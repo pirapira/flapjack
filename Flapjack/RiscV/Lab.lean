@@ -1126,11 +1126,37 @@ def labCollectPancakeRuntimeLabels : LabProgram (Word width) →
       [(0, 0, 812), (1, 0, 848), (2, 0, 772)] ++
         labCollectProgramLabels 1000 sourceProgram
 
+/-! Cake resolves the linked Pancake image with the post-target-lowering line
+    lengths.  In particular, a long jump/branch can occupy two instructions
+    although its Lab line starts as one symbolic instruction.  Keep the fixed
+    runtime labels, but iterate the source labels against those compiled
+    lengths before resolving branches.  This is the linked-image analogue of
+    `labCollectProgramLabelsStable`; using the old static count shifts the
+    first large `op_dispatch` target while leaving the section length unchanged. -/
+def labCollectPancakeRuntimeLabelsStableAux [NeZero width] (fuel : Nat)
+    (context : WordFfiContext) (sourceProgram : LabProgram (Word width))
+    (guess : List (Nat × Nat × Nat)) : List (Nat × Nat × Nat) :=
+  match fuel with
+  | 0 => guess
+  | fuel + 1 =>
+      let runtime := [(0, 0, 812), (1, 0, 848), (2, 0, 772)]
+      let next := runtime ++
+        labCollectProgramLabelsWithContext context 1000 guess sourceProgram
+      if next == guess then next
+      else labCollectPancakeRuntimeLabelsStableAux fuel context sourceProgram next
+
+def labCollectPancakeRuntimeLabelsStable [NeZero width] (fuel : Nat)
+    (context : WordFfiContext) (program : LabProgram (Word width)) :
+    List (Nat × Nat × Nat) :=
+  let sourceProgram := program.filter (fun entry => entry.name >= 3)
+  labCollectPancakeRuntimeLabelsStableAux fuel context sourceProgram
+    (labCollectPancakeRuntimeLabels program)
+
 def compileLabProgramLinkedWithPancakeRuntime [NeZero width]
     (context : WordFfiContext) (program : LabProgram (Word width)) :
     Option (List (Nat × Word width × List (Instruction width))) :=
   let sourceProgram := program.filter (fun entry => entry.name >= 3)
-  let labels := labCollectPancakeRuntimeLabels program
+  let labels := labCollectPancakeRuntimeLabelsStable 8 context program
   let haltPc := 1000 + 4 * labProgramInstructionCount sourceProgram
   compileLabProgramLinkedWithFfiStubsAndHaltAux context labels 1000 1000 haltPc
     sourceProgram

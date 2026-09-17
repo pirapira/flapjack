@@ -52,3 +52,20 @@ val loop = eval_term "stage=crep_to_loop"
   (list_mk_comb (``crep_to_loop$compile_prog``, [``RISC_V``, crep]));
 val word = eval_term "stage=loop_to_word"
   (mk_comb (``loop_to_word$compile``, loop));
+
+(* Optional focused probe for comparing the inputs to word_alloc.  The
+   complete word program above is useful for ordinary stage debugging, but
+   allocator parity needs the original heuristic and stack-only inputs too.
+   Keep this opt-in because these terms can be large. *)
+val _ =
+  case OS.Process.getEnv "PANCAKE_ALLOCATOR_PROBE" of
+      NONE => ()
+    | SOME _ =>
+        let
+          val input_term = list_mk_comb (``MAP``,
+            [``(λ(name,params,prog).
+                (name, word_alloc$get_heuristics 3 0 prog,
+                 word_alloc$get_stack_only prog))``, word])
+        in
+          ignore (eval_term "stage=cake_word_heuristics" input_term)
+        end

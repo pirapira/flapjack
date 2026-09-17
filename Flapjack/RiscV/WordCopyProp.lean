@@ -50,14 +50,16 @@ def wordCopySet (state : WordCopyState) (destination source : Nat) : WordCopySta
   if wordCopyIsAlloc destination && wordCopyIsAlloc source then
     /- `wordCopyRemove` has already dropped the state when `destination` had a
        class, so `destination` is its own representative here. -/
-    let sourceClass := wordCopyLookup state source
     let others := state.aliases.filter (fun entry =>
       entry.1 != destination && entry.1 != source)
     { state with
       aliases := (destination, destination) ::
         (source, destination) ::
-        others.map (fun entry =>
-          if entry.2 == sourceClass then (entry.1, destination) else entry) }
+        /- `set_eq` updates the class representative for the new copy but
+           leaves the existing `to_eq` entries intact.  Rewriting every old
+           member here makes a later move observe the new name where Cake's
+           `lookup_eq` still observes the prior representative. -/
+        others }
   else state
 
 /- `lookup_store_eq` (`word_copyScript.sml:252-260`).  Cake resolves the

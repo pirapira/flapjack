@@ -361,10 +361,25 @@ def copyPropagationPreservesPriorRepresentative : Bool :=
   match RiscV.wordCopyProp
       (.seq (.move 0 [(61, 45), (65, 45)])
         (.move 0 [(297, 65)]) : WordProg (Word 64)) with
-  | .seq _ (.move 0 [(297, 65)]) => true
+  | .seq _ (.move 0 [(297, 61)]) => true
   | _ => false
 
 #guard copyPropagationPreservesPriorRepresentative
+
+/- A representative update must rewrite all later members of the same Cake
+   class, not only the most recently inserted alias.  This is the reduced
+   shape of the fp_pow4 table setup: Cake changes the later 413 source from
+   the intermediate 329 to the surviving 345 representative. -/
+def copyPropagationCollapsesRepresentativeChain : Bool :=
+  match RiscV.wordCopyProp
+      (.seq (.move 0 [(349, 325), (345, 305), (341, 317), (337, 313),
+          (333, 309), (329, 305)])
+        (.move 0 [(413, 329)]) : WordProg (Word 64)) with
+  | .seq (.move 0 [(349, 325), (345, 305), (341, 317), (337, 313),
+      (333, 309), (329, 305)]) (.move 0 [(413, 345)]) => true
+  | _ => false
+
+#guard copyPropagationCollapsesRepresentativeChain
 
 /- Cake's branch merge compares class identities, not only the visible
    representative.  Independently-created classes for the same names must

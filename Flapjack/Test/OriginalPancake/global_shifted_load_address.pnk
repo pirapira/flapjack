@@ -1,0 +1,8 @@
+var 1 ev = 0;
+fun 1 shifted_offset(1 k) { return lds 1 (ev + (k - 1) * 8); }
+fun 1 main() {
+  ev = 1000;
+  var 1 value = shifted_offset(4);
+  @halt(@base, 0, @base, 0);
+  return value;
+}

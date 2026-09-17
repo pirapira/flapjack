@@ -760,6 +760,21 @@ def wordSsaRenameProgramWithLoops [OfNat α 0] (frames : List WordSsaLoopFrame)
         let movOut := .move 1 [(freshRight, 0), (freshLeft, 6)]
         (state, wordSsaSeq movIn
           (wordSsaSeq (.inst (.arith (.longMul 6 0 0 4))) movOut))
+    | .inst (.arith (.cakeAddCarry destination sourceLeft sourceRight carry)) =>
+        /- Cake's `ssa_cc_trans_inst` uses fixed carry register 0 for
+           AddCarry.  The move-in/move-out is semantically observable to the
+           dead pass: it keeps the source-shaped carry protocol and prevents
+           an otherwise dead first AddCarry from being discarded. -/
+        let sourceLeft := wordSsaRead state sourceLeft
+        let sourceRight := wordSsaRead state sourceRight
+        let carry := wordSsaRead state carry
+        let moveIn : WordProg α := .move 1 [(0, carry)]
+        let (state, freshDestination) := wordSsaFresh state destination
+        let (state, freshCarry) := wordSsaFresh state carry
+        let addCarry : WordProg α :=
+          .inst (.arith (.cakeAddCarry freshDestination sourceLeft sourceRight 0))
+        let moveOut : WordProg α := .move 1 [(freshCarry, 0)]
+        (state, wordSsaSeq moveIn (wordSsaSeq addCarry moveOut))
     | .inst instruction =>
         wordSsaRenameInstProgram state instruction
     | .get destination store =>

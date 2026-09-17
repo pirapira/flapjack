@@ -1,0 +1,11 @@
+fun 1 add1(1 a, 1 b) { return a + b; }
+exception E : 1;
+fun 1 main() {
+  var 1 x = 2;
+  if ((lds 1 (0)) != 0) {
+    throw E (0 #>> 7);
+  } else {
+    throw E (ld8 (0 + 4));
+  }
+  return add1(0, (0 ^ (x #>> 1)));
+}

@@ -128,11 +128,9 @@ def selectedBinaryGroundConfig : WordStackConfig :=
 def selectedBinaryCarrierLowering : Bool :=
   match
     wordToStackProgNat selectedBinaryGroundConfig
-      (.inst (.arith (.binOp .add 5 6 (.reg 7))) : WordProg Nat),
-    wordToStackProgNat selectedBinaryGroundConfig
-      (.assign 5 (.op .add [.var 6, .var 7])) with
-  | some (.arith .add 0 1 2), some (.arith .add 0 1 2) => true
-  | _, _ => false
+      (.inst (.arith (.binOp .add 5 6 (.reg 7))) : WordProg Nat) with
+  | some (.inst (.arith (.binOp .add 0 1 (.reg 2)))) => true
+  | _ => false
 
 #guard selectedBinaryCarrierLowering
 

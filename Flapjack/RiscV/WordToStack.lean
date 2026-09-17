@@ -727,7 +727,8 @@ def wordStackArithInst {α : Type} (config : WordStackConfig) (operation : WordA
           wordStackLocation config sourceRight with
       | some (.register destination), some (.register sourceLeft),
           some (.register sourceRight) =>
-        some (.arith operator destination sourceLeft sourceRight)
+        some (.inst (.arith (.binOp operator destination sourceLeft
+          (.reg sourceRight))))
       | _, _, _ =>
         match wordStackLocation config destination,
             wordStackLocation config sourceLeft,
@@ -751,7 +752,9 @@ def wordStackArithInst {α : Type} (config : WordStackConfig) (operation : WordA
               dReg
             pure (wordStackJoin loadLeft
               (wordStackJoin loadRight
-                (wordStackJoin (.arith operator dReg sLReg sRReg) writeDest)))
+                (wordStackJoin
+                  (.inst (.arith (.binOp operator dReg sLReg (.reg sRReg))))
+                  writeDest)))
         | _, _, _ => none
     | .binOp operator destination sourceLeft (.imm value) =>
       wordStackImmediateArithInst config destination sourceLeft value

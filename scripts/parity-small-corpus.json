@@ -31,7 +31,7 @@
       "source_reference": "cakeml/pancake/semantics/crepSemScript.sml:85-88 (crep_op_def)",
       "cake_sha256": "5e1162c5f80779f9ac072963aac2d3fbbae54d565f05c46a91e4028405dbb57f",
       "tracked_beads": [
-        "flapjack-pxn.8.5.10.1"
+        "flapjack-8tb.5.10"
       ]
     },
     {

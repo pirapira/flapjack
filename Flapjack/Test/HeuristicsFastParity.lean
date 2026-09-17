@@ -5,10 +5,10 @@ Parity regressions for the hashed heuristic state.
 
 `wordHeuristicSpillCostsFast` replaces the association-list counter map of
 `wordHeuristic` with a `Std.TreeMap` plus an update stamp.  The reference
-definition makes the *order* of its result observable -- every counter bump
-moves its key to the front of the list -- so these checks compare the two
-implementations as lists, not as sets, across every constructor that touches
-the counter state, including both merge paths (`ite` and a handled call).
+definition makes the *order* of its result observable through the Patricia
+tree traversal, so these checks compare the two implementations as lists,
+not as sets, across every constructor that touches the counter state,
+including both merge paths (`ite` and a handled call).
 -/
 
 namespace Flapjack
@@ -64,10 +64,11 @@ def heuristicParitySpillCosts (currentFunction : Nat) (program : WordProg Nat) :
     wordHeuristicSpillCosts currentFunction program
 
 /- Cake's move case updates all RHS registers before all LHS registers.  The
-   order is observable because each update moves its key to the front. -/
+   values are observable through the source Patricia-tree traversal, not the
+   order in which the updates were performed. -/
 def heuristicMoveUpdateOrderGuard : Bool :=
   (wordHeuristic 7 (.move 1 [(1, 2), (3, 4)] : WordProg Nat) ([], [])).1.map
-      Prod.fst == [1, 3, 2, 4]
+      Prod.fst == [3, 1, 4, 2]
 
 #guard heuristicMoveUpdateOrderGuard
 
@@ -85,9 +86,8 @@ def heuristicParityPrograms : List (Nat × WordProg Nat) :=
 #guard heuristicParityPrograms.all
   (fun entry => heuristicParitySpillCosts entry.1 entry.2)
 
-/-! `natEraseDups` must agree with `List.eraseDups`, which is what fixes the
-    key order of the merge and, in `Flapjack/RiscV/WordDeadCode.lean`, the
-    live-set order. -/
+/-! `natEraseDups` must agree with `List.eraseDups`; the source map merge uses
+    Patricia order separately. -/
 def heuristicEraseDupsCases : List (List Nat) :=
   [[], [7], [7, 7], [3, 1, 3, 4, 1, 5, 4], [1, 2, 3, 4, 5],
    [5, 4, 3, 2, 1], [9, 9, 9, 9], [0, 1, 0, 2, 0, 3, 1, 2, 3],
@@ -96,9 +96,33 @@ def heuristicEraseDupsCases : List (List Nat) :=
 #guard heuristicEraseDupsCases.all
   (fun names => names.eraseDups == natEraseDups names)
 
-/-! The merged map's order is the deduplicated key list reversed; pin it
-    directly so a change in either implementation is visible here. -/
+/-! The merged map's order is Cake's Patricia traversal; pin it directly so a
+    change in either implementation is visible here. -/
 #guard (wordHeuristicFast 7 heuristicParityMerge ({}, {})).1.keys ==
   (wordHeuristic 7 heuristicParityMerge ([], [])).1.map Prod.fst
+
+def heuristicCount (lhsConst lhsReg lhsMem rhsReg rhsMem : Nat) :
+    WordHeuristicCounts :=
+  { lhsConst, lhsReg, lhsMem, rhsReg, rhsMem }
+
+/- Direct Cake `heu_max_all`/`heu_merge_call` oracle case:
+   max_all emits [7,1,4,12,6] for the corresponding Patricia maps. -/
+def heuristicSourceMergeGuard : Bool :=
+  wordHeuristicMaxAll
+      [(1, heuristicCount 1 0 0 0 0), (4, heuristicCount 0 2 0 0 0),
+       (6, heuristicCount 0 0 3 0 0)]
+      [(7, heuristicCount 0 0 0 5 0), (4, heuristicCount 0 0 4 0 0),
+       (12, heuristicCount 0 0 0 0 6)] ==
+    [(7, heuristicCount 0 0 0 5 0), (1, heuristicCount 1 0 0 0 0),
+     (4, heuristicCount 0 2 4 0 0), (12, heuristicCount 0 0 0 0 6),
+     (6, heuristicCount 0 0 3 0 0)] &&
+  wordHeuristicMergeCalls [1, 4, 6] [7, 4, 12] == [7, 1, 4, 12, 6]
+  && wordHeuristicMaxAll
+      [(0, heuristicCount 1 0 0 0 0), (8, heuristicCount 0 1 0 0 0)]
+      [(2, heuristicCount 0 0 1 0 0), (10, heuristicCount 0 0 0 1 0)] ==
+    [(0, heuristicCount 1 0 0 0 0), (8, heuristicCount 0 1 0 0 0),
+     (2, heuristicCount 0 0 1 0 0), (10, heuristicCount 0 0 0 1 0)]
+
+#guard heuristicSourceMergeGuard
 
 end Flapjack

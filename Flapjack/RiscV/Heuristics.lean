@@ -31,6 +31,16 @@ structure WordHeuristicCounts where
 def wordHeuristicZero : WordHeuristicCounts :=
   { lhsConst := 0, lhsReg := 0, lhsMem := 0, rhsReg := 0, rhsMem := 0 }
 
+/-! Cake's `num_map` is a Patricia tree.  `insert` changes a value without
+    making that key the head of the observable `toAList`; the observable order
+    is the canonical Patricia traversal for the current key set. -/
+def wordHeuristicCanonicalize (counts : NatInfoMap WordHeuristicCounts) :
+    NatInfoMap WordHeuristicCounts :=
+  (NumSet.fromList (counts.map Prod.fst)).filterMap (fun name =>
+    match lookupNatInfo name counts with
+    | some value => some (name, value)
+    | none => none)
+
 def wordHeuristicUpdate (name : Nat)
     (update : WordHeuristicCounts → WordHeuristicCounts)
     (counts : NatInfoMap WordHeuristicCounts) :
@@ -38,7 +48,8 @@ def wordHeuristicUpdate (name : Nat)
   let value := match lookupNatInfo name counts with
     | some value => value
     | none => wordHeuristicZero
-  (name, update value) :: counts.filter (fun entry => entry.1 != name)
+  wordHeuristicCanonicalize
+    ((name, update value) :: counts.filter (fun entry => entry.1 != name))
 
 def wordHeuristicAddLhsConst (name : Nat)
     (counts : NatInfoMap WordHeuristicCounts) : NatInfoMap WordHeuristicCounts :=
@@ -138,19 +149,18 @@ def wordHeuristicKeys (counts : NatInfoMap WordHeuristicCounts) : List Nat :=
 
 def wordHeuristicMaxAll (left right : NatInfoMap WordHeuristicCounts) :
     NatInfoMap WordHeuristicCounts :=
-  ((wordHeuristicKeys left ++ wordHeuristicKeys right).eraseDups).foldl
-    (fun result name =>
+  (NumSet.fromList (wordHeuristicKeys left ++ wordHeuristicKeys right)).filterMap
+    (fun name =>
       let leftValue := match lookupNatInfo name left with
         | some value => value
         | none => wordHeuristicZero
       let rightValue := match lookupNatInfo name right with
         | some value => value
         | none => wordHeuristicZero
-      wordHeuristicUpdate name (fun _ => wordHeuristicMax leftValue rightValue) result)
-    []
+      some (name, wordHeuristicMax leftValue rightValue))
 
 def wordHeuristicMergeCalls (left right : List Nat) : List Nat :=
-  right.foldl (fun calls name => if name ∈ calls then calls else name :: calls) left
+  NumSet.fromList (left ++ right)
 
 def wordHeuristicAddCall (counts : NatInfoMap WordHeuristicCounts)
     (calls : List Nat) : List Nat :=
@@ -160,8 +170,8 @@ def wordHeuristicMoves (moves : List (Nat × Nat))
     (counts : NatInfoMap WordHeuristicCounts) : NatInfoMap WordHeuristicCounts :=
   /- Cake's `get_heu` uses `FOLDR add1_lhs_reg` over all move sources,
      after `FOLDR add1_rhs_reg` over all move destinations.  Updating a
-     complete move pair at once changes the association-list order that is
-     later consumed by spill-cost lookup. -/
+     complete move pair at once changes the source tree's values; the
+     resulting association-list order is the Patricia traversal. -/
   wordHeuristicAddLhsRegs (moves.map Prod.fst)
     (wordHeuristicAddRhsRegs (moves.map Prod.snd) counts)
 
@@ -220,20 +230,17 @@ decreasing_by all_goals decreasing_trivial
 
 /-! ## Tree-backed counter state
 
-`wordHeuristicUpdate` above moves the updated key to the front of the
-association list and rebuilds the remainder with `List.filter`, so every
-counter bump costs a full traversal and a full copy; `wordHeuristicMaxAll`
-adds an `eraseDups` on top of that at every `ite` and every handled call.
+`wordHeuristicUpdate` above rebuilds the Patricia traversal after each update,
+so every counter bump costs a full traversal and a full copy;
+`wordHeuristicMaxAll` also reconstructs the source key set at every `ite` and
+every handled call.
 On a function with `k` call sites the traversal alone measures cubic, and it
 dominates the whole Word back end: at `k = 200` it is 94% of
 `cakeWordStackVarCount`, which is itself half of the per-function cost.
 
 The state below carries the same information in a `Std.TreeMap`, together
-with a monotonically increasing stamp recording when each key was last
-updated.  Because `wordHeuristicUpdate` always moves the updated key to the
-front, the association list it maintains is exactly the entries in order of
-decreasing stamp, so `toNatInfoMap` reproduces the list-based result
-verbatim -- including its order, which the reference definition makes
+with a monotonically increasing stamp for updates.  `toNatInfoMap` rebuilds
+the source Patricia traversal from the current key set, so the order remains
 observable through `wordHeuristicKeys`.  Lookup and update become
 logarithmic, so a traversal is `O(n log n)` rather than cubic.
 `Flapjack/Test/HeuristicsFastParity.lean` checks that correspondence against
@@ -242,8 +249,7 @@ the reference definitions, list order included. -/
 structure WordHeuristicCountMap where
   /-- Key to its update stamp and counters. -/
   entries : Std.TreeMap Nat (Nat × WordHeuristicCounts) := ∅
-  /-- Update stamp back to its key, so the association list can be recovered
-      in stamp order without sorting. -/
+  /-- Update stamp retained only to distinguish repeated tree updates. -/
   order : Std.TreeMap Nat Nat := ∅
   next : Nat := 0
 
@@ -253,7 +259,7 @@ def lookup (counts : WordHeuristicCountMap) (name : Nat) :
     Option WordHeuristicCounts :=
   (counts.entries[name]?).map Prod.snd
 
-/-- `wordHeuristicUpdate`: bump one counter and move the key to the front. -/
+/-- `wordHeuristicUpdate`: bump one counter in the source map. -/
 def update (name : Nat) (update : WordHeuristicCounts → WordHeuristicCounts)
     (counts : WordHeuristicCountMap) : WordHeuristicCountMap :=
   let previous := counts.entries[name]?
@@ -265,21 +271,17 @@ def update (name : Nat) (update : WordHeuristicCounts → WordHeuristicCounts)
     order := order.insert counts.next name
     next := counts.next + 1 }
 
-/-- The association list the reference definition would have built: entries
-    in order of decreasing update stamp, most recently updated first.
-    `order` is keyed by stamp, so folding it left to right visits ascending
-    stamps and prepending reverses them into the required order. -/
+/-- The association list the reference definition would have built: entries in
+    canonical Patricia traversal order for the current key set. -/
 def toNatInfoMap (counts : WordHeuristicCountMap) :
     NatInfoMap WordHeuristicCounts :=
-  counts.order.foldl
-    (fun result _ name =>
-      match counts.entries[name]? with
-      | some (_, value) => (name, value) :: result
-      | none => result)
-    []
+  (NumSet.fromList (counts.entries.toList.map Prod.fst)).filterMap (fun name =>
+    match counts.entries[name]? with
+    | some (_, value) => some (name, value)
+    | none => none)
 
 def keys (counts : WordHeuristicCountMap) : List Nat :=
-  counts.order.foldl (fun result _ name => name :: result) []
+  NumSet.fromList (counts.entries.toList.map Prod.fst)
 
 def addLhsConst (name : Nat) (counts : WordHeuristicCountMap) :
     WordHeuristicCountMap :=
@@ -303,10 +305,8 @@ def addRhsMem (name : Nat) (counts : WordHeuristicCountMap) :
 
 end WordHeuristicCountMap
 
-/-- `wordHeuristicMaxAll`.  The reference folds `wordHeuristicUpdate` over the
-    deduplicated key list starting from the empty map, and every update
-    prepends, so the result is that key list reversed.  Inserting in the same
-    order here gives ascending stamps, and `toNatInfoMap` reverses them. -/
+/-- `wordHeuristicMaxAll`.  The source result is a Patricia-tree union, so its
+    observable key order is reconstructed by `toNatInfoMap`. -/
 def WordHeuristicCountMap.maxAll (left right : WordHeuristicCountMap) :
     WordHeuristicCountMap :=
   (natEraseDups (left.keys ++ right.keys)).foldl
@@ -326,11 +326,12 @@ structure WordHeuristicCallSet where
 /-- `wordHeuristicMergeCalls`. -/
 def WordHeuristicCallSet.merge (left : WordHeuristicCallSet) (right : List Nat) :
     WordHeuristicCallSet :=
-  right.foldl
+  let seen := right.foldl
     (fun calls name =>
       if calls.seen.contains name then calls
       else { names := name :: calls.names, seen := calls.seen.insert name })
     left
+  { names := NumSet.fromList (left.names ++ right), seen := seen.seen }
 
 /-- `wordHeuristicAddCall`. -/
 def WordHeuristicCallSet.addCall (calls : WordHeuristicCallSet)

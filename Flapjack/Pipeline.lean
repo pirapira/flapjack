@@ -881,7 +881,8 @@ def compileFlapjackRiscVViaAllocatedStackWithFullSsaAndBitmapsAndSimpleGcTarget
       { services := services } removeConfig
       { gcStubLocation := stackGcStubLocation, returnLabel := 0,
         firstFreshLabel := stackFunctionFirstLabel }
-      { } stackStoreConstsStubLocation wordAllocatableRegisters.length 0 initialLabel
+      { } stackStoreConstsStubLocation RiscV.CakeRegAlloc.cakeRiscVRegisterCount
+        0 initialLabel
       (functions.map (fun (label, _, body) => (label, body)))
   pure (bitmaps, instructions)
 
@@ -910,7 +911,8 @@ def compileFlapjackRiscVViaAllocatedStackWithFullSsaAndBitmapsAndSimpleGcTargetL
       { services := services } removeConfig
       { gcStubLocation := stackGcStubLocation, returnLabel := 0,
         firstFreshLabel := stackFunctionFirstLabel }
-      { } stackStoreConstsStubLocation wordAllocatableRegisters.length 0 initialLabel
+      { } stackStoreConstsStubLocation RiscV.CakeRegAlloc.cakeRiscVRegisterCount
+        0 initialLabel
       (functions.map (fun (label, _, body) => (label, body)))
   pure (bitmaps, sections)
 
@@ -940,7 +942,8 @@ def compileFlapjackRiscVViaAllocatedStackWithFullSsaAndBitmapsAndSimpleGcEntryLi
       { services := services } removeConfig
       { gcStubLocation := stackGcStubLocation, returnLabel := 0,
         firstFreshLabel := stackFunctionFirstLabel }
-      { } stackStoreConstsStubLocation wordAllocatableRegisters.length 0 initialLabel
+      { } stackStoreConstsStubLocation RiscV.CakeRegAlloc.cakeRiscVRegisterCount
+        0 initialLabel
       (functions.map (fun (label, _, body) => (label, body)))
   pure (bitmaps, sections)
 
@@ -1089,7 +1092,8 @@ def compileFlapjackRiscVViaAllocatedStackWithFullSsaAndBitmapsAndSimpleGc
       { services := services } removeConfig
       { gcStubLocation := stackGcStubLocation, returnLabel := 0,
         firstFreshLabel := stackFunctionFirstLabel }
-      { } stackStoreConstsStubLocation wordAllocatableRegisters.length 0 initialLabel
+      { } stackStoreConstsStubLocation RiscV.CakeRegAlloc.cakeRiscVRegisterCount
+        0 initialLabel
       (functions.map (fun (label, _, body) => (label, body)))
   pure (bitmaps, instructions)
 

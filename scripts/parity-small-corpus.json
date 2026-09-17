@@ -508,6 +508,14 @@
       "tracked_beads": [
         "flapjack-8tb.5.8"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00460_nested_handler_constant_fold.pnk",
+      "source_reference": "Reduced campaign-seed-17 witness f00460: Cake's word_inst folds the nested all-constant handler expression (7 & 0) + 1 before allocation; retaining the intermediate zero and add shifts the main/user section layout.",
+      "cake_sha256": "cda957aa936914e803af1f30a5b3affbde50ba7ef09a9e2227fd3a69e4966131",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.10.1"
+      ]
     }
   ]
 }

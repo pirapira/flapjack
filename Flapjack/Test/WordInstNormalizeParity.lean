@@ -265,6 +265,28 @@ def addressShiftKeepsOrdinaryImmediates : Bool :=
       .var 23) => true
   | _ => false
 
+/-- `inst_select_exp c tar temp (Op op [e1; Const w])`
+    (`word_instScript.sml:252-275`) tests `c.valid_imm (INL op) w` for every
+    operator, not only `Add`, so a nested `x && 1w` is one `andi`. -/
+def nestedAndImmediateMatches : Bool :=
+  match wordInstSelectAtom (α := Nat) 23 (.op .and [.var 18, .const 1]) with
+  | (.seq (.move 0 [(23, 18)])
+      (.inst (.arith (.binOp .and 23 23 (.imm 1)))), .var 23) => true
+  | _ => false
+
+/-- When the constant is not a valid immediate, Cake materializes it into
+    `temp + 1` and uses a register operand.  Leaving it as an unfused
+    expression instead would make an enclosing `Shift` miss its own immediate.
+    `2 ^ 60` is outside the signed 12-bit window in both directions. -/
+def nestedAndWideConstantMaterializes : Bool :=
+  match wordInstSelectAtom (α := Nat) 23 (.op .and [.var 18, .const (2 ^ 60)]) with
+  | (.seq (.seq (.move 0 [(23, 18)]) (.inst (.const 24 c)))
+      (.inst (.arith (.binOp .and 23 23 (.reg 24)))), .var 23) => c == 2 ^ 60
+  | _ => false
+
+#guard nestedAndImmediateMatches
+#guard nestedAndWideConstantMaterializes
+
 #guard twoVarOrderMatches
 #guard varConstOrderMatches
 #guard constFirstOrderMatches
@@ -312,6 +334,10 @@ def runChecks : IO Bool := do
     , ("a nested load preserves an unfused address expression", nestedLoadOffsetFallbackMatches)
     , ("address selection keeps Cake's ordinary immediates in nested shifts",
         addressShiftKeepsOrdinaryImmediates)
+    , ("a nested And with a valid immediate becomes Cake's andi",
+        nestedAndImmediateMatches)
+    , ("a nested And with a wide constant materializes it like Cake",
+        nestedAndWideConstantMaterializes)
   ]
   let mut ok := true
   for (label, passed) in checks do

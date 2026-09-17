@@ -330,7 +330,7 @@ def wordCopyProg [WordCseHash α] :
             wordCopyRemove state name)
       | .store | .store8 | .store16 | .store32 =>
           (.shareInst operator name
-            (wordCopyShareExp state address), state)
+            (wordCopyShareExp state address), wordCopyRemove state name)
   | state, .break label => (.break label, state)
   | state, .continue label => (.continue label, state)
   | _state, program => (program, wordCopyEmpty)

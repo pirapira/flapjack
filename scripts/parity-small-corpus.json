@@ -524,6 +524,30 @@
       "tracked_beads": [
         "flapjack-8tb.5.13"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00228_copy_share_store.pnk",
+      "source_reference": "Reduced accepted-output witness f00228: Cake's word_copy removes the complete copy class after ShareInst Store, so a later CSE move remains 381 <- 297 instead of inheriting 301. This fixture pins the generic shared-store invalidation rule.",
+      "cake_sha256": "b633c0d91633d9d2b35144044a0acfdcaa8b341534591b001b5a084c99846ee5",
+      "tracked_beads": [
+        "flapjack-8tb.5.14"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/input_blob_load_selector.pnk",
+      "source_reference": "Reduced independent P0 witness flapjack-8tb.5.15: Cake's ShareInst Load materializes a non-address-sized base-plus-offset expression through the selector temporary before the shared load, preserving allocator-visible temporaries and exact RISC-V bytes.",
+      "cake_sha256": "319f18cd709b82c61c9c6a96f5d81293f798e4ae0e039fb1675b396dd5712406",
+      "tracked_beads": [
+        "flapjack-8tb.5.15"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/gh1039_handled_call_labels.pnk",
+      "source_reference": "Reduced GH #1039 source-call witness: loop_to_word comp starts the handled call's handler and return labels at the next local label and advances past both bodies, preserving Cake's source-shaped call metadata.",
+      "cake_sha256": "9c880978b9dc615908fb334036b1af189c63bb83df48cb879974468bb095283f",
+      "tracked_beads": [
+        "flapjack-5v3"
+      ]
     }
   ]
 }

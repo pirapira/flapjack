@@ -268,6 +268,22 @@
       "tracked_beads": [
         "flapjack-8tb.4.7"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/gh1025_frame_bitmap.pnk",
+      "source_reference": "GH #1025 differential-fuzz seed 11, f00010: loop/handler liveness must preserve Cake's five live frame words and bitmap vector [4,32,32,32,32,32]",
+      "cake_sha256": "fee86f26b1438aa0586d1762200594116555eb70e27e4c8c041dad5cf3723c99",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.4.1"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/gh1025_frame_bitmap_f00000.pnk",
+      "source_reference": "GH #1025 differential-fuzz f00000 seed 1: Cake's nine call continuations require bitmap vector [4,8,8,8,8,8,8,8,8]",
+      "cake_sha256": "186e9c7b7f76c25201a0cbd91eb82a375d7ef0735d643c884bd191e473ada086",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.4.1"
+      ]
     }
   ]
 }

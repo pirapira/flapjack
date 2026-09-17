@@ -340,6 +340,12 @@
       ]
     },
     {
+      "path": "Flapjack/Test/OriginalPancake/u256_mul_full_bitmap_wrap.pnk",
+      "source_reference": "Minimized differential-fuzz finding f00114: Cake wraps a bitmap table at sixteen `.quad` words per line; this reduced u256 carry program is the first source-level witness for exact bitmap-table formatting.",
+      "cake_sha256": "bb71197ed267e892be2dc6f2d02b9e77811ce320f55c64fd66d289cde298f0fd",
+      "tracked_beads": []
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/divmnu_copy_loop.pnk",
       "source_reference": "Minimized full-guest divmnu witness; word_copy must reset copy state after Loop and resolve old members through Cake's class representative.",
       "cake_sha256": "76d372a0ccac7e59715ec940f16d8f4e89ce676601b1c691f4546d8a2b38cb49",

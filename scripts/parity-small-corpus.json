@@ -502,6 +502,15 @@
         "flapjack-8tb.4",
         "flapjack-6zt"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00484_nested_and_store.pnk",
+      "source_reference": "Rebuilt differential-fuzz witness f00484: Cake's word_inst optimize_consts collapses the nested all-constant And to zero before the enclosing XOR, removing the dead constant expression from the store value.",
+      "cake_sha256": "3c16e0f4cbd45190311272bc8a461e342791cc43cc1b40baf1460e77af2a93c7",
+      "tracked_beads": [
+        "flapjack-8tb.4",
+        "flapjack-6zt"
+      ]
     }
   ]
 }

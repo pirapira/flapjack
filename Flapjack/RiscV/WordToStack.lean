@@ -2803,6 +2803,14 @@ def wordStackIndirectCallNat (config : WordStackConfig) (arguments : List Nat) :
 def wordStackCallFreeCount (config : WordStackConfig) (argumentCount : Nat) : Nat :=
   wordStackCakeFrameSize config - (argumentCount - config.abiRegisterCount)
 
+/-! The source-shaped `loop_to_word` call list already contains Cake's link
+    slot.  For a `Call NONE`, Cake's `StackArgs dest (LENGTH args + 1)` uses
+    that complete list when computing `stack_free`; do not apply the ordinary
+    hardware ABI-window subtraction a second time. -/
+def wordStackSourceTailCallFreeCount (config : WordStackConfig)
+    (argumentCount : Nat) : Nat :=
+  wordStackCakeFrameSize config - (argumentCount + 1)
+
 def wordToStackProg {α : Type} [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Div α] [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
     [ShiftRight α] [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
@@ -3763,7 +3771,7 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
   | .call none (some target) arguments none => do
       let argumentMoves ← wordStackMovesToPhysical config arguments config.callAbiBase
       let callCode := .call none (.label target) none
-      let freeCount := wordStackCallFreeCount config arguments.length
+      let freeCount := wordStackSourceTailCallFreeCount config arguments.length
       pure (wordStackJoin argumentMoves (stackFreeIfNonzero freeCount callCode), state)
   | .call none (some target) arguments
       (some (exception, body, handlerLabel, handlerEntryLabel)) => do

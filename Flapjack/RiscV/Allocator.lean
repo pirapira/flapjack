@@ -980,8 +980,13 @@ def wordSsaRenameProgramWithLoops [OfNat α 0] (frames : List WordSsaLoopFrame)
           wordSsaRenameProgramWithLoops (frame :: frames) entryState body
         let backMoves := wordSsaReconcileTo bodyState setupState liveIn.eraseDups
         let body := wordSsaSeq body backMoves
-        let program := .loop (liveIn.map (wordSsaRead setupState)) body
-          (liveOut.map (wordSsaRead setupState))
+        /- `apply_nummap_key` rebuilds the Cake num_map, so its `toAList`
+           order is the Patricia-tree order of the renamed keys rather than
+           the incoming list order.  This order reaches the clash tree and is
+           observable in exact RISC-V allocation. -/
+        let ssaLiveIn := NumSet.fromList (liveIn.map (wordSsaRead setupState))
+        let ssaLiveOut := NumSet.fromList (liveOut.map (wordSsaRead setupState))
+        let program := .loop ssaLiveIn body ssaLiveOut
         /- CakeML threads the loop body's fresh-name counter out of
            `ssa_cc_trans (Loop ...)`, so code after the loop never reuses a
            name that the body allocated.  Only `next` is taken from the body

@@ -511,6 +511,31 @@
         "flapjack-8tb.4",
         "flapjack-6zt"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00325_zero_shift_self_move.pnk",
+      "source_reference": "Reduced campaign-seed-17 witness: Cake's word_inst keeps the self-copy emitted by a zero shift even when the selector temporary is also the shift target; dropping it shifts the subsequent SSA names and main instructions.",
+      "cake_sha256": "4e75debf6843a5b0ad4308f2261f7879401b1118731da23b737ff75ef9ee5f13",
+      "tracked_beads": [
+        "flapjack-8tb.5.7"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00356_zero_shift_self_move.pnk",
+      "source_reference": "Rebuilt differential-fuzz witness: Cake's word_inst selector preserves the zero-shift self-copy emitted by inst_select_exp, which changes allocator liveness and register colours in the surrounding loop/call frame.",
+      "cake_sha256": "7c7bb1966579fbcc7674f6b72e50763202e95fb5ab7ca012fcf8fe72aa477be2",
+      "tracked_beads": [
+        "flapjack-8tb.5.7",
+        "flapjack-8tb.4"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00042_zero_add_register_fusion.pnk",
+      "source_reference": "Reduced campaign-seed-17 witness for flapjack-8tb: Cake retains the zero source constant and register add before the following left shift; eliding the non-aliased zero-add pair shifts the main section and every downstream user-function base.",
+      "cake_sha256": "dfa87853d0ec8ed93fcf1a845adac03d4429968b51ca50ef2568a1747b03ad1f",
+      "tracked_beads": [
+        "flapjack-8tb.5.8"
+      ]
     }
   ]
 }

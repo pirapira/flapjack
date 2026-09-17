@@ -319,8 +319,12 @@ def wordInstSelectAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α
       match selectedLeft, WordInstSelectImmediate.shiftImmediate value with
       | .var left, .valid amount =>
           if amount = 0 then
-            (wordDeadSelectSeq leftPrelude
-              (.move 0 [(temp, left)]), .var temp)
+            /- Cake's `inst_select_exp` emits the final `Move 0 [tar,temp]`
+               even when the shift selector was already called with
+               `tar = temp`.  The self-copy is observable to SSA numbering
+               and the allocator, so preserve it rather than simplifying it
+               away at this boundary. -/
+            (wordDeadSelectSeq leftPrelude (.move 0 [(temp, temp)]), .var temp)
           else
             (wordDeadSelectSeq leftPrelude
               (.inst (.arith (.shift operator temp left (.imm value)))), .var temp)

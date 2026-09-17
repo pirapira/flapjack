@@ -1465,14 +1465,58 @@ def wordStackExpressionTemporariesExcluding (config : WordStackConfig)
 
 def wordStackCompileStoreNatNested (config : WordStackConfig) (address : WordExp Nat)
     (value : WordExp Nat) : Option (StackProg Nat) := do
-  let addressPrelude ← wordStackCompileExpToRegisterNat config config.addressScratch
-    (wordStackExpressionTemporaries config config.addressScratch) address
-  let valuePrelude ← wordStackCompileExpToRegisterNat config config.scratch
-    (wordStackExpressionTemporariesExcluding config config.scratch config.addressScratch)
-    value
-  pure (wordStackJoin addressPrelude
-    (wordStackJoin valuePrelude
-      (.inst (.mem .store config.scratch config.addressScratch))))
+  /- Cake's `word_to_stack` keeps `Addr base offset` through a store.  The
+     source-shaped Word expression presents the same address as `base + offset`;
+     preserve the static displacement here instead of materialising both the
+     address and a register-resident store value.  The Lab pass recognises the
+     const/add/store shape and emits the same `memOffset` instruction as Cake. -/
+  let general : Option (StackProg Nat) := do
+    let addressPrelude ← wordStackCompileExpToRegisterNat config config.addressScratch
+      (wordStackExpressionTemporaries config config.addressScratch) address
+    let valuePrelude ← wordStackCompileExpToRegisterNat config config.scratch
+      (wordStackExpressionTemporariesExcluding config config.scratch config.addressScratch)
+      value
+    pure (wordStackJoin addressPrelude
+      (wordStackJoin valuePrelude
+        (.inst (.mem .store config.scratch config.addressScratch))))
+  match address, value with
+  | .op operator [.var base, .const offset], .var valueName =>
+      let offsetFits :=
+        match operator with
+        | .add =>
+            offset < 2 ^ 11 ||
+              (offset ≥ 2 ^ 64 - 2 ^ 11 && offset < 2 ^ 64)
+        | .sub => offset ≤ 2 ^ 11
+        | _ => false
+      match wordStackLocation config base, wordStackLocation config valueName with
+      | some (.register baseRegister), some (.register valueRegister) =>
+          if (operator == .add || operator == .sub) && offset = 0 then
+            pure (.inst (.mem .store valueRegister baseRegister))
+          else if offsetFits && baseRegister != config.scratch &&
+              valueRegister != config.scratch && valueRegister != config.addressScratch then
+            pure (wordStackJoin
+              (.seq (.const config.scratch offset)
+                (.arith operator config.addressScratch baseRegister config.scratch))
+              (.inst (.mem .store valueRegister config.addressScratch)))
+          else
+            general
+      | _, _ => general
+  | .op operator [.var base, .const offset], _ =>
+      if (operator == .add || operator == .sub) && offset = 0 then
+        match wordStackLocation config base with
+        | some (.register baseRegister) =>
+            if baseRegister == config.scratch then
+              general
+            else
+              let valuePrelude ← wordStackCompileExpToRegisterNat config config.scratch
+                (wordStackExpressionTemporariesExcluding config config.scratch baseRegister)
+                value
+              pure (wordStackJoin valuePrelude
+                (.inst (.mem .store config.scratch baseRegister)))
+        | _ => general
+      else
+        general
+  | _, _ => general
 
 def wordStackCompileLoadNatNested (config : WordStackConfig) (destination : Nat)
     (address : WordExp Nat) : Option (StackProg Nat) := do
@@ -3919,6 +3963,22 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
   | .seq first second =>
       let peephole : Option (StackProg Nat × WordStackBitmapState) :=
         match first, second with
+        | .move _ moves, .seq (.inst (.mem .store source address)) rest =>
+            match moves.find? (fun move => move.1 == address) with
+            | some (_, addressSource) =>
+                let remaining := moves.filter (fun move => move.1 != address)
+                if !(wordProgReadVars rest).contains address &&
+                    !remaining.any (fun move => move.1 == addressSource) then do
+                  let moveCode ← wordStackMoveList config remaining
+                  let storeCode ← wordToStackInst config
+                    (.mem .store source addressSource)
+                  let (restCode, state) ← wordToStackProgWordWithBitmapBuilder
+                    config bitmapBuilder registerCount bitmapRegister frameSlots
+                    wordBits storeConstsStub state rest
+                  pure (.seq moveCode (.seq storeCode restCode), state)
+                else
+                  none
+            | none => none
         | .move 0 [(destination, source)],
             .seq (.assign name (.op operator [.var left, .const value])) rest =>
             if name = destination && left = destination then

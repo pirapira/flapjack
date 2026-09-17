@@ -155,7 +155,9 @@ def wordInstConstantsToEnd [Add α] [Sub α] [OrOp α]
       | none =>
           match operator with
           | .and =>
-              if constants.all (fun value => value = 0) then
+              -- Cake's `reduce_const And 0w rest` is an annihilator: once
+              -- any constant operand is zero, the whole expression is zero.
+              if constants.any (fun value => value = 0) then
                 [.const 0]
               else
                 constants.map (fun value => .const value) ++ others.reverse

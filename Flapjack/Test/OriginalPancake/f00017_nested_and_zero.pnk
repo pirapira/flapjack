@@ -1,0 +1,7 @@
+fun 1 add1(1 a, 1 b) { return a + b; }
+fun 1 main() {
+  var 1 y315 = add1(0, 0);
+  var 1 y773 = add1(0, 0);
+  var 1 y761 = add1(((y773 & 0) & 1), 0);
+  return add1(y315, 0);
+}

@@ -134,11 +134,14 @@ def labLineInstructionCount : LabLine (Word width) → Nat
 def labFfiStubOffset [NeZero width] (context : WordFfiContext)
     (function : FunName) (position : Nat) : Option (Word width) := do
   let index ← lookupWordFfiIndex function context.services
-  /- CakeML emits FFI blocks in reverse `ffi_names` order.  The target
-     assembler therefore addresses service index `i` at the fixed prefix
-     distance `(3 + i) * ffi_offset`: two runtime blocks (cake_clear and
-     cake_exit), followed by the reversed service table. -/
-  let stubDistance := 3 + index
+  /- `context.services` is the source/discovery order.  Cake's internal
+     `ffi_names` list is the reverse of that order, and the exporter emits
+     `REVERSE ffi_names`, so the textual stubs are in source order.  From
+     `cake_main`, service `i` is therefore preceded by the remaining
+     services, followed by `cake_clear` and `cake_exit`: `(2 + N - i)`
+     16-byte blocks.  The previous `(3 + i)` formula happened to work for a
+     single service but targeted the wrong stub once several FFIs existed. -/
+  let stubDistance := 2 + (context.services.length - index)
   pure (0 - BitVec.ofNat width (position + stubDistance * 16))
 
 /-! In the compact linked image the FFI blocks are physically prepended to the
@@ -1486,6 +1489,14 @@ theorem compileLabSection_ffi [NeZero width] :
       ⟨2, [
         .labAsm (.callFfi "sum") [] 0]⟩ =
       some [.jal 0 (0 - BitVec.ofNat width 48)] := by
+  simp [compileLabSection, labCompileLines,
+    labCompileAsm, labFfiStubOffset, lookupWordFfiIndex]
+
+theorem compileLabSection_ffi_multiple_services [NeZero width] :
+    compileLabSection { services := [("first", 7), ("second", 8)] }
+      ⟨2, [
+        .labAsm (.callFfi "first") [] 0]⟩ =
+      some [.jal 0 (0 - BitVec.ofNat width 64)] := by
   simp [compileLabSection, labCompileLines,
     labCompileAsm, labFfiStubOffset, lookupWordFfiIndex]
 

@@ -291,6 +291,20 @@ def sharedAddressConstFpMatchesCake : Bool :=
 
 #guard sharedAddressConstFpMatchesCake
 
+/-! `const_fp_exp` treats an expression-level `Load` as opaque
+    (`word_simpScript.sml:191-212`): unlike `ShareInst Load`, it does not
+    propagate the constant environment into the load address.  This matters
+    for the initialisation order that the allocator sees. -/
+def loadAddressConstFpProgram : WordProg (Word 64) :=
+  .seq (.assign 4 (.const 0)) (.assign 6 (.load (.var 4)))
+
+def loadAddressConstFpIsOpaque : Bool :=
+  match RiscV.wordConstFp loadAddressConstFpProgram with
+  | .seq (.assign 4 (.const 0)) (.assign 6 (.load (.var 4))) => true
+  | _ => false
+
+#guard loadAddressConstFpIsOpaque
+
 /-! ### Cake copy propagation representative
 
     Cake's `set_eq` (`compiler/backend/word_copyScript.sml:204-225`) inserts the
@@ -355,6 +369,65 @@ def tempStoreGetLowers : Bool :=
 
 #guard copyPropagationKeepsDestination
 
+/- A later copy through an already-populated class makes its destination the
+   representative visible to subsequent moves. -/
+def copyPropagationUsesLatestRepresentative : Bool :=
+  match RiscV.wordCopyProp
+      (.seq (.move 0 [(61, 45), (65, 45)])
+        (.move 0 [(297, 65)]) : WordProg (Word 64)) with
+  | .seq _ (.move 0 [(297, 61)]) => true
+  | _ => false
+
+#guard copyPropagationUsesLatestRepresentative
+
+/- A representative update must rewrite all later members of the same Cake
+   class, not only the most recently inserted alias.  This is the reduced
+   shape of the fp_pow4 table setup: Cake changes the later 413 source from
+   the intermediate 329 to the surviving 345 representative. -/
+def copyPropagationCollapsesRepresentativeChain : Bool :=
+  match RiscV.wordCopyProp
+      (.seq (.move 0 [(349, 325), (345, 305), (341, 317), (337, 313),
+          (333, 309), (329, 305)])
+        (.move 0 [(413, 329)]) : WordProg (Word 64)) with
+  | .seq (.move 0 [(349, 325), (345, 305), (341, 317), (337, 313),
+      (333, 309), (329, 305)]) (.move 0 [(413, 345)]) => true
+  | _ => false
+
+#guard copyPropagationCollapsesRepresentativeChain
+
+/- Cake's `copy_prop_prog (Loop ...)` resets the incoming copy state after
+   transforming the loop body (`word_copyScript.sml:377-380`). -/
+def copyPropagationClearsLoopState : Bool :=
+  match RiscV.wordCopyProp
+      (.seq (.move 0 [(61, 45), (65, 45)])
+        (.seq (.loop [] (.skip : WordProg (Word 64)) [])
+          (.move 0 [(297, 65)])) : WordProg (Word 64)) with
+  | .seq _ (.seq (.loop _ _ _) (.move 0 [(297, 65)])) => true
+  | _ => false
+
+#guard copyPropagationClearsLoopState
+
+/- Cake's branch merge compares class identities, not only the visible
+   representative.  Independently-created classes for the same names must
+   therefore not propagate a branch-local source across the merge. -/
+def copyMergeKeepsClassIdentity : Bool :=
+  let left : RiscV.WordCopyState :=
+    { aliases := [(2373, 2321), (2321, 2321)]
+      storeToEq := []
+      classOf := [(2373, 4), (2321, 4)]
+      classRep := [(4, 2321)]
+      classStore := []
+      classNext := 5 }
+  let right : RiscV.WordCopyState :=
+    { aliases := [(2373, 2321), (2321, 2321)]
+      storeToEq := []
+      classOf := [(2373, 5), (2321, 5)]
+      classRep := [(5, 2321)]
+      classStore := []
+      classNext := 6 }
+  RiscV.wordCopyLookup (RiscV.wordCopyMerge left right) 2373 == 2373
+
+#guard copyMergeKeepsClassIdentity
 /-! ### Cake ABI argument overflow
 
     The original `format_var`/`wMoveSingle` materializes arguments past the

@@ -116,7 +116,8 @@ def lowerLoopProg : CrepProg α → LoopProg α
   | .dec name value body =>
       .seq (.assign name (lowerLoopExp value)) (lowerLoopProg body)
   | .assign name value => .assign name (lowerLoopExp value)
-  | .primitive names operator arguments => .primitive names operator arguments
+  | .primitive names operator arguments =>
+      .primitive names operator arguments
   | .store _ _ => .fail
   | .store32 _ _ => .fail
   | .storeByte _ _ => .fail
@@ -321,8 +322,10 @@ def loopCompileProg [OfNat α 0] [OfNat α 1]
           loopNestedSeq (result.code ++ [.assign mappedName result.expression])
       | none => .skip
   | .primitive names operator arguments =>
-      match lookupLoopVars context names, lookupLoopVars context arguments with
-      | some names, some arguments => .primitive names operator arguments
+      match names.mapM (lookupNatInfo · context.vars),
+          arguments.mapM (lookupNatInfo · context.vars) with
+      | some mappedNames, some mappedArguments =>
+          .primitive mappedNames operator mappedArguments
       | _, _ => .skip
   | .store address value =>
       let addressResult := loopCompileExp context (context.maxVar + 1) live address

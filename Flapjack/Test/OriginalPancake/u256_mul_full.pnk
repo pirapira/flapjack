@@ -1,0 +1,86 @@
+fun {1,1} mul64x64(1 a, 1 b) {
+  var a0 = a & 4294967295;
+  var a1 = a >>> 32;
+  var b0 = b & 4294967295;
+  var b1 = b >>> 32;
+  var p00 = a0 * b0;
+  var p11 = a1 * b1;
+  var {1,1} mid = __add_with_carry__(a0 * b1, a1 * b0, 0);
+  var {1,1} lo = __add_with_carry__(p00, mid.0 << 32, 0);
+  var hi = p11 + (mid.0 >>> 32) + (mid.1 << 32) + lo.1;
+  return <lo.0, hi>;
+}
+
+fun {1,1,1,1,1,1,1,1} u256_mul_full({1,1,1,1} a, {1,1,1,1} b) {
+  var {1,1} p00 = mul64x64(a.0, b.0);
+  var {1,1} p01 = mul64x64(a.0, b.1);
+  var {1,1} p10 = mul64x64(a.1, b.0);
+  var {1,1} p02 = mul64x64(a.0, b.2);
+  var {1,1} p11 = mul64x64(a.1, b.1);
+  var {1,1} p20 = mul64x64(a.2, b.0);
+  var {1,1} p03 = mul64x64(a.0, b.3);
+  var {1,1} p12 = mul64x64(a.1, b.2);
+  var {1,1} p21 = mul64x64(a.2, b.1);
+  var {1,1} p30 = mul64x64(a.3, b.0);
+  var {1,1} p13 = mul64x64(a.1, b.3);
+  var {1,1} p22 = mul64x64(a.2, b.2);
+  var {1,1} p31 = mul64x64(a.3, b.1);
+  var {1,1} p23 = mul64x64(a.2, b.3);
+  var {1,1} p32 = mul64x64(a.3, b.2);
+  var {1,1} p33 = mul64x64(a.3, b.3);
+  var {1,1} t = <0, 0>;
+  var acc = 0;
+  var hi = 0;
+  var r0 = p00.0;
+  acc = p00.1;
+  t = __add_with_carry__(acc, p01.0, 0); acc = t.0; hi = hi + t.1;
+  t = __add_with_carry__(acc, p10.0, 0); acc = t.0; hi = hi + t.1;
+  var r1 = acc;
+  acc = hi; hi = 0;
+  t = __add_with_carry__(acc, p01.1, 0); acc = t.0; hi = hi + t.1;
+  t = __add_with_carry__(acc, p10.1, 0); acc = t.0; hi = hi + t.1;
+  t = __add_with_carry__(acc, p02.0, 0); acc = t.0; hi = hi + t.1;
+  t = __add_with_carry__(acc, p11.0, 0); acc = t.0; hi = hi + t.1;
+  t = __add_with_carry__(acc, p20.0, 0); acc = t.0; hi = hi + t.1;
+  var r2 = acc;
+  acc = hi; hi = 0;
+  t = __add_with_carry__(acc, p02.1, 0); acc = t.0; hi = hi + t.1;
+  t = __add_with_carry__(acc, p11.1, 0); acc = t.0; hi = hi + t.1;
+  t = __add_with_carry__(acc, p20.1, 0); acc = t.0; hi = hi + t.1;
+  t = __add_with_carry__(acc, p03.0, 0); acc = t.0; hi = hi + t.1;
+  t = __add_with_carry__(acc, p12.0, 0); acc = t.0; hi = hi + t.1;
+  t = __add_with_carry__(acc, p21.0, 0); acc = t.0; hi = hi + t.1;
+  t = __add_with_carry__(acc, p30.0, 0); acc = t.0; hi = hi + t.1;
+  var r3 = acc;
+  acc = hi; hi = 0;
+  t = __add_with_carry__(acc, p03.1, 0); acc = t.0; hi = hi + t.1;
+  t = __add_with_carry__(acc, p12.1, 0); acc = t.0; hi = hi + t.1;
+  t = __add_with_carry__(acc, p21.1, 0); acc = t.0; hi = hi + t.1;
+  t = __add_with_carry__(acc, p30.1, 0); acc = t.0; hi = hi + t.1;
+  t = __add_with_carry__(acc, p13.0, 0); acc = t.0; hi = hi + t.1;
+  t = __add_with_carry__(acc, p22.0, 0); acc = t.0; hi = hi + t.1;
+  t = __add_with_carry__(acc, p31.0, 0); acc = t.0; hi = hi + t.1;
+  var r4 = acc;
+  acc = hi; hi = 0;
+  t = __add_with_carry__(acc, p13.1, 0); acc = t.0; hi = hi + t.1;
+  t = __add_with_carry__(acc, p22.1, 0); acc = t.0; hi = hi + t.1;
+  t = __add_with_carry__(acc, p31.1, 0); acc = t.0; hi = hi + t.1;
+  t = __add_with_carry__(acc, p23.0, 0); acc = t.0; hi = hi + t.1;
+  t = __add_with_carry__(acc, p32.0, 0); acc = t.0; hi = hi + t.1;
+  var r5 = acc;
+  acc = hi; hi = 0;
+  t = __add_with_carry__(acc, p23.1, 0); acc = t.0; hi = hi + t.1;
+  t = __add_with_carry__(acc, p32.1, 0); acc = t.0; hi = hi + t.1;
+  t = __add_with_carry__(acc, p33.0, 0); acc = t.0; hi = hi + t.1;
+  var r6 = acc;
+  acc = hi; hi = 0;
+  var r7 = acc + p33.1;
+  return <r0, r1, r2, r3, r4, r5, r6, r7>;
+}
+
+fun 1 main() {
+  var {1,1,1,1} a = <1, 2, 3, 4>;
+  var {1,1,1,1} b = <5, 6, 7, 8>;
+  var {1,1,1,1,1,1,1,1} p = u256_mul_full(a, b);
+  return p.0;
+}

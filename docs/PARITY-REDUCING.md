@@ -40,7 +40,7 @@ a checked-in fixture only after review, through the normal route in
 
 | predicate | holds when |
 | --- | --- |
-| `signature` (default) | both compilers accept and the set of differing user-section names is exactly the seed's set |
+| `signature` (default) | both compilers accept and the set of differing runtime/user section names is exactly the seed's set |
 | `mismatch` | both accept and the artifacts differ in any way |
 | `section` | both accept and the section named by `--section` still differs |
 | `flapjack-reject` | Cake accepts, Flapjack rejects |
@@ -57,7 +57,9 @@ program.
 `section` exists for inputs that differ in many places at once. The stateless
 guest differs in 676 sections, so requiring all of them to survive prevents any
 reduction at all; `--predicate section --section digits_len` reduces towards one
-function's discrepancy instead.
+user-function discrepancy instead. Runtime helpers use the comparator's
+`runtime:` prefix, for example
+`--section runtime:_mpt_delete_node_body`.
 
 Large inputs also need a larger `--timeout`: the default 30 s is below what
 `flapjack-compile` takes on the guest, and a timed-out probe is reported as a
@@ -65,19 +67,26 @@ seed that does not satisfy the predicate.
 
 ## Passes
 
-Each pass runs to a fixpoint; the whole sequence repeats until a full round
-changes nothing (`--max-rounds`, default 8).
+Each pass is greedy: as soon as a strictly smaller candidate still satisfies
+the predicate it becomes the current source, and the pass continues from that
+smaller source. Passes run to a fixpoint; the whole sequence repeats until a
+full round changes nothing (`--max-rounds`, default 8). This follows the
+useful part of C-Reduce's workflow while keeping a deterministic, single-file
+reducer for Pancake.
 
 1. **strip comments** — `//` and `/* */` comments and blank lines.
-2. **delete-runs** — delete brace-balanced runs of lines, halving the chunk
-   size in the usual ddmin schedule. A balanced run is exactly a top-level
-   declaration, a whole block, or a single statement, so this one pass covers
-   every granularity without a Pancake parser.
-3. **empty-bodies** — replace a function body with a bare `return 0;`.
-4. **simplify-expressions** — replace a parenthesised subexpression with `0` or
+2. **delete-top-level** — delete balanced top-level declaration/statement
+   units using a coarse ddmin schedule. This keeps reductions of large guests
+   practical by testing whole functions before probing individual lines.
+3. **delete-runs** — delete brace-balanced runs of lines, halving the chunk
+   size in the usual ddmin schedule. A balanced run is a whole block or a
+   smaller statement run, so this pass supplies finer granularity without a
+   Pancake parser.
+4. **empty-bodies** — replace a function body with a bare `return 0;`.
+5. **simplify-expressions** — replace a parenthesised subexpression with `0` or
    `1`. Spans that follow an identifier are skipped, since those are call
    argument lists rather than expressions.
-5. **simplify-literals** — shrink an integer literal to `0`, to `1`, to its
+6. **simplify-literals** — shrink an integer literal to `0`, to `1`, to its
    absolute value, or to half its value.
 
 Candidate results are cached by source hash, so a pass that re-proposes a
@@ -94,6 +103,12 @@ shape already tried costs nothing.
 - `replay.sh` — a standalone check that exits `0` while the discrepancy
   reproduces and `3` once it is gone, so it doubles as a regression check.
   Pass another source as `$1` to check that one instead.
+
+While a long reduction is running, `.work/accepted.pnk` is a valid checkpoint
+containing the last accepted candidate. If an interactive session is
+interrupted, resume from that file; `candidate.pnk` may instead contain the
+probe that was in flight when the interruption happened and is not guaranteed
+to be valid.
 
 ## Worked example
 

@@ -1,0 +1,47 @@
+var 1 heap_ptr = 0;
+fun 1 alloc(1 n) {
+  var p = heap_ptr;
+  heap_ptr = p + n;
+  return p;
+}
+fun 1 heap_mark() { return heap_ptr; }
+fun 1 heap_release(1 m) { heap_ptr = m; return 0; }
+fun {1,1,1,1} fp_mul({1,1,1,1} a, {1,1,1,1} b) { return a; }
+fun {1,1,1,1} fp_sqr({1,1,1,1} a) { return a; }
+fun {1,1,1,1} fp_pow4({1,1,1,1} a, {1,1,1,1} e) {
+  var mark = heap_mark();
+  var 1 table = alloc(16 * 32);
+  var {1,1,1,1} t = a;
+  st table + 32, t;
+  var 1 d = 2;
+  while d <=+ 15 {
+    t = fp_mul(t, a);
+    st table + d * 32, t;
+    d = d + 1;
+  }
+  var {1,1,1,1} r = <1, 0, 0, 0>;
+  var 1 win = 64;
+  while win >+ 0 {
+    win = win - 1;
+    r = fp_sqr(r);
+    r = fp_sqr(r);
+    r = fp_sqr(r);
+    r = fp_sqr(r);
+    var 1 limb = win >>> 4;
+    var 1 shift = (win & 15) * 4;
+    var 1 ew = e.0;
+    if limb == 1 { ew = e.1; }
+    if limb == 2 { ew = e.2; }
+    if limb == 3 { ew = e.3; }
+    var 1 digit = (ew >>> shift) & 15;
+    if digit != 0 {
+      r = fp_mul(r, lds {1,1,1,1} (table + digit * 32));
+    }
+  }
+  heap_release(mark);
+  return r;
+}
+fun 1 main() {
+  var {1,1,1,1} r = fp_pow4(<1, 2, 3, 4>, <5, 6, 7, 8>);
+  return r.0;
+}

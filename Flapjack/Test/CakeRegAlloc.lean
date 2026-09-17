@@ -255,8 +255,8 @@ def sortColouring (colours : Flapjack.NatInfoMap Nat) :
 def partOrderGuard : Bool :=
   partitionReversed (fun x => x % 2 == 0) [0, 1, 2] == ([2, 0], [1])
 
-/-- `revive_moves` uses stable HOL `PARTITION`; `sort_moves` then applies
-    Cake's equal-priority order to the preserved revived bucket. -/
+/-- `revive_moves` uses reversing HOL `PARTITION`; `sort_moves` then applies
+    Cake's equal-priority order to the reversed revived bucket. -/
 def reviveOrderGuard : Bool :=
   let base : Flapjack.RiscV.CakeRegAlloc.CakeRaState :=
     { Flapjack.RiscV.CakeRegAlloc.CakeRaState.empty 4 with
@@ -264,7 +264,7 @@ def reviveOrderGuard : Bool :=
       unavailMovesWl := [(1, (5, 9)), (1, (13, 5)), (1, (13, 17))],
       availMovesWl := [(2, (1, 1))] }
   let out := Flapjack.RiscV.CakeRegAlloc.cakeReviveMoves [9] base
-  out.availMovesWl == [(2, (1, 1)), (1, (13, 5)), (1, (5, 9))] &&
+  out.availMovesWl == [(2, (1, 1)), (1, (5, 9)), (1, (13, 5))] &&
     out.unavailMovesWl == [(1, (13, 17))]
 
 def movesToSpOrderGuard : Bool :=
@@ -277,7 +277,7 @@ def movesToSpOrderGuard : Bool :=
 
 #guard reviveOrderGuard
 
-/-- `bg_ok` uses stable HOL `PARTITION`, then `st_ex_FILTER`s each case list. -/
+/-- `bg_ok` uses reversing HOL `PARTITION`, then `st_ex_FILTER`s each case list. -/
 def bgOkOrderGuard : Bool :=
   let base : Flapjack.RiscV.CakeRegAlloc.CakeRaState :=
     { Flapjack.RiscV.CakeRegAlloc.CakeRaState.empty 4 with
@@ -285,7 +285,17 @@ def bgOkOrderGuard : Bool :=
         [(0, [1]), (1, [3, 0]), (2, [3]), (3, [2, 1, 0])],
       nodeTag := Flapjack.RiscV.CakeRegAlloc.CakeNodeMap.ofNatInfoMap 4
         ((List.range 4).map (fun i => (i, .aTemp))) }
-  Flapjack.RiscV.CakeRegAlloc.cakeBgOk 3 0 3 base == some ([1], [0, 2])
+  Flapjack.RiscV.CakeRegAlloc.cakeBgOk 3 0 3 base == some ([1], [2, 0])
+
+def revivePartitionGuard : Bool :=
+  let base : Flapjack.RiscV.CakeRegAlloc.CakeRaState :=
+    { Flapjack.RiscV.CakeRegAlloc.CakeRaState.empty 4 with
+      adjLists := Flapjack.RiscV.CakeRegAlloc.CakeNodeMap.ofNatInfoMap 4
+        [(9, [17, 13, 5])],
+      unavailMovesWl := [(1, (5, 9)), (1, (13, 5)), (1, (13, 17))] }
+  let out := Flapjack.RiscV.CakeRegAlloc.cakeReviveMoves [9] base
+  out.availMovesWl == [(1, (5, 9)), (1, (13, 5)), (1, (13, 17))] &&
+    out.unavailMovesWl == []
 
 /-- `reg_alloc` on a single write/read pair colours the write with the
     first free register and the unconnected stack temp with `k`. -/
@@ -533,7 +543,7 @@ def runChecks : IO Bool := do
     heuSpillGuard, heuFixedDegreeGuard, raDeltaPairGuard, raDeltaFreeGuard,
     raStackOnlyGuard, raMovesCoalesceGuard, raMovesSelfFilteredGuard,
     partOrderGuard,
-    reviveOrderGuard, bgOkOrderGuard, qsortTiesTwoGuard,
+    reviveOrderGuard, revivePartitionGuard, bgOkOrderGuard, qsortTiesTwoGuard,
     movesToSpOrderGuard,
     qsortTiesThreeGuard, qsortDescGuard, raMovesStempGuard,
     raMovesStempHiGuard, negFirstMatchProjectionGuard, mapUpdateBoundedGuard,
@@ -553,8 +563,8 @@ def runChecks : IO Bool := do
     "init_alloc1_heu fixed degree", "reg_alloc delta pair",
     "reg_alloc delta free", "reg_alloc stack only",
     "reg_alloc moves coalesce", "reg_alloc moves self filtered",
-    "sorting partition order", "revive moves stable partition", "moves_to_sp order", "bg_ok order",
-    "sort_moves tie two", "sort_moves tie three", "sort_moves long tie",
+    "sorting partition order", "revive moves reversing partition", "revive partition direction", "bg_ok order",
+    "sort_moves tie two", "moves_to_sp order", "sort_moves tie three", "sort_moves long tie",
     "sort_moves descending",
     "reg_alloc moves stack temp", "reg_alloc moves stack temp high",
     "neg_first_match_col projection", "Cake map updates stay bounded",

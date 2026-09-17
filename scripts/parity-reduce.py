@@ -28,11 +28,12 @@ Reduction passes, each run to a fixpoint and then the whole sequence repeated
 until a full round changes nothing:
 
     1. strip comments and blank lines
-    2. delete brace-balanced line runs (top-level declarations, whole blocks,
-       and individual statements all fall out of this one), by halving chunk
-       sizes in the usual ddmin schedule
-    3. replace a function body with a bare ``return 0;``
-    4. simplify integer literals (to 0, to 1, drop the sign, halve)
+    2. delete balanced top-level declaration/statement units with a coarse
+       ddmin schedule
+    3. delete brace-balanced line runs for finer-grained block/statement
+       reduction
+    4. replace a function body with a bare ``return 0;``
+    5. simplify integer literals (to 0, to 1, drop the sign, halve)
 
 Outputs, under ``--out`` (default ``parity-reduction``)::
 
@@ -98,7 +99,7 @@ class Oracle:
                                   timeout=self.timeout)
 
     def compile_flapjack(self, path):
-        command = self._prefix() + [str(self.flapjack), str(path)]
+        command = self._prefix() + [str(self.flapjack), "--assembly", str(path)]
         return subprocess.run(command, capture_output=True, timeout=self.timeout)
 
     def observe(self, path):
@@ -120,12 +121,14 @@ class Oracle:
         if cake_sections is None or flapjack_sections is None:
             outcome["status"] = "unparsed"
             return outcome
-        _, cake_entry, cake_user = PB.classify(cake_sections)
-        _, flapjack_entry, flapjack_user = PB.classify(flapjack_sections)
+        cake_runtime, cake_entry, cake_user = PB.classify(cake_sections)
+        flapjack_runtime, flapjack_entry, flapjack_user = PB.classify(flapjack_sections)
+        cake_comparable = comparable_sections(cake_runtime, cake_user)
+        flapjack_comparable = comparable_sections(flapjack_runtime, flapjack_user)
         differing = sorted(
-            name for name in set(cake_user) | set(flapjack_user)
-            if cake_user.get(name, (None, None, None))[2]
-            != flapjack_user.get(name, (None, None, None))[2])
+            name for name in set(cake_comparable) | set(flapjack_comparable)
+            if cake_comparable.get(name, (None, None, None))[2]
+            != flapjack_comparable.get(name, (None, None, None))[2])
         entry_differs = (cake_entry or (None, None, None))[2] != \
             (flapjack_entry or (None, None, None))[2]
         outcome.update({
@@ -144,6 +147,30 @@ def signature(outcome):
     if outcome.get("status") != "compiled":
         return None
     return (tuple(outcome["differing_sections"]), outcome["entry_differs"])
+
+
+def section_summary(sections, limit=24):
+    """Keep large guest diagnostics readable while retaining the count."""
+    if len(sections) <= limit:
+        return ", ".join(sections)
+    shown = ", ".join(sections[:limit])
+    return "%s, ... (+%d more)" % (shown, len(sections) - limit)
+
+
+def comparable_sections(runtime, user):
+    """Return normalized names for runtime and user sections.
+
+    Runtime names use a prefix so they cannot collide with user functions.
+    This lets the section predicate target the same runtime names reported by
+    the artifact comparator, for example
+    ``runtime:_mpt_delete_node_body``.
+    """
+    result = {
+        "runtime:" + PB.normalize(name): (name,) + data
+        for name, data in runtime.items()
+    }
+    result.update({PB.normalize(name): data for name, data in user.items()})
+    return result
 
 
 PREDICATES = {}
@@ -234,6 +261,21 @@ class Tester:
         return verdict
 
 
+def keep_smaller(tester, current, candidate):
+    """Greedily keep only a strictly smaller interesting candidate."""
+    if len(candidate.encode()) >= len(current.encode()):
+        return False
+    if not tester.interesting(candidate):
+        return False
+    # Keep a valid checkpoint separate from ``candidate.pnk``.  The latter is
+    # overwritten before every oracle call, so a process killed during a
+    # rejected probe would otherwise leave only an invalid, non-resumable
+    # snapshot.  This checkpoint is deliberately in the reducer workdir and
+    # is removed with it after a successful run.
+    tester.path.with_name("accepted.pnk").write_text(candidate)
+    return True
+
+
 # ---------------------------------------------------------------------------
 # Reduction passes
 # ---------------------------------------------------------------------------
@@ -263,6 +305,66 @@ def brace_balanced(lines):
     return depth == 0
 
 
+def top_level_units(lines):
+    """Return balanced top-level declaration/statement spans.
+
+    Pancake declarations and function bodies are brace-delimited.  After the
+    comment-stripping pass, a run ending at brace depth zero is therefore a
+    safe coarse reduction unit: usually a whole function/global declaration,
+    and otherwise one top-level statement.  The oracle still validates every
+    candidate, so this deliberately remains a lexical splitter rather than a
+    second Pancake parser.
+    """
+    spans = []
+    start = None
+    depth = 0
+    for index, line in enumerate(lines):
+        if start is None:
+            if not line.strip():
+                continue
+            start = index
+        for character in line:
+            if character == "{":
+                depth += 1
+            elif character == "}":
+                depth -= 1
+        if depth == 0:
+            spans.append((start, index + 1))
+            start = None
+    if start is not None:
+        spans.append((start, len(lines)))
+    return spans
+
+
+def pass_delete_top_level(text, tester):
+    """Delete balanced top-level units with a coarse ddmin schedule."""
+    lines = text.splitlines()
+    removed = 0
+    spans = top_level_units(lines)
+    chunk = max(1, len(spans) // 2)
+    while chunk >= 1 and len(spans) >= 2:
+        progress = False
+        unit_start = 0
+        while unit_start + chunk <= len(spans):
+            first = spans[unit_start][0]
+            last = spans[unit_start + chunk - 1][1]
+            candidate_lines = lines[:first] + lines[last:]
+            candidate = "\n".join(candidate_lines) + "\n"
+            current = "\n".join(lines) + "\n"
+            if candidate_lines and keep_smaller(tester, current, candidate):
+                lines = candidate_lines
+                removed += chunk
+                spans = top_level_units(lines)
+                progress = True
+                continue
+            unit_start += chunk
+        if not progress:
+            if chunk == 1:
+                break
+            chunk = max(1, chunk // 2)
+    return "\n".join(lines) + "\n", removed
+
+
 def pass_delete_runs(text, tester):
     """ddmin over brace-balanced line runs.
 
@@ -280,12 +382,14 @@ def pass_delete_runs(text, tester):
             window = lines[start:start + chunk]
             if len(window) == chunk and brace_balanced(window):
                 candidate = lines[:start] + lines[start + chunk:]
-                if candidate and tester.interesting("\n".join(candidate) + "\n"):
+                current = "\n".join(lines) + "\n"
+                candidate_text = "\n".join(candidate) + "\n"
+                if candidate and keep_smaller(tester, current, candidate_text):
                     lines = candidate
                     removed += chunk
                     progress = True
                     continue
-            start += 1
+            start += chunk
         if not progress:
             chunk //= 2
     return "\n".join(lines) + "\n", removed
@@ -321,7 +425,9 @@ def pass_empty_bodies(text, tester):
             continue
         header = lines[index][:lines[index].index("{") + 1]
         candidate = lines[:index] + [header, "  return 0;", "}"] + lines[end + 1:]
-        if tester.interesting("\n".join(candidate) + "\n"):
+        current = "\n".join(lines) + "\n"
+        candidate_text = "\n".join(candidate) + "\n"
+        if keep_smaller(tester, current, candidate_text):
             lines = candidate
             replaced += 1
             index += 3
@@ -353,7 +459,7 @@ def pass_simplify_literals(text, tester):
                 continue
             for option in literal_candidates(value):
                 candidate = text[:match.start(1)] + str(option) + text[match.end(1):]
-                if tester.interesting(candidate):
+                if keep_smaller(tester, text, candidate):
                     text = candidate
                     simplified += 1
                     break
@@ -399,7 +505,7 @@ def pass_simplify_expressions(text, tester):
                 continue  # a call argument list, not an expression
             for replacement in ("0", "1"):
                 candidate = text[:start] + replacement + text[end:]
-                if tester.interesting(candidate):
+                if keep_smaller(tester, text, candidate):
                     text = candidate
                     simplified += 1
                     break
@@ -411,6 +517,7 @@ def pass_simplify_expressions(text, tester):
 
 
 PASSES = [
+    ("delete-top-level", pass_delete_top_level),
     ("delete-runs", pass_delete_runs),
     ("empty-bodies", pass_empty_bodies),
     ("simplify-expressions", pass_simplify_expressions),
@@ -420,7 +527,7 @@ PASSES = [
 
 def reduce_source(text, tester, max_rounds, verbose):
     stripped = strip_comments(text)
-    if tester.interesting(stripped):
+    if keep_smaller(tester, text, stripped):
         text = stripped
     counts = {name: 0 for name, _ in PASSES}
     rounds = 0
@@ -463,38 +570,27 @@ set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 source_file="${{1:-$here/case.min.pnk}}"
 exec python3 {repo}/scripts/parity-reduce.py "$source_file" \\
-  --predicate {predicate}{extra} \\
+  --predicate {predicate} \\
+{section_arg}  --expect-sections {sections} \\
   --check-only \\
-  --timeout {timeout} \\
   --cake "${{CAKE:-{cake}}}" \\
   --flapjack "${{FLAPJACK:-{flapjack}}}"
 """
 
-#: Above this many differing sections the seed's set is not worth pinning into
-#: the replay command; the predicate alone already says what has to hold.
-REPLAY_EXPECT_LIMIT = 8
-
-
-def replay_extra(predicate_name, sections, section):
-    """The predicate-specific flags a replay command needs."""
-    if predicate_name == "section":
-        return " \\\n  --section %s" % section
-    if predicate_name in ("signature", "mismatch") and \
-            len(sections) <= REPLAY_EXPECT_LIMIT:
-        return " \\\n  --expect-sections %s" % (",".join(sections) or "-")
-    return ""
-
 
 def write_outputs(out, text, report, cake, flapjack, predicate_name, sections,
-                  section, timeout):
+                  section_name=None):
     out.mkdir(parents=True, exist_ok=True)
     (out / "case.min.pnk").write_text(text)
     (out / "report.json").write_text(json.dumps(report, indent=2) + "\n")
     replay = out / "replay.sh"
+    section_arg = ""
+    if predicate_name == "section":
+        section_arg = "  --section %s \\\n" % (section_name or sections[0])
     replay.write_text(REPLAY_TEMPLATE.format(
-        cake=cake, flapjack=flapjack, repo=REPO_ROOT, timeout=timeout,
-        predicate=predicate_name,
-        extra=replay_extra(predicate_name, sections, section)))
+        cake=cake, flapjack=flapjack, repo=REPO_ROOT,
+        predicate=predicate_name, section_arg=section_arg,
+        sections=",".join(sections) or "(none)"))
     replay.chmod(0o755)
     return replay
 
@@ -554,7 +650,7 @@ def main(argv=None):
         seed_outcome.get("status"), seed_outcome.get("cake_accepted"),
         seed_outcome.get("flapjack_accepted"), len(seed_sections)))
     if seed_sections:
-        print("seed differing sections: %s" % ", ".join(seed_sections))
+        print("seed differing sections: %s" % section_summary(seed_sections))
 
     if not PREDICATES[args.predicate](seed_outcome, seed_outcome):
         print("seed does not satisfy predicate %r; nothing to reduce"
@@ -599,9 +695,14 @@ def main(argv=None):
         "tools": tool_versions(args.cake, args.flapjack),
     }
     out = Path(args.out)
+    # A section-focused reduction is intentionally allowed to discard all
+    # other guest mismatches.  The replay must therefore validate the reduced
+    # section set, not the seed guest's (often hundreds of) differing
+    # sections; otherwise the generated replay script rejects its own output.
+    replay_sections = final_outcome.get("differing_sections", []) \
+        if args.predicate == "section" else seed_sections
     replay = write_outputs(out, reduced, report, args.cake, args.flapjack,
-                           args.predicate, seed_sections, args.section,
-                           args.timeout)
+                           args.predicate, replay_sections, args.section)
     shutil.rmtree(workdir, ignore_errors=True)
 
     print("reduced %d -> %d bytes (%d -> %d lines) in %d oracle calls, %.1fs" % (

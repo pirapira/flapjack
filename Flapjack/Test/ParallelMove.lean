@@ -12,10 +12,29 @@ example :
         (.seq (.arith .or 5 4 4) (.arith .or 4 29 29)) : StackProg Nat) := by
   simp [wordStackMoveList, wordStackLocationMovesFromNames,
     wordStackParallelLocationMove, wordStackParallelLocationMoveAux,
-    wordStackLocationMoveDestinations, wordStackLocationMoveReady,
+    wordStackLocationMoveDestinations,
+    wordStackLocationMoveChain, wordStackLocationMoveBySource,
+    wordStackLocationMoveRemovePair,
     wordStackLocationMoveRemoveDestination, wordStackLocationMoveToScratch,
     wordStackLocationMoveFromScratch, wordStackLocationMove,
     wordStackLocation, wordStackOffset, wordStackJoin, lookupNatInfo]
+
+example :
+    wordStackParallelLocationMove (α := Nat)
+        { locations := [(0, .register 0), (1, .register 1),
+                        (2, .register 2), (5, .register 5),
+                        (7, .register 7)],
+          scratch := 31, addressScratch := 29, stackBase := 10 }
+        [(.register 0, .register 5), (.register 2, .register 7),
+         (.register 7, .register 7), (.register 5, .register 5),
+         (.register 1, .register 0)] =
+      some (.seq (.seq (.arith .or 1 0 0) (.arith .or 0 5 5))
+        (.arith .or 2 7 7) : StackProg Nat) := by
+  simp [wordStackParallelLocationMove, wordStackParallelLocationMoveAux,
+    wordStackLocationMoveDestinations, wordStackLocationMoveChain,
+    wordStackLocationMoveBySource, wordStackLocationMoveRemovePair,
+    wordStackLocationMoveRemoveDestination,
+    wordStackLocationMove, wordStackJoin]
 
 example :
     wordMoveToInstructions (width := 8) [(1, 2), (2, 1)] =

@@ -197,7 +197,7 @@ example :
     wordStackPhysicalMovesTo, wordStackPhysicalMovesToIndexed,
     wordStackParallelLocationMove,
     wordStackParallelLocationMoveAux, wordStackLocationMoveDestinations,
-    wordStackLocationMoveReady, wordStackLocationMoveRemoveDestination,
+    wordStackLocationMoveRemoveDestination,
     wordStackLocationMove, wordStackLocation,
     wordStackOffset, lookupNatInfo, wordStackJoin]
 
@@ -446,7 +446,7 @@ example :
     wordStackMovesFromPhysical,
     wordStackPhysicalMovesFrom, wordStackParallelLocationMove,
     wordStackParallelLocationMoveAux, wordStackLocationMoveDestinations,
-    wordStackLocationMoveReady, wordStackLocationMoveRemoveDestination,
+    wordStackLocationMoveRemoveDestination,
     wordStackLocationMove,
     wordStackLocation, lookupNatInfo]
 
@@ -469,7 +469,7 @@ example :
   simp [wordToStackProg, wordStackReturnCode, wordStackMovesToPhysical,
     wordStackPhysicalMovesTo, wordStackPhysicalMovesToIndexed,
     wordStackParallelLocationMove, wordStackParallelLocationMoveAux,
-    wordStackLocationMoveDestinations, wordStackLocationMoveReady,
+    wordStackLocationMoveDestinations,
     wordStackLocationMoveRemoveDestination, wordStackLocationMove,
     wordStackLocation, wordStackOffset,
     lookupNatInfo, wordToStackRaise,

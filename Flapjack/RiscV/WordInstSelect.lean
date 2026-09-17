@@ -376,10 +376,16 @@ def wordInstSelectProgram [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat
                 wordDeadSelectSeq prelude
                   (.inst (.arith (.binOp .sub destination left (.imm (0 - value)))))
               else
-                wordDeadSelectSeq prelude
-                  (.assign destination (.op operator [.var left, .const value]))
+                wordDeadSelectSeq
+                  (wordDeadSelectSeq prelude
+                    (.inst (.const (temp + 1) value)))
+                  (.inst (.arith (.binOp operator destination left
+                    (.reg (temp + 1)))))
           | _ => wordDeadSelectSeq prelude
-              (.assign destination (.op operator [left, .const value]))
+              (wordDeadSelectSeq
+                (.inst (.const (temp + 1) value))
+                (.inst (.arith (.binOp operator destination temp
+                  (.reg (temp + 1))))))
       | .shift operator left (.const value) =>
           let (prelude, left) := wordInstSelectAtom temp left
           match left, WordInstSelectImmediate.shiftImmediate value with

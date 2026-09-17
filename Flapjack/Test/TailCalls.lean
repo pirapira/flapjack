@@ -44,7 +44,7 @@ theorem tailCallArgumentMoves :
       tailCallTestConfig, wordStackLocation, lookupNatInfo]
   rw [wordStackMovesToPhysical, hmoves]
   simp [tailCallTestConfig, hnodup, wordStackLocationMove,
-    wordStackLocationMoveReady, wordStackLocationMoveRemoveDestination,
+    wordStackLocationMoveRemoveDestination,
     wordStackLocationMoveDestinations, wordStackParallelLocationMove,
     wordStackParallelLocationMoveAux, wordStackJoin, List.any_nil,
     List.any_cons, List.filter_nil]

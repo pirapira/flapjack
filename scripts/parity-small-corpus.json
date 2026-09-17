@@ -372,6 +372,12 @@
       "source_reference": "Reduced from the stateless guest's g1_double by scripts/parity-reduce.py. Cake's word_to_stack keeps Addr base offset through a load exactly as it does through a store, and the Lab pass recognises the const/arith/memory triple for loads as well as stores, emitting memOffset. wordStackCompileLoadNatNested had no Addr base offset case: it always materialised the whole address into addressScratch, so a load whose destination is spilled came out as addi x23, base, off; ld scratch, 0(x23); sd scratch, slot(x24) against Cake's ld scratch, off(base); sd scratch, slot(x24). Only the spilled destination was affected, because a register destination fuses through the statement-level path; register_load pins that half as exact, spilled_load the half that differed. Guest sections g1_double, swu_g1, ecp_add and g1_add were this shape.",
       "cake_sha256": "136627fe4ef74e45e9421f4ba3a6914b806cac5d269d0cbb8d9983e681c8a4e8",
       "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/allocator_colour_permutation.pnk",
+      "source_reference": "Reduced from the stateless guest's process_transaction by scripts/parity-reduce.py: 15840 lines to 2776 with the stub-other-functions pass, then to 20 lines in 1324 oracle calls. inst_select c temp (Set store exp) (word_instScript.sml:386-388) is Seq (inst_select_exp c temp temp (flatten_exp (pull_exp exp))) (Set store (Var temp)): it runs the expression selector unconditionally, so even Set store (Var v) becomes Move 0 [(temp, v)]; Set store (Var temp). Flapjack's wordInstSelectProgram had no Set case at all, so the store passed through untouched and that copy was never created. Full SSA then numbered every later name four lower than Cake's and the allocator saw one move fewer, which permuted the register colours -- the visible symptom here was the same bytes with slot 32 reloaded into cake x13 / fj x12 and so on. The throw path in this fixture is the smallest instance: Cake emits Inst (Const 137 0w); Move0 [(141,137)]; Set (Temp 0w) (Var 141) where Flapjack emitted const 137 0; set (temp 0) (var 137).",
+      "cake_sha256": "aa984a768fe54b226cdca51c0d3193aebefd2f44760d0e5e0cf0d45638a2ebb9",
+      "tracked_beads": []
     }
   ]
 }

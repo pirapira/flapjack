@@ -354,6 +354,22 @@ def wordInstSelectProgram [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat
       let (prelude, address) :=
         wordInstSelectAddressAtom temp (wordInstNormalizeExp address)
       wordDeadSelectSeq prelude (.shareInst operator name address)
+  | .set store value =>
+      /- `inst_select c temp (Set store exp)` (`word_instScript.sml:386-388`)
+         is `Seq (inst_select_exp c temp temp (flatten_exp (pull_exp exp)))
+         (Set store (Var temp))`.  It runs the expression selector
+         unconditionally, so even `Set store (Var v)` becomes
+         `Move 0 [(temp, v)]; Set store (Var temp)`.
+
+         Flapjack had no `Set` case at all, so the store passed through
+         untouched and the copy was never created.  Full SSA then numbered
+         every later name four lower than Cake's and the allocator saw one
+         fewer move, which permuted the colours: in the guest's
+         `process_transaction` Cake emits
+         `Inst (Const 137 0w); Move0 [(141,137)]; Set (Temp 0w) (Var 141)`
+         where Flapjack emitted `const 137 0; set (temp 0) (var 137)`. -/
+      let (prelude, selected) := wordInstSelectAtom temp (wordInstNormalizeExp value)
+      wordDeadSelectSeq prelude (.set store selected)
   | .assign destination value =>
       let value := wordInstNormalizeExp value
       match value with

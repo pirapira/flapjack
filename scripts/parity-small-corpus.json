@@ -546,6 +546,22 @@
       "tracked_beads": [
         "flapjack-8tb.5.15"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/gh1039_handled_call_labels.pnk",
+      "source_reference": "Reduced GH #1039 source-call witness: loop_to_word comp starts the handled call's handler and return labels at the next local label and advances past both bodies, preserving Cake's source-shaped call metadata.",
+      "cake_sha256": "9c880978b9dc615908fb334036b1af189c63bb83df48cb879974468bb095283f",
+      "tracked_beads": [
+        "flapjack-5v3"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/pxn98_unreach_elim.pnk",
+      "source_reference": "Reduced AST-to-RISC-V source-pass witness for flapjack-pxn.1.3.98: crep_inline unreach_elim must stop at a terminal return and preserve the return as an early-exit result before inlining.",
+      "cake_sha256": "ef032e94ef575575b8464c0232c2bac5c86189ebe8657e1af156cde26395e437",
+      "tracked_beads": [
+        "flapjack-pxn.1.3.98"
+      ]
     }
   ]
 }

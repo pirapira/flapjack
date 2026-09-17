@@ -1,0 +1,8 @@
+fun 1 dead_tail(1 x) {
+  return x;
+  x = 99;
+  @deadffi(0, 0, 0, 0);
+}
+fun 1 main() {
+  return dead_tail(7);
+}

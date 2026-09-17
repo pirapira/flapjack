@@ -278,6 +278,14 @@
       ]
     },
     {
+      "path": "Flapjack/Test/OriginalPancake/u256_mul_full.pnk",
+      "source_reference": "Minimized from stateless-pancaketh guest/src/lib/u256.pnk:168-286; exercises 16 mul64x64 calls and 29 Cake four-register AddCarry operations under allocator pressure.",
+      "cake_sha256": "d0d0e0cd32f85d749a52f22744a4ef7c2fcbc3be6e92b15c9ff067185851f95d",
+      "tracked_beads": [
+        "flapjack-8tb.4.7"
+      ]
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/gh1025_frame_bitmap.pnk",
       "source_reference": "GH #1025 differential-fuzz seed 11, f00010: loop/handler liveness must preserve Cake's five live frame words and bitmap vector [4,32,32,32,32,32]",
       "cake_sha256": "fee86f26b1438aa0586d1762200594116555eb70e27e4c8c041dad5cf3723c99",

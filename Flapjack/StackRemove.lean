@@ -234,6 +234,8 @@ def stackRemoveFuel [OfNat α 0] [OfNat α 1] : Nat → StackRemoveConfig → St
   | _fuel + 1, _, .inst instruction => .inst instruction
   | _fuel + 1, _, .shMem operator source address =>
       .shMem operator source address
+  | _fuel + 1, _, .shMemOffset operator source address offset =>
+      .shMemOffset operator source address offset
   | _fuel + 1, _, .const destination value => .const destination value
   | _fuel + 1, _, .arith operator destination left right =>
       .arith operator destination left right

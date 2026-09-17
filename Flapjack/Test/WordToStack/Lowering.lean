@@ -219,6 +219,17 @@ example :
   simp [wordToStackProg, wordStackSharedMemoryInst,
     wordStackSharedLoadInst, wordStackLocation, lookupNatInfo]
 
+/- Cake keeps a static displacement on shared-memory operations.  The
+   explicit carrier must survive Word-to-Stack rather than becoming an
+   ordinary-memory instruction. -/
+example :
+    wordStackCompileSharedNat
+        { locations := [(0, .register 4), (1, .register 5)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        .store8 0 (.op .add [.var 1, .const 32]) =
+      some (.shMemOffset .store8 4 5 32 : StackProg Nat) := by
+  rfl
+
 example :
     wordToStackProg
         { locations := [], scratch := 31, stackBase := 10 }

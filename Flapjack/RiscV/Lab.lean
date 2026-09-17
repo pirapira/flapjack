@@ -118,6 +118,7 @@ def labLineInstructionCount : LabLine (Word width) → Nat
       | .const _ value => labConstInstructionCount value
       | .stackMem _ _ _ _ => 1
       | .stackMemSub _ _ _ _ => 1
+      | .shareMemOffset _ _ _ _ => 1
       | .arithImm _ destination left immediate =>
           if destination = left && immediate = 0 then 0 else 1
       | .shiftImm _ _ _ _ => 1
@@ -354,6 +355,18 @@ def labCompilePlain [NeZero width] :
       pure [.jalr zero register zero]
   | .shareMem operator register address =>
       wordShareInstToInstructions operator register (.var address)
+  | .shareMemOffset operator register address offset => do
+      let register ← registerOfNat register
+      let address ← registerOfNat address
+      match operator with
+      | .load => pure [.loadWordOffset register address offset]
+      | .store => pure [.storeWordOffset register address offset]
+      | .load8 => pure [.loadByteOffset register address offset]
+      | .store8 => pure [.storeByteOffset register address offset]
+      | .load16 => pure [.loadHalfOffset register address offset]
+      | .store16 => pure [.storeHalfOffset register address offset]
+      | .load32 => pure [.load32Offset register address offset]
+      | .store32 => pure [.store32Offset register address offset]
   | .memOffset memoryOperator operator destination address offset => do
       let destination ← registerOfNat destination
       let address ← registerOfNat address
@@ -580,6 +593,8 @@ def labPlainNatToWord [NeZero width] : LabPlain Nat → LabPlain (Word width)
   | .dataBufferWrite address value => .dataBufferWrite address value
   | .shareMem operator register address =>
       .shareMem operator register address
+  | .shareMemOffset operator register address offset =>
+      .shareMemOffset operator register address (BitVec.ofNat width offset)
   | .memOffset memoryOperator operator destination address offset =>
       .memOffset memoryOperator operator destination address offset
 

@@ -300,6 +300,7 @@ def wordConstFpLoop [Add α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
   | .store address value, constants =>
       (.store (wordSimpConstExp constants address) value, constants)
   | .shareInst operator name address, constants =>
+      let address := wordSimpConstExp constants address
       match operator with
       | .load | .load8 | .load16 | .load32 =>
           (.shareInst operator name address, wordSimpMapDelete constants name)

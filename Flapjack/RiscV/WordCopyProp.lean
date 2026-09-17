@@ -296,9 +296,9 @@ def wordCopyProg [WordCseHash α] :
       (.ite operator (wordCopyLookup state condition)
           (wordCopyRegImm state right) thenBranch elseBranch,
         wordCopyMerge thenState elseState)
-  | state, .loop liveIn body liveOut =>
+  | _state, .loop liveIn body liveOut =>
       let (body, _) := wordCopyProg wordCopyEmpty body
-      (.loop liveIn body liveOut, state)
+      (.loop liveIn body liveOut, wordCopyEmpty)
   | state, .mustTerminate body =>
       let (body, state) := wordCopyProg state body
       (.mustTerminate body, state)

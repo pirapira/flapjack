@@ -278,6 +278,14 @@
       "tracked_beads": []
     },
     {
+      "path": "Flapjack/Test/OriginalPancake/fp_pow4_copy_loop.pnk",
+      "source_reference": "Cake word_copyScript.sml:377-380: copy_prop_prog resets the incoming equivalence state after a Loop. This isolates the fp_pow4 table/loop and call-result pressure that previously emitted a 20-byte surplus.",
+      "cake_sha256": "b4e2f41c484dc86b90a267cd0980789a024e0836cfc19a29b923a196453c75b2",
+      "tracked_beads": [
+        "flapjack-8tb.4.6"
+      ]
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/u256_add_carry.pnk",
       "source_reference": "minimized source-to-RISC-V differential for CakeML AddCarry ABI temporary numbering (cml_u256_add_carry_57)",
       "cake_sha256": "f117eaaae17df78521dd9f33f09e10042b09c94dda367d8dd8b0ed47f44a545d",

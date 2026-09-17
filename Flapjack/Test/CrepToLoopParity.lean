@@ -181,6 +181,15 @@ def shMemMissingLookupSkips : Bool :=
 
 #guard shMemMissingLookupSkips
 
+/- Cake's `StoreGlob` equation uses `nested_seq (p ++ [SetGlobal ...])`, so
+   even a side-effect-free initializer ends with the canonical trailing Skip. -/
+def storeGlobalNestedSeqMatches : Bool :=
+  match compileCrepToLoop compileContext [] (.storeGlob 9 (.const 7)) with
+  | .seq (.setGlobal 9 (.const 7)) .skip => true
+  | _ => false
+
+#guard storeGlobalNestedSeqMatches
+
 /- Cake's `Primitive` equation maps both destination and argument slots through
    `ctxt.vars`; leaving the source numbers untouched shifts every subsequent
    `ctxt.vars`; keeping source slots here changes the allocator input even when

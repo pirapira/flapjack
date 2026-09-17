@@ -40,7 +40,8 @@ example :
     wordToStackProgNat returnHandlerCodeConfig
       (.call (some ([7], ([], []), returnHandlerNatProgram, 12, 13))
         (some 3) [] none) =
-      some (wordToStackCallNoHandler false 3 0 0 31 []
+      some (wordToStackCallNoHandler false 3 0
+        (wordStackCallFrameOffset returnHandlerCodeConfig) 31 []
         (.const 5 9) 12 13) := by
   simp [wordToStackProgNat,
     wordStackCompileExpNat, wordStackWritePhysicalNat,
@@ -51,7 +52,7 @@ example :
     wordStackLocationMoveRemoveDestination, wordStackLocationMove,
     wordStackReturnStackSuffix,
     wordStackJoin,
-    returnHandlerCodeConfig, returnHandlerNatProgram]
+    returnHandlerCodeConfig, returnHandlerNatProgram, wordStackCallFrameOffset]
 
 example :
     wordProgToNat

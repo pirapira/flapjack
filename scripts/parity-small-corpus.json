@@ -300,6 +300,14 @@
       "tracked_beads": []
     },
     {
+      "path": "Flapjack/Test/OriginalPancake/process_message_empty_catch.pnk",
+      "source_reference": "Reduced from the full guest process_message discrepancy: Cake's word_simp$simp_duplicate_if must recurse through a conditional branch and exception-handler Call before word_to_stack, eliminating the clobbering 0/1 comparison round trip.",
+      "cake_sha256": "a397ae67860df485ecf2195e5f1baee53b8695aef922ff244fd8834c17a12641",
+      "tracked_beads": [
+        "flapjack-8tb.5"
+      ]
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/fp_pow4_copy_loop.pnk",
       "source_reference": "Cake word_copyScript.sml:377-380: copy_prop_prog resets the incoming equivalence state after a Loop. This isolates the fp_pow4 table/loop and call-result pressure that previously emitted a 20-byte surplus.",
       "cake_sha256": "b4e2f41c484dc86b90a267cd0980789a024e0836cfc19a29b923a196453c75b2",

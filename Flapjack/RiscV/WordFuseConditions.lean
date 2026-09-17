@@ -209,6 +209,32 @@ def wordDuplicateConditionsAux [BEq α] [OfNat α 0] [OfNat α 1]
                   statement :: wordDuplicateConditionsAux fuel normalize rest
           | none =>
               match statement with
+              | .call returns target arguments handler =>
+                  let returns := returns.map (fun metadata =>
+                    let (names, cutsets, returnProgram, firstLabel, secondLabel) := metadata
+                    (names, cutsets,
+                      wordListToProg
+                        (wordDuplicateConditionsAux fuel normalize
+                          (wordProgToList returnProgram)),
+                      firstLabel, secondLabel))
+                  let handler := handler.map (fun metadata =>
+                    let (exception, handlerProgram, firstLabel, secondLabel) := metadata
+                    (exception,
+                      wordListToProg
+                        (wordDuplicateConditionsAux fuel normalize
+                          (wordProgToList handlerProgram)),
+                      firstLabel, secondLabel))
+                  .call returns target arguments handler ::
+                    wordDuplicateConditionsAux fuel normalize rest
+              | .ite operator condition right thenBranch elseBranch =>
+                  let then' := wordListToProg
+                    (wordDuplicateConditionsAux fuel normalize
+                      (wordProgToList thenBranch))
+                  let else' := wordListToProg
+                    (wordDuplicateConditionsAux fuel normalize
+                      (wordProgToList elseBranch))
+                  .ite operator condition right then' else' ::
+                    wordDuplicateConditionsAux fuel normalize rest
               | .loop liveIn body liveOut =>
                   let body' := wordListToProg
                     (wordDuplicateConditionsAux fuel normalize (wordProgToList body))

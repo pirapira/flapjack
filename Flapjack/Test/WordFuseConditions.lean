@@ -12,7 +12,7 @@ def roundTrip : WordProg Nat :=
     (.seq (.assign 4 (.var 3))
       (.ite .notEqual 4 (.imm 0) (.assign 5 (.const 7)) .skip))
 
-def wordProgHasNotEqualZeroTest : WordProg Nat → Bool
+def wordProgHasNotEqualZeroTest {α : Type} : WordProg α → Bool
   | .seq first second =>
       wordProgHasNotEqualZeroTest first || wordProgHasNotEqualZeroTest second
   | .ite .notEqual _ (.imm _) _ _ => true
@@ -120,6 +120,29 @@ def loopConditionMaterializationFuses : Bool :=
   !wordProgHasNotEqualZeroTest (wordFuseConditions loopConditionMaterialization)
 
 #guard loopConditionMaterializationFuses
+
+/-! Cake also descends through a conditional branch before reaching a
+    handler call.  The source-shaped exception path uses exactly this shape:
+    the comparison result overwrites its left operand, is copied into a
+    handler temporary, and is then tested against zero. -/
+def callHandlerRoundTrip : WordProg (RiscV.Word 64) :=
+  .ite .equal 6 (.reg 12)
+    (.call (some ([6], ([0, 8], []), .skip, 7, 4)) (some 6) []
+      (some (12,
+        (.seq
+          (.ite .equal 10 (.reg 16)
+            (.assign 10 (.const 1)) (.assign 10 (.const 0)))
+          (.seq .tick
+            (.seq (.assign 4 (.var 10))
+              (.seq (.ite .notEqual 4 (.imm 0) .skip .skip) .tick)))),
+        7, 5)))
+    .skip
+
+def callHandlerRoundTripFuses : Bool :=
+  !wordProgHasNotEqualZeroTest
+    (wordFuseConditionsWithFold callHandlerRoundTrip)
+
+#guard callHandlerRoundTripFuses
 
 def terminatingElseIsPushedOut : Bool :=
   match wordPushOutIf

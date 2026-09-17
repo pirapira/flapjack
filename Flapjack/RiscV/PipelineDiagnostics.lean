@@ -323,6 +323,19 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordCheckedA
               addressScratch := 23
               specialScratch := RiscV.cakeSpecialScratch
               carryScratch := RiscV.cakeCarryScratch
+              /- Cake puts call argument `i` in colour `i + 1` -- colour 0 is
+                 the link register -- and every colour below `k` is a machine
+                 register, with `k = asm_conf.reg_count - (5 + LENGTH
+                 asm_conf.avoid_regs)` = 22 on RISC-V
+                 (`word_to_stackScript.sml:605`).  The window in
+                 argument-index space is therefore `k - 1`, not the twelve
+                 `x10`--`x21` slots.  Disassembling Cake's own sixteen-argument
+                 caller confirms the mapping is exactly
+                 `riscvRegisterName (i + 1)`: arguments land in x10, x11, x12,
+                 x13, x5, x6, x7, x8, x9, x27, x28, x29, x30, x14, x15, x16,
+                 which is the map `RegisterMap.riscvRegisterName` already
+                 carries. -/
+              abiRegisterCount := RiscV.CakeRegAlloc.cakeRiscVRegisterCount - 1
               abiBase := 1
               abiStride := 1
               callAbiBase := 0

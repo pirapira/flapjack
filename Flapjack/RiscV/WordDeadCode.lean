@@ -144,8 +144,11 @@ def wordDeadCodeAux : WordProg α → List Nat → List (List Nat × List Nat) �
       (.storeConsts source bitmap codeLength dataLength constants,
         wordDeadAddReads live [source, bitmap, codeLength, dataLength])
   | .opCurrHeap operator destination source, live, _ =>
-      (.opCurrHeap operator destination source,
-        wordDeadAddReads (wordDeadRemoveWrites live [destination]) [source])
+      if destination ∈ live then
+        (.opCurrHeap operator destination source,
+          wordDeadAddReads (wordDeadRemoveWrites live [destination]) [source])
+      else
+        (.skip, live)
   | .install codeBuffer codeLength dataBuffer dataLength cutsets, live, _ =>
       (.install codeBuffer codeLength dataBuffer dataLength cutsets,
         wordDeadAddReads live

@@ -446,6 +446,10 @@ def sourceSpillCostKeyGuard : Bool :=
   table.get 1 == some 10 && table.get 2 == some 1 && table.get 5 == some 20 &&
     table.get 0 == none
 
+def sourceMovePhysicalFallbackGuard : Bool :=
+  Flapjack.RiscV.CakeRegAlloc.cakeUpdateMove
+      (Flapjack.RiscV.CakeAlloc.spDefault []) (7, (2, 9)) == (7, (0, 1))
+
 /-- Cake's `remove_dead (Move pri ls)` keeps the surviving move priority
     (`word_allocScript.sml:891-899`).  The priority orders the coalescing
     worklist (`sort_moves` sorts descending, `do_coalesce` consumes the first
@@ -505,7 +509,8 @@ def parityGuard : Bool :=
     qsortTiesTwoGuard && qsortTiesThreeGuard && qsortDescGuard &&
     stempBadColourTieGuard && raMovesStempGuard && raMovesStempHiGuard &&
     negFirstMatchProjectionGuard
-    && mapUpdateBoundedGuard && sourceSpillCostKeyGuard && deadMovePriorityGuard
+    && mapUpdateBoundedGuard && sourceSpillCostKeyGuard && sourceMovePhysicalFallbackGuard
+    && deadMovePriorityGuard
     && deadProgramPriorityGuard && cakeBijSetPatriciaGuard
     && sortMovesTailSplitGuard
 
@@ -533,7 +538,7 @@ def runChecks : IO Bool := do
     qsortTiesThreeGuard, qsortDescGuard, raMovesStempGuard,
     raMovesStempHiGuard, negFirstMatchProjectionGuard, mapUpdateBoundedGuard,
     deadMovePriorityGuard, deadProgramPriorityGuard, sortMovesTailSplitGuard,
-    sourceSpillCostKeyGuard]
+    sourceSpillCostKeyGuard, sourceMovePhysicalFallbackGuard]
   let names := [
     "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
@@ -555,7 +560,7 @@ def runChecks : IO Bool := do
     "neg_first_match_col projection", "Cake map updates stay bounded",
     "remove_dead keeps move priority", "remove_dead_prog keeps entry priority",
     "mk_bij uses Cake Patricia Set order", "sort_moves tail split oracle",
-    "source-keyed spill costs"]
+    "source-keyed spill costs", "physical source move fallback"]
   let mut all := true
   for (name, result) in names.zip results do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"

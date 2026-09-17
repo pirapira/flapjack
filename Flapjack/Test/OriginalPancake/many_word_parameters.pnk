@@ -1,0 +1,9 @@
+fun 1 eleven_words({1,1,1,1,1} a, {1,1,1,1,1,1} b) { return 0; }
+fun 1 twelve_words({1,1,1,1,1,1} a, {1,1,1,1,1,1} b) { return 0; }
+fun 1 twelve_scalars(1 a, 1 b, 1 c, 1 d, 1 e, 1 g, 1 h, 1 i, 1 j, 1 k, 1 l, 1 m) {
+  return 0;
+}
+fun 1 main() {
+  @halt(@base, 0, @base, 0);
+  return 0;
+}

@@ -126,7 +126,8 @@ def wordCopySetStoreEq (state : WordCopyState) (store name : Nat) : WordCopyStat
               state.classStore.filter (fun entry => entry.1 != store)
             classNext := state.classNext + 1 }
     | none =>
-        { aliases := (name, name) ::
+        { state with
+          aliases := (name, name) ::
             state.aliases.filter (fun entry => entry.1 != name)
           storeToEq := (store, name) ::
             state.storeToEq.filter (fun entry => entry.1 != store)
@@ -287,6 +288,10 @@ def wordCopyProg [WordCseHash α] :
             (.move 0 moves, state)
   | state, .store address value =>
       (.store (wordCopyExp state address) (wordCopyLookup state value), state)
+  | state, .opCurrHeap operator destination source =>
+      let source' := wordCopyLookup state source
+      let source'' := if source' == destination then source else source'
+      (.opCurrHeap operator destination source'', wordCopyRemove state destination)
   | state, .set store value =>
       /- `copy_prop_prog (Set name exp)` (`word_copyScript.sml:332-337`). -/
       match value with

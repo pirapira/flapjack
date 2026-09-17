@@ -1,0 +1,22 @@
+var 1 ts = 0;
+fun 1 sk_make(1 addr, 1 key) { return addr + key; }
+fun 1 u256_is_zero({1,1,1,1} value) { return value.0 == 0; }
+fun 1 jdel(1 table, 1 key) { return 0; }
+fun 1 alloc(1 n) { return 0; }
+fun 1 jset(1 table, 1 key, 1 value) { return 0; }
+fun 1 set_transient_storage(1 addr, 1 key, {1,1,1,1} value) {
+  var 1 k = sk_make(addr, key);
+  var 1 z = u256_is_zero(value);
+  if z != 0 {
+    jdel(lds 1 (ts + 64), k);
+    return 0;
+  }
+  var 1 v = alloc(32);
+  st v, value;
+  jset(lds 1 (ts + 64), k, v);
+  return 0;
+}
+fun 1 main() {
+  @halt(@base, 0, @base, 0);
+  return 0;
+}

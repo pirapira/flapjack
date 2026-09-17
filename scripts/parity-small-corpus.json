@@ -396,6 +396,12 @@
       "source_reference": "Reduced from the stateless guest's process_transaction by scripts/parity-reduce.py: 15840 lines to 2776 with the stub-other-functions pass, then to 20 lines in 1324 oracle calls. inst_select c temp (Set store exp) (word_instScript.sml:386-388) is Seq (inst_select_exp c temp temp (flatten_exp (pull_exp exp))) (Set store (Var temp)): it runs the expression selector unconditionally, so even Set store (Var v) becomes Move 0 [(temp, v)]; Set store (Var temp). Flapjack's wordInstSelectProgram had no Set case at all, so the store passed through untouched and that copy was never created. Full SSA then numbered every later name four lower than Cake's and the allocator saw one move fewer, which permuted the register colours -- the visible symptom here was the same bytes with slot 32 reloaded into cake x13 / fj x12 and so on. The throw path in this fixture is the smallest instance: Cake emits Inst (Const 137 0w); Move0 [(141,137)]; Set (Temp 0w) (Var 141) where Flapjack emitted const 137 0; set (temp 0) (var 137).",
       "cake_sha256": "aa984a768fe54b226cdca51c0d3193aebefd2f44760d0e5e0cf0d45638a2ebb9",
       "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/set_transient_storage_copy_class.pnk",
+      "source_reference": "Minimized set_transient_storage witness: Cake's word_copy preserves copy classes across a new HeapLength store class and rewrites the later argument through the current representative.",
+      "cake_sha256": "0d2162f9aadd130cdc573fff76bf9726907afd89706d4ef1d366f7225aef6da3",
+      "tracked_beads": ["flapjack-gs2"]
     }
   ]
 }

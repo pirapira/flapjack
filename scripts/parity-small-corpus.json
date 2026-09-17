@@ -252,6 +252,12 @@
       "source_reference": "inst_select_exp c tar temp (Op op [e1; Const w]) (word_instScript.sml:252-275) tests c.valid_imm (INL op) w for every operator; only the Sub retry with -w is Add-specific, and the remaining case materializes w into temp+1. Flapjack's expression-level selector tested the immediate for Add alone, so a nested x && 1w emitted ori t, x0, 1; and d, x, t where Cake emits andi d, x, 1 - one instruction more per occurrence. bit_test, or_immediate and xor_immediate cover the immediate path for And/Or/Xor; sub_immediate covers the Add/Sub retry; wide_mask and wide_or pin the no-immediate path, where the constant must still be materialized into temp+1 rather than left as an unfused expression - leaving it there makes the enclosing Shift miss its own immediate and cost two more instructions (guest bswap64, rmd_f).",
       "cake_sha256": "1978fe507ca3dc7780fea4d42541eb6baaad3d2f91e713cb89ee5c280d24bb02",
       "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/loop_body_condition_fuse.pnk",
+      "source_reference": "word_simp$simp_duplicate_if (word_simpScript.sml:432-454) is structurally recursive and descends into Loop bodies, MustTerminate bodies and both sub-programs of a Call. Flapjack's executable version is fuel-driven and its wordProgFuel measure counted only Seq and If, so a whole while body was budgeted as one node and the recursion ran out of fuel part-way down it. A materialised comparison nested inside a loop body then kept its 0/1 round trip - bne; t := 0; jal; t := 1; beq t, 0 - where Cake folds the comparison straight into the branch: five instructions more per occurrence. break_then_more is the minimal shape (a comparison whose If is followed by further statements inside the loop); return_then_more is the guest's is_zero_bytes; nested_loop needs two levels of Loop descent; call_return_condition needs the Call return-program descent.",
+      "cake_sha256": "391ccced1dbd1cf6d4a70968404e6a81e31a589f32385eb9b0771b2868eeeaa2",
+      "tracked_beads": []
     }
   ]
 }

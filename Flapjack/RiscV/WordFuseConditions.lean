@@ -91,11 +91,30 @@ def wordListToProg : List (WordProg α) → WordProg α
   | [single] => single
   | first :: rest => .seq first (wordListToProg rest)
 
-/-- A size measure for the shapes the fusion pass recurses through. -/
+/-- A size measure for the shapes the fusion pass recurses through.
+
+    Cake's `simp_duplicate_if` (`word_simpScript.sml:432-454`) is structurally
+    recursive and descends into `Loop` bodies, `MustTerminate` bodies and both
+    sub-programs of a `Call`.  The executable version below is fuel-driven, so
+    this measure has to cover the same shapes: counting only `Seq` and `If`
+    left a `while` loop's body budgeted as a single node, and the recursion
+    ran out of fuel part-way down it.  A materialised comparison nested inside
+    a loop body then kept its 0/1 round trip -- `bne; t := 0; jal; t := 1;
+    beq t, 0` where Cake emits one branch -- five instructions more per
+    occurrence. -/
 def wordProgFuel : WordProg α → Nat
   | .seq first second => 1 + wordProgFuel first + wordProgFuel second
   | .ite _ _ _ thenBranch elseBranch =>
       1 + wordProgFuel thenBranch + wordProgFuel elseBranch
+  | .loop _ body _ => 1 + wordProgFuel body
+  | .mustTerminate body => 1 + wordProgFuel body
+  | .call returns _ _ handler =>
+      1 + (match returns with
+           | some (_, _, returnProgram, _, _) => wordProgFuel returnProgram
+           | none => 0)
+        + (match handler with
+           | some (_, handlerProgram, _, _) => wordProgFuel handlerProgram
+           | none => 0)
   | _ => 1
 
 /-- Recognise `ite _ _ _ (assign t 1) (assign t 0)`, which defines the 0/1

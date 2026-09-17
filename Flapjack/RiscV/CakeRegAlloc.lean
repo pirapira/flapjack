@@ -1074,7 +1074,7 @@ def cakeDoRegAlloc (alg : CakeAlgorithm) (scost : Option (CakeNodeMap Nat))
     (forced : List (Nat × Nat)) (fs : List Nat) : Option (NatInfoMap Nat) :=
   let bij := cakeMkBij tree
   let state := cakeInitRaState tree forced fs
-  let spta := fun v => (cakeMapLookup bij.toAllocator v).getD 0
+  let spta := CakeAlloc.spDefault bij.toAllocator
   let moves0 := moves.map (cakeUpdateMove spta)
   let movesF := filterReversed (fun m => cakeFullConsistencyOk state k m.2.1 m.2.2) moves0
   let selMoves := match alg with

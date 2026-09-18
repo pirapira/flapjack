@@ -273,6 +273,7 @@ import Flapjack.CrepeProgramLoopFuelRelation
 import Flapjack.CrepeProgramSourceWordLoopFuelRelation
 import Flapjack.CrepeProgramIteCorrectness
 import Flapjack.CrepeWordProgramCases
+import Flapjack.CrepeProgramWordInduction
 import Flapjack.CrepeProgramWhileCorrectness
 import Flapjack.CrepeWordLoopProgramCase
 import Flapjack.CrepeLoopComposeFuelRelation

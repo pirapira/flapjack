@@ -741,7 +741,7 @@ theorem panValuePcRaisedWordResultRel_of_semantic_lift
       some value)
     (hexception : exceptionRel exception (.word value) exceptionCode)
     (hfresh : state.locals (context.maxVar + 1) = none) :
-    panValuePcResultRel structs context exceptionRel resultExceptionCode
+    panValuePcResultRelWithContextCode structs context exceptionRel resultExceptionCode
       (crepPcWordGlobalsLookup (α := α))
       (.raised (fun _ => none) sourceGlobals sourceMemory exception (.word value))
       (.raised { state with globals := updateMemory state.globals 0 value }
@@ -752,17 +752,7 @@ theorem panValuePcRaisedWordResultRel_of_semantic_lift
     baseAddress topAddress bytesInWord sourceFuel targetFuel exception
     exceptionCode value expression compiled exceptionRel resultExceptionCode
     hlookup hcode hbytesInWord hrel hsource hcompile hcompiled hexception hfresh
-  simpa [panValuePcResultRel, panValuePcResultRelWithContextCode,
-    panValuePcExceptionResultRelWithContextCode] using
-    (show panValueCrepStateRel structs context
-        (fun _ => none) sourceGlobals sourceMemory
-        { state with globals := updateMemory state.globals 0 value } ∧
-      panValuePcExceptionResultRel structs context exceptionRel resultExceptionCode
-        (crepPcWordGlobalsLookup (α := α))
-        sourceGlobals sourceMemory exception (.word value)
-        { state with globals := updateMemory state.globals 0 value }
-        exceptionCode from
-      ⟨hresult.2.2.1, hresult.2.2.2.1⟩)
+  exact hresult.2.2
 
 /-! Adapter for the generic `pc_compile_correct` raised obligation.  The
     existing word semantic lift supplies the concrete evaluator equations;
@@ -822,9 +812,11 @@ theorem panValuePcRaisedWordHraise
     baseAddress topAddress bytesInWord sourceFuel targetFuel exception
     exceptionCode value expression compiled exceptionRel resultExceptionCode
     hlookup hcode hbytesInWord hrel hsource hcompile hcompiled hexception hfresh
-  rcases hresult with
-    ⟨hpost, spillAddress, code, hresultCode, htargetCode, hcontrol, hpayload⟩
-  refine ⟨?_, hlookup⟩
+  rcases hresult with ⟨hpost, hcontext⟩
+  rcases hcontext with ⟨hordinary, hlookupCode⟩
+  rcases hordinary with
+    ⟨spillAddress, code, hresultCode, htargetCode, hcontrol, hpayload⟩
+  refine ⟨?_, hlookupCode⟩
   refine ⟨hpost, ?_⟩
   refine ⟨spillAddress, hcontrol, ?_, ?_, ?_⟩
   · simpa [htargetCode] using hresultCode

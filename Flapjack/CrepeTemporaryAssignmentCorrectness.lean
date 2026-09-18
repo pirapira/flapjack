@@ -19,6 +19,85 @@ def restoredCrepLocals (locals result : Nat → Option α) : List Nat →
       if current = name then locals current
       else restoredCrepLocals locals result names current
 
+theorem restoredCrepLocals_updateCrepLocalList
+    [OfNat α 0]
+    (locals : Nat → Option α) (names : List Nat) (values : List α)
+    (hlength : names.length = values.length)
+    (hdistinct : CrepDistinctNames names)
+    (hnone : ∀ name ∈ names, locals name = none) :
+    restoredCrepLocals locals
+        (updateCrepLocalList locals names values) names = locals := by
+  induction names generalizing locals values with
+  | nil =>
+      cases values with
+      | nil => rfl
+      | cons value values => simp at hlength
+  | cons name names ih =>
+      rcases hdistinct with ⟨hnotName, htailDistinct⟩
+      cases values with
+      | nil => simp at hlength
+      | cons value values =>
+          have hlengthTail : names.length = values.length := by
+            simpa using Nat.succ.inj hlength
+          have hnoneTail : ∀ current ∈ names,
+              updateCrepLocal locals name value current = none := by
+            intro current hcurrent
+            have hcurrentNe : current ≠ name := by
+              intro heq
+              apply hnotName
+              simpa [heq] using hcurrent
+            have hnoneCurrent : locals current = none :=
+              hnone current (by simp [hcurrent])
+            simp [updateCrepLocal, hcurrentNe, hnoneCurrent]
+          have htail := ih
+            (locals := updateCrepLocal locals name value)
+            (values := values) hlengthTail htailDistinct
+            (by
+              intro current hcurrent
+              exact hnoneTail current hcurrent)
+          funext current
+          by_cases hcurrent : current = name
+          · simp [restoredCrepLocals, hcurrent]
+          · simp only [restoredCrepLocals, hcurrent,
+              updateCrepLocalList]
+            have hinv : ∀ (tailNames : List Nat), name ∉ tailNames →
+                restoredCrepLocals
+                    (updateCrepLocal locals name value)
+                    (updateCrepLocalList
+                    (updateCrepLocal locals name value) names values)
+                    tailNames current =
+                  restoredCrepLocals locals
+                    (updateCrepLocalList
+                    (updateCrepLocal locals name value) names values)
+                    tailNames current := by
+              intro tailNames
+              induction tailNames with
+              | nil =>
+                  intro _
+                  rfl
+              | cons tailName tailNames ihTail =>
+                  intro hname
+                  by_cases htail : current = tailName
+                  · have htailNe : tailName ≠ name := by
+                      intro heq
+                      apply hname
+                      simp [heq]
+                    simp [restoredCrepLocals, htail, updateCrepLocal,
+                      htailNe]
+                  · have htail' : name ∉ tailNames := by
+                      intro hmem
+                      apply hname
+                      exact List.mem_cons_of_mem tailName hmem
+                    simp [restoredCrepLocals, htail, ihTail htail']
+            have htailCurrent := congrFun htail current
+            rw [hinv names hnotName] at htailCurrent
+            change restoredCrepLocals locals
+              (updateCrepLocalList
+                (updateCrepLocal locals name value) names values)
+              names current = locals current
+            rw [htailCurrent]
+            simp [updateCrepLocal, hcurrent]
+
 theorem updateCrepLocalList_of_mem_eq
     (locals locals' : Nat → Option α)
     (names : List Nat) (values : List α) (current : Nat)

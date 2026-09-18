@@ -283,6 +283,169 @@ theorem panValueCrepProgramStateControlSafe_raise
               cases hsource
               simp [panValuePcControlLabelSafe]
 
+theorem panValueCrepProgramStateControlSafe_seq
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (first second : Prog α)
+    (hfirstCorrect : PanValueCrepProgramStateCorrect first)
+    (hfirstSafe : PanValueCrepProgramStateControlSafe first)
+    (hsecondSafe : PanValueCrepProgramStateControlSafe second) :
+    PanValueCrepProgramStateControlSafe (.seq first second) := by
+  intro context structs sourceFunctions functions sourceLocals sourceGlobals
+    sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord sourceFuel targetFuel exceptionRel
+    sourceResult crepResult hrel hsource hcrep
+  have hcompile :
+      compileProg context (.seq first second) =
+        .seq (compileProg context first) (compileProg context second) := by
+    simp [compileProg]
+  rw [hcompile] at hcrep
+  cases sourceFuel with
+  | zero =>
+      simp [evalPanValueProgWithPrimitiveCallsAndFfi] at hsource
+  | succ sourceFuel =>
+      cases targetFuel with
+      | zero =>
+          simp [evalCrepFullProgState] at hcrep
+      | succ targetFuel =>
+          cases hfirstSource : evalPanValueProgWithPrimitiveCallsAndFfi
+              primitive sourceHandler structs sourceFunctions
+              baseAddress topAddress bytesInWord sourceFuel
+              sourceLocals sourceGlobals sourceMemory first with
+          | none =>
+              simp [evalPanValueProgWithPrimitiveCallsAndFfi,
+                hfirstSource] at hsource
+          | some firstSourceResult =>
+              cases hfirstCrep : evalCrepFullProgState functions crepPrimitive ffi sharedMem
+                  baseAddress topAddress targetFuel state (compileProg context first) with
+              | none =>
+                  simp [evalCrepFullProgState, hfirstCrep] at hcrep
+              | some firstCrepResult =>
+                  have hfirstSafeResult := hfirstSafe context structs sourceFunctions functions
+                    sourceLocals sourceGlobals sourceMemory state primitive sourceHandler
+                    crepPrimitive ffi sharedMem baseAddress topAddress bytesInWord
+                    sourceFuel targetFuel exceptionRel firstSourceResult firstCrepResult
+                    hrel hfirstSource hfirstCrep
+                  have hfirstRel := hfirstCorrect context structs sourceFunctions functions
+                    sourceLocals sourceGlobals sourceMemory state primitive sourceHandler
+                    crepPrimitive ffi sharedMem baseAddress topAddress bytesInWord
+                    sourceFuel targetFuel exceptionRel firstSourceResult firstCrepResult
+                    hrel hfirstSource hfirstCrep
+                  cases firstSourceResult with
+                  | normal firstLocals firstGlobals firstMemory =>
+                      cases firstCrepResult with
+                      | normal firstState =>
+                          have hstateRel :
+                              panValueCrepStateRel structs context firstLocals firstGlobals
+                                firstMemory firstState := by
+                            simpa [panValueCrepControlRel] using hfirstRel
+                          have hsourceSecond :
+                              evalPanValueProgWithPrimitiveCallsAndFfi
+                                primitive sourceHandler structs sourceFunctions
+                                baseAddress topAddress bytesInWord sourceFuel
+                                firstLocals firstGlobals firstMemory second =
+                              some sourceResult := by
+                            simpa [evalPanValueProgWithPrimitiveCallsAndFfi,
+                              hfirstSource] using hsource
+                          have hcrepSecond :
+                              evalCrepFullProgState functions crepPrimitive ffi sharedMem
+                                baseAddress topAddress targetFuel firstState
+                                (compileProg context second) = some crepResult := by
+                            simpa [evalCrepFullProgState, hfirstCrep] using hcrep
+                          exact hsecondSafe context structs sourceFunctions functions
+                            firstLocals firstGlobals firstMemory firstState primitive
+                            sourceHandler crepPrimitive ffi sharedMem baseAddress topAddress
+                            bytesInWord sourceFuel targetFuel exceptionRel sourceResult
+                            crepResult hstateRel hsourceSecond hcrepSecond
+                      | returned firstState values
+                      | raised firstState exception
+                      | broke firstState label
+                      | continued firstState label
+                      | finalFfi firstState event =>
+                          simp [panValueCrepControlRel] at hfirstRel
+                  | returned firstLocals firstGlobals firstMemory values =>
+                      cases firstCrepResult with
+                      | normal firstState
+                      | raised firstState exception
+                      | broke firstState label
+                      | continued firstState label
+                      | finalFfi firstState event =>
+                          simp [panValueCrepControlRel] at hfirstRel
+                      | returned firstState firstValues =>
+                          have hsourceEq :
+                              PanValueControlResult.returned firstLocals firstGlobals
+                                  firstMemory values = sourceResult := by
+                            simpa [evalPanValueProgWithPrimitiveCallsAndFfi,
+                              hfirstSource] using hsource
+                          have hcrepEq :
+                              CrepControlResult.returned firstState firstValues = crepResult := by
+                            simpa [evalCrepFullProgState, hfirstCrep] using hcrep
+                          cases hsourceEq
+                          cases hcrepEq
+                          exact hfirstSafeResult
+                  | raised firstLocals firstGlobals firstMemory exception value =>
+                      cases firstCrepResult with
+                      | normal firstState
+                      | returned firstState values
+                      | broke firstState label
+                      | continued firstState label
+                      | finalFfi firstState event =>
+                          simp [panValueCrepControlRel] at hfirstRel
+                      | raised firstState exceptionCode =>
+                          have hsourceEq :
+                              PanValueControlResult.raised firstLocals firstGlobals
+                                  firstMemory exception value = sourceResult := by
+                            simpa [evalPanValueProgWithPrimitiveCallsAndFfi,
+                              hfirstSource] using hsource
+                          have hcrepEq :
+                              CrepControlResult.raised firstState exceptionCode = crepResult := by
+                            simpa [evalCrepFullProgState, hfirstCrep] using hcrep
+                          cases hsourceEq
+                          cases hcrepEq
+                          exact hfirstSafeResult
+                  | broke firstLocals firstGlobals firstMemory =>
+                      cases firstCrepResult with
+                      | normal firstState
+                      | returned firstState values
+                      | raised firstState exception
+                      | continued firstState label
+                      | finalFfi firstState event =>
+                          simp [panValueCrepControlRel] at hfirstRel
+                      | broke firstState label =>
+                          have hsourceEq :
+                              PanValueControlResult.broke firstLocals firstGlobals
+                                  firstMemory = sourceResult := by
+                            simpa [evalPanValueProgWithPrimitiveCallsAndFfi,
+                              hfirstSource] using hsource
+                          have hcrepEq :
+                              CrepControlResult.broke firstState label = crepResult := by
+                            simpa [evalCrepFullProgState, hfirstCrep] using hcrep
+                          cases hsourceEq
+                          cases hcrepEq
+                          exact hfirstSafeResult
+                  | continued firstLocals firstGlobals firstMemory =>
+                      cases firstCrepResult with
+                      | normal firstState
+                      | returned firstState values
+                      | raised firstState exception
+                      | broke firstState label
+                      | finalFfi firstState event =>
+                          simp [panValueCrepControlRel] at hfirstRel
+                      | continued firstState label =>
+                          have hsourceEq :
+                              PanValueControlResult.continued firstLocals firstGlobals
+                                  firstMemory = sourceResult := by
+                            simpa [evalPanValueProgWithPrimitiveCallsAndFfi,
+                              hfirstSource] using hsource
+                          have hcrepEq :
+                              CrepControlResult.continued firstState label = crepResult := by
+                            simpa [evalCrepFullProgState, hfirstCrep] using hcrep
+                          cases hsourceEq
+                          cases hcrepEq
+                          exact hfirstSafeResult
+
 structure PanValuePcInput (α : Type u) where
   structs : StructContext
   code : PanValuePcSourceCode α

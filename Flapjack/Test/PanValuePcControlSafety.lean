@@ -15,6 +15,15 @@ example : PanValueCrepProgramStateControlSafe (.break : Prog Nat) :=
 example : PanValueCrepProgramStateControlSafe (.continue : Prog Nat) :=
   panValueCrepProgramStateControlSafe_continue
 
+example :
+    PanValueCrepProgramStateControlSafe
+      (.seq (.break : Prog Nat) (.continue : Prog Nat)) := by
+  exact panValueCrepProgramStateControlSafe_seq
+    (.break : Prog Nat) (.continue : Prog Nat)
+    panValueCrepProgramStateCorrect_break
+    panValueCrepProgramStateControlSafe_break
+    panValueCrepProgramStateControlSafe_continue
+
 /-! Nonzero labels remain rejected at the `pc_compile_correct` boundary. -/
 example :
     ¬ panValuePcResultRel [] controlContext (fun _ _ _ => True) (fun _ => some 0)

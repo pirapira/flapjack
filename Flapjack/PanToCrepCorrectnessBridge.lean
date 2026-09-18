@@ -1069,6 +1069,60 @@ theorem crepPcFlatGlobalsLookup_of_stored_flat_words
   exact readMemoryListAt_updateMemoryListAt state.globals 0 bytesInWord
     (panValueFlatWords value) hdistinct
 
+theorem panValuePcRaisedHraiseData_of_flat_spill_state
+    [BEq α] [LawfulBEq α] [OfNat α 0] [Add α]
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (sourceException : ExceptionId) (values : List α)
+    (state : CrepState α) (bytesInWord targetException : α)
+    (sourceValue : PanValue α)
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory state)
+    (hexception : exceptionRel sourceException sourceValue targetException)
+    (hcode : exceptionCode sourceException = some targetException)
+    (hflat : panValueFlatWords sourceValue = values)
+    (hdistinct : List.Pairwise (fun left right : α => left ≠ right)
+      (storeAddresses (0 : α) bytesInWord values.length))
+    (hsize : Shape.shapeSize (panValueShape structs sourceValue) ≤ 32) :
+    panValuePcRaisedHraiseData exceptionCode
+      (crepPcFlatGlobalsLookup bytesInWord) structs context exceptionRel
+      (fun _ => none) sourceGlobals sourceMemory sourceException sourceValue
+      { state with globals :=
+          updateMemoryListAt state.globals 0 bytesInWord values }
+      targetException := by
+  have hpost : panValueCrepStateRel structs context
+      (fun _ => none) sourceGlobals sourceMemory
+      { state with globals :=
+          updateMemoryListAt state.globals 0 bytesInWord values } := by
+    refine ⟨hrel.1, panValueCrepLocalsRel_empty structs context state.locals, ?_⟩
+    exact hrel.2.2
+  have hraisedState : panValueCrepRaisedStateRel structs context
+      sourceGlobals sourceMemory
+      { state with globals :=
+          updateMemoryListAt state.globals 0 bytesInWord values } 0 := by
+    exact panValueCrepStateRelExcept_of_state_rel
+      structs context (fun _ => none) sourceGlobals sourceMemory
+      { state with globals :=
+          updateMemoryListAt state.globals 0 bytesInWord values }
+      (fun address => address = 0) hpost
+  have hcontrol : panValueCrepRaisedControlRel structs context exceptionRel
+      sourceGlobals sourceMemory sourceException sourceValue
+      { state with globals :=
+          updateMemoryListAt state.globals 0 bytesInWord values }
+      targetException 0 := ⟨hraisedState, hexception⟩
+  have hdistinct' : List.Pairwise (fun left right : α => left ≠ right)
+      (storeAddresses (0 : α) bytesInWord
+        (panValueFlatWords sourceValue).length) := by
+    simpa [hflat] using hdistinct
+  have hstored := crepPcFlatGlobalsLookup_of_stored_flat_words
+    (α := α) bytesInWord state sourceValue hdistinct'
+  refine ⟨hpost, 0, hcontrol, hcode, ?_, hsize⟩
+  intro _
+  simpa [hflat] using hstored
+
 /-! Turn the generic structured Raise evaluator theorem into the exact
     raised-result package consumed by `panValuePcCompileCorrect_compact`.
     The evaluator theorem supplies the raised control witness; this adapter

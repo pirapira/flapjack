@@ -554,21 +554,40 @@ theorem named_struct_raise_pc_result_rel_named_payload_spill :
     (targetState :=
       { state with globals := updateMemoryListAt state.globals 0 8 [3] })
     (targetException := 9)
-  refine ⟨?_, 0, ?_, ?_, ?_, ?_⟩
-  · refine ⟨rfl, panValueCrepLocalsRel_empty [] context state.locals, ?_⟩
-    rfl
-  · refine ⟨?_, by simp⟩
-    refine ⟨rfl, panValueCrepLocalsRel_empty [] context state.locals, ?_⟩
-    simp [panValueCrepMemoryRelExcept, panValueWordMemory, state]
-  · simp
-  · intro _
-    have hstored := crepPcFlatGlobalsLookup_of_stored_flat_words
+  apply panValuePcRaisedHraiseData_retarget_globals_lookup
+    (bytesInWord := 8) (structs := []) (context := context)
+    (exceptionRel := fun _ _ code => code = 9)
+    (exceptionCode := fun exception =>
+      if exception = "E" then some 9 else none)
+    (globalsLookup := pcGlobalsLookup)
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (sourceException := "E")
+    (sourceValue := namedStructSourceValue)
+    (targetState :=
+      { state with globals := updateMemoryListAt state.globals 0 8 [3] })
+    (targetException := 9)
+  · have hstored := crepPcFlatGlobalsLookup_of_stored_flat_words
       (α := Nat) 8 state namedStructSourceValue (by decide)
-    simp [pcGlobalsLookup, namedStructSourceValue, panValueFlatWords,
+    simpa [pcGlobalsLookup, namedStructSourceValue, panValueFlatWords,
       panValueFlatWordsFuel, panValueFlatValueFuel,
       panValueFlatWordsFuel.panValueFlatWordsFieldListFuel,
-      panValueFlatValueFuel.panValueFlatValueFieldListFuel] at hstored ⊢
-  · simp [namedStructSourceValue, panValueShape]
+      panValueFlatValueFuel.panValueFlatValueFieldListFuel] using hstored
+  · exact panValuePcRaisedHraiseData_of_flat_spill_state
+      (structs := []) (context := context)
+      (exceptionRel := fun _ _ code => code = 9)
+      (exceptionCode := fun exception =>
+        if exception = "E" then some 9 else none)
+      (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+      (sourceMemory := fun _ => none) (sourceException := "E")
+      (values := [3]) (state := state) (bytesInWord := 8)
+      (targetException := 9) (sourceValue := namedStructSourceValue)
+      (hrel := by
+        refine ⟨rfl, panValueCrepLocalsRel_empty [] context state.locals, rfl⟩)
+      (hexception := by simp)
+      (hcode := by simp)
+      (hflat := by rfl)
+      (hdistinct := by decide)
+      (hsize := by simp [namedStructSourceValue, panValueShape])
 
 theorem four_word_raise_pc_hraise_raw_words :
     panValuePcRaisedHraiseData

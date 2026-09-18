@@ -68,6 +68,11 @@ example (condition : SourceWordExp Nat) (body : Prog Nat)
       (.while condition.toExp body) :=
   panValueCrepProgramStateControlSafe_while_of_loop_safe condition body hloopSafe
 
+example (body : Prog Nat) :
+    PanValueCrepProgramLoopStateControlSafe
+      (.while (SourceWordExp.const (0 : Nat)).toExp body) :=
+  panValueCrepProgramLoopStateControlSafe_while_zero body
+
 example (condition : SourceWordExp Nat) (body : Prog Nat)
     (hbody : PanValueCrepProgramStateCorrect body)
     (hbodySafe : PanValueCrepProgramLoopStateControlSafe body)

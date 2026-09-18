@@ -15,6 +15,10 @@ def raiseResultExceptionCode : ExceptionId → Option Nat
   | "E" => some 9
   | _ => none
 
+def raiseWordGlobalsLookup (_state : CrepState Nat) (value : PanValue Nat) :
+    Option (List Nat) :=
+  some (panValueFlatWords value)
+
 /-! A closed source raise supplies the concrete semantic premises needed by the
     Pc raised-result obligation.  In particular, the conclusion retains the
     post-state relation, exception-code lookup, and the flattened global
@@ -63,6 +67,44 @@ theorem closed_word_raise_pc_hraise :
     (hexception := by simp)
     (hfresh := by simp [raiseState, raiseContext])
   exact ⟨h.1, h.2⟩
+
+theorem closed_word_raise_pc_result_rel_retargeted :
+    panValuePcResultRel [] raiseContext
+      (fun _ _ code => code = 9) raiseResultExceptionCode
+      raiseWordGlobalsLookup
+      (.raised (fun _ => none) (fun _ => none) (fun _ => none) "E" (.word 3))
+      (.raised { raiseState with globals := updateMemory raiseState.globals 0 3 }
+        9) := by
+  apply panValuePcRaisedWordResultRel_retarget_globals
+    (context := raiseContext) (structs := [])
+    (sourceFunctions := []) (functions := [])
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (state := raiseState)
+    (primitive := fun _ _ => none)
+    (sourceHandler := fun _ _ _ _ _ _ => none)
+    (crepPrimitive := fun _ _ => none)
+    (ffi := fun _ _ _ _ _ _ => none)
+    (sharedMem := fun _ _ _ _ => none)
+    (baseAddress := 0) (topAddress := 0) (bytesInWord := 8)
+    (sourceFuel := 2) (targetFuel := 2) (exception := "E")
+    (exceptionCode := 9) (value := 3) (expression := .const 3)
+    (compiled := .const 3)
+    (exceptionRel := fun _ _ code => code = 9)
+    (resultExceptionCode := raiseResultExceptionCode)
+    (globalsLookup := raiseWordGlobalsLookup)
+    (hlookup := by simp [raiseContext, lookupInfo])
+    (hcode := by simp [raiseResultExceptionCode])
+    (hbytesInWord := rfl)
+    (hrel := by
+      refine ⟨rfl, panValueCrepLocalsRel_empty [] raiseContext _, rfl⟩)
+    (hsource := by simp [SourceWordExp.toExp, evalPanValueExp])
+    (hcompile := by simp [SourceWordExp.toExp, compileExp])
+    (hcompiled := by simp [evalCrepFullExpState, raiseState])
+    (hexception := by simp)
+    (hfresh := by simp [raiseState, raiseContext])
+    (hlookupGlobals := by
+      simp [raiseWordGlobalsLookup, crepPcWordGlobalsLookup,
+        updateMemory, panValueFlatWords, panValueFlatWordsFuel])
 
 theorem closed_two_word_raise_pc_result_rel :
     panValuePcResultRel [] raiseContext

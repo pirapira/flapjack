@@ -658,6 +658,64 @@ theorem panValuePcRaisedWordHraise
     exact (hpayload hnonempty).1
   · simp [panValueShape]
 
+theorem panValuePcRaisedWordResultRel_retarget_globals
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (state : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α)
+    (sourceFuel targetFuel : Nat)
+    (exception : ExceptionId) (exceptionCode value : α)
+    (expression : SourceWordExp α) (compiled : CrepExp α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (resultExceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (hlookup : lookupInfo exception context.exceptions = some exceptionCode)
+    (hcode : resultExceptionCode exception = some exceptionCode)
+    (hbytesInWord : context.bytesInWord = bytesInWord)
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory state)
+    (hsource : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord expression.toExp = some (.word value))
+    (hcompile : compileExp context expression.toExp = ([compiled], .one))
+    (hcompiled : evalCrepFullExpState state baseAddress topAddress compiled =
+      some value)
+    (hexception : exceptionRel exception (.word value) exceptionCode)
+    (hfresh : state.locals (context.maxVar + 1) = none)
+    (hlookupGlobals : crepPcWordGlobalsLookup
+        { state with globals := updateMemory state.globals 0 value }
+        (.word value) = globalsLookup
+          { state with globals := updateMemory state.globals 0 value }
+          (.word value)) :
+    panValuePcResultRel structs context exceptionRel resultExceptionCode
+      globalsLookup
+      (.raised (fun _ => none) sourceGlobals sourceMemory exception (.word value))
+      (.raised { state with globals := updateMemory state.globals 0 value }
+        exceptionCode) := by
+  have hword := panValuePcRaisedWordHraise
+    context structs sourceFunctions functions sourceLocals sourceGlobals
+    sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord sourceFuel targetFuel exception
+    exceptionCode value expression compiled exceptionRel resultExceptionCode
+    hlookup hcode hbytesInWord hrel hsource hcompile hcompiled hexception hfresh
+  rcases hword with
+    ⟨hpost, spillAddress, hcontrol, hcode', hpayload, hsize⟩
+  refine ⟨hpost, ?_⟩
+  refine ⟨spillAddress, exceptionCode, hcode', rfl, hcontrol, ?_⟩
+  intro hnonempty
+  refine ⟨?_, hsize⟩
+  rw [← hlookupGlobals]
+  exact hpayload hnonempty
+
 /-! Semantic two-word raise lift for the next supported payload fragment.  The
     source and global-aware Crep equations are the checked two-word
     `CrepeCorrectness` boundary; the result clause retains both global words

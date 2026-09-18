@@ -2001,7 +2001,7 @@ theorem panValuePcResultRel_of_raised_generic_flat_evidence_retarget_globals
           { state with globals :=
               updateMemoryListAt state.globals 0 context.bytesInWord values }
           sourceValue) :
-    panValuePcResultRel structs context exceptionRel resultExceptionCode
+    panValuePcResultRelWithContextCode structs context exceptionRel resultExceptionCode
       globalsLookup
       (.raised sourceLocals sourceGlobals sourceMemory exception sourceValue)
       (.raised
@@ -2024,12 +2024,13 @@ theorem panValuePcResultRel_of_raised_generic_flat_evidence_retarget_globals
         (α := α) context.bytesInWord state sourceValue hdistinct'
       rw [← hlookupGlobals]
       simpa [hvalues] using hstored) hsize
-  exact panValuePcResultRel_of_raised_hraise_data structs context exceptionRel
-    resultExceptionCode globalsLookup sourceLocals sourceGlobals
-    sourceMemory exception sourceValue
+  have hresult := panValuePcExceptionResultRelWithContextCode_of_raised_hraise_data
+    structs context exceptionRel resultExceptionCode globalsLookup sourceLocals
+    sourceGlobals sourceMemory exception sourceValue
     { state with globals :=
         updateMemoryListAt state.globals 0 context.bytesInWord values }
-    exceptionCode hcanonical.1
+    exceptionCode hcanonical
+  exact ⟨hcanonical.1.1, hresult⟩
 
 theorem panValuePcResultRel_of_raised_hraise_data_retarget_globals_lookup
     [BEq α] [LawfulBEq α] [OfNat α 0] [Add α]

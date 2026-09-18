@@ -1059,7 +1059,7 @@ theorem panValuePcRaisedTwoWordResultRel_of_semantic_lift
       baseAddress topAddress compiledRight = some right)
     (hexception : exceptionRel exception
       (.rStruct [.word left, .word right]) exceptionCode) :
-    panValuePcResultRel structs context exceptionRel resultExceptionCode
+    panValuePcResultRelWithContextCode structs context exceptionRel resultExceptionCode
       (crepPcTwoWordGlobalsLookup bytesInWord)
       (.raised (fun _ => none) sourceGlobals sourceMemory exception
         (.rStruct [.word left, .word right]))
@@ -1075,22 +1075,7 @@ theorem panValuePcRaisedTwoWordResultRel_of_semantic_lift
     exception exceptionCode exceptionRel resultExceptionCode compiledLeft
     compiledRight hlookup hcode hbytesInWord hdistinct hrel hsource hcompile
     hcompiledLeft hcompiledRight hexception
-  simpa [panValuePcResultRel, panValuePcResultRelWithContextCode,
-    panValuePcExceptionResultRelWithContextCode] using
-    (show panValueCrepStateRel structs context
-        (fun _ => none) sourceGlobals sourceMemory
-        { state with globals :=
-            (updateMemory (updateMemory state.globals 0 left)
-              (0 + bytesInWord) right) } ∧
-      panValuePcExceptionResultRel structs context exceptionRel
-        resultExceptionCode (crepPcTwoWordGlobalsLookup bytesInWord)
-        sourceGlobals sourceMemory exception
-        (.rStruct [.word left, .word right])
-        { state with globals :=
-            (updateMemory (updateMemory state.globals 0 left)
-              (0 + bytesInWord) right) }
-        exceptionCode from
-      ⟨hresult.2.2.1, hresult.2.2.2.1⟩)
+  exact hresult.2.2
 
 /-! The two-word counterpart exposes the existing structured-payload semantic
     lift in the explicit generic `hraise` shape.  The distinct spill slots and
@@ -1166,15 +1151,17 @@ theorem panValuePcRaisedTwoWordHraise
     left right exception exceptionCode exceptionRel resultExceptionCode
     compiledLeft compiledRight hlookup hcode hbytesInWord hdistinct hrel hsource
     hcompile hcompiledLeft hcompiledRight hexception
-  rcases hresult with
-    ⟨hpost, spillAddress, code, hresultCode, htargetCode, hcontrol, hpayload⟩
+  rcases hresult with ⟨hpost, hcontext⟩
+  rcases hcontext with ⟨hordinary, hlookupCode⟩
+  rcases hordinary with
+    ⟨spillAddress, code, hresultCode, htargetCode, hcontrol, hpayload⟩
   have hnonempty : 1 ≤ Shape.shapeSize
       (panValueShape structs (.rStruct [.word left, .word right])) := by
     simp [panValueShape, Shape.shapeSize]
   have hshape : Shape.shapeSize
       (panValueShape structs (.rStruct [.word left, .word right])) ≤ 32 := by
     simp [panValueShape, Shape.shapeSize]
-  refine ⟨?_, hlookup⟩
+  refine ⟨?_, hlookupCode⟩
   refine ⟨hpost, ?_⟩
   refine ⟨spillAddress, hcontrol, ?_, ?_, ?_⟩
   · simpa [htargetCode] using hresultCode

@@ -188,6 +188,63 @@ theorem three_word_raise_pc_hraise_global_spill :
   simpa [sourceValue, context, updateMemoryListAt, List.range,
     List.range.loop, Nat.add_assoc] using h
 
+theorem three_word_raise_pc_hraise_flat_globals :
+    panValuePcRaisedHraiseData
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8) [] context
+      (fun _ _ code => code = 9)
+      (fun _ => none) (fun _ => none) (fun _ => none) "E" sourceValue
+      { state with globals := updateMemoryListAt state.globals 0 8 [3, 4, 5] }
+      9 := by
+  have h := panValuePcRaisedGenericHraise_of_flat_globals
+    (α := Nat) (context := context) (structs := [])
+    (sourceFunctions := []) (functions := [])
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (state := state)
+    (primitive := fun _ _ => none)
+    (sourceHandler := fun _ _ _ _ _ _ => none)
+    (crepPrimitive := fun _ _ => none)
+    (ffi := fun _ _ _ _ _ _ => none)
+    (sharedMem := fun _ _ _ _ => none)
+    (baseAddress := 0) (topAddress := 0) (bytesInWord := 8)
+    (sourceFuel := 2) (exception := "E") (exceptionCode := 9)
+    (expression := sourceExpression) (sourceValue := sourceValue)
+    (compiled := [.const 3, .const 4, .const 5])
+    (shape := .comb [.one, .one, .one]) (values := [3, 4, 5])
+    (exceptionRel := fun _ _ code => code = 9)
+    (resultExceptionCode := fun exception =>
+      if exception = "E" then some 9 else none)
+    (hlookup := by simp [context, lookupInfo])
+    (hrel := by
+      refine ⟨rfl, panValueCrepLocalsRel_empty [] context _, rfl⟩)
+    (hsource := by
+      simp [sourceExpression, sourceValue, evalPanValueExp,
+        evalPanValueExp.evalPanValueExps])
+    (hvalid := by
+      simp [sourceValue, panValuePayloadWithinLimit, panValuePayloadSizeFuel,
+        panValuePayloadSizeFuel.panValuePayloadSizeFieldsFuel,
+        panValueFlatValueFuel, panValueFlatValueFuel.panValueFlatValueListFuel])
+    (hcompile := by
+      simp [context, sourceExpression, compileExp,
+        compileExp.compileExpList])
+    (hlength := by simp [Shape.shapeSize])
+    (hcompiled := by
+      simp [state, evalCrepFullExpsState, evalCrepFullExpState])
+    (hnot := by simp [context, freshNames])
+    (hfresh := by simp [context, state, freshNames])
+    (hexception := by simp)
+    (hcode := by simp)
+    (hvalues := by
+      simp [sourceValue, panValueFlatWords, panValueFlatWordsFuel,
+        panValueFlatValueFuel,
+        panValueFlatWordsFuel.panValueFlatWordsListFuel,
+        panValueFlatValueFuel.panValueFlatValueListFuel])
+    (hdistinct := by
+      decide)
+    (hsize := by simp [sourceValue, panValueShape, Shape.shapeSize])
+  simpa [sourceValue, context, updateMemoryListAt, List.range,
+    List.range.loop, Nat.add_assoc] using h
+
 def runChecks : IO Bool := do
   IO.println "PASS generic three-word Raise evaluator relation"
   pure true

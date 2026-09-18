@@ -5618,7 +5618,8 @@ theorem panValuePcRaisedHraiseData_of_flat_global_evaluator_evidence
         (.raised targetState targetException) →
       panValuePcRaisedHraiseData exceptionCode globalsLookup structs context
         exceptionRel sourceLocals sourceGlobals sourceMemory sourceException
-        sourceValue targetState targetException := by
+        sourceValue targetState targetException ∧
+      lookupInfo sourceException context.exceptions = some targetException := by
   intro context structs exceptionRel sourceLocals sourceGlobals sourceMemory
     sourceException sourceValue targetState targetException hcontrol
   rcases hevidence context structs exceptionRel sourceLocals sourceGlobals
@@ -5627,7 +5628,8 @@ theorem panValuePcRaisedHraiseData_of_flat_global_evaluator_evidence
       hrel, hsource, hvalid, hcompile, hlength, hcompiled, hnot, hfresh,
       hexception, hlookupCode, hcode, hflat, hdistinct, hsize⟩
   subst targetState
-  exact panValuePcRaisedGenericHraise_of_evidence_retarget_globals_with_source_locals
+  have hcanonical :=
+    panValuePcRaisedGenericHraise_of_evidence_retarget_globals_with_source_locals
     context structs sourceFunctions functions sourceLocals sourceGlobals
     sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
     baseAddress topAddress bytesInWord sourceFuel sourceException targetException
@@ -5635,6 +5637,7 @@ theorem panValuePcRaisedHraiseData_of_flat_global_evaluator_evidence
     globalsLookup hlookupCode hrel hsource hvalid hcompile hlength hcompiled hnot
     hfresh hexception hcode hflat hdistinct hsize
     (by simpa [hbytesInWord] using (hlookup _ _))
+  exact ⟨hcanonical, hlookupCode⟩
 
 /-! Compact `pc_compile_correct` with evaluator-backed raised evidence.  The
     evidence callback exposes the source expression and compiled payload, so
@@ -5705,14 +5708,18 @@ theorem panValuePcCompileCorrect_compact_with_flat_global_evaluator_evidence
       (crepPcCompactTargetEvaluator functions crepPrimitive ffi sharedMem
         baseAddress topAddress targetFuel)
       codeRel excpRel exceptionCode globalsLookup program := by
+  have hraiseEvidence := panValuePcRaisedHraiseData_of_flat_global_evaluator_evidence
+    exceptionCode globalsLookup sourceFunctions functions primitive sourceHandler
+    crepPrimitive ffi sharedMem baseAddress topAddress bytesInWord sourceFuel
+    hlookup hevidence
   refine panValuePcCompileCorrect_compact_with_raised_data
     program codeRel excpRel exceptionCode globalsLookup sourceFunctions functions
     primitive sourceHandler crepPrimitive ffi sharedMem baseAddress topAddress
     bytesInWord sourceFuel targetFuel hprogram hprogramSafe ?_
-  exact panValuePcRaisedHraiseData_of_flat_global_evaluator_evidence
-    exceptionCode globalsLookup sourceFunctions functions primitive sourceHandler
-    crepPrimitive ffi sharedMem baseAddress topAddress bytesInWord sourceFuel
-    hlookup hevidence
+  intro context structs exceptionRel sourceLocals sourceGlobals sourceMemory
+    sourceException sourceValue targetState targetException hcontrol
+  exact (hraiseEvidence context structs exceptionRel sourceLocals sourceGlobals
+    sourceMemory sourceException sourceValue targetState targetException hcontrol).1
 
 /-! Context-code companion for the evaluator-backed boundary.  The callback
     retains Cake's exact `lookupInfo` exception-code provenance. -/
@@ -5781,7 +5788,7 @@ theorem panValuePcCompileCorrect_compact_with_flat_global_evaluator_evidence_con
       (crepPcCompactTargetEvaluator functions crepPrimitive ffi sharedMem
         baseAddress topAddress targetFuel)
       codeRel excpRel exceptionCode globalsLookup program := by
-  have hraiseData := panValuePcRaisedHraiseData_of_flat_global_evaluator_evidence
+  have hraiseEvidence := panValuePcRaisedHraiseData_of_flat_global_evaluator_evidence
     exceptionCode globalsLookup sourceFunctions functions primitive sourceHandler
     crepPrimitive ffi sharedMem baseAddress topAddress bytesInWord sourceFuel
     hlookup hevidence
@@ -5791,14 +5798,8 @@ theorem panValuePcCompileCorrect_compact_with_flat_global_evaluator_evidence_con
     bytesInWord sourceFuel targetFuel hprogram hprogramSafe (by
       intro context structs exceptionRel sourceLocals sourceGlobals sourceMemory
         sourceException sourceValue targetState targetException hcontrol
-      rcases hevidence context structs exceptionRel sourceLocals sourceGlobals
-        sourceMemory sourceException sourceValue targetState targetException hcontrol with
-        ⟨state, expression, compiled, shape, values, htarget, hbytesInWord,
-          hrel, hsource, hvalid, hcompile, hlength, hcompiled, hnot, hfresh,
-          hexception, hlookupCode, hcode, hflat, hdistinct, hsize⟩
-      exact ⟨hraiseData context structs exceptionRel sourceLocals sourceGlobals
-          sourceMemory sourceException sourceValue targetState targetException hcontrol,
-        hlookupCode⟩)
+      exact hraiseEvidence context structs exceptionRel sourceLocals sourceGlobals
+        sourceMemory sourceException sourceValue targetState targetException hcontrol)
 
 /-! Convert direct flat-spill state evidence into the raised package.  This is
     the state-level companion to the evaluator-backed adapter above: it keeps

@@ -1163,6 +1163,35 @@ theorem panValuePcRaisedHraiseData_of_control_evidence
   rcases hcontrol with ⟨spillAddress, hraised⟩
   exact ⟨hpost, spillAddress, hraised, hcode, hlookup, hsize⟩
 
+theorem panValuePcRaisedHraiseData_of_control_evidence_with_context_code
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+    (sourceValue : PanValue α) (targetState : CrepState α)
+    (targetException : α)
+    (hpost : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory targetState)
+    (hcontrol : panValueCrepControlRel structs context exceptionRel
+      (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+      (.raised targetState targetException))
+    (hcode : exceptionCode sourceException = some targetException)
+    (hlookup : 1 ≤ Shape.shapeSize (panValueShape structs sourceValue) →
+      globalsLookup targetState sourceValue = some (panValueFlatWords sourceValue))
+    (hsize : Shape.shapeSize (panValueShape structs sourceValue) ≤ 32)
+    (hlookupCode : lookupInfo sourceException context.exceptions =
+      some targetException) :
+    panValuePcRaisedHraiseData exceptionCode globalsLookup structs context
+      exceptionRel sourceLocals sourceGlobals sourceMemory sourceException
+      sourceValue targetState targetException ∧
+      lookupInfo sourceException context.exceptions = some targetException := by
+  exact ⟨panValuePcRaisedHraiseData_of_control_evidence structs context
+    exceptionRel exceptionCode globalsLookup sourceLocals sourceGlobals
+    sourceMemory sourceException sourceValue targetState targetException hpost
+    hcontrol hcode hlookup hsize, hlookupCode⟩
+
 theorem panValuePcResultRel_of_raised_hraise_data
     [BEq α] [LawfulBEq α]
     (structs : StructContext) (context : CompileContext α)
@@ -5340,12 +5369,11 @@ theorem panValuePcCompileCorrect_compact_with_flat_global_control_evidence_conte
     rcases hraiseEvidence context structs exceptionRel sourceLocals sourceGlobals
       sourceMemory sourceException sourceValue targetState targetException hcontrol with
       ⟨hpost, spillAddress, hraised, hcode, hlookupCode, hpayload, hsize⟩
-    have hcanonical := panValuePcRaisedHraiseData_of_control_evidence
+    exact panValuePcRaisedHraiseData_of_control_evidence_with_context_code
       structs context exceptionRel exceptionCode
       (crepPcFlatGlobalsLookup bytesInWord) sourceLocals sourceGlobals
       sourceMemory sourceException sourceValue targetState targetException
-      hpost hcontrol hcode hpayload hsize
-    exact ⟨hcanonical, hlookupCode⟩
+      hpost hcontrol hcode hpayload hsize hlookupCode
 
 /-! Ordinary `pc_compile_correct` companion for explicit control evidence.
     This is the same raised payload/global lookup lift without requiring the

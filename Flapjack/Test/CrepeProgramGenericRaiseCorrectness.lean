@@ -258,7 +258,7 @@ theorem three_word_raise_pc_semantic_lift :
         some (.raised
           { state with globals := updateMemoryListAt state.globals 0 8 [3, 4, 5] }
           9) ∧
-      panValuePcResultRel [] context (fun _ _ code => code = 9)
+      panValuePcResultRelWithContextCode [] context (fun _ _ code => code = 9)
         (fun exception => if exception = "E" then some 9 else none)
         (crepPcThreeWordGlobalsLookup 8)
         (.raised (fun _ => some (.word 7)) (fun _ => none) (fun _ => none)
@@ -315,13 +315,13 @@ theorem three_word_raise_pc_semantic_lift :
     (show panValueCrepStateRel [] context
         (fun _ => some (.word 7)) (fun _ => none) (fun _ => none)
         { state with globals := updateMemoryListAt state.globals 0 8 [3, 4, 5] } ∧
-      panValuePcExceptionResultRel [] context (fun _ _ code => code = 9)
+      panValuePcExceptionResultRelWithContextCode [] context (fun _ _ code => code = 9)
         (fun exception => if exception = "E" then some 9 else none)
         (crepPcThreeWordGlobalsLookup 8) (fun _ => none) (fun _ => none)
         "E" sourceValue
         { state with globals := updateMemoryListAt state.globals 0 8 [3, 4, 5] }
         9 from
-      ⟨hcontext.1, hcontext.2.1⟩)
+      ⟨hcontext.1, hcontext.2⟩)
 
 theorem three_word_raise_pc_hraise_flat_globals :
     panValuePcRaisedHraiseData
@@ -1084,7 +1084,7 @@ theorem four_word_raise_pc_semantic_lift :
         some (.raised
           { state with globals :=
               updateMemoryListAt state.globals 0 8 [3, 4, 5, 6] } 9) ∧
-      panValuePcResultRel [] context (fun _ _ code => code = 9)
+      panValuePcResultRelWithContextCode [] context (fun _ _ code => code = 9)
         (fun exception => if exception = "E" then some 9 else none)
         (crepPcFlatGlobalsLookup 8)
         (.raised (fun _ => some (.word 7)) (fun _ => none) (fun _ => none)
@@ -1143,17 +1143,8 @@ theorem four_word_raise_pc_semantic_lift :
     (hdistinct := by decide)
     (hsize := by simp [fourWordSourceValue, panValueShape, Shape.shapeSize])
   rcases h with ⟨hsourceEval, htargetEval, hcontext⟩
-  have hresult : panValuePcResultRel [] context (fun _ _ code => code = 9)
-      (fun exception => if exception = "E" then some 9 else none)
-      (crepPcFlatGlobalsLookup 8)
-      (.raised (fun _ => some (.word 7)) (fun _ => none) (fun _ => none)
-        "E" fourWordSourceValue)
-      (.raised
-        { state with globals :=
-            updateMemoryListAt state.globals 0 8 [3, 4, 5, 6] } 9) := by
-    exact ⟨hcontext.1, hcontext.2.1⟩
   simpa [context, fourWordSourceValue, freshNames, List.range, List.range.loop,
-    Nat.add_assoc] using ⟨hsourceEval, htargetEval, hresult⟩
+    Nat.add_assoc] using ⟨hsourceEval, htargetEval, hcontext⟩
 
 theorem four_word_raise_pc_semantic_lift_retargeted :
     evalPanValueProgWithPrimitiveCallsAndFfi
@@ -1168,7 +1159,7 @@ theorem four_word_raise_pc_semantic_lift_retargeted :
         some (.raised
           { state with globals :=
               updateMemoryListAt state.globals 0 8 [3, 4, 5, 6] } 9) ∧
-      panValuePcResultRel [] context (fun _ _ code => code = 9)
+      panValuePcResultRelWithContextCode [] context (fun _ _ code => code = 9)
         (fun exception => if exception = "E" then some 9 else none)
         pcGlobalsLookup
         (.raised (fun _ => some (.word 7)) (fun _ => none) (fun _ => none)
@@ -1395,7 +1386,8 @@ theorem four_word_raise_pc_context_code_from_semantic_lift :
     (targetState :=
       { state with globals := updateMemoryListAt state.globals 0 8 [3, 4, 5, 6] })
     (targetException := 9)
-  exact ⟨four_word_raise_pc_semantic_lift_retargeted.2.2, by
+  exact ⟨⟨four_word_raise_pc_semantic_lift_retargeted.2.2.1,
+      four_word_raise_pc_semantic_lift_retargeted.2.2.2.1⟩, by
     simp [context, lookupInfo]⟩
 
 theorem four_word_raise_pc_hraise_retargeted_globals :

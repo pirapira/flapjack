@@ -2616,7 +2616,7 @@ theorem panValuePcRaisedRawWordListSemanticLift_retarget_globals
         { state with globals :=
             updateMemoryListAt state.globals 0 context.bytesInWord values }
         exceptionCode) ∧
-    panValuePcResultRel structs context exceptionRel resultExceptionCode
+    panValuePcResultRelWithContextCode structs context exceptionRel resultExceptionCode
       globalsLookup
       (.raised sourceLocals sourceGlobals sourceMemory exception
         (.rStruct (values.map (fun value => .word value))))
@@ -2636,13 +2636,13 @@ theorem panValuePcRaisedRawWordListSemanticLift_retarget_globals
     baseAddress topAddress bytesInWord sourceFuel exception exceptionCode values
     expression compiled shape exceptionRel resultExceptionCode hlookup hrel hsource
     hvalid hcompile hlength hcompiled hnot hfresh hexception hcode hdistinct hsize
-  have hresult := panValuePcResultRel_of_raised_hraise_data_retarget_globals_lookup
+  have hresult := panValuePcResultRelWithContextCode_of_raised_hraise_data_retarget_globals_lookup
     structs context exceptionRel resultExceptionCode globalsLookup
     sourceLocals sourceGlobals sourceMemory exception
     (.rStruct (values.map (fun value => .word value)))
     { state with globals :=
         updateMemoryListAt state.globals 0 context.bytesInWord values }
-    exceptionCode context.bytesInWord hlookupGlobals hraiseData.1
+    exceptionCode context.bytesInWord hlookupGlobals hraiseData
   exact ⟨hsemantic.1, hsemantic.2.1, hresult⟩
 
 /-! Preserve the exact Cake exception-code lookup alongside the evaluator-backed
@@ -2730,27 +2730,7 @@ theorem panValuePcRaisedRawWordListSemanticLift_retarget_globals_with_context_co
     expression compiled shape exceptionRel resultExceptionCode globalsLookup hlookup
     hrel hsource hvalid hcompile hlength hcompiled hnot hfresh hexception hcode
     hdistinct hsize hlookupGlobals
-  have hresult : panValuePcResultRelWithContextCode structs context
-      exceptionRel resultExceptionCode globalsLookup
-      (.raised sourceLocals sourceGlobals sourceMemory exception
-        (.rStruct (values.map (fun value => .word value))))
-      (.raised
-        { state with globals :=
-            updateMemoryListAt state.globals 0 context.bytesInWord values }
-        exceptionCode) := by
-    simpa [panValuePcResultRelWithContextCode] using
-      (show panValueCrepStateRel structs context sourceLocals
-          sourceGlobals sourceMemory
-          { state with globals :=
-              updateMemoryListAt state.globals 0 context.bytesInWord values } ∧
-        panValuePcExceptionResultRelWithContextCode structs context exceptionRel
-          resultExceptionCode globalsLookup sourceGlobals
-          sourceMemory exception (.rStruct (values.map (fun value => .word value)))
-          { state with globals :=
-              updateMemoryListAt state.globals 0 context.bytesInWord values }
-          exceptionCode from
-        ⟨hsemantic.2.2.1, hsemantic.2.2.2, hlookup⟩)
-  exact ⟨hsemantic.1, hsemantic.2.1, hresult⟩
+  exact hsemantic
 
 theorem panValuePcResultRelWithContextCode_of_raised_result_rel
     [BEq α] [LawfulBEq α]

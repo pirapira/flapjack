@@ -3,6 +3,8 @@ import Flapjack.CrepeWordProgramCases
 import Flapjack.CrepeWordEffectProgramCases
 import Flapjack.CrepeWordLoopProgramCase
 import Flapjack.CrepeWordExtCallProgramCase
+import Flapjack.CrepeProgramWordRecordReturnCorrectness
+import Flapjack.CrepeProgramRecordFieldGeneralReturnCorrectness
 
 /-!
 An induction assembly for the stateful source-to-Crep correctness boundary.
@@ -48,6 +50,29 @@ inductive StatefulWordProg (α : Type)
         sourceLocals name = some value →
         ∃ slot, lookupInfo name context.vars = some (.one, [slot])) :
       StatefulWordProg α (.return expression)
+  | returnWordRecord
+      (fields : List (SourceWordExp α))
+      (hbytesInWord : ∀ (context : CompileContext α) (bytesInWord : α),
+        context.bytesInWord = bytesInWord)
+      (hlookup : ∀ (context : CompileContext α)
+        (sourceLocals : VarName → Option (PanValue α))
+        (name : VarName) (value : PanValue α),
+        sourceLocals name = some value →
+        ∃ slot, lookupInfo name context.vars = some (.one, [slot]))
+      (hsize : fields.length ≤ 32) :
+      StatefulWordProg α
+        (.return (.rStruct (fields.map SourceWordExp.toExp)))
+  | returnWordRecordField
+      (fields : List (SourceWordExp α)) (index : Nat)
+      (hbytesInWord : ∀ (context : CompileContext α) (bytesInWord : α),
+        context.bytesInWord = bytesInWord)
+      (hlookup : ∀ (context : CompileContext α)
+        (sourceLocals : VarName → Option (PanValue α))
+        (name : VarName) (value : PanValue α),
+        sourceLocals name = some value →
+        ∃ slot, lookupInfo name context.vars = some (.one, [slot])) :
+      StatefulWordProg α
+        (.return (.rField index (.rStruct (fields.map SourceWordExp.toExp))))
   | seq {first second : Prog α} :
       StatefulWordProg α first →
       StatefulWordProg α second →
@@ -178,6 +203,12 @@ theorem panValueCrepProgramStateCorrect_statefulWord
   | returnWord expression hword hbytesInWord hlookup =>
       exact panValueCrepProgramStateCorrect_return_wordExp expression hword
         hbytesInWord hlookup
+  | returnWordRecord fields hbytesInWord hlookup hsize =>
+      exact panValueCrepProgramStateCorrect_return_word_record fields
+        hbytesInWord hlookup hsize
+  | returnWordRecordField fields index hbytesInWord hlookup =>
+      exact panValueCrepProgramStateCorrect_return_rField_word_record fields
+        index hbytesInWord hlookup
   | @seq first second hfirst hsecond ihfirst ihsecond =>
       exact panValueCrepProgramStateCorrect_seq first second ihfirst ihsecond
   | iteWord condition hcondition thenBranch elseBranch hthen helse

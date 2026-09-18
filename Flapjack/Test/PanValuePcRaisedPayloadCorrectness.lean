@@ -250,6 +250,71 @@ theorem closed_two_word_raise_pc_hraise_flat_globals :
   simpa [Nat.zero_add] using
     (hpayload (by simp [panValueShape, Shape.shapeSize]))
 
+theorem closed_two_word_raise_pc_hraise_retargeted_globals :
+    panValuePcRaisedHraiseData raiseResultExceptionCode raiseWordGlobalsLookup
+        [] raiseContext (fun _ _ code => code = 9)
+        (fun _ => none) (fun _ => none) (fun _ => none) "E"
+        (.rStruct [.word 3, .word 4])
+        { raiseState with globals :=
+            (updateMemory (updateMemory raiseState.globals 0 3) 8 4) }
+        9 ∧
+      lookupInfo "E" raiseContext.exceptions = some 9 := by
+  let targetState : CrepState Nat :=
+    { raiseState with globals :=
+        (updateMemory (updateMemory raiseState.globals 0 3) 8 4) }
+  have hflatTwo :
+      crepPcFlatGlobalsLookup 8 targetState (.rStruct [.word 3, .word 4]) =
+        crepPcTwoWordGlobalsLookup 8 targetState (.rStruct [.word 3, .word 4]) := by
+    have htwo :
+        crepPcTwoWordGlobalsLookup 8 targetState (.rStruct [.word 3, .word 4]) =
+          some [3, 4] := by
+      simp [targetState, crepPcTwoWordGlobalsLookup, updateMemory]
+    have hflat := crepPcFlatGlobalsLookup_of_stored_flat_words
+      (α := Nat) 8 raiseState (.rStruct [.word 3, .word 4]) (by decide)
+    have hflat' :
+        crepPcFlatGlobalsLookup 8 targetState (.rStruct [.word 3, .word 4]) =
+          some [3, 4] := by
+      simpa [targetState, crepPcFlatGlobalsLookup, panValueFlatWords,
+        panValueFlatWordsFuel, panValueFlatValueFuel,
+        panValueFlatWordsFuel.panValueFlatWordsListFuel,
+        panValueFlatValueFuel.panValueFlatValueListFuel, updateMemoryListAt,
+        Nat.zero_add] using hflat
+    exact hflat'.trans htwo.symm
+  have htwoData :
+      panValuePcRaisedHraiseData raiseResultExceptionCode
+        (crepPcTwoWordGlobalsLookup 8) [] raiseContext
+        (fun _ _ code => code = 9)
+        (fun _ => none) (fun _ => none) (fun _ => none) "E"
+        (.rStruct [.word 3, .word 4]) targetState 9 := by
+    apply panValuePcRaisedHraiseData_retarget_globals_lookup_of
+      (canonicalGlobalsLookup := crepPcFlatGlobalsLookup 8)
+      (exceptionCode := raiseResultExceptionCode)
+      (globalsLookup := crepPcTwoWordGlobalsLookup 8)
+      (structs := []) (context := raiseContext)
+      (exceptionRel := fun _ _ code => code = 9)
+      (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+      (sourceMemory := fun _ => none) (sourceException := "E")
+      (sourceValue := .rStruct [.word 3, .word 4])
+      (targetState := targetState) (targetException := 9)
+    · exact hflatTwo
+    · simpa [targetState] using closed_two_word_raise_pc_hraise_flat_globals.1
+  refine ⟨?_, by simp [raiseContext, lookupInfo]⟩
+  apply panValuePcRaisedHraiseData_retarget_globals_lookup_of
+    (canonicalGlobalsLookup := crepPcTwoWordGlobalsLookup 8)
+    (exceptionCode := raiseResultExceptionCode)
+    (globalsLookup := raiseWordGlobalsLookup)
+    (structs := []) (context := raiseContext)
+    (exceptionRel := fun _ _ code => code = 9)
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (sourceException := "E")
+    (sourceValue := .rStruct [.word 3, .word 4])
+    (targetState := targetState) (targetException := 9)
+  · simp [targetState, crepPcTwoWordGlobalsLookup, raiseWordGlobalsLookup,
+      panValueFlatWords, panValueFlatWordsFuel, panValueFlatValueFuel,
+      panValueFlatWordsFuel.panValueFlatWordsListFuel,
+      panValueFlatValueFuel.panValueFlatValueListFuel, updateMemory]
+  · exact htwoData
+
 theorem closed_two_word_raise_pc_result_rel_flat_globals :
     panValuePcResultRel [] raiseContext
       (fun _ _ code => code = 9) raiseResultExceptionCode
@@ -688,5 +753,126 @@ theorem closed_word_raise_result_context_code_relation :
       { raiseState with globals := updateMemory raiseState.globals 0 3 } := by
     refine ⟨rfl, panValueCrepLocalsRel_empty [] raiseContext _, rfl⟩
   exact ⟨hstate, closed_word_raise_context_code_from_hraise_data⟩
+
+theorem one_word_raise_program_boundary_premises
+    (hlookupException : ∀ (context : CompileContext Nat),
+      ∃ exceptionCode, lookupInfo "E" context.exceptions = some exceptionCode)
+    (hfresh : ∀ (context : CompileContext Nat) (state : CrepState Nat),
+      state.locals (context.maxVar + 1) = none)
+    (hexception : ∀ (context : CompileContext Nat)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (exceptionCode : Nat),
+      lookupInfo "E" context.exceptions = some exceptionCode →
+      exceptionRel "E" (.rStruct [.word 3]) exceptionCode) :
+    PanValueCrepProgramStateCorrect
+        (.raise "E" (.rStruct [.const (3 : Nat)])) ∧
+      PanValueCrepProgramStateControlSafe
+        (.raise "E" (.rStruct [.const (3 : Nat)])) := by
+  have hprogram := panValueCrepProgramStateCorrect_raise_one_word_record
+    (α := Nat) "E" 3 hlookupException hfresh hexception
+  exact ⟨hprogram,
+    panValueCrepProgramStateControlSafe_raise "E"
+      (.rStruct [.const (3 : Nat)])⟩
+
+theorem two_word_raise_program_boundary_premises
+    (hlookupException : ∀ (context : CompileContext Nat),
+      ∃ exceptionCode, lookupInfo "E" context.exceptions = some exceptionCode)
+    (hfresh : ∀ (context : CompileContext Nat) (state : CrepState Nat),
+      state.locals (context.maxVar + 1) = none ∧
+      state.locals (context.maxVar + 2) = none)
+    (hexception : ∀ (context : CompileContext Nat)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (exceptionCode : Nat),
+      lookupInfo "E" context.exceptions = some exceptionCode →
+      exceptionRel "E" (.rStruct [.word 3, .word 4]) exceptionCode) :
+    PanValueCrepProgramStateCorrect
+        (.raise "E" (.rStruct [.const (3 : Nat), .const (4 : Nat)])) ∧
+      PanValueCrepProgramStateControlSafe
+        (.raise "E" (.rStruct [.const (3 : Nat), .const (4 : Nat)])) := by
+  have hprogram := panValueCrepProgramStateCorrect_raise_two_word_record
+    (α := Nat) "E" 3 4 hlookupException hfresh hexception
+  exact ⟨hprogram,
+    panValueCrepProgramStateControlSafe_raise "E"
+      (.rStruct [.const (3 : Nat), .const (4 : Nat)])⟩
+
+theorem three_word_raise_program_boundary_premises
+    (hlookupException : ∀ (context : CompileContext Nat),
+      ∃ exceptionCode, lookupInfo "E" context.exceptions = some exceptionCode)
+    (hfresh : ∀ (context : CompileContext Nat) (state : CrepState Nat),
+      state.locals (context.maxVar + 1) = none ∧
+      state.locals (context.maxVar + 2) = none ∧
+      state.locals (context.maxVar + 3) = none)
+    (hexception : ∀ (context : CompileContext Nat)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (exceptionCode : Nat),
+      lookupInfo "E" context.exceptions = some exceptionCode →
+      exceptionRel "E" (.rStruct [.word 3, .word 4, .word 5]) exceptionCode) :
+    PanValueCrepProgramStateCorrect
+        (.raise "E"
+          (.rStruct [.const (3 : Nat), .const (4 : Nat), .const (5 : Nat)])) ∧
+      PanValueCrepProgramStateControlSafe
+        (.raise "E"
+          (.rStruct [.const (3 : Nat), .const (4 : Nat), .const (5 : Nat)])) := by
+  have hprogram := panValueCrepProgramStateCorrect_raise_three_word_record
+    (α := Nat) "E" 3 4 5 hlookupException hfresh hexception
+  exact ⟨hprogram,
+    panValueCrepProgramStateControlSafe_raise "E"
+      (.rStruct [.const (3 : Nat), .const (4 : Nat), .const (5 : Nat)])⟩
+
+theorem four_word_raise_program_boundary_premises
+    (hlookupException : ∀ (context : CompileContext Nat),
+      ∃ exceptionCode, lookupInfo "E" context.exceptions = some exceptionCode)
+    (hfresh : ∀ (context : CompileContext Nat) (state : CrepState Nat),
+      state.locals (context.maxVar + 1) = none ∧
+      state.locals (context.maxVar + 2) = none ∧
+      state.locals (context.maxVar + 3) = none ∧
+      state.locals (context.maxVar + 4) = none)
+    (hexception : ∀ (context : CompileContext Nat)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (exceptionCode : Nat),
+      lookupInfo "E" context.exceptions = some exceptionCode →
+      exceptionRel "E" (.rStruct [.word 3, .word 4, .word 5, .word 6])
+        exceptionCode) :
+    PanValueCrepProgramStateCorrect
+        (.raise "E"
+          (.rStruct [.const (3 : Nat), .const (4 : Nat), .const (5 : Nat),
+            .const (6 : Nat)])) ∧
+      PanValueCrepProgramStateControlSafe
+        (.raise "E"
+          (.rStruct [.const (3 : Nat), .const (4 : Nat), .const (5 : Nat),
+            .const (6 : Nat)])) := by
+  have hprogram := panValueCrepProgramStateCorrect_raise_four_word_record
+    (α := Nat) "E" 3 4 5 6 hlookupException hfresh hexception
+  exact ⟨hprogram,
+    panValueCrepProgramStateControlSafe_raise "E"
+      (.rStruct [.const (3 : Nat), .const (4 : Nat), .const (5 : Nat),
+        .const (6 : Nat)])⟩
+
+theorem word_list_raise_program_boundary_premises
+    (hlookupException : ∀ (context : CompileContext Nat),
+      ∃ exceptionCode, lookupInfo "E" context.exceptions = some exceptionCode)
+    (hfresh : ∀ (context : CompileContext Nat) (state : CrepState Nat)
+      (name : Nat), name ∈ freshNames context 5 1 →
+      state.locals name = none)
+    (hexception : ∀ (context : CompileContext Nat)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (exceptionCode : Nat),
+      lookupInfo "E" context.exceptions = some exceptionCode →
+      exceptionRel "E" (.rStruct
+        [.word 3, .word 4, .word 5, .word 6, .word 7]) exceptionCode) :
+    PanValueCrepProgramStateCorrect
+        (.raise "E" (.rStruct
+          [.const (3 : Nat), .const (4 : Nat), .const (5 : Nat),
+            .const (6 : Nat), .const (7 : Nat)])) ∧
+      PanValueCrepProgramStateControlSafe
+        (.raise "E" (.rStruct
+          [.const (3 : Nat), .const (4 : Nat), .const (5 : Nat),
+            .const (6 : Nat), .const (7 : Nat)])) := by
+  have hprogram := panValueCrepProgramStateCorrect_raise_word_list_record
+    (α := Nat) "E" [3, 4, 5, 6, 7] hlookupException hfresh hexception
+  exact ⟨hprogram,
+    panValueCrepProgramStateControlSafe_raise "E"
+      (.rStruct [.const (3 : Nat), .const (4 : Nat), .const (5 : Nat),
+        .const (6 : Nat), .const (7 : Nat)])⟩
 
 end Flapjack.Test.PanValuePcRaisedPayloadCorrectness

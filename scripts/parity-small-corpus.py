@@ -203,9 +203,6 @@ def main(argv=None):
         help="compare Flapjack stdout with the manifest's pinned Cake hashes",
     )
     args = parser.parse_args(argv)
-    if not Path(args.cake).is_file():
-        print(f"missing cake binary: {args.cake}", file=sys.stderr)
-        return 2
     if not Path(args.flapjack).is_file():
         print(f"missing flapjack binary: {args.flapjack}", file=sys.stderr)
         return 2
@@ -213,6 +210,9 @@ def main(argv=None):
     manifest = json.loads(Path(args.manifest).read_text(encoding="utf-8"))
     if args.flapjack_only:
         return check_flapjack_against_oracle(manifest, Path(args.flapjack))
+    if not Path(args.cake).is_file():
+        print(f"missing cake binary: {args.cake}", file=sys.stderr)
+        return 2
     reports = [fixture_report(fixture, args.cake, Path(args.flapjack))
                for fixture in manifest["fixtures"]]
     for report in reports:

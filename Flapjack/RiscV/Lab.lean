@@ -1222,33 +1222,52 @@ def labUpdateStoredLabelLengths [NeZero width] (base : Nat) :
 def labPadStoredInstructions [NeZero width]
     (code : List (Instruction width)) (storedLength : Nat) :
     List (Instruction width) :=
-  /- A retained Cake line length can be one byte larger than its encoded
-     instruction body after `add_nop`; reconstruct the whole Skip instruction
-     rather than truncating with floor division. -/
-  let target := (storedLength + 3) / 4
+  /- Cake's stored lengths are byte offsets, while `pad_code` emits the
+     already-retained instruction bytes.  A non-aligned length such as 5 is
+     not itself a request for a Skip; `add_nop` supplies that full instruction
+     when a nonzero label is encountered. -/
+  let target := storedLength / 4
   if code.length < target then
     code ++ List.replicate (target - code.length) (.addi 0 0 0)
   else code
 
-def labCompileProgramLinesWithStoredLengths [NeZero width]
+def labAppendStoredNop [NeZero width] :
+    List (List (Instruction width)) → List (List (Instruction width))
+  | [] => []
+  | chunks =>
+      match chunks.reverse with
+      | [] => []
+      | chunk :: rest => (chunk ++ [.addi 0 0 0]) :: rest |>.reverse
+
+def labCompileProgramLinesWithStoredLengthsAux [NeZero width]
     (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
-    (position ffiBase haltPc : Nat) :
-    List (LabLine (Word width)) → Option (List (Instruction width))
-  | [] => some []
+    (position ffiBase haltPc : Nat)
+    (chunks : List (List (Instruction width))) :
+    List (LabLine (Word width)) → Option (List (List (Instruction width)))
+  | [] => some chunks
   | .label _ _ length :: lines =>
-      labCompileProgramLinesWithStoredLengths context labels
-        (position + length) ffiBase haltPc lines
+      let chunks := if length = 0 then chunks else labAppendStoredNop chunks
+      labCompileProgramLinesWithStoredLengthsAux context labels
+        (position + length) ffiBase haltPc chunks lines
   | .asm operation _ length :: lines => do
       let code ← labCompilePlain operation
-      let rest ← labCompileProgramLinesWithStoredLengths context labels
-        (position + length) ffiBase haltPc lines
-      pure (labPadStoredInstructions code length ++ rest)
+      labCompileProgramLinesWithStoredLengthsAux context labels
+        (position + length) ffiBase haltPc
+        (chunks ++ [labPadStoredInstructions code length]) lines
   | .labAsm operation _ length :: lines => do
       let code ← labCompileAsmProgramWithFfiBaseAndHalt context labels
         position ffiBase haltPc operation
-      let rest ← labCompileProgramLinesWithStoredLengths context labels
-        (position + length) ffiBase haltPc lines
-      pure (labPadStoredInstructions code length ++ rest)
+      labCompileProgramLinesWithStoredLengthsAux context labels
+        (position + length) ffiBase haltPc
+        (chunks ++ [labPadStoredInstructions code length]) lines
+
+def labCompileProgramLinesWithStoredLengths [NeZero width]
+    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (position ffiBase haltPc : Nat) :
+    List (LabLine (Word width)) → Option (List (Instruction width)) := fun lines => do
+  let chunks ← labCompileProgramLinesWithStoredLengthsAux context labels
+    position ffiBase haltPc [] lines
+  pure chunks.flatten
 
 def compileLabProgramLinkedWithStoredLengthsAux [NeZero width]
     (context : WordFfiContext) (labels : List (Nat × Nat × Nat))

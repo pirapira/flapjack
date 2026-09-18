@@ -304,7 +304,6 @@ def PanValuePcCompileCorrect
     (targetExecution : CrepPcExecution α),
     sourceInput.structs = structs →
     targetInput.structs = structs →
-    (sourceInput.code.map Prod.fst).Nodup →
     panValuePcLocalisedCode sourceInput.code →
     localisedProg program →
     codeRel context sourceInput.code targetInput.code →
@@ -339,7 +338,6 @@ theorem panValuePcCompileCorrect_of_obligations
       (targetExecution : CrepPcExecution α),
       sourceInput.structs = structs →
       targetInput.structs = structs →
-      (sourceInput.code.map Prod.fst).Nodup →
       panValuePcLocalisedCode sourceInput.code →
       localisedProg program →
       codeRel context sourceInput.code targetInput.code →
@@ -357,10 +355,10 @@ theorem panValuePcCompileCorrect_of_obligations
     PanValuePcCompileCorrect sourceEvaluate targetEvaluate codeRel excpRel
       exceptionCode globalsLookup program := by
   intro context structs sourceInput targetInput exceptionRel sourceExecution
-    targetExecution hdistinct hlocalisedCode hlocalised hcode hexcp hstate
+    targetExecution hlocalisedCode hlocalised hcode hexcp hstate
     hnonerror hsource htarget hpostCode hpostExcp
   exact hobligation context structs sourceInput targetInput exceptionRel
-    sourceExecution targetExecution hdistinct hlocalisedCode hlocalised hcode
+    sourceExecution targetExecution hlocalisedCode hlocalised hcode
     hexcp hstate hnonerror hsource htarget hpostCode hpostExcp
 
 end Flapjack

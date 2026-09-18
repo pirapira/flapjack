@@ -382,8 +382,8 @@ theorem pc_raised_result_accepts_context_exception_code :
   refine ⟨closed_word_raise_pc_result_rel_retargeted.2, ?_⟩
   simp [raiseContext, lookupInfo]
 
-theorem closed_two_word_raise_pc_result_rel :
-    panValuePcResultRel [] raiseContext
+theorem closed_two_word_raise_pc_result_rel_with_context_code_from_semantic_lift :
+    panValuePcResultRelWithContextCode [] raiseContext
       (fun _ _ code => code = 9) raiseResultExceptionCode
       (crepPcTwoWordGlobalsLookup 8)
       (.raised (fun _ => none) (fun _ => none) (fun _ => none) "E"

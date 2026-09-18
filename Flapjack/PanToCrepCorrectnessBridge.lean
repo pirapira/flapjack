@@ -5876,6 +5876,72 @@ theorem panValuePcRaisedHraiseData_of_flat_spill_evidence
         updateMemoryListAt state.globals 0 context.bytesInWord values }
     targetException (by simpa [hbytesInWord] using (hlookup _ _)) hcanonical
 
+/-! Context-code companion for direct flat-spill evidence.  The evaluator
+    witness carries Cake's exception lookup together with the payload facts,
+    so the raised boundary does not reconstruct that provenance separately. -/
+theorem panValuePcRaisedHraiseData_of_flat_spill_evidence_with_context_code
+    [BEq α] [LawfulBEq α] [OfNat α 0] [Add α]
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (bytesInWord : α)
+    (hlookup : ∀ (targetState : CrepState α) (sourceValue : PanValue α),
+      crepPcFlatGlobalsLookup bytesInWord targetState sourceValue =
+        globalsLookup targetState sourceValue)
+    (hevidence : ∀ (context : CompileContext α) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α))
+      (sourceException : ExceptionId) (sourceValue : PanValue α)
+      (targetState : CrepState α) (targetException : α),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      ∃ (values : List α) (state : CrepState α),
+        targetState =
+          { state with globals :=
+              updateMemoryListAt state.globals 0 context.bytesInWord values } ∧
+        context.bytesInWord = bytesInWord ∧
+        panValueCrepStateRel structs context sourceLocals sourceGlobals
+          sourceMemory state ∧
+        exceptionRel sourceException sourceValue targetException ∧
+        exceptionCode sourceException = some targetException ∧
+        lookupInfo sourceException context.exceptions = some targetException ∧
+        panValueFlatWords sourceValue = values ∧
+        List.Pairwise (fun left right : α => left ≠ right)
+          (storeAddresses (0 : α) context.bytesInWord values.length) ∧
+        Shape.shapeSize (panValueShape structs sourceValue) ≤ 32) :
+    ∀ (context : CompileContext α) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α))
+      (sourceException : ExceptionId) (sourceValue : PanValue α)
+      (targetState : CrepState α) (targetException : α),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      panValuePcRaisedHraiseData exceptionCode globalsLookup structs context
+        exceptionRel sourceLocals sourceGlobals sourceMemory sourceException
+        sourceValue targetState targetException ∧
+      lookupInfo sourceException context.exceptions = some targetException := by
+  intro context structs exceptionRel sourceLocals sourceGlobals sourceMemory
+    sourceException sourceValue targetState targetException hcontrol
+  have hraiseData := panValuePcRaisedHraiseData_of_flat_spill_evidence
+    exceptionCode globalsLookup bytesInWord hlookup (by
+      intro context structs exceptionRel sourceLocals sourceGlobals sourceMemory
+        sourceException sourceValue targetState targetException hcontrol
+      rcases hevidence context structs exceptionRel sourceLocals sourceGlobals
+        sourceMemory sourceException sourceValue targetState targetException hcontrol with
+        ⟨values, state, htarget, hbytesInWord, hrel, hexception, hcode,
+          _hlookupCode, hflat, hdistinct, hsize⟩
+      exact ⟨values, state, htarget, hbytesInWord, hrel, hexception, hcode,
+        hflat, hdistinct, hsize⟩)
+  rcases hevidence context structs exceptionRel sourceLocals sourceGlobals
+    sourceMemory sourceException sourceValue targetState targetException hcontrol with
+    ⟨_, _, _, _, _, _, _, hlookupCode, _, _, _⟩
+  exact ⟨hraiseData context structs exceptionRel sourceLocals sourceGlobals
+    sourceMemory sourceException sourceValue targetState targetException hcontrol,
+    hlookupCode⟩
+
 /-! Ordinary compact `pc_compile_correct` entrypoint for direct flat-spill
     evidence.  The target HOL global lookup is retargeted only through the
     supplied extensional equality. -/
@@ -5991,29 +6057,17 @@ theorem panValuePcCompileCorrect_compact_with_flat_spill_evidence_context_code
       (crepPcCompactTargetEvaluator functions crepPrimitive ffi sharedMem
         baseAddress topAddress targetFuel)
       codeRel excpRel exceptionCode globalsLookup program := by
-  have hraiseData := panValuePcRaisedHraiseData_of_flat_spill_evidence
-    exceptionCode globalsLookup bytesInWord hlookup (by
-      intro context structs exceptionRel sourceLocals sourceGlobals sourceMemory
-        sourceException sourceValue targetState targetException hcontrol
-      rcases hevidence context structs exceptionRel sourceLocals sourceGlobals
-        sourceMemory sourceException sourceValue targetState targetException hcontrol with
-        ⟨values, state, htarget, hbytesInWord, hrel, hexception, hcode,
-          hlookupCode, hflat, hdistinct, hsize⟩
-      exact ⟨values, state, htarget, hbytesInWord, hrel, hexception, hcode,
-        hflat, hdistinct, hsize⟩)
+  have hraiseEvidence :=
+    panValuePcRaisedHraiseData_of_flat_spill_evidence_with_context_code
+      exceptionCode globalsLookup bytesInWord hlookup hevidence
   exact panValuePcCompileCorrect_compact_with_context_code
     program codeRel excpRel exceptionCode globalsLookup sourceFunctions functions
     primitive sourceHandler crepPrimitive ffi sharedMem baseAddress topAddress
     bytesInWord sourceFuel targetFuel hprogram hprogramSafe (by
       intro context structs exceptionRel sourceLocals sourceGlobals sourceMemory
         sourceException sourceValue targetState targetException hcontrol
-      rcases hevidence context structs exceptionRel sourceLocals sourceGlobals
-        sourceMemory sourceException sourceValue targetState targetException hcontrol with
-        ⟨values, state, htarget, hbytesInWord, hrel, hexception, hcode,
-          hlookupCode, hflat, hdistinct, hsize⟩
-      exact ⟨hraiseData context structs exceptionRel sourceLocals sourceGlobals
-          sourceMemory sourceException sourceValue targetState targetException hcontrol,
-        hlookupCode⟩)
+      exact hraiseEvidence context structs exceptionRel sourceLocals sourceGlobals
+        sourceMemory sourceException sourceValue targetState targetException hcontrol)
 
 /-! Compact `pc_compile_correct` entrypoint for case-split raised evidence.
     Each case proves the canonical flattened lookup first; the boundary then

@@ -434,6 +434,33 @@ def namedStructPostPassValue : PanValue Nat :=
 def namedStructSourceValue : PanValue Nat :=
   .nStruct "S" [("field", .word 3)]
 
+theorem named_struct_source_pass_one_word_expression (value : Nat) :
+    structCompileExp namedStructPassContext
+        (.nStruct "S" [("field", .const value)]) =
+      .rStruct [.const value] := by
+  simp [namedStructPassContext, structCompileExp,
+    structCompileExp.structCompileFields, structSelectFields, lookupInfo]
+
+theorem named_struct_source_pass_one_word_flat_words (value : Nat) :
+    panValueFlatWords (.nStruct "S" [("field", .word value)]) =
+      panValueFlatWords (.rStruct [.word value]) := by
+  rfl
+
+theorem named_struct_source_pass_one_word_eval (value : Nat) :
+    evalPanValueExp namedStructPassContext.structs
+        (fun _ => none) (fun _ => none) (fun _ => none)
+        0 0 8 (.nStruct "S" [("field", .const value)]) =
+        some (.nStruct "S" [("field", .word value)]) ∧
+    evalPanValueExp [] (fun _ => none) (fun _ => none) (fun _ => none)
+        0 0 8 (structCompileExp namedStructPassContext
+          (.nStruct "S" [("field", .const value)])) =
+        some (.rStruct [.word value]) := by
+  simp [namedStructPassContext, structCompileExp,
+    structCompileExp.structCompileFields, structSelectFields, lookupInfo,
+    evalPanValueExp, evalPanValueExp.evalPanValueExps,
+    evalPanValueExp.evalPanValueFields, panValueFieldsHaveShapes,
+    panValueShape, panShapeMatches]
+
 theorem named_struct_raise_after_struct_pass_hraise_flat_globals :
     panValuePcRaisedHraiseData
       (fun exception => if exception = "E" then some 9 else none)

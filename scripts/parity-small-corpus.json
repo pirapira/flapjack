@@ -401,7 +401,17 @@
       "path": "Flapjack/Test/OriginalPancake/wide_call_arguments.pnk",
       "source_reference": "Reduced from the stateless guest's fp2_eq. Cake puts call argument i in colour i+1 (colour 0 is the link register) and every colour below k is a machine register, with k = asm_conf.reg_count - (5 + LENGTH asm_conf.avoid_regs) = 22 on RISC-V (word_to_stackScript.sml:605); the window in argument-index space is therefore k-1 = 21. WordStackConfig.abiRegisterCount defaulted to 12, the x10--x21 span, so a call with twelve or more word arguments was treated as having stack-resident arguments Cake keeps in registers: twelve_caller emitted an extra st x29, 24(x24) and freed three frame words where Cake frees four, and at fourteen or more arguments wordStackPhysicalMovesToIndexed returned none and the whole compile failed. ten_caller pins the arity just below the old threshold; twelve_caller pins the shape that used to differ.",
       "cake_sha256": "4a764aa63931c5370ee06f957c7c45c3ad6264881e1a935657fb1157aee369fc",
-      "tracked_beads": []
+      "tracked_beads": [
+        "flapjack-01k"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/secp256k1_recover.pnk",
+      "source_reference": "Minimized full-guest secp256k1_recover call-frame witness; source-shaped Cake uses 22 stack-register ABI slots and StackArgs without a second argument-move pass.",
+      "cake_sha256": "7d026bcdfb943080883abc49def4c23103ab692bda8504fa91b598cba3c434d8",
+      "tracked_beads": [
+        "flapjack-8tb.4.6"
+      ]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/spilled_load_offset.pnk",
@@ -522,6 +532,24 @@
       "cake_sha256": "a8408a520d22b8d1a3cc63c4044bdf5e43eaab85e2d8b905d3512e33f6ed46b4",
       "tracked_beads": [
         "flapjack-pxn.8.5.10.1"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00356_zero_shift_self_move.pnk",
+      "source_reference": "Rebuilt differential-fuzz witness f00356: Cake's word_inst selector preserves the zero-shift self-move emitted by inst_select_exp, which changes allocator liveness and register colours in the surrounding loop/call frame.",
+      "cake_sha256": "7c7bb1966579fbcc7674f6b72e50763202e95fb5ab7ca012fcf8fe72aa477be2",
+      "tracked_beads": [
+        "flapjack-8tb.4",
+        "flapjack-6zt"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00484_nested_and_store.pnk",
+      "source_reference": "Rebuilt differential-fuzz witness f00484: Cake's word_inst optimize_consts collapses the nested all-constant And to zero before the enclosing XOR, removing the dead constant expression from the store value.",
+      "cake_sha256": "3c16e0f4cbd45190311272bc8a461e342791cc43cc1b40baf1460e77af2a93c7",
+      "tracked_beads": [
+        "flapjack-8tb.4",
+        "flapjack-6zt"
       ]
     },
     {
@@ -648,7 +676,7 @@
     },
     {
       "path": "Flapjack/Test/OriginalPancake/output_write.pnk",
-      "source_reference": "Reduced source-defined output_write witness: Cake's ShareInst selector rejects the out-of-range byte offset 0xA0010000 and materializes the complete address before the shared store, preserving the allocator-visible temporary and exact RISC-V bytes.",
+      "source_reference": "Reduced source-defined output_write witness for flapjack-8tb.4: Cake's ShareInst selector rejects the out-of-range byte offset 0xA0010000 and materializes the complete address through its generic selector before the shared store, preserving the allocator-visible temporary and exact RISC-V bytes.",
       "cake_sha256": "6c1fce23950c75682847ed67c5a9aacecefcaf84f274e38492d4b404719904a9",
       "tracked_beads": [
         "flapjack-8tb.4"

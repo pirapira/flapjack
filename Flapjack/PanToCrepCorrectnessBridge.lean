@@ -2778,6 +2778,74 @@ theorem panValuePcRaisedGenericHraise_of_evidence_retarget_globals
         updateMemoryListAt state.globals 0 context.bytesInWord values }
     exceptionCode hlookupGlobals hcanonical
 
+theorem panValuePcRaisedGenericHraise_of_evidence_retarget_globals_with_source_locals
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (state : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α) (sourceFuel : Nat)
+    (exception : ExceptionId) (exceptionCode : α)
+    (expression : Exp α) (sourceValue : PanValue α)
+    (compiled : List (CrepExp α)) (shape : Shape) (values : List α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (resultExceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (hlookup : lookupInfo exception context.exceptions = some exceptionCode)
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory state)
+    (hsource : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord expression = some sourceValue)
+    (hvalid : panValuePayloadWithinLimit structs sourceValue = true)
+    (hcompile : compileExp context expression = (compiled, shape))
+    (hlength : compiled.length = Shape.shapeSize shape)
+    (hcompiled : evalCrepFullExpsState state baseAddress topAddress compiled =
+      some values)
+    (hnot : ∀ name ∈ freshNames context compiled.length 1,
+      ∀ value ∈ compiled, name ∉ crepExpVars value)
+    (hfresh : ∀ name ∈ freshNames context compiled.length 1,
+      state.locals name = none)
+    (hexception : exceptionRel exception sourceValue exceptionCode)
+    (hcode : resultExceptionCode exception = some exceptionCode)
+    (hflat : panValueFlatWords sourceValue = values)
+    (hdistinct : List.Pairwise (fun left right : α => left ≠ right)
+      (storeAddresses (0 : α) context.bytesInWord values.length))
+    (hsize : Shape.shapeSize (panValueShape structs sourceValue) ≤ 32)
+    (hlookupGlobals : crepPcFlatGlobalsLookup context.bytesInWord
+        { state with globals :=
+            updateMemoryListAt state.globals 0 context.bytesInWord values }
+        sourceValue = globalsLookup
+          { state with globals :=
+            updateMemoryListAt state.globals 0 context.bytesInWord values }
+          sourceValue) :
+    panValuePcRaisedHraiseData resultExceptionCode globalsLookup structs context
+      exceptionRel sourceLocals sourceGlobals sourceMemory exception sourceValue
+      { state with globals :=
+          updateMemoryListAt state.globals 0 context.bytesInWord values }
+      exceptionCode := by
+  have hcanonical :=
+    panValuePcRaisedGenericHraise_of_evidence_flat_globals_with_source_locals
+    context structs sourceFunctions functions sourceLocals sourceGlobals
+    sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord sourceFuel exception exceptionCode
+    expression sourceValue compiled shape values exceptionRel resultExceptionCode
+    hlookup hrel hsource hvalid hcompile hlength hcompiled hnot hfresh hexception
+    hcode hflat hdistinct hsize
+  exact panValuePcRaisedHraiseData_retarget_globals_lookup
+    context.bytesInWord resultExceptionCode globalsLookup structs context
+    exceptionRel sourceLocals sourceGlobals sourceMemory exception sourceValue
+    { state with globals :=
+        updateMemoryListAt state.globals 0 context.bytesInWord values }
+    exceptionCode hlookupGlobals hcanonical
+
 theorem panValuePcExceptionResultRelWithContextCode_of_raised_generic_evidence
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
@@ -5117,20 +5185,14 @@ theorem panValuePcRaisedHraiseData_of_flat_global_evaluator_evidence
       hrel, hsource, hvalid, hcompile, hlength, hcompiled, hnot, hfresh,
       hexception, hlookupCode, hcode, hflat, hdistinct, hsize⟩
   subst targetState
-  have hcanonical :=
-    panValuePcRaisedGenericHraise_of_evidence_flat_globals_with_source_locals
+  exact panValuePcRaisedGenericHraise_of_evidence_retarget_globals_with_source_locals
     context structs sourceFunctions functions sourceLocals sourceGlobals
     sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
     baseAddress topAddress bytesInWord sourceFuel sourceException targetException
     expression sourceValue compiled shape values exceptionRel exceptionCode
-    hlookupCode hrel hsource hvalid hcompile
-    hlength hcompiled hnot hfresh hexception hcode hflat hdistinct hsize
-  exact panValuePcRaisedHraiseData_retarget_globals_lookup
-    context.bytesInWord exceptionCode globalsLookup structs context exceptionRel
-    sourceLocals sourceGlobals sourceMemory sourceException sourceValue
-    { state with globals :=
-        updateMemoryListAt state.globals 0 context.bytesInWord values }
-    targetException (by simpa [hbytesInWord] using (hlookup _ _)) hcanonical
+    globalsLookup hlookupCode hrel hsource hvalid hcompile hlength hcompiled hnot
+    hfresh hexception hcode hflat hdistinct hsize
+    (by simpa [hbytesInWord] using (hlookup _ _))
 
 /-! Compact `pc_compile_correct` with evaluator-backed raised evidence.  The
     evidence callback exposes the source expression and compiled payload, so

@@ -39,6 +39,13 @@ def clockedCall :
     (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState 1
     none "returnOne" []
 
+def clockedProgramCall :
+    Option (PanValueFfiClockResult (Word 64) Unit) :=
+  evalPanValueFfiClockProg statefulTestContext statefulTestPrimitive
+    statefulTestHandler [] clockedCallFunctions 0 100 8 20
+    (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState 1
+    (.call none "returnOne" [])
+
 def clockedCallAtZero :
     Option (PanValueFfiClockResult (Word 64) Unit) :=
   evalPanValueFfiClockCall statefulTestContext statefulTestPrimitive
@@ -116,6 +123,12 @@ def clockedCallFinalFfi : Option (PanValueFfiClockResult (Word 64) Unit) :=
 
 #guard
   match clockedCall with
+  | some (.control (.returned locals _ _ _ [PanValue.word value]), 0) =>
+      locals "x" = none && value = BitVec.ofNat 64 1
+  | _ => false
+
+#guard
+  match clockedProgramCall with
   | some (.control (.returned locals _ _ _ [PanValue.word value]), 0) =>
       locals "x" = none && value = BitVec.ofNat 64 1
   | _ => false

@@ -276,4 +276,22 @@ theorem panValueCrepProgramStateCorrect_statefulCompact
   | @seq first second hfirst hsecond ihfirst ihsecond =>
       exact panValueCrepProgramStateCorrect_seq first second ihfirst ihsecond
 
+/-! A continuation-facing stateful return boundary.  This packages the
+constant-return leaf with the state-threading sequence rule, so a caller can
+reuse the result without falling back to the compatibility evaluator.  In
+particular, the continuation is not evaluated after the return and the full
+`CrepState` carried by the return remains the related target state. -/
+theorem panValueCrepProgramStateCorrect_seq_return_const
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (value : α) (continuation : Prog α)
+    (hcontinuation : PanValueCrepProgramStateCorrect continuation) :
+    PanValueCrepProgramStateCorrect
+      (.seq (.return (.const value)) continuation) := by
+  exact panValueCrepProgramStateCorrect_seq
+    (.return (.const value)) continuation
+    (panValueCrepProgramStateCorrect_return_const value) hcontinuation
+
 end Flapjack

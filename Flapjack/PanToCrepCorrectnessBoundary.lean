@@ -633,6 +633,37 @@ theorem panValueCrepProgramStateControlSafe_while_of_loop_safe
     baseAddress topAddress bytesInWord sourceFuel targetFuel sourceResult crepResult
     hrel hsource hcrep
 
+/-! Pair the stateful while simulation with its final Pc control-safety
+    obligation.  The body needs the loop-aware safety relation used by the
+    evaluator induction, while the complete while program separately needs
+    the boundary label-zero relation. -/
+theorem panValueCrepProgramStateCorrect_and_controlSafe_while_source_word
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (condition : SourceWordExp α) (body : Prog α)
+    (hbody : PanValueCrepProgramStateCorrect body)
+    (hbodySafe : PanValueCrepProgramLoopStateControlSafe body)
+    (hloopSafe : PanValueCrepProgramLoopStateControlSafe
+      (.while condition.toExp body))
+    (hbytesInWord : ∀ (context : CompileContext α) (bytesInWord : α),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext α)
+      (sourceLocals : VarName → Option (PanValue α))
+      (name : VarName) (value : PanValue α),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot])) :
+    PanValueCrepProgramStateCorrect
+        (.while condition.toExp body) ∧
+      PanValueCrepProgramStateControlSafe
+        (.while condition.toExp body) := by
+  constructor
+  · exact panValueCrepProgramStateCorrect_while_source_word condition body
+      hbody hbodySafe hbytesInWord hlookup
+  · exact panValueCrepProgramStateControlSafe_while_of_loop_safe condition
+      body hloopSafe
+
 structure PanValuePcInput (α : Type u) where
   structs : StructContext
   code : PanValuePcSourceCode α

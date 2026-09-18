@@ -1387,11 +1387,18 @@ def compileLabProgramLinkedWithPancakeRuntime [NeZero width]
     initialHaltPc initial
   let relabelled := labUpdateStoredLabelLengths 1000 encoded
   let haltPc := 1000 + labStoredProgramLength relabelled
-  let relabelledLabels := labCollectPancakeRuntimeStoredLabels relabelled
-  let final := labEncodeStoredProgram context relabelledLabels 1000 1000
+  /- Re-run the relocation-length convergence after label padding has been
+     updated.  CakeML's `remove_labels_loop` performs `enc_secs_again` again
+     after `upd_lab_len`; a single pass here is insufficient because changing
+     label slots can move a branch across the direct/long encoding boundary.
+     In that case the final compiler would emit more instructions than the
+     stored section length, shifting every following section. -/
+  let final := labEncodeStoredProgramStable 8 context 1000 1000
     haltPc relabelled
+  let finalHaltPc := 1000 + labStoredProgramLength final
   let labels := labCollectPancakeRuntimeStoredLabels final
-  compileLabProgramLinkedWithStoredLengthsAux context labels 1000 1000 haltPc final
+  compileLabProgramLinkedWithStoredLengthsAux context labels 1000 1000
+    finalHaltPc final
 
 def flattenLabProgramLinked :
     List (Nat × Word width × List (Instruction width)) → List (Instruction width)

@@ -6,6 +6,14 @@
   },
   "fixtures": [
     {
+      "path": "Flapjack/Test/OriginalPancake/f00068_throwminimal3.pnk",
+      "source_reference": "Reduced f00068 allocator/coalescing witness: Cake's option_lookup maps the retained sub1 result through ABI register 0, preserving the final 0 := result move.",
+      "cake_sha256": "971f38ca9175e51cd95600ac32470fc251815710f185baefd625f5125744cfbe",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.16"
+      ]
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/empty_locals.pnk",
       "source_reference": "cakeml/pancake/semantics/crepSemScript.sml:71 (empty_locals_def)",
       "cake_sha256": "e661960e2ea04f6c804fa9487b600bb0289929ba6c76e0dd10f243263cfdd870",

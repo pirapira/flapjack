@@ -581,6 +581,35 @@ theorem nested_raise_pc_hraise_flat_globals :
     (hdistinct := by decide)
     (hsize := by simp [nestedSourceValue, panValueShape, Shape.shapeSize])
 
+theorem nested_raise_pc_hraise_retargeted_globals :
+    panValuePcRaisedHraiseData
+      (fun exception => if exception = "E" then some 9 else none)
+      pcGlobalsLookup [] context
+      (fun _ _ code => code = 9)
+      (fun _ => none) (fun _ => none) (fun _ => none) "E"
+      nestedSourceValue
+      { state with globals := updateMemoryListAt state.globals 0 8 [3] }
+      9 := by
+  apply panValuePcRaisedHraiseData_retarget_globals_lookup
+    (bytesInWord := 8) (structs := []) (context := context)
+    (exceptionRel := fun _ _ code => code = 9)
+    (exceptionCode := fun exception =>
+      if exception = "E" then some 9 else none)
+    (globalsLookup := pcGlobalsLookup)
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (sourceException := "E")
+    (sourceValue := nestedSourceValue)
+    (targetState :=
+      { state with globals := updateMemoryListAt state.globals 0 8 [3] })
+    (targetException := 9)
+  · have hstored := crepPcFlatGlobalsLookup_of_stored_flat_words
+      (α := Nat) 8 state nestedSourceValue (by decide)
+    simpa [pcGlobalsLookup, nestedSourceValue, panValueFlatWords,
+      panValueFlatWordsFuel, panValueFlatValueFuel,
+      panValueFlatWordsFuel.panValueFlatWordsListFuel,
+      panValueFlatValueFuel.panValueFlatValueListFuel] using hstored
+  · exact nested_raise_pc_hraise_flat_globals
+
 theorem nested_flat_globals_lookup_exact :
     crepPcFlatGlobalsLookup 8
         { state with globals := updateMemoryListAt state.globals 0 8 [3] }

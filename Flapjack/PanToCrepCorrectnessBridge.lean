@@ -4398,9 +4398,9 @@ theorem panValuePcCompileCorrect_compact
       sourceInput targetInput targetExecution hstructs heval
 
 /-! Compact-evaluator entrypoint retaining the exact Cake exception-code
-    lookup in the raised result relation.  The raised-data and lookup
-    callbacks remain explicit so this theorem composes with evaluator-backed
-    semantic slices without weakening the HOL boundary. -/
+    lookup in the raised result relation.  The raised-data and lookup facts
+    travel together so evaluator-backed semantic slices cannot lose the HOL
+    exception provenance at this boundary. -/
 theorem panValuePcCompileCorrect_compact_with_context_code
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
@@ -4422,7 +4422,7 @@ theorem panValuePcCompileCorrect_compact_with_context_code
     (sourceFuel targetFuel : Nat)
     (hprogram : PanValueCrepProgramStateCorrect program)
     (hprogramSafe : PanValueCrepProgramStateControlSafe program)
-    (hraiseData : ∀ (context : CompileContext α) (structs : StructContext)
+    (hraiseEvidence : ∀ (context : CompileContext α) (structs : StructContext)
       (exceptionRel : ExceptionId → PanValue α → α → Prop)
       (sourceLocals sourceGlobals : VarName → Option (PanValue α))
       (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
@@ -4433,16 +4433,7 @@ theorem panValuePcCompileCorrect_compact_with_context_code
         (.raised targetState targetException) →
       panValuePcRaisedHraiseData exceptionCode globalsLookup structs context
         exceptionRel sourceLocals sourceGlobals sourceMemory sourceException
-        sourceValue targetState targetException)
-    (hlookupCode : ∀ (context : CompileContext α) (structs : StructContext)
-      (exceptionRel : ExceptionId → PanValue α → α → Prop)
-      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
-      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
-      (sourceValue : PanValue α) (targetState : CrepState α)
-      (targetException : α),
-      panValueCrepControlRel structs context exceptionRel
-        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
-        (.raised targetState targetException) →
+        sourceValue targetState targetException ∧
       lookupInfo sourceException context.exceptions = some targetException) :
     PanValuePcCompileCorrectWithContextCode
       (panValuePcCompactSourceEvaluator primitive sourceHandler sourceFunctions
@@ -4458,13 +4449,7 @@ theorem panValuePcCompileCorrect_compact_with_context_code
       baseAddress topAddress targetFuel)
     codeRel excpRel exceptionCode globalsLookup sourceFunctions functions
     primitive sourceHandler crepPrimitive ffi sharedMem baseAddress topAddress
-    bytesInWord sourceFuel targetFuel hprogram hprogramSafe ?_ ?_ (by
-      intro context structs exceptionRel sourceLocals sourceGlobals sourceMemory
-        sourceException sourceValue targetState targetException hcontrol
-      exact ⟨hraiseData context structs exceptionRel sourceLocals sourceGlobals
-          sourceMemory sourceException sourceValue targetState targetException hcontrol,
-        hlookupCode context structs exceptionRel sourceLocals sourceGlobals
-          sourceMemory sourceException sourceValue targetState targetException hcontrol⟩)
+    bytesInWord sourceFuel targetFuel hprogram hprogramSafe ?_ ?_ hraiseEvidence
   · intro context structs sourceInput targetInput sourceExecution hstructs heval
     exact panValuePcCompactSourceEvaluator_adapter primitive sourceHandler
       sourceFunctions baseAddress topAddress bytesInWord sourceFuel program
@@ -4568,7 +4553,13 @@ theorem panValuePcCompileCorrect_compact_with_context_code_cases
   exact panValuePcCompileCorrect_compact_with_context_code
     program codeRel excpRel exceptionCode globalsLookup sourceFunctions functions
     primitive sourceHandler crepPrimitive ffi sharedMem baseAddress topAddress
-    bytesInWord sourceFuel targetFuel hprogram hprogramSafe hraise hlookupCode
+    bytesInWord sourceFuel targetFuel hprogram hprogramSafe (by
+      intro context structs exceptionRel sourceLocals sourceGlobals sourceMemory
+        sourceException sourceValue targetState targetException hcontrol
+      exact ⟨hraise context structs exceptionRel sourceLocals sourceGlobals
+          sourceMemory sourceException sourceValue targetState targetException hcontrol,
+        hlookupCode context structs exceptionRel sourceLocals sourceGlobals
+          sourceMemory sourceException sourceValue targetState targetException hcontrol⟩)
 
 /-! Compact-evaluator entrypoint using evaluator-backed raw word records.
     The non-flat callback remains explicit, so this convenience theorem does
@@ -4744,7 +4735,13 @@ theorem panValuePcCompileCorrect_compact_with_raw_word_lists_context_code
   exact panValuePcCompileCorrect_compact_with_context_code
     program codeRel excpRel exceptionCode globalsLookup sourceFunctions functions
     primitive sourceHandler crepPrimitive ffi sharedMem baseAddress topAddress
-    bytesInWord sourceFuel targetFuel hprogram hprogramSafe hraise hlookupCode
+    bytesInWord sourceFuel targetFuel hprogram hprogramSafe (by
+      intro context structs exceptionRel sourceLocals sourceGlobals sourceMemory
+        sourceException sourceValue targetState targetException hcontrol
+      exact ⟨hraise context structs exceptionRel sourceLocals sourceGlobals
+          sourceMemory sourceException sourceValue targetState targetException hcontrol,
+        hlookupCode context structs exceptionRel sourceLocals sourceGlobals
+          sourceMemory sourceException sourceValue targetState targetException hcontrol⟩)
 
 /-! Compact context-code boundary for canonical flat-global evidence.  The
     raised callback is proved once against the compiler-owned lookup and is
@@ -4807,7 +4804,13 @@ theorem panValuePcCompileCorrect_compact_with_flat_global_callback_context_code
   exact panValuePcCompileCorrect_compact_with_context_code
     program codeRel excpRel exceptionCode globalsLookup sourceFunctions functions
     primitive sourceHandler crepPrimitive ffi sharedMem baseAddress topAddress
-    bytesInWord sourceFuel targetFuel hprogram hprogramSafe hretargeted hlookupCode
+    bytesInWord sourceFuel targetFuel hprogram hprogramSafe (by
+      intro context structs exceptionRel sourceLocals sourceGlobals sourceMemory
+        sourceException sourceValue targetState targetException hcontrol
+      exact ⟨hretargeted context structs exceptionRel sourceLocals sourceGlobals
+          sourceMemory sourceException sourceValue targetState targetException hcontrol,
+        hlookupCode context structs exceptionRel sourceLocals sourceGlobals
+          sourceMemory sourceException sourceValue targetState targetException hcontrol⟩)
 
 /-! Raw-word convenience form of the canonical flat-global boundary.  Word
     and arbitrary flat-record callbacks stay on the compiler lookup, while
@@ -5510,7 +5513,13 @@ theorem panValuePcCompileCorrect_compact_with_flat_global_evaluator_evidence_con
   exact panValuePcCompileCorrect_compact_with_context_code
     program codeRel excpRel exceptionCode globalsLookup sourceFunctions functions
     primitive sourceHandler crepPrimitive ffi sharedMem baseAddress topAddress
-    bytesInWord sourceFuel targetFuel hprogram hprogramSafe hraiseData hlookupCode
+    bytesInWord sourceFuel targetFuel hprogram hprogramSafe (by
+      intro context structs exceptionRel sourceLocals sourceGlobals sourceMemory
+        sourceException sourceValue targetState targetException hcontrol
+      exact ⟨hraiseData context structs exceptionRel sourceLocals sourceGlobals
+          sourceMemory sourceException sourceValue targetState targetException hcontrol,
+        hlookupCode context structs exceptionRel sourceLocals sourceGlobals
+          sourceMemory sourceException sourceValue targetState targetException hcontrol⟩)
 
 /-! Convert direct flat-spill state evidence into the raised package.  This is
     the state-level companion to the evaluator-backed adapter above: it keeps
@@ -5722,7 +5731,13 @@ theorem panValuePcCompileCorrect_compact_with_flat_spill_evidence_context_code
   exact panValuePcCompileCorrect_compact_with_context_code
     program codeRel excpRel exceptionCode globalsLookup sourceFunctions functions
     primitive sourceHandler crepPrimitive ffi sharedMem baseAddress topAddress
-    bytesInWord sourceFuel targetFuel hprogram hprogramSafe hraiseData hlookupCode
+    bytesInWord sourceFuel targetFuel hprogram hprogramSafe (by
+      intro context structs exceptionRel sourceLocals sourceGlobals sourceMemory
+        sourceException sourceValue targetState targetException hcontrol
+      exact ⟨hraiseData context structs exceptionRel sourceLocals sourceGlobals
+          sourceMemory sourceException sourceValue targetState targetException hcontrol,
+        hlookupCode context structs exceptionRel sourceLocals sourceGlobals
+          sourceMemory sourceException sourceValue targetState targetException hcontrol⟩)
 
 /-! Compact `pc_compile_correct` entrypoint for case-split raised evidence.
     Each case proves the canonical flattened lookup first; the boundary then

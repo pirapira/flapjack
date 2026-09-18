@@ -147,6 +147,14 @@ def wordStackLoadInst {α : Type} (config : WordStackConfig) (operator : WordMem
         (.seq (.inst (.mem operator config.scratch config.addressScratch))
           (.stackStore config.scratch (wordStackOffset config destination))))
 
+/- Cake's RISC-V spill path uses the link register (stack register 0) as the
+   short-lived address carrier for an indirect store.  The value register is
+   live across that store, so retain the configured address scratch only when
+   it is itself the value register; otherwise use Cake's carrier. -/
+def wordStackStoreAddressRegister (config : WordStackConfig) : WordLocation → Nat
+  | .register source => if source = 0 then config.addressScratch else 0
+  | .stack _ => config.addressScratch
+
 def wordStackStoreInst {α : Type} (config : WordStackConfig) (operator : WordMemOp)
     (source address : Nat) : Option (StackProg α) := do
   let source ← wordStackLocation config source
@@ -158,9 +166,10 @@ def wordStackStoreInst {α : Type} (config : WordStackConfig) (operator : WordMe
       pure (.seq (.stackLoad config.scratch (wordStackOffset config source))
         (.inst (.mem operator config.scratch address)))
   | .register source, .stack address =>
-      pure (.seq (.stackLoad config.addressScratch
+      let addressScratch := wordStackStoreAddressRegister config (.register source)
+      pure (.seq (.stackLoad addressScratch
           (wordStackOffset config address))
-        (.inst (.mem operator source config.addressScratch)))
+        (.inst (.mem operator source addressScratch)))
   | .stack source, .stack address =>
       pure (.seq (.stackLoad config.addressScratch
           (wordStackOffset config address))
@@ -876,6 +885,14 @@ def wordStackStoreLocationsSafe (config : WordStackConfig) :
   | .register _, .register _ => true
   | .stack _, .register address => address != config.scratch
   | .register source, .stack _ => source != config.addressScratch
+  | .stack _, .stack _ => config.scratch != config.addressScratch
+
+def wordStackMemoryStoreLocationsSafe (config : WordStackConfig) :
+    WordLocation → WordLocation → Bool
+  | .register _, .register _ => true
+  | .stack _, .register address => address != config.scratch
+  | .register source, .stack _ =>
+      source != wordStackStoreAddressRegister config (.register source)
   | .stack _, .stack _ => config.scratch != config.addressScratch
 
 def wordStackDivLocationSafe (config : WordStackConfig) :
@@ -3169,6 +3186,8 @@ theorem evalWordStackMachine_store_preserves_memory [NeZero width]
       some addressValue)
     (hscratch : config.scratch ≠ config.addressScratch)
     (hsafe : wordStackStoreLocationsSafe config sourceLocation addressLocation = true)
+    (hsafeAddress :
+      wordStackMemoryStoreLocationsSafe config sourceLocation addressLocation = true)
     (heval : (wordStackMemoryInst config .store source address).bind
       (evalWordStackMachine state) = some final) :
       final.memory addressValue = sourceValue := by
@@ -3181,7 +3200,8 @@ theorem evalWordStackMachine_store_preserves_memory [NeZero width]
   cases sourceLocation <;> cases addressLocation <;>
     simp [wordStackMemoryInst, wordStackStoreInst, wordStackLocation,
       wordStackOffset, hsource, haddress,
-      wordStackStoreLocationsSafe] at hsafe heval
+      wordStackStoreLocationsSafe, wordStackMemoryStoreLocationsSafe,
+      wordStackStoreAddressRegister] at hsafe hsafeAddress heval
   all_goals
     cases heval
     simp [wordStackMachineValue, wordStackLocation, wordStackOffset,
@@ -3190,7 +3210,7 @@ theorem evalWordStackMachine_store_preserves_memory [NeZero width]
     simp [
       wordStackMachineWriteRegister, 
       wordStackMachineWriteMemory, hsourceValue,
-      haddressValue, hsafe, hsafe']
+      haddressValue, hsafe, hsafeAddress, hsafe']
 
 theorem evalWordStackMachine_shared_load_preserves_value [NeZero width]
     (config : WordStackConfig) (state final : WordStackMachineState width)

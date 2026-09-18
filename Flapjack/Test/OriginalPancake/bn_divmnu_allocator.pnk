@@ -1,0 +1,106 @@
+fun 1 nlz32(1 x) {
+  return 0;
+}
+fun {1,1} div64by32(1 hi, 1 lo, 1 d) {
+  return <0, 0>;
+}
+fun 1 bn_divmnu(1 q, 1 r, 1 u, 1 m, 1 v, 1 n, 1 un, 1 vn) {
+  var i = 0;
+  var j = 0;
+  if n == 1 {
+    var d = lds 1 v;
+    var k = 0;
+    j = m;
+    while j >+ 0 {
+      j = j - 1;
+      var {1,1} qr = div64by32(k, lds 1 (u + j * 8), d);
+      st q + j * 8, qr.0;
+      k = qr.1;
+    }
+    st r, k;
+    return 0;
+  }
+  var s = nlz32(lds 1 (v + (n - 1) * 8));
+  i = n - 1;
+  while i >+ 0 {
+    st vn + i * 8, (((lds 1 (v + i * 8)) << s) | ((lds 1 (v + (i - 1) * 8)) >>> (32 - s))) & 4294967295;
+    i = i - 1;
+  }
+  st vn, ((lds 1 v) << s) & 4294967295;
+  st un + m * 8, (lds 1 (u + (m - 1) * 8)) >>> (32 - s);
+  i = m - 1;
+  while i >+ 0 {
+    st un + i * 8, (((lds 1 (u + i * 8)) << s) | ((lds 1 (u + (i - 1) * 8)) >>> (32 - s))) & 4294967295;
+    i = i - 1;
+  }
+  st un, ((lds 1 u) << s) & 4294967295;
+  var vtop = lds 1 (vn + (n - 1) * 8);
+  var vsec = lds 1 (vn + (n - 2) * 8);
+  j = m - n + 1;
+  while j >+ 0 {
+    j = j - 1;
+    var ujn = lds 1 (un + (j + n) * 8);
+    var ujn1 = lds 1 (un + (j + n - 1) * 8);
+    var ujn2 = lds 1 (un + (j + n - 2) * 8);
+    var qhat = 0;
+    var rhat = 0;
+    if ujn >=+ vtop {
+      qhat = 4294967295;
+      rhat = ((ujn << 32) | ujn1) - qhat * vtop;
+    } else {
+      var {1,1} qr = div64by32(ujn, ujn1, vtop);
+      qhat = qr.0;
+      rhat = qr.1;
+    }
+    var again = 1;
+    while again == 1 {
+      again = 0;
+      if rhat <+ 4294967296 {
+        if (qhat * vsec) >+ ((rhat << 32) | ujn2) {
+          qhat = qhat - 1;
+          rhat = rhat + vtop;
+          again = 1;
+        }
+      }
+    }
+    var k = 0;
+    i = 0;
+    while i <+ n {
+      var p = qhat * (lds 1 (vn + i * 8));
+      var t = (lds 1 (un + (i + j) * 8)) - k - (p & 4294967295);
+      st un + (i + j) * 8, t & 4294967295;
+      k = (p >>> 32) - (t >> 32);
+      i = i + 1;
+    }
+    var tt = ujn - k;
+    if tt < 0 {
+      st q + j * 8, qhat - 1;
+      k = 0;
+      i = 0;
+      while i <+ n {
+        var t2 = (lds 1 (un + (i + j) * 8)) + (lds 1 (vn + i * 8)) + k;
+        st un + (i + j) * 8, t2 & 4294967295;
+        k = t2 >>> 32;
+        i = i + 1;
+      }
+      st un + (j + n) * 8, (tt + k) & 4294967295;
+    } else {
+      st q + j * 8, qhat;
+      st un + (j + n) * 8, tt;
+    }
+  }
+  j = m - n + 1;
+  while j <+ m {
+    st q + j * 8, 0;
+    j = j + 1;
+  }
+  i = 0;
+  while i <+ n {
+    st r + i * 8, ((lds 1 (un + i * 8)) >>> s) | (((lds 1 (un + (i + 1) * 8)) << (32 - s)) & 4294967295);
+    i = i + 1;
+  }
+  return 0;
+}
+fun 1 main() {
+  return 0;
+}

@@ -155,6 +155,23 @@ def panValuePcResultRel
         sourceMemory targetState ∧ sourceEvent = targetEvent
   | _, _ => False
 
+def panValuePcResultRelWithContextCode
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α)) :
+    PanValuePcResult α → CrepPcResult α → Prop
+  | .raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue,
+      .raised targetState targetException =>
+      panValueCrepStateRel structs context sourceLocals sourceGlobals
+        sourceMemory targetState ∧
+      panValuePcExceptionResultRelWithContextCode structs context exceptionRel
+        exceptionCode globalsLookup sourceGlobals sourceMemory sourceException
+        sourceValue targetState targetException
+  | sourceResult, targetResult =>
+      panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
+        sourceResult targetResult
+
 /-! The source compiler-correctness theorem only permits the loop-control
 label `0` at this boundary.  Keep these rejection lemmas next to the
 relation so a future broadening of the pattern cannot silently weaken the
@@ -726,8 +743,39 @@ def PanValuePcCompileCorrect
       some targetExecution →
     codeRel context sourceExecution.code targetExecution.code →
     excpRel context sourceExecution.eshapes targetExecution.eshapes →
-    panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
-      sourceExecution.result targetExecution.result
+      panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
+        sourceExecution.result targetExecution.result
+
+def PanValuePcCompileCorrectWithContextCode
+    [BEq α] [OfNat α 0] [Add α]
+    (sourceEvaluate : PanValuePcEvaluator α)
+    (targetEvaluate : CrepPcEvaluator α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (program : Prog α) : Prop :=
+  ∀ (context : CompileContext α) (structs : StructContext)
+    (sourceInput : PanValuePcInput α) (targetInput : CrepPcInput α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (sourceExecution : PanValuePcExecution α)
+    (targetExecution : CrepPcExecution α),
+    sourceInput.structs = structs →
+    targetInput.structs = structs →
+    panValuePcLocalisedCode sourceInput.code →
+    localisedProg program →
+    codeRel context sourceInput.code targetInput.code →
+    excpRel context sourceInput.eshapes targetInput.eshapes →
+    panValueCrepStateRel structs context sourceInput.locals sourceInput.globals
+      sourceInput.memory targetInput.state →
+    sourceExecution.result ≠ .error →
+    sourceEvaluate context sourceInput program = some sourceExecution →
+    targetEvaluate context targetInput (compileProg context program) =
+      some targetExecution →
+    codeRel context sourceExecution.code targetExecution.code →
+    excpRel context sourceExecution.eshapes targetExecution.eshapes →
+    panValuePcResultRelWithContextCode structs context exceptionRel exceptionCode
+      globalsLookup sourceExecution.result targetExecution.result
 
 /-! Packaging theorem for a supported compiler subset.  Every HOL result case
 is an explicit obligation; in particular no proof can discharge this

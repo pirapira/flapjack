@@ -795,4 +795,28 @@ theorem two_word_raise_program_boundary_premises
     panValueCrepProgramStateControlSafe_raise "E"
       (.rStruct [.const (3 : Nat), .const (4 : Nat)])⟩
 
+theorem three_word_raise_program_boundary_premises
+    (hlookupException : ∀ (context : CompileContext Nat),
+      ∃ exceptionCode, lookupInfo "E" context.exceptions = some exceptionCode)
+    (hfresh : ∀ (context : CompileContext Nat) (state : CrepState Nat),
+      state.locals (context.maxVar + 1) = none ∧
+      state.locals (context.maxVar + 2) = none ∧
+      state.locals (context.maxVar + 3) = none)
+    (hexception : ∀ (context : CompileContext Nat)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (exceptionCode : Nat),
+      lookupInfo "E" context.exceptions = some exceptionCode →
+      exceptionRel "E" (.rStruct [.word 3, .word 4, .word 5]) exceptionCode) :
+    PanValueCrepProgramStateCorrect
+        (.raise "E"
+          (.rStruct [.const (3 : Nat), .const (4 : Nat), .const (5 : Nat)])) ∧
+      PanValueCrepProgramStateControlSafe
+        (.raise "E"
+          (.rStruct [.const (3 : Nat), .const (4 : Nat), .const (5 : Nat)])) := by
+  have hprogram := panValueCrepProgramStateCorrect_raise_three_word_record
+    (α := Nat) "E" 3 4 5 hlookupException hfresh hexception
+  exact ⟨hprogram,
+    panValueCrepProgramStateControlSafe_raise "E"
+      (.rStruct [.const (3 : Nat), .const (4 : Nat), .const (5 : Nat)])⟩
+
 end Flapjack.Test.PanValuePcRaisedPayloadCorrectness

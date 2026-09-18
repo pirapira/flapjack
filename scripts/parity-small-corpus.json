@@ -605,6 +605,14 @@
         "flapjack-8tb.4",
         "flapjack-6zt"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00232_nested_fold_order.pnk",
+      "source_reference": "Reduced accepted-output witness f00232: Cake pull_exp retains a folded unary Xor wrapper until flatten_exp, while unwrapping it early reverses the enclosing Add operands and shifts the multi-function layout.",
+      "cake_sha256": "4ff631ec21a10e15dcf97d05827b171bafbbdce353fbdce9f9ed75f4437759ef",
+      "tracked_beads": [
+        "flapjack-8tb.4"
+      ]
     }
   ]
 }

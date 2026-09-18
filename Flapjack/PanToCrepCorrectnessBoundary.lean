@@ -251,6 +251,35 @@ theorem panValueCrepProgramStateControlSafe_continue
           cases hcrep
           rfl
 
+theorem panValueCrepProgramStateControlSafe_raise
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (exception : ExceptionId) (expression : Exp α) :
+    PanValueCrepProgramStateControlSafe (.raise exception expression) := by
+  intro context structs sourceFunctions functions sourceLocals sourceGlobals
+    sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord sourceFuel targetFuel _exceptionRel
+    sourceResult crepResult hstate hsource hcrep
+  cases sourceFuel with
+  | zero => simp [evalPanValueProgWithPrimitiveCallsAndFfi] at hsource
+  | succ sourceFuel =>
+      cases hvalue : evalPanValueExp structs sourceLocals sourceGlobals
+          sourceMemory baseAddress topAddress bytesInWord expression with
+      | none =>
+          simp [evalPanValueProgWithPrimitiveCallsAndFfi, hvalue] at hsource
+      | some value =>
+          cases hvalid : panValuePayloadWithinLimit structs value with
+          | false =>
+              simp [evalPanValueProgWithPrimitiveCallsAndFfi, hvalue, hvalid]
+                at hsource
+          | true =>
+              simp [evalPanValueProgWithPrimitiveCallsAndFfi, hvalue, hvalid]
+                at hsource
+              cases hsource
+              simp [panValuePcControlLabelSafe]
+
 structure PanValuePcInput (α : Type u) where
   structs : StructContext
   code : PanValuePcSourceCode α

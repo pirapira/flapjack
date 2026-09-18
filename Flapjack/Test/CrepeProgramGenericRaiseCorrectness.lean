@@ -1215,7 +1215,7 @@ theorem four_word_raise_pc_semantic_lift_with_context_code :
         (.raised
           { state with globals :=
               updateMemoryListAt state.globals 0 8 [3, 4, 5, 6] } 9) := by
-  have h := panValuePcRaisedRawWordListSemanticLift_retarget_globals_with_context_code
+  have h := panValuePcRaisedGenericSemanticLift_retarget_globals_with_context_code
     (α := Nat) (context := context) (structs := [])
     (sourceFunctions := []) (functions := [])
     (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
@@ -1227,6 +1227,7 @@ theorem four_word_raise_pc_semantic_lift_with_context_code :
     (sharedMem := fun _ _ _ _ => none)
     (baseAddress := 0) (topAddress := 0) (bytesInWord := 8)
     (sourceFuel := 2) (exception := "E") (exceptionCode := 9)
+    (sourceValue := fourWordSourceValue)
     (values := [3, 4, 5, 6]) (expression := fourWordSourceExpression)
     (compiled := [.const 3, .const 4, .const 5, .const 6])
     (shape := .comb [.one, .one, .one, .one])
@@ -1238,10 +1239,11 @@ theorem four_word_raise_pc_semantic_lift_with_context_code :
     (hrel := by
       refine ⟨rfl, panValueCrepLocalsRel_empty [] context _, rfl⟩)
     (hsource := by
-      simp [fourWordSourceExpression, evalPanValueExp,
+      simp [fourWordSourceExpression, fourWordSourceValue, evalPanValueExp,
         evalPanValueExp.evalPanValueExps])
     (hvalid := by
-      simp [panValuePayloadWithinLimit, panValuePayloadSizeFuel,
+      simp [fourWordSourceValue, panValuePayloadWithinLimit,
+        panValuePayloadSizeFuel,
         panValuePayloadSizeFuel.panValuePayloadSizeFieldsFuel,
         panValueFlatValueFuel,
         panValueFlatValueFuel.panValueFlatValueListFuel])
@@ -1255,8 +1257,13 @@ theorem four_word_raise_pc_semantic_lift_with_context_code :
     (hfresh := by simp [context, state, freshNames])
     (hexception := by simp)
     (hcode := by simp)
+    (hflat := by
+      simp [fourWordSourceValue, panValueFlatWords, panValueFlatWordsFuel,
+        panValueFlatValueFuel,
+        panValueFlatWordsFuel.panValueFlatWordsListFuel,
+        panValueFlatValueFuel.panValueFlatValueListFuel])
     (hdistinct := by decide)
-    (hsize := by simp [panValueShape, Shape.shapeSize])
+    (hsize := by simp [fourWordSourceValue, panValueShape, Shape.shapeSize])
     (hlookupGlobals := by
       have hstored := crepPcFlatGlobalsLookup_of_stored_flat_words
         (α := Nat) context.bytesInWord state fourWordSourceValue (by decide)

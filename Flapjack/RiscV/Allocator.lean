@@ -356,7 +356,7 @@ def wordSsaRead (state : WordSsaState) (name : Nat) : Nat :=
 def wordSsaReadMoveSource (state : WordSsaState) (name : Nat) : Nat :=
   match lookupNatInfo name state.current with
   | some value => value
-  | none => if name % 2 == 0 && name >= 10 then 0 else name
+  | none => if name % 2 == 0 && (name >= 10 || name == 6) then 0 else name
 
 def wordSsaReadCutsets (state : WordSsaState)
     (cutsets : List Nat × List Nat) : List Nat × List Nat :=

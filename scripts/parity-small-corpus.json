@@ -6,6 +6,14 @@
   },
   "fixtures": [
     {
+      "path": "Flapjack/Test/OriginalPancake/f00068_allocator_return.pnk",
+      "source_reference": "Reduced f00068 allocator witness: Cake's SSA option_lookup maps an unmapped fixed-protocol source to ABI register 0, so the allocator retains sub1's result and emits the ABI 0 move.",
+      "cake_sha256": "d06482093d272aa5c327208a792b5d140de2f217b5d255f852141150d29d6cfc",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.16"
+      ]
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/f00068_throwminimal3.pnk",
       "source_reference": "Reduced f00068 allocator/coalescing witness: Cake's option_lookup maps the retained sub1 result through ABI register 0, preserving the final 0 := result move.",
       "cake_sha256": "971f38ca9175e51cd95600ac32470fc251815710f185baefd625f5125744cfbe",

@@ -308,6 +308,10 @@ example :
   rfl
 
 example :
+    wordSsaReadMoveSource ({ current := [], next := 200 } : WordSsaState) 6 = 0 := by
+  rfl
+
+example :
     wordSsaReadMoveSource ({ current := [], next := 200 } : WordSsaState) 9 = 9 := by
   rfl
 

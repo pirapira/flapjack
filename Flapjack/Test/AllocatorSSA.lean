@@ -35,7 +35,8 @@ example :
         .seq (.move 1 [(8, 6)])
           (.inst (.arith (.shift .asr 100 6 (.reg 8))))) := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
-    wordSsaRenameInstProgram, wordSsaFresh, wordSsaRead, lookupNatInfo]
+    wordSsaRenameInstProgram, wordSsaFresh, wordSsaRead,
+    wordSsaReadMoveSource, lookupNatInfo]
 
 example :
     wordProgAtomicClashes
@@ -298,8 +299,21 @@ example :
     wordSsaRenameMove (α := Nat)
         ({ current := [], next := 200 } : WordSsaState) 0 [(15, 4), (16, 12)] =
       ({ current := [(12, 204), (4, 200), (16, 204), (15, 200)], next := 208 },
-        (.move 0 [(200, 4), (204, 12)] : WordProg Nat)) := by
-  simp [wordSsaRenameMove, wordSsaFreshList, wordSsaFresh, wordSsaRead,
+        (.move 0 [(200, 4), (204, 0)] : WordProg Nat)) := by
+  simp [wordSsaRenameMove, wordSsaFreshList, wordSsaFresh,
+    wordSsaReadMoveSource,
     wordSsaForceRename, lookupNatInfo]
+
+example :
+    wordSsaReadMoveSource ({ current := [], next := 200 } : WordSsaState) 14 = 0 := by
+  rfl
+
+example :
+    wordSsaReadMoveSource ({ current := [], next := 200 } : WordSsaState) 6 = 0 := by
+  rfl
+
+example :
+    wordSsaReadMoveSource ({ current := [], next := 200 } : WordSsaState) 9 = 9 := by
+  rfl
 
 end Flapjack

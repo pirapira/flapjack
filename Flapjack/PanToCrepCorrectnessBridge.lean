@@ -870,7 +870,7 @@ theorem panValuePcRaisedWordResultRel_retarget_globals
         (.word value) = globalsLookup
           { state with globals := updateMemory state.globals 0 value }
           (.word value)) :
-    panValuePcResultRel structs context exceptionRel resultExceptionCode
+    panValuePcResultRelWithContextCode structs context exceptionRel resultExceptionCode
       globalsLookup
       (.raised (fun _ => none) sourceGlobals sourceMemory exception (.word value))
       (.raised { state with globals := updateMemory state.globals 0 value }
@@ -881,15 +881,20 @@ theorem panValuePcRaisedWordResultRel_retarget_globals
     baseAddress topAddress bytesInWord sourceFuel targetFuel exception
     exceptionCode value expression compiled exceptionRel resultExceptionCode
     hlookup hcode hbytesInWord hrel hsource hcompile hcompiled hexception hfresh
-  have hwordData := hword.1
+  rcases hword with ⟨hwordData, hlookupCode⟩
   rcases hwordData with
     ⟨hpost, spillAddress, hcontrol, hcode', hpayload, hsize⟩
   refine ⟨hpost, ?_⟩
-  refine ⟨spillAddress, exceptionCode, hcode', rfl, hcontrol, ?_⟩
+  refine ⟨?_, hlookupCode⟩
+  apply panValuePcExceptionResultRel_of_raised_control
+    structs context exceptionRel resultExceptionCode globalsLookup
+    sourceGlobals sourceMemory exception (.word value)
+    { state with globals := updateMemory state.globals 0 value }
+    exceptionCode spillAddress hcontrol hcode'
   intro hnonempty
-  refine ⟨?_, hsize⟩
   rw [← hlookupGlobals]
   exact hpayload hnonempty
+  exact hsize
 
 /-! Semantic two-word raise lift for the next supported payload fragment.  The
     source and global-aware Crep equations are the checked two-word

@@ -243,6 +243,71 @@ theorem three_word_raise_pc_hraise_global_spill :
   simpa [sourceValue, context, updateMemoryListAt, List.range,
     List.range.loop, Nat.add_assoc] using h
 
+theorem three_word_raise_pc_semantic_lift :
+    evalPanValueProgWithPrimitiveCallsAndFfi
+        (fun _ _ => none) (fun _ _ _ _ _ _ => none) [] []
+        0 0 8 3 (fun _ => none) (fun _ => none) (fun _ => none)
+        (.raise "E" sourceExpression) =
+        some (.raised (fun _ => none) (fun _ => none) (fun _ => none)
+          "E" sourceValue) ∧
+      evalCrepFullProgState [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+        (fun _ _ _ _ => none) 0 0 8 state
+        (compileProg context (.raise "E" sourceExpression)) =
+        some (.raised
+          { state with globals := updateMemoryListAt state.globals 0 8 [3, 4, 5] }
+          9) ∧
+      panValuePcResultRel [] context (fun _ _ code => code = 9)
+        (fun exception => if exception = "E" then some 9 else none)
+        (crepPcThreeWordGlobalsLookup 8)
+        (.raised (fun _ => none) (fun _ => none) (fun _ => none)
+          "E" sourceValue)
+        (.raised
+          { state with globals := updateMemoryListAt state.globals 0 8 [3, 4, 5] }
+          9) := by
+  have h := panValuePcRaisedThreeWordSemanticLift
+    (α := Nat) (context := context) (structs := [])
+    (sourceFunctions := []) (functions := [])
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (state := state)
+    (primitive := fun _ _ => none)
+    (sourceHandler := fun _ _ _ _ _ _ => none)
+    (crepPrimitive := fun _ _ => none)
+    (ffi := fun _ _ _ _ _ _ => none)
+    (sharedMem := fun _ _ _ _ => none)
+    (baseAddress := 0) (topAddress := 0) (bytesInWord := 8)
+    (sourceFuel := 2) (exception := "E") (exceptionCode := 9)
+    (first := 3) (second := 4) (third := 5)
+    (expression := sourceExpression)
+    (compiledFirst := .const 3) (compiledSecond := .const 4)
+    (compiledThird := .const 5)
+    (exceptionRel := fun _ _ code => code = 9)
+    (resultExceptionCode := fun exception =>
+      if exception = "E" then some 9 else none)
+    (hlookup := by simp [context, lookupInfo])
+    (hrel := by
+      refine ⟨rfl, panValueCrepLocalsRel_empty [] context _, rfl⟩)
+    (hsource := by
+      simp [sourceExpression, evalPanValueExp,
+        evalPanValueExp.evalPanValueExps])
+    (hvalid := by
+      simp [panValuePayloadWithinLimit, panValuePayloadSizeFuel,
+        panValuePayloadSizeFuel.panValuePayloadSizeFieldsFuel,
+        panValueFlatValueFuel, panValueFlatValueFuel.panValueFlatValueListFuel])
+    (hcompile := by
+      simp [context, sourceExpression, compileExp,
+        compileExp.compileExpList])
+    (hcompiled := by
+      simp [state, evalCrepFullExpsState, evalCrepFullExpState])
+    (hnot := by simp [context, freshNames])
+    (hfresh := by simp [context, state, freshNames])
+    (hexception := by simp)
+    (hcode := by simp)
+    (hdistinct01 := by decide)
+    (hdistinct02 := by decide)
+    (hdistinct12 := by decide)
+  simpa [sourceValue, context, freshNames, updateMemoryListAt,
+    List.range, List.range.loop, Nat.add_assoc] using h
+
 theorem three_word_raise_pc_hraise_flat_globals :
     panValuePcRaisedHraiseData
       (fun exception => if exception = "E" then some 9 else none)
@@ -1128,6 +1193,87 @@ theorem four_word_raise_pc_semantic_lift_retargeted :
   simpa [context, fourWordSourceValue, freshNames, List.range, List.range.loop,
     Nat.add_assoc] using h
 
+theorem four_word_raise_pc_semantic_lift_with_context_code :
+    evalPanValueProgWithPrimitiveCallsAndFfi
+        (fun _ _ => none) (fun _ _ _ _ _ _ => none) [] []
+        0 0 8 3 (fun _ => none) (fun _ => none) (fun _ => none)
+        (.raise "E" fourWordSourceExpression) =
+        some (.raised (fun _ => none) (fun _ => none) (fun _ => none)
+          "E" fourWordSourceValue) ∧
+      evalCrepFullProgState [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+        (fun _ _ _ _ => none) 0 0 10 state
+        (compileProg context (.raise "E" fourWordSourceExpression)) =
+        some (.raised
+          { state with globals :=
+              updateMemoryListAt state.globals 0 8 [3, 4, 5, 6] } 9) ∧
+      panValuePcResultRelWithContextCode [] context
+        (fun _ _ code => code = 9)
+        (fun exception => if exception = "E" then some 9 else none)
+        pcGlobalsLookup
+        (.raised (fun _ => none) (fun _ => none) (fun _ => none)
+          "E" fourWordSourceValue)
+        (.raised
+          { state with globals :=
+              updateMemoryListAt state.globals 0 8 [3, 4, 5, 6] } 9) := by
+  have h := panValuePcRaisedGenericSemanticLift_retarget_globals_with_context_code
+    (α := Nat) (context := context) (structs := [])
+    (sourceFunctions := []) (functions := [])
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (state := state)
+    (primitive := fun _ _ => none)
+    (sourceHandler := fun _ _ _ _ _ _ => none)
+    (crepPrimitive := fun _ _ => none)
+    (ffi := fun _ _ _ _ _ _ => none)
+    (sharedMem := fun _ _ _ _ => none)
+    (baseAddress := 0) (topAddress := 0) (bytesInWord := 8)
+    (sourceFuel := 2) (exception := "E") (exceptionCode := 9)
+    (sourceValue := fourWordSourceValue)
+    (values := [3, 4, 5, 6]) (expression := fourWordSourceExpression)
+    (compiled := [.const 3, .const 4, .const 5, .const 6])
+    (shape := .comb [.one, .one, .one, .one])
+    (exceptionRel := fun _ _ code => code = 9)
+    (resultExceptionCode := fun exception =>
+      if exception = "E" then some 9 else none)
+    (globalsLookup := pcGlobalsLookup)
+    (hlookup := by simp [context, lookupInfo])
+    (hrel := by
+      refine ⟨rfl, panValueCrepLocalsRel_empty [] context _, rfl⟩)
+    (hsource := by
+      simp [fourWordSourceExpression, fourWordSourceValue, evalPanValueExp,
+        evalPanValueExp.evalPanValueExps])
+    (hvalid := by
+      simp [fourWordSourceValue, panValuePayloadWithinLimit,
+        panValuePayloadSizeFuel,
+        panValuePayloadSizeFuel.panValuePayloadSizeFieldsFuel,
+        panValueFlatValueFuel,
+        panValueFlatValueFuel.panValueFlatValueListFuel])
+    (hcompile := by
+      simp [context, fourWordSourceExpression, compileExp,
+        compileExp.compileExpList])
+    (hlength := by simp [Shape.shapeSize])
+    (hcompiled := by
+      simp [state, evalCrepFullExpsState, evalCrepFullExpState])
+    (hnot := by simp [context, freshNames])
+    (hfresh := by simp [context, state, freshNames])
+    (hexception := by simp)
+    (hcode := by simp)
+    (hflat := by
+      simp [fourWordSourceValue, panValueFlatWords, panValueFlatWordsFuel,
+        panValueFlatValueFuel,
+        panValueFlatWordsFuel.panValueFlatWordsListFuel,
+        panValueFlatValueFuel.panValueFlatValueListFuel])
+    (hdistinct := by decide)
+    (hsize := by simp [fourWordSourceValue, panValueShape, Shape.shapeSize])
+    (hlookupGlobals := by
+      have hstored := crepPcFlatGlobalsLookup_of_stored_flat_words
+        (α := Nat) context.bytesInWord state fourWordSourceValue (by decide)
+      simpa [context, pcGlobalsLookup, fourWordSourceValue, panValueFlatWords,
+        panValueFlatWordsFuel, panValueFlatValueFuel,
+        panValueFlatWordsFuel.panValueFlatWordsListFuel,
+        panValueFlatValueFuel.panValueFlatValueListFuel] using hstored)
+  simpa [context, fourWordSourceValue, freshNames, List.range, List.range.loop,
+    Nat.add_assoc] using h
+
 theorem four_word_raise_pc_context_code_from_evidence :
     panValuePcExceptionResultRelWithContextCode [] context
       (fun _ _ code => code = 9)
@@ -1186,6 +1332,32 @@ theorem four_word_raise_pc_context_code_from_evidence :
       panValueFlatWordsFuel, panValueFlatValueFuel,
       panValueFlatWordsFuel.panValueFlatWordsListFuel,
       panValueFlatValueFuel.panValueFlatValueListFuel] using hstored
+
+theorem four_word_raise_pc_context_code_from_semantic_lift :
+    panValuePcResultRelWithContextCode [] context
+      (fun _ _ code => code = 9)
+      (fun exception => if exception = "E" then some 9 else none)
+      pcGlobalsLookup
+      (.raised (fun _ => none) (fun _ => none) (fun _ => none)
+        "E" fourWordSourceValue)
+      (.raised
+        { state with globals :=
+            updateMemoryListAt state.globals 0 8 [3, 4, 5, 6] }
+        9) := by
+  apply panValuePcResultRelWithContextCode_of_raised_result_rel
+    (structs := []) (context := context)
+    (exceptionRel := fun _ _ code => code = 9)
+    (exceptionCode := fun exception =>
+      if exception = "E" then some 9 else none)
+    (globalsLookup := pcGlobalsLookup)
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (sourceException := "E")
+    (sourceValue := fourWordSourceValue)
+    (targetState :=
+      { state with globals := updateMemoryListAt state.globals 0 8 [3, 4, 5, 6] })
+    (targetException := 9)
+  · exact four_word_raise_pc_semantic_lift_retargeted.2.2
+  · simp [context, lookupInfo]
 
 theorem four_word_raise_pc_hraise_retargeted_globals :
     panValuePcRaisedHraiseData

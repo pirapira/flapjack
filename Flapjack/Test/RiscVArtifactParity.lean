@@ -994,7 +994,7 @@ def runChecks : IO Bool := do
          bitmapCallsWordsMatch),
       ("frame-occupancy p1 bitmap vector matches Cake [4, 2]",
          frameOccupancyP1BitmapsMatch),
-      ("frame-occupancy p9 exact vector gap is tracked, not accepted",
+      ("frame-occupancy p9 exact vector matches the Cake oracle",
          frameOccupancyP9BitmapsMatch),
       ("relational condition direct-branch section is byte-identical to Cake",
         relationalConditionExactParity),

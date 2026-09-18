@@ -39,6 +39,28 @@ example (condition : SourceWordExp Nat) (thenBranch elseBranch : Prog Nat)
   panValueCrepProgramStateControlSafe_ite_source_word condition thenBranch
     elseBranch hthenSafe helseSafe hbytesInWord hlookup
 
+/-! The conditional bridge carries evaluator correctness and the boundary
+    control-label obligation together. -/
+example (condition : SourceWordExp Nat)
+    (hbytesInWord : ∀ (context : CompileContext Nat) (bytesInWord : Nat),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext Nat)
+      (sourceLocals : VarName → Option (PanValue Nat))
+      (name : VarName) (value : PanValue Nat),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot])) :
+    PanValueCrepProgramStateCorrect
+        (.ite condition.toExp (.break : Prog Nat) (.continue : Prog Nat)) ∧
+      PanValueCrepProgramStateControlSafe
+        (.ite condition.toExp (.break : Prog Nat) (.continue : Prog Nat)) := by
+  exact panValueCrepProgramStateCorrect_and_controlSafe_ite_source_word
+    condition (.break : Prog Nat) (.continue : Prog Nat)
+    panValueCrepProgramStateCorrect_break
+    panValueCrepProgramStateCorrect_continue
+    panValueCrepProgramStateControlSafe_break
+    panValueCrepProgramStateControlSafe_continue
+    hbytesInWord hlookup
+
 /-! Nonzero labels remain rejected at the `pc_compile_correct` boundary. -/
 example :
     ¬ panValuePcResultRel [] controlContext (fun _ _ _ => True) (fun _ => some 0)

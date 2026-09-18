@@ -335,8 +335,8 @@ theorem evalPanValueFfiClockProg_fuel_mono'
         | normal l g m f => simp at h
         | broke l g m f => simp at h
         | continued l g m f => simp at h
-        | finalFfi l g m f ev => simp at h
-      | timeout l g m f => simp at h
+        | finalFfi l g m f ev => exact h
+      | timeout l g m f => exact h
   | case9 fuel locals globals memory ffi clock conditionExp body ma c mh ihBody ihLoop =>
     intro fuel' result hle h
     obtain ⟨k, rfl⟩ : ∃ k, fuel' = k + 1 := ⟨fuel' - 1, by omega⟩

@@ -3014,7 +3014,7 @@ theorem panValuePcRaisedGenericSemanticLift_retarget_globals_with_context_code
         exceptionCode) ∧
     panValuePcResultRelWithContextCode structs context exceptionRel
       resultExceptionCode globalsLookup
-      (.raised (fun _ => none) sourceGlobals sourceMemory exception sourceValue)
+      (.raised sourceLocals sourceGlobals sourceMemory exception sourceValue)
       (.raised
         { state with globals :=
             updateMemoryListAt state.globals 0 context.bytesInWord values }
@@ -3025,7 +3025,8 @@ theorem panValuePcRaisedGenericSemanticLift_retarget_globals_with_context_code
     baseAddress topAddress bytesInWord sourceFuel exception exceptionCode
     expression sourceValue compiled shape values exceptionRel hlookup hrel hsource
     hvalid hcompile hlength hcompiled hnot hfresh hexception
-  have hraiseData := panValuePcRaisedGenericHraise_of_evidence_retarget_globals
+  have hraiseData :=
+    panValuePcRaisedGenericHraise_of_evidence_retarget_globals_with_source_locals
     context structs sourceFunctions functions sourceLocals sourceGlobals
     sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
     baseAddress topAddress bytesInWord sourceFuel exception exceptionCode
@@ -3034,19 +3035,19 @@ theorem panValuePcRaisedGenericSemanticLift_retarget_globals_with_context_code
     hexception hcode hflat hdistinct hsize hlookupGlobals
   have hresult := panValuePcResultRel_of_raised_hraise_data
     structs context exceptionRel resultExceptionCode globalsLookup
-    (fun _ => none) sourceGlobals sourceMemory exception sourceValue
+    sourceLocals sourceGlobals sourceMemory exception sourceValue
     { state with globals :=
         updateMemoryListAt state.globals 0 context.bytesInWord values }
     exceptionCode hraiseData
   have hcontext : panValuePcResultRelWithContextCode structs context
       exceptionRel resultExceptionCode globalsLookup
-      (.raised (fun _ => none) sourceGlobals sourceMemory exception sourceValue)
+      (.raised sourceLocals sourceGlobals sourceMemory exception sourceValue)
       (.raised
         { state with globals :=
             updateMemoryListAt state.globals 0 context.bytesInWord values }
         exceptionCode) := by
     simpa [panValuePcResultRelWithContextCode] using
-      (show panValueCrepStateRel structs context (fun _ => none)
+      (show panValueCrepStateRel structs context sourceLocals
           sourceGlobals sourceMemory
           { state with globals :=
               updateMemoryListAt state.globals 0 context.bytesInWord values } ∧
@@ -3120,7 +3121,7 @@ theorem panValuePcRaisedGenericSemanticLift_flat_globals_with_context_code
         exceptionCode) ∧
     panValuePcResultRelWithContextCode structs context exceptionRel
       resultExceptionCode (crepPcFlatGlobalsLookup context.bytesInWord)
-      (.raised (fun _ => none) sourceGlobals sourceMemory exception sourceValue)
+      (.raised sourceLocals sourceGlobals sourceMemory exception sourceValue)
       (.raised
         { state with globals :=
             updateMemoryListAt state.globals 0 context.bytesInWord values }

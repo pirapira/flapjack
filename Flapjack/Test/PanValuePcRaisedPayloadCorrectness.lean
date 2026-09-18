@@ -332,7 +332,7 @@ theorem closed_word_raise_pc_result_rel_retargeted :
       (.raised (fun _ => none) (fun _ => none) (fun _ => none) "E" (.word 3))
       (.raised { raiseState with globals := updateMemory raiseState.globals 0 3 }
         9) := by
-  apply panValuePcRaisedWordResultRel_retarget_globals
+  have h := panValuePcRaisedWordResultRel_retarget_globals
     (context := raiseContext) (structs := [])
     (sourceFunctions := []) (functions := [])
     (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
@@ -362,6 +362,16 @@ theorem closed_word_raise_pc_result_rel_retargeted :
     (hlookupGlobals := by
       simp [raiseWordGlobalsLookup, crepPcWordGlobalsLookup,
         updateMemory, panValueFlatWords, panValueFlatWordsFuel])
+  simpa [panValuePcResultRel, panValuePcResultRelWithContextCode,
+    panValuePcExceptionResultRelWithContextCode] using
+    (show panValueCrepStateRel [] raiseContext
+        (fun _ => none) (fun _ => none) (fun _ => none)
+        { raiseState with globals := updateMemory raiseState.globals 0 3 } ∧
+      panValuePcExceptionResultRel [] raiseContext
+        (fun _ _ code => code = 9) raiseResultExceptionCode
+        raiseWordGlobalsLookup (fun _ => none) (fun _ => none) "E" (.word 3)
+        { raiseState with globals := updateMemory raiseState.globals 0 3 } 9 from
+      ⟨h.1, h.2.1⟩)
 
 theorem pc_raised_result_accepts_context_exception_code :
     panValuePcExceptionResultRelWithContextCode [] raiseContext

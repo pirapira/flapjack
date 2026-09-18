@@ -245,6 +245,31 @@ theorem three_word_raise_pc_hraise_flat_globals :
   simpa [sourceValue, context, updateMemoryListAt, List.range,
     List.range.loop, Nat.add_assoc] using h
 
+theorem three_word_raise_pc_hraise_retargeted_globals :
+    panValuePcRaisedHraiseData
+      (fun exception => if exception = "E" then some 9 else none)
+      pcGlobalsLookup [] context
+      (fun _ _ code => code = 9)
+      (fun _ => none) (fun _ => none) (fun _ => none) "E" sourceValue
+      { state with globals := updateMemoryListAt state.globals 0 8 [3, 4, 5] }
+      9 := by
+  apply panValuePcRaisedHraiseData_retarget_globals_lookup
+    (bytesInWord := 8) (structs := []) (context := context)
+    (exceptionRel := fun _ _ code => code = 9)
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (sourceException := "E")
+    (sourceValue := sourceValue)
+    (targetState :=
+      { state with globals := updateMemoryListAt state.globals 0 8 [3, 4, 5] })
+    (targetException := 9)
+  · have hstored := crepPcFlatGlobalsLookup_of_stored_flat_words
+      (α := Nat) 8 state sourceValue (by decide)
+    simpa [pcGlobalsLookup, sourceValue, panValueFlatWords,
+      panValueFlatWordsFuel, panValueFlatValueFuel,
+      panValueFlatWordsFuel.panValueFlatWordsListFuel,
+      panValueFlatValueFuel.panValueFlatValueListFuel] using hstored
+  · exact three_word_raise_pc_hraise_flat_globals
+
 theorem three_word_raise_pc_result_rel_flat_globals :
     panValuePcResultRel [] context (fun _ _ code => code = 9)
       (fun exception => if exception = "E" then some 9 else none)
@@ -266,6 +291,34 @@ theorem three_word_raise_pc_result_rel_flat_globals :
       { state with globals := updateMemoryListAt state.globals 0 8 [3, 4, 5] })
     (targetException := 9)
   exact three_word_raise_pc_hraise_flat_globals
+
+theorem three_word_raise_pc_result_rel_retargeted_globals :
+    panValuePcResultRel [] context (fun _ _ code => code = 9)
+      (fun exception => if exception = "E" then some 9 else none)
+      pcGlobalsLookup
+      (.raised (fun _ => none) (fun _ => none) (fun _ => none) "E" sourceValue)
+      (.raised
+        { state with globals := updateMemoryListAt state.globals 0 8 [3, 4, 5] }
+        9) := by
+  apply panValuePcResultRel_of_raised_hraise_data_retarget_globals_lookup
+    (structs := []) (context := context)
+    (exceptionRel := fun _ _ code => code = 9)
+    (exceptionCode := fun exception =>
+      if exception = "E" then some 9 else none)
+    (globalsLookup := pcGlobalsLookup)
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (sourceException := "E")
+    (sourceValue := sourceValue)
+    (targetState :=
+      { state with globals := updateMemoryListAt state.globals 0 8 [3, 4, 5] })
+    (targetException := 9) (bytesInWord := 8)
+  · have hstored := crepPcFlatGlobalsLookup_of_stored_flat_words
+      (α := Nat) 8 state sourceValue (by decide)
+    simpa [pcGlobalsLookup, sourceValue, panValueFlatWords,
+      panValueFlatWordsFuel, panValueFlatValueFuel,
+      panValueFlatWordsFuel.panValueFlatWordsListFuel,
+      panValueFlatValueFuel.panValueFlatValueListFuel] using hstored
+  · exact three_word_raise_pc_hraise_flat_globals
 
 def runChecks : IO Bool := do
   IO.println "PASS generic three-word Raise evaluator relation"

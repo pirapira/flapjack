@@ -860,7 +860,7 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackCallWithHandler_return_of_eva
     (wordToStackProgNatWithBitmapBuilder config bitmapBuilder
       registerCount bitmapRegister frameSlots wordBits storeConstsStub bitmapState
       (.call returns (some target) arguments
-        (some (exception, body, handlerLabel, entryLabel)))).bind
+      (some (exception, body, handlerLabel, entryLabel)))).bind
         (fun compiled =>
           (evalStackProgFuelWithCodeAndFfi host (fuel + 5) code machineState
             compiled.1).map (fun control => (control, compiled.2))) =

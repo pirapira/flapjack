@@ -1840,6 +1840,32 @@ theorem panValuePcRaisedGenericHraise_of_flat_globals
         context.bytesInWord state sourceValue hdistinct
       simpa [hvalues] using hstored) hsize).1
 
+theorem panValuePcRaisedHraiseData_retarget_globals_lookup_of
+    (canonicalGlobalsLookup : CrepState α → PanValue α → Option (List α))
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+    (sourceValue : PanValue α) (targetState : CrepState α)
+    (targetException : α)
+    (hlookup : canonicalGlobalsLookup targetState sourceValue =
+      globalsLookup targetState sourceValue)
+    (hraiseData : panValuePcRaisedHraiseData exceptionCode
+      canonicalGlobalsLookup structs context exceptionRel
+      sourceLocals sourceGlobals sourceMemory sourceException sourceValue
+      targetState targetException) :
+    panValuePcRaisedHraiseData exceptionCode globalsLookup structs context
+      exceptionRel sourceLocals sourceGlobals sourceMemory sourceException
+      sourceValue targetState targetException := by
+  rcases hraiseData with
+    ⟨hpost, spillAddress, hcontrol, hcode, hpayload, hsize⟩
+  refine ⟨hpost, spillAddress, hcontrol, hcode, ?_, hsize⟩
+  intro hnonempty
+  rw [← hlookup]
+  exact hpayload hnonempty
+
 theorem panValuePcRaisedHraiseData_retarget_globals_lookup
     [OfNat α 0] [Add α]
     (bytesInWord : α)
@@ -1860,12 +1886,10 @@ theorem panValuePcRaisedHraiseData_retarget_globals_lookup
     panValuePcRaisedHraiseData exceptionCode globalsLookup structs context
       exceptionRel sourceLocals sourceGlobals sourceMemory sourceException
       sourceValue targetState targetException := by
-  rcases hraiseData with
-    ⟨hpost, spillAddress, hcontrol, hcode, hpayload, hsize⟩
-  refine ⟨hpost, spillAddress, hcontrol, hcode, ?_, hsize⟩
-  intro hnonempty
-  rw [← hlookup]
-  exact hpayload hnonempty
+  exact panValuePcRaisedHraiseData_retarget_globals_lookup_of
+    (crepPcFlatGlobalsLookup bytesInWord) exceptionCode globalsLookup
+    structs context exceptionRel sourceLocals sourceGlobals sourceMemory
+    sourceException sourceValue targetState targetException hlookup hraiseData
 
 /-! Lift an entire canonical raised-data callback through an extensionally
     equal HOL global lookup.  This is the callback-level adapter needed by

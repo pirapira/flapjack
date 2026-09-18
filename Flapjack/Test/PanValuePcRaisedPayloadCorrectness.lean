@@ -250,6 +250,71 @@ theorem closed_two_word_raise_pc_hraise_flat_globals :
   simpa [Nat.zero_add] using
     (hpayload (by simp [panValueShape, Shape.shapeSize]))
 
+theorem closed_two_word_raise_pc_hraise_retargeted_globals :
+    panValuePcRaisedHraiseData raiseResultExceptionCode raiseWordGlobalsLookup
+        [] raiseContext (fun _ _ code => code = 9)
+        (fun _ => none) (fun _ => none) (fun _ => none) "E"
+        (.rStruct [.word 3, .word 4])
+        { raiseState with globals :=
+            (updateMemory (updateMemory raiseState.globals 0 3) 8 4) }
+        9 ∧
+      lookupInfo "E" raiseContext.exceptions = some 9 := by
+  let targetState : CrepState Nat :=
+    { raiseState with globals :=
+        (updateMemory (updateMemory raiseState.globals 0 3) 8 4) }
+  have hflatTwo :
+      crepPcFlatGlobalsLookup 8 targetState (.rStruct [.word 3, .word 4]) =
+        crepPcTwoWordGlobalsLookup 8 targetState (.rStruct [.word 3, .word 4]) := by
+    have htwo :
+        crepPcTwoWordGlobalsLookup 8 targetState (.rStruct [.word 3, .word 4]) =
+          some [3, 4] := by
+      simp [targetState, crepPcTwoWordGlobalsLookup, updateMemory]
+    have hflat := crepPcFlatGlobalsLookup_of_stored_flat_words
+      (α := Nat) 8 raiseState (.rStruct [.word 3, .word 4]) (by decide)
+    have hflat' :
+        crepPcFlatGlobalsLookup 8 targetState (.rStruct [.word 3, .word 4]) =
+          some [3, 4] := by
+      simpa [targetState, crepPcFlatGlobalsLookup, panValueFlatWords,
+        panValueFlatWordsFuel, panValueFlatValueFuel,
+        panValueFlatWordsFuel.panValueFlatWordsListFuel,
+        panValueFlatValueFuel.panValueFlatValueListFuel, updateMemoryListAt,
+        Nat.zero_add] using hflat
+    exact hflat'.trans htwo.symm
+  have htwoData :
+      panValuePcRaisedHraiseData raiseResultExceptionCode
+        (crepPcTwoWordGlobalsLookup 8) [] raiseContext
+        (fun _ _ code => code = 9)
+        (fun _ => none) (fun _ => none) (fun _ => none) "E"
+        (.rStruct [.word 3, .word 4]) targetState 9 := by
+    apply panValuePcRaisedHraiseData_retarget_globals_lookup_of
+      (canonicalGlobalsLookup := crepPcFlatGlobalsLookup 8)
+      (exceptionCode := raiseResultExceptionCode)
+      (globalsLookup := crepPcTwoWordGlobalsLookup 8)
+      (structs := []) (context := raiseContext)
+      (exceptionRel := fun _ _ code => code = 9)
+      (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+      (sourceMemory := fun _ => none) (sourceException := "E")
+      (sourceValue := .rStruct [.word 3, .word 4])
+      (targetState := targetState) (targetException := 9)
+    · exact hflatTwo
+    · simpa [targetState] using closed_two_word_raise_pc_hraise_flat_globals.1
+  refine ⟨?_, by simp [raiseContext, lookupInfo]⟩
+  apply panValuePcRaisedHraiseData_retarget_globals_lookup_of
+    (canonicalGlobalsLookup := crepPcTwoWordGlobalsLookup 8)
+    (exceptionCode := raiseResultExceptionCode)
+    (globalsLookup := raiseWordGlobalsLookup)
+    (structs := []) (context := raiseContext)
+    (exceptionRel := fun _ _ code => code = 9)
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (sourceException := "E")
+    (sourceValue := .rStruct [.word 3, .word 4])
+    (targetState := targetState) (targetException := 9)
+  · simp [targetState, crepPcTwoWordGlobalsLookup, raiseWordGlobalsLookup,
+      panValueFlatWords, panValueFlatWordsFuel, panValueFlatValueFuel,
+      panValueFlatWordsFuel.panValueFlatWordsListFuel,
+      panValueFlatValueFuel.panValueFlatValueListFuel, updateMemory]
+  · exact htwoData
+
 theorem closed_two_word_raise_pc_result_rel_flat_globals :
     panValuePcResultRel [] raiseContext
       (fun _ _ code => code = 9) raiseResultExceptionCode

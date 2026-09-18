@@ -368,6 +368,14 @@
       ]
     },
     {
+      "path": "Flapjack/Test/OriginalPancake/bn_divmnu_allocator.pnk",
+      "source_reference": "Minimized canonical full-guest bn_divmnu witness; an indirect store with a spilled address must use Cake's operation-local stack-register-0 address carrier.",
+      "cake_sha256": "c2d08409fdb9d2831902ab669cf70b0ff835a0609833751a9d8dae1e009ce151",
+      "tracked_beads": [
+        "flapjack-8tb.5.17"
+      ]
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/gh1025_frame_bitmap.pnk",
       "source_reference": "GH #1025 differential-fuzz seed 11, f00010: loop/handler liveness must preserve Cake's five live frame words and bitmap vector [4,32,32,32,32,32]",
       "cake_sha256": "fee86f26b1438aa0586d1762200594116555eb70e27e4c8c041dad5cf3723c99",
@@ -462,11 +470,35 @@
       "tracked_beads": []
     },
     {
+      "path": "Flapjack/Test/OriginalPancake/op_dispatch_relocation_boundary.pnk",
+      "source_reference": "Reduced op_dispatch relocation-boundary witness: Cake records a nonzero label after its stored label slot during enc_lines_again, retaining the long branch slot and its residual NOP after relocation.",
+      "cake_sha256": "cbbe00570c6f2c6880c90ce3e5e876325e12bcedd60b0b3962dad56222462c10",
+      "tracked_beads": [
+        "flapjack-8tb.5.5"
+      ]
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/op_dispatch_label_stability.pnk",
       "source_reference": "Reduced op_dispatch linked-label witness: Cake's post-target-lowering label iteration keeps the 28-function dispatch image byte-exact; the stable linked-label resolver is covered here while the larger op_dispatch-many residual remains owned by flapjack-8tb.5.",
       "cake_sha256": "16336bc04b981030ccc17cff51dbd9628c556e2406e2eccb81a38c226b1f961a",
       "tracked_beads": [
         "flapjack-8tb.5"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/op_dispatch_many.pnk",
+      "source_reference": "Full reduced op_dispatch-many witness: Cake's 27-callee linked dispatch is 3760 bytes, including the post-target comparison lowering and stored-label relocation; this exact oracle locks the repaired four-byte gap.",
+      "cake_sha256": "cbbe00570c6f2c6880c90ce3e5e876325e12bcedd60b0b3962dad56222462c10",
+      "tracked_beads": [
+        "flapjack-8tb.5.5"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/op_dispatch_stored_length.pnk",
+      "source_reference": "Reduced op_dispatch relocation witness for flapjack-8tb.5.5: Cake enc_lines_again retains a branch's maximum encoded LabAsm length after it shrinks, and pad_code emits the residual ADDI x0,x0,0; the source-shaped linker must preserve that stored slot.",
+      "cake_sha256": "7351db917885d009c4765c88c182b08499c7681003a18218a24ad0b6926a4681",
+      "tracked_beads": [
+        "flapjack-8tb.5.5"
       ]
     },
     {

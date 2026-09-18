@@ -344,8 +344,23 @@ def nestedAndWideConstantMaterializes : Bool :=
       (.inst (.arith (.binOp .and 23 23 (.reg 24)))), .var 23) => c == 2 ^ 60
   | _ => false
 
+/- Cake's `inst_select ShareInst` takes the whole address through
+   `inst_select_exp` when an offset is outside the RISC-V signed-12-bit
+   displacement.  This is the reduced `output_write` oracle: the wide
+   `0xa0010000` address must be materialized before the byte store, rather
+   than left as an `Addr` displacement. -/
+def wideSharedStoreMaterializesAddress : Bool :=
+  match wordInstSelectProgramFrom (α := Nat)
+      (.shareInst .store8 10 (.op .add [.var 3, .const 2684420096])) with
+  | .seq (.seq (.seq (.move 0 [(11, 3)])
+      (.inst (.const 12 2684420096)))
+      (.inst (.arith (.binOp .add 11 11 (.reg 12)))))
+      (.shareInst .store8 10 (.var 11)) => true
+  | _ => false
+
 #guard nestedAndImmediateMatches
 #guard nestedAndWideConstantMaterializes
+#guard wideSharedStoreMaterializesAddress
 #guard nestedAndConstantFoldCollapses
 #guard nestedAndWordConstantFoldCollapses
 #guard nestedAndXorWordConstantFoldCollapses

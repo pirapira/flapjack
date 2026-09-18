@@ -121,7 +121,19 @@ example :
         subst location
         decide
       · simp [memorySpillValues] at hvalue
+  · exact by
+      intro name value location hvalue hlocation
+      by_cases hother : name = 3
+      · subst name
+        simp [memorySpillValues] at hvalue
+        subst value
+        have hlocation' : location = .register 6 := by
+          simpa [memorySpillConfig, wordStackLocation, lookupNatInfo] using
+            hlocation.symm
+        subst location
+        simp [memorySpillConfig, wordStackStoreAddressRegister]
+      · simp [memorySpillValues] at hvalue
   · simp [memorySpillConfig, memorySpillState, wordToStackProg,
       wordStackMemoryInst, wordStackStoreInst, wordStackLocation,
       wordStackOffset, evalWordStackMachine, wordStackMachineWriteRegister,
-      wordStackMachineWriteMemory, lookupNatInfo]
+      wordStackMachineWriteMemory, lookupNatInfo, Option.bind, Option.getD]

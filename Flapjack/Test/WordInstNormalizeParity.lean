@@ -270,12 +270,6 @@ def variableShiftSelectorMatches : Bool :=
         (.inst (.arith (.shift .asr 14 23 (.reg 24))))) => true
   | _ => false
 
-def zeroShiftSelectorRetainsSelfMove : Bool :=
-  match wordInstSelectAtom (α := Nat) 23
-      (.shift .lsr (.var 14) (.const 0)) with
-  | (.seq (.move 0 [(23, 14)]) (.move 0 [(23, 23)]), .var 23) => true
-  | _ => false
-
 /-- Cake keeps the self-copy after a zero shift even when its temporary is
     also the enclosing expression target. -/
 def zeroShiftSelfMoveMatches : Bool :=
@@ -352,7 +346,6 @@ def nestedAndWideConstantMaterializes : Bool :=
 
 #guard nestedAndImmediateMatches
 #guard nestedAndWideConstantMaterializes
-#guard zeroShiftSelectorRetainsSelfMove
 #guard nestedAndConstantFoldCollapses
 #guard nestedAndWordConstantFoldCollapses
 #guard nestedAndXorWordConstantFoldCollapses

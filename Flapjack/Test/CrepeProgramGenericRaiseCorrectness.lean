@@ -192,13 +192,14 @@ theorem three_word_raise_pc_result_rel_of_generic_evidence :
     updateMemoryListAt, List.range, List.range.loop, Nat.add_assoc] using h
 
 theorem three_word_raise_pc_hraise_global_spill :
-    panValuePcRaisedHraiseData
-      (fun exception => if exception = "E" then some 9 else none)
-      (crepPcThreeWordGlobalsLookup 8) [] context
-      (fun _ _ code => code = 9)
-      (fun _ => none) (fun _ => none) (fun _ => none) "E" sourceValue
-      { state with globals := updateMemoryListAt state.globals 0 8 [3, 4, 5] }
-      9 := by
+    (panValuePcRaisedHraiseData
+        (fun exception => if exception = "E" then some 9 else none)
+        (crepPcThreeWordGlobalsLookup 8) [] context
+        (fun _ _ code => code = 9)
+        (fun _ => none) (fun _ => none) (fun _ => none) "E" sourceValue
+        { state with globals := updateMemoryListAt state.globals 0 8 [3, 4, 5] }
+        9) ∧
+      lookupInfo "E" context.exceptions = some 9 := by
   have h := panValuePcRaisedThreeWordHraise_of_evidence
     (α := Nat) (context := context) (structs := [])
     (sourceFunctions := []) (functions := [])

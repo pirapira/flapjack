@@ -2040,14 +2040,15 @@ theorem panValuePcRaisedThreeWordHraise_of_evidence
       (0 + context.bytesInWord) + context.bytesInWord)
     (hdistinct12 : (0 : α) + context.bytesInWord ≠
       (0 + context.bytesInWord) + context.bytesInWord) :
-    panValuePcRaisedHraiseData resultExceptionCode
-      (crepPcThreeWordGlobalsLookup context.bytesInWord) structs context
-      exceptionRel sourceLocals sourceGlobals sourceMemory exception
-      (.rStruct [.word first, .word second, .word third])
-      { state with globals :=
-          (updateMemoryListAt state.globals 0 context.bytesInWord
-            [first, second, third]) }
-      exceptionCode := by
+    (panValuePcRaisedHraiseData resultExceptionCode
+        (crepPcThreeWordGlobalsLookup context.bytesInWord) structs context
+        exceptionRel sourceLocals sourceGlobals sourceMemory exception
+        (.rStruct [.word first, .word second, .word third])
+        { state with globals :=
+            (updateMemoryListAt state.globals 0 context.bytesInWord
+              [first, second, third]) }
+        exceptionCode) ∧
+      lookupInfo exception context.exceptions = some exceptionCode := by
   have hgeneric := compile_full_pan_value_raise_state_relation_of_evidence
     context structs sourceFunctions functions sourceLocals sourceGlobals
     sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
@@ -2084,6 +2085,7 @@ theorem panValuePcRaisedThreeWordHraise_of_evidence
   have hsize : Shape.shapeSize (panValueShape structs
       (.rStruct [.word first, .word second, .word third])) ≤ 32 := by
     simp [panValueShape, Shape.shapeSize]
+  refine ⟨?_, hlookup⟩
   exact ⟨hpost, 0, hcontrol, hcode, hlookupPayload, hsize⟩
 
 theorem panValuePcRaisedThreeWordSemanticLift
@@ -2186,7 +2188,7 @@ theorem panValuePcRaisedThreeWordSemanticLift
     { state with globals :=
         (updateMemoryListAt state.globals 0 context.bytesInWord
           [first, second, third]) }
-    exceptionCode hraiseData
+    exceptionCode hraiseData.1
   exact ⟨hsourceEval, htargetEval, hresult⟩
 
 /-! The same canonical spill adapter for a raw record of any number of word

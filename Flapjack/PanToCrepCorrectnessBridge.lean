@@ -1439,12 +1439,13 @@ theorem panValuePcRaisedHraiseData_of_flat_spill_state_retarget_globals
             updateMemoryListAt state.globals 0 bytesInWord values }
           sourceValue) :
     panValuePcRaisedHraiseData exceptionCode globalsLookup structs context
-      exceptionRel (fun _ => none) sourceGlobals sourceMemory sourceException
+      exceptionRel sourceLocals sourceGlobals sourceMemory sourceException
       sourceValue
       { state with globals :=
           updateMemoryListAt state.globals 0 bytesInWord values }
       targetException := by
-  have hcanonical := panValuePcRaisedHraiseData_of_flat_spill_state
+  have hcanonical :=
+    panValuePcRaisedHraiseData_of_flat_spill_state_with_source_locals
     structs context
     exceptionRel exceptionCode sourceLocals sourceGlobals sourceMemory
     sourceException values state bytesInWord targetException sourceValue hrel

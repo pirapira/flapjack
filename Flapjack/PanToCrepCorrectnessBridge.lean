@@ -5687,11 +5687,28 @@ theorem panValuePcCompileCorrect_compact_with_flat_spill_evidence_context_code
           sourceMemory state ∧
         exceptionRel sourceException sourceValue targetException ∧
         exceptionCode sourceException = some targetException ∧
+        lookupInfo sourceException context.exceptions = some targetException ∧
         panValueFlatWords sourceValue = values ∧
         List.Pairwise (fun left right : α => left ≠ right)
           (storeAddresses (0 : α) context.bytesInWord values.length) ∧
-        Shape.shapeSize (panValueShape structs sourceValue) ≤ 32)
-    (hlookupCode : ∀ (context : CompileContext α) (structs : StructContext)
+        Shape.shapeSize (panValueShape structs sourceValue) ≤ 32) :
+    PanValuePcCompileCorrectWithContextCode
+      (panValuePcCompactSourceEvaluator primitive sourceHandler sourceFunctions
+        baseAddress topAddress bytesInWord sourceFuel)
+      (crepPcCompactTargetEvaluator functions crepPrimitive ffi sharedMem
+        baseAddress topAddress targetFuel)
+      codeRel excpRel exceptionCode globalsLookup program := by
+  have hraiseData := panValuePcRaisedHraiseData_of_flat_spill_evidence
+    exceptionCode globalsLookup bytesInWord hlookup (by
+      intro context structs exceptionRel sourceLocals sourceGlobals sourceMemory
+        sourceException sourceValue targetState targetException hcontrol
+      rcases hevidence context structs exceptionRel sourceLocals sourceGlobals
+        sourceMemory sourceException sourceValue targetState targetException hcontrol with
+        ⟨values, state, htarget, hbytesInWord, hrel, hexception, hcode,
+          hlookupCode, hflat, hdistinct, hsize⟩
+      exact ⟨values, state, htarget, hbytesInWord, hrel, hexception, hcode,
+        hflat, hdistinct, hsize⟩)
+  have hlookupCode : ∀ (context : CompileContext α) (structs : StructContext)
       (exceptionRel : ExceptionId → PanValue α → α → Prop)
       (sourceLocals sourceGlobals : VarName → Option (PanValue α))
       (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
@@ -5700,15 +5717,14 @@ theorem panValuePcCompileCorrect_compact_with_flat_spill_evidence_context_code
       panValueCrepControlRel structs context exceptionRel
         (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
         (.raised targetState targetException) →
-      lookupInfo sourceException context.exceptions = some targetException) :
-    PanValuePcCompileCorrectWithContextCode
-      (panValuePcCompactSourceEvaluator primitive sourceHandler sourceFunctions
-        baseAddress topAddress bytesInWord sourceFuel)
-      (crepPcCompactTargetEvaluator functions crepPrimitive ffi sharedMem
-        baseAddress topAddress targetFuel)
-      codeRel excpRel exceptionCode globalsLookup program := by
-  have hraiseData := panValuePcRaisedHraiseData_of_flat_spill_evidence
-    exceptionCode globalsLookup bytesInWord hlookup hevidence
+      lookupInfo sourceException context.exceptions = some targetException := by
+    intro context structs exceptionRel sourceLocals sourceGlobals sourceMemory
+      sourceException sourceValue targetState targetException hcontrol
+    rcases hevidence context structs exceptionRel sourceLocals sourceGlobals
+      sourceMemory sourceException sourceValue targetState targetException hcontrol with
+      ⟨values, state, htarget, hbytesInWord, hrel, hexception, hcode,
+        hlookupCode, hflat, hdistinct, hsize⟩
+    exact hlookupCode
   exact panValuePcCompileCorrect_compact_with_context_code
     program codeRel excpRel exceptionCode globalsLookup sourceFunctions functions
     primitive sourceHandler crepPrimitive ffi sharedMem baseAddress topAddress

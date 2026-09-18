@@ -753,6 +753,51 @@ def labCollectProgramLabelsStable [NeZero width] (fuel : Nat)
       if next == guess then next
       else labCollectProgramLabelsStable fuel context base next program
 
+/-! Cake's `lab_to_target$remove_labels` runs `upd_lab_len` and then
+    `pad_code` after label relocation has stabilized.  A nonzero label length
+    means that the preceding encoded instruction receives one physical NOP;
+    labels at the beginning of a section have no preceding instruction and do
+    not synthesize one.  The Lean linker tracks byte positions, while Cake's
+    encoder length is measured in target instructions, hence the explicit
+    conversion before testing parity. -/
+def labPaddingLine [NeZero width] : LabLine (Word width) :=
+  .asm (.word (.arith (.binOp .add 0 0 (.imm 0)))) [] 1
+
+def labPadProgramSection [NeZero width] (context : WordFfiContext)
+    (labels : List (Nat × Nat × Nat)) (sectionId position : Nat)
+    (hasPrecedingCode : Bool) :
+    List (LabLine (Word width)) → List (LabLine (Word width))
+  | [] => []
+  | .label labelSection labelNumber _ :: lines =>
+      if hasPrecedingCode && (position / 4) % 2 = 1 then
+        labPaddingLine ::
+          .label labelSection labelNumber 0 ::
+            labPadProgramSection context labels sectionId (position + 4) true lines
+      else
+        .label labelSection labelNumber 0 ::
+          labPadProgramSection context labels sectionId position hasPrecedingCode lines
+  | line :: lines =>
+      let count := labProgramLineCompiledInstructionCount
+        context labels position line
+      line :: labPadProgramSection context labels sectionId
+        (position + 4 * count) (hasPrecedingCode || count > 0) lines
+termination_by lines => sizeOf lines
+decreasing_by all_goals simp_wf <;> omega
+
+def labPadProgram [NeZero width] (context : WordFfiContext)
+    (labels : List (Nat × Nat × Nat)) (base : Nat) :
+    LabProgram (Word width) → LabProgram (Word width)
+  | [] => []
+  | sectionData :: sections =>
+      let lines := labPadProgramSection context labels sectionData.name base false
+        sectionData.lines
+      let length := labSectionCompiledInstructionCount context labels
+        sectionData.name base lines
+      { sectionData with lines := lines } ::
+        labPadProgram context labels (base + 4 * length) sections
+termination_by sections => sizeOf sections
+decreasing_by all_goals simp_wf <;> omega
+
 def labCompileProgramSections [NeZero width] (context : WordFfiContext)
     (labels : List (Nat × Nat × Nat)) (base : Nat) :
     LabProgram (Word width) → Option (List (Instruction width))
@@ -767,7 +812,10 @@ def compileLabProgram [NeZero width] (context : WordFfiContext)
     (program : LabProgram (Word width)) : Option (List (Instruction width)) :=
   let initial := labCollectProgramLabels 0 program
   let labels := labCollectProgramLabelsStable 8 context 0 initial program
-  labCompileProgramSections context labels 0 program
+  let padded := labPadProgram context labels 0 program
+  let paddedInitial := labCollectProgramLabels 0 padded
+  let paddedLabels := labCollectProgramLabelsStable 8 context 0 paddedInitial padded
+  labCompileProgramSections context paddedLabels 0 padded
 
 def compileStackProgramNatToRiscV [NeZero width]
     (context : WordFfiContext) (config : StackRemoveConfig)
@@ -918,7 +966,10 @@ def compileLabProgramLinked [NeZero width] (context : WordFfiContext)
     Option (List (Nat × Word width × List (Instruction width))) :=
   let initial := labCollectProgramLabels 0 program
   let labels := labCollectProgramLabelsStable 8 context 0 initial program
-  compileLabProgramLinkedAux context labels 0 program
+  let padded := labPadProgram context labels 0 program
+  let paddedInitial := labCollectProgramLabels 0 padded
+  let paddedLabels := labCollectProgramLabelsStable 8 context 0 paddedInitial padded
+  compileLabProgramLinkedAux context paddedLabels 0 padded
 
 /-! Linked machine images retain CakeML's three-region FFI prefix.  The
 service blocks are emitted before `cake_clear` and `cake_exit`, each occupying
@@ -1172,9 +1223,11 @@ def compileLabProgramLinkedWithPancakeRuntime [NeZero width]
     Option (List (Nat × Word width × List (Instruction width))) :=
   let sourceProgram := program.filter (fun entry => entry.name >= 3)
   let labels := labCollectPancakeRuntimeLabelsStable 8 context program
-  let haltPc := 1000 + 4 * labProgramInstructionCount sourceProgram
-  compileLabProgramLinkedWithFfiStubsAndHaltAux context labels 1000 1000 haltPc
-    sourceProgram
+  let padded := labPadProgram context labels 1000 sourceProgram
+  let paddedLabels := labCollectPancakeRuntimeLabelsStable 8 context padded
+  let haltPc := 1000 + 4 * labProgramInstructionCount padded
+  compileLabProgramLinkedWithFfiStubsAndHaltAux context paddedLabels 1000 1000 haltPc
+    padded
 
 def flattenLabProgramLinked :
     List (Nat × Word width × List (Instruction width)) → List (Instruction width)
@@ -1560,6 +1613,7 @@ theorem compileLabProgram_cross_section_jump [NeZero width] :
     labCollectLabels, labSectionInstructionCount, labCompileProgramSections,
     labCompileProgramLines, labCompileAsmProgram,
     labCompilePlain,
+    labPadProgram, labPadProgramSection,
     labLookupProgramPosition, labResolveProgramRef,
     labOffset, labJumpInstructions, labJumpOffsetFits, hcount]
 

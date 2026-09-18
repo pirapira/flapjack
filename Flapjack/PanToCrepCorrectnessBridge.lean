@@ -4578,13 +4578,14 @@ theorem panValuePcCompileCorrectWithContextCode_of_stateful_program
         sourceValue targetState targetException := by
     intro sourceLocals sourceGlobals sourceMemory sourceException sourceValue
       targetState targetException hraised
-    have hdata := hraiseEvidence context structs exceptionRel sourceLocals sourceGlobals
-      sourceMemory sourceException sourceValue targetState targetException hraised
-    have hresult := panValuePcExceptionResultRelWithContextCode_of_raised_hraise_data
-      structs context exceptionRel exceptionCode globalsLookup sourceLocals
-      sourceGlobals sourceMemory sourceException sourceValue targetState
-      targetException hdata
-    exact ⟨hdata.1.1, hresult⟩
+    exact panValuePcRaisedHraiseData_to_exception_result_rel_with_context_code
+      structs context exceptionRel exceptionCode globalsLookup
+      (fun sourceLocals sourceGlobals sourceMemory sourceException sourceValue
+          targetState targetException hcontrol =>
+        hraiseEvidence context structs exceptionRel sourceLocals sourceGlobals
+          sourceMemory sourceException sourceValue targetState targetException hcontrol)
+      sourceLocals sourceGlobals sourceMemory sourceException sourceValue targetState
+      targetException hraised
   have hresult := panValuePcResultRelWithContextCode_of_control structs context
     exceptionRel exceptionCode globalsLookup hraise
     sourceResult crepResult targetExecution.result hcontrol hsafe hcrepShape

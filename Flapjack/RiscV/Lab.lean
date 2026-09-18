@@ -1119,7 +1119,11 @@ def labStoredProgramLength {width : Nat} [NeZero width] :
 
 def labInitialStoredLine [NeZero width] :
     LabLine (Word width) → LabLine (Word width)
-  | .label sectionId label _ => .label sectionId label 4
+  /- Labels are metadata in the source-shaped relocation pass.  Their final
+     zero/one-byte alignment is computed by `labUpdateStoredLabelLengths`;
+     counting every initial label as a four-byte code slot can spuriously
+     promote near-range JALs before that alignment pass. -/
+  | .label sectionId label _ => .label sectionId label 0
   | .asm operation bytes _ =>
       .asm operation bytes (4 * labLineInstructionCount (.asm operation bytes 0))
   | .labAsm operation bytes _ =>

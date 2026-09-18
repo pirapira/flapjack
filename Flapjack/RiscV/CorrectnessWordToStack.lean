@@ -1138,6 +1138,193 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackProgNatWithBitmapBuilder_call
     (result := some result) hmove hcall
   simp [hseq]
 
+/-! Faithful one-`StackArgs` execution boundary for handler calls.  The
+    bitmap/live prefix is the only caller-side code now: argument moves are
+    already represented by the Cake-shaped call lowering and must not be
+    replayed by this machine theorem. -/
+theorem evalStackProgFuelWithCodeAndFfi_wordToStackProgNatWithBitmapBuilder_call_handler_raise_of_eval_faithful
+    [BEq Nat] [NeZero width]
+    (host : StackMachineFfiHandler width)
+    (fuel : Nat) (code : Nat → Option (StackProg Nat))
+    (config : WordStackConfig)
+    (bitmapBuilder : List Nat → List Nat)
+    (registerCount bitmapRegister frameSlots wordBits : Nat)
+    (storeConstsStub : Option Nat)
+    (bitmapState liveState returnState finalState : WordStackBitmapState)
+    (machineState middle : WordStackMachineState width)
+    (returns : Option (List Nat × (List Nat × List Nat) × WordProg Nat × Nat × Nat))
+    (target : Nat) (arguments : List Nat)
+    (exception handlerLabel entryLabel : Nat)
+    (body : WordProg Nat)
+    (argumentMoves liveCode returnCode handlerCode : StackProg Nat)
+    (result : StackMachineControl width)
+    (hargs : wordStackMovesToPhysical config arguments config.abiBase = some argumentMoves)
+    (hlive : wordStackCallLiveBitmap config bitmapBuilder bitmapRegister frameSlots
+      bitmapState returns = (liveCode, liveState))
+    (hreturnSome : ∀ returnData, returns = some returnData →
+      match returnData with
+      | (_, _, returnProgram, _, _) =>
+          wordToStackProgNatWithBitmapBuilder config bitmapBuilder registerCount bitmapRegister
+            frameSlots wordBits storeConstsStub liveState returnProgram =
+            some (returnCode, returnState))
+    (hreturnNone : returns = none → some (.skip, liveState) = some (returnCode, returnState))
+    (hhandler : wordToStackProgNatWithBitmapBuilder config bitmapBuilder
+      registerCount bitmapRegister frameSlots wordBits storeConstsStub returnState body =
+      some (handlerCode, finalState))
+    (hliveExec : evalStackProgFuelWithCodeAndFfi host fuel code machineState liveCode =
+      some (.normal middle))
+    (hcall : evalStackProgFuelWithCodeAndFfi host fuel code middle
+      (wordToStackCallWithHandlerInSection config.perf target arguments.length
+        (wordStackCallFrameOffset config) config.scratch returnCode handlerCode
+        (wordStackReturnLabel config returns) (wordStackEntryLabel config returns)
+        (wordStackHandlerLabel config handlerLabel)
+        (wordStackHandlerEntryLabel config entryLabel) exception) = some result) :
+    liveCode ≠ .skip →
+    (wordToStackProgNatWithBitmapBuilder config bitmapBuilder registerCount bitmapRegister
+      frameSlots wordBits storeConstsStub bitmapState
+      (.call returns (some target) arguments
+        (some (exception, body, handlerLabel, entryLabel)))).bind
+        (fun compiled =>
+          (evalStackProgFuelWithCodeAndFfi host (fuel + 1) code machineState
+            compiled.1).map (fun control => (control, compiled.2))) =
+      some (result, finalState) := by
+  have hcompile := wordToStackProgNatWithBitmapBuilder_call_handler
+    (config := config) (bitmapBuilder := bitmapBuilder)
+    (registerCount := registerCount) (bitmapRegister := bitmapRegister)
+    (frameSlots := frameSlots) (wordBits := wordBits)
+    (storeConstsStub := storeConstsStub) (state := bitmapState)
+    (liveState := liveState) (returnState := returnState)
+    (finalState := finalState) (returns := returns) (target := target)
+    (arguments := arguments) (exception := exception)
+    (handlerLabel := handlerLabel) (entryLabel := entryLabel) (body := body)
+    (argumentMoves := argumentMoves) (liveCode := liveCode)
+    (returnCode := returnCode) (handlerCode := handlerCode)
+    (_hargs := hargs) (hlive := hlive) (hreturnSome := hreturnSome)
+    (hreturnNone := hreturnNone) (hhandler := hhandler)
+  have hcompile' : wordToStackProgNatWithBitmapBuilder config bitmapBuilder
+      registerCount bitmapRegister frameSlots wordBits storeConstsStub bitmapState
+      (.call returns (some target) arguments
+        (some (exception, body, handlerLabel, entryLabel))) =
+      some (wordStackJoin liveCode
+        (wordToStackCallWithHandlerInSection config.perf target arguments.length
+          (wordStackCallFrameOffset config) config.scratch returnCode handlerCode
+          (wordStackReturnLabel config returns) (wordStackEntryLabel config returns)
+          (wordStackHandlerLabel config handlerLabel)
+          (wordStackHandlerEntryLabel config entryLabel) exception), finalState) := by
+    simpa [wordStackJoin] using hcompile
+  rw [hcompile']
+  simp only [Option.bind_some]
+  have hcallNe :
+      wordToStackCallWithHandlerInSection config.perf target arguments.length
+        (wordStackCallFrameOffset config) config.scratch returnCode handlerCode
+        (wordStackReturnLabel config returns) (wordStackEntryLabel config returns)
+        (wordStackHandlerLabel config handlerLabel)
+        (wordStackHandlerEntryLabel config entryLabel) exception ≠
+        (.skip : StackProg Nat) := by
+    simp [wordToStackCallWithHandlerInSection, stackSeq, stackPushHandler,
+      stackHandlerArgs, stackArgs, stackMove, stackHandlerSlots]
+  intro hliveSkip
+  rw [wordStackJoin_eq_seq_of_ne_skip liveCode _ hliveSkip hcallNe]
+  have hseq := evalStackProgFuelWithCodeAndFfi_seq_normal_result
+    (host := host) (fuel := fuel) (code := code) (state := machineState)
+    (middle := middle) (first := liveCode)
+    (second := wordToStackCallWithHandlerInSection config.perf target arguments.length
+      (wordStackCallFrameOffset config) config.scratch returnCode handlerCode
+      (wordStackReturnLabel config returns) (wordStackEntryLabel config returns)
+      (wordStackHandlerLabel config handlerLabel)
+      (wordStackHandlerEntryLabel config entryLabel) exception)
+    (result := some result) hliveExec hcall
+  simp [hseq]
+
+/-! The corresponding returning call boundary has the same one-`StackArgs`
+    shape.  In particular, the live bitmap code is composed directly with
+    the call helper; no precomputed physical argument-move program is
+    evaluated a second time. -/
+theorem evalStackProgFuelWithCodeAndFfi_wordToStackProgNatWithBitmapBuilder_call_no_handler_of_eval_faithful
+    [BEq Nat] [NeZero width]
+    (host : StackMachineFfiHandler width)
+    (fuel : Nat) (code : Nat → Option (StackProg Nat))
+    (config : WordStackConfig)
+    (bitmapBuilder : List Nat → List Nat)
+    (registerCount bitmapRegister frameSlots wordBits : Nat)
+    (storeConstsStub : Option Nat)
+    (bitmapState liveState returnState : WordStackBitmapState)
+    (machineState middle : WordStackMachineState width)
+    (returns : Option (List Nat × (List Nat × List Nat) × WordProg Nat × Nat × Nat))
+    (target : Nat) (arguments : List Nat)
+    (argumentMoves liveCode returnCode : StackProg Nat)
+    (result : StackMachineControl width)
+    (hargs : wordStackMovesToPhysical config arguments config.abiBase = some argumentMoves)
+    (hlive : wordStackCallLiveBitmap config bitmapBuilder bitmapRegister frameSlots
+      bitmapState returns = (liveCode, liveState))
+    (hreturnSome : ∀ returnData, returns = some returnData →
+      match returnData with
+      | (_, _, returnProgram, _, _) =>
+          wordToStackProgNatWithBitmapBuilder config bitmapBuilder registerCount bitmapRegister
+            frameSlots wordBits storeConstsStub liveState returnProgram =
+            some (returnCode, returnState))
+    (hreturns : returns ≠ none)
+    (hliveExec : evalStackProgFuelWithCodeAndFfi host fuel code machineState liveCode =
+      some (.normal middle))
+    (hcall : evalStackProgFuelWithCodeAndFfi host fuel code middle
+      (wordToStackCallNoHandler config.perf target arguments.length
+        (wordStackCallFrameOffset config) config.scratch
+        (wordStackReturnStackSuffix config
+          (returns.map (fun item => item.1) |>.getD [])) returnCode
+        (wordStackReturnLabel config returns) (wordStackEntryLabel config returns)) =
+      some result) :
+    liveCode ≠ .skip →
+    (wordToStackProgNatWithBitmapBuilder config bitmapBuilder registerCount bitmapRegister
+      frameSlots wordBits storeConstsStub bitmapState
+      (.call returns (some target) arguments none)).bind
+        (fun compiled =>
+          (evalStackProgFuelWithCodeAndFfi host (fuel + 1) code machineState
+            compiled.1).map (fun control => (control, compiled.2))) =
+      some (result, returnState) := by
+  have hcompile := wordToStackProgNatWithBitmapBuilder_call_no_handler
+    (config := config) (bitmapBuilder := bitmapBuilder)
+    (registerCount := registerCount) (bitmapRegister := bitmapRegister)
+    (frameSlots := frameSlots) (wordBits := wordBits)
+    (storeConstsStub := storeConstsStub) (state := bitmapState)
+    (liveState := liveState) (returnState := returnState)
+    (returns := returns) (target := target) (arguments := arguments)
+    (argumentMoves := argumentMoves) (liveCode := liveCode)
+    (returnCode := returnCode) (_hargs := hargs) (hlive := hlive)
+    (hreturnSome := hreturnSome) (hreturns := hreturns)
+  have hcompile' : wordToStackProgNatWithBitmapBuilder config bitmapBuilder
+      registerCount bitmapRegister frameSlots wordBits storeConstsStub bitmapState
+      (.call returns (some target) arguments none) =
+      some (wordStackJoin liveCode
+        (wordToStackCallNoHandler config.perf target arguments.length
+          (wordStackCallFrameOffset config) config.scratch
+          (wordStackReturnStackSuffix config
+            (returns.map (fun item => item.1) |>.getD [])) returnCode
+          (wordStackReturnLabel config returns) (wordStackEntryLabel config returns)),
+        returnState) := by
+    simpa [wordStackJoin] using hcompile
+  rw [hcompile']
+  simp only [Option.bind_some]
+  have hcallNe :
+      wordToStackCallNoHandler config.perf target arguments.length
+        (wordStackCallFrameOffset config) config.scratch
+        (wordStackReturnStackSuffix config
+          (returns.map (fun item => item.1) |>.getD [])) returnCode
+        (wordStackReturnLabel config returns) (wordStackEntryLabel config returns) ≠
+        (.skip : StackProg Nat) := by
+    simp [wordToStackCallNoHandler, stackSeq, stackArgs, stackMove]
+  intro hliveSkip
+  rw [wordStackJoin_eq_seq_of_ne_skip liveCode _ hliveSkip hcallNe]
+  have hseq := evalStackProgFuelWithCodeAndFfi_seq_normal_result
+    (host := host) (fuel := fuel) (code := code) (state := machineState)
+    (middle := middle) (first := liveCode)
+    (second := wordToStackCallNoHandler config.perf target arguments.length
+      (wordStackCallFrameOffset config) config.scratch
+      (wordStackReturnStackSuffix config
+        (returns.map (fun item => item.1) |>.getD [])) returnCode
+      (wordStackReturnLabel config returns) (wordStackEntryLabel config returns))
+    (result := some result) hliveExec hcall
+  simp [hseq]
+
 theorem wordToStackProgNatWithBitmapBuilder_raise
     [BEq Nat] (config : WordStackConfig)
     (bitmapBuilder : List Nat → List Nat)

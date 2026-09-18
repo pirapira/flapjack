@@ -400,18 +400,18 @@ theorem panValuePcExceptionResultRel_of_raised_two_word_global_spill
     (structs : StructContext) (context : CompileContext α)
     (exceptionRel : ExceptionId → PanValue α → α → Prop)
     (exceptionCode : ExceptionId → Option α)
-    (sourceGlobals : VarName → Option (PanValue α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
     (sourceMemory : α → Option (PanValue α))
     (sourceException : ExceptionId) (bytesInWord left right : α)
     (state : CrepState α) (targetException : α)
     (hstate : panValueCrepStateRel structs context
-      (fun _ => none) sourceGlobals sourceMemory state)
+      sourceLocals sourceGlobals sourceMemory state)
     (hexception : exceptionRel sourceException
       (.rStruct [.word left, .word right]) targetException)
     (hcode : exceptionCode sourceException = some targetException)
     (hdistinct : (0 : α) ≠ 0 + bytesInWord) :
     panValuePcExceptionResultRel structs context exceptionRel exceptionCode
-      (crepPcTwoWordGlobalsLookup bytesInWord) (fun _ => none) sourceMemory
+      (crepPcTwoWordGlobalsLookup bytesInWord) sourceGlobals sourceMemory
       sourceException (.rStruct [.word left, .word right])
       { state with globals :=
           (updateMemory (updateMemory state.globals 0 left)
@@ -435,10 +435,9 @@ theorem panValuePcExceptionResultRel_of_raised_two_word_global_spill
           (updateMemory (updateMemory state.globals 0 left)
             (0 + bytesInWord) right) }
       targetException 0 := ⟨hraisedState, hexception⟩
-  rw [hstate.1] at hcontrol
   apply panValuePcExceptionResultRel_of_raised_control structs context
     exceptionRel exceptionCode (crepPcTwoWordGlobalsLookup bytesInWord)
-    (fun _ => none) sourceMemory sourceException
+    sourceGlobals sourceMemory sourceException
     (.rStruct [.word left, .word right])
     { state with globals :=
         (updateMemory (updateMemory state.globals 0 left)
@@ -457,12 +456,12 @@ theorem panValuePcResultRelWithContextCode_of_raised_two_word_global_spill
     (structs : StructContext) (context : CompileContext α)
     (exceptionRel : ExceptionId → PanValue α → α → Prop)
     (exceptionCode : ExceptionId → Option α)
-    (sourceGlobals : VarName → Option (PanValue α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
     (sourceMemory : α → Option (PanValue α))
     (sourceException : ExceptionId) (bytesInWord left right : α)
     (state : CrepState α) (targetException : α)
     (hstate : panValueCrepStateRel structs context
-      (fun _ => none) sourceGlobals sourceMemory state)
+      sourceLocals sourceGlobals sourceMemory state)
     (hexception : exceptionRel sourceException
       (.rStruct [.word left, .word right]) targetException)
     (hcode : exceptionCode sourceException = some targetException)
@@ -471,7 +470,7 @@ theorem panValuePcResultRelWithContextCode_of_raised_two_word_global_spill
     (hdistinct : (0 : α) ≠ 0 + bytesInWord) :
     panValuePcResultRelWithContextCode structs context exceptionRel exceptionCode
       (crepPcTwoWordGlobalsLookup bytesInWord)
-      (.raised (fun _ => none) sourceGlobals sourceMemory sourceException
+      (.raised sourceLocals sourceGlobals sourceMemory sourceException
         (.rStruct [.word left, .word right]))
       (.raised
         { state with globals :=
@@ -479,7 +478,7 @@ theorem panValuePcResultRelWithContextCode_of_raised_two_word_global_spill
               (0 + bytesInWord) right) }
         targetException) := by
   have hpost : panValueCrepStateRel structs context
-      (fun _ => none) sourceGlobals sourceMemory
+      sourceLocals sourceGlobals sourceMemory
       { state with globals :=
           (updateMemory (updateMemory state.globals 0 left)
             (0 + bytesInWord) right) } := by
@@ -488,7 +487,8 @@ theorem panValuePcResultRelWithContextCode_of_raised_two_word_global_spill
   refine ⟨?_, hlookupCode⟩
   simpa [hstate.1] using
     (panValuePcExceptionResultRel_of_raised_two_word_global_spill
-      structs context exceptionRel exceptionCode sourceGlobals sourceMemory
+      structs context exceptionRel exceptionCode sourceLocals sourceGlobals
+      sourceMemory
       sourceException bytesInWord left right state targetException hstate
       hexception hcode hdistinct)
 
@@ -944,7 +944,8 @@ theorem panValuePcRaisedTwoWordSemanticLift
     exact hrel.2.2
   have hexceptionResult :=
     panValuePcExceptionResultRel_of_raised_two_word_global_spill
-      structs context exceptionRel resultExceptionCode sourceGlobals sourceMemory
+      structs context exceptionRel resultExceptionCode (fun _ => none) sourceGlobals
+      sourceMemory
       exception bytesInWord left right state exceptionCode hstateEmpty hexception
       hcode hdistinct
   have hpost : panValueCrepStateRel structs context

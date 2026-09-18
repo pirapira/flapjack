@@ -90,7 +90,8 @@ theorem three_word_raise_pc_hraise :
       pcGlobalsLookup [] context
       (fun _ _ code => code = 9)
       (fun _ => none) (fun _ => none) (fun _ => none) "E" sourceValue
-      { state with globals := updateMemoryListAt state.globals 0 8 [3, 4, 5] } 9 := by
+      { state with globals := updateMemoryListAt state.globals 0 8 [3, 4, 5] } 9 ∧
+      lookupInfo "E" context.exceptions = some 9 := by
   have h := panValuePcRaisedGenericHraise_of_evidence
     (α := Nat) (context := context) (structs := [])
     (sourceFunctions := []) (functions := [])

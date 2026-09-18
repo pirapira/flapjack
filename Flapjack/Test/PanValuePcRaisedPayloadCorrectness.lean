@@ -19,6 +19,30 @@ def raiseWordGlobalsLookup (_state : CrepState Nat) (value : PanValue Nat) :
     Option (List Nat) :=
   some (panValueFlatWords value)
 
+theorem pc_break_requires_zero_label :
+    ¬ panValuePcResultRel [] raiseContext (fun _ _ code => code = 9)
+      raiseResultExceptionCode raiseWordGlobalsLookup
+      (.broke (fun _ => none) (fun _ => none) (fun _ => none))
+      (.broke raiseState 1) := by
+  simp [panValuePcResultRel]
+
+theorem pc_continue_requires_zero_label :
+    ¬ panValuePcResultRel [] raiseContext (fun _ _ code => code = 9)
+      raiseResultExceptionCode raiseWordGlobalsLookup
+      (.continued (fun _ => none) (fun _ => none) (fun _ => none))
+      (.continued raiseState 1) := by
+  simp [panValuePcResultRel]
+
+theorem pc_break_zero_label_preserves_state :
+    panValuePcResultRel [] raiseContext (fun _ _ code => code = 9)
+      raiseResultExceptionCode raiseWordGlobalsLookup
+      (.broke (fun _ => none) (fun _ => none) (fun _ => none))
+      (.broke raiseState 0) := by
+  have hstate : panValueCrepStateRel [] raiseContext
+      (fun _ => none) (fun _ => none) (fun _ => none) raiseState := by
+    refine ⟨rfl, panValueCrepLocalsRel_empty [] raiseContext _, rfl⟩
+  simpa [panValuePcResultRel] using hstate
+
 /-! A closed source raise supplies the concrete semantic premises needed by the
     Pc raised-result obligation.  In particular, the conclusion retains the
     post-state relation, exception-code lookup, and the flattened global
@@ -108,6 +132,20 @@ theorem closed_word_raise_pc_result_rel_flat_globals :
       { raiseState with globals := updateMemory raiseState.globals 0 3 })
     (targetException := 9)
   exact closed_word_raise_pc_hraise_flat_globals
+
+/-! The strict raised-result relation rejects a result code that is supplied by
+    an unrelated adapter map rather than by the source compiler context. -/
+def mismatchedRaiseContext : CompileContext Nat :=
+  { raiseContext with exceptions := [("E", 10)] }
+
+theorem pc_raised_result_requires_context_exception_code :
+    ¬ panValuePcExceptionResultRelWithContextCode [] mismatchedRaiseContext
+      (fun _ _ code => code = 9) raiseResultExceptionCode
+      raiseWordGlobalsLookup (fun _ => none) (fun _ => none)
+      "E" (.word 3) { raiseState with globals := updateMemory raiseState.globals 0 3 }
+      9 := by
+  simp [panValuePcExceptionResultRelWithContextCode, mismatchedRaiseContext,
+    raiseContext, lookupInfo]
 
 theorem closed_two_word_raise_pc_hraise_flat_globals :
     panValuePcRaisedHraiseData raiseResultExceptionCode
@@ -246,6 +284,15 @@ theorem closed_word_raise_pc_result_rel_retargeted :
       simp [raiseWordGlobalsLookup, crepPcWordGlobalsLookup,
         updateMemory, panValueFlatWords, panValueFlatWordsFuel])
 
+theorem pc_raised_result_accepts_context_exception_code :
+    panValuePcExceptionResultRelWithContextCode [] raiseContext
+      (fun _ _ code => code = 9) raiseResultExceptionCode
+      raiseWordGlobalsLookup (fun _ => none) (fun _ => none)
+      "E" (.word 3) { raiseState with globals := updateMemory raiseState.globals 0 3 }
+      9 := by
+  refine ⟨closed_word_raise_pc_result_rel_retargeted.2, ?_⟩
+  simp [raiseContext, lookupInfo]
+
 theorem closed_two_word_raise_pc_result_rel :
     panValuePcResultRel [] raiseContext
       (fun _ _ code => code = 9) raiseResultExceptionCode
@@ -314,5 +361,53 @@ theorem closed_three_word_raise_pc_global_spill :
   · decide
   · decide
   · decide
+
+theorem closed_word_raise_hraise_retargeted_via_flat_spill :
+    panValuePcRaisedHraiseData raiseResultExceptionCode
+      raiseWordGlobalsLookup [] raiseContext
+      (fun _ _ code => code = 9) (fun _ => none) (fun _ => none)
+      (fun _ => none) "E" (.word 3)
+      { raiseState with globals := updateMemory raiseState.globals 0 3 }
+      9 := by
+  apply panValuePcRaisedHraiseData_of_flat_spill_state_retarget_globals
+    (structs := []) (context := raiseContext)
+    (exceptionRel := fun _ _ code => code = 9)
+    (exceptionCode := raiseResultExceptionCode)
+    (globalsLookup := raiseWordGlobalsLookup)
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (sourceException := "E")
+    (values := [3]) (state := raiseState) (bytesInWord := 8)
+    (targetException := 9) (sourceValue := .word 3)
+  · refine ⟨rfl, panValueCrepLocalsRel_empty [] raiseContext _, rfl⟩
+  · simp
+  · simp [raiseResultExceptionCode]
+  · rfl
+  · decide
+  · simp [panValueShape]
+  · have hstored := crepPcFlatGlobalsLookup_of_stored_flat_words
+      (α := Nat) 8 raiseState (.word 3) (by decide)
+    simpa [raiseWordGlobalsLookup, panValueFlatWords,
+      panValueFlatWordsFuel, panValueFlatValueFuel] using hstored
+
+theorem closed_word_raise_context_code_from_hraise_data :
+    panValuePcExceptionResultRelWithContextCode [] raiseContext
+      (fun _ _ code => code = 9) raiseResultExceptionCode
+      raiseWordGlobalsLookup (fun _ => none) (fun _ => none)
+      "E" (.word 3)
+      { raiseState with globals := updateMemory raiseState.globals 0 3 }
+      9 := by
+  apply panValuePcExceptionResultRelWithContextCode_of_raised_hraise_data
+    (structs := []) (context := raiseContext)
+    (exceptionRel := fun _ _ code => code = 9)
+    (exceptionCode := raiseResultExceptionCode)
+    (globalsLookup := raiseWordGlobalsLookup)
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (sourceException := "E")
+    (sourceValue := .word 3)
+    (targetState :=
+      { raiseState with globals := updateMemory raiseState.globals 0 3 })
+    (targetException := 9)
+    closed_word_raise_hraise_retargeted_via_flat_spill
+  simp [raiseContext, lookupInfo]
 
 end Flapjack.Test.PanValuePcRaisedPayloadCorrectness

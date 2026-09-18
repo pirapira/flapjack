@@ -679,6 +679,19 @@ def deadFfiStubDropped : Bool :=
         (assembly.splitOn "cake_clear:").length == 2
   | none => false
 
+/-! Constant-condition branches are also removed by Cake's `const_fp`, before
+    FFI service discovery.  This is a separate guard from sequence-tail DCE:
+    the call is syntactically inside a branch, but the branch itself is
+    unreachable because `3 < 1` is constant false. -/
+def deadFfiAfterConstantFalseSource : String :=
+  "fun 1 main() { if (3 < 1) { @foo(1,2,3,4); } else { return 0; } return 0; }"
+
+def deadFfiConstantFalseDropped : Bool :=
+  (compileRuntimeImage deadFfiAfterConstantFalseSource).map (·.ffiNames) == some [] &&
+    match compileAssembly deadFfiAfterConstantFalseSource with
+    | some assembly => !assembly.contains "cake_ffi"
+    | none => false
+
 /-!
 ## Bitmap table word parity (bead `flapjack-pxn.8.5.14.1`)
 
@@ -914,6 +927,7 @@ def sharedMemOffsetCarrierEncoding : Bool :=
 #guard ffiMinFramePrefix
 #guard deadFfiNamesDropped
 #guard deadFfiStubDropped
+#guard deadFfiConstantFalseDropped
 #guard bitmapCallsWordsMatch
 #guard frameOccupancyP1BitmapsMatch
 #guard frameOccupancyP9BitmapsMatch

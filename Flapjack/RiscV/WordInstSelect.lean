@@ -183,7 +183,10 @@ def wordInstPullExp [Sub α] [Add α] [AndOp α] [OrOp α] [HXor α α α]
       let normalized := wordInstConstantsToEnd operator
         (wordInstPullOps operator expressions [])
       match normalized with
-      | [expression] => expression
+      | [expression] =>
+          match expression with
+          | .const value => if value = 0 then expression else .op operator normalized
+          | _ => expression
       | _ => .op operator normalized
   | .load address => .load (wordInstPullExp address)
   | .shift operator left right =>

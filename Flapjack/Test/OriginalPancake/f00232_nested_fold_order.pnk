@@ -1,0 +1,22 @@
+fun 1 add1(1 a, 1 b) { return a + b; }
+fun 1 sub1(1 a) { return a - 1; }
+fun {1,1} pair(1 a, 1 b) { return <a, b>; }
+struct S { 1 f1, 1 f2 }
+fun S mks(1 a, 1 b) { return S <f1 = a, f2 = b>; }
+exception E : 1;
+fun 1 main() {
+  var 1 x = 7;
+  var 1 y286 = ((ld8 0) #>> 2);
+  var 1 y556 = sub1((ld8 (1000 + 16)));
+  var {1,1} p491 = pair((lds 1 ((1000 + 1000))), 1000);
+  y556 = add1((lds 1 (1008)), 0);
+  y556 = 2;
+  st8 ((1024 + 16)), (lds 1 (1000 + 12));
+  try
+    x = add1(y556, (lds 1 ((1000 + 4))))
+  catch E => x {
+      st8 (1000), ((lds 1 ((1024 + 4))) | ((ld8 1016) + (1000 ^ 255)));
+      !ldw y286, (1000 + 24);
+  }
+  return sub1(3);
+}

@@ -286,4 +286,96 @@ theorem evalCrepFullProgState_storeGlobals_vars
                     evalCrepFullExpState, hnameEval, htailResult,
                     updateMemoryListAt, nextState, Nat.add_assoc]
 
+theorem evalCrepFullProgState_storeGlobals_vars_of_fuel
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (functions : List (CompiledFunction α))
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat) (state : CrepState α)
+    (address stride : α) (names : List Nat) (values : List α)
+    (hfuel : values.length + 1 ≤ fuel)
+    (hlength : names.length = values.length)
+    (hvalues : evalCrepFullExpsState state baseAddress topAddress
+      (names.map (fun name => .var name)) = some values) :
+    evalCrepFullProgState functions primitive ffi sharedMem
+      baseAddress topAddress fuel state
+      (crepNestedSeq (storeGlobals address stride
+        (names.map (fun name => .var name)))) =
+      some (.normal { state with
+        globals := updateMemoryListAt state.globals address stride values }) := by
+  induction names generalizing state address values fuel with
+  | nil =>
+      cases values with
+      | nil =>
+          cases fuel with
+          | zero => omega
+          | succ fuel =>
+              simp [crepNestedSeq, storeGlobals, evalCrepFullProgState,
+                updateMemoryListAt]
+      | cons value values =>
+          simp at hlength
+  | cons name names ih =>
+      cases values with
+      | nil =>
+          simp at hlength
+      | cons value values =>
+          cases fuel with
+          | zero => omega
+          | succ fuel =>
+              simp only [List.map_cons, evalCrepFullExpsState] at hvalues
+              cases hname : evalCrepFullExpState state baseAddress topAddress
+                  (.var name) with
+              | none => simp [hname] at hvalues
+              | some nameValue =>
+                  cases htail : evalCrepFullExpsState state baseAddress topAddress
+                      (names.map (fun name => .var name)) with
+                  | none => simp [hname, htail] at hvalues
+                  | some tailValues =>
+                      have hpair : nameValue :: tailValues = value :: values :=
+                        Option.some.inj (by simpa [hname, htail] using hvalues)
+                      cases hpair
+                      have hlength' : names.length = values.length := by
+                        exact Nat.succ.inj hlength
+                      simp only [List.length_cons] at hfuel
+                      have hfuel' : values.length + 1 ≤ fuel := by
+                        omega
+                      have htailEval :
+                          evalCrepFullExpsState state baseAddress topAddress
+                            (names.map (fun name => .var name)) = some values := by
+                        exact htail
+                      have hnameEval : evalCrepFullExpState state
+                          baseAddress topAddress (.var name) = some value := by
+                        exact hname
+                      let nextState : CrepState α :=
+                        { state with globals := updateMemory state.globals address value }
+                      have htailEval' :
+                          evalCrepFullExpsState nextState baseAddress topAddress
+                            (names.map (fun name => .var name)) = some values := by
+                        have hvars : ∀ (current : CrepState α),
+                            current.locals = state.locals →
+                            ∀ (currentNames : List Nat),
+                            evalCrepFullExpsState current baseAddress topAddress
+                                (currentNames.map (fun name => .var name)) =
+                              evalCrepFullExpsState state baseAddress topAddress
+                                (currentNames.map (fun name => .var name)) := by
+                          intro current hlocals currentNames
+                          induction currentNames with
+                          | nil => simp [evalCrepFullExpsState]
+                          | cons currentName currentNames ih =>
+                              simp [evalCrepFullExpsState, evalCrepFullExpState,
+                                ih, hlocals]
+                        rw [hvars nextState rfl]
+                        exact htailEval
+                      cases fuel with
+                      | zero => omega
+                      | succ fuel =>
+                          have htailResult := ih (state := nextState)
+                            (address := address + stride) (values := values)
+                            (fuel := fuel + 1) hfuel' hlength' htailEval'
+                          simp [crepNestedSeq, storeGlobals, evalCrepFullProgState,
+                            hnameEval, htailResult,
+                            updateMemoryListAt, nextState, Nat.add_assoc]
+
 end Flapjack

@@ -466,6 +466,87 @@ theorem four_word_raise_pc_hraise_raw_words :
     (hdistinct := by decide)
     (hsize := by simp [panValueShape, Shape.shapeSize])
 
+theorem four_word_raise_pc_hraise_retargeted_globals :
+    panValuePcRaisedHraiseData
+      (fun exception => if exception = "E" then some 9 else none)
+      pcGlobalsLookup [] context
+      (fun _ _ code => code = 9)
+      (fun _ => none) (fun _ => none) (fun _ => none) "E"
+      fourWordSourceValue
+      { state with globals :=
+          updateMemoryListAt state.globals 0 8 [3, 4, 5, 6] }
+      9 := by
+  apply panValuePcRaisedHraiseData_retarget_globals_lookup
+    (bytesInWord := 8) (structs := []) (context := context)
+    (exceptionRel := fun _ _ code => code = 9)
+    (exceptionCode := fun exception =>
+      if exception = "E" then some 9 else none)
+    (globalsLookup := pcGlobalsLookup)
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (sourceException := "E")
+    (sourceValue := fourWordSourceValue)
+    (targetState :=
+      { state with globals :=
+          updateMemoryListAt state.globals 0 8 [3, 4, 5, 6] })
+    (targetException := 9)
+  · have hstored := crepPcFlatGlobalsLookup_of_stored_flat_words
+      (α := Nat) 8 state fourWordSourceValue (by decide)
+    simpa [pcGlobalsLookup, fourWordSourceValue, panValueFlatWords,
+      panValueFlatWordsFuel, panValueFlatValueFuel,
+      panValueFlatWordsFuel.panValueFlatWordsListFuel,
+      panValueFlatValueFuel.panValueFlatValueListFuel] using hstored
+  · exact four_word_raise_pc_hraise_raw_words
+
+theorem four_word_raise_pc_result_rel_flat_globals :
+    panValuePcResultRel [] context (fun _ _ code => code = 9)
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8)
+      (.raised (fun _ => none) (fun _ => none) (fun _ => none) "E"
+        fourWordSourceValue)
+      (.raised
+        { state with globals :=
+            updateMemoryListAt state.globals 0 8 [3, 4, 5, 6] }
+        9) := by
+  apply panValuePcResultRel_of_raised_hraise_data
+    (structs := []) (context := context)
+    (exceptionRel := fun _ _ code => code = 9)
+    (exceptionCode := fun exception =>
+      if exception = "E" then some 9 else none)
+    (globalsLookup := crepPcFlatGlobalsLookup 8)
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (sourceException := "E")
+    (sourceValue := fourWordSourceValue)
+    (targetState :=
+      { state with globals :=
+          updateMemoryListAt state.globals 0 8 [3, 4, 5, 6] })
+    (targetException := 9)
+  exact four_word_raise_pc_hraise_raw_words
+
+theorem four_word_raise_pc_result_rel_retargeted_globals :
+    panValuePcResultRel [] context (fun _ _ code => code = 9)
+      (fun exception => if exception = "E" then some 9 else none)
+      pcGlobalsLookup
+      (.raised (fun _ => none) (fun _ => none) (fun _ => none) "E"
+        fourWordSourceValue)
+      (.raised
+        { state with globals :=
+            updateMemoryListAt state.globals 0 8 [3, 4, 5, 6] }
+        9) := by
+  apply panValuePcResultRel_of_raised_hraise_data
+    (structs := []) (context := context)
+    (exceptionRel := fun _ _ code => code = 9)
+    (exceptionCode := fun exception =>
+      if exception = "E" then some 9 else none)
+    (globalsLookup := pcGlobalsLookup)
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (sourceException := "E")
+    (sourceValue := fourWordSourceValue)
+    (targetState :=
+      { state with globals :=
+          updateMemoryListAt state.globals 0 8 [3, 4, 5, 6] })
+    (targetException := 9)
+  exact four_word_raise_pc_hraise_retargeted_globals
+
 def nestedSourceValue : PanValue Nat :=
   .rStruct [.rStruct [.word 3]]
 
@@ -524,6 +605,49 @@ theorem nested_raise_pc_hraise_flat_globals :
       rfl)
     (hdistinct := by decide)
     (hsize := by simp [nestedSourceValue, panValueShape, Shape.shapeSize])
+
+theorem nested_raise_pc_hraise_retargeted_globals :
+    panValuePcRaisedHraiseData
+      (fun exception => if exception = "E" then some 9 else none)
+      pcGlobalsLookup [] context
+      (fun _ _ code => code = 9)
+      (fun _ => none) (fun _ => none) (fun _ => none) "E"
+      nestedSourceValue
+      { state with globals := updateMemoryListAt state.globals 0 8 [3] }
+      9 := by
+  apply panValuePcRaisedHraiseData_retarget_globals_lookup
+    (bytesInWord := 8) (structs := []) (context := context)
+    (exceptionRel := fun _ _ code => code = 9)
+    (exceptionCode := fun exception =>
+      if exception = "E" then some 9 else none)
+    (globalsLookup := pcGlobalsLookup)
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (sourceException := "E")
+    (sourceValue := nestedSourceValue)
+    (targetState :=
+      { state with globals := updateMemoryListAt state.globals 0 8 [3] })
+    (targetException := 9)
+  · have hstored := crepPcFlatGlobalsLookup_of_stored_flat_words
+      (α := Nat) 8 state nestedSourceValue (by decide)
+    simpa [pcGlobalsLookup, nestedSourceValue, panValueFlatWords,
+      panValueFlatWordsFuel, panValueFlatValueFuel,
+      panValueFlatWordsFuel.panValueFlatWordsListFuel,
+      panValueFlatValueFuel.panValueFlatValueListFuel] using hstored
+  · exact nested_raise_pc_hraise_flat_globals
+
+theorem nested_flat_globals_lookup_exact :
+    crepPcFlatGlobalsLookup 8
+        { state with globals := updateMemoryListAt state.globals 0 8 [3] }
+        nestedSourceValue =
+      pcGlobalsLookup
+        { state with globals := updateMemoryListAt state.globals 0 8 [3] }
+        nestedSourceValue := by
+  have hstored := crepPcFlatGlobalsLookup_of_stored_flat_words
+    (α := Nat) 8 state nestedSourceValue (by decide)
+  simpa [pcGlobalsLookup, nestedSourceValue, panValueFlatWords,
+    panValueFlatWordsFuel, panValueFlatValueFuel,
+    panValueFlatWordsFuel.panValueFlatWordsListFuel,
+    panValueFlatValueFuel.panValueFlatValueListFuel] using hstored
 
 theorem nested_raise_pc_result_rel_retargeted_globals :
     panValuePcResultRel [] context (fun _ _ code => code = 9)

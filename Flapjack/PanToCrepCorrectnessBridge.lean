@@ -1768,6 +1768,79 @@ theorem panValuePcRaisedRawWordListHraise_of_evidence
         (.rStruct (values.map (fun value => .word value))) hdistinct')
   exact ⟨hpost, 0, hcontrol, hcode, hlookupPayload, hsize⟩
 
+/-! Direct result-boundary form of the raw word-list evidence.  This is the
+    evaluator-backed lift used by compact `pc_compile_correct` callers that
+    need both the flattened global observation and Cake's exception lookup. -/
+theorem panValuePcExceptionResultRelWithContextCode_of_raised_raw_word_list_evidence
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (state : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α) (sourceFuel : Nat)
+    (exception : ExceptionId) (exceptionCode : α)
+    (values : List α) (expression : Exp α)
+    (compiled : List (CrepExp α)) (shape : Shape)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (resultExceptionCode : ExceptionId → Option α)
+    (hlookup : lookupInfo exception context.exceptions = some exceptionCode)
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory state)
+    (hsource : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord expression =
+      some (.rStruct (values.map (fun value => .word value))))
+    (hvalid : panValuePayloadWithinLimit structs
+      (.rStruct (values.map (fun value => .word value))) = true)
+    (hcompile : compileExp context expression = (compiled, shape))
+    (hlength : compiled.length = Shape.shapeSize shape)
+    (hcompiled : evalCrepFullExpsState state baseAddress topAddress compiled =
+      some values)
+    (hnot : ∀ name ∈ freshNames context compiled.length 1,
+      ∀ value ∈ compiled, name ∉ crepExpVars value)
+    (hfresh : ∀ name ∈ freshNames context compiled.length 1,
+      state.locals name = none)
+    (hexception : exceptionRel exception
+      (.rStruct (values.map (fun value => .word value))) exceptionCode)
+    (hcode : resultExceptionCode exception = some exceptionCode)
+    (hdistinct : List.Pairwise (fun left right : α => left ≠ right)
+      (storeAddresses (0 : α) context.bytesInWord values.length))
+    (hsize : Shape.shapeSize
+      (panValueShape structs (.rStruct (values.map (fun value => .word value)))) ≤ 32) :
+    panValuePcExceptionResultRelWithContextCode structs context exceptionRel
+      resultExceptionCode (crepPcFlatGlobalsLookup context.bytesInWord)
+      sourceGlobals sourceMemory exception
+      (.rStruct (values.map (fun value => .word value)))
+      { state with globals :=
+          updateMemoryListAt state.globals 0 context.bytesInWord values }
+      exceptionCode := by
+  apply panValuePcExceptionResultRelWithContextCode_of_raised_hraise_data
+    (structs := structs) (context := context) (exceptionRel := exceptionRel)
+    (exceptionCode := resultExceptionCode)
+    (globalsLookup := crepPcFlatGlobalsLookup context.bytesInWord)
+    (sourceLocals := fun _ => none) (sourceGlobals := sourceGlobals)
+    (sourceMemory := sourceMemory) (sourceException := exception)
+    (sourceValue := .rStruct (values.map (fun value => .word value)))
+    (targetState :=
+      { state with globals :=
+          updateMemoryListAt state.globals 0 context.bytesInWord values })
+    (targetException := exceptionCode)
+  · exact panValuePcRaisedRawWordListHraise_of_evidence
+      context structs sourceFunctions functions sourceLocals sourceGlobals
+      sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
+      baseAddress topAddress bytesInWord sourceFuel exception exceptionCode values
+      expression compiled shape exceptionRel resultExceptionCode hlookup hrel
+      hsource hvalid hcompile hlength hcompiled hnot hfresh hexception hcode
+      hdistinct hsize
+  · exact hlookup
+
 /-! General evaluator-backed raised data with the canonical flattened global
     lookup.  The raw-word-list theorem above is the common flat specialization;
     this version keeps nested or otherwise non-flat source payloads available

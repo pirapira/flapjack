@@ -656,7 +656,7 @@ theorem panValuePcRaisedWordSemanticLift
       some (.raised
         { state with globals := updateMemory state.globals 0 value }
         exceptionCode) ∧
-    panValuePcResultRel structs context exceptionRel resultExceptionCode
+    panValuePcResultRelWithContextCode structs context exceptionRel resultExceptionCode
       (crepPcWordGlobalsLookup (α := α))
       (.raised (fun _ => none) sourceGlobals sourceMemory exception (.word value))
       (.raised { state with globals := updateMemory state.globals 0 value }
@@ -688,7 +688,23 @@ theorem panValuePcRaisedWordSemanticLift
         { state with globals := updateMemory state.globals 0 value }
         exceptionCode := by
     simpa [hrel.1] using hexceptionResult
-  exact ⟨hsourceEval, htargetEval, ⟨hpost, hexceptionResult'⟩⟩
+  have hcontext : panValuePcResultRelWithContextCode structs context
+      exceptionRel resultExceptionCode
+      (crepPcWordGlobalsLookup (α := α))
+      (.raised (fun _ => none) sourceGlobals sourceMemory exception (.word value))
+      (.raised { state with globals := updateMemory state.globals 0 value }
+        exceptionCode) := by
+    simpa [panValuePcResultRelWithContextCode] using
+      (show panValueCrepStateRel structs context
+          (fun _ => none) sourceGlobals sourceMemory
+          { state with globals := updateMemory state.globals 0 value } ∧
+        panValuePcExceptionResultRelWithContextCode structs context exceptionRel
+          resultExceptionCode (crepPcWordGlobalsLookup (α := α))
+          sourceGlobals sourceMemory exception (.word value)
+          { state with globals := updateMemory state.globals 0 value }
+          exceptionCode from
+        ⟨hpost, ⟨hexceptionResult', hlookup⟩⟩)
+  exact ⟨hsourceEval, htargetEval, hcontext⟩
 
 /-! Focused result-relation instantiation of the checked word semantic lift.
     Callers that already have the source/target raise premises can consume
@@ -730,12 +746,23 @@ theorem panValuePcRaisedWordResultRel_of_semantic_lift
       (.raised (fun _ => none) sourceGlobals sourceMemory exception (.word value))
       (.raised { state with globals := updateMemory state.globals 0 value }
         exceptionCode) := by
-  exact (panValuePcRaisedWordSemanticLift
+  have hresult := panValuePcRaisedWordSemanticLift
     context structs sourceFunctions functions sourceLocals sourceGlobals
     sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
     baseAddress topAddress bytesInWord sourceFuel targetFuel exception
     exceptionCode value expression compiled exceptionRel resultExceptionCode
-    hlookup hcode hbytesInWord hrel hsource hcompile hcompiled hexception hfresh).2.2
+    hlookup hcode hbytesInWord hrel hsource hcompile hcompiled hexception hfresh
+  simpa [panValuePcResultRel, panValuePcResultRelWithContextCode,
+    panValuePcExceptionResultRelWithContextCode] using
+    (show panValueCrepStateRel structs context
+        (fun _ => none) sourceGlobals sourceMemory
+        { state with globals := updateMemory state.globals 0 value } ∧
+      panValuePcExceptionResultRel structs context exceptionRel resultExceptionCode
+        (crepPcWordGlobalsLookup (α := α))
+        sourceGlobals sourceMemory exception (.word value)
+        { state with globals := updateMemory state.globals 0 value }
+        exceptionCode from
+      ⟨hresult.2.2.1, hresult.2.2.2.1⟩)
 
 /-! Adapter for the generic `pc_compile_correct` raised obligation.  The
     existing word semantic lift supplies the concrete evaluator equations;
@@ -789,13 +816,13 @@ theorem panValuePcRaisedWordHraise
             (.word value) = some (panValueFlatWords (.word value))) ∧
         Shape.shapeSize (panValueShape structs (.word value)) ≤ 32)) ∧
     lookupInfo exception context.exceptions = some exceptionCode := by
-  have hresult := panValuePcRaisedWordSemanticLift
+  have hresult := panValuePcRaisedWordResultRel_of_semantic_lift
     context structs sourceFunctions functions sourceLocals sourceGlobals
     sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
     baseAddress topAddress bytesInWord sourceFuel targetFuel exception
     exceptionCode value expression compiled exceptionRel resultExceptionCode
     hlookup hcode hbytesInWord hrel hsource hcompile hcompiled hexception hfresh
-  rcases hresult.2.2 with
+  rcases hresult with
     ⟨hpost, spillAddress, code, hresultCode, htargetCode, hcontrol, hpayload⟩
   refine ⟨?_, hlookup⟩
   refine ⟨hpost, ?_⟩

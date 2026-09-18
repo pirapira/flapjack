@@ -2145,6 +2145,86 @@ theorem panValuePcRaisedHraiseCases_with_raw_word_lists_retarget_globals
     exceptionRel sourceLocals sourceGlobals sourceMemory sourceException
     sourceValue targetState targetException hcontrol
 
+/-! The raw-word dispatcher also preserves the state relation and exact
+    exception-code provenance required by the Pc result boundary.  This keeps
+    arbitrary-length flat records on the same path as the specialized word,
+    two-word, and three-word adapters. -/
+theorem panValuePcRaisedHraiseCases_with_raw_word_lists_to_exception_result_rel_with_context_code
+    [BEq α] [LawfulBEq α]
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (hword : ∀ (context : CompileContext α) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (value : α) (targetState : CrepState α) (targetException : α),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException
+          (.word value))
+        (.raised targetState targetException) →
+      panValuePcRaisedHraiseData exceptionCode globalsLookup structs context
+        exceptionRel sourceLocals sourceGlobals sourceMemory sourceException
+        (.word value) targetState targetException)
+    (hraw : ∀ (context : CompileContext α) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (values : List α) (targetState : CrepState α) (targetException : α),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException
+          (.rStruct (values.map (fun value => .word value))))
+        (.raised targetState targetException) →
+      panValuePcRaisedHraiseData exceptionCode globalsLookup structs context
+        exceptionRel sourceLocals sourceGlobals sourceMemory sourceException
+        (.rStruct (values.map (fun value => .word value))) targetState
+        targetException)
+    (hother : ∀ (context : CompileContext α) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (sourceValue : PanValue α) (targetState : CrepState α)
+      (targetException : α),
+      (∀ value : α, sourceValue ≠ .word value) →
+      (∀ values : List α,
+        sourceValue ≠ .rStruct (values.map (fun value => .word value))) →
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException
+          sourceValue)
+        (.raised targetState targetException) →
+      panValuePcRaisedHraiseData exceptionCode globalsLookup structs context
+        exceptionRel sourceLocals sourceGlobals sourceMemory sourceException
+        sourceValue targetState targetException)
+    (hlookupCode : ∀ (context : CompileContext α)
+      (sourceException : ExceptionId) (targetException : α),
+      lookupInfo sourceException context.exceptions = some targetException) :
+    ∀ (context : CompileContext α) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (sourceValue : PanValue α) (targetState : CrepState α)
+      (targetException : α),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      panValueCrepStateRel structs context sourceLocals sourceGlobals
+        sourceMemory targetState ∧
+      panValuePcExceptionResultRelWithContextCode structs context exceptionRel
+        exceptionCode globalsLookup sourceGlobals sourceMemory sourceException
+        sourceValue targetState targetException := by
+  intro context structs exceptionRel sourceLocals sourceGlobals sourceMemory
+    sourceException sourceValue targetState targetException hcontrol
+  exact (panValuePcRaisedHraiseData_to_exception_result_rel_with_context_code
+    structs context exceptionRel exceptionCode globalsLookup
+    (fun sourceLocals sourceGlobals sourceMemory sourceException sourceValue
+        targetState targetException hcontrol =>
+      panValuePcRaisedHraiseCases_with_raw_word_lists
+        exceptionCode globalsLookup hword hraw hother context structs exceptionRel
+        sourceLocals sourceGlobals sourceMemory sourceException sourceValue
+        targetState targetException hcontrol)
+    (hlookupCode context))
+    sourceLocals sourceGlobals sourceMemory sourceException sourceValue targetState
+    targetException hcontrol
+
 /-! Dispatch the supported raised payload cases into the universal `hraise`
     slot consumed by `panValuePcCompileCorrect_compact`.  The word and exact
     two-word callbacks are the semantic adapters above; the fallback is

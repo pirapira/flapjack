@@ -148,6 +148,79 @@ def panValuePcResultRel
         sourceMemory targetState ∧ sourceEvent = targetEvent
   | _, _ => False
 
+/-! The source compiler-correctness theorem only permits the loop-control
+label `0` at this boundary.  Keep these rejection lemmas next to the
+relation so a future broadening of the pattern cannot silently weaken the
+statement back to an arbitrary target label. -/
+theorem panValuePcResultRel_broke_rejects_nonzero_label
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (targetState : CrepState α)
+    (label : Nat) (hlabel : label ≠ 0) :
+    ¬ panValuePcResultRel structs context exceptionRel exceptionCode
+      globalsLookup (.broke sourceLocals sourceGlobals sourceMemory)
+      (.broke targetState label) := by
+  simp [panValuePcResultRel, hlabel]
+
+theorem panValuePcResultRel_continued_rejects_nonzero_label
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (targetState : CrepState α)
+    (label : Nat) (hlabel : label ≠ 0) :
+    ¬ panValuePcResultRel structs context exceptionRel exceptionCode
+      globalsLookup (.continued sourceLocals sourceGlobals sourceMemory)
+      (.continued targetState label) := by
+  simp [panValuePcResultRel, hlabel]
+
+/-! Safety obligation for the compact `pc_compile_correct` bridge.  The
+intermediate control relation intentionally permits nonzero labels while a
+loop propagates them, but the final Pancake theorem only admits label `0` for
+the result exposed at its boundary. -/
+def panValuePcControlLabelSafe
+    (sourceResult : PanValueControlResult α)
+    (crepResult : CrepControlResult α) : Prop :=
+  match sourceResult, crepResult with
+  | .broke _ _ _, .broke _ label => label = 0
+  | .continued _ _ _, .continued _ label => label = 0
+  | _, _ => True
+
+def PanValueCrepProgramStateControlSafe
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (program : Prog α) : Prop :=
+  ∀ (context : CompileContext α) (structs : StructContext)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (state : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α)
+    (sourceFuel targetFuel : Nat)
+    (_exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (sourceResult : PanValueControlResult α)
+    (crepResult : CrepControlResult α),
+    panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory state →
+    evalPanValueProgWithPrimitiveCallsAndFfi
+      primitive sourceHandler structs sourceFunctions
+      baseAddress topAddress bytesInWord sourceFuel
+      sourceLocals sourceGlobals sourceMemory program = some sourceResult →
+    evalCrepFullProgState functions crepPrimitive ffi sharedMem
+      baseAddress topAddress targetFuel state
+      (compileProg context program) = some crepResult →
+    panValuePcControlLabelSafe sourceResult crepResult
+
 structure PanValuePcInput (α : Type u) where
   structs : StructContext
   code : PanValuePcSourceCode α

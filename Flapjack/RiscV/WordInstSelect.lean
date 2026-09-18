@@ -372,6 +372,17 @@ def wordInstSelectAddressAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [O
       (prelude, .op .add [selectedLeft, .const value])
   | _ => wordInstSelectAtom temp expression
 
+/- Cake's `ShareInst` uses an `Addr base offset` only when the target
+   memory encoding accepts that offset (`word_instScript.sml:409-418`).  The
+   RISC-V target has the same signed 12-bit range for all shared-memory widths
+   (and zero alignment), so the existing immediate predicate is the exact
+   target-level test.  In particular, a wide address constant must first be
+   materialised by `inst_select_exp`, rather than being left in the address
+   expression. -/
+def wordInstSelectShareOffsetAllowed [WordInstSelectImmediate α]
+    (_operator : WordMemOp) (offset : α) : Bool :=
+  WordInstSelectImmediate.validBinOpImmediate .add offset
+
 def wordInstSelectProgram [Sub α] [Add α] [AndOp α] [OrOp α] [HXor α α α]
     [DecidableEq α] [OfNat α 0] [OfNat α 1]
     [WordInstSelectImmediate α]
@@ -380,20 +391,22 @@ def wordInstSelectProgram [Sub α] [Add α] [AndOp α] [OrOp α] [HXor α α α]
       wordDeadSelectSeq (wordInstSelectProgram temp first)
         (wordInstSelectProgram temp second)
   | .shareInst operator name address =>
-      /- Cake's `ShareInst` selector uses the ordinary expression selector:
-         a positive constant displacement is materialised into the fixed
-         temporary before the shared-memory operation.  Keeping the
-         address-shaped selector here leaves `base + offset` in the carrier,
-         which changes allocator colours for looped input copies.  The
-         address-shaped path remains correct for ordinary loads/stores below,
-         where Word-to-Stack can consume the displacement. -/
-      let (prelude, address) :=
-        match operator with
-        | .load | .load8 | .load16 | .load32 =>
-            wordInstSelectAtom temp (wordInstNormalizeExp address)
-        | .store | .store8 | .store16 | .store32 =>
-            wordInstSelectAddressAtom temp (wordInstNormalizeExp address)
-      wordDeadSelectSeq prelude (.shareInst operator name address)
+      /- Cake's `ShareInst` selector keeps an address offset only when the
+         corresponding load/store encoding accepts it.  Otherwise it selects
+         the whole address into `temp`, then shares `Var temp`. -/
+      let address := wordInstNormalizeExp address
+      match address with
+      | .op .add [base, .const offset] =>
+          if wordInstSelectShareOffsetAllowed operator offset then
+            let (prelude, selectedBase) := wordInstSelectAtom temp base
+            wordDeadSelectSeq prelude
+              (.shareInst operator name (.op .add [selectedBase, .const offset]))
+          else
+            let (prelude, _) := wordInstSelectAtom temp address
+            wordDeadSelectSeq prelude (.shareInst operator name (.var temp))
+      | _ =>
+          let (prelude, _) := wordInstSelectAtom temp address
+          wordDeadSelectSeq prelude (.shareInst operator name (.var temp))
   | .set store value =>
       /- `inst_select c temp (Set store exp)` (`word_instScript.sml:386-388`)
          is `Seq (inst_select_exp c temp temp (flatten_exp (pull_exp exp)))

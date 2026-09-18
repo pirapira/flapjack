@@ -28,6 +28,7 @@ inductive WordShiftImmediate where
 
 class WordInstSelectImmediate (α : Type u) where
   validBinOpImmediate : BinOp → α → Bool
+  validSharedMemoryOffset : WordMemOp → α → Bool
   shiftImmediate : α → WordShiftImmediate
   negateImmediate : α → α
   /- The current allocator bridge has an established expression-shaped path
@@ -45,6 +46,11 @@ instance : WordInstSelectImmediate Nat where
     | .sub => value < 2 ^ 11
     | .add | .and | .or | .xor =>
         value < 2 ^ 11 || value ≥ 2 ^ 64 - 2 ^ 11
+  validSharedMemoryOffset operator value :=
+    let fits := value < 2 ^ 11 || value ≥ 2 ^ 64 - 2 ^ 11
+    match operator with
+    | .load16 | .store16 => fits && value % 2 = 0
+    | _ => fits
   shiftImmediate value :=
     if value < 64 then .valid value else .outOfRange
   negateImmediate value := (2 ^ 64 - value) % 2 ^ 64
@@ -57,6 +63,12 @@ instance : WordInstSelectImmediate (BitVec width) where
     | .sub => n < 2 ^ 11
     | .add | .and | .or | .xor =>
         n < 2 ^ 11 || n ≥ 2 ^ width - 2 ^ 11
+  validSharedMemoryOffset operator value :=
+    let n := value.toNat
+    let fits := n < 2 ^ 11 || n ≥ 2 ^ width - 2 ^ 11
+    match operator with
+    | .load16 | .store16 => fits && n % 2 = 0
+    | _ => fits
   shiftImmediate value :=
     if value.toNat < width then
       .valid value.toNat
@@ -374,14 +386,10 @@ def wordInstSelectAddressAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [O
 
 /- Cake's `ShareInst` uses an `Addr base offset` only when the target
    memory encoding accepts that offset (`word_instScript.sml:409-418`).  The
-   RISC-V target has the same signed 12-bit range for all shared-memory widths
-   (and zero alignment), so the existing immediate predicate is the exact
-   target-level test.  In particular, a wide address constant must first be
-   materialised by `inst_select_exp`, rather than being left in the address
    expression. -/
 def wordInstSelectShareOffsetAllowed [WordInstSelectImmediate α]
     (_operator : WordMemOp) (offset : α) : Bool :=
-  WordInstSelectImmediate.validBinOpImmediate .add offset
+  WordInstSelectImmediate.validSharedMemoryOffset _operator offset
 
 def wordInstSelectProgram [Sub α] [Add α] [AndOp α] [OrOp α] [HXor α α α]
     [DecidableEq α] [OfNat α 0] [OfNat α 1]

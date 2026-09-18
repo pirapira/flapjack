@@ -1,5 +1,6 @@
 import Flapjack.CrepeProgramGenericRaiseCorrectness
 import Flapjack.PanToCrepCorrectnessBridge
+import Flapjack.PanStructs
 
 /-! Concrete non-word/non-two-word evidence for the generic structured Raise
     evaluator theorem.  The source payload has three words, so this cannot be
@@ -413,6 +414,345 @@ def fourWordSourceValue : PanValue Nat :=
 
 def fourWordSourceExpression : Exp Nat :=
   .rStruct [.const 3, .const 4, .const 5, .const 6]
+
+theorem named_struct_raise_compile_fallback :
+    compileExp context (.nStruct "S" [("field", .const 3)]) =
+      ([.const 0], .one) := by
+  simp [compileExp]
+
+def namedStructPassContext : StructPassContext :=
+  { structs := [("S", { fields := [("field", .one)], size := 1 })]
+    locals := [], globals := [] }
+
+def namedStructPostPassExpression : Exp Nat :=
+  structCompileExp namedStructPassContext
+    (.nStruct "S" [("field", .const 3)])
+
+def namedStructPostPassValue : PanValue Nat :=
+  .rStruct [.word 3]
+
+def namedStructSourceValue : PanValue Nat :=
+  .nStruct "S" [("field", .word 3)]
+
+theorem named_struct_source_pass_one_word_expression (value : Nat) :
+    structCompileExp namedStructPassContext
+        (.nStruct "S" [("field", .const value)]) =
+      .rStruct [.const value] := by
+  simp [namedStructPassContext, structCompileExp,
+    structCompileExp.structCompileFields, structSelectFields, lookupInfo]
+
+theorem named_struct_source_pass_one_word_flat_words (value : Nat) :
+    panValueFlatWords (.nStruct "S" [("field", .word value)]) =
+      panValueFlatWords (.rStruct [.word value]) := by
+  rfl
+
+theorem named_struct_source_pass_one_word_eval (value : Nat) :
+    evalPanValueExp namedStructPassContext.structs
+        (fun _ => none) (fun _ => none) (fun _ => none)
+        0 0 8 (.nStruct "S" [("field", .const value)]) =
+        some (.nStruct "S" [("field", .word value)]) ∧
+    evalPanValueExp [] (fun _ => none) (fun _ => none) (fun _ => none)
+        0 0 8 (structCompileExp namedStructPassContext
+          (.nStruct "S" [("field", .const value)])) =
+        some (.rStruct [.word value]) := by
+  simp [namedStructPassContext, structCompileExp,
+    structCompileExp.structCompileFields, structSelectFields, lookupInfo,
+    evalPanValueExp, evalPanValueExp.evalPanValueExps,
+    evalPanValueExp.evalPanValueFields, panValueFieldsHaveShapes,
+    panValueShape, panShapeMatches]
+
+theorem named_struct_source_pass_compile_raise (value : Nat) :
+    compileProg context
+        (.raise "E"
+          (structCompileExp namedStructPassContext
+            (.nStruct "S" [("field", .const value)]))) =
+      .seq
+        (nestedDecs [context.maxVar + 1] [.const value]
+          (crepNestedSeq
+            (storeGlobals 0 context.bytesInWord
+              [.var (context.maxVar + 1)])))
+        (.raise 9) := by
+  simp [context, namedStructPassContext, structCompileExp,
+    structCompileExp.structCompileFields, structSelectFields, lookupInfo,
+    compileProg, compileExp, compileExp.compileExpList, freshNames,
+    List.range, List.range.loop, nestedDecs, crepNestedSeq, storeGlobals,
+    Shape.shapeSize]
+
+theorem named_struct_source_pass_raise_pc_relation (value : Nat) :
+    evalPanValueProgWithPrimitiveCallsAndFfi
+        (fun _ _ => none) (fun _ _ _ _ _ _ => none) [] []
+        0 0 8 3 (fun _ => none) (fun _ => none) (fun _ => none)
+        (.raise "E"
+          (structCompileExp namedStructPassContext
+            (.nStruct "S" [("field", .const value)]))) =
+        some (.raised (fun _ => none) (fun _ => none) (fun _ => none)
+          "E" (.rStruct [.word value])) ∧
+      evalCrepFullProgState [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+        (fun _ _ _ _ => none) 0 0 4 state
+        (compileProg context
+          (.raise "E"
+            (structCompileExp namedStructPassContext
+              (.nStruct "S" [("field", .const value)])))) =
+        some (.raised
+          { state with globals := updateMemoryListAt state.globals 0 8 [value] }
+          9) ∧
+      panValuePcResultRel [] context (fun _ _ code => code = 9)
+        (fun exception => if exception = "E" then some 9 else none)
+        pcGlobalsLookup
+        (.raised (fun _ => none) (fun _ => none) (fun _ => none) "E"
+          (.rStruct [.word value]))
+        (.raised
+          { state with globals := updateMemoryListAt state.globals 0 8 [value] }
+          9) := by
+  have hevidence := compile_full_pan_value_raise_state_relation_of_evidence
+    (α := Nat) (context := context) (structs := [])
+    (sourceFunctions := []) (functions := [])
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (state := state)
+    (primitive := fun _ _ => none)
+    (sourceHandler := fun _ _ _ _ _ _ => none)
+    (crepPrimitive := fun _ _ => none)
+    (ffi := fun _ _ _ _ _ _ => none)
+    (sharedMem := fun _ _ _ _ => none)
+    (baseAddress := 0) (topAddress := 0) (bytesInWord := 8)
+    (sourceFuel := 2) (exception := "E") (exceptionCode := 9)
+    (expression := structCompileExp namedStructPassContext
+      (.nStruct "S" [("field", .const value)]))
+    (sourceValue := .rStruct [.word value])
+    (compiled := [.const value]) (shape := .comb [.one]) (values := [value])
+    (exceptionRel := fun _ _ code => code = 9)
+    (hlookup := by simp [context, lookupInfo])
+    (hrel := by
+      refine ⟨rfl, panValueCrepLocalsRel_empty [] context _, rfl⟩)
+    (hsource := by
+      simp [namedStructPassContext, structCompileExp,
+        structCompileExp.structCompileFields, structSelectFields, lookupInfo,
+        evalPanValueExp, evalPanValueExp.evalPanValueExps])
+    (hvalid := by
+      simp [panValuePayloadWithinLimit, panValuePayloadSizeFuel,
+        panValuePayloadSizeFuel.panValuePayloadSizeFieldsFuel,
+        panValueFlatValueFuel,
+        panValueFlatValueFuel.panValueFlatValueListFuel])
+    (hcompile := by
+      simp [context, namedStructPassContext, structCompileExp,
+        structCompileExp.structCompileFields, structSelectFields, lookupInfo,
+        compileExp, compileExp.compileExpList])
+    (hlength := by simp [Shape.shapeSize])
+    (hcompiled := by
+      simp [state, evalCrepFullExpsState, evalCrepFullExpState])
+    (hnot := by simp [context, freshNames])
+    (hfresh := by simp [context, state, freshNames])
+    (hexception := by simp)
+  refine ⟨?_, ?_, ?_⟩
+  · simpa [namedStructPassContext] using hevidence.1
+  · simpa [context, freshNames, List.range, List.range.loop, Nat.add_assoc]
+      using hevidence.2.1
+  · apply panValuePcResultRel_of_raised_hraise_data
+      (structs := []) (context := context)
+      (exceptionRel := fun _ _ code => code = 9)
+      (exceptionCode := fun exception =>
+        if exception = "E" then some 9 else none)
+      (globalsLookup := pcGlobalsLookup)
+      (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+      (sourceMemory := fun _ => none) (sourceException := "E")
+      (sourceValue := .rStruct [.word value])
+      (targetState :=
+        { state with globals := updateMemoryListAt state.globals 0 8 [value] })
+      (targetException := 9)
+    apply panValuePcRaisedHraiseData_retarget_globals_lookup
+      (bytesInWord := 8) (structs := []) (context := context)
+      (exceptionRel := fun _ _ code => code = 9)
+      (exceptionCode := fun exception =>
+        if exception = "E" then some 9 else none)
+      (globalsLookup := pcGlobalsLookup)
+      (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+      (sourceMemory := fun _ => none) (sourceException := "E")
+      (sourceValue := .rStruct [.word value])
+      (targetState :=
+        { state with globals := updateMemoryListAt state.globals 0 8 [value] })
+      (targetException := 9)
+    · have hstored := crepPcFlatGlobalsLookup_of_stored_flat_words
+        (α := Nat) 8 state (.rStruct [.word value]) (by
+          simp [storeAddresses, panValueFlatWords, panValueFlatWordsFuel,
+            panValueFlatValueFuel,
+            panValueFlatWordsFuel.panValueFlatWordsListFuel,
+            panValueFlatValueFuel.panValueFlatValueListFuel])
+      simpa [pcGlobalsLookup, panValueFlatWords,
+        panValueFlatWordsFuel, panValueFlatValueFuel,
+        panValueFlatWordsFuel.panValueFlatWordsListFuel,
+        panValueFlatValueFuel.panValueFlatValueListFuel] using hstored
+    · exact panValuePcRaisedHraiseData_of_flat_spill_state
+        (structs := []) (context := context)
+        (exceptionRel := fun _ _ code => code = 9)
+        (exceptionCode := fun exception =>
+          if exception = "E" then some 9 else none)
+        (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+        (sourceMemory := fun _ => none) (sourceException := "E")
+        (values := [value]) (state := state) (bytesInWord := 8)
+        (targetException := 9) (sourceValue := .rStruct [.word value])
+        (hrel := by
+          refine ⟨rfl, panValueCrepLocalsRel_empty [] context state.locals, rfl⟩)
+        (hexception := by simp)
+        (hcode := by simp)
+        (hflat := by rfl)
+        (hdistinct := by
+          simp [storeAddresses])
+        (hsize := by simp [panValueShape, Shape.shapeSize])
+
+theorem named_struct_raise_after_struct_pass_hraise_flat_globals :
+    panValuePcRaisedHraiseData
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8) [] context
+      (fun _ _ code => code = 9)
+      (fun _ => none) (fun _ => none) (fun _ => none) "E"
+      namedStructPostPassValue
+      { state with globals := updateMemoryListAt state.globals 0 8 [3] }
+      9 := by
+  apply panValuePcRaisedGenericHraise_of_evidence_flat_globals
+    (α := Nat) (context := context) (structs := [])
+    (sourceFunctions := []) (functions := [])
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (state := state)
+    (primitive := fun _ _ => none)
+    (sourceHandler := fun _ _ _ _ _ _ => none)
+    (crepPrimitive := fun _ _ => none)
+    (ffi := fun _ _ _ _ _ _ => none)
+    (sharedMem := fun _ _ _ _ => none)
+    (baseAddress := 0) (topAddress := 0) (bytesInWord := 8)
+    (sourceFuel := 2) (exception := "E") (exceptionCode := 9)
+    (expression := namedStructPostPassExpression)
+    (sourceValue := namedStructPostPassValue)
+    (compiled := [.const 3]) (shape := .comb [.one]) (values := [3])
+    (exceptionRel := fun _ _ code => code = 9)
+    (resultExceptionCode := fun exception =>
+      if exception = "E" then some 9 else none)
+    (hlookup := by simp [context, lookupInfo])
+    (hrel := by
+      refine ⟨rfl, panValueCrepLocalsRel_empty [] context _, rfl⟩)
+    (hsource := by
+      simp [namedStructPostPassExpression, namedStructPassContext,
+        structCompileExp, structCompileExp.structCompileFields,
+        structSelectFields, lookupInfo, namedStructPostPassValue,
+        evalPanValueExp, evalPanValueExp.evalPanValueExps])
+    (hvalid := by
+      simp [namedStructPostPassValue, panValuePayloadWithinLimit,
+        panValuePayloadSizeFuel,
+        panValuePayloadSizeFuel.panValuePayloadSizeFieldsFuel,
+        panValueFlatValueFuel,
+        panValueFlatValueFuel.panValueFlatValueListFuel])
+    (hcompile := by
+      simp [context, namedStructPostPassExpression,
+        namedStructPassContext, structCompileExp,
+        structCompileExp.structCompileFields, structSelectFields,
+        lookupInfo, compileExp, compileExp.compileExpList])
+    (hlength := by simp [Shape.shapeSize])
+    (hcompiled := by
+      simp [state, evalCrepFullExpsState, evalCrepFullExpState])
+    (hnot := by simp [context, freshNames])
+    (hfresh := by simp [context, state, freshNames])
+    (hexception := by simp)
+    (hcode := by simp)
+    (hflat := by rfl)
+    (hdistinct := by decide)
+    (hsize := by
+      simp [namedStructPostPassValue, panValueShape, Shape.shapeSize])
+
+theorem named_struct_raise_after_struct_pass_result_rel_retargeted_globals :
+    panValuePcResultRel [] context (fun _ _ code => code = 9)
+      (fun exception => if exception = "E" then some 9 else none)
+      pcGlobalsLookup
+      (.raised (fun _ => none) (fun _ => none) (fun _ => none) "E"
+        namedStructPostPassValue)
+      (.raised
+        { state with globals := updateMemoryListAt state.globals 0 8 [3] }
+        9) := by
+  apply panValuePcResultRel_of_raised_hraise_data
+    (structs := []) (context := context)
+    (exceptionRel := fun _ _ code => code = 9)
+    (exceptionCode := fun exception =>
+      if exception = "E" then some 9 else none)
+    (globalsLookup := pcGlobalsLookup)
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (sourceException := "E")
+    (sourceValue := namedStructPostPassValue)
+    (targetState :=
+      { state with globals := updateMemoryListAt state.globals 0 8 [3] })
+    (targetException := 9)
+  apply panValuePcRaisedHraiseData_retarget_globals_lookup
+    (bytesInWord := 8) (structs := []) (context := context)
+    (exceptionRel := fun _ _ code => code = 9)
+    (exceptionCode := fun exception =>
+      if exception = "E" then some 9 else none)
+    (globalsLookup := pcGlobalsLookup)
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (sourceException := "E")
+    (sourceValue := namedStructPostPassValue)
+    (targetState :=
+      { state with globals := updateMemoryListAt state.globals 0 8 [3] })
+    (targetException := 9)
+  · have hstored := crepPcFlatGlobalsLookup_of_stored_flat_words
+      (α := Nat) 8 state namedStructPostPassValue (by decide)
+    simpa [pcGlobalsLookup, namedStructPostPassValue, panValueFlatWords,
+      panValueFlatWordsFuel, panValueFlatValueFuel,
+      panValueFlatWordsFuel.panValueFlatWordsListFuel,
+      panValueFlatValueFuel.panValueFlatValueListFuel] using hstored
+  · exact named_struct_raise_after_struct_pass_hraise_flat_globals
+
+theorem named_struct_raise_pc_result_rel_named_payload_spill :
+    panValuePcResultRel [] context (fun _ _ code => code = 9)
+      (fun exception => if exception = "E" then some 9 else none)
+      pcGlobalsLookup
+      (.raised (fun _ => none) (fun _ => none) (fun _ => none) "E"
+        namedStructSourceValue)
+      (.raised
+        { state with globals := updateMemoryListAt state.globals 0 8 [3] }
+        9) := by
+  apply panValuePcResultRel_of_raised_hraise_data
+    (structs := []) (context := context)
+    (exceptionRel := fun _ _ code => code = 9)
+    (exceptionCode := fun exception =>
+      if exception = "E" then some 9 else none)
+    (globalsLookup := pcGlobalsLookup)
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (sourceException := "E")
+    (sourceValue := namedStructSourceValue)
+    (targetState :=
+      { state with globals := updateMemoryListAt state.globals 0 8 [3] })
+    (targetException := 9)
+  apply panValuePcRaisedHraiseData_retarget_globals_lookup
+    (bytesInWord := 8) (structs := []) (context := context)
+    (exceptionRel := fun _ _ code => code = 9)
+    (exceptionCode := fun exception =>
+      if exception = "E" then some 9 else none)
+    (globalsLookup := pcGlobalsLookup)
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (sourceException := "E")
+    (sourceValue := namedStructSourceValue)
+    (targetState :=
+      { state with globals := updateMemoryListAt state.globals 0 8 [3] })
+    (targetException := 9)
+  · have hstored := crepPcFlatGlobalsLookup_of_stored_flat_words
+      (α := Nat) 8 state namedStructSourceValue (by decide)
+    simpa [pcGlobalsLookup, namedStructSourceValue, panValueFlatWords,
+      panValueFlatWordsFuel, panValueFlatValueFuel,
+      panValueFlatWordsFuel.panValueFlatWordsFieldListFuel,
+      panValueFlatValueFuel.panValueFlatValueFieldListFuel] using hstored
+  · exact panValuePcRaisedHraiseData_of_flat_spill_state
+      (structs := []) (context := context)
+      (exceptionRel := fun _ _ code => code = 9)
+      (exceptionCode := fun exception =>
+        if exception = "E" then some 9 else none)
+      (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+      (sourceMemory := fun _ => none) (sourceException := "E")
+      (values := [3]) (state := state) (bytesInWord := 8)
+      (targetException := 9) (sourceValue := namedStructSourceValue)
+      (hrel := by
+        refine ⟨rfl, panValueCrepLocalsRel_empty [] context state.locals, rfl⟩)
+      (hexception := by simp)
+      (hcode := by simp)
+      (hflat := by rfl)
+      (hdistinct := by decide)
+      (hsize := by simp [namedStructSourceValue, panValueShape])
 
 theorem four_word_raise_pc_hraise_raw_words :
     panValuePcRaisedHraiseData

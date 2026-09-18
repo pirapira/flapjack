@@ -1222,7 +1222,10 @@ def labUpdateStoredLabelLengths [NeZero width] (base : Nat) :
 def labPadStoredInstructions [NeZero width]
     (code : List (Instruction width)) (storedLength : Nat) :
     List (Instruction width) :=
-  let target := storedLength / 4
+  /- A retained Cake line length can be one byte larger than its encoded
+     instruction body after `add_nop`; reconstruct the whole Skip instruction
+     rather than truncating with floor division. -/
+  let target := (storedLength + 3) / 4
   if code.length < target then
     code ++ List.replicate (target - code.length) (.addi 0 0 0)
   else code

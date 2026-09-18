@@ -2245,7 +2245,7 @@ theorem panValuePcRaisedRawWordListHraise_of_evidence
       (.rStruct (values.map (fun value => .word value)))
       { state with globals :=
           updateMemoryListAt state.globals 0 context.bytesInWord values }
-      exceptionCode := by
+      exceptionCode ∧ lookupInfo exception context.exceptions = some exceptionCode := by
   have hgeneric := compile_full_pan_value_raise_state_relation_of_evidence
     context structs sourceFunctions functions sourceLocals sourceGlobals
     sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
@@ -2279,7 +2279,7 @@ theorem panValuePcRaisedRawWordListHraise_of_evidence
       (crepPcFlatGlobalsLookup_of_stored_flat_words
         (α := α) context.bytesInWord state
         (.rStruct (values.map (fun value => .word value))) hdistinct')
-  exact ⟨hpost, 0, hcontrol, hcode, hlookupPayload, hsize⟩
+  exact ⟨⟨hpost, 0, hcontrol, hcode, hlookupPayload, hsize⟩, hlookup⟩
 
 theorem panValuePcRaisedRawWordListSemanticLift
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
@@ -2367,7 +2367,7 @@ theorem panValuePcRaisedRawWordListSemanticLift
     sourceMemory exception (.rStruct (values.map (fun value => .word value)))
     { state with globals :=
         updateMemoryListAt state.globals 0 context.bytesInWord values }
-    exceptionCode hraiseData
+    exceptionCode hraiseData.1
   exact ⟨hsourceEval, htargetEval, hresult⟩
 
 theorem panValuePcRaisedRawWordListSemanticLift_retarget_globals
@@ -2463,7 +2463,7 @@ theorem panValuePcRaisedRawWordListSemanticLift_retarget_globals
     (.rStruct (values.map (fun value => .word value)))
     { state with globals :=
         updateMemoryListAt state.globals 0 context.bytesInWord values }
-    exceptionCode context.bytesInWord hlookupGlobals hraiseData
+    exceptionCode context.bytesInWord hlookupGlobals hraiseData.1
   exact ⟨hsemantic.1, hsemantic.2.1, hresult⟩
 
 /-! Preserve the exact Cake exception-code lookup alongside the evaluator-backed
@@ -2676,14 +2676,14 @@ theorem panValuePcExceptionResultRelWithContextCode_of_raised_raw_word_list_evid
     (.rStruct (values.map (fun value => .word value)))
     { state with globals :=
         updateMemoryListAt state.globals 0 context.bytesInWord values }
-    exceptionCode hlookupGlobals hcanonical
+    exceptionCode hlookupGlobals hcanonical.1
   exact panValuePcExceptionResultRelWithContextCode_of_raised_hraise_data
     structs context exceptionRel resultExceptionCode globalsLookup
     sourceLocals sourceGlobals sourceMemory exception
     (.rStruct (values.map (fun value => .word value)))
     { state with globals :=
         updateMemoryListAt state.globals 0 context.bytesInWord values }
-    exceptionCode ⟨hretarget, hlookup⟩
+    exceptionCode ⟨hretarget, hcanonical.2⟩
 
 /-! General evaluator-backed raised data with the canonical flattened global
     lookup.  The raw-word-list theorem above is the common flat specialization;

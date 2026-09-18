@@ -1015,7 +1015,7 @@ theorem four_word_raise_pc_hraise_raw_words :
       (fun _ => none) (fun _ => none) (fun _ => none) "E"
       fourWordSourceValue
       { state with globals := updateMemoryListAt state.globals 0 8 [3, 4, 5, 6] }
-      9 := by
+      9 ∧ lookupInfo "E" context.exceptions = some 9 := by
   apply panValuePcRaisedRawWordListHraise_of_evidence
     (α := Nat) (context := context) (structs := [])
     (sourceFunctions := []) (functions := [])
@@ -1415,7 +1415,7 @@ theorem four_word_raise_pc_hraise_retargeted_globals :
       panValueFlatWordsFuel, panValueFlatValueFuel,
       panValueFlatWordsFuel.panValueFlatWordsListFuel,
       panValueFlatValueFuel.panValueFlatValueListFuel] using hstored
-  · exact four_word_raise_pc_hraise_raw_words
+  · exact four_word_raise_pc_hraise_raw_words.1
 
 theorem four_word_raise_pc_context_code_retargeted_globals :
     panValuePcExceptionResultRelWithContextCode [] context
@@ -1459,7 +1459,7 @@ theorem four_word_raise_pc_context_code_retargeted_globals :
         panValueFlatWordsFuel, panValueFlatValueFuel,
         panValueFlatWordsFuel.panValueFlatWordsListFuel,
         panValueFlatValueFuel.panValueFlatValueListFuel] using hstored
-    · exact four_word_raise_pc_hraise_raw_words
+    · exact four_word_raise_pc_hraise_raw_words.1
   · simp [context, lookupInfo]
 
 theorem four_word_raise_pc_result_rel_flat_globals :
@@ -1485,7 +1485,7 @@ theorem four_word_raise_pc_result_rel_flat_globals :
       { state with globals :=
           updateMemoryListAt state.globals 0 8 [3, 4, 5, 6] })
     (targetException := 9)
-  exact four_word_raise_pc_hraise_raw_words
+  exact four_word_raise_pc_hraise_raw_words.1
 
 theorem four_word_raise_pc_result_rel_retargeted_globals :
     panValuePcResultRel [] context (fun _ _ code => code = 9)

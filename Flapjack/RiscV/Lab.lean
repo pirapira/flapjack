@@ -1119,22 +1119,37 @@ def labStoredProgramLength {width : Nat} [NeZero width] :
 
 def labInitialStoredLine [NeZero width] :
     LabLine (Word width) → LabLine (Word width)
-  /- Labels are metadata in the source-shaped relocation pass.  Their final
-     zero/one-byte alignment is computed by `labUpdateStoredLabelLengths`;
-     counting every initial label as a four-byte code slot can spuriously
-     promote near-range JALs before that alignment pass. -/
-  | .label sectionId label _ => .label sectionId label 0
+  /- Internal labels start with Cake's four-byte relocation slot.  The two
+     synthetic entry labels are handled separately below: Cake represents the
+     section-base label implicitly, while Flapjack materializes it. -/
+  | .label sectionId label _ =>
+      .label sectionId label 4
   | .asm operation bytes _ =>
       .asm operation bytes (4 * labLineInstructionCount (.asm operation bytes 0))
   | .labAsm operation bytes _ =>
       .labAsm operation bytes (4 * labLineInstructionCount
         (.labAsm operation bytes 0))
 
+def labInitialStoredEntryLine [NeZero width] :
+    LabLine (Word width) → LabLine (Word width)
+  | .label sectionId label _ => .label sectionId label 0
+  | line => labInitialStoredLine line
+
+def labInitialStoredSectionLines [NeZero width] :
+    Nat → List (LabLine (Word width)) → List (LabLine (Word width))
+  | _, [] => []
+  | 0, line :: lines =>
+      labInitialStoredLine line :: labInitialStoredSectionLines 0 lines
+  | fuel + 1, line :: lines =>
+      labInitialStoredEntryLine line ::
+        labInitialStoredSectionLines fuel lines
+
 def labInitialStoredProgram [NeZero width] :
     LabProgram (Word width) → LabProgram (Word width)
   | [] => []
   | sectionData :: sections =>
-      { sectionData with lines := sectionData.lines.map labInitialStoredLine } ::
+      { sectionData with
+          lines := labInitialStoredSectionLines 2 sectionData.lines } ::
         labInitialStoredProgram sections
 
 def labCollectStoredSectionLabels [NeZero width] (sectionId base : Nat) :

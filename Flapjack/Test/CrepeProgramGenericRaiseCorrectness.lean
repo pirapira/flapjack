@@ -414,6 +414,11 @@ def fourWordSourceValue : PanValue Nat :=
 def fourWordSourceExpression : Exp Nat :=
   .rStruct [.const 3, .const 4, .const 5, .const 6]
 
+theorem named_struct_raise_compile_fallback :
+    compileExp context (.nStruct "S" [("field", .const 3)]) =
+      ([.const 0], .one) := by
+  simp [compileExp]
+
 theorem four_word_raise_pc_hraise_raw_words :
     panValuePcRaisedHraiseData
       (fun exception => if exception = "E" then some 9 else none)

@@ -68,6 +68,126 @@ theorem closed_word_raise_pc_hraise :
     (hfresh := by simp [raiseState, raiseContext])
   exact ⟨h.1, h.2⟩
 
+theorem closed_word_raise_pc_hraise_flat_globals :
+    panValuePcRaisedHraiseData raiseResultExceptionCode
+      (crepPcFlatGlobalsLookup 8) [] raiseContext
+      (fun _ _ code => code = 9) (fun _ => none) (fun _ => none)
+      (fun _ => none) "E" (.word 3)
+      { raiseState with globals := updateMemory raiseState.globals 0 3 }
+      9 := by
+  apply panValuePcRaisedHraiseData_retarget_globals_lookup
+    (bytesInWord := 8) (structs := []) (context := raiseContext)
+    (exceptionRel := fun _ _ code => code = 9)
+    (exceptionCode := raiseResultExceptionCode)
+    (globalsLookup := crepPcFlatGlobalsLookup 8)
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (sourceException := "E")
+    (sourceValue := .word 3)
+    (targetState :=
+      { raiseState with globals := updateMemory raiseState.globals 0 3 })
+    (targetException := 9)
+  · simp [crepPcFlatGlobalsLookup, panValueFlatWords, panValueFlatWordsFuel]
+  · exact closed_word_raise_pc_hraise
+
+theorem closed_two_word_raise_pc_hraise_flat_globals :
+    panValuePcRaisedHraiseData raiseResultExceptionCode
+      (crepPcFlatGlobalsLookup 8) [] raiseContext
+      (fun _ _ code => code = 9) (fun _ => none) (fun _ => none)
+      (fun _ => none) "E" (.rStruct [.word 3, .word 4])
+      { raiseState with globals :=
+          (updateMemory (updateMemory raiseState.globals 0 3) 8 4) }
+      9 := by
+  have h := panValuePcRaisedTwoWordHraise
+    (α := Nat) (context := raiseContext) (structs := [])
+    (sourceFunctions := []) (functions := [])
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (state := raiseState)
+    (primitive := fun _ _ => none)
+    (sourceHandler := fun _ _ _ _ _ _ => none)
+    (crepPrimitive := fun _ _ => none)
+    (ffi := fun _ _ _ _ _ _ => none)
+    (sharedMem := fun _ _ _ _ => none)
+    (baseAddress := 0) (topAddress := 0) (bytesInWord := 8)
+    (fieldLeft := .const 3) (fieldRight := .const 4)
+    (left := 3) (right := 4) (exception := "E") (exceptionCode := 9)
+    (exceptionRel := fun _ _ code => code = 9)
+    (resultExceptionCode := raiseResultExceptionCode)
+    (compiledLeft := .const 3) (compiledRight := .const 4)
+    (hlookup := by simp [raiseContext, lookupInfo])
+    (hcode := by simp [raiseResultExceptionCode])
+    (hbytesInWord := rfl) (hdistinct := by decide)
+    (hrel := by
+      refine ⟨rfl, panValueCrepLocalsRel_empty [] raiseContext _, rfl⟩)
+    (hsource := by
+      simp [SourceWordExp.toExp, evalPanValueExp,
+        evalPanValueExp.evalPanValueExps])
+    (hcompile := by
+      simp [SourceWordExp.toExp, compileExp, compileExp.compileExpList])
+    (hcompiledLeft := by
+      simp [evalCrepFullExpState, raiseState])
+    (hcompiledRight := by
+      intro value
+      simp [evalCrepFullExpState, raiseState])
+    (hexception := by simp)
+  rcases h with ⟨hpost, spillAddress, hcontrol, hcode, hpayload, hsize⟩
+  refine ⟨hpost, spillAddress, hcontrol, hcode, ?_, hsize⟩
+  intro _
+  have hlookup :
+      crepPcTwoWordGlobalsLookup 8
+          { raiseState with globals :=
+              (updateMemory (updateMemory raiseState.globals 0 3) 8 4) }
+          (.rStruct [.word 3, .word 4]) =
+        crepPcFlatGlobalsLookup 8
+          { raiseState with globals :=
+              (updateMemory (updateMemory raiseState.globals 0 3) 8 4) }
+          (.rStruct [.word 3, .word 4]) := by
+    have htwo :
+        crepPcTwoWordGlobalsLookup 8
+            { raiseState with globals :=
+                (updateMemory (updateMemory raiseState.globals 0 3) 8 4) }
+            (.rStruct [.word 3, .word 4]) = some [3, 4] := by
+      simp [crepPcTwoWordGlobalsLookup, updateMemory]
+    have hflat := crepPcFlatGlobalsLookup_of_stored_flat_words
+      (α := Nat) 8 raiseState (.rStruct [.word 3, .word 4]) (by decide)
+    have hflat' :
+        crepPcFlatGlobalsLookup 8
+            { raiseState with globals :=
+                (updateMemory (updateMemory raiseState.globals 0 3) 8 4) }
+            (.rStruct [.word 3, .word 4]) = some [3, 4] := by
+      simpa [crepPcFlatGlobalsLookup, panValueFlatWords,
+        panValueFlatWordsFuel, panValueFlatValueFuel,
+        panValueFlatWordsFuel.panValueFlatWordsListFuel,
+        panValueFlatValueFuel.panValueFlatValueListFuel, updateMemoryListAt,
+        Nat.zero_add] using hflat
+    exact htwo.trans hflat'.symm
+  rw [← hlookup]
+  simpa [Nat.zero_add] using
+    (hpayload (by simp [panValueShape, Shape.shapeSize]))
+
+theorem closed_two_word_raise_pc_result_rel_flat_globals :
+    panValuePcResultRel [] raiseContext
+      (fun _ _ code => code = 9) raiseResultExceptionCode
+      (crepPcFlatGlobalsLookup 8)
+      (.raised (fun _ => none) (fun _ => none) (fun _ => none) "E"
+        (.rStruct [.word 3, .word 4]))
+      (.raised
+        { raiseState with globals :=
+            (updateMemory (updateMemory raiseState.globals 0 3) 8 4) }
+        9) := by
+  apply panValuePcResultRel_of_raised_hraise_data
+    (structs := []) (context := raiseContext)
+    (exceptionRel := fun _ _ code => code = 9)
+    (exceptionCode := raiseResultExceptionCode)
+    (globalsLookup := crepPcFlatGlobalsLookup 8)
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (sourceException := "E")
+    (sourceValue := .rStruct [.word 3, .word 4])
+    (targetState :=
+      { raiseState with globals :=
+          (updateMemory (updateMemory raiseState.globals 0 3) 8 4) })
+    (targetException := 9)
+  exact closed_two_word_raise_pc_hraise_flat_globals
+
 theorem closed_word_raise_pc_result_rel_retargeted :
     panValuePcResultRel [] raiseContext
       (fun _ _ code => code = 9) raiseResultExceptionCode

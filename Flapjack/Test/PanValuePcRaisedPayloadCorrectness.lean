@@ -389,4 +389,25 @@ theorem closed_word_raise_hraise_retargeted_via_flat_spill :
     simpa [raiseWordGlobalsLookup, panValueFlatWords,
       panValueFlatWordsFuel, panValueFlatValueFuel] using hstored
 
+theorem closed_word_raise_context_code_from_hraise_data :
+    panValuePcExceptionResultRelWithContextCode [] raiseContext
+      (fun _ _ code => code = 9) raiseResultExceptionCode
+      raiseWordGlobalsLookup (fun _ => none) (fun _ => none)
+      "E" (.word 3)
+      { raiseState with globals := updateMemory raiseState.globals 0 3 }
+      9 := by
+  apply panValuePcExceptionResultRelWithContextCode_of_raised_hraise_data
+    (structs := []) (context := raiseContext)
+    (exceptionRel := fun _ _ code => code = 9)
+    (exceptionCode := raiseResultExceptionCode)
+    (globalsLookup := raiseWordGlobalsLookup)
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (sourceException := "E")
+    (sourceValue := .word 3)
+    (targetState :=
+      { raiseState with globals := updateMemory raiseState.globals 0 3 })
+    (targetException := 9)
+    closed_word_raise_hraise_retargeted_via_flat_spill
+  simp [raiseContext, lookupInfo]
+
 end Flapjack.Test.PanValuePcRaisedPayloadCorrectness

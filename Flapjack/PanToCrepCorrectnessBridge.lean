@@ -5697,33 +5697,19 @@ theorem panValuePcCompileCorrect_compact_with_flat_spill_evidence_context_code
           hlookupCode, hflat, hdistinct, hsize⟩
       exact ⟨values, state, htarget, hbytesInWord, hrel, hexception, hcode,
         hflat, hdistinct, hsize⟩)
-  have hlookupCode : ∀ (context : CompileContext α) (structs : StructContext)
-      (exceptionRel : ExceptionId → PanValue α → α → Prop)
-      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
-      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
-      (sourceValue : PanValue α) (targetState : CrepState α)
-      (targetException : α),
-      panValueCrepControlRel structs context exceptionRel
-        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
-        (.raised targetState targetException) →
-      lookupInfo sourceException context.exceptions = some targetException := by
-    intro context structs exceptionRel sourceLocals sourceGlobals sourceMemory
-      sourceException sourceValue targetState targetException hcontrol
-    rcases hevidence context structs exceptionRel sourceLocals sourceGlobals
-      sourceMemory sourceException sourceValue targetState targetException hcontrol with
-      ⟨values, state, htarget, hbytesInWord, hrel, hexception, hcode,
-        hlookupCode, hflat, hdistinct, hsize⟩
-    exact hlookupCode
   exact panValuePcCompileCorrect_compact_with_context_code
     program codeRel excpRel exceptionCode globalsLookup sourceFunctions functions
     primitive sourceHandler crepPrimitive ffi sharedMem baseAddress topAddress
     bytesInWord sourceFuel targetFuel hprogram hprogramSafe (by
       intro context structs exceptionRel sourceLocals sourceGlobals sourceMemory
         sourceException sourceValue targetState targetException hcontrol
+      rcases hevidence context structs exceptionRel sourceLocals sourceGlobals
+        sourceMemory sourceException sourceValue targetState targetException hcontrol with
+        ⟨values, state, htarget, hbytesInWord, hrel, hexception, hcode,
+          hlookupCode, hflat, hdistinct, hsize⟩
       exact ⟨hraiseData context structs exceptionRel sourceLocals sourceGlobals
           sourceMemory sourceException sourceValue targetState targetException hcontrol,
-        hlookupCode context structs exceptionRel sourceLocals sourceGlobals
-          sourceMemory sourceException sourceValue targetState targetException hcontrol⟩)
+        hlookupCode⟩)
 
 /-! Compact `pc_compile_correct` entrypoint for case-split raised evidence.
     Each case proves the canonical flattened lookup first; the boundary then

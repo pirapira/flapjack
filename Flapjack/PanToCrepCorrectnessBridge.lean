@@ -1938,23 +1938,23 @@ theorem panValuePcExceptionResultRelWithContextCode_of_raised_hraise_data_retarg
     (targetException : α) (bytesInWord : α)
     (hlookup : crepPcFlatGlobalsLookup bytesInWord targetState sourceValue =
       globalsLookup targetState sourceValue)
-    (hraiseData : panValuePcRaisedHraiseData exceptionCode
-      (crepPcFlatGlobalsLookup bytesInWord) structs context exceptionRel
-      sourceLocals sourceGlobals sourceMemory sourceException sourceValue
-      targetState targetException)
-    (hlookupCode : lookupInfo sourceException context.exceptions =
-      some targetException) :
+    (hraiseEvidence :
+      panValuePcRaisedHraiseData exceptionCode
+        (crepPcFlatGlobalsLookup bytesInWord) structs context exceptionRel
+        sourceLocals sourceGlobals sourceMemory sourceException sourceValue
+        targetState targetException ∧
+      lookupInfo sourceException context.exceptions = some targetException) :
     panValuePcExceptionResultRelWithContextCode structs context exceptionRel
       exceptionCode globalsLookup sourceGlobals sourceMemory sourceException
       sourceValue targetState targetException := by
   have hretarget := panValuePcRaisedHraiseData_retarget_globals_lookup
     bytesInWord exceptionCode globalsLookup structs context exceptionRel
     sourceLocals sourceGlobals sourceMemory sourceException sourceValue
-    targetState targetException hlookup hraiseData
+    targetState targetException hlookup hraiseEvidence.1
   exact panValuePcExceptionResultRelWithContextCode_of_raised_hraise_data
     structs context exceptionRel exceptionCode globalsLookup sourceLocals
     sourceGlobals sourceMemory sourceException sourceValue targetState
-    targetException ⟨hretarget, hlookupCode⟩
+    targetException ⟨hretarget, hraiseEvidence.2⟩
 
 theorem panValuePcResultRelWithContextCode_of_raised_hraise_data_retarget_globals_lookup
     [BEq α] [LawfulBEq α] [OfNat α 0] [Add α]
@@ -1968,21 +1968,21 @@ theorem panValuePcResultRelWithContextCode_of_raised_hraise_data_retarget_global
     (targetException : α) (bytesInWord : α)
     (hlookup : crepPcFlatGlobalsLookup bytesInWord targetState sourceValue =
       globalsLookup targetState sourceValue)
-    (hraiseData : panValuePcRaisedHraiseData exceptionCode
-      (crepPcFlatGlobalsLookup bytesInWord) structs context exceptionRel
-      sourceLocals sourceGlobals sourceMemory sourceException sourceValue
-      targetState targetException)
-    (hlookupCode : lookupInfo sourceException context.exceptions =
-      some targetException) :
+    (hraiseEvidence :
+      panValuePcRaisedHraiseData exceptionCode
+        (crepPcFlatGlobalsLookup bytesInWord) structs context exceptionRel
+        sourceLocals sourceGlobals sourceMemory sourceException sourceValue
+        targetState targetException ∧
+      lookupInfo sourceException context.exceptions = some targetException) :
     panValuePcResultRelWithContextCode structs context exceptionRel
       exceptionCode globalsLookup
       (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
       (.raised targetState targetException) := by
-  refine ⟨hraiseData.1, ?_⟩
+  refine ⟨hraiseEvidence.1.1, ?_⟩
   exact panValuePcExceptionResultRelWithContextCode_of_raised_hraise_data_retarget_globals_lookup
     structs context exceptionRel exceptionCode globalsLookup sourceLocals
     sourceGlobals sourceMemory sourceException sourceValue targetState
-    targetException bytesInWord hlookup hraiseData hlookupCode
+    targetException bytesInWord hlookup hraiseEvidence
 
 theorem panValuePcRaisedThreeWordHraise_of_evidence
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]

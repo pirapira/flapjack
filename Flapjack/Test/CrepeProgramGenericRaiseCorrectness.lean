@@ -927,7 +927,8 @@ theorem named_struct_raise_after_struct_pass_context_code :
     (sourceValue := namedStructPostPassValue)
     (targetState :=
       { state with globals := updateMemoryListAt state.globals 0 8 [3] })
-    (targetException := 9)
+    (targetException := 9) (hraiseEvidence := ?_)
+  refine ⟨?_, ?_⟩
   · apply panValuePcRaisedHraiseData_retarget_globals_lookup
       (bytesInWord := 8) (structs := []) (context := context)
       (exceptionRel := fun _ _ code => code = 9)
@@ -1436,7 +1437,8 @@ theorem four_word_raise_pc_context_code_retargeted_globals :
     (targetState :=
       { state with globals :=
           updateMemoryListAt state.globals 0 8 [3, 4, 5, 6] })
-    (targetException := 9)
+    (targetException := 9) (hraiseEvidence := ?_)
+  refine ⟨?_, ?_⟩
   · apply panValuePcRaisedHraiseData_retarget_globals_lookup
       (bytesInWord := 8) (structs := []) (context := context)
       (exceptionRel := fun _ _ code => code = 9)

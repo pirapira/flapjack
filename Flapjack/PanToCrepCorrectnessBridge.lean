@@ -1190,19 +1190,19 @@ theorem panValuePcExceptionResultRelWithContextCode_of_raised_hraise_data
     (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
     (sourceValue : PanValue α) (targetState : CrepState α)
     (targetException : α)
-    (hraiseData : panValuePcRaisedHraiseData exceptionCode globalsLookup
-      structs context exceptionRel sourceLocals sourceGlobals sourceMemory
-      sourceException sourceValue targetState targetException)
-    (hlookupCode : lookupInfo sourceException context.exceptions =
-      some targetException) :
+    (hraiseEvidence :
+      panValuePcRaisedHraiseData exceptionCode globalsLookup structs context
+        exceptionRel sourceLocals sourceGlobals sourceMemory sourceException
+        sourceValue targetState targetException ∧
+      lookupInfo sourceException context.exceptions = some targetException) :
     panValuePcExceptionResultRelWithContextCode structs context exceptionRel
       exceptionCode globalsLookup sourceGlobals sourceMemory sourceException
       sourceValue targetState targetException := by
   have hresult := panValuePcResultRel_of_raised_hraise_data structs context
       exceptionRel exceptionCode globalsLookup sourceLocals sourceGlobals
       sourceMemory sourceException sourceValue targetState targetException
-      hraiseData
-  exact ⟨hresult.2, hlookupCode⟩
+      hraiseEvidence.1
+  exact ⟨hresult.2, hraiseEvidence.2⟩
 
 theorem panValuePcRaisedHraiseData_to_exception_result_rel
     [BEq α] [LawfulBEq α]
@@ -1278,7 +1278,7 @@ theorem panValuePcRaisedHraiseData_to_exception_result_rel_with_context_code
   have hresult := panValuePcExceptionResultRelWithContextCode_of_raised_hraise_data
     structs context exceptionRel exceptionCode globalsLookup sourceLocals
     sourceGlobals sourceMemory sourceException sourceValue targetState
-    targetException hraiseData hlookupCode
+    targetException ⟨hraiseData, hlookupCode⟩
   exact ⟨hraiseData.1, hresult⟩
 
 def crepPcFlatGlobalsLookup [OfNat α 0] [Add α]
@@ -1443,7 +1443,7 @@ theorem panValuePcResultRelWithContextCode_of_raised_flat_spill
     sourceLocals sourceGlobals sourceMemory sourceException sourceValue
     { state with globals :=
         (updateMemoryListAt state.globals 0 bytesInWord values) }
-    targetException hraiseData hlookupCode
+    targetException ⟨hraiseData, hlookupCode⟩
   exact ⟨hraiseData.1, hresult⟩
 
 theorem panValuePcRaisedHraiseData_of_flat_spill_state_retarget_globals
@@ -1954,7 +1954,7 @@ theorem panValuePcExceptionResultRelWithContextCode_of_raised_hraise_data_retarg
   exact panValuePcExceptionResultRelWithContextCode_of_raised_hraise_data
     structs context exceptionRel exceptionCode globalsLookup sourceLocals
     sourceGlobals sourceMemory sourceException sourceValue targetState
-    targetException hretarget hlookupCode
+    targetException ⟨hretarget, hlookupCode⟩
 
 theorem panValuePcResultRelWithContextCode_of_raised_hraise_data_retarget_globals_lookup
     [BEq α] [LawfulBEq α] [OfNat α 0] [Add α]
@@ -2674,7 +2674,7 @@ theorem panValuePcExceptionResultRelWithContextCode_of_raised_raw_word_list_evid
     (.rStruct (values.map (fun value => .word value)))
     { state with globals :=
         updateMemoryListAt state.globals 0 context.bytesInWord values }
-    exceptionCode hretarget hlookup
+    exceptionCode ⟨hretarget, hlookup⟩
 
 /-! General evaluator-backed raised data with the canonical flattened global
     lookup.  The raw-word-list theorem above is the common flat specialization;
@@ -3014,7 +3014,7 @@ theorem panValuePcExceptionResultRelWithContextCode_of_raised_generic_evidence
     sourceGlobals sourceMemory exception sourceValue
     { state with globals :=
         updateMemoryListAt state.globals 0 context.bytesInWord values }
-    exceptionCode hraiseData hlookup
+    exceptionCode ⟨hraiseData, hlookup⟩
 
 theorem panValuePcResultRelWithContextCode_of_raised_generic_evidence
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
@@ -4518,7 +4518,7 @@ theorem panValuePcCompileCorrectWithContextCode_of_stateful_program
     have hresult := panValuePcExceptionResultRelWithContextCode_of_raised_hraise_data
       structs context exceptionRel exceptionCode globalsLookup sourceLocals
       sourceGlobals sourceMemory sourceException sourceValue targetState
-      targetException hdata.1 hdata.2
+      targetException hdata
     exact ⟨hdata.1.1, hresult⟩
   have hresult := panValuePcResultRelWithContextCode_of_control structs context
     exceptionRel exceptionCode globalsLookup hraise

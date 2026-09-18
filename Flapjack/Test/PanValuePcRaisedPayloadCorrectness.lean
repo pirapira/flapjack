@@ -657,9 +657,9 @@ theorem closed_word_raise_context_code_from_hraise_data :
     (sourceValue := .word 3)
     (targetState :=
       { raiseState with globals := updateMemory raiseState.globals 0 3 })
-    (targetException := 9)
-    closed_word_raise_hraise_retargeted_via_flat_spill
-  simp [raiseContext, lookupInfo]
+    (targetException := 9) (hraiseEvidence := ?_)
+  exact ⟨closed_word_raise_hraise_retargeted_via_flat_spill, by
+    simp [raiseContext, lookupInfo]⟩
 
 theorem closed_word_raise_result_context_code_relation :
     panValuePcResultRelWithContextCode [] raiseContext

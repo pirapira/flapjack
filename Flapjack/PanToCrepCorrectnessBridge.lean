@@ -1096,9 +1096,8 @@ theorem panValuePcRaisedHraiseData_retarget_globals_lookup
     (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
     (sourceValue : PanValue α) (targetState : CrepState α)
     (targetException : α)
-    (hlookup : ∀ (state : CrepState α) (value : PanValue α),
-      crepPcFlatGlobalsLookup bytesInWord state value =
-        globalsLookup state value)
+    (hlookup : crepPcFlatGlobalsLookup bytesInWord targetState sourceValue =
+      globalsLookup targetState sourceValue)
     (hraiseData : panValuePcRaisedHraiseData exceptionCode
       (crepPcFlatGlobalsLookup bytesInWord) structs context exceptionRel
       sourceLocals sourceGlobals sourceMemory sourceException sourceValue

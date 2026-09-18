@@ -248,7 +248,7 @@ theorem three_word_raise_pc_hraise_flat_globals :
 theorem three_word_raise_pc_hraise_retargeted_globals :
     panValuePcRaisedHraiseData
       (fun exception => if exception = "E" then some 9 else none)
-      (fun targetState value => crepPcFlatGlobalsLookup 8 targetState value) [] context
+      pcGlobalsLookup [] context
       (fun _ _ code => code = 9)
       (fun _ => none) (fun _ => none) (fun _ => none) "E" sourceValue
       { state with globals := updateMemoryListAt state.globals 0 8 [3, 4, 5] }
@@ -262,8 +262,12 @@ theorem three_word_raise_pc_hraise_retargeted_globals :
     (targetState :=
       { state with globals := updateMemoryListAt state.globals 0 8 [3, 4, 5] })
     (targetException := 9)
-  · intro targetState value
-    rfl
+  · have hstored := crepPcFlatGlobalsLookup_of_stored_flat_words
+      (α := Nat) 8 state sourceValue (by decide)
+    simpa [pcGlobalsLookup, sourceValue, panValueFlatWords,
+      panValueFlatWordsFuel, panValueFlatValueFuel,
+      panValueFlatWordsFuel.panValueFlatWordsListFuel,
+      panValueFlatValueFuel.panValueFlatValueListFuel] using hstored
   · exact three_word_raise_pc_hraise_flat_globals
 
 theorem three_word_raise_pc_result_rel_flat_globals :

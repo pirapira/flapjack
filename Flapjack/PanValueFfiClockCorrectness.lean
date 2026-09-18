@@ -407,7 +407,6 @@ theorem evalPanValueFfiClockProg_call_returned
     (function : FunName) (arguments : List (Exp α))
     (nextGlobals : VarName → Option (PanValue α))
     (nextMemory : α → Option (PanValue α)) (nextFfi : FfiState σ)
-    (values : List (PanValue α))
     (hcall : evalPanValueFfiClockCall context primitive handler structs functions
       baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
       none function arguments =
@@ -449,6 +448,37 @@ theorem evalPanValueFfiClockProg_call_raised
       (.call none function arguments) =
       some (.control (.raised (fun _ => none) nextGlobals nextMemory nextFfi
         exception value), callClock) := by
+  simp [evalPanValueFfiClockProg, hcall]
+
+/-! This is the destination-bearing `Call_Ret_Return` branch of Cake's
+    `pc_compile_correct`: a returned value is installed in the caller's
+    destination, while the callee memory, FFI state, and clock are retained. -/
+theorem evalPanValueFfiClockProg_call_returned_destination
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel clock callClock : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (destination : Option (VarKind × VarName))
+    (function : FunName) (arguments : List (Exp α))
+    (assignedLocals assignedGlobals : VarName → Option (PanValue α))
+    (nextMemory : α → Option (PanValue α)) (nextFfi : FfiState σ)
+    (hcall : evalPanValueFfiClockCall context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
+      (some (destination, none)) function arguments =
+      some (.control (.normal assignedLocals assignedGlobals nextMemory nextFfi),
+        callClock)) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+      (.call (some (destination, none)) function arguments) =
+      some (.control (.normal assignedLocals assignedGlobals nextMemory nextFfi),
+        callClock) := by
   simp [evalPanValueFfiClockProg, hcall]
 
 /-! A caught exception resumes the handler in the callee's final state and

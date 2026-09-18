@@ -172,6 +172,14 @@ def allConstantAndFolds : Bool :=
   | .const value => value == 1
   | _ => false
 
+/-- Cake keeps a folded unary operator wrapper until `flatten_exp`; unwrapping
+    it in `pull_exp` changes the enclosing operand order. -/
+def nestedFoldKeepsCakeWrapper : Bool :=
+  match wordInstPullExp (α := Nat)
+      (.op .add [.var 2, .op .xor [.const 1000, .const 255]]) with
+  | .op .add [.var 2, .op .xor [.const 791]] => true
+  | _ => false
+
 /-- `x - 8` is `x + (-8)` with the constant second, like Cake's `convert_sub`
 composed with the constant placement. -/
 def subtractionConstantSecond : Bool :=
@@ -360,6 +368,7 @@ def nestedAndWideConstantMaterializes : Bool :=
 #guard allConstantAddFolds
 #guard allConstantOrFolds
 #guard allConstantAndFolds
+#guard nestedFoldKeepsCakeWrapper
 #guard subtractionConstantSecond
 #guard subtractionOperandOrderMatches
 #guard subtractionSingletonPreserved

@@ -5492,34 +5492,20 @@ theorem panValuePcCompileCorrect_compact_with_flat_global_evaluator_evidence_con
     exceptionCode globalsLookup sourceFunctions functions primitive sourceHandler
     crepPrimitive ffi sharedMem baseAddress topAddress bytesInWord sourceFuel
     hlookup hevidence
-  have hlookupCode : ∀ (context : CompileContext α) (structs : StructContext)
-      (exceptionRel : ExceptionId → PanValue α → α → Prop)
-      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
-      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
-      (sourceValue : PanValue α) (targetState : CrepState α)
-      (targetException : α),
-      panValueCrepControlRel structs context exceptionRel
-        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
-        (.raised targetState targetException) →
-      lookupInfo sourceException context.exceptions = some targetException := by
-    intro context structs exceptionRel sourceLocals sourceGlobals sourceMemory
-      sourceException sourceValue targetState targetException hcontrol
-    rcases hevidence context structs exceptionRel sourceLocals sourceGlobals
-      sourceMemory sourceException sourceValue targetState targetException hcontrol with
-      ⟨state, expression, compiled, shape, values, htarget, hbytesInWord,
-        hrel, hsource, hvalid, hcompile, hlength, hcompiled, hnot, hfresh,
-        hexception, hlookupCode, hcode, hflat, hdistinct, hsize⟩
-    exact hlookupCode
   exact panValuePcCompileCorrect_compact_with_context_code
     program codeRel excpRel exceptionCode globalsLookup sourceFunctions functions
     primitive sourceHandler crepPrimitive ffi sharedMem baseAddress topAddress
     bytesInWord sourceFuel targetFuel hprogram hprogramSafe (by
       intro context structs exceptionRel sourceLocals sourceGlobals sourceMemory
         sourceException sourceValue targetState targetException hcontrol
+      rcases hevidence context structs exceptionRel sourceLocals sourceGlobals
+        sourceMemory sourceException sourceValue targetState targetException hcontrol with
+        ⟨state, expression, compiled, shape, values, htarget, hbytesInWord,
+          hrel, hsource, hvalid, hcompile, hlength, hcompiled, hnot, hfresh,
+          hexception, hlookupCode, hcode, hflat, hdistinct, hsize⟩
       exact ⟨hraiseData context structs exceptionRel sourceLocals sourceGlobals
           sourceMemory sourceException sourceValue targetState targetException hcontrol,
-        hlookupCode context structs exceptionRel sourceLocals sourceGlobals
-          sourceMemory sourceException sourceValue targetState targetException hcontrol⟩)
+        hlookupCode⟩)
 
 /-! Convert direct flat-spill state evidence into the raised package.  This is
     the state-level companion to the evaluator-backed adapter above: it keeps

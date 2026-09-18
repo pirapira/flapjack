@@ -1076,7 +1076,7 @@ theorem four_word_raise_pc_semantic_lift :
         (.raised
           { state with globals :=
               updateMemoryListAt state.globals 0 8 [3, 4, 5, 6] } 9) := by
-  have h := panValuePcRaisedRawWordListSemanticLift
+  have h := panValuePcRaisedGenericSemanticLift_flat_globals_with_context_code
     (α := Nat) (context := context) (structs := [])
     (sourceFunctions := []) (functions := [])
     (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
@@ -1088,6 +1088,7 @@ theorem four_word_raise_pc_semantic_lift :
     (sharedMem := fun _ _ _ _ => none)
     (baseAddress := 0) (topAddress := 0) (bytesInWord := 8)
     (sourceFuel := 2) (exception := "E") (exceptionCode := 9)
+    (sourceValue := fourWordSourceValue)
     (values := [3, 4, 5, 6]) (expression := fourWordSourceExpression)
     (compiled := [.const 3, .const 4, .const 5, .const 6])
     (shape := .comb [.one, .one, .one, .one])
@@ -1098,10 +1099,11 @@ theorem four_word_raise_pc_semantic_lift :
     (hrel := by
       refine ⟨rfl, panValueCrepLocalsRel_empty [] context _, rfl⟩)
     (hsource := by
-      simp [fourWordSourceExpression, evalPanValueExp,
+      simp [fourWordSourceExpression, fourWordSourceValue, evalPanValueExp,
         evalPanValueExp.evalPanValueExps])
     (hvalid := by
-      simp [panValuePayloadWithinLimit, panValuePayloadSizeFuel,
+      simp [fourWordSourceValue, panValuePayloadWithinLimit,
+        panValuePayloadSizeFuel,
         panValuePayloadSizeFuel.panValuePayloadSizeFieldsFuel,
         panValueFlatValueFuel,
         panValueFlatValueFuel.panValueFlatValueListFuel])
@@ -1115,10 +1117,25 @@ theorem four_word_raise_pc_semantic_lift :
     (hfresh := by simp [context, state, freshNames])
     (hexception := by simp)
     (hcode := by simp)
+    (hflat := by
+      simp [fourWordSourceValue, panValueFlatWords, panValueFlatWordsFuel,
+        panValueFlatValueFuel,
+        panValueFlatWordsFuel.panValueFlatWordsListFuel,
+        panValueFlatValueFuel.panValueFlatValueListFuel])
     (hdistinct := by decide)
-    (hsize := by simp [panValueShape, Shape.shapeSize])
+    (hsize := by simp [fourWordSourceValue, panValueShape, Shape.shapeSize])
+  rcases h with ⟨hsourceEval, htargetEval, hcontext⟩
+  have hresult : panValuePcResultRel [] context (fun _ _ code => code = 9)
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8)
+      (.raised (fun _ => none) (fun _ => none) (fun _ => none)
+        "E" fourWordSourceValue)
+      (.raised
+        { state with globals :=
+            updateMemoryListAt state.globals 0 8 [3, 4, 5, 6] } 9) := by
+    exact ⟨hcontext.1, hcontext.2.1⟩
   simpa [context, fourWordSourceValue, freshNames, List.range, List.range.loop,
-    Nat.add_assoc] using h
+    Nat.add_assoc] using ⟨hsourceEval, htargetEval, hresult⟩
 
 theorem four_word_raise_pc_semantic_lift_retargeted :
     evalPanValueProgWithPrimitiveCallsAndFfi

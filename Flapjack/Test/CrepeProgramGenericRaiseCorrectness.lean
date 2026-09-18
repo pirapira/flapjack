@@ -1381,8 +1381,8 @@ theorem four_word_raise_pc_context_code_from_semantic_lift :
     (targetState :=
       { state with globals := updateMemoryListAt state.globals 0 8 [3, 4, 5, 6] })
     (targetException := 9)
-  · exact four_word_raise_pc_semantic_lift_retargeted.2.2
-  · simp [context, lookupInfo]
+  exact ⟨four_word_raise_pc_semantic_lift_retargeted.2.2, by
+    simp [context, lookupInfo]⟩
 
 theorem four_word_raise_pc_hraise_retargeted_globals :
     panValuePcRaisedHraiseData

@@ -2574,12 +2574,11 @@ theorem panValuePcResultRelWithContextCode_of_raised_result_rel
     (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
     (sourceValue : PanValue α) (targetState : CrepState α)
     (targetException : α)
-    (hresult : panValuePcResultRel structs context exceptionRel exceptionCode
-      globalsLookup
-      (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
-      (.raised targetState targetException))
-    (hlookupCode : lookupInfo sourceException context.exceptions =
-      some targetException) :
+    (hresultEvidence :
+      panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) ∧
+      lookupInfo sourceException context.exceptions = some targetException) :
     panValuePcResultRelWithContextCode structs context exceptionRel exceptionCode
       globalsLookup
       (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
@@ -2590,7 +2589,7 @@ theorem panValuePcResultRelWithContextCode_of_raised_result_rel
       panValuePcExceptionResultRelWithContextCode structs context exceptionRel
         exceptionCode globalsLookup sourceGlobals sourceMemory sourceException
         sourceValue targetState targetException from
-      ⟨hresult.1, hresult.2, hlookupCode⟩)
+      ⟨hresultEvidence.1.1, hresultEvidence.1.2, hresultEvidence.2⟩)
 
 /-! Direct result-boundary form of the raw word-list evidence.  This is the
     evaluator-backed lift used by compact `pc_compile_correct` callers that
@@ -3091,7 +3090,7 @@ theorem panValuePcResultRelWithContextCode_of_raised_generic_evidence
     sourceGlobals sourceMemory exception sourceValue
     { state with globals :=
         updateMemoryListAt state.globals 0 context.bytesInWord values }
-    exceptionCode hresult hlookup
+    exceptionCode ⟨hresult, hlookup⟩
 
 /-! Combine the generic Raise evaluator equations with the exact Pc raised
     result relation.  Unlike the flat-list specialization, this preserves the

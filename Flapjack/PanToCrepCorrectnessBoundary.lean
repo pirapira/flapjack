@@ -681,6 +681,34 @@ theorem panValueCrepProgramStateCorrect_and_controlSafe_while_source_word
   · exact panValueCrepProgramStateControlSafe_while_of_loop_safe condition
       body hloopSafe
 
+theorem panValueCrepProgramLoopStateControlSafe_while_zero
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (body : Prog α) :
+    PanValueCrepProgramLoopStateControlSafe
+      (.while (SourceWordExp.const (0 : α)).toExp body) := by
+  intro context structs sourceFunctions functions sourceLocals sourceGlobals
+    sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord sourceFuel targetFuel
+    sourceResult crepResult hrel hsource hcrep
+  cases sourceFuel with
+  | zero =>
+      simp [evalPanValueProgWithPrimitiveCallsAndFfi] at hsource
+  | succ sourceFuel =>
+      cases targetFuel with
+      | zero =>
+          simp [evalCrepFullProgState] at hcrep
+      | succ targetFuel =>
+          simp [evalPanValueProgWithPrimitiveCallsAndFfi,
+            SourceWordExp.toExp, evalPanValueExp,
+            evalCrepFullProgState, evalCrepFullExpState, compileProg,
+            compileExp] at hsource hcrep
+          cases hsource
+          cases hcrep
+          simp
+
 structure PanValuePcInput (α : Type u) where
   structs : StructContext
   code : PanValuePcSourceCode α

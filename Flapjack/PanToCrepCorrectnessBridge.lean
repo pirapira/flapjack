@@ -1372,6 +1372,45 @@ theorem panValuePcRaisedHraiseCases
         sourceMemory sourceException (.nStruct name fields) targetState targetException
         (by simp) (by simp) hcontrol
 
+theorem panValuePcRaisedHraiseCases_to_exception_result_rel
+    [BEq α] [LawfulBEq α]
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (hraise : ∀ (context : CompileContext α) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (sourceValue : PanValue α) (targetState : CrepState α)
+      (targetException : α),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      panValuePcRaisedHraiseData exceptionCode globalsLookup structs context
+        exceptionRel sourceLocals sourceGlobals sourceMemory sourceException
+        sourceValue targetState targetException) :
+    ∀ (context : CompileContext α) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (sourceValue : PanValue α) (targetState : CrepState α)
+      (targetException : α),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      panValueCrepStateRel structs context sourceLocals sourceGlobals
+        sourceMemory targetState ∧
+      panValuePcExceptionResultRel structs context exceptionRel exceptionCode
+        globalsLookup sourceGlobals sourceMemory sourceException sourceValue
+        targetState targetException := by
+  intro context structs exceptionRel
+    sourceLocals sourceGlobals sourceMemory sourceException sourceValue
+    targetState targetException hcontrol
+  exact panValuePcRaisedHraiseData_to_exception_result_rel
+    structs context exceptionRel exceptionCode globalsLookup
+    (hraise context structs exceptionRel)
+    sourceLocals sourceGlobals sourceMemory sourceException sourceValue
+    targetState targetException hcontrol
+
 /-! The ordinary compact control cases are proved directly from the existing
 `panValueCrepControlRel`.  Only the raised payload needs an additional
 obligation because the exact Pc relation retains both the HOL post-state
@@ -1632,10 +1671,8 @@ theorem panValuePcCompileCorrect_compact
       panValuePcExceptionResultRel structs context exceptionRel exceptionCode
         globalsLookup sourceGlobals sourceMemory sourceException sourceValue
         targetState targetException := by
-    intro context structs exceptionRel
-    exact panValuePcRaisedHraiseData_to_exception_result_rel
-      structs context exceptionRel exceptionCode globalsLookup
-      (hraise context structs exceptionRel)
+    exact panValuePcRaisedHraiseCases_to_exception_result_rel
+      exceptionCode globalsLookup hraise
   refine panValuePcCompileCorrect_of_stateful_program
     program
     (panValuePcCompactSourceEvaluator primitive sourceHandler sourceFunctions

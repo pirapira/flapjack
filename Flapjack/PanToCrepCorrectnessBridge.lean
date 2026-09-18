@@ -1323,6 +1323,45 @@ theorem panValuePcRaisedHraiseData_of_flat_spill_state
   intro _
   simpa [hflat] using hstored
 
+theorem panValuePcResultRelWithContextCode_of_raised_flat_spill
+    [BEq α] [LawfulBEq α] [OfNat α 0] [Add α]
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (sourceException : ExceptionId) (values : List α)
+    (state : CrepState α) (bytesInWord targetException : α)
+    (sourceValue : PanValue α)
+    (hstate : panValueCrepStateRel structs context
+      (fun _ => none) sourceGlobals sourceMemory state)
+    (hexception : exceptionRel sourceException sourceValue targetException)
+    (hcode : exceptionCode sourceException = some targetException)
+    (hlookupCode : lookupInfo sourceException context.exceptions =
+      some targetException)
+    (hflat : panValueFlatWords sourceValue = values)
+    (hdistinct : List.Pairwise (fun left right : α => left ≠ right)
+      (storeAddresses (0 : α) bytesInWord values.length))
+    (hsize : Shape.shapeSize (panValueShape structs sourceValue) ≤ 32) :
+    panValuePcResultRelWithContextCode structs context exceptionRel exceptionCode
+      (crepPcFlatGlobalsLookup bytesInWord)
+      (.raised (fun _ => none) sourceGlobals sourceMemory sourceException sourceValue)
+      (.raised
+        { state with globals :=
+            (updateMemoryListAt state.globals 0 bytesInWord values) }
+        targetException) := by
+  have hraiseData := panValuePcRaisedHraiseData_of_flat_spill_state
+    structs context exceptionRel exceptionCode (fun _ => none) sourceGlobals
+    sourceMemory sourceException values state bytesInWord targetException sourceValue
+    hstate hexception hcode hflat hdistinct hsize
+  have hresult := panValuePcExceptionResultRelWithContextCode_of_raised_hraise_data
+    structs context exceptionRel exceptionCode (crepPcFlatGlobalsLookup bytesInWord)
+    (fun _ => none) sourceGlobals sourceMemory sourceException sourceValue
+    { state with globals :=
+        (updateMemoryListAt state.globals 0 bytesInWord values) }
+    targetException hraiseData hlookupCode
+  exact ⟨hraiseData.1, hresult⟩
+
 theorem panValuePcRaisedHraiseData_of_flat_spill_state_retarget_globals
     [BEq α] [LawfulBEq α] [OfNat α 0] [Add α]
     (structs : StructContext) (context : CompileContext α)

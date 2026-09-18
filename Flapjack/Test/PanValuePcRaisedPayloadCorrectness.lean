@@ -413,6 +413,37 @@ theorem closed_three_word_raise_pc_result_rel_with_context_code :
     (hdistinct01 := by decide) (hdistinct02 := by decide)
     (hdistinct12 := by decide)
 
+theorem closed_four_word_raise_pc_result_rel_with_context_code :
+    panValuePcResultRelWithContextCode [] raiseContext
+      (fun _ _ code => code = 9) raiseResultExceptionCode
+      (crepPcFlatGlobalsLookup 8)
+      (.raised (fun _ => none) (fun _ => none) (fun _ => none) "E"
+        (.rStruct [.word 3, .word 4, .word 5, .word 6]))
+      (.raised
+        { raiseState with globals :=
+            (updateMemoryListAt raiseState.globals 0 8 [3, 4, 5, 6]) }
+        9) := by
+  have hstate : panValueCrepStateRel [] raiseContext
+      (fun _ => none) (fun _ => none) (fun _ => none) raiseState := by
+    refine ⟨rfl, panValueCrepLocalsRel_empty [] raiseContext _, rfl⟩
+  apply panValuePcResultRelWithContextCode_of_raised_flat_spill
+    (structs := []) (context := raiseContext)
+    (exceptionRel := fun _ _ code => code = 9)
+    (exceptionCode := raiseResultExceptionCode)
+    (sourceGlobals := fun _ => none) (sourceMemory := fun _ => none)
+    (sourceException := "E") (values := [3, 4, 5, 6])
+    (state := raiseState) (bytesInWord := 8) (targetException := 9)
+    (sourceValue := .rStruct [.word 3, .word 4, .word 5, .word 6])
+    (hstate := hstate) (hexception := by rfl)
+    (hcode := by simp [raiseResultExceptionCode])
+    (hlookupCode := by simp [raiseContext, lookupInfo])
+    (hflat := by
+      simp [panValueFlatWords, panValueFlatWordsFuel,
+        panValueFlatValueFuel,
+        panValueFlatWordsFuel.panValueFlatWordsListFuel,
+        panValueFlatValueFuel.panValueFlatValueListFuel])
+    (hdistinct := by decide) (hsize := by simp [panValueShape, Shape.shapeSize])
+
 theorem closed_word_raise_hraise_retargeted_via_flat_spill :
     panValuePcRaisedHraiseData raiseResultExceptionCode
       raiseWordGlobalsLookup [] raiseContext

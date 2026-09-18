@@ -460,6 +460,14 @@
       ]
     },
     {
+      "path": "Flapjack/Test/OriginalPancake/op_dispatch_stored_length.pnk",
+      "source_reference": "Reduced op_dispatch relocation witness for flapjack-8tb.5.5: Cake enc_lines_again retains a branch's maximum encoded LabAsm length after it shrinks, and pad_code emits the residual ADDI x0,x0,0; the source-shaped linker must preserve that stored slot.",
+      "cake_sha256": "7351db917885d009c4765c88c182b08499c7681003a18218a24ad0b6926a4681",
+      "tracked_beads": [
+        "flapjack-8tb.5.5"
+      ]
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/f00014_loop_to_word_allocator.pnk",
       "source_reference": "Reduced campaign-seed-17 witness for flapjack-8tb.5.1: Cake's loop-to-word fallback maps the source local absent from assigned variables to Word register 0 before SSA/allocation; Flapjack now matches the allocator input and exact RISC-V bytes.",
       "cake_sha256": "b09493d8e23e5be3ea9559b3aa013f94c079e2ae43957b25fbd1ef58c3509167",

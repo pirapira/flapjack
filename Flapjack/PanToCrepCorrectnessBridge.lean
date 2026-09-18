@@ -2056,6 +2056,113 @@ theorem panValuePcRaisedRawWordListSemanticLift_retarget_globals
     exceptionCode context.bytesInWord hlookupGlobals hraiseData
   exact ⟨hsemantic.1, hsemantic.2.1, hresult⟩
 
+/-! Preserve the exact Cake exception-code lookup alongside the evaluator-backed
+    raw-word semantic lift.  This is the direct semantic adapter consumed by
+    the context-code form of the compact `pc_compile_correct` boundary. -/
+theorem panValuePcRaisedRawWordListSemanticLift_retarget_globals_with_context_code
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (state : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α) (sourceFuel : Nat)
+    (exception : ExceptionId) (exceptionCode : α)
+    (values : List α) (expression : Exp α)
+    (compiled : List (CrepExp α)) (shape : Shape)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (resultExceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (hlookup : lookupInfo exception context.exceptions = some exceptionCode)
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory state)
+    (hsource : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord expression =
+      some (.rStruct (values.map (fun value => .word value))))
+    (hvalid : panValuePayloadWithinLimit structs
+      (.rStruct (values.map (fun value => .word value))) = true)
+    (hcompile : compileExp context expression = (compiled, shape))
+    (hlength : compiled.length = Shape.shapeSize shape)
+    (hcompiled : evalCrepFullExpsState state baseAddress topAddress compiled =
+      some values)
+    (hnot : ∀ name ∈ freshNames context compiled.length 1,
+      ∀ value ∈ compiled, name ∉ crepExpVars value)
+    (hfresh : ∀ name ∈ freshNames context compiled.length 1,
+      state.locals name = none)
+    (hexception : exceptionRel exception
+      (.rStruct (values.map (fun value => .word value))) exceptionCode)
+    (hcode : resultExceptionCode exception = some exceptionCode)
+    (hdistinct : List.Pairwise (fun left right : α => left ≠ right)
+      (storeAddresses (0 : α) context.bytesInWord values.length))
+    (hsize : Shape.shapeSize
+      (panValueShape structs (.rStruct (values.map (fun value => .word value)))) ≤ 32)
+    (hlookupGlobals : crepPcFlatGlobalsLookup context.bytesInWord
+        { state with globals :=
+            updateMemoryListAt state.globals 0 context.bytesInWord values }
+        (.rStruct (values.map (fun value => .word value))) =
+      globalsLookup
+        { state with globals :=
+            updateMemoryListAt state.globals 0 context.bytesInWord values }
+        (.rStruct (values.map (fun value => .word value)))) :
+    evalPanValueProgWithPrimitiveCallsAndFfi
+      primitive sourceHandler structs sourceFunctions
+      baseAddress topAddress bytesInWord (sourceFuel + 1)
+      sourceLocals sourceGlobals sourceMemory
+      (.raise exception expression) =
+      some (.raised (fun _ => none) sourceGlobals sourceMemory
+        exception (.rStruct (values.map (fun value => .word value)))) ∧
+    evalCrepFullProgState functions crepPrimitive ffi sharedMem
+      baseAddress topAddress
+      (values.length + (freshNames context compiled.length 1).length + 2)
+      state (compileProg context (.raise exception expression)) =
+      some (.raised
+        { state with globals :=
+            updateMemoryListAt state.globals 0 context.bytesInWord values }
+        exceptionCode) ∧
+    panValuePcResultRelWithContextCode structs context exceptionRel
+      resultExceptionCode globalsLookup
+      (.raised (fun _ => none) sourceGlobals sourceMemory exception
+        (.rStruct (values.map (fun value => .word value))))
+      (.raised
+        { state with globals :=
+            updateMemoryListAt state.globals 0 context.bytesInWord values }
+        exceptionCode) := by
+  have hsemantic := panValuePcRaisedRawWordListSemanticLift_retarget_globals
+    context structs sourceFunctions functions sourceLocals sourceGlobals
+    sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord sourceFuel exception exceptionCode values
+    expression compiled shape exceptionRel resultExceptionCode globalsLookup hlookup
+    hrel hsource hvalid hcompile hlength hcompiled hnot hfresh hexception hcode
+    hdistinct hsize hlookupGlobals
+  have hresult : panValuePcResultRelWithContextCode structs context
+      exceptionRel resultExceptionCode globalsLookup
+      (.raised (fun _ => none) sourceGlobals sourceMemory exception
+        (.rStruct (values.map (fun value => .word value))))
+      (.raised
+        { state with globals :=
+            updateMemoryListAt state.globals 0 context.bytesInWord values }
+        exceptionCode) := by
+    simpa [panValuePcResultRelWithContextCode] using
+      (show panValueCrepStateRel structs context (fun _ => none)
+          sourceGlobals sourceMemory
+          { state with globals :=
+              updateMemoryListAt state.globals 0 context.bytesInWord values } ∧
+        panValuePcExceptionResultRelWithContextCode structs context exceptionRel
+          resultExceptionCode globalsLookup sourceGlobals
+          sourceMemory exception (.rStruct (values.map (fun value => .word value)))
+          { state with globals :=
+              updateMemoryListAt state.globals 0 context.bytesInWord values }
+          exceptionCode from
+        ⟨hsemantic.2.2.1, hsemantic.2.2.2, hlookup⟩)
+  exact ⟨hsemantic.1, hsemantic.2.1, hresult⟩
+
 theorem panValuePcResultRelWithContextCode_of_raised_result_rel
     [BEq α] [LawfulBEq α]
     (structs : StructContext) (context : CompileContext α)

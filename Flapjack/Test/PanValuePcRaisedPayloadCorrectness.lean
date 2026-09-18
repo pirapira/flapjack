@@ -68,6 +68,28 @@ theorem closed_word_raise_pc_hraise :
     (hfresh := by simp [raiseState, raiseContext])
   exact ⟨h.1, h.2⟩
 
+theorem closed_word_raise_pc_hraise_flat_globals :
+    panValuePcRaisedHraiseData raiseResultExceptionCode
+      (crepPcFlatGlobalsLookup 8) [] raiseContext
+      (fun _ _ code => code = 9) (fun _ => none) (fun _ => none)
+      (fun _ => none) "E" (.word 3)
+      { raiseState with globals := updateMemory raiseState.globals 0 3 }
+      9 := by
+  apply panValuePcRaisedHraiseData_retarget_globals_lookup
+    (bytesInWord := 8) (structs := []) (context := raiseContext)
+    (exceptionRel := fun _ _ code => code = 9)
+    (exceptionCode := raiseResultExceptionCode)
+    (globalsLookup := crepPcFlatGlobalsLookup 8)
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (sourceException := "E")
+    (sourceValue := .word 3)
+    (targetState :=
+      { raiseState with globals := updateMemory raiseState.globals 0 3 })
+    (targetException := 9)
+  · simp [crepPcFlatGlobalsLookup, crepPcWordGlobalsLookup,
+      updateMemory, panValueFlatWords, panValueFlatWordsFuel]
+  · exact closed_word_raise_pc_hraise
+
 theorem closed_word_raise_pc_result_rel_retargeted :
     panValuePcResultRel [] raiseContext
       (fun _ _ code => code = 9) raiseResultExceptionCode

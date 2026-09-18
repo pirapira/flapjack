@@ -1041,6 +1041,30 @@ theorem panValuePcResultRel_of_raised_hraise_data
     sourceException sourceValue targetState targetException spillAddress
     hcontrol hcode hlookup hsize
 
+theorem panValuePcExceptionResultRelWithContextCode_of_raised_hraise_data
+    [BEq α] [LawfulBEq α]
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+    (sourceValue : PanValue α) (targetState : CrepState α)
+    (targetException : α)
+    (hraiseData : panValuePcRaisedHraiseData exceptionCode globalsLookup
+      structs context exceptionRel sourceLocals sourceGlobals sourceMemory
+      sourceException sourceValue targetState targetException)
+    (hlookupCode : lookupInfo sourceException context.exceptions =
+      some targetException) :
+    panValuePcExceptionResultRelWithContextCode structs context exceptionRel
+      exceptionCode globalsLookup sourceGlobals sourceMemory sourceException
+      sourceValue targetState targetException := by
+  have hresult := panValuePcResultRel_of_raised_hraise_data structs context
+      exceptionRel exceptionCode globalsLookup sourceLocals sourceGlobals
+      sourceMemory sourceException sourceValue targetState targetException
+      hraiseData
+  exact ⟨hresult.2, hlookupCode⟩
+
 theorem panValuePcRaisedHraiseData_to_exception_result_rel
     [BEq α] [LawfulBEq α]
     (structs : StructContext) (context : CompileContext α)

@@ -22,3 +22,6 @@ jobs:
         run: |
           lake build flapjack-compile
           python3 scripts/check-parity-goldens.py
+
+      - name: Check exact Pancake RISC-V parity corpus
+        run: python3 scripts/parity-small-corpus.py

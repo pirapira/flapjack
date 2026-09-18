@@ -1763,6 +1763,95 @@ theorem panValuePcCompileCorrect_compact_with_raised_data
       sharedMem baseAddress topAddress targetFuel program context structs
       sourceInput targetInput targetExecution hstructs heval
 
+/-! Clocked companion for the evidence-bearing boundary.  The raised branch
+continues to consume explicit evaluator/storeGlobals evidence, while the
+zero-clock Tick Timeout result is composed independently. -/
+theorem panValuePcCompileCorrect_compact_with_raised_data_and_timeout
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (program : Prog α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α)
+    (sourceFuel targetFuel : Nat)
+    (hprogram : PanValueCrepProgramStateCorrect program)
+    (hraiseData : ∀ (context : CompileContext α) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (sourceValue : PanValue α) (targetState : CrepState α)
+      (targetException : α),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      panValuePcRaisedHraiseData exceptionCode globalsLookup structs context
+        exceptionRel sourceLocals sourceGlobals sourceMemory sourceException
+        sourceValue targetState targetException)
+    (clockStructs : StructContext) (clockPcContext : CompileContext α)
+    (clockExceptionRel : ExceptionId → PanValue α → α → Prop)
+    (clockContext : PanValueFfiContext α)
+    (clockPrimitive : PanPrimitiveHandler α)
+    (clockHandler : PanValueStatefulFfiHandler α σ)
+    (clockFunctions : List (FunName × List VarName × Prog α))
+    (clockBaseAddress clockTopAddress clockBytesInWord : α)
+    (clockFuel : Nat)
+    (clockLocals clockGlobals : VarName → Option (PanValue α))
+    (clockMemory : α → Option (PanValue α)) (clockFfi : FfiState σ)
+    (clockTargetState : CrepState α)
+    (hclockState : panValueCrepStateRel clockStructs clockPcContext
+      (fun _ => none) clockGlobals clockMemory clockTargetState) :
+    PanValuePcCompileCorrect
+      (panValuePcCompactSourceEvaluator primitive sourceHandler sourceFunctions
+        baseAddress topAddress bytesInWord sourceFuel)
+      (crepPcCompactTargetEvaluator functions crepPrimitive ffi sharedMem
+        baseAddress topAddress targetFuel)
+      codeRel excpRel exceptionCode globalsLookup program ∧
+    evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
+      clockFfi 0 .tick =
+      some (.timeout (fun _ => none) clockGlobals clockMemory clockFfi, 0) ∧
+    (evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
+      clockFfi 0 .tick).map panValueFfiClockResultProjection =
+      some (.timeout (fun _ => none) clockGlobals clockMemory clockFfi 0) ∧
+    panValuePcResultRel clockStructs clockPcContext clockExceptionRel
+      exceptionCode globalsLookup
+      (.timeout (fun _ => none) clockGlobals clockMemory)
+      (.timeout clockTargetState) := by
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · exact panValuePcCompileCorrect_compact_with_raised_data program codeRel
+      excpRel exceptionCode globalsLookup sourceFunctions functions primitive
+      sourceHandler crepPrimitive ffi sharedMem baseAddress topAddress bytesInWord
+      sourceFuel targetFuel hprogram hraiseData
+  · exact panValuePcTimeoutResultRel_of_clocked_tick_zero clockStructs
+      clockPcContext clockExceptionRel exceptionCode globalsLookup clockContext
+      clockPrimitive clockHandler clockFunctions clockBaseAddress
+      clockTopAddress clockBytesInWord clockFuel clockLocals clockGlobals
+      clockMemory clockFfi clockTargetState hclockState |>.1
+  · exact panValuePcTimeoutResultRel_of_clocked_tick_zero clockStructs
+      clockPcContext clockExceptionRel exceptionCode globalsLookup clockContext
+      clockPrimitive clockHandler clockFunctions clockBaseAddress
+      clockTopAddress clockBytesInWord clockFuel clockLocals clockGlobals
+      clockMemory clockFfi clockTargetState hclockState |>.2.1
+  · exact panValuePcTimeoutResultRel_of_clocked_tick_zero clockStructs
+      clockPcContext clockExceptionRel exceptionCode globalsLookup clockContext
+      clockPrimitive clockHandler clockFunctions clockBaseAddress
+      clockTopAddress clockBytesInWord clockFuel clockLocals clockGlobals
+      clockMemory clockFfi clockTargetState hclockState |>.2.2
+
 /-! Assemble the unclocked compact correctness theorem with the clocked
     Timeout branch.  The compact evaluator itself has no timeout constructor,
     so this theorem keeps its `PanValuePcCompileCorrect` conclusion intact

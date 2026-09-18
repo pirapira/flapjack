@@ -454,7 +454,7 @@
     {
       "path": "Flapjack/Test/OriginalPancake/op_dispatch_relocation_boundary.pnk",
       "source_reference": "Reduced op_dispatch relocation-boundary witness: Cake records a nonzero label after its stored label slot during enc_lines_again, retaining the long branch slot and its residual NOP after relocation.",
-      "cake_sha256": "8dea735b972f682e68952b73180c680b6f7d0581f34582e57ad99edbdf50e7d6",
+      "cake_sha256": "cbbe00570c6f2c6880c90ce3e5e876325e12bcedd60b0b3962dad56222462c10",
       "tracked_beads": [
         "flapjack-8tb.5.5"
       ]
@@ -465,6 +465,14 @@
       "cake_sha256": "16336bc04b981030ccc17cff51dbd9628c556e2406e2eccb81a38c226b1f961a",
       "tracked_beads": [
         "flapjack-8tb.5"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/op_dispatch_many.pnk",
+      "source_reference": "Full reduced op_dispatch-many witness: Cake's 27-callee linked dispatch is 3760 bytes, including the post-target comparison lowering and stored-label relocation; this exact oracle locks the repaired four-byte gap.",
+      "cake_sha256": "cbbe00570c6f2c6880c90ce3e5e876325e12bcedd60b0b3962dad56222462c10",
+      "tracked_beads": [
+        "flapjack-8tb.5.5"
       ]
     },
     {

@@ -461,6 +461,23 @@ theorem named_struct_source_pass_one_word_eval (value : Nat) :
     evalPanValueExp.evalPanValueFields, panValueFieldsHaveShapes,
     panValueShape, panShapeMatches]
 
+theorem named_struct_source_pass_compile_raise (value : Nat) :
+    compileProg context
+        (.raise "E"
+          (structCompileExp namedStructPassContext
+            (.nStruct "S" [("field", .const value)]))) =
+      .seq
+        (nestedDecs [context.maxVar + 1] [.const value]
+          (crepNestedSeq
+            (storeGlobals 0 context.bytesInWord
+              [.var (context.maxVar + 1)])))
+        (.raise 9) := by
+  simp [context, namedStructPassContext, structCompileExp,
+    structCompileExp.structCompileFields, structSelectFields, lookupInfo,
+    compileProg, compileExp, compileExp.compileExpList, freshNames,
+    List.range, List.range.loop, nestedDecs, crepNestedSeq, storeGlobals,
+    Shape.shapeSize]
+
 theorem named_struct_raise_after_struct_pass_hraise_flat_globals :
     panValuePcRaisedHraiseData
       (fun exception => if exception = "E" then some 9 else none)

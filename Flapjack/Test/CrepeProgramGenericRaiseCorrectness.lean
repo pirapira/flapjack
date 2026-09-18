@@ -139,7 +139,7 @@ theorem three_word_raise_pc_hraise :
     updateMemoryListAt, List.range, List.range.loop, Nat.add_assoc] using h
 
 theorem three_word_raise_pc_result_rel_of_generic_evidence :
-    panValuePcResultRel [] context (fun _ _ code => code = 9)
+    panValuePcResultRelWithContextCode [] context (fun _ _ code => code = 9)
       (fun exception => if exception = "E" then some 9 else none)
       pcGlobalsLookup
       (.raised (fun _ => none) (fun _ => none) (fun _ => none) "E" sourceValue)

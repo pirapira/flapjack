@@ -1759,21 +1759,27 @@ theorem panValuePcResultRel_of_raised_generic_evidence
                 updateMemoryListAt state.globals 0 context.bytesInWord values }
             sourceValue = some (panValueFlatWords sourceValue))
     (hsize : Shape.shapeSize (panValueShape structs sourceValue) ≤ 32) :
-    panValuePcResultRel structs context exceptionRel resultExceptionCode
+    panValuePcResultRelWithContextCode structs context exceptionRel resultExceptionCode
       globalsLookup
       (.raised (fun _ => none) sourceGlobals sourceMemory exception sourceValue)
       (.raised
         { state with globals :=
             updateMemoryListAt state.globals 0 context.bytesInWord values }
         exceptionCode) := by
-  apply panValuePcResultRel_of_raised_hraise_data
-  exact (panValuePcRaisedGenericHraise_of_evidence context structs
+  have hraise := panValuePcRaisedGenericHraise_of_evidence context structs
     sourceFunctions functions sourceLocals sourceGlobals sourceMemory state
     primitive sourceHandler crepPrimitive ffi sharedMem baseAddress topAddress
     bytesInWord sourceFuel exception exceptionCode expression sourceValue
     compiled shape values exceptionRel resultExceptionCode globalsLookup hlookup
     hrel hsource hvalid hcompile hlength hcompiled hnot hfresh hexception hcode
-    hlookupPayload hsize).1
+    hlookupPayload hsize
+  have hresult := panValuePcExceptionResultRelWithContextCode_of_raised_hraise_data
+    structs context exceptionRel resultExceptionCode globalsLookup (fun _ => none)
+    sourceGlobals sourceMemory exception sourceValue
+    { state with globals :=
+        updateMemoryListAt state.globals 0 context.bytesInWord values }
+    exceptionCode hraise
+  exact ⟨hraise.1.1, hresult⟩
 
 theorem panValuePcRaisedGenericHraise_of_flat_globals
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]

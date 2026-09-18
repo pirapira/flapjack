@@ -780,6 +780,47 @@ theorem named_struct_raise_after_struct_pass_result_rel_retargeted_globals :
       panValueFlatValueFuel.panValueFlatValueListFuel] using hstored
   · exact named_struct_raise_after_struct_pass_hraise_flat_globals
 
+theorem named_struct_raise_after_struct_pass_context_code :
+    panValuePcExceptionResultRelWithContextCode [] context
+      (fun _ _ code => code = 9)
+      (fun exception => if exception = "E" then some 9 else none)
+      pcGlobalsLookup (fun _ => none) (fun _ => none) "E"
+      namedStructPostPassValue
+      { state with globals := updateMemoryListAt state.globals 0 8 [3] }
+      9 := by
+  apply panValuePcExceptionResultRelWithContextCode_of_raised_hraise_data
+    (structs := []) (context := context)
+    (exceptionRel := fun _ _ code => code = 9)
+    (exceptionCode := fun exception =>
+      if exception = "E" then some 9 else none)
+    (globalsLookup := pcGlobalsLookup)
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (sourceException := "E")
+    (sourceValue := namedStructPostPassValue)
+    (targetState :=
+      { state with globals := updateMemoryListAt state.globals 0 8 [3] })
+    (targetException := 9)
+  · apply panValuePcRaisedHraiseData_retarget_globals_lookup
+      (bytesInWord := 8) (structs := []) (context := context)
+      (exceptionRel := fun _ _ code => code = 9)
+      (exceptionCode := fun exception =>
+        if exception = "E" then some 9 else none)
+      (globalsLookup := pcGlobalsLookup)
+      (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+      (sourceMemory := fun _ => none) (sourceException := "E")
+      (sourceValue := namedStructPostPassValue)
+      (targetState :=
+        { state with globals := updateMemoryListAt state.globals 0 8 [3] })
+      (targetException := 9)
+    · have hstored := crepPcFlatGlobalsLookup_of_stored_flat_words
+        (α := Nat) 8 state namedStructPostPassValue (by decide)
+      simpa [pcGlobalsLookup, namedStructPostPassValue, panValueFlatWords,
+        panValueFlatWordsFuel, panValueFlatValueFuel,
+        panValueFlatWordsFuel.panValueFlatWordsListFuel,
+        panValueFlatValueFuel.panValueFlatValueListFuel] using hstored
+    · exact named_struct_raise_after_struct_pass_hraise_flat_globals
+  · simp [context, lookupInfo]
+
 theorem named_struct_raise_pc_result_rel_named_payload_spill :
     panValuePcResultRel [] context (fun _ _ code => code = 9)
       (fun exception => if exception = "E" then some 9 else none)

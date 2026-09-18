@@ -431,6 +431,9 @@ def namedStructPostPassExpression : Exp Nat :=
 def namedStructPostPassValue : PanValue Nat :=
   .rStruct [.word 3]
 
+def namedStructSourceValue : PanValue Nat :=
+  .nStruct "S" [("field", .word 3)]
+
 theorem named_struct_raise_after_struct_pass_hraise_flat_globals :
     panValuePcRaisedHraiseData
       (fun exception => if exception = "E" then some 9 else none)
@@ -529,6 +532,43 @@ theorem named_struct_raise_after_struct_pass_result_rel_retargeted_globals :
       panValueFlatWordsFuel.panValueFlatWordsListFuel,
       panValueFlatValueFuel.panValueFlatValueListFuel] using hstored
   · exact named_struct_raise_after_struct_pass_hraise_flat_globals
+
+theorem named_struct_raise_pc_result_rel_named_payload_spill :
+    panValuePcResultRel [] context (fun _ _ code => code = 9)
+      (fun exception => if exception = "E" then some 9 else none)
+      pcGlobalsLookup
+      (.raised (fun _ => none) (fun _ => none) (fun _ => none) "E"
+        namedStructSourceValue)
+      (.raised
+        { state with globals := updateMemoryListAt state.globals 0 8 [3] }
+        9) := by
+  apply panValuePcResultRel_of_raised_hraise_data
+    (structs := []) (context := context)
+    (exceptionRel := fun _ _ code => code = 9)
+    (exceptionCode := fun exception =>
+      if exception = "E" then some 9 else none)
+    (globalsLookup := pcGlobalsLookup)
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (sourceException := "E")
+    (sourceValue := namedStructSourceValue)
+    (targetState :=
+      { state with globals := updateMemoryListAt state.globals 0 8 [3] })
+    (targetException := 9)
+  refine ⟨?_, 0, ?_, ?_, ?_, ?_⟩
+  · refine ⟨rfl, panValueCrepLocalsRel_empty [] context state.locals, ?_⟩
+    rfl
+  · refine ⟨?_, by simp⟩
+    refine ⟨rfl, panValueCrepLocalsRel_empty [] context state.locals, ?_⟩
+    simp [panValueCrepMemoryRelExcept, panValueWordMemory, state]
+  · simp
+  · intro _
+    have hstored := crepPcFlatGlobalsLookup_of_stored_flat_words
+      (α := Nat) 8 state namedStructSourceValue (by decide)
+    simp [pcGlobalsLookup, namedStructSourceValue, panValueFlatWords,
+      panValueFlatWordsFuel, panValueFlatValueFuel,
+      panValueFlatWordsFuel.panValueFlatWordsFieldListFuel,
+      panValueFlatValueFuel.panValueFlatValueFieldListFuel] at hstored ⊢
+  · simp [namedStructSourceValue, panValueShape]
 
 theorem four_word_raise_pc_hraise_raw_words :
     panValuePcRaisedHraiseData

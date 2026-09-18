@@ -2478,7 +2478,7 @@ theorem panValuePcRaisedRawWordListSemanticLift
         { state with globals :=
             updateMemoryListAt state.globals 0 context.bytesInWord values }
         exceptionCode) ∧
-    panValuePcResultRel structs context exceptionRel resultExceptionCode
+    panValuePcResultRelWithContextCode structs context exceptionRel resultExceptionCode
       (crepPcFlatGlobalsLookup context.bytesInWord)
       (.raised sourceLocals sourceGlobals sourceMemory exception
         (.rStruct (values.map (fun value => .word value))))
@@ -2500,14 +2500,36 @@ theorem panValuePcRaisedRawWordListSemanticLift
     expression compiled shape exceptionRel resultExceptionCode hlookup hrel hsource
     hvalid hcompile hlength hcompiled hnot hfresh hexception hcode hdistinct hsize
   rcases hgeneric with ⟨hsourceEval, htargetEval, _hcontrol⟩
-  have hresult := panValuePcResultRel_of_raised_hraise_data
+  have hresult := panValuePcExceptionResultRelWithContextCode_of_raised_hraise_data
     structs context exceptionRel resultExceptionCode
     (crepPcFlatGlobalsLookup context.bytesInWord) sourceLocals sourceGlobals
     sourceMemory exception (.rStruct (values.map (fun value => .word value)))
     { state with globals :=
         updateMemoryListAt state.globals 0 context.bytesInWord values }
-    exceptionCode hraiseData.1
-  exact ⟨hsourceEval, htargetEval, hresult⟩
+    exceptionCode hraiseData
+  have hcontext : panValuePcResultRelWithContextCode structs context
+      exceptionRel resultExceptionCode
+      (crepPcFlatGlobalsLookup context.bytesInWord)
+      (.raised sourceLocals sourceGlobals sourceMemory exception
+        (.rStruct (values.map (fun value => .word value))))
+      (.raised
+        { state with globals :=
+            updateMemoryListAt state.globals 0 context.bytesInWord values }
+        exceptionCode) := by
+    simpa [panValuePcResultRelWithContextCode] using
+      (show panValueCrepStateRel structs context sourceLocals sourceGlobals
+          sourceMemory
+          { state with globals :=
+              updateMemoryListAt state.globals 0 context.bytesInWord values } ∧
+        panValuePcExceptionResultRelWithContextCode structs context exceptionRel
+          resultExceptionCode (crepPcFlatGlobalsLookup context.bytesInWord)
+          sourceGlobals sourceMemory exception
+          (.rStruct (values.map (fun value => .word value)))
+          { state with globals :=
+              updateMemoryListAt state.globals 0 context.bytesInWord values }
+          exceptionCode from
+        ⟨hraiseData.1.1, hresult⟩)
+  exact ⟨hsourceEval, htargetEval, hcontext⟩
 
 theorem panValuePcRaisedRawWordListSemanticLift_retarget_globals
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]

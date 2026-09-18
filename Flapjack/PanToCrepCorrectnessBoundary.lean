@@ -1,6 +1,7 @@
 import Flapjack.CrepeProgramInduction
 import Flapjack.CrepeExpressionRelation
 import Flapjack.CrepeProgramIteCorrectness
+import Flapjack.CrepeProgramWhileCorrectness
 
 /-!
 The checked Lean boundary corresponding to CakeML's
@@ -580,6 +581,25 @@ theorem panValueCrepProgramStateControlSafe_ite_source_word
                   simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcondition] at hsource
               | nStruct name fields =>
                   simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcondition] at hsource
+
+theorem panValueCrepProgramStateControlSafe_while_of_loop_safe
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (condition : SourceWordExp α) (body : Prog α)
+    (hloopSafe : PanValueCrepProgramLoopStateControlSafe
+      (.while condition.toExp body)) :
+    PanValueCrepProgramStateControlSafe
+      (.while condition.toExp body) := by
+  intro context structs sourceFunctions functions sourceLocals sourceGlobals
+    sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord sourceFuel targetFuel _exceptionRel
+    sourceResult crepResult hrel hsource hcrep
+  exact hloopSafe context structs sourceFunctions functions sourceLocals sourceGlobals
+    sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord sourceFuel targetFuel sourceResult crepResult
+    hrel hsource hcrep
 
 structure PanValuePcInput (α : Type u) where
   structs : StructContext

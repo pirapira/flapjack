@@ -39,6 +39,13 @@ example (condition : SourceWordExp Nat) (thenBranch elseBranch : Prog Nat)
   panValueCrepProgramStateControlSafe_ite_source_word condition thenBranch
     elseBranch hthenSafe helseSafe hbytesInWord hlookup
 
+example (condition : SourceWordExp Nat) (body : Prog Nat)
+    (hloopSafe : PanValueCrepProgramLoopStateControlSafe
+      (.while condition.toExp body)) :
+    PanValueCrepProgramStateControlSafe
+      (.while condition.toExp body) :=
+  panValueCrepProgramStateControlSafe_while_of_loop_safe condition body hloopSafe
+
 /-! Nonzero labels remain rejected at the `pc_compile_correct` boundary. -/
 example :
     ¬ panValuePcResultRel [] controlContext (fun _ _ _ => True) (fun _ => some 0)

@@ -925,7 +925,7 @@ theorem panValuePcRaisedTwoWordSemanticLift
             (updateMemory (updateMemory state.globals 0 left)
               (0 + bytesInWord) right) }
         exceptionCode) ∧
-    panValuePcResultRel structs context exceptionRel resultExceptionCode
+    panValuePcResultRelWithContextCode structs context exceptionRel resultExceptionCode
       (crepPcTwoWordGlobalsLookup bytesInWord)
       (.raised (fun _ => none) sourceGlobals sourceMemory exception
         (.rStruct [.word left, .word right]))
@@ -967,7 +967,33 @@ theorem panValuePcRaisedTwoWordSemanticLift
               (0 + bytesInWord) right) }
         exceptionCode := by
     simpa [hrel.1] using hexceptionResult
-  exact ⟨hsourceEval, htargetEval, ⟨hpost, hexceptionResult'⟩⟩
+  have hcontext : panValuePcResultRelWithContextCode structs context
+      exceptionRel resultExceptionCode
+      (crepPcTwoWordGlobalsLookup bytesInWord)
+      (.raised (fun _ => none) sourceGlobals sourceMemory exception
+        (.rStruct [.word left, .word right]))
+      (.raised
+        { state with globals :=
+            (updateMemory (updateMemory state.globals 0 left)
+              (0 + bytesInWord) right) }
+        exceptionCode) := by
+    simpa [panValuePcResultRelWithContextCode] using
+      (show panValueCrepStateRel structs context
+          (fun _ => none) sourceGlobals sourceMemory
+          { state with globals :=
+              (updateMemory (updateMemory state.globals 0 left)
+                (0 + bytesInWord) right) } ∧
+        panValuePcExceptionResultRelWithContextCode structs context
+          exceptionRel resultExceptionCode
+          (crepPcTwoWordGlobalsLookup bytesInWord)
+          sourceGlobals sourceMemory exception
+          (.rStruct [.word left, .word right])
+          { state with globals :=
+              (updateMemory (updateMemory state.globals 0 left)
+                (0 + bytesInWord) right) }
+          exceptionCode from
+        ⟨hpost, ⟨hexceptionResult', hlookup⟩⟩)
+  exact ⟨hsourceEval, htargetEval, hcontext⟩
 
 theorem panValuePcRaisedTwoWordResultRel_of_semantic_lift
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
@@ -1018,13 +1044,29 @@ theorem panValuePcRaisedTwoWordResultRel_of_semantic_lift
             (updateMemory (updateMemory state.globals 0 left)
               (0 + bytesInWord) right) }
         exceptionCode) := by
-  exact (panValuePcRaisedTwoWordSemanticLift
+  have hresult := panValuePcRaisedTwoWordSemanticLift
     context structs sourceFunctions functions sourceLocals sourceGlobals
     sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
     baseAddress topAddress bytesInWord fieldLeft fieldRight left right
     exception exceptionCode exceptionRel resultExceptionCode compiledLeft
     compiledRight hlookup hcode hbytesInWord hdistinct hrel hsource hcompile
-    hcompiledLeft hcompiledRight hexception).2.2
+    hcompiledLeft hcompiledRight hexception
+  simpa [panValuePcResultRel, panValuePcResultRelWithContextCode,
+    panValuePcExceptionResultRelWithContextCode] using
+    (show panValueCrepStateRel structs context
+        (fun _ => none) sourceGlobals sourceMemory
+        { state with globals :=
+            (updateMemory (updateMemory state.globals 0 left)
+              (0 + bytesInWord) right) } ∧
+      panValuePcExceptionResultRel structs context exceptionRel
+        resultExceptionCode (crepPcTwoWordGlobalsLookup bytesInWord)
+        sourceGlobals sourceMemory exception
+        (.rStruct [.word left, .word right])
+        { state with globals :=
+            (updateMemory (updateMemory state.globals 0 left)
+              (0 + bytesInWord) right) }
+        exceptionCode from
+      ⟨hresult.2.2.1, hresult.2.2.2.1⟩)
 
 /-! The two-word counterpart exposes the existing structured-payload semantic
     lift in the explicit generic `hraise` shape.  The distinct spill slots and
@@ -1093,14 +1135,14 @@ theorem panValuePcRaisedTwoWordHraise
         Shape.shapeSize (panValueShape structs
           (.rStruct [.word left, .word right])) ≤ 32)) ∧
     lookupInfo exception context.exceptions = some exceptionCode := by
-  have hresult := panValuePcRaisedTwoWordSemanticLift
+  have hresult := panValuePcRaisedTwoWordResultRel_of_semantic_lift
     context structs sourceFunctions functions sourceLocals sourceGlobals
     sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
     baseAddress topAddress bytesInWord fieldLeft fieldRight
     left right exception exceptionCode exceptionRel resultExceptionCode
     compiledLeft compiledRight hlookup hcode hbytesInWord hdistinct hrel hsource
     hcompile hcompiledLeft hcompiledRight hexception
-  rcases hresult.2.2 with
+  rcases hresult with
     ⟨hpost, spillAddress, code, hresultCode, htargetCode, hcontrol, hpayload⟩
   have hnonempty : 1 ≤ Shape.shapeSize
       (panValueShape structs (.rStruct [.word left, .word right])) := by

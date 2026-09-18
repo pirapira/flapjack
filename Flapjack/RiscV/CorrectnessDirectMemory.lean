@@ -55,6 +55,9 @@ theorem evalWordStackMachine_direct_store_preserves_mapped_values [NeZero width]
     (hno_addressScratch : ∀ name value location,
       values name = some value → wordStackLocation config name = some location →
       location ≠ .register config.addressScratch)
+    (hno_storeAddress : ∀ name value location,
+      values name = some value → wordStackLocation config name = some location →
+      location ≠ .register (wordStackStoreAddressRegister config sourceLocation))
     (heval : (wordToStackProg (α := Nat) config
       (.store (.var address) source)).bind
       (evalWordStackMachine state) = some final) :
@@ -64,6 +67,6 @@ theorem evalWordStackMachine_direct_store_preserves_mapped_values [NeZero width]
     simpa [wordToStackProg] using heval
   exact evalWordStackMachine_memory_store_preserves_mapped_values config state final
     source address sourceLocation addressLocation values hsource haddress hvalues
-    hno_scratch hno_addressScratch heval'
+    hno_scratch hno_addressScratch hno_storeAddress heval'
 
 end Flapjack.RiscV

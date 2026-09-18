@@ -172,6 +172,7 @@ example [NeZero width]
     (hsourceValue := by simpa [config] using hsourceValue)
     (haddressValue := by simpa [config] using haddressValue)
     (hscratch := by simp [config]) (hsafe := by simp [wordStackStoreLocationsSafe])
+    (hsafeAddress := by simp [wordStackMemoryStoreLocationsSafe])
     (by simpa [config] using heval)
 
 example [NeZero width]
@@ -234,6 +235,7 @@ example [NeZero width]
     (hsourceValue := by simpa [config] using hsourceValue)
     (haddressValue := by simpa [config] using haddressValue)
     (hscratch := by simp [config]) (hsafe := by simp [config, wordStackStoreLocationsSafe])
+    (hsafeAddress := by simp [config, wordStackMemoryStoreLocationsSafe])
     (by simpa [config] using heval)
 
 example [NeZero width]

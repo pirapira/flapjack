@@ -81,6 +81,8 @@ theorem evalWordStackMachine_memory_store_preserves_other_value [NeZero width]
     (hother : wordStackLocation config other = some otherLocation)
     (hother_scratch : otherLocation ≠ .register config.scratch)
     (hother_addressScratch : otherLocation ≠ .register config.addressScratch)
+    (hother_storeAddress :
+      otherLocation ≠ .register (wordStackStoreAddressRegister config sourceLocation))
     (heval : (wordStackMemoryInst config .store source address).bind
       (evalWordStackMachine state) = some final) :
     wordStackMachineValue config final other =
@@ -94,7 +96,8 @@ theorem evalWordStackMachine_memory_store_preserves_other_value [NeZero width]
   all_goals
     cases heval
     simp_all [wordStackMachineValue, wordStackLocation, wordStackOffset,
-      wordStackMachineWriteRegister, wordStackMachineWriteMemory]
+      wordStackMachineWriteRegister, wordStackMachineWriteMemory,
+      wordStackStoreAddressRegister]
 
 theorem evalWordStackMachine_memory_store_preserves_mapped_values [NeZero width]
     (config : WordStackConfig) (state final : WordStackMachineState width)
@@ -110,6 +113,9 @@ theorem evalWordStackMachine_memory_store_preserves_mapped_values [NeZero width]
     (hno_addressScratch : ∀ name value location,
       values name = some value → wordStackLocation config name = some location →
       location ≠ .register config.addressScratch)
+    (hno_storeAddress : ∀ name value location,
+      values name = some value → wordStackLocation config name = some location →
+      location ≠ .register (wordStackStoreAddressRegister config sourceLocation))
     (heval : (wordStackMemoryInst config .store source address).bind
       (evalWordStackMachine state) = some final) :
     wordStackMappedValues config values final := by
@@ -119,7 +125,8 @@ theorem evalWordStackMachine_memory_store_preserves_mapped_values [NeZero width]
     config state final source address name sourceLocation addressLocation location
     hsource haddress hlocation
     (hno_scratch name value location hvalue hlocation)
-    (hno_addressScratch name value location hvalue hlocation) heval
+    (hno_addressScratch name value location hvalue hlocation)
+    (hno_storeAddress name value location hvalue hlocation) heval
   rw [hpreserved]
   exact hstateValue
 

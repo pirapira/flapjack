@@ -1,6 +1,7 @@
 import Flapjack.Stack
 import Flapjack.RiscV.Allocator
 import Flapjack.RiscV.RegAlloc
+import Flapjack.RiscV.CakeAllocatorCore
 
 /-!
 # Word-to-Stack spill moves
@@ -1159,10 +1160,10 @@ def wordStackLiveBitmap (registerCount frameSlots wordBits : Nat)
 
 /- Location-derived mirror of the original `write_bitmap`: one membership bit
     per frame slot for the live cut-set variables that the allocator actually
-    placed on the stack, folded with the base-1 `wordStackBitsToNat` whose
-    implicit top bit terminates the word.  Register-resident live values carry
-    no stack root; the original's pancake artifacts pin the allocator to an
-    empty stack live set there, keeping the words pure `2 ^ frameSlots`. -/
+    placed on the stack.  Use Cake's `bits_to_word` implementation and its
+    explicit terminator rather than the legacy base-1 helper above.  These
+    encodings agree for a single bitmap word, but differ at a chunk boundary
+    because the legacy helper adds an implicit terminator to every chunk. -/
 def wordStackLiveBitmapFromLocations (config : WordStackConfig)
     (frameSlots wordBits : Nat) (live : List Nat) : List Nat :=
   let slots := live.filterMap (fun name =>
@@ -1170,7 +1171,7 @@ def wordStackLiveBitmapFromLocations (config : WordStackConfig)
     | some (.stack slot) => some slot
     | _ => none)
   let bits := (List.range frameSlots).map (fun slot => slots.contains slot)
-  wordStackBitmapWords (wordBits - 1) bits
+  CakeAlloc.frameBitmapWords (wordBits - 1) (bits ++ [true])
 
 def wordStackInsertBitmap (state : WordStackBitmapState)
     (bitmap : List Nat) : WordStackBitmapState × Nat :=

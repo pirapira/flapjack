@@ -944,6 +944,102 @@ theorem panValuePcRaisedGenericHraise_of_evidence
   refine ⟨hpost, ?_⟩
   exact ⟨0, hcontrol, hcode, hlookupPayload, hsize⟩
 
+theorem panValuePcRaisedThreeWordHraise_of_evidence
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (state : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α) (sourceFuel : Nat)
+    (exception : ExceptionId) (exceptionCode first second third : α)
+    (expression : Exp α)
+    (compiledFirst compiledSecond compiledThird : CrepExp α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (resultExceptionCode : ExceptionId → Option α)
+    (hlookup : lookupInfo exception context.exceptions = some exceptionCode)
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory state)
+    (hsource : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord expression =
+      some (.rStruct [.word first, .word second, .word third]))
+    (hvalid : panValuePayloadWithinLimit structs
+      (.rStruct [.word first, .word second, .word third]) = true)
+    (hcompile : compileExp context expression =
+      ([compiledFirst, compiledSecond, compiledThird],
+        .comb [.one, .one, .one]))
+    (hcompiled : evalCrepFullExpsState state baseAddress topAddress
+      [compiledFirst, compiledSecond, compiledThird] =
+      some [first, second, third])
+    (hnot : ∀ name ∈ freshNames context
+      [compiledFirst, compiledSecond, compiledThird].length 1,
+      ∀ value ∈ [compiledFirst, compiledSecond, compiledThird],
+        name ∉ crepExpVars value)
+    (hfresh : ∀ name ∈ freshNames context
+      [compiledFirst, compiledSecond, compiledThird].length 1,
+      state.locals name = none)
+    (hexception : exceptionRel exception
+      (.rStruct [.word first, .word second, .word third]) exceptionCode)
+    (hcode : resultExceptionCode exception = some exceptionCode)
+    (hdistinct01 : (0 : α) ≠ 0 + context.bytesInWord)
+    (hdistinct02 : (0 : α) ≠
+      (0 + context.bytesInWord) + context.bytesInWord)
+    (hdistinct12 : (0 : α) + context.bytesInWord ≠
+      (0 + context.bytesInWord) + context.bytesInWord) :
+    panValuePcRaisedHraiseData resultExceptionCode
+      (crepPcThreeWordGlobalsLookup context.bytesInWord) structs context
+      exceptionRel (fun _ => none) sourceGlobals sourceMemory exception
+      (.rStruct [.word first, .word second, .word third])
+      { state with globals :=
+          (updateMemoryListAt state.globals 0 context.bytesInWord
+            [first, second, third]) }
+      exceptionCode := by
+  have hgeneric := compile_full_pan_value_raise_state_relation_of_evidence
+    context structs sourceFunctions functions sourceLocals sourceGlobals
+    sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord sourceFuel exception exceptionCode
+    expression (.rStruct [.word first, .word second, .word third])
+    [compiledFirst, compiledSecond, compiledThird]
+    (.comb [.one, .one, .one]) [first, second, third] exceptionRel hlookup hrel
+    hsource hvalid hcompile (by simp [Shape.shapeSize]) hcompiled hnot hfresh hexception
+  rcases hgeneric with ⟨_, _, hcontrol⟩
+  have hpost : panValueCrepStateRel structs context
+      (fun _ => none) sourceGlobals sourceMemory
+      { state with globals :=
+          (updateMemoryListAt state.globals 0 context.bytesInWord
+            [first, second, third]) } := by
+    have hraisedState := hcontrol.1
+    refine ⟨hrel.1, hraisedState.2.1, ?_⟩
+    exact hrel.2.2
+  have hlookupPayload :
+      1 ≤ Shape.shapeSize (panValueShape structs
+        (.rStruct [.word first, .word second, .word third])) →
+      crepPcThreeWordGlobalsLookup context.bytesInWord
+          { state with globals :=
+              (updateMemoryListAt state.globals 0 context.bytesInWord
+                [first, second, third]) }
+          (.rStruct [.word first, .word second, .word third]) =
+        some (panValueFlatWords
+          (.rStruct [.word first, .word second, .word third])) := by
+    intro _
+    simp [crepPcThreeWordGlobalsLookup, panValueFlatWords,
+      panValueFlatWordsFuel, panValueFlatValueFuel,
+      panValueFlatWordsFuel.panValueFlatWordsListFuel,
+      panValueFlatValueFuel.panValueFlatValueListFuel,
+      updateMemoryListAt, updateMemory, hdistinct01, hdistinct02,
+      hdistinct12]
+  have hsize : Shape.shapeSize (panValueShape structs
+      (.rStruct [.word first, .word second, .word third])) ≤ 32 := by
+    simp [panValueShape, Shape.shapeSize]
+  exact ⟨hpost, 0, hcontrol, hcode, hlookupPayload, hsize⟩
+
 /-! Dispatch the supported raised payload cases into the universal `hraise`
     slot consumed by `panValuePcCompileCorrect_compact`.  The word and exact
     two-word callbacks are the semantic adapters above; the fallback is

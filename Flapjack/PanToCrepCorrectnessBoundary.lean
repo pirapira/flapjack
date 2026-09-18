@@ -581,6 +581,38 @@ theorem panValueCrepProgramStateControlSafe_ite_source_word
               | nStruct name fields =>
                   simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcondition] at hsource
 
+/-! A conditional source program needs both halves of the `pc_compile_correct`
+    obligation: the stateful evaluator simulation and the final label-zero
+    control safety rule.  Keep them paired so a future conditional proof
+    cannot discharge only the control observation while omitting execution
+    correctness. -/
+theorem panValueCrepProgramStateCorrect_and_controlSafe_ite_source_word
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (condition : SourceWordExp α) (thenBranch elseBranch : Prog α)
+    (hthenCorrect : PanValueCrepProgramStateCorrect thenBranch)
+    (helseCorrect : PanValueCrepProgramStateCorrect elseBranch)
+    (hthenSafe : PanValueCrepProgramStateControlSafe thenBranch)
+    (helseSafe : PanValueCrepProgramStateControlSafe elseBranch)
+    (hbytesInWord : ∀ (context : CompileContext α) (bytesInWord : α),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext α)
+      (sourceLocals : VarName → Option (PanValue α))
+      (name : VarName) (value : PanValue α),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot])) :
+    PanValueCrepProgramStateCorrect
+        (.ite condition.toExp thenBranch elseBranch) ∧
+      PanValueCrepProgramStateControlSafe
+        (.ite condition.toExp thenBranch elseBranch) := by
+  constructor
+  · exact panValueCrepProgramStateCorrect_ite_source_word condition
+      thenBranch elseBranch hthenCorrect helseCorrect hbytesInWord hlookup
+  · exact panValueCrepProgramStateControlSafe_ite_source_word condition
+      thenBranch elseBranch hthenSafe helseSafe hbytesInWord hlookup
+
 structure PanValuePcInput (α : Type u) where
   structs : StructContext
   code : PanValuePcSourceCode α

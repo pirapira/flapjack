@@ -346,9 +346,6 @@ def nestedAndWideConstantMaterializes : Bool :=
 
 #guard nestedAndImmediateMatches
 #guard nestedAndWideConstantMaterializes
-<<<<<<< HEAD
-=======
->>>>>>> 7137d9dd (Remove redundant selector parity guard)
 #guard nestedAndConstantFoldCollapses
 #guard nestedAndWordConstantFoldCollapses
 #guard nestedAndXorWordConstantFoldCollapses

@@ -4770,7 +4770,7 @@ theorem panValuePcCompileCorrect_compact_with_flat_global_callback_context_code
     (hlookup : ∀ (targetState : CrepState α) (sourceValue : PanValue α),
       crepPcFlatGlobalsLookup bytesInWord targetState sourceValue =
         globalsLookup targetState sourceValue)
-    (hraiseData : ∀ (context : CompileContext α) (structs : StructContext)
+    (hraiseEvidence : ∀ (context : CompileContext α) (structs : StructContext)
       (exceptionRel : ExceptionId → PanValue α → α → Prop)
       (sourceLocals sourceGlobals : VarName → Option (PanValue α))
       (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
@@ -4782,16 +4782,7 @@ theorem panValuePcCompileCorrect_compact_with_flat_global_callback_context_code
       panValuePcRaisedHraiseData exceptionCode
         (crepPcFlatGlobalsLookup bytesInWord) structs context exceptionRel
         sourceLocals sourceGlobals sourceMemory sourceException sourceValue
-        targetState targetException)
-    (hlookupCode : ∀ (context : CompileContext α) (structs : StructContext)
-      (exceptionRel : ExceptionId → PanValue α → α → Prop)
-      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
-      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
-      (sourceValue : PanValue α) (targetState : CrepState α)
-      (targetException : α),
-      panValueCrepControlRel structs context exceptionRel
-        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
-        (.raised targetState targetException) →
+        targetState targetException ∧
       lookupInfo sourceException context.exceptions = some targetException) :
     PanValuePcCompileCorrectWithContextCode
       (panValuePcCompactSourceEvaluator primitive sourceHandler sourceFunctions
@@ -4800,17 +4791,23 @@ theorem panValuePcCompileCorrect_compact_with_flat_global_callback_context_code
         baseAddress topAddress targetFuel)
       codeRel excpRel exceptionCode globalsLookup program := by
   have hretargeted := panValuePcRaisedHraiseData_retarget_globals_callback
-    bytesInWord exceptionCode globalsLookup hlookup hraiseData
+    bytesInWord exceptionCode globalsLookup hlookup (by
+      intro context structs exceptionRel sourceLocals sourceGlobals sourceMemory
+        sourceException sourceValue targetState targetException hcontrol
+      exact (hraiseEvidence context structs exceptionRel sourceLocals sourceGlobals
+        sourceMemory sourceException sourceValue targetState targetException hcontrol).1)
   exact panValuePcCompileCorrect_compact_with_context_code
     program codeRel excpRel exceptionCode globalsLookup sourceFunctions functions
     primitive sourceHandler crepPrimitive ffi sharedMem baseAddress topAddress
     bytesInWord sourceFuel targetFuel hprogram hprogramSafe (by
       intro context structs exceptionRel sourceLocals sourceGlobals sourceMemory
         sourceException sourceValue targetState targetException hcontrol
+      have hevidence := hraiseEvidence context structs exceptionRel sourceLocals
+        sourceGlobals sourceMemory sourceException sourceValue targetState
+        targetException hcontrol
       exact ⟨hretargeted context structs exceptionRel sourceLocals sourceGlobals
           sourceMemory sourceException sourceValue targetState targetException hcontrol,
-        hlookupCode context structs exceptionRel sourceLocals sourceGlobals
-          sourceMemory sourceException sourceValue targetState targetException hcontrol⟩)
+        hevidence.2⟩)
 
 /-! Raw-word convenience form of the canonical flat-global boundary.  Word
     and arbitrary flat-record callbacks stay on the compiler lookup, while
@@ -4899,13 +4896,19 @@ theorem panValuePcCompileCorrect_compact_with_raw_word_flat_globals_context_code
       (crepPcCompactTargetEvaluator functions crepPrimitive ffi sharedMem
         baseAddress topAddress targetFuel)
       codeRel excpRel exceptionCode globalsLookup program := by
+  let hraise := panValuePcRaisedHraiseCases_with_raw_word_lists
+    exceptionCode (crepPcFlatGlobalsLookup bytesInWord) hword hraw hother
   exact panValuePcCompileCorrect_compact_with_flat_global_callback_context_code
     program codeRel excpRel exceptionCode globalsLookup sourceFunctions functions
     primitive sourceHandler crepPrimitive ffi sharedMem baseAddress topAddress
     bytesInWord sourceFuel targetFuel hprogram hprogramSafe hlookup
-    (panValuePcRaisedHraiseCases_with_raw_word_lists
-      exceptionCode (crepPcFlatGlobalsLookup bytesInWord) hword hraw hother)
-    hlookupCode
+    (by
+      intro context structs exceptionRel sourceLocals sourceGlobals sourceMemory
+        sourceException sourceValue targetState targetException hcontrol
+      exact ⟨hraise context structs exceptionRel sourceLocals sourceGlobals
+          sourceMemory sourceException sourceValue targetState targetException hcontrol,
+        hlookupCode context structs exceptionRel sourceLocals sourceGlobals
+          sourceMemory sourceException sourceValue targetState targetException hcontrol⟩)
 
 /-! Generic evaluator-evidence form of the compact context-code boundary.
     This keeps arbitrary structured payloads on the canonical flattened lookup
@@ -4966,8 +4969,13 @@ theorem panValuePcCompileCorrect_compact_with_flat_global_evidence_context_code
   exact panValuePcCompileCorrect_compact_with_flat_global_callback_context_code
     program codeRel excpRel exceptionCode globalsLookup sourceFunctions functions
     primitive sourceHandler crepPrimitive ffi sharedMem baseAddress topAddress
-    bytesInWord sourceFuel targetFuel hprogram hprogramSafe hlookup hraiseData
-    hlookupCode
+    bytesInWord sourceFuel targetFuel hprogram hprogramSafe hlookup (by
+      intro context structs exceptionRel sourceLocals sourceGlobals sourceMemory
+        sourceException sourceValue targetState targetException hcontrol
+      exact ⟨hraiseData context structs exceptionRel sourceLocals sourceGlobals
+          sourceMemory sourceException sourceValue targetState targetException hcontrol,
+        hlookupCode context structs exceptionRel sourceLocals sourceGlobals
+          sourceMemory sourceException sourceValue targetState targetException hcontrol⟩)
 
 /-! Control-only entrypoint with explicit raised evidence.  The control
     relation supplies the spill witness; callers provide the post-state,

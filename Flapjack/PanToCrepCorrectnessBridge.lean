@@ -3823,15 +3823,17 @@ theorem panValuePcRaisedHraiseCases_to_exception_result_rel_with_context_code
     sourceException sourceValue targetState targetException hcontrol
   have hraise := panValuePcRaisedHraiseCases exceptionCode globalsLookup
     hword htwo hthree hother
-  have hdata := hraise context structs exceptionRel sourceLocals sourceGlobals
-    sourceMemory sourceException sourceValue targetState targetException hcontrol
-  have hresult := panValuePcExceptionResultRelWithContextCode_of_raised_hraise_data
-    structs context exceptionRel exceptionCode globalsLookup sourceLocals
-    sourceGlobals sourceMemory sourceException sourceValue targetState
-    targetException hdata
-    (hlookupCode context structs exceptionRel sourceLocals sourceGlobals
-      sourceMemory sourceException sourceValue targetState targetException hcontrol)
-  exact ⟨hdata.1, hresult⟩
+  exact panValuePcRaisedHraiseData_to_exception_result_rel_with_context_code
+    structs context exceptionRel exceptionCode globalsLookup
+    (fun sourceLocals sourceGlobals sourceMemory sourceException sourceValue
+      targetState targetException hcontrol =>
+      ⟨hraise context structs exceptionRel sourceLocals sourceGlobals sourceMemory
+          sourceException sourceValue targetState targetException hcontrol,
+        hlookupCode context structs exceptionRel sourceLocals sourceGlobals
+          sourceMemory sourceException sourceValue targetState targetException
+          hcontrol⟩)
+    sourceLocals sourceGlobals sourceMemory sourceException sourceValue targetState
+    targetException hcontrol
 
 /-! The ordinary compact control cases are proved directly from the existing
 `panValueCrepControlRel`.  Only the raised payload needs an additional

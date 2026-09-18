@@ -1216,6 +1216,67 @@ theorem panValuePcRaisedHraiseData_of_control_evidence
   rcases hcontrol with ⟨spillAddress, hraised⟩
   exact ⟨hpost, spillAddress, hraised, hcode, hlookup, hsize⟩
 
+theorem panValuePcRaisedWordHraiseData_retarget_globals
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (state : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α)
+    (sourceFuel targetFuel : Nat)
+    (exception : ExceptionId) (exceptionCode value : α)
+    (expression : SourceWordExp α) (compiled : CrepExp α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (resultExceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (hlookup : lookupInfo exception context.exceptions = some exceptionCode)
+    (hcode : resultExceptionCode exception = some exceptionCode)
+    (hbytesInWord : context.bytesInWord = bytesInWord)
+    (hrel : panValueCrepStateRel structs context (fun _ => none)
+      sourceGlobals sourceMemory state)
+    (hsource : evalPanValueExp structs (fun _ => none) sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord expression.toExp = some (.word value))
+    (hcompile : compileExp context expression.toExp = ([compiled], .one))
+    (hcompiled : evalCrepFullExpState state baseAddress topAddress compiled =
+      some value)
+    (hexception : exceptionRel exception (.word value) exceptionCode)
+    (hfresh : state.locals (context.maxVar + 1) = none)
+    (hlookupGlobals : crepPcWordGlobalsLookup
+        { state with globals := updateMemory state.globals 0 value }
+        (.word value) = globalsLookup
+          { state with globals := updateMemory state.globals 0 value }
+          (.word value)) :
+    panValuePcRaisedHraiseData resultExceptionCode globalsLookup structs context
+      exceptionRel (fun _ => none) sourceGlobals sourceMemory exception (.word value)
+      { state with globals := updateMemory state.globals 0 value }
+      exceptionCode ∧ lookupInfo exception context.exceptions = some exceptionCode := by
+  have hword := panValuePcRaisedWordHraise
+    context structs sourceFunctions functions (fun _ => none) sourceGlobals
+    sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord sourceFuel targetFuel exception
+    exceptionCode value expression compiled exceptionRel resultExceptionCode
+    hlookup hcode hbytesInWord hrel hsource hcompile hcompiled hexception hfresh
+  rcases hword with ⟨hwordData, hlookupCode⟩
+  rcases hwordData with
+    ⟨hpost, spillAddress, hcontrol, hcode', hpayload, hsize⟩
+  refine ⟨?_, hlookupCode⟩
+  apply panValuePcRaisedHraiseData_of_control_evidence
+    structs context exceptionRel resultExceptionCode globalsLookup
+    (fun _ => none) sourceGlobals sourceMemory exception (.word value)
+    { state with globals := updateMemory state.globals 0 value }
+    exceptionCode hpost ⟨spillAddress, hcontrol⟩ hcode' ?_ hsize
+  intro hnonempty
+  rw [← hlookupGlobals]
+  exact hpayload hnonempty
+
 theorem panValuePcRaisedHraiseData_of_control_evidence_with_context_code
     (structs : StructContext) (context : CompileContext α)
     (exceptionRel : ExceptionId → PanValue α → α → Prop)

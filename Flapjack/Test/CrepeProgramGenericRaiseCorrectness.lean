@@ -990,6 +990,58 @@ theorem four_word_raise_pc_hraise_raw_words :
     (hdistinct := by decide)
     (hsize := by simp [panValueShape, Shape.shapeSize])
 
+theorem four_word_raise_pc_context_code_from_evidence :
+    panValuePcExceptionResultRelWithContextCode [] context
+      (fun _ _ code => code = 9)
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8) (fun _ => none) (fun _ => none) "E"
+      fourWordSourceValue
+      { state with globals :=
+          updateMemoryListAt state.globals 0 8 [3, 4, 5, 6] }
+      9 := by
+  apply panValuePcExceptionResultRelWithContextCode_of_raised_raw_word_list_evidence
+    (α := Nat) (context := context) (structs := [])
+    (sourceFunctions := []) (functions := [])
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (state := state)
+    (primitive := fun _ _ => none)
+    (sourceHandler := fun _ _ _ _ _ _ => none)
+    (crepPrimitive := fun _ _ => none)
+    (ffi := fun _ _ _ _ _ _ => none)
+    (sharedMem := fun _ _ _ _ => none)
+    (baseAddress := 0) (topAddress := 0) (bytesInWord := 8)
+    (sourceFuel := 2) (exception := "E") (exceptionCode := 9)
+    (values := [3, 4, 5, 6]) (expression := fourWordSourceExpression)
+    (compiled := [.const 3, .const 4, .const 5, .const 6])
+    (shape := .comb [.one, .one, .one, .one])
+    (exceptionRel := fun _ _ code => code = 9)
+    (resultExceptionCode := fun exception =>
+      if exception = "E" then some 9 else none)
+    (hlookup := by simp [context, lookupInfo])
+    (hrel := by
+      refine ⟨rfl, panValueCrepLocalsRel_empty [] context _, rfl⟩)
+    (hsource := by
+      simp [fourWordSourceExpression, evalPanValueExp,
+        evalPanValueExp.evalPanValueExps])
+    (hvalid := by
+      simp [panValuePayloadWithinLimit,
+        panValuePayloadSizeFuel,
+        panValuePayloadSizeFuel.panValuePayloadSizeFieldsFuel,
+        panValueFlatValueFuel,
+        panValueFlatValueFuel.panValueFlatValueListFuel])
+    (hcompile := by
+      simp [context, fourWordSourceExpression, compileExp,
+        compileExp.compileExpList])
+    (hlength := by simp [Shape.shapeSize])
+    (hcompiled := by
+      simp [state, evalCrepFullExpsState, evalCrepFullExpState])
+    (hnot := by simp [context, freshNames])
+    (hfresh := by simp [context, state, freshNames])
+    (hexception := by simp)
+    (hcode := by simp)
+    (hdistinct := by decide)
+    (hsize := by simp [panValueShape, Shape.shapeSize])
+
 theorem four_word_raise_pc_hraise_retargeted_globals :
     panValuePcRaisedHraiseData
       (fun exception => if exception = "E" then some 9 else none)

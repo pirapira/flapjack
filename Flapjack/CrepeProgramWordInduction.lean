@@ -139,6 +139,19 @@ inductive StatefulWordProg (α : Type)
       StatefulWordProg α
         (.raise exception
           (.rStruct (values.map (fun value => .const value))))
+  | raiseNestedWordRecord
+      (exception : ExceptionId) (value : α)
+      (hlookupException : ∀ (context : CompileContext α),
+        ∃ exceptionCode, lookupInfo exception context.exceptions = some exceptionCode)
+      (hfresh : ∀ (context : CompileContext α) (state : CrepState α),
+        state.locals (context.maxVar + 1) = none)
+      (hexception : ∀ (context : CompileContext α)
+        (exceptionRel : ExceptionId → PanValue α → α → Prop)
+        (exceptionCode : α),
+        lookupInfo exception context.exceptions = some exceptionCode →
+        exceptionRel exception (.rStruct [.rStruct [.word value]]) exceptionCode) :
+      StatefulWordProg α
+        (.raise exception (.rStruct [.rStruct [.const value]]))
   | storeWord
       (address value : Exp α)
       (haddress : wordExp address) (hvalue : wordExp value)
@@ -241,6 +254,9 @@ theorem panValueCrepProgramStateCorrect_statefulWord
   | raiseWordRecord exception values hlookupException hfresh hexception =>
       exact panValueCrepProgramStateCorrect_raise_word_list_record exception
         values hlookupException hfresh hexception
+  | raiseNestedWordRecord exception value hlookupException hfresh hexception =>
+      exact panValueCrepProgramStateCorrect_raise_nested_one_word_record exception
+        value hlookupException hfresh hexception
   | storeWord address value haddress hvalue hbytesInWord hlookup hstable =>
       exact panValueCrepProgramStateCorrect_store_wordExp address value
         haddress hvalue hbytesInWord hlookup hstable

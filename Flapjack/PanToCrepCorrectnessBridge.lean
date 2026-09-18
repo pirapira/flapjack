@@ -4132,7 +4132,7 @@ theorem panValuePcCompileCorrectWithContextCode_of_stateful_program
           baseAddress topAddress targetFuel targetInput.state
           (compileProg context program) = some crepResult ∧
         crepPcResultOfControl crepResult = some targetExecution.result)
-    (hraiseData : ∀ (context : CompileContext α) (structs : StructContext)
+    (hraiseEvidence : ∀ (context : CompileContext α) (structs : StructContext)
       (exceptionRel : ExceptionId → PanValue α → α → Prop)
       (sourceLocals sourceGlobals : VarName → Option (PanValue α))
       (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
@@ -4143,16 +4143,7 @@ theorem panValuePcCompileCorrectWithContextCode_of_stateful_program
         (.raised targetState targetException) →
       panValuePcRaisedHraiseData exceptionCode globalsLookup structs context
         exceptionRel sourceLocals sourceGlobals sourceMemory sourceException
-        sourceValue targetState targetException)
-    (hlookupCode : ∀ (context : CompileContext α) (structs : StructContext)
-      (exceptionRel : ExceptionId → PanValue α → α → Prop)
-      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
-      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
-      (sourceValue : PanValue α) (targetState : CrepState α)
-      (targetException : α),
-      panValueCrepControlRel structs context exceptionRel
-        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
-        (.raised targetState targetException) →
+        sourceValue targetState targetException ∧
       lookupInfo sourceException context.exceptions = some targetException) :
     PanValuePcCompileCorrectWithContextCode sourceEvaluate targetEvaluate
       codeRel excpRel exceptionCode globalsLookup program := by
@@ -4189,15 +4180,13 @@ theorem panValuePcCompileCorrectWithContextCode_of_stateful_program
         sourceValue targetState targetException := by
     intro sourceLocals sourceGlobals sourceMemory sourceException sourceValue
       targetState targetException hraised
-    have hdata := hraiseData context structs exceptionRel sourceLocals sourceGlobals
+    have hdata := hraiseEvidence context structs exceptionRel sourceLocals sourceGlobals
       sourceMemory sourceException sourceValue targetState targetException hraised
     have hresult := panValuePcExceptionResultRelWithContextCode_of_raised_hraise_data
       structs context exceptionRel exceptionCode globalsLookup sourceLocals
       sourceGlobals sourceMemory sourceException sourceValue targetState
-      targetException hdata
-      (hlookupCode context structs exceptionRel sourceLocals sourceGlobals
-        sourceMemory sourceException sourceValue targetState targetException hraised)
-    exact ⟨hdata.1, hresult⟩
+      targetException hdata.1 hdata.2
+    exact ⟨hdata.1.1, hresult⟩
   have hresult := panValuePcResultRelWithContextCode_of_control structs context
     exceptionRel exceptionCode globalsLookup hraise
     sourceResult crepResult targetExecution.result hcontrol hsafe hcrepShape
@@ -4467,8 +4456,13 @@ theorem panValuePcCompileCorrect_compact_with_context_code
       baseAddress topAddress targetFuel)
     codeRel excpRel exceptionCode globalsLookup sourceFunctions functions
     primitive sourceHandler crepPrimitive ffi sharedMem baseAddress topAddress
-    bytesInWord sourceFuel targetFuel hprogram hprogramSafe ?_ ?_ hraiseData
-    hlookupCode
+    bytesInWord sourceFuel targetFuel hprogram hprogramSafe ?_ ?_ (by
+      intro context structs exceptionRel sourceLocals sourceGlobals sourceMemory
+        sourceException sourceValue targetState targetException hcontrol
+      exact ⟨hraiseData context structs exceptionRel sourceLocals sourceGlobals
+          sourceMemory sourceException sourceValue targetState targetException hcontrol,
+        hlookupCode context structs exceptionRel sourceLocals sourceGlobals
+          sourceMemory sourceException sourceValue targetState targetException hcontrol⟩)
   · intro context structs sourceInput targetInput sourceExecution hstructs heval
     exact panValuePcCompactSourceEvaluator_adapter primitive sourceHandler
       sourceFunctions baseAddress topAddress bytesInWord sourceFuel program

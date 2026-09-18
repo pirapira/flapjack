@@ -181,6 +181,36 @@ theorem panValuePcExceptionResultRel_of_raised_control
   intro hnonempty
   exact ⟨hlookup hnonempty, hsize⟩
 
+/-! Cake-faithful raised-result constructor.  In addition to the existing
+    spill/code/payload obligations, the source exception must resolve through
+    the compiler context, exactly as `FLOOKUP ctxt.eids eid` does in HOL. -/
+theorem panValuePcExceptionResultRelWithContextCode_of_raised_control
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (sourceException : ExceptionId) (sourceValue : PanValue α)
+    (targetState : CrepState α) (targetException spillAddress : α)
+    (hcontrol : panValueCrepRaisedControlRel structs context exceptionRel
+      sourceGlobals sourceMemory sourceException sourceValue targetState
+      targetException spillAddress)
+    (hcode : exceptionCode sourceException = some targetException)
+    (hlookupCode : lookupInfo sourceException context.exceptions =
+      some targetException)
+    (hlookup : 1 ≤ Shape.shapeSize (panValueShape structs sourceValue) →
+      globalsLookup targetState sourceValue = some (panValueFlatWords sourceValue))
+    (hsize : Shape.shapeSize (panValueShape structs sourceValue) ≤ 32) :
+    panValuePcExceptionResultRelWithContextCode structs context exceptionRel
+      exceptionCode globalsLookup sourceGlobals sourceMemory sourceException
+      sourceValue targetState targetException := by
+  refine ⟨?_, hlookupCode⟩
+  exact panValuePcExceptionResultRel_of_raised_control structs context
+    exceptionRel exceptionCode globalsLookup sourceGlobals sourceMemory
+    sourceException sourceValue targetState targetException spillAddress hcontrol
+    hcode hlookup hsize
+
 /-! The clocked terminal FFI branch has a direct Pc result lift.  The
     clocked leaf theorem supplies the complete source post-state and event;
     the projection theorem preserves that event while attaching the

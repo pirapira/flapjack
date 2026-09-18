@@ -94,6 +94,25 @@ def panValuePcExceptionResultRel
       globalsLookup targetState sourceValue = some (panValueFlatWords sourceValue) ∧
       Shape.shapeSize (panValueShape structs sourceValue) ≤ 32)
 
+/-! Exact Cake exception-code provenance for the raised result clause.  The
+    compatibility relation above keeps the historical result-code adapter
+    usable, but Cake's `pc_compile_correct` does not permit an unrelated code
+    map: its target code is `FLOOKUP ctxt.eids eid`.  This strengthened
+    relation makes that missing premise explicit at the boundary. -/
+def panValuePcExceptionResultRelWithContextCode
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (sourceException : ExceptionId) (sourceValue : PanValue α)
+    (targetState : CrepState α) (targetException : α) : Prop :=
+  panValuePcExceptionResultRel structs context exceptionRel exceptionCode
+    globalsLookup sourceGlobals sourceMemory sourceException sourceValue
+    targetState targetException ∧
+  lookupInfo sourceException context.exceptions = some targetException
+
 /-! The explicit state/global/memory result relation.  The raised branch uses
 the compiler-owned spill relation already used by the downstream Crep
 correctness lemmas; timeout and FinalFFI retain the ordinary state relation. -/

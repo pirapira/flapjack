@@ -133,6 +133,20 @@ theorem closed_word_raise_pc_result_rel_flat_globals :
     (targetException := 9)
   exact closed_word_raise_pc_hraise_flat_globals
 
+/-! The strict raised-result relation rejects a result code that is supplied by
+    an unrelated adapter map rather than by the source compiler context. -/
+def mismatchedRaiseContext : CompileContext Nat :=
+  { raiseContext with exceptions := [("E", 10)] }
+
+theorem pc_raised_result_requires_context_exception_code :
+    ¬ panValuePcExceptionResultRelWithContextCode [] mismatchedRaiseContext
+      (fun _ _ code => code = 9) raiseResultExceptionCode
+      raiseWordGlobalsLookup (fun _ => none) (fun _ => none)
+      "E" (.word 3) { raiseState with globals := updateMemory raiseState.globals 0 3 }
+      9 := by
+  simp [panValuePcExceptionResultRelWithContextCode, mismatchedRaiseContext,
+    raiseContext, lookupInfo]
+
 theorem closed_two_word_raise_pc_hraise_flat_globals :
     panValuePcRaisedHraiseData raiseResultExceptionCode
       (crepPcFlatGlobalsLookup 8) [] raiseContext
@@ -269,6 +283,15 @@ theorem closed_word_raise_pc_result_rel_retargeted :
     (hlookupGlobals := by
       simp [raiseWordGlobalsLookup, crepPcWordGlobalsLookup,
         updateMemory, panValueFlatWords, panValueFlatWordsFuel])
+
+theorem pc_raised_result_accepts_context_exception_code :
+    panValuePcExceptionResultRelWithContextCode [] raiseContext
+      (fun _ _ code => code = 9) raiseResultExceptionCode
+      raiseWordGlobalsLookup (fun _ => none) (fun _ => none)
+      "E" (.word 3) { raiseState with globals := updateMemory raiseState.globals 0 3 }
+      9 := by
+  refine ⟨closed_word_raise_pc_result_rel_retargeted.2, ?_⟩
+  simp [raiseContext, lookupInfo]
 
 theorem closed_two_word_raise_pc_result_rel :
     panValuePcResultRel [] raiseContext

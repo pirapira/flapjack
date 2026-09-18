@@ -54,20 +54,6 @@ inductive CrepPcResult (α : Type u) where
   | timeout (state : CrepState α)
   | finalFfi (state : CrepState α) (event : FfiFinalEvent)
 
-def crepPcTopLevelControlSafe : CrepControlResult α → Prop
-  | .broke _ label => label = 0
-  | .continued _ label => label = 0
-  | _ => True
-
-def panValuePcControlSafety (α : Type u) : Prop :=
-  ∀ (context : CompileContext α) (structs : StructContext)
-    (exceptionRel : ExceptionId → PanValue α → α → Prop)
-    (sourceResult : PanValueControlResult α)
-    (crepResult : CrepControlResult α),
-    panValueCrepControlRel structs context exceptionRel
-      sourceResult crepResult →
-    crepPcTopLevelControlSafe crepResult
-
 abbrev PanValuePcSourceCode α :=
   List (FunName × List VarName × Prog α)
 
@@ -220,6 +206,50 @@ def PanValueCrepProgramStateControlSafe
       baseAddress topAddress targetFuel state
       (compileProg context program) = some crepResult →
     panValuePcControlLabelSafe sourceResult crepResult
+
+theorem panValueCrepProgramStateControlSafe_break
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α] :
+    PanValueCrepProgramStateControlSafe (.break : Prog α) := by
+  intro context structs sourceFunctions functions sourceLocals sourceGlobals
+    sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord sourceFuel targetFuel _exceptionRel
+    sourceResult crepResult hstate hsource hcrep
+  cases sourceFuel with
+  | zero => simp [evalPanValueProgWithPrimitiveCallsAndFfi] at hsource
+  | succ sourceFuel =>
+      cases targetFuel with
+      | zero => simp [evalCrepFullProgState] at hcrep
+      | succ targetFuel =>
+          simp [evalPanValueProgWithPrimitiveCallsAndFfi, compileProg,
+            evalCrepFullProgState] at hsource hcrep
+          cases hsource
+          cases hcrep
+          rfl
+
+theorem panValueCrepProgramStateControlSafe_continue
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α] :
+    PanValueCrepProgramStateControlSafe (.continue : Prog α) := by
+  intro context structs sourceFunctions functions sourceLocals sourceGlobals
+    sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord sourceFuel targetFuel _exceptionRel
+    sourceResult crepResult hstate hsource hcrep
+  cases sourceFuel with
+  | zero => simp [evalPanValueProgWithPrimitiveCallsAndFfi] at hsource
+  | succ sourceFuel =>
+      cases targetFuel with
+      | zero => simp [evalCrepFullProgState] at hcrep
+      | succ targetFuel =>
+          simp [evalPanValueProgWithPrimitiveCallsAndFfi, compileProg,
+            evalCrepFullProgState] at hsource hcrep
+          cases hsource
+          cases hcrep
+          rfl
 
 structure PanValuePcInput (α : Type u) where
   structs : StructContext

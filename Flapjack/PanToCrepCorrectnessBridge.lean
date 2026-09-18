@@ -422,6 +422,46 @@ theorem panValuePcExceptionResultRel_of_raised_two_word_global_spill
       updateMemory, hdistinct]
   · simp [panValueShape, Shape.shapeSize]
 
+theorem panValuePcResultRelWithContextCode_of_raised_two_word_global_spill
+    [BEq α] [LawfulBEq α] [OfNat α 0] [Add α]
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (sourceException : ExceptionId) (bytesInWord left right : α)
+    (state : CrepState α) (targetException : α)
+    (hstate : panValueCrepStateRel structs context
+      (fun _ => none) sourceGlobals sourceMemory state)
+    (hexception : exceptionRel sourceException
+      (.rStruct [.word left, .word right]) targetException)
+    (hcode : exceptionCode sourceException = some targetException)
+    (hlookupCode : lookupInfo sourceException context.exceptions =
+      some targetException)
+    (hdistinct : (0 : α) ≠ 0 + bytesInWord) :
+    panValuePcResultRelWithContextCode structs context exceptionRel exceptionCode
+      (crepPcTwoWordGlobalsLookup bytesInWord)
+      (.raised (fun _ => none) sourceGlobals sourceMemory sourceException
+        (.rStruct [.word left, .word right]))
+      (.raised
+        { state with globals :=
+            (updateMemory (updateMemory state.globals 0 left)
+              (0 + bytesInWord) right) }
+        targetException) := by
+  have hpost : panValueCrepStateRel structs context
+      (fun _ => none) sourceGlobals sourceMemory
+      { state with globals :=
+          (updateMemory (updateMemory state.globals 0 left)
+            (0 + bytesInWord) right) } := by
+    exact ⟨hstate.1, hstate.2.1, hstate.2.2⟩
+  refine ⟨hpost, ?_⟩
+  refine ⟨?_, hlookupCode⟩
+  simpa [hstate.1] using
+    (panValuePcExceptionResultRel_of_raised_two_word_global_spill
+      structs context exceptionRel exceptionCode sourceGlobals sourceMemory
+      sourceException bytesInWord left right state targetException hstate
+      hexception hcode hdistinct)
+
 def crepPcThreeWordGlobalsLookup [OfNat α 0] [Add α]
     (bytesInWord : α) (state : CrepState α) (value : PanValue α) :
     Option (List α) :=

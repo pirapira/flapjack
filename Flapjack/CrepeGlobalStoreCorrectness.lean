@@ -34,6 +34,80 @@ theorem updateMemoryListAt_cons [BEq α] [Add α]
         (address + stride) stride values := by
   simp [updateMemoryListAt]
 
+def storeAddresses [Add α] (address stride : α) : Nat → List α
+  | 0 => []
+  | count + 1 => address :: storeAddresses (address + stride) stride count
+
+def readMemoryListAt [Add α]
+    (memory : α → Option α) (address stride : α) : Nat → Option (List α)
+  | 0 => some []
+  | count + 1 => do
+      let value ← memory address
+      let values ← readMemoryListAt memory (address + stride) stride count
+      pure (value :: values)
+
+theorem updateMemoryListAt_preserve_of_not_mem
+    [BEq α] [LawfulBEq α] [Add α]
+    (memory : α → Option α) (address stride : α)
+    (values : List α) (current : α)
+    (hnot : current ∉ storeAddresses address stride values.length) :
+    updateMemoryListAt memory address stride values current = memory current := by
+  induction values generalizing memory address current with
+  | nil => simp [updateMemoryListAt]
+  | cons value values ih =>
+      rw [updateMemoryListAt_cons]
+      have hhead : current ≠ address := by
+        intro heq
+        apply hnot
+        simp [storeAddresses, heq]
+      have htail : current ∉
+          storeAddresses (address + stride) stride values.length := by
+        intro hmem
+        apply hnot
+        simp [storeAddresses, hmem]
+      calc
+        updateMemoryListAt (updateMemory memory address value)
+            (address + stride) stride values current =
+            updateMemory memory address value current :=
+          ih (memory := updateMemory memory address value)
+            (address := address + stride) (current := current) htail
+        _ = memory current := by simp [updateMemory, hhead]
+
+theorem readMemoryListAt_updateMemoryListAt
+    [BEq α] [LawfulBEq α] [Add α]
+    (memory : α → Option α) (address stride : α)
+    (values : List α)
+    (hdistinct : List.Pairwise (fun left right : α => left ≠ right)
+      (storeAddresses address stride values.length)) :
+    readMemoryListAt
+        (updateMemoryListAt memory address stride values)
+        address stride values.length = some values := by
+  induction values generalizing memory address with
+  | nil => simp [readMemoryListAt, updateMemoryListAt]
+  | cons value values ih =>
+      rw [updateMemoryListAt_cons]
+      change List.Pairwise (fun left right : α => left ≠ right)
+        (address :: storeAddresses (address + stride) stride values.length)
+        at hdistinct
+      simp only [List.pairwise_cons] at hdistinct
+      have hheadPreserve :
+          updateMemoryListAt (updateMemory memory address value)
+              (address + stride) stride values address =
+            updateMemory memory address value address :=
+        updateMemoryListAt_preserve_of_not_mem
+          (updateMemory memory address value) (address + stride) stride values
+          address (by
+            intro hmem
+            exact (hdistinct.1 address hmem) rfl)
+      have hhead :
+          updateMemoryListAt (updateMemory memory address value)
+              (address + stride) stride values address = some value := by
+        rw [hheadPreserve]
+        simp [updateMemory]
+      have htail := ih (memory := updateMemory memory address value)
+        (address := address + stride) hdistinct.2
+      simp [readMemoryListAt, hhead, htail]
+
 /-! Stateful counterpart of the existing compact nested-declaration stability
 lemma.  This is the exact witness constructor used when the declaration body
 performs global stores, so converting through the compact evaluator would lose

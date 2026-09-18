@@ -471,6 +471,30 @@ theorem closed_word_raise_hraise_retargeted_via_flat_spill :
     simpa [raiseWordGlobalsLookup, panValueFlatWords,
       panValueFlatWordsFuel, panValueFlatValueFuel] using hstored
 
+theorem closed_word_raise_hraise_flat_spill_preserves_source_locals :
+    panValuePcRaisedHraiseData raiseResultExceptionCode
+      (crepPcFlatGlobalsLookup 8) [] raiseContext
+      (fun _ _ code => code = 9) (fun _ => some (.word 7)) (fun _ => none)
+      (fun _ => none) "E" (.word 3)
+      { raiseState with globals := updateMemory raiseState.globals 0 3 }
+      9 := by
+  apply panValuePcRaisedHraiseData_of_flat_spill_state_with_source_locals
+    (structs := []) (context := raiseContext)
+    (exceptionRel := fun _ _ code => code = 9)
+    (exceptionCode := raiseResultExceptionCode)
+    (sourceLocals := fun _ => some (.word 7))
+    (sourceGlobals := fun _ => none) (sourceMemory := fun _ => none)
+    (sourceException := "E") (values := [3]) (state := raiseState)
+    (bytesInWord := 8) (targetException := 9) (sourceValue := .word 3)
+  · refine ⟨rfl, ?_, rfl⟩
+    intro name value shape slots _ hlookup
+    simp [raiseContext, lookupInfo] at hlookup
+  · rfl
+  · simp [raiseResultExceptionCode]
+  · rfl
+  · decide
+  · simp [panValueShape]
+
 theorem closed_word_raise_context_code_from_hraise_data :
     panValuePcExceptionResultRelWithContextCode [] raiseContext
       (fun _ _ code => code = 9) raiseResultExceptionCode

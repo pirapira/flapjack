@@ -164,6 +164,30 @@ theorem closed_two_word_raise_pc_hraise_flat_globals :
   simpa [Nat.zero_add] using
     (hpayload (by simp [panValueShape, Shape.shapeSize]))
 
+theorem closed_two_word_raise_pc_result_rel_flat_globals :
+    panValuePcResultRel [] raiseContext
+      (fun _ _ code => code = 9) raiseResultExceptionCode
+      (crepPcFlatGlobalsLookup 8)
+      (.raised (fun _ => none) (fun _ => none) (fun _ => none) "E"
+        (.rStruct [.word 3, .word 4]))
+      (.raised
+        { raiseState with globals :=
+            (updateMemory (updateMemory raiseState.globals 0 3) 8 4) }
+        9) := by
+  apply panValuePcResultRel_of_raised_hraise_data
+    (structs := []) (context := raiseContext)
+    (exceptionRel := fun _ _ code => code = 9)
+    (exceptionCode := raiseResultExceptionCode)
+    (globalsLookup := crepPcFlatGlobalsLookup 8)
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (sourceException := "E")
+    (sourceValue := .rStruct [.word 3, .word 4])
+    (targetState :=
+      { raiseState with globals :=
+          (updateMemory (updateMemory raiseState.globals 0 3) 8 4) })
+    (targetException := 9)
+  exact closed_two_word_raise_pc_hraise_flat_globals
+
 theorem closed_word_raise_pc_result_rel_retargeted :
     panValuePcResultRel [] raiseContext
       (fun _ _ code => code = 9) raiseResultExceptionCode

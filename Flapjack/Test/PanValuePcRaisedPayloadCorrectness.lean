@@ -64,6 +64,50 @@ theorem closed_word_raise_pc_hraise :
     (hfresh := by simp [raiseState, raiseContext])
   exact ⟨h.1, h.2⟩
 
+theorem closed_two_word_raise_pc_result_rel :
+    panValuePcResultRel [] raiseContext
+      (fun _ _ code => code = 9) raiseResultExceptionCode
+      (crepPcTwoWordGlobalsLookup 8)
+      (.raised (fun _ => none) (fun _ => none) (fun _ => none) "E"
+        (.rStruct [.word 3, .word 4]))
+      (.raised
+        { raiseState with globals :=
+            (updateMemory (updateMemory raiseState.globals 0 3) 8 4) }
+        9) := by
+  have hstate : panValueCrepStateRel [] raiseContext
+      (fun _ => none) (fun _ => none) (fun _ => none) raiseState := by
+    refine ⟨rfl, panValueCrepLocalsRel_empty [] raiseContext _, rfl⟩
+  apply panValuePcRaisedTwoWordResultRel_of_semantic_lift
+    (α := Nat) (context := raiseContext) (structs := [])
+    (sourceFunctions := []) (functions := [])
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (state := raiseState)
+    (primitive := fun _ _ => none)
+    (sourceHandler := fun _ _ _ _ _ _ => none)
+    (crepPrimitive := fun _ _ => none)
+    (ffi := fun _ _ _ _ _ _ => none)
+    (sharedMem := fun _ _ _ _ => none)
+    (baseAddress := 0) (topAddress := 0) (bytesInWord := 8)
+    (fieldLeft := .const 3) (fieldRight := .const 4)
+    (left := 3) (right := 4) (exception := "E") (exceptionCode := 9)
+    (exceptionRel := fun _ _ code => code = 9)
+    (resultExceptionCode := raiseResultExceptionCode)
+    (compiledLeft := .const 3) (compiledRight := .const 4)
+    (hlookup := by simp [raiseContext, lookupInfo])
+    (hcode := by simp [raiseResultExceptionCode])
+    (hbytesInWord := rfl) (hdistinct := by decide) (hrel := hstate)
+    (hsource := by
+      simp [SourceWordExp.toExp, evalPanValueExp,
+        evalPanValueExp.evalPanValueExps])
+    (hcompile := by
+      simp [SourceWordExp.toExp, compileExp, compileExp.compileExpList])
+    (hcompiledLeft := by
+      simp [evalCrepFullExpState, raiseState])
+    (hcompiledRight := by
+      intro value
+      simp [evalCrepFullExpState, raiseState])
+    (hexception := by simp)
+
 theorem closed_three_word_raise_pc_global_spill :
     panValuePcExceptionResultRel [] raiseContext
       (fun _ _ code => code = 9) raiseResultExceptionCode

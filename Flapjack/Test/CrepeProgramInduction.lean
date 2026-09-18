@@ -21,4 +21,11 @@ example : PanValueCrepProgramStateCorrect compactExample := by
   exact panValueCrepProgramStateCorrect_statefulCompact compactExample
     (.seq (.returnConst 7) (.seq .tick (.annot "regression" "stateful")))
 
+/-! The composed return theorem is exercised independently of the inductive
+fragment, with a continuation that would change control if it were run. -/
+example : PanValueCrepProgramStateCorrect
+    (.seq (.return (.const (11 : Nat))) (.tick : Prog Nat)) := by
+  exact panValueCrepProgramStateCorrect_seq_return_const 11 .tick
+    panValueCrepProgramStateCorrect_tick
+
 end Flapjack.Test.CrepeProgramInduction

@@ -26,7 +26,7 @@ jobs:
       - name: Check guest.pp.pnk exact Pancake RISC-V parity
         run: |
           curl --fail --location --retry 3 --retry-delay 2 \
-            https://raw.githubusercontent.com/pirapira/stateless-pancaketh/84405317d6705de9df56362ce4334ff7573b444703/Guest/guest.pp.pnk \
+            https://raw.githubusercontent.com/pirapira/stateless-pancaketh/84405317d6705de9df563ad2f6cdd30b459198b4/Guest/guest.pp.pnk \
             --output "$RUNNER_TEMP/guest.pp.pnk"
           python3 scripts/check-guest-parity.py "$RUNNER_TEMP/guest.pp.pnk"
 

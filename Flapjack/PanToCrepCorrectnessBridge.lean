@@ -1102,6 +1102,44 @@ theorem panValuePcRaisedHraiseData_to_exception_result_rel
       sourceValue targetState targetException hcontrol)
   simpa [panValuePcResultRel] using hresult
 
+theorem panValuePcRaisedHraiseData_to_exception_result_rel_with_context_code
+    [BEq α] [LawfulBEq α]
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (hraiseData : ∀ (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (sourceValue : PanValue α) (targetState : CrepState α)
+      (targetException : α),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      panValuePcRaisedHraiseData exceptionCode globalsLookup structs context
+        exceptionRel sourceLocals sourceGlobals sourceMemory sourceException
+        sourceValue targetState targetException)
+    (hlookupCode : ∀ (sourceException : ExceptionId) (targetException : α),
+      lookupInfo sourceException context.exceptions = some targetException) :
+    ∀ (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (sourceValue : PanValue α) (targetState : CrepState α)
+      (targetException : α),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      panValueCrepStateRel structs context sourceLocals sourceGlobals
+        sourceMemory targetState ∧
+      panValuePcExceptionResultRelWithContextCode structs context exceptionRel
+        exceptionCode globalsLookup sourceGlobals sourceMemory sourceException
+        sourceValue targetState targetException := by
+  intro sourceLocals sourceGlobals sourceMemory sourceException sourceValue
+    targetState targetException hcontrol
+  have hresult := panValuePcRaisedHraiseData_to_exception_result_rel
+    structs context exceptionRel exceptionCode globalsLookup hraiseData
+    sourceLocals sourceGlobals sourceMemory sourceException sourceValue
+    targetState targetException hcontrol
+  exact ⟨hresult.1, hresult.2, hlookupCode sourceException targetException⟩
+
 def crepPcFlatGlobalsLookup [OfNat α 0] [Add α]
     (bytesInWord : α) (state : CrepState α) (value : PanValue α) :
     Option (List α) :=
@@ -2417,6 +2455,82 @@ theorem panValuePcResultRel_of_control
       | normal _ | returned _ _ | raised _ _ | broke _ _ | finalFfi _ _ =>
           simp [panValueCrepControlRel] at hcontrol
 
+theorem panValuePcResultRelWithContextCode_of_control
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (hraise : ∀ (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (sourceValue : PanValue α) (targetState : CrepState α)
+      (targetException : α),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      panValueCrepStateRel structs context sourceLocals sourceGlobals
+        sourceMemory targetState ∧
+      panValuePcExceptionResultRelWithContextCode structs context exceptionRel
+        exceptionCode globalsLookup sourceGlobals sourceMemory sourceException
+        sourceValue targetState targetException)
+    (sourceResult : PanValueControlResult α)
+    (crepResult : CrepControlResult α)
+    (targetResult : CrepPcResult α)
+    (hcontrol : panValueCrepControlRel structs context exceptionRel
+      sourceResult crepResult)
+    (hsafe : panValuePcControlLabelSafe sourceResult crepResult)
+    (hresult : crepPcResultOfControl crepResult = some targetResult) :
+    panValuePcResultRelWithContextCode structs context exceptionRel
+      exceptionCode globalsLookup
+      (panValuePcResultOfControl sourceResult) targetResult := by
+  cases sourceResult with
+  | normal sourceLocals sourceGlobals sourceMemory =>
+      cases crepResult with
+      | normal targetState =>
+          cases hresult
+          simpa [panValuePcResultOfControl, panValuePcResultRelWithContextCode,
+            panValuePcResultRel, panValueCrepControlRel] using hcontrol
+      | returned _ _ | raised _ _ | broke _ _ | continued _ _ | finalFfi _ _ =>
+          simp [panValueCrepControlRel] at hcontrol
+  | returned sourceLocals sourceGlobals sourceMemory sourceValues =>
+      cases crepResult with
+      | returned targetState targetValues =>
+          cases hresult
+          simpa [panValuePcResultOfControl, panValuePcResultRelWithContextCode,
+            panValuePcResultRel, panValueCrepControlRel] using hcontrol
+      | normal _ | raised _ _ | broke _ _ | continued _ _ | finalFfi _ _ =>
+          simp [panValueCrepControlRel] at hcontrol
+  | raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue =>
+      cases crepResult with
+      | raised targetState targetException =>
+          cases hresult
+          simpa [panValuePcResultOfControl, panValuePcResultRelWithContextCode] using
+            (hraise sourceLocals sourceGlobals sourceMemory sourceException
+              sourceValue targetState targetException hcontrol)
+      | normal _ | returned _ _ | broke _ _ | continued _ _ | finalFfi _ _ =>
+          simp [panValueCrepControlRel] at hcontrol
+  | broke sourceLocals sourceGlobals sourceMemory =>
+      cases crepResult with
+      | broke targetState targetLabel =>
+          cases hresult
+          have hlabel : targetLabel = 0 := by
+            simpa [panValuePcControlLabelSafe] using hsafe
+          subst targetLabel
+          simpa [panValuePcResultOfControl, panValuePcResultRelWithContextCode,
+            panValuePcResultRel, panValueCrepControlRel] using hcontrol
+      | normal _ | returned _ _ | raised _ _ | continued _ _ | finalFfi _ _ =>
+          simp [panValueCrepControlRel] at hcontrol
+  | continued sourceLocals sourceGlobals sourceMemory =>
+      cases crepResult with
+      | continued targetState targetLabel =>
+          cases hresult
+          have hlabel : targetLabel = 0 := by
+            simpa [panValuePcControlLabelSafe] using hsafe
+          subst targetLabel
+          simpa [panValuePcResultOfControl, panValuePcResultRelWithContextCode,
+            panValuePcResultRel, panValueCrepControlRel] using hcontrol
+      | normal _ | returned _ _ | raised _ _ | broke _ _ | finalFfi _ _ =>
+          simp [panValueCrepControlRel] at hcontrol
+
 /-! A kernel-checked composition theorem for the stateful source-to-Crep
 proof.  `hsourceAdapter` and `htargetAdapter` identify the rich evaluator's
 successful result with the existing stateful evaluators.  Ordinary
@@ -2510,6 +2624,124 @@ theorem panValuePcCompileCorrect_of_stateful_program
     (hraiseData context structs exceptionRel)
   have hresult := panValuePcResultRel_of_control structs context exceptionRel
     exceptionCode globalsLookup hraise
+    sourceResult crepResult targetExecution.result hcontrol hsafe hcrepShape
+  simpa [hsourceShape] using hresult
+
+theorem panValuePcCompileCorrectWithContextCode_of_stateful_program
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (program : Prog α)
+    (sourceEvaluate : PanValuePcEvaluator α)
+    (targetEvaluate : CrepPcEvaluator α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α)
+    (sourceFuel targetFuel : Nat)
+    (hprogram : PanValueCrepProgramStateCorrect program)
+    (hprogramSafe : PanValueCrepProgramStateControlSafe program)
+    (hsourceAdapter : ∀ (context : CompileContext α)
+      (structs : StructContext) (sourceInput : PanValuePcInput α)
+      (_targetInput : CrepPcInput α)
+      (sourceExecution : PanValuePcExecution α),
+      sourceInput.structs = structs →
+      sourceEvaluate context sourceInput program = some sourceExecution →
+      ∃ sourceResult,
+        evalPanValueProgWithPrimitiveCallsAndFfi
+          primitive sourceHandler structs sourceFunctions
+          baseAddress topAddress bytesInWord sourceFuel
+          sourceInput.locals sourceInput.globals sourceInput.memory program =
+            some sourceResult ∧
+        sourceExecution.result = panValuePcResultOfControl sourceResult)
+    (htargetAdapter : ∀ (context : CompileContext α)
+      (structs : StructContext) (_sourceInput : PanValuePcInput α)
+      (targetInput : CrepPcInput α) (targetExecution : CrepPcExecution α),
+      targetInput.structs = structs →
+      targetEvaluate context targetInput (compileProg context program) =
+        some targetExecution →
+      ∃ crepResult,
+        evalCrepFullProgState functions crepPrimitive ffi sharedMem
+          baseAddress topAddress targetFuel targetInput.state
+          (compileProg context program) = some crepResult ∧
+        crepPcResultOfControl crepResult = some targetExecution.result)
+    (hraiseData : ∀ (context : CompileContext α) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (sourceValue : PanValue α) (targetState : CrepState α)
+      (targetException : α),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      panValuePcRaisedHraiseData exceptionCode globalsLookup structs context
+        exceptionRel sourceLocals sourceGlobals sourceMemory sourceException
+        sourceValue targetState targetException)
+    (hlookupCode : ∀ (context : CompileContext α) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (sourceValue : PanValue α) (targetState : CrepState α)
+      (targetException : α),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      lookupInfo sourceException context.exceptions = some targetException) :
+    PanValuePcCompileCorrectWithContextCode sourceEvaluate targetEvaluate
+      codeRel excpRel exceptionCode globalsLookup program := by
+  intro context structs sourceInput targetInput exceptionRel sourceExecution
+    targetExecution hsourceStructs htargetStructs hlocalisedCode
+    hlocalised hcode hexcp hstate hnonerror hsource htarget hpostCode hpostExcp
+  obtain ⟨sourceResult, hsourceResult, hsourceShape⟩ :=
+    hsourceAdapter context structs sourceInput targetInput sourceExecution
+      hsourceStructs hsource
+  obtain ⟨crepResult, hcrepResult, hcrepShape⟩ :=
+    htargetAdapter context structs sourceInput targetInput targetExecution
+      htargetStructs htarget
+  have hcontrol := hprogram context structs sourceFunctions functions
+    sourceInput.locals sourceInput.globals sourceInput.memory targetInput.state
+    primitive sourceHandler crepPrimitive ffi sharedMem baseAddress topAddress
+    bytesInWord sourceFuel targetFuel exceptionRel sourceResult crepResult
+    hstate hsourceResult hcrepResult
+  have hsafe := hprogramSafe context structs sourceFunctions functions
+    sourceInput.locals sourceInput.globals sourceInput.memory targetInput.state
+    primitive sourceHandler crepPrimitive ffi sharedMem baseAddress topAddress
+    bytesInWord sourceFuel targetFuel exceptionRel sourceResult crepResult
+    hstate hsourceResult hcrepResult
+  have hraise : ∀ (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (sourceValue : PanValue α) (targetState : CrepState α)
+      (targetException : α),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      panValueCrepStateRel structs context sourceLocals sourceGlobals
+        sourceMemory targetState ∧
+      panValuePcExceptionResultRelWithContextCode structs context exceptionRel
+        exceptionCode globalsLookup sourceGlobals sourceMemory sourceException
+        sourceValue targetState targetException := by
+    intro sourceLocals sourceGlobals sourceMemory sourceException sourceValue
+      targetState targetException hraised
+    have hdata := hraiseData context structs exceptionRel sourceLocals sourceGlobals
+      sourceMemory sourceException sourceValue targetState targetException hraised
+    have hresult := panValuePcExceptionResultRelWithContextCode_of_raised_hraise_data
+      structs context exceptionRel exceptionCode globalsLookup sourceLocals
+      sourceGlobals sourceMemory sourceException sourceValue targetState
+      targetException hdata
+      (hlookupCode context structs exceptionRel sourceLocals sourceGlobals
+        sourceMemory sourceException sourceValue targetState targetException hraised)
+    exact ⟨hdata.1, hresult⟩
+  have hresult := panValuePcResultRelWithContextCode_of_control structs context
+    exceptionRel exceptionCode globalsLookup hraise
     sourceResult crepResult targetExecution.result hcontrol hsafe hcrepShape
   simpa [hsourceShape] using hresult
 

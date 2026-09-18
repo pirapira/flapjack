@@ -14,6 +14,14 @@
       ]
     },
     {
+      "path": "Flapjack/Test/OriginalPancake/f00068_throwminimal3.pnk",
+      "source_reference": "Reduced f00068 allocator/coalescing witness: Cake's option_lookup maps the retained sub1 result through ABI register 0, preserving the final 0 := result move.",
+      "cake_sha256": "971f38ca9175e51cd95600ac32470fc251815710f185baefd625f5125744cfbe",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.16"
+      ]
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/empty_locals.pnk",
       "source_reference": "cakeml/pancake/semantics/crepSemScript.sml:71 (empty_locals_def)",
       "cake_sha256": "e661960e2ea04f6c804fa9487b600bb0289929ba6c76e0dd10f243263cfdd870",
@@ -461,6 +469,12 @@
       "path": "Flapjack/Test/OriginalPancake/wide_call_spilled_base.pnk",
       "source_reference": "Resolved flapjack-01k. Cake's StackArgs uses the caller's frame size f as the source displacement for stack_move; Flapjack now derives that same Cake frame size from abiFrameSlots at the WordToStack call boundary. The reduced spilled-base witness is byte-exact at 396 bytes, including the 112(x24) to 32(x24) pre-call copy.",
       "cake_sha256": "bcab84ac1a923c846aef8f3f40996dc885b6157fe4a7eeaacc5cd0a654b99090",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00226_mks_out_of_range_shift.pnk",
+      "source_reference": "Minimized campaign-seed-17 finding f00226: Cake retains the zero source constant and register subtraction produced by a struct-constructor argument, while Flapjack's Lab fusion incorrectly dropped the pair and shifted the following function base.",
+      "cake_sha256": "a3ad0d2832df373ec4418997cb6a4cb4ef8a7d295e348466dd22f64c093db4a8",
       "tracked_beads": []
     },
     {

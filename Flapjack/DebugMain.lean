@@ -17,6 +17,102 @@ open Flapjack Flapjack.RiscV
 def emit [Repr α] (label : String) (value : α) : IO Unit :=
   IO.println (label ++ "=" ++ repr value)
 
+/-! A compact view of the source-shaped linked Lab program.  The ordinary
+    pipeline dump renders complete StackProg bodies, which is useful for
+    pass-by-pass comparisons but too large for a relocation discrepancy in a
+    large guest.  This view keeps only line constructors, stored lengths, and
+    byte positions for one section. -/
+
+def labLineSummary : LabLine (RiscV.Word 64) → String
+  | .label _ label length => s!"label {label} length={length}"
+  | .asm operation _ length => s!"asm {repr operation} length={length}"
+  | .labAsm operation _ length => s!"labAsm {repr operation} length={length}"
+
+def dumpLabSectionLines (stage : String) (target low high : Nat)
+    (sectionData : LabSection (RiscV.Word 64)) : IO Unit := do
+  IO.println
+    (s!"lab-stage={stage} section={sectionData.name} lines={sectionData.lines.length} " ++
+      s!"stored-bytes={RiscV.labStoredSectionLength sectionData.lines}")
+  let rec loop (position index : Nat) : List (LabLine (RiscV.Word 64)) → IO Unit
+    | [] => pure ()
+    | line :: lines => do
+        let length := RiscV.labStoredLineLength line
+        let next := position + length
+        if position <= high && next >= low then
+          IO.println
+            (s!"lab-line section={target} index={index} position={position} " ++
+              labLineSummary line)
+        loop next (index + 1) lines
+  loop 1000 0 sectionData.lines
+
+def dumpLabSection (stage : String) (target low high : Nat)
+    (program : LabProgram (RiscV.Word 64)) : IO Unit :=
+  match program.find? (fun sectionData => sectionData.name == target) with
+  | some sectionData => dumpLabSectionLines stage target low high sectionData
+  | none => IO.println s!"lab-stage={stage} missing-section={target}"
+
+def sourceRuntimeLabProgram
+    (initialLabel : Nat)
+    (functions : List (Nat × List Nat × StackProg Nat)) :
+    LabProgram (RiscV.Word 64) :=
+  let removeConfig : StackRemoveConfig :=
+    { storeBase := 10
+      currHeap := 12
+      scratch := 31
+      addressScratch := 29
+      stackPointer := 24
+      bytesInWord := 8
+      stackBase := 25
+      wordShift := 3 }
+  let removeConfig := RiscV.cakeStackRemoveConfig removeConfig
+  let programs :=
+    (stackRaiseStubLocation,
+        stackRaiseStub false removeConfig.addressScratch) ::
+      stackAllocCompileWithSimpleGcAndStoreConsts
+        { gcStubLocation := stackGcStubLocation, returnLabel := 0,
+          firstFreshLabel := stackFunctionFirstLabel }
+        {} stackStoreConstsStubLocation RiscV.CakeRegAlloc.cakeRiscVRegisterCount
+        (functions.map (fun (label, _, body) => (label, body)))
+  match stackProgramsWithLongDivRuntime removeConfig programs with
+  | none => []
+  | some programs =>
+      let programs := stackRawCallPrograms programs
+      (programs.map (fun (sectionId, program) =>
+        if sectionId = cakeLongDiv1Location || sectionId = cakeLongDivLocation then
+          labProgramToEntrySection sectionId 0 0
+            (stackMapRegisters riscvRegisterName
+              (stackRemoveComplete removeConfig program))
+        else
+          labProgramToEntrySection sectionId 0 initialLabel
+            (stackMapRegisters riscvRegisterName
+              (stackRemoveComplete removeConfig program)))).map labSectionNatToWord
+
+def dumpLinkedLab (pipeline : FlapjackPipelineResult (RiscV.Word 64))
+    (target low high : Nat) : IO Unit := do
+  let sourceLoop := pipelineLoopFunctionsSource .rv64i stackFunctionFirstLabel
+    pipeline.crepe
+  let sourceWord := panToWordCompileProg sourceLoop
+  match pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordChecked
+      (RiscV.wordStackInitialBitmaps false) sourceWord with
+  | .error error => emit "stage=lab_dump_error" error
+  | .ok (functions, _) =>
+      let program := sourceRuntimeLabProgram
+        (fullSsaInitialLabLabel functions) functions
+      let sourceProgram := program.filter (fun sectionData => sectionData.name >= 3)
+      let initial := RiscV.labInitialStoredProgram sourceProgram
+      let initialHaltPc := 1000 + RiscV.labStoredProgramLength initial
+      let encoded := RiscV.labEncodeStoredProgramStable 8 { services := [] }
+        1000 1000 initialHaltPc initial
+      let relabelled := RiscV.labUpdateStoredLabelLengths 1000 encoded
+      let haltPc := 1000 + RiscV.labStoredProgramLength relabelled
+      let labels := RiscV.labCollectPancakeRuntimeStoredLabels relabelled
+      let final := RiscV.labEncodeStoredProgram { services := [] } labels
+        1000 1000 haltPc relabelled
+      dumpLabSection "initial" target low high initial
+      dumpLabSection "encoded" target low high encoded
+      dumpLabSection "relabelled" target low high relabelled
+      dumpLabSection "final" target low high final
+
 def clashTreeSets : WordClashTree → List (List Nat)
   | .delta _ _ => []
   | .set names => [names]
@@ -222,12 +318,25 @@ def dumpSource (source : String) (target : Option Nat := none)
       | none, none => dumpPipeline pipeline
       return 0
 
+def dumpLabSource (source : String) (target : Nat) : IO UInt32 := do
+  match Parser.parseTopDecs (BitVec.ofInt 64) source with
+  | .error errors =>
+      emit "stage=parse_error" errors
+      return 1
+  | .ok declarations =>
+      let pipeline := compileFlapjackTarget .rv64i (BitVec.ofNat 64 8)
+        (fun value => BitVec.ofNat 64 value) declarations
+      dumpLinkedLab pipeline target 0 (Nat.succ 1000000000)
+      return 0
+
 def usage : String :=
   "Usage: lake exe flapjack-debug [SOURCE.pnk]\n" ++
   "       lake exe flapjack-debug --label LABEL [SOURCE.pnk]\n" ++
   "       lake exe flapjack-debug --function NAME [SOURCE.pnk]\n" ++
+  "       lake exe flapjack-debug --lab-label LABEL [SOURCE.pnk]\n" ++
   "Read Pancake source from SOURCE.pnk or stdin and print intermediate stages.\n" ++
-  "With --label or --function, render only the selected source Word function."
+  "With --label or --function, render only the selected source Word function.\n" ++
+  "With --lab-label, render compact linked-Lab lines for one section."
 
 def main (arguments : List String) : IO UInt32 := do
   match arguments with
@@ -257,6 +366,21 @@ def main (arguments : List String) : IO UInt32 := do
       dumpSource (← stdin.readToEnd) none (some name)
   | ["--function", name, path] =>
       dumpSource (← IO.FS.readFile path) none (some name)
+  | ["--lab-label", rawLabel] =>
+      match rawLabel.toNat? with
+      | none =>
+          IO.eprintln ("invalid numeric label: " ++ rawLabel)
+          return 2
+      | some label =>
+          let stdin ← IO.getStdin
+          dumpLabSource (← stdin.readToEnd) label
+  | ["--lab-label", rawLabel, path] =>
+      match rawLabel.toNat? with
+      | none =>
+          IO.eprintln ("invalid numeric label: " ++ rawLabel)
+          return 2
+      | some label =>
+          dumpLabSource (← IO.FS.readFile path) label
   | [path] =>
       dumpSource (← IO.FS.readFile path)
   | _ =>

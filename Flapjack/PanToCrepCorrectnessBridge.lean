@@ -2250,7 +2250,7 @@ theorem panValuePcCompileCorrect_of_stateful_program
     PanValuePcCompileCorrect sourceEvaluate targetEvaluate codeRel excpRel
       exceptionCode globalsLookup program := by
   intro context structs sourceInput targetInput exceptionRel sourceExecution
-    targetExecution hsourceStructs htargetStructs hdistinct hlocalisedCode
+    targetExecution hsourceStructs htargetStructs hlocalisedCode
     hlocalised hcode hexcp hstate hnonerror hsource htarget hpostCode hpostExcp
   obtain ⟨sourceResult, hsourceResult, hsourceShape⟩ :=
     hsourceAdapter context structs sourceInput targetInput sourceExecution

@@ -1342,7 +1342,9 @@ def compileLabProgramLinkedWithPancakeRuntime [NeZero width]
     initialHaltPc initial
   let relabelled := labUpdateStoredLabelLengths 1000 encoded
   let haltPc := 1000 + labStoredProgramLength relabelled
-  let final := labEncodeStoredProgramStable 8 context 1000 1000 haltPc relabelled
+  let relabelledLabels := labCollectPancakeRuntimeStoredLabels relabelled
+  let final := labEncodeStoredProgram context relabelledLabels 1000 1000
+    haltPc relabelled
   let labels := labCollectPancakeRuntimeStoredLabels final
   compileLabProgramLinkedWithStoredLengthsAux context labels 1000 1000 haltPc final
 

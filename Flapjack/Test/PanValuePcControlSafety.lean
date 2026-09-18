@@ -15,6 +15,30 @@ example : PanValueCrepProgramStateControlSafe (.break : Prog Nat) :=
 example : PanValueCrepProgramStateControlSafe (.continue : Prog Nat) :=
   panValueCrepProgramStateControlSafe_continue
 
+example :
+    PanValueCrepProgramStateControlSafe
+      (.seq (.break : Prog Nat) (.continue : Prog Nat)) := by
+  exact panValueCrepProgramStateControlSafe_seq
+    (.break : Prog Nat) (.continue : Prog Nat)
+    panValueCrepProgramStateCorrect_break
+    panValueCrepProgramStateControlSafe_break
+    panValueCrepProgramStateControlSafe_continue
+
+example (condition : SourceWordExp Nat) (thenBranch elseBranch : Prog Nat)
+    (hthenSafe : PanValueCrepProgramStateControlSafe thenBranch)
+    (helseSafe : PanValueCrepProgramStateControlSafe elseBranch)
+    (hbytesInWord : ∀ (context : CompileContext Nat) (bytesInWord : Nat),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext Nat)
+      (sourceLocals : VarName → Option (PanValue Nat))
+      (name : VarName) (value : PanValue Nat),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot])) :
+    PanValueCrepProgramStateControlSafe
+      (.ite condition.toExp thenBranch elseBranch) :=
+  panValueCrepProgramStateControlSafe_ite_source_word condition thenBranch
+    elseBranch hthenSafe helseSafe hbytesInWord hlookup
+
 /-! Nonzero labels remain rejected at the `pc_compile_correct` boundary. -/
 example :
     ¬ panValuePcResultRel [] controlContext (fun _ _ _ => True) (fun _ => some 0)

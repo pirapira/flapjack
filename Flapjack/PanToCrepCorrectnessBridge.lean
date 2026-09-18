@@ -1153,6 +1153,50 @@ theorem panValuePcRaisedHraiseData_of_flat_spill_state
   intro _
   simpa [hflat] using hstored
 
+theorem panValuePcRaisedHraiseData_of_flat_spill_state_retarget_globals
+    [BEq α] [LawfulBEq α] [OfNat α 0] [Add α]
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (sourceException : ExceptionId) (values : List α)
+    (state : CrepState α) (bytesInWord targetException : α)
+    (sourceValue : PanValue α)
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory state)
+    (hexception : exceptionRel sourceException sourceValue targetException)
+    (hcode : exceptionCode sourceException = some targetException)
+    (hflat : panValueFlatWords sourceValue = values)
+    (hdistinct : List.Pairwise (fun left right : α => left ≠ right)
+      (storeAddresses (0 : α) bytesInWord values.length))
+    (hsize : Shape.shapeSize (panValueShape structs sourceValue) ≤ 32)
+    (hlookup : crepPcFlatGlobalsLookup bytesInWord
+        { state with globals :=
+            updateMemoryListAt state.globals 0 bytesInWord values }
+        sourceValue = globalsLookup
+          { state with globals :=
+            updateMemoryListAt state.globals 0 bytesInWord values }
+          sourceValue) :
+    panValuePcRaisedHraiseData exceptionCode globalsLookup structs context
+      exceptionRel (fun _ => none) sourceGlobals sourceMemory sourceException
+      sourceValue
+      { state with globals :=
+          updateMemoryListAt state.globals 0 bytesInWord values }
+      targetException := by
+  have hcanonical := panValuePcRaisedHraiseData_of_flat_spill_state
+    structs context
+    exceptionRel exceptionCode sourceLocals sourceGlobals sourceMemory
+    sourceException values state bytesInWord targetException sourceValue hrel
+    hexception hcode hflat hdistinct hsize
+  rcases hcanonical with
+    ⟨hpost, spillAddress, hcontrol, hcode, hpayload, hsize⟩
+  refine ⟨hpost, spillAddress, hcontrol, hcode, ?_, hsize⟩
+  intro hnonempty
+  rw [← hlookup]
+  exact hpayload hnonempty
+
 /-! Turn the generic structured Raise evaluator theorem into the exact
     raised-result package consumed by `panValuePcCompileCorrect_compact`.
     The evaluator theorem supplies the raised control witness; this adapter

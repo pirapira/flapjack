@@ -681,6 +681,36 @@
       "tracked_beads": [
         "flapjack-8tb.4"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/decs_stcnames.pnk",
+      "source_reference": "Tracked Cake/Pancake declaration-name and source-AST audit fixture; exact output confirms declaration lowering remains unchanged by the Lab padding repair.",
+      "cake_sha256": "0988fae715209e66b753a42b1b7199b6297cc7389080bea6593d8cb2e8a019fa",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/evaluate_decls.pnk",
+      "source_reference": "Tracked Cake/Pancake declaration-evaluation audit fixture; exact output covers the AST declaration evaluation path independently of Lab padding.",
+      "cake_sha256": "9b71ab937453e4ded03220a808b551c60bb5ef189387ae0865ba12befccd40fb",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/lookup_code.pnk",
+      "source_reference": "Tracked Cake/Pancake code-lookup audit fixture; exact output covers code lookup and lowering without a distinct artifact discrepancy.",
+      "cake_sha256": "13977258b5aaec5b4939148e04251e81d8f6e7d17ce6fcec5877b5348ebb3287",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/semantics_decls.pnk",
+      "source_reference": "Tracked Cake/Pancake declaration-semantics audit fixture; exact output confirms the declaration semantics path against original Cake.",
+      "cake_sha256": "9b71ab937453e4ded03220a808b551c60bb5ef189387ae0865ba12befccd40fb",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/upd_locals.pnk",
+      "source_reference": "Tracked Cake/Pancake local-update audit fixture; exact output confirms local update lowering against original Cake.",
+      "cake_sha256": "13977258b5aaec5b4939148e04251e81d8f6e7d17ce6fcec5877b5348ebb3287",
+      "tracked_beads": []
     }
   ]
 }

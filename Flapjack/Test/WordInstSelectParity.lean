@@ -45,10 +45,23 @@ def cakeWideAddMaterializesConstant : Bool :=
       value == 2 ^ 60
   | _ => false
 
+def cakeSharedByteOffsetMaterializesConstant : Bool :=
+  match wordInstSelectProgram (α := Nat) 23
+      (.shareInst .store8 10
+        (.op .add [.var 12, .const 2684420096])) with
+  | .seq
+      (.seq
+        (.seq (.move 0 [(23, 12)]) (.inst (.const 24 value)))
+        (.inst (.arith (.binOp .add 23 23 (.reg 24)))))
+      (.shareInst .store8 10 (.var 23)) =>
+      value == 2684420096
+  | _ => false
+
 #guard cakeLoadConstShape
 #guard cakeLoadVarShape
 #guard cakeWideBinopStatementShape
 #guard cakeWideAddMaterializesConstant
+#guard cakeSharedByteOffsetMaterializesConstant
 
 #guard match cakeNonImmediateAnd with
   | .seq (.move 0 [(7, 2)])

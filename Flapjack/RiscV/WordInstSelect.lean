@@ -28,6 +28,7 @@ inductive WordShiftImmediate where
 
 class WordInstSelectImmediate (α : Type u) where
   validBinOpImmediate : BinOp → α → Bool
+  validSharedMemoryOffset : WordMemOp → α → Bool
   shiftImmediate : α → WordShiftImmediate
   negateImmediate : α → α
   /- The current allocator bridge has an established expression-shaped path
@@ -45,6 +46,11 @@ instance : WordInstSelectImmediate Nat where
     | .sub => value < 2 ^ 11
     | .add | .and | .or | .xor =>
         value < 2 ^ 11 || value ≥ 2 ^ 64 - 2 ^ 11
+  validSharedMemoryOffset operator value :=
+    let fits := value < 2 ^ 11 || value ≥ 2 ^ 64 - 2 ^ 11
+    match operator with
+    | .load16 | .store16 => fits && value % 2 = 0
+    | _ => fits
   shiftImmediate value :=
     if value < 64 then .valid value else .outOfRange
   negateImmediate value := (2 ^ 64 - value) % 2 ^ 64
@@ -57,6 +63,12 @@ instance : WordInstSelectImmediate (BitVec width) where
     | .sub => n < 2 ^ 11
     | .add | .and | .or | .xor =>
         n < 2 ^ 11 || n ≥ 2 ^ width - 2 ^ 11
+  validSharedMemoryOffset operator value :=
+    let n := value.toNat
+    let fits := n < 2 ^ 11 || n ≥ 2 ^ width - 2 ^ 11
+    match operator with
+    | .load16 | .store16 => fits && n % 2 = 0
+    | _ => fits
   shiftImmediate value :=
     if value.toNat < width then
       .valid value.toNat
@@ -372,6 +384,19 @@ def wordInstSelectAddressAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [O
       (prelude, .op .add [selectedLeft, .const value])
   | _ => wordInstSelectAtom temp expression
 
+def wordInstSelectSharedAddressAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α 1]
+    [WordInstSelectImmediate α]
+    (operator : WordMemOp) (temp : Nat) (expression : WordExp α) :
+    WordProg α × WordExp α :=
+  match expression with
+  | .op .add [left, .const value] =>
+      let (prelude, selectedLeft) := wordInstSelectAtom temp left
+      if WordInstSelectImmediate.validSharedMemoryOffset operator value then
+        (prelude, .op .add [selectedLeft, .const value])
+      else
+        wordInstSelectAtom temp expression
+  | _ => wordInstSelectAtom temp expression
+
 def wordInstSelectProgram [Sub α] [Add α] [AndOp α] [OrOp α] [HXor α α α]
     [DecidableEq α] [OfNat α 0] [OfNat α 1]
     [WordInstSelectImmediate α]
@@ -388,11 +413,7 @@ def wordInstSelectProgram [Sub α] [Add α] [AndOp α] [OrOp α] [HXor α α α]
          address-shaped path remains correct for ordinary loads/stores below,
          where Word-to-Stack can consume the displacement. -/
       let (prelude, address) :=
-        match operator with
-        | .load | .load8 | .load16 | .load32 =>
-            wordInstSelectAtom temp (wordInstNormalizeExp address)
-        | .store | .store8 | .store16 | .store32 =>
-            wordInstSelectAddressAtom temp (wordInstNormalizeExp address)
+        wordInstSelectSharedAddressAtom operator temp (wordInstNormalizeExp address)
       wordDeadSelectSeq prelude (.shareInst operator name address)
   | .set store value =>
       /- `inst_select c temp (Set store exp)` (`word_instScript.sml:386-388`)

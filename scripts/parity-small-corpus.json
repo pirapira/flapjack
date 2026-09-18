@@ -641,6 +641,14 @@
       "tracked_beads": [
         "flapjack-8tb.4"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/output_write.pnk",
+      "source_reference": "Reduced source-defined output_write witness for flapjack-8tb.4: Cake's ShareInst selector rejects the out-of-range byte offset 0xA0010000 and materializes the complete address through its generic selector before the shared store, preserving the allocator-visible temporary and exact RISC-V bytes.",
+      "cake_sha256": "6c1fce23950c75682847ed67c5a9aacecefcaf84f274e38492d4b404719904a9",
+      "tracked_beads": [
+        "flapjack-8tb.4"
+      ]
     }
   ]
 }

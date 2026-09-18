@@ -244,7 +244,14 @@ mutual
         | .control (.raised _ nextGlobals nextMemory nextFfi exception value) =>
             pure (.control (.raised (fun _ => none) nextGlobals nextMemory nextFfi
               exception value), nextClock)
-        | _ => none
+        | .timeout nextLocals nextGlobals nextMemory nextFfi =>
+            pure (.timeout nextLocals nextGlobals nextMemory nextFfi, nextClock)
+        | .control (.finalFfi nextLocals nextGlobals nextMemory nextFfi event) =>
+            pure (.control (.finalFfi nextLocals nextGlobals nextMemory nextFfi event),
+              nextClock)
+        | .control (.returned _ _ _ _ _) => none
+        | .control (.normal _ _ _ _) | .control (.broke _ _ _ _) |
+            .control (.continued _ _ _ _) => none
     | fuel + 1, locals, globals, memory, ffi, clock, .while conditionExp body,
         memoryAccess, contracts, memoryHandler => do
         let condition ← evalPanValueExp structs locals globals memory

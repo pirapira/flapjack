@@ -775,19 +775,20 @@ theorem panValuePcRaisedWordHraise
       some value)
     (hexception : exceptionRel exception (.word value) exceptionCode)
     (hfresh : state.locals (context.maxVar + 1) = none) :
-    panValueCrepStateRel structs context (fun _ => none) sourceGlobals
+    (panValueCrepStateRel structs context (fun _ => none) sourceGlobals
       sourceMemory { state with globals := updateMemory state.globals 0 value } ∧
-    (∃ spillAddress,
-      panValueCrepRaisedControlRel structs context exceptionRel sourceGlobals
-        sourceMemory exception (.word value)
-        { state with globals := updateMemory state.globals 0 value }
-        exceptionCode spillAddress ∧
-      resultExceptionCode exception = some exceptionCode ∧
-      (1 ≤ Shape.shapeSize (panValueShape structs (.word value)) →
-        crepPcWordGlobalsLookup
+      (∃ spillAddress,
+        panValueCrepRaisedControlRel structs context exceptionRel sourceGlobals
+          sourceMemory exception (.word value)
           { state with globals := updateMemory state.globals 0 value }
-          (.word value) = some (panValueFlatWords (.word value))) ∧
-      Shape.shapeSize (panValueShape structs (.word value)) ≤ 32) := by
+          exceptionCode spillAddress ∧
+        resultExceptionCode exception = some exceptionCode ∧
+        (1 ≤ Shape.shapeSize (panValueShape structs (.word value)) →
+          crepPcWordGlobalsLookup
+            { state with globals := updateMemory state.globals 0 value }
+            (.word value) = some (panValueFlatWords (.word value))) ∧
+        Shape.shapeSize (panValueShape structs (.word value)) ≤ 32)) ∧
+    lookupInfo exception context.exceptions = some exceptionCode := by
   have hresult := panValuePcRaisedWordSemanticLift
     context structs sourceFunctions functions sourceLocals sourceGlobals
     sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
@@ -796,7 +797,9 @@ theorem panValuePcRaisedWordHraise
     hlookup hcode hbytesInWord hrel hsource hcompile hcompiled hexception hfresh
   rcases hresult.2.2 with
     ⟨hpost, spillAddress, code, hresultCode, htargetCode, hcontrol, hpayload⟩
-  refine ⟨hpost, spillAddress, hcontrol, ?_, ?_, ?_⟩
+  refine ⟨?_, hlookup⟩
+  refine ⟨hpost, ?_⟩
+  refine ⟨spillAddress, hcontrol, ?_, ?_, ?_⟩
   · simpa [htargetCode] using hresultCode
   · intro hnonempty
     exact (hpayload hnonempty).1
@@ -851,7 +854,8 @@ theorem panValuePcRaisedWordResultRel_retarget_globals
     baseAddress topAddress bytesInWord sourceFuel targetFuel exception
     exceptionCode value expression compiled exceptionRel resultExceptionCode
     hlookup hcode hbytesInWord hrel hsource hcompile hcompiled hexception hfresh
-  rcases hword with
+  have hwordData := hword.1
+  rcases hwordData with
     ⟨hpost, spillAddress, hcontrol, hcode', hpayload, hsize⟩
   refine ⟨hpost, ?_⟩
   refine ⟨spillAddress, exceptionCode, hcode', rfl, hcontrol, ?_⟩

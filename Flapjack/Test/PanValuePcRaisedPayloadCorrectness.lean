@@ -48,7 +48,7 @@ theorem pc_break_zero_label_preserves_state :
     post-state relation, exception-code lookup, and the flattened global
     payload observation rather than treating the raised branch as opaque. -/
 theorem closed_word_raise_pc_hraise :
-    panValueCrepStateRel [] raiseContext (fun _ => none) (fun _ => none)
+    (panValueCrepStateRel [] raiseContext (fun _ => none) (fun _ => none)
         (fun _ => none) raiseState ∧
       (∃ spillAddress,
         panValueCrepRaisedControlRel [] raiseContext
@@ -61,7 +61,8 @@ theorem closed_word_raise_pc_hraise :
           crepPcWordGlobalsLookup
             { raiseState with globals := updateMemory raiseState.globals 0 3 }
             (.word 3) = some (panValueFlatWords (.word 3))) ∧
-        Shape.shapeSize (panValueShape [] (.word 3)) ≤ 32) := by
+        Shape.shapeSize (panValueShape [] (.word 3)) ≤ 32)) ∧
+      lookupInfo "E" raiseContext.exceptions = some 9 := by
   have hstate : panValueCrepStateRel [] raiseContext
       (fun _ => none) (fun _ => none) (fun _ => none) raiseState := by
     refine ⟨rfl, panValueCrepLocalsRel_empty [] raiseContext _, rfl⟩
@@ -111,7 +112,7 @@ theorem closed_word_raise_pc_hraise_flat_globals :
       { raiseState with globals := updateMemory raiseState.globals 0 3 })
     (targetException := 9)
   · simp [crepPcFlatGlobalsLookup, panValueFlatWords, panValueFlatWordsFuel]
-  · exact closed_word_raise_pc_hraise
+  · exact closed_word_raise_pc_hraise.1
 
 theorem closed_word_raise_pc_result_rel_flat_globals :
     panValuePcResultRel [] raiseContext

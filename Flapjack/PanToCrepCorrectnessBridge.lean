@@ -1953,6 +1953,34 @@ theorem panValuePcRaisedRawWordListSemanticLift_retarget_globals
     exceptionCode context.bytesInWord hlookupGlobals hraiseData
   exact ⟨hsemantic.1, hsemantic.2.1, hresult⟩
 
+theorem panValuePcResultRelWithContextCode_of_raised_result_rel
+    [BEq α] [LawfulBEq α]
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+    (sourceValue : PanValue α) (targetState : CrepState α)
+    (targetException : α)
+    (hresult : panValuePcResultRel structs context exceptionRel exceptionCode
+      globalsLookup
+      (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+      (.raised targetState targetException))
+    (hlookupCode : lookupInfo sourceException context.exceptions =
+      some targetException) :
+    panValuePcResultRelWithContextCode structs context exceptionRel exceptionCode
+      globalsLookup
+      (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+      (.raised targetState targetException) := by
+  simpa [panValuePcResultRelWithContextCode] using
+    (show panValueCrepStateRel structs context sourceLocals sourceGlobals
+        sourceMemory targetState ∧
+      panValuePcExceptionResultRelWithContextCode structs context exceptionRel
+        exceptionCode globalsLookup sourceGlobals sourceMemory sourceException
+        sourceValue targetState targetException from
+      ⟨hresult.1, hresult.2, hlookupCode⟩)
+
 /-! Direct result-boundary form of the raw word-list evidence.  This is the
     evaluator-backed lift used by compact `pc_compile_correct` callers that
     need both the flattened global observation and Cake's exception lookup. -/

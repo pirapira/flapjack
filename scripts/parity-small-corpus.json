@@ -452,6 +452,14 @@
       "tracked_beads": []
     },
     {
+      "path": "Flapjack/Test/OriginalPancake/op_dispatch_relocation_boundary.pnk",
+      "source_reference": "Reduced op_dispatch relocation-boundary witness: Cake records a nonzero label after its stored label slot during enc_lines_again, retaining the long branch slot and its residual NOP after relocation.",
+      "cake_sha256": "8dea735b972f682e68952b73180c680b6f7d0581f34582e57ad99edbdf50e7d6",
+      "tracked_beads": [
+        "flapjack-8tb.5.5"
+      ]
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/op_dispatch_label_stability.pnk",
       "source_reference": "Reduced op_dispatch linked-label witness: Cake's post-target-lowering label iteration keeps the 28-function dispatch image byte-exact; the stable linked-label resolver is covered here while the larger op_dispatch-many residual remains owned by flapjack-8tb.5.",
       "cake_sha256": "16336bc04b981030ccc17cff51dbd9628c556e2406e2eccb81a38c226b1f961a",

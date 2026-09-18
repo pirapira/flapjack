@@ -1137,7 +1137,7 @@ def labCollectStoredSectionLabels [NeZero width] (sectionId base : Nat) :
     List (LabLine (Word width)) → List (Nat × Nat × Nat)
   | [] => []
   | .label _ label length :: lines =>
-      (sectionId, label, base) ::
+      (sectionId, label, base + length) ::
         labCollectStoredSectionLabels sectionId (base + length) lines
   | line :: lines =>
       labCollectStoredSectionLabels sectionId

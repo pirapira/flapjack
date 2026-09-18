@@ -872,6 +872,30 @@ def panValuePcRaisedHraiseData
         some (panValueFlatWords sourceValue)) ∧
     Shape.shapeSize (panValueShape structs sourceValue) ≤ 32)
 
+theorem panValuePcResultRel_of_raised_hraise_data
+    [BEq α] [LawfulBEq α]
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+    (sourceValue : PanValue α) (targetState : CrepState α)
+    (targetException : α)
+    (hraiseData : panValuePcRaisedHraiseData exceptionCode globalsLookup
+      structs context exceptionRel sourceLocals sourceGlobals sourceMemory
+      sourceException sourceValue targetState targetException) :
+    panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
+      (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+      (.raised targetState targetException) := by
+  rcases hraiseData with
+    ⟨hpost, spillAddress, hcontrol, hcode, hlookup, hsize⟩
+  refine ⟨hpost, ?_⟩
+  exact panValuePcExceptionResultRel_of_raised_control structs context
+    exceptionRel exceptionCode globalsLookup sourceGlobals sourceMemory
+    sourceException sourceValue targetState targetException spillAddress
+    hcontrol hcode hlookup hsize
+
 def crepPcFlatGlobalsLookup [OfNat α 0] [Add α]
     (bytesInWord : α) (state : CrepState α) (value : PanValue α) :
     Option (List α) :=

@@ -695,6 +695,14 @@
       "tracked_beads": []
     },
     {
+      "path": "Flapjack/Test/OriginalPancake/ffi_constant_false.pnk",
+      "source_reference": "Reduced Cake/Flapjack FFI witness: const_fp removes @foo from the unreachable 3 < 1 branch before service/stub discovery.",
+      "cake_sha256": "0988fae715209e66b753a42b1b7199b6297cc7389080bea6593d8cb2e8a019fa",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.2"
+      ]
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/evaluate_decls.pnk",
       "source_reference": "Tracked Cake/Pancake declaration-evaluation audit fixture; exact output covers the AST declaration evaluation path independently of Lab padding.",
       "cake_sha256": "9b71ab937453e4ded03220a808b551c60bb5ef189387ae0865ba12befccd40fb",

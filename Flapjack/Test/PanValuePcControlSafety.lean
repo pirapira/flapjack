@@ -68,6 +68,23 @@ example (condition : SourceWordExp Nat) (body : Prog Nat)
       (.while condition.toExp body) :=
   panValueCrepProgramStateControlSafe_while_of_loop_safe condition body hloopSafe
 
+example (condition : SourceWordExp Nat) (body : Prog Nat)
+    (hbody : PanValueCrepProgramStateCorrect body)
+    (hbodySafe : PanValueCrepProgramLoopStateControlSafe body)
+    (hloopSafe : PanValueCrepProgramLoopStateControlSafe
+      (.while condition.toExp body))
+    (hbytesInWord : ∀ (context : CompileContext Nat) (bytesInWord : Nat),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext Nat)
+      (sourceLocals : VarName → Option (PanValue Nat))
+      (name : VarName) (value : PanValue Nat),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot])) :
+    PanValueCrepProgramStateCorrect (.while condition.toExp body) ∧
+      PanValueCrepProgramStateControlSafe (.while condition.toExp body) := by
+  exact panValueCrepProgramStateCorrect_and_controlSafe_while_source_word
+    condition body hbody hbodySafe hloopSafe hbytesInWord hlookup
+
 /-! Nonzero labels remain rejected at the `pc_compile_correct` boundary. -/
 example :
     ¬ panValuePcResultRel [] controlContext (fun _ _ _ => True) (fun _ => some 0)

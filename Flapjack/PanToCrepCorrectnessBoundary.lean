@@ -54,6 +54,20 @@ inductive CrepPcResult (α : Type u) where
   | timeout (state : CrepState α)
   | finalFfi (state : CrepState α) (event : FfiFinalEvent)
 
+def crepPcTopLevelControlSafe : CrepControlResult α → Prop
+  | .broke _ label => label = 0
+  | .continued _ label => label = 0
+  | _ => True
+
+def panValuePcControlSafety (α : Type u) : Prop :=
+  ∀ (context : CompileContext α) (structs : StructContext)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (sourceResult : PanValueControlResult α)
+    (crepResult : CrepControlResult α),
+    panValueCrepControlRel structs context exceptionRel
+      sourceResult crepResult →
+    crepPcTopLevelControlSafe crepResult
+
 abbrev PanValuePcSourceCode α :=
   List (FunName × List VarName × Prog α)
 
@@ -119,10 +133,10 @@ def panValuePcResultRel
       panValuePcExceptionResultRel structs context exceptionRel exceptionCode
         globalsLookup sourceGlobals sourceMemory sourceException sourceValue
         targetState targetException
-  | .broke sourceLocals sourceGlobals sourceMemory, .broke targetState _ =>
+  | .broke sourceLocals sourceGlobals sourceMemory, .broke targetState 0 =>
       panValueCrepStateRel structs context sourceLocals sourceGlobals
         sourceMemory targetState
-  | .continued sourceLocals sourceGlobals sourceMemory, .continued targetState _ =>
+  | .continued sourceLocals sourceGlobals sourceMemory, .continued targetState 0 =>
       panValueCrepStateRel structs context sourceLocals sourceGlobals
         sourceMemory targetState
   | .timeout sourceLocals sourceGlobals sourceMemory, .timeout targetState =>

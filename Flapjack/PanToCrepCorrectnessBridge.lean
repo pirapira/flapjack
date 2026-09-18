@@ -5972,22 +5972,23 @@ theorem panValuePcRaisedHraiseData_of_flat_spill_evidence_with_context_code
       lookupInfo sourceException context.exceptions = some targetException := by
   intro context structs exceptionRel sourceLocals sourceGlobals sourceMemory
     sourceException sourceValue targetState targetException hcontrol
-  have hraiseData := panValuePcRaisedHraiseData_of_flat_spill_evidence
-    exceptionCode globalsLookup bytesInWord hlookup (by
-      intro context structs exceptionRel sourceLocals sourceGlobals sourceMemory
-        sourceException sourceValue targetState targetException hcontrol
-      rcases hevidence context structs exceptionRel sourceLocals sourceGlobals
-        sourceMemory sourceException sourceValue targetState targetException hcontrol with
-        ⟨values, state, htarget, hbytesInWord, hrel, hexception, hcode,
-          _hlookupCode, hflat, hdistinct, hsize⟩
-      exact ⟨values, state, htarget, hbytesInWord, hrel, hexception, hcode,
-        hflat, hdistinct, hsize⟩)
   rcases hevidence context structs exceptionRel sourceLocals sourceGlobals
     sourceMemory sourceException sourceValue targetState targetException hcontrol with
-    ⟨_, _, _, _, _, _, _, hlookupCode, _, _, _⟩
-  exact ⟨hraiseData context structs exceptionRel sourceLocals sourceGlobals
-    sourceMemory sourceException sourceValue targetState targetException hcontrol,
-    hlookupCode⟩
+    ⟨values, state, htarget, hbytesInWord, hrel, hexception, hcode,
+      hlookupCode, hflat, hdistinct, hsize⟩
+  subst targetState
+  have hcanonical :=
+    panValuePcRaisedHraiseData_of_flat_spill_state_with_source_locals
+      structs context exceptionRel exceptionCode sourceLocals sourceGlobals
+      sourceMemory sourceException values state context.bytesInWord targetException
+      sourceValue hrel hexception hcode hflat hdistinct hsize
+  have hretargeted := panValuePcRaisedHraiseData_retarget_globals_lookup
+    context.bytesInWord exceptionCode globalsLookup structs context exceptionRel
+    sourceLocals sourceGlobals sourceMemory sourceException sourceValue
+    { state with globals :=
+        updateMemoryListAt state.globals 0 context.bytesInWord values }
+    targetException (by simpa [hbytesInWord] using (hlookup _ _)) hcanonical
+  exact ⟨hretargeted, hlookupCode⟩
 
 /-! Ordinary compact `pc_compile_correct` entrypoint for direct flat-spill
     evidence.  The target HOL global lookup is retargeted only through the

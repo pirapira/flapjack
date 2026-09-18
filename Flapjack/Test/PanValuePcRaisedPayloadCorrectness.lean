@@ -362,4 +362,31 @@ theorem closed_three_word_raise_pc_global_spill :
   · decide
   · decide
 
+theorem closed_word_raise_hraise_retargeted_via_flat_spill :
+    panValuePcRaisedHraiseData raiseResultExceptionCode
+      raiseWordGlobalsLookup [] raiseContext
+      (fun _ _ code => code = 9) (fun _ => none) (fun _ => none)
+      (fun _ => none) "E" (.word 3)
+      { raiseState with globals := updateMemory raiseState.globals 0 3 }
+      9 := by
+  apply panValuePcRaisedHraiseData_of_flat_spill_state_retarget_globals
+    (structs := []) (context := raiseContext)
+    (exceptionRel := fun _ _ code => code = 9)
+    (exceptionCode := raiseResultExceptionCode)
+    (globalsLookup := raiseWordGlobalsLookup)
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (sourceException := "E")
+    (values := [3]) (state := raiseState) (bytesInWord := 8)
+    (targetException := 9) (sourceValue := .word 3)
+  · refine ⟨rfl, panValueCrepLocalsRel_empty [] raiseContext _, rfl⟩
+  · simp
+  · simp [raiseResultExceptionCode]
+  · rfl
+  · decide
+  · simp [panValueShape]
+  · have hstored := crepPcFlatGlobalsLookup_of_stored_flat_words
+      (α := Nat) 8 raiseState (.word 3) (by decide)
+    simpa [raiseWordGlobalsLookup, panValueFlatWords,
+      panValueFlatWordsFuel, panValueFlatValueFuel] using hstored
+
 end Flapjack.Test.PanValuePcRaisedPayloadCorrectness

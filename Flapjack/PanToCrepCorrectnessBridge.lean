@@ -508,12 +508,12 @@ theorem panValuePcExceptionResultRel_of_raised_three_word_global_spill
     (structs : StructContext) (context : CompileContext α)
     (exceptionRel : ExceptionId → PanValue α → α → Prop)
     (exceptionCode : ExceptionId → Option α)
-    (sourceGlobals : VarName → Option (PanValue α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
     (sourceMemory : α → Option (PanValue α))
     (sourceException : ExceptionId) (bytesInWord first second third : α)
     (state : CrepState α) (targetException : α)
     (hstate : panValueCrepStateRel structs context
-      (fun _ => none) sourceGlobals sourceMemory state)
+      sourceLocals sourceGlobals sourceMemory state)
     (hexception : exceptionRel sourceException
       (.rStruct [.word first, .word second, .word third]) targetException)
     (hcode : exceptionCode sourceException = some targetException)
@@ -522,7 +522,7 @@ theorem panValuePcExceptionResultRel_of_raised_three_word_global_spill
     (hdistinct12 : (0 : α) + bytesInWord ≠
       (0 + bytesInWord) + bytesInWord) :
     panValuePcExceptionResultRel structs context exceptionRel exceptionCode
-      (crepPcThreeWordGlobalsLookup bytesInWord) (fun _ => none) sourceMemory
+      (crepPcThreeWordGlobalsLookup bytesInWord) sourceGlobals sourceMemory
       sourceException (.rStruct [.word first, .word second, .word third])
       { state with globals :=
           (updateMemoryListAt state.globals 0 bytesInWord
@@ -546,10 +546,9 @@ theorem panValuePcExceptionResultRel_of_raised_three_word_global_spill
           (updateMemoryListAt state.globals 0 bytesInWord
             [first, second, third]) }
       targetException 0 := ⟨hraisedState, hexception⟩
-  rw [hstate.1] at hcontrol
   apply panValuePcExceptionResultRel_of_raised_control structs context
     exceptionRel exceptionCode (crepPcThreeWordGlobalsLookup bytesInWord)
-    (fun _ => none) sourceMemory sourceException
+    sourceGlobals sourceMemory sourceException
     (.rStruct [.word first, .word second, .word third])
     { state with globals :=
         (updateMemoryListAt state.globals 0 bytesInWord
@@ -569,13 +568,13 @@ theorem panValuePcResultRelWithContextCode_of_raised_three_word_global_spill
     (structs : StructContext) (context : CompileContext α)
     (exceptionRel : ExceptionId → PanValue α → α → Prop)
     (exceptionCode : ExceptionId → Option α)
-    (sourceGlobals : VarName → Option (PanValue α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
     (sourceMemory : α → Option (PanValue α))
     (sourceException : ExceptionId)
     (bytesInWord first second third : α)
     (state : CrepState α) (targetException : α)
     (hstate : panValueCrepStateRel structs context
-      (fun _ => none) sourceGlobals sourceMemory state)
+      sourceLocals sourceGlobals sourceMemory state)
     (hexception : exceptionRel sourceException
       (.rStruct [.word first, .word second, .word third]) targetException)
     (hcode : exceptionCode sourceException = some targetException)
@@ -587,7 +586,7 @@ theorem panValuePcResultRelWithContextCode_of_raised_three_word_global_spill
       (0 + bytesInWord) + bytesInWord) :
     panValuePcResultRelWithContextCode structs context exceptionRel exceptionCode
       (crepPcThreeWordGlobalsLookup bytesInWord)
-      (.raised (fun _ => none) sourceGlobals sourceMemory sourceException
+      (.raised sourceLocals sourceGlobals sourceMemory sourceException
         (.rStruct [.word first, .word second, .word third]))
       (.raised
         { state with globals :=
@@ -595,7 +594,7 @@ theorem panValuePcResultRelWithContextCode_of_raised_three_word_global_spill
               [first, second, third]) }
         targetException) := by
   have hpost : panValueCrepStateRel structs context
-      (fun _ => none) sourceGlobals sourceMemory
+      sourceLocals sourceGlobals sourceMemory
       { state with globals :=
           (updateMemoryListAt state.globals 0 bytesInWord
             [first, second, third]) } := by
@@ -604,7 +603,7 @@ theorem panValuePcResultRelWithContextCode_of_raised_three_word_global_spill
   refine ⟨?_, hlookupCode⟩
   simpa [hstate.1] using
     (panValuePcExceptionResultRel_of_raised_three_word_global_spill
-      structs context exceptionRel exceptionCode sourceGlobals sourceMemory
+      structs context exceptionRel exceptionCode sourceLocals sourceGlobals sourceMemory
       sourceException bytesInWord first second third state targetException hstate
       hexception hcode hdistinct01 hdistinct02 hdistinct12)
 

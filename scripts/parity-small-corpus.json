@@ -466,11 +466,35 @@
       "tracked_beads": []
     },
     {
+      "path": "Flapjack/Test/OriginalPancake/op_dispatch_relocation_boundary.pnk",
+      "source_reference": "Reduced op_dispatch relocation-boundary witness: Cake records a nonzero label after its stored label slot during enc_lines_again, retaining the long branch slot and its residual NOP after relocation.",
+      "cake_sha256": "cbbe00570c6f2c6880c90ce3e5e876325e12bcedd60b0b3962dad56222462c10",
+      "tracked_beads": [
+        "flapjack-8tb.5.5"
+      ]
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/op_dispatch_label_stability.pnk",
       "source_reference": "Reduced op_dispatch linked-label witness: Cake's post-target-lowering label iteration keeps the 28-function dispatch image byte-exact; the stable linked-label resolver is covered here while the larger op_dispatch-many residual remains owned by flapjack-8tb.5.",
       "cake_sha256": "16336bc04b981030ccc17cff51dbd9628c556e2406e2eccb81a38c226b1f961a",
       "tracked_beads": [
         "flapjack-8tb.5"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/op_dispatch_many.pnk",
+      "source_reference": "Full reduced op_dispatch-many witness: Cake's 27-callee linked dispatch is 3760 bytes, including the post-target comparison lowering and stored-label relocation; this exact oracle locks the repaired four-byte gap.",
+      "cake_sha256": "cbbe00570c6f2c6880c90ce3e5e876325e12bcedd60b0b3962dad56222462c10",
+      "tracked_beads": [
+        "flapjack-8tb.5.5"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/op_dispatch_stored_length.pnk",
+      "source_reference": "Reduced op_dispatch relocation witness for flapjack-8tb.5.5: Cake enc_lines_again retains a branch's maximum encoded LabAsm length after it shrinks, and pad_code emits the residual ADDI x0,x0,0; the source-shaped linker must preserve that stored slot.",
+      "cake_sha256": "7351db917885d009c4765c88c182b08499c7681003a18218a24ad0b6926a4681",
+      "tracked_beads": [
+        "flapjack-8tb.5.5"
       ]
     },
     {
@@ -624,6 +648,14 @@
       "path": "Flapjack/Test/OriginalPancake/f00232_nested_fold_order.pnk",
       "source_reference": "Reduced accepted-output witness f00232: Cake pull_exp retains a folded unary Xor wrapper until flatten_exp, while unwrapping it early reverses the enclosing Add operands and shifts the multi-function layout.",
       "cake_sha256": "4ff631ec21a10e15dcf97d05827b171bafbbdce353fbdce9f9ed75f4437759ef",
+      "tracked_beads": [
+        "flapjack-8tb.4"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/output_write.pnk",
+      "source_reference": "Reduced source-defined output_write witness: Cake's ShareInst selector rejects the out-of-range byte offset 0xA0010000 and materializes the complete address before the shared store, preserving the allocator-visible temporary and exact RISC-V bytes.",
+      "cake_sha256": "6c1fce23950c75682847ed67c5a9aacecefcaf84f274e38492d4b404719904a9",
       "tracked_beads": [
         "flapjack-8tb.4"
       ]

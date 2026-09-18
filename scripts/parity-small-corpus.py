@@ -162,12 +162,46 @@ def fixture_report(fixture, cake, flapjack):
     return report
 
 
+def check_flapjack_against_oracle(manifest, flapjack):
+    """Check complete Flapjack frames against pinned Cake stdout hashes.
+
+    CI checkouts do not build the ignored Cake executable from the CakeML
+    submodule.  The hashes in this manifest were produced by the authoritative
+    Cake command; comparing the complete Flapjack stdout against them keeps
+    the CI regression check byte-for-byte without silently normalizing output.
+    """
+    failures = 0
+    for fixture in manifest["fixtures"]:
+        relative = fixture["path"]
+        path = REPO_ROOT / relative
+        result = subprocess.run(
+            [str(flapjack), "--assembly", str(path)], capture_output=True
+        )
+        actual = sha256(result.stdout)
+        expected = fixture["cake_sha256"]
+        if result.returncode == 0 and actual == expected:
+            print(f"exact {relative} sha256={actual}")
+        else:
+            failures += 1
+            print(
+                f"MISMATCH {relative} returncode={result.returncode} "
+                f"cake={expected} flapjack={actual}"
+            )
+    print(f"oracle corpus={len(manifest['fixtures'])} failures={failures}")
+    return int(failures != 0)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cake", default=os.environ.get("CAKE", DEFAULT_CAKE))
     parser.add_argument("--flapjack", default=os.environ.get("FLAPJACK", str(DEFAULT_FLAPJACK)))
     parser.add_argument("--manifest", default=str(DEFAULT_MANIFEST))
     parser.add_argument("--report", help="write the machine-readable report to this path")
+    parser.add_argument(
+        "--flapjack-only",
+        action="store_true",
+        help="compare Flapjack stdout with the manifest's pinned Cake hashes",
+    )
     args = parser.parse_args(argv)
     if not Path(args.cake).is_file():
         print(f"missing cake binary: {args.cake}", file=sys.stderr)
@@ -177,6 +211,8 @@ def main(argv=None):
         return 2
 
     manifest = json.loads(Path(args.manifest).read_text(encoding="utf-8"))
+    if args.flapjack_only:
+        return check_flapjack_against_oracle(manifest, Path(args.flapjack))
     reports = [fixture_report(fixture, args.cake, Path(args.flapjack))
                for fixture in manifest["fixtures"]]
     for report in reports:

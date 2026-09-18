@@ -275,7 +275,21 @@ def movesToSpOrderGuard : Bool :=
       some [(3, 11), (2, 7), (1, 5)] &&
     table.get 5 == some [(1, 2)]
 
+/-- Cake's composed `moves_to_sp`/`resort_moves` output keeps the partner
+    names in descending priority order before biased IRC preferences consume
+    them.  The expected order is recorded by `reg_alloc_probe.out`, which
+    evaluates the original Cake definitions directly. -/
+def resortMovesSpOrderGuard : Bool :=
+  let table := Flapjack.RiscV.CakeRegAlloc.cakeMovesToSp
+    [(1, (2, 5)), (2, (2, 7)), (3, (2, 11))]
+      (Flapjack.RiscV.CakeRegAlloc.CakeNodeMap.ofSize 12)
+  let resorted := Flapjack.RiscV.CakeRegAlloc.cakeResortMovesSp table
+  resorted.get 2 == some [11, 7, 5] &&
+    resorted.get 5 == some [2] && resorted.get 7 == some [2] &&
+    resorted.get 11 == some [2]
+
 #guard reviveOrderGuard
+#guard resortMovesSpOrderGuard
 
 /-- `bg_ok` uses reversing HOL `PARTITION`, then `st_ex_FILTER`s each case list. -/
 def bgOkOrderGuard : Bool :=
@@ -548,7 +562,8 @@ def parityGuard : Bool :=
     heuSpillGuard && heuFixedDegreeGuard && raDeltaPairGuard &&
     raDeltaFreeGuard && raDeltaTriangleGuard && raStackOnlyGuard &&
     raMovesCoalesceGuard && raMovesSelfFilteredGuard && raForcedEdgeGuard &&
-    partOrderGuard && reviveOrderGuard && movesToSpOrderGuard && bgOkOrderGuard &&
+    partOrderGuard && reviveOrderGuard && movesToSpOrderGuard &&
+    resortMovesSpOrderGuard && bgOkOrderGuard &&
     qsortTiesTwoGuard && qsortTiesThreeGuard && qsortDescGuard &&
     stempBadColourTieGuard && raMovesStempGuard && raMovesStempHiGuard &&
     negFirstMatchProjectionGuard
@@ -577,7 +592,7 @@ def runChecks : IO Bool := do
     raStackOnlyGuard, raMovesCoalesceGuard, raMovesSelfFilteredGuard,
     partOrderGuard,
     reviveOrderGuard, revivePartitionGuard, bgOkOrderGuard, qsortTiesTwoGuard,
-    movesToSpOrderGuard,
+    movesToSpOrderGuard, resortMovesSpOrderGuard,
     qsortTiesThreeGuard, qsortDescGuard, raMovesStempGuard,
     raMovesStempHiGuard, negFirstMatchProjectionGuard, mapUpdateBoundedGuard,
     deadMovePriorityGuard, deadProgramPriorityGuard, sortMovesTailSplitGuard,
@@ -597,7 +612,8 @@ def runChecks : IO Bool := do
     "reg_alloc delta free", "reg_alloc stack only",
     "reg_alloc moves coalesce", "reg_alloc moves self filtered",
     "sorting partition order", "revive moves reversing partition", "revive partition direction", "bg_ok order",
-    "sort_moves tie two", "moves_to_sp order", "sort_moves tie three", "sort_moves long tie",
+    "sort_moves tie two", "moves_to_sp order", "resort_moves output order",
+    "sort_moves tie three", "sort_moves long tie",
     "sort_moves descending",
     "reg_alloc moves stack temp", "reg_alloc moves stack temp high",
     "neg_first_match_col projection", "Cake map updates stay bounded",

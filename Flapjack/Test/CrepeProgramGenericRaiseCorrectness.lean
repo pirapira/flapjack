@@ -246,7 +246,7 @@ theorem three_word_raise_pc_hraise_global_spill :
 theorem three_word_raise_pc_semantic_lift :
     evalPanValueProgWithPrimitiveCallsAndFfi
         (fun _ _ => none) (fun _ _ _ _ _ _ => none) [] []
-        0 0 8 3 (fun _ => none) (fun _ => none) (fun _ => none)
+        0 0 8 3 (fun _ => some (.word 7)) (fun _ => none) (fun _ => none)
         (.raise "E" sourceExpression) =
         some (.raised (fun _ => none) (fun _ => none) (fun _ => none)
           "E" sourceValue) ∧
@@ -259,7 +259,7 @@ theorem three_word_raise_pc_semantic_lift :
       panValuePcResultRel [] context (fun _ _ code => code = 9)
         (fun exception => if exception = "E" then some 9 else none)
         (crepPcThreeWordGlobalsLookup 8)
-        (.raised (fun _ => none) (fun _ => none) (fun _ => none)
+        (.raised (fun _ => some (.word 7)) (fun _ => none) (fun _ => none)
           "E" sourceValue)
         (.raised
           { state with globals := updateMemoryListAt state.globals 0 8 [3, 4, 5] }
@@ -267,7 +267,7 @@ theorem three_word_raise_pc_semantic_lift :
   have h := panValuePcRaisedThreeWordSemanticLift
     (α := Nat) (context := context) (structs := [])
     (sourceFunctions := []) (functions := [])
-    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceLocals := fun _ => some (.word 7)) (sourceGlobals := fun _ => none)
     (sourceMemory := fun _ => none) (state := state)
     (primitive := fun _ _ => none)
     (sourceHandler := fun _ _ _ _ _ _ => none)
@@ -285,7 +285,9 @@ theorem three_word_raise_pc_semantic_lift :
       if exception = "E" then some 9 else none)
     (hlookup := by simp [context, lookupInfo])
     (hrel := by
-      refine ⟨rfl, panValueCrepLocalsRel_empty [] context _, rfl⟩)
+      refine ⟨rfl, ?_, rfl⟩
+      intro name value shape slots _ hlookup
+      simp [context, lookupInfo] at hlookup)
     (hsource := by
       simp [sourceExpression, evalPanValueExp,
         evalPanValueExp.evalPanValueExps])

@@ -1966,7 +1966,7 @@ theorem panValuePcRaisedThreeWordHraise_of_evidence
       (0 + context.bytesInWord) + context.bytesInWord) :
     panValuePcRaisedHraiseData resultExceptionCode
       (crepPcThreeWordGlobalsLookup context.bytesInWord) structs context
-      exceptionRel (fun _ => none) sourceGlobals sourceMemory exception
+      exceptionRel sourceLocals sourceGlobals sourceMemory exception
       (.rStruct [.word first, .word second, .word third])
       { state with globals :=
           (updateMemoryListAt state.globals 0 context.bytesInWord
@@ -1982,12 +1982,11 @@ theorem panValuePcRaisedThreeWordHraise_of_evidence
     hsource hvalid hcompile (by simp [Shape.shapeSize]) hcompiled hnot hfresh hexception
   rcases hgeneric with ⟨_, _, hcontrol⟩
   have hpost : panValueCrepStateRel structs context
-      (fun _ => none) sourceGlobals sourceMemory
+      sourceLocals sourceGlobals sourceMemory
       { state with globals :=
           (updateMemoryListAt state.globals 0 context.bytesInWord
             [first, second, third]) } := by
-    have hraisedState := hcontrol.1
-    refine ⟨hrel.1, hraisedState.2.1, ?_⟩
+    refine ⟨hrel.1, hrel.2.1, ?_⟩
     exact hrel.2.2
   have hlookupPayload :
       1 ≤ Shape.shapeSize (panValueShape structs
@@ -2079,7 +2078,7 @@ theorem panValuePcRaisedThreeWordSemanticLift
         exceptionCode) ∧
     panValuePcResultRel structs context exceptionRel resultExceptionCode
       (crepPcThreeWordGlobalsLookup context.bytesInWord)
-      (.raised (fun _ => none) sourceGlobals sourceMemory exception
+      (.raised sourceLocals sourceGlobals sourceMemory exception
       (.rStruct [.word first, .word second, .word third]))
       (.raised
         { state with globals :=
@@ -2105,7 +2104,7 @@ theorem panValuePcRaisedThreeWordSemanticLift
   rcases hgeneric with ⟨hsourceEval, htargetEval, _hcontrol⟩
   have hresult := panValuePcResultRel_of_raised_hraise_data
     structs context exceptionRel resultExceptionCode
-    (crepPcThreeWordGlobalsLookup context.bytesInWord) (fun _ => none)
+    (crepPcThreeWordGlobalsLookup context.bytesInWord) sourceLocals
     sourceGlobals sourceMemory exception
     (.rStruct [.word first, .word second, .word third])
     { state with globals :=

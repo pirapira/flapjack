@@ -1681,6 +1681,34 @@ theorem panValuePcExceptionResultRelWithContextCode_of_raised_hraise_data_retarg
     sourceGlobals sourceMemory sourceException sourceValue targetState
     targetException hretarget hlookupCode
 
+theorem panValuePcResultRelWithContextCode_of_raised_hraise_data_retarget_globals_lookup
+    [BEq α] [LawfulBEq α] [OfNat α 0] [Add α]
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+    (sourceValue : PanValue α) (targetState : CrepState α)
+    (targetException : α) (bytesInWord : α)
+    (hlookup : crepPcFlatGlobalsLookup bytesInWord targetState sourceValue =
+      globalsLookup targetState sourceValue)
+    (hraiseData : panValuePcRaisedHraiseData exceptionCode
+      (crepPcFlatGlobalsLookup bytesInWord) structs context exceptionRel
+      sourceLocals sourceGlobals sourceMemory sourceException sourceValue
+      targetState targetException)
+    (hlookupCode : lookupInfo sourceException context.exceptions =
+      some targetException) :
+    panValuePcResultRelWithContextCode structs context exceptionRel
+      exceptionCode globalsLookup
+      (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+      (.raised targetState targetException) := by
+  refine ⟨hraiseData.1, ?_⟩
+  exact panValuePcExceptionResultRelWithContextCode_of_raised_hraise_data_retarget_globals_lookup
+    structs context exceptionRel exceptionCode globalsLookup sourceLocals
+    sourceGlobals sourceMemory sourceException sourceValue targetState
+    targetException bytesInWord hlookup hraiseData hlookupCode
+
 theorem panValuePcRaisedThreeWordHraise_of_evidence
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

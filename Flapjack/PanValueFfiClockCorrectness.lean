@@ -355,6 +355,40 @@ theorem evalPanValueFfiClockProg_decCall_finalFfi
         callClock) := by
   simp [evalPanValueFfiClockProg, hcall]
 
+/-! This is the direct `Call_Ret_FinalFFI` branch of Cake's
+    `pc_compile_correct`. A direct call has no declaration continuation, so
+    the callee's final FFI event is returned unchanged by the enclosing
+    program evaluator. -/
+theorem evalPanValueFfiClockProg_call_finalFfi
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel clock callClock : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (info : Option (Option (VarKind × VarName) ×
+      Option (ExceptionId × VarName × Prog α)))
+    (function : FunName) (arguments : List (Exp α))
+    (nextLocals nextGlobals : VarName → Option (PanValue α))
+    (nextMemory : α → Option (PanValue α)) (nextFfi : FfiState σ)
+    (event : FfiFinalEvent)
+    (hcall : evalPanValueFfiClockCall context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
+      info function arguments =
+      some (.control (.finalFfi nextLocals nextGlobals nextMemory nextFfi event),
+        callClock)) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+      (.call info function arguments) =
+      some (.control (.finalFfi nextLocals nextGlobals nextMemory nextFfi event),
+        callClock) := by
+  simp [evalPanValueFfiClockProg, hcall]
+
 /-! A caught exception resumes the handler in the callee's final state and
 remaining clock, rather than restoring the caller's pre-call globals or
 memory. -/

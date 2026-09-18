@@ -2939,8 +2939,8 @@ theorem panValuePcRaisedGenericHraise_of_evidence_retarget_globals_with_source_l
       exceptionRel sourceLocals sourceGlobals sourceMemory exception sourceValue
       { state with globals :=
           updateMemoryListAt state.globals 0 context.bytesInWord values }
-      exceptionCode := by
-  apply panValuePcRaisedGenericHraise_of_evidence_with_source_locals
+      exceptionCode ∧ lookupInfo exception context.exceptions = some exceptionCode := by
+  have hcanonical := panValuePcRaisedGenericHraise_of_evidence_with_source_locals
     context structs sourceFunctions functions sourceLocals sourceGlobals
     sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
     baseAddress topAddress bytesInWord sourceFuel exception exceptionCode
@@ -2956,6 +2956,7 @@ theorem panValuePcRaisedGenericHraise_of_evidence_retarget_globals_with_source_l
         (α := α) context.bytesInWord state sourceValue hdistinct'
       rw [← hlookupGlobals]
       simpa [hflat] using hstored) hsize
+  exact ⟨hcanonical, hlookup⟩
 
 theorem panValuePcExceptionResultRelWithContextCode_of_raised_generic_evidence
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
@@ -3093,7 +3094,7 @@ theorem panValuePcResultRelWithContextCode_of_raised_generic_evidence
     sourceGlobals sourceMemory exception sourceValue
     { state with globals :=
         updateMemoryListAt state.globals 0 context.bytesInWord values }
-    exceptionCode hraiseData
+    exceptionCode hraiseData.1
   exact panValuePcResultRelWithContextCode_of_raised_result_rel
     structs context exceptionRel resultExceptionCode globalsLookup sourceLocals
     sourceGlobals sourceMemory exception sourceValue
@@ -5646,7 +5647,7 @@ theorem panValuePcRaisedHraiseData_of_flat_global_evaluator_evidence
     globalsLookup hlookupCode hrel hsource hvalid hcompile hlength hcompiled hnot
     hfresh hexception hcode hflat hdistinct hsize
     (by simpa [hbytesInWord] using (hlookup _ _))
-  exact ⟨hcanonical, hlookupCode⟩
+  exact hcanonical
 
 /-! Compact `pc_compile_correct` with evaluator-backed raised evidence.  The
     evidence callback exposes the source expression and compiled payload, so

@@ -1571,6 +1571,66 @@ theorem nested_raise_pc_hraise_flat_globals :
     (hdistinct := by decide)
     (hsize := by simp [nestedSourceValue, panValueShape, Shape.shapeSize])
 
+theorem nested_raise_pc_hraise_retargeted_globals_paired :
+    panValuePcRaisedHraiseData
+      (fun exception => if exception = "E" then some 9 else none)
+      pcGlobalsLookup [] context
+      (fun _ _ code => code = 9)
+      (fun _ => none) (fun _ => none) (fun _ => none) "E"
+      nestedSourceValue
+      { state with globals := updateMemoryListAt state.globals 0 8 [3] }
+      9 ∧ lookupInfo "E" context.exceptions = some 9 := by
+  apply panValuePcRaisedGenericHraise_of_evidence_retarget_globals_with_source_locals
+    (α := Nat) (context := context) (structs := [])
+    (sourceFunctions := []) (functions := [])
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (state := state)
+    (primitive := fun _ _ => none)
+    (sourceHandler := fun _ _ _ _ _ _ => none)
+    (crepPrimitive := fun _ _ => none)
+    (ffi := fun _ _ _ _ _ _ => none)
+    (sharedMem := fun _ _ _ _ => none)
+    (baseAddress := 0) (topAddress := 0) (bytesInWord := 8)
+    (sourceFuel := 2) (exception := "E") (exceptionCode := 9)
+    (expression := nestedSourceExpression) (sourceValue := nestedSourceValue)
+    (compiled := [.const 3]) (shape := .comb [.comb [.one]]) (values := [3])
+    (exceptionRel := fun _ _ code => code = 9)
+    (resultExceptionCode := fun exception =>
+      if exception = "E" then some 9 else none)
+    (globalsLookup := pcGlobalsLookup)
+    (hlookup := by simp [context, lookupInfo])
+    (hrel := by
+      refine ⟨rfl, panValueCrepLocalsRel_empty [] context _, rfl⟩)
+    (hsource := by
+      simp [nestedSourceExpression, nestedSourceValue, evalPanValueExp,
+        evalPanValueExp.evalPanValueExps])
+    (hvalid := by
+      simp [nestedSourceValue, panValuePayloadWithinLimit,
+        panValuePayloadSizeFuel,
+        panValuePayloadSizeFuel.panValuePayloadSizeFieldsFuel,
+        panValueFlatValueFuel,
+        panValueFlatValueFuel.panValueFlatValueListFuel])
+    (hcompile := by
+      simp [context, nestedSourceExpression, compileExp,
+        compileExp.compileExpList])
+    (hlength := by simp [Shape.shapeSize])
+    (hcompiled := by
+      simp [state, evalCrepFullExpsState, evalCrepFullExpState])
+    (hnot := by simp [context, freshNames])
+    (hfresh := by simp [context, state, freshNames])
+    (hexception := by simp)
+    (hcode := by simp)
+    (hflat := by rfl)
+    (hdistinct := by decide)
+    (hsize := by simp [nestedSourceValue, panValueShape, Shape.shapeSize])
+    (hlookupGlobals := by
+      have hstored := crepPcFlatGlobalsLookup_of_stored_flat_words
+        (α := Nat) 8 state nestedSourceValue (by decide)
+      simpa [context, pcGlobalsLookup, nestedSourceValue, panValueFlatWords,
+        panValueFlatWordsFuel, panValueFlatValueFuel,
+        panValueFlatWordsFuel.panValueFlatWordsListFuel,
+        panValueFlatValueFuel.panValueFlatValueListFuel] using hstored)
+
 theorem nested_raise_pc_hraise_retargeted_globals :
     panValuePcRaisedHraiseData
       (fun exception => if exception = "E" then some 9 else none)

@@ -39,6 +39,21 @@ def clockedCall :
     (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState 1
     none "returnOne" []
 
+def clockedProgramCall :
+    Option (PanValueFfiClockResult (Word 64) Unit) :=
+  evalPanValueFfiClockProg statefulTestContext statefulTestPrimitive
+    statefulTestHandler [] clockedCallFunctions 0 100 8 20
+    (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState 1
+    (.call none "returnOne" [])
+
+def clockedProgramCallDestination :
+    Option (PanValueFfiClockResult (Word 64) Unit) :=
+  evalPanValueFfiClockProg statefulTestContext statefulTestPrimitive
+    statefulTestHandler [] clockedCallFunctions 0 100 8 20
+    (fun name => if name == "x" then some (.word (BitVec.ofNat 64 0)) else none)
+    (fun _ => none) (fun _ => none) statefulTestFfiState 1
+    (.call (some (some (.local, "x"), none)) "returnOne" [])
+
 def clockedCallAtZero :
     Option (PanValueFfiClockResult (Word 64) Unit) :=
   evalPanValueFfiClockCall statefulTestContext statefulTestPrimitive
@@ -53,8 +68,28 @@ def clockedDecCallAtZero :
     (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState 0
     (.decCall "x" .one "returnOne" [] .skip)
 
+def clockedDecCallReturned : Option (PanValueFfiClockResult (Word 64) Unit) :=
+  evalPanValueFfiClockProg statefulTestContext statefulTestPrimitive
+    statefulTestHandler [] clockedCallFunctions 0 100 8 20
+    (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState 1
+    (.decCall "x" .one "returnOne" []
+      (.return (.var .local "x")))
+
 def clockedRaiseFunctions : List (FunName × List VarName × Prog (Word 64)) :=
   [("raiseOne", [], .raise "E" (.const (BitVec.ofNat 64 1)))]
+
+def clockedProgramRaisedCall :
+    Option (PanValueFfiClockResult (Word 64) Unit) :=
+  evalPanValueFfiClockProg statefulTestContext statefulTestPrimitive
+    statefulTestHandler [] clockedRaiseFunctions 0 100 8 20
+    (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState 1
+    (.call none "raiseOne" [])
+
+def clockedDecCallRaised : Option (PanValueFfiClockResult (Word 64) Unit) :=
+  evalPanValueFfiClockProg statefulTestContext statefulTestPrimitive
+    statefulTestHandler [] clockedRaiseFunctions 0 100 8 20
+    (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState 1
+    (.decCall "x" .one "raiseOne" [] .skip)
 
 def clockedCaughtCall : Option (PanValueFfiClockResult (Word 64) Unit) :=
   evalPanValueFfiClockCall statefulTestContext statefulTestPrimitive
@@ -62,6 +97,13 @@ def clockedCaughtCall : Option (PanValueFfiClockResult (Word 64) Unit) :=
     (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState 1
     (some (none, some ("E", "exceptionValue",
       .return (.var .local "exceptionValue")))) "raiseOne" []
+
+def clockedProgramCaughtCall : Option (PanValueFfiClockResult (Word 64) Unit) :=
+  evalPanValueFfiClockProg statefulTestContext statefulTestPrimitive
+    statefulTestHandler [] clockedRaiseFunctions 0 100 8 20
+    (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState 1
+    (.call (some (none, some ("E", "exceptionValue",
+      .return (.var .local "exceptionValue")))) "raiseOne" [])
 
 def clockedInvalidCallTerminal :
     Option (PanValueFfiClockResult (Word 64) Unit) :=
@@ -121,6 +163,32 @@ def clockedCallFinalFfi : Option (PanValueFfiClockResult (Word 64) Unit) :=
   | _ => false
 
 #guard
+  match clockedProgramCall with
+  | some (.control (.returned locals _ _ _ [PanValue.word value]), 0) =>
+      locals "x" = none && value = BitVec.ofNat 64 1
+  | _ => false
+
+#guard
+  match clockedProgramCallDestination with
+  | some (.control (.normal locals _ _ _), 0) =>
+      match locals "x" with
+      | some (.word value) => value == BitVec.ofNat 64 1
+      | _ => false
+  | _ => false
+
+#guard
+  match clockedProgramRaisedCall with
+  | some (.control (.raised locals _ _ _ "E" (PanValue.word value)), 0) =>
+      locals "x" = none && value = BitVec.ofNat 64 1
+  | _ => false
+
+#guard
+  match clockedDecCallRaised with
+  | some (.control (.raised locals _ _ _ "E" (PanValue.word value)), 0) =>
+      locals "x" = none && value = BitVec.ofNat 64 1
+  | _ => false
+
+#guard
   match clockedCallAtZero with
   | some (.timeout locals _ _ _, 0) => locals "x" = none
   | _ => false
@@ -131,7 +199,19 @@ def clockedCallFinalFfi : Option (PanValueFfiClockResult (Word 64) Unit) :=
   | _ => false
 
 #guard
+  match clockedDecCallReturned with
+  | some (.control (.returned locals _ _ _ [PanValue.word value]), 0) =>
+      locals "x" = none && value = BitVec.ofNat 64 1
+  | _ => false
+
+#guard
   match clockedCaughtCall with
+  | some (.control (.returned locals _ _ _ [PanValue.word value]), 0) =>
+      locals "exceptionValue" = none && value = BitVec.ofNat 64 1
+  | _ => false
+
+#guard
+  match clockedProgramCaughtCall with
   | some (.control (.returned locals _ _ _ [PanValue.word value]), 0) =>
       locals "exceptionValue" = none && value = BitVec.ofNat 64 1
   | _ => false

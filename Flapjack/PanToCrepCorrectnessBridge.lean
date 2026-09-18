@@ -1617,7 +1617,7 @@ theorem panValuePcRaisedGenericHraise_of_evidence_with_source_locals
       exceptionRel sourceLocals sourceGlobals sourceMemory exception sourceValue
       { state with globals :=
           updateMemoryListAt state.globals 0 context.bytesInWord values }
-      exceptionCode := by
+      exceptionCode ∧ lookupInfo exception context.exceptions = some exceptionCode := by
   have hgeneric := compile_full_pan_value_raise_state_relation_of_evidence
     context structs sourceFunctions functions sourceLocals sourceGlobals
     sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
@@ -1631,8 +1631,7 @@ theorem panValuePcRaisedGenericHraise_of_evidence_with_source_locals
           updateMemoryListAt state.globals 0 context.bytesInWord values } := by
     refine ⟨hrel.1, hrel.2.1, ?_⟩
     exact hrel.2.2
-  refine ⟨hpost, ?_⟩
-  exact ⟨0, hcontrol, hcode, hlookupPayload, hsize⟩
+  exact ⟨⟨hpost, 0, hcontrol, hcode, hlookupPayload, hsize⟩, hlookup⟩
 
 theorem panValuePcResultRel_of_raised_generic_evidence
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
@@ -1903,7 +1902,7 @@ theorem panValuePcResultRel_of_raised_generic_flat_evidence_retarget_globals
     sourceMemory exception sourceValue
     { state with globals :=
         updateMemoryListAt state.globals 0 context.bytesInWord values }
-    exceptionCode hcanonical
+    exceptionCode hcanonical.1
 
 theorem panValuePcResultRel_of_raised_hraise_data_retarget_globals_lookup
     [BEq α] [LawfulBEq α] [OfNat α 0] [Add α]
@@ -2798,7 +2797,7 @@ theorem panValuePcRaisedGenericHraise_of_evidence_flat_globals_with_source_local
       { state with globals :=
           updateMemoryListAt state.globals 0 context.bytesInWord values }
       exceptionCode := by
-  apply panValuePcRaisedGenericHraise_of_evidence_with_source_locals
+  have hpaired := panValuePcRaisedGenericHraise_of_evidence_with_source_locals
     context structs sourceFunctions functions sourceLocals sourceGlobals
     sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
     baseAddress topAddress bytesInWord sourceFuel exception exceptionCode
@@ -2814,6 +2813,7 @@ theorem panValuePcRaisedGenericHraise_of_evidence_flat_globals_with_source_local
       have hstored := crepPcFlatGlobalsLookup_of_stored_flat_words
         (α := α) context.bytesInWord state sourceValue hdistinct'
       simpa [hflat] using hstored) hsize
+  exact hpaired.1
 
 /-! Lift generic evaluator-backed raised evidence through the caller's HOL
     global lookup.  The canonical compiler lookup remains the source of the
@@ -2955,7 +2955,7 @@ theorem panValuePcRaisedGenericHraise_of_evidence_retarget_globals_with_source_l
         (α := α) context.bytesInWord state sourceValue hdistinct'
       rw [← hlookupGlobals]
       simpa [hflat] using hstored) hsize
-  exact ⟨hcanonical, hlookup⟩
+  exact hcanonical
 
 theorem panValuePcExceptionResultRelWithContextCode_of_raised_generic_evidence
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]

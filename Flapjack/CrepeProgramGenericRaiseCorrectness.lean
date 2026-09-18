@@ -365,4 +365,163 @@ theorem panValueCrepProgramStateCorrect_raise_one_word_record
                         exact congrFun hrel.2.2 address
                       exact ⟨0, hstate, hexception'⟩
 
+theorem panValueCrepProgramStateCorrect_raise_two_word_record
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (exception : ExceptionId) (left right : α)
+    (hlookupException : ∀ (context : CompileContext α),
+      ∃ exceptionCode, lookupInfo exception context.exceptions = some exceptionCode)
+    (hfresh : ∀ (context : CompileContext α) (state : CrepState α),
+      state.locals (context.maxVar + 1) = none ∧
+      state.locals (context.maxVar + 2) = none)
+    (hexception : ∀ (context : CompileContext α)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (exceptionCode : α),
+      lookupInfo exception context.exceptions = some exceptionCode →
+      exceptionRel exception (.rStruct [.word left, .word right]) exceptionCode) :
+    PanValueCrepProgramStateCorrect
+      (.raise exception (.rStruct [.const left, .const right])) := by
+  intro context structs sourceFunctions functions sourceLocals sourceGlobals
+    sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord sourceFuel targetFuel exceptionRel
+    sourceResult crepResult hrel hsource hcrep
+  cases sourceFuel with
+  | zero =>
+      simp [evalPanValueProgWithPrimitiveCallsAndFfi] at hsource
+  | succ sourceFuel =>
+      obtain ⟨exceptionCode, hlookupCode⟩ := hlookupException context
+      have hsourceValue :
+          evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+            baseAddress topAddress bytesInWord
+            (.rStruct [.const left, .const right]) =
+            some (.rStruct [.word left, .word right]) := by
+        simp [evalPanValueExp, evalPanValueExp.evalPanValueExps]
+      have hcompile :
+          compileExp context (.rStruct [.const left, .const right]) =
+            ([.const left, .const right], .comb [.one, .one]) := by
+        simp [compileExp, compileExp.compileExpList]
+      have hvalid :
+          panValuePayloadWithinLimit structs
+            (.rStruct [.word left, .word right]) = true := by
+        exact panValuePayloadWithinLimit_rStruct_two_words structs left right
+      have hcompiled :
+          evalCrepFullExpsState state baseAddress topAddress
+            [.const left, .const right] = some [left, right] := by
+        simp [evalCrepFullExpsState, evalCrepFullExpState]
+      have hlength :
+          [(.const left : CrepExp α), .const right].length =
+            Shape.shapeSize (.comb [.one, .one]) := by
+        simp [Shape.shapeSize]
+      have hnot : ∀ name ∈ freshNames context 2 1,
+          ∀ expression ∈ ([.const left, .const right] : List (CrepExp α)),
+            name ∉ crepExpVars expression := by
+        simp [freshNames]
+      have hfresh' : ∀ name ∈ freshNames context 2 1,
+          state.locals name = none := by
+        simpa [freshNames, List.range, List.range.loop, Nat.add_assoc] using
+          And.intro (hfresh context state).1 (hfresh context state).2
+      have hexception' :=
+        hexception context exceptionRel exceptionCode hlookupCode
+      have hnames : freshNames context 2 1 =
+          [context.maxVar + 1, context.maxVar + 2] := by
+        simp [freshNames, List.range, List.range.loop, Nat.add_assoc]
+      have hcompileProg : compileProg context
+          (.raise exception (.rStruct [.const left, .const right])) =
+          .seq
+            (nestedDecs [context.maxVar + 1, context.maxVar + 2]
+              [.const left, .const right]
+              (crepNestedSeq
+                (storeGlobals 0 context.bytesInWord
+                  [.var (context.maxVar + 1), .var (context.maxVar + 2)])))
+            (.raise exceptionCode) := by
+        simp [compileProg, hlookupCode, hcompile, hlength,
+          freshNames, Shape.shapeSize, List.range, List.range.loop,
+          nestedDecs, crepNestedSeq, storeGlobals]
+      cases targetFuel with
+      | zero =>
+          rw [hcompileProg] at hcrep
+          simp [nestedDecs, crepNestedSeq, storeGlobals,
+            evalCrepFullProgState] at hcrep
+      | succ targetFuel =>
+          cases targetFuel with
+          | zero =>
+              rw [hcompileProg] at hcrep
+              simp [nestedDecs, crepNestedSeq, storeGlobals,
+                evalCrepFullProgState] at hcrep
+          | succ targetFuel =>
+              cases targetFuel with
+              | zero =>
+                  rw [hcompileProg] at hcrep
+                  simp [nestedDecs, crepNestedSeq, storeGlobals,
+                    evalCrepFullProgState] at hcrep
+              | succ targetFuel =>
+                  cases targetFuel with
+                  | zero =>
+                      rw [hcompileProg] at hcrep
+                      simp [nestedDecs, crepNestedSeq, storeGlobals,
+                        evalCrepFullProgState] at hcrep
+                  | succ targetFuel =>
+                      cases targetFuel with
+                      | zero =>
+                          rw [hcompileProg] at hcrep
+                          simp [nestedDecs, crepNestedSeq, storeGlobals,
+                            evalCrepFullProgState] at hcrep
+                      | succ targetFuel =>
+                          cases targetFuel with
+                          | zero =>
+                              rw [hcompileProg] at hcrep
+                              simp [nestedDecs, crepNestedSeq, storeGlobals,
+                                evalCrepFullProgState, evalCrepFullExpState,
+                                updateCrepLocal, restoreCrepResult] at hcrep
+                          | succ targetFuel =>
+                              rw [hcompileProg] at hcrep
+                              have hfreshLeft :
+                                  state.locals (context.maxVar + 1) = none := by
+                                exact (hfresh context state).1
+                              have hfreshRight :
+                                  state.locals (context.maxVar + 2) = none := by
+                                exact (hfresh context state).2
+                              simp [evalCrepFullProgState, evalCrepFullExpState,
+                                nestedDecs, crepNestedSeq, storeGlobals,
+                                hfreshLeft, hfreshRight, updateCrepLocal,
+                                restoreCrepResult] at hcrep
+                              have hrestore :
+                                  restoreCrepLocal
+                                      (restoreCrepLocal
+                                        (updateCrepLocal
+                                          (updateCrepLocal state.locals
+                                            (context.maxVar + 1) left)
+                                          (context.maxVar + 2) right)
+                                        (context.maxVar + 2) none)
+                                      (context.maxVar + 1) none = state.locals := by
+                                funext current
+                                by_cases hcurrentRight : current = context.maxVar + 2
+                                · subst current
+                                  simp [restoreCrepLocal, hfreshRight]
+                                · by_cases hcurrentLeft : current = context.maxVar + 1 <;>
+                                    simp [restoreCrepLocal, updateCrepLocal,
+                                      hcurrentRight, hcurrentLeft, hfreshLeft]
+                              rw [hrestore] at hcrep
+                              simp [evalPanValueProgWithPrimitiveCallsAndFfi,
+                                hsourceValue, panValuePayloadWithinLimit] at hsource
+                              have hsourceEq := hsource.2
+                              have hcrepEq := hcrep
+                              cases hsourceEq
+                              cases hcrepEq
+                              have hstate : panValueCrepRaisedStateRel structs context
+                                  sourceGlobals sourceMemory
+                                  { state with
+                                      globals :=
+                                        updateMemory
+                                          (updateMemory state.globals 0 left)
+                                          (0 + bytesInWord) right } 0 := by
+                                refine ⟨hrel.1,
+                                  panValueCrepLocalsRel_empty structs context state.locals,
+                                  ?_⟩
+                                intro address _
+                                exact congrFun hrel.2.2 address
+                              exact ⟨0, hstate, hexception'⟩
+
 end Flapjack

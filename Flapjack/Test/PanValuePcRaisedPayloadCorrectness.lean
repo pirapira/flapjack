@@ -754,4 +754,24 @@ theorem closed_word_raise_result_context_code_relation :
     refine ⟨rfl, panValueCrepLocalsRel_empty [] raiseContext _, rfl⟩
   exact ⟨hstate, closed_word_raise_context_code_from_hraise_data⟩
 
+theorem one_word_raise_program_boundary_premises
+    (hlookupException : ∀ (context : CompileContext Nat),
+      ∃ exceptionCode, lookupInfo "E" context.exceptions = some exceptionCode)
+    (hfresh : ∀ (context : CompileContext Nat) (state : CrepState Nat),
+      state.locals (context.maxVar + 1) = none)
+    (hexception : ∀ (context : CompileContext Nat)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (exceptionCode : Nat),
+      lookupInfo "E" context.exceptions = some exceptionCode →
+      exceptionRel "E" (.rStruct [.word 3]) exceptionCode) :
+    PanValueCrepProgramStateCorrect
+        (.raise "E" (.rStruct [.const (3 : Nat)])) ∧
+      PanValueCrepProgramStateControlSafe
+        (.raise "E" (.rStruct [.const (3 : Nat)])) := by
+  have hprogram := panValueCrepProgramStateCorrect_raise_one_word_record
+    (α := Nat) "E" 3 hlookupException hfresh hexception
+  exact ⟨hprogram,
+    panValueCrepProgramStateControlSafe_raise "E"
+      (.rStruct [.const (3 : Nat)])⟩
+
 end Flapjack.Test.PanValuePcRaisedPayloadCorrectness

@@ -2928,20 +2928,22 @@ theorem panValuePcRaisedGenericHraise_of_evidence_retarget_globals_with_source_l
       { state with globals :=
           updateMemoryListAt state.globals 0 context.bytesInWord values }
       exceptionCode := by
-  have hcanonical :=
-    panValuePcRaisedGenericHraise_of_evidence_flat_globals_with_source_locals
+  apply panValuePcRaisedGenericHraise_of_evidence_with_source_locals
     context structs sourceFunctions functions sourceLocals sourceGlobals
     sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
     baseAddress topAddress bytesInWord sourceFuel exception exceptionCode
     expression sourceValue compiled shape values exceptionRel resultExceptionCode
-    hlookup hrel hsource hvalid hcompile hlength hcompiled hnot hfresh hexception
-    hcode hflat hdistinct hsize
-  exact panValuePcRaisedHraiseData_retarget_globals_lookup
-    context.bytesInWord resultExceptionCode globalsLookup structs context
-    exceptionRel sourceLocals sourceGlobals sourceMemory exception sourceValue
-    { state with globals :=
-        updateMemoryListAt state.globals 0 context.bytesInWord values }
-    exceptionCode hlookupGlobals hcanonical
+    globalsLookup hlookup hrel hsource hvalid hcompile hlength hcompiled hnot
+    hfresh hexception hcode (by
+      intro _
+      have hdistinct' : List.Pairwise (fun left right : α => left ≠ right)
+          (storeAddresses (0 : α) context.bytesInWord
+            (panValueFlatWords sourceValue).length) := by
+        simpa [hflat] using hdistinct
+      have hstored := crepPcFlatGlobalsLookup_of_stored_flat_words
+        (α := α) context.bytesInWord state sourceValue hdistinct'
+      rw [← hlookupGlobals]
+      simpa [hflat] using hstored) hsize
 
 theorem panValuePcExceptionResultRelWithContextCode_of_raised_generic_evidence
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]

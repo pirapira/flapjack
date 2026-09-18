@@ -84,6 +84,24 @@ def spillOnlyFrameOccupancy : Bool :=
 
 #guard spillOnlyFrameOccupancy
 
+/- The direct `compile_prog` frame equation is `MAX nextSpill
+   (LENGTH parameters - reg_count)`.  These boundary values pin both
+   allocator spill occupancy and Cake's RISC-V argument-frame threshold
+   (`reg_count = 22`) independently of the production pipeline. -/
+def cakeWordFrameSlotsOracleExact : Bool :=
+  let emptyAllocation : WordSpillState := { locations := [], nextSpill := 0 }
+  let oneSpill : WordSpillState := { locations := [], nextSpill := 1 }
+  cakeWordFrameSlots emptyAllocation []
+      (WordProg.skip : WordProg (RiscV.Word 64)) == 0 &&
+    cakeWordFrameSlots emptyAllocation (List.range 22)
+      (WordProg.skip : WordProg (RiscV.Word 64)) == 0 &&
+    cakeWordFrameSlots emptyAllocation (List.range 23)
+      (WordProg.skip : WordProg (RiscV.Word 64)) == 1 &&
+    cakeWordFrameSlots oneSpill (List.range 23)
+      (WordProg.skip : WordProg (RiscV.Word 64)) == 1
+
+#guard cakeWordFrameSlotsOracleExact
+
 /-- Cake's `max_var` ignores a handler on a no-return call.  This is distinct
     from the allocator inventory, which must retain the handler for liveness. -/
 def cakeMaxVarNoReturnHandler : Bool :=
@@ -147,6 +165,8 @@ def runChecks : IO Bool := do
         fixtureUsesFrame),
       ("bitmap-free allocator spills retain Cake frame occupancy",
         spillOnlyFrameOccupancy),
+      ("cakeWordFrameSlots matches the direct Cake frame equation",
+        cakeWordFrameSlotsOracleExact),
       ("allocator frame slots stay inside the frame word_to_stack allocates",
         frameContainmentExact) ]
   let mut ok := true

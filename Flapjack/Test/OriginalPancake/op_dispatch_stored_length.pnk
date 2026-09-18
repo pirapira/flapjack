@@ -1,0 +1,122 @@
+exception EvmErr : 1;
+fun 1 op_add() {
+  return 0;
+}
+fun 1 op_mul() {
+  return 0;
+}
+fun 1 op_sub() {
+  return 0;
+}
+fun 1 op_div() {
+  return 0;
+}
+fun 1 op_sdiv() {
+  return 0;
+}
+fun 1 op_mod() {
+  return 0;
+}
+fun 1 op_smod() {
+  return 0;
+}
+fun 1 op_addmod() {
+  return 0;
+}
+fun 1 op_mulmod() {
+  return 0;
+}
+fun 1 op_exp() {
+  return 0;
+}
+fun 1 op_signextend() {
+  return 0;
+}
+fun 1 op_lt() {
+  return 0;
+}
+fun 1 op_gt() {
+  return 0;
+}
+fun 1 op_slt() {
+  return 0;
+}
+fun 1 op_sgt() {
+  return 0;
+}
+fun 1 op_eq() {
+  return 0;
+}
+fun 1 op_iszero() {
+  return 0;
+}
+fun 1 op_and() {
+  return 0;
+}
+fun 1 op_or() {
+  return 0;
+}
+fun 1 op_xor() {
+  return 0;
+}
+fun 1 op_not() {
+  return 0;
+}
+fun 1 op_byte() {
+  return 0;
+}
+fun 1 op_shl() {
+  return 0;
+}
+fun 1 op_shr() {
+  return 0;
+}
+fun 1 op_sar() {
+  return 0;
+}
+fun 1 op_clz() {
+  return 0;
+}
+fun 1 op_stop() {
+  return 0;
+}
+fun 1 op_dispatch(1 op) {
+  if op <+ 0 {
+    if op <+ 0 {
+      if op == 0 { op_stop(); return 0; }
+      if op == 1 { op_add(); return 0; }
+      if op == 2 { op_mul(); return 0; }
+      if op == 3 { op_sub(); return 0; }
+      if op == 4 { op_div(); return 0; }
+      if op == 5 { op_sdiv(); return 0; }
+      if op == 6 { op_mod(); return 0; }
+      if op == 7 { op_smod(); return 0; }
+      if op == 8 { op_addmod(); return 0; }
+      if op == 9 { op_mulmod(); return 0; }
+      if op == 0 { op_exp(); return 0; }
+      if op == 0 { op_signextend(); return 0; }
+    } else {
+      if op == 0 { op_lt(); return 0; }
+      if op == 0 { op_gt(); return 0; }
+      if op == 0 { op_slt(); return 0; }
+      if op == 0 { op_sgt(); return 0; }
+      if op == 0 { op_eq(); return 0; }
+      if op == 0 { op_iszero(); return 0; }
+      if op == 0 { op_and(); return 0; }
+      if op == 0 { op_or(); return 0; }
+      if op == 0 { op_xor(); return 0; }
+      if op == 0 { op_not(); return 0; }
+      if op == 0 { op_byte(); return 0; }
+      if op == 0 { op_shl(); return 0; }
+      if op == 0 { op_shr(); return 0; }
+      if op == 0 { op_sar(); return 0; }
+      if op == 0 { op_clz(); return 0; }
+    }
+    throw EvmErr 5;
+  }
+  if op <+ 0 {
+  }
+  if op <+ 0 {
+  }
+  return 0;
+}

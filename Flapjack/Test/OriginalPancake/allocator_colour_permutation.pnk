@@ -1,0 +1,20 @@
+exception BlockErr : 1;
+fun {1,1} tx_chain_id(1 tx) {
+  return <0, 0>;
+}
+fun 1 process_transaction(1 tx, 1 index, 1 pubkey) {
+  var {1,1} cid = tx_chain_id(tx);
+  if cid.0 != 0 {
+    if cid.1 != 0 {
+      throw BlockErr 0;
+    }
+  }
+  var nal = 0;
+  var i = 0;
+  while i < nal {
+  }
+  if (lds 1 (tx + 0)) == 0 {
+  } else {
+  }
+  return 0;
+}

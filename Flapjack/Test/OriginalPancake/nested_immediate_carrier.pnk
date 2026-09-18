@@ -1,0 +1,7 @@
+fun 1 mask(1 x) {
+  return x & 255;
+}
+
+fun 1 main() {
+  return mask(7);
+}

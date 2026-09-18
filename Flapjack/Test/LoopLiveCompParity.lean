@@ -21,10 +21,15 @@ def parityGuard : Bool :=
   | _ => false) &&
   (match loopLiveComp
       (.loop [1] (.assign 2 (.const 7)) [] : LoopProg Nat) with
-  | .loop [1] (.mark .skip) [] => true
+  | .loop [] (.mark .skip) [] => true
   | _ => false)
 
 #eval parityGuard
 #guard parityGuard
+
+def largeLiveInFuelMatchesCake : Bool :=
+  loopFixedpointFuel (List.range 65) == 66
+
+#guard largeLiveInFuelMatchesCake
 
 end Flapjack.Test.LoopLiveCompParity

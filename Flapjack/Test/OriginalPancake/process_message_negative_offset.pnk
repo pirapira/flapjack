@@ -1,0 +1,27 @@
+fun 1 state_snapshot() { return 0; }
+fun 1 state_restore(1 snap) { return 0; }
+exception EvmErr : 1;
+var 1 ev = 0;
+var 1 cur_cont = 0;
+fun 1 frame_open(1 msg, 1 kind) { return 0; }
+fun 1 start_child(1 cm, 1 kind, 1 child_mark, 1 child_mem_mark, 1 new_account_charged,
+    1 out_start, 1 out_size, 1 contract_address) { return 0; }
+fun 1 depth0_prepare() { return 0; }
+fun 1 process_message(1 msg) {
+  if (lds 1 (msg + 0)) >+ 0 { throw EvmErr 7; }
+  var parent = ev;
+  var parent_cont = cur_cont;
+  var 1 child = frame_open(msg, 0);
+  if (lds 1 (msg + 0)) == 0 {
+    var 1 prep_snapshot = state_snapshot();
+    var perr = 0;
+    try depth0_prepare()
+    catch EvmErr => perr {
+      if perr == 1 { }
+      state_restore(prep_snapshot);
+      ev = parent;
+      cur_cont = parent_cont;
+    }
+  }
+  return child;
+}

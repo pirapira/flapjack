@@ -66,4 +66,30 @@ def duplicateGlobalLayoutGuard : Bool :=
 
 #guard duplicateGlobalLayoutGuard
 
+/-! Cake compiles each global initializer with only the declarations that
+    precede it in source order.  A reference to a later global therefore
+    takes `compile_exp`'s zero fallback, even though the final global context
+    used for function bodies contains that later declaration.  This guard is
+    the direct source-shaped regression for GH #1063 and mirrors
+    `pan_globalsScript.sml:162-169`. -/
+def laterGlobalInitializerDecls : List (Decl Nat) :=
+  [.decl .one "first" (.var .global "later"),
+   .decl .one "later" (.const 7),
+   .function
+     { name := "main"
+       inline := false
+       exported := false
+       params := []
+       body := .return (.var .global "later")
+       returnShape := .one }]
+
+def precedingGlobalContextGuard : Bool :=
+  let compiled := globalCompileTop 8 id laterGlobalInitializerDecls
+  match compiled.initializers with
+  | [.store (.op .sub [.topAddr, .const 8]) (.const 0),
+     .store (.op .sub [.topAddr, .const 16]) (.const 7)] => true
+  | _ => false
+
+#guard precedingGlobalContextGuard
+
 end Flapjack.Test.PanGlobalsCompileParity

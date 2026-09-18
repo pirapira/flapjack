@@ -45,6 +45,31 @@ example :
       some [.jal 0 (0 - BitVec.ofNat 64 160)] := by
   decide
 
+/-! Cake can retain a LabAsm length of 5 after `add_nop`: its one-instruction
+    body is followed by one complete encoded Skip even though the logical line
+    length is not instruction-aligned. -/
+def storedLengthFiveOracle : Bool :=
+    labPadStoredInstructions (width := 64)
+      [.ori 10 0 (BitVec.ofNat 64 1)] 5 ==
+    [.ori 10 0 (BitVec.ofNat 64 1)]
+
+#guard storedLengthFiveOracle
+
+/-! Cake's `pad_section` applies each nonzero retained label length to the
+    most recent prior LabAsm, appending one complete encoded Skip. -/
+def twoStoredLabelPadsOracle : Bool :=
+  labCompileProgramLinesWithStoredLengths (width := 64) { services := [] } []
+      1000 1000 2000
+      [.asm (.const 1 1) [] 4,
+       .label 0 1 1,
+       .asm (.const 2 2) [] 4,
+       .label 0 2 1] ==
+    some [.ori 1 0 (BitVec.ofNat 64 1), .addi 0 0 0,
+      .ori 2 0 (BitVec.ofNat 64 2), .addi 0 0 0]
+
+#guard twoStoredLabelPadsOracle
+
+
 example :
     labLinkedFfiStubOffset (width := 64)
       { services := [("first", 7), ("second", 8)] } "first" 96 =

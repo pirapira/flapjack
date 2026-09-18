@@ -275,7 +275,21 @@ def movesToSpOrderGuard : Bool :=
       some [(3, 11), (2, 7), (1, 5)] &&
     table.get 5 == some [(1, 2)]
 
+/-- Cake's composed `moves_to_sp`/`resort_moves` output keeps the partner
+    names in descending priority order before biased IRC preferences consume
+    them.  The expected order is recorded by `reg_alloc_probe.out`, which
+    evaluates the original Cake definitions directly. -/
+def resortMovesSpOrderGuard : Bool :=
+  let table := Flapjack.RiscV.CakeRegAlloc.cakeMovesToSp
+    [(1, (2, 5)), (2, (2, 7)), (3, (2, 11))]
+      (Flapjack.RiscV.CakeRegAlloc.CakeNodeMap.ofSize 12)
+  let resorted := Flapjack.RiscV.CakeRegAlloc.cakeResortMovesSp table
+  resorted.get 2 == some [11, 7, 5] &&
+    resorted.get 5 == some [2] && resorted.get 7 == some [2] &&
+    resorted.get 11 == some [2]
+
 #guard reviveOrderGuard
+#guard resortMovesSpOrderGuard
 
 /-- `bg_ok` uses reversing HOL `PARTITION`, then `st_ex_FILTER`s each case list. -/
 def bgOkOrderGuard : Bool :=
@@ -478,6 +492,39 @@ def deadProgramPriorityGuard : Bool :=
   | .seq (.move priority _) _ => priority == 1
   | _ => false
 
+def copyLastMoveSource : WordProg Nat → Option Nat
+  | .move _ [(destination, source)] =>
+      if destination == 485 then some source else none
+  | .seq _ second => copyLastMoveSource second
+  | _ => none
+termination_by program => sizeOf program
+decreasing_by all_goals decreasing_trivial
+
+def copyGetPreservesClassGuard : Bool :=
+  let steps : List (WordProg Nat) :=
+    [.move 0 [(409, 401)], .move 0 [(413, 389)], .move 0 [(417, 373)],
+     .move 0 [(421, 385)], .move 0 [(425, 377)], .move 0 [(429, 413)],
+     .seq (.move 0 [(433, 409)]) (.inst (.mem .store 429 433)),
+     .move 0 [(437, 417)],
+     .seq (.move 0 [(441, 433)]) (.store (.var 441) 437),
+     .move 0 [(445, 421)],
+     .seq (.move 0 [(449, 441)]) (.store (.var 449) 445),
+     .move 0 [(453, 425)],
+     .seq (.move 0 [(457, 449)]) (.store (.var 457) 453),
+     .get 461 (.heapLength),
+     .inst (.arith (.shift .lsl 465 461 (.imm 1))),
+     .opCurrHeap .add 469 465,
+     .assign 473 (.load (.var 469)), .assign 477 (.load (.var 473)),
+     .move 0 [(481, 381)], .move 0 [(485, 409)]]
+  let (program, _) := steps.foldl
+    (fun (program, state) step =>
+      let (step, state) := Flapjack.RiscV.wordCopyProg state step
+      (.seq program step, state))
+    (.skip, Flapjack.RiscV.wordCopyEmpty)
+  copyLastMoveSource program == some 457
+
+#guard copyGetPreservesClassGuard
+
 /- Cake's mk_bij_aux enumerates a Set through the Patricia-tree toAList,
    whose order is not ascending.  This fixture is the checked HOL order
    [0, 4, 12, 6] and guards the allocator node numbering that feeds
@@ -515,7 +562,8 @@ def parityGuard : Bool :=
     heuSpillGuard && heuFixedDegreeGuard && raDeltaPairGuard &&
     raDeltaFreeGuard && raDeltaTriangleGuard && raStackOnlyGuard &&
     raMovesCoalesceGuard && raMovesSelfFilteredGuard && raForcedEdgeGuard &&
-    partOrderGuard && reviveOrderGuard && movesToSpOrderGuard && bgOkOrderGuard &&
+    partOrderGuard && reviveOrderGuard && movesToSpOrderGuard &&
+    resortMovesSpOrderGuard && bgOkOrderGuard &&
     qsortTiesTwoGuard && qsortTiesThreeGuard && qsortDescGuard &&
     stempBadColourTieGuard && raMovesStempGuard && raMovesStempHiGuard &&
     negFirstMatchProjectionGuard
@@ -544,7 +592,7 @@ def runChecks : IO Bool := do
     raStackOnlyGuard, raMovesCoalesceGuard, raMovesSelfFilteredGuard,
     partOrderGuard,
     reviveOrderGuard, revivePartitionGuard, bgOkOrderGuard, qsortTiesTwoGuard,
-    movesToSpOrderGuard,
+    movesToSpOrderGuard, resortMovesSpOrderGuard,
     qsortTiesThreeGuard, qsortDescGuard, raMovesStempGuard,
     raMovesStempHiGuard, negFirstMatchProjectionGuard, mapUpdateBoundedGuard,
     deadMovePriorityGuard, deadProgramPriorityGuard, sortMovesTailSplitGuard,
@@ -564,7 +612,8 @@ def runChecks : IO Bool := do
     "reg_alloc delta free", "reg_alloc stack only",
     "reg_alloc moves coalesce", "reg_alloc moves self filtered",
     "sorting partition order", "revive moves reversing partition", "revive partition direction", "bg_ok order",
-    "sort_moves tie two", "moves_to_sp order", "sort_moves tie three", "sort_moves long tie",
+    "sort_moves tie two", "moves_to_sp order", "resort_moves output order",
+    "sort_moves tie three", "sort_moves long tie",
     "sort_moves descending",
     "reg_alloc moves stack temp", "reg_alloc moves stack temp high",
     "neg_first_match_col projection", "Cake map updates stay bounded",

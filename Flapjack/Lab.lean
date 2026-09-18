@@ -52,6 +52,7 @@ inductive LabPlain (α : Type u) where
   | codeBufferWrite (address value : Nat)
   | dataBufferWrite (address value : Nat)
   | shareMem (operator : WordMemOp) (register address : Nat)
+  | shareMemOffset (operator : WordMemOp) (register address : Nat) (offset : α)
   /- CakeML's stack remover emits a base+offset memory operand
      (`Inst (Mem op r (Addr base offset))`) whenever the address is the store
      base or stack pointer plus a static displacement.  The port reconstructs
@@ -132,6 +133,8 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
   | .inst instruction => ⟨[.asm (.word instruction) [] 0], false, counter⟩
   | .shMem operator source address =>
       ⟨[.asm (.shareMem operator source address) [] 0], false, counter⟩
+  | .shMemOffset operator source address offset =>
+      ⟨[.asm (.shareMemOffset operator source address offset) [] 0], false, counter⟩
   | .arith operator destination left right =>
       ⟨[.asm (.arith operator destination left right) [] 0], false, counter⟩
   | .shift operator destination left right =>
@@ -262,8 +265,15 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
         match memoryOperator with
         | .load | .load8 | .load16 | .load32
         | .store | .store8 | .store16 | .store32 => true
+      /- The displacement normally lands in the scratch register, but a base
+         that *is* the scratch register cannot be clobbered before the
+         arithmetic reads it, so Word-to-Stack puts the constant in the
+         address register instead and the arithmetic reads and writes it in
+         one instruction.  Both shapes denote the same `Addr base value`, and
+         Cake writes both as one `memOffset`. -/
       let canFuse :=
-        right == scratch && address == addressRegister &&
+        (right == scratch || right == addressRegister) &&
+          address == addressRegister &&
           offsetOperator && offsetFits && memorySupported
       if canFuse then
         ⟨[.asm (.memOffset memoryOperator operator destination base value) [] 0],
@@ -344,17 +354,19 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
         scratch != destination && right == scratch &&
           match operator with
           | .add =>
-              value < 2 ^ 11 ||
-                (value ≥ 2 ^ 64 - 2 ^ 11 && value < 2 ^ 64)
-          | .sub => value ≤ 2 ^ 11
+              value != 0 &&
+                (value < 2 ^ 11 ||
+                  (value ≥ 2 ^ 64 - 2 ^ 11 && value < 2 ^ 64))
+          | .sub => value != 0 && value ≤ 2 ^ 11
           | .and | .or | .xor => false
       let canFuseAliasedAdd :=
         scratch = destination && left = destination && operator = .add
       if canFuse || canFuseAliasedAdd then
-        if destination = left && value = 0 then
-          /- Cake's final Lab filter drops an arithmetic identity.  Keeping
-             this out of the line stream is important because otherwise the
-             encoder emits `addi rd, rd, 0` and label positions drift. -/
+        if operator = .add && destination = left && value = 0 then
+          /- Cake's lowering can leave a zero-add identity out of the line
+             stream when the preceding constant is fused.  A zero-sub is
+             different: Cake retains the register subtraction and its source
+             constant, so dropping that pair shifts every following label. -/
           ⟨[], false, counter⟩
         else
           if canFuseAliasedAdd then

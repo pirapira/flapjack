@@ -195,25 +195,29 @@ def loopCompileExp [OfNat α 0] [OfNat α 1]
       | .mul, [left, right] =>
           let leftTemp := result.nextTemp
           let rightTemp := leftTemp + 1
-          let destination := rightTemp + 1
+          let (operationCode, destination) :=
+            compileCrepOp .mul context.target leftTemp rightTemp
+              (rightTemp + 1) result.live
           { code := result.code ++
-              [.assign leftTemp left, .assign rightTemp right,
-               .arith (.longMul destination destination leftTemp rightTemp)]
+              [.assign leftTemp left, .assign rightTemp right] ++ operationCode
             expression := .var destination
             nextTemp := destination + 1
-            live := destination :: leftTemp :: rightTemp :: result.live }
+            live := insertNatSorted destination
+              (loopListInsert [leftTemp, rightTemp] result.live) }
       | .mul, expressions =>
           let firstTemp := result.nextTemp
           let argumentTemps := List.range expressions.length |>.map
             (fun offset => firstTemp + offset)
           let argumentCode := argumentTemps.zipWith
             (fun name expression => .assign name expression) expressions
-          let destination := firstTemp + expressions.length
-          { code := result.code ++ argumentCode ++
-              [.arith (.longMul destination destination firstTemp (firstTemp + 1))]
+          let (operationCode, destination) :=
+            compileCrepOp .mul context.target firstTemp (firstTemp + 1)
+              (firstTemp + expressions.length) result.live
+          { code := result.code ++ argumentCode ++ operationCode
             expression := .var destination
             nextTemp := destination + 1
-            live := destination :: argumentTemps ++ result.live }
+            live := insertNatSorted destination
+              (loopListInsert argumentTemps result.live) }
   | .cmp operator left right =>
       let leftResult := loopCompileExp context tmp live left
       let rightResult := loopCompileExp context leftResult.nextTemp leftResult.live right
@@ -331,41 +335,41 @@ def loopCompileProg [OfNat α 0] [OfNat α 1]
       let addressResult := loopCompileExp context (context.maxVar + 1) live address
       let valueResult := loopCompileExp context addressResult.nextTemp addressResult.live value
       let valueTemp := valueResult.nextTemp
-      .seq (loopNestedSeq (addressResult.code ++ valueResult.code))
-        (.seq (.assign valueTemp valueResult.expression)
-          (.store addressResult.expression valueTemp))
+      loopNestedSeq (addressResult.code ++ valueResult.code ++
+        [.assign valueTemp valueResult.expression,
+         .store addressResult.expression valueTemp])
   | .store32 address value =>
       let addressResult := loopCompileExp context (context.maxVar + 1) live address
       let valueResult := loopCompileExp context addressResult.nextTemp addressResult.live value
       let addressTemp := valueResult.nextTemp
       let valueTemp := addressTemp + 1
-      .seq (loopNestedSeq (addressResult.code ++ valueResult.code))
-        (.seq (.assign addressTemp addressResult.expression)
-          (.seq (.assign valueTemp valueResult.expression)
-            (.store32 addressTemp valueTemp)))
+      loopNestedSeq (addressResult.code ++ valueResult.code ++
+        [.assign addressTemp addressResult.expression,
+         .assign valueTemp valueResult.expression,
+         .store32 addressTemp valueTemp])
   | .storeByte address value =>
       let addressResult := loopCompileExp context (context.maxVar + 1) live address
       let valueResult := loopCompileExp context addressResult.nextTemp addressResult.live value
       let addressTemp := valueResult.nextTemp
       let valueTemp := addressTemp + 1
-      .seq (loopNestedSeq (addressResult.code ++ valueResult.code))
-        (.seq (.assign addressTemp addressResult.expression)
-          (.seq (.assign valueTemp valueResult.expression)
-            (.storeByte addressTemp valueTemp)))
+      loopNestedSeq (addressResult.code ++ valueResult.code ++
+        [.assign addressTemp addressResult.expression,
+         .assign valueTemp valueResult.expression,
+         .storeByte addressTemp valueTemp])
   | .storeGlob address value =>
       let result := loopCompileExp context (context.maxVar + 1) live value
-      .seq (loopNestedSeq result.code) (.setGlobal address result.expression)
+      loopNestedSeq (result.code ++ [.setGlobal address result.expression])
   | .seq first second => .seq (loopCompileProg context live first)
       (loopCompileProg context live second)
   | .ite condition thenBranch elseBranch =>
       -- `crep_to_loopScript.sml:176-181`: both branches and the cutset use
       -- the incoming live set; the condition's own live result is dropped.
       let result := loopCompileExp context (context.maxVar + 1) live condition
-      .seq (loopNestedSeq result.code)
-        (.seq (.assign result.nextTemp result.expression)
-            (.ite .notEqual result.nextTemp (.imm (by exact 0))
-            (loopCompileProg context live thenBranch)
-            (loopCompileProg context live elseBranch) live))
+      loopNestedSeq (result.code ++
+        [.assign result.nextTemp result.expression,
+         .ite .notEqual result.nextTemp (.imm (by exact 0))
+           (loopCompileProg context live thenBranch)
+           (loopCompileProg context live elseBranch) live])
   | .while condition body =>
       -- `crep_to_loopScript.sml:182-188`: the loop entry and exit live sets,
       -- the body, and the inner cutset all use the incoming live set.
@@ -403,7 +407,7 @@ def loopCompileProg [OfNat α 0] [OfNat α 1]
                 .ite .notEqual exceptionName (.imm exception)
                   (.raise exceptionName) (.seq .tick handlerCode) live,
                 .skip, live))
-      .seq (loopNestedSeq (result.code ++ loopAssignTemps argumentNames result.expressions)) call
+      loopNestedSeq (result.code ++ loopAssignTemps argumentNames result.expressions ++ [call])
   | .extCall function configuration configurationLength array arrayLength =>
       match lookupNatInfo configuration context.vars,
           lookupNatInfo configurationLength context.vars,
@@ -421,9 +425,12 @@ def loopCompileProg [OfNat α 0] [OfNat α 1]
       loopNestedSeq
         (result.code ++ loopAssignTemps names result.expressions ++ [.return names])
   | .shMem operator name address =>
-      let result := loopCompileExp context (context.maxVar + 1) live address
-      loopNestedSeq (result.code ++
-        [.shMem operator (findLoopVar context name) result.expression])
+      match lookupNatInfo name context.vars with
+      | some mappedName =>
+          let result := loopCompileExp context (context.maxVar + 1) live address
+          loopNestedSeq (result.code ++
+            [.shMem operator mappedName result.expression])
+      | none => .skip
   | .tick => .tick
 termination_by program => sizeOf program
 

@@ -28,7 +28,13 @@ inductive WordShiftImmediate where
 
 class WordInstSelectImmediate (α : Type u) where
   validBinOpImmediate : BinOp → α → Bool
+  validSharedMemoryOffset : WordMemOp → α → Bool
   shiftImmediate : α → WordShiftImmediate
+  negateImmediate : α → α
+  /- The current allocator bridge has an established expression-shaped path
+     for positive offset spill chains.  Negative RV offsets are the Cake
+     shape whose direct `Addr` carrier is required by the parity corpus. -/
+  negativeAddressOffset : α → Bool
 
 instance : WordInstSelectImmediate Nat where
   /- The source-facing pipeline carries RV64 words as `Nat` after the
@@ -40,8 +46,15 @@ instance : WordInstSelectImmediate Nat where
     | .sub => value < 2 ^ 11
     | .add | .and | .or | .xor =>
         value < 2 ^ 11 || value ≥ 2 ^ 64 - 2 ^ 11
+  validSharedMemoryOffset operator value :=
+    let fits := value < 2 ^ 11 || value ≥ 2 ^ 64 - 2 ^ 11
+    match operator with
+    | .load16 | .store16 => fits && value % 2 = 0
+    | _ => fits
   shiftImmediate value :=
     if value < 64 then .valid value else .outOfRange
+  negateImmediate value := (2 ^ 64 - value) % 2 ^ 64
+  negativeAddressOffset value := value ≥ 2 ^ 63
 
 instance : WordInstSelectImmediate (BitVec width) where
   validBinOpImmediate operator value :=
@@ -50,11 +63,19 @@ instance : WordInstSelectImmediate (BitVec width) where
     | .sub => n < 2 ^ 11
     | .add | .and | .or | .xor =>
         n < 2 ^ 11 || n ≥ 2 ^ width - 2 ^ 11
+  validSharedMemoryOffset operator value :=
+    let n := value.toNat
+    let fits := n < 2 ^ 11 || n ≥ 2 ^ width - 2 ^ 11
+    match operator with
+    | .load16 | .store16 => fits && n % 2 = 0
+    | _ => fits
   shiftImmediate value :=
     if value.toNat < width then
       .valid value.toNat
     else
       .outOfRange
+  negateImmediate value := 0 - value
+  negativeAddressOffset value := value.toNat ≥ 2 ^ (width - 1)
 
 def wordInstSelectMaximum : List Nat → Nat
   | [] => 0
@@ -109,66 +130,76 @@ def wordInstIsConstant : WordExp α → Bool
     folded identity `0w` for `Add`, `Or` and `Xor`, and collapses a zero fold
     to `Const 0w` for `And` (HOL probe labels `optimize_consts_or_zero`,
     `optimize_consts_xor_zero`, `optimize_consts_and_zero`, `norm_or_zero`,
-    `norm_and_zero`), so the zero cases are reproduced here.  Folding
-    *non-zero* constants for `Or`, `Xor` and `And` needs the operator
-    semantics, which this module (core type classes only, no Mathlib) cannot
-    assume, and `op_consts` for empty operand lists remains a separate gap. -/
+    `norm_and_zero`), so the zero cases are reproduced here.  `wordInstFoldConstants`
+    uses the available `And`/`Or`/`Xor`/arithmetic operation classes for
+    non-zero folds too.  Unlike the other operators, `And` folds its
+    non-empty constant list from the first operand, so no all-ones identity
+    is required; `op_consts` for empty operand lists remains a separate gap. -/
 def wordInstConstantValue : WordExp α → Option α
   | .const value => some value
   | _ => none
 
-def wordInstConstantsToEnd [Add α] [DecidableEq α] [OfNat α 0]
+/-! `word_op`/`optimize_consts` from Cake's `word_inst` fold all constant
+    operands before `flatten_exp` rebuilds the expression.  Keeping only the
+    zero-identity cases here was enough for earlier fixtures, but left
+    non-zero constant expressions such as `7 | 7` as an extra instruction.
+    That extra instruction is observable in a call handler because it shifts
+    every later SSA name and code section. -/
+def wordInstFoldConstants [Add α] [Sub α] [AndOp α] [OrOp α]
+    [HXor α α α] [OfNat α 0]
+    (operator : BinOp) (values : List α) : Option α :=
+  match operator, values with
+  | .add, values => some (values.foldr (fun value rest => value + rest) 0)
+  | .and, value :: values => some (values.foldl (fun acc value => acc &&& value) value)
+  | .or, values => some (values.foldr (fun value rest => value ||| rest) 0)
+  | .xor, values => some (values.foldr (fun value rest => value ^^^ rest) 0)
+  | .sub, [left, right] => some (left - right)
+  | _, _ => none
+
+def wordInstConstantsToEnd [Add α] [Sub α] [AndOp α] [OrOp α]
+    [HXor α α α] [DecidableEq α] [OfNat α 0]
     (operator : BinOp) (expressions : List (WordExp α)) : List (WordExp α) :=
   let constants := expressions.filterMap wordInstConstantValue
   let others := expressions.filter (fun expression => !wordInstIsConstant expression)
   match constants with
   | [] => expressions.reverse
   | _ =>
-      match operator with
-      | .add =>
-          -- Cake's `optimize_consts` folds the constant operands with `word_op`
-          -- and `reduce_const` drops the result when it is the identity `0`, so
-          -- `[Const 0; x]` normalizes to `[x]` and `[Const 0]` to `[Const 0]`.
-          let folded := constants.foldr (fun value rest => value + rest) 0
+      match wordInstFoldConstants operator constants with
+      | none => constants.map (fun value => .const value) ++ others.reverse
+      | some folded =>
           if folded = 0 then
-            match others with
-            | [] => [.const 0]
-            | [single] => [single]
-            | _ => others.reverse
+            match operator with
+            | .add | .or | .xor =>
+                match others with
+                | [] => [.const folded]
+                | [single] => [single]
+                | _ => others.reverse
+            | .and => [.const folded]
+            | _ => [.const folded] ++ others.reverse
           else
             [.const folded] ++ others.reverse
-      | .or | .xor =>
-          -- `reduce_const` drops a zero fold for `Or`/`Xor` exactly as for
-          -- `Add`; only the all-zero fold is decidable without the operator.
-          if constants.all (fun value => value = 0) then
-            match others with
-            | [] => [.const 0]
-            | [single] => [single]
-            | _ => others.reverse
-          else
-            constants.map (fun value => .const value) ++ others.reverse
-      | .and =>
-          -- `reduce_const And 0w rest = Const 0w` collapses the whole
-          -- expression; a non-zero fold keeps the constant last.
-          if constants.all (fun value => value = 0) then
-            [.const 0]
-          else
-            constants.map (fun value => .const value) ++ others.reverse
-      | _ => constants.map (fun value => .const value) ++ others.reverse
 
 def wordInstConvertSub [Sub α] [OfNat α 0] : List (WordExp α) → WordExp α
   | [.const left, .const right] => .const (left - right)
   | [expression, .const value] => .op .add [.const (0 - value), expression]
   | expressions => .op .sub expressions
 
-def wordInstPullExp [Sub α] [Add α] [DecidableEq α] [OfNat α 0] : WordExp α → WordExp α
+def wordInstPullExp [Sub α] [Add α] [AndOp α] [OrOp α] [HXor α α α]
+    [DecidableEq α] [OfNat α 0] : WordExp α → WordExp α
   | .op operator [] => .op operator []
   | .op _ [expression] => wordInstPullExp expression
   | .op .sub expressions =>
       wordInstConvertSub (expressions.map wordInstPullExp)
   | .op operator expressions =>
       let expressions := expressions.map wordInstPullExp
-      .op operator (wordInstConstantsToEnd operator (wordInstPullOps operator expressions []))
+      let normalized := wordInstConstantsToEnd operator
+        (wordInstPullOps operator expressions [])
+      match normalized with
+      | [expression] =>
+          match expression with
+          | .const value => if value = 0 then expression else .op operator normalized
+          | _ => expression
+      | _ => .op operator normalized
   | .load address => .load (wordInstPullExp address)
   | .shift operator left right =>
       .shift operator (wordInstPullExp left) (wordInstPullExp right)
@@ -196,7 +227,8 @@ def wordInstFlattenExp : WordExp α → WordExp α
 termination_by expression => sizeOf expression
 decreasing_by all_goals decreasing_trivial
 
-def wordInstNormalizeExp [Sub α] [Add α] [DecidableEq α] [OfNat α 0] (expression : WordExp α) : WordExp α :=
+def wordInstNormalizeExp [Sub α] [Add α] [AndOp α] [OrOp α] [HXor α α α]
+    [DecidableEq α] [OfNat α 0] (expression : WordExp α) : WordExp α :=
   wordInstFlattenExp (wordInstPullExp expression)
 
 /-- Shared tail of `inst_select_exp`'s `Load` case: the selected address is
@@ -207,9 +239,15 @@ def wordInstNormalizeExp [Sub α] [Add α] [DecidableEq α] [OfNat α 0] (expres
     unfused base-plus-offset expression is preserved for the later
     Word-to-Stack offset handling instead of pretending that `temp` holds the
     complete address. -/
-def wordInstSelectLoadTail (temp : Nat) (prelude : WordProg α)
+def wordInstSelectLoadTail [WordInstSelectImmediate α] (temp : Nat) (prelude : WordProg α)
     (selectedAddress : WordExp α) : WordProg α × WordExp α :=
   match selectedAddress with
+  | .op .add [.var address, .const offset] =>
+      if WordInstSelectImmediate.negativeAddressOffset offset then
+        (wordDeadSelectSeq prelude
+          (.inst (.memOffset .load temp address offset)), .var temp)
+      else
+        (wordDeadSelectSeq prelude (.assign temp (.load selectedAddress)), .var temp)
   | .var address =>
       (wordDeadSelectSeq prelude (.inst (.mem .load temp address)), .var temp)
   | _ => (wordDeadSelectSeq prelude (.assign temp (.load selectedAddress)), .var temp)
@@ -246,12 +284,9 @@ def wordInstSelectAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α
          `andi d, x, 1`, one instruction more per occurrence; the
          statement-level selector below already agreed with Cake.
 
-         Only `Add` keeps the unfused `base + constant` expression instead of
-         Cake's materialization, because that carrier is what
-         `wordInstSelectAddressAtom` hands to Word-to-Stack for the memory
-         offset.  Every other operator takes Cake's `Const`/`Reg` pair, which
-         is also what this selector emitted before the immediate test was
-         generalized. -/
+         Address selection is handled separately by
+         `wordInstSelectAddressAtom`, so ordinary out-of-range operations take
+         Cake's `Const`/`Reg` materialization here. -/
       let (prelude, selectedLeft) := wordInstSelectAtom temp left
       let materialized : WordProg α × WordExp α :=
         (wordDeadSelectSeq (wordDeadSelectSeq prelude (.inst (.const (temp + 1) value)))
@@ -262,15 +297,15 @@ def wordInstSelectAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α
             (wordDeadSelectSeq prelude
               (.inst (.arith (.binOp operator temp selected (.imm value)))), .var temp)
           else if operator = .add then
-            if WordInstSelectImmediate.validBinOpImmediate .sub (0 - value) then
+            if WordInstSelectImmediate.validBinOpImmediate .sub
+                (WordInstSelectImmediate.negateImmediate value) then
               (wordDeadSelectSeq prelude
-                (.inst (.arith (.binOp .sub temp selected (.imm (0 - value))))), .var temp)
-            else
-              (prelude, .op .add [selectedLeft, .const value])
+                  (.inst (.arith (.binOp .sub temp selected
+                    (.imm (WordInstSelectImmediate.negateImmediate value))))), .var temp)
+            else materialized
           else materialized
       | _ =>
-          if operator = .add then (prelude, .op .add [selectedLeft, .const value])
-          else materialized
+          materialized
   | .op operator [left, right] =>
       let (leftPrelude, _) := wordInstSelectAtom temp left
       let (rightPrelude, _) := wordInstSelectAtom (temp + 1) right
@@ -299,7 +334,12 @@ def wordInstSelectAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α
       match selectedLeft, WordInstSelectImmediate.shiftImmediate value with
       | .var left, .valid amount =>
           if amount = 0 then
-            (leftPrelude, .var temp)
+            /- Cake's `inst_select_exp` emits the final `Move 0 [tar,temp]`
+               even when the shift selector was already called with
+               `tar = temp`.  The self-copy is observable to SSA numbering
+               and the allocator, so preserve it rather than simplifying it
+               away at this boundary. -/
+            (wordDeadSelectSeq leftPrelude (.move 0 [(temp, temp)]), .var temp)
           else
             (wordDeadSelectSeq leftPrelude
               (.inst (.arith (.shift operator temp left (.imm value)))), .var temp)
@@ -344,26 +384,69 @@ def wordInstSelectAddressAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [O
       (prelude, .op .add [selectedLeft, .const value])
   | _ => wordInstSelectAtom temp expression
 
-def wordInstSelectProgram [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α 1]
+/- Cake's `ShareInst` uses an `Addr base offset` only when the target
+   memory encoding accepts that offset (`word_instScript.sml:409-418`).  The
+   expression. -/
+def wordInstSelectShareOffsetAllowed [WordInstSelectImmediate α]
+    (_operator : WordMemOp) (offset : α) : Bool :=
+  WordInstSelectImmediate.validSharedMemoryOffset _operator offset
+
+def wordInstSelectProgram [Sub α] [Add α] [AndOp α] [OrOp α] [HXor α α α]
+    [DecidableEq α] [OfNat α 0] [OfNat α 1]
     [WordInstSelectImmediate α]
     (temp : Nat) : WordProg α → WordProg α
   | .seq first second =>
       wordDeadSelectSeq (wordInstSelectProgram temp first)
         (wordInstSelectProgram temp second)
   | .shareInst operator name address =>
-      let (prelude, address) :=
-        wordInstSelectAddressAtom temp (wordInstNormalizeExp address)
-      wordDeadSelectSeq prelude (.shareInst operator name address)
+      /- Cake's `ShareInst` selector keeps an address offset only when the
+         corresponding load/store encoding accepts it.  Otherwise it selects
+         the whole address into `temp`, then shares `Var temp`. -/
+      let address := wordInstNormalizeExp address
+      match address with
+      | .op .add [base, .const offset] =>
+          if wordInstSelectShareOffsetAllowed operator offset then
+            let (prelude, selectedBase) := wordInstSelectAtom temp base
+            wordDeadSelectSeq prelude
+              (.shareInst operator name (.op .add [selectedBase, .const offset]))
+          else
+            let (prelude, _) := wordInstSelectAtom temp address
+            wordDeadSelectSeq prelude (.shareInst operator name (.var temp))
+      | _ =>
+          let (prelude, _) := wordInstSelectAtom temp address
+          wordDeadSelectSeq prelude (.shareInst operator name (.var temp))
+  | .set store value =>
+      /- `inst_select c temp (Set store exp)` (`word_instScript.sml:386-388`)
+         is `Seq (inst_select_exp c temp temp (flatten_exp (pull_exp exp)))
+         (Set store (Var temp))`.  It runs the expression selector
+         unconditionally, so even `Set store (Var v)` becomes
+         `Move 0 [(temp, v)]; Set store (Var temp)`.
+
+         Flapjack had no `Set` case at all, so the store passed through
+         untouched and the copy was never created.  Full SSA then numbered
+         every later name four lower than Cake's and the allocator saw one
+         fewer move, which permuted the colours: in the guest's
+         `process_transaction` Cake emits
+         `Inst (Const 137 0w); Move0 [(141,137)]; Set (Temp 0w) (Var 141)`
+         where Flapjack emitted `const 137 0; set (temp 0) (var 137)`. -/
+      let (prelude, selected) := wordInstSelectAtom temp (wordInstNormalizeExp value)
+      wordDeadSelectSeq prelude (.set store selected)
   | .assign destination value =>
       let value := wordInstNormalizeExp value
       match value with
       | .lookup store => .get destination store
       | .load address =>
-          let (prelude, address) := wordInstSelectAddressAtom temp address
-          match address with
+          let (prelude, selectedAddress) := wordInstSelectAddressAtom temp address
+          match selectedAddress with
           | .var address =>
               wordDeadSelectSeq prelude (.inst (.mem .load destination address))
-          | _ => wordDeadSelectSeq prelude (.assign destination (.load address))
+          | .op .add [.var address, .const offset] =>
+              if WordInstSelectImmediate.negativeAddressOffset offset then
+                wordDeadSelectSeq prelude
+                  (.inst (.memOffset .load destination address offset))
+              else
+                wordDeadSelectSeq prelude (.assign destination (.load selectedAddress))
+          | _ => wordDeadSelectSeq prelude (.assign destination (.load selectedAddress))
       | .op operator [left, .const value] =>
           let (prelude, left) := wordInstSelectAtom temp left
           match left with
@@ -372,9 +455,11 @@ def wordInstSelectProgram [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat
                 wordDeadSelectSeq prelude
                   (.inst (.arith (.binOp operator destination left (.imm value))))
               else if operator = .add &&
-                  WordInstSelectImmediate.validBinOpImmediate .sub (0 - value) then
+                  WordInstSelectImmediate.validBinOpImmediate .sub
+                    (WordInstSelectImmediate.negateImmediate value) then
                 wordDeadSelectSeq prelude
-                  (.inst (.arith (.binOp .sub destination left (.imm (0 - value)))))
+                  (.inst (.arith (.binOp .sub destination left
+                    (.imm (WordInstSelectImmediate.negateImmediate value)))))
               else
                 /- Cake's `inst_select_exp` materializes an out-of-range
                    constant in `temp + 1` and emits the register/register
@@ -432,9 +517,9 @@ def wordInstSelectProgram [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat
       | .var source => .move 0 [(destination, source)]
       | value => .assign destination value
   | .store address value =>
-      let (prelude, address) :=
+      let (prelude, selectedAddress) :=
         wordInstSelectAddressAtom temp (wordInstNormalizeExp address)
-      match address with
+      match selectedAddress with
       | .var address =>
           /- Cake's selected Store is an actual WordLang Mem instruction
              addressed through the fresh temporary.  Keeping it as a
@@ -442,7 +527,13 @@ def wordInstSelectProgram [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat
              address expression away, which changes the allocator-visible
              move shape. -/
           wordDeadSelectSeq prelude (.inst (.mem .store value address))
-      | _ => wordDeadSelectSeq prelude (.store address value)
+      | .op .add [.var address, .const offset] =>
+          if WordInstSelectImmediate.negativeAddressOffset offset then
+            wordDeadSelectSeq prelude
+              (.inst (.memOffset .store value address offset))
+          else
+            wordDeadSelectSeq prelude (.store selectedAddress value)
+      | _ => wordDeadSelectSeq prelude (.store selectedAddress value)
   | .ite operator condition right thenBranch elseBranch =>
       .ite operator condition right
         (wordInstSelectProgram temp thenBranch)
@@ -472,7 +563,8 @@ def wordInstSelectProgram [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial
 
-def wordInstSelectProgramFrom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α 1]
+def wordInstSelectProgramFrom [Sub α] [Add α] [AndOp α] [OrOp α] [HXor α α α]
+    [DecidableEq α] [OfNat α 0] [OfNat α 1]
     [WordInstSelectImmediate α]
     (program : WordProg α) : WordProg α :=
   wordInstSelectProgram (wordInstSelectMaximum (wordProgVariables program) + 1) program

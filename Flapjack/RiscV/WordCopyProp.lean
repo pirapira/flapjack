@@ -126,7 +126,8 @@ def wordCopySetStoreEq (state : WordCopyState) (store name : Nat) : WordCopyStat
               state.classStore.filter (fun entry => entry.1 != store)
             classNext := state.classNext + 1 }
     | none =>
-        { aliases := (name, name) ::
+        { state with
+          aliases := (name, name) ::
             state.aliases.filter (fun entry => entry.1 != name)
           storeToEq := (store, name) ::
             state.storeToEq.filter (fun entry => entry.1 != store)
@@ -205,6 +206,14 @@ def wordCopyInst {α : Type} (state : WordCopyState) :
       | .store | .store8 | .store16 | .store32 =>
           (.mem operator (wordCopyLookup state destination)
             (wordCopyLookup state address), state)
+  | .memOffset operator destination address offset =>
+      match operator with
+      | .load | .load8 | .load16 | .load32 =>
+          (.memOffset operator destination (wordCopyLookup state address) offset,
+            wordCopyRemove state destination)
+      | .store | .store8 | .store16 | .store32 =>
+          (.memOffset operator (wordCopyLookup state destination)
+            (wordCopyLookup state address) offset, state)
 
 def wordCopyMerge (left right : WordCopyState) : WordCopyState :=
   { aliases := left.aliases.filter (fun entry =>
@@ -279,6 +288,10 @@ def wordCopyProg [WordCseHash α] :
             (.move 0 moves, state)
   | state, .store address value =>
       (.store (wordCopyExp state address) (wordCopyLookup state value), state)
+  | state, .opCurrHeap operator destination source =>
+      let source' := wordCopyLookup state source
+      let source'' := if source' == destination then source else source'
+      (.opCurrHeap operator destination source'', wordCopyRemove state destination)
   | state, .set store value =>
       /- `copy_prop_prog (Set name exp)` (`word_copyScript.sml:332-337`). -/
       match value with
@@ -317,7 +330,7 @@ def wordCopyProg [WordCseHash α] :
             wordCopyRemove state name)
       | .store | .store8 | .store16 | .store32 =>
           (.shareInst operator name
-            (wordCopyShareExp state address), state)
+            (wordCopyShareExp state address), wordCopyRemove state name)
   | state, .break label => (.break label, state)
   | state, .continue label => (.continue label, state)
   | _state, program => (program, wordCopyEmpty)

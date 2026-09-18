@@ -34,9 +34,34 @@ def cakeWideBinopStatementShape : Bool :=
       value == 2 ^ 60
   | _ => false
 
+/- Cake materializes a large positive `Add` constant after the modular
+   negative-immediate retry fails (`word_instScript.sml:262-275`). -/
+def cakeWideAddMaterializesConstant : Bool :=
+  match wordInstSelectProgram (α := Nat) 23
+      (.assign 5 (.op .add [.var 18, .const (2 ^ 60)])) with
+  | .seq (.move 0 [(23, 18)])
+      (.seq (.inst (.const 24 value))
+        (.inst (.arith (.binOp .add 5 23 (.reg 24))))) =>
+      value == 2 ^ 60
+  | _ => false
+
+def cakeSharedByteOffsetMaterializesConstant : Bool :=
+  match wordInstSelectProgram (α := Nat) 23
+      (.shareInst .store8 10
+        (.op .add [.var 12, .const 2684420096])) with
+  | .seq
+      (.seq
+        (.seq (.move 0 [(23, 12)]) (.inst (.const 24 value)))
+        (.inst (.arith (.binOp .add 23 23 (.reg 24)))))
+      (.shareInst .store8 10 (.var 23)) =>
+      value == 2684420096
+  | _ => false
+
 #guard cakeLoadConstShape
 #guard cakeLoadVarShape
 #guard cakeWideBinopStatementShape
+#guard cakeWideAddMaterializesConstant
+#guard cakeSharedByteOffsetMaterializesConstant
 
 #guard match cakeNonImmediateAnd with
   | .seq (.move 0 [(7, 2)])

@@ -49,6 +49,12 @@ val _ = print_eval "ra_moves_self_filtered"
 val _ = print_eval "ra_forced_edge"
   ``reg_alloc$reg_alloc reg_alloc$IRC (NONE:num sptree$num_map option) 4
       [] (reg_alloc$Delta [1] [5;3]) [(1,5)] LN``;
+(* `do_reg_alloc` rebuilds the source move-partner table with
+   `moves_to_sp`, then applies `resort_moves` before biased preferences. *)
+val _ = print_eval "moves_to_sp_resort"
+  ``reg_alloc$resort_moves
+      (reg_alloc$moves_to_sp
+        [(1:num,(2:num,5:num));(2,(2,7));(3,(2,11))] LN)``;
 val _ = print_eval "ra_order_seq"
   ``reg_alloc$reg_alloc reg_alloc$IRC (NONE:num sptree$num_map option) 4 []
       (reg_alloc$Seq (reg_alloc$Delta [9] []) (reg_alloc$Delta [13] [])) [] LN``;

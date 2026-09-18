@@ -36,12 +36,23 @@ about to lower, which is the output of `word_alloc`;
 `cakeAllocateWordFunctionAfterDead` has already computed exactly that and
 returns it as `allocation.nextSpill`.  The original `compile_prog` separately
 accounts for the function's formal stack-argument area, not nested call
-argument lists, so no additional call-arity term belongs here. -/
+argument lists, so no additional call-arity term belongs here.
+
+`stack_arg_count = arg_count - reg_count` uses the same `reg_count`
+`word_to_stack$compile` computes once for the whole program
+(`word_to_stackScript.sml:605`): `asm_conf.reg_count - (5 + LENGTH
+asm_conf.avoid_regs)`, which for RISC-V is `cakeRiscVRegisterCount`.  A
+literal `12` here made every function with twelve or more word parameters
+reserve a frame Cake does not: `fun 1 f({1,1,1,1,1,1} a, {1,1,1,1,1,1} b)
+{ return 0; }` came out as an `addi sp`, a stack-overflow check and a
+matching `addi` around a body that is one `ori`.  `Pipeline.lean` already
+used `cakeRiscVRegisterCount` for the same term. -/
 def cakeWordFrameSlots [NeZero width] (allocation : WordSpillState)
     (wordParameters : List Nat)
     (_renamedProgram : WordProg (RiscV.Word width)) : Nat :=
   let cakeFrameSlots := allocation.nextSpill
-  max cakeFrameSlots (wordParameters.length - 12)
+  max cakeFrameSlots
+    (wordParameters.length - RiscV.CakeRegAlloc.cakeRiscVRegisterCount)
 
 def pipelineWordFunctionsToStackChecked [NeZero width] :
     List (Nat × List Nat × WordProg (Word width)) →
@@ -160,7 +171,7 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked [NeZero width] :
           /- Cake reserves allocator spills and the function's formal
              arguments outside the physical ABI window. -/
           let frameSlots := max allocation.nextSpill
-            (wordParameters.length - 12)
+            (wordParameters.length - RiscV.CakeRegAlloc.cakeRiscVRegisterCount)
           -- x23 stays clear of every Cake colour (x29 is colour 12 and can
           -- hold a call argument), so the parallel-move source check never trips.
           let config : RiscV.WordStackConfig :=
@@ -300,7 +311,7 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordCheckedA
       match RiscV.CakeRegAlloc.cakeAllocateWordFunctionAfterDead
           label wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)
-      | some (_, renamedParameters, renamedProgram, allocation) =>
+      | some (_, _renamedParameters, renamedProgram, allocation) =>
           let frameSlots :=
             RiscV.cakeWordFrameSlots allocation wordParameters renamedProgram
           -- x23 stays clear of every Cake colour (x29 is colour 12 and can
@@ -315,7 +326,12 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordCheckedA
               abiBase := 1
               abiStride := 1
               callAbiBase := 0
+              /- The source-shaped call list includes Cake's link slot.  Its
+                 register window is the full Cake `k`, not the historical
+                 twelve-register value used by the generic RISC-V path. -/
+              abiRegisterCount := RiscV.CakeRegAlloc.cakeRiscVRegisterCount
               abiFrameSlots := frameSlots
+              frameOffset := if frameSlots = 0 then 0 else frameSlots + 1
               sectionId := label
               handlerLabel := label }
           let localState : RiscV.WordStackBitmapState :=
@@ -323,12 +339,12 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordCheckedA
           let lower :=
             if frameSlots = 0 then
               RiscV.wordToStackFunctionWithParametersAndLocationBitmapsAfterDeadMovesWithSources
-                config renamedParameters wordRiscVAbiSourceRegister
+                config wordParameters wordRiscVAbiSourceRegister
                 RiscV.CakeRegAlloc.cakeRiscVRegisterCount config.scratch
                 frameSlots (some 1) localState renamedProgram
             else
               RiscV.wordToStackFunctionWithCakeFrameAndLocationBitmapsAfterDeadMovesWithSources
-                config renamedParameters wordRiscVAbiSourceRegister
+                config wordParameters wordRiscVAbiSourceRegister
                 RiscV.CakeRegAlloc.cakeRiscVRegisterCount config.scratch
                 frameSlots (some 1) localState renamedProgram
           match lower with
@@ -427,6 +443,19 @@ structure SourceRiscVRuntimeImage (width : Nat) where
       original CakeML backend emits in its startup frame. -/
   ffiNames : List String
 
+/-! FFI discovery must observe the same Word simplification boundary as the
+    emitted code.  In particular, Cake's `const_fp` removes a branch whose
+    comparison is already constant before `export_riscv` collects FFI names.
+    The source-shaped `pipeline.word` is intentionally earlier than that
+    pass, so applying the faithful pre-allocation Word sequence here avoids
+    registering stubs for dead constant branches. -/
+def wordFfiDiscoveryBody [NeZero width]
+    (body : WordProg (RiscV.Word width)) : WordProg (RiscV.Word width) :=
+  RiscV.wordRemoveUnreachable (wordProgDCE
+    (RiscV.wordInstSelectProgramFrom
+      (RiscV.wordFuseConditionsAndFold
+        (RiscV.wordConstFp (RiscV.wordFlattenProgramFrom body)))))
+
 /-! Checked sibling of `compileFlapjackRiscVViaStack`.  The historical
     `Option` entrypoint remains available for compatibility; this form makes
     a failed Word section distinguishable from a later StackRemove/Lab/RISC-V
@@ -491,7 +520,7 @@ def compileFlapjackRiscVSourceBytesChecked [NeZero width]
               let discoveredNames :=
                 (pipeline.word.flatMap
                   (fun entry : Nat × List Nat × WordProg (RiscV.Word width) =>
-                    RiscV.wordProgFfiNames (RiscV.wordRemoveUnreachable (wordProgDCE entry.2.2)))).eraseDups
+                    RiscV.wordProgFfiNames (wordFfiDiscoveryBody entry.2.2))).eraseDups
               let discoveredServices := discoveredNames.zip (List.range discoveredNames.length)
               let services := services ++ discoveredServices
               let identityResult :
@@ -549,7 +578,7 @@ def compileFlapjackRiscVSourceImageChecked [NeZero width]
               let discoveredNames :=
                 (pipeline.word.flatMap
                   (fun entry : Nat × List Nat × WordProg (RiscV.Word width) =>
-                    RiscV.wordProgFfiNames (RiscV.wordRemoveUnreachable (wordProgDCE entry.2.2)))).eraseDups
+                    RiscV.wordProgFfiNames (wordFfiDiscoveryBody entry.2.2))).eraseDups
               let discoveredServices := discoveredNames.zip (List.range discoveredNames.length)
               let services := services ++ discoveredServices
               match pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked pipeline.loop with
@@ -598,7 +627,7 @@ def compileFlapjackRiscVSourceRuntimeImageChecked [NeZero width]
               let discoveredNames :=
                 (discoveryWords.flatMap
                   (fun entry : Nat × Nat × WordProg (RiscV.Word width) =>
-                    RiscV.wordProgFfiNames (RiscV.wordRemoveUnreachable (wordProgDCE entry.2.2)))).eraseDups
+                    RiscV.wordProgFfiNames (wordFfiDiscoveryBody entry.2.2))).eraseDups
               let discoveredServices := discoveredNames.zip (List.range discoveredNames.length)
               let services := services ++ discoveredServices
               match pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordChecked

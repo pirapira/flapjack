@@ -86,7 +86,7 @@ def artifactCompileConfig : StackRemoveConfig :=
     bytesInWord := 8
     stackBase := 25
     wordShift := 3
-    jump := true }
+    jump := false }
 
 /-- The fixture source, taken from the original-side probe fact so the two
 comparisons cannot drift apart. -/
@@ -679,6 +679,19 @@ def deadFfiStubDropped : Bool :=
         (assembly.splitOn "cake_clear:").length == 2
   | none => false
 
+/-! Constant-condition branches are also removed by Cake's `const_fp`, before
+    FFI service discovery.  This is a separate guard from sequence-tail DCE:
+    the call is syntactically inside a branch, but the branch itself is
+    unreachable because `3 < 1` is constant false. -/
+def deadFfiAfterConstantFalseSource : String :=
+  "fun 1 main() { if (3 < 1) { @foo(1,2,3,4); } else { return 0; } return 0; }"
+
+def deadFfiConstantFalseDropped : Bool :=
+  (compileRuntimeImage deadFfiAfterConstantFalseSource).map (·.ffiNames) == some [] &&
+    match compileAssembly deadFfiAfterConstantFalseSource with
+    | some assembly => !assembly.contains "cake_ffi"
+    | none => false
+
 /-!
 ## Bitmap table word parity (bead `flapjack-pxn.8.5.14.1`)
 
@@ -775,6 +788,29 @@ def relationalConditionExactParity : Bool :=
       | _ => false
   | none => false
 
+def f01451Source : String :=
+  "  var p = @base;\n" ++
+    "fun 1 main() {\n" ++
+    "  var a = ld8 p; var b = ld8 (p+1); var c = ld8 (p+2);\n" ++
+    "  var d = ld8 (p+3); var e = ld8 (p+4); var t1 = ld8 (p+5);\n" ++
+    "  var h = 0;\n" ++
+    "  h = ((t1 + (a + (b + (c + (d + e))))) << 1000) >>> 1;\n" ++
+    "  return h;\n" ++
+    "}"
+
+def cakeF01451MainBytes : List (BitVec 8) :=
+  [0x13, 0x65, 0x00, 0x00,
+   0x13, 0x55, 0x15, 0x00,
+   0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
+
+def f01451ExactParity : Bool :=
+  match compileRuntimeImage f01451Source with
+  | some image =>
+      match emittedSections image with
+      | [(_, 1000, _), (_, 1028, main)] => main == cakeF01451MainBytes
+      | _ => false
+  | none => false
+
 /-- Source of the whole-artifact `hello.pnk` fixture (GitHub issue #1022 /
 bead `flapjack-8tb`). -/
 def helloSource : String :=
@@ -798,35 +834,66 @@ def helloSource : String :=
 assembly oracle. -/
 def cakeHelloMainLength : Nat := 152
 
-/- Port-side layout pin for `hello.pnk`; Cake's oracle has a 152-byte `cml_main`
-section under `artifactCompileConfig`.  The port currently has a tracked
-source-to-RISC-V discrepancy here, so this remains diagnostic data rather than
-an asserted invariant. -/
-def flapjackHelloMainLength : Nat := 152
-
+/- Port-side layout pin for `hello.pnk`; with the same `jump := false`
+configuration used by `flapjack-compile`, the source-facing runtime image has
+Cake's 152-byte `cml_main` section. -/
 def helloRuntimeImage : Option (SourceRiscVRuntimeImage 64) :=
   compileRuntimeImage helloSource
 
-/- The whole-artifact comparison for `hello.pnk` remains a tracked gap.  The
-predicate is retained to expose section-layout progress, while the
-differential corpus is the source of truth until this fixture is exact. -/
+/- The source-string path emits the same section labels, bases, and lengths as
+the checked Cake artifact: a 4-byte generated entry at 1000 and a 152-byte
+`cml_main` at 1004. -/
 def helloEmittedSectionsMatch : Bool :=
   match helloRuntimeImage with
   | some image =>
       match emittedSections image with
       | [(3, 1000, generated), (4, 1004, main)] =>
-          generated.length == 4 && main.length == flapjackHelloMainLength
+          generated.length == 4 && main.length == cakeHelloMainLength
       | _ => false
   | none => false
 
-/- The original-length predicate remains useful for diagnostics because the
-whole-artifact comparison is stricter than section length alone. -/
-def helloMainLengthGapTracked : Bool :=
-  match helloRuntimeImage with
+/- The reduced allocator-colour witness is an original-Cake oracle regression.
+   Cake emits four stack words ([4,16]) and a 256-byte process_transaction
+   section; passing fresh SSA metadata into Word-to-Stack used to emit only
+   three stack words and 232 bytes.  The full byte comparison remains pinned
+   by scripts/parity-small-corpus.py. -/
+def allocatorColourSource : String :=
+  "exception BlockErr : 1;\n" ++
+    "fun {1,1} tx_chain_id(1 tx) {\n" ++
+    "  return <0, 0>;\n" ++
+    "}\n" ++
+    "fun 1 process_transaction(1 tx, 1 index, 1 pubkey) {\n" ++
+    "  var {1,1} cid = tx_chain_id(tx);\n" ++
+    "  if cid.0 != 0 {\n" ++
+    "    if cid.1 != 0 {\n" ++
+    "      throw BlockErr 0;\n" ++
+    "    }\n" ++
+    "  }\n" ++
+    "  var nal = 0;\n" ++
+    "  var i = 0;\n" ++
+    "  while i < nal {\n" ++
+    "  }\n" ++
+    "  if (lds 1 (tx + 0)) == 0 {\n" ++
+    "  } else {\n" ++
+    "  }\n" ++
+    "  return 0;\n" ++
+    "}\n"
+
+def allocatorColourCompileConfig : StackRemoveConfig :=
+  { artifactCompileConfig with jump := false }
+
+def allocatorColourRuntimeImage : Option (SourceRiscVRuntimeImage 64) :=
+  match compileFlapjackRiscVSourceRuntimeImageChecked (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] allocatorColourCompileConfig
+      "main" allocatorColourSource with
+  | .ok image => some image
+  | .error _ => none
+
+def allocatorColourOracleShape : Bool :=
+  match allocatorColourRuntimeImage with
   | some image =>
-      match emittedSections image with
-      | _ :: (_, _, main) :: _ => main.length != cakeHelloMainLength
-      | _ => false
+      image.bitmaps.data == [4, 16] &&
+        (emittedSections image).any (fun entry => entry.2.2.length == 256)
   | none => false
 
 /- Cake's `ShareInst Store (Op Add [base; Const offset])` reaches the final
@@ -839,11 +906,15 @@ def sharedWordStoreOffsetPeephole : Bool :=
   | ⟨[.asm (.memOffset .store .add 10 12 40) [] 0], false, 0⟩ => true
   | _ => false
 
-/- `hello` remains a tracked end-to-end parity gap (`flapjack-8tb`).  Keep the
-   predicate above visible during focused diagnostics, but do not make this
-   known discrepancy a regression gate while the source-to-RISC-V pipeline is
-   being aligned. -/
-#eval helloEmittedSectionsMatch
+/- Cake's shared-memory `Addr base offset` is distinct from ordinary memory;
+   the carrier reaches the matching architectural offset store directly. -/
+def sharedMemOffsetCarrierEncoding : Bool :=
+  match labCompilePlain (width := 64)
+      (.shareMemOffset .store8 10 11 (BitVec.ofNat 64 32)) with
+  | some [.storeByteOffset 10 11 (BitVec.ofNat 64 32)] => true
+  | _ => false
+
+#guard helloEmittedSectionsMatch
 #guard nomainGlobalAccepted
 #guard nestedExpressionAccepted
 #guard nestedExpressionWordLoweringAccepted
@@ -856,11 +927,14 @@ def sharedWordStoreOffsetPeephole : Bool :=
 #guard ffiMinFramePrefix
 #guard deadFfiNamesDropped
 #guard deadFfiStubDropped
+#guard deadFfiConstantFalseDropped
 #guard bitmapCallsWordsMatch
 #guard frameOccupancyP1BitmapsMatch
 #guard frameOccupancyP9BitmapsMatch
 #guard relationalConditionExactParity
+#guard f01451ExactParity
 #guard sharedWordStoreOffsetPeephole
+#guard sharedMemOffsetCarrierEncoding
 #guard artifactAccepted
 #guard generatedMainBytesMatch
 #guard emittedLayoutMatches
@@ -880,6 +954,7 @@ def sharedWordStoreOffsetPeephole : Bool :=
 #guard saturatedNestedExpressionLowers
 #guard saturatedRorChainLowers
 #guard saturatedNestedExpressionExact
+#guard allocatorColourOracleShape
 
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
@@ -933,10 +1008,12 @@ def runChecks : IO Bool := do
          bitmapCallsWordsMatch),
       ("frame-occupancy p1 bitmap vector matches Cake [4, 2]",
          frameOccupancyP1BitmapsMatch),
-      ("frame-occupancy p9 exact vector gap is tracked, not accepted",
+      ("frame-occupancy p9 exact vector matches the Cake oracle",
          frameOccupancyP9BitmapsMatch),
       ("relational condition direct-branch section is byte-identical to Cake",
-        relationalConditionExactParity) ]
+        relationalConditionExactParity),
+      ("f01451 out-of-range shift section is byte-identical to Cake",
+        f01451ExactParity) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

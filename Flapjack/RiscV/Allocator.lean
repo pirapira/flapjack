@@ -248,6 +248,10 @@ def wordInstReadVars {α : Type u} : WordInst α → List Nat
       match operator with
       | .load | .load8 | .load16 | .load32 => [address]
       | .store | .store8 | .store16 | .store32 => [destination, address]
+  | .memOffset operator destination address _ =>
+      match operator with
+      | .load | .load8 | .load16 | .load32 => [address]
+      | .store | .store8 | .store16 | .store32 => [destination, address]
 
 def wordInstWriteVars {α : Type u} : WordInst α → List Nat
   | .arith operation =>
@@ -265,6 +269,10 @@ def wordInstWriteVars {α : Type u} : WordInst α → List Nat
       | .shift _ destination _ _ => [destination]
   | .const destination _ => [destination]
   | .mem operator destination _ =>
+      match operator with
+      | .load | .load8 | .load16 | .load32 => [destination]
+      | .store | .store8 | .store16 | .store32 => []
+  | .memOffset operator destination _ _ =>
       match operator with
       | .load | .load8 | .load16 | .load32 => [destination]
       | .store | .store8 | .store16 | .store32 => []
@@ -486,6 +494,14 @@ def wordSsaRenameInst (state : WordSsaState) :
           (state, .mem operator freshDestination address)
       | .store | .store8 | .store16 | .store32 =>
           (state, .mem operator (wordSsaRead state destination) address)
+  | .memOffset operator destination address offset =>
+      let address := wordSsaRead state address
+      match operator with
+      | .load | .load8 | .load16 | .load32 =>
+          let (state, freshDestination) := wordSsaFresh state destination
+          (state, .memOffset operator freshDestination address offset)
+      | .store | .store8 | .store16 | .store32 =>
+          (state, .memOffset operator (wordSsaRead state destination) address offset)
 
 /-! CakeML's SSA pass gives `LongMul` its fixed RISC-V register protocol.
     The instruction itself writes `(6, 0)` and the surrounding moves preserve
@@ -1170,6 +1186,7 @@ def wordInstCakeMaxVar : WordInst α → Nat
   | .const destination _ => destination
   | .arith operation => wordArithCakeMaxVar operation
   | .mem _ destination address => max destination address
+  | .memOffset _ destination address _ => max destination address
 
 def wordCutsetsCakeMaxVar (cutsets : List Nat × List Nat) : Nat :=
   max (cutsets.1.foldl max 0) (cutsets.2.foldl max 0)
@@ -1464,6 +1481,16 @@ def wordClashTreeDeltaInst {α : Type u} : WordInst α → WordClashTree
   | .mem .store8 source address
   | .mem .store16 source address
   | .mem .store32 source address =>
+      .delta [] [source, address]
+  | .memOffset .load destination address _
+  | .memOffset .load8 destination address _
+  | .memOffset .load16 destination address _
+  | .memOffset .load32 destination address _ =>
+      .delta [destination] [address]
+  | .memOffset .store source address _
+  | .memOffset .store8 source address _
+  | .memOffset .store16 source address _
+  | .memOffset .store32 source address _ =>
       .delta [] [source, address]
 
 def wordClashTreeCallReads (returns : Option
@@ -2006,6 +2033,8 @@ def wordApplyColourInst (colour : Nat → Nat) : WordInst α → WordInst α
   | .arith operation => .arith (wordApplyColourArith colour operation)
   | .mem operator destination address =>
       .mem operator (colour destination) (colour address)
+  | .memOffset operator destination address offset =>
+      .memOffset operator (colour destination) (colour address) offset
 
 /-! Cake's `num_set` fields are represented by lists in Flapjack.  The source
     `apply_nummap_key` rebuilds those sets through `fromAList`, so the result is
@@ -2523,7 +2552,7 @@ def wordProgSpecialLocationsSafe (locations : NatInfoMap WordLocation) :
   | .move _ _ | .assign _ _ | .get _ _ | .store _ _ | .set _ _ | .break _ | .continue _ |
       .raise _ | .return _ _ | .tick | .locValue _ _ | .ffi _ _ _ _ _ _ => true
   | .inst (.arith operation) => wordSpecialArithLocationsSafe operation locations
-  | .inst (.const _ _) | .inst (.mem _ _ _) => true
+  | .inst (.const _ _) | .inst (.mem _ _ _) | .inst (.memOffset _ _ _ _) => true
   | .seq first second =>
       wordProgSpecialLocationsSafe locations first &&
         wordProgSpecialLocationsSafe locations second

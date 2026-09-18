@@ -240,9 +240,9 @@ example :
 example :
     loopCompileProg loopContext []
         (.store32 (.const (α := Nat) 8) (.const 255)) =
-      .seq .skip
-        (.seq (.assign 3 (.const 8))
-          (.seq (.assign 4 (.const 255)) (.store32 3 4))) := by
+      .seq (.assign 3 (.const 8))
+        (.seq (.assign 4 (.const 255))
+          (.seq (.store32 3 4) .skip)) := by
   simp [loopCompileProg, loopCompileExp, loopNestedSeq,
     loopContext]
 

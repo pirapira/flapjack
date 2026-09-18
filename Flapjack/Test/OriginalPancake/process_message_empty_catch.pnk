@@ -1,0 +1,22 @@
+exception EvmErr : 1;
+fun 1 frame_open(1 msg, 1 kind) {
+  return 0;
+}
+fun 1 depth0_prepare() {
+  return 0;
+}
+fun 1 process_message(1 msg) {
+  var 1 child = frame_open(msg, 0);
+  if (lds 1 (msg + 0)) == 0 {
+    var perr = 0;
+    try depth0_prepare()
+    catch EvmErr => perr {
+      if perr == 1 {
+      }
+    }
+  }
+  return child;
+}
+fun 1 main() {
+  return 0;
+}

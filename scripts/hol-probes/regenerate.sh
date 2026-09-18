@@ -157,7 +157,7 @@ run_probe cake_ssa_temp_probeScript.sml cake_ssa_temp_probe.out \
 # 0..k-1, stack-only vars land at >= k, physical vars keep their register
 # index.
 run_probe reg_alloc_probeScript.sml reg_alloc_probe.out \
-  ra_delta_pair ra_stack_only \
+  ra_delta_pair moves_to_sp_resort \
   "$cake_dir/compiler/backend/reg_alloc/reg_allocScript.sml" \
   "$cake_dir/compiler/backend"
 run_probe sort_moves_probeScript.sml sort_moves_probe.out \

@@ -82,6 +82,34 @@ def runChecks : IO Bool := do
 #guard p1WordVariableNames == some [[0], [0, 2, 4], [0, 2, 4]]
 #guard p1CallCutsets == some [[], [[0]], []]
 
+def sourceFunctionParameters : List (Nat × List Nat × LoopProg Nat) :=
+  pipelineLoopFunctionsSource .rv64i 64
+    [{ name := "f", params := [10, 20], body := (.skip : CrepProg Nat),
+       returnShape := .one }]
+
+def sourceCompileProgParameterShape : Bool :=
+  match sourceFunctionParameters with
+  | [(64, [0, 1], _)] => true
+  | _ => false
+
+#guard sourceCompileProgParameterShape
+
+/-! Cake's handled-call branch starts handler and return-body labels at the
+    next local label and advances once more after both bodies.  This guard
+    keeps the source-shaped label state visible independently of final bytes. -/
+def handledCallLabelShape : Bool :=
+  match loopToWordProgWithLabels ({ vars := [] } : WordContext) (66, 2)
+      (.call (some ([7], [8])) (some 11) [2]
+        (some (9, .assign 8 (.const 1), .assign 7 (.const 2), []))) with
+  | (.seq
+      (.call (some ([7], ([0, 8], []), .assign 7 (.const 2), 66, 2))
+        (some 11) [2]
+        (some (9, .assign 8 (.const 1), 66, 3)))
+      .tick, (66, 4)) => true
+  | _ => false
+
+#guard handledCallLabelShape
+
 end Flapjack.Test.LoopToWordBoundaryParity
 
 /-! Oracle tests for the dense-even Word naming boundary at the allocator.

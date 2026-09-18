@@ -1,4 +1,5 @@
 import Flapjack.CrepeSourceWordReturnCorrectness
+import Flapjack.CrepeProgramSourceWordReturnRelation
 
 namespace Flapjack
 
@@ -45,5 +46,48 @@ theorem closed_source_word_return_bridge :
     (hlookup := hlookup)
     (hsource := by simp [SourceWordExp.toExp, evalPanValueExp])
   exact ⟨h.1, h.2.1⟩
+
+/-! The stateful return relation exposes the same closed source word through
+    the global-aware evaluator.  This keeps the continuation-facing theorem
+    above tied to an executable stateful witness rather than only a type-level
+    composition. -/
+theorem closed_source_word_return_stateful_bridge :
+    ∃ compiled,
+      compileExp sourceWordReturnContext
+          (SourceWordExp.const (7 : Nat)).toExp =
+        ([compiled], .one) ∧
+      evalCrepFullExpsState sourceWordReturnState 0 0 [compiled] =
+        some [7] ∧
+      evalCrepFullProgState [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+        (fun _ _ _ _ => none) 0 0 1 sourceWordReturnState
+        (compileProg sourceWordReturnContext
+          (.return (SourceWordExp.const (7 : Nat)).toExp)) =
+      some (.returned sourceWordReturnState [7]) := by
+  have hrel : panValueCrepStateRel [] sourceWordReturnContext
+      (fun _ => none) (fun _ => none) (fun _ => none)
+      sourceWordReturnState := by
+    refine ⟨rfl, panValueCrepLocalsRel_empty [] sourceWordReturnContext _, ?_⟩
+    rfl
+  have h := compile_full_pan_value_return_source_word_state_relation_fuel
+    (α := Nat) (context := sourceWordReturnContext) (structs := [])
+    (sourceFunctions := []) (functions := [])
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (state := sourceWordReturnState)
+    (primitive := fun _ _ => none)
+    (sourceHandler := fun _ _ _ _ _ _ => none)
+    (crepPrimitive := fun _ _ => none)
+    (ffi := fun _ _ _ _ _ _ => none)
+    (sharedMem := fun _ _ _ _ => none)
+    (baseAddress := 0) (topAddress := 0) (bytesInWord := 8)
+    (sourceFuel := 0) (targetFuel := 0)
+    (expression := .const (7 : Nat)) (value := 7)
+    (exceptionRel := fun _ _ _ => True) (hbytesInWord := rfl)
+    (hlookup := by
+      intro name value hvalue
+      simp at hvalue)
+    (hrel := hrel)
+    (hsource := by simp [SourceWordExp.toExp, evalPanValueExp])
+  exact ⟨h.choose, h.choose_spec.1, h.choose_spec.2.1,
+    h.choose_spec.2.2.2.1⟩
 
 end Flapjack

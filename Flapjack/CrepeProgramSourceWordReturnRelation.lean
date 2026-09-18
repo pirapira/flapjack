@@ -218,4 +218,30 @@ theorem panValueCrepProgramStateCorrect_return_source_word
               cases hcrepEq
               exact hrelation
 
+/-! Stateful composition helper for the source-word return boundary.  This is
+    the first continuation-facing form of the stateful return slice: the
+    return proof is composed with the existing stateful sequence constructor,
+    so the target `CrepState` (including globals and memory) remains explicit.
+    The legacy evaluator is not used on the target side. -/
+theorem panValueCrepProgramStateCorrect_seq_return_source_word
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (expression : SourceWordExp α) (continuation : Prog α)
+    (hcontinuation : PanValueCrepProgramStateCorrect continuation)
+    (hbytesInWord : ∀ (context : CompileContext α) (bytesInWord : α),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext α)
+      (sourceLocals : VarName → Option (PanValue α))
+      (name : VarName) (value : PanValue α),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot])) :
+    PanValueCrepProgramStateCorrect
+      (.seq (.return expression.toExp) continuation) := by
+  exact panValueCrepProgramStateCorrect_seq
+    (.return expression.toExp) continuation
+    (panValueCrepProgramStateCorrect_return_source_word expression
+      hbytesInWord hlookup)
+    hcontinuation
+
 end Flapjack

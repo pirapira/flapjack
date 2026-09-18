@@ -1378,13 +1378,13 @@ theorem panValuePcResultRelWithContextCode_of_raised_flat_spill
     (structs : StructContext) (context : CompileContext α)
     (exceptionRel : ExceptionId → PanValue α → α → Prop)
     (exceptionCode : ExceptionId → Option α)
-    (sourceGlobals : VarName → Option (PanValue α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
     (sourceMemory : α → Option (PanValue α))
     (sourceException : ExceptionId) (values : List α)
     (state : CrepState α) (bytesInWord targetException : α)
     (sourceValue : PanValue α)
     (hstate : panValueCrepStateRel structs context
-      (fun _ => none) sourceGlobals sourceMemory state)
+      sourceLocals sourceGlobals sourceMemory state)
     (hexception : exceptionRel sourceException sourceValue targetException)
     (hcode : exceptionCode sourceException = some targetException)
     (hlookupCode : lookupInfo sourceException context.exceptions =
@@ -1395,18 +1395,19 @@ theorem panValuePcResultRelWithContextCode_of_raised_flat_spill
     (hsize : Shape.shapeSize (panValueShape structs sourceValue) ≤ 32) :
     panValuePcResultRelWithContextCode structs context exceptionRel exceptionCode
       (crepPcFlatGlobalsLookup bytesInWord)
-      (.raised (fun _ => none) sourceGlobals sourceMemory sourceException sourceValue)
+      (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
       (.raised
         { state with globals :=
             (updateMemoryListAt state.globals 0 bytesInWord values) }
         targetException) := by
-  have hraiseData := panValuePcRaisedHraiseData_of_flat_spill_state
-    structs context exceptionRel exceptionCode (fun _ => none) sourceGlobals
+  have hraiseData :=
+    panValuePcRaisedHraiseData_of_flat_spill_state_with_source_locals
+    structs context exceptionRel exceptionCode sourceLocals sourceGlobals
     sourceMemory sourceException values state bytesInWord targetException sourceValue
     hstate hexception hcode hflat hdistinct hsize
   have hresult := panValuePcExceptionResultRelWithContextCode_of_raised_hraise_data
     structs context exceptionRel exceptionCode (crepPcFlatGlobalsLookup bytesInWord)
-    (fun _ => none) sourceGlobals sourceMemory sourceException sourceValue
+    sourceLocals sourceGlobals sourceMemory sourceException sourceValue
     { state with globals :=
         (updateMemoryListAt state.globals 0 bytesInWord values) }
     targetException hraiseData hlookupCode

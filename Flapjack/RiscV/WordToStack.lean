@@ -1,6 +1,7 @@
 import Flapjack.Stack
 import Flapjack.RiscV.Allocator
 import Flapjack.RiscV.RegAlloc
+import Flapjack.RiscV.CakeAllocatorCore
 
 /-!
 # Word-to-Stack spill moves
@@ -1159,10 +1160,10 @@ def wordStackLiveBitmap (registerCount frameSlots wordBits : Nat)
 
 /- Location-derived mirror of the original `write_bitmap`: one membership bit
     per frame slot for the live cut-set variables that the allocator actually
-    placed on the stack, folded with the base-1 `wordStackBitsToNat` whose
-    implicit top bit terminates the word.  Register-resident live values carry
-    no stack root; the original's pancake artifacts pin the allocator to an
-    empty stack live set there, keeping the words pure `2 ^ frameSlots`. -/
+    placed on the stack.  Use Cake's `bits_to_word` implementation and its
+    explicit terminator rather than the legacy base-1 helper above.  These
+    encodings agree for a single bitmap word, but differ at a chunk boundary
+    because the legacy helper adds an implicit terminator to every chunk. -/
 def wordStackLiveBitmapFromLocations (config : WordStackConfig)
     (frameSlots wordBits : Nat) (live : List Nat) : List Nat :=
   let slots := live.filterMap (fun name =>
@@ -1170,7 +1171,7 @@ def wordStackLiveBitmapFromLocations (config : WordStackConfig)
     | some (.stack slot) => some slot
     | _ => none)
   let bits := (List.range frameSlots).map (fun slot => slots.contains slot)
-  wordStackBitmapWords (wordBits - 1) bits
+  CakeAlloc.frameBitmapWords (wordBits - 1) (bits ++ [true])
 
 def wordStackInsertBitmap (state : WordStackBitmapState)
     (bitmap : List Nat) : WordStackBitmapState × Nat :=
@@ -4283,7 +4284,6 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
          `loop_to_word$comp` adds the link slot only to tail calls
          (`loop_to_wordScript.sml:131`); ordinary calls therefore begin at
          the value ABI base. -/
-      let argumentMoves ← wordStackMovesToPhysicalValueArgs config arguments config.abiBase
       let (liveCode, state) := wordStackCallLiveBitmapWord config bitmapBuilder
         bitmapRegister frameSlots state
         (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))
@@ -4297,10 +4297,9 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
         returnLabel entryLabel
         (wordStackHandlerLabel config handlerLabel)
         (wordStackHandlerEntryLabel config handlerEntryLabel) exception
-      pure (wordStackJoin argumentMoves (wordStackJoin liveCode callCode), state)
+      pure (wordStackJoin liveCode callCode, state)
   | .call (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))
       (some target) arguments none => do
-      let argumentMoves ← wordStackMovesToPhysicalValueArgs config arguments config.abiBase
       let (liveCode, state) := wordStackCallLiveBitmapWord config bitmapBuilder
         bitmapRegister frameSlots state
         (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))
@@ -4309,15 +4308,13 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
       let callCode := wordToStackCallNoHandler config.perf target arguments.length
         (wordStackCallFrameOffset config) config.scratch (wordStackReturnStackSuffix config destinations)
         returnCode returnLabel entryLabel
-      pure (wordStackJoin argumentMoves (wordStackJoin liveCode callCode), state)
+      pure (wordStackJoin liveCode callCode, state)
   | .call none (some target) arguments none => do
-      let argumentMoves ← wordStackMovesToPhysicalRegisterArgs config arguments config.callAbiBase
       let callCode := .call none (.label target) none
       let freeCount := wordStackSourceTailCallFreeCount config arguments.length
-      pure (wordStackJoin argumentMoves (stackFreeIfNonzero freeCount callCode), state)
+      pure (stackFreeIfNonzero freeCount callCode, state)
   | .call none (some target) arguments
       (some (exception, body, handlerLabel, handlerEntryLabel)) => do
-      let argumentMoves ← wordStackMovesToPhysicalRegisterArgs config arguments config.callAbiBase
       let (handlerCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
         registerCount bitmapRegister frameSlots wordBits storeConstsStub state body
       let callCode := wordToStackCallWithHandlerInSection config.perf target arguments.length
@@ -4325,18 +4322,15 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
         config.returnLabel config.entryLabel
         (wordStackHandlerLabel config handlerLabel)
         (wordStackHandlerEntryLabel config handlerEntryLabel) exception
-      pure (wordStackJoin argumentMoves callCode, state)
+      pure (callCode, state)
   | .call none none arguments none => do
-      let (direct, target, targetLoad) ← wordStackIndirectCallNat config arguments
-      let argumentMoves ← wordStackMovesToPhysicalRegisterArgs config direct config.abiBase
+      let (_direct, target, targetLoad) ← wordStackIndirectCallNat config arguments
       let callCode := .call none target none
       let freeCount := wordStackCallFreeCount config (arguments.length - 1)
-      pure (wordStackJoin argumentMoves
-        (wordStackJoin targetLoad (stackFreeIfNonzero freeCount callCode)), state)
+      pure (wordStackJoin targetLoad (stackFreeIfNonzero freeCount callCode), state)
   | .call none none arguments
       (some (exception, body, handlerLabel, handlerEntryLabel)) => do
-      let (direct, target, targetLoad) ← wordStackIndirectCallNat config arguments
-      let argumentMoves ← wordStackMovesToPhysicalRegisterArgs config direct config.abiBase
+      let (_direct, target, targetLoad) ← wordStackIndirectCallNat config arguments
       let (handlerCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
         registerCount bitmapRegister frameSlots wordBits storeConstsStub state body
       let callCode := wordToStackCallWithHandlerInSectionTarget config.perf target
@@ -4344,11 +4338,10 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
         config.returnLabel config.entryLabel
         (wordStackHandlerLabel config handlerLabel)
         (wordStackHandlerEntryLabel config handlerEntryLabel) exception
-      pure (wordStackJoin argumentMoves (wordStackJoin targetLoad callCode), state)
+      pure (wordStackJoin targetLoad callCode, state)
   | .call (some (destinations, cutsets, returnProgram, returnLabel, entryLabel)) none
       arguments none => do
-      let (direct, target, targetLoad) ← wordStackIndirectCallNat config arguments
-      let argumentMoves ← wordStackMovesToPhysicalValueArgs config direct config.abiBase
+      let (_direct, target, targetLoad) ← wordStackIndirectCallNat config arguments
       let (liveCode, state) := wordStackCallLiveBitmapWord config bitmapBuilder
         bitmapRegister frameSlots state
         (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))
@@ -4358,12 +4351,10 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
         (arguments.length - 1) (wordStackCallFrameOffset config) config.scratch
         (wordStackReturnStackSuffix config destinations) returnCode
         returnLabel entryLabel
-      pure (wordStackJoin argumentMoves
-        (wordStackJoin targetLoad (wordStackJoin liveCode callCode)), state)
+      pure (wordStackJoin targetLoad (wordStackJoin liveCode callCode), state)
   | .call (some (destinations, cutsets, returnProgram, returnLabel, entryLabel)) none
       arguments (some (exception, body, handlerLabel, handlerEntryLabel)) => do
-      let (direct, target, targetLoad) ← wordStackIndirectCallNat config arguments
-      let argumentMoves ← wordStackMovesToPhysicalValueArgs config direct config.abiBase
+      let (_direct, target, targetLoad) ← wordStackIndirectCallNat config arguments
       let (liveCode, state) := wordStackCallLiveBitmapWord config bitmapBuilder
         bitmapRegister frameSlots state
         (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))
@@ -4376,8 +4367,7 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
         returnLabel entryLabel
         (wordStackHandlerLabel config handlerLabel)
         (wordStackHandlerEntryLabel config handlerEntryLabel) exception
-      pure (wordStackJoin argumentMoves
-        (wordStackJoin targetLoad (wordStackJoin liveCode callCode)), state)
+      pure (wordStackJoin targetLoad (wordStackJoin liveCode callCode), state)
   | .alloc _ (_, live) =>
       let (code, state) := wordStackAllocWithBitmapBuilder config bitmapRegister frameSlots
         state live bitmapBuilder

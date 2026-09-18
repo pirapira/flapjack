@@ -2013,6 +2013,59 @@ theorem panValuePcRaisedHraiseData_retarget_globals_callback_with_context_code_o
     sourceLocals sourceGlobals sourceMemory sourceException sourceValue targetState
     targetException (hlookup targetState sourceValue) hcanonical.1, hcanonical.2⟩
 
+theorem panValuePcRaisedHraiseData_retarget_globals_callback_with_context_code_of_control_lookup
+    (canonicalGlobalsLookup : CrepState α → PanValue α → Option (List α))
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (hraiseEvidence : ∀ (context : CompileContext α) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (sourceValue : PanValue α) (targetState : CrepState α)
+      (targetException : α),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      panValuePcRaisedHraiseData exceptionCode canonicalGlobalsLookup structs
+        context exceptionRel sourceLocals sourceGlobals sourceMemory
+        sourceException sourceValue targetState targetException ∧
+      lookupInfo sourceException context.exceptions = some targetException)
+    (hlookup : ∀ (context : CompileContext α) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (sourceValue : PanValue α) (targetState : CrepState α)
+      (targetException : α),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      canonicalGlobalsLookup targetState sourceValue =
+        globalsLookup targetState sourceValue) :
+    ∀ (context : CompileContext α) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (sourceValue : PanValue α) (targetState : CrepState α)
+      (targetException : α),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      panValuePcRaisedHraiseData exceptionCode globalsLookup structs context
+        exceptionRel sourceLocals sourceGlobals sourceMemory sourceException
+        sourceValue targetState targetException ∧
+      lookupInfo sourceException context.exceptions = some targetException := by
+  intro context structs exceptionRel sourceLocals sourceGlobals sourceMemory
+    sourceException sourceValue targetState targetException hcontrol
+  have hcanonical := hraiseEvidence context structs exceptionRel sourceLocals
+    sourceGlobals sourceMemory sourceException sourceValue targetState targetException
+    hcontrol
+  exact ⟨panValuePcRaisedHraiseData_retarget_globals_lookup_of
+    canonicalGlobalsLookup exceptionCode globalsLookup structs context exceptionRel
+    sourceLocals sourceGlobals sourceMemory sourceException sourceValue targetState
+    targetException (hlookup context structs exceptionRel sourceLocals sourceGlobals
+      sourceMemory sourceException sourceValue targetState targetException hcontrol)
+    hcanonical.1, hcanonical.2⟩
+
 theorem panValuePcRaisedHraiseData_retarget_globals_callback_with_context_code
     [OfNat α 0] [Add α]
     (bytesInWord : α)

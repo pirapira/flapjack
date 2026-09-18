@@ -410,4 +410,18 @@ theorem closed_word_raise_context_code_from_hraise_data :
     closed_word_raise_hraise_retargeted_via_flat_spill
   simp [raiseContext, lookupInfo]
 
+theorem closed_word_raise_result_context_code_relation :
+    panValuePcResultRelWithContextCode [] raiseContext
+      (fun _ _ code => code = 9) raiseResultExceptionCode
+      raiseWordGlobalsLookup
+      (.raised (fun _ => none) (fun _ => none) (fun _ => none) "E" (.word 3))
+      (.raised
+        { raiseState with globals := updateMemory raiseState.globals 0 3 }
+        9) := by
+  have hstate : panValueCrepStateRel [] raiseContext
+      (fun _ => none) (fun _ => none) (fun _ => none)
+      { raiseState with globals := updateMemory raiseState.globals 0 3 } := by
+    refine ⟨rfl, panValueCrepLocalsRel_empty [] raiseContext _, rfl⟩
+  exact ⟨hstate, closed_word_raise_context_code_from_hraise_data⟩
+
 end Flapjack.Test.PanValuePcRaisedPayloadCorrectness

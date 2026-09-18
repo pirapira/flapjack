@@ -321,35 +321,65 @@ theorem panValuePcExceptionResultRel_of_raised_word_global_spill
     (structs : StructContext) (context : CompileContext α)
     (exceptionRel : ExceptionId → PanValue α → α → Prop)
     (exceptionCode : ExceptionId → Option α)
-    (sourceGlobals : VarName → Option (PanValue α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
     (sourceMemory : α → Option (PanValue α))
     (sourceException : ExceptionId) (value : α)
     (state : CrepState α) (targetException : α)
     (hstate : panValueCrepStateRel structs context
-      (fun _ => none) sourceGlobals sourceMemory state)
+      sourceLocals sourceGlobals sourceMemory state)
     (hexception : exceptionRel sourceException (.word value) targetException)
     (hcode : exceptionCode sourceException = some targetException) :
     panValuePcExceptionResultRel structs context exceptionRel exceptionCode
-      (crepPcWordGlobalsLookup (α := α)) (fun _ => none) sourceMemory
+      (crepPcWordGlobalsLookup (α := α)) sourceGlobals sourceMemory
       sourceException (.word value)
       { state with globals := updateMemory state.globals 0 value }
       targetException := by
   have hraised := panValueCrepRaisedGlobalSpillRel_word
-    structs context (fun _ => none) sourceGlobals sourceMemory state 0 value hstate
+    structs context sourceLocals sourceGlobals sourceMemory state 0 value hstate
   have hcontrol : panValueCrepRaisedControlRel structs context exceptionRel
       sourceGlobals sourceMemory sourceException (.word value)
       { state with globals := updateMemory state.globals 0 value }
       targetException 0 := ⟨hraised.1, hexception⟩
-  rw [hstate.1] at hcontrol
   apply panValuePcExceptionResultRel_of_raised_control structs context
     exceptionRel exceptionCode (crepPcWordGlobalsLookup (α := α))
-    (fun _ => none) sourceMemory sourceException (.word value)
+    sourceGlobals sourceMemory sourceException (.word value)
     { state with globals := updateMemory state.globals 0 value }
     targetException 0 hcontrol hcode
   · intro _
     simp [crepPcWordGlobalsLookup, panValueFlatWords,
       panValueFlatWordsFuel, updateMemory]
   · simp [panValueShape]
+
+theorem panValuePcResultRelWithContextCode_of_raised_word_global_spill
+    [BEq α] [LawfulBEq α] [OfNat α 0]
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (sourceException : ExceptionId) (value : α)
+    (state : CrepState α) (targetException : α)
+    (hstate : panValueCrepStateRel structs context
+      sourceLocals sourceGlobals sourceMemory state)
+    (hexception : exceptionRel sourceException (.word value) targetException)
+    (hcode : exceptionCode sourceException = some targetException)
+    (hlookupCode : lookupInfo sourceException context.exceptions =
+      some targetException) :
+    panValuePcResultRelWithContextCode structs context exceptionRel exceptionCode
+      (crepPcWordGlobalsLookup (α := α))
+      (.raised sourceLocals sourceGlobals sourceMemory sourceException (.word value))
+      (.raised
+        { state with globals := updateMemory state.globals 0 value }
+        targetException) := by
+  have hpost : panValueCrepStateRel structs context
+      sourceLocals sourceGlobals sourceMemory
+      { state with globals := updateMemory state.globals 0 value } := by
+    exact ⟨hstate.1, hstate.2.1, hstate.2.2⟩
+  have hresult := panValuePcExceptionResultRel_of_raised_word_global_spill
+    structs context exceptionRel exceptionCode sourceLocals sourceGlobals
+    sourceMemory sourceException value state targetException hstate hexception hcode
+  refine ⟨hpost, ?_⟩
+  exact ⟨hresult, hlookupCode⟩
 
 /-! Concrete two-word counterpart of the scalar global payload observation.
     The two flattened words occupy the consecutive compiler-owned global
@@ -644,7 +674,8 @@ theorem panValuePcRaisedWordSemanticLift
     refine ⟨hrel.1, panValueCrepLocalsRel_empty structs context state.locals, ?_⟩
     exact hrel.2.2
   have hexceptionResult := panValuePcExceptionResultRel_of_raised_word_global_spill
-    structs context exceptionRel resultExceptionCode sourceGlobals sourceMemory
+    structs context exceptionRel resultExceptionCode (fun _ => none) sourceGlobals
+    sourceMemory
     exception value state exceptionCode hstateEmpty hexception hcode
   have hpost : panValueCrepStateRel structs context
       (fun _ => none) sourceGlobals sourceMemory

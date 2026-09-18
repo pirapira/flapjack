@@ -534,6 +534,50 @@ theorem panValuePcExceptionResultRel_of_raised_three_word_global_spill
       hdistinct12]
   · simp [panValueShape, Shape.shapeSize]
 
+theorem panValuePcResultRelWithContextCode_of_raised_three_word_global_spill
+    [BEq α] [LawfulBEq α] [OfNat α 0] [Add α]
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (sourceException : ExceptionId)
+    (bytesInWord first second third : α)
+    (state : CrepState α) (targetException : α)
+    (hstate : panValueCrepStateRel structs context
+      (fun _ => none) sourceGlobals sourceMemory state)
+    (hexception : exceptionRel sourceException
+      (.rStruct [.word first, .word second, .word third]) targetException)
+    (hcode : exceptionCode sourceException = some targetException)
+    (hlookupCode : lookupInfo sourceException context.exceptions =
+      some targetException)
+    (hdistinct01 : (0 : α) ≠ 0 + bytesInWord)
+    (hdistinct02 : (0 : α) ≠ (0 + bytesInWord) + bytesInWord)
+    (hdistinct12 : (0 : α) + bytesInWord ≠
+      (0 + bytesInWord) + bytesInWord) :
+    panValuePcResultRelWithContextCode structs context exceptionRel exceptionCode
+      (crepPcThreeWordGlobalsLookup bytesInWord)
+      (.raised (fun _ => none) sourceGlobals sourceMemory sourceException
+        (.rStruct [.word first, .word second, .word third]))
+      (.raised
+        { state with globals :=
+            (updateMemoryListAt state.globals 0 bytesInWord
+              [first, second, third]) }
+        targetException) := by
+  have hpost : panValueCrepStateRel structs context
+      (fun _ => none) sourceGlobals sourceMemory
+      { state with globals :=
+          (updateMemoryListAt state.globals 0 bytesInWord
+            [first, second, third]) } := by
+    exact ⟨hstate.1, hstate.2.1, hstate.2.2⟩
+  refine ⟨hpost, ?_⟩
+  refine ⟨?_, hlookupCode⟩
+  simpa [hstate.1] using
+    (panValuePcExceptionResultRel_of_raised_three_word_global_spill
+      structs context exceptionRel exceptionCode sourceGlobals sourceMemory
+      sourceException bytesInWord first second third state targetException hstate
+      hexception hcode hdistinct01 hdistinct02 hdistinct12)
+
 /-! Semantic word-raise lift.  The source and target evaluator equations are
     supplied by the existing fuel-polymorphic Pancake-to-Crep raise theorem;
     this wrapper turns its global spill result into the exact Pc result

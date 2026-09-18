@@ -1069,29 +1069,30 @@ theorem panValuePcRaisedTwoWordHraise
       baseAddress topAddress compiledRight = some right)
     (hexception : exceptionRel exception
       (.rStruct [.word left, .word right]) exceptionCode) :
-    panValueCrepStateRel structs context (fun _ => none) sourceGlobals
-      sourceMemory
-      { state with globals :=
-          (updateMemory (updateMemory state.globals 0 left)
-            (0 + bytesInWord) right) } ∧
-    (∃ spillAddress,
-      panValueCrepRaisedControlRel structs context exceptionRel sourceGlobals
-        sourceMemory exception (.rStruct [.word left, .word right])
+    (panValueCrepStateRel structs context (fun _ => none) sourceGlobals
+        sourceMemory
         { state with globals :=
             (updateMemory (updateMemory state.globals 0 left)
-              (0 + bytesInWord) right) }
-        exceptionCode spillAddress ∧
-      resultExceptionCode exception = some exceptionCode ∧
-      (1 ≤ Shape.shapeSize
-          (panValueShape structs (.rStruct [.word left, .word right])) →
-        crepPcTwoWordGlobalsLookup bytesInWord
-            { state with globals :=
-                (updateMemory (updateMemory state.globals 0 left)
-                  (0 + bytesInWord) right) }
-            (.rStruct [.word left, .word right]) =
-          some (panValueFlatWords (.rStruct [.word left, .word right]))) ∧
-      Shape.shapeSize (panValueShape structs
-        (.rStruct [.word left, .word right])) ≤ 32) := by
+              (0 + bytesInWord) right) } ∧
+      (∃ spillAddress,
+        panValueCrepRaisedControlRel structs context exceptionRel sourceGlobals
+          sourceMemory exception (.rStruct [.word left, .word right])
+          { state with globals :=
+              (updateMemory (updateMemory state.globals 0 left)
+                (0 + bytesInWord) right) }
+          exceptionCode spillAddress ∧
+        resultExceptionCode exception = some exceptionCode ∧
+        (1 ≤ Shape.shapeSize
+            (panValueShape structs (.rStruct [.word left, .word right])) →
+          crepPcTwoWordGlobalsLookup bytesInWord
+              { state with globals :=
+                  (updateMemory (updateMemory state.globals 0 left)
+                    (0 + bytesInWord) right) }
+              (.rStruct [.word left, .word right]) =
+            some (panValueFlatWords (.rStruct [.word left, .word right]))) ∧
+        Shape.shapeSize (panValueShape structs
+          (.rStruct [.word left, .word right])) ≤ 32)) ∧
+    lookupInfo exception context.exceptions = some exceptionCode := by
   have hresult := panValuePcRaisedTwoWordSemanticLift
     context structs sourceFunctions functions sourceLocals sourceGlobals
     sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
@@ -1107,7 +1108,9 @@ theorem panValuePcRaisedTwoWordHraise
   have hshape : Shape.shapeSize
       (panValueShape structs (.rStruct [.word left, .word right])) ≤ 32 := by
     simp [panValueShape, Shape.shapeSize]
-  refine ⟨hpost, spillAddress, hcontrol, ?_, ?_, ?_⟩
+  refine ⟨?_, hlookup⟩
+  refine ⟨hpost, ?_⟩
+  refine ⟨spillAddress, hcontrol, ?_, ?_, ?_⟩
   · simpa [htargetCode] using hresultCode
   · intro _
     exact (hpayload hnonempty).1

@@ -173,13 +173,14 @@ theorem pc_raised_result_requires_context_exception_code :
     raiseContext, lookupInfo]
 
 theorem closed_two_word_raise_pc_hraise_flat_globals :
-    panValuePcRaisedHraiseData raiseResultExceptionCode
-      (crepPcFlatGlobalsLookup 8) [] raiseContext
-      (fun _ _ code => code = 9) (fun _ => none) (fun _ => none)
-      (fun _ => none) "E" (.rStruct [.word 3, .word 4])
-      { raiseState with globals :=
-          (updateMemory (updateMemory raiseState.globals 0 3) 8 4) }
-      9 := by
+    (panValuePcRaisedHraiseData raiseResultExceptionCode
+        (crepPcFlatGlobalsLookup 8) [] raiseContext
+        (fun _ _ code => code = 9) (fun _ => none) (fun _ => none)
+        (fun _ => none) "E" (.rStruct [.word 3, .word 4])
+        { raiseState with globals :=
+            (updateMemory (updateMemory raiseState.globals 0 3) 8 4) }
+        9) ∧
+      lookupInfo "E" raiseContext.exceptions = some 9 := by
   have h := panValuePcRaisedTwoWordHraise
     (α := Nat) (context := raiseContext) (structs := [])
     (sourceFunctions := []) (functions := [])
@@ -212,7 +213,9 @@ theorem closed_two_word_raise_pc_hraise_flat_globals :
       intro value
       simp [evalCrepFullExpState, raiseState])
     (hexception := by simp)
-  rcases h with ⟨hpost, spillAddress, hcontrol, hcode, hpayload, hsize⟩
+  have htwoData := h.1
+  rcases htwoData with ⟨hpost, spillAddress, hcontrol, hcode, hpayload, hsize⟩
+  refine ⟨?_, h.2⟩
   refine ⟨hpost, spillAddress, hcontrol, hcode, ?_, hsize⟩
   intro _
   have hlookup :
@@ -269,7 +272,7 @@ theorem closed_two_word_raise_pc_result_rel_flat_globals :
       { raiseState with globals :=
           (updateMemory (updateMemory raiseState.globals 0 3) 8 4) })
     (targetException := 9)
-  exact closed_two_word_raise_pc_hraise_flat_globals
+  exact closed_two_word_raise_pc_hraise_flat_globals.1
 
 theorem closed_two_word_raise_pc_result_rel_with_context_code :
     panValuePcResultRelWithContextCode [] raiseContext

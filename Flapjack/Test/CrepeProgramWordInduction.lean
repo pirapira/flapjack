@@ -23,6 +23,9 @@ def wordRecordReturn : Prog Nat :=
 def wordRecordFieldReturn : Prog Nat :=
   .return (.rField 1 (.rStruct [.const 7, .const 8]))
 
+def wordRecordRaise : Prog Nat :=
+  .raise "E" (.rStruct [.const 3, .const 4, .const 5, .const 6, .const 7])
+
 example
     (hbytesInWord : ∀ (context : CompileContext Nat) (bytesInWord : Nat),
       context.bytesInWord = bytesInWord)
@@ -73,5 +76,22 @@ example
     PanValueCrepProgramStateCorrect wordRecordFieldReturn := by
   apply panValueCrepProgramStateCorrect_statefulWord wordRecordFieldReturn
   exact .returnWordRecordField [.const 7, .const 8] 1 hbytesInWord hlookup
+
+example
+    (hlookupException : ∀ (context : CompileContext Nat),
+      ∃ exceptionCode, lookupInfo "E" context.exceptions = some exceptionCode)
+    (hfresh : ∀ (context : CompileContext Nat) (state : CrepState Nat)
+      (name : Nat), name ∈ freshNames context 5 1 →
+      state.locals name = none)
+    (hexception : ∀ (context : CompileContext Nat)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (exceptionCode : Nat),
+      lookupInfo "E" context.exceptions = some exceptionCode →
+      exceptionRel "E" (.rStruct
+        [.word 3, .word 4, .word 5, .word 6, .word 7]) exceptionCode) :
+    PanValueCrepProgramStateCorrect wordRecordRaise := by
+  apply panValueCrepProgramStateCorrect_statefulWord wordRecordRaise
+  exact .raiseWordRecord "E" [3, 4, 5, 6, 7]
+    hlookupException hfresh hexception
 
 end Flapjack.Test.CrepeProgramWordInduction

@@ -3447,7 +3447,8 @@ theorem panValuePcRaisedHraiseCases_with_raw_word_lists_to_exception_result_rel_
         (.raised targetState targetException) →
       panValuePcRaisedHraiseData exceptionCode globalsLookup structs context
         exceptionRel sourceLocals sourceGlobals sourceMemory sourceException
-        (.word value) targetState targetException)
+        (.word value) targetState targetException ∧
+      lookupInfo sourceException context.exceptions = some targetException)
     (hraw : ∀ (context : CompileContext α) (structs : StructContext)
       (exceptionRel : ExceptionId → PanValue α → α → Prop)
       (sourceLocals sourceGlobals : VarName → Option (PanValue α))
@@ -3460,7 +3461,8 @@ theorem panValuePcRaisedHraiseCases_with_raw_word_lists_to_exception_result_rel_
       panValuePcRaisedHraiseData exceptionCode globalsLookup structs context
         exceptionRel sourceLocals sourceGlobals sourceMemory sourceException
         (.rStruct (values.map (fun value => .word value))) targetState
-        targetException)
+        targetException ∧
+      lookupInfo sourceException context.exceptions = some targetException)
     (hother : ∀ (context : CompileContext α) (structs : StructContext)
       (exceptionRel : ExceptionId → PanValue α → α → Prop)
       (sourceLocals sourceGlobals : VarName → Option (PanValue α))
@@ -3476,9 +3478,7 @@ theorem panValuePcRaisedHraiseCases_with_raw_word_lists_to_exception_result_rel_
         (.raised targetState targetException) →
       panValuePcRaisedHraiseData exceptionCode globalsLookup structs context
         exceptionRel sourceLocals sourceGlobals sourceMemory sourceException
-        sourceValue targetState targetException)
-    (hlookupCode : ∀ (context : CompileContext α)
-      (sourceException : ExceptionId) (targetException : α),
+        sourceValue targetState targetException ∧
       lookupInfo sourceException context.exceptions = some targetException) :
     ∀ (context : CompileContext α) (structs : StructContext)
       (exceptionRel : ExceptionId → PanValue α → α → Prop)
@@ -3496,15 +3496,73 @@ theorem panValuePcRaisedHraiseCases_with_raw_word_lists_to_exception_result_rel_
         sourceValue targetState targetException := by
   intro context structs exceptionRel sourceLocals sourceGlobals sourceMemory
     sourceException sourceValue targetState targetException hcontrol
+  have hraise := panValuePcRaisedHraiseCases_with_raw_word_lists
+    exceptionCode globalsLookup
+    (fun context structs exceptionRel sourceLocals sourceGlobals sourceMemory
+        sourceException value targetState targetException hcontrol =>
+      (hword context structs exceptionRel sourceLocals sourceGlobals sourceMemory
+        sourceException value targetState targetException hcontrol).1)
+    (fun context structs exceptionRel sourceLocals sourceGlobals sourceMemory
+        sourceException values targetState targetException hcontrol =>
+      (hraw context structs exceptionRel sourceLocals sourceGlobals sourceMemory
+        sourceException values targetState targetException hcontrol).1)
+    (fun context structs exceptionRel sourceLocals sourceGlobals sourceMemory
+        sourceException sourceValue targetState targetException hwordNot hrawNot
+        hcontrol =>
+      (hother context structs exceptionRel sourceLocals sourceGlobals sourceMemory
+        sourceException sourceValue targetState targetException hwordNot hrawNot
+        hcontrol).1)
+  have hlookupCode : ∀ (context : CompileContext α) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (sourceValue : PanValue α) (targetState : CrepState α)
+      (targetException : α),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      lookupInfo sourceException context.exceptions = some targetException := by
+    intro context structs exceptionRel sourceLocals sourceGlobals sourceMemory
+      sourceException sourceValue targetState targetException hcontrol
+    cases sourceValue with
+    | word value =>
+        exact (hword context structs exceptionRel sourceLocals sourceGlobals
+          sourceMemory sourceException value targetState targetException hcontrol).2
+    | rStruct fields =>
+        by_cases hflat : ∃ values : List α,
+            fields = values.map (fun value => .word value)
+        · rcases hflat with ⟨values, hfields⟩
+          subst fields
+          exact (hraw context structs exceptionRel sourceLocals sourceGlobals
+            sourceMemory sourceException values targetState targetException hcontrol).2
+        · apply (hother context structs exceptionRel sourceLocals sourceGlobals
+            sourceMemory sourceException (.rStruct fields) targetState targetException
+            (by
+              intro value hvalue
+              simp at hvalue)
+            (by
+              intro values hvalue
+              apply hflat
+              injection hvalue with hfields
+              exact ⟨values, hfields⟩)
+            hcontrol).2
+    | nStruct name fields =>
+        exact (hother context structs exceptionRel sourceLocals sourceGlobals
+          sourceMemory sourceException (.nStruct name fields) targetState targetException
+          (by simp)
+          (by
+            intro values hvalue
+            cases hvalue)
+          hcontrol).2
   exact (panValuePcRaisedHraiseData_to_exception_result_rel_with_context_code
     structs context exceptionRel exceptionCode globalsLookup
     (fun sourceLocals sourceGlobals sourceMemory sourceException sourceValue
         targetState targetException hcontrol =>
-      ⟨panValuePcRaisedHraiseCases_with_raw_word_lists
-          exceptionCode globalsLookup hword hraw hother context structs exceptionRel
-          sourceLocals sourceGlobals sourceMemory sourceException sourceValue
-          targetState targetException hcontrol,
-        hlookupCode context sourceException targetException⟩))
+      ⟨hraise context structs exceptionRel sourceLocals sourceGlobals sourceMemory
+          sourceException sourceValue targetState targetException hcontrol,
+        hlookupCode context structs exceptionRel sourceLocals sourceGlobals
+          sourceMemory sourceException sourceValue targetState targetException
+          hcontrol⟩))
     sourceLocals sourceGlobals sourceMemory sourceException sourceValue targetState
     targetException hcontrol
 

@@ -353,6 +353,11 @@ def wordSsaRead (state : WordSsaState) (name : Nat) : Nat :=
   | some value => value
   | none => name
 
+def wordSsaReadMoveSource (state : WordSsaState) (name : Nat) : Nat :=
+  match lookupNatInfo name state.current with
+  | some value => value
+  | none => if name % 2 == 0 && name >= 10 then 0 else name
+
 def wordSsaReadCutsets (state : WordSsaState)
     (cutsets : List Nat × List Nat) : List Nat × List Nat :=
   /- Cake's `apply_nummaps_key` maps the keys of the source sptree and then
@@ -422,7 +427,9 @@ def wordSsaCallAbiRegisters (start count : Nat) : List Nat :=
 def wordSsaRenameMove (state : WordSsaState) (priority : Nat)
     (moves : List (Nat × Nat)) : WordSsaState × WordProg α :=
   let destinations := moves.map (fun move => move.1)
-  let sources := moves.map (fun move => wordSsaRead state move.2)
+  let sources := moves.map (fun move =>
+    if priority == 0 then wordSsaReadMoveSource state move.2
+    else wordSsaRead state move.2)
   let (state, destinations) := wordSsaFreshList state destinations
   let force := (moves.zip destinations).filter (fun move =>
     move.1.2 ∉ moves.map (fun candidate => candidate.1)) |>.map
@@ -512,7 +519,7 @@ def wordSsaRenameInstProgram [OfNat α 0] (state : WordSsaState) :
     WordInst α → WordSsaState × WordProg α
   | .arith (.shift operator destination sourceLeft (.reg sourceRight)) =>
       let sourceLeft := wordSsaRead state sourceLeft
-      let sourceRight := wordSsaRead state sourceRight
+      let sourceRight := wordSsaReadMoveSource state sourceRight
       let (state, freshDestination) := wordSsaFresh state destination
       let moveIn : WordProg α := .move 1 [(8, sourceRight)]
       let shift : WordProg α :=

@@ -257,7 +257,7 @@ theorem panValueCrepProgramStateControlSafe_break
   intro context structs sourceFunctions functions sourceLocals sourceGlobals
     sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
     baseAddress topAddress bytesInWord sourceFuel targetFuel _exceptionRel
-    sourceResult crepResult hrel hsource hcrep
+    sourceResult crepResult hstate hsource hcrep
   cases sourceFuel with
   | zero => simp [evalPanValueProgWithPrimitiveCallsAndFfi] at hsource
   | succ sourceFuel =>
@@ -279,7 +279,7 @@ theorem panValueCrepProgramStateControlSafe_continue
   intro context structs sourceFunctions functions sourceLocals sourceGlobals
     sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
     baseAddress topAddress bytesInWord sourceFuel targetFuel _exceptionRel
-    sourceResult crepResult hrel hsource hcrep
+    sourceResult crepResult hstate hsource hcrep
   cases sourceFuel with
   | zero => simp [evalPanValueProgWithPrimitiveCallsAndFfi] at hsource
   | succ sourceFuel =>

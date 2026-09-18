@@ -1,0 +1,14 @@
+fun 1 add1(1 a, 1 b) { return a + b; }
+fun 1 sub1(1 a) { return a - 1; }
+exception E : 1;
+fun 1 main() {
+  var 1 x = 255;
+  var 1 y189 = sub1(((ld8 1000 + 12) >> x));
+  var 1 y540 = sub1(x);
+  if (1 >= ((ld8 1000) #>> 2)) {
+    throw E (lds 1 (((1000 + 12 + 4) + 12)));
+  } else {
+    throw E x;
+  }
+  return add1((lds 1 ((1000 + 1000))), (255 >> y189));
+}

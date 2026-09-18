@@ -46,6 +46,13 @@ def clockedCallAtZero :
     (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState 0
     none "returnOne" []
 
+def clockedDecCallAtZero :
+    Option (PanValueFfiClockResult (Word 64) Unit) :=
+  evalPanValueFfiClockProg statefulTestContext statefulTestPrimitive
+    statefulTestHandler [] clockedCallFunctions 0 100 8 20
+    (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState 0
+    (.decCall "x" .one "returnOne" [] .skip)
+
 def clockedRaiseFunctions : List (FunName × List VarName × Prog (Word 64)) :=
   [("raiseOne", [], .raise "E" (.const (BitVec.ofNat 64 1)))]
 
@@ -94,6 +101,11 @@ def clockedFinalFfi : Option (PanValueFfiClockResult (Word 64) Unit) :=
 
 #guard
   match clockedCallAtZero with
+  | some (.timeout locals _ _ _, 0) => locals "x" = none
+  | _ => false
+
+#guard
+  match clockedDecCallAtZero with
   | some (.timeout locals _ _ _, 0) => locals "x" = none
   | _ => false
 

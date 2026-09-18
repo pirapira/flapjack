@@ -19,6 +19,30 @@ def raiseWordGlobalsLookup (_state : CrepState Nat) (value : PanValue Nat) :
     Option (List Nat) :=
   some (panValueFlatWords value)
 
+theorem pc_break_requires_zero_label :
+    ¬ panValuePcResultRel [] raiseContext (fun _ _ code => code = 9)
+      raiseResultExceptionCode raiseWordGlobalsLookup
+      (.broke (fun _ => none) (fun _ => none) (fun _ => none))
+      (.broke raiseState 1) := by
+  simp [panValuePcResultRel]
+
+theorem pc_continue_requires_zero_label :
+    ¬ panValuePcResultRel [] raiseContext (fun _ _ code => code = 9)
+      raiseResultExceptionCode raiseWordGlobalsLookup
+      (.continued (fun _ => none) (fun _ => none) (fun _ => none))
+      (.continued raiseState 1) := by
+  simp [panValuePcResultRel]
+
+theorem pc_break_zero_label_preserves_state :
+    panValuePcResultRel [] raiseContext (fun _ _ code => code = 9)
+      raiseResultExceptionCode raiseWordGlobalsLookup
+      (.broke (fun _ => none) (fun _ => none) (fun _ => none))
+      (.broke raiseState 0) := by
+  have hstate : panValueCrepStateRel [] raiseContext
+      (fun _ => none) (fun _ => none) (fun _ => none) raiseState := by
+    refine ⟨rfl, panValueCrepLocalsRel_empty [] raiseContext _, rfl⟩
+  simpa [panValuePcResultRel] using hstate
+
 /-! A closed source raise supplies the concrete semantic premises needed by the
     Pc raised-result obligation.  In particular, the conclusion retains the
     post-state relation, exception-code lookup, and the flattened global

@@ -1277,6 +1277,87 @@ theorem panValuePcRaisedWordHraiseData_retarget_globals
   rw [← hlookupGlobals]
   exact hpayload hnonempty
 
+theorem panValuePcRaisedTwoWordHraiseData_retarget_globals
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (state : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α)
+    (fieldLeft fieldRight : SourceWordExp α) (left right : α)
+    (exception : ExceptionId) (exceptionCode : α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (resultExceptionCode : ExceptionId → Option α)
+    (compiledLeft compiledRight : CrepExp α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (hlookup : lookupInfo exception context.exceptions = some exceptionCode)
+    (hcode : resultExceptionCode exception = some exceptionCode)
+    (hbytesInWord : context.bytesInWord = bytesInWord)
+    (hdistinct : (0 : α) ≠ 0 + bytesInWord)
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory state)
+    (hsource : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord
+      (.rStruct [fieldLeft.toExp, fieldRight.toExp]) =
+      some (.rStruct [.word left, .word right]))
+    (hcompile : compileExp context
+      (.rStruct [fieldLeft.toExp, fieldRight.toExp]) =
+      ([compiledLeft, compiledRight], .comb [.one, .one]))
+    (hcompiledLeft : evalCrepFullExpState state baseAddress topAddress compiledLeft =
+      some left)
+    (hcompiledRight : ∀ value : α, evalCrepFullExpState
+      { state with locals := updateCrepLocal state.locals (context.maxVar + 1) value }
+      baseAddress topAddress compiledRight = some right)
+    (hexception : exceptionRel exception
+      (.rStruct [.word left, .word right]) exceptionCode)
+    (hlookupGlobals : crepPcTwoWordGlobalsLookup bytesInWord
+        { state with globals :=
+            (updateMemory (updateMemory state.globals 0 left)
+              (0 + bytesInWord) right) }
+        (.rStruct [.word left, .word right]) =
+      globalsLookup
+        { state with globals :=
+            (updateMemory (updateMemory state.globals 0 left)
+              (0 + bytesInWord) right) }
+        (.rStruct [.word left, .word right])) :
+    panValuePcRaisedHraiseData resultExceptionCode globalsLookup structs context
+      exceptionRel (fun _ => none) sourceGlobals sourceMemory exception
+      (.rStruct [.word left, .word right])
+      { state with globals :=
+          (updateMemory (updateMemory state.globals 0 left)
+            (0 + bytesInWord) right) }
+      exceptionCode ∧ lookupInfo exception context.exceptions = some exceptionCode := by
+  have htwo := panValuePcRaisedTwoWordHraise
+    context structs sourceFunctions functions sourceLocals sourceGlobals
+    sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord fieldLeft fieldRight left right
+    exception exceptionCode exceptionRel resultExceptionCode compiledLeft compiledRight
+    hlookup hcode hbytesInWord hdistinct hrel hsource hcompile hcompiledLeft
+    hcompiledRight hexception
+  rcases htwo with
+    ⟨⟨hpost, ⟨spillAddress, hcontrol, hcode', hpayload, hsize⟩⟩,
+      hlookupCode⟩
+  refine ⟨?_, hlookupCode⟩
+  apply panValuePcRaisedHraiseData_of_control_evidence
+    structs context exceptionRel resultExceptionCode globalsLookup
+    (fun _ => none) sourceGlobals sourceMemory exception
+    (.rStruct [.word left, .word right])
+    { state with globals :=
+        (updateMemory (updateMemory state.globals 0 left)
+          (0 + bytesInWord) right) }
+    exceptionCode hpost ⟨spillAddress, hcontrol⟩ hcode' ?_ hsize
+  intro hnonempty
+  rw [← hlookupGlobals]
+  exact hpayload hnonempty
+
 theorem panValuePcRaisedHraiseData_of_control_evidence_with_context_code
     (structs : StructContext) (context : CompileContext α)
     (exceptionRel : ExceptionId → PanValue α → α → Prop)

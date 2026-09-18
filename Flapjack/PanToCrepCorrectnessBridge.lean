@@ -1791,6 +1791,7 @@ theorem panValuePcExceptionResultRelWithContextCode_of_raised_raw_word_list_evid
     (compiled : List (CrepExp α)) (shape : Shape)
     (exceptionRel : ExceptionId → PanValue α → α → Prop)
     (resultExceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
     (hlookup : lookupInfo exception context.exceptions = some exceptionCode)
     (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
       sourceMemory state)
@@ -1814,32 +1815,43 @@ theorem panValuePcExceptionResultRelWithContextCode_of_raised_raw_word_list_evid
       (storeAddresses (0 : α) context.bytesInWord values.length))
     (hsize : Shape.shapeSize
       (panValueShape structs (.rStruct (values.map (fun value => .word value)))) ≤ 32) :
+    (hlookupGlobals : crepPcFlatGlobalsLookup context.bytesInWord
+        { state with globals :=
+            updateMemoryListAt state.globals 0 context.bytesInWord values }
+        (.rStruct (values.map (fun value => .word value))) =
+      globalsLookup
+        { state with globals :=
+            updateMemoryListAt state.globals 0 context.bytesInWord values }
+        (.rStruct (values.map (fun value => .word value)))) →
     panValuePcExceptionResultRelWithContextCode structs context exceptionRel
-      resultExceptionCode (crepPcFlatGlobalsLookup context.bytesInWord)
+      resultExceptionCode globalsLookup
       sourceGlobals sourceMemory exception
       (.rStruct (values.map (fun value => .word value)))
       { state with globals :=
           updateMemoryListAt state.globals 0 context.bytesInWord values }
       exceptionCode := by
-  apply panValuePcExceptionResultRelWithContextCode_of_raised_hraise_data
-    (structs := structs) (context := context) (exceptionRel := exceptionRel)
-    (exceptionCode := resultExceptionCode)
-    (globalsLookup := crepPcFlatGlobalsLookup context.bytesInWord)
-    (sourceLocals := fun _ => none) (sourceGlobals := sourceGlobals)
-    (sourceMemory := sourceMemory) (sourceException := exception)
-    (sourceValue := .rStruct (values.map (fun value => .word value)))
-    (targetState :=
-      { state with globals :=
-          updateMemoryListAt state.globals 0 context.bytesInWord values })
-    (targetException := exceptionCode)
-  · exact panValuePcRaisedRawWordListHraise_of_evidence
+  intro hlookupGlobals
+  have hcanonical := panValuePcRaisedRawWordListHraise_of_evidence
       context structs sourceFunctions functions sourceLocals sourceGlobals
       sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
       baseAddress topAddress bytesInWord sourceFuel exception exceptionCode values
       expression compiled shape exceptionRel resultExceptionCode hlookup hrel
       hsource hvalid hcompile hlength hcompiled hnot hfresh hexception hcode
       hdistinct hsize
-  · exact hlookup
+  have hretarget := panValuePcRaisedHraiseData_retarget_globals_lookup
+    context.bytesInWord resultExceptionCode globalsLookup structs context exceptionRel
+    (fun _ => none) sourceGlobals sourceMemory exception
+    (.rStruct (values.map (fun value => .word value)))
+    { state with globals :=
+        updateMemoryListAt state.globals 0 context.bytesInWord values }
+    exceptionCode hlookupGlobals hcanonical
+  exact panValuePcExceptionResultRelWithContextCode_of_raised_hraise_data
+    structs context exceptionRel resultExceptionCode globalsLookup
+    (fun _ => none) sourceGlobals sourceMemory exception
+    (.rStruct (values.map (fun value => .word value)))
+    { state with globals :=
+        updateMemoryListAt state.globals 0 context.bytesInWord values }
+    exceptionCode hretarget hlookup
 
 /-! General evaluator-backed raised data with the canonical flattened global
     lookup.  The raw-word-list theorem above is the common flat specialization;

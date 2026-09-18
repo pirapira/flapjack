@@ -994,7 +994,7 @@ theorem four_word_raise_pc_context_code_from_evidence :
     panValuePcExceptionResultRelWithContextCode [] context
       (fun _ _ code => code = 9)
       (fun exception => if exception = "E" then some 9 else none)
-      (crepPcFlatGlobalsLookup 8) (fun _ => none) (fun _ => none) "E"
+      pcGlobalsLookup (fun _ => none) (fun _ => none) "E"
       fourWordSourceValue
       { state with globals :=
           updateMemoryListAt state.globals 0 8 [3, 4, 5, 6] }
@@ -1017,6 +1017,7 @@ theorem four_word_raise_pc_context_code_from_evidence :
     (exceptionRel := fun _ _ code => code = 9)
     (resultExceptionCode := fun exception =>
       if exception = "E" then some 9 else none)
+    (globalsLookup := pcGlobalsLookup)
     (hlookup := by simp [context, lookupInfo])
     (hrel := by
       refine ⟨rfl, panValueCrepLocalsRel_empty [] context _, rfl⟩)
@@ -1041,6 +1042,12 @@ theorem four_word_raise_pc_context_code_from_evidence :
     (hcode := by simp)
     (hdistinct := by decide)
     (hsize := by simp [panValueShape, Shape.shapeSize])
+  · have hstored := crepPcFlatGlobalsLookup_of_stored_flat_words
+      (α := Nat) 8 state fourWordSourceValue (by decide)
+    simpa [context, pcGlobalsLookup, fourWordSourceValue, panValueFlatWords,
+      panValueFlatWordsFuel, panValueFlatValueFuel,
+      panValueFlatWordsFuel.panValueFlatWordsListFuel,
+      panValueFlatValueFuel.panValueFlatValueListFuel] using hstored
 
 theorem four_word_raise_pc_hraise_retargeted_globals :
     panValuePcRaisedHraiseData

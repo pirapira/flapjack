@@ -2226,7 +2226,7 @@ theorem panValuePcRaisedThreeWordSemanticLift
             (updateMemoryListAt state.globals 0 context.bytesInWord
               [first, second, third]) }
         exceptionCode) ∧
-    panValuePcResultRel structs context exceptionRel resultExceptionCode
+    panValuePcResultRelWithContextCode structs context exceptionRel resultExceptionCode
       (crepPcThreeWordGlobalsLookup context.bytesInWord)
       (.raised sourceLocals sourceGlobals sourceMemory exception
       (.rStruct [.word first, .word second, .word third]))
@@ -2252,7 +2252,7 @@ theorem panValuePcRaisedThreeWordSemanticLift
     resultExceptionCode hlookup hrel hsource hvalid hcompile hcompiled hnot hfresh
     hexception hcode hdistinct01 hdistinct02 hdistinct12
   rcases hgeneric with ⟨hsourceEval, htargetEval, _hcontrol⟩
-  have hresult := panValuePcResultRel_of_raised_hraise_data
+  have hresult := panValuePcExceptionResultRelWithContextCode_of_raised_hraise_data
     structs context exceptionRel resultExceptionCode
     (crepPcThreeWordGlobalsLookup context.bytesInWord) sourceLocals
     sourceGlobals sourceMemory exception
@@ -2260,8 +2260,33 @@ theorem panValuePcRaisedThreeWordSemanticLift
     { state with globals :=
         (updateMemoryListAt state.globals 0 context.bytesInWord
           [first, second, third]) }
-    exceptionCode hraiseData.1
-  exact ⟨hsourceEval, htargetEval, hresult⟩
+    exceptionCode hraiseData
+  have hcontext : panValuePcResultRelWithContextCode structs context
+      exceptionRel resultExceptionCode
+      (crepPcThreeWordGlobalsLookup context.bytesInWord)
+      (.raised sourceLocals sourceGlobals sourceMemory exception
+        (.rStruct [.word first, .word second, .word third]))
+      (.raised
+        { state with globals :=
+            (updateMemoryListAt state.globals 0 context.bytesInWord
+              [first, second, third]) }
+        exceptionCode) := by
+    simpa [panValuePcResultRelWithContextCode] using
+      (show panValueCrepStateRel structs context sourceLocals sourceGlobals
+          sourceMemory
+          { state with globals :=
+              (updateMemoryListAt state.globals 0 context.bytesInWord
+                [first, second, third]) } ∧
+        panValuePcExceptionResultRelWithContextCode structs context exceptionRel
+          resultExceptionCode (crepPcThreeWordGlobalsLookup context.bytesInWord)
+          sourceGlobals sourceMemory exception
+          (.rStruct [.word first, .word second, .word third])
+          { state with globals :=
+              (updateMemoryListAt state.globals 0 context.bytesInWord
+                [first, second, third]) }
+          exceptionCode from
+        ⟨hraiseData.1.1, hresult⟩)
+  exact ⟨hsourceEval, htargetEval, hcontext⟩
 
 /-! The same canonical spill adapter for a raw record of any number of word
     fields.  This is the generic structured payload route used by the

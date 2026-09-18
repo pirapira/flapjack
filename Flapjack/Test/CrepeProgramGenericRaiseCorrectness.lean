@@ -309,8 +309,19 @@ theorem three_word_raise_pc_semantic_lift :
     (hdistinct01 := by decide)
     (hdistinct02 := by decide)
     (hdistinct12 := by decide)
-  simpa [sourceValue, context, freshNames, updateMemoryListAt,
-    List.range, List.range.loop, Nat.add_assoc] using h
+  rcases h with ⟨hsourceEval, htargetEval, hcontext⟩
+  refine ⟨hsourceEval, htargetEval, ?_⟩
+  simpa [panValuePcResultRel, panValuePcResultRelWithContextCode] using
+    (show panValueCrepStateRel [] context
+        (fun _ => some (.word 7)) (fun _ => none) (fun _ => none)
+        { state with globals := updateMemoryListAt state.globals 0 8 [3, 4, 5] } ∧
+      panValuePcExceptionResultRel [] context (fun _ _ code => code = 9)
+        (fun exception => if exception = "E" then some 9 else none)
+        (crepPcThreeWordGlobalsLookup 8) (fun _ => none) (fun _ => none)
+        "E" sourceValue
+        { state with globals := updateMemoryListAt state.globals 0 8 [3, 4, 5] }
+        9 from
+      ⟨hcontext.1, hcontext.2.1⟩)
 
 theorem three_word_raise_pc_hraise_flat_globals :
     panValuePcRaisedHraiseData

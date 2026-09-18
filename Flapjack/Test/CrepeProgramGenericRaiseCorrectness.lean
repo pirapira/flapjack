@@ -417,7 +417,19 @@ theorem three_word_raise_pc_result_rel_retargeted_globals :
       (.raised
         { state with globals := updateMemoryListAt state.globals 0 8 [3, 4, 5] }
         9) := by
-  apply panValuePcResultRel_of_raised_generic_flat_evidence_retarget_globals
+  apply panValuePcResultRel_of_raised_hraise_data
+    (structs := []) (context := context)
+    (exceptionRel := fun _ _ code => code = 9)
+    (exceptionCode := fun exception =>
+      if exception = "E" then some 9 else none)
+    (globalsLookup := pcGlobalsLookup)
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (sourceException := "E")
+    (sourceValue := sourceValue)
+    (targetState :=
+      { state with globals := updateMemoryListAt state.globals 0 8 [3, 4, 5] })
+    (targetException := 9)
+  apply panValuePcRaisedGenericHraise_of_evidence_retarget_globals
     (context := context) (structs := [])
     (sourceFunctions := []) (functions := [])
     (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
@@ -456,7 +468,7 @@ theorem three_word_raise_pc_result_rel_retargeted_globals :
     (hfresh := by simp [context, state, freshNames])
     (hexception := by simp)
     (hcode := by simp)
-    (hvalues := by
+    (hflat := by
       simp [sourceValue, panValueFlatWords, panValueFlatWordsFuel,
         panValueFlatValueFuel,
         panValueFlatWordsFuel.panValueFlatWordsListFuel,

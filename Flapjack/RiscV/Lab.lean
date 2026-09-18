@@ -1172,7 +1172,7 @@ def labEncodeStoredSection [NeZero width]
       .asm operation bytes stored ::
         labEncodeStoredSection context labels (base + stored) ffiBase haltPc lines
   | .labAsm operation bytes length :: lines =>
-      let actual := (labCompileAsmProgramWithLinkedFfiBaseAndHalt context labels
+      let actual := (labCompileAsmProgramWithFfiBaseAndHalt context labels
         base ffiBase haltPc operation).getD []
       let stored := max length (4 * actual.length)
       .labAsm operation bytes stored ::
@@ -1241,7 +1241,7 @@ def labCompileProgramLinesWithStoredLengths [NeZero width]
         (position + length) ffiBase haltPc lines
       pure (labPadStoredInstructions code length ++ rest)
   | .labAsm operation _ length :: lines => do
-      let code ← labCompileAsmProgramWithLinkedFfiBaseAndHalt context labels
+      let code ← labCompileAsmProgramWithFfiBaseAndHalt context labels
         position ffiBase haltPc operation
       let rest ← labCompileProgramLinesWithStoredLengths context labels
         (position + length) ffiBase haltPc lines

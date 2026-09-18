@@ -392,6 +392,37 @@ theorem evalPanValueFfiClockProg_decCall_returned
       some (panValueFfiClockRestoreLocal name (locals name) outcome, finalClock) := by
   simp [evalPanValueFfiClockProg, hcall, hshape, hbody]
 
+/-! An uncaught exception from a clocked `DecCall` bypasses its local
+    continuation and preserves the callee's post-call state and clock. -/
+theorem evalPanValueFfiClockProg_decCall_raised
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel clock callClock : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (name : VarName) (shape : Shape) (function : FunName)
+    (arguments : List (Exp α)) (body : Prog α)
+    (nextGlobals : VarName → Option (PanValue α))
+    (nextMemory : α → Option (PanValue α)) (nextFfi : FfiState σ)
+    (exception : ExceptionId) (value : PanValue α)
+    (hcall : evalPanValueFfiClockCall context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
+      none function arguments =
+      some (.control (.raised (fun _ => none) nextGlobals nextMemory nextFfi
+        exception value), callClock)) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+      (.decCall name shape function arguments body) =
+      some (.control (.raised (fun _ => none) nextGlobals nextMemory nextFfi
+        exception value), callClock) := by
+  simp [evalPanValueFfiClockProg, hcall]
+
 /-! This is the direct `Call_Ret_FinalFFI` branch of Cake's
     `pc_compile_correct`. A direct call has no declaration continuation, so
     the callee's final FFI event is returned unchanged by the enclosing

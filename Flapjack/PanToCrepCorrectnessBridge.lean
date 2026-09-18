@@ -1085,6 +1085,33 @@ theorem panValuePcRaisedGenericHraise_of_flat_globals
         context.bytesInWord state sourceValue hdistinct
       simpa [hvalues] using hstored) hsize
 
+theorem panValuePcRaisedHraiseData_retarget_globals_lookup
+    [OfNat α 0] [Add α]
+    (bytesInWord : α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+    (sourceValue : PanValue α) (targetState : CrepState α)
+    (targetException : α)
+    (hlookup : crepPcFlatGlobalsLookup bytesInWord targetState sourceValue =
+      globalsLookup targetState sourceValue)
+    (hraiseData : panValuePcRaisedHraiseData exceptionCode
+      (crepPcFlatGlobalsLookup bytesInWord) structs context exceptionRel
+      sourceLocals sourceGlobals sourceMemory sourceException sourceValue
+      targetState targetException) :
+    panValuePcRaisedHraiseData exceptionCode globalsLookup structs context
+      exceptionRel sourceLocals sourceGlobals sourceMemory sourceException
+      sourceValue targetState targetException := by
+  rcases hraiseData with
+    ⟨hpost, spillAddress, hcontrol, hcode, hpayload, hsize⟩
+  refine ⟨hpost, spillAddress, hcontrol, hcode, ?_, hsize⟩
+  intro hnonempty
+  rw [← hlookup]
+  exact hpayload hnonempty
+
 theorem panValuePcRaisedThreeWordHraise_of_evidence
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
@@ -1372,6 +1399,45 @@ theorem panValuePcRaisedHraiseCases
         sourceMemory sourceException (.nStruct name fields) targetState targetException
         (by simp) (by simp) hcontrol
 
+theorem panValuePcRaisedHraiseCases_to_exception_result_rel
+    [BEq α] [LawfulBEq α]
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (hraiseData : ∀ (context : CompileContext α) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (sourceValue : PanValue α) (targetState : CrepState α)
+      (targetException : α),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      panValuePcRaisedHraiseData exceptionCode globalsLookup structs context
+        exceptionRel sourceLocals sourceGlobals sourceMemory sourceException
+        sourceValue targetState targetException) :
+    ∀ (context : CompileContext α) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (sourceValue : PanValue α) (targetState : CrepState α)
+      (targetException : α),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      panValueCrepStateRel structs context sourceLocals sourceGlobals
+        sourceMemory targetState ∧
+      panValuePcExceptionResultRel structs context exceptionRel exceptionCode
+        globalsLookup sourceGlobals sourceMemory sourceException sourceValue
+        targetState targetException := by
+  intro context structs exceptionRel
+    sourceLocals sourceGlobals sourceMemory sourceException sourceValue
+    targetState targetException hcontrol
+  exact panValuePcRaisedHraiseData_to_exception_result_rel
+    structs context exceptionRel exceptionCode globalsLookup
+    (hraiseData context structs exceptionRel)
+    sourceLocals sourceGlobals sourceMemory sourceException sourceValue
+    targetState targetException hcontrol
+
 /-! The ordinary compact control cases are proved directly from the existing
 `panValueCrepControlRel`.  Only the raised payload needs an additional
 obligation because the exact Pc relation retains both the HOL post-state
@@ -1499,7 +1565,7 @@ theorem panValuePcCompileCorrect_of_stateful_program
           baseAddress topAddress targetFuel targetInput.state
           (compileProg context program) = some crepResult ∧
         crepPcResultOfControl crepResult = some targetExecution.result)
-    (hraise : ∀ (context : CompileContext α) (structs : StructContext)
+    (hraiseData : ∀ (context : CompileContext α) (structs : StructContext)
       (exceptionRel : ExceptionId → PanValue α → α → Prop)
       (sourceLocals sourceGlobals : VarName → Option (PanValue α))
       (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
@@ -1508,11 +1574,9 @@ theorem panValuePcCompileCorrect_of_stateful_program
       panValueCrepControlRel structs context exceptionRel
         (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
         (.raised targetState targetException) →
-      panValueCrepStateRel structs context sourceLocals sourceGlobals
-        sourceMemory targetState ∧
-      panValuePcExceptionResultRel structs context exceptionRel exceptionCode
-        globalsLookup sourceGlobals sourceMemory sourceException sourceValue
-        targetState targetException) :
+      panValuePcRaisedHraiseData exceptionCode globalsLookup structs context
+        exceptionRel sourceLocals sourceGlobals sourceMemory sourceException
+        sourceValue targetState targetException) :
     PanValuePcCompileCorrect sourceEvaluate targetEvaluate codeRel excpRel
       exceptionCode globalsLookup program := by
   intro context structs sourceInput targetInput exceptionRel sourceExecution
@@ -1529,8 +1593,11 @@ theorem panValuePcCompileCorrect_of_stateful_program
     primitive sourceHandler crepPrimitive ffi sharedMem baseAddress topAddress
     bytesInWord sourceFuel targetFuel exceptionRel sourceResult crepResult
     hstate hsourceResult hcrepResult
+  have hraise := panValuePcRaisedHraiseData_to_exception_result_rel
+    structs context exceptionRel exceptionCode globalsLookup
+    (hraiseData context structs exceptionRel)
   have hresult := panValuePcResultRel_of_control structs context exceptionRel
-    exceptionCode globalsLookup (hraise context structs exceptionRel)
+    exceptionCode globalsLookup hraise
     sourceResult crepResult targetExecution.result hcontrol hcrepShape
   simpa [hsourceShape] using hresult
 
@@ -1618,24 +1685,6 @@ theorem panValuePcCompileCorrect_compact
       codeRel excpRel exceptionCode globalsLookup program := by
   have hraise := panValuePcRaisedHraiseCases exceptionCode globalsLookup
     hword htwo hthree hother
-  have hraise' : ∀ (context : CompileContext α) (structs : StructContext)
-      (exceptionRel : ExceptionId → PanValue α → α → Prop)
-      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
-      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
-      (sourceValue : PanValue α) (targetState : CrepState α)
-      (targetException : α),
-      panValueCrepControlRel structs context exceptionRel
-        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
-        (.raised targetState targetException) →
-      panValueCrepStateRel structs context sourceLocals sourceGlobals
-        sourceMemory targetState ∧
-      panValuePcExceptionResultRel structs context exceptionRel exceptionCode
-        globalsLookup sourceGlobals sourceMemory sourceException sourceValue
-        targetState targetException := by
-    intro context structs exceptionRel
-    exact panValuePcRaisedHraiseData_to_exception_result_rel
-      structs context exceptionRel exceptionCode globalsLookup
-      (hraise context structs exceptionRel)
   refine panValuePcCompileCorrect_of_stateful_program
     program
     (panValuePcCompactSourceEvaluator primitive sourceHandler sourceFunctions
@@ -1644,7 +1693,7 @@ theorem panValuePcCompileCorrect_compact
       baseAddress topAddress targetFuel)
     codeRel excpRel exceptionCode globalsLookup sourceFunctions functions
     primitive sourceHandler crepPrimitive ffi sharedMem baseAddress topAddress
-    bytesInWord sourceFuel targetFuel hprogram ?_ ?_ hraise'
+    bytesInWord sourceFuel targetFuel hprogram ?_ ?_ hraise
   · intro context structs sourceInput targetInput sourceExecution hstructs heval
     exact panValuePcCompactSourceEvaluator_adapter primitive sourceHandler
       sourceFunctions baseAddress topAddress bytesInWord sourceFuel program
@@ -1653,6 +1702,155 @@ theorem panValuePcCompileCorrect_compact
     exact crepPcCompactTargetEvaluator_adapter functions crepPrimitive ffi
       sharedMem baseAddress topAddress targetFuel program context structs
       sourceInput targetInput targetExecution hstructs heval
+
+/-! Evidence-bearing compact boundary.  Unlike the case dispatcher above,
+this entrypoint accepts generic evaluator/storeGlobals evidence directly, so
+arbitrary structured raised payloads are not forced through an opaque
+control-only fallback. -/
+theorem panValuePcCompileCorrect_compact_with_raised_data
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (program : Prog α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α)
+    (sourceFuel targetFuel : Nat)
+    (hprogram : PanValueCrepProgramStateCorrect program)
+    (hraiseData : ∀ (context : CompileContext α) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (sourceValue : PanValue α) (targetState : CrepState α)
+      (targetException : α),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      panValuePcRaisedHraiseData exceptionCode globalsLookup structs context
+        exceptionRel sourceLocals sourceGlobals sourceMemory sourceException
+        sourceValue targetState targetException) :
+    PanValuePcCompileCorrect
+      (panValuePcCompactSourceEvaluator primitive sourceHandler sourceFunctions
+        baseAddress topAddress bytesInWord sourceFuel)
+      (crepPcCompactTargetEvaluator functions crepPrimitive ffi sharedMem
+        baseAddress topAddress targetFuel)
+      codeRel excpRel exceptionCode globalsLookup program := by
+  refine panValuePcCompileCorrect_of_stateful_program
+    program
+    (panValuePcCompactSourceEvaluator primitive sourceHandler sourceFunctions
+      baseAddress topAddress bytesInWord sourceFuel)
+    (crepPcCompactTargetEvaluator functions crepPrimitive ffi sharedMem
+      baseAddress topAddress targetFuel)
+    codeRel excpRel exceptionCode globalsLookup sourceFunctions functions
+    primitive sourceHandler crepPrimitive ffi sharedMem baseAddress topAddress
+    bytesInWord sourceFuel targetFuel hprogram ?_ ?_ hraiseData
+  · intro context structs sourceInput targetInput sourceExecution hstructs heval
+    exact panValuePcCompactSourceEvaluator_adapter primitive sourceHandler
+      sourceFunctions baseAddress topAddress bytesInWord sourceFuel program
+      context structs sourceInput targetInput sourceExecution hstructs heval
+  · intro context structs sourceInput targetInput targetExecution hstructs heval
+    exact crepPcCompactTargetEvaluator_adapter functions crepPrimitive ffi
+      sharedMem baseAddress topAddress targetFuel program context structs
+      sourceInput targetInput targetExecution hstructs heval
+
+/-! Clocked companion for the evidence-bearing boundary.  The raised branch
+continues to consume explicit evaluator/storeGlobals evidence, while the
+zero-clock Tick Timeout result is composed independently. -/
+theorem panValuePcCompileCorrect_compact_with_raised_data_and_timeout
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (program : Prog α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α)
+    (sourceFuel targetFuel : Nat)
+    (hprogram : PanValueCrepProgramStateCorrect program)
+    (hraiseData : ∀ (context : CompileContext α) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (sourceValue : PanValue α) (targetState : CrepState α)
+      (targetException : α),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      panValuePcRaisedHraiseData exceptionCode globalsLookup structs context
+        exceptionRel sourceLocals sourceGlobals sourceMemory sourceException
+        sourceValue targetState targetException)
+    (clockStructs : StructContext) (clockPcContext : CompileContext α)
+    (clockExceptionRel : ExceptionId → PanValue α → α → Prop)
+    (clockContext : PanValueFfiContext α)
+    (clockPrimitive : PanPrimitiveHandler α)
+    (clockHandler : PanValueStatefulFfiHandler α σ)
+    (clockFunctions : List (FunName × List VarName × Prog α))
+    (clockBaseAddress clockTopAddress clockBytesInWord : α)
+    (clockFuel : Nat)
+    (clockLocals clockGlobals : VarName → Option (PanValue α))
+    (clockMemory : α → Option (PanValue α)) (clockFfi : FfiState σ)
+    (clockTargetState : CrepState α)
+    (hclockState : panValueCrepStateRel clockStructs clockPcContext
+      (fun _ => none) clockGlobals clockMemory clockTargetState) :
+    PanValuePcCompileCorrect
+      (panValuePcCompactSourceEvaluator primitive sourceHandler sourceFunctions
+        baseAddress topAddress bytesInWord sourceFuel)
+      (crepPcCompactTargetEvaluator functions crepPrimitive ffi sharedMem
+        baseAddress topAddress targetFuel)
+      codeRel excpRel exceptionCode globalsLookup program ∧
+    evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
+      clockFfi 0 .tick =
+      some (.timeout (fun _ => none) clockGlobals clockMemory clockFfi, 0) ∧
+    (evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
+      clockFfi 0 .tick).map panValueFfiClockResultProjection =
+      some (.timeout (fun _ => none) clockGlobals clockMemory clockFfi 0) ∧
+    panValuePcResultRel clockStructs clockPcContext clockExceptionRel
+      exceptionCode globalsLookup
+      (.timeout (fun _ => none) clockGlobals clockMemory)
+      (.timeout clockTargetState) := by
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · exact panValuePcCompileCorrect_compact_with_raised_data program codeRel
+      excpRel exceptionCode globalsLookup sourceFunctions functions primitive
+      sourceHandler crepPrimitive ffi sharedMem baseAddress topAddress bytesInWord
+      sourceFuel targetFuel hprogram hraiseData
+  · exact panValuePcTimeoutResultRel_of_clocked_tick_zero clockStructs
+      clockPcContext clockExceptionRel exceptionCode globalsLookup clockContext
+      clockPrimitive clockHandler clockFunctions clockBaseAddress
+      clockTopAddress clockBytesInWord clockFuel clockLocals clockGlobals
+      clockMemory clockFfi clockTargetState hclockState |>.1
+  · exact panValuePcTimeoutResultRel_of_clocked_tick_zero clockStructs
+      clockPcContext clockExceptionRel exceptionCode globalsLookup clockContext
+      clockPrimitive clockHandler clockFunctions clockBaseAddress
+      clockTopAddress clockBytesInWord clockFuel clockLocals clockGlobals
+      clockMemory clockFfi clockTargetState hclockState |>.2.1
+  · exact panValuePcTimeoutResultRel_of_clocked_tick_zero clockStructs
+      clockPcContext clockExceptionRel exceptionCode globalsLookup clockContext
+      clockPrimitive clockHandler clockFunctions clockBaseAddress
+      clockTopAddress clockBytesInWord clockFuel clockLocals clockGlobals
+      clockMemory clockFfi clockTargetState hclockState |>.2.2
 
 /-! Assemble the unclocked compact correctness theorem with the clocked
     Timeout branch.  The compact evaluator itself has no timeout constructor,

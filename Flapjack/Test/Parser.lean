@@ -459,6 +459,17 @@ def keepNatCakeParity : Bool :=
 
 #guard keepNatCakeParity
 
+/-! Cake `conv_default_shape_def` (`panPtreeConversionScript.sml:189`) accepts
+    only the default-shape token and maps it to `One`. -/
+def convDefaultShapeCakeParity : Bool :=
+  match convDefaultShape (.lf (.defaultShT) unknownLoc),
+      convDefaultShape (.lf (.intT 1) unknownLoc),
+      convDefaultShape (.lf (.identT "one") unknownLoc) with
+  | some .one, none, none => true
+  | _, _, _ => false
+
+#guard convDefaultShapeCakeParity
+
 #guard (pancakeLex "x + 1").map (·.1) == [.identT "x", .plusT, .intT 1]
 
 -- `//` runs to end of line; the block forms are `/* */` and `/@ @/`.

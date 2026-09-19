@@ -30,11 +30,17 @@ def isAssignSeq : CrepProg Nat → Bool
       first == 7 && second == 9
   | _ => false
 
+def isFlattened : Bool :=
+  (crepSeqs
+      (.seq (.seq .skip .tick) (.assign 3 (.const 7) : CrepProg Nat))).map reprStr ==
+    ([.skip, .tick, .assign 3 (.const 7)] : List (CrepProg Nat)).map reprStr
+
 def parityGuard : Bool :=
   isEmpty (crepNestedSeq []) &&
   isOne (crepNestedSeq [.skip]) &&
   isTwo (crepNestedSeq [.tick, .skip]) &&
-  isAssignSeq (crepNestedSeq [.assign 1 (.const 7), .assign 2 (.const 9)])
+  isAssignSeq (crepNestedSeq [.assign 1 (.const 7), .assign 2 (.const 9)]) &&
+  isFlattened
 
 #eval parityGuard
 #guard parityGuard
@@ -44,14 +50,16 @@ def runChecks : IO Bool := do
     isEmpty (crepNestedSeq []),
     isOne (crepNestedSeq [.skip]),
     isTwo (crepNestedSeq [.tick, .skip]),
-    isAssignSeq (crepNestedSeq [.assign 1 (.const 7), .assign 2 (.const 9)])]
+    isAssignSeq (crepNestedSeq [.assign 1 (.const 7), .assign 2 (.const 9)]),
+    isFlattened]
   match results with
-  | [empty, one, two, assignment] =>
+  | [empty, one, two, assignment, flattened] =>
       if empty then IO.println "PASS crep nested_seq empty" else IO.println "FAIL crep nested_seq empty"
       if one then IO.println "PASS crep nested_seq one" else IO.println "FAIL crep nested_seq one"
       if two then IO.println "PASS crep nested_seq two" else IO.println "FAIL crep nested_seq two"
       if assignment then IO.println "PASS crep nested_seq assignment sequence" else IO.println "FAIL crep nested_seq assignment sequence"
-      pure (empty && one && two && assignment)
+      if flattened then IO.println "PASS crep seqs flatten nested sequences" else IO.println "FAIL crep seqs flatten nested sequences"
+      pure (empty && one && two && assignment && flattened)
   | _ =>
       IO.println "FAIL crep nested_seq result arity"
       pure false

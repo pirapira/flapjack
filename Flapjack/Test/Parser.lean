@@ -109,6 +109,18 @@ def nextTokenCakeParity : Bool :=
 
 #guard nextTokenCakeParity
 
+/-! Cake `token_of_atom_def` (`panLexerScript.sml:156`) maps each atom
+    constructor through the corresponding token conversion, preserving every
+    payload and using Cake's keyword/symbol tables for words and symbols. -/
+def tokenOfAtomCakeParity : Bool :=
+  tokenOfAtom (.numberA (-7)) == .intT (-7) &&
+    tokenOfAtom (.wordA "skip") == .keywordT .skipK &&
+    tokenOfAtom (.symA "+") == .plusT &&
+    tokenOfAtom (.errA "bad") == .lexErrorT "bad" &&
+    tokenOfAtom (.annotCommentA "note") == .annotCommentT "note"
+
+#guard tokenOfAtomCakeParity
+
 /-! Cake `dest_lexErrorT_def` (`panLexerScript.sml:70`) projects the message
     from a `LexErrorT` and rejects every other token constructor. -/
 def destLexErrorTCakeParity : Bool :=

@@ -149,6 +149,43 @@ def reachabilityContext : Context :=
     some .breakLast
 #guard seqLastStmt .retLast .invisLast == .retLast
 #guard staticLastStmtString .breakLast == "break"
+#guard match basedMerge .based .notBased with | .based => true | _ => false
+#guard match basedMerge .trusted .notBased with | .trusted => true | _ => false
+#guard match shapedBasedMerge [.word .based, .word .notBased] with
+  | .based => true | _ => false
+
+/-! Cake's `get_memop_msg` diagnostics (`panStaticScript.sml:491-511`) are
+    directional: local operations warn about non-base addresses, while shared
+    operations warn about base addresses. -/
+def memoryWarningContext : Context :=
+  { locals := [("notBased", { shapedBased := .word .notBased }),
+      ("based", { shapedBased := .word .based })]
+    globals := []
+    functions := []
+    expectedReturn := some .one
+    exceptions := []
+    structs := []
+    scope := .funScope "f" ""
+    inLoop := false
+    reachable := .isReach
+    last := .otherLast
+    location := "" }
+
+#guard
+  (checkProg memoryWarningContext
+    (.store (.var .local "notBased") (.const 0))).2.map statErrMessage ==
+      ["local store address is not calculated from base in function f\n"]
+#guard
+  (checkExp memoryWarningContext
+    (.load32 (.var .local "notBased") : Exp Nat)).2.map statErrMessage ==
+      ["local load address is not calculated from base in function f\n"]
+#guard
+  (checkProg memoryWarningContext
+    (.shMemStore .opW (.var .local "based") (.const 0))).2.map statErrMessage ==
+      ["shared store address is calculated from base in function f\n"]
+#guard
+  (checkProg memoryWarningContext
+    (.shMemStore .opW (.var .local "notBased") (.const 0))).2.isEmpty
 
 #guard
     staticResultOk (staticCheck (α := Nat)

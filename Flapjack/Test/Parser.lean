@@ -167,6 +167,24 @@ def convDecCakeParity : Bool :=
 
 #guard convDecCakeParity
 
+/-! Cake `conv_GlobalDec_def` (`panPtreeConversionScript.sml:571`) shares the
+    declaration shape conversion but requires a `GlobalDecNT` node; a local
+    declaration node or malformed arity returns `NONE`. -/
+def convGlobalDecCakeParity : Bool :=
+  let one : ParseTree := .lf (.intT 1) unknownLoc
+  let x : ParseTree := .lf (.identT "g") unknownLoc
+  let value : ParseTree := .lf (.intT 9) unknownLoc
+  let valid : ParseTree := .nd .globalDec [one, x, value] unknownLoc
+  let wrongNode : ParseTree := .nd .dec [one, x, value] unknownLoc
+  let short : ParseTree := .nd .globalDec [one, x] unknownLoc
+  match convDecForm (fun value => value) 8 .globalDec valid,
+      convDecForm (fun value => value) 8 .globalDec wrongNode,
+      convDecForm (fun value => value) 8 .globalDec short with
+  | some (.one, "g", .const 9), none, none => true
+  | _, _, _ => false
+
+#guard convGlobalDecCakeParity
+
 #guard (pancakeLex "x + 1").map (·.1) == [.identT "x", .plusT, .intT 1]
 
 -- `//` runs to end of line; the block forms are `/* */` and `/@ @/`.

@@ -1,3 +1,4 @@
+import Flapjack.CrepEvaluate
 import Flapjack.Test.CrepeSemantics
 
 /-!
@@ -59,11 +60,34 @@ def evaluateResVar : Bool :=
   restoreCrepLocal scopedLocals 1 none 1 == none &&
     restoreCrepLocal scopedLocals 1 (some 7) 1 == some 7
 
+/-! The public source-shaped evaluator must preserve Cake's destination
+    validation at its boundary, not only in the underlying helper tests.
+    `crepSemScript.sml:258-264,322-365` rejects a fresh assignment target,
+    duplicate primitive destinations, and a fresh call return destination. -/
+def evaluateRejectsFreshAssignment : Bool :=
+  (crepEvaluate [] crepeSemanticsPrimitive crepeSemanticsFfi
+    crepeSemanticsSharedMem 0 100 2 crepeSemanticsState
+    (.assign 9 (.const 7))).isNone
+
+def evaluateRejectsDuplicatePrimitiveDestinations : Bool :=
+  (crepEvaluate [] crepeSemanticsPrimitive crepeSemanticsFfi
+    crepeSemanticsSharedMem 0 100 2 crepeSemanticsExistingState
+    (.primitive [1, 1] .addCarry [1, 2, 3])).isNone
+
+def evaluateRejectsFreshCallDestination : Bool :=
+  (crepEvaluate crepeReturnOnlyFunctions crepeSemanticsPrimitive
+    crepeSemanticsFfi crepeSemanticsSharedMem 0 100 3
+    crepeSemanticsExistingState
+    (.call (some ([9], none)) "return7" [])).isNone
+
 #guard evaluateSkip
 #guard evaluateAssign
 #guard evaluateSequenceReturn
 #guard evaluateTickTimeout
 #guard evaluateResVar
+#guard evaluateRejectsFreshAssignment
+#guard evaluateRejectsDuplicatePrimitiveDestinations
+#guard evaluateRejectsFreshCallDestination
 
 def runChecks : IO Bool := do
   if evaluateSkip then IO.println "PASS crep evaluate Skip" else
@@ -76,7 +100,18 @@ def runChecks : IO Bool := do
     IO.println "FAIL crep evaluate Tick timeout"
   if evaluateResVar then IO.println "PASS crep res_var" else
     IO.println "FAIL crep res_var"
+  if evaluateRejectsFreshAssignment then
+    IO.println "PASS crep evaluate rejects fresh assignment" else
+    IO.println "FAIL crep evaluate rejects fresh assignment"
+  if evaluateRejectsDuplicatePrimitiveDestinations then
+    IO.println "PASS crep evaluate rejects duplicate primitive destinations" else
+    IO.println "FAIL crep evaluate rejects duplicate primitive destinations"
+  if evaluateRejectsFreshCallDestination then
+    IO.println "PASS crep evaluate rejects fresh call destination" else
+    IO.println "FAIL crep evaluate rejects fresh call destination"
   pure (evaluateSkip && evaluateAssign && evaluateSequenceReturn &&
-    evaluateTickTimeout && evaluateResVar)
+    evaluateTickTimeout && evaluateResVar && evaluateRejectsFreshAssignment &&
+    evaluateRejectsDuplicatePrimitiveDestinations &&
+    evaluateRejectsFreshCallDestination)
 
 end Flapjack.Test.CrepEvaluateParity

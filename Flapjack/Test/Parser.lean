@@ -380,6 +380,24 @@ def localiseExpCakeParity : Bool :=
 
 #guard localiseExpCakeParity
 
+/-! Cake `localise_topdecs_def` (`panPtreeConversionScript.sml:909`) starts
+    each function body in the scope of its parameter names while leaving an
+    out-of-scope global unchanged. -/
+def localiseTopDecsCakeParity : Bool :=
+  let function : Decl Nat := .function
+    { name := "f", inline := false, exported := false,
+      params := [("a", .one)],
+      body := .return (.op .add [.var .global "a", .var .global "g"]),
+      returnShape := .one }
+  match localiseDecls [function] with
+  | [.function declaration] =>
+      match declaration.body with
+      | .return (.op .add [.var .local "a", .var .global "g"]) => true
+      | _ => false
+  | _ => false
+
+#guard localiseTopDecsCakeParity
+
 #guard (pancakeLex "x + 1").map (·.1) == [.identT "x", .plusT, .intT 1]
 
 -- `//` runs to end of line; the block forms are `/* */` and `/@ @/`.

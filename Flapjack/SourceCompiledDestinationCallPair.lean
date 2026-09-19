@@ -130,7 +130,7 @@ theorem sourceCompiledDestinationCallPair
         panValueCrepStateRel structs
           { functionContext with
               functions := functionInfos declarations
-              vars := (compileParamVars declaration.params 0).1 }
+              vars := panToCrepMakeVmap declaration.params }
           sourceCalleeLocals sourceGlobals sourceMemory
           { locals := targetCalleeLocals, memory := crepMemory }) ∨
       (∃ (targetArgumentValues : List α) (targetParameters : List Nat)
@@ -165,7 +165,7 @@ theorem sourceCompiledDestinationCallPair
         panValueCrepStateRel structs
           { functionContext with
               functions := functionInfos declarations
-              vars := (compileParamVars declaration.params 0).1 }
+              vars := panToCrepMakeVmap declaration.params }
           sourceCalleeLocals sourceGlobals sourceMemory
           { locals := targetCalleeLocals, memory := crepMemory })) := by
   obtain hnormal | hreturned := evalCrepFullCall_normal_inversion

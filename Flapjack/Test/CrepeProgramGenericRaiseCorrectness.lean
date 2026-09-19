@@ -759,7 +759,26 @@ theorem named_struct_source_pass_raise_pc_relation (value : Nat) :
     (hrel := by
       refine ⟨rfl, panValueCrepLocalsRel_empty [] context _, rfl⟩)
     (hsource := by
-      exact (named_struct_source_pass_one_word_eval value).2)
+      apply evalPanValueExp_structPass_of_named_fields_evidence
+        (sourceStructs := namedStructPassContext.structs) (postStructs := [])
+        (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+        (sourceMemory := fun _ => none)
+        (baseAddress := 0) (topAddress := 0) (bytesInWord := 8)
+        (name := "S")
+        (fields := [("field", .const value)])
+        (values := [("field", .word value)])
+        (info := { fields := [("field", .one)], size := 1 })
+        (postExpression := structCompileExp namedStructPassContext
+          (.nStruct "S" [("field", .const value)]))
+        (postValue := .rStruct [.word value])
+      · simp [namedStructPassContext, lookupInfo]
+      · simp [evalPanValueExp.evalPanValueFields, evalPanValueExp]
+      · simp [namedStructPassContext, panValueFieldsHaveShapes, panValueShape,
+          panShapeMatches]
+      · intro namedValue _
+        simp [namedStructPassContext, structCompileExp,
+          structCompileExp.structCompileFields, structSelectFields, lookupInfo,
+          evalPanValueExp, evalPanValueExp.evalPanValueExps])
     (hvalid := by
       simp [panValuePayloadWithinLimit, panValuePayloadSizeFuel,
         panValuePayloadSizeFuel.panValuePayloadSizeFieldsFuel,

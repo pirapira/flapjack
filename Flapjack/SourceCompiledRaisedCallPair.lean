@@ -120,7 +120,7 @@ theorem sourceCompiledRaisedCallPair
       panValueCrepStateRel structs
         { functionContext with
             functions := functionInfos declarations
-            vars := (compileParamVars declaration.params 0).1 }
+            vars := panToCrepMakeVmap declaration.params }
         sourceCalleeLocals sourceGlobals sourceMemory
         { locals := targetCalleeLocals, memory := crepMemory } := by
   obtain ⟨compiledValues, targetParameters, targetBody, targetCalleeLocals,

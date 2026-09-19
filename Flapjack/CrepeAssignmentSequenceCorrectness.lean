@@ -24,7 +24,8 @@ theorem evalCrepFullProg_assignList
     (hnot : ∀ slot ∈ slots, ∀ expression ∈ expressions,
       slot ∉ crepExpVars expression)
     (heval : evalCrepFullExps state.locals state.memory
-      baseAddress topAddress expressions = some values) :
+      baseAddress topAddress expressions = some values)
+    (hdefined : ∀ slot ∈ slots, (state.locals slot).isSome = true) :
     evalCrepFullProg functions primitive ffi sharedMem
       baseAddress topAddress (fuel + slots.length + 1) state
       (crepNestedSeq (slots.zipWith
@@ -102,6 +103,14 @@ theorem evalCrepFullProg_assignList
                           hnot current (by simp [hcurrent]) expression'
                             (by simp [hexpression']))
                         htailStable
+                        (by
+                          intro current hcurrent
+                          have hcurrentDefined := hdefined current (by simp [hcurrent])
+                          have hcurrentNe : current ≠ slot := by
+                            intro heq
+                            subst current
+                            exact hslotNotTail hcurrent
+                          simpa [updateCrepLocal, hcurrentNe] using hcurrentDefined)
                       change evalCrepFullProg functions primitive ffi sharedMem
                         baseAddress topAddress
                         ((fuel + slots.length + 1) + 1) state
@@ -109,7 +118,9 @@ theorem evalCrepFullProg_assignList
                           (crepNestedSeq (List.zipWith
                             (fun name expression => .assign name expression)
                             slots expressions))) = _
-                      simp [evalCrepFullProg, hhead]
+                      have hslotDefined := hdefined slot (by simp)
+                      simp [evalCrepFullProg, hhead, assignExistingCrepValues,
+                        crepNamesDistinct, crepLocalsDefined, hslotDefined]
                       rw [htailResult]
                       rfl
 
@@ -127,7 +138,8 @@ theorem evalCrepFullProgState_assignList
     (hnot : ∀ slot ∈ slots, ∀ expression ∈ expressions,
       slot ∉ crepExpVars expression)
     (heval : evalCrepFullExpsState state baseAddress topAddress expressions =
-      some values) :
+      some values)
+    (hdefined : ∀ slot ∈ slots, (state.locals slot).isSome = true) :
     evalCrepFullProgState functions primitive ffi sharedMem
       baseAddress topAddress (fuel + slots.length + 1) state
       (crepNestedSeq (slots.zipWith
@@ -202,6 +214,14 @@ theorem evalCrepFullProgState_assignList
                           hnot current (by simp [hcurrent]) expression'
                             (by simp [hexpression']))
                         htailStable
+                        (by
+                          intro current hcurrent
+                          have hcurrentDefined := hdefined current (by simp [hcurrent])
+                          have hcurrentNe : current ≠ slot := by
+                            intro heq
+                            subst current
+                            exact hslotNotTail hcurrent
+                          simpa [updateCrepLocal, hcurrentNe] using hcurrentDefined)
                       change evalCrepFullProgState functions primitive ffi sharedMem
                         baseAddress topAddress
                         ((fuel + slots.length + 1) + 1) state
@@ -209,7 +229,9 @@ theorem evalCrepFullProgState_assignList
                           (crepNestedSeq (List.zipWith
                             (fun name expression => .assign name expression)
                             slots expressions))) = _
-                      simp [evalCrepFullProgState, hhead]
+                      have hslotDefined := hdefined slot (by simp)
+                      simp [evalCrepFullProgState, hhead, assignExistingCrepValues,
+                        crepNamesDistinct, crepLocalsDefined, hslotDefined]
                       rw [htailResult]
                       rfl
 

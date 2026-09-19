@@ -28,15 +28,18 @@ def crepeHandlerCallFunctions : List (CompiledFunction (Word 64)) :=
      returnShape := .one }]
 
 def crepeHandlerCallCaller : CrepState (Word 64) :=
-  { locals := fun _ => none, memory := fun _ => none }
+  { locals := fun x => if x = 1 then some 0 else none
+    memory := fun _ => none }
 
 def crepeHandlerCallReturnedState : CrepState (Word 64) :=
-  { locals := updateCrepLocal (fun _ => none) 1 (BitVec.ofNat 64 7)
+  { locals := updateCrepLocal (fun x => if x = 1 then some 0 else none)
+      1 (BitVec.ofNat 64 7)
     memory := updateMemory (fun _ => none) (BitVec.ofNat 64 0)
       (BitVec.ofNat 64 7) }
 
 def crepeHandlerCallStateReturnedState : CrepState (Word 64) :=
-  { locals := updateCrepLocal (fun _ => none) 1 (BitVec.ofNat 64 7)
+  { locals := updateCrepLocal (fun x => if x = 1 then some 0 else none)
+      1 (BitVec.ofNat 64 7)
     memory := fun _ => none
     globals := updateMemory (fun _ => none) (BitVec.ofNat 64 0)
       (BitVec.ofNat 64 7) }
@@ -51,7 +54,8 @@ def crepeHandlerCallResult : CrepControlResult (Word 64) :=
 def crepeHandlerCallRaisedResult : CrepControlResult (Word 64) :=
   .returned
     { locals := updateCrepLocal
-        (fun x => if x = 2 then some (BitVec.ofNat 64 0) else none)
+        (fun x => if x = 2 then some (BitVec.ofNat 64 0)
+          else if x = 1 then some (BitVec.ofNat 64 0) else none)
         1 (BitVec.ofNat 64 7)
       memory := updateMemory (fun _ => none)
         (BitVec.ofNat 64 0) (BitVec.ofNat 64 7) }
@@ -92,7 +96,8 @@ theorem crepe_handler_call_simulation_regression :
     simp [crepeHandlerCallContext, crepeHandlerCallFunctions,
       crepeHandlerCallCaller,
       evalCrepFullCall, evalCrepFullProg,
-      evalCrepFullExps, evalCrepFullExp, assignCrepValues, assignRet,
+      evalCrepFullExps, evalCrepFullExp, assignCrepValues,
+      assignExistingCrepValues, crepNamesDistinct, crepLocalsDefined, assignRet,
       crepNestedSeq, loadGlobals, compileProg, compileExp,
       updateCrepLocal, updateMemory, lookupCompiledFunction, hexn,
       initializeCrepLocals, allocatedNames,
@@ -120,9 +125,11 @@ theorem crepe_handler_call_simulation_regression :
   have hrestore :
       restoreCrepLocal
         (updateCrepLocal
-          (fun x => if x = 2 then some (BitVec.ofNat 64 0) else none)
+          (fun x => if x = 2 then some (BitVec.ofNat 64 0)
+            else if x = 1 then some (BitVec.ofNat 64 0) else none)
           1 (BitVec.ofNat 64 7)) 2 none =
-      updateCrepLocal (fun _ => none) 1 (BitVec.ofNat 64 7) := by
+      updateCrepLocal (fun x => if x = 1 then some 0 else none)
+        1 (BitVec.ofNat 64 7) := by
     funext current
     by_cases hcurrent : current = 2 <;>
       simp [restoreCrepLocal, updateCrepLocal, hcurrent]
@@ -253,7 +260,8 @@ theorem crepe_handler_call_destination_simulation_regression :
     simp [crepeHandlerCallContext, crepeHandlerCallFunctions,
       crepeHandlerCallCaller, crepeHandlerCallResult,
       crepeHandlerCallReturnedState, evalCrepFullCall, evalCrepFullProg,
-      evalCrepFullExps, evalCrepFullExp, assignCrepValues, assignRet,
+      evalCrepFullExps, evalCrepFullExp, assignCrepValues,
+      assignExistingCrepValues, crepNamesDistinct, crepLocalsDefined, assignRet,
       crepNestedSeq, loadGlobals, compileProg, compileExp,
       updateCrepLocal, updateMemory, lookupCompiledFunction, hexn]
 
@@ -352,7 +360,8 @@ theorem crepe_handler_call_destination_relation_regression :
       crepeHandlerCallCaller, crepeHandlerCallStateResult,
       crepeHandlerCallStateReturnedState, evalCrepFullCallState,
       evalCrepFullProgState, evalCrepFullExpsState, evalCrepFullExpState,
-      assignCrepValues, assignRet,
+      assignCrepValues, assignExistingCrepValues, crepNamesDistinct,
+      crepLocalsDefined, assignRet,
       crepNestedSeq, loadGlobals, compileProg, compileExp,
       updateCrepLocal, updateMemory, lookupCompiledFunction, hexn]
   · exact crepe_handler_call_returned_relation_except_regression

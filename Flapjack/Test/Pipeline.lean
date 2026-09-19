@@ -234,13 +234,13 @@ example :
     globalCompileInitializers, globalCompileProg, globalCompileExp, lookupInfo]
 
 example :
-    let result := compileFlapjack (α := Nat) .rv64i 1 id
+    let result := compileFlapjackCore (α := Nat) .rv64i 1 id
       [.function
         { name := "main", inline := false, exported := true, params := [],
           body := .return (.const 7), returnShape := .one }]
     result.simplified.length = 1 ∧ result.structured.length = 1 ∧
       result.crepe.length = 1 ∧ result.loop.length = 1 ∧ result.word.length = 1 := by
-  simp [compileFlapjack, panSimpDecls, structCompileTop, structGetNames,
+  simp [compileFlapjackCore, panSimpDecls, structCompileTop, structGetNames,
     structCompileDecls, globalCompileTop, globalCollect, globalCompileDecls,
     globalCompileInitializers, pipelineCrepeContext,
     pipelineFunctionInfos, pipelineLoopFunctions, pipelineLoopFunctionsAux,
@@ -577,6 +577,74 @@ where
     | _ => [[]]
 
 example : noMainEntrySteps = some ["store", "call main' tail"] := by
+  decide +kernel
+
+/-! The default source compiler must apply the same initializer wrapper when a
+    source `main` already exists.  In particular, a recursive call remains in
+    the renamed initializer-free body (`main'`); it must not re-run the global
+    initializer on every recursion.  This is the concrete regression for
+    GH #1066 and exercises the public `compileFlapjack` entry point rather than
+    only the explicitly named target variant. -/
+def recursiveMainInitializerFixture : List (Decl Nat) :=
+  [.decl .one "g" (.const 7),
+   .function
+     { name := "main", inline := false, exported := true, params := [],
+       body := .call none "main" [], returnShape := .one }]
+
+def recursiveMainFunctionNames : List String :=
+  (compileFlapjack (α := Nat) .rv64i 1 id recursiveMainInitializerFixture).globals.declarations.map
+    (fun declaration =>
+      match declaration with
+      | .function function => function.name
+      | .decl _ name _ => name
+      | .name name _ => name
+      | .exnDecl exception _ => exception)
+
+example : recursiveMainFunctionNames = ["main", "main'"] := by
+  decide +kernel
+
+def recursiveMainEntrySteps : Option (List String) :=
+  (compileFlapjack (α := Nat) .rv64i 1 id recursiveMainInitializerFixture).globals.declarations.findSome?
+    (fun declaration =>
+      match declaration with
+      | .function function =>
+          if function.name = "main" then some function.body else none
+      | _ => none) |>.map
+    (fun body =>
+      (go body).flatten)
+where
+  go : Prog Nat → List (List String)
+    | .seq first second => go first ++ go second
+    | .store _ _ => [["store"]]
+    | .store32 _ _ => [["store32"]]
+    | .storeByte _ _ => [["storeByte"]]
+    | .call info name _ => [["call " ++ name ++
+        (match info with | none => " tail" | some _ => " handled")]]
+    | _ => [[]]
+
+example : recursiveMainEntrySteps = some ["store", "call main' tail"] := by
+  decide +kernel
+
+def recursiveMainRenamedSteps : Option (List String) :=
+  (compileFlapjack (α := Nat) .rv64i 1 id recursiveMainInitializerFixture).globals.declarations.findSome?
+    (fun declaration =>
+      match declaration with
+      | .function function =>
+          if function.name = "main'" then some function.body else none
+      | _ => none) |>.map
+    (fun body =>
+      (go body).flatten)
+where
+  go : Prog Nat → List (List String)
+    | .seq first second => go first ++ go second
+    | .store _ _ => [["store"]]
+    | .store32 _ _ => [["store32"]]
+    | .storeByte _ _ => [["storeByte"]]
+    | .call info name _ => [["call " ++ name ++
+        (match info with | none => " tail" | some _ => " handled")]]
+    | _ => [[]]
+
+example : recursiveMainRenamedSteps = some ["call main' tail"] := by
   decide +kernel
 
 end Flapjack

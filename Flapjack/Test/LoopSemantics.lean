@@ -28,7 +28,7 @@ def primitiveCallStatePropagationState : LoopState Nat :=
       (fun result =>
         ((loopResultState result).globals 42,
           (loopResultState result).memory 8)) =
-      some (some 7, some 9)
+      none
 
 example :
     (evalLoopProg 10 loopDivisionState

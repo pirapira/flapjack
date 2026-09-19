@@ -142,6 +142,16 @@ def crepNestedSeq : List (CrepProg α) → CrepProg α
   | [] => .skip
   | statement :: statements => .seq statement (crepNestedSeq statements)
 
+/-! Faithful port of Cake `crep_seqs_def` from
+    `cakeml/pancake/pan_passesScript.sml:377`: flatten only `Seq` nodes,
+    preserving the left-to-right order of all other Crepe statements. -/
+def crepSeqs : CrepProg α → List (CrepProg α)
+  | .seq first second => crepSeqs first ++ crepSeqs second
+  | program => [program]
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
+
 def stores [BEq α] [OfNat α 0] [Add α]
     (address : CrepExp α) : List (CrepExp α) → α → α → List (CrepProg α)
   | [], _, _ => []

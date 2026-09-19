@@ -66,10 +66,9 @@ yields `none`, never a wrong AST.
 Three, each a case where upstream looks like it has an oversight rather than
 an intention. All three are covered by tests in `Flapjack/Test/Parser.lean`.
 
-**`@top`.** `get_keyword` maps both `@base` and `@top` to `BaseK`, so `@top`
-currently means `@base` and `TopK` is unreachable — even though the grammar
-accepts `TopK` and `conv_Exp` sends it to `TopAddr`. Here `@top` maps to
-`topK` and parses as `TopAddr`.
+**`@top`.** `get_keyword` maps both `@base` and `@top` to `BaseK`, matching
+Cake's source behavior. Consequently `@top` parses as `BaseAddr`; `TopK`
+remains a grammar/conversion constructor but is unreachable from Cake lexing.
 
 **`Load32` in `localise_exp`.** The pass has cases for `Load` and `LoadByte`
 but not `Load32`, so it falls to the catch-all and `ld32 x` leaves `x` marked

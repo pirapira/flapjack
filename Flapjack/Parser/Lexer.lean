@@ -150,13 +150,8 @@ def getToken (s : String) : Token :=
   else .lexErrorT s!"Unrecognised symbolic token: {s}"
 
 /--
-Keyword lookup, mirroring `panLexer$get_keyword`.
-
-One deliberate divergence: upstream maps both `@base` and `@top` to `BaseK`,
-so `@top` currently means `@base` and `TopK` is unreachable even though the
-grammar accepts it and the conversion sends it to `TopAddr`. That reads as a
-copy-paste slip rather than intent, so `@top` maps to `topK` here. See
-`Flapjack/Parser/README.md`.
+Keyword lookup, mirroring `panLexer$get_keyword`. Cake maps both `@base` and
+`@top` to `BaseK`; this intentionally preserves that source behavior.
 -/
 def getKeyword (s : String) : Token :=
   if s == "skip" then .keywordT .skipK
@@ -183,7 +178,7 @@ def getKeyword (s : String) : Token :=
   else if s == "ld16" then .keywordT .ld16K
   else if s == "ld32" then .keywordT .ld32K
   else if s == "@base" then .keywordT .baseK
-  else if s == "@top" then .keywordT .topK
+  else if s == "@top" then .keywordT .baseK
   else if s == "@biw" then .keywordT .biwK
   else if s == "true" then .keywordT .trueK
   else if s == "false" then .keywordT .falseK

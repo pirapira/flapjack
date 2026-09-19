@@ -751,6 +751,12 @@ def getUnreachMessage (location last : String) (scope : Scope) : String :=
   location ++ "unreachable statement(s) after " ++ last ++ " in " ++
     staticScopeDescription scope ++ "\n"
 
+/-! Source-shaped port of CakeML's `get_rogue_msg_def`
+    (`cakeml/pancake/panStaticScript.sml:542-549`). -/
+def getRogueMessage (isBreak : Bool) (location : String) (scope : Scope) : String :=
+  location ++ (if isBreak then "break " else "continue ") ++
+    "statement outside loop in " ++ staticScopeDescription scope ++ "\n"
+
 def staticUnreachableWarning (context : Context) (last : LastStmt) : StatErr :=
   .warning (getUnreachMessage context.location (staticLastStmtString last) context.scope)
 

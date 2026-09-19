@@ -241,6 +241,10 @@ def reachabilityContext : Context :=
   "AT 7: unreachable statement(s) after return in function f\n"
 #guard getUnreachMessage "" "" (.topLevel) ==
   "unreachable statement(s) after  in top-level declaration\n"
+#guard getRogueMessage true "L: " (.funScope "f" "") ==
+  "L: break statement outside loop in function f\n"
+#guard getRogueMessage false "L: " (.funScope "f" "") ==
+  "L: continue statement outside loop in function f\n"
 
 #guard match basedMerge .based .notBased with | .based => true | _ => false
 #guard match basedMerge .trusted .notBased with | .trusted => true | _ => false

@@ -212,6 +212,7 @@ def reachabilityContext : Context :=
   binopToString .and == "And" &&
   binopToString .or == "Or" &&
   binopToString .xor == "Xor"
+#guard panopToString .mul == "Mul"
 #guard
   addPrimitiveHint "__add_with_carry__" "error: unsupported primitive\n" ==
     "error: unsupported primitive\n  note: __add_with_carry__ is a built-in primitive only available in declaration or assignment RHS positions\n" &&

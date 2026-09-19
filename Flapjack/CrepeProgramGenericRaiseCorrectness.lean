@@ -37,6 +37,35 @@ theorem evalPanValueExp_nStruct_of_fields_evidence
       some (.nStruct name values) := by
   simp [evalPanValueExp, hlookup, hfields, hshape]
 
+theorem evalPanValueExp_structPass_of_named_fields_evidence
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (sourceStructs postStructs : StructContext)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (baseAddress topAddress bytesInWord : α)
+    (name : StructName) (fields : List (FieldName × Exp α))
+    (values : List (FieldName × PanValue α))
+    (info : StructInfo)
+    (postExpression : Exp α) (postValue : PanValue α)
+    (hlookup : lookupInfo name sourceStructs = some info)
+    (hfields : evalPanValueExp.evalPanValueFields sourceStructs sourceLocals sourceGlobals
+      sourceMemory baseAddress topAddress bytesInWord fields = some values)
+    (hshape : panValueFieldsHaveShapes sourceStructs info.fields values = true)
+    (hpass : ∀ namedValue,
+      evalPanValueExp sourceStructs sourceLocals sourceGlobals sourceMemory
+        baseAddress topAddress bytesInWord (.nStruct name fields) = some namedValue →
+      evalPanValueExp postStructs sourceLocals sourceGlobals sourceMemory
+        baseAddress topAddress bytesInWord postExpression = some postValue) :
+    evalPanValueExp postStructs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord postExpression = some postValue := by
+  apply hpass (.nStruct name values)
+  exact evalPanValueExp_nStruct_of_fields_evidence sourceStructs sourceLocals sourceGlobals
+    sourceMemory baseAddress topAddress bytesInWord name fields values info
+    hlookup hfields hshape
+
 theorem evalCrepFullProgState_raise_of_evidence_of_fuel
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

@@ -111,6 +111,17 @@ def convIntCakeParity : Bool :=
 
 #guard convIntCakeParity
 
+/-! Cake `conv_nat_def` (`panPtreeConversionScript.sml:79`) delegates to
+    `conv_int`, converts nonnegative integers to naturals, and rejects negative
+    or non-integer leaves. -/
+def convNatCakeParity : Bool :=
+  convNat (.lf (.intT 17) unknownLoc) == some 17 &&
+    convNat (.lf (.intT 0) unknownLoc) == some 0 &&
+    convNat (.lf (.intT (-1)) unknownLoc) == none &&
+    convNat (.lf (.identT "x") unknownLoc) == none
+
+#guard convNatCakeParity
+
 /-! Cake `binaryExps_def` (`panPtreeConversionScript.sml:109`) enumerates the
     left-associative binary expression nonterminals in source order.  Each
     listed node uses the shared fold, while a non-listed node is not part of

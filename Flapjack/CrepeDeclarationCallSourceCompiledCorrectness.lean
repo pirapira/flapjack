@@ -188,7 +188,20 @@ theorem compile_full_pan_value_decCall_returned_of_source_compiled_call
     targetCalleeLocals
     targetCallee targetCallerLocals crepResult hcontinuation hbodyCorrect hstate'
     hcompileCalleeBody' hsourceCallee hcrepCalleeBody
-    (by simpa using htargetValues) hlookupCompiled hassign hdestinations hcalleeValues
+    (by simpa using htargetValues) hlookupCompiled hassign
+    (by
+      have hdefined := initializeCrepLocals_defined state.locals
+        (allocatedNames context shape)
+      have hnamesDistinct :=
+        crepNamesDistinct_eq_true (allocatedNames context shape) hdistinct
+      have hlocalsDefined :=
+        crepLocalsDefined_eq_true
+          (initializeCrepLocals state.locals (allocatedNames context shape))
+          (allocatedNames context shape) hdefined
+      simpa [assignCrepValues, assignExistingCrepValues, crepNamesDistinct,
+        crepLocalsDefined, hdefined, hnamesDistinct, hlocalsDefined] using
+        hdestinations)
+    hcalleeValues
     hcompileArgs hsourceCall hsourceShape hsourceBody hcrepBody' hdistinct hname hfresh hrel
 theorem compile_full_pan_value_decCall_state_returned_of_source_compiled_call
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
@@ -460,7 +473,20 @@ theorem compile_full_pan_value_decCall_state_returned_of_source_compiled_call
         sourceBodyLocals sourceValue sourceResult targetArgumentValues targetCalleeValues
         targetParameters targetCalleeLocals targetCallee targetCallerLocals crepResult
         hcontinuation hbodyCorrect hstate' hcompileBody' hsourceCallee hcrepCalleeBody
-        htargetValues hlookupCompiled hassign hdestinations hcalleeValues hcompileArgs
+        htargetValues hlookupCompiled hassign
+        (by
+          have hdefined := initializeCrepLocals_defined state.locals
+            (allocatedNames context shape)
+          have hnamesDistinct :=
+            crepNamesDistinct_eq_true (allocatedNames context shape) hdistinct
+          have hlocalsDefined :=
+            crepLocalsDefined_eq_true
+              (initializeCrepLocals state.locals (allocatedNames context shape))
+              (allocatedNames context shape) hdefined
+          simpa [assignCrepValues, assignExistingCrepValues, crepNamesDistinct,
+            crepLocalsDefined, hdefined, hnamesDistinct, hlocalsDefined] using
+            hdestinations)
+        hcalleeValues hcompileArgs
         hsourceCall hsourceShape hsourceBody hcrepBody' hdistinct hname hfresh hrel
       simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using hresult
 

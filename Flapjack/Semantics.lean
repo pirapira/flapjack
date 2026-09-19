@@ -180,6 +180,36 @@ def assignCrepValues (locals : Nat → Option α) (names : List Nat)
     some ((names.zip values).foldl
       (fun locals (name, value) => updateCrepLocal locals name value) locals)
 
+/-! CakeML's `evaluate` uses `FLOOKUP` and `ALL_DISTINCT` for destinations:
+    assignments update an existing local only, rather than declaring one.  A
+    separate helper is needed because `assignCrepValues` also models
+    `upd_locals`, which intentionally binds fresh callee parameters. -/
+def crepLocalsDefined (locals : Nat → Option α) : List Nat → Bool
+  | [] => true
+  | name :: names => (locals name).isSome && crepLocalsDefined locals names
+
+def crepNamesDistinct : List Nat → Bool
+  | [] => true
+  | name :: names =>
+      names.all (fun other => name != other) && crepNamesDistinct names
+
+def assignExistingCrepValues (locals : Nat → Option α) (names : List Nat)
+    (values : List α) : Option (Nat → Option α) :=
+  if names.length != values.length then none
+  else if crepNamesDistinct names && crepLocalsDefined locals names then
+      some ((names.zip values).foldl
+         (fun locals (name, value) => updateCrepLocal locals name value) locals)
+    else none
+
+theorem assignExistingCrepValues_to_assignCrepValues
+    (locals : Nat → Option α) (names : List Nat) (values : List α)
+    (resultLocals : Nat → Option α)
+    (hassign : assignExistingCrepValues locals names values =
+      some resultLocals) :
+    assignCrepValues locals names values = some resultLocals := by
+  unfold assignExistingCrepValues at hassign
+  split at hassign <;> simp_all [assignCrepValues]
+
 def evalCrepStateProgWithPrimitive [Add α] [Mul α]
     (primitive : CrepPrimitiveHandler α) (locals : Nat → Option α) :
     CrepProg α → Option ((Nat → Option α) × List α)

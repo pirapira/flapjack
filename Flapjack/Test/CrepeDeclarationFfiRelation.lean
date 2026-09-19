@@ -70,7 +70,7 @@ def declarationFfiInitialState : CrepState (Word 64) :=
   { locals := fun _ => none, memory := fun _ => none }
 
 def declarationFfiCallState : CrepState (Word 64) :=
-  { locals := updateCrepLocal (fun _ => none) 1
+  { locals := updateCrepLocal (fun x => if x = 1 then some 0 else none) 1
       (BitVec.ofNat 64 42),
     memory := fun _ => none }
 
@@ -299,10 +299,8 @@ theorem declaration_ffi_source_to_crep_relation :
         updateCrepLocal]
     · simp [allocatedNames, declarationFfiContext,
         declarationFfiInitialState, declarationFfiCallState,
-        initializeCrepLocals, updateCrepLocal, assignCrepValues]
-      funext current
-      by_cases h : current = 1 <;>
-        simp [updateCrepLocal, h]
+        initializeCrepLocals, updateCrepLocal,
+        assignExistingCrepValues, crepNamesDistinct, crepLocalsDefined]
   have hcrepBody :
       evalCrepFullProg
         (compileToCrepe declarationFfiContext declarationFfiDeclarations)
@@ -395,14 +393,20 @@ theorem declaration_ffi_source_to_crep_relation :
       restoreCrepLocal declarationFfiCallState.locals 1 none =
         (fun _ => none) := by
     funext current
-    simp [declarationFfiCallState,
-      restoreCrepLocal, updateCrepLocal]
+    by_cases h : current = 1 <;>
+      simp [declarationFfiCallState, restoreCrepLocal, updateCrepLocal, h]
   have hsourceRestoredFinal :
       restorePanValueLocal (fun _ : VarName => none)
           "result" (none : Option (PanValue (Word 64))) =
         (fun _ => none) := by
     funext name
     simp [restorePanValueLocal]
+  have htargetRestoredExpanded :
+      restoreCrepLocal
+          (fun x : Nat => if x = 1 then some (BitVec.ofNat 64 0) else none)
+          1 none = (fun _ => none) := by
+    funext current
+    by_cases h : current = 1 <;> simp [restoreCrepLocal, h]
   have htargetRestoredFinal :
       restoreCrepLocal (fun _ : Nat => (none : Option (Word 64))) 1
           (none : Option (Word 64)) =
@@ -417,14 +421,16 @@ theorem declaration_ffi_source_to_crep_relation :
       declarationFfiCallState, declarationFfiMain, compileProg,
       compileExp, compileArgs, nestedDecs, allocatedNames,
       Shape.shapeSize, restoreCrepResultList, restoreCrepResult,
-      restoreCrepLocal, updateCrepLocal, htargetRestoredFinal] using
+      restoreCrepLocal, updateCrepLocal, htargetRestored,
+      htargetRestoredExpanded] using
         hresult.2.1
   · simpa [declarationFfiContext, declarationFfiInitialState,
       declarationFfiCallState, declarationFfiMain,
       restorePanValueControlLocal, restorePanValueLocal,
       restoreCrepResultList,
       restoreCrepResult, restoreCrepLocal, updateCrepLocal,
-      allocatedNames, hsourceRestoredFinal, htargetRestoredFinal] using
+      allocatedNames, hsourceRestoredFinal, htargetRestored,
+      htargetRestoredExpanded] using
         hresult.2.2
 
 /-! A failed host service must remain failed through the complete

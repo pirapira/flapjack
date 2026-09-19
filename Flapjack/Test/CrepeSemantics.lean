@@ -16,6 +16,16 @@ def crepeSemanticsState : CrepState Nat :=
   { locals := fun _ => none
     memory := fun _ => none }
 
+/- CakeML assignments and primitive/call destinations must already be present
+   in the local map.  Declarations still extend the map through `dec`; this
+   state supplies the declared slots used by the executable witnesses. -/
+def crepeSemanticsExistingState : CrepState Nat :=
+  { crepeSemanticsState with
+    locals := fun name =>
+      match name with
+      | 0 | 1 | 2 | 3 | 4 | 5 => some 0
+      | _ => none }
+
 /-! CakeML crepSem's set_var_def (crepSemScript.sml:55-57) updates exactly
     one local in the finite-map state and leaves every other local unchanged.
     updateCrepLocal is exercised at both the updated and untouched keys here. -/
@@ -304,14 +314,14 @@ def crepeRuntimeShortState : CrepRuntimeState Nat Unit :=
 theorem crepe_full_call_semantics :
     evalCrepFullResult crepeSemanticsFunctions
       crepeSemanticsPrimitive crepeSemanticsFfi crepeSemanticsSharedMem
-      0 100 30 crepeSemanticsState crepeSemanticsCall =
+      0 100 30 crepeSemanticsExistingState crepeSemanticsCall =
       some [42] := by
   decide +kernel
 
 theorem crepe_full_loop_semantics :
     evalCrepFullResult [] crepeSemanticsPrimitive
       crepeSemanticsFfi crepeSemanticsSharedMem
-      0 100 50 crepeSemanticsState crepeSemanticsLoop =
+      0 100 50 crepeSemanticsExistingState crepeSemanticsLoop =
       some [0] := by
   decide +kernel
 
@@ -325,25 +335,51 @@ theorem crepe_full_handler_semantics :
 theorem crepe_full_memory_semantics :
     evalCrepFullResult [] crepeSemanticsPrimitive
       crepeSemanticsFfi crepeSemanticsSharedMem
-      0 100 30 crepeSemanticsState crepeSemanticsMemory =
+      0 100 30 crepeSemanticsExistingState crepeSemanticsMemory =
       some [7] := by
   decide +kernel
 
 theorem crepe_full_primitive_semantics :
     evalCrepFullResult [] crepeSemanticsPrimitive
       crepeSemanticsFfi crepeSemanticsSharedMem
-      0 100 30 crepeSemanticsState crepeSemanticsPrimitiveProgram =
+      0 100 30 crepeSemanticsExistingState crepeSemanticsPrimitiveProgram =
       some [3] := by
+  decide +kernel
+
+/- CakeML's `evaluate` rejects all three invalid destination shapes covered by
+   the source audit: an unbound assignment, duplicate primitive destinations,
+   and a call result written to a fresh local. -/
+theorem crepe_assign_rejects_unbound_destination :
+    evalCrepFullProg [] crepeSemanticsPrimitive crepeSemanticsFfi
+      crepeSemanticsSharedMem 0 100 2 crepeSemanticsState
+      (.assign 9 (.const 7)) = none := by
+  decide +kernel
+
+theorem crepe_primitive_rejects_duplicate_destinations :
+    evalCrepFullProg [] crepeSemanticsPrimitive crepeSemanticsFfi
+      crepeSemanticsSharedMem 0 100 2 crepeSemanticsExistingState
+      (.primitive [1, 1] .addCarry [1, 2, 3]) = none := by
+  decide +kernel
+
+def crepeReturnOnlyFunctions : List (CompiledFunction Nat) :=
+  [{ name := "return7", params := [], body := .return [.const 7],
+     returnShape := .one }]
+
+theorem crepe_call_rejects_fresh_return_destination :
+    evalCrepFullCall crepeReturnOnlyFunctions crepeSemanticsPrimitive
+      crepeSemanticsFfi crepeSemanticsSharedMem 0 100 3
+      crepeSemanticsExistingState (some ([9], none)) "return7" [] = none := by
   decide +kernel
 
 theorem crepe_full_ffi_semantics :
     evalCrepFullResult [] crepeSemanticsPrimitive
       crepeSemanticsFfiHandler crepeSemanticsSharedMem
-      0 100 30 crepeSemanticsState crepeSemanticsFfiProgram =
+      0 100 30 crepeSemanticsExistingState crepeSemanticsFfiProgram =
       some [33] := by
   simp [evalCrepFullResult, evalCrepFullProg, evalCrepFullExp,
     evalCrepFullExps, crepeSemanticsFfiHandler, crepeSemanticsFfiProgram,
-    crepNestedSeq, updateCrepLocal, updateMemory]
+    crepeSemanticsExistingState, crepNestedSeq, updateCrepLocal, updateMemory,
+    assignExistingCrepValues, crepNamesDistinct, crepLocalsDefined]
 
 theorem crepe_full_ffi_final_semantics :
     evalCrepFullProg [] crepeSemanticsPrimitive

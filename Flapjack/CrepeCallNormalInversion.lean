@@ -94,18 +94,20 @@ theorem evalCrepFullCall_normal_inversion
                                 using hcall
                             exact (Option.some.inj htarget).symm
                       | returned callee calleeValues =>
-                          cases hdest : assignCrepValues caller.locals destinations calleeValues with
+                          cases hdest : assignExistingCrepValues caller.locals destinations calleeValues with
                           | none =>
                               simp [evalCrepFullCall, hvalues, hlookup, hassign, hcallee,
                                 hdest] at hcall
                           | some callerLocals =>
+                              have hdestOld := assignExistingCrepValues_to_assignCrepValues
+                                caller.locals destinations calleeValues callerLocals hdest
                               refine Or.inr ⟨values, parameters, body, calleeLocals, callee,
                                 calleeValues, callerLocals, ?_, ?_, ?_, ?_, ?_, ?_⟩
                               · rfl
                               · rfl
                               · exact hassign
                               · exact hcallee
-                              · exact hdest
+                              · exact hdestOld
                               · have htarget :
                                     some ({ locals := callerLocals, memory := callee.memory }) =
                                       some target := by
@@ -263,18 +265,20 @@ theorem evalCrepFullCallState_normal_inversion
                                 using hcall
                             exact (Option.some.inj htarget).symm
                       | returned callee calleeValues =>
-                          cases hdest : assignCrepValues caller.locals destinations calleeValues with
+                          cases hdest : assignExistingCrepValues caller.locals destinations calleeValues with
                           | none =>
                               simp [evalCrepFullCallState, hvalues, hlookup, hassign, hcallee,
                                 hdest] at hcall
                           | some callerLocals =>
+                              have hdestOld := assignExistingCrepValues_to_assignCrepValues
+                                caller.locals destinations calleeValues callerLocals hdest
                               refine Or.inr ⟨values, parameters, body, calleeLocals, callee,
                                 calleeValues, callerLocals, ?_, ?_, ?_, ?_, ?_, ?_⟩
                               · rfl
                               · rfl
                               · exact hassign
                               · exact hcallee
-                              · exact hdest
+                              · exact hdestOld
                               · have htarget :
                                     some (CrepState.mk callerLocals callee.memory callee.globals) =
                                       some target := by

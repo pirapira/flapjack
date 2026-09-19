@@ -21,6 +21,32 @@ def readCrepLocals {α : Type u} (locals : Nat → Option α) :
       let values ← readCrepLocals locals names
       pure (value :: values)
 
+theorem readCrepLocals_some_defined
+    (locals : Nat → Option α) (names : List Nat) (values : List α)
+    (hread : readCrepLocals locals names = some values) :
+    ∀ name, name ∈ names → (locals name).isSome = true := by
+  induction names generalizing values with
+  | nil =>
+      simp
+  | cons head names ih =>
+      cases hvalue : locals head with
+      | none =>
+          simp [readCrepLocals, hvalue] at hread
+      | some value =>
+          cases hvalues : readCrepLocals locals names with
+          | none =>
+              simp [readCrepLocals, hvalue, hvalues] at hread
+          | some tailValues =>
+              simp [readCrepLocals, hvalue, hvalues] at hread
+              intro name hname
+              have hname' : name = head ∨ name ∈ names := by
+                simpa [List.mem_cons] using hname
+              rcases hname' with heq | htail
+              · have hlocal : locals name = some value := by
+                  simpa [heq] using hvalue
+                simp [hlocal]
+              · exact ih tailValues hvalues name htail
+
 def panValueCrepValuesRel {α : Type u}
     (sourceValues : List (PanValue α)) (crepValues : List α) : Prop :=
   crepValues = sourceValues.flatMap panValueFlatWords
@@ -85,6 +111,35 @@ def panValueCrepStateRel {α : Type u}
   sourceGlobals = (fun _ => none) ∧
   panValueCrepLocalsRel structs context sourceLocals crepState.locals ∧
   panValueCrepMemoryRel sourceMemory crepState.memory
+
+theorem panValueCrepLocalsRel_word_slot
+    (structs : StructContext) (context : CompileContext α)
+    (sourceLocals : VarName → Option (PanValue α))
+    (crepLocals : Nat → Option α)
+    (name : VarName) (slot : Nat) (value : α)
+    (hrel : panValueCrepLocalsRel structs context sourceLocals crepLocals)
+    (hsource : sourceLocals name = some (.word value))
+    (hlookup : lookupInfo name context.vars = some (.one, [slot])) :
+    crepLocals slot = some value := by
+  have hread := (hrel name (.word value) .one [slot] hsource hlookup).2
+  simp [readCrepLocals, panValueFlatWords, panValueFlatWordsFuel] at hread
+  cases hlocal : crepLocals slot with
+  | none => simp [hlocal] at hread
+  | some current =>
+      simp [hlocal] at hread
+      simp [hread]
+
+theorem panValueCrepLocalsRel_defined
+    (structs : StructContext) (context : CompileContext α)
+    (sourceLocals : VarName → Option (PanValue α))
+    (crepLocals : Nat → Option α)
+    (name : VarName) (value : PanValue α) (shape : Shape) (slots : List Nat)
+    (hrel : panValueCrepLocalsRel structs context sourceLocals crepLocals)
+    (hsource : sourceLocals name = some value)
+    (hlookup : lookupInfo name context.vars = some (shape, slots)) :
+    ∀ slot, slot ∈ slots → (crepLocals slot).isSome = true := by
+  apply readCrepLocals_some_defined crepLocals slots _
+  exact (hrel name value shape slots hsource hlookup).2
 
 /-! A state relation that tolerates compiler-owned memory locations.  This is
 needed after a raised callee has written its flattened payload to the Crep

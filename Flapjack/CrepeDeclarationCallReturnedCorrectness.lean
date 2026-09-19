@@ -63,7 +63,7 @@ theorem compile_full_pan_value_decCall_returned_of_body_correct
     (hlookup : lookupCompiledFunction function functions = some (parameters, targetCalleeBody))
     (hassign : assignCrepValues (fun _ => none) parameters argumentValues =
       some targetCalleeLocals)
-    (hdestinations : assignCrepValues
+    (hdestinations : assignExistingCrepValues
       (initializeCrepLocals state.locals (allocatedNames context shape))
       (allocatedNames context shape) targetValues = some targetCallerLocals)
     (hcalleeValues : targetValues = panValueFlatWords sourceValue)
@@ -193,7 +193,7 @@ theorem compile_full_pan_value_decCall_state_returned_of_body_correct
     (hlookup : lookupCompiledFunction function functions = some (parameters, targetCalleeBody))
     (hassign : assignCrepValues (fun _ => none) parameters argumentValues =
       some targetCalleeLocals)
-    (hdestinations : assignCrepValues
+    (hdestinations : assignExistingCrepValues
       (initializeCrepLocals state.locals (allocatedNames context shape))
       (allocatedNames context shape) targetValues = some targetCallerLocals)
     (hcalleeValues : targetValues = panValueFlatWords sourceValue)

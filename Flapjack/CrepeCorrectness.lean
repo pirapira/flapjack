@@ -133,7 +133,8 @@ theorem compile_full_pan_value_local_assign_return_word_correct
     (baseAddress topAddress bytesInWord : α)
     (name : VarName) (slot : Nat) (oldValue value : α)
     (hlookup : lookupInfo name context.vars = some (.one, [slot]))
-    (hlocals : locals name = some (.word oldValue)) :
+    (hlocals : locals name = some (.word oldValue))
+    (hstate : state.locals slot = some oldValue) :
     evalCrepFullResultState [] primitive ffi sharedMem baseAddress topAddress 20 state
         (compileProg context
           (.seq (.assign .local name (.const value))
@@ -144,11 +145,13 @@ theorem compile_full_pan_value_local_assign_return_word_correct
         (.seq (.assign .local name (.const value))
           (.return (.var .local name)))).map
         (fun result => result.2.2.2.flatMap panValueFlatWords) := by
-  simp [compileProg, compileExp, hlookup, hlocals, evalCrepFullResultState,
+  simp [compileProg, compileExp, hlookup, hlocals, hstate,
+    evalCrepFullResultState,
     evalCrepFullProgState, evalCrepFullExpsState, evalCrepFullExpState,
     evalPanValueProg, evalPanValueProgWithPrimitive, evalPanValueExp,
     panValueAssignmentValid, panValueShape, panShapeMatches,
-    crepNestedSeq, distinctLists, updateCrepLocal, updatePanValueMap,
+    crepNestedSeq, distinctLists, updateCrepLocal, assignExistingCrepValues,
+    crepNamesDistinct, crepLocalsDefined, updatePanValueMap,
     panValueFlatWords, panValueFlatWordsFuel]
 
 /-! Sequence evaluation can now be composed at the structured source boundary.
@@ -772,7 +775,9 @@ theorem compile_full_pan_value_local_assign_record_return_correct
     (hlookup : lookupInfo name context.vars =
       some (.comb [.one, .one], [slotLeft, slotRight]))
     (hdistinct : slotLeft ≠ slotRight)
-    (hlocals : locals name = some (.rStruct [.word oldLeft, .word oldRight])) :
+    (hlocals : locals name = some (.rStruct [.word oldLeft, .word oldRight]))
+    (hstateLeft : state.locals slotLeft = some oldLeft)
+    (hstateRight : state.locals slotRight = some oldRight) :
     evalCrepFullResultState [] primitive ffi sharedMem baseAddress topAddress 30 state
         (compileProg context
           (.seq
@@ -799,18 +804,21 @@ theorem compile_full_pan_value_local_assign_record_return_correct
           (2 * panValueFlatValueFuel
             (PanValue.rStruct [PanValue.word left, PanValue.word right]))
           [PanValue.word left, PanValue.word right] = [left, right] := by
-    simp [panValueFlatWordsFuel, panValueFlatValueFuel,
+      simp [panValueFlatWordsFuel, panValueFlatValueFuel,
       panValueFlatWordsFuel.panValueFlatWordsListFuel,
       panValueFlatValueFuel.panValueFlatValueListFuel]
+  have hdistinct' : slotRight ≠ slotLeft := Ne.symm hdistinct
   simp [compileProg, compileExp, compileExp.compileExpList, hlookup,
     hlocals, evalCrepFullResultState, evalCrepFullProgState,
     evalCrepFullExpsState, evalCrepFullExpState,
     evalPanValueProg, evalPanValueProgWithPrimitive,
     evalPanValueExp, panValueAssignmentValid, panValueShape,
     panShapeMatches, panShapeMatches.panShapeListMatches,
-    crepNestedSeq, distinctLists, hdistinct, updateCrepLocal,
+    crepNestedSeq, distinctLists, hdistinct, hdistinct', hstateLeft, hstateRight,
+    updateCrepLocal,
     updatePanValueMap, hsourceExps, hflatListFuel,
-    panValueFlatWords, panValueFlatWordsFuel]
+    panValueFlatWords, panValueFlatWordsFuel, assignExistingCrepValues,
+    crepNamesDistinct, crepLocalsDefined]
 
 /-! A word store followed by a shaped load exercises the same flat-memory
     update on both sides of the source-to-Crep boundary. -/
@@ -2003,7 +2011,8 @@ theorem compile_full_pan_value_identity_declaration_call_correct
       functionInfos, compileProg, compileExp, compileArgs, allocatedNames,
       nestedDecs, evalCrepFullCall, evalCrepFullProg,
       evalCrepFullExps, evalCrepFullExp, updateCrepLocal, restoreCrepResult,
-      lookupCompiledFunction, assignCrepValues, lookupInfo, List.map,
+      lookupCompiledFunction, assignCrepValues, assignExistingCrepValues,
+      crepNamesDistinct, crepLocalsDefined, lookupInfo, List.map,
       List.zip, List.foldl]
 
 /-! Stateful form of the closed declaration-call regression.  The explicit
@@ -2031,6 +2040,7 @@ theorem compile_full_pan_value_identity_declaration_call_state_correct
       nestedDecs, evalCrepFullCallState, evalCrepFullProgState,
       evalCrepFullExpsState, evalCrepFullExpState, updateCrepLocal,
       restoreCrepResult, lookupCompiledFunction, assignCrepValues,
+      assignExistingCrepValues, crepNamesDistinct, crepLocalsDefined,
       lookupInfo, List.map, List.zip, List.foldl]
 
 /-! A generic call constructor for the full correctness induction.  The
@@ -2578,7 +2588,7 @@ theorem evalCrepFullCall_returned_with_destinations
       baseAddress topAddress fuel
       { locals := calleeLocals, memory := caller.memory } body =
       some (.returned callee calleeValues))
-    (hdestinations : assignCrepValues caller.locals destinations calleeValues =
+    (hdestinations : assignExistingCrepValues caller.locals destinations calleeValues =
       some callerLocals) :
     evalCrepFullCall functions primitive ffi sharedMem
       baseAddress topAddress (fuel + 1) caller

@@ -455,6 +455,18 @@ theorem compile_full_pan_value_local_assign_record_source_word_temporary_general
   have hbodyEval := evalCrepFullExps_varList_updateCrepLocalList
     state.locals state.memory baseAddress topAddress temporarySlots values
     htemporaryLength htemporaryDistinct
+  have hreadBase := (hrel.2.1 name
+    (.rStruct (oldValues.map (fun value => .word value))) _ slots
+    hlocals hlookup).2
+  have hreadTemporary := readCrepLocals_updateCrepLocalList_of_not_mem
+    state.locals temporarySlots values slots htemporaryLength
+    (fun temporary htemporary hslot =>
+      (hnoOverlap temporary hslot temporary htemporary) rfl)
+  have hdefined : ∀ slot ∈ slots,
+      (updateCrepLocalList state.locals temporarySlots values slot).isSome = true := by
+    apply readCrepLocals_some_defined
+      (updateCrepLocalList state.locals temporarySlots values) slots _
+    exact hreadTemporary.trans hreadBase
   have hbody :
       evalCrepFullProg functions crepPrimitive ffi sharedMem
         baseAddress topAddress (targetFuel + slots.length + 1)
@@ -478,7 +490,7 @@ theorem compile_full_pan_value_local_assign_record_source_word_temporary_general
           List.mem_map.1 hexpression
         subst expression
         simpa [crepExpVars] using hnoOverlap slot hslot temporary htemporaryMem)
-      hbodyEval
+      hbodyEval hdefined
     rw [crepAssignZipWith_map_right] at hassign
     exact hassign
   have hnested := evalCrepFullProg_nestedDecs_assignList

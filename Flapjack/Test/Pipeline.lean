@@ -6,6 +6,27 @@ namespace Flapjack
 
 open RiscV
 
+/-! Direct oracle for Cake `pan_to_target$exports_def`:
+    exported functions are retained in declaration order and every other
+    declaration or non-exported function is skipped. -/
+def pipelineExportsParity : Bool :=
+  panTargetExports
+      ([.decl .one "global" (.const (BitVec.ofNat 64 1)),
+        .function
+          { name := "hidden", inline := false, exported := false,
+            params := [], body := .skip, returnShape := .one },
+        .exnDecl "E" .one,
+        .function
+          { name := "first", inline := false, exported := true,
+            params := [], body := .skip, returnShape := .one },
+        .name "Pair" [],
+        .function
+          { name := "second", inline := false, exported := true,
+            params := [], body := .skip, returnShape := .one }] :
+       List (Decl (RiscV.Word 64))) == ["first", "second"]
+
+#guard pipelineExportsParity
+
 def pipelineStackAddDeclarations : List (Decl (RiscV.Word 64)) :=
   [.function
     { name := "add", inline := false, exported := false,

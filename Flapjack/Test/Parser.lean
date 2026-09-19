@@ -215,6 +215,21 @@ def convRetCakeParity : Bool :=
 
 #guard convRetCakeParity
 
+/-! Cake `conv_Prog_def` (`panPtreeConversionScript.sml:629`) folds a
+    `ProgNT` child list into right-nested sequencing; an empty program node is
+    rejected rather than silently becoming `skip`. -/
+def convProgCakeParity : Bool :=
+  let skip : ParseTree := .lf (.keywordT .skipK) unknownLoc
+  let breakTree : ParseTree := .lf (.keywordT .brK) unknownLoc
+  let sequence : ParseTree := .nd .prog [skip, breakTree] unknownLoc
+  let empty : ParseTree := .nd .prog [] unknownLoc
+  match convProg (fun value => value) false 8 sequence,
+      convProg (fun value => value) false 8 empty with
+  | some (.seq .skip .break), none => true
+  | _, _ => false
+
+#guard convProgCakeParity
+
 #guard (pancakeLex "x + 1").map (·.1) == [.identT "x", .plusT, .intT 1]
 
 -- `//` runs to end of line; the block forms are `/* */` and `/@ @/`.

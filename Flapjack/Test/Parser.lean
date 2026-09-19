@@ -109,6 +109,15 @@ def nextTokenCakeParity : Bool :=
 
 #guard nextTokenCakeParity
 
+/-! Cake `dest_lexErrorT_def` (`panLexerScript.sml:70`) projects the message
+    from a `LexErrorT` and rejects every other token constructor. -/
+def destLexErrorTCakeParity : Bool :=
+  destLexErrorT (.lexErrorT "bad") == some "bad" &&
+    destLexErrorT (.intT 7) == none &&
+    destLexErrorT (.keywordT .skipK) == none
+
+#guard destLexErrorTCakeParity
+
 /-! Cake `init_loc_def` (`panLexerScript.sml:299`) starts lexing at row 1,
     column 1. -/
 def initLocCakeParity : Bool :=

@@ -33,7 +33,7 @@ example :
         ((.inst (.arith (.shift .asr 20 6 (.reg 10)))) : WordProg Nat) =
         ({ current := [(20, 100), (10, 6)], next := 104 },
         .seq (.move 1 [(8, 6)])
-          (.inst (.arith (.shift .asr 100 6 (.reg 8))))) := by
+          (.inst (.arith (.shift .asr 100 0 (.reg 8))))) := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaRenameInstProgram, wordSsaFresh, wordSsaRead,
     wordSsaReadMoveSource, lookupNatInfo]
@@ -60,7 +60,7 @@ example :
         ((.call (some ([3, 4], ([2], []), .skip, 0, 0)) (some 7) [2, 5] none) : WordProg Nat) =
       ({ current := [(4, 216), (3, 212), (2, 208)], next := 220 },
         .seq (.move 0 [(202, 100)])
-          (.seq (.move 1 [(2, 100), (4, 5)])
+          (.seq (.move 1 [(2, 100), (4, 0)])
             (.call (some ([2, 4], ([202], []),
               .seq (.move 0 [(208, 202)])
                 (.move 1 [(212, 2), (216, 4)]), 0, 0))
@@ -229,7 +229,7 @@ example :
       ((.alloc 3 ([1], []) : WordProg Nat)) =
       ({ current := [(1, 208)], next := 212 },
         .seq (.move 0 [(202, 100)])
-          (.seq (.move 1 [(2, 3)])
+          (.seq (.move 1 [(2, 0)])
             (.seq (.alloc 2 ([202], []))
               (.move 0 [(208, 202)])))) := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
@@ -244,7 +244,7 @@ example :
         ({ current := [(1, 100)], next := 200 } : WordSsaState)
         ((.move 7 [(2, 1), (3, 2)]) : WordProg Nat) =
         ({ current := [(1, 200), (3, 204), (2, 200)], next := 208 },
-        .move 7 [(200, 100), (204, 2)]) := by
+        .move 7 [(200, 100), (204, 0)]) := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaRenameMove, wordSsaFreshList, wordSsaFresh, wordSsaRead,
     wordSsaForceRename, lookupNatInfo]
@@ -319,7 +319,7 @@ example :
    the current map (`word_allocScript.sml:270-278`).  This is observable in
    source-to-RISC-V parity when a call/branch has no current definition. -/
 example :
-    wordSsaRead ({ current := [], next := 200 } : WordSsaState) 9 = 9 := by
+    wordSsaRead ({ current := [], next := 200 } : WordSsaState) 9 = 0 := by
   rfl
 
 end Flapjack

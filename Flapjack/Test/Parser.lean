@@ -128,6 +128,24 @@ def isLexErrorTCakeParity : Bool :=
 
 #guard isLexErrorTCakeParity
 
+/-! Cake `get_token_def` (`panLexerScript.sml:75`) is an ordered symbolic-token
+    lookup.  Exercise every source branch and the final lexical-error fallback. -/
+def getTokenCakeParity : Bool :=
+  let cases : List (String × Token) := [
+    ("&&", .boolAndT), ("||", .boolOrT), ("&", .andT), ("|", .orT),
+    ("^", .xorT), ("==", .eqT), ("=>", .arrowT), ("!=", .neqT),
+    ("<", .lessT), (">", .greaterT), (">=", .geqT), ("<=", .leqT),
+    ("<+", .lowerT), (">+", .higherT), (">=+", .higheqT), ("<=+", .loweqT),
+    ("!", .notT), ("+", .plusT), ("-", .minusT), ("*", .starT),
+    (".", .dotT), ("<<", .lslT), (">>>", .lsrT), (">>", .asrT),
+    ("#>>", .rorT), ("(", .lParT), (")", .rParT), (",", .commaT),
+    (";", .semiT), (":", .colonT), ("[", .lBrakT), ("]", .rBrakT),
+    ("{", .lCurT), ("}", .rCurT), ("=", .assignT)]
+  cases.all (fun (source, expected) => getToken source == expected) &&
+    getToken "?" == .lexErrorT "Unrecognised symbolic token: ?"
+
+#guard getTokenCakeParity
+
 /-! Cake `init_loc_def` (`panLexerScript.sml:299`) starts lexing at row 1,
     column 1. -/
 def initLocCakeParity : Bool :=

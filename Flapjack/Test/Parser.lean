@@ -200,6 +200,21 @@ def convExnDecCakeParity : Bool :=
 
 #guard convExnDecCakeParity
 
+/-! Cake `conv_Ret_def` (`panPtreeConversionScript.sml:615`) distinguishes a
+    bare `return`, a `!` no-bind marker, and a bound return target; malformed
+    return nodes are rejected. -/
+def convRetCakeParity : Bool :=
+  let returnToken : ParseTree := .lf (.keywordT .retK) unknownLoc
+  let noBind : ParseTree := .lf (.notT) unknownLoc
+  let x : ParseTree := .lf (.identT "x") unknownLoc
+  let bound : ParseTree := .nd .ret [x] unknownLoc
+  let malformed : ParseTree := .nd .ret [] unknownLoc
+  match convRet returnToken, convRet noBind, convRet bound, convRet malformed with
+  | some none, some (some none), some (some (some (.global, "x"))), none => true
+  | _, _, _, _ => false
+
+#guard convRetCakeParity
+
 #guard (pancakeLex "x + 1").map (·.1) == [.identT "x", .plusT, .intT 1]
 
 -- `//` runs to end of line; the block forms are `/* */` and `/@ @/`.

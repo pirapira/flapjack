@@ -667,7 +667,17 @@ theorem named_struct_source_pass_one_word_expression (value : Nat) :
 theorem named_struct_source_pass_one_word_flat_words (value : Nat) :
     panValueFlatWords (.nStruct "S" [("field", .word value)]) =
       panValueFlatWords (.rStruct [.word value]) := by
-  rfl
+  have hn := panValueFlatWords_nStruct_word_fields "S" [("field", value)]
+  have hr := panValueFlatWords_rStruct_word_list [value]
+  simpa using hn.trans hr.symm
+
+theorem named_struct_flat_words_word_fields
+    (values : List (FieldName × Nat)) :
+    panValueFlatWords
+        (.nStruct "S"
+          (values.map (fun (field, value) => (field, .word value)))) =
+      values.map Prod.snd := by
+  exact panValueFlatWords_nStruct_word_fields "S" values
 
 theorem named_struct_source_eval_via_generic_evidence (value : Nat) :
     evalPanValueExp namedStructPassContext.structs

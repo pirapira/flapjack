@@ -271,6 +271,53 @@ def panValueFlatWords (value : PanValue α) : List α :=
   -- their leaves.
   panValueFlatWordsFuel (2 * panValueFlatValueFuel value + 1) value
 
+theorem panValueFlatWords_nStruct_word_fields
+    (name : StructName) (values : List (FieldName × α)) :
+    panValueFlatWords
+        (.nStruct name (values.map (fun (field, value) => (field, .word value)))) =
+      values.map Prod.snd := by
+  have hlistFuel : ∀ values : List (FieldName × α),
+      panValueFlatValueFuel.panValueFlatValueFieldListFuel
+          (values.map (fun (field, value) => (field, .word value))) =
+        values.length := by
+    intro values
+    induction values with
+    | nil => simp [panValueFlatValueFuel.panValueFlatValueFieldListFuel]
+    | cons value values ih =>
+        simp [panValueFlatValueFuel.panValueFlatValueFieldListFuel,
+          panValueFlatValueFuel, ih, Nat.add_comm]
+  have hvalueFuel :
+      panValueFlatValueFuel
+          (.nStruct name
+            (values.map (fun (field, value) => (field, .word value)))) =
+        values.length + 1 := by
+    simp only [panValueFlatValueFuel]
+    rw [hlistFuel values]
+    omega
+  have hwordsFuel : ∀ (fuel : Nat) (values : List (FieldName × α)),
+      values.length < fuel →
+        panValueFlatWordsFuel.panValueFlatWordsFieldListFuel fuel
+            (values.map (fun (field, value) => (field, .word value))) =
+          values.map Prod.snd := by
+    intro fuel values
+    induction values generalizing fuel with
+    | nil => intro; simp [panValueFlatWordsFuel.panValueFlatWordsFieldListFuel]
+    | cons value values ih =>
+        cases fuel with
+        | zero => simp_all
+        | succ fuel =>
+            intro hlength
+            cases fuel with
+            | zero => simp_all
+            | succ fuel =>
+                simp only [List.length_cons] at hlength
+                have htail : values.length < fuel + 1 := by omega
+                simp [panValueFlatWordsFuel.panValueFlatWordsFieldListFuel,
+                  panValueFlatWordsFuel, ih (fuel + 1) htail]
+  rw [panValueFlatWords, hvalueFuel]
+  simp only [panValueFlatWordsFuel]
+  exact hwordsFuel (2 * (values.length + 1)) values (by omega)
+
 def panValueFlatShapeFuel : Shape → Nat
   | .one => 1
   | .comb shapes => 1 + panValueFlatShapeListFuel shapes

@@ -595,6 +595,36 @@ def staticPrependWarning (warning : Option StatErr) (result : StaticResult α) :
   | none => result
   | some warning => (result.1, warning :: result.2)
 
+/-! Source-shaped port of CakeML's `check_struct_fields_def`
+    (`cakeml/pancake/panStaticScript.sml:717-765`). -/
+def checkStructFields [BEq String] (context : Context) (structName : StructName) :
+    List (FieldName × Shape) → List (FieldName × ShapedBased) → StaticResult Unit
+  | [], [] => staticOk ()
+  | [], (field, _) :: _ =>
+      staticError (.general (context.location ++ "unexpected field " ++ field ++
+        " given to named struct " ++ structName ++ " in " ++
+        staticScopeDescription context.scope ++ "\n"))
+  | (field, shape) :: fields, actual =>
+      match actual.filter (fun (candidate, _) => candidate == field) with
+      | [] =>
+          staticError (.shape (context.location ++ "missing field " ++ field ++
+            " in named struct " ++ structName ++ " constant in " ++
+            staticScopeDescription context.scope ++ "\n"))
+      | [(_, shaped)] =>
+          if shapedBasedHasShape shape shaped then
+            checkStructFields context structName fields
+              (actual.filter (fun (candidate, _) => candidate != field))
+          else
+            staticError (.shape (context.location ++
+              "value for field " ++ field ++ " given to named struct " ++ structName ++
+              " has shape " ++ shapedBasedToString shaped ++
+              " instead of declared shape " ++ Shape.shapeToString shape ++ " in " ++
+              staticScopeDescription context.scope ++ "\n"))
+      | _ =>
+          staticError (.shape (context.location ++ "multiple values for field " ++ field ++
+            " in named struct " ++ structName ++ " constant in " ++
+            staticScopeDescription context.scope ++ "\n"))
+
 def checkExp [BEq String] (context : Context) : Exp α → StaticResult ExpReturn
   | .const _ => staticOk { shapedBased := .word .notBased }
   | .var .local name =>
@@ -618,9 +648,8 @@ def checkExp [BEq String] (context : Context) : Exp α → StaticResult ExpRetur
       | none => staticError (.scope ("unknown struct: " ++ name))
       | some info =>
           staticBind (checkNamedExps context fields) (fun actual =>
-            if shapedBasedFieldsMatch context.structs info.fields actual then
-              staticOk { shapedBased := .named name actual }
-            else staticError (.shape "named struct fields do not match"))
+            staticBind (checkStructFields context name info.fields actual) (fun _ =>
+              staticOk { shapedBased := .named name actual }))
   | .nField name value =>
       staticBind (checkExp context value) (fun result =>
         match shapedBasedFieldNamed name result.shapedBased with

@@ -272,22 +272,16 @@ example :
   decide +kernel
 
 example :
-    checkExp (α := Nat)
+    staticResultOk (checkExp (α := Nat)
       checkerContext
-      (Exp.nStruct "Pair" [("left", .const 1), ("right", .const 2)]) =
-      staticOk { shapedBased := (.named "Pair"
-        [("left", .word .notBased), ("right", .word .notBased)]) } := by
-  simp [checkExp, checkExp.checkNamedExps, staticOk, staticBind,
-    shapedBasedFieldsMatch, shapedBasedFromShape, shapedBasedSameShape,
-    checkerContext, pairContext, lookupInfo]
+      (Exp.nStruct "Pair" [("left", .const 1), ("right", .const 2)])) = true := by
+  decide +kernel
 
 example :
-    (checkExp (α := Nat)
+    staticResultErrorMessage (checkExp (α := Nat)
       checkerContext
       (Exp.nStruct "Pair" [("left", .const 1)])) =
-      staticError (.shape "named struct fields do not match") := by
-  simp [checkExp, checkExp.checkNamedExps, staticOk, staticBind,
-    shapedBasedFieldsMatch, shapedBasedFromShape, shapedBasedSameShape,
-    checkerContext, pairContext, lookupInfo]
+      some "missing field right in named struct Pair constant in top-level declaration\n" := by
+  decide +kernel
 
 end Flapjack

@@ -874,7 +874,7 @@ def compileFlapjackRiscVViaAllocatedStackWithFullSsaAndBitmapsAndSimpleGcTarget
     (declarations : List (Decl (RiscV.Word width))) :
     Option (RiscV.WordStackBitmapState × List (RiscV.Instruction width)) := do
   let pipeline := compileFlapjackTarget architecture bytesInWord fromNat declarations
-  let loop := pipelineLoopFunctions architecture stackFunctionFirstLabel pipeline.crepe
+  let loop := pipeline.loop
   let (functions, bitmaps) ←
     pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmaps
       (RiscV.wordStackInitialBitmaps false) loop
@@ -904,7 +904,7 @@ def compileFlapjackRiscVViaAllocatedStackWithFullSsaAndBitmapsAndSimpleGcTargetL
     Option (RiscV.WordStackBitmapState ×
       List (Nat × RiscV.Word width × List (RiscV.Instruction width))) := do
   let pipeline := compileFlapjackTarget architecture bytesInWord fromNat declarations
-  let loop := pipelineLoopFunctions architecture stackFunctionFirstLabel pipeline.crepe
+  let loop := pipeline.loop
   let (functions, bitmaps) ←
     pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmaps
       (RiscV.wordStackInitialBitmaps false) loop
@@ -935,7 +935,7 @@ def compileFlapjackRiscVViaAllocatedStackWithFullSsaAndBitmapsAndSimpleGcEntryLi
     Option (RiscV.WordStackBitmapState ×
       List (Nat × RiscV.Word width × List (RiscV.Instruction width))) := do
   let pipeline ← compileFlapjackEntry architecture bytesInWord fromNat start declarations
-  let loop := pipelineLoopFunctions architecture stackFunctionFirstLabel pipeline.crepe
+  let loop := pipeline.loop
   let (functions, bitmaps) ←
     pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmaps
       (RiscV.wordStackInitialBitmaps false) loop

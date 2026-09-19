@@ -91,6 +91,24 @@ def nextAtomCakeParity : Bool :=
 
 #guard nextAtomCakeParity
 
+/-! Cake `next_token_def` (`panLexerScript.sml:284`) maps the atom returned by
+    `next_atom` through `token_of_atom`, preserving locations and remaining
+    input, while propagating EOF as `NONE`. -/
+def nextTokenCakeParity : Bool :=
+  match nextToken 16 "42".toList initLoc,
+      nextToken 16 "skip".toList initLoc,
+      nextToken 16 "?".toList initLoc,
+      nextToken 16 "".toList initLoc with
+  | some (.intT 42, numberLoc, []),
+      some (.keywordT .skipK, keywordLoc, []),
+      some (.lexErrorT "Unrecognised symbol: ?", errorLoc, []), none =>
+      numberLoc == { start := .posn 1 1, stop := .posn 1 3 } &&
+        keywordLoc == { start := .posn 1 1, stop := .posn 1 5 } &&
+        errorLoc == { start := .posn 1 1, stop := .posn 1 1 }
+  | _, _, _, _ => false
+
+#guard nextTokenCakeParity
+
 /-! `isNT_def` and `argsNT_def` at
     `panPtreeConversionScript.sml:58,62` inspect only the node's
     nonterminal: matching nodes succeed, mismatching nodes and leaves do not. -/

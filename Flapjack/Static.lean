@@ -493,6 +493,16 @@ def checkGlobalVar [BEq String] (context : Context) (name : VarName) :
       staticError (.scope
         (staticScopeMessage .variable context.location name context.scope))
 
+/-! Source-shaped port of CakeML's `check_local_var_def`
+    (`cakeml/pancake/panStaticScript.sml:633-638`). -/
+def checkLocalVar [BEq String] (context : Context) (name : VarName) :
+    StaticResult LocalInfo :=
+  match lookupInfo name context.locals with
+  | some info => staticOk info
+  | none =>
+      staticError (.scope
+        (staticScopeMessage .variable context.location name context.scope))
+
 /-! Source-shaped port of CakeML's `get_redec_msg_def`
     (`cakeml/pancake/panStaticScript.sml:478-489`). -/
 def getRedecMessage (idType : ScopedId) (location id : String) (scope : Scope) : String :=
@@ -583,9 +593,8 @@ def staticPrependWarning (warning : Option StatErr) (result : StaticResult α) :
 def checkExp [BEq String] (context : Context) : Exp α → StaticResult ExpReturn
   | .const _ => staticOk { shapedBased := .word .notBased }
   | .var .local name =>
-      match lookupInfo name context.locals with
-      | some info => staticOk { shapedBased := info.shapedBased }
-      | none => staticError (.scope ("unknown local variable: " ++ name))
+      staticBind (checkLocalVar context name) (fun info =>
+        staticOk { shapedBased := info.shapedBased })
   | .var .global name =>
       staticBind (checkGlobalVar context name) (fun info =>
         match shapedBasedFromShape context.structs info.shape with
@@ -740,12 +749,10 @@ def checkCallDestination [BEq String] (context : Context) (returnShape : Shape)
   | some (kind, name) =>
       match kind with
       | .local =>
-          match lookupInfo name context.locals with
-          | some localInfo =>
-              if shapedBasedMatchesShape context.structs returnShape localInfo.shapedBased then
-                progOk .otherLast false false context.location
-              else staticError (.shape "call destination shape does not match")
-          | none => staticError (.scope ("unknown call destination: " ++ name))
+          staticBind (checkLocalVar context name) (fun localInfo =>
+            if shapedBasedMatchesShape context.structs returnShape localInfo.shapedBased then
+              progOk .otherLast false false context.location
+            else staticError (.shape "call destination shape does not match"))
       | .global =>
           staticBind (checkGlobalVar context name) (fun globalInfo =>
             if shapesSame globalInfo.shape returnShape then
@@ -844,13 +851,11 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
               checkProg nextContext body
             else staticError (.shape "local declaration shape does not match"))
   | .assign .local name value =>
-      match lookupInfo name context.locals with
-      | none => staticError (.scope ("unknown local variable: " ++ name))
-      | some info =>
-          staticBind (checkExp context value) (fun result =>
-            if shapedBasedSameShape info.shapedBased result.shapedBased then
-              progOk .otherLast false false context.location
-            else staticError (.shape "local assignment shape does not match"))
+      staticBind (checkLocalVar context name) (fun info =>
+        staticBind (checkExp context value) (fun result =>
+          if shapedBasedSameShape info.shapedBased result.shapedBased then
+            progOk .otherLast false false context.location
+          else staticError (.shape "local assignment shape does not match")))
   | .assign .global name value =>
       staticBind (checkGlobalVar context name) (fun info =>
         staticBind (checkExp context value) (fun result =>
@@ -858,15 +863,13 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
             progOk .otherLast false false context.location
           else staticError (.shape "global assignment shape does not match")))
   | .primitive name _ arguments =>
-      match lookupInfo name context.locals with
-      | none => staticError (.scope ("unknown primitive destination: " ++ name))
-      | some destinationInfo =>
-          staticBind (checkCallArgs context arguments) (fun argumentResult =>
-            staticBind (checkPrimitiveArgs context .addCarry argumentResult.shapedBased)
-              (fun resultShape =>
-                if shapedBasedSameShape destinationInfo.shapedBased resultShape then
-                  progOk .otherLast false false context.location
-                else staticError (.shape "primitive result shape does not match")))
+      staticBind (checkLocalVar context name) (fun destinationInfo =>
+        staticBind (checkCallArgs context arguments) (fun argumentResult =>
+          staticBind (checkPrimitiveArgs context .addCarry argumentResult.shapedBased)
+            (fun resultShape =>
+              if shapedBasedSameShape destinationInfo.shapedBased resultShape then
+                progOk .otherLast false false context.location
+              else staticError (.shape "primitive result shape does not match"))))
   | .store address value =>
       staticBind (checkExp context address) (fun addressResult =>
         staticBind (checkExp context value) (fun _valueResult =>
@@ -1051,9 +1054,8 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
       let destinationCheck : StaticResult Bool :=
         match varKind with
         | .local =>
-            match lookupInfo name context.locals with
-            | some info => staticOk (shapedBasedIsWord info.shapedBased)
-            | none => staticError (.scope ("unknown shared-memory destination: " ++ name))
+            staticBind (checkLocalVar context name) (fun info =>
+              staticOk (shapedBasedIsWord info.shapedBased))
         | .global =>
             staticBind (checkGlobalVar context name) (fun info =>
               match shapedBasedFromShape context.structs info.shape with

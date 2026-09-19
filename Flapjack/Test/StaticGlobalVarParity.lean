@@ -43,4 +43,30 @@ def staticGlobalVarParityContext : Context :=
       (checkExp staticGlobalVarParityContext (.var .global "missing" : Exp Nat)) ==
       some "line: variable missing is not in scope in function f\n"
 
+/-! Direct executable parity for CakeML's `check_local_var_def`
+    (`panStaticScript.sml:633-638`). -/
+
+def staticLocalVarParityContext : Context :=
+  { staticGlobalVarParityContext with
+    locals := [("x", { shapedBased := .word .trusted })] }
+
+#guard
+  match (checkLocalVar staticLocalVarParityContext "x").1 with
+  | .ok info => match info.shapedBased with
+    | .word .trusted => true
+    | _ => false
+  | .error _ => false
+
+#guard
+  staticResultErrorMessage
+      (checkLocalVar staticLocalVarParityContext "missing") ==
+    some "line: variable missing is not in scope in function f\n"
+
+#guard
+  staticResultOk
+      (checkExp staticLocalVarParityContext (.var .local "x" : Exp Nat)) &&
+    staticResultErrorMessage
+      (checkExp staticLocalVarParityContext (.var .local "missing" : Exp Nat)) ==
+      some "line: variable missing is not in scope in function f\n"
+
 end Flapjack

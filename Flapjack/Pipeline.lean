@@ -68,7 +68,7 @@ termination_by declarations => sizeOf declarations
 def compileProgToCrep [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (declarations : List (Decl α)) :
     List (CompiledFunction α) :=
-  crepInlineTopRecursiveByNames (pipelineInlineNames declarations)
+  panToCrepCompileInlTop (pipelineInlineNames declarations)
     (compileToCrep context declarations)
 
 def pipelineFindFunction (name : FunName) :

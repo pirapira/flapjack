@@ -203,7 +203,7 @@ example :
   simp [checkProg, checkExp, staticOk, staticBind, isWfShape,
     shapedBasedMatchesShape,
     shapedBasedFromShape, shapedBasedSameShape, checkerContext, pairContext,
-    lookupInfo, checkLocalVar, staticRedeclarationWarning, staticPrependWarning]
+    lookupInfo, checkLocalVar, checkRedecVar]
 
 example :
     checkProg (α := Nat) checkerCallContext (.call none "f" []) =

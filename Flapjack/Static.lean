@@ -574,15 +574,20 @@ def staticAddWarning (result : StaticResult α) (warning : Option StatErr) :
   | none => result
   | some warning => (result.1, result.2 ++ [warning])
 
-/-! Cake's `check_redec_var` logs this warning before checking the declaration
-    body.  Keep it as a small wrapper so both `Dec` and `DecCall` use the same
-    source-shaped wording and preserve warning order. -/
-def staticRedeclarationWarning [BEq String] (context : Context)
-    (name : VarName) : Option StatErr :=
+/-! Source-shaped port of CakeML's `check_redec_var_def`
+    (`cakeml/pancake/panStaticScript.sml:641-647`).  Cake returns unit and logs
+    a warning when either local or global lookup finds the name. -/
+def checkRedecVar [BEq String] (context : Context) (name : VarName) :
+    StaticResult Unit :=
   if (lookupInfo name context.locals).isSome ||
       (lookupInfo name context.globals).isSome then
-    some (.warning (getRedecMessage .variable context.location name context.scope))
-  else none
+    staticWarn (.warning (getRedecMessage .variable context.location name context.scope))
+  else staticOk ()
+
+/-! Compatibility view used by callers that only need the optional warning. -/
+def staticRedeclarationWarning [BEq String] (context : Context)
+    (name : VarName) : Option StatErr :=
+  (checkRedecVar context name).2.head?
 
 def staticPrependWarning (warning : Option StatErr) (result : StaticResult α) :
     StaticResult α :=
@@ -839,7 +844,7 @@ def seqLastStmt (first second : LastStmt) : LastStmt :=
 def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgReturn
   | .skip => progOk .invisLast false false context.location
   | .dec name shape value body =>
-      staticPrependWarning (staticRedeclarationWarning context name) <|
+      staticBind (checkRedecVar context name) (fun _ =>
         if !isWfShape context.structs shape then
           staticError (.shape "local declaration has an invalid shape")
         else
@@ -850,6 +855,7 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
                 last := .otherLast }
               checkProg nextContext body
             else staticError (.shape "local declaration shape does not match"))
+      )
   | .assign .local name value =>
       staticBind (checkLocalVar context name) (fun info =>
         staticBind (checkExp context value) (fun result =>
@@ -1003,7 +1009,7 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
                         staticBind (checkProg handlerContext handlerProgram) (fun _ =>
                           checkCallDestination context returnShape destination)))
   | .decCall name shape function arguments body =>
-      staticPrependWarning (staticRedeclarationWarning context name) <|
+      staticBind (checkRedecVar context name) (fun _ =>
         if !isWfShape context.structs shape then
           staticError (.shape "declaration-call result has an invalid shape")
         else
@@ -1023,6 +1029,7 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
                         last := .otherLast }
                       staticBind (checkProg nextContext body) (fun result =>
                         (Except.ok { result with variableDelta := [] }, []))))
+      )
   | .extCall function configuration configurationLength array arrayLength =>
       staticBind (checkCallArgs context
         [configuration, configurationLength, array, arrayLength])

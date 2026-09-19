@@ -60,6 +60,7 @@ import Flapjack.Test.CrepeHandlerCorrectness
    resolution; source parity coverage remains in `Test.SourceToLoop`. -/
 import Flapjack.Test.CrepeRuntimeGlobalCorrectness
 import Flapjack.Test.StaticGlobalVarParity
+import Flapjack.Test.StaticRedecVarParity
 import Flapjack.Test.CorrectnessConditional
 import Flapjack.Test.CorrectnessColour
 import Flapjack.Test.CorrectnessSsaColour

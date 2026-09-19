@@ -705,6 +705,52 @@ theorem named_struct_source_pass_one_word_eval (value : Nat) :
     structCompileExp.structCompileFields, structSelectFields, lookupInfo,
     evalPanValueExp, evalPanValueExp.evalPanValueExps]
 
+/-! The stateful constructor also handles a record whose fields are nested
+    scalar expressions rather than constants.  The source evaluator is kept
+    as an explicit oracle regression so this test exercises both the
+    field-list inversion and the scalar compiler relation. -/
+def scalarSourceWordFields : List (SourceWordExp Nat) :=
+  [ .op .add (.const 3) (.const 4),
+    .mul (.op .add (.const 1) (.const 2)) (.const 5) ]
+
+def scalarSourceWordRaise : Prog Nat :=
+  .raise "E" (.rStruct (scalarSourceWordFields.map SourceWordExp.toExp))
+
+theorem scalar_source_word_fields_oracle :
+    evalPanValueExp [] (fun _ => none) (fun _ => none) (fun _ => none)
+        0 0 8 (scalarSourceWordFields.map SourceWordExp.toExp
+          |> fun fields => .rStruct fields) =
+      some (.rStruct [.word 7, .word 15]) := by
+  simp [scalarSourceWordFields, SourceWordExp.toExp, evalPanValueExp,
+    evalPanValueExp.evalPanValueExps, evalPanBinOp]
+
+example
+    (hbytesInWord : ∀ (context : CompileContext Nat) (bytesInWord : Nat),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext Nat)
+      (sourceLocals : VarName → Option (PanValue Nat))
+      (name : VarName) (value : PanValue Nat),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot]))
+    (hbounded : ∀ (context : CompileContext Nat) (name : VarName)
+      (shape : Shape) (slots : List Nat),
+      lookupInfo name context.vars = some (shape, slots) →
+      ∀ slot ∈ slots, slot ≤ context.maxVar)
+    (hlookupException : ∀ (context : CompileContext Nat),
+      ∃ exceptionCode, lookupInfo "E" context.exceptions = some exceptionCode)
+    (hfresh : ∀ (context : CompileContext Nat) (state : CrepState Nat)
+      (name : Nat), name ∈ freshNames context scalarSourceWordFields.length 1 →
+      state.locals name = none)
+    (hexception : ∀ (context : CompileContext Nat)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (exceptionCode : Nat) (values : List Nat),
+      lookupInfo "E" context.exceptions = some exceptionCode →
+      exceptionRel "E" (.rStruct (values.map PanValue.word)) exceptionCode) :
+    PanValueCrepProgramStateCorrect scalarSourceWordRaise := by
+  exact panValueCrepProgramStateCorrect_raise_source_word_record
+    "E" scalarSourceWordFields hbytesInWord hlookup hbounded
+    hlookupException hfresh hexception
+
 theorem named_struct_source_pass_compile_raise (value : Nat) :
     compileProg context
         (.raise "E"

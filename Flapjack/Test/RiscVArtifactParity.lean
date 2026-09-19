@@ -524,6 +524,19 @@ def nomainGlobalAccepted : Bool :=
   | .ok image => !image.sections.isEmpty
   | .error _ => false
 
+/- Cake's target pass does not synthesize a default main for an actually empty
+   declaration list; comment-only input therefore remains rejected. -/
+def emptySource : String := "// no Pancake declarations\n"
+
+def emptySourceRejected : Bool :=
+  match compileFlapjackRiscVSourceRuntimeImageChecked (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] artifactCompileConfig "main"
+      emptySource with
+  | .ok _ => false
+  | .error _ => true
+
+#guard emptySourceRejected
+
 /-!
 ## FFI stub parity (bead `flapjack-pxn.8.5.14.2`)
 
@@ -990,6 +1003,8 @@ def runChecks : IO Bool := do
         dupGlobalAcceptedWithWarning),
       ("nomain_global fixture accepted with a synthesized default main",
          nomainGlobalAccepted),
+      ("empty Pancake source is rejected like Cake",
+         emptySourceRejected),
       ("ffi names recorded in first-appearance order",
          ffiNamesMatch),
       ("single ffi stub block emitted in the original position",

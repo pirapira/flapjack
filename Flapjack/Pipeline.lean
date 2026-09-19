@@ -123,10 +123,7 @@ def pipelineLoopFunctionsAux [OfNat α 0] [OfNat α 1]
   | _, [] => []
   | label, function :: functions =>
       let context : LoopContext α :=
-        { vars := []
-          functions := functionInfos
-          maxVar := function.params.length
-          target := architecture }
+        crepMkCtxt architecture [] functionInfos function.params.length
       (label, function.params, oCompile context function.params function.body) ::
         pipelineLoopFunctionsAux architecture functionInfos (label + 1) functions
 

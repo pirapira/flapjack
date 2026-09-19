@@ -17,11 +17,8 @@ def oCompile [OfNat α 0] [OfNat α 1]
 def crepCompFunc [OfNat α 0] [OfNat α 1]
     (target : RiscV.Architecture) (functions : InfoMap (Nat × Nat))
     (params : List Nat) (body : CrepProg α) : LoopProg α :=
-  let context : LoopContext α :=
-    { vars := crepMakeVmap params
-      functions := functions
-      maxVar := params.length - 1
-      target := target }
+  let context : LoopContext α := crepMkCtxt target (crepMakeVmap params)
+    functions (params.length - 1)
   oCompile context (List.range params.length) body
 
 theorem oCompile_skip [OfNat α 0] [OfNat α 1]

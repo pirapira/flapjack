@@ -25,6 +25,15 @@ structure LoopContext (α : Type u) where
   target : RiscV.Architecture
   deriving Repr
 
+/-! Source-named port of CakeML Pancake's `mk_ctxt_def`
+    (`crep_to_loopScript.sml:221`).  Keep the constructor argument order
+    explicit: target, variable map, function map, and the fresh-variable
+    upper bound. -/
+def crepMkCtxt {α : Type u}
+    (target : RiscV.Architecture) (vmap : NatInfoMap Nat)
+    (functions : InfoMap (Nat × Nat)) (maxVar : Nat) : LoopContext α :=
+  { vars := vmap, functions := functions, maxVar := maxVar, target := target }
+
 /-! Source-named port of CakeML Pancake's `make_vmap_def`
     (`crep_to_loopScript.sml:230`).  Cake's finite map is populated by
     `ZIP (params, GENLIST I (LENGTH params))`; the list-backed context uses

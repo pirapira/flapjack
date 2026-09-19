@@ -218,6 +218,38 @@ def expr (source : String) : Except (List ParseError) (Prog Int) :=
 #guard sameAst (prog "var x = f; return x;")
   (.ok (.dec "x" .one (.var .global "f") (.return (.var .local "x"))))
 
+/-! Direct oracle for `conv_DecCall_def` from
+`cakeml/pancake/parser/panPtreeConversionScript.sml:598`.  Cake requires the
+first three children (shape, bound name, function name), accepts an omitted
+argument-list child as `[]`, and converts only the first optional argument
+child. -/
+def convDecCallCakeParity : Bool :=
+  sameAst
+    (convDecCall ofI 16
+      (.nd .decCall
+        [ .lf (.defaultShT) unknownLoc
+        , .lf (.identT "r") unknownLoc
+        , .lf (.identT "f") unknownLoc ] unknownLoc))
+    (some (.one, "r", "f", [])) &&
+  sameAst
+    (convDecCall ofI 16
+      (.nd .decCall
+        [ .lf (.defaultShT) unknownLoc
+        , .lf (.identT "r") unknownLoc
+        , .lf (.identT "f") unknownLoc
+        , .nd .argList
+            [ .nd .exp [ .lf (.intT 7) unknownLoc ] unknownLoc ] unknownLoc ]
+        unknownLoc))
+    (some (.one, "r", "f", [.const 7])) &&
+  (convDecCall ofI 16
+      (.nd .decCall
+        [ .lf (.defaultShT) unknownLoc
+        , .lf (.identT "r") unknownLoc ] unknownLoc)).isNone &&
+  (convDecCall ofI 16
+      (.nd .funNT [] unknownLoc)).isNone
+
+#guard convDecCallCakeParity
+
 -- An annotation comment becomes an `Annot` statement tagged `@`.
 #guard sameAst (prog "/@ hello @/ skip;") (.ok (.seq (.annot "@" " hello ") .skip))
 

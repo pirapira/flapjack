@@ -245,6 +245,10 @@ def reachabilityContext : Context :=
   "L: break statement outside loop in function f\n"
 #guard getRogueMessage false "L: " (.funScope "f" "") ==
   "L: continue statement outside loop in function f\n"
+#guard getNonWordMessage "load address" "pair" "L: " (.funScope "f" "") ==
+  "L: load address has shape pair instead of a word in function f\n"
+#guard getShapeMismatchMessage "return value" "pair" "word" "L: " (.funScope "f" "") ==
+  "L: return value has shape pair instead of declared shape word in function f\n"
 
 #guard match basedMerge .based .notBased with | .based => true | _ => false
 #guard match basedMerge .trusted .notBased with | .trusted => true | _ => false

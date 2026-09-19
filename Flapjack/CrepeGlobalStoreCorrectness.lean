@@ -34,6 +34,80 @@ theorem updateMemoryListAt_cons [BEq α] [Add α]
         (address + stride) stride values := by
   simp [updateMemoryListAt]
 
+def storeAddresses [Add α] (address stride : α) : Nat → List α
+  | 0 => []
+  | count + 1 => address :: storeAddresses (address + stride) stride count
+
+def readMemoryListAt [Add α]
+    (memory : α → Option α) (address stride : α) : Nat → Option (List α)
+  | 0 => some []
+  | count + 1 => do
+      let value ← memory address
+      let values ← readMemoryListAt memory (address + stride) stride count
+      pure (value :: values)
+
+theorem updateMemoryListAt_preserve_of_not_mem
+    [BEq α] [LawfulBEq α] [Add α]
+    (memory : α → Option α) (address stride : α)
+    (values : List α) (current : α)
+    (hnot : current ∉ storeAddresses address stride values.length) :
+    updateMemoryListAt memory address stride values current = memory current := by
+  induction values generalizing memory address current with
+  | nil => simp [updateMemoryListAt]
+  | cons value values ih =>
+      rw [updateMemoryListAt_cons]
+      have hhead : current ≠ address := by
+        intro heq
+        apply hnot
+        simp [storeAddresses, heq]
+      have htail : current ∉
+          storeAddresses (address + stride) stride values.length := by
+        intro hmem
+        apply hnot
+        simp [storeAddresses, hmem]
+      calc
+        updateMemoryListAt (updateMemory memory address value)
+            (address + stride) stride values current =
+            updateMemory memory address value current :=
+          ih (memory := updateMemory memory address value)
+            (address := address + stride) (current := current) htail
+        _ = memory current := by simp [updateMemory, hhead]
+
+theorem readMemoryListAt_updateMemoryListAt
+    [BEq α] [LawfulBEq α] [Add α]
+    (memory : α → Option α) (address stride : α)
+    (values : List α)
+    (hdistinct : List.Pairwise (fun left right : α => left ≠ right)
+      (storeAddresses address stride values.length)) :
+    readMemoryListAt
+        (updateMemoryListAt memory address stride values)
+        address stride values.length = some values := by
+  induction values generalizing memory address with
+  | nil => simp [readMemoryListAt, updateMemoryListAt]
+  | cons value values ih =>
+      rw [updateMemoryListAt_cons]
+      change List.Pairwise (fun left right : α => left ≠ right)
+        (address :: storeAddresses (address + stride) stride values.length)
+        at hdistinct
+      simp only [List.pairwise_cons] at hdistinct
+      have hheadPreserve :
+          updateMemoryListAt (updateMemory memory address value)
+              (address + stride) stride values address =
+            updateMemory memory address value address :=
+        updateMemoryListAt_preserve_of_not_mem
+          (updateMemory memory address value) (address + stride) stride values
+          address (by
+            intro hmem
+            exact (hdistinct.1 address hmem) rfl)
+      have hhead :
+          updateMemoryListAt (updateMemory memory address value)
+              (address + stride) stride values address = some value := by
+        rw [hheadPreserve]
+        simp [updateMemory]
+      have htail := ih (memory := updateMemory memory address value)
+        (address := address + stride) hdistinct.2
+      simp [readMemoryListAt, hhead, htail]
+
 /-! Stateful counterpart of the existing compact nested-declaration stability
 lemma.  This is the exact witness constructor used when the declaration body
 performs global stores, so converting through the compact evaluator would lose
@@ -211,5 +285,97 @@ theorem evalCrepFullProgState_storeGlobals_vars
                   simp [crepNestedSeq, storeGlobals, evalCrepFullProgState,
                     evalCrepFullExpState, hnameEval, htailResult,
                     updateMemoryListAt, nextState, Nat.add_assoc]
+
+theorem evalCrepFullProgState_storeGlobals_vars_of_fuel
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (functions : List (CompiledFunction α))
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat) (state : CrepState α)
+    (address stride : α) (names : List Nat) (values : List α)
+    (hfuel : values.length + 1 ≤ fuel)
+    (hlength : names.length = values.length)
+    (hvalues : evalCrepFullExpsState state baseAddress topAddress
+      (names.map (fun name => .var name)) = some values) :
+    evalCrepFullProgState functions primitive ffi sharedMem
+      baseAddress topAddress fuel state
+      (crepNestedSeq (storeGlobals address stride
+        (names.map (fun name => .var name)))) =
+      some (.normal { state with
+        globals := updateMemoryListAt state.globals address stride values }) := by
+  induction names generalizing state address values fuel with
+  | nil =>
+      cases values with
+      | nil =>
+          cases fuel with
+          | zero => omega
+          | succ fuel =>
+              simp [crepNestedSeq, storeGlobals, evalCrepFullProgState,
+                updateMemoryListAt]
+      | cons value values =>
+          simp at hlength
+  | cons name names ih =>
+      cases values with
+      | nil =>
+          simp at hlength
+      | cons value values =>
+          cases fuel with
+          | zero => omega
+          | succ fuel =>
+              simp only [List.map_cons, evalCrepFullExpsState] at hvalues
+              cases hname : evalCrepFullExpState state baseAddress topAddress
+                  (.var name) with
+              | none => simp [hname] at hvalues
+              | some nameValue =>
+                  cases htail : evalCrepFullExpsState state baseAddress topAddress
+                      (names.map (fun name => .var name)) with
+                  | none => simp [hname, htail] at hvalues
+                  | some tailValues =>
+                      have hpair : nameValue :: tailValues = value :: values :=
+                        Option.some.inj (by simpa [hname, htail] using hvalues)
+                      cases hpair
+                      have hlength' : names.length = values.length := by
+                        exact Nat.succ.inj hlength
+                      simp only [List.length_cons] at hfuel
+                      have hfuel' : values.length + 1 ≤ fuel := by
+                        omega
+                      have htailEval :
+                          evalCrepFullExpsState state baseAddress topAddress
+                            (names.map (fun name => .var name)) = some values := by
+                        exact htail
+                      have hnameEval : evalCrepFullExpState state
+                          baseAddress topAddress (.var name) = some value := by
+                        exact hname
+                      let nextState : CrepState α :=
+                        { state with globals := updateMemory state.globals address value }
+                      have htailEval' :
+                          evalCrepFullExpsState nextState baseAddress topAddress
+                            (names.map (fun name => .var name)) = some values := by
+                        have hvars : ∀ (current : CrepState α),
+                            current.locals = state.locals →
+                            ∀ (currentNames : List Nat),
+                            evalCrepFullExpsState current baseAddress topAddress
+                                (currentNames.map (fun name => .var name)) =
+                              evalCrepFullExpsState state baseAddress topAddress
+                                (currentNames.map (fun name => .var name)) := by
+                          intro current hlocals currentNames
+                          induction currentNames with
+                          | nil => simp [evalCrepFullExpsState]
+                          | cons currentName currentNames ih =>
+                              simp [evalCrepFullExpsState, evalCrepFullExpState,
+                                ih, hlocals]
+                        rw [hvars nextState rfl]
+                        exact htailEval
+                      cases fuel with
+                      | zero => omega
+                      | succ fuel =>
+                          have htailResult := ih (state := nextState)
+                            (address := address + stride) (values := values)
+                            (fuel := fuel + 1) hfuel' hlength' htailEval'
+                          simp [crepNestedSeq, storeGlobals, evalCrepFullProgState,
+                            hnameEval, htailResult,
+                            updateMemoryListAt, nextState, Nat.add_assoc]
 
 end Flapjack

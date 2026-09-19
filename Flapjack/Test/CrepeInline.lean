@@ -44,4 +44,24 @@ def crepInlineUnreachable : CrepProg Nat × Option CrepEarlyExit :=
   | (.return [.const 1], some .return) => true
   | _ => false
 
+def crepInlineUnreachableExits : Bool :=
+  (match crepUnreachElim
+      (.seq (.raise 3) (.return [.const 1]) : CrepProg Nat) with
+    | (.raise 3, some .exception) => true
+    | _ => false) &&
+  (match crepUnreachElim
+      (.ite (.const 1) (.return [.const 1]) (.raise 2) : CrepProg Nat) with
+    | (.ite _ (.return [_]) (.raise _), some .exception) => true
+    | _ => false) &&
+  (match crepUnreachElim
+      (.while (.const 1) (.return [.const 1]) : CrepProg Nat) with
+    | (.while _ (.return [_]), none) => true
+    | _ => false) &&
+  (match crepUnreachElim
+      (.call none "callee" [] : CrepProg Nat) with
+    | (.call none "callee" [], some .return) => true
+    | _ => false)
+
+#guard crepInlineUnreachableExits
+
 end Flapjack

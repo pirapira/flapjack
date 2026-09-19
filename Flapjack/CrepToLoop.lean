@@ -335,41 +335,41 @@ def loopCompileProg [OfNat α 0] [OfNat α 1]
       let addressResult := loopCompileExp context (context.maxVar + 1) live address
       let valueResult := loopCompileExp context addressResult.nextTemp addressResult.live value
       let valueTemp := valueResult.nextTemp
-      .seq (loopNestedSeq (addressResult.code ++ valueResult.code))
-        (.seq (.assign valueTemp valueResult.expression)
-          (.store addressResult.expression valueTemp))
+      loopNestedSeq (addressResult.code ++ valueResult.code ++
+        [.assign valueTemp valueResult.expression,
+         .store addressResult.expression valueTemp])
   | .store32 address value =>
       let addressResult := loopCompileExp context (context.maxVar + 1) live address
       let valueResult := loopCompileExp context addressResult.nextTemp addressResult.live value
       let addressTemp := valueResult.nextTemp
       let valueTemp := addressTemp + 1
-      .seq (loopNestedSeq (addressResult.code ++ valueResult.code))
-        (.seq (.assign addressTemp addressResult.expression)
-          (.seq (.assign valueTemp valueResult.expression)
-            (.store32 addressTemp valueTemp)))
+      loopNestedSeq (addressResult.code ++ valueResult.code ++
+        [.assign addressTemp addressResult.expression,
+         .assign valueTemp valueResult.expression,
+         .store32 addressTemp valueTemp])
   | .storeByte address value =>
       let addressResult := loopCompileExp context (context.maxVar + 1) live address
       let valueResult := loopCompileExp context addressResult.nextTemp addressResult.live value
       let addressTemp := valueResult.nextTemp
       let valueTemp := addressTemp + 1
-      .seq (loopNestedSeq (addressResult.code ++ valueResult.code))
-        (.seq (.assign addressTemp addressResult.expression)
-          (.seq (.assign valueTemp valueResult.expression)
-            (.storeByte addressTemp valueTemp)))
+      loopNestedSeq (addressResult.code ++ valueResult.code ++
+        [.assign addressTemp addressResult.expression,
+         .assign valueTemp valueResult.expression,
+         .storeByte addressTemp valueTemp])
   | .storeGlob address value =>
       let result := loopCompileExp context (context.maxVar + 1) live value
-      .seq (loopNestedSeq result.code) (.setGlobal address result.expression)
+      loopNestedSeq (result.code ++ [.setGlobal address result.expression])
   | .seq first second => .seq (loopCompileProg context live first)
       (loopCompileProg context live second)
   | .ite condition thenBranch elseBranch =>
       -- `crep_to_loopScript.sml:176-181`: both branches and the cutset use
       -- the incoming live set; the condition's own live result is dropped.
       let result := loopCompileExp context (context.maxVar + 1) live condition
-      .seq (loopNestedSeq result.code)
-        (.seq (.assign result.nextTemp result.expression)
-            (.ite .notEqual result.nextTemp (.imm (by exact 0))
-            (loopCompileProg context live thenBranch)
-            (loopCompileProg context live elseBranch) live))
+      loopNestedSeq (result.code ++
+        [.assign result.nextTemp result.expression,
+         .ite .notEqual result.nextTemp (.imm (by exact 0))
+           (loopCompileProg context live thenBranch)
+           (loopCompileProg context live elseBranch) live])
   | .while condition body =>
       -- `crep_to_loopScript.sml:182-188`: the loop entry and exit live sets,
       -- the body, and the inner cutset all use the incoming live set.
@@ -407,7 +407,7 @@ def loopCompileProg [OfNat α 0] [OfNat α 1]
                 .ite .notEqual exceptionName (.imm exception)
                   (.raise exceptionName) (.seq .tick handlerCode) live,
                 .skip, live))
-      .seq (loopNestedSeq (result.code ++ loopAssignTemps argumentNames result.expressions)) call
+      loopNestedSeq (result.code ++ loopAssignTemps argumentNames result.expressions ++ [call])
   | .extCall function configuration configurationLength array arrayLength =>
       match lookupNatInfo configuration context.vars,
           lookupNatInfo configurationLength context.vars,

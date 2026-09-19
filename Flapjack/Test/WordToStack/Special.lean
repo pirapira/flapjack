@@ -12,7 +12,8 @@ example :
         { locations := [(0, .stack 2), (1, .register 5), (2, .register 6)],
           scratch := 31, stackBase := 10, addressScratch := 29 }
         (.binOp .or 0 1 (.reg 2)) =
-      some (.seq (.arith .or 31 5 6) (.stackStore 31 12) : StackProg Nat) := by
+      some (.seq (.inst (.arith (.binOp .or 31 5 (.reg 6))))
+        (.stackStore 31 12) : StackProg Nat) := by
   simp [wordStackArithInst, wordSpecialArithLocationsSafe,
     wordStackLongMulMoveToPhysical, wordStackLongMulMoveFromPhysical,
     wordStackJoin, wordStackLocation, wordStackOffset, lookupNatInfo]

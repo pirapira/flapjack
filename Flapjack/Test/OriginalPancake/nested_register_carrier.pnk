@@ -1,0 +1,7 @@
+fun 1 add_value(1 x, 1 y) {
+  return x + y;
+}
+
+fun 1 main() {
+  return add_value(7, 5);
+}

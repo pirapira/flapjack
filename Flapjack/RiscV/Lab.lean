@@ -118,6 +118,7 @@ def labLineInstructionCount : LabLine (Word width) → Nat
       | .const _ value => labConstInstructionCount value
       | .stackMem _ _ _ _ => 1
       | .stackMemSub _ _ _ _ => 1
+      | .shareMemOffset _ _ _ _ => 1
       | .arithImm _ destination left immediate =>
           if destination = left && immediate = 0 then 0 else 1
       | .shiftImm _ _ _ _ => 1
@@ -354,6 +355,18 @@ def labCompilePlain [NeZero width] :
       pure [.jalr zero register zero]
   | .shareMem operator register address =>
       wordShareInstToInstructions operator register (.var address)
+  | .shareMemOffset operator register address offset => do
+      let register ← registerOfNat register
+      let address ← registerOfNat address
+      match operator with
+      | .load => pure [.loadWordOffset register address offset]
+      | .store => pure [.storeWordOffset register address offset]
+      | .load8 => pure [.loadByteOffset register address offset]
+      | .store8 => pure [.storeByteOffset register address offset]
+      | .load16 => pure [.loadHalfOffset register address offset]
+      | .store16 => pure [.storeHalfOffset register address offset]
+      | .load32 => pure [.load32Offset register address offset]
+      | .store32 => pure [.store32Offset register address offset]
   | .memOffset memoryOperator operator destination address offset => do
       let destination ← registerOfNat destination
       let address ← registerOfNat address
@@ -580,6 +593,8 @@ def labPlainNatToWord [NeZero width] : LabPlain Nat → LabPlain (Word width)
   | .dataBufferWrite address value => .dataBufferWrite address value
   | .shareMem operator register address =>
       .shareMem operator register address
+  | .shareMemOffset operator register address offset =>
+      .shareMemOffset operator register address (BitVec.ofNat width offset)
   | .memOffset memoryOperator operator destination address offset =>
       .memOffset memoryOperator operator destination address offset
 
@@ -1079,6 +1094,216 @@ def labCompileProgramLinesWithLinkedFfiBaseAndHalt [NeZero width]
       let rest ← labCompileProgramLinesWithLinkedFfiBaseAndHalt context labels
         (position + 4 * code.length) ffiBase haltPc lines
       pure (code ++ rest)
+/-! Cake's `enc_lines_again` retains the maximum encoded length of a LabAsm
+    across relocation iterations. A branch that first needs two instructions
+    and later fits in one therefore keeps a two-instruction slot; `pad_code`
+    fills the residual slot with the encoded Skip. The ordinary linker above
+    recomputes only the final length, losing this source-shaped artifact. -/
+
+def labStoredLineLength {width : Nat} [NeZero width] :
+    LabLine (Word width) → Nat
+  | .label _ _ length => length
+  | .asm _ _ length => length
+  | .labAsm _ _ length => length
+
+def labStoredSectionLength {width : Nat} [NeZero width] :
+    List (LabLine (Word width)) → Nat
+  | [] => 0
+  | line :: lines => labStoredLineLength line + labStoredSectionLength lines
+
+def labStoredProgramLength {width : Nat} [NeZero width] :
+    LabProgram (Word width) → Nat
+  | [] => 0
+  | sectionData :: sections =>
+      labStoredSectionLength sectionData.lines + labStoredProgramLength sections
+
+def labInitialStoredLine [NeZero width] :
+    LabLine (Word width) → LabLine (Word width)
+  /- Internal labels start with Cake's four-byte relocation slot.  The two
+     synthetic entry labels are handled separately below: Cake represents the
+     section-base label implicitly, while Flapjack materializes it. -/
+  | .label sectionId label _ =>
+      .label sectionId label 4
+  | .asm operation bytes _ =>
+      .asm operation bytes (4 * labLineInstructionCount (.asm operation bytes 0))
+  | .labAsm operation bytes _ =>
+      .labAsm operation bytes (4 * labLineInstructionCount
+        (.labAsm operation bytes 0))
+
+def labInitialStoredEntryLine [NeZero width] :
+    LabLine (Word width) → LabLine (Word width)
+  | .label sectionId label _ => .label sectionId label 0
+  | line => labInitialStoredLine line
+
+def labInitialStoredSectionLines [NeZero width] :
+    Nat → List (LabLine (Word width)) → List (LabLine (Word width))
+  | _, [] => []
+  | 0, line :: lines =>
+      labInitialStoredLine line :: labInitialStoredSectionLines 0 lines
+  | fuel + 1, line :: lines =>
+      labInitialStoredEntryLine line ::
+        labInitialStoredSectionLines fuel lines
+
+def labInitialStoredProgram [NeZero width] :
+    LabProgram (Word width) → LabProgram (Word width)
+  | [] => []
+  | sectionData :: sections =>
+      { sectionData with
+          lines := labInitialStoredSectionLines 2 sectionData.lines } ::
+        labInitialStoredProgram sections
+
+def labCollectStoredSectionLabels [NeZero width] (sectionId base : Nat) :
+    List (LabLine (Word width)) → List (Nat × Nat × Nat)
+  | [] => []
+  | .label _ label length :: lines =>
+      if label = 0 then
+        labCollectStoredSectionLabels sectionId (base + length) lines
+      else
+        (sectionId, label, base + length) ::
+          labCollectStoredSectionLabels sectionId (base + length) lines
+  | line :: lines =>
+      labCollectStoredSectionLabels sectionId
+        (base + labStoredLineLength line) lines
+
+def labCollectStoredProgramLabels [NeZero width] (base : Nat) :
+    LabProgram (Word width) → List (Nat × Nat × Nat)
+  | [] => []
+  | sectionData :: sections =>
+      ((sectionData.name, 0, base) ::
+        labCollectStoredSectionLabels sectionData.name base sectionData.lines) ++
+        labCollectStoredProgramLabels
+          (base + labStoredSectionLength sectionData.lines) sections
+
+def labCollectPancakeRuntimeStoredLabels [NeZero width]
+    (program : LabProgram (Word width)) : List (Nat × Nat × Nat) :=
+  let sourceProgram := program.filter (fun entry => entry.name >= 3)
+  [(0, 0, 812), (1, 0, 848), (2, 0, 772)] ++
+    labCollectStoredProgramLabels 1000 sourceProgram
+
+def labEncodeStoredSection [NeZero width]
+    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (base ffiBase haltPc : Nat) :
+    List (LabLine (Word width)) → List (LabLine (Word width))
+  | [] => []
+  | .label sectionId label length :: lines =>
+      .label sectionId label length ::
+        labEncodeStoredSection context labels
+          (base + length) ffiBase haltPc lines
+  | .asm operation bytes length :: lines =>
+      let actual := (labCompilePlain operation).getD []
+      let stored := max length (4 * actual.length)
+      .asm operation bytes stored ::
+        labEncodeStoredSection context labels (base + stored) ffiBase haltPc lines
+  | .labAsm operation bytes length :: lines =>
+      let actual := (labCompileAsmProgramWithFfiBaseAndHalt context labels
+        base ffiBase haltPc operation).getD []
+      let stored := max length (4 * actual.length)
+      .labAsm operation bytes stored ::
+        labEncodeStoredSection context labels (base + stored) ffiBase haltPc lines
+
+def labEncodeStoredProgram [NeZero width]
+    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (base ffiBase haltPc : Nat) :
+    LabProgram (Word width) → LabProgram (Word width)
+  | [] => []
+  | sectionData :: sections =>
+      let lines := labEncodeStoredSection context labels base ffiBase haltPc
+        sectionData.lines
+      { sectionData with lines := lines } ::
+        labEncodeStoredProgram context labels
+          (base + labStoredSectionLength lines) ffiBase haltPc sections
+
+def labEncodeStoredProgramStable [NeZero width] (fuel : Nat)
+    (context : WordFfiContext) (base ffiBase haltPc : Nat)
+    (program : LabProgram (Word width)) : LabProgram (Word width) :=
+  match fuel with
+  | 0 => program
+  | fuel + 1 =>
+      let labels := labCollectPancakeRuntimeStoredLabels program
+      labEncodeStoredProgramStable fuel context base ffiBase haltPc
+        (labEncodeStoredProgram context labels base ffiBase haltPc program)
+
+def labUpdateStoredLabelLengths [NeZero width] (base : Nat) :
+    LabProgram (Word width) → LabProgram (Word width)
+  | [] => []
+  | sectionData :: sections =>
+      let rec updateLines (position : Nat) :
+          List (LabLine (Word width)) → List (LabLine (Word width))
+        | [] => []
+        | .label sectionId label _ :: lines =>
+            let length := if position % 2 = 0 then 0 else 1
+            .label sectionId label length ::
+              updateLines (position + length) lines
+        | .asm operation bytes length :: lines =>
+            .asm operation bytes length :: updateLines (position + length) lines
+        | .labAsm operation bytes length :: lines =>
+            .labAsm operation bytes length :: updateLines (position + length) lines
+      let lines := updateLines base sectionData.lines
+      { sectionData with lines := lines } ::
+        labUpdateStoredLabelLengths (base + labStoredSectionLength lines) sections
+
+def labPadStoredInstructions [NeZero width]
+    (code : List (Instruction width)) (storedLength : Nat) :
+    List (Instruction width) :=
+  /- Cake's stored lengths are byte offsets, while `pad_code` emits the
+     already-retained instruction bytes.  A non-aligned length such as 5 is
+     not itself a request for a Skip; `add_nop` supplies that full instruction
+     when a nonzero label is encountered. -/
+  let target := storedLength / 4
+  if code.length < target then
+    code ++ List.replicate (target - code.length) (.addi 0 0 0)
+  else code
+
+def labAppendStoredNop [NeZero width] :
+    List (List (Instruction width)) → List (List (Instruction width))
+  | [] => []
+  | chunks =>
+      match chunks.reverse with
+      | [] => []
+      | chunk :: rest => (chunk ++ [.addi 0 0 0]) :: rest |>.reverse
+
+def labCompileProgramLinesWithStoredLengthsAux [NeZero width]
+    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (position ffiBase haltPc : Nat)
+    (chunks : List (List (Instruction width))) :
+    List (LabLine (Word width)) → Option (List (List (Instruction width)))
+  | [] => some chunks
+  | .label _ _ length :: lines =>
+      let chunks := if length = 0 then chunks else labAppendStoredNop chunks
+      labCompileProgramLinesWithStoredLengthsAux context labels
+        (position + length) ffiBase haltPc chunks lines
+  | .asm operation _ length :: lines => do
+      let code ← labCompilePlain operation
+      labCompileProgramLinesWithStoredLengthsAux context labels
+        (position + length) ffiBase haltPc
+        (chunks ++ [labPadStoredInstructions code length]) lines
+  | .labAsm operation _ length :: lines => do
+      let code ← labCompileAsmProgramWithFfiBaseAndHalt context labels
+        position ffiBase haltPc operation
+      labCompileProgramLinesWithStoredLengthsAux context labels
+        (position + length) ffiBase haltPc
+        (chunks ++ [labPadStoredInstructions code length]) lines
+
+def labCompileProgramLinesWithStoredLengths [NeZero width]
+    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (position ffiBase haltPc : Nat) :
+    List (LabLine (Word width)) → Option (List (Instruction width)) := fun lines => do
+  let chunks ← labCompileProgramLinesWithStoredLengthsAux context labels
+    position ffiBase haltPc [] lines
+  pure chunks.flatten
+
+def compileLabProgramLinkedWithStoredLengthsAux [NeZero width]
+    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (base ffiBase haltPc : Nat) : LabProgram (Word width) →
+      Option (List (Nat × Word width × List (Instruction width)))
+  | [] => some []
+  | sectionData :: sections => do
+      let code ← labCompileProgramLinesWithStoredLengths context labels base
+        ffiBase haltPc sectionData.lines
+      let rest ← compileLabProgramLinkedWithStoredLengthsAux context labels
+        (base + labStoredSectionLength sectionData.lines) ffiBase haltPc sections
+      pure ((sectionData.name, BitVec.ofNat width base, code) :: rest)
+
 def compileLabProgramLinkedWithFfiStubsAndHaltAux [NeZero width]
     (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
     (base ffiBase haltPc : Nat) : LabProgram (Word width) →
@@ -1126,14 +1351,54 @@ def labCollectPancakeRuntimeLabels : LabProgram (Word width) →
       [(0, 0, 812), (1, 0, 848), (2, 0, 772)] ++
         labCollectProgramLabels 1000 sourceProgram
 
+/-! Cake resolves the linked Pancake image with the post-target-lowering line
+    lengths.  In particular, a long jump/branch can occupy two instructions
+    although its Lab line starts as one symbolic instruction.  Keep the fixed
+    runtime labels, but iterate the source labels against those compiled
+    lengths before resolving branches.  This is the linked-image analogue of
+    `labCollectProgramLabelsStable`; using the old static count shifts the
+    first large `op_dispatch` target while leaving the section length unchanged. -/
+def labCollectPancakeRuntimeLabelsStableAux [NeZero width] (fuel : Nat)
+    (context : WordFfiContext) (sourceProgram : LabProgram (Word width))
+    (guess : List (Nat × Nat × Nat)) : List (Nat × Nat × Nat) :=
+  match fuel with
+  | 0 => guess
+  | fuel + 1 =>
+      let runtime := [(0, 0, 812), (1, 0, 848), (2, 0, 772)]
+      let next := runtime ++
+        labCollectProgramLabelsWithContext context 1000 guess sourceProgram
+      if next == guess then next
+      else labCollectPancakeRuntimeLabelsStableAux fuel context sourceProgram next
+
+def labCollectPancakeRuntimeLabelsStable [NeZero width] (fuel : Nat)
+    (context : WordFfiContext) (program : LabProgram (Word width)) :
+    List (Nat × Nat × Nat) :=
+  let sourceProgram := program.filter (fun entry => entry.name >= 3)
+  labCollectPancakeRuntimeLabelsStableAux fuel context sourceProgram
+    (labCollectPancakeRuntimeLabels program)
+
 def compileLabProgramLinkedWithPancakeRuntime [NeZero width]
     (context : WordFfiContext) (program : LabProgram (Word width)) :
     Option (List (Nat × Word width × List (Instruction width))) :=
   let sourceProgram := program.filter (fun entry => entry.name >= 3)
-  let labels := labCollectPancakeRuntimeLabels program
-  let haltPc := 1000 + 4 * labProgramInstructionCount sourceProgram
-  compileLabProgramLinkedWithFfiStubsAndHaltAux context labels 1000 1000 haltPc
-    sourceProgram
+  let initial := labInitialStoredProgram sourceProgram
+  let initialHaltPc := 1000 + labStoredProgramLength initial
+  let encoded := labEncodeStoredProgramStable 8 context 1000 1000
+    initialHaltPc initial
+  let relabelled := labUpdateStoredLabelLengths 1000 encoded
+  let haltPc := 1000 + labStoredProgramLength relabelled
+  /- Re-run the relocation-length convergence after label padding has been
+     updated.  CakeML's `remove_labels_loop` performs `enc_secs_again` again
+     after `upd_lab_len`; a single pass here is insufficient because changing
+     label slots can move a branch across the direct/long encoding boundary.
+     In that case the final compiler would emit more instructions than the
+     stored section length, shifting every following section. -/
+  let final := labEncodeStoredProgramStable 8 context 1000 1000
+    haltPc relabelled
+  let finalHaltPc := 1000 + labStoredProgramLength final
+  let labels := labCollectPancakeRuntimeStoredLabels final
+  compileLabProgramLinkedWithStoredLengthsAux context labels 1000 1000
+    finalHaltPc final
 
 def flattenLabProgramLinked :
     List (Nat × Word width × List (Instruction width)) → List (Instruction width)

@@ -1,6 +1,7 @@
 import Flapjack.Stack
 import Flapjack.RiscV.Allocator
 import Flapjack.RiscV.RegAlloc
+import Flapjack.RiscV.CakeAllocatorCore
 
 /-!
 # Word-to-Stack spill moves
@@ -68,6 +69,14 @@ def wordStackOffset (config : WordStackConfig) (slot : Nat) : Nat :=
     callers can continue to provide the source-shaped `f'` occupancy. -/
 def wordStackCakeFrameSize (config : WordStackConfig) : Nat :=
   if config.abiFrameSlots = 0 then 0 else config.abiFrameSlots + 1
+
+/- Cake's `StackArgs` receives the caller's frame size `f`, not the public
+   `stack_var_count` (`f'`) occupancy.  Source-shaped pipeline configs record
+   the latter in `abiFrameSlots`; retain an explicitly supplied offset for the
+   older zero-frame callers. -/
+def wordStackCallFrameOffset (config : WordStackConfig) : Nat :=
+  if config.abiFrameSlots = 0 then config.frameOffset
+  else wordStackCakeFrameSize config
 
 /-! `format_var k` classifies the first `k` physical argument slots as
     registers and the remaining slots as frame variables.  `wMoveSingle`
@@ -138,6 +147,14 @@ def wordStackLoadInst {α : Type} (config : WordStackConfig) (operator : WordMem
         (.seq (.inst (.mem operator config.scratch config.addressScratch))
           (.stackStore config.scratch (wordStackOffset config destination))))
 
+/- Cake's RISC-V spill path uses the link register (stack register 0) as the
+   short-lived address carrier for an indirect store.  The value register is
+   live across that store, so retain the configured address scratch only when
+   it is itself the value register; otherwise use Cake's carrier. -/
+def wordStackStoreAddressRegister (config : WordStackConfig) : WordLocation → Nat
+  | .register source => if source = 0 then config.addressScratch else 0
+  | .stack _ => config.addressScratch
+
 def wordStackStoreInst {α : Type} (config : WordStackConfig) (operator : WordMemOp)
     (source address : Nat) : Option (StackProg α) := do
   let source ← wordStackLocation config source
@@ -149,9 +166,10 @@ def wordStackStoreInst {α : Type} (config : WordStackConfig) (operator : WordMe
       pure (.seq (.stackLoad config.scratch (wordStackOffset config source))
         (.inst (.mem operator config.scratch address)))
   | .register source, .stack address =>
-      pure (.seq (.stackLoad config.addressScratch
+      let addressScratch := wordStackStoreAddressRegister config (.register source)
+      pure (.seq (.stackLoad addressScratch
           (wordStackOffset config address))
-        (.inst (.mem operator source config.addressScratch)))
+        (.inst (.mem operator source addressScratch)))
   | .stack source, .stack address =>
       pure (.seq (.stackLoad config.addressScratch
           (wordStackOffset config address))
@@ -719,7 +737,8 @@ def wordStackArithInst {α : Type} (config : WordStackConfig) (operation : WordA
           wordStackLocation config sourceRight with
       | some (.register destination), some (.register sourceLeft),
           some (.register sourceRight) =>
-        some (.arith operator destination sourceLeft sourceRight)
+        some (.inst (.arith (.binOp operator destination sourceLeft
+          (.reg sourceRight))))
       | _, _, _ =>
         match wordStackLocation config destination,
             wordStackLocation config sourceLeft,
@@ -743,7 +762,9 @@ def wordStackArithInst {α : Type} (config : WordStackConfig) (operation : WordA
               dReg
             pure (wordStackJoin loadLeft
               (wordStackJoin loadRight
-                (wordStackJoin (.arith operator dReg sLReg sRReg) writeDest)))
+                (wordStackJoin
+                  (.inst (.arith (.binOp operator dReg sLReg (.reg sRReg))))
+                  writeDest)))
         | _, _, _ => none
     | .binOp operator destination sourceLeft (.imm value) =>
       wordStackImmediateArithInst config destination sourceLeft value
@@ -866,6 +887,14 @@ def wordStackStoreLocationsSafe (config : WordStackConfig) :
   | .register source, .stack _ => source != config.addressScratch
   | .stack _, .stack _ => config.scratch != config.addressScratch
 
+def wordStackMemoryStoreLocationsSafe (config : WordStackConfig) :
+    WordLocation → WordLocation → Bool
+  | .register _, .register _ => true
+  | .stack _, .register address => address != config.scratch
+  | .register source, .stack _ =>
+      source != wordStackStoreAddressRegister config (.register source)
+  | .stack _, .stack _ => config.scratch != config.addressScratch
+
 def wordStackDivLocationSafe (config : WordStackConfig) :
     WordLocation → Bool
   | .register register =>
@@ -911,6 +940,56 @@ def wordStackSharedStoreInst {α : Type} (config : WordStackConfig) (operator : 
           (wordStackOffset config address))
         (.seq (.stackLoad config.scratch (wordStackOffset config source))
           (.shMem operator config.scratch config.addressScratch)))
+
+def wordStackSharedLoadOffsetInst {α : Type} (config : WordStackConfig)
+    (operator : WordMemOp) (destination address : Nat) (offset : α) :
+    Option (StackProg α) := do
+  let destination ← wordStackLocation config destination
+  let address ← wordStackLocation config address
+  match destination, address with
+  | .register destination, .register address =>
+      pure (.shMemOffset operator destination address offset)
+  | .stack destination, .register address =>
+      pure (.seq (.shMemOffset operator config.scratch address offset)
+        (.stackStore config.scratch (wordStackOffset config destination)))
+  | .register destination, .stack address =>
+      pure (.seq (.stackLoad config.addressScratch
+          (wordStackOffset config address))
+        (.shMemOffset operator destination config.addressScratch offset))
+  | .stack destination, .stack address =>
+      pure (.seq (.stackLoad config.addressScratch
+          (wordStackOffset config address))
+        (.seq (.shMemOffset operator config.scratch config.addressScratch offset)
+          (.stackStore config.scratch (wordStackOffset config destination))))
+
+def wordStackSharedStoreOffsetInst {α : Type} (config : WordStackConfig)
+    (operator : WordMemOp) (source address : Nat) (offset : α) :
+    Option (StackProg α) := do
+  let source ← wordStackLocation config source
+  let address ← wordStackLocation config address
+  match source, address with
+  | .register source, .register address =>
+      pure (.shMemOffset operator source address offset)
+  | .stack source, .register address =>
+      pure (.seq (.stackLoad config.scratch (wordStackOffset config source))
+        (.shMemOffset operator config.scratch address offset))
+  | .register source, .stack address =>
+      pure (.seq (.stackLoad config.addressScratch
+          (wordStackOffset config address))
+        (.shMemOffset operator source config.addressScratch offset))
+  | .stack source, .stack address =>
+      pure (.seq (.stackLoad config.addressScratch (wordStackOffset config address))
+        (.seq (.stackLoad config.scratch (wordStackOffset config source))
+          (.shMemOffset operator config.scratch config.addressScratch offset)))
+
+def wordStackSharedMemoryOffsetInst {α : Type} (config : WordStackConfig)
+    (operator : WordMemOp) (sourceOrDestination address : Nat) (offset : α) :
+    Option (StackProg α) :=
+  match operator with
+  | .load | .load8 | .load16 | .load32 =>
+      wordStackSharedLoadOffsetInst config operator sourceOrDestination address offset
+  | .store | .store8 | .store16 | .store32 =>
+      wordStackSharedStoreOffsetInst config operator sourceOrDestination address offset
 
 def wordStackSharedMemoryInst {α : Type} (config : WordStackConfig) (operator : WordMemOp)
     (sourceOrDestination address : Nat) : Option (StackProg α) :=
@@ -1098,10 +1177,10 @@ def wordStackLiveBitmap (registerCount frameSlots wordBits : Nat)
 
 /- Location-derived mirror of the original `write_bitmap`: one membership bit
     per frame slot for the live cut-set variables that the allocator actually
-    placed on the stack, folded with the base-1 `wordStackBitsToNat` whose
-    implicit top bit terminates the word.  Register-resident live values carry
-    no stack root; the original's pancake artifacts pin the allocator to an
-    empty stack live set there, keeping the words pure `2 ^ frameSlots`. -/
+    placed on the stack.  Use Cake's `bits_to_word` implementation and its
+    explicit terminator rather than the legacy base-1 helper above.  These
+    encodings agree for a single bitmap word, but differ at a chunk boundary
+    because the legacy helper adds an implicit terminator to every chunk. -/
 def wordStackLiveBitmapFromLocations (config : WordStackConfig)
     (frameSlots wordBits : Nat) (live : List Nat) : List Nat :=
   let slots := live.filterMap (fun name =>
@@ -1109,7 +1188,7 @@ def wordStackLiveBitmapFromLocations (config : WordStackConfig)
     | some (.stack slot) => some slot
     | _ => none)
   let bits := (List.range frameSlots).map (fun slot => slots.contains slot)
-  wordStackBitmapWords (wordBits - 1) bits
+  CakeAlloc.frameBitmapWords (wordBits - 1) (bits ++ [true])
 
 def wordStackInsertBitmap (state : WordStackBitmapState)
     (bitmap : List Nat) : WordStackBitmapState × Nat :=
@@ -1407,9 +1486,21 @@ def wordStackCompileExpToRegisterNat (config : WordStackConfig)
             let constantRegister :=
               (available.filter (fun register => register != leftRegister)).head?.getD
                 config.addressScratch
-            pure (wordStackJoin leftPrelude
-              (wordStackJoin (.const constantRegister value)
-                (.arith operator target leftRegister constantRegister)))
+            if operator == .sub then
+              if value < 2 ^ 11 then
+                pure (wordStackJoin leftPrelude
+                  (.inst (.arith (.binOp operator target leftRegister (.imm value)))))
+              else
+                pure (wordStackJoin leftPrelude
+                  (wordStackJoin (.const constantRegister value)
+                    (.arith operator target leftRegister constantRegister)))
+            else if value < 2 ^ 11 || value ≥ 2 ^ 64 - 2 ^ 11 then
+              pure (wordStackJoin leftPrelude
+                (.inst (.arith (.binOp operator target leftRegister (.imm value)))))
+            else
+              pure (wordStackJoin leftPrelude
+                (wordStackJoin (.const constantRegister value)
+                  (.arith operator target leftRegister constantRegister)))
         | _ =>
             let (leftPrelude, leftRegister) ← wordStackAtomNat config target left
             let rightTemporary := available.head?.getD config.addressScratch
@@ -1425,7 +1516,18 @@ def wordStackCompileExpToRegisterNat (config : WordStackConfig)
           (wordStackJoin left (.arith operator target target rightTarget)))
   | .shift operator left right => do
       if wordStackExpressionIsAtom left && wordStackExpressionIsAtom right then
-        if operator == .ror then
+        let immediate :=
+          match right with
+          | .const value => decide (value < 64)
+          | _ => false
+        if immediate then
+          let (leftPrelude, leftRegister) ← wordStackAtomNat config target left
+          match right with
+          | .const value =>
+              pure (wordStackJoin leftPrelude
+                (.inst (.arith (.shift operator target leftRegister (.imm value)))))
+          | _ => none
+        else if operator == .ror then
           let destinationRegister :=
             if target == config.scratch then
               (available.find? (fun register => register != config.scratch)).getD
@@ -1649,20 +1751,39 @@ def wordStackCompileLoadNatNested (config : WordStackConfig) (destination : Nat)
 def wordStackCompileSharedNat (config : WordStackConfig)
     (operator : WordMemOp) (destination : Nat) (address : WordExp Nat) :
     Option (StackProg Nat) := do
+  let general : Option (StackProg Nat) := do
+    match address with
+    | .const _ | .var _ | .lookup _ =>
+        let (addressPrelude, addressRegister) ←
+          wordStackAtomNat config config.addressScratch address
+        let body ← wordStackWritePhysicalNat config destination
+          (fun register => .shMem operator register addressRegister)
+        pure (wordStackJoin addressPrelude body)
+    | _ =>
+        let addressPrelude ←
+          wordStackCompileExpToRegisterNat config config.addressScratch
+            (wordStackExpressionTemporaries config config.addressScratch) address
+        let body ← wordStackWritePhysicalNat config destination
+          (fun register => .shMem operator register config.addressScratch)
+        pure (wordStackJoin addressPrelude body)
   match address with
-  | .const _ | .var _ | .lookup _ =>
-      let (addressPrelude, addressRegister) ←
-        wordStackAtomNat config config.addressScratch address
-      let body ← wordStackWritePhysicalNat config destination
-        (fun register => .shMem operator register addressRegister)
-      pure (wordStackJoin addressPrelude body)
-  | _ =>
-      let addressPrelude ←
-        wordStackCompileExpToRegisterNat config config.addressScratch
-          (wordStackExpressionTemporaries config config.addressScratch) address
-      let body ← wordStackWritePhysicalNat config destination
-        (fun register => .shMem operator register config.addressScratch)
-      pure (wordStackJoin addressPrelude body)
+  | .op .add [.var base, .const offset] =>
+      let offsetFits :=
+        match operator with
+        | .load | .store | .load32 | .store32 | .load8 | .store8 =>
+            offset < 2 ^ 11 ||
+              (offset ≥ 2 ^ 64 - 2 ^ 11 && offset < 2 ^ 64)
+        | .load16 | .store16 =>
+            (offset % 2 = 0) &&
+              (offset < 2 ^ 11 ||
+                (offset ≥ 2 ^ 64 - 2 ^ 11 && offset < 2 ^ 64))
+      if offsetFits then
+        match wordStackSharedMemoryOffsetInst config operator destination base offset with
+        | some body => pure body
+        | none => general
+      else
+        general
+  | _ => general
 
 def wordStackCompileExpNat (config : WordStackConfig) (destination : Nat) :
     WordExp Nat → Option (StackProg Nat)
@@ -2363,6 +2484,22 @@ def evalWordStackMachine [NeZero width]
       some (wordStackMachineWriteRegister state destination
         (wordStackMachineShift operator
           (state.registers left) (state.registers right)))
+  | .inst (.arith (.binOp operator destination sourceLeft (.reg sourceRight))) =>
+      some (wordStackMachineWriteRegister state destination
+        (wordStackMachineBinOp operator (state.registers sourceLeft)
+          (state.registers sourceRight)))
+  | .inst (.arith (.binOp operator destination sourceLeft (.imm value))) =>
+      some (wordStackMachineWriteRegister state destination
+        (wordStackMachineBinOp operator (state.registers sourceLeft)
+          (BitVec.ofNat width value)))
+  | .inst (.arith (.shift operator destination sourceLeft (.reg sourceRight))) =>
+      some (wordStackMachineWriteRegister state destination
+        (wordStackMachineShift operator (state.registers sourceLeft)
+          (state.registers sourceRight)))
+  | .inst (.arith (.shift operator destination sourceLeft (.imm value))) =>
+      some (wordStackMachineWriteRegister state destination
+        (wordStackMachineShift operator (state.registers sourceLeft)
+          (BitVec.ofNat width value)))
   | .inst (.arith (.longMul destinationLeft destinationRight sourceLeft sourceRight)) =>
       let left := state.registers sourceLeft
       let right := state.registers sourceRight
@@ -3049,6 +3186,8 @@ theorem evalWordStackMachine_store_preserves_memory [NeZero width]
       some addressValue)
     (hscratch : config.scratch ≠ config.addressScratch)
     (hsafe : wordStackStoreLocationsSafe config sourceLocation addressLocation = true)
+    (hsafeAddress :
+      wordStackMemoryStoreLocationsSafe config sourceLocation addressLocation = true)
     (heval : (wordStackMemoryInst config .store source address).bind
       (evalWordStackMachine state) = some final) :
       final.memory addressValue = sourceValue := by
@@ -3061,7 +3200,8 @@ theorem evalWordStackMachine_store_preserves_memory [NeZero width]
   cases sourceLocation <;> cases addressLocation <;>
     simp [wordStackMemoryInst, wordStackStoreInst, wordStackLocation,
       wordStackOffset, hsource, haddress,
-      wordStackStoreLocationsSafe] at hsafe heval
+      wordStackStoreLocationsSafe, wordStackMemoryStoreLocationsSafe,
+      wordStackStoreAddressRegister] at hsafe hsafeAddress heval
   all_goals
     cases heval
     simp [wordStackMachineValue, wordStackLocation, wordStackOffset,
@@ -3070,7 +3210,7 @@ theorem evalWordStackMachine_store_preserves_memory [NeZero width]
     simp [
       wordStackMachineWriteRegister, 
       wordStackMachineWriteMemory, hsourceValue,
-      haddressValue, hsafe, hsafe']
+      haddressValue, hsafe, hsafeAddress, hsafe']
 
 theorem evalWordStackMachine_shared_load_preserves_value [NeZero width]
     (config : WordStackConfig) (state final : WordStackMachineState width)
@@ -3279,7 +3419,7 @@ def wordToStackProg {α : Type} [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul
       let returnCode ← wordStackReturnCode config returns
       let destinations := returns.map (fun result => result.1) |>.getD []
       let callCode := wordToStackCallNoHandler config.perf target arguments.length
-        config.frameOffset config.scratch (wordStackReturnStackSuffix config destinations)
+        (wordStackCallFrameOffset config) config.scratch (wordStackReturnStackSuffix config destinations)
         returnCode
         config.returnLabel config.entryLabel
       pure (wordStackJoin argumentMoves callCode)
@@ -3290,7 +3430,7 @@ def wordToStackProg {α : Type} [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul
       let _destinations := returns.map (fun result => result.1) |>.getD []
       let handlerCode ← wordToStackProg config body
       let callCode := wordToStackCallWithHandlerInSection config.perf target arguments.length
-        config.frameOffset config.scratch returnCode handlerCode
+        (wordStackCallFrameOffset config) config.scratch returnCode handlerCode
         config.returnLabel config.entryLabel
         (wordStackHandlerLabel config handlerLabel)
         (wordStackHandlerEntryLabel config entryLabel) exception
@@ -3362,7 +3502,7 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
       let argumentMoves ← wordStackMovesToPhysical config arguments config.abiBase
       let returnCode ← wordToStackProgNat config returnProgram
       let callCode := wordToStackCallNoHandler config.perf target arguments.length
-        config.frameOffset config.scratch (wordStackReturnStackSuffix config destinations)
+        (wordStackCallFrameOffset config) config.scratch (wordStackReturnStackSuffix config destinations)
         returnCode
         returnLabel entryLabel
       pure (wordStackJoin argumentMoves callCode)
@@ -3371,7 +3511,7 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
       let argumentMoves ← wordStackMovesToPhysical config arguments config.abiBase
       let handlerCode ← wordToStackProgNat config body
       let callCode := wordToStackCallWithHandlerInSection config.perf target arguments.length
-        config.frameOffset config.scratch .skip handlerCode
+        (wordStackCallFrameOffset config) config.scratch .skip handlerCode
         config.returnLabel config.entryLabel
         (wordStackHandlerLabel config handlerLabel)
         (wordStackHandlerEntryLabel config handlerEntryLabel) exception
@@ -3383,7 +3523,7 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
       let returnCode ← wordToStackProgNat config returnProgram
       let handlerCode ← wordToStackProgNat config body
       let callCode := wordToStackCallWithHandlerInSection config.perf target arguments.length
-        config.frameOffset config.scratch returnCode handlerCode
+        (wordStackCallFrameOffset config) config.scratch returnCode handlerCode
         returnLabel entryLabel
         (wordStackHandlerLabel config handlerLabel)
         (wordStackHandlerEntryLabel config handlerEntryLabel) exception
@@ -3401,7 +3541,7 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
       let argumentMoves ← wordStackMovesToPhysical config direct config.abiBase
       let handlerCode ← wordToStackProgNat config body
       let callCode := wordToStackCallWithHandlerInSectionTarget config.perf target
-        (arguments.length - 1) config.frameOffset config.scratch .skip handlerCode
+        (arguments.length - 1) (wordStackCallFrameOffset config) config.scratch .skip handlerCode
         config.returnLabel config.entryLabel
         (wordStackHandlerLabel config handlerLabel)
         (wordStackHandlerEntryLabel config handlerEntryLabel) exception
@@ -3412,7 +3552,7 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
       let argumentMoves ← wordStackMovesToPhysical config direct config.abiBase
       let returnCode ← wordToStackProgNat config returnProgram
       let callCode := wordToStackCallNoHandlerTarget config.perf target
-        (arguments.length - 1) config.frameOffset config.scratch
+        (arguments.length - 1) (wordStackCallFrameOffset config) config.scratch
         (wordStackReturnStackSuffix config _destinations) returnCode
         returnLabel entryLabel
       pure (wordStackJoin argumentMoves (wordStackJoin targetLoad callCode))
@@ -3424,7 +3564,7 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
       let returnCode ← wordToStackProgNat config returnProgram
       let handlerCode ← wordToStackProgNat config body
       let callCode := wordToStackCallWithHandlerInSectionTarget config.perf target
-        (arguments.length - 1) config.frameOffset config.scratch returnCode handlerCode
+        (arguments.length - 1) (wordStackCallFrameOffset config) config.scratch returnCode handlerCode
         returnLabel entryLabel
         (wordStackHandlerLabel config handlerLabel)
         (wordStackHandlerEntryLabel config handlerEntryLabel) exception
@@ -3540,7 +3680,6 @@ def wordToStackProgNatWithBitmapBuilder [BEq Nat]
         (fun program => (program, state))
   | .call returns (some target) arguments
       (some (exception, body, handlerLabel, handlerEntryLabel)) => do
-      let argumentMoves ← wordStackMovesToPhysical config arguments config.abiBase
       let (liveCode, state) := wordStackCallLiveBitmap config bitmapBuilder
         bitmapRegister frameSlots state returns
       let (returnCode, state) ←
@@ -3553,24 +3692,23 @@ def wordToStackProgNatWithBitmapBuilder [BEq Nat]
       let (handlerCode, state) ← wordToStackProgNatWithBitmapBuilder config
         bitmapBuilder registerCount bitmapRegister frameSlots wordBits storeConstsStub state body
       let callCode := wordToStackCallWithHandlerInSection config.perf target arguments.length
-        config.frameOffset config.scratch returnCode handlerCode
+        (wordStackCallFrameOffset config) config.scratch returnCode handlerCode
         (wordStackReturnLabel config returns) (wordStackEntryLabel config returns)
         (wordStackHandlerLabel config handlerLabel)
         (wordStackHandlerEntryLabel config handlerEntryLabel) exception
-      pure (wordStackJoin argumentMoves (wordStackJoin liveCode callCode), state)
+      pure (wordStackJoin liveCode callCode, state)
   | .call (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))
       (some target) arguments none => do
-      let argumentMoves ← wordStackMovesToPhysical config arguments config.abiBase
       let (liveCode, state) := wordStackCallLiveBitmap config bitmapBuilder
         bitmapRegister frameSlots state
         (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))
       let (returnCode, state) ← wordToStackProgNatWithBitmapBuilder config bitmapBuilder
         registerCount bitmapRegister frameSlots wordBits storeConstsStub state returnProgram
       let callCode := wordToStackCallNoHandler config.perf target arguments.length
-        config.frameOffset config.scratch (wordStackReturnStackSuffix config destinations)
+        (wordStackCallFrameOffset config) config.scratch (wordStackReturnStackSuffix config destinations)
         returnCode
         returnLabel entryLabel
-      pure (wordStackJoin argumentMoves (wordStackJoin liveCode callCode), state)
+      pure (wordStackJoin liveCode callCode, state)
   | .alloc _ (_, live) =>
       let (program, state) := wordStackAllocWithBitmapBuilder config bitmapRegister
         frameSlots state live bitmapBuilder
@@ -3768,58 +3906,48 @@ theorem wordToStackProgNatWithBitmapBuilder_preserves_length
                   rcases returnData with
                     ⟨destinations, cutsets, returnProgram, returnLabel, entryLabel⟩
                   simp only [wordToStackProgNatWithBitmapBuilder] at hresult
-                  cases hargs : wordStackMovesToPhysical config arguments config.abiBase with
-                  | none =>
-                      rw [hargs] at hresult
-                      simp at hresult
-                  | some argumentMoves =>
-                      cases hlive : wordStackCallLiveBitmap config bitmapBuilder
-                        bitmapRegister frameSlots state
-                        (some (destinations, cutsets, returnProgram, returnLabel, entryLabel)) with
-                      | mk liveCode liveState =>
-                          simp [hargs, hlive] at hresult
-                          cases hreturn : wordToStackProgNatWithBitmapBuilder
-                            config bitmapBuilder registerCount bitmapRegister frameSlots wordBits
-                            storeConstsStub liveState returnProgram with
-                          | none =>
-                              rw [hreturn] at hresult
-                              simp at hresult
-                          | some returnPair =>
-                              cases returnPair with
-                              | mk returnCode finalState =>
-                                  have hliveInv : liveState.length = liveState.data.length := by
-                                    have hlive0 := wordStackCallLiveBitmap_length config bitmapBuilder
-                                      bitmapRegister frameSlots state
-                                      (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))
-                                      hstate
-                                    have hliveState : (wordStackCallLiveBitmap config bitmapBuilder
-                                      bitmapRegister frameSlots state
-                                      (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))).snd =
-                                      liveState := by
-                                      simpa using congrArg Prod.snd hlive
-                                    rw [← hliveState]
-                                    exact hlive0
-                                  have hreturnInv := wordToStackProgNatWithBitmapBuilder_preserves_length
-                                    config bitmapBuilder registerCount bitmapRegister frameSlots wordBits
-                                    storeConstsStub liveState returnProgram hliveInv returnCode finalState
-                                    hreturn
-                                  simp [hreturn] at hresult
-                                  rcases hresult with ⟨_, rfl, rfl⟩
-                                  exact hreturnInv
+                  cases hlive : wordStackCallLiveBitmap config bitmapBuilder
+                    bitmapRegister frameSlots state
+                    (some (destinations, cutsets, returnProgram, returnLabel, entryLabel)) with
+                  | mk liveCode liveState =>
+                      simp [hlive] at hresult
+                      cases hreturn : wordToStackProgNatWithBitmapBuilder
+                        config bitmapBuilder registerCount bitmapRegister frameSlots wordBits
+                        storeConstsStub liveState returnProgram with
+                      | none =>
+                          rw [hreturn] at hresult
+                          simp at hresult
+                      | some returnPair =>
+                          cases returnPair with
+                          | mk returnCode finalState =>
+                              have hliveInv : liveState.length = liveState.data.length := by
+                                have hlive0 := wordStackCallLiveBitmap_length config bitmapBuilder
+                                  bitmapRegister frameSlots state
+                                  (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))
+                                  hstate
+                                have hliveState : (wordStackCallLiveBitmap config bitmapBuilder
+                                  bitmapRegister frameSlots state
+                                  (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))).snd =
+                                  liveState := by
+                                  simpa using congrArg Prod.snd hlive
+                                rw [← hliveState]
+                                exact hlive0
+                              have hreturnInv := wordToStackProgNatWithBitmapBuilder_preserves_length
+                                config bitmapBuilder registerCount bitmapRegister frameSlots wordBits
+                                storeConstsStub liveState returnProgram hliveInv returnCode finalState
+                                hreturn
+                              simp [hreturn] at hresult
+                              rcases hresult with ⟨_, rfl, rfl⟩
+                              exact hreturnInv
           | some handlerData =>
               rcases handlerData with ⟨exception, body, handlerLabel, entryLabel⟩
               simp only [wordToStackProgNatWithBitmapBuilder] at hresult
-              cases hargs : wordStackMovesToPhysical config arguments config.abiBase with
+              cases returns with
               | none =>
-                  rw [hargs] at hresult
-                  simp at hresult
-              | some argumentMoves =>
-                  cases returns with
-                  | none =>
                       cases hlive : wordStackCallLiveBitmap config bitmapBuilder
                         bitmapRegister frameSlots state none with
                       | mk liveCode liveState =>
-                          simp [hargs, hlive] at hresult
+                          simp [hlive] at hresult
                           cases hhandler : wordToStackProgNatWithBitmapBuilder
                             config bitmapBuilder registerCount bitmapRegister frameSlots wordBits
                             storeConstsStub liveState body with
@@ -3844,14 +3972,14 @@ theorem wordToStackProgNatWithBitmapBuilder_preserves_length
                                   simp [hhandler] at hresult
                                   rcases hresult with ⟨_, rfl, rfl⟩
                                   exact hhandlerInv
-                  | some returnData =>
+              | some returnData =>
                       rcases returnData with
                         ⟨destinations, cutsets, returnProgram, returnLabel, entryLabel⟩
                       cases hlive : wordStackCallLiveBitmap config bitmapBuilder
                         bitmapRegister frameSlots state
                         (some (destinations, cutsets, returnProgram, returnLabel, entryLabel)) with
                       | mk liveCode liveState =>
-                          simp [hargs, hlive] at hresult
+                          simp [hlive] at hresult
                           cases hreturn : wordToStackProgNatWithBitmapBuilder
                             config bitmapBuilder registerCount bitmapRegister frameSlots wordBits
                             storeConstsStub liveState returnProgram with
@@ -4176,7 +4304,6 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
          `loop_to_word$comp` adds the link slot only to tail calls
          (`loop_to_wordScript.sml:131`); ordinary calls therefore begin at
          the value ABI base. -/
-      let argumentMoves ← wordStackMovesToPhysicalValueArgs config arguments config.abiBase
       let (liveCode, state) := wordStackCallLiveBitmapWord config bitmapBuilder
         bitmapRegister frameSlots state
         (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))
@@ -4186,77 +4313,68 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
       let (handlerCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
         registerCount bitmapRegister frameSlots wordBits storeConstsStub state body
       let callCode := wordToStackCallWithHandlerInSectionAtRegisterCount config.perf target
-        arguments.length registerCount config.frameOffset config.scratch returnCode handlerCode
+        arguments.length registerCount (wordStackCallFrameOffset config) config.scratch returnCode handlerCode
         returnLabel entryLabel
         (wordStackHandlerLabel config handlerLabel)
         (wordStackHandlerEntryLabel config handlerEntryLabel) exception
-      pure (wordStackJoin argumentMoves (wordStackJoin liveCode callCode), state)
+      pure (wordStackJoin liveCode callCode, state)
   | .call (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))
       (some target) arguments none => do
-      let argumentMoves ← wordStackMovesToPhysicalValueArgs config arguments config.abiBase
       let (liveCode, state) := wordStackCallLiveBitmapWord config bitmapBuilder
         bitmapRegister frameSlots state
         (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))
       let (returnCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
         registerCount bitmapRegister frameSlots wordBits storeConstsStub state returnProgram
       let callCode := wordToStackCallNoHandler config.perf target arguments.length
-        config.frameOffset config.scratch (wordStackReturnStackSuffix config destinations)
+        (wordStackCallFrameOffset config) config.scratch (wordStackReturnStackSuffix config destinations)
         returnCode returnLabel entryLabel
-      pure (wordStackJoin argumentMoves (wordStackJoin liveCode callCode), state)
+      pure (wordStackJoin liveCode callCode, state)
   | .call none (some target) arguments none => do
-      let argumentMoves ← wordStackMovesToPhysicalRegisterArgs config arguments config.callAbiBase
       let callCode := .call none (.label target) none
       let freeCount := wordStackSourceTailCallFreeCount config arguments.length
-      pure (wordStackJoin argumentMoves (stackFreeIfNonzero freeCount callCode), state)
+      pure (stackFreeIfNonzero freeCount callCode, state)
   | .call none (some target) arguments
       (some (exception, body, handlerLabel, handlerEntryLabel)) => do
-      let argumentMoves ← wordStackMovesToPhysicalRegisterArgs config arguments config.callAbiBase
       let (handlerCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
         registerCount bitmapRegister frameSlots wordBits storeConstsStub state body
       let callCode := wordToStackCallWithHandlerInSection config.perf target arguments.length
-        config.frameOffset config.scratch .skip handlerCode
+        (wordStackCallFrameOffset config) config.scratch .skip handlerCode
         config.returnLabel config.entryLabel
         (wordStackHandlerLabel config handlerLabel)
         (wordStackHandlerEntryLabel config handlerEntryLabel) exception
-      pure (wordStackJoin argumentMoves callCode, state)
+      pure (callCode, state)
   | .call none none arguments none => do
-      let (direct, target, targetLoad) ← wordStackIndirectCallNat config arguments
-      let argumentMoves ← wordStackMovesToPhysicalRegisterArgs config direct config.abiBase
+      let (_direct, target, targetLoad) ← wordStackIndirectCallNat config arguments
       let callCode := .call none target none
       let freeCount := wordStackCallFreeCount config (arguments.length - 1)
-      pure (wordStackJoin argumentMoves
-        (wordStackJoin targetLoad (stackFreeIfNonzero freeCount callCode)), state)
+      pure (wordStackJoin targetLoad (stackFreeIfNonzero freeCount callCode), state)
   | .call none none arguments
       (some (exception, body, handlerLabel, handlerEntryLabel)) => do
-      let (direct, target, targetLoad) ← wordStackIndirectCallNat config arguments
-      let argumentMoves ← wordStackMovesToPhysicalRegisterArgs config direct config.abiBase
+      let (_direct, target, targetLoad) ← wordStackIndirectCallNat config arguments
       let (handlerCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
         registerCount bitmapRegister frameSlots wordBits storeConstsStub state body
       let callCode := wordToStackCallWithHandlerInSectionTarget config.perf target
-        (arguments.length - 1) config.frameOffset config.scratch .skip handlerCode
+        (arguments.length - 1) (wordStackCallFrameOffset config) config.scratch .skip handlerCode
         config.returnLabel config.entryLabel
         (wordStackHandlerLabel config handlerLabel)
         (wordStackHandlerEntryLabel config handlerEntryLabel) exception
-      pure (wordStackJoin argumentMoves (wordStackJoin targetLoad callCode), state)
+      pure (wordStackJoin targetLoad callCode, state)
   | .call (some (destinations, cutsets, returnProgram, returnLabel, entryLabel)) none
       arguments none => do
-      let (direct, target, targetLoad) ← wordStackIndirectCallNat config arguments
-      let argumentMoves ← wordStackMovesToPhysicalValueArgs config direct config.abiBase
+      let (_direct, target, targetLoad) ← wordStackIndirectCallNat config arguments
       let (liveCode, state) := wordStackCallLiveBitmapWord config bitmapBuilder
         bitmapRegister frameSlots state
         (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))
       let (returnCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
         registerCount bitmapRegister frameSlots wordBits storeConstsStub state returnProgram
       let callCode := wordToStackCallNoHandlerTarget config.perf target
-        (arguments.length - 1) config.frameOffset config.scratch
+        (arguments.length - 1) (wordStackCallFrameOffset config) config.scratch
         (wordStackReturnStackSuffix config destinations) returnCode
         returnLabel entryLabel
-      pure (wordStackJoin argumentMoves
-        (wordStackJoin targetLoad (wordStackJoin liveCode callCode)), state)
+      pure (wordStackJoin targetLoad (wordStackJoin liveCode callCode), state)
   | .call (some (destinations, cutsets, returnProgram, returnLabel, entryLabel)) none
       arguments (some (exception, body, handlerLabel, handlerEntryLabel)) => do
-      let (direct, target, targetLoad) ← wordStackIndirectCallNat config arguments
-      let argumentMoves ← wordStackMovesToPhysicalValueArgs config direct config.abiBase
+      let (_direct, target, targetLoad) ← wordStackIndirectCallNat config arguments
       let (liveCode, state) := wordStackCallLiveBitmapWord config bitmapBuilder
         bitmapRegister frameSlots state
         (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))
@@ -4265,12 +4383,11 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
       let (handlerCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
         registerCount bitmapRegister frameSlots wordBits storeConstsStub state body
       let callCode := wordToStackCallWithHandlerInSectionTarget config.perf target
-        (arguments.length - 1) config.frameOffset config.scratch returnCode handlerCode
+        (arguments.length - 1) (wordStackCallFrameOffset config) config.scratch returnCode handlerCode
         returnLabel entryLabel
         (wordStackHandlerLabel config handlerLabel)
         (wordStackHandlerEntryLabel config handlerEntryLabel) exception
-      pure (wordStackJoin argumentMoves
-        (wordStackJoin targetLoad (wordStackJoin liveCode callCode)), state)
+      pure (wordStackJoin targetLoad (wordStackJoin liveCode callCode), state)
   | .alloc _ (_, live) =>
       let (code, state) := wordStackAllocWithBitmapBuilder config bitmapRegister frameSlots
         state live bitmapBuilder

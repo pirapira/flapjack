@@ -65,6 +65,8 @@ def originalCompFuncSkip : WordProg Nat := .skip
 def originalCompFuncAssign : WordProg Nat := .assign 4 (.const 3)
 def originalCompFuncSeqAssign : WordProg Nat :=
     .seq (.assign 4 (.const 3)) (.assign 6 (.var 4))
+def originalCompFuncUnboundVar : WordProg Nat :=
+    .seq (.assign 2 (.const 3)) (.assign 2 (.var 0))
 /-! `loop_to_word$compile` lowers the two-result AddCarry primitive through
     Cake's four-register scratch sequence.  These values are the direct
     source-shaped result for a context that maps source slots to physical
@@ -232,6 +234,9 @@ example : sameNatSet (mkNewCutset [(3, 6)] [3, 1, 3, 2])
 #guard sameWordProg (loopToWordCompFunc 7 [10]
     (.seq (.assign 11 (.const 3)) (.assign 12 (.var 11)) : LoopProg Nat))
     originalCompFuncSeqAssign == true
+#guard sameWordProg (loopToWordCompFunc 7 []
+    (.seq (.assign 2 (.const 3)) (.assign 2 (.var 1)) : LoopProg Nat))
+    originalCompFuncUnboundVar == true
 #guard sameWordCode (loopToWordCompileProg
     ([] : List (Nat × List Nat × LoopProg Nat))) originalCompileProgEmpty == true
 #guard sameWordCode (loopToWordCompileProg

@@ -74,7 +74,7 @@ def leanCompileCallWithHandler : LoopProg Nat :=
 /-- A handler-less source call still carries Cake's default raise handler. -/
 def handlerlessCallCarriesRaiseHandler : Bool :=
   match leanCompileCallNoHandler with
-  | .seq _ (.call _ (some 3) _ (some (5, .raise 5, .skip, []))) => true
+  | .seq _ (.seq (.call _ (some 3) _ (some (5, .raise 5, .skip, []))) .skip) => true
   | _ => false
 
 /-! Cake's `rt_vars` maps call return source variables through `ctxt.vars`,
@@ -83,7 +83,7 @@ return slot `9` is absent from this probe context, so the HOL equation
 requires the fallback destination `6`, not the source slot itself. -/
 def callReturnDestinationMappingMatches : Bool :=
   match leanCompileCallNoHandler with
-  | .seq _ (.call (some ([6], [])) (some 3) _ _) => true
+  | .seq _ (.seq (.call (some ([6], [])) (some 3) _ _) .skip) => true
   | _ => false
 
 def leanCompileCallMappedReturn : LoopProg Nat :=
@@ -91,13 +91,13 @@ def leanCompileCallMappedReturn : LoopProg Nat :=
 
 def callReturnSourceVariableMaps : Bool :=
   match leanCompileCallMappedReturn with
-  | .seq _ (.call (some ([5], [])) (some 3) _ _) => true
+  | .seq _ (.seq (.call (some ([5], [])) (some 3) _ _) .skip) => true
   | _ => false
 
 /-- A call that names an exception handler does emit an `rt2`. -/
 def handledCallCarriesRaiseHandler : Bool :=
   match leanCompileCallWithHandler with
-  | .seq _ (.call _ (some 3) _ (some _)) => true
+  | .seq _ (.seq (.call _ (some 3) _ (some _)) .skip) => true
   | _ => false
 
 #eval leanCompileCallNoHandler
@@ -180,6 +180,47 @@ def shMemMissingLookupSkips : Bool :=
   | _ => false
 
 #guard shMemMissingLookupSkips
+
+/- Cake's `StoreGlob` equation uses `nested_seq (p ++ [SetGlobal ...])`, so
+   even a side-effect-free initializer ends with the canonical trailing Skip. -/
+def storeGlobalNestedSeqMatches : Bool :=
+  match compileCrepToLoop compileContext [] (.storeGlob 9 (.const 7)) with
+  | .seq (.setGlobal 9 (.const 7)) .skip => true
+  | _ => false
+
+#guard storeGlobalNestedSeqMatches
+
+def storeNestedSeqMatches : Bool :=
+  match compileCrepToLoop compileContext [] (.store (.const 9) (.const 7)) with
+  | .seq (.assign 1 (.const 7))
+      (.seq (.store (.const 9) 1) .skip) => true
+  | _ => false
+
+def store32NestedSeqMatches : Bool :=
+  match compileCrepToLoop compileContext [] (.store32 (.const 9) (.const 7)) with
+  | .seq (.assign 1 (.const 9))
+      (.seq (.assign 2 (.const 7))
+        (.seq (.store32 1 2) .skip)) => true
+  | _ => false
+
+def ifNestedSeqMatches : Bool :=
+  match compileCrepToLoop compileContext []
+      (.ite (.const 1) .skip .skip) with
+  | .seq (.assign 1 (.const 1))
+      (.seq (.ite .notEqual 1 (.imm 0) .skip .skip []) .skip) => true
+  | _ => false
+
+def callNestedSeqMatches : Bool :=
+  match leanCompileCallNoHandler with
+  | .seq (.assign 5 (.const 3))
+      (.seq (.call (some ([6], [])) (some 3) [5]
+        (some (5, .raise 5, .skip, []))) .skip) => true
+  | _ => false
+
+#guard storeNestedSeqMatches
+#guard store32NestedSeqMatches
+#guard ifNestedSeqMatches
+#guard callNestedSeqMatches
 
 /- Cake's `Primitive` equation maps both destination and argument slots through
    `ctxt.vars`; leaving the source numbers untouched shifts every subsequent

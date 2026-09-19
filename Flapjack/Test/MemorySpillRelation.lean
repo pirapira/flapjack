@@ -140,11 +140,22 @@ example :
           simpa [memorySpillConfig, wordStackLocation, lookupNatInfo] using
             hlocation.symm
         subst location
-        decide
+        simp [memorySpillConfig]
       · simp [memorySpillValues] at hvalue
-  · simp [memorySpillConfig, memorySpillState, wordStackMemoryInst,
-      wordStackStoreInst, wordStackLocation, wordStackOffset,
-      evalWordStackMachine, wordStackMachineWriteRegister,
-      wordStackMachineWriteMemory, lookupNatInfo]
+  · exact by
+      intro name value location hvalue hlocation
+      by_cases hother : name = 3
+      · subst name
+        simp [memorySpillValues] at hvalue
+        subst value
+        have hlocation' : location = .register 6 := by
+          simpa [memorySpillConfig, wordStackLocation, lookupNatInfo] using
+            hlocation.symm
+        subst location
+        simp [memorySpillConfig, wordStackStoreAddressRegister]
+      · simp [memorySpillValues] at hvalue
+  · simp [memorySpillConfig, wordStackMemoryInst, wordStackStoreInst,
+      wordStackLocation, wordStackOffset, evalWordStackMachine,
+      Option.bind, Option.getD, lookupNatInfo]
 
 end Flapjack.RiscV

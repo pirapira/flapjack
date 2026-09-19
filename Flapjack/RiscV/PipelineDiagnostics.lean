@@ -331,6 +331,7 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordCheckedA
                  twelve-register value used by the generic RISC-V path. -/
               abiRegisterCount := RiscV.CakeRegAlloc.cakeRiscVRegisterCount
               abiFrameSlots := frameSlots
+              frameOffset := if frameSlots = 0 then 0 else frameSlots + 1
               sectionId := label
               handlerLabel := label }
           let localState : RiscV.WordStackBitmapState :=
@@ -442,6 +443,19 @@ structure SourceRiscVRuntimeImage (width : Nat) where
       original CakeML backend emits in its startup frame. -/
   ffiNames : List String
 
+/-! FFI discovery must observe the same Word simplification boundary as the
+    emitted code.  In particular, Cake's `const_fp` removes a branch whose
+    comparison is already constant before `export_riscv` collects FFI names.
+    The source-shaped `pipeline.word` is intentionally earlier than that
+    pass, so applying the faithful pre-allocation Word sequence here avoids
+    registering stubs for dead constant branches. -/
+def wordFfiDiscoveryBody [NeZero width]
+    (body : WordProg (RiscV.Word width)) : WordProg (RiscV.Word width) :=
+  RiscV.wordRemoveUnreachable (wordProgDCE
+    (RiscV.wordInstSelectProgramFrom
+      (RiscV.wordFuseConditionsAndFold
+        (RiscV.wordConstFp (RiscV.wordFlattenProgramFrom body)))))
+
 /-! Checked sibling of `compileFlapjackRiscVViaStack`.  The historical
     `Option` entrypoint remains available for compatibility; this form makes
     a failed Word section distinguishable from a later StackRemove/Lab/RISC-V
@@ -506,7 +520,7 @@ def compileFlapjackRiscVSourceBytesChecked [NeZero width]
               let discoveredNames :=
                 (pipeline.word.flatMap
                   (fun entry : Nat × List Nat × WordProg (RiscV.Word width) =>
-                    RiscV.wordProgFfiNames (RiscV.wordRemoveUnreachable (wordProgDCE entry.2.2)))).eraseDups
+                    RiscV.wordProgFfiNames (wordFfiDiscoveryBody entry.2.2))).eraseDups
               let discoveredServices := discoveredNames.zip (List.range discoveredNames.length)
               let services := services ++ discoveredServices
               let identityResult :
@@ -564,7 +578,7 @@ def compileFlapjackRiscVSourceImageChecked [NeZero width]
               let discoveredNames :=
                 (pipeline.word.flatMap
                   (fun entry : Nat × List Nat × WordProg (RiscV.Word width) =>
-                    RiscV.wordProgFfiNames (RiscV.wordRemoveUnreachable (wordProgDCE entry.2.2)))).eraseDups
+                    RiscV.wordProgFfiNames (wordFfiDiscoveryBody entry.2.2))).eraseDups
               let discoveredServices := discoveredNames.zip (List.range discoveredNames.length)
               let services := services ++ discoveredServices
               match pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked pipeline.loop with
@@ -613,7 +627,7 @@ def compileFlapjackRiscVSourceRuntimeImageChecked [NeZero width]
               let discoveredNames :=
                 (discoveryWords.flatMap
                   (fun entry : Nat × Nat × WordProg (RiscV.Word width) =>
-                    RiscV.wordProgFfiNames (RiscV.wordRemoveUnreachable (wordProgDCE entry.2.2)))).eraseDups
+                    RiscV.wordProgFfiNames (wordFfiDiscoveryBody entry.2.2))).eraseDups
               let discoveredServices := discoveredNames.zip (List.range discoveredNames.length)
               let services := services ++ discoveredServices
               match pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordChecked

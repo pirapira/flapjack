@@ -65,6 +65,17 @@ def locationBitmapExact : Bool :=
 
 #guard locationBitmapExact
 
+/- At 66 slots the location-derived path crosses the 63-bit bitmap chunk
+   boundary.  Cake appends one explicit terminator before splitting; the
+   legacy base-1 helper would encode the first chunk as 3 * 2^63 instead. -/
+def locationBitmapChunkBoundaryExact : Bool :=
+  let config : WordStackConfig :=
+    { locations := [], scratch := 31, stackBase := 0 }
+  wordStackLiveBitmapFromLocations config 66 64 [] ==
+    [2 ^ 63, 8]
+
+#guard locationBitmapChunkBoundaryExact
+
 def temporaryNumberingExact : Bool :=
   limitVar 0 == 5 && limitVar 26 == 29
 
@@ -79,6 +90,8 @@ def runChecks : IO Bool := do
         bitmapEncodingExact),
       ("location-derived frame bitmaps match Cake write_bitmap outputs",
         locationBitmapExact),
+      ("location-derived frame bitmap chunk boundary matches Cake",
+        locationBitmapChunkBoundaryExact),
       ("limit_var preserves the SSA temporary numbering base",
         temporaryNumberingExact) ]
   let mut ok := true

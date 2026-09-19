@@ -246,7 +246,7 @@ example :
     pipelineFunctionInfos, pipelineLoopFunctions, pipelineLoopFunctionsAux,
     pipelineWordFunctions, pipelinePrependInitializers, pipelineInlineNames,
     compileToCrep, compileFunctionsSource, compileFunDeclSource, compileParamVars,
-    compileProg, crepInlineTopRecursiveByNames, crepInlineTopRecursive,
+    crepInlineTopRecursiveByNames, crepInlineTopRecursive,
     crepInlineFunctionsRecursive, crepInlineActiveNames,
     crepSimpFunctions]
 

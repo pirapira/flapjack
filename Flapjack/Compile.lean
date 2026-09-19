@@ -289,6 +289,19 @@ def compileProg [BEq α] [OfNat α 0] [Add α]
 
 termination_by structural program
 
+/-! Source-named port of CakeML Pancake's active `comp_func_def`
+    (`pan_to_crepScript.sml:337`).  Cake derives the context's `vmax` from
+    the flattened parameter shape, then invokes `compile`; keeping that
+    construction explicit prevents callers from silently using the legacy
+    next-free-slot convention. -/
+def panToCrepCompFunc [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (params : List (VarName × Shape))
+    (body : Prog α) : CrepProg α :=
+  let shapes := params.map Prod.snd
+  let vmax := Shape.shapeSize (.comb shapes) - 1
+  compileProg
+    { context with vars := panToCrepMakeVmap params, maxVar := vmax } body
+
 def compileFunDecl [BEq α] [OfNat α 0] [Add α]
     (context : CompileContext α) (declaration : FunDecl α) : CompiledFunction α :=
   let (_vars, params, maxVar) := compileParamVars declaration.params 0
@@ -324,11 +337,9 @@ def compileToCrepe [BEq α] [OfNat α 0] [Add α]
     the source temporary numbering. -/
 def compileFunDeclSource [BEq α] [OfNat α 0] [Add α]
     (context : CompileContext α) (declaration : FunDecl α) : CompiledFunction α :=
-  let (_vars, params, maxVar) := compileParamVars declaration.params 0
-  let functionContext :=
-    { context with vars := panToCrepMakeVmap declaration.params, maxVar := maxVar - 1 }
+  let (_vars, params, _maxVar) := compileParamVars declaration.params 0
   { name := declaration.name, params := params,
-    body := compileProg functionContext declaration.body,
+    body := panToCrepCompFunc context declaration.params declaration.body,
     returnShape := declaration.returnShape }
 
 def compileFunctionsSource [BEq α] [OfNat α 0] [Add α]

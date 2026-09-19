@@ -6,6 +6,14 @@
   },
   "fixtures": [
     {
+      "path": "Flapjack/Test/OriginalPancake/f01189_ffi_stub_order.pnk",
+      "source_reference": "Minimized f01189 FFI/relocation witness: Cake indexes FFI calls by first appearance but exports the FFI stub prefix in reverse order, so both stub order and JAL relocations must agree.",
+      "cake_sha256": "c6cfbbe718e625f944924ccec9fbf0bb73f223564850f97e971b09e4c552ce6e",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.2"
+      ]
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/f00068_allocator_return.pnk",
       "source_reference": "Reduced f00068 allocator witness: Cake's SSA option_lookup maps an unmapped fixed-protocol source to ABI register 0, so the allocator retains sub1's result and emits the ABI 0 move.",
       "cake_sha256": "d06482093d272aa5c327208a792b5d140de2f217b5d255f852141150d29d6cfc",

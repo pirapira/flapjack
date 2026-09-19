@@ -212,7 +212,8 @@ example :
       progOk .tailLast true false "" := by
   simp [checkProg, checkProg.checkCallArgs,
     staticOk, staticBind,
-    functionArgumentsMatch, checkerCallContext, checkerContext, lookupInfo]
+    checkFunctionName, functionArgumentsMatch, checkerCallContext, checkerContext,
+    lookupInfo]
 
 example :
     checkProg (α := Nat) checkerCallContext
@@ -220,28 +221,32 @@ example :
       progOk .otherLast false false "" := by
   simp [checkProg, checkProg.checkCallArgs, checkCallDestination,
     staticOk, staticBind,
-    functionArgumentsMatch, checkerCallContext, checkerContext, lookupInfo]
+    checkFunctionName, functionArgumentsMatch, checkerCallContext, checkerContext,
+    lookupInfo]
 
 example :
     checkProg (α := Nat) checkerCallContext
       (.call (some (some (.local, "x"), none)) "f" []) =
       progOk .otherLast false false "" := by
   simp [checkProg, checkProg.checkCallArgs, checkCallDestination,
-    staticOk, staticBind, functionArgumentsMatch, checkerCallContext, checkerContext,
-    lookupInfo, shapedBasedMatchesShape, shapedBasedFromShape, shapedBasedSameShape]
+    staticOk, staticBind, checkFunctionName, functionArgumentsMatch,
+    checkerCallContext, checkerContext, lookupInfo, shapedBasedMatchesShape,
+    shapedBasedFromShape, shapedBasedSameShape]
 
 example :
-    checkProg (α := Nat) checkerCallContext (.call none "missing" []) =
-      staticError (.scope "unknown function: missing") := by
-  simp [checkProg, checkerCallContext, checkerContext, lookupInfo, staticError]
+  staticResultErrorMessage
+      (checkProg (α := Nat) checkerContext (.call none "missing" [])) =
+    some "function missing is not in scope in top-level declaration\n" := by
+  decide +kernel
 
 example :
     checkProg (α := Nat) checkerArgContext
       (.call none "f" [.const 1]) =
       progOk .tailLast true false "" := by
   simp [checkProg, checkProg.checkCallArgs, checkExp, staticOk, staticBind,
-    functionArgumentsMatch, shapedBasedMatchesShape, shapedBasedFromShape,
-    shapedBasedSameShape, checkerArgContext, checkerContext, lookupInfo]
+    checkFunctionName, functionArgumentsMatch, shapedBasedMatchesShape,
+    shapedBasedFromShape, shapedBasedSameShape, checkerArgContext, checkerContext,
+    lookupInfo]
 
 example :
     staticResultOk (checkProg (α := Nat) checkerPrimitiveContext

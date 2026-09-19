@@ -225,6 +225,16 @@ def reachabilityContext : Context :=
   "function f is redeclared in initialisation of global variable init\n"
 #guard getRedecMessage .struct "" "Pair" (.structScope "Pair" "left") ==
   "struct name Pair is redeclared in declaration of field left in named struct Pair\n"
+#guard
+  staticResultErrorMessage
+      (checkFunctionName { reachabilityContext with location := "at: " } "missing") ==
+    some "at: function missing is not in scope in function f\n"
+#guard
+  staticResultErrorMessage
+      (checkFunctionName { reachabilityContext with location := "at: " }
+        "__add_with_carry__") ==
+    some ("at: function __add_with_carry__ is not in scope in function f\n" ++
+      "  note: __add_with_carry__ is a built-in primitive only available in declaration or assignment RHS positions\n")
 #guard (reachedWarnable (.annot "" "" : Prog Nat) reachabilityContext).1.isNone
 #guard (reachedWarnable (.tick : Prog Nat) reachabilityContext).1.isNone
 #guard (reachedWarnable (.skip : Prog Nat)

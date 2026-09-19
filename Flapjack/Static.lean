@@ -695,6 +695,19 @@ def functionArgumentsMatch (context : StructContext) :
         functionArgumentsMatch context parameters arguments
   | _, _ => false
 
+/-! Source-shaped port of CakeML's `check_fun_name_def`
+    (`panStaticScript.sml:616-621`).  In particular, an unknown function uses
+    the normal scope diagnostic and the primitive hint, rather than a separate
+    implementation-specific error string. -/
+def checkFunctionName [BEq String] (context : Context) (name : FunName) :
+    StaticResult FuncInfo :=
+  match lookupInfo name context.functions with
+  | none =>
+      staticError (.scope
+        (addPrimitiveHint name
+          (staticScopeMessage .function context.location name context.scope)))
+  | some info => staticOk info
+
 def checkPrimitiveArgs [BEq String] (_context : Context) (operator : PrimOp)
     (arguments : List ShapedBased) : StaticResult ShapedBased :=
   match operator with
@@ -929,11 +942,9 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
       if context.inLoop then progOk .contLast false true context.location
       else staticError (.general "continue used outside a loop")
   | .call info function arguments =>
-      match lookupInfo function context.functions with
-      | none => staticError (.scope ("unknown function: " ++ function))
-      | some functionInfo =>
-          let returnShape := functionInfo.returnShape
-          staticBind (checkCallArgs context arguments) (fun argumentResult =>
+      staticBind (checkFunctionName context function) (fun functionInfo =>
+        let returnShape := functionInfo.returnShape
+        staticBind (checkCallArgs context arguments) (fun argumentResult =>
             if !functionArgumentsMatch context.structs functionInfo.params argumentResult.shapedBased then
               staticError (.shape "function argument shapes do not match")
             else
@@ -981,16 +992,14 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
                         let handlerContext := { context with locals :=
                           (handlerVariable, { shapedBased := handlerShaped }) :: context.locals }
                         staticBind (checkProg handlerContext handlerProgram) (fun _ =>
-                          checkCallDestination context returnShape destination))
+                          checkCallDestination context returnShape destination)))
   | .decCall name shape function arguments body =>
       staticPrependWarning (staticRedeclarationWarning context name) <|
         if !isWfShape context.structs shape then
           staticError (.shape "declaration-call result has an invalid shape")
         else
-          match lookupInfo function context.functions with
-          | none => staticError (.scope ("unknown function: " ++ function))
-          | some functionInfo =>
-              staticBind (checkCallArgs context arguments) (fun argumentResult =>
+          staticBind (checkFunctionName context function) (fun functionInfo =>
+            staticBind (checkCallArgs context arguments) (fun argumentResult =>
                 if !functionArgumentsMatch context.structs functionInfo.params
                     argumentResult.shapedBased then
                   staticError (.shape "function argument shapes do not match")
@@ -1004,7 +1013,7 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
                         locals := (name, { shapedBased := shaped }) :: context.locals
                         last := .otherLast }
                       staticBind (checkProg nextContext body) (fun result =>
-                        (Except.ok { result with variableDelta := [] }, [])))
+                        (Except.ok { result with variableDelta := [] }, []))))
   | .extCall function configuration configurationLength array arrayLength =>
       staticBind (checkCallArgs context
         [configuration, configurationLength, array, arrayLength])

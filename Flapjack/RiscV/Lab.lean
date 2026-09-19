@@ -148,6 +148,13 @@ def labFfiStubOffset [NeZero width] (context : WordFfiContext)
     above instead addresses Cake's runtime blocks immediately before
     `cake_main`; keeping the two layouts separate avoids sending a compact
     machine probe to a negative wrapped PC. -/
+/-- Absolute position of `function`'s linked stub; `labLinkedFfiStubOffset`
+    is this relative to the referring line. -/
+def labLinkedFfiStubTarget (context : WordFfiContext) (function : FunName) :
+    Option Nat := do
+  let index ← lookupWordFfiIndex function context.services
+  pure ((context.services.length - index - 1) * 16)
+
 def labLinkedFfiStubOffset [NeZero width] (context : WordFfiContext)
     (function : FunName) (position : Nat) : Option (Word width) := do
   let index ← lookupWordFfiIndex function context.services
@@ -219,6 +226,31 @@ def labLongTransferOffsetInstructions [NeZero width]
   pure [.auipc temporary (BitVec.ofInt width upper),
     .jalr destination temporary (BitVec.ofInt width low)]
 
+/-- Cake reduces both `CallFFI` and `Install` to `Jump w`
+    (`lab_to_targetScript.sml:27-28`, `lab_inst`), so each takes the same
+    AUIPC/JALR fallback as any other jump once the offset leaves the 21-bit
+    `JAL` range (`riscv_targetScript.sml:170-175`), and `line_ok_light`
+    checks them with `asm_ok (Jump w)`.  `Halt` already routed through
+    `labBackwardJumpInstructions`; these two emitted a bare `JAL`, which
+    silently wraps once the image grows past the 1 MB range.
+
+    The in-range branch keeps the exact offset term the direct `JAL` used, so
+    only out-of-range lowering changes. -/
+def labBackwardJumpOffsetInstructions [NeZero width]
+    (destination : Fin 32) (distance : Nat) :
+    Option (List (Instruction width)) :=
+  if distance <= 2 ^ 20 then
+    some [.jal destination (0 - BitVec.ofNat width distance)]
+  else
+    labLongTransferOffsetInstructions destination (-(Int.ofNat distance))
+
+/-- The distance from `position` back to `function`'s exported stub;
+    `labFfiStubOffset` is the negation of `position + this` as a target word. -/
+def labFfiStubDistance (context : WordFfiContext) (function : FunName) :
+    Option Nat := do
+  let index ← lookupWordFfiIndex function context.services
+  pure ((3 + index) * 16)
+
 def labLongTransferInstructions [NeZero width]
     (destination : Fin 32) (target position : Nat) :
     Option (List (Instruction width)) :=
@@ -255,10 +287,21 @@ def labBranch [NeZero width] (operator : Cmp) (left right : Fin 32)
   | .test => .branchNe left right offset
   | .notTest => .branchEq left right offset
 
+/-- Cake's `riscv_ast (JumpCmp c r ri a)`
+    (`riscv_targetScript.sml:176-263`) tests the short-branch range against
+    `a`, the offset carried by the whole `JumpCmp` line, and only then
+    subtracts the leading `ORI`/`ANDI`/`AND` when it forms the branch operand
+    (`off12 = w2w (a >>> 1) - 2w`).  `linePosition` is therefore where the
+    range is measured from, while `branchPosition` -- which differs by the
+    prelude -- is what the emitted offsets are relative to.  Measuring the
+    range at `branchPosition` moves the short/far boundary by one instruction
+    whenever a prelude is present, which flips the lowering against Cake at
+    `a = 4096` and `a = -4092`. -/
 def labJumpCmpInstructions [NeZero width]
-    (operator : Cmp) (left right : Fin 32) (target branchPosition : Nat) :
+    (operator : Cmp) (left right : Fin 32)
+    (target linePosition branchPosition : Nat) :
     Option (List (Instruction width)) :=
-  if labBranchOffsetFits target branchPosition then
+  if labBranchOffsetFits target linePosition then
     some [labBranch operator left right (labOffset target branchPosition)]
   else if labJumpOffsetFits target (branchPosition + 4) then
     do
@@ -460,14 +503,15 @@ def labCompileAsm [NeZero width] (context : WordFfiContext)
       let (left, right, prelude) ← labWordConditionOperands operator condition right
       let target ← labResolveRef sectionId labels target
       let branchPosition := position + 4 * prelude.length
-      let branch ← labJumpCmpInstructions operator left right target branchPosition
+      let branch ← labJumpCmpInstructions operator left right target position
+        branchPosition
       pure (prelude ++ branch)
   | .callFfi function => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
-      let offset ← labFfiStubOffset context function position
-      pure [.jal zero offset]
+      let distance ← labFfiStubDistance context function
+      labBackwardJumpOffsetInstructions zero (position + distance)
   | .install =>
-      pure [.jal 0 (0 - BitVec.ofNat width (position + 2 * 16))]
+      labBackwardJumpOffsetInstructions 0 (position + 2 * 16)
   | .heapAlloc _ => none
   | .halt => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
@@ -703,15 +747,16 @@ def labCompileAsmProgram [NeZero width] (context : WordFfiContext)
       let (left, right, prelude) ← labWordConditionOperands operator condition right
       let target ← labResolveProgramRef labels target
       let branchPosition := position + 4 * prelude.length
-      let branch ← labJumpCmpInstructions operator left right target branchPosition
+      let branch ← labJumpCmpInstructions operator left right target position
+        branchPosition
       pure (prelude ++ branch)
   | .callFfi function => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
-      let offset ← labFfiStubOffset context function position
-      pure [.jal zero offset]
+      let distance ← labFfiStubDistance context function
+      labBackwardJumpOffsetInstructions zero (position + distance)
   | .install => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
-      pure [.jal zero (0 - BitVec.ofNat width (position + 2 * 16))]
+      labBackwardJumpOffsetInstructions zero (position + 2 * 16)
   | .heapAlloc _ => none
   | .halt => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
@@ -872,18 +917,19 @@ def labCompileAsmWithHalt [NeZero width] (context : WordFfiContext)
       let (left, right, prelude) ← labWordConditionOperands operator condition right
       let target ← labResolveProgramRef labels target
       let branchPosition := position + 4 * prelude.length
-      let branch ← labJumpCmpInstructions operator left right target branchPosition
+      let branch ← labJumpCmpInstructions operator left right target position
+        branchPosition
       pure (prelude ++ branch)
   | .callFfi function => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
-      let offset ← labFfiStubOffset context function position
-      pure [.jal zero offset]
+      let distance ← labFfiStubDistance context function
+      labBackwardJumpOffsetInstructions zero (position + distance)
   | .halt => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
       labBackwardJumpInstructions zero position 16
   | .install => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
-      pure [.jal zero (0 - BitVec.ofNat width (position + 2 * 16))]
+      labBackwardJumpOffsetInstructions zero (position + 2 * 16)
   | .heapAlloc _ => none
 
 def labCompileProgramLinesWithHalt [NeZero width]
@@ -1002,8 +1048,8 @@ def labCompileAsmProgramWithFfiBase [NeZero width]
          the fixed 1000-byte runtime prefix.  Keep the linked absolute
          position here; subtracting `ffiBase` targets an internal synthetic
          stub instead of the exported `cake_ffi*` block. -/
-      let offset ← labFfiStubOffset context function position
-      pure [.jal zero offset]
+      let distance ← labFfiStubDistance context function
+      labBackwardJumpOffsetInstructions zero (position + distance)
   | operation => labCompileAsmProgram context labels position operation
 
 def labCompileProgramLinesWithFfiBase [NeZero width]
@@ -1030,8 +1076,8 @@ def labCompileAsmProgramWithLinkedFfiBase [NeZero width]
     LabAsm (Word width) → Option (List (Instruction width))
   | .callFfi function => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
-      let offset ← labLinkedFfiStubOffset context function position
-      pure [.jal zero offset]
+      let target ← labLinkedFfiStubTarget context function
+      labJumpInstructions zero target position
   | operation => labCompileAsmProgram context labels position operation
 
 def labCompileProgramLinesWithLinkedFfiBase [NeZero width]
@@ -1084,8 +1130,8 @@ def labCompileAsmProgramWithFfiBaseAndHalt [NeZero width]
     LabAsm (Word width) → Option (List (Instruction width))
   | .callFfi function => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
-      let offset ← labFfiStubOffset context function position
-      pure [.jal zero offset]
+      let distance ← labFfiStubDistance context function
+      labBackwardJumpOffsetInstructions zero (position + distance)
   | operation => labCompileAsmWithHalt context labels position haltPc operation
 
 def labCompileProgramLinesWithFfiBaseAndHalt [NeZero width]
@@ -1112,8 +1158,8 @@ def labCompileAsmProgramWithLinkedFfiBaseAndHalt [NeZero width]
     LabAsm (Word width) → Option (List (Instruction width))
   | .callFfi function => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
-      let offset ← labLinkedFfiStubOffset context function position
-      pure [.jal zero offset]
+      let target ← labLinkedFfiStubTarget context function
+      labJumpInstructions zero target position
   | operation => labCompileAsmWithHalt context labels position haltPc operation
 
 def labCompileProgramLinesWithLinkedFfiBaseAndHalt [NeZero width]
@@ -1862,7 +1908,8 @@ theorem compileLabSection_ffi [NeZero width] :
         .labAsm (.callFfi "sum") [] 0]⟩ =
       some [.jal 0 (0 - BitVec.ofNat width 48)] := by
   simp [compileLabSection, labCompileLines,
-    labCompileAsm, labFfiStubOffset, lookupWordFfiIndex]
+    labCompileAsm, labFfiStubDistance, labBackwardJumpOffsetInstructions,
+    lookupWordFfiIndex]
 
 theorem compileLabSection_ffi_multiple_services [NeZero width] :
     compileLabSection { services := [("first", 7), ("second", 8)] }
@@ -1870,7 +1917,8 @@ theorem compileLabSection_ffi_multiple_services [NeZero width] :
         .labAsm (.callFfi "first") [] 0]⟩ =
       some [.jal 0 (0 - BitVec.ofNat width 48)] := by
   simp [compileLabSection, labCompileLines,
-    labCompileAsm, labFfiStubOffset, lookupWordFfiIndex]
+    labCompileAsm, labFfiStubDistance, labBackwardJumpOffsetInstructions,
+    lookupWordFfiIndex]
 
 theorem compileLabProgram_cross_section_jump [NeZero width] :
     compileLabProgram (width := width) { services := [] }

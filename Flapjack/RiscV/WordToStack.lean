@@ -138,22 +138,22 @@ def wordStackLoadInst {α : Type} (config : WordStackConfig) (operator : WordMem
       pure (.seq (.inst (.mem operator config.scratch address))
         (.stackStore config.scratch (wordStackOffset config destination)))
   | .register destination, .stack address =>
-      pure (.seq (.stackLoad config.addressScratch
+      pure (.seq (.stackLoad config.scratch
           (wordStackOffset config address))
-        (.inst (.mem operator destination config.addressScratch)))
+        (.inst (.mem operator destination config.scratch)))
   | .stack destination, .stack address =>
-      pure (.seq (.stackLoad config.addressScratch
+      pure (.seq (.stackLoad config.scratch
           (wordStackOffset config address))
-        (.seq (.inst (.mem operator config.scratch config.addressScratch))
+        (.seq (.inst (.mem operator config.scratch config.scratch))
           (.stackStore config.scratch (wordStackOffset config destination))))
 
-/- Cake's RISC-V spill path uses the link register (stack register 0) as the
-   short-lived address carrier for an indirect store.  The value register is
-   live across that store, so retain the configured address scratch only when
-   it is itself the value register; otherwise use Cake's carrier. -/
+/- Cake's `wReg1` lowers a spilled store address through the first allocator
+   register `k`.  `scratch` is that register in the source-shaped RISC-V
+   configuration; the next register (`addressScratch`) is reserved for
+   `wReg2` operands and is used for a spilled store value. -/
 def wordStackStoreAddressRegister (config : WordStackConfig) : WordLocation → Nat
-  | .register source => if source = 0 then config.addressScratch else 0
-  | .stack _ => config.addressScratch
+  | .register _ => config.scratch
+  | .stack _ => config.scratch
 
 def wordStackStoreInst {α : Type} (config : WordStackConfig) (operator : WordMemOp)
     (source address : Nat) : Option (StackProg α) := do
@@ -171,10 +171,10 @@ def wordStackStoreInst {α : Type} (config : WordStackConfig) (operator : WordMe
           (wordStackOffset config address))
         (.inst (.mem operator source addressScratch)))
   | .stack source, .stack address =>
-      pure (.seq (.stackLoad config.addressScratch
+      pure (.seq (.stackLoad config.scratch
           (wordStackOffset config address))
-        (.seq (.stackLoad config.scratch (wordStackOffset config source))
-          (.inst (.mem operator config.scratch config.addressScratch))))
+        (.seq (.stackLoad config.addressScratch (wordStackOffset config source))
+          (.inst (.mem operator config.addressScratch config.scratch))))
 
 def wordStackJoin {α : Type} (first second : StackProg α) : StackProg α :=
   match first, second with
@@ -4230,22 +4230,10 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
   | .seq first second =>
       let peephole : Option (StackProg Nat × WordStackBitmapState) :=
         match first, second with
-        | .move _ moves, .seq (.inst (.mem .store source address)) rest =>
-            match moves.find? (fun move => move.1 == address) with
-            | some (_, addressSource) =>
-                let remaining := moves.filter (fun move => move.1 != address)
-                if !(wordProgReadVarsFast rest).contains address &&
-                    !remaining.any (fun move => move.1 == addressSource) then do
-                  let moveCode ← wordStackMoveList config remaining
-                  let storeCode ← wordToStackInst config
-                    (.mem .store source addressSource)
-                  let (restCode, state) ← wordToStackProgWordWithBitmapBuilder
-                    config bitmapBuilder registerCount bitmapRegister frameSlots
-                    wordBits storeConstsStub state rest
-                  pure (.seq moveCode (.seq storeCode restCode), state)
-                else
-                  none
-            | none => none
+        | .move _ _, .seq (.inst (.mem .store _ _)) _ =>
+            /- Cake compiles a parallel move before `wInst (Mem Store ...)`;
+               it does not fold the address move into the store. -/
+            none
         | .move 0 [(destination, source)],
             .seq (.assign name (.op operator [.var left, .const value])) rest =>
             if name = destination && left = destination then
@@ -4707,7 +4695,7 @@ theorem wordStackMemoryInst_load_spill_address :
     wordStackMemoryInst
         { locations := [(0, .register 4), (1, .stack 2)],
           scratch := 31, stackBase := 10 } .load32 0 1 =
-      some (.seq (.stackLoad 29 12) (.inst (.mem .load32 4 29)) : StackProg Nat) := by
+      some (.seq (.stackLoad 31 12) (.inst (.mem .load32 4 31)) : StackProg Nat) := by
   simp [wordStackMemoryInst, wordStackLoadInst, wordStackLocation,
     wordStackOffset, lookupNatInfo]
 
@@ -4715,8 +4703,8 @@ theorem wordStackMemoryInst_store_spill_value_and_address :
     wordStackMemoryInst
         { locations := [(0, .stack 3), (1, .stack 2)],
           scratch := 31, stackBase := 10 } .store32 0 1 =
-      some (.seq (.stackLoad 29 12)
-        (.seq (.stackLoad 31 13) (.inst (.mem .store32 31 29))) : StackProg Nat) := by
+      some (.seq (.stackLoad 31 12)
+        (.seq (.stackLoad 29 13) (.inst (.mem .store32 29 31))) : StackProg Nat) := by
   simp [wordStackMemoryInst, wordStackStoreInst, wordStackLocation,
     wordStackOffset, lookupNatInfo]
 

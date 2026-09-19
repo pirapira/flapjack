@@ -161,10 +161,10 @@ theorem compileFunDecl_body_eq_compileProg_parameter_context
     (compileFunDecl context declaration).body =
       compileProg
         { context with
-            vars := (compileParamVars declaration.params 0).1
+            vars := panToCrepMakeVmap declaration.params
             maxVar := (compileParamVars declaration.params 0).2.2 }
         declaration.body := by
-  simp [compileFunDecl]
+  simp [compileFunDecl, panToCrepMakeVmap]
 
 theorem panValueCrepStateRel_compileFunDecl_context_of_folds
     [OfNat α 0]

@@ -37,7 +37,7 @@ example :
 example :
     (compileFunDecl assignmentContext identityFunction).body =
       .return [.var 0] := by
-  simp [compileFunDecl, compileParamVars, identityFunction, compileProg, compileExp,
+  simp [compileFunDecl, panToCrepMakeVmap, compileParamVars, identityFunction, compileProg, compileExp,
     lookupInfo]
 
 example :

@@ -47,8 +47,8 @@ theorem compile_prog_inline_call_parity :
        { name := "main", params := [],
          body := .seq .tick (.seq .tick (.return [.const 7])), returnShape := .one }] := by
   simp [compileProgToCrep, pipelineInlineNames, compileToCrep,
-    compileFunctionsSource, compileFunDeclSource, compileParamVars,
-    panToCrepVars, Shape.shapeSize, panToCrepCompileInlTop,
+    compileFunctionsSource, compileFunDeclSource, panToCrepCompFunc,
+    compileParamVars, Shape.shapeSize, panToCrepCompileInlTop,
     functionInfos, compileProgProbeContext, compileProgProbeDecls,
     compileProg, compileExp, compileArgs,
     crepInlineTopRecursiveByNames, crepInlineTopRecursive,

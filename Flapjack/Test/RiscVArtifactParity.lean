@@ -524,15 +524,16 @@ def nomainGlobalAccepted : Bool :=
   | .ok image => !image.sections.isEmpty
   | .error _ => false
 
-/- The original Cake `pan_to_target_all` leaves an actually empty declaration
-   list empty: its default-main branch only fires when `SPLITP` found at least
-   one non-main declaration. A comment-only source therefore reaches Cake's
-   assembly error rather than receiving a synthetic entry; keep the source
-   entry from accepting this opposite case. -/
+/- Cake's target pass does not synthesize a default main for an actually empty
+   declaration list; comment-only input therefore remains rejected. -/
 def emptySource : String := "// no Pancake declarations\n"
 
 def emptySourceRejected : Bool :=
-  (compileRuntimeImage emptySource).isNone
+  match compileFlapjackRiscVSourceRuntimeImageChecked (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] artifactCompileConfig "main"
+      emptySource with
+  | .ok _ => false
+  | .error _ => true
 
 #guard emptySourceRejected
 

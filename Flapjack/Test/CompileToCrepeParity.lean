@@ -31,6 +31,26 @@ def crepVarsOracle : Bool :=
       ("right", .one)] == [0, 1, 2, 3]
 
 #guard crepVarsOracle
+/-! Direct `make_vmap_def` oracle: shaped parameters receive consecutive
+    flattened slots in source order. -/
+def makeVmapOracle : Bool :=
+  match panToCrepMakeVmap [("x", .one), ("pair", .comb [.one, .one])] with
+  | [("x", (.one, [0])), ("pair", (.comb [.one, .one], [1, 2]))] => true
+  | _ => false
+
+#guard makeVmapOracle
+
+/-! Direct `comp_func_def` oracle: the source-shaped wrapper uses the
+    flattened parameter shape to choose `vmax` and preserves the compiled
+    raise body from the Cake fixture. -/
+def compFuncOracle : Bool :=
+  match panToCrepCompFunc compileToCrepeProbeContext [("x", .one)]
+      (.raise "E" (.const 7)) with
+  | .seq (.dec 1 (.const 7) (.seq (.storeGlob 0 (.var 1)) .skip))
+      (.raise 0) => true
+  | _ => false
+
+#guard compFuncOracle
 
 /-! The fixture is the direct HOL evaluation of
     `pan_to_crep$compile_to_crep` on the same exception/function declaration.
@@ -45,7 +65,7 @@ theorem compile_to_crep_raise_const_parity :
            (.raise 0),
          returnShape := .one }] := by
   simp [compileToCrep, compileFunctionsSource, compileFunDeclSource,
-    compileParamVars, panToCrepVars, Shape.shapeSize,
+    panToCrepCompFunc, compileParamVars, Shape.shapeSize,
     functionInfos, compileToCrepeProbeContext, compileToCrepeProbeDecls,
     compileProg, compileExp, freshNames, nestedDecs, storeGlobals,
     crepNestedSeq, lookupInfo]

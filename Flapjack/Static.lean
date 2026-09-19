@@ -481,6 +481,28 @@ def staticScopeMessage (idType : ScopedId) (location id : String) (scope : Scope
   location ++ staticScopedIdDescription idType ++ id ++
     " is not in scope in " ++ staticScopeDescription scope ++ "\n"
 
+/-! Source-shaped port of CakeML's `check_global_var_def`
+    (`cakeml/pancake/panStaticScript.sml:625-630`).  Keeping the lookup and
+    diagnostic boundary explicit prevents callers from silently replacing
+    Cake's location- and scope-sensitive error with a generic message. -/
+def checkGlobalVar [BEq String] (context : Context) (name : VarName) :
+    StaticResult GlobalInfo :=
+  match lookupInfo name context.globals with
+  | some info => staticOk info
+  | none =>
+      staticError (.scope
+        (staticScopeMessage .variable context.location name context.scope))
+
+/-! Source-shaped port of CakeML's `check_local_var_def`
+    (`cakeml/pancake/panStaticScript.sml:633-638`). -/
+def checkLocalVar [BEq String] (context : Context) (name : VarName) :
+    StaticResult LocalInfo :=
+  match lookupInfo name context.locals with
+  | some info => staticOk info
+  | none =>
+      staticError (.scope
+        (staticScopeMessage .variable context.location name context.scope))
+
 /-! Source-shaped port of CakeML's `get_redec_msg_def`
     (`cakeml/pancake/panStaticScript.sml:478-489`). -/
 def getRedecMessage (idType : ScopedId) (location id : String) (scope : Scope) : String :=
@@ -552,15 +574,20 @@ def staticAddWarning (result : StaticResult α) (warning : Option StatErr) :
   | none => result
   | some warning => (result.1, result.2 ++ [warning])
 
-/-! Cake's `check_redec_var` logs this warning before checking the declaration
-    body.  Keep it as a small wrapper so both `Dec` and `DecCall` use the same
-    source-shaped wording and preserve warning order. -/
-def staticRedeclarationWarning [BEq String] (context : Context)
-    (name : VarName) : Option StatErr :=
+/-! Source-shaped port of CakeML's `check_redec_var_def`
+    (`cakeml/pancake/panStaticScript.sml:641-647`).  Cake returns unit and logs
+    a warning when either local or global lookup finds the name. -/
+def checkRedecVar [BEq String] (context : Context) (name : VarName) :
+    StaticResult Unit :=
   if (lookupInfo name context.locals).isSome ||
       (lookupInfo name context.globals).isSome then
-    some (.warning (getRedecMessage .variable context.location name context.scope))
-  else none
+    staticWarn (.warning (getRedecMessage .variable context.location name context.scope))
+  else staticOk ()
+
+/-! Compatibility view used by callers that only need the optional warning. -/
+def staticRedeclarationWarning [BEq String] (context : Context)
+    (name : VarName) : Option StatErr :=
+  (checkRedecVar context name).2.head?
 
 def staticPrependWarning (warning : Option StatErr) (result : StaticResult α) :
     StaticResult α :=
@@ -568,19 +595,101 @@ def staticPrependWarning (warning : Option StatErr) (result : StaticResult α) :
   | none => result
   | some warning => (result.1, warning :: result.2)
 
+/-! Source-shaped port of CakeML's `check_struct_fields_def`
+    (`cakeml/pancake/panStaticScript.sml:717-765`). -/
+def checkStructFields [BEq String] (context : Context) (structName : StructName) :
+    List (FieldName × Shape) → List (FieldName × ShapedBased) → StaticResult Unit
+  | [], [] => staticOk ()
+  | [], (field, _) :: _ =>
+      staticError (.general (context.location ++ "unexpected field " ++ field ++
+        " given to named struct " ++ structName ++ " in " ++
+        staticScopeDescription context.scope ++ "\n"))
+  | (field, shape) :: fields, actual =>
+      match actual.filter (fun (candidate, _) => candidate == field) with
+      | [] =>
+          staticError (.shape (context.location ++ "missing field " ++ field ++
+            " in named struct " ++ structName ++ " constant in " ++
+            staticScopeDescription context.scope ++ "\n"))
+      | [(_, shaped)] =>
+          if shapedBasedHasShape shape shaped then
+            checkStructFields context structName fields
+              (actual.filter (fun (candidate, _) => candidate != field))
+          else
+            staticError (.shape (context.location ++
+              "value for field " ++ field ++ " given to named struct " ++ structName ++
+              " has shape " ++ shapedBasedToString shaped ++
+              " instead of declared shape " ++ Shape.shapeToString shape ++ " in " ++
+              staticScopeDescription context.scope ++ "\n"))
+      | _ =>
+          staticError (.shape (context.location ++ "multiple values for field " ++ field ++
+            " in named struct " ++ structName ++ " constant in " ++
+            staticScopeDescription context.scope ++ "\n"))
+
+/-! Source-shaped port of CakeML's `get_non_word_msg_def`
+    (`cakeml/pancake/panStaticScript.sml:552-557`). -/
+def getNonWordMessage (description shapeString location : String)
+    (scope : Scope) : String :=
+  location ++ description ++ " has shape " ++ shapeString ++
+    " instead of a word in " ++ staticScopeDescription scope ++ "\n"
+
+/-! Source-shaped port of CakeML's `get_implementation_err_msg_def`
+    (`cakeml/pancake/panStaticScript.sml:568-572`). -/
+def getImplementationErrorMessage (description location : String)
+    (scope : Scope) : String :=
+  location ++ description ++ " in " ++ staticScopeDescription scope ++ "\n" ++
+    "this should never happen. please report to a compiler developer\n"
+
+/-! Source-shaped port of CakeML's `check_shape_def`
+    (`cakeml/pancake/panStaticScript.sml:759-773`).  The location and scope
+    are part of the observable error, so they must not be discarded in favour
+    of the earlier generic validity check. -/
+def checkShape [BEq String] (context : StructContext) (location : String)
+    (scope : Scope) : Shape → StaticResult Unit
+  | .one => staticOk ()
+  | .comb shapes => checkShapes shapes
+  | .named name =>
+      if (lookupInfo name context).isSome then
+        staticOk ()
+      else
+        staticError (.scope (staticScopeMessage .struct location name scope))
+termination_by shape => sizeOf shape
+decreasing_by
+  all_goals first | sizeOf_list_dec | decreasing_trivial
+where
+  checkShapes : List Shape → StaticResult Unit
+    | [] => staticOk ()
+    | shape :: rest =>
+        staticBind (checkShape context location scope shape) (fun _ =>
+          checkShapes rest)
+  termination_by shapes => sizeOf shapes
+  decreasing_by
+    all_goals first | sizeOf_list_dec | decreasing_trivial
+
+/-! Source-shaped port of CakeML's `check_operands_def`
+    (`cakeml/pancake/panStaticScript.sml:660-671`). -/
+def checkOperands [BEq String] (context : Context) (opString : String) :
+    List ShapedBased → StaticResult Based
+  | [] => staticOk .notBased
+  | .word basedness :: arguments =>
+      staticBind (checkOperands context opString arguments) (fun restBasedness =>
+        staticOk (basedMerge basedness restBasedness))
+  | shaped :: _ =>
+      staticError (.shape (getNonWordMessage
+        ("operation " ++ opString ++ " operand")
+        (shapedBasedToString shaped) context.location context.scope))
+
 def checkExp [BEq String] (context : Context) : Exp α → StaticResult ExpReturn
   | .const _ => staticOk { shapedBased := .word .notBased }
   | .var .local name =>
-      match lookupInfo name context.locals with
-      | some info => staticOk { shapedBased := info.shapedBased }
-      | none => staticError (.scope ("unknown local variable: " ++ name))
+      staticBind (checkLocalVar context name) (fun info =>
+        staticOk { shapedBased := info.shapedBased })
   | .var .global name =>
-      match lookupInfo name context.globals with
-      | some info =>
-          match shapedBasedFromShape context.structs info.shape with
-          | some shaped => staticOk { shapedBased := shaped }
-          | none => staticError (.scope ("invalid global shape: " ++ name))
-      | none => staticError (.scope ("unknown global variable: " ++ name))
+      staticBind (checkGlobalVar context name) (fun info =>
+        match shapedBasedFromShape context.structs info.shape with
+        | some shaped => staticOk { shapedBased := shaped }
+        | none => staticError (.scope (getImplementationErrorMessage
+            "static analysis failed to convert in-scope shape"
+            context.location context.scope)))
   | .rStruct expressions =>
       staticBind (checkExps context expressions) (fun result =>
         staticOk { shapedBased := .struct result.shapedBased })
@@ -588,71 +697,102 @@ def checkExp [BEq String] (context : Context) : Exp α → StaticResult ExpRetur
       staticBind (checkExp context value) (fun result =>
         match shapedBasedFieldAt index result.shapedBased with
         | some shaped => staticOk { shapedBased := shaped }
-        | none => staticError (.shape "invalid positional field index"))
+        | none => staticError (.shape (context.location ++ "expression shape " ++
+            shapedBasedToString result.shapedBased ++ " has no field at index " ++
+            toString index ++ " in " ++ staticScopeDescription context.scope ++ "\n")))
   | .nStruct name fields =>
       match lookupInfo name context.structs with
-      | none => staticError (.scope ("unknown struct: " ++ name))
+      | none => staticError (.scope
+          (staticScopeMessage .struct context.location name context.scope))
       | some info =>
           staticBind (checkNamedExps context fields) (fun actual =>
-            if shapedBasedFieldsMatch context.structs info.fields actual then
-              staticOk { shapedBased := .named name actual }
-            else staticError (.shape "named struct fields do not match"))
+            staticBind (checkStructFields context name info.fields actual) (fun _ =>
+              staticOk { shapedBased := .named name actual }))
   | .nField name value =>
       staticBind (checkExp context value) (fun result =>
         match shapedBasedFieldNamed name result.shapedBased with
         | some shaped => staticOk { shapedBased := shaped }
-        | none => staticError (.shape "invalid named field"))
+        | none => staticError (.shape (context.location ++ "expression shape " ++
+            shapedBasedToString result.shapedBased ++ " has no field " ++ name ++
+            " in " ++ staticScopeDescription context.scope ++ "\n")))
   | .load shape address =>
-      if !isWfShape context.structs shape then
-        staticError (.shape "load result has an invalid shape")
-      else
-        staticBind (checkExp context address) (fun result =>
+      let checkLoadResult : ExpReturn → StaticResult ExpReturn :=
+        fun result =>
           if shapedBasedIsWord result.shapedBased then
             match shapedBasedFromShape context.structs shape with
             | some shaped =>
                 staticAddWarning (staticOk { shapedBased := shaped })
                   (staticMemoryWarning context true true result.shapedBased)
-            | none => staticError (.scope "invalid load result shape")
-          else staticError (.shape "load address is not a word"))
+            | none => staticError (.scope (getImplementationErrorMessage
+                "static analysis failed to convert in-scope shape"
+                context.location context.scope))
+          else
+            staticError (.shape (getNonWordMessage "load address"
+              (shapedBasedToString result.shapedBased)
+              context.location context.scope))
+      staticBind (checkShape context.structs context.location context.scope shape)
+        (fun _ => staticBind (checkExp context address) checkLoadResult)
   | .load32 address =>
       staticBind (checkExp context address) (fun result =>
         if shapedBasedIsWord result.shapedBased then
           staticAddWarning (staticOk { shapedBased := .word .trusted })
             (staticMemoryWarning context true true result.shapedBased)
-        else staticError (.shape "load32 address is not a word"))
+        else
+          staticError (.shape (getNonWordMessage "load address"
+            (shapedBasedToString result.shapedBased)
+            context.location context.scope)))
   | .loadByte address =>
       staticBind (checkExp context address) (fun result =>
         if shapedBasedIsWord result.shapedBased then
           staticAddWarning (staticOk { shapedBased := .word .trusted })
             (staticMemoryWarning context true true result.shapedBased)
-        else staticError (.shape "loadByte address is not a word"))
+        else
+          staticError (.shape (getNonWordMessage "load address"
+            (shapedBasedToString result.shapedBased)
+            context.location context.scope)))
   | .op operator expressions =>
-      staticBind (checkExps context expressions) (fun result =>
-        let arityOk := match operator with
-          | .sub => expressions.length == 2
-          | _ => expressions.length >= 2
-        if !arityOk then staticError (.general "invalid binary operator arity")
-        else if result.shapedBased.all shapedBasedIsWord then
-          staticOk { shapedBased := .word (shapedBasedMerge result.shapedBased) }
-        else staticError (.shape "operator operand is not a word"))
-  | .panOp _ expressions =>
-      staticBind (checkExps context expressions) (fun result =>
-        if expressions.length != 2 then staticError (.general "invalid Flapjack operator arity")
-        else if result.shapedBased.all shapedBasedIsWord then
-          staticOk { shapedBased := .word (shapedBasedMerge result.shapedBased) }
-        else staticError (.shape "Flapjack operand is not a word"))
+      let operation := binopToString operator
+      let isExact :=
+        match operator with
+        | .sub => true
+        | _ => false
+      let arityOk := if isExact then expressions.length == 2 else expressions.length >= 2
+      if !arityOk then
+        staticError (.general (getOpargMessage isExact (if isExact then "2" else "2")
+          (toString expressions.length) context.location operation context.scope))
+      else
+        staticBind (checkExps context expressions) (fun result =>
+          staticBind (checkOperands context operation result.shapedBased) (fun basedness =>
+            staticOk { shapedBased := .word basedness }))
+  | .panOp operator expressions =>
+      let operation := panopToString operator
+      if expressions.length != 2 then
+        staticError (.general (getOpargMessage true "2"
+          (toString expressions.length) context.location operation context.scope))
+      else
+        staticBind (checkExps context expressions) (fun result =>
+          staticBind (checkOperands context operation result.shapedBased) (fun basedness =>
+            staticOk { shapedBased := .word basedness }))
   | .cmp _ left right =>
       staticBind (checkExp context left) (fun leftResult =>
         staticBind (checkExp context right) (fun rightResult =>
           if shapedBasedSameShape leftResult.shapedBased rightResult.shapedBased then
             staticOk { shapedBased := .word .notBased }
-          else staticError (.shape "comparison operands have different shapes")))
+          else staticError (.shape (context.location ++
+            "comparison given operands of different shapes in " ++
+            staticScopeDescription context.scope ++ "\n"))))
   | .shift _ left right =>
       staticBind (checkExp context left) (fun leftResult =>
         staticBind (checkExp context right) (fun rightResult =>
-          if shapedBasedIsWord leftResult.shapedBased && shapedBasedIsWord rightResult.shapedBased then
-            staticOk { shapedBased := rightResult.shapedBased }
-          else staticError (.shape "shift operands are not words")))
+          if shapedBasedHasShape .one leftResult.shapedBased then
+            if shapedBasedHasShape .one rightResult.shapedBased then
+              staticOk { shapedBased := rightResult.shapedBased }
+            else staticError (.shape (getNonWordMessage "shift expression"
+              (shapedBasedToString rightResult.shapedBased)
+              context.location context.scope))
+          else staticError (.shape (getNonWordMessage "shifted expression"
+            (shapedBasedToString leftResult.shapedBased)
+            context.location context.scope))))
   | .baseAddr => staticOk { shapedBased := .word .based }
   | .topAddr => staticOk { shapedBased := .word .based }
   | .bytesInWord => staticOk { shapedBased := .word .notBased }
@@ -708,15 +848,17 @@ def checkFunctionName [BEq String] (context : Context) (name : FunName) :
           (staticScopeMessage .function context.location name context.scope)))
   | some info => staticOk info
 
-def checkPrimitiveArgs [BEq String] (_context : Context) (operator : PrimOp)
+def checkPrimitiveArgs [BEq String] (context : Context) (operator : PrimOp)
     (arguments : List ShapedBased) : StaticResult ShapedBased :=
   match operator with
   | .addCarry =>
       if arguments.length != 3 then
-        staticError (.general "AddCarry expects three arguments")
-      else if arguments.all shapedBasedIsWord then
-        staticOk (.struct [.word .notBased, .word .notBased])
-      else staticError (.shape "AddCarry operand is not a word")
+        staticError (.general (getOpargMessage true "3" (toString arguments.length)
+          context.location (primopToString operator) context.scope))
+      else
+        staticBind (checkOperands context (primopToString operator) arguments)
+          (fun basedness =>
+            staticOk (.struct [.word basedness, .word .notBased]))
 
 def progOk (last : LastStmt) (exitsFunction exitsLoop : Bool) (location : String) :
     StaticResult ProgReturn :=
@@ -724,25 +866,42 @@ def progOk (last : LastStmt) (exitsFunction exitsLoop : Bool) (location : String
     { exitsFunction := exitsFunction, exitsLoop := exitsLoop, last := last,
       variableDelta := [], currentLocation := location }
 
-def checkCallDestination [BEq String] (context : Context) (returnShape : Shape)
+/-! Source-shaped port of CakeML's `get_shape_mismatch_msg_def`
+    (`cakeml/pancake/panStaticScript.sml:560-566`). -/
+def getShapeMismatchMessage (description actualShape expectedShape location : String)
+    (scope : Scope) : String :=
+  location ++ description ++ " has shape " ++ actualShape ++
+    " instead of declared shape " ++ expectedShape ++ " in " ++
+    staticScopeDescription scope ++ "\n"
+
+def checkCallDestination [BEq String] (context : Context) (functionName : FunName)
+    (returnShape : Shape)
     : Option (VarKind × VarName) → StaticResult ProgReturn
   | none => progOk .otherLast false false context.location
   | some (kind, name) =>
       match kind with
       | .local =>
-          match lookupInfo name context.locals with
-          | some localInfo =>
-              if shapedBasedMatchesShape context.structs returnShape localInfo.shapedBased then
-                progOk .otherLast false false context.location
-              else staticError (.shape "call destination shape does not match")
-          | none => staticError (.scope ("unknown call destination: " ++ name))
+          staticBind (checkLocalVar context name) (fun localInfo =>
+            if shapedBasedHasShape returnShape localInfo.shapedBased then
+              progOk .otherLast false false context.location
+            else
+              staticError (.shape (getShapeMismatchMessage
+                ("result of function call " ++ functionName ++
+                  " assigned to local variable " ++ name)
+                (Shape.shapeToString returnShape)
+                (shapedBasedToString localInfo.shapedBased)
+                context.location context.scope)))
       | .global =>
-          match lookupInfo name context.globals with
-          | some globalInfo =>
-              if shapesSame globalInfo.shape returnShape then
-                progOk .otherLast false false context.location
-              else staticError (.shape "global call destination shape does not match")
-          | none => staticError (.scope ("unknown call destination: " ++ name))
+          staticBind (checkGlobalVar context name) (fun globalInfo =>
+            if shapesSame globalInfo.shape returnShape then
+              progOk .otherLast false false context.location
+            else
+              staticError (.shape (getShapeMismatchMessage
+                ("result of function call " ++ functionName ++
+                  " assigned to global variable " ++ name)
+                (Shape.shapeToString returnShape)
+                (Shape.shapeToString globalInfo.shape)
+                context.location context.scope)))
 
 /-! These helpers are the executable counterparts of CakeML's
     `next_is_reachable`, `next_now_unreachable`, and `reached_warnable`.
@@ -770,27 +929,26 @@ def getRogueMessage (isBreak : Bool) (location : String) (scope : Scope) : Strin
   location ++ (if isBreak then "break " else "continue ") ++
     "statement outside loop in " ++ staticScopeDescription scope ++ "\n"
 
-/-! Source-shaped port of CakeML's `get_non_word_msg_def`
-    (`cakeml/pancake/panStaticScript.sml:552-557`). -/
-def getNonWordMessage (description shapeString location : String)
-    (scope : Scope) : String :=
-  location ++ description ++ " has shape " ++ shapeString ++
-    " instead of a word in " ++ staticScopeDescription scope ++ "\n"
-
-/-! Source-shaped port of CakeML's `get_shape_mismatch_msg_def`
-    (`cakeml/pancake/panStaticScript.sml:560-566`). -/
-def getShapeMismatchMessage (description actualShape expectedShape location : String)
-    (scope : Scope) : String :=
-  location ++ description ++ " has shape " ++ actualShape ++
-    " instead of declared shape " ++ expectedShape ++ " in " ++
-    staticScopeDescription scope ++ "\n"
-
-/-! Source-shaped port of CakeML's `get_implementation_err_msg_def`
-    (`cakeml/pancake/panStaticScript.sml:568-572`). -/
-def getImplementationErrorMessage (description location : String)
-    (scope : Scope) : String :=
-  location ++ description ++ " in " ++ staticScopeDescription scope ++ "\n" ++
-    "this should never happen. please report to a compiler developer\n"
+/-! Source-shaped port of CakeML's `check_func_args_def`
+    (`cakeml/pancake/panStaticScript.sml:690-718`). -/
+def checkFuncArgs [BEq String] (context : Context) (functionName : FunName) :
+    List (VarName × Shape) → List ShapedBased → StaticResult Unit
+  | (parameter, shape) :: parameters, argument :: arguments =>
+      if shapedBasedMatchesShape context.structs shape argument then
+        checkFuncArgs context functionName parameters arguments
+      else
+        staticError (.shape (getShapeMismatchMessage
+          ("value for argument " ++ parameter ++ " given to function " ++ functionName)
+          (shapedBasedToString argument) (Shape.shapeToString shape)
+          context.location context.scope))
+  | (parameter, _) :: _, [] =>
+      staticError (.general (context.location ++ "argument " ++ parameter ++
+        " for call to function " ++ functionName ++ " is missing in " ++
+        staticScopeDescription context.scope ++ "\n"))
+  | [], _ :: _ =>
+      staticError (.general (context.location ++ "extra arguments given to function " ++
+        functionName ++ " in " ++ staticScopeDescription context.scope ++ "\n"))
+  | [], [] => staticOk ()
 
 def staticUnreachableWarning (context : Context) (last : LastStmt) : StatErr :=
   .warning (getUnreachMessage context.location (staticLastStmtString last) context.scope)
@@ -824,66 +982,104 @@ def seqLastStmt (first second : LastStmt) : LastStmt :=
 def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgReturn
   | .skip => progOk .invisLast false false context.location
   | .dec name shape value body =>
-      staticPrependWarning (staticRedeclarationWarning context name) <|
-        if !isWfShape context.structs shape then
-          staticError (.shape "local declaration has an invalid shape")
-        else
-          staticBind (checkExp context value) (fun result =>
-            if shapedBasedMatchesShape context.structs shape result.shapedBased then
-              let nextContext := { context with
-                locals := (name, { shapedBased := result.shapedBased }) :: context.locals
-                last := .otherLast }
-              checkProg nextContext body
-            else staticError (.shape "local declaration shape does not match"))
+      let checkInitialValue : ExpReturn → StaticResult ProgReturn :=
+        fun result =>
+          if shapedBasedHasShape shape result.shapedBased then
+            let nextContext := { context with
+              locals := (name, { shapedBased := result.shapedBased }) :: context.locals
+              last := .otherLast }
+            checkProg nextContext body
+          else
+            staticError (.shape (getShapeMismatchMessage
+              ("expression to initialise local variable " ++ name)
+              (shapedBasedToString result.shapedBased)
+              (Shape.shapeToString shape)
+              context.location context.scope))
+      staticBind (checkRedecVar context name) (fun _ =>
+        staticBind (checkShape context.structs context.location context.scope shape) (fun _ =>
+          staticBind (checkExp context value) checkInitialValue))
   | .assign .local name value =>
-      match lookupInfo name context.locals with
-      | none => staticError (.scope ("unknown local variable: " ++ name))
-      | some info =>
-          staticBind (checkExp context value) (fun result =>
+      staticBind (checkLocalVar context name) (fun info =>
+        let checkValue : ExpReturn → StaticResult ProgReturn :=
+          fun result =>
             if shapedBasedSameShape info.shapedBased result.shapedBased then
               progOk .otherLast false false context.location
-            else staticError (.shape "local assignment shape does not match"))
+            else
+              staticError (.shape (getShapeMismatchMessage
+                ("expression assigned to local variable " ++ name)
+                (shapedBasedToString result.shapedBased)
+                (shapedBasedToString info.shapedBased)
+                context.location context.scope))
+        staticBind (checkExp context value) checkValue)
   | .assign .global name value =>
-      match lookupInfo name context.globals with
-      | none => staticError (.scope ("unknown global variable: " ++ name))
-      | some info =>
-          staticBind (checkExp context value) (fun result =>
-            if shapedBasedMatchesShape context.structs info.shape result.shapedBased then
+      staticBind (checkGlobalVar context name) (fun info =>
+        let checkValue : ExpReturn → StaticResult ProgReturn :=
+          fun result =>
+            if shapedBasedHasShape info.shape result.shapedBased then
               progOk .otherLast false false context.location
-            else staticError (.shape "global assignment shape does not match"))
-  | .primitive name _ arguments =>
-      match lookupInfo name context.locals with
-      | none => staticError (.scope ("unknown primitive destination: " ++ name))
-      | some destinationInfo =>
-          staticBind (checkCallArgs context arguments) (fun argumentResult =>
-            staticBind (checkPrimitiveArgs context .addCarry argumentResult.shapedBased)
-              (fun resultShape =>
-                if shapedBasedSameShape destinationInfo.shapedBased resultShape then
-                  progOk .otherLast false false context.location
-                else staticError (.shape "primitive result shape does not match")))
+            else
+              staticError (.shape (getShapeMismatchMessage
+                ("expression assigned to global variable " ++ name)
+                (shapedBasedToString result.shapedBased)
+                (Shape.shapeToString info.shape)
+                context.location context.scope))
+        staticBind (checkExp context value) checkValue)
+  | .primitive name operator arguments =>
+      staticBind (checkLocalVar context name) (fun destinationInfo =>
+        let checkResult : ShapedBased → StaticResult ProgReturn :=
+          fun resultShape =>
+            if shapedBasedSameShape destinationInfo.shapedBased resultShape then
+              progOk .otherLast false false context.location
+            else
+              staticError (.shape (getShapeMismatchMessage
+                ("result of primitive " ++ primopToString operator ++
+                  " assigned to local variable " ++ name)
+                (shapedBasedToString resultShape)
+                (shapedBasedToString destinationInfo.shapedBased)
+                context.location context.scope))
+        staticBind (checkCallArgs context arguments) (fun argumentResult =>
+          staticBind (checkPrimitiveArgs context operator argumentResult.shapedBased)
+            checkResult))
   | .store address value =>
       staticBind (checkExp context address) (fun addressResult =>
         staticBind (checkExp context value) (fun _valueResult =>
-          if shapedBasedIsWord addressResult.shapedBased then
+          if shapedBasedHasShape .one addressResult.shapedBased then
             staticAddWarning (progOk .otherLast false false context.location)
               (staticMemoryWarning context true false addressResult.shapedBased)
-          else staticError (.shape "store address is not a word")))
+          else
+            staticError (.shape (getNonWordMessage "store address"
+              (shapedBasedToString addressResult.shapedBased)
+              context.location context.scope))))
   | .store32 address value =>
       staticBind (checkExp context address) (fun addressResult =>
         staticBind (checkExp context value) (fun valueResult =>
-          if shapedBasedIsWord addressResult.shapedBased &&
-              shapedBasedIsWord valueResult.shapedBased then
-            staticAddWarning (progOk .otherLast false false context.location)
-              (staticMemoryWarning context true false addressResult.shapedBased)
-          else staticError (.shape "store32 operands are not words")))
+          if shapedBasedHasShape .one addressResult.shapedBased then
+            if shapedBasedHasShape .one valueResult.shapedBased then
+              staticAddWarning (progOk .otherLast false false context.location)
+                (staticMemoryWarning context true false addressResult.shapedBased)
+            else
+              staticError (.shape (getNonWordMessage "store value"
+                (shapedBasedToString valueResult.shapedBased)
+                context.location context.scope))
+          else
+            staticError (.shape (getNonWordMessage "store address"
+              (shapedBasedToString addressResult.shapedBased)
+              context.location context.scope))))
   | .storeByte address value =>
       staticBind (checkExp context address) (fun addressResult =>
         staticBind (checkExp context value) (fun valueResult =>
-          if shapedBasedIsWord addressResult.shapedBased &&
-              shapedBasedIsWord valueResult.shapedBased then
-            staticAddWarning (progOk .otherLast false false context.location)
-              (staticMemoryWarning context true false addressResult.shapedBased)
-          else staticError (.shape "storeByte operands are not words")))
+          if shapedBasedHasShape .one addressResult.shapedBased then
+            if shapedBasedHasShape .one valueResult.shapedBased then
+              staticAddWarning (progOk .otherLast false false context.location)
+                (staticMemoryWarning context true false addressResult.shapedBased)
+            else
+              staticError (.shape (getNonWordMessage "store value"
+                (shapedBasedToString valueResult.shapedBased)
+                context.location context.scope))
+          else
+            staticError (.shape (getNonWordMessage "store address"
+              (shapedBasedToString addressResult.shapedBased)
+              context.location context.scope))))
   | .seq first second =>
       /- Cake checks both sides even after an exit. It updates reachability
          before each side and emits a warning only when the current node is
@@ -919,7 +1115,7 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
                 warningBeforeFirst ++ firstWarnings ++ warningBeforeSecond ++ secondWarnings)
   | .ite condition thenBranch elseBranch =>
       staticBind (checkExp context condition) (fun conditionResult =>
-        if shapedBasedIsWord conditionResult.shapedBased then
+        if shapedBasedHasShape .one conditionResult.shapedBased then
           staticBind (checkProg context thenBranch) (fun thenResult =>
             staticBind (checkProg
               { context with location := thenResult.currentLocation } elseBranch) (fun elseResult =>
@@ -927,27 +1123,32 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
               let doubleLoopExit := thenResult.exitsLoop && elseResult.exitsLoop
               progOk (branchLastStmt doubleRet doubleLoopExit)
                 doubleRet doubleLoopExit context.location))
-        else staticError (.shape "condition is not a word"))
+        else
+          staticError (.shape (getNonWordMessage "if condition"
+            (shapedBasedToString conditionResult.shapedBased)
+            context.location context.scope)))
   | .while condition body =>
       staticBind (checkExp context condition) (fun conditionResult =>
-        if shapedBasedIsWord conditionResult.shapedBased then
+        if shapedBasedHasShape .one conditionResult.shapedBased then
           let loopContext := { context with inLoop := true }
           staticBind (checkProg loopContext body) (fun _ =>
             progOk .otherLast false false context.location)
-        else staticError (.shape "while condition is not a word"))
+        else
+          staticError (.shape (getNonWordMessage "while condition"
+            (shapedBasedToString conditionResult.shapedBased)
+            context.location context.scope)))
   | .break =>
       if context.inLoop then progOk .breakLast false true context.location
-      else staticError (.general "break used outside a loop")
+      else staticError (.general (getRogueMessage true context.location context.scope))
   | .continue =>
       if context.inLoop then progOk .contLast false true context.location
-      else staticError (.general "continue used outside a loop")
+      else staticError (.general (getRogueMessage false context.location context.scope))
   | .call info function arguments =>
       staticBind (checkFunctionName context function) (fun functionInfo =>
         let returnShape := functionInfo.returnShape
         staticBind (checkCallArgs context arguments) (fun argumentResult =>
-            if !functionArgumentsMatch context.structs functionInfo.params argumentResult.shapedBased then
-              staticError (.shape "function argument shapes do not match")
-            else
+          staticBind (checkFuncArgs context function functionInfo.params
+              argumentResult.shapedBased) (fun _ =>
               match info with
               | none =>
                   -- CakeML `panStaticScript.sml:1335`: a tail call requires the
@@ -955,11 +1156,15 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
                   match context.expectedReturn with
                   | some callerReturn =>
                       if !shapesSame callerReturn functionInfo.returnShape then
-                        staticError (.shape
-                          "tail call return shape does not match caller return shape")
+                        staticError (.shape (getShapeMismatchMessage
+                          ("result of function call " ++ function ++ " to return")
+                          (Shape.shapeToString functionInfo.returnShape)
+                          (Shape.shapeToString callerReturn)
+                          context.location context.scope))
                       else progOk .tailLast true false context.location
                   | none => progOk .tailLast true false context.location
-              | some (destination, none) => checkCallDestination context returnShape destination
+              | some (destination, none) =>
+                  checkCallDestination context function returnShape destination
               | some (destination, some (exception, handlerVariable, handlerProgram)) =>
                   match destination with
                   | some (.global, _) =>
@@ -969,22 +1174,25 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
                       -- the handler variable's shape is not checked.
                       match lookupInfo handlerVariable context.locals with
                       | none => staticError (.scope
-                          ("unknown exception handler variable: " ++ handlerVariable))
+                          (staticScopeMessage .variable context.location
+                            handlerVariable context.scope))
                       | some handlerInfo =>
                           let handlerContext := { context with locals :=
                             (handlerVariable, handlerInfo) :: context.locals }
                           staticBind (checkProg handlerContext handlerProgram) (fun _ =>
-                            checkCallDestination context returnShape destination)
+                            checkCallDestination context function returnShape destination)
                   | _ =>
                   match lookupInfo exception context.exceptions,
                       lookupInfo handlerVariable context.locals with
-                  | none, _ => staticError (.scope ("unknown exception: " ++ exception))
+                  | none, _ => staticError (.scope ("exception " ++ exception ++
+                      " is not declared\n"))
                   | _, none => staticError (.scope
-                      ("unknown exception handler variable: " ++ handlerVariable))
+                      (staticScopeMessage .variable context.location
+                        handlerVariable context.scope))
                   | some exceptionShape, some handlerInfo =>
-                      if !shapedBasedMatchesShape context.structs exceptionShape
-                          handlerInfo.shapedBased then
-                        staticError (.shape "exception handler variable shape does not match")
+                      if !shapedBasedHasShape exceptionShape handlerInfo.shapedBased then
+                        staticError (.shape ("handler variable " ++ handlerVariable ++
+                          " does not match shape of exception " ++ exception ++ "\n"))
                       else
                         let handlerShaped :=
                           (shapedBasedFromShape context.structs exceptionShape).getD
@@ -992,83 +1200,120 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
                         let handlerContext := { context with locals :=
                           (handlerVariable, { shapedBased := handlerShaped }) :: context.locals }
                         staticBind (checkProg handlerContext handlerProgram) (fun _ =>
-                          checkCallDestination context returnShape destination)))
+                          checkCallDestination context function returnShape destination))))
   | .decCall name shape function arguments body =>
-      staticPrependWarning (staticRedeclarationWarning context name) <|
-        if !isWfShape context.structs shape then
-          staticError (.shape "declaration-call result has an invalid shape")
-        else
+      staticBind (checkRedecVar context name) (fun _ =>
+        staticBind (checkShape context.structs context.location context.scope shape) (fun _ =>
           staticBind (checkFunctionName context function) (fun functionInfo =>
             staticBind (checkCallArgs context arguments) (fun argumentResult =>
-                if !functionArgumentsMatch context.structs functionInfo.params
-                    argumentResult.shapedBased then
-                  staticError (.shape "function argument shapes do not match")
-                else if !shapesSame shape functionInfo.returnShape then
-                  staticError (.shape "declaration-call result shape does not match")
+              staticBind (checkFuncArgs context function functionInfo.params
+                  argumentResult.shapedBased) (fun _ =>
+                if !shapesSame shape functionInfo.returnShape then
+                  staticError (.shape (getShapeMismatchMessage
+                    ("result of function call " ++ function ++
+                      " to initialise local variable " ++ name)
+                    (Shape.shapeToString functionInfo.returnShape)
+                    (Shape.shapeToString shape)
+                    context.location context.scope))
                 else
                   match shapedBasedFromShape context.structs shape with
-                  | none => staticError (.scope "invalid declaration-call result shape")
+                  | none => staticError (.scope (getImplementationErrorMessage
+                      "static analysis failed to convert in-scope shape"
+                      context.location context.scope))
                   | some shaped =>
                       let nextContext := { context with
                         locals := (name, { shapedBased := shaped }) :: context.locals
                         last := .otherLast }
                       staticBind (checkProg nextContext body) (fun result =>
-                        (Except.ok { result with variableDelta := [] }, []))))
+                        (Except.ok { result with variableDelta := [] }, []))))))
+      )
   | .extCall function configuration configurationLength array arrayLength =>
       staticBind (checkCallArgs context
         [configuration, configurationLength, array, arrayLength])
         (fun argumentResult =>
-          if argumentResult.shapedBased.all
-              (shapedBasedMatchesShape context.structs .one) then
+          if argumentResult.shapedBased.all (shapedBasedHasShape .one) then
             progOk .otherLast false false context.location
-          else staticError (.shape ("foreign-call argument is not a word: " ++ function)))
+          else
+            staticError (.shape (getNonWordMessage
+              ("value for argument given to FFI " ++ function)
+              (match argumentResult.shapedBased.find? (fun shaped =>
+                !shapedBasedHasShape .one shaped) with
+              | some shaped => shapedBasedToString shaped
+              | none => "")
+              context.location context.scope)))
   | .raise exception value =>
       match lookupInfo exception context.exceptions with
-      | none => staticError (.scope ("unknown exception: " ++ exception))
+      | none => staticError (.scope ("exception " ++ exception ++
+          " is not declared\n"))
       | some shape =>
           staticBind (checkExp context value) (fun result =>
-            if shapedBasedMatchesShape context.structs shape result.shapedBased then
+            if shapedBasedHasShape shape result.shapedBased then
               progOk .raiseLast true false context.location
-            else staticError (.shape "raised exception value has the wrong shape"))
+            else staticError (.shape ("raised exception " ++ exception ++
+              " has wrong value shape\n")))
   | .return value =>
       staticBind (checkExp context value) (fun result =>
         match context.expectedReturn with
         | none => progOk .retLast true false context.location
         | some shape =>
-            if shapedBasedMatchesShape context.structs shape result.shapedBased then
+            if shapedBasedHasShape shape result.shapedBased then
               progOk .retLast true false context.location
             else
-              staticError (.shape "return expression has the wrong shape"))
+              staticError (.shape (getShapeMismatchMessage
+                "expression to return" (shapedBasedToString result.shapedBased)
+                (Shape.shapeToString shape) context.location context.scope)))
   | .shMemLoad _ varKind name address =>
       /- CakeML looks the destination up in locals only for `Local` and in
          globals only for `Global` (`panStaticScript.sml:1642,1676`). -/
-      let destinationIsWord : Option Bool :=
+      let destinationCheck : StaticResult Bool :=
         match varKind with
         | .local =>
-            (lookupInfo name context.locals).map
-              (fun info => shapedBasedIsWord info.shapedBased)
+            staticBind (checkLocalVar context name) (fun info =>
+              staticOk (shapedBasedHasShape .one info.shapedBased))
         | .global =>
-            match lookupInfo name context.globals with
-            | some info => (shapedBasedFromShape context.structs info.shape).map shapedBasedIsWord
-            | none => none
-      match destinationIsWord with
-      | none => staticError (.scope ("unknown shared-memory destination: " ++ name))
-      | some false =>
-          staticError (.shape ("shared-memory load destination is not a word: " ++ name))
-      | some true =>
+            staticBind (checkGlobalVar context name) (fun info =>
+              match shapedBasedFromShape context.structs info.shape with
+              | some shaped => staticOk (shapedBasedHasShape .one shaped)
+              | none => staticError (.scope (getImplementationErrorMessage
+                  "static analysis failed to convert in-scope shape"
+                  context.location context.scope)))
+      staticBind destinationCheck (fun destinationIsWord =>
+        if !destinationIsWord then
+          match varKind with
+          | .local =>
+              staticBind (checkLocalVar context name) (fun info =>
+                staticError (.shape (getNonWordMessage "load variable"
+                  (shapedBasedToString info.shapedBased)
+                  context.location context.scope)))
+          | .global =>
+              staticBind (checkGlobalVar context name) (fun info =>
+                staticError (.shape (getNonWordMessage "load variable"
+                  (Shape.shapeToString info.shape)
+                  context.location context.scope)))
+        else
           staticBind (checkExp context address) (fun result =>
-            if shapedBasedIsWord result.shapedBased then
+            if shapedBasedHasShape .one result.shapedBased then
               staticAddWarning (progOk .otherLast false false context.location)
                 (staticMemoryWarning context false true result.shapedBased)
-            else staticError (.shape "shared-memory address is not a word"))
+            else
+              staticError (.shape (getNonWordMessage "load address"
+                (shapedBasedToString result.shapedBased)
+                context.location context.scope))))
   | .shMemStore _ address value =>
       staticBind (checkExp context address) (fun addressResult =>
         staticBind (checkExp context value) (fun valueResult =>
-          if shapedBasedIsWord addressResult.shapedBased &&
-              shapedBasedIsWord valueResult.shapedBased then
-            staticAddWarning (progOk .otherLast false false context.location)
-              (staticMemoryWarning context false false addressResult.shapedBased)
-          else staticError (.shape "shared-memory operands are not words")))
+          if shapedBasedHasShape .one addressResult.shapedBased then
+            if shapedBasedHasShape .one valueResult.shapedBased then
+              staticAddWarning (progOk .otherLast false false context.location)
+                (staticMemoryWarning context false false addressResult.shapedBased)
+            else
+              staticError (.shape (getNonWordMessage "store value"
+                (shapedBasedToString valueResult.shapedBased)
+                context.location context.scope))
+          else
+            staticError (.shape (getNonWordMessage "store address"
+              (shapedBasedToString addressResult.shapedBased)
+              context.location context.scope))))
   | .tick => progOk .otherLast false false context.location
   | .annot tag text =>
       let location := if tag == "location" then "AT " ++ text ++ ": " else context.location
@@ -1094,12 +1339,29 @@ def firstRepeat [BEq α] : List α → Option α
       else firstRepeat (value2 :: values)
   | _ => none
 
-def checkShape [BEq String] (context : StructContext) (shape : Shape) :
-    StaticResult Unit :=
-  if isWfShape context shape then
-    staticOk ()
-  else
-    staticError (.scope "shape refers to an unknown or invalid structure")
+/-! Source-shaped port of CakeML's `check_id_shapes_def`
+    (`cakeml/pancake/panStaticScript.sml:776-797`).  Each identifier gets its
+    identifier-specific scope before its shape is checked, which preserves the
+    diagnostics for both function parameters and structure fields. -/
+def checkIdShapes [BEq String] (context : StructContext) (location : String)
+    (scope : Scope) : List (String × Shape) → StaticResult Unit
+  | [] => staticOk ()
+  | (name, shape) :: identifiers =>
+      let scopedResult : StaticResult Scope :=
+        match scope with
+        | .funScope function _ =>
+            staticOk (.funScope function (" parameter " ++ name))
+        | .structScope structName _ =>
+            staticOk (.structScope structName name)
+        | _ =>
+            staticError (.general (getImplementationErrorMessage
+              "parameter or field found in unexpected scope" location scope))
+      staticBind scopedResult (fun scopedShape =>
+        staticBind (checkShape context location scopedShape shape) (fun _ =>
+          checkIdShapes context location scope identifiers))
+termination_by identifiers => sizeOf identifiers
+decreasing_by
+  all_goals decreasing_trivial
 
 def checkShapeFields [BEq String] (context : StructContext)
     (fields : List (FieldName × Shape)) : StaticResult Unit :=
@@ -1134,7 +1396,7 @@ def staticCheckNames [BEq String] (context : StructContext) :
         | some field =>
             staticError (.scope ("structure field is redeclared: " ++ field))
         | none =>
-            staticBind (checkShapeFields context fields) (fun _ =>
+            staticBind (checkIdShapes context "" (.structScope name "") fields) (fun _ =>
               let shapedFields :=
                 fields.map (fun (fieldName, shape) =>
                   (fieldName, (shapedBasedFromShape context shape).getD (.word .trusted)))
@@ -1146,6 +1408,21 @@ def staticCheckNames [BEq String] (context : StructContext) :
                 (fun result => staticOk result))
   | _ :: declarations => staticCheckNames context declarations
 termination_by declarations => sizeOf declarations
+
+/-! Source-shaped port of CakeML's `check_export_params_def`
+    (`cakeml/pancake/panStaticScript.sml:649-658`).  Exported parameters are
+    required to have exactly the scalar `One` shape, and Cake reports the
+    offending parameter's name and shape. -/
+def checkExportParams (location : String) (scope : Scope) :
+    List (VarName × Shape) → StaticResult Unit
+  | [] => staticOk ()
+  | (name, shape) :: params =>
+      if shapesSame shape .one then
+        checkExportParams location scope params
+      else
+        staticError (.shape (getNonWordMessage
+          ("exported function parameter " ++ name)
+          (Shape.shapeToString shape) location scope))
 
 def staticCheckFunctionHeader [BEq String] (context : StructContext)
     (declaration : FunDecl α) : StaticResult Unit :=
@@ -1163,19 +1440,22 @@ def staticCheckFunctionHeader [BEq String] (context : StructContext)
   else if declaration.exported && declaration.params.length > 4 then
     staticError (.general ("exported function has more than four arguments: " ++
       declaration.name))
-  else if declaration.exported &&
-      !declaration.params.all (fun (_, shape) => shapesSame shape .one) then
-    staticError (.shape "exported function parameters must be words")
-  else if declaration.exported && !shapesSame declaration.returnShape .one then
-    staticError (.shape "exported function must return one word")
-  else if !isWfShape context declaration.returnShape ||
-      !declaration.params.all (fun (_, shape) => isWfShape context shape) then
-    staticError (.shape ("function has an unknown or invalid parameter/return shape: " ++
-      declaration.name))
-  else if shapeSizeWithContext context declaration.returnShape > 32 then
-    staticError (.shape ("function returns more than 32 words: " ++ declaration.name))
+  else if declaration.exported then
+    staticBind (checkExportParams "" (.funScope declaration.name "") declaration.params)
+      (fun _ =>
+        if !shapesSame declaration.returnShape .one then
+          staticError (.shape "exported function must return one word")
+        else staticOk ())
   else
-    staticOk ()
+    staticBind (checkIdShapes context "" (.funScope declaration.name "")
+      declaration.params) (fun _ =>
+      staticBind (checkShape context ""
+        (.funScope declaration.name " return") declaration.returnShape) (fun _ =>
+        if shapeSizeWithContext context declaration.returnShape > 32 then
+          staticError (.shape ("function " ++ declaration.name ++
+            " returns a shape bigger than 32 words\n"))
+        else
+          staticOk ()))
 
 def staticCheckDecls [BEq String] (structs : StructContext) :
     StaticDeclContext → List (Decl α) → StaticResult StaticDeclContext
@@ -1199,7 +1479,7 @@ def staticCheckDecls [BEq String] (structs : StructContext) :
          else
           staticOk ())
         (fun _ =>
-          staticBind (checkShape structs shape) (fun _ =>
+          staticBind (checkShape structs "" (.declScope name) shape) (fun _ =>
             let checkingContext : Context :=
               { locals := []
                 globals := context.globals
@@ -1238,24 +1518,35 @@ def staticCheckProgs [BEq String] (structs : StructContext)
     (context : StaticDeclContext) : List (Decl α) → StaticResult Unit
   | [] => staticOk ()
   | .function declaration :: declarations =>
-      let checkingContext : Context :=
-        { locals := localInfosFromParams structs declaration.params
-          globals := context.globals
-          functions := context.functions
-          expectedReturn := some declaration.returnShape
-          exceptions := context.exceptions
-          structs := structs
-          scope := .funScope declaration.name ""
-          inLoop := false
-          reachable := .isReach
-          last := .invisLast
-          location := "" }
-      staticBind (checkProg checkingContext declaration.body) (fun result =>
-        if result.exitsFunction then
-          staticCheckProgs structs context declarations
-        else
-          staticError (.general ("missing return statement in function: " ++
-            declaration.name)))
+      let rec addParams : List (VarName × Shape) → StaticResult (InfoMap LocalInfo)
+        | [] => staticOk []
+        | (name, shape) :: params =>
+            match shapedBasedFromShape structs shape with
+            | none => staticError (.scope (getImplementationErrorMessage
+                "static analysis failed to convert in-scope shape" ""
+                (.funScope declaration.name "")))
+            | some shaped =>
+                staticBind (addParams params) (fun rest =>
+                  staticOk ((name, { shapedBased := shaped }) :: rest))
+      staticBind (addParams declaration.params) (fun locals =>
+        let checkingContext : Context :=
+          { locals := locals
+            globals := context.globals
+            functions := context.functions
+            expectedReturn := some declaration.returnShape
+            exceptions := context.exceptions
+            structs := structs
+            scope := .funScope declaration.name ""
+            inLoop := false
+            reachable := .isReach
+            last := .invisLast
+            location := "" }
+        staticBind (checkProg checkingContext declaration.body) (fun result =>
+          if result.exitsFunction then
+            staticCheckProgs structs context declarations
+          else
+            staticError (.general ("branches missing return statement in " ++
+              staticScopeDescription (.funScope declaration.name "") ++ "\n"))))
   | _ :: declarations => staticCheckProgs structs context declarations
 termination_by declarations => declarations.length
 

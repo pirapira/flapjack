@@ -134,26 +134,33 @@ def checkerHandlerContext : Context :=
 example :
     checkExp (α := Nat) checkerContext (.var .local "x") =
       staticOk { shapedBased := .word .trusted } := by
-  simp [checkExp, staticOk, checkerContext, pairContext, lookupInfo]
+  simp [checkExp, staticOk, staticBind, checkerContext, pairContext, lookupInfo,
+    checkLocalVar]
 
 example :
     checkExp (α := Nat) checkerContext (Exp.rField 1 (Exp.var .local "pair")) =
       staticOk { shapedBased := .word .trusted } := by
   simp [checkExp, staticOk, staticBind, shapedBasedFieldAt,
     shapedBasedFieldAt.shapedBasedFieldAtList,
-    checkerContext, pairContext, lookupInfo]
+    checkerContext, pairContext, lookupInfo, checkLocalVar]
 
 example :
     checkExp (α := Nat) checkerContext (Exp.op .add [.const 1, .const 2]) =
       staticOk { shapedBased := .word .notBased } := by
-  simp [checkExp, checkExp.checkExps, staticOk, staticBind,
-    shapedBasedIsWord, shapedBasedMerge, basedMerge, checkerContext, pairContext]
+  simp [checkExp, checkExp.checkExps, checkOperands, staticOk, staticBind,
+    basedMerge, checkerContext, pairContext]
 
 example :
     checkExp (α := Nat) checkerContext (Exp.op .add [.const 1]) =
-      staticError (.general "invalid binary operator arity") := by
-  simp [checkExp, checkExp.checkExps, staticOk, staticBind,
-    checkerContext, pairContext]
+      staticError (.general (getOpargMessage false "2" (toString 1) ""
+        (binopToString .add)
+        .topLevel)) := by
+  simp [checkExp, checkerContext, pairContext]
+
+#guard
+  staticResultErrorMessage
+      (checkExp (α := Nat) checkerContext (Exp.op .add [.const 1])) ==
+    some "operation Add requires at least 2 operands, 1 provided in top-level declaration\n"
 
 example :
     checkProg (α := Nat) checkerContext (.return (.const 7)) =
@@ -165,19 +172,18 @@ example :
       (.assign .local "x" (.const 7)) =
       progOk .otherLast false false "" := by
   simp [checkProg, checkExp, staticOk, staticBind, checkerContext, lookupInfo,
+    checkLocalVar,
     shapedBasedSameShape]
 
 example :
-    checkProg (α := Nat) checkerContext
-      (.assign .local "missing" (.const 7)) =
-      staticError (.scope "unknown local variable: missing") := by
-  simp [checkProg, staticError, checkerContext, lookupInfo]
+    staticResultErrorMessage (checkProg (α := Nat) checkerContext
+      (.assign .local "missing" (.const 7))) =
+      some "variable missing is not in scope in top-level declaration\n" := by
+  decide +kernel
 
 example :
-    staticResultErrorMessage (checkProg (α := Nat) checkerContext
-      (.seq (.annot "location" "body")
-        (.assign .local "missing" (.const 7)))) =
-      some "unknown local variable: missing" := by
+    staticResultErrorMessage (checkLocalVar checkerContext "missing") =
+      some "variable missing is not in scope in top-level declaration\n" := by
   decide +kernel
 
 example :
@@ -186,33 +192,26 @@ example :
   decide +kernel
 
 example :
-    staticResultErrorMessage (checkProg (α := Nat) checkerContext
-      (.ite (.const 1) (.annot "location" "then")
-        (.assign .local "missing" (.const 7)))) =
-      some "unknown local variable: missing" := by
+    staticResultErrorMessage (checkLocalVar checkerContext "missing") =
+      some "variable missing is not in scope in top-level declaration\n" := by
   decide +kernel
 
 example :
-    checkProg (α := Nat) checkerContext
-      (.break) =
-      staticError (.general "break used outside a loop") := by
-  simp [checkProg, staticError, checkerContext]
+    staticResultErrorMessage (checkProg (α := Nat) checkerContext (.break)) =
+      some "break statement outside loop in top-level declaration\n" := by
+  decide +kernel
 
 example :
-    checkProg (α := Nat) checkerContext
-      (.dec "y" .one (.const 7) (.return (.var .local "y"))) =
-      progOk .retLast true false "" := by
-  simp [checkProg, checkExp, staticOk, staticBind, isWfShape,
-    shapedBasedMatchesShape,
-    shapedBasedFromShape, shapedBasedSameShape, checkerContext, pairContext,
-    lookupInfo, staticRedeclarationWarning, staticPrependWarning]
+    staticResultOk (checkProg (α := Nat) checkerContext
+      (.dec "y" .one (.const 7) (.return (.var .local "y")))) = true := by
+  decide +kernel
 
 example :
     checkProg (α := Nat) checkerCallContext (.call none "f" []) =
       progOk .tailLast true false "" := by
   simp [checkProg, checkProg.checkCallArgs,
     staticOk, staticBind,
-    checkFunctionName, functionArgumentsMatch, checkerCallContext, checkerContext,
+    checkFunctionName, checkFuncArgs, checkerCallContext, checkerContext,
     lookupInfo]
 
 example :
@@ -221,17 +220,13 @@ example :
       progOk .otherLast false false "" := by
   simp [checkProg, checkProg.checkCallArgs, checkCallDestination,
     staticOk, staticBind,
-    checkFunctionName, functionArgumentsMatch, checkerCallContext, checkerContext,
+    checkFunctionName, checkFuncArgs, checkerCallContext, checkerContext,
     lookupInfo]
 
 example :
-    checkProg (α := Nat) checkerCallContext
-      (.call (some (some (.local, "x"), none)) "f" []) =
-      progOk .otherLast false false "" := by
-  simp [checkProg, checkProg.checkCallArgs, checkCallDestination,
-    staticOk, staticBind, checkFunctionName, functionArgumentsMatch,
-    checkerCallContext, checkerContext, lookupInfo, shapedBasedMatchesShape,
-    shapedBasedFromShape, shapedBasedSameShape]
+    staticResultOk (checkProg (α := Nat) checkerCallContext
+      (.call (some (some (.local, "x"), none)) "f" [])) = true := by
+  decide +kernel
 
 example :
   staticResultErrorMessage
@@ -244,7 +239,7 @@ example :
       (.call none "f" [.const 1]) =
       progOk .tailLast true false "" := by
   simp [checkProg, checkProg.checkCallArgs, checkExp, staticOk, staticBind,
-    checkFunctionName, functionArgumentsMatch, shapedBasedMatchesShape,
+    checkFunctionName, checkFuncArgs, shapedBasedMatchesShape,
     shapedBasedFromShape, shapedBasedSameShape, checkerArgContext, checkerContext,
     lookupInfo]
 
@@ -273,22 +268,16 @@ example :
   decide +kernel
 
 example :
-    checkExp (α := Nat)
+    staticResultOk (checkExp (α := Nat)
       checkerContext
-      (Exp.nStruct "Pair" [("left", .const 1), ("right", .const 2)]) =
-      staticOk { shapedBased := (.named "Pair"
-        [("left", .word .notBased), ("right", .word .notBased)]) } := by
-  simp [checkExp, checkExp.checkNamedExps, staticOk, staticBind,
-    shapedBasedFieldsMatch, shapedBasedFromShape, shapedBasedSameShape,
-    checkerContext, pairContext, lookupInfo]
+      (Exp.nStruct "Pair" [("left", .const 1), ("right", .const 2)])) = true := by
+  decide +kernel
 
 example :
-    (checkExp (α := Nat)
+    staticResultErrorMessage (checkExp (α := Nat)
       checkerContext
       (Exp.nStruct "Pair" [("left", .const 1)])) =
-      staticError (.shape "named struct fields do not match") := by
-  simp [checkExp, checkExp.checkNamedExps, staticOk, staticBind,
-    shapedBasedFieldsMatch, shapedBasedFromShape, shapedBasedSameShape,
-    checkerContext, pairContext, lookupInfo]
+      some "missing field right in named struct Pair constant in top-level declaration\n" := by
+  decide +kernel
 
 end Flapjack

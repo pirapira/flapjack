@@ -182,6 +182,13 @@ def reachabilityContext : Context :=
   branchLastStmt true false == .condExitLast &&
   branchLastStmt false true == .condExitLast &&
   branchLastStmt true true == .condExitLast
+#guard
+  seqLastStmt .retLast .invisLast == .retLast &&
+  seqLastStmt .otherLast .invisLast == .otherLast &&
+  seqLastStmt .invisLast .invisLast == .invisLast &&
+  seqLastStmt .retLast .otherLast == .otherLast &&
+  seqLastStmt .retLast .raiseLast == .raiseLast &&
+  seqLastStmt .invisLast .retLast == .retLast
 #guard (reachedWarnable (.annot "" "" : Prog Nat) reachabilityContext).1.isNone
 #guard (reachedWarnable (.tick : Prog Nat) reachabilityContext).1.isNone
 #guard (reachedWarnable (.skip : Prog Nat)

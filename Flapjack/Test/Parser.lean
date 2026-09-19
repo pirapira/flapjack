@@ -534,6 +534,19 @@ def convShapeCakeParity : Bool :=
 -- An unrecognised character is a lexical error rather than a silent skip.
 #guard rejects "fun f() { return `; }"
 
+/-! Cake `safe_pancake_lex_def` (`panLexerScript.sml:318`) preserves a
+    successful token stream, while collecting lexical-error messages and their
+    source locations from the filtered output. -/
+def safePancakeLexCakeParity : Bool :=
+  match safePancakeLex "1 + 2", safePancakeLex "/*" with
+  | .ok tokens, .error [(message, loc)] =>
+      tokens.map (·.1) == [.intT 1, .plusT, .intT 2] &&
+        message == "Malformed comment" &&
+        loc == { start := .posn 1 1, stop := .posn 1 3 }
+  | _, _ => false
+
+#guard safePancakeLexCakeParity
+
 /-! ### Expressions -/
 
 -- A run of one associative operator flattens into a single `Op`.

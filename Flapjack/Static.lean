@@ -827,6 +827,27 @@ def getImplementationErrorMessage (description location : String)
   location ++ description ++ " in " ++ staticScopeDescription scope ++ "\n" ++
     "this should never happen. please report to a compiler developer\n"
 
+/-! Source-shaped port of CakeML's `check_func_args_def`
+    (`cakeml/pancake/panStaticScript.sml:690-718`). -/
+def checkFuncArgs [BEq String] (context : Context) (functionName : FunName) :
+    List (VarName × Shape) → List ShapedBased → StaticResult Unit
+  | (parameter, shape) :: parameters, argument :: arguments =>
+      if shapedBasedMatchesShape context.structs shape argument then
+        checkFuncArgs context functionName parameters arguments
+      else
+        staticError (.shape (getShapeMismatchMessage
+          ("value for argument " ++ parameter ++ " given to function " ++ functionName)
+          (shapedBasedToString argument) (Shape.shapeToString shape)
+          context.location context.scope))
+  | (parameter, _) :: _, [] =>
+      staticError (.general (context.location ++ "argument " ++ parameter ++
+        " for call to function " ++ functionName ++ " is missing in " ++
+        staticScopeDescription context.scope ++ "\n"))
+  | [], _ :: _ =>
+      staticError (.general (context.location ++ "extra arguments given to function " ++
+        functionName ++ " in " ++ staticScopeDescription context.scope ++ "\n"))
+  | [], [] => staticOk ()
+
 def staticUnreachableWarning (context : Context) (last : LastStmt) : StatErr :=
   .warning (getUnreachMessage context.location (staticLastStmtString last) context.scope)
 
@@ -975,9 +996,8 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
       staticBind (checkFunctionName context function) (fun functionInfo =>
         let returnShape := functionInfo.returnShape
         staticBind (checkCallArgs context arguments) (fun argumentResult =>
-            if !functionArgumentsMatch context.structs functionInfo.params argumentResult.shapedBased then
-              staticError (.shape "function argument shapes do not match")
-            else
+          staticBind (checkFuncArgs context function functionInfo.params
+              argumentResult.shapedBased) (fun _ =>
               match info with
               | none =>
                   -- CakeML `panStaticScript.sml:1335`: a tail call requires the
@@ -1022,7 +1042,7 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
                         let handlerContext := { context with locals :=
                           (handlerVariable, { shapedBased := handlerShaped }) :: context.locals }
                         staticBind (checkProg handlerContext handlerProgram) (fun _ =>
-                          checkCallDestination context returnShape destination)))
+                          checkCallDestination context returnShape destination))))
   | .decCall name shape function arguments body =>
       staticBind (checkRedecVar context name) (fun _ =>
         if !isWfShape context.structs shape then
@@ -1030,10 +1050,9 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
         else
           staticBind (checkFunctionName context function) (fun functionInfo =>
             staticBind (checkCallArgs context arguments) (fun argumentResult =>
-                if !functionArgumentsMatch context.structs functionInfo.params
-                    argumentResult.shapedBased then
-                  staticError (.shape "function argument shapes do not match")
-                else if !shapesSame shape functionInfo.returnShape then
+              staticBind (checkFuncArgs context function functionInfo.params
+                  argumentResult.shapedBased) (fun _ =>
+                if !shapesSame shape functionInfo.returnShape then
                   staticError (.shape "declaration-call result shape does not match")
                 else
                   match shapedBasedFromShape context.structs shape with
@@ -1043,7 +1062,7 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
                         locals := (name, { shapedBased := shaped }) :: context.locals
                         last := .otherLast }
                       staticBind (checkProg nextContext body) (fun result =>
-                        (Except.ok { result with variableDelta := [] }, []))))
+                        (Except.ok { result with variableDelta := [] }, [])))))
       )
   | .extCall function configuration configurationLength array arrayLength =>
       staticBind (checkCallArgs context

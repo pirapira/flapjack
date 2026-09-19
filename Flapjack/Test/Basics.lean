@@ -210,7 +210,7 @@ example :
       progOk .tailLast true false "" := by
   simp [checkProg, checkProg.checkCallArgs,
     staticOk, staticBind,
-    checkFunctionName, functionArgumentsMatch, checkerCallContext, checkerContext,
+    checkFunctionName, checkFuncArgs, checkerCallContext, checkerContext,
     lookupInfo]
 
 example :
@@ -219,7 +219,7 @@ example :
       progOk .otherLast false false "" := by
   simp [checkProg, checkProg.checkCallArgs, checkCallDestination,
     staticOk, staticBind,
-    checkFunctionName, functionArgumentsMatch, checkerCallContext, checkerContext,
+    checkFunctionName, checkFuncArgs, checkerCallContext, checkerContext,
     lookupInfo]
 
 example :
@@ -227,7 +227,7 @@ example :
       (.call (some (some (.local, "x"), none)) "f" []) =
       progOk .otherLast false false "" := by
   simp [checkProg, checkProg.checkCallArgs, checkCallDestination,
-    staticOk, staticBind, checkFunctionName, functionArgumentsMatch,
+    staticOk, staticBind, checkFunctionName, checkFuncArgs,
     checkerCallContext, checkerContext, lookupInfo, checkLocalVar,
     shapedBasedMatchesShape,
     shapedBasedFromShape, shapedBasedSameShape]
@@ -243,7 +243,7 @@ example :
       (.call none "f" [.const 1]) =
       progOk .tailLast true false "" := by
   simp [checkProg, checkProg.checkCallArgs, checkExp, staticOk, staticBind,
-    checkFunctionName, functionArgumentsMatch, shapedBasedMatchesShape,
+    checkFunctionName, checkFuncArgs, shapedBasedMatchesShape,
     shapedBasedFromShape, shapedBasedSameShape, checkerArgContext, checkerContext,
     lookupInfo]
 

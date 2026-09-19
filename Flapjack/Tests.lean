@@ -63,6 +63,7 @@ import Flapjack.Test.StaticGlobalVarParity
 import Flapjack.Test.StaticRedecVarParity
 import Flapjack.Test.StaticExportParamsParity
 import Flapjack.Test.StaticOperandsParity
+import Flapjack.Test.StaticFuncArgsParity
 import Flapjack.Test.CorrectnessConditional
 import Flapjack.Test.CorrectnessColour
 import Flapjack.Test.CorrectnessSsaColour

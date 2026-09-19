@@ -1459,6 +1459,14 @@ def wordProgLiveBefore (program : WordProg α) (liveAfter : List Nat) : List Nat
   wordProgReadVars program ++
     liveAfter.filter (fun name => name ∉ wordProgWriteVars program)
 
+/- Cake's call boundary scans the same syntax in left-to-right order as
+   `wordProgReadVars`, but this private accumulator form avoids rebuilding the
+   prefix list at every nested call.  Keep the public equation above unchanged
+   for the proof-facing allocator interface. -/
+def wordProgLiveBeforeFast (program : WordProg α) (liveAfter : List Nat) : List Nat :=
+  wordProgReadVarsFast program ++
+    liveAfter.filter (fun name => name ∉ wordProgWriteVars program)
+
 def wordListUnion (left right : List Nat) : List Nat :=
   (left ++ right).eraseDups
 
@@ -1495,7 +1503,7 @@ def wordProgClashAnalysis : WordProg α → List Nat →
       let callProgram : WordProg α :=
         .call (some (destinations, cutsets, returnCode, returnLabel, entryLabel))
           target arguments none
-      (wordListUnion returnLive (wordProgLiveBefore callProgram liveAfter),
+      (wordListUnion returnLive (wordProgLiveBeforeFast callProgram liveAfter),
         returnEdges ++ wordProgAtomicClashes callProgram liveAfter)
   | .call returns target arguments (some (exception, body, _, _)), liveAfter =>
       let (returnLive, returnEdges) := match returns with
@@ -1509,7 +1517,7 @@ def wordProgClashAnalysis : WordProg α → List Nat →
       let handlerEntryEdges :=
         wordClashPairs [exception] (handlerLive ++ liveAfter)
       (wordListUnion (exception :: handlerLive)
-          (wordListUnion returnLive (wordProgLiveBefore callProgram liveAfter)),
+          (wordListUnion returnLive (wordProgLiveBeforeFast callProgram liveAfter)),
         handlerEntryEdges ++ handlerEdges ++ returnEdges ++
           wordProgAtomicClashes callProgram liveAfter)
   | program, liveOut =>

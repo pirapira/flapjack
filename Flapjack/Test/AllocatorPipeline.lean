@@ -26,6 +26,14 @@ example :
     wordExpReadVarsFastAcc, wordProgReadVars,
     wordExpReadVars, allocatorReadVarsFastFixture]
 
+example :
+    wordProgLiveBeforeFast allocatorReadVarsFastFixture [22, 23] =
+      wordProgLiveBefore allocatorReadVarsFastFixture [22, 23] := by
+  simp [wordProgLiveBeforeFast, wordProgLiveBefore, wordProgReadVarsFast,
+    wordProgReadVarsFastAcc, wordListAppendAcc, wordExpReadVarsFastAcc,
+    wordProgReadVars, wordProgWriteVars, wordExpReadVars,
+    allocatorReadVarsFastFixture]
+
 example [OfNat α 1] :
     pipelineWordFunctionsAllocated
       ([] : List (Nat × List Nat × LoopProg α)) = some [] := by

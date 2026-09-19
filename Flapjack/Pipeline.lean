@@ -175,6 +175,21 @@ def pipelineWordFunctions [OfNat α 1]
     (label, parameters.map (fun name => name + 2),
       wordProgDCE (loopToWordProg context body)))
 
+/-! Source-facing counterpart of `pipelineWordFunctions`.  The ordinary
+    helper above predates the executable `loop_to_word$comp_func` port and
+    assumes that every source variable keeps its numeric name after adding
+    two.  CakeML instead rebuilds a dense even-register context from
+    `params ++ fromNumSet (difference (acc_vars body) params)`.  Use that
+    context for source-entry artifacts, including the identity lowering path;
+    otherwise the identity path can disagree with the full-SSA fallback on
+    programs whose assigned variables are sparse. -/
+def pipelineWordFunctionsSource [OfNat α 1]
+    (functions : List (Nat × List Nat × LoopProg α)) :
+    List (Nat × List Nat × WordProg α) :=
+  functions.map (fun (label, parameters, body) =>
+    (label, LoopToWord.loopToWordCompParameters parameters body,
+      wordProgDCE (LoopToWord.loopToWordCompFunc label parameters body)))
+
 /-! Source-shaped `loop_to_word$compile_prog` output.  The ordinary pipeline
     keeps parameter names for later register allocation; `pan_to_word` instead
     exposes each function's source label, arity (including the entry slot), and

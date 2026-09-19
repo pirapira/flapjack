@@ -198,14 +198,25 @@ def differenceNumSet (names excluded : List Nat) : List Nat :=
     `loopAccVars` supplies the source `acc_vars` set, parameters are removed,
     `makeCtxt` assigns the consecutive even registers, and the existing
     `loopToWordProg` supplies the first component of `comp`. -/
-def loopToWordCompFunc [OfNat α 1] (name : Nat) (params : List Nat)
-    (body : LoopProg α) : WordProg α :=
+def loopToWordCompContext (params : List Nat) (body : LoopProg α) :
+    List (Nat × Nat) :=
   let assigned := loopAccVars body []
   let variables := fromNumSet (differenceNumSet assigned (toNumSet params))
   let maximum := (params ++ assigned ++ loopReferencedVars body).foldl max 0
   let fallback := sourceFallbackContext (List.range (maximum + 1))
-  let context := makeCtxt 2 (params ++ variables) fallback
-  (loopToWordProgWithLabels { vars := context } (name, 2) body).1
+  makeCtxt 2 (params ++ variables) fallback
+
+def loopToWordCompFunc [OfNat α 1] (name : Nat) (params : List Nat)
+    (body : LoopProg α) : WordProg α :=
+  (loopToWordProgWithLabels { vars := loopToWordCompContext params body }
+    (name, 2) body).1
+
+/-! Word names for the formals produced by the same `make_ctxt` used by
+    `comp_func`.  The source-facing pipeline must use these names rather than
+    adding two to the source variable number: source variables need not be
+    contiguous after `acc_vars` has been collected. -/
+def loopToWordCompParameters (params : List Nat) (body : LoopProg α) : List Nat :=
+  params.map (findVar (loopToWordCompContext params body))
 
 /-! Port of `compile_prog_def` from `loop_to_wordScript.sml:171-174`.
     The source adds one entry slot to each function's parameter count while

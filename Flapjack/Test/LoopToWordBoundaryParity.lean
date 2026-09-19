@@ -13,9 +13,8 @@ def p1Source : String :=
   "fun 1 id (1 x) { return x; }
 fun 1 main() { var 1 t = id(5); return 1; }"
 
-/-- Compile `p1` to its loop-level functions the way the RISC-V runtime
-    image pipeline does, then lower each function through the faithful
-    `loopToWordCompFunc` boundary. -/
+/-- Compile `p1` to its source-shaped loop-level functions, then lower each
+    function through the source-facing pipeline boundary. -/
 def p1WordBoundaries :
     Option (List (Nat × List Nat × WordProg (RiscV.Word 64))) := do
   let declarations ← match Parser.parseTopDecs (BitVec.ofInt 64) p1Source with
@@ -23,10 +22,7 @@ def p1WordBoundaries :
   let pipeline ← compileFlapjackEntry .rv64i (BitVec.ofNat 64 8)
       (fun value => BitVec.ofNat 64 value) "main"
       (panTargetDeclarationsWithDefaultMain declarations)
-  let functions := pipelineLoopFunctions .rv64i stackFunctionFirstLabel
-      pipeline.crepe
-  some (functions.map (fun (label, parameters, body) =>
-    (label, parameters, wordProgDCE (loopToWordCompFunc label parameters body))))
+  some (pipelineWordFunctionsSource pipeline.loop)
 
 /-- The Word-space names of every lowered `p1` function. -/
 def p1WordVariableNames : Option (List (List Nat)) :=

@@ -122,6 +122,12 @@ def panToCrepMakeFuncs : List (Decl α) → InfoMap (List (VarName × Shape) × 
 def functionInfos : List (Decl α) → InfoMap (List (VarName × Shape) × Shape) :=
   panToCrepMakeFuncs
 
+/-! Source-named port of CakeML Pancake's `crep_vars_def`
+    (`pan_to_crepScript.sml:376`).  The Crepe function interface exposes one
+    consecutive slot for every flattened parameter word. -/
+def panToCrepVars (params : List (VarName × Shape)) : List Nat :=
+  List.range (Shape.shapeSize (.comb (params.map Prod.snd)))
+
 /-! Faithful port of `pan_to_crep$compile` (`compile_def`) from
     `cakeml/pancake/pan_to_crepScript.sml:139-305`.
 
@@ -337,8 +343,7 @@ def compileToCrepe [BEq α] [OfNat α 0] [Add α]
     the source temporary numbering. -/
 def compileFunDeclSource [BEq α] [OfNat α 0] [Add α]
     (context : CompileContext α) (declaration : FunDecl α) : CompiledFunction α :=
-  let (_vars, params, _maxVar) := compileParamVars declaration.params 0
-  { name := declaration.name, params := params,
+  { name := declaration.name, params := panToCrepVars declaration.params,
     body := panToCrepCompFunc context declaration.params declaration.body,
     returnShape := declaration.returnShape }
 

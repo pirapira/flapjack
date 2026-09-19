@@ -398,6 +398,16 @@ def localiseTopDecsCakeParity : Bool :=
 
 #guard localiseTopDecsCakeParity
 
+/-! Cake `parse_topdecs_to_ast_def` (`panPtreeConversionScript.sml:913`)
+    lexes, converts, and localises a complete declaration list; malformed
+    source is reported as an error rather than producing partial declarations. -/
+def parseTopDecsCakeParity : Bool :=
+  let valid := sameAst (parseTopDecs ofI "var 1 x = 1;")
+    (.ok [.decl .one "x" (.const 1)])
+  valid && (parseTopDecs ofI "fun f() { return `; }").toOption.isNone
+
+#guard parseTopDecsCakeParity
+
 #guard (pancakeLex "x + 1").map (·.1) == [.identT "x", .plusT, .intT 1]
 
 -- `//` runs to end of line; the block forms are `/* */` and `/@ @/`.

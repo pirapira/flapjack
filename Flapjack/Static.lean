@@ -757,6 +757,13 @@ def getRogueMessage (isBreak : Bool) (location : String) (scope : Scope) : Strin
   location ++ (if isBreak then "break " else "continue ") ++
     "statement outside loop in " ++ staticScopeDescription scope ++ "\n"
 
+/-! Source-shaped port of CakeML's `get_non_word_msg_def`
+    (`cakeml/pancake/panStaticScript.sml:552-557`). -/
+def getNonWordMessage (description shapeString location : String)
+    (scope : Scope) : String :=
+  location ++ description ++ " has shape " ++ shapeString ++
+    " instead of a word in " ++ staticScopeDescription scope ++ "\n"
+
 def staticUnreachableWarning (context : Context) (last : LastStmt) : StatErr :=
   .warning (getUnreachMessage context.location (staticLastStmtString last) context.scope)
 

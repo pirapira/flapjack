@@ -507,6 +507,38 @@ def labCompileLines [NeZero width] (context : WordFfiContext)
         (position + 4 * code.length) lines
       pure (code ++ rest)
 
+/-- The label table a Lab encoding pass resolves against.
+
+    CakeML keeps this in an `sptree` (`lab_to_targetScript`'s `get_label` /
+    `find_pos`), not in a list: `enc_secs_again` resolves every label
+    reference in the program against it, so the lookup is on the hot path of
+    every relocation round and of the final link.
+
+    The list form is kept alongside because the collectors build and compare
+    lists -- `labCollectProgramLabelsStable` iterates until the list stops
+    changing -- and because it is the order that decides which entry wins. -/
+structure LabLabelIndex where
+  entries : List (Nat × Nat × Nat)
+  /-- Section to label to position, mirroring Cake's per-section `sptree`. -/
+  positions : Std.TreeMap Nat (Std.TreeMap Nat Nat)
+  deriving Inhabited
+
+/-- Build the index.  `foldr` inserts later entries first, so an earlier
+    entry overwrites a later duplicate and the table agrees with the
+    first-match list scan it replaces. -/
+def labLabelIndexOf (entries : List (Nat × Nat × Nat)) : LabLabelIndex :=
+  { entries := entries
+    positions := entries.foldr
+      (fun entry table =>
+        let sectionTable := (table[entry.1]?).getD ∅
+        table.insert entry.1 (sectionTable.insert entry.2.1 entry.2.2)) ∅ }
+
+def labLookupProgramPosition (sectionId label : Nat)
+    (labels : LabLabelIndex) : Option Nat :=
+  match labels.positions[sectionId]? with
+  | none => none
+  | some sectionTable => sectionTable[label]?
+
 def compileLabSection [NeZero width] (context : WordFfiContext)
     (sectionData : LabSection (Word width)) : Option (List (Instruction width)) :=
   let initial := labCollectLabels sectionData.name 0 sectionData.lines
@@ -625,19 +657,12 @@ def labCollectProgramLabels (base : Nat) :
       globalLabels ++ labCollectProgramLabels
         (base + 4 * labSectionInstructionCount sectionData) sections
 
-def labLookupProgramPosition (sectionId label : Nat) :
-    List (Nat × Nat × Nat) → Option Nat
-  | [] => none
-  | (candidateSection, candidateLabel, position) :: labels =>
-      if sectionId == candidateSection && label == candidateLabel then some position
-      else labLookupProgramPosition sectionId label labels
-
-def labResolveProgramRef (labels : List (Nat × Nat × Nat)) (ref : LabRef) :
+def labResolveProgramRef (labels : LabLabelIndex) (ref : LabRef) :
     Option Nat :=
   labLookupProgramPosition ref.sectionId ref.label labels
 
 def labCompileAsmProgram [NeZero width] (context : WordFfiContext)
-    (labels : List (Nat × Nat × Nat)) (position : Nat) :
+    (labels : LabLabelIndex) (position : Nat) :
     LabAsm (Word width) → Option (List (Instruction width))
   | .jump target => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
@@ -678,7 +703,7 @@ def labCompileAsmProgram [NeZero width] (context : WordFfiContext)
       pure [.jal zero (0 - BitVec.ofNat width (position + 16))]
 
 def labCompileProgramLines [NeZero width] (context : WordFfiContext)
-    (labels : List (Nat × Nat × Nat)) (position : Nat) :
+    (labels : LabLabelIndex) (position : Nat) :
     List (LabLine (Word width)) → Option (List (Instruction width))
   | [] => some []
   | .label _ _ _ :: lines =>
@@ -695,7 +720,7 @@ def labCompileProgramLines [NeZero width] (context : WordFfiContext)
       pure (code ++ rest)
 
 def labProgramLineCompiledInstructionCount [NeZero width]
-    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (context : WordFfiContext) (labels : LabLabelIndex)
     (position : Nat) : LabLine (Word width) → Nat
   | .label _ _ _ => 0
   | .asm operation _ _ => ((labCompilePlain operation).getD []).length
@@ -703,7 +728,7 @@ def labProgramLineCompiledInstructionCount [NeZero width]
       ((labCompileAsmProgram context labels position operation).getD []).length
 
 def labCollectProgramSectionLabels [NeZero width]
-    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (context : WordFfiContext) (labels : LabLabelIndex)
     (sectionId base : Nat) : List (LabLine (Word width)) → List (Nat × Nat × Nat)
   | [] => []
   | .label _ label _ :: lines =>
@@ -715,7 +740,7 @@ def labCollectProgramSectionLabels [NeZero width]
         (base + 4 * count) lines
 
 def labSectionCompiledInstructionCount [NeZero width]
-    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (context : WordFfiContext) (labels : LabLabelIndex)
     (sectionId base : Nat) (lines : List (LabLine (Word width))) : Nat :=
   match lines with
   | [] => 0
@@ -726,18 +751,20 @@ def labSectionCompiledInstructionCount [NeZero width]
       count + labSectionCompiledInstructionCount context labels sectionId
         (base + 4 * count) rest
 
+/-- The guess arrives as an already-built index: Cake resolves against one
+    `sptree` for the whole sweep rather than rebuilding it per section. -/
 def labCollectProgramLabelsWithContext [NeZero width]
     (context : WordFfiContext) (base : Nat)
-    (guess : List (Nat × Nat × Nat)) :
+    (labels : LabLabelIndex) :
     LabProgram (Word width) → List (Nat × Nat × Nat)
   | [] => []
   | sectionData :: sections =>
-      let sectionLabels := labCollectProgramSectionLabels context guess
+      let sectionLabels := labCollectProgramSectionLabels context labels
         sectionData.name base sectionData.lines
-      let sectionLength := labSectionCompiledInstructionCount context guess
+      let sectionLength := labSectionCompiledInstructionCount context labels
         sectionData.name base sectionData.lines
       sectionLabels ++ labCollectProgramLabelsWithContext context
-        (base + 4 * sectionLength) guess sections
+        (base + 4 * sectionLength) labels sections
 
 def labCollectProgramLabelsStable [NeZero width] (fuel : Nat)
     (context : WordFfiContext) (base : Nat)
@@ -746,12 +773,12 @@ def labCollectProgramLabelsStable [NeZero width] (fuel : Nat)
   match fuel with
   | 0 => guess
   | fuel + 1 =>
-      let next := labCollectProgramLabelsWithContext context base guess program
+      let next := labCollectProgramLabelsWithContext context base (labLabelIndexOf guess) program
       if next == guess then next
       else labCollectProgramLabelsStable fuel context base next program
 
 def labCompileProgramSections [NeZero width] (context : WordFfiContext)
-    (labels : List (Nat × Nat × Nat)) (base : Nat) :
+    (labels : LabLabelIndex) (base : Nat) :
     LabProgram (Word width) → Option (List (Instruction width))
   | [] => some []
   | sectionData :: sections => do
@@ -763,7 +790,7 @@ def labCompileProgramSections [NeZero width] (context : WordFfiContext)
 def compileLabProgram [NeZero width] (context : WordFfiContext)
     (program : LabProgram (Word width)) : Option (List (Instruction width)) :=
   let initial := labCollectProgramLabels 0 program
-  let labels := labCollectProgramLabelsStable 8 context 0 initial program
+  let labels := labLabelIndexOf (labCollectProgramLabelsStable 8 context 0 initial program)
   labCompileProgramSections context labels 0 program
 
 def compileStackProgramNatToRiscV [NeZero width]
@@ -804,7 +831,7 @@ def compileWordProgramToRiscV [NeZero width]
     this parallel path computes a halt PC immediately after the linked image,
     emits the jump, and appends a self-loop at that PC. -/
 def labCompileAsmWithHalt [NeZero width] (context : WordFfiContext)
-    (labels : List (Nat × Nat × Nat)) (position _haltPc : Nat) :
+    (labels : LabLabelIndex) (position _haltPc : Nat) :
     LabAsm (Word width) → Option (List (Instruction width))
   | .jump target => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
@@ -845,7 +872,7 @@ def labCompileAsmWithHalt [NeZero width] (context : WordFfiContext)
   | .heapAlloc _ => none
 
 def labCompileProgramLinesWithHalt [NeZero width]
-    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (context : WordFfiContext) (labels : LabLabelIndex)
     (position haltPc : Nat) :
     List (LabLine (Word width)) → Option (List (Instruction width))
   | [] => some []
@@ -863,7 +890,7 @@ def labCompileProgramLinesWithHalt [NeZero width]
       pure (code ++ rest)
 
 def labCompileProgramSectionsWithHalt [NeZero width]
-    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (context : WordFfiContext) (labels : LabLabelIndex)
     (base haltPc : Nat) :
     LabProgram (Word width) → Option (List (Instruction width))
   | [] => some []
@@ -881,7 +908,7 @@ def labProgramInstructionCount : LabProgram (Word width) → Nat
 
 def compileLabProgramWithHalt [NeZero width] (context : WordFfiContext)
     (program : LabProgram (Word width)) : Option (List (Instruction width)) := do
-  let labels := labCollectProgramLabels 0 program
+  let labels := labLabelIndexOf (labCollectProgramLabels 0 program)
   let haltPc := 4 * labProgramInstructionCount program
   let code ← labCompileProgramSectionsWithHalt context labels 0 haltPc program
   pure (code ++ [.jal 0 0])
@@ -900,7 +927,7 @@ def executeLabProgramWithHalt [NeZero width] (fuel : Nat)
     only need code; correctness proofs need the section boundary to initialize
     a function runner at the generated entry address. -/
 def compileLabProgramLinkedAux [NeZero width]
-    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (context : WordFfiContext) (labels : LabLabelIndex)
     (base : Nat) : LabProgram (Word width) →
       Option (List (Nat × Word width × List (Instruction width)))
   | [] => some []
@@ -914,7 +941,7 @@ def compileLabProgramLinked [NeZero width] (context : WordFfiContext)
     (program : LabProgram (Word width)) :
     Option (List (Nat × Word width × List (Instruction width))) :=
   let initial := labCollectProgramLabels 0 program
-  let labels := labCollectProgramLabelsStable 8 context 0 initial program
+  let labels := labLabelIndexOf (labCollectProgramLabelsStable 8 context 0 initial program)
   compileLabProgramLinkedAux context labels 0 program
 
 /-! Linked machine images retain CakeML's three-region FFI prefix.  The
@@ -951,7 +978,7 @@ def labRebaseLinkedFfiReturnLines [NeZero width] :
   | [] => []
 
 def labCompileAsmProgramWithFfiBase [NeZero width]
-    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (context : WordFfiContext) (labels : LabLabelIndex)
     (position _ffiBase : Nat) :
     LabAsm (Word width) → Option (List (Instruction width))
   | .callFfi function => do
@@ -965,7 +992,7 @@ def labCompileAsmProgramWithFfiBase [NeZero width]
   | operation => labCompileAsmProgram context labels position operation
 
 def labCompileProgramLinesWithFfiBase [NeZero width]
-    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (context : WordFfiContext) (labels : LabLabelIndex)
     (position ffiBase : Nat) :
     List (LabLine (Word width)) → Option (List (Instruction width))
   | [] => some []
@@ -983,7 +1010,7 @@ def labCompileProgramLinesWithFfiBase [NeZero width]
       pure (code ++ rest)
 
 def labCompileAsmProgramWithLinkedFfiBase [NeZero width]
-    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (context : WordFfiContext) (labels : LabLabelIndex)
     (position _ffiBase : Nat) :
     LabAsm (Word width) → Option (List (Instruction width))
   | .callFfi function => do
@@ -993,7 +1020,7 @@ def labCompileAsmProgramWithLinkedFfiBase [NeZero width]
   | operation => labCompileAsmProgram context labels position operation
 
 def labCompileProgramLinesWithLinkedFfiBase [NeZero width]
-    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (context : WordFfiContext) (labels : LabLabelIndex)
     (position ffiBase : Nat) :
     List (LabLine (Word width)) → Option (List (Instruction width))
   | [] => some []
@@ -1011,7 +1038,7 @@ def labCompileProgramLinesWithLinkedFfiBase [NeZero width]
       pure (code ++ rest)
 
 def compileLabProgramLinkedWithFfiStubsAux [NeZero width]
-    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (context : WordFfiContext) (labels : LabLabelIndex)
     (base ffiBase : Nat) : LabProgram (Word width) →
       Option (List (Nat × Word width × List (Instruction width)))
   | [] => some []
@@ -1029,7 +1056,7 @@ def compileLabProgramLinkedWithFfiStubs [NeZero width]
     Option (List (Nat × Word width × List (Instruction width))) :=
   let stubCode := labFfiStubPrefix context
   let prefixBytes := 4 * stubCode.length
-  let labels := labCollectProgramLabels prefixBytes program
+  let labels := labLabelIndexOf (labCollectProgramLabels prefixBytes program)
   match compileLabProgramLinkedWithFfiStubsAux context labels prefixBytes prefixBytes program with
   | none => none
   | some [] => some []
@@ -1037,7 +1064,7 @@ def compileLabProgramLinkedWithFfiStubs [NeZero width]
       some ((sectionId, 0, stubCode ++ code) :: sections)
 
 def labCompileAsmProgramWithFfiBaseAndHalt [NeZero width]
-    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (context : WordFfiContext) (labels : LabLabelIndex)
     (position _ffiBase haltPc : Nat) :
     LabAsm (Word width) → Option (List (Instruction width))
   | .callFfi function => do
@@ -1047,7 +1074,7 @@ def labCompileAsmProgramWithFfiBaseAndHalt [NeZero width]
   | operation => labCompileAsmWithHalt context labels position haltPc operation
 
 def labCompileProgramLinesWithFfiBaseAndHalt [NeZero width]
-    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (context : WordFfiContext) (labels : LabLabelIndex)
     (position ffiBase haltPc : Nat) :
     List (LabLine (Word width)) → Option (List (Instruction width))
   | [] => some []
@@ -1065,7 +1092,7 @@ def labCompileProgramLinesWithFfiBaseAndHalt [NeZero width]
       pure (code ++ rest)
 
 def labCompileAsmProgramWithLinkedFfiBaseAndHalt [NeZero width]
-    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (context : WordFfiContext) (labels : LabLabelIndex)
     (position _ffiBase haltPc : Nat) :
     LabAsm (Word width) → Option (List (Instruction width))
   | .callFfi function => do
@@ -1075,7 +1102,7 @@ def labCompileAsmProgramWithLinkedFfiBaseAndHalt [NeZero width]
   | operation => labCompileAsmWithHalt context labels position haltPc operation
 
 def labCompileProgramLinesWithLinkedFfiBaseAndHalt [NeZero width]
-    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (context : WordFfiContext) (labels : LabLabelIndex)
     (position ffiBase haltPc : Nat) :
     List (LabLine (Word width)) → Option (List (Instruction width))
   | [] => some []
@@ -1178,7 +1205,7 @@ def labCollectPancakeRuntimeStoredLabels [NeZero width]
     labCollectStoredProgramLabels 1000 sourceProgram
 
 def labEncodeStoredSection [NeZero width]
-    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (context : WordFfiContext) (labels : LabLabelIndex)
     (base ffiBase haltPc : Nat) :
     List (LabLine (Word width)) → List (LabLine (Word width))
   | [] => []
@@ -1199,7 +1226,7 @@ def labEncodeStoredSection [NeZero width]
         labEncodeStoredSection context labels (base + stored) ffiBase haltPc lines
 
 def labEncodeStoredProgram [NeZero width]
-    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (context : WordFfiContext) (labels : LabLabelIndex)
     (base ffiBase haltPc : Nat) :
     LabProgram (Word width) → LabProgram (Word width)
   | [] => []
@@ -1230,7 +1257,7 @@ def labEncodeStoredProgramStable [NeZero width] (fuel : Nat)
   match fuel with
   | 0 => program
   | fuel + 1 =>
-      let labels := labCollectPancakeRuntimeStoredLabels program
+      let labels := labLabelIndexOf (labCollectPancakeRuntimeStoredLabels program)
       let next := labEncodeStoredProgram context labels base ffiBase haltPc program
       /- `remove_labels_loop` stops as soon as the lengths stop changing
          (`lab_to_targetScript.sml`), it does not run a fixed number of
@@ -1283,7 +1310,7 @@ def labAppendStoredNop [NeZero width] :
       | chunk :: rest => (chunk ++ [.addi 0 0 0]) :: rest |>.reverse
 
 def labCompileProgramLinesWithStoredLengthsAux [NeZero width]
-    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (context : WordFfiContext) (labels : LabLabelIndex)
     (position ffiBase haltPc : Nat)
     (chunks : List (List (Instruction width))) :
     List (LabLine (Word width)) → Option (List (List (Instruction width)))
@@ -1305,7 +1332,7 @@ def labCompileProgramLinesWithStoredLengthsAux [NeZero width]
         (chunks ++ [labPadStoredInstructions code length]) lines
 
 def labCompileProgramLinesWithStoredLengths [NeZero width]
-    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (context : WordFfiContext) (labels : LabLabelIndex)
     (position ffiBase haltPc : Nat) :
     List (LabLine (Word width)) → Option (List (Instruction width)) := fun lines => do
   let chunks ← labCompileProgramLinesWithStoredLengthsAux context labels
@@ -1313,7 +1340,7 @@ def labCompileProgramLinesWithStoredLengths [NeZero width]
   pure chunks.flatten
 
 def compileLabProgramLinkedWithStoredLengthsAux [NeZero width]
-    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (context : WordFfiContext) (labels : LabLabelIndex)
     (base ffiBase haltPc : Nat) : LabProgram (Word width) →
       Option (List (Nat × Word width × List (Instruction width)))
   | [] => some []
@@ -1325,7 +1352,7 @@ def compileLabProgramLinkedWithStoredLengthsAux [NeZero width]
       pure ((sectionData.name, BitVec.ofNat width base, code) :: rest)
 
 def compileLabProgramLinkedWithFfiStubsAndHaltAux [NeZero width]
-    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (context : WordFfiContext) (labels : LabLabelIndex)
     (base ffiBase haltPc : Nat) : LabProgram (Word width) →
       Option (List (Nat × Word width × List (Instruction width)))
   | [] => some []
@@ -1337,7 +1364,7 @@ def compileLabProgramLinkedWithFfiStubsAndHaltAux [NeZero width]
       pure ((sectionData.name, BitVec.ofNat width base, code) :: rest)
 
 def compileLabProgramLinkedWithFfiStubsAndHaltCompactAux [NeZero width]
-    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (context : WordFfiContext) (labels : LabLabelIndex)
     (base ffiBase haltPc : Nat) : LabProgram (Word width) →
       Option (List (Nat × Word width × List (Instruction width)))
   | [] => some []
@@ -1353,7 +1380,7 @@ def compileLabProgramLinkedWithFfiStubsAndHalt [NeZero width]
     Option (List (Nat × Word width × List (Instruction width))) :=
   let stubCode := labFfiStubPrefix context
   let prefixBytes := 4 * stubCode.length
-  let labels := labCollectProgramLabels prefixBytes program
+  let labels := labLabelIndexOf (labCollectProgramLabels prefixBytes program)
   let haltPc := prefixBytes + 4 * labProgramInstructionCount program
   match compileLabProgramLinkedWithFfiStubsAndHaltCompactAux context labels prefixBytes prefixBytes haltPc program with
   | none => none
@@ -1386,7 +1413,8 @@ def labCollectPancakeRuntimeLabelsStableAux [NeZero width] (fuel : Nat)
   | fuel + 1 =>
       let runtime := [(0, 0, 812), (1, 0, 848), (2, 0, 772)]
       let next := runtime ++
-        labCollectProgramLabelsWithContext context 1000 guess sourceProgram
+        labCollectProgramLabelsWithContext context 1000 (labLabelIndexOf guess)
+          sourceProgram
       if next == guess then next
       else labCollectPancakeRuntimeLabelsStableAux fuel context sourceProgram next
 
@@ -1416,7 +1444,7 @@ def compileLabProgramLinkedWithPancakeRuntime [NeZero width]
   let final := labEncodeStoredProgramStable 8 context 1000 1000
     haltPc relabelled
   let finalHaltPc := 1000 + labStoredProgramLength final
-  let labels := labCollectPancakeRuntimeStoredLabels final
+  let labels := labLabelIndexOf (labCollectPancakeRuntimeStoredLabels final)
   compileLabProgramLinkedWithStoredLengthsAux context labels 1000 1000
     finalHaltPc final
 
@@ -1427,7 +1455,7 @@ def flattenLabProgramLinked :
 
 theorem compileLabProgramLinkedAux_flatten
     [NeZero width] (context : WordFfiContext)
-    (labels : List (Nat × Nat × Nat)) (base : Nat)
+    (labels : LabLabelIndex) (base : Nat)
     (program : LabProgram (Word width)) :
     (compileLabProgramLinkedAux context labels base program).map
         flattenLabProgramLinked =
@@ -1471,7 +1499,7 @@ theorem compileLabProgramLinked_flatten [NeZero width]
     compileLabProgramLinkedAux_flatten]
 
 def compileLabProgramLinkedWithHaltAux [NeZero width]
-    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (context : WordFfiContext) (labels : LabLabelIndex)
     (base haltPc : Nat) : LabProgram (Word width) →
       Option (List (Nat × Word width × List (Instruction width)))
   | [] => some []
@@ -1485,13 +1513,13 @@ def compileLabProgramLinkedWithHaltAux [NeZero width]
 def compileLabProgramLinkedWithHalt [NeZero width] (context : WordFfiContext)
     (program : LabProgram (Word width)) :
     Option (List (Nat × Word width × List (Instruction width))) :=
-  let labels := labCollectProgramLabels 0 program
+  let labels := labLabelIndexOf (labCollectProgramLabels 0 program)
   let haltPc := 4 * labProgramInstructionCount program
   compileLabProgramLinkedWithHaltAux context labels 0 haltPc program
 
 theorem compileLabProgramLinkedWithHaltAux_flatten
     [NeZero width] (context : WordFfiContext)
-    (labels : List (Nat × Nat × Nat)) (base haltPc : Nat)
+    (labels : LabLabelIndex) (base haltPc : Nat)
     (program : LabProgram (Word width)) :
     (compileLabProgramLinkedWithHaltAux context labels base haltPc program).map
         flattenLabProgramLinked =
@@ -1530,7 +1558,7 @@ theorem compileLabProgramLinkedWithHalt_flatten [NeZero width]
     (compileLabProgramLinkedWithHalt context program).map
         flattenLabProgramLinkedWithHalt =
       compileLabProgramWithHalt context program := by
-  let labels := labCollectProgramLabels 0 program
+  let labels := labLabelIndexOf (labCollectProgramLabels 0 program)
   let haltPc := 4 * labProgramInstructionCount program
   change
     (compileLabProgramLinkedWithHaltAux context labels 0 haltPc program).map
@@ -1804,7 +1832,7 @@ theorem compileLabProgram_cross_section_jump [NeZero width] :
     labCollectLabels, labSectionInstructionCount, labCompileProgramSections,
     labCompileProgramLines, labCompileAsmProgram,
     labCompilePlain,
-    labLookupProgramPosition, labResolveProgramRef,
+    labLookupProgramPosition, labResolveProgramRef, labLabelIndexOf,
     labOffset, labJumpInstructions, labJumpOffsetFits, hcount]
 
 end Flapjack.RiscV

@@ -29,7 +29,11 @@ theorem loopCallControl_mapped_locals :
       readRegister, writeRegister] using hvalue
   · simp [loopCallControlLoopState, hname] at hvalue
 
-theorem loopCallControl_break_simulation :
+/- These old simulation witnesses intentionally exposed callee Break,
+   normal fall-through, and Continue across a call. Cake maps all three to
+   Error, so the witnesses are disabled until the corresponding correctness
+   theorem is reproved against the faithful contract. -/
+/- theorem loopCallControl_break_simulation :
     loopResultMappedToWordLoop ({ vars := [] } : WordContext)
       (.broke loopCallControlLoopState 0)
       (.broke loopCallControlWordState 0) := by
@@ -77,11 +81,12 @@ theorem loopCallControl_break_simulation :
         loopCallControlWordState, writeRegister,
         readRegister, RiscV.readWordRegisters, RiscV.bindWordRegisters,
         RiscV.clearWordRegisters, registerOfNat, wordFindVar, lookupNatInfo])
+-/
 
 def loopCallFfiBody : LoopProg (Word 64) :=
   .ffi "identity" 10 10 10 10 []
 
-theorem loopCallFfi_simulation :
+/- theorem loopCallFfi_simulation :
     loopResultMappedToWordLoop ({ vars := [] } : WordContext)
       (.normal loopCallControlLoopState)
       (.normal loopCallControlWordState) := by
@@ -183,6 +188,7 @@ theorem loopCallFfi_simulation :
         writeRegister, readRegister, RiscV.readWordRegisters,
         RiscV.bindWordRegisters, RiscV.clearWordRegisters,
         registerOfNat, wordFindVar, lookupNatInfo])
+-/
 
 def loopCallHandlerFfiBody : LoopProg (Word 64) :=
   .ffi "identity" 10 10 10 10 []
@@ -224,7 +230,7 @@ theorem loopCall_handler_ffi_mapped_locals :
         readRegister, writeRegister] using hvalue
     · simp [loopCallHandlerFfiLoopState, hname, hname10] at hvalue
 
-theorem loopCall_handler_ffi_simulation :
+/- theorem loopCall_handler_ffi_simulation :
     loopResultMappedToWordLoop ({ vars := [] } : WordContext)
       (.normal { loopCallHandlerFfiLoopState with
         locals := updateLoopLocal loopCallHandlerFfiLoopState.locals 8 9 })
@@ -337,5 +343,6 @@ theorem loopCall_handler_ffi_simulation :
       loopCallHandlerFfiWordState, writeRegister, readRegister,
       RiscV.readWordRegisters, RiscV.bindWordRegisters,
       RiscV.clearWordRegisters, registerOfNat, wordFindVar, lookupNatInfo]
+-/
 
 end Flapjack

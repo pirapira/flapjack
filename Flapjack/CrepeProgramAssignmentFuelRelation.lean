@@ -61,7 +61,12 @@ theorem compile_full_pan_value_local_assign_source_word_relation_fuel
   · simp [evalPanValueProgWithPrimitiveCallsAndFfi, hsource, hold,
       panValueAssignmentValid, panValueShape, panShapeMatches]
   constructor
-  · simp [evalCrepFullProg, hcompiled]
+  · have hslotValue := panValueCrepLocalsRel_word_slot structs context
+      sourceLocals state.locals name slot oldValue hrel.2.1 hold hlookup
+    have hslotDefined : (state.locals slot).isSome = true := by
+      simp [hslotValue]
+    simp [evalCrepFullProg, hcompiled, assignExistingCrepValues,
+      crepNamesDistinct, crepLocalsDefined, hslotDefined]
   · refine ⟨hrel.1, ?_, hrel.2.2⟩
     exact panValueCrepLocalsRel_update_word structs context sourceLocals
       state.locals name slot value hrel.2.1 hlookup hnoalias
@@ -140,7 +145,12 @@ theorem compile_full_pan_value_local_assign_source_word_state_relation_fuel
   · simp [evalPanValueProgWithPrimitiveCallsAndFfi, hsource, hold,
       panValueAssignmentValid, panValueShape, panShapeMatches]
   constructor
-  · simp [evalCrepFullProgState, hcompiledState]
+  · have hslotValue := panValueCrepLocalsRel_word_slot structs context
+      sourceLocals state.locals name slot oldValue hrel.2.1 hold hlookup
+    have hslotDefined : (state.locals slot).isSome = true := by
+      simp [hslotValue]
+    simp [evalCrepFullProgState, hcompiledState, assignExistingCrepValues,
+      crepNamesDistinct, crepLocalsDefined, hslotDefined]
   · refine ⟨hrel.1, ?_, hrel.2.2⟩
     exact panValueCrepLocalsRel_update_word structs context sourceLocals
       state.locals name slot value hrel.2.1 hlookup hnoalias
@@ -208,6 +218,11 @@ theorem compile_full_pan_value_local_assign_source_word_temporary_relation_fuel
         baseAddress topAddress (.var temporary) = some value := by
       simp [evalCrepFullExp, updateCrepLocal]
     have hslotNe : slot ≠ temporary := Ne.symm htemporaryNe
+    have hslotValue := panValueCrepLocalsRel_word_slot structs context
+      sourceLocals state.locals name slot oldValue hrel.2.1 hold hlookup
+    have hslotDefined' :
+        (updateCrepLocal state.locals temporary value slot).isSome = true := by
+      simp [updateCrepLocal, hslotNe, hslotValue]
     have hrestore :
         restoreCrepLocal
             (updateCrepLocal (updateCrepLocal state.locals temporary value) slot value)
@@ -222,7 +237,8 @@ theorem compile_full_pan_value_local_assign_source_word_temporary_relation_fuel
         · simp [restoreCrepLocal, updateCrepLocal, hcurrentTemporary,
             hcurrentSlot]
     simp [evalCrepFullProg, hcompiled, htemporary, htemporaryRead, hrestore,
-      restoreCrepResult]
+      restoreCrepResult, assignExistingCrepValues, crepNamesDistinct,
+      crepLocalsDefined, hslotDefined']
   · refine ⟨hrel.1, ?_, hrel.2.2⟩
     exact panValueCrepLocalsRel_update_word structs context sourceLocals
       state.locals name slot value hrel.2.1 hlookup hnoalias
@@ -311,6 +327,11 @@ theorem compile_full_pan_value_local_assign_source_word_temporary_state_relation
         baseAddress topAddress (.var temporary) = some value := by
       simp [evalCrepFullExpState, updateCrepLocal]
     have hslotNe : slot ≠ temporary := Ne.symm htemporaryNe
+    have hslotValue := panValueCrepLocalsRel_word_slot structs context
+      sourceLocals state.locals name slot oldValue hrel.2.1 hold hlookup
+    have hslotDefined' :
+        (updateCrepLocal state.locals temporary value slot).isSome = true := by
+      simp [updateCrepLocal, hslotNe, hslotValue]
     have hrestore :
         restoreCrepLocal
             (updateCrepLocal (updateCrepLocal state.locals temporary value) slot value)
@@ -325,7 +346,8 @@ theorem compile_full_pan_value_local_assign_source_word_temporary_state_relation
         · simp [restoreCrepLocal, updateCrepLocal, hcurrentTemporary,
             hcurrentSlot]
     simp [evalCrepFullProgState, hcompiledState, htemporary, htemporaryRead,
-      hrestore, restoreCrepResult]
+      hrestore, restoreCrepResult, assignExistingCrepValues,
+      crepNamesDistinct, crepLocalsDefined, hslotDefined']
   · refine ⟨hrel.1, ?_, hrel.2.2⟩
     exact panValueCrepLocalsRel_update_word structs context sourceLocals
       state.locals name slot value hrel.2.1 hlookup hnoalias

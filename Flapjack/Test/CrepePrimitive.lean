@@ -19,7 +19,10 @@ def crepePrimitiveProgram : Prog (RiscV.Word 64) :=
     (.return (.var .local "pair"))
 
 def crepePrimitiveState : CrepState (RiscV.Word 64) :=
-  { locals := fun _ => none
+  { locals := fun name =>
+      match name with
+      | 0 | 1 => some 0
+      | _ => none
     memory := fun _ => none }
 
 theorem crepe_primitive_compilation_regression :

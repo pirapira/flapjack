@@ -25,6 +25,7 @@ theorem evalCrepFullProg_assignList_inv
       slot ∉ crepExpVars expression)
     (heval : evalCrepFullExps state.locals state.memory
       baseAddress topAddress expressions = some values)
+    (hdefined : ∀ slot ∈ slots, (state.locals slot).isSome = true)
     (hresult : evalCrepFullProg functions primitive ffi sharedMem
       baseAddress topAddress targetFuel state
       (crepNestedSeq (slots.zipWith
@@ -67,6 +68,7 @@ theorem evalCrepFullProg_assignList_inv
                   | some tailValues =>
                       simp [evalCrepFullExps, hhead, htail] at heval
           | cons value values =>
+              have hslotDefined := hdefined slot (by simp)
               have hlengthTail : slots.length = expressions.length := by
                 simp only [List.length_cons] at hlength
                 omega
@@ -112,11 +114,15 @@ theorem evalCrepFullProg_assignList_inv
                                       .assign name expression) slots expressions)) with
                               | none =>
                                   simp [crepNestedSeq, evalCrepFullProg, hhead,
-                                    htailResult] at hresult
+                                    htailResult, assignExistingCrepValues,
+                                    crepNamesDistinct, crepLocalsDefined,
+                                    hslotDefined] at hresult
                               | some tailResult =>
                                   have htailEq : tailResult = result := by
                                     simpa [crepNestedSeq, evalCrepFullProg,
-                                      hhead, htailResult] using hresult
+                                      hhead, htailResult, assignExistingCrepValues,
+                                      crepNamesDistinct, crepLocalsDefined,
+                                      hslotDefined] using hresult
                                   have htailNot :
                                       ∀ current ∈ slots,
                                         ∀ currentExpression ∈ expressions,
@@ -131,7 +137,18 @@ theorem evalCrepFullProg_assignList_inv
                                       locals := updateCrepLocal state.locals slot value })
                                     (result := tailResult)
                                     hlengthTail htailDistinct htailNot
-                                    htailStable htailResult
+                                    htailStable
+                                    (by
+                                      intro current hcurrent
+                                      have hcurrentDefined := hdefined current
+                                        (by simp [hcurrent])
+                                      have hcurrentNe : current ≠ slot := by
+                                        intro heq
+                                        subst current
+                                        exact hslotNotTail hcurrent
+                                      simpa [updateCrepLocal, hcurrentNe]
+                                        using hcurrentDefined)
+                                    htailResult
                                   cases htailEq
                                   exact htailInv
 
@@ -151,6 +168,7 @@ theorem evalCrepFullProgState_assignList_inv
       slot ∉ crepExpVars expression)
     (heval : evalCrepFullExpsState state baseAddress topAddress expressions =
       some values)
+    (hdefined : ∀ slot ∈ slots, (state.locals slot).isSome = true)
     (hresult : evalCrepFullProgState functions primitive ffi sharedMem
       baseAddress topAddress targetFuel state
       (crepNestedSeq (slots.zipWith
@@ -185,6 +203,7 @@ theorem evalCrepFullProgState_assignList_inv
                   | none => simp [evalCrepFullExpsState, hhead, htail] at heval
                   | some tailValues => simp [evalCrepFullExpsState, hhead, htail] at heval
           | cons value values =>
+              have hslotDefined := hdefined slot (by simp)
               have hlengthTail : slots.length = expressions.length := by
                 simp only [List.length_cons] at hlength
                 omega
@@ -222,11 +241,15 @@ theorem evalCrepFullProgState_assignList_inv
                                     slots expressions)) with
                               | none =>
                                   simp [crepNestedSeq, evalCrepFullProgState, hhead,
-                                    htailResult] at hresult
+                                    htailResult, assignExistingCrepValues,
+                                    crepNamesDistinct, crepLocalsDefined,
+                                    hslotDefined] at hresult
                               | some tailResult =>
                                   have htailEq : tailResult = result := by
                                     simpa [crepNestedSeq, evalCrepFullProgState,
-                                      hhead, htailResult] using hresult
+                                      hhead, htailResult, assignExistingCrepValues,
+                                      crepNamesDistinct, crepLocalsDefined,
+                                      hslotDefined] using hresult
                                   have htailNot :
                                       ∀ current ∈ slots,
                                         ∀ currentExpression ∈ expressions,
@@ -241,7 +264,18 @@ theorem evalCrepFullProgState_assignList_inv
                                       locals := updateCrepLocal state.locals slot value })
                                     (result := tailResult)
                                     hlengthTail htailDistinct htailNot
-                                    htailStable htailResult
+                                    htailStable
+                                    (by
+                                      intro current hcurrent
+                                      have hcurrentDefined := hdefined current
+                                        (by simp [hcurrent])
+                                      have hcurrentNe : current ≠ slot := by
+                                        intro heq
+                                        subst current
+                                        exact hslotNotTail hcurrent
+                                      simpa [updateCrepLocal, hcurrentNe]
+                                        using hcurrentDefined)
+                                    htailResult
                                   cases htailEq
                                   exact htailInv
 

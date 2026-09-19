@@ -29,11 +29,22 @@ structure WordCopyState where
   classRep : NatInfoMap Nat
   classStore : NatInfoMap Nat
   classNext : Nat
+  /- Production states cache the same first-binding maps in trees.  The
+     association lists remain the proof-facing Cake representation; literals
+     in focused tests use the default `indicesReady = false`. -/
+  indicesReady : Bool := false
+  aliasIndex : Std.TreeMap Nat Nat := ∅
+  classOfIndex : Std.TreeMap Nat Nat := ∅
+  classRepIndex : Std.TreeMap Nat Nat := ∅
   deriving Repr
 
 def wordCopyEmpty : WordCopyState :=
   { aliases := [], storeToEq := [], classOf := [], classRep := [],
-    classStore := [], classNext := 0 }
+    classStore := [], classNext := 0, indicesReady := true }
+
+def wordCopyLookupIndexed (ready : Bool) (index : Std.TreeMap Nat Nat)
+    (entries : NatInfoMap Nat) (name : Nat) : Option Nat :=
+  if ready then index[name]? else lookupNatInfo name entries
 
 def wordCopyLookup (state : WordCopyState) (name : Nat) : Nat :=
   /- Cake's `lookup_eq` resolves the class indirection first: `to_eq` maps
@@ -43,19 +54,26 @@ def wordCopyLookup (state : WordCopyState) (name : Nat) : Nat :=
      update.  Without this order, a later `set_eq` changed `classRep` while
      old members continued to read their stale alias (the fp_pow4 chain
      329 <- 305, 345 <- 329, 413 <- 329). -/
-  match lookupNatInfo name state.classOf with
+  match wordCopyLookupIndexed state.indicesReady state.classOfIndex
+      state.classOf name with
   | some classId =>
-      (lookupNatInfo classId state.classRep).getD name
+      (wordCopyLookupIndexed state.indicesReady state.classRepIndex
+        state.classRep classId).getD name
   | none =>
-      (lookupNatInfo name state.aliases).getD name
+      (wordCopyLookupIndexed state.indicesReady state.aliasIndex
+        state.aliases name).getD name
 
 def wordCopyUpdate (aliases : NatInfoMap Nat) (name value : Nat) : NatInfoMap Nat :=
   (name, value) :: aliases.filter (fun entry => entry.1 != name)
 
 def wordCopyIsAlloc (name : Nat) : Bool := name % 4 == 1
 
+def wordCopyIndex (entries : NatInfoMap Nat) : Std.TreeMap Nat Nat :=
+  entries.foldr (fun entry index => index.insert entry.1 entry.2) ∅
+
 def wordCopyRemove (state : WordCopyState) (name : Nat) : WordCopyState :=
-  if (lookupNatInfo name state.aliases).isSome then wordCopyEmpty else state
+  if (wordCopyLookupIndexed state.indicesReady state.aliasIndex
+      state.aliases name).isSome then wordCopyEmpty else state
 
 /-! `set_eq` (`word_copyScript.sml:204-225`).  Cake's equivalence class is
     represented by the *destination* of the copy. -/
@@ -63,14 +81,30 @@ def wordCopySet (state : WordCopyState) (destination source : Nat) : WordCopySta
   if wordCopyIsAlloc destination && wordCopyIsAlloc source then
     let others := state.aliases.filter (fun entry =>
       entry.1 != destination && entry.1 != source)
-    match lookupNatInfo source state.classOf with
+    let aliasIndex := if state.indicesReady then
+        ((state.aliasIndex.erase destination).erase source)
+          |>.insert destination destination
+      else ∅
+    let aliasIndex := if state.indicesReady then
+        aliasIndex.insert source destination
+      else ∅
+    match wordCopyLookupIndexed state.indicesReady state.classOfIndex
+        state.classOf source with
     | some classId =>
-        if (lookupNatInfo classId state.classRep).isSome then
+        if (wordCopyLookupIndexed state.indicesReady state.classRepIndex
+            state.classRep classId).isSome then
           { state with
             aliases := (destination, destination) ::
               (source, destination) :: others
             classOf := wordCopyUpdate state.classOf destination classId
-            classRep := wordCopyUpdate state.classRep classId destination }
+            classRep := wordCopyUpdate state.classRep classId destination
+            aliasIndex := aliasIndex
+            classOfIndex := if state.indicesReady then
+                state.classOfIndex.insert destination classId
+              else ∅
+            classRepIndex := if state.indicesReady then
+                state.classRepIndex.insert classId destination
+              else ∅ }
         else
           { state with
             aliases := (destination, destination) ::
@@ -78,15 +112,31 @@ def wordCopySet (state : WordCopyState) (destination source : Nat) : WordCopySta
             classOf := (destination, state.classNext) ::
               (source, state.classNext) :: state.classOf
             classRep := (state.classNext, destination) :: state.classRep
-            classNext := state.classNext + 1 }
+            classNext := state.classNext + 1
+            aliasIndex := aliasIndex
+            classOfIndex := if state.indicesReady then
+                (state.classOfIndex.insert destination state.classNext).insert
+                  source state.classNext
+              else ∅
+            classRepIndex := if state.indicesReady then
+                state.classRepIndex.insert state.classNext destination
+              else ∅ }
     | none =>
         { state with
           aliases := (destination, destination) ::
             (source, destination) :: others
           classOf := (destination, state.classNext) ::
-            (source, state.classNext) :: state.classOf
+              (source, state.classNext) :: state.classOf
           classRep := (state.classNext, destination) :: state.classRep
-          classNext := state.classNext + 1 }
+          classNext := state.classNext + 1
+          aliasIndex := aliasIndex
+          classOfIndex := if state.indicesReady then
+              (state.classOfIndex.insert destination state.classNext).insert
+                source state.classNext
+            else ∅
+          classRepIndex := if state.indicesReady then
+              state.classRepIndex.insert state.classNext destination
+            else ∅ }
   else state
 
 /- `lookup_store_eq` (`word_copyScript.sml:252-260`).  Cake resolves the
@@ -97,7 +147,8 @@ def wordCopyLookupStoreEq (state : WordCopyState) (store : Nat) : Option Nat :=
   match lookupNatInfo store state.storeToEq with
   | none => none
   | some representative =>
-      if (lookupNatInfo representative state.aliases).isSome then
+      if (wordCopyLookupIndexed state.indicesReady state.aliasIndex
+          state.aliases representative).isSome then
         some representative
       else none
 
@@ -106,9 +157,11 @@ def wordCopyLookupStoreEq (state : WordCopyState) (store : Nat) : Option Nat :=
     singleton class and a name with one reuses it. -/
 def wordCopySetStoreEq (state : WordCopyState) (store name : Nat) : WordCopyState :=
   if wordCopyIsAlloc name then
-    match lookupNatInfo name state.classOf with
+    match wordCopyLookupIndexed state.indicesReady state.classOfIndex
+        state.classOf name with
     | some classId =>
-        if (lookupNatInfo classId state.classRep).isSome then
+        if (wordCopyLookupIndexed state.indicesReady state.classRepIndex
+            state.classRep classId).isSome then
           { state with
             storeToEq := (store, wordCopyLookup state name) ::
               state.storeToEq.filter (fun entry => entry.1 != store)
@@ -124,7 +177,16 @@ def wordCopySetStoreEq (state : WordCopyState) (store name : Nat) : WordCopyStat
             classRep := (state.classNext, name) :: state.classRep
             classStore := (store, state.classNext) ::
               state.classStore.filter (fun entry => entry.1 != store)
-            classNext := state.classNext + 1 }
+            classNext := state.classNext + 1
+            aliasIndex := if state.indicesReady then
+                (state.aliasIndex.erase name).insert name name
+              else ∅
+            classOfIndex := if state.indicesReady then
+                state.classOfIndex.insert name state.classNext
+              else ∅
+            classRepIndex := if state.indicesReady then
+                state.classRepIndex.insert state.classNext name
+              else ∅ }
     | none =>
         { state with
           aliases := (name, name) ::
@@ -135,7 +197,16 @@ def wordCopySetStoreEq (state : WordCopyState) (store name : Nat) : WordCopyStat
           classRep := (state.classNext, name) :: state.classRep
           classStore := (store, state.classNext) ::
             state.classStore.filter (fun entry => entry.1 != store)
-          classNext := state.classNext + 1 }
+          classNext := state.classNext + 1
+          aliasIndex := if state.indicesReady then
+              (state.aliasIndex.erase name).insert name name
+            else ∅
+          classOfIndex := if state.indicesReady then
+              state.classOfIndex.insert name state.classNext
+            else ∅
+          classRepIndex := if state.indicesReady then
+              state.classRepIndex.insert state.classNext name
+            else ∅ }
   else wordCopyEmpty
 
 def wordCopyExp (state : WordCopyState) : WordExp α → WordExp α
@@ -216,24 +287,39 @@ def wordCopyInst {α : Type} (state : WordCopyState) :
             (wordCopyLookup state address) offset, state)
 
 def wordCopyMerge (left right : WordCopyState) : WordCopyState :=
-  { aliases := left.aliases.filter (fun entry =>
-      lookupNatInfo entry.1 right.aliases == some entry.2 &&
-      match lookupNatInfo entry.1 left.classOf,
-        lookupNatInfo entry.1 right.classOf with
+  let rightAliases := if right.indicesReady then right.aliasIndex
+    else wordCopyIndex right.aliases
+  let rightClassOf := if right.indicesReady then right.classOfIndex
+    else wordCopyIndex right.classOf
+  let rightClassRep := if right.indicesReady then right.classRepIndex
+    else wordCopyIndex right.classRep
+  let aliases := left.aliases.filter (fun entry =>
+      rightAliases[entry.1]? == some entry.2 &&
+      match wordCopyLookupIndexed left.indicesReady left.classOfIndex
+          left.classOf entry.1, rightClassOf[entry.1]? with
       | some leftClass, some rightClass =>
           leftClass == rightClass &&
-            lookupNatInfo leftClass left.classRep == some entry.2 &&
-            lookupNatInfo rightClass right.classRep == some entry.2
-      | _, _ => false),
+            wordCopyLookupIndexed left.indicesReady left.classRepIndex
+              left.classRep leftClass == some entry.2 &&
+            rightClassRep[leftClass]? == some entry.2
+      | _, _ => false)
+  let classOf := left.classOf.filter (fun entry =>
+      rightClassOf[entry.1]? == some entry.2)
+  let classRep := left.classRep.filter (fun entry =>
+      rightClassRep[entry.1]? == some entry.2)
+  let ready := left.indicesReady && right.indicesReady
+  { aliases := aliases,
     storeToEq := left.storeToEq.filter (fun entry =>
       lookupNatInfo entry.1 right.storeToEq == some entry.2),
-    classOf := left.classOf.filter (fun entry =>
-      lookupNatInfo entry.1 right.classOf == some entry.2),
-    classRep := left.classRep.filter (fun entry =>
-      lookupNatInfo entry.1 right.classRep == some entry.2),
+    classOf := classOf,
+    classRep := classRep,
     classStore := left.classStore.filter (fun entry =>
       lookupNatInfo entry.1 right.classStore == some entry.2),
-    classNext := max left.classNext right.classNext }
+    classNext := max left.classNext right.classNext,
+    indicesReady := ready,
+    aliasIndex := if ready then wordCopyIndex aliases else ∅,
+    classOfIndex := if ready then wordCopyIndex classOf else ∅,
+    classRepIndex := if ready then wordCopyIndex classRep else ∅ }
 
 def wordCopyMoves : WordCopyState → List (Nat × Nat) →
     List (Nat × Nat) × WordCopyState

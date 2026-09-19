@@ -33,7 +33,7 @@ theorem evalCrepFullCall_returned_destinations_read_back
       baseAddress topAddress fuel
       { locals := calleeLocals, memory := caller.memory } body =
       some (.returned callee calleeValues))
-    (hdestinations : assignCrepValues caller.locals destinations calleeValues =
+    (hdestinations : assignExistingCrepValues caller.locals destinations calleeValues =
       some callerLocals)
     (hdistinct : CrepDistinctNames destinations) :
     evalCrepFullCall functions primitive ffi sharedMem
@@ -45,7 +45,7 @@ theorem evalCrepFullCall_returned_destinations_read_back
     functions primitive ffi sharedMem baseAddress topAddress fuel caller
     function destinations arguments values parameters body calleeLocals callee
     calleeValues callerLocals hvalues hlookup hassign hcallee hdestinations
-  exact ⟨hcall, assignCrepValues_read_back caller.locals destinations
+  exact ⟨hcall, assignExistingCrepValues_read_back caller.locals destinations
     calleeValues callerLocals hdestinations hdistinct⟩
 
 end Flapjack

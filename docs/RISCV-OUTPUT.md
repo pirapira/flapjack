@@ -95,17 +95,21 @@ uppercase 16-byte `.byte` lines and four-space `makesym` syntax.  Thus a code
 byte mismatch cannot hide a serialization mismatch, and a serialization match
 does not claim ABI/code-byte parity.
 
-The following is a historical audit at integration head `d778e24`: all 87
-original-Pancake accepted programs in the 244-program corpus had at least one code section
-whose bytes differ from Flapjack's (`programs=244 gaps=264`, no matches).
-The remaining differences are tracked by:
+The historical audit at integration head `d778e24` found differences in all
+87 accepted programs in the 244-program corpus.  That result is superseded
+by the current audit: at coordinator head `fd200b05`,
+`scripts/parity-corpus.py` extracted 244 Pancake blocks from the CakeML
+submodule (adding the same synthetic `main` used by the acceptance runner),
+with 157 accepted by both compilers and 87 rejected by both.  Running
+`scripts/parity-bytes.py --dir .../withmain` over those 244 sources reports
+zero runtime, generated-entry, user-section, layout, or byte mismatches for
+the accepted programs.  This is stronger corpus evidence, not a proof that
+every possible Pancake source has been compared.
 
-* `flapjack-pxn.8.5.10.1` constant-return lowering;
-* `flapjack-pxn.8.5.10.2` global-initializer generated entry;
-* `flapjack-pxn.8.5.10.3` direct-call entry;
-* `flapjack-pxn.8.5.11.2` exact runtime section bytes, now covered by the
-  fixed RV64 runtime prefix and its regression fixture; generated/user code
-  mismatches remain tracked by the `.8.5.10.x` beads.
+The older `.8.5.10.x` parity beads remain historical tracking records for the
+lowering differences that led to this audit; they should be closed only after
+the corresponding fixes are present on `main` and the issue acceptance
+criteria have been reviewed.
 
 ## Known format/layout differences
 

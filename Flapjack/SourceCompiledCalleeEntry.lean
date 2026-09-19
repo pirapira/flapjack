@@ -53,7 +53,7 @@ theorem sourceCompiledCalleeEntry_of_lookup
       compileProg
           { context with
               functions := functionInfos declarations
-              vars := (compileParamVars declaration.params 0).1
+              vars := panToCrepMakeVmap declaration.params
               maxVar := (compileParamVars declaration.params 0).2.2 }
           declaration.body =
         (compileFunDecl
@@ -61,7 +61,7 @@ theorem sourceCompiledCalleeEntry_of_lookup
       panValueCrepStateRel structs
         { context with
             functions := functionInfos declarations
-            vars := (compileParamVars declaration.params 0).1 }
+            vars := panToCrepMakeVmap declaration.params }
         (foldCalleeParameterSource (fun _ => none)
           (compileCalleeParameterList declaration.params values 0))
         sourceGlobals sourceMemory
@@ -128,13 +128,13 @@ theorem sourceCompiledCalleeState_of_lookup
       compileProg
           { context with
               functions := functionInfos declarations
-              vars := (compileParamVars declaration.params 0).1
+              vars := panToCrepMakeVmap declaration.params
               maxVar := (compileParamVars declaration.params 0).2.2 }
           declaration.body = targetBody ∧
       panValueCrepStateRel structs
         { context with
             functions := functionInfos declarations
-            vars := (compileParamVars declaration.params 0).1 }
+            vars := panToCrepMakeVmap declaration.params }
         calleeLocals sourceGlobals sourceMemory
         { locals := targetCalleeLocals, memory := crepMemory } := by
   obtain ⟨declaration, hname, hparams, hbody, hinfo, hcompiled, _⟩ :=
@@ -195,7 +195,7 @@ theorem sourceCompiledCalleeState_of_lookup
   have hcompileBody : compileProg
       { context with
           functions := functionInfos declarations
-          vars := (compileParamVars declaration.params 0).1
+          vars := panToCrepMakeVmap declaration.params
           maxVar := (compileParamVars declaration.params 0).2.2 }
       declaration.body = targetBody := by
     rw [htargetBody]

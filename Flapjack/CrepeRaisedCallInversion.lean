@@ -203,13 +203,15 @@ theorem evalCrepFullCall_raised_inversion
                       | normal calleeState =>
                           simp [evalCrepFullCall, hvalues, hlookup, hassign, hcallee] at hcall
                       | returned calleeState calleeValues =>
-                          cases hdest : assignCrepValues caller.locals destinations calleeValues with
-                          | none =>
-                              simp [evalCrepFullCall, hvalues, hlookup, hassign, hcallee,
-                                hdest] at hcall
-                          | some callerLocals =>
-                              simp [evalCrepFullCall, hvalues, hlookup, hassign, hcallee,
-                                hdest] at hcall
+                          simp [evalCrepFullCall, hvalues, hlookup, hassign, hcallee,
+                            assignExistingCrepValues] at hcall
+                          by_cases hlength : destinations.length = calleeValues.length
+                          · by_cases hvalid :
+                                crepNamesDistinct destinations = true ∧
+                                  crepLocalsDefined caller.locals destinations = true
+                            · simp [hlength, hvalid, Option.bind] at hcall
+                            · simp [hlength, hvalid, Option.bind] at hcall
+                          · simp [hlength, Option.bind] at hcall
                       | broke calleeState label
                       | continued calleeState label
                       | finalFfi calleeState event =>
@@ -292,13 +294,15 @@ theorem evalCrepFullCallState_raised_inversion
                       | normal callee =>
                           simp [evalCrepFullCallState, hvalues, hlookup, hassign, hcallee] at hcall
                       | returned callee values =>
-                          cases hdest : assignCrepValues caller.locals destinations values with
-                          | none =>
-                              simp [evalCrepFullCallState, hvalues, hlookup, hassign, hcallee,
-                                hdest] at hcall
-                          | some callerLocals =>
-                              simp [evalCrepFullCallState, hvalues, hlookup, hassign, hcallee,
-                                hdest] at hcall
+                          simp [evalCrepFullCallState, hvalues, hlookup, hassign, hcallee,
+                            assignExistingCrepValues] at hcall
+                          by_cases hlength : destinations.length = values.length
+                          · by_cases hvalid :
+                                crepNamesDistinct destinations = true ∧
+                                  crepLocalsDefined caller.locals destinations = true
+                            · simp [hlength, hvalid, Option.bind] at hcall
+                            · simp [hlength, hvalid, Option.bind] at hcall
+                          · simp [hlength, Option.bind] at hcall
                       | broke callee label
                       | continued callee label
                       | finalFfi callee event =>

@@ -1245,11 +1245,7 @@ mutual
         let .word address := address | none
         let value ← match memoryAccess with
           | none => memory address
-          | some access => match size with
-              | .opW => (access.readWord access.domain memory bytesInWord address).map .word
-              | .op8 => (access.readByte access.domain memory bytesInWord address).map .word
-              | .op16 => (access.read16 access.domain memory bytesInWord address).map .word
-              | .op32 => (access.read32 access.domain memory bytesInWord address).map .word
+          | some access => access.sharedRead memory bytesInWord size address
         if panValueSharedLoadValid structs locals globals kind name value then
           match kind with
           | .local => pure (.normal (updatePanValueMap locals name value) globals memory)
@@ -1264,11 +1260,7 @@ mutual
         let .word value := value | none
         let memory ← match memoryAccess with
           | none => some (updatePanValueMemory memory address (.word value))
-          | some access => match size with
-              | .opW => panValueStoreWithAccess memory bytesInWord address (.word value)
-              | .op8 => access.storeByte access.domain memory bytesInWord address value
-              | .op16 => access.store16 access.domain memory bytesInWord address value
-              | .op32 => access.store32 access.domain memory bytesInWord address value
+          | some access => access.sharedStore memory bytesInWord size address (.word value)
         pure (.normal locals globals memory)
     | _fuel + 1, locals, globals, memory, .tick, _, _ |
         _fuel + 1, locals, globals, memory, .annot _ _, _, _ =>
@@ -1555,11 +1547,7 @@ mutual
         let .word address := address | none
         let value ← match memoryAccess with
           | none => memory address
-          | some access => match size with
-              | .opW => (access.readWord access.domain memory bytesInWord address).map .word
-              | .op8 => (access.readByte access.domain memory bytesInWord address).map .word
-              | .op16 => (access.read16 access.domain memory bytesInWord address).map .word
-              | .op32 => (access.read32 access.domain memory bytesInWord address).map .word
+          | some access => access.sharedRead memory bytesInWord size address
         if panValueSharedLoadValid structs locals globals kind name value then
           match kind with
           | .local => pure (.normal (updatePanValueMap locals name value) globals memory)
@@ -1575,11 +1563,7 @@ mutual
         let .word value := value | none
         let memory ← match memoryAccess with
           | none => some (updatePanValueMemory memory address (.word value))
-          | some access => match size with
-              | .opW => panValueStoreWithAccess memory bytesInWord address (.word value)
-              | .op8 => access.storeByte access.domain memory bytesInWord address value
-              | .op16 => access.store16 access.domain memory bytesInWord address value
-              | .op32 => access.store32 access.domain memory bytesInWord address value
+          | some access => access.sharedStore memory bytesInWord size address (.word value)
         pure (.normal locals globals memory)
     | _fuel + 1, locals, globals, memory,
         .tick, _, _, _ | _fuel + 1, locals, globals, memory, .annot _ _, _, _, _ =>

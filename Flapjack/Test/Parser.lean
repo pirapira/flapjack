@@ -292,6 +292,46 @@ def convStructNameCakeParity : Bool :=
 
 #guard convStructNameCakeParity
 
+/-! Cake `conv_TopDec_def` (`panPtreeConversionScript.sml:762`) dispatches
+    top-level function, global declaration, struct, and exception nodes to
+    their dedicated converters; malformed nodes return `NONE`. -/
+def convTopDecCakeParity : Bool :=
+  let one : ParseTree := .lf (.intT 1) unknownLoc
+  let nine : ParseTree := .lf (.intT 9) unknownLoc
+  let name : ParseTree := .lf (.identT "g") unknownLoc
+  let field : ParseTree := .lf (.identT "f") unknownLoc
+  let exception : ParseTree := .lf (.identT "E") unknownLoc
+  let fields : ParseTree := .nd .fieldNameList [one, field] unknownLoc
+  let params : ParseTree := .nd .paramList [] unknownLoc
+  let function : ParseTree := .nd .funNT
+    [.lf (.keywordT .inlineK) unknownLoc, .lf (.staticT) unknownLoc,
+      one, .lf (.identT "f") unknownLoc, params,
+      .lf (.keywordT .skipK) unknownLoc] unknownLoc
+  let global : ParseTree := .nd .globalDec [one, name, nine] unknownLoc
+  let structureTree : ParseTree := .nd .structName [
+    .lf (.identT "S") unknownLoc, fields] unknownLoc
+  let exn : ParseTree := .nd .exnDec [exception, one] unknownLoc
+  let malformed : ParseTree := .nd .prog [] unknownLoc
+  let functionOk := match convTopDec (fun value => value) false 8 function with
+    | some (.function declaration) =>
+        declaration.name == "f" && declaration.inline && !declaration.exported &&
+          declaration.params.isEmpty &&
+          match declaration.body, declaration.returnShape with
+          | .skip, .one => true
+          | _, _ => false
+    | _ => false
+  match functionOk,
+      convTopDec (fun value => value) false 8 global,
+      convTopDec (fun value => value) false 8 structureTree,
+      convTopDec (fun value => value) false 8 exn,
+      convTopDec (fun value => value) false 8 malformed with
+  | true, some (.decl .one "g" (.const 9)),
+      some (.name "S" [("f", .one)]),
+      some (.exnDecl "E" .one), none => true
+  | _, _, _, _, _ => false
+
+#guard convTopDecCakeParity
+
 #guard (pancakeLex "x + 1").map (·.1) == [.identT "x", .plusT, .intT 1]
 
 -- `//` runs to end of line; the block forms are `/* */` and `/@ @/`.

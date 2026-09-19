@@ -153,6 +153,11 @@ inductive PrimOp where
   | addCarry
   deriving DecidableEq, Repr
 
+/-! Exact source counterpart of Pancake's `primop_to_str_def`
+    (`panStaticScript.sml:606-610`). -/
+def primopToString : PrimOp → String
+  | .addCarry => "AddCarry"
+
 /-! The source `word_sh` operation receives a natural shift amount extracted
     from a target word.  Targets provide the word width and this extraction so
     the generic source evaluator can preserve CakeML's out-of-range failure

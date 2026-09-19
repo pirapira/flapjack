@@ -189,6 +189,12 @@ def reachabilityContext : Context :=
   seqLastStmt .retLast .otherLast == .otherLast &&
   seqLastStmt .retLast .raiseLast == .raiseLast &&
   seqLastStmt .invisLast .retLast == .retLast
+#guard
+  staticScopeDescription (.funScope "f" " at line 1") == "function f at line 1" &&
+  staticScopeDescription (.declScope "g") == "initialisation of global variable g" &&
+  staticScopeDescription (.structScope "S" "field") ==
+    "declaration of field field in named struct S" &&
+  staticScopeDescription .topLevel == "top-level declaration"
 #guard (reachedWarnable (.annot "" "" : Prog Nat) reachabilityContext).1.isNone
 #guard (reachedWarnable (.tick : Prog Nat) reachabilityContext).1.isNone
 #guard (reachedWarnable (.skip : Prog Nat)

@@ -144,6 +144,16 @@ def sourceMakeFuncsOracle : Bool :=
 
 #guard sourceMakeFuncsOracle
 
+/-! `mk_ctxt_def` field-order oracle: the constructor preserves both the
+    source-name lookup map and Cake's fresh-variable bound. -/
+def sourceMkCtxtOracle : Bool :=
+  let context := crepMkCtxt (α := Nat) .rv64i (crepMakeVmap [10, 20])
+    [("f", (64, 2))] 1
+  findLoopVar context 20 == 1 && context.maxVar == 1 &&
+    context.functions == [("f", (64, 2))]
+
+#guard sourceMkCtxtOracle
+
 /-! Cake's handled-call branch starts handler and return-body labels at the
     next local label and advances once more after both bodies.  This guard
     keeps the source-shaped label state visible independently of final bytes. -/

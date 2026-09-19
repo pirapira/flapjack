@@ -622,6 +622,31 @@ def pegFCakeParity : Bool :=
 
 #guard pegFCakeParity
 
+/-! Direct oracle for `seql_def` from
+`cakeml/pancake/parser/panPEGScript.sml:115`.  Results concatenate in parser
+order, the empty list supplies `[]`, and a failed component propagates. -/
+def seqLCakeParity : Bool :=
+  let input : PState := PState.ofToks [(.semiT, unknownLoc)]
+  let success := P.seqL
+      [P.pure' [1, 2], P.pure' [3], P.pure' []]
+      (fun values => P.pure' values.length) input
+  let empty : Option (List Nat) × PState := P.seqL []
+      (fun values => P.pure' values) input
+  let failing : P (List Nat) := fun state => (none, state)
+  let failure := P.seqL [P.pure' [1], failing]
+      (fun values => P.pure' values) input
+  (match success with
+  | (some 3, state) => state.toks == input.toks
+  | _ => false) &&
+  (match empty with
+  | (some [], state) => state.toks == input.toks
+  | _ => false) &&
+  (match failure with
+  | (none, state) => state.toks == input.toks
+  | _ => false)
+
+#guard seqLCakeParity
+
 #guard remainingTracksToks "var 1 x = 1;"
 #guard remainingTracksToks "exception E : 1;"
 #guard remainingTracksToks "fun f(1 a, 1 b) { var x = a + b * 2; return x; }"

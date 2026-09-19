@@ -1219,6 +1219,13 @@ def labCollectPancakeRuntimeStoredLabels [NeZero width]
   [(0, 0, 812), (1, 0, 848), (2, 0, 772)] ++
     labCollectStoredProgramLabels 1000 sourceProgram
 
+/-! The exported Pancake image has a fixed 1000-byte runtime prefix.  Cake's
+    initial `enc_sec_list` sweep, however, positions source sections after the
+    pre-finalization runtime layout, whose source base is 1104 bytes.  Keeping
+    these bases separate is observable only at long-range relocation
+    boundaries, but is required to retain Cake's first-pass instruction slot. -/
+def pancakeInitialSourceBase : Nat := 1104
+
 def labEncodeStoredSection [NeZero width]
     (context : WordFfiContext) (labels : LabLabelIndex)
     (base ffiBase haltPc : Nat) :
@@ -1478,8 +1485,8 @@ def compileLabProgramLinkedWithPancakeRuntime [NeZero width]
     Option (List (Nat × Word width × List (Instruction width))) :=
   let sourceProgram := program.filter (fun entry => entry.name >= 3)
   let initial := labInitialStoredProgram sourceProgram
-  let initialHaltPc := 1000 + labStoredProgramLength initial
-  let encoded := labEncodeStoredProgramStable 8 context 1000 1000
+  let initialHaltPc := pancakeInitialSourceBase + labStoredProgramLength initial
+  let encoded := labEncodeStoredProgramStable 8 context pancakeInitialSourceBase 1000
     initialHaltPc initial
   let relabelled := labUpdateStoredLabelLengths 1000 encoded
   let haltPc := 1000 + labStoredProgramLength relabelled

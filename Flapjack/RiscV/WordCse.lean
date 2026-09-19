@@ -138,7 +138,14 @@ def wordCseInvalidate (data : WordCseKnowledge) (written : Nat) : WordCseKnowled
 
 def wordCseInvalidateRegs (data : WordCseKnowledge) (written : List Nat) :
     WordCseKnowledge :=
-  written.foldl (fun accumulated register => wordCseInvalidate accumulated register) data
+  /- `invalidate_data` is absorbing: once one written register is tracked,
+     the knowledge becomes empty and every later invalidation is a no-op.
+     Cake's fold is therefore equivalent to this single membership scan, but
+     the scan avoids rebuilding the five maps for every register in a write
+     set (notably the four-register StoreConsts boundary). -/
+  if written.any (fun register => (data.toCanonical[register]?).isSome) then
+    wordCseEmpty
+  else data
 
 /-- Cake's `register_read`: an odd register a stored fact reads is entered as
     a self-mapping, so a later write to it resets the data. -/

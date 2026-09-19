@@ -62,6 +62,40 @@ theorem readCrepLocals_initialize_of_not_mem
       rw [ih (locals := updateCrepLocal locals name 0) htail]
       exact readCrepLocals_update_of_not_mem locals name 0 slots hhead
 
+theorem initializeCrepLocals_defined
+    [OfNat α 0]
+    (locals : Nat → Option α) (names : List Nat) :
+    ∀ name, name ∈ names →
+      (initializeCrepLocals locals names name).isSome = true := by
+  have hpreserve : ∀ (base : Nat → Option α) (names : List Nat) (name : Nat),
+      (base name).isSome = true →
+      (initializeCrepLocals base names name).isSome = true := by
+    intro base names name hbase
+    induction names generalizing base with
+    | nil =>
+        simpa [initializeCrepLocals] using hbase
+    | cons head names ih =>
+        simp only [initializeCrepLocals]
+        by_cases heq : name = head
+        · apply ih
+          simp [updateCrepLocal, heq]
+        · apply ih (base := updateCrepLocal base head 0)
+          simpa [updateCrepLocal, heq] using hbase
+  induction names generalizing locals with
+  | nil =>
+      simp
+  | cons head names ih =>
+      intro name hname
+      have htail : ∀ current, current ∈ names →
+          (initializeCrepLocals (updateCrepLocal locals head 0) names current).isSome = true := by
+        intro current hcurrent
+        exact ih (locals := updateCrepLocal locals head 0) current hcurrent
+      rcases (by simpa [List.mem_cons] using hname) with heq | hcurrent
+      · exact hpreserve (updateCrepLocal locals head 0) names name
+          (by simp [heq, updateCrepLocal])
+      · simp only [initializeCrepLocals]
+        exact htail name hcurrent
+
 theorem panValueCrepStateRel_initialize
     [OfNat α 0]
     [LawfulBEq String]

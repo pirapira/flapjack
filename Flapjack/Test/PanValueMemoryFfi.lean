@@ -47,6 +47,74 @@ def memoryFfiTestMemoryAccess : PanValueMemoryAccess Nat :=
     sharedRead := fun _ _ _ _ => none
     sharedStore := fun _ _ _ _ _ => none }
 
+/- CakeML's shared-memory boundary is independent from ordinary memory.  This
+   fixture makes that distinction observable: the ordinary domain rejects
+   every address, while the shared callbacks accept an Op8 access. -/
+def sharedOnlyMemoryAccess : PanValueMemoryAccess Nat :=
+  { memoryFfiTestMemoryAccess with
+    domain := fun _ => false
+    sharedRead := fun _ _ size _ =>
+      match size with
+      | .op8 => some (.word 7)
+      | _ => none
+    sharedStore := fun memory _ size address value =>
+      match size with
+      | .op8 => some (updatePanValueMemory memory address value)
+      | _ => none }
+
+def sharedBoundaryLocals : VarName → Option (PanValue Nat) :=
+  fun name => if name == "x" then some (.word 0) else none
+
+def sharedBoundaryHandler : PanValueFfiHandler Nat :=
+  fun _ _ _ _ _ locals => some locals
+
+def sharedBoundaryLoadResult :=
+  (evalPanValueProgWithCallsAndFfi [] [] sharedBoundaryHandler
+    0 100 1 5 sharedBoundaryLocals (fun _ => none) (fun _ => none)
+    (.shMemLoad .op8 .local "x" (.const 10))
+    (memoryAccess := some sharedOnlyMemoryAccess)).map fun result =>
+      match result with
+      | .normal locals _ _ => locals "x"
+      | _ => none
+
+def sharedBoundaryPrimitiveLoadResult :=
+  (evalPanValueProgWithPrimitiveCallsAndFfi (fun _ _ => none)
+    sharedBoundaryHandler [] [] 0 100 1 5 sharedBoundaryLocals
+    (fun _ => none) (fun _ => none)
+    (.shMemLoad .op8 .local "x" (.const 10))
+    (memoryAccess := some sharedOnlyMemoryAccess)).map fun result =>
+      match result with
+      | .normal locals _ _ => locals "x"
+      | _ => none
+
+def sharedBoundaryStoreResult :=
+  (evalPanValueProgWithCallsAndFfi [] [] sharedBoundaryHandler
+    0 100 1 5 (fun _ => none) (fun _ => none) (fun _ => none)
+    (.shMemStore .op8 (.const 10) (.const 9))
+    (memoryAccess := some sharedOnlyMemoryAccess)).map fun result =>
+      match result with
+      | .normal _ _ memory => memory 10
+      | _ => none
+
+def sharedBoundaryLoadAccepted : Bool :=
+  match sharedBoundaryLoadResult with
+  | some (some (.word value)) => value == 7
+  | _ => false
+
+def sharedBoundaryPrimitiveLoadAccepted : Bool :=
+  match sharedBoundaryPrimitiveLoadResult with
+  | some (some (.word value)) => value == 7
+  | _ => false
+
+def sharedBoundaryStoreAccepted : Bool :=
+  match sharedBoundaryStoreResult with
+  | some (some (.word value)) => value == 9
+  | _ => false
+
+#guard sharedBoundaryLoadAccepted
+#guard sharedBoundaryPrimitiveLoadAccepted
+#guard sharedBoundaryStoreAccepted
+
 def memoryFfiAccelerator : PanValueMemoryFfiHandler Nat Unit :=
   fun function configuration _ array _ locals memory ffi =>
     if function == "accelerator" then

@@ -16,7 +16,7 @@ def noPrim : CrepPrimitiveHandler Nat := fun _ _ => none
 def shm : CrepSharedMemHandler Nat := defaultCrepSharedMemHandler
 
 def state5 : CrepState Nat :=
-  { locals := fun _ => none
+  { locals := fun name => if name = 0 then some 0 else none
     memory := fun address => if address = 5 then some 9 else none
     globals := fun address => if address = 5 then some 3 else none }
 
@@ -67,13 +67,13 @@ example :
 
 /-- Call entry carries the caller's globals into the callee and back. -/
 def keepGlobalsFunctions : List (CompiledFunction Nat) :=
-  [{ name := "f", params := [], body := .skip, returnShape := .one }]
+  [{ name := "f", params := [], body := .return [.const 0], returnShape := .one }]
 
 def callGlobalsResult :=
   observe (crepEvaluate keepGlobalsFunctions noPrim (noCrepFfi Nat) shm
     0 0 10 state5
     (.seq (.storeGlob 5 (.const 7))
-      (.seq (.call none "f" [])
+      (.seq (.call (some ([0], none)) "f" [])
         (.return [.loadGlob 5]))))
 
 def runChecks : IO Bool := do
@@ -97,7 +97,7 @@ example :
     observe (crepEvaluate keepGlobalsFunctions noPrim (noCrepFfi Nat) shm
       0 0 10 state5
       (.seq (.storeGlob 5 (.const 7))
-        (.seq (.call none "f" [])
+        (.seq (.call (some ([0], none)) "f" [])
           (.return [.loadGlob 5])))) = some ([7], some 7, some 9) := by
   decide +kernel
 

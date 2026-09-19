@@ -335,17 +335,14 @@ mutual
         let result ← evalCrepFullProgState functions primitive ffi sharedMem
           baseAddress topAddress fuel callee body
         match result with
-        | .normal callee =>
-            pure (.normal { caller with
-              memory := callee.memory
-              globals := callee.globals })
+        | .normal _ => none
         | .returned callee values =>
             match info with
             | none => pure (.returned { caller with
                 memory := callee.memory
                 globals := callee.globals } values)
             | some (destinations, _) => do
-                let locals ← assignCrepValues caller.locals destinations values
+                let locals ← assignExistingCrepValues caller.locals destinations values
                 pure (.normal (CrepState.mk locals callee.memory callee.globals))
         | .raised callee exception =>
             match info with
@@ -361,14 +358,8 @@ mutual
             | _ => pure (.raised { caller with
                 memory := callee.memory
                 globals := callee.globals } exception)
-        | .broke callee label =>
-            pure (.broke { caller with
-              memory := callee.memory
-              globals := callee.globals } label)
-        | .continued callee label =>
-            pure (.continued { caller with
-              memory := callee.memory
-              globals := callee.globals } label)
+        | .broke _ _ => none
+        | .continued _ _ => none
         | .finalFfi callee event =>
             pure (.finalFfi { caller with
               locals := fun _ => none
@@ -395,11 +386,12 @@ mutual
         pure (restoreCrepResult name (state.locals name) result)
     | _fuel + 1, state, .assign name value => do
         let value ← evalCrepFullExpState state baseAddress topAddress value
-        pure (.normal { state with locals := updateCrepLocal state.locals name value })
+        let locals ← assignExistingCrepValues state.locals [name] [value]
+        pure (.normal { state with locals := locals })
     | _fuel + 1, state, .primitive names operator arguments => do
         let arguments ← arguments.mapM state.locals
         let values ← primitive operator arguments
-        let locals ← assignCrepValues state.locals names values
+        let locals ← assignExistingCrepValues state.locals names values
         pure (.normal { state with locals := locals })
     | _fuel + 1, state, .store address value => do
         let address ← evalCrepFullExpState state baseAddress topAddress address
@@ -540,13 +532,12 @@ mutual
         let result ← evalCrepFullProg functions primitive ffi sharedMem
           baseAddress topAddress fuel callee body
         match result with
-        | .normal callee =>
-            pure (.normal { caller with memory := callee.memory })
+        | .normal _ => none
         | .returned callee values =>
             match info with
             | none => pure (.returned { caller with memory := callee.memory } values)
             | some (destinations, _) => do
-                let locals ← assignCrepValues caller.locals destinations values
+                let locals ← assignExistingCrepValues caller.locals destinations values
                 pure (.normal { locals := locals, memory := callee.memory })
         | .raised callee exception =>
             match info with
@@ -558,10 +549,8 @@ mutual
                 else
                   pure (.raised { caller with memory := callee.memory } exception)
             | _ => pure (.raised { caller with memory := callee.memory } exception)
-        | .broke callee label =>
-            pure (.broke { caller with memory := callee.memory } label)
-        | .continued callee label =>
-            pure (.continued { caller with memory := callee.memory } label)
+        | .broke _ _ => none
+        | .continued _ _ => none
         | .finalFfi callee event =>
             pure (.finalFfi { caller with
               locals := fun _ => none
@@ -587,11 +576,12 @@ mutual
         pure (restoreCrepResult name (state.locals name) result)
     | _fuel + 1, state, .assign name value => do
         let value ← evalCrepFullExp state.locals state.memory baseAddress topAddress value
-        pure (.normal { state with locals := updateCrepLocal state.locals name value })
+        let locals ← assignExistingCrepValues state.locals [name] [value]
+        pure (.normal { state with locals := locals })
     | _fuel + 1, state, .primitive names operator arguments => do
         let arguments ← arguments.mapM state.locals
         let values ← primitive operator arguments
-        let locals ← assignCrepValues state.locals names values
+        let locals ← assignExistingCrepValues state.locals names values
         pure (.normal { state with locals := locals })
     | _fuel + 1, state, .store address value => do
         let address ← evalCrepFullExp state.locals state.memory baseAddress topAddress address

@@ -397,6 +397,9 @@ mutual
         | .raised _ globals memory ffi exception value =>
             pure (.raised (fun _ => none) globals memory ffi exception value,
               callSteps + 1)
+        | .finalFfi _ globals memory ffi event =>
+            pure (.finalFfi (fun _ => none) globals memory ffi event,
+              callSteps + 1)
         | _ => none
     | _fuel + 1, locals, globals, memory, ffi,
         .extCall function configuration configurationLength array arrayLength, memoryAccess,

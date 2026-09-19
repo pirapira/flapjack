@@ -100,9 +100,10 @@ def dumpLinkedLab (pipeline : FlapjackPipelineResult (RiscV.Word 64))
         (fullSsaInitialLabLabel functions) functions
       let sourceProgram := program.filter (fun sectionData => sectionData.name >= 3)
       let initial := RiscV.labInitialStoredProgram sourceProgram
-      let initialHaltPc := 1000 + RiscV.labStoredProgramLength initial
+      let initialHaltPc := RiscV.pancakeInitialSourceBase +
+        RiscV.labStoredProgramLength initial
       let encoded := RiscV.labEncodeStoredProgramStable 8 { services := [] }
-        1000 1000 initialHaltPc initial
+        RiscV.pancakeInitialSourceBase 1000 initialHaltPc initial
       let relabelled := RiscV.labUpdateStoredLabelLengths 1000 encoded
       let haltPc := 1000 + RiscV.labStoredProgramLength relabelled
       let labels := RiscV.labLabelIndexOf

@@ -23,7 +23,7 @@ open Flapjack
     single dead-code pass cubic in function size; `natEraseDups` returns the
     same list. -/
 def wordDeadAddReads (live : List Nat) (reads : List Nat) : List Nat :=
-  natEraseDups (live ++ reads)
+  natEraseDupsAppend live reads
 
 def wordDeadRemoveWrites (live : List Nat) (writes : List Nat) : List Nat :=
   live.filter (fun name => name ∉ writes)
@@ -134,7 +134,7 @@ def wordDeadCodeAux : WordProg α → List Nat → List (List Nat × List Nat) �
         wordDeadCallLive cutsets arguments)
   | .call returns target arguments handler, live, _ =>
       (.call returns target arguments handler,
-        wordDeadAddReads live (wordProgReadVars
+        wordDeadAddReads live (wordProgReadVarsFast
           (.call returns target arguments handler)))
   | .alloc destination cutsets, live, _ =>
       (.alloc destination cutsets,
@@ -237,7 +237,7 @@ def wordCopyUnreachMergeMoves (first second : List (Nat × Nat)) :
     (move.1, (lookupNatInfo move.2 first).getD move.2))
   (rewritten ++ first).foldl (fun seen move =>
     if seen.any (fun prior => prior.1 == move.1) then seen
-    else seen ++ [move]) []
+    else move :: seen) [] |>.reverse
 
 def wordCopyUnreachSeq (first second : WordProg α) : WordProg α :=
   match first, second with
@@ -265,31 +265,39 @@ def wordCopyUnreachSeq (first second : WordProg α) : WordProg α :=
 /-! `Seq_assoc_right` first flattens every sequence, including sequences
     nested in call continuations.  Keeping the parts as a list makes that
     association explicit and lets `wordCopyUnreachSeq` merge adjacent moves
-    after copy propagation, just as Cake's `dest_Seq_Move` does. -/
-def wordCopyUnreachParts : WordProg α → List (WordProg α)
-  | .seq first second => wordCopyUnreachParts first ++ wordCopyUnreachParts second
-  | .ite operator condition right thenBranch elseBranch =>
-      [.ite operator condition right
-        (wordCopyUnreachParts thenBranch |>.foldr wordCopyUnreachSeq .skip)
-        (wordCopyUnreachParts elseBranch |>.foldr wordCopyUnreachSeq .skip)]
-  | .loop liveIn body liveOut =>
-      [.loop liveIn (wordCopyUnreachParts body |>.foldr wordCopyUnreachSeq .skip) liveOut]
-  | .mustTerminate body =>
-      [.mustTerminate (wordCopyUnreachParts body |>.foldr wordCopyUnreachSeq .skip)]
+    after copy propagation, just as Cake's `dest_Seq_Move` does.  The
+    accumulator preserves the same preorder without rebuilding the left
+    prefix with `++` at every sequence node. -/
+def wordCopyUnreachPartsAcc : WordProg α → List (WordProg α) → List (WordProg α)
+  | .seq first second, suffix =>
+      wordCopyUnreachPartsAcc first (wordCopyUnreachPartsAcc second suffix)
+  | .ite operator condition right thenBranch elseBranch, suffix =>
+      (.ite operator condition right
+        (wordCopyUnreachPartsAcc thenBranch [] |>.foldr wordCopyUnreachSeq .skip)
+        (wordCopyUnreachPartsAcc elseBranch [] |>.foldr wordCopyUnreachSeq .skip)) :: suffix
+  | .loop liveIn body liveOut, suffix =>
+      (.loop liveIn (wordCopyUnreachPartsAcc body [] |>.foldr wordCopyUnreachSeq .skip)
+        liveOut) :: suffix
+  | .mustTerminate body, suffix =>
+      (.mustTerminate (wordCopyUnreachPartsAcc body [] |>.foldr wordCopyUnreachSeq .skip))
+        :: suffix
   | .call (some (destinations, cutsets, returnCode, returnLabel, entryLabel))
-      target arguments handler =>
+      target arguments handler, suffix =>
       let handler' := match handler with
         | none => none
         | some (exception, body, handlerLabel, handlerEntryLabel) =>
             some (exception,
-              wordCopyUnreachParts body |>.foldr wordCopyUnreachSeq .skip,
+              wordCopyUnreachPartsAcc body [] |>.foldr wordCopyUnreachSeq .skip,
               handlerLabel, handlerEntryLabel)
-      [.call (some (destinations, cutsets,
-          wordCopyUnreachParts returnCode |>.foldr wordCopyUnreachSeq .skip,
-          returnLabel, entryLabel)) target arguments handler']
-  | program => [program]
+      (.call (some (destinations, cutsets,
+          wordCopyUnreachPartsAcc returnCode [] |>.foldr wordCopyUnreachSeq .skip,
+          returnLabel, entryLabel)) target arguments handler') :: suffix
+  | program, suffix => program :: suffix
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial
+
+def wordCopyUnreachParts (program : WordProg α) : List (WordProg α) :=
+  wordCopyUnreachPartsAcc program []
 
 def wordRemoveUnreachableAfterCopy (program : WordProg α) : WordProg α :=
   wordCopyUnreachParts program |>.foldr wordCopyUnreachSeq .skip

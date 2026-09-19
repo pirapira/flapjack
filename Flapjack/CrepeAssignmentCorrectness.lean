@@ -43,10 +43,20 @@ theorem compile_full_pan_value_local_assign_return_word_rel
       (updatePanValueMap sourceLocals name (.word value))
       sourceGlobals sourceMemory
       { state with locals := updateCrepLocal state.locals slot value } := by
+  have hstate : state.locals slot = some oldValue := by
+    have hslot := hrel.2.1 name (.word oldValue) .one [slot] hlocals hlookup
+    have hread := hslot.2
+    simp [readCrepLocals, panValueFlatWords, panValueFlatWordsFuel] at hread
+    cases hlocal : state.locals slot with
+    | none => simp [hlocal] at hread
+    | some current =>
+        simp [hlocal] at hread
+        simp [hread]
   constructor
   · exact compile_full_pan_value_local_assign_return_word_correct
       context structs sourceLocals sourceGlobals state primitive ffi sharedMem
       baseAddress topAddress bytesInWord name slot oldValue value hlookup hlocals
+      hstate
   · refine ⟨hrel.1, ?_, hrel.2.2⟩
     exact panValueCrepLocalsRel_update_word structs context sourceLocals
       state.locals name slot value hrel.2.1 hlookup hnoalias

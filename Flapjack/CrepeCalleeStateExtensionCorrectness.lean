@@ -63,7 +63,8 @@ theorem evalCrepFullCall_returned_state_extension_of_body_correct
     (hlookup : lookupCompiledFunction function functions = some (parameters, targetBody))
     (hassign : assignCrepValues (fun _ => none) parameters argumentValues =
       some targetCalleeLocals)
-    (hdestinations : assignCrepValues caller.locals (allocatedNames context shape)
+    (hdestinations : assignExistingCrepValues caller.locals
+      (allocatedNames context shape)
       targetValues = some targetCallerLocals)
     (hcalleeValues : targetValues = panValueFlatWords value)
     (hshape : panShapeMatches (panValueShape structs value) shape = true)
@@ -105,7 +106,8 @@ theorem evalCrepFullCall_returned_state_extension_of_body_correct
     hbodyRel.1
   have hread : readCrepLocals targetCallerLocals
       (allocatedNames context shape) = some targetValues :=
-    assignCrepValues_read_back caller.locals (allocatedNames context shape)
+    assignExistingCrepValues_read_back caller.locals
+      (allocatedNames context shape)
       targetValues targetCallerLocals hdestinations hdistinct
   have hold : ∀ oldName oldValue oldShape oldSlots,
       oldName ≠ name →
@@ -117,7 +119,7 @@ theorem evalCrepFullCall_returned_state_extension_of_body_correct
     intro oldName oldValue oldShape oldSlots hne hsourceOld hlookupOld
     have holdOld := hcallerRel.2.1 oldName oldValue oldShape oldSlots
       hsourceOld hlookupOld
-    have hpreserve := assignCrepValues_read_preserve caller.locals
+    have hpreserve := assignExistingCrepValues_read_preserve caller.locals
       (allocatedNames context shape) targetValues targetCallerLocals oldSlots
       hdestinations (fun destination hdestination =>
         hnoalias oldName oldShape oldSlots hne hlookupOld destination hdestination)
@@ -194,7 +196,7 @@ theorem evalCrepFullCallState_returned_state_extension_of_body_correct
     (hlookup : lookupCompiledFunction function functions = some (parameters, targetBody))
     (hassign : assignCrepValues (fun _ => none) parameters argumentValues =
       some targetCalleeLocals)
-    (hdestinations : assignCrepValues caller.locals
+    (hdestinations : assignExistingCrepValues caller.locals
       (allocatedNames context shape) targetValues = some targetCallerLocals)
     (hcalleeValues : targetValues = panValueFlatWords value)
     (hshape : panShapeMatches (panValueShape structs value) shape = true)
@@ -242,7 +244,8 @@ theorem evalCrepFullCallState_returned_state_extension_of_body_correct
       targetCallee := hbodyRel.1
   have hread : readCrepLocals targetCallerLocals
       (allocatedNames context shape) = some targetValues :=
-    assignCrepValues_read_back caller.locals (allocatedNames context shape)
+    assignExistingCrepValues_read_back caller.locals
+      (allocatedNames context shape)
       targetValues targetCallerLocals hdestinations hdistinct
   have hold : ∀ oldName oldValue oldShape oldSlots,
       oldName ≠ name →
@@ -254,7 +257,7 @@ theorem evalCrepFullCallState_returned_state_extension_of_body_correct
     intro oldName oldValue oldShape oldSlots hne hsourceOld hlookupOld
     have holdOld := hcallerRel.2.1 oldName oldValue oldShape oldSlots
       hsourceOld hlookupOld
-    have hpreserve := assignCrepValues_read_preserve caller.locals
+    have hpreserve := assignExistingCrepValues_read_preserve caller.locals
       (allocatedNames context shape) targetValues targetCallerLocals oldSlots
       hdestinations (fun destination hdestination =>
         hnoalias oldName oldShape oldSlots hne hlookupOld destination hdestination)

@@ -62,7 +62,7 @@ def compileFlapjackRiscVViaSourceAlgorithmStack [NeZero width]
     (services : List (FunName × Nat)) (removeConfig : StackRemoveConfig)
     (declarations : List (Decl (RiscV.Word width))) :
     Option (List (RiscV.Instruction width)) := do
-  let pipeline := compileFlapjack architecture bytesInWord fromNat declarations
+  let pipeline := compileFlapjackCore architecture bytesInWord fromNat declarations
   let functions ← pipelineWordFunctionsAllocatedWithSourceAlgorithm algorithm
     pipeline.loop
   RiscV.compileStackProgramNatListWithRaiseStubToRiscV { services := services }

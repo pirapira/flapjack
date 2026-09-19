@@ -108,9 +108,12 @@ theorem panValueCrepProgramCorrect_assign_local_direct
     simp [compileProg, hlookupExact, hcompile, hslotLength, hcompiledLength,
       hdirect']
   rw [hcompileProg] at hcrep
+  have hdefined := panValueCrepLocalsRel_defined structs context sourceLocals
+    state.locals name oldValue shape slots hrel.2.1 hold hlookupName
   have htarget := evalCrepFullProg_assignList_inv functions crepPrimitive ffi sharedMem
     baseAddress topAddress targetFuel state slots compiled values crepResult
-    (by exact hslotLength.trans hcompiledLength.symm) hslotsDistinct hnot hcompiled hcrep
+    (by exact hslotLength.trans hcompiledLength.symm) hslotsDistinct hnot hcompiled
+    hdefined hcrep
   have hnoalias' := hnoalias context shape slots hlookupName
   have hrel' := panValueCrepLocalsRel_update_value structs context sourceLocals
     state.locals name shape slots sourceValue values hrel.2.1 hlookupName
@@ -214,9 +217,12 @@ theorem panValueCrepProgramStateCorrect_assign_local_direct
     simp [compileProg, hlookupExact, hcompile, hslotLength, hcompiledLength,
       hdirect']
   rw [hcompileProg] at hcrep
+  have hdefined := panValueCrepLocalsRel_defined structs context sourceLocals
+    state.locals name oldValue shape slots hrel.2.1 hold hlookupName
   have htarget := evalCrepFullProgState_assignList_inv functions crepPrimitive ffi sharedMem
     baseAddress topAddress targetFuel state slots compiled values crepResult
-    (by exact hslotLength.trans hcompiledLength.symm) hslotsDistinct hnot hcompiled hcrep
+    (by exact hslotLength.trans hcompiledLength.symm) hslotsDistinct hnot hcompiled
+    hdefined hcrep
   have hnoalias' := hnoalias context shape slots hlookupName
   have hrel' := panValueCrepLocalsRel_update_value structs context sourceLocals
     state.locals name shape slots sourceValue values hrel.2.1 hlookupName

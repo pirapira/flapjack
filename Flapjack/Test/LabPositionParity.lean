@@ -31,6 +31,16 @@ example :
       some [.jal 0 (0 - BitVec.ofNat 64 80)] := by
   rfl
 
+/-! Cake switches the backward Halt transfer to its long AUIPC/JALR form once
+    the distance is beyond the direct JAL range.  Keep the boundary exact so
+    the target assembler cannot silently regress to the short form. -/
+example :
+    labCompileAsmWithHalt (width := 64) { services := [] } (labLabelIndexOf [])
+      (2 ^ 20) 999 .halt =
+      some [.auipc 31 (BitVec.ofInt 64 (-256)),
+        .jalr 0 31 (BitVec.ofInt 64 (-16))] := by
+  decide
+
 example :
     labCompileAsmWithHalt (width := 64) { services := [] } (labLabelIndexOf []) 64 999 .install =
       some [.jal 0 (0 - BitVec.ofNat 64 96)] := by

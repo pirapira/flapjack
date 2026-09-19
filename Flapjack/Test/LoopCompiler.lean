@@ -180,6 +180,16 @@ def reachabilityContext : Context :=
   | .named "Pair" [("lo", .word .trusted), ("hi", .word .trusted)] => true
   | _ => false
 
+/-! Direct Cake `sh_bd_has_shape` parity (`panStaticScript.sml:244-258`). -/
+#guard shapedBasedHasShape .one (.word .based) == true
+#guard shapedBasedHasShape .one (.struct []) == false
+#guard shapedBasedHasShape (.comb [.one, .comb [.one]])
+    (.struct [.word .trusted, .struct [.word .notBased]]) == true
+#guard shapedBasedHasShape (.comb [.one, .one]) (.struct [.word .trusted]) == false
+#guard shapedBasedHasShape (.named "Pair")
+    (.named "Pair" [("ignored", .struct [])]) == true
+#guard shapedBasedHasShape (.named "Pair") (.named "Other" []) == false
+
 /-! Cake's `get_memop_msg` diagnostics (`panStaticScript.sml:491-511`) are
     directional: local operations warn about non-base addresses, while shared
     operations warn about base addresses. -/

@@ -348,6 +348,20 @@ where
       (.struct [.word .notBased, .word .notBased]) = true := by
   rfl
 
+/-! Direct source-shaped port of Cake's `sh_bd_has_shape_def`. -/
+def shapedBasedHasShape : Shape → ShapedBased → Bool
+  | .one, .word _ => true
+  | .comb shapes, .struct shaped => shapedBasedHasShapeList shapes shaped
+  | .named name, .named other _ => name == other
+  | _, _ => false
+where
+  shapedBasedHasShapeList : List Shape → List ShapedBased → Bool
+    | [], [] => true
+    | [], _ :: _ => false
+    | _ :: _, [] => false
+    | shape :: shapes, shaped :: shapeds =>
+        shapedBasedHasShape shape shaped && shapedBasedHasShapeList shapes shapeds
+
 def shapesSame : Shape → Shape → Bool
   | .one, .one => true
   | .comb left, .comb right => shapesSameList left right

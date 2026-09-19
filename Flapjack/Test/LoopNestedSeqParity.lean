@@ -24,6 +24,11 @@ def probeTwo : List (LoopProg Nat) := [.tick, .skip]
 def probeAssignLoad : List (LoopProg Nat) :=
   [.assign 1 (.const 7), .load32 0 2]
 
+def nestedSeqFlattened : Bool :=
+  (loopSeqs
+      (.seq (.seq .skip .tick) (.assign 3 (.const 7) : LoopProg Nat))).map reprStr ==
+    ([.skip, .tick, .assign 3 (.const 7)] : List (LoopProg Nat)).map reprStr
+
 def sameExp : LoopExp Nat → LoopExp Nat → Bool
   | .const actual, .const expected => actual == expected
   | _, _ => false
@@ -44,6 +49,7 @@ def sameProg : LoopProg Nat → LoopProg Nat → Bool
 #guard sameProg (loopNestedSeq probeOne) originalOne
 #guard sameProg (loopNestedSeq probeTwo) originalTwo
 #guard sameProg (loopNestedSeq probeAssignLoad) originalAssignLoad
+#guard nestedSeqFlattened
 
 def check (name : String) (actual expected : LoopProg Nat) : IO Bool := do
   if sameProg actual expected then
@@ -60,6 +66,10 @@ def runChecks : IO Bool := do
     check "nested_seq two statements" (loopNestedSeq probeTwo) originalTwo,
     check "nested_seq assign/load"
       (loopNestedSeq probeAssignLoad) originalAssignLoad ].mapM id
-  pure (results.all id)
+  if nestedSeqFlattened then
+    IO.println "PASS loop_seqs flatten"
+  else
+    IO.println "FAIL loop_seqs flatten"
+  pure (results.all id && nestedSeqFlattened)
 
 end Flapjack.Test.LoopNestedSeqParity

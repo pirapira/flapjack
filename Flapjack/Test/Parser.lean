@@ -529,6 +529,29 @@ def remainingTracksToks (source : String) : Bool :=
   let final := (gTopDecList (parseFuel toks.length) (PState.ofToks toks)).2
   final.remaining == final.toks.length
 
+/-! Direct oracle for `consume_kw_def` from
+`cakeml/pancake/parser/panPEGScript.sml:64`.  Cake delegates to
+`consume_tok (KeywordT k)`: a successful keyword contributes no parse-tree
+child and consumes exactly one token, while a mismatch leaves input intact. -/
+def consumeKwCakeParity : Bool :=
+  let good := P.consumeKw .varK "var"
+    (PState.ofToks
+      [(.keywordT .varK, unknownLoc), (.semiT, unknownLoc)])
+  let bad := P.consumeKw .varK "var"
+    (PState.ofToks
+      [(.keywordT .funK, unknownLoc), (.semiT, unknownLoc)])
+  (match good with
+  | (some [], state) => state.remaining == 1 &&
+      state.toks == [(.semiT, unknownLoc)] && state.lastConsumed.isSome
+  | _ => false) &&
+  (match bad with
+  | (none, state) => state.remaining == 2 &&
+      state.toks == [(.keywordT .funK, unknownLoc), (.semiT, unknownLoc)] &&
+      state.furthest.isSome
+  | _ => false)
+
+#guard consumeKwCakeParity
+
 #guard remainingTracksToks "var 1 x = 1;"
 #guard remainingTracksToks "exception E : 1;"
 #guard remainingTracksToks "fun f(1 a, 1 b) { var x = a + b * 2; return x; }"

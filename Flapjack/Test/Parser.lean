@@ -121,6 +121,21 @@ def convOperatorCakeParity : Bool :=
 
 #guard convOperatorCakeParity
 
+/-! Cake's `conv_params_def` (`panPtreeConversionScript.sml:224`) consumes a
+    flat sequence of shape/name pairs, accepts the empty list, and rejects an
+    incomplete pair or a pair whose shape/name conversion fails. -/
+def convParamsCakeParity : Bool :=
+  let one : ParseTree := .lf (.intT 1) unknownLoc
+  let x : ParseTree := .lf (.identT "x") unknownLoc
+  let y : ParseTree := .lf (.identT "y") unknownLoc
+  let wrong : ParseTree := .lf (.plusT) unknownLoc
+  match convParams 8 [one, x, one, y], convParams 8 [],
+      convParams 8 [one], convParams 8 [wrong, x] with
+  | some [("x", .one), ("y", .one)], some [], none, none => true
+  | _, _, _, _ => false
+
+#guard convParamsCakeParity
+
 #guard (pancakeLex "x + 1").map (·.1) == [.identT "x", .plusT, .intT 1]
 
 -- `//` runs to end of line; the block forms are `/* */` and `/@ @/`.

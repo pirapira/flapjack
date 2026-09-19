@@ -524,6 +524,17 @@ def nomainGlobalAccepted : Bool :=
   | .ok image => !image.sections.isEmpty
   | .error _ => false
 
+/- The byte-oriented source entry point must apply the same target preparation;
+   Cake accepts this non-empty main-less source through its synthesized main. -/
+def nomainGlobalBytesAccepted : Bool :=
+  match compileFlapjackRiscVSourceBytesChecked (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] artifactCompileConfig "main"
+      nomainGlobalSource with
+  | .ok artifact => !artifact.bytes.isEmpty
+  | .error _ => false
+
+#guard nomainGlobalBytesAccepted
+
 /- Cake's target pass does not synthesize a default main for an actually empty
    declaration list; comment-only input therefore remains rejected. -/
 def emptySource : String := "// no Pancake declarations\n"
@@ -1006,6 +1017,8 @@ def runChecks : IO Bool := do
         dupGlobalAcceptedWithWarning),
       ("nomain_global fixture accepted with a synthesized default main",
          nomainGlobalAccepted),
+      ("nomain_global byte entry accepts the synthesized default main",
+         nomainGlobalBytesAccepted),
       ("empty Pancake source is rejected like Cake",
          emptySourceRejected),
       ("ffi names recorded in Cake collector order",

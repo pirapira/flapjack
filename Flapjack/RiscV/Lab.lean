@@ -209,16 +209,31 @@ def labBranchOffsetFits (target position : Nat) : Bool :=
   else
     position - target <= 4092
 
-def labLongTransferInstructions [NeZero width]
-    (destination : Fin 32) (target position : Nat) :
+def labLongTransferOffsetInstructions [NeZero width]
+    (destination : Fin 32) (delta : Int) :
     Option (List (Instruction width)) := do
   let temporary ← labRegisterOfNat (portToStack 31)
-  let delta : Int := Int.ofNat target - Int.ofNat position
   let remainder := delta % 4096
   let low := if remainder >= 2048 then remainder - 4096 else remainder
   let upper := (delta - low) / 4096
   pure [.auipc temporary (BitVec.ofInt width upper),
     .jalr destination temporary (BitVec.ofInt width low)]
+
+def labLongTransferInstructions [NeZero width]
+    (destination : Fin 32) (target position : Nat) :
+    Option (List (Instruction width)) :=
+  labLongTransferOffsetInstructions destination
+    (Int.ofNat target - Int.ofNat position)
+
+def labBackwardJumpInstructions [NeZero width]
+    (destination : Fin 32) (position distance : Nat) :
+    Option (List (Instruction width)) := do
+  let distance := position + distance
+  let delta : Int := -Int.ofNat distance
+  if distance <= 2 ^ 20 then
+    pure [.jal destination (BitVec.ofInt width delta)]
+  else
+    labLongTransferOffsetInstructions destination delta
 
 def labJumpInstructions [NeZero width]
     (destination : Fin 32) (target position : Nat) :
@@ -456,7 +471,7 @@ def labCompileAsm [NeZero width] (context : WordFfiContext)
   | .heapAlloc _ => none
   | .halt => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
-      pure [.jal zero (0 - BitVec.ofNat width (position + 16))]
+      labBackwardJumpInstructions zero position 16
 
 def labLineCompiledInstructionCount [NeZero width]
     (context : WordFfiContext) (sectionId : Nat)
@@ -700,7 +715,7 @@ def labCompileAsmProgram [NeZero width] (context : WordFfiContext)
   | .heapAlloc _ => none
   | .halt => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
-      pure [.jal zero (0 - BitVec.ofNat width (position + 16))]
+      labBackwardJumpInstructions zero position 16
 
 def labCompileProgramLines [NeZero width] (context : WordFfiContext)
     (labels : LabLabelIndex) (position : Nat) :
@@ -865,7 +880,7 @@ def labCompileAsmWithHalt [NeZero width] (context : WordFfiContext)
       pure [.jal zero offset]
   | .halt => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
-      pure [.jal zero (0 - BitVec.ofNat width (position + 16))]
+      labBackwardJumpInstructions zero position 16
   | .install => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
       pure [.jal zero (0 - BitVec.ofNat width (position + 2 * 16))]

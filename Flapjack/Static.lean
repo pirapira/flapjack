@@ -1080,10 +1080,10 @@ where
       all_goals first | sizeOf_list_dec | decreasing_trivial
 
 def firstRepeat [BEq α] : List α → Option α
-  | [] => none
-  | value :: values =>
-      if values.any (fun candidate => candidate == value) then some value
-      else firstRepeat values
+  | value1 :: value2 :: values =>
+      if value1 == value2 then some value1
+      else firstRepeat (value2 :: values)
+  | _ => none
 
 def checkShape [BEq String] (context : StructContext) (shape : Shape) :
     StaticResult Unit :=

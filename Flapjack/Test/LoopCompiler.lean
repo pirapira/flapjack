@@ -251,6 +251,10 @@ def reachabilityContext : Context :=
   "L: return value has shape pair instead of declared shape word in function f\n"
 #guard getImplementationErrorMessage "static analysis failed" "L: " (.funScope "f" "") ==
   "L: static analysis failed in function f\nthis should never happen. please report to a compiler developer\n"
+#guard firstRepeat ([] : List Nat) == none
+#guard firstRepeat [1, 1, 2] == some 1
+#guard firstRepeat [1, 2, 2] == some 2
+#guard firstRepeat [1, 2, 1] == none
 
 #guard match basedMerge .based .notBased with | .based => true | _ => false
 #guard match basedMerge .trusted .notBased with | .trusted => true | _ => false

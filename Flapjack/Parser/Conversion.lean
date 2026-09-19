@@ -63,6 +63,10 @@ def convBinop (tree : ParseTree) : Option BinOp :=
       else if tree.tokcheck .xorT then some .xor
       else none
 
+/-! Cake `panExps_def` (`panPtreeConversionScript.sml:113`) enumerates the
+    expression nonterminals handled by `conv_panops`. -/
+def panExps : List Nonterminal := [.eMul]
+
 /-- `conv_panop`. -/
 def convPanop (tree : ParseTree) : Option PanOp :=
   match tree with

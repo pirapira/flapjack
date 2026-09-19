@@ -374,6 +374,20 @@ def binaryExpsCakeParity : Bool :=
 
 #guard binaryExpsCakeParity
 
+/-! Cake `panExps_def` (`panPtreeConversionScript.sml:113`) is the singleton
+    `EMulNT` family consumed by `conv_panops`; other expression nodes stay out
+    of that fold. -/
+def panExpsCakeParity : Bool :=
+  let integer (value : Int) : ParseTree := .lf (.intT value) unknownLoc
+  sameAst panExps ([.eMul] : List Nonterminal) &&
+    sameAst (convExp ofI 8
+      (.nd .eMul [integer 3, .lf (.starT) unknownLoc, integer 4] unknownLoc))
+      (some (.panOp .mul [.const 3, .const 4])) &&
+    (convExp ofI 8
+      (.nd .eAdd [integer 3, .lf (.plusT) unknownLoc, integer 4] unknownLoc)).isSome
+
+#guard panExpsCakeParity
+
 /-! Cake operator conversion at `panPtreeConversionScript.sml:141,153,168`
     recurses through the corresponding operator wrapper, maps comparison
     spellings to `(Cmp, swapped)`, and rejects other wrappers/tokens. -/

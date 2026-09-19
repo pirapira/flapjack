@@ -471,6 +471,24 @@ def remainingTracksToks (source : String) : Bool :=
 -- And `conv_binop` refuses a token that is not one.
 #guard (convBinop (.lf (.starT) unknownLoc) == (none : Option BinOp))
 
+/-! Direct oracle for `conv_binop_def` from
+`cakeml/pancake/parser/panPtreeConversionScript.sml:125`.  Cake accepts a
+single leaf below `AddOpsNT`, recursively converts the leaf, and rejects both
+wrong node tags and every other child count. -/
+def convBinopCakeParity : Bool :=
+  convBinop (.lf (.plusT) unknownLoc) == some .add &&
+  convBinop (.lf (.minusT) unknownLoc) == some .sub &&
+  convBinop (.lf (.andT) unknownLoc) == some .and &&
+  convBinop (.lf (.orT) unknownLoc) == some .or &&
+  convBinop (.lf (.xorT) unknownLoc) == some .xor &&
+  convBinop (.nd .addOps [(.lf (.plusT) unknownLoc)] unknownLoc) == some .add &&
+  convBinop (.nd .addOps [] unknownLoc) == none &&
+  convBinop (.nd .addOps
+    [(.lf (.plusT) unknownLoc), (.lf (.minusT) unknownLoc)] unknownLoc) == none &&
+  convBinop (.nd .mulOps [(.lf (.plusT) unknownLoc)] unknownLoc) == none
+
+#guard convBinopCakeParity
+
 /-! ### Downstream compatibility
 
 The AST the parser produces has to be consumable by what already exists, not

@@ -72,6 +72,7 @@ import Flapjack.Test.StaticProgParity
 import Flapjack.Test.StaticProgsParity
 import Flapjack.Test.StaticDeclsParity
 import Flapjack.Test.StaticNamesParity
+import Flapjack.Test.StaticOverallParity
 import Flapjack.Test.CorrectnessConditional
 import Flapjack.Test.CorrectnessColour
 import Flapjack.Test.CorrectnessSsaColour

@@ -133,17 +133,8 @@ def pipelineLoopFunctionsSourceAux [OfNat α 0] [OfNat α 1]
     Nat → List (CompiledFunction α) → List (Nat × List Nat × LoopProg α)
   | _, [] => []
   | label, function :: functions =>
-      let context : LoopContext α :=
-        /- `crep_to_loop$comp_func` calls `make_vmap params`, mapping each
-           source parameter to its flattened positional slot.  An empty map
-           silently turns parameter assignments into `Skip`, which changes
-           both the loop program and the emitted artifact. -/
-        { vars := crepMakeVmap function.params
-          functions := functionInfos
-          maxVar := function.params.length - 1
-          target := architecture }
       (label, List.range function.params.length,
-        oCompile context (List.range function.params.length) function.body) ::
+        crepCompFunc architecture functionInfos function.params function.body) ::
         pipelineLoopFunctionsSourceAux architecture functionInfos (label + 1) functions
 
 def pipelineLoopFunctionsSource [OfNat α 0] [OfNat α 1]

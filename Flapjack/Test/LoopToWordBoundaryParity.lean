@@ -117,6 +117,16 @@ def sourceMakeVmapOracle : Bool :=
 
 #guard sourceMakeVmapOracle
 
+/-! `comp_func_def` must resolve a source parameter through `make_vmap` before
+    lowering.  This representative assignment is the source-to-Loop oracle:
+    Cake's parameter name `10` is compiled to dense local slot `0`. -/
+def sourceCompFuncOracle : Bool :=
+  match crepCompFunc .rv64i [] [10] (.return [.var 10] : CrepProg Nat) with
+  | .mark (.seq (.mark (.assign 1 (.var 0))) _) => true
+  | _ => false
+
+#guard sourceCompFuncOracle
+
 /-! Cake's handled-call branch starts handler and return-body labels at the
     next local label and advances once more after both bodies.  This guard
     keeps the source-shaped label state visible independently of final bytes. -/

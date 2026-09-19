@@ -154,6 +154,22 @@ def reachabilityContext : Context :=
 #guard match shapedBasedMerge [.word .based, .word .notBased] with
   | .based => true | _ => false
 
+/-! Direct Cake `based_merge` parity (`panStaticScript.sml:288-298`). -/
+#guard match basedMerge .notBased .notBased with
+  | .notBased => true | _ => false
+#guard match basedMerge .trusted .notBased with
+  | .trusted => true | _ => false
+#guard match basedMerge .notBased .trusted with
+  | .trusted => true | _ => false
+#guard match basedMerge .notTrusted .trusted with
+  | .notTrusted => true | _ => false
+#guard match basedMerge .trusted .notTrusted with
+  | .notTrusted => true | _ => false
+#guard match basedMerge .based .notTrusted with
+  | .based => true | _ => false
+#guard match basedMerge .notTrusted .based with
+  | .based => true | _ => false
+
 /-! Direct Cake `sh_bd_from_sh` parity (`panStaticScript.sml:213-233`).
     The explicit basedness must reach every word in comb and named shapes. -/
 #guard match shapedBasedFromShapeWith [] .based .one with

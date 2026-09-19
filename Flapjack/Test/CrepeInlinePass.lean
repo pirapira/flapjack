@@ -148,4 +148,26 @@ def crepTransformBranchHandlerResult : CrepProg Nat :=
         (.break 0))))) "callee" [] => true
   | _ => false
 
+/-! Direct `crep_inline$inline_nontail` oracle coverage.  Cake's
+    `inline_nontail_def` (crep_inlineScript.sml:191-203) nests zero-valued
+    return temporaries outside `arg_load`, then copies the temporary results
+    back to the caller's destinations in order. -/
+def crepInlineNontailCakeResult : CrepProg Nat :=
+  crepInlineNontail
+    (.return [.const 7, .var 12])
+    [20, 21] [30, 31] [40]
+    [.const 5] [10]
+
+#guard match crepInlineNontailCakeResult with
+  | .dec 30 (.const 0)
+      (.dec 31 (.const 0)
+        (.seq
+          (.dec 40 (.const 5)
+            (.dec 10 (.var 40)
+              (.return [.const 7, .var 12])))
+          (.seq
+            (.assign 20 (.var 30))
+            (.seq (.assign 21 (.var 31)) .skip)))) => true
+  | _ => false
+
 end Flapjack

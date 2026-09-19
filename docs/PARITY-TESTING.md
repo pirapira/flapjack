@@ -101,7 +101,9 @@ acceptance. The only normalization is the documented `cml_` prefix and
 
 Every mismatch is classified into a signature (`sections/order`,
 `bytes/user:main:len_ne`, `frame/bitmap-table`, `acceptance/gap:entry`, ...).
-Signatures owned by a bead are listed in
+The current gaps registry is intentionally empty: all previously recorded
+acceptance and frame signatures have been fixed. If a new temporary
+exception is ever required, it must be owned by an active bead and listed in
 [`scripts/parity-difffuzz-gaps.json`](../scripts/parity-difffuzz-gaps.json);
 acceptance disagreements and tool failures are never owned, so they always
 surface. Unknown signatures and CakeML-accepted/Flapjack-rejected cases exit

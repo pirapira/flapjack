@@ -772,6 +772,13 @@ def getShapeMismatchMessage (description actualShape expectedShape location : St
     " instead of declared shape " ++ expectedShape ++ " in " ++
     staticScopeDescription scope ++ "\n"
 
+/-! Source-shaped port of CakeML's `get_implementation_err_msg_def`
+    (`cakeml/pancake/panStaticScript.sml:568-572`). -/
+def getImplementationErrorMessage (description location : String)
+    (scope : Scope) : String :=
+  location ++ description ++ " in " ++ staticScopeDescription scope ++ "\n" ++
+    "this should never happen. please report to a compiler developer\n"
+
 def staticUnreachableWarning (context : Context) (last : LastStmt) : StatErr :=
   .warning (getUnreachMessage context.location (staticLastStmtString last) context.scope)
 

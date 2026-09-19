@@ -249,6 +249,8 @@ def reachabilityContext : Context :=
   "L: load address has shape pair instead of a word in function f\n"
 #guard getShapeMismatchMessage "return value" "pair" "word" "L: " (.funScope "f" "") ==
   "L: return value has shape pair instead of declared shape word in function f\n"
+#guard getImplementationErrorMessage "static analysis failed" "L: " (.funScope "f" "") ==
+  "L: static analysis failed in function f\nthis should never happen. please report to a compiler developer\n"
 
 #guard match basedMerge .based .notBased with | .based => true | _ => false
 #guard match basedMerge .trusted .notBased with | .trusted => true | _ => false

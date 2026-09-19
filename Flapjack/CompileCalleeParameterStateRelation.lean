@@ -11,48 +11,6 @@ assign transport into the context shape produced by the compiler.
 
 namespace Flapjack
 
-theorem lookupInfo_append
-    [LawfulBEq String]
-    (name : String) (left right : InfoMap α) :
-    lookupInfo name (left ++ right) =
-      match lookupInfo name left with
-      | some value => some value
-      | none => lookupInfo name right := by
-  induction left with
-  | nil => simp [lookupInfo]
-  | cons entry left ih =>
-      rcases entry with ⟨candidate, value⟩
-      by_cases hcandidate : candidate == name
-      · simp [lookupInfo, hcandidate]
-      · simp [lookupInfo, hcandidate, ih]
-
-theorem lookupInfo_reverse_of_nodup
-    [LawfulBEq String]
-    (name : String) (entries : InfoMap α)
-    (hnames : entries.map Prod.fst |>.Nodup) :
-    lookupInfo name entries.reverse = lookupInfo name entries := by
-  induction entries with
-  | nil => simp [lookupInfo]
-  | cons entry entries ih =>
-      rcases entry with ⟨candidate, value⟩
-      have hcons := List.nodup_cons.mp hnames
-      have htail : (entries.map Prod.fst).Nodup := hcons.2
-      have hcandidate : candidate ∉ entries.map Prod.fst := hcons.1
-      by_cases hname : name = candidate
-      · subst name
-        have hnone : lookupInfo candidate entries.reverse = none := by
-          apply lookupInfo_none_of_name_not_mem
-          simpa using hcandidate
-        simp [List.reverse_cons, lookupInfo_append, lookupInfo, hnone]
-      · have hname' : candidate ≠ name := Ne.symm hname
-        cases hlookup : lookupInfo name entries with
-        | none =>
-            simp [List.reverse_cons, lookupInfo_append, lookupInfo, hname',
-              hlookup, ih htail]
-        | some found =>
-            simp [List.reverse_cons, lookupInfo_append, lookupInfo, hname',
-              hlookup, ih htail]
-
 theorem compileParamVars_names_nodup
     [LawfulBEq String]
     (params : List (VarName × Shape)) (offset : Nat)
@@ -84,10 +42,12 @@ theorem panValueCrepStateRel_reindex_vmap
   intro name value shape slots hsource hlookup
   apply hlocals name value shape slots hsource
   have hmapNames := compileParamVars_names_nodup params offset hnames
-  change lookupInfo name (compileParamVars params offset).1.reverse =
-    some (shape, slots) at hlookup
-  rw [lookupInfo_reverse_of_nodup name (compileParamVars params offset).1 hmapNames] at hlookup
-  exact hlookup
+  have hlookupRaw : lookupInfo name (compileParamVars params offset).1 =
+      some (shape, slots) := by
+    rw [lookupInfo_reverse_of_nodup name
+      (compileParamVars params offset).1 hmapNames]
+    exact hlookup
+  exact hlookupRaw
 
 theorem panValueCrepStateRel_compileCalleeParameterList
     [OfNat α 0]
@@ -320,7 +280,7 @@ theorem panValueCrepStateRel_reordered_parameter_context
     change lookupInfo name (compileParamVars params 0).1.reverse =
       some (shape, slots) at hlookup'
     rw [lookupInfo_reverse_of_nodup name
-      (compileParamVars params 0).1 hnamesCompiled] at hlookup'
+      (compileParamVars params 0).1 hnamesCompiled]
     exact hlookup'
   exact hlocals name value shape slots hsource hlookupRaw
 

@@ -422,9 +422,9 @@ def wordToStackCallWithHandlerInSectionTarget (perf : Bool) (target : StackCallT
   let returnCode := stackPopHandler perf scratch returnCode
   let callCode :=
     .call (some (returnCode, 0, returnLabel, entryLabel)) target
-      (some (handlerCode, exceptionLabel, handlerLabel))
+      (some (handlerCode, exceptionLabel, handlerEntryLabel))
   stackSeq [
-    stackPushHandler perf handlerLabel handlerEntryLabel scratch,
+    stackPushHandler perf handlerEntryLabel handlerLabel scratch,
     stackHandlerArgs perf (argumentCount + 1) frameOffset scratch,
     callCode
   ]

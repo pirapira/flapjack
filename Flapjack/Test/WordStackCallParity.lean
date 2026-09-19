@@ -125,6 +125,42 @@ def indirectEmptyTargetExact : Bool :=
 
 #guard indirectEmptyTargetExact
 
+/-! `StackArgs dest arg_count (k,f,f') = stack_move n 0 f k (StackAlloc n)`
+    (`word_to_stackScript.sml:287-292`), and `stack_move` reads its source at
+    `start + f`, where `f` is the *caller's* frame size -- Cake's
+    `compile_prog` `f`, not the public `stack_var_count` occupancy `f'`.
+    `wordStackCallFrameOffset` is the port's `f`, so pin it against
+    `compile_prog`'s `f = if stack_var_count = 0 then 0 else
+    stack_var_count + 1`.  Getting this wrong loads the overflow argument
+    from the allocator's own slot instead of the caller frame, which is bead
+    flapjack-pxn.8.5.14.17. -/
+def callFrameOffsetMatchesCakeF : Bool :=
+  let frameless : WordStackConfig :=
+    { locations := [], scratch := 22, stackBase := 0,
+      abiFrameSlots := 0, frameOffset := 0 }
+  let occupied : Nat → WordStackConfig := fun occupancy =>
+    { locations := [], scratch := 22, stackBase := 0,
+      abiFrameSlots := occupancy, frameOffset := occupancy + 1 }
+  wordStackCallFrameOffset frameless == 0 &&
+    ((List.range 12).all (fun occupancy =>
+      wordStackCallFrameOffset (occupied (occupancy + 1)) == occupancy + 2))
+
+/-! `wMoveSingle` materializes an overflow argument at `f - 1 - (r - k)`
+    (`word_to_stackScript.sml`), counting down from the top of the caller
+    frame.  `wordStackPhysicalLocation` is that formula. -/
+def overflowArgumentSlotMatchesWMoveSingle : Bool :=
+  let config : WordStackConfig :=
+    { locations := [], scratch := 22, stackBase := 0,
+      abiRegisterCount := 22, abiFrameSlots := 9, frameOffset := 10 }
+  -- `f` is 10 here, so index 22 is slot 9, index 23 slot 8, and so on.
+  [(22, 9), (23, 8), (24, 7), (25, 6)].all (fun entry =>
+    match wordStackPhysicalLocation config entry.1 1 with
+    | .stack slot => slot == entry.2
+    | _ => false)
+
+#guard callFrameOffsetMatchesCakeF
+#guard overflowArgumentSlotMatchesWMoveSingle
+
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
     [ ("stack_arg_count and stack_free match the call oracle", callArgCountExact),
@@ -142,7 +178,11 @@ def runChecks : IO Bool := do
       ("indirect calls load a stack target through scratch",
         indirectStackTargetExact),
       ("an indirect call without arguments falls back to the raise stub",
-        indirectEmptyTargetExact) ]
+        indirectEmptyTargetExact),
+      ("StackArgs uses compile_prog's caller frame size f",
+        callFrameOffsetMatchesCakeF),
+      ("an overflow argument sits at wMoveSingle's f - 1 - (r - k)",
+        overflowArgumentSlotMatchesWMoveSingle) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

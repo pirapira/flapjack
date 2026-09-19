@@ -749,6 +749,12 @@
       "tracked_beads": [
         "flapjack-7w3"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/stack_args_overflow_slots.pnk",
+      "source_reference": "flapjack-pxn.8.5.14.17. StackArgs dest arg_count (k,f,f') = stack_move n 0 f k (StackAlloc n) (word_to_stackScript.sml:287-292), and stack_move reads its source at start + f, where f is the caller's frame size from compile_prog -- f = if stack_var_count = 0 then 0 else stack_var_count + 1 -- not the public stack_var_count occupancy f'. Routing the pre-call overflow-argument copy through the allocator's own slot instead loads the wrong caller-frame word: the single wide_call_spilled_base witness had Cake loading 112(x24) where Flapjack loaded 56(x24). This fixture pins three overflow arities at once (24, 26 and 30 word arguments, so one, three and seven overflow slots) because the wrong slot is a function of f and a single arity cannot distinguish an off-by-one from a wrong formula. All three differ from Cake at 23eded92 and are byte-identical here.",
+      "cake_sha256": "c7028d7ccbcbb9947d6772d94d9c0387bba858337457e08ce0dcc92d215962f0",
+      "tracked_beads": []
     }
   ]
 }

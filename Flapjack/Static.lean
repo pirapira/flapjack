@@ -1173,12 +1173,31 @@ def firstRepeat [BEq α] : List α → Option α
       else firstRepeat (value2 :: values)
   | _ => none
 
-def checkShape [BEq String] (context : StructContext) (shape : Shape) :
-    StaticResult Unit :=
-  if isWfShape context shape then
-    staticOk ()
-  else
-    staticError (.scope "shape refers to an unknown or invalid structure")
+/-! Source-shaped port of CakeML's `check_shape_def`
+    (`cakeml/pancake/panStaticScript.sml:759-773`).  The location and scope
+    are part of the observable error, so they must not be discarded in favour
+    of the earlier generic validity check. -/
+def checkShape [BEq String] (context : StructContext) (location : String)
+    (scope : Scope) : Shape → StaticResult Unit
+  | .one => staticOk ()
+  | .comb shapes => checkShapes shapes
+  | .named name =>
+      if (lookupInfo name context).isSome then
+        staticOk ()
+      else
+        staticError (.scope (staticScopeMessage .struct location name scope))
+termination_by shape => sizeOf shape
+decreasing_by
+  all_goals first | sizeOf_list_dec | decreasing_trivial
+where
+  checkShapes : List Shape → StaticResult Unit
+    | [] => staticOk ()
+    | shape :: rest =>
+        staticBind (checkShape context location scope shape) (fun _ =>
+          checkShapes rest)
+  termination_by shapes => sizeOf shapes
+  decreasing_by
+    all_goals first | sizeOf_list_dec | decreasing_trivial
 
 def checkShapeFields [BEq String] (context : StructContext)
     (fields : List (FieldName × Shape)) : StaticResult Unit :=
@@ -1294,7 +1313,7 @@ def staticCheckDecls [BEq String] (structs : StructContext) :
          else
           staticOk ())
         (fun _ =>
-          staticBind (checkShape structs shape) (fun _ =>
+          staticBind (checkShape structs "" (.declScope name) shape) (fun _ =>
             let checkingContext : Context :=
               { locals := []
                 globals := context.globals

@@ -450,6 +450,15 @@ def convNonRecStmtCakeParity : Bool :=
 
 #guard convNonRecStmtCakeParity
 
+/-! Cake `butlast_def` (`panPtreeConversionScript.sml:487`) drops exactly the
+    final list element, including the empty and singleton boundary cases. -/
+def butlastCakeParity : Bool :=
+  butlast ([] : List Nat) == [] &&
+    butlast [7] == [] &&
+    butlast [1, 2, 3, 4] == [1, 2, 3]
+
+#guard butlastCakeParity
+
 /-! Cake operator conversion at `panPtreeConversionScript.sml:141,153,168`
     recurses through the corresponding operator wrapper, maps comparison
     spellings to `(Cmp, swapped)`, and rejects other wrappers/tokens. -/

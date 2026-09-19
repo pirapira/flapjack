@@ -350,6 +350,12 @@ def addWithCarryName : String := "__add_with_carry__"
 def addLocsAnnot (locations : Bool) (tree : ParseTree) (program : Prog α) : Prog α :=
   if locations then .seq (.annot locationTag (locsComment tree.locs)) program else program
 
+/-! Cake `butlast_def` (`panPtreeConversionScript.sml:487`). -/
+def butlast : List α → List α
+  | [] => []
+  | [_] => []
+  | value :: values => value :: butlast values
+
 /-- `conv_NonRecStmt`: the statements that carry no nested program. -/
 def convNonRecStmt (ofInt : Int → α) (fuel : Nat) (tree : ParseTree) : Option (Prog α) :=
   match tree with

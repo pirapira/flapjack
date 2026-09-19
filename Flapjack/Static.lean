@@ -866,6 +866,16 @@ def progOk (last : LastStmt) (exitsFunction exitsLoop : Bool) (location : String
     { exitsFunction := exitsFunction, exitsLoop := exitsLoop, last := last,
       variableDelta := [], currentLocation := location }
 
+/-! A local assignment/call/load updates the basedness tracked for the local
+    variable.  CakeML's `sh_bd_from_bd Trusted` preserves the shape tree while
+    making every word trusted; `shapedBasedWithBase` is its executable
+    counterpart. -/
+def localVariableDelta (name : VarName) (info : LocalInfo) : InfoMap LocalInfo :=
+  [(name, { info with shapedBased := shapedBasedWithBase .trusted info.shapedBased })]
+
+def removeLocalVariableDelta (name : VarName) (result : ProgReturn) : ProgReturn :=
+  { result with variableDelta := infoMapDelete name result.variableDelta }
+
 /-! Source-shaped port of CakeML's `get_shape_mismatch_msg_def`
     (`cakeml/pancake/panStaticScript.sml:560-566`). -/
 def getShapeMismatchMessage (description actualShape expectedShape location : String)
@@ -883,7 +893,10 @@ def checkCallDestination [BEq String] (context : Context) (functionName : FunNam
       | .local =>
           staticBind (checkLocalVar context name) (fun localInfo =>
             if shapedBasedHasShape returnShape localInfo.shapedBased then
-              progOk .otherLast false false context.location
+              staticOk
+                { exitsFunction := false, exitsLoop := false, last := .otherLast,
+                  variableDelta := localVariableDelta name localInfo,
+                  currentLocation := context.location }
             else
               staticError (.shape (getShapeMismatchMessage
                 ("result of function call " ++ functionName ++
@@ -988,7 +1001,9 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
             let nextContext := { context with
               locals := (name, { shapedBased := result.shapedBased }) :: context.locals
               last := .otherLast }
-            checkProg nextContext body
+            staticBind (checkProg nextContext body) (fun bodyResult =>
+              staticOk { bodyResult with
+                variableDelta := infoMapDelete name bodyResult.variableDelta })
           else
             staticError (.shape (getShapeMismatchMessage
               ("expression to initialise local variable " ++ name)
@@ -1003,7 +1018,10 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
         let checkValue : ExpReturn → StaticResult ProgReturn :=
           fun result =>
             if shapedBasedSameShape info.shapedBased result.shapedBased then
-              progOk .otherLast false false context.location
+              staticOk
+                { exitsFunction := false, exitsLoop := false, last := .otherLast,
+                  variableDelta := [(name, { shapedBased := result.shapedBased })],
+                  currentLocation := context.location }
             else
               staticError (.shape (getShapeMismatchMessage
                 ("expression assigned to local variable " ++ name)
@@ -1029,7 +1047,10 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
         let checkResult : ShapedBased → StaticResult ProgReturn :=
           fun resultShape =>
             if shapedBasedSameShape destinationInfo.shapedBased resultShape then
-              progOk .otherLast false false context.location
+              staticOk
+                { exitsFunction := false, exitsLoop := false, last := .otherLast,
+                  variableDelta := [(name, { shapedBased := resultShape })],
+                  currentLocation := context.location }
             else
               staticError (.shape (getShapeMismatchMessage
                 ("result of primitive " ++ primopToString operator ++
@@ -1095,6 +1116,7 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
       | (Except.ok firstInfo, firstWarnings) =>
           let nextReach := nextIsReachable context1.reachable firstInfo.last
           let context2 := { context1 with
+            locals := seqLocInf context1.locals firstInfo.variableDelta
             reachable := nextReach
             last := if nextNowUnreachable context1.reachable nextReach then
               firstInfo.last else context1.last
@@ -1111,7 +1133,9 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
               (Except.ok { secondInfo with
                   exitsFunction := firstInfo.exitsFunction || secondInfo.exitsFunction
                   exitsLoop := firstInfo.exitsLoop || secondInfo.exitsLoop
-                  last := seqLastStmt firstInfo.last secondInfo.last },
+                  last := seqLastStmt firstInfo.last secondInfo.last
+                  variableDelta := seqLocInf firstInfo.variableDelta
+                    secondInfo.variableDelta },
                 warningBeforeFirst ++ firstWarnings ++ warningBeforeSecond ++ secondWarnings)
   | .ite condition thenBranch elseBranch =>
       staticBind (checkExp context condition) (fun conditionResult =>
@@ -1121,8 +1145,12 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
               { context with location := thenResult.currentLocation } elseBranch) (fun elseResult =>
               let doubleRet := thenResult.exitsFunction && elseResult.exitsFunction
               let doubleLoopExit := thenResult.exitsLoop && elseResult.exitsLoop
-              progOk (branchLastStmt doubleRet doubleLoopExit)
-                doubleRet doubleLoopExit context.location))
+              staticOk
+                { exitsFunction := doubleRet, exitsLoop := doubleLoopExit,
+                  last := branchLastStmt doubleRet doubleLoopExit,
+                  variableDelta := branchLocInf context.locals
+                    thenResult.variableDelta elseResult.variableDelta,
+                  currentLocation := elseResult.currentLocation }))
         else
           staticError (.shape (getNonWordMessage "if condition"
             (shapedBasedToString conditionResult.shapedBased)
@@ -1131,8 +1159,12 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
       staticBind (checkExp context condition) (fun conditionResult =>
         if shapedBasedHasShape .one conditionResult.shapedBased then
           let loopContext := { context with inLoop := true }
-          staticBind (checkProg loopContext body) (fun _ =>
-            progOk .otherLast false false context.location)
+          staticBind (checkProg loopContext body) (fun bodyResult =>
+            staticOk
+              { exitsFunction := false, exitsLoop := false, last := .otherLast,
+                variableDelta := branchLocInf context.locals
+                  bodyResult.variableDelta [],
+                currentLocation := context.location })
         else
           staticError (.shape (getNonWordMessage "while condition"
             (shapedBasedToString conditionResult.shapedBased)
@@ -1162,7 +1194,12 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
                           (Shape.shapeToString callerReturn)
                           context.location context.scope))
                       else progOk .tailLast true false context.location
-                  | none => progOk .tailLast true false context.location
+                  | none =>
+                      match context.scope with
+                      | .funScope _ _ => progOk .tailLast true false context.location
+                      | _ => staticError (.general (getImplementationErrorMessage
+                          "tail call found outside function scope"
+                          context.location context.scope))
               | some (destination, none) =>
                   checkCallDestination context function returnShape destination
               | some (destination, some (exception, handlerVariable, handlerProgram)) =>
@@ -1225,8 +1262,7 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
                         locals := (name, { shapedBased := shaped }) :: context.locals
                         last := .otherLast }
                       staticBind (checkProg nextContext body) (fun result =>
-                        (Except.ok { result with variableDelta := [] }, []))))))
-      )
+                        staticOk (removeLocalVariableDelta name result)))))))
   | .extCall function configuration configurationLength array arrayLength =>
       staticBind (checkCallArgs context
         [configuration, configurationLength, array, arrayLength])
@@ -1253,9 +1289,10 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
               " has wrong value shape\n")))
   | .return value =>
       staticBind (checkExp context value) (fun result =>
-        match context.expectedReturn with
-        | none => progOk .retLast true false context.location
-        | some shape =>
+        match context.expectedReturn, context.scope with
+        | none, _ => staticError (.general (getImplementationErrorMessage
+            "return found outside function scope" context.location context.scope))
+        | some shape, _ =>
             if shapedBasedHasShape shape result.shapedBased then
               progOk .retLast true false context.location
             else
@@ -1293,7 +1330,16 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
         else
           staticBind (checkExp context address) (fun result =>
             if shapedBasedHasShape .one result.shapedBased then
-              staticAddWarning (progOk .otherLast false false context.location)
+              staticAddWarning
+                (match varKind with
+                | .local =>
+                    staticBind (checkLocalVar context name) (fun info =>
+                      staticOk
+                        { exitsFunction := false, exitsLoop := false,
+                          last := .otherLast,
+                          variableDelta := localVariableDelta name info,
+                          currentLocation := context.location })
+                | .global => progOk .otherLast false false context.location)
                 (staticMemoryWarning context false true result.shapedBased)
             else
               staticError (.shape (getNonWordMessage "load address"

@@ -29,6 +29,30 @@ def staticProgCallContext : Context :=
 def staticProgCallCheck (program : Prog Nat) : StaticResult ProgReturn :=
   checkProg staticProgCallContext program
 
+def staticProgDeltaContext : Context :=
+  { staticProgCallContext with
+    locals := ("x", { shapedBased := .word .trusted }) :: staticProgCallContext.locals }
+
+def staticProgDeltaCheck (program : Prog Nat) : StaticResult ProgReturn :=
+  checkProg staticProgDeltaContext program
+
+def staticProgDeltaHas (program : Prog Nat) (name : String)
+    (expected : ShapedBased) : Bool :=
+  match (staticProgDeltaCheck program).1 with
+  | Except.ok result =>
+      match lookupInfo name result.variableDelta with
+      | some info => info.shapedBased == expected
+      | none => false
+  | Except.error _ => false
+
+def staticProgDeltaRemovesDeclaration : Bool :=
+  match (staticProgDeltaCheck
+      (.dec "y" .one (.const 0) (.assign .local "x" (.const 1)))).1 with
+  | (Except.ok result) =>
+      (lookupInfo "y" result.variableDelta).isNone &&
+        (lookupInfo "x" result.variableDelta).isSome
+  | (Except.error _) => false
+
 #guard
   staticResultErrorMessage (staticProgCheck
       (.dec "x" (.named "Missing") (.const 0) .skip)) ==
@@ -112,5 +136,29 @@ def staticProgCallCheck (program : Prog Nat) : StaticResult ProgReturn :=
   staticResultErrorMessage (staticProgCallCheck
       (.decCall "x" (.comb [.one, .one]) "callee" [] .skip)) ==
     some "L: result of function call callee to initialise local variable x has shape 1 instead of declared shape {1,1} in function f\n"
+
+/-! Cake's `var_delta` is observable to the following checker node.  These
+    guards cover local assignment, sequential composition, branch merging,
+    loop merging, call destinations, declarations, and shared-memory loads. -/
+#guard staticProgDeltaHas (.assign .local "x" (.const 1)) "x" (.word .notBased)
+
+#guard staticProgDeltaHas
+  (.seq (.assign .local "x" (.const 1)) .skip) "x" (.word .notBased)
+
+#guard staticProgDeltaHas
+  (.ite (.const 1)
+    (.assign .local "x" (.const 1))
+    (.assign .local "x" (.const 2))) "x" (.word .notBased)
+
+#guard staticProgDeltaHas
+  (.while (.const 1) (.assign .local "x" (.const 1))) "x" (.word .notTrusted)
+
+#guard staticProgDeltaHas
+  (.call (some (some (.local, "x"), none)) "callee" []) "x" (.word .trusted)
+
+#guard staticProgDeltaHas
+  (.shMemLoad .opW .local "x" (.const 0)) "x" (.word .trusted)
+
+#guard staticProgDeltaRemovesDeclaration
 
 end Flapjack

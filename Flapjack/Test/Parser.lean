@@ -243,6 +243,19 @@ def convInlineCakeParity : Bool :=
 
 #guard convInlineCakeParity
 
+/-! Cake `conv_export_def` (`panPtreeConversionScript.sml:732`) maps the
+    `export` and `static` tokens to `true` and `false`, rejecting unrelated
+    leaves. -/
+def convExportCakeParity : Bool :=
+  let exportToken : ParseTree := .lf (.keywordT .exportK) unknownLoc
+  let staticToken : ParseTree := .lf (.staticT) unknownLoc
+  let wrongToken : ParseTree := .lf (.identT "export") unknownLoc
+  match convExport exportToken, convExport staticToken, convExport wrongToken with
+  | some true, some false, none => true
+  | _, _, _ => false
+
+#guard convExportCakeParity
+
 #guard (pancakeLex "x + 1").map (·.1) == [.identT "x", .plusT, .intT 1]
 
 -- `//` runs to end of line; the block forms are `/* */` and `/@ @/`.

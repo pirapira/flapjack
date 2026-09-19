@@ -3184,7 +3184,6 @@ theorem evalWordStackMachine_store_preserves_memory [NeZero width]
       some sourceValue)
     (haddressValue : wordStackMachineValue config state address =
       some addressValue)
-    (hscratch : config.scratch ≠ config.addressScratch)
     (hsafe : wordStackStoreLocationsSafe config sourceLocation addressLocation = true)
     (hsafeAddress :
       wordStackMemoryStoreLocationsSafe config sourceLocation addressLocation = true)
@@ -3193,10 +3192,6 @@ theorem evalWordStackMachine_store_preserves_memory [NeZero width]
       final.memory addressValue = sourceValue := by
   change lookupNatInfo source config.locations = some sourceLocation at hsource
   change lookupNatInfo address config.locations = some addressLocation at haddress
-  have hsafe' : config.addressScratch ≠ config.scratch := by
-    intro heq
-    apply hscratch
-    exact heq.symm
   cases sourceLocation <;> cases addressLocation <;>
     simp [wordStackMemoryInst, wordStackStoreInst, wordStackLocation,
       wordStackOffset, hsource, haddress,
@@ -3210,7 +3205,7 @@ theorem evalWordStackMachine_store_preserves_memory [NeZero width]
     simp [
       wordStackMachineWriteRegister, 
       wordStackMachineWriteMemory, hsourceValue,
-      haddressValue, hsafe, hsafeAddress, hsafe']
+      haddressValue, hsafe, hsafeAddress]
 
 theorem evalWordStackMachine_shared_load_preserves_value [NeZero width]
     (config : WordStackConfig) (state final : WordStackMachineState width)

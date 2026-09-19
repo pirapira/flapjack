@@ -1213,6 +1213,20 @@ def labEncodeStoredProgram [NeZero width]
         labEncodeStoredProgram context labels
           (base + labStoredSectionLength lines) ffiBase haltPc sections
 
+/-- Every line's stored length, in order.  This is what CakeML's
+    `remove_labels_loop` tests with `all_lengths_ok` to decide whether another
+    `enc_secs_again` round is needed. -/
+def labStoredLineLengths [NeZero width] :
+    LabProgram (Word width) → List Nat
+  | [] => []
+  | sectionData :: sections =>
+      sectionData.lines.map (fun line =>
+        match line with
+        | .label _ _ length => length
+        | .asm _ _ length => length
+        | .labAsm _ _ length => length)
+        ++ labStoredLineLengths sections
+
 def labEncodeStoredProgramStable [NeZero width] (fuel : Nat)
     (context : WordFfiContext) (base ffiBase haltPc : Nat)
     (program : LabProgram (Word width)) : LabProgram (Word width) :=
@@ -1220,8 +1234,17 @@ def labEncodeStoredProgramStable [NeZero width] (fuel : Nat)
   | 0 => program
   | fuel + 1 =>
       let labels := labCollectPancakeRuntimeStoredLabels program
-      labEncodeStoredProgramStable fuel context base ffiBase haltPc
-        (labEncodeStoredProgram context labels base ffiBase haltPc program)
+      let next := labEncodeStoredProgram context labels base ffiBase haltPc program
+      /- `remove_labels_loop` stops as soon as the lengths stop changing
+         (`lab_to_targetScript.sml`), it does not run a fixed number of
+         rounds.  Stopping matters: `labEncodeStoredProgram` re-encodes every
+         line, so a fixed eight rounds costs eight full passes over the
+         program even though the guest converges in one.  The encodings are a
+         function of the label positions and the positions are a function of
+         the stored lengths, so unchanged lengths mean the next round would
+         reproduce this program exactly. -/
+      if labStoredLineLengths next == labStoredLineLengths program then next
+      else labEncodeStoredProgramStable fuel context base ffiBase haltPc next
 
 def labUpdateStoredLabelLengths [NeZero width] (base : Nat) :
     LabProgram (Word width) → LabProgram (Word width)

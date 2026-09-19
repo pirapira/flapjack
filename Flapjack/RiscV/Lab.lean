@@ -1309,6 +1309,39 @@ def labAppendStoredNop [NeZero width] :
       | [] => []
       | chunk :: rest => (chunk ++ [.addi 0 0 0]) :: rest |>.reverse
 
+/-! The stored-length linker visits lines from left to right, but only ever
+    changes the most recently emitted chunk when a retained label asks for a
+    NOP.  Keeping chunks in reverse order makes both that update and adding a
+    new chunk constant-time; the public wrapper reverses once before flattening.
+    This is representation-only: line positions, stored lengths, and emitted
+    instruction order are unchanged. -/
+def labAppendStoredNopRev [NeZero width] :
+    List (List (Instruction width)) → List (List (Instruction width))
+  | [] => []
+  | chunk :: chunks => (chunk ++ [.addi 0 0 0]) :: chunks
+
+def labCompileProgramLinesWithStoredLengthsAuxRev [NeZero width]
+    (context : WordFfiContext) (labels : LabLabelIndex)
+    (position ffiBase haltPc : Nat)
+    (chunks : List (List (Instruction width))) :
+    List (LabLine (Word width)) → Option (List (List (Instruction width)))
+  | [] => some chunks
+  | .label _ _ length :: lines =>
+      let chunks := if length = 0 then chunks else labAppendStoredNopRev chunks
+      labCompileProgramLinesWithStoredLengthsAuxRev context labels
+        (position + length) ffiBase haltPc chunks lines
+  | .asm operation _ length :: lines => do
+      let code ← labCompilePlain operation
+      labCompileProgramLinesWithStoredLengthsAuxRev context labels
+        (position + length) ffiBase haltPc
+        (labPadStoredInstructions code length :: chunks) lines
+  | .labAsm operation _ length :: lines => do
+      let code ← labCompileAsmProgramWithFfiBaseAndHalt context labels
+        position ffiBase haltPc operation
+      labCompileProgramLinesWithStoredLengthsAuxRev context labels
+        (position + length) ffiBase haltPc
+        (labPadStoredInstructions code length :: chunks) lines
+
 def labCompileProgramLinesWithStoredLengthsAux [NeZero width]
     (context : WordFfiContext) (labels : LabLabelIndex)
     (position ffiBase haltPc : Nat)
@@ -1335,9 +1368,9 @@ def labCompileProgramLinesWithStoredLengths [NeZero width]
     (context : WordFfiContext) (labels : LabLabelIndex)
     (position ffiBase haltPc : Nat) :
     List (LabLine (Word width)) → Option (List (Instruction width)) := fun lines => do
-  let chunks ← labCompileProgramLinesWithStoredLengthsAux context labels
+  let chunks ← labCompileProgramLinesWithStoredLengthsAuxRev context labels
     position ffiBase haltPc [] lines
-  pure chunks.flatten
+  pure chunks.reverse.flatten
 
 def compileLabProgramLinkedWithStoredLengthsAux [NeZero width]
     (context : WordFfiContext) (labels : LabLabelIndex)

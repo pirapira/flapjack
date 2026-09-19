@@ -419,6 +419,15 @@ def memoryWarningContext : Context :=
     last := .otherLast
     location := "" }
 
+#guard getMemopMessage true true false "L: " (.funScope "f" "") ==
+  "L: local load address is not calculated from base in function f\n"
+#guard getMemopMessage true false true "L: " (.funScope "f" "") ==
+  "L: local store address may not be calculated from base in function f\n"
+#guard getMemopMessage false true false "L: " (.funScope "f" "") ==
+  "L: shared load address is calculated from base in function f\n"
+#guard getMemopMessage false false true "L: " (.funScope "f" "") ==
+  "L: shared store address may be calculated from base in function f\n"
+
 #guard
   (checkProg memoryWarningContext
     (.store (.var .local "notBased") (.const 0))).2.map statErrMessage ==

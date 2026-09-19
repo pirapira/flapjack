@@ -499,6 +499,20 @@ def addPrimitiveHint (functionName message : String) : String :=
       " is a built-in primitive only available in declaration or assignment RHS positions\n"
   else message
 
+/-! Source-shaped port of CakeML's `get_memop_msg_def`
+    (`cakeml/pancake/panStaticScript.sml:497-511`). -/
+def getMemopMessage (isLocal isLoad isUntrusted : Bool)
+    (location : String) (scope : Scope) : String :=
+  let memoryType := if isLocal then "local " else "shared "
+  let operationType := if isLoad then "load " else "store "
+  let issue :=
+    if isLocal then
+      if isUntrusted then "may not be " else "is not "
+    else
+      if isUntrusted then "may be " else "is "
+  location ++ memoryType ++ operationType ++ "address " ++ issue ++
+    "calculated from base in " ++ staticScopeDescription scope ++ "\n"
+
 /-! Cake's memory-operation diagnostics distinguish local addresses, which
     should not be based on `@base`, from shared addresses, which should.  A
     `NotTrusted` address is reported as a possibility in either direction;
@@ -507,23 +521,20 @@ def staticMemoryWarning (context : Context) (isLocal isLoad : Bool)
     (address : ShapedBased) : Option StatErr :=
   match address with
   | .word basedness =>
-      let issue : Option String :=
+      let untrusted : Option Bool :=
         if isLocal then
           match basedness with
-          | .notBased => some "is not "
-          | .notTrusted => some "may not be "
+          | .notBased => some false
+          | .notTrusted => some true
           | _ => none
         else
           match basedness with
-          | .based => some "is "
-          | .notTrusted => some "may be "
+          | .based => some false
+          | .notTrusted => some true
           | _ => none
-      issue.map (fun issue =>
-        .warning (context.location ++
-          (if isLocal then "local " else "shared ") ++
-          (if isLoad then "load " else "store ") ++
-          "address " ++ issue ++ "calculated from base in " ++
-          staticScopeDescription context.scope ++ "\n"))
+      untrusted.map (fun isUntrusted =>
+        .warning (getMemopMessage isLocal isLoad isUntrusted
+          context.location context.scope))
   | _ => none
 
 def staticAddWarning (result : StaticResult α) (warning : Option StatErr) :

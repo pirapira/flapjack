@@ -67,6 +67,30 @@ def isAtomGroupCakeParity : Bool :=
 
 #guard isAtomGroupCakeParity
 
+/-! Cake `next_atom_def` (`panLexerScript.sml:225`) skips whitespace and
+    newlines, recognizes unsigned/signed numbers, words, singleton symbols,
+    and reports an unrecognized character without silently dropping it. -/
+def nextAtomCakeParity : Bool :=
+  match nextAtom 16 " \n42".toList initLoc,
+      nextAtom 16 "-17".toList initLoc,
+      nextAtom 16 "name".toList initLoc,
+      nextAtom 16 "+".toList initLoc,
+      nextAtom 16 "`".toList initLoc,
+      nextAtom 16 "".toList initLoc with
+  | some (.numberA 42, numberLoc, []),
+      some (.numberA (-17), signedLoc, []),
+      some (.wordA "name", wordLoc, []),
+      some (.symA "+", symbolLoc, []),
+      some (.errA "Unrecognised symbol: `", errorLoc, _), none =>
+      numberLoc == { start := .posn 2 0, stop := .posn 2 2 } &&
+        signedLoc == { start := .posn 1 1, stop := .posn 1 3 } &&
+        wordLoc == { start := .posn 1 1, stop := .posn 1 5 } &&
+        symbolLoc == { start := .posn 1 1, stop := .posn 1 1 } &&
+        errorLoc == { start := .posn 1 1, stop := .posn 1 1 }
+  | _, _, _, _, _, _ => false
+
+#guard nextAtomCakeParity
+
 /-! `isNT_def` and `argsNT_def` at
     `panPtreeConversionScript.sml:58,62` inspect only the node's
     nonterminal: matching nodes succeed, mismatching nodes and leaves do not. -/

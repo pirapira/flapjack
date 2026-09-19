@@ -55,6 +55,19 @@ def storedLengthFiveOracle : Bool :=
 
 #guard storedLengthFiveOracle
 
+/-! Cake's `enc_lines_again` retains a two-instruction relocation slot when a
+    jump first needs a long transfer.  After the final labels make the same
+    jump fit in one JAL, `pad_code` fills the retained slot with one encoded
+    Skip.  Keep this boundary separate from label-triggered `add_nop`: the
+    preceding LabAsm itself owns the residual byte range. -/
+def retainedJumpSlotPaddingOracle : Bool :=
+  labCompileProgramLinesWithStoredLengths (width := 64) { services := [] }
+      (labLabelIndexOf [(0, 0, 1004)]) 1000 1000 2000
+      [.labAsm (.jump { sectionId := 0, label := 0 }) [] 8] ==
+    some [.jal 0 (BitVec.ofNat 64 4), .addi 0 0 0]
+
+#guard retainedJumpSlotPaddingOracle
+
 /-! Cake's `pad_section` applies each nonzero retained label length to the
     most recent prior LabAsm, appending one complete encoded Skip. -/
 def twoStoredLabelPadsOracle : Bool :=

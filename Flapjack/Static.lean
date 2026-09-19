@@ -470,6 +470,21 @@ def staticScopeDescription : Scope → String
       " in named struct " ++ name
   | .topLevel => "top-level declaration"
 
+def staticScopedIdDescription : ScopedId → String
+  | .variable => "variable "
+  | .function => "function "
+  | .struct => "struct name "
+
+/-! Source-shaped port of CakeML's `get_scope_msg_def`
+    (`cakeml/pancake/panStaticScript.sml:442-451`). -/
+def staticScopeMessage (idType : ScopedId) (location id : String) (scope : Scope) : String :=
+  location ++ staticScopedIdDescription idType ++ id ++
+    " is not in scope in " ++ staticScopeDescription scope ++ "\n"
+
+/-! Source-shaped port of CakeML's `primitive_idents_def`
+    (`cakeml/pancake/panStaticScript.sml:457-459`). -/
+def primitiveIdents : List String := ["__add_with_carry__"]
+
 /-! Cake's memory-operation diagnostics distinguish local addresses, which
     should not be based on `@base`, from shared addresses, which should.  A
     `NotTrusted` address is reported as a possibility in either direction;

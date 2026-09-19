@@ -100,6 +100,27 @@ def convIdentCakeParity : Bool :=
 
 #guard convIdentCakeParity
 
+/-! Cake operator conversion at `panPtreeConversionScript.sml:141,153,168`
+    recurses through the corresponding operator wrapper, maps comparison
+    spellings to `(Cmp, swapped)`, and rejects other wrappers/tokens. -/
+def convOperatorCakeParity : Bool :=
+  let star : ParseTree := .lf (.starT) unknownLoc
+  let mulNode : ParseTree := .nd .mulOps [star] unknownLoc
+  let ror : ParseTree := .lf (.rorT) unknownLoc
+  let shiftNode : ParseTree := .nd .shiftOps [ror] unknownLoc
+  let greater : ParseTree := .lf (.greaterT) unknownLoc
+  let cmpNode : ParseTree := .nd .cmpOps [greater] unknownLoc
+  let equal : ParseTree := .lf (.eqT) unknownLoc
+  let eqNode : ParseTree := .nd .eqOps [equal] unknownLoc
+  let wrong : ParseTree := .lf (.plusT) unknownLoc
+  match convPanop mulNode, convShift shiftNode, convCmp cmpNode,
+      convCmp eqNode, convPanop wrong, convShift wrong, convCmp wrong with
+  | some .mul, some .ror, some (.less, true), some (.equal, false),
+      none, none, none => true
+  | _, _, _, _, _, _, _ => false
+
+#guard convOperatorCakeParity
+
 #guard (pancakeLex "x + 1").map (·.1) == [.identT "x", .plusT, .intT 1]
 
 -- `//` runs to end of line; the block forms are `/* */` and `/@ @/`.

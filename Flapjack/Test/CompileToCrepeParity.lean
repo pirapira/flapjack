@@ -24,6 +24,13 @@ def makeFuncsOracle : Bool :=
 
 #guard makeFuncsOracle
 
+/-! Direct `crep_vars_def` oracle: nested parameter shapes flatten in source
+    order and receive consecutive slots. -/
+def crepVarsOracle : Bool :=
+  panToCrepVars [("left", .one), ("pair", .comb [.one, .one]),
+      ("right", .one)] == [0, 1, 2, 3]
+
+#guard crepVarsOracle
 /-! Direct `make_vmap_def` oracle: shaped parameters receive consecutive
     flattened slots in source order. -/
 def makeVmapOracle : Bool :=
@@ -44,14 +51,6 @@ def compFuncOracle : Bool :=
   | _ => false
 
 #guard compFuncOracle
-
-/-! Direct `crep_vars_def` oracle: nested parameter shapes flatten in source
-    order and receive consecutive slots. -/
-def crepVarsOracle : Bool :=
-  panToCrepVars [("left", .one), ("pair", .comb [.one, .one]),
-      ("right", .one)] == [0, 1, 2, 3]
-
-#guard crepVarsOracle
 
 /-! The fixture is the direct HOL evaluation of
     `pan_to_crep$compile_to_crep` on the same exception/function declaration.

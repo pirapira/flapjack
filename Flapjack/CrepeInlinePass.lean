@@ -190,6 +190,16 @@ def crepInlineTopRecursiveByNames [BEq FunName] [LawfulBEq FunName]
         (function.name, (function.params, function.body)))
   crepInlineTopRecursive inlineable functions
 
+/-! Source-named port of CakeML Pancake's `compile_inl_top_def`
+    (`crep_inlineScript.sml:264`).  The production recursive traversal is the
+    executable form of Cake's `compile_inl_prog`/`inline_prog` composition;
+    keeping this boundary named makes the pass correspondence explicit. -/
+def panToCrepCompileInlTop [BEq FunName] [LawfulBEq FunName]
+    [LawfulHashable FunName] [OfNat α 0] [OfNat α 1]
+    (inlineNames : List FunName) (functions : List (CompiledFunction α)) :
+    List (CompiledFunction α) :=
+  crepInlineTopRecursiveByNames inlineNames functions
+
 def crepInlineFunctions [BEq FunName] [OfNat α 0] [OfNat α 1]
     (inlineable : List (CrepInlineEntry α)) :
     List (CompiledFunction α) → List (CompiledFunction α)

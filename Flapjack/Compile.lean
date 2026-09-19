@@ -107,7 +107,6 @@ termination_by params => sizeOf params
 abbrev panToCrepMakeVmap (params : List (VarName × Shape)) :
     InfoMap (Shape × List Nat) :=
   (compileParamVars params 0).1
-
 /-! Source-named port of CakeML Pancake's `make_funcs_def`
     (`pan_to_crepScript.sml:366`).  Cake's function table keeps each function
     name paired with its original parameter list and return shape; non-function

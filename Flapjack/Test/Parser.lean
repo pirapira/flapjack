@@ -127,6 +127,14 @@ def destAnnotTokCakeParity : Bool :=
 
 #guard destAnnotTokCakeParity
 
+/-! Cake `kw_def` (`panPtreeConversionScript.sml:54`) wraps a keyword enum in
+    the corresponding `KeywordT` token without changing its constructor. -/
+def kwCakeParity : Bool :=
+  let kw (keyword : Keyword) : Token := .keywordT keyword
+  kw .varK == .keywordT .varK && kw .retK == .keywordT .retK
+
+#guard kwCakeParity
+
 /-! Cake's leaf converters at
     `panPtreeConversionScript.sml:90,97,104` accept only their respective
     token constructors: identifiers become global variables, while foreign

@@ -211,6 +211,12 @@ def reachabilityContext : Context :=
     "error: unsupported primitive\n  note: __add_with_carry__ is a built-in primitive only available in declaration or assignment RHS positions\n" &&
   addPrimitiveHint "__other__" "error: unsupported primitive\n" ==
     "error: unsupported primitive\n"
+#guard getRedecMessage .variable "line: " "x" (.funScope "f" "") ==
+  "line: variable x is redeclared in function f\n"
+#guard getRedecMessage .function "" "f" (.declScope "init") ==
+  "function f is redeclared in initialisation of global variable init\n"
+#guard getRedecMessage .struct "" "Pair" (.structScope "Pair" "left") ==
+  "struct name Pair is redeclared in declaration of field left in named struct Pair\n"
 #guard (reachedWarnable (.annot "" "" : Prog Nat) reachabilityContext).1.isNone
 #guard (reachedWarnable (.tick : Prog Nat) reachabilityContext).1.isNone
 #guard (reachedWarnable (.skip : Prog Nat)

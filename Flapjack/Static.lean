@@ -481,6 +481,12 @@ def staticScopeMessage (idType : ScopedId) (location id : String) (scope : Scope
   location ++ staticScopedIdDescription idType ++ id ++
     " is not in scope in " ++ staticScopeDescription scope ++ "\n"
 
+/-! Source-shaped port of CakeML's `get_redec_msg_def`
+    (`cakeml/pancake/panStaticScript.sml:478-489`). -/
+def getRedecMessage (idType : ScopedId) (location id : String) (scope : Scope) : String :=
+  location ++ staticScopedIdDescription idType ++ id ++
+    " is redeclared in " ++ staticScopeDescription scope ++ "\n"
+
 /-! Source-shaped port of CakeML's `primitive_idents_def`
     (`cakeml/pancake/panStaticScript.sml:457-459`). -/
 def primitiveIdents : List String := ["__add_with_carry__"]
@@ -533,8 +539,7 @@ def staticRedeclarationWarning [BEq String] (context : Context)
     (name : VarName) : Option StatErr :=
   if (lookupInfo name context.locals).isSome ||
       (lookupInfo name context.globals).isSome then
-    some (.warning (context.location ++ "variable " ++ name ++
-      " is redeclared in " ++ staticScopeDescription context.scope ++ "\n"))
+    some (.warning (getRedecMessage .variable context.location name context.scope))
   else none
 
 def staticPrependWarning (warning : Option StatErr) (result : StaticResult α) :

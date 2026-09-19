@@ -212,7 +212,7 @@ def pancakeRuntimeAssembly
     (crepe : List (CompiledFunction (RiscV.Word 64)))
     (image : Flapjack.SourceRiscVRuntimeImage 64) : String :=
   let bytes := cakeRuntimeBytes ++ runtimeFunctionBytes image.sections
-  let ffiStubLines := image.ffiNames.flatMap (fun name =>
+  let ffiStubLines := image.ffiNames.reverse.flatMap (fun name =>
     [s!"cake_ffi{name}:", s!"     tail cdecl(ffi{name})", "     .p2align 4", ""])
   String.intercalate "\n"
     (pancakePrologue ++

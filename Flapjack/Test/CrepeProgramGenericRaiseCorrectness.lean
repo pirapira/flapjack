@@ -669,21 +669,6 @@ theorem named_struct_source_pass_one_word_flat_words (value : Nat) :
       panValueFlatWords (.rStruct [.word value]) := by
   rfl
 
-theorem named_struct_source_pass_one_word_eval (value : Nat) :
-    evalPanValueExp namedStructPassContext.structs
-        (fun _ => none) (fun _ => none) (fun _ => none)
-        0 0 8 (.nStruct "S" [("field", .const value)]) =
-        some (.nStruct "S" [("field", .word value)]) ∧
-    evalPanValueExp [] (fun _ => none) (fun _ => none) (fun _ => none)
-        0 0 8 (structCompileExp namedStructPassContext
-          (.nStruct "S" [("field", .const value)])) =
-        some (.rStruct [.word value]) := by
-  simp [namedStructPassContext, structCompileExp,
-    structCompileExp.structCompileFields, structSelectFields, lookupInfo,
-    evalPanValueExp, evalPanValueExp.evalPanValueExps,
-    evalPanValueExp.evalPanValueFields, panValueFieldsHaveShapes,
-    panValueShape, panShapeMatches]
-
 theorem named_struct_source_eval_via_generic_evidence (value : Nat) :
     evalPanValueExp namedStructPassContext.structs
         (fun _ => none) (fun _ => none) (fun _ => none)
@@ -695,6 +680,20 @@ theorem named_struct_source_eval_via_generic_evidence (value : Nat) :
   · simp [evalPanValueExp.evalPanValueFields, evalPanValueExp]
   · simp [namedStructPassContext, panValueFieldsHaveShapes, panValueShape,
       panShapeMatches]
+
+theorem named_struct_source_pass_one_word_eval (value : Nat) :
+    evalPanValueExp namedStructPassContext.structs
+        (fun _ => none) (fun _ => none) (fun _ => none)
+        0 0 8 (.nStruct "S" [("field", .const value)]) =
+        some (.nStruct "S" [("field", .word value)]) ∧
+    evalPanValueExp [] (fun _ => none) (fun _ => none) (fun _ => none)
+        0 0 8 (structCompileExp namedStructPassContext
+          (.nStruct "S" [("field", .const value)])) =
+        some (.rStruct [.word value]) := by
+  refine ⟨named_struct_source_eval_via_generic_evidence value, ?_⟩
+  simp [namedStructPassContext, structCompileExp,
+    structCompileExp.structCompileFields, structSelectFields, lookupInfo,
+    evalPanValueExp, evalPanValueExp.evalPanValueExps]
 
 theorem named_struct_source_pass_compile_raise (value : Nat) :
     compileProg context
@@ -760,9 +759,7 @@ theorem named_struct_source_pass_raise_pc_relation (value : Nat) :
     (hrel := by
       refine ⟨rfl, panValueCrepLocalsRel_empty [] context _, rfl⟩)
     (hsource := by
-      simp [namedStructPassContext, structCompileExp,
-        structCompileExp.structCompileFields, structSelectFields, lookupInfo,
-        evalPanValueExp, evalPanValueExp.evalPanValueExps])
+      exact (named_struct_source_pass_one_word_eval value).2)
     (hvalid := by
       simp [panValuePayloadWithinLimit, panValuePayloadSizeFuel,
         panValuePayloadSizeFuel.panValuePayloadSizeFieldsFuel,

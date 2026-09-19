@@ -741,6 +741,14 @@
       "source_reference": "Tracked Cake/Pancake local-update audit fixture; exact output confirms local update lowering against original Cake.",
       "cake_sha256": "13977258b5aaec5b4939148e04251e81d8f6e7d17ce6fcec5877b5348ebb3287",
       "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00097_ssa_unmapped_zero.pnk",
+      "source_reference": "Reduced differential-fuzz witness for Cake's SSA option_lookup default: an unmapped source must become register zero, including a shift source and move source.",
+      "cake_sha256": "0f5b31a3346e0b80a84df6bc84a6800a45171c0204eb00595fc48d2bbf3ee485",
+      "tracked_beads": [
+        "flapjack-7w3"
+      ]
     }
   ]
 }

@@ -25,6 +25,13 @@ structure LoopContext (α : Type u) where
   target : RiscV.Architecture
   deriving Repr
 
+/-! Source-named port of CakeML Pancake's `make_vmap_def`
+    (`crep_to_loopScript.sml:230`).  Cake's finite map is populated by
+    `ZIP (params, GENLIST I (LENGTH params))`; the list-backed context uses
+    the same positional pairs and preserves their lookup order. -/
+def crepMakeVmap (params : List Nat) : NatInfoMap Nat :=
+  params.zip (List.range params.length)
+
 def findLoopVar (context : LoopContext α) (name : Nat) : Nat :=
   match lookupNatInfo name context.vars with
   | some value => value

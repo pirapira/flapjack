@@ -212,6 +212,15 @@ def memoryWarningContext : Context :=
     (.decCall "x" .one "f" [] (.skip : Prog Nat))).2.map statErrMessage ==
       ["variable x is redeclared in function f\n"]
 
+/-! A declaration resets Cake's `last` marker before checking its body, so an
+    already-unreachable body's warning does not inherit the preceding return. -/
+#guard
+  (checkProg
+    { reachabilityContext with reachable := .warnReach, last := .retLast }
+    (.dec "y" .one (.const 0)
+      (.seq (.skip : Prog Nat) (.return (.const 0)))).2.map statErrMessage ==
+      ["unreachable statement(s) after  in function f\n"]
+
 /-! Crepe primitives contain already-flattened variable names.  The original
     `crep_to_loop` pass resolves both sides through the loop variable map; it
     must not leave the Crepe names untouched (which can alias generated

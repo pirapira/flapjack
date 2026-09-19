@@ -575,7 +575,8 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
           staticBind (checkExp context value) (fun result =>
             if shapedBasedMatchesShape context.structs shape result.shapedBased then
               let nextContext := { context with
-                locals := (name, { shapedBased := result.shapedBased }) :: context.locals }
+                locals := (name, { shapedBased := result.shapedBased }) :: context.locals
+                last := .otherLast }
               checkProg nextContext body
             else staticError (.shape "local declaration shape does not match"))
   | .assign .local name value =>
@@ -755,8 +756,9 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
                   match shapedBasedFromShape context.structs shape with
                   | none => staticError (.scope "invalid declaration-call result shape")
                   | some shaped =>
-                      let nextContext := { context with locals :=
-                        (name, { shapedBased := shaped }) :: context.locals }
+                      let nextContext := { context with
+                        locals := (name, { shapedBased := shaped }) :: context.locals
+                        last := .otherLast }
                       staticBind (checkProg nextContext body) (fun result =>
                         (Except.ok { result with variableDelta := [] }, [])))
   | .extCall function configuration configurationLength array arrayLength =>

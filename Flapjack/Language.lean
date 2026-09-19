@@ -65,6 +65,11 @@ inductive PanOp where
   | mul
   deriving DecidableEq, Repr
 
+/-! Exact source counterpart of Pancake's `panop_to_str_def`
+    (`panStaticScript.sml:599-603`). -/
+def panopToString : PanOp → String
+  | .mul => "Mul"
+
 inductive Cmp where
   | equal
   | lower

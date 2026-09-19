@@ -69,6 +69,28 @@ def twoStoredLabelPadsOracle : Bool :=
 
 #guard twoStoredLabelPadsOracle
 
+/-! A leading retained label has no preceding Asm/LabAsm, so Cake's
+    `pad_section` leaves the section physically unchanged.  Consecutive
+    retained labels still apply `add_nop` to that same nearest predecessor. -/
+def leadingStoredLabelNoPadOracle : Bool :=
+    labCompileProgramLinesWithStoredLengths (width := 64) { services := [] } []
+      1000 1000 2000
+      [.label 0 1 1,
+       .asm (.const 1 1) [] 4] ==
+    some [.ori 1 0 (BitVec.ofNat 64 1)]
+
+#guard leadingStoredLabelNoPadOracle
+
+def consecutiveStoredLabelPadsOracle : Bool :=
+    labCompileProgramLinesWithStoredLengths (width := 64) { services := [] } []
+      1000 1000 2000
+      [.asm (.const 1 1) [] 4,
+       .label 0 1 1,
+       .label 0 2 1] ==
+    some [.ori 1 0 (BitVec.ofNat 64 1), .addi 0 0 0, .addi 0 0 0]
+
+#guard consecutiveStoredLabelPadsOracle
+
 
 example :
     labLinkedFfiStubOffset (width := 64)

@@ -82,6 +82,23 @@ def runChecks : IO Bool := do
 #guard p1WordVariableNames == some [[0], [0, 2, 4], [0, 2, 4]]
 #guard p1CallCutsets == some [[], [[0]], []]
 
+/- The source-facing entry path must use Cake's `comp_func` context and its
+   `oCompile` loop-live pass, rather than the legacy pass-local context. -/
+def p1EntryUsesSourceLoop : Bool :=
+  match Parser.parseTopDecs (BitVec.ofInt 64) p1Source with
+  | Except.error _ => false
+  | Except.ok declarations =>
+      match compileFlapjackEntry .rv64i (BitVec.ofNat 64 8)
+          (fun value => BitVec.ofNat 64 value) "main"
+          (panTargetDeclarationsWithDefaultMain declarations) with
+      | none => false
+      | some pipeline =>
+          pipeline.loop.map (fun (_, parameters, _) => parameters) ==
+            (pipelineLoopFunctionsSource .rv64i 1 pipeline.crepe).map
+              (fun (_, parameters, _) => parameters)
+
+#guard p1EntryUsesSourceLoop
+
 def sourceFunctionParameters : List (Nat × List Nat × LoopProg Nat) :=
   pipelineLoopFunctionsSource .rv64i 64
     [{ name := "f", params := [10, 20], body := (.skip : CrepProg Nat),

@@ -351,13 +351,12 @@ structure WordSsaState where
 def wordSsaRead (state : WordSsaState) (name : Nat) : Nat :=
   match lookupNatInfo name state.current with
   | some value => value
-  /- `option_lookup` in CakeML's `word_alloc` is a total lookup whose
-     missing-entry value is the architectural zero register.  Keeping the
-     source name here is tempting for an abstract SSA representation, but it
-     changes the generated Word program whenever a value is read outside the
-     current map. -/
-  | none => 0
+  | none => name
 
+/-! Cake's `option_lookup` fallback for fixed protocol move sources.  These
+    even, unallocated names are ABI-facing sources produced by the allocator's
+    fixed move protocol; Cake maps them to register zero rather than retaining
+    the virtual name.  Ordinary SSA reads keep the identity fallback above. -/
 def wordSsaReadMoveSource (state : WordSsaState) (name : Nat) : Nat :=
   match lookupNatInfo name state.current with
   | some value => value

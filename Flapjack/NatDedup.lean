@@ -27,6 +27,20 @@ def natEraseDupsAux (seen : Std.TreeSet Nat) : List Nat → List Nat
 def natEraseDups (names : List Nat) : List Nat :=
   natEraseDupsAux ∅ names
 
+/-! The compiler frequently deduplicates a live prefix followed by a small
+    read suffix.  Traversing the two lists directly preserves the exact
+    `eraseDups (prefix ++ suffix)` order while avoiding the intermediate
+    append and its prefix copy. -/
+def natEraseDupsAppendAux (seen : Std.TreeSet Nat) : List Nat → List Nat → List Nat
+  | [], suffix => natEraseDupsAux seen suffix
+  | name :: names, suffix =>
+      if seen.contains name then natEraseDupsAppendAux seen names suffix
+      else name :: natEraseDupsAppendAux (seen.insert name) names suffix
+termination_by xs => sizeOf xs
+
+def natEraseDupsAppend (left right : List Nat) : List Nat :=
+  natEraseDupsAppendAux ∅ left right
+
 /-- The elements of a name list as a set, for membership tests that would
     otherwise rescan the list.  Callers keep their lists; only the predicate
     changes, so the values they compute are unchanged. -/

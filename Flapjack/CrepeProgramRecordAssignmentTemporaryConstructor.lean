@@ -141,6 +141,16 @@ theorem panValueCrepProgramCorrect_assign_local_record_temporary
     innerResult (by exact htemporaryLength.trans hcompiledLength.symm)
     htemporaryDistinct hcompiledFresh hcompiled hnested
   rw [← crepAssignZipWith_map_right] at hbodyResult
+  have hreadBase := (hrel.2.1 name oldValue shape slots hold hlookupName).2
+  have hreadTemporary := readCrepLocals_updateCrepLocalList_of_not_mem
+    state.locals temporarySlots values slots htemporaryLength
+    (fun temporary htemporary hslot =>
+      (hnoOverlap temporary hslot temporary htemporary) rfl)
+  have hdefined : ∀ slot ∈ slots,
+      (updateCrepLocalList state.locals temporarySlots values slot).isSome = true := by
+    apply readCrepLocals_some_defined
+      (updateCrepLocalList state.locals temporarySlots values) slots _
+    exact hreadTemporary.trans hreadBase
   have hbodyTarget := evalCrepFullProg_assignList_inv
     functions crepPrimitive ffi sharedMem baseAddress topAddress nestedFuel
     { state with locals := updateCrepLocalList state.locals temporarySlots values }
@@ -154,7 +164,7 @@ theorem panValueCrepProgramCorrect_assign_local_record_temporary
       subst expression
       simpa [crepExpVars] using
         (hnoOverlap slot hslot temporary htemporaryMem))
-    hbodyEval hbodyResult
+    hbodyEval hdefined hbodyResult
   have hinner : innerResult = .normal { state with
       locals := updateCrepLocalList
         (updateCrepLocalList state.locals temporarySlots values) slots values } := by
@@ -313,6 +323,16 @@ theorem panValueCrepProgramStateCorrect_assign_local_record_temporary
     innerResult (by exact htemporaryLength.trans hcompiledLength.symm)
     htemporaryDistinct hcompiledFresh hcompiled hnested
   rw [← crepAssignZipWith_map_right] at hbodyResult
+  have hreadBase := (hrel.2.1 name oldValue shape slots hold hlookupName).2
+  have hreadTemporary := readCrepLocals_updateCrepLocalList_of_not_mem
+    state.locals temporarySlots values slots htemporaryLength
+    (fun temporary htemporary hslot =>
+      (hnoOverlap temporary hslot temporary htemporary) rfl)
+  have hdefined : ∀ slot ∈ slots,
+      (updateCrepLocalList state.locals temporarySlots values slot).isSome = true := by
+    apply readCrepLocals_some_defined
+      (updateCrepLocalList state.locals temporarySlots values) slots _
+    exact hreadTemporary.trans hreadBase
   have hbodyTarget := evalCrepFullProgState_assignList_inv
     functions crepPrimitive ffi sharedMem baseAddress topAddress nestedFuel
     { state with locals := updateCrepLocalList state.locals temporarySlots values }
@@ -326,7 +346,7 @@ theorem panValueCrepProgramStateCorrect_assign_local_record_temporary
       subst expression
       simpa [crepExpVars] using
         (hnoOverlap slot hslot temporary htemporaryMem))
-    hbodyEval hbodyResult
+    hbodyEval hdefined hbodyResult
   have hinner : innerResult = .normal { state with
       locals := updateCrepLocalList
         (updateCrepLocalList state.locals temporarySlots values) slots values } := by

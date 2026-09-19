@@ -524,6 +524,17 @@ def nomainGlobalAccepted : Bool :=
   | .ok image => !image.sections.isEmpty
   | .error _ => false
 
+/- The byte-oriented source entry point must apply the same target preparation;
+   Cake accepts this non-empty main-less source through its synthesized main. -/
+def nomainGlobalBytesAccepted : Bool :=
+  match compileFlapjackRiscVSourceBytesChecked (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] artifactCompileConfig "main"
+      nomainGlobalSource with
+  | .ok artifact => !artifact.bytes.isEmpty
+  | .error _ => false
+
+#guard nomainGlobalBytesAccepted
+
 /- Cake's target pass does not synthesize a default main for an actually empty
    declaration list; comment-only input therefore remains rejected. -/
 def emptySource : String := "// no Pancake declarations\n"
@@ -599,6 +610,15 @@ def ffiNamesMatch : Bool :=
     (compileRuntimeImage ffiOrderSource).map (·.ffiNames) == some ["bar", "foo"] &&
     (compileRuntimeImage ffiOrderFlipSource).map (·.ffiNames) ==
       some ["foo", "bar"]
+
+def ffiCollectorOrderGuard : Bool :=
+  match RiscV.wordProgFfiNamesCake
+      (.seq (.ffi "foo" 1 2 3 4 ([], []))
+        (.ffi "bar" 1 2 3 4 ([], [])) : WordProg Nat) with
+  | ["bar", "foo"] => true
+  | _ => false
+
+#guard ffiCollectorOrderGuard
 
 /-- The single-FFI assembly carries the exact original stub block in the
 exact original position, immediately before `cake_clear`. -/
@@ -1006,6 +1026,8 @@ def runChecks : IO Bool := do
         dupGlobalAcceptedWithWarning),
       ("nomain_global fixture accepted with a synthesized default main",
          nomainGlobalAccepted),
+      ("nomain_global byte entry accepts the synthesized default main",
+         nomainGlobalBytesAccepted),
       ("empty Pancake source is rejected like Cake",
          emptySourceRejected),
       ("ffi names recorded in Cake collector order",

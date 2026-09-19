@@ -245,6 +245,153 @@ def PanValueCrepProgramStateControlSafe
       (compileProg context program) = some crepResult →
     panValuePcControlLabelSafe sourceResult crepResult
 
+/-! The stateful evaluator proof and the final Pc boundary proof require two
+independent facts about every program: its source/Crep state simulation and
+the fact that a top-level `break`/`continue` carries label zero.  Keeping
+these facts paired is important for sequencing: the safety proof for the
+first component needs its state-correctness proof in order to expose the
+intermediate result.  This is the direct induction assembly for that paired
+obligation, including handlers hidden in call metadata. -/
+theorem panValueCrepProgramStateCorrect_and_controlSafe_induction
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (hskip : PanValueCrepProgramStateCorrect (.skip : Prog α) ∧
+      PanValueCrepProgramStateControlSafe (.skip : Prog α))
+    (hdec : ∀ (name : VarName) (shape : Shape) (value : Exp α)
+      (body : Prog α),
+      (PanValueCrepProgramStateCorrect body ∧
+        PanValueCrepProgramStateControlSafe body) →
+      PanValueCrepProgramStateCorrect (.dec name shape value body) ∧
+        PanValueCrepProgramStateControlSafe (.dec name shape value body))
+    (hassign : ∀ (kind : VarKind) (name : VarName) (value : Exp α),
+      PanValueCrepProgramStateCorrect (.assign kind name value) ∧
+        PanValueCrepProgramStateControlSafe (.assign kind name value))
+    (hprimitive : ∀ (name : VarName) (operator : PrimOp)
+      (args : List (Exp α)),
+      PanValueCrepProgramStateCorrect (.primitive name operator args) ∧
+        PanValueCrepProgramStateControlSafe (.primitive name operator args))
+    (hstore : ∀ (address value : Exp α),
+      PanValueCrepProgramStateCorrect (.store address value) ∧
+        PanValueCrepProgramStateControlSafe (.store address value))
+    (hstore32 : ∀ (address value : Exp α),
+      PanValueCrepProgramStateCorrect (.store32 address value) ∧
+        PanValueCrepProgramStateControlSafe (.store32 address value))
+    (hstoreByte : ∀ (address value : Exp α),
+      PanValueCrepProgramStateCorrect (.storeByte address value) ∧
+        PanValueCrepProgramStateControlSafe (.storeByte address value))
+    (hseq : ∀ (first second : Prog α),
+      (PanValueCrepProgramStateCorrect first ∧
+        PanValueCrepProgramStateControlSafe first) →
+      (PanValueCrepProgramStateCorrect second ∧
+        PanValueCrepProgramStateControlSafe second) →
+      PanValueCrepProgramStateCorrect (.seq first second) ∧
+        PanValueCrepProgramStateControlSafe (.seq first second))
+    (hite : ∀ (condition : Exp α) (thenBranch elseBranch : Prog α),
+      (PanValueCrepProgramStateCorrect thenBranch ∧
+        PanValueCrepProgramStateControlSafe thenBranch) →
+      (PanValueCrepProgramStateCorrect elseBranch ∧
+        PanValueCrepProgramStateControlSafe elseBranch) →
+      PanValueCrepProgramStateCorrect (.ite condition thenBranch elseBranch) ∧
+        PanValueCrepProgramStateControlSafe (.ite condition thenBranch elseBranch))
+    (hwhile : ∀ (condition : Exp α) (body : Prog α),
+      (PanValueCrepProgramStateCorrect body ∧
+        PanValueCrepProgramStateControlSafe body) →
+      PanValueCrepProgramStateCorrect (.while condition body) ∧
+        PanValueCrepProgramStateControlSafe (.while condition body))
+    (hbreak : PanValueCrepProgramStateCorrect (.break : Prog α) ∧
+      PanValueCrepProgramStateControlSafe (.break : Prog α))
+    (hcontinue : PanValueCrepProgramStateCorrect (.continue : Prog α) ∧
+      PanValueCrepProgramStateControlSafe (.continue : Prog α))
+    (hcall : ∀
+      (info : Option (Option (VarKind × VarName) ×
+        Option (ExceptionId × VarName × Prog α)))
+      (name : FunName) (args : List (Exp α)),
+      (match info with
+       | some (_, some (_, _, handler)) =>
+           PanValueCrepProgramStateCorrect handler ∧
+             PanValueCrepProgramStateControlSafe handler
+       | _ => True) →
+      PanValueCrepProgramStateCorrect (.call info name args) ∧
+        PanValueCrepProgramStateControlSafe (.call info name args))
+    (hdecCall : ∀ (name : VarName) (shape : Shape) (function : FunName)
+      (args : List (Exp α)) (body : Prog α),
+      (PanValueCrepProgramStateCorrect body ∧
+        PanValueCrepProgramStateControlSafe body) →
+      PanValueCrepProgramStateCorrect (.decCall name shape function args body) ∧
+        PanValueCrepProgramStateControlSafe (.decCall name shape function args body))
+    (hextCall : ∀ (function : FunName)
+      (configuration configurationLength array arrayLength : Exp α),
+      PanValueCrepProgramStateCorrect
+          (.extCall function configuration configurationLength array arrayLength) ∧
+        PanValueCrepProgramStateControlSafe
+          (.extCall function configuration configurationLength array arrayLength))
+    (hraise : ∀ (exception : ExceptionId) (value : Exp α),
+      PanValueCrepProgramStateCorrect (.raise exception value) ∧
+        PanValueCrepProgramStateControlSafe (.raise exception value))
+    (hreturn : ∀ (value : Exp α),
+      PanValueCrepProgramStateCorrect (.return value) ∧
+        PanValueCrepProgramStateControlSafe (.return value))
+    (hshMemLoad : ∀ (size : OpSize) (kind : VarKind) (name : VarName)
+      (address : Exp α),
+      PanValueCrepProgramStateCorrect (.shMemLoad size kind name address) ∧
+        PanValueCrepProgramStateControlSafe (.shMemLoad size kind name address))
+    (hshMemStore : ∀ (size : OpSize) (address value : Exp α),
+      PanValueCrepProgramStateCorrect (.shMemStore size address value) ∧
+        PanValueCrepProgramStateControlSafe (.shMemStore size address value))
+    (htick : PanValueCrepProgramStateCorrect (.tick : Prog α) ∧
+      PanValueCrepProgramStateControlSafe (.tick : Prog α))
+    (hannot : ∀ (tag text : String),
+      PanValueCrepProgramStateCorrect (@Prog.annot α tag text) ∧
+        PanValueCrepProgramStateControlSafe (@Prog.annot α tag text)) :
+    ∀ program : Prog α,
+      PanValueCrepProgramStateCorrect program ∧
+        PanValueCrepProgramStateControlSafe program := by
+  let rec go : (program : Prog α) →
+      PanValueCrepProgramStateCorrect program ∧
+        PanValueCrepProgramStateControlSafe program
+    | .skip => hskip
+    | .dec name shape value body => hdec name shape value body (go body)
+    | .assign kind name value => hassign kind name value
+    | .primitive name operator args => hprimitive name operator args
+    | .store address value => hstore address value
+    | .store32 address value => hstore32 address value
+    | .storeByte address value => hstoreByte address value
+    | .seq first second => hseq first second (go first) (go second)
+    | .ite condition thenBranch elseBranch =>
+        hite condition thenBranch elseBranch (go thenBranch) (go elseBranch)
+    | .while condition body => hwhile condition body (go body)
+    | .break => hbreak
+    | .continue => hcontinue
+    | .call info name args =>
+        hcall info name args (by
+          cases info with
+          | none => exact True.intro
+          | some info =>
+              cases info with
+              | mk destination handlerInfo =>
+                  cases handlerInfo with
+                  | none => exact True.intro
+                  | some handler =>
+                      cases handler with
+                      | mk exception handlerInfo =>
+                          cases handlerInfo with
+                          | mk handlerVar handlerProgram =>
+                              exact go handlerProgram)
+    | .decCall name shape function args body =>
+        hdecCall name shape function args body (go body)
+    | .extCall function configuration configurationLength array arrayLength =>
+        hextCall function configuration configurationLength array arrayLength
+    | .raise exception value => hraise exception value
+    | .return value => hreturn value
+    | .shMemLoad size kind name address => hshMemLoad size kind name address
+    | .shMemStore size address value => hshMemStore size address value
+    | .tick => htick
+    | .annot tag text => hannot tag text
+    termination_by program => sizeOf program
+  exact fun program => go program
+
 /-! The two primitive loop-control constructors already produce label `0` in
 the source and stateful Crep evaluators.  These leaf proofs discharge the
 first concrete instances of the safety premise required by the Pc bridge. -/

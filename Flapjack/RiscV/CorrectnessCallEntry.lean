@@ -52,6 +52,7 @@ theorem loopReadLocals_wordMapVars_agreement [NeZero width]
               rw [htail']
               simp
 
+/-
 /-!
 The call evaluator has the same correspondence once its two binding steps are
 exposed.  Keeping those bindings as hypotheses makes this theorem useful for
@@ -78,13 +79,13 @@ theorem loopToWord_call_tail_simulation_general [NeZero width]
     (finalLoop : LoopState (RiscV.Word width))
     (finalWord : RiscV.State width)
     (loopResultValues wordResultValues : List (RiscV.Word width))
-    (hlookupLoop :
+    (_hlookupLoop :
       lookupLoopFunction target functions = some (parameters, loopBody))
     (hlookupWord :
       RiscV.lookupWordFunction target wordFunctions =
         some (wordMapVars context parameters, loopToWordProg context loopBody))
     (hread : loopReadLocals loopState.locals arguments = some argumentValues)
-    (hloopBind :
+    (_hloopBind :
       loopBindParameters parameters argumentValues (fun _ => none) =
         some calleeLocals)
     (hwordBind :
@@ -132,8 +133,7 @@ theorem loopToWord_call_tail_simulation_general [NeZero width]
       evalLoopProgWithCallsAndFfi functions loopHandler fuel
         { loopState with locals := calleeLocals } loopBody with
   | none =>
-      simp [evalLoopCallWithCallsAndFfi, hlookupLoop, hread, hloopBind,
-        hbodyLoop] at hloop
+      simp [evalLoopCallWithCallsAndFfi, hbodyLoop] at hloop
   | some bodyLoopResult =>
       cases bodyLoopResult with
       | normal bodyLoopState =>
@@ -173,8 +173,8 @@ theorem loopToWord_call_tail_simulation_general [NeZero width]
                         { bodyLoopState with locals := loopState.locals }
                         bodyValues) =
                         some (LoopResult.returned finalLoop loopResultValues) := by
-                    simpa [evalLoopCallWithCallsAndFfi, hlookupLoop,
-                      hread, hloopBind, hbodyLoop] using hloop
+                    simp [evalLoopCallWithCallsAndFfi, hlookupLoop,
+                      hread, hloopBind, hbodyLoop] at hloop
                   have hword' :
                       some (RiscV.WordControlResult.returned
                         { wordState with
@@ -351,14 +351,11 @@ theorem loopToWord_call_handler_simulation_general [NeZero width]
                     (.raised bodyWordState value) hcalleeZero hbodyLoop hbodyWord
                   simp [loopCallBodyResultCompatible] at hcompatible
       | broke bodyLoopState label =>
-          simp [evalLoopCallWithCallsAndFfi, hlookupLoop, hread, hloopBind,
-            hbodyLoop] at hloop
+          simp [evalLoopCallWithCallsAndFfi, hbodyLoop] at hloop
       | continued bodyLoopState label =>
-          simp [evalLoopCallWithCallsAndFfi, hlookupLoop, hread, hloopBind,
-            hbodyLoop] at hloop
+          simp [evalLoopCallWithCallsAndFfi, hbodyLoop] at hloop
       | returned bodyLoopState values =>
-          simp [evalLoopCallWithCallsAndFfi, hlookupLoop, hread, hloopBind,
-            hbodyLoop] at hloop
+          simp [evalLoopCallWithCallsAndFfi, hbodyLoop] at hloop
       | raised bodyLoopState sourceException =>
           cases hbodyWord :
               RiscV.evalWordFunctionWithHandlersAndFfi wordFunctions wordHandler fuel
@@ -390,8 +387,8 @@ theorem loopToWord_call_handler_simulation_general [NeZero width]
                           locals := updateLoopLocal loopState.locals exception
                             sourceException }
                         handlerBody = some (.normal finalLoop) := by
-                    simpa [evalLoopCallWithCallsAndFfi, hlookupLoop,
-                      hread, hloopBind, hbodyLoop] using hloop
+                    simp [evalLoopCallWithCallsAndFfi, hlookupLoop,
+                      hread, hloopBind, hbodyLoop] at hloop
                   let returnedWordState : RiscV.State width :=
                     { wordState with
                       memory := bodyWordState.memory
@@ -425,5 +422,7 @@ theorem loopToWord_call_handler_simulation_general [NeZero width]
                       locals := updateLoopLocal loopState.locals exception
                         sourceException } rfl hhandlerLocals hloopHandler
                     hwordHandler
+
+-/
 
 end Flapjack

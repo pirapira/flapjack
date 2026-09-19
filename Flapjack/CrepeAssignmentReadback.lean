@@ -11,6 +11,38 @@ destination list is distinct.
 
 namespace Flapjack
 
+theorem crepNamesDistinct_eq_true
+    (names : List Nat) (hdistinct : CrepDistinctNames names) :
+    crepNamesDistinct names = true := by
+  induction names with
+  | nil => simp [crepNamesDistinct]
+  | cons name names ih =>
+      rcases hdistinct with ⟨hnot, htail⟩
+      have hneq : ∀ x ∈ names, name ≠ x := by
+        intro x hx heq
+        apply hnot
+        rw [heq]
+        exact hx
+      have hall : names.all (fun other => name != other) = true :=
+        List.all_eq_true.mpr (by
+          intro x hx
+          simpa using hneq x hx)
+      simp [crepNamesDistinct, ih htail, hall]
+
+theorem crepLocalsDefined_eq_true
+    (locals : Nat → Option α) (names : List Nat)
+    (hdefined : ∀ name, name ∈ names → (locals name).isSome = true) :
+    crepLocalsDefined locals names = true := by
+  induction names with
+  | nil => simp [crepLocalsDefined]
+  | cons name names ih =>
+      have hhead : (locals name).isSome = true :=
+        hdefined name (by simp)
+      have htail : ∀ other, other ∈ names → (locals other).isSome = true := by
+        intro other hmem
+        exact hdefined other (by simp [hmem])
+      simp [crepLocalsDefined, hhead, ih htail]
+
 theorem assignCrepValues_read_back
     (locals : Nat → Option α) (names : List Nat) (values : List α)
     (resultLocals : Nat → Option α)
@@ -116,6 +148,19 @@ theorem assignCrepValues_read_back
   rw [← hfold]
   exact hread locals names values hlength hdistinct
 
+theorem assignExistingCrepValues_read_back
+    (locals : Nat → Option α) (names : List Nat) (values : List α)
+    (resultLocals : Nat → Option α)
+    (hassign : assignExistingCrepValues locals names values = some resultLocals)
+    (hdistinct : CrepDistinctNames names) :
+    readCrepLocals resultLocals names = some values := by
+  unfold assignExistingCrepValues at hassign
+  split at hassign <;> try simp at hassign
+  have hassign' : assignCrepValues locals names values = some resultLocals := by
+    simp [assignCrepValues, *]
+  exact assignCrepValues_read_back locals names values resultLocals
+    hassign' hdistinct
+
 theorem assignCrepValues_read_preserve
     (locals : Nat → Option α) (names : List Nat) (values : List α)
     (resultLocals : Nat → Option α) (slots : List Nat)
@@ -175,5 +220,18 @@ theorem assignCrepValues_read_preserve
   have hnameMem : entry.1 ∈ names := by
     exact hzipFstMem names values entry hentry
   exact hnot entry.1 hnameMem
+
+theorem assignExistingCrepValues_read_preserve
+    (locals : Nat → Option α) (names : List Nat) (values : List α)
+    (resultLocals : Nat → Option α) (slots : List Nat)
+    (hassign : assignExistingCrepValues locals names values = some resultLocals)
+    (hnot : ∀ name, name ∈ names → name ∉ slots) :
+    readCrepLocals resultLocals slots = readCrepLocals locals slots := by
+  unfold assignExistingCrepValues at hassign
+  split at hassign <;> try simp at hassign
+  have hassign' : assignCrepValues locals names values = some resultLocals := by
+    simp [assignCrepValues, *]
+  exact assignCrepValues_read_preserve locals names values resultLocals slots
+    hassign' hnot
 
 end Flapjack

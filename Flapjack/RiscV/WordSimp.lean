@@ -50,20 +50,47 @@ def wordSimpLeftSeq : List (WordProg α) → WordProg α
   | statement :: statements =>
       statements.foldl wordSimpSmartSeq statement
 
-def wordSimpSeqAssoc : WordProg α → WordProg α
+/-- `wordSimpSeqItems (wordSimpLeftSeq statements)`, without building the
+    intermediate spine.  `wordSimpLeftSeq` folds `wordSimpSmartSeq` from the
+    head, and `wordSimpSmartSeq .skip second = second`, so every leading
+    `Skip` is dropped while later ones are retained; an all-`Skip` list
+    collapses to the single `Skip` that `wordSimpLeftSeq []` returns. -/
+def wordSimpLeftSeqItems : List (WordProg α) → List (WordProg α)
+  | [] => [.skip]
+  | .skip :: statements => wordSimpLeftSeqItems statements
+  | statements => statements
+
+/-! Cake's `Seq_assoc` threads the left prefix through an accumulator
+    (`word_simpScript.sml:21-38`), so it visits each node once.  Recursing
+    into both halves and then re-running `wordSimpSeqItems` over the two
+    *already reassociated* results walks the processed spine again at every
+    `Seq` node, which is quadratic in the length of the sequence: on the
+    stateless guest one 14 325-node function spent 16.4 s here.
+
+    Returning the spine items directly removes the re-walk.  The result is
+    unchanged: `wordSimpSeqAssoc` is `wordSimpLeftSeq` of these items, and
+    for a `Seq` the previous code took `wordSimpLeftSeq` of the same list
+    before `wordSimpLeftSeqItems` dropped its leading `Skip`s -- which
+    `wordSimpLeftSeq` drops again on its own. -/
+def wordSimpSeqAssocItems : WordProg α → List (WordProg α)
   | .seq first second =>
-      let first := wordSimpSeqAssoc first
-      let second := wordSimpSeqAssoc second
-      wordSimpLeftSeq (wordSimpSeqItems first ++ wordSimpSeqItems second)
+      wordSimpLeftSeqItems
+        (wordSimpSeqAssocItems first ++ wordSimpSeqAssocItems second)
   | .ite operator condition right thenBranch elseBranch =>
-      .ite operator condition right
-        (wordSimpSeqAssoc thenBranch) (wordSimpSeqAssoc elseBranch)
+      [.ite operator condition right
+        (wordSimpLeftSeq (wordSimpSeqAssocItems thenBranch))
+        (wordSimpLeftSeq (wordSimpSeqAssocItems elseBranch))]
   | .loop liveIn body liveOut =>
-      .loop liveIn (wordSimpSeqAssoc body) liveOut
-  | .mustTerminate body => .mustTerminate (wordSimpSeqAssoc body)
-  | program => program
+      [.loop liveIn (wordSimpLeftSeq (wordSimpSeqAssocItems body)) liveOut]
+  | .mustTerminate body =>
+      [.mustTerminate (wordSimpLeftSeq (wordSimpSeqAssocItems body))]
+  | program => [program]
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial
+
+def wordSimpSeqAssoc (program : WordProg α) : WordProg α :=
+  wordSimpLeftSeq (wordSimpSeqAssocItems program)
+
 
 /-! `strip_const` (`word_simpScript.sml:131-138`). -/
 def wordSimpStripConst : List (WordExp α) → Option (List α)

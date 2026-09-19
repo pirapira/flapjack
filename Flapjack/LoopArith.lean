@@ -62,4 +62,21 @@ def loopArith (width : Nat) : LoopArith → (Nat → Option Nat) → Option (Nat
   | .longDiv destinationLeft destinationRight sourceLeft sourceRight quotient, locals =>
       loopArithLongDiv width destinationLeft destinationRight sourceLeft sourceRight quotient locals
 
+theorem loopArithDiv_some_implies_divisor_nonzero
+    (destination dividend divisor : Nat) (locals : Nat → Option Nat)
+    (result : Nat → Option Nat)
+    (heval : loopArithDiv destination dividend divisor locals = some result) :
+    ∃ divisorValue, locals divisor = some divisorValue ∧ divisorValue ≠ 0 := by
+  cases hdivisor : locals divisor with
+  | none =>
+      simp [loopArithDiv, hdivisor] at heval
+  | some divisorValue =>
+      cases hdividend : locals dividend with
+      | none =>
+          simp [loopArithDiv, hdivisor, hdividend] at heval
+      | some dividendValue =>
+          simp [loopArithDiv, hdivisor, hdividend] at heval
+          refine ⟨divisorValue, rfl, ?_⟩
+          exact heval.1
+
 end Flapjack

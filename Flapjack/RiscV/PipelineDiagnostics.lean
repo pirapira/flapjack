@@ -470,7 +470,7 @@ def compileFlapjackRiscVViaStackChecked [NeZero width]
     (removeConfig : StackRemoveConfig)
     (declarations : List (Decl (RiscV.Word width))) :
     Except PipelineRiscVLoweringError (List (RiscV.Instruction width)) :=
-  let pipeline := compileFlapjack architecture bytesInWord fromNat declarations
+  let pipeline := compileFlapjackCore architecture bytesInWord fromNat declarations
   match RiscV.pipelineWordFunctionsToStackChecked pipeline.word with
   | .error error => .error (.wordToStack error)
   | .ok functions =>
@@ -515,7 +515,8 @@ def compileFlapjackRiscVSourceBytesChecked [NeZero width]
       | .ok _ =>
           let warnings := checked.2
           match compileFlapjackEntry architecture bytesInWord
-              (fun value => fromNat value) start declarations with
+              (fun value => fromNat value) start
+              (panTargetDeclarationsWithDefaultMain declarations) with
           | none => .error .entryNotFound
           | some pipeline =>
               let sourceLoop := pipelineLoopFunctionsSource architecture 1 pipeline.crepe

@@ -44,7 +44,11 @@ def parityGuard : Bool :=
   | _ => false) &&
   (match loopShrinkLeaf
       (.loop [1] (.assign 2 (.const 7)) [] : LoopProg Nat) [] with
-  | (.loop [] .skip [], []) => true
+  | (.loop [1] .skip [], [1]) => true
+  | _ => false) &&
+  (match loopShrinkLeaf
+      (.loop [1] (.assign 1 (.const 7)) [] : LoopProg Nat) [] with
+  | (.loop [] (.assign 1 (.const 7)) [], []) => true
   | _ => false) &&
   (match loopShrink [([5], [8])] (.continue 0 : LoopProg Nat) [] with
   | (.continue 0, [5]) => true

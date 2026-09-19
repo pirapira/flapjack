@@ -214,6 +214,8 @@ import Flapjack.Test.RiscVAbiParity
 import Flapjack.Test.RiscVAbiAdapterParity
 import Flapjack.Test.LoopToWordBoundaryParity
 import Flapjack.Test.SptreeOrderParity
+import Flapjack.Test.WordSimpSeqAssocParity
+import Flapjack.Test.RiscVFarTransferParity
 
 /-!
 # Pancake/RISC-V compiler parity tests

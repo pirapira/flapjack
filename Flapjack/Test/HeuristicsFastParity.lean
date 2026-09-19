@@ -96,6 +96,15 @@ def heuristicEraseDupsCases : List (List Nat) :=
 #guard heuristicEraseDupsCases.all
   (fun names => names.eraseDups == natEraseDups names)
 
+def heuristicEraseDupsAppendCases : List (List Nat × List Nat) :=
+  [([], []), ([7, 1, 7], [2, 1, 4]),
+   (List.range 40, List.range 20),
+   ((List.range 40).reverse, List.range 20)]
+
+#guard heuristicEraseDupsAppendCases.all
+  (fun names => natEraseDupsAppend names.1 names.2 ==
+    natEraseDups (names.1 ++ names.2))
+
 /-! The merged map's order is Cake's Patricia traversal; pin it directly so a
     change in either implementation is visible here. -/
 #guard (wordHeuristicFast 7 heuristicParityMerge ({}, {})).1.keys ==

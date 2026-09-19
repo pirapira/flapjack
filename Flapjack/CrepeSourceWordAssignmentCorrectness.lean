@@ -59,11 +59,14 @@ theorem compile_full_pan_value_local_assign_source_word_relation
       .seq (.assign slot compiled) .skip := by
     simp [compileProg, hlookup, hcompile, hdistinct, crepNestedSeq]
   rw [hcompileProg]
+  have hstate := panValueCrepLocalsRel_word_slot structs context sourceLocals
+    state.locals name slot oldValue hrel.2.1 hold hlookup
   constructor
   · simp [evalPanValueProgWithPrimitiveCallsAndFfi, hsource, hold,
       panValueAssignmentValid, panValueShape, panShapeMatches]
   constructor
-  · simp [evalCrepFullProg, hcompiled]
+  · simp [evalCrepFullProg, hcompiled, hstate, assignExistingCrepValues,
+      crepNamesDistinct, crepLocalsDefined]
   · refine ⟨hrel.1, ?_, hrel.2.2⟩
     exact panValueCrepLocalsRel_update_word structs context sourceLocals
       state.locals name slot value hrel.2.1 hlookup hnoalias
@@ -122,6 +125,8 @@ theorem compile_full_pan_value_local_assign_source_word_temporary_relation
     simp [compileProg, hlookup, hcompile, hnotDistinct, freshNames, nestedDecs,
       crepNestedSeq]
   rw [hcompileProg]
+  have hstate := panValueCrepLocalsRel_word_slot structs context sourceLocals
+    state.locals name slot oldValue hrel.2.1 hold hlookup
   constructor
   · simp [evalPanValueProgWithPrimitiveCallsAndFfi, hsource, hold,
       panValueAssignmentValid, panValueShape, panShapeMatches]
@@ -145,7 +150,8 @@ theorem compile_full_pan_value_local_assign_source_word_temporary_relation
         · simp [restoreCrepLocal, updateCrepLocal, hcurrentTemporary,
             hcurrentSlot]
     simp [evalCrepFullProg, hcompiled, htemporary, htemporaryRead, hrestore,
-      restoreCrepResult]
+      hstate, hslotNe, updateCrepLocal, assignExistingCrepValues,
+      crepNamesDistinct, crepLocalsDefined, restoreCrepResult]
   · refine ⟨hrel.1, ?_, hrel.2.2⟩
     exact panValueCrepLocalsRel_update_word structs context sourceLocals
       state.locals name slot value hrel.2.1 hlookup hnoalias
@@ -204,11 +210,14 @@ theorem compile_full_pan_value_local_assign_source_word_state_relation
       .seq (.assign slot compiled) .skip := by
     simp [compileProg, hlookup, hcompile, hdistinct, crepNestedSeq]
   rw [hcompileProg]
+  have hstate := panValueCrepLocalsRel_word_slot structs context sourceLocals
+    state.locals name slot oldValue hrel.2.1 hold hlookup
   constructor
   · simp [evalPanValueProgWithPrimitiveCallsAndFfi, hsource, hold,
       panValueAssignmentValid, panValueShape, panShapeMatches]
   constructor
-  · simp [evalCrepFullProgState, hcompiled]
+  · simp [evalCrepFullProgState, hcompiled, hstate, assignExistingCrepValues,
+      crepNamesDistinct, crepLocalsDefined]
   · refine ⟨hrel.1, ?_, hrel.2.2⟩
     exact panValueCrepLocalsRel_update_word structs context sourceLocals
       state.locals name slot value hrel.2.1 hlookup hnoalias
@@ -266,6 +275,8 @@ theorem compile_full_pan_value_local_assign_source_word_temporary_state_relation
     simp [compileProg, hlookup, hcompile, hnotDistinct, freshNames, nestedDecs,
       crepNestedSeq]
   rw [hcompileProg]
+  have hstate := panValueCrepLocalsRel_word_slot structs context sourceLocals
+    state.locals name slot oldValue hrel.2.1 hold hlookup
   constructor
   · simp [evalPanValueProgWithPrimitiveCallsAndFfi, hsource, hold,
       panValueAssignmentValid, panValueShape, panShapeMatches]
@@ -289,7 +300,8 @@ theorem compile_full_pan_value_local_assign_source_word_temporary_state_relation
         · simp [restoreCrepLocal, updateCrepLocal, hcurrentTemporary,
             hcurrentSlot]
     simp [evalCrepFullProgState, hcompiled, htemporary, htemporaryRead, hrestore,
-      restoreCrepResult]
+      hstate, hslotNe, updateCrepLocal, assignExistingCrepValues,
+      crepNamesDistinct, crepLocalsDefined, restoreCrepResult]
   · refine ⟨hrel.1, ?_, hrel.2.2⟩
     exact panValueCrepLocalsRel_update_word structs context sourceLocals
       state.locals name slot value hrel.2.1 hlookup hnoalias

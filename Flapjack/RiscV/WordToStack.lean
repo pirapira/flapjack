@@ -4234,7 +4234,7 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
             match moves.find? (fun move => move.1 == address) with
             | some (_, addressSource) =>
                 let remaining := moves.filter (fun move => move.1 != address)
-                if !(wordProgReadVars rest).contains address &&
+                if !(wordProgReadVarsFast rest).contains address &&
                     !remaining.any (fun move => move.1 == addressSource) then do
                   let moveCode ← wordStackMoveList config remaining
                   let storeCode ← wordToStackInst config

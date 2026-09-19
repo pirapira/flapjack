@@ -194,11 +194,13 @@ theorem compile_full_pan_value_identity_declaration_call_relation
       functionInfos, compileProg, compileExp, compileArgs, allocatedNames,
       evalCrepFullCall, evalCrepFullProg, evalCrepFullExps, evalCrepFullExp,
       updateCrepLocal, lookupCompiledFunction, assignCrepValues,
+      assignExistingCrepValues, crepNamesDistinct, crepLocalsDefined,
+      initializeCrepLocals,
       lookupInfo, List.map, List.zip, List.foldl]
     funext current
     by_cases h : current = 1
     · simp [h, updateCrepLocal]
-    · simp [h, initializeCrepLocals, updateCrepLocal]
+    · simp [h, updateCrepLocal]
   have hcrepBody :
       evalCrepFullProg
       (compileToCrepe (correctnessIdentityContext (α := α))

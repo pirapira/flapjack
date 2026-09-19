@@ -669,6 +669,18 @@ theorem named_struct_source_pass_one_word_flat_words (value : Nat) :
       panValueFlatWords (.rStruct [.word value]) := by
   rfl
 
+theorem named_struct_source_eval_via_generic_evidence (value : Nat) :
+    evalPanValueExp namedStructPassContext.structs
+        (fun _ => none) (fun _ => none) (fun _ => none)
+        0 0 8 (.nStruct "S" [("field", .const value)]) =
+        some (.nStruct "S" [("field", .word value)]) := by
+  apply evalPanValueExp_nStruct_of_fields_evidence
+    (info := { fields := [("field", .one)], size := 1 })
+  · simp [namedStructPassContext, lookupInfo]
+  · simp [evalPanValueExp.evalPanValueFields, evalPanValueExp]
+  · simp [namedStructPassContext, panValueFieldsHaveShapes, panValueShape,
+      panShapeMatches]
+
 theorem named_struct_source_pass_one_word_eval (value : Nat) :
     evalPanValueExp namedStructPassContext.structs
         (fun _ => none) (fun _ => none) (fun _ => none)
@@ -678,11 +690,10 @@ theorem named_struct_source_pass_one_word_eval (value : Nat) :
         0 0 8 (structCompileExp namedStructPassContext
           (.nStruct "S" [("field", .const value)])) =
         some (.rStruct [.word value]) := by
+  refine ⟨named_struct_source_eval_via_generic_evidence value, ?_⟩
   simp [namedStructPassContext, structCompileExp,
     structCompileExp.structCompileFields, structSelectFields, lookupInfo,
-    evalPanValueExp, evalPanValueExp.evalPanValueExps,
-    evalPanValueExp.evalPanValueFields, panValueFieldsHaveShapes,
-    panValueShape, panShapeMatches]
+    evalPanValueExp, evalPanValueExp.evalPanValueExps]
 
 theorem named_struct_source_pass_compile_raise (value : Nat) :
     compileProg context
@@ -748,9 +759,26 @@ theorem named_struct_source_pass_raise_pc_relation (value : Nat) :
     (hrel := by
       refine ⟨rfl, panValueCrepLocalsRel_empty [] context _, rfl⟩)
     (hsource := by
-      simp [namedStructPassContext, structCompileExp,
-        structCompileExp.structCompileFields, structSelectFields, lookupInfo,
-        evalPanValueExp, evalPanValueExp.evalPanValueExps])
+      apply evalPanValueExp_structPass_of_named_fields_evidence
+        (sourceStructs := namedStructPassContext.structs) (postStructs := [])
+        (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+        (sourceMemory := fun _ => none)
+        (baseAddress := 0) (topAddress := 0) (bytesInWord := 8)
+        (name := "S")
+        (fields := [("field", .const value)])
+        (values := [("field", .word value)])
+        (info := { fields := [("field", .one)], size := 1 })
+        (postExpression := structCompileExp namedStructPassContext
+          (.nStruct "S" [("field", .const value)]))
+        (postValue := .rStruct [.word value])
+      · simp [namedStructPassContext, lookupInfo]
+      · simp [evalPanValueExp.evalPanValueFields, evalPanValueExp]
+      · simp [namedStructPassContext, panValueFieldsHaveShapes, panValueShape,
+          panShapeMatches]
+      · intro namedValue _
+        simp [namedStructPassContext, structCompileExp,
+          structCompileExp.structCompileFields, structSelectFields, lookupInfo,
+          evalPanValueExp, evalPanValueExp.evalPanValueExps])
     (hvalid := by
       simp [panValuePayloadWithinLimit, panValuePayloadSizeFuel,
         panValuePayloadSizeFuel.panValuePayloadSizeFieldsFuel,

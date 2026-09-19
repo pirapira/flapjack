@@ -109,6 +109,13 @@ def nextTokenCakeParity : Bool :=
 
 #guard nextTokenCakeParity
 
+/-! Cake `init_loc_def` (`panLexerScript.sml:299`) starts lexing at row 1,
+    column 1. -/
+def initLocCakeParity : Bool :=
+  sameAst initLoc (.posn 1 1)
+
+#guard initLocCakeParity
+
 /-! `isNT_def` and `argsNT_def` at
     `panPtreeConversionScript.sml:58,62` inspect only the node's
     nonterminal: matching nodes succeed, mismatching nodes and leaves do not. -/

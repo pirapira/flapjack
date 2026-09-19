@@ -158,8 +158,9 @@ def loopShrinkLeaf : LoopProg α → List Nat → LoopProg α × List Nat
   | .loop liveIn body liveOut, live =>
       let loopLiveOut := loopIntersectSorted liveOut live
       let bodyEntryLive := loopListInsert liveIn loopLiveOut
-      /- Cake's `fixedpoint` repeats the body shrink with the loop's output
-         live set until the live-in set stabilizes.  The bound is an
+      /- Cake's `fixedpoint` repeats the body shrink with `bex`, the union of
+         the loop's live-in and output sets, until the live-in set stabilizes.
+         The bound is an
          executable representation of the finite-set decrease argument used
          by the HOL definition; Pancake live sets are bounded by the source
          program, so this comfortably covers generated bodies. -/
@@ -170,7 +171,7 @@ def loopShrinkLeaf : LoopProg α → List Nat → LoopProg α × List Nat
             let (fallback, _) := loopShrinkLeaf body bodyEntryLive
             (.loop liveIn fallback loopLiveOut, liveIn)
         | fuel + 1 =>
-            let (body', bodyLive) := loopShrinkLeaf body loopLiveOut
+            let (body', bodyLive) := loopShrinkLeaf body bodyEntryLive
             let current := loopIntersectSorted liveIn bodyLive
             if current = previous then
               (.loop current body' loopLiveOut, current)
@@ -265,9 +266,12 @@ def loopShrinkFixed (contexts : List (List Nat × List Nat))
     Nat → List Nat → Option (LoopProg α × List Nat)
   | 0, _ => none
   | fuel + 1, previous =>
+      /- `fixedpoint` passes its `bex` argument to every body shrink; using
+         only `loopLiveOut` drops assignments that are needed to establish
+         the loop's incoming cutset (loop_liveScript.sml:67-78). -/
       let (body', bodyLive) := loopShrink
         ((loopIntersectSorted liveIn previous, bodyEntryLive) :: contexts)
-        body loopLiveOut
+        body bodyEntryLive
       let current := loopIntersectSorted liveIn bodyLive
       if current = previous then
         some (.loop current body' loopLiveOut, current)

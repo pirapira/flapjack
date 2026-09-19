@@ -138,7 +138,7 @@ def pipelineLoopFunctionsSourceAux [OfNat α 0] [OfNat α 1]
            source parameter to its flattened positional slot.  An empty map
            silently turns parameter assignments into `Skip`, which changes
            both the loop program and the emitted artifact. -/
-        { vars := function.params.zip (List.range function.params.length)
+        { vars := crepMakeVmap function.params
           functions := functionInfos
           maxVar := function.params.length - 1
           target := architecture }

@@ -111,6 +111,16 @@ def sourceCompileProgParameterShape : Bool :=
 
 #guard sourceCompileProgParameterShape
 
+/-! `make_vmap_def` oracle: parameter names receive their dense positional
+    slots, in source order, and no entries are invented for an empty list. -/
+def sourceMakeVmapOracle : Bool :=
+  crepMakeVmap [] == [] &&
+  crepMakeVmap [10, 20, 30] == [(10, 0), (20, 1), (30, 2)] &&
+  lookupNatInfo 10 (crepMakeVmap [10, 20, 30]) == some 0 &&
+  lookupNatInfo 30 (crepMakeVmap [10, 20, 30]) == some 2
+
+#guard sourceMakeVmapOracle
+
 /-! Cake's handled-call branch starts handler and return-body labels at the
     next local label and advances once more after both bodies.  This guard
     keeps the source-shaped label state visible independently of final bytes. -/

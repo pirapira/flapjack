@@ -44,6 +44,17 @@ def expr (source : String) : Except (List ParseError) (Prog Int) :=
 
 /-! ### Lexer -/
 
+/-! `isAtom_singleton_def` is the Cake lexer boundary at
+    `cakeml/pancake/parser/panLexerScript.sml:46`: exactly the listed
+    punctuation characters are emitted as one-character atoms.  The guard
+    checks the complete source set and representative adjacent non-members;
+    `nextAtom` consumes this predicate directly. -/
+def isAtomSingletonCakeParity : Bool :=
+  ("+-^*().,;:[]{}".toList).all isAtomSingleton &&
+  ("0a#=<>!&|".toList).all (fun character => !isAtomSingleton character)
+
+#guard isAtomSingletonCakeParity
+
 #guard (pancakeLex "x + 1").map (·.1) == [.identT "x", .plusT, .intT 1]
 
 -- `//` runs to end of line; the block forms are `/* */` and `/@ @/`.

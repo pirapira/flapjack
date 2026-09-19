@@ -185,4 +185,30 @@ def crepInlineHandlerProgResult : CrepProg Nat :=
           (.dec 10 (.var 11) (.return [.var 10]))))))) "outer" [] => true
   | _ => false
 
+/-! Direct `crep_inline$compile_inl_prog` oracle coverage.  Cake's
+    `compile_inl_prog_def` (crep_inlineScript.sml:259-262) maps each function
+    with its own name removed from the inline map: `first` may inline `second`,
+    while `second`'s return body remains unchanged. -/
+def crepCompileInlProgCakeEntries : List (CrepInlineEntry Nat) :=
+  [("first", ([], .call none "second" [])),
+   ("second", ([], .return [.const 9]))]
+
+def crepCompileInlProgCakeResult : List (CompiledFunction Nat) :=
+  crepInlineFunctionsRecursive crepCompileInlProgCakeEntries
+    (crepInlineActiveNames crepCompileInlProgCakeEntries)
+    [CompiledFunction.mk "first" [] (.call none "second" []) .one,
+     CompiledFunction.mk "second" [] (.return [.const 9]) .one]
+
+#guard match crepCompileInlProgCakeResult with
+  | [first, second] =>
+      (first.name == "first" &&
+        match first.body with
+        | .seq .tick (.return [.const 9]) => true
+        | _ => false) &&
+      (second.name == "second" &&
+        match second.body with
+        | .return [.const 9] => true
+        | _ => false)
+  | _ => false
+
 end Flapjack

@@ -154,6 +154,20 @@ def reachabilityContext : Context :=
 #guard match shapedBasedMerge [.word .based, .word .notBased] with
   | .based => true | _ => false
 
+/-! Direct Cake `sh_bd_from_sh` parity (`panStaticScript.sml:213-233`).
+    The explicit basedness must reach every word in comb and named shapes. -/
+#guard match shapedBasedFromShapeWith [] .based .one with
+  | some (.word .based) => true | _ => false
+#guard match shapedBasedFromShapeWith [] .notTrusted (.comb [.one, .one]) with
+  | some (.struct [.word .notTrusted, .word .notTrusted]) => true | _ => false
+#guard
+  let context : StructContext :=
+    [("Pair", StructInfo.mk [("lo", .one), ("hi", .one)] 2
+      [("lo", .word .trusted), ("hi", .word .trusted)])]
+  match shapedBasedFromShapeWith context .based (.named "Pair") with
+  | some (.named "Pair" [("lo", .word .based), ("hi", .word .based)]) => true
+  | _ => false
+
 /-! Cake's `get_memop_msg` diagnostics (`panStaticScript.sml:491-511`) are
     directional: local operations warn about non-base addresses, while shared
     operations warn about base addresses. -/

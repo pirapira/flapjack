@@ -208,6 +208,71 @@ def staticBind (result : StaticResult α) (continuation : α → StaticResult β
       let next := continuation value
       (next.1, warnings ++ next.2)
 
+/-! Cake's `sh_bd_from_bd` changes the basedness of every word while preserving
+    the already-validated shape tree.  The named-structure case of
+    `sh_bd_from_sh` is equivalent to applying it to the stored field tree; the
+    static checker has already validated that tree when the structure entered
+    the context. -/
+mutual
+  def shapedBasedWithBase : Based → ShapedBased → ShapedBased
+    | basedness, .word _ => .word basedness
+    | basedness, .struct fields =>
+        .struct (shapedBasedWithBaseList basedness fields)
+    | basedness, .named name fields =>
+        .named name (shapedBasedWithBaseFields basedness fields)
+  termination_by _ shaped => sizeOf shaped
+  decreasing_by
+    all_goals first | sizeOf_list_dec | decreasing_trivial
+
+  def shapedBasedWithBaseList (basedness : Based) : List ShapedBased → List ShapedBased
+    | [] => []
+    | shaped :: shapedRest =>
+        shapedBasedWithBase basedness shaped ::
+          shapedBasedWithBaseList basedness shapedRest
+  termination_by shapedRest => sizeOf shapedRest
+  decreasing_by
+    all_goals first | sizeOf_list_dec | decreasing_trivial
+
+  def shapedBasedWithBaseFields (basedness : Based) :
+      List (FieldName × ShapedBased) → List (FieldName × ShapedBased)
+    | [] => []
+    | (field, shaped) :: fieldRest =>
+        (field, shapedBasedWithBase basedness shaped) ::
+          shapedBasedWithBaseFields basedness fieldRest
+  termination_by fieldRest => sizeOf fieldRest
+  decreasing_by
+    all_goals first | sizeOf_list_dec | decreasing_trivial
+end
+
+def shapedBasedFromShapeWith (context : StructContext) (basedness : Based) :
+    Shape → Option ShapedBased
+  | .one => some (.word basedness)
+  | .comb shapes =>
+      match shapedBasedFromShapes context basedness shapes with
+      | some fields => some (.struct fields)
+      | none => none
+  | .named name =>
+      match lookupInfoWithRest name context with
+      | some (info, _) =>
+          some (.named name
+            (info.shapedFields.map (fun (field, shaped) =>
+              (field, shapedBasedWithBase basedness shaped))))
+      | none => none
+termination_by shape => sizeOf shape
+decreasing_by
+  all_goals first | sizeOf_list_dec | decreasing_trivial
+where
+  shapedBasedFromShapes (context : StructContext) (basedness : Based) :
+      List Shape → Option (List ShapedBased)
+    | [] => some []
+    | shape :: shapes => do
+        let shaped ← shapedBasedFromShapeWith context basedness shape
+        let rest ← shapedBasedFromShapes context basedness shapes
+        pure (shaped :: rest)
+  termination_by shapes => sizeOf shapes
+    decreasing_by
+      all_goals first | sizeOf_list_dec | decreasing_trivial
+
 def shapedBasedFromShape (context : StructContext) : Shape → Option ShapedBased
   | .one => some (.word .trusted)
   | .comb shapes =>

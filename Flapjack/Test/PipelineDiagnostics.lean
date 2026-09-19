@@ -108,6 +108,21 @@ def longDivSourceEntryRemoveConfig : StackRemoveConfig :=
 def longDivRuntimeSemanticConfig : StackRemoveConfig :=
   { longDivSourceEntryRemoveConfig with bytesInWord := 1 }
 
+/-! The Cake software path prepends the two code-table helpers before the
+    raise stub and user section.  Keep that linked ordering explicit: Lab
+    relocation and helper calls depend on these labels, while direct RISC-V
+    LongDiv encoding remains rejected above. -/
+def longDivLinkedSectionOrder : Bool :=
+  match RiscV.compileStackProgramNatListLinkedWithRaiseStubToRiscVCakeChecked
+      (width := 8) { services := [] } longDivRuntimeSemanticConfig 29 0
+      [(29, (.inst (.arith (.longDiv 0 3 3 0 6)) : StackProg Nat))] with
+  | .ok sections => sections.map (fun entry => entry.1) ==
+      [RiscV.cakeLongDiv1Location, RiscV.cakeLongDivLocation,
+       stackRaiseStubLocation, 29]
+  | .error _ => false
+
+#guard longDivLinkedSectionOrder
+
 def longDivRuntimeSemanticState : WordStackMachineState 8 :=
   { registers := fun register =>
       if register = 3 then BitVec.ofNat 8 1

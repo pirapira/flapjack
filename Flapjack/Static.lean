@@ -764,6 +764,14 @@ def getNonWordMessage (description shapeString location : String)
   location ++ description ++ " has shape " ++ shapeString ++
     " instead of a word in " ++ staticScopeDescription scope ++ "\n"
 
+/-! Source-shaped port of CakeML's `get_shape_mismatch_msg_def`
+    (`cakeml/pancake/panStaticScript.sml:560-566`). -/
+def getShapeMismatchMessage (description actualShape expectedShape location : String)
+    (scope : Scope) : String :=
+  location ++ description ++ " has shape " ++ actualShape ++
+    " instead of declared shape " ++ expectedShape ++ " in " ++
+    staticScopeDescription scope ++ "\n"
+
 def staticUnreachableWarning (context : Context) (last : LastStmt) : StatErr :=
   .warning (getUnreachMessage context.location (staticLastStmtString last) context.scope)
 

@@ -84,6 +84,22 @@ def parseTreeNtCakeParity : Bool :=
 
 #guard parseTreeNtCakeParity
 
+/-! Cake's leaf converters at
+    `panPtreeConversionScript.sml:90,97,104` accept only their respective
+    token constructors: identifiers become global variables, while foreign
+    identifiers remain FFI names. -/
+def convIdentCakeParity : Bool :=
+  let ident : ParseTree := .lf (.identT "x") unknownLoc
+  let foreign : ParseTree := .lf (.foreignIdent "write") unknownLoc
+  let integer : ParseTree := .lf (.intT 7) unknownLoc
+  match convIdent ident, convIdent foreign,
+      convFfiIdent foreign, convFfiIdent ident,
+      convVar (α := Nat) ident, convVar (α := Nat) integer with
+  | some "x", none, some "write", none, some (.var .global "x"), none => true
+  | _, _, _, _, _, _ => false
+
+#guard convIdentCakeParity
+
 #guard (pancakeLex "x + 1").map (·.1) == [.identT "x", .plusT, .intT 1]
 
 -- `//` runs to end of line; the block forms are `/* */` and `/@ @/`.

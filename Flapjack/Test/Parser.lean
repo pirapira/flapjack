@@ -55,6 +55,18 @@ def isAtomSingletonCakeParity : Bool :=
 
 #guard isAtomSingletonCakeParity
 
+/-! Cake's symbolic-group boundaries are `isAtom_begin_group_def` and
+    `isAtom_in_group_def` at `panLexerScript.sml:50,57`.  These guards cover
+    each complete source character set and nearby non-members; `nextAtom`
+    uses both predicates when collecting symbolic tokens. -/
+def isAtomGroupCakeParity : Bool :=
+  ("#=><!&|".toList).all isAtomBeginGroup &&
+  ("+-^*().,;:{}[]0a".toList).all (fun character => !isAtomBeginGroup character) &&
+  ("=<>|&+".toList).all isAtomInGroup &&
+  ("#$^*().,;:{}[]0a".toList).all (fun character => !isAtomInGroup character)
+
+#guard isAtomGroupCakeParity
+
 #guard (pancakeLex "x + 1").map (·.1) == [.identT "x", .plusT, .intT 1]
 
 -- `//` runs to end of line; the block forms are `/* */` and `/@ @/`.

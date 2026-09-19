@@ -67,6 +67,23 @@ def isAtomGroupCakeParity : Bool :=
 
 #guard isAtomGroupCakeParity
 
+/-! `isNT_def` and `argsNT_def` at
+    `panPtreeConversionScript.sml:58,62` inspect only the node's
+    nonterminal: matching nodes succeed, mismatching nodes and leaves do not. -/
+def parseTreeNtCakeParity : Bool :=
+  let matching : ParseTree := .nd .exp [] unknownLoc
+  let mismatching : ParseTree := .nd .prog [] unknownLoc
+  let leaf : ParseTree := .lf .semiT unknownLoc
+  ParseTree.isNT matching .exp &&
+    !ParseTree.isNT mismatching .exp &&
+    !ParseTree.isNT leaf .exp &&
+    match ParseTree.argsNT matching .exp, ParseTree.argsNT mismatching .exp,
+      ParseTree.argsNT leaf .exp with
+    | some [], none, none => true
+    | _, _, _ => false
+
+#guard parseTreeNtCakeParity
+
 #guard (pancakeLex "x + 1").map (·.1) == [.identT "x", .plusT, .intT 1]
 
 -- `//` runs to end of line; the block forms are `/* */` and `/@ @/`.

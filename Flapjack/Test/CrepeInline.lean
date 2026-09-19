@@ -44,6 +44,25 @@ def crepVarProgCakeParity : Bool :=
 
 #guard crepVarProgCakeParity
 
+/-! Direct Cake `vmax_prog_def` and `has_return_def` coverage
+    (`crep_inlineScript.sml:36-57`).  `vmax_prog` takes the maximum over
+    `var_prog`, while call return metadata determines `has_return`; handler
+    exception identifiers are deliberately not variable occurrences. -/
+def crepInlineAnalysisCakeParity : Bool :=
+  crepVmaxProg (.skip : CrepProg Nat) = 0 &&
+  crepVmaxProg
+      (.call (some ([8], some (9, .assign 10 (.var 11)))) "f" [.var 7]
+        : CrepProg Nat) = 11 &&
+  crepVmaxProg (.extCall "ffi" 12 13 14 15 : CrepProg Nat) = 15 &&
+  crepHasReturn (.call none "f" [] : CrepProg Nat) &&
+  !crepHasReturn (.call (some ([8], none)) "f" [] : CrepProg Nat) &&
+  crepHasReturn
+      (.call (some ([8], some (9, .return [.const 1]))) "f" [] : CrepProg Nat) &&
+  crepHasReturn (.while (.const 1) (.return [.const 1]) : CrepProg Nat) &&
+  !crepHasReturn (.assign 3 (.const 4) : CrepProg Nat)
+
+#guard crepInlineAnalysisCakeParity
+
 #guard crepVmaxProg
     (.seq (.assign 4 (.var 3)) (.return [.var 9]) : CrepProg Nat) = 9
 #guard crepHasReturn (.return [.const 0] : CrepProg Nat)

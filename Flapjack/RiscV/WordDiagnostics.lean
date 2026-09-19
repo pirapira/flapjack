@@ -132,6 +132,29 @@ termination_by program => sizeOf program
 decreasing_by
   all_goals decreasing_trivial
 
+/-! Cake's Lab collector visits the tail of a section before the current
+    line (`find_ffi_names` in `lab_to_targetScript.sml`).  Keep that exact
+    traversal separate from the source-order helper above: the RISC-V
+    artifact discovery boundary needs the collector order, while other
+    diagnostics use source order. -/
+def wordProgFfiNamesCake : WordProg α → List FunName
+  | .seq first second => wordProgFfiNamesCake second ++ wordProgFfiNamesCake first
+  | .ite _ _ _ thenBranch elseBranch =>
+      wordProgFfiNamesCake elseBranch ++ wordProgFfiNamesCake thenBranch
+  | .loop _ body _ | .mustTerminate body => wordProgFfiNamesCake body
+  | .call returns _ _ handler =>
+      (match handler with
+       | some (_, body, _, _) => wordProgFfiNamesCake body
+       | none => []) ++
+        (match returns with
+         | some (_, _, returnCode, _, _) => wordProgFfiNamesCake returnCode
+         | none => [])
+  | .ffi function _ _ _ _ _ => [function]
+  | _ => []
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
+
 def wordProgNeedsCakeFrame (program : WordProg α) : Bool :=
   !(wordProgFfiNames program).isEmpty || wordProgHasFrameOperations program
 

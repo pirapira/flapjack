@@ -31,7 +31,7 @@
     },
     "frame/ffi-stub": {
      "beads": ["flapjack-pxn.8.5.14.2"],
-     "reason": "Flapjack now emits the CakeML cake_ffi<name>: stub blocks (tail cdecl(ffi<name>), .p2align 4) in first-appearance order between the startup stub and cake_clear. Residual tracked by the bead: stubs for FFI names referenced only from unreachable code (Flapjack discovers names pre-DCE, CakeML removes dead code first; same family as the 8.5.10.1 lowering diffs)."
+     "reason": "Flapjack now follows Cake's tail-first find_ffi_names collector and emits the CakeML cake_ffi<name>: stub blocks (tail cdecl(ffi<name>), .p2align 4) in the same exported order between the startup stub and cake_clear. Residual tracked by the bead: stubs for FFI names referenced only from unreachable code (Flapjack discovers names pre-DCE, CakeML removes dead code first; same family as the 8.5.10.1 lowering diffs)."
     }
   }
 }

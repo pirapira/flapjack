@@ -1,0 +1,5 @@
+fun 1 main() {
+  @foo(1, 2, 3, 4);
+  @halt(@base, 0, @base, 0);
+  return 0;
+}

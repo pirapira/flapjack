@@ -408,6 +408,23 @@ def parseTopDecsCakeParity : Bool :=
 
 #guard parseTopDecsCakeParity
 
+/-! Cake `mknt_def` (`panPEGScript.sml:36`) wraps child trees in a
+    nonterminal node whose location spans the first child's start through the
+    last child's stop; an empty child list has `unknownLoc`. -/
+def mkNtCakeParity : Bool :=
+  let firstLoc : Locs := { start := .posn 2 3, stop := .posn 2 4 }
+  let lastLoc : Locs := { start := .posn 2 8, stop := .posn 2 9 }
+  let first : ParseTree := .lf (.identT "x") firstLoc
+  let last : ParseTree := .lf (.intT 7) lastLoc
+  let children : P.Trees := [first, last]
+  let expected : Locs := { start := .posn 2 3, stop := .posn 2 9 }
+  match P.mkNode .prog children, P.mkSubtree .prog children, P.mkNode .exp [] with
+  | .nd .prog _ nodeLoc, [.nd .prog _ subtreeLoc], .nd .exp [] emptyLoc =>
+      nodeLoc == expected && subtreeLoc == expected && emptyLoc == unknownLoc
+  | _, _, _ => false
+
+#guard mkNtCakeParity
+
 #guard (pancakeLex "x + 1").map (·.1) == [.identT "x", .plusT, .intT 1]
 
 -- `//` runs to end of line; the block forms are `/* */` and `/@ @/`.

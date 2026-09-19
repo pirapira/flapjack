@@ -1434,13 +1434,14 @@ def staticCheckNames [BEq String] (context : StructContext) :
   | [] => staticOk context
   | .name name fields :: declarations =>
       if (lookupInfo name context).isSome then
-        staticError (.scope ("structure is redeclared: " ++ name))
+        staticError (.scope (getRedecMessage .struct "" name .topLevel))
       else
         -- CakeML sorts (`panStaticScript.sml:578-585`) so `first_repeat`
         -- reports the lexicographically smallest duplicate.
         match firstRepeat ((fields.map Prod.fst).mergeSort (· ≤ ·)) with
         | some field =>
-            staticError (.scope ("structure field is redeclared: " ++ field))
+            staticError (.scope ("field " ++ field ++
+              " is redeclared in struct name " ++ name ++ "\n"))
         | none =>
             staticBind (checkIdShapes context "" (.structScope name "") fields) (fun _ =>
               let shapedFields :=

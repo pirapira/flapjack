@@ -163,14 +163,18 @@ example :
     some "operation Add requires at least 2 operands, 1 provided in top-level declaration\n"
 
 example :
-    checkProg (α := Nat) checkerContext (.return (.const 7)) =
-      progOk .retLast true false "" := by
-  simp [checkProg, checkExp, staticOk, staticBind, checkerContext]
+    staticResultErrorMessage (checkProg (α := Nat) checkerContext
+      (.return (.const 7))) =
+      some "return found outside function scope in top-level declaration\nthis should never happen. please report to a compiler developer\n" := by
+  native_decide
 
 example :
     checkProg (α := Nat) checkerContext
       (.assign .local "x" (.const 7)) =
-      progOk .otherLast false false "" := by
+      staticOk
+        { exitsFunction := false, exitsLoop := false, last := .otherLast,
+          variableDelta := [("x", { shapedBased := .word .notBased })],
+          currentLocation := "" } := by
   simp [checkProg, checkExp, staticOk, staticBind, checkerContext, lookupInfo,
     checkLocalVar,
     shapedBasedSameShape]
@@ -203,16 +207,18 @@ example :
 
 example :
     staticResultOk (checkProg (α := Nat) checkerContext
-      (.dec "y" .one (.const 7) (.return (.var .local "y")))) = true := by
-  decide +kernel
+      (.dec "y" .one (.const 7) (.return (.var .local "y")))) = false := by
+  simp [staticResultOk, checkProg, checkExp, staticError, staticOk, staticBind,
+    checkRedecVar, checkShape, checkerContext, lookupInfo, checkLocalVar,
+    shapedBasedHasShape]
 
 example :
     checkProg (α := Nat) checkerCallContext (.call none "f" []) =
-      progOk .tailLast true false "" := by
-  simp [checkProg, checkProg.checkCallArgs,
-    staticOk, staticBind,
-    checkFunctionName, checkFuncArgs, checkerCallContext, checkerContext,
-    lookupInfo]
+      staticError (.general (getImplementationErrorMessage
+        "tail call found outside function scope" "" Scope.topLevel)) := by
+  simp [checkProg, checkProg.checkCallArgs, staticError, staticOk,
+    staticBind, checkFunctionName, checkFuncArgs, checkerCallContext,
+    checkerContext, lookupInfo]
 
 example :
     checkProg (α := Nat) checkerCallContext
@@ -237,11 +243,12 @@ example :
 example :
     checkProg (α := Nat) checkerArgContext
       (.call none "f" [.const 1]) =
-      progOk .tailLast true false "" := by
-  simp [checkProg, checkProg.checkCallArgs, checkExp, staticOk, staticBind,
-    checkFunctionName, checkFuncArgs, shapedBasedMatchesShape,
-    shapedBasedFromShape, shapedBasedSameShape, checkerArgContext, checkerContext,
-    lookupInfo]
+      staticError (.general (getImplementationErrorMessage
+        "tail call found outside function scope" "" Scope.topLevel)) := by
+  simp [checkProg, checkProg.checkCallArgs, checkExp, staticError, staticOk,
+    staticBind, checkFunctionName, checkFuncArgs, checkerArgContext,
+    checkerContext, lookupInfo, shapedBasedMatchesShape, shapedBasedFromShape,
+    shapedBasedSameShape]
 
 example :
     staticResultOk (checkProg (α := Nat) checkerPrimitiveContext

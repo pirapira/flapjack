@@ -175,6 +175,9 @@ mutual
         WordCallHandler (Word width) →
         Option (WordLoopControlResult width)
     | 0, _, _, _, _, _ => none
+    /- Cake rejects a tail call carrying an exception handler before entering
+       the callee (`loopSemScript.sml:evaluate_def`). -/
+    | _fuel + 1, _, none, _, _, some _ => none
     | fuel + 1, state, returns, target, arguments, handler => do
         let target ← target
         let (parameters, body) ← lookupWordFunction target functions
@@ -204,7 +207,10 @@ mutual
               privilege := calleeState.privilege
               mode := calleeState.mode }
         match result with
-        | .normal _ => some (.normal returnedState)
+        /- A call may finish only with a return value or an exception.  Normal
+           fall-through and loop control escaping a callee are Cake `Error`,
+           not caller-visible control results. -/
+        | .normal _ | .broke _ _ | .continued _ _ => none
         | .returned _ values =>
             match returns with
             | none => some (.returned returnedState values)
@@ -218,8 +224,6 @@ mutual
                 let name ← registerOfNat name
                 evalWordLoopProgWithHandlersAndFfi functions ffiHandler fuel
                   (writeRegister returnedState name exception) handlerBody
-        | .broke _ label => some (.broke returnedState label)
-        | .continued _ label => some (.continued returnedState label)
     termination_by fuel _ _ _ _ _ => fuel
 
   def evalWordLoopProgWithHandlersAndFfi [NeZero width]

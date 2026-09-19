@@ -186,4 +186,27 @@ theorem panValuePcCompileCorrect_compact_return_nat :
       hstate.2.2⟩
   exact ⟨hstateRel, panValueCrepValuesRel_singleton (.word 7)⟩
 
+theorem panValuePcCompileCorrect_compact_seq_skip_tick_nat :
+    PanValuePcCompileCorrect
+      (panValuePcCompactSourceEvaluator
+        skipNatPrimitive skipNatSourceHandler [] 0 0 1 2)
+      (crepPcCompactTargetEvaluator
+        [] skipNatCrepPrimitive skipNatFfi skipNatSharedMem 0 0 2)
+      skipNatCodeRel skipNatExcpRel skipNatExceptionCode
+      skipNatGlobalsLookup (.seq (.skip : Prog Nat) .tick) := by
+  intro context structs sourceInput targetInput exceptionRel sourceExecution
+    targetExecution hsourceStructs htargetStructs hlocalisedCode hlocalised
+    hcode hexcp hstate hnonerror hsource htarget hpostCode hpostExcp
+  simp [panValuePcCompactSourceEvaluator,
+    evalPanValueProgWithPrimitiveCallsAndFfi] at hsource
+  cases hsource
+  simp [crepPcCompactTargetEvaluator, evalCrepFullProgState, compileProg]
+    at htarget
+  obtain ⟨targetResult, htargetResult, htargetExecution⟩ := htarget
+  cases htargetExecution
+  simp [crepPcResultOfControl] at htargetResult
+  cases htargetResult
+  simpa [panValuePcResultOfControl, panValuePcResultRel,
+    panValueCrepControlRel] using hstate
+
 end Flapjack

@@ -295,6 +295,43 @@ The grammar cannot tell a local from a global, so every variable starts
 #guard sameAst (prog "var v = 1; st32 v, v;")
   (.ok (.dec "v" .one (.const 1) (.store32 (.var .local "v") (.var .local "v"))))
 
+/-! Direct oracle for `localise_prog_def` from
+`cakeml/pancake/parser/panPtreeConversionScript.sml:844`.  The scope extends
+only over declaration/DecCall bodies and handler bodies; call targets and
+arguments use the incoming scope, while primitive destinations remain names
+and are not reclassified by this pass. -/
+def localiseProgCakeParity : Bool :=
+  sameAst
+    (localiseProg []
+      (.dec "x" .one (.var .global "g")
+        (.seq (.assign .global "x" (.var .global "x"))
+          (.return (.var .global "g"))) : Prog Int))
+    (.dec "x" .one (.var .global "g")
+      (.seq (.assign .local "x" (.var .local "x"))
+        (.return (.var .global "g")))) &&
+  sameAst
+    (localiseProg ["x"]
+      (.call (some (some (.global, "x"), none)) "f"
+        [.var .global "x"] : Prog Int))
+    (.call (some (some (.local, "x"), none)) "f"
+      [.var .local "x"]) &&
+  sameAst
+    (localiseProg ["x"]
+      (.call (some (some (.global, "x"),
+        some ("E", "e", .return (.var .global "e")))) "f"
+        [.var .global "x"] : Prog Int))
+    (.call (some (some (.local, "x"),
+      some ("E", "e", .return (.var .local "e")))) "f"
+      [.var .local "x"]) &&
+  sameAst
+    (localiseProg []
+      (.decCall "r" .one "f" [.var .global "g"]
+        (.return (.var .global "r")) : Prog Int))
+    (.decCall "r" .one "f" [.var .global "g"]
+      (.return (.var .local "r")))
+
+#guard localiseProgCakeParity
+
 /-! ### Errors
 
 Invalid syntax gives a structured error with a position, not a silent

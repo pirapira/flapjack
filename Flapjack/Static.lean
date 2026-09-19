@@ -1163,6 +1163,21 @@ def staticCheckNames [BEq String] (context : StructContext) :
   | _ :: declarations => staticCheckNames context declarations
 termination_by declarations => sizeOf declarations
 
+/-! Source-shaped port of CakeML's `check_export_params_def`
+    (`cakeml/pancake/panStaticScript.sml:649-658`).  Exported parameters are
+    required to have exactly the scalar `One` shape, and Cake reports the
+    offending parameter's name and shape. -/
+def checkExportParams (location : String) (scope : Scope) :
+    List (VarName × Shape) → StaticResult Unit
+  | [] => staticOk ()
+  | (name, shape) :: params =>
+      if shapesSame shape .one then
+        checkExportParams location scope params
+      else
+        staticError (.shape (getNonWordMessage
+          ("exported function parameter " ++ name)
+          (Shape.shapeToString shape) location scope))
+
 def staticCheckFunctionHeader [BEq String] (context : StructContext)
     (declaration : FunDecl α) : StaticResult Unit :=
   if declaration.name = "main" then
@@ -1179,11 +1194,12 @@ def staticCheckFunctionHeader [BEq String] (context : StructContext)
   else if declaration.exported && declaration.params.length > 4 then
     staticError (.general ("exported function has more than four arguments: " ++
       declaration.name))
-  else if declaration.exported &&
-      !declaration.params.all (fun (_, shape) => shapesSame shape .one) then
-    staticError (.shape "exported function parameters must be words")
-  else if declaration.exported && !shapesSame declaration.returnShape .one then
-    staticError (.shape "exported function must return one word")
+  else if declaration.exported then
+    staticBind (checkExportParams "" (.funScope declaration.name "") declaration.params)
+      (fun _ =>
+        if !shapesSame declaration.returnShape .one then
+          staticError (.shape "exported function must return one word")
+        else staticOk ())
   else if !isWfShape context declaration.returnShape ||
       !declaration.params.all (fun (_, shape) => isWfShape context shape) then
     staticError (.shape ("function has an unknown or invalid parameter/return shape: " ++

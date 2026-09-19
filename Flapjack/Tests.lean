@@ -61,6 +61,7 @@ import Flapjack.Test.CrepeHandlerCorrectness
 import Flapjack.Test.CrepeRuntimeGlobalCorrectness
 import Flapjack.Test.StaticGlobalVarParity
 import Flapjack.Test.StaticRedecVarParity
+import Flapjack.Test.StaticExportParamsParity
 import Flapjack.Test.CorrectnessConditional
 import Flapjack.Test.CorrectnessColour
 import Flapjack.Test.CorrectnessSsaColour

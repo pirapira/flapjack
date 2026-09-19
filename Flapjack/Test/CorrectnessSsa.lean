@@ -4,6 +4,19 @@ namespace Flapjack.RiscV
 
 /-! Regression coverage for the first SSA-renaming semantic boundary. -/
 
+private theorem zeroStateSsaRegisterAgreement (next : Nat) :
+    ∀ name, name < 32 →
+      (do
+        let register ← registerOfNat name
+        pure (readRegister (zeroState 32) register)) =
+      (do
+        let register ← registerOfNat
+          (wordSsaRead ({ current := [], next := next } : WordSsaState) name)
+        pure (readRegister (zeroState 32) register)) := by
+  intro name hname
+  simp [registerOfNat, wordSsaRead, lookupNatInfo, zeroState, readRegister,
+    hname]
+
 example :
     (evalWordProg (zeroState 32)
       (.inst (.mem .store 1 2))).map (fun state => state.memory) =
@@ -12,8 +25,7 @@ example :
           ({ current := [], next := 0 } : WordSsaState)
           (.mem .store 1 2)).2)).map (fun state => state.memory) := by
   apply evalWordProg_ssaRename_store
-  · intro name
-    rfl
+  · exact zeroStateSsaRegisterAgreement _
   · rfl
   all_goals decide
 
@@ -27,12 +39,7 @@ example :
           (.shareInst .store8 1 (.const (BitVec.ofNat 32 16)))).2).map
         (fun state => state.memory) := by
   apply evalWordProg_ssaRename_program_share_store8_const
-  · intro name
-    simp [registerOfNat, wordSsaRead, lookupNatInfo]
-    split
-    · simp_all
-    · have hlt : ¬ name < 32 := by omega
-      simp [hlt]
+  · exact zeroStateSsaRegisterAgreement _
   · rfl
   · rfl
   all_goals decide
@@ -47,12 +54,7 @@ example :
           (.shareInst .store16 1 (.const (BitVec.ofNat 32 16)))).2).map
         (fun state => state.memory) := by
   apply evalWordProg_ssaRename_program_share_store16_const
-  · intro name
-    simp [registerOfNat, wordSsaRead, lookupNatInfo]
-    split
-    · simp_all
-    · have hlt : ¬ name < 32 := by omega
-      simp [hlt]
+  · exact zeroStateSsaRegisterAgreement _
   · rfl
   · rfl
   all_goals decide
@@ -67,12 +69,7 @@ example :
           (.shareInst .store32 1 (.const (BitVec.ofNat 32 16)))).2).map
         (fun state => state.memory) := by
   apply evalWordProg_ssaRename_program_share_store32_const
-  · intro name
-    simp [registerOfNat, wordSsaRead, lookupNatInfo]
-    split
-    · simp_all
-    · have hlt : ¬ name < 32 := by omega
-      simp [hlt]
+  · exact zeroStateSsaRegisterAgreement _
   · rfl
   · rfl
   all_goals decide
@@ -88,8 +85,7 @@ example :
         readRegister target' ⟨4, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_load_destination
-  · intro name
-    rfl
+  · exact zeroStateSsaRegisterAgreement _
   · rfl
   all_goals decide
 
@@ -101,8 +97,7 @@ example :
           ({ current := [], next := 4 } : WordSsaState)
           (.mem .store32 1 2)).2)).map (fun state => state.memory) := by
   apply evalWordProg_ssaRename_store_family
-  · intro name
-    rfl
+  · exact zeroStateSsaRegisterAgreement _
   · rfl
   · exact Or.inr (Or.inr (Or.inr rfl))
   all_goals decide
@@ -118,8 +113,7 @@ example :
         readRegister target' ⟨4, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_div_destination
-  · intro name
-    rfl
+  · exact zeroStateSsaRegisterAgreement _
   · rfl
   all_goals decide
 
@@ -146,8 +140,7 @@ example :
     (sourceLeft := 2) (sourceRight := 3)
   · rfl
   · rfl
-  · intro name
-    rfl
+  · exact zeroStateSsaRegisterAgreement _
   · rfl
   all_goals decide
 
@@ -174,8 +167,7 @@ example :
     (sourceLeft := 6) (sourceRight := 7) (carryIn := 9)
   · rfl
   · rfl
-  · intro name
-    rfl
+  · exact zeroStateSsaRegisterAgreement _
   · rfl
   all_goals decide
 
@@ -190,8 +182,7 @@ example :
         readRegister target' ⟨4, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_load8_destination
-  · intro name
-    rfl
+  · exact zeroStateSsaRegisterAgreement _
   · rfl
   all_goals decide
 
@@ -206,8 +197,7 @@ example :
         readRegister target' ⟨4, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_load16_destination
-  · intro name
-    rfl
+  · exact zeroStateSsaRegisterAgreement _
   · rfl
   all_goals decide
 
@@ -222,8 +212,7 @@ example :
         readRegister target' ⟨4, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_load32_destination
-  · intro name
-    rfl
+  · exact zeroStateSsaRegisterAgreement _
   · rfl
   all_goals decide
 
@@ -253,8 +242,7 @@ example :
         readRegister target' ⟨4, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_assign_var_destination
-  · intro name
-    rfl
+  · exact zeroStateSsaRegisterAgreement _
   · rfl
   all_goals decide
 
@@ -286,12 +274,7 @@ example :
         readRegister target' ⟨4, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_assign_binary_var_var_destination
-  · intro name
-    simp [registerOfNat, wordSsaRead, lookupNatInfo]
-    split
-    · simp_all
-    · have hlt : ¬ name < 32 := by omega
-      simp [hlt]
+  · exact zeroStateSsaRegisterAgreement _
   · rfl
   all_goals decide
 
@@ -308,12 +291,7 @@ example :
         readRegister target' ⟨4, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_assign_binary_var_const_destination
-  · intro name
-    simp [registerOfNat, wordSsaRead, lookupNatInfo]
-    split
-    · simp_all
-    · have hlt : ¬ name < 32 := by omega
-      simp [hlt]
+  · exact zeroStateSsaRegisterAgreement _
   · rfl
   all_goals decide
 
@@ -349,12 +327,7 @@ example :
         readRegister target' ⟨4, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_assign_shift_var_const_destination
-  · intro name
-    simp [registerOfNat, wordSsaRead, lookupNatInfo]
-    split
-    · simp_all
-    · have hlt : ¬ name < 32 := by omega
-      simp [hlt]
+  · exact zeroStateSsaRegisterAgreement _
   · rfl
   all_goals decide
 
@@ -371,12 +344,7 @@ example :
         readRegister target' ⟨4, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_assign_shift_var_var_destination
-  · intro name
-    simp [registerOfNat, wordSsaRead, lookupNatInfo]
-    split
-    · simp_all
-    · have hlt : ¬ name < 32 := by omega
-      simp [hlt]
+  · exact zeroStateSsaRegisterAgreement _
   · rfl
   all_goals decide
 
@@ -393,12 +361,7 @@ example :
         readRegister target' ⟨4, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_assign_rotate_var_const_destination
-  · intro name
-    simp [registerOfNat, wordSsaRead, lookupNatInfo]
-    split
-    · simp_all
-    · have hlt : ¬ name < 32 := by omega
-      simp [hlt]
+  · exact zeroStateSsaRegisterAgreement _
   · rfl
   all_goals decide
 
@@ -415,12 +378,7 @@ example :
         readRegister target' ⟨4, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_assign_rotate_var_var_destination
-  · intro name
-    simp [registerOfNat, wordSsaRead, lookupNatInfo]
-    split
-    · simp_all
-    · have hlt : ¬ name < 32 := by omega
-      simp [hlt]
+  · exact zeroStateSsaRegisterAgreement _
   · rfl
   all_goals decide
 
@@ -433,12 +391,7 @@ example :
           (.store (.var 2) 1)).2).map
         (fun state => state.memory) := by
   apply evalWordProg_ssaRename_program_store_var
-  · intro name
-    simp [registerOfNat, wordSsaRead, lookupNatInfo]
-    split
-    · simp_all
-    · have hlt : ¬ name < 32 := by omega
-      simp [hlt]
+  · exact zeroStateSsaRegisterAgreement _
   · rfl
   all_goals decide
 
@@ -454,12 +407,7 @@ example :
         readRegister target' ⟨4, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_program_share_load
-  · intro name
-    simp [registerOfNat, wordSsaRead, lookupNatInfo]
-    split
-    · simp_all
-    · have hlt : ¬ name < 32 := by omega
-      simp [hlt]
+  · exact zeroStateSsaRegisterAgreement _
   · rfl
   all_goals decide
 
@@ -475,12 +423,7 @@ example :
         readRegister target' ⟨4, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_program_share_load8
-  · intro name
-    simp [registerOfNat, wordSsaRead, lookupNatInfo]
-    split
-    · simp_all
-    · have hlt : ¬ name < 32 := by omega
-      simp [hlt]
+  · exact zeroStateSsaRegisterAgreement _
   · rfl
   all_goals decide
 
@@ -496,12 +439,7 @@ example :
         readRegister target' ⟨4, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_program_share_load16
-  · intro name
-    simp [registerOfNat, wordSsaRead, lookupNatInfo]
-    split
-    · simp_all
-    · have hlt : ¬ name < 32 := by omega
-      simp [hlt]
+  · exact zeroStateSsaRegisterAgreement _
   · rfl
   all_goals decide
 
@@ -517,12 +455,7 @@ example :
         readRegister target' ⟨4, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_program_share_load32
-  · intro name
-    simp [registerOfNat, wordSsaRead, lookupNatInfo]
-    split
-    · simp_all
-    · have hlt : ¬ name < 32 := by omega
-      simp [hlt]
+  · exact zeroStateSsaRegisterAgreement _
   · rfl
   all_goals decide
 
@@ -535,12 +468,7 @@ example :
           (.shareInst .store 1 (.var 2))).2).map
         (fun state => state.memory) := by
   apply evalWordProg_ssaRename_program_share_store
-  · intro name
-    simp [registerOfNat, wordSsaRead, lookupNatInfo]
-    split
-    · simp_all
-    · have hlt : ¬ name < 32 := by omega
-      simp [hlt]
+  · exact zeroStateSsaRegisterAgreement _
   · rfl
   all_goals decide
 
@@ -553,12 +481,7 @@ example :
           (.shareInst .store8 1 (.var 2))).2).map
         (fun state => state.memory) := by
   apply evalWordProg_ssaRename_program_share_store8
-  · intro name
-    simp [registerOfNat, wordSsaRead, lookupNatInfo]
-    split
-    · simp_all
-    · have hlt : ¬ name < 32 := by omega
-      simp [hlt]
+  · exact zeroStateSsaRegisterAgreement _
   · rfl
   all_goals decide
 
@@ -571,12 +494,7 @@ example :
           (.shareInst .store16 1 (.var 2))).2).map
         (fun state => state.memory) := by
   apply evalWordProg_ssaRename_program_share_store16
-  · intro name
-    simp [registerOfNat, wordSsaRead, lookupNatInfo]
-    split
-    · simp_all
-    · have hlt : ¬ name < 32 := by omega
-      simp [hlt]
+  · exact zeroStateSsaRegisterAgreement _
   · rfl
   all_goals decide
 
@@ -589,12 +507,7 @@ example :
           (.shareInst .store32 1 (.var 2))).2).map
         (fun state => state.memory) := by
   apply evalWordProg_ssaRename_program_share_store32
-  · intro name
-    simp [registerOfNat, wordSsaRead, lookupNatInfo]
-    split
-    · simp_all
-    · have hlt : ¬ name < 32 := by omega
-      simp [hlt]
+  · exact zeroStateSsaRegisterAgreement _
   · rfl
   all_goals decide
 
@@ -624,12 +537,7 @@ example :
           (.shareInst .store 1 (.const (BitVec.ofNat 32 16)))).2).map
         (fun state => state.memory) := by
   apply evalWordProg_ssaRename_program_share_store_const
-  · intro name
-    simp [registerOfNat, wordSsaRead, lookupNatInfo]
-    split
-    · simp_all
-    · have hlt : ¬ name < 32 := by omega
-      simp [hlt]
+  · exact zeroStateSsaRegisterAgreement _
   · rfl
   · rfl
   all_goals decide

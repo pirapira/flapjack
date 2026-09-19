@@ -256,6 +256,23 @@ def convExportCakeParity : Bool :=
 
 #guard convExportCakeParity
 
+/-! Cake `conv_FieldNameList_def` (`panPtreeConversionScript.sml:740`) passes
+    the exact `FieldNameListNT` children to the shaped-parameter converter,
+    preserving empty lists and rejecting incomplete pairs. -/
+def convFieldNameListCakeParity : Bool :=
+  let one : ParseTree := .lf (.intT 1) unknownLoc
+  let x : ParseTree := .lf (.identT "field") unknownLoc
+  let valid : ParseTree := .nd .fieldNameList [one, x] unknownLoc
+  let empty : ParseTree := .nd .fieldNameList [] unknownLoc
+  let wrongNode : ParseTree := .nd .paramList [one, x] unknownLoc
+  let short : ParseTree := .nd .fieldNameList [one] unknownLoc
+  match convFieldNameList 8 valid, convFieldNameList 8 empty,
+      convFieldNameList 8 wrongNode, convFieldNameList 8 short with
+  | some [("field", .one)], some [], none, none => true
+  | _, _, _, _ => false
+
+#guard convFieldNameListCakeParity
+
 #guard (pancakeLex "x + 1").map (·.1) == [.identT "x", .plusT, .intT 1]
 
 -- `//` runs to end of line; the block forms are `/* */` and `/@ @/`.

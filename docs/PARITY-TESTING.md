@@ -205,6 +205,15 @@ For any intermediate-stage investigation, also set `PANCAKE_STAGE_LABEL=258`
 `crep_to_loop` result before `loop_to_word`, avoiding multi-gigabyte dumps for
 large guests; it can be combined with the allocator probe.
 
+For a relocation or stored-length discrepancy after `loop_to_word`, use
+`flapjack-debug --lab-label LABEL CASE.pnk`. It prints only the selected
+source-shaped Lab section at the `initial`, `encoded`, `relabelled`, and
+`final` linker stages, including each line's stored length and byte position.
+The label is the numeric section name shown by the Lean stage dump; this
+compact view avoids rendering the complete linked program. Compare it with
+the CakeML `enc_sec_list`/`enc_secs_again` probe before changing relocation or
+padding code.
+
 For a larger campaign, preserve the complete finding directory produced by
 `parity-difffuzz.py --out ... --minimize` and then run `parity-debug.py` on its
 `case.min.pnk`. This keeps fuzzing, shrinking, stage inspection, and review

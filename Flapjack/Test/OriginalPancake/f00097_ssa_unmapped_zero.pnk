@@ -1,0 +1,21 @@
+fun 1 add1(1 a, 1 b) {
+  return 0;
+}
+fun 1 sub1(1 a) {
+  return 0;
+}
+struct S { 1 f1, 1 f2 }
+exception E : 1;
+fun S mks(1 a, 1 b) { return S <f1 = a, f2 = b>; }
+fun 1 main() {
+  var 1 x = 0;
+  var 1 y656 = 0;
+  var 1 y189 = sub1(0);
+  var S s642 = mks(0, 0);
+  if (1 >= ((ld8 0) #>> 2)) {
+    throw E (lds 1 (0));
+  } else {
+    throw E s642.f1;
+  }
+  return add1(0, (0 >> y189));
+}

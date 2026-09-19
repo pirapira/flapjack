@@ -87,12 +87,7 @@ theorem evalCrepFullCall_normal_inversion
                           · rfl
                           · exact hassign
                           · exact hcallee
-                          · have htarget :
-                                some ({ caller with memory := callee.memory }) =
-                                  some target := by
-                              simpa [evalCrepFullCall, hvalues, hlookup, hassign, hcallee]
-                                using hcall
-                            exact (Option.some.inj htarget).symm
+                          · simp [evalCrepFullCall, hvalues, hlookup, hassign, hcallee] at hcall
                       | returned callee calleeValues =>
                           cases hdest : assignExistingCrepValues caller.locals destinations calleeValues with
                           | none =>
@@ -173,12 +168,7 @@ theorem evalCrepFullCall_none_normal_inversion
                           · rfl
                           · exact hassign
                           · exact hcallee
-                          · have htarget :
-                                some ({ caller with memory := callee.memory }) =
-                                  some target := by
-                              simpa [evalCrepFullCall, hvalues, hlookup, hassign, hcallee]
-                                using hcall
-                            exact (Option.some.inj htarget).symm
+                          · simp [evalCrepFullCall, hvalues, hlookup, hassign, hcallee] at hcall
                       | returned callee values
                       | raised callee exception
                       | broke callee label
@@ -258,12 +248,7 @@ theorem evalCrepFullCallState_normal_inversion
                           · rfl
                           · exact hassign
                           · exact hcallee
-                          · have htarget :
-                                some (CrepState.mk caller.locals callee.memory callee.globals) =
-                                  some target := by
-                              simpa [evalCrepFullCallState, hvalues, hlookup, hassign, hcallee]
-                                using hcall
-                            exact (Option.some.inj htarget).symm
+                          · simp [evalCrepFullCallState, hvalues, hlookup, hassign, hcallee] at hcall
                       | returned callee calleeValues =>
                           cases hdest : assignExistingCrepValues caller.locals destinations calleeValues with
                           | none =>

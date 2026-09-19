@@ -30,7 +30,7 @@ example :
     wordSsaRenameProgram ({ current := [], next := 4 } : WordSsaState)
         (.inst (.arith (.longMul 1 2 2 3)) : WordProg Nat) =
       ({ current := [(2, 8), (1, 4)], next := 12 },
-        .seq (.move 1 [(0, 2), (4, 3)])
+        .seq (.move 1 [(0, 0), (4, 0)])
         (.seq (.inst (.arith (.longMul 6 0 0 4)))
             (.move 1 [(8, 0), (4, 6)]))) := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
@@ -47,7 +47,7 @@ example :
     wordSsaRenameProgram ({ current := [], next := 10 } : WordSsaState)
         (.inst (.arith (.longMul 1 2 3 4)) : WordProg Nat) =
       ({ current := [(2, 14), (1, 10)], next := 18 },
-        .seq (.move 1 [(0, 3), (4, 4)])
+        .seq (.move 1 [(0, 0), (4, 0)])
             (.seq (.inst (.arith (.longMul 6 0 0 4)))
             (.move 1 [(14, 0), (10, 6)]))) := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
@@ -103,8 +103,8 @@ example :
     wordSsaRenameProgram ({ current := [], next := 10 } : WordSsaState)
       (.ffi "f" 1 2 3 4 ([5], [6]) : WordProg Nat) =
       ({ current := [(6, 26), (5, 22)], next := 30 },
-        .seq (.move 0 [(12, 5), (16, 6)])
-          (.seq (.move 1 [(2, 1), (4, 2), (6, 3), (8, 4)])
+        .seq (.move 0 [(12, 0), (16, 0)])
+          (.seq (.move 1 [(2, 0), (4, 0), (6, 0), (8, 0)])
             (.seq (.ffi "f" 2 4 6 8 ([12], [16]))
               (.move 0 [(22, 12), (26, 16)])))) := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,

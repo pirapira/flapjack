@@ -74,7 +74,7 @@ theorem writeWordValue_memory_congr [NeZero width]
 
 theorem evalWordProg_ssaRename_store [NeZero width]
     (ssa : WordSsaState) (source target : State width)
-    (hregister : ∀ name,
+    (hregister : ∀ name, name < 32 →
       (do
         let register ← registerOfNat name
         pure (readRegister source register)) =
@@ -131,7 +131,7 @@ theorem writeWord32_memory_congr
 
 theorem evalWordProg_ssaRename_store_family [NeZero width]
     (ssa : WordSsaState) (source target : State width)
-    (hregister : ∀ name,
+    (hregister : ∀ name, name < 32 →
       (do
         let register ← registerOfNat name
         pure (readRegister source register)) =
@@ -179,7 +179,7 @@ theorem evalWordProg_ssaRename_store_family [NeZero width]
 
 theorem evalWordProg_ssaRename_load_destination [NeZero width]
     (ssa : WordSsaState) (source target : State width)
-    (hregister : ∀ name,
+    (hregister : ∀ name, name < 32 →
       (do
         let register ← registerOfNat name
         pure (readRegister source register)) =
@@ -225,7 +225,7 @@ theorem evalWordProg_ssaRename_load_destination [NeZero width]
 
 theorem evalWordProg_ssaRename_load8_destination [NeZero width]
     (ssa : WordSsaState) (source target : State width)
-    (hregister : ∀ name,
+    (hregister : ∀ name, name < 32 →
       (do
         let register ← registerOfNat name
         pure (readRegister source register)) =
@@ -273,7 +273,7 @@ theorem evalWordProg_ssaRename_load8_destination [NeZero width]
 
 theorem evalWordProg_ssaRename_load16_destination [NeZero width]
     (ssa : WordSsaState) (source target : State width)
-    (hregister : ∀ name,
+    (hregister : ∀ name, name < 32 →
       (do
         let register ← registerOfNat name
         pure (readRegister source register)) =
@@ -319,7 +319,7 @@ theorem evalWordProg_ssaRename_load16_destination [NeZero width]
 
 theorem evalWordProg_ssaRename_load32_destination [NeZero width]
     (ssa : WordSsaState) (source target : State width)
-    (hregister : ∀ name,
+    (hregister : ∀ name, name < 32 →
       (do
         let register ← registerOfNat name
         pure (readRegister source register)) =
@@ -414,7 +414,7 @@ theorem wordSsaRenameProgram_assign_var [OfNat α 0]
 
 theorem evalWordProg_ssaRename_assign_var_destination [NeZero width]
     (ssa : WordSsaState) (source target : State width)
-    (hregister : ∀ name,
+    (hregister : ∀ name, name < 32 →
       (do
         let register ← registerOfNat name
         pure (readRegister source register)) =
@@ -507,7 +507,7 @@ theorem wordSsaRenameProgram_assign_binary_var_var [OfNat α 0]
 
 theorem evalWordProg_ssaRename_assign_binary_var_var_destination [NeZero width]
     (ssa : WordSsaState) (source target : State width)
-    (hregister : ∀ name,
+    (hregister : ∀ name, name < 32 →
       (do
         let register ← registerOfNat name
         pure (readRegister source register)) =
@@ -648,7 +648,7 @@ theorem wordSsaRenameProgram_assign_binary_var_const
 
 theorem evalWordProg_ssaRename_assign_binary_var_const_destination [NeZero width]
     (ssa : WordSsaState) (sourceState targetState : State width)
-    (hregister : ∀ name,
+    (hregister : ∀ name, name < 32 →
       (do
         let register ← registerOfNat name
         pure (readRegister sourceState register)) =
@@ -827,7 +827,7 @@ theorem wordSsaRenameProgram_assign_shift_var_const
 
 theorem evalWordProg_ssaRename_assign_shift_var_const_destination [NeZero width]
     (ssa : WordSsaState) (sourceState targetState : State width)
-    (hregister : ∀ name,
+    (hregister : ∀ name, name < 32 →
       (do
         let register ← registerOfNat name
         pure (readRegister sourceState register)) =
@@ -933,7 +933,7 @@ theorem wordSsaRenameProgram_assign_shift_var_var [OfNat α 0]
 
 theorem evalWordProg_ssaRename_assign_shift_var_var_destination [NeZero width]
     (ssa : WordSsaState) (sourceState targetState : State width)
-    (hregister : ∀ name,
+    (hregister : ∀ name, name < 32 →
       (do
         let register ← registerOfNat name
         pure (readRegister sourceState register)) =
@@ -1050,7 +1050,7 @@ theorem wordSsaRenameProgram_assign_rotate_var_const
 
 theorem evalWordProg_ssaRename_assign_rotate_var_const_destination [NeZero width]
     (ssa : WordSsaState) (sourceState targetState : State width)
-    (hregister : ∀ name,
+    (hregister : ∀ name, name < 32 →
       (do
         let register ← registerOfNat name
         pure (readRegister sourceState register)) =
@@ -1185,7 +1185,7 @@ theorem wordSsaRenameProgram_assign_rotate_var_var [OfNat α 0]
 
 theorem evalWordProg_ssaRename_assign_rotate_var_var_destination [NeZero width]
     (ssa : WordSsaState) (sourceState targetState : State width)
-    (hregister : ∀ name,
+    (hregister : ∀ name, name < 32 →
       (do
         let register ← registerOfNat name
         pure (readRegister sourceState register)) =
@@ -1349,7 +1349,7 @@ theorem wordSsaRenameProgram_store_var [OfNat α 0]
 
 theorem evalWordProg_ssaRename_program_store_var [NeZero width]
     (ssa : WordSsaState) (source target : State width)
-    (hregister : ∀ name,
+    (hregister : ∀ name, name < 32 →
       (do
         let register ← registerOfNat name
         pure (readRegister source register)) =
@@ -1395,7 +1395,7 @@ theorem wordSsaRenameProgram_shareInst_load_var [OfNat α 0]
 
 theorem evalWordProg_ssaRename_program_share_load [NeZero width]
     (ssa : WordSsaState) (source target : State width)
-    (hregister : ∀ name,
+    (hregister : ∀ name, name < 32 →
       (do
         let register ← registerOfNat name
         pure (readRegister source register)) =
@@ -1453,7 +1453,7 @@ theorem wordSsaRenameProgram_shareInst_load8_var [OfNat α 0]
 
 theorem evalWordProg_ssaRename_program_share_load8 [NeZero width]
     (ssa : WordSsaState) (source target : State width)
-    (hregister : ∀ name,
+    (hregister : ∀ name, name < 32 →
       (do
         let register ← registerOfNat name
         pure (readRegister source register)) =
@@ -1513,7 +1513,7 @@ theorem wordSsaRenameProgram_shareInst_load16_var [OfNat α 0]
 
 theorem evalWordProg_ssaRename_program_share_load16 [NeZero width]
     (ssa : WordSsaState) (source target : State width)
-    (hregister : ∀ name,
+    (hregister : ∀ name, name < 32 →
       (do
         let register ← registerOfNat name
         pure (readRegister source register)) =
@@ -1571,7 +1571,7 @@ theorem wordSsaRenameProgram_shareInst_load32_var [OfNat α 0]
 
 theorem evalWordProg_ssaRename_program_share_load32 [NeZero width]
     (ssa : WordSsaState) (source target : State width)
-    (hregister : ∀ name,
+    (hregister : ∀ name, name < 32 →
       (do
         let register ← registerOfNat name
         pure (readRegister source register)) =
@@ -1628,7 +1628,7 @@ theorem wordSsaRenameProgram_shareInst_store_var [OfNat α 0]
 
 theorem evalWordProg_ssaRename_program_share_store [NeZero width]
     (ssa : WordSsaState) (source target : State width)
-    (hregister : ∀ name,
+    (hregister : ∀ name, name < 32 →
       (do
         let register ← registerOfNat name
         pure (readRegister source register)) =
@@ -1674,7 +1674,7 @@ theorem wordSsaRenameProgram_shareInst_store8_var [OfNat α 0]
 
 theorem evalWordProg_ssaRename_program_share_store8 [NeZero width]
     (ssa : WordSsaState) (source target : State width)
-    (hregister : ∀ name,
+    (hregister : ∀ name, name < 32 →
       (do
         let register ← registerOfNat name
         pure (readRegister source register)) =
@@ -1720,7 +1720,7 @@ theorem wordSsaRenameProgram_shareInst_store16_var [OfNat α 0]
 
 theorem evalWordProg_ssaRename_program_share_store16 [NeZero width]
     (ssa : WordSsaState) (source target : State width)
-    (hregister : ∀ name,
+    (hregister : ∀ name, name < 32 →
       (do
         let register ← registerOfNat name
         pure (readRegister source register)) =
@@ -1766,7 +1766,7 @@ theorem wordSsaRenameProgram_shareInst_store32_var [OfNat α 0]
 
 theorem evalWordProg_ssaRename_program_share_store32 [NeZero width]
     (ssa : WordSsaState) (source target : State width)
-    (hregister : ∀ name,
+    (hregister : ∀ name, name < 32 →
       (do
         let register ← registerOfNat name
         pure (readRegister source register)) =
@@ -1876,7 +1876,7 @@ theorem wordSsaRenameProgram_shareInst_store_const
 
 theorem evalWordProg_ssaRename_program_share_store_const [NeZero width]
     (ssa : WordSsaState) (source target : State width)
-    (hregister : ∀ name,
+    (hregister : ∀ name, name < 32 →
       (do
         let register ← registerOfNat name
         pure (readRegister source register)) =
@@ -2150,7 +2150,7 @@ theorem wordSsaRenameProgram_shareInst_store8_const
 
 theorem evalWordProg_ssaRename_program_share_store8_const [NeZero width]
     (ssa : WordSsaState) (source target : State width)
-    (hregister : ∀ name,
+    (hregister : ∀ name, name < 32 →
       (do
         let register ← registerOfNat name
         pure (readRegister source register)) =
@@ -2229,7 +2229,7 @@ theorem wordSsaRenameProgram_shareInst_store16_const
 
 theorem evalWordProg_ssaRename_program_share_store16_const [NeZero width]
     (ssa : WordSsaState) (source target : State width)
-    (hregister : ∀ name,
+    (hregister : ∀ name, name < 32 →
       (do
         let register ← registerOfNat name
         pure (readRegister source register)) =
@@ -2308,7 +2308,7 @@ theorem wordSsaRenameProgram_shareInst_store32_const
 
 theorem evalWordProg_ssaRename_program_share_store32_const [NeZero width]
     (ssa : WordSsaState) (source target : State width)
-    (hregister : ∀ name,
+    (hregister : ∀ name, name < 32 →
       (do
         let register ← registerOfNat name
         pure (readRegister source register)) =
@@ -2387,7 +2387,7 @@ theorem wordSsaRenameInst_div {width : Nat}
 
 theorem evalWordProg_ssaRename_div_destination [NeZero width]
     (ssa : WordSsaState) (source target : State width)
-    (hregister : ∀ name,
+    (hregister : ∀ name, name < 32 →
       (do
         let register ← registerOfNat name
         pure (readRegister source register)) =
@@ -2455,7 +2455,7 @@ theorem evalWordProg_ssaRename_longMul_destinations [NeZero width]
     (destinationLeft destinationRight sourceLeft sourceRight : Nat)
     (hfirst : wordSsaFresh ssa destinationLeft = (first, freshLeft))
     (hsecond : wordSsaFresh first destinationRight = (second, freshRight))
-    (hregister : ∀ name,
+    (hregister : ∀ name, name < 32 →
       (do
         let register ← registerOfNat name
         pure (readRegister source register)) =
@@ -2651,7 +2651,7 @@ theorem evalWordProg_ssaRename_addCarry_destinations [NeZero width]
     (destination resultCarry sourceLeft sourceRight carryIn : Nat)
     (hfirst : wordSsaFresh ssa destination = (first, freshDestination))
     (hsecond : wordSsaFresh first resultCarry = (second, freshCarry))
-    (hregister : ∀ name,
+    (hregister : ∀ name, name < 32 →
       (do
         let register ← registerOfNat name
         pure (readRegister source register)) =

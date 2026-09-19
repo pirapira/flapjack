@@ -1199,6 +1199,30 @@ where
   decreasing_by
     all_goals first | sizeOf_list_dec | decreasing_trivial
 
+/-! Source-shaped port of CakeML's `check_id_shapes_def`
+    (`cakeml/pancake/panStaticScript.sml:776-797`).  Each identifier gets its
+    identifier-specific scope before its shape is checked, which preserves the
+    diagnostics for both function parameters and structure fields. -/
+def checkIdShapes [BEq String] (context : StructContext) (location : String)
+    (scope : Scope) : List (String × Shape) → StaticResult Unit
+  | [] => staticOk ()
+  | (name, shape) :: identifiers =>
+      let scopedResult : StaticResult Scope :=
+        match scope with
+        | .funScope function _ =>
+            staticOk (.funScope function (" parameter " ++ name))
+        | .structScope structName _ =>
+            staticOk (.structScope structName name)
+        | _ =>
+            staticError (.general (getImplementationErrorMessage
+              "parameter or field found in unexpected scope" location scope))
+      staticBind scopedResult (fun scopedShape =>
+        staticBind (checkShape context location scopedShape shape) (fun _ =>
+          checkIdShapes context location scope identifiers))
+termination_by identifiers => sizeOf identifiers
+decreasing_by
+  all_goals decreasing_trivial
+
 def checkShapeFields [BEq String] (context : StructContext)
     (fields : List (FieldName × Shape)) : StaticResult Unit :=
   if isWfFields context fields then
@@ -1232,7 +1256,7 @@ def staticCheckNames [BEq String] (context : StructContext) :
         | some field =>
             staticError (.scope ("structure field is redeclared: " ++ field))
         | none =>
-            staticBind (checkShapeFields context fields) (fun _ =>
+            staticBind (checkIdShapes context "" (.structScope name "") fields) (fun _ =>
               let shapedFields :=
                 fields.map (fun (fieldName, shape) =>
                   (fieldName, (shapedBasedFromShape context shape).getD (.word .trusted)))
@@ -1282,14 +1306,16 @@ def staticCheckFunctionHeader [BEq String] (context : StructContext)
         if !shapesSame declaration.returnShape .one then
           staticError (.shape "exported function must return one word")
         else staticOk ())
-  else if !isWfShape context declaration.returnShape ||
-      !declaration.params.all (fun (_, shape) => isWfShape context shape) then
-    staticError (.shape ("function has an unknown or invalid parameter/return shape: " ++
-      declaration.name))
-  else if shapeSizeWithContext context declaration.returnShape > 32 then
-    staticError (.shape ("function returns more than 32 words: " ++ declaration.name))
   else
-    staticOk ()
+    staticBind (checkIdShapes context "" (.funScope declaration.name "")
+      declaration.params) (fun _ =>
+      staticBind (checkShape context ""
+        (.funScope declaration.name " return") declaration.returnShape) (fun _ =>
+        if shapeSizeWithContext context declaration.returnShape > 32 then
+          staticError (.shape ("function " ++ declaration.name ++
+            " returns a shape bigger than 32 words\n"))
+        else
+          staticOk ()))
 
 def staticCheckDecls [BEq String] (structs : StructContext) :
     StaticDeclContext → List (Decl α) → StaticResult StaticDeclContext

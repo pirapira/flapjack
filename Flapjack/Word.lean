@@ -194,6 +194,15 @@ def wordArith (context : WordContext) : LoopArith → WordArith α
       .div (wordFindVar context destination) (wordFindVar context dividend)
         (wordFindVar context divisor)
 
+def wordArithIsLoopGenerated : WordArith α → Prop
+  | .longMul _ _ _ _ | .longDiv _ _ _ _ _ | .div _ _ _ => True
+  | _ => False
+
+theorem wordArith_isLoopGenerated {α : Type u}
+    (context : WordContext) (operation : LoopArith) :
+    wordArithIsLoopGenerated (wordArith (α := α) context operation) := by
+  cases operation <;> simp [wordArith, wordArithIsLoopGenerated]
+
 def wordMemOp : CrepMemOp → Option WordMemOp
   | .load => some .load
   | .load8 => some .load8

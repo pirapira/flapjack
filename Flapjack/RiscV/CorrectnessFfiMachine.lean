@@ -290,39 +290,47 @@ theorem labCompileAsm_callFfi_stub_shape
     [NeZero width] (context : WordFfiContext)
     (sectionId : Nat) (labels : List (Nat × Nat)) (position : Nat)
     (function : FunName) (index : Nat)
-    (hindex : lookupWordFfiIndex function context.services = some index) :
+    (hindex : lookupWordFfiIndex function context.services = some index)
+    /- Cake lowers `CallFFI` as `Jump w`, so the single `JAL` shape holds only
+       while the stub is inside the 21-bit range; beyond it both Cake and the
+       port fall back to AUIPC/JALR. -/
+    (hrange : position + (3 + index) * 16 <= 2 ^ 20) :
     labCompileAsm context sectionId labels position (.callFfi function) =
       some [.jal 0 (0 - BitVec.ofNat width
         (position + (3 + index) * 16))] := by
-  simp [labCompileAsm, labFfiStubOffset, hindex]
+  simp [labCompileAsm, labFfiStubDistance, labBackwardJumpOffsetInstructions,
+    hindex, hrange]
 
 theorem compileLabSection_callFfi_stub_shape
     [NeZero width] (context : WordFfiContext)
     (sectionId : Nat) (function : FunName) (index : Nat)
-    (hindex : lookupWordFfiIndex function context.services = some index) :
+    (hindex : lookupWordFfiIndex function context.services = some index)
+    (hrange : (3 + index) * 16 <= 2 ^ 20) :
     compileLabSection context
       ⟨sectionId, [.labAsm (.callFfi function) [] 0]⟩ =
       some [.jal 0 (0 - BitVec.ofNat width
         ((3 + index) * 16))] := by
   simp [compileLabSection, labCompileLines, labCompileAsm,
-    labFfiStubOffset, hindex]
+    labFfiStubDistance, labBackwardJumpOffsetInstructions, hindex, hrange]
 
 theorem compileLabProgram_callFfi_stub_shape
     [NeZero width] (context : WordFfiContext)
     (sectionId : Nat) (function : FunName) (index : Nat)
-    (hindex : lookupWordFfiIndex function context.services = some index) :
+    (hindex : lookupWordFfiIndex function context.services = some index)
+    (hrange : (3 + index) * 16 <= 2 ^ 20) :
     compileLabProgram context
       [⟨sectionId, [.labAsm (.callFfi function) [] 0]⟩] =
       some [.jal 0 (0 - BitVec.ofNat width
         ((3 + index) * 16))] := by
   simp [compileLabProgram, labCompileProgramSections,
     labCompileProgramLines, labCompileAsmProgram,
-    labFfiStubOffset, hindex]
+    labFfiStubDistance, labBackwardJumpOffsetInstructions, hindex, hrange]
 
 theorem compileLabProgram_callFfi_return_stub_shape
     (context : WordFfiContext) (sectionId : Nat)
     (function : FunName) (index : Nat)
-    (hindex : lookupWordFfiIndex function context.services = some index) :
+    (hindex : lookupWordFfiIndex function context.services = some index)
+    (hrange : (3 + index) * 16 <= 2 ^ 20) :
     compileLabProgram context
       [⟨sectionId, [
         .labAsm (.callFfi function) [] 0,
@@ -332,7 +340,8 @@ theorem compileLabProgram_callFfi_return_stub_shape
         .jalr 0 1 0] := by
   simp [compileLabProgram, labCompileProgramSections,
     labCompileProgramLines, labCompileAsmProgram,
-    labFfiStubOffset, labLocValueRegister, hindex]
+    labFfiStubDistance, labBackwardJumpOffsetInstructions,
+    labLocValueRegister, hindex, hrange]
 
 theorem executeInstructionsWithFfi_wordFfi_abi
     [NeZero width] (host : WordFfiHost width) (state : State width)

@@ -399,6 +399,28 @@ def isSubOpCakeParity : Bool :=
 
 #guard isSubOpCakeParity
 
+/-! Cake `conv_Exp_def` (`panPtreeConversionScript.sml:244`) dispatches
+    expression nodes in source order, while leaves fall through to constants
+    and variables; malformed node shapes return `NONE`. -/
+def convExpCakeParity : Bool :=
+  let integer (value : Int) : ParseTree := .lf (.intT value) unknownLoc
+  let identifier (name : String) : ParseTree := .lf (.identT name) unknownLoc
+  let notToken : ParseTree := .lf (.notT) unknownLoc
+  sameAst (convExp ofI 8 (integer 7)) (some (.const 7)) &&
+    sameAst (convExp ofI 8 (identifier "x")) (some (.var .global "x")) &&
+    sameAst (convExp ofI 8
+      (.nd .eNot [integer 7] unknownLoc)) (some (.const 7)) &&
+    sameAst (convExp ofI 8
+      (.nd .eNot [notToken, integer 7] unknownLoc))
+      (some (.cmp .equal (.const 0) (.const 7))) &&
+    sameAst (convExp ofI 8
+      (.nd .eField [integer 7, integer 2] unknownLoc))
+      (some (.rField 2 (.const 7))) &&
+    sameAst (convExp ofI 8 (.nd .eField [] unknownLoc))
+      (none : Option (Exp Int))
+
+#guard convExpCakeParity
+
 /-! Cake operator conversion at `panPtreeConversionScript.sml:141,153,168`
     recurses through the corresponding operator wrapper, maps comparison
     spellings to `(Cmp, swapped)`, and rejects other wrappers/tokens. -/

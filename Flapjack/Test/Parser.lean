@@ -115,6 +115,18 @@ def tokcheckCakeParity : Bool :=
 
 #guard tokcheckCakeParity
 
+/-! Cake `dest_annot_tok_def` (`panPtreeConversionScript.sml:48`) extracts
+    only an `AnnotCommentT` payload from a leaf; ordinary tokens and nodes are
+    rejected. -/
+def destAnnotTokCakeParity : Bool :=
+  match destAnnotTok (.lf (.annotCommentT " note ") unknownLoc),
+      destAnnotTok (.lf (.identT "x") unknownLoc),
+      destAnnotTok (.nd .prog [] unknownLoc) with
+  | some " note ", none, none => true
+  | _, _, _ => false
+
+#guard destAnnotTokCakeParity
+
 /-! Cake's leaf converters at
     `panPtreeConversionScript.sml:90,97,104` accept only their respective
     token constructors: identifiers become global variables, while foreign

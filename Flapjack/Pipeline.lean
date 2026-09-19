@@ -725,10 +725,12 @@ def panTargetDeclarationsWithDefaultMain [OfNat α 0] [OfNat α 1]
       | .function function => function.name == "main"
       | _ => false) then
     declarations
-  else
-    .function
-      { name := "main", inline := false, exported := false, params := [],
-        body := .return (.const 0), returnShape := .one } :: declarations
+  else match declarations with
+    | [] => []
+    | _ =>
+      .function
+        { name := "main", inline := false, exported := false, params := [],
+          body := .return (.const 0), returnShape := .one } :: declarations
 
 /-! Target entry point.  `pan_to_target` first supplies a zero-returning
     `main` when the source has no entry function, then takes the exact entry

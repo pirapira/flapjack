@@ -481,6 +481,18 @@ def staticScopeMessage (idType : ScopedId) (location id : String) (scope : Scope
   location ++ staticScopedIdDescription idType ++ id ++
     " is not in scope in " ++ staticScopeDescription scope ++ "\n"
 
+/-! Source-shaped port of CakeML's `check_global_var_def`
+    (`cakeml/pancake/panStaticScript.sml:625-630`).  Keeping the lookup and
+    diagnostic boundary explicit prevents callers from silently replacing
+    Cake's location- and scope-sensitive error with a generic message. -/
+def checkGlobalVar [BEq String] (context : Context) (name : VarName) :
+    StaticResult GlobalInfo :=
+  match lookupInfo name context.globals with
+  | some info => staticOk info
+  | none =>
+      staticError (.scope
+        (staticScopeMessage .variable context.location name context.scope))
+
 /-! Source-shaped port of CakeML's `get_redec_msg_def`
     (`cakeml/pancake/panStaticScript.sml:478-489`). -/
 def getRedecMessage (idType : ScopedId) (location id : String) (scope : Scope) : String :=
@@ -575,12 +587,10 @@ def checkExp [BEq String] (context : Context) : Exp α → StaticResult ExpRetur
       | some info => staticOk { shapedBased := info.shapedBased }
       | none => staticError (.scope ("unknown local variable: " ++ name))
   | .var .global name =>
-      match lookupInfo name context.globals with
-      | some info =>
-          match shapedBasedFromShape context.structs info.shape with
-          | some shaped => staticOk { shapedBased := shaped }
-          | none => staticError (.scope ("invalid global shape: " ++ name))
-      | none => staticError (.scope ("unknown global variable: " ++ name))
+      staticBind (checkGlobalVar context name) (fun info =>
+        match shapedBasedFromShape context.structs info.shape with
+        | some shaped => staticOk { shapedBased := shaped }
+        | none => staticError (.scope ("invalid global shape: " ++ name)))
   | .rStruct expressions =>
       staticBind (checkExps context expressions) (fun result =>
         staticOk { shapedBased := .struct result.shapedBased })
@@ -724,12 +734,10 @@ def checkCallDestination [BEq String] (context : Context) (returnShape : Shape)
               else staticError (.shape "call destination shape does not match")
           | none => staticError (.scope ("unknown call destination: " ++ name))
       | .global =>
-          match lookupInfo name context.globals with
-          | some globalInfo =>
-              if shapesSame globalInfo.shape returnShape then
-                progOk .otherLast false false context.location
-              else staticError (.shape "global call destination shape does not match")
-          | none => staticError (.scope ("unknown call destination: " ++ name))
+          staticBind (checkGlobalVar context name) (fun globalInfo =>
+            if shapesSame globalInfo.shape returnShape then
+              progOk .otherLast false false context.location
+            else staticError (.shape "global call destination shape does not match"))
 
 /-! These helpers are the executable counterparts of CakeML's
     `next_is_reachable`, `next_now_unreachable`, and `reached_warnable`.
@@ -831,13 +839,11 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
               progOk .otherLast false false context.location
             else staticError (.shape "local assignment shape does not match"))
   | .assign .global name value =>
-      match lookupInfo name context.globals with
-      | none => staticError (.scope ("unknown global variable: " ++ name))
-      | some info =>
-          staticBind (checkExp context value) (fun result =>
-            if shapedBasedMatchesShape context.structs info.shape result.shapedBased then
-              progOk .otherLast false false context.location
-            else staticError (.shape "global assignment shape does not match"))
+      staticBind (checkGlobalVar context name) (fun info =>
+        staticBind (checkExp context value) (fun result =>
+          if shapedBasedMatchesShape context.structs info.shape result.shapedBased then
+            progOk .otherLast false false context.location
+          else staticError (.shape "global assignment shape does not match")))
   | .primitive name _ arguments =>
       match lookupInfo name context.locals with
       | none => staticError (.scope ("unknown primitive destination: " ++ name))
@@ -1033,25 +1039,26 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
   | .shMemLoad _ varKind name address =>
       /- CakeML looks the destination up in locals only for `Local` and in
          globals only for `Global` (`panStaticScript.sml:1642,1676`). -/
-      let destinationIsWord : Option Bool :=
+      let destinationCheck : StaticResult Bool :=
         match varKind with
         | .local =>
-            (lookupInfo name context.locals).map
-              (fun info => shapedBasedIsWord info.shapedBased)
+            match lookupInfo name context.locals with
+            | some info => staticOk (shapedBasedIsWord info.shapedBased)
+            | none => staticError (.scope ("unknown shared-memory destination: " ++ name))
         | .global =>
-            match lookupInfo name context.globals with
-            | some info => (shapedBasedFromShape context.structs info.shape).map shapedBasedIsWord
-            | none => none
-      match destinationIsWord with
-      | none => staticError (.scope ("unknown shared-memory destination: " ++ name))
-      | some false =>
+            staticBind (checkGlobalVar context name) (fun info =>
+              match shapedBasedFromShape context.structs info.shape with
+              | some shaped => staticOk (shapedBasedIsWord shaped)
+              | none => staticError (.scope ("invalid global shape: " ++ name)))
+      staticBind destinationCheck (fun destinationIsWord =>
+        if !destinationIsWord then
           staticError (.shape ("shared-memory load destination is not a word: " ++ name))
-      | some true =>
+        else
           staticBind (checkExp context address) (fun result =>
             if shapedBasedIsWord result.shapedBased then
               staticAddWarning (progOk .otherLast false false context.location)
                 (staticMemoryWarning context false true result.shapedBased)
-            else staticError (.shape "shared-memory address is not a word"))
+            else staticError (.shape "shared-memory address is not a word")))
   | .shMemStore _ address value =>
       staticBind (checkExp context address) (fun addressResult =>
         staticBind (checkExp context value) (fun valueResult =>

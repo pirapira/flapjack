@@ -59,6 +59,7 @@ import Flapjack.Test.CrepeHandlerCorrectness
 /- These legacy Crep-to-Loop theorem fixtures still assume identity variable
    resolution; source parity coverage remains in `Test.SourceToLoop`. -/
 import Flapjack.Test.CrepeRuntimeGlobalCorrectness
+import Flapjack.Test.StaticGlobalVarParity
 import Flapjack.Test.CorrectnessConditional
 import Flapjack.Test.CorrectnessColour
 import Flapjack.Test.CorrectnessSsaColour

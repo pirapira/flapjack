@@ -485,6 +485,14 @@ def staticScopeMessage (idType : ScopedId) (location id : String) (scope : Scope
     (`cakeml/pancake/panStaticScript.sml:457-459`). -/
 def primitiveIdents : List String := ["__add_with_carry__"]
 
+/-! Source-shaped port of CakeML's `add_primitive_hint_def`
+    (`cakeml/pancake/panStaticScript.sml:464-473`). -/
+def addPrimitiveHint (functionName message : String) : String :=
+  if functionName ∈ primitiveIdents then
+    message ++ "  note: " ++ functionName ++
+      " is a built-in primitive only available in declaration or assignment RHS positions\n"
+  else message
+
 /-! Cake's memory-operation diagnostics distinguish local addresses, which
     should not be based on `@base`, from shared addresses, which should.  A
     `NotTrusted` address is reported as a possibility in either direction;

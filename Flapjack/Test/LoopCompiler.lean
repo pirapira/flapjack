@@ -206,6 +206,11 @@ def reachabilityContext : Context :=
   primitiveIdents == ["__add_with_carry__"] &&
   "__add_with_carry__" ∈ primitiveIdents &&
   !("__sub_with_borrow__" ∈ primitiveIdents)
+#guard
+  addPrimitiveHint "__add_with_carry__" "error: unsupported primitive\n" ==
+    "error: unsupported primitive\n  note: __add_with_carry__ is a built-in primitive only available in declaration or assignment RHS positions\n" &&
+  addPrimitiveHint "__other__" "error: unsupported primitive\n" ==
+    "error: unsupported primitive\n"
 #guard (reachedWarnable (.annot "" "" : Prog Nat) reachabilityContext).1.isNone
 #guard (reachedWarnable (.tick : Prog Nat) reachabilityContext).1.isNone
 #guard (reachedWarnable (.skip : Prog Nat)

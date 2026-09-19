@@ -252,6 +252,17 @@ def parseTreeNtCakeParity : Bool :=
 
 #guard parseTreeNtCakeParity
 
+/-! Cake `parsetree_locs_def` (`panPtreeConversionScript.sml:527`) projects
+    the stored location pair from either a leaf or a node without inspecting
+    its token, nonterminal, or children. -/
+def parseTreeLocsCakeParity : Bool :=
+  let leafLoc : Locs := { start := .posn 2 3, stop := .posn 2 7 }
+  let nodeLoc : Locs := { start := .posn 5 1, stop := .eofPt }
+  ParseTree.locs (.lf (.identT "x") leafLoc) == leafLoc &&
+    ParseTree.locs (.nd .exp [] nodeLoc) == nodeLoc
+
+#guard parseTreeLocsCakeParity
+
 /-! Cake `destLf_def` (`panPtreeConversionScript.sml:25`) projects the token
     from a leaf and returns `NONE` for a non-leaf node.  Lean's `destTok` is
     the corresponding `destTOK ∘ destLf` composition. -/

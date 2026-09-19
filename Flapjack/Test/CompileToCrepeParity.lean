@@ -24,6 +24,14 @@ def makeFuncsOracle : Bool :=
 
 #guard makeFuncsOracle
 
+/-! Direct `crep_vars_def` oracle: nested parameter shapes flatten in source
+    order and receive consecutive slots. -/
+def crepVarsOracle : Bool :=
+  panToCrepVars [("left", .one), ("pair", .comb [.one, .one]),
+      ("right", .one)] == [0, 1, 2, 3]
+
+#guard crepVarsOracle
+
 /-! The fixture is the direct HOL evaluation of
     `pan_to_crep$compile_to_crep` on the same exception/function declaration.
     `compileToCrep` preserves the source function name, flattened parameter
@@ -37,7 +45,7 @@ theorem compile_to_crep_raise_const_parity :
            (.raise 0),
          returnShape := .one }] := by
   simp [compileToCrep, compileFunctionsSource, compileFunDeclSource,
-    compileParamVars,
+    compileParamVars, panToCrepVars, Shape.shapeSize,
     functionInfos, compileToCrepeProbeContext, compileToCrepeProbeDecls,
     compileProg, compileExp, freshNames, nestedDecs, storeGlobals,
     crepNestedSeq, lookupInfo]
@@ -59,6 +67,6 @@ def runChecks : IO Bool := do
     IO.println "PASS compile_to_crep raised constant source parity"
   else
     IO.println "FAIL compile_to_crep parity"
-  pure parityGuard
+  pure (parityGuard && crepVarsOracle)
 
 end Flapjack.Test.CompileToCrepeParity

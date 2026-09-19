@@ -149,6 +149,24 @@ def locationAnnotationCakeParity : Bool :=
 
 #guard locationAnnotationCakeParity
 
+/-! Cake `conv_Dec_def` (`panPtreeConversionScript.sml:555`) accepts exactly
+    a `DecNT` node with shape, identifier, and expression children; malformed
+    arity or a different nonterminal returns `NONE`. -/
+def convDecCakeParity : Bool :=
+  let one : ParseTree := .lf (.intT 1) unknownLoc
+  let x : ParseTree := .lf (.identT "x") unknownLoc
+  let value : ParseTree := .lf (.intT 7) unknownLoc
+  let valid : ParseTree := .nd .dec [one, x, value] unknownLoc
+  let wrongNode : ParseTree := .nd .prog [one, x, value] unknownLoc
+  let short : ParseTree := .nd .dec [one, x] unknownLoc
+  match convDecForm (fun value => value) 8 .dec valid,
+      convDecForm (fun value => value) 8 .dec wrongNode,
+      convDecForm (fun value => value) 8 .dec short with
+  | some (.one, "x", .const 7), none, none => true
+  | _, _, _ => false
+
+#guard convDecCakeParity
+
 #guard (pancakeLex "x + 1").map (·.1) == [.identT "x", .plusT, .intT 1]
 
 -- `//` runs to end of line; the block forms are `/* */` and `/@ @/`.

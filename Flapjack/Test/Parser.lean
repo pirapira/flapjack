@@ -131,6 +131,20 @@ def pancakeLexAuxCakeParity : Bool :=
 
 #guard pancakeLexAuxCakeParity
 
+/-! Cake `pancake_lex_def` (`panLexerScript.sml:314`) invokes the auxiliary
+    lexer at `init_loc`; the public entrypoint therefore exposes the same
+    token stream and source locations as the direct auxiliary oracle. -/
+def pancakeLexCakeParity : Bool :=
+  let source := "x + 1"
+  let expected := [
+    (.identT "x", { start := .posn 1 1, stop := .posn 1 2 }),
+    (.plusT, { start := .posn 1 3, stop := .posn 1 3 }),
+    (.intT 1, { start := .posn 1 4, stop := .posn 1 5 })]
+  sameAst (pancakeLex source) expected &&
+    sameAst (pancakeLex "") []
+
+#guard pancakeLexCakeParity
+
 /-! `isNT_def` and `argsNT_def` at
     `panPtreeConversionScript.sml:58,62` inspect only the node's
     nonterminal: matching nodes succeed, mismatching nodes and leaves do not. -/

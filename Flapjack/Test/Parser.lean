@@ -388,6 +388,17 @@ def panExpsCakeParity : Bool :=
 
 #guard panExpsCakeParity
 
+/-! Cake `isSubOp_def` (`panPtreeConversionScript.sml:119`) is true only for
+    a binary `Sub` expression; it prevents subtraction from being flattened
+    with other binary operators. -/
+def isSubOpCakeParity : Bool :=
+  isSubOp (.op .sub [.const (1 : Int), .const 2]) &&
+    !isSubOp (.op .sub [.const (1 : Int), .const 2, .const 3]) &&
+    !isSubOp (.op .add [.const (1 : Int), .const 2]) &&
+    !isSubOp (.panOp .mul [.const (1 : Int), .const 2])
+
+#guard isSubOpCakeParity
+
 /-! Cake operator conversion at `panPtreeConversionScript.sml:141,153,168`
     recurses through the corresponding operator wrapper, maps comparison
     spellings to `(Cmp, swapped)`, and rejects other wrappers/tokens. -/

@@ -81,4 +81,40 @@ def crepInlineByNamesResult : List (CompiledFunction Nat) :=
       | _ => false)
   | _ => false
 
+/-! Direct `crep_inline$transform_eoc` oracle coverage.  Cake's
+    `transform_eoc_def` (crep_inlineScript.sml:138-149) rewrites returns into
+    assignments to the caller's temporary return names, turns a returnless
+    call into a call carrying those names, and recurses through declarations,
+    loops, sequences, conditionals, and handler bodies. -/
+def crepTransformEocCakeProbe : CrepProg Nat :=
+  .dec 9 (.const 0)
+    (.seq
+      (.call none "leaf" [.const 1])
+      (.while (.const 1)
+        (.return [.var 9, .const 2])))
+
+def crepTransformEocCakeResult : CrepProg Nat :=
+  crepTransformEoc [20, 21] crepTransformEocCakeProbe
+
+#guard match crepTransformEocCakeResult with
+  | .dec 9 (.const 0)
+      (.seq
+        (.call (some ([20, 21], none)) "leaf" [.const 1])
+        (.while (.const 1)
+          (.seq
+            (.assign 20 (.var 9))
+            (.seq (.assign 21 (.const 2)) .skip)))) => true
+  | _ => false
+
+def crepTransformEocHandlerProbe : CrepProg Nat :=
+  .call (some ([30], some (7, .return [.var 8]))) "callee" []
+
+def crepTransformEocHandlerResult : CrepProg Nat :=
+  crepTransformEoc [20, 21] crepTransformEocHandlerProbe
+
+#guard match crepTransformEocHandlerResult with
+  | .call (some ([30], some (7,
+      (.seq (.assign 20 (.var 8)) (.skip))))) "callee" [] => true
+  | _ => false
+
 end Flapjack

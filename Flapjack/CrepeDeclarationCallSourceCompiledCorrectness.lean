@@ -151,7 +151,14 @@ theorem compile_full_pan_value_decCall_returned_of_source_compiled_call
   have hstate' : panValueCrepStateRel structs hcalleeContext
       sourceCalleeLocals sourceGlobals sourceMemory
       { locals := targetCalleeLocals, memory := state.memory } := by
-    simpa [hcalleeContext, panValueCrepStateRel, panValueCrepLocalsRel] using hstate
+    have hreordered := panValueCrepStateRel_reordered_parameter_context structs
+      { functionContext with functions := functionInfos declarations }
+      declaration.params sourceCalleeLocals sourceGlobals sourceMemory
+      { locals := targetCalleeLocals, memory := state.memory } hstate
+      (by
+        rw [hparams]
+        exact hnames sourceParameters sourceCalleeBody hlookupSource)
+    simpa [hcalleeContext, panValueCrepStateRel, panValueCrepLocalsRel] using hreordered
   have hbodyCorrect : PanValueCrepProgramCorrect sourceCalleeBody := by
     have h := hcalleeCorrect declaration
     rw [hbodyDeclaration] at h
@@ -374,8 +381,16 @@ theorem compile_full_pan_value_decCall_state_returned_of_source_compiled_call
           sourceCalleeLocals sourceGlobals sourceMemory
           { locals := targetCalleeLocals, memory := state.memory,
             globals := state.globals } := by
+        have hreordered := panValueCrepStateRel_reordered_parameter_context structs
+          { functionContext with functions := functionInfos declarations }
+          declaration.params sourceCalleeLocals sourceGlobals sourceMemory
+          { locals := targetCalleeLocals, memory := state.memory,
+            globals := state.globals } hstate
+          (by
+            rw [hparams]
+            exact hnames sourceParameters sourceCalleeBody hlookupSourceDecl)
         simpa [calleeContext, panValueCrepStateRel, panValueCrepLocalsRel]
-          using hstate
+          using hreordered
       have hbodyCorrect : PanValueCrepProgramStateCorrect sourceCalleeBody := by
         have h := hcalleeCorrect declaration
         rw [hbodyDeclaration] at h
@@ -435,8 +450,16 @@ theorem compile_full_pan_value_decCall_state_returned_of_source_compiled_call
           sourceCalleeLocals sourceGlobals sourceMemory
           { locals := targetCalleeLocals, memory := state.memory,
             globals := state.globals } := by
+        have hreordered := panValueCrepStateRel_reordered_parameter_context structs
+          { functionContext with functions := functionInfos declarations }
+          declaration.params sourceCalleeLocals sourceGlobals sourceMemory
+          { locals := targetCalleeLocals, memory := state.memory,
+            globals := state.globals } hstate
+          (by
+            rw [hparams]
+            exact hnames sourceParameters sourceCalleeBody hlookupSourceDecl)
         simpa [calleeContext, panValueCrepStateRel, panValueCrepLocalsRel]
-          using hstate
+          using hreordered
       have hbodyCorrect : PanValueCrepProgramStateCorrect sourceCalleeBody := by
         have h := hcalleeCorrect declaration
         rw [hbodyDeclaration] at h

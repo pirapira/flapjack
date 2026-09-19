@@ -287,4 +287,38 @@ theorem panValueCrepStateRel_compileFunDecl_context_of_folds
     declaration.params values 0 hlength hglobals hmemory hcontext hnames hshape
     hparameterLength
 
+theorem panValueCrepStateRel_reordered_parameter_context
+    [OfNat α 0]
+    [LawfulBEq String]
+    (structs : StructContext) (context : CompileContext α)
+    (params : List (VarName × Shape))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (crepState : CrepState α)
+    (hrel : panValueCrepStateRel structs
+      { context with vars := (compileParamVars params 0).1 }
+      sourceLocals sourceGlobals sourceMemory crepState)
+    (hnames : (params.map Prod.fst).Nodup) :
+    panValueCrepStateRel structs
+      { context with vars := panToCrepMakeVmap params }
+      sourceLocals sourceGlobals sourceMemory crepState := by
+  have hnamesCompiled :
+      ((compileParamVars params 0).1.map Prod.fst).Nodup := by
+    have hnamesEq := congrArg (List.map Prod.fst)
+      (compileParamVars_preserves_parameter_shapes params 0)
+    have hnamesEq' :
+        (compileParamVars params 0).1.map Prod.fst = params.map Prod.fst := by
+      simpa [List.map_map, Function.comp_def] using hnamesEq
+    rw [hnamesEq']
+    exact hnames
+  rcases hrel with ⟨hglobals, hlocals, hmemory⟩
+  refine ⟨hglobals, ?_, hmemory⟩
+  intro name value shape slots hsource hlookup
+  have hlookupRaw : lookupInfo name (compileParamVars params 0).1 =
+      some (shape, slots) := by
+    rw [lookupInfo_reverse_of_nodup name
+      (compileParamVars params 0).1 hnamesCompiled]
+    simpa [panToCrepMakeVmap] using hlookup
+  exact hlocals name value shape slots hsource hlookupRaw
+
 end Flapjack

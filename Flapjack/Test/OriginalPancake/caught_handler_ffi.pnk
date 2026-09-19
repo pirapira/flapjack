@@ -1,0 +1,11 @@
+exception E : 1;
+fun 1 raise() { throw E 3; }
+fun 1 main() {
+  var 1 x = 0;
+  try
+    x = raise()
+  catch E => x {
+    @inc(0, 0, 0, 0);
+  }
+  return x;
+}

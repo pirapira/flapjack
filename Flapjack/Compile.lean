@@ -103,10 +103,15 @@ termination_by params => sizeOf params
 /-! Source-named port of CakeML Pancake's active `make_vmap_def`
     (`pan_to_crepScript.sml:327`).  The first component of the parameter
     allocation is the finite map from source names to shaped flattened slots;
-    `compileParamVars` supplies the same `with_shape` numbering used by Cake. -/
+    `compileParamVars` supplies the same `with_shape` numbering used by Cake.
+
+    Cake builds this map with `FEMPTY |++ ZIP`, so a later duplicate name
+    replaces an earlier one.  `InfoMap` is a first-entry lookup list; reversing
+    the update order is the list-backed representation of that finite-map
+    semantics. -/
 abbrev panToCrepMakeVmap (params : List (VarName × Shape)) :
     InfoMap (Shape × List Nat) :=
-  (compileParamVars params 0).1
+  (compileParamVars params 0).1.reverse
 /-! Source-named port of CakeML Pancake's `make_funcs_def`
     (`pan_to_crepScript.sml:366`).  Cake's function table keeps each function
     name paired with its original parameter list and return shape; non-function

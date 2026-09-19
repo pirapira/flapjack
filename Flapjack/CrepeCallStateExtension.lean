@@ -40,7 +40,7 @@ theorem evalCrepFullCall_returned_state_extension
       baseAddress topAddress fuel
       { locals := calleeLocals, memory := caller.memory } body =
       some (.returned callee calleeValues))
-    (hdestinations : assignCrepValues caller.locals destinations calleeValues =
+    (hdestinations : assignExistingCrepValues caller.locals destinations calleeValues =
       some callerLocals)
     (hdistinct : CrepDistinctNames destinations)
     (hsource : sourceLocals' = updatePanValueMap sourceLocals name value)
@@ -78,7 +78,7 @@ theorem evalCrepFullCall_returned_state_extension
     intro oldName oldValue oldShape oldSlots hne hsourceOld hlookupOld
     have holdOld := hrel.2.1 oldName oldValue oldShape oldSlots
       hsourceOld hlookupOld
-    have hpreserve := assignCrepValues_read_preserve caller.locals
+    have hpreserve := assignExistingCrepValues_read_preserve caller.locals
       destinations calleeValues callerLocals oldSlots hdestinations
       (fun destination hdestination =>
         hnoalias oldName oldShape oldSlots hne hlookupOld destination

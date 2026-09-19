@@ -11,6 +11,44 @@ assign transport into the context shape produced by the compiler.
 
 namespace Flapjack
 
+theorem compileParamVars_names_nodup
+    [LawfulBEq String]
+    (params : List (VarName × Shape)) (offset : Nat)
+    (hnames : (params.map Prod.fst).Nodup) :
+    ((compileParamVars params offset).1.map Prod.fst).Nodup := by
+  have hshapes := compileParamVars_preserves_parameter_shapes params offset
+  have hnamesEq :
+      (compileParamVars params offset).1.map Prod.fst = params.map Prod.fst := by
+    simpa [Function.comp_def] using congrArg (List.map Prod.fst) hshapes
+  rw [hnamesEq]
+  exact hnames
+
+theorem panValueCrepStateRel_reindex_vmap
+    [LawfulBEq String]
+    (structs : StructContext) (context : CompileContext α)
+    (params : List (VarName × Shape)) (offset : Nat)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (crepState : CrepState α)
+    (hnames : (params.map Prod.fst).Nodup)
+    (hrel : panValueCrepStateRel structs
+      { context with vars := (compileParamVars params offset).1 }
+      sourceLocals sourceGlobals sourceMemory crepState) :
+    panValueCrepStateRel structs
+      { context with vars := (compileParamVars params offset).1.reverse }
+      sourceLocals sourceGlobals sourceMemory crepState := by
+  rcases hrel with ⟨hglobals, hlocals, hmemory⟩
+  refine ⟨hglobals, ?_, hmemory⟩
+  intro name value shape slots hsource hlookup
+  apply hlocals name value shape slots hsource
+  have hmapNames := compileParamVars_names_nodup params offset hnames
+  have hlookupRaw : lookupInfo name (compileParamVars params offset).1 =
+      some (shape, slots) := by
+    rw [lookupInfo_reverse_of_nodup name
+      (compileParamVars params offset).1 hmapNames]
+    exact hlookup
+  exact hlookupRaw
+
 theorem panValueCrepStateRel_compileCalleeParameterList
     [OfNat α 0]
     [LawfulBEq String]
@@ -38,7 +76,7 @@ theorem panValueCrepStateRel_compileCalleeParameterList
         (compileParamVars params offset).2.1
         (values.flatMap panValueFlatWords) = some targetCalleeLocals) :
     panValueCrepStateRel structs
-      { context with vars := (compileParamVars params offset).1 }
+      { context with vars := (compileParamVars params offset).1.reverse }
       calleeLocals sourceGlobals sourceMemory
       { locals := targetCalleeLocals, memory := crepMemory } := by
   have hfresh := compileCalleeParameterList_fresh_append
@@ -57,12 +95,16 @@ theorem panValueCrepStateRel_compileCalleeParameterList
           (compileCalleeParameterList params values offset)).vars := by
     rw [foldCalleeParameterContextAppend_eq]
     simp [hcontext, compileCalleeParameterList_metadata params values offset hlength]
-  exact panValueCrepStateRel_parameters_append_of_context_bind_assign
+  have hrel := panValueCrepStateRel_parameters_append_of_context_bind_assign
     structs context
     { context with vars := (compileParamVars params offset).1 }
     sourceGlobals sourceMemory crepMemory
     (compileCalleeParameterList params values offset)
     calleeLocals targetCalleeLocals hglobals hmemory hbind hassign' hfresh hvars
+  simpa [panToCrepMakeVmap] using
+    (panValueCrepStateRel_reindex_vmap structs context params offset
+    calleeLocals sourceGlobals sourceMemory
+    { locals := targetCalleeLocals, memory := crepMemory } hnames hrel)
 
 theorem panValueCrepStateRel_compileCalleeParameterList_of_folds
     [OfNat α 0]
@@ -82,7 +124,7 @@ theorem panValueCrepStateRel_compileCalleeParameterList_of_folds
     (hparameterLength : ∀ parameter ∈ compileCalleeParameterList params values offset,
       parameter.slots.length = parameter.values.length) :
     panValueCrepStateRel structs
-      { context with vars := (compileParamVars params offset).1 }
+      { context with vars := (compileParamVars params offset).1.reverse }
       (foldCalleeParameterSource (fun _ => none)
         (compileCalleeParameterList params values offset))
       sourceGlobals sourceMemory
@@ -98,11 +140,18 @@ theorem panValueCrepStateRel_compileCalleeParameterList_of_folds
           (compileCalleeParameterList params values offset)).vars := by
     rw [foldCalleeParameterContextAppend_eq]
     simp [hcontext, compileCalleeParameterList_metadata params values offset hlength]
-  exact panValueCrepStateRel_parameters_append_of_context
+  have hrel := panValueCrepStateRel_parameters_append_of_context
     structs context
     { context with vars := (compileParamVars params offset).1 }
     sourceGlobals sourceMemory crepMemory
     (compileCalleeParameterList params values offset) hglobals hmemory hfresh hvars
+  simpa [panToCrepMakeVmap] using
+    (panValueCrepStateRel_reindex_vmap structs context params offset
+    (foldCalleeParameterSource (fun _ => none)
+      (compileCalleeParameterList params values offset)) sourceGlobals sourceMemory
+    { locals := foldCalleeParameterLocals (fun _ => none)
+        (compileCalleeParameterList params values offset),
+      memory := crepMemory } hnames hrel)
 
 theorem panValueCrepStateRel_compileCalleeParameterList_of_source_bind_assign
     [OfNat α 0]
@@ -128,7 +177,7 @@ theorem panValueCrepStateRel_compileCalleeParameterList_of_source_bind_assign
         (compileParamVars params offset).2.1
         (values.flatMap panValueFlatWords) = some targetCalleeLocals) :
     panValueCrepStateRel structs
-      { context with vars := (compileParamVars params offset).1 }
+      { context with vars := (compileParamVars params offset).1.reverse }
       calleeLocals sourceGlobals sourceMemory
       { locals := targetCalleeLocals, memory := crepMemory } := by
   have hsource := bindPanValueParameters_compileCalleeParameterList_source
@@ -186,7 +235,7 @@ theorem panValueCrepStateRel_compileFunDecl_context_of_folds
         declaration.params values 0,
       parameter.slots.length = parameter.values.length) :
     panValueCrepStateRel structs
-      { context with vars := (compileParamVars declaration.params 0).1 }
+      { context with vars := panToCrepMakeVmap declaration.params }
       (foldCalleeParameterSource (fun _ => none)
         (compileCalleeParameterList declaration.params values 0))
       sourceGlobals sourceMemory
@@ -197,5 +246,42 @@ theorem panValueCrepStateRel_compileFunDecl_context_of_folds
     structs context sourceGlobals sourceMemory crepMemory
     declaration.params values 0 hlength hglobals hmemory hcontext hnames hshape
     hparameterLength
+
+theorem panValueCrepStateRel_reordered_parameter_context
+    [OfNat α 0]
+    [LawfulBEq String]
+    (structs : StructContext) (context : CompileContext α)
+    (params : List (VarName × Shape))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (crepState : CrepState α)
+    (hrel : panValueCrepStateRel structs
+      { context with vars := (compileParamVars params 0).1 }
+      sourceLocals sourceGlobals sourceMemory crepState)
+    (hnames : (params.map Prod.fst).Nodup) :
+    panValueCrepStateRel structs
+      { context with vars := panToCrepMakeVmap params }
+      sourceLocals sourceGlobals sourceMemory crepState := by
+  have hnamesCompiled :
+      ((compileParamVars params 0).1.map Prod.fst).Nodup := by
+    have hnamesEq := congrArg (List.map Prod.fst)
+      (compileParamVars_preserves_parameter_shapes params 0)
+    have hnamesEq' :
+        (compileParamVars params 0).1.map Prod.fst = params.map Prod.fst := by
+      simpa [List.map_map, Function.comp_def] using hnamesEq
+    rw [hnamesEq']
+    exact hnames
+  rcases hrel with ⟨hglobals, hlocals, hmemory⟩
+  refine ⟨hglobals, ?_, hmemory⟩
+  intro name value shape slots hsource hlookup
+  have hlookupRaw : lookupInfo name (compileParamVars params 0).1 =
+      some (shape, slots) := by
+    have hlookup' := hlookup
+    change lookupInfo name (compileParamVars params 0).1.reverse =
+      some (shape, slots) at hlookup'
+    rw [lookupInfo_reverse_of_nodup name
+      (compileParamVars params 0).1 hnamesCompiled]
+    exact hlookup'
+  exact hlocals name value shape slots hsource hlookupRaw
 
 end Flapjack

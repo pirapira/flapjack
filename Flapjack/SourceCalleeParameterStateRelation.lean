@@ -44,7 +44,7 @@ theorem panValueCrepStateRel_sourceFunctionParameters_of_lookup
       declaration.params = parameters ∧
       declaration.returnShape = returnShape ∧
       panValueCrepStateRel structs
-        { context with vars := (compileParamVars declaration.params 0).1 }
+        { context with vars := panToCrepMakeVmap declaration.params }
         (foldCalleeParameterSource (fun _ => none)
           (compileCalleeParameterList declaration.params values 0))
         sourceGlobals sourceMemory
@@ -102,7 +102,7 @@ theorem panValueCrepStateRel_sourceFunctionParameters_of_source_lookup
       declaration.params.map Prod.fst = sourceParams ∧
       declaration.body = sourceBody ∧
       panValueCrepStateRel structs
-        { context with vars := (compileParamVars declaration.params 0).1 }
+        { context with vars := panToCrepMakeVmap declaration.params }
         (foldCalleeParameterSource (fun _ => none)
           (compileCalleeParameterList declaration.params values 0))
         sourceGlobals sourceMemory

@@ -1596,6 +1596,9 @@ mutual
       Nat → LoopState α → Option (List Nat × List Nat) → Option Nat → List Nat →
         Option (Nat × LoopProg α × LoopProg α × List Nat) → Option (LoopResult α)
     | 0, _, _, _, _, _ => none
+    /- `loopSemScript.sml:evaluate_def` rejects a tail call that carries an
+       exception handler before looking up or evaluating the callee. -/
+    | _fuel + 1, _, none, _, _, some _ => none
     | fuel + 1, state, returns, target, arguments, handler => do
         let target ← target
         let (parameters, body) ← lookupLoopFunction target functions
@@ -1622,11 +1625,10 @@ mutual
                   { calleeState with
                     locals := updateLoopLocal state.locals name exception }
                   exceptionBody
-        | .normal calleeState => some (.normal { calleeState with locals := state.locals })
-        | .broke calleeState label =>
-            some (.broke { calleeState with locals := state.locals } label)
-        | .continued calleeState label =>
-            some (.continued { calleeState with locals := state.locals } label)
+        /- A callee must finish with `Result` or `Exception`.  Cake maps
+           normal fall-through and loop control escaping a call to `Error`,
+           rather than exposing it to the caller. -/
+        | .normal _ | .broke _ _ | .continued _ _ => none
     termination_by fuel _ _ _ _ _ => fuel
 
   def evalLoopProgWithFunctions [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
@@ -1745,6 +1747,7 @@ mutual
       Nat → LoopState α → Option (List Nat × List Nat) → Option Nat → List Nat →
         Option (Nat × LoopProg α × LoopProg α × List Nat) → Option (LoopResult α)
     | 0, _, _, _, _, _ => none
+    | _fuel + 1, _, none, _, _, some _ => none
     | fuel + 1, state, returns, target, arguments, handler => do
         let target ← target
         let (parameters, body) ← lookupLoopFunction target functions
@@ -1771,12 +1774,7 @@ mutual
                   { calleeState with
                     locals := updateLoopLocal state.locals name exception }
                   exceptionBody
-        | .normal calleeState =>
-            some (.normal { calleeState with locals := state.locals })
-        | .broke calleeState label =>
-            some (.broke { calleeState with locals := state.locals } label)
-        | .continued calleeState label =>
-            some (.continued { calleeState with locals := state.locals } label)
+        | .normal _ | .broke _ _ | .continued _ _ => none
     termination_by fuel _ _ _ _ _ => fuel
 
   def evalLoopProgWithCallsAndFfi [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
@@ -1852,6 +1850,7 @@ mutual
       Nat → LoopState α → Option (List Nat × List Nat) → Option Nat → List Nat →
         Option (Nat × LoopProg α × LoopProg α × List Nat) → Option (LoopResult α)
     | 0, _, _, _, _, _ => none
+    | _fuel + 1, _, none, _, _, some _ => none
     | fuel + 1, state, returns, target, arguments, handler => do
         let target ← target
         let (parameters, body) ← lookupLoopFunction target functions
@@ -1879,12 +1878,7 @@ mutual
                   { calleeState with
                     locals := updateLoopLocal state.locals name exception }
                   exceptionBody
-        | .normal calleeState =>
-            some (.normal { calleeState with locals := state.locals })
-        | .broke calleeState label =>
-            some (.broke { calleeState with locals := state.locals } label)
-        | .continued calleeState label =>
-            some (.continued { calleeState with locals := state.locals } label)
+        | .normal _ | .broke _ _ | .continued _ _ => none
     termination_by fuel _ _ _ _ _ => fuel
 
   def evalLoopProgWithPrimitiveCallsAndFfi

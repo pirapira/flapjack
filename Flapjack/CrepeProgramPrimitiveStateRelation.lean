@@ -117,6 +117,13 @@ theorem compile_full_pan_value_primitive_addCarry_state_relation_fuel
     have hleftNe''' : leftSlot ≠ context.maxVar + 3 := Ne.symm hcarryNe.1
     have hrightNe''' : rightSlot ≠ context.maxVar + 3 := Ne.symm hcarryNe.2
     have hslots' : rightSlot ≠ leftSlot := Ne.symm hslots
+    have hreadOld := (hrel.2.1 name
+      (.rStruct [.word oldLeft, .word oldRight])
+      (.comb [.one, .one]) [leftSlot, rightSlot] hold hlookup).2
+    have hdefined := readCrepLocals_some_defined state.locals
+      [leftSlot, rightSlot] _ hreadOld
+    have hleftDefined := hdefined leftSlot (by simp)
+    have hrightDefined := hdefined rightSlot (by simp)
     have hrestore :
         restoreCrepLocal
             (restoreCrepLocal
@@ -148,8 +155,10 @@ theorem compile_full_pan_value_primitive_addCarry_state_relation_fuel
     simp [nestedDecs, evalCrepFullProgState, updateCrepStateTwoLocals,
       updateCrepTwoLocals, hcompiledLeft, hcompiledRightAfter,
       hcompiledCarryAfter, hleftFresh, hrightFresh, hcarryFresh,
-      hcrepPrimitive, assignCrepValues, updateCrepLocal, restoreCrepResult,
-      hrestore]
+      hleftNe', hrightNe', hleftNe'', hrightNe'', hleftNe''', hrightNe''',
+      hslots, hcrepPrimitive, assignExistingCrepValues,
+      crepNamesDistinct, crepLocalsDefined, hleftDefined, hrightDefined,
+      updateCrepLocal, restoreCrepResult, hrestore]
   · refine ⟨hrel.1, ?_, hrel.2.2⟩
     exact panValueCrepLocalsRel_update_two_words structs context sourceLocals
       state.locals name leftSlot rightSlot hrel.2.1 hlookup result carryOut

@@ -51,7 +51,7 @@ theorem sourceFunctionCalleeEntry_compileToCrepe_of_lookup
       panValueCrepStateRel structs
         { context with
             functions := functionInfos declarations
-            vars := (compileParamVars declaration.params 0).1 }
+            vars := panToCrepMakeVmap declaration.params }
         (foldCalleeParameterSource (fun _ => none)
           (compileCalleeParameterList declaration.params values 0))
         sourceGlobals sourceMemory

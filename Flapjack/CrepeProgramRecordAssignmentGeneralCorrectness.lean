@@ -87,6 +87,11 @@ theorem compile_full_pan_value_local_assign_record_source_word_general
         crepNestedSeq (slots.zipWith
           (fun slot expression => .assign slot expression) compiled) := by
     simp [compileProg, hlookup, hcompile, hlength, hcompiledLength, hdirect]
+  have hdefined : ∀ slot ∈ slots, (state.locals slot).isSome = true := by
+    have hread := (hrel.2.1 name
+      (.rStruct (oldValues.map (fun value => .word value))) _ slots
+      hlocals hlookup).2
+    exact readCrepLocals_some_defined state.locals slots _ hread
   constructor
   · simp [evalPanValueProgWithPrimitiveCallsAndFfi, hsource, hvalid, hlocals,
       panValueAssignmentValid, updatePanValueMap]
@@ -95,7 +100,7 @@ theorem compile_full_pan_value_local_assign_record_source_word_general
     exact evalCrepFullProg_assignList functions crepPrimitive ffi sharedMem
       baseAddress topAddress targetFuel state slots compiled values
       (hlength.trans hcompiledLength.symm) hdistinct hnot
-      hcompiled
+      hcompiled hdefined
   · refine ⟨hrel.1, ?_, hrel.2.2⟩
     exact panValueCrepLocalsRel_update_word_list structs context sourceLocals
       state.locals name slots values hrel.2.1 hlookup hlength hdistinct hnoalias
@@ -175,6 +180,11 @@ theorem compile_full_pan_value_local_assign_record_source_word_general_state_rel
         crepNestedSeq (slots.zipWith
           (fun slot expression => .assign slot expression) compiled) := by
     simp [compileProg, hlookup, hcompile, hlength, hcompiledLength, hdirect]
+  have hdefined : ∀ slot ∈ slots, (state.locals slot).isSome = true := by
+    have hread := (hrel.2.1 name
+      (.rStruct (oldValues.map (fun value => .word value))) _ slots
+      hlocals hlookup).2
+    exact readCrepLocals_some_defined state.locals slots _ hread
   constructor
   · simp [evalPanValueProgWithPrimitiveCallsAndFfi, hsource, hvalid, hlocals,
       panValueAssignmentValid, updatePanValueMap]
@@ -183,7 +193,7 @@ theorem compile_full_pan_value_local_assign_record_source_word_general_state_rel
     exact evalCrepFullProgState_assignList functions crepPrimitive ffi sharedMem
       baseAddress topAddress targetFuel state slots compiled values
       (hlength.trans hcompiledLength.symm) hdistinct hnot
-      hcompiled
+      hcompiled hdefined
   · refine ⟨hrel.1, ?_, hrel.2.2⟩
     exact panValueCrepLocalsRel_update_word_list structs context sourceLocals
       state.locals name slots values hrel.2.1 hlookup hlength hdistinct hnoalias

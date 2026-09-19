@@ -172,7 +172,9 @@ example :
           .skip, [])))).map (fun result =>
       match result with
       | .normal state => (state.locals 7, state.locals 8)
-      | _ => (none, none)) = some (some 12, some 1) := by
+      | _ => (none, none)) = none := by
+  /- Cake's `evaluate_def` rejects `Call NONE ... (SOME handler)` before
+     evaluating the callee (`loopSemScript.sml:395-401`). -/
   decide +kernel
 
 example :
@@ -188,6 +190,28 @@ example :
     (evalLoopProgWithFunctions
       [(8, [1], (.return [1] : LoopProg Nat))] 10 loopCallTestState
       (.call none (some 8) [1] none)).map loopResultValues = some [9] := by
+  decide +kernel
+
+/- The Cake `evaluate_def` call boundary maps a callee that falls through,
+   breaks, or continues to `Error`, for both tail and returning calls
+   (`loopSemScript.sml:395-425`).  `none` is the corresponding error result
+   of these executable Loop evaluators. -/
+example :
+    (evalLoopProgWithFunctions
+      [(13, [1], (.skip : LoopProg Nat))] 10 loopCallTestState
+      (.call (some ([3], [])) (some 13) [1] none)) = none := by
+  decide +kernel
+
+example :
+    (evalLoopProgWithFunctions
+      [(14, [1], (.break 0 : LoopProg Nat))] 10 loopCallTestState
+      (.call none (some 14) [1] none)) = none := by
+  decide +kernel
+
+example :
+    (evalLoopProgWithFunctions
+      [(15, [1], (.continue 0 : LoopProg Nat))] 10 loopCallTestState
+      (.call (some ([3], [])) (some 15) [1] none)) = none := by
   decide +kernel
 
 example :

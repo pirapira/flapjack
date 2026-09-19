@@ -237,6 +237,11 @@ def reachabilityContext : Context :=
   staticLastStmtString .invisLast == "" &&
   staticLastStmtString .otherLast == ""
 
+#guard getUnreachMessage "AT 7: " "return" (.funScope "f" "") ==
+  "AT 7: unreachable statement(s) after return in function f\n"
+#guard getUnreachMessage "" "" (.topLevel) ==
+  "unreachable statement(s) after  in top-level declaration\n"
+
 #guard match basedMerge .based .notBased with | .based => true | _ => false
 #guard match basedMerge .trusted .notBased with | .trusted => true | _ => false
 #guard match shapedBasedMerge [.word .based, .word .notBased] with

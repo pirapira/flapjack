@@ -745,9 +745,14 @@ def staticLastStmtString : LastStmt → String
   | .condExitLast => "exiting conditional"
   | _ => ""
 
+/-! Source-shaped port of CakeML's `get_unreach_msg_def`
+    (`cakeml/pancake/panStaticScript.sml:530-536`). -/
+def getUnreachMessage (location last : String) (scope : Scope) : String :=
+  location ++ "unreachable statement(s) after " ++ last ++ " in " ++
+    staticScopeDescription scope ++ "\n"
+
 def staticUnreachableWarning (context : Context) (last : LastStmt) : StatErr :=
-  .warning (context.location ++ "unreachable statement(s) after " ++
-    staticLastStmtString last ++ " in " ++ staticScopeDescription context.scope ++ "\n")
+  .warning (getUnreachMessage context.location (staticLastStmtString last) context.scope)
 
 def nextIsReachable : Reachable → LastStmt → Reachable
   | .isReach, last =>

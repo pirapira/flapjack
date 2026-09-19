@@ -618,6 +618,9 @@ def main : IO Unit := do
                         acc + sectionData.lines.length) 0
                     let _ ← force lineCount
                     let l1 ← stage "lab:build" l0 lineCount
+                    -- Faithful copy of compileLabProgramLinkedWithPancakeRuntime,
+                    -- timed between each of its lets.
+                    let context : RiscV.WordFfiContext := { services := [] }
                     let sourceProgram := labProgram.filter
                       (fun (sectionData : LabSection (RiscV.Word 64)) =>
                         sectionData.name >= 3)
@@ -625,71 +628,50 @@ def main : IO Unit := do
                     let _ ← force (RiscV.labStoredProgramLength initial)
                     let l2 ← stage "lab:initialStored" l1
                       (RiscV.labStoredProgramLength initial)
-                    let labels := RiscV.labCollectPancakeRuntimeStoredLabels initial
-                    let _ ← force labels.length
-                    let l3 ← stage "lab:collectLabels" l2 labels.length
-                    let haltPc := 1000 + RiscV.labStoredProgramLength initial
-                    let onePass := RiscV.labEncodeStoredProgram
-                      { services := [] } labels 1000 1000 haltPc initial
-                    let _ ← force (RiscV.labStoredProgramLength onePass)
-                    let l4 ← stage "lab:encodeOnePass" l3
-                      (RiscV.labStoredProgramLength onePass)
-                    -- how many rounds until the stored lengths stabilise
-                    let rec rounds (fuel : Nat) (p : List (LabSection (RiscV.Word 64)))
-                        (n : Nat) : Nat × List (LabSection (RiscV.Word 64)) :=
-                      match fuel with
-                      | 0 => (n, p)
-                      | fuel + 1 =>
-                          let ls := RiscV.labCollectPancakeRuntimeStoredLabels p
-                          let next := RiscV.labEncodeStoredProgram { services := [] } ls
-                            1000 1000 haltPc p
-                          if RiscV.labStoredLineLengths next == RiscV.labStoredLineLengths p
-                          then (n + 1, next)
-                          else rounds fuel next (n + 1)
-                    let (roundCount, stable) := rounds 8 initial 0
-                    let _ ← force (roundCount + RiscV.labStoredProgramLength stable)
-                    let l5 ← stage "lab:stableLoop" l4 roundCount
-                    let relabelled := RiscV.labUpdateStoredLabelLengths 1000 stable
-                    let haltPc2 := 1000 + RiscV.labStoredProgramLength relabelled
-                    let (roundCount2, stable2) :=
-                      (let rec rounds2 (fuel : Nat) (p : List (LabSection (RiscV.Word 64)))
-                          (n : Nat) : Nat × List (LabSection (RiscV.Word 64)) :=
-                        match fuel with
-                        | 0 => (n, p)
-                        | fuel + 1 =>
-                            let ls := RiscV.labCollectPancakeRuntimeStoredLabels p
-                            let next := RiscV.labEncodeStoredProgram { services := [] } ls
-                              1000 1000 haltPc2 p
-                            if RiscV.labStoredLineLengths next == RiscV.labStoredLineLengths p
-                            then (n + 1, next)
-                            else rounds2 fuel next (n + 1)
-                       rounds2 8 relabelled 0)
-                    let _ ← force (roundCount2 + RiscV.labStoredProgramLength stable2)
-                    let l6 ← stage "lab:stableLoop2" l5 roundCount2
-                    let finalHaltPc := 1000 + RiscV.labStoredProgramLength stable2
-                    let finalLabels := RiscV.labCollectPancakeRuntimeStoredLabels stable2
-                    let _ ← force finalLabels.length
-                    let l7 ← stage "lab:finalLabels" l6 finalLabels.length
-                    -- how many lines actually resolve a label reference
-                    let labAsmCount := stable2.foldl
+                    let initialHaltPc := 1000 + RiscV.labStoredProgramLength initial
+                    let encoded := RiscV.labEncodeStoredProgramStable 8 context 1000 1000
+                      initialHaltPc initial
+                    let _ ← force (RiscV.labStoredProgramLength encoded)
+                    let l3 ← stage "lab:encodeStable" l2
+                      (RiscV.labStoredProgramLength encoded)
+                    let relabelled := RiscV.labUpdateStoredLabelLengths 1000 encoded
+                    let _ ← force (RiscV.labStoredProgramLength relabelled)
+                    let l4 ← stage "lab:updateLabelLengths" l3
+                      (RiscV.labStoredProgramLength relabelled)
+                    let haltPc := 1000 + RiscV.labStoredProgramLength relabelled
+                    let relabelledLabels := RiscV.labLabelIndexOf
+                      (RiscV.labCollectPancakeRuntimeStoredLabels relabelled)
+                    let _ ← force relabelledLabels.entries.length
+                    let l5 ← stage "lab:collectRelabelled" l4
+                      relabelledLabels.entries.length
+                    let final := RiscV.labEncodeStoredProgram context relabelledLabels
+                      1000 1000 haltPc relabelled
+                    let _ ← force (RiscV.labStoredProgramLength final)
+                    let l6 ← stage "lab:encodeFinal" l5
+                      (RiscV.labStoredProgramLength final)
+                    let labels := RiscV.labLabelIndexOf
+                      (RiscV.labCollectPancakeRuntimeStoredLabels final)
+                    let _ ← force labels.entries.length
+                    let l7 ← stage "lab:collectFinal" l6 labels.entries.length
+                    let labAsmCount := final.foldl
                       (fun acc (sectionData : LabSection (RiscV.Word 64)) =>
                         acc + sectionData.lines.foldl (fun n line =>
                           match line with
                           | .labAsm _ _ _ => n + 1
                           | _ => n) 0) 0
                     let _ ← force labAsmCount
-                    IO.println s!"PERF lab labAsmLines {labAsmCount} labels {finalLabels.length}"
+                    IO.println s!"PERF lab labAsmLines {labAsmCount} labels {labels.entries.length}"
                     match RiscV.compileLabProgramLinkedWithStoredLengthsAux
-                        { services := [] } finalLabels 1000 1000 finalHaltPc stable2 with
+                        context labels 1000 1000 haltPc final with
                     | none => IO.println "PERF lab link FAILED"
                     | some sections =>
                         let _ ← force (sections.foldl
                           (fun acc (entry : Nat × RiscV.Word 64 × List (RiscV.Instruction 64)) =>
                             acc + entry.2.2.length) 0)
                         let l8 ← stage "lab:linkEmit" l7 sections.length
-                        let encoded := RiscV.encodeLinkedSections sections
-                        let _ ← force encoded.length
-                        let _ ← stage "lab:encodeSections" l8 encoded.length
+                        let encodedSections := RiscV.encodeLinkedSections sections
+                        let _ ← force encodedSections.length
+                        let _ ← stage "lab:encodeSections" l8 encodedSections.length
                         pure ()
           if (← IO.getEnv "PERF_PHASEWALK").isSome then
             let sourceLoop := pipelineLoopFunctionsSource .rv64i stackFunctionFirstLabel crepe
@@ -927,6 +909,62 @@ def main : IO Unit := do
                   RiscV.wordProgFfiNames (RiscV.wordRemoveUnreachable (wordProgDCE entry.2.2)))).eraseDups
             let _ ← stage "ffiNames(from sourceWords)" td3 namesSingle.length
             IO.println s!"PERF ffiNamesEqual {namesDouble == namesSingle}"
+            -- faithful copy of the real discovery in
+            -- compileFlapjackRiscVSourceRuntimeImageChecked
+            let td4 ← IO.monoMsNow
+            let realNames :=
+              (discoveryWords.reverse.flatMap
+                (fun entry : Nat × Nat × WordProg (RiscV.Word 64) =>
+                  RiscV.wordProgFfiNamesCake (wordFfiDiscoveryBody entry.2.2))).eraseDups
+            let _ ← force realNames.length
+            let _ ← stage "ffiNames(real, wordFfiDiscoveryBody)" td4 realNames.length
+            -- pass-by-pass inside wordFfiDiscoveryBody
+            let bodies := discoveryWords.map (fun e => e.2.2)
+            let d0 ← IO.monoMsNow
+            let flat := bodies.map RiscV.wordFlattenProgramFrom
+            let _ ← force (flat.foldl (fun a b => a + countWord b) 0)
+            let d1 ← stage "disc:flatten" d0 (flat.foldl (fun a b => a + countWord b) 0)
+            let cfp := flat.map RiscV.wordConstFp
+            let _ ← force (cfp.foldl (fun a b => a + countWord b) 0)
+            let d2 ← stage "disc:constFp" d1 (cfp.foldl (fun a b => a + countWord b) 0)
+            let fused := cfp.map RiscV.wordFuseConditionsAndFold
+            let _ ← force (fused.foldl (fun a b => a + countWord b) 0)
+            let d3 ← stage "disc:fuseConditions" d2 (fused.foldl (fun a b => a + countWord b) 0)
+            let sel := fused.map RiscV.wordInstSelectProgramFrom
+            let _ ← force (sel.foldl (fun a b => a + countWord b) 0)
+            let d4 ← stage "disc:instSelect" d3 (sel.foldl (fun a b => a + countWord b) 0)
+            let dce := sel.map wordProgDCE
+            let _ ← force (dce.foldl (fun a b => a + countWord b) 0)
+            let d5 ← stage "disc:dce" d4 (dce.foldl (fun a b => a + countWord b) 0)
+            let unreach := dce.map RiscV.wordRemoveUnreachable
+            let _ ← force (unreach.foldl (fun a b => a + countWord b) 0)
+            let _ ← stage "disc:removeUnreachable" d5 (unreach.foldl (fun a b => a + countWord b) 0)
+            -- per-function constFp cost: is it concentrated or uniform?
+            let mut worst : List (Nat × Nat × Nat) := []
+            let mut idx := 0
+            for b in flat do
+              let c0 ← IO.monoMsNow
+              let r := RiscV.wordConstFp b
+              let _ ← force (countWord r)
+              let c1 ← IO.monoMsNow
+              worst := (c1 - c0, idx, countWord b) :: worst
+              idx := idx + 1
+            let top := (worst.toArray.qsort (fun a b => a.1 > b.1)).toList.take 12
+            for (ms, i, size) in top do
+              IO.println s!"PERF constFp fn[{i}] {ms} ms nodes={size}"
+            let total := worst.foldl (fun a e => a + e.1) 0
+            IO.println s!"PERF constFp totalMs {total} functions {worst.length}"
+            -- split wordConstFp on the dominating function
+            match flat.drop 639 with
+            | [] => IO.println "PERF constFp: fn 639 missing"
+            | body :: _ =>
+                let a0 ← IO.monoMsNow
+                let assoc := RiscV.wordSimpSeqAssoc body
+                let _ ← force (countWord assoc)
+                let a1 ← stage "constFp639:seqAssoc" a0 (countWord assoc)
+                let (looped, _) := RiscV.wordConstFpLoop assoc ∅
+                let _ ← force (countWord looped)
+                let _ ← stage "constFp639:loop" a1 (countWord looped)
             IO.println s!"PERF ffiNames {namesDouble}"
           if (← IO.getEnv "PERF_BACKEND").isSome then
             let from_ := (← IO.getEnv "PERF_BACKEND_FROM").getD "0" |>.toNat!

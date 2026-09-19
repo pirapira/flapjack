@@ -67,6 +67,25 @@ def isAtomGroupCakeParity : Bool :=
 
 #guard isAtomGroupCakeParity
 
+/-! Cake `isAlphaNumOrWild_def` (`panLexerScript.sml:61`) accepts every
+    alphanumeric character plus underscore, and rejects nearby punctuation. -/
+def isAlphaNumOrWildCakeParity : Bool :=
+  ['a', 'Z', '0', '9', '_'].all isAlphaNumOrWild &&
+    ['-', '+', '.', '@', ' '].all (fun character => !isAlphaNumOrWild character)
+
+#guard isAlphaNumOrWildCakeParity
+
+/-! Cake `read_while_def` (`panLexerScript.sml:166`) returns the accepted
+    prefix in source order and leaves the first rejected character plus its
+    suffix untouched. -/
+def readWhileCakeParity : Bool :=
+  let letters : Char → Bool := fun character => character == 'a' || character == 'b'
+  sameAst (readWhile letters "ababaX".toList []) ("ababa", "X".toList) &&
+    sameAst (readWhile letters "Xab".toList []) ("", "Xab".toList) &&
+    sameAst (readWhile letters "ab".toList ['z']) ("zab", ([] : List Char))
+
+#guard readWhileCakeParity
+
 /-! Cake `next_atom_def` (`panLexerScript.sml:225`) skips whitespace and
     newlines, recognizes unsigned/signed numbers, words, singleton symbols,
     and reports an unrecognized character without silently dropping it. -/
@@ -921,7 +940,7 @@ def convShapeCakeParity : Bool :=
 -- `@base`, `@biw` and `@top` are keywords; any other `@name` is a foreign
 -- identifier with the `@` stripped.
 #guard (pancakeLex "@base @biw @top @write").map (·.1)
-  == [.keywordT .baseK, .keywordT .biwK, .keywordT .topK, .foreignIdent "write"]
+  == [.keywordT .baseK, .keywordT .biwK, .keywordT .baseK, .foreignIdent "write"]
 
 -- Rows advance across lines. Columns follow `panLexer`'s arithmetic, which is
 -- approximate by design: a newline resets the column to 0, and a single-
@@ -1010,9 +1029,9 @@ def safePancakeLexCakeParity : Bool :=
 #guard sameAst (expr "@base") (.ok (.return .baseAddr))
 #guard sameAst (expr "@biw") (.ok (.return .bytesInWord))
 
--- `@top` is `TopAddr`. Upstream's lexer maps `@top` to the `@base` keyword,
--- which looks like a slip: the grammar and the conversion both handle `TopK`.
-#guard sameAst (expr "@top") (.ok (.return .topAddr))
+-- Cake's lexer maps `@top` to the `@base` keyword, so conversion preserves
+-- the original source behavior and produces `BaseAddr`.
+#guard sameAst (expr "@top") (.ok (.return .baseAddr))
 
 -- Shift operators.
 #guard sameAst (expr "a << 2") (.ok (.return (.shift .lsl (.var .global "a") (.const 2))))

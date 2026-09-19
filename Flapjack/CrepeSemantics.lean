@@ -335,10 +335,7 @@ mutual
         let result ← evalCrepFullProgState functions primitive ffi sharedMem
           baseAddress topAddress fuel callee body
         match result with
-        | .normal callee =>
-            pure (.normal { caller with
-              memory := callee.memory
-              globals := callee.globals })
+        | .normal _ => none
         | .returned callee values =>
             match info with
             | none => pure (.returned { caller with
@@ -361,14 +358,8 @@ mutual
             | _ => pure (.raised { caller with
                 memory := callee.memory
                 globals := callee.globals } exception)
-        | .broke callee label =>
-            pure (.broke { caller with
-              memory := callee.memory
-              globals := callee.globals } label)
-        | .continued callee label =>
-            pure (.continued { caller with
-              memory := callee.memory
-              globals := callee.globals } label)
+        | .broke _ _ => none
+        | .continued _ _ => none
         | .finalFfi callee event =>
             pure (.finalFfi { caller with
               locals := fun _ => none
@@ -541,8 +532,7 @@ mutual
         let result ← evalCrepFullProg functions primitive ffi sharedMem
           baseAddress topAddress fuel callee body
         match result with
-        | .normal callee =>
-            pure (.normal { caller with memory := callee.memory })
+        | .normal _ => none
         | .returned callee values =>
             match info with
             | none => pure (.returned { caller with memory := callee.memory } values)
@@ -559,10 +549,8 @@ mutual
                 else
                   pure (.raised { caller with memory := callee.memory } exception)
             | _ => pure (.raised { caller with memory := callee.memory } exception)
-        | .broke callee label =>
-            pure (.broke { caller with memory := callee.memory } label)
-        | .continued callee label =>
-            pure (.continued { caller with memory := callee.memory } label)
+        | .broke _ _ => none
+        | .continued _ _ => none
         | .finalFfi callee event =>
             pure (.finalFfi { caller with
               locals := fun _ => none

@@ -365,10 +365,45 @@ def crepeReturnOnlyFunctions : List (CompiledFunction Nat) :=
   [{ name := "return7", params := [], body := .return [.const 7],
      returnShape := .one }]
 
+def crepeInvalidCallCompletionFunctions : List (CompiledFunction Nat) :=
+  [{ name := "fallsThrough", params := [], body := .skip,
+     returnShape := .one },
+   { name := "breaks", params := [], body := .break 0,
+     returnShape := .one },
+   { name := "continues", params := [], body := .continue 0,
+     returnShape := .one }]
+
 theorem crepe_call_rejects_fresh_return_destination :
     evalCrepFullCall crepeReturnOnlyFunctions crepeSemanticsPrimitive
       crepeSemanticsFfi crepeSemanticsSharedMem 0 100 3
       crepeSemanticsExistingState (some ([9], none)) "return7" [] = none := by
+  decide +kernel
+
+/- CakeML crepSem's evaluate(Call ...) maps a callee's normal fall-through,
+   Break, and Continue results to Error.  The call boundary must not expose
+   those loop-control results to its caller. -/
+theorem crepe_call_rejects_invalid_callee_completion :
+    evalCrepFullCall crepeInvalidCallCompletionFunctions
+      crepeSemanticsPrimitive crepeSemanticsFfi crepeSemanticsSharedMem
+      0 100 3 crepeSemanticsExistingState none "fallsThrough" [] = none ∧
+    evalCrepFullCall crepeInvalidCallCompletionFunctions
+      crepeSemanticsPrimitive crepeSemanticsFfi crepeSemanticsSharedMem
+      0 100 3 crepeSemanticsExistingState none "breaks" [] = none ∧
+    evalCrepFullCall crepeInvalidCallCompletionFunctions
+      crepeSemanticsPrimitive crepeSemanticsFfi crepeSemanticsSharedMem
+      0 100 3 crepeSemanticsExistingState none "continues" [] = none ∧
+    evalCrepFullCallState crepeInvalidCallCompletionFunctions
+      crepeSemanticsPrimitive crepeSemanticsFfi crepeSemanticsSharedMem
+      0 100 3 { crepeSemanticsExistingState with globals := fun _ => none }
+      none "fallsThrough" [] = none ∧
+    evalCrepFullCallState crepeInvalidCallCompletionFunctions
+      crepeSemanticsPrimitive crepeSemanticsFfi crepeSemanticsSharedMem
+      0 100 3 { crepeSemanticsExistingState with globals := fun _ => none }
+      none "breaks" [] = none ∧
+    evalCrepFullCallState crepeInvalidCallCompletionFunctions
+      crepeSemanticsPrimitive crepeSemanticsFfi crepeSemanticsSharedMem
+      0 100 3 { crepeSemanticsExistingState with globals := fun _ => none }
+      none "continues" [] = none := by
   decide +kernel
 
 theorem crepe_full_ffi_semantics :

@@ -5,6 +5,22 @@ import Flapjack.Test.MemorySpillRelation
 
 namespace Flapjack.RiscV
 
+/- Cake's `wReg1` uses the first allocator register as the carrier when the
+   address of a store is spilled.  This small case is the source-level shape
+   that exposed the four-byte RISC-V parity discrepancy in the differential
+   reducer: using the link register is semantically valid but not
+   Pancake-compatible. -/
+
+example :
+    wordStackMemoryInst
+        { locations := [(0, .stack 19), (21, .register 21)],
+          scratch := 22, stackBase := 0, addressScratch := 23 }
+        .store 21 0 =
+      some (.seq (.stackLoad 22 19)
+        (.inst (.mem .store 21 22)) : StackProg Nat) := by
+  simp [wordStackMemoryInst, wordStackStoreInst, wordStackStoreAddressRegister,
+    wordStackLocation, wordStackOffset, lookupNatInfo]
+
 example :
     wordStackMappedValuesExcept memorySpillConfig 1 memorySpillValues
       (((wordToStackProg (α := Nat) memorySpillConfig

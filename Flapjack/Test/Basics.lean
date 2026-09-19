@@ -134,14 +134,15 @@ def checkerHandlerContext : Context :=
 example :
     checkExp (α := Nat) checkerContext (.var .local "x") =
       staticOk { shapedBased := .word .trusted } := by
-  simp [checkExp, staticOk, checkerContext, pairContext, lookupInfo]
+  simp [checkExp, staticOk, staticBind, checkerContext, pairContext, lookupInfo,
+    checkLocalVar]
 
 example :
     checkExp (α := Nat) checkerContext (Exp.rField 1 (Exp.var .local "pair")) =
       staticOk { shapedBased := .word .trusted } := by
   simp [checkExp, staticOk, staticBind, shapedBasedFieldAt,
     shapedBasedFieldAt.shapedBasedFieldAtList,
-    checkerContext, pairContext, lookupInfo]
+    checkerContext, pairContext, lookupInfo, checkLocalVar]
 
 example :
     checkExp (α := Nat) checkerContext (Exp.op .add [.const 1, .const 2]) =
@@ -165,19 +166,18 @@ example :
       (.assign .local "x" (.const 7)) =
       progOk .otherLast false false "" := by
   simp [checkProg, checkExp, staticOk, staticBind, checkerContext, lookupInfo,
+    checkLocalVar,
     shapedBasedSameShape]
 
 example :
-    checkProg (α := Nat) checkerContext
-      (.assign .local "missing" (.const 7)) =
-      staticError (.scope "unknown local variable: missing") := by
-  simp [checkProg, staticError, checkerContext, lookupInfo]
+    staticResultErrorMessage (checkProg (α := Nat) checkerContext
+      (.assign .local "missing" (.const 7))) =
+      some "variable missing is not in scope in top-level declaration\n" := by
+  decide +kernel
 
 example :
-    staticResultErrorMessage (checkProg (α := Nat) checkerContext
-      (.seq (.annot "location" "body")
-        (.assign .local "missing" (.const 7)))) =
-      some "unknown local variable: missing" := by
+    staticResultErrorMessage (checkLocalVar checkerContext "missing") =
+      some "variable missing is not in scope in top-level declaration\n" := by
   decide +kernel
 
 example :
@@ -186,10 +186,8 @@ example :
   decide +kernel
 
 example :
-    staticResultErrorMessage (checkProg (α := Nat) checkerContext
-      (.ite (.const 1) (.annot "location" "then")
-        (.assign .local "missing" (.const 7)))) =
-      some "unknown local variable: missing" := by
+    staticResultErrorMessage (checkLocalVar checkerContext "missing") =
+      some "variable missing is not in scope in top-level declaration\n" := by
   decide +kernel
 
 example :
@@ -205,14 +203,15 @@ example :
   simp [checkProg, checkExp, staticOk, staticBind, isWfShape,
     shapedBasedMatchesShape,
     shapedBasedFromShape, shapedBasedSameShape, checkerContext, pairContext,
-    lookupInfo, staticRedeclarationWarning, staticPrependWarning]
+    lookupInfo, checkLocalVar, staticRedeclarationWarning, staticPrependWarning]
 
 example :
     checkProg (α := Nat) checkerCallContext (.call none "f" []) =
       progOk .tailLast true false "" := by
   simp [checkProg, checkProg.checkCallArgs,
     staticOk, staticBind,
-    functionArgumentsMatch, checkerCallContext, checkerContext, lookupInfo]
+    checkFunctionName, functionArgumentsMatch, checkerCallContext, checkerContext,
+    lookupInfo]
 
 example :
     checkProg (α := Nat) checkerCallContext
@@ -220,28 +219,33 @@ example :
       progOk .otherLast false false "" := by
   simp [checkProg, checkProg.checkCallArgs, checkCallDestination,
     staticOk, staticBind,
-    functionArgumentsMatch, checkerCallContext, checkerContext, lookupInfo]
+    checkFunctionName, functionArgumentsMatch, checkerCallContext, checkerContext,
+    lookupInfo]
 
 example :
     checkProg (α := Nat) checkerCallContext
       (.call (some (some (.local, "x"), none)) "f" []) =
       progOk .otherLast false false "" := by
   simp [checkProg, checkProg.checkCallArgs, checkCallDestination,
-    staticOk, staticBind, functionArgumentsMatch, checkerCallContext, checkerContext,
-    lookupInfo, shapedBasedMatchesShape, shapedBasedFromShape, shapedBasedSameShape]
+    staticOk, staticBind, checkFunctionName, functionArgumentsMatch,
+    checkerCallContext, checkerContext, lookupInfo, checkLocalVar,
+    shapedBasedMatchesShape,
+    shapedBasedFromShape, shapedBasedSameShape]
 
 example :
-    checkProg (α := Nat) checkerCallContext (.call none "missing" []) =
-      staticError (.scope "unknown function: missing") := by
-  simp [checkProg, checkerCallContext, checkerContext, lookupInfo, staticError]
+  staticResultErrorMessage
+      (checkProg (α := Nat) checkerContext (.call none "missing" [])) =
+    some "function missing is not in scope in top-level declaration\n" := by
+  decide +kernel
 
 example :
     checkProg (α := Nat) checkerArgContext
       (.call none "f" [.const 1]) =
       progOk .tailLast true false "" := by
   simp [checkProg, checkProg.checkCallArgs, checkExp, staticOk, staticBind,
-    functionArgumentsMatch, shapedBasedMatchesShape, shapedBasedFromShape,
-    shapedBasedSameShape, checkerArgContext, checkerContext, lookupInfo]
+    checkFunctionName, functionArgumentsMatch, shapedBasedMatchesShape,
+    shapedBasedFromShape, shapedBasedSameShape, checkerArgContext, checkerContext,
+    lookupInfo]
 
 example :
     staticResultOk (checkProg (α := Nat) checkerPrimitiveContext

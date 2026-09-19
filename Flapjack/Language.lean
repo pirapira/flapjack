@@ -52,9 +52,23 @@ inductive BinOp where
   | xor
   deriving DecidableEq, Repr
 
+/-! Exact source counterpart of Pancake's `binop_to_str_def`
+    (`panStaticScript.sml:588-596`). -/
+def binopToString : BinOp → String
+  | .add => "Add"
+  | .sub => "Sub"
+  | .and => "And"
+  | .or => "Or"
+  | .xor => "Xor"
+
 inductive PanOp where
   | mul
   deriving DecidableEq, Repr
+
+/-! Exact source counterpart of Pancake's `panop_to_str_def`
+    (`panStaticScript.sml:599-603`). -/
+def panopToString : PanOp → String
+  | .mul => "Mul"
 
 inductive Cmp where
   | equal
@@ -138,6 +152,11 @@ inductive OpSize where
 inductive PrimOp where
   | addCarry
   deriving DecidableEq, Repr
+
+/-! Exact source counterpart of Pancake's `primop_to_str_def`
+    (`panStaticScript.sml:606-610`). -/
+def primopToString : PrimOp → String
+  | .addCarry => "AddCarry"
 
 /-! The source `word_sh` operation receives a natural shift amount extracted
     from a target word.  Targets provide the word width and this extraction so

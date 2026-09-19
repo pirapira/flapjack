@@ -11,6 +11,58 @@ def crepInlineVariables : List Nat :=
         "callee" [.var 5]) : CrepProg Nat)
 
 #guard crepInlineVariables = [4, 3, 5, 7, 12, 11]
+
+/-! Direct coverage for Cake `var_prog_def`
+    (`cakeml/pancake/crep_inlineScript.sml:11-32`).  This keeps the
+    statement-level cases observable, including call handlers and all memory
+    variants, rather than checking only the original sequence fixture. -/
+def crepVarProgCakeParity : Bool :=
+  crepVarProg (.dec 9 (.var 1) (.return [.var 2]) : CrepProg Nat) = [9, 1, 2] &&
+  crepVarProg (.assign 3 (.var 4) : CrepProg Nat) = [3, 4] &&
+  crepVarProg (.store (.var 5) (.const 0) : CrepProg Nat) = [5] &&
+  crepVarProg (.store32 (.var 5) (.var 6) : CrepProg Nat) = [5, 6] &&
+  crepVarProg (.storeByte (.var 5) (.var 6) : CrepProg Nat) = [5, 6] &&
+  crepVarProg (.storeGlob 7 (.var 8) : CrepProg Nat) = [8] &&
+  crepVarProg (.seq (.assign 3 (.var 4)) (.return [.var 5]) : CrepProg Nat) =
+    [3, 4, 5] &&
+  crepVarProg
+      (.ite (.var 8) (.assign 9 (.var 10)) .skip : CrepProg Nat) = [8, 9, 10] &&
+  crepVarProg (.while (.var 11) (.assign 12 (.var 13)) : CrepProg Nat) =
+    [11, 12, 13] &&
+  crepVarProg (.call none "f" [.var 14, .const 0] : CrepProg Nat) = [14] &&
+  crepVarProg
+      (.call (some ([15], none)) "f" [.var 16] : CrepProg Nat) = [16, 15] &&
+  crepVarProg
+      (.call (some ([17], some (18, .assign 19 (.var 20)))) "f" [.var 21]
+        : CrepProg Nat) = [21, 17, 19, 20] &&
+  crepVarProg (.extCall "ffi" 22 23 24 25 : CrepProg Nat) = [22, 23, 24, 25] &&
+  crepVarProg (.return [.var 26, .const 0] : CrepProg Nat) = [26] &&
+  crepVarProg (.shMem .store 27 (.var 28) : CrepProg Nat) = [27, 28] &&
+  crepVarProg (.primitive [29, 30] .addCarry [31, 32] : CrepProg Nat) =
+    [29, 30, 31, 32] &&
+  crepVarProg (.skip : CrepProg Nat) = []
+
+#guard crepVarProgCakeParity
+
+/-! Direct Cake `vmax_prog_def` and `has_return_def` coverage
+    (`crep_inlineScript.sml:36-57`).  `vmax_prog` takes the maximum over
+    `var_prog`, while call return metadata determines `has_return`; handler
+    exception identifiers are deliberately not variable occurrences. -/
+def crepInlineAnalysisCakeParity : Bool :=
+  crepVmaxProg (.skip : CrepProg Nat) = 0 &&
+  crepVmaxProg
+      (.call (some ([8], some (9, .assign 10 (.var 11)))) "f" [.var 7]
+        : CrepProg Nat) = 11 &&
+  crepVmaxProg (.extCall "ffi" 12 13 14 15 : CrepProg Nat) = 15 &&
+  crepHasReturn (.call none "f" [] : CrepProg Nat) &&
+  !crepHasReturn (.call (some ([8], none)) "f" [] : CrepProg Nat) &&
+  crepHasReturn
+      (.call (some ([8], some (9, .return [.const 1]))) "f" [] : CrepProg Nat) &&
+  crepHasReturn (.while (.const 1) (.return [.const 1]) : CrepProg Nat) &&
+  !crepHasReturn (.assign 3 (.const 4) : CrepProg Nat)
+
+#guard crepInlineAnalysisCakeParity
+
 #guard crepVmaxProg
     (.seq (.assign 4 (.var 3)) (.return [.var 9]) : CrepProg Nat) = 9
 #guard crepHasReturn (.return [.const 0] : CrepProg Nat)

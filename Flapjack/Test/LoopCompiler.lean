@@ -211,6 +211,21 @@ def reachabilityContext : Context :=
      ("y", { shapedBased := .word .notTrusted })] => true
   | _ => false
 
+/-! Direct Cake `seq_loc_inf` parity (`panStaticScript.sml:337-338`). -/
+#guard
+  match seqLocInf
+      [("x", { shapedBased := .word .trusted })]
+      [("x", { shapedBased := .word .based })] with
+  | [("x", { shapedBased := .word .based })] => true
+  | _ => false
+#guard
+  match seqLocInf
+      [("x", { shapedBased := .word .trusted })]
+      [("y", { shapedBased := .word .based })] with
+  | [("y", { shapedBased := .word .based }),
+     ("x", { shapedBased := .word .trusted })] => true
+  | _ => false
+
 /-! Direct Cake `sh_bd_from_sh` parity (`panStaticScript.sml:213-233`).
     The explicit basedness must reach every word in comb and named shapes. -/
 #guard match shapedBasedFromShapeWith [] .based .one with

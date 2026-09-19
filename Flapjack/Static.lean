@@ -304,6 +304,12 @@ def branchLocInf [BEq String] (context : InfoMap LocalInfo)
     { leftInfo with shapedBased :=
         shapedBasedBranch leftInfo.shapedBased rightInfo.shapedBased }) left' right'
 
+/-! Cake's sequential local-info composition is `union y x`: the later
+    delta (`y`) takes precedence over the incoming map (`x`). -/
+def seqLocInf [BEq String] (previous delta : InfoMap LocalInfo) :
+    InfoMap LocalInfo :=
+  infoMapUnionWith (fun newer _older => newer) delta previous
+
 def shapedBasedFromShapeWith (context : StructContext) (basedness : Based) :
     Shape → Option ShapedBased
   | .one => some (.word basedness)

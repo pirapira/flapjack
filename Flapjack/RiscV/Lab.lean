@@ -1219,6 +1219,15 @@ def labCollectPancakeRuntimeStoredLabelsAt [NeZero width] (sourceBase : Nat)
   [(0, 0, 812), (1, 0, 848), (2, 0, 772)] ++
     labCollectStoredProgramLabels sourceBase sourceProgram
 
+def labCollectPancakeRuntimeStoredLabelsAtWithRuntimeOffset [NeZero width]
+    (sourceBase runtimeOffset : Nat) (program : LabProgram (Word width)) :
+    List (Nat × Nat × Nat) :=
+  let sourceProgram := program.filter (fun entry => entry.name >= 3)
+  [(0, 0, 812 + runtimeOffset), (1, 0, 848 + runtimeOffset),
+      (2, 0, 772 + runtimeOffset)] ++
+    labCollectStoredProgramLabels sourceBase sourceProgram
+
+
 def labCollectPancakeRuntimeStoredLabels [NeZero width]
     (program : LabProgram (Word width)) : List (Nat × Nat × Nat) :=
   labCollectPancakeRuntimeStoredLabelsAt 1000 program
@@ -1229,6 +1238,10 @@ def labCollectPancakeRuntimeStoredLabels [NeZero width]
     these bases separate is observable only at long-range relocation
     boundaries, but is required to retain Cake's first-pass instruction slot. -/
 def pancakeInitialSourceBase : Nat := 1104
+
+/-! The initial runtime sections occupy 104 bytes more than the exported
+    runtime table before Cake's final relocation pass. -/
+def pancakeInitialRuntimeLabelOffset : Nat := pancakeInitialSourceBase - 1000
 
 def labEncodeStoredSection [NeZero width]
     (context : WordFfiContext) (labels : LabLabelIndex)
@@ -1277,13 +1290,15 @@ def labStoredLineLengths [NeZero width] :
         | .labAsm _ _ length => length)
         ++ labStoredLineLengths sections
 
-def labEncodeStoredProgramStable [NeZero width] (fuel : Nat)
+def labEncodeStoredProgramStableWithRuntimeOffset [NeZero width]
+    (fuel runtimeOffset : Nat)
     (context : WordFfiContext) (base ffiBase haltPc : Nat)
     (program : LabProgram (Word width)) : LabProgram (Word width) :=
   match fuel with
   | 0 => program
   | fuel + 1 =>
-      let labels := labLabelIndexOf (labCollectPancakeRuntimeStoredLabelsAt base program)
+      let labels := labLabelIndexOf
+        (labCollectPancakeRuntimeStoredLabelsAtWithRuntimeOffset base runtimeOffset program)
       let next := labEncodeStoredProgram context labels base ffiBase haltPc program
       /- `remove_labels_loop` stops as soon as the lengths stop changing
          (`lab_to_targetScript.sml`), it does not run a fixed number of
@@ -1294,7 +1309,14 @@ def labEncodeStoredProgramStable [NeZero width] (fuel : Nat)
          the stored lengths, so unchanged lengths mean the next round would
          reproduce this program exactly. -/
       if labStoredLineLengths next == labStoredLineLengths program then next
-      else labEncodeStoredProgramStable fuel context base ffiBase haltPc next
+      else labEncodeStoredProgramStableWithRuntimeOffset fuel runtimeOffset
+        context base ffiBase haltPc next
+
+def labEncodeStoredProgramStable [NeZero width] (fuel : Nat)
+    (context : WordFfiContext) (base ffiBase haltPc : Nat)
+    (program : LabProgram (Word width)) : LabProgram (Word width) :=
+  labEncodeStoredProgramStableWithRuntimeOffset fuel 0 context base ffiBase haltPc program
+
 
 def labUpdateStoredLabelLengths [NeZero width] (base : Nat) :
     LabProgram (Word width) → LabProgram (Word width)
@@ -1490,8 +1512,8 @@ def compileLabProgramLinkedWithPancakeRuntime [NeZero width]
   let sourceProgram := program.filter (fun entry => entry.name >= 3)
   let initial := labInitialStoredProgram sourceProgram
   let initialHaltPc := pancakeInitialSourceBase + labStoredProgramLength initial
-  let encoded := labEncodeStoredProgramStable 8 context pancakeInitialSourceBase 1000
-    initialHaltPc initial
+  let encoded := labEncodeStoredProgramStableWithRuntimeOffset 8 pancakeInitialRuntimeLabelOffset context
+    pancakeInitialSourceBase 1000 initialHaltPc initial
   let relabelled := labUpdateStoredLabelLengths 1000 encoded
   let haltPc := 1000 + labStoredProgramLength relabelled
   /- Cake's final pass still retains the maximum LabAsm length observed during

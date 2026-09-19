@@ -235,6 +235,16 @@ def pancakeLexCakeParity : Bool :=
 
 #guard pancakeLexCakeParity
 
+/-! Cake `posn_string_def` (`panPtreeConversionScript.sml:534`) renders all
+    source-position constructors exactly, including the two sentinel values.
+    The strings are the intermediate values consumed by `locs_comment`. -/
+def posnStringCakeParity : Bool :=
+  posnString (.posn 12 34) == "12:34" &&
+    posnString .eofPt == "EOF" &&
+    posnString .unknownPt == "UNKNOWN"
+
+#guard posnStringCakeParity
+
 /-! `isNT_def` and `argsNT_def` at
     `panPtreeConversionScript.sml:58,62` inspect only the node's
     nonterminal: matching nodes succeed, mismatching nodes and leaves do not. -/

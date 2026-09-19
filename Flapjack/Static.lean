@@ -757,7 +757,8 @@ def checkPrimitiveArgs [BEq String] (context : Context) (operator : PrimOp)
   match operator with
   | .addCarry =>
       if arguments.length != 3 then
-        staticError (.general "AddCarry expects three arguments")
+        staticError (.general (getOpargMessage true "3" (toString arguments.length)
+          context.location (primopToString operator) context.scope))
       else
         staticBind (checkOperands context (primopToString operator) arguments)
           (fun basedness =>

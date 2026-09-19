@@ -35,4 +35,10 @@ def operandsParityContext : Context :=
         [.word .trusted, .struct [.word .notBased]]) ==
     some "line: operation AddCarry operand has shape {1} instead of a word in function f\n"
 
+#guard
+  staticResultErrorMessage
+      (checkPrimitiveArgs operandsParityContext .addCarry
+        [.word .trusted, .word .notBased]) ==
+    some "line: operation AddCarry only accepts 3 operands, 2 provided in function f\n"
+
 end Flapjack

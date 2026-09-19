@@ -16,6 +16,27 @@ area to `globals_lookup` at the exact `pc_compile_correct` boundary.
 
 namespace Flapjack
 
+theorem evalPanValueExp_nStruct_of_fields_evidence
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (baseAddress topAddress bytesInWord : α)
+    (name : StructName) (fields : List (FieldName × Exp α))
+    (values : List (FieldName × PanValue α))
+    (info : StructInfo)
+    (hlookup : lookupInfo name structs = some info)
+    (hfields : evalPanValueExp.evalPanValueFields structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord fields = some values)
+    (hshape : panValueFieldsHaveShapes structs info.fields values = true) :
+    evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord (.nStruct name fields) =
+      some (.nStruct name values) := by
+  simp [evalPanValueExp, hlookup, hfields, hshape]
+
 theorem evalCrepFullProgState_raise_of_evidence_of_fuel
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

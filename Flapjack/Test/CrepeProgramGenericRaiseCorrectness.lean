@@ -684,6 +684,18 @@ theorem named_struct_source_pass_one_word_eval (value : Nat) :
     evalPanValueExp.evalPanValueFields, panValueFieldsHaveShapes,
     panValueShape, panShapeMatches]
 
+theorem named_struct_source_eval_via_generic_evidence (value : Nat) :
+    evalPanValueExp namedStructPassContext.structs
+        (fun _ => none) (fun _ => none) (fun _ => none)
+        0 0 8 (.nStruct "S" [("field", .const value)]) =
+        some (.nStruct "S" [("field", .word value)]) := by
+  apply evalPanValueExp_nStruct_of_fields_evidence
+    (info := { fields := [("field", .one)], size := 1 })
+  · simp [namedStructPassContext, lookupInfo]
+  · simp [evalPanValueExp.evalPanValueFields, evalPanValueExp]
+  · simp [namedStructPassContext, panValueFieldsHaveShapes, panValueShape,
+      panShapeMatches]
+
 theorem named_struct_source_pass_compile_raise (value : Nat) :
     compileProg context
         (.raise "E"

@@ -237,8 +237,19 @@ def skipBlockComment : List Char → Posn → Nat → Option (Posn × Nat × Nat
       else if x == '\n' then skipBlockComment (y :: xs) (nextLine loc) (i + 1)
       else skipBlockComment (y :: xs) (nextLoc 1 loc) (i + 1)
 
+/--
+Cake's `unhex_alt` (`panLexerScript.sml:217`).  Keep the helper total, as in
+`UNHEX`: callers get zero for a non-hexadecimal character.
+-/
+def unhexAlt (c : Char) : Nat :=
+  let n := c.toNat
+  if 48 ≤ n && n ≤ 57 then n - 48
+  else if 97 ≤ n && n ≤ 102 then 10 + n - 97
+  else if 65 ≤ n && n ≤ 70 then 10 + n - 65
+  else 0
+
 def numFromDecString (s : String) : Nat :=
-  s.toList.foldl (fun total c => total * 10 + (if c.isDigit then c.toNat - '0'.toNat else 0)) 0
+  s.toList.foldl (fun total c => total * 10 + unhexAlt c) 0
 
 /--
 `next_atom`: read one lexeme, skipping whitespace and comments.

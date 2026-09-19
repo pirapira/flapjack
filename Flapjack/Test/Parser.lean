@@ -139,6 +139,15 @@ def skipCommentCakeParity : Bool :=
 
 #guard skipCommentCakeParity
 
+/-! Cake `unhex_alt_def` (`panLexerScript.sml:217`) returns the `UNHEX` value
+    for decimal and upper/lowercase hexadecimal digits, and zero otherwise. -/
+def unhexAltCakeParity : Bool :=
+  [unhexAlt '0', unhexAlt '9', unhexAlt 'a', unhexAlt 'f',
+   unhexAlt 'A', unhexAlt 'F', unhexAlt 'g', unhexAlt ' ']
+    == [0, 9, 10, 15, 10, 15, 0, 0]
+
+#guard unhexAltCakeParity
+
 /-! Cake `loc_row_def` (`panLexerScript.sml:191`) constructs a position at the
     requested row and the initial source column. -/
 def locRowCakeParity : Bool :=

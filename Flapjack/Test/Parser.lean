@@ -109,6 +109,43 @@ def nextTokenCakeParity : Bool :=
 
 #guard nextTokenCakeParity
 
+/-! Cake `dest_lexErrorT_def` (`panLexerScript.sml:70`) projects the message
+    from a `LexErrorT` and rejects every other token constructor. -/
+def destLexErrorTCakeParity : Bool :=
+  destLexErrorT (.lexErrorT "bad") == some "bad" &&
+    destLexErrorT (.intT 7) == none &&
+    destLexErrorT (.keywordT .skipK) == none
+
+#guard destLexErrorTCakeParity
+
+/-! Cake `isLexErrorT_def` (`panLexerScript.sml:65`) recognizes exactly the
+    `LexErrorT` token constructor and rejects representative ordinary tokens. -/
+def isLexErrorTCakeParity : Bool :=
+  isLexErrorT (.lexErrorT "bad") &&
+    !isLexErrorT (.intT 7) &&
+    !isLexErrorT (.keywordT .skipK) &&
+    !isLexErrorT (.identT "name")
+
+#guard isLexErrorTCakeParity
+
+/-! Cake `get_token_def` (`panLexerScript.sml:75`) is an ordered symbolic-token
+    lookup.  Exercise every source branch and the final lexical-error fallback. -/
+def getTokenCakeParity : Bool :=
+  let cases : List (String × Token) := [
+    ("&&", .boolAndT), ("||", .boolOrT), ("&", .andT), ("|", .orT),
+    ("^", .xorT), ("==", .eqT), ("=>", .arrowT), ("!=", .neqT),
+    ("<", .lessT), (">", .greaterT), (">=", .geqT), ("<=", .leqT),
+    ("<+", .lowerT), (">+", .higherT), (">=+", .higheqT), ("<=+", .loweqT),
+    ("!", .notT), ("+", .plusT), ("-", .minusT), ("*", .starT),
+    (".", .dotT), ("<<", .lslT), (">>>", .lsrT), (">>", .asrT),
+    ("#>>", .rorT), ("(", .lParT), (")", .rParT), (",", .commaT),
+    (";", .semiT), (":", .colonT), ("[", .lBrakT), ("]", .rBrakT),
+    ("{", .lCurT), ("}", .rCurT), ("=", .assignT)]
+  cases.all (fun (source, expected) => getToken source == expected) &&
+    getToken "?" == .lexErrorT "Unrecognised symbolic token: ?"
+
+#guard getTokenCakeParity
+
 /-! Cake `init_loc_def` (`panLexerScript.sml:299`) starts lexing at row 1,
     column 1. -/
 def initLocCakeParity : Bool :=
@@ -138,6 +175,28 @@ def skipCommentCakeParity : Bool :=
   | _, _, _ => false
 
 #guard skipCommentCakeParity
+
+/-! Cake `unhex_alt_def` (`panLexerScript.sml:217`) returns the `UNHEX` value
+    for decimal and upper/lowercase hexadecimal digits, and zero otherwise. -/
+def unhexAltCakeParity : Bool :=
+  [unhexAlt '0', unhexAlt '9', unhexAlt 'a', unhexAlt 'f',
+   unhexAlt 'A', unhexAlt 'F', unhexAlt 'g', unhexAlt ' ']
+    == [0, 9, 10, 15, 10, 15, 0, 0]
+
+#guard unhexAltCakeParity
+
+/-! Cake `num_from_dec_string_alt_def` (`panLexerScript.sml:221`) is
+    `s2n 10 unhex_alt`; these cases cover its empty/leading-zero and
+    multi-digit accumulation, plus the signed `next_atom` caller. -/
+def numFromDecStringAltCakeParity : Bool :=
+  numFromDecStringAlt "" == 0 &&
+    numFromDecStringAlt "00042" == 42 &&
+    numFromDecStringAlt "12345" == 12345 &&
+    match nextAtom 16 "-42".toList initLoc with
+    | some (.numberA (-42), _, []) => true
+    | _ => false
+
+#guard numFromDecStringAltCakeParity
 
 /-! Cake `loc_row_def` (`panLexerScript.sml:191`) constructs a position at the
     requested row and the initial source column. -/
@@ -314,6 +373,91 @@ def binaryExpsCakeParity : Bool :=
     binary .eAnd .andT .and && binary .eAdd .plusT .add
 
 #guard binaryExpsCakeParity
+
+/-! Cake `panExps_def` (`panPtreeConversionScript.sml:113`) is the singleton
+    `EMulNT` family consumed by `conv_panops`; other expression nodes stay out
+    of that fold. -/
+def panExpsCakeParity : Bool :=
+  let integer (value : Int) : ParseTree := .lf (.intT value) unknownLoc
+  sameAst panExps ([.eMul] : List Nonterminal) &&
+    sameAst (convExp ofI 8
+      (.nd .eMul [integer 3, .lf (.starT) unknownLoc, integer 4] unknownLoc))
+      (some (.panOp .mul [.const 3, .const 4])) &&
+    (convExp ofI 8
+      (.nd .eAdd [integer 3, .lf (.plusT) unknownLoc, integer 4] unknownLoc)).isSome
+
+#guard panExpsCakeParity
+
+/-! Cake `isSubOp_def` (`panPtreeConversionScript.sml:119`) is true only for
+    a binary `Sub` expression; it prevents subtraction from being flattened
+    with other binary operators. -/
+def isSubOpCakeParity : Bool :=
+  isSubOp (.op .sub [.const (1 : Int), .const 2]) &&
+    !isSubOp (.op .sub [.const (1 : Int), .const 2, .const 3]) &&
+    !isSubOp (.op .add [.const (1 : Int), .const 2]) &&
+    !isSubOp (.panOp .mul [.const (1 : Int), .const 2])
+
+#guard isSubOpCakeParity
+
+/-! Cake `conv_Exp_def` (`panPtreeConversionScript.sml:244`) dispatches
+    expression nodes in source order, while leaves fall through to constants
+    and variables; malformed node shapes return `NONE`. -/
+def convExpCakeParity : Bool :=
+  let integer (value : Int) : ParseTree := .lf (.intT value) unknownLoc
+  let identifier (name : String) : ParseTree := .lf (.identT name) unknownLoc
+  let notToken : ParseTree := .lf (.notT) unknownLoc
+  sameAst (convExp ofI 8 (integer 7)) (some (.const 7)) &&
+    sameAst (convExp ofI 8 (identifier "x")) (some (.var .global "x")) &&
+    sameAst (convExp ofI 8
+      (.nd .eNot [integer 7] unknownLoc)) (some (.const 7)) &&
+    sameAst (convExp ofI 8
+      (.nd .eNot [notToken, integer 7] unknownLoc))
+      (some (.cmp .equal (.const 0) (.const 7))) &&
+    sameAst (convExp ofI 8
+      (.nd .eField [integer 7, integer 2] unknownLoc))
+      (some (.rField 2 (.const 7))) &&
+    sameAst (convExp ofI 8 (.nd .eField [] unknownLoc))
+      (none : Option (Exp Int))
+
+#guard convExpCakeParity
+
+/-! Cake `conv_NonRecStmt_def` (`panPtreeConversionScript.sml:404`) converts
+    statements without nested `Prog` children, including assignment, memory,
+    shared-memory load, return, raise, and the leaf control statements. -/
+def convNonRecStmtCakeParity : Bool :=
+  let integer (value : Int) : ParseTree := .lf (.intT value) unknownLoc
+  let identifier (name : String) : ParseTree := .lf (.identT name) unknownLoc
+  let assignTree := .nd .assign [identifier "x", integer 7] unknownLoc
+  let storeTree := .nd .store [integer 8, integer 9] unknownLoc
+  let sharedLoadTree := .nd .sharedLoad [identifier "x", integer 10] unknownLoc
+  let returnTree := .nd .returnNT [integer 11] unknownLoc
+  let raiseTree := .nd .throwNT [identifier "E", integer 12] unknownLoc
+  let malformed := .nd .assign [identifier "x"] unknownLoc
+  sameAst (convNonRecStmt ofI 8 assignTree)
+      (some (.assign .global "x" (.const 7))) &&
+    sameAst (convNonRecStmt ofI 8 storeTree)
+      (some (.store (.const 8) (.const 9))) &&
+    sameAst (convNonRecStmt ofI 8 sharedLoadTree)
+      (some (.shMemLoad .opW .global "x" (.const 10))) &&
+    sameAst (convNonRecStmt ofI 8 returnTree)
+      (some (.return (.const 11))) &&
+    sameAst (convNonRecStmt ofI 8 raiseTree)
+      (some (.raise "E" (.const 12))) &&
+    sameAst (convNonRecStmt ofI 8 (.lf (.keywordT .skipK) unknownLoc))
+      (some .skip) &&
+    sameAst (convNonRecStmt ofI 8 malformed)
+      (none : Option (Prog Int))
+
+#guard convNonRecStmtCakeParity
+
+/-! Cake `butlast_def` (`panPtreeConversionScript.sml:487`) drops exactly the
+    final list element, including the empty and singleton boundary cases. -/
+def butlastCakeParity : Bool :=
+  butlast ([] : List Nat) == [] &&
+    butlast [7] == [] &&
+    butlast [1, 2, 3, 4] == [1, 2, 3]
+
+#guard butlastCakeParity
 
 /-! Cake operator conversion at `panPtreeConversionScript.sml:141,153,168`
     recurses through the corresponding operator wrapper, maps comparison

@@ -237,8 +237,24 @@ def skipBlockComment : List Char → Posn → Nat → Option (Posn × Nat × Nat
       else if x == '\n' then skipBlockComment (y :: xs) (nextLine loc) (i + 1)
       else skipBlockComment (y :: xs) (nextLoc 1 loc) (i + 1)
 
+/--
+Cake's `unhex_alt` (`panLexerScript.sml:217`).  Keep the helper total, as in
+`UNHEX`: callers get zero for a non-hexadecimal character.
+-/
+def unhexAlt (c : Char) : Nat :=
+  let n := c.toNat
+  if 48 ≤ n && n ≤ 57 then n - 48
+  else if 97 ≤ n && n ≤ 102 then 10 + n - 97
+  else if 65 ≤ n && n ≤ 70 then 10 + n - 65
+  else 0
+
+/-! Cake's `num_from_dec_string_alt_def` is `s2n 10 unhex_alt`.
+    `l2n` over the reversed list is the same left-to-right accumulator. -/
+def numFromDecStringAlt (s : String) : Nat :=
+  s.toList.foldl (fun total c => total * 10 + unhexAlt c) 0
+
 def numFromDecString (s : String) : Nat :=
-  s.toList.foldl (fun total c => total * 10 + (if c.isDigit then c.toNat - '0'.toNat else 0)) 0
+  numFromDecStringAlt s
 
 /--
 `next_atom`: read one lexeme, skipping whitespace and comments.
@@ -255,11 +271,11 @@ def nextAtom : Nat → List Char → Posn → Option (Atom × Locs × List Char)
       else if c.isWhitespace || c == '\x0b' || c == '\x0c' then nextAtom fuel cs (nextLoc 1 loc)
       else if c.isDigit then
         let (n, cs') := readWhile Char.isDigit cs [c]
-        some (.numberA (Int.ofNat (numFromDecString n)),
+        some (.numberA (Int.ofNat (numFromDecStringAlt n)),
               { start := loc, stop := nextLoc n.length loc }, cs')
       else if c == '-' && (cs.head?.map Char.isDigit).getD false then
         let (n, rest) := readWhile Char.isDigit cs []
-        some (.numberA (0 - Int.ofNat (numFromDecString n)),
+        some (.numberA (0 - Int.ofNat (numFromDecStringAlt n)),
               { start := loc, stop := nextLoc n.length loc }, rest)
       else if c == '/' && cs.head? == some '/' then
         match skipComment cs.tail (nextLoc 2 loc) 0 with

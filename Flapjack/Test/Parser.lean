@@ -116,6 +116,21 @@ def initLocCakeParity : Bool :=
 
 #guard initLocCakeParity
 
+/-! Cake `pancake_lex_aux_def` (`panLexerScript.sml:303`) accumulates tokens in
+    source order, threads each token's end location into the next call, and
+    returns an empty list at EOF or exhausted fuel. -/
+def pancakeLexAuxCakeParity : Bool :=
+  let source := "x + 1"
+  let expected := [
+    (.identT "x", { start := .posn 1 1, stop := .posn 1 2 }),
+    (.plusT, { start := .posn 1 3, stop := .posn 1 3 }),
+    (.intT 1, { start := .posn 1 4, stop := .posn 1 5 })]
+  sameAst (lexAux (source.length + 1) source.toList initLoc) expected &&
+    sameAst (lexAux 0 source.toList initLoc) [] &&
+    sameAst (lexAux 16 "".toList initLoc) []
+
+#guard pancakeLexAuxCakeParity
+
 /-! `isNT_def` and `argsNT_def` at
     `panPtreeConversionScript.sml:58,62` inspect only the node's
     nonterminal: matching nodes succeed, mismatching nodes and leaves do not. -/

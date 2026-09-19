@@ -39,6 +39,24 @@ def divResult : Option (List Nat) :=
 def divByZero : Bool :=
   (loopArith probeWidth (.div 1 2 3) (withLocals [(2, 7), (3, 0)])).isNone
 
+theorem successful_division_requires_nonzero_divisor
+    (result : Nat → Option Nat)
+    (heval : loopArithDiv 1 2 3 (withLocals [(2, 7), (3, 2)]) = some result) :
+    ∃ divisorValue, withLocals [(2, 7), (3, 2)] 3 = some divisorValue ∧
+      divisorValue ≠ 0 := by
+  exact loopArithDiv_some_implies_divisor_nonzero 1 2 3
+    (withLocals [(2, 7), (3, 2)]) result heval
+
+theorem zero_divisor_cannot_be_successful
+    (result : Nat → Option Nat)
+    (heval : loopArithDiv 1 2 3 (withLocals [(2, 7), (3, 0)]) = some result) :
+    False := by
+  obtain ⟨divisorValue, hvalue, hnonzero⟩ :=
+    loopArithDiv_some_implies_divisor_nonzero 1 2 3
+      (withLocals [(2, 7), (3, 0)]) result heval
+  simp [withLocals] at hvalue
+  omega
+
 /-- The original returns `NONE` for a non-word operand; the `Nat` model has no
     non-word locals, so an absent operand is the corresponding input. -/
 def divNonWord : Bool :=

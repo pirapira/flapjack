@@ -127,6 +127,19 @@ def pegF (parser : P α) (continuation : α → P β) : P β := fun s =>
   | (some value, state) => continuation value state
   | (none, state) => (none, state)
 
+/-! Direct counterpart of `panPEG$seql_def` from
+`cakeml/pancake/parser/panPEGScript.sml:115`.  The source folds `seq` over
+parser results using list append before applying `pegf`'s continuation. -/
+def seqList (parsers : List (P (List α))) : P (List α) :=
+  match parsers with
+  | [] => pure' []
+  | parser :: rest =>
+      pegF parser (fun first =>
+        pegF (seqList rest) (fun remaining => pure' (first ++ remaining)))
+
+def seqL (parsers : List (P (List α))) (continuation : List α → P β) : P β :=
+  pegF (seqList parsers) continuation
+
 /-- Run a parser but treat failure as success with `none`, mirroring `try`. -/
 def optional' (p : P α) : P (Option α) := fun s =>
   match p s with

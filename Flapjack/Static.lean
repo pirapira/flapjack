@@ -732,15 +732,36 @@ def checkFunctionName [BEq String] (context : Context) (name : FunName) :
           (staticScopeMessage .function context.location name context.scope)))
   | some info => staticOk info
 
-def checkPrimitiveArgs [BEq String] (_context : Context) (operator : PrimOp)
+/-! Source-shaped port of CakeML's `get_non_word_msg_def`
+    (`cakeml/pancake/panStaticScript.sml:552-557`). -/
+def getNonWordMessage (description shapeString location : String)
+    (scope : Scope) : String :=
+  location ++ description ++ " has shape " ++ shapeString ++
+    " instead of a word in " ++ staticScopeDescription scope ++ "\n"
+
+/-! Source-shaped port of CakeML's `check_operands_def`
+    (`cakeml/pancake/panStaticScript.sml:660-671`). -/
+def checkOperands [BEq String] (context : Context) (opString : String) :
+    List ShapedBased → StaticResult Based
+  | [] => staticOk .notBased
+  | .word basedness :: arguments =>
+      staticBind (checkOperands context opString arguments) (fun restBasedness =>
+        staticOk (basedMerge basedness restBasedness))
+  | shaped :: _ =>
+      staticError (.shape (getNonWordMessage
+        ("operation " ++ opString ++ " operand")
+        (shapedBasedToString shaped) context.location context.scope))
+
+def checkPrimitiveArgs [BEq String] (context : Context) (operator : PrimOp)
     (arguments : List ShapedBased) : StaticResult ShapedBased :=
   match operator with
   | .addCarry =>
       if arguments.length != 3 then
         staticError (.general "AddCarry expects three arguments")
-      else if arguments.all shapedBasedIsWord then
-        staticOk (.struct [.word .notBased, .word .notBased])
-      else staticError (.shape "AddCarry operand is not a word")
+      else
+        staticBind (checkOperands context (primopToString operator) arguments)
+          (fun basedness =>
+            staticOk (.struct [.word basedness, .word .notBased]))
 
 def progOk (last : LastStmt) (exitsFunction exitsLoop : Bool) (location : String) :
     StaticResult ProgReturn :=
@@ -789,13 +810,6 @@ def getUnreachMessage (location last : String) (scope : Scope) : String :=
 def getRogueMessage (isBreak : Bool) (location : String) (scope : Scope) : String :=
   location ++ (if isBreak then "break " else "continue ") ++
     "statement outside loop in " ++ staticScopeDescription scope ++ "\n"
-
-/-! Source-shaped port of CakeML's `get_non_word_msg_def`
-    (`cakeml/pancake/panStaticScript.sml:552-557`). -/
-def getNonWordMessage (description shapeString location : String)
-    (scope : Scope) : String :=
-  location ++ description ++ " has shape " ++ shapeString ++
-    " instead of a word in " ++ staticScopeDescription scope ++ "\n"
 
 /-! Source-shaped port of CakeML's `get_shape_mismatch_msg_def`
     (`cakeml/pancake/panStaticScript.sml:560-566`). -/

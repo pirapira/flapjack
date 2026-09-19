@@ -653,7 +653,7 @@ def wordSsaMergeMoves : List Nat → WordSsaState → WordSsaState → Nat →
           if leftName = rightName then
             (leftMoves, rightMoves, next, left, right)
           else
-            ([(next, leftName)] ++ leftMoves, [(next, rightName)] ++ rightMoves,
+            ((next, leftName) :: leftMoves, (next, rightName) :: rightMoves,
               next + 4, wordSsaForceRename [(name, next)] left,
               wordSsaForceRename [(name, next)] right)
       | _, _ => (leftMoves, rightMoves, next, left, right)

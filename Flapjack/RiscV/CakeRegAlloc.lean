@@ -133,6 +133,46 @@ structure CakeNodeBijection where
   nextNode : Nat
   deriving Repr
 
+/- The reference keeps the two observable association-list maps in
+   first-appearance order.  The membership test used while constructing them
+   need not rescan that history, so the production constructor carries a
+   private ordered index and drops it at the public boundary. -/
+structure CakeNodeBijectionBuild where
+  toAllocator : NatInfoMap Nat
+  fromAllocator : NatInfoMap Nat
+  index : Std.TreeMap Nat Nat
+  nextNode : Nat
+
+def cakeListRemapBuild : List Nat → CakeNodeBijectionBuild → CakeNodeBijectionBuild
+  | [], bijection => bijection
+  | name :: names, bijection =>
+      match bijection.index[name]? with
+      | some _ => cakeListRemapBuild names bijection
+      | none =>
+          cakeListRemapBuild names
+            { toAllocator := (name, bijection.nextNode) :: bijection.toAllocator
+              fromAllocator := (bijection.nextNode, name) :: bijection.fromAllocator
+              index := bijection.index.insert name bijection.nextNode
+              nextNode := bijection.nextNode + 1 }
+
+def cakeMkBijBuildAux : WordClashTree → CakeNodeBijectionBuild → CakeNodeBijectionBuild
+  | .delta writes reads, bijection =>
+      cakeListRemapBuild writes (cakeListRemapBuild reads bijection)
+  | .set names, bijection =>
+      cakeListRemapBuild (NumSet.fromList names) bijection
+  | .branch live thenBranch elseBranch, bijection =>
+      let mapped := cakeMkBijBuildAux elseBranch
+        (cakeMkBijBuildAux thenBranch bijection)
+      match live with
+      | none => mapped
+      | some names => cakeListRemapBuild (NumSet.fromList names) mapped
+  | .seq first second, bijection =>
+      cakeMkBijBuildAux first (cakeMkBijBuildAux second bijection)
+
+def cakeMkBijBuild (tree : WordClashTree) : CakeNodeBijectionBuild :=
+  cakeMkBijBuildAux tree
+    { toAllocator := [], fromAllocator := [], index := {}, nextNode := 0 }
+
 /-- `list_remap` (`reg_allocScript.sml:1096-1103`): assign fresh allocator
     node numbers to the not-yet-mapped names of a list, left to right. -/
 def cakeListRemap : List Nat → CakeNodeBijection → CakeNodeBijection
@@ -173,7 +213,10 @@ def cakeMkBijAux : WordClashTree → CakeNodeBijection → CakeNodeBijection
 /-- `mk_bij` (`reg_allocScript.sml:1119-1127`): the node bijection for a
     whole clash tree, starting from the empty bijection at node zero. -/
 def cakeMkBij (tree : WordClashTree) : CakeNodeBijection :=
-  cakeMkBijAux tree { toAllocator := [], fromAllocator := [], nextNode := 0 }
+  let built := cakeMkBijBuild tree
+  { toAllocator := built.toAllocator,
+    fromAllocator := built.fromAllocator,
+    nextNode := built.nextNode }
 
 end Flapjack.RiscV.CakeRegAlloc
 

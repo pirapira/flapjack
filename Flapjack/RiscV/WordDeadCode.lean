@@ -23,7 +23,7 @@ open Flapjack
     single dead-code pass cubic in function size; `natEraseDups` returns the
     same list. -/
 def wordDeadAddReads (live : List Nat) (reads : List Nat) : List Nat :=
-  natEraseDups (live ++ reads)
+  natEraseDupsAppend live reads
 
 def wordDeadRemoveWrites (live : List Nat) (writes : List Nat) : List Nat :=
   live.filter (fun name => name ∉ writes)

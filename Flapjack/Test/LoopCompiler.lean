@@ -177,6 +177,11 @@ def reachabilityContext : Context :=
   (reachedWarnable (.return (.const 1) : Prog Nat) reachabilityContext).1.isNone &&
   (reachedWarnable (.return (.const 1) : Prog Nat) reachabilityContext).2.reachable ==
       .isReach
+#guard
+  branchLastStmt false false == .otherLast &&
+  branchLastStmt true false == .condExitLast &&
+  branchLastStmt false true == .condExitLast &&
+  branchLastStmt true true == .condExitLast
 #guard (reachedWarnable (.annot "" "" : Prog Nat) reachabilityContext).1.isNone
 #guard (reachedWarnable (.tick : Prog Nat) reachabilityContext).1.isNone
 #guard (reachedWarnable (.skip : Prog Nat)

@@ -67,6 +67,14 @@ def isAtomGroupCakeParity : Bool :=
 
 #guard isAtomGroupCakeParity
 
+/-! Cake `isAlphaNumOrWild_def` (`panLexerScript.sml:61`) accepts every
+    alphanumeric character plus underscore, and rejects nearby punctuation. -/
+def isAlphaNumOrWildCakeParity : Bool :=
+  ['a', 'Z', '0', '9', '_'].all isAlphaNumOrWild &&
+    ['-', '+', '.', '@', ' '].all (fun character => !isAlphaNumOrWild character)
+
+#guard isAlphaNumOrWildCakeParity
+
 /-! Cake `next_atom_def` (`panLexerScript.sml:225`) skips whitespace and
     newlines, recognizes unsigned/signed numbers, words, singleton symbols,
     and reports an unrecognized character without silently dropping it. -/

@@ -50,7 +50,7 @@ def compileFlapjackRiscVViaHeuristicAllocatedStack [NeZero width]
     (services : List (FunName × Nat)) (removeConfig : StackRemoveConfig)
     (declarations : List (Decl (RiscV.Word width))) :
     Option (List (RiscV.Instruction width)) := do
-  let pipeline := compileFlapjack architecture bytesInWord fromNat declarations
+  let pipeline := compileFlapjackCore architecture bytesInWord fromNat declarations
   let functions ← pipelineWordFunctionsAllocatedWithHeuristics algorithm pipeline.loop
   RiscV.compileStackProgramNatListWithRaiseStubToRiscV { services := services }
     removeConfig 0 0

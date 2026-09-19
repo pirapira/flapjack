@@ -148,6 +148,19 @@ def unhexAltCakeParity : Bool :=
 
 #guard unhexAltCakeParity
 
+/-! Cake `num_from_dec_string_alt_def` (`panLexerScript.sml:221`) is
+    `s2n 10 unhex_alt`; these cases cover its empty/leading-zero and
+    multi-digit accumulation, plus the signed `next_atom` caller. -/
+def numFromDecStringAltCakeParity : Bool :=
+  numFromDecStringAlt "" == 0 &&
+    numFromDecStringAlt "00042" == 42 &&
+    numFromDecStringAlt "12345" == 12345 &&
+    match nextAtom 16 "-42".toList initLoc with
+    | some (.numberA (-42), _, []) => true
+    | _ => false
+
+#guard numFromDecStringAltCakeParity
+
 /-! Cake `loc_row_def` (`panLexerScript.sml:191`) constructs a position at the
     requested row and the initial source column. -/
 def locRowCakeParity : Bool :=

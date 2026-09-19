@@ -248,8 +248,13 @@ def unhexAlt (c : Char) : Nat :=
   else if 65 ≤ n && n ≤ 70 then 10 + n - 65
   else 0
 
-def numFromDecString (s : String) : Nat :=
+/-! Cake's `num_from_dec_string_alt_def` is `s2n 10 unhex_alt`.
+    `l2n` over the reversed list is the same left-to-right accumulator. -/
+def numFromDecStringAlt (s : String) : Nat :=
   s.toList.foldl (fun total c => total * 10 + unhexAlt c) 0
+
+def numFromDecString (s : String) : Nat :=
+  numFromDecStringAlt s
 
 /--
 `next_atom`: read one lexeme, skipping whitespace and comments.
@@ -266,11 +271,11 @@ def nextAtom : Nat → List Char → Posn → Option (Atom × Locs × List Char)
       else if c.isWhitespace || c == '\x0b' || c == '\x0c' then nextAtom fuel cs (nextLoc 1 loc)
       else if c.isDigit then
         let (n, cs') := readWhile Char.isDigit cs [c]
-        some (.numberA (Int.ofNat (numFromDecString n)),
+        some (.numberA (Int.ofNat (numFromDecStringAlt n)),
               { start := loc, stop := nextLoc n.length loc }, cs')
       else if c == '-' && (cs.head?.map Char.isDigit).getD false then
         let (n, rest) := readWhile Char.isDigit cs []
-        some (.numberA (0 - Int.ofNat (numFromDecString n)),
+        some (.numberA (0 - Int.ofNat (numFromDecStringAlt n)),
               { start := loc, stop := nextLoc n.length loc }, rest)
       else if c == '/' && cs.head? == some '/' then
         match skipComment cs.tail (nextLoc 2 loc) 0 with

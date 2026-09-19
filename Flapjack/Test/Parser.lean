@@ -109,6 +109,18 @@ def nextTokenCakeParity : Bool :=
 
 #guard nextTokenCakeParity
 
+/-! Cake `token_of_atom_def` (`panLexerScript.sml:156`) maps each atom
+    constructor through the corresponding token conversion, preserving every
+    payload and using Cake's keyword/symbol tables for words and symbols. -/
+def tokenOfAtomCakeParity : Bool :=
+  tokenOfAtom (.numberA (-7)) == .intT (-7) &&
+    tokenOfAtom (.wordA "skip") == .keywordT .skipK &&
+    tokenOfAtom (.symA "+") == .plusT &&
+    tokenOfAtom (.errA "bad") == .lexErrorT "bad" &&
+    tokenOfAtom (.annotCommentA "note") == .annotCommentT "note"
+
+#guard tokenOfAtomCakeParity
+
 /-! Cake `dest_lexErrorT_def` (`panLexerScript.sml:70`) projects the message
     from a `LexErrorT` and rejects every other token constructor. -/
 def destLexErrorTCakeParity : Bool :=
@@ -206,6 +218,16 @@ def locRowCakeParity : Bool :=
 
 #guard locRowCakeParity
 
+/-! Cake `next_loc_def` (`panLexerScript.sml:181`) advances only the column
+    of a concrete `POSN`; the EOF and unknown sentinels are unchanged. -/
+def nextLocCakeParity : Bool :=
+  nextLoc 0 (.posn 4 5) == .posn 4 5 &&
+    nextLoc 3 (.posn 4 5) == .posn 4 8 &&
+    nextLoc 3 .eofPt == .eofPt &&
+    nextLoc 3 .unknownPt == .unknownPt
+
+#guard nextLocCakeParity
+
 /-! Cake `pancake_lex_aux_def` (`panLexerScript.sml:303`) accumulates tokens in
     source order, threads each token's end location into the next call, and
     returns an empty list at EOF or exhausted fuel. -/
@@ -235,6 +257,16 @@ def pancakeLexCakeParity : Bool :=
 
 #guard pancakeLexCakeParity
 
+/-! Cake `posn_string_def` (`panPtreeConversionScript.sml:534`) renders all
+    source-position constructors exactly, including the two sentinel values.
+    The strings are the intermediate values consumed by `locs_comment`. -/
+def posnStringCakeParity : Bool :=
+  posnString (.posn 12 34) == "12:34" &&
+    posnString .eofPt == "EOF" &&
+    posnString .unknownPt == "UNKNOWN"
+
+#guard posnStringCakeParity
+
 /-! `isNT_def` and `argsNT_def` at
     `panPtreeConversionScript.sml:58,62` inspect only the node's
     nonterminal: matching nodes succeed, mismatching nodes and leaves do not. -/
@@ -251,6 +283,17 @@ def parseTreeNtCakeParity : Bool :=
     | _, _, _ => false
 
 #guard parseTreeNtCakeParity
+
+/-! Cake `parsetree_locs_def` (`panPtreeConversionScript.sml:527`) projects
+    the stored location pair from either a leaf or a node without inspecting
+    its token, nonterminal, or children. -/
+def parseTreeLocsCakeParity : Bool :=
+  let leafLoc : Locs := { start := .posn 2 3, stop := .posn 2 7 }
+  let nodeLoc : Locs := { start := .posn 5 1, stop := .eofPt }
+  ParseTree.locs (.lf (.identT "x") leafLoc) == leafLoc &&
+    ParseTree.locs (.nd .exp [] nodeLoc) == nodeLoc
+
+#guard parseTreeLocsCakeParity
 
 /-! Cake `destLf_def` (`panPtreeConversionScript.sml:25`) projects the token
     from a leaf and returns `NONE` for a non-leaf node.  Lean's `destTok` is

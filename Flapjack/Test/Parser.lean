@@ -470,6 +470,32 @@ def convDefaultShapeCakeParity : Bool :=
 
 #guard convDefaultShapeCakeParity
 
+/-! Cake `conv_Shape_def` (`panPtreeConversionScript.sml:197`) accepts
+    default, counted, named, and recursive shape-combination trees.  Invalid
+    counts, wrong node tags, and exhausted conversion fuel return `NONE`. -/
+def convShapeCakeParity : Bool :=
+  let defaultTree : ParseTree := .lf (.defaultShT) unknownLoc
+  let two : ParseTree := .lf (.intT 2) unknownLoc
+  let zero : ParseTree := .lf (.intT 0) unknownLoc
+  let negative : ParseTree := .lf (.intT (-1)) unknownLoc
+  let named : ParseTree := .lf (.identT "Word") unknownLoc
+  let combined : ParseTree := .nd .shapeComb [defaultTree, named] unknownLoc
+  let wrongNode : ParseTree := .nd .prog [defaultTree, named] unknownLoc
+  match convShape 8 defaultTree,
+      convShape 8 two,
+      convShape 8 zero,
+      convShape 8 negative,
+      convShape 8 named,
+      convShape 8 combined,
+      convShape 0 defaultTree,
+      convShape 8 wrongNode with
+  | some .one, some (.comb [.one, .one]), none, none,
+      some (.named "Word"), some (.comb [.one, .named "Word"]),
+      none, none => true
+  | _, _, _, _, _, _, _, _ => false
+
+#guard convShapeCakeParity
+
 #guard (pancakeLex "x + 1").map (·.1) == [.identT "x", .plusT, .intT 1]
 
 -- `//` runs to end of line; the block forms are `/* */` and `/@ @/`.

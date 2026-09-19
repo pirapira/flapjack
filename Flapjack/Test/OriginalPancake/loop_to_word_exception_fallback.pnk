@@ -1,0 +1,14 @@
+exception E0 : 1;
+exception E1 : 1;
+exception E2 : 1;
+exception E3 : 1;
+exception E4 : 1;
+exception E5 : 1;
+exception E6 : 1;
+exception E7 : 1;
+exception E8 : 1;
+exception E9 : 1;
+fun 1 main() {
+  throw E9(0);
+  return 0;
+}

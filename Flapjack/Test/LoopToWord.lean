@@ -67,6 +67,7 @@ def originalCompFuncSeqAssign : WordProg Nat :=
     .seq (.assign 4 (.const 3)) (.assign 6 (.var 4))
 def originalCompFuncUnboundVar : WordProg Nat :=
     .seq (.assign 2 (.const 3)) (.assign 2 (.var 0))
+def originalCompFuncUnboundRaise : WordProg Nat := .raise 0
 /-! `loop_to_word$compile` lowers the two-result AddCarry primitive through
     Cake's four-register scratch sequence.  These values are the direct
     source-shaped result for a context that maps source slots to physical
@@ -135,6 +136,7 @@ def sameWordProg : WordProg Nat → WordProg Nat → Bool
       sameWordProg leftFirst rightFirst && sameWordProg leftSecond rightSecond
   | .loop leftIn leftBody leftOut, .loop rightIn rightBody rightOut =>
       leftIn == rightIn && sameWordProg leftBody rightBody && leftOut == rightOut
+  | .raise left, .raise right => left == right
   | .break left, .break right => left == right
   | .tick, .tick => true
   | _, _ => false
@@ -237,6 +239,11 @@ example : sameNatSet (mkNewCutset [(3, 6)] [3, 1, 3, 2])
 #guard sameWordProg (loopToWordCompFunc 7 []
     (.seq (.assign 2 (.const 3)) (.assign 2 (.var 1)) : LoopProg Nat))
     originalCompFuncUnboundVar == true
+#guard sameWordProg (loopToWordCompFunc 7 []
+    (.raise 17 : LoopProg Nat)) originalCompFuncUnboundRaise == true
+#guard loopReferencedVars (.raise 17 : LoopProg Nat) == [17]
+#guard wordFindVar
+    ({ vars := sourceFallbackContext (List.range 18) } : WordContext) 17 == 0
 #guard sameWordCode (loopToWordCompileProg
     ([] : List (Nat × List Nat × LoopProg Nat))) originalCompileProgEmpty == true
 #guard sameWordCode (loopToWordCompileProg

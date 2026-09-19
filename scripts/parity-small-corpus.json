@@ -486,6 +486,14 @@
       ]
     },
     {
+      "path": "Flapjack/Test/OriginalPancake/loop_to_word_exception_fallback.pnk",
+      "source_reference": "Minimized exact oracle for the loop_to_word missing-variable fallback: a high exception identifier remains register zero after the source-shaped Loop boundary scans all referenced names.",
+      "cake_sha256": "18d150a215e9f622f9c0fe4e46181a07225fefa6240c37b4045a302b21c588ca",
+      "tracked_beads": [
+        "flapjack-7zw"
+      ]
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/f00226_mks_out_of_range_shift.pnk",
       "source_reference": "Minimized campaign-seed-17 finding f00226: Cake retains the zero source constant and register subtraction produced by a struct-constructor argument, while Flapjack's Lab fusion incorrectly dropped the pair and shifted the following function base.",
       "cake_sha256": "a3ad0d2832df373ec4418997cb6a4cb4ef8a7d295e348466dd22f64c093db4a8",

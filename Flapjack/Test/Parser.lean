@@ -136,6 +136,19 @@ def convParamsCakeParity : Bool :=
 
 #guard convParamsCakeParity
 
+/-! Cake location conversion at `panPtreeConversionScript.sml:540,549`
+    renders both position forms and prepends a `location` annotation only
+    when requested. -/
+def locationAnnotationCakeParity : Bool :=
+  let locs : Locs := { start := .posn 2 3, stop := .eofPt }
+  let tree : ParseTree := .lf (.identT "x") locs
+  match locsComment locs, addLocsAnnot true tree (.skip : Prog Nat),
+      addLocsAnnot false tree (.skip : Prog Nat) with
+  | "(2:3 EOF)", .seq (.annot "location" "(2:3 EOF)") .skip, .skip => true
+  | _, _, _ => false
+
+#guard locationAnnotationCakeParity
+
 #guard (pancakeLex "x + 1").map (·.1) == [.identT "x", .plusT, .intT 1]
 
 -- `//` runs to end of line; the block forms are `/* */` and `/@ @/`.

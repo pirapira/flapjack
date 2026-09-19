@@ -15,6 +15,15 @@ def compileToCrepeProbeDecls : List (Decl Nat) :=
        params := [("x", .one)],
        body := .raise "E" (.const 7), returnShape := .one }]
 
+/-! Direct `make_funcs_def` oracle: exception declarations are skipped and the
+    function entry preserves both source parameters and return shape. -/
+def makeFuncsOracle : Bool :=
+  match panToCrepMakeFuncs compileToCrepeProbeDecls with
+  | [("f", ([("x", .one)], .one))] => true
+  | _ => false
+
+#guard makeFuncsOracle
+
 /-! The fixture is the direct HOL evaluation of
     `pan_to_crep$compile_to_crep` on the same exception/function declaration.
     `compileToCrep` preserves the source function name, flattened parameter

@@ -439,8 +439,9 @@ structure SourceRiscVRuntimeImage (width : Nat) where
   bitmaps : RiscV.WordStackBitmapState
   sections : List (RiscV.EncodedRiscVSection width)
   warnings : List StatErr
-  /-- User FFI names in first-appearance order, mirroring the stubs the
-      original CakeML backend emits in its startup frame. -/
+  /-- User FFI names in Cake's Lab collector order.  The exporter reverses
+      this list when rendering the startup-frame stubs, matching
+      `export_riscv`'s `REVERSE ffi_names`. -/
   ffiNames : List String
 
 /-! FFI discovery must observe the same Word simplification boundary as the
@@ -525,7 +526,7 @@ def compileFlapjackRiscVSourceBytesChecked [NeZero width]
               let discoveredNames :=
                 (pipeline.word.reverse.flatMap
                   (fun entry : Nat × List Nat × WordProg (RiscV.Word width) =>
-                    RiscV.wordProgFfiNames (wordFfiDiscoveryBody entry.2.2))).eraseDups
+                    RiscV.wordProgFfiNamesCake (wordFfiDiscoveryBody entry.2.2))).eraseDups
               let discoveredServices := discoveredNames.zip (List.range discoveredNames.length)
               let services := services ++ discoveredServices
               let identityResult :
@@ -585,7 +586,7 @@ def compileFlapjackRiscVSourceImageChecked [NeZero width]
               let discoveredNames :=
                 (pipeline.word.reverse.flatMap
                   (fun entry : Nat × List Nat × WordProg (RiscV.Word width) =>
-                    RiscV.wordProgFfiNames (wordFfiDiscoveryBody entry.2.2))).eraseDups
+                    RiscV.wordProgFfiNamesCake (wordFfiDiscoveryBody entry.2.2))).eraseDups
               let discoveredServices := discoveredNames.zip (List.range discoveredNames.length)
               let services := services ++ discoveredServices
               match pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked pipeline.loop with
@@ -636,7 +637,7 @@ def compileFlapjackRiscVSourceRuntimeImageChecked [NeZero width]
               let discoveredNames :=
                 (discoveryWords.reverse.flatMap
                   (fun entry : Nat × Nat × WordProg (RiscV.Word width) =>
-                    RiscV.wordProgFfiNames (wordFfiDiscoveryBody entry.2.2))).eraseDups
+                    RiscV.wordProgFfiNamesCake (wordFfiDiscoveryBody entry.2.2))).eraseDups
               let discoveredServices := discoveredNames.zip (List.range discoveredNames.length)
               let services := services ++ discoveredServices
               match pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordChecked

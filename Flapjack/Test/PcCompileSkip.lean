@@ -302,4 +302,54 @@ theorem panValuePcCompileCorrect_compact_dec_skip_nat :
   simpa [panValuePcResultOfControl, panValuePcResultRel,
     panValueCrepControlRel] using hstate
 
+theorem panValuePcCompileCorrect_compact_dec_assign_nat :
+    PanValuePcCompileCorrect
+      (panValuePcCompactSourceEvaluator
+        skipNatPrimitive skipNatSourceHandler [] 0 0 1 3)
+      (crepPcCompactTargetEvaluator
+        [] skipNatCrepPrimitive skipNatFfi skipNatSharedMem 0 0 3)
+      skipNatCodeRel skipNatExcpRel skipNatExceptionCode
+      skipNatGlobalsLookup
+      (.dec "x" .one (.const 7)
+        (.assign .local "x" (.const 8))) := by
+  intro context structs sourceInput targetInput exceptionRel sourceExecution
+    targetExecution hsourceStructs htargetStructs hlocalisedCode hlocalised
+    hcode hexcp hstate hnonerror hsource htarget hpostCode hpostExcp
+  simp [panValuePcCompactSourceEvaluator,
+    evalPanValueProgWithPrimitiveCallsAndFfi, evalPanValueExp,
+    panValueShape, panShapeMatches, restorePanValueControlLocal,
+    panValueAssignmentValid, updatePanValueMap] at hsource
+  cases hsource
+  simp [crepPcCompactTargetEvaluator, evalCrepFullProgState, compileProg,
+    compileExp, evalCrepFullExpState, restoreCrepResult, allocatedNames,
+    nestedDecs, crepNestedSeq, distinctLists, assignExistingCrepValues, crepNamesDistinct,
+    crepLocalsDefined, lookupInfo, updateCrepLocal]
+    at htarget
+  obtain ⟨targetResult, htargetResult, htargetExecution⟩ := htarget
+  cases htargetExecution
+  simp [crepPcResultOfControl] at htargetResult
+  cases htargetResult
+  have hsourceLocals :
+      restorePanValueLocal
+          (updatePanValueMap
+            (updatePanValueMap sourceInput.locals "x" (.word (7 : Nat))) "x"
+            (.word (8 : Nat))) "x" (sourceInput.locals "x") =
+        sourceInput.locals := by
+    funext current
+    by_cases hcurrent : current = "x" <;>
+      simp [restorePanValueLocal, updatePanValueMap, hcurrent]
+  have htargetLocals :
+      restoreCrepLocal
+          (updateCrepLocal
+            (updateCrepLocal targetInput.state.locals (context.maxVar + 1) 7)
+            (context.maxVar + 1) 8)
+          (context.maxVar + 1) (targetInput.state.locals (context.maxVar + 1)) =
+        targetInput.state.locals := by
+    funext current
+    by_cases hcurrent : current = context.maxVar + 1 <;>
+      simp [restoreCrepLocal, updateCrepLocal, hcurrent]
+  rw [hsourceLocals, htargetLocals]
+  simpa [panValuePcResultOfControl, panValuePcResultRel,
+    panValueCrepControlRel] using hstate
+
 end Flapjack

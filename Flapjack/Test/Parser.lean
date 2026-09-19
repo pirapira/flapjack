@@ -111,6 +111,25 @@ def convIntCakeParity : Bool :=
 
 #guard convIntCakeParity
 
+/-! Cake `binaryExps_def` (`panPtreeConversionScript.sml:109`) enumerates the
+    left-associative binary expression nonterminals in source order.  Each
+    listed node uses the shared fold, while a non-listed node is not part of
+    this family. -/
+def binaryExpsCakeParity : Bool :=
+  let integer (value : Int) : ParseTree := .lf (.intT value) unknownLoc
+  let binary (nonterminal : Nonterminal) (token : Token)
+      (operator : BinOp) : Bool :=
+    sameAst (convExp ofI 8
+        (.nd nonterminal
+          [integer 1, .lf token unknownLoc, integer 2] unknownLoc))
+      (some (.op operator [.const 1, .const 2]))
+  sameAst ([.eOr, .eXor, .eAnd, .eAdd] : List Nonterminal)
+      [.eOr, .eXor, .eAnd, .eAdd] &&
+    binary .eOr .orT .or && binary .eXor .xorT .xor &&
+    binary .eAnd .andT .and && binary .eAdd .plusT .add
+
+#guard binaryExpsCakeParity
+
 /-! Cake operator conversion at `panPtreeConversionScript.sml:141,153,168`
     recurses through the corresponding operator wrapper, maps comparison
     spellings to `(Cmp, swapped)`, and rejects other wrappers/tokens. -/

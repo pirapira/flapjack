@@ -440,6 +440,25 @@ def keepIntCakeParity : Bool :=
 
 #guard keepIntCakeParity
 
+/-! Cake `keep_nat_def` (`panPEGScript.sml:96`) keeps non-negative integer
+    tokens only; negative integers and other tokens fail without consuming the
+    parser input. -/
+def keepNatCakeParity : Bool :=
+  let accepted : PState :=
+    PState.ofToks [(.intT 7, unknownLoc), (.semiT, unknownLoc)]
+  let negative : PState :=
+    PState.ofToks [(.intT (-1), unknownLoc), (.semiT, unknownLoc)]
+  let incompatible : PState :=
+    PState.ofToks [(.identT "x", unknownLoc), (.semiT, unknownLoc)]
+  match P.keepNat accepted, P.keepNat negative, P.keepNat incompatible with
+  | (some [.lf (.intT 7) loc], success), (none, negativeState),
+      (none, incompatibleState) =>
+      loc == unknownLoc && success.remaining == 1 &&
+        negativeState.remaining == 2 && incompatibleState.remaining == 2
+  | _, _, _ => false
+
+#guard keepNatCakeParity
+
 #guard (pancakeLex "x + 1").map (·.1) == [.identT "x", .plusT, .intT 1]
 
 -- `//` runs to end of line; the block forms are `/* */` and `/@ @/`.

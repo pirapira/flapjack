@@ -50,6 +50,50 @@ def makeCtxt : Nat → List Nat → List (Nat × Nat) → List (Nat × Nat)
   | next, name :: rest, context =>
       makeCtxt (next + 2) rest (insertVar name next context)
 
+def loopReferencedVars : LoopProg α → List Nat
+  | .skip => []
+  | .assign name value => name :: loopVarsOfExp value
+  | .primitive destinations _ arguments => destinations ++ arguments
+  | .arith operation =>
+      match operation with
+      | .longMul left right sourceLeft sourceRight =>
+          [left, right, sourceLeft, sourceRight]
+      | .longDiv left right sourceLeft sourceRight quotient =>
+          [left, right, sourceLeft, sourceRight, quotient]
+      | .div destination dividend divisor => [destination, dividend, divisor]
+  | .store address value => value :: loopVarsOfExp address
+  | .setGlobal _ value => loopVarsOfExp value
+  | .load32 address destination => [address, destination]
+  | .loadByte address destination => [address, destination]
+  | .store32 address value => [address, value]
+  | .storeByte address value => [address, value]
+  | .seq first second => loopReferencedVars first ++ loopReferencedVars second
+  | .ite _ condition right thenBranch elseBranch live =>
+      [condition] ++ (match right with | .reg name => [name] | .imm _ => []) ++
+        live ++ loopReferencedVars thenBranch ++ loopReferencedVars elseBranch
+  | .loop liveIn body liveOut => liveIn ++ loopReferencedVars body ++ liveOut
+  | .break label => [label]
+  | .continue label => [label]
+  | .raise exception => [exception]
+  | .return values => values
+  | .shMem _ name address => name :: loopVarsOfExp address
+  | .tick => []
+  | .mark body => loopReferencedVars body
+  | .fail => []
+  | .locValue destination source => [destination, source]
+  | .call returns target arguments handler =>
+      (match returns with
+       | none => []
+       | some (values, live) => values ++ live) ++
+      target.toList ++ arguments ++
+      (match handler with
+       | none => []
+       | some (exception, handlerBody, returnBody, live) =>
+           exception :: live ++ loopReferencedVars handlerBody ++
+             loopReferencedVars returnBody)
+  | .ffi _ configuration configurationLength array arrayLength live =>
+      [configuration, configurationLength, array, arrayLength] ++ live
+
 /-! A list-backed representation of CakeML's `num_set` for the executable
     Loop-to-Word boundary.  The source `toNumSet_def` builds an sptree set by
     recursively inserting each input name; `loopInsert` is the existing
@@ -154,14 +198,25 @@ def differenceNumSet (names excluded : List Nat) : List Nat :=
     `loopAccVars` supplies the source `acc_vars` set, parameters are removed,
     `makeCtxt` assigns the consecutive even registers, and the existing
     `loopToWordProg` supplies the first component of `comp`. -/
-def loopToWordCompFunc [OfNat α 1] (name : Nat) (params : List Nat)
-    (body : LoopProg α) : WordProg α :=
+def loopToWordCompContext (params : List Nat) (body : LoopProg α) :
+    List (Nat × Nat) :=
   let assigned := loopAccVars body []
   let variables := fromNumSet (differenceNumSet assigned (toNumSet params))
-  let maximum := (params ++ assigned).foldl max 0
+  let maximum := (params ++ assigned ++ loopReferencedVars body).foldl max 0
   let fallback := sourceFallbackContext (List.range (maximum + 1))
-  let context := makeCtxt 2 (params ++ variables) fallback
-  (loopToWordProgWithLabels { vars := context } (name, 2) body).1
+  makeCtxt 2 (params ++ variables) fallback
+
+def loopToWordCompFunc [OfNat α 1] (name : Nat) (params : List Nat)
+    (body : LoopProg α) : WordProg α :=
+  (loopToWordProgWithLabels { vars := loopToWordCompContext params body }
+    (name, 2) body).1
+
+/-! Word names for the formals produced by the same `make_ctxt` used by
+    `comp_func`.  The source-facing pipeline must use these names rather than
+    adding two to the source variable number: source variables need not be
+    contiguous after `acc_vars` has been collected. -/
+def loopToWordCompParameters (params : List Nat) (body : LoopProg α) : List Nat :=
+  params.map (findVar (loopToWordCompContext params body))
 
 /-! Port of `compile_prog_def` from `loop_to_wordScript.sml:171-174`.
     The source adds one entry slot to each function's parameter count while

@@ -6,6 +6,36 @@
   },
   "fixtures": [
     {
+      "path": "Flapjack/Test/OriginalPancake/f01189_ffi_stub_order.pnk",
+      "source_reference": "Minimized f01189 FFI/relocation witness: Cake's tail-first Lab collector is reversed by export_riscv, so both stub order and JAL relocations must agree.",
+      "cake_sha256": "c6cfbbe718e625f944924ccec9fbf0bb73f223564850f97e971b09e4c552ce6e",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.2"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/ffi_halt_order.pnk",
+      "source_reference": "Reduced differential-fuzz witness: Cake's tail-first Lab FFI collector and exported stub order must also handle the built-in halt service, including its two relocated jumps.",
+      "cake_sha256": "02a4bb2d12291b97fa0bb88af2376472cee87491ed8b40e49126e7d248fb3c33",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00068_allocator_return.pnk",
+      "source_reference": "Reduced f00068 allocator witness: Cake's SSA option_lookup maps an unmapped fixed-protocol source to ABI register 0, so the allocator retains sub1's result and emits the ABI 0 move.",
+      "cake_sha256": "d06482093d272aa5c327208a792b5d140de2f217b5d255f852141150d29d6cfc",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.16"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00068_throwminimal3.pnk",
+      "source_reference": "Reduced f00068 allocator/coalescing witness: Cake's option_lookup maps the retained sub1 result through ABI register 0, preserving the final 0 := result move.",
+      "cake_sha256": "971f38ca9175e51cd95600ac32470fc251815710f185baefd625f5125744cfbe",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.16"
+      ]
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/empty_locals.pnk",
       "source_reference": "cakeml/pancake/semantics/crepSemScript.sml:71 (empty_locals_def)",
       "cake_sha256": "e661960e2ea04f6c804fa9487b600bb0289929ba6c76e0dd10f243263cfdd870",
@@ -456,11 +486,25 @@
       "tracked_beads": []
     },
     {
+      "path": "Flapjack/Test/OriginalPancake/f00226_mks_out_of_range_shift.pnk",
+      "source_reference": "Minimized campaign-seed-17 finding f00226: Cake retains the zero source constant and register subtraction produced by a struct-constructor argument, while Flapjack's Lab fusion incorrectly dropped the pair and shifted the following function base.",
+      "cake_sha256": "a3ad0d2832df373ec4418997cb6a4cb4ef8a7d295e348466dd22f64c093db4a8",
+      "tracked_beads": []
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/loop_to_word_unbound_var.pnk",
       "source_reference": "Minimized differential-fuzz witness: loop_to_word$find_var maps a source local absent from acc_vars to Word register 0. The source-shaped adapter previously retained the unbound local number, changing exception-handler allocator colours and equal-length RISC-V bytes.",
       "cake_sha256": "c425e51ca0fad2926e92a1a53f6f4fb5ae4140d6577914b6e14d0fbce0b6c856",
       "tracked_beads": [
         "flapjack-8tb.4"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/loop_to_word_exception_fallback.pnk",
+      "source_reference": "Minimized exact oracle for the loop_to_word missing-variable fallback: a high exception identifier remains register zero after the source-shaped Loop boundary scans all referenced names.",
+      "cake_sha256": "18d150a215e9f622f9c0fe4e46181a07225fefa6240c37b4045a302b21c588ca",
+      "tracked_beads": [
+        "flapjack-7zw"
       ]
     },
     {
@@ -719,6 +763,28 @@
       "source_reference": "Tracked Cake/Pancake local-update audit fixture; exact output confirms local update lowering against original Cake.",
       "cake_sha256": "13977258b5aaec5b4939148e04251e81d8f6e7d17ce6fcec5877b5348ebb3287",
       "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00097_ssa_unmapped_zero.pnk",
+      "source_reference": "Reduced differential-fuzz witness for Cake's SSA option_lookup default: an unmapped source must become register zero, including a shift source and move source.",
+      "cake_sha256": "0f5b31a3346e0b80a84df6bc84a6800a45171c0204eb00595fc48d2bbf3ee485",
+      "tracked_beads": [
+        "flapjack-7w3"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/stack_args_overflow_slots.pnk",
+      "source_reference": "flapjack-pxn.8.5.14.17. StackArgs dest arg_count (k,f,f') = stack_move n 0 f k (StackAlloc n) (word_to_stackScript.sml:287-292), and stack_move reads its source at start + f, where f is the caller's frame size from compile_prog -- f = if stack_var_count = 0 then 0 else stack_var_count + 1 -- not the public stack_var_count occupancy f'. Routing the pre-call overflow-argument copy through the allocator's own slot instead loads the wrong caller-frame word: the single wide_call_spilled_base witness had Cake loading 112(x24) where Flapjack loaded 56(x24). This fixture pins three overflow arities at once (24, 26 and 30 word arguments, so one, three and seven overflow slots) because the wrong slot is a function of f and a single arity cannot distinguish an off-by-one from a wrong formula. All three differ from Cake at 23eded92 and are byte-identical here.",
+      "cake_sha256": "c7028d7ccbcbb9947d6772d94d9c0387bba858337457e08ce0dcc92d215962f0",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/wide_constants_boundaries.pnk",
+      "source_reference": "GH #1020 CakeML constant-materialization boundary oracle: eight source functions cover zero, the signed-immediate boundary, the first non-immediate value, a medium 32-bit value, a large 32-bit value, a 64-bit value, and 2^64-1. All accepted source-to-RISC-V sections are byte-exact against original Cake.",
+      "cake_sha256": "cc5afbad6b83346813c4611a3f30007b3dc356309470466c985b3b13e80e20ff",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.6"
+      ]
     }
   ]
 }

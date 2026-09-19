@@ -58,7 +58,7 @@ theorem lookupCompiledFunction_compileToCrepe_head
         compileProg
           { context with
               functions := functionInfos (.function declaration :: declarations)
-              vars := (compileParamVars declaration.params 0).1
+              vars := panToCrepMakeVmap declaration.params
               maxVar := (compileParamVars declaration.params 0).2.2 }
           declaration.body) := by
   simpa [compileToCrepe] using

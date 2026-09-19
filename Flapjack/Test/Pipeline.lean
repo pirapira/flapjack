@@ -242,11 +242,11 @@ example :
       result.crepe.length = 1 ∧ result.loop.length = 1 ∧ result.word.length = 1 := by
   simp [compileFlapjack, panSimpDecls, structCompileTop, structGetNames,
     structCompileDecls, globalCompileTop, globalCollect, globalCompileDecls,
-    globalCompileInitializers, pipelineCrepeContext, pipelineExceptionCodes,
+    globalCompileInitializers, pipelineCrepeContext,
     pipelineFunctionInfos, pipelineLoopFunctions, pipelineLoopFunctionsAux,
     pipelineWordFunctions, pipelinePrependInitializers, pipelineInlineNames,
     compileToCrep, compileFunctionsSource, compileFunDeclSource, compileParamVars,
-    compileProg, crepInlineTopRecursiveByNames, crepInlineTopRecursive,
+    crepInlineTopRecursiveByNames, crepInlineTopRecursive,
     crepInlineFunctionsRecursive, crepInlineActiveNames,
     crepSimpFunctions]
 

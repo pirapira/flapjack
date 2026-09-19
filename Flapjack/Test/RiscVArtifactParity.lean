@@ -524,12 +524,27 @@ def nomainGlobalAccepted : Bool :=
   | .ok image => !image.sections.isEmpty
   | .error _ => false
 
+/- Cake's target pass does not synthesize a default main for an actually empty
+   declaration list; comment-only input therefore remains rejected. -/
+def emptySource : String := "// no Pancake declarations\n"
+
+def emptySourceRejected : Bool :=
+  match compileFlapjackRiscVSourceRuntimeImageChecked (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] artifactCompileConfig "main"
+      emptySource with
+  | .ok _ => false
+  | .error _ => true
+
+#guard emptySourceRejected
+
 /-!
 ## FFI stub parity (bead `flapjack-pxn.8.5.14.2`)
 
 The original CakeML `export_riscv` emits, between the `j cake_main`
 startup stub and the fixed `cake_clear`/`cake_exit` pair, one 16-byte
-block per user FFI name in first-appearance order:
+block per user FFI name.  `find_ffi_names` records names in tail-first
+collector order and the exporter reverses that list, yielding source order
+for a straight-line section:
 
 ```
 cake_ffi<name>:
@@ -537,9 +552,10 @@ cake_ffi<name>:
      .p2align 4
 ```
 
-The port used to omit these blocks entirely.  The runtime image now
-carries the discovered `ffiNames` and `RiscV.pancakeRuntimeAssembly`
-emits the same blocks in the same position and order.  Residual: names
+The port used to omit these blocks entirely.  The runtime image now carries
+the Cake collector-order `ffiNames`; `RiscV.pancakeRuntimeAssembly` reverses
+this list at the artifact boundary, just like Cake.
+Residual: names
 referenced only from unreachable code are still emitted because the
 port discovers FFI names before dead-code removal (same family as the
 `flapjack-pxn.8.5.10.1` lowering residuals).
@@ -576,13 +592,13 @@ def compileAssembly (source : String) : Option String :=
               some (RiscV.pancakeRuntimeAssembly pipeline.crepe image)
           | .error _ => none
 
-/-- The runtime image records the reachable user FFI names in
-first-appearance order. -/
+/-- The runtime image records reachable user FFI names in Cake's tail-first
+collector order. -/
 def ffiNamesMatch : Bool :=
   (compileRuntimeImage ffiMinSource).map (·.ffiNames) == some ["foo"] &&
-    (compileRuntimeImage ffiOrderSource).map (·.ffiNames) == some ["foo", "bar"] &&
+    (compileRuntimeImage ffiOrderSource).map (·.ffiNames) == some ["bar", "foo"] &&
     (compileRuntimeImage ffiOrderFlipSource).map (·.ffiNames) ==
-      some ["bar", "foo"]
+      some ["foo", "bar"]
 
 /-- The single-FFI assembly carries the exact original stub block in the
 exact original position, immediately before `cake_clear`. -/
@@ -593,8 +609,8 @@ def ffiMinStubEmitted : Bool :=
         "cake_ffifoo:\n     tail cdecl(ffifoo)\n     .p2align 4\n\ncake_clear:").length == 2
   | none => false
 
-/-- The two-FFI assembly carries both stub blocks in first-appearance
-order (`foo` then `bar`) between the startup stub and `cake_clear`. -/
+/-- Cake exports the two-FFI blocks in source order (`foo` then `bar`) after
+    reversing its tail-first collector list. -/
 def ffiOrderStubsEmitted : Bool :=
   match compileAssembly ffiOrderSource with
   | some assembly =>
@@ -602,8 +618,8 @@ def ffiOrderStubsEmitted : Bool :=
         "cake_ffifoo:\n     tail cdecl(ffifoo)\n     .p2align 4\n\ncake_ffibar:\n     tail cdecl(ffibar)\n     .p2align 4\n\ncake_clear:").length == 2
   | none => false
 
-/-- Flipping the source order flips the emitted stub order (`bar` then
-`foo`), matching the original's first-appearance convention. -/
+/-- Flipping the source order flips the emitted stub order (`bar` then `foo`),
+    matching Cake's exported artifact. -/
 def ffiOrderFlipStubsEmitted : Bool :=
   match compileAssembly ffiOrderFlipSource with
   | some assembly =>
@@ -990,11 +1006,13 @@ def runChecks : IO Bool := do
         dupGlobalAcceptedWithWarning),
       ("nomain_global fixture accepted with a synthesized default main",
          nomainGlobalAccepted),
-      ("ffi names recorded in first-appearance order",
+      ("empty Pancake source is rejected like Cake",
+         emptySourceRejected),
+      ("ffi names recorded in Cake collector order",
          ffiNamesMatch),
       ("single ffi stub block emitted in the original position",
          ffiMinStubEmitted),
-      ("two ffi stub blocks emitted in first-appearance order",
+      ("two ffi stub blocks emitted in Cake order",
          ffiOrderStubsEmitted),
       ("flipped ffi source order flips the emitted stub order",
          ffiOrderFlipStubsEmitted),

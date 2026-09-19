@@ -100,12 +100,32 @@ def compileParamVars : List (VarName × Shape) → Nat →
       ((name, (shape, names)) :: restVars, names ++ restNames, nextOffset)
 termination_by params => sizeOf params
 
-def functionInfos : List (Decl α) → InfoMap (List (VarName × Shape) × Shape)
+/-! Source-named port of CakeML Pancake's active `make_vmap_def`
+    (`pan_to_crepScript.sml:327`).  The first component of the parameter
+    allocation is the finite map from source names to shaped flattened slots;
+    `compileParamVars` supplies the same `with_shape` numbering used by Cake. -/
+abbrev panToCrepMakeVmap (params : List (VarName × Shape)) :
+    InfoMap (Shape × List Nat) :=
+  (compileParamVars params 0).1
+/-! Source-named port of CakeML Pancake's `make_funcs_def`
+    (`pan_to_crepScript.sml:366`).  Cake's function table keeps each function
+    name paired with its original parameter list and return shape; non-function
+    declarations are absent from the table. -/
+def panToCrepMakeFuncs : List (Decl α) → InfoMap (List (VarName × Shape) × Shape)
   | [] => []
   | .function declaration :: declarations =>
       (declaration.name, (declaration.params, declaration.returnShape)) ::
-        functionInfos declarations
-  | _ :: declarations => functionInfos declarations
+        panToCrepMakeFuncs declarations
+  | _ :: declarations => panToCrepMakeFuncs declarations
+
+def functionInfos : List (Decl α) → InfoMap (List (VarName × Shape) × Shape) :=
+  panToCrepMakeFuncs
+
+/-! Source-named port of CakeML Pancake's `crep_vars_def`
+    (`pan_to_crepScript.sml:376`).  The Crepe function interface exposes one
+    consecutive slot for every flattened parameter word. -/
+def panToCrepVars (params : List (VarName × Shape)) : List Nat :=
+  List.range (Shape.shapeSize (.comb (params.map Prod.snd)))
 
 /-! Faithful port of `pan_to_crep$compile` (`compile_def`) from
     `cakeml/pancake/pan_to_crepScript.sml:139-305`.
@@ -274,10 +294,24 @@ def compileProg [BEq α] [OfNat α 0] [Add α]
 
 termination_by structural program
 
+/-! Source-named port of CakeML Pancake's active `comp_func_def`
+    (`pan_to_crepScript.sml:337`).  Cake derives the context's `vmax` from
+    the flattened parameter shape, then invokes `compile`; keeping that
+    construction explicit prevents callers from silently using the legacy
+    next-free-slot convention. -/
+def panToCrepCompFunc [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (params : List (VarName × Shape))
+    (body : Prog α) : CrepProg α :=
+  let shapes := params.map Prod.snd
+  let vmax := Shape.shapeSize (.comb shapes) - 1
+  compileProg
+    { context with vars := panToCrepMakeVmap params, maxVar := vmax } body
+
 def compileFunDecl [BEq α] [OfNat α 0] [Add α]
     (context : CompileContext α) (declaration : FunDecl α) : CompiledFunction α :=
-  let (vars, params, maxVar) := compileParamVars declaration.params 0
-  let functionContext := { context with vars := vars, maxVar := maxVar }
+  let (_vars, params, maxVar) := compileParamVars declaration.params 0
+  let functionContext :=
+    { context with vars := panToCrepMakeVmap declaration.params, maxVar := maxVar }
   { name := declaration.name, params := params,
     body := compileProg functionContext declaration.body,
     returnShape := declaration.returnShape }
@@ -308,10 +342,9 @@ def compileToCrepe [BEq α] [OfNat α 0] [Add α]
     the source temporary numbering. -/
 def compileFunDeclSource [BEq α] [OfNat α 0] [Add α]
     (context : CompileContext α) (declaration : FunDecl α) : CompiledFunction α :=
-  let (vars, params, maxVar) := compileParamVars declaration.params 0
-  let functionContext := { context with vars := vars, maxVar := maxVar - 1 }
+  let (_vars, params, _maxVar) := compileParamVars declaration.params 0
   { name := declaration.name, params := params,
-    body := compileProg functionContext declaration.body,
+    body := panToCrepCompFunc context declaration.params declaration.body,
     returnShape := declaration.returnShape }
 
 def compileFunctionsSource [BEq α] [OfNat α 0] [Add α]

@@ -1,0 +1,30 @@
+fun 1 add1(1 a, 1 b) { return a + b; }
+fun 1 sub1(1 a) { return a - 1; }
+fun {1,1} pair(1 a, 1 b) { return <a, b>; }
+struct S { 1 f1, 1 f2 }
+fun S mks(1 a, 1 b) { return S <f1 = a, f2 = b>; }
+exception E : 1;
+fun 1 main() {
+  var 1 x = 255;
+  var 1 y656 = ((lds 1 (1008)) | (7 + 1000));
+  var 1 y189 = sub1(((ld8 1000 + 12) >> x));
+  var 1 y540 = sub1(x);
+  var 1 y926 = (lds 1 ((1000 + 12 + 8)));
+  var S s642 = mks((0 + 3), ((lds 1 ((1008 + 8))) + ((lds 1 (1000 + 12)) * (lds 1 (0)))));
+  var {1,1} p24 = pair(((s642.f1 * 3) #>> 2), (2 #>> 2));
+  if ((ld8 (1000 + 24 + 16)) <= (ld8 (1016 + 12))) {
+    !ldw y926, ((1000 + 16));
+    y926 = ((y540 - 7) * (1000 << x));
+  } else {
+    st ((1000 + 24 + 4)), (lds 1 (((1024 + 16) + 1000)));
+    st (1008), x;
+  }
+  y540 = sub1((lds 1 (1008)));
+  if (1 >= ((ld8 1000) #>> 2)) {
+    throw E (lds 1 (((1000 + 12 + 4) + 12)));
+  } else {
+    throw E s642.f1;
+    y656 = ((y540 << 1) | y189);
+  }
+  return add1((lds 1 ((1000 + 1000))), (255 >> y189));
+}

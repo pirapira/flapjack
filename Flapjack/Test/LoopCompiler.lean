@@ -19,7 +19,7 @@ def exceptionNumberingFixture : List (Decl Nat) :=
    .exnDecl "F" .one]
 
 #guard
-  pipelineExceptionCodes (fun value => value) 0 exceptionNumberingFixture ==
+  crepGetEidsFromDecls (fun value => value) exceptionNumberingFixture ==
     [("E", 0), ("F", 1)]
 
 #guard
@@ -93,11 +93,11 @@ example :
     result.globals.initializers.length = 1 ∧ result.crepe.length = 1 := by
   simp [compileFlapjack, panSimpDecls, structCompileTop, structGetNames,
     structCompileDecls, globalCompileTop, globalCollect, globalCompileDecls,
-    globalCompileInitializers, pipelineCrepeContext, pipelineExceptionCodes,
+    globalCompileInitializers, pipelineCrepeContext,
     pipelineFunctionInfos, pipelineLoopFunctions, pipelineLoopFunctionsAux,
     pipelineWordFunctions, pipelinePrependInitializers, pipelineInlineNames,
     compileToCrep, compileFunctionsSource, compileFunDeclSource, compileParamVars,
-    compileProg, crepInlineTopRecursiveByNames, crepInlineTopRecursive,
+    crepInlineTopRecursiveByNames, crepInlineTopRecursive,
     crepInlineFunctionsRecursive, crepInlineActiveNames,
     crepSimpFunctions
     ]
@@ -129,6 +129,63 @@ example :
         { name := "main", inline := false, exported := false, params := [],
           body := .seq (.return (.const 7)) .skip, returnShape := .one }]).2.length = 1 := by
   decide +kernel
+
+/-! Cake's reachability-warning equations. `Annot` and `Tick` are transparent
+    to `reached_warnable`, while an exiting statement moves the next ordinary
+    node to `WarnReach`; the production sequence case below consumes these
+    equations for both function and loop exits. -/
+def reachabilityContext : Context :=
+  { locals := [], globals := [], functions := [], expectedReturn := some .one,
+    exceptions := [], structs := [], scope := .funScope "f" "", inLoop := false,
+    reachable := .isReach, last := .otherLast, location := "" }
+
+#guard nextIsReachable .isReach .retLast == .warnReach
+#guard nextIsReachable .isReach .breakLast == .warnReach
+#guard nextIsReachable .isReach .invisLast == .isReach
+#guard (reachedWarnable (.annot "" "" : Prog Nat) reachabilityContext).1.isNone
+#guard (reachedWarnable (.tick : Prog Nat) reachabilityContext).1.isNone
+#guard (reachedWarnable (.skip : Prog Nat)
+  { reachabilityContext with reachable := .warnReach, last := .breakLast }).1 ==
+    some .breakLast
+#guard seqLastStmt .retLast .invisLast == .retLast
+#guard staticLastStmtString .breakLast == "break"
+#guard match basedMerge .based .notBased with | .based => true | _ => false
+#guard match basedMerge .trusted .notBased with | .trusted => true | _ => false
+#guard match shapedBasedMerge [.word .based, .word .notBased] with
+  | .based => true | _ => false
+
+/-! Cake's `get_memop_msg` diagnostics (`panStaticScript.sml:491-511`) are
+    directional: local operations warn about non-base addresses, while shared
+    operations warn about base addresses. -/
+def memoryWarningContext : Context :=
+  { locals := [("notBased", { shapedBased := .word .notBased }),
+      ("based", { shapedBased := .word .based })]
+    globals := []
+    functions := []
+    expectedReturn := some .one
+    exceptions := []
+    structs := []
+    scope := .funScope "f" ""
+    inLoop := false
+    reachable := .isReach
+    last := .otherLast
+    location := "" }
+
+#guard
+  (checkProg memoryWarningContext
+    (.store (.var .local "notBased") (.const 0))).2.map statErrMessage ==
+      ["local store address is not calculated from base in function f\n"]
+#guard
+  (checkExp memoryWarningContext
+    (.load32 (.var .local "notBased") : Exp Nat)).2.map statErrMessage ==
+      ["local load address is not calculated from base in function f\n"]
+#guard
+  (checkProg memoryWarningContext
+    (.shMemStore .opW (.var .local "based") (.const 0))).2.map statErrMessage ==
+      ["shared store address is calculated from base in function f\n"]
+#guard
+  (checkProg memoryWarningContext
+    (.shMemStore .opW (.var .local "notBased") (.const 0))).2.isEmpty
 
 #guard
     staticResultOk (staticCheck (α := Nat)

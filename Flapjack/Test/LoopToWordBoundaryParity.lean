@@ -13,9 +13,8 @@ def p1Source : String :=
   "fun 1 id (1 x) { return x; }
 fun 1 main() { var 1 t = id(5); return 1; }"
 
-/-- Compile `p1` to its loop-level functions the way the RISC-V runtime
-    image pipeline does, then lower each function through the faithful
-    `loopToWordCompFunc` boundary. -/
+/-- Compile `p1` to its source-shaped loop-level functions, then lower each
+    function through the source-facing pipeline boundary. -/
 def p1WordBoundaries :
     Option (List (Nat × List Nat × WordProg (RiscV.Word 64))) := do
   let declarations ← match Parser.parseTopDecs (BitVec.ofInt 64) p1Source with
@@ -23,10 +22,7 @@ def p1WordBoundaries :
   let pipeline ← compileFlapjackEntry .rv64i (BitVec.ofNat 64 8)
       (fun value => BitVec.ofNat 64 value) "main"
       (panTargetDeclarationsWithDefaultMain declarations)
-  let functions := pipelineLoopFunctions .rv64i stackFunctionFirstLabel
-      pipeline.crepe
-  some (functions.map (fun (label, parameters, body) =>
-    (label, parameters, wordProgDCE (loopToWordCompFunc label parameters body))))
+  some (pipelineWordFunctionsSource pipeline.loop)
 
 /-- The Word-space names of every lowered `p1` function. -/
 def p1WordVariableNames : Option (List (List Nat)) :=
@@ -82,6 +78,23 @@ def runChecks : IO Bool := do
 #guard p1WordVariableNames == some [[0], [0, 2, 4], [0, 2, 4]]
 #guard p1CallCutsets == some [[], [[0]], []]
 
+/- The source-facing entry path must use Cake's `comp_func` context and its
+   `oCompile` loop-live pass, rather than the legacy pass-local context. -/
+def p1EntryUsesSourceLoop : Bool :=
+  match Parser.parseTopDecs (BitVec.ofInt 64) p1Source with
+  | Except.error _ => false
+  | Except.ok declarations =>
+      match compileFlapjackEntry .rv64i (BitVec.ofNat 64 8)
+          (fun value => BitVec.ofNat 64 value) "main"
+          (panTargetDeclarationsWithDefaultMain declarations) with
+      | none => false
+      | some pipeline =>
+          pipeline.loop.map (fun (_, parameters, _) => parameters) ==
+            (pipelineLoopFunctionsSource .rv64i 1 pipeline.crepe).map
+              (fun (_, parameters, _) => parameters)
+
+#guard p1EntryUsesSourceLoop
+
 def sourceFunctionParameters : List (Nat × List Nat × LoopProg Nat) :=
   pipelineLoopFunctionsSource .rv64i 64
     [{ name := "f", params := [10, 20], body := (.skip : CrepProg Nat),
@@ -93,6 +106,49 @@ def sourceCompileProgParameterShape : Bool :=
   | _ => false
 
 #guard sourceCompileProgParameterShape
+
+/-! `make_vmap_def` oracle: parameter names receive their dense positional
+    slots, in source order, and no entries are invented for an empty list. -/
+def sourceMakeVmapOracle : Bool :=
+  crepMakeVmap [] == [] &&
+  crepMakeVmap [10, 20, 30] == [(10, 0), (20, 1), (30, 2)] &&
+  lookupNatInfo 10 (crepMakeVmap [10, 20, 30]) == some 0 &&
+  lookupNatInfo 30 (crepMakeVmap [10, 20, 30]) == some 2
+
+#guard sourceMakeVmapOracle
+
+/-! `comp_func_def` must resolve a source parameter through `make_vmap` before
+    lowering.  This representative assignment is the source-to-Loop oracle:
+    Cake's parameter name `10` is compiled to dense local slot `0`. -/
+def sourceCompFuncOracle : Bool :=
+  match crepCompFunc .rv64i [] [10] (.return [.var 10] : CrepProg Nat) with
+  | .mark (.seq (.mark (.assign 1 (.var 0))) _) => true
+  | _ => false
+
+#guard sourceCompFuncOracle
+
+/-! Cake's `first_name` is 64 and `make_funcs` assigns consecutive labels and
+    parameter lengths.  The runtime-facing variant below uses the same
+    equation at its reserved label base. -/
+def sourceMakeFuncsOracle : Bool :=
+  crepFirstName == 64 &&
+  match crepMakeFuncs
+      [{ name := "f", params := [10, 20], body := (.skip : CrepProg Nat),
+         returnShape := .one }] with
+  | [("f", (64, 2))] => true
+  | _ => false
+
+#guard sourceMakeFuncsOracle
+
+/-! `mk_ctxt_def` field-order oracle: the constructor preserves both the
+    source-name lookup map and Cake's fresh-variable bound. -/
+def sourceMkCtxtOracle : Bool :=
+  let context := crepMkCtxt (α := Nat) .rv64i (crepMakeVmap [10, 20])
+    [("f", (64, 2))] 1
+  findLoopVar context 20 == 1 && context.maxVar == 1 &&
+    context.functions == [("f", (64, 2))]
+
+#guard sourceMkCtxtOracle
 
 /-! Cake's handled-call branch starts handler and return-body labels at the
     next local label and advances once more after both bodies.  This guard

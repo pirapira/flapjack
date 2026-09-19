@@ -1999,6 +1999,7 @@ theorem compile_full_pan_value_identity_declaration_call_correct
         { locals := fun _ => none, memory := fun _ => none } [value])) := by
   simp [correctnessIdentityContext, correctnessIdentityDeclarations,
       compileToCrepe, compileFunctions, compileFunDecl, compileParamVars,
+      panToCrepMakeVmap,
       functionInfos, compileProg, compileExp, compileArgs, allocatedNames,
       nestedDecs, evalCrepFullCall, evalCrepFullProg,
       evalCrepFullExps, evalCrepFullExp, updateCrepLocal, restoreCrepResult,
@@ -2025,6 +2026,7 @@ theorem compile_full_pan_value_identity_declaration_call_state_correct
         { locals := fun _ => none, memory := fun _ => none } [value])) := by
   simp [correctnessIdentityContext, correctnessIdentityDeclarations,
       compileToCrepe, compileFunctions, compileFunDecl, compileParamVars,
+      panToCrepMakeVmap,
       functionInfos, compileProg, compileExp, compileArgs, allocatedNames,
       nestedDecs, evalCrepFullCallState, evalCrepFullProgState,
       evalCrepFullExpsState, evalCrepFullExpState, updateCrepLocal,

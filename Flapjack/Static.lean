@@ -249,6 +249,22 @@ def shapedBasedIsWord : ShapedBased → Bool
   | .word _ => true
   | _ => false
 
+/-! Priority order for Cake's `based_merge`: `Based` dominates, followed by
+    `NotTrusted`, `Trusted`, and finally `NotBased`. -/
+def basedMerge : Based → Based → Based
+  | .based, _ => .based
+  | _, .based => .based
+  | .notTrusted, _ => .notTrusted
+  | _, .notTrusted => .notTrusted
+  | .trusted, _ => .trusted
+  | _, .trusted => .trusted
+  | .notBased, .notBased => .notBased
+
+def shapedBasedMerge : List ShapedBased → Based
+  | [] => .notBased
+  | .word basedness :: rest => basedMerge basedness (shapedBasedMerge rest)
+  | _ :: rest => shapedBasedMerge rest
+
 def shapedBasedSameShape : ShapedBased → ShapedBased → Bool
   | .word _, .word _ => true
   | .struct left, .struct right => shapedBasedSameShapes left right
@@ -289,6 +305,46 @@ def shapedBasedFieldsMatch (context : StructContext)
         | none => false) &&
         shapedBasedFieldsMatch context expected actual
   | _, _ => false
+
+def staticScopeDescription : Scope → String
+  | .funScope name suffix => "function " ++ name ++ suffix
+  | .declScope name => "initialisation of global variable " ++ name
+  | .structScope name field => "declaration of field " ++ field ++
+      " in named struct " ++ name
+  | .topLevel => "top-level declaration"
+
+/-! Cake's memory-operation diagnostics distinguish local addresses, which
+    should not be based on `@base`, from shared addresses, which should.  A
+    `NotTrusted` address is reported as a possibility in either direction;
+    `Trusted` is exempt from both warnings. -/
+def staticMemoryWarning (context : Context) (isLocal isLoad : Bool)
+    (address : ShapedBased) : Option StatErr :=
+  match address with
+  | .word basedness =>
+      let issue : Option String :=
+        if isLocal then
+          match basedness with
+          | .notBased => some "is not "
+          | .notTrusted => some "may not be "
+          | _ => none
+        else
+          match basedness with
+          | .based => some "is "
+          | .notTrusted => some "may be "
+          | _ => none
+      issue.map (fun issue =>
+        .warning (context.location ++
+          (if isLocal then "local " else "shared ") ++
+          (if isLoad then "load " else "store ") ++
+          "address " ++ issue ++ "calculated from base in " ++
+          staticScopeDescription context.scope ++ "\n"))
+  | _ => none
+
+def staticAddWarning (result : StaticResult α) (warning : Option StatErr) :
+    StaticResult α :=
+  match warning with
+  | none => result
+  | some warning => (result.1, result.2 ++ [warning])
 
 def checkExp [BEq String] (context : Context) : Exp α → StaticResult ExpReturn
   | .const _ => staticOk { shapedBased := .word .notBased }
@@ -331,18 +387,22 @@ def checkExp [BEq String] (context : Context) : Exp α → StaticResult ExpRetur
         staticBind (checkExp context address) (fun result =>
           if shapedBasedIsWord result.shapedBased then
             match shapedBasedFromShape context.structs shape with
-            | some shaped => staticOk { shapedBased := shaped }
+            | some shaped =>
+                staticAddWarning (staticOk { shapedBased := shaped })
+                  (staticMemoryWarning context true true result.shapedBased)
             | none => staticError (.scope "invalid load result shape")
           else staticError (.shape "load address is not a word"))
   | .load32 address =>
       staticBind (checkExp context address) (fun result =>
         if shapedBasedIsWord result.shapedBased then
-          staticOk { shapedBased := .word .trusted }
+          staticAddWarning (staticOk { shapedBased := .word .trusted })
+            (staticMemoryWarning context true true result.shapedBased)
         else staticError (.shape "load32 address is not a word"))
   | .loadByte address =>
       staticBind (checkExp context address) (fun result =>
         if shapedBasedIsWord result.shapedBased then
-          staticOk { shapedBased := .word .trusted }
+          staticAddWarning (staticOk { shapedBased := .word .trusted })
+            (staticMemoryWarning context true true result.shapedBased)
         else staticError (.shape "loadByte address is not a word"))
   | .op operator expressions =>
       staticBind (checkExps context expressions) (fun result =>
@@ -351,13 +411,13 @@ def checkExp [BEq String] (context : Context) : Exp α → StaticResult ExpRetur
           | _ => expressions.length >= 2
         if !arityOk then staticError (.general "invalid binary operator arity")
         else if result.shapedBased.all shapedBasedIsWord then
-          staticOk { shapedBased := .word .notBased }
+          staticOk { shapedBased := .word (shapedBasedMerge result.shapedBased) }
         else staticError (.shape "operator operand is not a word"))
   | .panOp _ expressions =>
       staticBind (checkExps context expressions) (fun result =>
         if expressions.length != 2 then staticError (.general "invalid Flapjack operator arity")
         else if result.shapedBased.all shapedBasedIsWord then
-          staticOk { shapedBased := .word .notBased }
+          staticOk { shapedBased := .word (shapedBasedMerge result.shapedBased) }
         else staticError (.shape "Flapjack operand is not a word"))
   | .cmp _ left right =>
       staticBind (checkExp context left) (fun leftResult =>
@@ -449,6 +509,45 @@ def checkCallDestination [BEq String] (context : Context) (returnShape : Shape)
               else staticError (.shape "global call destination shape does not match")
           | none => staticError (.scope ("unknown call destination: " ++ name))
 
+/-! These helpers are the executable counterparts of CakeML's
+    `next_is_reachable`, `next_now_unreachable`, and `reached_warnable`.
+    Reachability is deliberately kept in the checker context: a sequence may
+    contain transparent nodes (`Seq`, `Tick`, and `Annot`) before the first
+    statement which can actually trigger the warning. -/
+def staticLastStmtString : LastStmt → String
+  | .retLast => "return"
+  | .raiseLast => "raise"
+  | .tailLast => "tail call"
+  | .breakLast => "break"
+  | .contLast => "continue"
+  | .condExitLast => "exiting conditional"
+  | _ => ""
+
+def staticUnreachableWarning (context : Context) (last : LastStmt) : StatErr :=
+  .warning (context.location ++ "unreachable statement(s) after " ++
+    staticLastStmtString last ++ " in " ++ staticScopeDescription context.scope ++ "\n")
+
+def nextIsReachable : Reachable → LastStmt → Reachable
+  | .isReach, last =>
+      if last == .invisLast || last == .otherLast then .isReach else .warnReach
+  | reachable, _ => reachable
+
+def nextNowUnreachable (reachable next : Reachable) : Bool :=
+  reachable == .isReach && next != .isReach
+
+def reachedWarnable (program : Prog α) (context : Context) :
+    Option LastStmt × Context :=
+  match program with
+  | .seq _ _ | .tick | .annot _ _ => (none, context)
+  | _ =>
+      if context.reachable == .warnReach then
+        (some context.last, { context with reachable := .notReach })
+      else
+        (none, context)
+
+def seqLastStmt (first second : LastStmt) : LastStmt :=
+  if second == .invisLast then first else second
+
 def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgReturn
   | .skip => progOk .invisLast false false context.location
   | .dec name shape value body =>
@@ -491,41 +590,58 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
       staticBind (checkExp context address) (fun addressResult =>
         staticBind (checkExp context value) (fun _valueResult =>
           if shapedBasedIsWord addressResult.shapedBased then
-            progOk .otherLast false false context.location
+            staticAddWarning (progOk .otherLast false false context.location)
+              (staticMemoryWarning context true false addressResult.shapedBased)
           else staticError (.shape "store address is not a word")))
   | .store32 address value =>
       staticBind (checkExp context address) (fun addressResult =>
         staticBind (checkExp context value) (fun valueResult =>
           if shapedBasedIsWord addressResult.shapedBased &&
               shapedBasedIsWord valueResult.shapedBased then
-            progOk .otherLast false false context.location
+            staticAddWarning (progOk .otherLast false false context.location)
+              (staticMemoryWarning context true false addressResult.shapedBased)
           else staticError (.shape "store32 operands are not words")))
   | .storeByte address value =>
       staticBind (checkExp context address) (fun addressResult =>
         staticBind (checkExp context value) (fun valueResult =>
           if shapedBasedIsWord addressResult.shapedBased &&
               shapedBasedIsWord valueResult.shapedBased then
-            progOk .otherLast false false context.location
+            staticAddWarning (progOk .otherLast false false context.location)
+              (staticMemoryWarning context true false addressResult.shapedBased)
           else staticError (.shape "storeByte operands are not words")))
   | .seq first second =>
-      staticBind (checkProg context first) (fun firstResult =>
-        if firstResult.exitsFunction then
-          -- CakeML `panStaticScript.sml:1451` always checks the second
-          -- statement; the unreachable tail only earns a warning, while
-          -- errors in it still reject the program.
-          match checkProg
-              { context with location := firstResult.currentLocation } second with
+      /- Cake checks both sides even after an exit. It updates reachability
+         before each side and emits a warning only when the current node is
+         warnable; Seq/Tick/Annot themselves are transparent. -/
+      let (firstWarning, context1) := reachedWarnable first context
+      let firstResult := checkProg context1 first
+      let warningBeforeFirst := match firstWarning with
+        | some last => [staticUnreachableWarning context1 last]
+        | none => []
+      match firstResult with
+      | (Except.error error, warnings) =>
+          (Except.error error, warningBeforeFirst ++ warnings)
+      | (Except.ok firstInfo, firstWarnings) =>
+          let nextReach := nextIsReachable context1.reachable firstInfo.last
+          let context2 := { context1 with
+            reachable := nextReach
+            last := if nextNowUnreachable context1.reachable nextReach then
+              firstInfo.last else context1.last
+            location := firstInfo.currentLocation }
+          let (secondWarning, context3) := reachedWarnable second context2
+          let warningBeforeSecond := match secondWarning with
+            | some last => [staticUnreachableWarning context3 last]
+            | none => []
+          match checkProg context3 second with
           | (Except.error error, warnings) =>
               (Except.error error,
-                .warning "statement after function exit is unreachable" :: warnings)
-          | (Except.ok secondInfo, warnings) =>
+                warningBeforeFirst ++ firstWarnings ++ warningBeforeSecond ++ warnings)
+          | (Except.ok secondInfo, secondWarnings) =>
               (Except.ok { secondInfo with
-                  exitsFunction := true
-                  exitsLoop := firstResult.exitsLoop || secondInfo.exitsLoop },
-                .warning "statement after function exit is unreachable" :: warnings)
-        else staticBind (checkProg
-          { context with location := firstResult.currentLocation } second) (fun secondResult =>
-          staticOk secondResult))
+                  exitsFunction := firstInfo.exitsFunction || secondInfo.exitsFunction
+                  exitsLoop := firstInfo.exitsLoop || secondInfo.exitsLoop
+                  last := seqLastStmt firstInfo.last secondInfo.last },
+                warningBeforeFirst ++ firstWarnings ++ warningBeforeSecond ++ secondWarnings)
   | .ite condition thenBranch elseBranch =>
       staticBind (checkExp context condition) (fun conditionResult =>
         if shapedBasedIsWord conditionResult.shapedBased then
@@ -674,14 +790,16 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
       | some true =>
           staticBind (checkExp context address) (fun result =>
             if shapedBasedIsWord result.shapedBased then
-              progOk .otherLast false false context.location
+              staticAddWarning (progOk .otherLast false false context.location)
+                (staticMemoryWarning context false true result.shapedBased)
             else staticError (.shape "shared-memory address is not a word"))
   | .shMemStore _ address value =>
       staticBind (checkExp context address) (fun addressResult =>
         staticBind (checkExp context value) (fun valueResult =>
           if shapedBasedIsWord addressResult.shapedBased &&
               shapedBasedIsWord valueResult.shapedBased then
-            progOk .otherLast false false context.location
+            staticAddWarning (progOk .otherLast false false context.location)
+              (staticMemoryWarning context false false addressResult.shapedBased)
           else staticError (.shape "shared-memory operands are not words")))
   | .tick => progOk .otherLast false false context.location
   | .annot tag text =>

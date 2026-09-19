@@ -84,6 +84,15 @@ def parseTreeNtCakeParity : Bool :=
 
 #guard parseTreeNtCakeParity
 
+/-! Cake `destLf_def` (`panPtreeConversionScript.sml:25`) projects the token
+    from a leaf and returns `NONE` for a non-leaf node.  Lean's `destTok` is
+    the corresponding `destTOK ∘ destLf` composition. -/
+def destLfCakeParity : Bool :=
+  ParseTree.destTok (.lf (.identT "x") unknownLoc) == some (.identT "x") &&
+    ParseTree.destTok (.nd .prog [] unknownLoc) == none
+
+#guard destLfCakeParity
+
 /-! Cake's leaf converters at
     `panPtreeConversionScript.sml:90,97,104` accept only their respective
     token constructors: identifiers become global variables, while foreign

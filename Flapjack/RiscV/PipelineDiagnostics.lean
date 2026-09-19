@@ -517,8 +517,13 @@ def compileFlapjackRiscVSourceBytesChecked [NeZero width]
               (fun value => fromNat value) start declarations with
           | none => .error .entryNotFound
           | some pipeline =>
+              /- Cake's backend scans the compiled section list from its
+                 reverse function order before `export_riscv` reverses the
+                 names into the startup-frame stubs.  `compile_prog` keeps
+                 this order even though the emitted symbol table is later
+                 presented in source order. -/
               let discoveredNames :=
-                (pipeline.word.flatMap
+                (pipeline.word.reverse.flatMap
                   (fun entry : Nat × List Nat × WordProg (RiscV.Word width) =>
                     RiscV.wordProgFfiNames (wordFfiDiscoveryBody entry.2.2))).eraseDups
               let discoveredServices := discoveredNames.zip (List.range discoveredNames.length)
@@ -575,8 +580,10 @@ def compileFlapjackRiscVSourceImageChecked [NeZero width]
               start (panTargetDeclarationsWithDefaultMain declarations) with
           | none => .error .entryNotFound
           | some pipeline =>
+              /- Keep FFI discovery in Cake's reverse section order; the
+                 artifact exporter reverses this list once more. -/
               let discoveredNames :=
-                (pipeline.word.flatMap
+                (pipeline.word.reverse.flatMap
                   (fun entry : Nat × List Nat × WordProg (RiscV.Word width) =>
                     RiscV.wordProgFfiNames (wordFfiDiscoveryBody entry.2.2))).eraseDups
               let discoveredServices := discoveredNames.zip (List.range discoveredNames.length)
@@ -624,8 +631,10 @@ def compileFlapjackRiscVSourceRuntimeImageChecked [NeZero width]
               let discoveryWords :=
                 sourceWords.map
                   (fun (label, arity, body) => (label, arity, wordProgDCE body))
+              /- The source-shaped list has the same section order after the
+                 source loop conversion, so mirror Cake before exporting. -/
               let discoveredNames :=
-                (discoveryWords.flatMap
+                (discoveryWords.reverse.flatMap
                   (fun entry : Nat × Nat × WordProg (RiscV.Word width) =>
                     RiscV.wordProgFfiNames (wordFfiDiscoveryBody entry.2.2))).eraseDups
               let discoveredServices := discoveredNames.zip (List.range discoveredNames.length)

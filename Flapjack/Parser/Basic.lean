@@ -110,6 +110,14 @@ def orElse' (p : P α) (q : P α) : P α := fun s =>
 instance : OrElse (P α) where
   orElse p q := orElse' p (q ())
 
+/-! Direct counterpart of `panPEG$choicel_def` from
+`cakeml/pancake/parser/panPEGScript.sml:106`.  The empty list is the
+state-preserving failure `not (empty []) []`; nonempty lists try alternatives
+left to right and retain the furthest failure through `orElse'`. -/
+def choiceL : List (P α) → P α
+  | [] => fun s => (none, s)
+  | parser :: parsers => orElse' parser (choiceL parsers)
+
 /-- Run a parser but treat failure as success with `none`, mirroring `try`. -/
 def optional' (p : P α) : P (Option α) := fun s =>
   match p s with

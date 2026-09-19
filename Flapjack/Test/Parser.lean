@@ -575,6 +575,35 @@ def keepFfiIdentCakeParity : Bool :=
 
 #guard keepFfiIdentCakeParity
 
+/-! Direct oracle for `choicel_def` from
+`cakeml/pancake/parser/panPEGScript.sml:106`.  Ordered alternatives use the
+first successful parser, while the empty list fails without changing state. -/
+def choiceLCakeParity : Bool :=
+  let fallback := P.choiceL
+      [P.keepKw .funK "fun", P.keepKw .varK "var"]
+      (PState.ofToks
+        [(.keywordT .varK, unknownLoc), (.semiT, unknownLoc)])
+  let first := P.choiceL
+      [P.keepKw .varK "var", P.keepKw .funK "fun"]
+      (PState.ofToks
+        [(.keywordT .varK, unknownLoc), (.semiT, unknownLoc)])
+  let empty : Option P.Trees × PState := P.choiceL []
+      (PState.ofToks
+        [(.keywordT .varK, unknownLoc), (.semiT, unknownLoc)])
+  (match fallback with
+  | (some [.lf (.keywordT .varK) _], state) => state.remaining == 1
+  | _ => false) &&
+  (match first with
+  | (some [.lf (.keywordT .varK) _], state) => state.remaining == 1
+  | _ => false) &&
+  (match empty with
+  | (none, state) => state.remaining == 2 &&
+      state.toks == [(.keywordT .varK, unknownLoc), (.semiT, unknownLoc)] &&
+      state.furthest.isNone
+  | _ => false)
+
+#guard choiceLCakeParity
+
 #guard remainingTracksToks "var 1 x = 1;"
 #guard remainingTracksToks "exception E : 1;"
 #guard remainingTracksToks "fun f(1 a, 1 b) { var x = a + b * 2; return x; }"

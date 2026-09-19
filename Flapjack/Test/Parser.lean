@@ -230,6 +230,19 @@ def convProgCakeParity : Bool :=
 
 #guard convProgCakeParity
 
+/-! Cake `conv_inline_def` (`panPtreeConversionScript.sml:724`) maps the
+    `inline` and `noinline` tokens to `true` and `false`, rejecting unrelated
+    leaves. -/
+def convInlineCakeParity : Bool :=
+  let inlineToken : ParseTree := .lf (.keywordT .inlineK) unknownLoc
+  let noInlineToken : ParseTree := .lf (.noinlineT) unknownLoc
+  let wrongToken : ParseTree := .lf (.identT "inline") unknownLoc
+  match convInline inlineToken, convInline noInlineToken, convInline wrongToken with
+  | some true, some false, none => true
+  | _, _, _ => false
+
+#guard convInlineCakeParity
+
 #guard (pancakeLex "x + 1").map (·.1) == [.identT "x", .plusT, .intT 1]
 
 -- `//` runs to end of line; the block forms are `/* */` and `/@ @/`.

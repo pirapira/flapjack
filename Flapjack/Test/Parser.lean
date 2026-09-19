@@ -720,6 +720,15 @@ def convDecCallCakeParity : Bool :=
 
 /-! ### `__add_with_carry__` -/
 
+/-! Cake `is_add_with_carry_def` (`panPtreeConversionScript.sml:68`) is the
+    exact string predicate used to recognize the carry primitive. -/
+def isAddWithCarryCakeParity : Bool :=
+  addWithCarryName == "__add_with_carry__" &&
+    addWithCarryName != "__add_with_carry" &&
+    addWithCarryName != "__add_with_carry___"
+
+#guard isAddWithCarryCakeParity
+
 -- As a call it becomes a primitive, taking its result variable from the
 -- assignment target.
 #guard sameAst (prog "r = __add_with_carry__(a, b, c);")

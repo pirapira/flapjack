@@ -135,14 +135,11 @@ def labLineInstructionCount : LabLine (Word width) → Nat
 def labFfiStubOffset [NeZero width] (context : WordFfiContext)
     (function : FunName) (position : Nat) : Option (Word width) := do
   let index ← lookupWordFfiIndex function context.services
-  /- `context.services` is the source/discovery order.  Cake's internal
-     `ffi_names` list is the reverse of that order, and the exporter emits
-     `REVERSE ffi_names`, so the textual stubs are in source order.  From
-     `cake_main`, service `i` is therefore preceded by the remaining
-     services, followed by `cake_clear` and `cake_exit`: `(2 + N - i)`
-     16-byte blocks.  The previous `(3 + i)` formula happened to work for a
-     single service but targeted the wrong stub once several FFIs existed. -/
-  let stubDistance := 2 + (context.services.length - index)
+  /- `context.services` is the source/discovery order and the exported
+     prefix reverses it.  From `cake_main`, source service `i` is therefore
+     preceded by `i` other FFI blocks, followed by `cake_clear` and
+     `cake_exit`: `(3 + i)` 16-byte blocks. -/
+  let stubDistance := 3 + index
   pure (0 - BitVec.ofNat width (position + stubDistance * 16))
 
 /-! In the compact linked image the FFI blocks are physically prepended to the
@@ -212,16 +209,31 @@ def labBranchOffsetFits (target position : Nat) : Bool :=
   else
     position - target <= 4092
 
-def labLongTransferInstructions [NeZero width]
-    (destination : Fin 32) (target position : Nat) :
+def labLongTransferOffsetInstructions [NeZero width]
+    (destination : Fin 32) (delta : Int) :
     Option (List (Instruction width)) := do
   let temporary ← labRegisterOfNat (portToStack 31)
-  let delta : Int := Int.ofNat target - Int.ofNat position
   let remainder := delta % 4096
   let low := if remainder >= 2048 then remainder - 4096 else remainder
   let upper := (delta - low) / 4096
   pure [.auipc temporary (BitVec.ofInt width upper),
     .jalr destination temporary (BitVec.ofInt width low)]
+
+def labLongTransferInstructions [NeZero width]
+    (destination : Fin 32) (target position : Nat) :
+    Option (List (Instruction width)) :=
+  labLongTransferOffsetInstructions destination
+    (Int.ofNat target - Int.ofNat position)
+
+def labBackwardJumpInstructions [NeZero width]
+    (destination : Fin 32) (position distance : Nat) :
+    Option (List (Instruction width)) := do
+  let distance := position + distance
+  let delta : Int := -Int.ofNat distance
+  if distance <= 2 ^ 20 then
+    pure [.jal destination (BitVec.ofInt width delta)]
+  else
+    labLongTransferOffsetInstructions destination delta
 
 def labJumpInstructions [NeZero width]
     (destination : Fin 32) (target position : Nat) :
@@ -459,7 +471,7 @@ def labCompileAsm [NeZero width] (context : WordFfiContext)
   | .heapAlloc _ => none
   | .halt => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
-      pure [.jal zero (0 - BitVec.ofNat width (position + 16))]
+      labBackwardJumpInstructions zero position 16
 
 def labLineCompiledInstructionCount [NeZero width]
     (context : WordFfiContext) (sectionId : Nat)
@@ -703,7 +715,7 @@ def labCompileAsmProgram [NeZero width] (context : WordFfiContext)
   | .heapAlloc _ => none
   | .halt => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
-      pure [.jal zero (0 - BitVec.ofNat width (position + 16))]
+      labBackwardJumpInstructions zero position 16
 
 def labCompileProgramLines [NeZero width] (context : WordFfiContext)
     (labels : LabLabelIndex) (position : Nat) :
@@ -868,7 +880,7 @@ def labCompileAsmWithHalt [NeZero width] (context : WordFfiContext)
       pure [.jal zero offset]
   | .halt => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
-      pure [.jal zero (0 - BitVec.ofNat width (position + 16))]
+      labBackwardJumpInstructions zero position 16
   | .install => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
       pure [.jal zero (0 - BitVec.ofNat width (position + 2 * 16))]
@@ -1312,6 +1324,39 @@ def labAppendStoredNop [NeZero width] :
       | [] => []
       | chunk :: rest => (chunk ++ [.addi 0 0 0]) :: rest |>.reverse
 
+/-! The stored-length linker visits lines from left to right, but only ever
+    changes the most recently emitted chunk when a retained label asks for a
+    NOP.  Keeping chunks in reverse order makes both that update and adding a
+    new chunk constant-time; the public wrapper reverses once before flattening.
+    This is representation-only: line positions, stored lengths, and emitted
+    instruction order are unchanged. -/
+def labAppendStoredNopRev [NeZero width] :
+    List (List (Instruction width)) → List (List (Instruction width))
+  | [] => []
+  | chunk :: chunks => (chunk ++ [.addi 0 0 0]) :: chunks
+
+def labCompileProgramLinesWithStoredLengthsAuxRev [NeZero width]
+    (context : WordFfiContext) (labels : LabLabelIndex)
+    (position ffiBase haltPc : Nat)
+    (chunks : List (List (Instruction width))) :
+    List (LabLine (Word width)) → Option (List (List (Instruction width)))
+  | [] => some chunks
+  | .label _ _ length :: lines =>
+      let chunks := if length = 0 then chunks else labAppendStoredNopRev chunks
+      labCompileProgramLinesWithStoredLengthsAuxRev context labels
+        (position + length) ffiBase haltPc chunks lines
+  | .asm operation _ length :: lines => do
+      let code ← labCompilePlain operation
+      labCompileProgramLinesWithStoredLengthsAuxRev context labels
+        (position + length) ffiBase haltPc
+        (labPadStoredInstructions code length :: chunks) lines
+  | .labAsm operation _ length :: lines => do
+      let code ← labCompileAsmProgramWithFfiBaseAndHalt context labels
+        position ffiBase haltPc operation
+      labCompileProgramLinesWithStoredLengthsAuxRev context labels
+        (position + length) ffiBase haltPc
+        (labPadStoredInstructions code length :: chunks) lines
+
 def labCompileProgramLinesWithStoredLengthsAux [NeZero width]
     (context : WordFfiContext) (labels : LabLabelIndex)
     (position ffiBase haltPc : Nat)
@@ -1338,9 +1383,9 @@ def labCompileProgramLinesWithStoredLengths [NeZero width]
     (context : WordFfiContext) (labels : LabLabelIndex)
     (position ffiBase haltPc : Nat) :
     List (LabLine (Word width)) → Option (List (Instruction width)) := fun lines => do
-  let chunks ← labCompileProgramLinesWithStoredLengthsAux context labels
+  let chunks ← labCompileProgramLinesWithStoredLengthsAuxRev context labels
     position ffiBase haltPc [] lines
-  pure chunks.flatten
+  pure chunks.reverse.flatten
 
 def compileLabProgramLinkedWithStoredLengthsAux [NeZero width]
     (context : WordFfiContext) (labels : LabLabelIndex)
@@ -1438,18 +1483,17 @@ def compileLabProgramLinkedWithPancakeRuntime [NeZero width]
     initialHaltPc initial
   let relabelled := labUpdateStoredLabelLengths 1000 encoded
   let haltPc := 1000 + labStoredProgramLength relabelled
-  /- Re-run the relocation-length convergence after label padding has been
-     updated.  CakeML's `remove_labels_loop` performs `enc_secs_again` again
-     after `upd_lab_len`; a single pass here is insufficient because changing
-     label slots can move a branch across the direct/long encoding boundary.
-     In that case the final compiler would emit more instructions than the
-     stored section length, shifting every following section. -/
-  let final := labEncodeStoredProgramStable 8 context 1000 1000
+  /- Cake's `remove_labels_loop` performs one `enc_secs_again` pass after
+     `upd_lab_len`, and checks that pass's relocation operands directly.  The
+     retained line lengths from the first pass must not be iterated again here:
+     doing so can erase the final direct-relocation slot that Cake preserves
+     for `pad_code`. -/
+  let relabelledLabels := labLabelIndexOf
+    (labCollectPancakeRuntimeStoredLabels relabelled)
+  let final := labEncodeStoredProgram context relabelledLabels 1000 1000
     haltPc relabelled
-  let finalHaltPc := 1000 + labStoredProgramLength final
   let labels := labLabelIndexOf (labCollectPancakeRuntimeStoredLabels final)
-  compileLabProgramLinkedWithStoredLengthsAux context labels 1000 1000
-    finalHaltPc final
+  compileLabProgramLinkedWithStoredLengthsAux context labels 1000 1000 haltPc final
 
 def flattenLabProgramLinked :
     List (Nat × Word width × List (Instruction width)) → List (Instruction width)
@@ -1814,7 +1858,7 @@ theorem compileLabSection_ffi_multiple_services [NeZero width] :
     compileLabSection { services := [("first", 7), ("second", 8)] }
       ⟨2, [
         .labAsm (.callFfi "first") [] 0]⟩ =
-      some [.jal 0 (0 - BitVec.ofNat width 64)] := by
+      some [.jal 0 (0 - BitVec.ofNat width 48)] := by
   simp [compileLabSection, labCompileLines,
     labCompileAsm, labFfiStubOffset, lookupWordFfiIndex]
 

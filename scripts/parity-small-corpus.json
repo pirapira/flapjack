@@ -6,6 +6,20 @@
   },
   "fixtures": [
     {
+      "path": "Flapjack/Test/OriginalPancake/f01189_ffi_stub_order.pnk",
+      "source_reference": "Minimized f01189 FFI/relocation witness: Cake's tail-first Lab collector is reversed by export_riscv, so both stub order and JAL relocations must agree.",
+      "cake_sha256": "c6cfbbe718e625f944924ccec9fbf0bb73f223564850f97e971b09e4c552ce6e",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.2"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/ffi_halt_order.pnk",
+      "source_reference": "Reduced differential-fuzz witness: Cake's tail-first Lab FFI collector and exported stub order must also handle the built-in halt service, including its two relocated jumps.",
+      "cake_sha256": "02a4bb2d12291b97fa0bb88af2376472cee87491ed8b40e49126e7d248fb3c33",
+      "tracked_beads": []
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/f00068_allocator_return.pnk",
       "source_reference": "Reduced f00068 allocator witness: Cake's SSA option_lookup maps an unmapped fixed-protocol source to ABI register 0, so the allocator retains sub1's result and emits the ABI 0 move.",
       "cake_sha256": "d06482093d272aa5c327208a792b5d140de2f217b5d255f852141150d29d6cfc",
@@ -771,6 +785,12 @@
       "tracked_beads": [
         "flapjack-pxn.8.5.14.6"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/nested_shape_22_fields.pnk",
+      "source_reference": "CakeML Pancake corpus case 748e171602: nested record payloads with 11- and 22-word fields compile to byte-identical RISC-V output, extending exact shape/flattening coverage beyond the hand-written small fixtures.",
+      "cake_sha256": "91ebaab3609c8a0c6db97a76cd98c8e6c010a0d7e0394cfb6e512a7ce98e958a",
+      "tracked_beads": []
     }
   ]
 }

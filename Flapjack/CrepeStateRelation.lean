@@ -493,9 +493,10 @@ theorem lookupCompiledFunction_compileFunctions_head
       some ((compileParamVars declaration.params 0).2.1,
         compileProg
           { context with
-              vars := (compileParamVars declaration.params 0).1
+              vars := panToCrepMakeVmap declaration.params
               maxVar := (compileParamVars declaration.params 0).2.2 }
           declaration.body) := by
-  simp [compileFunctions, compileFunDecl, lookupCompiledFunction]
+  simp [compileFunctions, compileFunDecl, panToCrepMakeVmap,
+    lookupCompiledFunction]
 
 end Flapjack

@@ -10,13 +10,13 @@ namespace Flapjack.RiscV
 example :
     labFfiStubOffset (width := 64)
       { services := [("first", 7), ("second", 8)] } "first" 64 =
-      some (0 - BitVec.ofNat 64 128) := by
+      some (0 - BitVec.ofNat 64 112) := by
   decide
 
 example :
     labFfiStubOffset (width := 64)
       { services := [("first", 7), ("second", 8)] } "second" 64 =
-      some (0 - BitVec.ofNat 64 112) := by
+      some (0 - BitVec.ofNat 64 128) := by
   decide
 
 example :
@@ -31,6 +31,16 @@ example :
       some [.jal 0 (0 - BitVec.ofNat 64 80)] := by
   rfl
 
+/-! Cake switches the backward Halt transfer to its long AUIPC/JALR form once
+    the distance is beyond the direct JAL range.  Keep the boundary exact so
+    the target assembler cannot silently regress to the short form. -/
+example :
+    labCompileAsmWithHalt (width := 64) { services := [] } (labLabelIndexOf [])
+      (2 ^ 20) 999 .halt =
+      some [.auipc 31 (BitVec.ofInt 64 (-256)),
+        .jalr 0 31 (BitVec.ofInt 64 (-16))] := by
+  decide
+
 example :
     labCompileAsmWithHalt (width := 64) { services := [] } (labLabelIndexOf []) 64 999 .install =
       some [.jal 0 (0 - BitVec.ofNat 64 96)] := by
@@ -42,7 +52,7 @@ example :
       (.callFfi "first") =
       /- Cake addresses the exported FFI block from the linked absolute
          position; `ffiBase` is retained only for the legacy API shape. -/
-      some [.jal 0 (0 - BitVec.ofNat 64 160)] := by
+      some [.jal 0 (0 - BitVec.ofNat 64 144)] := by
   decide
 
 /-! Cake can retain a LabAsm length of 5 after `add_nop`: its one-instruction
@@ -54,6 +64,19 @@ def storedLengthFiveOracle : Bool :=
     [.ori 10 0 (BitVec.ofNat 64 1)]
 
 #guard storedLengthFiveOracle
+
+/-! Cake's `enc_lines_again` retains a two-instruction relocation slot when a
+    jump first needs a long transfer.  After the final labels make the same
+    jump fit in one JAL, `pad_code` fills the retained slot with one encoded
+    Skip.  Keep this boundary separate from label-triggered `add_nop`: the
+    preceding LabAsm itself owns the residual byte range. -/
+def retainedJumpSlotPaddingOracle : Bool :=
+  labCompileProgramLinesWithStoredLengths (width := 64) { services := [] }
+      (labLabelIndexOf [(0, 0, 1004)]) 1000 1000 2000
+      [.labAsm (.jump { sectionId := 0, label := 0 }) [] 8] ==
+    some [.jal 0 (BitVec.ofNat 64 4), .addi 0 0 0]
+
+#guard retainedJumpSlotPaddingOracle
 
 /-! Cake's `pad_section` applies each nonzero retained label length to the
     most recent prior LabAsm, appending one complete encoded Skip. -/

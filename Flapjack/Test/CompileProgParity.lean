@@ -19,6 +19,23 @@ def compileProgProbeDecls : List (Decl Nat) :=
      { name := "main", inline := false, exported := true, params := [],
        body := .call none "mid" [], returnShape := .one }]
 
+/-! Direct `compile_inl_top_def` boundary oracle: the named source pass keeps
+    the function table while recursively expanding the selected inline names. -/
+def compileInlTopOracle : Bool :=
+  match panToCrepCompileInlTop ["first", "second"]
+      [CompiledFunction.mk "first" [] (.call none "second" []) .one,
+       CompiledFunction.mk "second" [] (.return [.const 9]) .one] with
+  | [first, second] =>
+      (match first.body with
+      | .seq .tick (.return [.const 9]) => true
+      | _ => false) &&
+      (match second.body with
+      | .return [.const 9] => true
+      | _ => false)
+  | _ => false
+
+#guard compileInlTopOracle
+
 /-! The fixture is the direct HOL evaluation of
     `pan_to_crep$compile_prog` on the same inline callee/caller pair. -/
 theorem compile_prog_inline_call_parity :
@@ -30,7 +47,8 @@ theorem compile_prog_inline_call_parity :
        { name := "main", params := [],
          body := .seq .tick (.seq .tick (.return [.const 7])), returnShape := .one }] := by
   simp [compileProgToCrep, pipelineInlineNames, compileToCrep,
-    compileFunctionsSource, compileFunDeclSource, compileParamVars,
+    compileFunctionsSource, compileFunDeclSource, panToCrepCompFunc,
+    compileParamVars, Shape.shapeSize, panToCrepCompileInlTop,
     functionInfos, compileProgProbeContext, compileProgProbeDecls,
     compileProg, compileExp, compileArgs,
     crepInlineTopRecursiveByNames, crepInlineTopRecursive,

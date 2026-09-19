@@ -190,6 +190,7 @@ theorem compile_full_pan_value_identity_declaration_call_relation
     simp [callState, correctnessIdentityCrepState,
       correctnessIdentityContext, correctnessIdentityDeclarations,
       compileToCrepe, compileFunctions, compileFunDecl, compileParamVars,
+      panToCrepMakeVmap,
       functionInfos, compileProg, compileExp, compileArgs, allocatedNames,
       evalCrepFullCall, evalCrepFullProg, evalCrepFullExps, evalCrepFullExp,
       updateCrepLocal, lookupCompiledFunction, assignCrepValues,

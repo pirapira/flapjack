@@ -310,6 +310,18 @@ def seqLocInf [BEq String] (previous delta : InfoMap LocalInfo) :
     InfoMap LocalInfo :=
   infoMapUnionWith (fun newer _older => newer) delta previous
 
+/-! Exact source-shaped port of Cake `sh_bd_to_str_def`
+    (`panStaticScript.sml:342-350`).  Basedness is intentionally erased for
+    words, while named structures print only their declared name. -/
+def shapedBasedToString : ShapedBased → String
+  | .word _ => "1"
+  | .struct [] => "{}"
+  | .struct (head :: tail) =>
+      "{" ++ shapedBasedToString head ++
+        tail.foldl (fun result field =>
+          result ++ "," ++ shapedBasedToString field) "" ++ "}"
+  | .named name _ => name
+
 def shapedBasedFromShapeWith (context : StructContext) (basedness : Based) :
     Shape → Option ShapedBased
   | .one => some (.word basedness)

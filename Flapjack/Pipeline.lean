@@ -95,6 +95,22 @@ def panTargetMoveStartToFront [BEq String]
       | .function function => function.name != start
       | _ => true) declarations
 
+/-! Source-shaped port of CakeML Pancake's `exports_def`
+    (`cakeml/pancake/pan_to_targetScript.sml:10`).  Export collection walks
+    declarations in source order, keeps only exported functions, and ignores
+    globals, exceptions, and structure declarations.  Keeping this as a
+    separate executable helper preserves the observable export list without
+    changing the target section ordering. -/
+def panTargetExports : List (Decl α) → List FunName
+  | [] => []
+  | .function declaration :: declarations =>
+      if declaration.exported then
+        declaration.name :: panTargetExports declarations
+      else
+        panTargetExports declarations
+  | _ :: declarations => panTargetExports declarations
+termination_by declarations => sizeOf declarations
+
 def pipelineCrepeContext [BEq α] [Add α]
     (bytesInWord : α) (fromNat : Nat → α)
     (program : GlobalCompiledProgram α) : CompileContext α :=

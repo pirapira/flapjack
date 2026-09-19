@@ -226,6 +226,15 @@ def reachabilityContext : Context :=
      ("x", { shapedBased := .word .trusted })] => true
   | _ => false
 
+/-! Direct Cake `sh_bd_to_str` parity (`panStaticScript.sml:342-350`). -/
+#guard shapedBasedToString (.word .trusted) == "1"
+#guard shapedBasedToString (.struct []) == "{}"
+#guard shapedBasedToString
+    (.struct [.word .based, .struct [.word .notTrusted, .word .trusted]]) ==
+    "{1,{1,1}}"
+#guard shapedBasedToString
+    (.named "Pair" [("left", .word .trusted), ("right", .word .based)]) == "Pair"
+
 /-! Direct Cake `sh_bd_from_sh` parity (`panStaticScript.sml:213-233`).
     The explicit basedness must reach every word in comb and named shapes. -/
 #guard match shapedBasedFromShapeWith [] .based .one with

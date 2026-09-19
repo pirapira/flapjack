@@ -481,9 +481,46 @@ def staticScopeMessage (idType : ScopedId) (location id : String) (scope : Scope
   location ++ staticScopedIdDescription idType ++ id ++
     " is not in scope in " ++ staticScopeDescription scope ++ "\n"
 
+/-! Source-shaped port of CakeML's `get_redec_msg_def`
+    (`cakeml/pancake/panStaticScript.sml:478-489`). -/
+def getRedecMessage (idType : ScopedId) (location id : String) (scope : Scope) : String :=
+  location ++ staticScopedIdDescription idType ++ id ++
+    " is redeclared in " ++ staticScopeDescription scope ++ "\n"
+
 /-! Source-shaped port of CakeML's `primitive_idents_def`
     (`cakeml/pancake/panStaticScript.sml:457-459`). -/
 def primitiveIdents : List String := ["__add_with_carry__"]
+
+/-! Source-shaped port of CakeML's `add_primitive_hint_def`
+    (`cakeml/pancake/panStaticScript.sml:464-473`). -/
+def addPrimitiveHint (functionName message : String) : String :=
+  if functionName ∈ primitiveIdents then
+    message ++ "  note: " ++ functionName ++
+      " is a built-in primitive only available in declaration or assignment RHS positions\n"
+  else message
+
+/-! Source-shaped port of CakeML's `get_memop_msg_def`
+    (`cakeml/pancake/panStaticScript.sml:497-511`). -/
+def getMemopMessage (isLocal isLoad isUntrusted : Bool)
+    (location : String) (scope : Scope) : String :=
+  let memoryType := if isLocal then "local " else "shared "
+  let operationType := if isLoad then "load " else "store "
+  let issue :=
+    if isLocal then
+      if isUntrusted then "may not be " else "is not "
+    else
+      if isUntrusted then "may be " else "is "
+  location ++ memoryType ++ operationType ++ "address " ++ issue ++
+    "calculated from base in " ++ staticScopeDescription scope ++ "\n"
+
+/-! Source-shaped port of CakeML's `get_oparg_msg_def`
+    (`cakeml/pancake/panStaticScript.sml:517-527`). -/
+def getOpargMessage (isExact : Bool) (expected given location operation : String)
+    (scope : Scope) : String :=
+  location ++ "operation " ++ operation ++
+    (if isExact then " only accepts " else " requires at least ") ++
+    expected ++ " operands, " ++ given ++ " provided in " ++
+    staticScopeDescription scope ++ "\n"
 
 /-! Cake's memory-operation diagnostics distinguish local addresses, which
     should not be based on `@base`, from shared addresses, which should.  A
@@ -493,23 +530,20 @@ def staticMemoryWarning (context : Context) (isLocal isLoad : Bool)
     (address : ShapedBased) : Option StatErr :=
   match address with
   | .word basedness =>
-      let issue : Option String :=
+      let untrusted : Option Bool :=
         if isLocal then
           match basedness with
-          | .notBased => some "is not "
-          | .notTrusted => some "may not be "
+          | .notBased => some false
+          | .notTrusted => some true
           | _ => none
         else
           match basedness with
-          | .based => some "is "
-          | .notTrusted => some "may be "
+          | .based => some false
+          | .notTrusted => some true
           | _ => none
-      issue.map (fun issue =>
-        .warning (context.location ++
-          (if isLocal then "local " else "shared ") ++
-          (if isLoad then "load " else "store ") ++
-          "address " ++ issue ++ "calculated from base in " ++
-          staticScopeDescription context.scope ++ "\n"))
+      untrusted.map (fun isUntrusted =>
+        .warning (getMemopMessage isLocal isLoad isUntrusted
+          context.location context.scope))
   | _ => none
 
 def staticAddWarning (result : StaticResult α) (warning : Option StatErr) :
@@ -525,8 +559,7 @@ def staticRedeclarationWarning [BEq String] (context : Context)
     (name : VarName) : Option StatErr :=
   if (lookupInfo name context.locals).isSome ||
       (lookupInfo name context.globals).isSome then
-    some (.warning (context.location ++ "variable " ++ name ++
-      " is redeclared in " ++ staticScopeDescription context.scope ++ "\n"))
+    some (.warning (getRedecMessage .variable context.location name context.scope))
   else none
 
 def staticPrependWarning (warning : Option StatErr) (result : StaticResult α) :
@@ -712,9 +745,14 @@ def staticLastStmtString : LastStmt → String
   | .condExitLast => "exiting conditional"
   | _ => ""
 
+/-! Source-shaped port of CakeML's `get_unreach_msg_def`
+    (`cakeml/pancake/panStaticScript.sml:530-536`). -/
+def getUnreachMessage (location last : String) (scope : Scope) : String :=
+  location ++ "unreachable statement(s) after " ++ last ++ " in " ++
+    staticScopeDescription scope ++ "\n"
+
 def staticUnreachableWarning (context : Context) (last : LastStmt) : StatErr :=
-  .warning (context.location ++ "unreachable statement(s) after " ++
-    staticLastStmtString last ++ " in " ++ staticScopeDescription context.scope ++ "\n")
+  .warning (getUnreachMessage context.location (staticLastStmtString last) context.scope)
 
 def nextIsReachable : Reachable → LastStmt → Reachable
   | .isReach, last =>

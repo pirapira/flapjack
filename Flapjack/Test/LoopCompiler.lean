@@ -206,6 +206,17 @@ def reachabilityContext : Context :=
   primitiveIdents == ["__add_with_carry__"] &&
   "__add_with_carry__" ∈ primitiveIdents &&
   !("__sub_with_borrow__" ∈ primitiveIdents)
+#guard
+  addPrimitiveHint "__add_with_carry__" "error: unsupported primitive\n" ==
+    "error: unsupported primitive\n  note: __add_with_carry__ is a built-in primitive only available in declaration or assignment RHS positions\n" &&
+  addPrimitiveHint "__other__" "error: unsupported primitive\n" ==
+    "error: unsupported primitive\n"
+#guard getRedecMessage .variable "line: " "x" (.funScope "f" "") ==
+  "line: variable x is redeclared in function f\n"
+#guard getRedecMessage .function "" "f" (.declScope "init") ==
+  "function f is redeclared in initialisation of global variable init\n"
+#guard getRedecMessage .struct "" "Pair" (.structScope "Pair" "left") ==
+  "struct name Pair is redeclared in declaration of field left in named struct Pair\n"
 #guard (reachedWarnable (.annot "" "" : Prog Nat) reachabilityContext).1.isNone
 #guard (reachedWarnable (.tick : Prog Nat) reachabilityContext).1.isNone
 #guard (reachedWarnable (.skip : Prog Nat)
@@ -225,6 +236,11 @@ def reachabilityContext : Context :=
   staticLastStmtString .condExitLast == "exiting conditional" &&
   staticLastStmtString .invisLast == "" &&
   staticLastStmtString .otherLast == ""
+
+#guard getUnreachMessage "AT 7: " "return" (.funScope "f" "") ==
+  "AT 7: unreachable statement(s) after return in function f\n"
+#guard getUnreachMessage "" "" (.topLevel) ==
+  "unreachable statement(s) after  in top-level declaration\n"
 
 #guard match basedMerge .based .notBased with | .based => true | _ => false
 #guard match basedMerge .trusted .notBased with | .trusted => true | _ => false
@@ -407,6 +423,20 @@ def memoryWarningContext : Context :=
     reachable := .isReach
     last := .otherLast
     location := "" }
+
+#guard getMemopMessage true true false "L: " (.funScope "f" "") ==
+  "L: local load address is not calculated from base in function f\n"
+#guard getMemopMessage true false true "L: " (.funScope "f" "") ==
+  "L: local store address may not be calculated from base in function f\n"
+#guard getMemopMessage false true false "L: " (.funScope "f" "") ==
+  "L: shared load address is calculated from base in function f\n"
+#guard getMemopMessage false false true "L: " (.funScope "f" "") ==
+  "L: shared store address may be calculated from base in function f\n"
+
+#guard getOpargMessage true "2" "3" "L: " "Sub" (.funScope "f" "") ==
+  "L: operation Sub only accepts 2 operands, 3 provided in function f\n"
+#guard getOpargMessage false "2" "1" "L: " "Add" (.funScope "f" "") ==
+  "L: operation Add requires at least 2 operands, 1 provided in function f\n"
 
 #guard
   (checkProg memoryWarningContext

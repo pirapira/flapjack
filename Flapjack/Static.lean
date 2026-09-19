@@ -625,6 +625,59 @@ def checkStructFields [BEq String] (context : Context) (structName : StructName)
             " in named struct " ++ structName ++ " constant in " ++
             staticScopeDescription context.scope ++ "\n"))
 
+/-! Source-shaped port of CakeML's `get_non_word_msg_def`
+    (`cakeml/pancake/panStaticScript.sml:552-557`). -/
+def getNonWordMessage (description shapeString location : String)
+    (scope : Scope) : String :=
+  location ++ description ++ " has shape " ++ shapeString ++
+    " instead of a word in " ++ staticScopeDescription scope ++ "\n"
+
+/-! Source-shaped port of CakeML's `get_implementation_err_msg_def`
+    (`cakeml/pancake/panStaticScript.sml:568-572`). -/
+def getImplementationErrorMessage (description location : String)
+    (scope : Scope) : String :=
+  location ++ description ++ " in " ++ staticScopeDescription scope ++ "\n" ++
+    "this should never happen. please report to a compiler developer\n"
+
+/-! Source-shaped port of CakeML's `check_shape_def`
+    (`cakeml/pancake/panStaticScript.sml:759-773`).  The location and scope
+    are part of the observable error, so they must not be discarded in favour
+    of the earlier generic validity check. -/
+def checkShape [BEq String] (context : StructContext) (location : String)
+    (scope : Scope) : Shape → StaticResult Unit
+  | .one => staticOk ()
+  | .comb shapes => checkShapes shapes
+  | .named name =>
+      if (lookupInfo name context).isSome then
+        staticOk ()
+      else
+        staticError (.scope (staticScopeMessage .struct location name scope))
+termination_by shape => sizeOf shape
+decreasing_by
+  all_goals first | sizeOf_list_dec | decreasing_trivial
+where
+  checkShapes : List Shape → StaticResult Unit
+    | [] => staticOk ()
+    | shape :: rest =>
+        staticBind (checkShape context location scope shape) (fun _ =>
+          checkShapes rest)
+  termination_by shapes => sizeOf shapes
+  decreasing_by
+    all_goals first | sizeOf_list_dec | decreasing_trivial
+
+/-! Source-shaped port of CakeML's `check_operands_def`
+    (`cakeml/pancake/panStaticScript.sml:660-671`). -/
+def checkOperands [BEq String] (context : Context) (opString : String) :
+    List ShapedBased → StaticResult Based
+  | [] => staticOk .notBased
+  | .word basedness :: arguments =>
+      staticBind (checkOperands context opString arguments) (fun restBasedness =>
+        staticOk (basedMerge basedness restBasedness))
+  | shaped :: _ =>
+      staticError (.shape (getNonWordMessage
+        ("operation " ++ opString ++ " operand")
+        (shapedBasedToString shaped) context.location context.scope))
+
 def checkExp [BEq String] (context : Context) : Exp α → StaticResult ExpReturn
   | .const _ => staticOk { shapedBased := .word .notBased }
   | .var .local name =>
@@ -634,7 +687,9 @@ def checkExp [BEq String] (context : Context) : Exp α → StaticResult ExpRetur
       staticBind (checkGlobalVar context name) (fun info =>
         match shapedBasedFromShape context.structs info.shape with
         | some shaped => staticOk { shapedBased := shaped }
-        | none => staticError (.scope ("invalid global shape: " ++ name)))
+        | none => staticError (.scope (getImplementationErrorMessage
+            "static analysis failed to convert in-scope shape"
+            context.location context.scope)))
   | .rStruct expressions =>
       staticBind (checkExps context expressions) (fun result =>
         staticOk { shapedBased := .struct result.shapedBased })
@@ -642,10 +697,13 @@ def checkExp [BEq String] (context : Context) : Exp α → StaticResult ExpRetur
       staticBind (checkExp context value) (fun result =>
         match shapedBasedFieldAt index result.shapedBased with
         | some shaped => staticOk { shapedBased := shaped }
-        | none => staticError (.shape "invalid positional field index"))
+        | none => staticError (.shape (context.location ++ "expression shape " ++
+            shapedBasedToString result.shapedBased ++ " has no field at index " ++
+            toString index ++ " in " ++ staticScopeDescription context.scope ++ "\n")))
   | .nStruct name fields =>
       match lookupInfo name context.structs with
-      | none => staticError (.scope ("unknown struct: " ++ name))
+      | none => staticError (.scope
+          (staticScopeMessage .struct context.location name context.scope))
       | some info =>
           staticBind (checkNamedExps context fields) (fun actual =>
             staticBind (checkStructFields context name info.fields actual) (fun _ =>
@@ -654,58 +712,87 @@ def checkExp [BEq String] (context : Context) : Exp α → StaticResult ExpRetur
       staticBind (checkExp context value) (fun result =>
         match shapedBasedFieldNamed name result.shapedBased with
         | some shaped => staticOk { shapedBased := shaped }
-        | none => staticError (.shape "invalid named field"))
+        | none => staticError (.shape (context.location ++ "expression shape " ++
+            shapedBasedToString result.shapedBased ++ " has no field " ++ name ++
+            " in " ++ staticScopeDescription context.scope ++ "\n")))
   | .load shape address =>
-      if !isWfShape context.structs shape then
-        staticError (.shape "load result has an invalid shape")
-      else
-        staticBind (checkExp context address) (fun result =>
+      let checkLoadResult : ExpReturn → StaticResult ExpReturn :=
+        fun result =>
           if shapedBasedIsWord result.shapedBased then
             match shapedBasedFromShape context.structs shape with
             | some shaped =>
                 staticAddWarning (staticOk { shapedBased := shaped })
                   (staticMemoryWarning context true true result.shapedBased)
-            | none => staticError (.scope "invalid load result shape")
-          else staticError (.shape "load address is not a word"))
+            | none => staticError (.scope (getImplementationErrorMessage
+                "static analysis failed to convert in-scope shape"
+                context.location context.scope))
+          else
+            staticError (.shape (getNonWordMessage "load address"
+              (shapedBasedToString result.shapedBased)
+              context.location context.scope))
+      staticBind (checkShape context.structs context.location context.scope shape)
+        (fun _ => staticBind (checkExp context address) checkLoadResult)
   | .load32 address =>
       staticBind (checkExp context address) (fun result =>
         if shapedBasedIsWord result.shapedBased then
           staticAddWarning (staticOk { shapedBased := .word .trusted })
             (staticMemoryWarning context true true result.shapedBased)
-        else staticError (.shape "load32 address is not a word"))
+        else
+          staticError (.shape (getNonWordMessage "load address"
+            (shapedBasedToString result.shapedBased)
+            context.location context.scope)))
   | .loadByte address =>
       staticBind (checkExp context address) (fun result =>
         if shapedBasedIsWord result.shapedBased then
           staticAddWarning (staticOk { shapedBased := .word .trusted })
             (staticMemoryWarning context true true result.shapedBased)
-        else staticError (.shape "loadByte address is not a word"))
+        else
+          staticError (.shape (getNonWordMessage "load address"
+            (shapedBasedToString result.shapedBased)
+            context.location context.scope)))
   | .op operator expressions =>
-      staticBind (checkExps context expressions) (fun result =>
-        let arityOk := match operator with
-          | .sub => expressions.length == 2
-          | _ => expressions.length >= 2
-        if !arityOk then staticError (.general "invalid binary operator arity")
-        else if result.shapedBased.all shapedBasedIsWord then
-          staticOk { shapedBased := .word (shapedBasedMerge result.shapedBased) }
-        else staticError (.shape "operator operand is not a word"))
-  | .panOp _ expressions =>
-      staticBind (checkExps context expressions) (fun result =>
-        if expressions.length != 2 then staticError (.general "invalid Flapjack operator arity")
-        else if result.shapedBased.all shapedBasedIsWord then
-          staticOk { shapedBased := .word (shapedBasedMerge result.shapedBased) }
-        else staticError (.shape "Flapjack operand is not a word"))
+      let operation := binopToString operator
+      let isExact :=
+        match operator with
+        | .sub => true
+        | _ => false
+      let arityOk := if isExact then expressions.length == 2 else expressions.length >= 2
+      if !arityOk then
+        staticError (.general (getOpargMessage isExact (if isExact then "2" else "2")
+          (toString expressions.length) context.location operation context.scope))
+      else
+        staticBind (checkExps context expressions) (fun result =>
+          staticBind (checkOperands context operation result.shapedBased) (fun basedness =>
+            staticOk { shapedBased := .word basedness }))
+  | .panOp operator expressions =>
+      let operation := panopToString operator
+      if expressions.length != 2 then
+        staticError (.general (getOpargMessage true "2"
+          (toString expressions.length) context.location operation context.scope))
+      else
+        staticBind (checkExps context expressions) (fun result =>
+          staticBind (checkOperands context operation result.shapedBased) (fun basedness =>
+            staticOk { shapedBased := .word basedness }))
   | .cmp _ left right =>
       staticBind (checkExp context left) (fun leftResult =>
         staticBind (checkExp context right) (fun rightResult =>
           if shapedBasedSameShape leftResult.shapedBased rightResult.shapedBased then
             staticOk { shapedBased := .word .notBased }
-          else staticError (.shape "comparison operands have different shapes")))
+          else staticError (.shape (context.location ++
+            "comparison given operands of different shapes in " ++
+            staticScopeDescription context.scope ++ "\n"))))
   | .shift _ left right =>
       staticBind (checkExp context left) (fun leftResult =>
         staticBind (checkExp context right) (fun rightResult =>
-          if shapedBasedIsWord leftResult.shapedBased && shapedBasedIsWord rightResult.shapedBased then
-            staticOk { shapedBased := rightResult.shapedBased }
-          else staticError (.shape "shift operands are not words")))
+          if shapedBasedHasShape .one leftResult.shapedBased then
+            if shapedBasedHasShape .one rightResult.shapedBased then
+              staticOk { shapedBased := rightResult.shapedBased }
+            else staticError (.shape (getNonWordMessage "shift expression"
+              (shapedBasedToString rightResult.shapedBased)
+              context.location context.scope))
+          else staticError (.shape (getNonWordMessage "shifted expression"
+            (shapedBasedToString leftResult.shapedBased)
+            context.location context.scope))))
   | .baseAddr => staticOk { shapedBased := .word .based }
   | .topAddr => staticOk { shapedBased := .word .based }
   | .bytesInWord => staticOk { shapedBased := .word .notBased }
@@ -760,26 +847,6 @@ def checkFunctionName [BEq String] (context : Context) (name : FunName) :
         (addPrimitiveHint name
           (staticScopeMessage .function context.location name context.scope)))
   | some info => staticOk info
-
-/-! Source-shaped port of CakeML's `get_non_word_msg_def`
-    (`cakeml/pancake/panStaticScript.sml:552-557`). -/
-def getNonWordMessage (description shapeString location : String)
-    (scope : Scope) : String :=
-  location ++ description ++ " has shape " ++ shapeString ++
-    " instead of a word in " ++ staticScopeDescription scope ++ "\n"
-
-/-! Source-shaped port of CakeML's `check_operands_def`
-    (`cakeml/pancake/panStaticScript.sml:660-671`). -/
-def checkOperands [BEq String] (context : Context) (opString : String) :
-    List ShapedBased → StaticResult Based
-  | [] => staticOk .notBased
-  | .word basedness :: arguments =>
-      staticBind (checkOperands context opString arguments) (fun restBasedness =>
-        staticOk (basedMerge basedness restBasedness))
-  | shaped :: _ =>
-      staticError (.shape (getNonWordMessage
-        ("operation " ++ opString ++ " operand")
-        (shapedBasedToString shaped) context.location context.scope))
 
 def checkPrimitiveArgs [BEq String] (context : Context) (operator : PrimOp)
     (arguments : List ShapedBased) : StaticResult ShapedBased :=
@@ -848,13 +915,6 @@ def getShapeMismatchMessage (description actualShape expectedShape location : St
   location ++ description ++ " has shape " ++ actualShape ++
     " instead of declared shape " ++ expectedShape ++ " in " ++
     staticScopeDescription scope ++ "\n"
-
-/-! Source-shaped port of CakeML's `get_implementation_err_msg_def`
-    (`cakeml/pancake/panStaticScript.sml:568-572`). -/
-def getImplementationErrorMessage (description location : String)
-    (scope : Scope) : String :=
-  location ++ description ++ " in " ++ staticScopeDescription scope ++ "\n" ++
-    "this should never happen. please report to a compiler developer\n"
 
 /-! Source-shaped port of CakeML's `check_func_args_def`
     (`cakeml/pancake/panStaticScript.sml:690-718`). -/
@@ -1172,32 +1232,6 @@ def firstRepeat [BEq α] : List α → Option α
       if value1 == value2 then some value1
       else firstRepeat (value2 :: values)
   | _ => none
-
-/-! Source-shaped port of CakeML's `check_shape_def`
-    (`cakeml/pancake/panStaticScript.sml:759-773`).  The location and scope
-    are part of the observable error, so they must not be discarded in favour
-    of the earlier generic validity check. -/
-def checkShape [BEq String] (context : StructContext) (location : String)
-    (scope : Scope) : Shape → StaticResult Unit
-  | .one => staticOk ()
-  | .comb shapes => checkShapes shapes
-  | .named name =>
-      if (lookupInfo name context).isSome then
-        staticOk ()
-      else
-        staticError (.scope (staticScopeMessage .struct location name scope))
-termination_by shape => sizeOf shape
-decreasing_by
-  all_goals first | sizeOf_list_dec | decreasing_trivial
-where
-  checkShapes : List Shape → StaticResult Unit
-    | [] => staticOk ()
-    | shape :: rest =>
-        staticBind (checkShape context location scope shape) (fun _ =>
-          checkShapes rest)
-  termination_by shapes => sizeOf shapes
-  decreasing_by
-    all_goals first | sizeOf_list_dec | decreasing_trivial
 
 /-! Source-shaped port of CakeML's `check_id_shapes_def`
     (`cakeml/pancake/panStaticScript.sml:776-797`).  Each identifier gets its

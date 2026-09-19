@@ -67,6 +67,7 @@ import Flapjack.Test.StaticFuncArgsParity
 import Flapjack.Test.StaticStructFieldsParity
 import Flapjack.Test.StaticShapeParity
 import Flapjack.Test.StaticIdShapesParity
+import Flapjack.Test.StaticExpParity
 import Flapjack.Test.CorrectnessConditional
 import Flapjack.Test.CorrectnessColour
 import Flapjack.Test.CorrectnessSsaColour

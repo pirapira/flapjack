@@ -147,14 +147,20 @@ example :
 example :
     checkExp (α := Nat) checkerContext (Exp.op .add [.const 1, .const 2]) =
       staticOk { shapedBased := .word .notBased } := by
-  simp [checkExp, checkExp.checkExps, staticOk, staticBind,
-    shapedBasedIsWord, shapedBasedMerge, basedMerge, checkerContext, pairContext]
+  simp [checkExp, checkExp.checkExps, checkOperands, staticOk, staticBind,
+    basedMerge, checkerContext, pairContext]
 
 example :
     checkExp (α := Nat) checkerContext (Exp.op .add [.const 1]) =
-      staticError (.general "invalid binary operator arity") := by
-  simp [checkExp, checkExp.checkExps, staticOk, staticBind,
-    checkerContext, pairContext]
+      staticError (.general (getOpargMessage false "2" (toString 1) ""
+        (binopToString .add)
+        .topLevel)) := by
+  simp [checkExp, checkerContext, pairContext]
+
+#guard
+  staticResultErrorMessage
+      (checkExp (α := Nat) checkerContext (Exp.op .add [.const 1])) ==
+    some "operation Add requires at least 2 operands, 1 provided in top-level declaration\n"
 
 example :
     checkProg (α := Nat) checkerContext (.return (.const 7)) =

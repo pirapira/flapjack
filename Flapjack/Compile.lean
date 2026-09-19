@@ -100,6 +100,14 @@ def compileParamVars : List (VarName × Shape) → Nat →
       ((name, (shape, names)) :: restVars, names ++ restNames, nextOffset)
 termination_by params => sizeOf params
 
+/-! Source-named port of CakeML Pancake's active `make_vmap_def`
+    (`pan_to_crepScript.sml:327`).  The first component of the parameter
+    allocation is the finite map from source names to shaped flattened slots;
+    `compileParamVars` supplies the same `with_shape` numbering used by Cake. -/
+abbrev panToCrepMakeVmap (params : List (VarName × Shape)) :
+    InfoMap (Shape × List Nat) :=
+  (compileParamVars params 0).1
+
 /-! Source-named port of CakeML Pancake's `make_funcs_def`
     (`pan_to_crepScript.sml:366`).  Cake's function table keeps each function
     name paired with its original parameter list and return shape; non-function
@@ -283,8 +291,9 @@ termination_by structural program
 
 def compileFunDecl [BEq α] [OfNat α 0] [Add α]
     (context : CompileContext α) (declaration : FunDecl α) : CompiledFunction α :=
-  let (vars, params, maxVar) := compileParamVars declaration.params 0
-  let functionContext := { context with vars := vars, maxVar := maxVar }
+  let (_vars, params, maxVar) := compileParamVars declaration.params 0
+  let functionContext :=
+    { context with vars := panToCrepMakeVmap declaration.params, maxVar := maxVar }
   { name := declaration.name, params := params,
     body := compileProg functionContext declaration.body,
     returnShape := declaration.returnShape }
@@ -315,8 +324,9 @@ def compileToCrepe [BEq α] [OfNat α 0] [Add α]
     the source temporary numbering. -/
 def compileFunDeclSource [BEq α] [OfNat α 0] [Add α]
     (context : CompileContext α) (declaration : FunDecl α) : CompiledFunction α :=
-  let (vars, params, maxVar) := compileParamVars declaration.params 0
-  let functionContext := { context with vars := vars, maxVar := maxVar - 1 }
+  let (_vars, params, maxVar) := compileParamVars declaration.params 0
+  let functionContext :=
+    { context with vars := panToCrepMakeVmap declaration.params, maxVar := maxVar - 1 }
   { name := declaration.name, params := params,
     body := compileProg functionContext declaration.body,
     returnShape := declaration.returnShape }

@@ -24,6 +24,15 @@ def makeFuncsOracle : Bool :=
 
 #guard makeFuncsOracle
 
+/-! Direct `make_vmap_def` oracle: shaped parameters receive consecutive
+    flattened slots in source order. -/
+def makeVmapOracle : Bool :=
+  match panToCrepMakeVmap [("x", .one), ("pair", .comb [.one, .one])] with
+  | [("x", (.one, [0])), ("pair", (.comb [.one, .one], [1, 2]))] => true
+  | _ => false
+
+#guard makeVmapOracle
+
 /-! The fixture is the direct HOL evaluation of
     `pan_to_crep$compile_to_crep` on the same exception/function declaration.
     `compileToCrep` preserves the source function name, flattened parameter

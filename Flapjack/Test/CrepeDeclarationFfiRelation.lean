@@ -215,6 +215,7 @@ theorem declaration_ffi_source_to_crep_relation :
     · simp [declarationFfiContext, evalCrepFullExps, evalCrepFullExp]
     · simp [declarationFfiContext, declarationFfiDeclarations,
         compileToCrepe, compileFunctions, compileFunDecl, compileParamVars,
+        panToCrepMakeVmap,
         functionInfos, compileProg, compileExp, compileArgs, allocatedNames,
         declarationFfiCalleeBody, declarationFfiCompiledCalleeBody,
         firstCompiledExp, lookupInfo,

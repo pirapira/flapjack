@@ -11,6 +11,8 @@ load "mlstringSyntax";
 load "panPtreeConversionTheory";
 load "pan_to_wordTheory";
 load "backend_passesTheory";
+load "miscTheory";
+load "word_to_stackTheory";
 load "riscv_targetTheory";
 open bossLib;
 open HolKernel Parse;
@@ -90,6 +92,7 @@ val loop_for_word = filter_label loop;
 val word = eval_term "stage=loop_to_word"
   (mk_comb (``loop_to_word$compile``, loop_for_word));
 
+
 (* Optional focused probe for comparing the inputs to word_alloc.  The
    complete word program above is useful for ordinary stage debugging, but
    allocator parity needs the original heuristic and stack-only inputs too.
@@ -135,6 +138,33 @@ val _ =
                internal_names, selected_word]))
           val (internal_word, _) = pairSyntax.dest_pair internal
           val selected = internal_word
+          val selected_head = fst (listSyntax.dest_cons selected)
+          val (selected_name, selected_rest) = pairSyntax.dest_pair selected_head
+          val (selected_params, selected_prog) = pairSyntax.dest_pair selected_rest
+          val _ = selected_params
+          val word_alloc = Term.inst
+            [Type.alpha |-> ``:64``] ``word_alloc$word_alloc``
+          val none_col = Term.inst
+            [Type.alpha |-> ``:num sptree$num_map``] ``NONE``
+          val allocated = eval_term "stage=cake_word_allocated"
+            (list_mk_comb (word_alloc,
+              [selected_name, ``riscv_target$riscv_config``,
+               numSyntax.mk_numeral (Arbnum.fromString "3"),
+               numSyntax.mk_numeral (Arbnum.fromString "22"),
+               selected_prog, none_col]))
+          val initial_bitmaps0 = ``(misc$List [4w],1n)``
+          val initial_bitmaps = Term.inst
+            [Type.alpha |-> ``:64``] initial_bitmaps0
+          val word_to_stack = Term.inst
+            [Type.alpha |-> ``:64``] ``word_to_stack$compile_prog``
+          val stack1 = mk_comb (word_to_stack, ``riscv_target$riscv_config``)
+          val stack2 = mk_comb (stack1, ``F``)
+          val stack3 = mk_comb (stack2, allocated)
+          val stack4 = mk_comb (stack3, selected_params)
+          val stack5 = mk_comb (stack4,
+            numSyntax.mk_numeral (Arbnum.fromString "22"))
+          val _ = eval_term "stage=cake_word_to_stack"
+            (mk_comb (stack5, initial_bitmaps))
           val selected_entry_type = type_of selected |> dest_type |> snd |> hd
           val map_inst = Term.inst
             [Type.alpha |-> selected_entry_type] ``MAP``

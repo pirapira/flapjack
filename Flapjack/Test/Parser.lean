@@ -185,6 +185,21 @@ def convGlobalDecCakeParity : Bool :=
 
 #guard convGlobalDecCakeParity
 
+/-! Cake `conv_ExnDec_def` (`panPtreeConversionScript.sml:587`) accepts an
+    `ExnDecNT` exception identifier and shape pair; a different node or
+    incomplete pair returns `NONE`. -/
+def convExnDecCakeParity : Bool :=
+  let exception : ParseTree := .lf (.identT "E") unknownLoc
+  let one : ParseTree := .lf (.intT 1) unknownLoc
+  let valid : ParseTree := .nd .exnDec [exception, one] unknownLoc
+  let wrongNode : ParseTree := .nd .dec [exception, one] unknownLoc
+  let short : ParseTree := .nd .exnDec [exception] unknownLoc
+  match convExnDec 8 valid, convExnDec 8 wrongNode, convExnDec 8 short with
+  | some ("E", .one), none, none => true
+  | _, _, _ => false
+
+#guard convExnDecCakeParity
+
 #guard (pancakeLex "x + 1").map (·.1) == [.identT "x", .plusT, .intT 1]
 
 -- `//` runs to end of line; the block forms are `/* */` and `/@ @/`.

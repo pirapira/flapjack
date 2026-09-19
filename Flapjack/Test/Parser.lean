@@ -425,6 +425,21 @@ def mkNtCakeParity : Bool :=
 
 #guard mkNtCakeParity
 
+/-! Cake `keep_int_def` (`panPEGScript.sml:90`) keeps only integer tokens,
+    packages the original token/location as a leaf, and leaves the parser
+    position unchanged on rejection. -/
+def keepIntCakeParity : Bool :=
+  let accepted : PState :=
+    PState.ofToks [(.intT 7, unknownLoc), (.semiT, unknownLoc)]
+  let rejected : PState :=
+    PState.ofToks [(.identT "x", unknownLoc), (.semiT, unknownLoc)]
+  match P.keepInt accepted, P.keepInt rejected with
+  | (some [.lf (.intT 7) loc], success), (none, failure) =>
+      loc == unknownLoc && success.remaining == 1 && failure.remaining == 2
+  | _, _ => false
+
+#guard keepIntCakeParity
+
 #guard (pancakeLex "x + 1").map (·.1) == [.identT "x", .plusT, .intT 1]
 
 -- `//` runs to end of line; the block forms are `/* */` and `/@ @/`.

@@ -218,7 +218,7 @@ def memoryWarningContext : Context :=
   (checkProg
     { reachabilityContext with reachable := .warnReach, last := .retLast }
     (.dec "y" .one (.const 0)
-      (.seq (.skip : Prog Nat) (.return (.const 0)))).2.map statErrMessage ==
+      (.seq (.skip : Prog Nat) (.return (.const 0))))).2.map statErrMessage ==
       ["unreachable statement(s) after  in function f\n"]
 
 /-! Crepe primitives contain already-flattened variable names.  The original

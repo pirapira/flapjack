@@ -142,6 +142,41 @@ def reachabilityContext : Context :=
 #guard nextIsReachable .isReach .retLast == .warnReach
 #guard nextIsReachable .isReach .breakLast == .warnReach
 #guard nextIsReachable .isReach .invisLast == .isReach
+#guard
+  nextIsReachable .isReach .raiseLast == .warnReach &&
+  nextIsReachable .isReach .tailLast == .warnReach &&
+  nextIsReachable .isReach .contLast == .warnReach &&
+  nextIsReachable .isReach .condExitLast == .warnReach &&
+  nextIsReachable .isReach .otherLast == .isReach &&
+  nextIsReachable .isReach .invisLast == .isReach &&
+  nextIsReachable .warnReach .retLast == .warnReach &&
+  nextIsReachable .notReach .retLast == .notReach
+#guard
+  nextNowUnreachable .isReach .isReach == false &&
+  nextNowUnreachable .isReach .warnReach == true &&
+  nextNowUnreachable .isReach .notReach == true &&
+  nextNowUnreachable .warnReach .isReach == false &&
+  nextNowUnreachable .warnReach .warnReach == false &&
+  nextNowUnreachable .warnReach .notReach == false &&
+  nextNowUnreachable .notReach .isReach == false &&
+  nextNowUnreachable .notReach .warnReach == false &&
+  nextNowUnreachable .notReach .notReach == false
+#guard
+  (reachedWarnable (.seq (.skip : Prog Nat) .skip)
+    { reachabilityContext with reachable := .warnReach, last := .retLast }).1.isNone &&
+  (reachedWarnable (.tick : Prog Nat)
+    { reachabilityContext with reachable := .warnReach, last := .retLast }).1.isNone &&
+  (reachedWarnable (.annot "" "" : Prog Nat)
+    { reachabilityContext with reachable := .warnReach, last := .retLast }).1.isNone &&
+  (reachedWarnable (.return (.const 1) : Prog Nat)
+    { reachabilityContext with reachable := .warnReach, last := .retLast }).1 ==
+      some .retLast &&
+  (reachedWarnable (.return (.const 1) : Prog Nat)
+    { reachabilityContext with reachable := .warnReach, last := .retLast }).2.reachable ==
+      .notReach &&
+  (reachedWarnable (.return (.const 1) : Prog Nat) reachabilityContext).1.isNone &&
+  (reachedWarnable (.return (.const 1) : Prog Nat) reachabilityContext).2.reachable ==
+      .isReach
 #guard (reachedWarnable (.annot "" "" : Prog Nat) reachabilityContext).1.isNone
 #guard (reachedWarnable (.tick : Prog Nat) reachabilityContext).1.isNone
 #guard (reachedWarnable (.skip : Prog Nat)

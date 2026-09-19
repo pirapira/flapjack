@@ -118,6 +118,15 @@ def choiceL : List (P α) → P α
   | [] => fun s => (none, s)
   | parser :: parsers => orElse' parser (choiceL parsers)
 
+/-! Direct counterpart of `panPEG$pegf_def` from
+`cakeml/pancake/parser/panPEGScript.sml:111`.  The source `seq` pairs a
+parser's result with an empty parser result and applies the continuation only
+to the first component; this is the explicit bind below. -/
+def pegF (parser : P α) (continuation : α → P β) : P β := fun s =>
+  match parser s with
+  | (some value, state) => continuation value state
+  | (none, state) => (none, state)
+
 /-- Run a parser but treat failure as success with `none`, mirroring `try`. -/
 def optional' (p : P α) : P (Option α) := fun s =>
   match p s with

@@ -604,6 +604,24 @@ def choiceLCakeParity : Bool :=
 
 #guard choiceLCakeParity
 
+/-! Direct oracle for `pegf_def` from
+`cakeml/pancake/parser/panPEGScript.sml:111`.  The continuation sees the
+first parser result, while failure and parser state are propagated exactly. -/
+def pegFCakeParity : Bool :=
+  let input : PState := PState.ofToks [(.semiT, unknownLoc)]
+  let success := P.pegF (P.pure' 7)
+      (fun value => P.pure' (value + 1)) input
+  let failureParser : P Nat := fun state => (none, state)
+  let failure := P.pegF failureParser (fun _ => P.pure' 1) input
+  (match success with
+  | (some 8, state) => state.toks == input.toks && state.remaining == 1
+  | _ => false) &&
+  (match failure with
+  | (none, state) => state.toks == input.toks && state.remaining == 1
+  | _ => false)
+
+#guard pegFCakeParity
+
 #guard remainingTracksToks "var 1 x = 1;"
 #guard remainingTracksToks "exception E : 1;"
 #guard remainingTracksToks "fun f(1 a, 1 b) { var x = a + b * 2; return x; }"

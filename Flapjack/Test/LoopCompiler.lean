@@ -177,6 +177,24 @@ def reachabilityContext : Context :=
   (reachedWarnable (.return (.const 1) : Prog Nat) reachabilityContext).1.isNone &&
   (reachedWarnable (.return (.const 1) : Prog Nat) reachabilityContext).2.reachable ==
       .isReach
+#guard
+  branchLastStmt false false == .otherLast &&
+  branchLastStmt true false == .condExitLast &&
+  branchLastStmt false true == .condExitLast &&
+  branchLastStmt true true == .condExitLast
+#guard
+  seqLastStmt .retLast .invisLast == .retLast &&
+  seqLastStmt .otherLast .invisLast == .otherLast &&
+  seqLastStmt .invisLast .invisLast == .invisLast &&
+  seqLastStmt .retLast .otherLast == .otherLast &&
+  seqLastStmt .retLast .raiseLast == .raiseLast &&
+  seqLastStmt .invisLast .retLast == .retLast
+#guard
+  staticScopeDescription (.funScope "f" " at line 1") == "function f at line 1" &&
+  staticScopeDescription (.declScope "g") == "initialisation of global variable g" &&
+  staticScopeDescription (.structScope "S" "field") ==
+    "declaration of field field in named struct S" &&
+  staticScopeDescription .topLevel == "top-level declaration"
 #guard (reachedWarnable (.annot "" "" : Prog Nat) reachabilityContext).1.isNone
 #guard (reachedWarnable (.tick : Prog Nat) reachabilityContext).1.isNone
 #guard (reachedWarnable (.skip : Prog Nat)

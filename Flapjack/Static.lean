@@ -709,6 +709,11 @@ def nextIsReachable : Reachable → LastStmt → Reachable
 def nextNowUnreachable (reachable next : Reachable) : Bool :=
   reachable == .isReach && next != .isReach
 
+/-! Source-shaped port of CakeML's `branch_last_stmt_def`
+    (`cakeml/pancake/panStaticScript.sml:409-412`). -/
+def branchLastStmt (doubleRet doubleLoopExit : Bool) : LastStmt :=
+  if doubleRet || doubleLoopExit then .condExitLast else .otherLast
+
 def reachedWarnable (program : Prog α) (context : Context) :
     Option LastStmt × Context :=
   match program with
@@ -824,9 +829,10 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
           staticBind (checkProg context thenBranch) (fun thenResult =>
             staticBind (checkProg
               { context with location := thenResult.currentLocation } elseBranch) (fun elseResult =>
-              progOk .condExitLast
-                (thenResult.exitsFunction && elseResult.exitsFunction)
-                (thenResult.exitsLoop && elseResult.exitsLoop) context.location))
+              let doubleRet := thenResult.exitsFunction && elseResult.exitsFunction
+              let doubleLoopExit := thenResult.exitsLoop && elseResult.exitsLoop
+              progOk (branchLastStmt doubleRet doubleLoopExit)
+                doubleRet doubleLoopExit context.location))
         else staticError (.shape "condition is not a word"))
   | .while condition body =>
       staticBind (checkExp context condition) (fun conditionResult =>

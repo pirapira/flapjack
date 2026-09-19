@@ -67,7 +67,7 @@ theorem lookupCompiledFunction_compileFunctions_of_source_lookup_and_info
                 (declaration.params, declaration.returnShape) =
                   (parameters, returnShape) := by
                 exact Option.some.inj (by
-                  simpa [functionInfos, lookupInfo, hname] using hinfo)
+                  simpa [functionInfos, panToCrepMakeFuncs, lookupInfo, hname] using hinfo)
             cases hsourcePair
             cases hinfoPair
             refine ⟨declaration, hname.symm, rfl, rfl, rfl, rfl, ?_⟩
@@ -84,7 +84,7 @@ theorem lookupCompiledFunction_compileFunctions_of_source_lookup_and_info
             have hinfoTail :
                 lookupInfo name (functionInfos declarations) =
                   some (parameters, returnShape) := by
-                simpa [functionInfos, lookupInfo, hname, hname'] using hinfo
+                simpa [functionInfos, panToCrepMakeFuncs, lookupInfo, hname, hname'] using hinfo
             obtain ⟨found, hfoundName, hfoundParams, hfoundBody,
                 hfoundDeclarationParams, hfoundReturnShape, hfoundLookup⟩ :=
               ih hsourceTail hinfoTail
@@ -102,7 +102,7 @@ theorem lookupCompiledFunction_compileFunctions_of_source_lookup_and_info
           have hinfoTail :
               lookupInfo name (functionInfos declarations) =
                 some (parameters, returnShape) := by
-            simpa [functionInfos] using hinfo
+            simpa [functionInfos, panToCrepMakeFuncs] using hinfo
           obtain ⟨found, hfoundName, hfoundParams, hfoundBody,
               hfoundDeclarationParams, hfoundReturnShape, hfoundLookup⟩ :=
             ih hsourceTail hinfoTail
@@ -117,7 +117,7 @@ theorem lookupCompiledFunction_compileFunctions_of_source_lookup_and_info
           have hinfoTail :
               lookupInfo name (functionInfos declarations) =
                 some (parameters, returnShape) := by
-            simpa [functionInfos] using hinfo
+            simpa [functionInfos, panToCrepMakeFuncs] using hinfo
           obtain ⟨found, hfoundName, hfoundParams, hfoundBody,
               hfoundDeclarationParams, hfoundReturnShape, hfoundLookup⟩ :=
             ih hsourceTail hinfoTail
@@ -132,7 +132,7 @@ theorem lookupCompiledFunction_compileFunctions_of_source_lookup_and_info
           have hinfoTail :
               lookupInfo name (functionInfos declarations) =
                 some (parameters, returnShape) := by
-            simpa [functionInfos] using hinfo
+            simpa [functionInfos, panToCrepMakeFuncs] using hinfo
           obtain ⟨found, hfoundName, hfoundParams, hfoundBody,
               hfoundDeclarationParams, hfoundReturnShape, hfoundLookup⟩ :=
             ih hsourceTail hinfoTail

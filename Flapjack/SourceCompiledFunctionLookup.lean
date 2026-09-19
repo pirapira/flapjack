@@ -154,7 +154,7 @@ theorem lookupInfo_functionInfos_of_source_lookup
                     hlookup)
             cases hpair
             refine ⟨declaration, hname.symm, rfl, rfl, ?_⟩
-            simp [functionInfos, lookupInfo, hname]
+            simp [functionInfos, panToCrepMakeFuncs, lookupInfo, hname]
           · have hlookupTail :
                 lookupPanFunction name (sourceFunctionEntries declarations) =
                   some (sourceParams, sourceBody) := by
@@ -163,7 +163,7 @@ theorem lookupInfo_functionInfos_of_source_lookup
             obtain ⟨found, hfoundName, hfoundParams, hfoundBody, hfoundInfo⟩ :=
               ih hlookupTail
             refine ⟨found, hfoundName, hfoundParams, hfoundBody, ?_⟩
-            simpa [functionInfos, lookupInfo, Ne.symm hname] using hfoundInfo
+            simpa [functionInfos, panToCrepMakeFuncs, lookupInfo, Ne.symm hname] using hfoundInfo
       | decl shape declaration value =>
           have hlookupTail :
               lookupPanFunction name (sourceFunctionEntries declarations) =
@@ -172,7 +172,7 @@ theorem lookupInfo_functionInfos_of_source_lookup
           obtain ⟨found, hfoundName, hfoundParams, hfoundBody, hfoundInfo⟩ :=
             ih hlookupTail
           refine ⟨found, hfoundName, hfoundParams, hfoundBody, ?_⟩
-          simpa [functionInfos] using hfoundInfo
+          simpa [functionInfos, panToCrepMakeFuncs] using hfoundInfo
       | exnDecl exception shape =>
           have hlookupTail :
               lookupPanFunction name (sourceFunctionEntries declarations) =
@@ -181,7 +181,7 @@ theorem lookupInfo_functionInfos_of_source_lookup
           obtain ⟨found, hfoundName, hfoundParams, hfoundBody, hfoundInfo⟩ :=
             ih hlookupTail
           refine ⟨found, hfoundName, hfoundParams, hfoundBody, ?_⟩
-          simpa [functionInfos] using hfoundInfo
+          simpa [functionInfos, panToCrepMakeFuncs] using hfoundInfo
       | name struct fields =>
           have hlookupTail :
               lookupPanFunction name (sourceFunctionEntries declarations) =
@@ -190,7 +190,7 @@ theorem lookupInfo_functionInfos_of_source_lookup
           obtain ⟨found, hfoundName, hfoundParams, hfoundBody, hfoundInfo⟩ :=
             ih hlookupTail
           refine ⟨found, hfoundName, hfoundParams, hfoundBody, ?_⟩
-          simpa [functionInfos] using hfoundInfo
+          simpa [functionInfos, panToCrepMakeFuncs] using hfoundInfo
 
 theorem lookupInfo_functionInfos_of_source_lookup_eq
     [LawfulBEq String]

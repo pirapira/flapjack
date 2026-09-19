@@ -100,12 +100,19 @@ def compileParamVars : List (VarName × Shape) → Nat →
       ((name, (shape, names)) :: restVars, names ++ restNames, nextOffset)
 termination_by params => sizeOf params
 
-def functionInfos : List (Decl α) → InfoMap (List (VarName × Shape) × Shape)
+/-! Source-named port of CakeML Pancake's `make_funcs_def`
+    (`pan_to_crepScript.sml:366`).  Cake's function table keeps each function
+    name paired with its original parameter list and return shape; non-function
+    declarations are absent from the table. -/
+def panToCrepMakeFuncs : List (Decl α) → InfoMap (List (VarName × Shape) × Shape)
   | [] => []
   | .function declaration :: declarations =>
       (declaration.name, (declaration.params, declaration.returnShape)) ::
-        functionInfos declarations
-  | _ :: declarations => functionInfos declarations
+        panToCrepMakeFuncs declarations
+  | _ :: declarations => panToCrepMakeFuncs declarations
+
+def functionInfos : List (Decl α) → InfoMap (List (VarName × Shape) × Shape) :=
+  panToCrepMakeFuncs
 
 /-! Faithful port of `pan_to_crep$compile` (`compile_def`) from
     `cakeml/pancake/pan_to_crepScript.sml:139-305`.

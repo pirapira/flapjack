@@ -21,7 +21,7 @@ def parityGuard : Bool :=
   | _ => false) &&
   (match loopLiveComp
       (.loop [1] (.assign 2 (.const 7)) [] : LoopProg Nat) with
-  | .loop [] (.mark .skip) [] => true
+  | .loop [1] (.mark .skip) [] => true
   | _ => false)
 
 #eval parityGuard

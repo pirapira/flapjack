@@ -710,7 +710,7 @@ def compileFlapjackEntry [BEq α] [OfNat α 0] [OfNat α 1]
       let compiled := compileToCrep crepeContext globals.declarations
       let crepe := crepSimpFunctions fromNat
         (crepInlineTopRecursiveByNames (pipelineInlineNames globals.declarations) compiled)
-      let loop := pipelineLoopFunctions architecture 1 crepe
+      let loop := pipelineLoopFunctionsSource architecture 1 crepe
       let word := pipelineWordFunctions loop
       some (FlapjackPipelineResult.mk simplified structured globals crepe loop word)
 

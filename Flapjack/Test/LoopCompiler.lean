@@ -196,6 +196,22 @@ def memoryWarningContext : Context :=
         { name := "f", inline := false, exported := false, params := [],
           body := .return (.const 1), returnShape := .one }]) = false
 
+/-! Cake's `check_redec_var` warns, rather than rejects, a local `Dec` that
+    shadows an existing local; the warning is emitted before body warnings. -/
+#guard
+  (checkProg
+    { reachabilityContext with
+      locals := [("x", { shapedBased := .word .trusted })] }
+    (.dec "x" .one (.const 0) (.skip : Prog Nat))).2.map statErrMessage ==
+      ["variable x is redeclared in function f\n"]
+
+#guard
+  (checkProg
+    { reachabilityContext with
+      locals := [("x", { shapedBased := .word .trusted })] }
+    (.decCall "x" .one "f" [] (.skip : Prog Nat))).2.map statErrMessage ==
+      ["variable x is redeclared in function f\n"]
+
 /-! Crepe primitives contain already-flattened variable names.  The original
     `crep_to_loop` pass resolves both sides through the loop variable map; it
     must not leave the Crepe names untouched (which can alias generated

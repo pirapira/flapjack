@@ -346,6 +346,23 @@ def staticAddWarning (result : StaticResult α) (warning : Option StatErr) :
   | none => result
   | some warning => (result.1, result.2 ++ [warning])
 
+/-! Cake's `check_redec_var` logs this warning before checking the declaration
+    body.  Keep it as a small wrapper so both `Dec` and `DecCall` use the same
+    source-shaped wording and preserve warning order. -/
+def staticRedeclarationWarning [BEq String] (context : Context)
+    (name : VarName) : Option StatErr :=
+  if (lookupInfo name context.locals).isSome ||
+      (lookupInfo name context.globals).isSome then
+    some (.warning (context.location ++ "variable " ++ name ++
+      " is redeclared in " ++ staticScopeDescription context.scope ++ "\n"))
+  else none
+
+def staticPrependWarning (warning : Option StatErr) (result : StaticResult α) :
+    StaticResult α :=
+  match warning with
+  | none => result
+  | some warning => (result.1, warning :: result.2)
+
 def checkExp [BEq String] (context : Context) : Exp α → StaticResult ExpReturn
   | .const _ => staticOk { shapedBased := .word .notBased }
   | .var .local name =>
@@ -551,15 +568,16 @@ def seqLastStmt (first second : LastStmt) : LastStmt :=
 def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgReturn
   | .skip => progOk .invisLast false false context.location
   | .dec name shape value body =>
-      if !isWfShape context.structs shape then
-        staticError (.shape "local declaration has an invalid shape")
-      else
-        staticBind (checkExp context value) (fun result =>
-          if shapedBasedMatchesShape context.structs shape result.shapedBased then
-            let nextContext := { context with
-              locals := (name, { shapedBased := result.shapedBased }) :: context.locals }
-            checkProg nextContext body
-          else staticError (.shape "local declaration shape does not match"))
+      staticPrependWarning (staticRedeclarationWarning context name) <|
+        if !isWfShape context.structs shape then
+          staticError (.shape "local declaration has an invalid shape")
+        else
+          staticBind (checkExp context value) (fun result =>
+            if shapedBasedMatchesShape context.structs shape result.shapedBased then
+              let nextContext := { context with
+                locals := (name, { shapedBased := result.shapedBased }) :: context.locals }
+              checkProg nextContext body
+            else staticError (.shape "local declaration shape does not match"))
   | .assign .local name value =>
       match lookupInfo name context.locals with
       | none => staticError (.scope ("unknown local variable: " ++ name))
@@ -720,32 +738,27 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
                         staticBind (checkProg handlerContext handlerProgram) (fun _ =>
                           checkCallDestination context returnShape destination))
   | .decCall name shape function arguments body =>
-      let redeclarationWarnings :=
-        if (lookupInfo name context.locals).isSome ||
-            (lookupInfo name context.globals).isSome then
-          [StatErr.warning ("local declaration redeclares: " ++ name)]
-        else []
-      if !isWfShape context.structs shape then
-        staticError (.shape "declaration-call result has an invalid shape")
-      else
-        match lookupInfo function context.functions with
-        | none => staticError (.scope ("unknown function: " ++ function))
-        | some functionInfo =>
-            staticBind (checkCallArgs context arguments) (fun argumentResult =>
-              if !functionArgumentsMatch context.structs functionInfo.params
-                  argumentResult.shapedBased then
-                staticError (.shape "function argument shapes do not match")
-              else if !shapesSame shape functionInfo.returnShape then
-                staticError (.shape "declaration-call result shape does not match")
-              else
-                match shapedBasedFromShape context.structs shape with
-                | none => staticError (.scope "invalid declaration-call result shape")
-                | some shaped =>
-                    let nextContext := { context with locals :=
-                      (name, { shapedBased := shaped }) :: context.locals }
-                    staticBind (checkProg nextContext body) (fun result =>
-                      (Except.ok { result with variableDelta := [] },
-                        redeclarationWarnings)))
+      staticPrependWarning (staticRedeclarationWarning context name) <|
+        if !isWfShape context.structs shape then
+          staticError (.shape "declaration-call result has an invalid shape")
+        else
+          match lookupInfo function context.functions with
+          | none => staticError (.scope ("unknown function: " ++ function))
+          | some functionInfo =>
+              staticBind (checkCallArgs context arguments) (fun argumentResult =>
+                if !functionArgumentsMatch context.structs functionInfo.params
+                    argumentResult.shapedBased then
+                  staticError (.shape "function argument shapes do not match")
+                else if !shapesSame shape functionInfo.returnShape then
+                  staticError (.shape "declaration-call result shape does not match")
+                else
+                  match shapedBasedFromShape context.structs shape with
+                  | none => staticError (.scope "invalid declaration-call result shape")
+                  | some shaped =>
+                      let nextContext := { context with locals :=
+                        (name, { shapedBased := shaped }) :: context.locals }
+                      staticBind (checkProg nextContext body) (fun result =>
+                        (Except.ok { result with variableDelta := [] }, [])))
   | .extCall function configuration configurationLength array arrayLength =>
       staticBind (checkCallArgs context
         [configuration, configurationLength, array, arrayLength])

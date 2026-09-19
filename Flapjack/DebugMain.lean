@@ -105,7 +105,8 @@ def dumpLinkedLab (pipeline : FlapjackPipelineResult (RiscV.Word 64))
         1000 1000 initialHaltPc initial
       let relabelled := RiscV.labUpdateStoredLabelLengths 1000 encoded
       let haltPc := 1000 + RiscV.labStoredProgramLength relabelled
-      let labels := RiscV.labCollectPancakeRuntimeStoredLabels relabelled
+      let labels := RiscV.labLabelIndexOf
+        (RiscV.labCollectPancakeRuntimeStoredLabels relabelled)
       let final := RiscV.labEncodeStoredProgram { services := [] } labels
         1000 1000 haltPc relabelled
       dumpLabSection "initial" target low high initial

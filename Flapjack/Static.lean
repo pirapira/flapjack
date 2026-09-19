@@ -1478,30 +1478,38 @@ def staticCheckFunctionHeader [BEq String] (context : StructContext)
     else if declaration.exported then
       staticError (.general "main function is exported")
     else if !shapesSame declaration.returnShape .one then
-      staticError (.shape "main function must return one word")
+      staticError (.shape (getNonWordMessage "main function return"
+        (Shape.shapeToString declaration.returnShape) ""
+        (.funScope declaration.name "")))
     else
       staticOk ()
-  else if (firstRepeat ((declaration.params.map Prod.fst).mergeSort (· ≤ ·))).isSome then
-    staticError (.scope ("function parameter is redeclared: " ++ declaration.name))
-  else if declaration.exported && declaration.params.length > 4 then
-    staticError (.general ("exported function has more than four arguments: " ++
-      declaration.name))
-  else if declaration.exported then
-    staticBind (checkExportParams "" (.funScope declaration.name "") declaration.params)
-      (fun _ =>
-        if !shapesSame declaration.returnShape .one then
-          staticError (.shape "exported function must return one word")
-        else staticOk ())
   else
-    staticBind (checkIdShapes context "" (.funScope declaration.name "")
-      declaration.params) (fun _ =>
-      staticBind (checkShape context ""
-        (.funScope declaration.name " return") declaration.returnShape) (fun _ =>
-        if shapeSizeWithContext context declaration.returnShape > 32 then
-          staticError (.shape ("function " ++ declaration.name ++
-            " returns a shape bigger than 32 words\n"))
-        else
-          staticOk ()))
+    match firstRepeat ((declaration.params.map Prod.fst).mergeSort (· ≤ ·)) with
+    | some parameter =>
+        staticError (.scope ("parameter " ++ parameter ++
+          " is redeclared in function " ++ declaration.name ++ "\n"))
+    | none =>
+      if declaration.exported && declaration.params.length > 4 then
+        staticError (.general ("exported function " ++ declaration.name ++
+          " has more than 4 arguments\n"))
+      else if declaration.exported then
+        staticBind (checkExportParams "" (.funScope declaration.name "") declaration.params)
+          (fun _ =>
+            if !shapesSame declaration.returnShape .one then
+              staticError (.shape (getNonWordMessage "exported function return"
+                (Shape.shapeToString declaration.returnShape) ""
+                (.funScope declaration.name "")))
+            else staticOk ())
+      else
+        staticBind (checkIdShapes context "" (.funScope declaration.name "")
+          declaration.params) (fun _ =>
+          staticBind (checkShape context ""
+            (.funScope declaration.name " return") declaration.returnShape) (fun _ =>
+            if shapeSizeWithContext context declaration.returnShape > 32 then
+              staticError (.shape ("function " ++ declaration.name ++
+                " returns a shape bigger than 32 words\n"))
+            else
+              staticOk ()))
 
 def staticCheckDecls [BEq String] (structs : StructContext) :
     StaticDeclContext → List (Decl α) → StaticResult StaticDeclContext
@@ -1518,36 +1526,33 @@ def staticCheckDecls [BEq String] (structs : StructContext) :
           { context with exceptions := (exception, shape) :: context.exceptions }
           declarations
   | context, .decl shape name value :: declarations =>
-      staticBind
-        (if (lookupInfo name context.globals).isSome then
-          staticWarn (.warning ("variable " ++ name ++
-            " is redeclared in top-level declaration\n"))
-         else
-          staticOk ())
-        (fun _ =>
-          staticBind (checkShape structs "" (.declScope name) shape) (fun _ =>
-            let checkingContext : Context :=
-              { locals := []
-                globals := context.globals
-                functions := []
-                expectedReturn := none
-                exceptions := context.exceptions
-                structs := structs
-                scope := .declScope name
-                inLoop := false
-                reachable := .isReach
-                last := .invisLast
-                location := "" }
-            staticBind (checkExp checkingContext value) (fun result =>
-              if shapedBasedMatchesShape structs shape result.shapedBased then
-                staticCheckDecls structs
-                  { context with globals := (name, { shape := shape }) :: context.globals }
-                  declarations
-              else
-                staticError (.shape ("global initializer has the wrong shape: " ++ name)))))
+      let checkingContext : Context :=
+        { locals := []
+          globals := context.globals
+          functions := []
+          expectedReturn := none
+          exceptions := context.exceptions
+          structs := structs
+          scope := .declScope name
+          inLoop := false
+          reachable := .isReach
+          last := .invisLast
+          location := "" }
+      staticBind (checkRedecVar { checkingContext with scope := .topLevel } name) (fun _ =>
+        staticBind (checkShape structs "" (.declScope name) shape) (fun _ =>
+          staticBind (checkExp checkingContext value) (fun result =>
+            if shapedBasedMatchesShape structs shape result.shapedBased then
+              staticCheckDecls structs
+                { context with globals := (name, { shape := shape }) :: context.globals }
+                declarations
+            else
+              staticError (.shape (getShapeMismatchMessage
+                ("expression to initialise global variable " ++ name)
+                (shapedBasedToString result.shapedBased)
+                (Shape.shapeToString shape) "" (.declScope name))))))
   | context, .function declaration :: declarations =>
       if (lookupInfo declaration.name context.functions).isSome then
-        staticError (.scope ("function is redeclared: " ++ declaration.name))
+        staticError (.scope (getRedecMessage .function "" declaration.name .topLevel))
       else
         staticBind (staticCheckFunctionHeader structs declaration) (fun _ =>
           staticCheckDecls structs

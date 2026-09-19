@@ -1,4 +1,5 @@
 import Flapjack.LoopArith
+import Flapjack.Word
 
 /-!
 Parity test for the faithful `loop_arith` port.
@@ -20,6 +21,24 @@ Original source: `cakeml/pancake/semantics/loopSemScript.sml:118-145`
 namespace Flapjack.Test.LoopArithParity
 
 open Flapjack
+
+def sourceWordContext : WordContext :=
+  { vars := [] }
+
+example (operation : LoopArith) :
+    wordArithIsLoopGenerated (α := Nat)
+      (wordArith (α := Nat) sourceWordContext operation) := by
+  exact wordArith_isLoopGenerated (α := Nat) sourceWordContext operation
+
+example : wordArith (α := Nat) sourceWordContext (.div 1 2 3) = .div 1 2 3 := by
+  rfl
+
+example : wordArith (α := Nat) sourceWordContext (.longMul 1 2 3 4) = .longMul 1 2 3 4 := by
+  rfl
+
+example : wordArith (α := Nat) sourceWordContext (.longDiv 1 2 3 4 5) =
+    .longDiv 1 2 3 4 5 := by
+  rfl
 
 /-- Word width used by the probe, giving `dimword = 256`. -/
 def probeWidth : Nat := 8

@@ -122,6 +122,20 @@ def convNatCakeParity : Bool :=
 
 #guard convNatCakeParity
 
+/-! Cake `conv_const_def` (`panPtreeConversionScript.sml:86`) maps the
+    integer leaf through `i2w` and wraps it as `Const`; non-integer leaves stay
+    absent.  `ofI` is the test-width identity supplied to the parameterized
+    Lean port. -/
+def convConstCakeParity : Bool :=
+  sameAst (convConst ofI (.lf (.intT (-17)) unknownLoc))
+      (some (.const (-17))) &&
+    sameAst (convConst ofI (.lf (.intT 0) unknownLoc))
+      (some (.const 0)) &&
+    sameAst (convConst ofI (.lf (.identT "x") unknownLoc))
+      (none : Option (Exp Int))
+
+#guard convConstCakeParity
+
 /-! Cake `binaryExps_def` (`panPtreeConversionScript.sml:109`) enumerates the
     left-associative binary expression nonterminals in source order.  Each
     listed node uses the shared fold, while a non-listed node is not part of

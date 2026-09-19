@@ -515,7 +515,8 @@ def compileFlapjackRiscVSourceBytesChecked [NeZero width]
       | .ok _ =>
           let warnings := checked.2
           match compileFlapjackEntry architecture bytesInWord
-              (fun value => fromNat value) start declarations with
+              (fun value => fromNat value) start
+              (panTargetDeclarationsWithDefaultMain declarations) with
           | none => .error .entryNotFound
           | some pipeline =>
               let sourceLoop := pipelineLoopFunctionsSource architecture 1 pipeline.crepe

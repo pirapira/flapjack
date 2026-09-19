@@ -161,6 +161,22 @@ def reachabilityContext : Context :=
   nextNowUnreachable .notReach .isReach == false &&
   nextNowUnreachable .notReach .warnReach == false &&
   nextNowUnreachable .notReach .notReach == false
+#guard
+  (reachedWarnable (.seq (.skip : Prog Nat) .skip)
+    { reachabilityContext with reachable := .warnReach, last := .retLast }).1.isNone &&
+  (reachedWarnable (.tick : Prog Nat)
+    { reachabilityContext with reachable := .warnReach, last := .retLast }).1.isNone &&
+  (reachedWarnable (.annot "" "" : Prog Nat)
+    { reachabilityContext with reachable := .warnReach, last := .retLast }).1.isNone &&
+  (reachedWarnable (.return (.const 1) : Prog Nat)
+    { reachabilityContext with reachable := .warnReach, last := .retLast }).1 ==
+      some .retLast &&
+  (reachedWarnable (.return (.const 1) : Prog Nat)
+    { reachabilityContext with reachable := .warnReach, last := .retLast }).2.reachable ==
+      .notReach &&
+  (reachedWarnable (.return (.const 1) : Prog Nat) reachabilityContext).1.isNone &&
+  (reachedWarnable (.return (.const 1) : Prog Nat) reachabilityContext).2.reachable ==
+      .isReach
 #guard (reachedWarnable (.annot "" "" : Prog Nat) reachabilityContext).1.isNone
 #guard (reachedWarnable (.tick : Prog Nat) reachabilityContext).1.isNone
 #guard (reachedWarnable (.skip : Prog Nat)

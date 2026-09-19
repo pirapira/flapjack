@@ -552,6 +552,29 @@ def consumeKwCakeParity : Bool :=
 
 #guard consumeKwCakeParity
 
+/-! Direct oracle for `keep_ffi_ident_def` from
+`cakeml/pancake/parser/panPEGScript.sml:84`.  Cake accepts only
+`ForeignIdent`, preserves the token in one `mkleaf`, and consumes it. -/
+def keepFfiIdentCakeParity : Bool :=
+  let good := P.keepFfiIdent
+    (PState.ofToks
+      [(.foreignIdent "write", unknownLoc), (.semiT, unknownLoc)])
+  let bad := P.keepFfiIdent
+    (PState.ofToks
+      [(.identT "write", unknownLoc), (.semiT, unknownLoc)])
+  (match good with
+  | (some [.lf (.foreignIdent "write") _], state) =>
+      state.remaining == 1 && state.toks == [(.semiT, unknownLoc)] &&
+        state.lastConsumed.isSome
+  | _ => false) &&
+  (match bad with
+  | (none, state) => state.remaining == 2 &&
+      state.toks == [(.identT "write", unknownLoc), (.semiT, unknownLoc)] &&
+      state.furthest.isSome
+  | _ => false)
+
+#guard keepFfiIdentCakeParity
+
 #guard remainingTracksToks "var 1 x = 1;"
 #guard remainingTracksToks "exception E : 1;"
 #guard remainingTracksToks "fun f(1 a, 1 b) { var x = a + b * 2; return x; }"

@@ -366,6 +366,20 @@ def parseToAstCakeParity : Bool :=
 
 #guard parseToAstCakeParity
 
+/-! Cake `localise_exp_def` (`panPtreeConversionScript.sml:824`) changes only
+    identifiers present in the scope to `Local`, recursively through expression
+    constructors; out-of-scope identifiers stay `Global`. -/
+def localiseExpCakeParity : Bool :=
+  let expression : Exp Nat :=
+    .op .add [.var .global "x", .var .global "y"]
+  match localiseExp ["x"] expression,
+      localiseExp ["x"] (.load32 (.var .global "x") : Exp Nat) with
+  | .op .add [.var .local "x", .var .global "y"],
+      .load32 (.var .local "x") => true
+  | _, _ => false
+
+#guard localiseExpCakeParity
+
 #guard (pancakeLex "x + 1").map (·.1) == [.identT "x", .plusT, .intT 1]
 
 -- `//` runs to end of line; the block forms are `/* */` and `/@ @/`.

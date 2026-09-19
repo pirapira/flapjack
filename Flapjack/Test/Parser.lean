@@ -100,6 +100,17 @@ def convIdentCakeParity : Bool :=
 
 #guard convIdentCakeParity
 
+/-! Cake `conv_int_def` (`panPtreeConversionScript.sml:72`) accepts an
+    integer leaf, including negative and zero values, and rejects non-integer
+    leaves and non-leaf parse-tree nodes. -/
+def convIntCakeParity : Bool :=
+  convInt (.lf (.intT (-17)) unknownLoc) == some (-17) &&
+    convInt (.lf (.intT 0) unknownLoc) == some 0 &&
+    convInt (.lf (.identT "x") unknownLoc) == none &&
+    convInt (.nd .exp [] unknownLoc) == none
+
+#guard convIntCakeParity
+
 /-! Cake operator conversion at `panPtreeConversionScript.sml:141,153,168`
     recurses through the corresponding operator wrapper, maps comparison
     spellings to `(Cmp, swapped)`, and rejects other wrappers/tokens. -/

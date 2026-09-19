@@ -116,6 +116,16 @@ def initLocCakeParity : Bool :=
 
 #guard initLocCakeParity
 
+/-! Cake `next_line_def` (`panLexerScript.sml:186`) increments the row and
+    resets the column for a concrete position, while preserving EOF/unknown
+    sentinel positions. -/
+def nextLineCakeParity : Bool :=
+  sameAst (nextLine (.posn 7 42)) (.posn 8 0) &&
+    sameAst (nextLine .eofPt) (.eofPt) &&
+    sameAst (nextLine .unknownPt) (.unknownPt)
+
+#guard nextLineCakeParity
+
 /-! Cake `pancake_lex_aux_def` (`panLexerScript.sml:303`) accumulates tokens in
     source order, threads each token's end location into the next call, and
     returns an empty list at EOF or exhausted fuel. -/

@@ -288,6 +288,39 @@ def convDecCallCakeParity : Bool :=
   (.ok [.function { name := "f", inline := true, exported := true,
                     params := [], body := .skip, returnShape := .one }])
 
+/-! Direct oracle for `localise_topdec_def` from
+`cakeml/pancake/parser/panPtreeConversionScript.sml:901`.  Non-function
+declarations pass through unchanged; a function body is localized under the
+parameter-name fold before any nested declaration scope is entered. -/
+def localiseTopDecCakeParity : Bool :=
+  sameAst
+    (localiseDecl (.decl .one "g" (.const 7) : Decl Int))
+    (.decl .one "g" (.const 7)) &&
+  sameAst
+    (localiseDecl (.exnDecl "E" .one : Decl Int))
+    (.exnDecl "E" .one) &&
+  sameAst
+    (localiseDecl (.name "pair" [("left", .one), ("right", .one)] : Decl Int))
+    (.name "pair" [("left", .one), ("right", .one)]) &&
+  sameAst
+    (localiseDecl
+      (.function
+        { name := "f", inline := false, exported := true,
+          params := [("a", .one), ("b", .one)],
+          body := .seq
+            (.assign .global "a" (.var .global "a"))
+            (.return (.var .global "b")),
+          returnShape := .one } : Decl Int))
+    (.function
+      { name := "f", inline := false, exported := true,
+        params := [("a", .one), ("b", .one)],
+        body := .seq
+          (.assign .local "a" (.var .local "a"))
+          (.return (.var .local "b")),
+        returnShape := .one })
+
+#guard localiseTopDecCakeParity
+
 /-! ### Localisation
 
 The grammar cannot tell a local from a global, so every variable starts

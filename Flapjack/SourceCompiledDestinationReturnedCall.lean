@@ -125,7 +125,7 @@ theorem sourceCompiledDestinationCallPair_returned_of_body_correct
       compileProg
           { functionContext with
               functions := functionInfos declarations
-              vars := (compileParamVars declaration.params 0).1
+              vars := panToCrepMakeVmap declaration.params
               maxVar := (compileParamVars declaration.params 0).2.2 }
           declaration.body = targetBody ∧
       assignCrepValues (fun _ => none) targetParameters targetArgumentValues =
@@ -161,11 +161,32 @@ theorem sourceCompiledDestinationCallPair_returned_of_body_correct
     have hstate' : panValueCrepStateRel structs
         { functionContext with
             functions := functionInfos declarations
-            vars := (compileParamVars declaration.params 0).1 }
+            vars := panToCrepMakeVmap declaration.params }
         sourceCalleeLocals sourceGlobals sourceMemory
         { locals := targetCalleeLocals, memory := caller.memory } := by
       rw [hcallerMemory]
-      simpa [panValueCrepStateRel, panValueCrepLocalsRel] using hstate
+      have hnamesDeclaration : (declaration.params.map Prod.fst).Nodup := by
+        rw [hparams]
+        exact hnames sourceParameters sourceBody hlookupSource
+      have hnamesCompiled :
+          ((compileParamVars declaration.params 0).1.map Prod.fst).Nodup := by
+        have hnamesEq := congrArg (List.map Prod.fst)
+          (compileParamVars_preserves_parameter_shapes declaration.params 0)
+        have hnamesEq' :
+            (compileParamVars declaration.params 0).1.map Prod.fst =
+              declaration.params.map Prod.fst := by
+          simpa [List.map_map, Function.comp_def] using hnamesEq
+        rw [hnamesEq']
+        exact hnamesDeclaration
+      rcases hstate with ⟨hglobals', hlocals', hmemory'⟩
+      refine ⟨hglobals', ?_, hmemory'⟩
+      intro name value shape slots hsource hlookup
+      have hlookupRaw : lookupInfo name (compileParamVars declaration.params 0).1 =
+          some (shape, slots) := by
+        rw [lookupInfo_reverse_of_nodup name
+          (compileParamVars declaration.params 0).1 hnamesCompiled]
+        simpa [panToCrepMakeVmap] using hlookup
+      exact hlocals' name value shape slots hsource hlookupRaw
     have hbodyCorrect' : PanValueCrepProgramCorrect sourceBody := by
       have h := hcalleeCorrect declaration
       rw [hbody] at h
@@ -173,7 +194,7 @@ theorem sourceCompiledDestinationCallPair_returned_of_body_correct
     have hcompileBody' : compileProg
         { functionContext with
             functions := functionInfos declarations
-            vars := (compileParamVars declaration.params 0).1
+            vars := panToCrepMakeVmap declaration.params
             maxVar := (compileParamVars declaration.params 0).2.2 }
         sourceBody = targetBody := by
       rw [← hbody]
@@ -183,7 +204,7 @@ theorem sourceCompiledDestinationCallPair_returned_of_body_correct
     exact False.elim (crepReturnedCall_normal_branch_impossible_of_body_correct
       { functionContext with
           functions := functionInfos declarations
-          vars := (compileParamVars declaration.params 0).1
+          vars := panToCrepMakeVmap declaration.params
           maxVar := (compileParamVars declaration.params 0).2.2 }
       structs sourceFunctions functions sourceCalleeLocals sourceGlobals sourceMemory
       sourceCalleeMemory caller

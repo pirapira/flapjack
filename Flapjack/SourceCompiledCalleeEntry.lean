@@ -53,7 +53,7 @@ theorem sourceCompiledCalleeEntry_of_lookup
       compileProg
           { context with
               functions := functionInfos declarations
-              vars := (compileParamVars declaration.params 0).1
+              vars := panToCrepMakeVmap declaration.params
               maxVar := (compileParamVars declaration.params 0).2.2 }
           declaration.body =
         (compileFunDecl
@@ -128,7 +128,7 @@ theorem sourceCompiledCalleeState_of_lookup
       compileProg
           { context with
               functions := functionInfos declarations
-              vars := (compileParamVars declaration.params 0).1
+              vars := panToCrepMakeVmap declaration.params
               maxVar := (compileParamVars declaration.params 0).2.2 }
           declaration.body = targetBody ∧
       panValueCrepStateRel structs
@@ -195,7 +195,7 @@ theorem sourceCompiledCalleeState_of_lookup
   have hcompileBody : compileProg
       { context with
           functions := functionInfos declarations
-          vars := (compileParamVars declaration.params 0).1
+          vars := panToCrepMakeVmap declaration.params
           maxVar := (compileParamVars declaration.params 0).2.2 }
       declaration.body = targetBody := by
     rw [htargetBody]

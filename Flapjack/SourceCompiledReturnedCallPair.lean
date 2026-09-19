@@ -116,7 +116,7 @@ theorem sourceCompiledReturnedCallPair
       compileProg
           { functionContext with
               functions := functionInfos declarations
-              vars := (compileParamVars declaration.params 0).1
+              vars := panToCrepMakeVmap declaration.params
               maxVar := (compileParamVars declaration.params 0).2.2 }
           declaration.body = targetBody ∧
       assignCrepValues (fun _ => none) targetParameters compiledValues =

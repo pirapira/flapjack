@@ -35,10 +35,25 @@ def crepVarsOracle : Bool :=
     flattened slots in source order. -/
 def makeVmapOracle : Bool :=
   match panToCrepMakeVmap [("x", .one), ("pair", .comb [.one, .one])] with
-  | [("x", (.one, [0])), ("pair", (.comb [.one, .one], [1, 2]))] => true
+  | [("pair", (.comb [.one, .one], [1, 2])), ("x", (.one, [0]))] => true
   | _ => false
 
 #guard makeVmapOracle
+
+/-! Cake's `FEMPTY |++ ZIP` gives the later duplicate parameter binding to
+    `FLOOKUP`; the list-backed source map therefore keeps the later slot first.
+    The body probe makes the selected slot observable at the Crepe boundary. -/
+def duplicateParameterLastWinsOracle : Bool :=
+  match panToCrepMakeVmap [("x", .one), ("x", .one)] with
+  | [("x", (.one, [1])), ("x", (.one, [0]))] =>
+      match panToCrepCompFunc compileToCrepeProbeContext
+          [("x", .one), ("x", .one)]
+          (.return (.var .local "x")) with
+      | .return [.var 1] => true
+      | _ => false
+  | _ => false
+
+#guard duplicateParameterLastWinsOracle
 
 /-! Direct `comp_func_def` oracle: the source-shaped wrapper uses the
     flattened parameter shape to choose `vmax` and preserves the compiled

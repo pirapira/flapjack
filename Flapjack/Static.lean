@@ -1518,24 +1518,35 @@ def staticCheckProgs [BEq String] (structs : StructContext)
     (context : StaticDeclContext) : List (Decl α) → StaticResult Unit
   | [] => staticOk ()
   | .function declaration :: declarations =>
-      let checkingContext : Context :=
-        { locals := localInfosFromParams structs declaration.params
-          globals := context.globals
-          functions := context.functions
-          expectedReturn := some declaration.returnShape
-          exceptions := context.exceptions
-          structs := structs
-          scope := .funScope declaration.name ""
-          inLoop := false
-          reachable := .isReach
-          last := .invisLast
-          location := "" }
-      staticBind (checkProg checkingContext declaration.body) (fun result =>
-        if result.exitsFunction then
-          staticCheckProgs structs context declarations
-        else
-          staticError (.general ("missing return statement in function: " ++
-            declaration.name)))
+      let rec addParams : List (VarName × Shape) → StaticResult (InfoMap LocalInfo)
+        | [] => staticOk []
+        | (name, shape) :: params =>
+            match shapedBasedFromShape structs shape with
+            | none => staticError (.scope (getImplementationErrorMessage
+                "static analysis failed to convert in-scope shape" ""
+                (.funScope declaration.name "")))
+            | some shaped =>
+                staticBind (addParams params) (fun rest =>
+                  staticOk ((name, { shapedBased := shaped }) :: rest))
+      staticBind (addParams declaration.params) (fun locals =>
+        let checkingContext : Context :=
+          { locals := locals
+            globals := context.globals
+            functions := context.functions
+            expectedReturn := some declaration.returnShape
+            exceptions := context.exceptions
+            structs := structs
+            scope := .funScope declaration.name ""
+            inLoop := false
+            reachable := .isReach
+            last := .invisLast
+            location := "" }
+        staticBind (checkProg checkingContext declaration.body) (fun result =>
+          if result.exitsFunction then
+            staticCheckProgs structs context declarations
+          else
+            staticError (.general ("branches missing return statement in " ++
+              staticScopeDescription (.funScope declaration.name "") ++ "\n"))))
   | _ :: declarations => staticCheckProgs structs context declarations
 termination_by declarations => declarations.length
 

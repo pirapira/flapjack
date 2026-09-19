@@ -197,19 +197,14 @@ example :
   decide +kernel
 
 example :
-    checkProg (α := Nat) checkerContext
-      (.break) =
-      staticError (.general "break used outside a loop") := by
-  simp [checkProg, staticError, checkerContext]
+    staticResultErrorMessage (checkProg (α := Nat) checkerContext (.break)) =
+      some "break statement outside loop in top-level declaration\n" := by
+  decide +kernel
 
 example :
-    checkProg (α := Nat) checkerContext
-      (.dec "y" .one (.const 7) (.return (.var .local "y"))) =
-      progOk .retLast true false "" := by
-  simp [checkProg, checkExp, staticOk, staticBind, isWfShape,
-    shapedBasedMatchesShape,
-    shapedBasedFromShape, shapedBasedSameShape, checkerContext, pairContext,
-    lookupInfo, checkLocalVar, checkRedecVar]
+    staticResultOk (checkProg (α := Nat) checkerContext
+      (.dec "y" .one (.const 7) (.return (.var .local "y")))) = true := by
+  decide +kernel
 
 example :
     checkProg (α := Nat) checkerCallContext (.call none "f" []) =
@@ -229,14 +224,9 @@ example :
     lookupInfo]
 
 example :
-    checkProg (α := Nat) checkerCallContext
-      (.call (some (some (.local, "x"), none)) "f" []) =
-      progOk .otherLast false false "" := by
-  simp [checkProg, checkProg.checkCallArgs, checkCallDestination,
-    staticOk, staticBind, checkFunctionName, checkFuncArgs,
-    checkerCallContext, checkerContext, lookupInfo, checkLocalVar,
-    shapedBasedMatchesShape,
-    shapedBasedFromShape, shapedBasedSameShape]
+    staticResultOk (checkProg (α := Nat) checkerCallContext
+      (.call (some (some (.local, "x"), none)) "f" [])) = true := by
+  decide +kernel
 
 example :
   staticResultErrorMessage

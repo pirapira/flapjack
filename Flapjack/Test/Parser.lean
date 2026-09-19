@@ -206,6 +206,16 @@ def locRowCakeParity : Bool :=
 
 #guard locRowCakeParity
 
+/-! Cake `next_loc_def` (`panLexerScript.sml:181`) advances only the column
+    of a concrete `POSN`; the EOF and unknown sentinels are unchanged. -/
+def nextLocCakeParity : Bool :=
+  nextLoc 0 (.posn 4 5) == .posn 4 5 &&
+    nextLoc 3 (.posn 4 5) == .posn 4 8 &&
+    nextLoc 3 .eofPt == .eofPt &&
+    nextLoc 3 .unknownPt == .unknownPt
+
+#guard nextLocCakeParity
+
 /-! Cake `pancake_lex_aux_def` (`panLexerScript.sml:303`) accumulates tokens in
     source order, threads each token's end location into the next call, and
     returns an empty list at EOF or exhausted fuel. -/

@@ -131,6 +131,19 @@ def sourceCompFuncOracle : Bool :=
 
 #guard sourceCompFuncOracle
 
+/-! Cake's `first_name` is 64 and `make_funcs` assigns consecutive labels and
+    parameter lengths.  The runtime-facing variant below uses the same
+    equation at its reserved label base. -/
+def sourceMakeFuncsOracle : Bool :=
+  crepFirstName == 64 &&
+  match crepMakeFuncs
+      [{ name := "f", params := [10, 20], body := (.skip : CrepProg Nat),
+         returnShape := .one }] with
+  | [("f", (64, 2))] => true
+  | _ => false
+
+#guard sourceMakeFuncsOracle
+
 /-! Cake's handled-call branch starts handler and return-body labels at the
     next local label and advances once more after both bodies.  This guard
     keeps the source-shaped label state visible independently of final bytes. -/

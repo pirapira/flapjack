@@ -95,12 +95,27 @@ def pipelineCrepeContext [BEq α] [Add α]
     maxVar := 0
     bytesInWord := bytesInWord }
 
-def pipelineFunctionInfos (firstLabel : Nat) :
+/-! Source-named ports of CakeML Pancake's `first_name_def` and
+    `make_funcs_def` (`crep_to_loopScript.sml:243-255`).  The executable
+    pipeline also needs a caller-selected label base when runtime sections
+    reserve labels before user functions, so the parameterized helper keeps
+    Cake's consecutive numbering while allowing that established ABI base. -/
+def crepFirstName : Nat := 64
+
+def crepMakeFuncsAt (firstName : Nat) :
     List (CompiledFunction α) → InfoMap (Nat × Nat)
   | [] => []
   | function :: functions =>
-      (function.name, (firstLabel, function.params.length)) ::
-        pipelineFunctionInfos (firstLabel + 1) functions
+      (function.name, (firstName, function.params.length)) ::
+        crepMakeFuncsAt (firstName + 1) functions
+
+def crepMakeFuncs :
+    List (CompiledFunction α) → InfoMap (Nat × Nat) :=
+  crepMakeFuncsAt crepFirstName
+
+def pipelineFunctionInfos (firstLabel : Nat) :
+    List (CompiledFunction α) → InfoMap (Nat × Nat) :=
+  crepMakeFuncsAt firstLabel
 
 def pipelineLoopFunctionsAux [OfNat α 0] [OfNat α 1]
     (architecture : RiscV.Architecture) (functionInfos : InfoMap (Nat × Nat)) :

@@ -75,6 +75,17 @@ def isAlphaNumOrWildCakeParity : Bool :=
 
 #guard isAlphaNumOrWildCakeParity
 
+/-! Cake `read_while_def` (`panLexerScript.sml:166`) returns the accepted
+    prefix in source order and leaves the first rejected character plus its
+    suffix untouched. -/
+def readWhileCakeParity : Bool :=
+  let letters : Char → Bool := fun character => character == 'a' || character == 'b'
+  sameAst (readWhile letters "ababaX".toList []) ("ababa", "X".toList) &&
+    sameAst (readWhile letters "Xab".toList []) ("", "Xab".toList) &&
+    sameAst (readWhile letters "ab".toList ['z']) ("zab", ([] : List Char))
+
+#guard readWhileCakeParity
+
 /-! Cake `next_atom_def` (`panLexerScript.sml:225`) skips whitespace and
     newlines, recognizes unsigned/signed numbers, words, singleton symbols,
     and reports an unrecognized character without silently dropping it. -/

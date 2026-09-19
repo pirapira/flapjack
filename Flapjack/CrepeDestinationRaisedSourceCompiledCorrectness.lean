@@ -98,7 +98,7 @@ theorem compile_full_pan_value_destination_call_raised_of_source_compiled_call
   let calleeContext : CompileContext α :=
     { functionContext with
         functions := functionInfos declarations
-        vars := (compileParamVars declaration.params 0).1
+        vars := panToCrepMakeVmap declaration.params
         maxVar := (compileParamVars declaration.params 0).2.2 }
   have hstate' : panValueCrepStateRel structs calleeContext
       sourceCalleeLocals sourceGlobals sourceMemory
@@ -243,7 +243,7 @@ theorem compile_full_pan_value_destination_call_state_raised_of_source_compiled_
   let calleeContext : CompileContext α :=
     { functionContext with
         functions := functionInfos declarations
-        vars := (compileParamVars declaration.params 0).1
+        vars := panToCrepMakeVmap declaration.params
         maxVar := (compileParamVars declaration.params 0).2.2 }
   have hstate' : panValueCrepStateRel structs calleeContext
       sourceCalleeLocals sourceGlobals sourceMemory

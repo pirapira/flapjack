@@ -32,13 +32,44 @@ def crepVarsOracle : Bool :=
 
 #guard crepVarsOracle
 /-! Direct `make_vmap_def` oracle: shaped parameters receive consecutive
-    flattened slots in source order. -/
+    flattened slots.  The list representation is reversed at the finite-map
+    boundary so `lookupInfo` agrees with Cake's later-binding update rule. -/
 def makeVmapOracle : Bool :=
   match panToCrepMakeVmap [("x", .one), ("pair", .comb [.one, .one])] with
-  | [("x", (.one, [0])), ("pair", (.comb [.one, .one], [1, 2]))] => true
+  | [("pair", (.comb [.one, .one], [1, 2])), ("x", (.one, [0]))] => true
   | _ => false
 
 #guard makeVmapOracle
+
+/-! Cake's `FEMPTY |++ ZIP` gives the later duplicate parameter the result of
+    lookup.  This is deliberately a malformed direct compiler input: the
+    source static checker rejects duplicate formal names, but the executable
+    `make_vmap` boundary must still agree with the HOL definition. -/
+def duplicateVmapOracle : Bool :=
+  match lookupInfo "x" (panToCrepMakeVmap
+      [("x", .one), ("x", .comb [.one, .one])]) with
+  | some (.comb [.one, .one], [1, 2]) => true
+  | _ => false
+
+#guard duplicateVmapOracle
+
+def duplicateFunctionDecls : List (Decl Nat) :=
+  [.function
+      { name := "dup", inline := false, exported := false, params := [],
+        body := .return (.const 1), returnShape := .one },
+   .function
+      { name := "dup", inline := false, exported := false,
+        params := [("x", .one)], body := .return (.var .local "x"),
+        returnShape := .one }]
+
+/-! `make_funcs_def` is the same first-binding finite-map construction as
+    `ALOOKUP`; the first duplicate therefore remains visible. -/
+def duplicateFuncsOracle : Bool :=
+  match lookupInfo "dup" (functionInfos duplicateFunctionDecls) with
+  | some ([], .one) => true
+  | _ => false
+
+#guard duplicateFuncsOracle
 
 /-! Direct `comp_func_def` oracle: the source-shaped wrapper uses the
     flattened parameter shape to choose `vmax` and preserves the compiled

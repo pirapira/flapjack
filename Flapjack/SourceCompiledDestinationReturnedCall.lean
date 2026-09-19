@@ -125,7 +125,7 @@ theorem sourceCompiledDestinationCallPair_returned_of_body_correct
       compileProg
           { functionContext with
               functions := functionInfos declarations
-              vars := (compileParamVars declaration.params 0).1
+              vars := panToCrepMakeVmap declaration.params
               maxVar := (compileParamVars declaration.params 0).2.2 }
           declaration.body = targetBody ∧
       assignCrepValues (fun _ => none) targetParameters targetArgumentValues =
@@ -140,7 +140,7 @@ theorem sourceCompiledDestinationCallPair_returned_of_body_correct
       panValueCrepStateRel structs
         { functionContext with
             functions := functionInfos declarations
-            vars := (compileParamVars declaration.params 0).1
+            vars := panToCrepMakeVmap declaration.params
             maxVar := (compileParamVars declaration.params 0).2.2 }
         sourceCalleeLocals sourceGlobals sourceMemory
         { locals := targetCalleeLocals, memory := crepMemory } := by
@@ -161,7 +161,7 @@ theorem sourceCompiledDestinationCallPair_returned_of_body_correct
     have hstate' : panValueCrepStateRel structs
         { functionContext with
             functions := functionInfos declarations
-            vars := (compileParamVars declaration.params 0).1 }
+            vars := panToCrepMakeVmap declaration.params }
         sourceCalleeLocals sourceGlobals sourceMemory
         { locals := targetCalleeLocals, memory := caller.memory } := by
       rw [hcallerMemory]
@@ -173,7 +173,7 @@ theorem sourceCompiledDestinationCallPair_returned_of_body_correct
     have hcompileBody' : compileProg
         { functionContext with
             functions := functionInfos declarations
-            vars := (compileParamVars declaration.params 0).1
+            vars := panToCrepMakeVmap declaration.params
             maxVar := (compileParamVars declaration.params 0).2.2 }
         sourceBody = targetBody := by
       rw [← hbody]
@@ -183,7 +183,7 @@ theorem sourceCompiledDestinationCallPair_returned_of_body_correct
     exact False.elim (crepReturnedCall_normal_branch_impossible_of_body_correct
       { functionContext with
           functions := functionInfos declarations
-          vars := (compileParamVars declaration.params 0).1
+          vars := panToCrepMakeVmap declaration.params
           maxVar := (compileParamVars declaration.params 0).2.2 }
       structs sourceFunctions functions sourceCalleeLocals sourceGlobals sourceMemory
       sourceCalleeMemory caller

@@ -34,7 +34,7 @@ theorem lookupCompiledFunction_compileFunctions_of_source_lookup
         some ((compileParamVars declaration.params 0).2.1,
           compileProg
             { context with
-                vars := (compileParamVars declaration.params 0).1
+                vars := panToCrepMakeVmap declaration.params
                 maxVar := (compileParamVars declaration.params 0).2.2 }
             declaration.body) := by
   induction declarations with
@@ -70,7 +70,7 @@ theorem lookupCompiledFunction_compileFunctions_of_source_lookup
               (compileParamVars found.params 0).2.1
               (compileProg
                 { context with
-                    vars := (compileParamVars found.params 0).1
+                    vars := panToCrepMakeVmap found.params
                     maxVar := (compileParamVars found.params 0).2.2 }
                 found.body)
               hcompiledName hfoundLookup
@@ -117,7 +117,7 @@ theorem lookupCompiledFunction_compileToCrepe_of_source_lookup
           compileProg
             { context with
                 functions := functionInfos declarations
-                vars := (compileParamVars declaration.params 0).1
+                vars := panToCrepMakeVmap declaration.params
                 maxVar := (compileParamVars declaration.params 0).2.2 }
             declaration.body) := by
   obtain ⟨declaration, hname, hparams, hbody, hcompiled⟩ :=

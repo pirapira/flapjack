@@ -421,6 +421,35 @@ def convExpCakeParity : Bool :=
 
 #guard convExpCakeParity
 
+/-! Cake `conv_NonRecStmt_def` (`panPtreeConversionScript.sml:404`) converts
+    statements without nested `Prog` children, including assignment, memory,
+    shared-memory load, return, raise, and the leaf control statements. -/
+def convNonRecStmtCakeParity : Bool :=
+  let integer (value : Int) : ParseTree := .lf (.intT value) unknownLoc
+  let identifier (name : String) : ParseTree := .lf (.identT name) unknownLoc
+  let assignTree := .nd .assign [identifier "x", integer 7] unknownLoc
+  let storeTree := .nd .store [integer 8, integer 9] unknownLoc
+  let sharedLoadTree := .nd .sharedLoad [identifier "x", integer 10] unknownLoc
+  let returnTree := .nd .returnNT [integer 11] unknownLoc
+  let raiseTree := .nd .throwNT [identifier "E", integer 12] unknownLoc
+  let malformed := .nd .assign [identifier "x"] unknownLoc
+  sameAst (convNonRecStmt ofI 8 assignTree)
+      (some (.assign .global "x" (.const 7))) &&
+    sameAst (convNonRecStmt ofI 8 storeTree)
+      (some (.store (.const 8) (.const 9))) &&
+    sameAst (convNonRecStmt ofI 8 sharedLoadTree)
+      (some (.shMemLoad .opW .global "x" (.const 10))) &&
+    sameAst (convNonRecStmt ofI 8 returnTree)
+      (some (.return (.const 11))) &&
+    sameAst (convNonRecStmt ofI 8 raiseTree)
+      (some (.raise "E" (.const 12))) &&
+    sameAst (convNonRecStmt ofI 8 (.lf (.keywordT .skipK) unknownLoc))
+      (some .skip) &&
+    sameAst (convNonRecStmt ofI 8 malformed)
+      (none : Option (Prog Int))
+
+#guard convNonRecStmtCakeParity
+
 /-! Cake operator conversion at `panPtreeConversionScript.sml:141,153,168`
     recurses through the corresponding operator wrapper, maps comparison
     spellings to `(Cmp, swapped)`, and rejects other wrappers/tokens. -/

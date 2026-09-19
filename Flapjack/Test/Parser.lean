@@ -126,6 +126,14 @@ def nextLineCakeParity : Bool :=
 
 #guard nextLineCakeParity
 
+/-! Cake `loc_row_def` (`panLexerScript.sml:191`) constructs a position at the
+    requested row and the initial source column. -/
+def locRowCakeParity : Bool :=
+  sameAst (locRow 0) (.posn 0 1) &&
+    sameAst (locRow 17) (.posn 17 1)
+
+#guard locRowCakeParity
+
 /-! Cake `pancake_lex_aux_def` (`panLexerScript.sml:303`) accumulates tokens in
     source order, threads each token's end location into the next call, and
     returns an empty list at EOF or exhausted fuel. -/

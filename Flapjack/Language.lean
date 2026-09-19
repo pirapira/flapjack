@@ -52,6 +52,15 @@ inductive BinOp where
   | xor
   deriving DecidableEq, Repr
 
+/-! Exact source counterpart of Pancake's `binop_to_str_def`
+    (`panStaticScript.sml:588-596`). -/
+def binopToString : BinOp → String
+  | .add => "Add"
+  | .sub => "Sub"
+  | .and => "And"
+  | .or => "Or"
+  | .xor => "Xor"
+
 inductive PanOp where
   | mul
   deriving DecidableEq, Repr

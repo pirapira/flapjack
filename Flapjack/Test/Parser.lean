@@ -356,6 +356,16 @@ def convTopDecListCakeParity : Bool :=
 
 #guard convTopDecListCakeParity
 
+/-! Cake `parse_to_ast_def` (`panPtreeConversionScript.sml:809`) exposes the
+    single-program parser: a valid sequence converts to the expected AST and
+    lexical failure is reported as an error rather than a partial program. -/
+def parseToAstCakeParity : Bool :=
+  match parseProgram ofI "skip; tick;", parseProgram ofI "skip; `;" with
+  | .ok (.seq .skip .tick), .error (_ :: _) => true
+  | _, _ => false
+
+#guard parseToAstCakeParity
+
 #guard (pancakeLex "x + 1").map (·.1) == [.identT "x", .plusT, .intT 1]
 
 -- `//` runs to end of line; the block forms are `/* */` and `/@ @/`.

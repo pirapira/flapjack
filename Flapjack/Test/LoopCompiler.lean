@@ -428,6 +428,11 @@ def memoryWarningContext : Context :=
 #guard getMemopMessage false false true "L: " (.funScope "f" "") ==
   "L: shared store address may be calculated from base in function f\n"
 
+#guard getOpargMessage true "2" "3" "L: " "Sub" (.funScope "f" "") ==
+  "L: operation Sub only accepts 2 operands, 3 provided in function f\n"
+#guard getOpargMessage false "2" "1" "L: " "Add" (.funScope "f" "") ==
+  "L: operation Add requires at least 2 operands, 1 provided in function f\n"
+
 #guard
   (checkProg memoryWarningContext
     (.store (.var .local "notBased") (.const 0))).2.map statErrMessage ==

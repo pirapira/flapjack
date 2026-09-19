@@ -513,6 +513,15 @@ def getMemopMessage (isLocal isLoad isUntrusted : Bool)
   location ++ memoryType ++ operationType ++ "address " ++ issue ++
     "calculated from base in " ++ staticScopeDescription scope ++ "\n"
 
+/-! Source-shaped port of CakeML's `get_oparg_msg_def`
+    (`cakeml/pancake/panStaticScript.sml:517-527`). -/
+def getOpargMessage (isExact : Bool) (expected given location operation : String)
+    (scope : Scope) : String :=
+  location ++ "operation " ++ operation ++
+    (if isExact then " only accepts " else " requires at least ") ++
+    expected ++ " operands, " ++ given ++ " provided in " ++
+    staticScopeDescription scope ++ "\n"
+
 /-! Cake's memory-operation diagnostics distinguish local addresses, which
     should not be based on `@base`, from shared addresses, which should.  A
     `NotTrusted` address is reported as a possibility in either direction;

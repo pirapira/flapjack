@@ -126,6 +126,19 @@ def nextLineCakeParity : Bool :=
 
 #guard nextLineCakeParity
 
+/-! Cake `skip_comment_def` (`panLexerScript.sml:195`) stops at the first
+    newline, returns its post-newline location and consumed count, and fails
+    when the comment reaches EOF without a newline. -/
+def skipCommentCakeParity : Bool :=
+  match skipComment "abc\nrest".toList initLoc 0,
+      skipComment "abc".toList initLoc 0,
+      skipComment [] initLoc 0 with
+  | some (loc, count), none, none =>
+      sameAst loc (.posn 2 0) && count == 4
+  | _, _, _ => false
+
+#guard skipCommentCakeParity
+
 /-! Cake `loc_row_def` (`panLexerScript.sml:191`) constructs a position at the
     requested row and the initial source column. -/
 def locRowCakeParity : Bool :=

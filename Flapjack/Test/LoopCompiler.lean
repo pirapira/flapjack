@@ -184,6 +184,33 @@ def reachabilityContext : Context :=
     (.named "Pair" [("left", .word .trusted)]) with
   | .named "Pair" [("left", .word .trusted)] => true | _ => false
 
+/-! Direct Cake `branch_loc_inf` parity (`panStaticScript.sml:311-334`). -/
+#guard
+  match branchLocInf
+      [("x", { shapedBased := .word .trusted })]
+      [("x", { shapedBased := .word .trusted })] [] with
+  | [("x", { shapedBased := .word .trusted })] => true
+  | _ => false
+#guard
+  match branchLocInf
+      [("x", { shapedBased := .word .notBased })]
+      [("x", { shapedBased := .word .trusted })] [] with
+  | [("x", { shapedBased := .word .notTrusted })] => true
+  | _ => false
+#guard
+  match branchLocInf [] []
+      [("y", { shapedBased := .struct [.word .trusted, .word .based] })] with
+  | [("y", { shapedBased := .struct [.word .notTrusted, .word .notTrusted] })] => true
+  | _ => false
+#guard
+  match branchLocInf []
+      [("x", { shapedBased := .word .trusted })]
+      [("x", { shapedBased := .word .notBased }),
+       ("y", { shapedBased := .word .based })] with
+  | [("x", { shapedBased := .word .notTrusted }),
+     ("y", { shapedBased := .word .notTrusted })] => true
+  | _ => false
+
 /-! Direct Cake `sh_bd_from_sh` parity (`panStaticScript.sml:213-233`).
     The explicit basedness must reach every word in comb and named shapes. -/
 #guard match shapedBasedFromShapeWith [] .based .one with

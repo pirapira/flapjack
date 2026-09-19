@@ -250,6 +250,60 @@ end
 def shapedBasedBranch (left right : ShapedBased) : ShapedBased :=
   if left == right then left else shapedBasedWithBase .notTrusted left
 
+/-! List-backed counterparts of Cake's `mapWithKey` and `unionWith` used by
+    `branch_loc_inf`.  `InfoMap` is the executable association-list view of
+    Cake's finite map; retaining the left map's order also preserves the
+    first-match lookup convention used by the checker. -/
+def infoMapMapWithKey (f : String → α → β) : InfoMap α → InfoMap β
+  | [] => []
+  | (name, value) :: entries =>
+      (name, f name value) :: infoMapMapWithKey f entries
+
+def infoMapDelete [BEq String] (name : String) : InfoMap α → InfoMap α
+  | [] => []
+  | (candidate, value) :: entries =>
+      if candidate == name then infoMapDelete name entries
+      else (candidate, value) :: infoMapDelete name entries
+
+def infoMapUnionWith [BEq String] (combine : α → α → α) :
+    InfoMap α → InfoMap α → InfoMap α
+  | [], right => right
+  | (name, value) :: left, right =>
+      match lookupInfo name right with
+      | some rightValue =>
+          (name, combine value rightValue) ::
+            infoMapUnionWith combine left (infoMapDelete name right)
+      | none => (name, value) :: infoMapUnionWith combine left right
+
+/-! Source-shaped port of Cake `branch_loc_inf_def` (`panStaticScript.sml:311`
+    onward).  A variable present in only one branch is compared against the
+    incoming context; variables present in both branches are merged directly. -/
+def branchLocInf [BEq String] (context : InfoMap LocalInfo)
+    (left right : InfoMap LocalInfo) : InfoMap LocalInfo :=
+  let left' := infoMapMapWithKey (fun name info =>
+    if (lookupInfo name right).isNone then
+      match lookupInfo name context with
+      | some prior =>
+          { info with shapedBased :=
+              shapedBasedBranch info.shapedBased prior.shapedBased }
+      | none =>
+          { info with shapedBased :=
+              shapedBasedWithBase .notTrusted info.shapedBased }
+    else info) left
+  let right' := infoMapMapWithKey (fun name info =>
+    if (lookupInfo name left).isNone then
+      match lookupInfo name context with
+      | some prior =>
+          { info with shapedBased :=
+              shapedBasedBranch info.shapedBased prior.shapedBased }
+      | none =>
+          { info with shapedBased :=
+              shapedBasedWithBase .notTrusted info.shapedBased }
+    else info) right
+  infoMapUnionWith (fun leftInfo rightInfo =>
+    { leftInfo with shapedBased :=
+        shapedBasedBranch leftInfo.shapedBased rightInfo.shapedBased }) left' right'
+
 def shapedBasedFromShapeWith (context : StructContext) (basedness : Based) :
     Shape → Option ShapedBased
   | .one => some (.word basedness)

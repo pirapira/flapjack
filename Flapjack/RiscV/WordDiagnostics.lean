@@ -136,24 +136,34 @@ decreasing_by
     line (`find_ffi_names` in `lab_to_targetScript.sml`).  Keep that exact
     traversal separate from the source-order helper above: the RISC-V
     artifact discovery boundary needs the collector order, while other
-    diagnostics use source order. -/
-def wordProgFfiNamesCake : WordProg α → List FunName
-  | .seq first second => wordProgFfiNamesCake second ++ wordProgFfiNamesCake first
-  | .ite _ _ _ thenBranch elseBranch =>
-      wordProgFfiNamesCake elseBranch ++ wordProgFfiNamesCake thenBranch
-  | .loop _ body _ | .mustTerminate body => wordProgFfiNamesCake body
-  | .call returns _ _ handler =>
-      (match handler with
-       | some (_, body, _, _) => wordProgFfiNamesCake body
-       | none => []) ++
-        (match returns with
-         | some (_, _, returnCode, _, _) => wordProgFfiNamesCake returnCode
-         | none => [])
-  | .ffi function _ _ _ _ _ => [function]
-  | _ => []
+    diagnostics use source order.  The accumulator removes repeated `++`
+    while retaining the same tail-first order. -/
+def wordProgFfiNamesCakeAcc : WordProg α → List FunName → List FunName
+  | .seq first second, suffix =>
+      wordProgFfiNamesCakeAcc second (wordProgFfiNamesCakeAcc first suffix)
+  | .ite _ _ _ thenBranch elseBranch, suffix =>
+      wordProgFfiNamesCakeAcc elseBranch
+        (wordProgFfiNamesCakeAcc thenBranch suffix)
+  | .loop _ body _, suffix =>
+      wordProgFfiNamesCakeAcc body suffix
+  | .mustTerminate body, suffix =>
+      wordProgFfiNamesCakeAcc body suffix
+  | .call returns _ _ handler, suffix =>
+      let suffix := match returns with
+        | some (_, _, returnCode, _, _) =>
+            wordProgFfiNamesCakeAcc returnCode suffix
+        | none => suffix
+      match handler with
+      | some (_, body, _, _) => wordProgFfiNamesCakeAcc body suffix
+      | none => suffix
+  | .ffi function _ _ _ _ _, suffix => function :: suffix
+  | _, suffix => suffix
 termination_by program => sizeOf program
 decreasing_by
   all_goals decreasing_trivial
+
+def wordProgFfiNamesCake (program : WordProg α) : List FunName :=
+  wordProgFfiNamesCakeAcc program []
 
 def wordProgNeedsCakeFrame (program : WordProg α) : Bool :=
   !(wordProgFfiNames program).isEmpty || wordProgHasFrameOperations program

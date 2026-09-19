@@ -611,6 +611,15 @@ def ffiNamesMatch : Bool :=
     (compileRuntimeImage ffiOrderFlipSource).map (·.ffiNames) ==
       some ["foo", "bar"]
 
+def ffiCollectorOrderGuard : Bool :=
+  match RiscV.wordProgFfiNamesCake
+      (.seq (.ffi "foo" 1 2 3 4 ([], []))
+        (.ffi "bar" 1 2 3 4 ([], [])) : WordProg Nat) with
+  | ["bar", "foo"] => true
+  | _ => false
+
+#guard ffiCollectorOrderGuard
+
 /-- The single-FFI assembly carries the exact original stub block in the
 exact original position, immediately before `cake_clear`. -/
 def ffiMinStubEmitted : Bool :=

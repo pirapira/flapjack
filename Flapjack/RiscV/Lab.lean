@@ -1213,11 +1213,22 @@ def labCollectStoredProgramLabels [NeZero width] (base : Nat) :
         labCollectStoredProgramLabels
           (base + labStoredSectionLength sectionData.lines) sections
 
-def labCollectPancakeRuntimeStoredLabels [NeZero width]
+def labCollectPancakeRuntimeStoredLabelsAt [NeZero width] (sourceBase : Nat)
     (program : LabProgram (Word width)) : List (Nat × Nat × Nat) :=
   let sourceProgram := program.filter (fun entry => entry.name >= 3)
   [(0, 0, 812), (1, 0, 848), (2, 0, 772)] ++
-    labCollectStoredProgramLabels 1000 sourceProgram
+    labCollectStoredProgramLabels sourceBase sourceProgram
+
+def labCollectPancakeRuntimeStoredLabels [NeZero width]
+    (program : LabProgram (Word width)) : List (Nat × Nat × Nat) :=
+  labCollectPancakeRuntimeStoredLabelsAt 1000 program
+
+/-! The exported Pancake image has a fixed 1000-byte runtime prefix.  Cake's
+    initial `enc_sec_list` sweep, however, positions source sections after the
+    pre-finalization runtime layout, whose source base is 1104 bytes.  Keeping
+    these bases separate is observable only at long-range relocation
+    boundaries, but is required to retain Cake's first-pass instruction slot. -/
+def pancakeInitialSourceBase : Nat := 1104
 
 def labEncodeStoredSection [NeZero width]
     (context : WordFfiContext) (labels : LabLabelIndex)
@@ -1272,7 +1283,7 @@ def labEncodeStoredProgramStable [NeZero width] (fuel : Nat)
   match fuel with
   | 0 => program
   | fuel + 1 =>
-      let labels := labLabelIndexOf (labCollectPancakeRuntimeStoredLabels program)
+      let labels := labLabelIndexOf (labCollectPancakeRuntimeStoredLabelsAt base program)
       let next := labEncodeStoredProgram context labels base ffiBase haltPc program
       /- `remove_labels_loop` stops as soon as the lengths stop changing
          (`lab_to_targetScript.sml`), it does not run a fixed number of
@@ -1478,22 +1489,21 @@ def compileLabProgramLinkedWithPancakeRuntime [NeZero width]
     Option (List (Nat × Word width × List (Instruction width))) :=
   let sourceProgram := program.filter (fun entry => entry.name >= 3)
   let initial := labInitialStoredProgram sourceProgram
-  let initialHaltPc := 1000 + labStoredProgramLength initial
-  let encoded := labEncodeStoredProgramStable 8 context 1000 1000
+  let initialHaltPc := pancakeInitialSourceBase + labStoredProgramLength initial
+  let encoded := labEncodeStoredProgramStable 8 context pancakeInitialSourceBase 1000
     initialHaltPc initial
   let relabelled := labUpdateStoredLabelLengths 1000 encoded
   let haltPc := 1000 + labStoredProgramLength relabelled
-  /- Cake's `remove_labels_loop` performs one `enc_secs_again` pass after
-     `upd_lab_len`, and checks that pass's relocation operands directly.  The
-     retained line lengths from the first pass must not be iterated again here:
-     doing so can erase the final direct-relocation slot that Cake preserves
-     for `pad_code`. -/
-  let relabelledLabels := labLabelIndexOf
-    (labCollectPancakeRuntimeStoredLabels relabelled)
-  let final := labEncodeStoredProgram context relabelledLabels 1000 1000
+  /- Cake's final pass still retains the maximum LabAsm length observed during
+     relocation.  Re-run the same convergence after `upd_lab_len`, so a branch
+     that became direct does not erase the slot that `pad_code` fills with a
+     Skip instruction. -/
+  let final := labEncodeStoredProgramStable 8 context 1000 1000
     haltPc relabelled
+  let finalHaltPc := 1000 + labStoredProgramLength final
   let labels := labLabelIndexOf (labCollectPancakeRuntimeStoredLabels final)
-  compileLabProgramLinkedWithStoredLengthsAux context labels 1000 1000 haltPc final
+  compileLabProgramLinkedWithStoredLengthsAux context labels 1000 1000
+    finalHaltPc final
 
 def flattenLabProgramLinked :
     List (Nat × Word width × List (Instruction width)) → List (Instruction width)

@@ -389,7 +389,7 @@ theorem progMono (context : PanValueFfiContext α) (primitive : PanPrimitiveHand
       | normal l g m f => simp at h
       | broke l g m f => simp at h
       | continued l g m f => simp at h
-      | finalFfi l g m f ev => simp at h
+      | finalFfi l g m f ev => exact h
   | case16 =>
     intro fuel' result hle h
     obtain ⟨k, rfl⟩ : ∃ k, fuel' = k + 1 := ⟨fuel' - 1, by omega⟩

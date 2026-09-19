@@ -115,11 +115,49 @@ theorem compile_full_pan_value_local_assign_record_source_word_relation
       { state with locals :=
           (updateCrepLocal (updateCrepLocal state.locals slotLeft left)
             slotRight right) } := by
+  have hslots := hrel.2.1 name
+    (.rStruct [.word oldLeft, .word oldRight])
+    (.comb [.one, .one]) [slotLeft, slotRight] hlocals hlookup
+  have hstateLeft : state.locals slotLeft = some oldLeft := by
+    have hread := hslots.2
+    simp [readCrepLocals, panValueFlatWords, panValueFlatWordsFuel,
+      panValueFlatValueFuel,
+      panValueFlatWordsFuel.panValueFlatWordsListFuel,
+      panValueFlatValueFuel.panValueFlatValueListFuel] at hread
+    cases hleft : state.locals slotLeft with
+    | none => rw [hleft] at hread; simp at hread
+    | some currentLeft =>
+        cases hright : state.locals slotRight with
+        | none => rw [hleft, hright] at hread; simp at hread
+        | some currentRight =>
+            rw [hleft, hright] at hread
+            have hleftEq : currentLeft = oldLeft := by
+              simp at hread
+              exact hread.1
+            simp [hleftEq] at hleft ⊢
+  have hstateRight : state.locals slotRight = some oldRight := by
+    have hread := hslots.2
+    simp [readCrepLocals, panValueFlatWords, panValueFlatWordsFuel,
+      panValueFlatValueFuel,
+      panValueFlatWordsFuel.panValueFlatWordsListFuel,
+      panValueFlatValueFuel.panValueFlatValueListFuel] at hread
+    cases hleft : state.locals slotLeft with
+    | none => rw [hleft] at hread; simp at hread
+    | some currentLeft =>
+        cases hright : state.locals slotRight with
+        | none => rw [hleft, hright] at hread; simp at hread
+        | some currentRight =>
+            rw [hleft, hright] at hread
+            have hrightEq : currentRight = oldRight := by
+              simp at hread
+              exact hread.2
+            simp [hrightEq] at hright ⊢
   constructor
   · exact compile_full_pan_value_local_assign_record_return_correct
       context structs sourceLocals sourceGlobals state primitive ffi sharedMem
       baseAddress topAddress bytesInWord name slotLeft slotRight
-      oldLeft oldRight left right hlookup hdistinct hlocals
+      oldLeft oldRight left right hlookup hdistinct hlocals hstateLeft
+      hstateRight
   · refine ⟨hrel.1, ?_, hrel.2.2⟩
     exact panValueCrepLocalsRel_update_record_two_words structs context
       sourceLocals state.locals name slotLeft slotRight left right hrel.2.1

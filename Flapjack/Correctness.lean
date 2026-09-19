@@ -2430,8 +2430,8 @@ theorem loopToWord_call_return_simulation_single_parameter [NeZero width]
                       some (LoopResult.normal
                         { bodyLoopState with locals := loopState.locals }) =
                         some (LoopResult.normal finalLoop) := by
-                    simpa [evalLoopCallWithCallsAndFfi, hlookupLoop,
-                      hreadLoop, hcalleeBind, hbodyLoop] using hloop
+                    simp [evalLoopCallWithCallsAndFfi, hlookupLoop,
+                      hreadLoop, hcalleeBind, hbodyLoop] at hloop
                   let returnedWordState : RiscV.State width :=
                     { wordState with
                       memory := bodyWordState.memory
@@ -2588,7 +2588,7 @@ theorem loopToWord_call_handler_simulation_single_parameter [NeZero width]
     (parameterRegister exceptionRegister : Fin 32)
     (finalLoop : LoopState (RiscV.Word width))
     (finalWord : RiscV.State width)
-    (hlookupLoop :
+    (_hlookupLoop :
       lookupLoopFunction target functions = some ([parameter], loopBody))
     (hlookupWord :
       RiscV.lookupWordFunction target wordFunctions =
@@ -2672,8 +2672,7 @@ theorem loopToWord_call_handler_simulation_single_parameter [NeZero width]
       evalLoopProgWithCallsAndFfi functions loopHandler fuel
         { loopState with locals := calleeLocals } loopBody with
   | none =>
-      simp [evalLoopCallWithCallsAndFfi, hlookupLoop, hreadLoop, hcalleeBind,
-        hbodyLoop] at hloop
+      simp [evalLoopCallWithCallsAndFfi] at hloop
   | some bodyLoopResult =>
       cases bodyLoopResult with
       | normal bodyLoopState =>
@@ -2693,8 +2692,7 @@ theorem loopToWord_call_handler_simulation_single_parameter [NeZero width]
                       some (LoopResult.normal
                         { bodyLoopState with locals := loopState.locals }) =
                         some (LoopResult.normal finalLoop) := by
-                    simpa [evalLoopCallWithCallsAndFfi, hlookupLoop,
-                      hreadLoop, hcalleeBind, hbodyLoop] using hloop
+                    simp [evalLoopCallWithCallsAndFfi] at hloop
                   have hword' :
                       some (RiscV.WordControlResult.normal
                         { wordState with
@@ -2725,14 +2723,11 @@ theorem loopToWord_call_handler_simulation_single_parameter [NeZero width]
                     (.raised bodyWordState value) hcalleeZero hbodyLoop hbodyWord
                   simp [loopCallBodyResultCompatible] at hcompatible
       | broke bodyLoopState label =>
-          simp [evalLoopCallWithCallsAndFfi, hlookupLoop, hreadLoop, hcalleeBind,
-            hbodyLoop] at hloop
+          simp [evalLoopCallWithCallsAndFfi] at hloop
       | continued bodyLoopState label =>
-          simp [evalLoopCallWithCallsAndFfi, hlookupLoop, hreadLoop, hcalleeBind,
-            hbodyLoop] at hloop
+          simp [evalLoopCallWithCallsAndFfi] at hloop
       | returned bodyLoopState values =>
-          simp [evalLoopCallWithCallsAndFfi, hlookupLoop, hreadLoop, hcalleeBind,
-            hbodyLoop] at hloop
+          simp [evalLoopCallWithCallsAndFfi] at hloop
       | raised bodyLoopState sourceException =>
           cases hbodyWord :
               RiscV.evalWordFunctionWithHandlersAndFfi wordFunctions wordHandler fuel
@@ -2764,8 +2759,7 @@ theorem loopToWord_call_handler_simulation_single_parameter [NeZero width]
                           locals := updateLoopLocal loopState.locals exception
                             sourceException }
                         handlerBody = some (.normal finalLoop) := by
-                    simpa [evalLoopCallWithCallsAndFfi, hlookupLoop,
-                      hreadLoop, hcalleeBind, hbodyLoop] using hloop
+                    simp [evalLoopCallWithCallsAndFfi] at hloop
                   let returnedWordState : RiscV.State width :=
                     { wordState with
                       memory := bodyWordState.memory

@@ -678,7 +678,12 @@ structure FlapjackPipelineResult (α : Type u) where
   loop : List (Nat × List Nat × LoopProg α)
   word : List (Nat × List Nat × WordProg α)
 
-def compileFlapjack [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+/-! The pass-local core used when the target wrapper cannot be constructed (in
+    particular for an empty declaration list).  The public `compileFlapjack`
+    below goes through `compileFlapjackTarget`, matching Cake's
+    initializer-wrapper path; keeping this core named prevents the target
+    fallback from recursively calling the public entry point. -/
+def compileFlapjackCore [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [AndOp α] [ShiftRight α] [PanShiftWidth α]
     (architecture : RiscV.Architecture) (bytesInWord : α)
     (fromNat : Nat → α) (declarations : List (Decl α)) :
@@ -772,7 +777,20 @@ def compileFlapjackTarget [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
   let declarations := panTargetDeclarationsWithDefaultMain declarations
   match compileFlapjackEntry architecture bytesInWord fromNat "main" declarations with
   | some result => result
-  | none => compileFlapjack architecture bytesInWord fromNat declarations
+  | none => compileFlapjackCore architecture bytesInWord fromNat declarations
+
+/-! Public source compiler entry point.  Cake's `pan_to_target` wrapper is the
+    default behavior: global initializers execute once in the synthesized
+    entry wrapper, rather than being prepended to the recursive source `main`.
+    The old pass-local implementation remains available as
+    `compileFlapjackCore` for the empty-program fallback and intermediate
+    fixtures that intentionally exercise the unwrapped pass. -/
+def compileFlapjack [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [AndOp α] [ShiftRight α] [PanShiftWidth α]
+    (architecture : RiscV.Architecture) (bytesInWord : α)
+    (fromNat : Nat → α) (declarations : List (Decl α)) :
+    FlapjackPipelineResult α :=
+  compileFlapjackTarget architecture bytesInWord fromNat declarations
 
 /-! Executable port of `pan_to_word$compile_prog`: compose the existing
     Pancake passes, then expose the source-shaped `loop_to_word` result. -/
@@ -985,7 +1003,7 @@ def compileFlapjackRiscVViaStack [NeZero width] [BEq (RiscV.Word width)]
     (removeConfig : StackRemoveConfig)
     (declarations : List (Decl (RiscV.Word width))) :
     Option (List (RiscV.Instruction width)) := do
-  let pipeline := compileFlapjack architecture bytesInWord fromNat declarations
+  let pipeline := compileFlapjackCore architecture bytesInWord fromNat declarations
   let functions ← pipelineWordFunctionsToStack pipeline.word
   RiscV.compileStackProgramNatListWithRaiseStubToRiscV { services := services }
     removeConfig 0 0
@@ -1004,7 +1022,7 @@ def compileFlapjackRiscVViaAllocatedStack [NeZero width]
     (removeConfig : StackRemoveConfig)
     (declarations : List (Decl (RiscV.Word width))) :
     Option (List (RiscV.Instruction width)) := do
-  let pipeline := compileFlapjack architecture bytesInWord fromNat declarations
+  let pipeline := compileFlapjackCore architecture bytesInWord fromNat declarations
   let functions ← pipelineWordFunctionsAllocatedWithSpills pipeline.loop
   RiscV.compileStackProgramNatListWithRaiseStubToRiscV { services := services }
     removeConfig 0 0
@@ -1023,7 +1041,7 @@ def compileFlapjackRiscVViaAllocatedStackWithFullSsa [NeZero width]
     (removeConfig : StackRemoveConfig)
     (declarations : List (Decl (RiscV.Word width))) :
     Option (List (RiscV.Instruction width)) := do
-  let pipeline := compileFlapjack architecture bytesInWord fromNat declarations
+  let pipeline := compileFlapjackCore architecture bytesInWord fromNat declarations
   let functions ← pipelineWordFunctionsAllocatedWithSpillsAndFullSsa pipeline.loop
   let initialLabel := fullSsaInitialLabLabel functions
   RiscV.compileStackProgramNatListWithRaiseStubToRiscV { services := services }
@@ -1043,7 +1061,7 @@ def compileFlapjackRiscVViaGraphStackWithFullSsa [NeZero width]
     (removeConfig : StackRemoveConfig)
     (declarations : List (Decl (RiscV.Word width))) :
     Option (List (RiscV.Instruction width)) := do
-  let pipeline := compileFlapjack architecture bytesInWord fromNat declarations
+  let pipeline := compileFlapjackCore architecture bytesInWord fromNat declarations
   let functions ← pipelineWordFunctionsAllocatedWithGraphAndFullSsa pipeline.loop
   let initialLabel := fullSsaInitialLabLabel functions
   RiscV.compileStackProgramNatListWithRaiseStubToRiscV { services := services }
@@ -1062,7 +1080,7 @@ def compileFlapjackRiscVViaAllocatedStackWithBitmaps [NeZero width]
     (removeConfig : StackRemoveConfig)
     (declarations : List (Decl (RiscV.Word width))) :
     Option (RiscV.WordStackBitmapState × List (RiscV.Instruction width)) := do
-  let pipeline := compileFlapjack architecture bytesInWord fromNat declarations
+  let pipeline := compileFlapjackCore architecture bytesInWord fromNat declarations
   let (functions, bitmaps) ←
     pipelineWordFunctionsAllocatedWithSpillsAndBitmaps
       (RiscV.wordStackInitialBitmaps false) pipeline.loop
@@ -1086,7 +1104,7 @@ def compileFlapjackRiscVViaAllocatedStackWithFullSsaAndBitmaps [NeZero width]
     (removeConfig : StackRemoveConfig)
     (declarations : List (Decl (RiscV.Word width))) :
     Option (RiscV.WordStackBitmapState × List (RiscV.Instruction width)) := do
-  let pipeline := compileFlapjack architecture bytesInWord fromNat declarations
+  let pipeline := compileFlapjackCore architecture bytesInWord fromNat declarations
   let (functions, bitmaps) ←
     pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmaps
       (RiscV.wordStackInitialBitmaps false) pipeline.loop
@@ -1111,7 +1129,7 @@ def compileFlapjackRiscVViaAllocatedStackWithFullSsaAndBitmapsAndSimpleGc
     (removeConfig : StackRemoveConfig)
     (declarations : List (Decl (RiscV.Word width))) :
     Option (RiscV.WordStackBitmapState × List (RiscV.Instruction width)) := do
-  let pipeline := compileFlapjack architecture bytesInWord fromNat declarations
+  let pipeline := compileFlapjackCore architecture bytesInWord fromNat declarations
   let loop := pipelineLoopFunctionsSource architecture stackFunctionFirstLabel pipeline.crepe
   let (functions, bitmaps) ←
     pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmaps
@@ -1139,7 +1157,7 @@ def compileFlapjackRiscVViaGraphAllocatedStack [NeZero width]
     (removeConfig : StackRemoveConfig)
     (declarations : List (Decl (RiscV.Word width))) :
     Option (List (RiscV.Instruction width)) := do
-  let pipeline := compileFlapjack architecture bytesInWord fromNat declarations
+  let pipeline := compileFlapjackCore architecture bytesInWord fromNat declarations
   let functions ← pipelineWordFunctionsAllocatedWithGraph pipeline.loop
   RiscV.compileStackProgramNatListWithRaiseStubToRiscV { services := services }
     removeConfig 0 0
@@ -1157,7 +1175,7 @@ def compileFlapjackRiscVViaGraphAllocatedStackLinked [NeZero width]
     (removeConfig : StackRemoveConfig)
     (declarations : List (Decl (RiscV.Word width))) :
     Option (List (Nat × RiscV.Word width × List (RiscV.Instruction width))) := do
-  let pipeline := compileFlapjack architecture bytesInWord fromNat declarations
+  let pipeline := compileFlapjackCore architecture bytesInWord fromNat declarations
   let functions ← pipelineWordFunctionsAllocatedWithGraph pipeline.loop
   RiscV.compileStackProgramNatListLinkedWithRaiseStubToRiscV { services := services }
     removeConfig 0 0 (functions.map (fun (label, _, body) => (label, body)))
@@ -1175,7 +1193,7 @@ def compileFlapjackRiscVViaAllocatedStackLinked [NeZero width]
     (removeConfig : StackRemoveConfig)
     (declarations : List (Decl (RiscV.Word width))) :
     Option (List (Nat × RiscV.Word width × List (RiscV.Instruction width))) := do
-  let pipeline := compileFlapjack architecture bytesInWord fromNat declarations
+  let pipeline := compileFlapjackCore architecture bytesInWord fromNat declarations
   let functions ← pipelineWordFunctionsAllocatedWithSpills pipeline.loop
   RiscV.compileStackProgramNatListLinkedWithRaiseStubToRiscV { services := services }
     removeConfig 0 0 (functions.map (fun (label, _, body) => (label, body)))
@@ -1192,7 +1210,7 @@ def compileFlapjackRiscVViaAllocatedStackWithFullSsaLinked [NeZero width]
     (removeConfig : StackRemoveConfig)
     (declarations : List (Decl (RiscV.Word width))) :
     Option (List (Nat × RiscV.Word width × List (RiscV.Instruction width))) := do
-  let pipeline := compileFlapjack architecture bytesInWord fromNat declarations
+  let pipeline := compileFlapjackCore architecture bytesInWord fromNat declarations
   let functions ← pipelineWordFunctionsAllocatedWithSpillsAndFullSsa pipeline.loop
   let initialLabel := fullSsaInitialLabLabel functions
   RiscV.compileStackProgramNatListLinkedWithRaiseStubToRiscV { services := services }
@@ -1292,7 +1310,7 @@ def compileFlapjackRiscV [NeZero width] [BEq (RiscV.Word width)]
     (architecture : RiscV.Architecture) (bytesInWord : RiscV.Word width)
     (fromNat : Nat → RiscV.Word width)
     (declarations : List (Decl (RiscV.Word width))) : FlapjackRiscVResult width :=
-  let pipeline := compileFlapjack architecture bytesInWord fromNat declarations
+  let pipeline := compileFlapjackCore architecture bytesInWord fromNat declarations
   let functions := pipelineRiscVFunctions pipeline.word
   { pipeline := pipeline
     functions := functions
@@ -1334,7 +1352,7 @@ def compileFlapjackRiscVWithFfi [NeZero width] [BEq (RiscV.Word width)]
     (architecture : RiscV.Architecture) (bytesInWord : RiscV.Word width)
     (fromNat : Nat → RiscV.Word width) (services : List (FunName × Nat))
     (declarations : List (Decl (RiscV.Word width))) : FlapjackRiscVResult width :=
-  let pipeline := compileFlapjack architecture bytesInWord fromNat declarations
+  let pipeline := compileFlapjackCore architecture bytesInWord fromNat declarations
   let functions := pipelineRiscVFunctionsWithFfi services pipeline.word
   { pipeline := pipeline
     functions := functions
@@ -1369,9 +1387,12 @@ theorem compileFlapjack_skip [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α
     [AndOp α] [ShiftRight α] [PanShiftWidth α]
     (architecture : RiscV.Architecture) (bytesInWord : α) (fromNat : Nat → α) :
     (compileFlapjack architecture bytesInWord fromNat []).simplified = [] := by
-  simp [compileFlapjack, panSimpDecls, structCompileTop, structGetNames,
-    structCompileDecls, globalCompileTop, globalCollect, globalCompileDecls,
-    globalCompileInitializers, pipelineCrepeContext, 
-    pipelineLoopFunctions, pipelineWordFunctions, pipelinePrependInitializers]
+  simp [compileFlapjack, compileFlapjackTarget, compileFlapjackEntry,
+    pipelineFindFunction, panTargetDeclarationsWithDefaultMain,
+    panTargetMoveStartToFront, globalDeclsFilter, compileFlapjackCore,
+    panSimpDecls, structCompileTop, structGetNames, structCompileDecls,
+    globalCompileTop, globalCollect, globalCompileDecls,
+    globalCompileInitializers, pipelineCrepeContext, pipelineLoopFunctions,
+    pipelineWordFunctions, pipelinePrependInitializers]
 
 end Flapjack

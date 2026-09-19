@@ -201,6 +201,23 @@ def reachabilityContext : Context :=
     (.named "Pair" [("other", .struct [])]) == true
 #guard shapedBasedSameShape (.named "Pair" []) (.named "Other" []) == false
 
+/-! Direct Cake `index_sh_bd` parity (`panStaticScript.sml:274-279`). -/
+#guard match shapedBasedFieldAt 0 (.word .based) with
+  | none => true | _ => false
+#guard match shapedBasedFieldAt 0
+    (.struct [.word .trusted, .word .notBased]) with
+  | some (.word .trusted) => true | _ => false
+#guard match shapedBasedFieldAt 1
+    (.struct [.word .trusted, .word .notBased]) with
+  | some (.word .notBased) => true | _ => false
+#guard match shapedBasedFieldAt 2
+    (.struct [.word .trusted, .word .notBased]) with
+  | none => true | _ => false
+#guard match shapedBasedFieldAt 0 (.named "Pair" []) with
+  | none => true | _ => false
+#guard match shapedBasedFieldAt 0 (.struct []) with
+  | none => true | _ => false
+
 /-! Cake's `get_memop_msg` diagnostics (`panStaticScript.sml:491-511`) are
     directional: local operations warn about non-base addresses, while shared
     operations warn about base addresses. -/

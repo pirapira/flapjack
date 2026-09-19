@@ -15,13 +15,13 @@ inductive Based where
   | notBased
   | trusted
   | notTrusted
-  deriving Repr
+  deriving BEq, Repr
 
 inductive ShapedBased where
   | word (basedness : Based)
   | struct (fields : List ShapedBased)
   | named (name : StructName) (fields : List (FieldName × ShapedBased))
-  deriving Repr
+  deriving BEq, Repr
 
 structure StructInfo where
   fields : List (FieldName × Shape)
@@ -208,6 +208,137 @@ def staticBind (result : StaticResult α) (continuation : α → StaticResult β
       let next := continuation value
       (next.1, warnings ++ next.2)
 
+/-! Cake's `sh_bd_from_bd` changes the basedness of every word while preserving
+    the already-validated shape tree.  The named-structure case of
+    `sh_bd_from_sh` is equivalent to applying it to the stored field tree; the
+    static checker has already validated that tree when the structure entered
+    the context. -/
+mutual
+  def shapedBasedWithBase : Based → ShapedBased → ShapedBased
+    | basedness, .word _ => .word basedness
+    | basedness, .struct fields =>
+        .struct (shapedBasedWithBaseList basedness fields)
+    | basedness, .named name fields =>
+        .named name (shapedBasedWithBaseFields basedness fields)
+  termination_by _ shaped => sizeOf shaped
+  decreasing_by
+    all_goals first | sizeOf_list_dec | decreasing_trivial
+
+  def shapedBasedWithBaseList (basedness : Based) : List ShapedBased → List ShapedBased
+    | [] => []
+    | shaped :: shapedRest =>
+        shapedBasedWithBase basedness shaped ::
+          shapedBasedWithBaseList basedness shapedRest
+  termination_by shapedRest => sizeOf shapedRest
+  decreasing_by
+    all_goals first | sizeOf_list_dec | decreasing_trivial
+
+def shapedBasedWithBaseFields (basedness : Based) :
+      List (FieldName × ShapedBased) → List (FieldName × ShapedBased)
+    | [] => []
+    | (field, shaped) :: fieldRest =>
+        (field, shapedBasedWithBase basedness shaped) ::
+          shapedBasedWithBaseFields basedness fieldRest
+  termination_by fieldRest => sizeOf fieldRest
+  decreasing_by
+    all_goals first | sizeOf_list_dec | decreasing_trivial
+end
+
+/-! Cake's `sh_bd_branch` retains a complete value only when the two shaped
+    values are equal, including their basedness.  A shape-only comparison is
+    insufficient here: differing WordB states must become NotTrusted. -/
+def shapedBasedBranch (left right : ShapedBased) : ShapedBased :=
+  if left == right then left else shapedBasedWithBase .notTrusted left
+
+/-! List-backed counterparts of Cake's `mapWithKey` and `unionWith` used by
+    `branch_loc_inf`.  `InfoMap` is the executable association-list view of
+    Cake's finite map; retaining the left map's order also preserves the
+    first-match lookup convention used by the checker. -/
+def infoMapMapWithKey (f : String → α → β) : InfoMap α → InfoMap β
+  | [] => []
+  | (name, value) :: entries =>
+      (name, f name value) :: infoMapMapWithKey f entries
+
+def infoMapDelete [BEq String] (name : String) : InfoMap α → InfoMap α
+  | [] => []
+  | (candidate, value) :: entries =>
+      if candidate == name then infoMapDelete name entries
+      else (candidate, value) :: infoMapDelete name entries
+
+def infoMapUnionWith [BEq String] (combine : α → α → α) :
+    InfoMap α → InfoMap α → InfoMap α
+  | [], right => right
+  | (name, value) :: left, right =>
+      match lookupInfo name right with
+      | some rightValue =>
+          (name, combine value rightValue) ::
+            infoMapUnionWith combine left (infoMapDelete name right)
+      | none => (name, value) :: infoMapUnionWith combine left right
+
+/-! Source-shaped port of Cake `branch_loc_inf_def` (`panStaticScript.sml:311`
+    onward).  A variable present in only one branch is compared against the
+    incoming context; variables present in both branches are merged directly. -/
+def branchLocInf [BEq String] (context : InfoMap LocalInfo)
+    (left right : InfoMap LocalInfo) : InfoMap LocalInfo :=
+  let left' := infoMapMapWithKey (fun name info =>
+    if (lookupInfo name right).isNone then
+      match lookupInfo name context with
+      | some prior =>
+          { info with shapedBased :=
+              shapedBasedBranch info.shapedBased prior.shapedBased }
+      | none =>
+          { info with shapedBased :=
+              shapedBasedWithBase .notTrusted info.shapedBased }
+    else info) left
+  let right' := infoMapMapWithKey (fun name info =>
+    if (lookupInfo name left).isNone then
+      match lookupInfo name context with
+      | some prior =>
+          { info with shapedBased :=
+              shapedBasedBranch info.shapedBased prior.shapedBased }
+      | none =>
+          { info with shapedBased :=
+              shapedBasedWithBase .notTrusted info.shapedBased }
+    else info) right
+  infoMapUnionWith (fun leftInfo rightInfo =>
+    { leftInfo with shapedBased :=
+        shapedBasedBranch leftInfo.shapedBased rightInfo.shapedBased }) left' right'
+
+/-! Cake's sequential local-info composition is `union y x`: the later
+    delta (`y`) takes precedence over the incoming map (`x`). -/
+def seqLocInf [BEq String] (previous delta : InfoMap LocalInfo) :
+    InfoMap LocalInfo :=
+  infoMapUnionWith (fun newer _older => newer) delta previous
+
+def shapedBasedFromShapeWith (context : StructContext) (basedness : Based) :
+    Shape → Option ShapedBased
+  | .one => some (.word basedness)
+  | .comb shapes =>
+      match shapedBasedFromShapes context basedness shapes with
+      | some fields => some (.struct fields)
+      | none => none
+  | .named name =>
+      match lookupInfoWithRest name context with
+      | some (info, _) =>
+          some (.named name
+            (info.shapedFields.map (fun (field, shaped) =>
+              (field, shapedBasedWithBase basedness shaped))))
+      | none => none
+termination_by shape => sizeOf shape
+decreasing_by
+  all_goals first | sizeOf_list_dec | decreasing_trivial
+where
+  shapedBasedFromShapes (context : StructContext) (basedness : Based) :
+      List Shape → Option (List ShapedBased)
+    | [] => some []
+    | shape :: shapes => do
+        let shaped ← shapedBasedFromShapeWith context basedness shape
+        let rest ← shapedBasedFromShapes context basedness shapes
+        pure (shaped :: rest)
+  termination_by shapes => sizeOf shapes
+    decreasing_by
+      all_goals first | sizeOf_list_dec | decreasing_trivial
+
 def shapedBasedFromShape (context : StructContext) : Shape → Option ShapedBased
   | .one => some (.word .trusted)
   | .comb shapes =>
@@ -282,6 +413,20 @@ where
       (.struct [.word .notBased, .word .notBased])
       (.struct [.word .notBased, .word .notBased]) = true := by
   rfl
+
+/-! Direct source-shaped port of Cake's `sh_bd_has_shape_def`. -/
+def shapedBasedHasShape : Shape → ShapedBased → Bool
+  | .one, .word _ => true
+  | .comb shapes, .struct shaped => shapedBasedHasShapeList shapes shaped
+  | .named name, .named other _ => name == other
+  | _, _ => false
+where
+  shapedBasedHasShapeList : List Shape → List ShapedBased → Bool
+    | [], [] => true
+    | [], _ :: _ => false
+    | _ :: _, [] => false
+    | shape :: shapes, shaped :: shapeds =>
+        shapedBasedHasShape shape shaped && shapedBasedHasShapeList shapes shapeds
 
 def shapesSame : Shape → Shape → Bool
   | .one, .one => true

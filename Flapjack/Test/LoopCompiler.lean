@@ -154,6 +154,157 @@ def reachabilityContext : Context :=
 #guard match shapedBasedMerge [.word .based, .word .notBased] with
   | .based => true | _ => false
 
+/-! Direct Cake `based_merge` parity (`panStaticScript.sml:288-298`). -/
+#guard match basedMerge .notBased .notBased with
+  | .notBased => true | _ => false
+#guard match basedMerge .trusted .notBased with
+  | .trusted => true | _ => false
+#guard match basedMerge .notBased .trusted with
+  | .trusted => true | _ => false
+#guard match basedMerge .notTrusted .trusted with
+  | .notTrusted => true | _ => false
+#guard match basedMerge .trusted .notTrusted with
+  | .notTrusted => true | _ => false
+#guard match basedMerge .based .notTrusted with
+  | .based => true | _ => false
+#guard match basedMerge .notTrusted .based with
+  | .based => true | _ => false
+
+/-! Direct Cake `sh_bd_branch` parity (`panStaticScript.sml:301-305`). -/
+#guard match shapedBasedBranch (.word .trusted) (.word .trusted) with
+  | .word .trusted => true | _ => false
+#guard match shapedBasedBranch (.word .trusted) (.word .notBased) with
+  | .word .notTrusted => true | _ => false
+#guard match shapedBasedBranch
+    (.struct [.word .trusted, .word .based])
+    (.struct [.word .trusted, .word .notBased]) with
+  | .struct [.word .notTrusted, .word .notTrusted] => true | _ => false
+#guard match shapedBasedBranch
+    (.named "Pair" [("left", .word .trusted)])
+    (.named "Pair" [("left", .word .trusted)]) with
+  | .named "Pair" [("left", .word .trusted)] => true | _ => false
+
+/-! Direct Cake `branch_loc_inf` parity (`panStaticScript.sml:311-334`). -/
+#guard
+  match branchLocInf
+      [("x", { shapedBased := .word .trusted })]
+      [("x", { shapedBased := .word .trusted })] [] with
+  | [("x", { shapedBased := .word .trusted })] => true
+  | _ => false
+#guard
+  match branchLocInf
+      [("x", { shapedBased := .word .notBased })]
+      [("x", { shapedBased := .word .trusted })] [] with
+  | [("x", { shapedBased := .word .notTrusted })] => true
+  | _ => false
+#guard
+  match branchLocInf [] []
+      [("y", { shapedBased := .struct [.word .trusted, .word .based] })] with
+  | [("y", { shapedBased := .struct [.word .notTrusted, .word .notTrusted] })] => true
+  | _ => false
+#guard
+  match branchLocInf []
+      [("x", { shapedBased := .word .trusted })]
+      [("x", { shapedBased := .word .notBased }),
+       ("y", { shapedBased := .word .based })] with
+  | [("x", { shapedBased := .word .notTrusted }),
+     ("y", { shapedBased := .word .notTrusted })] => true
+  | _ => false
+
+/-! Direct Cake `seq_loc_inf` parity (`panStaticScript.sml:337-338`). -/
+#guard
+  match seqLocInf
+      [("x", { shapedBased := .word .trusted })]
+      [("x", { shapedBased := .word .based })] with
+  | [("x", { shapedBased := .word .based })] => true
+  | _ => false
+#guard
+  match seqLocInf
+      [("x", { shapedBased := .word .trusted })]
+      [("y", { shapedBased := .word .based })] with
+  | [("y", { shapedBased := .word .based }),
+     ("x", { shapedBased := .word .trusted })] => true
+  | _ => false
+
+/-! Direct Cake `sh_bd_from_sh` parity (`panStaticScript.sml:213-233`).
+    The explicit basedness must reach every word in comb and named shapes. -/
+#guard match shapedBasedFromShapeWith [] .based .one with
+  | some (.word .based) => true | _ => false
+#guard match shapedBasedFromShapeWith [] .notTrusted (.comb [.one, .one]) with
+  | some (.struct [.word .notTrusted, .word .notTrusted]) => true | _ => false
+#guard
+  let context : StructContext :=
+    [("Pair", StructInfo.mk [("lo", .one), ("hi", .one)] 2
+      [("lo", .word .trusted), ("hi", .word .trusted)])]
+  match shapedBasedFromShapeWith context .based (.named "Pair") with
+  | some (.named "Pair" [("lo", .word .based), ("hi", .word .based)]) => true
+  | _ => false
+
+/-! Direct Cake `sh_bd_from_bd` parity (`panStaticScript.sml:236-240`). -/
+#guard match shapedBasedWithBase .based (.word .notBased) with
+  | .word .based => true | _ => false
+#guard match shapedBasedWithBase .notTrusted
+    (.struct [.word .based, .struct [.word .trusted]]) with
+  | .struct [.word .notTrusted, .struct [.word .notTrusted]] => true
+  | _ => false
+#guard match shapedBasedWithBase .trusted
+    (.named "Pair" [("lo", .word .based), ("hi", .word .notBased)]) with
+  | .named "Pair" [("lo", .word .trusted), ("hi", .word .trusted)] => true
+  | _ => false
+
+/-! Direct Cake `sh_bd_has_shape` parity (`panStaticScript.sml:244-258`). -/
+#guard shapedBasedHasShape .one (.word .based) == true
+#guard shapedBasedHasShape .one (.struct []) == false
+#guard shapedBasedHasShape (.comb [.one, .comb [.one]])
+    (.struct [.word .trusted, .struct [.word .notBased]]) == true
+#guard shapedBasedHasShape (.comb [.one, .one]) (.struct [.word .trusted]) == false
+#guard shapedBasedHasShape (.named "Pair")
+    (.named "Pair" [("ignored", .struct [])]) == true
+#guard shapedBasedHasShape (.named "Pair") (.named "Other" []) == false
+
+/-! Direct Cake `sh_bd_eq_shapes` parity (`panStaticScript.sml:259-272`). -/
+#guard shapedBasedSameShape (.word .based) (.word .notBased) == true
+#guard shapedBasedSameShape
+    (.struct [.word .trusted, .struct [.word .based]])
+    (.struct [.word .notTrusted, .struct [.word .notBased]]) == true
+#guard shapedBasedSameShape (.struct [.word .trusted]) (.struct []) == false
+#guard shapedBasedSameShape
+    (.named "Pair" [("left", .word .based)])
+    (.named "Pair" [("other", .struct [])]) == true
+#guard shapedBasedSameShape (.named "Pair" []) (.named "Other" []) == false
+
+/-! Direct Cake `index_sh_bd` parity (`panStaticScript.sml:274-279`). -/
+#guard match shapedBasedFieldAt 0 (.word .based) with
+  | none => true | _ => false
+#guard match shapedBasedFieldAt 0
+    (.struct [.word .trusted, .word .notBased]) with
+  | some (.word .trusted) => true | _ => false
+#guard match shapedBasedFieldAt 1
+    (.struct [.word .trusted, .word .notBased]) with
+  | some (.word .notBased) => true | _ => false
+#guard match shapedBasedFieldAt 2
+    (.struct [.word .trusted, .word .notBased]) with
+  | none => true | _ => false
+#guard match shapedBasedFieldAt 0 (.named "Pair" []) with
+  | none => true | _ => false
+#guard match shapedBasedFieldAt 0 (.struct []) with
+  | none => true | _ => false
+
+/-! Direct Cake `field_sh_bd` parity (`panStaticScript.sml:281-285`). -/
+#guard match shapedBasedFieldNamed "left" (.word .based) with
+  | none => true | _ => false
+#guard match shapedBasedFieldNamed "left" (.struct []) with
+  | none => true | _ => false
+#guard match shapedBasedFieldNamed "left"
+    (.named "Pair" [("left", .word .based), ("right", .word .notBased)]) with
+  | some (.word .based) => true | _ => false
+#guard match shapedBasedFieldNamed "missing"
+    (.named "Pair" [("left", .word .based)]) with
+  | none => true | _ => false
+#guard match shapedBasedFieldNamed "left"
+    (.named "Pair" [("left", .word .based), ("left", .word .notBased)]) with
+  | some (.word .based) => true | _ => false
+
 /-! Cake's `get_memop_msg` diagnostics (`panStaticScript.sml:491-511`) are
     directional: local operations warn about non-base addresses, while shared
     operations warn about base addresses. -/

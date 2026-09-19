@@ -117,4 +117,35 @@ def crepTransformEocHandlerResult : CrepProg Nat :=
       (.seq (.assign 20 (.var 8)) (.skip))))) "callee" [] => true
   | _ => false
 
+/-! Direct `crep_inline$transform_branch` coverage.  Cake's
+    `transform_branch_def` (crep_inlineScript.sml:156-169) turns returns and
+    returnless calls into assignments/calls followed by a break at the current
+    loop depth, increments that depth through nested loops, and recursively
+    transforms handler bodies. -/
+def crepTransformBranchCakeProbe : CrepProg Nat :=
+  .while (.const 1) (.return [.const 4])
+
+def crepTransformBranchCakeResult : CrepProg Nat :=
+  crepTransformBranch 0 [20] crepTransformBranchCakeProbe
+
+#guard match crepTransformBranchCakeResult with
+  | .while (.const 1)
+      (.seq
+        (.seq (.assign 20 (.const 4)) .skip)
+        (.break 1)) => true
+  | _ => false
+
+def crepTransformBranchHandlerProbe : CrepProg Nat :=
+  .call (some ([30], some (7, .return [.var 8]))) "callee" []
+
+def crepTransformBranchHandlerResult : CrepProg Nat :=
+  crepTransformBranch 0 [20, 21] crepTransformBranchHandlerProbe
+
+#guard match crepTransformBranchHandlerResult with
+  | .call (some ([30], some (7,
+      (.seq
+        (.seq (.assign 20 (.var 8)) .skip)
+        (.break 0))))) "callee" [] => true
+  | _ => false
+
 end Flapjack

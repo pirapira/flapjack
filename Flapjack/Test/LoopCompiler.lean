@@ -202,6 +202,10 @@ def reachabilityContext : Context :=
     "function g is not in scope in initialisation of global variable init\n" &&
   staticScopeMessage .struct "at: " "S" (.structScope "T" "field") ==
     "at: struct name S is not in scope in declaration of field field in named struct T\n"
+#guard
+  primitiveIdents == ["__add_with_carry__"] &&
+  "__add_with_carry__" ∈ primitiveIdents &&
+  !("__sub_with_borrow__" ∈ primitiveIdents)
 #guard (reachedWarnable (.annot "" "" : Prog Nat) reachabilityContext).1.isNone
 #guard (reachedWarnable (.tick : Prog Nat) reachabilityContext).1.isNone
 #guard (reachedWarnable (.skip : Prog Nat)

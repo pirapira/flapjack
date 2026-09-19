@@ -167,7 +167,22 @@ def crepInlineNontailCakeResult : CrepProg Nat :=
               (.return [.const 7, .var 12])))
           (.seq
             (.assign 20 (.var 30))
-            (.seq (.assign 21 (.var 31)) .skip)))) => true
+          (.seq (.assign 21 (.var 31)) .skip)))) => true
+  | _ => false
+
+/-! Direct `crep_inline$inline_prog` oracle coverage.  Cake's
+    `inline_prog_def` (crep_inlineScript.sml:203-216) keeps a handled outer
+    call intact while recursively transforming the handler body. -/
+def crepInlineHandlerProgResult : CrepProg Nat :=
+  crepInlineProg [crepInlinePassEntry]
+    (.call (some ([20], some (7,
+      (.call none "identity" [.const 9])))) "outer" [])
+
+#guard match crepInlineHandlerProgResult with
+  | .call (some ([20], some (7,
+      (.seq .tick
+        (.dec 11 (.const 9)
+          (.dec 10 (.var 11) (.return [.var 10]))))))) "outer" [] => true
   | _ => false
 
 end Flapjack

@@ -81,7 +81,7 @@ def compileLabSectionChecked [NeZero width] (context : WordFfiContext)
   labCompileLinesChecked context sectionData.name labels 0 sectionData.lines
 
 def labCompileAsmProgramChecked [NeZero width] (context : WordFfiContext)
-    (sectionId : Nat) (labels : List (Nat × Nat × Nat)) (position : Nat)
+    (sectionId : Nat) (labels : LabLabelIndex) (position : Nat)
     (operation : LabAsm (Word width)) :
     Except LabLoweringError (List (Instruction width)) :=
   match operation with
@@ -95,7 +95,7 @@ def labCompileAsmProgramChecked [NeZero width] (context : WordFfiContext)
     calculation as `compileLabProgram`, but retains the first section and
     source position at which lowering fails. -/
 def labCompileProgramLinesChecked [NeZero width] (context : WordFfiContext)
-    (labels : List (Nat × Nat × Nat)) (sectionId : Nat) (position : Nat) :
+    (labels : LabLabelIndex) (sectionId : Nat) (position : Nat) :
     List (LabLine (Word width)) →
       Except LabLoweringError (List (Instruction width))
   | [] => .ok []
@@ -119,7 +119,7 @@ def labCompileProgramLinesChecked [NeZero width] (context : WordFfiContext)
           | .ok rest => .ok (code ++ rest)
 
 def labCompileProgramSectionsChecked [NeZero width] (context : WordFfiContext)
-    (labels : List (Nat × Nat × Nat)) (base : Nat) :
+    (labels : LabLabelIndex) (base : Nat) :
     LabProgram (Word width) →
       Except LabLoweringError (List (Instruction width))
   | [] => .ok []
@@ -136,14 +136,14 @@ def labCompileProgramSectionsChecked [NeZero width] (context : WordFfiContext)
 def compileLabProgramChecked [NeZero width] (context : WordFfiContext)
     (program : LabProgram (Word width)) :
     Except LabLoweringError (List (Instruction width)) :=
-  let labels := labCollectProgramLabels 0 program
+  let labels := labLabelIndexOf (labCollectProgramLabels 0 program)
   labCompileProgramSectionsChecked context labels 0 program
 
 /-! Checked linked lowering.  The section-entry metadata is identical to the
 historical linker; only the per-section compiler is replaced by the checked
 version so a failing section and byte position survive the API boundary. -/
 def labCompileProgramLinkedAuxChecked [NeZero width]
-    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (context : WordFfiContext) (labels : LabLabelIndex)
     (base : Nat) : LabProgram (Word width) →
       Except LabLoweringError
         (List (Nat × Word width × List (Instruction width)))
@@ -163,14 +163,14 @@ def compileLabProgramLinkedChecked [NeZero width]
     (context : WordFfiContext) (program : LabProgram (Word width)) :
     Except LabLoweringError
       (List (Nat × Word width × List (Instruction width))) :=
-  let labels := labCollectProgramLabels 0 program
+  let labels := labLabelIndexOf (labCollectProgramLabels 0 program)
   labCompileProgramLinkedAuxChecked context labels 0 program
 
 /-! Checked halt-aware linked lowering.  SimpleGC and StoreConsts use the
     CakeML-shaped halt linker, so keep that path checked as well instead of
     falling back to the ordinary Option boundary. -/
 def labCompileAsmWithHaltChecked [NeZero width] (context : WordFfiContext)
-    (labels : List (Nat × Nat × Nat)) (position haltPc : Nat)
+    (labels : LabLabelIndex) (position haltPc : Nat)
     (operation : LabAsm (Word width)) :
     Except LabLoweringError (List (Instruction width)) :=
   match operation with
@@ -181,7 +181,7 @@ def labCompileAsmWithHaltChecked [NeZero width] (context : WordFfiContext)
       | none => .error (labLoweringError 0 position .loweringFailure)
 
 def labCompileProgramLinesWithHaltChecked [NeZero width]
-    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (context : WordFfiContext) (labels : LabLabelIndex)
     (sectionId : Nat) (position haltPc : Nat) :
     List (LabLine (Word width)) →
       Except LabLoweringError (List (Instruction width))
@@ -206,7 +206,7 @@ def labCompileProgramLinesWithHaltChecked [NeZero width]
           | .ok rest => .ok (code ++ rest)
 
 def labCompileProgramLinkedWithHaltAuxChecked [NeZero width]
-    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (context : WordFfiContext) (labels : LabLabelIndex)
     (base haltPc : Nat) : LabProgram (Word width) →
       Except LabLoweringError
         (List (Nat × Word width × List (Instruction width)))
@@ -226,7 +226,7 @@ def compileLabProgramLinkedWithHaltChecked [NeZero width]
     (context : WordFfiContext) (program : LabProgram (Word width)) :
     Except LabLoweringError
       (List (Nat × Word width × List (Instruction width))) :=
-  let labels := labCollectProgramLabels 0 program
+  let labels := labLabelIndexOf (labCollectProgramLabels 0 program)
   let haltPc := 4 * labProgramInstructionCount program
   labCompileProgramLinkedWithHaltAuxChecked context labels 0 haltPc program
 

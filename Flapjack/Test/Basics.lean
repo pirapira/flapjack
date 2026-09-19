@@ -147,7 +147,7 @@ example :
     checkExp (α := Nat) checkerContext (Exp.op .add [.const 1, .const 2]) =
       staticOk { shapedBased := .word .notBased } := by
   simp [checkExp, checkExp.checkExps, staticOk, staticBind,
-    shapedBasedIsWord, checkerContext, pairContext]
+    shapedBasedIsWord, shapedBasedMerge, basedMerge, checkerContext, pairContext]
 
 example :
     checkExp (α := Nat) checkerContext (Exp.op .add [.const 1]) =

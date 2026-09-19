@@ -316,9 +316,12 @@ theorem panValueCrepStateRel_reordered_parameter_context
   intro name value shape slots hsource hlookup
   have hlookupRaw : lookupInfo name (compileParamVars params 0).1 =
       some (shape, slots) := by
+    have hlookup' := hlookup
+    change lookupInfo name (compileParamVars params 0).1.reverse =
+      some (shape, slots) at hlookup'
     rw [lookupInfo_reverse_of_nodup name
-      (compileParamVars params 0).1 hnamesCompiled]
-    simpa [panToCrepMakeVmap] using hlookup
+      (compileParamVars params 0).1 hnamesCompiled] at hlookup'
+    exact hlookup'
   exact hlocals name value shape slots hsource hlookupRaw
 
 end Flapjack

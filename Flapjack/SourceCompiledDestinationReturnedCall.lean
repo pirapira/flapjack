@@ -181,11 +181,9 @@ theorem sourceCompiledDestinationCallPair_returned_of_body_correct
       rcases hstate with ⟨hglobals', hlocals', hmemory'⟩
       refine ⟨hglobals', ?_, hmemory'⟩
       intro name value shape slots hsource hlookup
-      have hlookupRaw : lookupInfo name (compileParamVars declaration.params 0).1 =
+      have hlookupRaw : lookupInfo name (panToCrepMakeVmap declaration.params) =
           some (shape, slots) := by
-        rw [lookupInfo_reverse_of_nodup name
-          (compileParamVars declaration.params 0).1 hnamesCompiled]
-        simpa [panToCrepMakeVmap] using hlookup
+        exact hlookup
       exact hlocals' name value shape slots hsource hlookupRaw
     have hbodyCorrect' : PanValueCrepProgramCorrect sourceBody := by
       have h := hcalleeCorrect declaration

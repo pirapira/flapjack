@@ -1,0 +1,39 @@
+fun 1 zero() {
+  return 0;
+}
+
+fun 1 signed_boundary() {
+  return 2047;
+}
+
+fun 1 signed_wide() {
+  return 2048;
+}
+
+fun 1 medium() {
+  return 4660;
+}
+
+fun 1 large() {
+  return 305419896;
+}
+
+fun 1 huge() {
+  return 1311768467463790320;
+}
+
+fun 1 all_ones() {
+  return 18446744073709551615;
+}
+
+fun 1 main() {
+  var 1 a = zero();
+  var 1 b = signed_boundary();
+  var 1 c = signed_wide();
+  var 1 d = medium();
+  var 1 e = large();
+  var 1 f = huge();
+  var 1 g = all_ones();
+  @halt(@base, 0, @base, 0);
+  return a + b + c + d + e + f + g;
+}

@@ -351,12 +351,10 @@ structure WordSsaState where
 def wordSsaRead (state : WordSsaState) (name : Nat) : Nat :=
   match lookupNatInfo name state.current with
   | some value => value
-  | none => name
+  /- Cake's `option_lookup` is total; a missing SSA name maps to the
+     architectural zero register. -/
+  | none => 0
 
-/-! Cake's `option_lookup` fallback for fixed protocol move sources.  These
-    even, unallocated names are ABI-facing sources produced by the allocator's
-    fixed move protocol; Cake maps them to register zero rather than retaining
-    the virtual name.  Ordinary SSA reads keep the identity fallback above. -/
 def wordSsaReadMoveSource (state : WordSsaState) (name : Nat) : Nat :=
   match lookupNatInfo name state.current with
   | some value => value

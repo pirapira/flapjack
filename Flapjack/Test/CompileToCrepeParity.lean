@@ -65,7 +65,7 @@ theorem compile_to_crep_raise_const_parity :
            (.raise 0),
          returnShape := .one }] := by
   simp [compileToCrep, compileFunctionsSource, compileFunDeclSource,
-    panToCrepCompFunc, compileParamVars, Shape.shapeSize,
+    panToCrepCompFunc, panToCrepVars, Shape.shapeSize,
     functionInfos, compileToCrepeProbeContext, compileToCrepeProbeDecls,
     compileProg, compileExp, freshNames, nestedDecs, storeGlobals,
     crepNestedSeq, lookupInfo]

@@ -96,7 +96,7 @@ example :
     globalCompileInitializers, pipelineCrepeContext,
     pipelineFunctionInfos, pipelineLoopFunctions, pipelineLoopFunctionsAux,
     pipelineWordFunctions, pipelinePrependInitializers, pipelineInlineNames,
-    compileToCrep, compileFunctionsSource, compileFunDeclSource, compileParamVars,
+    compileToCrep, compileFunctionsSource, compileFunDeclSource,
     crepInlineTopRecursiveByNames, crepInlineTopRecursive,
     crepInlineFunctionsRecursive, crepInlineActiveNames,
     crepSimpFunctions
@@ -195,6 +195,31 @@ def memoryWarningContext : Context :=
        .function
         { name := "f", inline := false, exported := false, params := [],
           body := .return (.const 1), returnShape := .one }]) = false
+
+/-! Cake's `check_redec_var` warns, rather than rejects, a local `Dec` that
+    shadows an existing local; the warning is emitted before body warnings. -/
+#guard
+  (checkProg
+    { reachabilityContext with
+      locals := [("x", { shapedBased := .word .trusted })] }
+    (.dec "x" .one (.const 0) (.skip : Prog Nat))).2.map statErrMessage ==
+      ["variable x is redeclared in function f\n"]
+
+#guard
+  (checkProg
+    { reachabilityContext with
+      locals := [("x", { shapedBased := .word .trusted })] }
+    (.decCall "x" .one "f" [] (.skip : Prog Nat))).2.map statErrMessage ==
+      ["variable x is redeclared in function f\n"]
+
+/-! A declaration resets Cake's `last` marker before checking its body, so an
+    already-unreachable body's warning does not inherit the preceding return. -/
+#guard
+  (checkProg
+    { reachabilityContext with reachable := .warnReach, last := .retLast }
+    (.dec "y" .one (.const 0)
+      (.seq (.skip : Prog Nat) (.return (.const 0))))).2.map statErrMessage ==
+      ["unreachable statement(s) after  in function f\n"]
 
 /-! Crepe primitives contain already-flattened variable names.  The original
     `crep_to_loop` pass resolves both sides through the loop variable map; it

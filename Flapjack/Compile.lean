@@ -342,8 +342,7 @@ def compileToCrepe [BEq α] [OfNat α 0] [Add α]
     the source temporary numbering. -/
 def compileFunDeclSource [BEq α] [OfNat α 0] [Add α]
     (context : CompileContext α) (declaration : FunDecl α) : CompiledFunction α :=
-  let (_vars, params, _maxVar) := compileParamVars declaration.params 0
-  { name := declaration.name, params := params,
+  { name := declaration.name, params := panToCrepVars declaration.params,
     body := panToCrepCompFunc context declaration.params declaration.body,
     returnShape := declaration.returnShape }
 

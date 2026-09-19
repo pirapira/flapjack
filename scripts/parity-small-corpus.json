@@ -788,7 +788,7 @@
     },
     {
       "path": "Flapjack/Test/OriginalPancake/nested_shape_22_fields.pnk",
-      "source_reference": "CakeML Pancake corpus case 748e171602: nested record payloads with 11- and 22-word fields compile to byte-identical RISC-V output, extending exact shape/flattening coverage beyond the hand-written small fixtures.",
+      "source_reference": "CakeML Pancake nested record payload oracle: fields with 11- and 22-word shapes compile to byte-identical RISC-V output.",
       "cake_sha256": "91ebaab3609c8a0c6db97a76cd98c8e6c010a0d7e0394cfb6e512a7ce98e958a",
       "tracked_beads": []
     }

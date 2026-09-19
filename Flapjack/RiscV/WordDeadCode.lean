@@ -134,7 +134,7 @@ def wordDeadCodeAux : WordProg α → List Nat → List (List Nat × List Nat) �
         wordDeadCallLive cutsets arguments)
   | .call returns target arguments handler, live, _ =>
       (.call returns target arguments handler,
-        wordDeadAddReads live (wordProgReadVars
+        wordDeadAddReads live (wordProgReadVarsFast
           (.call returns target arguments handler)))
   | .alloc destination cutsets, live, _ =>
       (.alloc destination cutsets,

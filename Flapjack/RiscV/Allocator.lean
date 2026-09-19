@@ -1124,6 +1124,88 @@ def wordProgReadVars : WordProg α → List Nat
       | .store | .store8 | .store16 | .store32 => [name]) ++
         wordExpReadVars address
 
+/-! A production-only difference-list inventory.  The reference definitions
+    above remain the proof-facing equations; this helper has the same
+    left-to-right Cake traversal but threads the tail so large allocator
+    programs do not repeatedly copy prefixes with `++`. -/
+def wordListAppendAcc : List Nat → List Nat → List Nat
+  | [], tail => tail
+  | name :: names, tail => name :: wordListAppendAcc names tail
+
+def wordExpReadVarsFastAcc : WordExp α → List Nat → List Nat
+  | .const _, tail => tail
+  | .var name, tail => name :: tail
+  | .lookup _, tail => tail
+  | .load address, tail => wordExpReadVarsFastAcc address tail
+  | .op _ arguments, tail =>
+      arguments.foldr
+        (fun argument rest => wordExpReadVarsFastAcc argument rest) tail
+  | .shift _ left right, tail =>
+      wordExpReadVarsFastAcc left (wordExpReadVarsFastAcc right tail)
+
+def wordExpReadVarsFast (expression : WordExp α) : List Nat :=
+  wordExpReadVarsFastAcc expression []
+
+def wordProgReadVarsFastAcc : WordProg α → List Nat → List Nat
+  | .skip, tail => tail
+  | .move _ moves, tail => moves.foldr (fun move rest => move.2 :: rest) tail
+  | .assign _ value, tail => wordExpReadVarsFastAcc value tail
+  | .inst instruction, tail => wordListAppendAcc (wordInstReadVars instruction) tail
+  | .get _ _, tail => tail
+  | .store address value, tail =>
+      wordExpReadVarsFastAcc address (value :: tail)
+  | .set _ value, tail => wordExpReadVarsFastAcc value tail
+  | .seq first second, tail =>
+      wordProgReadVarsFastAcc first (wordProgReadVarsFastAcc second tail)
+  | .ite _ condition right thenBranch elseBranch, tail =>
+      condition :: (match right with
+        | .reg name => name :: wordProgReadVarsFastAcc thenBranch
+            (wordProgReadVarsFastAcc elseBranch tail)
+        | .imm _ => wordProgReadVarsFastAcc thenBranch
+            (wordProgReadVarsFastAcc elseBranch tail))
+  | .loop liveIn body liveOut, tail =>
+      wordListAppendAcc liveIn
+        (wordProgReadVarsFastAcc body (wordListAppendAcc liveOut tail))
+  | .mustTerminate body, tail => wordProgReadVarsFastAcc body tail
+  | .break _, tail | .continue _, tail => tail
+  | .raise exception, tail => exception :: tail
+  | .return label values, tail => label :: wordListAppendAcc values tail
+  | .tick, tail => tail
+  | .locValue _ _, tail => tail
+  | .call returns _ arguments handler, tail =>
+      let afterHandler := match handler with
+        | none => tail
+        | some (_, body, _, _) => wordProgReadVarsFastAcc body tail
+      let afterReturns := match returns with
+        | none => afterHandler
+        | some (_, cutsets, returnCode, _, _) =>
+            wordListAppendAcc cutsets.1
+              (wordListAppendAcc cutsets.2
+                (wordProgReadVarsFastAcc returnCode afterHandler))
+      wordListAppendAcc arguments afterReturns
+  | .alloc destination (nonGc, gc), tail =>
+      destination :: wordListAppendAcc nonGc (wordListAppendAcc gc tail)
+  | .storeConsts source bitmap codeLength dataLength _, tail =>
+      source :: bitmap :: codeLength :: dataLength :: tail
+  | .opCurrHeap _ _ source, tail => source :: tail
+  | .install codeBuffer codeLength dataBuffer dataLength (nonGc, gc), tail =>
+      codeBuffer :: codeLength :: dataBuffer :: dataLength ::
+        wordListAppendAcc nonGc (wordListAppendAcc gc tail)
+  | .codeBufferWrite address value, tail => address :: value :: tail
+  | .dataBufferWrite address value, tail => address :: value :: tail
+  | .ffi _ configuration configurationLength array arrayLength live, tail =>
+      configuration :: configurationLength :: array :: arrayLength ::
+        wordListAppendAcc live.1 (wordListAppendAcc live.2 tail)
+  | .shareInst operator name address, tail =>
+      match operator with
+      | .load | .load8 | .load16 | .load32 =>
+          wordExpReadVarsFastAcc address tail
+      | .store | .store8 | .store16 | .store32 =>
+          name :: wordExpReadVarsFastAcc address tail
+
+def wordProgReadVarsFast (program : WordProg α) : List Nat :=
+  wordProgReadVarsFastAcc program []
+
 def wordProgWriteVars : WordProg α → List Nat
   | .get destination _ => [destination]
   | .skip | .store _ _ | .set _ _ | .break _ | .continue _ | .raise _
@@ -1510,7 +1592,7 @@ def wordClashTreeCallReads (returns : Option
   arguments ++ match returns with
     | none => []
     | some (values, cutsets, returnCode, _, _) =>
-        values ++ cutsets.1 ++ cutsets.2 ++ wordProgReadVars returnCode
+        values ++ cutsets.1 ++ cutsets.2 ++ wordProgReadVarsFast returnCode
 
 def wordClashTreeCallWrites (returns : Option
     (List Nat × (List Nat × List Nat) × WordProg α × Nat × Nat)) : List Nat :=

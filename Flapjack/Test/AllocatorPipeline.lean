@@ -9,6 +9,23 @@ def pipelineAllocatedMulDeclarations : List (Decl (RiscV.Word 64)) :=
         [.const (BitVec.ofNat 64 6), .const (BitVec.ofNat 64 7)]),
       returnShape := .one }]
 
+/- The production allocator uses the difference-list inventory only at its
+   measured hot spots.  This mixed fixture covers the Cake preorder through a
+   sequence, loop, call return cutsets, and handler body. -/
+def allocatorReadVarsFastFixture : WordProg Nat :=
+  .seq (.assign 3 (.var 2))
+    (.seq (.loop [4] (.assign 5 (.var 6)) [7])
+      (.call (some ([8], ([9], [10]), .assign 11 (.var 12), 13, 14))
+        (some 15) [16]
+        (some (17, .assign 18 (.var 19), 20, 21))))
+
+example :
+    wordProgReadVarsFast allocatorReadVarsFastFixture =
+      wordProgReadVars allocatorReadVarsFastFixture := by
+  simp [wordProgReadVarsFast, wordProgReadVarsFastAcc, wordListAppendAcc,
+    wordExpReadVarsFastAcc, wordProgReadVars,
+    wordExpReadVars, allocatorReadVarsFastFixture]
+
 example [OfNat α 1] :
     pipelineWordFunctionsAllocated
       ([] : List (Nat × List Nat × LoopProg α)) = some [] := by

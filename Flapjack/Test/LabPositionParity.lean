@@ -3,26 +3,26 @@ import Flapjack.RiscV.Lab
 namespace Flapjack.RiscV
 
 /-! CakeML's `lab_to_target` indexes CallFFI targets from the original
-    `ffi_names` order while the exported prefix emits those blocks reversed.
-    These two-service guards exercise the position base and prefix ordering;
-    the one-service case cannot distinguish the two conventions. -/
+    `ffi_names` order, and the exported prefix preserves that order.  These
+    two-service guards exercise the position base and prefix ordering; the
+    one-service case cannot distinguish the two conventions. -/
 
 example :
     labFfiStubOffset (width := 64)
       { services := [("first", 7), ("second", 8)] } "first" 64 =
-      some (0 - BitVec.ofNat 64 112) := by
+      some (0 - BitVec.ofNat 64 128) := by
   decide
 
 example :
     labFfiStubOffset (width := 64)
       { services := [("first", 7), ("second", 8)] } "second" 64 =
-      some (0 - BitVec.ofNat 64 128) := by
+      some (0 - BitVec.ofNat 64 112) := by
   decide
 
 example :
     labFfiStubPrefix (width := 64)
       { services := [("first", 7), ("second", 8)] } =
-      labFfiServiceStub 8 ++ labFfiServiceStub 7 ++
+      labFfiServiceStub 7 ++ labFfiServiceStub 8 ++
         List.replicate 8 (.jal 0 0) := by
   rfl
 
@@ -42,7 +42,7 @@ example :
       (.callFfi "first") =
       /- Cake addresses the exported FFI block from the linked absolute
          position; `ffiBase` is retained only for the legacy API shape. -/
-      some [.jal 0 (0 - BitVec.ofNat 64 144)] := by
+      some [.jal 0 (0 - BitVec.ofNat 64 160)] := by
   decide
 
 /-! Cake can retain a LabAsm length of 5 after `add_nop`: its one-instruction

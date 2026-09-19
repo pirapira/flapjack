@@ -135,11 +135,11 @@ def labLineInstructionCount : LabLine (Word width) → Nat
 def labFfiStubOffset [NeZero width] (context : WordFfiContext)
     (function : FunName) (position : Nat) : Option (Word width) := do
   let index ← lookupWordFfiIndex function context.services
-  /- `context.services` is the source/discovery order and the exported
-     prefix reverses it.  From `cake_main`, source service `i` is therefore
-     preceded by `i` other FFI blocks, followed by `cake_clear` and
-     `cake_exit`: `(3 + i)` 16-byte blocks. -/
-  let stubDistance := 3 + index
+  /- The exported prefix preserves source/discovery order.  From
+     `cake_main`, source service `i` is therefore preceded by the services
+     after it, followed by `cake_clear` and `cake_exit`: `(3 + n - i - 1)`
+     16-byte blocks. -/
+  let stubDistance := 3 + (context.services.length - index - 1)
   pure (0 - BitVec.ofNat width (position + stubDistance * 16))
 
 /-! In the compact linked image the FFI blocks are physically prepended to the
@@ -959,7 +959,7 @@ def labFfiStubPrefix [NeZero width] (context : WordFfiContext) :
     List (Instruction width) :=
   if context.services.isEmpty then []
   else
-      context.services.reverse.flatMap (fun (_, service) => labFfiServiceStub service) ++
+      context.services.flatMap (fun (_, service) => labFfiServiceStub service) ++
         List.replicate 8 (.jal 0 0)
 
 /-! A linked FFI call is nested inside an ordinary Cake function call.  Its
@@ -1844,7 +1844,7 @@ theorem compileLabSection_ffi_multiple_services [NeZero width] :
     compileLabSection { services := [("first", 7), ("second", 8)] }
       ⟨2, [
         .labAsm (.callFfi "first") [] 0]⟩ =
-      some [.jal 0 (0 - BitVec.ofNat width 48)] := by
+      some [.jal 0 (0 - BitVec.ofNat width 64)] := by
   simp [compileLabSection, labCompileLines,
     labCompileAsm, labFfiStubOffset, lookupWordFfiIndex]
 

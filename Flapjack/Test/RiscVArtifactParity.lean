@@ -552,8 +552,7 @@ cake_ffi<name>:
 
 The port used to omit these blocks entirely.  The runtime image now
 carries the discovered `ffiNames`; Cake indexes calls by first appearance
-but emits the exported blocks in reverse list order, so
-`RiscV.pancakeRuntimeAssembly` reverses this list at the artifact boundary.
+and emits the exported blocks in that same order.
 Residual: names
 referenced only from unreachable code are still emitted because the
 port discovers FFI names before dead-code removal (same family as the
@@ -608,22 +607,22 @@ def ffiMinStubEmitted : Bool :=
         "cake_ffifoo:\n     tail cdecl(ffifoo)\n     .p2align 4\n\ncake_clear:").length == 2
   | none => false
 
-/-- Cake exports the two-FFI blocks in reverse first-appearance order
-(`bar` then `foo`) between the startup stub and `cake_clear`. -/
+/-- Cake exports the two-FFI blocks in first-appearance order (`foo` then
+`bar`) between the startup stub and `cake_clear`. -/
 def ffiOrderStubsEmitted : Bool :=
   match compileAssembly ffiOrderSource with
   | some assembly =>
       (assembly.splitOn
-        "cake_ffibar:\n     tail cdecl(ffibar)\n     .p2align 4\n\ncake_ffifoo:\n     tail cdecl(ffifoo)\n     .p2align 4\n\ncake_clear:").length == 2
+        "cake_ffifoo:\n     tail cdecl(ffifoo)\n     .p2align 4\n\ncake_ffibar:\n     tail cdecl(ffibar)\n     .p2align 4\n\ncake_clear:").length == 2
   | none => false
 
-/-- Flipping the source order flips the reversed emitted stub order (`foo`
-then `bar`), matching Cake's exported artifact. -/
+/-- Flipping the source order flips the emitted stub order (`bar` then `foo`),
+matching Cake's exported artifact. -/
 def ffiOrderFlipStubsEmitted : Bool :=
   match compileAssembly ffiOrderFlipSource with
   | some assembly =>
       (assembly.splitOn
-        "cake_ffifoo:\n     tail cdecl(ffifoo)\n     .p2align 4\n\ncake_ffibar:\n     tail cdecl(ffibar)\n     .p2align 4\n\ncake_clear:").length == 2
+        "cake_ffibar:\n     tail cdecl(ffibar)\n     .p2align 4\n\ncake_ffifoo:\n     tail cdecl(ffifoo)\n     .p2align 4\n\ncake_clear:").length == 2
   | none => false
 
 def bytesContain (needle haystack : List (BitVec 8)) : Bool :=

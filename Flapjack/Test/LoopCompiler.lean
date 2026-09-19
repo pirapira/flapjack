@@ -130,6 +130,26 @@ example :
           body := .seq (.return (.const 7)) .skip, returnShape := .one }]).2.length = 1 := by
   decide +kernel
 
+/-! Cake's reachability-warning equations. `Annot` and `Tick` are transparent
+    to `reached_warnable`, while an exiting statement moves the next ordinary
+    node to `WarnReach`; the production sequence case below consumes these
+    equations for both function and loop exits. -/
+def reachabilityContext : Context :=
+  { locals := [], globals := [], functions := [], expectedReturn := some .one,
+    exceptions := [], structs := [], scope := .funScope "f" "", inLoop := false,
+    reachable := .isReach, last := .otherLast, location := "" }
+
+#guard nextIsReachable .isReach .retLast == .warnReach
+#guard nextIsReachable .isReach .breakLast == .warnReach
+#guard nextIsReachable .isReach .invisLast == .isReach
+#guard (reachedWarnable (.annot "" "" : Prog Nat) reachabilityContext).1.isNone
+#guard (reachedWarnable (.tick : Prog Nat) reachabilityContext).1.isNone
+#guard (reachedWarnable (.skip : Prog Nat)
+  { reachabilityContext with reachable := .warnReach, last := .breakLast }).1 ==
+    some .breakLast
+#guard seqLastStmt .retLast .invisLast == .retLast
+#guard staticLastStmtString .breakLast == "break"
+
 #guard
     staticResultOk (staticCheck (α := Nat)
       [.function

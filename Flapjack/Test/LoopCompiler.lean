@@ -149,6 +149,19 @@ def reachabilityContext : Context :=
     some .breakLast
 #guard seqLastStmt .retLast .invisLast == .retLast
 #guard staticLastStmtString .breakLast == "break"
+
+/-! Direct Cake `last_to_str_def` parity
+    (`cakeml/pancake/panStaticScript.sml:359-367`).  These strings are used
+    only by warning diagnostics, but their exact spellings are observable. -/
+#guard staticLastStmtString .retLast == "return" &&
+  staticLastStmtString .raiseLast == "raise" &&
+  staticLastStmtString .tailLast == "tail call" &&
+  staticLastStmtString .breakLast == "break" &&
+  staticLastStmtString .contLast == "continue" &&
+  staticLastStmtString .condExitLast == "exiting conditional" &&
+  staticLastStmtString .invisLast == "" &&
+  staticLastStmtString .otherLast == ""
+
 #guard match basedMerge .based .notBased with | .based => true | _ => false
 #guard match basedMerge .trusted .notBased with | .trusted => true | _ => false
 #guard match shapedBasedMerge [.word .based, .word .notBased] with

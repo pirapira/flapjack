@@ -19,7 +19,7 @@ def exceptionNumberingFixture : List (Decl Nat) :=
    .exnDecl "F" .one]
 
 #guard
-  pipelineExceptionCodes (fun value => value) 0 exceptionNumberingFixture ==
+  crepGetEidsFromDecls (fun value => value) exceptionNumberingFixture ==
     [("E", 0), ("F", 1)]
 
 #guard
@@ -93,7 +93,7 @@ example :
     result.globals.initializers.length = 1 ∧ result.crepe.length = 1 := by
   simp [compileFlapjack, panSimpDecls, structCompileTop, structGetNames,
     structCompileDecls, globalCompileTop, globalCollect, globalCompileDecls,
-    globalCompileInitializers, pipelineCrepeContext, pipelineExceptionCodes,
+    globalCompileInitializers, pipelineCrepeContext,
     pipelineFunctionInfos, pipelineLoopFunctions, pipelineLoopFunctionsAux,
     pipelineWordFunctions, pipelinePrependInitializers, pipelineInlineNames,
     compileToCrep, compileFunctionsSource, compileFunDeclSource, compileParamVars,

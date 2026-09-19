@@ -41,6 +41,15 @@ def pipelineExceptionCodes (fromNat : Nat → α) : Nat → List (Decl α) → I
       (exception, fromNat index) :: pipelineExceptionCodes fromNat (index + 1) declarations
   | index, _ :: declarations => pipelineExceptionCodes fromNat index declarations
 
+/-! Source-named port of the active CakeML Pancake
+    `get_eids_from_decls_def` (`pan_to_crepScript.sml:356`).  Cake first
+    filters to exception declarations, then numbers that filtered list from
+    zero; the accumulator above expresses the same `MAP FST (exceptions ...)`
+    and `GENLIST n2w` result without assigning IDs to ordinary declarations. -/
+def crepGetEidsFromDecls (fromNat : Nat → α) (declarations : List (Decl α)) :
+    InfoMap α :=
+  pipelineExceptionCodes fromNat 0 declarations
+
 def pipelineInlineNames : List (Decl α) → List FunName
   | [] => []
   | .function declaration :: declarations =>
@@ -91,7 +100,7 @@ def pipelineCrepeContext [BEq α] [Add α]
     (program : GlobalCompiledProgram α) : CompileContext α :=
   { vars := []
     functions := []
-    exceptions := pipelineExceptionCodes fromNat 0 program.declarations
+    exceptions := crepGetEidsFromDecls fromNat program.declarations
     maxVar := 0
     bytesInWord := bytesInWord }
 

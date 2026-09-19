@@ -332,6 +332,30 @@ def convTopDecCakeParity : Bool :=
 
 #guard convTopDecCakeParity
 
+/-! Cake `conv_TopDecList_def` (`panPtreeConversionScript.sml:788`) preserves
+    declaration order, drops annotation-comment leaves, accepts the empty
+    list, and rejects malformed child arity. -/
+def convTopDecListCakeParity : Bool :=
+  let one : ParseTree := .lf (.intT 1) unknownLoc
+  let nine : ParseTree := .lf (.intT 9) unknownLoc
+  let name : ParseTree := .lf (.identT "g") unknownLoc
+  let declaration : ParseTree := .nd .globalDec [one, name, nine] unknownLoc
+  let empty : ParseTree := .nd .topDecList [] unknownLoc
+  let withDeclaration : ParseTree := .nd .topDecList [declaration, empty] unknownLoc
+  let annotation : ParseTree := .lf (.annotCommentT "ignored") unknownLoc
+  let withAnnotation : ParseTree :=
+    .nd .topDecList [annotation, withDeclaration] unknownLoc
+  let malformed : ParseTree := .nd .topDecList [declaration] unknownLoc
+  match convTopDecList (fun value => value) false 8 empty,
+      convTopDecList (fun value => value) false 8 withDeclaration,
+      convTopDecList (fun value => value) false 8 withAnnotation,
+      convTopDecList (fun value => value) false 8 malformed with
+  | some [], some [.decl .one "g" (.const 9)], some [.decl .one "g" (.const 9)],
+      none => true
+  | _, _, _, _ => false
+
+#guard convTopDecListCakeParity
+
 #guard (pancakeLex "x + 1").map (·.1) == [.identT "x", .plusT, .intT 1]
 
 -- `//` runs to end of line; the block forms are `/* */` and `/@ @/`.

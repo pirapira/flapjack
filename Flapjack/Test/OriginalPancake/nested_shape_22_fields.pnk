@@ -1,0 +1,11 @@
+  struct my_struct {
+    11 x,
+    22 y
+  }
+
+  fun 1 f () {
+    var my_struct x = my_struct <x = <0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>, y = <0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0> >;
+    return 1;
+  }
+
+fun 1 main() { return 0; }

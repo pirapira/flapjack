@@ -515,23 +515,26 @@ def compileFlapjackRiscVSourceBytesChecked [NeZero width]
       | .ok _ =>
           let warnings := checked.2
           match compileFlapjackEntry architecture bytesInWord
-              (fun value => fromNat value) start declarations with
+              (fun value => fromNat value) start
+              (panTargetDeclarationsWithDefaultMain declarations) with
           | none => .error .entryNotFound
           | some pipeline =>
+              let sourceLoop := pipelineLoopFunctionsSource architecture 1 pipeline.crepe
+              let sourceWord := pipelineWordFunctionsSource sourceLoop
               /- Cake's backend scans the compiled section list from its
                  reverse function order before `export_riscv` reverses the
                  names into the startup-frame stubs.  `compile_prog` keeps
                  this order even though the emitted symbol table is later
                  presented in source order. -/
               let discoveredNames :=
-                (pipeline.word.reverse.flatMap
+                (sourceWord.reverse.flatMap
                   (fun entry : Nat × List Nat × WordProg (RiscV.Word width) =>
                     RiscV.wordProgFfiNamesCake (wordFfiDiscoveryBody entry.2.2))).eraseDups
               let discoveredServices := discoveredNames.zip (List.range discoveredNames.length)
               let services := services ++ discoveredServices
               let identityResult :
                   Except PipelineRiscVLoweringError (List (BitVec 8)) :=
-                match RiscV.pipelineWordFunctionsToStackChecked pipeline.word with
+                match RiscV.pipelineWordFunctionsToStackChecked sourceWord with
                 | .error error => .error (.wordToStack error)
                 | .ok functions =>
                     match RiscV.compileStackProgramNatListWithRaiseStubToRiscVChecked
@@ -581,10 +584,12 @@ def compileFlapjackRiscVSourceImageChecked [NeZero width]
               start (panTargetDeclarationsWithDefaultMain declarations) with
           | none => .error .entryNotFound
           | some pipeline =>
+              let sourceLoop := pipelineLoopFunctionsSource architecture 1 pipeline.crepe
+              let sourceWord := pipelineWordFunctionsSource sourceLoop
               /- Keep FFI discovery in Cake's reverse section order; the
                  artifact exporter reverses this list once more. -/
               let discoveredNames :=
-                (pipeline.word.reverse.flatMap
+                (sourceWord.reverse.flatMap
                   (fun entry : Nat × List Nat × WordProg (RiscV.Word width) =>
                     RiscV.wordProgFfiNamesCake (wordFfiDiscoveryBody entry.2.2))).eraseDups
               let discoveredServices := discoveredNames.zip (List.range discoveredNames.length)

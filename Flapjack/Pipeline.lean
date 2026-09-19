@@ -41,6 +41,15 @@ def pipelineExceptionCodes (fromNat : Nat → α) : Nat → List (Decl α) → I
       (exception, fromNat index) :: pipelineExceptionCodes fromNat (index + 1) declarations
   | index, _ :: declarations => pipelineExceptionCodes fromNat index declarations
 
+/-! Source-named port of the active CakeML Pancake
+    `get_eids_from_decls_def` (`pan_to_crepScript.sml:356`).  Cake first
+    filters to exception declarations, then numbers that filtered list from
+    zero; the accumulator above expresses the same `MAP FST (exceptions ...)`
+    and `GENLIST n2w` result without assigning IDs to ordinary declarations. -/
+def crepGetEidsFromDecls (fromNat : Nat → α) (declarations : List (Decl α)) :
+    InfoMap α :=
+  pipelineExceptionCodes fromNat 0 declarations
+
 def pipelineInlineNames : List (Decl α) → List FunName
   | [] => []
   | .function declaration :: declarations =>
@@ -59,7 +68,7 @@ termination_by declarations => sizeOf declarations
 def compileProgToCrep [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (declarations : List (Decl α)) :
     List (CompiledFunction α) :=
-  crepInlineTopRecursiveByNames (pipelineInlineNames declarations)
+  panToCrepCompileInlTop (pipelineInlineNames declarations)
     (compileToCrep context declarations)
 
 def pipelineFindFunction (name : FunName) :
@@ -91,16 +100,31 @@ def pipelineCrepeContext [BEq α] [Add α]
     (program : GlobalCompiledProgram α) : CompileContext α :=
   { vars := []
     functions := []
-    exceptions := pipelineExceptionCodes fromNat 0 program.declarations
+    exceptions := crepGetEidsFromDecls fromNat program.declarations
     maxVar := 0
     bytesInWord := bytesInWord }
 
-def pipelineFunctionInfos (firstLabel : Nat) :
+/-! Source-named ports of CakeML Pancake's `first_name_def` and
+    `make_funcs_def` (`crep_to_loopScript.sml:243-255`).  The executable
+    pipeline also needs a caller-selected label base when runtime sections
+    reserve labels before user functions, so the parameterized helper keeps
+    Cake's consecutive numbering while allowing that established ABI base. -/
+def crepFirstName : Nat := 64
+
+def crepMakeFuncsAt (firstName : Nat) :
     List (CompiledFunction α) → InfoMap (Nat × Nat)
   | [] => []
   | function :: functions =>
-      (function.name, (firstLabel, function.params.length)) ::
-        pipelineFunctionInfos (firstLabel + 1) functions
+      (function.name, (firstName, function.params.length)) ::
+        crepMakeFuncsAt (firstName + 1) functions
+
+def crepMakeFuncs :
+    List (CompiledFunction α) → InfoMap (Nat × Nat) :=
+  crepMakeFuncsAt crepFirstName
+
+def pipelineFunctionInfos (firstLabel : Nat) :
+    List (CompiledFunction α) → InfoMap (Nat × Nat) :=
+  crepMakeFuncsAt firstLabel
 
 def pipelineLoopFunctionsAux [OfNat α 0] [OfNat α 1]
     (architecture : RiscV.Architecture) (functionInfos : InfoMap (Nat × Nat)) :
@@ -108,10 +132,7 @@ def pipelineLoopFunctionsAux [OfNat α 0] [OfNat α 1]
   | _, [] => []
   | label, function :: functions =>
       let context : LoopContext α :=
-        { vars := []
-          functions := functionInfos
-          maxVar := function.params.length
-          target := architecture }
+        crepMkCtxt architecture [] functionInfos function.params.length
       (label, function.params, oCompile context function.params function.body) ::
         pipelineLoopFunctionsAux architecture functionInfos (label + 1) functions
 
@@ -133,17 +154,8 @@ def pipelineLoopFunctionsSourceAux [OfNat α 0] [OfNat α 1]
     Nat → List (CompiledFunction α) → List (Nat × List Nat × LoopProg α)
   | _, [] => []
   | label, function :: functions =>
-      let context : LoopContext α :=
-        /- `crep_to_loop$comp_func` calls `make_vmap params`, mapping each
-           source parameter to its flattened positional slot.  An empty map
-           silently turns parameter assignments into `Skip`, which changes
-           both the loop program and the emitted artifact. -/
-        { vars := function.params.zip (List.range function.params.length)
-          functions := functionInfos
-          maxVar := function.params.length - 1
-          target := architecture }
       (label, List.range function.params.length,
-        oCompile context (List.range function.params.length) function.body) ::
+        crepCompFunc architecture functionInfos function.params function.body) ::
         pipelineLoopFunctionsSourceAux architecture functionInfos (label + 1) functions
 
 def pipelineLoopFunctionsSource [OfNat α 0] [OfNat α 1]
@@ -162,6 +174,21 @@ def pipelineWordFunctions [OfNat α 1]
       { vars := slots.map (fun name => (name, name + 2)) }
     (label, parameters.map (fun name => name + 2),
       wordProgDCE (loopToWordProg context body)))
+
+/-! Source-facing counterpart of `pipelineWordFunctions`.  The ordinary
+    helper above predates the executable `loop_to_word$comp_func` port and
+    assumes that every source variable keeps its numeric name after adding
+    two.  CakeML instead rebuilds a dense even-register context from
+    `params ++ fromNumSet (difference (acc_vars body) params)`.  Use that
+    context for source-entry artifacts, including the identity lowering path;
+    otherwise the identity path can disagree with the full-SSA fallback on
+    programs whose assigned variables are sparse. -/
+def pipelineWordFunctionsSource [OfNat α 1]
+    (functions : List (Nat × List Nat × LoopProg α)) :
+    List (Nat × List Nat × WordProg α) :=
+  functions.map (fun (label, parameters, body) =>
+    (label, LoopToWord.loopToWordCompParameters parameters body,
+      wordProgDCE (LoopToWord.loopToWordCompFunc label parameters body)))
 
 /-! Source-shaped `loop_to_word$compile_prog` output.  The ordinary pipeline
     keeps parameter names for later register allocation; `pan_to_word` instead

@@ -104,6 +104,17 @@ def destTokCakeParity : Bool :=
 
 #guard destTokCakeParity
 
+/-! Cake `tokcheck_def` (`panPtreeConversionScript.sml:40`) compares a leaf's
+    token with the expected token and returns false for a non-leaf. -/
+def tokcheckCakeParity : Bool :=
+  let plus : ParseTree := .lf (.plusT) unknownLoc
+  let node : ParseTree := .nd .exp [] unknownLoc
+  ParseTree.tokcheck plus .plusT &&
+    !ParseTree.tokcheck plus .minusT &&
+    !ParseTree.tokcheck node .plusT
+
+#guard tokcheckCakeParity
+
 /-! Cake's leaf converters at
     `panPtreeConversionScript.sml:90,97,104` accept only their respective
     token constructors: identifiers become global variables, while foreign

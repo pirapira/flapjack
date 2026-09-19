@@ -647,6 +647,25 @@ def seqLCakeParity : Bool :=
 
 #guard seqLCakeParity
 
+/-! Direct oracle for `try_def` from
+`cakeml/pancake/parser/panPEGScript.sml:119`.  `P.tryRule` is Cake's
+`choicel [s; empty []]`: successful input is retained, while failed input
+backtracks and returns an empty child list. -/
+def tryCakeParity : Bool :=
+  let input : PState := PState.ofToks
+    [(.keywordT .varK, unknownLoc), (.semiT, unknownLoc)]
+  let success := P.tryRule (P.keepKw .varK "var") input
+  let failure := P.tryRule (P.keepKw .funK "fun") input
+  (match success with
+  | (some [.lf (.keywordT .varK) _], state) => state.remaining == 1
+  | _ => false) &&
+  (match failure with
+  | (some [], state) => state.remaining == 2 &&
+      state.toks == input.toks && state.furthest.isSome
+  | _ => false)
+
+#guard tryCakeParity
+
 #guard remainingTracksToks "var 1 x = 1;"
 #guard remainingTracksToks "exception E : 1;"
 #guard remainingTracksToks "fun f(1 a, 1 b) { var x = a + b * 2; return x; }"

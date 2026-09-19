@@ -195,6 +195,13 @@ def reachabilityContext : Context :=
   staticScopeDescription (.structScope "S" "field") ==
     "declaration of field field in named struct S" &&
   staticScopeDescription .topLevel == "top-level declaration"
+#guard
+  staticScopeMessage .variable "L: " "x" (.funScope "f" "") ==
+    "L: variable x is not in scope in function f\n" &&
+  staticScopeMessage .function "" "g" (.declScope "init") ==
+    "function g is not in scope in initialisation of global variable init\n" &&
+  staticScopeMessage .struct "at: " "S" (.structScope "T" "field") ==
+    "at: struct name S is not in scope in declaration of field field in named struct T\n"
 #guard (reachedWarnable (.annot "" "" : Prog Nat) reachabilityContext).1.isNone
 #guard (reachedWarnable (.tick : Prog Nat) reachabilityContext).1.isNone
 #guard (reachedWarnable (.skip : Prog Nat)

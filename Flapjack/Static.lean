@@ -470,6 +470,17 @@ def staticScopeDescription : Scope → String
       " in named struct " ++ name
   | .topLevel => "top-level declaration"
 
+def staticScopedIdDescription : ScopedId → String
+  | .variable => "variable "
+  | .function => "function "
+  | .struct => "struct name "
+
+/-! Source-shaped port of CakeML's `get_scope_msg_def`
+    (`cakeml/pancake/panStaticScript.sml:442-451`). -/
+def staticScopeMessage (idType : ScopedId) (location id : String) (scope : Scope) : String :=
+  location ++ staticScopedIdDescription idType ++ id ++
+    " is not in scope in " ++ staticScopeDescription scope ++ "\n"
+
 /-! Cake's memory-operation diagnostics distinguish local addresses, which
     should not be based on `@base`, from shared addresses, which should.  A
     `NotTrusted` address is reported as a possibility in either direction;

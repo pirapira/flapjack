@@ -273,6 +273,25 @@ def convFieldNameListCakeParity : Bool :=
 
 #guard convFieldNameListCakeParity
 
+/-! Cake `conv_StructName_def` (`panPtreeConversionScript.sml:747`) converts
+    the struct identifier together with its shaped field list, preserving an
+    empty field list and rejecting malformed structure nodes. -/
+def convStructNameCakeParity : Bool :=
+  let name : ParseTree := .lf (.identT "S") unknownLoc
+  let field : ParseTree := .lf (.identT "f") unknownLoc
+  let one : ParseTree := .lf (.intT 1) unknownLoc
+  let fields : ParseTree := .nd .fieldNameList [one, field] unknownLoc
+  let emptyFields : ParseTree := .nd .fieldNameList [] unknownLoc
+  let valid : ParseTree := .nd .structName [name, fields] unknownLoc
+  let empty : ParseTree := .nd .structName [name, emptyFields] unknownLoc
+  let malformed : ParseTree := .nd .structName [name] unknownLoc
+  match convStructName 8 valid, convStructName 8 empty,
+      convStructName 8 malformed with
+  | some ("S", [("f", .one)]), some ("S", []), none => true
+  | _, _, _ => false
+
+#guard convStructNameCakeParity
+
 #guard (pancakeLex "x + 1").map (·.1) == [.identT "x", .plusT, .intT 1]
 
 -- `//` runs to end of line; the block forms are `/* */` and `/@ @/`.

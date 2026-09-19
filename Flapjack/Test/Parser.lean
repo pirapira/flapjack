@@ -93,6 +93,17 @@ def destLfCakeParity : Bool :=
 
 #guard destLfCakeParity
 
+/-! Cake `destTOK_def` (`panPtreeConversionScript.sml:29`) then projects the
+    token constructor from the `TOK` wrapper; the composed Lean operation
+    preserves every token payload and rejects a node. -/
+def destTokCakeParity : Bool :=
+  match ParseTree.destTok (.lf (.intT (-9)) unknownLoc),
+      ParseTree.destTok (.nd .exp [] unknownLoc) with
+  | some (.intT (-9)), none => true
+  | _, _ => false
+
+#guard destTokCakeParity
+
 /-! Cake's leaf converters at
     `panPtreeConversionScript.sml:90,97,104` accept only their respective
     token constructors: identifiers become global variables, while foreign

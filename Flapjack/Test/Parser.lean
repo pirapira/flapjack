@@ -118,6 +118,16 @@ def destLexErrorTCakeParity : Bool :=
 
 #guard destLexErrorTCakeParity
 
+/-! Cake `isLexErrorT_def` (`panLexerScript.sml:65`) recognizes exactly the
+    `LexErrorT` token constructor and rejects representative ordinary tokens. -/
+def isLexErrorTCakeParity : Bool :=
+  isLexErrorT (.lexErrorT "bad") &&
+    !isLexErrorT (.intT 7) &&
+    !isLexErrorT (.keywordT .skipK) &&
+    !isLexErrorT (.identT "name")
+
+#guard isLexErrorTCakeParity
+
 /-! Cake `init_loc_def` (`panLexerScript.sml:299`) starts lexing at row 1,
     column 1. -/
 def initLocCakeParity : Bool :=

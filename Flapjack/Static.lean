@@ -15,13 +15,13 @@ inductive Based where
   | notBased
   | trusted
   | notTrusted
-  deriving Repr
+  deriving BEq, Repr
 
 inductive ShapedBased where
   | word (basedness : Based)
   | struct (fields : List ShapedBased)
   | named (name : StructName) (fields : List (FieldName × ShapedBased))
-  deriving Repr
+  deriving BEq, Repr
 
 structure StructInfo where
   fields : List (FieldName × Shape)
@@ -233,7 +233,7 @@ mutual
   decreasing_by
     all_goals first | sizeOf_list_dec | decreasing_trivial
 
-  def shapedBasedWithBaseFields (basedness : Based) :
+def shapedBasedWithBaseFields (basedness : Based) :
       List (FieldName × ShapedBased) → List (FieldName × ShapedBased)
     | [] => []
     | (field, shaped) :: fieldRest =>
@@ -243,6 +243,12 @@ mutual
   decreasing_by
     all_goals first | sizeOf_list_dec | decreasing_trivial
 end
+
+/-! Cake's `sh_bd_branch` retains a complete value only when the two shaped
+    values are equal, including their basedness.  A shape-only comparison is
+    insufficient here: differing WordB states must become NotTrusted. -/
+def shapedBasedBranch (left right : ShapedBased) : ShapedBased :=
+  if left == right then left else shapedBasedWithBase .notTrusted left
 
 def shapedBasedFromShapeWith (context : StructContext) (basedness : Based) :
     Shape → Option ShapedBased

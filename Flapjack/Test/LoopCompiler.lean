@@ -170,6 +170,20 @@ def reachabilityContext : Context :=
 #guard match basedMerge .notTrusted .based with
   | .based => true | _ => false
 
+/-! Direct Cake `sh_bd_branch` parity (`panStaticScript.sml:301-305`). -/
+#guard match shapedBasedBranch (.word .trusted) (.word .trusted) with
+  | .word .trusted => true | _ => false
+#guard match shapedBasedBranch (.word .trusted) (.word .notBased) with
+  | .word .notTrusted => true | _ => false
+#guard match shapedBasedBranch
+    (.struct [.word .trusted, .word .based])
+    (.struct [.word .trusted, .word .notBased]) with
+  | .struct [.word .notTrusted, .word .notTrusted] => true | _ => false
+#guard match shapedBasedBranch
+    (.named "Pair" [("left", .word .trusted)])
+    (.named "Pair" [("left", .word .trusted)]) with
+  | .named "Pair" [("left", .word .trusted)] => true | _ => false
+
 /-! Direct Cake `sh_bd_from_sh` parity (`panStaticScript.sml:213-233`).
     The explicit basedness must reach every word in comb and named shapes. -/
 #guard match shapedBasedFromShapeWith [] .based .one with

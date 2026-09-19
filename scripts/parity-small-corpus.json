@@ -785,6 +785,12 @@
       "tracked_beads": [
         "flapjack-pxn.8.5.14.6"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/nested_shape_22_fields.pnk",
+      "source_reference": "CakeML Pancake nested record payload oracle: fields with 11- and 22-word shapes compile to byte-identical RISC-V output.",
+      "cake_sha256": "91ebaab3609c8a0c6db97a76cd98c8e6c010a0d7e0394cfb6e512a7ce98e958a",
+      "tracked_beads": []
     }
   ]
 }

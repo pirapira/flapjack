@@ -10,13 +10,13 @@ namespace Flapjack.RiscV
 example :
     labFfiStubOffset (width := 64)
       { services := [("first", 7), ("second", 8)] } "first" 64 =
-      some (0 - BitVec.ofNat 64 128) := by
+      some (0 - BitVec.ofNat 64 112) := by
   decide
 
 example :
     labFfiStubOffset (width := 64)
       { services := [("first", 7), ("second", 8)] } "second" 64 =
-      some (0 - BitVec.ofNat 64 112) := by
+      some (0 - BitVec.ofNat 64 128) := by
   decide
 
 example :
@@ -42,7 +42,7 @@ example :
       (.callFfi "first") =
       /- Cake addresses the exported FFI block from the linked absolute
          position; `ffiBase` is retained only for the legacy API shape. -/
-      some [.jal 0 (0 - BitVec.ofNat 64 160)] := by
+      some [.jal 0 (0 - BitVec.ofNat 64 144)] := by
   decide
 
 /-! Cake can retain a LabAsm length of 5 after `add_nop`: its one-instruction

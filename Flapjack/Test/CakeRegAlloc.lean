@@ -140,6 +140,24 @@ def bijCompositeGuard : Bool :=
       (.branch (some [6]) (.delta [] [4] : WordClashTree)
         (.delta [] [5] : WordClashTree)))).nextNode = 5
 
+/- The indexed builder is only an implementation optimization; its public
+   maps and numbering must remain identical to the direct Cake-shaped walk. -/
+def bijIndexedBuilderParityGuard : Bool :=
+  let trees : List WordClashTree :=
+    [.delta [1] [2, 3],
+     .branch (some [13]) (.delta [] [9]) (.delta [] [11]),
+     .seq (.delta [1] [2])
+       (.branch (some [6]) (.delta [] [4]) (.delta [] [5]))]
+  trees.all (fun tree =>
+    let reference := cakeMkBijAux tree
+      { toAllocator := [], fromAllocator := [], nextNode := 0 }
+    let indexed := cakeMkBij tree
+    indexed.toAllocator == reference.toAllocator &&
+      indexed.fromAllocator == reference.fromAllocator &&
+      indexed.nextNode == reference.nextNode)
+
+#guard bijIndexedBuilderParityGuard
+
 
 /-! ## IRC graph construction guards
 

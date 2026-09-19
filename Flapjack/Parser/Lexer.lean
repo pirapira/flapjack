@@ -73,6 +73,9 @@ def locationTag : String := "location"
 
 def initLoc : Posn := .posn 1 1
 
+/-! Cake `loc_row`: a source row starts at column one. -/
+def locRow (row : Nat) : Posn := .posn row 1
+
 def nextLoc (n : Nat) : Posn → Posn
   | .posn row col => .posn row (col + n)
   | other => other

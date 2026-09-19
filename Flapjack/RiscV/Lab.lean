@@ -1492,8 +1492,10 @@ def compileLabProgramLinkedWithPancakeRuntime [NeZero width]
     (labCollectPancakeRuntimeStoredLabels relabelled)
   let final := labEncodeStoredProgram context relabelledLabels 1000 1000
     haltPc relabelled
+  let finalHaltPc := 1000 + labStoredProgramLength final
   let labels := labLabelIndexOf (labCollectPancakeRuntimeStoredLabels final)
-  compileLabProgramLinkedWithStoredLengthsAux context labels 1000 1000 haltPc final
+  compileLabProgramLinkedWithStoredLengthsAux context labels 1000 1000
+    finalHaltPc final
 
 def flattenLabProgramLinked :
     List (Nat × Word width × List (Instruction width)) → List (Instruction width)

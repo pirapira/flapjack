@@ -1235,13 +1235,15 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
                         staticError (.shape ("handler variable " ++ handlerVariable ++
                           " does not match shape of exception " ++ exception ++ "\n"))
                       else
-                        let handlerShaped :=
-                          (shapedBasedFromShape context.structs exceptionShape).getD
-                            handlerInfo.shapedBased
-                        let handlerContext := { context with locals :=
-                          (handlerVariable, { shapedBased := handlerShaped }) :: context.locals }
-                        staticBind (checkProg handlerContext handlerProgram) (fun _ =>
-                          checkCallDestination context function returnShape destination))))
+                        match shapedBasedFromShape context.structs exceptionShape with
+                        | none => staticError (.scope (getImplementationErrorMessage
+                            "static analysis failed to convert in-scope shape"
+                            context.location context.scope))
+                        | some handlerShaped =>
+                            let handlerContext := { context with locals :=
+                              (handlerVariable, { shapedBased := handlerShaped }) :: context.locals }
+                            staticBind (checkProg handlerContext handlerProgram) (fun _ =>
+                              checkCallDestination context function returnShape destination))))
   | .decCall name shape function arguments body =>
       staticBind (checkRedecVar context name) (fun _ =>
         staticBind (checkShape context.structs context.location context.scope shape) (fun _ =>

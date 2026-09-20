@@ -251,6 +251,21 @@ def staticProgGlobalHandlerTrustOracle : Bool :=
 
 #guard staticProgGlobalHandlerTrustOracle
 
+def staticProgInvalidHandlerShapeContext : Context :=
+  { staticProgCallContext with
+    exceptions := [("E", .named "Missing")]
+    locals := ("h", { shapedBased := .named "Missing" [] }) ::
+      staticProgCallContext.locals }
+
+/-! Cake rejects a handler whose already-accepted exception shape cannot be
+    converted to shaped basedness in the current structure context. -/
+#guard
+  staticResultErrorMessage
+      (checkProg staticProgInvalidHandlerShapeContext
+        ((.call (some (none, some ("E", "h", .skip))) "callee" []) : Prog Nat)) ==
+    some ("L: static analysis failed to convert in-scope shape in function f\n" ++
+      "this should never happen. please report to a compiler developer\n")
+
 /-! Cake's accepted local-destination call records the destination's trusted
     shape in the returned variable delta. -/
 def staticProgLocalCallMetadataOracle : Bool :=

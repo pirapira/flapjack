@@ -2591,40 +2591,16 @@ theorem three_word_raise_pc_compile_correct_direct_clocked_normal
       (by
         intro sourceLocals sourceGlobals sourceMemory sourceException
           sourceValue targetState targetException hcontrol
-        rcases hevidence context [] (fun _ _ code => code = 9)
-          sourceLocals sourceGlobals sourceMemory sourceException sourceValue
-          targetState targetException hcontrol with
-          ⟨clockState, expression, compiled, shape, htarget, hbytesInWord,
-            hrel, hsource, hvalid, hcompile, hlength, hcompiled, hnot, hfresh,
-            hexception, hlookupCode, hcode, hdistinct, hsize⟩
-        have hraiseData :=
-          panValuePcRaisedGenericHraise_of_evidence_with_source_locals
-            (α := Nat) context [] [] [] sourceLocals sourceGlobals sourceMemory
-            clockState (fun _ _ => none) (fun _ _ _ _ _ _ => none)
-            (fun _ _ => none) (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none)
-            0 0 8 2 sourceException targetException expression sourceValue
-            compiled shape (panValueFlatWords sourceValue)
-            (fun _ _ code => code = 9)
-            (fun exception => if exception = "E" then some 9 else none)
-            (crepPcFlatGlobalsLookup 8) hlookupCode hrel hsource hvalid hcompile
-            hlength hcompiled hnot hfresh hexception hcode (by
-              intro _
-              have hstored :=
-                crepPcFlatGlobalsLookup_of_stored_flat_words
-                  8 clockState sourceValue hdistinct
-              simpa [hbytesInWord] using hstored) hsize
-        subst targetState
-        have hresult :=
-          panValuePcExceptionResultRelWithContextCode_of_raised_hraise_data
-            [] context (fun _ _ code => code = 9)
-            (fun exception => if exception = "E" then some 9 else none)
-            (crepPcFlatGlobalsLookup 8) sourceLocals sourceGlobals sourceMemory
-            sourceException sourceValue
-            { clockState with globals :=
-                (updateMemoryListAt clockState.globals 0 context.bytesInWord
-                  (panValueFlatWords sourceValue)) }
-            targetException hraiseData
-        exact ⟨hraiseData.1.1, hresult⟩)
+        exact panValuePcClockedRaisedResultRel_of_flat_global_evaluator_evidence
+          (α := Nat) [] context (fun _ _ code => code = 9)
+          (fun exception => if exception = "E" then some 9 else none)
+          (crepPcFlatGlobalsLookup 8) [] []
+          (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+          (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+          (fun _ _ _ _ => none) 0 0 8 2 (by
+            intro targetState sourceValue
+            rfl) hevidenceWithValues sourceLocals sourceGlobals sourceMemory
+          sourceException sourceValue targetState targetException hcontrol)
   refine ⟨hresult.1, ?_, ?_⟩
   · exact hclock
   · simp [panValuePcResultRelWithContextCode, panValuePcResultRel,

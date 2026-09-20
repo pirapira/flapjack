@@ -63,6 +63,25 @@ def checkedWord32Store : Option (CrepMemoryState (RiscV.Word 64)) :=
 #guard checkedByteStore.isSome
 #guard checkedWord32Store.isSome
 
+def checkedExpLocals : Nat → Option (RiscV.Word 64) := fun _ => none
+def checkedExpGlobals : RiscV.Word 64 → Option (RiscV.Word 64) := fun _ => none
+
+def checkedExpressionWordLoad : Option (RiscV.Word 64) :=
+  evalCrepCheckedExpStateFull checkedExpLocals checkedExpGlobals
+    checkedMemoryState 0 100 (.load (.const (BitVec.ofNat 64 8)))
+
+def checkedExpressionByteLoad : Option (RiscV.Word 64) :=
+  evalCrepCheckedExpStateFull checkedExpLocals checkedExpGlobals
+    checkedMemoryState 0 100 (.loadByte (.const (BitVec.ofNat 64 9)))
+
+def checkedExpressionUnalignedLoad32 : Option (RiscV.Word 64) :=
+  evalCrepCheckedExpStateFull checkedExpLocals checkedExpGlobals
+    checkedMemoryState 0 100 (.load32 (.const (BitVec.ofNat 64 9)))
+
+#guard checkedExpressionWordLoad = checkedWordLoad
+#guard checkedExpressionByteLoad = checkedByteLoad
+#guard checkedExpressionUnalignedLoad32 = none
+
 theorem checkedWordLoad_outside_domain :
     checkedWordLoadOutsideDomain = none := by
   simp [checkedWordLoadOutsideDomain, crepMemLoad, panModelReadWord,

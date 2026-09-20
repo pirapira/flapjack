@@ -123,6 +123,12 @@ inductive VarKind where
   | global
   deriving DecidableEq, Repr
 
+/-! Exact source counterpart of Pancake's `varkind_to_str_def`
+    (`pan_passesScript.sml:124-127`). -/
+def varKindToString : VarKind → String
+  | .global => "global"
+  | .local => "local"
+
 inductive Exp (α : Type u) where
   | const (value : α)
   | var (kind : VarKind) (name : VarName)

@@ -34,6 +34,17 @@ structure PanSemEvaluateState (α : Type u) (σ : Type v) where
   contracts : Option PanValueCallContracts := none
   memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none
 
+/-! Source-faithful callers carry the Cake memory operations as a required
+    field.  The legacy state remains optional for executable compatibility;
+    this wrapper is the typed boundary used by exact evaluator proofs. -/
+structure PanSemExactState (α : Type u) (σ : Type v) where
+  legacy : PanSemEvaluateState α σ
+  memoryAccess : PanValueMemoryAccess α
+
+def PanSemExactState.toEvaluateState (state : PanSemExactState α σ) :
+    PanSemEvaluateState α σ :=
+  { state.legacy with memoryAccess := some state.memoryAccess }
+
 mutual
   def panSemExpFuel : Exp α → Nat
     | .const _ | .var _ _ | .baseAddr | .topAddr | .bytesInWord => 1
@@ -162,6 +173,29 @@ theorem panSemEvaluateExact_uses_memory_access
     panSemEvaluateExact context primitive handler memoryAccess state program =
       panSemEvaluate context primitive handler
         { state with memoryAccess := some memoryAccess } program := by
+  rfl
+
+def panSemEvaluateExactState
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (state : PanSemExactState α σ) (program : Prog α) :
+    Option (PanValueFfiClockResult α σ) :=
+  panSemEvaluate context primitive handler state.toEvaluateState program
+
+theorem panSemEvaluateExactState_eq
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (state : PanSemExactState α σ) (program : Prog α) :
+    panSemEvaluateExactState context primitive handler state program =
+      panSemEvaluate context primitive handler state.toEvaluateState program := by
   rfl
 
 end Flapjack

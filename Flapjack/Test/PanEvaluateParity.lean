@@ -98,6 +98,10 @@ def fixedLoadState (clock : Nat) : PanSemEvaluateState (Word 64) Unit :=
 def fixedLoadStateWithoutAccess (clock : Nat) : PanSemEvaluateState (Word 64) Unit :=
   { fixedLoadState clock with memoryAccess := none }
 
+def fixedExactState : PanSemExactState (Word 64) Unit :=
+  { legacy := fixedLoadStateWithoutAccess 4
+    memoryAccess := fixedLoadAccess }
+
 def fixedStoreLocals : VarName → Option (PanValue (Word 64)) :=
   fun name => if name == "kept" then some (.word (BitVec.ofNat 64 55)) else none
 
@@ -130,6 +134,15 @@ example :
     statefulTestContext statefulTestPrimitive statefulTestHandler fixedLoadAccess
     (fixedLoadStateWithoutAccess 4)
     (.return (.load32 (.const (BitVec.ofNat 64 8))) : Prog (Word 64))
+
+example :
+    panSemEvaluateExactState statefulTestContext statefulTestPrimitive
+        statefulTestHandler fixedExactState
+        (.return (.load32 (.const (BitVec.ofNat 64 8))) : Prog (Word 64)) =
+      panSemEvaluateExact statefulTestContext statefulTestPrimitive
+        statefulTestHandler fixedLoadAccess (fixedLoadStateWithoutAccess 4)
+        (.return (.load32 (.const (BitVec.ofNat 64 8))) : Prog (Word 64)) := by
+  rfl
 
 def evaluateFixedByteDomainFailure :=
   panSemEvaluateExact statefulTestContext statefulTestPrimitive statefulTestHandler

@@ -714,6 +714,51 @@ theorem evalWordFunctionWithHandlers_raise [NeZero width]
           pure (.raised state (readRegister state exception))) := by
   simp [evalWordFunctionWithHandlers]
 
+theorem evalWordFunctionWithHandlers_call [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (fuel : Nat) (state : State width) (returns : WordCallReturns (Word width))
+    (target : Option Nat) (arguments : List Nat)
+    (handler : WordCallHandler (Word width)) :
+    evalWordFunctionWithHandlers functions (fuel + 1) state
+        (.call returns target arguments handler) =
+      evalWordCallWithHandlers functions fuel state returns target arguments handler := by
+  simp [evalWordFunctionWithHandlers]
+
+theorem evalWordFunctionWithHandlers_seq_returned [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (fuel : Nat) (state : State width) (firstState : State width)
+    (first second : WordProg (Word width)) (values : List (Word width))
+    (hfirst : evalWordFunctionWithHandlers functions fuel state first =
+      some (.returned firstState values)) :
+    evalWordFunctionWithHandlers functions (fuel + 1) state (.seq first second) =
+      some (.returned firstState values) := by
+  simp [evalWordFunctionWithHandlers, hfirst]
+
+theorem evalWordFunctionWithHandlers_seq_raised [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (fuel : Nat) (state : State width) (firstState : State width)
+    (first second : WordProg (Word width)) (exception : Word width)
+    (hfirst : evalWordFunctionWithHandlers functions fuel state first =
+      some (.raised firstState exception)) :
+    evalWordFunctionWithHandlers functions (fuel + 1) state (.seq first second) =
+      some (.raised firstState exception) := by
+  simp [evalWordFunctionWithHandlers, hfirst]
+
+theorem evalWordFunctionWithHandlers_mustTerminate [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (fuel : Nat) (state : State width) (body : WordProg (Word width)) :
+    evalWordFunctionWithHandlers functions (fuel + 1) state (.mustTerminate body) =
+      evalWordFunctionWithHandlers functions fuel state body := by
+  simp [evalWordFunctionWithHandlers]
+
+example (functions : List (Nat × List Nat × WordProg (Word 64)))
+    (fuel : Nat) (state : State 64) :
+    evalWordFunctionWithHandlers functions (fuel + 1) state
+        (.mustTerminate (.skip : WordProg (Word 64))) =
+      evalWordFunctionWithHandlers functions fuel state (.skip : WordProg (Word 64)) :=
+  evalWordFunctionWithHandlers_mustTerminate functions fuel state
+    (.skip : WordProg (Word 64))
+
 /-!
 An explicit host boundary for Word-level foreign calls.  The compiler keeps
 the four FFI argument registers and the live-register list in the IR; the

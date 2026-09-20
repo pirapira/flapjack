@@ -881,4 +881,182 @@ theorem panValuePcCompileCorrect_compact_store_source_word
   cases htarget
   simpa [panValuePcResultOfControl, panValuePcResultRel] using hrelNew
 
+/-- Symbolic source-word store32: the direct compact instance, lifting the full
+evaluator relation `compile_full_pan_value_store32_source_word_state_relation`
+to the compact evaluators.  The caller supplies the evaluated address/value
+words; source locals/globals/memory and the target state stay visible. -/
+theorem panValuePcCompileCorrect_compact_store32_source_word
+    (address value : SourceWordExp Nat)
+    (hbytesInWord : ∀ (context : CompileContext Nat) (bytesInWord : Nat),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext Nat)
+      (sourceLocals : VarName → Option (PanValue Nat)) (name : VarName)
+      (currentValue : PanValue Nat), sourceLocals name = some currentValue →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot]))
+    (hstoreEvidence : ∀ (context : CompileContext Nat) (structs : StructContext)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+      (sourceMemory : Nat → Option (PanValue Nat)) (state : CrepState Nat),
+      panValueCrepStateRel structs context sourceLocals sourceGlobals sourceMemory state →
+      ∃ addressValue valueValue : Nat,
+        evalPanValueExp structs sourceLocals sourceGlobals sourceMemory 0 0 1
+          address.toExp = some (.word addressValue) ∧
+        evalPanValueExp structs sourceLocals sourceGlobals sourceMemory 0 0 1
+          value.toExp = some (.word valueValue)) :
+    PanValuePcCompileCorrect
+      (panValuePcCompactSourceEvaluator skipNatPrimitive skipNatSourceHandler
+        [] 0 0 1 4)
+      (crepPcCompactTargetEvaluator [] skipNatCrepPrimitive skipNatFfi
+        skipNatSharedMem 0 0 4)
+      skipNatCodeRel skipNatExcpRel skipNatExceptionCode skipNatGlobalsLookup
+      (.store32 address.toExp value.toExp) := by
+  intro context structs sourceInput targetInput exceptionRel sourceExecution
+    targetExecution hsourceStructs htargetStructs hlocalisedCode hlocalised hcode
+    hexcp hstate hnonerror hsource htarget hpostCode hpostExcp
+  obtain ⟨addressValue, valueValue, hsourceAddress, hsourceValue⟩ :=
+    hstoreEvidence context structs sourceInput.locals sourceInput.globals
+      sourceInput.memory targetInput.state hstate
+  have hrelation :=
+    compile_full_pan_value_store32_source_word_state_relation context structs [] []
+      sourceInput.locals sourceInput.globals sourceInput.memory targetInput.state
+      skipNatPrimitive skipNatSourceHandler skipNatCrepPrimitive skipNatFfi
+      skipNatSharedMem 0 0 1 3 address value addressValue valueValue
+      (hbytesInWord context 1) hstate (hlookup context sourceInput.locals)
+      hsourceAddress hsourceValue
+  obtain ⟨hsourceResult, compiledAddress, compiledValue, _hcompileAddress,
+    _hcompileValue, htargetResult, hrelNew⟩ := hrelation
+  simp only [panValuePcCompactSourceEvaluator, hsourceStructs, hsourceResult]
+    at hsource
+  simp only [crepPcCompactTargetEvaluator, htargetResult] at htarget
+  cases hsource
+  cases htarget
+  simpa [panValuePcResultOfControl, panValuePcResultRel] using hrelNew
+
+/-- Symbolic source-word storeByte: the direct compact instance, lifting the full
+evaluator relation `compile_full_pan_value_storeByte_source_word_state_relation`
+to the compact evaluators.  The caller supplies the evaluated address/value
+words; source locals/globals/memory and the target state stay visible. -/
+theorem panValuePcCompileCorrect_compact_storeByte_source_word
+    (address value : SourceWordExp Nat)
+    (hbytesInWord : ∀ (context : CompileContext Nat) (bytesInWord : Nat),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext Nat)
+      (sourceLocals : VarName → Option (PanValue Nat)) (name : VarName)
+      (currentValue : PanValue Nat), sourceLocals name = some currentValue →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot]))
+    (hstoreEvidence : ∀ (context : CompileContext Nat) (structs : StructContext)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+      (sourceMemory : Nat → Option (PanValue Nat)) (state : CrepState Nat),
+      panValueCrepStateRel structs context sourceLocals sourceGlobals sourceMemory state →
+      ∃ addressValue valueValue : Nat,
+        evalPanValueExp structs sourceLocals sourceGlobals sourceMemory 0 0 1
+          address.toExp = some (.word addressValue) ∧
+        evalPanValueExp structs sourceLocals sourceGlobals sourceMemory 0 0 1
+          value.toExp = some (.word valueValue)) :
+    PanValuePcCompileCorrect
+      (panValuePcCompactSourceEvaluator skipNatPrimitive skipNatSourceHandler
+        [] 0 0 1 4)
+      (crepPcCompactTargetEvaluator [] skipNatCrepPrimitive skipNatFfi
+        skipNatSharedMem 0 0 4)
+      skipNatCodeRel skipNatExcpRel skipNatExceptionCode skipNatGlobalsLookup
+      (.storeByte address.toExp value.toExp) := by
+  intro context structs sourceInput targetInput exceptionRel sourceExecution
+    targetExecution hsourceStructs htargetStructs hlocalisedCode hlocalised hcode
+    hexcp hstate hnonerror hsource htarget hpostCode hpostExcp
+  obtain ⟨addressValue, valueValue, hsourceAddress, hsourceValue⟩ :=
+    hstoreEvidence context structs sourceInput.locals sourceInput.globals
+      sourceInput.memory targetInput.state hstate
+  have hrelation :=
+    compile_full_pan_value_storeByte_source_word_state_relation context structs [] []
+      sourceInput.locals sourceInput.globals sourceInput.memory targetInput.state
+      skipNatPrimitive skipNatSourceHandler skipNatCrepPrimitive skipNatFfi
+      skipNatSharedMem 0 0 1 3 address value addressValue valueValue
+      (hbytesInWord context 1) hstate (hlookup context sourceInput.locals)
+      hsourceAddress hsourceValue
+  obtain ⟨hsourceResult, compiledAddress, compiledValue, _hcompileAddress,
+    _hcompileValue, htargetResult, hrelNew⟩ := hrelation
+  simp only [panValuePcCompactSourceEvaluator, hsourceStructs, hsourceResult]
+    at hsource
+  simp only [crepPcCompactTargetEvaluator, htargetResult] at htarget
+  cases hsource
+  cases htarget
+  simpa [panValuePcResultOfControl, panValuePcResultRel] using hrelNew
+
+/-- The flat-global raised-data evaluator evidence required by the deep raise
+wrapper, specialized to the compact Nat setting used by these regressions. -/
+abbrev FlatGlobalRaisedEvidence (bytesInWord baseAddress topAddress : Nat)
+    (exceptionCode : ExceptionId → Option Nat) : Prop :=
+  ∀ (context : CompileContext Nat) (structs : StructContext)
+    (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+    (sourceMemory : Nat → Option (PanValue Nat)) (sourceException : ExceptionId)
+    (sourceValue : PanValue Nat) (targetState : CrepState Nat)
+    (targetException : Nat),
+    panValueCrepControlRel structs context exceptionRel
+      (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+      (.raised targetState targetException) →
+    ∃ (state : CrepState Nat) (expression : Exp Nat)
+      (compiled : List (CrepExp Nat)) (shape : Shape),
+      targetState =
+        { state with globals := updateMemoryListAt state.globals 0 context.bytesInWord (panValueFlatWords sourceValue) } ∧
+      context.bytesInWord = bytesInWord ∧
+      panValueCrepStateRel structs context sourceLocals sourceGlobals
+        sourceMemory state ∧
+      evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+        baseAddress topAddress bytesInWord expression = some sourceValue ∧
+      panValuePayloadWithinLimit structs sourceValue = true ∧
+      compileExp context expression = (compiled, shape) ∧
+      compiled.length = Shape.shapeSize shape ∧
+      evalCrepFullExpsState state baseAddress topAddress compiled =
+        some (panValueFlatWords sourceValue) ∧
+      (∀ name ∈ freshNames context compiled.length 1,
+        ∀ value ∈ compiled, name ∉ crepExpVars value) ∧
+      (∀ name ∈ freshNames context compiled.length 1,
+        state.locals name = none) ∧
+      exceptionRel sourceException sourceValue targetException ∧
+      lookupInfo sourceException context.exceptions = some targetException ∧
+      exceptionCode sourceException = some targetException ∧
+      List.Pairwise (fun left right : Nat => left ≠ right)
+        (storeAddresses (0 : Nat) context.bytesInWord
+          (panValueFlatWords sourceValue).length) ∧
+      Shape.shapeSize (panValueShape structs sourceValue) ≤ 32
+
+/-- The deep raise wrapper is applicable to an arbitrary source-word payload: it
+needs the paired source-word raise bridge premises plus the explicit flat-global
+raised-data evaluator evidence, with source locals/globals/memory and the target
+state still visible. This example instantiates it on a constant word payload. -/
+example
+    (hevidence : FlatGlobalRaisedEvidence 1 0 0 skipNatExceptionCode)
+    (hbytesInWord : ∀ (context : CompileContext Nat) (bytesInWord : Nat),
+      context.bytesInWord = bytesInWord)
+    (hlookupSource : ∀ (context : CompileContext Nat)
+      (sourceLocals : VarName → Option (PanValue Nat))
+      (name : VarName) (value : PanValue Nat),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot]))
+    (hlookupException : ∀ (context : CompileContext Nat),
+      ∃ exceptionCode, lookupInfo "E" context.exceptions = some exceptionCode)
+    (hfresh : ∀ (context : CompileContext Nat) (state : CrepState Nat),
+      state.locals (context.maxVar + 1) = none)
+    (hexception : ∀ (context : CompileContext Nat)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (value exceptionCode : Nat),
+      lookupInfo "E" context.exceptions = some exceptionCode →
+      exceptionRel "E" (.word value) exceptionCode)
+    (hlookup : ∀ (targetState : CrepState Nat) (sourceValue : PanValue Nat),
+      crepPcFlatGlobalsLookup 1 targetState sourceValue =
+        skipNatGlobalsLookup targetState sourceValue) :
+    PanValuePcCompileCorrect
+      (panValuePcCompactSourceEvaluator skipNatPrimitive skipNatSourceHandler
+        [] 0 0 1 4)
+      (crepPcCompactTargetEvaluator [] skipNatCrepPrimitive skipNatFfi
+        skipNatSharedMem 0 0 4)
+      skipNatCodeRel skipNatExcpRel skipNatExceptionCode skipNatGlobalsLookup
+      (.raise "E" (SourceWordExp.const 9).toExp) :=
+  panValuePcCompileCorrect_compact_with_flat_global_evaluator_evidence_raise_source_word
+    "E" (SourceWordExp.const 9) skipNatCodeRel skipNatExcpRel
+    skipNatExceptionCode skipNatGlobalsLookup [] [] skipNatPrimitive
+    skipNatSourceHandler skipNatCrepPrimitive skipNatFfi skipNatSharedMem
+    0 0 1 4 4 hbytesInWord hlookupSource hlookupException hfresh hexception
+    hlookup hevidence
+
 end Flapjack

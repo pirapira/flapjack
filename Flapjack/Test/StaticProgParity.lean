@@ -150,6 +150,22 @@ def staticProgWordLocalContext : Context :=
   { staticProgParityContext with
     locals := ("x", { shapedBased := .word .trusted }) :: staticProgParityContext.locals }
 
+/-! Cake's If merges branch deltas with branch_loc_inf; a local changed in
+    only one branch becomes NotTrusted against the incoming local. -/
+def staticProgIfDeltaOracle : Bool :=
+  match checkProg staticProgWordLocalContext
+      (.ite (.const 1) (.assign .local "x" (.const 0)) .skip) with
+  | (Except.ok result, warnings) =>
+      !result.exitsFunction && !result.exitsLoop && result.last == .otherLast &&
+        result.currentLocation == "L: " && warnings.isEmpty &&
+        result.variableDelta.length == 1 &&
+        match lookupInfo "x" result.variableDelta with
+        | some info => info.shapedBased == .word .notTrusted
+        | none => false
+  | _ => false
+
+#guard staticProgIfDeltaOracle
+
 /-! Cake's While retains the body's local delta, merged against the
     surrounding locals and the empty second branch of its synthetic If. -/
 def staticProgWhileDeltaOracle : Bool :=

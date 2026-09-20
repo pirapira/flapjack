@@ -167,6 +167,34 @@ example
   exact panValueCrepProgramStateCorrect_and_controlSafe_storeByte_source_word
     (SourceWordExp.const 7) (SourceWordExp.const 9) hbytesInWord hlookup
 
+/-! The raise bridge carries evaluator correctness and the boundary
+    control-label obligation together for a raised source word. -/
+example
+    (exception : ExceptionId)
+    (hbytesInWord : ∀ (context : CompileContext Nat) (bytesInWord : Nat),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext Nat)
+      (sourceLocals : VarName → Option (PanValue Nat))
+      (name : VarName) (value : PanValue Nat),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot]))
+    (hlookupException : ∀ (context : CompileContext Nat),
+      ∃ exceptionCode, lookupInfo exception context.exceptions = some exceptionCode)
+    (hfresh : ∀ (context : CompileContext Nat) (state : CrepState Nat),
+      state.locals (context.maxVar + 1) = none)
+    (hexception : ∀ (context : CompileContext Nat)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (value exceptionCode : Nat),
+      lookupInfo exception context.exceptions = some exceptionCode →
+      exceptionRel exception (.word value) exceptionCode) :
+    PanValueCrepProgramStateCorrect
+        (.raise exception (SourceWordExp.const (9 : Nat)).toExp) ∧
+      PanValueCrepProgramStateControlSafe
+        (.raise exception (SourceWordExp.const (9 : Nat)).toExp) := by
+  exact panValueCrepProgramStateCorrect_and_controlSafe_raise_source_word
+    exception (SourceWordExp.const 9) hbytesInWord hlookup hlookupException
+    hfresh hexception
+
 /-! Nonzero labels remain rejected at the `pc_compile_correct` boundary. -/
 example :
     ¬ panValuePcResultRel [] controlContext (fun _ _ _ => True) (fun _ => some 0)

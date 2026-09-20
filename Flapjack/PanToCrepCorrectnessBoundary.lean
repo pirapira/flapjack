@@ -2,6 +2,7 @@ import Flapjack.CrepeProgramInduction
 import Flapjack.CrepeExpressionRelation
 import Flapjack.CrepeProgramGenericStoreStateCorrectness
 import Flapjack.CrepeProgramIteCorrectness
+import Flapjack.CrepeProgramRaiseCorrectness
 import Flapjack.CrepeProgramStoreCorrectness
 import Flapjack.CrepeProgramStoreByteCorrectness
 import Flapjack.CrepeProgramWhileCorrectness
@@ -741,6 +742,39 @@ theorem panValueCrepProgramStateCorrect_and_controlSafe_storeByte_source_word
   · exact panValueCrepProgramStateCorrect_storeByte_source_word address value
       hbytesInWord hlookup
   · exact panValueCrepProgramStateControlSafe_storeByte address.toExp value.toExp
+
+/-! Cake's `pc_compile_correct[Raise]` case (`pan_to_crepProofScript.sml:
+1957-2054`) raises a flattened word value and never exposes loop control.  This
+bridge supplies the missing control half for the existing source-word raise
+state theorem. -/
+theorem panValueCrepProgramStateCorrect_and_controlSafe_raise_source_word
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (exception : ExceptionId) (expression : SourceWordExp α)
+    (hbytesInWord : ∀ (context : CompileContext α) (bytesInWord : α),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext α)
+      (sourceLocals : VarName → Option (PanValue α))
+      (name : VarName) (value : PanValue α),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot]))
+    (hlookupException : ∀ (context : CompileContext α),
+      ∃ exceptionCode, lookupInfo exception context.exceptions = some exceptionCode)
+    (hfresh : ∀ (context : CompileContext α) (state : CrepState α),
+      state.locals (context.maxVar + 1) = none)
+    (hexception : ∀ (context : CompileContext α)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (value exceptionCode : α),
+      lookupInfo exception context.exceptions = some exceptionCode →
+      exceptionRel exception (.word value) exceptionCode) :
+    PanValueCrepProgramStateCorrect (.raise exception expression.toExp) ∧
+      PanValueCrepProgramStateControlSafe (.raise exception expression.toExp) := by
+  constructor
+  · exact panValueCrepProgramStateCorrect_raise_source_word exception expression
+      hbytesInWord hlookup hlookupException hfresh hexception
+  · exact panValueCrepProgramStateControlSafe_raise exception expression.toExp
 
 /-! Cake's `pc_compile_correct[Return]` case (`pan_to_crepProofScript.sml:
 2056-2070`) returns a flattened value and never exposes loop control.  This

@@ -211,6 +211,21 @@ def wordLocValueToInstructions [NeZero width] (destination label : Nat) :
   let destination ← registerOfNat destination
   pure [.addi destination 0 (BitVec.ofNat width label)]
 
+/-! The checked, Cake-faithful LocValue boundary.  Cake's `riscv_ast (Loc r i)`
+    emits `AUIPC`/`ADDI` for the PC-relative offset `i - position`; the
+    standalone selector above has no layout table and so cannot produce this
+    shape.  This boundary takes the current `position` explicitly and mirrors
+    `labLocValueInstructions`, which is what the executable pipeline uses. -/
+def wordLocValueToInstructionsCake [NeZero width] (destination label position : Nat) :
+    Option (List (Instruction width)) := do
+  let destination ← registerOfNat destination
+  let delta : Int := Int.ofNat label - Int.ofNat position
+  let remainder := delta % 4096
+  let low := if remainder >= 2048 then remainder - 4096 else remainder
+  let upper := (delta - low) / 4096
+  pure [.auipc destination (BitVec.ofInt width upper),
+        .addi destination destination (BitVec.ofInt width low)]
+
 def wordArithToInstruction [NeZero width] :
     WordArith (Word width) → Option (Instruction width)
   | .longMul _destinationLeft _destinationRight _sourceLeft _sourceRight =>

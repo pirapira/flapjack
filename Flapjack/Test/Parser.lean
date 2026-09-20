@@ -256,6 +256,20 @@ def varKindToStringCakeParity : Bool :=
 
 #guard varKindToStringCakeParity
 
+/-! Cake `pan_seqs_def` (`pan_passesScript.sml:184-190`) flattens ordinary
+    sequences but preserves a sequence whose first item is an annotation. -/
+def panSeqsCakeParity : Bool :=
+  let ordinary : Prog Int :=
+    .seq (.seq .skip .tick) (.assign .local "x" (.const 7))
+  let annotated : Prog Int :=
+    .seq (.annot "@" "note") (.assign .local "x" (.const 7))
+  sameAst (panSeqs ordinary)
+      ([.skip, .tick, .assign .local "x" (.const 7)] : List (Prog Int)) &&
+    sameAst (panSeqs annotated) ([annotated] : List (Prog Int)) &&
+    sameAst (panSeqs (.tick : Prog Int)) ([.tick] : List (Prog Int))
+
+#guard panSeqsCakeParity
+
 /-! Cake `unhex_alt_def` (`panLexerScript.sml:217`) returns the `UNHEX` value
     for decimal and upper/lowercase hexadecimal digits, and zero otherwise. -/
 def unhexAltCakeParity : Bool :=

@@ -231,6 +231,22 @@ def nestedSeq : List (Prog α) → Prog α
   | [] => .skip
   | statement :: statements => .seq statement (nestedSeq statements)
 
+/-! Source-shaped port of Pancake's `pan_seqs_def`
+    (`pan_passesScript.sml:184-190`).  Annotation-led sequences are kept as
+    one display item; all other sequences are flattened recursively. -/
+def isAnnot : Prog α → Bool
+  | .annot _ _ => true
+  | _ => false
+
+def panSeqs : Prog α → List (Prog α)
+  | .seq first second =>
+      if isAnnot first then [.seq first second]
+      else panSeqs first ++ panSeqs second
+  | program => [program]
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
+
 /-! The exception identifiers syntactically reachable from a Pancake program.
     This follows `panLang$exp_ids_def`; in particular, a call contributes its
     handler identifier and the identifiers reachable in that handler, while

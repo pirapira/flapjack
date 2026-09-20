@@ -139,11 +139,12 @@ def wordDeadCodeAux : WordProg α → List Nat → List (List Nat × List Nat) �
            continuation, and it does not carry the incoming live set across
            a tail call (`word_allocScript.sml:832-834`). -/
         wordDeadAddReads [] arguments)
-  | .alloc destination cutsets, live, _ =>
+  | .alloc destination cutsets, _live, _ =>
       (.alloc destination cutsets,
         /- Cake's `get_live (Alloc ...)` keeps the allocation result live and
-           adds both cut-set components (`word_allocScript.sml:802-803`). -/
-        wordDeadAddReads (destination :: live) (cutsets.1 ++ cutsets.2))
+           adds both cut-set components, but does not retain the incoming
+           live set (`word_allocScript.sml:802-803`). -/
+        wordDeadAddReads [destination] (cutsets.1 ++ cutsets.2))
   | .storeConsts source bitmap codeLength dataLength constants, live, _ =>
       (.storeConsts source bitmap codeLength dataLength constants,
         /- `StoreConsts` consumes source and bitmap but produces the code and
@@ -157,20 +158,23 @@ def wordDeadCodeAux : WordProg α → List Nat → List (List Nat × List Nat) �
           wordDeadAddReads (wordDeadRemoveWrites live [destination]) [source])
       else
         (.skip, live)
-  | .install codeBuffer codeLength dataBuffer dataLength cutsets, live, _ =>
+  | .install codeBuffer codeLength dataBuffer dataLength cutsets, _live, _ =>
       (.install codeBuffer codeLength dataBuffer dataLength cutsets,
-        wordDeadAddReads live
-          ([codeBuffer, codeLength, dataBuffer, dataLength] ++
-            cutsets.1 ++ cutsets.2))
+        /- Cake's `get_live (Install ...)` retains only the four installed
+           values and the two cut-set components, not the incoming live set
+           (`word_allocScript.sml:805-807`). -/
+        wordDeadAddReads [codeBuffer, codeLength, dataBuffer, dataLength]
+          (cutsets.1 ++ cutsets.2))
   | .codeBufferWrite address value, live, _ =>
       (.codeBufferWrite address value, wordDeadAddReads live [address, value])
   | .dataBufferWrite address value, live, _ =>
       (.dataBufferWrite address value, wordDeadAddReads live [address, value])
-  | .ffi function configuration configurationLength array arrayLength liveSet, live, _ =>
+  | .ffi function configuration configurationLength array arrayLength liveSet, _live, _ =>
       (.ffi function configuration configurationLength array arrayLength liveSet,
-        wordDeadAddReads live
-          ([configuration, configurationLength, array, arrayLength] ++
-            liveSet.1 ++ liveSet.2))
+        /- Cake's `get_live (FFI ...)` likewise starts from the four FFI
+           operands and the cut-set components (`word_allocScript.sml:812-815`). -/
+        wordDeadAddReads [configuration, configurationLength, array, arrayLength]
+          (liveSet.1 ++ liveSet.2))
   | .shareInst operator name address, live, _ =>
       match operator with
       | .load | .load8 | .load16 | .load32 =>

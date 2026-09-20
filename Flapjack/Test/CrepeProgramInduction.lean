@@ -1,4 +1,4 @@
-import Flapjack.CrepeProgramInduction
+import Flapjack.PanToCrepCorrectnessBoundary
 
 /-!
 Regression coverage for the assembled stateful source-to-Crep induction.
@@ -47,6 +47,10 @@ example (hraiseState : PanValueCrepProgramStateCorrect arbitraryRaise)
   exact panValueCrepProgramCorrect_statefulCompact arbitraryRaise
     (.raiseWithEvidence "E" (.rStruct [.const 3, .const 5, .const 8])
       hraiseState hraisePlain)
+
+example : PanValueCrepProgramStateControlSafe compactExample := by
+  exact panValueCrepProgramStateControlSafe_statefulCompact compactExample
+    (.seq (.returnConst 7) (.seq .tick (.annot "regression" "stateful")))
 
 /-! The composed return theorem is exercised independently of the inductive
 fragment, with a continuation that would change control if it were run. -/

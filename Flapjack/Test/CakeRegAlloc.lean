@@ -400,6 +400,17 @@ def raOrderCliqueGuard : Bool :=
       (.delta [9, 13] []) [] []).map sortColouring ==
     some (sortColouring [(9, 0), (13, 1)])
 
+/- The canonical `reg_alloc_probe.out` cost-sensitive case exercises
+   `do_spill` with a non-`NONE` source-keyed table and one allocatable colour:
+   Cake selects the high-cost source 5 for colour 0, leaving 1 and 9 in the
+   two spill colours. -/
+def raSpillCostGuard : Bool :=
+  let costs : Flapjack.NatInfoMap Nat := [(1, 1), (5, 100), (9, 1)]
+  (Flapjack.RiscV.CakeRegAlloc.cakeDoRegAlloc .irc
+      (some (cakeSpillCostMap 3 costs)) 1 []
+      (.delta [1, 5, 9] []) [] []).map sortColouring ==
+    some (sortColouring [(1, 1), (5, 0), (9, 2)])
+
 /- `get_prefs_def` uses `MAP ... ++ acc`, preserving each Move's source
    order.  These guards mirror the canonical `get_prefs_probe.out` output. -/
 def prefsMoveOrderGuard : Bool :=
@@ -705,7 +716,7 @@ def parityGuard : Bool :=
     heuSpillGuard && heuFixedDegreeGuard && raDeltaPairGuard &&
     raDeltaFreeGuard && raDeltaTriangleGuard && raStackOnlyGuard &&
     raMovesCoalesceGuard && raMovesSelfFilteredGuard && raForcedEdgeGuard &&
-    raOrderSeqGuard && raOrderCliqueGuard &&
+    raOrderSeqGuard && raOrderCliqueGuard && raSpillCostGuard &&
     prefsMoveOrderGuard && prefsSeqOrderGuard && prefsBranchOrderGuard &&
     prefsCallHandlerOrderGuard && prefsCallReturnOnlyGuard &&
     prefsLoopOrderGuard && prefsControlFlowGuard &&
@@ -741,7 +752,7 @@ def runChecks : IO Bool := do
     graphTagsGuard, graphInitGuard, heuDeltaGuard, heuMovesGuard,
     heuSpillGuard, heuFixedDegreeGuard, raDeltaPairGuard, raDeltaFreeGuard,
     raStackOnlyGuard, raMovesCoalesceGuard, raMovesSelfFilteredGuard,
-    raOrderSeqGuard, raOrderCliqueGuard,
+    raOrderSeqGuard, raOrderCliqueGuard, raSpillCostGuard,
     prefsMoveOrderGuard, prefsSeqOrderGuard, prefsBranchOrderGuard,
     prefsCallHandlerOrderGuard, prefsCallReturnOnlyGuard, prefsLoopOrderGuard,
     prefsControlFlowGuard,
@@ -770,6 +781,7 @@ def runChecks : IO Bool := do
     "reg_alloc delta free", "reg_alloc stack only",
     "reg_alloc moves coalesce", "reg_alloc moves self filtered",
     "reg_alloc sequential pair order", "reg_alloc clique order",
+    "reg_alloc spill-cost selection",
     "get_prefs Move order", "get_prefs Seq order", "get_prefs If order",
     "get_prefs Call handler order", "get_prefs Call return-only order",
     "get_prefs Loop order", "get_prefs control flow",

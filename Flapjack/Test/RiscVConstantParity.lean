@@ -1,5 +1,6 @@
 import Flapjack.RiscV.Backend
 import Flapjack.RiscV.Calls
+import Flapjack.RiscV.CorrectnessBackend
 import Flapjack.RiscV.Encoding
 import Flapjack.RiscV.Lab
 
@@ -123,6 +124,24 @@ example :
           (fun instructions => (instructions, [])) := by
   exact wordFunctionToRiscVWithCallsCake_const _ 4
     (BitVec.ofNat 64 0x1122334455667788)
+
+/-! The checked call-aware selector now has the same compositional theorem
+    shape as the legacy theorem-facing selector.  This exercises the sequence
+    induction while retaining the full Cake list-valued constant boundary. -/
+example :
+    wordFunctionToRiscVWithCallsCake (width := 64)
+        ({ targets := [] } : WordCallContext 64)
+        (.seq
+          (.assign 4 (.const (BitVec.ofNat 64 0x1122334455667788)))
+          (.assign 5 (.var 4))) =
+      (wordProgToRiscVCake (width := 64)
+          (.seq
+            (.assign 4 (.const (BitVec.ofNat 64 0x1122334455667788)))
+            (.assign 5 (.var 4)))).map (fun code => (code, [])) := by
+  exact wordFunctionToRiscVWithCallsCake_agrees_cakeStraightLine _ _
+    (WordRiscVStraightLine.seq _ _
+      (WordRiscVStraightLine.assign _ _)
+      (WordRiscVStraightLine.assign _ _))
 
 /-! `wordExpToInstruction` is not Cake-faithful for constants outside the
 signed 12-bit immediate range: it returns a single `addi` whose immediate the
@@ -687,5 +706,105 @@ theorem uImmediate_ofInt_range_nonneg (upper : Int) (h0 : 0 ≤ upper) (hhi : up
   rw [uImmediate, signExtend_ofNat_ofInt_nonneg upper h0 hhi]
   rw [BitVec.shiftLeft_eq, BitVec.shiftLeft_eq_mul_twoPow, BitVec.ofInt_mul]
   rw [show BitVec.twoPow 64 12 = BitVec.ofInt 64 4096 by decide]
+
+/-! ### Kernel-checked reconstruction for the full signed offset range
+
+The negative-offset (backward reference) case of the reconstruction, so the
+premise of `wordLocValueToInstructionsCake_execution_of_reconstruction` is
+discharged for every signed 20-bit `upper`, i.e. every `delta = label - position`
+with `-(2^19) ≤ delta < 2^19`. (bead flapjack-pxn.1.4) -/
+
+theorem bmod_ofInt_toNat_neg (upper : Int) (hlo : -(2^19) ≤ upper) (hneg : upper < 0) :
+    (((BitVec.ofInt 64 upper).toNat : Int)).bmod (2^20) = upper := by
+  rw [BitVec.toNat_ofInt]
+  have hmod : upper % ((2^64 : Nat) : Int) = upper + ((2^64 : Nat) : Int) := by
+    have h2 : upper % ((2^64 : Nat) : Int) =
+        (upper + ((2^64 : Nat) : Int)) % ((2^64 : Nat) : Int) := by
+      apply Int.emod_eq_emod_iff_emod_sub_eq_zero.mpr
+      have hsub : upper - (upper + ((2^64 : Nat) : Int)) = -(((2^64 : Nat) : Int)) := by
+        omega
+      rw [hsub]; decide
+    rw [h2]
+    exact Int.emod_eq_of_lt (by omega) (by omega)
+  rw [hmod]
+  rw [Int.toNat_of_nonneg (by omega : (0:Int) ≤ upper + ((2^64 : Nat) : Int))]
+  rw [Int.bmod_eq_emod]
+  have hper : (upper + ((2^64 : Nat) : Int)) % ((2^20 : Nat) : Int) =
+      upper + ((2^20 : Nat) : Int) := by
+    rw [Int.add_emod]
+    have hz : ((2^64 : Nat) : Int) % ((2^20 : Nat) : Int) = 0 := by decide
+    rw [hz]
+    have hu : upper % ((2^20 : Nat) : Int) = upper + ((2^20 : Nat) : Int) := by
+      have h2 : upper % ((2^20 : Nat) : Int) =
+          (upper + ((2^20 : Nat) : Int)) % ((2^20 : Nat) : Int) := by
+        apply Int.emod_eq_emod_iff_emod_sub_eq_zero.mpr
+        have hsub : upper - (upper + ((2^20 : Nat) : Int)) = -(((2^20 : Nat) : Int)) := by
+          omega
+        rw [hsub]; decide
+      rw [h2]
+      exact Int.emod_eq_of_lt (by omega) (by omega)
+    rw [hu]
+    rw [Int.emod_eq_of_lt (by omega) (by omega)]
+    omega
+  rw [hper]
+  have hc : (((2^20 : Nat) : Int) + 1) / 2 = 524288 := by decide
+  rw [if_pos (by rw [hc]; omega :
+    (((2^20 : Nat) : Int) + 1) / 2 ≤ upper + ((2^20 : Nat) : Int))]
+  omega
+
+theorem bmod_ofInt_toNat_range (upper : Int) (hlo : -(2^19) ≤ upper) (hhi : upper < 2^19) :
+    (((BitVec.ofInt 64 upper).toNat : Int)).bmod (2^20) = upper := by
+  by_cases h : 0 ≤ upper
+  · exact bmod_ofInt_toNat_nonneg upper h hhi
+  · exact bmod_ofInt_toNat_neg upper hlo (by omega)
+
+theorem signExtend_ofNat_ofInt_range (upper : Int) (hlo : -(2^19) ≤ upper)
+    (hhi : upper < 2^19) :
+    BitVec.signExtend 64 (BitVec.ofNat 20 (BitVec.ofInt 64 upper).toNat) =
+      BitVec.ofInt 64 upper := by
+  apply BitVec.eq_of_toInt_eq
+  rw [BitVec.toInt_signExtend]
+  change ((OfNat.ofNat ((BitVec.ofInt 64 upper).toNat) : BitVec 20).toInt).bmod
+      (2 ^ min 64 20) = (BitVec.ofInt 64 upper).toInt
+  rw [BitVec.toInt_ofNat, BitVec.toInt_ofInt, Nat.min_eq_right (by omega : 20 ≤ 64)]
+  rw [bmod_ofInt_toNat_range upper hlo hhi]
+  have hb1 : -(↑(2^20 : Nat) / 2) ≤ upper := by omega
+  have hb2 : upper < (↑(2^20 : Nat) + 1) / 2 := by omega
+  rw [Int.bmod_eq_of_le (n := upper) (m := (2:Nat)^20) hb1 hb2]
+  have hc1 : -(↑(2^64 : Nat) / 2) ≤ upper := by omega
+  have hc2 : upper < (↑(2^64 : Nat) + 1) / 2 := by omega
+  exact (Int.bmod_eq_of_le (n := upper) (m := (2:Nat)^64) hc1 hc2).symm
+
+theorem uImmediate_ofInt_range (upper : Int) (hlo : -(2^19) ≤ upper) (hhi : upper < 2^19) :
+    uImmediate (BitVec.ofInt 64 upper) = BitVec.ofInt 64 (upper * 4096) := by
+  rw [uImmediate, signExtend_ofNat_ofInt_range upper hlo hhi]
+  rw [BitVec.shiftLeft_eq, BitVec.shiftLeft_eq_mul_twoPow, BitVec.ofInt_mul]
+  rw [show BitVec.twoPow 64 12 = BitVec.ofInt 64 4096 by decide]
+
+/-- Packaged Cake-faithful `LocValue` execution for the non-layout API: with
+`position = 0` and a forward label in `[0, 2^19)`, executing the
+`wordLocValueToInstructionsCake` pair from any state writes `state.pc + label`
+to the destination register. This discharges the reconstruction premise of
+`wordLocValueToInstructionsCake_execution_of_reconstruction` for the position-0
+case. (bead flapjack-pxn.1.4) -/
+theorem wordLocValueToInstructionsCake_execution_zero (state : State 64)
+    (destination label : Nat) (hd : destination < 32) (hne : destination ≠ 0)
+    (hlabel : (label : Int) < 2^19) :
+    readRegister (executeInstructions state
+        ((wordLocValueToInstructionsCake (width := 64) destination label 0).getD []))
+      ⟨destination, hd⟩ = state.pc + BitVec.ofNat 64 label := by
+  apply wordLocValueToInstructionsCake_execution_of_reconstruction state destination label 0 hd hne
+  rw [show (Int.ofNat label - Int.ofNat 0 : Int) = (label : Int) by simp]
+  rw [uImmediate_ofInt_range]
+  · rw [← BitVec.ofInt_add]
+    rw [show ((label : Int) - (if (label : Int) % 4096 ≥ 2048 then (label : Int) % 4096 - 4096 else (label : Int) % 4096)) / 4096 * 4096 +
+          (if (label : Int) % 4096 ≥ 2048 then (label : Int) % 4096 - 4096 else (label : Int) % 4096)
+        = (label : Int) by
+      have hbal := locValue_balanced_reconstruction (label : Int)
+      dsimp only at hbal
+      omega]
+    rw [BitVec.ofInt_natCast]
+  · omega
+  · omega
 
 end Flapjack.RiscV

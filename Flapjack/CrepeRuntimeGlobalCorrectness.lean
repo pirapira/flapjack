@@ -169,6 +169,15 @@ def storeCrepRuntimeTypedGlobalState [BEq α]
   state.withTypedGlobalState key
     (storeCrepTypedGlobal key typedState address value)
 
+theorem loopStateWithTypedGlobalStore_runtime_adapter [BEq α]
+    (state : CrepRuntimeState α σ) (key : α → CrepGlobalAddress)
+    (typedState : CrepGlobalState α) (address value : α) :
+    loopStateWithTypedGlobalStore
+        (loopStateOfCrepRuntimeStateForGlobals state) key typedState address value =
+      loopStateOfCrepRuntimeStateForGlobals
+        (storeCrepRuntimeTypedGlobalState state key typedState address value) := by
+  rfl
+
 theorem crepRuntimeTypedGlobalRelation_store_adapter
     [BEq α]
     (state : CrepRuntimeState α σ) (key : α → CrepGlobalAddress)

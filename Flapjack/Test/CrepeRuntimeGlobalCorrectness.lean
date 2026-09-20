@@ -80,6 +80,16 @@ example :
     runtimeTypedKey runtimeTypedBaseState 4 36 17
 
 example :
+    loopStateWithTypedGlobalStore
+        (loopStateOfCrepRuntimeStateForGlobals globalLoadRuntimeState)
+        runtimeTypedKey runtimeTypedBaseState 4 17 =
+      loopStateOfCrepRuntimeStateForGlobals
+        (storeCrepRuntimeTypedGlobalState globalLoadRuntimeState runtimeTypedKey
+          runtimeTypedBaseState 4 17) := by
+  exact loopStateWithTypedGlobalStore_runtime_adapter globalLoadRuntimeState
+    runtimeTypedKey runtimeTypedBaseState 4 17
+
+example :
     crepRuntimeTypedGlobalRelation runtimeTypedKey
       (storeCrepRuntimeTypedGlobalState globalLoadRuntimeState runtimeTypedKey
         runtimeTypedBaseState 4 17)

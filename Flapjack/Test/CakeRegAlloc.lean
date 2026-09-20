@@ -488,6 +488,15 @@ def sourceSpillCostKeyGuard : Bool :=
   table.get 1 == some 10 && table.get 2 == some 1 && table.get 5 == some 20 &&
     table.get 0 == none
 
+/- Cake's fixed allocator array exposes source-keyed costs outside its dense
+   dimension through the same lookup/update semantics as the HOL sptree.
+   The first source binding also wins, matching lookup_any on the original map. -/
+def sourceSpillCostRoundTripGuard : Bool :=
+  let costs : Flapjack.NatInfoMap Nat := [(1, 10), (1, 11), (5, 20)]
+  let table := cakeSpillCostMap 3 costs
+  table.toNatInfoMap == [(1, 10), (5, 20)] &&
+    table.get 5 == some 20
+
 def sourceMovePhysicalFallbackGuard : Bool :=
   Flapjack.RiscV.CakeRegAlloc.cakeUpdateMove
       (Flapjack.RiscV.CakeAlloc.spDefault []) (7, (2, 9)) == (7, (0, 1))
@@ -619,7 +628,8 @@ def parityGuard : Bool :=
     qsortTiesTwoGuard && qsortTiesThreeGuard && qsortDescGuard &&
     stempBadColourTieGuard && raMovesStempGuard && raMovesStempHiGuard &&
     negFirstMatchProjectionGuard
-    && mapUpdateBoundedGuard && sourceSpillCostKeyGuard && sourceMovePhysicalFallbackGuard
+    && mapUpdateBoundedGuard && sourceSpillCostKeyGuard &&
+    sourceSpillCostRoundTripGuard && sourceMovePhysicalFallbackGuard
     && deadMovePriorityGuard
     && deadProgramPriorityGuard && deadTailCallLiveGuard && deadAllocLiveGuard
     && deadInstallLiveGuard && deadFfiLiveGuard && deadStoreConstsLiveGuard
@@ -675,7 +685,8 @@ def runChecks : IO Bool := do
     "neg_first_match_col projection", "Cake map updates stay bounded",
     "remove_dead keeps move priority", "remove_dead_prog keeps entry priority",
     "mk_bij uses Cake Patricia Set order", "sort_moves tail split oracle",
-    "source-keyed spill costs", "physical source move fallback",
+    "source-keyed spill costs", "source-keyed spill-cost round trip",
+    "physical source move fallback",
     "remove_dead tail-call liveness", "remove_dead Alloc liveness",
     "remove_dead Install liveness", "remove_dead FFI liveness",
     "remove_dead StoreConsts liveness"]

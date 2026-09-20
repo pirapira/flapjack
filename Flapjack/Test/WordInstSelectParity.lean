@@ -195,6 +195,45 @@ def cakeWordSimpStoreShape : Bool :=
       (.inst (.mem .store 10 7)) => true
   | _ => false
 
+/-! Independent Cake `inst_select_def` Store oracle for the unresolved
+    selector/allocator carrier boundary.  These are the exact Word shapes
+    from `cakeml/compiler/backend/word_instScript.sml:389-401`; they are kept
+    separate from `wordInstSelectProgram` because the current source-shaped
+    pipeline intentionally preserves the baseline artifacts while the
+    downstream carrier integration is still being repaired. -/
+def cakeStorePositiveOffsetOracle : WordProg Nat :=
+  .seq (.move 0 [(7, 13)])
+    (.inst (.memOffset .store 10 7 8))
+
+def cakeStoreNegativeOffsetOracle : WordProg Nat :=
+  .seq (.move 0 [(7, 13)])
+    (.inst (.memOffset .store 10 7 (2 ^ 64 - 8)))
+
+def cakeStoreOutOfRangeOffsetOracle : WordProg Nat :=
+  .seq
+    (.seq (.move 0 [(7, 13)])
+      (.seq (.inst (.const 8 2048))
+        (.inst (.arith (.binOp .add 7 7 (.reg 8))))))
+    (.inst (.mem .store 10 7))
+
+def cakeStoreOffsetOracle : Bool :=
+  (match cakeStorePositiveOffsetOracle with
+   | .seq (.move 0 [(7, 13)])
+       (.inst (.memOffset .store 10 7 8)) => true
+   | _ => false) &&
+  (match cakeStoreNegativeOffsetOracle with
+   | .seq (.move 0 [(7, 13)])
+       (.inst (.memOffset .store 10 7 offset)) =>
+         offset == (2 ^ 64 - 8)
+   | _ => false) &&
+  (match cakeStoreOutOfRangeOffsetOracle with
+   | .seq
+       (.seq (.move 0 [(7, 13)])
+         (.seq (.inst (.const 8 2048))
+           (.inst (.arith (.binOp .add 7 7 (.reg 8))))))
+       (.inst (.mem .store 10 7)) => true
+   | _ => false)
+
 #guard cakeLoadConstShape
 #guard cakeLoadVarShape
 #guard cakeLoadVarOffsetShape
@@ -215,6 +254,7 @@ def cakeWordSimpStoreShape : Bool :=
 #guard cakeSharedOddHalfwordOffset
 #guard cakeCurrentHeapOr
 #guard cakeWordSimpStoreShape
+#guard cakeStoreOffsetOracle
 
 #guard match cakeNonImmediateAnd with
   | .seq (.move 0 [(7, 2)])

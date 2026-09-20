@@ -11,14 +11,6 @@ ones that turn out to be bound. A name is local inside the scope of the
 variable, or a function parameter. Ports `localise_exp`, `localise_prog` and
 `localise_topdecs`.
 
-The pass deliberately follows Cake's constructor coverage, including the
-upstream catch-all behavior for the newer byte-memory constructors:
-
-* `localise_exp` has no `Load32` case, so `ld32 x` leaves `x` marked
-  `Global` even where `x` is local, matching Cake.
-* `localise_prog` has no `Store32` case, so neither operand of `st32` is
-  localised, matching Cake.
-
 `collectGlobals` is provided as the direct source-shaped port of
 `collect_globals`; `localiseDecls` still starts from an empty scope.
 -/
@@ -66,6 +58,8 @@ def localiseExp (scope : List VarName) : Exp α → Exp α
   | .nStruct name fields => .nStruct name (localiseFields scope fields)
   | .nField name value => .nField name (localiseExp scope value)
   | .load shape address => .load shape (localiseExp scope address)
+  -- Cake's `localise_exp` has no Load32 clause: preserve the expression
+  -- unchanged through its catch-all case.
   | .load32 address => .load32 address
   | .loadByte address => .loadByte (localiseExp scope address)
   | .op operator args => .op operator (localiseExps scope args)
@@ -108,6 +102,8 @@ def localiseProg (scope : List VarName) : Prog α → Prog α
   | .primitive name operator args =>
       .primitive name operator (localiseExpList scope args)
   | .store address value => .store (localiseExp scope address) (localiseExp scope value)
+  -- Cake's `localise_prog` has no Store32 clause: preserve the program
+  -- unchanged through its catch-all case.
   | .store32 address value => .store32 address value
   | .storeByte address value =>
       .storeByte (localiseExp scope address) (localiseExp scope value)

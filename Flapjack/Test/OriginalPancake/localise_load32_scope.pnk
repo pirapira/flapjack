@@ -1,0 +1,5 @@
+fun 1 f() {
+  var 1 z = 7;
+  var 1 y = ld32 z;
+  return y;
+}

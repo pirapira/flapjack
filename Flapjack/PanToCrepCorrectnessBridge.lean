@@ -5069,6 +5069,161 @@ theorem panValuePcCompileCorrect_of_context_code
     hlocalisedCode hlocalised hcode hexcp hstate hnonerror hsource htarget
     hpostCode hpostExcp
 
+abbrev panValuePcCompileCorrectProgram
+    [BEq α] [OfNat α 0] [Add α]
+    (sourceEvaluate : PanValuePcEvaluator α)
+    (targetEvaluate : CrepPcEvaluator α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (program : Prog α) : Prop :=
+  PanValuePcCompileCorrectWithContextCode sourceEvaluate targetEvaluate
+    codeRel excpRel exceptionCode globalsLookup program
+
+theorem panValuePcCompileCorrectProgram_induction
+    [BEq α] [OfNat α 0] [Add α]
+    (sourceEvaluate : PanValuePcEvaluator α)
+    (targetEvaluate : CrepPcEvaluator α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (hskip : panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate
+      codeRel excpRel exceptionCode globalsLookup (.skip : Prog α))
+    (hdec : ∀ (name : VarName) (shape : Shape) (value : Exp α)
+      (body : Prog α),
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup body →
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup (.dec name shape value body))
+    (hassign : ∀ (kind : VarKind) (name : VarName) (value : Exp α),
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup (.assign kind name value))
+    (hprimitive : ∀ (name : VarName) (operator : PrimOp)
+      (args : List (Exp α)),
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup (.primitive name operator args))
+    (hstore : ∀ (address value : Exp α),
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup (.store address value))
+    (hstore32 : ∀ (address value : Exp α),
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup (.store32 address value))
+    (hstoreByte : ∀ (address value : Exp α),
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup (.storeByte address value))
+    (hseq : ∀ (first second : Prog α),
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup first →
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup second →
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup (.seq first second))
+    (hite : ∀ (condition : Exp α) (thenBranch elseBranch : Prog α),
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup thenBranch →
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup elseBranch →
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup (.ite condition thenBranch elseBranch))
+    (hwhile : ∀ (condition : Exp α) (body : Prog α),
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup body →
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup (.while condition body))
+    (hbreak : panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate
+      codeRel excpRel exceptionCode globalsLookup (.break : Prog α))
+    (hcontinue : panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate
+      codeRel excpRel exceptionCode globalsLookup (.continue : Prog α))
+    (hcall : ∀
+      (info : Option (Option (VarKind × VarName) ×
+        Option (ExceptionId × VarName × Prog α)))
+      (name : FunName) (args : List (Exp α)),
+      (match info with
+       | some (_, some (_, _, handler)) =>
+           panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+             excpRel exceptionCode globalsLookup handler
+       | _ => True) →
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup (.call info name args))
+    (hdecCall : ∀ (name : VarName) (shape : Shape) (function : FunName)
+      (args : List (Exp α)) (body : Prog α),
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup body →
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup
+          (.decCall name shape function args body))
+    (hextCall : ∀ (function : FunName)
+      (configuration configurationLength array arrayLength : Exp α),
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup
+          (.extCall function configuration configurationLength array arrayLength))
+    (hraise : ∀ (exception : ExceptionId) (value : Exp α),
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup (.raise exception value))
+    (hreturn : ∀ (value : Exp α),
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup (.return value))
+    (hshMemLoad : ∀ (size : OpSize) (kind : VarKind) (name : VarName)
+      (address : Exp α),
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup (.shMemLoad size kind name address))
+    (hshMemStore : ∀ (size : OpSize) (address value : Exp α),
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup (.shMemStore size address value))
+    (htick : panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate
+      codeRel excpRel exceptionCode globalsLookup (.tick : Prog α))
+    (hannot : ∀ (tag text : String),
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup (@Prog.annot α tag text)) :
+    ∀ program : Prog α,
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup program := by
+  let rec go : (program : Prog α) →
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup program
+    | .skip => hskip
+    | .dec name shape value body => hdec name shape value body (go body)
+    | .assign kind name value => hassign kind name value
+    | .primitive name operator args => hprimitive name operator args
+    | .store address value => hstore address value
+    | .store32 address value => hstore32 address value
+    | .storeByte address value => hstoreByte address value
+    | .seq first second => hseq first second (go first) (go second)
+    | .ite condition thenBranch elseBranch =>
+        hite condition thenBranch elseBranch (go thenBranch) (go elseBranch)
+    | .while condition body => hwhile condition body (go body)
+    | .break => hbreak
+    | .continue => hcontinue
+    | .call info name args =>
+        hcall info name args (by
+          cases info with
+          | none => exact True.intro
+          | some info =>
+              cases info with
+              | mk destination handlerInfo =>
+                  cases handlerInfo with
+                  | none => exact True.intro
+                  | some handler =>
+                      cases handler with
+                      | mk exception handlerInfo =>
+                          cases handlerInfo with
+                          | mk handlerVar handlerProgram =>
+                              exact go handlerProgram)
+    | .decCall name shape function args body =>
+        hdecCall name shape function args body (go body)
+    | .extCall function configuration configurationLength array arrayLength =>
+        hextCall function configuration configurationLength array arrayLength
+    | .raise exception value => hraise exception value
+    | .return value => hreturn value
+    | .shMemLoad size kind name address => hshMemLoad size kind name address
+    | .shMemStore size address value => hshMemStore size address value
+    | .tick => htick
+    | .annot tag text => hannot tag text
+    termination_by program => sizeOf program
+  exact fun program => go program
+
 /-! A kernel-checked composition theorem for the stateful source-to-Crep
 proof.  `hsourceAdapter` and `htargetAdapter` identify the rich evaluator's
 successful result with the existing stateful evaluators.  Ordinary
@@ -14846,6 +15001,154 @@ theorem panValuePcCompileCorrect_of_stateful_program_with_generic_raised_evidenc
     clockGlobalsLookup
     (.continued clockLocals clockGlobals clockMemory)
     (.continued clockTargetState 0) hcontext.2.2.2
+
+/-! Generalize the top-level clocked Continued bridge over the evaluator's
+    exception-code map and source evaluator addresses.  The zero continue
+    count and clocked state relation remain explicit. -/
+theorem panValuePcCompileCorrect_of_stateful_program_with_generalized_flat_global_evaluator_evidence_and_clocked_continued
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (program : Prog α)
+    (sourceEvaluate : PanValuePcEvaluator α)
+    (targetEvaluate : CrepPcEvaluator α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α)
+    (sourceFuel targetFuel : Nat)
+    (hprogram : PanValueCrepProgramStateCorrect program)
+    (hprogramSafe : PanValueCrepProgramStateControlSafe program)
+    (hsourceAdapter : ∀ (context : CompileContext α)
+      (structs : StructContext) (sourceInput : PanValuePcInput α)
+      (_targetInput : CrepPcInput α)
+      (sourceExecution : PanValuePcExecution α),
+      sourceInput.structs = structs →
+      sourceEvaluate context sourceInput program = some sourceExecution →
+      ∃ sourceResult,
+        evalPanValueProgWithPrimitiveCallsAndFfi
+          primitive sourceHandler structs sourceFunctions
+          baseAddress topAddress bytesInWord sourceFuel
+          sourceInput.locals sourceInput.globals sourceInput.memory program =
+          some sourceResult ∧
+        sourceExecution.result = panValuePcResultOfControl sourceResult)
+    (htargetAdapter : ∀ (context : CompileContext α)
+      (structs : StructContext) (_sourceInput : PanValuePcInput α)
+      (targetInput : CrepPcInput α) (targetExecution : CrepPcExecution α),
+      targetInput.structs = structs →
+      targetEvaluate context targetInput (compileProg context program) =
+        some targetExecution →
+      ∃ crepResult,
+        evalCrepFullProgState functions crepPrimitive ffi sharedMem
+          baseAddress topAddress targetFuel targetInput.state
+          (compileProg context program) = some crepResult ∧
+        crepPcResultOfControl crepResult = some targetExecution.result)
+    (evidence : ∀ (context : CompileContext α) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (evidenceExceptionCode : ExceptionId → Option α)
+      (evidenceBaseAddress evidenceTopAddress evidenceBytesInWord : α)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (sourceValue : PanValue α) (targetState : CrepState α)
+      (targetException : α),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      ∃ (state : CrepState α) (expression : Exp α)
+        (compiled : List (CrepExp α)) (shape : Shape) (values : List α),
+        targetState =
+          { state with globals :=
+              updateMemoryListAt state.globals 0 context.bytesInWord values } ∧
+        context.bytesInWord = evidenceBytesInWord ∧
+        panValueCrepStateRel structs context sourceLocals sourceGlobals
+          sourceMemory state ∧
+        evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+          evidenceBaseAddress evidenceTopAddress evidenceBytesInWord expression =
+          some sourceValue ∧
+        panValuePayloadWithinLimit structs sourceValue = true ∧
+        compileExp context expression = (compiled, shape) ∧
+        compiled.length = Shape.shapeSize shape ∧
+        evalCrepFullExpsState state evidenceBaseAddress evidenceTopAddress compiled =
+          some values ∧
+        (∀ name ∈ freshNames context compiled.length 1,
+          ∀ value ∈ compiled, name ∉ crepExpVars value) ∧
+        (∀ name ∈ freshNames context compiled.length 1,
+          state.locals name = none) ∧
+        exceptionRel sourceException sourceValue targetException ∧
+        lookupInfo sourceException context.exceptions = some targetException ∧
+        evidenceExceptionCode sourceException = some targetException ∧
+        panValueFlatWords sourceValue = values ∧
+        List.Pairwise (fun left right : α => left ≠ right)
+          (storeAddresses (0 : α) context.bytesInWord values.length) ∧
+        Shape.shapeSize (panValueShape structs sourceValue) ≤ 32 ∧
+        crepPcFlatGlobalsLookup evidenceBytesInWord
+            { state with globals :=
+                updateMemoryListAt state.globals 0 context.bytesInWord values }
+            sourceValue =
+          globalsLookup
+            { state with globals :=
+                updateMemoryListAt state.globals 0 context.bytesInWord values }
+            sourceValue)
+    (clockStructs : StructContext) (clockPcContext : CompileContext α)
+    (clockExceptionRel : ExceptionId → PanValue α → α → Prop)
+    (clockExceptionCode : ExceptionId → Option α)
+    (clockGlobalsLookup : CrepState α → PanValue α → Option (List α))
+    (clockContext : PanValueFfiContext α)
+    (clockPrimitive : PanPrimitiveHandler α)
+    (clockHandler : PanValueStatefulFfiHandler α σ)
+    (clockFunctions : List (FunName × List VarName × Prog α))
+    (clockBaseAddress clockTopAddress clockBytesInWord : α)
+    (clockFuel clock : Nat)
+    (clockLocals clockGlobals : VarName → Option (PanValue α))
+    (clockMemory : α → Option (PanValue α)) (clockFfi : FfiState σ)
+    (clockProgram : Prog α) (clockTargetState : CrepState α)
+    (hclock : evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
+      clockFfi clock clockProgram =
+      some (.control (.continued clockLocals clockGlobals clockMemory clockFfi), clock))
+    (hclockState : panValueCrepStateRel clockStructs clockPcContext
+      clockLocals clockGlobals clockMemory clockTargetState) :
+    PanValuePcCompileCorrect sourceEvaluate targetEvaluate codeRel excpRel
+      exceptionCode globalsLookup program ∧
+    evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
+      clockFfi clock clockProgram =
+      some (.control (.continued clockLocals clockGlobals clockMemory clockFfi), clock) ∧
+    (evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
+      clockFfi clock clockProgram).map panValueFfiClockResultProjection =
+      some (.continued clockLocals clockGlobals clockMemory clockFfi clock) ∧
+    panValuePcResultRel clockStructs clockPcContext clockExceptionRel
+      clockExceptionCode clockGlobalsLookup
+      (.continued clockLocals clockGlobals clockMemory)
+      (.continued clockTargetState 0) := by
+  exact panValuePcCompileCorrect_of_stateful_program_with_generic_raised_evidence_and_clocked_continued
+    program sourceEvaluate targetEvaluate codeRel excpRel exceptionCode globalsLookup
+    sourceFunctions functions primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord sourceFuel targetFuel hprogram hprogramSafe
+    hsourceAdapter htargetAdapter
+    (fun context structs exceptionRel sourceLocals sourceGlobals sourceMemory
+        sourceException sourceValue targetState targetException hcontrol =>
+      evidence context structs exceptionRel exceptionCode baseAddress topAddress
+        bytesInWord sourceLocals sourceGlobals sourceMemory sourceException
+        sourceValue targetState targetException hcontrol)
+    clockStructs clockPcContext clockExceptionRel clockExceptionCode
+    clockGlobalsLookup clockContext clockPrimitive clockHandler clockFunctions
+    clockBaseAddress clockTopAddress clockBytesInWord clockFuel clock
+    clockLocals clockGlobals clockMemory clockFfi clockProgram clockTargetState
+    hclock hclockState
 
 theorem panValuePcCompileCorrect_of_stateful_program_with_generic_raised_evidence_and_clocked_normal
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]

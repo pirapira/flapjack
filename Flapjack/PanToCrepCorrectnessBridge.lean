@@ -5358,11 +5358,11 @@ theorem panValueCrepProgramStateControlSafe_return
           | false =>
               simp [evalPanValueProgWithPrimitiveCallsAndFfi, hvalue, hvalid]
                 at hsource
-      | true =>
-          simp [evalPanValueProgWithPrimitiveCallsAndFfi, hvalue, hvalid]
-            at hsource
-          cases hsource
-          simp [panValuePcControlLabelSafe]
+          | true =>
+              simp [evalPanValueProgWithPrimitiveCallsAndFfi, hvalue, hvalid]
+                at hsource
+              cases hsource
+              simp [panValuePcControlLabelSafe]
 /-! A kernel-checked composition theorem for the stateful source-to-Crep
 proof.  `hsourceAdapter` and `htargetAdapter` identify the rich evaluator's
 successful result with the existing stateful evaluators.  Ordinary

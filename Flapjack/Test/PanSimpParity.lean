@@ -200,6 +200,11 @@ def compileProgDeclsParity : Bool :=
 
 #guard compileProgDeclsParity
 
+theorem pan_simp_compile_prog_map :
+    panSimpDecls compileProgDeclsFixture =
+      compileProgDeclsFixture.map panSimpDecl := by
+  exact panSimpDecls_eq_map compileProgDeclsFixture
+
 def parityGuard : Bool :=
   isSkip (smartSeq (.skip : Prog Nat) .skip) &&
     isTick (smartSeq (.skip : Prog Nat) .tick) &&

@@ -736,4 +736,119 @@ example (functions : List (Nat × List Nat × WordProg (Word 64)))
     ffiHandler state (.skip : WordProg (Word 64)) .skip _ (Nat.le_refl _)]
   simp [evalWordProg]
 
+/-! ## Loop-aware evaluator boundary
+
+`evalWordLoopProgWithHandlersAndFfi` is the most complete evaluator: it tracks
+calls, FFI, loops, `break`, `continue`, `raise`, and `return` as
+`WordLoopControlResult`.  On a straight-line program none of those control
+transfers can fire, so every outcome must be `.normal` and the evaluator must
+coincide with the plain program evaluator.  The explicit fuel premise again
+accounts for nested sequences; the `functions` list, the FFI handler, and the
+source state stay visible in the hypotheses.
+-/
+
+theorem option_bind_loop_normal_of_straightLine [NeZero width]
+    (state : State width) (program : WordProg (Word width))
+    (hstraight : WordRiscVStraightLine program) :
+    (evalWordFunction state program).bind
+      (fun p => if p.2.isEmpty then some (WordLoopControlResult.normal p.1)
+                else some (WordLoopControlResult.returned p.1 p.2)) =
+    (evalWordProg state program).map (fun state => WordLoopControlResult.normal state) := by
+  rw [evalWordFunction_wordRiscVStraightLine_eq_evalWordProg state program hstraight]
+  cases evalWordProg state program <;> simp
+
+theorem evalWordLoopProgWithHandlersAndFfi_straightLine_eq_evalWordProg_normal
+    {width : Nat} [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (state : State width) (program : WordProg (Word width))
+    (hstraight : WordRiscVStraightLine program)
+    (fuel : Nat) (hfuel : sizeOf program + 1 ≤ fuel) :
+    evalWordLoopProgWithHandlersAndFfi functions ffiHandler fuel state program =
+      (evalWordProg state program).map (fun state => WordLoopControlResult.normal state) := by
+  induction hstraight generalizing state fuel with
+  | skip =>
+      cases fuel with
+      | zero => omega
+      | succ k =>
+          simp only [evalWordLoopProgWithHandlersAndFfi]
+          exact option_bind_loop_normal_of_straightLine state (.skip : WordProg (Word width)) .skip
+  | move store moves =>
+      cases fuel with
+      | zero => omega
+      | succ k =>
+          simp only [evalWordLoopProgWithHandlersAndFfi]
+          exact option_bind_loop_normal_of_straightLine state (.move store moves) (.move store moves)
+  | assign destination value =>
+      cases fuel with
+      | zero => omega
+      | succ k =>
+          simp only [evalWordLoopProgWithHandlersAndFfi]
+          exact option_bind_loop_normal_of_straightLine state (.assign destination value)
+            (.assign destination value)
+  | inst instruction =>
+      cases fuel with
+      | zero => omega
+      | succ k =>
+          simp only [evalWordLoopProgWithHandlersAndFfi]
+          exact option_bind_loop_normal_of_straightLine state (.inst instruction) (.inst instruction)
+  | store address value =>
+      cases fuel with
+      | zero => omega
+      | succ k =>
+          simp only [evalWordLoopProgWithHandlersAndFfi]
+          exact option_bind_loop_normal_of_straightLine state (.store address value)
+            (.store address value)
+  | locValue destination source =>
+      cases fuel with
+      | zero => omega
+      | succ k =>
+          simp only [evalWordLoopProgWithHandlersAndFfi]
+          exact option_bind_loop_normal_of_straightLine state (.locValue destination source)
+            (.locValue destination source)
+  | tick =>
+      cases fuel with
+      | zero => omega
+      | succ k =>
+          simp only [evalWordLoopProgWithHandlersAndFfi]
+          exact option_bind_loop_normal_of_straightLine state (.tick : WordProg (Word width)) .tick
+  | shareInst operator name address =>
+      cases fuel with
+      | zero => omega
+      | succ k =>
+          simp only [evalWordLoopProgWithHandlersAndFfi]
+          exact option_bind_loop_normal_of_straightLine state (.shareInst operator name address)
+            (.shareInst operator name address)
+  | @seq first second hfirst hsecond ihfirst ihsecond =>
+      cases fuel with
+      | zero => omega
+      | succ k =>
+          have hk : sizeOf first + 1 ≤ k := by
+            have hs : sizeOf (WordProg.seq first second) =
+                1 + sizeOf first + sizeOf second := rfl
+            omega
+          have hk2 : sizeOf second + 1 ≤ k := by
+            have hs : sizeOf (WordProg.seq first second) =
+                1 + sizeOf first + sizeOf second := rfl
+            omega
+          simp only [evalWordLoopProgWithHandlersAndFfi, evalWordProg]
+          rw [ihfirst state k hk]
+          cases heval : evalWordProg state first with
+          | none => simp
+          | some firstState => simp [ihsecond firstState k hk2]
+
+/-- Regression: the loop-aware evaluator returns `.normal` on a straight-line
+skip once the fuel exceeds the program size. -/
+example (functions : List (Nat × List Nat × WordProg (Word 64)))
+    (ffiHandler : FunName → Word 64 → Word 64 → Word 64 → Word 64 →
+      State 64 → Option (State 64)) (state : State 64) :
+    evalWordLoopProgWithHandlersAndFfi functions ffiHandler
+        (sizeOf (.skip : WordProg (Word 64)) + 1) state
+        (.skip : WordProg (Word 64)) =
+      some (WordLoopControlResult.normal state) := by
+  rw [evalWordLoopProgWithHandlersAndFfi_straightLine_eq_evalWordProg_normal functions
+    ffiHandler state (.skip : WordProg (Word 64)) .skip _ (Nat.le_refl _)]
+  simp [evalWordProg]
+
 end Flapjack.RiscV

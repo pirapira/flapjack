@@ -2944,8 +2944,7 @@ theorem compile_full_pan_value_seq_normal_compose_state_full
     [ShiftLeft α] [ShiftRight α] [PanShiftWidth α]
     [ArithmeticShiftRight α] [RotateRightOp α]
     [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (context : CompileContext α)
-    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (context : CompileContext α) (structs : StructContext)
     (functions : List (CompiledFunction α))
     (sourceLocals sourceGlobals : VarName → Option (PanValue α))
     (sourceMemory : α → Option (PanValue α))
@@ -2953,40 +2952,38 @@ theorem compile_full_pan_value_seq_normal_compose_state_full
     (sourceFirstMemory : α → Option (PanValue α))
     (state firstState : CrepState α)
     (primitive : PanPrimitiveHandler α)
-    (sourceHandler : PanValueFfiHandler α)
     (crepPrimitive : CrepPrimitiveHandler α)
     (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
     (baseAddress topAddress bytesInWord : α) (fuel : Nat)
     (first second : Prog α)
-    (sourceResult : PanValueControlResult α)
+    (sourceResult : (VarName → Option (PanValue α)) ×
+      (VarName → Option (PanValue α)) ×
+      (α → Option (PanValue α)) × List (PanValue α))
     (crepResult : CrepControlResult α)
-    (hsourceFirst : evalPanValueProgWithPrimitiveCallsAndFfiFull
-      primitive sourceHandler [] sourceFunctions
-      baseAddress topAddress bytesInWord (fuel + 1)
-      sourceLocals sourceGlobals sourceMemory first =
-      some (.normal sourceFirstLocals sourceFirstGlobals sourceFirstMemory))
+    (hsourceFirst : evalPanValueProgWithPrimitiveFull structs
+      baseAddress topAddress bytesInWord sourceLocals sourceGlobals sourceMemory
+      primitive first =
+      some (sourceFirstLocals, sourceFirstGlobals, sourceFirstMemory, []))
     (hcrepFirst : evalCrepFullProgStateFull functions crepPrimitive ffi sharedMem
       baseAddress topAddress (fuel + 1) state (compileProg context first) =
       some (.normal firstState))
-    (hsourceSecond : evalPanValueProgWithPrimitiveCallsAndFfiFull
-      primitive sourceHandler [] sourceFunctions
-      baseAddress topAddress bytesInWord (fuel + 1)
-      sourceFirstLocals sourceFirstGlobals sourceFirstMemory second =
+    (hsourceSecond : evalPanValueProgWithPrimitiveFull structs
+      baseAddress topAddress bytesInWord sourceFirstLocals sourceFirstGlobals
+      sourceFirstMemory primitive second =
       some sourceResult)
     (hcrepSecond : evalCrepFullProgStateFull functions crepPrimitive ffi sharedMem
       baseAddress topAddress (fuel + 1) firstState (compileProg context second) =
       some crepResult) :
-    evalPanValueProgWithPrimitiveCallsAndFfiFull
-      primitive sourceHandler [] sourceFunctions
-      baseAddress topAddress bytesInWord (fuel + 2)
-      sourceLocals sourceGlobals sourceMemory (.seq first second) =
+    evalPanValueProgWithPrimitiveFull structs
+      baseAddress topAddress bytesInWord sourceLocals sourceGlobals sourceMemory
+      primitive (.seq first second) =
       some sourceResult ∧
     evalCrepFullProgStateFull functions crepPrimitive ffi sharedMem
       baseAddress topAddress (fuel + 2) state
       (compileProg context (.seq first second)) =
       some crepResult := by
   constructor
-  · simp [evalPanValueProgWithPrimitiveCallsAndFfiFull, hsourceFirst,
+  · simp [evalPanValueProgWithPrimitiveFull, hsourceFirst,
       hsourceSecond]
   · simp [compileProg, hcrepFirst, hcrepSecond,
       evalCrepFullProgStateFull]

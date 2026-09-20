@@ -656,4 +656,79 @@ theorem evalPanValueFfiClockProg_seqAssoc_fuel_gap
   constructor <;>
     simp [evalPanValueFfiClockProg, evalPanValueFfiClockLeaf_skip, seqAssoc]
 
+/-- The leaf evaluation of `Return (Var .local name)` reduces to the singleton
+    `.returned` of the local's value, retaining the caller's globals, memory,
+    FFI state and clock.  This is the read-back half of the `pan_simp`
+    tail-call fusion. -/
+theorem evalPanValueFfiClockLeaf_return_var
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (clock : Nat) (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (name : VarName) (value : PanValue α)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (hlookup : locals name = some value)
+    (hwithin : panValuePayloadWithinLimit structs value = true) :
+    evalPanValueFfiClockLeaf context primitive handler structs functions
+        baseAddress topAddress bytesInWord clock locals globals memory ffi
+        (.return (.var .local name)) ma c mh =
+      some (.control (.returned (fun _ => none) globals memory ffi [value]), clock) := by
+  simp [evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps, evalPanValueExpCounted,
+    evalPanValueExp, hlookup, hwithin]
+
+/-- Fusion of the `pan_simp` tail-call pattern.  When a call whose return value
+    is stored in local `returnName` returns normally, the sequence
+    `Call ... ; Return (Var returnName)` evaluates to exactly the `.returned`
+    result of the tail call `Call none ...`: the destination read-back supplies
+    the returned value.  This is the clocked, fuel-aware analogue of Cake's
+    `evaluate_seq_call_ret_eq`, stated with explicit successful-run premises
+    (the call result and the destination lookup) rather than a fixed-fuel
+    equality. -/
+theorem evalPanValueFfiClockProg_seq_call_return_returned
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel clock callClock : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (function : FunName) (arguments : List (Exp α))
+    (returnName returnedName : VarName) (value : PanValue α)
+    (assignedLocals assignedGlobals : VarName → Option (PanValue α))
+    (nextMemory : α → Option (PanValue α)) (nextFfi : FfiState σ)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (hcall : evalPanValueFfiClockCall context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
+      (some (some (.local, returnName), none)) function arguments ma c mh =
+      some (.control (.normal assignedLocals assignedGlobals nextMemory nextFfi),
+        callClock))
+    (hlookup : assignedLocals returnedName = some value)
+    (hwithin : panValuePayloadWithinLimit structs value = true) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (fuel + 2) locals globals memory ffi
+        clock (.seq (.call (some (some (.local, returnName), none)) function arguments)
+          (.return (.var .local returnedName))) ma c mh =
+      some (.control (.returned (fun _ => none) assignedGlobals nextMemory nextFfi
+        [value]), callClock) := by
+  simp only [evalPanValueFfiClockProg]
+  rw [hcall]
+  simp only [Option.bind_eq_bind, Option.bind_some]
+  exact evalPanValueFfiClockLeaf_return_var context primitive handler structs functions
+    baseAddress topAddress bytesInWord callClock assignedLocals assignedGlobals
+    nextMemory nextFfi returnedName value ma c mh hlookup hwithin
+
 end Flapjack

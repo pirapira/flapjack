@@ -194,6 +194,16 @@ def loopProgOracle : Bool :=
   loopProgCoreOracle && loopProgSeqOracle && loopProgMemoryOracle &&
     loopProgControlOracle && loopProgCallOracle
 
+def loopFunOracle : Bool :=
+  sameDisplay
+    (loopFunToDisplay [(7, "callee")]
+      ((7, [1, 2], .assign 3 (.const (BitVec.ofNat 64 7))) :
+        Nat × List Nat × LoopProg (BitVec 64)))
+    (.tuple [.string "func", .string "callee@7",
+      .tuple [.string "1", .string "2"],
+      .tuple [.string "3", .string ":=",
+        .item none "Const" [.string "0x7"]]])
+
 #guard opSizeOracle
 #guard insertEsOracle
 #guard varKindOracle
@@ -202,5 +212,6 @@ def loopProgOracle : Bool :=
 #guard panExpOracle
 #guard loopExpOracle
 #guard loopProgOracle
+#guard loopFunOracle
 
 end Flapjack.Test.DisplayParity

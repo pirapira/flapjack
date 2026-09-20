@@ -377,5 +377,43 @@ theorem evalPanValueProgWithPrimitive_seqAssoc (structs : StructContext)
       | tick => simp [seqAssoc, smartSeqEval]
   exact main (sizeOf program) program rfl pre locals globals memory
 
+/-- CakeML's `eval_seq_assoc_eq_evaluate` / `eval_seq_assoc_not_error`:
+    `seq_assoc Skip` is semantics-preserving, so a successful evaluation of
+    the original program is exactly a successful evaluation of the
+    sequence-associated program. -/
+theorem evalPanValueProgWithPrimitive_seqAssoc_skip (structs : StructContext)
+    (baseAddress topAddress bytesInWord : α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (primitive : PanPrimitiveHandler α)
+    (program : Prog α) (memoryAccess : Option (PanValueMemoryAccess α)) :
+    SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+        memory (seqAssoc (.skip : Prog α) program)
+      = SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+        memory program := by
+  rw [evalPanValueProgWithPrimitive_seqAssoc]
+  exact skip_seqEval structs baseAddress topAddress bytesInWord locals globals memory
+    primitive program memoryAccess
+
+/-- CakeML's `evaluate_seq_no_error_fst`: a successful evaluation of
+    `Seq first second` exposes a successful evaluation of `first`. -/
+theorem evalPanValueProgWithPrimitive_seq_some_fst (structs : StructContext)
+    (baseAddress topAddress bytesInWord : α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (primitive : PanPrimitiveHandler α)
+    (first second : Prog α) (memoryAccess : Option (PanValueMemoryAccess α))
+    (result : (VarName → Option (PanValue α)) × (VarName → Option (PanValue α))
+      × (α → Option (PanValue α)) × List (PanValue α)) :
+    evalPanValueProgWithPrimitive structs baseAddress topAddress bytesInWord
+        locals globals memory primitive (.seq first second)
+        (memoryAccess := memoryAccess) = some result →
+    ∃ firstResult, evalPanValueProgWithPrimitive structs baseAddress topAddress
+        bytesInWord locals globals memory primitive first
+        (memoryAccess := memoryAccess) = some firstResult := by
+  intro h
+  cases hfirst : evalPanValueProgWithPrimitive structs baseAddress topAddress
+      bytesInWord locals globals memory primitive first
+      (memoryAccess := memoryAccess) with
+  | none => simp [evalPanValueProgWithPrimitive, hfirst] at h
+  | some firstResult => exact ⟨firstResult, rfl⟩
 
 end Flapjack

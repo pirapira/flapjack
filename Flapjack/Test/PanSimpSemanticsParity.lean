@@ -79,4 +79,32 @@ example :
     (.while (.const 1) (.tick : Prog Nat)) (.tick : Prog Nat)
     (fun _ => none) (fun _ => none) (fun _ => none)
 
+/-- CakeML `eval_seq_assoc_eq_evaluate`: `seqAssoc Skip` preserves evaluation
+    on a concrete program. -/
+example :
+    evalPanValueProgWithPrimitive ([] : StructContext) (0 : Nat) 0 1
+        (fun _ => none) (fun _ => none) (fun _ => none) (fun _ _ => none)
+        (seqAssoc (.skip : Prog Nat) (.tick : Prog Nat))
+      = evalPanValueProgWithPrimitive ([] : StructContext) (0 : Nat) 0 1
+        (fun _ => none) (fun _ => none) (fun _ => none) (fun _ _ => none)
+        (.tick : Prog Nat) :=
+  evalPanValueProgWithPrimitive_seqAssoc_skip ([] : StructContext) (0 : Nat) 0 1
+    (fun _ => none) (fun _ => none) (fun _ => none) (fun _ _ => none)
+    (.tick : Prog Nat) none
+
+/-- CakeML `evaluate_seq_no_error_fst`: a successful sequence evaluation
+    exposes a successful first-component evaluation. -/
+example
+    (h : evalPanValueProgWithPrimitive ([] : StructContext) (0 : Nat) 0 1
+        (fun _ => none) (fun _ => none) (fun _ => none) (fun _ _ => none)
+        (.seq (.tick : Prog Nat) (.tick : Prog Nat))
+      = some ((fun _ => none), (fun _ => none), (fun _ => none),
+          ([] : List (PanValue Nat)))) :
+    ∃ firstResult, evalPanValueProgWithPrimitive ([] : StructContext) (0 : Nat) 0 1
+        (fun _ => none) (fun _ => none) (fun _ => none) (fun _ _ => none)
+        (.tick : Prog Nat) = some firstResult :=
+  evalPanValueProgWithPrimitive_seq_some_fst ([] : StructContext) (0 : Nat) 0 1
+    (fun _ => none) (fun _ => none) (fun _ => none) (fun _ _ => none)
+    (.tick : Prog Nat) (.tick : Prog Nat) none _ h
+
 end Flapjack

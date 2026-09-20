@@ -469,9 +469,11 @@
     },
     {
       "path": "Flapjack/Test/OriginalPancake/spilled_load_offset.pnk",
-      "source_reference": "Reduced from the stateless guest's g1_double by scripts/parity-reduce.py. Cake's word_to_stack keeps Addr base offset through a load exactly as it does through a store, and the Lab pass recognises the const/arith/memory triple for loads as well as stores, emitting memOffset. wordStackCompileLoadNatNested had no Addr base offset case: it always materialised the whole address into addressScratch, so a load whose destination is spilled came out as addi x23, base, off; ld scratch, 0(x23); sd scratch, slot(x24) against Cake's ld scratch, off(base); sd scratch, slot(x24). Only the spilled destination was affected, because a register destination fuses through the statement-level path; register_load pins that half as exact, spilled_load the half that differed. Guest sections g1_double, swu_g1, ecp_add and g1_add were this shape.",
+      "source_reference": "Reduced from the stateless guest's g1_double by scripts/parity-reduce.py. Cake's word_to_stack carries Addr base offset through a spilled-destination load; Flapjack now uses the same memOffset carrier before allocation, preserving Cake's frame and register decisions. The register_load sibling remains exact as an independent register-destination oracle.",
       "cake_sha256": "136627fe4ef74e45e9421f4ba3a6914b806cac5d269d0cbb8d9983e681c8a4e8",
-      "tracked_beads": []
+      "tracked_beads": [
+        "flapjack-pxn.9.1"
+      ]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/allocator_colour_permutation.pnk",

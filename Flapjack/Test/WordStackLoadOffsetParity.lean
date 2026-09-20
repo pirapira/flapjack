@@ -21,6 +21,18 @@ example :
     wordStackOffset, lookupNatInfo]
 
 example :
+    wordStackCompileLoadNatNested
+      { locations := [(0, .stack 2), (1, .register 5)]
+        scratch := 31
+        addressScratch := 29
+        stackBase := 10 }
+      0 (.op .add [.var 1, .const 8]) =
+      some (.seq (.inst (.memOffset .load 31 5 8))
+        (.stackStore 31 12) : StackProg Nat) := by
+  simp [wordStackCompileLoadNatNested, wordStackLoadOffsetInst,
+    wordStackLocation, wordStackOffset, lookupNatInfo]
+
+example :
     wordStackMemoryOffsetInst
       { locations := [(0, .register 4), (1, .register 5)]
         scratch := 31

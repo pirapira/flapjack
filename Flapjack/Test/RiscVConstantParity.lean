@@ -98,4 +98,23 @@ def cakeConstFunctionExecution : Option (List (Word 64)) :=
 
 #guard cakeConstFunctionExecution = some [BitVec.ofNat 64 0x1234]
 
+/-! Executable obligations for the Cake-faithful multi-instruction boundary.
+
+These deliberately exercise the emitted instruction list, rather than the
+legacy one-instruction expression API. -/
+theorem cakeConst1234_execution_oracle :
+    (wordConstToInstructions (width := 64) 4 (BitVec.ofNat 64 0x1234)).map
+        (fun instructions =>
+          readRegister (executeInstructions (zeroState 64) instructions) 4) =
+      some (BitVec.ofNat 64 0x1234) := by
+  decide
+
+theorem cakeConstWide_execution_oracle :
+    (wordConstToInstructions (width := 64) 4
+        (BitVec.ofNat 64 0x1122334455667788)).map
+        (fun instructions =>
+          readRegister (executeInstructions (zeroState 64) instructions) 4) =
+      some (BitVec.ofNat 64 0x1122334455667788) := by
+  decide
+
 end Flapjack.RiscV

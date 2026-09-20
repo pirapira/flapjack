@@ -91,6 +91,7 @@ def spillOnlyFrameOccupancy : Bool :=
 def cakeWordFrameSlotsOracleExact : Bool :=
   let emptyAllocation : WordSpillState := { locations := [], nextSpill := 0 }
   let oneSpill : WordSpillState := { locations := [], nextSpill := 1 }
+  let fourSpills : WordSpillState := { locations := [], nextSpill := 4 }
   cakeWordFrameSlots emptyAllocation []
       (WordProg.skip : WordProg (RiscV.Word 64)) == 0 &&
     cakeWordFrameSlots emptyAllocation (List.range 22)
@@ -98,7 +99,11 @@ def cakeWordFrameSlotsOracleExact : Bool :=
     cakeWordFrameSlots emptyAllocation (List.range 23)
       (WordProg.skip : WordProg (RiscV.Word 64)) == 1 &&
     cakeWordFrameSlots oneSpill (List.range 23)
-      (WordProg.skip : WordProg (RiscV.Word 64)) == 1
+      (WordProg.skip : WordProg (RiscV.Word 64)) == 1 &&
+    cakeWordFrameSlots fourSpills (List.range 23)
+      (WordProg.skip : WordProg (RiscV.Word 64)) == 4 &&
+    cakeWordFrameSlots emptyAllocation (List.range 25)
+      (WordProg.skip : WordProg (RiscV.Word 64)) == 3
 
 #guard cakeWordFrameSlotsOracleExact
 

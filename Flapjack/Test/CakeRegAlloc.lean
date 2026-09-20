@@ -69,6 +69,17 @@ def callMergeGuard : Bool :=
 def callTailGuard : Bool :=
   cakeGetStackOnly (.call none (some 5) [0, 2] none : WordProg Nat) = []
 
+/- These control-flow cases mirror the Cake `MustTerminate` and `Loop`
+   equations in `word_allocScript.sml:1754-1769`.  The canonical HOL probe
+   returns `[9]` for each wrapper around the forced-stack move chain. -/
+def mustTerminateGuard : Bool :=
+  cakeGetStackOnly
+      (.mustTerminate (.move 1 [(9, 9), (7, 9)] : WordProg Nat)) = [9]
+
+def loopBodyGuard : Bool :=
+  cakeGetStackOnly
+      (.loop [] (.move 1 [(9, 9), (7, 9)]) [] : WordProg Nat) = [9]
+
 /-- A plain assignment is a clash-tree leaf: its written name is removed
     from the temporaries set (`∅`). -/
 def assignLeafGuard : Bool :=
@@ -488,6 +499,15 @@ def sourceSpillCostKeyGuard : Bool :=
   table.get 1 == some 10 && table.get 2 == some 1 && table.get 5 == some 20 &&
     table.get 0 == none
 
+/- Cake's fixed allocator array exposes source-keyed costs outside its dense
+   dimension through the same lookup/update semantics as the HOL sptree.
+   The first source binding also wins, matching lookup_any on the original map. -/
+def sourceSpillCostRoundTripGuard : Bool :=
+  let costs : Flapjack.NatInfoMap Nat := [(1, 10), (1, 11), (5, 20)]
+  let table := cakeSpillCostMap 3 costs
+  table.toNatInfoMap == [(1, 10), (5, 20)] &&
+    table.get 5 == some 20
+
 def sourceMovePhysicalFallbackGuard : Bool :=
   Flapjack.RiscV.CakeRegAlloc.cakeUpdateMove
       (Flapjack.RiscV.CakeAlloc.spDefault []) (7, (2, 9)) == (7, (0, 1))
@@ -605,7 +625,8 @@ def maxVarControlLabelGuard : Bool :=
 
 def parityGuard : Bool :=
   moveChainGuard && moveFromRegGuard && seqMovesGuard && ifMergeGuard &&
-    ifMergeAllocGuard && callMergeGuard && callTailGuard && assignLeafGuard &&
+    ifMergeAllocGuard && callMergeGuard && callTailGuard && mustTerminateGuard &&
+    loopBodyGuard && assignLeafGuard &&
     bijDeltaBasicGuard && bijDeltaDedupGuard && bijSeqOrderGuard &&
     bijBranchOrderGuard && bijBranchLiveGuard && bijSetGuard &&
     bijSetUnsortedGuard && bijCompositeGuard && graphDeltaDisjointGuard &&
@@ -619,7 +640,8 @@ def parityGuard : Bool :=
     qsortTiesTwoGuard && qsortTiesThreeGuard && qsortDescGuard &&
     stempBadColourTieGuard && raMovesStempGuard && raMovesStempHiGuard &&
     negFirstMatchProjectionGuard
-    && mapUpdateBoundedGuard && sourceSpillCostKeyGuard && sourceMovePhysicalFallbackGuard
+    && mapUpdateBoundedGuard && sourceSpillCostKeyGuard &&
+    sourceSpillCostRoundTripGuard && sourceMovePhysicalFallbackGuard
     && deadMovePriorityGuard
     && deadProgramPriorityGuard && deadTailCallLiveGuard && deadAllocLiveGuard
     && deadInstallLiveGuard && deadFfiLiveGuard && deadStoreConstsLiveGuard
@@ -636,7 +658,8 @@ def runChecks : IO Bool := do
      expectations block the implementation-parity build. -/
   let results := [
     moveChainGuard, moveFromRegGuard, seqMovesGuard, ifMergeGuard,
-    ifMergeAllocGuard, callMergeGuard, callTailGuard, assignLeafGuard,
+    ifMergeAllocGuard, callMergeGuard, callTailGuard, mustTerminateGuard,
+    loopBodyGuard, assignLeafGuard,
     bijDeltaBasicGuard, bijDeltaDedupGuard, bijSeqOrderGuard,
     bijBranchOrderGuard, bijBranchLiveGuard, bijSetGuard,
     bijSetUnsortedGuard, bijCompositeGuard, graphDeltaDisjointGuard,
@@ -657,7 +680,8 @@ def runChecks : IO Bool := do
     "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
     "get_stack_only if merge alloc", "get_stack_only call merge",
-    "get_stack_only call tail", "get_stack_only assign leaf",
+    "get_stack_only call tail", "get_stack_only MustTerminate",
+    "get_stack_only Loop body", "get_stack_only assign leaf",
     "mk_bij delta basic", "mk_bij delta dedup", "mk_bij seq order",
     "mk_bij branch order", "mk_bij branch live", "mk_bij set",
     "mk_bij set unsorted", "mk_bij composite", "mk_graph delta disjoint",
@@ -675,7 +699,8 @@ def runChecks : IO Bool := do
     "neg_first_match_col projection", "Cake map updates stay bounded",
     "remove_dead keeps move priority", "remove_dead_prog keeps entry priority",
     "mk_bij uses Cake Patricia Set order", "sort_moves tail split oracle",
-    "source-keyed spill costs", "physical source move fallback",
+    "source-keyed spill costs", "source-keyed spill-cost round trip",
+    "physical source move fallback",
     "remove_dead tail-call liveness", "remove_dead Alloc liveness",
     "remove_dead Install liveness", "remove_dead FFI liveness",
     "remove_dead StoreConsts liveness"]

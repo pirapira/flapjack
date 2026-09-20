@@ -339,4 +339,80 @@ example :
       some (labLocValueInstructions (width := 64) 4 0x123456 0x1000) := by
   decide
 
+/-- Executing the checked Cake-faithful `LocValue` boundary materializes the
+label value, mirroring the constant execution oracles: the `auipc`/`addi`
+pair computes `label - position` relative to the current program counter. -/
+example :
+    readRegister
+        (executeInstructions (zeroState 64)
+          (labLocValueInstructions (width := 64) 4 0x1234 0)) 4 =
+      some (BitVec.ofNat 64 0x1234) := by
+  decide
+
+example :
+    wordProgToRiscVCake (width := 64)
+        (.assign 4 (.const (BitVec.ofNat 64 0x1234))) =
+      some [.lui 4 (BitVec.ofNat 64 1),
+        .addi 4 4 (BitVec.ofNat 64 0x234)] := by
+  simp [wordProgToRiscVCake, wordExpToInstructionsCake, wordConstToInstructions,
+    wordConst32ToInstructions, registerOfNat]
+
+example :
+    wordProgToRiscVCake (width := 64)
+        (.inst (.const 4 (BitVec.ofNat 64 0x1234))) =
+      some [.lui 4 (BitVec.ofNat 64 1),
+        .addi 4 4 (BitVec.ofNat 64 0x234)] := by
+  simp [wordProgToRiscVCake, wordInstToInstructionsCake, wordConstToInstructions,
+    wordConst32ToInstructions, registerOfNat]
+
+example :
+    wordFunctionToRiscVCake (width := 64)
+        (.seq (.assign 4 (.const (BitVec.ofNat 64 0x1234)))
+          (.return 0 [4])) =
+      some ([.lui 4 (BitVec.ofNat 64 1),
+        .addi 4 4 (BitVec.ofNat 64 0x234)], [4]) := by
+  simp [wordFunctionToRiscVCake,
+    wordExpToInstructionsCake, wordConstToInstructions,
+    wordConst32ToInstructions, registerOfNat]
+
+/-! Focused regressions for the same checked boundary across the offset shapes
+that the `auipc`/`addi` split must handle: an aligned upward delta, an aligned
+downward page crossing, a negative delta whose signed 12-bit remainder forces a
+carry, a wide label spread over many pages, and an unaligned program counter.
+The `auipc`/`addi` pair computes `label - position + position`. -/
+example :
+    readRegister
+        (executeInstructions { (zeroState 64) with pc := BitVec.ofNat 64 0 }
+          (labLocValueInstructions (width := 64) 4 0x2000 0)) 4 =
+      BitVec.ofNat 64 0x2000 := by
+  decide
+
+example :
+    readRegister
+        (executeInstructions { (zeroState 64) with pc := BitVec.ofNat 64 0x1000 }
+          (labLocValueInstructions (width := 64) 4 0 0x1000)) 4 =
+      BitVec.ofNat 64 0 := by
+  decide
+
+example :
+    readRegister
+        (executeInstructions { (zeroState 64) with pc := BitVec.ofNat 64 0x1000 }
+          (labLocValueInstructions (width := 64) 4 0x800 0x1000)) 4 =
+      BitVec.ofNat 64 0x800 := by
+  decide
+
+example :
+    readRegister
+        (executeInstructions { (zeroState 64) with pc := BitVec.ofNat 64 0x1000 }
+          (labLocValueInstructions (width := 64) 4 0x123456 0x1000)) 4 =
+      BitVec.ofNat 64 0x123456 := by
+  decide
+
+example :
+    readRegister
+        (executeInstructions { (zeroState 64) with pc := BitVec.ofNat 64 2 }
+          (labLocValueInstructions (width := 64) 4 0x1004 2)) 4 =
+      BitVec.ofNat 64 0x1004 := by
+  decide
+
 end Flapjack.RiscV

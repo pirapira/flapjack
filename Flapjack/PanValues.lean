@@ -2248,6 +2248,32 @@ mutual
     termination_by fuel _ _ _ _ _ => fuel
 end
 
+/-! Target-word calls/FFI boundary without primitive operations.  This is the
+    full counterpart of `evalPanValueProgWithCallsAndFfi`: use the already
+    Cake-faithful primitive/call evaluator with an empty primitive handler so
+    target-word callers do not fall back to the partial `evalPanShift` path. -/
+def evalPanValueProgWithCallsAndFfiFull
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (handler : PanValueFfiHandler α)
+    (baseAddress topAddress bytesInWord : α) :
+    Nat → (VarName → Option (PanValue α)) →
+      (VarName → Option (PanValue α)) → (α → Option (PanValue α)) →
+      Prog α →
+    (memoryAccess : Option (PanValueMemoryAccess α) := none) →
+    (contracts : Option PanValueCallContracts := none) →
+      Option (PanValueControlResult α) := by
+  intro fuel locals globals memory program memoryAccess contracts
+  exact evalPanValueProgWithPrimitiveCallsAndFfiFull
+    (fun _ _ => none) handler structs functions
+    baseAddress topAddress bytesInWord fuel locals globals memory program
+    (memoryAccess := memoryAccess) (contracts := contracts)
+    (memoryHandler := none)
+
 theorem evalPanValueExp_rField_word
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

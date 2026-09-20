@@ -110,9 +110,7 @@ theorem compile_full_pan_value_shMemStore_word_relation
     (htargetRel : panValueCrepStateRel structs context sourceLocals sourceGlobals
       (updatePanValueMemory sourceMemory address (.word value))
       { targetState with
-        locals := restoreCrepLocal targetState.locals
-          (maxCrepExpVar [compiledAddress] + 1)
-          (state.locals (maxCrepExpVar [compiledAddress] + 1)) }) :
+          locals := restoreCrepLocal targetState.locals (maxCrepExpVar [compiledAddress] + 1) (state.locals (maxCrepExpVar [compiledAddress] + 1)) }) :
     evalPanValueProgWithPrimitiveCallsAndFfi
       primitive sourceHandler structs sourceFunctions
       baseAddress topAddress bytesInWord (fuel + 2)

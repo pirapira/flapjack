@@ -866,6 +866,16 @@ def progOk (last : LastStmt) (exitsFunction exitsLoop : Bool) (location : String
     { exitsFunction := exitsFunction, exitsLoop := exitsLoop, last := last,
       variableDelta := [], currentLocation := location }
 
+/-! A local assignment/call/load updates the basedness tracked for the local
+    variable.  CakeML's `sh_bd_from_bd Trusted` preserves the shape tree while
+    making every word trusted; `shapedBasedWithBase` is its executable
+    counterpart. -/
+def localVariableDelta (name : VarName) (info : LocalInfo) : InfoMap LocalInfo :=
+  [(name, { info with shapedBased := shapedBasedWithBase .trusted info.shapedBased })]
+
+def removeLocalVariableDelta (name : VarName) (result : ProgReturn) : ProgReturn :=
+  { result with variableDelta := infoMapDelete name result.variableDelta }
+
 /-! Source-shaped port of CakeML's `get_shape_mismatch_msg_def`
     (`cakeml/pancake/panStaticScript.sml:560-566`). -/
 def getShapeMismatchMessage (description actualShape expectedShape location : String)
@@ -883,14 +893,10 @@ def checkCallDestination [BEq String] (context : Context) (functionName : FunNam
       | .local =>
           staticBind (checkLocalVar context name) (fun localInfo =>
             if shapedBasedHasShape returnShape localInfo.shapedBased then
-              staticOk {
-                exitsFunction := false
-                exitsLoop := false
-                last := .otherLast
-                variableDelta :=
-                  [(name, { shapedBased :=
-                    shapedBasedWithBase .trusted localInfo.shapedBased })]
-                currentLocation := context.location }
+              staticOk
+                { exitsFunction := false, exitsLoop := false, last := .otherLast,
+                  variableDelta := localVariableDelta name localInfo,
+                  currentLocation := context.location }
             else
               staticError (.shape (getShapeMismatchMessage
                 ("result of function call " ++ functionName ++
@@ -910,17 +916,17 @@ def checkCallDestination [BEq String] (context : Context) (functionName : FunNam
                 (Shape.shapeToString globalInfo.shape)
                 context.location context.scope)))
 
-/- Cake's AssignCall rules check the destination scope before resolving the
-   callee (`panStaticScript.sml:1169-1175,1235-1241`).  Keep that preliminary
-   check separate from `checkCallDestination`, which performs the
-   return-shape check after the callee is known. -/
+/-! Cake checks a call destination's scope before resolving the callee.  The
+    later destination check validates its return shape after the callee and
+    arguments have been checked; keeping these phases separate preserves both
+    the diagnostics and their ordering. -/
 def checkCallDestinationScope [BEq String] (context : Context) :
     Option (VarKind × VarName) → StaticResult Unit
   | none => staticOk ()
-  | some (.local, name) =>
-      staticBind (checkLocalVar context name) (fun _ => staticOk ())
-  | some (.global, name) =>
-      staticBind (checkGlobalVar context name) (fun _ => staticOk ())
+  | some (kind, name) =>
+      match kind with
+      | .local => staticBind (checkLocalVar context name) (fun _ => staticOk ())
+      | .global => staticBind (checkGlobalVar context name) (fun _ => staticOk ())
 
 /-! These helpers are the executable counterparts of CakeML's
     `next_is_reachable`, `next_now_unreachable`, and `reached_warnable`.
@@ -1008,8 +1014,8 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
               locals := (name, { shapedBased := result.shapedBased }) :: context.locals
               last := .otherLast }
             staticBind (checkProg nextContext body) (fun bodyResult =>
-              (Except.ok { bodyResult with
-                variableDelta := infoMapDelete name bodyResult.variableDelta }, []))
+              staticOk { bodyResult with
+                variableDelta := infoMapDelete name bodyResult.variableDelta })
           else
             staticError (.shape (getShapeMismatchMessage
               ("expression to initialise local variable " ++ name)
@@ -1024,12 +1030,10 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
         let checkValue : ExpReturn → StaticResult ProgReturn :=
           fun result =>
             if shapedBasedSameShape info.shapedBased result.shapedBased then
-              staticOk {
-                exitsFunction := false
-                exitsLoop := false
-                last := .otherLast
-                variableDelta := [(name, { shapedBased := result.shapedBased })]
-                currentLocation := context.location }
+              staticOk
+                { exitsFunction := false, exitsLoop := false, last := .otherLast,
+                  variableDelta := [(name, { shapedBased := result.shapedBased })],
+                  currentLocation := context.location }
             else
               staticError (.shape (getShapeMismatchMessage
                 ("expression assigned to local variable " ++ name)
@@ -1055,12 +1059,10 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
         let checkResult : ShapedBased → StaticResult ProgReturn :=
           fun resultShape =>
             if shapedBasedSameShape destinationInfo.shapedBased resultShape then
-              staticOk {
-                exitsFunction := false
-                exitsLoop := false
-                last := .otherLast
-                variableDelta := [(name, { shapedBased := resultShape })]
-                currentLocation := context.location }
+              staticOk
+                { exitsFunction := false, exitsLoop := false, last := .otherLast,
+                  variableDelta := [(name, { shapedBased := resultShape })],
+                  currentLocation := context.location }
             else
               staticError (.shape (getShapeMismatchMessage
                 ("result of primitive " ++ primopToString operator ++
@@ -1134,6 +1136,7 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
       | (Except.ok firstInfo, firstWarnings) =>
           let nextReach := nextIsReachable context1.reachable firstInfo.last
           let context2 := { context1 with
+            locals := seqLocInf context1.locals firstInfo.variableDelta
             reachable := nextReach
             last := if nextNowUnreachable context1.reachable nextReach then
               firstInfo.last else context1.last
@@ -1151,8 +1154,8 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
                   exitsFunction := firstInfo.exitsFunction || secondInfo.exitsFunction
                   exitsLoop := firstInfo.exitsLoop || secondInfo.exitsLoop
                   last := seqLastStmt firstInfo.last secondInfo.last
-                  variableDelta :=
-                    seqLocInf firstInfo.variableDelta secondInfo.variableDelta },
+                  variableDelta := seqLocInf firstInfo.variableDelta
+                    secondInfo.variableDelta },
                 warningBeforeFirst ++ firstWarnings ++ warningBeforeSecond ++ secondWarnings)
   | .ite condition thenBranch elseBranch =>
       staticBind (checkExp context condition) (fun conditionResult =>
@@ -1162,14 +1165,12 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
               { context with location := thenResult.currentLocation } elseBranch) (fun elseResult =>
               let doubleRet := thenResult.exitsFunction && elseResult.exitsFunction
               let doubleLoopExit := thenResult.exitsLoop && elseResult.exitsLoop
-              staticOk {
-                exitsFunction := doubleRet
-                exitsLoop := doubleLoopExit
-                last := branchLastStmt doubleRet doubleLoopExit
-                variableDelta :=
-                  branchLocInf context.locals thenResult.variableDelta
-                    elseResult.variableDelta
-                currentLocation := elseResult.currentLocation }))
+              staticOk
+                { exitsFunction := doubleRet, exitsLoop := doubleLoopExit,
+                  last := branchLastStmt doubleRet doubleLoopExit,
+                  variableDelta := branchLocInf context.locals
+                    thenResult.variableDelta elseResult.variableDelta,
+                  currentLocation := elseResult.currentLocation }))
         else
           staticError (.shape (getNonWordMessage "if condition"
             (shapedBasedToString conditionResult.shapedBased)
@@ -1195,91 +1196,80 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
   | .continue =>
       if context.inLoop then progOk .contLast false true context.location
       else staticError (.general (getRogueMessage false context.location context.scope))
-  | .call info function arguments =>
-      let tailScope := match info with
-        | none =>
-            match context.scope with
-            | .funScope caller _ =>
-                staticBind (checkFunctionName context caller) (fun _ => staticOk ())
-            | _ => staticError (.general "tail call found outside function scope")
-        | some _ => staticOk ()
-      let destinationScope := match info with
-        | some (some destination, _) =>
-            checkCallDestinationScope context (some destination)
-        | _ => staticOk ()
-      staticBind tailScope (fun _ =>
-        staticBind destinationScope (fun _ =>
+  | .call none function arguments =>
+      /- Cake's `TailCall` checks the caller scope and declaration before the
+         callee, arguments, and return-shape agreement. -/
+      match context.scope with
+      | .funScope callerName _ =>
+          staticBind (checkFunctionName context callerName) (fun callerInfo =>
+            staticBind (checkFunctionName context function) (fun functionInfo =>
+              staticBind (checkCallArgs context arguments) (fun argumentResult =>
+                if !shapesSame callerInfo.returnShape functionInfo.returnShape then
+                  staticError (.shape (getShapeMismatchMessage
+                    ("result of function call " ++ function ++ " to return")
+                    (Shape.shapeToString functionInfo.returnShape)
+                    (Shape.shapeToString callerInfo.returnShape)
+                    context.location context.scope))
+                else
+                  staticBind (checkFuncArgs context function functionInfo.params
+                      argumentResult.shapedBased) (fun _ =>
+                    progOk .tailLast true false context.location))))
+      | _ =>
+          staticError (.general (getImplementationErrorMessage
+            "tail call found outside function scope"
+            context.location context.scope))
+  | .call (some (destination, handler)) function arguments =>
+      staticBind (checkCallDestinationScope context destination) (fun _ =>
         staticBind (checkFunctionName context function) (fun functionInfo =>
           let returnShape := functionInfo.returnShape
           staticBind (checkCallArgs context arguments) (fun argumentResult =>
-            match info with
-            | none =>
-                -- CakeML `panStaticScript.sml:1335`: a tail call checks the
-                -- return shape before the argument shapes.
-                let checkArguments :=
-                  checkFuncArgs context function functionInfo.params
-                    argumentResult.shapedBased
-                match context.expectedReturn with
-                | some callerReturn =>
-                    if !shapesSame callerReturn functionInfo.returnShape then
-                      staticError (.shape (getShapeMismatchMessage
-                        ("result of function call " ++ function ++ " to return")
-                        (Shape.shapeToString functionInfo.returnShape)
-                        (Shape.shapeToString callerReturn)
-                        context.location context.scope))
-                    else
-                      staticBind checkArguments (fun _ =>
-                        progOk .tailLast true false context.location)
-                | none =>
-                    staticBind checkArguments (fun _ =>
-                      progOk .tailLast true false context.location)
-            | some (destination, handler) =>
-                staticBind (checkFuncArgs context function functionInfo.params
-                    argumentResult.shapedBased) (fun _ =>
-                  match handler with
-              | none =>
-                  checkCallDestination context function returnShape destination
-              | some (exception, handlerVariable, handlerProgram) =>
-                  staticBind (checkCallDestination context function returnShape destination)
-                    (fun destinationResult =>
-                      match destination with
-                      | some (.global, _) =>
-                          -- CakeML `panStaticScript.sml:1256-1264`: a handled call
-                          -- assigning to a global only requires the handler variable
-                          -- to be a local; the exception need not be declared and
-                          -- the handler variable's shape is not checked.
-                          match lookupInfo handlerVariable context.locals with
-                          | none => staticError (.scope
-                              (staticScopeMessage .variable context.location
-                                handlerVariable context.scope))
-                          | some handlerInfo =>
-                              let handlerContext := { context with locals :=
-                                (handlerVariable,
-                                  { handlerInfo with shapedBased :=
-                                      shapedBasedWithBase .trusted handlerInfo.shapedBased }) ::
-                                  context.locals }
-                              staticBind (checkProg handlerContext handlerProgram) (fun _ =>
-                                staticOk destinationResult)
-                      | _ =>
-                          match lookupInfo exception context.exceptions,
-                              lookupInfo handlerVariable context.locals with
-                          | none, _ => staticError (.scope ("exception " ++ exception ++
-                              " is not declared\n"))
-                          | _, none => staticError (.scope
-                              (staticScopeMessage .variable context.location
-                                handlerVariable context.scope))
-                          | some exceptionShape, some handlerInfo =>
-                              if !shapedBasedHasShape exceptionShape handlerInfo.shapedBased then
-                                staticError (.shape ("handler variable " ++ handlerVariable ++
-                                  " does not match shape of exception " ++ exception ++ "\n"))
-                              else
-                                let handlerShaped :=
-                                  (shapedBasedFromShape context.structs exceptionShape).getD
-                                    handlerInfo.shapedBased
-                                let handlerContext := { context with locals :=
-                                  (handlerVariable, { shapedBased := handlerShaped }) :: context.locals }
-                                staticBind (checkProg handlerContext handlerProgram) (fun _ =>
-                                  staticOk destinationResult)))))))
+            staticBind (checkFuncArgs context function functionInfo.params
+                argumentResult.shapedBased) (fun _ =>
+              match handler with
+            | none => checkCallDestination context function returnShape destination
+            | some (exception, handlerVariable, handlerProgram) =>
+                staticBind (checkCallDestination context function returnShape destination)
+                  (fun destinationResult =>
+                    match destination with
+                    | some (.global, _) =>
+                        -- CakeML `panStaticScript.sml:1256-1264`: a handled call
+                        -- assigning to a global only requires the handler variable
+                        -- to be a local; the exception need not be declared and
+                        -- the handler variable's shape is not checked.
+                        match lookupInfo handlerVariable context.locals with
+                        | none => staticError (.scope
+                            (staticScopeMessage .variable context.location
+                              handlerVariable context.scope))
+                        | some handlerInfo =>
+                            let handlerContext := { context with locals :=
+                              (handlerVariable,
+                                { handlerInfo with shapedBased :=
+                                    shapedBasedWithBase .trusted handlerInfo.shapedBased }) ::
+                                context.locals }
+                            staticBind (checkProg handlerContext handlerProgram) (fun _ =>
+                              staticOk destinationResult)
+                    | _ =>
+                        match lookupInfo exception context.exceptions,
+                            lookupInfo handlerVariable context.locals with
+                        | none, _ => staticError (.scope ("exception " ++ exception ++
+                            " is not declared\n"))
+                        | _, none => staticError (.scope
+                            (staticScopeMessage .variable context.location
+                              handlerVariable context.scope))
+                        | some exceptionShape, some handlerInfo =>
+                            if !shapedBasedHasShape exceptionShape handlerInfo.shapedBased then
+                              staticError (.shape ("handler variable " ++ handlerVariable ++
+                                " does not match shape of exception " ++ exception ++ "\n"))
+                            else
+                              match shapedBasedFromShape context.structs exceptionShape with
+                              | none => staticError (.scope (getImplementationErrorMessage
+                                  "static analysis failed to convert in-scope shape"
+                                  context.location context.scope))
+                              | some handlerShaped =>
+                                  let handlerContext := { context with locals :=
+                                    (handlerVariable, { shapedBased := handlerShaped }) :: context.locals }
+                                  staticBind (checkProg handlerContext handlerProgram) (fun _ =>
+                                    staticOk destinationResult))))))
   | .decCall name shape function arguments body =>
       staticBind (checkRedecVar context name) (fun _ =>
         staticBind (checkShape context.structs context.location context.scope shape) (fun _ =>
@@ -1304,9 +1294,7 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
                         locals := (name, { shapedBased := shaped }) :: context.locals
                         last := .otherLast }
                       staticBind (checkProg nextContext body) (fun result =>
-                        (Except.ok { result with
-                          variableDelta := infoMapDelete name result.variableDelta }, []))))))
-      )
+                        staticOk (removeLocalVariableDelta name result)))))))
   | .extCall function configuration configurationLength array arrayLength =>
       staticBind (checkCallArgs context
         [configuration, configurationLength, array, arrayLength])
@@ -1374,9 +1362,7 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
                   exitsFunction := false
                   exitsLoop := false
                   last := .otherLast
-                  variableDelta :=
-                    [(name, { shapedBased :=
-                      shapedBasedWithBase .trusted info.shapedBased })]
+                  variableDelta := localVariableDelta name info
                   currentLocation := context.location }))
       | .global =>
           staticBind (checkGlobalVar context name) (fun info =>
@@ -1480,13 +1466,14 @@ def staticCheckNames [BEq String] (context : StructContext) :
   | [] => staticOk context
   | .name name fields :: declarations =>
       if (lookupInfo name context).isSome then
-        staticError (.scope ("structure is redeclared: " ++ name))
+        staticError (.scope (getRedecMessage .struct "" name .topLevel))
       else
         -- CakeML sorts (`panStaticScript.sml:578-585`) so `first_repeat`
         -- reports the lexicographically smallest duplicate.
         match firstRepeat ((fields.map Prod.fst).mergeSort (· ≤ ·)) with
         | some field =>
-            staticError (.scope ("structure field is redeclared: " ++ field))
+            staticError (.scope ("field " ++ field ++
+              " is redeclared in struct name " ++ name ++ "\n"))
         | none =>
             staticBind (checkIdShapes context "" (.structScope name "") fields) (fun _ =>
               let shapedFields :=
@@ -1520,34 +1507,42 @@ def staticCheckFunctionHeader [BEq String] (context : StructContext)
     (declaration : FunDecl α) : StaticResult Unit :=
   if declaration.name = "main" then
     if !declaration.params.isEmpty then
-      staticError (.general "main function has arguments")
+      staticError (.general "main function has arguments\n")
     else if declaration.exported then
-      staticError (.general "main function is exported")
+      staticError (.general "main function is exported\n")
     else if !shapesSame declaration.returnShape .one then
-      staticError (.shape "main function must return one word")
+      staticError (.shape (getNonWordMessage "main function return"
+        (Shape.shapeToString declaration.returnShape) ""
+        (.funScope declaration.name "")))
     else
       staticOk ()
-  else if (firstRepeat ((declaration.params.map Prod.fst).mergeSort (· ≤ ·))).isSome then
-    staticError (.scope ("function parameter is redeclared: " ++ declaration.name))
-  else if declaration.exported && declaration.params.length > 4 then
-    staticError (.general ("exported function has more than four arguments: " ++
-      declaration.name))
-  else if declaration.exported then
-    staticBind (checkExportParams "" (.funScope declaration.name "") declaration.params)
-      (fun _ =>
-        if !shapesSame declaration.returnShape .one then
-          staticError (.shape "exported function must return one word")
-        else staticOk ())
   else
-    staticBind (checkIdShapes context "" (.funScope declaration.name "")
-      declaration.params) (fun _ =>
-      staticBind (checkShape context ""
-        (.funScope declaration.name " return") declaration.returnShape) (fun _ =>
-        if shapeSizeWithContext context declaration.returnShape > 32 then
-          staticError (.shape ("function " ++ declaration.name ++
-            " returns a shape bigger than 32 words\n"))
-        else
-          staticOk ()))
+    match firstRepeat ((declaration.params.map Prod.fst).mergeSort (· ≤ ·)) with
+    | some parameter =>
+        staticError (.scope ("parameter " ++ parameter ++
+          " is redeclared in function " ++ declaration.name ++ "\n"))
+    | none =>
+      if declaration.exported && declaration.params.length > 4 then
+        staticError (.general ("exported function " ++ declaration.name ++
+          " has more than 4 arguments\n"))
+      else if declaration.exported then
+        staticBind (checkExportParams "" (.funScope declaration.name "") declaration.params)
+          (fun _ =>
+            if !shapesSame declaration.returnShape .one then
+              staticError (.shape (getNonWordMessage "exported function return"
+                (Shape.shapeToString declaration.returnShape) ""
+                (.funScope declaration.name "")))
+            else staticOk ())
+      else
+        staticBind (checkIdShapes context "" (.funScope declaration.name "")
+          declaration.params) (fun _ =>
+          staticBind (checkShape context ""
+            (.funScope declaration.name " return") declaration.returnShape) (fun _ =>
+            if shapeSizeWithContext context declaration.returnShape > 32 then
+              staticError (.shape ("function " ++ declaration.name ++
+                " returns a shape bigger than 32 words\n"))
+            else
+              staticOk ()))
 
 def staticCheckDecls [BEq String] (structs : StructContext) :
     StaticDeclContext → List (Decl α) → StaticResult StaticDeclContext
@@ -1556,7 +1551,7 @@ def staticCheckDecls [BEq String] (structs : StructContext) :
       staticCheckDecls structs context declarations
   | context, .exnDecl exception shape :: declarations =>
       if (lookupInfo exception context.exceptions).isSome then
-        staticError (.scope ("exception is redeclared: " ++ exception))
+        staticError (.scope ("exception " ++ exception ++ " is redeclared\n"))
       else
         /- CakeML only checks for redeclaration here; the exception shape
            itself is not validated (`panStaticScript.sml:1858-1868`). -/
@@ -1564,36 +1559,33 @@ def staticCheckDecls [BEq String] (structs : StructContext) :
           { context with exceptions := (exception, shape) :: context.exceptions }
           declarations
   | context, .decl shape name value :: declarations =>
-      staticBind
-        (if (lookupInfo name context.globals).isSome then
-          staticWarn (.warning ("variable " ++ name ++
-            " is redeclared in top-level declaration\n"))
-         else
-          staticOk ())
-        (fun _ =>
-          staticBind (checkShape structs "" (.declScope name) shape) (fun _ =>
-            let checkingContext : Context :=
-              { locals := []
-                globals := context.globals
-                functions := []
-                expectedReturn := none
-                exceptions := context.exceptions
-                structs := structs
-                scope := .declScope name
-                inLoop := false
-                reachable := .isReach
-                last := .invisLast
-                location := "" }
-            staticBind (checkExp checkingContext value) (fun result =>
-              if shapedBasedMatchesShape structs shape result.shapedBased then
-                staticCheckDecls structs
-                  { context with globals := (name, { shape := shape }) :: context.globals }
-                  declarations
-              else
-                staticError (.shape ("global initializer has the wrong shape: " ++ name)))))
+      let checkingContext : Context :=
+        { locals := []
+          globals := context.globals
+          functions := []
+          expectedReturn := none
+          exceptions := context.exceptions
+          structs := structs
+          scope := .declScope name
+          inLoop := false
+          reachable := .isReach
+          last := .invisLast
+          location := "" }
+      staticBind (checkRedecVar { checkingContext with scope := .topLevel } name) (fun _ =>
+        staticBind (checkShape structs "" (.declScope name) shape) (fun _ =>
+          staticBind (checkExp checkingContext value) (fun result =>
+            if shapedBasedMatchesShape structs shape result.shapedBased then
+              staticCheckDecls structs
+                { context with globals := (name, { shape := shape }) :: context.globals }
+                declarations
+            else
+              staticError (.shape (getShapeMismatchMessage
+                ("expression to initialise global variable " ++ name)
+                (shapedBasedToString result.shapedBased)
+                (Shape.shapeToString shape) "" (.declScope name))))))
   | context, .function declaration :: declarations =>
       if (lookupInfo declaration.name context.functions).isSome then
-        staticError (.scope ("function is redeclared: " ++ declaration.name))
+        staticError (.scope (getRedecMessage .function "" declaration.name .topLevel))
       else
         staticBind (staticCheckFunctionHeader structs declaration) (fun _ =>
           staticCheckDecls structs

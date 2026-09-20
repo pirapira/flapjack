@@ -297,6 +297,48 @@ theorem evalPanValueFfiClockCall_raised_no_handler
         finalClock) := by
   simp [evalPanValueFfiClockCall, hargs, hlookup, hbind, hclock, hbody, hwithin]
 
+/-! Cake's `pc_compile_correct[Call_Ret_TimeOut]` propagates a callee
+timeout through a direct call.  The caller-local environment is cleared, but
+the callee's globals, memory, FFI state, and remaining clock are retained. -/
+theorem evalPanValueFfiClockCall_timeout
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel clock finalClock : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (values : List (PanValue α)) (parameters : List VarName)
+    (calleeLocals bodyLocals finalGlobals : VarName → Option (PanValue α))
+    (finalMemory : α → Option (PanValue α)) (finalFfi : FfiState σ)
+    (body : Prog α) (function : FunName) (arguments : List (Exp α))
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (contracts : Option PanValueCallContracts := none)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none)
+    (hargs : evalPanValueExps structs locals globals memory
+      baseAddress topAddress bytesInWord arguments
+      (memoryAccess := memoryAccess) = some values)
+    (hlookup : lookupPanFunction function functions = some (parameters, body))
+    (hbind : bindPanValueParameters parameters values = some calleeLocals)
+    (hparameters : panValueParametersValid structs contracts function values = true)
+    (hclock : clock ≠ 0)
+    (hbody : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel calleeLocals globals memory ffi (clock - 1)
+      body (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) =
+      some (.timeout bodyLocals finalGlobals finalMemory finalFfi, finalClock)) :
+    evalPanValueFfiClockCall context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+      none function arguments (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) =
+      some (.timeout (fun _ => none) finalGlobals finalMemory finalFfi, finalClock) := by
+  simp [evalPanValueFfiClockCall, hargs, hlookup, hbind, hparameters, hclock, hbody]
+
 /-! A declaration call propagates the callee's terminal outcomes.  Cake's
     `panSem` does not turn a callee timeout or FinalFFI into an evaluator
     failure merely because the call has a local continuation. -/
@@ -456,6 +498,78 @@ theorem evalPanValueFfiClockProg_call_finalFfi
       some (.control (.finalFfi nextLocals nextGlobals nextMemory nextFfi event),
         callClock) := by
   simp [evalPanValueFfiClockProg, hcall]
+
+/-! This is the direct `Call_Ret_TimeOut` branch of Cake's
+    `pc_compile_correct`: a direct call propagates the callee timeout without
+    introducing a declaration continuation. -/
+theorem evalPanValueFfiClockProg_call_timeout
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel clock callClock : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (info : Option (Option (VarKind × VarName) ×
+      Option (ExceptionId × VarName × Prog α)))
+    (function : FunName) (arguments : List (Exp α))
+    (nextLocals nextGlobals : VarName → Option (PanValue α))
+    (nextMemory : α → Option (PanValue α)) (nextFfi : FfiState σ)
+    (hcall : evalPanValueFfiClockCall context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
+      info function arguments =
+      some (.timeout nextLocals nextGlobals nextMemory nextFfi, callClock)) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+      (.call info function arguments) =
+      some (.timeout nextLocals nextGlobals nextMemory nextFfi, callClock) := by
+  simp [evalPanValueFfiClockProg, hcall]
+
+/-! This is the direct `ExtCall` branch of Cake's `pc_compile_correct`.
+    The source leaf evaluator's terminal FFI event crosses the clocked program
+    boundary unchanged, with only the remaining clock attached. -/
+theorem evalPanValueFfiClockProg_extCall_finalFfi
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (_fuel clock : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (function : FunName) (configuration configurationLength array arrayLength : Exp α)
+    (finalLocals finalGlobals : VarName → Option (PanValue α))
+    (finalMemory : α → Option (PanValue α)) (finalFfi : FfiState σ)
+    (event : FfiFinalEvent) (steps : Nat)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (contracts : Option PanValueCallContracts := none)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none)
+    (hsteps : evalPanValueFfiProgSteps context primitive handler structs functions
+      baseAddress topAddress bytesInWord 1 locals globals memory ffi
+      (.extCall function configuration configurationLength array arrayLength)
+      (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) =
+      some (.finalFfi finalLocals finalGlobals finalMemory finalFfi event, steps)) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (_fuel + 1) locals globals memory ffi clock
+      (.extCall function configuration configurationLength array arrayLength)
+      (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) =
+      some (.control (.finalFfi finalLocals finalGlobals finalMemory finalFfi event), clock) := by
+  simpa [evalPanValueFfiClockProg] using
+    (evalPanValueFfiClockLeaf_finalFfi context primitive handler structs functions
+      baseAddress topAddress bytesInWord clock locals globals memory ffi
+      (.extCall function configuration configurationLength array arrayLength)
+      finalLocals finalGlobals finalMemory finalFfi event steps
+      (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) hsteps)
 
 /-! This is the standalone `Call_Ret_Return` branch of Cake's
     `pc_compile_correct`: with no destination or handler, a valid returned

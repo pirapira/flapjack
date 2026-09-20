@@ -27,7 +27,7 @@ namespace Flapjack
 open RiscV
 
 example : RiscV.Architecture.width .rv32i = 32 := by
-  rfl
+  decide +kernel
 
 example :
     (evalPanValueProgWithPrimitive (α := RiscV.Word 64) [] 0 100 8
@@ -125,11 +125,6 @@ def checkerArgContext : Context :=
   { checkerContext with
     functions := [("f", { returnShape := .one, params := [("arg", .one)] })] }
 
-def checkerArgFunctionContext : Context :=
-  { checkerArgContext with
-    expectedReturn := some .one
-    scope := .funScope "f" "" }
-
 def checkerPrimitiveContext : Context :=
   { checkerContext with
     locals := ("carry", { shapedBased := .struct [.word .notBased, .word .notBased] }) ::
@@ -172,6 +167,11 @@ example :
       (checkExp (α := Nat) checkerContext (Exp.op .add [.const 1])) ==
     some "operation Add requires at least 2 operands, 1 provided in top-level declaration\n"
 
+#guard
+  staticResultErrorMessage (checkProg (α := Nat) checkerContext
+    (.return (.const 7))) ==
+    some "return found outside function scope in top-level declaration\nthis should never happen. please report to a compiler developer\n"
+
 example :
     checkProg (α := Nat) checkerContext (.return (.const 7)) =
       staticError (.general (getImplementationErrorMessage
@@ -181,8 +181,10 @@ example :
 example :
     checkProg (α := Nat) checkerContext
       (.assign .local "x" (.const 7)) =
-      staticOk (ProgReturn.mk false false .otherLast
-        [("x", { shapedBased := .word .notBased })] "") := by
+      staticOk
+        { exitsFunction := false, exitsLoop := false, last := .otherLast,
+          variableDelta := [("x", { shapedBased := .word .notBased })],
+          currentLocation := "" } := by
   simp [checkProg, checkExp, staticOk, staticBind, checkerContext, lookupInfo,
     checkLocalVar,
     shapedBasedSameShape]
@@ -214,24 +216,30 @@ example :
   decide +kernel
 
 example :
+    staticResultOk (checkProg (α := Nat) checkerContext
+      (.dec "y" .one (.const 7) (.return (.var .local "y")))) = false := by
+  simp [staticResultOk, checkProg, checkExp, staticError, staticOk, staticBind,
+    checkRedecVar, checkShape, checkerContext, lookupInfo, checkLocalVar,
+    shapedBasedHasShape]
+
+example :
     staticResultOk (checkProg (α := Nat) checkerFunctionContext
       (.dec "y" .one (.const 7) (.return (.var .local "y")))) = true := by
   decide +kernel
 
-#guard
-  match checkProg (α := Nat) checkerFunctionContext (.call none "f" []) with
-  | (Except.ok result, warnings) =>
-      result.exitsFunction && !result.exitsLoop && result.last == .tailLast &&
-        result.variableDelta.isEmpty && result.currentLocation == "" &&
-        warnings.isEmpty
-  | _ => false
+example :
+    checkProg (α := Nat) checkerCallContext (.call none "f" []) =
+      staticError (.general (getImplementationErrorMessage
+        "tail call found outside function scope" "" Scope.topLevel)) := by
+  simp [checkProg, checkerCallContext, checkerContext, staticError,
+    getImplementationErrorMessage]
 
 example :
     checkProg (α := Nat) checkerCallContext
       (.call (some (none, none)) "f" []) =
       progOk .otherLast false false "" := by
   simp [checkProg, checkProg.checkCallArgs, checkCallDestination,
-    staticOk, staticBind,
+    checkCallDestinationScope, staticOk, staticBind,
     checkFunctionName, checkFuncArgs, checkerCallContext, checkerContext,
     lookupInfo]
 
@@ -242,18 +250,17 @@ example :
 
 example :
   staticResultErrorMessage
-      (checkProg (α := Nat) checkerFunctionContext (.call none "missing" [])) =
-    some "function missing is not in scope in function f\n" := by
+      (checkProg (α := Nat) checkerContext (.call none "missing" [])) =
+    some "tail call found outside function scope in top-level declaration\nthis should never happen. please report to a compiler developer\n" := by
   decide +kernel
 
-#guard
-  match checkProg (α := Nat) checkerArgFunctionContext
-      (.call none "f" [.const 1]) with
-  | (Except.ok result, warnings) =>
-      result.exitsFunction && !result.exitsLoop && result.last == .tailLast &&
-        result.variableDelta.isEmpty && result.currentLocation == "" &&
-        warnings.isEmpty
-  | _ => false
+example :
+    checkProg (α := Nat) checkerArgContext
+      (.call none "f" [.const 1]) =
+      staticError (.general (getImplementationErrorMessage
+        "tail call found outside function scope" "" Scope.topLevel)) := by
+  simp [checkProg, checkerArgContext, checkerContext, staticError,
+    getImplementationErrorMessage]
 
 example :
     staticResultOk (checkProg (α := Nat) checkerPrimitiveContext

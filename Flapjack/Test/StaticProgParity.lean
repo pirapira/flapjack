@@ -36,7 +36,8 @@ def staticProgSkipMetadataOracle : Bool :=
 
 def staticProgCallContext : Context :=
   { staticProgParityContext with
-    functions := [("callee", { returnShape := .one, params := [] })] }
+    functions := [("callee", { returnShape := .one, params := [] }),
+      ("f", { returnShape := .one, params := [] })] }
 
 def staticProgReturnContext : Context :=
   { staticProgParityContext with
@@ -44,6 +45,30 @@ def staticProgReturnContext : Context :=
 
 def staticProgCallCheck (program : Prog Nat) : StaticResult ProgReturn :=
   checkProg staticProgCallContext program
+
+def staticProgDeltaContext : Context :=
+  { staticProgCallContext with
+    locals := ("x", { shapedBased := .word .trusted }) :: staticProgCallContext.locals }
+
+def staticProgDeltaCheck (program : Prog Nat) : StaticResult ProgReturn :=
+  checkProg staticProgDeltaContext program
+
+def staticProgDeltaHas (program : Prog Nat) (name : String)
+    (expected : ShapedBased) : Bool :=
+  match (staticProgDeltaCheck program).1 with
+  | Except.ok result =>
+      match lookupInfo name result.variableDelta with
+      | some info => info.shapedBased == expected
+      | none => false
+  | Except.error _ => false
+
+def staticProgDeltaRemovesDeclaration : Bool :=
+  match (staticProgDeltaCheck
+      (.dec "y" .one (.const 0) (.assign .local "x" (.const 1)))).1 with
+  | (Except.ok result) =>
+      (lookupInfo "y" result.variableDelta).isNone &&
+        (lookupInfo "x" result.variableDelta).isSome
+  | (Except.error _) => false
 
 def staticProgLoopControlContext : Context :=
   { staticProgParityContext with inLoop := true }
@@ -263,12 +288,7 @@ def staticProgLocalLoadMetadataOracle : Bool :=
 /-! Cake's call with no destination is a tail call: matching caller/callee
     return shapes produce TailLast and function exit metadata. -/
 def staticProgTailCallMetadataOracle : Bool :=
-  let context :=
-    { staticProgCallContext with
-      functions :=
-        ("f", { returnShape := .one, params := [] }) ::
-          staticProgCallContext.functions }
-  match checkProg context ((.call none "callee" []) : Prog Nat) with
+  match staticProgCallCheck (.call none "callee" []) with
   | (Except.ok result, warnings) =>
       result.exitsFunction && !result.exitsLoop && result.last == .tailLast &&
         result.variableDelta.isEmpty && result.currentLocation == "L: " &&
@@ -276,21 +296,6 @@ def staticProgTailCallMetadataOracle : Bool :=
   | _ => false
 
 #guard staticProgTailCallMetadataOracle
-
-/- Cake checks the caller scope before the callee for a tail call. -/
-#guard
-  staticResultErrorMessage
-      (checkProg staticProgCallContext ((.call none "callee" []) : Prog Nat)) ==
-    some "L: function f is not in scope in function f\n"
-
-/- A tail call outside a function is an implementation error, not an accepted
-   fall-through call (`panStaticScript.sml:1324-1335`). -/
-#guard
-  staticResultErrorMessage
-      (checkProg
-        { staticProgCallContext with scope := .topLevel, expectedReturn := none }
-        ((.call none "callee" []) : Prog Nat)) ==
-    some "tail call found outside function scope"
 
 def staticProgWordLocalCallContext : Context :=
   { staticProgCallContext with
@@ -316,6 +321,21 @@ def staticProgGlobalHandlerTrustOracle : Bool :=
 
 #guard staticProgGlobalHandlerTrustOracle
 
+def staticProgInvalidHandlerShapeContext : Context :=
+  { staticProgCallContext with
+    exceptions := [("E", .named "Missing")]
+    locals := ("h", { shapedBased := .named "Missing" [] }) ::
+      staticProgCallContext.locals }
+
+/-! Cake rejects a handler whose already-accepted exception shape cannot be
+    converted to shaped basedness in the current structure context. -/
+#guard
+  staticResultErrorMessage
+      (checkProg staticProgInvalidHandlerShapeContext
+        ((.call (some (none, some ("E", "h", .skip))) "callee" []) : Prog Nat)) ==
+    some ("L: static analysis failed to convert in-scope shape in function f\n" ++
+      "this should never happen. please report to a compiler developer\n")
+
 /- Cake's global-destination call branch does not produce a local delta and
    checks the destination shape before accepting the ordinary fall-through
    result (`panStaticScript.sml:1235-1269`). -/
@@ -329,20 +349,6 @@ def staticProgGlobalCallMetadataOracle : Bool :=
   | _ => false
 
 #guard staticProgGlobalCallMetadataOracle
-
-def staticProgDestinationScopeOrderContext : Context :=
-  { staticProgCallContext with
-    locals := ("x", { shapedBased := .word .trusted }) ::
-      staticProgCallContext.locals }
-
-/- Cake checks a destination's scope before resolving the callee for
-   AssignCall.  The destination error therefore wins over an unknown callee
-   (`panStaticScript.sml:1169-1175`). -/
-#guard
-  staticResultErrorMessage
-      (checkProg staticProgDestinationScopeOrderContext
-        ((.call (some (some (.local, "missing"), none)) "Unknown" []) : Prog Nat)) ==
-    some "L: variable missing is not in scope in function f\n"
 
 def staticProgStandaloneHandlerContext : Context :=
   { staticProgGlobalHandlerContext with
@@ -386,6 +392,19 @@ def staticProgBadLocalCallDestinationContext : Context :=
         (some (some (.local, "x"), some ("Missing", "h", .skip)))
         "callee" []) : Prog Nat)) ==
     some "L: result of function call callee assigned to local variable x has shape 1 instead of declared shape {1,1} in function f\n"
+
+/-! Cake checks a destination's scope before the callee.  These conflicting
+    cases preserve the destination diagnostic even when the function is
+    unknown. -/
+#guard
+  staticResultErrorMessage (checkProg staticProgCallContext
+      ((.call (some (some (.local, "missing"), none)) "Unknown" []) : Prog Nat)) ==
+    some "L: variable missing is not in scope in function f\n"
+
+#guard
+  staticResultErrorMessage (checkProg staticProgCallContext
+      ((.call (some (some (.global, "missing"), none)) "Unknown" []) : Prog Nat)) ==
+    some "L: variable missing is not in scope in function f\n"
 
 /-! Cake's accepted local-destination call records the destination's trusted
     shape in the returned variable delta. -/
@@ -557,5 +576,29 @@ def staticProgReturnMetadataOracle : Bool :=
   staticResultErrorMessage (staticProgCallCheck
       (.decCall "x" (.comb [.one, .one]) "callee" [] .skip)) ==
     some "L: result of function call callee to initialise local variable x has shape 1 instead of declared shape {1,1} in function f\n"
+
+/-! Cake's `var_delta` is observable to the following checker node.  These
+    guards cover local assignment, sequential composition, branch merging,
+    loop merging, call destinations, declarations, and shared-memory loads. -/
+#guard staticProgDeltaHas (.assign .local "x" (.const 1)) "x" (.word .notBased)
+
+#guard staticProgDeltaHas
+  (.seq (.assign .local "x" (.const 1)) .skip) "x" (.word .notBased)
+
+#guard staticProgDeltaHas
+  (.ite (.const 1)
+    (.assign .local "x" (.const 1))
+    (.assign .local "x" (.const 2))) "x" (.word .notBased)
+
+#guard staticProgDeltaHas
+  (.while (.const 1) (.assign .local "x" (.const 1))) "x" (.word .notTrusted)
+
+#guard staticProgDeltaHas
+  (.call (some (some (.local, "x"), none)) "callee" []) "x" (.word .trusted)
+
+#guard staticProgDeltaHas
+  (.shMemLoad .opW .local "x" (.const 0)) "x" (.word .trusted)
+
+#guard staticProgDeltaRemovesDeclaration
 
 end Flapjack

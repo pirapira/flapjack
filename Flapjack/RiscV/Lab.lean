@@ -115,6 +115,7 @@ def labLineInstructionCount : LabLine (Word width) → Nat
       | .word (.arith (.longMul _ _ _ _)) => 2
       | .word (.arith (.addCarry _ _ _ _ _)) => 6
       | .word (.arith (.cakeAddCarry _ _ _ _)) => 6
+      | .word (.const _ value) => labConstInstructionCount value.toNat
       | .const _ value => labConstInstructionCount value
       | .stackMem _ _ _ _ => 1
       | .stackMemSub _ _ _ _ => 1
@@ -350,6 +351,11 @@ def labShiftInstructions [NeZero width] (operator : Shift)
 def labCompilePlain [NeZero width] :
     LabPlain (Word width) → Option (List (Instruction width))
   | .word (.arith operation) => wordArithToInstructions operation
+  | .word (.const destination value) => do
+      let zero ← labRegisterOfNat (portToStack portZeroRegister)
+      let destination ← labRegisterOfNat (portToStack destination)
+      let temporary ← labRegisterOfNat (portToStack 31)
+      pure (labConstInstructions destination zero temporary value.toNat)
   | .word instruction => (wordInstToInstruction instruction).map List.singleton
   | .stackMem operator register base offset => do
       let register ← labRegisterOfNat (portToStack register)

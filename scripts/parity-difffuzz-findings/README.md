@@ -1,8 +1,9 @@
-# Preserved differential-fuzz findings (minimized)
+# Historical differential-fuzz findings (minimized)
 
-Minimized, replayable reproducers for the mismatches found by
-`scripts/parity-difffuzz.py` (differential fuzzing of original Pancake
-`cake` vs `flapjack-compile`). Each directory holds one finding:
+These minimized reproducers record mismatches found during earlier
+`scripts/parity-difffuzz.py` campaigns between original Pancake `cake` and
+`flapjack-compile`. The acceptance and frame discrepancies listed below are
+fixed on the current branch; the files remain as regression probes:
 
 | directory        | signatures                                              | owning bead (P1)                |
 |------------------|---------------------------------------------------------|---------------------------------|
@@ -23,9 +24,9 @@ Each directory contains:
 
     python3 scripts/parity-difffuzz.py --replay scripts/parity-difffuzz-findings/bitmap-min
 
-re-runs `case.pnk` through both compilers and checks that the recorded
-signatures still reproduce (exit 0 on match). Signatures that stop
-reproducing mean the underlying bead has been fixed.
+re-runs `case.pnk` through both compilers. Current behavior should report
+`signatures=none` and `reproduced=False`; that is expected for these fixed
+historical cases. A newly reproduced signature is a regression.
 
 ## Regenerating
 
@@ -36,7 +37,6 @@ deterministically from the saved sources:
         --file scripts/parity-difffuzz-findings/<name>/case.pnk \
         --out scripts/parity-difffuzz-findings
 
-The `acceptance/gap:*` directories belong to beads by construction: the
-gaps registry (`scripts/parity-difffuzz-gaps.json`) never marks acceptance
-signatures as known, so any re-run of these sources surfaces them again as
-findings until the owning beads are fixed.
+The gaps registry (`scripts/parity-difffuzz-gaps.json`) no longer whitelists
+frame or acceptance signatures, so any recurrence surfaces as an untracked
+finding immediately.

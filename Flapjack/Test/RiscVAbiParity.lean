@@ -20,11 +20,9 @@ link slot as well, and its ABI word names are `[0, 2, 4, ..., 2n]` for `n`
 value parameters.  Both facts are pinned here against the ported
 `riscvRegisterName` map (`scripts/hol-probes/riscv_names_probe.out`).
 
-The blocking piece for byte parity is that Flapjack's lowered function body
-keeps the link entry move (and does not coalesce parameters onto the ABI
-registers), while the original runs `remove_dead_prog` right after
-`full_ssa_cc_trans` (`compiler/backend/backend_passesScript.sml:206-207`); see
-the `callee_abi` fixture and bead `flapjack-pxn.8.5.10.1.1`.
+The `callee_abi` fixture now reaches the same Cake ABI registers and exact
+return bytes through the production pipeline.  The guards below retain the
+source-level calling-convention facts that made that parity repair observable.
 -/
 
 namespace Flapjack.Test.RiscVAbiParity
@@ -454,6 +452,22 @@ def copyPropagationClearsLoopState : Bool :=
   | _ => false
 
 #guard copyPropagationClearsLoopState
+
+/- Cake's `remove_eq` checks class membership (`to_eq`), not the optional
+   representative/alias cache.  Keeping this distinction is necessary for
+   the cache-enabled production state: a class member can have no standalone
+   alias entry after a representative update. -/
+def copyRemoveUsesClassMembership : Bool :=
+  let state : RiscV.WordCopyState :=
+    { aliases := []
+      storeToEq := []
+      classOf := [(177, 0)]
+      classRep := [(0, 177)]
+      classStore := []
+      classNext := 1 }
+  (RiscV.wordCopyRemove state 177).classNext == 0
+
+#guard copyRemoveUsesClassMembership
 
 /- Cake's `remove_eq` checks class membership (`to_eq`), not the flattened
    representative aliases.  Keeping this distinction prevents a stale alias

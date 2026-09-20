@@ -5,6 +5,7 @@ import Flapjack.Test.ParserStaticExamples
 import Flapjack.Test.PanSteppedSemantics
 import Flapjack.Test.Backend
 import Flapjack.Test.Correctness
+import Flapjack.Test.PcCompileSkip
 import Flapjack.Test.CompileFunctionDistinct
 import Flapjack.Test.Runtime
 import Flapjack.Test.CollectorSemantics
@@ -71,6 +72,9 @@ import Flapjack.Test.StaticIdShapesParity
 import Flapjack.Test.StaticExpParity
 import Flapjack.Test.StaticProgParity
 import Flapjack.Test.StaticProgsParity
+import Flapjack.Test.StaticDeclsParity
+import Flapjack.Test.StaticNamesParity
+import Flapjack.Test.StaticOverallParity
 import Flapjack.Test.CorrectnessConditional
 import Flapjack.Test.CorrectnessColour
 import Flapjack.Test.CorrectnessSsaColour

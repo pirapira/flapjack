@@ -26,6 +26,10 @@ def staticProgCallContext : Context :=
   { staticProgParityContext with
     functions := [("callee", { returnShape := .one, params := [] })] }
 
+def staticProgReturnContext : Context :=
+  { staticProgParityContext with
+    functions := [("f", { returnShape := .one, params := [] })] }
+
 def staticProgCallCheck (program : Prog Nat) : StaticResult ProgReturn :=
   checkProg staticProgCallContext program
 
@@ -73,7 +77,7 @@ def staticProgLoopControlMetadataOracle : Bool :=
 /-! Cake's `If` combines branch exits conjunctively and selects the
     branch-specific terminal marker only when both branches exit. -/
 def staticProgIfMetadataOracle : Bool :=
-  match staticProgCheck
+  match checkProg staticProgReturnContext
       (.ite (.const 1) (.return (.const 0)) (.return (.const 0))) with
   | (Except.ok result, warnings) =>
       result.exitsFunction && !result.exitsLoop && result.last == .condExitLast &&
@@ -332,7 +336,7 @@ def staticProgDecMetadataOracle : Bool :=
     statement is transparent.  Check the returned metadata, not only the
     acceptance/error bit, for a return followed by Skip. -/
 def staticProgReturnMetadataOracle : Bool :=
-  match staticProgCheck (.seq (.return (.const 0)) .skip) with
+  match checkProg staticProgReturnContext (.seq (.return (.const 0)) .skip) with
   | (Except.ok result, warnings) =>
       result.exitsFunction && !result.exitsLoop &&
         result.last == .retLast && result.variableDelta.isEmpty &&
@@ -344,6 +348,14 @@ def staticProgReturnMetadataOracle : Bool :=
   | _ => false
 
 #guard staticProgReturnMetadataOracle
+
+/-! Cake rejects Return outside a FunScope with its implementation error. -/
+#guard
+  match checkProg
+      { staticProgParityContext with scope := .topLevel, expectedReturn := none }
+      (.return (.const 0)) with
+  | (Except.error (.general _), []) => true
+  | _ => false
 
 #guard
   staticResultErrorMessage (staticProgCheck
@@ -400,7 +412,7 @@ def staticProgReturnMetadataOracle : Bool :=
     some "raised exception E has wrong value shape\n"
 
 #guard
-  staticResultErrorMessage (staticProgCheck
+  staticResultErrorMessage (checkProg staticProgReturnContext
       (.return (.rStruct [.const 0]))) ==
     some "L: expression to return has shape {1} instead of declared shape 1 in function f\n"
 

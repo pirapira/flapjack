@@ -6,7 +6,7 @@ namespace Flapjack
     (`cakeml/pancake/panStaticScript.sml:1766-1817`). -/
 
 def staticProgsContext : StaticDeclContext :=
-  { functions := []
+  { functions := [("f", { returnShape := .one, params := [] })]
     globals := []
     exceptions := [] }
 

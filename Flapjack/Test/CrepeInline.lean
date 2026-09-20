@@ -88,6 +88,26 @@ def handledCallReturn : CrepProg Nat :=
 #guard crepNotBranchRet
     (.call (some ([7], none)) "callee" [] : CrepProg Nat)
 
+/-! Regression for Cake's `not_has_return_imp_not_branch_ret`: the theorem
+    must cover nested declarations, sequences, branches, and call handlers,
+    not only the leaf cases above.  The hypothesis is discharged by reduction
+    here, so this also checks that the executable analysis agrees with the
+    theorem's source-side premise. -/
+def noReturnNested : CrepProg Nat :=
+  .dec 1 (.const 0)
+    (.seq (.assign 2 (.const 1))
+      (.ite (.const 1) .skip
+        (.call (some ([7], some (11, .assign 12 (.var 11))))
+          "callee" [])))
+
+theorem noReturnNested_notBranchRet :
+    crepNotBranchRet noReturnNested = true := by
+  apply crepHasReturn_false_imp_notBranchRet
+  simp [noReturnNested, crepHasReturn]
+
+#guard crepHasReturn noReturnNested == false
+#guard crepNotBranchRet noReturnNested
+
 def crepInlineUnreachable : CrepProg Nat × Option CrepEarlyExit :=
   crepUnreachElim
     (.seq (.return [.const 1]) (.assign 4 (.const 99)) : CrepProg Nat)

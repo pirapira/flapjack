@@ -70,6 +70,68 @@ termination_by program => sizeOf program
 decreasing_by
   all_goals decreasing_trivial
 
+/-! Kernel-checked port of CakeML's
+    `not_has_return_imp_not_branch_ret` (`crep_inlineProofScript.sml:1758`):
+    a program with no return cannot acquire a return through a branching
+    construct.  The handler case is included because handlers are recursive
+    Crep programs rather than opaque metadata. -/
+private theorem crepHasReturn_false_imp_notBranchRet_aux :
+    (program : CrepProg α) →
+      crepHasReturn program = false → crepNotBranchRet program = true
+  | .skip => fun _ => by simp [crepNotBranchRet]
+  | .dec name value body => fun h =>
+      by
+        simpa [crepNotBranchRet] using
+          (crepHasReturn_false_imp_notBranchRet_aux body (by
+            simpa [crepHasReturn] using h))
+  | .assign name value => fun _ => by simp [crepNotBranchRet]
+  | .primitive names operator args =>
+      fun _ => by simp [crepNotBranchRet]
+  | .store address value => fun _ => by simp [crepNotBranchRet]
+  | .store32 address value =>
+      fun _ => by simp [crepNotBranchRet]
+  | .storeByte address value =>
+      fun _ => by simp [crepNotBranchRet]
+  | .storeGlob address value =>
+      fun _ => by simp [crepNotBranchRet]
+  | .seq first second => fun h =>
+      by
+        have hparts : crepHasReturn first = false ∧
+            crepHasReturn second = false := by
+          simpa [crepHasReturn] using h
+        simp [crepNotBranchRet,
+          crepHasReturn_false_imp_notBranchRet_aux first hparts.1,
+          crepHasReturn_false_imp_notBranchRet_aux second hparts.2]
+  | .ite condition thenBranch elseBranch => fun h =>
+      by simpa [crepHasReturn, crepNotBranchRet] using h
+  | .while condition body => fun h =>
+      by simpa [crepHasReturn, crepNotBranchRet] using h
+  | .break label => fun _ => by simp [crepNotBranchRet]
+  | .continue label => fun _ => by simp [crepNotBranchRet]
+  | .call none name args => fun h =>
+      by simp [crepHasReturn] at h
+  | .call (some (names, none)) name args =>
+      fun _ => by simp [crepNotBranchRet]
+  | .call (some (names, some (handlerName, handler))) name args => fun h =>
+      by
+        have hhandler : crepHasReturn handler = false := by
+          simpa [crepHasReturn] using h
+        simpa [crepNotBranchRet] using hhandler
+  | .extCall function configuration configurationLength array arrayLength =>
+      fun _ => by simp [crepNotBranchRet]
+  | .raise exception => fun _ => by simp [crepNotBranchRet]
+  | .return values => fun _ => by simp [crepNotBranchRet]
+  | .shMem operator name address =>
+      fun _ => by simp [crepNotBranchRet]
+  | .tick => fun _ => by simp [crepNotBranchRet]
+termination_by program => sizeOf program
+decreasing_by all_goals decreasing_trivial
+
+theorem crepHasReturn_false_imp_notBranchRet (program : CrepProg α)
+    (h : crepHasReturn program = false) :
+    crepNotBranchRet program = true :=
+  crepHasReturn_false_imp_notBranchRet_aux program h
+
 inductive CrepEarlyExit where
   | exception
   | return

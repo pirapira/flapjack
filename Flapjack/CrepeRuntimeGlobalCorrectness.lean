@@ -92,6 +92,18 @@ theorem setGlobal_load_alias [BEq α] [LawfulBEq α]
   simp [setGlobal, evalExp, load, store, evalLoopExp,
     evalCrepTypedLoad, storeCrepTypedGlobal, storeCrepGlobal]
 
+/-! The legacy Loop projection can be used by executable callers without
+    losing Cake's fixed-width global key.  This is the direct LoadGlob
+    boundary after a typed StoreGlob; unlike `updateLoopGlobal`, it needs no
+    no-alias premise because the store happens in the typed map first. -/
+theorem store_toLoopState_load [BEq α]
+    (state : LoopTypedGlobalState α)
+    (key : α → CrepGlobalAddress) (address value loadAddress : α) :
+    ((state.store key address value).toLoopState key).globals loadAddress =
+      evalCrepTypedLoad key
+        (storeCrepTypedGlobal key state.globals address value) loadAddress := by
+  rfl
+
 end LoopTypedGlobalState
 
 theorem loopStateWithTypedGlobalStore_relation [BEq α]

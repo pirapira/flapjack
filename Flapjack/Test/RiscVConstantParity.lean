@@ -169,6 +169,19 @@ example :
   exact wordFunctionToRiscVWithCallsCake_const _ 4
     (BitVec.ofNat 64 0x1122334455667788)
 
+/-! The FFI-aware Cake boundary preserves the same multi-instruction constant
+    materialization and return carrier while retaining its service table. -/
+example :
+    wordFunctionToRiscVWithCallsAndFfiCake (width := 64)
+        ({ targets := [], services := [] } : WordCallFfiContext 64)
+        (.seq (.assign 4 (.const (BitVec.ofNat 64 0x1234)))
+          (.return 0 [4])) =
+      some ([.lui 4 (BitVec.ofNat 64 1),
+        .addi 4 4 (BitVec.ofNat 64 0x234)], [4]) := by
+  simp [wordFunctionToRiscVWithCallsAndFfiCake,
+    wordFunctionToRiscVWithCallsCake, wordExpToInstructionsCake,
+    wordConstToInstructions, wordConst32ToInstructions, registerOfNat]
+
 /-! The checked call-aware selector now has the same compositional theorem
     shape as the legacy theorem-facing selector.  This exercises the sequence
     induction while retaining the full Cake list-valued constant boundary. -/

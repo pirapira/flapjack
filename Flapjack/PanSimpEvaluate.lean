@@ -83,6 +83,78 @@ theorem evalPanValueFfiClockProg_seq_skip
                 simp [evalPanValueFfiClockProg, evalPanValueFfiClockLeaf_skip]
           | timeout _ _ _ _ => simp
 
+/-- Clocked counterpart of Cake's `evaluate_while_body_same`
+    (`pan_simpProofScript.sml:59-74`): if two loop bodies agree on every state,
+    so do the loops.  Each iteration consumes one unit of fuel, so the Lean
+    proof is a strong induction on fuel rather than on the clock. -/
+theorem evalPanValueFfiClockProg_while_body_same
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (condition : Exp α) (body body' : Prog α)
+    (hbody : ∀ (fuel clock : Nat) (locals globals : VarName → Option (PanValue α))
+        (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+        (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+        (mh : Option (PanValueMemoryFfiHandler α σ)),
+      evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord fuel locals globals memory ffi clock body
+        (memoryAccess := ma) (contracts := c) (memoryHandler := mh) =
+      evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord fuel locals globals memory ffi clock body'
+        (memoryAccess := ma) (contracts := c) (memoryHandler := mh)) :
+    ∀ (fuel clock : Nat) (locals globals : VarName → Option (PanValue α))
+      (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+      (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+      (mh : Option (PanValueMemoryFfiHandler α σ)),
+      evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
+        (.while condition body) (memoryAccess := ma) (contracts := c)
+        (memoryHandler := mh) =
+      evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
+        (.while condition body') (memoryAccess := ma) (contracts := c)
+        (memoryHandler := mh) := by
+  intro fuel
+  induction fuel using Nat.strongRecOn with
+  | _ fuel ih =>
+    intro clock locals globals memory ffi ma c mh
+    cases fuel with
+    | zero => simp [evalPanValueFfiClockProg]
+    | succ f =>
+      simp only [evalPanValueFfiClockProg]
+      cases hc : evalPanValueExp structs locals globals memory baseAddress topAddress
+          bytesInWord condition ma with
+      | none => rfl
+      | some cv =>
+        cases cv with
+        | word w =>
+          simp only [Option.bind_eq_bind, Option.bind_some]
+          by_cases hz : (w == 0) = true
+          · simp [hz]
+          · simp only [if_neg hz]
+            by_cases hclock : (clock == 0) = true
+            · simp [hclock]
+            · simp only [if_neg hclock]
+              rw [hbody f (clock - 1) locals globals memory ffi ma c mh]
+              have hloop : ∀ (cl : Nat) (l g : VarName → Option (PanValue α))
+                  (m : α → Option (PanValue α)) (ff : FfiState σ),
+                  evalPanValueFfiClockProg context primitive handler structs functions
+                    baseAddress topAddress bytesInWord f l g m ff cl (.while condition body)
+                    ma c mh =
+                  evalPanValueFfiClockProg context primitive handler structs functions
+                    baseAddress topAddress bytesInWord f l g m ff cl (.while condition body')
+                    ma c mh :=
+                fun cl l g m ff => ih f (by omega) cl l g m ff ma c mh
+              simp only [hloop]
+        | rStruct fields => simp
+        | nStruct nm fields => simp
+
 /-- Clocked counterpart of Cake's `evaluate_skip_seq`
     (`pan_simpProofScript.sml:52-54`): a leading `Skip` is absorbed. -/
 theorem evalPanValueFfiClockProg_skip_seq

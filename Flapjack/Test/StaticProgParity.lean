@@ -59,6 +59,19 @@ def staticProgIfMetadataOracle : Bool :=
 
 #guard staticProgIfMetadataOracle
 
+/-! Cake's `While` consumes loop-control exits from its body: the enclosing
+    result is non-exiting with `OtherLast` and a delta filtered against the
+    outer locals. -/
+def staticProgWhileMetadataOracle : Bool :=
+  match staticProgCheck (.while (.const 1) .break) with
+  | (Except.ok result, warnings) =>
+      !result.exitsFunction && !result.exitsLoop && result.last == .otherLast &&
+        result.variableDelta.isEmpty && result.currentLocation == "L: " &&
+        warnings.isEmpty
+  | _ => false
+
+#guard staticProgWhileMetadataOracle
+
 /-! Cake's sequence rule keeps the first function exit when the second
     statement is transparent.  Check the returned metadata, not only the
     acceptance/error bit, for a return followed by Skip. -/

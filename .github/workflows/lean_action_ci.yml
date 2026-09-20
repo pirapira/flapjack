@@ -32,3 +32,8 @@ jobs:
 
       - name: Check exact Pancake RISC-V parity corpus
         run: python3 scripts/parity-small-corpus.py --flapjack-only
+
+      - name: Check exact Cake frame and allocator parity
+        run: |
+          python3 scripts/check-frame-occupancy-parity.py
+          python3 scripts/check-allocator-parity.py

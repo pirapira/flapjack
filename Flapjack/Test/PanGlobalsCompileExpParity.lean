@@ -34,4 +34,9 @@ def parityGuard : Bool :=
 #eval parityGuard
 #guard parityGuard
 
+theorem global_compile_exp_top_addr_oracle :
+    globalCompileExp compileContext .topAddr =
+      .op .sub [.topAddr, .const compileContext.maxGlobalsSize] := by
+  exact globalCompileExp_topAddr compileContext
+
 end Flapjack.Test.PanGlobalsCompileExpParity

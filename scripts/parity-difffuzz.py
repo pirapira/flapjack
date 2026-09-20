@@ -60,7 +60,15 @@ DEFAULT_SEED_CORPUS = REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake"
 # Program generation (restricted to the implemented Pancake source subset).
 # ---------------------------------------------------------------------------
 
-CONSTS = ["0", "1", "2", "3", "7", "255", "1000"]
+# Include the immediate/materialisation boundaries used by Cake's RISC-V
+# encoder.  The small values exercise ORI, 2048/4095 cross signed-12-bit
+# selection, and the remaining values exercise signed-32 and full 64-bit
+# constant construction in the source-to-artifact path.
+CONSTS = [
+    "0", "1", "2", "3", "7", "255", "1000", "2047", "2048", "4095",
+    "2147483647", "2147483648", "4294967295", "4294967296",
+    "9223372036854775807", "9223372036854775808",
+]
 BINOPS = ["+", "-", "*", "&", "|", "^", "<<", ">>", ">>>"]
 
 FIXED_DECLS = (

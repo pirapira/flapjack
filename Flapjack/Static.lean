@@ -1289,15 +1289,19 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
               " has wrong value shape\n")))
   | .return value =>
       staticBind (checkExp context value) (fun result =>
-        match context.expectedReturn with
-        | none => progOk .retLast true false context.location
-        | some shape =>
-            if shapedBasedHasShape shape result.shapedBased then
-              progOk .retLast true false context.location
-            else
-              staticError (.shape (getShapeMismatchMessage
-                "expression to return" (shapedBasedToString result.shapedBased)
-                (Shape.shapeToString shape) context.location context.scope)))
+        match context.scope with
+        | .funScope functionName _ =>
+            staticBind (checkFunctionName context functionName) (fun functionInfo =>
+              if shapedBasedHasShape functionInfo.returnShape result.shapedBased then
+                progOk .retLast true false context.location
+              else
+                staticError (.shape (getShapeMismatchMessage
+                  "expression to return" (shapedBasedToString result.shapedBased)
+                  (Shape.shapeToString functionInfo.returnShape)
+                  context.location context.scope)))
+        | _ =>
+            staticError (.general (getImplementationErrorMessage
+              "return found outside function scope" context.location context.scope)))
   | .shMemLoad _ varKind name address =>
       /- CakeML looks the destination up in locals only for `Local` and in
          globals only for `Global` (`panStaticScript.sml:1642,1676`). -/

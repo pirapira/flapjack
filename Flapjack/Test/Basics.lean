@@ -116,6 +116,11 @@ def checkerCallContext : Context :=
   { checkerContext with
     functions := [("f", { returnShape := .one, params := [] })] }
 
+def checkerFunctionContext : Context :=
+  { checkerCallContext with
+    expectedReturn := some .one
+    scope := .funScope "f" "" }
+
 def checkerArgContext : Context :=
   { checkerContext with
     functions := [("f", { returnShape := .one, params := [("arg", .one)] })] }
@@ -164,7 +169,8 @@ example :
 
 example :
     checkProg (α := Nat) checkerContext (.return (.const 7)) =
-      progOk .retLast true false "" := by
+      staticError (.general (getImplementationErrorMessage
+        "return found outside function scope" "" .topLevel)) := by
   simp [checkProg, checkExp, staticOk, staticBind, checkerContext]
 
 example :
@@ -203,7 +209,7 @@ example :
   decide +kernel
 
 example :
-    staticResultOk (checkProg (α := Nat) checkerContext
+    staticResultOk (checkProg (α := Nat) checkerFunctionContext
       (.dec "y" .one (.const 7) (.return (.var .local "y")))) = true := by
   decide +kernel
 

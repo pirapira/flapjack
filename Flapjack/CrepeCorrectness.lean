@@ -788,6 +788,82 @@ theorem compile_full_pan_value_dec_two_word_record_return_correct
     hsourceExps, hflatListFuel,
     panValueFlatWords, panValueFlatWordsFuel]
 
+/-! Full-word stateful two-word declaration.  The two compiler-generated
+    temporary slots are restored after the returned payload is evaluated, while
+    Cake restores the source local and retains source globals and memory. -/
+theorem compile_full_pan_value_dec_two_word_record_return_state_full
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [PanShiftWidth α]
+    [ArithmeticShiftRight α] [RotateRightOp α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (state : CrepState α) (primitive : PanPrimitiveHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord left right : α) (name : VarName) :
+    evalCrepFullProgStateFull [] crepPrimitive ffi sharedMem
+        baseAddress topAddress 10 state
+        (compileProg context
+          (.dec name (.comb [.one, .one])
+            (.rStruct [.const left, .const right])
+            (.return (.var .local name)))) =
+      some (.returned state [left, right]) ∧
+    evalPanValueProgWithPrimitiveFull structs
+        baseAddress topAddress bytesInWord sourceLocals sourceGlobals
+        sourceMemory primitive
+        (.dec name (.comb [.one, .one])
+          (.rStruct [.const left, .const right])
+          (.return (.var .local name))) =
+      some (restorePanValueLocal (fun _ => none) name (sourceLocals name),
+        sourceGlobals, sourceMemory,
+        [.rStruct [.word left, .word right]]) := by
+  have hnames :
+      allocatedNames context (.comb [.one, .one]) =
+        [context.maxVar + 1, context.maxVar + 2] := by
+    simp [allocatedNames, Shape.shapeSize, List.range, List.range.loop]
+  have hcompile :
+      compileExp context (.rStruct [.const left, .const right]) =
+        ([.const left, .const right], .comb [.one, .one]) := by
+    simp [compileExp, compileExp.compileExpList]
+  have hprogram :
+      compileProg context
+          (.dec name (.comb [.one, .one])
+            (.rStruct [.const left, .const right])
+            (.return (.var .local name))) =
+        nestedDecs [context.maxVar + 1, context.maxVar + 2]
+          [.const left, .const right]
+          (.return [.var (context.maxVar + 1), .var (context.maxVar + 2)]) := by
+    simp only [compileProg, hcompile, Shape.shapeSize]
+    rw [hnames]
+    simp [compileExp, lookupInfo]
+  rw [hprogram]
+  have hrestore :
+      restoreCrepLocal
+          (restoreCrepLocal
+            (updateCrepLocal (updateCrepLocal state.locals
+              (context.maxVar + 1) left)
+              (context.maxVar + 2) right)
+            (context.maxVar + 2) (state.locals (context.maxVar + 2)))
+          (context.maxVar + 1) (state.locals (context.maxVar + 1)) =
+        state.locals := by
+    funext current
+    by_cases hfirst : current = context.maxVar + 1
+    · simp [restoreCrepLocal, hfirst]
+    · by_cases hsecond : current = context.maxVar + 2 <;>
+        simp [restoreCrepLocal, updateCrepLocal, hfirst, hsecond]
+  constructor
+  · simp [nestedDecs, evalCrepFullProgStateFull,
+      evalCrepFullExpsStateFull, evalCrepFullExpStateFull,
+      updateCrepLocal, restoreCrepResult, hrestore]
+  · simp [evalPanValueProgWithPrimitiveFull, evalPanValueExpFull,
+      evalPanValueExpsFull, updatePanValueMap,
+      panValueShape, panShapeMatches,
+      panShapeMatches.panShapeListMatches,
+      panValuePayloadWithinLimit_rStruct_two_words]
+
 /-! The declaration boundary can be composed with an arbitrary source
     expression and continuation once the expression and continuation
     obligations are supplied separately.  This is the induction shape used

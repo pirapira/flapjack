@@ -631,6 +631,50 @@ theorem compile_full_pan_value_dec_word_return_correct
     updatePanValueMap, lookupInfo, panValueShape, panShapeMatches,
     panValueFlatWords, panValueFlatWordsFuel]
 
+/-! Stateful full-word declaration boundary.  This is the compact Cake
+    `dec` rule with an explicit source restoration and the corresponding
+    Crep temporary-slot restoration; globals and memory are carried through
+    unchanged while the returned word is preserved. -/
+theorem compile_full_pan_value_dec_word_return_state_full
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [PanShiftWidth α]
+    [ArithmeticShiftRight α] [RotateRightOp α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (state : CrepState α) (primitive : PanPrimitiveHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord value : α) (name : VarName) :
+    evalCrepFullProgStateFull [] crepPrimitive ffi sharedMem
+        baseAddress topAddress 10 state
+        (compileProg context
+          (.dec name .one (.const value)
+            (.return (.var .local name)))) =
+      some (.returned
+        { state with
+            locals := restoreCrepLocal
+              (updateCrepLocal state.locals (context.maxVar + 1) value)
+              (context.maxVar + 1)
+              (state.locals (context.maxVar + 1)) }
+        [value]) ∧
+    evalPanValueProgWithPrimitiveFull structs
+        baseAddress topAddress bytesInWord sourceLocals sourceGlobals
+        sourceMemory primitive
+        (.dec name .one (.const value)
+          (.return (.var .local name))) =
+      some (restorePanValueLocal (fun _ => none) name (sourceLocals name),
+        sourceGlobals, sourceMemory, [.word value]) := by
+  constructor
+  · simp [compileProg, compileExp, lookupInfo, allocatedNames, nestedDecs,
+      evalCrepFullProgStateFull, evalCrepFullExpsStateFull,
+      evalCrepFullExpStateFull, updateCrepLocal,
+      restoreCrepResult]
+  · simp [evalPanValueProgWithPrimitiveFull, evalPanValueExpFull,
+      updatePanValueMap, panValueShape, panShapeMatches]
+
 /-! A two-word record declaration gives a concrete structured witness for the
     declaration path: both flattened slots are allocated and returned in
     source order. -/

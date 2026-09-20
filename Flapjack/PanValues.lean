@@ -1292,6 +1292,41 @@ def evalPanValueProgFull [BEq α] [OfNat α 0] [OfNat α 1]
   evalPanValueProgWithPrimitiveFull structs baseAddress topAddress bytesInWord
     locals globals memory (fun _ _ => none) program memoryAccess
 
+def evalPanValueProgWithPrimitiveExact
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [PanShiftWidth α]
+    [ArithmeticShiftRight α] [RotateRightOp α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext)
+    (baseAddress topAddress bytesInWord : α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α))
+    (memoryAccess : PanValueMemoryAccess α)
+    (primitive : PanPrimitiveHandler α) (program : Prog α) :
+    Option ((VarName → Option (PanValue α)) ×
+      (VarName → Option (PanValue α)) ×
+      (α → Option (PanValue α)) × List (PanValue α)) :=
+  evalPanValueProgWithPrimitiveFull structs baseAddress topAddress bytesInWord
+    locals globals memory primitive program (memoryAccess := some memoryAccess)
+
+def evalPanValueProgExact
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [PanShiftWidth α]
+    [ArithmeticShiftRight α] [RotateRightOp α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext)
+    (baseAddress topAddress bytesInWord : α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α))
+    (memoryAccess : PanValueMemoryAccess α) (program : Prog α) :
+    Option ((VarName → Option (PanValue α)) ×
+      (VarName → Option (PanValue α)) ×
+      (α → Option (PanValue α)) × List (PanValue α)) :=
+  evalPanValueProgWithPrimitiveExact structs baseAddress topAddress bytesInWord
+    locals globals memory memoryAccess (fun _ _ => none) program
+
 def evalPanValueProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]

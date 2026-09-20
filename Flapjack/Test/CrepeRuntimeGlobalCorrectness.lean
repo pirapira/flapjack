@@ -93,6 +93,13 @@ example :
   exact LoopTypedGlobalState.setGlobal_load_alias runtimeTypedLoopGlobalState
     runtimeTypedKey 4 17 36
 
+example :
+    ((runtimeTypedLoopGlobalState.store runtimeTypedKey 4 17).toLoopState
+        runtimeTypedKey).globals 36 = some 17 := by
+  rw [LoopTypedGlobalState.store_toLoopState_load]
+  simp [runtimeTypedKey, storeCrepTypedGlobal,
+    evalCrepTypedLoad, storeCrepGlobal, crepGlobalKeyOfNat]
+
 def runtimeTypedAliasedLoopStoreState : LoopState Nat :=
   loopStateWithTypedGlobalStore runtimeTypedLoopBaseState runtimeTypedKey
     runtimeTypedBaseState 4 17

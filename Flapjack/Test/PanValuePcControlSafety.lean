@@ -1,4 +1,5 @@
 import Flapjack.PanToCrepCorrectnessBoundary
+import Flapjack.CrepeNestedDecsStability
 
 namespace Flapjack.Test.PanValuePcControlSafety
 
@@ -234,5 +235,27 @@ example :
         (.broke { locals := fun _ => none, memory := fun _ => none } 1) := by
   apply panValuePcResultRel_broke_rejects_nonzero_label
   decide
+
+/-! Target-side freshness of the declaration prefix.  A list of freshly
+allocated target locals preserves the state relation; with an empty variable
+map the freshness side condition is vacuous.  This is the reusable ingredient
+for the compiled store/declaration instances, whose programs start with
+`nestedDecs`. -/
+example :
+    panValueCrepStateRel ([] : StructContext) controlContext
+      (fun _ => none) (fun _ => none) (fun _ => none)
+      { locals := updateCrepLocalList (fun _ => none) [0, 1] [7, 9]
+        memory := fun _ => none } := by
+  have hrel : panValueCrepStateRel ([] : StructContext) controlContext
+      (fun _ => none) (fun _ => none) (fun _ => none)
+      { locals := fun _ => none, memory := fun _ => none } :=
+    ⟨rfl, panValueCrepLocalsRel_empty _ _ _, rfl⟩
+  exact panValueCrepStateRel_updateCrepLocalList_fresh
+    ([] : StructContext) controlContext (fun _ => none) (fun _ => none)
+    (fun _ => none) { locals := fun _ => none, memory := fun _ => none }
+    [0, 1] [7, 9] hrel rfl
+    (by
+      intro name shape slots hlookup slot hslot
+      simp [controlContext, lookupInfo] at hlookup)
 
 end Flapjack.Test.PanValuePcControlSafety

@@ -544,6 +544,12 @@ def globalCompileTop [BEq String] [Add α] [Mul α]
     globalCompileExp context (.var .local name) = .var .local name := by
   simp [globalCompileExp]
 
+theorem globalCompileExp_topAddr [BEq String]
+    (context : GlobalPassContext α) :
+    globalCompileExp context .topAddr =
+      .op .sub [.topAddr, .const context.maxGlobalsSize] := by
+  simp [globalCompileExp]
+
 theorem globalCompileExp_global [BEq String] [Add α] [Mul α]
     (context : GlobalPassContext α) (name : VarName) (shape : Shape) (address : α)
     (lookup : lookupInfo name context.globals = some (shape, address)) :

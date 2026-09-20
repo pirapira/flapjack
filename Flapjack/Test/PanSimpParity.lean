@@ -49,18 +49,23 @@ theorem exp_ids_seq_assoc_preserves_raise :
   simpa [expIds] using expIds_seqAssoc (.skip : Prog Nat)
     (.seq (.raise "E" (.const 0)) .tick)
 
-/-! Cake's `exp_ids_ret_to_tail_eq` also preserves nested handler and raise
-    identifiers while rewriting a tail call. -/
+/-! Cake's `exp_ids_ret_to_tail_eq` preservation theorem, exercised through
+    a nested call handler as well as the outer program. -/
+theorem exp_ids_ret_to_tail_preserves_raise :
+    expIds (retToTail (.raise "E" (.const 0) : Prog Nat)) = ["E"] := by
+  simpa [expIds] using expIds_retToTail
+    (.raise "E" (.const 0) : Prog Nat)
+
 theorem exp_ids_ret_to_tail_preserves_nested_raise :
     expIds (retToTail
       (.call
         (some (some (.local, "r"), some ("E", "h",
-          .seq (.raise "F" (.const 0)) .tick)))
-        "f" [] : Prog Nat)) = ["E", "F"] := by
+          .seq (.raise "E2" (.const 0)) .tick)))
+        "f" [] : Prog Nat)) = ["E", "E2"] := by
   simpa [expIds] using expIds_retToTail
     (.call
       (some (some (.local, "r"), some ("E", "h",
-        .seq (.raise "F" (.const 0)) .tick)))
+        .seq (.raise "E2" (.const 0)) .tick)))
       "f" [] : Prog Nat)
 
 /-! The expected values are the direct HOL evaluation of

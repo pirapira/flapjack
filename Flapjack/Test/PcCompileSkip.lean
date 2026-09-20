@@ -819,4 +819,66 @@ theorem skipNatRaiseConstFlatGlobalEvaluatorEvidence
   · simp [storeAddresses]
   · simp [panValueShape]
 
+/-- Symbolic source-word store: the direct compact instance, lifting the full
+evaluator relation `compile_full_pan_value_store_source_word_state_relation` to
+the compact evaluators.  The address and value are arbitrary `SourceWordExp`s;
+the caller supplies the evaluated words together with the compiled-expression
+stability facts, so source locals/globals/memory and the target state stay
+visible. -/
+theorem panValuePcCompileCorrect_compact_store_source_word
+    (address value : SourceWordExp Nat)
+    (hbytesInWord : ∀ (context : CompileContext Nat) (bytesInWord : Nat),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext Nat)
+      (sourceLocals : VarName → Option (PanValue Nat)) (name : VarName)
+      (currentValue : PanValue Nat), sourceLocals name = some currentValue →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot]))
+    (hstoreEvidence : ∀ (context : CompileContext Nat) (structs : StructContext)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+      (sourceMemory : Nat → Option (PanValue Nat)) (state : CrepState Nat),
+      panValueCrepStateRel structs context sourceLocals sourceGlobals sourceMemory state →
+      ∃ addressValue valueValue : Nat,
+        evalPanValueExp structs sourceLocals sourceGlobals sourceMemory 0 0 1
+          address.toExp = some (.word addressValue) ∧
+        evalPanValueExp structs sourceLocals sourceGlobals sourceMemory 0 0 1
+          value.toExp = some (.word valueValue) ∧
+        (∀ compiled, compileExp context address.toExp = ([compiled], .one) →
+          evalCrepFullExpState
+            ({ state with locals :=
+                updateCrepLocal state.locals (context.maxVar + 1) addressValue })
+            0 0 compiled = some addressValue) ∧
+        (∀ compiled, compileExp context value.toExp = ([compiled], .one) →
+          evalCrepFullExpState
+            ({ state with locals :=
+                updateCrepLocal state.locals (context.maxVar + 1) addressValue })
+            0 0 compiled = some valueValue)) :
+    PanValuePcCompileCorrect
+      (panValuePcCompactSourceEvaluator skipNatPrimitive skipNatSourceHandler
+        [] 0 0 1 4)
+      (crepPcCompactTargetEvaluator [] skipNatCrepPrimitive skipNatFfi
+        skipNatSharedMem 0 0 4)
+      skipNatCodeRel skipNatExcpRel skipNatExceptionCode skipNatGlobalsLookup
+      (.store address.toExp value.toExp) := by
+  intro context structs sourceInput targetInput exceptionRel sourceExecution
+    targetExecution hsourceStructs htargetStructs hlocalisedCode hlocalised hcode
+    hexcp hstate hnonerror hsource htarget hpostCode hpostExcp
+  obtain ⟨addressValue, valueValue, hsourceAddress, hsourceValue, haddressStable,
+    hvalueStable⟩ :=
+    hstoreEvidence context structs sourceInput.locals sourceInput.globals
+      sourceInput.memory targetInput.state hstate
+  have hrelation :=
+    compile_full_pan_value_store_source_word_state_relation context structs [] []
+      sourceInput.locals sourceInput.globals sourceInput.memory targetInput.state
+      skipNatPrimitive skipNatSourceHandler skipNatCrepPrimitive skipNatFfi
+      skipNatSharedMem 0 0 1 address value addressValue valueValue
+      (hbytesInWord context 1) hstate (hlookup context sourceInput.locals)
+      hsourceAddress hsourceValue haddressStable hvalueStable
+  obtain ⟨hsourceResult, htargetResult, hrelNew⟩ := hrelation
+  simp only [panValuePcCompactSourceEvaluator, hsourceStructs, hsourceResult]
+    at hsource
+  simp only [crepPcCompactTargetEvaluator, htargetResult] at htarget
+  cases hsource
+  cases htarget
+  simpa [panValuePcResultOfControl, panValuePcResultRel] using hrelNew
+
 end Flapjack

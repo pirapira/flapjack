@@ -114,8 +114,10 @@ def wordDeadCodeAuxWithLabels : WordProg α → List Nat → List (List Nat × L
       let rightReads := match right with
         | .imm _ => []
         | .reg name => [name]
-      (.ite operator condition right then' else',
-        wordDeadAddReads (thenLive ++ elseLive) (condition :: rightReads))
+      let live := wordDeadAddReads (thenLive ++ elseLive) (condition :: rightReads)
+      match then', else' with
+      | .skip, .skip => (.skip, live)
+      | _, _ => (.ite operator condition right then' else', live)
   | .loop liveIn body liveOut, _live, frames, returnLabels =>
       let (body', _) := wordDeadCodeAuxWithLabels body liveIn
         ((liveIn, liveOut) :: frames) returnLabels

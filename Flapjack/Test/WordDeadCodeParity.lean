@@ -14,4 +14,14 @@ def raiseTailGuard : WordProg Nat → Bool
 
 #guard raiseTailGuard (wordRemoveDeadProgram raiseTail)
 
+/- Cake's remove_dead drops an If after both branches become Skip, while
+   retaining the condition in the backward live set. -/
+def deadIfBranchesGuard : Bool :=
+  match wordDeadCodeAux
+      (.ite .equal 4 (.imm 0) (.skip : WordProg Nat) .skip) [9] [] with
+  | (.skip, live) => live == [9, 4]
+  | _ => false
+
+#guard deadIfBranchesGuard
+
 end Flapjack.Test.WordDeadCodeParity

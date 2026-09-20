@@ -859,7 +859,7 @@ def localiseExpCakeParity : Bool :=
   match localiseExp ["x"] expression,
       localiseExp ["x"] (.load32 (.var .global "x") : Exp Nat) with
   | .op .add [.var .local "x", .var .global "y"],
-      .load32 (.var .local "x") => true
+      .load32 (.var .global "x") => true
   | _, _ => false
 
 #guard localiseExpCakeParity
@@ -1309,14 +1309,12 @@ The grammar cannot tell a local from a global, so every variable starts
                       (.return (.var .global "e")),
                     returnShape := .one }])
 
--- `ld32` and `st32` are localised. Upstream's `localise_exp` has no `Load32`
--- case and its `localise_prog` no `Store32` case, so both leave their operands
--- marked `Global`; those look like constructors added after the pass was
--- written.
+-- Cake's `localise_exp`/`localise_prog` have no `Load32`/`Store32` cases, so
+-- those operands remain marked `Global` even inside a local declaration.
 #guard sameAst (prog "var v = 1; return ld32 v;")
-  (.ok (.dec "v" .one (.const 1) (.return (.load32 (.var .local "v")))))
+  (.ok (.dec "v" .one (.const 1) (.return (.load32 (.var .global "v")))))
 #guard sameAst (prog "var v = 1; st32 v, v;")
-  (.ok (.dec "v" .one (.const 1) (.store32 (.var .local "v") (.var .local "v"))))
+  (.ok (.dec "v" .one (.const 1) (.store32 (.var .global "v") (.var .global "v"))))
 
 /-! Direct oracle for `localise_prog_def` from
 `cakeml/pancake/parser/panPtreeConversionScript.sml:844`.  The scope extends

@@ -133,7 +133,7 @@ def loopShrinkLeaf : LoopProg α → List Nat → LoopProg α × List Nat
          (`loop_liveScript.sml:75-80`). -/
       (.ite operator condition right then' else' restricted,
         insertNatSorted condition
-          (loopListInsert rightLive (thenLive ++ elseLive)))
+          (loopListInsert rightLive (loopListUnion thenLive elseLive)))
   | .break label, _ => (.break label, [])
   | .continue label, _ => (.continue label, [])
   | .fail, _ => (.fail, [])
@@ -222,7 +222,8 @@ def loopShrink (contexts : List (List Nat × List Nat)) :
          the emitted `If` carries `inter l l1`, not the original set
          (`loop_liveScript.sml:75-80`). -/
       (.ite operator condition right then' else' restricted,
-        insertNatSorted condition (loopListInsert rightLive (thenLive ++ elseLive)))
+        insertNatSorted condition
+          (loopListInsert rightLive (loopListUnion thenLive elseLive)))
   | .mark body, live => loopShrink contexts body live
   | .break label, _ =>
       (.break label, (loopContextAt label contexts).map Prod.snd |>.getD [])

@@ -4,7 +4,9 @@
 The fixtures are the original Pancake/CakeML witnesses used by bead
 ``flapjack-pxn.8.5.14.1.3``.  Keep this campaign separate from the broader
 small corpus because its sources and checked Cake assembly vectors are
-specifically about frame occupancy and allocator temporary slots.
+specifically about frame occupancy and allocator temporary slots.  The
+``.cake.S`` files beside the sources are checked-in Cake outputs, so this
+check does not require the ignored/local Cake executable in CI.
 """
 
 import subprocess
@@ -22,11 +24,20 @@ def main() -> int:
     if not fixtures:
         print(f"no frame fixtures found in {FIXTURE_DIR}", file=sys.stderr)
         return 2
-    result = subprocess.run(
-        [sys.executable, str(PARITY), *(str(path) for path in fixtures)],
-        cwd=REPO_ROOT,
-    )
-    return result.returncode
+    failures = 0
+    for path in fixtures:
+        reference = path.with_suffix(".cake.S")
+        if not reference.is_file():
+            print(f"missing Cake oracle: {reference}", file=sys.stderr)
+            failures += 1
+            continue
+        result = subprocess.run(
+            [sys.executable, str(PARITY), "--reference", str(reference), str(path)],
+            cwd=REPO_ROOT,
+        )
+        failures += result.returncode != 0
+    print(f"frame fixtures={len(fixtures)} failures={failures}")
+    return int(failures != 0)
 
 
 if __name__ == "__main__":

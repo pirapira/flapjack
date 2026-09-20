@@ -229,6 +229,25 @@ def skipCommentCakeParity : Bool :=
 
 #guard skipCommentCakeParity
 
+/-! Cake `skip_block_comment_def` (`panLexerScript.sml:205`) returns the
+    post-delimiter position, characters-inside count, and drop count.  The
+    newline case is included because it exercises the intermediate position
+    transition rather than only the final parser result. -/
+def skipBlockCommentCakeParity : Bool :=
+  match skipBlockComment "abc*/rest".toList (.posn 1 3) 0,
+      skipBlockComment "a\nb*/rest".toList (.posn 1 3) 0,
+      skipBlockComment "ab@/rest".toList (.posn 1 3) 0,
+      skipBlockComment ['x'] (.posn 1 3) 0 with
+  | some (plainLoc, plainCount, plainDrop),
+      some (newlineLoc, newlineCount, newlineDrop),
+      some (altLoc, altCount, altDrop), none =>
+      sameAst (plainLoc, plainCount, plainDrop) ((.posn 1 8), 3, 5) &&
+        sameAst (newlineLoc, newlineCount, newlineDrop) ((.posn 2 3), 3, 5) &&
+        sameAst (altLoc, altCount, altDrop) ((.posn 1 7), 2, 4)
+  | _, _, _, _ => false
+
+#guard skipBlockCommentCakeParity
+
 /-! Cake `unhex_alt_def` (`panLexerScript.sml:217`) returns the `UNHEX` value
     for decimal and upper/lowercase hexadecimal digits, and zero otherwise. -/
 def unhexAltCakeParity : Bool :=

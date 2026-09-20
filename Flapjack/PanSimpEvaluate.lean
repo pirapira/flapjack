@@ -412,4 +412,33 @@ theorem evalPanValueFfiClockProg_seq_congr_second
           | _ => simp
       | timeout nextLocals nextGlobals nextMemory nextFfi => simp
 
+/-- Concrete demonstration that `seqAssoc` is **not** fuel-preserving under the
+    fuel-indexed clocked evaluator.  For `p = Seq Skip (Seq Skip Skip)`, at
+    fuel `2` the transformed program `seqAssoc .skip p` evaluates to a normal
+    result while the source `Seq .skip p` times out (`none`).  Hence no
+    fixed-fuel analogue of Cake's `evaluate_seq_assoc` (which holds because
+    Cake's `Seq` does not consume clock) can be stated; the port must use a
+    fuel-adequacy / upward-closed-success formulation instead. -/
+theorem evalPanValueFfiClockProg_seqAssoc_fuel_gap
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (clock : Nat) (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord 2 locals globals memory ffi clock
+        (seqAssoc (.skip : Prog α) (.seq .skip (.seq .skip .skip))) =
+      some (.control (.normal locals globals memory ffi), clock) ∧
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord 2 locals globals memory ffi clock
+        (.seq .skip (.seq .skip .skip)) = none := by
+  constructor <;>
+    simp [evalPanValueFfiClockProg, evalPanValueFfiClockLeaf_skip, seqAssoc]
+
 end Flapjack

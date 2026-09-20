@@ -1,6 +1,7 @@
 import Flapjack.Language
 import Flapjack.Crepe
 import Flapjack.Loop
+import Flapjack.NumSet
 
 /-!
 The small display-language boundary used by Pancake's pass printer.
@@ -509,6 +510,178 @@ def panFunToDisplay [CakeDisplayWord α] : Decl α → DisplayExpr
   | .exnDecl exception shape =>
       .tuple [.string "exception", .string exception, .string ":",
         .string (Shape.shapeToString shape)]
+def numToDisplay (number : Nat) : DisplayExpr :=
+  .string (toString number)
+
+def numsToDisplay (name : String) (numbers : List Nat) : DisplayExpr :=
+  .item none name (numbers.map numToDisplay)
+
+def displayNumSetString : List Nat → String
+  | [] => ""
+  | [number] => toString number
+  | number :: numbers => toString number ++ "," ++ displayNumSetString numbers
+
+/-! `num_set_to_display` traverses Cake's sorted sptree list, not the input
+    insertion order.  Rebuild that observable order through the shared
+    list-backed `NumSet` port. -/
+def numSetToDisplay (names : List Nat) : DisplayExpr :=
+  .string ("{" ++ displayNumSetString (NumSet.fromList names) ++ "}")
+
+def displayList (children : List DisplayExpr) : DisplayExpr :=
+  .list children
+
+def loopLookupDisplayName : Nat → List (Nat × String) → Option String
+  | _, [] => none
+  | number, (candidate, name) :: names =>
+      if number == candidate then some name else loopLookupDisplayName number names
+
+def loopAttachName (names : List (Nat × String)) (number : Option Nat) : String :=
+  match number with
+  | none => "none"
+  | some number =>
+      match loopLookupDisplayName number names with
+      | none => toString number
+      | some name => name ++ "@" ++ toString number
+
+def loopRegImmToDisplay [CakeDisplayWord α] (value : RegImm α) : DisplayExpr :=
+  match value with
+  | .reg number => .item none "Reg" [numToDisplay number]
+  | .imm value => itemWithWord "Imm" value
+
+def loopMemOpToDisplay : CrepMemOp → DisplayExpr
+  | .load => emptyDisplayItem "Load"
+  | .load8 => emptyDisplayItem "Load8"
+  | .load16 => emptyDisplayItem "Load16"
+  | .load32 => emptyDisplayItem "Load32"
+  | .store => emptyDisplayItem "Store"
+  | .store8 => emptyDisplayItem "Store8"
+  | .store16 => emptyDisplayItem "Store16"
+  | .store32 => emptyDisplayItem "Store32"
+
+def loopArithToDisplay : LoopArith → DisplayExpr
+  | .longMul leftHigh rightHigh leftLow rightLow =>
+      numsToDisplay "long_mul" [leftHigh, rightHigh, leftLow, rightLow]
+  | .longDiv leftHigh rightHigh leftLow rightLow quotient =>
+      numsToDisplay "long_div" [leftHigh, rightHigh, leftLow, rightLow, quotient]
+  | .div destination dividend divisor =>
+      numsToDisplay "div" [destination, dividend, divisor]
+
+
+def loopProgHandlerToDisplay [CakeDisplayWord α]
+    (render : LoopProg α → DisplayExpr) :
+    Option (Nat × LoopProg α × LoopProg α × List Nat) → DisplayExpr
+  | none => emptyDisplayItem "no_handler"
+  | some (exception, handlerBody, returnBody, live) =>
+      .item none "handler"
+        [.tuple [numToDisplay exception,
+                 render handlerBody,
+                 render returnBody,
+                 numSetToDisplay live]]
+
+def loopProgDepth : LoopProg α → Nat
+  | .skip | .arith _ | .assign _ _ | .primitive _ _ _ | .setGlobal _ _ => 1
+  | .seq first second => 1 + max (loopProgDepth first) (loopProgDepth second)
+  | .ffi _ _ _ _ _ _ | .raise _ | .return _ | .tick
+  | .break _ | .continue _ | .fail | .load32 _ _ | .loadByte _ _
+  | .store32 _ _ | .storeByte _ _ | .locValue _ _ | .shMem _ _ _ => 1
+  | .ite _ _ _ thenBranch elseBranch _ =>
+      1 + max (loopProgDepth thenBranch) (loopProgDepth elseBranch)
+  | .loop _ body _ | .mark body => 1 + loopProgDepth body
+  | .store _ _ => 1
+  | .call _ _ _ handler => 1 + loopProgHandlerDepth handler
+termination_by program => sizeOf program
+where
+  loopProgHandlerDepth :
+      Option (Nat × LoopProg α × LoopProg α × List Nat) → Nat
+    | none => 0
+    | some (_, handlerBody, returnBody, _) =>
+        max (loopProgDepth handlerBody) (loopProgDepth returnBody)
+    termination_by handler => sizeOf handler
+
+/-! Exact source counterpart of Cake's `loop_prog_to_display_def` and its
+    handler equation (`pan_passesScript.sml:549-631`).  The fuel wrapper is
+    executable for the recursive Loop carrier while preserving each source
+    display constructor and list/tuple boundary. -/
+def loopProgToDisplayFuel [CakeDisplayWord α]
+    (names : List (Nat × String)) : Nat → LoopProg α → DisplayExpr
+  | 0, _ => emptyDisplayItem "display-depth-exhausted"
+  | _fuel + 1, .skip => emptyDisplayItem "skip"
+  | _fuel + 1, .arith operation => loopArithToDisplay operation
+  | _fuel + 1, .assign number expression =>
+      .tuple [numToDisplay number, .string ":=", loopExpToDisplay expression]
+  | _fuel + 1, .primitive destinations operator arguments =>
+      .tuple [
+        .tuple (destinations.map numToDisplay),
+        .string ":=",
+        insertDisplayExpressions (primOpToDisplay operator)
+          (arguments.map numToDisplay)]
+  | _fuel + 1, .setGlobal address expression =>
+      .item none "set_global" [wordToDisplay address, loopExpToDisplay expression]
+  | fuel + 1, .seq first second =>
+      separateDisplayLines "seq"
+        ((loopSeqs first ++ loopSeqs second).map
+          (loopProgToDisplayFuel names fuel))
+  | _fuel + 1, .ffi function configuration configurationLength array arrayLength live =>
+      .item none "ffi"
+        ([.string function,
+          numToDisplay configuration,
+          numToDisplay configurationLength,
+          numToDisplay array,
+          numToDisplay arrayLength] ++ [numSetToDisplay live])
+  | _fuel + 1, .raise exception => numsToDisplay "raise" [exception]
+  | _fuel + 1, .return values => numsToDisplay "return" values
+  | _fuel + 1, .tick => emptyDisplayItem "tick"
+  | _fuel + 1, .break label => numsToDisplay "break" [label]
+  | _fuel + 1, .continue label => numsToDisplay "continue" [label]
+  | _fuel + 1, .fail => emptyDisplayItem "fail"
+  | _fuel + 1, .load32 address destination =>
+      numsToDisplay "load_32" [address, destination]
+  | _fuel + 1, .loadByte address destination =>
+      numsToDisplay "load_byte" [address, destination]
+  | _fuel + 1, .store32 address value => numsToDisplay "store_32" [address, value]
+  | _fuel + 1, .storeByte address value => numsToDisplay "store_byte" [address, value]
+  | _fuel + 1, .locValue destination source =>
+      .item none "loc_value"
+        [.string (loopAttachName names (some destination)), numToDisplay source]
+  | _fuel + 1, .shMem operator name address =>
+      .tuple [.string "share_mem", loopMemOpToDisplay operator,
+        numToDisplay name, loopExpToDisplay address]
+  | fuel + 1, .ite operator condition right thenBranch elseBranch live =>
+      .item none "if"
+        [.tuple [cmpToDisplay operator, numToDisplay condition,
+                 loopRegImmToDisplay right],
+         loopProgToDisplayFuel names fuel thenBranch,
+         loopProgToDisplayFuel names fuel elseBranch,
+         numSetToDisplay live]
+  | fuel + 1, .loop liveIn body liveOut =>
+      .item none "loop"
+        [numSetToDisplay liveIn,
+         loopProgToDisplayFuel names fuel body,
+         numSetToDisplay liveOut]
+  | fuel + 1, .mark body =>
+      .item none "mark" [loopProgToDisplayFuel names fuel body]
+  | _fuel + 1, .store address value =>
+      .tuple [.string "mem", loopExpToDisplay address,
+        .string ":=", numToDisplay value]
+  | fuel + 1, .call returns target arguments handler =>
+      let targetDisplay := .string (loopAttachName names target)
+      let callDisplay := .item none "call"
+        [targetDisplay,
+         displayList (arguments.map numToDisplay),
+         match returns with
+         | none => numSetToDisplay []
+         | some (_, live) => numSetToDisplay live,
+         loopProgHandlerToDisplay
+           (loopProgToDisplayFuel names fuel) handler]
+      match returns with
+      | none => .item none "tail_call"
+          [targetDisplay, displayList (arguments.map numToDisplay)]
+      | some (destinations, _) =>
+          .tuple [displayList (destinations.map numToDisplay), .string ":=", callDisplay]
+
+def loopProgToDisplay [CakeDisplayWord α]
+    (names : List (Nat × String)) (program : LoopProg α) : DisplayExpr :=
+  loopProgToDisplayFuel names (loopProgDepth program + 1) program
 
 def destAnnot (program : Prog α) : Option (String × String) :=
   match program with

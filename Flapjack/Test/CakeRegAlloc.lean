@@ -720,7 +720,7 @@ def parityGuard : Bool :=
     prefsMoveOrderGuard && prefsSeqOrderGuard && prefsControlFlowGuard &&
     prefsBranchOrderGuard &&
     prefsCallHandlerOrderGuard && prefsCallReturnOnlyGuard &&
-    prefsLoopOrderGuard &&
+    prefsLoopOrderGuard && prefsControlFlowGuard &&
     partOrderGuard && reviveOrderGuard && movesToSpOrderGuard &&
     resortMovesSpOrderGuard && bgOkOrderGuard &&
     qsortTiesTwoGuard && qsortTiesThreeGuard && qsortDescGuard &&
@@ -756,7 +756,8 @@ def runChecks : IO Bool := do
     raOrderSeqGuard, raOrderCliqueGuard, raSpillCostGuard,
     prefsMoveOrderGuard, prefsSeqOrderGuard, prefsControlFlowGuard,
     prefsBranchOrderGuard,
-    prefsCallHandlerOrderGuard, prefsLoopOrderGuard,
+    prefsCallHandlerOrderGuard, prefsCallReturnOnlyGuard, prefsLoopOrderGuard,
+    prefsControlFlowGuard,
     partOrderGuard,
     reviveOrderGuard, revivePartitionGuard, bgOkOrderGuard, qsortTiesTwoGuard,
     movesToSpOrderGuard, resortMovesSpOrderGuard,
@@ -786,7 +787,7 @@ def runChecks : IO Bool := do
     "get_prefs Move order", "get_prefs Seq order", "get_prefs control flow",
     "get_prefs If order",
     "get_prefs Call handler order", "get_prefs Call return-only order",
-    "get_prefs Loop order",
+    "get_prefs Loop order", "get_prefs control flow",
     "sorting partition order", "revive moves reversing partition", "revive partition direction", "bg_ok order",
     "sort_moves tie two", "moves_to_sp order", "resort_moves output order",
     "sort_moves tie three", "sort_moves long tie",

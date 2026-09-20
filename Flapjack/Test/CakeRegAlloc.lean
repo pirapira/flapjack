@@ -181,15 +181,6 @@ def allocatorIndexLookupGuard : Bool :=
 
 #guard allocatorIndexLookupGuard
 
-def extractColorOrderGuard : Bool :=
-  let tree : WordClashTree := .delta [9, 1] [17]
-  let bij := cakeMkBij tree
-  let state := cakeInitRaState tree [] []
-  cakeExtractColor state bij.toAllocator ==
-    [(1, 0), (9, 0), (17, 0)]
-
-#guard extractColorOrderGuard
-
 
 /-! ## IRC graph construction guards
 

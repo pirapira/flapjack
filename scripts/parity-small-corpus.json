@@ -881,6 +881,14 @@
       "tracked_beads": [
         "flapjack-pxn.10"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/allocator_frame_handler_min.pnk",
+      "source_reference": "Fresh exact differential witness (seed 97): a struct-returning call, handled call, and loop exercise Cake frame/allocator and continuation layout with only small constants; Cake and Flapjack emit identical sections.",
+      "cake_sha256": "e89a29181eef14445829217319b7af9785bf475ebbcdc549dfc26007475b0e0b",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.5"
+      ]
     }
   ]
 }

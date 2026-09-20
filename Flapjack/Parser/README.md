@@ -63,22 +63,15 @@ yields `none`, never a wrong AST.
 
 ## Deliberate divergences
 
-Three, each a case where upstream looks like it has an oversight rather than
-an intention. All three are covered by tests in `Flapjack/Test/Parser.lean`.
+One, a case where upstream looks like it has an oversight rather than an
+intention. It is covered by tests in `Flapjack/Test/Parser.lean`.
 
 **`@top`.** `get_keyword` maps both `@base` and `@top` to `BaseK`, matching
 Cake's source behavior. Consequently `@top` parses as `BaseAddr`; `TopK`
 remains a grammar/conversion constructor but is unreachable from Cake lexing.
 
-**`Load32` in `localise_exp`.** The pass has cases for `Load` and `LoadByte`
-but not `Load32`, so it falls to the catch-all and `ld32 x` leaves `x` marked
-`Global` even where `x` is local. Handled here.
-
-**`Store32` in `localise_prog`.** Likewise no `Store32` case, so neither
-operand of `st32` is localised. Handled here.
-
-All three read as constructors added after the code around them was written.
-They are worth reporting upstream.
+This reads as a constructor added after the code around it was written and is
+worth reporting upstream.
 
 ## Upstream behaviour preserved
 

@@ -889,6 +889,22 @@
       "tracked_beads": [
         "flapjack-pxn.8.5.14.1.5"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/localise_load32_shadow.pnk",
+      "source_reference": "GH #1126 P0 regression: a shadowed global/local name in ld32 must follow Cake's catch-all localisation and emit byte-identical RISC-V.",
+      "cake_sha256": "db997d0d9737c0a38761d2c31f5b31e78db395b6f72fdc15bb455bd12791dba8",
+      "tracked_beads": [
+        "flapjack-8tb.9"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/localise_store32_shadow.pnk",
+      "source_reference": "GH #1126 P0 regression: a shadowed global/local name in st32 must follow Cake's catch-all localisation and emit byte-identical RISC-V.",
+      "cake_sha256": "6a840c271cf587ce2c274c9e570d94e5b4652c7c07a540eabfff03d4c538163d",
+      "tracked_beads": [
+        "flapjack-8tb.9"
+      ]
     }
   ]
 }

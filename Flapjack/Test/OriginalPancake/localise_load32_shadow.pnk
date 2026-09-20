@@ -1,0 +1,5 @@
+var 1 x = 5;
+fun 1 f() {
+  var 1 x = 7;
+  return ld32 x;
+}

@@ -199,6 +199,23 @@ def staticProgLocalCallMetadataOracle : Bool :=
 
 #guard staticProgLocalCallMetadataOracle
 
+/-! Cake's DecCall removes only its newly declared destination from the body
+    delta; assignments to pre-existing locals remain observable. -/
+def staticProgDecCallMetadataOracle : Bool :=
+  match checkProg staticProgWordLocalCallContext
+      ((.decCall "y" .one "callee" []
+        (.assign .local "x" (.const 0))) : Prog Nat) with
+  | (Except.ok result, warnings) =>
+      !result.exitsFunction && !result.exitsLoop && result.last == .otherLast &&
+        result.currentLocation == "L: " && warnings.isEmpty &&
+        result.variableDelta.length == 1 &&
+        match lookupInfo "x" result.variableDelta with
+        | some info => info.shapedBased == .word .notBased
+        | none => false
+  | _ => false
+
+#guard staticProgDecCallMetadataOracle
+
 /-! Cake's sequence rule keeps the first function exit when the second
     statement is transparent.  Check the returned metadata, not only the
     acceptance/error bit, for a return followed by Skip. -/

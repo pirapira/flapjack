@@ -802,4 +802,30 @@ theorem uImmediate_ofInt_range (upper : Int) (hlo : -(2^19) ≤ upper) (hhi : up
   rw [BitVec.shiftLeft_eq, BitVec.shiftLeft_eq_mul_twoPow, BitVec.ofInt_mul]
   rw [show BitVec.twoPow 64 12 = BitVec.ofInt 64 4096 by decide]
 
+/-- Packaged Cake-faithful `LocValue` execution for the non-layout API: with
+`position = 0` and a forward label in `[0, 2^19)`, executing the
+`wordLocValueToInstructionsCake` pair from any state writes `state.pc + label`
+to the destination register. This discharges the reconstruction premise of
+`wordLocValueToInstructionsCake_execution_of_reconstruction` for the position-0
+case. (bead flapjack-pxn.1.4) -/
+theorem wordLocValueToInstructionsCake_execution_zero (state : State 64)
+    (destination label : Nat) (hd : destination < 32) (hne : destination ≠ 0)
+    (hlabel : (label : Int) < 2^19) :
+    readRegister (executeInstructions state
+        ((wordLocValueToInstructionsCake (width := 64) destination label 0).getD []))
+      ⟨destination, hd⟩ = state.pc + BitVec.ofNat 64 label := by
+  apply wordLocValueToInstructionsCake_execution_of_reconstruction state destination label 0 hd hne
+  rw [show (Int.ofNat label - Int.ofNat 0 : Int) = (label : Int) by simp]
+  rw [uImmediate_ofInt_range]
+  · rw [← BitVec.ofInt_add]
+    rw [show ((label : Int) - (if (label : Int) % 4096 ≥ 2048 then (label : Int) % 4096 - 4096 else (label : Int) % 4096)) / 4096 * 4096 +
+          (if (label : Int) % 4096 ≥ 2048 then (label : Int) % 4096 - 4096 else (label : Int) % 4096)
+        = (label : Int) by
+      have hbal := locValue_balanced_reconstruction (label : Int)
+      dsimp only at hbal
+      omega]
+    rw [BitVec.ofInt_natCast]
+  · omega
+  · omega
+
 end Flapjack.RiscV

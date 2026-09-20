@@ -80,6 +80,13 @@ example :
     runtimeTypedKey runtimeTypedBaseState 4 36 17
 
 example :
+    evalCrepTypedLoad runtimeTypedKey
+        (storeCrepTypedGlobal runtimeTypedKey runtimeTypedBaseState 4 17) 36 =
+      runtimeTypedAliasedLoopStoreState.globals 36 := by
+  exact loopStateWithTypedGlobalStore_typed_load runtimeTypedLoopBaseState
+    runtimeTypedKey runtimeTypedBaseState 4 36 17
+
+example :
     loopStateWithTypedGlobalStore
         (loopStateOfCrepRuntimeStateForGlobals globalLoadRuntimeState)
         runtimeTypedKey runtimeTypedBaseState 4 17 =

@@ -47,6 +47,15 @@ theorem loopStateWithTypedGlobalStore_load [BEq α]
         (key loadAddress) := by
   rfl
 
+theorem loopStateWithTypedGlobalStore_typed_load [BEq α]
+    (state : LoopState α) (key : α → CrepGlobalAddress)
+    (typedState : CrepGlobalState α) (address loadAddress value : α) :
+    evalCrepTypedLoad key
+        (storeCrepTypedGlobal key typedState address value) loadAddress =
+      (loopStateWithTypedGlobalStore state key typedState address value).globals
+        loadAddress := by
+  rfl
+
 def crepRuntimeLocalProjection (name : Nat)
     (step : CrepRuntimeStep α σ ε) : Option α :=
   match step.1 with

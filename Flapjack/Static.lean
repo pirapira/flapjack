@@ -1130,7 +1130,9 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
               (Except.ok { secondInfo with
                   exitsFunction := firstInfo.exitsFunction || secondInfo.exitsFunction
                   exitsLoop := firstInfo.exitsLoop || secondInfo.exitsLoop
-                  last := seqLastStmt firstInfo.last secondInfo.last },
+                  last := seqLastStmt firstInfo.last secondInfo.last
+                  variableDelta :=
+                    seqLocInf firstInfo.variableDelta secondInfo.variableDelta },
                 warningBeforeFirst ++ firstWarnings ++ warningBeforeSecond ++ secondWarnings)
   | .ite condition thenBranch elseBranch =>
       staticBind (checkExp context condition) (fun conditionResult =>

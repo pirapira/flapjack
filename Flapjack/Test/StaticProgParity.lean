@@ -142,6 +142,22 @@ def staticProgIfDeltaOracle : Bool :=
 
 #guard staticProgIfDeltaOracle
 
+/-! Cake's Seq returns the union of the first and second local deltas; a
+    transparent second statement must not erase the first assignment. -/
+def staticProgSeqDeltaOracle : Bool :=
+  match checkProg staticProgWordLocalContext
+      (.seq (.assign .local "x" (.const 0)) .skip) with
+  | (Except.ok result, warnings) =>
+      !result.exitsFunction && !result.exitsLoop && result.last == .otherLast &&
+        result.currentLocation == "L: " && warnings.isEmpty &&
+        result.variableDelta.length == 1 &&
+        match lookupInfo "x" result.variableDelta with
+        | some info => info.shapedBased == .word .notBased
+        | none => false
+  | _ => false
+
+#guard staticProgSeqDeltaOracle
+
 /-! Cake's While retains the body's local delta, merged against the
     surrounding locals and the empty second branch of its synthetic If. -/
 def staticProgWhileDeltaOracle : Bool :=

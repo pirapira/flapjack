@@ -703,6 +703,22 @@ def wordProgToRiscVCake [NeZero width] :
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial
 
+/-! Named equations for theorem clients crossing the checked Cake program
+    boundary.  In particular, a constant assignment must retain the complete
+    list-valued materialization instead of reducing through the historical
+    one-instruction selector. -/
+theorem wordProgToRiscVCake_assign [NeZero width] (destination : Nat)
+    (value : WordExp (Word width)) :
+    wordProgToRiscVCake (.assign destination value) =
+      wordExpToInstructionsCake destination value := by
+  simp [wordProgToRiscVCake]
+
+theorem wordProgToRiscVCake_const [NeZero width] (destination : Nat)
+    (value : Word width) :
+    wordProgToRiscVCake (.assign destination (.const value)) =
+      wordConstToInstructions destination value := by
+  simp [wordProgToRiscVCake, wordExpToInstructionsCake]
+
 /-!
 `executeInstructions` is useful for straight-line code, but it deliberately
 does not interpret branch targets.  This runner treats `start` as the address
@@ -1070,6 +1086,24 @@ def wordFunctionToRiscVCake [NeZero width] :
   | _ => none
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial
+
+/-! Function-level equations expose the same checked constant boundary through
+    the return carrier used by theorem-facing function compilation. -/
+theorem wordFunctionToRiscVCake_assign [NeZero width] (destination : Nat)
+    (value : WordExp (Word width)) :
+    wordFunctionToRiscVCake (.assign destination value) =
+      (wordExpToInstructionsCake destination value).map
+        (fun instructions => (instructions, [])) := by
+  simp [wordFunctionToRiscVCake]
+  cases h : wordExpToInstructionsCake destination value <;> rfl
+
+theorem wordFunctionToRiscVCake_const [NeZero width] (destination : Nat)
+    (value : Word width) :
+    wordFunctionToRiscVCake (.assign destination (.const value)) =
+      (wordConstToInstructions destination value).map
+        (fun instructions => (instructions, [])) := by
+  simp [wordFunctionToRiscVCake, wordExpToInstructionsCake]
+  cases h : wordConstToInstructions destination value <;> rfl
 
 def evalWordCondition [NeZero width] (state : State width)
     (operator : Cmp) (condition : Nat) (rightValue : WordRegImm (Word width)) :

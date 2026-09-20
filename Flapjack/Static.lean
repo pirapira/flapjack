@@ -1210,7 +1210,10 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
                             handlerVariable context.scope))
                       | some handlerInfo =>
                           let handlerContext := { context with locals :=
-                            (handlerVariable, handlerInfo) :: context.locals }
+                            (handlerVariable,
+                              { handlerInfo with shapedBased :=
+                                  shapedBasedWithBase .trusted handlerInfo.shapedBased }) ::
+                              context.locals }
                           staticBind (checkProg handlerContext handlerProgram) (fun _ =>
                             checkCallDestination context function returnShape destination)
                   | _ =>

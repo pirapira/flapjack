@@ -186,7 +186,8 @@ theorem wordInstToInstructionsCake_const_eq_labConstInstructions {width : Nat}
     wordInstToInstructionsCake (width := width) (.const destination value) =
       some (labConstInstructions (width := width) ⟨destination, hdestination⟩ 0 31
         value.toNat) :=
-  wordConstToInstructions_eq_labConstInstructions destination value hdestination
+  by simpa [wordInstToInstructionsCake] using
+    (wordConstToInstructions_eq_labConstInstructions destination value hdestination)
 
 /-- The 0x1234 materialization oracle through the expression-facing Cake
 boundary, stated directly against the executable Lab lowering. -/

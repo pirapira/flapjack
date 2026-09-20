@@ -1,5 +1,6 @@
 import Flapjack.Correctness
 import Flapjack.RiscV.Correctness
+import Flapjack.CrepeDeclarationRelation
 
 /-!
 The first general Loop-to-Word primitive bridge.  It connects the explicit
@@ -163,6 +164,7 @@ theorem crepToLoop_primitive_agreement
     (destinations : List Nat) (operator : PrimOp) (arguments : List Nat) :
     lookupLoopVars context destinations = some destinations →
     lookupLoopVars context arguments = some arguments →
+    CrepDistinctNames destinations →
     (evalCrepStateProgWithPrimitive primitive locals
       (.primitive destinations operator arguments)).map id =
       (evalLoopProgWithPrimitive primitive 1 (loopStateOfCrepLocals locals)
@@ -170,7 +172,7 @@ theorem crepToLoop_primitive_agreement
           (.primitive destinations operator arguments))).map
     (fun result =>
           ((loopResultState result).locals, loopResultValues result)) := by
-  intro hdestinations harguments
+  intro hdestinations harguments hdestinationsDistinct
   have hlookup (names : List Nat) :
       lookupLoopVars context names =
         List.mapM (fun x => lookupNatInfo x context.vars) names := by
@@ -218,31 +220,70 @@ theorem crepToLoop_primitive_agreement
               loopReadLocals (loopStateOfCrepLocals locals).locals arguments =
                 some values := by
             simpa [loopStateOfCrepLocals] using hargs
-          have hfold (base : Nat → Option α) (entries : List (Nat × α)) :
-              List.foldl (fun locals entry =>
-                updateCrepLocal locals entry.fst entry.snd) base entries =
-              List.foldl (fun locals entry =>
-                updateLoopLocal locals entry.fst entry.snd) base entries := by
-            induction entries generalizing base with
-            | nil => rfl
-            | cons entry entries ih =>
-                cases entry with
-                | mk name value =>
-                    simp only [List.foldl]
-                    rw [show updateCrepLocal base name value =
-                      updateLoopLocal base name value by rfl]
-                    exact ih _
+          have hdestinationsNodup : destinations.Nodup := by
+            have hnodupAux : ∀ (names : List Nat),
+                CrepDistinctNames names → names.Nodup := by
+              intro names
+              induction names with
+              | nil => simp
+              | cons name names ih =>
+                  intro hdistinct
+                  rcases hdistinct with ⟨hnot, htail⟩
+                  apply List.pairwise_cons.mpr
+                  constructor
+                  · intro other hother heq
+                    exact hnot (heq ▸ hother)
+                  · exact ih htail
+            exact hnodupAux destinations hdestinationsDistinct
           by_cases hlength : destinations.length = result.length
+          · have hzip : (destinations.zip result).map Prod.fst = destinations := by
+              have hzipAux : ∀ (names : List Nat) (values : List α),
+                  names.length = values.length →
+                    (names.zip values).map Prod.fst = names := by
+                intro names
+                induction names with
+                | nil =>
+                    intro values hvalues
+                    cases values <;> simp
+                | cons name names ih =>
+                    intro values hvalues
+                    cases values with
+                    | nil => simp at hvalues
+                    | cons value values =>
+                        have htail : names.length = values.length :=
+                          Nat.succ.inj hvalues
+                        change name :: (names.zip values).map Prod.fst =
+                          name :: names
+                        exact congrArg (fun tail => name :: tail)
+                          (ih values htail)
+              exact hzipAux destinations result hlength
+            have hzipNodup :
+                ((destinations.zip result).map Prod.fst).Nodup := by
+              rw [hzip]
+              exact hdestinationsNodup
+            have hassignEqual (base : Nat → Option α) :
+                loopAssignValues base destinations result =
+                  assignCrepValues base destinations result := by
+              have hlookupFirst := loopLookupFirst_eq_foldl_of_nodup base
+                (destinations.zip result) hzipNodup
+              change loopLookupFirst base (destinations.zip result) =
+                List.foldl (fun locals entry =>
+                  updateCrepLocal locals entry.fst entry.snd) base
+                  (destinations.zip result) at hlookupFirst
+              simpa [loopAssignValues, assignCrepValues, hlength] using
+                congrArg some hlookupFirst
+            simp [hargs, hprimitive, hdestinationsMapped,
+              hargumentsMapped,
+              loopCompileProg, evalLoopProgWithPrimitive,
+              loopStateOfCrepLocals, loopResultState, loopResultValues,
+              hassignEqual]
+            cases hassigned : assignCrepValues locals destinations result <;>
+              simp [Function.comp_apply]
           · simp [hargs, hprimitive, hlength, hdestinationsMapped,
               hargumentsMapped,
               loopCompileProg, evalLoopProgWithPrimitive, assignCrepValues,
               loopAssignValues, loopStateOfCrepLocals, loopResultState,
-              loopResultValues, hfold]
-          · simp [hargs, hprimitive, hlength, hdestinationsMapped,
-              hargumentsMapped,
-              loopCompileProg, evalLoopProgWithPrimitive, assignCrepValues,
-              loopAssignValues, loopStateOfCrepLocals, loopResultState,
-              loopResultValues, hfold]
+              loopResultValues]
 
 theorem addCarry_preserves_mapped_locals [NeZero width]
     (context : WordContext) (locals : Nat → Option (RiscV.Word width))

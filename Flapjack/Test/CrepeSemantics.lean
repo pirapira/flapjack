@@ -654,7 +654,7 @@ def crepeCallFullValues :
     Option (List (RiscV.Word 64)) :=
   do
     let (_, main) ← lookupCompiledFunction "main" crepCallFunctions
-    let result ← evalCrepFullProg crepCallFunctions
+    let result ← evalCrepFullProgStateFull crepCallFunctions
       crepeCallFullPrimitive crepeCallFullFfi crepeCallFullSharedMem
       0 (BitVec.ofNat 64 100) 30 crepeCallFullState main
     pure (match result with

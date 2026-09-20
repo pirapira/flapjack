@@ -25,7 +25,7 @@ theorem sourceToCrepeFfi_sequence_relation :
       sourceToCrepeFfiStructuredSequence =
       some (.returned (fun _ => none) (fun _ => none) (fun _ => none)
         [.word (BitVec.ofNat 64 42)]) ∧
-    evalCrepFullProgState sourceToCrepeFfiFunctions
+    evalCrepFullProgStateFull sourceToCrepeFfiFunctions
       (fun _ _ => none) sourceToCrepeFfiHandler sourceToCrepeFfiSharedMem
       0 100 31 sourceToCrepeFfiState
       (compileProg sourceToCrepeFfiContext
@@ -59,7 +59,7 @@ theorem sourceToCrepeFfi_sequence_relation :
       sourceToCrepeFfiStructuredAfter,
       evalPanValueProgWithPrimitiveCallsAndFfi, evalPanValueExp]
   have hfirstCrepState :
-      evalCrepFullProgState sourceToCrepeFfiFunctions
+      evalCrepFullProgStateFull sourceToCrepeFfiFunctions
         (fun _ _ => none) sourceToCrepeFfiHandler sourceToCrepeFfiSharedMem
         0 100 30 sourceToCrepeFfiState
         (compileProg sourceToCrepeFfiContext sourceToCrepeFfiProgram) =
@@ -70,7 +70,8 @@ theorem sourceToCrepeFfi_sequence_relation :
       sourceToCrepeFfiTargetAfter, sourceToCrepeFfiTargetAfterTemps,
       restoreCrepFfiTemps, sourceToCrepeFfiTempBase, maxCrepExpVar,
       crepExpVars, List.foldl, compileProg, firstCompiledExp, compileExp,
-      lookupInfo, nestedDecs, evalCrepFullProgState, evalCrepFullExpState,
+      lookupInfo, nestedDecs, evalCrepFullProgStateFull,
+      evalCrepFullExpStateFull,
       updateCrepLocal, restoreCrepResult]
   have htargetLocal : targetAfter.locals 1 =
       some (BitVec.ofNat 64 42) := by
@@ -84,12 +85,13 @@ theorem sourceToCrepeFfi_sequence_relation :
     simp [sourceToCrepeFfiStructuredContinuation,
       sourceToCrepeFfiContext, compileProg, compileExp, lookupInfo]
   have hcrepSecond :
-      evalCrepFullProgState sourceToCrepeFfiFunctions
+      evalCrepFullProgStateFull sourceToCrepeFfiFunctions
         (fun _ _ => none) sourceToCrepeFfiHandler sourceToCrepeFfiSharedMem
         0 100 (29 + 1) targetAfter
         (.return [.var 1]) =
       some (.returned targetAfter [BitVec.ofNat 64 42]) := by
-    simp [evalCrepFullProgState, evalCrepFullExpsState, evalCrepFullExpState,
+    simp [evalCrepFullProgStateFull, evalCrepFullExpsStateFull,
+      evalCrepFullExpStateFull,
       htargetLocal]
   have hsecondRel :
       panValueCrepControlRel [] sourceToCrepeFfiContext
@@ -108,7 +110,7 @@ theorem sourceToCrepeFfi_sequence_relation :
         sourceToCrepeFfiState]
     exact ⟨hpost, panValueCrepValuesRel_singleton (.word
       (BitVec.ofNat 64 42))⟩
-  apply compile_full_pan_value_seq_normal_relation_mixed_fuel
+  apply compile_full_pan_value_seq_normal_relation_mixed_fuel_full
     (context := sourceToCrepeFfiContext) (structs := [])
     (sourceFunctions := sourceToCrepeFfiSourceFunctions)
     (functions := sourceToCrepeFfiFunctions)

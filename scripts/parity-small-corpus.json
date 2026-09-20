@@ -855,6 +855,14 @@
       "tracked_beads": [
         "flapjack-pxn.8.10"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/current_heap_or.pnk",
+      "source_reference": "Cake word_instScript.sml current-heap oracle: Op Or [Lookup CurrHeap, Const 1] selects the constant into the fresh temporary and emits OpCurrHeap Or, preserving Cake's addi-then-or instruction order.",
+      "cake_sha256": "df16ff855fb0f593fd727b6f4d7d326fd116ca635e79f64060d295b9725eb121",
+      "tracked_beads": [
+        "flapjack-pxn.8.11"
+      ]
     }
   ]
 }

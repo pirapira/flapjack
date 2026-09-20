@@ -46,4 +46,21 @@ def parityGuard : Bool :=
 #eval parityGuard
 #guard parityGuard
 
+/- Direct parity for `pan_structs$compile_def` (`pan_structsScript.sml:157`).
+   The declaration-local context is observable here: the body field lookup
+   must use the source shape bound by `Dec`, while the emitted declaration
+   carries the recursively compiled shape. -/
+def compileProgParityGuard : Bool :=
+  match structCompileProg context
+      (.dec "value" (.named "Pair")
+        (.nStruct "Pair" [("left", .const 1), ("right", .const 2)])
+        (.return (.nField "right" (.var .local "value"))) : Prog Nat) with
+  | .dec "value" (.comb [.one, .comb [.one, .one]])
+      (.rStruct [.const 1, .const 2])
+      (.return (.rField 1 (.var .local "value"))) => true
+  | _ => false
+
+#eval compileProgParityGuard
+#guard compileProgParityGuard
+
 end Flapjack.Test.PanStructsCompileExpParity

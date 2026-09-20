@@ -2,6 +2,7 @@ import Flapjack.CrepeProgramInduction
 import Flapjack.CrepeExpressionRelation
 import Flapjack.CrepeProgramIteCorrectness
 import Flapjack.CrepeProgramWhileCorrectness
+import Flapjack.CrepeProgramSourceWordReturnCorrectness
 
 /-!
 The checked Lean boundary corresponding to CakeML's
@@ -467,6 +468,100 @@ theorem panValueCrepProgramStateControlSafe_raise
                 at hsource
               cases hsource
               simp [panValuePcControlLabelSafe]
+
+/-! Cake's `pc_compile_correct[Return]` case (`pan_to_crepProofScript.sml:
+2056-2070`) returns a flattened value and never exposes loop control.  This
+bridge supplies the missing control half for the existing source-word return
+state theorem. -/
+theorem panValueCrepProgramStateControlSafe_return_source_word
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (expression : SourceWordExp α)
+    (hbytesInWord : ∀ (context : CompileContext α) (bytesInWord : α),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext α)
+      (sourceLocals : VarName → Option (PanValue α))
+      (name : VarName) (value : PanValue α),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot])) :
+    PanValueCrepProgramStateControlSafe (.return expression.toExp) := by
+  intro context structs sourceFunctions functions sourceLocals sourceGlobals
+    sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord sourceFuel targetFuel _exceptionRel
+    sourceResult crepResult hrel hsource hcrep
+  cases sourceFuel with
+  | zero =>
+      simp [evalPanValueProgWithPrimitiveCallsAndFfi] at hsource
+  | succ sourceFuel =>
+      cases hvalue : evalPanValueExp structs sourceLocals sourceGlobals
+          sourceMemory baseAddress topAddress bytesInWord expression.toExp with
+      | none =>
+          simp [evalPanValueProgWithPrimitiveCallsAndFfi, hvalue] at hsource
+      | some sourceValue' =>
+          obtain ⟨value, hword⟩ := evalPanValueExp_sourceWord_inv
+            structs sourceLocals sourceGlobals sourceMemory
+            baseAddress topAddress bytesInWord context hrel.2.1
+            (fun name value hvalue =>
+              hlookup context sourceLocals name value hvalue)
+            expression sourceValue' hvalue
+          have hsourceValue :
+              evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+                baseAddress topAddress bytesInWord expression.toExp =
+                some (.word value) := by
+            rw [hvalue, hword]
+          have hsourceExpected :
+              evalPanValueProgWithPrimitiveCallsAndFfi
+                primitive sourceHandler structs sourceFunctions
+                baseAddress topAddress bytesInWord (sourceFuel + 1)
+                sourceLocals sourceGlobals sourceMemory
+                (.return expression.toExp) =
+                some (.returned (fun _ => none) sourceGlobals sourceMemory
+                  [.word value]) := by
+            simp [evalPanValueProgWithPrimitiveCallsAndFfi, hsourceValue]
+          cases targetFuel with
+          | zero =>
+              simp [evalCrepFullProgState] at hcrep
+          | succ targetFuel =>
+              obtain ⟨_compiled, _hcompile, _hcompiled, _, hcrepExpected,
+                _hrelation⟩ :=
+                compile_full_pan_value_return_source_word_state_relation_fuel
+                  context structs sourceFunctions functions sourceLocals sourceGlobals
+                  sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
+                  baseAddress topAddress bytesInWord sourceFuel targetFuel expression value
+                  _exceptionRel (hbytesInWord context bytesInWord)
+                  (fun name value hvalue =>
+                    hlookup context sourceLocals name value hvalue)
+                  hrel hsourceValue
+              have hsourceEq := Option.some.inj
+                (hsourceExpected.symm.trans hsource)
+              have hcrepEq := Option.some.inj
+                (hcrepExpected.symm.trans hcrep)
+              cases hsourceEq
+              cases hcrepEq
+              simp [panValuePcControlLabelSafe]
+
+theorem panValueCrepProgramStateCorrect_and_controlSafe_return_source_word
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (expression : SourceWordExp α)
+    (hbytesInWord : ∀ (context : CompileContext α) (bytesInWord : α),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext α)
+      (sourceLocals : VarName → Option (PanValue α))
+      (name : VarName) (value : PanValue α),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot])) :
+    PanValueCrepProgramStateCorrect (.return expression.toExp) ∧
+      PanValueCrepProgramStateControlSafe (.return expression.toExp) := by
+  constructor
+  · exact panValueCrepProgramStateCorrect_return_source_word expression
+      hbytesInWord hlookup
+  · exact panValueCrepProgramStateControlSafe_return_source_word expression
+      hbytesInWord hlookup
 
 theorem panValueCrepProgramStateControlSafe_seq
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]

@@ -664,6 +664,18 @@ def wordShareInstToInstructionsCake [NeZero width] (operator : WordMemOp)
         let instruction ← wordInstToInstruction (.mem operator name 31)
         pure (address ++ [instruction])
 
+/-! Named Cake equation for a constant memory address.  This keeps the
+    recursive multi-instruction materialization visible to theorem clients;
+    the historical `wordShareInstToInstructions` boundary remains unchanged. -/
+theorem wordShareInstToInstructionsCake_const [NeZero width]
+    (operator : WordMemOp) (name : Nat) (value : Word width) :
+    wordShareInstToInstructionsCake operator name (.const value) =
+      if name == 31 then none else (do
+        let address ← wordConstToInstructions 31 value
+        let instruction ← wordInstToInstruction (.mem operator name 31)
+        pure (address ++ [instruction])) := by
+  rfl
+
 def wordProgToRiscVCake [NeZero width] :
     WordProg (Word width) → Option (List (Instruction width))
   | .skip => some []

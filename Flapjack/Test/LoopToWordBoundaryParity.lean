@@ -140,6 +140,17 @@ def sourceMakeFuncsOracle : Bool :=
 
 #guard sourceMakeFuncsOracle
 
+def sourceMakeFuncsSequenceOracle : Bool :=
+  match crepMakeFuncs
+      [{ name := "f", params := [10, 20], body := (.skip : CrepProg Nat),
+         returnShape := .one },
+       { name := "g", params := [], body := (.skip : CrepProg Nat),
+         returnShape := .one }] with
+  | [("f", (64, 2)), ("g", (65, 0))] => true
+  | _ => false
+
+#guard sourceMakeFuncsSequenceOracle
+
 /-! `mk_ctxt_def` field-order oracle: the constructor preserves both the
     source-name lookup map and Cake's fresh-variable bound. -/
 def sourceMkCtxtOracle : Bool :=

@@ -1,4 +1,5 @@
 import Flapjack.RiscV.Backend
+import Flapjack.RiscV.Calls
 import Flapjack.RiscV.Encoding
 import Flapjack.RiscV.Lab
 
@@ -98,6 +99,30 @@ theorem cakeExpWide_execution_oracle :
           readRegister (executeInstructions (zeroState 64) instructions) 4) =
       some (BitVec.ofNat 64 0x1122334455667788) := by
   decide
+
+/-! The call-aware Cake boundary preserves the return carrier while allowing a
+wide assignment to materialize as the complete Cake instruction list.  The
+legacy call-aware selector remains unchanged so its existing correctness
+contract continues to use the historical one-instruction API. -/
+example :
+    wordFunctionToRiscVWithCallsCake (width := 64)
+        ({ targets := [] } : WordCallContext 64)
+        (.seq (.assign 4 (.const (BitVec.ofNat 64 0x1234)))
+        (.return 0 [4])) =
+      some ([.lui 4 (BitVec.ofNat 64 1),
+        .addi 4 4 (BitVec.ofNat 64 0x234)], [4]) := by
+  simp [wordFunctionToRiscVWithCallsCake, wordExpToInstructionsCake,
+    wordConstToInstructions, wordConst32ToInstructions, registerOfNat]
+
+example :
+    wordFunctionToRiscVWithCallsCake (width := 64)
+        ({ targets := [] } : WordCallContext 64)
+        (.assign 4 (.const (BitVec.ofNat 64 0x1122334455667788))) =
+      (wordConstToInstructions (width := 64) 4
+        (BitVec.ofNat 64 0x1122334455667788)).map
+          (fun instructions => (instructions, [])) := by
+  exact wordFunctionToRiscVWithCallsCake_const _ 4
+    (BitVec.ofNat 64 0x1122334455667788)
 
 /-! `wordExpToInstruction` is not Cake-faithful for constants outside the
 signed 12-bit immediate range: it returns a single `addi` whose immediate the

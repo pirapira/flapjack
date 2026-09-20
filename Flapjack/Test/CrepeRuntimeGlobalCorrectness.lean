@@ -97,6 +97,16 @@ example (state : CrepRuntimeState (BitVec 5) Unit)
   exact crepRuntimeTypedGlobalRelation_store_of_noalias id state typedState
     address value hrel (fun _ h => h)
 
+example (state : CrepRuntimeState (BitVec 5) Unit)
+    (typedState : CrepGlobalState (BitVec 5))
+    (address value : BitVec 5) :
+    CrepGlobalKeyRelation (id : BitVec 5 → CrepGlobalAddress)
+      (updateLoopGlobal (state.withTypedGlobalState id typedState).globals
+        address value)
+      (storeCrepTypedGlobal id typedState address value).globals := by
+  exact crepRuntimeTypedGlobalRelation_loopStore_of_noalias
+    state id typedState address value (fun _ h => h)
+
 /- The guard routes runtime LoadGlob through the typed StoreGlob entrypoint,
    whose expected value is the source `crepSem` store/load result. -/
 example : runtimeTypedStoreLoadValue = some 11 := by

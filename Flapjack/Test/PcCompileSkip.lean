@@ -1119,4 +1119,31 @@ example
     skipNatSharedMem 0 0 1 1 1 skipNatCodeRel skipNatExcpRel
     skipNatExceptionCode skipNatGlobalsLookup (Exp.const 9) hvalue hraiseData
 
+example
+    (hvalue : PanValueCrepExpressionStateCorrect (Exp.const (9 : Nat)))
+    (hraiseEvidence : ∀ (context : CompileContext Nat) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+      (sourceMemory : Nat → Option (PanValue Nat)) (sourceException : ExceptionId)
+      (sourceValue : PanValue Nat) (targetState : CrepState Nat)
+      (targetException : Nat),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      panValuePcRaisedHraiseData skipNatExceptionCode skipNatGlobalsLookup
+        structs context exceptionRel sourceLocals sourceGlobals sourceMemory
+        sourceException sourceValue targetState targetException ∧
+      lookupInfo sourceException context.exceptions = some targetException) :
+    PanValuePcCompileCorrectWithContextCode
+      (panValuePcCompactSourceEvaluator skipNatPrimitive skipNatSourceHandler
+        [] 0 0 1 1)
+      (crepPcCompactTargetEvaluator [] skipNatCrepPrimitive skipNatFfi
+        skipNatSharedMem 0 0 1)
+      skipNatCodeRel skipNatExcpRel skipNatExceptionCode skipNatGlobalsLookup
+      (.return (.const 9)) := by
+  exact panValuePcCompileCorrect_compact_return_with_context_code
+    [] [] skipNatPrimitive skipNatSourceHandler skipNatCrepPrimitive skipNatFfi
+    skipNatSharedMem 0 0 1 1 1 skipNatCodeRel skipNatExcpRel
+    skipNatExceptionCode skipNatGlobalsLookup (Exp.const 9) hvalue hraiseEvidence
+
 end Flapjack

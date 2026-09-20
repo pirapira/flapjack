@@ -529,6 +529,48 @@ theorem evalPanValueFfiClockProg_call_timeout
       some (.timeout nextLocals nextGlobals nextMemory nextFfi, callClock) := by
   simp [evalPanValueFfiClockProg, hcall]
 
+/-! This is the direct `ExtCall` branch of Cake's `pc_compile_correct`.
+    The source leaf evaluator's terminal FFI event crosses the clocked program
+    boundary unchanged, with only the remaining clock attached. -/
+theorem evalPanValueFfiClockProg_extCall_finalFfi
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (_fuel clock : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (function : FunName) (configuration configurationLength array arrayLength : Exp α)
+    (finalLocals finalGlobals : VarName → Option (PanValue α))
+    (finalMemory : α → Option (PanValue α)) (finalFfi : FfiState σ)
+    (event : FfiFinalEvent) (steps : Nat)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (contracts : Option PanValueCallContracts := none)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none)
+    (hsteps : evalPanValueFfiProgSteps context primitive handler structs functions
+      baseAddress topAddress bytesInWord 1 locals globals memory ffi
+      (.extCall function configuration configurationLength array arrayLength)
+      (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) =
+      some (.finalFfi finalLocals finalGlobals finalMemory finalFfi event, steps)) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (_fuel + 1) locals globals memory ffi clock
+      (.extCall function configuration configurationLength array arrayLength)
+      (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) =
+      some (.control (.finalFfi finalLocals finalGlobals finalMemory finalFfi event), clock) := by
+  simpa [evalPanValueFfiClockProg] using
+    (evalPanValueFfiClockLeaf_finalFfi context primitive handler structs functions
+      baseAddress topAddress bytesInWord clock locals globals memory ffi
+      (.extCall function configuration configurationLength array arrayLength)
+      finalLocals finalGlobals finalMemory finalFfi event steps
+      (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) hsteps)
+
 /-! This is the standalone `Call_Ret_Return` branch of Cake's
     `pc_compile_correct`: with no destination or handler, a valid returned
     value crosses the program-call boundary unchanged. -/

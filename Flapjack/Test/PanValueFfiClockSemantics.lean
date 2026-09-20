@@ -135,6 +135,17 @@ def clockedFinalFfi : Option (PanValueFfiClockResult (Word 64) Unit) :=
     ((.dec "x" .one (.const (BitVec.ofNat 64 0))
       (.shMemLoad .op8 .local "x" (.const (BitVec.ofNat 64 10)))) : Prog (Word 64))
 
+def clockedDirectExtCallFinalFfi : Option (PanValueFfiClockResult (Word 64) Unit) :=
+  evalPanValueFfiClockProg statefulTestContext statefulTestPrimitive
+    statefulTestHandler [] []
+    (BitVec.ofNat 64 0) (BitVec.ofNat 64 100) (BitVec.ofNat 64 8)
+    10 (fun _ => none) (fun _ => none) statefulTestMemory
+    statefulTestFinalState 10
+    (.extCall "final" (.const (BitVec.ofNat 64 8))
+      (.const (BitVec.ofNat 64 1)) (.const (BitVec.ofNat 64 8))
+      (.const (BitVec.ofNat 64 1)))
+    (memoryAccess := some (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel))
+
 def clockedCallFinalFfiFunctions : List (FunName × List VarName × Prog (Word 64)) :=
   [("finalExt", [],
     .extCall "final" (.const (BitVec.ofNat 64 8))
@@ -279,6 +290,13 @@ def clockedCallFinalFfiSteps : Option (PanValueFfiSteppedResult (Word 64) Unit) 
   | some (.finalFfi locals globals memory ffi event 10) =>
       locals "x" = none && globals "x" = none && memory (BitVec.ofNat 64 0) = none &&
         ffi.state = () && event.name = .sharedMem .mappedRead &&
+        event.outcome = .failed
+  | _ => false
+
+#guard
+  match clockedDirectExtCallFinalFfi with
+  | some (.control (.finalFfi locals _ _ _ event), 10) =>
+      locals "x" = none && event.name = .extCall "final" &&
         event.outcome = .failed
   | _ => false
 

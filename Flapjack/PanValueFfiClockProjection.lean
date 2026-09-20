@@ -271,6 +271,70 @@ theorem evalPanValueFfiClockCall_raised_projects_to_steps
   · simp [evalPanValueFfiCallSteps, hargsSteps, hlookup, hbind, hparameters, hexception,
       hwithin, hstepBody]
 
+/-! Cake's `pc_compile_correct[Call_Ret_FinalFFI]` propagates a terminal FFI
+event through a direct call without applying return or exception validation.
+The clocked and stepped evaluators preserve the same post-state/event; only
+their clock and step accounting differ. -/
+theorem evalPanValueFfiClockCall_finalFfi_projects_to_steps
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel clock finalClock : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (values : List (PanValue α)) (parameters : List VarName)
+    (calleeLocals bodyLocals finalGlobals : VarName → Option (PanValue α))
+    (finalMemory : α → Option (PanValue α)) (finalFfi : FfiState σ)
+    (body : Prog α) (function : FunName) (arguments : List (Exp α))
+    (event : FfiFinalEvent) (argumentSteps bodySteps : Nat)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (contracts : Option PanValueCallContracts := none)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none)
+    (hargs : evalPanValueExps structs locals globals memory
+      baseAddress topAddress bytesInWord arguments
+      (memoryAccess := memoryAccess) = some values)
+    (hargsSteps : evalPanValueExpsCounted structs locals globals memory
+      baseAddress topAddress bytesInWord arguments
+      (memoryAccess := memoryAccess) = some (values, argumentSteps))
+    (hlookup : lookupPanFunction function functions = some (parameters, body))
+    (hbind : bindPanValueParameters parameters values = some calleeLocals)
+    (hparameters : panValueParametersValid structs contracts function values = true)
+    (hclock : clock ≠ 0)
+    (hclockBody : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel calleeLocals globals memory ffi (clock - 1)
+      body (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) =
+      some (.control (.finalFfi bodyLocals finalGlobals finalMemory finalFfi event),
+        finalClock))
+    (hstepBody : evalPanValueFfiProgSteps context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel calleeLocals globals memory ffi body
+      (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) =
+      some (.finalFfi bodyLocals finalGlobals finalMemory finalFfi event, bodySteps)) :
+    evalPanValueFfiClockCall context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+      none function arguments (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) =
+      some (.control (.finalFfi (fun _ => none) finalGlobals finalMemory finalFfi event),
+        finalClock) ∧
+    evalPanValueFfiCallSteps context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi
+      none function arguments (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) =
+      some (.finalFfi (fun _ => none) finalGlobals finalMemory finalFfi event,
+        argumentSteps + bodySteps) := by
+  constructor
+  · simp [evalPanValueFfiClockCall, hargs, hlookup, hbind, hparameters, hclock,
+      hclockBody]
+  · simp [evalPanValueFfiCallSteps, hargsSteps, hlookup, hbind, hparameters,
+      hstepBody]
+
 /-! Return values assigned to an explicit caller destination project as well.
 The assignment result is shared by the clocked and stepped evaluators, while
 the callee memory, FFI state, and remaining clock continue to be preserved. -/

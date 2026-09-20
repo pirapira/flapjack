@@ -422,7 +422,31 @@ def prefsControlFlowGuard : Bool :=
     cakeGetPrefs
       (.ite .notEqual 2 (.reg 3)
         (.move 11 [(17, 18)]) (.move 12 [(19, 20)]) : WordProg Nat) [] ==
-      [(11, (17, 18)), (12, (19, 20))]
+    [(11, (17, 18)), (12, (19, 20))]
+
+/-! These control-flow cases mirror the remaining `get_prefs_def` equations
+    in Cake's `word_allocScript.sml`: both branch arms are traversed with the
+    else-arm as the incoming accumulator, and a handled call traverses its
+    handler after its return continuation. -/
+def prefsBranchOrderGuard : Bool :=
+  cakeGetPrefs
+      (.ite .notEqual 2 (.reg 3)
+        (.move 9 [(1, 2)]) (.move 10 [(3, 4)]) : WordProg Nat) [] ==
+    [(9, (1, 2)), (10, (3, 4))]
+
+def prefsCallHandlerOrderGuard : Bool :=
+  cakeGetPrefs
+      (.call (some ([9], ([], []),
+          (.move 11 [(5, 6)] : WordProg Nat), 0, 1))
+        (some 2) []
+        (some (12, (.move 13 [(7, 8)] : WordProg Nat), 0, 2)) : WordProg Nat) [] ==
+    [(13, (7, 8)), (11, (5, 6))]
+
+def prefsLoopOrderGuard : Bool :=
+  cakeGetPrefs
+      (.loop [2]
+        (.move 14 [(9, 10)] : WordProg Nat) [3] : WordProg Nat) [] ==
+    [(14, (9, 10))]
 
 /-- `sort_moves` flips equal-priority moves relative to the input order
     (probe `sort_moves_probe.out` `sm_ties_two`). -/
@@ -674,6 +698,8 @@ def parityGuard : Bool :=
     raMovesCoalesceGuard && raMovesSelfFilteredGuard && raForcedEdgeGuard &&
     raOrderSeqGuard && raOrderCliqueGuard &&
     prefsMoveOrderGuard && prefsSeqOrderGuard && prefsControlFlowGuard &&
+    prefsBranchOrderGuard &&
+    prefsCallHandlerOrderGuard && prefsLoopOrderGuard &&
     partOrderGuard && reviveOrderGuard && movesToSpOrderGuard &&
     resortMovesSpOrderGuard && bgOkOrderGuard &&
     qsortTiesTwoGuard && qsortTiesThreeGuard && qsortDescGuard &&
@@ -708,6 +734,8 @@ def runChecks : IO Bool := do
     raStackOnlyGuard, raMovesCoalesceGuard, raMovesSelfFilteredGuard,
     raOrderSeqGuard, raOrderCliqueGuard,
     prefsMoveOrderGuard, prefsSeqOrderGuard, prefsControlFlowGuard,
+    prefsBranchOrderGuard,
+    prefsCallHandlerOrderGuard, prefsLoopOrderGuard,
     partOrderGuard,
     reviveOrderGuard, revivePartitionGuard, bgOkOrderGuard, qsortTiesTwoGuard,
     movesToSpOrderGuard, resortMovesSpOrderGuard,
@@ -734,6 +762,8 @@ def runChecks : IO Bool := do
     "reg_alloc moves coalesce", "reg_alloc moves self filtered",
     "reg_alloc sequential pair order", "reg_alloc clique order",
     "get_prefs Move order", "get_prefs Seq order", "get_prefs control flow",
+    "get_prefs If order",
+    "get_prefs Call handler order", "get_prefs Loop order",
     "sorting partition order", "revive moves reversing partition", "revive partition direction", "bg_ok order",
     "sort_moves tie two", "moves_to_sp order", "resort_moves output order",
     "sort_moves tie three", "sort_moves long tie",

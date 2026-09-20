@@ -2988,4 +2988,50 @@ theorem compile_full_pan_value_seq_normal_compose_state_full
   · simp [compileProg, hcrepFirst, hcrepSecond,
       evalCrepFullProgStateFull]
 
+/-! A returned first component is the next compact stateful source-to-Crep
+    boundary.  The hypotheses are the explicit Cake evaluator and compiled
+    Crep evaluator obligations: Cake has already produced the returned
+    payload and post-state, while Crep has produced the corresponding word
+    payload and target state.  The second component is not evaluated by
+    either semantics. -/
+theorem compile_full_pan_value_seq_return_compose_state_full
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [PanShiftWidth α]
+    [ArithmeticShiftRight α] [RotateRightOp α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (functions : List (CompiledFunction α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (sourceFirstGlobals : VarName → Option (PanValue α))
+    (sourceFirstMemory : α → Option (PanValue α))
+    (state firstState : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (first second : Prog α)
+    (sourceValue : PanValue α) (crepValues : List α)
+    (hsourceFirst : evalPanValueProgWithPrimitiveFull structs
+      baseAddress topAddress bytesInWord sourceLocals sourceGlobals sourceMemory
+      primitive first =
+      some ((fun _ => none), sourceFirstGlobals, sourceFirstMemory,
+        [sourceValue]))
+    (hcrepFirst : evalCrepFullProgStateFull functions crepPrimitive ffi sharedMem
+      baseAddress topAddress (fuel + 1) state (compileProg context first) =
+      some (.returned firstState crepValues)) :
+    evalPanValueProgWithPrimitiveFull structs
+      baseAddress topAddress bytesInWord sourceLocals sourceGlobals sourceMemory
+      primitive (.seq first second) =
+      some ((fun _ => none), sourceFirstGlobals, sourceFirstMemory,
+        [sourceValue]) ∧
+    evalCrepFullProgStateFull functions crepPrimitive ffi sharedMem
+      baseAddress topAddress (fuel + 2) state
+      (compileProg context (.seq first second)) =
+      some (.returned firstState crepValues) := by
+  constructor
+  · simp [evalPanValueProgWithPrimitiveFull, hsourceFirst]
+  · simp [compileProg, hcrepFirst, evalCrepFullProgStateFull]
+
 end Flapjack

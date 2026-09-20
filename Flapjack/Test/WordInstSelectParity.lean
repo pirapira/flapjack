@@ -88,6 +88,26 @@ def cakeWideBinopStatementShape : Bool :=
       value == 2 ^ 60
   | _ => false
 
+/- Cake's `valid_imm` accepts signed-12-bit logical immediates and the
+   selector must keep the boundary value in the immediate carrier. -/
+def cakeLogicalImmediateBoundary : Bool :=
+  match wordInstSelectProgram (α := Nat) 23
+      (.assign 5 (.op .and [.var 18, .const 2047])) with
+  | .seq (.move 0 [(23, 18)])
+      (.inst (.arith (.binOp .and 5 23 (.imm 2047)))) => true
+  | _ => false
+
+/- The first value outside Cake's signed-12-bit immediate range is
+   materialized in the selector temporary before the logical operation. -/
+def cakeLogicalImmediateFirstMaterialized : Bool :=
+  match wordInstSelectProgram (α := Nat) 23
+      (.assign 5 (.op .and [.var 18, .const 2048])) with
+  | .seq (.move 0 [(23, 18)])
+      (.seq (.inst (.const 24 value))
+        (.inst (.arith (.binOp .and 5 23 (.reg 24))))) =>
+      value == 2048
+  | _ => false
+
 /- Cake materializes a large positive `Add` constant after the modular
    negative-immediate retry fails (`word_instScript.sml:262-275`). -/
 def cakeWideAddMaterializesConstant : Bool :=
@@ -131,6 +151,8 @@ def cakeSharedOddHalfwordOffset : Bool :=
 #guard cakeLoadNegativeOffsetAddress
 #guard cakeLoadOutOfRangeAddress
 #guard cakeWideBinopStatementShape
+#guard cakeLogicalImmediateBoundary
+#guard cakeLogicalImmediateFirstMaterialized
 #guard cakeWideAddMaterializesConstant
 #guard cakeSharedByteOffsetMaterializesConstant
 #guard cakeSharedOddHalfwordOffset

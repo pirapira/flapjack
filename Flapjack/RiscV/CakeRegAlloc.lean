@@ -1087,8 +1087,12 @@ def cakeAssignStemps (k : Nat)
     table over the (ascending) allocator bijection. -/
 def cakeExtractColor (state : CakeRaState) (toAllocator : NatInfoMap Nat) :
     NatInfoMap Nat :=
-  (toAllocator.mergeSort (fun a b => a.1 < b.1)).foldl (fun acc entry =>
-      cakeMapUpdate acc entry.1 (cakeTagCol state entry.2)) []
+  /- `toAllocator` is a bijection, so its sorted keys are unique.  Cake's
+     update loop therefore appends each freshly seen key; mapping the sorted
+     entries directly preserves the observable association-list order while
+     avoiding a quadratic rebuild of the result. -/
+  (toAllocator.mergeSort (fun a b => a.1 < b.1)).map
+    (fun entry => (entry.1, cakeTagCol state entry.2))
 
 /-- `full_consistency_ok` (`reg_allocScript.sml:1385+`). -/
 def cakeTagIsAtemp (state : CakeRaState) (x : Nat) : Bool :=

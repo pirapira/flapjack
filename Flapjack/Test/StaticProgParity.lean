@@ -29,6 +29,23 @@ def staticProgCallContext : Context :=
 def staticProgCallCheck (program : Prog Nat) : StaticResult ProgReturn :=
   checkProg staticProgCallContext program
 
+def staticProgLoopControlContext : Context :=
+  { staticProgParityContext with inLoop := true }
+
+/-! Cake returns loop exits as intermediate metadata: both controls exit the
+    loop, preserve the current location, and carry no variable delta. -/
+def staticProgLoopControlMetadataOracle : Bool :=
+  let checkControl := fun (program : Prog Nat) (expected : LastStmt) =>
+    match checkProg staticProgLoopControlContext program with
+    | (Except.ok result, warnings) =>
+        !result.exitsFunction && result.exitsLoop && result.last == expected &&
+          result.variableDelta.isEmpty && result.currentLocation == "L: " &&
+          warnings.isEmpty
+    | _ => false
+  checkControl .break .breakLast && checkControl .continue .contLast
+
+#guard staticProgLoopControlMetadataOracle
+
 /-! Cake's sequence rule keeps the first function exit when the second
     statement is transparent.  Check the returned metadata, not only the
     acceptance/error bit, for a return followed by Skip. -/

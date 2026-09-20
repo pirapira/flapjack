@@ -492,6 +492,19 @@ def stExMaxDegTieGuard : Bool :=
 
 #guard stExMaxDegTieGuard
 
+/- End-to-end `do_spill` oracle: Cake selects node 2, pushes it, and
+   `unspill` moves the residual low-degree node 1 to the simplify worklist. -/
+def doSpillTransitionGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      degrees := CakeNodeMap.ofNatInfoMap 4 [(0, 2), (1, 1), (2, 3)],
+      spillWl := [1, 2] }
+  let (did, after) := cakeDoSpill none 4 state
+  did && after.stack == [2] && after.simpWl == [1] &&
+    after.freezeWl == [] && after.spillWl == []
+
+#guard doSpillTransitionGuard
+
 /- `get_prefs_def` uses `MAP ... ++ acc`, preserving each Move's source
    order.  These guards mirror the canonical `get_prefs_probe.out` output. -/
 def prefsMoveOrderGuard : Bool :=
@@ -848,7 +861,7 @@ def runChecks : IO Bool := do
     deadTailCallLiveGuard, deadAllocLiveGuard, deadInstallLiveGuard,
     deadFfiLiveGuard, deadStoreConstsLiveGuard, stExMinCostOrderGuard,
     stExMinCostTieGuard, stExMinCostZeroDegreeGuard,
-    stExMaxDegOrderGuard, stExMaxDegTieGuard]
+    stExMaxDegOrderGuard, stExMaxDegTieGuard, doSpillTransitionGuard]
   let names := [
     "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
@@ -886,7 +899,8 @@ def runChecks : IO Bool := do
     "remove_dead Install liveness", "remove_dead FFI liveness",
     "remove_dead StoreConsts liveness", "st_ex_list_MIN_cost ordering",
     "st_ex_list_MIN_cost tie ordering", "st_ex_list_MIN_cost zero degree",
-    "st_ex_list_MAX_deg ordering", "st_ex_list_MAX_deg tie ordering"]
+    "st_ex_list_MAX_deg ordering", "st_ex_list_MAX_deg tie ordering",
+    "do_spill transition"]
   let mut all := true
   for (name, result) in names.zip results do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"

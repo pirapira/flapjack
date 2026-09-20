@@ -221,8 +221,159 @@ def wordDeadCodeAux : WordProg α → List Nat → List (List Nat × List Nat) �
 def wordDeadCode : WordProg α → List Nat → WordProg α × List Nat
   | program, live => wordDeadCodeAuxWithLabels program live [] (wordDeadReturnLabels program)
 
-def wordRemoveDeadProgram (program : WordProg α) : WordProg α :=
-  (wordDeadCode program []).1
+/-! Cake's `remove_dead` carries a second backward set, `nlive`, for global
+    stores (`word_allocScript.sml:938-1027`).  A direct `Set store (Var r)`
+    can be removed when the same store is already in `nlive`, because the
+    later write is the only observable value.  Ordinary memory stores and
+    non-variable global expressions reset this information, as do control
+    flow boundaries.  The old pair-valued helper above remains available for
+    local proofs; production dead-program elimination uses this exact
+    three-component state. -/
+
+def wordDeadStoreKey [WordCseHash α] (store : WordStore α) : Nat :=
+  wordCseStoreCode store
+
+def wordDeadForgetStore [WordCseHash α] (store : WordStore α)
+    (nlive : List Nat) : List Nat :=
+  nlive.filter (fun key => key != wordDeadStoreKey store)
+
+def wordDeadCodeWithStores [WordCseHash α] : WordProg α → List Nat →
+    List (List Nat × List Nat) → List Nat → List Nat →
+    WordProg α × List Nat × List Nat
+  | .skip, live, _, _, nlive => (.skip, live, nlive)
+  | .move priority moves, live, _, _, nlive =>
+      let (program, live) := wordDeadMove priority live moves
+      (program, live, nlive)
+  | .assign destination value, live, _, _, nlive =>
+      let (program, live) := wordDeadCodeAuxWithLabels
+        (.assign destination value) live [] []
+      (program, live, nlive)
+  | .inst instruction, live, _, _, nlive =>
+      let (program, live) := wordDeadInst live instruction
+      (program, live, nlive)
+  | .get destination store, live, _, _, nlive =>
+      if destination ∈ live then
+        (.get destination store,
+          wordDeadAddReads (wordDeadRemoveWrites live [destination]) [],
+          wordDeadForgetStore store nlive)
+      else
+        (.skip, live, nlive)
+  | .store address value, live, _, _, nlive =>
+      (.store address value,
+        wordDeadAddReads live (wordExpReadVars address ++ [value]), nlive)
+  | .set store value, live, _, _, nlive =>
+      match value with
+      | .var source =>
+          if wordDeadStoreKey store ∈ nlive then
+            (.skip, live, nlive)
+          else
+            (.set store value, wordDeadAddReads live [source],
+              wordDeadStoreKey store :: nlive)
+      | _ =>
+          (.set store value, wordDeadAddReads live (wordExpReadVars value), [])
+  | .seq first second, live, frames, returnLabels, nlive =>
+      let (second', secondLive, secondNLive) := wordDeadCodeWithStores
+        second live frames returnLabels nlive
+      let (first', firstLive, firstNLive) := wordDeadCodeWithStores
+        first secondLive frames returnLabels secondNLive
+      let program := match first', second' with
+        | .skip, program => program
+        | program, .skip => program
+        | _, _ => .seq first' second'
+      (program, firstLive, firstNLive)
+  | .ite operator condition right thenBranch elseBranch, live, frames,
+      returnLabels, nlive =>
+      let (then', thenLive, thenNLive) := wordDeadCodeWithStores
+        thenBranch live frames returnLabels nlive
+      let (else', elseLive, elseNLive) := wordDeadCodeWithStores
+        elseBranch live frames returnLabels nlive
+      let rightReads := match right with
+        | .imm _ => []
+        | .reg name => [name]
+      let live := wordDeadAddReads (thenLive ++ elseLive) (condition :: rightReads)
+      let nlive := thenNLive.filter (fun key => key ∈ elseNLive)
+      let program := match then', else' with
+        | .skip, .skip => .skip
+        | _, _ => .ite operator condition right then' else'
+      (program, live, nlive)
+  | .loop liveIn body liveOut, _live, frames, returnLabels, _nlive =>
+      let (body', _, _) := wordDeadCodeWithStores body liveIn
+        ((liveIn, liveOut) :: frames) returnLabels []
+      (.loop liveIn body' liveOut, liveIn, [])
+  | .mustTerminate body, live, frames, returnLabels, nlive =>
+      let (body', live, nlive) := wordDeadCodeWithStores body live frames
+        returnLabels nlive
+      (.mustTerminate body', live, nlive)
+  | .break label, _live, frames, _, _nlive =>
+      (.break label, (wordClashTreeFindLoopFrame label frames).map Prod.snd |>.getD [], [])
+  | .continue label, _live, frames, _, _nlive =>
+      (.continue label, (wordClashTreeFindLoopFrame label frames).map Prod.fst |>.getD [], [])
+  | .raise exception, live, _, returnLabels, _nlive =>
+      let retained := if returnLabels.isEmpty then live
+        else live.filter (fun name => name ∈ returnLabels)
+      (.raise exception, exception :: retained, [])
+  | .return label values, live, _, _, _nlive =>
+      (.return label values, wordDeadAddReads (label :: live) values, [])
+  | .tick, live, _, _, nlive => (.tick, live, nlive)
+  | .locValue destination source, live, _, _, nlive =>
+      if destination ∈ live then
+        (.locValue destination source,
+          wordDeadAddReads (wordDeadRemoveWrites live [destination]) [], nlive)
+      else
+        (.skip, live, nlive)
+  | .call (some (destinations, cutsets, returnCode, returnLabel, entryLabel))
+      target arguments handler, live, frames, returnLabels, nlive =>
+      let (returnCode', _, _) := wordDeadCodeWithStores returnCode live frames
+        returnLabels nlive
+      let handler' := match handler with
+        | none => none
+        | some (exception, body, handlerLabel, handlerEntryLabel) =>
+            some (exception,
+              (wordDeadCodeWithStores body live frames [] nlive).1,
+              handlerLabel, handlerEntryLabel)
+      (.call (some (destinations, cutsets, returnCode', returnLabel, entryLabel))
+          target arguments handler',
+        wordDeadCallLive cutsets arguments, [])
+  | .call returns target arguments handler, _live, _, _, _nlive =>
+      (.call returns target arguments handler, wordDeadAddReads [] arguments, [])
+  | .alloc destination cutsets, _live, _, _, _nlive =>
+      (.alloc destination cutsets,
+        wordDeadAddReads [destination] (cutsets.1 ++ cutsets.2), [])
+  | .storeConsts source bitmap codeLength dataLength constants, live, _, _, nlive =>
+      (.storeConsts source bitmap codeLength dataLength constants,
+        wordDeadAddReads (wordDeadRemoveWrites live [source, bitmap])
+          [codeLength, dataLength], nlive)
+  | .opCurrHeap operator destination source, live, _, _, nlive =>
+      if destination ∈ live then
+        (.opCurrHeap operator destination source,
+          wordDeadAddReads (wordDeadRemoveWrites live [destination]) [source],
+          wordDeadForgetStore (.currHeap : WordStore α) nlive)
+      else
+        (.skip, live, nlive)
+  | .install codeBuffer codeLength dataBuffer dataLength cutsets, _live, _, _, nlive =>
+      (.install codeBuffer codeLength dataBuffer dataLength cutsets,
+        wordDeadAddReads [codeBuffer, codeLength, dataBuffer, dataLength]
+          (cutsets.1 ++ cutsets.2), nlive)
+  | .codeBufferWrite address value, live, _, _, nlive =>
+      (.codeBufferWrite address value, wordDeadAddReads live [address, value], nlive)
+  | .dataBufferWrite address value, live, _, _, nlive =>
+      (.dataBufferWrite address value, wordDeadAddReads live [address, value], nlive)
+  | .ffi function configuration configurationLength array arrayLength liveSet, _live,
+      _, _, nlive =>
+      (.ffi function configuration configurationLength array arrayLength liveSet,
+        wordDeadAddReads [configuration, configurationLength, array, arrayLength]
+          (liveSet.1 ++ liveSet.2), nlive)
+  | .shareInst operator name address, live, _, _, nlive =>
+      match operator with
+      | .load | .load8 | .load16 | .load32 =>
+          (.shareInst operator name address,
+            wordDeadAddReads (wordDeadRemoveWrites live [name])
+              (wordExpReadVars address), nlive)
+      | .store | .store8 | .store16 | .store32 =>
+          (.shareInst operator name address,
+            wordDeadAddReads live ([name] ++ wordExpReadVars address), nlive)
+def wordRemoveDeadProgram [WordCseHash α] (program : WordProg α) : WordProg α :=
+  (wordDeadCodeWithStores program [] [] (wordDeadReturnLabels program) []).1
 
 /-! Cake's two-register arithmetic pass turns a selected binary operation into
     a destination/source move followed by an in-place operation.  The Word

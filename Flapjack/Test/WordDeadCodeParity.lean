@@ -24,4 +24,19 @@ def deadIfBranchesGuard : Bool :=
 
 #guard deadIfBranchesGuard
 
+/- Cake's `remove_dead` tracks `nlive` globals backwards: an earlier
+   `Set globals (Var 7)` is dead once a later write to the same global is
+   retained.  This is `word_allocScript.sml:952-961`, distinct from ordinary
+   local-variable dead assignment removal. -/
+def deadGlobalOverwrite : WordProg Nat :=
+  .seq (.set (.globals : WordStore Nat) (.var 7))
+    (.set (.globals : WordStore Nat) (.var 8))
+
+def deadGlobalOverwriteGuard : Bool :=
+  match wordRemoveDeadProgram deadGlobalOverwrite with
+  | .set .globals (.var 8) => true
+  | _ => false
+
+#guard deadGlobalOverwriteGuard
+
 end Flapjack.Test.WordDeadCodeParity

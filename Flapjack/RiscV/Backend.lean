@@ -258,14 +258,6 @@ theorem wordExpToInstructionsCake_load [NeZero width] (destination : Nat)
           pure (addressInstructions ++ [.loadWord destination 31])) := by
   rfl
 
-/-! The standalone Word selector has no layout table.  Its LocValue boundary
-    therefore materializes the abstract label number; the layout-aware Lab
-    selector later replaces this with the absolute target position. -/
-def wordLocValueToInstructions [NeZero width] (destination label : Nat) :
-    Option (List (Instruction width)) := do
-  let destination ← registerOfNat destination
-  pure [.addi destination 0 (BitVec.ofNat width label)]
-
 /-! The checked, Cake-faithful LocValue boundary.  Cake's `riscv_ast (Loc r i)`
     emits `AUIPC`/`ADDI` for the PC-relative offset `i - position`; the
     standalone selector above has no layout table and so cannot produce this
@@ -280,6 +272,15 @@ def wordLocValueToInstructionsCake [NeZero width] (destination label position : 
   let upper := (delta - low) / 4096
   pure [.auipc destination (BitVec.ofInt width upper),
         .addi destination destination (BitVec.ofInt width low)]
+
+/-! The historical standalone Word entry point now uses Cake's position-zero
+    LocValue encoding.  Keeping this wrapper preserves its public arity while
+    removing the old single-ADDI truncation for labels outside the 12-bit range.
+    Layout-aware callers continue to pass their actual position through the
+    explicit Cake boundary above. -/
+def wordLocValueToInstructions [NeZero width] (destination label : Nat) :
+    Option (List (Instruction width)) :=
+  wordLocValueToInstructionsCake destination label 0
 
 def wordArithToInstruction [NeZero width] :
     WordArith (Word width) → Option (Instruction width)
@@ -1374,22 +1375,28 @@ theorem compileWordAdd_sound [NeZero width] (state : State width) :
 theorem wordFunctionToRiscV_locValue [NeZero width] :
     wordFunctionToRiscV
         ((.locValue 4 2) : WordProg (Word width)) =
-      some ([.addi 4 0 2], []) := by
-  simp [wordFunctionToRiscV, wordLocValueToInstructions, registerOfNat]
+      some ([.auipc 4 (BitVec.ofInt width 0),
+        .addi 4 4 (BitVec.ofInt width 2)], []) := by
+  simp [wordFunctionToRiscV, wordLocValueToInstructions,
+    wordLocValueToInstructionsCake, registerOfNat]
 
 theorem evalWordFunction_locValue [NeZero width] (state : State width) :
     evalWordFunction state
         ((.locValue 4 2) : WordProg (Word width)) =
-      some (execute state (.addi 4 0 2), []) := by
+      some (executeInstructions state
+        [.auipc 4 (BitVec.ofInt width 0),
+          .addi 4 4 (BitVec.ofInt width 2)], []) := by
   simp [evalWordFunction, wordLocValueToInstructions,
-    executeInstructions, registerOfNat]
+    wordLocValueToInstructionsCake, executeInstructions, registerOfNat]
 
 theorem compileWordLocValue_sound [NeZero width] (state : State width) :
     evalWordProg state
         ((.locValue 4 2) : WordProg (Word width)) =
-      some (executeInstructions state [.addi 4 0 2]) := by
+      some (executeInstructions state
+        [.auipc 4 (BitVec.ofInt width 0),
+          .addi 4 4 (BitVec.ofInt width 2)]) := by
   simp [evalWordProg, wordLocValueToInstructions,
-    executeInstructions, registerOfNat]
+    wordLocValueToInstructionsCake, executeInstructions, registerOfNat]
 
 theorem wordExpToInstruction_binOp [NeZero width] (operator : BinOp) :
     wordExpToInstruction (width := width) 1 (.op operator [.var 2, .var 3]) =

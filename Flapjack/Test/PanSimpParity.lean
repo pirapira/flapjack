@@ -49,6 +49,20 @@ theorem exp_ids_seq_assoc_preserves_raise :
   simpa [expIds] using expIds_seqAssoc (.skip : Prog Nat)
     (.seq (.raise "E" (.const 0)) .tick)
 
+/-! Cake's `exp_ids_ret_to_tail_eq` also preserves nested handler and raise
+    identifiers while rewriting a tail call. -/
+theorem exp_ids_ret_to_tail_preserves_nested_raise :
+    expIds (retToTail
+      (.call
+        (some (some (.local, "r"), some ("E", "h",
+          .seq (.raise "F" (.const 0)) .tick)))
+        "f" [] : Prog Nat)) = ["E", "F"] := by
+  simpa [expIds] using expIds_retToTail
+    (.call
+      (some (some (.local, "r"), some ("E", "h",
+        .seq (.raise "F" (.const 0)) .tick)))
+      "f" [] : Prog Nat)
+
 /-! The expected values are the direct HOL evaluation of
     `pan_simp$seq_call_ret` from `pan_simpScript.sml:42-49`. -/
 theorem seq_call_ret_matching_return :

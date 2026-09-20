@@ -3257,7 +3257,7 @@ theorem compile_full_pan_value_seq_raise_compose_state_full
     (crepException : α)
     (hcompileFirst : compileProg context first = compiledFirst)
     (hcompileSecond : compileProg context second = compiledSecond)
-    (hsourceFirst : evalPanValueProgWithPrimitiveCallsAndFfiFull
+    (hsourceFirst : evalPanValueProgWithPrimitiveCallsAndFfi
       primitive sourceHandler structs sourceFunctions
       baseAddress topAddress bytesInWord (fuel + 1)
       sourceLocals sourceGlobals sourceMemory first =
@@ -3266,7 +3266,7 @@ theorem compile_full_pan_value_seq_raise_compose_state_full
     (hcrepFirst : evalCrepFullProgStateFull functions crepPrimitive ffi sharedMem
       baseAddress topAddress (fuel + 1) state compiledFirst =
       some (.raised firstState crepException)) :
-    evalPanValueProgWithPrimitiveCallsAndFfiFull
+    evalPanValueProgWithPrimitiveCallsAndFfi
       primitive sourceHandler structs sourceFunctions
       baseAddress topAddress bytesInWord (fuel + 2)
       sourceLocals sourceGlobals sourceMemory (.seq first second) =
@@ -3277,7 +3277,7 @@ theorem compile_full_pan_value_seq_raise_compose_state_full
       (compileProg context (.seq first second)) =
       some (.raised firstState crepException) := by
   constructor
-  · simp [evalPanValueProgWithPrimitiveCallsAndFfiFull, hsourceFirst]
+  · simp [evalPanValueProgWithPrimitiveCallsAndFfi, hsourceFirst]
   · simp [compileProg, hcompileFirst, hcompileSecond,
       evalCrepFullProgStateFull, hcrepFirst]
 
@@ -3306,7 +3306,7 @@ theorem compile_full_pan_value_seq_break_compose_state_full
     (compiledFirst compiledSecond : CrepProg α)
     (hcompileFirst : compileProg context first = compiledFirst)
     (hcompileSecond : compileProg context second = compiledSecond)
-    (hsourceFirst : evalPanValueProgWithPrimitiveCallsAndFfiFull
+    (hsourceFirst : evalPanValueProgWithPrimitiveCallsAndFfi
       primitive sourceHandler structs sourceFunctions
       baseAddress topAddress bytesInWord (fuel + 1)
       sourceLocals sourceGlobals sourceMemory first =
@@ -3314,7 +3314,7 @@ theorem compile_full_pan_value_seq_break_compose_state_full
     (hcrepFirst : evalCrepFullProgStateFull functions crepPrimitive ffi sharedMem
       baseAddress topAddress (fuel + 1) state compiledFirst =
       some (.broke firstState 0)) :
-    evalPanValueProgWithPrimitiveCallsAndFfiFull
+    evalPanValueProgWithPrimitiveCallsAndFfi
       primitive sourceHandler structs sourceFunctions
       baseAddress topAddress bytesInWord (fuel + 2)
       sourceLocals sourceGlobals sourceMemory (.seq first second) =
@@ -3324,7 +3324,7 @@ theorem compile_full_pan_value_seq_break_compose_state_full
       (compileProg context (.seq first second)) =
       some (.broke firstState 0) := by
   constructor
-  · simp [evalPanValueProgWithPrimitiveCallsAndFfiFull, hsourceFirst]
+  · simp [evalPanValueProgWithPrimitiveCallsAndFfi, hsourceFirst]
   · simp [compileProg, hcompileFirst, hcompileSecond,
       evalCrepFullProgStateFull, hcrepFirst]
 
@@ -3352,7 +3352,7 @@ theorem compile_full_pan_value_seq_continue_compose_state_full
     (compiledFirst compiledSecond : CrepProg α)
     (hcompileFirst : compileProg context first = compiledFirst)
     (hcompileSecond : compileProg context second = compiledSecond)
-    (hsourceFirst : evalPanValueProgWithPrimitiveCallsAndFfiFull
+    (hsourceFirst : evalPanValueProgWithPrimitiveCallsAndFfi
       primitive sourceHandler structs sourceFunctions
       baseAddress topAddress bytesInWord (fuel + 1)
       sourceLocals sourceGlobals sourceMemory first =
@@ -3360,7 +3360,7 @@ theorem compile_full_pan_value_seq_continue_compose_state_full
     (hcrepFirst : evalCrepFullProgStateFull functions crepPrimitive ffi sharedMem
       baseAddress topAddress (fuel + 1) state compiledFirst =
       some (.continued firstState 0)) :
-    evalPanValueProgWithPrimitiveCallsAndFfiFull
+    evalPanValueProgWithPrimitiveCallsAndFfi
       primitive sourceHandler structs sourceFunctions
       baseAddress topAddress bytesInWord (fuel + 2)
       sourceLocals sourceGlobals sourceMemory (.seq first second) =
@@ -3370,7 +3370,7 @@ theorem compile_full_pan_value_seq_continue_compose_state_full
       (compileProg context (.seq first second)) =
       some (.continued firstState 0) := by
   constructor
-  · simp [evalPanValueProgWithPrimitiveCallsAndFfiFull, hsourceFirst]
+  · simp [evalPanValueProgWithPrimitiveCallsAndFfi, hsourceFirst]
   · simp [compileProg, hcompileFirst, hcompileSecond,
       evalCrepFullProgStateFull, hcrepFirst]
 

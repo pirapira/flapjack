@@ -135,7 +135,7 @@ theorem compile_full_pan_value_raise_two_word_state_full_correct_regression :
       simp [crepeFullRaiseContext])
 
 theorem compile_full_pan_value_seq_raise_compose_state_full_regression :
-    evalPanValueProgWithPrimitiveCallsAndFfiFull
+    evalPanValueProgWithPrimitiveCallsAndFfi
         (fun _ _ => none) (fun _ _ _ _ _ _ => none)
         ([] : StructContext) [] 0 100 1 11
         (fun _ => none) (fun _ => none) (fun _ => none)
@@ -159,14 +159,14 @@ theorem compile_full_pan_value_seq_raise_compose_state_full_regression :
     (defaultCrepSharedMemHandler : CrepSharedMemHandler (RiscV.Word 8))
     0 100 1 7 "E" 9 (by simp [crepeFullRaiseContext, lookupInfo])
   have hsourceFirst :
-      evalPanValueProgWithPrimitiveCallsAndFfiFull
+      evalPanValueProgWithPrimitiveCallsAndFfi
         (fun _ _ => none) (fun _ _ _ _ _ _ => none)
         ([] : StructContext) [] 0 100 1 10
         (fun _ => none) (fun _ => none) (fun _ => none)
         (.raise "E" (.const 7) : Prog (RiscV.Word 8)) =
       some (.raised (fun _ => none) (fun _ => none) (fun _ => none)
         "E" (.word 7)) := by
-    simp [evalPanValueProgWithPrimitiveCallsAndFfiFull, evalPanValueExpFull]
+    simp [evalPanValueProgWithPrimitiveCallsAndFfi, evalPanValueExp]
   exact compile_full_pan_value_seq_raise_compose_state_full
     crepeFullRaiseContext ([] : StructContext) [] []
     (fun _ => none) (fun _ => none) (fun _ => none)
@@ -184,7 +184,7 @@ theorem compile_full_pan_value_seq_raise_compose_state_full_regression :
     rfl (by simp [compileProg]) hsourceFirst hraise.2
 
 theorem compile_full_pan_value_seq_break_compose_state_full_regression :
-    evalPanValueProgWithPrimitiveCallsAndFfiFull
+    evalPanValueProgWithPrimitiveCallsAndFfi
         (fun _ _ => none) (fun _ _ _ _ _ _ => none)
         ([] : StructContext) [] 0 100 1 3
         (fun _ => none) (fun _ => none) (fun _ => none)
@@ -198,13 +198,13 @@ theorem compile_full_pan_value_seq_break_compose_state_full_regression :
           (.seq (.break) (.skip) : Prog (RiscV.Word 8))) =
       some (.broke crepeFullRaiseState 0) := by
   have hsourceFirst :
-      evalPanValueProgWithPrimitiveCallsAndFfiFull
+      evalPanValueProgWithPrimitiveCallsAndFfi
         (fun _ _ => none) (fun _ _ _ _ _ _ => none)
         ([] : StructContext) [] 0 100 1 2
         (fun _ => none) (fun _ => none) (fun _ => none)
         (.break : Prog (RiscV.Word 8)) =
       some (.broke (fun _ => none) (fun _ => none) (fun _ => none)) := by
-    simp [evalPanValueProgWithPrimitiveCallsAndFfiFull]
+    simp [evalPanValueProgWithPrimitiveCallsAndFfi]
   have hcrepFirst :
       evalCrepFullProgStateFull [] (fun _ _ => none)
         (noCrepFfi (RiscV.Word 8))
@@ -227,7 +227,7 @@ theorem compile_full_pan_value_seq_break_compose_state_full_regression :
     (by simp [compileProg]) hsourceFirst hcrepFirst
 
 theorem compile_full_pan_value_seq_continue_compose_state_full_regression :
-    evalPanValueProgWithPrimitiveCallsAndFfiFull
+    evalPanValueProgWithPrimitiveCallsAndFfi
         (fun _ _ => none) (fun _ _ _ _ _ _ => none)
         ([] : StructContext) [] 0 100 1 3
         (fun _ => none) (fun _ => none) (fun _ => none)
@@ -241,13 +241,13 @@ theorem compile_full_pan_value_seq_continue_compose_state_full_regression :
           (.seq (.continue) (.skip) : Prog (RiscV.Word 8))) =
       some (.continued crepeFullRaiseState 0) := by
   have hsourceFirst :
-      evalPanValueProgWithPrimitiveCallsAndFfiFull
+      evalPanValueProgWithPrimitiveCallsAndFfi
         (fun _ _ => none) (fun _ _ _ _ _ _ => none)
         ([] : StructContext) [] 0 100 1 2
         (fun _ => none) (fun _ => none) (fun _ => none)
         (.continue : Prog (RiscV.Word 8)) =
       some (.continued (fun _ => none) (fun _ => none) (fun _ => none)) := by
-    simp [evalPanValueProgWithPrimitiveCallsAndFfiFull]
+    simp [evalPanValueProgWithPrimitiveCallsAndFfi]
   have hcrepFirst :
       evalCrepFullProgStateFull [] (fun _ _ => none)
         (noCrepFfi (RiscV.Word 8))

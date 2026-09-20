@@ -127,7 +127,10 @@ python3 scripts/parity-difffuzz.py --replay difffuzz-findings/<case>
 The `--include-globals` variant adds deterministic global declarations and
 global-based load/store addresses to generated cases.  It is kept as a
 separate smoke invocation so the ordinary campaign remains directly
-comparable with older recorded seeds.
+comparable with older recorded seeds.  Run it in an environment with both
+the original CakeML `cake` binary and Flapjack; CI uses the checked-in
+artifact corpus (which includes global fixtures) because it does not build
+the CakeML reference binary.
 
 `--exact` is the required mode for source-to-RISC-V parity: any difference in
 acceptance, section layout, metadata, or bytes is a failure, including a

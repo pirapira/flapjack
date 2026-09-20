@@ -150,28 +150,6 @@ theorem clocked_seq_second_congr_matches_cake :
       simp [evalPanValueFfiClockProg, evalPanValueFfiClockLeaf,
         evalPanValueFfiProgSteps]
 
-theorem clocked_seq_normal_exposes_components :
-    ∃ (middleLocals middleGlobals : VarName → Option (PanValue Nat))
-      (middleMemory : Nat → Option (PanValue Nat)) (middleFfi : FfiState Unit)
-      (middleClock : Nat),
-      evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
-        evaluatorHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
-        (fun _ => none) evaluatorFfi 2 .tick none none none =
-        some (.control (.normal middleLocals middleGlobals middleMemory middleFfi),
-          middleClock) ∧
-      evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
-        evaluatorHandler [] [] 0 0 8 1 middleLocals middleGlobals middleMemory
-        middleFfi middleClock .skip none none none =
-        some (.control (.normal (fun _ => none) (fun _ => none)
-          (fun _ => none) evaluatorFfi), 1) := by
-  apply evalPanValueFfiClockProg_seq_normal_some_implies_components_some
-    evaluatorContext (fun _ _ => none) evaluatorHandler [] [] 0 0 8 1 2
-    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi
-    .tick .skip (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
-    none none none
-  simp [evalPanValueFfiClockProg, evalPanValueFfiClockLeaf,
-    evalPanValueFfiProgSteps]
-
 /-! A common upper fuel restores the semantic equality after the explicit
     fixed-fuel gap witness: the transformed side succeeds at fuel 2, while
     the original sequence needs fuel 4, and both agree once lifted to 4. -/
@@ -184,14 +162,13 @@ theorem clocked_seq_assoc_common_fuel_matches_cake :
       evaluatorHandler [] [] 0 0 8 4 (fun _ => none) (fun _ => none)
       (fun _ => none) evaluatorFfi 1
       (.seq .skip (.seq .skip (.seq .skip .skip))) := by
-  apply evalPanValueFfiClockProg_eq_of_common_fuel
-    (fuelLeft := 2) (fuelRight := 4) (commonFuel := 4)
+  apply evalPanValueFfiClockProg_seqAssoc_common_fuel
+    (fuelAssoc := 2) (fuelSeq := 4) (commonFuel := 4)
     (result := (.control (.normal (fun _ => none) (fun _ => none)
       (fun _ => none) evaluatorFfi), 1))
     evaluatorContext (fun _ _ => none) evaluatorHandler [] [] 0 0 8
     (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
-    (seqAssoc (.skip : Prog Nat) (.seq .skip (.seq .skip .skip)))
-    (.seq .skip (.seq .skip (.seq .skip .skip))) none none none
+    (.seq .skip (.seq .skip .skip)) none none none
   · simp [evalPanValueFfiClockProg, evalPanValueFfiClockLeaf,
       evalPanValueFfiProgSteps, seqAssoc]
   · simp [evalPanValueFfiClockProg, evalPanValueFfiClockLeaf,

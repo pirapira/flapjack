@@ -134,6 +134,18 @@ def staticProgExtCallMetadataOracle : Bool :=
 
 #guard staticProgExtCallMetadataOracle
 
+/-! Cake warns when a shared store address is calculated from the base
+    address.  `baseAddr` is the executable Based case for this branch. -/
+def staticProgSharedStoreWarningOracle : Bool :=
+  match staticProgCheck (.shMemStore .opW .baseAddr (.const 0)) with
+  | (Except.ok result, [StatErr.warning message]) =>
+      !result.exitsFunction && !result.exitsLoop && result.last == .otherLast &&
+        result.variableDelta.isEmpty && result.currentLocation == "L: " &&
+        message == "L: shared store address is calculated from base in function f\n"
+  | _ => false
+
+#guard staticProgSharedStoreWarningOracle
+
 /-! Cake's sequence rule keeps the first function exit when the second
     statement is transparent.  Check the returned metadata, not only the
     acceptance/error bit, for a return followed by Skip. -/

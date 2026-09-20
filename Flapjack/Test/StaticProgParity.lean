@@ -146,6 +146,27 @@ def staticProgSharedStoreWarningOracle : Bool :=
 
 #guard staticProgSharedStoreWarningOracle
 
+def staticProgWordLocalContext : Context :=
+  { staticProgParityContext with
+    locals := ("x", { shapedBased := .word .trusted }) :: staticProgParityContext.locals }
+
+/-! Cake's local shared-memory load both warns on a Base address and records
+    the loaded word in the local variable delta as Trusted. -/
+def staticProgLocalLoadMetadataOracle : Bool :=
+  match checkProg staticProgWordLocalContext
+      ((.shMemLoad .opW .local "x" .baseAddr) : Prog Nat) with
+  | (Except.ok result, [StatErr.warning message]) =>
+      !result.exitsFunction && !result.exitsLoop && result.last == .otherLast &&
+        result.currentLocation == "L: " &&
+        message == "L: shared load address is calculated from base in function f\n" &&
+        result.variableDelta.length == 1 &&
+        match lookupInfo "x" result.variableDelta with
+        | some info => info.shapedBased == .word .trusted
+        | none => false
+  | _ => false
+
+#guard staticProgLocalLoadMetadataOracle
+
 /-! Cake's sequence rule keeps the first function exit when the second
     statement is transparent.  Check the returned metadata, not only the
     acceptance/error bit, for a return followed by Skip. -/

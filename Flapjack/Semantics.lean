@@ -53,6 +53,51 @@ def evalPanOp [Mul α] (operator : PanOp) (values : List α) : Option α :=
     evalPanOp .mul [left, right] = some (left * right) := by
   rfl
 
+/-! CakeML's `panSem$eval` delegates every `Shift` expression to
+`word_sh`.  Keep the historical two-operation helper above for the small
+abstract fragment, but expose the complete source operation at the boundary
+used by target-word evaluators.  In particular, an amount equal to the word
+width is invalid while amount zero remains valid, matching `word_sh`. -/
+def evalPanShiftFull [PanShiftWidth α] [ShiftLeft α] [ShiftRight α]
+    [ArithmeticShiftRight α] [RotateRightOp α]
+    (operator : Shift) (left right : α) : Option α :=
+  let amount := PanShiftWidth.amount (α := α) right
+  if amount ≠ 0 ∧ PanShiftWidth.width (α := α) ≤ amount then none else
+    match operator with
+    | .lsl => some (ShiftLeft.shiftLeft left right)
+    | .lsr => some (ShiftRight.shiftRight left right)
+    | .asr => some (ArithmeticShiftRight.arithmeticShiftRight left right)
+    | .ror => some (RotateRightOp.rotateRight left right)
+
+/-! Full source expression evaluator paired with `evalPanShiftFull`.
+This is deliberately separate from the historical compact evaluator so
+existing abstract proofs retain their interfaces while target-word callers
+cannot silently turn Cake ASR/ROR into `none`. -/
+def evalPanExpFull [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [PanCmp α] [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
+    (locals : VarName → Option α) (expression : Exp α) : Option α := match expression with
+  | .const value => some value
+  | .var .local name => locals name
+  | .op operator [left, right] => do
+      let left ← evalPanExpFull locals left
+      let right ← evalPanExpFull locals right
+      pure (evalPanBinOp operator left right)
+  | .panOp operator [left, right] => do
+      let left ← evalPanExpFull locals left
+      let right ← evalPanExpFull locals right
+      evalPanOp operator [left, right]
+  | .cmp operator left right => do
+      let left ← evalPanExpFull locals left
+      let right ← evalPanExpFull locals right
+      pure (evalPanCmp operator left right)
+  | .shift operator left right => do
+      let left ← evalPanExpFull locals left
+      let right ← evalPanExpFull locals right
+      evalPanShiftFull operator left right
+  | _ => none
+termination_by structural expression
+
 /-!
 Complete shift semantics corresponding to CakeML's `word_sh`: ASR and ROR
 are intentionally supplied by separate interfaces so a target cannot

@@ -61,6 +61,15 @@ def clockedCallAtZero :
     (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState 0
     none "returnOne" []
 
+def clockedTimeoutFunctions : List (FunName × List VarName × Prog (Word 64)) :=
+  [("timeoutLoop", [], .while (.const (BitVec.ofNat 64 1)) .skip)]
+
+def clockedCallBodyTimeout : Option (PanValueFfiClockResult (Word 64) Unit) :=
+  evalPanValueFfiClockCall statefulTestContext statefulTestPrimitive
+    statefulTestHandler [] clockedTimeoutFunctions 0 100 8 20
+    (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState 1
+    none "timeoutLoop" []
+
 def clockedDecCallAtZero :
     Option (PanValueFfiClockResult (Word 64) Unit) :=
   evalPanValueFfiClockProg statefulTestContext statefulTestPrimitive
@@ -205,6 +214,11 @@ def clockedCallFinalFfiSteps : Option (PanValueFfiSteppedResult (Word 64) Unit) 
 
 #guard
   match clockedCallAtZero with
+  | some (.timeout locals _ _ _, 0) => locals "x" = none
+  | _ => false
+
+#guard
+  match clockedCallBodyTimeout with
   | some (.timeout locals _ _ _, 0) => locals "x" = none
   | _ => false
 

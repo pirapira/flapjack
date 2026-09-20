@@ -1000,6 +1000,65 @@ def wordFunctionToRiscV [NeZero width] :
       pure ([], values)
   | _ => none
 
+/-! Function-level Cake constant boundary.  This mirrors the established
+    function selector but routes its code-producing branches through the
+    checked whole-program entrypoint above. -/
+def wordFunctionToRiscVCake [NeZero width] :
+    WordProg (Word width) → Option (List (Instruction width) × List (Fin 32))
+  | .skip => some ([], [])
+  | .assign name value => do
+      let instructions ← wordExpToInstructionsCake name value
+      pure (instructions, [])
+  | .inst instruction => do
+      let instructions ← wordInstToInstructionsCake instruction
+      pure (instructions, [])
+  | .store address value => do
+      let instructions ← wordShareInstToInstructionsCake .store value address
+      pure (instructions, [])
+  | .shareInst operator name address => do
+      let instructions ← wordShareInstToInstructionsCake operator name address
+      pure (instructions, [])
+  | .locValue destination source => do
+      let instructions ← wordLocValueToInstructions destination source
+      pure (instructions, [])
+  | .tick => pure ([.addi 0 0 0], [])
+  | .ite operator condition rightValue thenBranch elseBranch => do
+      let (branchLeft, right, prelude) ←
+        wordConditionOperands operator condition rightValue
+      let (thenCode, thenReturns) ← wordFunctionToRiscVCake thenBranch
+      let (elseCode, elseReturns) ← wordFunctionToRiscVCake elseBranch
+      if thenReturns != elseReturns then none
+      else
+        let falseOffset : Word width :=
+          BitVec.ofNat width (8 + 4 * thenCode.length)
+        let endOffset : Word width :=
+          BitVec.ofNat width (4 + 4 * elseCode.length)
+        let branchFalse ← match operator with
+          | .equal => pure (.branchNe branchLeft right falseOffset)
+          | .notEqual => pure (.branchEq branchLeft right falseOffset)
+          | .less => pure (.branchGe branchLeft right falseOffset)
+          | .notLess => pure (.branchLt branchLeft right falseOffset)
+          | .lower => pure (.branchGeU branchLeft right falseOffset)
+          | .notLower => pure (.branchLtU branchLeft right falseOffset)
+          | .test => pure (.branchNe branchLeft right falseOffset)
+          | .notTest => pure (.branchEq branchLeft right falseOffset)
+        pure (prelude ++ [branchFalse] ++ thenCode ++
+          [.branchEq 0 0 endOffset] ++ elseCode, thenReturns)
+  | .mustTerminate body => wordFunctionToRiscVCake body
+  | .seq first second => do
+      let (firstCode, firstReturns) ← wordFunctionToRiscVCake first
+      if !firstReturns.isEmpty then
+        pure (firstCode, firstReturns)
+      else
+        let (secondCode, secondReturns) ← wordFunctionToRiscVCake second
+        pure (firstCode ++ secondCode, secondReturns)
+  | .return _ values => do
+      let values ← values.mapM registerOfNat
+      pure ([], values)
+  | _ => none
+termination_by program => sizeOf program
+decreasing_by all_goals decreasing_trivial
+
 def evalWordCondition [NeZero width] (state : State width)
     (operator : Cmp) (condition : Nat) (rightValue : WordRegImm (Word width)) :
     Option Bool := do

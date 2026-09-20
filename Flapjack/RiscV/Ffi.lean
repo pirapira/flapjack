@@ -177,6 +177,59 @@ def wordFunctionToRiscVWithCallsAndFfi [NeZero width]
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial
 
+/-- Cake-faithful sibling of `wordFunctionToRiscVWithCallsAndFfi`: the FFI and
+    call framing is unchanged, while ordinary straight-line instructions are
+    delegated to the Cake list-valued selector `wordFunctionToRiscVWithCallsCake`
+    (so `Loc` values become the exact `AUIPC`/`ADDI` pair). -/
+def wordFunctionToRiscVWithCallsAndFfiCake [NeZero width]
+    (context : WordCallFfiContext width) :
+    WordProg (Word width) → Option (List (Instruction width) × List (Fin 32))
+  | .ffi function configuration configurationLength array arrayLength _ => do
+      let code ← wordFfiToRiscV { services := context.services } function
+        configuration configurationLength array arrayLength
+      pure (code, [])
+  | .seq first second => do
+      let (firstCode, firstReturns) ←
+        wordFunctionToRiscVWithCallsAndFfiCake context first
+      if !firstReturns.isEmpty then
+        pure (firstCode, firstReturns)
+      else
+        let (secondCode, secondReturns) ←
+          wordFunctionToRiscVWithCallsAndFfiCake context second
+        pure (firstCode ++ secondCode, secondReturns)
+  | .ite operator condition rightValue thenBranch elseBranch => do
+      let (branchLeft, right, prelude) ←
+        wordConditionOperands operator condition rightValue
+      let (thenCode, thenReturns) ←
+        wordFunctionToRiscVWithCallsAndFfiCake context thenBranch
+      let (elseCode, elseReturns) ←
+        wordFunctionToRiscVWithCallsAndFfiCake context elseBranch
+      if thenReturns != elseReturns then none
+      else
+        let falseOffset : Word width :=
+          BitVec.ofNat width (8 + 4 * thenCode.length)
+        let endOffset : Word width :=
+          BitVec.ofNat width (4 + 4 * elseCode.length)
+        let branchFalse ← match operator with
+          | .equal => pure (.branchNe branchLeft right falseOffset)
+          | .notEqual => pure (.branchEq branchLeft right falseOffset)
+          | .less => pure (.branchGe branchLeft right falseOffset)
+          | .notLess => pure (.branchLt branchLeft right falseOffset)
+          | .lower => pure (.branchGeU branchLeft right falseOffset)
+          | .notLower => pure (.branchLtU branchLeft right falseOffset)
+          | .test => pure (.branchNe branchLeft right falseOffset)
+          | .notTest => pure (.branchEq branchLeft right falseOffset)
+        pure (prelude ++ [branchFalse] ++ thenCode ++
+          [.branchEq 0 0 endOffset] ++ elseCode, thenReturns)
+  | .mustTerminate body =>
+      wordFunctionToRiscVWithCallsAndFfiCake context body
+  | program => do
+      let (code, returns) ← wordFunctionToRiscVWithCallsCake
+        { targets := context.targets } program
+      pure (code, returns)
+termination_by program => sizeOf program
+decreasing_by all_goals decreasing_trivial
+
 mutual
   def evalWordCallWithCallsAndFfi [NeZero width]
       (functions : List (Nat × List Nat × WordProg (Word width)))

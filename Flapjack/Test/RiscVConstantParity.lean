@@ -387,6 +387,28 @@ example :
     wordExpToInstructionsCake, wordConstToInstructions,
     wordConst32ToInstructions, registerOfNat]
 
+/-! The checked `...Cake` program and function boundaries now route `locValue`
+through the position-aware Cake-faithful lowering (default position `0` for the
+non-layout API), so they emit the `auipc`/`addi` pair rather than a single
+truncating `addi`. -/
+example :
+    wordProgToRiscVCake (width := 64) (.locValue 4 0x1234) =
+      some [.auipc 4 (BitVec.ofInt 64 1),
+        .addi 4 4 (BitVec.ofInt 64 0x234)] := by
+  simp [wordProgToRiscVCake, wordLocValueToInstructionsCake, registerOfNat]
+
+example :
+    wordProgToRiscVCake (width := 64) (.locValue 4 0x1234) =
+      some (labLocValueInstructions (width := 64) 4 0x1234 0) := by
+  simp [wordProgToRiscVCake, wordLocValueToInstructionsCake,
+    labLocValueInstructions, registerOfNat]
+
+example :
+    (wordFunctionToRiscVCake (width := 64) (.locValue 4 0x1234)).map Prod.fst =
+      some (labLocValueInstructions (width := 64) 4 0x1234 0) := by
+  simp [wordFunctionToRiscVCake, wordLocValueToInstructionsCake,
+    labLocValueInstructions, registerOfNat]
+
 /-! Focused regressions for the same checked boundary across the offset shapes
 that the `auipc`/`addi` split must handle: an aligned upward delta, an aligned
 downward page crossing, a negative delta whose signed 12-bit remainder forces a

@@ -514,4 +514,61 @@ example :
         ((wordLocValueToInstructionsCake (width := 64) 4 0x234 0).getD [])) 4 := by
   decide
 
+/-! ## Cake-faithful LocValue execution oracles (bead flapjack-pxn.1.4)
+
+    The checked lowering `wordLocValueToInstructionsCake destination label position`
+    mirrors Cake's PC-relative `Loc` encoding: it emits `AUIPC`/`ADDI` for the
+    offset `label - position`.  Executing that pair from `pc = position` therefore
+    yields `label`.  These `by decide` oracles exercise the out-of-range and
+    page-crossing shapes that the legacy one-instruction boundary truncates. -/
+
+theorem locValue_balanced_reconstruction (delta : Int) :
+    (let remainder := delta % 4096
+     let low := if remainder >= 2048 then remainder - 4096 else remainder
+     let upper := (delta - low) / 4096
+     low + upper * 4096) = delta := by
+  dsimp only
+  split <;> omega
+
+example :
+    readRegister (executeInstructions (zeroState 64)
+        ((wordLocValueToInstructionsCake (width := 64) 4 0x123456 0).getD [])) 4 =
+      BitVec.ofNat 64 0x123456 := by decide
+
+example :
+    readRegister (executeInstructions { (zeroState 64) with pc := BitVec.ofNat 64 0x1000 }
+        ((wordLocValueToInstructionsCake (width := 64) 4 0x800 0x1000).getD [])) 4 =
+      BitVec.ofNat 64 0x800 := by decide
+
+example :
+    readRegister (executeInstructions { (zeroState 64) with pc := BitVec.ofNat 64 0x1000 }
+        ((wordLocValueToInstructionsCake (width := 64) 4 0 0x1000).getD [])) 4 =
+      BitVec.ofNat 64 0 := by decide
+
+example :
+    readRegister (executeInstructions { (zeroState 64) with pc := BitVec.ofNat 64 2 }
+        ((wordLocValueToInstructionsCake (width := 64) 4 0x1004 2).getD [])) 4 =
+      BitVec.ofNat 64 0x1004 := by decide
+
+/-! ### Range boundary of the `AUIPC` immediate (bead flapjack-pxn.1.4)
+
+    The generic execution identity for `wordLocValueToInstructionsCake` needs the
+    pc-relative delta to fit the signed 32-bit `AUIPC`+`ADDI` range; equivalently
+    the `upper` word must fit signed 20 bits.  Outside that range the `AUIPC`
+    immediate sign-wraps, exactly as in Cake's `riscv_ast`.  The first
+    out-of-range `upper`, `2 ^ 19`, is a concrete counterexample to the naive
+    unconditional identity, while in-range values satisfy it. -/
+
+example :
+    uImmediate (BitVec.ofInt 64 (2 ^ 19 : Int)) ≠
+      BitVec.ofInt 64 ((2 ^ 19 : Int) * 4096) := by decide
+
+example :
+    uImmediate (BitVec.ofInt 64 (1 : Int)) =
+      BitVec.ofInt 64 ((1 : Int) * 4096) := by decide
+
+example :
+    uImmediate (BitVec.ofInt 64 (-1 : Int)) =
+      BitVec.ofInt 64 ((-1 : Int) * 4096) := by decide
+
 end Flapjack.RiscV

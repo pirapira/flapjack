@@ -71,6 +71,40 @@ theorem compile_full_pan_value_while_zero_state_correct_regression :
     (defaultCrepSharedMemHandler : CrepSharedMemHandler Nat) 0 100 1 9
     (.skip : Prog Nat)
 
+/-! The complete-word shared-store theorem has a concrete Cake/Crep oracle:
+    both evaluators write the same word at address 7, while the target path
+    goes through the compiled temporary and stateful shared-memory handler. -/
+def crepeFullStoreState : CrepState (RiscV.Word 8) :=
+  { locals := fun name => if name == 1 then some 99 else none
+    memory := fun _ => none
+    globals := fun _ => none }
+
+def crepeFullStoreProgram : Prog (RiscV.Word 8) :=
+  .shMemStore .opW (.const 7) (.const 42)
+
+def crepeFullStoreContext : CompileContext (RiscV.Word 8) :=
+  { vars := [], functions := [], exceptions := [], maxVar := 0,
+    bytesInWord := 1 }
+
+#guard (evalPanValueProgWithPrimitiveFull
+    ([] : StructContext) 0 100 1 (fun _ => none) (fun _ => none)
+    (fun _ => none) (fun _ _ => none) crepeFullStoreProgram).map
+      (fun result => match result.2.2.1 7 with
+      | some (.word value) => value == 42
+      | _ => false) ==
+    some true
+
+#guard (evalCrepFullProgStateFull [] (fun _ _ => none)
+    (noCrepFfi (RiscV.Word 8))
+    (defaultCrepSharedMemHandler : CrepSharedMemHandler (RiscV.Word 8)) 0 100 10
+    crepeFullStoreState
+    (compileProg crepeFullStoreContext crepeFullStoreProgram)).map
+      (fun result => match result with
+      | .normal state => match state.memory 7 with
+        | some value => value == 42
+        | none => false
+      | _ => false) == some true
+
 #guard evalCrepFullExpState crepeGlobalSemanticsState 0 100
   (CrepExp.loadGlob 200) = some 42
 

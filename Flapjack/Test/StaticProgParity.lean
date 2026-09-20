@@ -143,6 +143,18 @@ def staticProgLocalLoadMetadataOracle : Bool :=
 
 #guard staticProgLocalLoadMetadataOracle
 
+/-! Cake's call with no destination is a tail call: matching caller/callee
+    return shapes produce TailLast and function exit metadata. -/
+def staticProgTailCallMetadataOracle : Bool :=
+  match staticProgCallCheck (.call none "callee" []) with
+  | (Except.ok result, warnings) =>
+      result.exitsFunction && !result.exitsLoop && result.last == .tailLast &&
+        result.variableDelta.isEmpty && result.currentLocation == "L: " &&
+        warnings.isEmpty
+  | _ => false
+
+#guard staticProgTailCallMetadataOracle
+
 /-! Cake's sequence rule keeps the first function exit when the second
     statement is transparent.  Check the returned metadata, not only the
     acceptance/error bit, for a return followed by Skip. -/

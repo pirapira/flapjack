@@ -873,6 +873,14 @@
       "tracked_beads": [
         "flapjack-pxn.8.5.10.1.1.1"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/store_offset_boundaries.pnk",
+      "source_reference": "Minimized Cake word_inst Store-carrier oracle: one accepted function exercises valid +8, out-of-range +2048, and signed-negative -2048 local Store offsets; original Cake and Flapjack artifacts are byte-identical.",
+      "cake_sha256": "5b2c394a29f469e71a02b778eade822682a32a7840611c19a1199d37c05d20d6",
+      "tracked_beads": [
+        "flapjack-pxn.10"
+      ]
     }
   ]
 }

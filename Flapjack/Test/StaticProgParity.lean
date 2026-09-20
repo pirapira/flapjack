@@ -72,6 +72,19 @@ def staticProgWhileMetadataOracle : Bool :=
 
 #guard staticProgWhileMetadataOracle
 
+/-! A declared exception with a matching structured payload exits the current
+    function in Cake, with `RaiseLast` and no local delta or diagnostics. -/
+def staticProgRaiseMetadataOracle : Bool :=
+  match staticProgCheck
+      (.raise "E" (.rStruct [.const 0, .const 1])) with
+  | (Except.ok result, warnings) =>
+      result.exitsFunction && !result.exitsLoop && result.last == .raiseLast &&
+        result.variableDelta.isEmpty && result.currentLocation == "L: " &&
+        warnings.isEmpty
+  | _ => false
+
+#guard staticProgRaiseMetadataOracle
+
 /-! Cake's sequence rule keeps the first function exit when the second
     statement is transparent.  Check the returned metadata, not only the
     acceptance/error bit, for a return followed by Skip. -/

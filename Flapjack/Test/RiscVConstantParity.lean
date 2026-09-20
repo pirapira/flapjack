@@ -271,4 +271,14 @@ example :
       some (labLocValueInstructions (width := 64) 4 0x123456 0x1000) := by
   decide
 
+/-- Executing the checked Cake-faithful `LocValue` boundary materializes the
+label value, mirroring the constant execution oracles: the `auipc`/`addi`
+pair computes `label - position` relative to the current program counter. -/
+example :
+    readRegister
+        (executeInstructions (zeroState 64)
+          (labLocValueInstructions (width := 64) 4 0x1234 0)) 4 =
+      some (BitVec.ofNat 64 0x1234) := by
+  decide
+
 end Flapjack.RiscV

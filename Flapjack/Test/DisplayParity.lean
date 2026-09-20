@@ -84,11 +84,78 @@ def panExpOracle : Bool :=
   panExpConstOracle && panExpVarOracle && panExpLoadOracle &&
     panExpNamedStructOracle && panExpShiftOracle
 
+/-! Direct oracle guards for `pan_prog_to_display_def` in
+    `pan_passesScript.sml:203-300`, including sequence flattening, annotation
+    escaping, calls, handlers, and declaration calls. -/
+def panProgBasicOracle : Bool :=
+  sameDisplay (panProgToDisplay (.skip : Prog (BitVec 64))) (.string "skip") &&
+    sameDisplay
+      (panProgToDisplay
+        (.shMemLoad .opW .global "g" (.const (BitVec.ofNat 64 8))))
+      (.item none "shared_mem_load"
+        [.string "word", .string "global", .string "g",
+         .item none "Const" [.string "0x8"]]) &&
+    sameDisplay
+      (panProgToDisplay
+        (.store32 (.const (BitVec.ofNat 64 0)) (.const (BitVec.ofNat 64 1))))
+      (.tuple [.string "mem", .item none "Const" [.string "0x0"],
+        .string ":=", .string "32bit", .item none "Const" [.string "0x1"]])
+
+def panProgSequenceOracle : Bool :=
+  let program : Prog (BitVec 64) :=
+    .seq (.seq .skip .tick) (.assign .local "x" (.const (BitVec.ofNat 64 7)))
+  sameDisplay (panProgToDisplay program)
+    (.list [.string "seq", .string "skip", .string "tick",
+      .tuple [.string "local", .string "x", .string ":=",
+        .item none "Const" [.string "0x7"]]])
+
+def panProgAnnotationOracle : Bool :=
+  sameDisplay
+    (panProgToDisplay (.annot "a\n" "b\"" : Prog (BitVec 64)))
+    (.item none "annot" [.string "\"a\\n\"", .string "\"b\\\"\""])
+
+def panProgCallOracle : Bool :=
+  sameDisplay
+      (panProgToDisplay
+        (.call none "f" [.const (BitVec.ofNat 64 1)] : Prog (BitVec 64)))
+      (.item none "tail_call"
+        [.string "f", .tuple [.item none "Const" [.string "0x1"]]]) &&
+    sameDisplay
+      (panProgToDisplay
+        (.call (some (none, some ("E", "h", .return (.const (BitVec.ofNat 64 2)))))
+          "f" [] : Prog (BitVec 64)))
+      (.item none "call"
+        [.string "f", .tuple [],
+         .item none "handler"
+           [.tuple [.string "E", .string "h",
+             .item none "return" [.item none "Const" [.string "0x2"]]]]]) &&
+    sameDisplay
+      (panProgToDisplay
+        (.call (some (some (.local, "r"), none)) "f" [] : Prog (BitVec 64)))
+      (.tuple [.string "r", .string ":=",
+        .item none "call"
+          [.string "f", .tuple [], .string "no_handler"]])
+
+def panProgDeclCallOracle : Bool :=
+  sameDisplay
+    (panProgToDisplay
+      (.decCall "r" .one "f" [.const (BitVec.ofNat 64 3)] .skip : Prog (BitVec 64)))
+    (.item none "dec"
+      [.tuple [.string "1", .string "r", .string ":=",
+        .item none "call"
+          [.string "f", .tuple [.item none "Const" [.string "0x3"]]]],
+       .string "skip"])
+
+def panProgOracle : Bool :=
+  panProgBasicOracle && panProgSequenceOracle && panProgAnnotationOracle &&
+    panProgCallOracle && panProgDeclCallOracle
+
 #guard opSizeOracle
 #guard insertEsOracle
 #guard varKindOracle
 #guard primOpOracle
 #guard destAnnotOracle
 #guard panExpOracle
+#guard panProgOracle
 
 end Flapjack.Test.DisplayParity

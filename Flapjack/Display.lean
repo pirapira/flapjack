@@ -96,6 +96,9 @@ def shiftToDisplay : Shift → DisplayExpr
   | .asr => emptyDisplayItem "Asr"
   | .ror => emptyDisplayItem "Ror"
 
+def primOpToDisplay : PrimOp → DisplayExpr
+  | .addCarry => emptyDisplayItem "AddCarry"
+
 def panExpToDisplay [CakeDisplayWord α] : Exp α → DisplayExpr
   | .const value => itemWithWord "Const" value
   | .var kind name =>
@@ -147,8 +150,142 @@ where
   termination_by fields => sizeOf fields
   decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
 
-def primOpToDisplay : PrimOp → DisplayExpr
-  | .addCarry => emptyDisplayItem "AddCarry"
+def cakeEscapeChar : Char → String
+  | '\t' => "\\t"
+  | '\n' => "\\n"
+  | '\\' => "\\\\"
+  | '"' => "\\\""
+  | character => String.ofList [character]
+
+def cakeEscapeString (value : String) : String :=
+  "\"" ++ String.ofList (value.toList.flatMap (fun character =>
+    (cakeEscapeChar character).toList)) ++ "\""
+
+def separateDisplayLines (name : String) (children : List DisplayExpr) : DisplayExpr :=
+  .list (.string name :: children)
+
+/-! Program display uses a fuel derived from the nesting of program bodies.
+    The fuel is an implementation detail; every recursive call consumes one,
+    so the public helper has the same total behavior as Cake's definition. -/
+def panProgDepth : Prog α → Nat
+  | .skip => 1
+  | .dec _ _ _ body => 1 + panProgDepth body
+  | .assign _ _ _ => 1
+  | .primitive _ _ _ => 1
+  | .store _ _ => 1
+  | .store32 _ _ => 1
+  | .storeByte _ _ => 1
+  | .seq first second => 1 + max (panProgDepth first) (panProgDepth second)
+  | .ite _ thenBranch elseBranch =>
+      1 + max (panProgDepth thenBranch) (panProgDepth elseBranch)
+  | .while _ body => 1 + panProgDepth body
+  | .break => 1
+  | .continue => 1
+  | .call (some (_, some (_, _, handler))) _ _ => 1 + panProgDepth handler
+  | .call _ _ _ => 1
+  | .decCall _ _ _ _ body => 1 + panProgDepth body
+  | .extCall _ _ _ _ _ => 1
+  | .raise _ _ => 1
+  | .return _ => 1
+  | .shMemLoad _ _ _ _ => 1
+  | .shMemStore _ _ _ => 1
+  | .tick => 1
+  | .annot _ _ => 1
+termination_by program => sizeOf program
+decreasing_by all_goals decreasing_trivial
+
+def panProgToDisplayFuel [CakeDisplayWord α] : Nat → Prog α → DisplayExpr
+  | 0, _ => emptyDisplayItem "display-depth-exhausted"
+  | _fuel + 1, .skip => emptyDisplayItem "skip"
+  | _fuel + 1, .shMemLoad size kind name address =>
+      .item none "shared_mem_load"
+        [opSizeToDisplay size, .string (varKindToString kind), .string name,
+         panExpToDisplay address]
+  | _fuel + 1, .shMemStore size address value =>
+      .item none "shared_mem_store"
+        [opSizeToDisplay size, panExpToDisplay address, panExpToDisplay value]
+  | _fuel + 1, .extCall function configuration configurationLength array arrayLength =>
+      .item none "ext_call"
+        [.string function, panExpToDisplay configuration,
+         panExpToDisplay configurationLength, panExpToDisplay array,
+         panExpToDisplay arrayLength]
+  | fuel + 1, .ite condition thenBranch elseBranch =>
+      .item none "if"
+        [panExpToDisplay condition, panProgToDisplayFuel fuel thenBranch,
+         panProgToDisplayFuel fuel elseBranch]
+  | fuel + 1, .while condition body =>
+      .item none "while" [panExpToDisplay condition, panProgToDisplayFuel fuel body]
+  | fuel + 1, .dec name shape value body =>
+      .item none "dec"
+        [.tuple [.string "local", .string (Shape.shapeToString shape),
+          .string name, .string ":=", panExpToDisplay value],
+         panProgToDisplayFuel fuel body]
+  | _fuel + 1, .assign kind name value =>
+      .tuple [.string (varKindToString kind), .string name, .string ":=",
+        panExpToDisplay value]
+  | _fuel + 1, .primitive name operator arguments =>
+      .tuple [.string name, .string ":=",
+        insertDisplayExpressions (primOpToDisplay operator)
+          (panExpToDisplayList arguments)]
+  | _fuel + 1, .store address value =>
+      .tuple [.string "mem", panExpToDisplay address, .string ":=",
+        panExpToDisplay value]
+  | _fuel + 1, .store32 address value =>
+      .tuple [.string "mem", panExpToDisplay address, .string ":=",
+        .string "32bit", panExpToDisplay value]
+  | _fuel + 1, .storeByte address value =>
+      .tuple [.string "mem", panExpToDisplay address, .string ":=",
+        .string "byte", panExpToDisplay value]
+  | _fuel + 1, .annot tag text =>
+      .item none "annot" [.string (cakeEscapeString tag), .string (cakeEscapeString text)]
+  | _fuel + 1, .tick => emptyDisplayItem "tick"
+  | _fuel + 1, .break => emptyDisplayItem "break"
+  | _fuel + 1, .continue => emptyDisplayItem "continue"
+  | _fuel + 1, .return value => .item none "return" [panExpToDisplay value]
+  | _fuel + 1, .raise exception value =>
+      .item none "raise" [.string exception, panExpToDisplay value]
+  | fuel + 1, .seq first second =>
+      separateDisplayLines "seq"
+        ((panSeqs first ++ panSeqs second).map (panProgToDisplayFuel fuel))
+  | _fuel + 1, .call none function arguments =>
+      .item none "tail_call"
+        [.string function, .tuple (panExpToDisplayList arguments)]
+  | fuel + 1, .call (some (none, handler)) function arguments =>
+      .item none "call"
+        [.string function, .tuple (panExpToDisplayList arguments),
+         panProgToDisplayFuelHandler fuel handler]
+  | fuel + 1, .call (some (some (_, destination), handler)) function arguments =>
+      .tuple [.string destination, .string ":=",
+        .item none "call"
+          [.string function, .tuple (panExpToDisplayList arguments),
+           panProgToDisplayFuelHandler fuel handler]]
+  | fuel + 1, .decCall destination shape function arguments body =>
+      .item none "dec"
+        [.tuple [.string (Shape.shapeToString shape), .string destination,
+          .string ":=", .item none "call"
+            [.string function, .tuple (panExpToDisplayList arguments)]],
+         panProgToDisplayFuel fuel body]
+termination_by fuel => fuel
+where
+  panExpToDisplayList : List (Exp α) → List DisplayExpr
+    | [] => []
+    | expression :: expressions =>
+        panExpToDisplay expression :: panExpToDisplayList expressions
+  termination_by expressions => sizeOf expressions
+  decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+
+  panProgToDisplayFuelHandler : Nat → Option (ExceptionId × VarName × Prog α) → DisplayExpr
+    | _, none => emptyDisplayItem "no_handler"
+    | 0, some _ => emptyDisplayItem "display-depth-exhausted"
+    | fuel + 1, some (exception, handlerVariable, program) =>
+        .item none "handler"
+          [.tuple [.string exception, .string handlerVariable,
+            panProgToDisplayFuel fuel program]]
+  termination_by fuel => fuel
+  decreasing_by all_goals decreasing_trivial
+
+def panProgToDisplay [CakeDisplayWord α] (program : Prog α) : DisplayExpr :=
+  panProgToDisplayFuel (panProgDepth program + 1) program
 
 def destAnnot (program : Prog α) : Option (String × String) :=
   match program with

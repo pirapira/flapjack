@@ -58,4 +58,31 @@ def getNamesParityGuard : Bool :=
 #eval getNamesParityGuard
 #guard getNamesParityGuard
 
+/- Direct parity for `pan_structs$compile_top_def`
+   (`pan_structsScript.sml:244`).  The top pass must seed the structure
+   context from Name declarations, then return only the compiled declarations
+   in source order. -/
+def compileTopParityGuard : Bool :=
+  match structCompileTop
+      [.name "Pair" [("left", .one), ("right", .one)],
+       .decl (.named "Pair") "global"
+         (.nStruct "Pair" [("left", .const 1), ("right", .const 2)]),
+       .function
+         { name := "read", inline := false, exported := false,
+           params := [("pair", .named "Pair")],
+           body := .return (.nField "right" (.var .local "pair")),
+           returnShape := .one }] with
+  | [.decl (.comb [.one, .one]) "global" (.rStruct [.const 1, .const 2]),
+     .function declaration] =>
+      (match declaration.params with
+      | [("pair", .comb [.one, .one])] => true
+      | _ => false) &&
+      match declaration.body with
+      | .return (.rField 1 (.var .local "pair")) => true
+      | _ => false
+  | _ => false
+
+#eval compileTopParityGuard
+#guard compileTopParityGuard
+
 end Flapjack.Test.PanStructsCompileShapeParity

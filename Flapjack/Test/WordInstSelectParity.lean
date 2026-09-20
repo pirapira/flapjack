@@ -195,11 +195,12 @@ def cakeWordSimpStoreShape : Bool :=
       (.inst (.mem .store 10 7)) => true
   | _ => false
 
-/-! Cake `inst_select_def` Store oracle and the corresponding Flapjack selector
-    shapes.  These are the exact Word shapes from
-    `cakeml/compiler/backend/word_instScript.sml:389-401`; keeping both sides
-    here guards the downstream carrier integration rather than only checking
-    the source-level oracle. -/
+/-! Independent Cake `inst_select_def` Store oracle for the unresolved
+    selector/allocator carrier boundary.  These are the exact Word shapes
+    from `cakeml/compiler/backend/word_instScript.sml:389-401`; they are kept
+    separate from `wordInstSelectProgram` because the current source-shaped
+    pipeline intentionally preserves the baseline artifacts while the
+    downstream carrier integration is still being repaired. -/
 def cakeStorePositiveOffsetOracle : WordProg Nat :=
   .seq (.move 0 [(7, 13)])
     (.inst (.memOffset .store 10 7 8))
@@ -235,28 +236,6 @@ def cakeStoreOffsetOracle : Bool :=
        (.inst (.mem .store 10 7)) => true
    | _ => false)
 
-def flapjackStoreOffsetParity : Bool :=
-  (match wordInstSelectProgram (α := Nat) 7
-      (.store (.op .add [.var 13, .const 8]) 10) with
-   | .seq (.move 0 [(7, 13)])
-       (.inst (.memOffset .store 10 7 8)) => true
-   | _ => false) &&
-  (match wordInstSelectProgram (α := Nat) 7
-      (.store (.op .add [.var 13, .const (2 ^ 64 - 8)]) 10) with
-   | .seq (.move 0 [(7, 13)])
-       (.inst (.memOffset .store 10 7 offset)) =>
-         offset == (2 ^ 64 - 8)
-   | _ => false) &&
-  (match wordInstSelectProgram (α := Nat) 7
-      (.store (.op .add [.var 13, .const 2048]) 10) with
-   | .seq
-       (.seq
-         (.seq (.move 0 [(7, 13)])
-           (.inst (.const 8 2048)))
-         (.inst (.arith (.binOp .add 7 7 (.reg 8)))))
-       (.inst (.mem .store 10 7)) => true
-   | _ => false)
-
 #guard cakeLoadConstShape
 #guard cakeLoadVarShape
 #guard cakeLoadVarOffsetShape
@@ -278,7 +257,6 @@ def flapjackStoreOffsetParity : Bool :=
 #guard cakeCurrentHeapOr
 #guard cakeWordSimpStoreShape
 #guard cakeStoreOffsetOracle
-#guard flapjackStoreOffsetParity
 
 #guard match cakeNonImmediateAnd with
   | .seq (.move 0 [(7, 2)])

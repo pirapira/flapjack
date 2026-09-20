@@ -44,6 +44,28 @@ def runtimeTypedStoredRuntimeState : CrepRuntimeState Nat Unit :=
 def runtimeTypedStoreLoadValue : Option Nat :=
   evalCrepRuntimeExp runtimeTypedStoredRuntimeState (.loadGlob 4)
 
+def runtimeTypedAliasedStoreLoadValue : Option Nat :=
+  evalCrepRuntimeExp
+    (storeCrepRuntimeTypedGlobalState globalLoadRuntimeState runtimeTypedKey
+      runtimeTypedBaseState 4 17) (.loadGlob 36)
+
+#guard runtimeTypedAliasedStoreLoadValue == some 17
+
+example :
+    crepRuntimeTypedGlobalRelation runtimeTypedKey
+      (storeCrepRuntimeTypedGlobalState globalLoadRuntimeState runtimeTypedKey
+        runtimeTypedBaseState 4 17)
+      (storeCrepTypedGlobal runtimeTypedKey runtimeTypedBaseState 4 17) := by
+  exact crepRuntimeTypedGlobalRelation_store_adapter _ _ _ _ _
+
+example : runtimeTypedAliasedStoreLoadValue = some 17 := by
+  change evalCrepRuntimeExp
+    (storeCrepRuntimeTypedGlobalState globalLoadRuntimeState runtimeTypedKey
+      runtimeTypedBaseState 4 17) (.loadGlob 36) = some 17
+  rw [evalCrepRuntimeExp_loadGlob_after_store_typedState]
+  simp [runtimeTypedKey, runtimeTypedBaseState, storeCrepTypedGlobal,
+    evalCrepTypedLoad, storeCrepGlobal, crepGlobalKeyOfNat]
+
 /- The relation-level guard uses the actual Cake key type.  On a 5-bit target
    the re-keying is injective, so the runtime's ordinary updateMemory is the
    same update as the source's typed StoreGlob map. -/

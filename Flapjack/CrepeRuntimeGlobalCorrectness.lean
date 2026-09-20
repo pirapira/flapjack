@@ -81,6 +81,15 @@ def storeCrepRuntimeTypedGlobalState [BEq α]
   state.withTypedGlobalState key
     (storeCrepTypedGlobal key typedState address value)
 
+theorem crepRuntimeTypedGlobalRelation_store_adapter
+    [BEq α]
+    (state : CrepRuntimeState α σ) (key : α → CrepGlobalAddress)
+    (typedState : CrepGlobalState α) (address value : α) :
+    crepRuntimeTypedGlobalRelation key
+      (storeCrepRuntimeTypedGlobalState state key typedState address value)
+      (storeCrepTypedGlobal key typedState address value) := by
+  exact crepRuntimeTypedGlobalRelation_adapter _ _ _
+
 theorem evalCrepRuntimeExp_loadGlob_typedState
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
@@ -93,6 +102,22 @@ theorem evalCrepRuntimeExp_loadGlob_typedState
       evalCrepTypedLoad key typedState address := by
   simp [CrepRuntimeState.withTypedGlobalState, evalCrepRuntimeExp,
     evalCrepTypedLoad, CrepGlobalState.toCompact]
+
+theorem evalCrepRuntimeExp_loadGlob_after_store_typedState
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeState α σ) (key : α → CrepGlobalAddress)
+    (typedState : CrepGlobalState α) (address value loadAddress : α) :
+    evalCrepRuntimeExp
+        (storeCrepRuntimeTypedGlobalState state key typedState address value)
+        (.loadGlob loadAddress) =
+      evalCrepTypedLoad key
+        (storeCrepTypedGlobal key typedState address value) loadAddress := by
+  simpa [storeCrepRuntimeTypedGlobalState] using
+    (evalCrepRuntimeExp_loadGlob_typedState state key
+      (storeCrepTypedGlobal key typedState address value) loadAddress)
 
 theorem crepRuntimeToLoop_loadGlob_assign_agreement
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]

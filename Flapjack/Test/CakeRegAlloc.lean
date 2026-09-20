@@ -387,6 +387,31 @@ def raForcedEdgeGuard : Bool :=
       (.delta [1] [5, 3]) [(1, 5)] []).map sortColouring ==
     some (sortColouring [(1, 1), (3, 4), (5, 0)])
 
+/- These two outputs are direct `reg_alloc_probe.out` observations.  A
+   sequential pair has no interference and may share colour zero, while a
+   same-delta clique must receive distinct colours. -/
+def raOrderSeqGuard : Bool :=
+  (Flapjack.RiscV.CakeRegAlloc.cakeDoRegAlloc .irc none 4 []
+      (.seq (.delta [9] []) (.delta [13] [])) [] []).map sortColouring ==
+    some (sortColouring [(9, 0), (13, 0)])
+
+def raOrderCliqueGuard : Bool :=
+  (Flapjack.RiscV.CakeRegAlloc.cakeDoRegAlloc .irc none 4 []
+      (.delta [9, 13] []) [] []).map sortColouring ==
+    some (sortColouring [(9, 0), (13, 1)])
+
+/- `get_prefs_def` uses `MAP ... ++ acc`, preserving each Move's source
+   order.  These guards mirror the canonical `get_prefs_probe.out` output. -/
+def prefsMoveOrderGuard : Bool :=
+  cakeGetPrefs (.move 7 [(1, 2), (3, 4)] : WordProg Nat) [] ==
+    [(7, (1, 2)), (7, (3, 4))]
+
+def prefsSeqOrderGuard : Bool :=
+  cakeGetPrefs
+      (.seq (.move 7 [(1, 2), (3, 4)])
+        (.move 8 [(5, 6), (7, 8)]) : WordProg Nat) [] ==
+    [(7, (1, 2)), (7, (3, 4)), (8, (5, 6)), (8, (7, 8))]
+
 /-- `sort_moves` flips equal-priority moves relative to the input order
     (probe `sort_moves_probe.out` `sm_ties_two`). -/
 def qsortTiesTwoGuard : Bool :=
@@ -635,6 +660,8 @@ def parityGuard : Bool :=
     heuSpillGuard && heuFixedDegreeGuard && raDeltaPairGuard &&
     raDeltaFreeGuard && raDeltaTriangleGuard && raStackOnlyGuard &&
     raMovesCoalesceGuard && raMovesSelfFilteredGuard && raForcedEdgeGuard &&
+    raOrderSeqGuard && raOrderCliqueGuard &&
+    prefsMoveOrderGuard && prefsSeqOrderGuard &&
     partOrderGuard && reviveOrderGuard && movesToSpOrderGuard &&
     resortMovesSpOrderGuard && bgOkOrderGuard &&
     qsortTiesTwoGuard && qsortTiesThreeGuard && qsortDescGuard &&
@@ -667,6 +694,8 @@ def runChecks : IO Bool := do
     graphTagsGuard, graphInitGuard, heuDeltaGuard, heuMovesGuard,
     heuSpillGuard, heuFixedDegreeGuard, raDeltaPairGuard, raDeltaFreeGuard,
     raStackOnlyGuard, raMovesCoalesceGuard, raMovesSelfFilteredGuard,
+    raOrderSeqGuard, raOrderCliqueGuard,
+    prefsMoveOrderGuard, prefsSeqOrderGuard,
     partOrderGuard,
     reviveOrderGuard, revivePartitionGuard, bgOkOrderGuard, qsortTiesTwoGuard,
     movesToSpOrderGuard, resortMovesSpOrderGuard,
@@ -691,6 +720,8 @@ def runChecks : IO Bool := do
     "init_alloc1_heu fixed degree", "reg_alloc delta pair",
     "reg_alloc delta free", "reg_alloc stack only",
     "reg_alloc moves coalesce", "reg_alloc moves self filtered",
+    "reg_alloc sequential pair order", "reg_alloc clique order",
+    "get_prefs Move order", "get_prefs Seq order",
     "sorting partition order", "revive moves reversing partition", "revive partition direction", "bg_ok order",
     "sort_moves tie two", "moves_to_sp order", "resort_moves output order",
     "sort_moves tie three", "sort_moves long tie",

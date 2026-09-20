@@ -1,4 +1,5 @@
 import Flapjack.RiscV.Backend
+import Flapjack.RiscV.Encoding
 
 /-! Direct CakeML `riscv_ast (Inst (Const ...))` oracle checks.
 
@@ -115,6 +116,29 @@ theorem cakeConstWide_execution_oracle :
         (fun instructions =>
           readRegister (executeInstructions (zeroState 64) instructions) 4) =
       some (BitVec.ofNat 64 0x1122334455667788) := by
+  decide
+
+/-! `wordExpToInstruction` is not Cake-faithful for constants outside the
+signed 12-bit immediate range: it returns a single `addi` whose immediate the
+encoder silently truncates, while `wordConstToInstructions` emits the
+`lui`/`addi` (or wider) sequence of `riscv_targetScript.sml:96`.  The witness
+below records the information loss so callers that need the Cake shape use the
+`wordConstToInstructions` boundary. -/
+
+example :
+    wordExpToInstruction (width := 64) 4 (.const (BitVec.ofNat 64 0x1234)) =
+      some (.addi 4 0 (BitVec.ofNat 64 0x1234)) := by
+  decide
+
+example :
+    encodeInstruction (.addi 4 0 (BitVec.ofNat 64 0x1234)) =
+      encodeInstruction (.addi 4 0 (BitVec.ofNat 64 0x234)) := by
+  decide
+
+example :
+    (wordExpToInstruction (width := 64) 4 (.const (BitVec.ofNat 64 0x1234))).map
+        (fun instruction => encodeInstruction instruction) =
+      some (encodeInstruction (.addi 4 0 (BitVec.ofNat 64 0x234))) := by
   decide
 
 end Flapjack.RiscV

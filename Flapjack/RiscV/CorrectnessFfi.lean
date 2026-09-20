@@ -1639,6 +1639,59 @@ example (context : WordCallFfiContext 64) (state : State 64) :
   exact wordFunctionToRiscVWithCallsAndFfiAndLoops_sound_of_straightLine
     context state (.skip : WordProg (Word 64)) .skip _ hcompile
 
+/-- Execution contract for the most complete (loop-, call-, and FFI-aware)
+selector against the loop-aware evaluator: on a straight-line program, an
+accepted compilation yields exactly the emitted instruction sequence, and the
+loop-aware evaluator reports it as a `normal` outcome.  No control transfer can
+fire on the straight-line fragment, so the `WordLoopControlResult` carrier is
+always `normal`. -/
+theorem evalWordLoopProgWithHandlersAndFfi_straightLine_execution_contract_ffi
+    {width : Nat} [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (context : WordCallFfiContext width) (state : State width)
+    (program : WordProg (Word width))
+    (hstraight : WordRiscVStraightLine program) (fuel : Nat)
+    (hfuel : sizeOf program + 1 ≤ fuel)
+    (code : List (Instruction width))
+    (hcompile : wordFunctionToRiscVWithCallsAndFfiAndLoops context program =
+      some (code, [])) :
+    evalWordLoopProgWithHandlersAndFfi functions ffiHandler fuel state program =
+      some (WordLoopControlResult.normal (executeInstructions state code)) := by
+  rw [evalWordLoopProgWithHandlersAndFfi_straightLine_eq_evalWordProg_normal
+    functions ffiHandler state program hstraight fuel hfuel]
+  have hword := wordFunctionToRiscVWithCallsAndFfiAndLoops_sound_of_straightLine
+    context state program hstraight code hcompile
+  rw [evalWordFunction_wordRiscVStraightLine_eq_evalWordProg state program hstraight]
+    at hword
+  cases hprog : evalWordProg state program with
+  | none => simp [hprog] at hword
+  | some final =>
+      simp only [hprog, Option.map_some] at hword
+      have hfin : final = executeInstructions state code := by
+        simpa using congrArg (fun pair => pair.1) (Option.some.inj hword)
+      rw [hfin]
+      rfl
+
+/-- Regression: the loop/FFI-aware execution contract fires on a trivial
+straight-line program. -/
+example (context : WordCallFfiContext 64) (state : State 64) :
+    evalWordLoopProgWithHandlersAndFfi
+      ([] : List (Nat × List Nat × WordProg (Word 64)))
+      (fun _ _ _ _ _ _ => none) (sizeOf (.skip : WordProg (Word 64)) + 1)
+      state (.skip : WordProg (Word 64)) =
+      some (WordLoopControlResult.normal (executeInstructions state ([] : List (Instruction 64)))) := by
+  have hcompile : wordFunctionToRiscVWithCallsAndFfiAndLoops context
+      (.skip : WordProg (Word 64)) =
+      some (([] : List (Instruction 64)), []) := by
+    simp [wordFunctionToRiscVWithCallsAndFfiAndLoops,
+      wordFunctionToRiscVWithCallsAndFfiAndLoopsAux,
+      wordFunctionToRiscVWithCallsAndFfi, wordFunctionToRiscVWithCalls,
+      wordControlInstructions]
+  exact evalWordLoopProgWithHandlersAndFfi_straightLine_execution_contract_ffi
+    _ _ context state (.skip : WordProg (Word 64)) .skip _ (Nat.le_refl _) _ hcompile
+
 /-! The loop-capable selector preserves the one-step ECALL simulation boundary.
     This is the first named machine-correctness theorem for an FFI operation
     after loop-aware lowering. -/

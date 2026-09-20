@@ -218,7 +218,19 @@ def crepProgOracle : Bool :=
         .item none "call"
           [.string "f", .tuple [],
            .item none "handler"
-             [.tuple [.string "0xA", .string "skip"]]]])
+           [.tuple [.string "0xA", .string "skip"]]]])
+
+/-! Direct oracle guard for `crep_fun_to_display_def` in
+    `pan_passesScript.sml:492-499`. -/
+def crepFunOracle : Bool :=
+  sameDisplay
+    (crepFunToDisplay "f" [2, 3]
+      (.return [.var 2, .const (BitVec.ofNat 64 7)] : CrepProg (BitVec 64)))
+    (.tuple [.string "func", .string "f",
+      .tuple [.string "2", .string "3"],
+      .item none "return"
+        [.item none "Var" [.string "2"],
+         .item none "Const" [.string "0x7"]]])
 
 /-! Direct oracle guards for `pan_prog_to_display_def` in
     `pan_passesScript.sml:203-300`, including sequence flattening, annotation
@@ -445,6 +457,7 @@ def loopFunOracle : Bool :=
 #guard panExpOracle
 #guard crepExpOracle
 #guard crepProgOracle
+#guard crepFunOracle
 #guard panProgOracle
 #guard loopExpOracle
 #guard panFunOracle

@@ -307,6 +307,14 @@ decreasing_by all_goals decreasing_trivial
 def crepProgToDisplay [CakeDisplayWord α] (program : CrepProg α) : DisplayExpr :=
   crepProgToDisplayFuel (crepProgDepth program + 1) program
 
+/-! Exact source counterpart of Cake's `crep_fun_to_display_def`
+    (`pan_passesScript.sml:492-499`). -/
+def crepFunToDisplay [CakeDisplayWord α] (name : FunName) (parameters : List Nat)
+    (body : CrepProg α) : DisplayExpr :=
+  .tuple [.string "func", .string name,
+    .tuple (parameters.map (fun parameter => .string (toString parameter))),
+    crepProgToDisplay body]
+
 def cakeEscapeChar : Char → String
   | '\t' => "\\t"
   | '\n' => "\\n"

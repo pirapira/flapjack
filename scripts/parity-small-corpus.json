@@ -905,6 +905,14 @@
       "tracked_beads": [
         "flapjack-8tb.9"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/gh1126_load32_store32.pnk",
+      "source_reference": "Cake panPtreeConversion localise_exp/localise_prog fall-through oracle: Load32 and Store32 operands remain global even inside shadowing declarations; the RISC-V output is byte-identical after preserving those operands.",
+      "cake_sha256": "9326d9fa812cb3d735ab72558da395d4e672b172a5aa0c130f187d08cb7391f3",
+      "tracked_beads": [
+        "flapjack-8tb.9"
+      ]
     }
   ]
 }

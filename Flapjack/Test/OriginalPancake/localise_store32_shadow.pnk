@@ -1,0 +1,6 @@
+var 1 x = 5;
+fun 1 f() {
+  var 1 x = 7;
+  st32 x, 9;
+  return 0;
+}

@@ -891,6 +891,22 @@
       ]
     },
     {
+      "path": "Flapjack/Test/OriginalPancake/localise_load32_shadow.pnk",
+      "source_reference": "GH #1126 P0 regression: a shadowed global/local name in ld32 must follow Cake's catch-all localisation and emit byte-identical RISC-V.",
+      "cake_sha256": "db997d0d9737c0a38761d2c31f5b31e78db395b6f72fdc15bb455bd12791dba8",
+      "tracked_beads": [
+        "flapjack-8tb.9"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/localise_store32_shadow.pnk",
+      "source_reference": "GH #1126 P0 regression: a shadowed global/local name in st32 must follow Cake's catch-all localisation and emit byte-identical RISC-V.",
+      "cake_sha256": "6a840c271cf587ce2c274c9e570d94e5b4652c7c07a540eabfff03d4c538163d",
+      "tracked_beads": [
+        "flapjack-8tb.9"
+      ]
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/gh1126_load32_store32.pnk",
       "source_reference": "Cake panPtreeConversion localise_exp/localise_prog fall-through oracle: Load32 and Store32 operands remain global even inside shadowing declarations; the RISC-V output is byte-identical after preserving those operands.",
       "cake_sha256": "9326d9fa812cb3d735ab72558da395d4e672b172a5aa0c130f187d08cb7391f3",

@@ -63,15 +63,15 @@ yields `none`, never a wrong AST.
 
 ## Deliberate divergences
 
-One parser-token mapping detail differs from the obvious constructor name. It
-is covered by tests in `Flapjack/Test/Parser.lean`.
+One, a case where upstream looks like it has an oversight rather than an
+intention. It is covered by tests in `Flapjack/Test/Parser.lean`.
 
 **`@top`.** `get_keyword` maps both `@base` and `@top` to `BaseK`, matching
 Cake's source behavior. Consequently `@top` parses as `BaseAddr`; `TopK`
 remains a grammar/conversion constructor but is unreachable from Cake lexing.
 
-`Load32` and `Store32` are intentionally not listed here: like Cake, Flapjack
-now leaves their operands unchanged in the localisation pass.
+This reads as a constructor added after the code around it was written and is
+worth reporting upstream.
 
 ## Upstream behaviour preserved
 

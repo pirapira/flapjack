@@ -84,6 +84,21 @@ def panSimpDecls : List (Decl α) → List (Decl α)
   | declaration :: declarations => declaration :: panSimpDecls declarations
 termination_by declarations => sizeOf declarations
 
+def panSimpDecl : Decl α → Decl α
+  | .function declaration =>
+      .function { declaration with body := panSimpProg declaration.body }
+  | declaration => declaration
+
+/-! Source-shaped counterpart of Cake's `compile_prog_pmatch`: `compile_prog`
+    maps `compile` over function declarations and leaves other declarations
+    unchanged. -/
+theorem panSimpDecls_eq_map (declarations : List (Decl α)) :
+    panSimpDecls declarations = declarations.map panSimpDecl := by
+  induction declarations with
+  | nil => simp [panSimpDecls]
+  | cons declaration declarations ih =>
+      cases declaration <;> simp [panSimpDecls, panSimpDecl, ih]
+
 @[simp] theorem smartSeq_skip (program : Prog α) :
     smartSeq (.skip : Prog α) program = program := by
   cases program <;> rfl

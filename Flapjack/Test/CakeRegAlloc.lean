@@ -169,18 +169,6 @@ def bijIndexedBuilderParityGuard : Bool :=
 
 #guard bijIndexedBuilderParityGuard
 
-/- The hot-path source index must preserve the Cake association-list lookup,
-   including the zero fallback for a name absent from the bijection. -/
-def allocatorIndexLookupGuard : Bool :=
-  let entries : NatInfoMap Nat := [(9, 4), (1, 2), (17, 6)]
-  let index := cakeAllocatorIndex entries
-  cakeAllocatorIndexLookup index 9 = 4 &&
-    cakeAllocatorIndexLookup index 1 = 2 &&
-    cakeAllocatorIndexLookup index 17 = 6 &&
-    cakeAllocatorIndexLookup index 99 = 0
-
-#guard allocatorIndexLookupGuard
-
 
 /-! ## IRC graph construction guards
 

@@ -1103,18 +1103,6 @@ def cakeFullConsistencyOk (state : CakeRaState) (k : Nat) (x y : Nat) : Bool :=
     (cakeIsFixedK state k y || cakeTagIsAtemp state y) &&
     !(cakeIsFixedK state k x && cakeIsFixedK state k y)
 
-/-- A lookup-only index for the source-variable side of `mk_bij`.
-
-    Cake's `toAllocator` association list is a bijection with unique source
-    keys.  The list remains the canonical ordered representation everywhere
-    observable; this index is used only for the repeated `update_move` lookups
-    in the allocator hot path. -/
-def cakeAllocatorIndex (toAllocator : NatInfoMap Nat) : Std.HashMap Nat Nat :=
-  toAllocator.foldl (fun index entry => index.insert entry.1 entry.2) {}
-
-def cakeAllocatorIndexLookup (index : Std.HashMap Nat Nat) (name : Nat) : Nat :=
-  (index[name]?).getD 0
-
 /-- The allocator flavour, mirroring `algorithm` in the original. -/
 inductive CakeAlgorithm : Type
   | simple : CakeAlgorithm
@@ -1126,8 +1114,7 @@ inductive CakeAlgorithm : Type
 def cakeDoRegAllocFromState (alg : CakeAlgorithm) (scost : Option (CakeNodeMap Nat))
     (k : Nat) (moves : List (Nat × (Nat × Nat)))
     (bij : CakeNodeBijection) (state : CakeRaState) : Option (NatInfoMap Nat) :=
-  let sourceIndex := cakeAllocatorIndex bij.toAllocator
-  let spta := fun name => cakeAllocatorIndexLookup sourceIndex name
+  let spta := CakeAlloc.spDefault bij.toAllocator
   let moves0 := moves.map (cakeUpdateMove spta)
   let movesF := filterReversed (fun m => cakeFullConsistencyOk state k m.2.1 m.2.2) moves0
   let selMoves := match alg with

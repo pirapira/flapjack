@@ -302,4 +302,276 @@ example (state : State 64) :
         ((wordLocValueToInstructionsCake (width := 64) 4 0x1234 0).getD [])) := by
   simp [evalWordProgCake, wordLocValueToInstructionsCake, registerOfNat]
 
+/-!
+## Function-level Cake-faithful evaluator
+
+`evalWordFunction` is the historical function-level evaluator; it carries the
+ABI return list alongside the resulting machine state.  This section defines the
+Cake-faithful counterpart `evalWordFunctionCake` (same clauses, checked Cake
+lowering) and lifts the straight-line soundness result from the program level to
+the function level.  Source, memory and FFI-relevant state stay explicit: the
+evaluator takes `state` and returns the resulting `State` together with the
+returned registers.
+-/
+
+/-- Cake-faithful counterpart of `evalWordFunction`: identical clause structure,
+but constants, shared-instruction addresses and `LocValue` go through the
+checked Cake selectors. -/
+def evalWordFunctionCake [NeZero width] (state : State width) :
+    WordProg (Word width) → Option (State width × List (Word width))
+  | .skip => some (state, [])
+  | .move _ moves => do
+      let instructions ← wordMoveToInstructions moves
+      pure (executeInstructions state instructions, [])
+  | .assign name value => do
+      let instructions ← wordExpToInstructionsCake name value
+      pure (executeInstructions state instructions, [])
+  | .tick => pure (execute state (.addi 0 0 0), [])
+  | .inst (.const destination value) => do
+      let instructions ← wordInstToInstructionsCake (.const destination value)
+      pure (executeInstructions state instructions, [])
+  | .inst (.arith operation) => do
+      let instructions ← wordArithToInstructions operation
+      pure (executeInstructions state instructions, [])
+  | .inst (.mem .load8 destination address) => do
+      let destination ← registerOfNat destination
+      let address ← registerOfNat address
+      pure (execute state (.loadByte destination address), [])
+  | .inst (.mem .store8 source address) => do
+      let source ← registerOfNat source
+      let address ← registerOfNat address
+      pure (execute state (.storeByte source address), [])
+  | .inst (.mem .load16 destination address) => do
+      let destination ← registerOfNat destination
+      let address ← registerOfNat address
+      pure (execute state (.loadHalf destination address), [])
+  | .inst (.mem .store16 source address) => do
+      let source ← registerOfNat source
+      let address ← registerOfNat address
+      pure (execute state (.storeHalf source address), [])
+  | .inst (.mem .load32 destination address) => do
+      let destination ← registerOfNat destination
+      let address ← registerOfNat address
+      pure (execute state (.load32 destination address), [])
+  | .store address value => do
+      let state ← evalWordShareInstCake state .store value address
+      pure (state, [])
+  | .inst (.mem .store32 source address) => do
+      let source ← registerOfNat source
+      let address ← registerOfNat address
+      pure (execute state (.store32 source address), [])
+  | .inst (.mem .store source address) => do
+      let source ← registerOfNat source
+      let address ← registerOfNat address
+      pure (execute state (.storeWord source address), [])
+  | .inst (.mem .load destination address) => do
+      let destination ← registerOfNat destination
+      let address ← registerOfNat address
+      pure (execute state (.loadWord destination address), [])
+  | .inst (.memOffset .load destination address offset) => do
+      let destination ← registerOfNat destination
+      let address ← registerOfNat address
+      pure (execute state (.loadWordOffset destination address offset), [])
+  | .inst (.memOffset .load8 destination address offset) => do
+      let destination ← registerOfNat destination
+      let address ← registerOfNat address
+      pure (execute state (.loadByteOffset destination address offset), [])
+  | .inst (.memOffset .load16 destination address offset) => do
+      let destination ← registerOfNat destination
+      let address ← registerOfNat address
+      pure (execute state (.loadHalfOffset destination address offset), [])
+  | .inst (.memOffset .load32 destination address offset) => do
+      let destination ← registerOfNat destination
+      let address ← registerOfNat address
+      pure (execute state (.load32Offset destination address offset), [])
+  | .inst (.memOffset .store source address offset) => do
+      let source ← registerOfNat source
+      let address ← registerOfNat address
+      pure (execute state (.storeWordOffset source address offset), [])
+  | .inst (.memOffset .store8 source address offset) => do
+      let source ← registerOfNat source
+      let address ← registerOfNat address
+      pure (execute state (.storeByteOffset source address offset), [])
+  | .inst (.memOffset .store16 source address offset) => do
+      let source ← registerOfNat source
+      let address ← registerOfNat address
+      pure (execute state (.storeHalfOffset source address offset), [])
+  | .inst (.memOffset .store32 source address offset) => do
+      let source ← registerOfNat source
+      let address ← registerOfNat address
+      pure (execute state (.store32Offset source address offset), [])
+  | .shareInst operator name address => do
+      let state ← evalWordShareInstCake state operator name address
+      pure (state, [])
+  | .locValue destination source => do
+      let instructions ← wordLocValueToInstructionsCake destination source 0
+      pure (executeInstructions state instructions, [])
+  | .ite operator condition rightValue thenBranch elseBranch => do
+      let choose ← evalWordCondition state operator condition rightValue
+      if choose then evalWordFunctionCake state thenBranch
+      else evalWordFunctionCake state elseBranch
+  | .mustTerminate body => evalWordFunctionCake state body
+  | .seq first second => do
+      let (state, firstReturns) ← evalWordFunctionCake state first
+      if !firstReturns.isEmpty then
+        pure (state, firstReturns)
+      else
+        let (state, secondReturns) ← evalWordFunctionCake state second
+        pure (state, secondReturns)
+  | .return _ values => do
+      let values ← values.mapM (fun name => do
+        let register ← registerOfNat name
+        pure (readRegister state register))
+      pure (state, values)
+  | _ => none
+  termination_by program => sizeOf program
+  decreasing_by all_goals decreasing_trivial
+
+/-- On the straight-line fragment the function-level Cake evaluator is the
+program-level Cake evaluator paired with the empty return carrier. -/
+theorem evalWordFunctionCake_wordRiscVStraightLine_eq_evalWordProgCake [NeZero width]
+    (state : State width) (program : WordProg (Word width))
+    (hstraight : WordRiscVStraightLine program) :
+    evalWordFunctionCake state program =
+      (evalWordProgCake state program).map (fun state => (state, [])) := by
+  induction hstraight generalizing state with
+  | skip => simp [evalWordFunctionCake, evalWordProgCake]
+  | move store moves => simp [evalWordFunctionCake, evalWordProgCake, Function.comp_def]
+  | assign destination value =>
+      simp [evalWordFunctionCake, evalWordProgCake, Function.comp_def]
+  | inst instruction =>
+      cases instruction with
+      | arith operation =>
+          simp [evalWordFunctionCake, evalWordProgCake, Function.comp_def]
+      | const destination value =>
+          simp [evalWordFunctionCake, evalWordProgCake, Function.comp_def]
+      | mem operator destination address =>
+          cases operator <;>
+            simp [evalWordFunctionCake, evalWordProgCake, Function.comp_def]
+      | memOffset operator destination address offset =>
+          cases operator <;>
+            simp [evalWordFunctionCake, evalWordProgCake, Function.comp_def]
+  | store address value =>
+      cases h : wordShareInstToInstructionsCake (width := width) .store value address <;>
+        simp [evalWordFunctionCake, evalWordProgCake, evalWordShareInstCake, h]
+  | locValue destination source =>
+      simp [evalWordFunctionCake, evalWordProgCake, Function.comp_def]
+  | tick => simp [evalWordFunctionCake, evalWordProgCake]
+  | shareInst operator name address =>
+      cases h : wordShareInstToInstructionsCake (width := width) operator name address <;>
+        simp [evalWordFunctionCake, evalWordProgCake, evalWordShareInstCake, h]
+  | @seq first second hfirst hsecond ihfirst ihsecond =>
+      simp only [evalWordFunctionCake, evalWordProgCake]
+      rw [ihfirst state]
+      cases hfirstEval : evalWordProgCake state first with
+      | none => simp
+      | some firstState =>
+          simp [ihsecond firstState]
+          cases hsecondEval : evalWordProgCake firstState second with
+          | none => simp
+          | some secondState => simp
+
+/-- The function-level Cake selector omits the `.move` clause (mirroring the
+historical `wordFunctionToRiscV`), so on straight-line programs it accepts only
+programs without `move`.  On those programs it agrees with the program-level
+Cake selector, and its return carrier is always empty. -/
+theorem wordFunctionToRiscVCake_code_eq_wordProgToRiscVCake_of_straightLine
+    [NeZero width] (program : WordProg (Word width))
+    (hstraight : WordRiscVStraightLine program)
+    (code : List (Instruction width)) (returns : List (Fin 32))
+    (hcompile : wordFunctionToRiscVCake program = some (code, returns)) :
+    wordProgToRiscVCake program = some code ∧ returns = [] := by
+  induction hstraight generalizing code returns with
+  | skip =>
+      simpa [wordFunctionToRiscVCake, wordProgToRiscVCake] using hcompile
+  | move store moves =>
+      simp [wordFunctionToRiscVCake] at hcompile
+  | assign destination value =>
+      cases h : wordExpToInstructionsCake (width := width) destination value with
+      | none => simp [wordFunctionToRiscVCake, h] at hcompile
+      | some instructions =>
+          simpa [wordFunctionToRiscVCake, wordProgToRiscVCake, h] using hcompile
+  | inst instruction =>
+      cases h : wordInstToInstructionsCake (width := width) instruction with
+      | none => simp [wordFunctionToRiscVCake, h] at hcompile
+      | some instructions =>
+          simpa [wordFunctionToRiscVCake, wordProgToRiscVCake, h] using hcompile
+  | store address value =>
+      cases h : wordShareInstToInstructionsCake (width := width) .store value address with
+      | none => simp [wordFunctionToRiscVCake, h] at hcompile
+      | some instructions =>
+          simpa [wordFunctionToRiscVCake, wordProgToRiscVCake, h] using hcompile
+  | shareInst operator name address =>
+      cases h : wordShareInstToInstructionsCake (width := width) operator name address with
+      | none => simp [wordFunctionToRiscVCake, h] at hcompile
+      | some instructions =>
+          simpa [wordFunctionToRiscVCake, wordProgToRiscVCake, h] using hcompile
+  | locValue destination source =>
+      cases h : wordLocValueToInstructionsCake (width := width) destination source 0 with
+      | none => simp [wordFunctionToRiscVCake, h] at hcompile
+      | some instructions =>
+          simpa [wordFunctionToRiscVCake, wordProgToRiscVCake, h] using hcompile
+  | tick =>
+      simpa [wordFunctionToRiscVCake, wordProgToRiscVCake] using hcompile
+  | seq first second hfirst hsecond ihfirst ihsecond =>
+      cases hfirstCompile : wordFunctionToRiscVCake first with
+      | none => simp [wordFunctionToRiscVCake, hfirstCompile] at hcompile
+      | some firstResult =>
+          obtain ⟨firstCode, firstReturns⟩ := firstResult
+          obtain ⟨hfirstProg, hfirstReturns⟩ :=
+            ihfirst firstCode firstReturns hfirstCompile
+          subst firstReturns
+          cases hsecondCompile : wordFunctionToRiscVCake second with
+          | none =>
+              simp [wordFunctionToRiscVCake, hfirstCompile, hsecondCompile]
+                at hcompile
+          | some secondResult =>
+              obtain ⟨secondCode, secondReturns⟩ := secondResult
+              obtain ⟨hsecondProg, hsecondReturns⟩ :=
+                ihsecond secondCode secondReturns hsecondCompile
+              subst secondReturns
+              simpa [wordFunctionToRiscVCake, wordProgToRiscVCake, hfirstCompile,
+                hsecondCompile, hfirstProg, hsecondProg] using hcompile
+
+/-- Function-level Cake-faithful soundness for the straight-line fragment: if the
+checked Cake function selector accepts a straight-line program then running the
+emitted instructions is exactly the Cake-faithful evaluator, with an empty
+return carrier. -/
+theorem wordFunctionToRiscVCake_sound_of_straightLine [NeZero width]
+    (state : State width) (program : WordProg (Word width))
+    (hstraight : WordRiscVStraightLine program)
+    (code : List (Instruction width))
+    (hcompile : wordFunctionToRiscVCake program = some (code, [])) :
+    evalWordFunctionCake state program =
+      some (executeInstructions state code, []) := by
+  obtain ⟨hbase, _⟩ :=
+    wordFunctionToRiscVCake_code_eq_wordProgToRiscVCake_of_straightLine
+      program hstraight code [] hcompile
+  have hword := wordProgToRiscVCake_sound_of_straightLine state program
+    hstraight code hbase
+  rw [evalWordFunctionCake_wordRiscVStraightLine_eq_evalWordProgCake state
+    program hstraight, hword]
+  rfl
+
+/-! Focused regressions for the function-level Cake boundary. -/
+
+/-- Function-level soundness exercised on the trivial straight-line program. -/
+example (state : State 64) :
+    evalWordFunctionCake state (.skip : WordProg (Word 64)) =
+      some (executeInstructions state ([] : List (Instruction 64)),
+        ([] : List (Word 64))) := by
+  have hstraight : WordRiscVStraightLine (.skip : WordProg (Word 64)) := .skip
+  have hcompile : wordFunctionToRiscVCake (.skip : WordProg (Word 64)) =
+      some (([] : List (Instruction 64)), ([] : List (Fin 32))) := by
+    simp [wordFunctionToRiscVCake]
+  exact wordFunctionToRiscVCake_sound_of_straightLine state _ hstraight _ hcompile
+
+/-- The function-level Cake selector keeps the multi-instruction AUIPC+ADDI
+materialization of `LocValue` visible. -/
+example :
+    wordFunctionToRiscVCake (.locValue 4 0x1234 : WordProg (Word 64)) =
+      some ([.auipc 4 (BitVec.ofInt 64 1), .addi 4 4 (BitVec.ofInt 64 0x234)],
+        ([] : List (Fin 32))) := by
+  simp [wordFunctionToRiscVCake, wordLocValueToInstructionsCake, registerOfNat]
+
 end Flapjack.RiscV

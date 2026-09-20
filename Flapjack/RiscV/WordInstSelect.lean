@@ -231,27 +231,10 @@ def wordInstNormalizeExp [Sub α] [Add α] [AndOp α] [OrOp α] [HXor α α α]
     [DecidableEq α] [OfNat α 0] (expression : WordExp α) : WordExp α :=
   wordInstFlattenExp (wordInstPullExp expression)
 
-/-- Shared tail of `inst_select_exp`'s `Load` case: the selected address is
-    normally the returned temporary, matching Cake's `Addr temp 0w`, and Cake
-    lowers every expression-level load to a genuine `Mem Load` instruction.
-    Keeping it as an `Assign` would leave the load invisible to `word_cse`, so
-    repeated loads could not share the first result.  An address that stayed an
-    unfused base-plus-offset expression is preserved for the later
-    Word-to-Stack offset handling instead of pretending that `temp` holds the
-    complete address. -/
-def wordInstSelectLoadTail [WordInstSelectImmediate α] (temp : Nat) (prelude : WordProg α)
-    (selectedAddress : WordExp α) : WordProg α × WordExp α :=
-  match selectedAddress with
-  | .op .add [.var address, .const offset] =>
-      if WordInstSelectImmediate.negativeAddressOffset offset then
-        (wordDeadSelectSeq prelude
-          (.inst (.memOffset .load temp address offset)), .var temp)
-      else
-        (wordDeadSelectSeq prelude (.assign temp (.load selectedAddress)), .var temp)
-  | .var address =>
-      (wordDeadSelectSeq prelude (.inst (.mem .load temp address)), .var temp)
-  | _ => (wordDeadSelectSeq prelude (.assign temp (.load selectedAddress)), .var temp)
-
+/-! Cake's `inst_select_exp` load rule always produces a real `Mem Load`:
+    valid `base + offset` addresses retain the offset, while invalid and
+    non-add addresses are materialized in the fresh temporary and use offset
+    zero. -/
 def wordInstSelectAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α 1]
     [WordInstSelectImmediate α]
     (temp : Nat) : WordExp α → WordProg α × WordExp α
@@ -259,21 +242,23 @@ def wordInstSelectAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α
   | .var name => (.move 0 [(temp, name)], .var temp)
   | .lookup store => (.get temp store, .var temp)
   | .load (.op .add [base, .const value]) =>
-      /- `inst_select_exp c tar temp (Load exp)` (`word_instScript.sml:234-245`)
-         checks the address for `Op Add [exp'; Const w]` and keeps `w` in the
-         `Addr temp w` it emits, selecting only `exp'`.  Folding that `w` into
-         an `addi` instead costs an extra instruction and loses the offset the
-         Word-to-Stack pass would have fused: `calculate_total_blob_gas` in the
-         stateless-pancaketh guest came out as `addi a0, a0, 264; ld a0, 0(a0)`
-         where Cake emits `ld a0, 264(a0)`.  Note that Cake splits on the
-         address shape and still selects `exp'` with the ordinary target
-         configuration; suppressing immediates for the whole address would also
-         reach nested subexpressions, where Cake selects `addi`/`slli`. -/
-      let (prelude, selectedBase) := wordInstSelectAtom temp base
-      wordInstSelectLoadTail temp prelude (.op .add [selectedBase, .const value])
+      /- Cake's `inst_select_exp` (`word_instScript.sml:234-245`) keeps a
+         valid address offset in the memory instruction.  For an invalid
+         offset it first materializes the complete add expression in `temp`,
+         then loads from `Addr temp 0`. -/
+      if WordInstSelectImmediate.validSharedMemoryOffset .load value then
+        let (prelude, _) := wordInstSelectAtom temp base
+        (wordDeadSelectSeq prelude
+          (.inst (.memOffset .load temp temp value)), .var temp)
+      else
+        let (prelude, _) := wordInstSelectAtom temp (.op .add [base, .const value])
+        (wordDeadSelectSeq prelude
+          (.inst (.mem .load temp temp)), .var temp)
   | .load address =>
-      let (prelude, selectedAddress) := wordInstSelectAtom temp address
-      wordInstSelectLoadTail temp prelude selectedAddress
+      /- Non-add addresses are also selected into `temp` before the
+         zero-offset load, including plain variables and constants. -/
+      let (prelude, _) := wordInstSelectAtom temp address
+      (wordDeadSelectSeq prelude (.inst (.mem .load temp temp)), .var temp)
   | .op operator [left, .const value] =>
       /- `inst_select_exp c tar temp (Op op [e1; e2])` with `e2 = Const w`
          (`word_instScript.sml:252-275`) tests `c.valid_imm (INL op) w` for
@@ -436,17 +421,23 @@ def wordInstSelectProgram [Sub α] [Add α] [AndOp α] [OrOp α] [HXor α α α]
       match value with
       | .lookup store => .get destination store
       | .load address =>
-          let (prelude, selectedAddress) := wordInstSelectAddressAtom temp address
-          match selectedAddress with
-          | .var address =>
-              wordDeadSelectSeq prelude (.inst (.mem .load destination address))
-          | .op .add [.var address, .const offset] =>
-              if WordInstSelectImmediate.negativeAddressOffset offset then
+          /- This is the statement-level form of Cake's `Load` selector:
+             preserve a valid `Addr temp offset`, otherwise select the whole
+             address into `temp` and emit `Addr temp 0`. -/
+          match address with
+          | .op .add [base, .const offset] =>
+              if WordInstSelectImmediate.validSharedMemoryOffset .load offset then
+                let (prelude, _) := wordInstSelectAtom temp base
                 wordDeadSelectSeq prelude
-                  (.inst (.memOffset .load destination address offset))
+                  (.inst (.memOffset .load destination temp offset))
               else
-                wordDeadSelectSeq prelude (.assign destination (.load selectedAddress))
-          | _ => wordDeadSelectSeq prelude (.assign destination (.load selectedAddress))
+                let (prelude, _) := wordInstSelectAtom temp address
+                wordDeadSelectSeq prelude
+                  (.inst (.mem .load destination temp))
+          | _ =>
+              let (prelude, _) := wordInstSelectAtom temp address
+              wordDeadSelectSeq prelude
+                (.inst (.mem .load destination temp))
       | .op operator [left, .const value] =>
           let (prelude, left) := wordInstSelectAtom temp left
           match left with

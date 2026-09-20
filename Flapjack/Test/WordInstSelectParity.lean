@@ -10,6 +10,16 @@ def cakeLoadVarAddress : WordProg (BitVec 64) :=
   wordInstSelectProgram 7
     (.assign 2 (.load (.var 13)))
 
+def cakeLoadValidOffsetAddress : WordProg (BitVec 64) :=
+  wordInstSelectProgram 7
+    (.assign 2
+      (.load (.op .add [.var 13, .const (BitVec.ofNat 64 0x10)])))
+
+def cakeLoadInvalidOffsetAddress : WordProg (BitVec 64) :=
+  wordInstSelectProgram 7
+    (.assign 2
+      (.load (.op .add [.var 13, .const (BitVec.ofNat 64 0x1000)])))
+
 def cakeNonImmediateAnd : WordProg (BitVec 64) :=
   wordInstSelectProgram 7
     (.assign 40 (.op .and [.var 2, .const (BitVec.ofNat 64 0xFFFFFFFF)]))
@@ -59,6 +69,21 @@ def cakeSharedByteOffsetMaterializesConstant : Bool :=
 
 #guard cakeLoadConstShape
 #guard cakeLoadVarShape
+#guard match cakeLoadValidOffsetAddress with
+  | .seq (.move 0 [(7, 13)])
+      (.inst (.memOffset .load 2 7 value)) =>
+      value == BitVec.ofNat 64 0x10
+  | _ => false
+#guard match cakeLoadInvalidOffsetAddress with
+  | .seq
+      (.seq
+        (.seq
+          (.move 0 [(7, 13)])
+          (.inst (.const 8 value)))
+        (.inst (.arith (.binOp .add 7 7 (.reg 8)))))
+      (.inst (.mem .load 2 7)) =>
+      value == BitVec.ofNat 64 0x1000
+  | _ => false
 #guard cakeWideBinopStatementShape
 #guard cakeWideAddMaterializesConstant
 #guard cakeSharedByteOffsetMaterializesConstant

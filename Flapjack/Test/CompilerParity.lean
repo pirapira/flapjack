@@ -201,6 +201,7 @@ import Flapjack.Test.WordStackCallParity
 import Flapjack.Test.StackRawCall
 import Flapjack.Test.WordInstNormalizeParity
 import Flapjack.Test.WordInstSelectParity
+import Flapjack.Test.WordStackLoadOffsetParity
 import Flapjack.Test.CakeTailCallSsaParity
 import Flapjack.Test.CakeForcedParity
 import Flapjack.Test.CakeMkBijParity

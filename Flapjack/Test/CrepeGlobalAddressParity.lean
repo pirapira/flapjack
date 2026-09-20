@@ -217,6 +217,31 @@ example : typedOutOfRangeShiftValue = panRiscVShift .asr (BitVec.ofNat 8 0x80) 8
     panRiscVShift, shiftState,
     PanShiftWidth.amount, PanShiftWidth.width]
 
+/-! Program-level Cake oracle coverage: the return-list path must use the same
+full shift semantics as the expression boundary, rather than the legacy
+`evalCrepFullExpsState`/`evalPanShift` compatibility path. -/
+def typedShiftProgramValue : Option (List (RiscV.Word 8)) :=
+  (evalCrepTypedProgFull shiftKey shiftState [] (fun _ _ => none)
+    (noCrepFfi (RiscV.Word 8))
+    (defaultCrepSharedMemHandler : CrepSharedMemHandler (RiscV.Word 8))
+    0 0 4
+    (.return
+      [.shift .asr (.const (BitVec.ofNat 8 0x80)) (.const (BitVec.ofNat 8 1)),
+       .shift .ror (.const (BitVec.ofNat 8 0x81)) (.const (BitVec.ofNat 8 1))])).bind
+    fun result => match result with
+    | .returned _ values => some values
+    | _ => none
+
+def typedShiftOracleValues : Option (List (RiscV.Word 8)) :=
+  some [BitVec.ofNat 8 0xc0, BitVec.ofNat 8 0xc0]
+
+example : typedShiftProgramValue = typedShiftOracleValues := by
+  simp [typedShiftProgramValue, typedShiftOracleValues, evalCrepTypedProgFull,
+    evalCrepFullProgStateFull, evalCrepFullExpsStateFull,
+    evalCrepFullExpStateFull, CrepGlobalState.toCompact, evalPanShiftFull,
+    shiftState, PanShiftWidth.amount, PanShiftWidth.width,
+    ArithmeticShiftRight.arithmeticShiftRight, RotateRightOp.rotateRight]
+
 /-- The typed store/load round trip through the executable entrypoint. -/
 example : evalCrepTypedLoad typedKey typedStored 4 = some 11 :=
   evalCrepTypedLoad_storeCrepTypedGlobal typedKey typedBaseState 4 11

@@ -534,6 +534,43 @@ theorem evalWordCallWithHandlers_raise_handler_of_eval [NeZero width]
   simp [evalWordCallWithHandlers, hlookup, hread, hbind, hbody,
     hhandlerRegister, hhandler]
 
+theorem evalWordCallWithHandlers_normal_of_eval [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (fuel : Nat) (state calleeState bodyState : State width)
+    (target : Nat) (parameters arguments : List Nat)
+    (body : WordProg (Word width)) (values : List (Word width))
+    (hlookup : lookupWordFunction target functions = some (parameters, body))
+    (hread : readWordRegisters state arguments = some values)
+    (hbind : bindWordRegisters state parameters values = some calleeState)
+    (hbody : evalWordFunctionWithHandlers functions fuel
+      calleeState body = some (.normal bodyState)) :
+    evalWordCallWithHandlers functions (fuel + 1) state
+      none (some target) arguments none =
+      some (.normal { state with
+        memory := bodyState.memory
+        privilege := bodyState.privilege
+        mode := bodyState.mode }) := by
+  simp [evalWordCallWithHandlers, hlookup, hread, hbind, hbody]
+
+theorem evalWordCallWithHandlers_raise_none_of_eval [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (fuel : Nat) (state calleeState bodyState : State width)
+    (target : Nat) (parameters arguments : List Nat)
+    (body : WordProg (Word width)) (values : List (Word width))
+    (exceptionValue : Nat)
+    (hlookup : lookupWordFunction target functions = some (parameters, body))
+    (hread : readWordRegisters state arguments = some values)
+    (hbind : bindWordRegisters state parameters values = some calleeState)
+    (hbody : evalWordFunctionWithHandlers functions fuel
+      calleeState body = some (.raised bodyState exceptionValue)) :
+    evalWordCallWithHandlers functions (fuel + 1) state
+      none (some target) arguments none =
+      some (.raised { state with
+        memory := bodyState.memory
+        privilege := bodyState.privilege
+        mode := bodyState.mode } (BitVec.ofNat width exceptionValue)) := by
+  simp [evalWordCallWithHandlers, hlookup, hread, hbind, hbody]
+
 /-!
 An explicit host boundary for Word-level foreign calls.  The compiler keeps
 the four FFI argument registers and the live-register list in the IR; the
@@ -748,6 +785,47 @@ theorem evalWordCallWithHandlersAndFfi_raise_handler_of_eval [NeZero width]
   simp [evalWordCallWithHandlersAndFfi, hlookup, hread, hbind, hbody,
     hhandlerRegister, hhandler]
 
+theorem evalWordCallWithHandlersAndFfi_normal_of_eval [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (fuel : Nat) (state calleeState bodyState : State width)
+    (target : Nat) (parameters arguments : List Nat)
+    (body : WordProg (Word width)) (values : List (Word width))
+    (hlookup : lookupWordFunction target functions = some (parameters, body))
+    (hread : readWordRegisters state arguments = some values)
+    (hbind : bindWordRegisters state parameters values = some calleeState)
+    (hbody : evalWordFunctionWithHandlersAndFfi functions ffiHandler fuel
+      calleeState body = some (.normal bodyState)) :
+    evalWordCallWithHandlersAndFfi functions ffiHandler (fuel + 1) state
+      none (some target) arguments none =
+      some (.normal { state with
+        memory := bodyState.memory
+        privilege := bodyState.privilege
+        mode := bodyState.mode }) := by
+  simp [evalWordCallWithHandlersAndFfi, hlookup, hread, hbind, hbody]
+
+theorem evalWordCallWithHandlersAndFfi_raise_none_of_eval [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (fuel : Nat) (state calleeState bodyState : State width)
+    (target : Nat) (parameters arguments : List Nat)
+    (body : WordProg (Word width)) (values : List (Word width))
+    (exceptionValue : Nat)
+    (hlookup : lookupWordFunction target functions = some (parameters, body))
+    (hread : readWordRegisters state arguments = some values)
+    (hbind : bindWordRegisters state parameters values = some calleeState)
+    (hbody : evalWordFunctionWithHandlersAndFfi functions ffiHandler fuel
+      calleeState body = some (.raised bodyState exceptionValue)) :
+    evalWordCallWithHandlersAndFfi functions ffiHandler (fuel + 1) state
+      none (some target) arguments none =
+      some (.raised { state with
+        memory := bodyState.memory
+        privilege := bodyState.privilege
+        mode := bodyState.mode } (BitVec.ofNat width exceptionValue)) := by
+  simp [evalWordCallWithHandlersAndFfi, hlookup, hread, hbind, hbody]
+
 theorem evalWordFunctionWithHandlersAndFfi_ffi [NeZero width]
     (functions : List (Nat × List Nat × WordProg (Word width)))
     (ffiHandler : FunName → Word width → Word width → Word width → Word width →
@@ -766,5 +844,28 @@ theorem evalWordFunctionWithHandlersAndFfi_ffi [NeZero width]
         (readRegister state arrayLength) state
       pure (.normal state)) := by
   simp [evalWordFunctionWithHandlersAndFfi]
+
+/-! The loop-aware evaluator keeps Cake's direct Raise equation: register
+    lookup is performed before the exception control result is returned, and
+    the handler/FFI state remains otherwise unchanged. -/
+theorem evalWordLoopProgWithHandlersAndFfi_raise [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (fuel : Nat) (state : State width) (exception : Nat) :
+    evalWordLoopProgWithHandlersAndFfi functions ffiHandler (fuel + 1) state
+      (.raise exception) = (do
+      let exception ← registerOfNat exception
+      pure (.raised state (readRegister state exception))) := by
+  simp [evalWordLoopProgWithHandlersAndFfi]
+
+example (functions : List (Nat × List Nat × WordProg (Word 64)))
+    (ffiHandler : FunName → Word 64 → Word 64 → Word 64 → Word 64 →
+      State 64 → Option (State 64)) (state : State 64) :
+    evalWordLoopProgWithHandlersAndFfi functions ffiHandler 1 state
+      (.raise 3) = (do
+      let exception ← registerOfNat 3
+      pure (.raised state (readRegister state exception))) := by
+  simp [evalWordLoopProgWithHandlersAndFfi]
 
 end Flapjack.RiscV

@@ -822,9 +822,10 @@ theorem skipNatRaiseConstFlatGlobalEvaluatorEvidence
 /-- Symbolic source-word store: the direct compact instance, lifting the full
 evaluator relation `compile_full_pan_value_store_source_word_state_relation` to
 the compact evaluators.  The address and value are arbitrary `SourceWordExp`s;
-the caller supplies the evaluated words together with the compiled-expression
-stability facts, so source locals/globals/memory and the target state stay
-visible. -/
+the caller supplies the evaluated words plus the static context bound, so
+source locals/globals/memory and the target state stay visible.  The
+compiled-expression stability needed by the two-temporary lowering is derived
+inside the relation from the bound rather than assumed. -/
 theorem panValuePcCompileCorrect_compact_store_source_word
     (address value : SourceWordExp Nat)
     (hbytesInWord : ∀ (context : CompileContext Nat) (bytesInWord : Nat),
@@ -833,6 +834,9 @@ theorem panValuePcCompileCorrect_compact_store_source_word
       (sourceLocals : VarName → Option (PanValue Nat)) (name : VarName)
       (currentValue : PanValue Nat), sourceLocals name = some currentValue →
       ∃ slot, lookupInfo name context.vars = some (.one, [slot]))
+    (hbound : ∀ (context : CompileContext Nat) (name : VarName) (shape : Shape)
+      (names : List Nat), lookupInfo name context.vars = some (shape, names) →
+      ∀ varName ∈ names, varName ≤ context.maxVar)
     (hstoreEvidence : ∀ (context : CompileContext Nat) (structs : StructContext)
       (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
       (sourceMemory : Nat → Option (PanValue Nat)) (state : CrepState Nat),
@@ -841,17 +845,7 @@ theorem panValuePcCompileCorrect_compact_store_source_word
         evalPanValueExp structs sourceLocals sourceGlobals sourceMemory 0 0 1
           address.toExp = some (.word addressValue) ∧
         evalPanValueExp structs sourceLocals sourceGlobals sourceMemory 0 0 1
-          value.toExp = some (.word valueValue) ∧
-        (∀ compiled, compileExp context address.toExp = ([compiled], .one) →
-          evalCrepFullExpState
-            ({ state with locals :=
-                updateCrepLocal state.locals (context.maxVar + 1) addressValue })
-            0 0 compiled = some addressValue) ∧
-        (∀ compiled, compileExp context value.toExp = ([compiled], .one) →
-          evalCrepFullExpState
-            ({ state with locals :=
-                updateCrepLocal state.locals (context.maxVar + 1) addressValue })
-            0 0 compiled = some valueValue)) :
+          value.toExp = some (.word valueValue)) :
     PanValuePcCompileCorrect
       (panValuePcCompactSourceEvaluator skipNatPrimitive skipNatSourceHandler
         [] 0 0 1 4)
@@ -862,8 +856,7 @@ theorem panValuePcCompileCorrect_compact_store_source_word
   intro context structs sourceInput targetInput exceptionRel sourceExecution
     targetExecution hsourceStructs htargetStructs hlocalisedCode hlocalised hcode
     hexcp hstate hnonerror hsource htarget hpostCode hpostExcp
-  obtain ⟨addressValue, valueValue, hsourceAddress, hsourceValue, haddressStable,
-    hvalueStable⟩ :=
+  obtain ⟨addressValue, valueValue, hsourceAddress, hsourceValue⟩ :=
     hstoreEvidence context structs sourceInput.locals sourceInput.globals
       sourceInput.memory targetInput.state hstate
   have hrelation :=
@@ -872,7 +865,7 @@ theorem panValuePcCompileCorrect_compact_store_source_word
       skipNatPrimitive skipNatSourceHandler skipNatCrepPrimitive skipNatFfi
       skipNatSharedMem 0 0 1 address value addressValue valueValue
       (hbytesInWord context 1) hstate (hlookup context sourceInput.locals)
-      hsourceAddress hsourceValue haddressStable hvalueStable
+      hsourceAddress hsourceValue (hbound context)
   obtain ⟨hsourceResult, htargetResult, hrelNew⟩ := hrelation
   simp only [panValuePcCompactSourceEvaluator, hsourceStructs, hsourceResult]
     at hsource
@@ -884,14 +877,17 @@ theorem panValuePcCompileCorrect_compact_store_source_word
 /-- The symbolic store instance is usable with a non-constant, state-independent
 address expression: here the address is `.baseAddr` (evaluating to the base
 address `0`) and the value is the constant `9`.  The compiled-expression
-stability facts hold because neither compiled expression reads locals. -/
+stability needed by the lowering is now derived from the context bound. -/
 example
     (hbytesInWord : ∀ (context : CompileContext Nat) (bytesInWord : Nat),
       context.bytesInWord = bytesInWord)
     (hlookup : ∀ (context : CompileContext Nat)
       (sourceLocals : VarName → Option (PanValue Nat)) (name : VarName)
       (currentValue : PanValue Nat), sourceLocals name = some currentValue →
-      ∃ slot, lookupInfo name context.vars = some (.one, [slot])) :
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot]))
+    (hbound : ∀ (context : CompileContext Nat) (name : VarName) (shape : Shape)
+      (names : List Nat), lookupInfo name context.vars = some (shape, names) →
+      ∀ varName ∈ names, varName ≤ context.maxVar) :
     PanValuePcCompileCorrect
       (panValuePcCompactSourceEvaluator skipNatPrimitive skipNatSourceHandler
         [] 0 0 1 4)
@@ -900,20 +896,12 @@ example
       skipNatCodeRel skipNatExcpRel skipNatExceptionCode skipNatGlobalsLookup
       (.store (SourceWordExp.baseAddr).toExp (SourceWordExp.const 9).toExp) :=
   panValuePcCompileCorrect_compact_store_source_word
-    SourceWordExp.baseAddr (SourceWordExp.const 9) hbytesInWord hlookup
+    SourceWordExp.baseAddr (SourceWordExp.const 9) hbytesInWord hlookup hbound
     (by
       intro context structs sourceLocals sourceGlobals sourceMemory state _hstate
-      refine ⟨0, 9, ?_, ?_, ?_, ?_⟩
+      refine ⟨0, 9, ?_, ?_⟩
       · simp [SourceWordExp.toExp, evalPanValueExp]
-      · simp [SourceWordExp.toExp, evalPanValueExp]
-      · intro compiled hcompile
-        simp [SourceWordExp.toExp, compileExp] at hcompile
-        rw [← hcompile]
-        simp [evalCrepFullExpState]
-      · intro compiled hcompile
-        simp [SourceWordExp.toExp, compileExp] at hcompile
-        rw [← hcompile]
-        simp [evalCrepFullExpState])
+      · simp [SourceWordExp.toExp, evalPanValueExp])
 
 /-- Symbolic source-word store32: the direct compact instance, lifting the full
 evaluator relation `compile_full_pan_value_store32_source_word_state_relation`

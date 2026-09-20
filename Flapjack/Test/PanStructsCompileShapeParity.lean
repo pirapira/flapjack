@@ -33,4 +33,56 @@ def parityGuard : Bool :=
 #eval parityGuard
 #guard parityGuard
 
+/- Direct parity for `pan_structs$get_names_def`
+   (`pan_structsScript.sml:235`).  Cake prepends each Name declaration while
+   traversing the source list, so the final structure environment is in
+   reverse Name order and ignores every non-Name declaration. -/
+def getNamesParityGuard : Bool :=
+  let context : StructPassContext :=
+    { structs := [], locals := [], globals := [] }
+  match structGetNames context
+      [.decl .one "global" (.const 0),
+       .name "First" [("a", .comb [.one, .one])],
+       .function
+         { name := "f", inline := false, exported := false, params := [],
+           body := .skip, returnShape := .one },
+       .name "Second" [("b", .one)]] with
+  | { structs := [("Second", second), ("First", first)],
+      locals := [], globals := [] } =>
+      match second.fields, second.size, second.shapedFields,
+        first.fields, first.size, first.shapedFields with
+      | [("b", .one)], 0, [], [("a", .comb [.one, .one])], 0, [] => true
+      | _, _, _, _, _, _ => false
+  | _ => false
+
+#eval getNamesParityGuard
+#guard getNamesParityGuard
+
+/- Direct parity for `pan_structs$compile_top_def`
+   (`pan_structsScript.sml:244`).  The top pass must seed the structure
+   context from Name declarations, then return only the compiled declarations
+   in source order. -/
+def compileTopParityGuard : Bool :=
+  match structCompileTop
+      [.name "Pair" [("left", .one), ("right", .one)],
+       .decl (.named "Pair") "global"
+         (.nStruct "Pair" [("left", .const 1), ("right", .const 2)]),
+       .function
+         { name := "read", inline := false, exported := false,
+           params := [("pair", .named "Pair")],
+           body := .return (.nField "right" (.var .local "pair")),
+           returnShape := .one }] with
+  | [.decl (.comb [.one, .one]) "global" (.rStruct [.const 1, .const 2]),
+     .function declaration] =>
+      (match declaration.params with
+      | [("pair", .comb [.one, .one])] => true
+      | _ => false) &&
+      match declaration.body with
+      | .return (.rField 1 (.var .local "pair")) => true
+      | _ => false
+  | _ => false
+
+#eval compileTopParityGuard
+#guard compileTopParityGuard
+
 end Flapjack.Test.PanStructsCompileShapeParity

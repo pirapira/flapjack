@@ -22,6 +22,13 @@ def exceptionNumberingFixture : List (Decl Nat) :=
   crepGetEidsFromDecls (fun value => value) exceptionNumberingFixture ==
     [("E", 0), ("F", 1)]
 
+/-! `get_eids_from_decls_def` applies Cake's supplied word conversion after
+    numbering the filtered exception list.  A non-identity conversion makes
+    that ordering observable independently of the target representation. -/
+#guard
+  crepGetEidsFromDecls (fun value => value + 7) exceptionNumberingFixture ==
+    [("E", 7), ("F", 8)]
+
 #guard
     let result := compileFlapjackRiscV (width := 64) .rv64i
       (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)

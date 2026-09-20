@@ -86,6 +86,30 @@ def pipelineNoMainTargetHasSyntheticMain : Bool :=
 
 #guard pipelineNoMainTargetHasSyntheticMain
 
+/- Cake's `compile_prog_def` uses `SPLITP` to move the first user `main` to
+   the front, retaining every declaration from the prefix and suffix in their
+   original order.  This pins that source-shaped boundary independently of
+   the later RISC-V artifact checks. -/
+def pipelineTargetMovesMainWithStableOrder : Bool :=
+  let declarations : List (Decl Nat) :=
+    [.decl .one "g" (.const 7),
+     .function
+       { name := "worker", inline := false, exported := false, params := [],
+         body := .skip, returnShape := .one },
+     .function
+       { name := "main", inline := false, exported := true, params := [],
+         body := .return (.const 0), returnShape := .one },
+     .name "Pair" []]
+  (panTargetMoveStartToFront "main" declarations).map (fun declaration =>
+    match declaration with
+    | .function function => function.name
+    | .decl _ name _ => name
+    | .name name _ => name
+    | .exnDecl exception _ => exception) =
+    ["main", "g", "worker", "Pair"]
+
+#guard pipelineTargetMovesMainWithStableOrder
+
 #guard
     (compileFlapjackRiscVViaStack (width := 64) .rv64i
       (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []

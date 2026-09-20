@@ -510,6 +510,28 @@ def deadProgramPriorityGuard : Bool :=
   | .seq (.move priority _) _ => priority == 1
   | _ => false
 
+/- These three guards mirror the non-instruction `get_live` equations in
+   `word_allocScript.sml`: a tail call carries only its arguments, Alloc keeps
+   its result live with both cut-set components, and StoreConsts kills its
+   source/bitmap while retaining the produced lengths. -/
+def deadTailCallLiveGuard : Bool :=
+  match Flapjack.RiscV.wordDeadCodeAux
+      (.call none (some 7) [2, 4] none : WordProg Nat) [99] [] with
+  | (.call none (some 7) [2, 4] none, live) => live == [2, 4]
+  | _ => false
+
+def deadAllocLiveGuard : Bool :=
+  match Flapjack.RiscV.wordDeadCodeAux
+      (.alloc 7 ([2], [3]) : WordProg Nat) [99] [] with
+  | (.alloc 7 ([2], [3]), live) => live == [7, 99, 2, 3]
+  | _ => false
+
+def deadStoreConstsLiveGuard : Bool :=
+  match Flapjack.RiscV.wordDeadCodeAux
+      (.storeConsts 1 2 3 4 [] : WordProg Nat) [1, 2, 9] [] with
+  | (.storeConsts 1 2 3 4 [], live) => live == [9, 3, 4]
+  | _ => false
+
 def copyLastMoveSource : WordProg Nat → Option Nat
   | .move _ [(destination, source)] =>
       if destination == 485 then some source else none
@@ -587,7 +609,8 @@ def parityGuard : Bool :=
     negFirstMatchProjectionGuard
     && mapUpdateBoundedGuard && sourceSpillCostKeyGuard && sourceMovePhysicalFallbackGuard
     && deadMovePriorityGuard
-    && deadProgramPriorityGuard && cakeBijSetPatriciaGuard
+    && deadProgramPriorityGuard && deadTailCallLiveGuard && deadAllocLiveGuard
+    && deadStoreConstsLiveGuard && cakeBijSetPatriciaGuard
     && sortMovesTailSplitGuard
 
 /- The aggregate guard is intentionally disabled while the allocator port is
@@ -614,7 +637,8 @@ def runChecks : IO Bool := do
     qsortTiesThreeGuard, qsortDescGuard, raMovesStempGuard,
     raMovesStempHiGuard, negFirstMatchProjectionGuard, mapUpdateBoundedGuard,
     deadMovePriorityGuard, deadProgramPriorityGuard, sortMovesTailSplitGuard,
-    sourceSpillCostKeyGuard, sourceMovePhysicalFallbackGuard]
+    sourceSpillCostKeyGuard, sourceMovePhysicalFallbackGuard,
+    deadTailCallLiveGuard, deadAllocLiveGuard, deadStoreConstsLiveGuard]
   let names := [
     "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
@@ -637,7 +661,9 @@ def runChecks : IO Bool := do
     "neg_first_match_col projection", "Cake map updates stay bounded",
     "remove_dead keeps move priority", "remove_dead_prog keeps entry priority",
     "mk_bij uses Cake Patricia Set order", "sort_moves tail split oracle",
-    "source-keyed spill costs", "physical source move fallback"]
+    "source-keyed spill costs", "physical source move fallback",
+    "remove_dead tail-call liveness", "remove_dead Alloc liveness",
+    "remove_dead StoreConsts liveness"]
   let mut all := true
   for (name, result) in names.zip results do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"

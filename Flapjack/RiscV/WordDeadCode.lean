@@ -132,17 +132,25 @@ def wordDeadCodeAux : WordProg α → List Nat → List (List Nat × List Nat) �
       (.call (some (destinations, cutsets, returnCode', returnLabel, entryLabel))
           target arguments handler',
         wordDeadCallLive cutsets arguments)
-  | .call returns target arguments handler, live, _ =>
+    | .call returns target arguments handler, _live, _ =>
       (.call returns target arguments handler,
-        wordDeadAddReads live (wordProgReadVarsFast
-          (.call returns target arguments handler)))
+        /- Cake's `get_live (Call NONE ...)` is the argument set only.
+           In particular, it does not inspect an unreachable handler or
+           continuation, and it does not carry the incoming live set across
+           a tail call (`word_allocScript.sml:832-834`). -/
+        wordDeadAddReads [] arguments)
   | .alloc destination cutsets, live, _ =>
       (.alloc destination cutsets,
-        wordDeadAddReads (wordDeadRemoveWrites live [destination])
-          (cutsets.1 ++ cutsets.2))
+        /- Cake's `get_live (Alloc ...)` keeps the allocation result live and
+           adds both cut-set components (`word_allocScript.sml:802-803`). -/
+        wordDeadAddReads (destination :: live) (cutsets.1 ++ cutsets.2))
   | .storeConsts source bitmap codeLength dataLength constants, live, _ =>
       (.storeConsts source bitmap codeLength dataLength constants,
-        wordDeadAddReads live [source, bitmap, codeLength, dataLength])
+        /- `StoreConsts` consumes source and bitmap but produces the code and
+           data lengths; this is the exact `get_live` equation rather than a
+           conservative read inventory. -/
+        wordDeadAddReads (wordDeadRemoveWrites live [source, bitmap])
+          [codeLength, dataLength])
   | .opCurrHeap operator destination source, live, _ =>
       if destination ∈ live then
         (.opCurrHeap operator destination source,

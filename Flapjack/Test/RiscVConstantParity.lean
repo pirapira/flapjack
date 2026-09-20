@@ -254,6 +254,27 @@ example (state : State 64) :
       wordConstToInstructions, wordConst32ToInstructions, registerOfNat]
   exact wordFunctionToRiscVCake_sound_of_straightLine state _ hstraight _ hcompile
 
+example (state : State 64) :
+    evalWordFunctionCake state
+        (.assign 4 (.load (.const (BitVec.ofNat 64 0x1234))) :
+          WordProg (Word 64)) =
+      some (executeInstructions state
+        [.lui 31 (BitVec.ofNat 64 1),
+         .addi 31 31 (BitVec.ofNat 64 0x234),
+         .loadWord 4 31], []) := by
+  have hstraight : WordRiscVStraightLine
+      (.assign 4 (.load (.const (BitVec.ofNat 64 0x1234))) :
+        WordProg (Word 64)) := .assign _ _
+  have hcompile : wordFunctionToRiscVCake
+      (.assign 4 (.load (.const (BitVec.ofNat 64 0x1234))) :
+        WordProg (Word 64)) =
+      some ([.lui 31 (BitVec.ofNat 64 1),
+        .addi 31 31 (BitVec.ofNat 64 0x234),
+        .loadWord 4 31], []) := by
+    simp [wordFunctionToRiscVCake, wordExpToInstructionsCake,
+      wordConstToInstructions, wordConst32ToInstructions, registerOfNat]
+  exact wordFunctionToRiscVCake_sound_of_straightLine state _ hstraight _ hcompile
+
 /-! The checked call-aware selector now has the same compositional theorem
     shape as the legacy theorem-facing selector.  This exercises the sequence
     induction while retaining the full Cake list-valued constant boundary. -/

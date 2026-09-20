@@ -130,6 +130,70 @@ def loopExpOracle : Bool :=
   loopExpConstOracle && loopExpLookupOracle && loopExpNestedOracle &&
     loopExpLoadOracle && loopExpShiftOracle
 
+/-! Direct oracle guards for `loop_prog_to_display_def` and its handler
+    equation in `pan_passesScript.sml:549-631`. -/
+def loopProgCoreOracle : Bool :=
+  sameDisplay
+      (loopProgToDisplay [] (.skip : LoopProg Nat))
+      (.string "skip") &&
+    sameDisplay
+      (loopProgToDisplay []
+        (.arith (.longDiv 1 2 3 4 5) : LoopProg Nat))
+      (.item none "long_div"
+        [.string "1", .string "2", .string "3", .string "4", .string "5"]) &&
+    sameDisplay
+      (loopProgToDisplay []
+        (.assign 3 (.const (BitVec.ofNat 64 7)) : LoopProg (BitVec 64)))
+      (.tuple [.string "3", .string ":=",
+        .item none "Const" [.string "0x7"]])
+
+def loopProgSeqOracle : Bool :=
+  sameDisplay
+    (loopProgToDisplay []
+      (.seq .skip (.assign 1 (.const 2)) : LoopProg Nat))
+    (.list [.string "seq", .string "skip",
+      .tuple [.string "1", .string ":=",
+        .item none "Const" [.string "0x2"]]])
+
+def loopProgMemoryOracle : Bool :=
+  sameDisplay
+    (loopProgToDisplay []
+      (.shMem .store8 4 (.const (BitVec.ofNat 64 9)) : LoopProg (BitVec 64)))
+    (.tuple [.string "share_mem", .string "Store8", .string "4",
+      .item none "Const" [.string "0x9"]]) &&
+    sameDisplay
+      (loopProgToDisplay []
+        (.locValue 7 3 : LoopProg Nat))
+      (.item none "loc_value" [.string "7", .string "3"])
+
+def loopProgControlOracle : Bool :=
+  sameDisplay
+    (loopProgToDisplay []
+      (.ite .equal 1 (.imm (BitVec.ofNat 64 0)) .skip .fail [] :
+        LoopProg (BitVec 64)))
+    (.item none "if"
+      [.tuple [.string "Equal", .string "1",
+        .item none "Imm" [.string "0x0"]],
+       .string "skip", .string "fail", .string "{}"])
+
+def loopProgCallOracle : Bool :=
+  sameDisplay
+    (loopProgToDisplay [(7, "callee")]
+      (.call (some ([4], [2])) (some 7) [1, 2]
+        (some (9, .skip, .return [3], [4])) : LoopProg Nat))
+    (.tuple [.list [.string "4"], .string ":=",
+      .item none "call"
+        [.string "callee@7",
+         .list [.string "1", .string "2"],
+         .string "{2}",
+         .item none "handler"
+           [.tuple [.string "9", .string "skip",
+             .item none "return" [.string "3"], .string "{4}"]]]])
+
+def loopProgOracle : Bool :=
+  loopProgCoreOracle && loopProgSeqOracle && loopProgMemoryOracle &&
+    loopProgControlOracle && loopProgCallOracle
+
 #guard opSizeOracle
 #guard insertEsOracle
 #guard varKindOracle
@@ -137,5 +201,6 @@ def loopExpOracle : Bool :=
 #guard destAnnotOracle
 #guard panExpOracle
 #guard loopExpOracle
+#guard loopProgOracle
 
 end Flapjack.Test.DisplayParity

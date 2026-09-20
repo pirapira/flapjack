@@ -82,7 +82,7 @@ def crepeFullRaiseState : CrepState (RiscV.Word 8) :=
   { locals := fun _ => none, memory := fun _ => none, globals := fun _ => none }
 
 theorem compile_full_pan_value_raise_word_state_full_correct_regression :
-    evalPanValueProgWithPrimitiveCallsAndFfiFull
+    evalPanValueProgWithPrimitiveCallsAndFfi
         (fun _ _ => none) (fun _ _ _ _ _ _ => none)
         ([] : StructContext) [] 0 100 1 3
         (fun _ => none) (fun _ => none)

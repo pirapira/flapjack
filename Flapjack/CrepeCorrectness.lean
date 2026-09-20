@@ -1985,7 +1985,7 @@ theorem compile_full_pan_value_raise_word_state_full_correct
     (baseAddress topAddress bytesInWord value : α)
     (exception : ExceptionId) (exceptionCode : α)
     (hlookup : lookupInfo exception context.exceptions = some exceptionCode) :
-    evalPanValueProgWithPrimitiveCallsAndFfiFull
+    evalPanValueProgWithPrimitiveCallsAndFfi
       primitive sourceHandler structs sourceFunctions
       baseAddress topAddress bytesInWord 3
       sourceLocals sourceGlobals sourceMemory
@@ -2001,7 +2001,7 @@ theorem compile_full_pan_value_raise_word_state_full_correct
   constructor
   · have hlimit : panValuePayloadWithinLimit structs (.word value) = true := by
       simp [panValuePayloadWithinLimit, panValuePayloadSizeFuel]
-    simp [evalPanValueProgWithPrimitiveCallsAndFfiFull, evalPanValueExpFull,
+    simp [evalPanValueProgWithPrimitiveCallsAndFfi, evalPanValueExp,
       hlimit]
   · have hrestore : restoreCrepLocal
         (updateCrepLocal state.locals (context.maxVar + 1) value)

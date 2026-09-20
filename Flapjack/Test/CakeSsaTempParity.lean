@@ -83,10 +83,48 @@ def fullTwoAssignsGuard : Bool :=
 
 #guard fullTwoAssignsGuard
 
+/-! Branch and loop cases from the canonical Cake `ssa_cc_trans` equations
+    (`word_allocScript.sml:391-590`).  These pin the branch continuation
+    reconciliation and loop-entry/back-edge moves that feed IRC frame
+    allocation.  The expected shapes were obtained with the canonical HOL
+    `full_ssa_cc_trans` oracle. -/
+def branchProgram : WordProg Nat :=
+  .ite .equal 0 (.reg 2)
+    (.seq (.assign 0 (.const 1)) (.assign 2 (.var 0)))
+    (.assign 2 (.const 2))
+
+def branchSsaGuard : Bool :=
+  match (wordFullSsaCcTrans 2 branchProgram).2.2 with
+  | .seq (.move 1 [(5, 0), (9, 2)])
+      (.ite .equal 5 (.reg 9)
+        (.seq
+          (.seq (.assign 13 (.const 1)) (.assign 17 (.var 13)))
+          (.move 1 [(29, 13), (25, 17)]))
+        (.seq (.assign 21 (.const 2))
+          (.move 1 [(29, 5), (25, 21)]))) => true
+  | _ => false
+
+def loopProgram : WordProg Nat :=
+  .loop [0] (.seq (.assign 0 (.const 1)) (.continue 0)) []
+
+def loopSsaGuard : Bool :=
+  match (wordFullSsaCcTrans 2 loopProgram).2.2 with
+  | .seq (.move 1 [(5, 0), (9, 2)])
+      (.seq (.move 0 [(13, 5)])
+        (.loop [13]
+          (.seq
+            (.seq (.assign 17 (.const 1))
+              (.seq (.move 1 [(13, 17)]) (.continue 0)))
+            (.move 1 [(13, 17)])) [])) => true
+  | _ => false
+
+#guard branchSsaGuard
+#guard loopSsaGuard
+
 def parityGuard : Bool :=
   setupTwoGuard && fullTransMoveGuard && limitBaseGuard &&
     limitTwoAssignsGuard && setupTwoNextGuard && fullSkipMoveGuard &&
-    fullTwoAssignsGuard
+    fullTwoAssignsGuard && branchSsaGuard && loopSsaGuard
 
 #guard parityGuard
 #eval parityGuard
@@ -102,7 +140,10 @@ def runChecks : IO Bool := do
       ("full_ssa_cc_trans on Skip and two assigns share the setup prologue",
         fullSkipMoveGuard),
       ("full_ssa_cc_trans preserves the Cake two-assignment body",
-        fullTwoAssignsGuard) ]
+        fullTwoAssignsGuard),
+      ("full_ssa_cc_trans reconciles Cake branch continuations",
+        branchSsaGuard),
+      ("full_ssa_cc_trans reconciles Cake loop back edges", loopSsaGuard) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

@@ -27,6 +27,34 @@ def pcGlobalsLookup (_state : CrepState Nat) (value : PanValue Nat) :
     Option (List Nat) :=
   some (panValueFlatWords value)
 
+example
+    (hevidence : ∀ (context : CompileContext Nat) (structs : StructContext)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+      (sourceMemory : Nat → Option (PanValue Nat)) (state : CrepState Nat)
+      (baseAddress topAddress bytesInWord : Nat) (sourceValue : PanValue Nat),
+      evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+        baseAddress topAddress bytesInWord sourceExpression = some sourceValue →
+      ∃ (compiled : List (CrepExp Nat)) (shape : Shape) (values : List Nat),
+        panValuePayloadWithinLimit structs sourceValue = true ∧
+        compileExp context sourceExpression = (compiled, shape) ∧
+        compiled.length = Shape.shapeSize shape ∧
+        evalCrepFullExpsState state baseAddress topAddress compiled =
+          some values ∧
+        (∀ name ∈ freshNames context compiled.length 1,
+          ∀ value ∈ compiled, name ∉ crepExpVars value) ∧
+        (∀ name ∈ freshNames context compiled.length 1,
+          state.locals name = none))
+    (hlookupException : ∀ (context : CompileContext Nat),
+      ∃ exceptionCode, lookupInfo "E" context.exceptions = some exceptionCode)
+    (hexception : ∀ (context : CompileContext Nat)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (sourceValue : PanValue Nat) (exceptionCode : Nat),
+      lookupInfo "E" context.exceptions = some exceptionCode →
+      exceptionRel "E" sourceValue exceptionCode) :
+    PanValueCrepProgramStateCorrect (.raise "E" sourceExpression) := by
+  exact panValueCrepProgramStateCorrect_raise_of_compiled_evidence
+    "E" sourceExpression hevidence hlookupException hexception
+
 theorem three_word_raise_state_relation :
     ∃ exceptionCode,
       evalPanValueProgWithPrimitiveCallsAndFfi

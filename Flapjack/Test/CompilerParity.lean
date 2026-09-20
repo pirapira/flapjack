@@ -213,6 +213,7 @@ import Flapjack.Test.CakeSsaTempParity
 import Flapjack.Test.CakeSsaBoundaryParity
 import Flapjack.Test.CakeSsaControlParity
 import Flapjack.Test.CakeDeadCodeStateParity
+import Flapjack.Test.CakeReturnSoundness
 import Flapjack.Test.CakeApplyColourParity
 import Flapjack.Test.CakeSpillCostParity
 import Flapjack.Test.CakeFrameVectorParity
@@ -730,6 +731,7 @@ def main : IO Unit := do
     Flapjack.Test.CakeSsaBoundaryParity.runChecks,
     Flapjack.Test.CakeSsaControlParity.runChecks,
     Flapjack.Test.CakeDeadCodeStateParity.runChecks,
+    Flapjack.Test.CakeReturnSoundness.runChecks,
     Flapjack.Test.CakeApplyColourParity.runChecks,
     Flapjack.Test.CakeSpillCostParity.runChecks,
     Flapjack.Test.CakeFrameVectorParity.runChecks,

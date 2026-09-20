@@ -1587,6 +1587,57 @@ theorem wordFunctionToRiscVWithCallsAndFfiAndLoops_agrees_straightLine
       | mk code returns =>
           simp [wordControlInstructions_map_instruction]
 
+theorem wordRiscVFFIStraightLine_of_straightLine {α : Type} {program : WordProg α}
+    (hstraight : WordRiscVStraightLine program) :
+    WordRiscVFFIStraightLine program := by
+  induction hstraight with
+  | skip => exact .skip
+  | move store moves => exact .move store moves
+  | assign destination value => exact .assign destination value
+  | inst instruction => exact .inst instruction
+  | store address value => exact .store address value
+  | seq first second hfirst hsecond ihfirst ihsecond =>
+      exact .seq first second ihfirst ihsecond
+  | locValue destination source => exact .locValue destination source
+  | tick => exact .tick
+  | shareInst operator name address => exact .shareInst operator name address
+
+/-- Soundness of the most complete (loop- and FFI-aware) static selector on the
+ordinary straight-line fragment: an accepted program evaluates to exactly the
+emitted instruction sequence.  The loop- and FFI-capable machinery collapses to
+the call-aware selector, whose soundness is already established. -/
+theorem wordFunctionToRiscVWithCallsAndFfiAndLoops_sound_of_straightLine
+    [NeZero width] (context : WordCallFfiContext width) (state : State width)
+    (program : WordProg (Word width))
+    (hstraight : WordRiscVStraightLine program)
+    (code : List (Instruction width))
+    (hcompile : wordFunctionToRiscVWithCallsAndFfiAndLoops context program =
+      some (code, [])) :
+    evalWordFunction state program =
+      some (executeInstructions state code, []) := by
+  have hloops := wordFunctionToRiscVWithCallsAndFfiAndLoops_agrees_straightLine
+    context program (wordRiscVFFIStraightLine_of_straightLine hstraight)
+  rw [hloops] at hcompile
+  have hffi := wordFunctionToRiscVWithCallsAndFfi_agrees_straightLine
+    context program hstraight
+  rw [hffi] at hcompile
+  exact wordFunctionToRiscVWithCalls_sound_of_straightLine
+    { targets := context.targets } state program hstraight code hcompile
+
+/-- Regression: the loop/FFI-aware selector soundness fires on a trivial
+straight-line program. -/
+example (context : WordCallFfiContext 64) (state : State 64) :
+    evalWordFunction state (.skip : WordProg (Word 64)) =
+      some (executeInstructions state ([] : List (Instruction 64)), []) := by
+  have hcompile : wordFunctionToRiscVWithCallsAndFfiAndLoops context
+      (.skip : WordProg (Word 64)) =
+      some (([] : List (Instruction 64)), []) := by
+    simp [wordFunctionToRiscVWithCallsAndFfiAndLoops,
+      wordFunctionToRiscVWithCallsAndFfiAndLoopsAux,
+      wordFunctionToRiscVWithCallsAndFfi, wordFunctionToRiscVWithCalls,
+      wordControlInstructions]
+  exact wordFunctionToRiscVWithCallsAndFfiAndLoops_sound_of_straightLine
+    context state (.skip : WordProg (Word 64)) .skip _ hcompile
 
 /-! The loop-capable selector preserves the one-step ECALL simulation boundary.
     This is the first named machine-correctness theorem for an FFI operation

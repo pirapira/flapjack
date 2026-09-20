@@ -862,6 +862,23 @@ def loopToStrs [CakeDisplayWord α]
       displayStrTreeToStrings "\n\n"
         (displayToStrTree (loopFunToDisplay names function))) functions
 
+/-! The typed output-boundary counterpart of Cake's `any_pan_prog_pp_def`
+    (`pan_passesScript.sml:660-666`).  Backend Cake stages are represented by
+    their already-rendered string stream because the source/backend ASTs are
+    not part of Flapjack's source-shaped language. -/
+inductive AnyPanProg (α : Type u) where
+  | pan (program : List (Decl α))
+  | crep (program : List (FunName × List Nat × CrepProg α))
+  | loop (program : List (Nat × List Nat × LoopProg α))
+      (names : List (Nat × String))
+  | cake (rendered : List String)
+
+def anyPanProgPp [CakeDisplayWord α] : AnyPanProg α → List String
+  | .pan program => panToStrs program
+  | .crep program => crepToStrs program
+  | .loop program names => loopToStrs names program
+  | .cake rendered => rendered
+
 def destAnnot (program : Prog α) : Option (String × String) :=
   match program with
   | .annot tag text => some (tag, text)

@@ -197,6 +197,19 @@ def crepToStrsOracle : Bool :=
     ["(", "func", " ", "main", " ", "(", "1", ")", " ", "(",
      "return", " ", "(", "Var", " ", "1", ")", ")", ")", "\n\n"]
 
+def anyPanProgOracle : Bool :=
+  let panProgram : List (Decl (BitVec 64)) :=
+    [.decl Shape.one "g" (.const (BitVec.ofNat 64 7))]
+  let crepProgram : List (FunName × List Nat × CrepProg (BitVec 64)) :=
+    [("c", [], .skip)]
+  let loopProgram : List (Nat × List Nat × LoopProg (BitVec 64)) :=
+    [(0, [], .skip)]
+  anyPanProgPp (.pan panProgram) == panToStrs panProgram &&
+    anyPanProgPp (.crep crepProgram) == crepToStrs crepProgram &&
+    anyPanProgPp (.loop loopProgram []) == loopToStrs [] loopProgram &&
+    anyPanProgPp (.cake ["backend", "stage"] : AnyPanProg (BitVec 64)) ==
+      ["backend", "stage"]
+
 /-! Direct oracle guards for `loop_exp_to_display_def` in
     `pan_passesScript.sml:508-530`. -/
 def loopExpConstOracle : Bool :=
@@ -338,6 +351,7 @@ def loopToStrsOracle : Bool :=
 #guard crepProgOracle
 #guard crepFunOracle
 #guard crepToStrsOracle
+#guard anyPanProgOracle
 #guard loopExpOracle
 #guard loopProgOracle
 #guard loopFunOracle

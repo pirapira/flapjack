@@ -176,7 +176,22 @@ def highVariableContext : CompileContext Nat :=
 #guard
   match compileProg highVariableContext
       (.shMemStore .op8 (.const 10) (.var .local "x")) with
-  | .dec 1 (.var 7) (.shMem .store8 1 (.const 10)) => true
+  | .dec 8 (.var 7) (.shMem .store8 8 (.const 10)) => true
+  | _ => false
+
+/-! `pan_to_crep$compile` bases a shared-memory-store temporary on the value
+    expression, not the address expression.  Keep the address deliberately at
+    a higher slot so an address-based implementation is observably different.
+    This is the direct Cake witness for the source-level lowering. -/
+def highAddressLowValueContext : CompileContext Nat :=
+  { assignmentContext with
+      vars := [("address", (.one, [7])), ("value", (.one, [1]))]
+      maxVar := 0 }
+
+#guard
+  match compileProg highAddressLowValueContext
+      (.shMemStore .op8 (.var .local "address") (.var .local "value")) with
+  | .dec 2 (.var 1) (.shMem .store8 2 (.var 7)) => true
   | _ => false
 
 def crepAddCarryHandler : CrepPrimitiveHandler Nat

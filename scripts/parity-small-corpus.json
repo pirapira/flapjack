@@ -847,6 +847,14 @@
       "tracked_beads": [
         "flapjack-pxn.8.9"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/odd_subword_offset.pnk",
+      "source_reference": "Cake word_instScript.sml:412 and asmScript.sml:275-281: hw_offset_ok is offset_ok 0, so a RISC-V shared-memory halfword offset of 9 is a valid immediate despite being odd.",
+      "cake_sha256": "4f4b27f3fbdd5ffbe321d27b46ebdbd3ef49a2a9e007b8a254806234f0da4838",
+      "tracked_beads": [
+        "flapjack-pxn.8.10"
+      ]
     }
   ]
 }

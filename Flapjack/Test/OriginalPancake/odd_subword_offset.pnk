@@ -1,0 +1,5 @@
+fun 1 main() {
+  var 1 r16 = 0;
+  !ld16 r16, 1000 + 9;
+  return r16;
+}

@@ -60,6 +60,25 @@ def cakeLoadVarOffsetShape : Bool :=
       (.inst (.memOffset .load 2 7 8)) => true
   | _ => false
 
+/- Cake's `hw_offset_ok` is `offset_ok 0`, so unlike a target execution trap
+   it does not impose even alignment on the selector's halfword immediate. -/
+def cakeLoadOddHalfwordOffset : Bool :=
+  match wordInstSelectProgram (α := Nat) 7
+      (.shareInst .load16 10
+        (.op .add [.var 13, .const 9])) with
+  | .seq (.move 0 [(7, 13)])
+      (.shareInst .load16 10 (.op .add [.var 7, .const 9])) => true
+  | _ => false
+
+def cakeStoreOddHalfwordOffset : Bool :=
+  match wordInstSelectProgram (α := BitVec 64) 7
+      (.shareInst .store16 10
+        (.op .add [.var 13, .const (BitVec.ofNat 64 9)])) with
+  | .seq (.move 0 [(7, 13)])
+      (.shareInst .store16 10
+        (.op .add [.var 7, .const (BitVec.ofNat 64 9)])) => true
+  | _ => false
+
 def cakeWideBinopStatementShape : Bool :=
   match wordInstSelectProgram (α := Nat) 23
       (.assign 5 (.op .and [.var 18, .const (2 ^ 60)])) with
@@ -95,6 +114,8 @@ def cakeSharedByteOffsetMaterializesConstant : Bool :=
 #guard cakeLoadConstShape
 #guard cakeLoadVarShape
 #guard cakeLoadVarOffsetShape
+#guard cakeLoadOddHalfwordOffset
+#guard cakeStoreOddHalfwordOffset
 #guard cakeLoadPositiveOffsetAddress
 #guard cakeLoadNegativeOffsetAddress
 #guard cakeLoadOutOfRangeAddress

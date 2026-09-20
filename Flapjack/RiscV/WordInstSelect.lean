@@ -49,7 +49,7 @@ instance : WordInstSelectImmediate Nat where
   validSharedMemoryOffset operator value :=
     let fits := value < 2 ^ 11 || value ≥ 2 ^ 64 - 2 ^ 11
     match operator with
-    | .load16 | .store16 => fits && value % 2 = 0
+    | .load16 | .store16 => fits
     | _ => fits
   shiftImmediate value :=
     if value < 64 then .valid value else .outOfRange
@@ -67,7 +67,7 @@ instance : WordInstSelectImmediate (BitVec width) where
     let n := value.toNat
     let fits := n < 2 ^ 11 || n ≥ 2 ^ width - 2 ^ 11
     match operator with
-    | .load16 | .store16 => fits && n % 2 = 0
+    | .load16 | .store16 => fits
     | _ => fits
   shiftImmediate value :=
     if value.toNat < width then

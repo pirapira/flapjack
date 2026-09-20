@@ -1,5 +1,6 @@
 import Flapjack.RiscV.Backend
 import Flapjack.RiscV.Calls
+import Flapjack.RiscV.CorrectnessBackend
 import Flapjack.RiscV.Encoding
 import Flapjack.RiscV.Lab
 
@@ -123,6 +124,24 @@ example :
           (fun instructions => (instructions, [])) := by
   exact wordFunctionToRiscVWithCallsCake_const _ 4
     (BitVec.ofNat 64 0x1122334455667788)
+
+/-! The checked call-aware selector now has the same compositional theorem
+    shape as the legacy theorem-facing selector.  This exercises the sequence
+    induction while retaining the full Cake list-valued constant boundary. -/
+example :
+    wordFunctionToRiscVWithCallsCake (width := 64)
+        ({ targets := [] } : WordCallContext 64)
+        (.seq
+          (.assign 4 (.const (BitVec.ofNat 64 0x1122334455667788)))
+          (.assign 5 (.var 4))) =
+      (wordProgToRiscVCake (width := 64)
+          (.seq
+            (.assign 4 (.const (BitVec.ofNat 64 0x1122334455667788)))
+            (.assign 5 (.var 4)))).map (fun code => (code, [])) := by
+  exact wordFunctionToRiscVWithCallsCake_agrees_cakeStraightLine _ _
+    (WordRiscVStraightLine.seq _ _
+      (WordRiscVStraightLine.assign _ _)
+      (WordRiscVStraightLine.assign _ _))
 
 /-! `wordExpToInstruction` is not Cake-faithful for constants outside the
 signed 12-bit immediate range: it returns a single `addi` whose immediate the

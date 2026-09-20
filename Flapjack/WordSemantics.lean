@@ -411,6 +411,57 @@ mutual
     termination_by fuel _ _ => fuel
 end
 
+/-! Call equations for the plain handler-aware evaluator, mirroring the
+    combined FFI-aware ones below.  The callee is supplied through an
+    evaluation witness, so these statements compose with sequences, conditionals,
+    and nested calls without unfolding the callee body at every caller. -/
+
+theorem evalWordCallWithHandlers_return_of_eval [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (fuel : Nat) (state calleeState bodyState : State width)
+    (target : Nat) (parameters arguments : List Nat)
+    (body : WordProg (Word width)) (values returnValues : List (Word width))
+    (hlookup : lookupWordFunction target functions = some (parameters, body))
+    (hread : readWordRegisters state arguments = some values)
+    (hbind : bindWordRegisters state parameters values = some calleeState)
+    (hbody : evalWordFunctionWithHandlers functions fuel
+      calleeState body = some (.returned bodyState returnValues)) :
+    evalWordCallWithHandlers functions (fuel + 1) state
+      none (some target) arguments none =
+      some (.returned { state with
+        memory := bodyState.memory
+        privilege := bodyState.privilege
+        mode := bodyState.mode } returnValues) := by
+  simp [evalWordCallWithHandlers, hlookup, hread, hbind, hbody]
+
+theorem evalWordCallWithHandlers_raise_handler_of_eval [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (fuel : Nat) (state calleeState bodyState : State width)
+    (target : Nat) (parameters arguments : List Nat)
+    (body : WordProg (Word width)) (values : List (Word width))
+    (exceptionValue handlerName handlerLabel entryLabel : Nat)
+    (handlerBody : WordProg (Word width)) (handlerRegister : Fin 32)
+    (handlerResult : WordControlResult width)
+    (hlookup : lookupWordFunction target functions = some (parameters, body))
+    (hread : readWordRegisters state arguments = some values)
+    (hbind : bindWordRegisters state parameters values = some calleeState)
+    (hbody : evalWordFunctionWithHandlers functions fuel
+      calleeState body = some (.raised bodyState exceptionValue))
+    (hhandlerRegister : registerOfNat handlerName = some handlerRegister)
+    (hhandler : evalWordFunctionWithHandlers functions fuel
+      (writeRegister { state with
+        memory := bodyState.memory
+        privilege := bodyState.privilege
+        mode := bodyState.mode } handlerRegister
+        (BitVec.ofNat width exceptionValue)) handlerBody =
+        some handlerResult) :
+    evalWordCallWithHandlers functions (fuel + 1) state
+      (some ([], ([], []), .skip, 0, 0)) (some target) arguments
+      (some (handlerName, handlerBody, handlerLabel, entryLabel)) =
+      some handlerResult := by
+  simp [evalWordCallWithHandlers, hlookup, hread, hbind, hbody,
+    hhandlerRegister, hhandler]
+
 /-!
 An explicit host boundary for Word-level foreign calls.  The compiler keeps
 the four FFI argument registers and the live-register list in the IR; the

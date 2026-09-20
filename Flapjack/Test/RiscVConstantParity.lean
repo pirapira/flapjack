@@ -1,6 +1,7 @@
 import Flapjack.RiscV.Backend
 import Flapjack.RiscV.Calls
 import Flapjack.RiscV.CorrectnessBackend
+import Flapjack.RiscV.CorrectnessFfi
 import Flapjack.RiscV.Encoding
 import Flapjack.RiscV.Lab
 import Flapjack.RiscV.LocValue
@@ -174,10 +175,33 @@ example :
 example :
     wordFunctionToRiscVWithCallsAndFfiCake (width := 64)
         ({ targets := [], services := [] } : WordCallFfiContext 64)
+        (.assign 4 (.const (BitVec.ofNat 64 0x1234))) =
+      some ([.lui 4 (BitVec.ofNat 64 1),
+        .addi 4 4 (BitVec.ofNat 64 0x234)], []) := by
+  simpa [wordConstToInstructions, wordConst32ToInstructions, registerOfNat] using
+    (wordFunctionToRiscVWithCallsAndFfiCake_const_assign
+      ({ targets := [], services := [] } : WordCallFfiContext 64)
+      4 (BitVec.ofNat 64 0x1234))
+
+example :
+    wordFunctionToRiscVWithCallsAndFfiCake (width := 64)
+        ({ targets := [], services := [] } : WordCallFfiContext 64)
         (.seq (.assign 4 (.const (BitVec.ofNat 64 0x1234)))
           (.return 0 [4])) =
       some ([.lui 4 (BitVec.ofNat 64 1),
         .addi 4 4 (BitVec.ofNat 64 0x234)], [4]) := by
+  simp [wordFunctionToRiscVWithCallsAndFfiCake,
+    wordFunctionToRiscVWithCallsCake, wordExpToInstructionsCake,
+    wordConstToInstructions, wordConst32ToInstructions, registerOfNat]
+
+example :
+    wordFunctionToRiscVWithCallsAndFfiCake (width := 64)
+        ({ targets := [], services := [] } : WordCallFfiContext 64)
+        (.seq (.assign 4 (.const (BitVec.ofNat 64 0x1122334455667788)))
+          (.return 0 [4])) =
+      (wordConstToInstructions (width := 64) 4
+        (BitVec.ofNat 64 0x1122334455667788)).map
+          (fun instructions => (instructions, [4])) := by
   simp [wordFunctionToRiscVWithCallsAndFfiCake,
     wordFunctionToRiscVWithCallsCake, wordExpToInstructionsCake,
     wordConstToInstructions, wordConst32ToInstructions, registerOfNat]

@@ -1386,6 +1386,22 @@ theorem wordFunctionToRiscVWithCallsAndFfiCake_locValue_execution
   exact wordLocValueToInstructionsCake_execution_general state destination source 0
     hdestination hdestinationNonzero hpc (by omega) (by simpa using hsource)
 
+/-! The FFI-aware Cake boundary preserves complete constant materialization for
+    ordinary assignments, just as the non-FFI Cake selector does.  The
+    return-carrier composition is covered by the exact regression in
+    `RiscVConstantParity`. -/
+theorem wordFunctionToRiscVWithCallsAndFfiCake_const_assign
+    [NeZero width] (context : WordCallFfiContext width) (destination : Nat)
+    (value : Word width) :
+    wordFunctionToRiscVWithCallsAndFfiCake context
+        (.assign destination (.const value)) =
+      (wordConstToInstructions destination value).map
+        (fun instructions => (instructions, [])) := by
+  cases h : wordConstToInstructions destination value <;>
+    simp [wordFunctionToRiscVWithCallsAndFfiCake,
+      wordFunctionToRiscVWithCallsCake, wordExpToInstructionsCake,
+      Option.map, Option.bind, h]
+
 /-- Regression: the FFI-aware Cake selector also lowers `Loc 4 0x1234` to the
     `AUIPC`/`ADDI` pair with no leading fallback entry. -/
 example (context : WordCallFfiContext 64) :

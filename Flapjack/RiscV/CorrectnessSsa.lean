@@ -1,4 +1,5 @@
 import Flapjack.RiscV.AllocatorCorrectness
+import Flapjack.RiscV.LocValue
 
 /-!
 Semantic facts for the SSA-renaming stage of the Word allocator.
@@ -401,6 +402,41 @@ theorem evalWordProg_ssaRename_locValue_destination [NeZero width]
   · simp [execute, writeRegister, readRegister, hdestinationNonzero,
       hfreshNonzero, hzero']
   · simp [execute, writeRegister, hmemory, hdestinationNonzero, hfreshNonzero]
+
+/-- Cake-faithful, position-aware counterpart of
+`evalWordProg_ssaRename_locValue_destination`.  The legacy evaluator models a
+`locValue` as an absolute constant, while Cake's `riscv_ast (Loc r i)` is
+PC-relative (`pc + (target - position)`).  This corollary states the SSA
+destination invariant directly against the checked Cake boundary
+(`wordLocValueToInstructionsCake`, `AUIPC`+`ADDI`): when both states share the
+same pc (`source.pc = target.pc = ofNat position`) and the signed offset
+`label - position` lies in the AUIPC signed-20-bit range, the original and the
+SSA-renamed destination read back the same value.  Source state stays visible
+through `source`/`target`; the premise `source.pc = target.pc` is explicit.
+(bead flapjack-pxn.1.4) -/
+theorem evalWordProg_ssaRename_locValueCake_destination
+    (ssa : WordSsaState) (source target : State 64)
+    (destination label position : Nat)
+    (hdestination : destination < 32)
+    (hdestinationNonzero : destination ≠ 0)
+    (hfresh : (wordSsaFresh ssa destination).2 < 32)
+    (hfreshNonzero : (wordSsaFresh ssa destination).2 ≠ 0)
+    (hpcSource : source.pc = BitVec.ofNat 64 position)
+    (hpcTarget : target.pc = BitVec.ofNat 64 position)
+    (hlo : -(2 ^ 19) ≤ (label : Int) - (position : Int))
+    (hhi : (label : Int) - (position : Int) < 2 ^ 19) :
+    readRegister (executeInstructions source
+        ((wordLocValueToInstructionsCake (width := 64) destination label position).getD []))
+      ⟨destination, hdestination⟩ =
+    readRegister (executeInstructions target
+        ((wordLocValueToInstructionsCake (width := 64)
+          (wordSsaFresh ssa destination).2 label position).getD []))
+      ⟨(wordSsaFresh ssa destination).2, hfresh⟩ := by
+  rw [wordLocValueToInstructionsCake_execution_general source destination label
+    position hdestination hdestinationNonzero hpcSource hlo hhi]
+  rw [wordLocValueToInstructionsCake_execution_general target
+    (wordSsaFresh ssa destination).2 label position hfresh hfreshNonzero
+    hpcTarget hlo hhi]
 
 theorem wordSsaRenameProgram_assign_var [OfNat α 0]
     (ssa : WordSsaState) (destination source : Nat) :

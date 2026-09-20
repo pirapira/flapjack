@@ -317,11 +317,11 @@ def calleeAbiMainReturnMatches : Bool :=
       | _ => false
   | none => false
 
-/- This remains a known allocator/ABI parity gap (tracked by
-   `flapjack-pxn.8.5.10.1.1`).  Keep evaluating the Cake oracle in the test
-   output, but do not make the CI regression suite fail until the allocator
-   emits the same return register. -/
-#eval calleeAbiMainReturnMatches
+/- The production allocator now preserves Cake's selected return register for
+   this source witness.  Keep the original Cake terminal bytes as a checked
+   regression oracle so a later ABI change cannot silently reintroduce the
+   former gap. -/
+#guard calleeAbiMainReturnMatches
 
 
 /-- The `nested_expression` fixture source, taken from the original-side probe

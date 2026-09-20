@@ -49,6 +49,28 @@ theorem compile_full_pan_value_return_word_state_correct_regression :
     crepeGlobalSemanticsState (fun _ _ => none) (noCrepFfi Nat)
     (defaultCrepSharedMemHandler : CrepSharedMemHandler Nat) 0 100 1 7
 
+theorem compile_full_pan_value_while_zero_state_correct_regression :
+    evalCrepFullProgState [] (fun _ _ => none) (noCrepFfi Nat)
+        (defaultCrepSharedMemHandler : CrepSharedMemHandler Nat) 0 100 10
+        crepeGlobalSemanticsState
+        (compileProg crepeGlobalSkipContext
+          (.while (.const 0) (.skip : Prog Nat))) =
+      some (.normal crepeGlobalSemanticsState) ∧
+    evalPanValueProgWithPrimitiveCallsAndFfi
+        (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+        ([] : StructContext) [] 0 100 1 10
+        (fun _ => none) (fun _ => none)
+        (fun address => (crepeGlobalSemanticsState.memory address).map PanValue.word)
+        (.while (.const 0) (.skip : Prog Nat)) =
+      some (.normal (fun _ => none) (fun _ => none)
+        (fun address => (crepeGlobalSemanticsState.memory address).map PanValue.word)) := by
+  exact compile_full_pan_value_while_zero_state_correct crepeGlobalSkipContext
+    ([] : StructContext) (fun _ => none) (fun _ => none)
+    (fun address => (crepeGlobalSemanticsState.memory address).map PanValue.word)
+    crepeGlobalSemanticsState (fun _ _ => none) (noCrepFfi Nat)
+    (defaultCrepSharedMemHandler : CrepSharedMemHandler Nat) 0 100 1 9
+    (.skip : Prog Nat)
+
 #guard evalCrepFullExpState crepeGlobalSemanticsState 0 100
   (CrepExp.loadGlob 200) = some 42
 

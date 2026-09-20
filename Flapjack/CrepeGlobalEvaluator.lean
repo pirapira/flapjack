@@ -101,42 +101,16 @@ def evalCrepTypedExp {α : Type u} [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
 termination_by expression => sizeOf expression
 
 /-! The target-word caller of the compact evaluator must preserve Cake's full
-`word_sh` semantics.  Keep `evalCrepTypedExp` above as the historical abstract
-entrypoint used by Nat/pass-local fixtures, and expose this typed boundary for
-RISC-V words: ASR and ROR are evaluated through `evalPanShiftFull`, including
-Cake's invalid shift-count rule. -/
+`word_sh` semantics. Keep `evalCrepTypedExp` above as the historical abstract
+entrypoint used by Nat/pass-local fixtures, and route this typed boundary
+through the full state evaluator for RISC-V words. -/
 def evalCrepTypedExpFull {α : Type u} [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     [Mul α] [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
     [ShiftRight α] [PanShiftWidth α] [ArithmeticShiftRight α]
     [RotateRightOp α] [LT α] [DecidableRel (fun left right : α => left < right)]
     [PanCmp α] (key : α → CrepGlobalAddress) (state : CrepGlobalState α)
-    (baseAddress topAddress : α) : CrepExp α → Option α
-  | .const value => some value
-  | .var name => state.locals name
-  | .load address | .load32 address | .loadByte address => do
-      let address ← evalCrepTypedExpFull key state baseAddress topAddress address
-      state.memory address
-  | .loadGlob address => state.globals (key address)
-  | .op operator [left, right] => do
-      let left ← evalCrepTypedExpFull key state baseAddress topAddress left
-      let right ← evalCrepTypedExpFull key state baseAddress topAddress right
-      pure (evalPanBinOp operator left right)
-  | .crepOp .mul [left, right] => do
-      let left ← evalCrepTypedExpFull key state baseAddress topAddress left
-      let right ← evalCrepTypedExpFull key state baseAddress topAddress right
-      pure (left * right)
-  | .cmp operator left right => do
-      let left ← evalCrepTypedExpFull key state baseAddress topAddress left
-      let right ← evalCrepTypedExpFull key state baseAddress topAddress right
-      pure (evalPanCmp operator left right)
-  | .shift operator left right => do
-      let left ← evalCrepTypedExpFull key state baseAddress topAddress left
-      let right ← evalCrepTypedExpFull key state baseAddress topAddress right
-      evalPanShiftFull operator left right
-  | .baseAddr => some baseAddress
-  | .topAddr => some topAddress
-  | _ => none
-termination_by expression => sizeOf expression
+    (baseAddress topAddress : α) : CrepExp α → Option α :=
+  evalCrepFullExpStateFull (state.toCompact key) baseAddress topAddress
 
 /-- Executable `LoadGlob` entrypoint on the typed state: read the 5-bit key. -/
 def evalCrepTypedLoad {α : Type u} (key : α → CrepGlobalAddress)

@@ -96,6 +96,18 @@ def crepRuntimeTypedGlobalRelation
     (typedState : CrepGlobalState α) : Prop :=
   CrepGlobalKeyRelation key state.globals typedState.globals
 
+/-! Typed global-aware replacement for the legacy raw runtime/Loop relation.
+    The executable fields remain related by equality, while globals are also
+    related to Cake's fixed-width map explicitly.  This is the parameterized
+    boundary callers can adopt without changing `CrepRuntimeState` itself. -/
+def crepRuntimeLoopTypedGlobalRel
+    (key : α → CrepGlobalAddress) (source : CrepRuntimeState α σ)
+    (target : LoopState α) (typedState : CrepGlobalState α) : Prop :=
+  source.locals = target.locals ∧
+  source.memory = target.memory ∧
+  source.globals = target.globals ∧
+  crepRuntimeTypedGlobalRelation key source typedState
+
 theorem crepRuntimeTypedGlobalRelation_adapter
     (state : CrepRuntimeState α σ) (key : α → CrepGlobalAddress)
     (typedState : CrepGlobalState α) :
@@ -103,6 +115,16 @@ theorem crepRuntimeTypedGlobalRelation_adapter
       (state.withTypedGlobalState key typedState) typedState := by
   intro address
   rfl
+
+theorem crepRuntimeLoopTypedGlobalRel_adapter
+    (state : CrepRuntimeState α σ) (key : α → CrepGlobalAddress)
+    (typedState : CrepGlobalState α) :
+    crepRuntimeLoopTypedGlobalRel key
+      (state.withTypedGlobalState key typedState)
+      (loopStateOfCrepRuntimeStateForGlobals
+        (state.withTypedGlobalState key typedState)) typedState := by
+  refine ⟨rfl, rfl, rfl, ?_⟩
+  exact crepRuntimeTypedGlobalRelation_adapter state key typedState
 
 /-! The Loop-side state produced by the typed runtime adapter retains the
     source-shaped global relation.  This is the explicit state boundary used
@@ -171,6 +193,31 @@ theorem crepRuntimeTypedGlobalRelation_store_of_noalias
   have hupdate := updateCrepGlobalKeyedBy_eq_updateMemory_of_noalias
     key state.globals address value hnoalias
   simpa [storeCrepTypedGlobal, hupdate] using hstore
+
+theorem crepRuntimeLoopTypedGlobalRel_store_of_noalias
+    [BEq α] [LawfulBEq α]
+    (state : CrepRuntimeState α σ) (key : α → CrepGlobalAddress)
+    (typedState : CrepGlobalState α) (address value : α)
+    (hnoalias : ∀ current, key current = key address → current = address) :
+    crepRuntimeLoopTypedGlobalRel key
+      { (state.withTypedGlobalState key typedState) with
+        globals := updateMemory
+          (state.withTypedGlobalState key typedState).globals address value }
+      { (loopStateOfCrepRuntimeStateForGlobals
+          (state.withTypedGlobalState key typedState)) with
+        globals := updateLoopGlobal
+          (state.withTypedGlobalState key typedState).globals address value }
+      (storeCrepTypedGlobal key typedState address value) := by
+  refine ⟨rfl, rfl, ?_, ?_⟩
+  · funext current
+    by_cases h : address = current
+    · subst current
+      simp [updateMemory, updateLoopGlobal]
+    · have h' : current ≠ address := Ne.symm h
+      simp [updateMemory, updateLoopGlobal, h, h']
+  · exact crepRuntimeTypedGlobalRelation_store_of_noalias key
+      (state.withTypedGlobalState key typedState) typedState address value
+      (crepRuntimeTypedGlobalRelation_adapter state key typedState) hnoalias
 
 def storeCrepRuntimeTypedGlobalState [BEq α]
     (state : CrepRuntimeState α σ) (key : α → CrepGlobalAddress)

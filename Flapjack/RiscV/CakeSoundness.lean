@@ -1,6 +1,5 @@
 import Flapjack.RiscV.Backend
 import Flapjack.RiscV.CorrectnessBackend
-import Flapjack.RiscV.Ffi
 
 /-!
 Cake-faithful evaluator boundary for the straight-line Word fragment.
@@ -623,73 +622,6 @@ example :
       some ([.auipc 4 (BitVec.ofInt 64 1), .addi 4 4 (BitVec.ofInt 64 0x234)],
         ([] : List (Fin 32))) := by
   simp [wordFunctionToRiscVCake, wordLocValueToInstructionsCake, registerOfNat]
-
-/-!
-The FFI/call-aware evaluator keeps the source state, memory, and handler
-visible in its arguments.  On the straight-line fragment it agrees with the
-plain evaluator; the explicit fuel premise accounts for nested sequences.
--/
-
-theorem option_bind_pair_eta {α β : Type} (x : Option (α × β)) :
-    x.bind (fun p => some (p.1, p.2)) = x := by
-  cases x <;> rfl
-
-theorem evalWordFunctionWithCallsAndFfi_straightLine_eq_evalWordFunction
-    {width : Nat} [NeZero width]
-    (functions : List (Nat × List Nat × WordProg (Word width)))
-    (handler : FunName → Word width → Word width → Word width → Word width →
-      State width → Option (State width))
-    (state : State width) (program : WordProg (Word width))
-    (hstraight : WordRiscVStraightLine program)
-    (fuel : Nat) (hfuel : sizeOf program + 1 ≤ fuel) :
-    evalWordFunctionWithCallsAndFfi functions handler fuel state program =
-      evalWordFunction state program := by
-  induction hstraight generalizing state fuel with
-  | skip => cases fuel with | zero => omega | succ k => simp [evalWordFunctionWithCallsAndFfi]
-  | move store moves =>
-      cases fuel with | zero => omega | succ k => simp [evalWordFunctionWithCallsAndFfi]
-  | assign destination value =>
-      cases fuel with | zero => omega | succ k => simp [evalWordFunctionWithCallsAndFfi]
-  | inst instruction =>
-      cases fuel with | zero => omega | succ k => simp [evalWordFunctionWithCallsAndFfi]
-  | store address value =>
-      cases fuel with | zero => omega | succ k => simp [evalWordFunctionWithCallsAndFfi]
-  | locValue destination source =>
-      cases fuel with | zero => omega | succ k => simp [evalWordFunctionWithCallsAndFfi]
-  | tick => cases fuel with | zero => omega | succ k => simp [evalWordFunctionWithCallsAndFfi]
-  | shareInst operator name address =>
-      cases fuel with | zero => omega | succ k => simp [evalWordFunctionWithCallsAndFfi]
-  | seq first second hfirst hsecond ihfirst ihsecond =>
-      cases fuel with
-      | zero => omega
-      | succ k =>
-          have hk : sizeOf first + 1 ≤ k := by
-            have hs : sizeOf (WordProg.seq first second) =
-                1 + sizeOf first + sizeOf second := rfl
-            omega
-          have hk2 : sizeOf second + 1 ≤ k := by
-            have hs : sizeOf (WordProg.seq first second) =
-                1 + sizeOf first + sizeOf second := rfl
-            omega
-          simp only [evalWordFunctionWithCallsAndFfi, evalWordFunction]
-          rw [ihfirst state k hk]
-          rw [evalWordFunction_wordRiscVStraightLine_eq_evalWordProg state first hfirst]
-          cases heval : evalWordProg state first with
-          | none => simp
-          | some firstState =>
-              simp [ihsecond firstState k hk2, option_bind_pair_eta]
-
-/-- The FFI-aware evaluator agrees with the plain evaluator on a straight-line
-skip when the fuel exceeds the program size. -/
-example (functions : List (Nat × List Nat × WordProg (Word 64)))
-    (handler : FunName → Word 64 → Word 64 → Word 64 → Word 64 →
-      State 64 → Option (State 64)) (state : State 64) :
-    evalWordFunctionWithCallsAndFfi functions handler
-        (sizeOf (.skip : WordProg (Word 64)) + 1) state
-        (.skip : WordProg (Word 64)) =
-      evalWordFunction state (.skip : WordProg (Word 64)) :=
-  evalWordFunctionWithCallsAndFfi_straightLine_eq_evalWordFunction functions
-    handler state (.skip : WordProg (Word 64)) .skip _ (Nat.le_refl _)
 
 /-!
 The handler-aware control evaluator `evalWordFunctionWithHandlersAndFfi`

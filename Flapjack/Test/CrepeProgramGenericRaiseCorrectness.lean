@@ -852,6 +852,81 @@ theorem named_struct_source_pass_full_raise_state_relation :
       compileExp, compileExp.compileExpList, freshNames, List.range,
       List.range.loop, Nat.add_assoc] using h.2.1
 
+theorem named_struct_source_pass_generic_hraise_bridge :
+    panValuePcRaisedHraiseData
+      (fun exception => if exception = "E" then some 9 else none)
+      pcGlobalsLookup [] context (fun _ _ code => code = 9)
+      (fun _ => none) (fun _ => none) (fun _ => none) "E"
+      namedStructPostPassValue
+      { state with globals := updateMemoryListAt state.globals 0 8 [3] } 9 ∧
+    lookupInfo "E" context.exceptions = some 9 := by
+  apply panValuePcRaisedGenericHraise_of_struct_pass_evidence
+    (α := Nat) (context := context)
+    (sourceStructs := namedStructPassContext.structs) (postStructs := [])
+    (sourceFunctions := []) (functions := [])
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (state := state)
+    (primitive := fun _ _ => none)
+    (sourceHandler := fun _ _ _ _ _ _ => none)
+    (crepPrimitive := fun _ _ => none)
+    (ffi := fun _ _ _ _ _ _ => none)
+    (sharedMem := fun _ _ _ _ => none)
+    (baseAddress := 0) (topAddress := 0) (bytesInWord := 8)
+    (sourceFuel := 2) (exception := "E") (exceptionCode := 9)
+    (name := "S") (fields := [("field", .const 3)])
+    (values := [("field", .word 3)])
+    (info := { fields := [("field", .one)], size := 1 })
+    (postExpression := namedStructPostPassExpression)
+    (postValue := namedStructPostPassValue)
+    (compiled := [.const 3]) (shape := .comb [.one]) (flatValues := [3])
+    (exceptionRel := fun _ _ code => code = 9)
+    (resultExceptionCode := fun exception =>
+      if exception = "E" then some 9 else none)
+    (globalsLookup := pcGlobalsLookup)
+    (hlookupException := by simp [context, lookupInfo])
+    (hlookupStruct := by simp [namedStructPassContext, lookupInfo])
+    (hfields := by
+      simp [evalPanValueExp.evalPanValueFields, evalPanValueExp])
+    (hshape := by
+      simp [namedStructPassContext, panValueFieldsHaveShapes, panValueShape,
+        panShapeMatches])
+    (hpass := by
+      intro namedValue hnamed
+      have hsource := named_struct_source_eval_via_generic_evidence 3
+      have hvalue : namedValue = namedStructSourceValue :=
+        Option.some.inj (hnamed.symm.trans hsource)
+      subst namedValue
+      exact (named_struct_source_pass_one_word_eval 3).2)
+    (hrel := by
+      refine ⟨rfl, panValueCrepLocalsRel_empty [] context _, rfl⟩)
+    (hvalid := by
+      simp [namedStructPostPassValue, panValuePayloadWithinLimit,
+        panValuePayloadSizeFuel,
+        panValuePayloadSizeFuel.panValuePayloadSizeFieldsFuel,
+        panValueFlatValueFuel,
+        panValueFlatValueFuel.panValueFlatValueListFuel])
+    (hcompile := by
+      simp only [namedStructPostPassExpression]
+      rw [named_struct_source_pass_one_word_expression 3]
+      simp [context, compileExp, compileExp.compileExpList])
+    (hlength := by simp [Shape.shapeSize])
+    (hcompiled := by
+      simp [state, evalCrepFullExpsState, evalCrepFullExpState])
+    (hflat := by
+      simp [namedStructPostPassValue, panValueFlatWords,
+        panValueFlatWordsFuel, panValueFlatValueFuel,
+        panValueFlatWordsFuel.panValueFlatWordsListFuel,
+        panValueFlatValueFuel.panValueFlatValueListFuel])
+    (hnot := by simp [context, freshNames])
+    (hfresh := by simp [context, state, freshNames])
+    (hexception := by simp)
+    (hcode := by simp)
+    (hlookupPayload := by
+      intro _
+      rfl)
+    (hsize := by
+      simp [namedStructPostPassValue, panValueShape, Shape.shapeSize])
+
 /-! The stateful constructor also handles a record whose fields are nested
     scalar expressions rather than constants.  The source evaluator is kept
     as an explicit oracle regression so this test exercises both the

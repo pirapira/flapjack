@@ -416,4 +416,129 @@ theorem evalPanValueProgWithPrimitive_seq_some_fst (structs : StructContext)
   | none => simp [evalPanValueProgWithPrimitive, hfirst] at h
   | some firstResult => exact ⟨firstResult, rfl⟩
 
+/-- CakeML's tail-call recognition is evaluation-preserving: the
+    `seqCallRet` rewrite of an `AssignCall`/`Return` shape does not change
+    the structured evaluation. -/
+theorem evalPanValueProgWithPrimitive_seqCallRet (structs : StructContext)
+    (baseAddress topAddress bytesInWord : α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (primitive : PanPrimitiveHandler α)
+    (program : Prog α) (memoryAccess : Option (PanValueMemoryAccess α)) :
+    SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+        memory (seqCallRet program)
+      = SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+        memory program := by
+  unfold seqCallRet
+  split
+  · split <;> simp [SEval, evalPanValueProgWithPrimitive]
+  · rfl
+
+/-- CakeML's `ret_to_tail_correct` on the structured evaluator: the
+    `pan_simp` tail-call rewrite preserves evaluation. -/
+theorem evalPanValueProgWithPrimitive_retToTail (structs : StructContext)
+    (baseAddress topAddress bytesInWord : α) (primitive : PanPrimitiveHandler α)
+    (memoryAccess : Option (PanValueMemoryAccess α)) :
+    ∀ (program : Prog α) (locals globals : VarName → Option (PanValue α))
+      (memory : α → Option (PanValue α)),
+      SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+          memory (retToTail program)
+        = SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+          memory program := by
+  intro program locals globals memory
+  have main : ∀ n, ∀ (program : Prog α), sizeOf program = n →
+      ∀ (locals globals : VarName → Option (PanValue α))
+        (memory : α → Option (PanValue α)),
+        SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+            memory (retToTail program)
+          = SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+            memory program := by
+    intro n
+    induction n using Nat.strongRecOn with
+    | ind n ih =>
+      intro program hsize locals globals memory
+      cases program with
+      | skip =>
+          rw [retToTail.eq_1]
+      | dec name shape value body =>
+          rw [retToTail.eq_2]
+          exact dec_congr structs baseAddress topAddress bytesInWord primitive memoryAccess
+            name shape value (retToTail body) body
+            (fun l g m => ih (sizeOf body) (by rw [← hsize]; decreasing_trivial)
+              body rfl l g m)
+            locals globals memory
+      | seq first second =>
+          rw [retToTail.eq_3]
+          calc
+            SEval structs baseAddress topAddress bytesInWord primitive memoryAccess
+                locals globals memory
+                (seqCallRet (.seq (retToTail first) (retToTail second)))
+              = SEval structs baseAddress topAddress bytesInWord primitive memoryAccess
+                  locals globals memory (.seq (retToTail first) (retToTail second)) :=
+                evalPanValueProgWithPrimitive_seqCallRet structs baseAddress topAddress
+                  bytesInWord locals globals memory primitive
+                  (.seq (retToTail first) (retToTail second)) memoryAccess
+            _ = SEval structs baseAddress topAddress bytesInWord primitive memoryAccess
+                  locals globals memory (.seq first (retToTail second)) :=
+                seq_congr_left structs baseAddress topAddress bytesInWord primitive
+                  memoryAccess locals globals memory (retToTail first) first
+                  (retToTail second)
+                  (ih (sizeOf first) (by rw [← hsize]; decreasing_trivial)
+                    first rfl locals globals memory)
+            _ = SEval structs baseAddress topAddress bytesInWord primitive memoryAccess
+                  locals globals memory (.seq first second) :=
+                seq_congr_right structs baseAddress topAddress bytesInWord primitive
+                  memoryAccess first (retToTail second) second
+                  (fun l g m => ih (sizeOf second) (by rw [← hsize]; decreasing_trivial)
+                    second rfl l g m)
+                  locals globals memory
+      | ite condition thenBranch elseBranch =>
+          rw [retToTail.eq_4]
+          exact ite_congr structs baseAddress topAddress bytesInWord primitive memoryAccess
+            condition (retToTail thenBranch) thenBranch (retToTail elseBranch) elseBranch
+            (fun l g m => ih (sizeOf thenBranch) (by rw [← hsize]; decreasing_trivial)
+              thenBranch rfl l g m)
+            (fun l g m => ih (sizeOf elseBranch) (by rw [← hsize]; decreasing_trivial)
+              elseBranch rfl l g m)
+            locals globals memory
+      | «while» condition body =>
+          rw [retToTail.eq_5]
+          simp [SEval, evalPanValueProgWithPrimitive]
+      | «call» info function arguments =>
+          cases info with
+          | none =>
+              rw [retToTail.eq_6]
+          | some info =>
+              cases info with
+              | mk returns handlerInfo =>
+                  cases handlerInfo with
+                  | none =>
+                      rw [retToTail.eq_7]
+                  | some handler =>
+                      cases handler with
+                      | mk exception handlerInfo =>
+                          cases handlerInfo with
+                          | mk handlerVar handlerProgram =>
+                              rw [retToTail.eq_8]
+                              simp [SEval, evalPanValueProgWithPrimitive]
+      | decCall name shape function arguments body =>
+          rw [retToTail.eq_9]
+          simp [SEval, evalPanValueProgWithPrimitive]
+      | annot tag text =>
+          simp [retToTail]
+      | assign kind name value => simp [retToTail]
+      | primitive name operator arguments => simp [retToTail]
+      | store address value => simp [retToTail]
+      | store32 address value => simp [retToTail]
+      | storeByte address value => simp [retToTail]
+      | «break» => simp [retToTail]
+      | «continue» => simp [retToTail]
+      | extCall function configuration configurationLength array arrayLength =>
+          simp [retToTail]
+      | «raise» exception value => simp [retToTail]
+      | «return» value => simp [retToTail]
+      | shMemLoad size kind name address => simp [retToTail]
+      | shMemStore size address value => simp [retToTail]
+      | tick => simp [retToTail]
+  exact main (sizeOf program) program rfl locals globals memory
+
 end Flapjack

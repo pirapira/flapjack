@@ -224,4 +224,34 @@ example :
     (labLocValueInstructions (width := 64) 4 0x1234 0).length = 2 := by
   decide
 
+/-! ### Checked Cake-faithful LocValue boundary (bead flapjack-pxn.1.4)
+
+`wordLocValueToInstructionsCake` is the position-aware `AUIPC`/`ADDI` boundary
+that mirrors Cake's `riscv_ast (Loc r i)`.  The bridge below proves it emits
+exactly the instructions of the executable Lab selector, so a theorem client
+can use the checked boundary while the pipeline keeps using `labLocValueInstructions`. -/
+
+theorem wordLocValueToInstructionsCake_eq_labLocValueInstructions {width : Nat}
+    [NeZero width] (destination label position : Nat) (hdestination : destination < 32) :
+    wordLocValueToInstructionsCake (width := width) destination label position =
+      some (labLocValueInstructions (width := width) ⟨destination, hdestination⟩
+        label position) := by
+  unfold wordLocValueToInstructionsCake labLocValueInstructions
+  simp [registerOfNat, hdestination]
+
+example :
+    wordLocValueToInstructionsCake (width := 64) 4 0x1234 0 =
+      some (labLocValueInstructions (width := 64) 4 0x1234 0) := by
+  decide
+
+example :
+    (wordLocValueToInstructionsCake (width := 64) 4 0x1234 0).map List.length =
+      some 2 := by
+  decide
+
+example :
+    wordLocValueToInstructionsCake (width := 64) 4 0x123456 0x1000 =
+      some (labLocValueInstructions (width := 64) 4 0x123456 0x1000) := by
+  decide
+
 end Flapjack.RiscV

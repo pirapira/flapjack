@@ -1036,6 +1036,37 @@ theorem compile_full_pan_value_while_zero_correct
     evalPanValueProgWithPrimitiveCallsAndFfi,
     evalPanValueExp]
 
+/-! Stateful counterpart of the zero-condition loop boundary.  Cake's
+    evaluator returns the complete source state because the body is never
+    entered; the full Crep evaluator must preserve the complete target state
+    for the same reason. -/
+theorem compile_full_pan_value_while_zero_state_correct
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (locals globals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (body : Prog α) :
+    evalCrepFullProgState [] primitive ffi sharedMem
+        baseAddress topAddress (fuel + 1) state
+        (compileProg context (.while (.const 0) body)) =
+      some (.normal state) ∧
+    evalPanValueProgWithPrimitiveCallsAndFfi
+        (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+        structs [] baseAddress topAddress bytesInWord (fuel + 1)
+        locals globals sourceMemory (.while (.const 0) body) =
+      some (.normal locals globals sourceMemory) := by
+  constructor
+  · simp [compileProg, compileExp, evalCrepFullProgState,
+      evalCrepFullExpState]
+  · simp [evalPanValueProgWithPrimitiveCallsAndFfi,
+      evalPanValueExp]
+
 /-! Loop-control transfers are observable at the full result boundary as
     non-returning outcomes.  The source and Crep evaluators agree on that
     projection for `break`, independently of the surrounding state. -/

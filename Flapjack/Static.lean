@@ -1041,7 +1041,12 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
         let checkResult : ShapedBased → StaticResult ProgReturn :=
           fun resultShape =>
             if shapedBasedSameShape destinationInfo.shapedBased resultShape then
-              progOk .otherLast false false context.location
+              staticOk {
+                exitsFunction := false
+                exitsLoop := false
+                last := .otherLast
+                variableDelta := [(name, { shapedBased := resultShape })]
+                currentLocation := context.location }
             else
               staticError (.shape (getShapeMismatchMessage
                 ("result of primitive " ++ primopToString operator ++

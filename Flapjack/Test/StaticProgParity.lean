@@ -192,6 +192,23 @@ def staticProgDecCallMetadataOracle : Bool :=
 
 #guard staticProgDecCallMetadataOracle
 
+/-! Cake's accepted AddCarry primitive records its structured result shape in
+    the destination delta. -/
+def staticProgPrimitiveMetadataOracle : Bool :=
+  match staticProgCheck
+      (.primitive "pair" .addCarry [.const 0, .const 1, .const 2]) with
+  | (Except.ok result, warnings) =>
+      !result.exitsFunction && !result.exitsLoop && result.last == .otherLast &&
+        result.currentLocation == "L: " && warnings.isEmpty &&
+        result.variableDelta.length == 1 &&
+        match lookupInfo "pair" result.variableDelta with
+        | some info =>
+            info.shapedBased == .struct [.word .notBased, .word .notBased]
+        | none => false
+  | _ => false
+
+#guard staticProgPrimitiveMetadataOracle
+
 /-! Cake's sequence rule keeps the first function exit when the second
     statement is transparent.  Check the returned metadata, not only the
     acceptance/error bit, for a return followed by Skip. -/

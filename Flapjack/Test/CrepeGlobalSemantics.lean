@@ -2,6 +2,7 @@ import Flapjack.CrepeSemantics
 import Flapjack.Compile
 import Flapjack.CrepeCorrectness
 import Flapjack.CrepToLoopCorrectness
+import Flapjack.RiscV.PanMemory
 
 /-!
 Focused executable regressions for the separate global environment introduced
@@ -99,6 +100,29 @@ def crepeFullRecordAssignState : CrepState (RiscV.Word 8) :=
       if slot == 2 then some 1 else none
     memory := fun _ => none
     globals := fun _ => none }
+
+/- The exact structured-program adapter uses the Cake fixed-width shared-read
+   operation at the source boundary; this guard would not hold for a legacy
+   whole-cell memory fallback on a non-word-shaped cell. -/
+def exactStructuredLoad : Option ((VarName → Option (PanValue (RiscV.Word 8))) ×
+    (VarName → Option (PanValue (RiscV.Word 8))) ×
+    ((RiscV.Word 8) → Option (PanValue (RiscV.Word 8))) ×
+    List (PanValue (RiscV.Word 8))) :=
+  evalPanValueProgWithPrimitiveExact
+    ([] : StructContext) 0 100 1
+    (fun name => if name == "x" then some (.word 0) else none)
+    (fun _ => none)
+    (fun address => if address == 7 then some (.word 42) else none)
+    (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel)
+    (fun _ _ => none)
+    (.shMemLoad .opW .local "x" (.const 7) : Prog (RiscV.Word 8))
+
+#guard match exactStructuredLoad with
+  | some (locals, _, _, []) =>
+      match locals "x" with
+      | some (.word value) => value == (42 : RiscV.Word 8)
+      | _ => false
+  | _ => false
 
 theorem compile_full_pan_value_shMemLoad_word_state_full_regression :
     evalPanValueProgWithPrimitiveFull

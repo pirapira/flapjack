@@ -145,8 +145,12 @@ def sourceMakeFuncsOracle : Bool :=
 def sourceMkCtxtOracle : Bool :=
   let context := crepMkCtxt (α := Nat) .rv64i (crepMakeVmap [10, 20])
     [("f", (64, 2))] 1
-  findLoopVar context 20 == 1 && context.maxVar == 1 &&
-    context.functions == [("f", (64, 2))]
+  context.vars == [(10, 0), (20, 1)] &&
+    findLoopVar context 20 == 1 && context.maxVar == 1 &&
+    context.functions == [("f", (64, 2))] &&
+    match context.target with
+    | .rv64i => true
+    | _ => false
 
 #guard sourceMkCtxtOracle
 

@@ -4,6 +4,14 @@ namespace Flapjack
 
 open RiscV
 
+/-! Direct parity for Cake's `distinct_lists_def` (`pan_commonScript.sml:8`):
+    only membership of the right-hand list matters; repetitions on the left
+    remain harmless, while any shared element rejects the pair. -/
+#guard distinctLists [] [1, 2] == true
+#guard distinctLists [2, 4, 4] [0, 1, 3] == true
+#guard distinctLists [2, 4, 4] [4, 9] == false
+#guard distinctLists [0, 1] [] == true
+
 def crepContext : CompileContext Nat :=
   { vars := [("pair", (.comb [.one, .one], [0, 1]))], functions := [], exceptions := [],
     maxVar := 1, bytesInWord := 1 }

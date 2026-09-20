@@ -53,6 +53,49 @@ def staticProgDeltaRemovesDeclaration : Bool :=
         (lookupInfo "x" result.variableDelta).isSome
   | (Except.error _) => false
 
+def staticProgLoopControlContext : Context :=
+  { staticProgParityContext with inLoop := true }
+
+/-! Cake returns loop exits as intermediate metadata: both controls exit the
+    loop, preserve the current location, and carry no variable delta. -/
+def staticProgLoopControlMetadataOracle : Bool :=
+  let checkControl := fun (program : Prog Nat) (expected : LastStmt) =>
+    match checkProg staticProgLoopControlContext program with
+    | (Except.ok result, warnings) =>
+        !result.exitsFunction && result.exitsLoop && result.last == expected &&
+          result.variableDelta.isEmpty && result.currentLocation == "L: " &&
+          warnings.isEmpty
+    | _ => false
+  checkControl .break .breakLast && checkControl .continue .contLast
+
+#guard staticProgLoopControlMetadataOracle
+
+/-! Cake's `If` combines branch exits conjunctively and selects the
+    branch-specific terminal marker only when both branches exit. -/
+def staticProgIfMetadataOracle : Bool :=
+  match staticProgCheck
+      (.ite (.const 1) (.return (.const 0)) (.return (.const 0))) with
+  | (Except.ok result, warnings) =>
+      result.exitsFunction && !result.exitsLoop && result.last == .condExitLast &&
+        result.variableDelta.isEmpty && result.currentLocation == "L: " &&
+        warnings.isEmpty
+  | _ => false
+
+#guard staticProgIfMetadataOracle
+
+/-! Cake's `While` consumes loop-control exits from its body: the enclosing
+    result is non-exiting with `OtherLast` and a delta filtered against the
+    outer locals. -/
+def staticProgWhileMetadataOracle : Bool :=
+  match staticProgCheck (.while (.const 1) .break) with
+  | (Except.ok result, warnings) =>
+      !result.exitsFunction && !result.exitsLoop && result.last == .otherLast &&
+        result.variableDelta.isEmpty && result.currentLocation == "L: " &&
+        warnings.isEmpty
+  | _ => false
+
+#guard staticProgWhileMetadataOracle
+
 /-! Cake's sequence rule keeps the first function exit when the second
     statement is transparent.  Check the returned metadata, not only the
     acceptance/error bit, for a return followed by Skip. -/

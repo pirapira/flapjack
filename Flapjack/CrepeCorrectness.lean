@@ -115,6 +115,45 @@ theorem compile_full_pan_value_return_word_state_full
     evalPanValueProgWithPrimitiveFull, evalPanValueExpFull,
     panValueFlatWords, panValueFlatWordsFuel]
 
+/-! Stateful expression-return composition with the complete Cake word contract.
+
+    The source premise uses `evalPanValueExpFull`, the compiled-expression
+    premise uses `evalCrepFullExpStateFull`, and the result boundary uses the
+    corresponding full evaluators on both sides.  These are the explicit
+    Cake/HOL obligations that a later expression compiler induction supplies;
+    no compatibility evaluator is hidden in this bridge. -/
+theorem compile_full_pan_value_return_word_state_full_of_exp
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [PanShiftWidth α]
+    [ArithmeticShiftRight α] [RotateRightOp α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (locals globals : VarName → Option (PanValue α))
+    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord value : α)
+    (expression : Exp α) (compiled : CrepExp α)
+    (hsource : evalPanValueExpFull structs locals globals (fun address =>
+      (state.memory address).map PanValue.word)
+      baseAddress topAddress bytesInWord expression = some (.word value))
+    (hcompile : compileExp context expression = ([compiled], .one))
+    (hcompiled : evalCrepFullExpStateFull state baseAddress topAddress
+      compiled = some value) :
+    evalCrepFullResultStateFull [] primitive ffi sharedMem
+        baseAddress topAddress 1 state
+        (compileProg context (.return expression)) =
+      (evalPanValueProgFull structs baseAddress topAddress bytesInWord
+        locals globals (fun address =>
+          (state.memory address).map PanValue.word)
+        (.return expression)).map
+        (fun result => result.2.2.2.flatMap panValueFlatWords) := by
+  simp [compileProg, hcompile, evalCrepFullResultStateFull,
+    evalCrepFullProgStateFull, evalCrepFullExpsStateFull,
+    hcompiled, evalPanValueProgFull,
+    evalPanValueProgWithPrimitiveFull, hsource,
+    panValueFlatWords, panValueFlatWordsFuel]
+
 /-! The return boundary is also useful with a non-constant source expression.
     Its two hypotheses are precisely the source-expression and lowered-Crep
     expression obligations that a later expression pass theorem supplies. -/

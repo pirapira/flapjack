@@ -427,4 +427,41 @@ theorem panValuePcCompileCorrect_compact_if_nonzero_continue_nat :
   simpa [panValuePcResultOfControl, panValuePcResultRel,
     panValueCrepControlRel] using hstate
 
+theorem panValuePcCompileCorrect_compact_if_nonzero_return_nat :
+    PanValuePcCompileCorrect
+      (panValuePcCompactSourceEvaluator
+        skipNatPrimitive skipNatSourceHandler [] 0 0 1 2)
+      (crepPcCompactTargetEvaluator
+        [] skipNatCrepPrimitive skipNatFfi skipNatSharedMem 0 0 2)
+      skipNatCodeRel skipNatExcpRel skipNatExceptionCode
+      skipNatGlobalsLookup
+      (.ite (.const 5) (.return (.const 7)) (.skip : Prog Nat)) := by
+  intro context structs sourceInput targetInput exceptionRel sourceExecution
+    targetExecution hsourceStructs htargetStructs hlocalisedCode hlocalised
+    hcode hexcp hstate hnonerror hsource htarget hpostCode hpostExcp
+  have hlimit : panValuePayloadWithinLimit structs (.word (7 : Nat)) = true :=
+    panValuePayloadWithinLimit_word structs 7
+  have hsourceResult :
+      ({ code := sourceInput.code
+        , eshapes := sourceInput.eshapes
+        , result := panValuePcResultOfControl
+            (.returned (fun _ => none) sourceInput.globals sourceInput.memory
+              [.word 7]) } : PanValuePcExecution Nat) = sourceExecution := by
+    simpa [panValuePcCompactSourceEvaluator,
+      evalPanValueProgWithPrimitiveCallsAndFfi, evalPanValueExp, hlimit] using hsource
+  cases hsourceResult
+  simp [crepPcCompactTargetEvaluator, evalCrepFullProgState, compileProg,
+    compileExp, evalCrepFullExpsState, evalCrepFullExpState]
+    at htarget
+  obtain ⟨targetResult, htargetResult, htargetExecution⟩ := htarget
+  cases htargetExecution
+  simp [crepPcResultOfControl] at htargetResult
+  cases htargetResult
+  have hstateRel :
+      panValueCrepStateRel structs context
+        (fun _ => none) sourceInput.globals sourceInput.memory targetInput.state :=
+    ⟨hstate.1, panValueCrepLocalsRel_empty structs context targetInput.state.locals,
+      hstate.2.2⟩
+  exact ⟨hstateRel, panValueCrepValuesRel_singleton (.word 7)⟩
+
 end Flapjack

@@ -14,6 +14,18 @@ example :
       some [.ori 4 0 (BitVec.ofNat 64 0x12)] := by
   decide
 
+/-! Signed-12 endpoints from Cake's `valid_imm`/`riscv_ast` boundary. -/
+example :
+    wordConstToInstructions (width := 64) 4 (BitVec.ofNat 64 2047) =
+      some [.ori 4 0 (BitVec.ofNat 64 0x7ff)] := by
+  decide
+
+example :
+    wordConstToInstructions (width := 64) 4
+        (BitVec.ofNat 64 (2 ^ 64 - 2048)) =
+      some [.ori 4 0 (BitVec.ofNat 64 0x800)] := by
+  decide
+
 example :
     wordConstToInstructions (width := 64) 4 (BitVec.ofNat 64 0x1234) =
       some [.lui 4 (BitVec.ofNat 64 1),

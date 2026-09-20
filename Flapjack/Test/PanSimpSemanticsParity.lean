@@ -107,4 +107,30 @@ example
     (fun _ => none) (fun _ => none) (fun _ => none) (fun _ _ => none)
     (.tick : Prog Nat) (.tick : Prog Nat) none _ h
 
+/-- CakeML `ret_to_tail_correct` (structured fragment): the tail-call rewrite
+    preserves evaluation on a concrete program. -/
+example :
+    evalPanValueProgWithPrimitive ([] : StructContext) (0 : Nat) 0 1
+        (fun _ => none) (fun _ => none) (fun _ => none) (fun _ _ => none)
+        (retToTail (.tick : Prog Nat))
+      = evalPanValueProgWithPrimitive ([] : StructContext) (0 : Nat) 0 1
+        (fun _ => none) (fun _ => none) (fun _ => none) (fun _ _ => none)
+        (.tick : Prog Nat) :=
+  evalPanValueProgWithPrimitive_retToTail ([] : StructContext) (0 : Nat) 0 1
+    (fun _ _ => none) none (.tick : Prog Nat)
+    (fun _ => none) (fun _ => none) (fun _ => none)
+
+/-- CakeML `evaluate_seq_call_ret_eq` (structured fragment): the tail-call
+    recognition rewrite preserves evaluation. -/
+example :
+    evalPanValueProgWithPrimitive ([] : StructContext) (0 : Nat) 0 1
+        (fun _ => none) (fun _ => none) (fun _ => none) (fun _ _ => none)
+        (seqCallRet (.tick : Prog Nat))
+      = evalPanValueProgWithPrimitive ([] : StructContext) (0 : Nat) 0 1
+        (fun _ => none) (fun _ => none) (fun _ => none) (fun _ _ => none)
+        (.tick : Prog Nat) :=
+  evalPanValueProgWithPrimitive_seqCallRet ([] : StructContext) (0 : Nat) 0 1
+    (fun _ => none) (fun _ => none) (fun _ => none) (fun _ _ => none)
+    (.tick : Prog Nat) none
+
 end Flapjack

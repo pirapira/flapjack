@@ -807,6 +807,14 @@
       "source_reference": "CakeML Pancake nested record payload oracle: fields with 11- and 22-word shapes compile to byte-identical RISC-V output.",
       "cake_sha256": "91ebaab3609c8a0c6db97a76cd98c8e6c010a0d7e0394cfb6e512a7ce98e958a",
       "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/gh1049_stack_alloc.pnk",
+      "source_reference": "GH #1049 minimized stack_alloc witness: an allocation-shaped source call plus a downstream store checks Cake's section-id return metadata and downstream section layout.",
+      "cake_sha256": "3de844d86dd7541dfb2db7618cd54061fefc10571b8dd9bfacc6c5ae809c0ad2",
+      "tracked_beads": [
+        "flapjack-8tb.8"
+      ]
     }
   ]
 }

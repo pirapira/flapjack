@@ -237,7 +237,8 @@ theorem wordInstToInstructionsCake_const_eq_labConstInstructions {width : Nat}
     wordInstToInstructionsCake (width := width) (.const destination value) =
       some (labConstInstructions (width := width) ⟨destination, hdestination⟩ 0 31
         value.toNat) :=
-  wordConstToInstructions_eq_labConstInstructions destination value hdestination
+  by simpa [wordInstToInstructionsCake_const] using
+    (wordConstToInstructions_eq_labConstInstructions destination value hdestination)
 
 /-! The function-level checked boundary composes the same Cake constant list
     with its return carrier.  This is the reusable migration theorem for
@@ -268,6 +269,17 @@ example :
     wordInstToInstructionsCake (width := 64)
         (.const 4 (BitVec.ofNat 64 0x1234)) =
       some (labConstInstructions (width := 64) 4 0 31 0x1234) := by
+  decide
+
+/-! A constant used as a load address must retain the complete Cake
+materialization before the load; this is the recursive expression boundary,
+not the legacy one-instruction selector. -/
+example :
+    wordExpToInstructionsCake (width := 64) 1
+        (.load (.const (BitVec.ofNat 64 0x1234))) =
+      some [.lui 31 (BitVec.ofNat 64 1),
+        .addi 31 31 (BitVec.ofNat 64 0x234),
+        .loadWord 1 31] := by
   decide
 
 /-- The 0x1234 materialization oracle, stated directly against the executable

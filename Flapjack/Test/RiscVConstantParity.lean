@@ -14,6 +14,18 @@ example :
       some [.ori 4 0 (BitVec.ofNat 64 0x12)] := by
   decide
 
+/-! Signed-12 endpoints from Cake's `valid_imm`/`riscv_ast` boundary. -/
+example :
+    wordConstToInstructions (width := 64) 4 (BitVec.ofNat 64 2047) =
+      some [.ori 4 0 (BitVec.ofNat 64 0x7ff)] := by
+  decide
+
+example :
+    wordConstToInstructions (width := 64) 4
+        (BitVec.ofNat 64 (2 ^ 64 - 2048)) =
+      some [.ori 4 0 (BitVec.ofNat 64 0x800)] := by
+  decide
+
 example :
     wordConstToInstructions (width := 64) 4 (BitVec.ofNat 64 0x1234) =
       some [.lui 4 (BitVec.ofNat 64 1),
@@ -62,6 +74,25 @@ theorem cakeConst1234_execution_oracle :
 theorem cakeConstWide_execution_oracle :
     (wordConstToInstructions (width := 64) 4
         (BitVec.ofNat 64 0x1122334455667788)).map
+        (fun instructions =>
+          readRegister (executeInstructions (zeroState 64) instructions) 4) =
+      some (BitVec.ofNat 64 0x1122334455667788) := by
+  decide
+
+/-! The expression-facing Cake boundary preserves the same executable
+    obligations while leaving the historical one-instruction selector intact.
+    These are theorem-facing API checks, not production-caller migration. -/
+theorem cakeExp1234_execution_oracle :
+    (wordExpToInstructionsCake (width := 64) 4
+        (.const (BitVec.ofNat 64 0x1234))).map
+        (fun instructions =>
+          readRegister (executeInstructions (zeroState 64) instructions) 4) =
+      some (BitVec.ofNat 64 0x1234) := by
+  decide
+
+theorem cakeExpWide_execution_oracle :
+    (wordExpToInstructionsCake (width := 64) 4
+        (.const (BitVec.ofNat 64 0x1122334455667788))).map
         (fun instructions =>
           readRegister (executeInstructions (zeroState 64) instructions) 4) =
       some (BitVec.ofNat 64 0x1122334455667788) := by

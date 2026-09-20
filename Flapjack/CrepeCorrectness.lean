@@ -715,6 +715,56 @@ theorem compile_full_pan_value_local_assign_word_state_full_correct
       assignExistingCrepValues, crepNestedSeq, distinctLists,
       crepNamesDistinct, crepLocalsDefined, hstate]
 
+/-! Full-word stateful assignment of a two-word record.  Cake validates the
+    shaped source local, while Crep validates both existing destination slots;
+    both sides then update the two words in source order. -/
+theorem compile_full_pan_value_local_assign_record_state_full_correct
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [PanShiftWidth α]
+    [ArithmeticShiftRight α] [RotateRightOp α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (state : CrepState α) (primitive : PanPrimitiveHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord left right oldLeft oldRight : α)
+    (name : VarName) (slotLeft slotRight : Nat)
+    (lookup : lookupInfo name context.vars =
+      some (.comb [.one, .one], [slotLeft, slotRight]))
+    (hdistinct : slotLeft ≠ slotRight)
+    (hlocals : sourceLocals name =
+      some (.rStruct [.word oldLeft, .word oldRight]))
+    (hstateLeft : state.locals slotLeft = some oldLeft)
+    (hstateRight : state.locals slotRight = some oldRight) :
+    evalPanValueProgWithPrimitiveFull structs
+        baseAddress topAddress bytesInWord sourceLocals sourceGlobals
+        sourceMemory primitive
+        (.assign .local name
+          (.rStruct [.const left, .const right])) =
+      some (updatePanValueMap sourceLocals name
+        (.rStruct [.word left, .word right]), sourceGlobals, sourceMemory, []) ∧
+    evalCrepFullProgStateFull [] crepPrimitive ffi sharedMem
+        baseAddress topAddress 30 state
+        (compileProg context
+          (.assign .local name
+            (.rStruct [.const left, .const right]))) =
+      some (.normal { state with
+        locals := updateCrepLocal
+          (updateCrepLocal state.locals slotLeft left) slotRight right }) := by
+  have hdistinct' : slotRight ≠ slotLeft := Ne.symm hdistinct
+  constructor
+  · simp [evalPanValueProgWithPrimitiveFull, evalPanValueExpFull,
+      evalPanValueExpsFull, hlocals, panValueAssignmentValid,
+      panValueShape, panShapeMatches, panShapeMatches.panShapeListMatches]
+  · simp [compileProg, compileExp, compileExp.compileExpList, lookup,
+      evalCrepFullProgStateFull, evalCrepFullExpStateFull,
+      assignExistingCrepValues, crepNestedSeq, distinctLists,
+      crepNamesDistinct, crepLocalsDefined, hdistinct',
+      updateCrepLocal, hstateLeft, hstateRight]
+
 /-! A two-word record declaration gives a concrete structured witness for the
     declaration path: both flattened slots are allocated and returned in
     source order. -/

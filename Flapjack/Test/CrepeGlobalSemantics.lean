@@ -90,6 +90,16 @@ def crepeFullLoadState : CrepState (RiscV.Word 8) :=
     memory := fun address => if address == 7 then some 42 else none
     globals := fun _ => none }
 
+def crepeFullRecordAssignContext : CompileContext (RiscV.Word 8) :=
+  { vars := [("pair", (.comb [.one, .one], [1, 2]))], functions := [],
+    exceptions := [], maxVar := 2, bytesInWord := 1 }
+
+def crepeFullRecordAssignState : CrepState (RiscV.Word 8) :=
+  { locals := fun slot => if slot == 1 then some 0 else
+      if slot == 2 then some 1 else none
+    memory := fun _ => none
+    globals := fun _ => none }
+
 theorem compile_full_pan_value_shMemLoad_word_state_full_regression :
     evalPanValueProgWithPrimitiveFull
         ([] : StructContext) 0 100 1
@@ -166,6 +176,45 @@ theorem compile_full_pan_value_local_assign_word_state_full_regression :
     (by simp [crepeFullLoadContext, lookupInfo])
     (by simp)
     (by simp [crepeFullLoadState])
+
+theorem compile_full_pan_value_local_assign_record_state_full_regression :
+    evalCrepFullProgStateFull [] (fun _ _ => none)
+        (noCrepFfi (RiscV.Word 8))
+        (defaultCrepSharedMemHandler : CrepSharedMemHandler (RiscV.Word 8))
+        0 100 30 crepeFullRecordAssignState
+        (compileProg crepeFullRecordAssignContext
+          (.assign .local "pair"
+            (.rStruct [.const 11, .const 22]) : Prog (RiscV.Word 8))) =
+      some (.normal { crepeFullRecordAssignState with
+        locals := updateCrepLocal
+          (updateCrepLocal crepeFullRecordAssignState.locals 1 11) 2 22 }) ∧
+    evalPanValueProgWithPrimitiveFull
+        ([] : StructContext) 0 100 1
+        (fun name => if name == "pair" then
+          some (.rStruct [.word 0, .word 1]) else none)
+        (fun _ => none) (fun _ => none) (fun _ _ => none)
+        (.assign .local "pair"
+          (.rStruct [.const 11, .const 22]) : Prog (RiscV.Word 8)) =
+      some (updatePanValueMap
+        (fun name => if name == "pair" then
+          some (.rStruct [.word 0, .word 1]) else none)
+        "pair" (.rStruct [.word 11, .word 22]),
+        (fun _ => none), (fun _ => none), []) := by
+  have h := compile_full_pan_value_local_assign_record_state_full_correct
+    crepeFullRecordAssignContext ([] : StructContext)
+    (fun name => if name == "pair" then
+      some (.rStruct [.word 0, .word 1]) else none)
+    (fun _ => none) (fun _ => none)
+    crepeFullRecordAssignState (fun _ _ => none) (fun _ _ => none)
+    (noCrepFfi (RiscV.Word 8))
+    (defaultCrepSharedMemHandler : CrepSharedMemHandler (RiscV.Word 8))
+    0 100 1 11 22 0 1 "pair" 1 2
+    (by simp [crepeFullRecordAssignContext, lookupInfo])
+    (by simp)
+    (by simp)
+    (by simp [crepeFullRecordAssignState])
+    (by simp [crepeFullRecordAssignState])
+  exact ⟨h.2, h.1⟩
 
 theorem compile_full_pan_value_dec_word_return_state_full_regression :
     evalCrepFullProgStateFull [] (fun _ _ => none) (noCrepFfi (RiscV.Word 8))

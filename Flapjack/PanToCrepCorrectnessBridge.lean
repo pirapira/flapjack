@@ -5069,6 +5069,161 @@ theorem panValuePcCompileCorrect_of_context_code
     hlocalisedCode hlocalised hcode hexcp hstate hnonerror hsource htarget
     hpostCode hpostExcp
 
+abbrev panValuePcCompileCorrectProgram
+    [BEq α] [OfNat α 0] [Add α]
+    (sourceEvaluate : PanValuePcEvaluator α)
+    (targetEvaluate : CrepPcEvaluator α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (program : Prog α) : Prop :=
+  PanValuePcCompileCorrectWithContextCode sourceEvaluate targetEvaluate
+    codeRel excpRel exceptionCode globalsLookup program
+
+theorem panValuePcCompileCorrectProgram_induction
+    [BEq α] [OfNat α 0] [Add α]
+    (sourceEvaluate : PanValuePcEvaluator α)
+    (targetEvaluate : CrepPcEvaluator α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (hskip : panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate
+      codeRel excpRel exceptionCode globalsLookup (.skip : Prog α))
+    (hdec : ∀ (name : VarName) (shape : Shape) (value : Exp α)
+      (body : Prog α),
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup body →
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup (.dec name shape value body))
+    (hassign : ∀ (kind : VarKind) (name : VarName) (value : Exp α),
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup (.assign kind name value))
+    (hprimitive : ∀ (name : VarName) (operator : PrimOp)
+      (args : List (Exp α)),
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup (.primitive name operator args))
+    (hstore : ∀ (address value : Exp α),
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup (.store address value))
+    (hstore32 : ∀ (address value : Exp α),
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup (.store32 address value))
+    (hstoreByte : ∀ (address value : Exp α),
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup (.storeByte address value))
+    (hseq : ∀ (first second : Prog α),
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup first →
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup second →
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup (.seq first second))
+    (hite : ∀ (condition : Exp α) (thenBranch elseBranch : Prog α),
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup thenBranch →
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup elseBranch →
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup (.ite condition thenBranch elseBranch))
+    (hwhile : ∀ (condition : Exp α) (body : Prog α),
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup body →
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup (.while condition body))
+    (hbreak : panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate
+      codeRel excpRel exceptionCode globalsLookup (.break : Prog α))
+    (hcontinue : panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate
+      codeRel excpRel exceptionCode globalsLookup (.continue : Prog α))
+    (hcall : ∀
+      (info : Option (Option (VarKind × VarName) ×
+        Option (ExceptionId × VarName × Prog α)))
+      (name : FunName) (args : List (Exp α)),
+      (match info with
+       | some (_, some (_, _, handler)) =>
+           panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+             excpRel exceptionCode globalsLookup handler
+       | _ => True) →
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup (.call info name args))
+    (hdecCall : ∀ (name : VarName) (shape : Shape) (function : FunName)
+      (args : List (Exp α)) (body : Prog α),
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup body →
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup
+          (.decCall name shape function args body))
+    (hextCall : ∀ (function : FunName)
+      (configuration configurationLength array arrayLength : Exp α),
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup
+          (.extCall function configuration configurationLength array arrayLength))
+    (hraise : ∀ (exception : ExceptionId) (value : Exp α),
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup (.raise exception value))
+    (hreturn : ∀ (value : Exp α),
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup (.return value))
+    (hshMemLoad : ∀ (size : OpSize) (kind : VarKind) (name : VarName)
+      (address : Exp α),
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup (.shMemLoad size kind name address))
+    (hshMemStore : ∀ (size : OpSize) (address value : Exp α),
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup (.shMemStore size address value))
+    (htick : panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate
+      codeRel excpRel exceptionCode globalsLookup (.tick : Prog α))
+    (hannot : ∀ (tag text : String),
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup (@Prog.annot α tag text)) :
+    ∀ program : Prog α,
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup program := by
+  let rec go : (program : Prog α) →
+      panValuePcCompileCorrectProgram sourceEvaluate targetEvaluate codeRel
+        excpRel exceptionCode globalsLookup program
+    | .skip => hskip
+    | .dec name shape value body => hdec name shape value body (go body)
+    | .assign kind name value => hassign kind name value
+    | .primitive name operator args => hprimitive name operator args
+    | .store address value => hstore address value
+    | .store32 address value => hstore32 address value
+    | .storeByte address value => hstoreByte address value
+    | .seq first second => hseq first second (go first) (go second)
+    | .ite condition thenBranch elseBranch =>
+        hite condition thenBranch elseBranch (go thenBranch) (go elseBranch)
+    | .while condition body => hwhile condition body (go body)
+    | .break => hbreak
+    | .continue => hcontinue
+    | .call info name args =>
+        hcall info name args (by
+          cases info with
+          | none => exact True.intro
+          | some info =>
+              cases info with
+              | mk destination handlerInfo =>
+                  cases handlerInfo with
+                  | none => exact True.intro
+                  | some handler =>
+                      cases handler with
+                      | mk exception handlerInfo =>
+                          cases handlerInfo with
+                          | mk handlerVar handlerProgram =>
+                              exact go handlerProgram)
+    | .decCall name shape function args body =>
+        hdecCall name shape function args body (go body)
+    | .extCall function configuration configurationLength array arrayLength =>
+        hextCall function configuration configurationLength array arrayLength
+    | .raise exception value => hraise exception value
+    | .return value => hreturn value
+    | .shMemLoad size kind name address => hshMemLoad size kind name address
+    | .shMemStore size address value => hshMemStore size address value
+    | .tick => htick
+    | .annot tag text => hannot tag text
+    termination_by program => sizeOf program
+  exact fun program => go program
+
 /-! A kernel-checked composition theorem for the stateful source-to-Crep
 proof.  `hsourceAdapter` and `htargetAdapter` identify the rich evaluator's
 successful result with the existing stateful evaluators.  Ordinary

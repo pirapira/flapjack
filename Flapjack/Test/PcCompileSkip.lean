@@ -608,4 +608,63 @@ theorem panValuePcCompileCorrect_compact_storeByte_nat (address value : Nat) :
       panValueCrepMemoryRel_update_word sourceInput.memory targetInput.state.memory
         address value hstate.2.2⟩
 
+/-! ### Raise evaluation helpers for the deep store/Raise obligation
+
+    The arbitrary-Raise evidence obligation ultimately needs the source
+    `raise` control result and the compiled target `raise` result in an
+    explicit, state-visible form.  These two lemmas provide exactly that for
+    the constant-payload case used by the compact instances: the source
+    evaluator yields `.raised (fun _ => none) globals memory exception (.word
+    value)`, and the compiled program (nested payload declarations followed
+    by `storeGlobals` into the global spill area and a `.raise code`) yields
+    `.raised` of the state whose global area received the payload, with the
+    payload temporaries restored.  The exception code comes from the context
+    exception map, so the target statement carries that lookup as an explicit
+    premise. -/
+
+theorem skipNatRaiseConstSourceEval
+    (structs : StructContext) (locals globals : VarName → Option (PanValue Nat))
+    (memory : Nat → Option (PanValue Nat)) (exception : ExceptionId) (value : Nat) :
+    evalPanValueProgWithPrimitiveCallsAndFfi skipNatPrimitive skipNatSourceHandler
+      structs [] 0 0 1 4 locals globals memory
+      (.raise exception (.const value)) =
+    some (.raised (fun _ => none) globals memory exception (.word value)) := by
+  simp [evalPanValueProgWithPrimitiveCallsAndFfi, evalPanValueExp]
+
+theorem skipNatRaiseConstTargetEval
+    (context : CompileContext Nat) (state : CrepState Nat)
+    (exception : ExceptionId) (value code : Nat)
+    (hcode : lookupInfo exception context.exceptions = some code) :
+    evalCrepFullProgState [] skipNatCrepPrimitive skipNatFfi skipNatSharedMem
+      0 0 4 state
+      (compileProg context (.raise exception (.const value))) =
+    some (.raised { state with
+      globals := updateMemory state.globals 0 value } code) := by
+  simp [compileProg, compileExp, nestedDecs, crepNestedSeq,
+    storeGlobals, freshNames, evalCrepFullProgState, evalCrepFullExpState,
+    updateCrepLocal, restoreCrepResult, hcode]
+  funext current
+  by_cases hcurrent : current = context.maxVar + 1
+  · simp [restoreCrepLocal, hcurrent]
+  · simp [restoreCrepLocal, updateCrepLocal, hcurrent]
+
+/-- Regression for the raise helpers: a constant-payload raise evaluates on the
+    source side to a raised control result and on the compiled side to a raised
+    state that only updates the global spill area. -/
+example (context : CompileContext Nat) (state : CrepState Nat)
+    (locals globals : VarName → Option (PanValue Nat))
+    (memory : Nat → Option (PanValue Nat))
+    (exception : ExceptionId) (value code : Nat)
+    (hcode : lookupInfo exception context.exceptions = some code) :
+    evalPanValueProgWithPrimitiveCallsAndFfi skipNatPrimitive skipNatSourceHandler
+        ([] : StructContext) [] 0 0 1 4 locals globals memory
+        (.raise exception (.const value)) =
+      some (.raised (fun _ => none) globals memory exception (.word value)) ∧
+    evalCrepFullProgState [] skipNatCrepPrimitive skipNatFfi skipNatSharedMem
+        0 0 4 state (compileProg context (.raise exception (.const value))) =
+      some (.raised { state with globals := updateMemory state.globals 0 value }
+        code) :=
+  ⟨skipNatRaiseConstSourceEval [] locals globals memory exception value,
+    skipNatRaiseConstTargetEval context state exception value code hcode⟩
+
 end Flapjack

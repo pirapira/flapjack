@@ -22,6 +22,18 @@ def staticProgParityContext : Context :=
 def staticProgCheck (program : Prog Nat) : StaticResult ProgReturn :=
   checkProg staticProgParityContext program
 
+/-! Cake's `Skip` is an ordinary fall-through statement: unlike `Tick` and
+    `Annot`, it returns `OtherLast` (`panStaticScript.sml:1049-1055`). -/
+def staticProgSkipMetadataOracle : Bool :=
+  match staticProgCheck (.skip : Prog Nat) with
+  | (Except.ok result, warnings) =>
+      !result.exitsFunction && !result.exitsLoop && result.last == .otherLast &&
+        result.variableDelta.isEmpty && result.currentLocation == "L: " &&
+        warnings.isEmpty
+  | _ => false
+
+#guard staticProgSkipMetadataOracle
+
 def staticProgCallContext : Context :=
   { staticProgParityContext with
     functions := [("callee", { returnShape := .one, params := [] }),
@@ -456,14 +468,14 @@ def staticProgDecMetadataOracle : Bool :=
 
 #guard staticProgDecMetadataOracle
 
-/-! Cake's sequence rule keeps the first function exit when the second
-    statement is transparent.  Check the returned metadata, not only the
-    acceptance/error bit, for a return followed by Skip. -/
+/-! Cake's sequence rule keeps the first function exit flag, but `Skip` is an
+    ordinary `OtherLast` statement, so `seq_last_stmt` returns `OtherLast`.
+    Check the returned metadata, not only the acceptance/error bit. -/
 def staticProgReturnMetadataOracle : Bool :=
   match checkProg staticProgReturnContext (.seq (.return (.const 0)) .skip) with
   | (Except.ok result, warnings) =>
       result.exitsFunction && !result.exitsLoop &&
-        result.last == .retLast && result.variableDelta.isEmpty &&
+        result.last == .otherLast && result.variableDelta.isEmpty &&
         result.currentLocation == "L: " &&
         match warnings with
         | [StatErr.warning message] =>

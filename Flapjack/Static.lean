@@ -1005,7 +1005,7 @@ def seqLastStmt (first second : LastStmt) : LastStmt :=
   if second == .invisLast then first else second
 
 def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgReturn
-  | .skip => progOk .invisLast false false context.location
+  | .skip => progOk .otherLast false false context.location
   | .dec name shape value body =>
       let checkInitialValue : ExpReturn → StaticResult ProgReturn :=
         fun result =>

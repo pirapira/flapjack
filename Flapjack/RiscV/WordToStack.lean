@@ -877,8 +877,13 @@ def wordStackMemoryOffsetInst {α : Type} (config : WordStackConfig)
     Option (StackProg α) :=
   match operator with
   | .load => wordStackLoadOffsetInst config operator sourceOrDestination address offset
+  | .load8 => wordStackLoadOffsetInst config operator sourceOrDestination address offset
+  | .load16 => wordStackLoadOffsetInst config operator sourceOrDestination address offset
+  | .load32 => wordStackLoadOffsetInst config operator sourceOrDestination address offset
   | .store => wordStackStoreOffsetInst config operator sourceOrDestination address offset
-  | .load8 | .load16 | .load32 | .store8 | .store16 | .store32 => none
+  | .store8 => wordStackStoreOffsetInst config operator sourceOrDestination address offset
+  | .store16 => wordStackStoreOffsetInst config operator sourceOrDestination address offset
+  | .store32 => wordStackStoreOffsetInst config operator sourceOrDestination address offset
 
 def wordStackStoreLocationsSafe (config : WordStackConfig) :
     WordLocation → WordLocation → Bool

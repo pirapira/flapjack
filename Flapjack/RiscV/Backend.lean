@@ -310,11 +310,34 @@ def wordInstToInstruction [NeZero width] :
       let destination ← registerOfNat destination
       let address ← registerOfNat address
       pure (.loadWordOffset destination address offset)
+  | .memOffset .load8 destination address offset => do
+      let destination ← registerOfNat destination
+      let address ← registerOfNat address
+      pure (.loadByteOffset destination address offset)
+  | .memOffset .load16 destination address offset => do
+      let destination ← registerOfNat destination
+      let address ← registerOfNat address
+      pure (.loadHalfOffset destination address offset)
+  | .memOffset .load32 destination address offset => do
+      let destination ← registerOfNat destination
+      let address ← registerOfNat address
+      pure (.load32Offset destination address offset)
   | .memOffset .store source address offset => do
       let source ← registerOfNat source
       let address ← registerOfNat address
       pure (.storeWordOffset source address offset)
-  | .memOffset _ _ _ _ => none
+  | .memOffset .store8 source address offset => do
+      let source ← registerOfNat source
+      let address ← registerOfNat address
+      pure (.storeByteOffset source address offset)
+  | .memOffset .store16 source address offset => do
+      let source ← registerOfNat source
+      let address ← registerOfNat address
+      pure (.storeHalfOffset source address offset)
+  | .memOffset .store32 source address offset => do
+      let source ← registerOfNat source
+      let address ← registerOfNat address
+      pure (.store32Offset source address offset)
 
 def executeInstructions [NeZero width] (state : State width) :
     List (Instruction width) → State width
@@ -844,6 +867,18 @@ def evalWordFunction [NeZero width] (state : State width) :
       let destination ← registerOfNat destination
       let address ← registerOfNat address
       pure (execute state (.loadWordOffset destination address offset), [])
+  | .inst (.memOffset .load8 destination address offset) => do
+      let destination ← registerOfNat destination
+      let address ← registerOfNat address
+      pure (execute state (.loadByteOffset destination address offset), [])
+  | .inst (.memOffset .load16 destination address offset) => do
+      let destination ← registerOfNat destination
+      let address ← registerOfNat address
+      pure (execute state (.loadHalfOffset destination address offset), [])
+  | .inst (.memOffset .load32 destination address offset) => do
+      let destination ← registerOfNat destination
+      let address ← registerOfNat address
+      pure (execute state (.load32Offset destination address offset), [])
   | .store address value => do
       let state ← evalWordShareInst state .store value address
       pure (state, [])
@@ -859,6 +894,18 @@ def evalWordFunction [NeZero width] (state : State width) :
       let source ← registerOfNat source
       let address ← registerOfNat address
       pure (execute state (.storeWordOffset source address offset), [])
+  | .inst (.memOffset .store8 source address offset) => do
+      let source ← registerOfNat source
+      let address ← registerOfNat address
+      pure (execute state (.storeByteOffset source address offset), [])
+  | .inst (.memOffset .store16 source address offset) => do
+      let source ← registerOfNat source
+      let address ← registerOfNat address
+      pure (execute state (.storeHalfOffset source address offset), [])
+  | .inst (.memOffset .store32 source address offset) => do
+      let source ← registerOfNat source
+      let address ← registerOfNat address
+      pure (execute state (.store32Offset source address offset), [])
   | .shareInst operator name address => do
       let state ← evalWordShareInst state operator name address
       pure (state, [])
@@ -941,10 +988,34 @@ def evalWordProg [NeZero width] (state : State width) :
       let destination ← registerOfNat destination
       let address ← registerOfNat address
       pure (execute state (.loadWordOffset destination address offset))
+  | .inst (.memOffset .load8 destination address offset) => do
+      let destination ← registerOfNat destination
+      let address ← registerOfNat address
+      pure (execute state (.loadByteOffset destination address offset))
+  | .inst (.memOffset .load16 destination address offset) => do
+      let destination ← registerOfNat destination
+      let address ← registerOfNat address
+      pure (execute state (.loadHalfOffset destination address offset))
+  | .inst (.memOffset .load32 destination address offset) => do
+      let destination ← registerOfNat destination
+      let address ← registerOfNat address
+      pure (execute state (.load32Offset destination address offset))
   | .inst (.memOffset .store source address offset) => do
       let source ← registerOfNat source
       let address ← registerOfNat address
       pure (execute state (.storeWordOffset source address offset))
+  | .inst (.memOffset .store8 source address offset) => do
+      let source ← registerOfNat source
+      let address ← registerOfNat address
+      pure (execute state (.storeByteOffset source address offset))
+  | .inst (.memOffset .store16 source address offset) => do
+      let source ← registerOfNat source
+      let address ← registerOfNat address
+      pure (execute state (.storeHalfOffset source address offset))
+  | .inst (.memOffset .store32 source address offset) => do
+      let source ← registerOfNat source
+      let address ← registerOfNat address
+      pure (execute state (.store32Offset source address offset))
   | .shareInst operator name address =>
       evalWordShareInst state operator name address
   | .locValue destination source => do

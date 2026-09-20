@@ -6,6 +6,70 @@ import Flapjack.RiscV.WordToStack
 
 namespace Flapjack.RiscV
 
+/- Cake's `wInst` preserves the address offset for every ordinary memory
+   operator (`word_to_stackScript.sml:137-163`).  Keep the subword forms on
+   the same StackLang carrier as the word load/store forms. -/
+
+example :
+    wordStackMemoryOffsetInst
+      { locations := [(0, .register 4), (1, .register 5)]
+        scratch := 31
+        stackBase := 10 }
+      .load8 0 1 8 =
+      some (.inst (.memOffset .load8 4 5 8) : StackProg Nat) := by
+  simp [wordStackMemoryOffsetInst, wordStackLoadOffsetInst, wordStackLocation,
+    wordStackOffset, lookupNatInfo]
+
+example :
+    wordStackMemoryOffsetInst
+      { locations := [(0, .register 4), (1, .register 5)]
+        scratch := 31
+        stackBase := 10 }
+      .load16 0 1 8 =
+      some (.inst (.memOffset .load16 4 5 8) : StackProg Nat) := by
+  simp [wordStackMemoryOffsetInst, wordStackLoadOffsetInst, wordStackLocation,
+    wordStackOffset, lookupNatInfo]
+
+example :
+    wordStackMemoryOffsetInst
+      { locations := [(0, .register 4), (1, .register 5)]
+        scratch := 31
+        stackBase := 10 }
+      .load32 0 1 8 =
+      some (.inst (.memOffset .load32 4 5 8) : StackProg Nat) := by
+  simp [wordStackMemoryOffsetInst, wordStackLoadOffsetInst, wordStackLocation,
+    wordStackOffset, lookupNatInfo]
+
+example :
+    wordStackMemoryOffsetInst
+      { locations := [(0, .register 4), (1, .register 5)]
+        scratch := 31
+        stackBase := 10 }
+      .store32 0 1 12 =
+      some (.inst (.memOffset .store32 4 5 12) : StackProg Nat) := by
+  simp [wordStackMemoryOffsetInst, wordStackStoreOffsetInst, wordStackLocation,
+    wordStackOffset, lookupNatInfo]
+
+example :
+    wordStackMemoryOffsetInst
+      { locations := [(0, .register 4), (1, .register 5)]
+        scratch := 31
+        stackBase := 10 }
+      .store8 0 1 12 =
+      some (.inst (.memOffset .store8 4 5 12) : StackProg Nat) := by
+  simp [wordStackMemoryOffsetInst, wordStackStoreOffsetInst, wordStackLocation,
+    wordStackOffset, lookupNatInfo]
+
+example :
+    wordStackMemoryOffsetInst
+      { locations := [(0, .register 4), (1, .register 5)]
+        scratch := 31
+        stackBase := 10 }
+      .store16 0 1 12 =
+      some (.inst (.memOffset .store16 4 5 12) : StackProg Nat) := by
+  simp [wordStackMemoryOffsetInst, wordStackStoreOffsetInst, wordStackLocation,
+    wordStackOffset, lookupNatInfo]
+
 example :
     wordStackMemoryOffsetInst
       { locations := [(0, .register 4), (1, .stack 2)]

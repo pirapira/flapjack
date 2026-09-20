@@ -189,6 +189,24 @@ theorem wordInstToInstructionsCake_const_eq_labConstInstructions {width : Nat}
   by simpa [wordInstToInstructionsCake] using
     (wordConstToInstructions_eq_labConstInstructions destination value hdestination)
 
+/-! The function-level checked boundary composes the same Cake constant list
+    with its return carrier.  This is the reusable migration theorem for
+    callers that currently depend on the legacy one-instruction selector. -/
+theorem wordFunctionToRiscVCake_const_assign_return_eq_labConstInstructions
+    {width : Nat} [NeZero width] (destination : Nat) (value : Word width)
+    (hdestination : destination < 32) :
+    wordFunctionToRiscVCake (width := width)
+        (.seq (.assign destination (.const value))
+          (.return 0 [destination])) =
+      some
+        (labConstInstructions (width := width) ⟨destination, hdestination⟩
+            0 31 value.toNat,
+          [⟨destination, hdestination⟩]) := by
+  simp [wordFunctionToRiscVCake, wordExpToInstructionsCake,
+    registerOfNat, hdestination,
+    wordConstToInstructions_eq_labConstInstructions destination value
+      hdestination]
+
 /-- The 0x1234 materialization oracle through the expression-facing Cake
 boundary, stated directly against the executable Lab lowering. -/
 example :
@@ -320,5 +338,39 @@ example :
           (labLocValueInstructions (width := 64) 4 0x1004 2)) 4 =
       BitVec.ofNat 64 0x1004 := by
   decide
+
+example :
+    wordProgToRiscVCake (width := 64)
+        (.assign 4 (.const (BitVec.ofNat 64 0x1234))) =
+      some [.lui 4 (BitVec.ofNat 64 1),
+        .addi 4 4 (BitVec.ofNat 64 0x234)] := by
+  simp [wordProgToRiscVCake, wordExpToInstructionsCake, wordConstToInstructions,
+    wordConst32ToInstructions, registerOfNat]
+
+example :
+    wordProgToRiscVCake (width := 64)
+        (.inst (.const 4 (BitVec.ofNat 64 0x1234))) =
+      some [.lui 4 (BitVec.ofNat 64 1),
+        .addi 4 4 (BitVec.ofNat 64 0x234)] := by
+  simp [wordProgToRiscVCake, wordInstToInstructionsCake, wordConstToInstructions,
+    wordConst32ToInstructions, registerOfNat]
+
+example :
+    wordFunctionToRiscVCake (width := 64)
+        (.seq (.assign 4 (.const (BitVec.ofNat 64 0x1234)))
+          (.return 0 [4])) =
+      some ([.lui 4 (BitVec.ofNat 64 1),
+        .addi 4 4 (BitVec.ofNat 64 0x234)], [4]) := by
+  simp [wordFunctionToRiscVCake,
+    wordExpToInstructionsCake, wordConstToInstructions,
+    wordConst32ToInstructions, registerOfNat]
+
+def cakeConstFunctionExecution : Option (List (Word 64)) :=
+  (wordFunctionToRiscVCake (width := 64)
+    (.seq (.assign 4 (.const (BitVec.ofNat 64 0x1234)))
+      (.return 0 [4]))).map fun (code, returns) =>
+    returns.map (readRegister (executeInstructions (zeroState 64) code))
+
+#guard cakeConstFunctionExecution = some [BitVec.ofNat 64 0x1234]
 
 end Flapjack.RiscV

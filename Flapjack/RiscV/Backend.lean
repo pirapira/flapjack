@@ -204,6 +204,47 @@ def wordExpToInstructionsCake [NeZero width] (destination : Nat) :
         pure (addressInstructions ++ [.loadWord destination 31])
   | expression => wordExpToInstructions destination expression
 
+/-! Constructor equations for theorem clients migrating from the historical
+    one-instruction expression API.  Only `.const` (and a load whose address
+    recursively contains a constant) uses the Cake list-valued boundary; the
+    remaining expression forms retain exactly the old result. -/
+theorem wordExpToInstructionsCake_const [NeZero width] (destination : Nat)
+    (value : Word width) :
+    wordExpToInstructionsCake destination (.const value) =
+      wordConstToInstructions destination value := by
+  rfl
+
+theorem wordExpToInstructionsCake_var [NeZero width] (destination source : Nat) :
+    wordExpToInstructionsCake destination
+        (.var source : WordExp (Word width)) =
+      wordExpToInstructions destination (.var source : WordExp (Word width)) := by
+  rfl
+
+theorem wordExpToInstructionsCake_lookup [NeZero width] (destination : Nat)
+    (store : WordStore (Word width)) :
+    wordExpToInstructionsCake destination (.lookup store) =
+      wordExpToInstructions destination (.lookup store) := by
+  rfl
+
+theorem wordExpToInstructionsCake_op [NeZero width] (destination : Nat)
+    (operator : BinOp) (args : List (WordExp (Word width))) :
+    wordExpToInstructionsCake destination (.op operator args) =
+      wordExpToInstructions destination (.op operator args) := by
+  rfl
+
+theorem wordExpToInstructionsCake_shift [NeZero width] (destination : Nat)
+    (operator : Shift) (left right : WordExp (Word width)) :
+    wordExpToInstructionsCake destination (.shift operator left right) =
+      wordExpToInstructions destination (.shift operator left right) := by
+  rfl
+
+theorem wordExpToInstructionsCake_load_var [NeZero width] (destination source : Nat) :
+    wordExpToInstructionsCake destination
+        (.load (.var source) : WordExp (Word width)) =
+      wordExpToInstructions destination
+        (.load (.var source) : WordExp (Word width)) := by
+  rfl
+
 /-! The standalone Word selector has no layout table.  Its LocValue boundary
     therefore materializes the abstract label number; the layout-aware Lab
     selector later replaces this with the absolute target position. -/
@@ -589,6 +630,57 @@ def wordProgToRiscV [NeZero width] :
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial
 
+def wordShareInstToInstructionsCake [NeZero width] (operator : WordMemOp)
+    (name : Nat) : WordExp (Word width) → Option (List (Instruction width))
+  | .var address => do
+      let instruction ← wordInstToInstruction (.mem operator name address)
+      pure [instruction]
+  | expression => do
+      if name == 31 then none
+      else
+        let address ← wordExpToInstructionsCake 31 expression
+        let instruction ← wordInstToInstruction (.mem operator name 31)
+        pure (address ++ [instruction])
+
+def wordProgToRiscVCake [NeZero width] :
+    WordProg (Word width) → Option (List (Instruction width))
+  | .skip => some []
+  | .move _ moves => wordMoveToInstructions moves
+  | .assign name value => wordExpToInstructionsCake name value
+  | .store address value => wordShareInstToInstructionsCake .store value address
+  | .shareInst operator name address =>
+      wordShareInstToInstructionsCake operator name address
+  | .locValue destination source => wordLocValueToInstructions destination source
+  | .inst instruction => wordInstToInstructionsCake instruction
+  | .seq first second => do
+      let first ← wordProgToRiscVCake first
+      let second ← wordProgToRiscVCake second
+      pure (first ++ second)
+  | .tick => some [.addi 0 0 0]
+  | .ite operator condition rightValue thenBranch elseBranch => do
+      let (branchLeft, right, prelude) ←
+        wordConditionOperands operator condition rightValue
+      let thenCode ← wordProgToRiscVCake thenBranch
+      let elseCode ← wordProgToRiscVCake elseBranch
+      let falseOffset : Word width :=
+        BitVec.ofNat width (8 + 4 * thenCode.length)
+      let endOffset : Word width :=
+        BitVec.ofNat width (4 + 4 * elseCode.length)
+      let branchFalse ← match operator with
+        | .equal => pure (.branchNe branchLeft right falseOffset)
+        | .notEqual => pure (.branchEq branchLeft right falseOffset)
+        | .less => pure (.branchGe branchLeft right falseOffset)
+        | .notLess => pure (.branchLt branchLeft right falseOffset)
+        | .lower => pure (.branchGeU branchLeft right falseOffset)
+        | .notLower => pure (.branchLtU branchLeft right falseOffset)
+        | .test => pure (.branchNe branchLeft right falseOffset)
+        | .notTest => pure (.branchEq branchLeft right falseOffset)
+      pure (prelude ++ [branchFalse] ++ thenCode ++
+        [.branchEq 0 0 endOffset] ++ elseCode)
+  | _ => none
+termination_by program => sizeOf program
+decreasing_by all_goals decreasing_trivial
+
 /-!
 `executeInstructions` is useful for straight-line code, but it deliberately
 does not interpret branch targets.  This runner treats `start` as the address
@@ -897,6 +989,65 @@ def wordFunctionToRiscV [NeZero width] :
       let values ← values.mapM registerOfNat
       pure ([], values)
   | _ => none
+
+/-! Function-level Cake constant boundary.  This mirrors the established
+    function selector but routes its code-producing branches through the
+    checked whole-program entrypoint above. -/
+def wordFunctionToRiscVCake [NeZero width] :
+    WordProg (Word width) → Option (List (Instruction width) × List (Fin 32))
+  | .skip => some ([], [])
+  | .assign name value => do
+      let instructions ← wordExpToInstructionsCake name value
+      pure (instructions, [])
+  | .inst instruction => do
+      let instructions ← wordInstToInstructionsCake instruction
+      pure (instructions, [])
+  | .store address value => do
+      let instructions ← wordShareInstToInstructionsCake .store value address
+      pure (instructions, [])
+  | .shareInst operator name address => do
+      let instructions ← wordShareInstToInstructionsCake operator name address
+      pure (instructions, [])
+  | .locValue destination source => do
+      let instructions ← wordLocValueToInstructions destination source
+      pure (instructions, [])
+  | .tick => pure ([.addi 0 0 0], [])
+  | .ite operator condition rightValue thenBranch elseBranch => do
+      let (branchLeft, right, prelude) ←
+        wordConditionOperands operator condition rightValue
+      let (thenCode, thenReturns) ← wordFunctionToRiscVCake thenBranch
+      let (elseCode, elseReturns) ← wordFunctionToRiscVCake elseBranch
+      if thenReturns != elseReturns then none
+      else
+        let falseOffset : Word width :=
+          BitVec.ofNat width (8 + 4 * thenCode.length)
+        let endOffset : Word width :=
+          BitVec.ofNat width (4 + 4 * elseCode.length)
+        let branchFalse ← match operator with
+          | .equal => pure (.branchNe branchLeft right falseOffset)
+          | .notEqual => pure (.branchEq branchLeft right falseOffset)
+          | .less => pure (.branchGe branchLeft right falseOffset)
+          | .notLess => pure (.branchLt branchLeft right falseOffset)
+          | .lower => pure (.branchGeU branchLeft right falseOffset)
+          | .notLower => pure (.branchLtU branchLeft right falseOffset)
+          | .test => pure (.branchNe branchLeft right falseOffset)
+          | .notTest => pure (.branchEq branchLeft right falseOffset)
+        pure (prelude ++ [branchFalse] ++ thenCode ++
+          [.branchEq 0 0 endOffset] ++ elseCode, thenReturns)
+  | .mustTerminate body => wordFunctionToRiscVCake body
+  | .seq first second => do
+      let (firstCode, firstReturns) ← wordFunctionToRiscVCake first
+      if !firstReturns.isEmpty then
+        pure (firstCode, firstReturns)
+      else
+        let (secondCode, secondReturns) ← wordFunctionToRiscVCake second
+        pure (firstCode ++ secondCode, secondReturns)
+  | .return _ values => do
+      let values ← values.mapM registerOfNat
+      pure ([], values)
+  | _ => none
+termination_by program => sizeOf program
+decreasing_by all_goals decreasing_trivial
 
 def evalWordCondition [NeZero width] (state : State width)
     (operator : Cmp) (condition : Nat) (rightValue : WordRegImm (Word width)) :

@@ -964,6 +964,30 @@ theorem named_struct_raise_after_struct_pass_hraise_flat_globals :
     (hsize := by
       simp [namedStructPostPassValue, panValueShape, Shape.shapeSize])
 
+theorem named_struct_word_fields_global_bridge :
+    panValuePcRaisedHraiseData
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8) [] context
+      (fun _ _ code => code = 9)
+      (fun _ => none) (fun _ => none) (fun _ => none) "E"
+      namedStructSourceValue
+      { state with globals := updateMemoryListAt state.globals 0 8 [3] }
+      9 := by
+  apply panValuePcRaisedHraiseData_of_named_struct_word_fields
+    (structs := []) (context := context)
+    (exceptionRel := fun _ _ code => code = 9)
+    (exceptionCode := fun exception =>
+      if exception = "E" then some 9 else none)
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (sourceException := "E")
+    (name := "S") (fields := [("field", 3)])
+    (state := state) (bytesInWord := 8) (targetException := 9)
+  · refine ⟨rfl, panValueCrepLocalsRel_empty [] context state.locals, rfl⟩
+  · simp
+  · simp
+  · decide
+  · simp [panValueShape]
+
 theorem named_struct_raise_after_struct_pass_result_rel_retargeted_globals :
     panValuePcResultRel [] context (fun _ _ code => code = 9)
       (fun exception => if exception = "E" then some 9 else none)

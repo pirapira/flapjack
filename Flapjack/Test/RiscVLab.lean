@@ -385,6 +385,16 @@ example :
         .jalr 1 31 (BitVec.ofNat 64 0)] := by
   decide
 
+/- Cake's CallFFI target also takes the AUIPC/JALR fallback when the current
+   PC plus the service-stub distance leaves the direct-JAL range. -/
+example :
+    labCompileAsm (width := 64)
+      { services := [("first", 7)] } 1 [] (2 ^ 20)
+      (.callFfi "first") =
+      some [.auipc 31 (BitVec.ofInt 64 (-256)),
+        .jalr 0 31 (BitVec.ofInt 64 (-48))] := by
+  decide
+
 example :
     labCompileAsm (width := 64) { services := [] } 1 [(0, 5000)] 0
       (.jumpCmp .equal 4 (.reg 5) ⟨1, 0⟩) =

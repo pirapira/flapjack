@@ -327,54 +327,6 @@ theorem evalPanValueFfiClockProg_seq_congr
   simp only [evalPanValueFfiClockProg]
   rw [h]
 
-/-! Congruence under the second component of a `Seq`.  The premise is
-    quantified over the post-first state and clock because the first component
-    may update every evaluator component before the second starts. -/
-theorem evalPanValueFfiClockProg_seq_congr_second
-    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (context : PanValueFfiContext α)
-    (primitive : PanPrimitiveHandler α)
-    (handler : PanValueStatefulFfiHandler α σ)
-    (structs : StructContext)
-    (functions : List (FunName × List VarName × Prog α))
-    (baseAddress topAddress bytesInWord : α)
-    (fuel clock : Nat) (locals globals : VarName → Option (PanValue α))
-    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
-    (first second second' : Prog α)
-    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
-    (mh : Option (PanValueMemoryFfiHandler α σ))
-    (hsecond : ∀ (fuel clock : Nat)
-      (locals globals : VarName → Option (PanValue α))
-      (memory : α → Option (PanValue α)) (ffi : FfiState σ),
-      evalPanValueFfiClockProg context primitive handler structs functions
-        baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
-        second ma c mh =
-      evalPanValueFfiClockProg context primitive handler structs functions
-        baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
-        second' ma c mh) :
-    evalPanValueFfiClockProg context primitive handler structs functions
-        baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi
-        clock (.seq first second) ma c mh =
-      evalPanValueFfiClockProg context primitive handler structs functions
-        baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi
-        clock (.seq first second') ma c mh := by
-  simp only [evalPanValueFfiClockProg]
-  cases hfirst : evalPanValueFfiClockProg context primitive handler structs functions
-      baseAddress topAddress bytesInWord fuel locals globals memory ffi clock first ma c mh with
-  | none => simp
-  | some firstResult =>
-      obtain ⟨firstOutcome, firstClock⟩ := firstResult
-      cases firstOutcome with
-      | control firstControl =>
-          cases firstControl with
-          | normal nextLocals nextGlobals nextMemory nextFfi =>
-              simp only [Option.bind_eq_bind, Option.bind_some]
-              rw [hsecond fuel firstClock nextLocals nextGlobals nextMemory nextFfi]
-          | _ => simp
-      | timeout nextLocals nextGlobals nextMemory nextFfi => simp
-
 /-! A normal result from a `Seq` exposes the intermediate normal state and the
     second component's evaluation.  This is the clocked state/result case used
     when lifting Cake's sequence equations through the source evaluator. -/
@@ -466,4 +418,124 @@ theorem evalPanValueFfiClockProg_fuel_anti
         clock program ma c mh hfuel h
       rw [hnone] at hmono
       simp at hmono
+/-! A sound replacement for fixed-fuel evaluator equalities.  The two programs
+    may need different structural fuel budgets; once both have successful
+    results at their respective budgets, fuel monotonicity transports both
+    results to a common upper budget. -/
+theorem evalPanValueFfiClockProg_eq_of_common_fuel
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    {fuelLeft fuelRight commonFuel : Nat}
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (programLeft programRight : Prog α)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    {result : PanValueFfiClockResult α σ}
+    (hleft : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuelLeft locals globals memory ffi clock
+      programLeft ma c mh = some result)
+    (hright : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuelRight locals globals memory ffi clock
+      programRight ma c mh = some result)
+    (hleftFuel : fuelLeft ≤ commonFuel)
+    (hrightFuel : fuelRight ≤ commonFuel) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord commonFuel locals globals memory ffi clock
+      programLeft ma c mh =
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord commonFuel locals globals memory ffi clock
+      programRight ma c mh := by
+  have hleftCommon := evalPanValueFfiClockProg_fuel_mono context primitive handler
+    structs functions baseAddress topAddress bytesInWord locals globals memory ffi clock
+    programLeft ma c mh hleftFuel hleft
+  have hrightCommon := evalPanValueFfiClockProg_fuel_mono context primitive handler
+    structs functions baseAddress topAddress bytesInWord locals globals memory ffi clock
+    programRight ma c mh hrightFuel hright
+  rw [hleftCommon, hrightCommon]
+
+/-! Congruence under the second component of a `Seq`.  The premise is
+    quantified over the post-first state and clock because the first component
+    may update every evaluator component before the second starts. -/
+theorem evalPanValueFfiClockProg_seq_congr_second
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel clock : Nat) (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (first second second' : Prog α)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (hsecond : ∀ (fuel clock : Nat)
+      (locals globals : VarName → Option (PanValue α))
+      (memory : α → Option (PanValue α)) (ffi : FfiState σ),
+      evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
+        second ma c mh =
+      evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
+        second' ma c mh) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi
+        clock (.seq first second) ma c mh =
+      evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi
+        clock (.seq first second') ma c mh := by
+  simp only [evalPanValueFfiClockProg]
+  cases hfirst : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory ffi clock first ma c mh with
+  | none => simp
+  | some firstResult =>
+      obtain ⟨firstOutcome, firstClock⟩ := firstResult
+      cases firstOutcome with
+      | control firstControl =>
+          cases firstControl with
+          | normal nextLocals nextGlobals nextMemory nextFfi =>
+              simp only [Option.bind_eq_bind, Option.bind_some]
+              rw [hsecond fuel firstClock nextLocals nextGlobals nextMemory nextFfi]
+          | _ => simp
+      | timeout nextLocals nextGlobals nextMemory nextFfi => simp
+
+/-- Concrete demonstration that `seqAssoc` is **not** fuel-preserving under the
+    fuel-indexed clocked evaluator.  For `p = Seq Skip (Seq Skip Skip)`, at
+    fuel `2` the transformed program `seqAssoc .skip p` evaluates to a normal
+    result while the source `Seq .skip p` times out (`none`).  Hence no
+    fixed-fuel analogue of Cake's `evaluate_seq_assoc` (which holds because
+    Cake's `Seq` does not consume clock) can be stated; the port must use a
+    fuel-adequacy / upward-closed-success formulation instead. -/
+theorem evalPanValueFfiClockProg_seqAssoc_fuel_gap
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (clock : Nat) (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord 2 locals globals memory ffi clock
+        (seqAssoc (.skip : Prog α) (.seq .skip (.seq .skip .skip))) =
+      some (.control (.normal locals globals memory ffi), clock) ∧
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord 2 locals globals memory ffi clock
+        (.seq .skip (.seq .skip .skip)) = none := by
+  constructor <;>
+    simp [evalPanValueFfiClockProg, evalPanValueFfiClockLeaf_skip, seqAssoc]
+
 end Flapjack

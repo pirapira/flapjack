@@ -1,0 +1,12 @@
+var 1 x = 5;
+
+fun 1 f() {
+  var 1 x = 7;
+  return ld32 x;
+}
+
+fun 1 g() {
+  var 1 x = 7;
+  st32 x, 9;
+  return 0;
+}

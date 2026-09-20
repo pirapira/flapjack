@@ -508,6 +508,39 @@ theorem panValueCrepProgramStateControlSafe_annot
           cases hsource
           simp [panValuePcControlLabelSafe]
 
+theorem panValueCrepProgramStateControlSafe_return_const
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (value : α) :
+    PanValueCrepProgramStateControlSafe
+      (.return (.const value) : Prog α) := by
+  intro context structs sourceFunctions functions sourceLocals sourceGlobals
+    sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord sourceFuel targetFuel _exceptionRel
+    sourceResult crepResult hstate hsource hcrep
+  cases sourceFuel with
+  | zero => simp [evalPanValueProgWithPrimitiveCallsAndFfi] at hsource
+  | succ sourceFuel =>
+      cases targetFuel with
+      | zero => simp [evalCrepFullProgState] at hcrep
+      | succ targetFuel =>
+          have hlimit : panValuePayloadWithinLimit structs (.word value) = true :=
+            panValuePayloadWithinLimit_word structs value
+          have hsourceResult :
+              PanValueControlResult.returned (fun _ => none) sourceGlobals
+                sourceMemory [.word value] = sourceResult := by
+            simpa [evalPanValueProgWithPrimitiveCallsAndFfi,
+              evalPanValueExp, hlimit] using hsource
+          have hcrepResult :
+              CrepControlResult.returned state [value] = crepResult := by
+            simpa [compileProg, compileExp, evalCrepFullProgState,
+              evalCrepFullExpsState, evalCrepFullExpState] using hcrep
+          cases hsourceResult
+          cases hcrepResult
+          simp [panValuePcControlLabelSafe]
+
 theorem panValueCrepProgramStateControlSafe_raise
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
@@ -1032,6 +1065,26 @@ theorem panValueCrepProgramStateControlSafe_seq
                           cases hsourceEq
                           cases hcrepEq
                           exact hfirstSafeResult
+
+theorem panValueCrepProgramStateControlSafe_statefulCompact
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (program : Prog α) (hprogram : StatefulCompactProg α program) :
+    PanValueCrepProgramStateControlSafe program := by
+  induction hprogram with
+  | skip => exact panValueCrepProgramStateControlSafe_skip
+  | tick => exact panValueCrepProgramStateControlSafe_tick
+  | controlBreak => exact panValueCrepProgramStateControlSafe_break
+  | controlContinue => exact panValueCrepProgramStateControlSafe_continue
+  | annot tag text => exact panValueCrepProgramStateControlSafe_annot tag text
+  | returnConst value =>
+      exact panValueCrepProgramStateControlSafe_return_const value
+  | @seq first second hfirst hsecond ihfirst ihsecond =>
+      exact panValueCrepProgramStateControlSafe_seq first second
+        (panValueCrepProgramStateCorrect_statefulCompact first hfirst)
+        ihfirst ihsecond
 
 theorem panValueCrepProgramStateCorrect_and_controlSafe_skip
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]

@@ -171,6 +171,45 @@ example :
   exact wordFunctionToRiscVWithCallsCake_const _ 4
     (BitVec.ofNat 64 0x1122334455667788)
 
+/-! Cake's list-valued constant boundary composes with both call carriers.
+These are direct source-shaped sequences: the constant is fully materialized
+before the parameter move, and the ordinary call retains Cake's saved-link and
+return-move protocol. -/
+example :
+    wordFunctionToRiscVWithCallsCake (width := 64)
+        ({ targets := [(7, BitVec.ofNat 64 32, [2], [10])] } : WordCallContext 64)
+        (.seq (.assign 4 (.const (BitVec.ofNat 64 0x1234)))
+          (.call (some ([4], ([], []), .skip, 0, 0)) (some 7) [6] none)) =
+      some ([.lui 4 (BitVec.ofNat 64 1),
+        .addi 4 4 (BitVec.ofNat 64 0x234),
+        .addi 2 6 0,
+        .addi 30 30 (0 - BitVec.ofNat 64 8),
+        .storeWord 1 30,
+        .addi 31 0 (BitVec.ofNat 64 32),
+        .jalr 1 31 0,
+        .addi 4 10 0,
+        .loadWord 1 30,
+        .addi 30 30 (BitVec.ofNat 64 8)], []) := by
+  simp [wordFunctionToRiscVWithCallsCake, wordExpToInstructionsCake,
+    wordConstToInstructions, wordConst32ToInstructions,
+    wordCallToRiscVWithStack, wordRegisterMoves, lookupWordCallTarget,
+    registerOfNat]
+
+example :
+    wordFunctionToRiscVWithCallsCake (width := 64)
+        ({ targets := [(7, BitVec.ofNat 64 32, [2], [10])] } : WordCallContext 64)
+        (.seq (.assign 4 (.const (BitVec.ofNat 64 0x1234)))
+          (.call none (some 7) [6] none)) =
+      some ([.lui 4 (BitVec.ofNat 64 1),
+        .addi 4 4 (BitVec.ofNat 64 0x234),
+        .addi 2 6 0,
+        .addi 31 0 (BitVec.ofNat 64 32),
+        .jalr 0 31 0], [10]) := by
+  simp [wordFunctionToRiscVWithCallsCake, wordExpToInstructionsCake,
+    wordConstToInstructions, wordConst32ToInstructions,
+    wordTailCallToRiscV, wordRegisterMoves, lookupWordCallTarget,
+    registerOfNat]
+
 /-! A wide constant used as a memory address keeps Cake's complete address
     materialization before the final store carrier. -/
 example :

@@ -146,4 +146,22 @@ def panSemEvaluateExact
   panSemEvaluate context primitive handler
     { state with memoryAccess := some memoryAccess } program
 
+/-! The exact source entrypoint is a state boundary, not a second evaluator:
+    it installs the explicit Cake memory operations before evaluating.  Keeping
+    this equation named makes exact correctness proofs unable to silently
+    select the legacy no-access compatibility path. -/
+theorem panSemEvaluateExact_uses_memory_access
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (memoryAccess : PanValueMemoryAccess α)
+    (state : PanSemEvaluateState α σ) (program : Prog α) :
+    panSemEvaluateExact context primitive handler memoryAccess state program =
+      panSemEvaluate context primitive handler
+        { state with memoryAccess := some memoryAccess } program := by
+  rfl
+
 end Flapjack

@@ -144,13 +144,26 @@ def stackMapDepth : StackProg α → Nat
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial
 
+/- Cake's wReg1/wReg2 keep equal allocator colors in distinct operand
+   carriers for a store.  Preserve that distinction only at final register
+   mapping; StackLang evaluation still sees the shared value. -/
+def stackMapStoreAddress (map : Nat → Nat) (source address : Nat) : Nat :=
+  map (if source = address then address + 1 else address)
+
+
+def stackMapMemoryAddress (map : Nat → Nat) (operator : WordMemOp)
+    (source address : Nat) : Nat :=
+  match operator with
+  | .store | .store8 | .store16 | .store32 =>
+      stackMapStoreAddress map source address
+  | .load | .load8 | .load16 | .load32 => map address
 def stackMapRegisters (map : Nat → Nat) : StackProg α → StackProg α
   | .skip => .skip
   | .const destination value => .const (map destination) value
   | .inst instruction => .inst (stackMapWordInst map instruction)
-  | .shMem operator source address => .shMem operator (map source) (map address)
+  | .shMem operator source address => .shMem operator (map source) (stackMapMemoryAddress map operator source address)
   | .shMemOffset operator source address offset =>
-      .shMemOffset operator (map source) (map address) offset
+      .shMemOffset operator (map source) (stackMapMemoryAddress map operator source address) offset
   | .get destination store => .get (map destination) store
   | .set store source => .set store (map source)
   | .arith operator destination left right =>

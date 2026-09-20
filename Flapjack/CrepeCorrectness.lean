@@ -1805,6 +1805,62 @@ theorem compile_full_pan_value_shMemStore_word_state_correct
       evalCrepFullProgState, hcrepAddress, hcrepValue,
       hsharedMem, restoreCrepResult]
 
+/-! Complete-word stateful counterpart of the shared-memory store boundary.
+    The source premises use Cake's full `word_sh` expression evaluator and the
+    target premises use the full stateful Crep evaluator; the temporary local
+    is restored while the handler's memory and globals remain authoritative. -/
+theorem compile_full_pan_value_shMemStore_word_state_full_correct
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (functions : List (CompiledFunction α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (state targetState : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (size : OpSize) (address value : α) (sourceAddress sourceValue : Exp α)
+    (compiledAddress compiledValue : CrepExp α)
+    (haddress : evalPanValueExpFull structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord sourceAddress = some (.word address))
+    (hvalue : evalPanValueExpFull structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord sourceValue = some (.word value))
+    (hcompiledAddress : firstCompiledExpAnyShape context sourceAddress = some compiledAddress)
+    (hcompiledValue : firstCompiledExpAnyShape context sourceValue = some compiledValue)
+    (hcrepAddress : evalCrepFullExpStateFull
+      { state with
+          locals := updateCrepLocal state.locals (maxCrepExpVar [compiledAddress] + 1) value }
+      baseAddress topAddress compiledAddress = some address)
+    (hcrepValue : evalCrepFullExpStateFull state baseAddress topAddress compiledValue =
+      some value)
+    (hsharedMem : sharedMem (storeMemOp size) (maxCrepExpVar [compiledAddress] + 1) address
+      { state with
+        locals := updateCrepLocal state.locals (maxCrepExpVar [compiledAddress] + 1) value } =
+      some targetState) :
+    evalPanValueProgWithPrimitiveFull structs
+      baseAddress topAddress bytesInWord sourceLocals sourceGlobals sourceMemory primitive
+      (.shMemStore size sourceAddress sourceValue) =
+      some (sourceLocals, sourceGlobals,
+        updatePanValueMemory sourceMemory address (.word value), []) ∧
+    evalCrepFullProgStateFull functions crepPrimitive ffi sharedMem
+      baseAddress topAddress (fuel + 2) state
+      (compileProg context (.shMemStore size sourceAddress sourceValue)) =
+      some (.normal
+        { targetState with
+          locals := restoreCrepLocal targetState.locals
+            (maxCrepExpVar [compiledAddress] + 1)
+            (state.locals (maxCrepExpVar [compiledAddress] + 1)) }) := by
+  constructor
+  · simp [evalPanValueProgWithPrimitiveFull, haddress, hvalue,
+      updatePanValueMemory]
+  · simp [compileProg, hcompiledAddress, hcompiledValue, nestedDecs,
+      evalCrepFullProgStateFull, hcrepAddress, hcrepValue,
+      hsharedMem, restoreCrepResult]
+
 /-! A closed word raise exercises the exception-code lookup and the compiler's
     global payload spill before the Crep exception result is produced. -/
 theorem compile_full_pan_value_raise_word_correct

@@ -150,6 +150,37 @@ def panProgOracle : Bool :=
   panProgBasicOracle && panProgSequenceOracle && panProgAnnotationOracle &&
     panProgCallOracle && panProgDeclCallOracle
 
+/-! Direct oracle guards for `pan_fun_to_display_def` in
+    `pan_passesScript.sml:311-330`. -/
+def panFunOracle : Bool :=
+  sameDisplay
+      (panFunToDisplay
+        (.function
+          { name := "f", inline := false, exported := true,
+            params := [("x", .one), ("pair", .comb [.one, .one])],
+            body := .return (.var .local "x"), returnShape := .one } :
+          Decl (BitVec 64)))
+      (.tuple [.string "func", .string "1", .string "f",
+        .tuple [.tuple [.string "x", .string ":", .string "1"],
+          .tuple [.string "pair", .string ":", .string "{1,1}"]],
+        .item none "return" [.item none "Var" [.string "local", .string "x"]]]) &&
+    sameDisplay
+      (panFunToDisplay
+        (.decl .one "g" (.const (BitVec.ofNat 64 5)) : Decl (BitVec 64)))
+      (.tuple [.string "global", .string "1", .string "g", .string ":=",
+        .item none "Const" [.string "0x5"]]) &&
+    sameDisplay
+      (panFunToDisplay
+        (.name "Pair" [("left", .one), ("right", .named "Word")] :
+          Decl (BitVec 64)))
+      (.tuple [.string "struct", .string "Pair",
+        .tuple [.tuple [.string "left", .string ":", .string "1"],
+          .tuple [.string "right", .string ":", .string "Word"]]]) &&
+    sameDisplay
+      (panFunToDisplay
+        (.exnDecl "E" (.comb [.one, .one]) : Decl (BitVec 64)))
+      (.tuple [.string "exception", .string "E", .string ":", .string "{1,1}"])
+
 /-! Direct oracle guards for `loop_exp_to_display_def` in
     `pan_passesScript.sml:508-530`. -/
 def loopExpConstOracle : Bool :=
@@ -204,5 +235,6 @@ def loopExpOracle : Bool :=
 #guard panExpOracle
 #guard panProgOracle
 #guard loopExpOracle
+#guard panFunOracle
 
 end Flapjack.Test.DisplayParity

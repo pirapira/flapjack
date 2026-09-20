@@ -335,6 +335,26 @@ where
 def loopExpToDisplay [CakeDisplayWord α] (expression : LoopExp α) : DisplayExpr :=
   loopExpToDisplayFuel (loopExpDepth expression + 1) expression
 
+/-! Exact source counterpart of Cake's `pan_fun_to_display_def`
+    (`pan_passesScript.sml:311-330`). -/
+def panFunToDisplay [CakeDisplayWord α] : Decl α → DisplayExpr
+  | .function declaration =>
+      .tuple [.string "func", .string (Shape.shapeToString declaration.returnShape),
+        .string declaration.name,
+        .tuple (declaration.params.map (fun (name, shape) =>
+          .tuple [.string name, .string ":", .string (Shape.shapeToString shape)])),
+        panProgToDisplay declaration.body]
+  | .decl shape name expression =>
+      .tuple [.string "global", .string (Shape.shapeToString shape), .string name,
+        .string ":=", panExpToDisplay expression]
+  | .name name fields =>
+      .tuple [.string "struct", .string name,
+        .tuple (fields.map (fun (field, shape) =>
+          .tuple [.string field, .string ":", .string (Shape.shapeToString shape)]))]
+  | .exnDecl exception shape =>
+      .tuple [.string "exception", .string exception, .string ":",
+        .string (Shape.shapeToString shape)]
+
 def destAnnot (program : Prog α) : Option (String × String) :=
   match program with
   | .annot tag text => some (tag, text)

@@ -57,6 +57,7 @@ import Flapjack.PanHProgStoreMem
 import Flapjack.PanHProgAssign
 import Flapjack.PanHProgWhile
 import Flapjack.PanSimp
+import Flapjack.PanSimpEvaluate
 import Flapjack.PanStructs
 import Flapjack.PanGlobals
 import Flapjack.Pipeline

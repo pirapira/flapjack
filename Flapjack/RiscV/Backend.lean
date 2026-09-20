@@ -630,6 +630,67 @@ def wordProgToRiscV [NeZero width] :
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial
 
+/-! Whole-program entrypoint for the checked Cake constant boundary.  This is
+    additive so existing proofs of the legacy one-instruction compiler remain
+    stable while new target-facing callers can opt into list-valued constants.
+    All non-constant selectors are shared with the established backend. -/
+def wordInstToInstructionsCake [NeZero width] :
+    WordInst (Word width) → Option (List (Instruction width))
+  | .const destination value => wordConstToInstructions destination value
+  | .arith operation => wordArithToInstructions operation
+  | instruction => (wordInstToInstruction instruction).map (fun instruction => [instruction])
+
+def wordShareInstToInstructionsCake [NeZero width] (operator : WordMemOp)
+    (name : Nat) : WordExp (Word width) → Option (List (Instruction width))
+  | .var address => do
+      let instruction ← wordInstToInstruction (.mem operator name address)
+      pure [instruction]
+  | expression => do
+      if name == 31 then none
+      else
+        let address ← wordExpToInstructionsCake 31 expression
+        let instruction ← wordInstToInstruction (.mem operator name 31)
+        pure (address ++ [instruction])
+
+def wordProgToRiscVCake [NeZero width] :
+    WordProg (Word width) → Option (List (Instruction width))
+  | .skip => some []
+  | .move _ moves => wordMoveToInstructions moves
+  | .assign name value => wordExpToInstructionsCake name value
+  | .store address value => wordShareInstToInstructionsCake .store value address
+  | .shareInst operator name address =>
+      wordShareInstToInstructionsCake operator name address
+  | .locValue destination source => wordLocValueToInstructions destination source
+  | .inst instruction => wordInstToInstructionsCake instruction
+  | .seq first second => do
+      let first ← wordProgToRiscVCake first
+      let second ← wordProgToRiscVCake second
+      pure (first ++ second)
+  | .tick => some [.addi 0 0 0]
+  | .ite operator condition rightValue thenBranch elseBranch => do
+      let (branchLeft, right, prelude) ←
+        wordConditionOperands operator condition rightValue
+      let thenCode ← wordProgToRiscVCake thenBranch
+      let elseCode ← wordProgToRiscVCake elseBranch
+      let falseOffset : Word width :=
+        BitVec.ofNat width (8 + 4 * thenCode.length)
+      let endOffset : Word width :=
+        BitVec.ofNat width (4 + 4 * elseCode.length)
+      let branchFalse ← match operator with
+        | .equal => pure (.branchNe branchLeft right falseOffset)
+        | .notEqual => pure (.branchEq branchLeft right falseOffset)
+        | .less => pure (.branchGe branchLeft right falseOffset)
+        | .notLess => pure (.branchLt branchLeft right falseOffset)
+        | .lower => pure (.branchGeU branchLeft right falseOffset)
+        | .notLower => pure (.branchLtU branchLeft right falseOffset)
+        | .test => pure (.branchNe branchLeft right falseOffset)
+        | .notTest => pure (.branchEq branchLeft right falseOffset)
+      pure (prelude ++ [branchFalse] ++ thenCode ++
+        [.branchEq 0 0 endOffset] ++ elseCode)
+  | _ => none
+termination_by program => sizeOf program
+decreasing_by all_goals decreasing_trivial
+
 /-!
 `executeInstructions` is useful for straight-line code, but it deliberately
 does not interpret branch targets.  This runner treats `start` as the address

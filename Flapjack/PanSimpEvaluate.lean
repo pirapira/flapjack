@@ -364,6 +364,50 @@ theorem evalPanValueFfiClockProg_fuel_anti
         clock program ma c mh hfuel h
       rw [hnone] at hmono
       simp at hmono
+
+/-! A sound replacement for fixed-fuel evaluator equalities.  The two programs
+    may need different structural fuel budgets; once both have successful
+    results at their respective budgets, fuel monotonicity transports both
+    results to a common upper budget. -/
+theorem evalPanValueFfiClockProg_eq_of_common_fuel
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    {fuelLeft fuelRight commonFuel : Nat}
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (programLeft programRight : Prog α)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    {result : PanValueFfiClockResult α σ}
+    (hleft : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuelLeft locals globals memory ffi clock
+      programLeft ma c mh = some result)
+    (hright : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuelRight locals globals memory ffi clock
+      programRight ma c mh = some result)
+    (hleftFuel : fuelLeft ≤ commonFuel)
+    (hrightFuel : fuelRight ≤ commonFuel) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord commonFuel locals globals memory ffi clock
+      programLeft ma c mh =
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord commonFuel locals globals memory ffi clock
+      programRight ma c mh := by
+  have hleftCommon := evalPanValueFfiClockProg_fuel_mono context primitive handler
+    structs functions baseAddress topAddress bytesInWord locals globals memory ffi clock
+    programLeft ma c mh hleftFuel hleft
+  have hrightCommon := evalPanValueFfiClockProg_fuel_mono context primitive handler
+    structs functions baseAddress topAddress bytesInWord locals globals memory ffi clock
+    programRight ma c mh hrightFuel hright
+  rw [hleftCommon, hrightCommon]
+
 /-! Congruence under the second component of a `Seq`.  The premise is
     quantified over the post-first state and clock because the first component
     may update every evaluator component before the second starts. -/

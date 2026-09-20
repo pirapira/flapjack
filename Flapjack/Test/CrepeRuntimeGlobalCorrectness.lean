@@ -66,6 +66,23 @@ example : runtimeTypedAliasedStoreLoadValue = some 17 := by
   simp [runtimeTypedKey, runtimeTypedBaseState, storeCrepTypedGlobal,
     evalCrepTypedLoad, storeCrepGlobal, crepGlobalKeyOfNat]
 
+/- The Loop-side projection carries the same fixed-width key relation, so an
+   aliased read observes the Cake typed global state rather than an exact
+   target-width address update. -/
+example :
+    CrepGlobalKeyRelation runtimeTypedKey
+      (loopStateOfCrepRuntimeStateForGlobals runtimeTypedStoredRuntimeState).globals
+      runtimeTypedStoredGlobalState.globals := by
+  exact crepRuntimeTypedGlobalRelation_loopState_adapter
+    globalLoadRuntimeState runtimeTypedKey runtimeTypedStoredGlobalState
+
+example :
+    (loopStateOfCrepRuntimeStateForGlobals runtimeTypedStoredRuntimeState).globals
+      36 = some 11 := by
+  change runtimeTypedStoredGlobalState.globals (runtimeTypedKey 36) = some 11
+  simp [runtimeTypedStoredGlobalState, runtimeTypedBaseState, runtimeTypedKey,
+    storeCrepTypedGlobal, storeCrepGlobal, crepGlobalKeyOfNat]
+
 /- The relation-level guard uses the actual Cake key type.  On a 5-bit target
    the re-keying is injective, so the runtime's ordinary updateMemory is the
    same update as the source's typed StoreGlob map. -/

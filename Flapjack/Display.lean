@@ -289,6 +289,171 @@ termination_by fuel => fuel
 def panExpToDisplay [CakeDisplayWord α] (expression : Exp α) : DisplayExpr :=
   panExpToDisplayFuel (panExpDepth expression + 1) expression
 
+/-! Cake's `escape_str_def` is used only by annotation display.  Keep its
+    four `char_escape_seq` cases explicit so annotation output has the same
+    source spelling as Cake. -/
+def cakeEscapeChar : Char → String
+  | '\t' => "\\t"
+  | '\n' => "\\n"
+  | '\\' => "\\\\"
+  | '"' => "\\\""
+  | character => String.ofList [character]
+
+def cakeEscapeString (value : String) : String :=
+  "\"" ++ String.ofList (value.toList.flatMap (fun character =>
+    (cakeEscapeChar character).toList)) ++ "\""
+
+def separateDisplayLines (name : String) (children : List DisplayExpr) : DisplayExpr :=
+  .list (.string name :: children)
+
+def primOpToDisplay : PrimOp → DisplayExpr
+  | .addCarry => emptyDisplayItem "AddCarry"
+
+def panProgHandlerToDisplay [CakeDisplayWord α]
+    (render : Prog α → DisplayExpr) :
+    Option (ExceptionId × VarName × Prog α) → DisplayExpr
+  | none => emptyDisplayItem "no_handler"
+  | some (exception, variableName, body) =>
+      .item none "handler"
+        [.tuple [.string exception, .string variableName, render body]]
+
+def panProgDepth : Prog α → Nat
+  | .skip | .assign _ _ _ | .primitive _ _ _ | .store _ _
+  | .store32 _ _ | .storeByte _ _ | .extCall _ _ _ _ _
+  | .raise _ _ | .return _ | .shMemLoad _ _ _ _ | .shMemStore _ _ _
+  | .tick | .break | .continue | .annot _ _ => 1
+  | .dec _ _ _ body | .decCall _ _ _ _ body => 1 + panProgDepth body
+  | .seq first second => 1 + max (panProgDepth first) (panProgDepth second)
+  | .ite _ thenBranch elseBranch =>
+      1 + max (panProgDepth thenBranch) (panProgDepth elseBranch)
+  | .while _ body => 1 + panProgDepth body
+  | .call info _ _ =>
+      1 + match info with
+        | none => 0
+        | some (_, handler) =>
+            match handler with
+            | none => 0
+            | some (_, _, body) => panProgDepth body
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
+
+/-! Exact source counterpart of Cake's `pan_prog_to_display_def` and its
+    handler equation (`pan_passesScript.sml:222-309`). -/
+def panProgToDisplayFuel [CakeDisplayWord α] : Nat → Prog α → DisplayExpr
+  | 0, _ => emptyDisplayItem "display-depth-exhausted"
+  | _fuel + 1, .skip => emptyDisplayItem "skip"
+  | _fuel + 1, .shMemLoad size kind name address =>
+      .item none "shared_mem_load"
+        [opSizeToDisplay size, .string (varKindToDisplayString kind),
+         .string name, panExpToDisplay address]
+  | _fuel + 1, .shMemStore size address value =>
+      .item none "shared_mem_store"
+        [opSizeToDisplay size, panExpToDisplay address,
+         panExpToDisplay value]
+  | _fuel + 1, .extCall function configuration configurationLength array arrayLength =>
+      .item none "ext_call"
+        [.string function, panExpToDisplay configuration,
+         panExpToDisplay configurationLength, panExpToDisplay array,
+         panExpToDisplay arrayLength]
+  | fuel + 1, .ite condition thenBranch elseBranch =>
+      .item none "if"
+        [panExpToDisplay condition,
+         panProgToDisplayFuel fuel thenBranch,
+         panProgToDisplayFuel fuel elseBranch]
+  | fuel + 1, .while condition body =>
+      .item none "while"
+        [panExpToDisplay condition, panProgToDisplayFuel fuel body]
+  | fuel + 1, .dec name shape value body =>
+      .item none "dec"
+        [.tuple [.string "local", .string (Shape.shapeToString shape),
+          .string name, .string ":=", panExpToDisplay value],
+         panProgToDisplayFuel fuel body]
+  | _fuel + 1, .assign kind name value =>
+      .tuple [.string (varKindToDisplayString kind), .string name,
+        .string ":=", panExpToDisplay value]
+  | _fuel + 1, .primitive name operator arguments =>
+      .tuple [.string name, .string ":=",
+        insertDisplayExpressions (primOpToDisplay operator)
+          (arguments.map panExpToDisplay)]
+  | _fuel + 1, .store address value =>
+      .tuple [.string "mem", panExpToDisplay address, .string ":=",
+        panExpToDisplay value]
+  | _fuel + 1, .store32 address value =>
+      .tuple [.string "mem", panExpToDisplay address, .string ":=",
+        .string "32bit", panExpToDisplay value]
+  | _fuel + 1, .storeByte address value =>
+      .tuple [.string "mem", panExpToDisplay address, .string ":=",
+        .string "byte", panExpToDisplay value]
+  | _fuel + 1, .annot tag text =>
+      .item none "annot" [.string (cakeEscapeString tag),
+        .string (cakeEscapeString text)]
+  | _fuel + 1, .tick => emptyDisplayItem "tick"
+  | _fuel + 1, .break => emptyDisplayItem "break"
+  | _fuel + 1, .continue => emptyDisplayItem "continue"
+  | _fuel + 1, .return value =>
+      .item none "return" [panExpToDisplay value]
+  | _fuel + 1, .raise exception value =>
+      .item none "raise" [.string exception, panExpToDisplay value]
+  | fuel + 1, .seq first second =>
+      separateDisplayLines "seq"
+        ((panSeqs first ++ panSeqs second).map
+          (panProgToDisplayFuel fuel))
+  | fuel + 1, .call info function arguments =>
+      let callHandler := match info with
+        | none => none
+        | some (_, handler) => handler
+      let callDisplay := .item none "call"
+        [.string function,
+         .tuple (arguments.map panExpToDisplay),
+         panProgHandlerToDisplay (panProgToDisplayFuel fuel) callHandler]
+      match info with
+      | none => .item none "tail_call"
+          [.string function, .tuple (arguments.map panExpToDisplay)]
+      | some (none, _) => callDisplay
+      | some (some (_, variableName), _) =>
+          .tuple [.string variableName, .string ":=", callDisplay]
+  | fuel + 1, .decCall name shape function arguments body =>
+      .item none "dec"
+        [.tuple [.string (Shape.shapeToString shape), .string name,
+          .string ":=",
+          .item none "call"
+            [.string function, .tuple (arguments.map panExpToDisplay)]],
+         panProgToDisplayFuel fuel body]
+termination_by fuel => fuel
+
+def panProgToDisplay [CakeDisplayWord α] (program : Prog α) : DisplayExpr :=
+  panProgToDisplayFuel (panProgDepth program + 1) program
+
+/-! Exact source counterpart of Cake's `pan_fun_to_display_def`
+    (`pan_passesScript.sml:311-338`). -/
+def panFunToDisplay [CakeDisplayWord α] (declaration : Decl α) : DisplayExpr :=
+  match declaration with
+  | .function function =>
+      .tuple [.string "func", .string (Shape.shapeToString function.returnShape),
+        .string function.name,
+        .tuple (function.params.map (fun (name, shape) =>
+          .tuple [.string name, .string ":", .string (Shape.shapeToString shape)])),
+        panProgToDisplay function.body]
+  | .decl shape name value =>
+      .tuple [.string "global", .string (Shape.shapeToString shape),
+        .string name, .string ":=", panExpToDisplay value]
+  | .name name fields =>
+      .tuple [.string "struct", .string name,
+        .tuple (fields.map (fun (field, shape) =>
+          .tuple [.string field, .string ":", .string (Shape.shapeToString shape)]))]
+  | .exnDecl exception shape =>
+      .tuple [.string "exception", .string exception, .string ":",
+        .string (Shape.shapeToString shape)]
+
+/-! Exact source counterpart of Cake's `pan_to_strs_def`
+    (`pan_passesScript.sml:340-344`). -/
+def panToStrs [CakeDisplayWord α] (declarations : List (Decl α)) : List String :=
+  mapAppendDisplayStrings
+    (fun declaration =>
+      displayStrTreeToStrings "\n\n"
+        (displayToStrTree (panFunToDisplay declaration))) declarations
+
 /-! Exact source counterpart of Cake's `loop_exp_to_display_def`
     (`pan_passesScript.sml:508-530`).  The extra Loop constructors retained by
     the executable carrier are given stable names, while every constructor in
@@ -356,9 +521,6 @@ def numSetToDisplay (names : List Nat) : DisplayExpr :=
 def displayList (children : List DisplayExpr) : DisplayExpr :=
   .list children
 
-def separateDisplayLines (name : String) (children : List DisplayExpr) : DisplayExpr :=
-  .list (.string name :: children)
-
 def loopLookupDisplayName : Nat → List (Nat × String) → Option String
   | _, [] => none
   | number, (candidate, name) :: names =>
@@ -394,9 +556,6 @@ def loopArithToDisplay : LoopArith → DisplayExpr
       numsToDisplay "long_div" [leftHigh, rightHigh, leftLow, rightLow, quotient]
   | .div destination dividend divisor =>
       numsToDisplay "div" [destination, dividend, divisor]
-
-def primOpToDisplay : PrimOp → DisplayExpr
-  | .addCarry => emptyDisplayItem "AddCarry"
 
 def loopProgHandlerToDisplay [CakeDisplayWord α]
     (render : LoopProg α → DisplayExpr) :

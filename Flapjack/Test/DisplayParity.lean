@@ -84,6 +84,66 @@ def panExpOracle : Bool :=
   panExpConstOracle && panExpVarOracle && panExpLoadOracle &&
     panExpNamedStructOracle && panExpShiftOracle
 
+/-! Direct oracle guards for `pan_prog_to_display_def` and
+    `pan_fun_to_display_def` in `pan_passesScript.sml:222-338`. -/
+def panProgCoreOracle : Bool :=
+  sameDisplay (panProgToDisplay (.skip : Prog (BitVec 64)))
+      (.string "skip") &&
+    sameDisplay
+      (panProgToDisplay
+        (.assign .local "x" (.const (BitVec.ofNat 64 7)) : Prog (BitVec 64)))
+      (.tuple [.string "local", .string "x", .string ":=",
+        .item none "Const" [.string "0x7"]]) &&
+    sameDisplay
+      (panProgToDisplay
+        (.seq (.assign .local "x" (.const (BitVec.ofNat 64 7)))
+          (.return (.var .local "x")) : Prog (BitVec 64)))
+      (.list [.string "seq",
+        .tuple [.string "local", .string "x", .string ":=",
+          .item none "Const" [.string "0x7"]],
+        .item none "return"
+          [.item none "Var" [.string "local", .string "x"]]])
+
+def panProgCallOracle : Bool :=
+  sameDisplay
+      (panProgToDisplay
+        (.call none "callee" [.const (BitVec.ofNat 64 1)] : Prog (BitVec 64)))
+      (.item none "tail_call"
+        [.string "callee", .tuple [.item none "Const" [.string "0x1"]]]) &&
+    sameDisplay
+      (panProgToDisplay
+        (.call (some (none, some ("E", "v", .skip))) "callee" [] :
+          Prog (BitVec 64)))
+      (.item none "call"
+        [.string "callee", .tuple [],
+         .item none "handler"
+           [.tuple [.string "E", .string "v", .string "skip"]]])
+
+def panProgOracle : Bool := panProgCoreOracle && panProgCallOracle
+
+def panFunOracle : Bool :=
+  let declaration : Decl (BitVec 64) :=
+    .function
+      { name := "main", inline := false, exported := true,
+        params := [("x", Shape.one)],
+        body := .return (.var .local "x"), returnShape := Shape.one }
+  sameDisplay (panFunToDisplay declaration)
+    (.tuple [.string "func", .string "1", .string "main",
+      .tuple [.tuple [.string "x", .string ":", .string "1"]],
+      .item none "return"
+        [.item none "Var" [.string "local", .string "x"]]])
+
+def panToStrsOracle : Bool :=
+  panToStrs
+    [(.function
+        { name := "main", inline := false, exported := true,
+          params := [("x", Shape.one)],
+          body := .return (.var .local "x"), returnShape := Shape.one } :
+      Decl (BitVec 64))] ==
+    ["(", "func", " ", "1", " ", "main", " ", "(", "(", "x", " ", ":", " ",
+     "1", ")", ")", " ", "(", "return", " ", "(", "Var", " ", "local", " ",
+     "x", ")", ")", ")", "\n\n"]
+
 /-! Direct oracle guards for `loop_exp_to_display_def` in
     `pan_passesScript.sml:508-530`. -/
 def loopExpConstOracle : Bool :=
@@ -218,6 +278,9 @@ def loopToStrsOracle : Bool :=
 #guard primOpOracle
 #guard destAnnotOracle
 #guard panExpOracle
+#guard panProgOracle
+#guard panFunOracle
+#guard panToStrsOracle
 #guard loopExpOracle
 #guard loopProgOracle
 #guard loopFunOracle

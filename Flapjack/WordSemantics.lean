@@ -767,4 +767,27 @@ theorem evalWordFunctionWithHandlersAndFfi_ffi [NeZero width]
       pure (.normal state)) := by
   simp [evalWordFunctionWithHandlersAndFfi]
 
+/-! The loop-aware evaluator keeps Cake's direct Raise equation: register
+    lookup is performed before the exception control result is returned, and
+    the handler/FFI state remains otherwise unchanged. -/
+theorem evalWordLoopProgWithHandlersAndFfi_raise [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (fuel : Nat) (state : State width) (exception : Nat) :
+    evalWordLoopProgWithHandlersAndFfi functions ffiHandler (fuel + 1) state
+      (.raise exception) = (do
+      let exception ← registerOfNat exception
+      pure (.raised state (readRegister state exception))) := by
+  simp [evalWordLoopProgWithHandlersAndFfi]
+
+example (functions : List (Nat × List Nat × WordProg (Word 64)))
+    (ffiHandler : FunName → Word 64 → Word 64 → Word 64 → Word 64 →
+      State 64 → Option (State 64)) (state : State 64) :
+    evalWordLoopProgWithHandlersAndFfi functions ffiHandler 1 state
+      (.raise 3) = (do
+      let exception ← registerOfNat 3
+      pure (.raised state (readRegister state exception))) := by
+  simp [evalWordLoopProgWithHandlersAndFfi]
+
 end Flapjack.RiscV

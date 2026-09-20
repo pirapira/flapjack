@@ -97,6 +97,19 @@ def staticProgLocalStoreWarningOracle : Bool :=
 
 #guard staticProgLocalStoreWarningOracle
 
+/-! Cake's ExtCall checks all four FFI words and otherwise returns ordinary
+    fall-through metadata without a warning. -/
+def staticProgExtCallMetadataOracle : Bool :=
+  match staticProgCheck
+      (.extCall "ffi" (.const 0) (.const 1) (.const 2) (.const 3)) with
+  | (Except.ok result, warnings) =>
+      !result.exitsFunction && !result.exitsLoop && result.last == .otherLast &&
+        result.variableDelta.isEmpty && result.currentLocation == "L: " &&
+        warnings.isEmpty
+  | _ => false
+
+#guard staticProgExtCallMetadataOracle
+
 /-! Cake's sequence rule keeps the first function exit when the second
     statement is transparent.  Check the returned metadata, not only the
     acceptance/error bit, for a return followed by Skip. -/

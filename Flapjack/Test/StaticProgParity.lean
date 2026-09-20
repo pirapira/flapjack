@@ -198,7 +198,12 @@ def staticProgLocalLoadMetadataOracle : Bool :=
 /-! Cake's call with no destination is a tail call: matching caller/callee
     return shapes produce TailLast and function exit metadata. -/
 def staticProgTailCallMetadataOracle : Bool :=
-  match staticProgCallCheck (.call none "callee" []) with
+  let context :=
+    { staticProgCallContext with
+      functions :=
+        ("f", { returnShape := .one, params := [] }) ::
+          staticProgCallContext.functions }
+  match checkProg context ((.call none "callee" []) : Prog Nat) with
   | (Except.ok result, warnings) =>
       result.exitsFunction && !result.exitsLoop && result.last == .tailLast &&
         result.variableDelta.isEmpty && result.currentLocation == "L: " &&
@@ -206,6 +211,21 @@ def staticProgTailCallMetadataOracle : Bool :=
   | _ => false
 
 #guard staticProgTailCallMetadataOracle
+
+/- Cake checks the caller scope before the callee for a tail call. -/
+#guard
+  staticResultErrorMessage
+      (checkProg staticProgCallContext ((.call none "callee" []) : Prog Nat)) ==
+    some "L: function f is not in scope in function f\n"
+
+/- A tail call outside a function is an implementation error, not an accepted
+   fall-through call (`panStaticScript.sml:1324-1335`). -/
+#guard
+  staticResultErrorMessage
+      (checkProg
+        { staticProgCallContext with scope := .topLevel, expectedReturn := none }
+        ((.call none "callee" []) : Prog Nat)) ==
+    some "tail call found outside function scope"
 
 def staticProgWordLocalCallContext : Context :=
   { staticProgCallContext with

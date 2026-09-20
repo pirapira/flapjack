@@ -1188,33 +1188,50 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
       if context.inLoop then progOk .contLast false true context.location
       else staticError (.general (getRogueMessage false context.location context.scope))
   | .call info function arguments =>
+      let tailScope := match info with
+        | none =>
+            match context.scope with
+            | .funScope caller _ =>
+                staticBind (checkFunctionName context caller) (fun _ => staticOk ())
+            | _ => staticError (.general "tail call found outside function scope")
+        | some _ => staticOk ()
       let destinationScope := match info with
         | some (some destination, _) =>
             checkCallDestinationScope context (some destination)
         | _ => staticOk ()
-      staticBind destinationScope (fun _ =>
+      staticBind tailScope (fun _ =>
+        staticBind destinationScope (fun _ =>
         staticBind (checkFunctionName context function) (fun functionInfo =>
           let returnShape := functionInfo.returnShape
           staticBind (checkCallArgs context arguments) (fun argumentResult =>
-            staticBind (checkFuncArgs context function functionInfo.params
-                argumentResult.shapedBased) (fun _ =>
-                match info with
+            match info with
+            | none =>
+                -- CakeML `panStaticScript.sml:1335`: a tail call checks the
+                -- return shape before the argument shapes.
+                let checkArguments :=
+                  checkFuncArgs context function functionInfo.params
+                    argumentResult.shapedBased
+                match context.expectedReturn with
+                | some callerReturn =>
+                    if !shapesSame callerReturn functionInfo.returnShape then
+                      staticError (.shape (getShapeMismatchMessage
+                        ("result of function call " ++ function ++ " to return")
+                        (Shape.shapeToString functionInfo.returnShape)
+                        (Shape.shapeToString callerReturn)
+                        context.location context.scope))
+                    else
+                      staticBind checkArguments (fun _ =>
+                        progOk .tailLast true false context.location)
+                | none =>
+                    staticBind checkArguments (fun _ =>
+                      progOk .tailLast true false context.location)
+            | some (destination, handler) =>
+                staticBind (checkFuncArgs context function functionInfo.params
+                    argumentResult.shapedBased) (fun _ =>
+                  match handler with
               | none =>
-                  -- CakeML `panStaticScript.sml:1335`: a tail call requires the
-                  -- caller's and callee's return shapes to agree.
-                  match context.expectedReturn with
-                  | some callerReturn =>
-                      if !shapesSame callerReturn functionInfo.returnShape then
-                        staticError (.shape (getShapeMismatchMessage
-                          ("result of function call " ++ function ++ " to return")
-                          (Shape.shapeToString functionInfo.returnShape)
-                          (Shape.shapeToString callerReturn)
-                          context.location context.scope))
-                      else progOk .tailLast true false context.location
-                  | none => progOk .tailLast true false context.location
-              | some (destination, none) =>
                   checkCallDestination context function returnShape destination
-              | some (destination, some (exception, handlerVariable, handlerProgram)) =>
+              | some (exception, handlerVariable, handlerProgram) =>
                   staticBind (checkCallDestination context function returnShape destination)
                     (fun destinationResult =>
                       match destination with
@@ -1254,7 +1271,7 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
                                 let handlerContext := { context with locals :=
                                   (handlerVariable, { shapedBased := handlerShaped }) :: context.locals }
                                 staticBind (checkProg handlerContext handlerProgram) (fun _ =>
-                                  staticOk destinationResult))))))
+                                  staticOk destinationResult)))))))
   | .decCall name shape function arguments body =>
       staticBind (checkRedecVar context name) (fun _ =>
         staticBind (checkShape context.structs context.location context.scope shape) (fun _ =>

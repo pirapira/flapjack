@@ -125,6 +125,11 @@ def checkerArgContext : Context :=
   { checkerContext with
     functions := [("f", { returnShape := .one, params := [("arg", .one)] })] }
 
+def checkerArgFunctionContext : Context :=
+  { checkerArgContext with
+    expectedReturn := some .one
+    scope := .funScope "f" "" }
+
 def checkerPrimitiveContext : Context :=
   { checkerContext with
     locals := ("carry", { shapedBased := .struct [.word .notBased, .word .notBased] }) ::
@@ -213,13 +218,13 @@ example :
       (.dec "y" .one (.const 7) (.return (.var .local "y")))) = true := by
   decide +kernel
 
-example :
-    checkProg (α := Nat) checkerCallContext (.call none "f" []) =
-      progOk .tailLast true false "" := by
-  simp [checkProg, checkProg.checkCallArgs,
-    staticOk, staticBind,
-    checkFunctionName, checkFuncArgs, checkerCallContext, checkerContext,
-    lookupInfo]
+#guard
+  match checkProg (α := Nat) checkerFunctionContext (.call none "f" []) with
+  | (Except.ok result, warnings) =>
+      result.exitsFunction && !result.exitsLoop && result.last == .tailLast &&
+        result.variableDelta.isEmpty && result.currentLocation == "" &&
+        warnings.isEmpty
+  | _ => false
 
 example :
     checkProg (α := Nat) checkerCallContext
@@ -237,18 +242,18 @@ example :
 
 example :
   staticResultErrorMessage
-      (checkProg (α := Nat) checkerContext (.call none "missing" [])) =
-    some "function missing is not in scope in top-level declaration\n" := by
+      (checkProg (α := Nat) checkerFunctionContext (.call none "missing" [])) =
+    some "function missing is not in scope in function f\n" := by
   decide +kernel
 
-example :
-    checkProg (α := Nat) checkerArgContext
-      (.call none "f" [.const 1]) =
-      progOk .tailLast true false "" := by
-  simp [checkProg, checkProg.checkCallArgs, checkExp, staticOk, staticBind,
-    checkFunctionName, checkFuncArgs, shapedBasedMatchesShape,
-    shapedBasedFromShape, shapedBasedSameShape, checkerArgContext, checkerContext,
-    lookupInfo]
+#guard
+  match checkProg (α := Nat) checkerArgFunctionContext
+      (.call none "f" [.const 1]) with
+  | (Except.ok result, warnings) =>
+      result.exitsFunction && !result.exitsLoop && result.last == .tailLast &&
+        result.variableDelta.isEmpty && result.currentLocation == "" &&
+        warnings.isEmpty
+  | _ => false
 
 example :
     staticResultOk (checkProg (α := Nat) checkerPrimitiveContext

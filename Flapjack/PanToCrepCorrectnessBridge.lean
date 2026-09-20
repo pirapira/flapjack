@@ -13563,4 +13563,68 @@ theorem panValuePcCompileCorrect_of_context_code_and_clocked_timeout
     rfl
   · simp [panValuePcResultRel, hclockState]
 
+/-! The direct context-coded FinalFFI projection.  The leaf evaluator and
+    event equality remain explicit, while the arbitrary compact correctness
+    premise is projected to the ordinary Pc boundary. -/
+theorem panValuePcCompileCorrect_of_context_code_and_clocked_final_ffi
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (program : Prog α)
+    (sourceEvaluate : PanValuePcEvaluator α)
+    (targetEvaluate : CrepPcEvaluator α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (hcompact : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (clockStructs : StructContext) (clockPcContext : CompileContext α)
+    (clockExceptionRel : ExceptionId → PanValue α → α → Prop)
+    (clockExceptionCode : ExceptionId → Option α)
+    (clockGlobalsLookup : CrepState α → PanValue α → Option (List α))
+    (clockContext : PanValueFfiContext α)
+    (clockPrimitive : PanPrimitiveHandler α)
+    (clockHandler : PanValueStatefulFfiHandler α σ)
+    (clockFunctions : List (FunName × List VarName × Prog α))
+    (clockBaseAddress clockTopAddress clockBytesInWord : α)
+    (clock : Nat) (clockLocals clockGlobals : VarName → Option (PanValue α))
+    (clockMemory : α → Option (PanValue α)) (clockFfi : FfiState σ)
+    (clockProgram : Prog α) (clockTargetState : CrepState α)
+    (event targetEvent : FfiFinalEvent) (finalFfi : FfiState σ)
+    (hclock : evalPanValueFfiClockLeaf clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord clock clockLocals clockGlobals clockMemory clockFfi
+      clockProgram =
+      some (.control
+        (.finalFfi clockLocals clockGlobals clockMemory finalFfi event), clock))
+    (hclockState : panValueCrepStateRel clockStructs clockPcContext
+      clockLocals clockGlobals clockMemory clockTargetState)
+    (hevent : event = targetEvent) :
+    PanValuePcCompileCorrect sourceEvaluate targetEvaluate codeRel excpRel
+      exceptionCode globalsLookup program ∧
+    evalPanValueFfiClockLeaf clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord clock clockLocals clockGlobals clockMemory clockFfi
+      clockProgram =
+      some (.control
+        (.finalFfi clockLocals clockGlobals clockMemory finalFfi event), clock) ∧
+    (evalPanValueFfiClockLeaf clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord clock clockLocals clockGlobals clockMemory clockFfi
+      clockProgram).map panValueFfiClockResultProjection =
+      some (.finalFfi clockLocals clockGlobals clockMemory finalFfi event clock) ∧
+    panValuePcResultRel clockStructs clockPcContext clockExceptionRel
+      clockExceptionCode clockGlobalsLookup
+      (.finalFfi clockLocals clockGlobals clockMemory event)
+      (.finalFfi clockTargetState targetEvent) := by
+  have hcorrect := panValuePcCompileCorrect_of_context_code
+    sourceEvaluate targetEvaluate codeRel excpRel exceptionCode globalsLookup
+    program hcompact
+  refine ⟨hcorrect, hclock, ?_, ?_⟩
+  · rw [hclock]
+    rfl
+  · simp [panValuePcResultRel, hclockState, hevent]
+
 end Flapjack

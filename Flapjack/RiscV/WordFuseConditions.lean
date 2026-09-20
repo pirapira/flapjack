@@ -512,4 +512,13 @@ def wordFuseConditionsAndFold [Add α] [Sub α] [AndOp α] [OrOp α]
     (program : WordProg α) : WordProg α :=
   wordPushOutIf (wordFuseConditionsWithFold program)
 
+/-! The complete pre-SSA source pass corresponding to Cake's
+    `word_simp$compile_exp`: constant propagation runs before duplicate-if
+    fusion and terminating-branch hoisting. -/
+def wordToWordPreSsa [Add α] [Sub α] [AndOp α] [OrOp α]
+    [HXor α α α] [Complement α] [OfNat α 1] [OfNat α 0] [DecidableEq α]
+    [PanCmp α] [WordSimpShift α]
+    (program : WordProg α) : WordProg α :=
+  wordFuseConditionsAndFold (wordConstFp program)
+
 end Flapjack.RiscV

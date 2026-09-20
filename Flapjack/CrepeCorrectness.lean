@@ -3034,4 +3034,69 @@ theorem compile_full_pan_value_seq_return_compose_state_full
   · simp [evalPanValueProgWithPrimitiveFull, hsourceFirst]
   · simp [compileProg, hcrepFirst, evalCrepFullProgStateFull]
 
+/-! Full-word conditional composition is the next compact stateful
+    source-to-Crep constructor.  The premises expose the Cake expression
+    result, the compiled condition result, and both branch simulations; no
+    compatibility evaluator or partial shift contract is hidden here. -/
+theorem compile_full_pan_value_ite_compose_state_full
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [PanShiftWidth α]
+    [ArithmeticShiftRight α] [RotateRightOp α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (functions : List (CompiledFunction α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (state : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (condition : Exp α) (compiledCondition : CrepExp α)
+    (conditionValue : α) (thenBranch elseBranch : Prog α)
+    (sourceResult : (VarName → Option (PanValue α)) ×
+      (VarName → Option (PanValue α)) ×
+      (α → Option (PanValue α)) × List (PanValue α))
+    (crepResult : CrepControlResult α)
+    (hsourceCondition : evalPanValueExpFull structs sourceLocals sourceGlobals
+      sourceMemory baseAddress topAddress bytesInWord condition =
+      some (.word conditionValue))
+    (hcompileCondition : compileExp context condition =
+      ([compiledCondition], .one))
+    (hcompiledCondition : evalCrepFullExpStateFull state
+      baseAddress topAddress compiledCondition = some conditionValue)
+    (hsourceThen : evalPanValueProgWithPrimitiveFull structs
+      baseAddress topAddress bytesInWord sourceLocals sourceGlobals sourceMemory
+      primitive thenBranch = some sourceResult)
+    (hcrepThen : evalCrepFullProgStateFull functions crepPrimitive ffi sharedMem
+      baseAddress topAddress fuel state (compileProg context thenBranch) =
+      some crepResult)
+    (hsourceElse : evalPanValueProgWithPrimitiveFull structs
+      baseAddress topAddress bytesInWord sourceLocals sourceGlobals sourceMemory
+      primitive elseBranch = some sourceResult)
+    (hcrepElse : evalCrepFullProgStateFull functions crepPrimitive ffi sharedMem
+      baseAddress topAddress fuel state (compileProg context elseBranch) =
+      some crepResult) :
+    evalPanValueProgWithPrimitiveFull structs
+      baseAddress topAddress bytesInWord sourceLocals sourceGlobals sourceMemory
+      primitive (.ite condition thenBranch elseBranch) = some sourceResult ∧
+    evalCrepFullProgStateFull functions crepPrimitive ffi sharedMem
+      baseAddress topAddress (fuel + 1) state
+      (compileProg context (.ite condition thenBranch elseBranch)) =
+      some crepResult := by
+  have hcompile :
+      compileProg context (.ite condition thenBranch elseBranch) =
+        .ite compiledCondition (compileProg context thenBranch)
+          (compileProg context elseBranch) := by
+    simp [compileProg, hcompileCondition]
+  rw [hcompile]
+  by_cases hcondition : conditionValue != 0
+  · simp [evalPanValueProgWithPrimitiveFull, hsourceCondition,
+      hcondition, hsourceThen, evalCrepFullProgStateFull,
+      hcompiledCondition, hcrepThen]
+  · simp [evalPanValueProgWithPrimitiveFull, hsourceCondition,
+      hcondition, hsourceElse, evalCrepFullProgStateFull,
+      hcompiledCondition, hcrepElse]
+
 end Flapjack

@@ -553,7 +553,56 @@ theorem wordFunctionToRiscVCake_sound_of_straightLine [NeZero width]
     program hstraight, hword]
   rfl
 
+/-!
+The call-aware Cake selector accepts `.move`, which the bare function selector
+rejects, so its soundness theorem is the one that covers the move fragment of
+the straight-line API.  It composes the Cake agreement bridge with the
+program-level Cake soundness theorem and the function/program evaluator
+equivalence proved above.
+-/
+
+theorem wordFunctionToRiscVWithCallsCake_sound_of_straightLine [NeZero width]
+    (context : WordCallContext width) (state : State width)
+    (program : WordProg (Word width))
+    (hstraight : WordRiscVStraightLine program)
+    (code : List (Instruction width))
+    (hcompile : wordFunctionToRiscVWithCallsCake context program =
+      some (code, [])) :
+    evalWordFunctionCake state program =
+      some (executeInstructions state code, []) := by
+  have hagree := wordFunctionToRiscVWithCallsCake_agrees_cakeStraightLine
+    context program hstraight
+  rw [hagree] at hcompile
+  have hbase : wordProgToRiscVCake program = some code := by
+    cases hcode : wordProgToRiscVCake program with
+    | none => simp [hcode] at hcompile
+    | some instructions =>
+        have hinstructions : instructions = code := by
+          simpa [hcode] using hcompile
+        exact congrArg (fun xs : List (Instruction width) => some xs) hinstructions
+  have hword := wordProgToRiscVCake_sound_of_straightLine state program
+    hstraight code hbase
+  rw [evalWordFunctionCake_wordRiscVStraightLine_eq_evalWordProgCake state
+    program hstraight, hword]
+  rfl
+
 /-! Focused regressions for the function-level Cake boundary. -/
+
+/-- The call-aware Cake selector accepts an empty `.move`, so the call-aware
+soundness theorem covers the move fragment that the function selector rejects. -/
+example (context : WordCallContext 64) (state : State 64) :
+    evalWordFunctionCake state (.move 0 [] : WordProg (Word 64)) =
+      some (executeInstructions state ([] : List (Instruction 64)),
+        ([] : List (Word 64))) := by
+  have hstraight : WordRiscVStraightLine (.move 0 [] : WordProg (Word 64)) :=
+    .move 0 []
+  have hcompile : wordFunctionToRiscVWithCallsCake context
+      (.move 0 [] : WordProg (Word 64)) =
+      some (([] : List (Instruction 64)), ([] : List (Fin 32))) := by
+    simp [wordFunctionToRiscVWithCallsCake, wordMoveToInstructions,
+      wordMoveToInstructionsAux, wordMoveRegisterDestinations]
+  exact wordFunctionToRiscVWithCallsCake_sound_of_straightLine context state
+    _ hstraight _ hcompile
 
 /-- Function-level soundness exercised on the trivial straight-line program. -/
 example (state : State 64) :

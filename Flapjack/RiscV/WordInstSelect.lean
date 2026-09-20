@@ -243,7 +243,7 @@ def wordInstSelectLoadTail [WordInstSelectImmediate α] (temp : Nat) (prelude : 
     (selectedAddress : WordExp α) : WordProg α × WordExp α :=
   match selectedAddress with
   | .op .add [.var address, .const offset] =>
-      if WordInstSelectImmediate.negativeAddressOffset offset then
+      if WordInstSelectImmediate.validSharedMemoryOffset .load offset then
         (wordDeadSelectSeq prelude
           (.inst (.memOffset .load temp address offset)), .var temp)
       else
@@ -441,7 +441,7 @@ def wordInstSelectProgram [Sub α] [Add α] [AndOp α] [OrOp α] [HXor α α α]
           | .var address =>
               wordDeadSelectSeq prelude (.inst (.mem .load destination address))
           | .op .add [.var address, .const offset] =>
-              if WordInstSelectImmediate.negativeAddressOffset offset then
+              if WordInstSelectImmediate.validSharedMemoryOffset .load offset then
                 wordDeadSelectSeq prelude
                   (.inst (.memOffset .load destination address offset))
               else

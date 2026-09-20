@@ -25,6 +25,13 @@ def cakeLoadVarShape : Bool :=
   | .seq (.move 0 [(7, 13)]) (.inst (.mem .load 2 7)) => true
   | _ => false
 
+def cakeLoadVarOffsetShape : Bool :=
+  match wordInstSelectProgram (α := Nat) 7
+      (.assign 2 (.load (.op .add [.var 13, .const 8]))) with
+  | .seq (.move 0 [(7, 13)])
+      (.inst (.memOffset .load 2 7 8)) => true
+  | _ => false
+
 def cakeWideBinopStatementShape : Bool :=
   match wordInstSelectProgram (α := Nat) 23
       (.assign 5 (.op .and [.var 18, .const (2 ^ 60)])) with
@@ -59,6 +66,7 @@ def cakeSharedByteOffsetMaterializesConstant : Bool :=
 
 #guard cakeLoadConstShape
 #guard cakeLoadVarShape
+#guard cakeLoadVarOffsetShape
 #guard cakeWideBinopStatementShape
 #guard cakeWideAddMaterializesConstant
 #guard cakeSharedByteOffsetMaterializesConstant

@@ -298,14 +298,13 @@ def nestedLoadSelectorMatches : Bool :=
   | (.seq (.move 0 [(23, 18)]) (.inst (.mem .load 23 23)), .var 23) => true
   | _ => false
 
-/-- The address-selector fallback remains an expression when an offset is not
-    yet materialized.  The nested-load case must retain that address rather
-    than incorrectly loading from the base temporary alone. -/
-def nestedLoadOffsetFallbackMatches : Bool :=
+/- Cake emits a direct memory instruction for an accepted base-plus-offset
+   load, preserving the displacement for the target instruction. -/
+def nestedLoadOffsetMatches : Bool :=
   match wordInstSelectAtom (α := Nat) 23
       (.load (.op .add [.var 18, .const 8])) with
   | (.seq (.move 0 [(23, 18)])
-      (.assign 23 (.load (.op .add [.var 23, .const 8]))), .var 23) => true
+      (.inst (.memOffset .load 23 23 8)), .var 23) => true
   | _ => false
 
 /-- `inst_select_exp c tar temp (Load exp)` (`word_instScript.sml:234-245`)
@@ -390,7 +389,7 @@ def wideSharedStoreMaterializesAddress : Bool :=
 #guard constantSelectorMatches
 #guard loadSelectorMatches
 #guard nestedLoadSelectorMatches
-#guard nestedLoadOffsetFallbackMatches
+#guard nestedLoadOffsetMatches
 #guard addressShiftKeepsOrdinaryImmediates
 
 def runChecks : IO Bool := do
@@ -418,7 +417,7 @@ def runChecks : IO Bool := do
     , ("a constant assignment becomes Cake's Const instruction", constantSelectorMatches)
     , ("a load materializes Cake's Mem instruction after its address move", loadSelectorMatches)
     , ("a nested load remains Cake's memory instruction", nestedLoadSelectorMatches)
-    , ("a nested load preserves an unfused address expression", nestedLoadOffsetFallbackMatches)
+    , ("a nested load preserves Cake's accepted offset", nestedLoadOffsetMatches)
     , ("address selection keeps Cake's ordinary immediates in nested shifts",
         addressShiftKeepsOrdinaryImmediates)
     , ("a nested And with a valid immediate becomes Cake's andi",

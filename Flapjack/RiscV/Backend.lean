@@ -188,10 +188,11 @@ def wordExpToInstruction [NeZero width] (destination : Nat) :
 
 /-! Cake's `riscv_ast (Const ...)` is a list-valued lowering.  Keep the
     historical selector above unchanged for its one-instruction correctness
-    contracts, but expose the checked boundary needed by callers that accept
-    the target's multi-instruction constant materialization.  The recursive
-    load case is important: Cake materializes the address before emitting the
-    load, so a wide address constant must not fall back to ADDI truncation. -/
+    contracts, but expose the checked boundary needed by theorem clients that
+    accept the target's multi-instruction constant materialization.  The
+    recursive load case is important: Cake materializes the address before
+    emitting the load, so a wide address constant must not fall back to ADDI
+    truncation. -/
 def wordExpToInstructionsCake [NeZero width] (destination : Nat) :
     WordExp (Word width) → Option (List (Instruction width))
   | .const value => wordConstToInstructions destination value
@@ -422,6 +423,17 @@ def wordInstToInstruction [NeZero width] :
       let source ← registerOfNat source
       let address ← registerOfNat address
       pure (.store32Offset source address offset)
+
+/-! Cake's `riscv_ast (Inst (Const ...))` is list-valued: constants may need
+    several instructions, while ordinary Word instructions still lower to
+    their single-instruction backend boundary.  Keep this checked API
+    separate from `wordInstToInstruction`, whose one-instruction contract is
+    retained for existing theorem clients. -/
+def wordInstToInstructionsCake [NeZero width] :
+    WordInst (Word width) → Option (List (Instruction width))
+  | .const destination value => wordConstToInstructions destination value
+  | .arith operation => wordArithToInstructions operation
+  | instruction => (wordInstToInstruction instruction).map List.singleton
 
 def executeInstructions [NeZero width] (state : State width) :
     List (Instruction width) → State width

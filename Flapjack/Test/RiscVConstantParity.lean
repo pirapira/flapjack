@@ -131,6 +131,25 @@ theorem cakeConstWide_execution_oracle :
       some (BitVec.ofNat 64 0x1122334455667788) := by
   decide
 
+/-! The expression-facing Cake boundary preserves the same executable
+    obligations while leaving the historical one-instruction selector intact.
+    These are theorem-facing API checks, not production-caller migration. -/
+theorem cakeExp1234_execution_oracle :
+    (wordExpToInstructionsCake (width := 64) 4
+        (.const (BitVec.ofNat 64 0x1234))).map
+        (fun instructions =>
+          readRegister (executeInstructions (zeroState 64) instructions) 4) =
+      some (BitVec.ofNat 64 0x1234) := by
+  decide
+
+theorem cakeExpWide_execution_oracle :
+    (wordExpToInstructionsCake (width := 64) 4
+        (.const (BitVec.ofNat 64 0x1122334455667788))).map
+        (fun instructions =>
+          readRegister (executeInstructions (zeroState 64) instructions) 4) =
+      some (BitVec.ofNat 64 0x1122334455667788) := by
+  decide
+
 /-! `wordExpToInstruction` is not Cake-faithful for constants outside the
 signed 12-bit immediate range: it returns a single `addi` whose immediate the
 encoder silently truncates, while `wordConstToInstructions` emits the

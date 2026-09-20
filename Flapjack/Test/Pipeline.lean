@@ -27,6 +27,17 @@ def pipelineExportsParity : Bool :=
 
 #guard pipelineExportsParity
 
+/-! Direct oracle for Cake's `pan_compile_tap_def`: the explore flag controls
+    only the titled intermediate report and never changes the compiled output. -/
+def pipelineCompileTapParity : Bool :=
+  let stages : List (String × AnyPanProg (RiscV.Word 64)) :=
+    [("after backend", .cake ["cake-stage"])]
+  panCompileTap false (37 : Nat) stages == (37, []) &&
+    panCompileTap true (37 : Nat) stages ==
+      (37, ["# ", "after backend", "\n\n", "cake-stage"])
+
+#guard pipelineCompileTapParity
+
 def pipelineStackAddDeclarations : List (Decl (RiscV.Word 64)) :=
   [.function
     { name := "add", inline := false, exported := false,

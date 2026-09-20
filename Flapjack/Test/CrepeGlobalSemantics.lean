@@ -195,6 +195,34 @@ theorem compile_full_pan_value_dec_word_return_state_full_regression :
     (defaultCrepSharedMemHandler : CrepSharedMemHandler (RiscV.Word 8))
     0 100 1 7 "x"
 
+theorem compile_full_pan_value_dec_two_word_record_return_state_full_regression :
+    evalCrepFullProgStateFull [] (fun _ _ => none)
+        (noCrepFfi (RiscV.Word 8))
+        (defaultCrepSharedMemHandler : CrepSharedMemHandler (RiscV.Word 8))
+        0 100 10 crepeFullRaiseState
+        (compileProg crepeFullRaiseContext
+          (.dec "pair" (.comb [.one, .one])
+            (.rStruct [.const 11, .const 22])
+            (.return (.var .local "pair")) : Prog (RiscV.Word 8))) =
+      some (.returned crepeFullRaiseState [11, 22]) ∧
+    evalPanValueProgWithPrimitiveFull
+        ([] : StructContext) 0 100 1
+        (fun _ => none) (fun _ => none) (fun _ => none)
+        (fun _ _ => none)
+        (.dec "pair" (.comb [.one, .one])
+          (.rStruct [.const 11, .const 22])
+          (.return (.var .local "pair")) : Prog (RiscV.Word 8)) =
+      some (restorePanValueLocal (fun _ => none) "pair" none,
+        (fun _ => none), (fun _ => none),
+        [.rStruct [.word 11, .word 22]]) := by
+  exact compile_full_pan_value_dec_two_word_record_return_state_full
+    crepeFullRaiseContext ([] : StructContext)
+    (fun _ => none) (fun _ => none) (fun _ => none)
+    crepeFullRaiseState (fun _ _ => none) (fun _ _ => none)
+    (noCrepFfi (RiscV.Word 8))
+    (defaultCrepSharedMemHandler : CrepSharedMemHandler (RiscV.Word 8))
+    0 100 1 11 22 "pair"
+
 theorem compile_full_pan_value_raise_word_state_full_correct_regression :
     evalPanValueProgWithPrimitiveCallsAndFfi
         (fun _ _ => none) (fun _ _ _ _ _ _ => none)

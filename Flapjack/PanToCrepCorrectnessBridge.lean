@@ -1746,6 +1746,49 @@ theorem panValuePcRaisedHraiseData_of_named_struct_nested_two_word_field
   · exact hdistinct
   · exact hsize
 
+theorem panValuePcRaisedHraiseData_of_named_struct_nested_word_fields
+    [BEq α] [LawfulBEq α] [OfNat α 0] [Add α]
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (sourceException : ExceptionId) (name : StructName)
+    (leftField rightField : FieldName) (left right : α)
+    (state : CrepState α) (bytesInWord targetException : α)
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory state)
+    (hexception : exceptionRel sourceException
+      (.nStruct name
+        [(leftField, .rStruct [.word left]),
+          (rightField, .rStruct [.word right])]) targetException)
+    (hcode : exceptionCode sourceException = some targetException)
+    (hdistinct : List.Pairwise (fun first second : α => first ≠ second)
+      (storeAddresses (0 : α) bytesInWord 2))
+    (hsize : Shape.shapeSize
+      (panValueShape structs
+        (.nStruct name
+          [(leftField, .rStruct [.word left]),
+            (rightField, .rStruct [.word right])])) ≤ 32) :
+    panValuePcRaisedHraiseData exceptionCode
+      (crepPcFlatGlobalsLookup bytesInWord) structs context exceptionRel
+      sourceLocals sourceGlobals sourceMemory sourceException
+      (.nStruct name
+        [(leftField, .rStruct [.word left]),
+          (rightField, .rStruct [.word right])])
+      { state with globals :=
+          updateMemoryListAt state.globals 0 bytesInWord [left, right] }
+      targetException := by
+  apply panValuePcRaisedHraiseData_of_flat_spill_state_with_source_locals
+    structs context exceptionRel exceptionCode sourceLocals sourceGlobals
+    sourceMemory sourceException [left, right] state bytesInWord targetException
+    (.nStruct name
+      [(leftField, .rStruct [.word left]),
+        (rightField, .rStruct [.word right])]) hrel hexception hcode
+  · rfl
+  · exact hdistinct
+  · exact hsize
+
 theorem panValuePcResultRelWithContextCode_of_raised_flat_spill
     [BEq α] [LawfulBEq α] [OfNat α 0] [Add α]
     (structs : StructContext) (context : CompileContext α)

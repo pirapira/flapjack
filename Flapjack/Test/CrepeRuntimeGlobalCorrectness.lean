@@ -34,9 +34,12 @@ def runtimeTypedBaseState : CrepGlobalState Nat :=
 def runtimeTypedRuntimeState : CrepRuntimeState Nat Unit :=
   globalLoadRuntimeState.withTypedGlobalState runtimeTypedKey runtimeTypedBaseState
 
+def runtimeTypedStoredGlobalState : CrepGlobalState Nat :=
+  storeCrepTypedGlobal runtimeTypedKey runtimeTypedBaseState 4 11
+
 def runtimeTypedStoredRuntimeState : CrepRuntimeState Nat Unit :=
-  storeCrepRuntimeTypedGlobalState runtimeTypedRuntimeState runtimeTypedKey
-    runtimeTypedBaseState 4 11
+  globalLoadRuntimeState.withTypedGlobalState runtimeTypedKey
+    runtimeTypedStoredGlobalState
 
 def runtimeTypedStoreLoadValue : Option Nat :=
   evalCrepRuntimeExp runtimeTypedStoredRuntimeState (.loadGlob 4)
@@ -44,8 +47,9 @@ def runtimeTypedStoreLoadValue : Option Nat :=
 /- The guard routes runtime LoadGlob through the typed StoreGlob entrypoint,
    whose expected value is the source `crepSem` store/load result. -/
 example : runtimeTypedStoreLoadValue = some 11 := by
-  simp only [runtimeTypedStoreLoadValue, runtimeTypedStoredRuntimeState,
-    storeCrepRuntimeTypedGlobalState]
+  change evalCrepRuntimeExp
+    (globalLoadRuntimeState.withTypedGlobalState runtimeTypedKey
+      runtimeTypedStoredGlobalState) (.loadGlob 4) = some 11
   rw [evalCrepRuntimeExp_loadGlob_typedState]
   exact evalCrepTypedLoad_storeCrepTypedGlobal runtimeTypedKey
     runtimeTypedBaseState 4 11
@@ -69,6 +73,46 @@ theorem peerCrepRuntimeToLoop_loadGlob_regression :
     ⟨0, by simp [globalLoadRuntimeState]⟩
     (by simp [lookupNatInfo])
     (by simp [globalLoadRuntimeState])
+
+theorem typedCrepRuntimeToLoop_loadGlob_regression :
+    (evalCrepRuntimeResult globalLoadRuntimeHandler (fun _ _ => none) 2
+      runtimeTypedStoredRuntimeState (.assign 5 (.loadGlob 4))).map
+        (fun result => result.2.locals 5) =
+    (evalLoopProgWithCallsAndFfi [] (fun _ _ _ _ _ loopState => some loopState)
+      3 (loopStateOfCrepRuntimeStateForGlobals runtimeTypedStoredRuntimeState)
+      (loopCompileProg
+        ({ vars := [(5, 5)], functions := [], maxVar := 0, target := .rv64i } :
+          LoopContext Nat)
+        [] (.assign 5 (.loadGlob 4)))).map
+        (fun result => (loopResultState result).locals 5) := by
+  exact crepRuntimeToLoop_loadGlob_assign_agreement_typed
+    ({ vars := [(5, 5)], functions := [], maxVar := 0, target := .rv64i } :
+      LoopContext Nat)
+    [] globalLoadRuntimeHandler (fun _ _ => none) 1 globalLoadRuntimeState
+    runtimeTypedKey runtimeTypedStoredGlobalState [] 5 4 11
+    ⟨0, by simp [globalLoadRuntimeState]⟩
+    (by simp [lookupNatInfo])
+    (by simp [runtimeTypedStoredGlobalState, runtimeTypedBaseState,
+      storeCrepTypedGlobal, storeCrepGlobal])
+
+theorem typedCrepRuntimeToLoop_loadGlob_failure_regression :
+    (evalCrepRuntimeResult globalLoadRuntimeHandler (fun _ _ => none) 2
+      runtimeTypedStoredRuntimeState (.assign 5 (.loadGlob 4))).bind
+        (crepRuntimeLocalProjection 5) =
+    (evalLoopProgWithCallsAndFfi [] (fun _ _ _ _ _ loopState => some loopState)
+      3 (loopStateOfCrepRuntimeStateForGlobals runtimeTypedStoredRuntimeState)
+      (loopCompileProg
+        ({ vars := [(5, 5)], functions := [], maxVar := 0, target := .rv64i } :
+          LoopContext Nat)
+        [] (.assign 5 (.loadGlob 4)))).map
+        (fun result => (loopResultState result).locals 5) := by
+  exact crepRuntimeToLoop_loadGlob_assign_failure_agreement_typed
+    ({ vars := [(5, 5)], functions := [], maxVar := 0, target := .rv64i } :
+      LoopContext Nat)
+    [] globalLoadRuntimeHandler (fun _ _ => none) 1 globalLoadRuntimeState
+    runtimeTypedKey runtimeTypedStoredGlobalState [] 5 4
+    ⟨0, by simp [globalLoadRuntimeState]⟩
+    (by simp [lookupNatInfo])
 
 theorem peerCrepRuntimeToLoop_loadGlob_failure_regression :
     (evalCrepRuntimeResult globalLoadRuntimeHandler (fun _ _ => none) 2

@@ -284,6 +284,20 @@ def staticProgInvalidHandlerShapeContext : Context :=
     some ("L: static analysis failed to convert in-scope shape in function f\n" ++
       "this should never happen. please report to a compiler developer\n")
 
+def staticProgBadLocalCallDestinationContext : Context :=
+  { staticProgCallContext with
+    locals := ("x", { shapedBased := .struct [.word .trusted, .word .trusted] }) ::
+      staticProgCallContext.locals }
+
+/-! Cake validates a handled call's destination before its handler; the
+    destination shape error therefore wins over a missing exception. -/
+#guard
+  staticResultErrorMessage (checkProg staticProgBadLocalCallDestinationContext
+      ((.call
+        (some (some (.local, "x"), some ("Missing", "h", .skip)))
+        "callee" []) : Prog Nat)) ==
+    some "L: result of function call callee assigned to local variable x has shape 1 instead of declared shape {1,1} in function f\n"
+
 /-! Cake's accepted local-destination call records the destination's trusted
     shape in the returned variable delta. -/
 def staticProgLocalCallMetadataOracle : Bool :=

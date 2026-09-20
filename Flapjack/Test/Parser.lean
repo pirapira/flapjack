@@ -248,6 +248,14 @@ def skipBlockCommentCakeParity : Bool :=
 
 #guard skipBlockCommentCakeParity
 
+/-! Cake `varkind_to_str_def` (`pan_passesScript.sml:124-127`) preserves the
+    two source variable-kind display names exactly. -/
+def varKindToStringCakeParity : Bool :=
+  varKindToString .global == "global" &&
+    varKindToString .local == "local"
+
+#guard varKindToStringCakeParity
+
 /-! Cake `unhex_alt_def` (`panLexerScript.sml:217`) returns the `UNHEX` value
     for decimal and upper/lowercase hexadecimal digits, and zero otherwise. -/
 def unhexAltCakeParity : Bool :=

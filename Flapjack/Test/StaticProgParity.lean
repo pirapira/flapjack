@@ -195,6 +195,25 @@ def staticProgLocalLoadMetadataOracle : Bool :=
 
 #guard staticProgLocalLoadMetadataOracle
 
+/- Cake retains a based-address warning before rejecting a non-word load
+   destination (`panStaticScript.sml:1642-1706`). -/
+#guard
+  match checkProg staticProgParityContext
+      ((.shMemLoad .opW .local "pair" .baseAddr) : Prog Nat) with
+  | (Except.error (.shape message), [StatErr.warning warning]) =>
+      message == "L: load variable has shape {1,1} instead of a word in function f\n" &&
+        warning == "L: shared load address is calculated from base in function f\n"
+  | _ => false
+
+/- The same address-before-destination sequencing applies to global loads. -/
+#guard
+  match checkProg staticProgParityContext
+      ((.shMemLoad .opW .global "g" .baseAddr) : Prog Nat) with
+  | (Except.error (.shape message), [StatErr.warning warning]) =>
+      message == "L: load variable has shape {1,1} instead of a word in function f\n" &&
+        warning == "L: shared load address is calculated from base in function f\n"
+  | _ => false
+
 /-! Cake's call with no destination is a tail call: matching caller/callee
     return shapes produce TailLast and function exit metadata. -/
 def staticProgTailCallMetadataOracle : Bool :=

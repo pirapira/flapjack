@@ -454,6 +454,23 @@ theorem crepe_runtime_extCall_return_writes_bytes :
     crepeRuntimeByteReturnHandler, crepRuntimeReadBytes, crepRuntimeLoadByte,
     crepRuntimeWriteBytes, crepRuntimeStoreByte, updateMemory]
 
+/- CakeML's `write_bytearray` (`panSemScript.sml:309-313`) evaluates the
+   recursive tail first and, when the current byte is outside the domain,
+   returns that tail memory rather than the pre-recursion memory. -/
+def crepeRuntimePartialWriteState : CrepRuntimeState Nat Unit :=
+  { crepeRuntimeState with
+    memory := fun address =>
+      if address == 21 then some 21 else none
+    memaddrs := fun address => address == 21 }
+
+theorem crepe_runtime_write_bytes_preserves_tail_on_store_failure :
+    (crepRuntimeWriteBytes crepeRuntimePartialWriteState 20 [99, 100]).map
+        (fun state => (state.memory 20, state.memory 21)) =
+      some (none, some 100) := by
+  simp [crepRuntimeWriteBytes, crepRuntimeStoreByte,
+    crepeRuntimePartialWriteState, crepeRuntimeState,
+    natCrepRuntimeFfiContext, natCrepRuntimeMemoryModel, updateMemory]
+
 theorem crepe_runtime_ffi_state_transition :
     let result := crepRuntimeExtCall crepeRuntimeFfiStatefulHandler
       crepeRuntimeState "host" 1 2 3 4

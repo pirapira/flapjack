@@ -70,6 +70,22 @@ def parityGuard : Bool :=
 #eval parityGuard
 #guard parityGuard
 
+/-! `pan_to_crep$compile` chooses a shared-store temporary from the largest
+    variable in the *address* expression (`pan_to_crepScript.sml:291-299`).
+    This small oracle catches the accidental value-based choice that aliases a
+    store's address when the value is a lower-numbered local. -/
+def shMemStoreAddressTempContext : CompileContext Nat :=
+  { vars := [("out", (.one, [2])), ("len", (.one, [1]))], functions := [],
+    exceptions := [], maxVar := 2, bytesInWord := 8 }
+
+def shMemStoreAddressTempParity : Bool :=
+  match compileProg shMemStoreAddressTempContext
+      (.shMemStore .opW (.var .local "out") (.var .local "len")) with
+  | .dec 3 (.var 1) (.shMem .store 3 (.var 2)) => true
+  | _ => false
+
+#guard shMemStoreAddressTempParity
+
 /-! Cake's `crep_inline` prunes an inline callee at its first terminal
     statement before splicing it into the caller.  The assignment after the
     return is deliberately unreachable and must not survive the inline. -/
@@ -98,6 +114,11 @@ def runChecks : IO Bool := do
     IO.println "PASS compile_prog unreach-before-inline parity"
   else
     IO.println "FAIL compile_prog unreach-before-inline parity"
-  pure (parityGuard && compileProgUnreachableInlineGuard)
+  if shMemStoreAddressTempParity then
+    IO.println "PASS compile_prog shared-store address temporary parity"
+  else
+    IO.println "FAIL compile_prog shared-store address temporary parity"
+  pure (parityGuard && compileProgUnreachableInlineGuard &&
+    shMemStoreAddressTempParity)
 
 end Flapjack.Test.CompileProgParity

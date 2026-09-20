@@ -44,6 +44,42 @@ def runtimeTypedStoredRuntimeState : CrepRuntimeState Nat Unit :=
 def runtimeTypedStoreLoadValue : Option Nat :=
   evalCrepRuntimeExp runtimeTypedStoredRuntimeState (.loadGlob 4)
 
+def runtimeTypedAliasedStoreLoadValue : Option Nat :=
+  evalCrepRuntimeExp
+    (storeCrepRuntimeTypedGlobalState globalLoadRuntimeState runtimeTypedKey
+      runtimeTypedBaseState 4 17) (.loadGlob 36)
+
+#guard runtimeTypedAliasedStoreLoadValue == some 17
+
+example :
+    crepRuntimeTypedGlobalRelation runtimeTypedKey
+      (storeCrepRuntimeTypedGlobalState globalLoadRuntimeState runtimeTypedKey
+        runtimeTypedBaseState 4 17)
+      (storeCrepTypedGlobal runtimeTypedKey runtimeTypedBaseState 4 17) := by
+  exact crepRuntimeTypedGlobalRelation_store_adapter _ _ _ _ _
+
+example : runtimeTypedAliasedStoreLoadValue = some 17 := by
+  change evalCrepRuntimeExp
+    (storeCrepRuntimeTypedGlobalState globalLoadRuntimeState runtimeTypedKey
+      runtimeTypedBaseState 4 17) (.loadGlob 36) = some 17
+  rw [evalCrepRuntimeExp_loadGlob_after_store_typedState]
+  simp [runtimeTypedKey, runtimeTypedBaseState, storeCrepTypedGlobal,
+    evalCrepTypedLoad, storeCrepGlobal, crepGlobalKeyOfNat]
+
+/- The relation-level guard uses the actual Cake key type.  On a 5-bit target
+   the re-keying is injective, so the runtime's ordinary updateMemory is the
+   same update as the source's typed StoreGlob map. -/
+example (state : CrepRuntimeState (BitVec 5) Unit)
+    (typedState : CrepGlobalState (BitVec 5))
+    (address value : BitVec 5)
+    (hrel : crepRuntimeTypedGlobalRelation (id : BitVec 5 → CrepGlobalAddress)
+      state typedState) :
+    crepRuntimeTypedGlobalRelation (id : BitVec 5 → CrepGlobalAddress)
+      { state with globals := updateMemory state.globals address value }
+      (storeCrepTypedGlobal id typedState address value) := by
+  exact crepRuntimeTypedGlobalRelation_store_of_noalias id state typedState
+    address value hrel (fun _ h => h)
+
 /- The guard routes runtime LoadGlob through the typed StoreGlob entrypoint,
    whose expected value is the source `crepSem` store/load result. -/
 example : runtimeTypedStoreLoadValue = some 11 := by

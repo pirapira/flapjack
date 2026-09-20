@@ -1329,43 +1329,42 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
   | .shMemLoad _ varKind name address =>
       /- CakeML looks the destination up in locals only for `Local` and in
          globals only for `Global` (`panStaticScript.sml:1642,1676`). -/
+      /- Cake checks the address before checking the destination shape.  This
+         retains an address warning even when a later non-word destination
+         error aborts the check (`panStaticScript.sml:1642-1706`). -/
+      let checkAddress : StaticResult ExpReturn :=
+        staticBind (checkExp context address) (fun result =>
+          if shapedBasedHasShape .one result.shapedBased then
+            staticAddWarning (staticOk result)
+              (staticMemoryWarning context false true result.shapedBased)
+          else
+            staticError (.shape (getNonWordMessage "load address"
+              (shapedBasedToString result.shapedBased)
+              context.location context.scope)))
       match varKind with
       | .local =>
           staticBind (checkLocalVar context name) (fun info =>
-            staticBind (checkExp context address) (fun result =>
-              if shapedBasedHasShape .one result.shapedBased then
-                staticAddWarning
-                  (if shapedBasedHasShape .one info.shapedBased then
-                    staticOk
-                      { exitsFunction := false, exitsLoop := false,
-                        last := .otherLast,
-                        variableDelta := localVariableDelta name info,
-                        currentLocation := context.location }
-                   else
-                    staticError (.shape (getNonWordMessage "load variable"
-                      (shapedBasedToString info.shapedBased)
-                      context.location context.scope)))
-                  (staticMemoryWarning context false true result.shapedBased)
+            staticBind checkAddress (fun _ =>
+              if !shapedBasedHasShape .one info.shapedBased then
+                staticError (.shape (getNonWordMessage "load variable"
+                  (shapedBasedToString info.shapedBased)
+                  context.location context.scope))
               else
-                staticError (.shape (getNonWordMessage "load address"
-                  (shapedBasedToString result.shapedBased)
-                  context.location context.scope))))
+                staticOk {
+                  exitsFunction := false
+                  exitsLoop := false
+                  last := .otherLast
+                  variableDelta := localVariableDelta name info
+                  currentLocation := context.location }))
       | .global =>
           staticBind (checkGlobalVar context name) (fun info =>
-            staticBind (checkExp context address) (fun result =>
-              if shapedBasedHasShape .one result.shapedBased then
-                staticAddWarning
-                  (if shapesSame info.shape .one then
-                    progOk .otherLast false false context.location
-                   else
-                    staticError (.shape (getNonWordMessage "load variable"
-                      (Shape.shapeToString info.shape)
-                      context.location context.scope)))
-                  (staticMemoryWarning context false true result.shapedBased)
+            staticBind checkAddress (fun _ =>
+              if !shapesSame info.shape .one then
+                staticError (.shape (getNonWordMessage "load variable"
+                  (Shape.shapeToString info.shape)
+                  context.location context.scope))
               else
-                staticError (.shape (getNonWordMessage "load address"
-                  (shapedBasedToString result.shapedBased)
-                  context.location context.scope))))
+                progOk .otherLast false false context.location))
   | .shMemStore _ address value =>
       staticBind (checkExp context address) (fun addressResult =>
         staticBind (checkExp context value) (fun valueResult =>

@@ -598,4 +598,25 @@ example (context : WordCallContext 8) (state : State 8)
     (WordRiscVStraightLine.assign 2 (.var 1)) 0 [2]
     firstCode returns hfirstCompile hreturnCompile
 
+example (context : WordCallContext 8) (state : State 8)
+    (firstCode : List (Instruction 8)) (returns : List (Fin 32))
+    (hfirstCompile : wordFunctionToRiscVWithCalls context
+      (.assign 2 (.var 1) : WordProg (Word 8)) = some (firstCode, []))
+    (hreturnCompile : wordFunctionToRiscVWithCalls context
+      ((.return 0 [2]) : WordProg (Word 8)) = some ([], returns)) :
+    evalWordFunction (executeInstructions state [.addi 3 2 1])
+        (.seq (.assign 2 (.var 1)) (.return 0 [2]) : WordProg (Word 8)) =
+      Option.map (fun returned =>
+        ((executeInstructionsCounted (executeInstructions state [.addi 3 2 1])
+          firstCode).1, returned))
+        (([2] : List Nat).mapM (fun name => do
+          let register ← registerOfNat name
+          pure (readRegister
+            (executeInstructionsCounted (executeInstructions state [.addi 3 2 1])
+              firstCode).1 register))) := by
+  exact wordFunctionToRiscV_seq_return_counted_sound_after_prefix context state
+    [.addi 3 2 1] (.assign 2 (.var 1))
+    (WordRiscVStraightLine.assign 2 (.var 1)) 0 [2]
+    firstCode returns hfirstCompile hreturnCompile
+
 end Flapjack.RiscV

@@ -889,6 +889,17 @@ theorem panValueCrepProgramStateControlSafe_statefulCompact
         (panValueCrepProgramStateCorrect_statefulCompact first hfirst)
         ihfirst ihsecond
 
+theorem panValueCrepProgramStateCorrect_and_controlSafe_statefulCompact
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (program : Prog α) (hprogram : StatefulCompactProg α program) :
+    PanValueCrepProgramStateCorrect program ∧
+      PanValueCrepProgramStateControlSafe program := by
+  exact ⟨panValueCrepProgramStateCorrect_statefulCompact program hprogram,
+    panValueCrepProgramStateControlSafe_statefulCompact program hprogram⟩
+
 theorem panValueCrepProgramStateControlSafe_ite_source_word
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

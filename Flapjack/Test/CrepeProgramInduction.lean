@@ -52,6 +52,12 @@ example : PanValueCrepProgramStateControlSafe compactExample := by
   exact panValueCrepProgramStateControlSafe_statefulCompact compactExample
     (.seq (.returnConst 7) (.seq .tick (.annot "regression" "stateful")))
 
+example : PanValueCrepProgramStateCorrect compactExample ∧
+    PanValueCrepProgramStateControlSafe compactExample := by
+  exact panValueCrepProgramStateCorrect_and_controlSafe_statefulCompact
+    compactExample
+    (.seq (.returnConst 7) (.seq .tick (.annot "regression" "stateful")))
+
 /-! The composed return theorem is exercised independently of the inductive
 fragment, with a continuation that would change control if it were run. -/
 example : PanValueCrepProgramStateCorrect

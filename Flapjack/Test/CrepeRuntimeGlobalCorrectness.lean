@@ -31,6 +31,22 @@ def runtimeTypedBaseState : CrepGlobalState Nat :=
     memory := fun _ => none
     globals := fun _ => none }
 
+def runtimeTypedRawState : CrepRuntimeTypedState Nat Unit :=
+  { runtime := globalLoadRuntimeState
+    globals := fun _ => none }
+
+/- The raw runtime wrapper keeps values as Nat but carries Cake's distinct
+   five-bit global key.  The aliased read is therefore a representation-level
+   guard, not a target-width-keyed update disguised as a global store. -/
+example :
+    evalCrepRuntimeExp
+        ((runtimeTypedRawState.store runtimeTypedKey 4 19).toRuntime
+          runtimeTypedKey) (.loadGlob 36) = some 19 := by
+  rw [CrepRuntimeTypedState.load_after_store_toRuntime]
+  simp [runtimeTypedRawState, CrepRuntimeTypedState.toGlobalState,
+    runtimeTypedKey, evalCrepTypedLoad, storeCrepTypedGlobal, storeCrepGlobal,
+    crepGlobalKeyOfNat]
+
 def runtimeTypedRuntimeState : CrepRuntimeState Nat Unit :=
   globalLoadRuntimeState.withTypedGlobalState runtimeTypedKey runtimeTypedBaseState
 

@@ -424,6 +424,46 @@ theorem evalWordLoopProgWithHandlersAndFfi_break [NeZero width]
       (.break label) = some (.broke state label) := by
   simp [evalWordLoopProgWithHandlersAndFfi]
 
+theorem evalWordLoopProgWithHandlersAndFfi_continue [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (state : State width) (label : Nat) :
+    evalWordLoopProgWithHandlersAndFfi functions ffiHandler 1 state
+      (.continue label) = some (.continued state label) := by
+  simp [evalWordLoopProgWithHandlersAndFfi]
+
+theorem evalWordLoopProgWithHandlersAndFfi_return [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (fuel : Nat) (state : State width) (label : Nat) (values : List Nat) :
+    evalWordLoopProgWithHandlersAndFfi functions ffiHandler (fuel + 1) state
+      (.return label values) = (do
+      let values ← values.mapM (fun name => do
+        let register ← registerOfNat name
+        pure (readRegister state register))
+      pure (.returned state values)) := by
+  simp [evalWordLoopProgWithHandlersAndFfi]
+
+example (functions : List (Nat × List Nat × WordProg (Word 64)))
+    (ffiHandler : FunName → Word 64 → Word 64 → Word 64 → Word 64 →
+      State 64 → Option (State 64)) (state : State 64) :
+    evalWordLoopProgWithHandlersAndFfi functions ffiHandler 1 state
+      (.continue 0) = some (.continued state 0) := by
+  simp [evalWordLoopProgWithHandlersAndFfi]
+
+example (functions : List (Nat × List Nat × WordProg (Word 64)))
+    (ffiHandler : FunName → Word 64 → Word 64 → Word 64 → Word 64 →
+      State 64 → Option (State 64)) (state : State 64) :
+    evalWordLoopProgWithHandlersAndFfi functions ffiHandler 1 state
+      (.return 0 [3]) = (do
+      let values ← [3].mapM (fun name => do
+        let register ← registerOfNat name
+        pure (readRegister state register))
+      pure (.returned state values)) := by
+  simp [evalWordLoopProgWithHandlersAndFfi]
+
 theorem evalWordLoopProg_break [NeZero width] (state : State width) (label : Nat) :
     evalWordLoopProg 1 state (.break label) =
       some (.broke state label) := by

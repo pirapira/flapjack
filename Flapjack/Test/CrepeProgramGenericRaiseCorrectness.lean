@@ -2101,6 +2101,69 @@ theorem nested_flat_globals_lookup_exact :
     panValueFlatWordsFuel.panValueFlatWordsListFuel,
     panValueFlatValueFuel.panValueFlatValueListFuel] using hstored
 
+theorem nested_raise_generic_semantic_global_lift :
+    evalPanValueProgWithPrimitiveCallsAndFfi
+        (fun _ _ => none) (fun _ _ _ _ _ _ => none) [] []
+        0 0 8 3 (fun _ => none) (fun _ => none) (fun _ => none)
+        (.raise "E" nestedSourceExpression) =
+      some (.raised (fun _ => none) (fun _ => none) (fun _ => none)
+        "E" nestedSourceValue) ∧
+    evalCrepFullProgState [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+        (fun _ _ _ _ => none) 0 0
+        (1 + (freshNames context 1 1).length + 2) state
+        (compileProg context (.raise "E" nestedSourceExpression)) =
+      some (.raised
+        { state with globals := updateMemoryListAt state.globals 0 8 [3] } 9) ∧
+    panValuePcResultRelWithContextCode [] context
+      (fun _ _ code => code = 9)
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8)
+      (.raised (fun _ => none) (fun _ => none) (fun _ => none)
+        "E" nestedSourceValue)
+      (.raised
+        { state with globals := updateMemoryListAt state.globals 0 8 [3] } 9) := by
+  apply panValuePcRaisedGenericSemanticLift_flat_globals_with_context_code
+    (context := context) (structs := [])
+    (sourceFunctions := []) (functions := [])
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (state := state)
+    (primitive := fun _ _ => none)
+    (sourceHandler := fun _ _ _ _ _ _ => none)
+    (crepPrimitive := fun _ _ => none)
+    (ffi := fun _ _ _ _ _ _ => none)
+    (sharedMem := fun _ _ _ _ => none)
+    (baseAddress := 0) (topAddress := 0) (bytesInWord := 8)
+    (sourceFuel := 2) (exception := "E") (exceptionCode := 9)
+    (expression := nestedSourceExpression) (sourceValue := nestedSourceValue)
+    (compiled := [.const 3]) (shape := .comb [.comb [.one]]) (values := [3])
+    (exceptionRel := fun _ _ code => code = 9)
+    (resultExceptionCode := fun exception =>
+      if exception = "E" then some 9 else none)
+    (hlookup := by simp [context, lookupInfo])
+    (hrel := by
+      refine ⟨rfl, panValueCrepLocalsRel_empty [] context state.locals, rfl⟩)
+    (hsource := by
+      simp [nestedSourceExpression, nestedSourceValue, evalPanValueExp,
+        evalPanValueExp.evalPanValueExps])
+    (hvalid := by
+      simp [nestedSourceValue, panValuePayloadWithinLimit,
+        panValuePayloadSizeFuel,
+        panValuePayloadSizeFuel.panValuePayloadSizeFieldsFuel,
+        panValueFlatValueFuel, panValueFlatValueFuel.panValueFlatValueListFuel])
+    (hcompile := by
+      simp [context, nestedSourceExpression, compileExp,
+        compileExp.compileExpList])
+    (hlength := by simp [Shape.shapeSize])
+    (hcompiled := by
+      simp [state, evalCrepFullExpsState, evalCrepFullExpState])
+    (hnot := by simp [context, freshNames])
+    (hfresh := by simp [context, state, freshNames])
+    (hexception := by simp)
+    (hcode := by simp)
+    (hflat := by rfl)
+    (hdistinct := by decide)
+    (hsize := by simp [nestedSourceValue, panValueShape, Shape.shapeSize])
+
 theorem nested_raise_pc_result_rel_retargeted_globals :
     panValuePcResultRel [] context (fun _ _ code => code = 9)
       (fun exception => if exception = "E" then some 9 else none)
@@ -2145,6 +2208,7 @@ theorem nested_raise_pc_result_rel_retargeted_globals :
 def runChecks : IO Bool := do
   IO.println "PASS generic three-word Raise evaluator relation"
   IO.println "PASS generic raised semantic/global lookup lift"
+  IO.println "PASS nested raised semantic/global lookup lift"
   pure true
 
 end Flapjack.Test.CrepeProgramGenericRaiseCorrectness

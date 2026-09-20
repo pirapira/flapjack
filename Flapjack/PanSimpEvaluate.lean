@@ -447,6 +447,44 @@ theorem evalPanValueFfiClockProg_seqAssoc_eq_of_common_fuel
     (seqAssoc pre program) (.seq pre program) ma c mh hleft hright hleftFuel
     hrightFuel
 
+/-! Clocked counterpart of Cake's `ret_to_tail_correct` at a common fuel.  The
+    transformed and source programs retain the same explicit result premise;
+    only the fuel transport is abstracted by the upward-closed bridge. -/
+theorem evalPanValueFfiClockProg_retToTail_eq_of_common_fuel
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (program : Prog α)
+    {fuelTail fuelSource commonFuel : Nat}
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    {result : PanValueFfiClockResult α σ}
+    (htail : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuelTail locals globals memory ffi clock
+      (retToTail program) ma c mh = some result)
+    (hsource : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuelSource locals globals memory ffi clock
+      program ma c mh = some result)
+    (htailFuel : fuelTail ≤ commonFuel)
+    (hsourceFuel : fuelSource ≤ commonFuel) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord commonFuel locals globals memory ffi clock
+      (retToTail program) ma c mh =
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord commonFuel locals globals memory ffi clock
+      program ma c mh := by
+  exact evalPanValueFfiClockProg_eq_of_common_fuel context primitive handler structs
+    functions baseAddress topAddress bytesInWord locals globals memory ffi clock
+    (retToTail program) program ma c mh htail hsource htailFuel hsourceFuel
+
 /-! Congruence under the second component of a `Seq`.  The premise is
     quantified over the post-first state and clock because the first component
     may update every evaluator component before the second starts. -/

@@ -595,6 +595,16 @@ structure PanValueFfiProgramState (α : Type u) (σ : Type v) where
   source : PanValueProgramState α
   ffi : FfiState σ
 
+/-! Exact source callers carry the Cake memory operations as data rather than
+    relying on the optional compatibility argument below. -/
+structure PanValueFfiExactProgramState (α : Type u) (σ : Type v) where
+  legacy : PanValueFfiProgramState α σ
+  memoryAccess : PanValueMemoryAccess α
+
+def PanValueFfiExactProgramState.toProgramState
+    (state : PanValueFfiExactProgramState α σ) : PanValueFfiProgramState α σ :=
+  state.legacy
+
 def evalPanValueFfiProgram
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
@@ -624,6 +634,40 @@ def evalPanValueFfiProgram
       else none
   | some _, .returned _ _ _ _ _ => none
   | _, result => some result
+
+def evalPanValueFfiExactProgram
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (initial : PanValueFfiExactProgramState α σ)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (fuel : Nat) (declarations : List (Decl α))
+    (entry : FunName) (arguments : List (Exp α))
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none) :
+    Option (PanValueFfiControlResult α σ) :=
+  evalPanValueFfiProgram context initial.legacy primitive handler fuel declarations entry
+    arguments (memoryAccess := some initial.memoryAccess)
+    (memoryHandler := memoryHandler)
+
+theorem evalPanValueFfiExactProgram_eq
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (initial : PanValueFfiExactProgramState α σ)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (fuel : Nat) (declarations : List (Decl α))
+    (entry : FunName) (arguments : List (Exp α))
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none) :
+    evalPanValueFfiExactProgram context initial primitive handler fuel declarations entry
+        arguments (memoryHandler := memoryHandler) =
+      evalPanValueFfiProgram context initial.legacy primitive handler fuel declarations entry
+        arguments (memoryAccess := some initial.memoryAccess)
+        (memoryHandler := memoryHandler) := by
+  rfl
 
 /-! Public top-level stateful-FFI evaluator retaining the source-step count.
     The underlying call evaluator already records argument and body steps; this

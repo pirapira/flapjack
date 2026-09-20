@@ -239,6 +239,10 @@ def statefulPublicProgramState : PanValueFfiProgramState (Word 64) Unit :=
         bytesInWord := BitVec.ofNat 64 8 }
     ffi := statefulTestFfiState }
 
+def statefulExactPublicProgramState : PanValueFfiExactProgramState (Word 64) Unit :=
+  { legacy := statefulPublicProgramState
+    memoryAccess := panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel }
+
 def statefulOversizedValues : Exp (Word 64) :=
   .rStruct (List.replicate 33 (.const (BitVec.ofNat 64 1)))
 
@@ -281,6 +285,23 @@ def statefulPublicProgram : Option (Word 64 × Nat) :=
       | _ => none
 
 #guard statefulPublicProgram = some (BitVec.ofNat 64 0x42, 1)
+
+def statefulExactPublicProgram : Option (Word 64 × Nat) :=
+  (evalPanValueFfiExactProgram statefulTestContext statefulExactPublicProgramState
+      statefulTestPrimitive statefulTestHandler 30
+      [.function
+        { name := "main", inline := false, exported := true, params := [],
+          body := .seq (.extCall "echo" (.const (BitVec.ofNat 64 8))
+              (.const (BitVec.ofNat 64 1)) (.const (BitVec.ofNat 64 8))
+              (.const (BitVec.ofNat 64 1)))
+            (.return (.loadByte (.const (BitVec.ofNat 64 8)))),
+          returnShape := .one }]
+      "main" []).bind
+    fun result => match result with
+      | .returned _ _ _ ffi [.word value] => some (value, ffi.ioEvents.length)
+      | _ => none
+
+#guard statefulExactPublicProgram = some (BitVec.ofNat 64 0x42, 1)
 
 example :
     (evalPanValueFfiProgramStepped statefulTestContext

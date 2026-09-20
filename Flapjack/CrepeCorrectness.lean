@@ -1960,6 +1960,61 @@ theorem compile_full_pan_value_raise_word_state_correct
       evalCrepFullExpState, updateCrepLocal, restoreCrepResult,
       hrestore]
 
+/-! Complete-word stateful counterpart of the closed raise boundary.  The
+    source premise is Cake's full exception evaluator (including the explicit
+    exception-validity and payload checks), while the target premise is the
+    full Crep state evaluator.  The raised result therefore preserves the
+    threaded globals and records the spilled payload in the target global
+    state without falling back to the compatibility evaluator. -/
+theorem compile_full_pan_value_raise_word_state_full_correct
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [PanShiftWidth α]
+    [ArithmeticShiftRight α] [RotateRightOp α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (state : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord value : α)
+    (exception : ExceptionId) (exceptionCode : α)
+    (hlookup : lookupInfo exception context.exceptions = some exceptionCode) :
+    evalPanValueProgWithPrimitiveCallsAndFfiFull
+      primitive sourceHandler structs sourceFunctions
+      baseAddress topAddress bytesInWord 3
+      sourceLocals sourceGlobals sourceMemory
+      (.raise exception (.const value)) =
+      some (.raised (fun _ => none) sourceGlobals sourceMemory
+        exception (.word value)) ∧
+    evalCrepFullProgStateFull functions crepPrimitive ffi sharedMem
+      baseAddress topAddress 10 state
+      (compileProg context (.raise exception (.const value))) =
+      some (.raised
+        { state with globals := updateMemory state.globals 0 value }
+        exceptionCode) := by
+  constructor
+  · have hlimit : panValuePayloadWithinLimit structs (.word value) = true := by
+      simp [panValuePayloadWithinLimit, panValuePayloadSizeFuel]
+    simp [evalPanValueProgWithPrimitiveCallsAndFfiFull, evalPanValueExpFull,
+      hlimit]
+  · have hrestore : restoreCrepLocal
+        (updateCrepLocal state.locals (context.maxVar + 1) value)
+        (context.maxVar + 1) (state.locals (context.maxVar + 1)) =
+        state.locals := by
+      funext current
+      by_cases hcurrent : current = context.maxVar + 1 <;>
+        simp [restoreCrepLocal, updateCrepLocal, hcurrent]
+    simp [compileProg, compileExp, hlookup, freshNames, nestedDecs,
+      crepNestedSeq, storeGlobals, evalCrepFullProgStateFull,
+      evalCrepFullExpStateFull, updateCrepLocal, restoreCrepResult,
+      hrestore]
+
 /-! Structured raise payloads are spilled in source order before the target
     raises.  This two-word case is the first nontrivial instance of that
     general payload relation. -/

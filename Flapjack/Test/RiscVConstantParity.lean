@@ -333,4 +333,44 @@ def cakeConstFunctionExecution : Option (List (Word 64)) :=
 
 #guard cakeConstFunctionExecution = some [BitVec.ofNat 64 0x1234]
 
+/-! Focused regressions for the same checked boundary across the offset shapes
+that the `auipc`/`addi` split must handle: an aligned upward delta, an aligned
+downward page crossing, a negative delta whose signed 12-bit remainder forces a
+carry, a wide label spread over many pages, and an unaligned program counter.
+The `auipc`/`addi` pair computes `label - position + position`. -/
+example :
+    readRegister
+        (executeInstructions { (zeroState 64) with pc := BitVec.ofNat 64 0 }
+          (labLocValueInstructions (width := 64) 4 0x2000 0)) 4 =
+      BitVec.ofNat 64 0x2000 := by
+  decide
+
+example :
+    readRegister
+        (executeInstructions { (zeroState 64) with pc := BitVec.ofNat 64 0x1000 }
+          (labLocValueInstructions (width := 64) 4 0 0x1000)) 4 =
+      BitVec.ofNat 64 0 := by
+  decide
+
+example :
+    readRegister
+        (executeInstructions { (zeroState 64) with pc := BitVec.ofNat 64 0x1000 }
+          (labLocValueInstructions (width := 64) 4 0x800 0x1000)) 4 =
+      BitVec.ofNat 64 0x800 := by
+  decide
+
+example :
+    readRegister
+        (executeInstructions { (zeroState 64) with pc := BitVec.ofNat 64 0x1000 }
+          (labLocValueInstructions (width := 64) 4 0x123456 0x1000)) 4 =
+      BitVec.ofNat 64 0x123456 := by
+  decide
+
+example :
+    readRegister
+        (executeInstructions { (zeroState 64) with pc := BitVec.ofNat 64 2 }
+          (labLocValueInstructions (width := 64) 4 0x1004 2)) 4 =
+      BitVec.ofNat 64 0x1004 := by
+  decide
+
 end Flapjack.RiscV

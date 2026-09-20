@@ -64,6 +64,49 @@ example :
         .xori 4 4 (BitVec.ofNat 64 0x800)] := by
   decide
 
+/- The checked expression boundary routes constants through the Cake list
+   lowering while preserving the old selector for all other expressions. -/
+example :
+    wordExpToInstructionsCake (width := 64) 4
+        (.const (BitVec.ofNat 64 0x1234)) =
+      some [.lui 4 (BitVec.ofNat 64 1),
+        .addi 4 4 (BitVec.ofNat 64 0x234)] := by
+  decide
+
+example :
+    wordExpToInstructionsCake (width := 64) 4
+        (.load (.const (BitVec.ofNat 64 0x1234))) =
+      some [.lui 31 (BitVec.ofNat 64 1),
+        .addi 31 31 (BitVec.ofNat 64 0x234),
+        .loadWord 4 31] := by
+  decide
+
+example :
+    wordProgToRiscVCake (width := 64)
+        (.assign 4 (.const (BitVec.ofNat 64 0x1234))) =
+      some [.lui 4 (BitVec.ofNat 64 1),
+        .addi 4 4 (BitVec.ofNat 64 0x234)] := by
+  simp [wordProgToRiscVCake, wordExpToInstructionsCake, wordConstToInstructions,
+    wordConst32ToInstructions, registerOfNat]
+
+example :
+    wordProgToRiscVCake (width := 64)
+        (.inst (.const 4 (BitVec.ofNat 64 0x1234))) =
+      some [.lui 4 (BitVec.ofNat 64 1),
+        .addi 4 4 (BitVec.ofNat 64 0x234)] := by
+  simp [wordProgToRiscVCake, wordInstToInstructionsCake, wordConstToInstructions,
+    wordConst32ToInstructions, registerOfNat]
+
+example :
+    wordFunctionToRiscVCake (width := 64)
+        (.seq (.assign 4 (.const (BitVec.ofNat 64 0x1234)))
+          (.return 0 [4])) =
+      some ([.lui 4 (BitVec.ofNat 64 1),
+        .addi 4 4 (BitVec.ofNat 64 0x234)], [4]) := by
+  simp [wordFunctionToRiscVCake,
+    wordExpToInstructionsCake, wordConstToInstructions,
+    wordConst32ToInstructions, registerOfNat]
+
 /-! Executable obligations for the Cake-faithful multi-instruction boundary.
 
 These deliberately exercise the emitted instruction list, rather than the
@@ -125,6 +168,19 @@ example :
           (fun instructions => (instructions, [])) := by
   exact wordFunctionToRiscVWithCallsCake_const _ 4
     (BitVec.ofNat 64 0x1122334455667788)
+
+/-! The FFI-aware Cake boundary preserves the same multi-instruction constant
+    materialization and return carrier while retaining its service table. -/
+example :
+    wordFunctionToRiscVWithCallsAndFfiCake (width := 64)
+        ({ targets := [], services := [] } : WordCallFfiContext 64)
+        (.seq (.assign 4 (.const (BitVec.ofNat 64 0x1234)))
+          (.return 0 [4])) =
+      some ([.lui 4 (BitVec.ofNat 64 1),
+        .addi 4 4 (BitVec.ofNat 64 0x234)], [4]) := by
+  simp [wordFunctionToRiscVWithCallsAndFfiCake,
+    wordFunctionToRiscVWithCallsCake, wordExpToInstructionsCake,
+    wordConstToInstructions, wordConst32ToInstructions, registerOfNat]
 
 /-! The checked call-aware selector now has the same compositional theorem
     shape as the legacy theorem-facing selector.  This exercises the sequence

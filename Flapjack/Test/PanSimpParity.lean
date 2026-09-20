@@ -132,6 +132,24 @@ theorem clocked_seq_first_congr_matches_cake :
   simp [evalPanValueFfiClockProg, evalPanValueFfiClockLeaf,
     evalPanValueFfiProgSteps]
 
+theorem clocked_seq_second_congr_matches_cake :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 2 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1 (.seq .tick .skip) =
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 2 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1 (.seq .tick (.annot "tag" "text")) := by
+  apply evalPanValueFfiClockProg_seq_congr_second evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 1 1
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi
+    .tick .skip (.annot "tag" "text") none none none
+  intro fuel clock locals globals memory ffi
+  cases fuel with
+  | zero => simp [evalPanValueFfiClockProg]
+  | succ fuel =>
+      simp [evalPanValueFfiClockProg, evalPanValueFfiClockLeaf,
+        evalPanValueFfiProgSteps]
+
 /-! The expected values are the direct HOL evaluation of
     `pan_simp$SmartSeq` from `pan_simpScript.sml:13-16`. -/
 theorem smart_seq_skip_skip :
@@ -386,6 +404,7 @@ def runChecks : IO Bool := do
     IO.println "FAIL pan_simp SmartSeq/seq_assoc/seq_call_ret/ret_to_tail/compile source parity"
   IO.println "PASS pan_simp clocked evaluate_seq_skip/evaluate_skip_seq Cake equations"
   IO.println "PASS pan_simp clocked evaluate_while_body_same Cake equation"
+  IO.println "PASS pan_simp clocked evaluate_seq_second_congr Cake equation"
   pure parityGuard
 
 end Flapjack.Test.PanSimpParity

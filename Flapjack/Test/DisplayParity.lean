@@ -241,6 +241,14 @@ def crepToStrsOracle : Bool :=
      "(", "return", " ", "(", "Var", " ", "2", ")", " ", "(", "Const", " ",
      "0x7", ")", ")", ")", "\n\n"]
 
+/-! Direct oracle guard for `pan_to_strs_def` in
+    `pan_passesScript.sml:340-346`. -/
+def panToStrsOracle : Bool :=
+  panToStrs
+    [(.decl .one "g" (.const (BitVec.ofNat 64 5)) : Decl (BitVec 64))] ==
+    ["(", "global", " ", "1", " ", "g", " ", ":=", " ", "(", "Const", " ",
+     "0x5", ")", ")", "\n\n"]
+
 /-! Direct oracle guards for `pan_prog_to_display_def` in
     `pan_passesScript.sml:203-300`, including sequence flattening, annotation
     escaping, calls, handlers, and declaration calls. -/
@@ -476,6 +484,7 @@ def loopToStrsOracle : Bool :=
 #guard crepProgOracle
 #guard crepFunOracle
 #guard crepToStrsOracle
+#guard panToStrsOracle
 #guard panProgOracle
 #guard loopExpOracle
 #guard panFunOracle

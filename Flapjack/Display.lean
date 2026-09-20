@@ -638,6 +638,15 @@ def panFunToDisplay [CakeDisplayWord α] : Decl α → DisplayExpr
   | .exnDecl exception shape =>
       .tuple [.string "exception", .string exception, .string ":",
         .string (Shape.shapeToString shape)]
+
+/-! Exact source counterpart of Cake's `pan_to_strs_def`
+    (`pan_passesScript.sml:340-346`). -/
+def panToStrs [CakeDisplayWord α] (declarations : List (Decl α)) : List String :=
+  mapAppendDisplayStrings
+    (fun declaration =>
+      displayStrTreeToStrings "\n\n"
+        (displayToStrTree (panFunToDisplay declaration))) declarations
+
 def numToDisplay (number : Nat) : DisplayExpr :=
   .string (toString number)
 

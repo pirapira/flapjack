@@ -455,6 +455,22 @@ def copyPropagationClearsLoopState : Bool :=
 
 #guard copyPropagationClearsLoopState
 
+/- Cake's `remove_eq` checks class membership (`to_eq`), not the optional
+   representative/alias cache.  Keeping this distinction is necessary for
+   the cache-enabled production state: a class member can have no standalone
+   alias entry after a representative update. -/
+def copyRemoveUsesClassMembership : Bool :=
+  let state : RiscV.WordCopyState :=
+    { aliases := []
+      storeToEq := []
+      classOf := [(177, 0)]
+      classRep := [(0, 177)]
+      classStore := []
+      classNext := 1 }
+  (RiscV.wordCopyRemove state 177).classNext == 0
+
+#guard copyRemoveUsesClassMembership
+
 /- Cake's branch merge compares class identities, not only the visible
    representative.  Independently-created classes for the same names must
    therefore not propagate a branch-local source across the merge. -/

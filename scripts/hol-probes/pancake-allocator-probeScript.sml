@@ -3,7 +3,7 @@
 
   Unlike pancake-stage-probeScript.sml this does not print the large
   pan/loop/word/internal terms.  It evaluates the same definitions and emits
-  only the selected Word program, Cake's allocator result, and the
+  only the selected Word program, its clash tree, Cake's allocator result, and the
   Word-to-Stack result.  This keeps source-to-RISC-V parity investigations
   usable on minimized witnesses without waiting for a multi-megabyte HOL
   pretty-print.
@@ -125,6 +125,11 @@ val selected = internal_word;
 val selected_head = fst (listSyntax.dest_cons selected);
 val (selected_name, selected_rest) = pairSyntax.dest_pair selected_head;
 val (selected_params, selected_prog) = pairSyntax.dest_pair selected_rest;
+val clash_fun = Term.inst [Type.alpha |-> ``:64``]
+  ``word_alloc$get_clash_tree``;
+val clash_term = mk_comb (mk_comb (clash_fun, selected_prog),
+  ``([]:(sptree$num_set # sptree$num_set) list)``);
+val _ = emit "stage=cake_word_clash_tree" clash_term;
 val word_alloc = Term.inst
   [Type.alpha |-> ``:64``] ``word_alloc$word_alloc``;
 val none_col = Term.inst

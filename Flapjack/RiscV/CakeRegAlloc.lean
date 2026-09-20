@@ -1087,8 +1087,12 @@ def cakeAssignStemps (k : Nat)
     table over the (ascending) allocator bijection. -/
 def cakeExtractColor (state : CakeRaState) (toAllocator : NatInfoMap Nat) :
     NatInfoMap Nat :=
-  (toAllocator.mergeSort (fun a b => a.1 < b.1)).foldl (fun acc entry =>
-      cakeMapUpdate acc entry.1 (cakeTagCol state entry.2)) []
+  /- `toAllocator` is a bijection, so its sorted keys are unique.  Cake's
+     update loop therefore appends each freshly seen key; mapping the sorted
+     entries directly preserves the observable association-list order while
+     avoiding a quadratic rebuild of the result. -/
+  (toAllocator.mergeSort (fun a b => a.1 < b.1)).map
+    (fun entry => (entry.1, cakeTagCol state entry.2))
 
 /-- `full_consistency_ok` (`reg_allocScript.sml:1385+`). -/
 def cakeTagIsAtemp (state : CakeRaState) (x : Nat) : Bool :=
@@ -1103,6 +1107,18 @@ def cakeFullConsistencyOk (state : CakeRaState) (k : Nat) (x y : Nat) : Bool :=
     (cakeIsFixedK state k y || cakeTagIsAtemp state y) &&
     !(cakeIsFixedK state k x && cakeIsFixedK state k y)
 
+/-- A lookup-only index for the source-variable side of `mk_bij`.
+
+    Cake's `toAllocator` association list is a bijection with unique source
+    keys.  The list remains the canonical ordered representation everywhere
+    observable; this index is used only for the repeated `update_move` lookups
+    in the allocator hot path. -/
+def cakeAllocatorIndex (toAllocator : NatInfoMap Nat) : Std.HashMap Nat Nat :=
+  toAllocator.foldl (fun index entry => index.insert entry.1 entry.2) {}
+
+def cakeAllocatorIndexLookup (index : Std.HashMap Nat Nat) (name : Nat) : Nat :=
+  (index[name]?).getD 0
+
 /-- The allocator flavour, mirroring `algorithm` in the original. -/
 inductive CakeAlgorithm : Type
   | simple : CakeAlgorithm
@@ -1114,7 +1130,8 @@ inductive CakeAlgorithm : Type
 def cakeDoRegAllocFromState (alg : CakeAlgorithm) (scost : Option (CakeNodeMap Nat))
     (k : Nat) (moves : List (Nat × (Nat × Nat)))
     (bij : CakeNodeBijection) (state : CakeRaState) : Option (NatInfoMap Nat) :=
-  let spta := CakeAlloc.spDefault bij.toAllocator
+  let sourceIndex := cakeAllocatorIndex bij.toAllocator
+  let spta := fun name => cakeAllocatorIndexLookup sourceIndex name
   let moves0 := moves.map (cakeUpdateMove spta)
   let movesF := filterReversed (fun m => cakeFullConsistencyOk state k m.2.1 m.2.2) moves0
   let selMoves := match alg with

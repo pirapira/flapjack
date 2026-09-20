@@ -1,4 +1,5 @@
 import Flapjack.PanSimp
+import Flapjack.PanGlobals
 
 namespace Flapjack.Test.PanSimpParity
 
@@ -48,6 +49,25 @@ theorem exp_ids_seq_assoc_preserves_raise :
       (.seq (.raise "E" (.const 0)) .tick)) = ["E"] := by
   simpa [expIds] using expIds_seqAssoc (.skip : Prog Nat)
     (.seq (.raise "E" (.const 0)) .tick)
+
+/-! Cake's `exp_ids_ret_to_tail_eq` preservation theorem, exercised through
+    a nested call handler as well as the outer program. -/
+theorem exp_ids_ret_to_tail_preserves_raise :
+    expIds (retToTail (.raise "E" (.const 0) : Prog Nat)) = ["E"] := by
+  simpa [expIds] using expIds_retToTail
+    (.raise "E" (.const 0) : Prog Nat)
+
+theorem exp_ids_ret_to_tail_preserves_nested_raise :
+    expIds (retToTail
+      (.call
+        (some (some (.local, "r"), some ("E", "h",
+          .seq (.raise "E2" (.const 0)) .tick)))
+        "f" [] : Prog Nat)) = ["E", "E2"] := by
+  simpa [expIds] using expIds_retToTail
+    (.call
+      (some (some (.local, "r"), some ("E", "h",
+        .seq (.raise "E2" (.const 0)) .tick)))
+      "f" [] : Prog Nat)
 
 /-! The expected values are the direct HOL evaluation of
     `pan_simp$seq_call_ret` from `pan_simpScript.sml:42-49`. -/
@@ -180,6 +200,16 @@ def compileProgDeclsParity : Bool :=
   | _ => false
 
 #guard compileProgDeclsParity
+
+theorem pan_simp_compile_prog_map :
+    panSimpDecls compileProgDeclsFixture =
+      compileProgDeclsFixture.map panSimpDecl := by
+  exact panSimpDecls_eq_map compileProgDeclsFixture
+
+theorem pan_simp_compile_prog_size_of_eids :
+    sizeOfEids (panSimpDecls compileProgDeclsFixture) =
+      sizeOfEids compileProgDeclsFixture := by
+  exact sizeOfEids_panSimpDecls compileProgDeclsFixture
 
 def parityGuard : Bool :=
   isSkip (smartSeq (.skip : Prog Nat) .skip) &&

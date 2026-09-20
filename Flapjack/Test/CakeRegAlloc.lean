@@ -169,6 +169,27 @@ def bijIndexedBuilderParityGuard : Bool :=
 
 #guard bijIndexedBuilderParityGuard
 
+/- The hot-path source index must preserve the Cake association-list lookup,
+   including the zero fallback for a name absent from the bijection. -/
+def allocatorIndexLookupGuard : Bool :=
+  let entries : NatInfoMap Nat := [(9, 4), (1, 2), (17, 6)]
+  let index := cakeAllocatorIndex entries
+  cakeAllocatorIndexLookup index 9 = 4 &&
+    cakeAllocatorIndexLookup index 1 = 2 &&
+    cakeAllocatorIndexLookup index 17 = 6 &&
+    cakeAllocatorIndexLookup index 99 = 0
+
+#guard allocatorIndexLookupGuard
+
+def extractColorOrderGuard : Bool :=
+  let tree : WordClashTree := .delta [9, 1] [17]
+  let bij := cakeMkBij tree
+  let state := cakeInitRaState tree [] []
+  cakeExtractColor state bij.toAllocator ==
+    [(1, 0), (9, 0), (17, 0)]
+
+#guard extractColorOrderGuard
+
 
 /-! ## IRC graph construction guards
 

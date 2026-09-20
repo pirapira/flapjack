@@ -84,6 +84,21 @@ def panSimpDecls : List (Decl α) → List (Decl α)
   | declaration :: declarations => declaration :: panSimpDecls declarations
 termination_by declarations => sizeOf declarations
 
+def panSimpDecl : Decl α → Decl α
+  | .function declaration =>
+      .function { declaration with body := panSimpProg declaration.body }
+  | declaration => declaration
+
+/-! Source-shaped counterpart of Cake's `compile_prog_pmatch`: `compile_prog`
+    maps `compile` over function declarations and leaves other declarations
+    unchanged. -/
+theorem panSimpDecls_eq_map (declarations : List (Decl α)) :
+    panSimpDecls declarations = declarations.map panSimpDecl := by
+  induction declarations with
+  | nil => simp [panSimpDecls]
+  | cons declaration declarations ih =>
+      cases declaration <;> simp [panSimpDecls, panSimpDecl, ih]
+
 @[simp] theorem smartSeq_skip (program : Prog α) :
     smartSeq (.skip : Prog α) program = program := by
   cases program <;> rfl
@@ -208,5 +223,91 @@ theorem expIds_seqAssoc (pre program : Prog α) :
     termination_by program => sizeOf program
     decreasing_by all_goals decreasing_trivial
   exact go pre program
+
+/-! Manual well-founded induction for Cake's `exp_ids_ret_to_tail_eq`.  The
+    handler stored inside `Call` is nested in the syntax, so this uses the
+    same explicit handler case as `expIds_seqAssoc`. -/
+
+theorem expIds_retToTail (program : Prog α) :
+    expIds (retToTail program) = expIds program := by
+  let rec go : (program : Prog α) →
+      expIds (retToTail program) = expIds program
+    | .skip => by
+        simp [retToTail, expIds]
+    | .dec name shape value body => by
+        simp only [retToTail, expIds]
+        rw [go body]
+    | .seq first second => by
+        simp only [retToTail]
+        rw [expIds_seqCallRet]
+        simp only [expIds]
+        rw [go first, go second]
+    | .ite condition thenBranch elseBranch => by
+        simp only [retToTail, expIds]
+        rw [go thenBranch, go elseBranch]
+    | .while condition body => by
+        simp only [retToTail, expIds]
+        rw [go body]
+    | .call info function arguments => by
+        cases info with
+        | none =>
+            simp [retToTail, expIds]
+        | some info =>
+            cases info with
+            | mk returns handlerInfo =>
+                cases handlerInfo with
+                | none =>
+                    simp [retToTail, expIds]
+                | some handler =>
+                    cases handler with
+                    | mk exception handlerInfo =>
+                        cases handlerInfo with
+                        | mk handlerVar handlerProgram =>
+                            simp only [retToTail]
+                            simp only [expIds]
+                            rw [go handlerProgram]
+    | .decCall name shape function arguments body => by
+        simp only [retToTail, expIds]
+        rw [go body]
+    | .annot tag text => by
+        simp [retToTail, expIds]
+    | .assign kind name value => by
+        simp [retToTail, expIds]
+    | .primitive name operator args => by
+        simp [retToTail, expIds]
+    | .store address value => by
+        simp [retToTail, expIds]
+    | .store32 address value => by
+        simp [retToTail, expIds]
+    | .storeByte address value => by
+        simp [retToTail, expIds]
+    | .break => by
+        simp [retToTail, expIds]
+    | .continue => by
+        simp [retToTail, expIds]
+    | .extCall function configuration configurationLength array arrayLength => by
+        simp [retToTail, expIds]
+    | .raise exception value => by
+        simp [retToTail, expIds]
+    | .return value => by
+        simp [retToTail, expIds]
+    | .shMemLoad size kind name address => by
+        simp [retToTail, expIds]
+    | .shMemStore size address value => by
+        simp [retToTail, expIds]
+    | .tick => by
+        simp [retToTail, expIds]
+    termination_by program => sizeOf program
+    decreasing_by all_goals decreasing_trivial
+  exact go program
+
+/-- The full `pan_simp` program transformation preserves the exception
+    identifiers reachable from a program, mirroring Cake's
+    `exp_ids_compile_eq`. -/
+theorem expIds_panSimpProg (program : Prog α) :
+    expIds (panSimpProg program) = expIds program := by
+  simp only [panSimpProg]
+  rw [expIds_retToTail, expIds_seqAssoc]
+  simp [expIds]
 
 end Flapjack

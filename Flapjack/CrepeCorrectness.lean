@@ -86,6 +86,35 @@ theorem compile_full_pan_value_return_word_correct
     evalPanValueProg, evalPanValueProgWithPrimitive, evalPanValueExp,
     panValueFlatWords, panValueFlatWordsFuel]
 
+/-! Target-word counterpart of the closed return boundary.  This version uses
+    the stateful evaluator with Cake's complete `word_sh` contract on both
+    sides, so target callers do not inherit the compatibility evaluator's
+    partial shift semantics. -/
+theorem compile_full_pan_value_return_word_state_full
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [PanShiftWidth α]
+    [ArithmeticShiftRight α] [RotateRightOp α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (locals globals : VarName → Option (PanValue α))
+    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord value : α) :
+    evalCrepFullResultStateFull [] primitive ffi sharedMem
+        baseAddress topAddress 1 state
+        (compileProg context (.return (.const value))) =
+      (evalPanValueProgFull structs baseAddress topAddress bytesInWord
+        locals globals (fun address =>
+          (state.memory address).map PanValue.word)
+        (.return (.const value))).map
+        (fun result => result.2.2.2.flatMap panValueFlatWords) := by
+  simp [compileProg, compileExp, evalCrepFullResultStateFull,
+    evalCrepFullProgStateFull, evalCrepFullExpsStateFull,
+    evalCrepFullExpStateFull, evalPanValueProgFull,
+    evalPanValueProgWithPrimitiveFull, evalPanValueExpFull,
+    panValueFlatWords, panValueFlatWordsFuel]
+
 /-! The return boundary is also useful with a non-constant source expression.
     Its two hypotheses are precisely the source-expression and lowered-Crep
     expression obligations that a later expression pass theorem supplies. -/

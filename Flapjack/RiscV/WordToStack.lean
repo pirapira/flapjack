@@ -3247,6 +3247,7 @@ theorem evalWordStackMachine_shared_store_preserves_memory [NeZero width]
     (heval : (wordStackSharedMemoryInst config .store source address).bind
       (evalWordStackMachine state) = some final) :
       final.sharedMemory addressValue = sourceValue := by
+  have _hscratch := hscratch
   change lookupNatInfo source config.locations = some sourceLocation at hsource
   change lookupNatInfo address config.locations = some addressLocation at haddress
   cases sourceLocation <;> cases addressLocation <;>

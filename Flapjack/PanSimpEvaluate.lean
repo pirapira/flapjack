@@ -1,6 +1,7 @@
 import Flapjack.PanSimp
 import Flapjack.PanEvaluate
 import Flapjack.PanValueFfiClockFuel
+import Flapjack.PanValueFfiClockCorrectness
 
 /-!
 # Evaluator-level `pan_simp` obligations
@@ -730,5 +731,105 @@ theorem evalPanValueFfiClockProg_seq_call_return_returned
   exact evalPanValueFfiClockLeaf_return_var context primitive handler structs functions
     baseAddress topAddress bytesInWord callClock assignedLocals assignedGlobals
     nextMemory nextFfi returnedName value ma c mh hlookup hwithin
+
+/-- The `seqCallRet` tail-call fusion in the direction Cake uses.  If the
+    destination call `Call (SOME (SOME (Local, returnName), NONE)) ...` returns
+    normally from a body that itself `return`s `[value]`, then the tail call
+    `Call NONE ...` and the original sequence
+    `Call ... ; Return (Var returnName)` agree at the same structural fuel.
+    This is the clocked analogue of Cake's `evaluate_seq_call_ret_eq` with an
+    explicit successful-run premise instead of a fixed-fuel equality. -/
+theorem evalPanValueFfiClockProg_seq_call_return_tail_call
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel clock finalClock : Nat) (hclock : clock ≠ 0)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (value : PanValue α) (parameters : List VarName)
+    (calleeLocals bodyLocals finalGlobals : VarName → Option (PanValue α))
+    (finalMemory : α → Option (PanValue α)) (finalFfi : FfiState σ)
+    (body : Prog α) (function : FunName) (arguments : List (Exp α))
+    (returnName : VarName) (assignedLocals : VarName → Option (PanValue α))
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (hargs : evalPanValueExps structs locals globals memory baseAddress topAddress
+      bytesInWord arguments (memoryAccess := memoryAccess) = some [value])
+    (hlookup : lookupPanFunction function functions = some (parameters, body))
+    (hbind : bindPanValueParameters parameters [value] = some calleeLocals)
+    (hbody : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel calleeLocals globals memory ffi
+      (clock - 1) body (memoryAccess := memoryAccess) (contracts := none)
+      (memoryHandler := none) =
+      some (.control (.returned bodyLocals finalGlobals finalMemory finalFfi [value]),
+        finalClock))
+    (hwithin : panValueValuesWithinLimit structs [value] = true)
+    (hpayload : panValuePayloadWithinLimit structs value = true)
+    (hassign : assignPanValueCallResult locals finalGlobals (some (.local, returnName))
+      [value] (structs := structs) = some (assignedLocals, finalGlobals))
+    (hlookupReturn : assignedLocals returnName = some value) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (fuel + 3) locals globals memory ffi
+        clock (.call none function arguments) (memoryAccess := memoryAccess)
+        (contracts := none) (memoryHandler := none) =
+      evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (fuel + 3) locals globals memory ffi
+        clock (.seq (.call (some (some (.local, returnName), none)) function arguments)
+          (.return (.var .local returnName))) (memoryAccess := memoryAccess)
+        (contracts := none) (memoryHandler := none) := by
+  have hbodyFuel : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) calleeLocals globals memory ffi
+      (clock - 1) body (memoryAccess := memoryAccess) (contracts := none)
+      (memoryHandler := none) =
+      some (.control (.returned bodyLocals finalGlobals finalMemory finalFfi [value]),
+        finalClock) :=
+    evalPanValueFfiClockProg_fuel_mono context primitive handler structs functions
+      baseAddress topAddress bytesInWord (locals := calleeLocals) (globals := globals)
+      (memory := memory) (ffi := ffi) (clock := clock - 1) (program := body)
+      (ma := memoryAccess) (c := none) (mh := none) (by omega) hbody
+  have hL : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 3) locals globals memory ffi
+      clock (.call none function arguments) (memoryAccess := memoryAccess)
+      (contracts := none) (memoryHandler := none) =
+      some (.control (.returned (fun _ => none) finalGlobals finalMemory finalFfi
+        [value]), finalClock) := by
+    simp only [evalPanValueFfiClockProg]
+    exact evalPanValueFfiClockCall_returned_no_destination context primitive handler
+      structs functions baseAddress topAddress bytesInWord (fuel + 1) clock finalClock
+      locals globals memory ffi [value] parameters calleeLocals bodyLocals
+      finalGlobals finalMemory finalFfi body function arguments memoryAccess
+      hargs hlookup hbind hclock hbodyFuel hwithin
+  have hR : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 3) locals globals memory ffi
+      clock (.seq (.call (some (some (.local, returnName), none)) function arguments)
+        (.return (.var .local returnName))) (memoryAccess := memoryAccess)
+      (contracts := none) (memoryHandler := none) =
+      some (.control (.returned (fun _ => none) finalGlobals finalMemory finalFfi
+        [value]), finalClock) := by
+    simp only [evalPanValueFfiClockProg]
+    rw [evalPanValueFfiClockCall_returned_destination context primitive handler structs
+      functions baseAddress topAddress bytesInWord fuel clock finalClock locals
+      globals memory ffi [value] parameters calleeLocals bodyLocals finalGlobals
+      finalMemory finalFfi body function arguments (some (.local, returnName))
+      assignedLocals finalGlobals memoryAccess hargs hlookup hbind hclock hbody hwithin
+      hassign]
+    simp only [Option.bind_eq_bind, Option.bind_some]
+    exact evalPanValueFfiClockLeaf_return_var context primitive handler structs functions
+      baseAddress topAddress bytesInWord finalClock assignedLocals finalGlobals
+      finalMemory finalFfi returnName value memoryAccess none none hlookupReturn hpayload
+  rw [hL, hR]
+
+/-- Syntactic shape of the `seqCallRet` tail-call rewrite, used to connect the
+    evaluator fusion above to the `pan_simp` pass itself. -/
+theorem seqCallRet_tail_call (returnName : VarName) (function : FunName)
+    (arguments : List (Exp α)) :
+    seqCallRet (.seq (.call (some (some (.local, returnName), none)) function arguments)
+      (.return (.var .local returnName))) = .call none function arguments := by
+  simp [seqCallRet]
 
 end Flapjack

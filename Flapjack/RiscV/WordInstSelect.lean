@@ -311,6 +311,7 @@ def wordInstSelectAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α
   | .op operator [left, right] =>
       let (leftPrelude, _) := wordInstSelectAtom temp left
       let (rightPrelude, _) := wordInstSelectAtom (temp + 1) right
+      let (rightHeapPrelude, _) := wordInstSelectAtom temp right
       let code := wordDeadSelectSeq leftPrelude rightPrelude
       let generic :=
         (wordDeadSelectSeq code
@@ -330,6 +331,15 @@ def wordInstSelectAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α
               (.seq (.inst (.arith (.shift .lsl temp temp (.imm (1 : α)))))
                 (.opCurrHeap .add temp temp)), .var temp)
           else generic
+      | _, _, .lookup .currHeap =>
+          let (prelude, _) := wordInstSelectAtom temp left
+          (wordDeadSelectSeq prelude (.opCurrHeap operator temp temp), .var temp)
+      | _, .lookup .currHeap, _ =>
+          if operator = .sub then
+            generic
+          else
+            (wordDeadSelectSeq rightHeapPrelude
+              (.opCurrHeap operator temp temp), .var temp)
       | _, _, _ => generic
   | .shift operator left (.const value) =>
       let (leftPrelude, selectedLeft) := wordInstSelectAtom temp left
@@ -454,29 +464,38 @@ def wordInstSelectProgram [Sub α] [Add α] [AndOp α] [OrOp α] [HXor α α α]
                 wordDeadSelectSeq materialize
                   (.inst (.mem .load destination temp))
           | _ => wordDeadSelectSeq prelude (.inst (.mem .load destination temp))
-      | .op operator [left, .const value] =>
-          let (prelude, left) := wordInstSelectAtom temp left
+      | .op operator [sourceLeft, .const value] =>
+          let (prelude, left) := wordInstSelectAtom temp sourceLeft
           match left with
           | .var left =>
-              if WordInstSelectImmediate.validBinOpImmediate operator value then
-                wordDeadSelectSeq prelude
-                  (.inst (.arith (.binOp operator destination left (.imm value))))
-              else if operator = .add &&
-                  WordInstSelectImmediate.validBinOpImmediate .sub
-                    (WordInstSelectImmediate.negateImmediate value) then
-                wordDeadSelectSeq prelude
-                  (.inst (.arith (.binOp .sub destination left
-                    (.imm (WordInstSelectImmediate.negateImmediate value)))))
-              else
-                /- Cake's `inst_select_exp` materializes an out-of-range
-                   constant in `temp + 1` and emits the register/register
-                   instruction.  Leaving this as an expression defers the
-                   choice to Word-to-Stack and changes both allocator colours
-                   and the emitted RISC-V for wide masks. -/
-                wordDeadSelectSeq prelude
-                  (wordDeadSelectSeq (.inst (.const (temp + 1) value))
-                    (.inst (.arith (.binOp operator destination left
-                      (.reg (temp + 1))))))
+              let normal :=
+                if WordInstSelectImmediate.validBinOpImmediate operator value then
+                  wordDeadSelectSeq prelude
+                    (.inst (.arith (.binOp operator destination left (.imm value))))
+                else if operator = .add &&
+                    WordInstSelectImmediate.validBinOpImmediate .sub
+                      (WordInstSelectImmediate.negateImmediate value) then
+                  wordDeadSelectSeq prelude
+                    (.inst (.arith (.binOp .sub destination left
+                      (.imm (WordInstSelectImmediate.negateImmediate value)))))
+                else
+                  /- Cake's `inst_select_exp` materializes an out-of-range
+                     constant in `temp + 1` and emits the register/register
+                     instruction.  Leaving this as an expression defers the
+                     choice to Word-to-Stack and changes both allocator colours
+                     and the emitted RISC-V for wide masks. -/
+                  wordDeadSelectSeq prelude
+                    (wordDeadSelectSeq (.inst (.const (temp + 1) value))
+                      (.inst (.arith (.binOp operator destination left
+                        (.reg (temp + 1))))))
+              match sourceLeft with
+              | .lookup .currHeap =>
+                  if operator = .sub then
+                    normal
+                  else
+                    wordDeadSelectSeq (.inst (.const temp value))
+                      (.opCurrHeap operator destination temp)
+              | _ => normal
           | _ => wordDeadSelectSeq prelude
               (wordDeadSelectSeq
                 (.inst (.const (temp + 1) value))
@@ -504,9 +523,25 @@ def wordInstSelectProgram [Sub α] [Add α] [AndOp α] [OrOp α] [HXor α α α]
           wordDeadSelectSeq leftPrelude
             (wordDeadSelectSeq rightPrelude body)
       | .const value => .inst (.const destination value)
-      | .op operator [left, right] =>
-          let (leftPrelude, left) := wordInstSelectAtom temp left
-          let (rightPrelude, right) := wordInstSelectAtom (temp + 1) right
+      | .op operator [sourceLeft, sourceRight] =>
+          let (leftPrelude, left) := wordInstSelectAtom temp sourceLeft
+          let (rightPrelude, right) := wordInstSelectAtom (temp + 1) sourceRight
+          let (rightHeapPrelude, _) := wordInstSelectAtom temp sourceRight
+          let currentHeapCode : Option (WordProg α) :=
+            match sourceLeft, sourceRight with
+            | _, .lookup .currHeap =>
+                some (wordDeadSelectSeq leftPrelude
+                  (.opCurrHeap operator destination temp))
+            | .lookup .currHeap, _ =>
+                if operator = .sub then
+                  none
+                else
+                  some (wordDeadSelectSeq rightHeapPrelude
+                    (.opCurrHeap operator destination temp))
+            | _, _ => none
+          match currentHeapCode with
+          | some code => code
+          | none =>
           /- Cake's `inst_select_exp` emits an operation whose operands are the
              register numbers the materialising preludes wrote, not rewritable
              expressions.  Keeping that carrier is what stops expression-level

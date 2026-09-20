@@ -257,6 +257,63 @@ def evalCrepFullExpStateFull [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α
   | _ => none
 termination_by expression => sizeOf expression
 
+/-! Checked target-word expression boundary.  Unlike the compatibility
+    evaluator above, this entrypoint consumes `CrepMemoryState`, so ordinary
+    loads, byte loads, and 32-bit loads go through Cake's domain/alignment,
+    endian, and word-cell operations. -/
+def evalCrepCheckedExpStateFull
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
+    [OfNat α 2] [OfNat α 3]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (locals : Nat → Option α) (globals : α → Option α)
+    (memoryState : CrepMemoryState α)
+    (baseAddress topAddress : α) : CrepExp α → Option α
+  | .const value => some value
+  | .var name => locals name
+  | .load address => do
+      let address ← evalCrepCheckedExpStateFull locals globals memoryState
+        baseAddress topAddress address
+      crepMemLoad memoryState address
+  | .load32 address => do
+      let address ← evalCrepCheckedExpStateFull locals globals memoryState
+        baseAddress topAddress address
+      crepMemLoad32 memoryState address
+  | .loadByte address => do
+      let address ← evalCrepCheckedExpStateFull locals globals memoryState
+        baseAddress topAddress address
+      crepMemLoadByte memoryState address
+  | .loadGlob address => globals address
+  | .op operator [left, right] => do
+      let left ← evalCrepCheckedExpStateFull locals globals memoryState
+        baseAddress topAddress left
+      let right ← evalCrepCheckedExpStateFull locals globals memoryState
+        baseAddress topAddress right
+      pure (evalPanBinOp operator left right)
+  | .crepOp .mul [left, right] => do
+      let left ← evalCrepCheckedExpStateFull locals globals memoryState
+        baseAddress topAddress left
+      let right ← evalCrepCheckedExpStateFull locals globals memoryState
+        baseAddress topAddress right
+      pure (left * right)
+  | .cmp operator left right => do
+      let left ← evalCrepCheckedExpStateFull locals globals memoryState
+        baseAddress topAddress left
+      let right ← evalCrepCheckedExpStateFull locals globals memoryState
+        baseAddress topAddress right
+      pure (evalPanCmp operator left right)
+  | .shift operator left right => do
+      let left ← evalCrepCheckedExpStateFull locals globals memoryState
+        baseAddress topAddress left
+      let right ← evalCrepCheckedExpStateFull locals globals memoryState
+        baseAddress topAddress right
+      evalPanShiftFull operator left right
+  | .baseAddr => some baseAddress
+  | .topAddr => some topAddress
+  | _ => none
+termination_by expression => sizeOf expression
+
 def evalCrepFullExpsStateFull [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]

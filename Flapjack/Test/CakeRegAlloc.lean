@@ -460,7 +460,6 @@ def stExMaxDegOrderGuard : Bool :=
   cakeStExListMaxDeg degrees [1, 2] 4 0 2 [] == (2, [0, 1])
 
 #guard stExMaxDegOrderGuard
-
 /- `get_prefs_def` uses `MAP ... ++ acc`, preserving each Move's source
    order.  These guards mirror the canonical `get_prefs_probe.out` output. -/
 def prefsMoveOrderGuard : Bool :=

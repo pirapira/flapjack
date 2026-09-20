@@ -144,6 +144,25 @@ def callHandlerRoundTripFuses : Bool :=
 
 #guard callHandlerRoundTripFuses
 
+def cakePreSsaRoundTrip : WordProg (RiscV.Word 64) :=
+  wordToWordPreSsa
+    (.seq (.ite .less 1 (.reg 2)
+        (.assign 3 (.const 1)) (.assign 3 (.const 0)))
+      (.seq (.assign 4 (.var 3))
+        (.ite .notEqual 4 (.imm 0) (.assign 5 (.const 7)) .skip)))
+
+def cakePreSsaRoundTripMatchesCake : Bool :=
+  match wordProgToList cakePreSsaRoundTrip with
+  | [.ite .less 1 (.reg 2)
+      (.seq (.assign 3 (.const 1))
+        (.seq (.assign 4 (.const 1))
+          (.seq .skip (.assign 5 (.const 7)))))
+      (.seq (.assign 3 (.const 0))
+        (.seq (.assign 4 (.const 0)) (.seq .skip .skip)))] => true
+  | _ => false
+
+#guard cakePreSsaRoundTripMatchesCake
+
 def terminatingElseIsPushedOut : Bool :=
   match wordPushOutIf
       (.ite .less 1 (.reg 2) (.assign 3 (.var 4)) (.raise 0) : WordProg Nat) with
@@ -183,6 +202,8 @@ def runChecks : IO Bool := do
         nestedLoopRoundTripFuses),
       ("fusion handles materialized conditions in Loop branches",
         loopConditionMaterializationFuses),
+      ("Cake pre-SSA pass order keeps const propagation before fusion",
+        cakePreSsaRoundTripMatchesCake),
       ("Cake terminating conditional branches are pushed out",
         terminatingElseIsPushedOut),
       ("a clobbering materialisation uses Cake duplicate-if",

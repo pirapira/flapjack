@@ -162,11 +162,10 @@ example :
       (checkExp (α := Nat) checkerContext (Exp.op .add [.const 1])) ==
     some "operation Add requires at least 2 operands, 1 provided in top-level declaration\n"
 
-example :
-    staticResultErrorMessage (checkProg (α := Nat) checkerContext
-      (.return (.const 7))) =
-      some "return found outside function scope in top-level declaration\nthis should never happen. please report to a compiler developer\n" := by
-  native_decide
+#guard
+  staticResultErrorMessage (checkProg (α := Nat) checkerContext
+    (.return (.const 7))) ==
+    some "return found outside function scope in top-level declaration\nthis should never happen. please report to a compiler developer\n"
 
 example :
     checkProg (α := Nat) checkerContext

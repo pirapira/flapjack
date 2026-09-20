@@ -1189,7 +1189,7 @@ def cakeAllocateWordFunction [OfNat α 0] (parameters : List Nat) (program : Wor
 def cakeGetPrefs {α : Type u} [OfNat α 0] [OfNat α 1] :
     WordProg α → List (Nat × (Nat × Nat)) → List (Nat × (Nat × Nat))
   | .move priority moves, acc =>
-      moves.foldl (fun acc' move => (priority, (move.1, move.2)) :: acc') acc
+      moves.map (fun move => (priority, (move.1, move.2))) ++ acc
   | .mustTerminate body, acc => cakeGetPrefs body acc
   | .seq first second, acc => cakeGetPrefs first (cakeGetPrefs second acc)
   | .ite _ _ _ thenBranch elseBranch, acc =>

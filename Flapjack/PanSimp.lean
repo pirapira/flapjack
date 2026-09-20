@@ -238,4 +238,12 @@ theorem expIds_retToTail (program : Prog α) :
       | tick => simp [retToTail, expIds]
   exact main (sizeOf program) program rfl
 
+/-- The full `pan_simp` program pass preserves the exception identifiers
+    collected by the source program (Cake's `exp_ids_compile_eq`). -/
+theorem expIds_panSimpProg (program : Prog α) :
+    expIds (panSimpProg program) = expIds program := by
+  unfold panSimpProg
+  rw [expIds_retToTail, expIds_seqAssoc]
+  simp [expIds]
+
 end Flapjack

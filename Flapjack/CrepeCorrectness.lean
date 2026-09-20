@@ -2291,7 +2291,7 @@ theorem compile_full_pan_value_raise_word_state_full_correct
     (baseAddress topAddress bytesInWord value : α)
     (exception : ExceptionId) (exceptionCode : α)
     (hlookup : lookupInfo exception context.exceptions = some exceptionCode) :
-    evalPanValueProgWithPrimitiveCallsAndFfiFull
+    evalPanValueProgWithPrimitiveCallsAndFfi
       primitive sourceHandler structs sourceFunctions
       baseAddress topAddress bytesInWord 3
       sourceLocals sourceGlobals sourceMemory
@@ -2307,7 +2307,7 @@ theorem compile_full_pan_value_raise_word_state_full_correct
   constructor
   · have hlimit : panValuePayloadWithinLimit structs (.word value) = true := by
       simp [panValuePayloadWithinLimit, panValuePayloadSizeFuel]
-    simp [evalPanValueProgWithPrimitiveCallsAndFfiFull, evalPanValueExpFull,
+    simp [evalPanValueProgWithPrimitiveCallsAndFfi, evalPanValueExp,
       hlimit]
   · have hrestore : restoreCrepLocal
         (updateCrepLocal state.locals (context.maxVar + 1) value)
@@ -2511,7 +2511,7 @@ theorem compile_full_pan_value_raise_two_word_state_full_correct
     (exception : ExceptionId) (exceptionCode : α)
     (hlookup : lookupInfo exception context.exceptions = some exceptionCode)
     (hbytesInWord : context.bytesInWord = bytesInWord) :
-    evalPanValueProgWithPrimitiveCallsAndFfiFull
+    evalPanValueProgWithPrimitiveCallsAndFfi
       primitive sourceHandler structs sourceFunctions
       baseAddress topAddress bytesInWord 5
       sourceLocals sourceGlobals sourceMemory
@@ -2532,8 +2532,8 @@ theorem compile_full_pan_value_raise_two_word_state_full_correct
   · have hlimit : panValuePayloadWithinLimit structs
         (.rStruct [.word left, .word right]) = true := by
       exact panValuePayloadWithinLimit_rStruct_two_words structs left right
-    simp [evalPanValueProgWithPrimitiveCallsAndFfiFull, evalPanValueExpFull,
-      evalPanValueExpsFull, hlimit]
+    simp [evalPanValueProgWithPrimitiveCallsAndFfi, evalPanValueExp,
+      evalPanValueExp.evalPanValueExps, hlimit]
   · have hcompile : compileExp context
         (.rStruct [.const left, .const right]) =
         ([.const left, .const right], .comb [.one, .one]) := by
@@ -3563,7 +3563,7 @@ theorem compile_full_pan_value_seq_raise_compose_state_full
     (crepException : α)
     (hcompileFirst : compileProg context first = compiledFirst)
     (hcompileSecond : compileProg context second = compiledSecond)
-    (hsourceFirst : evalPanValueProgWithPrimitiveCallsAndFfiFull
+    (hsourceFirst : evalPanValueProgWithPrimitiveCallsAndFfi
       primitive sourceHandler structs sourceFunctions
       baseAddress topAddress bytesInWord (fuel + 1)
       sourceLocals sourceGlobals sourceMemory first =
@@ -3572,7 +3572,7 @@ theorem compile_full_pan_value_seq_raise_compose_state_full
     (hcrepFirst : evalCrepFullProgStateFull functions crepPrimitive ffi sharedMem
       baseAddress topAddress (fuel + 1) state compiledFirst =
       some (.raised firstState crepException)) :
-    evalPanValueProgWithPrimitiveCallsAndFfiFull
+    evalPanValueProgWithPrimitiveCallsAndFfi
       primitive sourceHandler structs sourceFunctions
       baseAddress topAddress bytesInWord (fuel + 2)
       sourceLocals sourceGlobals sourceMemory (.seq first second) =
@@ -3583,7 +3583,7 @@ theorem compile_full_pan_value_seq_raise_compose_state_full
       (compileProg context (.seq first second)) =
       some (.raised firstState crepException) := by
   constructor
-  · simp [evalPanValueProgWithPrimitiveCallsAndFfiFull, hsourceFirst]
+  · simp [evalPanValueProgWithPrimitiveCallsAndFfi, hsourceFirst]
   · simp [compileProg, hcompileFirst, hcompileSecond,
       evalCrepFullProgStateFull, hcrepFirst]
 
@@ -3612,7 +3612,7 @@ theorem compile_full_pan_value_seq_break_compose_state_full
     (compiledFirst compiledSecond : CrepProg α)
     (hcompileFirst : compileProg context first = compiledFirst)
     (hcompileSecond : compileProg context second = compiledSecond)
-    (hsourceFirst : evalPanValueProgWithPrimitiveCallsAndFfiFull
+    (hsourceFirst : evalPanValueProgWithPrimitiveCallsAndFfi
       primitive sourceHandler structs sourceFunctions
       baseAddress topAddress bytesInWord (fuel + 1)
       sourceLocals sourceGlobals sourceMemory first =
@@ -3620,7 +3620,7 @@ theorem compile_full_pan_value_seq_break_compose_state_full
     (hcrepFirst : evalCrepFullProgStateFull functions crepPrimitive ffi sharedMem
       baseAddress topAddress (fuel + 1) state compiledFirst =
       some (.broke firstState 0)) :
-    evalPanValueProgWithPrimitiveCallsAndFfiFull
+    evalPanValueProgWithPrimitiveCallsAndFfi
       primitive sourceHandler structs sourceFunctions
       baseAddress topAddress bytesInWord (fuel + 2)
       sourceLocals sourceGlobals sourceMemory (.seq first second) =
@@ -3630,7 +3630,7 @@ theorem compile_full_pan_value_seq_break_compose_state_full
       (compileProg context (.seq first second)) =
       some (.broke firstState 0) := by
   constructor
-  · simp [evalPanValueProgWithPrimitiveCallsAndFfiFull, hsourceFirst]
+  · simp [evalPanValueProgWithPrimitiveCallsAndFfi, hsourceFirst]
   · simp [compileProg, hcompileFirst, hcompileSecond,
       evalCrepFullProgStateFull, hcrepFirst]
 
@@ -3658,7 +3658,7 @@ theorem compile_full_pan_value_seq_continue_compose_state_full
     (compiledFirst compiledSecond : CrepProg α)
     (hcompileFirst : compileProg context first = compiledFirst)
     (hcompileSecond : compileProg context second = compiledSecond)
-    (hsourceFirst : evalPanValueProgWithPrimitiveCallsAndFfiFull
+    (hsourceFirst : evalPanValueProgWithPrimitiveCallsAndFfi
       primitive sourceHandler structs sourceFunctions
       baseAddress topAddress bytesInWord (fuel + 1)
       sourceLocals sourceGlobals sourceMemory first =
@@ -3666,7 +3666,7 @@ theorem compile_full_pan_value_seq_continue_compose_state_full
     (hcrepFirst : evalCrepFullProgStateFull functions crepPrimitive ffi sharedMem
       baseAddress topAddress (fuel + 1) state compiledFirst =
       some (.continued firstState 0)) :
-    evalPanValueProgWithPrimitiveCallsAndFfiFull
+    evalPanValueProgWithPrimitiveCallsAndFfi
       primitive sourceHandler structs sourceFunctions
       baseAddress topAddress bytesInWord (fuel + 2)
       sourceLocals sourceGlobals sourceMemory (.seq first second) =
@@ -3676,7 +3676,7 @@ theorem compile_full_pan_value_seq_continue_compose_state_full
       (compileProg context (.seq first second)) =
       some (.continued firstState 0) := by
   constructor
-  · simp [evalPanValueProgWithPrimitiveCallsAndFfiFull, hsourceFirst]
+  · simp [evalPanValueProgWithPrimitiveCallsAndFfi, hsourceFirst]
   · simp [compileProg, hcompileFirst, hcompileSecond,
       evalCrepFullProgStateFull, hcrepFirst]
 

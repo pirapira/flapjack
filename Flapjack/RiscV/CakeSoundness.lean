@@ -1,5 +1,6 @@
 import Flapjack.RiscV.Backend
 import Flapjack.RiscV.CorrectnessBackend
+import Flapjack.RiscV.CorrectnessFfi
 
 /-!
 Cake-faithful evaluator boundary for the straight-line Word fragment.
@@ -622,5 +623,36 @@ example :
       some ([.auipc 4 (BitVec.ofInt 64 1), .addi 4 4 (BitVec.ofInt 64 0x234)],
         ([] : List (Fin 32))) := by
   simp [wordFunctionToRiscVCake, wordLocValueToInstructionsCake, registerOfNat]
+
+/-! The FFI-aware Cake selector is the Cake call-aware selector on the
+straight-line fragment, so it inherits the checked Cake soundness theorem. -/
+
+theorem wordFunctionToRiscVWithCallsAndFfiCake_sound_of_straightLine [NeZero width]
+    (context : WordCallFfiContext width) (state : State width)
+    (program : WordProg (Word width))
+    (hstraight : WordRiscVStraightLine program)
+    (code : List (Instruction width))
+    (hcompile : wordFunctionToRiscVWithCallsAndFfiCake context program =
+      some (code, [])) :
+    evalWordFunctionCake state program =
+      some (executeInstructions state code, []) := by
+  have hagree := wordFunctionToRiscVWithCallsAndFfiCake_agrees_straightLine
+    context program hstraight
+  rw [hagree] at hcompile
+  exact wordFunctionToRiscVWithCallsCake_sound_of_straightLine
+    { targets := context.targets } state program hstraight code hcompile
+
+/-- The FFI-aware Cake selector inherits straight-line soundness. -/
+example (context : WordCallFfiContext 64) (state : State 64) :
+    evalWordFunctionCake state (.skip : WordProg (Word 64)) =
+      some (executeInstructions state ([] : List (Instruction 64)),
+        ([] : List (Word 64))) := by
+  have hstraight : WordRiscVStraightLine (.skip : WordProg (Word 64)) := .skip
+  have hcompile : wordFunctionToRiscVWithCallsAndFfiCake context
+      (.skip : WordProg (Word 64)) =
+      some (([] : List (Instruction 64)), ([] : List (Fin 32))) := by
+    simp [wordFunctionToRiscVWithCallsAndFfiCake, wordFunctionToRiscVWithCallsCake]
+  exact wordFunctionToRiscVWithCallsAndFfiCake_sound_of_straightLine context state
+    _ hstraight _ hcompile
 
 end Flapjack.RiscV

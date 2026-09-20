@@ -848,7 +848,6 @@ def frameOccupancyLive3BitmapsMatch : Bool :=
   match compileRuntimeImage frameOccupancyLive3Source with
   | some image => image.bitmaps.data == cakeFrameOccupancyLive3Bitmaps
   | none => false
-
 /-- Source for the GH #1027 relational-condition case: `if x < 10` over a
 parameter. -/
 def relationalConditionSource : String :=

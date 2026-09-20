@@ -1,5 +1,6 @@
 import Flapjack.RiscV.Backend
 import Flapjack.RiscV.Encoding
+import Flapjack.RiscV.Lab
 
 /-! Direct CakeML `riscv_ast (Inst (Const ...))` oracle checks.
 
@@ -151,6 +152,66 @@ example :
     (wordExpToInstruction (width := 64) 4 (.const (BitVec.ofNat 64 0x1234))).map
         (fun instruction => encodeInstruction instruction) =
       some (encodeInstruction (.addi 4 0 (BitVec.ofNat 64 0x234))) := by
+  decide
+
+/-! ## Bridge to the executable Lab lowering
+
+`labConst32` is the port of Cake's `riscv_const32`
+(`riscv_targetScript.sml:77`) and `labConstInstructions` is the port of the
+`Const` clause of `riscv_ast_def` (`riscv_targetScript.sml:96`).  The
+`wordConst*` definitions are the option-valued, checked theorem boundary.  The
+theorems below show that the two boundaries emit exactly the same instruction
+lists, so correctness statements about `wordConstToInstructions` transfer to
+the executable pipeline. -/
+
+theorem wordConst32ToInstructions_eq_labConst32 {width : Nat} [NeZero width] :
+    (wordConst32ToInstructions (width := width)) =
+      (labConst32 (width := width)) := by
+  rfl
+
+private theorem some_ite {α : Type} (c : Prop) [Decidable c] (a b : α) :
+    (some (if c then a else b) : Option α) = if c then some a else some b := by
+  split <;> rfl
+
+theorem wordConstToInstructions_eq_labConstInstructions {width : Nat}
+    [NeZero width] (destination : Nat) (value : Word width)
+    (hdestination : destination < 32) :
+    wordConstToInstructions (width := width) destination value =
+      some (labConstInstructions (width := width) ⟨destination, hdestination⟩ 0 31
+        value.toNat) := by
+  unfold wordConstToInstructions labConstInstructions
+  simp only [registerOfNat, hdestination]
+  rw [wordConst32ToInstructions_eq_labConst32]
+  have hmod : value.toNat % 2 ^ width = value.toNat :=
+    Nat.mod_eq_of_lt value.isLt
+  by_cases hsmall : value.toNat < 2 ^ 11
+  · have hlow : value.toNat % 2 ^ 12 = value.toNat :=
+      Nat.mod_eq_of_lt (by omega)
+    simp [hsmall, hlow]
+  · simp only [hsmall, if_false, hmod]
+    by_cases hfit :
+        (value.toNat ==
+          (if value.toNat % 2 ^ 12 / 2 ^ 11 % 2 = 0 then value.toNat % 2 ^ 12
+            else (2 ^ width - (2 ^ 12 - value.toNat % 2 ^ 12)) % 2 ^ width)) =
+          true
+    · simp [hfit]
+    · simp only [hfit]
+      simp only [some_ite]
+      simp
+
+/-- The 0x1234 materialization oracle, stated directly against the executable
+Lab lowering rather than only against `wordConstToInstructions`. -/
+example :
+    wordConstToInstructions (width := 64) 4 (BitVec.ofNat 64 0x1234) =
+      some (labConstInstructions (width := 64) 4 0 31 0x1234) := by
+  decide
+
+/-- The wide-constant materialization oracle against the executable Lab
+lowering. -/
+example :
+    wordConstToInstructions (width := 64) 4
+        (BitVec.ofNat 64 0x1122334455667788) =
+      some (labConstInstructions (width := 64) 4 0 31 0x1122334455667788) := by
   decide
 
 end Flapjack.RiscV

@@ -106,4 +106,136 @@ theorem expIds_smartSeq (pre program : Prog α) :
     expIds (smartSeq pre program) = expIds pre ++ expIds program := by
   cases pre <;> simp [smartSeq, expIds]
 
+/-- `seq_assoc` preserves the exception identifiers collected by the source
+    program (Cake's `exp_ids_seq_assoc_eq`).  The pass only recurses on the
+    second argument, but the handler of a call is nested inside an `Option`,
+    so the Lean definition is well-founded; we therefore run a strong
+    induction on `sizeOf program` rather than the (ill-formed) unary
+    induction principle. -/
+theorem expIds_seqAssoc (program pre : Prog α) :
+    expIds (seqAssoc pre program) = expIds pre ++ expIds program := by
+  have main : ∀ n, ∀ program : Prog α, sizeOf program = n → ∀ pre,
+      expIds (seqAssoc pre program) = expIds pre ++ expIds program := by
+    intro n
+    induction n using Nat.strongRecOn with
+    | ind n ih =>
+      intro program hsize pre
+      cases program with
+      | skip => simp [seqAssoc, expIds]
+      | dec name shape value body =>
+          rw [seqAssoc.eq_2, expIds_smartSeq]
+          have hbody := ih (sizeOf body) (by rw [← hsize]; decreasing_trivial) body rfl (.skip : Prog α)
+          simp [expIds, hbody]
+      | seq first second =>
+          rw [seqAssoc.eq_3]
+          have hfirst := ih (sizeOf first) (by rw [← hsize]; decreasing_trivial) first rfl pre
+          have hsecond := ih (sizeOf second) (by rw [← hsize]; decreasing_trivial) second rfl (seqAssoc pre first)
+          rw [hsecond, hfirst]
+          simp [expIds, List.append_assoc]
+      | ite condition thenBranch elseBranch =>
+          rw [seqAssoc.eq_4, expIds_smartSeq]
+          have hthen := ih (sizeOf thenBranch) (by rw [← hsize]; decreasing_trivial) thenBranch rfl (.skip : Prog α)
+          have helse := ih (sizeOf elseBranch) (by rw [← hsize]; decreasing_trivial) elseBranch rfl (.skip : Prog α)
+          simp [expIds, hthen, helse]
+      | «while» condition body =>
+          rw [seqAssoc.eq_5, expIds_smartSeq]
+          have hbody := ih (sizeOf body) (by rw [← hsize]; decreasing_trivial) body rfl (.skip : Prog α)
+          simp [expIds, hbody]
+      | call info function arguments =>
+          cases info with
+          | none => rw [seqAssoc.eq_6, expIds_smartSeq]
+          | some returnsHandler =>
+              obtain ⟨returns, handlerInfo⟩ := returnsHandler
+              cases handlerInfo with
+              | none => rw [seqAssoc.eq_7, expIds_smartSeq]
+              | some exceptionHandler =>
+                  obtain ⟨exception, handlerVar, handler⟩ := exceptionHandler
+                  rw [seqAssoc.eq_8, expIds_smartSeq]
+                  have hbody := ih (sizeOf handler) (by rw [← hsize]; decreasing_trivial) handler rfl (.skip : Prog α)
+                  simp [expIds, hbody]
+      | decCall name shape function arguments body =>
+          rw [seqAssoc.eq_9, expIds_smartSeq]
+          have hbody := ih (sizeOf body) (by rw [← hsize]; decreasing_trivial) body rfl (.skip : Prog α)
+          simp [expIds, hbody]
+      | annot tag text => simp [seqAssoc, expIds]
+      | assign kind name value => simp [seqAssoc, expIds_smartSeq, expIds]
+      | primitive name operator arguments => simp [seqAssoc, expIds_smartSeq, expIds]
+      | store address value => simp [seqAssoc, expIds_smartSeq, expIds]
+      | store32 address value => simp [seqAssoc, expIds_smartSeq, expIds]
+      | storeByte address value => simp [seqAssoc, expIds_smartSeq, expIds]
+      | «break» => simp [seqAssoc, expIds_smartSeq, expIds]
+      | «continue» => simp [seqAssoc, expIds_smartSeq, expIds]
+      | extCall function configuration configurationLength array arrayLength =>
+          simp [seqAssoc, expIds_smartSeq, expIds]
+      | «raise» exception value => simp [seqAssoc, expIds_smartSeq, expIds]
+      | «return» value => simp [seqAssoc, expIds_smartSeq, expIds]
+      | shMemLoad size kind name address => simp [seqAssoc, expIds_smartSeq, expIds]
+      | shMemStore size address value => simp [seqAssoc, expIds_smartSeq, expIds]
+      | tick => simp [seqAssoc, expIds_smartSeq, expIds]
+  exact main (sizeOf program) program rfl pre
+
+/-- `ret_to_tail` preserves the exception identifiers collected by the source
+    program (Cake's `exp_ids_ret_to_tail_eq`).  Same well-founded-recursion
+    workaround as `expIds_seqAssoc`. -/
+theorem expIds_retToTail (program : Prog α) :
+    expIds (retToTail program) = expIds program := by
+  have main : ∀ n, ∀ program : Prog α, sizeOf program = n →
+      expIds (retToTail program) = expIds program := by
+    intro n
+    induction n using Nat.strongRecOn with
+    | ind n ih =>
+      intro program hsize
+      cases program with
+      | skip => simp [retToTail, expIds]
+      | dec name shape value body =>
+          rw [retToTail.eq_2]
+          have hbody := ih (sizeOf body) (by rw [← hsize]; decreasing_trivial) body rfl
+          simp [expIds, hbody]
+      | seq first second =>
+          rw [retToTail.eq_3, expIds_seqCallRet]
+          have hfirst := ih (sizeOf first) (by rw [← hsize]; decreasing_trivial) first rfl
+          have hsecond := ih (sizeOf second) (by rw [← hsize]; decreasing_trivial) second rfl
+          simp [expIds, hfirst, hsecond]
+      | ite condition thenBranch elseBranch =>
+          rw [retToTail.eq_4]
+          have hthen := ih (sizeOf thenBranch) (by rw [← hsize]; decreasing_trivial) thenBranch rfl
+          have helse := ih (sizeOf elseBranch) (by rw [← hsize]; decreasing_trivial) elseBranch rfl
+          simp [expIds, hthen, helse]
+      | «while» condition body =>
+          rw [retToTail.eq_5]
+          have hbody := ih (sizeOf body) (by rw [← hsize]; decreasing_trivial) body rfl
+          simp [expIds, hbody]
+      | call info function arguments =>
+          cases info with
+          | none => rw [retToTail.eq_6]
+          | some returnsHandler =>
+              obtain ⟨returns, handlerInfo⟩ := returnsHandler
+              cases handlerInfo with
+              | none => rw [retToTail.eq_7]
+              | some exceptionHandler =>
+                  obtain ⟨exception, handlerVar, handler⟩ := exceptionHandler
+                  rw [retToTail.eq_8]
+                  have hbody := ih (sizeOf handler) (by rw [← hsize]; decreasing_trivial) handler rfl
+                  simp [expIds, hbody]
+      | decCall name shape function arguments body =>
+          rw [retToTail.eq_9]
+          have hbody := ih (sizeOf body) (by rw [← hsize]; decreasing_trivial) body rfl
+          simp [expIds, hbody]
+      | annot tag text => simp [retToTail, expIds]
+      | assign kind name value => simp [retToTail, expIds]
+      | primitive name operator arguments => simp [retToTail, expIds]
+      | store address value => simp [retToTail, expIds]
+      | store32 address value => simp [retToTail, expIds]
+      | storeByte address value => simp [retToTail, expIds]
+      | «break» => simp [retToTail, expIds]
+      | «continue» => simp [retToTail, expIds]
+      | extCall function configuration configurationLength array arrayLength =>
+          simp [retToTail, expIds]
+      | «raise» exception value => simp [retToTail, expIds]
+      | «return» value => simp [retToTail, expIds]
+      | shMemLoad size kind name address => simp [retToTail, expIds]
+      | shMemStore size address value => simp [retToTail, expIds]
+      | tick => simp [retToTail, expIds]
+  exact main (sizeOf program) program rfl
+
 end Flapjack

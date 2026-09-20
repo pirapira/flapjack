@@ -1,0 +1,7 @@
+fun 1 main() {
+  var 1 x = 0;
+  if (x == 0) {
+  } else {
+  }
+  return 0;
+}

@@ -1,6 +1,9 @@
 import Flapjack.CrepeProgramInduction
 import Flapjack.CrepeExpressionRelation
+import Flapjack.CrepeProgramGenericStoreStateCorrectness
 import Flapjack.CrepeProgramIteCorrectness
+import Flapjack.CrepeProgramStoreCorrectness
+import Flapjack.CrepeProgramStoreByteCorrectness
 import Flapjack.CrepeProgramWhileCorrectness
 import Flapjack.CrepeProgramSourceWordReturnCorrectness
 
@@ -576,6 +579,168 @@ theorem panValueCrepProgramStateControlSafe_store
               | nStruct name fields =>
                   simp [evalPanValueProgWithPrimitiveCallsAndFfi, haddress,
                     hvalue] at hsource
+
+theorem panValueCrepProgramStateControlSafe_store32
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (address value : Exp α) :
+    PanValueCrepProgramStateControlSafe (.store32 address value) := by
+  intro context structs sourceFunctions functions sourceLocals sourceGlobals
+    sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord sourceFuel targetFuel _exceptionRel
+    sourceResult crepResult hstate hsource hcrep
+  cases sourceFuel with
+  | zero => simp [evalPanValueProgWithPrimitiveCallsAndFfi] at hsource
+  | succ sourceFuel =>
+      cases haddress : evalPanValueExp structs sourceLocals sourceGlobals
+          sourceMemory baseAddress topAddress bytesInWord address with
+      | none =>
+          simp [evalPanValueProgWithPrimitiveCallsAndFfi, haddress] at hsource
+      | some addressValue =>
+          cases hvalue : evalPanValueExp structs sourceLocals sourceGlobals
+              sourceMemory baseAddress topAddress bytesInWord value with
+          | none =>
+              simp [evalPanValueProgWithPrimitiveCallsAndFfi, haddress, hvalue]
+                at hsource
+          | some storedValue =>
+              cases addressValue with
+              | word word =>
+                  cases storedValue with
+                  | word wordValue =>
+                      simp [evalPanValueProgWithPrimitiveCallsAndFfi, haddress,
+                        hvalue] at hsource
+                      cases hsource
+                      simp [panValuePcControlLabelSafe]
+                  | rStruct fields =>
+                      simp [evalPanValueProgWithPrimitiveCallsAndFfi, haddress,
+                        hvalue] at hsource
+                  | nStruct name fields =>
+                      simp [evalPanValueProgWithPrimitiveCallsAndFfi, haddress,
+                        hvalue] at hsource
+              | rStruct fields =>
+                  simp [evalPanValueProgWithPrimitiveCallsAndFfi, haddress,
+                    hvalue] at hsource
+              | nStruct name fields =>
+                  simp [evalPanValueProgWithPrimitiveCallsAndFfi, haddress,
+                    hvalue] at hsource
+
+theorem panValueCrepProgramStateControlSafe_storeByte
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (address value : Exp α) :
+    PanValueCrepProgramStateControlSafe (.storeByte address value) := by
+  intro context structs sourceFunctions functions sourceLocals sourceGlobals
+    sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord sourceFuel targetFuel _exceptionRel
+    sourceResult crepResult hstate hsource hcrep
+  cases sourceFuel with
+  | zero => simp [evalPanValueProgWithPrimitiveCallsAndFfi] at hsource
+  | succ sourceFuel =>
+      cases haddress : evalPanValueExp structs sourceLocals sourceGlobals
+          sourceMemory baseAddress topAddress bytesInWord address with
+      | none =>
+          simp [evalPanValueProgWithPrimitiveCallsAndFfi, haddress] at hsource
+      | some addressValue =>
+          cases hvalue : evalPanValueExp structs sourceLocals sourceGlobals
+              sourceMemory baseAddress topAddress bytesInWord value with
+          | none =>
+              simp [evalPanValueProgWithPrimitiveCallsAndFfi, haddress, hvalue]
+                at hsource
+          | some storedValue =>
+              cases addressValue with
+              | word word =>
+                  cases storedValue with
+                  | word wordValue =>
+                      simp [evalPanValueProgWithPrimitiveCallsAndFfi, haddress,
+                        hvalue] at hsource
+                      cases hsource
+                      simp [panValuePcControlLabelSafe]
+                  | rStruct fields =>
+                      simp [evalPanValueProgWithPrimitiveCallsAndFfi, haddress,
+                        hvalue] at hsource
+                  | nStruct name fields =>
+                      simp [evalPanValueProgWithPrimitiveCallsAndFfi, haddress,
+                        hvalue] at hsource
+              | rStruct fields =>
+                  simp [evalPanValueProgWithPrimitiveCallsAndFfi, haddress,
+                    hvalue] at hsource
+              | nStruct name fields =>
+                  simp [evalPanValueProgWithPrimitiveCallsAndFfi, haddress,
+                    hvalue] at hsource
+
+/-! The store family's paired source-word bridges, mirroring the return/ite/
+while bridges: the state-correctness half is the generic word-store theorem
+and the control half is the label rule, with `hlookup`/`hstable` explicit. -/
+theorem panValueCrepProgramStateCorrect_and_controlSafe_store_source_word
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (address value : SourceWordExp α)
+    (hbytesInWord : ∀ (context : CompileContext α) (bytesInWord : α),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext α)
+      (sourceLocals : VarName → Option (PanValue α))
+      (name : VarName) (value : PanValue α),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot]))
+    (hstable : ∀ (state : CrepState α) (baseAddress topAddress : α)
+      (temporary : Nat) (compiled : CrepExp α) (value updateValue : α),
+      evalCrepFullExp state.locals state.memory baseAddress topAddress compiled =
+        some value →
+      evalCrepFullExp
+        (updateCrepLocal state.locals temporary updateValue) state.memory
+        baseAddress topAddress compiled = some value) :
+    PanValueCrepProgramStateCorrect (.store address.toExp value.toExp) ∧
+      PanValueCrepProgramStateControlSafe (.store address.toExp value.toExp) := by
+  constructor
+  · exact panValueCrepProgramStateCorrect_store_source_word address value
+      hbytesInWord hlookup hstable
+  · exact panValueCrepProgramStateControlSafe_store address.toExp value.toExp
+
+theorem panValueCrepProgramStateCorrect_and_controlSafe_store32_source_word
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (address value : SourceWordExp α)
+    (hbytesInWord : ∀ (context : CompileContext α) (bytesInWord : α),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext α)
+      (sourceLocals : VarName → Option (PanValue α))
+      (name : VarName) (value : PanValue α),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot])) :
+    PanValueCrepProgramStateCorrect (.store32 address.toExp value.toExp) ∧
+      PanValueCrepProgramStateControlSafe (.store32 address.toExp value.toExp) := by
+  constructor
+  · exact panValueCrepProgramStateCorrect_store32_source_word address value
+      hbytesInWord hlookup
+  · exact panValueCrepProgramStateControlSafe_store32 address.toExp value.toExp
+
+theorem panValueCrepProgramStateCorrect_and_controlSafe_storeByte_source_word
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (address value : SourceWordExp α)
+    (hbytesInWord : ∀ (context : CompileContext α) (bytesInWord : α),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext α)
+      (sourceLocals : VarName → Option (PanValue α))
+      (name : VarName) (value : PanValue α),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot])) :
+    PanValueCrepProgramStateCorrect (.storeByte address.toExp value.toExp) ∧
+      PanValueCrepProgramStateControlSafe (.storeByte address.toExp value.toExp) := by
+  constructor
+  · exact panValueCrepProgramStateCorrect_storeByte_source_word address value
+      hbytesInWord hlookup
+  · exact panValueCrepProgramStateControlSafe_storeByte address.toExp value.toExp
 
 /-! Cake's `pc_compile_correct[Return]` case (`pan_to_crepProofScript.sml:
 2056-2070`) returns a flattened value and never exposes loop control.  This

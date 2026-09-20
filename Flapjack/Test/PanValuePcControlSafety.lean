@@ -107,6 +107,66 @@ example (condition : SourceWordExp Nat) (body : Prog Nat)
   exact panValueCrepProgramStateCorrect_and_controlSafe_while_source_word
     condition body hbody hbodySafe hloopSafe hbytesInWord hlookup
 
+/-! The store bridge carries evaluator correctness and the boundary
+    control-label obligation together, with `hlookup`/`hstable` explicit. -/
+example
+    (hbytesInWord : ∀ (context : CompileContext Nat) (bytesInWord : Nat),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext Nat)
+      (sourceLocals : VarName → Option (PanValue Nat))
+      (name : VarName) (value : PanValue Nat),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot]))
+    (hstable : ∀ (state : CrepState Nat) (baseAddress topAddress : Nat)
+      (temporary : Nat) (compiled : CrepExp Nat) (value updateValue : Nat),
+      evalCrepFullExp state.locals state.memory baseAddress topAddress compiled =
+        some value →
+      evalCrepFullExp
+        (updateCrepLocal state.locals temporary updateValue) state.memory
+        baseAddress topAddress compiled = some value) :
+    PanValueCrepProgramStateCorrect
+        (.store (SourceWordExp.const (7 : Nat)).toExp
+          (SourceWordExp.const (9 : Nat)).toExp) ∧
+      PanValueCrepProgramStateControlSafe
+        (.store (SourceWordExp.const (7 : Nat)).toExp
+          (SourceWordExp.const (9 : Nat)).toExp) := by
+  exact panValueCrepProgramStateCorrect_and_controlSafe_store_source_word
+    (SourceWordExp.const 7) (SourceWordExp.const 9) hbytesInWord hlookup hstable
+
+example
+    (hbytesInWord : ∀ (context : CompileContext Nat) (bytesInWord : Nat),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext Nat)
+      (sourceLocals : VarName → Option (PanValue Nat))
+      (name : VarName) (value : PanValue Nat),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot])) :
+    PanValueCrepProgramStateCorrect
+        (.store32 (SourceWordExp.const (7 : Nat)).toExp
+          (SourceWordExp.const (9 : Nat)).toExp) ∧
+      PanValueCrepProgramStateControlSafe
+        (.store32 (SourceWordExp.const (7 : Nat)).toExp
+          (SourceWordExp.const (9 : Nat)).toExp) := by
+  exact panValueCrepProgramStateCorrect_and_controlSafe_store32_source_word
+    (SourceWordExp.const 7) (SourceWordExp.const 9) hbytesInWord hlookup
+
+example
+    (hbytesInWord : ∀ (context : CompileContext Nat) (bytesInWord : Nat),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext Nat)
+      (sourceLocals : VarName → Option (PanValue Nat))
+      (name : VarName) (value : PanValue Nat),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot])) :
+    PanValueCrepProgramStateCorrect
+        (.storeByte (SourceWordExp.const (7 : Nat)).toExp
+          (SourceWordExp.const (9 : Nat)).toExp) ∧
+      PanValueCrepProgramStateControlSafe
+        (.storeByte (SourceWordExp.const (7 : Nat)).toExp
+          (SourceWordExp.const (9 : Nat)).toExp) := by
+  exact panValueCrepProgramStateCorrect_and_controlSafe_storeByte_source_word
+    (SourceWordExp.const 7) (SourceWordExp.const 9) hbytesInWord hlookup
+
 /-! Nonzero labels remain rejected at the `pc_compile_correct` boundary. -/
 example :
     ¬ panValuePcResultRel [] controlContext (fun _ _ _ => True) (fun _ => some 0)

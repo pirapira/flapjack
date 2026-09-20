@@ -15,6 +15,23 @@ example : PanValueCrepProgramStateControlSafe (.break : Prog Nat) :=
 example : PanValueCrepProgramStateControlSafe (.continue : Prog Nat) :=
   panValueCrepProgramStateControlSafe_continue
 
+/-! Cake's `pc_compile_correct[Return]` has no loop-control label to transport;
+the source-word return bridge makes that case explicit. -/
+example
+    (hbytesInWord : ∀ (context : CompileContext Nat) (bytesInWord : Nat),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext Nat)
+      (sourceLocals : VarName → Option (PanValue Nat))
+      (name : VarName) (value : PanValue Nat),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot])) :
+    PanValueCrepProgramStateCorrect
+        (.return (SourceWordExp.const (7 : Nat)).toExp) ∧
+      PanValueCrepProgramStateControlSafe
+        (.return (SourceWordExp.const (7 : Nat)).toExp) := by
+  exact panValueCrepProgramStateCorrect_and_controlSafe_return_source_word
+    (SourceWordExp.const 7) hbytesInWord hlookup
+
 example :
     PanValueCrepProgramStateControlSafe
       (.seq (.break : Prog Nat) (.continue : Prog Nat)) := by

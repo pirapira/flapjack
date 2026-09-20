@@ -1293,7 +1293,20 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
         else
           staticBind (checkExp context address) (fun result =>
             if shapedBasedHasShape .one result.shapedBased then
-              staticAddWarning (progOk .otherLast false false context.location)
+              let metadata : StaticResult ProgReturn :=
+                match varKind with
+                | .local =>
+                    staticBind (checkLocalVar context name) (fun info =>
+                      staticOk {
+                        exitsFunction := false
+                        exitsLoop := false
+                        last := .otherLast
+                        variableDelta :=
+                          [(name, { shapedBased :=
+                            shapedBasedWithBase .trusted info.shapedBased })]
+                        currentLocation := context.location })
+                | .global => progOk .otherLast false false context.location
+              staticAddWarning metadata
                 (staticMemoryWarning context false true result.shapedBased)
             else
               staticError (.shape (getNonWordMessage "load address"

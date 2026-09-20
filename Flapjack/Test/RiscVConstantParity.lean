@@ -1,5 +1,6 @@
 import Flapjack.RiscV.Backend
 import Flapjack.RiscV.Encoding
+import Flapjack.RiscV.Lab
 
 /-! Direct CakeML `riscv_ast (Inst (Const ...))` oracle checks.
 
@@ -119,6 +120,108 @@ example :
     (wordExpToInstruction (width := 64) 4 (.const (BitVec.ofNat 64 0x1234))).map
         (fun instruction => encodeInstruction instruction) =
       some (encodeInstruction (.addi 4 0 (BitVec.ofNat 64 0x234))) := by
+  decide
+
+/-! ## Bridge to the executable Lab lowering
+
+`labConst32` is the port of Cake's `riscv_const32`
+(`riscv_targetScript.sml:77`) and `labConstInstructions` is the port of the
+`Const` clause of `riscv_ast_def` (`riscv_targetScript.sml:96`).  The
+`wordConst*` definitions are the option-valued, checked theorem boundary.  The
+theorems below show that the two boundaries emit exactly the same instruction
+lists, so correctness statements about `wordConstToInstructions` transfer to
+the executable pipeline. -/
+
+theorem wordConst32ToInstructions_eq_labConst32 {width : Nat} [NeZero width] :
+    (wordConst32ToInstructions (width := width)) =
+      (labConst32 (width := width)) := by
+  rfl
+
+private theorem some_ite {α : Type} (c : Prop) [Decidable c] (a b : α) :
+    (some (if c then a else b) : Option α) = if c then some a else some b := by
+  split <;> rfl
+
+theorem wordConstToInstructions_eq_labConstInstructions {width : Nat}
+    [NeZero width] (destination : Nat) (value : Word width)
+    (hdestination : destination < 32) :
+    wordConstToInstructions (width := width) destination value =
+      some (labConstInstructions (width := width) ⟨destination, hdestination⟩ 0 31
+        value.toNat) := by
+  unfold wordConstToInstructions labConstInstructions
+  simp only [registerOfNat, hdestination]
+  rw [wordConst32ToInstructions_eq_labConst32]
+  have hmod : value.toNat % 2 ^ width = value.toNat :=
+    Nat.mod_eq_of_lt value.isLt
+  by_cases hsmall : value.toNat < 2 ^ 11
+  · have hlow : value.toNat % 2 ^ 12 = value.toNat :=
+      Nat.mod_eq_of_lt (by omega)
+    simp [hsmall, hlow]
+  · simp only [hsmall, if_false, hmod]
+    by_cases hfit :
+        (value.toNat ==
+          (if value.toNat % 2 ^ 12 / 2 ^ 11 % 2 = 0 then value.toNat % 2 ^ 12
+            else (2 ^ width - (2 ^ 12 - value.toNat % 2 ^ 12)) % 2 ^ width)) =
+          true
+    · simp [hfit]
+    · simp only [hfit]
+      simp only [some_ite]
+      simp
+
+/-- The expression-facing Cake boundary selects the checked constant lowering
+for `.const`, so it agrees with the executable Lab materialization while the
+legacy one-instruction selector stays unchanged. -/
+theorem wordExpToInstructionsCake_const_eq_labConstInstructions {width : Nat}
+    [NeZero width] (destination : Nat) (value : Word width)
+    (hdestination : destination < 32) :
+    wordExpToInstructionsCake (width := width) destination (.const value) =
+      some (labConstInstructions (width := width) ⟨destination, hdestination⟩ 0 31
+        value.toNat) :=
+  wordConstToInstructions_eq_labConstInstructions destination value hdestination
+
+/-- The 0x1234 materialization oracle through the expression-facing Cake
+boundary, stated directly against the executable Lab lowering. -/
+example :
+    wordExpToInstructionsCake (width := 64) 4 (.const (BitVec.ofNat 64 0x1234)) =
+      some (labConstInstructions (width := 64) 4 0 31 0x1234) := by
+  decide
+
+/-- The 0x1234 materialization oracle, stated directly against the executable
+Lab lowering rather than only against `wordConstToInstructions`. -/
+example :
+    wordConstToInstructions (width := 64) 4 (BitVec.ofNat 64 0x1234) =
+      some (labConstInstructions (width := 64) 4 0 31 0x1234) := by
+  decide
+
+/-- The wide-constant materialization oracle against the executable Lab
+lowering. -/
+example :
+    wordConstToInstructions (width := 64) 4
+        (BitVec.ofNat 64 0x1122334455667788) =
+      some (labConstInstructions (width := 64) 4 0 31 0x1122334455667788) := by
+  decide
+
+/-! ## LocValue boundary witness (bead flapjack-pxn.1.4)
+
+The standalone Word selector materializes a location label with a single `addi`
+(`Flapjack/RiscV/Backend.lean:210`), while Cake's `riscv_ast (Loc r i)`
+(`cakeml/compiler/encoders/riscv/riscv_targetScript.sml:265`) always emits
+`auipc`/`addi`.  For labels outside the signed 12-bit range the single `addi`
+immediate is silently truncated by the encoder.  The executable Lab selector
+uses `labLocValueInstructions` (`Flapjack/RiscV/Lab.lean:194`), so production
+output is unaffected; these checks record the unfaithful theorem boundary. -/
+
+example :
+    wordLocValueToInstructions (width := 64) 4 0x1234 =
+      some [.addi 4 0 (BitVec.ofNat 64 0x1234)] := by
+  decide
+
+example :
+    (wordLocValueToInstructions (width := 64) 4 0x1234).map List.length =
+      some 1 := by
+  decide
+
+example :
+    (labLocValueInstructions (width := 64) 4 0x1234 0).length = 2 := by
   decide
 
 end Flapjack.RiscV

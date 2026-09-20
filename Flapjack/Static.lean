@@ -1010,7 +1010,12 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
         let checkValue : ExpReturn → StaticResult ProgReturn :=
           fun result =>
             if shapedBasedSameShape info.shapedBased result.shapedBased then
-              progOk .otherLast false false context.location
+              staticOk {
+                exitsFunction := false
+                exitsLoop := false
+                last := .otherLast
+                variableDelta := [(name, { shapedBased := result.shapedBased })]
+                currentLocation := context.location }
             else
               staticError (.shape (getShapeMismatchMessage
                 ("expression assigned to local variable " ++ name)
@@ -1232,7 +1237,8 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
                         locals := (name, { shapedBased := shaped }) :: context.locals
                         last := .otherLast }
                       staticBind (checkProg nextContext body) (fun result =>
-                        (Except.ok { result with variableDelta := [] }, []))))))
+                        (Except.ok { result with
+                          variableDelta := infoMapDelete name result.variableDelta }, []))))))
       )
   | .extCall function configuration configurationLength array arrayLength =>
       staticBind (checkCallArgs context

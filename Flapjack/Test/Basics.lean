@@ -170,7 +170,8 @@ example :
 example :
     checkProg (α := Nat) checkerContext
       (.assign .local "x" (.const 7)) =
-      progOk .otherLast false false "" := by
+      staticOk (ProgReturn.mk false false .otherLast
+        [("x", { shapedBased := .word .notBased })] "") := by
   simp [checkProg, checkExp, staticOk, staticBind, checkerContext, lookupInfo,
     checkLocalVar,
     shapedBasedSameShape]

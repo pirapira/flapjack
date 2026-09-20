@@ -292,4 +292,38 @@ theorem evalPanValueFfiClockProg_while_no_none
   apply h
   simp [evalPanValueFfiClockProg, hcond, hw, hclock, hbody]
 
+/-- Congruence of the clocked evaluator under the first component of a `Seq`.
+    This is the fuel-compatible building block needed to reassociate sequences:
+    a `Seq` at `fuel + 1` evaluates its first component at `fuel`, so replacing
+    that component by an evaluation-equal one leaves the whole `Seq` equal. -/
+theorem evalPanValueFfiClockProg_seq_congr
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel clock : Nat) (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (first first' second : Prog α)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (h : evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
+        first ma c mh =
+      evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
+        first' ma c mh) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi
+        clock (.seq first second) ma c mh =
+      evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi
+        clock (.seq first' second) ma c mh := by
+  simp only [evalPanValueFfiClockProg]
+  rw [h]
+
 end Flapjack

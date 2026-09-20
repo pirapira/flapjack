@@ -258,6 +258,49 @@ theorem wordFunctionToRiscVWithCalls_agrees_straightLine [NeZero width]
               simp [wordFunctionToRiscVWithCalls, wordProgToRiscV, ihfirst,
                 ihsecond, hfirstCode, hsecondCode]
 
+/-! The same compositional bridge for the checked Cake boundary.  This keeps
+    the multi-instruction constant materialization visible to theorem clients:
+    on the straight-line fragment, the call-aware Cake selector is exactly the
+    Cake program selector paired with an empty return carrier. -/
+theorem wordFunctionToRiscVWithCallsCake_agrees_cakeStraightLine [NeZero width]
+    (context : WordCallContext width)
+    (program : WordProg (Word width))
+    (hstraight : WordRiscVStraightLine program) :
+    wordFunctionToRiscVWithCallsCake context program =
+      (wordProgToRiscVCake program).map (fun code => (code, [])) := by
+  induction hstraight with
+  | skip => simp [wordFunctionToRiscVWithCallsCake, wordProgToRiscVCake]
+  | move store moves =>
+      cases h : wordMoveToInstructions (width := width) moves <;>
+        simp [wordFunctionToRiscVWithCallsCake, wordProgToRiscVCake, h]
+  | assign destination value =>
+      cases h : wordExpToInstructionsCake (width := width) destination value <;>
+        simp [wordFunctionToRiscVWithCallsCake, wordProgToRiscVCake, h]
+  | inst instruction =>
+      cases h : wordInstToInstructionsCake (width := width) instruction <;>
+        simp [wordFunctionToRiscVWithCallsCake, wordProgToRiscVCake, h]
+  | store address value =>
+      cases h : wordShareInstToInstructionsCake (width := width) .store value address <;>
+        simp [wordFunctionToRiscVWithCallsCake, wordProgToRiscVCake, h]
+  | locValue destination source =>
+      cases h : wordLocValueToInstructionsCake (width := width) destination source 0 <;>
+        simp [wordFunctionToRiscVWithCallsCake, wordProgToRiscVCake, h]
+  | tick => simp [wordFunctionToRiscVWithCallsCake, wordProgToRiscVCake]
+  | shareInst operator name address =>
+      cases h : wordShareInstToInstructionsCake (width := width) operator name address <;>
+        simp [wordFunctionToRiscVWithCallsCake, wordProgToRiscVCake, h]
+  | seq first second hfirst hsecond ihfirst ihsecond =>
+      cases hfirstCode : wordProgToRiscVCake first with
+      | none => simp [wordFunctionToRiscVWithCallsCake, wordProgToRiscVCake,
+          ihfirst, hfirstCode]
+      | some firstCode =>
+          cases hsecondCode : wordProgToRiscVCake second with
+          | none => simp [wordFunctionToRiscVWithCallsCake, wordProgToRiscVCake,
+              ihfirst, ihsecond, hfirstCode, hsecondCode]
+          | some secondCode =>
+              simp [wordFunctionToRiscVWithCallsCake, wordProgToRiscVCake,
+                ihfirst, ihsecond, hfirstCode, hsecondCode]
+
 theorem evalWordFunction_wordRiscVStraightLine_eq_evalWordProg [NeZero width]
     (state : State width) (program : WordProg (Word width))
     (hstraight : WordRiscVStraightLine program) :

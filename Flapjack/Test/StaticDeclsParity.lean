@@ -49,6 +49,16 @@ def staticDeclsWarnings (declarations : List (Decl Nat)) : List String :=
 
 #guard
   staticResultErrorMessage
+      (staticDeclsCheck [staticDeclsFunction "main" false [("arg", .one)] .one]) ==
+    some "main function has arguments\n"
+
+#guard
+  staticResultErrorMessage
+      (staticDeclsCheck [staticDeclsFunction "main" true [] .one]) ==
+    some "main function is exported\n"
+
+#guard
+  staticResultErrorMessage
       (staticDeclsCheck [staticDeclsFunction "exported" true [] (.comb [.one, .one])]) ==
     some "exported function return has shape {1,1} instead of a word in function exported\n"
 
@@ -75,6 +85,6 @@ def staticDeclsWarnings (declarations : List (Decl Nat)) : List String :=
 #guard
   staticResultErrorMessage
       (staticDeclsCheck [.exnDecl "E" .one, .exnDecl "E" .one]) ==
-    some "exception is redeclared: E"
+    some "exception E is redeclared\n"
 
 end Flapjack

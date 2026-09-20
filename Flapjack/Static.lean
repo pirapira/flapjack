@@ -1496,9 +1496,9 @@ def staticCheckFunctionHeader [BEq String] (context : StructContext)
     (declaration : FunDecl α) : StaticResult Unit :=
   if declaration.name = "main" then
     if !declaration.params.isEmpty then
-      staticError (.general "main function has arguments")
+      staticError (.general "main function has arguments\n")
     else if declaration.exported then
-      staticError (.general "main function is exported")
+      staticError (.general "main function is exported\n")
     else if !shapesSame declaration.returnShape .one then
       staticError (.shape (getNonWordMessage "main function return"
         (Shape.shapeToString declaration.returnShape) ""
@@ -1540,7 +1540,7 @@ def staticCheckDecls [BEq String] (structs : StructContext) :
       staticCheckDecls structs context declarations
   | context, .exnDecl exception shape :: declarations =>
       if (lookupInfo exception context.exceptions).isSome then
-        staticError (.scope ("exception is redeclared: " ++ exception))
+        staticError (.scope ("exception " ++ exception ++ " is redeclared\n"))
       else
         /- CakeML only checks for redeclaration here; the exception shape
            itself is not validated (`panStaticScript.sml:1858-1868`). -/

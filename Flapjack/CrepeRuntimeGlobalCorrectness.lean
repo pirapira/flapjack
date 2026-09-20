@@ -60,6 +60,21 @@ theorem crepRuntimeTypedGlobalRelation_adapter
   intro address
   rfl
 
+/-! The Loop-side state produced by the typed runtime adapter retains the
+    source-shaped global relation.  This is the explicit state boundary used
+    by typed correctness bridges; the raw Loop store theorems below still
+    require a no-alias premise because `updateLoopGlobal` is target-width
+    keyed. -/
+theorem crepRuntimeTypedGlobalRelation_loopState_adapter
+    (state : CrepRuntimeState α σ) (key : α → CrepGlobalAddress)
+    (typedState : CrepGlobalState α) :
+    CrepGlobalKeyRelation key
+      (loopStateOfCrepRuntimeStateForGlobals
+        (state.withTypedGlobalState key typedState)).globals
+      typedState.globals := by
+  intro address
+  rfl
+
 theorem crepRuntimeTypedGlobalRelation_store_of_noalias
     [BEq α] [LawfulBEq α]
     (key : α → CrepGlobalAddress) (state : CrepRuntimeState α σ)

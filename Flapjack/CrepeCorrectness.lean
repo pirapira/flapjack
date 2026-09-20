@@ -2931,4 +2931,61 @@ theorem compileProg_decCall_expansion
             body)) := by
   simp [compileProg]
 
+/-! Full-word stateful normal sequencing is the next compact induction
+    boundary.  The four hypotheses below are the explicit Cake/HOL obligations
+    supplied by the source and compiled-code simulation steps: both semantics
+    must normalize the first component, and both must agree on the
+    continuation from the resulting state.  Unlike the compatibility
+    composition above, this keeps Cake's complete word evaluator and the
+    stateful Crepe evaluator on the same boundary. -/
+theorem compile_full_pan_value_seq_normal_compose_state_full
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [PanShiftWidth α]
+    [ArithmeticShiftRight α] [RotateRightOp α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (functions : List (CompiledFunction α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (sourceFirstLocals sourceFirstGlobals : VarName → Option (PanValue α))
+    (sourceFirstMemory : α → Option (PanValue α))
+    (state firstState : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (first second : Prog α)
+    (sourceResult : (VarName → Option (PanValue α)) ×
+      (VarName → Option (PanValue α)) ×
+      (α → Option (PanValue α)) × List (PanValue α))
+    (crepResult : CrepControlResult α)
+    (hsourceFirst : evalPanValueProgWithPrimitiveFull structs
+      baseAddress topAddress bytesInWord sourceLocals sourceGlobals sourceMemory
+      primitive first =
+      some (sourceFirstLocals, sourceFirstGlobals, sourceFirstMemory, []))
+    (hcrepFirst : evalCrepFullProgStateFull functions crepPrimitive ffi sharedMem
+      baseAddress topAddress (fuel + 1) state (compileProg context first) =
+      some (.normal firstState))
+    (hsourceSecond : evalPanValueProgWithPrimitiveFull structs
+      baseAddress topAddress bytesInWord sourceFirstLocals sourceFirstGlobals
+      sourceFirstMemory primitive second =
+      some sourceResult)
+    (hcrepSecond : evalCrepFullProgStateFull functions crepPrimitive ffi sharedMem
+      baseAddress topAddress (fuel + 1) firstState (compileProg context second) =
+      some crepResult) :
+    evalPanValueProgWithPrimitiveFull structs
+      baseAddress topAddress bytesInWord sourceLocals sourceGlobals sourceMemory
+      primitive (.seq first second) =
+      some sourceResult ∧
+    evalCrepFullProgStateFull functions crepPrimitive ffi sharedMem
+      baseAddress topAddress (fuel + 2) state
+      (compileProg context (.seq first second)) =
+      some crepResult := by
+  constructor
+  · simp [evalPanValueProgWithPrimitiveFull, hsourceFirst,
+      hsourceSecond]
+  · simp [compileProg, hcrepFirst, hcrepSecond,
+      evalCrepFullProgStateFull]
+
 end Flapjack

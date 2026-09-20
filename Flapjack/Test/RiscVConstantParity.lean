@@ -64,4 +64,20 @@ example :
         .loadWord 4 31] := by
   decide
 
+example :
+    wordProgToRiscVCake (width := 64)
+        (.assign 4 (.const (BitVec.ofNat 64 0x1234))) =
+      some [.lui 4 (BitVec.ofNat 64 1),
+        .addi 4 4 (BitVec.ofNat 64 0x234)] := by
+  simp [wordProgToRiscVCake, wordExpToInstructionsCake, wordConstToInstructions,
+    wordConst32ToInstructions, registerOfNat]
+
+example :
+    wordProgToRiscVCake (width := 64)
+        (.inst (.const 4 (BitVec.ofNat 64 0x1234))) =
+      some [.lui 4 (BitVec.ofNat 64 1),
+        .addi 4 4 (BitVec.ofNat 64 0x234)] := by
+  simp [wordProgToRiscVCake, wordInstToInstructionsCake, wordConstToInstructions,
+    wordConst32ToInstructions, registerOfNat]
+
 end Flapjack.RiscV

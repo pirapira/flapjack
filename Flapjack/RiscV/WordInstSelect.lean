@@ -235,22 +235,28 @@ def wordInstNormalizeExp [Sub α] [Add α] [AndOp α] [OrOp α] [HXor α α α]
     normally the returned temporary, matching Cake's `Addr temp 0w`, and Cake
     lowers every expression-level load to a genuine `Mem Load` instruction.
     Keeping it as an `Assign` would leave the load invisible to `word_cse`, so
-    repeated loads could not share the first result.  An address that stayed an
-    unfused base-plus-offset expression is preserved for the later
-    Word-to-Stack offset handling instead of pretending that `temp` holds the
-    complete address. -/
+    repeated loads could not share the first result.  Valid base-plus-offset
+    addresses retain their offset in the selected memory instruction; an
+    out-of-range offset is materialized before a zero-offset load, matching
+    `word_instScript.sml:234-245`. -/
 def wordInstSelectLoadTail [WordInstSelectImmediate α] (temp : Nat) (prelude : WordProg α)
     (selectedAddress : WordExp α) : WordProg α × WordExp α :=
   match selectedAddress with
   | .op .add [.var address, .const offset] =>
-      if WordInstSelectImmediate.negativeAddressOffset offset then
+      if WordInstSelectImmediate.validSharedMemoryOffset .load offset then
         (wordDeadSelectSeq prelude
           (.inst (.memOffset .load temp address offset)), .var temp)
       else
-        (wordDeadSelectSeq prelude (.assign temp (.load selectedAddress)), .var temp)
+        let materialize := wordDeadSelectSeq prelude
+          (.inst (.const (temp + 1) offset))
+        let materialize := wordDeadSelectSeq materialize
+          (.inst (.arith (.binOp .add temp temp (.reg (temp + 1)))))
+        (wordDeadSelectSeq materialize
+          (.inst (.mem .load temp temp)), .var temp)
   | .var address =>
       (wordDeadSelectSeq prelude (.inst (.mem .load temp address)), .var temp)
-  | _ => (wordDeadSelectSeq prelude (.assign temp (.load selectedAddress)), .var temp)
+  | _ =>
+      (wordDeadSelectSeq prelude (.inst (.mem .load temp temp)), .var temp)
 
 def wordInstSelectAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α 1]
     [WordInstSelectImmediate α]
@@ -441,12 +447,17 @@ def wordInstSelectProgram [Sub α] [Add α] [AndOp α] [OrOp α] [HXor α α α]
           | .var address =>
               wordDeadSelectSeq prelude (.inst (.mem .load destination address))
           | .op .add [.var address, .const offset] =>
-              if WordInstSelectImmediate.negativeAddressOffset offset then
+              if WordInstSelectImmediate.validSharedMemoryOffset .load offset then
                 wordDeadSelectSeq prelude
                   (.inst (.memOffset .load destination address offset))
               else
-                wordDeadSelectSeq prelude (.assign destination (.load selectedAddress))
-          | _ => wordDeadSelectSeq prelude (.assign destination (.load selectedAddress))
+                let materialize := wordDeadSelectSeq prelude
+                  (.inst (.const (temp + 1) offset))
+                let materialize := wordDeadSelectSeq materialize
+                  (.inst (.arith (.binOp .add temp temp (.reg (temp + 1)))))
+                wordDeadSelectSeq materialize
+                  (.inst (.mem .load destination temp))
+          | _ => wordDeadSelectSeq prelude (.inst (.mem .load destination temp))
       | .op operator [left, .const value] =>
           let (prelude, left) := wordInstSelectAtom temp left
           match left with

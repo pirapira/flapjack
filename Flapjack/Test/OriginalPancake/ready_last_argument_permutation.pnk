@@ -1,0 +1,9 @@
+fun 1 callee(1 a, 1 b, 1 c, 1 d) { return a + b + c + d; }
+fun 1 main() {
+  var 1 a = 5;
+  var 1 b = 7;
+  var 1 c = 11;
+  var 1 d = 13;
+  var 1 result = callee(b, c, d, a);
+  return result + a + b + c + d;
+}

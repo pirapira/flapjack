@@ -703,6 +703,25 @@ def evalPanValueFfiProgramStepped
   | some _, (.returned _ _ _ _ _, _) => none
   | _, result => some result
 
+/-! The stepped exact entrypoint carries the Cake memory operations in its
+    state, just as `evalPanValueFfiExactProgram` does.  In particular, an
+    exact caller cannot accidentally select the legacy whole-cell load/store
+    fallback by omitting `memoryAccess`. -/
+def evalPanValueFfiExactProgramStepped
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (initial : PanValueFfiExactProgramState α σ)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (fuel : Nat) (declarations : List (Decl α))
+    (entry : FunName) (arguments : List (Exp α)) :
+    Option (PanValueFfiSteppedResult α σ) :=
+  evalPanValueFfiProgramStepped context initial.legacy primitive handler fuel
+    declarations entry arguments
+    (memoryAccess := some initial.memoryAccess)
+
 theorem evalPanValueFfiProgramStepped_fst
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
@@ -758,5 +777,23 @@ theorem evalPanValueFfiProgramStepped_fst
                       simp [hcall, hlookup]
                   | finalFfi locals globals memory ffi event =>
                       simp [hcall, hlookup]
+
+theorem evalPanValueFfiExactProgramStepped_fst
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (initial : PanValueFfiExactProgramState α σ)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (fuel : Nat) (declarations : List (Decl α))
+    (entry : FunName) (arguments : List (Exp α)) :
+    (evalPanValueFfiExactProgramStepped context initial primitive handler fuel
+      declarations entry arguments).map Prod.fst =
+      evalPanValueFfiExactProgram context initial primitive handler fuel
+        declarations entry arguments := by
+  exact evalPanValueFfiProgramStepped_fst context initial.legacy primitive handler
+    fuel declarations entry arguments
+    (memoryAccess := some initial.memoryAccess)
 
 end Flapjack

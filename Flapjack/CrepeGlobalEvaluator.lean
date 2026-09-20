@@ -112,6 +112,33 @@ def evalCrepTypedExpFull {α : Type u} [BEq α] [OfNat α 0] [OfNat α 1] [Add �
     (baseAddress topAddress : α) : CrepExp α → Option α :=
   evalCrepFullExpStateFull (state.toCompact key) baseAddress topAddress
 
+/-! The list and program adapters keep the same typed-global projection while
+    ensuring that target-word callers do not fall back to the partial shift
+    operation through the legacy expression-list/program evaluator. -/
+def evalCrepTypedExpsFull {α : Type u} [BEq α] [OfNat α 0] [OfNat α 1]
+    [Add α] [Mul α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [PanShiftWidth α]
+    [ArithmeticShiftRight α] [RotateRightOp α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (key : α → CrepGlobalAddress) (state : CrepGlobalState α)
+    (baseAddress topAddress : α) (expressions : List (CrepExp α)) :
+    Option (List α) :=
+  evalCrepFullExpsStateFull (state.toCompact key) baseAddress topAddress expressions
+
+def evalCrepTypedProgFull {α : Type u} [BEq α] [OfNat α 0] [OfNat α 1]
+    [Add α] [Mul α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [PanShiftWidth α]
+    [ArithmeticShiftRight α] [RotateRightOp α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (key : α → CrepGlobalAddress) (state : CrepGlobalState α)
+    (functions : List (CompiledFunction α))
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat) (program : CrepProg α) :
+    Option (CrepControlResult α) :=
+  evalCrepFullProgStateFull functions primitive ffi sharedMem
+    baseAddress topAddress fuel (state.toCompact key) program
+
 /-- Executable `LoadGlob` entrypoint on the typed state: read the 5-bit key. -/
 def evalCrepTypedLoad {α : Type u} (key : α → CrepGlobalAddress)
     (state : CrepGlobalState α) (address : α) : Option α :=

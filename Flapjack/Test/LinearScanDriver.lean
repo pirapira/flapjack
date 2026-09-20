@@ -6,6 +6,14 @@ import Flapjack.RiscV.AllocationModePipeline
 
 namespace Flapjack
 
+/- Cake's `get_prefs_def` preserves Move priorities and ignores Assign
+   fallback copies; the linear-scan driver must receive that shape directly. -/
+example :
+    wordProgPrioritizedMoves
+        (.seq (.move 7 [(1, 2)]) (.assign 3 (.var 4)) : WordProg Nat) =
+      [{ priority := 7, left := 1, right := 2 }] := by
+  decide +kernel
+
 def linearScanTargetRemoveConfig : StackRemoveConfig :=
   { storeBase := 10, currHeap := 12, scratch := 31, addressScratch := 29,
     stackPointer := 20, bytesInWord := 8, stackBase := 21, wordShift := 3 }

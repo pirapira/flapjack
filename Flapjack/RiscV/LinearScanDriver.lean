@@ -1,4 +1,5 @@
 import Flapjack.RiscV.LinearScan
+import Flapjack.RiscV.Heuristics
 
 /-!
 # Function-level linear-scan allocation
@@ -20,8 +21,9 @@ def wordAllocateLinearScanFunction [OfNat α 0] (parameters : List Nat)
   let tree := WordClashTree.seq (.set renamedParameters)
     (wordClashTree renamedProgram [])
   let forced := wordProgForcedClashes renamedProgram
-  let moves := wordPreferenceMoves
-    (wordProgPreferenceEdges renamedProgram)
+  /- Cake's linear_scan_reg_alloc receives the priority-bearing get_prefs
+     list; wordProgPrioritizedMoves is the corresponding Word boundary. -/
+  let moves := wordProgPrioritizedMoves renamedProgram
   (wordLinearScanAllocateClashTreeChecked colours stackStart tree forced moves).map
     (fun allocation =>
       (state, renamedParameters, allocation, renamedProgram))
@@ -47,8 +49,8 @@ theorem wordAllocateLinearScanFunction_safe [OfNat α 0]
       (.set (wordSsaRenameFunction parameters program).2.fst)
       (wordClashTree (wordSsaRenameFunction parameters program).2.snd []))
     (wordProgForcedClashes (wordSsaRenameFunction parameters program).2.snd)
-    (wordPreferenceMoves
-      (wordProgPreferenceEdges (wordSsaRenameFunction parameters program).2.snd))
+    (wordProgPrioritizedMoves
+      (wordSsaRenameFunction parameters program).2.snd)
     allocation' hchecked
 
 theorem wordLinearScanLocationsComplete_mem
@@ -86,8 +88,8 @@ theorem wordAllocateLinearScanFunction_maps_parameters [OfNat α 0]
       (.set (wordSsaRenameFunction parameters program).2.fst)
       (wordClashTree (wordSsaRenameFunction parameters program).2.snd []))
     (wordProgForcedClashes (wordSsaRenameFunction parameters program).2.snd)
-    (wordPreferenceMoves
-      (wordProgPreferenceEdges (wordSsaRenameFunction parameters program).2.snd))
+    (wordProgPrioritizedMoves
+      (wordSsaRenameFunction parameters program).2.snd)
     allocation' hchecked
   have hcomplete :
       wordLinearScanLocationsComplete allocation'
@@ -112,8 +114,7 @@ def wordAllocateLinearScanFunctionWithEntry [OfNat α 0] (parameters : List Nat)
   let tree := WordClashTree.seq (.set renamedParameters)
     (wordClashTree renamedProgram [])
   let forced := wordProgForcedClashes renamedProgram
-  let moves := wordPreferenceMoves
-    (wordProgPreferenceEdges renamedProgram)
+  let moves := wordProgPrioritizedMoves renamedProgram
   (wordLinearScanAllocateClashTreeChecked colours stackStart tree forced moves).map
     (fun allocation =>
       (state, renamedParameters, allocation, renamedProgram))
@@ -139,8 +140,8 @@ theorem wordAllocateLinearScanFunctionWithEntry_safe [OfNat α 0]
       (.set (wordSsaRenameFunctionWithEntry parameters program).2.fst)
       (wordClashTree (wordSsaRenameFunctionWithEntry parameters program).2.snd []))
     (wordProgForcedClashes (wordSsaRenameFunctionWithEntry parameters program).2.snd)
-    (wordPreferenceMoves
-      (wordProgPreferenceEdges (wordSsaRenameFunctionWithEntry parameters program).2.snd))
+    (wordProgPrioritizedMoves
+      (wordSsaRenameFunctionWithEntry parameters program).2.snd)
     allocation_ hchecked
 
 theorem wordAllocateLinearScanFunctionWithEntry_maps_parameters [OfNat α 0]
@@ -160,9 +161,8 @@ theorem wordAllocateLinearScanFunctionWithEntry_maps_parameters [OfNat α 0]
       (.set (wordSsaRenameFunctionWithEntry parameters program).2.fst)
       (wordClashTree (wordSsaRenameFunctionWithEntry parameters program).2.snd []))
     (wordProgForcedClashes (wordSsaRenameFunctionWithEntry parameters program).2.snd)
-    (wordPreferenceMoves
-      (wordProgPreferenceEdges
-        (wordSsaRenameFunctionWithEntry parameters program).2.snd))
+    (wordProgPrioritizedMoves
+      (wordSsaRenameFunctionWithEntry parameters program).2.snd)
     allocation_ hchecked
   have hcomplete :
       wordLinearScanLocationsComplete allocation_

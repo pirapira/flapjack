@@ -51,6 +51,51 @@ def runtimeTypedAliasedStoreLoadValue : Option Nat :=
 
 #guard runtimeTypedAliasedStoreLoadValue == some 17
 
+def runtimeTypedLoopBaseState : LoopState Nat :=
+  { locals := fun _ => none
+    globals := fun _ => none
+    memory := fun _ => none }
+
+def runtimeTypedAliasedLoopStoreState : LoopState Nat :=
+  loopStateWithTypedGlobalStore runtimeTypedLoopBaseState runtimeTypedKey
+    runtimeTypedBaseState 4 17
+
+/- The Loop adapter preserves Cake's fixed-key alias fiber: a store at 4 is
+   visible through the distinct target-width address 36, while its relation is
+   stated against the typed 5-bit map rather than against raw equality. -/
+#guard runtimeTypedAliasedLoopStoreState.globals 36 == some 17
+
+example :
+    CrepGlobalKeyRelation runtimeTypedKey
+      runtimeTypedAliasedLoopStoreState.globals
+      (storeCrepTypedGlobal runtimeTypedKey runtimeTypedBaseState 4 17).globals := by
+  exact loopStateWithTypedGlobalStore_relation runtimeTypedLoopBaseState
+    runtimeTypedKey runtimeTypedBaseState 4 17
+
+example :
+    runtimeTypedAliasedLoopStoreState.globals 36 =
+      (storeCrepTypedGlobal runtimeTypedKey runtimeTypedBaseState 4 17).globals
+        (runtimeTypedKey 36) := by
+  exact loopStateWithTypedGlobalStore_load runtimeTypedLoopBaseState
+    runtimeTypedKey runtimeTypedBaseState 4 36 17
+
+example :
+    evalCrepTypedLoad runtimeTypedKey
+        (storeCrepTypedGlobal runtimeTypedKey runtimeTypedBaseState 4 17) 36 =
+      runtimeTypedAliasedLoopStoreState.globals 36 := by
+  exact loopStateWithTypedGlobalStore_typed_load runtimeTypedLoopBaseState
+    runtimeTypedKey runtimeTypedBaseState 4 36 17
+
+example :
+    loopStateWithTypedGlobalStore
+        (loopStateOfCrepRuntimeStateForGlobals globalLoadRuntimeState)
+        runtimeTypedKey runtimeTypedBaseState 4 17 =
+      loopStateOfCrepRuntimeStateForGlobals
+        (storeCrepRuntimeTypedGlobalState globalLoadRuntimeState runtimeTypedKey
+          runtimeTypedBaseState 4 17) := by
+  exact loopStateWithTypedGlobalStore_runtime_adapter globalLoadRuntimeState
+    runtimeTypedKey runtimeTypedBaseState 4 17
+
 example :
     crepRuntimeTypedGlobalRelation runtimeTypedKey
       (storeCrepRuntimeTypedGlobalState globalLoadRuntimeState runtimeTypedKey

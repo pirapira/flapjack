@@ -347,6 +347,18 @@ def raDeltaPairGuard : Bool :=
       (.delta [1] [3]) [] []).map sortColouring ==
     some (sortColouring [(1, 0), (3, 4)])
 
+/-- The threaded allocator entrypoint is definitionally the same computation as
+    the compatibility wrapper, while allowing production callers to reuse the
+    bijection and initial graph state they already built. -/
+def threadedAllocatorEntryGuard : Bool :=
+  let tree : WordClashTree := .delta [1] [3]
+  let bij := cakeMkBij tree
+  let state := cakeInitRaStateFromBij bij tree [] []
+  cakeDoRegAlloc .irc none 4 [] tree [] [] ==
+    cakeDoRegAllocFromState .irc none 4 [] bij state
+
+#guard threadedAllocatorEntryGuard
+
 /-- A physical-register read keeps its own register colour (`2 ↦ 1`). -/
 def raDeltaFreeGuard : Bool :=
   (Flapjack.RiscV.CakeRegAlloc.cakeDoRegAlloc .irc none 4 []

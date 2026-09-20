@@ -847,6 +847,14 @@
       "tracked_beads": [
         "flapjack-pxn.8.9"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/odd_halfword_offset.pnk",
+      "source_reference": "Cake RISC-V selector oracle: a nonconstant shared-memory base with odd halfword offset +9 remains an Addr offset because hw_offset_ok uses offset_ok 0; Flapjack must keep the same address carrier.",
+      "cake_sha256": "747c4cf1851829d0dc8c004a459ba6979221dbf96ac38b4ed04d777653924e3f",
+      "tracked_beads": [
+        "flapjack-pxn.8.10"
+      ]
     }
   ]
 }

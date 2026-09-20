@@ -1,0 +1,10 @@
+fun 1 worker(1 out) {
+  var 1 value = 4660;
+  var 1 loaded = 0;
+  !st16 out + 9, value;
+  !ld16 loaded, out + 9;
+  return loaded;
+}
+fun 1 main() {
+  return worker(2684420096);
+}

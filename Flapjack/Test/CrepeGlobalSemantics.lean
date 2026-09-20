@@ -223,6 +223,37 @@ theorem compile_full_pan_value_dec_two_word_record_return_state_full_regression 
     (defaultCrepSharedMemHandler : CrepSharedMemHandler (RiscV.Word 8))
     0 100 1 11 22 "pair"
 
+theorem compile_full_pan_value_store_word_state_full_regression :
+    evalCrepFullProgStateFull [] (fun _ _ => none)
+        (noCrepFfi (RiscV.Word 8))
+        (defaultCrepSharedMemHandler : CrepSharedMemHandler (RiscV.Word 8))
+        0 100 20 crepeFullLoadState
+        (compileProg crepeFullLoadContext
+          (.store (.const 7) (.const 99) : Prog (RiscV.Word 8))) =
+      some (.normal { crepeFullLoadState with
+        memory := updateMemory crepeFullLoadState.memory 7 99 }) ∧
+    evalPanValueProgWithPrimitiveFull
+        ([] : StructContext) 0 100 1
+        (fun name => if name == "x" then some (.word 0) else none)
+        (fun _ => none)
+        (fun address => if address == 7 then some (.word 42) else none)
+        (fun _ _ => none)
+        (.store (.const 7) (.const 99) : Prog (RiscV.Word 8)) =
+      some ((fun name => if name == "x" then some (.word 0) else none),
+        (fun _ => none),
+        updatePanValueMemory
+          (fun address => if address == 7 then some (.word 42) else none)
+          7 (.word 99), []) := by
+  exact compile_full_pan_value_store_word_state_full_correct
+    crepeFullLoadContext ([] : StructContext)
+    (fun name => if name == "x" then some (.word 0) else none)
+    (fun _ => none)
+    (fun address => if address == 7 then some (.word 42) else none)
+    crepeFullLoadState (fun _ _ => none) (fun _ _ => none)
+    (noCrepFfi (RiscV.Word 8))
+    (defaultCrepSharedMemHandler : CrepSharedMemHandler (RiscV.Word 8))
+    0 100 1 7 99
+
 theorem compile_full_pan_value_raise_word_state_full_correct_regression :
     evalPanValueProgWithPrimitiveCallsAndFfiFull
         (fun _ _ => none) (fun _ _ _ _ _ _ => none)

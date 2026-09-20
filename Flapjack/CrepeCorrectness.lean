@@ -1050,6 +1050,55 @@ theorem compile_full_pan_value_local_assign_record_return_correct
 
 /-! A word store followed by a shaped load exercises the same flat-memory
     update on both sides of the source-to-Crep boundary. -/
+theorem compile_full_pan_value_store_word_state_full_correct
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [PanShiftWidth α]
+    [ArithmeticShiftRight α] [RotateRightOp α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (state : CrepState α) (primitive : PanPrimitiveHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord address value : α) :
+    evalCrepFullProgStateFull [] crepPrimitive ffi sharedMem
+        baseAddress topAddress 20 state
+        (compileProg context
+          (.store (.const address) (.const value))) =
+      some (.normal { state with
+        memory := updateMemory state.memory address value }) ∧
+    evalPanValueProgWithPrimitiveFull structs
+        baseAddress topAddress bytesInWord sourceLocals sourceGlobals
+        sourceMemory primitive
+        (.store (.const address) (.const value)) =
+      some (sourceLocals, sourceGlobals,
+        updatePanValueMemory sourceMemory address (.word value), []) := by
+  have hrestore :
+      restoreCrepLocal
+          (restoreCrepLocal
+            (updateCrepLocal (updateCrepLocal state.locals
+              (context.maxVar + 1) address)
+              (context.maxVar + 2) value)
+            (context.maxVar + 2) (state.locals (context.maxVar + 2)))
+          (context.maxVar + 1) (state.locals (context.maxVar + 1)) =
+        state.locals := by
+    funext current
+    by_cases hfirst : current = context.maxVar + 1
+    · simp [restoreCrepLocal, hfirst]
+    · by_cases hsecond : current = context.maxVar + 2 <;>
+        simp [restoreCrepLocal, updateCrepLocal, hfirst, hsecond]
+  constructor
+  · simp [compileProg, compileExp, freshNames, nestedDecs, crepNestedSeq,
+      stores, evalCrepFullProgStateFull, evalCrepFullExpStateFull,
+      updateCrepLocal, restoreCrepResult, hrestore]
+  · simp [evalPanValueProgWithPrimitiveFull, evalPanValueExpFull,
+      panValueStoreWithAccess, panValueFlatStoreWords,
+      panValueFlatWords, panValueFlatWordsFuel, updatePanValueMemory]
+
+/-! A word store followed by a shaped load exercises the same flat-memory
+    update on both sides of the source-to-Crep boundary. -/
 theorem compile_full_pan_value_store_load_word_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

@@ -27,8 +27,10 @@ def freshNames (context : CompileContext α) (count start : Nat) : List Nat :=
 
 /-! Cake's ExtCall lowering chooses its temporary base from the largest
     variable occurring in all four compiled expressions, rather than from the
-    context's cached `vmax`.  `ShMemStore` uses the same rule for the compiled
-    value expression only (`pan_to_crepScript.sml:278-305`). -/
+    context's cached `vmax`.  `ShMemStore` chooses its temporary from the
+    compiled address expression (`pan_to_crepScript.sml:291-299`); using the
+    value expression here can shadow the address variable and changes emitted
+    register allocation. -/
 def maxCrepExpVar (expressions : List (CrepExp α)) : Nat :=
   (expressions.flatMap crepExpVars).foldl max 0
 
@@ -292,7 +294,7 @@ def compileProg [BEq α] [OfNat α 0] [Add α]
   | .shMemStore size address value =>
       match firstCompiledExpAnyShape context address, firstCompiledExpAnyShape context value with
       | some address, some value =>
-          let temporary := maxCrepExpVar [value] + 1
+          let temporary := maxCrepExpVar [address] + 1
           nestedDecs [temporary] [value] (.shMem (storeMemOp size) temporary address)
       | _, _ => .skip
   | .tick => .tick

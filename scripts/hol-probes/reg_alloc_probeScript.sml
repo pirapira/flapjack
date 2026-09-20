@@ -61,3 +61,9 @@ val _ = print_eval "ra_order_seq"
 val _ = print_eval "ra_order_clique"
   ``reg_alloc$reg_alloc reg_alloc$IRC (NONE:num sptree$num_map option) 4 []
       (reg_alloc$Delta [9;13] []) [] LN``;
+(* A non-NONE source-keyed spill-cost table exercises the cost-sensitive
+   do_spill path: with k=1, the middle-cost clique node is selected first. *)
+val _ = print_eval "ra_spill_cost"
+  ``reg_alloc$reg_alloc reg_alloc$IRC
+      (SOME (fromAList [(1,1);(5,100);(9,1)]) : num sptree$num_map option) 1 []
+      (reg_alloc$Delta [1;5;9] []) [] LN``;

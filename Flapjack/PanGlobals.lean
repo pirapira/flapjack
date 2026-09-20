@@ -381,6 +381,17 @@ def sizeOfEids : List (Decl α) → Nat
         sizeOfEids declarations
 termination_by declarations => sizeOf declarations
 
+/-! Cake's `size_of_eids_compile_eq`: the pan_simp declaration pass changes
+    function bodies only, so it preserves the number of exception
+    declarations. -/
+theorem sizeOfEids_panSimpDecls (declarations : List (Decl α)) :
+    sizeOfEids (panSimpDecls declarations) = sizeOfEids declarations := by
+  induction declarations with
+  | nil => simp [panSimpDecls, sizeOfEids]
+  | cons declaration declarations ih =>
+      cases declaration <;>
+        simp [panSimpDecls, sizeOfEids, isExnDecl, ih]
+
 def globalResortDecls (declarations : List (Decl α)) : List (Decl α) :=
   globalDeclsFilter globalDeclIsName declarations ++
     globalDeclsFilter globalDeclIsException declarations ++

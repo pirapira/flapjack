@@ -301,4 +301,13 @@ theorem expIds_retToTail (program : Prog α) :
     decreasing_by all_goals decreasing_trivial
   exact go program
 
+/-- The full `pan_simp` program transformation preserves the exception
+    identifiers reachable from a program, mirroring Cake's
+    `exp_ids_compile_eq`. -/
+theorem expIds_panSimpProg (program : Prog α) :
+    expIds (panSimpProg program) = expIds program := by
+  simp only [panSimpProg]
+  rw [expIds_retToTail, expIds_seqAssoc]
+  simp [expIds]
+
 end Flapjack

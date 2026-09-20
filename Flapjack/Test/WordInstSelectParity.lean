@@ -184,6 +184,17 @@ def cakeCurrentHeapOr : Bool :=
   | .seq (.inst (.const 23 value)) (.opCurrHeap .or 2 23) => value == 1
   | _ => false
 
+/- Cake's word_simp materializes a non-atomic source Store address before
+   word_inst sees the Store.  The selector therefore receives `Var temp` and
+   emits a zero-offset Mem; the source/output regression secp_accel fixture
+   exercises this ordering (word_instScript.sml:383-427). -/
+def cakeWordSimpStoreShape : Bool :=
+  match wordInstSelectProgram (α := Nat) 7
+      (.store (.var 13) 10) with
+  | .seq (.move 0 [(7, 13)])
+      (.inst (.mem .store 10 7)) => true
+  | _ => false
+
 #guard cakeLoadConstShape
 #guard cakeLoadVarShape
 #guard cakeLoadVarOffsetShape
@@ -203,6 +214,7 @@ def cakeCurrentHeapOr : Bool :=
 #guard cakeSharedByteOffsetMaterializesConstant
 #guard cakeSharedOddHalfwordOffset
 #guard cakeCurrentHeapOr
+#guard cakeWordSimpStoreShape
 
 #guard match cakeNonImmediateAnd with
   | .seq (.move 0 [(7, 2)])

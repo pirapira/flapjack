@@ -167,6 +167,21 @@ def shiftState : CrepGlobalState (RiscV.Word 8) :=
 
 def shiftKey (address : RiscV.Word 8) : CrepGlobalAddress := crepGlobalKey address
 
+def compactShiftState : CrepState (RiscV.Word 8) :=
+  { locals := fun _ => none
+    memory := fun _ => none
+    globals := fun _ => none }
+
+def compactAsrValue : Option (RiscV.Word 8) :=
+  evalCrepFullExpStateFull compactShiftState 0 0
+    (.shift .asr (.const (BitVec.ofNat 8 0x80))
+      (.const (BitVec.ofNat 8 1)))
+
+example : compactAsrValue = panRiscVShift .asr (BitVec.ofNat 8 0x80) 1 := by
+  simp [compactAsrValue, evalCrepFullExpStateFull, evalPanShiftFull,
+    panRiscVShift, compactShiftState, PanShiftWidth.amount,
+    PanShiftWidth.width, ArithmeticShiftRight.arithmeticShiftRight]
+
 def typedAsrValue : Option (RiscV.Word 8) :=
   evalCrepTypedExpFull shiftKey shiftState 0 0
     (.shift .asr (.const (BitVec.ofNat 8 0x80))
@@ -183,18 +198,24 @@ def typedOutOfRangeShiftValue : Option (RiscV.Word 8) :=
       (.const (BitVec.ofNat 8 8)))
 
 example : typedAsrValue = panRiscVShift .asr (BitVec.ofNat 8 0x80) 1 := by
-  simp [typedAsrValue, evalCrepTypedExpFull, evalPanShiftFull, panRiscVShift,
-    shiftState, PanShiftWidth.amount, PanShiftWidth.width,
+  simp [typedAsrValue, evalCrepTypedExpFull, evalCrepFullExpStateFull,
+    CrepGlobalState.toCompact, evalPanShiftFull, panRiscVShift, shiftState,
+    PanShiftWidth.amount,
+    PanShiftWidth.width,
     ArithmeticShiftRight.arithmeticShiftRight]
 
 example : typedRorValue = panRiscVShift .ror (BitVec.ofNat 8 0x81) 1 := by
-  simp [typedRorValue, evalCrepTypedExpFull, evalPanShiftFull, panRiscVShift,
-    shiftState, PanShiftWidth.amount, PanShiftWidth.width,
+  simp [typedRorValue, evalCrepTypedExpFull, evalCrepFullExpStateFull,
+    CrepGlobalState.toCompact, evalPanShiftFull, panRiscVShift, shiftState,
+    PanShiftWidth.amount,
+    PanShiftWidth.width,
     RotateRightOp.rotateRight]
 
 example : typedOutOfRangeShiftValue = panRiscVShift .asr (BitVec.ofNat 8 0x80) 8 := by
-  simp [typedOutOfRangeShiftValue, evalCrepTypedExpFull, evalPanShiftFull,
-    panRiscVShift, shiftState, PanShiftWidth.amount, PanShiftWidth.width]
+  simp [typedOutOfRangeShiftValue, evalCrepTypedExpFull,
+    evalCrepFullExpStateFull, CrepGlobalState.toCompact, evalPanShiftFull,
+    panRiscVShift, shiftState,
+    PanShiftWidth.amount, PanShiftWidth.width]
 
 /-- The typed store/load round trip through the executable entrypoint. -/
 example : evalCrepTypedLoad typedKey typedStored 4 = some 11 :=

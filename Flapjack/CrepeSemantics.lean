@@ -257,6 +257,19 @@ def evalCrepFullExpStateFull [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α
   | _ => none
 termination_by expression => sizeOf expression
 
+def evalCrepFullExpsStateFull [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepState α) (baseAddress topAddress : α) :
+    List (CrepExp α) → Option (List α)
+  | [] => some []
+  | expression :: expressions => do
+      let value ← evalCrepFullExpStateFull state baseAddress topAddress expression
+      let values ← evalCrepFullExpsStateFull state baseAddress topAddress expressions
+      pure (value :: values)
+termination_by expressions => sizeOf expressions
+
 def evalCrepFullExpsState [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
@@ -494,6 +507,162 @@ mutual
         pure (.returned state values)
     | _fuel + 1, state, .shMem operator name address => do
         let address ← evalCrepFullExpState state baseAddress topAddress address
+        let state ← sharedMem operator name address state
+        pure (.normal state)
+    | _fuel + 1, state, .tick => pure (.normal state)
+    termination_by fuel _ _ => fuel
+
+end
+
+/-! Target-word version of the global-aware evaluator.  This is deliberately a
+    separate entrypoint: the abstract evaluator and its correctness theorems
+    retain the historical partial `evalPanShift` contract, while callers that
+    have a Cake word model use the full `word_sh` semantics throughout calls,
+    returns, stores, and shared-memory operations. -/
+mutual
+  def evalCrepFullCallStateFull
+      [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+      [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+      [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
+      [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+      (functions : List (CompiledFunction α))
+      (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+      (sharedMem : CrepSharedMemHandler α)
+      (baseAddress topAddress : α) :
+      Nat → CrepState α →
+        Option (List Nat × Option (α × CrepProg α)) → FunName →
+        List (CrepExp α) → Option (CrepControlResult α)
+    | 0, _, _, _, _ => none
+    | fuel + 1, caller, info, function, arguments => do
+        let values ← evalCrepFullExpsStateFull caller baseAddress topAddress arguments
+        let (parameters, body) ← lookupCompiledFunction function functions
+        let calleeLocals ← assignCrepValues (fun _ => none) parameters values
+        let callee := CrepState.mk calleeLocals caller.memory caller.globals
+        let result ← evalCrepFullProgStateFull functions primitive ffi sharedMem
+          baseAddress topAddress fuel callee body
+        match result with
+        | .normal _ => none
+        | .returned callee values =>
+            match info with
+            | none => pure (.returned { caller with
+                memory := callee.memory
+                globals := callee.globals } values)
+            | some (destinations, _) => do
+                let locals ← assignExistingCrepValues caller.locals destinations values
+                pure (.normal (CrepState.mk locals callee.memory callee.globals))
+        | .raised callee exception =>
+            match info with
+            | some (_, some (caught, handler)) =>
+                if caught == exception then
+                  evalCrepFullProgStateFull functions primitive ffi sharedMem
+                    baseAddress topAddress fuel
+                    (CrepState.mk caller.locals callee.memory callee.globals) handler
+                else
+                  pure (.raised { caller with
+                    memory := callee.memory
+                    globals := callee.globals } exception)
+            | _ => pure (.raised { caller with
+                memory := callee.memory
+                globals := callee.globals } exception)
+        | .broke _ _ => none
+        | .continued _ _ => none
+        | .finalFfi callee event =>
+            pure (.finalFfi { caller with
+              locals := fun _ => none
+              memory := callee.memory
+              globals := callee.globals } event)
+    termination_by fuel _ _ _ _ => fuel
+
+  def evalCrepFullProgStateFull
+      [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+      [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+      [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
+      [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+      (functions : List (CompiledFunction α))
+      (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+      (sharedMem : CrepSharedMemHandler α)
+      (baseAddress topAddress : α) :
+      Nat → CrepState α → CrepProg α → Option (CrepControlResult α)
+    | 0, _, _ => none
+    | _fuel + 1, state, .skip => some (.normal state)
+    | fuel + 1, state, .dec name value body => do
+        let value ← evalCrepFullExpStateFull state baseAddress topAddress value
+        let result ← evalCrepFullProgStateFull functions primitive ffi sharedMem
+          baseAddress topAddress fuel
+          { state with locals := updateCrepLocal state.locals name value } body
+        pure (restoreCrepResult name (state.locals name) result)
+    | _fuel + 1, state, .assign name value => do
+        let value ← evalCrepFullExpStateFull state baseAddress topAddress value
+        let locals ← assignExistingCrepValues state.locals [name] [value]
+        pure (.normal { state with locals := locals })
+    | _fuel + 1, state, .primitive names operator arguments => do
+        let arguments ← arguments.mapM state.locals
+        let values ← primitive operator arguments
+        let locals ← assignExistingCrepValues state.locals names values
+        pure (.normal { state with locals := locals })
+    | _fuel + 1, state, .store address value => do
+        let address ← evalCrepFullExpStateFull state baseAddress topAddress address
+        let value ← evalCrepFullExpStateFull state baseAddress topAddress value
+        pure (.normal { state with memory := updateMemory state.memory address value })
+    | _fuel + 1, state, .store32 address value
+    | _fuel + 1, state, .storeByte address value => do
+        let address ← evalCrepFullExpStateFull state baseAddress topAddress address
+        let value ← evalCrepFullExpStateFull state baseAddress topAddress value
+        pure (.normal { state with memory := updateMemory state.memory address value })
+    | _fuel + 1, state, .storeGlob address value => do
+        let value ← evalCrepFullExpStateFull state baseAddress topAddress value
+        pure (.normal { state with globals := updateMemory state.globals address value })
+    | fuel + 1, state, .seq first second => do
+        let result ← evalCrepFullProgStateFull functions primitive ffi sharedMem
+          baseAddress topAddress fuel state first
+        match result with
+        | .normal state =>
+            evalCrepFullProgStateFull functions primitive ffi sharedMem
+              baseAddress topAddress fuel state second
+        | result => pure result
+    | fuel + 1, state, .ite condition thenBranch elseBranch => do
+        let condition ← evalCrepFullExpStateFull state baseAddress topAddress condition
+        if condition != 0 then
+          evalCrepFullProgStateFull functions primitive ffi sharedMem
+            baseAddress topAddress fuel state thenBranch
+        else
+          evalCrepFullProgStateFull functions primitive ffi sharedMem
+            baseAddress topAddress fuel state elseBranch
+    | fuel + 1, state, .while conditionExp body => do
+        let condition ← evalCrepFullExpStateFull state baseAddress topAddress conditionExp
+        if condition == 0 then
+          pure (.normal state)
+        else
+          let result ← evalCrepFullProgStateFull functions primitive ffi sharedMem
+            baseAddress topAddress fuel state body
+          match result with
+          | .normal state | .continued state 0 =>
+              evalCrepFullProgStateFull functions primitive ffi sharedMem
+                baseAddress topAddress fuel state (.while conditionExp body)
+          | .broke state 0 => pure (.normal state)
+          | .continued state label => pure (.continued state (label - 1))
+          | .broke state label => pure (.broke state (label - 1))
+          | result => pure result
+    | _fuel + 1, state, .break label => pure (.broke state label)
+    | _fuel + 1, state, .continue label => pure (.continued state label)
+    | fuel + 1, state, .call info function arguments =>
+        evalCrepFullCallStateFull functions primitive ffi sharedMem
+          baseAddress topAddress fuel state info function arguments
+    | _fuel + 1, state, .extCall function configuration configurationLength array arrayLength => do
+        let configuration ← state.locals configuration
+        let configurationLength ← state.locals configurationLength
+        let array ← state.locals array
+        let arrayLength ← state.locals arrayLength
+        let ffiResult ← ffi function configuration configurationLength array arrayLength state
+        match ffiResult with
+        | .returned state => pure (.normal state)
+        | .final event => pure (.finalFfi state event)
+    | _fuel + 1, state, .raise exception => pure (.raised state exception)
+    | _fuel + 1, state, .return values => do
+        let values ← evalCrepFullExpsStateFull state baseAddress topAddress values
+        pure (.returned state values)
+    | _fuel + 1, state, .shMem operator name address => do
+        let address ← evalCrepFullExpStateFull state baseAddress topAddress address
         let state ← sharedMem operator name address state
         pure (.normal state)
     | _fuel + 1, state, .tick => pure (.normal state)

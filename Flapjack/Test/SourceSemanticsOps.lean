@@ -68,6 +68,30 @@ def evalRiscVAsr : Option (PanValue ShiftWord) :=
     (shiftWord 0) (shiftWord 0) (shiftWord 8)
     (.shift .asr (.const (shiftWord 0x80)) (.const (shiftWord 1)))
 
+/- The structured source evaluator must use the same Cake `word_sh` oracle,
+   including through a record-valued recursive expression. -/
+def evalStructuredRiscVAsrFull : Option (PanValue ShiftWord) :=
+  evalPanValueExpFull [] (fun _ => none) (fun _ => none) (fun _ => none)
+    (shiftWord 0) (shiftWord 0) (shiftWord 8)
+    (.shift .asr (.const (shiftWord 0x80)) (.const (shiftWord 1)))
+
+def evalStructuredRiscVRorFull : Option (PanValue ShiftWord) :=
+  evalPanValueExpFull [] (fun _ => none) (fun _ => none) (fun _ => none)
+    (shiftWord 0) (shiftWord 0) (shiftWord 8)
+    (.rStruct [.shift .ror (.const (shiftWord 0x81)) (.const (shiftWord 1))])
+
+#guard match evalStructuredRiscVAsrFull with
+  | some (.word value) => value == shiftWord 0xc0
+  | _ => false
+#guard match evalStructuredRiscVRorFull with
+  | some (.rStruct [.word value]) => value == shiftWord 0xc0
+  | _ => false
+def evalStructuredRiscVOutOfRangeFull : Option (PanValue ShiftWord) :=
+  evalPanValueExpFull [] (fun _ => none) (fun _ => none) (fun _ => none)
+    (shiftWord 0) (shiftWord 0) (shiftWord 8)
+    (.shift .lsl (.const (shiftWord 1)) (.const (shiftWord 8)))
+#guard evalStructuredRiscVOutOfRangeFull.isNone
+
 def evalRiscVRor : Option (PanValue ShiftWord) :=
   RiscV.evalPanRiscVFlatExp [] (fun _ => none) (fun _ => none)
     (fun _ => false) (fun _ => none)

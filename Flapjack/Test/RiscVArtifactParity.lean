@@ -827,6 +827,28 @@ def frameOccupancyP6BitmapsMatch : Bool :=
   | some image => image.bitmaps.data == cakeFrameOccupancyP6Bitmaps
   | none => false
 
+/-! The `live3` oracle exercises four non-tail continuations over three
+struct-valued locals.  Cake retains a four-word frame for each continuation,
+so its checked bitmap payload is `[4, 16, 16, 16, 16]`. -/
+def frameOccupancyLive3Source : String :=
+  "struct S { 1 f1, 1 f2 }\n" ++
+    "fun S mks(1 a, 1 b) { return S <f1 = a, f2 = b>; }\n" ++
+    "fun 1 id(1 a) { return a; }\n" ++
+    "fun 1 main() {\n" ++
+    "  var S s1 = mks(1, 2);\n" ++
+    "  var S s2 = mks(3, 4);\n" ++
+    "  var S s3 = mks(5, 6);\n" ++
+    "  var 1 t = id(7);\n" ++
+    "  return s1.f1 + s2.f2 + s3.f1 + t;\n" ++
+    "}"
+
+def cakeFrameOccupancyLive3Bitmaps : List Nat := [4, 16, 16, 16, 16]
+
+def frameOccupancyLive3BitmapsMatch : Bool :=
+  match compileRuntimeImage frameOccupancyLive3Source with
+  | some image => image.bitmaps.data == cakeFrameOccupancyLive3Bitmaps
+  | none => false
+
 /-- Source for the GH #1027 relational-condition case: `if x < 10` over a
 parameter. -/
 def relationalConditionSource : String :=
@@ -1003,6 +1025,7 @@ def sharedMemOffsetCarrierEncoding : Bool :=
 #guard frameOccupancyP9BitmapsMatch
 #guard frameOccupancyP10BitmapsMatch
 #guard frameOccupancyP6BitmapsMatch
+#guard frameOccupancyLive3BitmapsMatch
 #guard relationalConditionExactParity
 #guard f01451ExactParity
 #guard sharedWordStoreOffsetPeephole
@@ -1090,6 +1113,8 @@ def runChecks : IO Bool := do
          frameOccupancyP10BitmapsMatch),
       ("frame-occupancy p6 exact vector matches the Cake oracle",
          frameOccupancyP6BitmapsMatch),
+      ("frame-occupancy live3 exact vector matches the Cake oracle",
+         frameOccupancyLive3BitmapsMatch),
       ("relational condition direct-branch section is byte-identical to Cake",
         relationalConditionExactParity),
       ("f01451 out-of-range shift section is byte-identical to Cake",

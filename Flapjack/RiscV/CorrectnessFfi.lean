@@ -1319,6 +1319,82 @@ example (context : WordCallContext 64) :
       some ([.auipc 4 (BitVec.ofInt 64 1), .addi 4 4 (BitVec.ofInt 64 0x234)], []) := by
   simp [wordFunctionToRiscVWithCallsCake, wordLocValueToInstructionsCake, registerOfNat]
 
+/-! The Cake-faithful FFI-aware selector is definitionally the Cake call-aware
+    selector on straight-line programs, so the exact `AUIPC`/`ADDI` `Loc`
+    lowering and its register readback are inherited by the FFI boundary. -/
+
+theorem wordFunctionToRiscVWithCallsAndFfiCake_agrees_straightLine [NeZero width]
+    (context : WordCallFfiContext width)
+    (program : WordProg (Word width))
+    (hstraight : WordRiscVStraightLine program) :
+    wordFunctionToRiscVWithCallsAndFfiCake context program =
+      wordFunctionToRiscVWithCallsCake
+        { targets := context.targets } program := by
+  induction hstraight with
+  | skip =>
+      simp [wordFunctionToRiscVWithCallsAndFfiCake, wordFunctionToRiscVWithCallsCake]
+  | move store moves =>
+      cases h : wordMoveToInstructions (width := width) moves <;>
+        simp [wordFunctionToRiscVWithCallsAndFfiCake,
+          wordFunctionToRiscVWithCallsCake, h]
+  | assign destination value =>
+      cases h : wordExpToInstructionsCake (width := width) destination value <;>
+        simp [wordFunctionToRiscVWithCallsAndFfiCake,
+          wordFunctionToRiscVWithCallsCake, h]
+  | inst instruction =>
+      cases h : wordFunctionToRiscVWithCallsCake { targets := context.targets }
+          (.inst instruction) <;>
+        simp [wordFunctionToRiscVWithCallsAndFfiCake, h]
+  | store address value =>
+      cases h : wordShareInstToInstructionsCake .store value address <;>
+        simp [wordFunctionToRiscVWithCallsAndFfiCake,
+          wordFunctionToRiscVWithCallsCake, h]
+  | locValue destination source =>
+      cases h : wordLocValueToInstructionsCake (width := width) destination source 0 <;>
+        simp [wordFunctionToRiscVWithCallsAndFfiCake,
+          wordFunctionToRiscVWithCallsCake, h]
+  | tick =>
+      simp [wordFunctionToRiscVWithCallsAndFfiCake, wordFunctionToRiscVWithCallsCake]
+  | shareInst operator name address =>
+      cases h : wordShareInstToInstructionsCake operator name address <;>
+        simp [wordFunctionToRiscVWithCallsAndFfiCake,
+          wordFunctionToRiscVWithCallsCake, h]
+  | seq first second hfirst hsecond ihfirst ihsecond =>
+      simp [wordFunctionToRiscVWithCallsAndFfiCake,
+        wordFunctionToRiscVWithCallsCake, ihfirst, ihsecond]
+
+theorem wordFunctionToRiscVWithCallsAndFfiCake_locValue [NeZero width]
+    (context : WordCallFfiContext width) (destination source : Nat) :
+    wordFunctionToRiscVWithCallsAndFfiCake context
+        ((.locValue destination source) : WordProg (Word width)) =
+      (wordLocValueToInstructionsCake (width := width) destination source 0).map
+        (fun instructions => (instructions, [])) := by
+  cases h : wordLocValueToInstructionsCake (width := width) destination source 0 <;>
+    simp [wordFunctionToRiscVWithCallsAndFfiCake,
+      wordFunctionToRiscVWithCallsCake, h]
+
+theorem wordFunctionToRiscVWithCallsAndFfiCake_locValue_execution
+    (_context : WordCallFfiContext 64) (state : State 64)
+    (destination source : Nat) (hdestination : destination < 32)
+    (hdestinationNonzero : destination ≠ 0)
+    (hpc : state.pc = BitVec.ofNat 64 0)
+    (hsource : (source : Int) < 2 ^ 19) :
+    readRegister
+      (executeInstructions state
+        ((wordLocValueToInstructionsCake (width := 64) destination source 0).getD []))
+      ⟨destination, hdestination⟩ = BitVec.ofNat 64 source := by
+  exact wordLocValueToInstructionsCake_execution_general state destination source 0
+    hdestination hdestinationNonzero hpc (by omega) (by simpa using hsource)
+
+/-- Regression: the FFI-aware Cake selector also lowers `Loc 4 0x1234` to the
+    `AUIPC`/`ADDI` pair with no leading fallback entry. -/
+example (context : WordCallFfiContext 64) :
+    wordFunctionToRiscVWithCallsAndFfiCake context
+        ((.locValue 4 0x1234) : WordProg (Word 64)) =
+      some ([.auipc 4 (BitVec.ofInt 64 1), .addi 4 4 (BitVec.ofInt 64 0x234)], []) := by
+  simp [wordFunctionToRiscVWithCallsAndFfiCake, wordFunctionToRiscVWithCallsCake,
+    wordLocValueToInstructionsCake, registerOfNat]
+
 /-! Compose the FFI-aware selector with the ABI return boundary for a
     deterministic straight-line body.  Foreign calls may occur in the
     surrounding function, but this theorem isolates the ordinary body/return

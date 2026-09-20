@@ -514,4 +514,40 @@ example :
         ((wordLocValueToInstructionsCake (width := 64) 4 0x234 0).getD [])) 4 := by
   decide
 
+/-! ## Cake-faithful LocValue execution oracles (bead flapjack-pxn.1.4)
+
+    The checked lowering `wordLocValueToInstructionsCake destination label position`
+    mirrors Cake's PC-relative `Loc` encoding: it emits `AUIPC`/`ADDI` for the
+    offset `label - position`.  Executing that pair from `pc = position` therefore
+    yields `label`.  These `by decide` oracles exercise the out-of-range and
+    page-crossing shapes that the legacy one-instruction boundary truncates. -/
+
+theorem locValue_balanced_reconstruction (delta : Int) :
+    (let remainder := delta % 4096
+     let low := if remainder >= 2048 then remainder - 4096 else remainder
+     let upper := (delta - low) / 4096
+     low + upper * 4096) = delta := by
+  dsimp only
+  split <;> omega
+
+example :
+    readRegister (executeInstructions (zeroState 64)
+        ((wordLocValueToInstructionsCake (width := 64) 4 0x123456 0).getD [])) 4 =
+      BitVec.ofNat 64 0x123456 := by decide
+
+example :
+    readRegister (executeInstructions { (zeroState 64) with pc := BitVec.ofNat 64 0x1000 }
+        ((wordLocValueToInstructionsCake (width := 64) 4 0x800 0x1000).getD [])) 4 =
+      BitVec.ofNat 64 0x800 := by decide
+
+example :
+    readRegister (executeInstructions { (zeroState 64) with pc := BitVec.ofNat 64 0x1000 }
+        ((wordLocValueToInstructionsCake (width := 64) 4 0 0x1000).getD [])) 4 =
+      BitVec.ofNat 64 0 := by decide
+
+example :
+    readRegister (executeInstructions { (zeroState 64) with pc := BitVec.ofNat 64 2 }
+        ((wordLocValueToInstructionsCake (width := 64) 4 0x1004 2).getD [])) 4 =
+      BitVec.ofNat 64 0x1004 := by decide
+
 end Flapjack.RiscV

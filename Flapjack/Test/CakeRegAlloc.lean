@@ -412,6 +412,18 @@ def prefsSeqOrderGuard : Bool :=
         (.move 8 [(5, 6), (7, 8)]) : WordProg Nat) [] ==
     [(7, (1, 2)), (7, (3, 4)), (8, (5, 6)), (8, (7, 8))]
 
+def prefsControlFlowGuard : Bool :=
+  cakeGetPrefs
+      (.mustTerminate (.move 9 [(9, 10), (11, 12)]) : WordProg Nat) [] ==
+      [(9, (9, 10)), (9, (11, 12))] &&
+    cakeGetPrefs
+      (.loop [] (.move 10 [(13, 14), (15, 16)]) [] : WordProg Nat) [] ==
+      [(10, (13, 14)), (10, (15, 16))] &&
+    cakeGetPrefs
+      (.ite .notEqual 2 (.reg 3)
+        (.move 11 [(17, 18)]) (.move 12 [(19, 20)]) : WordProg Nat) [] ==
+      [(11, (17, 18)), (12, (19, 20))]
+
 /-- `sort_moves` flips equal-priority moves relative to the input order
     (probe `sort_moves_probe.out` `sm_ties_two`). -/
 def qsortTiesTwoGuard : Bool :=
@@ -661,7 +673,7 @@ def parityGuard : Bool :=
     raDeltaFreeGuard && raDeltaTriangleGuard && raStackOnlyGuard &&
     raMovesCoalesceGuard && raMovesSelfFilteredGuard && raForcedEdgeGuard &&
     raOrderSeqGuard && raOrderCliqueGuard &&
-    prefsMoveOrderGuard && prefsSeqOrderGuard &&
+    prefsMoveOrderGuard && prefsSeqOrderGuard && prefsControlFlowGuard &&
     partOrderGuard && reviveOrderGuard && movesToSpOrderGuard &&
     resortMovesSpOrderGuard && bgOkOrderGuard &&
     qsortTiesTwoGuard && qsortTiesThreeGuard && qsortDescGuard &&
@@ -695,7 +707,7 @@ def runChecks : IO Bool := do
     heuSpillGuard, heuFixedDegreeGuard, raDeltaPairGuard, raDeltaFreeGuard,
     raStackOnlyGuard, raMovesCoalesceGuard, raMovesSelfFilteredGuard,
     raOrderSeqGuard, raOrderCliqueGuard,
-    prefsMoveOrderGuard, prefsSeqOrderGuard,
+    prefsMoveOrderGuard, prefsSeqOrderGuard, prefsControlFlowGuard,
     partOrderGuard,
     reviveOrderGuard, revivePartitionGuard, bgOkOrderGuard, qsortTiesTwoGuard,
     movesToSpOrderGuard, resortMovesSpOrderGuard,
@@ -721,7 +733,7 @@ def runChecks : IO Bool := do
     "reg_alloc delta free", "reg_alloc stack only",
     "reg_alloc moves coalesce", "reg_alloc moves self filtered",
     "reg_alloc sequential pair order", "reg_alloc clique order",
-    "get_prefs Move order", "get_prefs Seq order",
+    "get_prefs Move order", "get_prefs Seq order", "get_prefs control flow",
     "sorting partition order", "revive moves reversing partition", "revive partition direction", "bg_ok order",
     "sort_moves tie two", "moves_to_sp order", "resort_moves output order",
     "sort_moves tie three", "sort_moves long tie",

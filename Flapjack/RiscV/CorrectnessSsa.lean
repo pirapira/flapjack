@@ -448,6 +448,28 @@ theorem wordSsaRenameProgram_assign_var [OfNat α 0]
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaRenameExp]
 
+/-- Cake Move namespace equation for a singleton move. -/
+theorem wordSsaRenameProgram_move_one [OfNat α 0]
+    (ssa : WordSsaState) (priority source destination : Nat) :
+    wordSsaRenameProgram ssa
+        (.move priority [(destination, source)] : WordProg α) =
+      let (freshState, fresh) := wordSsaFresh ssa destination
+      let finalState :=
+        if source = destination then freshState
+        else wordSsaForceRename [(source, fresh)] freshState
+      (finalState,
+        .move priority
+          [(fresh, if priority == 0 then wordSsaReadMoveSource ssa source
+            else wordSsaRead ssa source)]) := by
+  by_cases hsource : source = destination
+  · subst source
+    simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
+      wordSsaRenameMove, wordSsaFreshList, wordSsaForceRename,
+      wordSsaReadMoveSource]
+  · simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
+      wordSsaRenameMove, wordSsaFreshList, wordSsaForceRename, hsource,
+      wordSsaReadMoveSource]
+
 theorem evalWordProg_ssaRename_assign_var_destination [NeZero width]
     (ssa : WordSsaState) (source target : State width)
     (hregister : ∀ name, name < 32 →

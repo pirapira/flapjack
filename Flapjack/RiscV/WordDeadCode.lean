@@ -521,8 +521,9 @@ def cakeAllocateWordFunctionAfterDead [OfNat α 0] [WordCseHash α] (currentFunc
      Keep those keys intact; `CakeNodeMap` stores keys outside the allocator
      array when necessary, matching `lookup_any` in `st_ex_list_MIN_cost`. -/
   let scost := spillCosts.map (cakeSpillCostMap bij.nextNode)
-  match cakeDoRegAlloc .irc scost cakeRiscVRegisterCount
-      moves tree forced fs with
+  let initialState := cakeInitRaStateFromBij bij tree forced fs
+  match cakeDoRegAllocFromState .irc scost cakeRiscVRegisterCount
+      moves bij initialState with
   | none => none
   | some colouring =>
       some (state, renamedParameters, ssaProgram,

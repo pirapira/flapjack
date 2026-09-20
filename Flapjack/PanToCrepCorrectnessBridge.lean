@@ -18162,4 +18162,84 @@ theorem panValuePcCompileCorrectWithContextCode_of_compact_evaluators_and_clocke
     clockLocals clockGlobals clockMemory clockFfi clockProgram clockTargetState
     clockException clockValue clockTargetException hclock hclockState hclockRaise
 
+/-! Preserve the context-coded correctness boundary when composing an arbitrary
+    clocked control result.  The ordinary projection theorem above is useful
+    after code/result adapters are fixed; this form keeps the source/target
+    evaluator relation and explicit raised-payload evidence available to the
+    next correctness layer. -/
+theorem panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_control
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (program : Prog α)
+    (sourceEvaluate : PanValuePcEvaluator α)
+    (targetEvaluate : CrepPcEvaluator α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (hcompact : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (clockStructs : StructContext) (clockPcContext : CompileContext α)
+    (clockExceptionRel : ExceptionId → PanValue α → α → Prop)
+    (clockExceptionCode : ExceptionId → Option α)
+    (clockGlobalsLookup : CrepState α → PanValue α → Option (List α))
+    (clockContext : PanValueFfiContext α)
+    (clockPrimitive : PanPrimitiveHandler α)
+    (clockHandler : PanValueStatefulFfiHandler α σ)
+    (clockFunctions : List (FunName × List VarName × Prog α))
+    (clockBaseAddress clockTopAddress clockBytesInWord : α)
+    (clockFuel clock : Nat)
+    (clockLocals clockGlobals : VarName → Option (PanValue α))
+    (clockMemory : α → Option (PanValue α)) (clockFfi : FfiState σ)
+    (clockProgram : Prog α) (clockTargetResult : CrepPcResult α)
+    (sourceControl : PanValueControlResult α)
+    (targetControl : CrepControlResult α)
+    (hclock : evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
+      clockFfi clock clockProgram = some
+        (.control (panValueFfiControlResultOfControl clockFfi sourceControl), clock))
+    (hcontrol : panValueCrepControlRel clockStructs clockPcContext
+      clockExceptionRel sourceControl targetControl)
+    (hsafe : panValuePcControlLabelSafe sourceControl targetControl)
+    (hresult : crepPcResultOfControl targetControl = some clockTargetResult)
+    (hraise : ∀ (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (sourceValue : PanValue α) (targetState : CrepState α)
+      (targetException : α),
+      panValueCrepControlRel clockStructs clockPcContext clockExceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      panValueCrepStateRel clockStructs clockPcContext sourceLocals sourceGlobals
+        sourceMemory targetState ∧
+      panValuePcExceptionResultRelWithContextCode clockStructs clockPcContext
+        clockExceptionRel clockExceptionCode clockGlobalsLookup
+        sourceGlobals sourceMemory sourceException sourceValue targetState
+        targetException) :
+    PanValuePcCompileCorrectWithContextCode sourceEvaluate targetEvaluate
+      codeRel excpRel exceptionCode globalsLookup program ∧
+    evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
+      clockFfi clock clockProgram = some
+        (.control (panValueFfiControlResultOfControl clockFfi sourceControl), clock) ∧
+    (evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
+      clockFfi clock clockProgram).map panValueFfiClockResultProjection =
+      some (panValueFfiClockResultProjection
+        (.control (panValueFfiControlResultOfControl clockFfi sourceControl), clock)) ∧
+    panValuePcResultRelWithContextCode clockStructs clockPcContext
+      clockExceptionRel clockExceptionCode clockGlobalsLookup
+      (panValuePcResultOfControl sourceControl) clockTargetResult := by
+  have hresultRel := panValuePcResultRelWithContextCode_of_control
+    clockStructs clockPcContext clockExceptionRel clockExceptionCode
+    clockGlobalsLookup hraise sourceControl targetControl clockTargetResult
+    hcontrol hsafe hresult
+  refine ⟨hcompact, hclock, ?_, hresultRel⟩
+  rw [hclock]
+  rfl
+
 end Flapjack

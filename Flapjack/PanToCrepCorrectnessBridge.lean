@@ -1663,6 +1663,42 @@ theorem panValuePcRaisedHraiseData_of_flat_spill_state_auto
     sourceMemory sourceException (panValueFlatWords sourceValue) state
     bytesInWord targetException sourceValue hrel hexception hcode rfl hdistinct hsize
 
+theorem panValuePcResultRelWithContextCode_of_raised_flat_spill_auto
+    [BEq α] [LawfulBEq α] [OfNat α 0] [Add α]
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (sourceException : ExceptionId) (state : CrepState α)
+    (bytesInWord targetException : α) (sourceValue : PanValue α)
+    (hstate : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory state)
+    (hexception : exceptionRel sourceException sourceValue targetException)
+    (hcode : exceptionCode sourceException = some targetException)
+    (hlookupCode : lookupInfo sourceException context.exceptions =
+      some targetException)
+    (hdistinct : List.Pairwise (fun left right : α => left ≠ right)
+      (storeAddresses (0 : α) bytesInWord (panValueFlatWords sourceValue).length))
+    (hsize : Shape.shapeSize (panValueShape structs sourceValue) ≤ 32) :
+    panValuePcResultRelWithContextCode structs context exceptionRel exceptionCode
+      (crepPcFlatGlobalsLookup bytesInWord)
+      (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+      (.raised
+        { state with globals := updateMemoryListAt state.globals 0 bytesInWord (panValueFlatWords sourceValue) }
+        targetException) := by
+  have hraiseData := panValuePcRaisedHraiseData_of_flat_spill_state_auto
+    structs context exceptionRel exceptionCode sourceLocals sourceGlobals
+    sourceMemory sourceException state bytesInWord targetException sourceValue
+    hstate hexception hcode hdistinct hsize
+  have hresult := panValuePcExceptionResultRelWithContextCode_of_raised_hraise_data
+    structs context exceptionRel exceptionCode
+    (crepPcFlatGlobalsLookup bytesInWord) sourceLocals sourceGlobals sourceMemory
+    sourceException sourceValue
+    { state with globals := updateMemoryListAt state.globals 0 bytesInWord (panValueFlatWords sourceValue) }
+    targetException ⟨hraiseData, hlookupCode⟩
+  exact ⟨hraiseData.1, hresult⟩
+
 /-! Named structured payloads with word-valued fields use the same global
     spill layout as their flattened word list.  This adapter discharges the
     flattening premise from the field representation, so generic raised

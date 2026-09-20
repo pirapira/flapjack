@@ -12,6 +12,41 @@ def loopStateOfCrepRuntimeStateForGlobals (state : CrepRuntimeState α σ) : Loo
     globals := state.globals
     memory := state.memory }
 
+/-! A typed global-store adapter for the Loop-side state.  `LoopState` keeps
+    its historical compact map for executable compatibility, so this wrapper
+    projects a `CrepGlobalState` through `toCompact` after a Cake-typed store.
+    In particular, all target-width addresses sharing a 5-bit key observe
+    the same update; the adapter never replaces the source key with the raw
+    target-width address used by `updateLoopGlobal`. -/
+def loopStateWithTypedGlobalState
+    (state : LoopState α) (key : α → CrepGlobalAddress)
+    (typedState : CrepGlobalState α) : LoopState α :=
+  { state with globals := (typedState.toCompact key).globals }
+
+def loopStateWithTypedGlobalStore [BEq α]
+    (state : LoopState α) (key : α → CrepGlobalAddress)
+    (typedState : CrepGlobalState α) (address value : α) : LoopState α :=
+  loopStateWithTypedGlobalState state key
+    (storeCrepTypedGlobal key typedState address value)
+
+theorem loopStateWithTypedGlobalStore_relation [BEq α]
+    (state : LoopState α) (key : α → CrepGlobalAddress)
+    (typedState : CrepGlobalState α) (address value : α) :
+    CrepGlobalKeyRelation key
+      (loopStateWithTypedGlobalStore state key typedState address value).globals
+      (storeCrepTypedGlobal key typedState address value).globals := by
+  exact CrepGlobalState.relation_toCompact key
+    (storeCrepTypedGlobal key typedState address value)
+
+theorem loopStateWithTypedGlobalStore_load [BEq α]
+    (state : LoopState α) (key : α → CrepGlobalAddress)
+    (typedState : CrepGlobalState α) (address loadAddress value : α) :
+    (loopStateWithTypedGlobalStore state key typedState address value).globals
+        loadAddress =
+      (storeCrepTypedGlobal key typedState address value).globals
+        (key loadAddress) := by
+  rfl
+
 def crepRuntimeLocalProjection (name : Nat)
     (step : CrepRuntimeStep α σ ε) : Option α :=
   match step.1 with

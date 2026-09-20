@@ -168,6 +168,27 @@ def clockedCallFinalFfiSteps : Option (PanValueFfiSteppedResult (Word 64) Unit) 
     statefulTestFinalState none "finalExt" []
     (memoryAccess := some (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel))
 
+/- CakeML's `panSem.evaluate_def` handles `If` by evaluating a word-valued
+   condition and selecting the nonzero branch (panSemScript.sml:618-621).
+   This exact structured evaluator guard also exercises the ordinary memory
+   load used by that equation; the removed compact evaluator had no source
+   semantics or shape checks. -/
+def exactMemoryBranch : Option (PanValueFfiClockResult (Word 64) Unit) :=
+  evalPanValueFfiClockProg statefulTestContext statefulTestPrimitive
+    statefulTestHandler [] [] 0 100 8 20 (fun _ => none) (fun _ => none)
+    statefulTestMemory statefulTestFfiState 1
+    (.ite (.cmp .equal (.load .one (.const (BitVec.ofNat 64 8)))
+      (.const (BitVec.ofNat 64 0x42)))
+      (.return (.const (BitVec.ofNat 64 1)))
+      (.return (.const (BitVec.ofNat 64 0))))
+    (memoryAccess := some (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel))
+
+#guard
+  match exactMemoryBranch with
+  | some (.control (.returned _ _ _ _ [PanValue.word value]), 1) =>
+      value == BitVec.ofNat 64 1
+  | _ => false
+
 #guard
   match clockedCallFinalFfi with
   | some (.control (.finalFfi locals _ _ _ event), 9) =>

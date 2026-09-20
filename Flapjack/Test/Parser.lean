@@ -1316,6 +1316,12 @@ The grammar cannot tell a local from a global, so every variable starts
 #guard sameAst (prog "var v = 1; st32 v, v;")
   (.ok (.dec "v" .one (.const 1) (.store32 (.var .global "v") (.var .global "v"))))
 
+-- Cake rejects a local-only ld32 source name because the catch-all leaves the
+-- operand global; keep the acceptance boundary as well as the AST shape.
+#guard match parseTopDecs ofI "fun 1 f() {\n  var 1 z = 7;\n  var 1 y = ld32 z;\n  return y;\n}" with
+  | .ok declarations => !staticResultOk (staticCheck declarations)
+  | .error _ => false
+
 /-! Direct oracle for `localise_prog_def` from
 `cakeml/pancake/parser/panPtreeConversionScript.sml:844`.  The scope extends
 only over declaration/DecCall bodies and handler bodies; call targets and

@@ -116,12 +116,18 @@ Typical bounded runs (each a few minutes, safe for a laptop):
 
 ```sh
 nice -n 10 python3 scripts/parity-difffuzz.py --smoke --exact # every accepted artifact must match
+nice -n 10 python3 scripts/parity-difffuzz.py --smoke --include-globals --exact
 nice -n 10 python3 scripts/parity-difffuzz.py --mode mixed --exact --seed 3 --count 80 \
     --out difffuzz-findings --minimize                      # bounded exact campaign
 python3 scripts/parity-difffuzz.py --mode mixed --seed 3 --count 80 \
     --out difffuzz-findings --minimize                      # bounded campaign
 python3 scripts/parity-difffuzz.py --replay difffuzz-findings/<case>
 ```
+
+The `--include-globals` variant adds deterministic global declarations and
+global-based load/store addresses to generated cases.  It is kept as a
+separate smoke invocation so the ordinary campaign remains directly
+comparable with older recorded seeds.
 
 `--exact` is the required mode for source-to-RISC-V parity: any difference in
 acceptance, section layout, metadata, or bytes is a failure, including a

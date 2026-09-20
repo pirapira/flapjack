@@ -161,6 +161,21 @@ example (state : CrepRuntimeState (BitVec 5) Unit)
 example (state : CrepRuntimeState (BitVec 5) Unit)
     (typedState : CrepGlobalState (BitVec 5))
     (address value : BitVec 5) :
+    crepRuntimeLoopTypedGlobalRel (id : BitVec 5 → CrepGlobalAddress)
+      { (state.withTypedGlobalState id typedState) with
+        globals := updateMemory
+          (state.withTypedGlobalState id typedState).globals address value }
+      { (loopStateOfCrepRuntimeStateForGlobals
+          (state.withTypedGlobalState id typedState)) with
+        globals := updateLoopGlobal
+          (state.withTypedGlobalState id typedState).globals address value }
+      (storeCrepTypedGlobal id typedState address value) := by
+  exact crepRuntimeLoopTypedGlobalRel_store_of_noalias state id typedState
+    address value (fun _ h => h)
+
+example (state : CrepRuntimeState (BitVec 5) Unit)
+    (typedState : CrepGlobalState (BitVec 5))
+    (address value : BitVec 5) :
     CrepGlobalKeyRelation (id : BitVec 5 → CrepGlobalAddress)
       (updateLoopGlobal (state.withTypedGlobalState id typedState).globals
         address value)

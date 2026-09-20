@@ -285,6 +285,49 @@ def staticProgInvalidHandlerShapeContext : Context :=
     some ("L: static analysis failed to convert in-scope shape in function f\n" ++
       "this should never happen. please report to a compiler developer\n")
 
+/- Cake's global-destination call branch does not produce a local delta and
+   checks the destination shape before accepting the ordinary fall-through
+   result (`panStaticScript.sml:1235-1269`). -/
+def staticProgGlobalCallMetadataOracle : Bool :=
+  match checkProg staticProgGlobalHandlerContext
+      ((.call (some (some (.global, "g"), none)) "callee" []) : Prog Nat) with
+  | (Except.ok result, warnings) =>
+      !result.exitsFunction && !result.exitsLoop && result.last == .otherLast &&
+        result.variableDelta.isEmpty && result.currentLocation == "L: " &&
+        warnings.isEmpty
+  | _ => false
+
+#guard staticProgGlobalCallMetadataOracle
+
+def staticProgStandaloneHandlerContext : Context :=
+  { staticProgGlobalHandlerContext with
+    locals :=
+      ("h", { shapedBased := .struct [.word .notBased, .word .notBased] }) ::
+        staticProgGlobalHandlerContext.locals }
+
+/- Cake's standalone handled-call branch checks the declared exception and
+   handler shape, trusts the handler variable while checking its body, and
+   returns ordinary fall-through metadata with no destination delta
+   (`panStaticScript.sml:1353-1406`). -/
+def staticProgStandaloneHandlerMetadataOracle : Bool :=
+  match checkProg staticProgStandaloneHandlerContext
+      ((.call (some (none, some ("E", "h", .skip))) "callee" []) : Prog Nat) with
+  | (Except.ok result, warnings) =>
+      !result.exitsFunction && !result.exitsLoop && result.last == .otherLast &&
+        result.variableDelta.isEmpty && result.currentLocation == "L: " &&
+        warnings.isEmpty
+  | _ => false
+
+#guard staticProgStandaloneHandlerMetadataOracle
+
+/- The handler-shape diagnostic is observable and must precede handler-body
+   checking for a standalone call. -/
+#guard
+  staticResultErrorMessage
+      (checkProg staticProgGlobalHandlerContext
+        ((.call (some (none, some ("E", "h", .skip))) "callee" []) : Prog Nat)) ==
+    some "handler variable h does not match shape of exception E\n"
+
 def staticProgBadLocalCallDestinationContext : Context :=
   { staticProgCallContext with
     locals := ("x", { shapedBased := .struct [.word .trusted, .word .trusted] }) ::

@@ -3229,6 +3229,58 @@ theorem compile_full_pan_value_seq_return_compose_state_full
   · simp [evalPanValueProgWithPrimitiveFull, hsourceFirst]
   · simp [compileProg, hcrepFirst, evalCrepFullProgStateFull]
 
+/-! Raised first components also short-circuit full stateful sequences.  The
+    premises expose Cake's complete control result and the corresponding full
+    Crep raised state, so the continuation is never evaluated on either side. -/
+theorem compile_full_pan_value_seq_raise_compose_state_full
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [PanShiftWidth α]
+    [ArithmeticShiftRight α] [RotateRightOp α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (sourceFirstLocals sourceFirstGlobals : VarName → Option (PanValue α))
+    (sourceFirstMemory : α → Option (PanValue α))
+    (state firstState : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (first second : Prog α)
+    (compiledFirst compiledSecond : CrepProg α)
+    (sourceException : ExceptionId) (sourceValue : PanValue α)
+    (crepException : α)
+    (hcompileFirst : compileProg context first = compiledFirst)
+    (hcompileSecond : compileProg context second = compiledSecond)
+    (hsourceFirst : evalPanValueProgWithPrimitiveCallsAndFfiFull
+      primitive sourceHandler structs sourceFunctions
+      baseAddress topAddress bytesInWord (fuel + 1)
+      sourceLocals sourceGlobals sourceMemory first =
+      some (.raised sourceFirstLocals sourceFirstGlobals sourceFirstMemory
+        sourceException sourceValue))
+    (hcrepFirst : evalCrepFullProgStateFull functions crepPrimitive ffi sharedMem
+      baseAddress topAddress (fuel + 1) state compiledFirst =
+      some (.raised firstState crepException)) :
+    evalPanValueProgWithPrimitiveCallsAndFfiFull
+      primitive sourceHandler structs sourceFunctions
+      baseAddress topAddress bytesInWord (fuel + 2)
+      sourceLocals sourceGlobals sourceMemory (.seq first second) =
+      some (.raised sourceFirstLocals sourceFirstGlobals sourceFirstMemory
+        sourceException sourceValue) ∧
+    evalCrepFullProgStateFull functions crepPrimitive ffi sharedMem
+      baseAddress topAddress (fuel + 2) state
+      (compileProg context (.seq first second)) =
+      some (.raised firstState crepException) := by
+  constructor
+  · simp [evalPanValueProgWithPrimitiveCallsAndFfiFull, hsourceFirst]
+  · simp [compileProg, hcompileFirst, hcompileSecond,
+      evalCrepFullProgStateFull, hcrepFirst]
+
 /-! Full-word conditional composition is the next compact stateful
     source-to-Crep constructor.  The premises expose the Cake expression
     result, the compiled condition result, and both branch simulations; no

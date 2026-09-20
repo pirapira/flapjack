@@ -219,6 +219,20 @@ def staticProgLocalLoadMetadataOracle : Bool :=
 
 #guard staticProgLocalLoadMetadataOracle
 
+/-! Cake checks the shared-load address before the destination shape.  These
+    cases keep the address diagnostic observable when both inputs are bad. -/
+#guard
+  staticResultErrorMessage
+      (staticProgCheck
+        (.shMemLoad .opW .local "pair" (.rStruct [.const 0]))) ==
+    some "L: load address has shape {1} instead of a word in function f\n"
+
+#guard
+  staticResultErrorMessage
+      (staticProgCheck
+        (.shMemLoad .opW .global "g" (.rStruct [.const 0]))) ==
+    some "L: load address has shape {1} instead of a word in function f\n"
+
 /-! Cake's call with no destination is a tail call: matching caller/callee
     return shapes produce TailLast and function exit metadata. -/
 def staticProgTailCallMetadataOracle : Bool :=

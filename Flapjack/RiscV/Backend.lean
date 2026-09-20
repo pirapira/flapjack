@@ -204,6 +204,47 @@ def wordExpToInstructionsCake [NeZero width] (destination : Nat) :
         pure (addressInstructions ++ [.loadWord destination 31])
   | expression => wordExpToInstructions destination expression
 
+/-! Constructor equations for theorem clients migrating from the historical
+    one-instruction expression API.  Only `.const` (and a load whose address
+    recursively contains a constant) uses the Cake list-valued boundary; the
+    remaining expression forms retain exactly the old result. -/
+theorem wordExpToInstructionsCake_const [NeZero width] (destination : Nat)
+    (value : Word width) :
+    wordExpToInstructionsCake destination (.const value) =
+      wordConstToInstructions destination value := by
+  rfl
+
+theorem wordExpToInstructionsCake_var [NeZero width] (destination source : Nat) :
+    wordExpToInstructionsCake destination
+        (.var source : WordExp (Word width)) =
+      wordExpToInstructions destination (.var source : WordExp (Word width)) := by
+  rfl
+
+theorem wordExpToInstructionsCake_lookup [NeZero width] (destination : Nat)
+    (store : WordStore (Word width)) :
+    wordExpToInstructionsCake destination (.lookup store) =
+      wordExpToInstructions destination (.lookup store) := by
+  rfl
+
+theorem wordExpToInstructionsCake_op [NeZero width] (destination : Nat)
+    (operator : BinOp) (args : List (WordExp (Word width))) :
+    wordExpToInstructionsCake destination (.op operator args) =
+      wordExpToInstructions destination (.op operator args) := by
+  rfl
+
+theorem wordExpToInstructionsCake_shift [NeZero width] (destination : Nat)
+    (operator : Shift) (left right : WordExp (Word width)) :
+    wordExpToInstructionsCake destination (.shift operator left right) =
+      wordExpToInstructions destination (.shift operator left right) := by
+  rfl
+
+theorem wordExpToInstructionsCake_load_var [NeZero width] (destination source : Nat) :
+    wordExpToInstructionsCake destination
+        (.load (.var source) : WordExp (Word width)) =
+      wordExpToInstructions destination
+        (.load (.var source) : WordExp (Word width)) := by
+  rfl
+
 /-! The standalone Word selector has no layout table.  Its LocValue boundary
     therefore materializes the abstract label number; the layout-aware Lab
     selector later replaces this with the absolute target position. -/

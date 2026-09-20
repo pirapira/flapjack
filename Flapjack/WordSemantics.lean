@@ -1169,6 +1169,126 @@ theorem evalWordFunctionWithHandlersAndFfi_ffi [NeZero width]
       pure (.normal state)) := by
   simp [evalWordFunctionWithHandlersAndFfi]
 
+/-! Direct equations for the combined Word control evaluator.  These mirror
+    the plain handler-aware equations, delegating call and FFI actions to the
+    call-level evaluator and exposing sequence, conditional, termination,
+    raise, and return results without unfolding the fuel recursion. -/
+
+theorem evalWordFunctionWithHandlersAndFfi_call [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (fuel : Nat) (state : State width) (returns : WordCallReturns (Word width))
+    (target : Option Nat) (arguments : List Nat)
+    (handler : WordCallHandler (Word width)) :
+    evalWordFunctionWithHandlersAndFfi functions ffiHandler (fuel + 1) state
+      (.call returns target arguments handler) =
+      evalWordCallWithHandlersAndFfi functions ffiHandler fuel state returns target
+        arguments handler := by
+  simp [evalWordFunctionWithHandlersAndFfi]
+
+theorem evalWordFunctionWithHandlersAndFfi_seq_normal [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (fuel : Nat) (state firstState : State width)
+    (first second : WordProg (Word width)) (result : WordControlResult width)
+    (hfirst : evalWordFunctionWithHandlersAndFfi functions ffiHandler fuel state
+      first = some (.normal firstState))
+    (hsecond : evalWordFunctionWithHandlersAndFfi functions ffiHandler fuel
+      firstState second = some result) :
+    evalWordFunctionWithHandlersAndFfi functions ffiHandler (fuel + 1) state
+      (.seq first second) = some result := by
+  simp [evalWordFunctionWithHandlersAndFfi, hfirst, hsecond]
+
+theorem evalWordFunctionWithHandlersAndFfi_seq_returned [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (fuel : Nat) (state firstState : State width)
+    (first second : WordProg (Word width)) (values : List (Word width))
+    (hfirst : evalWordFunctionWithHandlersAndFfi functions ffiHandler fuel state
+      first = some (.returned firstState values)) :
+    evalWordFunctionWithHandlersAndFfi functions ffiHandler (fuel + 1) state
+      (.seq first second) = some (.returned firstState values) := by
+  simp [evalWordFunctionWithHandlersAndFfi, hfirst]
+
+theorem evalWordFunctionWithHandlersAndFfi_seq_raised [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (fuel : Nat) (state firstState : State width)
+    (first second : WordProg (Word width)) (exception : Word width)
+    (hfirst : evalWordFunctionWithHandlersAndFfi functions ffiHandler fuel state
+      first = some (.raised firstState exception)) :
+    evalWordFunctionWithHandlersAndFfi functions ffiHandler (fuel + 1) state
+      (.seq first second) = some (.raised firstState exception) := by
+  simp [evalWordFunctionWithHandlersAndFfi, hfirst]
+
+theorem evalWordFunctionWithHandlersAndFfi_ite_true [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (fuel : Nat) (state : State width) (operator : Cmp) (condition : Nat)
+    (rightValue : WordRegImm (Word width))
+    (thenBranch elseBranch : WordProg (Word width))
+    (result : WordControlResult width)
+    (hcondition : evalWordCondition state operator condition rightValue = some true)
+    (hthen : evalWordFunctionWithHandlersAndFfi functions ffiHandler fuel state
+      thenBranch = some result) :
+    evalWordFunctionWithHandlersAndFfi functions ffiHandler (fuel + 1) state
+      (.ite operator condition rightValue thenBranch elseBranch) = some result := by
+  simp [evalWordFunctionWithHandlersAndFfi, hcondition, hthen]
+
+theorem evalWordFunctionWithHandlersAndFfi_ite_false [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (fuel : Nat) (state : State width) (operator : Cmp) (condition : Nat)
+    (rightValue : WordRegImm (Word width))
+    (thenBranch elseBranch : WordProg (Word width))
+    (result : WordControlResult width)
+    (hcondition : evalWordCondition state operator condition rightValue = some false)
+    (helse : evalWordFunctionWithHandlersAndFfi functions ffiHandler fuel state
+      elseBranch = some result) :
+    evalWordFunctionWithHandlersAndFfi functions ffiHandler (fuel + 1) state
+      (.ite operator condition rightValue thenBranch elseBranch) = some result := by
+  simp [evalWordFunctionWithHandlersAndFfi, hcondition, helse]
+
+theorem evalWordFunctionWithHandlersAndFfi_mustTerminate [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (fuel : Nat) (state : State width) (body : WordProg (Word width)) :
+    evalWordFunctionWithHandlersAndFfi functions ffiHandler (fuel + 1) state
+      (.mustTerminate body) =
+      evalWordFunctionWithHandlersAndFfi functions ffiHandler fuel state body := by
+  simp [evalWordFunctionWithHandlersAndFfi]
+
+theorem evalWordFunctionWithHandlersAndFfi_raise [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (fuel : Nat) (state : State width) (exception : Nat) :
+    evalWordFunctionWithHandlersAndFfi functions ffiHandler (fuel + 1) state
+      (.raise exception) = (do
+      let exception ← registerOfNat exception
+      pure (.raised state (readRegister state exception))) := by
+  simp [evalWordFunctionWithHandlersAndFfi]
+
+theorem evalWordFunctionWithHandlersAndFfi_return [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (fuel : Nat) (state : State width) (label : Nat) (values : List Nat) :
+    evalWordFunctionWithHandlersAndFfi functions ffiHandler (fuel + 1) state
+      (.return label values) = (do
+      let values ← values.mapM (fun name => do
+        let register ← registerOfNat name
+        pure (readRegister state register))
+      pure (.returned state values)) := by
+  simp [evalWordFunctionWithHandlersAndFfi]
+
 /-! The loop-aware evaluator keeps Cake's direct Raise equation: register
     lookup is performed before the exception control result is returned, and
     the handler/FFI state remains otherwise unchanged. -/

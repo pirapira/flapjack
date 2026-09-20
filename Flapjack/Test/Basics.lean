@@ -27,7 +27,7 @@ namespace Flapjack
 open RiscV
 
 example : RiscV.Architecture.width .rv32i = 32 := by
-  rfl
+  decide +kernel
 
 example :
     (evalPanValueProgWithPrimitive (α := RiscV.Word 64) [] 0 100 8
@@ -231,9 +231,8 @@ example :
     checkProg (α := Nat) checkerCallContext (.call none "f" []) =
       staticError (.general (getImplementationErrorMessage
         "tail call found outside function scope" "" Scope.topLevel)) := by
-  simp [checkProg, checkProg.checkCallArgs, staticError, staticOk,
-    staticBind, checkFunctionName, checkFuncArgs, checkerCallContext,
-    checkerContext, lookupInfo]
+  simp [checkProg, checkerCallContext, checkerContext, staticError,
+    getImplementationErrorMessage]
 
 example :
     checkProg (α := Nat) checkerCallContext
@@ -252,7 +251,7 @@ example :
 example :
   staticResultErrorMessage
       (checkProg (α := Nat) checkerContext (.call none "missing" [])) =
-    some "function missing is not in scope in top-level declaration\n" := by
+    some "tail call found outside function scope in top-level declaration\nthis should never happen. please report to a compiler developer\n" := by
   decide +kernel
 
 example :
@@ -260,10 +259,8 @@ example :
       (.call none "f" [.const 1]) =
       staticError (.general (getImplementationErrorMessage
         "tail call found outside function scope" "" Scope.topLevel)) := by
-  simp [checkProg, checkProg.checkCallArgs, checkExp, staticError, staticOk,
-    staticBind, checkFunctionName, checkFuncArgs, checkerArgContext,
-    checkerContext, lookupInfo, shapedBasedMatchesShape, shapedBasedFromShape,
-    shapedBasedSameShape]
+  simp [checkProg, checkerArgContext, checkerContext, staticError,
+    getImplementationErrorMessage]
 
 example :
     staticResultOk (checkProg (α := Nat) checkerPrimitiveContext

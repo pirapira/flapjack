@@ -1176,76 +1176,79 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
   | .continue =>
       if context.inLoop then progOk .contLast false true context.location
       else staticError (.general (getRogueMessage false context.location context.scope))
-  | .call info function arguments =>
+  | .call none function arguments =>
+      /- Cake's `TailCall` checks the caller scope and declaration before the
+         callee, arguments, and return-shape agreement. -/
+      match context.scope with
+      | .funScope callerName _ =>
+          staticBind (checkFunctionName context callerName) (fun callerInfo =>
+            staticBind (checkFunctionName context function) (fun functionInfo =>
+              staticBind (checkCallArgs context arguments) (fun argumentResult =>
+                if !shapesSame callerInfo.returnShape functionInfo.returnShape then
+                  staticError (.shape (getShapeMismatchMessage
+                    ("result of function call " ++ function ++ " to return")
+                    (Shape.shapeToString functionInfo.returnShape)
+                    (Shape.shapeToString callerInfo.returnShape)
+                    context.location context.scope))
+                else
+                  staticBind (checkFuncArgs context function functionInfo.params
+                      argumentResult.shapedBased) (fun _ =>
+                    progOk .tailLast true false context.location))))
+      | _ =>
+          staticError (.general (getImplementationErrorMessage
+            "tail call found outside function scope"
+            context.location context.scope))
+  | .call (some (destination, handler)) function arguments =>
       staticBind (checkFunctionName context function) (fun functionInfo =>
         let returnShape := functionInfo.returnShape
         staticBind (checkCallArgs context arguments) (fun argumentResult =>
           staticBind (checkFuncArgs context function functionInfo.params
               argumentResult.shapedBased) (fun _ =>
-              match info with
-              | none =>
-                  -- CakeML `panStaticScript.sml:1335`: a tail call requires the
-                  -- caller's and callee's return shapes to agree.
-                  match context.expectedReturn with
-                  | some callerReturn =>
-                      if !shapesSame callerReturn functionInfo.returnShape then
-                        staticError (.shape (getShapeMismatchMessage
-                          ("result of function call " ++ function ++ " to return")
-                          (Shape.shapeToString functionInfo.returnShape)
-                          (Shape.shapeToString callerReturn)
-                          context.location context.scope))
-                      else progOk .tailLast true false context.location
-                  | none =>
-                      match context.scope with
-                      | .funScope _ _ => progOk .tailLast true false context.location
-                      | _ => staticError (.general (getImplementationErrorMessage
-                          "tail call found outside function scope"
-                          context.location context.scope))
-              | some (destination, none) =>
-                  checkCallDestination context function returnShape destination
-              | some (destination, some (exception, handlerVariable, handlerProgram)) =>
-                  staticBind (checkCallDestination context function returnShape destination)
-                    (fun destinationResult =>
-                      match destination with
-                      | some (.global, _) =>
-                          -- CakeML `panStaticScript.sml:1256-1264`: a handled call
-                          -- assigning to a global only requires the handler variable
-                          -- to be a local; the exception need not be declared and
-                          -- the handler variable's shape is not checked.
-                          match lookupInfo handlerVariable context.locals with
-                          | none => staticError (.scope
-                              (staticScopeMessage .variable context.location
-                                handlerVariable context.scope))
-                          | some handlerInfo =>
-                              let handlerContext := { context with locals :=
-                                (handlerVariable,
-                                  { handlerInfo with shapedBased :=
-                                      shapedBasedWithBase .trusted handlerInfo.shapedBased }) ::
-                                  context.locals }
-                              staticBind (checkProg handlerContext handlerProgram) (fun _ =>
-                                staticOk destinationResult)
-                      | _ =>
-                          match lookupInfo exception context.exceptions,
-                              lookupInfo handlerVariable context.locals with
-                          | none, _ => staticError (.scope ("exception " ++ exception ++
-                              " is not declared\n"))
-                          | _, none => staticError (.scope
-                              (staticScopeMessage .variable context.location
-                                handlerVariable context.scope))
-                          | some exceptionShape, some handlerInfo =>
-                              if !shapedBasedHasShape exceptionShape handlerInfo.shapedBased then
-                                staticError (.shape ("handler variable " ++ handlerVariable ++
-                                  " does not match shape of exception " ++ exception ++ "\n"))
-                              else
-                                match shapedBasedFromShape context.structs exceptionShape with
-                                | none => staticError (.scope (getImplementationErrorMessage
-                                    "static analysis failed to convert in-scope shape"
-                                    context.location context.scope))
-                                | some handlerShaped =>
-                                    let handlerContext := { context with locals :=
-                                      (handlerVariable, { shapedBased := handlerShaped }) :: context.locals }
-                                    staticBind (checkProg handlerContext handlerProgram) (fun _ =>
-                                      staticOk destinationResult)))))
+            match handler with
+            | none => checkCallDestination context function returnShape destination
+            | some (exception, handlerVariable, handlerProgram) =>
+                staticBind (checkCallDestination context function returnShape destination)
+                  (fun destinationResult =>
+                    match destination with
+                    | some (.global, _) =>
+                        -- CakeML `panStaticScript.sml:1256-1264`: a handled call
+                        -- assigning to a global only requires the handler variable
+                        -- to be a local; the exception need not be declared and
+                        -- the handler variable's shape is not checked.
+                        match lookupInfo handlerVariable context.locals with
+                        | none => staticError (.scope
+                            (staticScopeMessage .variable context.location
+                              handlerVariable context.scope))
+                        | some handlerInfo =>
+                            let handlerContext := { context with locals :=
+                              (handlerVariable,
+                                { handlerInfo with shapedBased :=
+                                    shapedBasedWithBase .trusted handlerInfo.shapedBased }) ::
+                                context.locals }
+                            staticBind (checkProg handlerContext handlerProgram) (fun _ =>
+                              staticOk destinationResult)
+                    | _ =>
+                        match lookupInfo exception context.exceptions,
+                            lookupInfo handlerVariable context.locals with
+                        | none, _ => staticError (.scope ("exception " ++ exception ++
+                            " is not declared\n"))
+                        | _, none => staticError (.scope
+                            (staticScopeMessage .variable context.location
+                              handlerVariable context.scope))
+                        | some exceptionShape, some handlerInfo =>
+                            if !shapedBasedHasShape exceptionShape handlerInfo.shapedBased then
+                              staticError (.shape ("handler variable " ++ handlerVariable ++
+                                " does not match shape of exception " ++ exception ++ "\n"))
+                            else
+                              match shapedBasedFromShape context.structs exceptionShape with
+                              | none => staticError (.scope (getImplementationErrorMessage
+                                  "static analysis failed to convert in-scope shape"
+                                  context.location context.scope))
+                              | some handlerShaped =>
+                                  let handlerContext := { context with locals :=
+                                    (handlerVariable, { shapedBased := handlerShaped }) :: context.locals }
+                                  staticBind (checkProg handlerContext handlerProgram) (fun _ =>
+                                    staticOk destinationResult)))))
   | .decCall name shape function arguments body =>
       staticBind (checkRedecVar context name) (fun _ =>
         staticBind (checkShape context.structs context.location context.scope shape) (fun _ =>

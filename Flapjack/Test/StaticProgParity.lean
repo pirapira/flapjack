@@ -24,7 +24,8 @@ def staticProgCheck (program : Prog Nat) : StaticResult ProgReturn :=
 
 def staticProgCallContext : Context :=
   { staticProgParityContext with
-    functions := [("callee", { returnShape := .one, params := [] })] }
+    functions := [("callee", { returnShape := .one, params := [] }),
+      ("f", { returnShape := .one, params := [] })] }
 
 def staticProgReturnContext : Context :=
   { staticProgParityContext with

@@ -969,4 +969,100 @@ example (functions : List (Nat × List Nat × WordProg (Word 64))) (state : Stat
     (.skip : WordProg (Word 64)) .skip _ (Nat.le_refl _)]
   simp [evalWordProg]
 
+/-- Straight-line execution contract for the FFI-aware handler evaluator.  On an
+FFI-free straight-line program the evaluator returns `.normal` at exactly the
+state produced by executing the RISC-V code emitted by the call-aware selector,
+so handler-aware evaluator results are tied to the compiled artifact through the
+`WordControlResult` carrier used by the PanValue/Crep control relations. -/
+theorem evalWordFunctionWithHandlersAndFfi_straightLine_execution_contract
+    {width : Nat} [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (context : WordCallContext width) (state : State width)
+    (program : WordProg (Word width))
+    (hstraight : WordRiscVStraightLine program)
+    (fuel : Nat) (hfuel : sizeOf program + 1 ≤ fuel)
+    (code : List (Instruction width))
+    (hcompile : wordFunctionToRiscVWithCalls context program = some (code, [])) :
+    evalWordFunctionWithHandlersAndFfi functions ffiHandler fuel state program =
+      some (WordControlResult.normal (executeInstructions state code)) := by
+  rw [evalWordFunctionWithHandlersAndFfi_straightLine_eq_evalWordProg_normal functions
+    ffiHandler state program hstraight fuel hfuel]
+  have hword := wordFunctionToRiscVWithCalls_sound_of_straightLine context state program
+    hstraight code hcompile
+  rw [evalWordFunction_wordRiscVStraightLine_eq_evalWordProg state program hstraight] at hword
+  cases hprog : evalWordProg state program with
+  | none => simp [hprog] at hword
+  | some final =>
+      simp only [hprog, Option.map_some] at hword
+      have hfin : final = executeInstructions state code := by
+        simpa using congrArg (fun pair => pair.1) (Option.some.inj hword)
+      rw [hfin]
+      rfl
+
+/-- Regression for the handler-aware execution contract on a straight-line
+skip: the empty program compiles to no code and leaves the state unchanged. -/
+example (functions : List (Nat × List Nat × WordProg (Word 64)))
+    (ffiHandler : FunName → Word 64 → Word 64 → Word 64 → Word 64 →
+      State 64 → Option (State 64))
+    (context : WordCallContext 64) (state : State 64) :
+    evalWordFunctionWithHandlersAndFfi functions ffiHandler
+        (sizeOf (.skip : WordProg (Word 64)) + 1) state
+        (.skip : WordProg (Word 64)) =
+      some (WordControlResult.normal (executeInstructions state [])) := by
+  exact evalWordFunctionWithHandlersAndFfi_straightLine_execution_contract
+    functions ffiHandler context state (.skip : WordProg (Word 64)) .skip _
+    (Nat.le_refl _) [] (by simp [wordFunctionToRiscVWithCalls])
+
+/-- Straight-line execution contract for the loop-aware handler evaluator, the
+most complete Word-level evaluator (calls, FFI, loops, and control transfers).
+On a straight-line program no control transfer can fire, so the evaluator
+returns `.normal` at exactly the state produced by executing the RISC-V code
+emitted by the loop-aware selector. -/
+theorem evalWordLoopProgWithHandlersAndFfi_straightLine_execution_contract
+    {width : Nat} [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (context : WordCallContext width) (state : State width)
+    (program : WordProg (Word width))
+    (hstraight : WordRiscVStraightLine program)
+    (fuel : Nat) (hfuel : sizeOf program + 1 ≤ fuel)
+    (code : List (Instruction width))
+    (hcompile : wordFunctionToRiscVWithCallsAndLoops context program = some (code, [])) :
+    evalWordLoopProgWithHandlersAndFfi functions ffiHandler fuel state program =
+      some (WordLoopControlResult.normal (executeInstructions state code)) := by
+  rw [evalWordLoopProgWithHandlersAndFfi_straightLine_eq_evalWordProg_normal functions
+    ffiHandler state program hstraight fuel hfuel]
+  have hagree := wordFunctionToRiscVWithCallsAndLoops_agrees_straightLine context program
+    hstraight
+  rw [hagree] at hcompile
+  have hword := wordFunctionToRiscVWithCalls_sound_of_straightLine context state program
+    hstraight code hcompile
+  rw [evalWordFunction_wordRiscVStraightLine_eq_evalWordProg state program hstraight] at hword
+  cases hprog : evalWordProg state program with
+  | none => simp [hprog] at hword
+  | some final =>
+      simp only [hprog, Option.map_some] at hword
+      have hfin : final = executeInstructions state code := by
+        simpa using congrArg (fun pair => pair.1) (Option.some.inj hword)
+      rw [hfin]
+      rfl
+
+/-- Regression for the loop-aware execution contract on a straight-line skip. -/
+example (functions : List (Nat × List Nat × WordProg (Word 64)))
+    (ffiHandler : FunName → Word 64 → Word 64 → Word 64 → Word 64 →
+      State 64 → Option (State 64))
+    (context : WordCallContext 64) (state : State 64) :
+    evalWordLoopProgWithHandlersAndFfi functions ffiHandler
+        (sizeOf (.skip : WordProg (Word 64)) + 1) state
+        (.skip : WordProg (Word 64)) =
+      some (WordLoopControlResult.normal (executeInstructions state [])) := by
+  exact evalWordLoopProgWithHandlersAndFfi_straightLine_execution_contract
+    functions ffiHandler context state (.skip : WordProg (Word 64)) .skip _
+    (Nat.le_refl _) []
+    (by rw [wordFunctionToRiscVWithCallsAndLoops_agrees_straightLine context
+      (.skip : WordProg (Word 64)) .skip]; simp [wordFunctionToRiscVWithCalls])
+
 end Flapjack.RiscV

@@ -843,9 +843,6 @@ def wordStackLoadOffsetInst {α : Type} (config : WordStackConfig)
       pure (.seq (.inst (.memOffset operator config.scratch address offset))
         (.stackStore config.scratch (wordStackOffset config destination)))
   | .register destination, .stack address =>
-      /- Cake's `wReg1` is used for the address of every `Mem Load`, including
-         an offset load.  Its spill carrier is `k` (the first allocator
-         register), not `wReg2`'s `k+1` address scratch. -/
       pure (.seq (.stackLoad config.scratch
           (wordStackOffset config address))
         (.inst (.memOffset operator destination config.scratch offset)))

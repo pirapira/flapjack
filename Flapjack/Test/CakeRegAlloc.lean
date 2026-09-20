@@ -717,7 +717,8 @@ def parityGuard : Bool :=
     raDeltaFreeGuard && raDeltaTriangleGuard && raStackOnlyGuard &&
     raMovesCoalesceGuard && raMovesSelfFilteredGuard && raForcedEdgeGuard &&
     raOrderSeqGuard && raOrderCliqueGuard && raSpillCostGuard &&
-    prefsMoveOrderGuard && prefsSeqOrderGuard && prefsBranchOrderGuard &&
+    prefsMoveOrderGuard && prefsSeqOrderGuard && prefsControlFlowGuard &&
+    prefsBranchOrderGuard &&
     prefsCallHandlerOrderGuard && prefsCallReturnOnlyGuard &&
     prefsLoopOrderGuard && prefsControlFlowGuard &&
     partOrderGuard && reviveOrderGuard && movesToSpOrderGuard &&
@@ -753,7 +754,8 @@ def runChecks : IO Bool := do
     heuSpillGuard, heuFixedDegreeGuard, raDeltaPairGuard, raDeltaFreeGuard,
     raStackOnlyGuard, raMovesCoalesceGuard, raMovesSelfFilteredGuard,
     raOrderSeqGuard, raOrderCliqueGuard, raSpillCostGuard,
-    prefsMoveOrderGuard, prefsSeqOrderGuard, prefsBranchOrderGuard,
+    prefsMoveOrderGuard, prefsSeqOrderGuard, prefsControlFlowGuard,
+    prefsBranchOrderGuard,
     prefsCallHandlerOrderGuard, prefsCallReturnOnlyGuard, prefsLoopOrderGuard,
     prefsControlFlowGuard,
     partOrderGuard,
@@ -782,7 +784,8 @@ def runChecks : IO Bool := do
     "reg_alloc moves coalesce", "reg_alloc moves self filtered",
     "reg_alloc sequential pair order", "reg_alloc clique order",
     "reg_alloc spill-cost selection",
-    "get_prefs Move order", "get_prefs Seq order", "get_prefs If order",
+    "get_prefs Move order", "get_prefs Seq order", "get_prefs control flow",
+    "get_prefs If order",
     "get_prefs Call handler order", "get_prefs Call return-only order",
     "get_prefs Loop order", "get_prefs control flow",
     "sorting partition order", "revive moves reversing partition", "revive partition direction", "bg_ok order",

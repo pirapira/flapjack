@@ -104,14 +104,6 @@ example :
     wordExpToInstructionsCake, wordConstToInstructions,
     wordConst32ToInstructions, registerOfNat]
 
-def cakeConstFunctionExecution : Option (List (Word 64)) :=
-  (wordFunctionToRiscVCake (width := 64)
-    (.seq (.assign 4 (.const (BitVec.ofNat 64 0x1234)))
-      (.return 0 [4]))).map fun (code, returns) =>
-    returns.map (readRegister (executeInstructions (zeroState 64) code))
-
-#guard cakeConstFunctionExecution = some [BitVec.ofNat 64 0x1234]
-
 /-! Executable obligations for the Cake-faithful multi-instruction boundary.
 
 These deliberately exercise the emitted instruction list, rather than the
@@ -386,6 +378,14 @@ example :
   simp [wordFunctionToRiscVCake,
     wordExpToInstructionsCake, wordConstToInstructions,
     wordConst32ToInstructions, registerOfNat]
+
+def cakeConstFunctionExecution : Option (List (Word 64)) :=
+  (wordFunctionToRiscVCake (width := 64)
+    (.seq (.assign 4 (.const (BitVec.ofNat 64 0x1234)))
+      (.return 0 [4]))).map fun (code, returns) =>
+    returns.map (readRegister (executeInstructions (zeroState 64) code))
+
+#guard cakeConstFunctionExecution = some [BitVec.ofNat 64 0x1234]
 
 /-! The checked `...Cake` program and function boundaries now route `locValue`
 through the position-aware Cake-faithful lowering (default position `0` for the

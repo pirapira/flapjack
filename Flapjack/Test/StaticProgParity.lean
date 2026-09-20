@@ -209,6 +209,18 @@ def staticProgPrimitiveMetadataOracle : Bool :=
 
 #guard staticProgPrimitiveMetadataOracle
 
+/-! Cake's Dec removes only its newly declared local from the body delta. -/
+def staticProgDecMetadataOracle : Bool :=
+  match staticProgCheck
+      (.dec "x" .one (.const 0) (.assign .local "x" (.const 1))) with
+  | (Except.ok result, warnings) =>
+      !result.exitsFunction && !result.exitsLoop && result.last == .otherLast &&
+        result.variableDelta.isEmpty && result.currentLocation == "L: " &&
+        warnings.isEmpty
+  | _ => false
+
+#guard staticProgDecMetadataOracle
+
 /-! Cake's sequence rule keeps the first function exit when the second
     statement is transparent.  Check the returned metadata, not only the
     acceptance/error bit, for a return followed by Skip. -/

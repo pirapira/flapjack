@@ -995,7 +995,9 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
             let nextContext := { context with
               locals := (name, { shapedBased := result.shapedBased }) :: context.locals
               last := .otherLast }
-            checkProg nextContext body
+            staticBind (checkProg nextContext body) (fun bodyResult =>
+              (Except.ok { bodyResult with
+                variableDelta := infoMapDelete name bodyResult.variableDelta }, []))
           else
             staticError (.shape (getShapeMismatchMessage
               ("expression to initialise local variable " ++ name)

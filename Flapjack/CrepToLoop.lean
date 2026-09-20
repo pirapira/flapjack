@@ -86,6 +86,9 @@ def insertNatSorted (name : Nat) : List Nat → List Nat
 def loopListInsert (names live : List Nat) : List Nat :=
   names.foldl (fun current name => insertNatSorted name current) live
 
+def loopListUnion (left right : List Nat) : List Nat :=
+  loopListInsert (left ++ right) []
+
 /-! Source-named port of `crep_to_loop$prog_if` (`prog_if_def`,
     `crep_to_loopScript.sml:34`).  The result is a statement list; the caller
     applies `nested_seq` exactly as the original compiler does. -/

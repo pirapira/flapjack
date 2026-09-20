@@ -455,6 +455,16 @@ def stExMinCostOrderGuard : Bool :=
 
 #guard stExMinCostOrderGuard
 
+/- Equal spill costs retain the first candidate: Cake's `v > cost` test is
+   strict, while each visited non-selected node is prepended to the residual
+   worklist. -/
+def stExMinCostTieGuard : Bool :=
+  let degrees := CakeNodeMap.ofNatInfoMap 4 [(0, 2), (1, 2), (2, 2)]
+  let costs := CakeNodeMap.ofNatInfoMap 4 [(0, 10), (1, 10), (2, 10)]
+  cakeStExListMinCost degrees costs [1, 2] 4 0 5 [] == (0, [2, 1])
+
+#guard stExMinCostTieGuard
+
 /- Cake's cost-free `do_spill` fallback uses `st_ex_list_MAX_deg`: it scans
    the remaining worklist, replacing the selected node only on a strict
    degree increase and retaining the reversed residual list. -/
@@ -827,7 +837,7 @@ def runChecks : IO Bool := do
     sourceSpillCostKeyGuard, sourceMovePhysicalFallbackGuard,
     deadTailCallLiveGuard, deadAllocLiveGuard, deadInstallLiveGuard,
     deadFfiLiveGuard, deadStoreConstsLiveGuard, stExMinCostOrderGuard,
-    stExMaxDegOrderGuard, stExMaxDegTieGuard]
+    stExMinCostTieGuard, stExMaxDegOrderGuard, stExMaxDegTieGuard]
   let names := [
     "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
@@ -864,7 +874,8 @@ def runChecks : IO Bool := do
     "remove_dead tail-call liveness", "remove_dead Alloc liveness",
     "remove_dead Install liveness", "remove_dead FFI liveness",
     "remove_dead StoreConsts liveness", "st_ex_list_MIN_cost ordering",
-    "st_ex_list_MAX_deg ordering", "st_ex_list_MAX_deg tie ordering"]
+    "st_ex_list_MIN_cost tie ordering", "st_ex_list_MAX_deg ordering",
+    "st_ex_list_MAX_deg tie ordering"]
   let mut all := true
   for (name, result) in names.zip results do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"

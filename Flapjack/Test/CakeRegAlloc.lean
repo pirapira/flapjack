@@ -455,6 +455,15 @@ def stExMinCostOrderGuard : Bool :=
 
 #guard stExMinCostOrderGuard
 
+/- Cake's cost-free `do_spill` fallback uses `st_ex_list_MAX_deg`: it scans
+   the remaining worklist, replacing the selected node only on a strict
+   degree increase and retaining the reversed residual list. -/
+def stExMaxDegOrderGuard : Bool :=
+  let degrees := CakeNodeMap.ofNatInfoMap 4 [(0, 2), (1, 1), (2, 3)]
+  cakeStExListMaxDeg degrees [1, 2] 4 0 2 [] == (2, [0, 1])
+
+#guard stExMaxDegOrderGuard
+
 /- `get_prefs_def` uses `MAP ... ++ acc`, preserving each Move's source
    order.  These guards mirror the canonical `get_prefs_probe.out` output. -/
 def prefsMoveOrderGuard : Bool :=
@@ -809,7 +818,8 @@ def runChecks : IO Bool := do
     deadMovePriorityGuard, deadProgramPriorityGuard, sortMovesTailSplitGuard,
     sourceSpillCostKeyGuard, sourceMovePhysicalFallbackGuard,
     deadTailCallLiveGuard, deadAllocLiveGuard, deadInstallLiveGuard,
-    deadFfiLiveGuard, deadStoreConstsLiveGuard, stExMinCostOrderGuard]
+    deadFfiLiveGuard, deadStoreConstsLiveGuard, stExMinCostOrderGuard,
+    stExMaxDegOrderGuard]
   let names := [
     "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
@@ -845,7 +855,8 @@ def runChecks : IO Bool := do
     "physical source move fallback",
     "remove_dead tail-call liveness", "remove_dead Alloc liveness",
     "remove_dead Install liveness", "remove_dead FFI liveness",
-    "remove_dead StoreConsts liveness", "st_ex_list_MIN_cost ordering"]
+    "remove_dead StoreConsts liveness", "st_ex_list_MIN_cost ordering",
+    "st_ex_list_MAX_deg ordering"]
   let mut all := true
   for (name, result) in names.zip results do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"

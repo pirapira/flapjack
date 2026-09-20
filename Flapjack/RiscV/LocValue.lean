@@ -15,13 +15,10 @@ theorem wordLocValueToInstructionsCake_eq_labLocValueInstructions {width : Nat}
   unfold wordLocValueToInstructionsCake labLocValueInstructions
   simp [registerOfNat, hdestination]
 
-/-! Semantic agreement between the legacy absolute `LocValue` lowering
-(`wordLocValueToInstructions`, a single `ADDI`) and the Cake-faithful
-position-aware lowering (`wordLocValueToInstructionsCake`, `AUIPC`+`ADDI`).
-The legacy shape is only faithful in the non-truncating range, so the
-agreement theorem carries the explicit premises `ZeroRegister state`,
-`state.pc = 0`, and `label < 2 ^ 11`; source/global/memory/FFI state stays
-visible as the `state` argument. -/
+/-! The public standalone Word boundary is now the position-zero instance of
+the Cake-faithful `AUIPC`/`ADDI` lowering.  The explicit state argument in the
+agreement theorems below remains useful to callers, but no longer hides a
+truncating single-instruction model. -/
 
 theorem execute_addi_read [NeZero width] (state : State width) (destination source : Fin 32)
     (immediate : Word width) :
@@ -36,10 +33,10 @@ theorem uImmediate_zero [NeZero width] : uImmediate (0 : Word width) = 0 := by
   simp [BitVec.getElem_signExtend]
 
 theorem wordLocValueToInstructions_getD [NeZero width]
-    (destination label : Nat) (hd : destination < 32) :
+    (destination label : Nat) (_hd : destination < 32) :
     (wordLocValueToInstructions (width := width) destination label).getD [] =
-      [.addi ⟨destination, hd⟩ 0 (BitVec.ofNat width label)] := by
-  simp [wordLocValueToInstructions, registerOfNat, hd]
+      (wordLocValueToInstructionsCake (width := width) destination label 0).getD [] := by
+  rfl
 
 theorem wordLocValueToInstructionsCake_small_eq [NeZero width]
     (destination label : Nat) (hdestination : destination < 32) (hlabel : label < 2 ^ 11) :
@@ -58,18 +55,23 @@ theorem wordLocValueToInstructionsCake_small_eq [NeZero width]
 
 theorem wordLocValueToInstructions_execution [NeZero width]
     (state : State width) (destination label : Nat) (hd : destination < 32)
-    (hzero : ZeroRegister state) :
+    (_hzero : ZeroRegister state) :
     readRegister (executeInstructions state
-        [.addi ⟨destination, hd⟩ 0 (BitVec.ofNat width label)]) ⟨destination, hd⟩ =
-      if destination = 0 then readRegister state ⟨destination, hd⟩
-      else BitVec.ofNat width label := by
-  rw [executeInstructions_single, execute_addi_read]
-  simp only [Fin.ext_iff, Fin.val_zero]
-  by_cases h : destination = 0
-  · simp [h]
-  · simp only [h, if_false]
-    rw [show readRegister state (0 : Fin 32) = 0 from hzero]
-    simp
+        ((wordLocValueToInstructions (width := width) destination label).getD []))
+      ⟨destination, hd⟩ =
+    readRegister (executeInstructions state
+        ((wordLocValueToInstructionsCake (width := width) destination label 0).getD []))
+      ⟨destination, hd⟩ := by
+  rfl
+
+theorem wordLocValueToInstructions_memory [NeZero width] (state : State width)
+    (destination label : Nat) (hd : destination < 32) :
+    (executeInstructions state
+      ((wordLocValueToInstructions (width := width) destination label).getD [])).memory =
+      state.memory := by
+  by_cases hzero : destination = 0 <;>
+    simp [wordLocValueToInstructions, wordLocValueToInstructionsCake,
+      registerOfNat, hd, hzero, executeInstructions, execute, writeRegister]
 
 theorem auipcAddi_execution_of_small [NeZero width]
     (state : State width) (destination label : Nat) (hd : destination < 32)
@@ -90,16 +92,12 @@ theorem auipcAddi_execution_of_small [NeZero width]
 
 theorem wordLocValueToInstructions_agrees_cake_of_small [NeZero width]
     (state : State width) (destination label : Nat) (hd : destination < 32)
-    (hzero : ZeroRegister state) (hpc : state.pc = 0) (hlabel : label < 2 ^ 11) :
+    (_hzero : ZeroRegister state) (_hpc : state.pc = 0) (_hlabel : label < 2 ^ 11) :
     readRegister (executeInstructions state
         ((wordLocValueToInstructions (width := width) destination label).getD [])) ⟨destination, hd⟩ =
       readRegister (executeInstructions state
         ((wordLocValueToInstructionsCake (width := width) destination label 0).getD [])) ⟨destination, hd⟩ := by
-  rw [wordLocValueToInstructions_getD destination label hd,
-    wordLocValueToInstructionsCake_small_eq destination label hd hlabel]
-  simp only [Option.getD_some]
-  rw [wordLocValueToInstructions_execution state destination label hd hzero,
-    auipcAddi_execution_of_small state destination label hd hpc]
+  rfl
 
 example :
     readRegister (executeInstructions (zeroState 64)
@@ -410,26 +408,17 @@ theorem wordLocValueToInstructionsCake_execution_general (state : State 64)
   exact BitVec.ofInt_natCast 64 label
 
 /-- Strengthening of `wordLocValueToInstructions_agrees_cake_of_small` to the
-full forward `AUIPC` signed range: for a nonzero destination, `state.pc = 0`,
-`ZeroRegister state`, and a forward label with `(label : Int) < 2 ^ 19`, the
-legacy absolute single-`ADDI` lowering and the Cake-faithful `AUIPC`+`ADDI`
-lowering execute to the same destination value.  The `state.pc = 0` premise is
-exactly where the legacy absolute model coincides with Cake's PC-relative
-`riscv_ast (Loc r i)`. (bead flapjack-pxn.1.4) -/
+full forward `AUIPC` signed range.  Since the public boundary is now the
+position-zero Cake lowering, this is a direct definitional agreement. -/
 theorem wordLocValueToInstructions_agrees_cake_of_forward (state : State 64)
-    (destination label : Nat) (hd : destination < 32) (hne : destination ≠ 0)
-    (hzero : ZeroRegister state) (hpc : state.pc = 0)
-    (hlabel : (label : Int) < 2 ^ 19) :
+    (destination label : Nat) (hd : destination < 32) (_hne : destination ≠ 0)
+    (_hzero : ZeroRegister state) (_hpc : state.pc = 0)
+    (_hlabel : (label : Int) < 2 ^ 19) :
     readRegister (executeInstructions state
         ((wordLocValueToInstructions (width := 64) destination label).getD [])) ⟨destination, hd⟩ =
       readRegister (executeInstructions state
         ((wordLocValueToInstructionsCake (width := 64) destination label 0).getD [])) ⟨destination, hd⟩ := by
-  rw [wordLocValueToInstructions_getD destination label hd]
-  rw [wordLocValueToInstructions_execution state destination label hd hzero]
-  rw [show (if destination = 0 then readRegister state ⟨destination, hd⟩
-        else BitVec.ofNat 64 label) = BitVec.ofNat 64 label from by rw [if_neg hne]]
-  exact (wordLocValueToInstructionsCake_execution_general state destination label 0 hd hne hpc
-    (by omega) (by simpa using hlabel)).symm
+  rfl
 
 example :
     readRegister (executeInstructions (zeroState 64)

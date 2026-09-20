@@ -523,7 +523,19 @@ def deadTailCallLiveGuard : Bool :=
 def deadAllocLiveGuard : Bool :=
   match Flapjack.RiscV.wordDeadCodeAux
       (.alloc 7 ([2], [3]) : WordProg Nat) [99] [] with
-  | (.alloc 7 ([2], [3]), live) => live == [7, 99, 2, 3]
+  | (.alloc 7 ([2], [3]), live) => live == [7, 2, 3]
+  | _ => false
+
+def deadInstallLiveGuard : Bool :=
+  match Flapjack.RiscV.wordDeadCodeAux
+      (.install 7 8 9 10 ([11], [12]) : WordProg Nat) [99] [] with
+  | (.install 7 8 9 10 ([11], [12]), live) => live == [7, 8, 9, 10, 11, 12]
+  | _ => false
+
+def deadFfiLiveGuard : Bool :=
+  match Flapjack.RiscV.wordDeadCodeAux
+      (.ffi "svc" 7 8 9 10 ([11], [12]) : WordProg Nat) [99] [] with
+  | (.ffi "svc" 7 8 9 10 ([11], [12]), live) => live == [7, 8, 9, 10, 11, 12]
   | _ => false
 
 def deadStoreConstsLiveGuard : Bool :=
@@ -610,7 +622,8 @@ def parityGuard : Bool :=
     && mapUpdateBoundedGuard && sourceSpillCostKeyGuard && sourceMovePhysicalFallbackGuard
     && deadMovePriorityGuard
     && deadProgramPriorityGuard && deadTailCallLiveGuard && deadAllocLiveGuard
-    && deadStoreConstsLiveGuard && cakeBijSetPatriciaGuard
+    && deadInstallLiveGuard && deadFfiLiveGuard && deadStoreConstsLiveGuard
+    && cakeBijSetPatriciaGuard
     && sortMovesTailSplitGuard
 
 /- The aggregate guard is intentionally disabled while the allocator port is
@@ -638,7 +651,8 @@ def runChecks : IO Bool := do
     raMovesStempHiGuard, negFirstMatchProjectionGuard, mapUpdateBoundedGuard,
     deadMovePriorityGuard, deadProgramPriorityGuard, sortMovesTailSplitGuard,
     sourceSpillCostKeyGuard, sourceMovePhysicalFallbackGuard,
-    deadTailCallLiveGuard, deadAllocLiveGuard, deadStoreConstsLiveGuard]
+    deadTailCallLiveGuard, deadAllocLiveGuard, deadInstallLiveGuard,
+    deadFfiLiveGuard, deadStoreConstsLiveGuard]
   let names := [
     "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
@@ -663,6 +677,7 @@ def runChecks : IO Bool := do
     "mk_bij uses Cake Patricia Set order", "sort_moves tail split oracle",
     "source-keyed spill costs", "physical source move fallback",
     "remove_dead tail-call liveness", "remove_dead Alloc liveness",
+    "remove_dead Install liveness", "remove_dead FFI liveness",
     "remove_dead StoreConsts liveness"]
   let mut all := true
   for (name, result) in names.zip results do

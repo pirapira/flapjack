@@ -881,6 +881,40 @@ theorem panValuePcCompileCorrect_compact_store_source_word
   cases htarget
   simpa [panValuePcResultOfControl, panValuePcResultRel] using hrelNew
 
+/-- The symbolic store instance is usable with a non-constant, state-independent
+address expression: here the address is `.baseAddr` (evaluating to the base
+address `0`) and the value is the constant `9`.  The compiled-expression
+stability facts hold because neither compiled expression reads locals. -/
+example
+    (hbytesInWord : ∀ (context : CompileContext Nat) (bytesInWord : Nat),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext Nat)
+      (sourceLocals : VarName → Option (PanValue Nat)) (name : VarName)
+      (currentValue : PanValue Nat), sourceLocals name = some currentValue →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot])) :
+    PanValuePcCompileCorrect
+      (panValuePcCompactSourceEvaluator skipNatPrimitive skipNatSourceHandler
+        [] 0 0 1 4)
+      (crepPcCompactTargetEvaluator [] skipNatCrepPrimitive skipNatFfi
+        skipNatSharedMem 0 0 4)
+      skipNatCodeRel skipNatExcpRel skipNatExceptionCode skipNatGlobalsLookup
+      (.store (SourceWordExp.baseAddr).toExp (SourceWordExp.const 9).toExp) :=
+  panValuePcCompileCorrect_compact_store_source_word
+    SourceWordExp.baseAddr (SourceWordExp.const 9) hbytesInWord hlookup
+    (by
+      intro context structs sourceLocals sourceGlobals sourceMemory state _hstate
+      refine ⟨0, 9, ?_, ?_, ?_, ?_⟩
+      · simp [SourceWordExp.toExp, evalPanValueExp]
+      · simp [SourceWordExp.toExp, evalPanValueExp]
+      · intro compiled hcompile
+        simp [SourceWordExp.toExp, compileExp] at hcompile
+        rw [← hcompile]
+        simp [evalCrepFullExpState]
+      · intro compiled hcompile
+        simp [SourceWordExp.toExp, compileExp] at hcompile
+        rw [← hcompile]
+        simp [evalCrepFullExpState])
+
 /-- Symbolic source-word store32: the direct compact instance, lifting the full
 evaluator relation `compile_full_pan_value_store32_source_word_state_relation`
 to the compact evaluators.  The caller supplies the evaluated address/value

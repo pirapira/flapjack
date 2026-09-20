@@ -46,6 +46,19 @@ def staticProgLoopControlMetadataOracle : Bool :=
 
 #guard staticProgLoopControlMetadataOracle
 
+/-! Cake's `If` combines branch exits conjunctively and selects the
+    branch-specific terminal marker only when both branches exit. -/
+def staticProgIfMetadataOracle : Bool :=
+  match staticProgCheck
+      (.ite (.const 1) (.return (.const 0)) (.return (.const 0))) with
+  | (Except.ok result, warnings) =>
+      result.exitsFunction && !result.exitsLoop && result.last == .condExitLast &&
+        result.variableDelta.isEmpty && result.currentLocation == "L: " &&
+        warnings.isEmpty
+  | _ => false
+
+#guard staticProgIfMetadataOracle
+
 /-! Cake's sequence rule keeps the first function exit when the second
     statement is transparent.  Check the returned metadata, not only the
     acceptance/error bit, for a return followed by Skip. -/

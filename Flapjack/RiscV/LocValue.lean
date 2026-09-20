@@ -3,6 +3,18 @@ import Flapjack.RiscV.Lab
 
 namespace Flapjack.RiscV
 
+/-! The checked Word boundary is definitionally the same AUIPC/ADDI pair as
+the layout-aware Lab lowering.  Keep this bridge in the production API so
+correctness clients do not need to restate the encoder equation in tests. -/
+theorem wordLocValueToInstructionsCake_eq_labLocValueInstructions {width : Nat}
+    [NeZero width] (destination label position : Nat)
+    (hdestination : destination < 32) :
+    wordLocValueToInstructionsCake (width := width) destination label position =
+      some (labLocValueInstructions (width := width) ⟨destination, hdestination⟩
+        label position) := by
+  unfold wordLocValueToInstructionsCake labLocValueInstructions
+  simp [registerOfNat, hdestination]
+
 /-! Semantic agreement between the legacy absolute `LocValue` lowering
 (`wordLocValueToInstructions`, a single `ADDI`) and the Cake-faithful
 position-aware lowering (`wordLocValueToInstructionsCake`, `AUIPC`+`ADDI`).

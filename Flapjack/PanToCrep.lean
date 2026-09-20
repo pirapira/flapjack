@@ -63,6 +63,19 @@ def retVar (shape : Shape) (names : List Nat) : Option Nat :=
       if Shape.shapeSize (.comb fields) = 1 then names.head? else none
   | .named _ => none
 
+/-! Source-shaped port of CakeML Pancake's `shape_vars_def`
+    (`cakeml/pancake/pan_to_crepScript.sml:319-322`).  The source consumes the
+    flattened word list one shape at a time: each result keeps exactly
+    `size_of_shape sh` words, and the recursive call receives the remaining
+    `DROP` suffix.  In particular, short input is not padded and excess input
+    is not attached to the final shape. -/
+def shapeVars (shapes : List Shape) (values : List α) : List (Shape × List α) :=
+  match shapes with
+  | [] => []
+  | shape :: rest =>
+      (shape, values.take (Shape.shapeSize shape)) ::
+        shapeVars rest (values.drop (Shape.shapeSize shape))
+
 /-! Faithful port of `pan_to_crep$ret_hdl` from
     `cakeml/pancake/pan_to_crepScript.sml:122-127`.
 

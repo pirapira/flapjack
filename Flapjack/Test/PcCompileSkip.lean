@@ -464,4 +464,148 @@ theorem panValuePcCompileCorrect_compact_if_nonzero_return_nat :
       hstate.2.2⟩
   exact ⟨hstateRel, panValueCrepValuesRel_singleton (.word 7)⟩
 
+private theorem skipNatStoreSourceEval
+    (structs : StructContext) (locals globals : VarName → Option (PanValue Nat))
+    (memory : Nat → Option (PanValue Nat)) (address value : Nat) :
+    evalPanValueProgWithPrimitiveCallsAndFfi skipNatPrimitive skipNatSourceHandler
+      structs [] 0 0 1 4 locals globals memory
+      (.store (SourceWordExp.const address).toExp (SourceWordExp.const value).toExp) =
+    some (.normal locals globals (updatePanValueMemory memory address (.word value))) := by
+  simp [SourceWordExp.toExp, evalPanValueProgWithPrimitiveCallsAndFfi,
+    evalPanValueExp, panValueStoreWithAccess, panValueFlatStoreWords,
+    panValueFlatWords, panValueFlatWordsFuel, panValueFlatOffset,
+    updatePanValueMemory]
+
+private theorem skipNatStoreTargetEval
+    (context : CompileContext Nat) (state : CrepState Nat) (address value : Nat) :
+    evalCrepFullProgState [] skipNatCrepPrimitive skipNatFfi skipNatSharedMem
+      0 0 4 state
+      (compileProg context
+        (.store (SourceWordExp.const address).toExp (SourceWordExp.const value).toExp)) =
+    some (.normal { state with memory := updateMemory state.memory address value }) := by
+  simp [SourceWordExp.toExp, compileProg, compileExp, nestedDecs, crepNestedSeq,
+    stores, freshNames, evalCrepFullProgState, evalCrepFullExpState,
+    updateCrepLocal, restoreCrepResult]
+  funext current
+  by_cases haddress : current = context.maxVar + 1
+  · simp [restoreCrepLocal, haddress]
+  by_cases hvalue : current = context.maxVar + 2
+  · simp [restoreCrepLocal, hvalue]
+  · simp [restoreCrepLocal, updateCrepLocal, haddress, hvalue]
+
+theorem panValuePcCompileCorrect_compact_store_nat (address value : Nat) :
+    PanValuePcCompileCorrect
+      (panValuePcCompactSourceEvaluator
+        skipNatPrimitive skipNatSourceHandler [] 0 0 1 4)
+      (crepPcCompactTargetEvaluator
+        [] skipNatCrepPrimitive skipNatFfi skipNatSharedMem 0 0 4)
+      skipNatCodeRel skipNatExcpRel skipNatExceptionCode
+      skipNatGlobalsLookup
+      (.store (SourceWordExp.const address).toExp (SourceWordExp.const value).toExp) := by
+  intro context structs sourceInput targetInput exceptionRel sourceExecution
+    targetExecution hsourceStructs htargetStructs hlocalisedCode hlocalised
+    hcode hexcp hstate hnonerror hsource htarget hpostCode hpostExcp
+  have hsourceEval := skipNatStoreSourceEval sourceInput.structs
+    sourceInput.locals sourceInput.globals sourceInput.memory address value
+  have htargetEval := skipNatStoreTargetEval context targetInput.state address value
+  simp only [panValuePcCompactSourceEvaluator, hsourceEval] at hsource
+  simp only [crepPcCompactTargetEvaluator, htargetEval] at htarget
+  cases hsource
+  cases htarget
+  simp only [panValuePcResultOfControl, panValuePcResultRel]
+  exact ⟨hstate.1, hstate.2.1, by
+    simpa [updateMemory] using
+      panValueCrepMemoryRel_update_word sourceInput.memory targetInput.state.memory
+        address value hstate.2.2⟩
+
+private theorem skipNatStore32SourceEval
+    (structs : StructContext) (locals globals : VarName → Option (PanValue Nat))
+    (memory : Nat → Option (PanValue Nat)) (address value : Nat) :
+    evalPanValueProgWithPrimitiveCallsAndFfi skipNatPrimitive skipNatSourceHandler
+      structs [] 0 0 1 4 locals globals memory
+      (.store32 (SourceWordExp.const address).toExp (SourceWordExp.const value).toExp) =
+    some (.normal locals globals (updatePanValueMemory memory address (.word value))) := by
+  simp [SourceWordExp.toExp, evalPanValueProgWithPrimitiveCallsAndFfi,
+    evalPanValueExp, updatePanValueMemory]
+
+private theorem skipNatStore32TargetEval
+    (context : CompileContext Nat) (state : CrepState Nat) (address value : Nat) :
+    evalCrepFullProgState [] skipNatCrepPrimitive skipNatFfi skipNatSharedMem
+      0 0 4 state
+      (compileProg context
+        (.store32 (SourceWordExp.const address).toExp (SourceWordExp.const value).toExp)) =
+    some (.normal { state with memory := updateMemory state.memory address value }) := by
+  simp [SourceWordExp.toExp, compileProg, compileExp, evalCrepFullProgState,
+    evalCrepFullExpState]
+
+theorem panValuePcCompileCorrect_compact_store32_nat (address value : Nat) :
+    PanValuePcCompileCorrect
+      (panValuePcCompactSourceEvaluator
+        skipNatPrimitive skipNatSourceHandler [] 0 0 1 4)
+      (crepPcCompactTargetEvaluator
+        [] skipNatCrepPrimitive skipNatFfi skipNatSharedMem 0 0 4)
+      skipNatCodeRel skipNatExcpRel skipNatExceptionCode
+      skipNatGlobalsLookup
+      (.store32 (SourceWordExp.const address).toExp (SourceWordExp.const value).toExp) := by
+  intro context structs sourceInput targetInput exceptionRel sourceExecution
+    targetExecution hsourceStructs htargetStructs hlocalisedCode hlocalised
+    hcode hexcp hstate hnonerror hsource htarget hpostCode hpostExcp
+  have hsourceEval := skipNatStore32SourceEval sourceInput.structs
+    sourceInput.locals sourceInput.globals sourceInput.memory address value
+  have htargetEval := skipNatStore32TargetEval context targetInput.state address value
+  simp only [panValuePcCompactSourceEvaluator, hsourceEval] at hsource
+  simp only [crepPcCompactTargetEvaluator, htargetEval] at htarget
+  cases hsource
+  cases htarget
+  simp only [panValuePcResultOfControl, panValuePcResultRel]
+  exact ⟨hstate.1, hstate.2.1, by
+    simpa [updateMemory] using
+      panValueCrepMemoryRel_update_word sourceInput.memory targetInput.state.memory
+        address value hstate.2.2⟩
+
+private theorem skipNatStoreByteSourceEval
+    (structs : StructContext) (locals globals : VarName → Option (PanValue Nat))
+    (memory : Nat → Option (PanValue Nat)) (address value : Nat) :
+    evalPanValueProgWithPrimitiveCallsAndFfi skipNatPrimitive skipNatSourceHandler
+      structs [] 0 0 1 4 locals globals memory
+      (.storeByte (SourceWordExp.const address).toExp (SourceWordExp.const value).toExp) =
+    some (.normal locals globals (updatePanValueMemory memory address (.word value))) := by
+  simp [SourceWordExp.toExp, evalPanValueProgWithPrimitiveCallsAndFfi,
+    evalPanValueExp, updatePanValueMemory]
+
+private theorem skipNatStoreByteTargetEval
+    (context : CompileContext Nat) (state : CrepState Nat) (address value : Nat) :
+    evalCrepFullProgState [] skipNatCrepPrimitive skipNatFfi skipNatSharedMem
+      0 0 4 state
+      (compileProg context
+        (.storeByte (SourceWordExp.const address).toExp (SourceWordExp.const value).toExp)) =
+    some (.normal { state with memory := updateMemory state.memory address value }) := by
+  simp [SourceWordExp.toExp, compileProg, compileExp, evalCrepFullProgState,
+    evalCrepFullExpState]
+
+theorem panValuePcCompileCorrect_compact_storeByte_nat (address value : Nat) :
+    PanValuePcCompileCorrect
+      (panValuePcCompactSourceEvaluator
+        skipNatPrimitive skipNatSourceHandler [] 0 0 1 4)
+      (crepPcCompactTargetEvaluator
+        [] skipNatCrepPrimitive skipNatFfi skipNatSharedMem 0 0 4)
+      skipNatCodeRel skipNatExcpRel skipNatExceptionCode
+      skipNatGlobalsLookup
+      (.storeByte (SourceWordExp.const address).toExp (SourceWordExp.const value).toExp) := by
+  intro context structs sourceInput targetInput exceptionRel sourceExecution
+    targetExecution hsourceStructs htargetStructs hlocalisedCode hlocalised
+    hcode hexcp hstate hnonerror hsource htarget hpostCode hpostExcp
+  have hsourceEval := skipNatStoreByteSourceEval sourceInput.structs
+    sourceInput.locals sourceInput.globals sourceInput.memory address value
+  have htargetEval := skipNatStoreByteTargetEval context targetInput.state address value
+  simp only [panValuePcCompactSourceEvaluator, hsourceEval] at hsource
+  simp only [crepPcCompactTargetEvaluator, htargetEval] at htarget
+  cases hsource
+  cases htarget
+  simp only [panValuePcResultOfControl, panValuePcResultRel]
+  exact ⟨hstate.1, hstate.2.1, by
+    simpa [updateMemory] using
+      panValueCrepMemoryRel_update_word sourceInput.memory targetInput.state.memory
+        address value hstate.2.2⟩
+
 end Flapjack

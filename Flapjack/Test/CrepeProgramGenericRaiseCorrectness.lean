@@ -2281,10 +2281,181 @@ theorem nested_raise_pc_result_rel_retargeted_globals :
       panValueFlatValueFuel.panValueFlatValueListFuel] using hstored
   · exact nested_raise_pc_hraise_flat_globals
 
+def directClockContext : PanValueFfiContext Nat :=
+  { sharedDomain := fun _ => true
+    byteAlign := id
+    bigEndian := false
+    wordToBytes := fun value _ => [UInt8.ofNat value]
+    wordOfBytes := fun _ bytes =>
+      match bytes with
+      | byte :: _ => byte.toNat
+      | [] => 0
+    wordToByte := fun value => UInt8.ofNat value
+    byteToWord := fun byte => byte.toNat
+    valueToNat := id }
+
+def directClockFfi : FfiState Unit :=
+  { oracle := fun _ state _ _ => .returned state []
+    state := ()
+    ioEvents := [] }
+
+def directClockHandler : PanValueStatefulFfiHandler Nat Unit :=
+  fun _ _ _ _ _ locals ffi => some (locals, ffi)
+
+theorem three_word_raise_pc_compile_correct_direct_clocked_normal
+    (sourceFuel targetFuel : Nat)
+    (hlookupException : ∀ context : CompileContext Nat,
+      ∃ exceptionCode, lookupInfo "E" context.exceptions = some exceptionCode)
+    (hfresh : ∀ (context : CompileContext Nat) (state : CrepState Nat)
+      (name : Nat), name ∈ freshNames context 3 1 → state.locals name = none)
+    (hexception : ∀ (context : CompileContext Nat)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (exceptionCode : Nat),
+      lookupInfo "E" context.exceptions = some exceptionCode →
+      exceptionRel "E" sourceValue exceptionCode)
+    (hevidence : ∀ (context : CompileContext Nat) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+      (sourceMemory : Nat → Option (PanValue Nat)) (sourceException : ExceptionId)
+      (sourceValue : PanValue Nat) (targetState : CrepState Nat)
+      (targetException : Nat),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      ∃ (state : CrepState Nat) (expression : Exp Nat)
+        (compiled : List (CrepExp Nat)) (shape : Shape),
+        targetState =
+          { state with globals :=
+              (updateMemoryListAt state.globals 0 context.bytesInWord
+                (panValueFlatWords sourceValue)) } ∧
+        context.bytesInWord = 8 ∧
+        panValueCrepStateRel structs context sourceLocals sourceGlobals
+          sourceMemory state ∧
+        evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+          0 0 8 expression = some sourceValue ∧
+        panValuePayloadWithinLimit structs sourceValue = true ∧
+        compileExp context expression = (compiled, shape) ∧
+        compiled.length = Shape.shapeSize shape ∧
+        evalCrepFullExpsState state 0 0 compiled =
+          some (panValueFlatWords sourceValue) ∧
+        (∀ name ∈ freshNames context compiled.length 1,
+          ∀ value ∈ compiled, name ∉ crepExpVars value) ∧
+        (∀ name ∈ freshNames context compiled.length 1,
+          state.locals name = none) ∧
+        exceptionRel sourceException sourceValue targetException ∧
+        lookupInfo sourceException context.exceptions = some targetException ∧
+        (if sourceException = "E" then some 9 else none) =
+          some targetException ∧
+        List.Pairwise (fun left right : Nat => left ≠ right)
+          (storeAddresses 0 context.bytesInWord
+            (panValueFlatWords sourceValue).length) ∧
+        Shape.shapeSize (panValueShape structs sourceValue) ≤ 32) :
+    PanValuePcCompileCorrect
+      (panValuePcCompactSourceEvaluator
+        (fun _ _ => none) (fun _ _ _ _ _ _ => none) []
+        0 0 8 sourceFuel)
+      (crepPcCompactTargetEvaluator [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+        (fun _ _ _ _ => none) 0 0 targetFuel)
+      (fun _ _ _ => True)
+      (fun _ _ _ => True)
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8)
+      (.raise "E" sourceExpression) ∧
+    evalPanValueFfiClockProg directClockContext (fun _ _ => none)
+      directClockHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+      (fun _ => none) directClockFfi 1 .skip =
+      some (.control (.normal (fun _ => none) (fun _ => none)
+        (fun _ => none) directClockFfi), 1) ∧
+    panValuePcResultRelWithContextCode [] context (fun _ _ code => code = 9)
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8)
+      (.normal (fun _ => none) (fun _ => none) (fun _ => none))
+      (.normal state) := by
+  have hprogram := panValueCrepProgramStateCorrect_raise_word_list_record
+    "E" [3, 4, 5] hlookupException hfresh hexception
+  have hprogramSafe := panValueCrepProgramStateControlSafe_raise "E"
+    sourceExpression
+  have hsourceAdapter := fun (context : CompileContext Nat)
+      (structs : StructContext) (sourceInput : PanValuePcInput Nat)
+      (targetInput : CrepPcInput Nat)
+      (sourceExecution : PanValuePcExecution Nat)
+      (hstructs : sourceInput.structs = structs)
+      (heval : panValuePcCompactSourceEvaluator
+        (fun _ _ => none) (fun _ _ _ _ _ _ => none) [] 0 0 8 sourceFuel
+        context sourceInput (.raise "E" sourceExpression) =
+        some sourceExecution) =>
+    panValuePcCompactSourceEvaluator_adapter
+      (fun _ _ => none) (fun _ _ _ _ _ _ => none) [] 0 0 8 sourceFuel
+      (.raise "E" sourceExpression) context structs sourceInput targetInput
+      sourceExecution hstructs heval
+  have htargetAdapter := fun (context : CompileContext Nat)
+      (structs : StructContext) (sourceInput : PanValuePcInput Nat)
+      (targetInput : CrepPcInput Nat)
+      (targetExecution : CrepPcExecution Nat)
+      (hstructs : targetInput.structs = structs)
+      (heval : crepPcCompactTargetEvaluator [] (fun _ _ => none)
+        (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none) 0 0 targetFuel
+        context targetInput (compileProg context (.raise "E" sourceExpression)) =
+        some targetExecution) =>
+    crepPcCompactTargetEvaluator_adapter
+      [] (fun _ _ => none) (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none)
+      0 0 targetFuel (.raise "E" sourceExpression) context structs sourceInput
+      targetInput targetExecution hstructs heval
+  have hclock :
+      evalPanValueFfiClockProg directClockContext (fun _ _ => none)
+        directClockHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+        (fun _ => none) directClockFfi 1 .skip =
+      some (.control (.normal (fun _ => none) (fun _ => none)
+        (fun _ => none) directClockFfi), 1) := by
+    simp [evalPanValueFfiClockProg, evalPanValueFfiClockLeaf,
+      evalPanValueFfiProgSteps]
+  have hclockState : panValueCrepStateRel [] context
+      (fun _ => none) (fun _ => none) (fun _ => none) state := by
+    refine ⟨rfl, ?_, rfl⟩
+    exact panValueCrepLocalsRel_empty [] context state.locals
+  have hresult :=
+    panValuePcCompileCorrect_of_stateful_program_with_generic_raised_evidence_and_clocked_normal
+      (.raise "E" sourceExpression)
+      (panValuePcCompactSourceEvaluator
+        (fun _ _ => none) (fun _ _ _ _ _ _ => none) [] 0 0 8 sourceFuel)
+      (crepPcCompactTargetEvaluator [] (fun _ _ => none)
+        (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none) 0 0 targetFuel)
+      (fun _ _ _ => True) (fun _ _ _ => True)
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8) [] []
+      (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      (fun _ _ => none) (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none)
+      0 0 8 sourceFuel targetFuel hprogram hprogramSafe hsourceAdapter
+      htargetAdapter (by
+        intro clockContext clockStructs clockExceptionRel
+          clockLocals clockGlobals clockMemory clockException clockValue
+          clockTargetState clockTargetException hcontrol
+        rcases hevidence clockContext clockStructs clockExceptionRel clockLocals
+          clockGlobals clockMemory clockException clockValue clockTargetState
+          clockTargetException hcontrol with
+          ⟨clockState, expression, compiled, shape, htarget, hbytesInWord,
+            hrel, hsource, hvalid, hcompile, hlength, hcompiled, hnot, hfresh,
+            hexception, hlookupCode, hcode, hdistinct, hsize⟩
+        exact ⟨clockState, expression, compiled, shape,
+          panValueFlatWords clockValue, htarget, hbytesInWord, hrel, hsource,
+          hvalid, hcompile, hlength, hcompiled, hnot, hfresh, hexception,
+          hlookupCode, hcode, rfl, hdistinct, hsize, by rfl⟩)
+        [] context (fun _ _ code => code = 9)
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8) directClockContext (fun _ _ => none)
+      directClockHandler [] 0 0 8 0 1 (fun _ => none) (fun _ => none)
+      (fun _ => none) directClockFfi .skip state hclock
+      hclockState
+  refine ⟨hresult.1, ?_, ?_⟩
+  · exact hclock
+  · simp [panValuePcResultRelWithContextCode, panValuePcResultRel,
+      hclockState]
+
 def runChecks : IO Bool := do
   IO.println "PASS generic three-word Raise evaluator relation"
   IO.println "PASS generic raised semantic/global lookup lift"
   IO.println "PASS direct arbitrary context-coded pc_compile_correct evaluator instantiation"
+  IO.println "PASS direct arbitrary context-coded clocked evaluator instantiation"
   IO.println "PASS nested raised semantic/global lookup lift"
   pure true
 

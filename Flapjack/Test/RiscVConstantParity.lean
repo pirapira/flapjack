@@ -171,6 +171,17 @@ example :
   exact wordFunctionToRiscVWithCallsCake_const _ 4
     (BitVec.ofNat 64 0x1122334455667788)
 
+/-! A wide constant used as a memory address keeps Cake's complete address
+    materialization before the final store carrier. -/
+example :
+    wordShareInstToInstructionsCake (width := 64) .store 4
+        (.const (BitVec.ofNat 64 0x1234)) =
+      some ([.lui 31 (BitVec.ofNat 64 1),
+        .addi 31 31 (BitVec.ofNat 64 0x234), .storeWord 4 31]) := by
+  rw [wordShareInstToInstructionsCake_const]
+  simp [wordConstToInstructions, wordConst32ToInstructions, wordInstToInstruction,
+    registerOfNat]
+
 /-! The FFI-aware Cake boundary preserves the same multi-instruction constant
     materialization and return carrier while retaining its service table. -/
 example :
@@ -274,6 +285,42 @@ example (state : State 64) :
     simp [wordFunctionToRiscVCake, wordExpToInstructionsCake,
       wordConstToInstructions, wordConst32ToInstructions, registerOfNat]
   exact wordFunctionToRiscVCake_sound_of_straightLine state _ hstraight _ hcompile
+
+example (state : State 64) :
+    evalWordFunctionCake state
+        (.seq (.assign 4 (.const (BitVec.ofNat 64 0x1234)))
+          (.return 0 [4]) : WordProg (Word 64)) =
+      some
+        (executeInstructions state
+          [.lui 4 (BitVec.ofNat 64 1),
+           .addi 4 4 (BitVec.ofNat 64 0x234)],
+         [readRegister
+           (executeInstructions state
+             [.lui 4 (BitVec.ofNat 64 1),
+              .addi 4 4 (BitVec.ofNat 64 0x234)]) 4]) := by
+  simp [evalWordFunctionCake, wordExpToInstructionsCake,
+    wordConstToInstructions, wordConst32ToInstructions, registerOfNat]
+
+example (state : State 64) :
+    evalWordFunctionCake state
+        (.assign 4 (.const (BitVec.ofNat 64 0x1234)) : WordProg (Word 64)) =
+      some (executeInstructions state
+        [.lui 4 (BitVec.ofNat 64 1),
+         .addi 4 4 (BitVec.ofNat 64 0x234)], []) := by
+  have hstraight : WordRiscVStraightLine
+      (.assign 4 (.const (BitVec.ofNat 64 0x1234)) : WordProg (Word 64)) :=
+    .assign _ _
+  have hcompile : wordFunctionToRiscVWithCallsAndFfiCake
+      ({ targets := [], services := [] } : WordCallFfiContext 64)
+      (.assign 4 (.const (BitVec.ofNat 64 0x1234)) : WordProg (Word 64)) =
+      some ([.lui 4 (BitVec.ofNat 64 1),
+        .addi 4 4 (BitVec.ofNat 64 0x234)], []) := by
+    simp [wordFunctionToRiscVWithCallsAndFfiCake,
+      wordFunctionToRiscVWithCallsCake, wordExpToInstructionsCake,
+      wordConstToInstructions, wordConst32ToInstructions, registerOfNat]
+  exact wordFunctionToRiscVWithCallsAndFfiCake_sound_of_straightLine
+    ({ targets := [], services := [] } : WordCallFfiContext 64)
+    state _ hstraight _ hcompile
 
 /-! The checked call-aware selector now has the same compositional theorem
     shape as the legacy theorem-facing selector.  This exercises the sequence

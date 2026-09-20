@@ -793,6 +793,22 @@ def frameOccupancyP9BitmapsMatch : Bool :=
   | some image => image.bitmaps.data == cakeFrameOccupancyP9Bitmaps
   | none => false
 
+/-! The `p11` frame-occupancy oracle is the CSE-shaped companion to `p9`:
+    the two-field result is read twice at the same field, and Cake retains a
+    two-word frame for both non-tail continuations (`[4, 4, 4]`). -/
+def frameOccupancyP11Source : String :=
+  "struct S { 1 f, 1 g }\n" ++
+    "fun S mks (1 a, 1 b) { return S <f = a, g = b>; }\n" ++
+    "fun 1 id (1 a) { return a; }\n" ++
+    "fun 1 main() { var S s = mks(1,2); var 1 t = id(5); return s.f + s.f; }"
+
+def cakeFrameOccupancyP11Bitmaps : List Nat := [4, 4, 4]
+
+def frameOccupancyP11BitmapsMatch : Bool :=
+  match compileRuntimeImage frameOccupancyP11Source with
+  | some image => image.bitmaps.data == cakeFrameOccupancyP11Bitmaps
+  | none => false
+
 /-! The `p10` frame-occupancy oracle is the first three-field struct case.
 Cake's two non-tail continuations both retain a four-word frame (`f' = 4`),
 so the checked bitmap payload is `[4, 16, 16]`.  The source is copied from
@@ -809,6 +825,44 @@ def cakeFrameOccupancyP10Bitmaps : List Nat := [4, 16, 16]
 def frameOccupancyP10BitmapsMatch : Bool :=
   match compileRuntimeImage frameOccupancyP10Source with
   | some image => image.bitmaps.data == cakeFrameOccupancyP10Bitmaps
+  | none => false
+
+/-! The `p6` oracle covers the two-field struct return with two non-tail
+continuations.  Cake keeps a two-word frame for both continuations, yielding
+`[4, 4, 4]`; the source is copied from the checked p6 fixture. -/
+def frameOccupancyP6Source : String :=
+  "struct S { 1 f, 1 g }\n" ++
+    "fun S mks (1 a, 1 b) { return S <f = a, g = b>; }\n" ++
+    "fun 1 id (1 a) { return a; }\n" ++
+    "fun 1 main() { var S s = mks(1,2); var 1 t = id(5); return s.f; }"
+
+def cakeFrameOccupancyP6Bitmaps : List Nat := [4, 4, 4]
+
+def frameOccupancyP6BitmapsMatch : Bool :=
+  match compileRuntimeImage frameOccupancyP6Source with
+  | some image => image.bitmaps.data == cakeFrameOccupancyP6Bitmaps
+  | none => false
+
+/-! The `live3` oracle exercises four non-tail continuations over three
+struct-valued locals.  Cake retains a four-word frame for each continuation,
+so its checked bitmap payload is `[4, 16, 16, 16, 16]`. -/
+def frameOccupancyLive3Source : String :=
+  "struct S { 1 f1, 1 f2 }\n" ++
+    "fun S mks(1 a, 1 b) { return S <f1 = a, f2 = b>; }\n" ++
+    "fun 1 id(1 a) { return a; }\n" ++
+    "fun 1 main() {\n" ++
+    "  var S s1 = mks(1, 2);\n" ++
+    "  var S s2 = mks(3, 4);\n" ++
+    "  var S s3 = mks(5, 6);\n" ++
+    "  var 1 t = id(7);\n" ++
+    "  return s1.f1 + s2.f2 + s3.f1 + t;\n" ++
+    "}"
+
+def cakeFrameOccupancyLive3Bitmaps : List Nat := [4, 16, 16, 16, 16]
+
+def frameOccupancyLive3BitmapsMatch : Bool :=
+  match compileRuntimeImage frameOccupancyLive3Source with
+  | some image => image.bitmaps.data == cakeFrameOccupancyLive3Bitmaps
   | none => false
 
 /-- Source for the GH #1027 relational-condition case: `if x < 10` over a
@@ -985,7 +1039,10 @@ def sharedMemOffsetCarrierEncoding : Bool :=
 #guard bitmapCallsWordsMatch
 #guard frameOccupancyP1BitmapsMatch
 #guard frameOccupancyP9BitmapsMatch
+#guard frameOccupancyP11BitmapsMatch
 #guard frameOccupancyP10BitmapsMatch
+#guard frameOccupancyP6BitmapsMatch
+#guard frameOccupancyLive3BitmapsMatch
 #guard relationalConditionExactParity
 #guard f01451ExactParity
 #guard sharedWordStoreOffsetPeephole
@@ -1069,8 +1126,14 @@ def runChecks : IO Bool := do
          frameOccupancyP1BitmapsMatch),
       ("frame-occupancy p9 exact vector matches the Cake oracle",
          frameOccupancyP9BitmapsMatch),
+      ("frame-occupancy p11 exact vector matches the Cake oracle",
+         frameOccupancyP11BitmapsMatch),
       ("frame-occupancy p10 exact vector matches the Cake oracle",
          frameOccupancyP10BitmapsMatch),
+      ("frame-occupancy p6 exact vector matches the Cake oracle",
+         frameOccupancyP6BitmapsMatch),
+      ("frame-occupancy live3 exact vector matches the Cake oracle",
+         frameOccupancyLive3BitmapsMatch),
       ("relational condition direct-branch section is byte-identical to Cake",
         relationalConditionExactParity),
       ("f01451 out-of-range shift section is byte-identical to Cake",

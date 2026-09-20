@@ -108,6 +108,16 @@ theorem noReturnNested_notBranchRet :
 #guard crepHasReturn noReturnNested == false
 #guard crepNotBranchRet noReturnNested
 
+theorem noReturnNested_unreach_self :
+    crepUnreachElim noReturnNested = (noReturnNested, none) := by
+  simp [noReturnNested, crepUnreachElim, crepMergeExit]
+
+theorem noReturnNested_unreach_notReturn :
+    (none : Option CrepEarlyExit) ≠ some .return := by
+  apply crepHasReturn_false_imp_unreachElim_notReturn noReturnNested none
+  · simp [noReturnNested, crepHasReturn]
+  · exact noReturnNested_unreach_self
+
 def crepInlineUnreachable : CrepProg Nat × Option CrepEarlyExit :=
   crepUnreachElim
     (.seq (.return [.const 1]) (.assign 4 (.const 99)) : CrepProg Nat)

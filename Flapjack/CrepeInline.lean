@@ -251,4 +251,114 @@ termination_by program => sizeOf program
 decreasing_by
   all_goals first | decreasing_trivial | simp_wf
 
+/-! Kernel-checked port of CakeML's
+    `not_has_return_imp_unreach_elim` (`crep_inlineProofScript.sml:1765`):
+    `unreach_elim` cannot report a return for a program whose executable
+    return analysis is false.  The private statement is slightly stronger
+    than Cake's self-equality formulation and makes the recursive argument
+    explicit; the public theorem below recovers the original statement. -/
+private theorem crepHasReturn_false_imp_unreachElim_notReturn_aux :
+    (program : CrepProg α) →
+      crepHasReturn program = false →
+      (crepUnreachElim program).2 ≠ some .return
+  | .skip => fun _ => by simp [crepUnreachElim]
+  | .dec name value body => fun h =>
+      by
+        simpa [crepUnreachElim] using
+          (crepHasReturn_false_imp_unreachElim_notReturn_aux body (by
+            simpa [crepHasReturn] using h))
+  | .assign name value => fun _ => by simp [crepUnreachElim]
+  | .primitive names operator args => fun _ => by simp [crepUnreachElim]
+  | .store address value => fun _ => by simp [crepUnreachElim]
+  | .store32 address value => fun _ => by simp [crepUnreachElim]
+  | .storeByte address value => fun _ => by simp [crepUnreachElim]
+  | .storeGlob address value => fun _ => by simp [crepUnreachElim]
+  | .seq first second => fun h =>
+      by
+        have hparts : crepHasReturn first = false ∧
+            crepHasReturn second = false := by
+          simpa [crepHasReturn] using h
+        cases hfirst : crepUnreachElim first with
+        | mk first' firstExit =>
+            cases hsecond : crepUnreachElim second with
+            | mk second' secondExit =>
+                have hfirstNot : firstExit ≠ some .return := by
+                  simpa [hfirst] using
+                    (crepHasReturn_false_imp_unreachElim_notReturn_aux first
+                      hparts.1)
+                have hsecondNot : secondExit ≠ some .return := by
+                  simpa [hsecond] using
+                    (crepHasReturn_false_imp_unreachElim_notReturn_aux second
+                      hparts.2)
+                by_cases hsome : firstExit.isSome
+                · simp [crepUnreachElim, hfirst, hsome, hfirstNot]
+                · simp [crepUnreachElim, hfirst, hsecond, hsome, hsecondNot]
+  | .ite condition thenBranch elseBranch => fun h =>
+      by
+        have hparts : crepHasReturn thenBranch = false ∧
+            crepHasReturn elseBranch = false := by
+          simpa [crepHasReturn] using h
+        cases hthen : crepUnreachElim thenBranch with
+        | mk then' thenExit =>
+            cases helse : crepUnreachElim elseBranch with
+            | mk else' elseExit =>
+                have hthenNot : thenExit ≠ some .return := by
+                  simpa [hthen] using
+                    (crepHasReturn_false_imp_unreachElim_notReturn_aux thenBranch
+                      hparts.1)
+                have helseNot : elseExit ≠ some .return := by
+                  simpa [ helse] using
+                    (crepHasReturn_false_imp_unreachElim_notReturn_aux elseBranch
+                      hparts.2)
+                cases thenExit with
+                | none =>
+                    cases elseExit with
+                    | none => simp [crepUnreachElim, hthen, helse, crepMergeExit]
+                    | some elseExit =>
+                        cases elseExit <;>
+                          simp [crepUnreachElim, hthen, helse, crepMergeExit]
+                | some thenExit =>
+                    cases thenExit with
+                    | exception =>
+                        cases elseExit with
+                        | none => simp [crepUnreachElim, hthen, helse, crepMergeExit]
+                        | some elseExit =>
+                            cases elseExit <;>
+                              simp [crepUnreachElim, hthen, helse, crepMergeExit,
+                                helseNot]
+                    | «return» =>
+                        simp at hthenNot
+                    | loopExit =>
+                        cases elseExit with
+                        | none => simp [crepUnreachElim, hthen, helse, crepMergeExit]
+                        | some elseExit =>
+                            cases elseExit <;>
+                              simp [crepUnreachElim, hthen, helse, crepMergeExit,
+                                helseNot]
+  | .while condition body => fun _ => by simp [crepUnreachElim]
+  | .break label => fun _ => by simp [crepUnreachElim]
+  | .continue label => fun _ => by simp [crepUnreachElim]
+  | .call none name args => fun h => by simp [crepHasReturn] at h
+  | .call (some (names, none)) name args => fun _ => by simp [crepUnreachElim]
+  | .call (some (names, some (handlerName, handler))) name args =>
+      fun _ => by simp [crepUnreachElim]
+  | .extCall function configuration configurationLength array arrayLength =>
+      fun _ => by simp [crepUnreachElim]
+  | .raise exception => fun _ => by simp [crepUnreachElim]
+  | .return values => fun h => by simp [crepHasReturn] at h
+  | .shMem operator name address => fun _ => by simp [crepUnreachElim]
+  | .tick => fun _ => by simp [crepUnreachElim]
+termination_by program => sizeOf program
+decreasing_by all_goals decreasing_trivial
+
+theorem crepHasReturn_false_imp_unreachElim_notReturn
+    (program : CrepProg α) (result : Option CrepEarlyExit)
+    (hReturn : crepHasReturn program = false)
+    (hElim : crepUnreachElim program = (program, result)) :
+    result ≠ some .return := by
+  have hNotReturn :=
+    crepHasReturn_false_imp_unreachElim_notReturn_aux program hReturn
+  rw [hElim] at hNotReturn
+  exact hNotReturn
+
 end Flapjack

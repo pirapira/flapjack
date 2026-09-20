@@ -33,4 +33,29 @@ def parityGuard : Bool :=
 #eval parityGuard
 #guard parityGuard
 
+/- Direct parity for `pan_structs$get_names_def`
+   (`pan_structsScript.sml:235`).  Cake prepends each Name declaration while
+   traversing the source list, so the final structure environment is in
+   reverse Name order and ignores every non-Name declaration. -/
+def getNamesParityGuard : Bool :=
+  let context : StructPassContext :=
+    { structs := [], locals := [], globals := [] }
+  match structGetNames context
+      [.decl .one "global" (.const 0),
+       .name "First" [("a", .comb [.one, .one])],
+       .function
+         { name := "f", inline := false, exported := false, params := [],
+           body := .skip, returnShape := .one },
+       .name "Second" [("b", .one)]] with
+  | { structs := [("Second", second), ("First", first)],
+      locals := [], globals := [] } =>
+      match second.fields, second.size, second.shapedFields,
+        first.fields, first.size, first.shapedFields with
+      | [("b", .one)], 0, [], [("a", .comb [.one, .one])], 0, [] => true
+      | _, _, _, _, _, _ => false
+  | _ => false
+
+#eval getNamesParityGuard
+#guard getNamesParityGuard
+
 end Flapjack.Test.PanStructsCompileShapeParity

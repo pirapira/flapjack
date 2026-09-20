@@ -178,10 +178,27 @@ theorem wordExpToInstructionsCake_const_eq_labConstInstructions {width : Nat}
         value.toNat) :=
   wordConstToInstructions_eq_labConstInstructions destination value hdestination
 
+/-! The instruction-facing Cake boundary selects the same checked constant
+    lowering as the expression-facing boundary. -/
+theorem wordInstToInstructionsCake_const_eq_labConstInstructions {width : Nat}
+    [NeZero width] (destination : Nat) (value : Word width)
+    (hdestination : destination < 32) :
+    wordInstToInstructionsCake (width := width) (.const destination value) =
+      some (labConstInstructions (width := width) ⟨destination, hdestination⟩ 0 31
+        value.toNat) :=
+  by simpa [wordInstToInstructionsCake] using
+    (wordConstToInstructions_eq_labConstInstructions destination value hdestination)
+
 /-- The 0x1234 materialization oracle through the expression-facing Cake
 boundary, stated directly against the executable Lab lowering. -/
 example :
     wordExpToInstructionsCake (width := 64) 4 (.const (BitVec.ofNat 64 0x1234)) =
+      some (labConstInstructions (width := 64) 4 0 31 0x1234) := by
+  decide
+
+example :
+    wordInstToInstructionsCake (width := 64)
+        (.const 4 (BitVec.ofNat 64 0x1234)) =
       some (labConstInstructions (width := 64) 4 0 31 0x1234) := by
   decide
 
@@ -222,6 +239,36 @@ example :
 
 example :
     (labLocValueInstructions (width := 64) 4 0x1234 0).length = 2 := by
+  decide
+
+/-! ### Checked Cake-faithful LocValue boundary (bead flapjack-pxn.1.4)
+
+`wordLocValueToInstructionsCake` is the position-aware `AUIPC`/`ADDI` boundary
+that mirrors Cake's `riscv_ast (Loc r i)`.  The bridge below proves it emits
+exactly the instructions of the executable Lab selector, so a theorem client
+can use the checked boundary while the pipeline keeps using `labLocValueInstructions`. -/
+
+theorem wordLocValueToInstructionsCake_eq_labLocValueInstructions {width : Nat}
+    [NeZero width] (destination label position : Nat) (hdestination : destination < 32) :
+    wordLocValueToInstructionsCake (width := width) destination label position =
+      some (labLocValueInstructions (width := width) ⟨destination, hdestination⟩
+        label position) := by
+  unfold wordLocValueToInstructionsCake labLocValueInstructions
+  simp [registerOfNat, hdestination]
+
+example :
+    wordLocValueToInstructionsCake (width := 64) 4 0x1234 0 =
+      some (labLocValueInstructions (width := 64) 4 0x1234 0) := by
+  decide
+
+example :
+    (wordLocValueToInstructionsCake (width := 64) 4 0x1234 0).map List.length =
+      some 2 := by
+  decide
+
+example :
+    wordLocValueToInstructionsCake (width := 64) 4 0x123456 0x1000 =
+      some (labLocValueInstructions (width := 64) 4 0x123456 0x1000) := by
   decide
 
 end Flapjack.RiscV

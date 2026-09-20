@@ -424,6 +424,22 @@ example :
       some [.jal 0 (BitVec.ofNat 64 (2 ^ 20 - 2))] := by
   decide
 
+/- The negative JAL boundary is asymmetric in Cake's target encoder: the
+   direct form includes -2^20, while the first smaller target requires the
+   AUIPC/JALR long-transfer sequence. -/
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 0)] (2 ^ 20)
+      (.jump ⟨1, 0⟩) =
+      some [.jal 0 (0 - BitVec.ofNat 64 (2 ^ 20))] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 0)] (2 ^ 20 + 2)
+      (.jump ⟨1, 0⟩) =
+      some [.auipc 31 (BitVec.ofInt 64 (-256)),
+        .jalr 0 31 (BitVec.ofInt 64 (-2))] := by
+  decide
+
 /-! The matching negative branch boundaries are distinct in Cake's target
     encoder: `-0xFFC` remains a direct branch, while `-0x1000` uses the
     inverted-branch/JAL sequence. -/

@@ -753,6 +753,24 @@ def bitmapCallsWordsMatch : Bool :=
   | some image => image.bitmaps.data == [4, 2, 2]
   | none => false
 
+/-! The `bc` oracle exercises two self-recursive non-tail calls.  Cake's
+    recursive continuations use the trivial frame word, yielding `[4, 2, 2]`.
+    This is distinct from the non-recursive `bitmap_calls` fixture. -/
+def frameOccupancyBcSource : String :=
+  "fun 1 f () {\n" ++
+    "  var 1 x = f();\n" ++
+    "  var 1 x = f();\n" ++
+    "  return 1;\n" ++
+    "}\n\n" ++
+    "fun 1 main() { return 0; }"
+
+def cakeFrameOccupancyBcBitmaps : List Nat := [4, 2, 2]
+
+def frameOccupancyBcBitmapsMatch : Bool :=
+  match compileRuntimeImage frameOccupancyBcSource with
+  | some image => image.bitmaps.data == cakeFrameOccupancyBcBitmaps
+  | none => false
+
 /-! The smallest frame-occupancy oracle from
 `scripts/parity-difffuzz-findings/frame-occupancy/p1.cake.S`.  Its single
 non-tail call has no live value across the call, so Cake emits exactly the
@@ -1159,6 +1177,7 @@ def sharedMemOffsetCarrierEncoding : Bool :=
 #guard deadFfiStubDropped
 #guard deadFfiConstantFalseDropped
 #guard bitmapCallsWordsMatch
+#guard frameOccupancyBcBitmapsMatch
 #guard frameOccupancyP1BitmapsMatch
 #guard frameOccupancyP2BitmapsMatch
 #guard frameOccupancyP3BitmapsMatch
@@ -1252,6 +1271,8 @@ def runChecks : IO Bool := do
          deadFfiStubDropped),
       ("bitmap_calls table matches the original [4, 2, 2]",
          bitmapCallsWordsMatch),
+      ("frame-occupancy bc exact vector matches the Cake oracle",
+         frameOccupancyBcBitmapsMatch),
       ("frame-occupancy p1 bitmap vector matches Cake [4, 2]",
          frameOccupancyP1BitmapsMatch),
       ("frame-occupancy p2 exact vector matches the Cake oracle",

@@ -464,6 +464,14 @@ def stExMaxDegOrderGuard : Bool :=
 
 #guard stExMaxDegOrderGuard
 
+/- Equal degrees retain the first spill candidate: Cake's comparison is
+   strict, so a tie must not perturb the selected node. -/
+def stExMaxDegTieGuard : Bool :=
+  let degrees := CakeNodeMap.ofNatInfoMap 4 [(0, 2), (1, 2), (2, 2)]
+  cakeStExListMaxDeg degrees [1, 2] 4 0 2 [] == (0, [2, 1])
+
+#guard stExMaxDegTieGuard
+
 /- `get_prefs_def` uses `MAP ... ++ acc`, preserving each Move's source
    order.  These guards mirror the canonical `get_prefs_probe.out` output. -/
 def prefsMoveOrderGuard : Bool :=
@@ -819,7 +827,7 @@ def runChecks : IO Bool := do
     sourceSpillCostKeyGuard, sourceMovePhysicalFallbackGuard,
     deadTailCallLiveGuard, deadAllocLiveGuard, deadInstallLiveGuard,
     deadFfiLiveGuard, deadStoreConstsLiveGuard, stExMinCostOrderGuard,
-    stExMaxDegOrderGuard]
+    stExMaxDegOrderGuard, stExMaxDegTieGuard]
   let names := [
     "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
@@ -856,7 +864,7 @@ def runChecks : IO Bool := do
     "remove_dead tail-call liveness", "remove_dead Alloc liveness",
     "remove_dead Install liveness", "remove_dead FFI liveness",
     "remove_dead StoreConsts liveness", "st_ex_list_MIN_cost ordering",
-    "st_ex_list_MAX_deg ordering"]
+    "st_ex_list_MAX_deg ordering", "st_ex_list_MAX_deg tie ordering"]
   let mut all := true
   for (name, result) in names.zip results do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"

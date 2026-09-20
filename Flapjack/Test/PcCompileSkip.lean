@@ -667,4 +667,81 @@ example (context : CompileContext Nat) (state : CrepState Nat)
   ⟨skipNatRaiseConstSourceEval [] locals globals memory exception value,
     skipNatRaiseConstTargetEval context state exception value code hcode⟩
 
+/-- Source evaluation of two sequential constant stores: the memory is updated
+    twice while locals, globals and the stored payloads stay visible. -/
+private theorem skipNatSeqStoreSourceEval
+    (structs : StructContext) (locals globals : VarName → Option (PanValue Nat))
+    (memory : Nat → Option (PanValue Nat))
+    (firstAddress firstValue secondAddress secondValue : Nat) :
+    evalPanValueProgWithPrimitiveCallsAndFfi skipNatPrimitive skipNatSourceHandler
+      structs [] 0 0 1 5 locals globals memory
+      (.seq
+        (.store (SourceWordExp.const firstAddress).toExp
+          (SourceWordExp.const firstValue).toExp)
+        (.store (SourceWordExp.const secondAddress).toExp
+          (SourceWordExp.const secondValue).toExp)) =
+    some (.normal locals globals
+      (updatePanValueMemory
+        (updatePanValueMemory memory firstAddress (.word firstValue))
+        secondAddress (.word secondValue))) := by
+  simp [evalPanValueProgWithPrimitiveCallsAndFfi, skipNatStoreSourceEval]
+
+/-- Compiled evaluation of two sequential constant stores: the nested
+    declaration and store bodies compose, updating the target memory twice. -/
+private theorem skipNatSeqStoreTargetEval
+    (context : CompileContext Nat) (state : CrepState Nat)
+    (firstAddress firstValue secondAddress secondValue : Nat) :
+    evalCrepFullProgState [] skipNatCrepPrimitive skipNatFfi skipNatSharedMem
+      0 0 5 state
+      (compileProg context
+        (.seq
+          (.store (SourceWordExp.const firstAddress).toExp
+            (SourceWordExp.const firstValue).toExp)
+          (.store (SourceWordExp.const secondAddress).toExp
+            (SourceWordExp.const secondValue).toExp))) =
+    some (.normal { state with
+      memory := updateMemory (updateMemory state.memory firstAddress firstValue)
+        secondAddress secondValue }) := by
+  rw [compileProg_seq]
+  simp [evalCrepFullProgState, skipNatStoreTargetEval]
+
+/-- Concrete correctness for two sequential constant stores: this exercises the
+    composition of the store instances and keeps the doubly-updated memory
+    relation explicit. -/
+theorem panValuePcCompileCorrect_compact_seq_store_nat
+    (firstAddress firstValue secondAddress secondValue : Nat) :
+    PanValuePcCompileCorrect
+      (panValuePcCompactSourceEvaluator
+        skipNatPrimitive skipNatSourceHandler [] 0 0 1 5)
+      (crepPcCompactTargetEvaluator
+        [] skipNatCrepPrimitive skipNatFfi skipNatSharedMem 0 0 5)
+      skipNatCodeRel skipNatExcpRel skipNatExceptionCode
+      skipNatGlobalsLookup
+      (.seq
+        (.store (SourceWordExp.const firstAddress).toExp
+          (SourceWordExp.const firstValue).toExp)
+        (.store (SourceWordExp.const secondAddress).toExp
+          (SourceWordExp.const secondValue).toExp)) := by
+  intro context structs sourceInput targetInput exceptionRel sourceExecution
+    targetExecution hsourceStructs htargetStructs hlocalisedCode hlocalised
+    hcode hexcp hstate hnonerror hsource htarget hpostCode hpostExcp
+  have hsourceEval := skipNatSeqStoreSourceEval sourceInput.structs
+    sourceInput.locals sourceInput.globals sourceInput.memory
+    firstAddress firstValue secondAddress secondValue
+  have htargetEval := skipNatSeqStoreTargetEval context targetInput.state
+    firstAddress firstValue secondAddress secondValue
+  simp only [panValuePcCompactSourceEvaluator, hsourceEval] at hsource
+  simp only [crepPcCompactTargetEvaluator, htargetEval] at htarget
+  cases hsource
+  cases htarget
+  simp only [panValuePcResultOfControl, panValuePcResultRel]
+  exact ⟨hstate.1, hstate.2.1, by
+    simpa [updateMemory] using
+      panValueCrepMemoryRel_update_word
+        (updatePanValueMemory sourceInput.memory firstAddress (.word firstValue))
+        (updateMemory targetInput.state.memory firstAddress firstValue)
+        secondAddress secondValue
+        (panValueCrepMemoryRel_update_word sourceInput.memory targetInput.state.memory
+          firstAddress firstValue hstate.2.2)⟩
+
 end Flapjack

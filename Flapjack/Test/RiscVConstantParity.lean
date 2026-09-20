@@ -899,4 +899,33 @@ theorem wordLocValueToInstructionsCake_execution_general (state : State 64)
   rw [show (position : Int) + ((label : Int) - (position : Int)) = (label : Int) by omega]
   exact BitVec.ofInt_natCast 64 label
 
+/-- Strengthening of `wordLocValueToInstructions_agrees_cake_of_small` to the
+full forward `AUIPC` signed range: for a nonzero destination, `state.pc = 0`,
+`ZeroRegister state`, and a forward label with `(label : Int) < 2 ^ 19`, the
+legacy absolute single-`ADDI` lowering and the Cake-faithful `AUIPC`+`ADDI`
+lowering execute to the same destination value.  The `state.pc = 0` premise is
+exactly where the legacy absolute model coincides with Cake's PC-relative
+`riscv_ast (Loc r i)`. (bead flapjack-pxn.1.4) -/
+theorem wordLocValueToInstructions_agrees_cake_of_forward (state : State 64)
+    (destination label : Nat) (hd : destination < 32) (hne : destination ≠ 0)
+    (hzero : ZeroRegister state) (hpc : state.pc = 0)
+    (hlabel : (label : Int) < 2 ^ 19) :
+    readRegister (executeInstructions state
+        ((wordLocValueToInstructions (width := 64) destination label).getD [])) ⟨destination, hd⟩ =
+      readRegister (executeInstructions state
+        ((wordLocValueToInstructionsCake (width := 64) destination label 0).getD [])) ⟨destination, hd⟩ := by
+  rw [wordLocValueToInstructions_getD destination label hd]
+  rw [wordLocValueToInstructions_execution state destination label hd hzero]
+  rw [show (if destination = 0 then readRegister state ⟨destination, hd⟩
+        else BitVec.ofNat 64 label) = BitVec.ofNat 64 label from by rw [if_neg hne]]
+  exact (wordLocValueToInstructionsCake_execution_general state destination label 0 hd hne hpc
+    (by omega) (by simpa using hlabel)).symm
+
+example :
+    readRegister (executeInstructions (zeroState 64)
+        ((wordLocValueToInstructions (width := 64) 4 0x12345).getD [])) 4 =
+      readRegister (executeInstructions (zeroState 64)
+        ((wordLocValueToInstructionsCake (width := 64) 4 0x12345 0).getD [])) 4 := by
+  decide
+
 end Flapjack.RiscV

@@ -106,4 +106,107 @@ theorem expIds_smartSeq (pre program : Prog α) :
     expIds (smartSeq pre program) = expIds pre ++ expIds program := by
   cases pre <;> simp [smartSeq, expIds]
 
+/-! Manual well-founded induction for Cake's `exp_ids_seq_assoc_eq`.  The
+    handler stored inside `Call` is nested in the syntax, so the ordinary
+    generated `Prog` recursor does not expose it as an induction hypothesis. -/
+
+theorem expIds_seqAssoc (pre program : Prog α) :
+    expIds (seqAssoc pre program) = expIds pre ++ expIds program := by
+  let rec go (pre : Prog α) : (program : Prog α) →
+      expIds (seqAssoc pre program) = expIds pre ++ expIds program
+    | .skip => by
+        simp [seqAssoc, expIds]
+    | .dec name shape value body => by
+        simp only [seqAssoc]
+        rw [expIds_smartSeq]
+        simp only [expIds]
+        rw [go .skip body]
+        simp [expIds]
+    | .seq first second => by
+        simp only [seqAssoc]
+        rw [go (seqAssoc pre first) second, go pre first]
+        simp [expIds, List.append_assoc]
+    | .ite condition thenBranch elseBranch => by
+        simp only [seqAssoc]
+        rw [expIds_smartSeq]
+        simp only [expIds]
+        rw [go .skip thenBranch, go .skip elseBranch]
+        simp [expIds]
+    | .while condition body => by
+        simp only [seqAssoc]
+        rw [expIds_smartSeq]
+        simp only [expIds]
+        rw [go .skip body]
+        simp [expIds]
+    | .call info function arguments => by
+        cases info with
+        | none =>
+            simp [seqAssoc, expIds, expIds_smartSeq]
+        | some info =>
+            cases info with
+            | mk returns handlerInfo =>
+                cases handlerInfo with
+                | none =>
+                    simp [seqAssoc, expIds, expIds_smartSeq]
+                | some handler =>
+                    cases handler with
+                    | mk exception handlerInfo =>
+                        cases handlerInfo with
+                        | mk handlerVar handlerProgram =>
+                            simp only [seqAssoc]
+                            rw [expIds_smartSeq]
+                            simp only [expIds]
+                            rw [go .skip handlerProgram]
+                            simp [expIds]
+    | .decCall name shape function arguments body => by
+        simp only [seqAssoc]
+        rw [expIds_smartSeq]
+        simp only [expIds]
+        rw [go .skip body]
+        simp [expIds]
+    | .annot tag text => by
+        simp [seqAssoc, expIds]
+    | .assign kind name value => by
+        simp only [seqAssoc]
+        rw [expIds_smartSeq]
+    | .primitive name operator args => by
+        simp only [seqAssoc]
+        rw [expIds_smartSeq]
+    | .store address value => by
+        simp only [seqAssoc]
+        rw [expIds_smartSeq]
+    | .store32 address value => by
+        simp only [seqAssoc]
+        rw [expIds_smartSeq]
+    | .storeByte address value => by
+        simp only [seqAssoc]
+        rw [expIds_smartSeq]
+    | .break => by
+        simp only [seqAssoc]
+        rw [expIds_smartSeq]
+    | .continue => by
+        simp only [seqAssoc]
+        rw [expIds_smartSeq]
+    | .extCall function configuration configurationLength array arrayLength => by
+        simp only [seqAssoc]
+        rw [expIds_smartSeq]
+    | .raise exception value => by
+        simp only [seqAssoc]
+        rw [expIds_smartSeq]
+    | .return value => by
+        simp only [seqAssoc]
+        rw [expIds_smartSeq]
+    | .shMemLoad size kind name address => by
+        simp only [seqAssoc]
+        rw [expIds_smartSeq]
+    | .shMemStore size address value => by
+        simp only [seqAssoc]
+        rw [expIds_smartSeq]
+    | .tick => by
+        simp only [seqAssoc]
+        rw [expIds_smartSeq]
+    termination_by program => sizeOf program
+    decreasing_by all_goals decreasing_trivial
+  exact go pre program
+
 end Flapjack

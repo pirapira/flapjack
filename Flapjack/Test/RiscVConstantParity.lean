@@ -47,4 +47,21 @@ example :
         .xori 4 4 (BitVec.ofNat 64 0x800)] := by
   decide
 
+/- The checked expression boundary routes constants through the Cake list
+   lowering while preserving the old selector for all other expressions. -/
+example :
+    wordExpToInstructionsCake (width := 64) 4
+        (.const (BitVec.ofNat 64 0x1234)) =
+      some [.lui 4 (BitVec.ofNat 64 1),
+        .addi 4 4 (BitVec.ofNat 64 0x234)] := by
+  decide
+
+example :
+    wordExpToInstructionsCake (width := 64) 4
+        (.load (.const (BitVec.ofNat 64 0x1234))) =
+      some [.lui 31 (BitVec.ofNat 64 1),
+        .addi 31 31 (BitVec.ofNat 64 0x234),
+        .loadWord 4 31] := by
+  decide
+
 end Flapjack.RiscV

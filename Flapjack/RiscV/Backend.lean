@@ -186,6 +186,23 @@ def wordExpToInstruction [NeZero width] (destination : Nat) :
           .or destination destination 31]
   | expression => (wordExpToInstruction destination expression).map (fun instruction => [instruction])
 
+/-! Cake's `riscv_ast (Const ...)` is a list-valued lowering.  Keep the
+    historical selector above unchanged for its one-instruction correctness
+    contracts, but expose the checked boundary needed by callers that accept
+    the target's multi-instruction constant materialization.  The recursive
+    load case is important: Cake materializes the address before emitting the
+    load, so a wide address constant must not fall back to ADDI truncation. -/
+def wordExpToInstructionsCake [NeZero width] (destination : Nat) :
+    WordExp (Word width) → Option (List (Instruction width))
+  | .const value => wordConstToInstructions destination value
+  | .load address => do
+      if destination == 31 then none
+      else
+        let addressInstructions ← wordExpToInstructionsCake 31 address
+        let destination ← registerOfNat destination
+        pure (addressInstructions ++ [.loadWord destination 31])
+  | expression => wordExpToInstructions destination expression
+
 /-! The standalone Word selector has no layout table.  Its LocValue boundary
     therefore materializes the abstract label number; the layout-aware Lab
     selector later replaces this with the absolute target position. -/

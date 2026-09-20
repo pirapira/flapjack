@@ -70,6 +70,25 @@ theorem clocked_while_body_same_matches_cake :
   exact hsame 2 1 (fun _ => none) (fun _ => none)
     (fun _ => none) evaluatorFfi none none none
 
+theorem clocked_while_success_requires_body_success
+    (result : PanValueFfiClockResult Nat Unit)
+    (hresult : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 2 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1
+      (.while (.const 1) .skip) = some result) :
+    ∃ bodyResult,
+      evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+        evaluatorHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+        (fun _ => none) evaluatorFfi 0 .skip = some bodyResult := by
+  apply evalPanValueFfiClockProg_while_some_implies_body_some
+    evaluatorContext (fun _ _ => none) evaluatorHandler [] [] 0 0 8
+    (.const 1) .skip 1 1 (fun _ => none) (fun _ => none)
+    (fun _ => none) evaluatorFfi none none none 1
+  · simp [evalPanValueExp]
+  · decide
+  · decide
+  · exact hresult
+
 /-! The expected values are the direct HOL evaluation of
     `pan_simp$SmartSeq` from `pan_simpScript.sml:13-16`. -/
 theorem smart_seq_skip_skip :

@@ -669,4 +669,42 @@ theorem wordLocValueToInstructionsCake_execution_of_reconstruction [NeZero width
   rw [execute_auipc_addi_read state ⟨destination, hd⟩ (by simpa using hne)]
   rw [BitVec.add_assoc, hreconstruct]
 
+/-! ### Kernel-checked reconstruction for nonnegative (forward) offsets
+
+The reconstruction premise used by `wordLocValueToInstructionsCake_execution_of_reconstruction`
+is discharged here for the nonnegative-offset range, i.e. forward references where the
+target is at or after the current position. The signed range needs the negative case as
+well and remains an explicit obligation. (bead flapjack-pxn.1.4) -/
+
+theorem bmod_ofInt_toNat_nonneg (upper : Int) (h0 : 0 ≤ upper) (hhi : upper < 2^19) :
+    (((BitVec.ofInt 64 upper).toNat : Int)).bmod (2^20) = upper := by
+  rw [BitVec.toNat_ofInt]
+  have h1 : upper % ((2^64 : Nat) : Int) = upper := Int.emod_eq_of_lt h0 (by omega)
+  rw [h1, Int.toNat_of_nonneg h0]
+  have hb1 : -(↑(2^20 : Nat) / 2) ≤ upper := by omega
+  have hb2 : upper < (↑(2^20 : Nat) + 1) / 2 := by omega
+  exact Int.bmod_eq_of_le (n := upper) (m := (2:Nat)^20) hb1 hb2
+
+theorem signExtend_ofNat_ofInt_nonneg (upper : Int) (h0 : 0 ≤ upper) (hhi : upper < 2^19) :
+    BitVec.signExtend 64 (BitVec.ofNat 20 (BitVec.ofInt 64 upper).toNat) =
+      BitVec.ofInt 64 upper := by
+  apply BitVec.eq_of_toInt_eq
+  rw [BitVec.toInt_signExtend]
+  change ((OfNat.ofNat ((BitVec.ofInt 64 upper).toNat) : BitVec 20).toInt).bmod
+      (2 ^ min 64 20) = (BitVec.ofInt 64 upper).toInt
+  rw [BitVec.toInt_ofNat, BitVec.toInt_ofInt, Nat.min_eq_right (by omega : 20 ≤ 64)]
+  rw [bmod_ofInt_toNat_nonneg upper h0 hhi]
+  have hb1 : -(↑(2^20 : Nat) / 2) ≤ upper := by omega
+  have hb2 : upper < (↑(2^20 : Nat) + 1) / 2 := by omega
+  rw [Int.bmod_eq_of_le (n := upper) (m := (2:Nat)^20) hb1 hb2]
+  have hc1 : -(↑(2^64 : Nat) / 2) ≤ upper := by omega
+  have hc2 : upper < (↑(2^64 : Nat) + 1) / 2 := by omega
+  exact (Int.bmod_eq_of_le (n := upper) (m := (2:Nat)^64) hc1 hc2).symm
+
+theorem uImmediate_ofInt_range_nonneg (upper : Int) (h0 : 0 ≤ upper) (hhi : upper < 2^19) :
+    uImmediate (BitVec.ofInt 64 upper) = BitVec.ofInt 64 (upper * 4096) := by
+  rw [uImmediate, signExtend_ofNat_ofInt_nonneg upper h0 hhi]
+  rw [BitVec.shiftLeft_eq, BitVec.shiftLeft_eq_mul_twoPow, BitVec.ofInt_mul]
+  rw [show BitVec.twoPow 64 12 = BitVec.ofInt 64 4096 by decide]
+
 end Flapjack.RiscV

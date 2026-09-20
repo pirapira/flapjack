@@ -359,6 +359,28 @@ def cakeConstFunctionExecution : Option (List (Word 64)) :=
 
 #guard cakeConstFunctionExecution = some [BitVec.ofNat 64 0x1234]
 
+/-! The checked `...Cake` program and function boundaries now route `locValue`
+through the position-aware Cake-faithful lowering (default position `0` for the
+non-layout API), so they emit the `auipc`/`addi` pair rather than a single
+truncating `addi`. -/
+example :
+    wordProgToRiscVCake (width := 64) (.locValue 4 0x1234) =
+      some [.auipc 4 (BitVec.ofInt 64 1),
+        .addi 4 4 (BitVec.ofInt 64 0x234)] := by
+  simp [wordProgToRiscVCake, wordLocValueToInstructionsCake, registerOfNat]
+
+example :
+    wordProgToRiscVCake (width := 64) (.locValue 4 0x1234) =
+      some (labLocValueInstructions (width := 64) 4 0x1234 0) := by
+  simp [wordProgToRiscVCake, wordLocValueToInstructionsCake,
+    labLocValueInstructions, registerOfNat]
+
+example :
+    (wordFunctionToRiscVCake (width := 64) (.locValue 4 0x1234)).map Prod.fst =
+      some (labLocValueInstructions (width := 64) 4 0x1234 0) := by
+  simp [wordFunctionToRiscVCake, wordLocValueToInstructionsCake,
+    labLocValueInstructions, registerOfNat]
+
 /-! Focused regressions for the same checked boundary across the offset shapes
 that the `auipc`/`addi` split must handle: an aligned upward delta, an aligned
 downward page crossing, a negative delta whose signed 12-bit remainder forces a
@@ -397,6 +419,99 @@ example :
         (executeInstructions { (zeroState 64) with pc := BitVec.ofNat 64 2 }
           (labLocValueInstructions (width := 64) 4 0x1004 2)) 4 =
       BitVec.ofNat 64 0x1004 := by
+  decide
+
+/-! Semantic agreement between the legacy absolute `LocValue` lowering
+(`wordLocValueToInstructions`, a single `ADDI`) and the Cake-faithful
+position-aware lowering (`wordLocValueToInstructionsCake`, `AUIPC`+`ADDI`).
+The legacy shape is only faithful in the non-truncating range, so the
+agreement theorem carries the explicit premises `ZeroRegister state`,
+`state.pc = 0`, and `label < 2 ^ 11`; source/global/memory/FFI state stays
+visible as the `state` argument. -/
+
+theorem execute_addi_read [NeZero width] (state : State width) (destination source : Fin 32)
+    (immediate : Word width) :
+    readRegister (execute state (.addi destination source immediate)) destination =
+      if destination = 0 then readRegister state destination
+      else readRegister state source + immediate := by
+  by_cases h : destination = 0 <;> simp [execute, writeRegister, readRegister, h]
+
+theorem uImmediate_zero [NeZero width] : uImmediate (0 : Word width) = 0 := by
+  unfold uImmediate
+  ext i
+  simp [BitVec.getElem_signExtend]
+
+theorem wordLocValueToInstructions_getD [NeZero width]
+    (destination label : Nat) (hd : destination < 32) :
+    (wordLocValueToInstructions (width := width) destination label).getD [] =
+      [.addi ⟨destination, hd⟩ 0 (BitVec.ofNat width label)] := by
+  simp [wordLocValueToInstructions, registerOfNat, hd]
+
+theorem wordLocValueToInstructionsCake_small_eq [NeZero width]
+    (destination label : Nat) (hdestination : destination < 32) (hlabel : label < 2 ^ 11) :
+    wordLocValueToInstructionsCake (width := width) destination label 0 =
+      some [.auipc ⟨destination, hdestination⟩ 0,
+            .addi ⟨destination, hdestination⟩ ⟨destination, hdestination⟩
+              (BitVec.ofNat width label)] := by
+  have hrem : (label : Int) % 4096 = (label : Int) :=
+    Int.emod_eq_of_lt (by omega) (by omega)
+  have hnot : ¬ ((label : Int) ≥ (2048 : Int)) := by omega
+  unfold wordLocValueToInstructionsCake
+  simp only [registerOfNat, hdestination, dif_pos trivial]
+  have hdelta : (Int.ofNat label - Int.ofNat 0 : Int) = (label : Int) := by simp
+  rw [hdelta, hrem, if_neg hnot]
+  simp
+
+theorem wordLocValueToInstructions_execution [NeZero width]
+    (state : State width) (destination label : Nat) (hd : destination < 32)
+    (hzero : ZeroRegister state) :
+    readRegister (executeInstructions state
+        [.addi ⟨destination, hd⟩ 0 (BitVec.ofNat width label)]) ⟨destination, hd⟩ =
+      if destination = 0 then readRegister state ⟨destination, hd⟩
+      else BitVec.ofNat width label := by
+  rw [executeInstructions_single, execute_addi_read]
+  simp only [Fin.ext_iff, Fin.val_zero]
+  by_cases h : destination = 0
+  · simp [h]
+  · simp only [h, if_false]
+    rw [show readRegister state (0 : Fin 32) = 0 from hzero]
+    simp
+
+theorem auipcAddi_execution_of_small [NeZero width]
+    (state : State width) (destination label : Nat) (hd : destination < 32)
+    (hpc : state.pc = 0) :
+    readRegister (executeInstructions state
+        [.auipc ⟨destination, hd⟩ 0,
+         .addi ⟨destination, hd⟩ ⟨destination, hd⟩ (BitVec.ofNat width label)]) ⟨destination, hd⟩ =
+      if destination = 0 then readRegister state ⟨destination, hd⟩
+      else BitVec.ofNat width label := by
+  simp only [executeInstructions]
+  rw [execute_addi_read]
+  simp only [Fin.ext_iff, Fin.val_zero]
+  by_cases h : destination = 0
+  · rw [execute_auipc]; simp [h]
+  · rw [if_neg (by simpa using h), if_neg (by simpa using h), execute_auipc]
+    simp only [Fin.ext_iff, Fin.val_zero, if_neg (by simpa using h), hpc, uImmediate_zero]
+    simp
+
+theorem wordLocValueToInstructions_agrees_cake_of_small [NeZero width]
+    (state : State width) (destination label : Nat) (hd : destination < 32)
+    (hzero : ZeroRegister state) (hpc : state.pc = 0) (hlabel : label < 2 ^ 11) :
+    readRegister (executeInstructions state
+        ((wordLocValueToInstructions (width := width) destination label).getD [])) ⟨destination, hd⟩ =
+      readRegister (executeInstructions state
+        ((wordLocValueToInstructionsCake (width := width) destination label 0).getD [])) ⟨destination, hd⟩ := by
+  rw [wordLocValueToInstructions_getD destination label hd,
+    wordLocValueToInstructionsCake_small_eq destination label hd hlabel]
+  simp only [Option.getD_some]
+  rw [wordLocValueToInstructions_execution state destination label hd hzero,
+    auipcAddi_execution_of_small state destination label hd hpc]
+
+example :
+    readRegister (executeInstructions (zeroState 64)
+        ((wordLocValueToInstructions (width := 64) 4 0x234).getD [])) 4 =
+      readRegister (executeInstructions (zeroState 64)
+        ((wordLocValueToInstructionsCake (width := 64) 4 0x234 0).getD [])) 4 := by
   decide
 
 end Flapjack.RiscV

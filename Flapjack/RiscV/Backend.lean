@@ -672,7 +672,7 @@ def wordProgToRiscVCake [NeZero width] :
   | .store address value => wordShareInstToInstructionsCake .store value address
   | .shareInst operator name address =>
       wordShareInstToInstructionsCake operator name address
-  | .locValue destination source => wordLocValueToInstructions destination source
+  | .locValue destination source => wordLocValueToInstructionsCake destination source 0
   | .inst instruction => wordInstToInstructionsCake instruction
   | .seq first second => do
       let first ← wordProgToRiscVCake first
@@ -1047,7 +1047,7 @@ def wordFunctionToRiscVCake [NeZero width] :
       let instructions ← wordShareInstToInstructionsCake operator name address
       pure (instructions, [])
   | .locValue destination source => do
-      let instructions ← wordLocValueToInstructions destination source
+      let instructions ← wordLocValueToInstructionsCake destination source 0
       pure (instructions, [])
   | .tick => pure ([.addi 0 0 0], [])
   | .ite operator condition rightValue thenBranch elseBranch => do

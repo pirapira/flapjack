@@ -134,9 +134,24 @@ def clockedCallFinalFfi : Option (PanValueFfiClockResult (Word 64) Unit) :=
     statefulTestFinalState 10 (.call none "finalExt" [])
     (memoryAccess := some (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel))
 
+def clockedCallFinalFfiSteps : Option (PanValueFfiSteppedResult (Word 64) Unit) :=
+  evalPanValueFfiCallSteps statefulTestContext statefulTestPrimitive
+    statefulTestHandler [] clockedCallFinalFfiFunctions
+    (BitVec.ofNat 64 0) (BitVec.ofNat 64 100) (BitVec.ofNat 64 8)
+    10 (fun _ => none) (fun _ => none) statefulTestMemory
+    statefulTestFinalState none "finalExt" []
+    (memoryAccess := some (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel))
+
 #guard
   match clockedCallFinalFfi with
   | some (.control (.finalFfi locals _ _ _ event), 9) =>
+      locals "x" = none && event.name = .extCall "final" &&
+        event.outcome = .failed
+  | _ => false
+
+#guard
+  match clockedCallFinalFfiSteps with
+  | some (.finalFfi locals _ _ _ event, _) =>
       locals "x" = none && event.name = .extCall "final" &&
         event.outcome = .failed
   | _ => false

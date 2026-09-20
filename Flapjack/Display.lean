@@ -26,6 +26,116 @@ inductive DisplayExpr where
   | list (children : List DisplayExpr)
   deriving Repr
 
+/-! The small string-tree and pretty intermediate languages used by Cake's
+    `display_to_str_tree`/`str_tree_to_strs` boundary. -/
+inductive DisplayStrTree where
+  | str (value : String)
+  | trees (children : List DisplayStrTree)
+  | grabLine (tree : DisplayStrTree)
+
+inductive DisplayPretty where
+  | parenthesis (body : DisplayPretty)
+  | string (value : String)
+  | append (left : DisplayPretty) (lineBreak : Bool) (right : DisplayPretty)
+  | size (width : Nat) (body : DisplayPretty)
+
+def displayToStrTree : DisplayExpr → DisplayStrTree
+  | .item _ name children =>
+      .trees (.str name :: children.map displayToStrTree)
+  | .string value => .str value
+  | .tuple [] => .str "()"
+  | .tuple children => .trees (children.map displayToStrTree)
+  | .list [] => .str "()"
+  | .list children => .trees ((children.map displayToStrTree).map .grabLine)
+
+def displayNewlines : List DisplayPretty → DisplayPretty
+  | [] => .string ""
+  | [pretty] => pretty
+  | pretty :: pretties => .append pretty true (displayNewlines pretties)
+
+def displayV2Pretty : DisplayStrTree → DisplayPretty
+  | .str value => .string value
+  | .grabLine tree => .size 100000 (displayV2Pretty tree)
+  | .trees children => .parenthesis (displayNewlines (children.map displayV2Pretty))
+
+def displayGetSize : DisplayPretty → Nat
+  | .size width _ => width
+  | .append left _ right => displayGetSize left + displayGetSize right + 1
+  | .parenthesis body => displayGetSize body + 2
+  | .string _ => 0
+
+def displayGetNextSize : DisplayPretty → Nat
+  | .size width _ => width
+  | .append left _ _ => displayGetNextSize left
+  | .parenthesis body => displayGetNextSize body + 2
+  | .string _ => 0
+
+def displayAnnotate : DisplayPretty → DisplayPretty
+  | .string value => .size value.length (.string value)
+  | .parenthesis body =>
+      let annotated := displayAnnotate body
+      .size (displayGetSize annotated + 2) (.parenthesis annotated)
+  | .append left lineBreak right =>
+      .append (displayAnnotate left) lineBreak (displayAnnotate right)
+  | .size width body => .size width (displayAnnotate body)
+
+def displayRemoveAll : DisplayPretty → DisplayPretty
+  | .parenthesis body => .parenthesis (displayRemoveAll body)
+  | .string value => .string value
+  | .append left _ right =>
+      .append (displayRemoveAll left) false (displayRemoveAll right)
+  | .size _ body => displayRemoveAll body
+
+def displaySmartRemove : Nat → Nat → DisplayPretty → DisplayPretty
+  | _, _, .string value => .string value
+  | indent, column, .size width body =>
+      if column + width < 70 then
+        displayRemoveAll body
+      else
+        displaySmartRemove indent column body
+  | indent, column, .parenthesis body =>
+      .parenthesis (displaySmartRemove (indent + 1) (column + 1) body)
+  | indent, column, .append left _lineBreak right =>
+      let leftSize := displayGetSize left
+      let rightSize := displayGetNextSize right
+      if column + leftSize + rightSize < 50 then
+        .append (displaySmartRemove indent column left) false
+          (displaySmartRemove indent (column + leftSize) right)
+      else
+        .append (displaySmartRemove indent column left) true
+          (displaySmartRemove indent indent right)
+termination_by _ _ pretty => sizeOf pretty
+
+def displayPrettyDepth : DisplayPretty → Nat
+  | .string _ => 1
+  | .size _ body | .parenthesis body => 1 + displayPrettyDepth body
+  | .append left _ right =>
+      1 + max (displayPrettyDepth left) (displayPrettyDepth right)
+
+def displayFlattenFuel : Nat → String → DisplayPretty → List String → List String
+  | 0, _, _, rest => rest
+  | fuel + 1, indent, .size _ body, rest => displayFlattenFuel fuel indent body rest
+  | fuel + 1, indent, .parenthesis body, rest =>
+      "(" :: displayFlattenFuel fuel (indent ++ "   ") body (")" :: rest)
+  | _fuel + 1, _indent, .string value, rest => value :: rest
+  | fuel + 1, indent, .append left lineBreak right, rest =>
+      let rightStrings := displayFlattenFuel fuel indent right rest
+      displayFlattenFuel fuel indent left
+        ((if lineBreak then indent else " ") :: rightStrings)
+
+def displayFlatten (indent : String) (pretty : DisplayPretty)
+    (rest : List String) : List String :=
+  displayFlattenFuel (displayPrettyDepth pretty + 1) indent pretty rest
+
+def displayStrTreeToStrings (ending : String) (tree : DisplayStrTree) : List String :=
+  displayFlatten "\n"
+    (displaySmartRemove 0 0
+      (displayAnnotate (displayV2Pretty tree))) [ending]
+
+def mapAppendDisplayStrings (render : α → List String) : List α → List String
+  | [] => []
+  | value :: values => render value ++ mapAppendDisplayStrings render values
+
 def emptyDisplayItem (name : String) : DisplayExpr :=
   .string name
 
@@ -415,6 +525,16 @@ def loopFunToDisplay [CakeDisplayWord α]
     .string (loopAttachName names (some number)),
     .tuple (arguments.map numToDisplay),
     loopProgToDisplay names body]
+
+/-! Exact source counterpart of Cake's `loop_to_strs_def`
+    (`pan_passesScript.sml:654-658`). -/
+def loopToStrs [CakeDisplayWord α]
+    (names : List (Nat × String))
+    (functions : List (Nat × List Nat × LoopProg α)) : List String :=
+  mapAppendDisplayStrings
+    (fun function =>
+      displayStrTreeToStrings "\n\n"
+        (displayToStrTree (loopFunToDisplay names function))) functions
 
 def destAnnot (program : Prog α) : Option (String × String) :=
   match program with

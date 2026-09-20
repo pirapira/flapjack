@@ -72,6 +72,27 @@ def runtimeTypedLoopBaseState : LoopState Nat :=
     globals := fun _ => none
     memory := fun _ => none }
 
+def runtimeTypedLoopGlobalState : LoopTypedGlobalState Nat :=
+  { legacy := runtimeTypedLoopBaseState
+    globals := runtimeTypedBaseState }
+
+#guard ((runtimeTypedLoopGlobalState.setGlobal runtimeTypedKey 4 (.const 17)).bind
+    (fun state => state.load runtimeTypedKey 36)) == some 17
+
+example :
+    (runtimeTypedLoopGlobalState.store runtimeTypedKey 4 17).toLoopState
+        runtimeTypedKey =
+      loopStateWithTypedGlobalStore runtimeTypedLoopBaseState runtimeTypedKey
+        runtimeTypedBaseState 4 17 := by
+  exact LoopTypedGlobalState.toLoopState_store runtimeTypedLoopGlobalState
+    runtimeTypedKey 4 17
+
+example :
+    (runtimeTypedLoopGlobalState.setGlobal runtimeTypedKey 4 (.const 17)).bind
+        (fun state => state.load runtimeTypedKey 36) = some 17 := by
+  exact LoopTypedGlobalState.setGlobal_load_alias runtimeTypedLoopGlobalState
+    runtimeTypedKey 4 17 36
+
 def runtimeTypedAliasedLoopStoreState : LoopState Nat :=
   loopStateWithTypedGlobalStore runtimeTypedLoopBaseState runtimeTypedKey
     runtimeTypedBaseState 4 17

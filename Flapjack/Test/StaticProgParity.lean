@@ -231,6 +231,26 @@ def staticProgWordLocalCallContext : Context :=
   { staticProgCallContext with
     locals := ("x", { shapedBased := .word .trusted }) :: staticProgCallContext.locals }
 
+def staticProgGlobalHandlerContext : Context :=
+  { staticProgCallContext with
+    globals := [("g", { shape := .one })]
+    locals := ("h", { shapedBased := .word .notBased }) :: staticProgCallContext.locals }
+
+/-! Cake promotes a global-call handler variable to Trusted before checking
+    its body; using it as a store address therefore emits no basedness warning. -/
+def staticProgGlobalHandlerTrustOracle : Bool :=
+  match checkProg staticProgGlobalHandlerContext
+      ((.call
+        (some (some (.global, "g"), some ("Missing", "h",
+          (.store (.var .local "h") (.const 0))))) "callee" []) : Prog Nat) with
+  | (Except.ok result, warnings) =>
+      !result.exitsFunction && !result.exitsLoop && result.last == .otherLast &&
+        result.variableDelta.isEmpty && result.currentLocation == "L: " &&
+        warnings.isEmpty
+  | _ => false
+
+#guard staticProgGlobalHandlerTrustOracle
+
 /-! Cake's accepted local-destination call records the destination's trusted
     shape in the returned variable delta. -/
 def staticProgLocalCallMetadataOracle : Bool :=

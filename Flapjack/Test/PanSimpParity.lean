@@ -89,6 +89,49 @@ theorem clocked_while_success_requires_body_success
   · decide
   · exact hresult
 
+theorem clocked_seq_success_requires_first_success
+    (hresult : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 2 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1 (.seq .skip .skip) ≠ none) :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1 .skip ≠ none := by
+  apply evalPanValueFfiClockProg_seq_no_none evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 1 1
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi .skip .skip
+    none none none
+  exact hresult
+
+theorem clocked_while_nonzero_requires_body_success
+    (hresult : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 2 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1 (.while (.const 1) .skip) ≠ none) :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 0 .skip ≠ none := by
+  apply evalPanValueFfiClockProg_while_no_none evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8
+    1 1 (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi
+    (.const 1) .skip 1 none none none
+  · simp [evalPanValueExp]
+  · decide
+  · decide
+  · exact hresult
+
+theorem clocked_seq_first_congr_matches_cake :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 2 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1 (.seq .skip .tick) =
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 2 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1 (.seq (.annot "tag" "text") .tick) := by
+  apply evalPanValueFfiClockProg_seq_congr evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 1 1
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi
+    .skip (.annot "tag" "text") .tick none none none
+  simp [evalPanValueFfiClockProg, evalPanValueFfiClockLeaf,
+    evalPanValueFfiProgSteps]
+
 /-! The expected values are the direct HOL evaluation of
     `pan_simp$SmartSeq` from `pan_simpScript.sml:13-16`. -/
 theorem smart_seq_skip_skip :

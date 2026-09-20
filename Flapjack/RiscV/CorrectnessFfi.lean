@@ -1,4 +1,5 @@
 import Flapjack.Correctness
+import Flapjack.RiscV.CakeSoundness
 import Flapjack.RiscV.CorrectnessBackend
 import Flapjack.RiscV.Ffi
 import Flapjack.RiscV.CorrectnessFfiMachine
@@ -1362,6 +1363,25 @@ theorem wordFunctionToRiscVWithCallsAndFfiCake_agrees_straightLine [NeZero width
   | seq first second hfirst hsecond ihfirst ihsecond =>
       simp [wordFunctionToRiscVWithCallsAndFfiCake,
         wordFunctionToRiscVWithCallsCake, ihfirst, ihsecond]
+
+/-! The FFI-aware Cake selector has the same evaluator soundness on the
+    straight-line fragment as its call-aware sibling.  The straight-line
+    premise excludes foreign effects, so the existing Cake evaluator relation
+    is the exact state contract needed here. -/
+theorem wordFunctionToRiscVWithCallsAndFfiCake_sound_of_straightLine
+    [NeZero width] (context : WordCallFfiContext width) (state : State width)
+    (program : WordProg (Word width))
+    (hstraight : WordRiscVStraightLine program)
+    (code : List (Instruction width))
+    (hcompile : wordFunctionToRiscVWithCallsAndFfiCake context program =
+      some (code, [])) :
+    evalWordFunctionCake state program =
+      some (executeInstructions state code, []) := by
+  have hagree := wordFunctionToRiscVWithCallsAndFfiCake_agrees_straightLine
+    context program hstraight
+  rw [hagree] at hcompile
+  exact wordFunctionToRiscVWithCallsCake_sound_of_straightLine
+    { targets := context.targets } state program hstraight code hcompile
 
 theorem wordFunctionToRiscVWithCallsAndFfiCake_locValue [NeZero width]
     (context : WordCallFfiContext width) (destination source : Nat) :

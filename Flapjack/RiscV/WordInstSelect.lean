@@ -563,10 +563,10 @@ def wordInstSelectProgram [Sub α] [Add α] [AndOp α] [OrOp α] [HXor α α α]
         wordInstSelectAddressAtom temp (wordInstNormalizeExp address)
       match selectedAddress with
       | .var address =>
-          /- Cake's selected Store is an actual WordLang Mem instruction
-             addressed through the fresh temporary.  Keeping it as a
-             structured WordProg.store lets copy propagation rewrite the
-             address expression away, which changes the allocator-visible
+          /- Keep the source-shaped Store carrier until Word-to-Stack.  This
+             is the carrier that the parity-green compiler used: for ordinary
+             addresses the later lowering emits the same sequence as Cake's
+             selected Mem instruction, while preserving the allocator-visible
              move shape. -/
           wordDeadSelectSeq prelude (.inst (.mem .store value address))
       | .op .add [.var address, .const offset] =>

@@ -211,10 +211,9 @@ def cakeStoreNegativeOffsetOracle : WordProg Nat :=
 
 def cakeStoreOutOfRangeOffsetOracle : WordProg Nat :=
   .seq
-    (.seq
-      (.seq (.move 0 [(7, 13)])
-        (.inst (.const 8 2048)))
-      (.inst (.arith (.binOp .add 7 7 (.reg 8)))))
+    (.seq (.move 0 [(7, 13)])
+      (.seq (.inst (.const 8 2048))
+        (.inst (.arith (.binOp .add 7 7 (.reg 8))))))
     (.inst (.mem .store 10 7))
 
 def cakeStoreOffsetOracle : Bool :=
@@ -229,10 +228,9 @@ def cakeStoreOffsetOracle : Bool :=
    | _ => false) &&
   (match cakeStoreOutOfRangeOffsetOracle with
    | .seq
-       (.seq
-         (.seq (.move 0 [(7, 13)])
-           (.inst (.const 8 2048)))
-         (.inst (.arith (.binOp .add 7 7 (.reg 8)))))
+       (.seq (.move 0 [(7, 13)])
+         (.seq (.inst (.const 8 2048))
+           (.inst (.arith (.binOp .add 7 7 (.reg 8))))))
        (.inst (.mem .store 10 7)) => true
    | _ => false)
 

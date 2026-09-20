@@ -96,6 +96,31 @@ def staticProgWhileMetadataOracle : Bool :=
 
 #guard staticProgWhileMetadataOracle
 
+/-! A declared exception with a matching structured payload exits the current
+    function in Cake, with `RaiseLast` and no local delta or diagnostics. -/
+def staticProgRaiseMetadataOracle : Bool :=
+  match staticProgCheck
+      (.raise "E" (.rStruct [.const 0, .const 1])) with
+  | (Except.ok result, warnings) =>
+      result.exitsFunction && !result.exitsLoop && result.last == .raiseLast &&
+        result.variableDelta.isEmpty && result.currentLocation == "L: " &&
+        warnings.isEmpty
+  | _ => false
+
+#guard staticProgRaiseMetadataOracle
+
+/-! Cake warns when a local store address is a word but is not calculated
+    from the base address.  `bytesInWord` is the executable NotBased case. -/
+def staticProgLocalStoreWarningOracle : Bool :=
+  match staticProgCheck (.store .bytesInWord (.const 0)) with
+  | (Except.ok result, [StatErr.warning message]) =>
+      !result.exitsFunction && !result.exitsLoop && result.last == .otherLast &&
+        result.variableDelta.isEmpty && result.currentLocation == "L: " &&
+        message == "L: local store address is not calculated from base in function f\n"
+  | _ => false
+
+#guard staticProgLocalStoreWarningOracle
+
 /-! Cake's sequence rule keeps the first function exit when the second
     statement is transparent.  Check the returned metadata, not only the
     acceptance/error bit, for a return followed by Skip. -/

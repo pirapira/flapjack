@@ -270,4 +270,63 @@ theorem crepRuntimeToLoop_loadGlob_assign_failure_agreement_typed
     handler primitive fuel (state.withTypedGlobalState key typedState) live name
     address hlocal loop_lookup
 
+theorem crepRuntimeToLoop_storeGlob_loadGlob_sequence_agreement_typed
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : LoopContext α)
+    (functions : List (Nat × List Nat × LoopProg α))
+    (handler : CrepRuntimeFfiHandler α σ ε)
+    (primitive : CrepPrimitiveHandler α)
+    (fuel : Nat) (state : CrepRuntimeState α σ)
+    (key : α → CrepGlobalAddress) (typedState : CrepGlobalState α)
+    (name : Nat) (address value : α)
+    (hlocal : ∃ oldValue, state.locals name = some oldValue)
+    (loop_lookup : lookupNatInfo name context.vars = some name) :
+    (evalCrepRuntimeResult handler primitive (fuel + 2)
+      (state.withTypedGlobalState key typedState)
+      (.seq (.storeGlob address (.const value))
+        (.assign name (.loadGlob address)))).map
+        (fun result => result.2.globals address) =
+    (evalLoopProgWithCallsAndFfi functions
+      (fun _ _ _ _ _ loopState => some loopState) (fuel + 3)
+      (loopStateOfCrepRuntimeStateForGlobals
+        (state.withTypedGlobalState key typedState))
+      (loopCompileProg context []
+        (.seq (.storeGlob address (.const value))
+          (.assign name (.loadGlob address))))).map
+    (fun result => (loopResultState result).globals address) := by
+  exact crepRuntimeToLoop_storeGlob_loadGlob_sequence_agreement context
+    functions handler primitive fuel (state.withTypedGlobalState key typedState)
+    name address value hlocal loop_lookup
+
+theorem crepRuntimeToLoop_storeGlob_state_agreement_typed
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : LoopContext α)
+    (functions : List (Nat × List Nat × LoopProg α))
+    (handler : CrepRuntimeFfiHandler α σ ε)
+    (primitive : CrepPrimitiveHandler α)
+    (fuel : Nat) (state : CrepRuntimeState α σ)
+    (key : α → CrepGlobalAddress) (typedState : CrepGlobalState α)
+    (live : List Nat) (address value : α) :
+    ∃ sourceTarget loopTarget,
+      evalCrepRuntimeResult handler primitive (fuel + 1)
+        (state.withTypedGlobalState key typedState)
+        (.storeGlob address (.const value)) =
+        some (.normal, sourceTarget) ∧
+      evalLoopProgWithCallsAndFfi functions
+        (fun _ _ _ _ _ loopState => some loopState) (fuel + 2)
+        (loopStateOfCrepRuntimeStateForGlobals
+          (state.withTypedGlobalState key typedState))
+        (loopCompileProg context live
+          (.storeGlob address (.const value))) =
+        some (.normal loopTarget) ∧
+      crepRuntimeLoopStateRel sourceTarget loopTarget := by
+  exact crepRuntimeToLoop_storeGlob_state_agreement context functions handler
+    primitive fuel (state.withTypedGlobalState key typedState) live address value
+
 end Flapjack

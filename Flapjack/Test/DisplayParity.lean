@@ -232,6 +232,15 @@ def crepFunOracle : Bool :=
         [.item none "Var" [.string "2"],
          .item none "Const" [.string "0x7"]]])
 
+def crepToStrsOracle : Bool :=
+  crepToStrs
+    [(("f", [2, 3],
+      .return [.var 2, .const (BitVec.ofNat 64 7)]) :
+        FunName × List Nat × CrepProg (BitVec 64))] ==
+    ["(", "func", " ", "f", " ", "(", "2", " ", "3", ")", " ",
+     "(", "return", " ", "(", "Var", " ", "2", ")", " ", "(", "Const", " ",
+     "0x7", ")", ")", ")", "\n\n"]
+
 /-! Direct oracle guards for `pan_prog_to_display_def` in
     `pan_passesScript.sml:203-300`, including sequence flattening, annotation
     escaping, calls, handlers, and declaration calls. -/
@@ -466,6 +475,7 @@ def loopToStrsOracle : Bool :=
 #guard crepExpOracle
 #guard crepProgOracle
 #guard crepFunOracle
+#guard crepToStrsOracle
 #guard panProgOracle
 #guard loopExpOracle
 #guard panFunOracle

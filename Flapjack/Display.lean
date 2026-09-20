@@ -425,6 +425,16 @@ def crepFunToDisplay [CakeDisplayWord α] (name : FunName) (parameters : List Na
     .tuple (parameters.map (fun parameter => .string (toString parameter))),
     crepProgToDisplay body]
 
+/-! Exact source counterpart of Cake's `crep_to_strs_def`
+    (`pan_passesScript.sml:500-505`). -/
+def crepToStrs [CakeDisplayWord α]
+    (functions : List (FunName × List Nat × CrepProg α)) : List String :=
+  mapAppendDisplayStrings
+    (fun function =>
+      let (name, parameters, body) := function
+      displayStrTreeToStrings "\n\n"
+        (displayToStrTree (crepFunToDisplay name parameters body))) functions
+
 def cakeEscapeChar : Char → String
   | '\t' => "\\t"
   | '\n' => "\\n"

@@ -1633,6 +1633,35 @@ theorem wordFunctionToRiscV_sound_of_straightLine_after_prefix [NeZero width]
     (executeInstructions state prelude) program hstraight code hcompile
   rw [hsound, executeInstructions_append]
 
+/-! The prefix composition also carries the ABI return boundary.  This is the
+    generic pipeline step needed when a straight-line body is followed by a
+    compiled return: the returned registers are read from the machine after
+    `prelude ++ code`, not from the unprefixed fragment state. -/
+theorem wordFunctionToRiscV_seq_return_sound_after_prefix [NeZero width]
+    (context : WordCallContext width) (state : State width)
+    (prelude : List (Instruction width))
+    (program : WordProg (Word width))
+    (hstraight : WordRiscVStraightLine program)
+    (store : Nat) (values : List Nat)
+    (firstCode : List (Instruction width)) (returns : List (Fin 32))
+    (hfirstCompile : wordFunctionToRiscVWithCalls context program =
+      some (firstCode, []))
+    (hreturnCompile : wordFunctionToRiscVWithCalls context
+      ((.return store values) : WordProg (Word width)) =
+      some ([], returns)) :
+    evalWordFunction (executeInstructions state prelude)
+        (.seq program (.return store values)) =
+      Option.map (fun returned =>
+        (executeInstructions state (prelude ++ firstCode), returned))
+        (values.mapM (fun name => do
+          let register ← registerOfNat name
+          pure (readRegister
+            (executeInstructions state (prelude ++ firstCode)) register))) := by
+  have h := wordFunctionToRiscVWithCalls_seq_return_sound context
+    (executeInstructions state prelude) program hstraight store values
+    firstCode returns hfirstCompile hreturnCompile
+  simpa only [executeInstructions_append] using h.2
+
 theorem wordFunctionToRiscV_counted_sound_of_straightLine_after_prefix
     [NeZero width]
     (context : WordCallContext width) (state : State width)

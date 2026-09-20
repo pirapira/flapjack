@@ -2205,7 +2205,7 @@ theorem compile_full_pan_value_raise_two_word_state_full_correct
     (exception : ExceptionId) (exceptionCode : α)
     (hlookup : lookupInfo exception context.exceptions = some exceptionCode)
     (hbytesInWord : context.bytesInWord = bytesInWord) :
-    evalPanValueProgWithPrimitiveCallsAndFfiFull
+    evalPanValueProgWithPrimitiveCallsAndFfi
       primitive sourceHandler structs sourceFunctions
       baseAddress topAddress bytesInWord 5
       sourceLocals sourceGlobals sourceMemory
@@ -2226,8 +2226,8 @@ theorem compile_full_pan_value_raise_two_word_state_full_correct
   · have hlimit : panValuePayloadWithinLimit structs
         (.rStruct [.word left, .word right]) = true := by
       exact panValuePayloadWithinLimit_rStruct_two_words structs left right
-    simp [evalPanValueProgWithPrimitiveCallsAndFfiFull, evalPanValueExpFull,
-      evalPanValueExpsFull, hlimit]
+    simp [evalPanValueProgWithPrimitiveCallsAndFfi, evalPanValueExp,
+      evalPanValueExp.evalPanValueExps, hlimit]
   · have hcompile : compileExp context
         (.rStruct [.const left, .const right]) =
         ([.const left, .const right], .comb [.one, .one]) := by

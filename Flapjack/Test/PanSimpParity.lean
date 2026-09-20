@@ -41,6 +41,14 @@ theorem seq_assoc_tick_return :
       .seq .tick (.return (.const 7)) := by
   simp [seqAssoc, smartSeq]
 
+/-! Cake's `exp_ids_seq_assoc_eq` preservation theorem: associating a
+sequence does not change the statically reachable exception identifiers. -/
+theorem exp_ids_seq_assoc_preserves_raise :
+    expIds (seqAssoc (.skip : Prog Nat)
+      (.seq (.raise "E" (.const 0)) .tick)) = ["E"] := by
+  simpa [expIds] using expIds_seqAssoc (.skip : Prog Nat)
+    (.seq (.raise "E" (.const 0)) .tick)
+
 /-! The expected values are the direct HOL evaluation of
     `pan_simp$seq_call_ret` from `pan_simpScript.sml:42-49`. -/
 theorem seq_call_ret_matching_return :

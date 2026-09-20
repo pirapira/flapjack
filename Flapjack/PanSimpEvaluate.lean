@@ -1,5 +1,6 @@
 import Flapjack.PanSimp
 import Flapjack.PanEvaluate
+import Flapjack.PanValueFfiClockFuel
 
 /-!
 # Evaluator-level `pan_simp` obligations
@@ -325,5 +326,43 @@ theorem evalPanValueFfiClockProg_seq_congr
         clock (.seq first' second) ma c mh := by
   simp only [evalPanValueFfiClockProg]
   rw [h]
+
+/-- Contrapositive of fuel monotonicity: a run that fails at a larger fuel also
+    fails at every smaller fuel.  This is the missing direction needed to line
+    up two runs whose structural fuel budgets differ, as happens for
+    `seqAssoc` (which inserts/removes `Seq` nodes) under the fuel-indexed
+    clocked evaluator. -/
+theorem evalPanValueFfiClockProg_fuel_anti
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    {fuel fuel' : Nat} (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (program : Prog α)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (hfuel : fuel ≤ fuel')
+    (hnone : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel' locals globals memory ffi clock program
+      ma c mh = none) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory ffi clock program
+      ma c mh = none := by
+  cases h : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory ffi clock program
+      ma c mh with
+  | none => rfl
+  | some result =>
+      have hmono := evalPanValueFfiClockProg_fuel_mono context primitive handler
+        structs functions baseAddress topAddress bytesInWord locals globals memory ffi
+        clock program ma c mh hfuel h
+      rw [hnone] at hmono
+      simp at hmono
 
 end Flapjack

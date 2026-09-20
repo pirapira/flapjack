@@ -63,119 +63,138 @@ def wordDeadInst {α : Type} (live : List Nat) (instruction : WordInst α) :
         | _ => (.skip, live)
     | _ => (.skip, live)
 
-def wordDeadCodeAux : WordProg α → List Nat → List (List Nat × List Nat) →
-    WordProg α × List Nat
-  | .skip, live, _ => (.skip, live)
-  | .move priority moves, live, _ => wordDeadMove priority live moves
-  | .assign destination value, live, _ =>
+def wordDeadReturnLabels : WordProg α → List Nat
+  | .return label _ => [label]
+  | .seq first second => wordDeadReturnLabels first ++ wordDeadReturnLabels second
+  | .ite _ _ _ thenBranch elseBranch =>
+      wordDeadReturnLabels thenBranch ++ wordDeadReturnLabels elseBranch
+  | .loop _ body _ | .mustTerminate body => wordDeadReturnLabels body
+  | .call none _ _ none => []
+  | .call (some (_, _, returnCode, _, _)) _ _ none =>
+      wordDeadReturnLabels returnCode
+  | .call none _ _ (some (_, body, _, _)) =>
+      wordDeadReturnLabels body
+  | .call (some (_, _, returnCode, _, _)) _ _ (some (_, body, _, _)) =>
+      wordDeadReturnLabels returnCode ++ wordDeadReturnLabels body
+  | _ => []
+
+def wordDeadCodeAuxWithLabels : WordProg α → List Nat → List (List Nat × List Nat) →
+    List Nat → WordProg α × List Nat
+  | .skip, live, _, _ => (.skip, live)
+  | .move priority moves, live, _, _ => wordDeadMove priority live moves
+  | .assign destination value, live, _, _ =>
       if destination ∈ live then
         (.assign destination value,
           wordDeadAddReads (wordDeadRemoveWrites live [destination])
             (wordExpReadVars value))
       else
         (.skip, live)
-  | .inst instruction, live, _ => wordDeadInst live instruction
-  | .get destination store, live, _ =>
+  | .inst instruction, live, _, _ => wordDeadInst live instruction
+  | .get destination store, live, _, _ =>
       if destination ∈ live then
         (.get destination store,
           wordDeadAddReads (wordDeadRemoveWrites live [destination]) [])
       else
         (.skip, live)
-  | .store address value, live, _ =>
+  | .store address value, live, _, _ =>
       (.store address value,
         wordDeadAddReads live (wordExpReadVars address ++ [value]))
-  | .set store value, live, _ =>
+  | .set store value, live, _, _ =>
       (.set store value, wordDeadAddReads live (wordExpReadVars value))
-  | .seq first second, live, frames =>
-      let (second', live) := wordDeadCodeAux second live frames
-      let (first', live) := wordDeadCodeAux first live frames
+  | .seq first second, live, frames, returnLabels =>
+      let (second', live) := wordDeadCodeAuxWithLabels second live frames returnLabels
+      let (first', live) := wordDeadCodeAuxWithLabels first live frames returnLabels
       (match first', second' with
        | .skip, program => program
        | program, .skip => program
        | _, _ => .seq first' second', live)
-  | .ite operator condition right thenBranch elseBranch, live, frames =>
-      let (then', thenLive) := wordDeadCodeAux thenBranch live frames
-      let (else', elseLive) := wordDeadCodeAux elseBranch live frames
+  | .ite operator condition right thenBranch elseBranch, live, frames, returnLabels =>
+      let (then', thenLive) := wordDeadCodeAuxWithLabels thenBranch live frames returnLabels
+      let (else', elseLive) := wordDeadCodeAuxWithLabels elseBranch live frames returnLabels
       let rightReads := match right with
         | .imm _ => []
         | .reg name => [name]
       (.ite operator condition right then' else',
         wordDeadAddReads (thenLive ++ elseLive) (condition :: rightReads))
-  | .loop liveIn body liveOut, _live, frames =>
-      let (body', _) := wordDeadCodeAux body liveIn ((liveIn, liveOut) :: frames)
+  | .loop liveIn body liveOut, _live, frames, returnLabels =>
+      let (body', _) := wordDeadCodeAuxWithLabels body liveIn
+        ((liveIn, liveOut) :: frames) returnLabels
       (.loop liveIn body' liveOut, liveIn)
-  | .mustTerminate body, live, frames =>
-      let (body', live) := wordDeadCodeAux body live frames
+  | .mustTerminate body, live, frames, returnLabels =>
+      let (body', live) := wordDeadCodeAuxWithLabels body live frames returnLabels
       (.mustTerminate body', live)
-  | .break label, _live, frames =>
+  | .break label, _live, frames, _ =>
       (.break label, (wordClashTreeFindLoopFrame label frames).map Prod.snd |>.getD [])
-  | .continue label, _live, frames =>
+  | .continue label, _live, frames, _ =>
       (.continue label, (wordClashTreeFindLoopFrame label frames).map Prod.fst |>.getD [])
-  | .raise exception, live, _ => (.raise exception, exception :: live)
-  | .return label values, live, _ =>
+  | .raise exception, live, _, returnLabels =>
+      let retained := if returnLabels.isEmpty then live
+        else live.filter (fun name => name ∈ returnLabels)
+      (.raise exception, exception :: retained)
+  | .return label values, live, _, _ =>
       (.return label values, wordDeadAddReads (label :: live) values)
-  | .tick, live, _ => (.tick, live)
-  | .locValue destination source, live, _ =>
+  | .tick, live, _, _ => (.tick, live)
+  | .locValue destination source, live, _, _ =>
       if destination ∈ live then
         (.locValue destination source,
           wordDeadAddReads (wordDeadRemoveWrites live [destination]) [])
       else
         (.skip, live)
   | .call (some (destinations, cutsets, returnCode, returnLabel, entryLabel))
-      target arguments handler, live, frames =>
-      let (returnCode', _) := wordDeadCodeAux returnCode live frames
+      target arguments handler, live, frames, returnLabels =>
+      let (returnCode', _) := wordDeadCodeAuxWithLabels returnCode live frames returnLabels
       let handler' := match handler with
         | none => none
         | some (exception, body, handlerLabel, handlerEntryLabel) =>
-            some (exception, (wordDeadCodeAux body live frames).1,
+            some (exception, (wordDeadCodeAuxWithLabels body live frames []).1,
               handlerLabel, handlerEntryLabel)
       (.call (some (destinations, cutsets, returnCode', returnLabel, entryLabel))
           target arguments handler',
         wordDeadCallLive cutsets arguments)
-    | .call returns target arguments handler, _live, _ =>
+  | .call returns target arguments handler, _live, _, _ =>
       (.call returns target arguments handler,
         /- Cake's `get_live (Call NONE ...)` is the argument set only.
            In particular, it does not inspect an unreachable handler or
            continuation, and it does not carry the incoming live set across
            a tail call (`word_allocScript.sml:832-834`). -/
         wordDeadAddReads [] arguments)
-  | .alloc destination cutsets, _live, _ =>
+  | .alloc destination cutsets, _live, _, _ =>
       (.alloc destination cutsets,
         /- Cake's `get_live (Alloc ...)` keeps the allocation result live and
            adds both cut-set components, but does not retain the incoming
            live set (`word_allocScript.sml:802-803`). -/
         wordDeadAddReads [destination] (cutsets.1 ++ cutsets.2))
-  | .storeConsts source bitmap codeLength dataLength constants, live, _ =>
+  | .storeConsts source bitmap codeLength dataLength constants, live, _, _ =>
       (.storeConsts source bitmap codeLength dataLength constants,
         /- `StoreConsts` consumes source and bitmap but produces the code and
            data lengths; this is the exact `get_live` equation rather than a
            conservative read inventory. -/
         wordDeadAddReads (wordDeadRemoveWrites live [source, bitmap])
           [codeLength, dataLength])
-  | .opCurrHeap operator destination source, live, _ =>
+  | .opCurrHeap operator destination source, live, _, _ =>
       if destination ∈ live then
         (.opCurrHeap operator destination source,
           wordDeadAddReads (wordDeadRemoveWrites live [destination]) [source])
       else
         (.skip, live)
-  | .install codeBuffer codeLength dataBuffer dataLength cutsets, _live, _ =>
+  | .install codeBuffer codeLength dataBuffer dataLength cutsets, _live, _, _ =>
       (.install codeBuffer codeLength dataBuffer dataLength cutsets,
         /- Cake's `get_live (Install ...)` retains only the four installed
            values and the two cut-set components, not the incoming live set
            (`word_allocScript.sml:805-807`). -/
         wordDeadAddReads [codeBuffer, codeLength, dataBuffer, dataLength]
           (cutsets.1 ++ cutsets.2))
-  | .codeBufferWrite address value, live, _ =>
+  | .codeBufferWrite address value, live, _, _ =>
       (.codeBufferWrite address value, wordDeadAddReads live [address, value])
-  | .dataBufferWrite address value, live, _ =>
+  | .dataBufferWrite address value, live, _, _ =>
       (.dataBufferWrite address value, wordDeadAddReads live [address, value])
-  | .ffi function configuration configurationLength array arrayLength liveSet, _live, _ =>
+  | .ffi function configuration configurationLength array arrayLength liveSet, _live, _, _ =>
       (.ffi function configuration configurationLength array arrayLength liveSet,
         /- Cake's `get_live (FFI ...)` likewise starts from the four FFI
            operands and the cut-set components (`word_allocScript.sml:812-815`). -/
         wordDeadAddReads [configuration, configurationLength, array, arrayLength]
           (liveSet.1 ++ liveSet.2))
-  | .shareInst operator name address, live, _ =>
+  | .shareInst operator name address, live, _, _ =>
       match operator with
       | .load | .load8 | .load16 | .load32 =>
           /- Cake deliberately retains ShareInst loads: even a dead load
@@ -192,8 +211,13 @@ decreasing_by
   all_goals simp_wf
   all_goals omega
 
+def wordDeadCodeAux : WordProg α → List Nat → List (List Nat × List Nat) →
+    WordProg α × List Nat
+  | program, live, frames =>
+      wordDeadCodeAuxWithLabels program live frames (wordDeadReturnLabels program)
+
 def wordDeadCode : WordProg α → List Nat → WordProg α × List Nat
-  | program, live => wordDeadCodeAux program live []
+  | program, live => wordDeadCodeAuxWithLabels program live [] (wordDeadReturnLabels program)
 
 def wordRemoveDeadProgram (program : WordProg α) : WordProg α :=
   (wordDeadCode program []).1

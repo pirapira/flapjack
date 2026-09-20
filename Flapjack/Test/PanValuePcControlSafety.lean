@@ -133,6 +133,37 @@ example
   exact panValueCrepProgramStateCorrect_and_controlSafe_store_source_word
     (SourceWordExp.const 7) (SourceWordExp.const 9) hbytesInWord hlookup hstable
 
+/-! The paired fragment composes: a store followed by a control leaf carries
+    both evaluator correctness and the control-label obligation together. -/
+example
+    (hbytesInWord : ∀ (context : CompileContext Nat) (bytesInWord : Nat),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext Nat)
+      (sourceLocals : VarName → Option (PanValue Nat))
+      (name : VarName) (value : PanValue Nat),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot]))
+    (hstable : ∀ (state : CrepState Nat) (baseAddress topAddress : Nat)
+      (temporary : Nat) (compiled : CrepExp Nat) (value updateValue : Nat),
+      evalCrepFullExp state.locals state.memory baseAddress topAddress compiled =
+        some value →
+      evalCrepFullExp
+        (updateCrepLocal state.locals temporary updateValue) state.memory
+        baseAddress topAddress compiled = some value) :
+    PanValueCrepProgramStateCorrect
+        (.seq (.store (SourceWordExp.const (7 : Nat)).toExp
+            (SourceWordExp.const (9 : Nat)).toExp) (.skip : Prog Nat)) ∧
+      PanValueCrepProgramStateControlSafe
+        (.seq (.store (SourceWordExp.const (7 : Nat)).toExp
+            (SourceWordExp.const (9 : Nat)).toExp) (.skip : Prog Nat)) := by
+  obtain ⟨hstoreCorrect, hstoreSafe⟩ :=
+    panValueCrepProgramStateCorrect_and_controlSafe_store_source_word
+      (SourceWordExp.const 7) (SourceWordExp.const 9) hbytesInWord hlookup hstable
+  exact panValueCrepProgramStateCorrect_and_controlSafe_seq _ _
+    hstoreCorrect hstoreSafe
+    panValueCrepProgramStateCorrect_skip
+    panValueCrepProgramStateControlSafe_skip
+
 example
     (hbytesInWord : ∀ (context : CompileContext Nat) (bytesInWord : Nat),
       context.bytesInWord = bytesInWord)

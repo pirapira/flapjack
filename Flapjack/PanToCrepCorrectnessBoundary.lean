@@ -1033,6 +1033,73 @@ theorem panValueCrepProgramStateControlSafe_seq
                           cases hcrepEq
                           exact hfirstSafeResult
 
+theorem panValueCrepProgramStateCorrect_and_controlSafe_skip
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α] :
+    PanValueCrepProgramStateCorrect (.skip : Prog α) ∧
+      PanValueCrepProgramStateControlSafe (.skip : Prog α) :=
+  ⟨panValueCrepProgramStateCorrect_skip,
+    panValueCrepProgramStateControlSafe_skip⟩
+
+theorem panValueCrepProgramStateCorrect_and_controlSafe_tick
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α] :
+    PanValueCrepProgramStateCorrect (.tick : Prog α) ∧
+      PanValueCrepProgramStateControlSafe (.tick : Prog α) :=
+  ⟨panValueCrepProgramStateCorrect_tick,
+    panValueCrepProgramStateControlSafe_tick⟩
+
+theorem panValueCrepProgramStateCorrect_and_controlSafe_annot
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (tag text : String) :
+    PanValueCrepProgramStateCorrect (.annot tag text : Prog α) ∧
+      PanValueCrepProgramStateControlSafe (.annot tag text : Prog α) :=
+  ⟨panValueCrepProgramStateCorrect_annot tag text,
+    panValueCrepProgramStateControlSafe_annot tag text⟩
+
+theorem panValueCrepProgramStateCorrect_and_controlSafe_break
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α] :
+    PanValueCrepProgramStateCorrect (.break : Prog α) ∧
+      PanValueCrepProgramStateControlSafe (.break : Prog α) :=
+  ⟨panValueCrepProgramStateCorrect_break,
+    panValueCrepProgramStateControlSafe_break⟩
+
+theorem panValueCrepProgramStateCorrect_and_controlSafe_continue
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α] :
+    PanValueCrepProgramStateCorrect (.continue : Prog α) ∧
+      PanValueCrepProgramStateControlSafe (.continue : Prog α) :=
+  ⟨panValueCrepProgramStateCorrect_continue,
+    panValueCrepProgramStateControlSafe_continue⟩
+
+theorem panValueCrepProgramStateCorrect_and_controlSafe_seq
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (first second : Prog α)
+    (hfirstCorrect : PanValueCrepProgramStateCorrect first)
+    (hfirstSafe : PanValueCrepProgramStateControlSafe first)
+    (hsecondCorrect : PanValueCrepProgramStateCorrect second)
+    (hsecondSafe : PanValueCrepProgramStateControlSafe second) :
+    PanValueCrepProgramStateCorrect (.seq first second) ∧
+      PanValueCrepProgramStateControlSafe (.seq first second) :=
+  ⟨panValueCrepProgramStateCorrect_seq first second hfirstCorrect hsecondCorrect,
+    panValueCrepProgramStateControlSafe_seq first second hfirstCorrect hfirstSafe
+      hsecondSafe⟩
+
 theorem panValueCrepProgramStateControlSafe_ite_source_word
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

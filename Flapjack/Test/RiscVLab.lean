@@ -385,11 +385,75 @@ example :
         .jalr 1 31 (BitVec.ofNat 64 0)] := by
   decide
 
+/- Cake's CallFFI target also takes the AUIPC/JALR fallback when the current
+   PC plus the service-stub distance leaves the direct-JAL range. -/
+example :
+    labCompileAsm (width := 64)
+      { services := [("first", 7)] } 1 [] (2 ^ 20)
+      (.callFfi "first") =
+      some [.auipc 31 (BitVec.ofInt 64 (-256)),
+        .jalr 0 31 (BitVec.ofInt 64 (-48))] := by
+  decide
+
 example :
     labCompileAsm (width := 64) { services := [] } 1 [(0, 5000)] 0
       (.jumpCmp .equal 4 (.reg 5) ⟨1, 0⟩) =
       some [.branchEq 4 5 (BitVec.ofNat 64 8),
         .jal 0 (BitVec.ofNat 64 4996)] := by
+  decide
+
+/-! Exact `riscv_targetScript.sml` range boundaries: a forward branch at
+    `+0xFFC` remains direct, while `+0x1000` takes the inverted-branch/JAL
+    fallback.  Direct JAL remains valid through `2^20 - 2`. -/
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 4092)] 0
+      (.jumpCmp .equal 4 (.reg 5) ⟨1, 0⟩) =
+      some [.branchNe 4 5 (BitVec.ofNat 64 4092)] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 4096)] 0
+      (.jumpCmp .equal 4 (.reg 5) ⟨1, 0⟩) =
+      some [.branchEq 4 5 (BitVec.ofNat 64 8),
+        .jal 0 (BitVec.ofNat 64 4092)] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 2 ^ 20 - 2)] 0
+      (.jump ⟨1, 0⟩) =
+      some [.jal 0 (BitVec.ofNat 64 (2 ^ 20 - 2))] := by
+  decide
+
+/- The negative JAL boundary is asymmetric in Cake's target encoder: the
+   direct form includes -2^20, while the first smaller target requires the
+   AUIPC/JALR long-transfer sequence. -/
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 0)] (2 ^ 20)
+      (.jump ⟨1, 0⟩) =
+      some [.jal 0 (0 - BitVec.ofNat 64 (2 ^ 20))] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 0)] (2 ^ 20 + 2)
+      (.jump ⟨1, 0⟩) =
+      some [.auipc 31 (BitVec.ofInt 64 (-256)),
+        .jalr 0 31 (BitVec.ofInt 64 (-2))] := by
+  decide
+
+/-! The matching negative branch boundaries are distinct in Cake's target
+    encoder: `-0xFFC` remains a direct branch, while `-0x1000` uses the
+    inverted-branch/JAL sequence. -/
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 0)] 4092
+      (.jumpCmp .equal 4 (.reg 5) ⟨1, 0⟩) =
+      some [.branchNe 4 5 (0 - BitVec.ofNat 64 4092)] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 0)] 4096
+      (.jumpCmp .equal 4 (.reg 5) ⟨1, 0⟩) =
+      some [.branchEq 4 5 (BitVec.ofNat 64 8),
+        .jal 0 (0 - BitVec.ofNat 64 4100)] := by
   decide
 
 example :

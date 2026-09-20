@@ -1085,13 +1085,17 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
       staticBind (checkExp context address) (fun addressResult =>
         staticBind (checkExp context value) (fun valueResult =>
           if shapedBasedHasShape .one addressResult.shapedBased then
+            let warning :=
+              staticMemoryWarning context true false addressResult.shapedBased
             if shapedBasedHasShape .one valueResult.shapedBased then
               staticAddWarning (progOk .otherLast false false context.location)
-                (staticMemoryWarning context true false addressResult.shapedBased)
+                warning
             else
-              staticError (.shape (getNonWordMessage "store value"
-                (shapedBasedToString valueResult.shapedBased)
-                context.location context.scope))
+              staticAddWarning
+                (staticError (.shape (getNonWordMessage "store value"
+                  (shapedBasedToString valueResult.shapedBased)
+                  context.location context.scope)))
+                warning
           else
             staticError (.shape (getNonWordMessage "store address"
               (shapedBasedToString addressResult.shapedBased)
@@ -1100,13 +1104,17 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
       staticBind (checkExp context address) (fun addressResult =>
         staticBind (checkExp context value) (fun valueResult =>
           if shapedBasedHasShape .one addressResult.shapedBased then
+            let warning :=
+              staticMemoryWarning context true false addressResult.shapedBased
             if shapedBasedHasShape .one valueResult.shapedBased then
               staticAddWarning (progOk .otherLast false false context.location)
-                (staticMemoryWarning context true false addressResult.shapedBased)
+                warning
             else
-              staticError (.shape (getNonWordMessage "store value"
-                (shapedBasedToString valueResult.shapedBased)
-                context.location context.scope))
+              staticAddWarning
+                (staticError (.shape (getNonWordMessage "store value"
+                  (shapedBasedToString valueResult.shapedBased)
+                  context.location context.scope)))
+                warning
           else
             staticError (.shape (getNonWordMessage "store address"
               (shapedBasedToString addressResult.shapedBased)
@@ -1383,13 +1391,17 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
       staticBind (checkExp context address) (fun addressResult =>
         staticBind (checkExp context value) (fun valueResult =>
           if shapedBasedHasShape .one addressResult.shapedBased then
+            let warning :=
+              staticMemoryWarning context false false addressResult.shapedBased
             if shapedBasedHasShape .one valueResult.shapedBased then
               staticAddWarning (progOk .otherLast false false context.location)
-                (staticMemoryWarning context false false addressResult.shapedBased)
+                warning
             else
-              staticError (.shape (getNonWordMessage "store value"
-                (shapedBasedToString valueResult.shapedBased)
-                context.location context.scope))
+              staticAddWarning
+                (staticError (.shape (getNonWordMessage "store value"
+                  (shapedBasedToString valueResult.shapedBased)
+                  context.location context.scope)))
+                warning
           else
             staticError (.shape (getNonWordMessage "store address"
               (shapedBasedToString addressResult.shapedBased)

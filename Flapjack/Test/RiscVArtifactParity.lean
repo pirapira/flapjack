@@ -793,6 +793,38 @@ def frameOccupancyP9BitmapsMatch : Bool :=
   | some image => image.bitmaps.data == cakeFrameOccupancyP9Bitmaps
   | none => false
 
+/-! The `p11` frame-occupancy oracle is the CSE-shaped companion to `p9`:
+    the two-field result is read twice at the same field, and Cake retains a
+    two-word frame for both non-tail continuations (`[4, 4, 4]`). -/
+def frameOccupancyP11Source : String :=
+  "struct S { 1 f, 1 g }\n" ++
+    "fun S mks (1 a, 1 b) { return S <f = a, g = b>; }\n" ++
+    "fun 1 id (1 a) { return a; }\n" ++
+    "fun 1 main() { var S s = mks(1,2); var 1 t = id(5); return s.f + s.f; }"
+
+def cakeFrameOccupancyP11Bitmaps : List Nat := [4, 4, 4]
+
+def frameOccupancyP11BitmapsMatch : Bool :=
+  match compileRuntimeImage frameOccupancyP11Source with
+  | some image => image.bitmaps.data == cakeFrameOccupancyP11Bitmaps
+  | none => false
+
+/-! The `wide` frame-occupancy oracle keeps the first and last fields of a
+    six-field struct live across the `id` call.  Cake's checked artifact uses
+    two eight-word continuation entries (`[4, 8, 8]`). -/
+def frameOccupancyWideSource : String :=
+  "struct S { 1 a, 1 b, 1 c, 1 d, 1 e, 1 f }\n" ++
+    "fun S mks(1 x) { return S <a=x,b=x,c=x,d=x,e=x,f=x>; }\n" ++
+    "fun 1 id(1 a) { return a; }\n" ++
+    "fun 1 main() { var S s = mks(1); var 1 t = id(2); return s.a + s.f + t; }"
+
+def cakeFrameOccupancyWideBitmaps : List Nat := [4, 8, 8]
+
+def frameOccupancyWideBitmapsMatch : Bool :=
+  match compileRuntimeImage frameOccupancyWideSource with
+  | some image => image.bitmaps.data == cakeFrameOccupancyWideBitmaps
+  | none => false
+
 /-! The `p10` frame-occupancy oracle is the first three-field struct case.
 Cake's two non-tail continuations both retain a four-word frame (`f' = 4`),
 so the checked bitmap payload is `[4, 16, 16]`.  The source is copied from
@@ -1039,6 +1071,8 @@ def sharedMemOffsetCarrierEncoding : Bool :=
 #guard bitmapCallsWordsMatch
 #guard frameOccupancyP1BitmapsMatch
 #guard frameOccupancyP9BitmapsMatch
+#guard frameOccupancyP11BitmapsMatch
+#guard frameOccupancyWideBitmapsMatch
 #guard frameOccupancyP10BitmapsMatch
 #guard frameOccupancyP6BitmapsMatch
 #guard frameOccupancyLive3BitmapsMatch
@@ -1126,6 +1160,10 @@ def runChecks : IO Bool := do
          frameOccupancyP1BitmapsMatch),
       ("frame-occupancy p9 exact vector matches the Cake oracle",
          frameOccupancyP9BitmapsMatch),
+      ("frame-occupancy p11 exact vector matches the Cake oracle",
+         frameOccupancyP11BitmapsMatch),
+      ("frame-occupancy wide exact vector matches the Cake oracle",
+         frameOccupancyWideBitmapsMatch),
       ("frame-occupancy p10 exact vector matches the Cake oracle",
          frameOccupancyP10BitmapsMatch),
       ("frame-occupancy p6 exact vector matches the Cake oracle",

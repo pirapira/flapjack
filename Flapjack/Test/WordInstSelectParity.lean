@@ -108,6 +108,40 @@ def cakeLogicalImmediateFirstMaterialized : Bool :=
       value == 2048
   | _ => false
 
+/- Cake applies the same signed-12-bit `valid_imm` boundary to OR. -/
+def cakeOrLogicalImmediateBoundary : Bool :=
+  match wordInstSelectProgram (α := Nat) 23
+      (.assign 5 (.op .or [.var 18, .const 2047])) with
+  | .seq (.move 0 [(23, 18)])
+      (.inst (.arith (.binOp .or 5 23 (.imm 2047)))) => true
+  | _ => false
+
+def cakeOrLogicalImmediateFirstMaterialized : Bool :=
+  match wordInstSelectProgram (α := Nat) 23
+      (.assign 5 (.op .or [.var 18, .const 2048])) with
+  | .seq (.move 0 [(23, 18)])
+      (.seq (.inst (.const 24 value))
+        (.inst (.arith (.binOp .or 5 23 (.reg 24))))) =>
+      value == 2048
+  | _ => false
+
+/- Cake applies the same signed-12-bit `valid_imm` boundary to XOR. -/
+def cakeXorLogicalImmediateBoundary : Bool :=
+  match wordInstSelectProgram (α := Nat) 23
+      (.assign 5 (.op .xor [.var 18, .const 2047])) with
+  | .seq (.move 0 [(23, 18)])
+      (.inst (.arith (.binOp .xor 5 23 (.imm 2047)))) => true
+  | _ => false
+
+def cakeXorLogicalImmediateFirstMaterialized : Bool :=
+  match wordInstSelectProgram (α := Nat) 23
+      (.assign 5 (.op .xor [.var 18, .const 2048])) with
+  | .seq (.move 0 [(23, 18)])
+      (.seq (.inst (.const 24 value))
+        (.inst (.arith (.binOp .xor 5 23 (.reg 24))))) =>
+      value == 2048
+  | _ => false
+
 /- Cake materializes a large positive `Add` constant after the modular
    negative-immediate retry fails (`word_instScript.sml:262-275`). -/
 def cakeWideAddMaterializesConstant : Bool :=
@@ -161,6 +195,10 @@ def cakeCurrentHeapOr : Bool :=
 #guard cakeWideBinopStatementShape
 #guard cakeLogicalImmediateBoundary
 #guard cakeLogicalImmediateFirstMaterialized
+#guard cakeOrLogicalImmediateBoundary
+#guard cakeOrLogicalImmediateFirstMaterialized
+#guard cakeXorLogicalImmediateBoundary
+#guard cakeXorLogicalImmediateFirstMaterialized
 #guard cakeWideAddMaterializesConstant
 #guard cakeSharedByteOffsetMaterializesConstant
 #guard cakeSharedOddHalfwordOffset

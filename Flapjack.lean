@@ -1,4 +1,5 @@
 import Flapjack.Language
+import Flapjack.Display
 import Flapjack.Ffi
 import Flapjack.LoopFfi
 import Flapjack.PanItreeFfi

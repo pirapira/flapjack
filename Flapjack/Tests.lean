@@ -1,5 +1,6 @@
 import Flapjack.Test.Source
 import Flapjack.Test.Parser
+import Flapjack.Test.DisplayParity
 import Flapjack.Test.ParserStaticExamples
 import Flapjack.Test.PanSteppedSemantics
 import Flapjack.Test.Backend

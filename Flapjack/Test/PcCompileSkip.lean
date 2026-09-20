@@ -981,4 +981,82 @@ theorem panValuePcCompileCorrect_compact_storeByte_source_word
   cases htarget
   simpa [panValuePcResultOfControl, panValuePcResultRel] using hrelNew
 
+/-- The flat-global raised-data evaluator evidence required by the deep raise
+wrapper, specialized to the compact Nat setting used by these regressions. -/
+abbrev FlatGlobalRaisedEvidence (bytesInWord baseAddress topAddress : Nat)
+    (exceptionCode : ExceptionId → Option Nat) : Prop :=
+  ∀ (context : CompileContext Nat) (structs : StructContext)
+    (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+    (sourceMemory : Nat → Option (PanValue Nat)) (sourceException : ExceptionId)
+    (sourceValue : PanValue Nat) (targetState : CrepState Nat)
+    (targetException : Nat),
+    panValueCrepControlRel structs context exceptionRel
+      (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+      (.raised targetState targetException) →
+    ∃ (state : CrepState Nat) (expression : Exp Nat)
+      (compiled : List (CrepExp Nat)) (shape : Shape),
+      targetState =
+        { state with globals := updateMemoryListAt state.globals 0 context.bytesInWord (panValueFlatWords sourceValue) } ∧
+      context.bytesInWord = bytesInWord ∧
+      panValueCrepStateRel structs context sourceLocals sourceGlobals
+        sourceMemory state ∧
+      evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+        baseAddress topAddress bytesInWord expression = some sourceValue ∧
+      panValuePayloadWithinLimit structs sourceValue = true ∧
+      compileExp context expression = (compiled, shape) ∧
+      compiled.length = Shape.shapeSize shape ∧
+      evalCrepFullExpsState state baseAddress topAddress compiled =
+        some (panValueFlatWords sourceValue) ∧
+      (∀ name ∈ freshNames context compiled.length 1,
+        ∀ value ∈ compiled, name ∉ crepExpVars value) ∧
+      (∀ name ∈ freshNames context compiled.length 1,
+        state.locals name = none) ∧
+      exceptionRel sourceException sourceValue targetException ∧
+      lookupInfo sourceException context.exceptions = some targetException ∧
+      exceptionCode sourceException = some targetException ∧
+      List.Pairwise (fun left right : Nat => left ≠ right)
+        (storeAddresses (0 : Nat) context.bytesInWord
+          (panValueFlatWords sourceValue).length) ∧
+      Shape.shapeSize (panValueShape structs sourceValue) ≤ 32
+
+/-- The deep raise wrapper is applicable to an arbitrary source-word payload: it
+needs the paired source-word raise bridge premises plus the explicit flat-global
+raised-data evaluator evidence, with source locals/globals/memory and the target
+state still visible. This example instantiates it on a constant word payload. -/
+example
+    (hevidence : FlatGlobalRaisedEvidence 1 0 0 skipNatExceptionCode)
+    (hbytesInWord : ∀ (context : CompileContext Nat) (bytesInWord : Nat),
+      context.bytesInWord = bytesInWord)
+    (hlookupSource : ∀ (context : CompileContext Nat)
+      (sourceLocals : VarName → Option (PanValue Nat))
+      (name : VarName) (value : PanValue Nat),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot]))
+    (hlookupException : ∀ (context : CompileContext Nat),
+      ∃ exceptionCode, lookupInfo "E" context.exceptions = some exceptionCode)
+    (hfresh : ∀ (context : CompileContext Nat) (state : CrepState Nat),
+      state.locals (context.maxVar + 1) = none)
+    (hexception : ∀ (context : CompileContext Nat)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (value exceptionCode : Nat),
+      lookupInfo "E" context.exceptions = some exceptionCode →
+      exceptionRel "E" (.word value) exceptionCode)
+    (hlookup : ∀ (targetState : CrepState Nat) (sourceValue : PanValue Nat),
+      crepPcFlatGlobalsLookup 1 targetState sourceValue =
+        skipNatGlobalsLookup targetState sourceValue) :
+    PanValuePcCompileCorrect
+      (panValuePcCompactSourceEvaluator skipNatPrimitive skipNatSourceHandler
+        [] 0 0 1 4)
+      (crepPcCompactTargetEvaluator [] skipNatCrepPrimitive skipNatFfi
+        skipNatSharedMem 0 0 4)
+      skipNatCodeRel skipNatExcpRel skipNatExceptionCode skipNatGlobalsLookup
+      (.raise "E" (SourceWordExp.const 9).toExp) :=
+  panValuePcCompileCorrect_compact_with_flat_global_evaluator_evidence_raise_source_word
+    "E" (SourceWordExp.const 9) skipNatCodeRel skipNatExcpRel
+    skipNatExceptionCode skipNatGlobalsLookup [] [] skipNatPrimitive
+    skipNatSourceHandler skipNatCrepPrimitive skipNatFfi skipNatSharedMem
+    0 0 1 4 4 hbytesInWord hlookupSource hlookupException hfresh hexception
+    hlookup hevidence
+
 end Flapjack

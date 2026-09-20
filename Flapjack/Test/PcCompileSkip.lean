@@ -352,4 +352,54 @@ theorem panValuePcCompileCorrect_compact_dec_assign_nat :
   simpa [panValuePcResultOfControl, panValuePcResultRel,
     panValueCrepControlRel] using hstate
 
+theorem panValuePcCompileCorrect_compact_if_nonzero_nat :
+    PanValuePcCompileCorrect
+      (panValuePcCompactSourceEvaluator
+        skipNatPrimitive skipNatSourceHandler [] 0 0 1 2)
+      (crepPcCompactTargetEvaluator
+        [] skipNatCrepPrimitive skipNatFfi skipNatSharedMem 0 0 2)
+      skipNatCodeRel skipNatExcpRel skipNatExceptionCode
+      skipNatGlobalsLookup
+      (.ite (.const 5) (.skip : Prog Nat) .tick) := by
+  intro context structs sourceInput targetInput exceptionRel sourceExecution
+    targetExecution hsourceStructs htargetStructs hlocalisedCode hlocalised
+    hcode hexcp hstate hnonerror hsource htarget hpostCode hpostExcp
+  simp [panValuePcCompactSourceEvaluator,
+    evalPanValueProgWithPrimitiveCallsAndFfi, evalPanValueExp] at hsource
+  cases hsource
+  simp [crepPcCompactTargetEvaluator, evalCrepFullProgState, compileProg,
+    compileExp, evalCrepFullExpState]
+    at htarget
+  obtain ⟨targetResult, htargetResult, htargetExecution⟩ := htarget
+  cases htargetExecution
+  simp [crepPcResultOfControl] at htargetResult
+  cases htargetResult
+  simpa [panValuePcResultOfControl, panValuePcResultRel,
+    panValueCrepControlRel] using hstate
+
+theorem panValuePcCompileCorrect_compact_if_nonzero_break_nat :
+    PanValuePcCompileCorrect
+      (panValuePcCompactSourceEvaluator
+        skipNatPrimitive skipNatSourceHandler [] 0 0 1 2)
+      (crepPcCompactTargetEvaluator
+        [] skipNatCrepPrimitive skipNatFfi skipNatSharedMem 0 0 2)
+      skipNatCodeRel skipNatExcpRel skipNatExceptionCode
+      skipNatGlobalsLookup
+      (.ite (.const 5) .break (.skip : Prog Nat)) := by
+  intro context structs sourceInput targetInput exceptionRel sourceExecution
+    targetExecution hsourceStructs htargetStructs hlocalisedCode hlocalised
+    hcode hexcp hstate hnonerror hsource htarget hpostCode hpostExcp
+  simp [panValuePcCompactSourceEvaluator,
+    evalPanValueProgWithPrimitiveCallsAndFfi, evalPanValueExp] at hsource
+  cases hsource
+  simp [crepPcCompactTargetEvaluator, evalCrepFullProgState, compileProg,
+    compileExp, evalCrepFullExpState]
+    at htarget
+  obtain ⟨targetResult, htargetResult, htargetExecution⟩ := htarget
+  cases htargetExecution
+  simp [crepPcResultOfControl] at htargetResult
+  cases htargetResult
+  simpa [panValuePcResultOfControl, panValuePcResultRel,
+    panValueCrepControlRel] using hstate
+
 end Flapjack

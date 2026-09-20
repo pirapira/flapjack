@@ -1160,11 +1160,12 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
         if shapedBasedHasShape .one conditionResult.shapedBased then
           let loopContext := { context with inLoop := true }
           staticBind (checkProg loopContext body) (fun bodyResult =>
-            staticOk
-              { exitsFunction := false, exitsLoop := false, last := .otherLast,
-                variableDelta := branchLocInf context.locals
-                  bodyResult.variableDelta [],
-                currentLocation := context.location })
+            staticOk {
+              exitsFunction := false
+              exitsLoop := false
+              last := .otherLast
+              variableDelta := branchLocInf context.locals bodyResult.variableDelta []
+              currentLocation := context.location })
         else
           staticError (.shape (getNonWordMessage "while condition"
             (shapedBasedToString conditionResult.shapedBased)

@@ -150,6 +150,22 @@ def staticProgWordLocalContext : Context :=
   { staticProgParityContext with
     locals := ("x", { shapedBased := .word .trusted }) :: staticProgParityContext.locals }
 
+/-! Cake's While retains the body's local delta, merged against the
+    surrounding locals and the empty second branch of its synthetic If. -/
+def staticProgWhileDeltaOracle : Bool :=
+  match checkProg staticProgWordLocalContext
+      (.while (.const 1) (.assign .local "x" (.const 0))) with
+  | (Except.ok result, warnings) =>
+      !result.exitsFunction && !result.exitsLoop && result.last == .otherLast &&
+        result.currentLocation == "L: " && warnings.isEmpty &&
+        result.variableDelta.length == 1 &&
+        match lookupInfo "x" result.variableDelta with
+        | some info => info.shapedBased == .word .notTrusted
+        | none => false
+  | _ => false
+
+#guard staticProgWhileDeltaOracle
+
 /-! Cake's local shared-memory load both warns on a Base address and records
     the loaded word in the local variable delta as Trusted. -/
 def staticProgLocalLoadMetadataOracle : Bool :=

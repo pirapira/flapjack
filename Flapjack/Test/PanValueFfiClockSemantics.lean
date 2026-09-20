@@ -359,4 +359,37 @@ example (event : FfiFinalEvent)
           cases h
         · rfl) rfl).2.2
 
+/-! The direct `Call` branch reaches the same terminal FFI outcome without a
+    declaration continuation; the same explicit callee evaluation and flat
+    source state discharge the Pc result lift for that branch. -/
+example (event : FfiFinalEvent)
+    (hcall : evalPanValueFfiClockCall statefulTestContext statefulTestPrimitive
+      statefulTestHandler [] clockedCallFinalFfiFunctions
+      (BitVec.ofNat 64 0) (BitVec.ofNat 64 100) (BitVec.ofNat 64 8) 9
+      (fun _ => none) (fun _ => none) statefulTestMemory statefulTestFinalState
+      10 none "finalExt" [] =
+      some (.control (.finalFfi (fun _ => none) (fun _ => none)
+        statefulTestMemory statefulTestFinalState event), 9)) :
+    panValuePcResultRel [] clockedPcContext (fun _ _ _ => True)
+      (fun _ => none) (fun _ _ => none)
+      (.finalFfi (fun _ => none) (fun _ => none) statefulTestMemory event)
+      (.finalFfi { locals := fun _ => none, memory := panValueWordMemory statefulTestMemory, globals := fun _ => none } event) :=
+  (panValuePcFinalFfiResultRel_of_clocked_call [] clockedPcContext
+    (fun _ _ _ => True) (fun _ => none) (fun _ _ => none)
+    statefulTestContext statefulTestPrimitive statefulTestHandler
+    clockedCallFinalFfiFunctions
+    (BitVec.ofNat 64 0) (BitVec.ofNat 64 100) (BitVec.ofNat 64 8) 9 10 9
+    (fun _ => none) (fun _ => none) statefulTestMemory statefulTestFinalState
+    none "finalExt" []
+    (fun _ => none) (fun _ => none) statefulTestMemory statefulTestFinalState
+    event event
+    { locals := fun _ => none, memory := panValueWordMemory statefulTestMemory, globals := fun _ => none }
+    hcall (by
+      constructor
+      · rfl
+      · constructor
+        · intro name value shape slots h
+          cases h
+        · rfl) rfl).2.2
+
 end Flapjack

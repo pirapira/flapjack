@@ -186,7 +186,7 @@ theorem wordInstToInstructionsCake_const_eq_labConstInstructions {width : Nat}
     wordInstToInstructionsCake (width := width) (.const destination value) =
       some (labConstInstructions (width := width) ⟨destination, hdestination⟩ 0 31
         value.toNat) :=
-  by simpa [wordInstToInstructionsCake] using
+  by simpa [wordInstToInstructionsCake_const] using
     (wordConstToInstructions_eq_labConstInstructions destination value hdestination)
 
 /-! The function-level checked boundary composes the same Cake constant list
@@ -218,6 +218,17 @@ example :
     wordInstToInstructionsCake (width := 64)
         (.const 4 (BitVec.ofNat 64 0x1234)) =
       some (labConstInstructions (width := 64) 4 0 31 0x1234) := by
+  decide
+
+/-! A constant used as a load address must retain the complete Cake
+materialization before the load; this is the recursive expression boundary,
+not the legacy one-instruction selector. -/
+example :
+    wordExpToInstructionsCake (width := 64) 1
+        (.load (.const (BitVec.ofNat 64 0x1234))) =
+      some [.lui 31 (BitVec.ofNat 64 1),
+        .addi 31 31 (BitVec.ofNat 64 0x234),
+        .loadWord 1 31] := by
   decide
 
 /-- The 0x1234 materialization oracle, stated directly against the executable
@@ -394,5 +405,45 @@ example :
       some (labLocValueInstructions (width := 64) 4 0x1234 0) := by
   simp [wordFunctionToRiscVCake, wordLocValueToInstructionsCake,
     labLocValueInstructions, registerOfNat]
+
+/-! Focused regressions for the same checked boundary across the offset shapes
+that the `auipc`/`addi` split must handle: an aligned upward delta, an aligned
+downward page crossing, a negative delta whose signed 12-bit remainder forces a
+carry, a wide label spread over many pages, and an unaligned program counter.
+The `auipc`/`addi` pair computes `label - position + position`. -/
+example :
+    readRegister
+        (executeInstructions { (zeroState 64) with pc := BitVec.ofNat 64 0 }
+          (labLocValueInstructions (width := 64) 4 0x2000 0)) 4 =
+      BitVec.ofNat 64 0x2000 := by
+  decide
+
+example :
+    readRegister
+        (executeInstructions { (zeroState 64) with pc := BitVec.ofNat 64 0x1000 }
+          (labLocValueInstructions (width := 64) 4 0 0x1000)) 4 =
+      BitVec.ofNat 64 0 := by
+  decide
+
+example :
+    readRegister
+        (executeInstructions { (zeroState 64) with pc := BitVec.ofNat 64 0x1000 }
+          (labLocValueInstructions (width := 64) 4 0x800 0x1000)) 4 =
+      BitVec.ofNat 64 0x800 := by
+  decide
+
+example :
+    readRegister
+        (executeInstructions { (zeroState 64) with pc := BitVec.ofNat 64 0x1000 }
+          (labLocValueInstructions (width := 64) 4 0x123456 0x1000)) 4 =
+      BitVec.ofNat 64 0x123456 := by
+  decide
+
+example :
+    readRegister
+        (executeInstructions { (zeroState 64) with pc := BitVec.ofNat 64 2 }
+          (labLocValueInstructions (width := 64) 4 0x1004 2)) 4 =
+      BitVec.ofNat 64 0x1004 := by
+  decide
 
 end Flapjack.RiscV

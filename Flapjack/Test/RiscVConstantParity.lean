@@ -489,22 +489,19 @@ example :
 
 /-! ## LocValue boundary witness (bead flapjack-pxn.1.4)
 
-The standalone Word selector materializes a location label with a single `addi`
-(`Flapjack/RiscV/Backend.lean:210`), while Cake's `riscv_ast (Loc r i)`
-(`cakeml/compiler/encoders/riscv/riscv_targetScript.sml:265`) always emits
-`auipc`/`addi`.  For labels outside the signed 12-bit range the single `addi`
-immediate is silently truncated by the encoder.  The executable Lab selector
-uses `labLocValueInstructions` (`Flapjack/RiscV/Lab.lean:194`), so production
-output is unaffected; these checks record the unfaithful theorem boundary. -/
+The standalone Word selector now uses the same position-zero `auipc`/`addi`
+pair as Cake's `riscv_ast (Loc r i)` and the executable Lab selector.  These
+checks keep the public boundary and its instruction count aligned with the
+original backend shape. -/
 
 example :
     wordLocValueToInstructions (width := 64) 4 0x1234 =
-      some [.addi 4 0 (BitVec.ofNat 64 0x1234)] := by
+      some (labLocValueInstructions (width := 64) 4 0x1234 0) := by
   decide
 
 example :
     (wordLocValueToInstructions (width := 64) 4 0x1234).map List.length =
-      some 1 := by
+      some 2 := by
   decide
 
 example :

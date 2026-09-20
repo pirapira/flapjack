@@ -435,12 +435,21 @@ def prefsBranchOrderGuard : Bool :=
     [(9, (1, 2)), (10, (3, 4))]
 
 def prefsCallHandlerOrderGuard : Bool :=
-  cakeGetPrefs
+    cakeGetPrefs
       (.call (some ([9], ([], []),
           (.move 11 [(5, 6)] : WordProg Nat), 0, 1))
         (some 2) []
         (some (12, (.move 13 [(7, 8)] : WordProg Nat), 0, 2)) : WordProg Nat) [] ==
     [(13, (7, 8)), (11, (5, 6))]
+
+/- `get_prefs_def`'s handled-call `NONE` branch traverses only the return
+   handler; it must not invent preferences from an absent exception handler. -/
+def prefsCallReturnOnlyGuard : Bool :=
+  cakeGetPrefs
+      (.call (some ([9], ([], []),
+          (.move 15 [(1, 2)] : WordProg Nat), 0, 1))
+        (some 2) [] none : WordProg Nat) [] ==
+    [(15, (1, 2))]
 
 def prefsLoopOrderGuard : Bool :=
   cakeGetPrefs
@@ -699,7 +708,8 @@ def parityGuard : Bool :=
     raOrderSeqGuard && raOrderCliqueGuard &&
     prefsMoveOrderGuard && prefsSeqOrderGuard && prefsControlFlowGuard &&
     prefsBranchOrderGuard &&
-    prefsCallHandlerOrderGuard && prefsLoopOrderGuard &&
+    prefsCallHandlerOrderGuard && prefsCallReturnOnlyGuard &&
+    prefsLoopOrderGuard &&
     partOrderGuard && reviveOrderGuard && movesToSpOrderGuard &&
     resortMovesSpOrderGuard && bgOkOrderGuard &&
     qsortTiesTwoGuard && qsortTiesThreeGuard && qsortDescGuard &&
@@ -763,7 +773,8 @@ def runChecks : IO Bool := do
     "reg_alloc sequential pair order", "reg_alloc clique order",
     "get_prefs Move order", "get_prefs Seq order", "get_prefs control flow",
     "get_prefs If order",
-    "get_prefs Call handler order", "get_prefs Loop order",
+    "get_prefs Call handler order", "get_prefs Call return-only order",
+    "get_prefs Loop order",
     "sorting partition order", "revive moves reversing partition", "revive partition direction", "bg_ok order",
     "sort_moves tie two", "moves_to_sp order", "resort_moves output order",
     "sort_moves tie three", "sort_moves long tie",

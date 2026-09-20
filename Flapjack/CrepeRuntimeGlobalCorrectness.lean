@@ -29,6 +29,71 @@ def loopStateWithTypedGlobalStore [BEq α]
   loopStateWithTypedGlobalState state key
     (storeCrepTypedGlobal key typedState address value)
 
+/-! A typed Loop-side state for the global operations that are source
+    `StoreGlob`/`LoadGlob` boundaries.  The legacy `LoopState` is retained as
+    the executable projection; only the global field is supplied by the typed
+    Cake state when that projection is requested. -/
+structure LoopTypedGlobalState (α : Type u) where
+  legacy : LoopState α
+  globals : CrepGlobalState α
+
+namespace LoopTypedGlobalState
+
+def toLoopState (state : LoopTypedGlobalState α)
+    (key : α → CrepGlobalAddress) : LoopState α :=
+  loopStateWithTypedGlobalState state.legacy key state.globals
+
+def store [BEq α] (state : LoopTypedGlobalState α)
+    (key : α → CrepGlobalAddress) (address value : α) :
+    LoopTypedGlobalState α :=
+  { state with globals := storeCrepTypedGlobal key state.globals address value }
+
+def load [BEq α] (state : LoopTypedGlobalState α)
+    (key : α → CrepGlobalAddress) (address : α) : Option α :=
+  evalCrepTypedLoad key state.globals address
+
+def evalExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [PanCmp α] (state : LoopTypedGlobalState α)
+    (key : α → CrepGlobalAddress) (expression : LoopExp α) : Option α :=
+  evalLoopExp (state.toLoopState key) expression
+
+def setGlobal [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [PanCmp α] (state : LoopTypedGlobalState α)
+    (key : α → CrepGlobalAddress) (address : α) (expression : LoopExp α) :
+    Option (LoopTypedGlobalState α) := do
+  let value ← state.evalExp key expression
+  pure (state.store key address value)
+
+theorem toLoopState_store [BEq α]
+    (state : LoopTypedGlobalState α) (key : α → CrepGlobalAddress)
+    (address value : α) :
+    (state.store key address value).toLoopState key =
+      loopStateWithTypedGlobalStore state.legacy key state.globals address value := by
+  rfl
+
+theorem evalExp_lookup [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [PanCmp α] (state : LoopTypedGlobalState α)
+    (key : α → CrepGlobalAddress) (address : α) :
+    state.evalExp key (.lookup address) = state.load key address := by
+  rfl
+
+theorem setGlobal_load_alias [BEq α] [LawfulBEq α]
+    [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [PanCmp α] (state : LoopTypedGlobalState α)
+    (key : α → CrepGlobalAddress) (address value loadAddress : α) :
+    (state.setGlobal key address (.const value)).bind
+        (fun next => next.load key loadAddress) =
+      evalCrepTypedLoad key
+        (storeCrepTypedGlobal key state.globals address value) loadAddress := by
+  simp [setGlobal, evalExp, load, store, evalLoopExp,
+    evalCrepTypedLoad, storeCrepTypedGlobal, storeCrepGlobal]
+
+end LoopTypedGlobalState
+
 theorem loopStateWithTypedGlobalStore_relation [BEq α]
     (state : LoopState α) (key : α → CrepGlobalAddress)
     (typedState : CrepGlobalState α) (address value : α) :

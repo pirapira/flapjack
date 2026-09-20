@@ -5,7 +5,8 @@ namespace Flapjack
 def distinctFunctionDeclarations : List (Decl Nat) :=
   [.exnDecl "E" .one,
    .function
-     { name := "first", inline := false, exported := false, params := [],
+     { name := "first", inline := false, exported := false,
+       params := [("argument", .comb [.one, .one]), ("flag", .one)],
        body := .skip, returnShape := .one },
    .decl .one "global" (.const 0),
    .function
@@ -33,11 +34,20 @@ theorem distinctFunctionDeclarations_compiled_names_nodup :
   exact compileToCrepe_names_nodup _ _
     distinctFunctionDeclarations_names_nodup
 
+theorem distinctFunctionDeclarations_compiled_params_nodup :
+    ∀ function ∈ compileToCrep distinctCompileContext distinctFunctionDeclarations,
+      function.params.Nodup := by
+  exact compileToCrep_params_nodup _ _
+
 #guard
     (functionDeclarationNames duplicateFunctionDeclarations) = ["same", "same"]
 
 #guard
     (compileToCrepe distinctCompileContext distinctFunctionDeclarations).map
       CompiledFunction.name = ["first", "second"]
+
+#guard
+    (compileToCrep distinctCompileContext distinctFunctionDeclarations).map
+      CompiledFunction.params = [[0, 1, 2], []]
 
 end Flapjack

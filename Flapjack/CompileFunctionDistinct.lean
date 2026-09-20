@@ -57,4 +57,40 @@ theorem compileToCrepe_names_nodup
       ({ context with functions := functionInfos declarations }) declarations
       (functionDeclarationNames declarations) rfl hnodup)
 
+/- Cake's `compile_prog_distinct_params` theorem states that every compiled
+   function has distinct flattened parameter slots.  The source-faithful
+   `compileToCrep` boundary exposes those slots as `List.range`, so this
+   invariant is independent of function-body lowering. -/
+theorem compileFunctionsSource_params_nodup
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (declarations : List (Decl α)) :
+    ∀ function ∈ compileFunctionsSource context declarations,
+      function.params.Nodup := by
+  induction declarations with
+  | nil => simp [compileFunctionsSource]
+  | cons declaration declarations ih =>
+      cases declaration with
+      | function declaration =>
+          intro function hfunction
+          simp only [compileFunctionsSource, List.mem_cons] at hfunction
+          rcases hfunction with rfl | hfunction
+          · simp [compileFunDeclSource, panToCrepVars, List.nodup_range]
+          · exact ih function hfunction
+      | decl shape name value =>
+          simpa [compileFunctionsSource] using ih
+      | exnDecl exception shape =>
+          simpa [compileFunctionsSource] using ih
+      | name struct fields =>
+          simpa [compileFunctionsSource] using ih
+
+theorem compileToCrep_params_nodup
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (declarations : List (Decl α)) :
+    ∀ function ∈ compileToCrep context declarations,
+      function.params.Nodup := by
+  simpa [compileToCrep] using
+    compileFunctionsSource_params_nodup
+      ({ context with functions := functionInfos declarations } : CompileContext α)
+      declarations
+
 end Flapjack

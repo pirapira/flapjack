@@ -120,6 +120,21 @@ def staticProgLocalStoreWarningOracle : Bool :=
         warning == "L: shared store address is calculated from base in function f\n"
   | _ => false
 
+/- StoreByte follows the same warning-before-value-shape rule. -/
+#guard
+  match staticProgCheck
+      (.storeByte .bytesInWord (.rStruct [.const 0])) with
+  | (Except.error (.shape message), [StatErr.warning warning]) =>
+      message == "L: store value has shape {1} instead of a word in function f\n" &&
+        warning == "L: local store address is not calculated from base in function f\n"
+  | _ => false
+
+/- Cake evaluates the value expression before rejecting a non-word address. -/
+#guard
+  staticResultErrorMessage (staticProgCheck
+      (.store32 (.rStruct [.const 0]) (.var .local "missing"))) ==
+    some "L: variable missing is not in scope in function f\n"
+
 /-! Cake's ExtCall checks all four FFI words and otherwise returns ordinary
     fall-through metadata without a warning. -/
 def staticProgExtCallMetadataOracle : Bool :=

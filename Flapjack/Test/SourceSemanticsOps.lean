@@ -107,6 +107,22 @@ def evalStructuredRiscVProgramShiftsFull : Option (List (PanValue ShiftWord)) :=
       asr == shiftWord 0xc0 && ror == shiftWord 0xc0
   | _ => false
 
+/- A target-word call must keep the complete Cake shift semantics across the
+   callee boundary, rather than falling back to the compact evaluator. -/
+def evalStructuredRiscVCallShiftFull : Option (PanValueControlResult ShiftWord) :=
+  evalPanValueProgWithPrimitiveCallsAndFfiFull
+    (fun _ _ => none) (fun _ _ _ _ _ locals => some locals)
+    [] [
+      ("shift", ["x"],
+        .return (.shift .asr (.var .local "x") (.const (shiftWord 1))))]
+    (shiftWord 0) (shiftWord 0) (shiftWord 8) 8
+    (fun _ => none) (fun _ => none) (fun _ => none)
+    (.call none "shift" [.const (shiftWord 0x80)])
+
+#guard match evalStructuredRiscVCallShiftFull with
+  | some (.returned _ _ _ [.word value]) => value == shiftWord 0xc0
+  | _ => false
+
 def evalRiscVRor : Option (PanValue ShiftWord) :=
   RiscV.evalPanRiscVFlatExp [] (fun _ => none) (fun _ => none)
     (fun _ => false) (fun _ => none)

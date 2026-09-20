@@ -311,6 +311,22 @@ def callResultFirstWinsAndRestoresCaller : Bool :=
     (.call (some ([5], [])) (some 1) [1, 2] none) callResultState) ==
     (none, some (.word 7), none, 4)
 
+/-! `loopSemScript.sml:set_vars_def` is first-occurrence-wins for duplicate
+    names.  These direct guards exercise the two executable Loop entrypoints
+    that bind parameters and assign call results. -/
+def duplicateBindFirstWins : Bool :=
+  match loopBindParameters [1, 1]
+      ([.word 5, .word 7] : List LoopWordLoc)
+      (fun _ => none : Nat → Option LoopWordLoc) with
+  | some locals => locals 1 == some (.word 5)
+  | none => false
+
+def duplicateAssignFirstWins : Bool :=
+  match loopAssignValues (fun _ => none : Nat → Option LoopWordLoc) [1, 1]
+      ([.word 5, .word 7] : List LoopWordLoc) with
+  | some locals => locals 1 == some (.word 5)
+  | none => false
+
 #guard sequenceReturn
 #guard skip
 #guard assignment
@@ -319,6 +335,8 @@ def callResultFirstWinsAndRestoresCaller : Bool :=
 #guard timeout
 #guard tailCallNoResult
 #guard callResultFirstWinsAndRestoresCaller
+#guard duplicateBindFirstWins
+#guard duplicateAssignFirstWins
 #guard longDivSuccess
 #guard longDivZero
 #guard longDivOverflow
@@ -346,6 +364,8 @@ def runChecks : IO Bool := do
     ("evaluate tail call maps callee NONE to Error", tailCallNoResult),
     ("evaluate Call uses first-wins bindings and restores caller locals",
       callResultFirstWinsAndRestoresCaller),
+    ("Loop parameter binding keeps the first duplicate", duplicateBindFirstWins),
+    ("Loop result assignment keeps the first duplicate", duplicateAssignFirstWins),
     ("evaluate LongDiv returns the HOL quotient and remainder", longDivSuccess),
     ("evaluate LongDiv rejects a zero divisor", longDivZero),
     ("evaluate LongDiv rejects quotient overflow", longDivOverflow),

@@ -1509,19 +1509,119 @@ def lookupLoopFunction : Nat → List (Nat × List Nat × LoopProg α) →
       if label == candidate then some (parameters, body)
       else lookupLoopFunction label functions
 
+/-! `loopSemScript$set_vars` overlays an association list from the tail
+    towards the head, so the first duplicate name wins.  Keep this helper
+    local to the executable Loop evaluator: importing `LoopSetVars` here would
+    create a dependency cycle, while the recursion is the same source rule. -/
+def loopLookupFirst (locals : Nat → Option α) : List (Nat × α) → Nat → Option α
+  | [], current => locals current
+  | (name, value) :: entries, current =>
+      if current = name then some value else loopLookupFirst locals entries current
+
+theorem loopLookupFirst_singleton (locals : Nat → Option α) (name : Nat)
+    (value : α) :
+    loopLookupFirst locals [(name, value)] = updateLoopLocal locals name value := by
+  funext current
+  by_cases h : current = name <;> simp [loopLookupFirst, updateLoopLocal, h]
+
+theorem loopFoldUpdate_at_congr (locals₁ locals₂ : Nat → Option α)
+    (entries : List (Nat × α)) (current : Nat)
+    (hcurrent : locals₁ current = locals₂ current) :
+    List.foldl (fun locals entry =>
+      updateLoopLocal locals entry.fst entry.snd) locals₁ entries current =
+      List.foldl (fun locals entry =>
+        updateLoopLocal locals entry.fst entry.snd) locals₂ entries current := by
+  induction entries generalizing locals₁ locals₂ with
+  | nil => exact hcurrent
+  | cons entry entries ih =>
+      cases entry with
+      | mk name value =>
+          by_cases hname : current = name
+          · apply ih
+            simp [updateLoopLocal, hname]
+          · apply ih
+            simp [updateLoopLocal, hname, hcurrent]
+
+theorem loopFoldUpdate_not_mem (locals : Nat → Option α)
+    (entries : List (Nat × α)) (current : Nat)
+    (hcurrent : current ∉ entries.map Prod.fst) :
+    List.foldl (fun locals entry =>
+      updateLoopLocal locals entry.fst entry.snd) locals entries current =
+      locals current := by
+  induction entries generalizing locals with
+  | nil => rfl
+  | cons entry entries ih =>
+      cases entry with
+      | mk name value =>
+          have hname : current ≠ name := by
+            intro heq
+            apply hcurrent
+            simp [heq]
+          have htail : current ∉ entries.map Prod.fst := by
+            intro hmem
+            apply hcurrent
+            simp [hmem]
+          have hfold := ih (locals := updateLoopLocal locals name value) htail
+          simpa [List.foldl, updateLoopLocal, hname] using hfold
+
+theorem loopLookupFirst_eq_foldl_of_nodup (locals : Nat → Option α)
+    (entries : List (Nat × α))
+    (hnodup : (entries.map Prod.fst).Nodup) :
+    loopLookupFirst locals entries =
+      List.foldl (fun locals entry =>
+        updateLoopLocal locals entry.fst entry.snd) locals entries := by
+  induction entries generalizing locals with
+  | nil => rfl
+  | cons entry entries ih =>
+      cases entry with
+      | mk name value =>
+          have hpair := List.pairwise_cons.mp hnodup
+          have hnot : name ∉ entries.map Prod.fst := by
+            intro hother
+            exact (hpair.1 name hother) rfl
+          have htailNodup : (entries.map Prod.fst).Nodup := hpair.2
+          funext current
+          by_cases hcurrent : current = name
+          · have htail := loopFoldUpdate_not_mem
+                (updateLoopLocal locals name value) entries current
+                (by simpa [hcurrent] using hnot)
+            simp only [loopLookupFirst, List.foldl, if_pos hcurrent]
+            calc
+              some value = updateLoopLocal locals name value current := by
+                simp [updateLoopLocal, hcurrent]
+              _ = List.foldl (fun locals entry =>
+                  updateLoopLocal locals entry.fst entry.snd)
+                  (updateLoopLocal locals name value) entries current :=
+                htail.symm
+          · have hbase : updateLoopLocal locals name value current =
+                locals current := by
+              simp [updateLoopLocal, hcurrent]
+            have htail := loopFoldUpdate_at_congr
+                (updateLoopLocal locals name value) locals entries current
+                (by simpa using hbase)
+            simp only [loopLookupFirst, List.foldl, if_neg hcurrent]
+            calc
+              loopLookupFirst locals entries current =
+                  List.foldl (fun locals entry =>
+                    updateLoopLocal locals entry.fst entry.snd)
+                    locals entries current :=
+                congrFun (ih locals htailNodup) current
+              _ = List.foldl (fun locals entry =>
+                  updateLoopLocal locals entry.fst entry.snd)
+                  (updateLoopLocal locals name value) entries current :=
+                htail.symm
+
 def loopBindParameters (parameters : List Nat) (values : List α)
     (locals : Nat → Option α) : Option (Nat → Option α) :=
   if parameters.length != values.length then none
   else
-    some ((parameters.zip values).foldl
-      (fun locals (name, value) => updateLoopLocal locals name value) locals)
+    some (loopLookupFirst locals (parameters.zip values))
 
 def loopAssignValues (locals : Nat → Option α) (names : List Nat)
     (values : List α) : Option (Nat → Option α) :=
   if names.length != values.length then none
   else
-    some ((names.zip values).foldl
-      (fun locals (name, value) => updateLoopLocal locals name value) locals)
+    some (loopLookupFirst locals (names.zip values))
 
 abbrev LoopPrimitiveHandler (α : Type u) :=
   PrimOp → List α → Option (List α)

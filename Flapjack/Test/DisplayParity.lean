@@ -84,6 +84,43 @@ def panExpOracle : Bool :=
   panExpConstOracle && panExpVarOracle && panExpLoadOracle &&
     panExpNamedStructOracle && panExpShiftOracle
 
+/-! Direct oracle guards for `crep_exp_to_display_def` in
+    `pan_passesScript.sml:348-372`. -/
+def crepExpOracle : Bool :=
+  sameDisplay
+      (crepExpToDisplay (α := BitVec 64) (.const (BitVec.ofNat 64 255)))
+      (.item none "Const" [.string "0xFF"]) &&
+    sameDisplay
+      (crepExpToDisplay (α := BitVec 64) (.loadGlob (BitVec.ofNat 64 32)))
+      (.item none "LoadGlob" [.string "0x20"]) &&
+    sameDisplay
+      (crepExpToDisplay (.var 7 : CrepExp (BitVec 64)))
+      (.item none "Var" [.string "7"]) &&
+    sameDisplay
+      (crepExpToDisplay
+        (.load32 (.op .add [.var 1, .const (BitVec.ofNat 64 4)]) :
+          CrepExp (BitVec 64)))
+      (.item none "MemLoad32"
+        [.item none "Add"
+          [.item none "Var" [.string "1"],
+           .item none "Const" [.string "0x4"]]]) &&
+    sameDisplay
+      (crepExpToDisplay
+        ((.crepOp .mul [.var 2, .const (BitVec.ofNat 64 3)]) :
+          CrepExp (BitVec 64)))
+      (.item none "Mul"
+        [.item none "Var" [.string "2"],
+         .item none "Const" [.string "0x3"]]) &&
+    sameDisplay
+      (crepExpToDisplay
+        (.shift .ror (.cmp .equal (.var 0) (.const (BitVec.ofNat 64 0)))
+          (.const (BitVec.ofNat 64 1)) : CrepExp (BitVec 64)))
+      (.item none "Ror"
+        [.item none "Equal"
+          [.item none "Var" [.string "0"],
+           .item none "Const" [.string "0x0"]],
+         .item none "Const" [.string "0x1"]])
+
 /-! Direct oracle guards for `pan_prog_to_display_def` in
     `pan_passesScript.sml:203-300`, including sequence flattening, annotation
     escaping, calls, handlers, and declaration calls. -/
@@ -233,6 +270,7 @@ def loopExpOracle : Bool :=
 #guard primOpOracle
 #guard destAnnotOracle
 #guard panExpOracle
+#guard crepExpOracle
 #guard panProgOracle
 #guard loopExpOracle
 #guard panFunOracle

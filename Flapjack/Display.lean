@@ -1,4 +1,5 @@
 import Flapjack.Language
+import Flapjack.Crepe
 import Flapjack.Loop
 
 /-!
@@ -150,6 +151,52 @@ where
           panExpToDisplayFieldList fields
   termination_by fields => sizeOf fields
   decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+
+/-! Exact source counterpart of Cake's `crep_exp_to_display_def`
+    (`pan_passesScript.sml:348-372`).  Crepe variables are numeric, so the
+    source `num_to_display` helper is represented by `toString` here. -/
+def crepExpToDisplayFuel [CakeDisplayWord α] : Nat → CrepExp α → DisplayExpr
+  | 0, _ => emptyDisplayItem "display-depth-exhausted"
+  | _fuel + 1, .const value => itemWithWord "Const" value
+  | _fuel + 1, .loadGlob value => itemWithWord "LoadGlob" value
+  | _fuel + 1, .var name => .item none "Var" [.string (toString name)]
+  | _fuel + 1, .baseAddr => .item none "BaseAddr" []
+  | _fuel + 1, .topAddr => .item none "TopAddr" []
+  | fuel + 1, .load address =>
+      .item none "MemLoad" [crepExpToDisplayFuel fuel address]
+  | fuel + 1, .load32 address =>
+      .item none "MemLoad32" [crepExpToDisplayFuel fuel address]
+  | fuel + 1, .loadByte address =>
+      .item none "MemLoadByte" [crepExpToDisplayFuel fuel address]
+  | fuel + 1, .cmp operator left right =>
+      insertDisplayExpressions (cmpToDisplay operator)
+        [crepExpToDisplayFuel fuel left, crepExpToDisplayFuel fuel right]
+  | fuel + 1, .op operator arguments =>
+      insertDisplayExpressions (binOpToDisplay operator)
+        (arguments.map (crepExpToDisplayFuel fuel))
+  | fuel + 1, .crepOp .mul arguments =>
+      .item none "Mul" (arguments.map (crepExpToDisplayFuel fuel))
+  | fuel + 1, .shift operator left right =>
+      insertDisplayExpressions (shiftToDisplay operator)
+        [crepExpToDisplayFuel fuel left, crepExpToDisplayFuel fuel right]
+
+def crepExpDepth : CrepExp α → Nat
+  | .const _ | .loadGlob _ | .var _ | .baseAddr | .topAddr => 1
+  | .load address | .load32 address | .loadByte address => 1 + crepExpDepth address
+  | .op _ arguments | .crepOp _ arguments => 1 + crepExpDepthList arguments
+  | .cmp _ left right | .shift _ left right =>
+      1 + max (crepExpDepth left) (crepExpDepth right)
+termination_by expression => sizeOf expression
+where
+  crepExpDepthList : List (CrepExp α) → Nat
+    | [] => 0
+    | expression :: expressions =>
+        max (crepExpDepth expression) (crepExpDepthList expressions)
+  termination_by expressions => sizeOf expressions
+  decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+
+def crepExpToDisplay [CakeDisplayWord α] (expression : CrepExp α) : DisplayExpr :=
+  crepExpToDisplayFuel (crepExpDepth expression + 1) expression
 
 def cakeEscapeChar : Char → String
   | '\t' => "\\t"

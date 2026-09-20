@@ -2164,6 +2164,82 @@ theorem nested_raise_generic_semantic_global_lift :
     (hdistinct := by decide)
     (hsize := by simp [nestedSourceValue, panValueShape, Shape.shapeSize])
 
+theorem three_word_raise_pc_compile_correct_context_code_of_evaluator_evidence
+    (sourceFuel targetFuel : Nat)
+    (hlookupException : ∀ context : CompileContext Nat,
+      ∃ exceptionCode, lookupInfo "E" context.exceptions = some exceptionCode)
+    (hfresh : ∀ (context : CompileContext Nat) (state : CrepState Nat)
+      (name : Nat), name ∈ freshNames context 3 1 → state.locals name = none)
+    (hexception : ∀ (context : CompileContext Nat)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (exceptionCode : Nat),
+      lookupInfo "E" context.exceptions = some exceptionCode →
+      exceptionRel "E" sourceValue exceptionCode)
+    (hevidence : ∀ (context : CompileContext Nat) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+      (sourceMemory : Nat → Option (PanValue Nat)) (sourceException : ExceptionId)
+      (sourceValue : PanValue Nat) (targetState : CrepState Nat)
+      (targetException : Nat),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      ∃ (state : CrepState Nat) (expression : Exp Nat)
+        (compiled : List (CrepExp Nat)) (shape : Shape),
+        targetState =
+          { state with globals :=
+              (updateMemoryListAt state.globals 0 context.bytesInWord
+                (panValueFlatWords sourceValue)) } ∧
+        context.bytesInWord = 8 ∧
+        panValueCrepStateRel structs context sourceLocals sourceGlobals
+          sourceMemory state ∧
+        evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+          0 0 8 expression = some sourceValue ∧
+        panValuePayloadWithinLimit structs sourceValue = true ∧
+        compileExp context expression = (compiled, shape) ∧
+        compiled.length = Shape.shapeSize shape ∧
+        evalCrepFullExpsState state 0 0 compiled =
+          some (panValueFlatWords sourceValue) ∧
+        (∀ name ∈ freshNames context compiled.length 1,
+          ∀ value ∈ compiled, name ∉ crepExpVars value) ∧
+        (∀ name ∈ freshNames context compiled.length 1,
+          state.locals name = none) ∧
+        exceptionRel sourceException sourceValue targetException ∧
+        lookupInfo sourceException context.exceptions = some targetException ∧
+        (if sourceException = "E" then some 9 else none) =
+          some targetException ∧
+        List.Pairwise (fun left right : Nat => left ≠ right)
+          (storeAddresses 0 context.bytesInWord
+            (panValueFlatWords sourceValue).length) ∧
+        Shape.shapeSize (panValueShape structs sourceValue) ≤ 32) :
+    PanValuePcCompileCorrectWithContextCode
+      (panValuePcCompactSourceEvaluator
+        (fun _ _ => none) (fun _ _ _ _ _ _ => none) []
+        0 0 8 sourceFuel)
+      (crepPcCompactTargetEvaluator [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+        (fun _ _ _ _ => none) 0 0 targetFuel)
+      (fun _ _ _ => True)
+      (fun _ _ _ => True)
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8)
+      (.raise "E" sourceExpression) := by
+  have hprogram := panValueCrepProgramStateCorrect_raise_word_list_record
+    "E" [3, 4, 5] hlookupException hfresh hexception
+  have hprogramSafe := panValueCrepProgramStateControlSafe_raise "E"
+    sourceExpression
+  apply panValuePcCompileCorrect_compact_with_flat_global_evaluator_evidence_auto_context_code
+    (.raise "E" sourceExpression)
+    (fun _ _ _ => True) (fun _ _ _ => True)
+    (fun exception => if exception = "E" then some 9 else none)
+    (crepPcFlatGlobalsLookup 8) [] []
+    (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+    (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+    (fun _ _ _ _ => none) 0 0 8 sourceFuel targetFuel
+    hprogram hprogramSafe
+  · intro targetState sourceValue
+    rfl
+  · exact hevidence
+
 theorem nested_raise_pc_result_rel_retargeted_globals :
     panValuePcResultRel [] context (fun _ _ code => code = 9)
       (fun exception => if exception = "E" then some 9 else none)
@@ -2208,6 +2284,7 @@ theorem nested_raise_pc_result_rel_retargeted_globals :
 def runChecks : IO Bool := do
   IO.println "PASS generic three-word Raise evaluator relation"
   IO.println "PASS generic raised semantic/global lookup lift"
+  IO.println "PASS direct arbitrary context-coded pc_compile_correct evaluator instantiation"
   IO.println "PASS nested raised semantic/global lookup lift"
   pure true
 

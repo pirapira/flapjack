@@ -11207,4 +11207,58 @@ theorem panValuePcCompileCorrectWithContextCode_of_stateful_program_and_clocked_
     rfl
   · simp [panValuePcResultRelWithContextCode, panValuePcResultRel, hclockState]
 
+theorem panValuePcRaisedWordStateFullCorrect
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [PanShiftWidth α]
+    [ArithmeticShiftRight α] [RotateRightOp α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (state : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord value : α)
+    (exception : ExceptionId) (exceptionCode : α)
+    (resultExceptionCode : ExceptionId → Option α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (hlookup : lookupInfo exception context.exceptions = some exceptionCode)
+    (hstate : panValueCrepStateRel structs context
+      (fun _ => none) sourceGlobals sourceMemory state)
+    (hexception : exceptionRel exception (.word value) exceptionCode)
+    (hcode : resultExceptionCode exception = some exceptionCode) :
+    evalPanValueProgWithPrimitiveCallsAndFfi
+      primitive sourceHandler structs sourceFunctions
+      baseAddress topAddress bytesInWord 3
+      sourceLocals sourceGlobals sourceMemory
+      (.raise exception (.const value)) =
+      some (.raised (fun _ => none) sourceGlobals sourceMemory
+        exception (.word value)) ∧
+    evalCrepFullProgStateFull functions crepPrimitive ffi sharedMem
+      baseAddress topAddress 10 state
+      (compileProg context (.raise exception (.const value))) =
+      some (.raised
+        { state with globals := updateMemory state.globals 0 value }
+        exceptionCode) ∧
+    panValuePcResultRelWithContextCode structs context exceptionRel
+      resultExceptionCode (crepPcWordGlobalsLookup (α := α))
+      (.raised (fun _ => none) sourceGlobals sourceMemory
+        exception (.word value))
+      (.raised { state with globals := updateMemory state.globals 0 value }
+        exceptionCode) := by
+  have heval := compile_full_pan_value_raise_word_state_full_correct
+    context structs sourceFunctions functions sourceLocals sourceGlobals
+    sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord value exception exceptionCode hlookup
+  have hresult := panValuePcResultRelWithContextCode_of_raised_word_global_spill
+    structs context exceptionRel resultExceptionCode
+    (fun _ => none) sourceGlobals sourceMemory exception value state
+    exceptionCode hstate hexception hcode hlookup
+  exact ⟨heval.1, heval.2, hresult⟩
+
 end Flapjack

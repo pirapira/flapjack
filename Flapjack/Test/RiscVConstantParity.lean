@@ -542,4 +542,23 @@ example :
         ((wordLocValueToInstructionsCake (width := 64) 4 0x234 0).getD [])) 4 := by
   decide
 
+/-! The Cake AUIPC field is signed 20-bit, so the generic execution bridge
+    needs a signed-32-bit PC-relative-range premise.  At the first out-of-range
+    upper word the encoded AUIPC contribution wraps; this is an oracle guard
+    against incorrectly claiming `pc + label` for every natural label. -/
+example :
+    uImmediate (BitVec.ofInt 64 (2 ^ 19)) !=
+      BitVec.ofInt 64 ((2 ^ 19) * 4096) := by
+  decide
+
+example :
+    uImmediate (BitVec.ofInt 64 (1)) =
+      BitVec.ofInt 64 (1 * 4096) := by
+  decide
+
+example :
+    uImmediate (BitVec.ofInt 64 (-1)) =
+      BitVec.ofInt 64 (-1 * 4096) := by
+  decide
+
 end Flapjack.RiscV

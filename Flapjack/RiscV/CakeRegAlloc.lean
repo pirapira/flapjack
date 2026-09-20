@@ -462,9 +462,8 @@ def cakeMkTags (n : Nat) (fromAllocator : NatInfoMap Nat) (fs : List Nat) :
 
 /-- `init_ra_state` (`reg_allocScript.sml:1241-1250`): the initial allocator
     state for a clash tree. -/
-def cakeInitRaState (tree : WordClashTree) (forced : List (Nat × Nat))
-    (fs : List Nat) : CakeRaState :=
-  let bij := cakeMkBij tree
+def cakeInitRaStateFromBij (bij : CakeNodeBijection) (tree : WordClashTree)
+    (forced : List (Nat × Nat)) (fs : List Nat) : CakeRaState :=
   let ta := CakeAlloc.spDefault bij.toAllocator
   let (adj, _) := cakeMkGraph ta tree [] (CakeNodeMap.ofSize bij.nextNode)
   let adj := cakeExtendGraph ta forced adj
@@ -472,6 +471,10 @@ def cakeInitRaState (tree : WordClashTree) (forced : List (Nat × Nat))
   { (CakeRaState.empty bij.nextNode) with
     adjLists := adj,
     nodeTag := tags }
+
+def cakeInitRaState (tree : WordClashTree) (forced : List (Nat × Nat))
+    (fs : List Nat) : CakeRaState :=
+  cakeInitRaStateFromBij (cakeMkBij tree) tree forced fs
 
 /-- `is_Fixed` (`reg_allocScript.sml:449-454`): a physical node. -/
 def cakeIsFixed (state : CakeRaState) (x : Nat) : Bool :=
@@ -1108,11 +1111,9 @@ inductive CakeAlgorithm : Type
 /-- `do_reg_alloc` (`reg_allocScript.sml:1452-1470`): the complete IRC
     colouring pipeline over a clash tree, producing the var → colour
     table. -/
-def cakeDoRegAlloc (alg : CakeAlgorithm) (scost : Option (CakeNodeMap Nat))
-    (k : Nat) (moves : List (Nat × (Nat × Nat))) (tree : WordClashTree)
-    (forced : List (Nat × Nat)) (fs : List Nat) : Option (NatInfoMap Nat) :=
-  let bij := cakeMkBij tree
-  let state := cakeInitRaState tree forced fs
+def cakeDoRegAllocFromState (alg : CakeAlgorithm) (scost : Option (CakeNodeMap Nat))
+    (k : Nat) (moves : List (Nat × (Nat × Nat)))
+    (bij : CakeNodeBijection) (state : CakeRaState) : Option (NatInfoMap Nat) :=
   let spta := CakeAlloc.spDefault bij.toAllocator
   let moves0 := moves.map (cakeUpdateMove spta)
   let movesF := filterReversed (fun m => cakeFullConsistencyOk state k m.2.1 m.2.2) moves0
@@ -1126,6 +1127,13 @@ def cakeDoRegAlloc (alg : CakeAlgorithm) (scost : Option (CakeNodeMap Nat))
   let state := cakeAssignAtemps k ls (fun s n ks => cakeBiasedPref s mvs n ks) s1
   let state := cakeAssignStemps k (fun s n bads => cakeNegBiasedPref s k mvs n bads) state
   some (cakeExtractColor state bij.toAllocator)
+
+def cakeDoRegAlloc (alg : CakeAlgorithm) (scost : Option (CakeNodeMap Nat))
+    (k : Nat) (moves : List (Nat × (Nat × Nat))) (tree : WordClashTree)
+    (forced : List (Nat × Nat)) (fs : List Nat) : Option (NatInfoMap Nat) :=
+  let bij := cakeMkBij tree
+  let state := cakeInitRaStateFromBij bij tree forced fs
+  cakeDoRegAllocFromState alg scost k moves bij state
 
 /-! Convert Cake's `total_colour` result back into the location contract used
     by Word-to-Stack.  Cake colours are even Word names; their half is the
@@ -1178,7 +1186,8 @@ def cakeAllocateWordFunction [OfNat α 0] (parameters : List Nat) (program : Wor
      Keep those keys intact; `CakeNodeMap` stores keys outside the allocator
      array when necessary, matching `lookup_any` in `st_ex_list_MIN_cost`. -/
   let scost := spillCosts.map (cakeSpillCostMap bij.nextNode)
-  match cakeDoRegAlloc .irc scost k moves tree forced fs with
+  let initialState := cakeInitRaStateFromBij bij tree forced fs
+  match cakeDoRegAllocFromState .irc scost k moves bij initialState with
   | none => none
   | some colouring =>
       some (state, renamedParameters, ssaProgram,
@@ -1228,7 +1237,8 @@ def cakeWordStackVarCount [OfNat α 0] [OfNat α 1]
   /- Keep the source-keyed spill table intact, as `word_alloc` passes it
      directly to `reg_alloc`; out-of-range keys live in `CakeNodeMap.outside`. -/
   let scost := spillCosts.map (cakeSpillCostMap bij.nextNode)
-  match cakeDoRegAlloc .irc scost k moves tree forced fs with
+  let initialState := cakeInitRaStateFromBij bij tree forced fs
+  match cakeDoRegAllocFromState .irc scost k moves bij initialState with
   | none => 0
   | some colouring =>
       let colour := CakeAlloc.totalColour colouring

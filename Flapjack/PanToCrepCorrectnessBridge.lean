@@ -1637,6 +1637,32 @@ theorem panValuePcRaisedHraiseData_of_flat_spill_state_with_source_locals
   intro _
   simpa [targetState, hflat] using hstored
 
+theorem panValuePcRaisedHraiseData_of_flat_spill_state_auto
+    [BEq α] [LawfulBEq α] [OfNat α 0] [Add α]
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (sourceException : ExceptionId) (state : CrepState α)
+    (bytesInWord targetException : α) (sourceValue : PanValue α)
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory state)
+    (hexception : exceptionRel sourceException sourceValue targetException)
+    (hcode : exceptionCode sourceException = some targetException)
+    (hdistinct : List.Pairwise (fun left right : α => left ≠ right)
+      (storeAddresses (0 : α) bytesInWord (panValueFlatWords sourceValue).length))
+    (hsize : Shape.shapeSize (panValueShape structs sourceValue) ≤ 32) :
+    panValuePcRaisedHraiseData exceptionCode
+      (crepPcFlatGlobalsLookup bytesInWord) structs context exceptionRel
+      sourceLocals sourceGlobals sourceMemory sourceException sourceValue
+      { state with globals := updateMemoryListAt state.globals 0 bytesInWord (panValueFlatWords sourceValue) }
+      targetException := by
+  exact panValuePcRaisedHraiseData_of_flat_spill_state_with_source_locals
+    structs context exceptionRel exceptionCode sourceLocals sourceGlobals
+    sourceMemory sourceException (panValueFlatWords sourceValue) state
+    bytesInWord targetException sourceValue hrel hexception hcode rfl hdistinct hsize
+
 /-! Named structured payloads with word-valued fields use the same global
     spill layout as their flattened word list.  This adapter discharges the
     flattening premise from the field representation, so generic raised
@@ -1785,6 +1811,50 @@ theorem panValuePcRaisedHraiseData_of_named_struct_nested_word_fields
     (.nStruct name
       [(leftField, .rStruct [.word left]),
         (rightField, .rStruct [.word right])]) hrel hexception hcode
+  · rfl
+  · exact hdistinct
+  · exact hsize
+
+theorem panValuePcRaisedHraiseData_of_named_struct_nested_mixed_fields
+    [BEq α] [LawfulBEq α] [OfNat α 0] [Add α]
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (sourceException : ExceptionId) (name : StructName)
+    (pairField tailField : FieldName) (first second third : α)
+    (state : CrepState α) (bytesInWord targetException : α)
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory state)
+    (hexception : exceptionRel sourceException
+      (.nStruct name
+        [(pairField, .rStruct [.word first, .word second]),
+          (tailField, .rStruct [.word third])]) targetException)
+    (hcode : exceptionCode sourceException = some targetException)
+    (hdistinct : List.Pairwise (fun left right : α => left ≠ right)
+      (storeAddresses (0 : α) bytesInWord 3))
+    (hsize : Shape.shapeSize
+      (panValueShape structs
+        (.nStruct name
+          [(pairField, .rStruct [.word first, .word second]),
+            (tailField, .rStruct [.word third])])) ≤ 32) :
+    panValuePcRaisedHraiseData exceptionCode
+      (crepPcFlatGlobalsLookup bytesInWord) structs context exceptionRel
+      sourceLocals sourceGlobals sourceMemory sourceException
+      (.nStruct name
+        [(pairField, .rStruct [.word first, .word second]),
+          (tailField, .rStruct [.word third])])
+      { state with globals :=
+          updateMemoryListAt state.globals 0 bytesInWord [first, second, third] }
+      targetException := by
+  apply panValuePcRaisedHraiseData_of_flat_spill_state_with_source_locals
+    structs context exceptionRel exceptionCode sourceLocals sourceGlobals
+    sourceMemory sourceException [first, second, third] state bytesInWord
+    targetException
+    (.nStruct name
+      [(pairField, .rStruct [.word first, .word second]),
+        (tailField, .rStruct [.word third])]) hrel hexception hcode
   · rfl
   · exact hdistinct
   · exact hsize

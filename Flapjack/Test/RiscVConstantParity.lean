@@ -688,4 +688,78 @@ theorem uImmediate_ofInt_range_nonneg (upper : Int) (h0 : 0 ≤ upper) (hhi : up
   rw [BitVec.shiftLeft_eq, BitVec.shiftLeft_eq_mul_twoPow, BitVec.ofInt_mul]
   rw [show BitVec.twoPow 64 12 = BitVec.ofInt 64 4096 by decide]
 
+/-! ### Kernel-checked reconstruction for the full signed offset range
+
+The negative-offset (backward reference) case of the reconstruction, so the
+premise of `wordLocValueToInstructionsCake_execution_of_reconstruction` is
+discharged for every signed 20-bit `upper`, i.e. every `delta = label - position`
+with `-(2^19) ≤ delta < 2^19`. (bead flapjack-pxn.1.4) -/
+
+theorem bmod_ofInt_toNat_neg (upper : Int) (hlo : -(2^19) ≤ upper) (hneg : upper < 0) :
+    (((BitVec.ofInt 64 upper).toNat : Int)).bmod (2^20) = upper := by
+  rw [BitVec.toNat_ofInt]
+  have hmod : upper % ((2^64 : Nat) : Int) = upper + ((2^64 : Nat) : Int) := by
+    have h2 : upper % ((2^64 : Nat) : Int) =
+        (upper + ((2^64 : Nat) : Int)) % ((2^64 : Nat) : Int) := by
+      apply Int.emod_eq_emod_iff_emod_sub_eq_zero.mpr
+      have hsub : upper - (upper + ((2^64 : Nat) : Int)) = -(((2^64 : Nat) : Int)) := by
+        omega
+      rw [hsub]; decide
+    rw [h2]
+    exact Int.emod_eq_of_lt (by omega) (by omega)
+  rw [hmod]
+  rw [Int.toNat_of_nonneg (by omega : (0:Int) ≤ upper + ((2^64 : Nat) : Int))]
+  rw [Int.bmod_eq_emod]
+  have hper : (upper + ((2^64 : Nat) : Int)) % ((2^20 : Nat) : Int) =
+      upper + ((2^20 : Nat) : Int) := by
+    rw [Int.add_emod]
+    have hz : ((2^64 : Nat) : Int) % ((2^20 : Nat) : Int) = 0 := by decide
+    rw [hz]
+    have hu : upper % ((2^20 : Nat) : Int) = upper + ((2^20 : Nat) : Int) := by
+      have h2 : upper % ((2^20 : Nat) : Int) =
+          (upper + ((2^20 : Nat) : Int)) % ((2^20 : Nat) : Int) := by
+        apply Int.emod_eq_emod_iff_emod_sub_eq_zero.mpr
+        have hsub : upper - (upper + ((2^20 : Nat) : Int)) = -(((2^20 : Nat) : Int)) := by
+          omega
+        rw [hsub]; decide
+      rw [h2]
+      exact Int.emod_eq_of_lt (by omega) (by omega)
+    rw [hu]
+    rw [Int.emod_eq_of_lt (by omega) (by omega)]
+    omega
+  rw [hper]
+  have hc : (((2^20 : Nat) : Int) + 1) / 2 = 524288 := by decide
+  rw [if_pos (by rw [hc]; omega :
+    (((2^20 : Nat) : Int) + 1) / 2 ≤ upper + ((2^20 : Nat) : Int))]
+  omega
+
+theorem bmod_ofInt_toNat_range (upper : Int) (hlo : -(2^19) ≤ upper) (hhi : upper < 2^19) :
+    (((BitVec.ofInt 64 upper).toNat : Int)).bmod (2^20) = upper := by
+  by_cases h : 0 ≤ upper
+  · exact bmod_ofInt_toNat_nonneg upper h hhi
+  · exact bmod_ofInt_toNat_neg upper hlo (by omega)
+
+theorem signExtend_ofNat_ofInt_range (upper : Int) (hlo : -(2^19) ≤ upper)
+    (hhi : upper < 2^19) :
+    BitVec.signExtend 64 (BitVec.ofNat 20 (BitVec.ofInt 64 upper).toNat) =
+      BitVec.ofInt 64 upper := by
+  apply BitVec.eq_of_toInt_eq
+  rw [BitVec.toInt_signExtend]
+  change ((OfNat.ofNat ((BitVec.ofInt 64 upper).toNat) : BitVec 20).toInt).bmod
+      (2 ^ min 64 20) = (BitVec.ofInt 64 upper).toInt
+  rw [BitVec.toInt_ofNat, BitVec.toInt_ofInt, Nat.min_eq_right (by omega : 20 ≤ 64)]
+  rw [bmod_ofInt_toNat_range upper hlo hhi]
+  have hb1 : -(↑(2^20 : Nat) / 2) ≤ upper := by omega
+  have hb2 : upper < (↑(2^20 : Nat) + 1) / 2 := by omega
+  rw [Int.bmod_eq_of_le (n := upper) (m := (2:Nat)^20) hb1 hb2]
+  have hc1 : -(↑(2^64 : Nat) / 2) ≤ upper := by omega
+  have hc2 : upper < (↑(2^64 : Nat) + 1) / 2 := by omega
+  exact (Int.bmod_eq_of_le (n := upper) (m := (2:Nat)^64) hc1 hc2).symm
+
+theorem uImmediate_ofInt_range (upper : Int) (hlo : -(2^19) ≤ upper) (hhi : upper < 2^19) :
+    uImmediate (BitVec.ofInt 64 upper) = BitVec.ofInt 64 (upper * 4096) := by
+  rw [uImmediate, signExtend_ofNat_ofInt_range upper hlo hhi]
+  rw [BitVec.shiftLeft_eq, BitVec.shiftLeft_eq_mul_twoPow, BitVec.ofInt_mul]
+  rw [show BitVec.twoPow 64 12 = BitVec.ofInt 64 4096 by decide]
+
 end Flapjack.RiscV

@@ -464,6 +464,142 @@ example (functions : List (Nat × List Nat × WordProg (Word 64)))
       pure (.returned state values)) := by
   simp [evalWordLoopProgWithHandlersAndFfi]
 
+theorem evalWordLoopProgWithHandlersAndFfi_call [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (fuel : Nat) (state : State width) (returns : WordCallReturns (Word width))
+    (target : Option Nat) (arguments : List Nat)
+    (handler : WordCallHandler (Word width)) :
+    evalWordLoopProgWithHandlersAndFfi functions ffiHandler (fuel + 1) state
+        (.call returns target arguments handler) =
+      evalWordLoopCallWithHandlersAndFfi functions ffiHandler fuel state returns
+        target arguments handler := by
+  simp [evalWordLoopProgWithHandlersAndFfi]
+
+theorem evalWordLoopProgWithHandlersAndFfi_seq_normal [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (fuel : Nat) (state firstState : State width)
+    (first second : WordProg (Word width)) (result : WordLoopControlResult width)
+    (hfirst : evalWordLoopProgWithHandlersAndFfi functions ffiHandler fuel state
+      first = some (.normal firstState))
+    (hsecond : evalWordLoopProgWithHandlersAndFfi functions ffiHandler fuel
+      firstState second = some result) :
+    evalWordLoopProgWithHandlersAndFfi functions ffiHandler (fuel + 1) state
+      (.seq first second) = some result := by
+  simp [evalWordLoopProgWithHandlersAndFfi, hfirst, hsecond]
+
+theorem evalWordLoopProgWithHandlersAndFfi_seq_returned [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (fuel : Nat) (state firstState : State width)
+    (first second : WordProg (Word width)) (values : List (Word width))
+    (hfirst : evalWordLoopProgWithHandlersAndFfi functions ffiHandler fuel state
+      first = some (.returned firstState values)) :
+    evalWordLoopProgWithHandlersAndFfi functions ffiHandler (fuel + 1) state
+      (.seq first second) = some (.returned firstState values) := by
+  simp [evalWordLoopProgWithHandlersAndFfi, hfirst]
+
+theorem evalWordLoopProgWithHandlersAndFfi_seq_raised [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (fuel : Nat) (state firstState : State width)
+    (first second : WordProg (Word width)) (exception : Word width)
+    (hfirst : evalWordLoopProgWithHandlersAndFfi functions ffiHandler fuel state
+      first = some (.raised firstState exception)) :
+    evalWordLoopProgWithHandlersAndFfi functions ffiHandler (fuel + 1) state
+      (.seq first second) = some (.raised firstState exception) := by
+  simp [evalWordLoopProgWithHandlersAndFfi, hfirst]
+
+theorem evalWordLoopProgWithHandlersAndFfi_seq_broke [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (fuel : Nat) (state firstState : State width)
+    (first second : WordProg (Word width)) (label : Nat)
+    (hfirst : evalWordLoopProgWithHandlersAndFfi functions ffiHandler fuel state
+      first = some (.broke firstState label)) :
+    evalWordLoopProgWithHandlersAndFfi functions ffiHandler (fuel + 1) state
+      (.seq first second) = some (.broke firstState label) := by
+  simp [evalWordLoopProgWithHandlersAndFfi, hfirst]
+
+theorem evalWordLoopProgWithHandlersAndFfi_seq_continued [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (fuel : Nat) (state firstState : State width)
+    (first second : WordProg (Word width)) (label : Nat)
+    (hfirst : evalWordLoopProgWithHandlersAndFfi functions ffiHandler fuel state
+      first = some (.continued firstState label)) :
+    evalWordLoopProgWithHandlersAndFfi functions ffiHandler (fuel + 1) state
+      (.seq first second) = some (.continued firstState label) := by
+  simp [evalWordLoopProgWithHandlersAndFfi, hfirst]
+
+theorem evalWordLoopProgWithHandlersAndFfi_ite_true [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (fuel : Nat) (state : State width)
+    (operator : Cmp) (condition : Nat) (rightValue : WordRegImm (Word width))
+    (thenBranch elseBranch : WordProg (Word width))
+    (result : WordLoopControlResult width)
+    (hcondition : evalWordCondition state operator condition rightValue = some true)
+    (hthen : evalWordLoopProgWithHandlersAndFfi functions ffiHandler fuel state
+      thenBranch = some result) :
+    evalWordLoopProgWithHandlersAndFfi functions ffiHandler (fuel + 1) state
+      (.ite operator condition rightValue thenBranch elseBranch) = some result := by
+  simp [evalWordLoopProgWithHandlersAndFfi, hcondition, hthen]
+
+theorem evalWordLoopProgWithHandlersAndFfi_ite_false [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (fuel : Nat) (state : State width)
+    (operator : Cmp) (condition : Nat) (rightValue : WordRegImm (Word width))
+    (thenBranch elseBranch : WordProg (Word width))
+    (result : WordLoopControlResult width)
+    (hcondition : evalWordCondition state operator condition rightValue = some false)
+    (helse : evalWordLoopProgWithHandlersAndFfi functions ffiHandler fuel state
+      elseBranch = some result) :
+    evalWordLoopProgWithHandlersAndFfi functions ffiHandler (fuel + 1) state
+      (.ite operator condition rightValue thenBranch elseBranch) = some result := by
+  simp [evalWordLoopProgWithHandlersAndFfi, hcondition, helse]
+
+theorem evalWordLoopProgWithHandlersAndFfi_loop [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (fuel : Nat) (state : State width)
+    (liveIn : List Nat) (body : WordProg (Word width)) (liveOut : List Nat) :
+    evalWordLoopProgWithHandlersAndFfi functions ffiHandler (fuel + 1) state
+        (.loop liveIn body liveOut) =
+      evalWordLoopRepeatWithHandlersAndFfi functions ffiHandler fuel state body := by
+  simp [evalWordLoopProgWithHandlersAndFfi]
+
+theorem evalWordLoopProgWithHandlersAndFfi_mustTerminate [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (fuel : Nat) (state : State width) (body : WordProg (Word width)) :
+    evalWordLoopProgWithHandlersAndFfi functions ffiHandler (fuel + 1) state
+        (.mustTerminate body) =
+      evalWordLoopProgWithHandlersAndFfi functions ffiHandler fuel state body := by
+  simp [evalWordLoopProgWithHandlersAndFfi]
+
+example (functions : List (Nat × List Nat × WordProg (Word 64)))
+    (ffiHandler : FunName → Word 64 → Word 64 → Word 64 → Word 64 →
+      State 64 → Option (State 64)) (state : State 64) :
+    evalWordLoopProgWithHandlersAndFfi functions ffiHandler 1 state
+        (.mustTerminate (.skip : WordProg (Word 64))) =
+      evalWordLoopProgWithHandlersAndFfi functions ffiHandler 0 state
+        (.skip : WordProg (Word 64)) :=
+  evalWordLoopProgWithHandlersAndFfi_mustTerminate functions ffiHandler 0 state
+    (.skip : WordProg (Word 64))
+
 theorem evalWordLoopProg_break [NeZero width] (state : State width) (label : Nat) :
     evalWordLoopProg 1 state (.break label) =
       some (.broke state label) := by

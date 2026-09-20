@@ -182,6 +182,14 @@
       ]
     },
     {
+      "path": "Flapjack/Test/OriginalPancake/conditional_comparators.pnk",
+      "source_reference": "GH #1027 conditional-lowering regression: signed less-than, unsigned lower-than, equality, and inequality source branches all retain CakeML direct-branch layouts and exact section bytes.",
+      "cake_sha256": "88fe750851c8f58e477a3b4c374f3f55a980120782555f8f86f648bfe7f45a15",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.11"
+      ]
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/hello.pnk",
       "source_reference": "hello.pnk whole-artifact parity (GitHub issue #1022 / bead flapjack-8tb): the checked fixture now has byte-identical Cake and Flapjack output, including cml_main, after the Cake FFI setup-order fix. Retain it as the primary exact-output regression while broader accepted-program parity remains tracked by flapjack-8tb and child beads.",
       "cake_sha256": "72e2d0d849bfcb8d5070a06c35d148d81c032982cd0ca5ce6e12bd91843dc270",

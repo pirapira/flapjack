@@ -1,0 +1,24 @@
+fun 1 less_case(1 x, 1 y) {
+  if x < y { return 1; }
+  return 0;
+}
+fun 1 lower_case(1 x, 1 y) {
+  if x <+ y { return 1; }
+  return 0;
+}
+fun 1 equal_case(1 x, 1 y) {
+  if x == y { return 1; }
+  return 0;
+}
+fun 1 not_equal_case(1 x, 1 y) {
+  if x != y { return 1; }
+  return 0;
+}
+fun 1 main() {
+  var 1 a = less_case(1, 2);
+  var 1 b = lower_case(1, 2);
+  var 1 c = equal_case(2, 2);
+  var 1 d = not_equal_case(1, 2);
+  @halt(@base, 0, @base, 0);
+  return a + b + c + d;
+}

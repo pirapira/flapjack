@@ -1026,12 +1026,10 @@ def wordStackReadRegister {α : Type} (config : WordStackConfig) (name temporary
 def wordStackConditionOperands {α : Type} (config : WordStackConfig) (condition : Nat)
     (right : WordRegImm α) :
     Option (StackProg α × Nat × WordRegImm α) := do
-  let conditionTemporary :=
-    match right with
-    | .imm _ => config.addressScratch
-    | .reg _ => config.scratch
   let (conditionPrelude, conditionRegister) ←
-    wordStackReadRegister config condition conditionTemporary
+    /- Cake's `comp If` always uses `wReg1` for the condition, including
+       the immediate-RHS branch (`word_to_stackScript.sml:472-487`). -/
+    wordStackReadRegister config condition config.scratch
   let (rightPrelude, rightOperand) ← match right with
     | .imm value => pure (.skip, .imm value)
     | .reg name => do

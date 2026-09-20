@@ -11261,4 +11261,70 @@ theorem panValuePcRaisedWordStateFullCorrect
     exceptionCode hstate hexception hcode hlookup
   exact ⟨heval.1, heval.2, hresult⟩
 
+theorem panValuePcRaisedTwoWordStateFullCorrect
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [PanShiftWidth α]
+    [ArithmeticShiftRight α] [RotateRightOp α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (state : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord left right : α)
+    (exception : ExceptionId) (exceptionCode : α)
+    (resultExceptionCode : ExceptionId → Option α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (hlookup : lookupInfo exception context.exceptions = some exceptionCode)
+    (hbytesInWord : context.bytesInWord = bytesInWord)
+    (hdistinct : (0 : α) ≠ 0 + bytesInWord)
+    (hstate : panValueCrepStateRel structs context
+      (fun _ => none) sourceGlobals sourceMemory state)
+    (hexception : exceptionRel exception
+      (.rStruct [.word left, .word right]) exceptionCode)
+    (hcode : resultExceptionCode exception = some exceptionCode) :
+    evalPanValueProgWithPrimitiveCallsAndFfi
+      primitive sourceHandler structs sourceFunctions
+      baseAddress topAddress bytesInWord 5
+      sourceLocals sourceGlobals sourceMemory
+      (.raise exception (.rStruct [.const left, .const right])) =
+      some (.raised (fun _ => none) sourceGlobals sourceMemory
+        exception (.rStruct [.word left, .word right])) ∧
+    evalCrepFullProgStateFull functions crepPrimitive ffi sharedMem
+      baseAddress topAddress 15 state
+      (compileProg context
+        (.raise exception (.rStruct [.const left, .const right]))) =
+      some (.raised
+        { state with
+          globals := updateMemory
+            (updateMemory state.globals 0 left)
+            (0 + bytesInWord) right }
+        exceptionCode) ∧
+    panValuePcResultRelWithContextCode structs context exceptionRel
+      resultExceptionCode (crepPcTwoWordGlobalsLookup bytesInWord)
+      (.raised (fun _ => none) sourceGlobals sourceMemory exception
+        (.rStruct [.word left, .word right]))
+      (.raised
+        { state with
+          globals := updateMemory
+            (updateMemory state.globals 0 left)
+            (0 + bytesInWord) right }
+        exceptionCode) := by
+  have heval := compile_full_pan_value_raise_two_word_state_full_correct
+    context structs sourceFunctions functions sourceLocals sourceGlobals
+    sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord left right exception exceptionCode
+    hlookup hbytesInWord
+  have hresult := panValuePcResultRelWithContextCode_of_raised_two_word_global_spill
+    structs context exceptionRel resultExceptionCode
+    (fun _ => none) sourceGlobals sourceMemory exception bytesInWord left right
+    state exceptionCode hstate hexception hcode hlookup hdistinct
+  exact ⟨heval.1, heval.2, hresult⟩
+
 end Flapjack

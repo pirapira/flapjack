@@ -683,6 +683,18 @@ def loopProgToDisplay [CakeDisplayWord α]
     (names : List (Nat × String)) (program : LoopProg α) : DisplayExpr :=
   loopProgToDisplayFuel names (loopProgDepth program + 1) program
 
+/-! Exact source counterpart of Cake's `loop_fun_to_display_def`
+    (`pan_passesScript.sml:646-652`). -/
+def loopFunToDisplay [CakeDisplayWord α]
+    (names : List (Nat × String))
+    (function : Nat × List Nat × LoopProg α) : DisplayExpr :=
+  let (number, arguments, body) := function
+  .tuple [
+    .string "func",
+    .string (loopAttachName names (some number)),
+    .tuple (arguments.map numToDisplay),
+    loopProgToDisplay names body]
+
 def destAnnot (program : Prog α) : Option (String × String) :=
   match program with
   | .annot tag text => some (tag, text)

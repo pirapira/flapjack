@@ -81,6 +81,92 @@ def crepeFullRaiseContext : CompileContext (RiscV.Word 8) :=
 def crepeFullRaiseState : CrepState (RiscV.Word 8) :=
   { locals := fun _ => none, memory := fun _ => none, globals := fun _ => none }
 
+def crepeFullLoadContext : CompileContext (RiscV.Word 8) :=
+  { vars := [("x", (.one, [1]))], functions := [], exceptions := [],
+    maxVar := 1, bytesInWord := 1 }
+
+def crepeFullLoadState : CrepState (RiscV.Word 8) :=
+  { locals := fun slot => if slot == 1 then some 0 else none
+    memory := fun address => if address == 7 then some 42 else none
+    globals := fun _ => none }
+
+theorem compile_full_pan_value_shMemLoad_word_state_full_regression :
+    evalPanValueProgWithPrimitiveFull
+        ([] : StructContext) 0 100 1
+        (fun name => if name == "x" then some (.word 0) else none)
+        (fun _ => none)
+        (fun address => if address == 7 then some (.word 42) else none)
+        (fun _ _ => none)
+        (.shMemLoad .opW .local "x" (.const 7) : Prog (RiscV.Word 8)) =
+      some (updatePanValueMap
+        (fun name => if name == "x" then some (.word 0) else none)
+        "x" (.word 42),
+        (fun _ => none),
+        (fun address => if address == 7 then some (.word 42) else none), []) ∧
+    evalCrepFullProgStateFull [] (fun _ _ => none)
+        (noCrepFfi (RiscV.Word 8))
+        (defaultCrepSharedMemHandler : CrepSharedMemHandler (RiscV.Word 8))
+        0 100 10 crepeFullLoadState
+        (compileProg crepeFullLoadContext
+          (.shMemLoad .opW .local "x" (.const 7) : Prog (RiscV.Word 8))) =
+      some (.normal { crepeFullLoadState with
+        locals := updateCrepLocal crepeFullLoadState.locals 1 42 }) := by
+  exact compile_full_pan_value_shMemLoad_word_state_full_correct
+    crepeFullLoadContext ([] : StructContext) []
+    (fun name => if name == "x" then some (.word 0) else none)
+    (fun _ => none)
+    (fun address => if address == 7 then some (.word 42) else none)
+    crepeFullLoadState
+    { crepeFullLoadState with
+        locals := updateCrepLocal crepeFullLoadState.locals 1 42 }
+    (fun _ _ => none)
+    (fun _ _ => none)
+    (noCrepFfi (RiscV.Word 8))
+    (defaultCrepSharedMemHandler : CrepSharedMemHandler (RiscV.Word 8))
+    0 100 1 9 .opW "x" 1 7 42 0 (.const 7) (.const 7)
+    (by simp [crepeFullLoadContext, lookupInfo])
+    (by simp [evalPanValueExpFull])
+    (by simp)
+    (by simp [firstCompiledExpAnyShape, compileExp])
+    (by simp [evalCrepFullExpStateFull])
+    (by simp [defaultCrepSharedMemHandler, loadMemOp,
+      crepeFullLoadState])
+    (by simp)
+
+theorem compile_full_pan_value_local_assign_word_state_full_regression :
+    evalPanValueProgWithPrimitiveFull
+        ([] : StructContext) 0 100 1
+        (fun name => if name == "x" then some (.word 0) else none)
+        (fun _ => none)
+        (fun address => if address == 7 then some (.word 42) else none)
+        (fun _ _ => none)
+        (.assign .local "x" (.const 42) : Prog (RiscV.Word 8)) =
+      some (updatePanValueMap
+        (fun name => if name == "x" then some (.word 0) else none)
+        "x" (.word 42),
+        (fun _ => none),
+        (fun address => if address == 7 then some (.word 42) else none), []) ∧
+    evalCrepFullProgStateFull [] (fun _ _ => none)
+        (noCrepFfi (RiscV.Word 8))
+        (defaultCrepSharedMemHandler : CrepSharedMemHandler (RiscV.Word 8))
+        0 100 10 crepeFullLoadState
+        (compileProg crepeFullLoadContext
+          (.assign .local "x" (.const 42) : Prog (RiscV.Word 8))) =
+      some (.normal { crepeFullLoadState with
+        locals := updateCrepLocal crepeFullLoadState.locals 1 42 }) := by
+  exact compile_full_pan_value_local_assign_word_state_full_correct
+    crepeFullLoadContext ([] : StructContext)
+    (fun name => if name == "x" then some (.word 0) else none)
+    (fun _ => none)
+    (fun address => if address == 7 then some (.word 42) else none)
+    crepeFullLoadState (fun _ _ => none) (fun _ _ => none)
+    (noCrepFfi (RiscV.Word 8))
+    (defaultCrepSharedMemHandler : CrepSharedMemHandler (RiscV.Word 8))
+    0 100 1 42 0 8 "x" 1
+    (by simp [crepeFullLoadContext, lookupInfo])
+    (by simp)
+    (by simp [crepeFullLoadState])
+
 theorem compile_full_pan_value_dec_word_return_state_full_regression :
     evalCrepFullProgStateFull [] (fun _ _ => none) (noCrepFfi (RiscV.Word 8))
         (defaultCrepSharedMemHandler : CrepSharedMemHandler (RiscV.Word 8))

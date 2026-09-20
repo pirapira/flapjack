@@ -1,4 +1,5 @@
 import Flapjack.RiscV.Backend
+import Flapjack.RiscV.CakeSoundness
 import Flapjack.RiscV.Calls
 import Flapjack.RiscV.CorrectnessBackend
 import Flapjack.RiscV.CorrectnessFfi
@@ -204,6 +205,25 @@ example :
           (fun instructions => (instructions, [4])) := by
   simp [wordFunctionToRiscVWithCallsAndFfiCake,
     wordFunctionToRiscVWithCallsCake, wordExpToInstructionsCake,
+    wordConstToInstructions, wordConst32ToInstructions, registerOfNat]
+
+example (state : State 64) :
+    evalWordProgCake state
+        (.assign 4 (.const (BitVec.ofNat 64 0x1234)) : WordProg (Word 64)) =
+      some (executeInstructions state
+        [.lui 4 (BitVec.ofNat 64 1),
+         .addi 4 4 (BitVec.ofNat 64 0x234)]) := by
+  simp [evalWordProgCake, wordExpToInstructionsCake,
+    wordConstToInstructions, wordConst32ToInstructions, registerOfNat]
+
+example (state : State 64) :
+    evalWordProgCake state
+        (.assign 4 (.const (BitVec.ofNat 64 0x1122334455667788)) :
+          WordProg (Word 64)) =
+      some (executeInstructions state
+        ((wordConstToInstructions (width := 64) 4
+          (BitVec.ofNat 64 0x1122334455667788)).getD [])) := by
+  simp [evalWordProgCake, wordExpToInstructionsCake,
     wordConstToInstructions, wordConst32ToInstructions, registerOfNat]
 
 /-! The checked call-aware selector now has the same compositional theorem

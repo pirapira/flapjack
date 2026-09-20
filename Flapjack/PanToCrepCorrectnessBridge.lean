@@ -5021,6 +5021,44 @@ theorem panValuePcResultRelWithContextCode_of_control
       | normal _ | returned _ _ | raised _ _ | broke _ _ | finalFfi _ _ =>
           simp [panValueCrepControlRel] at hcontrol
 
+theorem panValuePcResultRel_of_context_code
+    [BEq α] [OfNat α 0] [OfNat α 1]
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceResult : PanValuePcResult α) (targetResult : CrepPcResult α)
+    (hresult : panValuePcResultRelWithContextCode structs context exceptionRel
+      exceptionCode globalsLookup sourceResult targetResult) :
+    panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
+      sourceResult targetResult := by
+  cases sourceResult <;> cases targetResult <;>
+    simp_all [panValuePcResultRelWithContextCode,
+      panValuePcExceptionResultRelWithContextCode, panValuePcResultRel]
+
+theorem panValuePcCompileCorrect_of_context_code
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
+    (sourceEvaluate : PanValuePcEvaluator α)
+    (targetEvaluate : CrepPcEvaluator α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (program : Prog α)
+    (hcontext : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program) :
+    PanValuePcCompileCorrect sourceEvaluate targetEvaluate codeRel excpRel
+      exceptionCode globalsLookup program := by
+  intro context structs sourceInput targetInput exceptionRel sourceExecution
+    targetExecution hsourceStructs htargetStructs hlocalisedCode hlocalised
+    hcode hexcp hstate hnonerror hsource htarget hpostCode hpostExcp
+  apply panValuePcResultRel_of_context_code structs context exceptionRel
+    exceptionCode globalsLookup sourceExecution.result targetExecution.result
+  exact hcontext context structs sourceInput targetInput exceptionRel
+    sourceExecution targetExecution hsourceStructs htargetStructs
+    hlocalisedCode hlocalised hcode hexcp hstate hnonerror hsource htarget
+    hpostCode hpostExcp
+
 /-! A kernel-checked composition theorem for the stateful source-to-Crep
 proof.  `hsourceAdapter` and `htargetAdapter` identify the rich evaluator's
 successful result with the existing stateful evaluators.  Ordinary

@@ -559,23 +559,26 @@ def wordInstSelectProgram [Sub α] [Add α] [AndOp α] [OrOp α] [HXor α α α]
       | .var source => .move 0 [(destination, source)]
       | value => .assign destination value
   | .store address value =>
-      let (prelude, selectedAddress) :=
-        wordInstSelectAddressAtom temp (wordInstNormalizeExp address)
-      match selectedAddress with
-      | .var address =>
-          /- Cake's selected Store is an actual WordLang Mem instruction
-             addressed through the fresh temporary.  Keeping it as a
-             structured WordProg.store lets copy propagation rewrite the
-             address expression away, which changes the allocator-visible
-             move shape. -/
-          wordDeadSelectSeq prelude (.inst (.mem .store value address))
-      | .op .add [.var address, .const offset] =>
-          if WordInstSelectImmediate.negativeAddressOffset offset then
+      /- Cake's `inst_select` applies the same address split as
+         `inst_select_exp` to Store: a valid signed offset is retained in the
+         Mem instruction through the fresh temporary; an invalid offset (or a
+         non-add address) materializes the complete address into that
+         temporary and emits a zero-offset Mem.  Keeping the source-shaped
+         `.store` node here used to defer this choice to Word-to-Stack, which
+         was only accidentally equivalent for the current fixtures. -/
+      let normalized := wordInstNormalizeExp address
+      match normalized with
+      | .op .add [base, .const offset] =>
+          if WordInstSelectImmediate.validSharedMemoryOffset .store offset then
+            let (prelude, _) := wordInstSelectAtom temp base
             wordDeadSelectSeq prelude
-              (.inst (.memOffset .store value address offset))
+              (.inst (.memOffset .store value temp offset))
           else
-            wordDeadSelectSeq prelude (.store selectedAddress value)
-      | _ => wordDeadSelectSeq prelude (.store selectedAddress value)
+            let (prelude, _) := wordInstSelectAtom temp normalized
+            wordDeadSelectSeq prelude (.inst (.mem .store value temp))
+      | _ =>
+          let (prelude, _) := wordInstSelectAtom temp normalized
+          wordDeadSelectSeq prelude (.inst (.mem .store value temp))
   | .ite operator condition right thenBranch elseBranch =>
       .ite operator condition right
         (wordInstSelectProgram temp thenBranch)

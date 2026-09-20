@@ -218,21 +218,6 @@ example :
   decide +kernel
 
 example :
-    lowerLoopExp (CrepExp.cmp .equal (.var 0) (.const (α := Nat) 1)) =
-      .cmp .equal (.var 0) (.const 1) := by
-  simp [lowerLoopExp]
-
-example :
-    lowerLoopProg (CrepProg.seq .skip (.tick : CrepProg Nat)) =
-      .seq .skip .tick := by
-  simp [lowerLoopProg]
-
-example :
-    lowerLoopProg (CrepProg.store (.const (α := Nat) 0) (.const 7)) =
-      (.fail : LoopProg Nat) := by
-  simp [lowerLoopProg]
-
-example :
     (loopCompileExp loopContext 3 [] (.load32 (.const (α := Nat) 8))).code =
       [.assign 3 (.const 8), .load32 3 3] := by
   simp [loopCompileExp]

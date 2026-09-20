@@ -70,6 +70,12 @@ def clockedCallBodyTimeout : Option (PanValueFfiClockResult (Word 64) Unit) :=
     (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState 1
     none "timeoutLoop" []
 
+def clockedProgramBodyTimeout : Option (PanValueFfiClockResult (Word 64) Unit) :=
+  evalPanValueFfiClockProg statefulTestContext statefulTestPrimitive
+    statefulTestHandler [] clockedTimeoutFunctions 0 100 8 20
+    (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState 1
+    (.call none "timeoutLoop" [])
+
 def clockedDecCallAtZero :
     Option (PanValueFfiClockResult (Word 64) Unit) :=
   evalPanValueFfiClockProg statefulTestContext statefulTestPrimitive
@@ -219,6 +225,11 @@ def clockedCallFinalFfiSteps : Option (PanValueFfiSteppedResult (Word 64) Unit) 
 
 #guard
   match clockedCallBodyTimeout with
+  | some (.timeout locals _ _ _, 0) => locals "x" = none
+  | _ => false
+
+#guard
+  match clockedProgramBodyTimeout with
   | some (.timeout locals _ _ _, 0) => locals "x" = none
   | _ => false
 

@@ -92,6 +92,21 @@ def evalStructuredRiscVOutOfRangeFull : Option (PanValue ShiftWord) :=
     (.shift .lsl (.const (shiftWord 1)) (.const (shiftWord 8)))
 #guard evalStructuredRiscVOutOfRangeFull.isNone
 
+/- The target-word structured program boundary must preserve the same Cake
+   shift behavior when a shift is nested inside a returned record. -/
+def evalStructuredRiscVProgramShiftsFull : Option (List (PanValue ShiftWord)) :=
+  (evalPanValueProgFull [] (shiftWord 0) (shiftWord 0) (shiftWord 8)
+    (fun _ => none) (fun _ => none) (fun _ => none)
+    (.return (.rStruct
+      [.shift .asr (.const (shiftWord 0x80)) (.const (shiftWord 1)),
+       .shift .ror (.const (shiftWord 0x81)) (.const (shiftWord 1))]))).map
+    fun result => result.2.2.2
+
+#guard match evalStructuredRiscVProgramShiftsFull with
+  | some [.rStruct [.word asr, .word ror]] =>
+      asr == shiftWord 0xc0 && ror == shiftWord 0xc0
+  | _ => false
+
 def evalRiscVRor : Option (PanValue ShiftWord) :=
   RiscV.evalPanRiscVFlatExp [] (fun _ => none) (fun _ => none)
     (fun _ => false) (fun _ => none)

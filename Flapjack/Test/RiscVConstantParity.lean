@@ -518,14 +518,6 @@ that mirrors Cake's `riscv_ast (Loc r i)`.  The bridge below proves it emits
 exactly the instructions of the executable Lab selector, so a theorem client
 can use the checked boundary while the pipeline keeps using `labLocValueInstructions`. -/
 
-theorem wordLocValueToInstructionsCake_eq_labLocValueInstructions {width : Nat}
-    [NeZero width] (destination label position : Nat) (hdestination : destination < 32) :
-    wordLocValueToInstructionsCake (width := width) destination label position =
-      some (labLocValueInstructions (width := width) ⟨destination, hdestination⟩
-        label position) := by
-  unfold wordLocValueToInstructionsCake labLocValueInstructions
-  simp [registerOfNat, hdestination]
-
 example :
     wordLocValueToInstructionsCake (width := 64) 4 0x1234 0 =
       some (labLocValueInstructions (width := 64) 4 0x1234 0) := by

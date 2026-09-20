@@ -75,6 +75,44 @@ theorem crepRuntimeTypedGlobalRelation_loopState_adapter
   intro address
   rfl
 
+/-! When the key re-encoding is injective on the addresses in scope, the
+    existing Loop exact-address store is the same update as Cake's typed
+    StoreGlob after projection.  This is the explicit premise needed by the
+    raw Loop store bridge; aliases must use the typed evaluator adapter above.
+    -/
+theorem crepRuntimeTypedGlobalRelation_loopStore_of_noalias
+    [BEq α] [LawfulBEq α]
+    (state : CrepRuntimeState α σ) (key : α → CrepGlobalAddress)
+    (typedState : CrepGlobalState α) (address value : α)
+    (hnoalias : ∀ current, key current = key address → current = address) :
+    CrepGlobalKeyRelation key
+      (updateLoopGlobal
+        (state.withTypedGlobalState key typedState).globals address value)
+      (storeCrepTypedGlobal key typedState address value).globals := by
+  have hcompact :
+      CrepGlobalKeyRelation key
+        (state.withTypedGlobalState key typedState).globals typedState.globals :=
+    crepRuntimeTypedGlobalRelation_adapter state key typedState
+  have hstore := CrepGlobalKeyRelation.store key hcompact address value
+  have hupdate := updateCrepGlobalKeyedBy_eq_updateMemory_of_noalias
+    key (state.withTypedGlobalState key typedState).globals address value hnoalias
+  intro current
+  calc
+    (storeCrepTypedGlobal key typedState address value).globals (key current) =
+        updateCrepGlobalKeyedBy key
+          (state.withTypedGlobalState key typedState).globals address value current :=
+      hstore current
+    _ = updateMemory
+          (state.withTypedGlobalState key typedState).globals address value current :=
+      congrFun hupdate current
+    _ = updateLoopGlobal
+          (state.withTypedGlobalState key typedState).globals address value current := by
+      by_cases h : address = current
+      · subst current
+        simp [updateMemory, updateLoopGlobal]
+      · have h' : current ≠ address := Ne.symm h
+        simp [updateMemory, updateLoopGlobal, h, h']
+
 theorem crepRuntimeTypedGlobalRelation_store_of_noalias
     [BEq α] [LawfulBEq α]
     (key : α → CrepGlobalAddress) (state : CrepRuntimeState α σ)

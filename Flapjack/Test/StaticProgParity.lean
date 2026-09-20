@@ -155,6 +155,26 @@ def staticProgTailCallMetadataOracle : Bool :=
 
 #guard staticProgTailCallMetadataOracle
 
+def staticProgWordLocalCallContext : Context :=
+  { staticProgCallContext with
+    locals := ("x", { shapedBased := .word .trusted }) :: staticProgCallContext.locals }
+
+/-! Cake's accepted local-destination call records the destination's trusted
+    shape in the returned variable delta. -/
+def staticProgLocalCallMetadataOracle : Bool :=
+  match checkProg staticProgWordLocalCallContext
+      ((.call (some (some (.local, "x"), none)) "callee" []) : Prog Nat) with
+  | (Except.ok result, warnings) =>
+      !result.exitsFunction && !result.exitsLoop && result.last == .otherLast &&
+        result.currentLocation == "L: " && warnings.isEmpty &&
+        result.variableDelta.length == 1 &&
+        match lookupInfo "x" result.variableDelta with
+        | some info => info.shapedBased == .word .trusted
+        | none => false
+  | _ => false
+
+#guard staticProgLocalCallMetadataOracle
+
 /-! Cake's sequence rule keeps the first function exit when the second
     statement is transparent.  Check the returned metadata, not only the
     acceptance/error bit, for a return followed by Skip. -/

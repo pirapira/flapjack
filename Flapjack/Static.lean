@@ -883,7 +883,14 @@ def checkCallDestination [BEq String] (context : Context) (functionName : FunNam
       | .local =>
           staticBind (checkLocalVar context name) (fun localInfo =>
             if shapedBasedHasShape returnShape localInfo.shapedBased then
-              progOk .otherLast false false context.location
+              staticOk {
+                exitsFunction := false
+                exitsLoop := false
+                last := .otherLast
+                variableDelta :=
+                  [(name, { shapedBased :=
+                    shapedBasedWithBase .trusted localInfo.shapedBased })]
+                currentLocation := context.location }
             else
               staticError (.shape (getShapeMismatchMessage
                 ("result of function call " ++ functionName ++

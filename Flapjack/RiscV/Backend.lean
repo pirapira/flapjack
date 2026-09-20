@@ -589,16 +589,6 @@ def wordProgToRiscV [NeZero width] :
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial
 
-/-! Whole-program entrypoint for the checked Cake constant boundary.  This is
-    additive so existing proofs of the legacy one-instruction compiler remain
-    stable while new target-facing callers can opt into list-valued constants.
-    All non-constant selectors are shared with the established backend. -/
-def wordInstToInstructionsCake [NeZero width] :
-    WordInst (Word width) → Option (List (Instruction width))
-  | .const destination value => wordConstToInstructions destination value
-  | .arith operation => wordArithToInstructions operation
-  | instruction => (wordInstToInstruction instruction).map (fun instruction => [instruction])
-
 def wordShareInstToInstructionsCake [NeZero width] (operator : WordMemOp)
     (name : Nat) : WordExp (Word width) → Option (List (Instruction width))
   | .var address => do

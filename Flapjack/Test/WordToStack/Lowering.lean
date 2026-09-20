@@ -51,6 +51,20 @@ example :
       some (.seq (.stackLoad 31 12) (.inst (.mem .load32 4 31)) : StackProg Nat) := by
   exact wordStackMemoryInst_load_spill_address
 
+/- Cake's `wReg1` uses the first allocator register `k` for a spilled
+   address in an offset load.  The second scratch is reserved for the
+   second operand of instructions such as stores; using it here changes the
+   emitted RISC-V register even though the operation remains executable. -/
+example :
+    wordStackMemoryOffsetInst
+        { locations := [(0, .register 5), (1, .stack 2)],
+          scratch := 22, stackBase := 0, addressScratch := 23 }
+        .load 0 1 192 =
+      some (.seq (.stackLoad 22 2)
+        (.inst (.memOffset .load 5 22 192)) : StackProg Nat) := by
+  simp [wordStackMemoryOffsetInst, wordStackLoadOffsetInst,
+    wordStackLocation, wordStackOffset, lookupNatInfo]
+
 example :
     wordStackMemoryInst
         { locations := [(0, .stack 3), (1, .stack 2)],

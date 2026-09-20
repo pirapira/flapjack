@@ -1,7 +1,8 @@
 import Flapjack.RiscV.WordToStack
 
-/-! Cake's `wShareInst Load` reloads a spilled address with `wReg1`, the first
-    spill temporary.  This pins the corresponding offset-load StackLang shape. -/
+/-! Cake's `wReg1` reloads a spilled address through the first allocator
+    register.  These two shapes pin the corresponding offset-load StackLang
+    forms, including a spilled destination. -/
 
 namespace Flapjack.RiscV
 

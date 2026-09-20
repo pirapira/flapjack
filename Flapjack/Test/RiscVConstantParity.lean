@@ -807,4 +807,88 @@ theorem wordLocValueToInstructionsCake_execution_zero (state : State 64)
   · omega
   · omega
 
+/-! The signed-20-bit reconstruction is also the rule used by Cake when the
+    label is not at position zero. Keep this packaged separately from the
+    position-zero convenience theorem above so the theorem-facing LocValue API
+    remains unchanged while callers can discharge the actual layout premise. -/
+
+theorem locValue_reconstruct_delta (delta : Int) (hlo : -(2^19) ≤ delta)
+    (hhi : delta < 2^19) :
+    let remainder := delta % 4096
+    let low := if remainder >= 2048 then remainder - 4096 else remainder
+    let upper := (delta - low) / 4096
+    uImmediate (BitVec.ofInt 64 upper) + BitVec.ofInt 64 low =
+      BitVec.ofInt 64 delta := by
+  dsimp only
+  by_cases hrem : delta % 4096 >= 2048
+  · simp only [if_pos hrem]
+    rw [uImmediate_ofInt_range]
+    · rw [← BitVec.ofInt_add]
+      rw [show
+          (delta - (delta % 4096 - 4096)) / 4096 * 4096 +
+              (delta % 4096 - 4096) = delta by
+        have hbal := locValue_balanced_reconstruction delta
+        dsimp only at hbal
+        omega]
+    · omega
+    · omega
+  · simp only [if_neg hrem]
+    rw [uImmediate_ofInt_range]
+    · rw [← BitVec.ofInt_add]
+      rw [show
+          (delta - delta % 4096) / 4096 * 4096 + delta % 4096 = delta by
+        have hbal := locValue_balanced_reconstruction delta
+        dsimp only at hbal
+        omega]
+    · omega
+    · omega
+
+theorem wordLocValueToInstructionsCake_execution_at_position (state : State 64)
+    (destination label position : Nat) (hd : destination < 32) (hne : destination ≠ 0)
+    (hpc : state.pc = BitVec.ofNat 64 position)
+    (hlo : -(2^19 : Int) ≤ Int.ofNat label - Int.ofNat position)
+    (hhi : Int.ofNat label - Int.ofNat position < 2^19) :
+    readRegister (executeInstructions state
+        ((wordLocValueToInstructionsCake (width := 64) destination label position).getD []))
+      ⟨destination, hd⟩ = BitVec.ofNat 64 label := by
+  rw [wordLocValueToInstructionsCake_getD destination label position hd]
+  rw [execute_auipc_addi_read state ⟨destination, hd⟩ (by simpa using hne)]
+  rw [hpc]
+  have hreconstruct := locValue_reconstruct_delta
+    (Int.ofNat label - Int.ofNat position) hlo hhi
+  dsimp only at hreconstruct
+  rw [BitVec.add_assoc]
+  rw [hreconstruct]
+  rw [show BitVec.ofNat 64 position =
+      BitVec.ofInt 64 (Int.ofNat position) by simp]
+  rw [← BitVec.ofInt_add]
+  rw [show (Int.ofNat position +
+      (Int.ofNat label - Int.ofNat position)) = Int.ofNat label by omega]
+  simp
+
+/-! The packaged theorem is exercised on both sides of the current PC. The
+    first guard is a negative, page-crossing delta; the second is a positive
+    nonzero-position delta. -/
+example :
+    readRegister (executeInstructions
+        ({ (zeroState 64) with pc := BitVec.ofNat 64 0x1000 })
+          ((wordLocValueToInstructionsCake (width := 64) 4 0x800 0x1000).getD [])) 4 =
+      BitVec.ofNat 64 0x800 := by
+  apply wordLocValueToInstructionsCake_execution_at_position
+    ({ (zeroState 64) with pc := BitVec.ofNat 64 0x1000 }) 4 0x800 0x1000
+      (by decide) (by decide) rfl
+  · decide
+  · decide
+
+example :
+    readRegister (executeInstructions
+        ({ (zeroState 64) with pc := BitVec.ofNat 64 0x1000 })
+          ((wordLocValueToInstructionsCake (width := 64) 4 0x2345 0x1000).getD [])) 4 =
+      BitVec.ofNat 64 0x2345 := by
+  apply wordLocValueToInstructionsCake_execution_at_position
+    ({ (zeroState 64) with pc := BitVec.ofNat 64 0x1000 }) 4 0x2345 0x1000
+      (by decide) (by decide) rfl
+  · decide
+  · decide
+
 end Flapjack.RiscV

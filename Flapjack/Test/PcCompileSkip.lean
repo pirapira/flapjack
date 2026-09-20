@@ -1093,4 +1093,30 @@ example
     0 0 1 4 4 hbytesInWord hlookupSource hlookupException hfresh hexception
     hlookup hevidence
 
+example
+    (hvalue : PanValueCrepExpressionStateCorrect (Exp.const (9 : Nat)))
+    (hraiseData : ∀ (context : CompileContext Nat) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+      (sourceMemory : Nat → Option (PanValue Nat)) (sourceException : ExceptionId)
+      (sourceValue : PanValue Nat) (targetState : CrepState Nat)
+      (targetException : Nat),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      panValuePcRaisedHraiseData skipNatExceptionCode skipNatGlobalsLookup
+        structs context exceptionRel sourceLocals sourceGlobals sourceMemory
+        sourceException sourceValue targetState targetException) :
+    PanValuePcCompileCorrect
+      (panValuePcCompactSourceEvaluator skipNatPrimitive skipNatSourceHandler
+        [] 0 0 1 1)
+      (crepPcCompactTargetEvaluator [] skipNatCrepPrimitive skipNatFfi
+        skipNatSharedMem 0 0 1)
+      skipNatCodeRel skipNatExcpRel skipNatExceptionCode skipNatGlobalsLookup
+      (.return (.const 9)) := by
+  exact panValuePcCompileCorrect_compact_return
+    [] [] skipNatPrimitive skipNatSourceHandler skipNatCrepPrimitive skipNatFfi
+    skipNatSharedMem 0 0 1 1 1 skipNatCodeRel skipNatExcpRel
+    skipNatExceptionCode skipNatGlobalsLookup (Exp.const 9) hvalue hraiseData
+
 end Flapjack

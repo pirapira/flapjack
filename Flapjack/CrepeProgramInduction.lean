@@ -243,10 +243,16 @@ compatibility theorem over the legacy evaluator.
 
 The fragment is nontrivial because sequencing is recursive: a proof for each
 component is threaded through the target `CrepState` by the stateful sequence
-constructor.  More expression-, declaration-, and call-bearing constructors
-remain separate follow-up cases for the full induction.
+constructor.  The arbitrary `Raise` case keeps both evaluator relations as
+explicit premises; more expression-, declaration-, and call-bearing
+constructors remain separate follow-up cases for the full induction.
 -/
-inductive StatefulCompactProg (α : Type u) : Prog α → Prop where
+inductive StatefulCompactProg (α : Type)
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α] :
+    Prog α → Prop where
   | skip : StatefulCompactProg α (.skip : Prog α)
   | tick : StatefulCompactProg α (.tick : Prog α)
   | controlBreak : StatefulCompactProg α (.break : Prog α)
@@ -254,6 +260,12 @@ inductive StatefulCompactProg (α : Type u) : Prog α → Prop where
   | annot (tag text : String) : StatefulCompactProg α (.annot tag text : Prog α)
   | returnConst (value : α) :
       StatefulCompactProg α (.return (.const value) : Prog α)
+  | raiseWithEvidence (exception : ExceptionId) (value : Exp α)
+      (hraiseState : PanValueCrepProgramStateCorrect (α := α)
+        (.raise exception value : Prog α))
+      (hraisePlain : PanValueCrepProgramCorrect (α := α)
+        (.raise exception value : Prog α)) :
+      StatefulCompactProg α (.raise exception value : Prog α)
   | seq {first second : Prog α} :
       StatefulCompactProg α first →
       StatefulCompactProg α second →
@@ -273,6 +285,7 @@ theorem panValueCrepProgramStateCorrect_statefulCompact
   | controlContinue => exact panValueCrepProgramStateCorrect_continue
   | annot tag text => exact panValueCrepProgramStateCorrect_annot tag text
   | returnConst value => exact panValueCrepProgramStateCorrect_return_const value
+  | raiseWithEvidence exception value hraiseState hraisePlain => exact hraiseState
   | @seq first second hfirst hsecond ihfirst ihsecond =>
       exact panValueCrepProgramStateCorrect_seq first second ihfirst ihsecond
 
@@ -313,6 +326,7 @@ theorem panValueCrepProgramCorrect_statefulCompact
   | controlContinue => exact panValueCrepProgramCorrect_continue
   | annot tag text => exact panValueCrepProgramCorrect_annot tag text
   | returnConst value => exact panValueCrepProgramCorrect_return_const value
+  | raiseWithEvidence exception value hraiseState hraisePlain => exact hraisePlain
   | @seq first second hfirst hsecond ihfirst ihsecond =>
       exact panValueCrepProgramCorrect_seq first second ihfirst ihsecond
 

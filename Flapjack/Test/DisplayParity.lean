@@ -84,11 +84,58 @@ def panExpOracle : Bool :=
   panExpConstOracle && panExpVarOracle && panExpLoadOracle &&
     panExpNamedStructOracle && panExpShiftOracle
 
+/-! Direct oracle guards for `loop_exp_to_display_def` in
+    `pan_passesScript.sml:508-530`. -/
+def loopExpConstOracle : Bool :=
+  sameDisplay
+    (loopExpToDisplay (α := BitVec 64) (.const (BitVec.ofNat 64 255)))
+    (.item none "Const" [.string "0xFF"])
+
+def loopExpLookupOracle : Bool :=
+  sameDisplay
+    (loopExpToDisplay (α := BitVec 64) (.lookup (BitVec.ofNat 64 32)))
+    (.item none "Lookup" [.string "0x20"])
+
+def loopExpNestedOracle : Bool :=
+  sameDisplay
+    (loopExpToDisplay
+      (.op .add [.var 3, .const (BitVec.ofNat 64 1)] : LoopExp (BitVec 64)))
+    (.item none "Op"
+      [.string "Add",
+       .item none "Var" [.string "3"],
+       .item none "Const" [.string "0x1"]])
+
+def loopExpLoadOracle : Bool :=
+  sameDisplay
+    (loopExpToDisplay
+      (.load (.op .xor [.var 2, .const (BitVec.ofNat 64 4)]) :
+        LoopExp (BitVec 64)))
+    (.item none "MemLoad"
+      [.item none "Op"
+        [.string "Xor",
+         .item none "Var" [.string "2"],
+         .item none "Const" [.string "0x4"]]])
+
+def loopExpShiftOracle : Bool :=
+  sameDisplay
+    (loopExpToDisplay
+      (.shift .ror (.const (BitVec.ofNat 64 255)) (.var 1) :
+        LoopExp (BitVec 64)))
+    (.item none "Shift"
+      [.string "Ror",
+       .item none "Const" [.string "0xFF"],
+       .item none "Var" [.string "1"]])
+
+def loopExpOracle : Bool :=
+  loopExpConstOracle && loopExpLookupOracle && loopExpNestedOracle &&
+    loopExpLoadOracle && loopExpShiftOracle
+
 #guard opSizeOracle
 #guard insertEsOracle
 #guard varKindOracle
 #guard primOpOracle
 #guard destAnnotOracle
 #guard panExpOracle
+#guard loopExpOracle
 
 end Flapjack.Test.DisplayParity

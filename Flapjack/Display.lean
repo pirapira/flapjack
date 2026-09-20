@@ -1,4 +1,5 @@
 import Flapjack.Language
+import Flapjack.Loop
 
 /-!
 The small display-language boundary used by Pancake's pass printer.
@@ -176,6 +177,53 @@ termination_by fuel => fuel
 
 def panExpToDisplay [CakeDisplayWord α] (expression : Exp α) : DisplayExpr :=
   panExpToDisplayFuel (panExpDepth expression + 1) expression
+
+/-! Exact source counterpart of Cake's `loop_exp_to_display_def`
+    (`pan_passesScript.sml:508-530`).  The extra Loop constructors retained by
+    the executable carrier are given stable names, while every constructor in
+    the source equation is reproduced verbatim. -/
+def loopExpToDisplayFuel [CakeDisplayWord α] : Nat → LoopExp α → DisplayExpr
+  | 0, _ => emptyDisplayItem "display-depth-exhausted"
+  | _fuel + 1, .const value => itemWithWord "Const" value
+  | _fuel + 1, .var name => .item none "Var" [.string (toString name)]
+  | _fuel + 1, .baseAddr => .item none "BaseAddr" []
+  | _fuel + 1, .topAddr => .item none "TopAddr" []
+  | _fuel + 1, .lookup address => itemWithWord "Lookup" address
+  | fuel + 1, .load address =>
+      .item none "MemLoad" [loopExpToDisplayFuel fuel address]
+  | fuel + 1, .op operator arguments =>
+      .item none "Op"
+        (binOpToDisplay operator :: arguments.map (loopExpToDisplayFuel fuel))
+  | fuel + 1, .shift operator left right =>
+      .item none "Shift"
+        [shiftToDisplay operator,
+         loopExpToDisplayFuel fuel left,
+         loopExpToDisplayFuel fuel right]
+  | fuel + 1, .crepOp .mul arguments =>
+      .item none "Mul" (arguments.map (loopExpToDisplayFuel fuel))
+  | fuel + 1, .cmp operator left right =>
+      insertDisplayExpressions (cmpToDisplay operator)
+        [loopExpToDisplayFuel fuel left, loopExpToDisplayFuel fuel right]
+
+def loopExpDepth : LoopExp α → Nat
+  | .const _ | .var _ | .lookup _ | .baseAddr | .topAddr => 1
+  | .load address => 1 + loopExpDepth address
+  | .op _ arguments | .crepOp _ arguments => 1 + loopExpDepthList arguments
+  | .cmp _ left right | .shift _ left right =>
+      1 + max (loopExpDepth left) (loopExpDepth right)
+termination_by expression => sizeOf expression
+decreasing_by
+  all_goals first | sizeOf_list_dec | decreasing_trivial
+where
+  loopExpDepthList : List (LoopExp α) → Nat
+    | [] => 0
+    | expression :: expressions =>
+        max (loopExpDepth expression) (loopExpDepthList expressions)
+  termination_by expressions => sizeOf expressions
+  decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+
+def loopExpToDisplay [CakeDisplayWord α] (expression : LoopExp α) : DisplayExpr :=
+  loopExpToDisplayFuel (loopExpDepth expression + 1) expression
 
 def primOpToDisplay : PrimOp → DisplayExpr
   | .addCarry => emptyDisplayItem "AddCarry"

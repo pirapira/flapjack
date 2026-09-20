@@ -126,6 +126,25 @@ def staticProgLocalStoreWarningOracle : Bool :=
 
 #guard staticProgLocalStoreWarningOracle
 
+/- Cake logs the local-store basedness warning before rejecting an invalid
+   Store32 value (`panStaticScript.sml:1580-1610`). -/
+#guard
+  match staticProgCheck
+      (.store32 .bytesInWord (.rStruct [.const 0])) with
+  | (Except.error (.shape message), [StatErr.warning warning]) =>
+      message == "L: store value has shape {1} instead of a word in function f\n" &&
+        warning == "L: local store address is not calculated from base in function f\n"
+  | _ => false
+
+/- The same warning-before-value-shape rule applies to shared stores. -/
+#guard
+  match staticProgCheck
+      (.shMemStore .opW .baseAddr (.rStruct [.const 0])) with
+  | (Except.error (.shape message), [StatErr.warning warning]) =>
+      message == "L: store value has shape {1} instead of a word in function f\n" &&
+        warning == "L: shared store address is calculated from base in function f\n"
+  | _ => false
+
 /-! Cake's ExtCall checks all four FFI words and otherwise returns ordinary
     fall-through metadata without a warning. -/
 def staticProgExtCallMetadataOracle : Bool :=

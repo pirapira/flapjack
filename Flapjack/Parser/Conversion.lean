@@ -63,6 +63,10 @@ def convBinop (tree : ParseTree) : Option BinOp :=
       else if tree.tokcheck .xorT then some .xor
       else none
 
+/-! Cake `panExps_def` (`panPtreeConversionScript.sml:113`) enumerates the
+    expression nonterminals handled by `conv_panops`. -/
+def panExps : List Nonterminal := [.eMul]
+
 /-- `conv_panop`. -/
 def convPanop (tree : ParseTree) : Option PanOp :=
   match tree with
@@ -345,6 +349,12 @@ def addWithCarryName : String := "__add_with_carry__"
 /-- `add_locs_annot`, applied only when asked for. -/
 def addLocsAnnot (locations : Bool) (tree : ParseTree) (program : Prog α) : Prog α :=
   if locations then .seq (.annot locationTag (locsComment tree.locs)) program else program
+
+/-! Cake `butlast_def` (`panPtreeConversionScript.sml:487`). -/
+def butlast : List α → List α
+  | [] => []
+  | [_] => []
+  | value :: values => value :: butlast values
 
 /-- `conv_NonRecStmt`: the statements that carry no nested program. -/
 def convNonRecStmt (ofInt : Int → α) (fuel : Nat) (tree : ParseTree) : Option (Prog α) :=

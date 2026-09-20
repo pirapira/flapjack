@@ -46,4 +46,59 @@ def parityGuard : Bool :=
 #eval parityGuard
 #guard parityGuard
 
+/- Direct parity for `pan_structs$compile_def` (`pan_structsScript.sml:157`).
+   The declaration-local context is observable here: the body field lookup
+   must use the source shape bound by `Dec`, while the emitted declaration
+   carries the recursively compiled shape. -/
+def compileProgParityGuard : Bool :=
+  match structCompileProg context
+      (.dec "value" (.named "Pair")
+        (.nStruct "Pair" [("left", .const 1), ("right", .const 2)])
+        (.return (.nField "right" (.var .local "value"))) : Prog Nat) with
+  | .dec "value" (.comb [.one, .comb [.one, .one]])
+      (.rStruct [.const 1, .const 2])
+      (.return (.rField 1 (.var .local "value"))) => true
+  | _ => false
+
+#eval compileProgParityGuard
+#guard compileProgParityGuard
+
+/- Direct parity for `pan_structs$compile_decs_def`
+   (`pan_structsScript.sml:213`).  This checks the reverse-recursive pass's
+   final global context as well as each declaration's compiled shape. -/
+def compileDeclsParityGuard : Bool :=
+  let declarations : List (Decl Nat) :=
+    [.decl (.named "Pair") "global"
+      (.nStruct "Pair" [("left", .const 1), ("right", .const 2)]),
+     .function
+       { name := "read", inline := false, exported := false,
+         params := [("pair", .named "Pair")],
+         body := .return (.nField "right" (.var .local "pair")),
+         returnShape := .named "Pair" },
+     .exnDecl "E" (.named "Pair")]
+  let initial : StructPassContext :=
+    { structs := context.structs, locals := [], globals := [] }
+  let (compiled, finalContext) := structCompileDecls declarations initial
+  match finalContext.globals with
+  | [("global", .named "Pair")] =>
+      match compiled with
+      | [.decl (.comb [.one, .comb [.one, .one]]) "global"
+          (.rStruct [.const 1, .const 2]),
+         .function declaration,
+         .exnDecl "E" (.comb [.one, .comb [.one, .one]])] =>
+          (match declaration.params with
+          | [("pair", .comb [.one, .comb [.one, .one]])] => true
+          | _ => false) &&
+          (match declaration.returnShape with
+          | .comb [.one, .comb [.one, .one]] => true
+          | _ => false) &&
+          match declaration.body with
+          | .return (.rField 1 (.var .local "pair")) => true
+          | _ => false
+      | _ => false
+  | _ => false
+
+#eval compileDeclsParityGuard
+#guard compileDeclsParityGuard
+
 end Flapjack.Test.PanStructsCompileExpParity

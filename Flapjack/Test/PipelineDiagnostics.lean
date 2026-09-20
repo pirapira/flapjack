@@ -199,6 +199,46 @@ def longDivHelperCallAbiExact : Bool :=
   cakeAddCarryOps (RiscV.cakeLongDiv1Code 8) =
     [(10, 10, 16, 1), (12, 12, 14, 1)]
 
+/-! Pin the complete width-8 helper shape from
+    `scripts/hol-probes/longdiv_code_probe.out`, not only its calls and
+    AddCarry leaves.  This is the Cake `LongDiv1_code` software path selected
+    when `has_longdiv = F`; the direct RISC-V LongDiv selector remains
+    intentionally rejecting the hardware instruction above. -/
+def cakeLongDiv1Code8Oracle : WordProg Nat :=
+  .ite .test 2 (.reg 2)
+    (.seq (.set (.temp 28) (.var 10)) (.return 0 [8]))
+    (RiscV.cakeWordSeq [
+      .assign 6 (.op .or [
+        .shift .lsr (.var 6) (.const 1),
+        .shift .lsl (.var 4) (.const 7)]),
+      .assign 4 (.shift .lsr (.var 4) (.const 1)),
+      .assign 8 (.shift .lsl (.var 8) (.const 1)),
+      .assign 2 (.op .sub [.var 2, .const 1]),
+      .ite .lower 12 (.reg 4) RiscV.cakeLongDiv1Call .skip,
+      .ite .equal 12 (.reg 4)
+        (.ite .lower 10 (.reg 6) RiscV.cakeLongDiv1Call .skip)
+        .skip,
+      .assign 8 (.op .add [.var 8, .const 1]),
+      .assign 16 (.op .xor [.var 6, .const 255]),
+      .assign 14 (.op .xor [.var 4, .const 255]),
+      .assign 1 (.const 1),
+      .inst (.arith (.cakeAddCarry 10 10 16 1)),
+      .inst (.arith (.cakeAddCarry 12 12 14 1)),
+      RiscV.cakeLongDiv1Call])
+
+example : RiscV.cakeLongDiv1Code 8 = cakeLongDiv1Code8Oracle := by
+  rfl
+
+def cakeLongDivCode8Oracle : WordProg Nat :=
+  RiscV.cakeWordSeq [
+    .assign 10 (.const 0),
+    .assign 11 (.const 8),
+    .call none (some RiscV.cakeLongDiv1Location)
+      [0, 11, 6, 10, 10, 4, 2] none]
+
+example : RiscV.cakeLongDivCode 8 = cakeLongDivCode8Oracle := by
+  rfl
+
 example :
     RiscV.compileLabProgramChecked (width := 64) { services := [] }
       [⟨19, [.asm (.const 1 7) [] 0]⟩] =

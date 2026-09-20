@@ -141,6 +141,19 @@ example :
       some [.lui 5 (BitVec.ofNat 64 0x12345),
         .addi 5 5 (BitVec.ofNat 64 0x678)] := by decide
 
+/- The same Cake expansion must also be used when a Word instruction reaches
+   Lab as `.word (.const ...)`; the old path incorrectly emitted one ADDI. -/
+example :
+    labCompilePlain (width := 64)
+      (.word (.const 3 (BitVec.ofNat 64 41))) =
+      some [.ori 3 0 (BitVec.ofNat 64 41)] := by decide
+
+example :
+    labCompilePlain (width := 64)
+      (.word (.const 5 (BitVec.ofNat 64 0x12345678))) =
+      some [.lui 5 (BitVec.ofNat 64 0x12345),
+        .addi 5 5 (BitVec.ofNat 64 0x678)] := by decide
+
 /-- The one-time Cake relabeling is a bijection on the 64-bit state space,
 packaging the injective and surjective boundary facts. -/
 example : Function.Injective (relabelRegisters (width := 64) riscvForward) ∧

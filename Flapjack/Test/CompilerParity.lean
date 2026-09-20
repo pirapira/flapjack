@@ -6,6 +6,8 @@ import Flapjack.Test.RegisterTransfer
 import Flapjack.Test.LoopToWord
 import Flapjack.Test.PanMemoryParity
 import Flapjack.Test.PanShapeParity
+import Flapjack.Test.PanShapeVarsParity
+import Flapjack.Test.PanGetEidsParity
 import Flapjack.Test.PanWordParity
 import Flapjack.Test.LabPositionParity
 import Flapjack.Test.PanOpParity
@@ -199,6 +201,7 @@ import Flapjack.Test.WordStackCallParity
 import Flapjack.Test.StackRawCall
 import Flapjack.Test.WordInstNormalizeParity
 import Flapjack.Test.WordInstSelectParity
+import Flapjack.Test.WordStackLoadOffsetParity
 import Flapjack.Test.CakeTailCallSsaParity
 import Flapjack.Test.CakeForcedParity
 import Flapjack.Test.CakeMkBijParity

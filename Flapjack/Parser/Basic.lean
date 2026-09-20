@@ -110,6 +110,36 @@ def orElse' (p : P α) (q : P α) : P α := fun s =>
 instance : OrElse (P α) where
   orElse p q := orElse' p (q ())
 
+/-! Direct counterpart of `panPEG$choicel_def` from
+`cakeml/pancake/parser/panPEGScript.sml:106`.  The empty list is the
+state-preserving failure `not (empty []) []`; nonempty lists try alternatives
+left to right and retain the furthest failure through `orElse'`. -/
+def choiceL : List (P α) → P α
+  | [] => fun s => (none, s)
+  | parser :: parsers => orElse' parser (choiceL parsers)
+
+/-! Direct counterpart of `panPEG$pegf_def` from
+`cakeml/pancake/parser/panPEGScript.sml:111`.  The source `seq` pairs a
+parser's result with an empty parser result and applies the continuation only
+to the first component; this is the explicit bind below. -/
+def pegF (parser : P α) (continuation : α → P β) : P β := fun s =>
+  match parser s with
+  | (some value, state) => continuation value state
+  | (none, state) => (none, state)
+
+/-! Direct counterpart of `panPEG$seql_def` from
+`cakeml/pancake/parser/panPEGScript.sml:115`.  The source folds `seq` over
+parser results using list append before applying `pegf`'s continuation. -/
+def seqList (parsers : List (P (List α))) : P (List α) :=
+  match parsers with
+  | [] => pure' []
+  | parser :: rest =>
+      pegF parser (fun first =>
+        pegF (seqList rest) (fun remaining => pure' (first ++ remaining)))
+
+def seqL (parsers : List (P (List α))) (continuation : List α → P β) : P β :=
+  pegF (seqList parsers) continuation
+
 /-- Run a parser but treat failure as success with `none`, mirroring `try`. -/
 def optional' (p : P α) : P (Option α) := fun s =>
   match p s with

@@ -667,7 +667,17 @@ theorem named_struct_source_pass_one_word_expression (value : Nat) :
 theorem named_struct_source_pass_one_word_flat_words (value : Nat) :
     panValueFlatWords (.nStruct "S" [("field", .word value)]) =
       panValueFlatWords (.rStruct [.word value]) := by
-  rfl
+  have hn := panValueFlatWords_nStruct_word_fields "S" [("field", value)]
+  have hr := panValueFlatWords_rStruct_word_list [value]
+  simpa using hn.trans hr.symm
+
+theorem named_struct_flat_words_word_fields
+    (values : List (FieldName × Nat)) :
+    panValueFlatWords
+        (.nStruct "S"
+          (values.map (fun (field, value) => (field, .word value)))) =
+      values.map Prod.snd := by
+  exact panValueFlatWords_nStruct_word_fields "S" values
 
 theorem named_struct_source_eval_via_generic_evidence (value : Nat) :
     evalPanValueExp namedStructPassContext.structs
@@ -694,6 +704,52 @@ theorem named_struct_source_pass_one_word_eval (value : Nat) :
   simp [namedStructPassContext, structCompileExp,
     structCompileExp.structCompileFields, structSelectFields, lookupInfo,
     evalPanValueExp, evalPanValueExp.evalPanValueExps]
+
+/-! The stateful constructor also handles a record whose fields are nested
+    scalar expressions rather than constants.  The source evaluator is kept
+    as an explicit oracle regression so this test exercises both the
+    field-list inversion and the scalar compiler relation. -/
+def scalarSourceWordFields : List (SourceWordExp Nat) :=
+  [ .op .add (.const 3) (.const 4),
+    .mul (.op .add (.const 1) (.const 2)) (.const 5) ]
+
+def scalarSourceWordRaise : Prog Nat :=
+  .raise "E" (.rStruct (scalarSourceWordFields.map SourceWordExp.toExp))
+
+theorem scalar_source_word_fields_oracle :
+    evalPanValueExp [] (fun _ => none) (fun _ => none) (fun _ => none)
+        0 0 8 (scalarSourceWordFields.map SourceWordExp.toExp
+          |> fun fields => .rStruct fields) =
+      some (.rStruct [.word 7, .word 15]) := by
+  simp [scalarSourceWordFields, SourceWordExp.toExp, evalPanValueExp,
+    evalPanValueExp.evalPanValueExps, evalPanBinOp]
+
+example
+    (hbytesInWord : ∀ (context : CompileContext Nat) (bytesInWord : Nat),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext Nat)
+      (sourceLocals : VarName → Option (PanValue Nat))
+      (name : VarName) (value : PanValue Nat),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot]))
+    (hbounded : ∀ (context : CompileContext Nat) (name : VarName)
+      (shape : Shape) (slots : List Nat),
+      lookupInfo name context.vars = some (shape, slots) →
+      ∀ slot ∈ slots, slot ≤ context.maxVar)
+    (hlookupException : ∀ (context : CompileContext Nat),
+      ∃ exceptionCode, lookupInfo "E" context.exceptions = some exceptionCode)
+    (hfresh : ∀ (context : CompileContext Nat) (state : CrepState Nat)
+      (name : Nat), name ∈ freshNames context scalarSourceWordFields.length 1 →
+      state.locals name = none)
+    (hexception : ∀ (context : CompileContext Nat)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (exceptionCode : Nat) (values : List Nat),
+      lookupInfo "E" context.exceptions = some exceptionCode →
+      exceptionRel "E" (.rStruct (values.map PanValue.word)) exceptionCode) :
+    PanValueCrepProgramStateCorrect scalarSourceWordRaise := by
+  exact panValueCrepProgramStateCorrect_raise_source_word_record
+    "E" scalarSourceWordFields hbytesInWord hlookup hbounded
+    hlookupException hfresh hexception
 
 theorem named_struct_source_pass_compile_raise (value : Nat) :
     compileProg context
@@ -907,6 +963,198 @@ theorem named_struct_raise_after_struct_pass_hraise_flat_globals :
     (hdistinct := by decide)
     (hsize := by
       simp [namedStructPostPassValue, panValueShape, Shape.shapeSize])
+
+theorem named_struct_word_fields_global_bridge :
+    panValuePcRaisedHraiseData
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8) [] context
+      (fun _ _ code => code = 9)
+      (fun _ => none) (fun _ => none) (fun _ => none) "E"
+      namedStructSourceValue
+      { state with globals := updateMemoryListAt state.globals 0 8 [3] }
+      9 := by
+  apply panValuePcRaisedHraiseData_of_named_struct_word_fields
+    (structs := []) (context := context)
+    (exceptionRel := fun _ _ code => code = 9)
+    (exceptionCode := fun exception =>
+      if exception = "E" then some 9 else none)
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (sourceException := "E")
+    (name := "S") (fields := [("field", 3)])
+    (state := state) (bytesInWord := 8) (targetException := 9)
+  · refine ⟨rfl, panValueCrepLocalsRel_empty [] context state.locals, rfl⟩
+  · simp
+  · simp
+  · decide
+  · simp [panValueShape]
+
+theorem named_struct_nested_word_field_global_bridge :
+    panValuePcRaisedHraiseData
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8) [] context
+      (fun _ _ code => code = 9)
+      (fun _ => none) (fun _ => none) (fun _ => none) "E"
+      (.nStruct "Outer" [("inner", .rStruct [.word 3])])
+      { state with globals := updateMemoryListAt state.globals 0 8 [3] }
+      9 := by
+  apply panValuePcRaisedHraiseData_of_named_struct_nested_word_field
+    (structs := []) (context := context)
+    (exceptionRel := fun _ _ code => code = 9)
+    (exceptionCode := fun exception =>
+      if exception = "E" then some 9 else none)
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (sourceException := "E")
+    (name := "Outer") (field := "inner") (value := 3)
+    (state := state) (bytesInWord := 8) (targetException := 9)
+  · refine ⟨rfl, panValueCrepLocalsRel_empty [] context state.locals, rfl⟩
+  · simp
+  · simp
+  · decide
+  · simp [panValueShape]
+
+theorem named_struct_nested_two_word_field_global_bridge :
+    panValuePcRaisedHraiseData
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8) [] context
+      (fun _ _ code => code = 9)
+      (fun _ => none) (fun _ => none) (fun _ => none) "E"
+      (.nStruct "Outer" [("inner", .rStruct [.word 3, .word 4])])
+      { state with globals := updateMemoryListAt state.globals 0 8 [3, 4] }
+      9 := by
+  apply panValuePcRaisedHraiseData_of_named_struct_nested_two_word_field
+    (structs := []) (context := context)
+    (exceptionRel := fun _ _ code => code = 9)
+    (exceptionCode := fun exception =>
+      if exception = "E" then some 9 else none)
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (sourceException := "E")
+    (name := "Outer") (field := "inner") (left := 3) (right := 4)
+    (state := state) (bytesInWord := 8) (targetException := 9)
+  · refine ⟨rfl, panValueCrepLocalsRel_empty [] context state.locals, rfl⟩
+  · simp
+  · simp
+  · decide
+  · simp [panValueShape]
+
+theorem named_struct_nested_word_fields_global_bridge :
+    panValuePcRaisedHraiseData
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8) [] context
+      (fun _ _ code => code = 9)
+      (fun _ => none) (fun _ => none) (fun _ => none) "E"
+      (.nStruct "Outer"
+        [("left", .rStruct [.word 3]),
+          ("right", .rStruct [.word 4])])
+      { state with globals := updateMemoryListAt state.globals 0 8 [3, 4] }
+      9 := by
+  apply panValuePcRaisedHraiseData_of_named_struct_nested_word_fields
+    (structs := []) (context := context)
+    (exceptionRel := fun _ _ code => code = 9)
+    (exceptionCode := fun exception =>
+      if exception = "E" then some 9 else none)
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (sourceException := "E")
+    (name := "Outer") (leftField := "left") (rightField := "right")
+    (left := 3) (right := 4) (state := state) (bytesInWord := 8)
+    (targetException := 9)
+  · refine ⟨rfl, panValueCrepLocalsRel_empty [] context state.locals, rfl⟩
+  · simp
+  · simp
+  · decide
+  · simp [panValueShape]
+
+theorem named_struct_nested_mixed_fields_global_bridge :
+    panValuePcRaisedHraiseData
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8) [] context
+      (fun _ _ code => code = 9)
+      (fun _ => none) (fun _ => none) (fun _ => none) "E"
+      (.nStruct "Outer"
+        [("pair", .rStruct [.word 3, .word 4]),
+          ("tail", .rStruct [.word 5])])
+      { state with globals := updateMemoryListAt state.globals 0 8 [3, 4, 5] }
+      9 := by
+  apply panValuePcRaisedHraiseData_of_named_struct_nested_mixed_fields
+    (structs := []) (context := context)
+    (exceptionRel := fun _ _ code => code = 9)
+    (exceptionCode := fun exception =>
+      if exception = "E" then some 9 else none)
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (sourceException := "E")
+    (name := "Outer") (pairField := "pair") (tailField := "tail")
+    (first := 3) (second := 4) (third := 5) (state := state)
+    (bytesInWord := 8) (targetException := 9)
+  · refine ⟨rfl, panValueCrepLocalsRel_empty [] context state.locals, rfl⟩
+  · simp
+  · simp
+  · decide
+  · simp [panValueShape]
+
+theorem generic_flattened_nested_global_bridge :
+    panValuePcRaisedHraiseData
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8) [] context
+      (fun _ _ code => code = 9)
+      (fun _ => none) (fun _ => none) (fun _ => none) "E"
+      (.nStruct "Outer"
+        [("pair", .rStruct [.word 3, .word 4]),
+          ("tail", .rStruct [.word 5])])
+      { state with globals := updateMemoryListAt state.globals 0 8 [3, 4, 5] }
+      9 := by
+  have hgeneric := panValuePcRaisedHraiseData_of_flat_spill_state_auto
+    (structs := []) (context := context)
+    (exceptionRel := fun _ _ code => code = 9)
+    (exceptionCode := fun exception =>
+      if exception = "E" then some 9 else none)
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (sourceException := "E")
+    (state := state) (bytesInWord := 8) (targetException := 9)
+    (sourceValue :=
+      .nStruct "Outer"
+        [("pair", .rStruct [.word 3, .word 4]),
+          ("tail", .rStruct [.word 5])])
+    (hrel := by
+      refine ⟨rfl, panValueCrepLocalsRel_empty [] context state.locals, rfl⟩)
+    (hexception := by simp)
+    (hcode := by simp)
+    (hdistinct := by decide)
+    (hsize := by simp [panValueShape])
+  simpa [panValueFlatWords, panValueFlatWordsFuel, panValueFlatValueFuel,
+    panValueFlatWordsFuel.panValueFlatWordsFieldListFuel,
+    panValueFlatWordsFuel.panValueFlatWordsListFuel,
+    panValueFlatValueFuel.panValueFlatValueFieldListFuel,
+    panValueFlatValueFuel.panValueFlatValueListFuel] using hgeneric
+
+theorem generic_flattened_nested_result_bridge :
+    panValuePcResultRelWithContextCode [] context
+      (fun _ _ code => code = 9)
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8)
+      (.raised (fun _ => none) (fun _ => none) (fun _ => none) "E"
+        (.nStruct "Outer"
+          [("pair", .rStruct [.word 3, .word 4]),
+            ("tail", .rStruct [.word 5])]))
+      (.raised
+        { state with globals := updateMemoryListAt state.globals 0 8 [3, 4, 5] }
+        9) := by
+  apply panValuePcResultRelWithContextCode_of_raised_flat_spill_auto
+    (structs := []) (context := context)
+    (exceptionRel := fun _ _ code => code = 9)
+    (exceptionCode := fun exception =>
+      if exception = "E" then some 9 else none)
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (sourceException := "E")
+    (state := state) (bytesInWord := 8) (targetException := 9)
+    (sourceValue :=
+      .nStruct "Outer"
+        [("pair", .rStruct [.word 3, .word 4]),
+          ("tail", .rStruct [.word 5])])
+  · refine ⟨rfl, panValueCrepLocalsRel_empty [] context state.locals, rfl⟩
+  · simp
+  · simp
+  · simp [context, lookupInfo]
+  · decide
+  · simp [panValueShape]
 
 theorem named_struct_raise_after_struct_pass_result_rel_retargeted_globals :
     panValuePcResultRel [] context (fun _ _ code => code = 9)

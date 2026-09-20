@@ -22,6 +22,13 @@ def exceptionNumberingFixture : List (Decl Nat) :=
   crepGetEidsFromDecls (fun value => value) exceptionNumberingFixture ==
     [("E", 0), ("F", 1)]
 
+/-! `get_eids_from_decls_def` applies Cake's supplied word conversion after
+    numbering the filtered exception list.  A non-identity conversion makes
+    that ordering observable independently of the target representation. -/
+#guard
+  crepGetEidsFromDecls (fun value => value + 7) exceptionNumberingFixture ==
+    [("E", 7), ("F", 8)]
+
 #guard
     let result := compileFlapjackRiscV (width := 64) .rv64i
       (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)
@@ -142,6 +149,99 @@ def reachabilityContext : Context :=
 #guard nextIsReachable .isReach .retLast == .warnReach
 #guard nextIsReachable .isReach .breakLast == .warnReach
 #guard nextIsReachable .isReach .invisLast == .isReach
+#guard
+  nextIsReachable .isReach .raiseLast == .warnReach &&
+  nextIsReachable .isReach .tailLast == .warnReach &&
+  nextIsReachable .isReach .contLast == .warnReach &&
+  nextIsReachable .isReach .condExitLast == .warnReach &&
+  nextIsReachable .isReach .otherLast == .isReach &&
+  nextIsReachable .isReach .invisLast == .isReach &&
+  nextIsReachable .warnReach .retLast == .warnReach &&
+  nextIsReachable .notReach .retLast == .notReach
+#guard
+  nextNowUnreachable .isReach .isReach == false &&
+  nextNowUnreachable .isReach .warnReach == true &&
+  nextNowUnreachable .isReach .notReach == true &&
+  nextNowUnreachable .warnReach .isReach == false &&
+  nextNowUnreachable .warnReach .warnReach == false &&
+  nextNowUnreachable .warnReach .notReach == false &&
+  nextNowUnreachable .notReach .isReach == false &&
+  nextNowUnreachable .notReach .warnReach == false &&
+  nextNowUnreachable .notReach .notReach == false
+#guard
+  (reachedWarnable (.seq (.skip : Prog Nat) .skip)
+    { reachabilityContext with reachable := .warnReach, last := .retLast }).1.isNone &&
+  (reachedWarnable (.tick : Prog Nat)
+    { reachabilityContext with reachable := .warnReach, last := .retLast }).1.isNone &&
+  (reachedWarnable (.annot "" "" : Prog Nat)
+    { reachabilityContext with reachable := .warnReach, last := .retLast }).1.isNone &&
+  (reachedWarnable (.return (.const 1) : Prog Nat)
+    { reachabilityContext with reachable := .warnReach, last := .retLast }).1 ==
+      some .retLast &&
+  (reachedWarnable (.return (.const 1) : Prog Nat)
+    { reachabilityContext with reachable := .warnReach, last := .retLast }).2.reachable ==
+      .notReach &&
+  (reachedWarnable (.return (.const 1) : Prog Nat) reachabilityContext).1.isNone &&
+  (reachedWarnable (.return (.const 1) : Prog Nat) reachabilityContext).2.reachable ==
+      .isReach
+#guard
+  branchLastStmt false false == .otherLast &&
+  branchLastStmt true false == .condExitLast &&
+  branchLastStmt false true == .condExitLast &&
+  branchLastStmt true true == .condExitLast
+#guard
+  seqLastStmt .retLast .invisLast == .retLast &&
+  seqLastStmt .otherLast .invisLast == .otherLast &&
+  seqLastStmt .invisLast .invisLast == .invisLast &&
+  seqLastStmt .retLast .otherLast == .otherLast &&
+  seqLastStmt .retLast .raiseLast == .raiseLast &&
+  seqLastStmt .invisLast .retLast == .retLast
+#guard
+  staticScopeDescription (.funScope "f" " at line 1") == "function f at line 1" &&
+  staticScopeDescription (.declScope "g") == "initialisation of global variable g" &&
+  staticScopeDescription (.structScope "S" "field") ==
+    "declaration of field field in named struct S" &&
+  staticScopeDescription .topLevel == "top-level declaration"
+#guard
+  staticScopeMessage .variable "L: " "x" (.funScope "f" "") ==
+    "L: variable x is not in scope in function f\n" &&
+  staticScopeMessage .function "" "g" (.declScope "init") ==
+    "function g is not in scope in initialisation of global variable init\n" &&
+  staticScopeMessage .struct "at: " "S" (.structScope "T" "field") ==
+    "at: struct name S is not in scope in declaration of field field in named struct T\n"
+#guard
+  primitiveIdents == ["__add_with_carry__"] &&
+  "__add_with_carry__" ∈ primitiveIdents &&
+  !("__sub_with_borrow__" ∈ primitiveIdents)
+#guard
+  binopToString .add == "Add" &&
+  binopToString .sub == "Sub" &&
+  binopToString .and == "And" &&
+  binopToString .or == "Or" &&
+  binopToString .xor == "Xor"
+#guard panopToString .mul == "Mul"
+#guard primopToString .addCarry == "AddCarry"
+#guard
+  addPrimitiveHint "__add_with_carry__" "error: unsupported primitive\n" ==
+    "error: unsupported primitive\n  note: __add_with_carry__ is a built-in primitive only available in declaration or assignment RHS positions\n" &&
+  addPrimitiveHint "__other__" "error: unsupported primitive\n" ==
+    "error: unsupported primitive\n"
+#guard getRedecMessage .variable "line: " "x" (.funScope "f" "") ==
+  "line: variable x is redeclared in function f\n"
+#guard getRedecMessage .function "" "f" (.declScope "init") ==
+  "function f is redeclared in initialisation of global variable init\n"
+#guard getRedecMessage .struct "" "Pair" (.structScope "Pair" "left") ==
+  "struct name Pair is redeclared in declaration of field left in named struct Pair\n"
+#guard
+  staticResultErrorMessage
+      (checkFunctionName { reachabilityContext with location := "at: " } "missing") ==
+    some "at: function missing is not in scope in function f\n"
+#guard
+  staticResultErrorMessage
+      (checkFunctionName { reachabilityContext with location := "at: " }
+        "__add_with_carry__") ==
+    some ("at: function __add_with_carry__ is not in scope in function f\n" ++
+      "  note: __add_with_carry__ is a built-in primitive only available in declaration or assignment RHS positions\n")
 #guard (reachedWarnable (.annot "" "" : Prog Nat) reachabilityContext).1.isNone
 #guard (reachedWarnable (.tick : Prog Nat) reachabilityContext).1.isNone
 #guard (reachedWarnable (.skip : Prog Nat)
@@ -149,10 +249,202 @@ def reachabilityContext : Context :=
     some .breakLast
 #guard seqLastStmt .retLast .invisLast == .retLast
 #guard staticLastStmtString .breakLast == "break"
+
+/-! Direct Cake `last_to_str_def` parity
+    (`cakeml/pancake/panStaticScript.sml:359-367`).  These strings are used
+    only by warning diagnostics, but their exact spellings are observable. -/
+#guard staticLastStmtString .retLast == "return" &&
+  staticLastStmtString .raiseLast == "raise" &&
+  staticLastStmtString .tailLast == "tail call" &&
+  staticLastStmtString .breakLast == "break" &&
+  staticLastStmtString .contLast == "continue" &&
+  staticLastStmtString .condExitLast == "exiting conditional" &&
+  staticLastStmtString .invisLast == "" &&
+  staticLastStmtString .otherLast == ""
+
+#guard getUnreachMessage "AT 7: " "return" (.funScope "f" "") ==
+  "AT 7: unreachable statement(s) after return in function f\n"
+#guard getUnreachMessage "" "" (.topLevel) ==
+  "unreachable statement(s) after  in top-level declaration\n"
+#guard getRogueMessage true "L: " (.funScope "f" "") ==
+  "L: break statement outside loop in function f\n"
+#guard getRogueMessage false "L: " (.funScope "f" "") ==
+  "L: continue statement outside loop in function f\n"
+#guard getNonWordMessage "load address" "pair" "L: " (.funScope "f" "") ==
+  "L: load address has shape pair instead of a word in function f\n"
+#guard getShapeMismatchMessage "return value" "pair" "word" "L: " (.funScope "f" "") ==
+  "L: return value has shape pair instead of declared shape word in function f\n"
+#guard getImplementationErrorMessage "static analysis failed" "L: " (.funScope "f" "") ==
+  "L: static analysis failed in function f\nthis should never happen. please report to a compiler developer\n"
+#guard firstRepeat ([] : List Nat) == none
+#guard firstRepeat [1, 1, 2] == some 1
+#guard firstRepeat [1, 2, 2] == some 2
+#guard firstRepeat [1, 2, 1] == none
+
 #guard match basedMerge .based .notBased with | .based => true | _ => false
 #guard match basedMerge .trusted .notBased with | .trusted => true | _ => false
 #guard match shapedBasedMerge [.word .based, .word .notBased] with
   | .based => true | _ => false
+
+/-! Direct Cake `based_merge` parity (`panStaticScript.sml:288-298`). -/
+#guard match basedMerge .notBased .notBased with
+  | .notBased => true | _ => false
+#guard match basedMerge .trusted .notBased with
+  | .trusted => true | _ => false
+#guard match basedMerge .notBased .trusted with
+  | .trusted => true | _ => false
+#guard match basedMerge .notTrusted .trusted with
+  | .notTrusted => true | _ => false
+#guard match basedMerge .trusted .notTrusted with
+  | .notTrusted => true | _ => false
+#guard match basedMerge .based .notTrusted with
+  | .based => true | _ => false
+#guard match basedMerge .notTrusted .based with
+  | .based => true | _ => false
+
+/-! Direct Cake `sh_bd_branch` parity (`panStaticScript.sml:301-305`). -/
+#guard match shapedBasedBranch (.word .trusted) (.word .trusted) with
+  | .word .trusted => true | _ => false
+#guard match shapedBasedBranch (.word .trusted) (.word .notBased) with
+  | .word .notTrusted => true | _ => false
+#guard match shapedBasedBranch
+    (.struct [.word .trusted, .word .based])
+    (.struct [.word .trusted, .word .notBased]) with
+  | .struct [.word .notTrusted, .word .notTrusted] => true | _ => false
+#guard match shapedBasedBranch
+    (.named "Pair" [("left", .word .trusted)])
+    (.named "Pair" [("left", .word .trusted)]) with
+  | .named "Pair" [("left", .word .trusted)] => true | _ => false
+
+/-! Direct Cake `branch_loc_inf` parity (`panStaticScript.sml:311-334`). -/
+#guard
+  match branchLocInf
+      [("x", { shapedBased := .word .trusted })]
+      [("x", { shapedBased := .word .trusted })] [] with
+  | [("x", { shapedBased := .word .trusted })] => true
+  | _ => false
+#guard
+  match branchLocInf
+      [("x", { shapedBased := .word .notBased })]
+      [("x", { shapedBased := .word .trusted })] [] with
+  | [("x", { shapedBased := .word .notTrusted })] => true
+  | _ => false
+#guard
+  match branchLocInf [] []
+      [("y", { shapedBased := .struct [.word .trusted, .word .based] })] with
+  | [("y", { shapedBased := .struct [.word .notTrusted, .word .notTrusted] })] => true
+  | _ => false
+#guard
+  match branchLocInf []
+      [("x", { shapedBased := .word .trusted })]
+      [("x", { shapedBased := .word .notBased }),
+       ("y", { shapedBased := .word .based })] with
+  | [("x", { shapedBased := .word .notTrusted }),
+     ("y", { shapedBased := .word .notTrusted })] => true
+  | _ => false
+
+/-! Direct Cake `seq_loc_inf` parity (`panStaticScript.sml:337-338`). -/
+#guard
+  match seqLocInf
+      [("x", { shapedBased := .word .trusted })]
+      [("x", { shapedBased := .word .based })] with
+  | [("x", { shapedBased := .word .based })] => true
+  | _ => false
+#guard
+  match seqLocInf
+      [("x", { shapedBased := .word .trusted })]
+      [("y", { shapedBased := .word .based })] with
+  | [("y", { shapedBased := .word .based }),
+     ("x", { shapedBased := .word .trusted })] => true
+  | _ => false
+
+/-! Direct Cake `sh_bd_to_str` parity (`panStaticScript.sml:342-350`). -/
+#guard shapedBasedToString (.word .trusted) == "1"
+#guard shapedBasedToString (.struct []) == "{}"
+#guard shapedBasedToString
+    (.struct [.word .based, .struct [.word .notTrusted, .word .trusted]]) ==
+    "{1,{1,1}}"
+#guard shapedBasedToString
+    (.named "Pair" [("left", .word .trusted), ("right", .word .based)]) == "Pair"
+
+/-! Direct Cake `sh_bd_from_sh` parity (`panStaticScript.sml:213-233`).
+    The explicit basedness must reach every word in comb and named shapes. -/
+#guard match shapedBasedFromShapeWith [] .based .one with
+  | some (.word .based) => true | _ => false
+#guard match shapedBasedFromShapeWith [] .notTrusted (.comb [.one, .one]) with
+  | some (.struct [.word .notTrusted, .word .notTrusted]) => true | _ => false
+#guard
+  let context : StructContext :=
+    [("Pair", StructInfo.mk [("lo", .one), ("hi", .one)] 2
+      [("lo", .word .trusted), ("hi", .word .trusted)])]
+  match shapedBasedFromShapeWith context .based (.named "Pair") with
+  | some (.named "Pair" [("lo", .word .based), ("hi", .word .based)]) => true
+  | _ => false
+
+/-! Direct Cake `sh_bd_from_bd` parity (`panStaticScript.sml:236-240`). -/
+#guard match shapedBasedWithBase .based (.word .notBased) with
+  | .word .based => true | _ => false
+#guard match shapedBasedWithBase .notTrusted
+    (.struct [.word .based, .struct [.word .trusted]]) with
+  | .struct [.word .notTrusted, .struct [.word .notTrusted]] => true
+  | _ => false
+#guard match shapedBasedWithBase .trusted
+    (.named "Pair" [("lo", .word .based), ("hi", .word .notBased)]) with
+  | .named "Pair" [("lo", .word .trusted), ("hi", .word .trusted)] => true
+  | _ => false
+
+/-! Direct Cake `sh_bd_has_shape` parity (`panStaticScript.sml:244-258`). -/
+#guard shapedBasedHasShape .one (.word .based) == true
+#guard shapedBasedHasShape .one (.struct []) == false
+#guard shapedBasedHasShape (.comb [.one, .comb [.one]])
+    (.struct [.word .trusted, .struct [.word .notBased]]) == true
+#guard shapedBasedHasShape (.comb [.one, .one]) (.struct [.word .trusted]) == false
+#guard shapedBasedHasShape (.named "Pair")
+    (.named "Pair" [("ignored", .struct [])]) == true
+#guard shapedBasedHasShape (.named "Pair") (.named "Other" []) == false
+
+/-! Direct Cake `sh_bd_eq_shapes` parity (`panStaticScript.sml:259-272`). -/
+#guard shapedBasedSameShape (.word .based) (.word .notBased) == true
+#guard shapedBasedSameShape
+    (.struct [.word .trusted, .struct [.word .based]])
+    (.struct [.word .notTrusted, .struct [.word .notBased]]) == true
+#guard shapedBasedSameShape (.struct [.word .trusted]) (.struct []) == false
+#guard shapedBasedSameShape
+    (.named "Pair" [("left", .word .based)])
+    (.named "Pair" [("other", .struct [])]) == true
+#guard shapedBasedSameShape (.named "Pair" []) (.named "Other" []) == false
+
+/-! Direct Cake `index_sh_bd` parity (`panStaticScript.sml:274-279`). -/
+#guard match shapedBasedFieldAt 0 (.word .based) with
+  | none => true | _ => false
+#guard match shapedBasedFieldAt 0
+    (.struct [.word .trusted, .word .notBased]) with
+  | some (.word .trusted) => true | _ => false
+#guard match shapedBasedFieldAt 1
+    (.struct [.word .trusted, .word .notBased]) with
+  | some (.word .notBased) => true | _ => false
+#guard match shapedBasedFieldAt 2
+    (.struct [.word .trusted, .word .notBased]) with
+  | none => true | _ => false
+#guard match shapedBasedFieldAt 0 (.named "Pair" []) with
+  | none => true | _ => false
+#guard match shapedBasedFieldAt 0 (.struct []) with
+  | none => true | _ => false
+
+/-! Direct Cake `field_sh_bd` parity (`panStaticScript.sml:281-285`). -/
+#guard match shapedBasedFieldNamed "left" (.word .based) with
+  | none => true | _ => false
+#guard match shapedBasedFieldNamed "left" (.struct []) with
+  | none => true | _ => false
+#guard match shapedBasedFieldNamed "left"
+    (.named "Pair" [("left", .word .based), ("right", .word .notBased)]) with
+  | some (.word .based) => true | _ => false
+#guard match shapedBasedFieldNamed "missing"
+    (.named "Pair" [("left", .word .based)]) with
+  | none => true | _ => false
+#guard match shapedBasedFieldNamed "left"
+    (.named "Pair" [("left", .word .based), ("left", .word .notBased)]) with
+  | some (.word .based) => true | _ => false
 
 /-! Cake's `get_memop_msg` diagnostics (`panStaticScript.sml:491-511`) are
     directional: local operations warn about non-base addresses, while shared
@@ -170,6 +462,20 @@ def memoryWarningContext : Context :=
     reachable := .isReach
     last := .otherLast
     location := "" }
+
+#guard getMemopMessage true true false "L: " (.funScope "f" "") ==
+  "L: local load address is not calculated from base in function f\n"
+#guard getMemopMessage true false true "L: " (.funScope "f" "") ==
+  "L: local store address may not be calculated from base in function f\n"
+#guard getMemopMessage false true false "L: " (.funScope "f" "") ==
+  "L: shared load address is calculated from base in function f\n"
+#guard getMemopMessage false false true "L: " (.funScope "f" "") ==
+  "L: shared store address may be calculated from base in function f\n"
+
+#guard getOpargMessage true "2" "3" "L: " "Sub" (.funScope "f" "") ==
+  "L: operation Sub only accepts 2 operands, 3 provided in function f\n"
+#guard getOpargMessage false "2" "1" "L: " "Add" (.funScope "f" "") ==
+  "L: operation Add requires at least 2 operands, 1 provided in function f\n"
 
 #guard
   (checkProg memoryWarningContext

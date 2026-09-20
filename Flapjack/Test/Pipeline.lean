@@ -6,6 +6,38 @@ namespace Flapjack
 
 open RiscV
 
+/-! Direct oracle for Cake `pan_to_target$exports_def`:
+    exported functions are retained in declaration order and every other
+    declaration or non-exported function is skipped. -/
+def pipelineExportsParity : Bool :=
+  panTargetExports
+      ([.decl .one "global" (.const (BitVec.ofNat 64 1)),
+        .function
+          { name := "hidden", inline := false, exported := false,
+            params := [], body := .skip, returnShape := .one },
+        .exnDecl "E" .one,
+        .function
+          { name := "first", inline := false, exported := true,
+            params := [], body := .skip, returnShape := .one },
+        .name "Pair" [],
+        .function
+          { name := "second", inline := false, exported := true,
+            params := [], body := .skip, returnShape := .one }] :
+       List (Decl (RiscV.Word 64))) == ["first", "second"]
+
+#guard pipelineExportsParity
+
+/-! Direct oracle for Cake's `pan_compile_tap_def`: the explore flag controls
+    only the titled intermediate report and never changes the compiled output. -/
+def pipelineCompileTapParity : Bool :=
+  let stages : List (String × AnyPanProg (RiscV.Word 64)) :=
+    [("after backend", .cake ["cake-stage"])]
+  panCompileTap false (37 : Nat) stages == (37, []) &&
+    panCompileTap true (37 : Nat) stages ==
+      (37, ["# ", "after backend", "\n\n", "cake-stage"])
+
+#guard pipelineCompileTapParity
+
 def pipelineStackAddDeclarations : List (Decl (RiscV.Word 64)) :=
   [.function
     { name := "add", inline := false, exported := false,
@@ -64,6 +96,30 @@ def pipelineNoMainTargetHasSyntheticMain : Bool :=
   | _ => false
 
 #guard pipelineNoMainTargetHasSyntheticMain
+
+/- Cake's `compile_prog_def` uses `SPLITP` to move the first user `main` to
+   the front, retaining every declaration from the prefix and suffix in their
+   original order.  This pins that source-shaped boundary independently of
+   the later RISC-V artifact checks. -/
+def pipelineTargetMovesMainWithStableOrder : Bool :=
+  let declarations : List (Decl Nat) :=
+    [.decl .one "g" (.const 7),
+     .function
+       { name := "worker", inline := false, exported := false, params := [],
+         body := .skip, returnShape := .one },
+     .function
+       { name := "main", inline := false, exported := true, params := [],
+         body := .return (.const 0), returnShape := .one },
+     .name "Pair" []]
+  (panTargetMoveStartToFront "main" declarations).map (fun declaration =>
+    match declaration with
+    | .function function => function.name
+    | .decl _ name _ => name
+    | .name name _ => name
+    | .exnDecl exception _ => exception) =
+    ["main", "g", "worker", "Pair"]
+
+#guard pipelineTargetMovesMainWithStableOrder
 
 #guard
     (compileFlapjackRiscVViaStack (width := 64) .rv64i

@@ -101,7 +101,9 @@ acceptance. The only normalization is the documented `cml_` prefix and
 
 Every mismatch is classified into a signature (`sections/order`,
 `bytes/user:main:len_ne`, `frame/bitmap-table`, `acceptance/gap:entry`, ...).
-Signatures owned by a bead are listed in
+The current gaps registry is intentionally empty: all previously recorded
+acceptance and frame signatures have been fixed. If a new temporary
+exception is ever required, it must be owned by an active bead and listed in
 [`scripts/parity-difffuzz-gaps.json`](../scripts/parity-difffuzz-gaps.json);
 acceptance disagreements and tool failures are never owned, so they always
 surface. Unknown signatures and CakeML-accepted/Flapjack-rejected cases exit
@@ -114,12 +116,21 @@ Typical bounded runs (each a few minutes, safe for a laptop):
 
 ```sh
 nice -n 10 python3 scripts/parity-difffuzz.py --smoke --exact # every accepted artifact must match
+nice -n 10 python3 scripts/parity-difffuzz.py --smoke --include-globals --exact
 nice -n 10 python3 scripts/parity-difffuzz.py --mode mixed --exact --seed 3 --count 80 \
     --out difffuzz-findings --minimize                      # bounded exact campaign
 python3 scripts/parity-difffuzz.py --mode mixed --seed 3 --count 80 \
     --out difffuzz-findings --minimize                      # bounded campaign
 python3 scripts/parity-difffuzz.py --replay difffuzz-findings/<case>
 ```
+
+The `--include-globals` variant adds deterministic global declarations and
+global-based load/store addresses to generated cases.  It is kept as a
+separate smoke invocation so the ordinary campaign remains directly
+comparable with older recorded seeds.  Run it in an environment with both
+the original CakeML `cake` binary and Flapjack; CI uses the checked-in
+artifact corpus (which includes global fixtures) because it does not build
+the CakeML reference binary.
 
 `--exact` is the required mode for source-to-RISC-V parity: any difference in
 acceptance, section layout, metadata, or bytes is a failure, including a

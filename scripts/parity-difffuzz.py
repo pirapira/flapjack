@@ -60,7 +60,15 @@ DEFAULT_SEED_CORPUS = REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake"
 # Program generation (restricted to the implemented Pancake source subset).
 # ---------------------------------------------------------------------------
 
-CONSTS = ["0", "1", "2", "3", "7", "255", "1000"]
+# Include the immediate/materialisation boundaries used by Cake's RISC-V
+# encoder.  The small values exercise ORI, 2048/4095 cross signed-12-bit
+# selection, and the remaining values exercise signed-32 and full 64-bit
+# constant construction in the source-to-artifact path.
+CONSTS = [
+    "0", "1", "2", "3", "7", "255", "1000", "2047", "2048", "4095",
+    "2147483647", "2147483648", "4294967295", "4294967296",
+    "9223372036854775807", "9223372036854775808",
+]
 BINOPS = ["+", "-", "*", "&", "|", "^", "<<", ">>", ">>>"]
 
 FIXED_DECLS = (
@@ -86,12 +94,14 @@ class Generator:
     """
 
     max_extra_words = 6
+    include_globals = False
 
     def __init__(self, rng):
         self.rng = rng
         self.words = []
         self.structs = []
         self.pairs = []
+        self.globals = []
 
     def word(self):
         return self.rng.choice(self.words) if self.words else "x"
@@ -128,6 +138,8 @@ class Generator:
 
     def addr(self, depth=0):
         rng = self.rng
+        if self.globals and rng.random() < 0.25:
+            return "%s + %s" % (rng.choice(self.globals), rng.choice(["0", "8", "16"]))
         if depth > 2 or rng.random() < 0.5:
             return rng.choice(["0", "1000", "1008", "1016", "1024", "1000 + 12", "1000 + 24"])
         return "(%s + %s)" % (self.addr(depth + 1), rng.choice(["4", "8", "12", "16", "1000"]))
@@ -178,6 +190,10 @@ class Generator:
     def program(self):
         rng = self.rng
         self.words = ["x"]
+        global_declarations = ""
+        if Generator.include_globals and rng.random() < 0.5:
+            self.globals = ["ev"]
+            global_declarations = "var 1 ev = 0;\n"
         body = ["  var 1 x = %s;" % rng.choice(CONSTS)]
         for _ in range(rng.randint(0, Generator.max_extra_words)):
             name = "y%d" % rng.randint(0, 999)
@@ -194,7 +210,7 @@ class Generator:
         for _ in range(rng.randint(1, Generator.max_extra_words)):
             body.append(self.stmt(2))
         body.append("  return %s;" % self.top_expr())
-        return FIXED_DECLS + "fun 1 main() {\n" + "\n".join(body) + "\n}\n"
+        return FIXED_DECLS + global_declarations + "fun 1 main() {\n" + "\n".join(body) + "\n}\n"
 
 
 # ---------------------------------------------------------------------------
@@ -847,6 +863,11 @@ def main(argv=None):
     parser.add_argument("--seed", type=int, default=1, help="master random seed")
     parser.add_argument("--count", type=int, default=200, help="number of cases")
     parser.add_argument("--mode", choices=["generate", "mutate", "mixed"], default="generate")
+    parser.add_argument(
+        "--include-globals",
+        action="store_true",
+        help="include deterministic global-based addresses in generated programs",
+    )
     parser.add_argument("--smoke", action="store_true",
                         help="run the fixed deterministic smoke corpus")
     parser.add_argument("--exact", action="store_true",
@@ -869,6 +890,8 @@ def main(argv=None):
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args(argv)
+
+    Generator.include_globals = args.include_globals
 
     if args.directory:
         return replay_finding(args)

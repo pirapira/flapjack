@@ -67,4 +67,14 @@ def loopNestedSeq : List (LoopProg α) → LoopProg α
   | [] => .skip
   | statement :: statements => .seq statement (loopNestedSeq statements)
 
+/-! Faithful port of Cake `loop_seqs_def` from
+    `cakeml/pancake/pan_passesScript.sml:532`: flatten only `Seq` nodes,
+    preserving the left-to-right order of every other Loop statement. -/
+def loopSeqs : LoopProg α → List (LoopProg α)
+  | .seq first second => loopSeqs first ++ loopSeqs second
+  | program => [program]
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
+
 end Flapjack

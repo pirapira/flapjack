@@ -25,9 +25,12 @@ def allocatedNames (context : CompileContext α) (shape : Shape) : List Nat :=
 def freshNames (context : CompileContext α) (count start : Nat) : List Nat :=
   (List.range count).map (fun offset => context.maxVar + start + offset)
 
-/-! Cake's ExtCall and ShMemStore lowerings choose their temporary base from
-    the largest variable occurring in the compiled expressions, rather than
-    from the context's cached `vmax` (`pan_to_crepScript.sml:278-305`). -/
+/-! Cake's ExtCall lowering chooses its temporary base from the largest
+    variable occurring in all four compiled expressions, rather than from the
+    context's cached `vmax`.  `ShMemStore` chooses its temporary from the
+    compiled address expression (`pan_to_crepScript.sml:291-299`); using the
+    value expression here can shadow the address variable and changes emitted
+    register allocation. -/
 def maxCrepExpVar (expressions : List (CrepExp α)) : Nat :=
   (expressions.flatMap crepExpVars).foldl max 0
 

@@ -165,7 +165,7 @@ theorem panValueCrepProgramStateCorrect_shMemStore_source_word
               let stateAfterValue : CrepState α :=
                 { state with
                   locals := updateCrepLocal state.locals
-                    (maxCrepExpVar [compiledAddress] + 1) valueValue }
+                          (maxCrepExpVar [compiledAddress] + 1) valueValue }
               have hcrepAddressAfterState := hstateExpFromLegacy address
                 addressValue compiledAddress stateAfterValue hsourceAddress
                 hcompileAddress hcrepAddressAfter

@@ -21,6 +21,28 @@ namespace Flapjack.Test.Parser
 
 open Flapjack Flapjack.Parser
 
+/-! Cake's `collect_globals_def` keeps only top-level `Decl` entries, ignores
+    functions/exceptions/structures, and has earlier declarations win when a
+    name is repeated (`panPtreeConversionScript.sml:816-821`). -/
+def collectGlobalsCakeParity : Bool :=
+  let function : FunDecl Int :=
+    { name := "f", inline := false, exported := false,
+      params := [], body := .skip, returnShape := .one }
+  let declarations : List (Decl Int) :=
+    [.function function,
+      .decl .one "g" (.const 1),
+      .exnDecl "E" .one,
+      .decl .one "g" (.const 2),
+      .name "S" [],
+      .decl .one "h" (.const 3)]
+  let globals := collectGlobals declarations
+  lookupInfo "g" globals == some () &&
+    lookupInfo "h" globals == some () &&
+    lookupInfo "f" globals == none &&
+    lookupInfo "E" globals == none
+
+#guard collectGlobalsCakeParity
+
 /-- The tests parse into `Int` constants; real users pass `BitVec.ofInt 64`. -/
 abbrev ofI : Int → Int := fun value => value
 

@@ -1140,8 +1140,14 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
               { context with location := thenResult.currentLocation } elseBranch) (fun elseResult =>
               let doubleRet := thenResult.exitsFunction && elseResult.exitsFunction
               let doubleLoopExit := thenResult.exitsLoop && elseResult.exitsLoop
-              progOk (branchLastStmt doubleRet doubleLoopExit)
-                doubleRet doubleLoopExit context.location))
+              staticOk {
+                exitsFunction := doubleRet
+                exitsLoop := doubleLoopExit
+                last := branchLastStmt doubleRet doubleLoopExit
+                variableDelta :=
+                  branchLocInf context.locals thenResult.variableDelta
+                    elseResult.variableDelta
+                currentLocation := elseResult.currentLocation }))
         else
           staticError (.shape (getNonWordMessage "if condition"
             (shapedBasedToString conditionResult.shapedBased)

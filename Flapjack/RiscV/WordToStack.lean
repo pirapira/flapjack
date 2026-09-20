@@ -1779,9 +1779,8 @@ def wordStackCompileSharedNat (config : WordStackConfig)
             offset < 2 ^ 11 ||
               (offset ≥ 2 ^ 64 - 2 ^ 11 && offset < 2 ^ 64)
         | .load16 | .store16 =>
-            (offset % 2 = 0) &&
-              (offset < 2 ^ 11 ||
-                (offset ≥ 2 ^ 64 - 2 ^ 11 && offset < 2 ^ 64))
+            offset < 2 ^ 11 ||
+              (offset ≥ 2 ^ 64 - 2 ^ 11 && offset < 2 ^ 64)
       if offsetFits then
         match wordStackSharedMemoryOffsetInst config operator destination base offset with
         | some body => pure body

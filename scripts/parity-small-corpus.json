@@ -629,6 +629,14 @@
       ]
     },
     {
+      "path": "Flapjack/Test/OriginalPancake/dead_if_branches.pnk",
+      "source_reference": "Cake word_alloc remove_dead collapses an If whose two branches are Skip after dead-program elimination, while retaining the condition variables in the backward live set.",
+      "cake_sha256": "0988fae715209e66b753a42b1b7199b6297cc7389080bea6593d8cb2e8a019fa",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.10.1.1.2"
+      ]
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/f00356_zero_shift_self_move.pnk",
       "source_reference": "Rebuilt differential-fuzz witness: Cake's word_inst selector preserves the zero-shift self-copy emitted by inst_select_exp, which changes allocator liveness and register colours in the surrounding loop/call frame.",
       "cake_sha256": "7c7bb1966579fbcc7674f6b72e50763202e95fb5ab7ca012fcf8fe72aa477be2",

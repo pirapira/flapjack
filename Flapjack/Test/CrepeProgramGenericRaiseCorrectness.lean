@@ -1125,6 +1125,37 @@ theorem generic_flattened_nested_global_bridge :
     panValueFlatValueFuel.panValueFlatValueFieldListFuel,
     panValueFlatValueFuel.panValueFlatValueListFuel] using hgeneric
 
+theorem generic_flattened_nested_result_bridge :
+    panValuePcResultRelWithContextCode [] context
+      (fun _ _ code => code = 9)
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8)
+      (.raised (fun _ => none) (fun _ => none) (fun _ => none) "E"
+        (.nStruct "Outer"
+          [("pair", .rStruct [.word 3, .word 4]),
+            ("tail", .rStruct [.word 5])]))
+      (.raised
+        { state with globals := updateMemoryListAt state.globals 0 8 [3, 4, 5] }
+        9) := by
+  apply panValuePcResultRelWithContextCode_of_raised_flat_spill_auto
+    (structs := []) (context := context)
+    (exceptionRel := fun _ _ code => code = 9)
+    (exceptionCode := fun exception =>
+      if exception = "E" then some 9 else none)
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (sourceException := "E")
+    (state := state) (bytesInWord := 8) (targetException := 9)
+    (sourceValue :=
+      .nStruct "Outer"
+        [("pair", .rStruct [.word 3, .word 4]),
+          ("tail", .rStruct [.word 5])])
+  · refine ⟨rfl, panValueCrepLocalsRel_empty [] context state.locals, rfl⟩
+  · simp
+  · simp
+  · simp [context, lookupInfo]
+  · decide
+  · simp [panValueShape]
+
 theorem named_struct_raise_after_struct_pass_result_rel_retargeted_globals :
     panValuePcResultRel [] context (fun _ _ code => code = 9)
       (fun exception => if exception = "E" then some 9 else none)

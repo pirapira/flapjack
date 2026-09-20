@@ -69,9 +69,24 @@ def fullSkipMoveGuard : Bool :=
 
 #guard fullSkipMoveGuard
 
+/-! The checked source-shaped `wordFullSsaCcTrans` boundary must preserve the
+    full Cake result, not only its entry move.  This is the `full_two_assigns`
+    oracle from `cake_ssa_temp_probe.out`: after the parameter prologue, the
+    two source assignments receive fresh names 13 and 17, and the second read
+    observes the first fresh name. -/
+def fullTwoAssignsGuard : Bool :=
+  match (wordFullSsaCcTrans 2 twoAssigns).2.2 with
+  | .seq (.move priority moves)
+      (.seq (.assign 13 (.const 0)) (.assign 17 (.var 13))) =>
+      priority == 1 && moves == [(5, 0), (9, 2)]
+  | _ => false
+
+#guard fullTwoAssignsGuard
+
 def parityGuard : Bool :=
   setupTwoGuard && fullTransMoveGuard && limitBaseGuard &&
-    limitTwoAssignsGuard && setupTwoNextGuard && fullSkipMoveGuard
+    limitTwoAssignsGuard && setupTwoNextGuard && fullSkipMoveGuard &&
+    fullTwoAssignsGuard
 
 #guard parityGuard
 #eval parityGuard
@@ -85,7 +100,9 @@ def runChecks : IO Bool := do
       ("limit_var on the two-assign program is 5", limitTwoAssignsGuard),
       ("setup_ssa at the two-assign limit matches the oracle", setupTwoNextGuard),
       ("full_ssa_cc_trans on Skip and two assigns share the setup prologue",
-        fullSkipMoveGuard) ]
+        fullSkipMoveGuard),
+      ("full_ssa_cc_trans preserves the Cake two-assignment body",
+        fullTwoAssignsGuard) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

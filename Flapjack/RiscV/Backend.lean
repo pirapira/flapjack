@@ -245,6 +245,19 @@ theorem wordExpToInstructionsCake_load_var [NeZero width] (destination source : 
         (.load (.var source) : WordExp (Word width)) := by
   rfl
 
+/-! The Cake load boundary exposes the recursively materialized address.  This
+    equation is useful to theorem clients because a constant address is a
+    list-valued lowering, while a variable address retains the historical
+    selector result. -/
+theorem wordExpToInstructionsCake_load [NeZero width] (destination : Nat)
+    (address : WordExp (Word width)) :
+    wordExpToInstructionsCake destination (.load address) =
+      (if destination == 31 then none else do
+          let addressInstructions ← wordExpToInstructionsCake 31 address
+          let destination ← registerOfNat destination
+          pure (addressInstructions ++ [.loadWord destination 31])) := by
+  rfl
+
 /-! The standalone Word selector has no layout table.  Its LocValue boundary
     therefore materializes the abstract label number; the layout-aware Lab
     selector later replaces this with the absolute target position. -/
@@ -475,6 +488,15 @@ def wordInstToInstructionsCake [NeZero width] :
   | .const destination value => wordConstToInstructions destination value
   | .arith operation => wordArithToInstructions operation
   | instruction => (wordInstToInstruction instruction).map List.singleton
+
+/-! Constructor equation for the Cake constant boundary.  Keep this named
+    equation beside the definition so correctness clients can rewrite through
+    the checked list-valued API without unfolding unrelated instruction cases. -/
+theorem wordInstToInstructionsCake_const [NeZero width] (destination : Nat)
+    (value : Word width) :
+    wordInstToInstructionsCake (.const destination value) =
+      wordConstToInstructions destination value := by
+  rfl
 
 def executeInstructions [NeZero width] (state : State width) :
     List (Instruction width) → State width

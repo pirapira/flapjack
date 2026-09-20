@@ -851,4 +851,122 @@ example (functions : List (Nat × List Nat × WordProg (Word 64)))
     ffiHandler state (.skip : WordProg (Word 64)) .skip _ (Nat.le_refl _)]
   simp [evalWordProg]
 
+/-! ## Plain handler-aware evaluator boundary
+
+`evalWordFunctionWithHandlers` is the handler-aware evaluator that carries no
+FFI handler.  On a straight-line program no call, `raise`, or `return` can
+occur, so every outcome must be `.normal` and the evaluator must coincide with
+the plain program evaluator.  The explicit fuel premise again accounts for
+nested sequences; the `functions` list and the source state stay visible in the
+hypotheses.
+-/
+
+theorem evalWordFunctionWithHandlers_straightLine_eq_evalWordProg_normal
+    {width : Nat} [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (state : State width) (program : WordProg (Word width))
+    (hstraight : WordRiscVStraightLine program)
+    (fuel : Nat) (hfuel : sizeOf program + 1 ≤ fuel) :
+    evalWordFunctionWithHandlers functions fuel state program =
+      (evalWordProg state program).map (fun state => WordControlResult.normal state) := by
+  induction hstraight generalizing state fuel with
+  | skip =>
+      cases fuel with
+      | zero => omega
+      | succ k =>
+          simp only [evalWordFunctionWithHandlers]
+          exact option_bind_normal_of_straightLine state (.skip : WordProg (Word width)) .skip
+  | move store moves =>
+      cases fuel with
+      | zero => omega
+      | succ k =>
+          simp only [evalWordFunctionWithHandlers]
+          exact option_bind_normal_of_straightLine state (.move store moves) (.move store moves)
+  | assign destination value =>
+      cases fuel with
+      | zero => omega
+      | succ k =>
+          simp only [evalWordFunctionWithHandlers]
+          exact option_bind_normal_of_straightLine state (.assign destination value)
+            (.assign destination value)
+  | inst instruction =>
+      cases fuel with
+      | zero => omega
+      | succ k =>
+          simp only [evalWordFunctionWithHandlers]
+          exact option_bind_normal_of_straightLine state (.inst instruction) (.inst instruction)
+  | store address value =>
+      cases fuel with
+      | zero => omega
+      | succ k =>
+          simp only [evalWordFunctionWithHandlers]
+          exact option_bind_normal_of_straightLine state (.store address value)
+            (.store address value)
+  | locValue destination source =>
+      cases fuel with
+      | zero => omega
+      | succ k =>
+          simp only [evalWordFunctionWithHandlers]
+          exact option_bind_normal_of_straightLine state (.locValue destination source)
+            (.locValue destination source)
+  | tick =>
+      cases fuel with
+      | zero => omega
+      | succ k =>
+          simp only [evalWordFunctionWithHandlers]
+          exact option_bind_normal_of_straightLine state (.tick : WordProg (Word width)) .tick
+  | shareInst operator name address =>
+      cases fuel with
+      | zero => omega
+      | succ k =>
+          simp only [evalWordFunctionWithHandlers]
+          exact option_bind_normal_of_straightLine state (.shareInst operator name address)
+            (.shareInst operator name address)
+  | @seq first second hfirst hsecond ihfirst ihsecond =>
+      cases fuel with
+      | zero => omega
+      | succ k =>
+          have hk : sizeOf first + 1 ≤ k := by
+            have hs : sizeOf (WordProg.seq first second) =
+                1 + sizeOf first + sizeOf second := rfl
+            omega
+          have hk2 : sizeOf second + 1 ≤ k := by
+            have hs : sizeOf (WordProg.seq first second) =
+                1 + sizeOf first + sizeOf second := rfl
+            omega
+          simp only [evalWordFunctionWithHandlers, evalWordProg]
+          rw [ihfirst state k hk]
+          cases heval : evalWordProg state first with
+          | none => simp
+          | some firstState => simp [ihsecond firstState k hk2]
+
+/-- Adding an FFI handler cannot change the semantics of an FFI-free
+straight-line program: the plain handler-aware evaluator and the FFI-aware
+handler evaluator both reduce to the plain program evaluator. -/
+theorem evalWordFunctionWithHandlers_eq_evalWordFunctionWithHandlersAndFfi_straightLine
+    {width : Nat} [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (state : State width) (program : WordProg (Word width))
+    (hstraight : WordRiscVStraightLine program)
+    (fuel : Nat) (hfuel : sizeOf program + 1 ≤ fuel) :
+    evalWordFunctionWithHandlers functions fuel state program =
+      evalWordFunctionWithHandlersAndFfi functions ffiHandler fuel state program := by
+  rw [evalWordFunctionWithHandlers_straightLine_eq_evalWordProg_normal functions state
+    program hstraight fuel hfuel]
+  rw [evalWordFunctionWithHandlersAndFfi_straightLine_eq_evalWordProg_normal functions
+    ffiHandler state program hstraight fuel hfuel]
+
+/-- Regression: the plain handler-aware evaluator returns `.normal` on a
+straight-line skip once the fuel exceeds the program size. -/
+example (functions : List (Nat × List Nat × WordProg (Word 64))) (state : State 64) :
+    evalWordFunctionWithHandlers functions
+        (sizeOf (.skip : WordProg (Word 64)) + 1) state
+        (.skip : WordProg (Word 64)) =
+      some (WordControlResult.normal state) := by
+  rw [evalWordFunctionWithHandlers_straightLine_eq_evalWordProg_normal functions state
+    (.skip : WordProg (Word 64)) .skip _ (Nat.le_refl _)]
+  simp [evalWordProg]
+
 end Flapjack.RiscV

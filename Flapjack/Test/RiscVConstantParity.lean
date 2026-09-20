@@ -80,4 +80,14 @@ example :
   simp [wordProgToRiscVCake, wordInstToInstructionsCake, wordConstToInstructions,
     wordConst32ToInstructions, registerOfNat]
 
+example :
+    wordFunctionToRiscVCake (width := 64)
+        (.seq (.assign 4 (.const (BitVec.ofNat 64 0x1234)))
+          (.return 0 [4])) =
+      some ([.lui 4 (BitVec.ofNat 64 1),
+        .addi 4 4 (BitVec.ofNat 64 0x234)], [4]) := by
+  simp [wordFunctionToRiscVCake,
+    wordExpToInstructionsCake, wordConstToInstructions,
+    wordConst32ToInstructions, registerOfNat]
+
 end Flapjack.RiscV

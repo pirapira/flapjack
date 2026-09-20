@@ -29,6 +29,23 @@ def staticProgCallContext : Context :=
 def staticProgCallCheck (program : Prog Nat) : StaticResult ProgReturn :=
   checkProg staticProgCallContext program
 
+/-! Cake's sequence rule keeps the first function exit when the second
+    statement is transparent.  Check the returned metadata, not only the
+    acceptance/error bit, for a return followed by Skip. -/
+def staticProgReturnMetadataOracle : Bool :=
+  match staticProgCheck (.seq (.return (.const 0)) .skip) with
+  | (Except.ok result, warnings) =>
+      result.exitsFunction && !result.exitsLoop &&
+        result.last == .retLast && result.variableDelta.isEmpty &&
+        result.currentLocation == "L: " &&
+        match warnings with
+        | [StatErr.warning message] =>
+            message == "L: unreachable statement(s) after return in function f\n"
+        | _ => false
+  | _ => false
+
+#guard staticProgReturnMetadataOracle
+
 #guard
   staticResultErrorMessage (staticProgCheck
       (.dec "x" (.named "Missing") (.const 0) .skip)) ==

@@ -69,6 +69,17 @@ def callMergeGuard : Bool :=
 def callTailGuard : Bool :=
   cakeGetStackOnly (.call none (some 5) [0, 2] none : WordProg Nat) = []
 
+/- These control-flow cases mirror the Cake `MustTerminate` and `Loop`
+   equations in `word_allocScript.sml:1754-1769`.  The canonical HOL probe
+   returns `[9]` for each wrapper around the forced-stack move chain. -/
+def mustTerminateGuard : Bool :=
+  cakeGetStackOnly
+      (.mustTerminate (.move 1 [(9, 9), (7, 9)] : WordProg Nat)) = [9]
+
+def loopBodyGuard : Bool :=
+  cakeGetStackOnly
+      (.loop [] (.move 1 [(9, 9), (7, 9)]) [] : WordProg Nat) = [9]
+
 /-- A plain assignment is a clash-tree leaf: its written name is removed
     from the temporaries set (`∅`). -/
 def assignLeafGuard : Bool :=
@@ -614,7 +625,8 @@ def maxVarControlLabelGuard : Bool :=
 
 def parityGuard : Bool :=
   moveChainGuard && moveFromRegGuard && seqMovesGuard && ifMergeGuard &&
-    ifMergeAllocGuard && callMergeGuard && callTailGuard && assignLeafGuard &&
+    ifMergeAllocGuard && callMergeGuard && callTailGuard && mustTerminateGuard &&
+    loopBodyGuard && assignLeafGuard &&
     bijDeltaBasicGuard && bijDeltaDedupGuard && bijSeqOrderGuard &&
     bijBranchOrderGuard && bijBranchLiveGuard && bijSetGuard &&
     bijSetUnsortedGuard && bijCompositeGuard && graphDeltaDisjointGuard &&
@@ -646,7 +658,8 @@ def runChecks : IO Bool := do
      expectations block the implementation-parity build. -/
   let results := [
     moveChainGuard, moveFromRegGuard, seqMovesGuard, ifMergeGuard,
-    ifMergeAllocGuard, callMergeGuard, callTailGuard, assignLeafGuard,
+    ifMergeAllocGuard, callMergeGuard, callTailGuard, mustTerminateGuard,
+    loopBodyGuard, assignLeafGuard,
     bijDeltaBasicGuard, bijDeltaDedupGuard, bijSeqOrderGuard,
     bijBranchOrderGuard, bijBranchLiveGuard, bijSetGuard,
     bijSetUnsortedGuard, bijCompositeGuard, graphDeltaDisjointGuard,
@@ -667,7 +680,8 @@ def runChecks : IO Bool := do
     "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
     "get_stack_only if merge alloc", "get_stack_only call merge",
-    "get_stack_only call tail", "get_stack_only assign leaf",
+    "get_stack_only call tail", "get_stack_only MustTerminate",
+    "get_stack_only Loop body", "get_stack_only assign leaf",
     "mk_bij delta basic", "mk_bij delta dedup", "mk_bij seq order",
     "mk_bij branch order", "mk_bij branch live", "mk_bij set",
     "mk_bij set unsorted", "mk_bij composite", "mk_graph delta disjoint",

@@ -32,3 +32,8 @@ jobs:
 
       - name: Check exact Pancake RISC-V parity corpus
         run: python3 scripts/parity-small-corpus.py --flapjack-only
+
+      - name: Check exact Pancake RISC-V global differential smoke
+        run: |
+          nice -n 10 python3 scripts/parity-difffuzz.py \
+            --smoke --include-globals --exact --quiet

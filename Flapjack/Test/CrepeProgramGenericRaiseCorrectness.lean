@@ -1090,6 +1090,41 @@ theorem named_struct_nested_mixed_fields_global_bridge :
   · decide
   · simp [panValueShape]
 
+theorem generic_flattened_nested_global_bridge :
+    panValuePcRaisedHraiseData
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8) [] context
+      (fun _ _ code => code = 9)
+      (fun _ => none) (fun _ => none) (fun _ => none) "E"
+      (.nStruct "Outer"
+        [("pair", .rStruct [.word 3, .word 4]),
+          ("tail", .rStruct [.word 5])])
+      { state with globals := updateMemoryListAt state.globals 0 8 [3, 4, 5] }
+      9 := by
+  have hgeneric := panValuePcRaisedHraiseData_of_flat_spill_state_auto
+    (structs := []) (context := context)
+    (exceptionRel := fun _ _ code => code = 9)
+    (exceptionCode := fun exception =>
+      if exception = "E" then some 9 else none)
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none) (sourceException := "E")
+    (state := state) (bytesInWord := 8) (targetException := 9)
+    (sourceValue :=
+      .nStruct "Outer"
+        [("pair", .rStruct [.word 3, .word 4]),
+          ("tail", .rStruct [.word 5])])
+    (hrel := by
+      refine ⟨rfl, panValueCrepLocalsRel_empty [] context state.locals, rfl⟩)
+    (hexception := by simp)
+    (hcode := by simp)
+    (hdistinct := by decide)
+    (hsize := by simp [panValueShape])
+  simpa [panValueFlatWords, panValueFlatWordsFuel, panValueFlatValueFuel,
+    panValueFlatWordsFuel.panValueFlatWordsFieldListFuel,
+    panValueFlatWordsFuel.panValueFlatWordsListFuel,
+    panValueFlatValueFuel.panValueFlatValueFieldListFuel,
+    panValueFlatValueFuel.panValueFlatValueListFuel] using hgeneric
+
 theorem named_struct_raise_after_struct_pass_result_rel_retargeted_globals :
     panValuePcResultRel [] context (fun _ _ code => code = 9)
       (fun exception => if exception = "E" then some 9 else none)

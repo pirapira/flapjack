@@ -193,10 +193,21 @@ example :
 example :
     wordToStackProg
         { locations := [(0, .stack 2), (1, .stack 3)],
-          scratch := 31, stackBase := 10 }
+          scratch := 31, stackBase := 10 } 
         ((.ite .equal 0 (.reg 1) .skip .skip) : WordProg Nat) =
       some (.seq (.seq (.stackLoad 31 12) (.stackLoad 29 13))
         (.ite .equal 31 (.reg 29) .skip .skip) : StackProg Nat) := by
+  simp [wordToStackProg, wordStackConditionOperands, wordStackReadRegister,
+    wordStackJoin, wordStackLocation, wordStackOffset, lookupNatInfo]
+
+/- Cake's `comp If` uses `wReg1` for a spilled condition even when the
+   comparison's right operand is an immediate. -/
+example :
+    wordToStackProg
+        { locations := [(0, .stack 2)], scratch := 31, stackBase := 10 }
+        ((.ite .less 0 (.imm 10) .skip .skip) : WordProg Nat) =
+      some (.seq (.stackLoad 31 12)
+        (.ite .less 31 (.imm 10) .skip .skip) : StackProg Nat) := by
   simp [wordToStackProg, wordStackConditionOperands, wordStackReadRegister,
     wordStackJoin, wordStackLocation, wordStackOffset, lookupNatInfo]
 

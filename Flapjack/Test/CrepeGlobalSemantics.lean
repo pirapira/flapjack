@@ -71,6 +71,69 @@ theorem compile_full_pan_value_while_zero_state_correct_regression :
     (defaultCrepSharedMemHandler : CrepSharedMemHandler Nat) 0 100 1 9
     (.skip : Prog Nat)
 
+/-! The full Cake exception evaluator and full Crep evaluator agree on a
+    closed raised word, including the global payload spill and exception-code
+    lookup. -/
+def crepeFullRaiseContext : CompileContext (RiscV.Word 8) :=
+  { vars := [], functions := [], exceptions := [("E", 9)], maxVar := 0,
+    bytesInWord := 1 }
+
+def crepeFullRaiseState : CrepState (RiscV.Word 8) :=
+  { locals := fun _ => none, memory := fun _ => none, globals := fun _ => none }
+
+theorem compile_full_pan_value_raise_word_state_full_correct_regression :
+    evalPanValueProgWithPrimitiveCallsAndFfi
+        (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+        ([] : StructContext) [] 0 100 1 3
+        (fun _ => none) (fun _ => none)
+        (fun _ => none)
+        (.raise "E" (.const 7) : Prog (RiscV.Word 8)) =
+      some (.raised (fun _ => none) (fun _ => none) (fun _ => none)
+        "E" (.word 7)) ∧
+    evalCrepFullProgStateFull [] (fun _ _ => none) (noCrepFfi (RiscV.Word 8))
+        (defaultCrepSharedMemHandler : CrepSharedMemHandler (RiscV.Word 8))
+        0 100 10 crepeFullRaiseState
+        (compileProg crepeFullRaiseContext
+          (.raise "E" (.const 7) : Prog (RiscV.Word 8))) =
+      some (.raised
+        { crepeFullRaiseState with
+            globals := updateMemory crepeFullRaiseState.globals 0 7 } 9) := by
+  exact compile_full_pan_value_raise_word_state_full_correct crepeFullRaiseContext
+    ([] : StructContext) [] []
+    (fun _ => none) (fun _ => none) (fun _ => none)
+    crepeFullRaiseState (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+    (fun _ _ => none)
+    (noCrepFfi (RiscV.Word 8))
+    (defaultCrepSharedMemHandler : CrepSharedMemHandler (RiscV.Word 8))
+    0 100 1 7 "E" 9 (by simp [crepeFullRaiseContext, lookupInfo])
+
+theorem compile_full_pan_value_raise_two_word_state_full_correct_regression :
+    evalPanValueProgWithPrimitiveCallsAndFfi
+        (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+        ([] : StructContext) [] 0 100 1 5
+        (fun _ => none) (fun _ => none) (fun _ => none)
+        (.raise "E" (.rStruct [.const 11, .const 22]) : Prog (RiscV.Word 8)) =
+      some (.raised (fun _ => none) (fun _ => none) (fun _ => none)
+        "E" (.rStruct [.word 11, .word 22])) ∧
+    evalCrepFullProgStateFull [] (fun _ _ => none)
+        (noCrepFfi (RiscV.Word 8))
+        (defaultCrepSharedMemHandler : CrepSharedMemHandler (RiscV.Word 8))
+        0 100 15 crepeFullRaiseState
+        (compileProg crepeFullRaiseContext
+          (.raise "E" (.rStruct [.const 11, .const 22]) : Prog (RiscV.Word 8))) =
+      some (.raised
+        { crepeFullRaiseState with
+            globals := updateMemory
+              (updateMemory crepeFullRaiseState.globals 0 11) 1 22 } 9) := by
+  exact compile_full_pan_value_raise_two_word_state_full_correct
+    crepeFullRaiseContext ([] : StructContext) [] []
+    (fun _ => none) (fun _ => none) (fun _ => none)
+    crepeFullRaiseState (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+    (fun _ _ => none) (noCrepFfi (RiscV.Word 8))
+    (defaultCrepSharedMemHandler : CrepSharedMemHandler (RiscV.Word 8))
+    0 100 1 11 22 "E" 9 (by simp [crepeFullRaiseContext, lookupInfo]) (by
+      simp [crepeFullRaiseContext])
+
 /-! The complete-word shared-store theorem has a concrete Cake/Crep oracle:
     both evaluators write the same word at address 7, while the target path
     goes through the compiled temporary and stateful shared-memory handler. -/

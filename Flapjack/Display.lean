@@ -75,6 +75,9 @@ def wordToDisplay [CakeDisplayWord α] (value : α) : DisplayExpr :=
 def itemWithWord [CakeDisplayWord α] (name : String) (value : α) : DisplayExpr :=
   .item none name [wordToDisplay value]
 
+def itemWithNat (name : String) (value : Nat) : DisplayExpr :=
+  .item none name [.string (toString value)]
+
 def binOpToDisplay : BinOp → DisplayExpr
   | .add => emptyDisplayItem "Add"
   | .sub => emptyDisplayItem "Sub"
@@ -197,6 +200,111 @@ where
 
 def crepExpToDisplay [CakeDisplayWord α] (expression : CrepExp α) : DisplayExpr :=
   crepExpToDisplayFuel (crepExpDepth expression + 1) expression
+
+/-! Exact source counterpart of Cake's `crep_prog_to_display_def`
+    (`pan_passesScript.sml:394-489`). -/
+def crepProgToDisplayFuel [CakeDisplayWord α] : Nat → CrepProg α → DisplayExpr
+  | 0, _ => emptyDisplayItem "display-depth-exhausted"
+  | _fuel + 1, .skip => emptyDisplayItem "skip"
+  | _fuel + 1, .shMem operator name address =>
+      let memoryPrefix := match operator with
+        | .load => [.string "load", .string "word"]
+        | .load8 => [.string "load", .string "byte"]
+        | .load16 => [.string "load", .string "word16"]
+        | .load32 => [.string "load", .string "word32"]
+        | .store => [.string "store", .string "word"]
+        | .store8 => [.string "store", .string "byte"]
+        | .store16 => [.string "store", .string "word16"]
+        | .store32 => [.string "store", .string "word32"]
+      .item none "shared_mem"
+        (memoryPrefix ++ [.string (toString name), crepExpToDisplay address])
+  | _fuel + 1, .extCall function configuration configurationLength array arrayLength =>
+      .item none "ext_call"
+        [.string function, .string (toString configuration),
+         .string (toString configurationLength), .string (toString array),
+         .string (toString arrayLength)]
+  | _fuel + 1, .storeGlob address value =>
+      .item none "store_glob"
+        [wordToDisplay address, crepExpToDisplay value]
+  | fuel + 1, .ite condition thenBranch elseBranch =>
+      .item none "if"
+        [crepExpToDisplay condition,
+         crepProgToDisplayFuel fuel thenBranch,
+         crepProgToDisplayFuel fuel elseBranch]
+  | fuel + 1, .while condition body =>
+      .item none "while"
+        [crepExpToDisplay condition, crepProgToDisplayFuel fuel body]
+  | fuel + 1, .dec name value body =>
+      .item none "dec"
+        [.tuple [.string (toString name), .string ":=", crepExpToDisplay value],
+         crepProgToDisplayFuel fuel body]
+  | _fuel + 1, .assign name value =>
+      .tuple [.string (toString name), .string ":=", crepExpToDisplay value]
+  | _fuel + 1, .primitive names operator arguments =>
+      .tuple [.tuple (names.map (fun name => .string (toString name))),
+        .string ":=",
+        insertDisplayExpressions (primOpToDisplay operator)
+          (arguments.map (fun name => .string (toString name)))]
+  | _fuel + 1, .store address value =>
+      .tuple [.string "mem", crepExpToDisplay address, .string ":=",
+        crepExpToDisplay value]
+  | _fuel + 1, .store32 address value =>
+      .tuple [.string "mem", crepExpToDisplay address, .string ":=",
+        .string "32bit", crepExpToDisplay value]
+  | _fuel + 1, .storeByte address value =>
+      .tuple [.string "mem", crepExpToDisplay address, .string ":=",
+        .string "byte", crepExpToDisplay value]
+  | _fuel + 1, .tick => emptyDisplayItem "tick"
+  | _fuel + 1, .break label => itemWithNat "break" label
+  | _fuel + 1, .continue label => itemWithNat "continue" label
+  | _fuel + 1, .return values =>
+      .item none "return" (values.map crepExpToDisplay)
+  | _fuel + 1, .raise exception => itemWithWord "raise" exception
+  | fuel + 1, .seq first second =>
+      .list (.string "seq" ::
+        ((crepSeqs first ++ crepSeqs second).map
+          (crepProgToDisplayFuel fuel)))
+  | fuel + 1, .call none function arguments =>
+      .item none "tail_call"
+        [.string function, .tuple (arguments.map crepExpToDisplay)]
+  | fuel + 1, .call (some ([], handler)) function arguments =>
+      .item none "call"
+        [.string function, .tuple (arguments.map crepExpToDisplay),
+         crepProgToDisplayHandler fuel handler]
+  | fuel + 1, .call (some (names, handler)) function arguments =>
+      .tuple [.tuple (names.map (fun name => .string (toString name))),
+        .string ":=",
+        .item none "call"
+          [.string function, .tuple (arguments.map crepExpToDisplay),
+           crepProgToDisplayHandler fuel handler]]
+termination_by fuel => fuel
+where
+  crepProgToDisplayHandler [CakeDisplayWord α] :
+      Nat → Option (α × CrepProg α) → DisplayExpr
+    | _, none => emptyDisplayItem "no_handler"
+    | 0, some _ => emptyDisplayItem "display-depth-exhausted"
+    | fuel + 1, some (exception, program) =>
+        .item none "handler"
+          [.tuple [wordToDisplay exception,
+            crepProgToDisplayFuel fuel program]]
+    termination_by fuel => fuel
+    decreasing_by all_goals decreasing_trivial
+
+def crepProgDepth : CrepProg α → Nat
+  | .skip | .assign _ _ | .primitive _ _ _ | .store _ _ | .store32 _ _ |
+      .storeByte _ _ | .storeGlob _ _ | .shMem _ _ _ | .extCall _ _ _ _ _ |
+      .break _ | .continue _ | .tick | .raise _ | .return _ => 1
+  | .dec _ _ body | .while _ body => 1 + crepProgDepth body
+  | .ite _ thenBranch elseBranch =>
+      1 + max (crepProgDepth thenBranch) (crepProgDepth elseBranch)
+  | .seq first second => 1 + max (crepProgDepth first) (crepProgDepth second)
+  | .call (some (_, some (_, handler))) _ _ => 1 + crepProgDepth handler
+  | .call _ _ _ => 1
+termination_by program => sizeOf program
+decreasing_by all_goals decreasing_trivial
+
+def crepProgToDisplay [CakeDisplayWord α] (program : CrepProg α) : DisplayExpr :=
+  crepProgToDisplayFuel (crepProgDepth program + 1) program
 
 def cakeEscapeChar : Char → String
   | '\t' => "\\t"

@@ -121,6 +121,105 @@ def crepExpOracle : Bool :=
            .item none "Const" [.string "0x0"]],
          .item none "Const" [.string "0x1"]])
 
+/-! Direct oracle guards for `crep_prog_to_display_def` in
+    `pan_passesScript.sml:394-489`.  These cover every source constructor
+    family, including sequence flattening and both call/handler forms. -/
+def crepProgOracle : Bool :=
+  sameDisplay
+      (crepProgToDisplay (.skip : CrepProg (BitVec 64)))
+      (.string "skip") &&
+    sameDisplay
+      (crepProgToDisplay
+        (.shMem .load8 3 (.const (BitVec.ofNat 64 4)) :
+          CrepProg (BitVec 64)))
+      (.item none "shared_mem"
+        [.string "load", .string "byte", .string "3",
+         .item none "Const" [.string "0x4"]]) &&
+    sameDisplay
+      (crepProgToDisplay
+        (.extCall "ffi" 1 2 3 4 : CrepProg (BitVec 64)))
+      (.item none "ext_call"
+        [.string "ffi", .string "1", .string "2", .string "3", .string "4"]) &&
+    sameDisplay
+      (crepProgToDisplay
+        (.storeGlob (BitVec.ofNat 64 32) (.var 0) : CrepProg (BitVec 64)))
+      (.item none "store_glob"
+        [.string "0x20", .item none "Var" [.string "0"]]) &&
+    sameDisplay
+      (crepProgToDisplay
+        (.ite (.var 0) (.assign 1 (.const (BitVec.ofNat 64 2))) .skip :
+          CrepProg (BitVec 64)))
+      (.item none "if"
+        [.item none "Var" [.string "0"],
+         .tuple [.string "1", .string ":=", .item none "Const" [.string "0x2"]],
+         .string "skip"]) &&
+    sameDisplay
+      (crepProgToDisplay
+        (.dec 2 (.const (BitVec.ofNat 64 5))
+          (.while (.var 2) (.storeByte (.var 0) (.var 2))) :
+          CrepProg (BitVec 64)))
+      (.item none "dec"
+        [.tuple [.string "2", .string ":=", .item none "Const" [.string "0x5"]],
+         .item none "while"
+           [.item none "Var" [.string "2"],
+            .tuple [.string "mem", .item none "Var" [.string "0"], .string ":=",
+              .string "byte", .item none "Var" [.string "2"]]]]) &&
+    sameDisplay
+      (crepProgToDisplay
+        (.primitive [1, 2] .addCarry [3, 4] : CrepProg (BitVec 64)))
+      (.tuple [.tuple [.string "1", .string "2"], .string ":=",
+        .item none "AddCarry" [.string "3", .string "4"]]) &&
+    sameDisplay
+      (crepProgToDisplay
+        (.store (.var 0) (.const (BitVec.ofNat 64 1)) : CrepProg (BitVec 64)))
+      (.tuple [.string "mem", .item none "Var" [.string "0"], .string ":=",
+        .item none "Const" [.string "0x1"]]) &&
+    sameDisplay
+      (crepProgToDisplay
+        (.store32 (.var 0) (.const (BitVec.ofNat 64 1)) : CrepProg (BitVec 64)))
+      (.tuple [.string "mem", .item none "Var" [.string "0"], .string ":=",
+        .string "32bit", .item none "Const" [.string "0x1"]]) &&
+    sameDisplay
+      (crepProgToDisplay (.tick : CrepProg (BitVec 64))) (.string "tick") &&
+    sameDisplay
+      (crepProgToDisplay (.break 4 : CrepProg (BitVec 64)))
+      (.item none "break" [.string "4"]) &&
+    sameDisplay
+      (crepProgToDisplay (.continue 5 : CrepProg (BitVec 64)))
+      (.item none "continue" [.string "5"]) &&
+    sameDisplay
+      (crepProgToDisplay
+        (.return [.const (BitVec.ofNat 64 6), .var 1] : CrepProg (BitVec 64)))
+      (.item none "return"
+        [.item none "Const" [.string "0x6"], .item none "Var" [.string "1"]]) &&
+    sameDisplay
+      (crepProgToDisplay (.raise (BitVec.ofNat 64 7) : CrepProg (BitVec 64)))
+      (.item none "raise" [.string "0x7"]) &&
+    sameDisplay
+      (crepProgToDisplay
+        (.seq (.seq .skip .tick) (.assign 0 (.const (BitVec.ofNat 64 8))) :
+          CrepProg (BitVec 64)))
+      (.list [.string "seq", .string "skip", .string "tick",
+        .tuple [.string "0", .string ":=", .item none "Const" [.string "0x8"]]]) &&
+    sameDisplay
+      (crepProgToDisplay
+        (.call none "f" [.const (BitVec.ofNat 64 9)] : CrepProg (BitVec 64)))
+      (.item none "tail_call"
+        [.string "f", .tuple [.item none "Const" [.string "0x9"]]]) &&
+    sameDisplay
+      (crepProgToDisplay
+        (.call (some ([], none)) "f" [] : CrepProg (BitVec 64)))
+      (.item none "call" [.string "f", .tuple [], .string "no_handler"]) &&
+    sameDisplay
+      (crepProgToDisplay
+        (.call (some ([2], some ((BitVec.ofNat 64 10), .skip))) "f" [] :
+          CrepProg (BitVec 64)))
+      (.tuple [.tuple [.string "2"], .string ":=",
+        .item none "call"
+          [.string "f", .tuple [],
+           .item none "handler"
+             [.tuple [.string "0xA", .string "skip"]]]])
+
 /-! Direct oracle guards for `pan_prog_to_display_def` in
     `pan_passesScript.sml:203-300`, including sequence flattening, annotation
     escaping, calls, handlers, and declaration calls. -/
@@ -271,6 +370,7 @@ def loopExpOracle : Bool :=
 #guard destAnnotOracle
 #guard panExpOracle
 #guard crepExpOracle
+#guard crepProgOracle
 #guard panProgOracle
 #guard loopExpOracle
 #guard panFunOracle

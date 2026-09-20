@@ -675,6 +675,46 @@ theorem compile_full_pan_value_dec_word_return_state_full
   · simp [evalPanValueProgWithPrimitiveFull, evalPanValueExpFull,
       updatePanValueMap, panValueShape, panShapeMatches]
 
+/-! Full-word stateful local assignment.  The explicit Cake premise that the
+    source local already has word shape and the Crep premise that its slot is
+    present are the two validity checks shared by the source and target rules. -/
+theorem compile_full_pan_value_local_assign_word_state_full_correct
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [PanShiftWidth α]
+    [ArithmeticShiftRight α] [RotateRightOp α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (state : CrepState α) (primitive : PanPrimitiveHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord value oldValue : α) (fuel : Nat)
+    (name : VarName) (slot : Nat)
+    (lookup : lookupInfo name context.vars = some (.one, [slot]))
+    (hlocals : sourceLocals name = some (.word oldValue))
+    (hstate : state.locals slot = some oldValue) :
+    evalPanValueProgWithPrimitiveFull structs
+        baseAddress topAddress bytesInWord sourceLocals sourceGlobals
+        sourceMemory primitive
+        (.assign .local name (.const value)) =
+      some (updatePanValueMap sourceLocals name (.word value),
+        sourceGlobals, sourceMemory, []) ∧
+    evalCrepFullProgStateFull [] crepPrimitive ffi sharedMem
+        baseAddress topAddress (fuel + 2) state
+        (compileProg context (.assign .local name (.const value))) =
+      some (.normal { state with
+        locals := updateCrepLocal state.locals slot value }) := by
+  constructor
+  · simp [evalPanValueProgWithPrimitiveFull, evalPanValueExpFull,
+      panValueAssignmentValid, panValueShape,
+      panShapeMatches, hlocals]
+  · simp [compileProg, lookup, evalCrepFullProgStateFull,
+      compileExp, evalCrepFullExpStateFull,
+      assignExistingCrepValues, crepNestedSeq, distinctLists,
+      crepNamesDistinct, crepLocalsDefined, hstate]
+
 /-! A two-word record declaration gives a concrete structured witness for the
     declaration path: both flattened slots are allocated and returned in
     source order. -/

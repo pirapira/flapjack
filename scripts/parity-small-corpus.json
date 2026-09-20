@@ -263,7 +263,7 @@
     },
     {
       "path": "Flapjack/Test/OriginalPancake/secp_accel_init_block.pnk",
-      "source_reference": "Minimized from the full guest's secp_accel_init_block: Cake preserves static base-plus-offset stores and register-resident struct words through word_to_stack and Lab.",
+      "source_reference": "Minimized from the full guest's secp_accel_init_block: Cake's word_simp first materializes non-atomic base-plus-offset Store addresses, word_inst then sees Store Var and emits zero-offset Mem, and word_to_stack/Lab preserve the resulting register-resident struct stores.",
       "cake_sha256": "2cdf414cfa245f284a23ad93df8be7909c5a083c3fb4b924db9b9162766d34af",
       "tracked_beads": [
         "flapjack-8tb.4.6"

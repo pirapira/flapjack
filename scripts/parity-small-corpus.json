@@ -839,6 +839,14 @@
       "tracked_beads": [
         "flapjack-pxn.8.5.14.1.3.1"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/ordinary_subword_offsets.pnk",
+      "source_reference": "Cake subword-offset oracle: ordinary local memory uses st8/st32 and ld8/ld32 at +4/+12; Cake's parser exposes st16/ld16 only as shared-memory forms, exercised at +8 rather than inventing unsupported ordinary syntax.",
+      "cake_sha256": "3b21d76021ccf6ec9d8c2b34d5327ed3a8c377ea41bfc794380223275f1dfd32",
+      "tracked_beads": [
+        "flapjack-pxn.8.9"
+      ]
     }
   ]
 }

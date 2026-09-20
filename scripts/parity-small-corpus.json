@@ -863,6 +863,14 @@
       "tracked_beads": [
         "flapjack-pxn.8.11"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/ready_last_argument_permutation.pnk",
+      "source_reference": "Cake word_to_stackScript parmove oracle: a four-argument call with a cyclic permutation of live argument values exercises dependency-ready-last ordering while preserving every source value for the callee and caller continuation.",
+      "cake_sha256": "b3e2fdfffa39baa8bdbc3a644e9595d057e8e6dd647755c0debf5779074f9358",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.10.1.1.1"
+      ]
     }
   ]
 }

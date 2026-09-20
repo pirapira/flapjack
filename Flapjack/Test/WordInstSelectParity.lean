@@ -103,6 +103,14 @@ def cakeSharedOddHalfwordOffset : Bool :=
         (.op .add [.var 23, .const 9])) => true
   | _ => false
 
+/- Cake's `inst_select_exp` selects the non-heap operand into the fresh
+   temporary before emitting the current-heap operation. -/
+def cakeCurrentHeapOr : Bool :=
+  match wordInstSelectProgram (α := Nat) 23
+      (.assign 2 (.op .or [.lookup .currHeap, .const 1])) with
+  | .seq (.inst (.const 23 value)) (.opCurrHeap .or 2 23) => value == 1
+  | _ => false
+
 #guard cakeLoadConstShape
 #guard cakeLoadVarShape
 #guard cakeLoadVarOffsetShape
@@ -113,6 +121,7 @@ def cakeSharedOddHalfwordOffset : Bool :=
 #guard cakeWideAddMaterializesConstant
 #guard cakeSharedByteOffsetMaterializesConstant
 #guard cakeSharedOddHalfwordOffset
+#guard cakeCurrentHeapOr
 
 #guard match cakeNonImmediateAnd with
   | .seq (.move 0 [(7, 2)])

@@ -1,9 +1,53 @@
 import Flapjack.PanSimp
+import Flapjack.PanSimpEvaluate
 import Flapjack.PanGlobals
 
 namespace Flapjack.Test.PanSimpParity
 
 open Flapjack
+
+def evaluatorContext : PanValueFfiContext Nat :=
+  { sharedDomain := fun _ => true
+    byteAlign := id
+    bigEndian := false
+    wordToBytes := fun value _ => [UInt8.ofNat value]
+    wordOfBytes := fun _ bytes =>
+      match bytes with
+      | byte :: _ => byte.toNat
+      | [] => 0
+    wordToByte := fun value => UInt8.ofNat value
+    byteToWord := fun byte => byte.toNat
+    valueToNat := id }
+
+def evaluatorHandler : PanValueStatefulFfiHandler Nat Unit :=
+  fun _ _ _ _ _ locals ffi => some (locals, ffi)
+
+def evaluatorFfi : FfiState Unit :=
+  { oracle := fun _ state _ _ => .returned state []
+    state := ()
+    ioEvents := [] }
+
+theorem clocked_seq_skip_matches_cake :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1 (.seq .skip .skip) =
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 0 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1 .skip := by
+  exact evalPanValueFfiClockProg_seq_skip evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 0 1
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi .skip
+
+theorem clocked_skip_seq_matches_cake :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1 (.seq .skip .skip) =
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 0 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1 .skip := by
+  exact evalPanValueFfiClockProg_skip_seq evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 0 1
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi .skip
 
 /-! The expected values are the direct HOL evaluation of
     `pan_simp$SmartSeq` from `pan_simpScript.sml:13-16`. -/
@@ -257,6 +301,7 @@ def runChecks : IO Bool := do
     IO.println "PASS pan_simp SmartSeq/seq_assoc/seq_call_ret/ret_to_tail/compile source parity"
   else
     IO.println "FAIL pan_simp SmartSeq/seq_assoc/seq_call_ret/ret_to_tail/compile source parity"
+  IO.println "PASS pan_simp clocked evaluate_seq_skip/evaluate_skip_seq Cake equations"
   pure parityGuard
 
 end Flapjack.Test.PanSimpParity

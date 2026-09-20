@@ -134,6 +134,55 @@ theorem compile_full_pan_value_raise_two_word_state_full_correct_regression :
     0 100 1 11 22 "E" 9 (by simp [crepeFullRaiseContext, lookupInfo]) (by
       simp [crepeFullRaiseContext])
 
+theorem compile_full_pan_value_seq_raise_compose_state_full_regression :
+    evalPanValueProgWithPrimitiveCallsAndFfiFull
+        (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+        ([] : StructContext) [] 0 100 1 11
+        (fun _ => none) (fun _ => none) (fun _ => none)
+        (.seq (.raise "E" (.const 7)) (.skip) : Prog (RiscV.Word 8)) =
+      some (.raised (fun _ => none) (fun _ => none) (fun _ => none)
+        "E" (.word 7)) ∧
+    evalCrepFullProgStateFull [] (fun _ _ => none)
+        (noCrepFfi (RiscV.Word 8))
+        (defaultCrepSharedMemHandler : CrepSharedMemHandler (RiscV.Word 8))
+        0 100 11 crepeFullRaiseState
+        (compileProg crepeFullRaiseContext
+          (.seq (.raise "E" (.const 7)) (.skip) : Prog (RiscV.Word 8))) =
+      some (.raised
+        { crepeFullRaiseState with
+            globals := updateMemory crepeFullRaiseState.globals 0 7 } 9) := by
+  have hraise := compile_full_pan_value_raise_word_state_full_correct
+    crepeFullRaiseContext ([] : StructContext) [] []
+    (fun _ => none) (fun _ => none) (fun _ => none)
+    crepeFullRaiseState (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+    (fun _ _ => none) (noCrepFfi (RiscV.Word 8))
+    (defaultCrepSharedMemHandler : CrepSharedMemHandler (RiscV.Word 8))
+    0 100 1 7 "E" 9 (by simp [crepeFullRaiseContext, lookupInfo])
+  have hsourceFirst :
+      evalPanValueProgWithPrimitiveCallsAndFfiFull
+        (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+        ([] : StructContext) [] 0 100 1 10
+        (fun _ => none) (fun _ => none) (fun _ => none)
+        (.raise "E" (.const 7) : Prog (RiscV.Word 8)) =
+      some (.raised (fun _ => none) (fun _ => none) (fun _ => none)
+        "E" (.word 7)) := by
+    simp [evalPanValueProgWithPrimitiveCallsAndFfiFull, evalPanValueExpFull]
+  exact compile_full_pan_value_seq_raise_compose_state_full
+    crepeFullRaiseContext ([] : StructContext) [] []
+    (fun _ => none) (fun _ => none) (fun _ => none)
+    (fun _ => none) (fun _ => none) (fun _ => none)
+    crepeFullRaiseState
+    ({ crepeFullRaiseState with
+        globals := updateMemory crepeFullRaiseState.globals 0 7 })
+    (fun _ _ => none) (fun _ _ _ _ _ _ => none) (fun _ _ => none)
+    (noCrepFfi (RiscV.Word 8))
+    (defaultCrepSharedMemHandler : CrepSharedMemHandler (RiscV.Word 8))
+    0 100 1 9
+    (.raise "E" (.const 7)) (.skip)
+    (compileProg crepeFullRaiseContext (.raise "E" (.const 7)))
+    (compileProg crepeFullRaiseContext (.skip)) "E" (.word 7) 9
+    rfl (by simp [compileProg]) hsourceFirst hraise.2
+
 /-! The complete-word shared-store theorem has a concrete Cake/Crep oracle:
     both evaluators write the same word at address 7, while the target path
     goes through the compiled temporary and stateful shared-memory handler. -/

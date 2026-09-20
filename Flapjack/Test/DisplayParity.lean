@@ -449,6 +449,14 @@ def loopFunOracle : Bool :=
       .tuple [.string "3", .string ":=",
         .item none "Const" [.string "0x7"]]])
 
+def loopToStrsOracle : Bool :=
+  loopToStrs [(7, "callee")]
+    [((7, [1, 2], .assign 3 (.const (BitVec.ofNat 64 7))) :
+        Nat × List Nat × LoopProg (BitVec 64))] ==
+    ["(", "func", " ", "callee@7", " ", "(", "1", " ", "2", ")", " ",
+     "(", "3", " ", ":=", " ", "(", "Const", " ", "0x7", ")", ")", ")",
+     "\n\n"]
+
 #guard opSizeOracle
 #guard insertEsOracle
 #guard varKindOracle
@@ -463,5 +471,6 @@ def loopFunOracle : Bool :=
 #guard panFunOracle
 #guard loopProgOracle
 #guard loopFunOracle
+#guard loopToStrsOracle
 
 end Flapjack.Test.DisplayParity

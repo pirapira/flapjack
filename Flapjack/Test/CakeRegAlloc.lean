@@ -715,6 +715,8 @@ def maxVarControlLabelGuard : Bool :=
 
 #guard maxVarControlLabelGuard
 #guard sortMovesTailSplitGuard
+#guard raDeltaTriangleGuard
+#guard raForcedEdgeGuard
 
 def parityGuard : Bool :=
   moveChainGuard && moveFromRegGuard && seqMovesGuard && ifMergeGuard &&
@@ -750,10 +752,6 @@ def parityGuard : Bool :=
    being aligned with CakeML.  Individual oracle cases remain available to
    select and repair without blocking the whole build on stale expectations. -/
 def runChecks : IO Bool := do
-  /- `raDeltaTriangleGuard` and `raForcedEdgeGuard` encode expectations for
-     allocator ordering that are currently being reworked toward CakeML.
-     Keep the probes above for diagnosis, but do not let these stale
-     expectations block the implementation-parity build. -/
   let results := [
     moveChainGuard, moveFromRegGuard, seqMovesGuard, ifMergeGuard,
     ifMergeAllocGuard, callMergeGuard, callTailGuard, mustTerminateGuard,
@@ -764,7 +762,8 @@ def runChecks : IO Bool := do
     graphDeltaCliqueGuard, graphSetCliqueGuard, graphForcedEdgeGuard,
     graphTagsGuard, graphInitGuard, heuDeltaGuard, heuMovesGuard,
     heuSpillGuard, heuFixedDegreeGuard, raDeltaPairGuard, raDeltaFreeGuard,
-    raStackOnlyGuard, raMovesCoalesceGuard, raMovesSelfFilteredGuard,
+    raDeltaTriangleGuard, raStackOnlyGuard, raMovesCoalesceGuard,
+    raMovesSelfFilteredGuard, raForcedEdgeGuard,
     raOrderSeqGuard, raOrderCliqueGuard, raSpillCostGuard,
     prefsMoveOrderGuard, prefsSeqOrderGuard, prefsControlFlowGuard,
     prefsBranchOrderGuard,
@@ -792,8 +791,10 @@ def runChecks : IO Bool := do
     "mk_tags roles", "init_ra_state", "init_alloc1_heu delta",
     "init_alloc1_heu moves", "init_alloc1_heu spill",
     "init_alloc1_heu fixed degree", "reg_alloc delta pair",
-    "reg_alloc delta free", "reg_alloc stack only",
+    "reg_alloc delta free", "reg_alloc triangle",
+    "reg_alloc stack only",
     "reg_alloc moves coalesce", "reg_alloc moves self filtered",
+    "reg_alloc forced edge",
     "reg_alloc sequential pair order", "reg_alloc clique order",
     "reg_alloc spill-cost selection",
     "get_prefs Move order", "get_prefs Seq order", "get_prefs control flow",

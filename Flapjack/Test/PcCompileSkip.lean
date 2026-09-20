@@ -744,4 +744,79 @@ theorem panValuePcCompileCorrect_compact_seq_store_nat
         (panValueCrepMemoryRel_update_word sourceInput.memory targetInput.state.memory
           firstAddress firstValue hstate.2.2)⟩
 
+/-- Flat-global evaluator evidence for a constant-word raise payload.
+
+    This builds the giant evaluator-evidence bundle that
+    `panValuePcRaisedHraiseData_of_flat_global_evaluator_evidence` consumes,
+    specialized to a `(.word value)` payload: the witness expression is
+    `.const value`, its flat words are `[value]`, and the raised target state
+    is the one-word spill of `value` into the globals. The source/target raise
+    equations `skipNatRaiseConstSourceEval`/`skipNatRaiseConstTargetEval`
+    identify exactly this globals update, so the explicit `exceptionRel`,
+    `lookupInfo` and `exceptionCode` premises connect the equations to the
+    generic evidence. All of locals, globals, memory and the exception code
+    stay visible. -/
+theorem skipNatRaiseConstFlatGlobalEvaluatorEvidence
+    (context : CompileContext Nat) (structs : StructContext)
+    (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+    (sourceMemory : Nat → Option (PanValue Nat))
+    (state : CrepState Nat) (sourceException : ExceptionId) (value : Nat)
+    (targetException bytesInWord baseAddress topAddress : Nat)
+    (exceptionCode : ExceptionId → Option Nat)
+    (hbytesInWord : context.bytesInWord = bytesInWord)
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory state)
+    (hfresh : ∀ name ∈ freshNames context 1 1, state.locals name = none)
+    (hexception : exceptionRel sourceException (.word value) targetException)
+    (hlookupCode : lookupInfo sourceException context.exceptions =
+      some targetException)
+    (hcode : exceptionCode sourceException = some targetException) :
+    ∃ (state' : CrepState Nat) (expression : Exp Nat)
+      (compiled : List (CrepExp Nat)) (shape : Shape) (values : List Nat),
+      { state with globals := updateMemory state.globals 0 value } =
+          { state' with globals :=
+              updateMemoryListAt state'.globals 0 context.bytesInWord values } ∧
+        context.bytesInWord = bytesInWord ∧
+        panValueCrepStateRel structs context sourceLocals sourceGlobals
+          sourceMemory state' ∧
+        evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+          baseAddress topAddress bytesInWord expression = some (.word value) ∧
+        panValuePayloadWithinLimit structs (.word value) = true ∧
+        compileExp context expression = (compiled, shape) ∧
+        compiled.length = Shape.shapeSize shape ∧
+        evalCrepFullExpsState state' baseAddress topAddress compiled =
+          some values ∧
+        (∀ name ∈ freshNames context compiled.length 1,
+          ∀ item ∈ compiled, name ∉ crepExpVars item) ∧
+        (∀ name ∈ freshNames context compiled.length 1,
+          state'.locals name = none) ∧
+        exceptionRel sourceException (.word value) targetException ∧
+        lookupInfo sourceException context.exceptions = some targetException ∧
+        exceptionCode sourceException = some targetException ∧
+        panValueFlatWords (.word value) = values ∧
+        List.Pairwise (fun left right : Nat => left ≠ right)
+          (storeAddresses (0 : Nat) context.bytesInWord values.length) ∧
+        Shape.shapeSize (panValueShape structs (.word value)) ≤ 32 := by
+  refine ⟨state, .const value, [.const value], .one, [value], ?_, ?_, ?_, ?_,
+    ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · simp [updateMemoryListAt]
+  · exact hbytesInWord
+  · exact hrel
+  · simp [evalPanValueExp]
+  · exact panValuePayloadWithinLimit_word structs value
+  · simp [compileExp]
+  · simp
+  · simp [evalCrepFullExpsState, evalCrepFullExpState]
+  · intro name _ item hitem
+    obtain rfl := List.mem_singleton.mp hitem
+    simp
+  · simpa using hfresh
+  · exact hexception
+  · exact hlookupCode
+  · exact hcode
+  · simp [panValueFlatWords, panValueFlatWordsFuel]
+  · simp [storeAddresses]
+  · simp [panValueShape]
+
 end Flapjack

@@ -910,6 +910,18 @@ def checkCallDestination [BEq String] (context : Context) (functionName : FunNam
                 (Shape.shapeToString globalInfo.shape)
                 context.location context.scope)))
 
+/- Cake's AssignCall rules check the destination scope before resolving the
+   callee (`panStaticScript.sml:1169-1175,1235-1241`).  Keep that preliminary
+   check separate from `checkCallDestination`, which performs the
+   return-shape check after the callee is known. -/
+def checkCallDestinationScope [BEq String] (context : Context) :
+    Option (VarKind × VarName) → StaticResult Unit
+  | none => staticOk ()
+  | some (.local, name) =>
+      staticBind (checkLocalVar context name) (fun _ => staticOk ())
+  | some (.global, name) =>
+      staticBind (checkGlobalVar context name) (fun _ => staticOk ())
+
 /-! These helpers are the executable counterparts of CakeML's
     `next_is_reachable`, `next_now_unreachable`, and `reached_warnable`.
     Reachability is deliberately kept in the checker context: a sequence may
@@ -1176,12 +1188,17 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
       if context.inLoop then progOk .contLast false true context.location
       else staticError (.general (getRogueMessage false context.location context.scope))
   | .call info function arguments =>
-      staticBind (checkFunctionName context function) (fun functionInfo =>
-        let returnShape := functionInfo.returnShape
-        staticBind (checkCallArgs context arguments) (fun argumentResult =>
-          staticBind (checkFuncArgs context function functionInfo.params
-              argumentResult.shapedBased) (fun _ =>
-              match info with
+      let destinationScope := match info with
+        | some (some destination, _) =>
+            checkCallDestinationScope context (some destination)
+        | _ => staticOk ()
+      staticBind destinationScope (fun _ =>
+        staticBind (checkFunctionName context function) (fun functionInfo =>
+          let returnShape := functionInfo.returnShape
+          staticBind (checkCallArgs context arguments) (fun argumentResult =>
+            staticBind (checkFuncArgs context function functionInfo.params
+                argumentResult.shapedBased) (fun _ =>
+                match info with
               | none =>
                   -- CakeML `panStaticScript.sml:1335`: a tail call requires the
                   -- caller's and callee's return shapes to agree.
@@ -1237,7 +1254,7 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
                                 let handlerContext := { context with locals :=
                                   (handlerVariable, { shapedBased := handlerShaped }) :: context.locals }
                                 staticBind (checkProg handlerContext handlerProgram) (fun _ =>
-                                  staticOk destinationResult)))))
+                                  staticOk destinationResult))))))
   | .decCall name shape function arguments body =>
       staticBind (checkRedecVar context name) (fun _ =>
         staticBind (checkShape context.structs context.location context.scope shape) (fun _ =>

@@ -245,6 +245,20 @@ def staticProgGlobalCallMetadataOracle : Bool :=
 
 #guard staticProgGlobalCallMetadataOracle
 
+def staticProgDestinationScopeOrderContext : Context :=
+  { staticProgCallContext with
+    locals := ("x", { shapedBased := .word .trusted }) ::
+      staticProgCallContext.locals }
+
+/- Cake checks a destination's scope before resolving the callee for
+   AssignCall.  The destination error therefore wins over an unknown callee
+   (`panStaticScript.sml:1169-1175`). -/
+#guard
+  staticResultErrorMessage
+      (checkProg staticProgDestinationScopeOrderContext
+        ((.call (some (some (.local, "missing"), none)) "Unknown" []) : Prog Nat)) ==
+    some "L: variable missing is not in scope in function f\n"
+
 def staticProgStandaloneHandlerContext : Context :=
   { staticProgGlobalHandlerContext with
     locals :=

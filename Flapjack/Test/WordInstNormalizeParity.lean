@@ -307,6 +307,17 @@ def nestedLoadOffsetMatches : Bool :=
       (.inst (.memOffset .load 23 23 8)), .var 23) => true
   | _ => false
 
+/- Cake's non-add Load path selects the complete address into `temp` and then
+   emits a zero-offset Mem Load.  This guards that boundary separately from
+   the base-plus-offset case above. -/
+def nestedLoadNonAddMatches : Bool :=
+  match wordInstSelectAtom (α := Nat) 23
+      (.load (.op .sub [.var 18, .const 1])) with
+  | (.seq (.seq (.move 0 [(23, 18)])
+      (.inst (.arith (.binOp .sub 23 23 (.imm 1)))))
+      (.inst (.mem .load 23 23)), .var 23) => true
+  | _ => false
+
 /-- `inst_select_exp c tar temp (Load exp)` (`word_instScript.sml:234-245`)
     splits on the address shape once and selects the remaining subexpressions
     with the ordinary `asm_config`; it has no second, immediate-suppressing
@@ -390,6 +401,7 @@ def wideSharedStoreMaterializesAddress : Bool :=
 #guard loadSelectorMatches
 #guard nestedLoadSelectorMatches
 #guard nestedLoadOffsetMatches
+#guard nestedLoadNonAddMatches
 #guard addressShiftKeepsOrdinaryImmediates
 
 def runChecks : IO Bool := do
@@ -418,6 +430,8 @@ def runChecks : IO Bool := do
     , ("a load materializes Cake's Mem instruction after its address move", loadSelectorMatches)
     , ("a nested load remains Cake's memory instruction", nestedLoadSelectorMatches)
     , ("a nested load preserves Cake's valid address offset", nestedLoadOffsetMatches)
+    , ("a non-add nested load uses Cake's zero-offset memory form",
+        nestedLoadNonAddMatches)
     , ("address selection keeps Cake's ordinary immediates in nested shifts",
         addressShiftKeepsOrdinaryImmediates)
     , ("a nested And with a valid immediate becomes Cake's andi",

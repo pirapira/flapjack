@@ -916,6 +916,18 @@ def checkCallDestination [BEq String] (context : Context) (functionName : FunNam
                 (Shape.shapeToString globalInfo.shape)
                 context.location context.scope)))
 
+/-! Cake checks a call destination's scope before resolving the callee.  The
+    later destination check validates its return shape after the callee and
+    arguments have been checked; keeping these phases separate preserves both
+    the diagnostics and their ordering. -/
+def checkCallDestinationScope [BEq String] (context : Context) :
+    Option (VarKind × VarName) → StaticResult Unit
+  | none => staticOk ()
+  | some (kind, name) =>
+      match kind with
+      | .local => staticBind (checkLocalVar context name) (fun _ => staticOk ())
+      | .global => staticBind (checkGlobalVar context name) (fun _ => staticOk ())
+
 /-! These helpers are the executable counterparts of CakeML's
     `next_is_reachable`, `next_now_unreachable`, and `reached_warnable`.
     Reachability is deliberately kept in the checker context: a sequence may
@@ -1199,12 +1211,13 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
             "tail call found outside function scope"
             context.location context.scope))
   | .call (some (destination, handler)) function arguments =>
-      staticBind (checkFunctionName context function) (fun functionInfo =>
-        let returnShape := functionInfo.returnShape
-        staticBind (checkCallArgs context arguments) (fun argumentResult =>
-          staticBind (checkFuncArgs context function functionInfo.params
-              argumentResult.shapedBased) (fun _ =>
-            match handler with
+      staticBind (checkCallDestinationScope context destination) (fun _ =>
+        staticBind (checkFunctionName context function) (fun functionInfo =>
+          let returnShape := functionInfo.returnShape
+          staticBind (checkCallArgs context arguments) (fun argumentResult =>
+            staticBind (checkFuncArgs context function functionInfo.params
+                argumentResult.shapedBased) (fun _ =>
+              match handler with
             | none => checkCallDestination context function returnShape destination
             | some (exception, handlerVariable, handlerProgram) =>
                 staticBind (checkCallDestination context function returnShape destination)
@@ -1248,7 +1261,7 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
                                   let handlerContext := { context with locals :=
                                     (handlerVariable, { shapedBased := handlerShaped }) :: context.locals }
                                   staticBind (checkProg handlerContext handlerProgram) (fun _ =>
-                                    staticOk destinationResult)))))
+                                    staticOk destinationResult))))))
   | .decCall name shape function arguments body =>
       staticBind (checkRedecVar context name) (fun _ =>
         staticBind (checkShape context.structs context.location context.scope shape) (fun _ =>

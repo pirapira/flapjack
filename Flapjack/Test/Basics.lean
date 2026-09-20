@@ -239,7 +239,7 @@ example :
       (.call (some (none, none)) "f" []) =
       progOk .otherLast false false "" := by
   simp [checkProg, checkProg.checkCallArgs, checkCallDestination,
-    staticOk, staticBind,
+    checkCallDestinationScope, staticOk, staticBind,
     checkFunctionName, checkFuncArgs, checkerCallContext, checkerContext,
     lookupInfo]
 

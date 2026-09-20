@@ -299,6 +299,19 @@ def staticProgBadLocalCallDestinationContext : Context :=
         "callee" []) : Prog Nat)) ==
     some "L: result of function call callee assigned to local variable x has shape 1 instead of declared shape {1,1} in function f\n"
 
+/-! Cake checks a destination's scope before the callee.  These conflicting
+    cases preserve the destination diagnostic even when the function is
+    unknown. -/
+#guard
+  staticResultErrorMessage (checkProg staticProgCallContext
+      ((.call (some (some (.local, "missing"), none)) "Unknown" []) : Prog Nat)) ==
+    some "L: variable missing is not in scope in function f\n"
+
+#guard
+  staticResultErrorMessage (checkProg staticProgCallContext
+      ((.call (some (some (.global, "missing"), none)) "Unknown" []) : Prog Nat)) ==
+    some "L: variable missing is not in scope in function f\n"
+
 /-! Cake's accepted local-destination call records the destination's trusted
     shape in the returned variable delta. -/
 def staticProgLocalCallMetadataOracle : Bool :=

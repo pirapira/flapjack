@@ -24,6 +24,18 @@ def shiftWord (value : Nat) : ShiftWord := BitVec.ofNat 8 value
 #guard evalLoopShiftFull .ror (shiftWord 0x81) (shiftWord 1) = some (shiftWord 0xc0)
 #guard evalLoopShiftFull .lsl (shiftWord 1) (shiftWord 8) = none
 
+/- The source evaluator must agree with Cake's target-word `word_sh`, not
+the historical compact helper which rejected ASR/ROR. -/
+#guard evalPanExpFull (fun _ => none)
+    (.shift .asr (.const (shiftWord 0x80)) (.const (shiftWord 1))) =
+    RiscV.panRiscVShift .asr (shiftWord 0x80) (shiftWord 1)
+#guard evalPanExpFull (fun _ => none)
+    (.shift .ror (.const (shiftWord 0x81)) (.const (shiftWord 1))) =
+    RiscV.panRiscVShift .ror (shiftWord 0x81) (shiftWord 1)
+#guard evalPanExpFull (fun _ => none)
+    (.shift .lsl (.const (shiftWord 1)) (.const (shiftWord 8))) =
+    RiscV.panRiscVShift .lsl (shiftWord 1) (shiftWord 8)
+
 def parsedShiftExpression (source : String) : Option (Exp ShiftWord) :=
   match Parser.parseProgram (BitVec.ofInt 8) source with
   | .ok (.return expression) => some expression

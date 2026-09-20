@@ -360,6 +360,13 @@ example :
 
 example :
     wordProgToRiscVCake (width := 64)
+        (.assign 4 (.const (BitVec.ofNat 64 0x1122334455667788))) =
+      wordConstToInstructions (width := 64) 4
+        (BitVec.ofNat 64 0x1122334455667788) := by
+  exact wordProgToRiscVCake_const 4 (BitVec.ofNat 64 0x1122334455667788)
+
+example :
+    wordProgToRiscVCake (width := 64)
         (.inst (.const 4 (BitVec.ofNat 64 0x1234))) =
       some [.lui 4 (BitVec.ofNat 64 1),
         .addi 4 4 (BitVec.ofNat 64 0x234)] := by
@@ -375,6 +382,14 @@ example :
   simp [wordFunctionToRiscVCake,
     wordExpToInstructionsCake, wordConstToInstructions,
     wordConst32ToInstructions, registerOfNat]
+
+example :
+    wordFunctionToRiscVCake (width := 64)
+        (.assign 4 (.const (BitVec.ofNat 64 0x1122334455667788))) =
+      (wordConstToInstructions (width := 64) 4
+        (BitVec.ofNat 64 0x1122334455667788)).map
+          (fun instructions => (instructions, [])) := by
+  exact wordFunctionToRiscVCake_const 4 (BitVec.ofNat 64 0x1122334455667788)
 
 def cakeConstFunctionExecution : Option (List (Word 64)) :=
   (wordFunctionToRiscVCake (width := 64)

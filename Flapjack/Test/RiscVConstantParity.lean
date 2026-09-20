@@ -171,6 +171,17 @@ example :
   exact wordFunctionToRiscVWithCallsCake_const _ 4
     (BitVec.ofNat 64 0x1122334455667788)
 
+/-! A wide constant used as a memory address keeps Cake's complete address
+    materialization before the final store carrier. -/
+example :
+    wordShareInstToInstructionsCake (width := 64) .store 4
+        (.const (BitVec.ofNat 64 0x1234)) =
+      some ([.lui 31 (BitVec.ofNat 64 1),
+        .addi 31 31 (BitVec.ofNat 64 0x234), .storeWord 4 31]) := by
+  rw [wordShareInstToInstructionsCake_const]
+  simp [wordConstToInstructions, wordConst32ToInstructions, wordInstToInstruction,
+    registerOfNat]
+
 /-! The FFI-aware Cake boundary preserves the same multi-instruction constant
     materialization and return carrier while retaining its service table. -/
 example :

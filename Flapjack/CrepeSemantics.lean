@@ -670,6 +670,27 @@ mutual
 
 end
 
+/-! Target-word result projection for callers that need the observable return
+    list.  Keep this separate from `evalCrepFullResultState`: the latter is the
+    historical abstract API, while this entrypoint preserves Cake's complete
+    `word_sh` behavior through `evalCrepFullProgStateFull`. -/
+def evalCrepFullResultStateFull
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (functions : List (CompiledFunction α))
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat) (state : CrepState α)
+    (program : CrepProg α) : Option (List α) :=
+  (evalCrepFullProgStateFull functions primitive ffi sharedMem
+    baseAddress topAddress fuel state program).bind fun result =>
+      match result with
+      | .returned _ values => some values
+      | .normal _ => some []
+      | .raised _ _ | .broke _ _ | .continued _ _ | .finalFfi _ _ => none
+
 def evalCrepFullResultState
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

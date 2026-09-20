@@ -221,23 +221,20 @@ example : typedOutOfRangeShiftValue = panRiscVShift .asr (BitVec.ofNat 8 0x80) 8
 full shift semantics as the expression boundary, rather than the legacy
 `evalCrepFullExpsState`/`evalPanShift` compatibility path. -/
 def typedShiftProgramValue : Option (List (RiscV.Word 8)) :=
-  (evalCrepTypedProgFull shiftKey shiftState [] (fun _ _ => none)
+  evalCrepTypedResultFull shiftKey shiftState [] (fun _ _ => none)
     (noCrepFfi (RiscV.Word 8))
     (defaultCrepSharedMemHandler : CrepSharedMemHandler (RiscV.Word 8))
     0 0 4
     (.return
       [.shift .asr (.const (BitVec.ofNat 8 0x80)) (.const (BitVec.ofNat 8 1)),
-       .shift .ror (.const (BitVec.ofNat 8 0x81)) (.const (BitVec.ofNat 8 1))])).bind
-    fun result => match result with
-    | .returned _ values => some values
-    | _ => none
+       .shift .ror (.const (BitVec.ofNat 8 0x81)) (.const (BitVec.ofNat 8 1))])
 
 def typedShiftOracleValues : Option (List (RiscV.Word 8)) :=
   some [BitVec.ofNat 8 0xc0, BitVec.ofNat 8 0xc0]
 
 example : typedShiftProgramValue = typedShiftOracleValues := by
-  simp [typedShiftProgramValue, typedShiftOracleValues, evalCrepTypedProgFull,
-    evalCrepFullProgStateFull, evalCrepFullExpsStateFull,
+  simp [typedShiftProgramValue, typedShiftOracleValues, evalCrepTypedResultFull,
+    evalCrepFullResultStateFull, evalCrepFullProgStateFull, evalCrepFullExpsStateFull,
     evalCrepFullExpStateFull, CrepGlobalState.toCompact, evalPanShiftFull,
     shiftState, PanShiftWidth.amount, PanShiftWidth.width,
     ArithmeticShiftRight.arithmeticShiftRight, RotateRightOp.rotateRight]

@@ -21,6 +21,7 @@ import Flapjack.RiscV.Backend
 import Flapjack.RiscV.Loops
 import Flapjack.RiscV.Link
 import Flapjack.RiscV.Lab
+import Flapjack.Display
 
 /-!
 An executable composition of the currently ported Pancake passes.
@@ -40,6 +41,20 @@ def pipelineExceptionCodes (fromNat : Nat → α) : Nat → List (Decl α) → I
   | index, .exnDecl exception _ :: declarations =>
       (exception, fromNat index) :: pipelineExceptionCodes fromNat (index + 1) declarations
   | index, _ :: declarations => pipelineExceptionCodes fromNat index declarations
+
+/-! Source-shaped port of Pancake's `get_eids_def`
+    (`cakeml/pancake/pan_to_crepScript.sml:346-353`).  Unlike
+    `get_eids_from_decls`, this pass scans the exception identifiers reachable
+    from function bodies, removes repeats in first-occurrence order, and only
+    then assigns consecutive target words. -/
+def pipelineExceptionIds (fromNat : Nat → α) : Nat → List ExceptionId → InfoMap α
+  | _, [] => []
+  | index, exception :: exceptions =>
+      (exception, fromNat index) :: pipelineExceptionIds fromNat (index + 1) exceptions
+
+def pipelineGetEids (fromNat : Nat → α) (functions : List (FunDecl α)) : InfoMap α :=
+  pipelineExceptionIds fromNat 0
+    ((functions.flatMap (fun function => expIds function.body)).eraseDups)
 
 /-! Source-named port of the active CakeML Pancake
     `get_eids_from_decls_def` (`pan_to_crepScript.sml:356`).  Cake first
@@ -94,6 +109,22 @@ def panTargetMoveStartToFront [BEq String]
       match declaration with
       | .function function => function.name != start
       | _ => true) declarations
+
+/-! Source-shaped port of CakeML Pancake's `exports_def`
+    (`cakeml/pancake/pan_to_targetScript.sml:10`).  Export collection walks
+    declarations in source order, keeps only exported functions, and ignores
+    globals, exceptions, and structure declarations.  Keeping this as a
+    separate executable helper preserves the observable export list without
+    changing the target section ordering. -/
+def panTargetExports : List (Decl α) → List FunName
+  | [] => []
+  | .function declaration :: declarations =>
+      if declaration.exported then
+        declaration.name :: panTargetExports declarations
+      else
+        panTargetExports declarations
+  | _ :: declarations => panTargetExports declarations
+termination_by declarations => sizeOf declarations
 
 def pipelineCrepeContext [BEq α] [Add α]
     (bytesInWord : α) (fromNat : Nat → α)
@@ -677,6 +708,26 @@ structure FlapjackPipelineResult (α : Type u) where
   crepe : List (CompiledFunction α)
   loop : List (Nat × List Nat × LoopProg α)
   word : List (Nat × List Nat × WordProg α)
+
+/-! Typed output-boundary port of Cake's `pan_compile_tap_def`
+    (`pan_passesScript.sml:668-674`).  The pass pipeline supplies the
+    already-computed output and typed intermediate stages; this wrapper keeps
+    Cake's exact explore-flag behavior and `pp_with_title` ordering. -/
+def panCompileTapReports [CakeDisplayWord α]
+    (stages : List (String × AnyPanProg α)) : List String :=
+  match stages with
+  | [] => []
+  | (title, stage) :: stages =>
+      ["# ", title, "\n\n"] ++ anyPanProgPp stage ++
+        panCompileTapReports stages
+
+def panCompileTap [CakeDisplayWord α]
+    (exploreFlag : Bool) (output : β)
+    (stages : List (String × AnyPanProg α)) : β × List String :=
+  if exploreFlag then
+    (output, panCompileTapReports stages)
+  else
+    (output, [])
 
 /-! The pass-local core used when the target wrapper cannot be constructed (in
     particular for an empty declaration list).  The public `compileFlapjack`

@@ -55,6 +55,21 @@ example :
     stackAllocComp, stackAllocRuntimeCall, stackAllocNextLab,
     stackAllocTestConfig, stackAllocStub]
 
+/- The minimized GH #1049 shape keeps each generated allocation call's return
+   label equal to its own section id, while the section-local fresh entry
+   label remains the Cake seed `2`; the following section must not inherit
+   either piece of metadata. -/
+example :
+    stackAllocCompile stackAllocTestConfig
+        [(1, (.alloc 3 : StackProg Nat)),
+         (2, (.storeConsts 1 2 (some 88) : StackProg Nat))] =
+      [(77, (.return 0 : StackProg Nat)),
+       (1, (.call (some (.skip, 0, 1, 2)) (.label 77) none)),
+       (2, (.call (some (.skip, 0, 2, 2)) (.label 88) none))] := by
+  simp [stackAllocCompile, stackAllocStubs, stackAllocProgram,
+    stackAllocComp, stackAllocRuntimeCall, stackAllocNextLab,
+    stackAllocTestConfig, stackAllocStub]
+
 example :
     stackAllocStubs stackAllocTestConfig = [(77, (.return 0 : StackProg Nat))] := by
   rfl

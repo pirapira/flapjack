@@ -52,9 +52,23 @@ inductive BinOp where
   | xor
   deriving DecidableEq, Repr
 
+/-! Exact source counterpart of Pancake's `binop_to_str_def`
+    (`panStaticScript.sml:588-596`). -/
+def binopToString : BinOp → String
+  | .add => "Add"
+  | .sub => "Sub"
+  | .and => "And"
+  | .or => "Or"
+  | .xor => "Xor"
+
 inductive PanOp where
   | mul
   deriving DecidableEq, Repr
+
+/-! Exact source counterpart of Pancake's `panop_to_str_def`
+    (`panStaticScript.sml:599-603`). -/
+def panopToString : PanOp → String
+  | .mul => "Mul"
 
 inductive Cmp where
   | equal
@@ -109,6 +123,12 @@ inductive VarKind where
   | global
   deriving DecidableEq, Repr
 
+/-! Exact source counterpart of Pancake's `varkind_to_str_def`
+    (`pan_passesScript.sml:124-127`). -/
+def varKindToString : VarKind → String
+  | .global => "global"
+  | .local => "local"
+
 inductive Exp (α : Type u) where
   | const (value : α)
   | var (kind : VarKind) (name : VarName)
@@ -138,6 +158,11 @@ inductive OpSize where
 inductive PrimOp where
   | addCarry
   deriving DecidableEq, Repr
+
+/-! Exact source counterpart of Pancake's `primop_to_str_def`
+    (`panStaticScript.sml:606-610`). -/
+def primopToString : PrimOp → String
+  | .addCarry => "AddCarry"
 
 /-! The source `word_sh` operation receives a natural shift amount extracted
     from a target word.  Targets provide the word width and this extraction so
@@ -205,6 +230,22 @@ def inlinable : Decl α → Bool
 def nestedSeq : List (Prog α) → Prog α
   | [] => .skip
   | statement :: statements => .seq statement (nestedSeq statements)
+
+/-! Source-shaped port of Pancake's `pan_seqs_def`
+    (`pan_passesScript.sml:184-190`).  Annotation-led sequences are kept as
+    one display item; all other sequences are flattened recursively. -/
+def isAnnot : Prog α → Bool
+  | .annot _ _ => true
+  | _ => false
+
+def panSeqs : Prog α → List (Prog α)
+  | .seq first second =>
+      if isAnnot first then [.seq first second]
+      else panSeqs first ++ panSeqs second
+  | program => [program]
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
 
 /-! The exception identifiers syntactically reachable from a Pancake program.
     This follows `panLang$exp_ids_def`; in particular, a call contributes its

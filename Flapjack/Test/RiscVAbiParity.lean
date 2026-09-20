@@ -455,6 +455,39 @@ def copyPropagationClearsLoopState : Bool :=
 
 #guard copyPropagationClearsLoopState
 
+/- Cake's `remove_eq` checks class membership (`to_eq`), not the optional
+   representative/alias cache.  Keeping this distinction is necessary for
+   the cache-enabled production state: a class member can have no standalone
+   alias entry after a representative update. -/
+def copyRemoveUsesClassMembership : Bool :=
+  let state : RiscV.WordCopyState :=
+    { aliases := []
+      storeToEq := []
+      classOf := [(177, 0)]
+      classRep := [(0, 177)]
+      classStore := []
+      classNext := 1 }
+  (RiscV.wordCopyRemove state 177).classNext == 0
+
+#guard copyRemoveUsesClassMembership
+
+/- Cake's `remove_eq` checks class membership (`to_eq`), not the flattened
+   representative aliases.  Keeping this distinction prevents a stale alias
+   cache from retaining a class that Cake has invalidated. -/
+def copyPropagationRemovesByClassMembership : Bool :=
+  let classOf : NatInfoMap Nat := [(145, 0)]
+  let classRep : NatInfoMap Nat := [(0, 145)]
+  let state : RiscV.WordCopyState :=
+    { RiscV.wordCopyEmpty with
+      aliases := []
+      classOf := classOf
+      classRep := classRep
+      indicesReady := false }
+  let removed := RiscV.wordCopyRemove state 145
+  removed.classOf == [] && removed.classRep == []
+
+#guard copyPropagationRemovesByClassMembership
+
 /- Cake's branch merge compares class identities, not only the visible
    representative.  Independently-created classes for the same names must
    therefore not propagate a branch-local source across the merge. -/
@@ -548,6 +581,8 @@ def runChecks : IO Bool := do
       overflowRejectedWithTinyFrame),
     ("copy propagation keeps Cake's destination representative",
       copyPropagationKeepsDestination),
+    ("copy propagation removes by Cake class membership",
+      copyPropagationRemovesByClassMembership),
     ("copy propagation shares a stored value", copyPropagationSharesStoredValues),
     ("copy propagation drops a redundant Get", copyPropagationDropsRedundantGet)]
   let mut ok := true

@@ -155,6 +155,24 @@ def isHandlerSeq : Prog Nat → Bool
       "f" [] => true
   | _ => false
 
+/-! `pan_simp$compile_prog` (`pan_simpScript.sml:74-81`) maps `compile` over
+    function declarations and preserves every non-function declaration. -/
+def compileProgDeclsFixture : List (Decl Nat) :=
+  [.decl .one "g" (.const 7),
+   .function
+     { name := "f", inline := false, exported := false, params := [],
+       body := .seq .skip .tick, returnShape := .one }]
+
+def compileProgDeclsParity : Bool :=
+  match panSimpDecls compileProgDeclsFixture with
+  | [.decl .one "g" (.const 7), .function declaration] =>
+      match declaration.body with
+      | .tick => true
+      | _ => false
+  | _ => false
+
+#guard compileProgDeclsParity
+
 def parityGuard : Bool :=
   isSkip (smartSeq (.skip : Prog Nat) .skip) &&
     isTick (smartSeq (.skip : Prog Nat) .tick) &&

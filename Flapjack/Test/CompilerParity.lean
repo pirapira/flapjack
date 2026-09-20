@@ -6,6 +6,8 @@ import Flapjack.Test.RegisterTransfer
 import Flapjack.Test.LoopToWord
 import Flapjack.Test.PanMemoryParity
 import Flapjack.Test.PanShapeParity
+import Flapjack.Test.PanShapeVarsParity
+import Flapjack.Test.PanGetEidsParity
 import Flapjack.Test.PanWordParity
 import Flapjack.Test.LabPositionParity
 import Flapjack.Test.PanOpParity
@@ -215,6 +217,7 @@ import Flapjack.Test.RiscVAbiAdapterParity
 import Flapjack.Test.LoopToWordBoundaryParity
 import Flapjack.Test.SptreeOrderParity
 import Flapjack.Test.WordSimpSeqAssocParity
+import Flapjack.Test.RiscVFarTransferParity
 
 /-!
 # Pancake/RISC-V compiler parity tests

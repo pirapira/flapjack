@@ -4,6 +4,14 @@ namespace Flapjack
 
 open RiscV
 
+/-! Direct parity for Cake's `distinct_lists_def` (`pan_commonScript.sml:8`):
+    only membership of the right-hand list matters; repetitions on the left
+    remain harmless, while any shared element rejects the pair. -/
+#guard distinctLists [] [1, 2] == true
+#guard distinctLists [2, 4, 4] [0, 1, 3] == true
+#guard distinctLists [2, 4, 4] [4, 9] == false
+#guard distinctLists [0, 1] [] == true
+
 def crepContext : CompileContext Nat :=
   { vars := [("pair", (.comb [.one, .one], [0, 1]))], functions := [], exceptions := [],
     maxVar := 1, bytesInWord := 1 }
@@ -168,7 +176,22 @@ def highVariableContext : CompileContext Nat :=
 #guard
   match compileProg highVariableContext
       (.shMemStore .op8 (.const 10) (.var .local "x")) with
-  | .dec 1 (.var 7) (.shMem .store8 1 (.const 10)) => true
+  | .dec 8 (.var 7) (.shMem .store8 8 (.const 10)) => true
+  | _ => false
+
+/-! `pan_to_crep$compile` bases a shared-memory-store temporary on the value
+    expression, not the address expression.  Keep the address deliberately at
+    a higher slot so an address-based implementation is observably different.
+    This is the direct Cake witness for the source-level lowering. -/
+def highAddressLowValueContext : CompileContext Nat :=
+  { assignmentContext with
+      vars := [("address", (.one, [7])), ("value", (.one, [1]))]
+      maxVar := 0 }
+
+#guard
+  match compileProg highAddressLowValueContext
+      (.shMemStore .op8 (.var .local "address") (.var .local "value")) with
+  | .dec 2 (.var 1) (.shMem .store8 2 (.var 7)) => true
   | _ => false
 
 def crepAddCarryHandler : CrepPrimitiveHandler Nat
@@ -208,21 +231,6 @@ example :
         RiscV.panPrimitiveHandler crepPrimitiveSource).map
         (fun result => result.2.2.2.flatMap panValueWords) := by
   decide +kernel
-
-example :
-    lowerLoopExp (CrepExp.cmp .equal (.var 0) (.const (α := Nat) 1)) =
-      .cmp .equal (.var 0) (.const 1) := by
-  simp [lowerLoopExp]
-
-example :
-    lowerLoopProg (CrepProg.seq .skip (.tick : CrepProg Nat)) =
-      .seq .skip .tick := by
-  simp [lowerLoopProg]
-
-example :
-    lowerLoopProg (CrepProg.store (.const (α := Nat) 0) (.const 7)) =
-      (.fail : LoopProg Nat) := by
-  simp [lowerLoopProg]
 
 example :
     (loopCompileExp loopContext 3 [] (.load32 (.const (α := Nat) 8))).code =

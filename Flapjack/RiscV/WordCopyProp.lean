@@ -72,8 +72,8 @@ def wordCopyIndex (entries : NatInfoMap Nat) : Std.TreeMap Nat Nat :=
   entries.foldr (fun entry index => index.insert entry.1 entry.2) ∅
 
 def wordCopyRemove (state : WordCopyState) (name : Nat) : WordCopyState :=
-  if (wordCopyLookupIndexed state.indicesReady state.aliasIndex
-      state.aliases name).isSome then wordCopyEmpty else state
+  if (wordCopyLookupIndexed state.indicesReady state.classOfIndex
+      state.classOf name).isSome then wordCopyEmpty else state
 
 /-! `set_eq` (`word_copyScript.sml:204-225`).  Cake's equivalence class is
     represented by the *destination* of the copy. -/

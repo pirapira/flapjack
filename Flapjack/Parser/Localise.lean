@@ -1,4 +1,5 @@
 import Flapjack.Language
+import Flapjack.Static
 
 /-!
 The localisation pass.
@@ -18,13 +19,34 @@ after the pass was written rather than deliberate choices:
 * `localise_prog` has no `Store32` case, so neither operand of `st32` is
   localised. Handled here.
 
-`collect_globals` is not ported: upstream defines it but `localise_topdecs`
-starts from an empty scope and never calls it.
+`collectGlobals` is provided as the direct source-shaped port of
+`collect_globals`; `localiseDecls` still starts from an empty scope.
 -/
 
 namespace Flapjack.Parser
 
 open Flapjack
+
+/-! Source-shaped port of CakeML's `collect_globals_def`
+    (`panPtreeConversionScript.sml:816-821`).  Cake builds the map from the
+    tail and inserts each declaration, so an earlier declaration wins lookup
+    when names are repeated. -/
+def insertGlobalInfo [BEq String] (name : DeclarationName) : InfoMap Unit → InfoMap Unit
+  | [] => [(name, ())]
+  | (candidate, value) :: entries =>
+      if candidate == name then
+        (name, value) :: entries
+      else
+        (candidate, value) :: insertGlobalInfo name entries
+
+def collectGlobals [BEq String] : List (Decl α) → InfoMap Unit
+  | [] => []
+  | .decl _ name _ :: declarations =>
+      insertGlobalInfo name (collectGlobals declarations)
+  | _ :: declarations => collectGlobals declarations
+termination_by declarations => sizeOf declarations
+decreasing_by
+  all_goals decreasing_trivial
 
 /-- A variable is local exactly when it is in scope. -/
 def localiseKind (scope : List VarName) (kind : VarKind) (name : VarName) : VarKind :=

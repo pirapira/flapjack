@@ -73,6 +73,9 @@ def locationTag : String := "location"
 
 def initLoc : Posn := .posn 1 1
 
+/-! Cake `loc_row`: a source row starts at column one. -/
+def locRow (row : Nat) : Posn := .posn row 1
+
 def nextLoc (n : Nat) : Posn → Posn
   | .posn row col => .posn row (col + n)
   | other => other
@@ -147,13 +150,8 @@ def getToken (s : String) : Token :=
   else .lexErrorT s!"Unrecognised symbolic token: {s}"
 
 /--
-Keyword lookup, mirroring `panLexer$get_keyword`.
-
-One deliberate divergence: upstream maps both `@base` and `@top` to `BaseK`,
-so `@top` currently means `@base` and `TopK` is unreachable even though the
-grammar accepts it and the conversion sends it to `TopAddr`. That reads as a
-copy-paste slip rather than intent, so `@top` maps to `topK` here. See
-`Flapjack/Parser/README.md`.
+Keyword lookup, mirroring `panLexer$get_keyword`. Cake maps both `@base` and
+`@top` to `BaseK`; this intentionally preserves that source behavior.
 -/
 def getKeyword (s : String) : Token :=
   if s == "skip" then .keywordT .skipK
@@ -180,7 +178,7 @@ def getKeyword (s : String) : Token :=
   else if s == "ld16" then .keywordT .ld16K
   else if s == "ld32" then .keywordT .ld32K
   else if s == "@base" then .keywordT .baseK
-  else if s == "@top" then .keywordT .topK
+  else if s == "@top" then .keywordT .baseK
   else if s == "@biw" then .keywordT .biwK
   else if s == "true" then .keywordT .trueK
   else if s == "false" then .keywordT .falseK
@@ -234,8 +232,24 @@ def skipBlockComment : List Char → Posn → Nat → Option (Posn × Nat × Nat
       else if x == '\n' then skipBlockComment (y :: xs) (nextLine loc) (i + 1)
       else skipBlockComment (y :: xs) (nextLoc 1 loc) (i + 1)
 
+/--
+Cake's `unhex_alt` (`panLexerScript.sml:217`).  Keep the helper total, as in
+`UNHEX`: callers get zero for a non-hexadecimal character.
+-/
+def unhexAlt (c : Char) : Nat :=
+  let n := c.toNat
+  if 48 ≤ n && n ≤ 57 then n - 48
+  else if 97 ≤ n && n ≤ 102 then 10 + n - 97
+  else if 65 ≤ n && n ≤ 70 then 10 + n - 65
+  else 0
+
+/-! Cake's `num_from_dec_string_alt_def` is `s2n 10 unhex_alt`.
+    `l2n` over the reversed list is the same left-to-right accumulator. -/
+def numFromDecStringAlt (s : String) : Nat :=
+  s.toList.foldl (fun total c => total * 10 + unhexAlt c) 0
+
 def numFromDecString (s : String) : Nat :=
-  s.toList.foldl (fun total c => total * 10 + (if c.isDigit then c.toNat - '0'.toNat else 0)) 0
+  numFromDecStringAlt s
 
 /--
 `next_atom`: read one lexeme, skipping whitespace and comments.
@@ -252,11 +266,11 @@ def nextAtom : Nat → List Char → Posn → Option (Atom × Locs × List Char)
       else if c.isWhitespace || c == '\x0b' || c == '\x0c' then nextAtom fuel cs (nextLoc 1 loc)
       else if c.isDigit then
         let (n, cs') := readWhile Char.isDigit cs [c]
-        some (.numberA (Int.ofNat (numFromDecString n)),
+        some (.numberA (Int.ofNat (numFromDecStringAlt n)),
               { start := loc, stop := nextLoc n.length loc }, cs')
       else if c == '-' && (cs.head?.map Char.isDigit).getD false then
         let (n, rest) := readWhile Char.isDigit cs []
-        some (.numberA (0 - Int.ofNat (numFromDecString n)),
+        some (.numberA (0 - Int.ofNat (numFromDecStringAlt n)),
               { start := loc, stop := nextLoc n.length loc }, rest)
       else if c == '/' && cs.head? == some '/' then
         match skipComment cs.tail (nextLoc 2 loc) 0 with

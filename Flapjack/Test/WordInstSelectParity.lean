@@ -92,6 +92,17 @@ def cakeSharedByteOffsetMaterializesConstant : Bool :=
       value == 2684420096
   | _ => false
 
+/- Cake's RISC-V `hw_offset_ok` is `offset_ok 0`, so odd halfword offsets
+   remain valid and must stay in the shared-memory address carrier. -/
+def cakeSharedOddHalfwordOffset : Bool :=
+  match wordInstSelectProgram (α := Nat) 23
+      (.shareInst .store16 10
+        (.op .add [.var 12, .const 9])) with
+  | .seq (.move 0 [(23, 12)])
+      (.shareInst .store16 10
+        (.op .add [.var 23, .const 9])) => true
+  | _ => false
+
 #guard cakeLoadConstShape
 #guard cakeLoadVarShape
 #guard cakeLoadVarOffsetShape
@@ -101,6 +112,7 @@ def cakeSharedByteOffsetMaterializesConstant : Bool :=
 #guard cakeWideBinopStatementShape
 #guard cakeWideAddMaterializesConstant
 #guard cakeSharedByteOffsetMaterializesConstant
+#guard cakeSharedOddHalfwordOffset
 
 #guard match cakeNonImmediateAnd with
   | .seq (.move 0 [(7, 2)])

@@ -226,6 +226,49 @@ theorem compile_full_pan_value_seq_break_compose_state_full_regression :
     (compileProg crepeFullRaiseContext (.skip)) rfl
     (by simp [compileProg]) hsourceFirst hcrepFirst
 
+theorem compile_full_pan_value_seq_continue_compose_state_full_regression :
+    evalPanValueProgWithPrimitiveCallsAndFfiFull
+        (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+        ([] : StructContext) [] 0 100 1 3
+        (fun _ => none) (fun _ => none) (fun _ => none)
+        (.seq (.continue) (.skip) : Prog (RiscV.Word 8)) =
+      some (.continued (fun _ => none) (fun _ => none) (fun _ => none)) ∧
+    evalCrepFullProgStateFull [] (fun _ _ => none)
+        (noCrepFfi (RiscV.Word 8))
+        (defaultCrepSharedMemHandler : CrepSharedMemHandler (RiscV.Word 8))
+        0 100 3 crepeFullRaiseState
+        (compileProg crepeFullRaiseContext
+          (.seq (.continue) (.skip) : Prog (RiscV.Word 8))) =
+      some (.continued crepeFullRaiseState 0) := by
+  have hsourceFirst :
+      evalPanValueProgWithPrimitiveCallsAndFfiFull
+        (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+        ([] : StructContext) [] 0 100 1 2
+        (fun _ => none) (fun _ => none) (fun _ => none)
+        (.continue : Prog (RiscV.Word 8)) =
+      some (.continued (fun _ => none) (fun _ => none) (fun _ => none)) := by
+    simp [evalPanValueProgWithPrimitiveCallsAndFfiFull]
+  have hcrepFirst :
+      evalCrepFullProgStateFull [] (fun _ _ => none)
+        (noCrepFfi (RiscV.Word 8))
+        (defaultCrepSharedMemHandler : CrepSharedMemHandler (RiscV.Word 8))
+        0 100 2 crepeFullRaiseState
+        (compileProg crepeFullRaiseContext (.continue)) =
+      some (.continued crepeFullRaiseState 0) := by
+    simp [compileProg, evalCrepFullProgStateFull]
+  exact compile_full_pan_value_seq_continue_compose_state_full
+    crepeFullRaiseContext ([] : StructContext) [] []
+    (fun _ => none) (fun _ => none) (fun _ => none)
+    (fun _ => none) (fun _ => none) (fun _ => none)
+    crepeFullRaiseState crepeFullRaiseState
+    (fun _ _ => none) (fun _ _ _ _ _ _ => none) (fun _ _ => none)
+    (noCrepFfi (RiscV.Word 8))
+    (defaultCrepSharedMemHandler : CrepSharedMemHandler (RiscV.Word 8))
+    0 100 1 1 (.continue) (.skip)
+    (compileProg crepeFullRaiseContext (.continue))
+    (compileProg crepeFullRaiseContext (.skip)) rfl
+    (by simp [compileProg]) hsourceFirst hcrepFirst
+
 /-! The complete-word shared-store theorem has a concrete Cake/Crep oracle:
     both evaluators write the same word at address 7, while the target path
     goes through the compiled temporary and stateful shared-memory handler. -/

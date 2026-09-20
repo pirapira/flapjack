@@ -2516,33 +2516,71 @@ theorem three_word_raise_pc_compile_correct_direct_clocked_normal
       (fun _ => none) (fun _ => none) (fun _ => none) state := by
     refine ⟨rfl, ?_, rfl⟩
     exact panValueCrepLocalsRel_empty [] context state.locals
+  have hevidenceWithValues :
+      ∀ (evidenceContext : CompileContext Nat) (evidenceStructs : StructContext)
+        (evidenceExceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+        (evidenceLocals evidenceGlobals : VarName → Option (PanValue Nat))
+        (evidenceMemory : Nat → Option (PanValue Nat))
+        (evidenceException : ExceptionId) (evidenceValue : PanValue Nat)
+        (evidenceTargetState : CrepState Nat) (evidenceTargetException : Nat),
+        panValueCrepControlRel evidenceStructs evidenceContext
+          evidenceExceptionRel
+          (.raised evidenceLocals evidenceGlobals evidenceMemory evidenceException
+            evidenceValue)
+          (.raised evidenceTargetState evidenceTargetException) →
+        ∃ (evidenceState : CrepState Nat) (expression : Exp Nat)
+          (compiled : List (CrepExp Nat)) (shape : Shape) (values : List Nat),
+          evidenceTargetState =
+              { evidenceState with globals :=
+                  (updateMemoryListAt evidenceState.globals 0
+                    evidenceContext.bytesInWord values) } ∧
+          evidenceContext.bytesInWord = 8 ∧
+          panValueCrepStateRel evidenceStructs evidenceContext evidenceLocals
+            evidenceGlobals evidenceMemory evidenceState ∧
+          evalPanValueExp evidenceStructs evidenceLocals evidenceGlobals
+            evidenceMemory 0 0 8 expression = some evidenceValue ∧
+          panValuePayloadWithinLimit evidenceStructs evidenceValue = true ∧
+          compileExp evidenceContext expression = (compiled, shape) ∧
+          compiled.length = Shape.shapeSize shape ∧
+          evalCrepFullExpsState evidenceState 0 0 compiled = some values ∧
+          (∀ name ∈ freshNames evidenceContext compiled.length 1,
+            ∀ value ∈ compiled, name ∉ crepExpVars value) ∧
+          (∀ name ∈ freshNames evidenceContext compiled.length 1,
+            evidenceState.locals name = none) ∧
+          evidenceExceptionRel evidenceException evidenceValue
+            evidenceTargetException ∧
+          lookupInfo evidenceException evidenceContext.exceptions =
+            some evidenceTargetException ∧
+          (if evidenceException = "E" then some 9 else none) =
+            some evidenceTargetException ∧
+          panValueFlatWords evidenceValue = values ∧
+          List.Pairwise (fun left right : Nat => left ≠ right)
+            (storeAddresses 0 evidenceContext.bytesInWord values.length) ∧
+          Shape.shapeSize (panValueShape evidenceStructs evidenceValue) ≤ 32 := by
+    intro evidenceContext evidenceStructs evidenceExceptionRel
+      evidenceLocals evidenceGlobals evidenceMemory evidenceException evidenceValue
+      evidenceTargetState evidenceTargetException hcontrol
+    rcases hevidence evidenceContext evidenceStructs evidenceExceptionRel
+      evidenceLocals evidenceGlobals evidenceMemory evidenceException evidenceValue
+      evidenceTargetState evidenceTargetException hcontrol with
+      ⟨evidenceState, expression, compiled, shape, htarget, hbytesInWord,
+        hrel, hsource, hvalid, hcompile, hlength, hcompiled, hnot, hfresh,
+        hexception, hlookupCode, hcode, hdistinct, hsize⟩
+    exact ⟨evidenceState, expression, compiled, shape,
+      panValueFlatWords evidenceValue, htarget, hbytesInWord, hrel, hsource,
+      hvalid, hcompile, hlength, hcompiled, hnot, hfresh, hexception,
+      hlookupCode, hcode, rfl, hdistinct, hsize⟩
   have hresult :=
-    panValuePcCompileCorrect_of_stateful_program_with_generic_raised_evidence_and_clocked_control
+    panValuePcCompileCorrect_compact_with_flat_global_evaluator_evidence_context_code_and_clocked_control
       (.raise "E" sourceExpression)
-      (panValuePcCompactSourceEvaluator
-        (fun _ _ => none) (fun _ _ _ _ _ _ => none) [] 0 0 8 sourceFuel)
-      (crepPcCompactTargetEvaluator [] (fun _ _ => none)
-        (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none) 0 0 targetFuel)
       (fun _ _ _ => True) (fun _ _ _ => True)
       (fun exception => if exception = "E" then some 9 else none)
       (crepPcFlatGlobalsLookup 8) [] []
       (fun _ _ => none) (fun _ _ _ _ _ _ => none)
       (fun _ _ => none) (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none)
-      0 0 8 sourceFuel targetFuel hprogram hprogramSafe hsourceAdapter
-      htargetAdapter (by
-        intro clockContext clockStructs clockExceptionRel
-          clockLocals clockGlobals clockMemory clockException clockValue
-          clockTargetState clockTargetException hcontrol
-        rcases hevidence clockContext clockStructs clockExceptionRel clockLocals
-          clockGlobals clockMemory clockException clockValue clockTargetState
-          clockTargetException hcontrol with
-          ⟨clockState, expression, compiled, shape, htarget, hbytesInWord,
-            hrel, hsource, hvalid, hcompile, hlength, hcompiled, hnot, hfresh,
-            hexception, hlookupCode, hcode, hdistinct, hsize⟩
-        exact ⟨clockState, expression, compiled, shape,
-          panValueFlatWords clockValue, htarget, hbytesInWord, hrel, hsource,
-          hvalid, hcompile, hlength, hcompiled, hnot, hfresh, hexception,
-          hlookupCode, hcode, rfl, hdistinct, hsize, by rfl⟩)
+      0 0 8 sourceFuel targetFuel hprogram hprogramSafe (by
+        intro targetState sourceValue
+        rfl) hevidenceWithValues
         [] context (fun _ _ code => code = 9)
       (fun exception => if exception = "E" then some 9 else none)
       (crepPcFlatGlobalsLookup 8) directClockContext (fun _ _ => none)

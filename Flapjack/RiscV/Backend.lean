@@ -17,6 +17,58 @@ while the remaining Word instructions are ported.
 
 namespace Flapjack.RiscV
 
+/-! Cake's `riscv_ast (Inst (Const r i))` is a multi-instruction lowering for
+    constants which do not fit a signed 12-bit immediate.  Keep this boundary
+    separate from `wordExpToInstruction`: the latter is theorem-facing and
+    intentionally models the existing one-instruction Word API. -/
+def wordConst32ToInstructions {width : Nat} [NeZero width]
+    (destination : Fin 32) (value : Nat) :
+    List (Instruction width) :=
+  let low32 := value % 2 ^ 32
+  let high20 := low32 / 2 ^ 12
+  let low12 := low32 % 2 ^ 12
+  if low12 / 2 ^ 11 % 2 = 1 then
+    [.lui destination (BitVec.ofNat width ((2 ^ 20 - 1) - high20)),
+      .xori destination destination (BitVec.ofNat width low12)]
+  else
+    [.lui destination (BitVec.ofNat width high20),
+      .addi destination destination (BitVec.ofNat width low12)]
+
+def wordConstToInstructions [NeZero width] (destination : Nat)
+    (value : Word width) : Option (List (Instruction width)) := do
+  let destination ← registerOfNat destination
+  let zero ← registerOfNat 0
+  let temporary ← registerOfNat 31
+  let normalized := value.toNat
+  let low12 := normalized % 2 ^ 12
+  let fitsImm12 :=
+    normalized ==
+      (if low12 / 2 ^ 11 % 2 = 0 then
+        low12
+      else
+        (2 ^ width - (2 ^ 12 - low12)) % 2 ^ width)
+  if normalized < 2 ^ 11 || fitsImm12 then
+    pure [.ori destination zero (BitVec.ofNat width low12)]
+  else
+    let low32 := normalized % 2 ^ 32
+    let high32 := normalized / 2 ^ 32 % 2 ^ 32
+    let low32Sign := low32 / 2 ^ 31 % 2 = 1
+    let fitsSigned32 :=
+      (high32 = 0 ∧ !low32Sign) ||
+        (high32 = 2 ^ 32 - 1 ∧ low32Sign)
+    if fitsSigned32 then
+      pure (wordConst32ToInstructions destination low32)
+    else if low32Sign then
+      pure (wordConst32ToInstructions temporary low32 ++
+        wordConst32ToInstructions destination ((2 ^ 32 - 1) - high32) ++
+        [.slli destination destination (BitVec.ofNat width 32),
+          .xor destination destination temporary])
+    else
+      pure (wordConst32ToInstructions temporary low32 ++
+        wordConst32ToInstructions destination high32 ++
+        [.slli destination destination (BitVec.ofNat width 32),
+          .or destination destination temporary])
+
 def wordExpToInstruction [NeZero width] (destination : Nat) :
     WordExp (Word width) → Option (Instruction width)
   | .const value => do

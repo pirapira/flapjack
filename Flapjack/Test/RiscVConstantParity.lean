@@ -226,6 +226,17 @@ example (state : State 64) :
   simp [evalWordProgCake, wordExpToInstructionsCake,
     wordConstToInstructions, wordConst32ToInstructions, registerOfNat]
 
+example (state : State 64) :
+    evalWordProgCake state
+        (.assign 4 (.load (.const (BitVec.ofNat 64 0x1234))) :
+          WordProg (Word 64)) =
+      some (executeInstructions state
+        [.lui 31 (BitVec.ofNat 64 1),
+         .addi 31 31 (BitVec.ofNat 64 0x234),
+         .loadWord 4 31]) := by
+  simp [evalWordProgCake, wordExpToInstructionsCake,
+    wordConstToInstructions, wordConst32ToInstructions, registerOfNat]
+
 /-! The checked call-aware selector now has the same compositional theorem
     shape as the legacy theorem-facing selector.  This exercises the sequence
     induction while retaining the full Cake list-valued constant boundary. -/

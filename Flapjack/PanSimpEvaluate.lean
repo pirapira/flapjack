@@ -407,11 +407,11 @@ theorem evalPanValueFfiClockProg_eq_of_common_fuel
     programRight ma c mh hrightFuel hright
   rw [hleftCommon, hrightCommon]
 
-/-! Cake's `evaluate_seq_assoc` counterpart at an explicit common fuel.  The
-    two source-shaped programs may require different initial fuel budgets, so
-    their successful results and fuel bounds remain premises rather than being
-    hidden behind a fixed-fuel equality. -/
-theorem evalPanValueFfiClockProg_seqAssoc_common_fuel
+/-! Cake's `evaluate_seq_assoc` compares the source sequence with its
+    right-associated `seqAssoc` form.  The clocked evaluator additionally
+    needs successful runs at possibly different structural fuel budgets; this
+    source-shaped wrapper exposes that obligation without weakening it. -/
+theorem evalPanValueFfiClockProg_seqAssoc_eq_of_common_fuel
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
@@ -421,31 +421,31 @@ theorem evalPanValueFfiClockProg_seqAssoc_common_fuel
     (structs : StructContext)
     (functions : List (FunName × List VarName × Prog α))
     (baseAddress topAddress bytesInWord : α)
-    {fuelAssoc fuelSeq commonFuel : Nat}
+    (pre program : Prog α)
+    {fuelLeft fuelRight commonFuel : Nat}
     (locals globals : VarName → Option (PanValue α))
     (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
-    (program : Prog α)
     (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
     (mh : Option (PanValueMemoryFfiHandler α σ))
     {result : PanValueFfiClockResult α σ}
-    (hassoc : evalPanValueFfiClockProg context primitive handler structs functions
-      baseAddress topAddress bytesInWord fuelAssoc locals globals memory ffi clock
-      (seqAssoc (.skip : Prog α) program) ma c mh = some result)
-    (hseq : evalPanValueFfiClockProg context primitive handler structs functions
-      baseAddress topAddress bytesInWord fuelSeq locals globals memory ffi clock
-      (.seq .skip program) ma c mh = some result)
-    (hassocFuel : fuelAssoc ≤ commonFuel)
-    (hseqFuel : fuelSeq ≤ commonFuel) :
+    (hleft : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuelLeft locals globals memory ffi clock
+      (seqAssoc pre program) ma c mh = some result)
+    (hright : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuelRight locals globals memory ffi clock
+      (.seq pre program) ma c mh = some result)
+    (hleftFuel : fuelLeft ≤ commonFuel)
+    (hrightFuel : fuelRight ≤ commonFuel) :
     evalPanValueFfiClockProg context primitive handler structs functions
       baseAddress topAddress bytesInWord commonFuel locals globals memory ffi clock
-      (seqAssoc (.skip : Prog α) program) ma c mh =
+      (seqAssoc pre program) ma c mh =
     evalPanValueFfiClockProg context primitive handler structs functions
       baseAddress topAddress bytesInWord commonFuel locals globals memory ffi clock
-      (.seq .skip program) ma c mh := by
+      (.seq pre program) ma c mh := by
   exact evalPanValueFfiClockProg_eq_of_common_fuel context primitive handler structs
     functions baseAddress topAddress bytesInWord locals globals memory ffi clock
-    (seqAssoc (.skip : Prog α) program) (.seq .skip program) ma c mh hassoc hseq
-    hassocFuel hseqFuel
+    (seqAssoc pre program) (.seq pre program) ma c mh hleft hright hleftFuel
+    hrightFuel
 
 /-! Congruence under the second component of a `Seq`.  The premise is
     quantified over the post-first state and clock because the first component

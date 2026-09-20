@@ -162,13 +162,14 @@ theorem clocked_seq_assoc_common_fuel_matches_cake :
       evaluatorHandler [] [] 0 0 8 4 (fun _ => none) (fun _ => none)
       (fun _ => none) evaluatorFfi 1
       (.seq .skip (.seq .skip (.seq .skip .skip))) := by
-  apply evalPanValueFfiClockProg_seqAssoc_common_fuel
-    (fuelAssoc := 2) (fuelSeq := 4) (commonFuel := 4)
+  apply evalPanValueFfiClockProg_seqAssoc_eq_of_common_fuel
+    (fuelLeft := 2) (fuelRight := 4) (commonFuel := 4)
     (result := (.control (.normal (fun _ => none) (fun _ => none)
       (fun _ => none) evaluatorFfi), 1))
     evaluatorContext (fun _ _ => none) evaluatorHandler [] [] 0 0 8
+    (.skip : Prog Nat) (.seq .skip (.seq .skip .skip))
     (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
-    (.seq .skip (.seq .skip .skip)) none none none
+    none none none
   · simp [evalPanValueFfiClockProg, evalPanValueFfiClockLeaf,
       evalPanValueFfiProgSteps, seqAssoc]
   · simp [evalPanValueFfiClockProg, evalPanValueFfiClockLeaf,

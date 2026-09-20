@@ -815,6 +815,21 @@ def frameOccupancyP4BitmapsMatch : Bool :=
   | some image => image.bitmaps.data == cakeFrameOccupancyP4Bitmaps
   | none => false
 
+/-! The `p5` oracle keeps one field of a two-field struct live across the
+    non-tail call.  Cake's checked artifact uses the minimal continuation
+    vector `[4, 4]`. -/
+def frameOccupancyP5Source : String :=
+  "struct S { 1 f, 1 g }\n" ++
+    "fun 1 id (x) { return x; }\n" ++
+    "fun 1 main() { var S s = S <f = 1, g = 2>; var 1 t = id(5); return s.f; }"
+
+def cakeFrameOccupancyP5Bitmaps : List Nat := [4, 4]
+
+def frameOccupancyP5BitmapsMatch : Bool :=
+  match compileRuntimeImage frameOccupancyP5Source with
+  | some image => image.bitmaps.data == cakeFrameOccupancyP5Bitmaps
+  | none => false
+
 /-! The `p9` frame-occupancy oracle (`p9.cake.S`) records the two-field
 struct case: Cake's allocator keeps one field live across the `mks` call and
 spills the other, so both call continuations carry frame words `2 ^ 3 = 8`.
@@ -1101,6 +1116,7 @@ def sharedMemOffsetCarrierEncoding : Bool :=
 #guard frameOccupancyP2BitmapsMatch
 #guard frameOccupancyP3BitmapsMatch
 #guard frameOccupancyP4BitmapsMatch
+#guard frameOccupancyP5BitmapsMatch
 #guard frameOccupancyP9BitmapsMatch
 #guard frameOccupancyP11BitmapsMatch
 #guard frameOccupancyWideBitmapsMatch
@@ -1194,6 +1210,8 @@ def runChecks : IO Bool := do
          frameOccupancyP3BitmapsMatch),
       ("frame-occupancy p4 exact vector matches the Cake oracle",
          frameOccupancyP4BitmapsMatch),
+      ("frame-occupancy p5 exact vector matches the Cake oracle",
+         frameOccupancyP5BitmapsMatch),
       ("frame-occupancy p9 exact vector matches the Cake oracle",
          frameOccupancyP9BitmapsMatch),
       ("frame-occupancy p11 exact vector matches the Cake oracle",

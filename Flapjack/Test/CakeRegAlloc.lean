@@ -505,6 +505,20 @@ def doSpillTransitionGuard : Bool :=
 
 #guard doSpillTransitionGuard
 
+/- Cake's `dec_degree` skips an out-of-dimension node before reading its
+   adjacency list.  This matters for the functional map's explicit `outside`
+   bindings: an out-of-range edge must not decrement an in-range neighbour. -/
+def decDegreeOutOfDimGuard : Bool :=
+  let adj := cakeInsertEdge 3 1 (CakeNodeMap.ofSize 2)
+  let state : CakeRaState :=
+    { CakeRaState.empty 2 with
+      adjLists := adj,
+      degrees := CakeNodeMap.ofNatInfoMap 2 [(1, 2)] }
+  let after := cakeDecDegree 3 state
+  (after.degrees.get 1).getD 0 == 2
+
+#guard decDegreeOutOfDimGuard
+
 /- `get_prefs_def` uses `MAP ... ++ acc`, preserving each Move's source
    order.  These guards mirror the canonical `get_prefs_probe.out` output. -/
 def prefsMoveOrderGuard : Bool :=
@@ -900,7 +914,7 @@ def runChecks : IO Bool := do
     "remove_dead StoreConsts liveness", "st_ex_list_MIN_cost ordering",
     "st_ex_list_MIN_cost tie ordering", "st_ex_list_MIN_cost zero degree",
     "st_ex_list_MAX_deg ordering", "st_ex_list_MAX_deg tie ordering",
-    "do_spill transition"]
+    "do_spill transition", "dec_degree out-of-dimension guard"]
   let mut all := true
   for (name, result) in names.zip results do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"

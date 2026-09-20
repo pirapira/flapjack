@@ -646,7 +646,10 @@ def cakeDecDeg (v : Nat) (state : CakeRaState) : CakeRaState :=
 
 /-- `dec_degree`: decrement the degrees of all nodes adjacent to `x`. -/
 def cakeDecDegree (x : Nat) (state : CakeRaState) : CakeRaState :=
-  (cakeAdjSub state.adjLists x).foldl (fun s v => cakeDecDeg v s) state
+  if x < state.dim then
+    (cakeAdjSub state.adjLists x).foldl (fun s v => cakeDecDeg v s) state
+  else
+    state
 
 /-- `push_stack` (`reg_allocScript.sml:300-307`). -/
 def cakePushStack (x : Nat) (state : CakeRaState) : CakeRaState :=

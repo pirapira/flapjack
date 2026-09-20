@@ -167,6 +167,24 @@ theorem wordConstToInstructions_eq_labConstInstructions {width : Nat}
       simp only [some_ite]
       simp
 
+/-- The expression-facing Cake boundary selects the checked constant lowering
+for `.const`, so it agrees with the executable Lab materialization while the
+legacy one-instruction selector stays unchanged. -/
+theorem wordExpToInstructionsCake_const_eq_labConstInstructions {width : Nat}
+    [NeZero width] (destination : Nat) (value : Word width)
+    (hdestination : destination < 32) :
+    wordExpToInstructionsCake (width := width) destination (.const value) =
+      some (labConstInstructions (width := width) ⟨destination, hdestination⟩ 0 31
+        value.toNat) :=
+  wordConstToInstructions_eq_labConstInstructions destination value hdestination
+
+/-- The 0x1234 materialization oracle through the expression-facing Cake
+boundary, stated directly against the executable Lab lowering. -/
+example :
+    wordExpToInstructionsCake (width := 64) 4 (.const (BitVec.ofNat 64 0x1234)) =
+      some (labConstInstructions (width := 64) 4 0 31 0x1234) := by
+  decide
+
 /-- The 0x1234 materialization oracle, stated directly against the executable
 Lab lowering rather than only against `wordConstToInstructions`. -/
 example :

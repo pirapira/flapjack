@@ -41,6 +41,20 @@ def pipelineExceptionCodes (fromNat : Nat → α) : Nat → List (Decl α) → I
       (exception, fromNat index) :: pipelineExceptionCodes fromNat (index + 1) declarations
   | index, _ :: declarations => pipelineExceptionCodes fromNat index declarations
 
+/-! Source-shaped port of Pancake's `get_eids_def`
+    (`cakeml/pancake/pan_to_crepScript.sml:346-353`).  Unlike
+    `get_eids_from_decls`, this pass scans the exception identifiers reachable
+    from function bodies, removes repeats in first-occurrence order, and only
+    then assigns consecutive target words. -/
+def pipelineExceptionIds (fromNat : Nat → α) : Nat → List ExceptionId → InfoMap α
+  | _, [] => []
+  | index, exception :: exceptions =>
+      (exception, fromNat index) :: pipelineExceptionIds fromNat (index + 1) exceptions
+
+def pipelineGetEids (fromNat : Nat → α) (functions : List (FunDecl α)) : InfoMap α :=
+  pipelineExceptionIds fromNat 0
+    ((functions.flatMap (fun function => expIds function.body)).eraseDups)
+
 /-! Source-named port of the active CakeML Pancake
     `get_eids_from_decls_def` (`pan_to_crepScript.sml:356`).  Cake first
     filters to exception declarations, then numbers that filtered list from

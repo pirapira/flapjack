@@ -91,4 +91,15 @@ def wordSimpLeftSeqItemsAgrees : Bool :=
 
 #guard wordSimpLeftSeqItemsAgrees
 
+/- Cake's `const_fp_loop` applies `const_fp_exp` to a Store address but does
+   not materialize or select the address (`word_simpScript.sml:319-320`).
+   This pins the source-to-Word boundary that precedes the separate
+   `word_inst$inst_select` Store offset rule. -/
+def wordSimpStoreAddressPreserved : Bool :=
+  let program : WordProg (BitVec 64) :=
+    .store (.op .add [.var 13, .const (BitVec.ofNat 64 8)]) 10
+  reprStr (wordConstFp program) == reprStr program
+
+#guard wordSimpStoreAddressPreserved
+
 end Flapjack.RiscV

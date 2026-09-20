@@ -1,5 +1,6 @@
 import Flapjack.RiscV.Backend
 import Flapjack.RiscV.CorrectnessBackend
+import Flapjack.RiscV.CorrectnessFfi
 
 /-!
 Cake-faithful evaluator boundary for the straight-line Word fragment.
@@ -553,7 +554,56 @@ theorem wordFunctionToRiscVCake_sound_of_straightLine [NeZero width]
     program hstraight, hword]
   rfl
 
+/-!
+The call-aware Cake selector accepts `.move`, which the bare function selector
+rejects, so its soundness theorem is the one that covers the move fragment of
+the straight-line API.  It composes the Cake agreement bridge with the
+program-level Cake soundness theorem and the function/program evaluator
+equivalence proved above.
+-/
+
+theorem wordFunctionToRiscVWithCallsCake_sound_of_straightLine [NeZero width]
+    (context : WordCallContext width) (state : State width)
+    (program : WordProg (Word width))
+    (hstraight : WordRiscVStraightLine program)
+    (code : List (Instruction width))
+    (hcompile : wordFunctionToRiscVWithCallsCake context program =
+      some (code, [])) :
+    evalWordFunctionCake state program =
+      some (executeInstructions state code, []) := by
+  have hagree := wordFunctionToRiscVWithCallsCake_agrees_cakeStraightLine
+    context program hstraight
+  rw [hagree] at hcompile
+  have hbase : wordProgToRiscVCake program = some code := by
+    cases hcode : wordProgToRiscVCake program with
+    | none => simp [hcode] at hcompile
+    | some instructions =>
+        have hinstructions : instructions = code := by
+          simpa [hcode] using hcompile
+        exact congrArg (fun xs : List (Instruction width) => some xs) hinstructions
+  have hword := wordProgToRiscVCake_sound_of_straightLine state program
+    hstraight code hbase
+  rw [evalWordFunctionCake_wordRiscVStraightLine_eq_evalWordProgCake state
+    program hstraight, hword]
+  rfl
+
 /-! Focused regressions for the function-level Cake boundary. -/
+
+/-- The call-aware Cake selector accepts an empty `.move`, so the call-aware
+soundness theorem covers the move fragment that the function selector rejects. -/
+example (context : WordCallContext 64) (state : State 64) :
+    evalWordFunctionCake state (.move 0 [] : WordProg (Word 64)) =
+      some (executeInstructions state ([] : List (Instruction 64)),
+        ([] : List (Word 64))) := by
+  have hstraight : WordRiscVStraightLine (.move 0 [] : WordProg (Word 64)) :=
+    .move 0 []
+  have hcompile : wordFunctionToRiscVWithCallsCake context
+      (.move 0 [] : WordProg (Word 64)) =
+      some (([] : List (Instruction 64)), ([] : List (Fin 32))) := by
+    simp [wordFunctionToRiscVWithCallsCake, wordMoveToInstructions,
+      wordMoveToInstructionsAux, wordMoveRegisterDestinations]
+  exact wordFunctionToRiscVWithCallsCake_sound_of_straightLine context state
+    _ hstraight _ hcompile
 
 /-- Function-level soundness exercised on the trivial straight-line program. -/
 example (state : State 64) :
@@ -573,5 +623,36 @@ example :
       some ([.auipc 4 (BitVec.ofInt 64 1), .addi 4 4 (BitVec.ofInt 64 0x234)],
         ([] : List (Fin 32))) := by
   simp [wordFunctionToRiscVCake, wordLocValueToInstructionsCake, registerOfNat]
+
+/-! The FFI-aware Cake selector is the Cake call-aware selector on the
+straight-line fragment, so it inherits the checked Cake soundness theorem. -/
+
+theorem wordFunctionToRiscVWithCallsAndFfiCake_sound_of_straightLine [NeZero width]
+    (context : WordCallFfiContext width) (state : State width)
+    (program : WordProg (Word width))
+    (hstraight : WordRiscVStraightLine program)
+    (code : List (Instruction width))
+    (hcompile : wordFunctionToRiscVWithCallsAndFfiCake context program =
+      some (code, [])) :
+    evalWordFunctionCake state program =
+      some (executeInstructions state code, []) := by
+  have hagree := wordFunctionToRiscVWithCallsAndFfiCake_agrees_straightLine
+    context program hstraight
+  rw [hagree] at hcompile
+  exact wordFunctionToRiscVWithCallsCake_sound_of_straightLine
+    { targets := context.targets } state program hstraight code hcompile
+
+/-- The FFI-aware Cake selector inherits straight-line soundness. -/
+example (context : WordCallFfiContext 64) (state : State 64) :
+    evalWordFunctionCake state (.skip : WordProg (Word 64)) =
+      some (executeInstructions state ([] : List (Instruction 64)),
+        ([] : List (Word 64))) := by
+  have hstraight : WordRiscVStraightLine (.skip : WordProg (Word 64)) := .skip
+  have hcompile : wordFunctionToRiscVWithCallsAndFfiCake context
+      (.skip : WordProg (Word 64)) =
+      some (([] : List (Instruction 64)), ([] : List (Fin 32))) := by
+    simp [wordFunctionToRiscVWithCallsAndFfiCake, wordFunctionToRiscVWithCallsCake]
+  exact wordFunctionToRiscVWithCallsAndFfiCake_sound_of_straightLine context state
+    _ hstraight _ hcompile
 
 end Flapjack.RiscV

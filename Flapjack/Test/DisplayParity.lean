@@ -144,6 +144,59 @@ def panToStrsOracle : Bool :=
      "1", ")", ")", " ", "(", "return", " ", "(", "Var", " ", "local", " ",
      "x", ")", ")", ")", "\n\n"]
 
+/-! Direct oracle guards for `crep_exp_to_display_def`,
+    `crep_prog_to_display_def`, `crep_fun_to_display_def`, and
+    `crep_to_strs_def` in `pan_passesScript.sml:348-504`. -/
+def crepExpOracle : Bool :=
+  sameDisplay
+      (crepExpToDisplay
+        (.loadGlob (BitVec.ofNat 64 16) : CrepExp (BitVec 64)))
+      (.item none "LoadGlob" [.string "0x10"]) &&
+    sameDisplay
+      (crepExpToDisplay
+        (.op .add [.var 2, .const (BitVec.ofNat 64 1)] :
+          CrepExp (BitVec 64)))
+      (.item none "Add"
+        [.item none "Var" [.string "2"],
+         .item none "Const" [.string "0x1"]])
+
+def crepProgOracle : Bool :=
+  sameDisplay
+      (crepProgToDisplay (.skip : CrepProg (BitVec 64)))
+      (.string "skip") &&
+    sameDisplay
+      (crepProgToDisplay
+        (.shMem .load8 3 (.const (BitVec.ofNat 64 9)) :
+          CrepProg (BitVec 64)))
+      (.item none "shared_mem"
+        [.string "load", .string "byte", .string "3",
+         .item none "Const" [.string "0x9"]]) &&
+    sameDisplay
+      (crepProgToDisplay
+        (.call (some ([2], some (BitVec.ofNat 64 5, .skip))) "callee" [] :
+          CrepProg (BitVec 64)))
+      (.tuple [.tuple [.string "2"], .string ":=",
+        .item none "call"
+          [.string "callee", .tuple [],
+           .item none "handler"
+             [.tuple [.string "0x5", .string "skip"]]]])
+
+def crepFunOracle : Bool :=
+  sameDisplay
+    (crepFunToDisplay
+      (("main", [1, 2], .return [.var 1]) :
+        FunName × List Nat × CrepProg (BitVec 64)))
+    (.tuple [.string "func", .string "main",
+      .tuple [.string "1", .string "2"],
+      .item none "return" [.item none "Var" [.string "1"]]])
+
+def crepToStrsOracle : Bool :=
+  crepToStrs
+    [( ("main", [1], .return [.var 1]) :
+      FunName × List Nat × CrepProg (BitVec 64))] ==
+    ["(", "func", " ", "main", " ", "(", "1", ")", " ", "(",
+     "return", " ", "(", "Var", " ", "1", ")", ")", ")", "\n\n"]
+
 /-! Direct oracle guards for `loop_exp_to_display_def` in
     `pan_passesScript.sml:508-530`. -/
 def loopExpConstOracle : Bool :=
@@ -281,6 +334,10 @@ def loopToStrsOracle : Bool :=
 #guard panProgOracle
 #guard panFunOracle
 #guard panToStrsOracle
+#guard crepExpOracle
+#guard crepProgOracle
+#guard crepFunOracle
+#guard crepToStrsOracle
 #guard loopExpOracle
 #guard loopProgOracle
 #guard loopFunOracle

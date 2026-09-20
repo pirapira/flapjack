@@ -168,11 +168,6 @@ def parsedConditionalMachineResult : Option (List (RiscV.Word 64)) := do
   RiscV.executeFunctionAtAfterEntry 4000 0 entry returnAddress [] image [2] []
     (RiscV.writeRegister (RiscV.zeroState 64) 1 returnAddress)
 
-def parsedConditionalSourceResult : Option (List (RiscV.Word 64)) := do
-  let body ← parsedConditionalSourceMain
-  let result ← evalPanMemProgFuel 30 (fun _ => none) (fun _ => none) body
-  pure result.2.2
-
 def parsedConditionalLoopResult : Option (List (RiscV.Word 64)) := do
   let declarations ← parsedConditionalDeclarations
   let pipeline ← compileFlapjackEntry .rv64i (BitVec.ofNat 64 8)

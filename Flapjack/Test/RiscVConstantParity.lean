@@ -189,6 +189,24 @@ theorem wordInstToInstructionsCake_const_eq_labConstInstructions {width : Nat}
   by simpa [wordInstToInstructionsCake] using
     (wordConstToInstructions_eq_labConstInstructions destination value hdestination)
 
+/-! The function-level checked boundary composes the same Cake constant list
+    with its return carrier.  This is the reusable migration theorem for
+    callers that currently depend on the legacy one-instruction selector. -/
+theorem wordFunctionToRiscVCake_const_assign_return_eq_labConstInstructions
+    {width : Nat} [NeZero width] (destination : Nat) (value : Word width)
+    (hdestination : destination < 32) :
+    wordFunctionToRiscVCake (width := width)
+        (.seq (.assign destination (.const value))
+          (.return 0 [destination])) =
+      some
+        (labConstInstructions (width := width) ⟨destination, hdestination⟩
+            0 31 value.toNat,
+          [⟨destination, hdestination⟩]) := by
+  simp [wordFunctionToRiscVCake, wordExpToInstructionsCake,
+    registerOfNat, hdestination,
+    wordConstToInstructions_eq_labConstInstructions destination value
+      hdestination]
+
 /-- The 0x1234 materialization oracle through the expression-facing Cake
 boundary, stated directly against the executable Lab lowering. -/
 example :

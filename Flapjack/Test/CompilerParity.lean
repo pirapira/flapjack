@@ -6,6 +6,7 @@ import Flapjack.Test.RegisterTransfer
 import Flapjack.Test.LoopToWord
 import Flapjack.Test.PanMemoryParity
 import Flapjack.Test.PanShapeParity
+import Flapjack.Test.PanShapeVarsParity
 import Flapjack.Test.PanWordParity
 import Flapjack.Test.LabPositionParity
 import Flapjack.Test.PanOpParity

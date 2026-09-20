@@ -303,6 +303,21 @@ def statefulExactPublicProgram : Option (Word 64 × Nat) :=
 
 #guard statefulExactPublicProgram = some (BitVec.ofNat 64 0x42, 1)
 
+#guard
+  match evalPanValueFfiExactProgramStepped statefulTestContext
+      statefulExactPublicProgramState statefulTestPrimitive statefulTestHandler 30
+      [.function
+        { name := "main", inline := false, exported := true, params := [],
+          body := .seq (.extCall "echo" (.const (BitVec.ofNat 64 8))
+              (.const (BitVec.ofNat 64 1)) (.const (BitVec.ofNat 64 8))
+              (.const (BitVec.ofNat 64 1)))
+            (.return (.loadByte (.const (BitVec.ofNat 64 8)))),
+          returnShape := .one }]
+      "main" [] with
+  | some (.returned _ _ _ ffi [.word value], _steps) =>
+      value == BitVec.ofNat 64 0x42 && ffi.ioEvents.length == 1
+  | _ => false
+
 example :
     (evalPanValueFfiProgramStepped statefulTestContext
       statefulPublicProgramState statefulTestPrimitive statefulTestHandler

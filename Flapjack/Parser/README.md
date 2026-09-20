@@ -123,8 +123,9 @@ caveat above).
 
 ## Not ported
 
-**`collect_globals`.** Upstream defines it, but `localise_topdecs` starts from
-an empty scope and never calls it.
+**`collect_globals`.** `collectGlobals` is ported as a direct source-shaped
+`InfoMap Unit` collector. `localiseDecls` still starts from an empty scope,
+matching upstream's `localise_topdecs` entrypoint.
 
 **`RetCallNT`.** In the grammar but unreachable: `CallNT` is tried first and
 matches everything `RetCallNT` would, and `conv_Prog` has no case for it.

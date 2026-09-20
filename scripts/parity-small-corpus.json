@@ -889,6 +889,14 @@
       "tracked_beads": [
         "flapjack-pxn.8.5.14.1.5"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/gh1126_load32_store32.pnk",
+      "source_reference": "GH #1126 Cake localise_exp/localise_prog oracle: Load32 and Store32 operands fall through unchanged, so shadowed names remain global; the accepted fixture is byte-identical after Flapjack matches that source behavior.",
+      "cake_sha256": "bfc949464a5934e65b55681cec6fe27a3a5bfd13f0db26e34a390ba5181ba36f",
+      "tracked_beads": [
+        "flapjack-8tb.9"
+      ]
     }
   ]
 }

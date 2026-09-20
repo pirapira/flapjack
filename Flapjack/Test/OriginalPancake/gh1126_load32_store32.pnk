@@ -1,0 +1,10 @@
+var 1 x = 5;
+fun 1 load32_shadow() {
+  var 1 x = 7;
+  return ld32 x;
+}
+fun 1 store32_shadow() {
+  var 1 x = 7;
+  st32 x, 9;
+  return 0;
+}

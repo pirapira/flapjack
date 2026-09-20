@@ -460,39 +460,14 @@ def cakeMkTags (n : Nat) (fromAllocator : NatInfoMap Nat) (fs : List Nat) :
       | _ => tags.set i (.fixed (v / 2)))
     (CakeNodeMap.ofSize n)
 
-def cakeMkTagsIndexed (n : Nat) (fromAllocator : CakeNodeMap Nat) (fs : List Nat) :
-    CakeNodeMap CakeNodeTag :=
-  let stackOnly := Flapjack.natSetOfList fs
-  (List.range n).foldl (fun tags i =>
-      let v := (fromAllocator.get i).getD
-        (if CakeAlloc.isPhyVar i then i / 2 else 0)
-      match v % 4 with
-      | 1 => tags.set i (if stackOnly.contains v then .sTemp else .aTemp)
-      | 3 => tags.set i .sTemp
-      | _ => tags.set i (.fixed (v / 2)))
-    (CakeNodeMap.ofSize n)
-
-def cakeAllocatorIndex (toAllocator : NatInfoMap Nat) : Std.HashMap Nat Nat :=
-  toAllocator.foldl (fun index entry => index.insert entry.1 entry.2) {}
-
-def cakeAllocatorIndexLookup (index : Std.HashMap Nat Nat) (name : Nat) : Nat :=
-  (index[name]?).getD 0
-
-def cakeAllocatorSpDefault (index : Std.HashMap Nat Nat) (name : Nat) : Nat :=
-  match index[name]? with
-  | some value => value
-  | none => if CakeAlloc.isPhyVar name then name / 2 else 0
-
 /-- `init_ra_state` (`reg_allocScript.sml:1241-1250`): the initial allocator
     state for a clash tree. -/
 def cakeInitRaStateFromBij (bij : CakeNodeBijection) (tree : WordClashTree)
     (forced : List (Nat × Nat)) (fs : List Nat) : CakeRaState :=
-  let sourceIndex := cakeAllocatorIndex bij.toAllocator
-  let ta := cakeAllocatorSpDefault sourceIndex
+  let ta := CakeAlloc.spDefault bij.toAllocator
   let (adj, _) := cakeMkGraph ta tree [] (CakeNodeMap.ofSize bij.nextNode)
   let adj := cakeExtendGraph ta forced adj
-  let fromIndex := CakeNodeMap.ofNatInfoMap bij.nextNode bij.fromAllocator
-  let tags := cakeMkTagsIndexed bij.nextNode fromIndex fs
+  let tags := cakeMkTags bij.nextNode bij.fromAllocator fs
   { (CakeRaState.empty bij.nextNode) with
     adjLists := adj,
     nodeTag := tags }
@@ -1132,6 +1107,18 @@ def cakeFullConsistencyOk (state : CakeRaState) (k : Nat) (x y : Nat) : Bool :=
     (cakeIsFixedK state k y || cakeTagIsAtemp state y) &&
     !(cakeIsFixedK state k x && cakeIsFixedK state k y)
 
+/-- A lookup-only index for the source-variable side of `mk_bij`.
+
+    Cake's `toAllocator` association list is a bijection with unique source
+    keys.  The list remains the canonical ordered representation everywhere
+    observable; this index is used only for the repeated `update_move` lookups
+    in the allocator hot path. -/
+def cakeAllocatorIndex (toAllocator : NatInfoMap Nat) : Std.HashMap Nat Nat :=
+  toAllocator.foldl (fun index entry => index.insert entry.1 entry.2) {}
+
+def cakeAllocatorIndexLookup (index : Std.HashMap Nat Nat) (name : Nat) : Nat :=
+  (index[name]?).getD 0
+
 /-- The allocator flavour, mirroring `algorithm` in the original. -/
 inductive CakeAlgorithm : Type
   | simple : CakeAlgorithm
@@ -1144,7 +1131,7 @@ def cakeDoRegAllocFromState (alg : CakeAlgorithm) (scost : Option (CakeNodeMap N
     (k : Nat) (moves : List (Nat × (Nat × Nat)))
     (bij : CakeNodeBijection) (state : CakeRaState) : Option (NatInfoMap Nat) :=
   let sourceIndex := cakeAllocatorIndex bij.toAllocator
-  let spta := fun name => cakeAllocatorSpDefault sourceIndex name
+  let spta := fun name => cakeAllocatorIndexLookup sourceIndex name
   let moves0 := moves.map (cakeUpdateMove spta)
   let movesF := filterReversed (fun m => cakeFullConsistencyOk state k m.2.1 m.2.2) moves0
   let selMoves := match alg with

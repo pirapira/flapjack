@@ -179,14 +179,7 @@ def allocatorIndexLookupGuard : Bool :=
     cakeAllocatorIndexLookup index 17 = 6 &&
     cakeAllocatorIndexLookup index 99 = 0
 
-def allocatorSpDefaultGuard : Bool :=
-  let index := cakeAllocatorIndex ([(9, 4), (1, 2)] : NatInfoMap Nat)
-  cakeAllocatorSpDefault index 9 = 4 &&
-    cakeAllocatorSpDefault index 10 = 5 &&
-    cakeAllocatorSpDefault index 11 = 0
-
 #guard allocatorIndexLookupGuard
-#guard allocatorSpDefaultGuard
 
 def extractColorOrderGuard : Bool :=
   let tree : WordClashTree := .delta [9, 1] [17]

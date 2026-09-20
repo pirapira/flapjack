@@ -163,8 +163,8 @@ def wordStackStoreInst {α : Type} (config : WordStackConfig) (operator : WordMe
   | .register source, .register address =>
       pure (.inst (.mem operator source address))
   | .stack source, .register address =>
-      pure (.seq (.stackLoad config.scratch (wordStackOffset config source))
-        (.inst (.mem operator config.scratch address)))
+      pure (.seq (.stackLoad config.addressScratch (wordStackOffset config source))
+        (.inst (.mem operator config.addressScratch address)))
   | .register source, .stack address =>
       let addressScratch := wordStackStoreAddressRegister config (.register source)
       pure (.seq (.stackLoad addressScratch
@@ -861,16 +861,16 @@ def wordStackStoreOffsetInst {α : Type} (config : WordStackConfig)
   | .register source, .register address =>
       pure (.inst (.memOffset operator source address offset))
   | .stack source, .register address =>
-      pure (.seq (.stackLoad config.scratch (wordStackOffset config source))
-        (.inst (.memOffset operator config.scratch address offset)))
+      pure (.seq (.stackLoad config.addressScratch (wordStackOffset config source))
+        (.inst (.memOffset operator config.addressScratch address offset)))
   | .register source, .stack address =>
-      pure (.seq (.stackLoad config.addressScratch
+      pure (.seq (.stackLoad config.scratch
           (wordStackOffset config address))
-        (.inst (.memOffset operator source config.addressScratch offset)))
+        (.inst (.memOffset operator source config.scratch offset)))
   | .stack source, .stack address =>
-      pure (.seq (.stackLoad config.addressScratch (wordStackOffset config address))
-        (.seq (.stackLoad config.scratch (wordStackOffset config source))
-          (.inst (.memOffset operator config.scratch config.addressScratch offset))))
+      pure (.seq (.stackLoad config.scratch (wordStackOffset config address))
+        (.seq (.stackLoad config.addressScratch (wordStackOffset config source))
+          (.inst (.memOffset operator config.addressScratch config.scratch offset))))
 
 def wordStackMemoryOffsetInst {α : Type} (config : WordStackConfig)
     (operator : WordMemOp) (sourceOrDestination address : Nat) (offset : α) :
@@ -890,7 +890,7 @@ def wordStackStoreLocationsSafe (config : WordStackConfig) :
 def wordStackMemoryStoreLocationsSafe (config : WordStackConfig) :
     WordLocation → WordLocation → Bool
   | .register _, .register _ => true
-  | .stack _, .register address => address != config.scratch
+  | .stack _, .register address => address != config.addressScratch
   | .register source, .stack _ =>
       source != wordStackStoreAddressRegister config (.register source)
   | .stack _, .stack _ => config.scratch != config.addressScratch
@@ -929,17 +929,17 @@ def wordStackSharedStoreInst {α : Type} (config : WordStackConfig) (operator : 
   | .register source, .register address =>
       pure (.shMem operator source address)
   | .stack source, .register address =>
-      pure (.seq (.stackLoad config.scratch (wordStackOffset config source))
-        (.shMem operator config.scratch address))
+      pure (.seq (.stackLoad config.addressScratch (wordStackOffset config source))
+        (.shMem operator config.addressScratch address))
   | .register source, .stack address =>
-      pure (.seq (.stackLoad config.addressScratch
+      pure (.seq (.stackLoad config.scratch
           (wordStackOffset config address))
-        (.shMem operator source config.addressScratch))
+        (.shMem operator source config.scratch))
   | .stack source, .stack address =>
-      pure (.seq (.stackLoad config.addressScratch
+      pure (.seq (.stackLoad config.scratch
           (wordStackOffset config address))
-        (.seq (.stackLoad config.scratch (wordStackOffset config source))
-          (.shMem operator config.scratch config.addressScratch)))
+        (.seq (.stackLoad config.addressScratch (wordStackOffset config source))
+          (.shMem operator config.addressScratch config.scratch)))
 
 def wordStackSharedLoadOffsetInst {α : Type} (config : WordStackConfig)
     (operator : WordMemOp) (destination address : Nat) (offset : α) :
@@ -971,16 +971,16 @@ def wordStackSharedStoreOffsetInst {α : Type} (config : WordStackConfig)
   | .register source, .register address =>
       pure (.shMemOffset operator source address offset)
   | .stack source, .register address =>
-      pure (.seq (.stackLoad config.scratch (wordStackOffset config source))
-        (.shMemOffset operator config.scratch address offset))
+      pure (.seq (.stackLoad config.addressScratch (wordStackOffset config source))
+        (.shMemOffset operator config.addressScratch address offset))
   | .register source, .stack address =>
-      pure (.seq (.stackLoad config.addressScratch
+      pure (.seq (.stackLoad config.scratch
           (wordStackOffset config address))
-        (.shMemOffset operator source config.addressScratch offset))
+        (.shMemOffset operator source config.scratch offset))
   | .stack source, .stack address =>
-      pure (.seq (.stackLoad config.addressScratch (wordStackOffset config address))
-        (.seq (.stackLoad config.scratch (wordStackOffset config source))
-          (.shMemOffset operator config.scratch config.addressScratch offset)))
+      pure (.seq (.stackLoad config.scratch (wordStackOffset config address))
+        (.seq (.stackLoad config.addressScratch (wordStackOffset config source))
+          (.shMemOffset operator config.addressScratch config.scratch offset)))
 
 def wordStackSharedMemoryOffsetInst {α : Type} (config : WordStackConfig)
     (operator : WordMemOp) (sourceOrDestination address : Nat) (offset : α) :
@@ -3243,20 +3243,16 @@ theorem evalWordStackMachine_shared_store_preserves_memory [NeZero width]
     (haddressValue : wordStackMachineValue config state address =
       some addressValue)
     (hscratch : config.scratch ≠ config.addressScratch)
-    (hsafe : wordStackStoreLocationsSafe config sourceLocation addressLocation = true)
+    (hsafe : wordStackMemoryStoreLocationsSafe config sourceLocation addressLocation = true)
     (heval : (wordStackSharedMemoryInst config .store source address).bind
       (evalWordStackMachine state) = some final) :
       final.sharedMemory addressValue = sourceValue := by
   change lookupNatInfo source config.locations = some sourceLocation at hsource
   change lookupNatInfo address config.locations = some addressLocation at haddress
-  have hsafe' : config.addressScratch ≠ config.scratch := by
-    intro heq
-    apply hscratch
-    exact heq.symm
   cases sourceLocation <;> cases addressLocation <;>
     simp [wordStackSharedMemoryInst, wordStackSharedStoreInst,
       wordStackLocation, wordStackOffset, hsource, haddress,
-      wordStackStoreLocationsSafe] at hsafe heval
+      wordStackMemoryStoreLocationsSafe, wordStackStoreAddressRegister] at hsafe heval
   all_goals
     cases heval
     simp [wordStackMachineValue, wordStackLocation, wordStackOffset,
@@ -3265,7 +3261,7 @@ theorem evalWordStackMachine_shared_store_preserves_memory [NeZero width]
     simp [
       wordStackMachineWriteRegister, 
       wordStackMachineWriteSharedMemory, 
-      hsourceValue, haddressValue, hsafe, hsafe']
+      hsourceValue, haddressValue, hsafe]
 
 theorem evalWordStackMachine_div_preserves_value [NeZero width]
     (config : WordStackConfig) (state final : WordStackMachineState width)

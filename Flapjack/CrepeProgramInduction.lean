@@ -294,4 +294,26 @@ theorem panValueCrepProgramStateCorrect_seq_return_const
     (.return (.const value)) continuation
     (panValueCrepProgramStateCorrect_return_const value) hcontinuation
 
+/-! The corresponding non-stateful fragment is useful to the original
+    `pc_compile_correct` boundary as well.  Keeping this theorem next to the
+    stateful assembly makes the distinction explicit: the target evaluator
+    differs only in whether it carries the global-aware `CrepState` runner,
+    while the source constructors and control relation are shared. -/
+theorem panValueCrepProgramCorrect_statefulCompact
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (program : Prog α) (hprogram : StatefulCompactProg α program) :
+    PanValueCrepProgramCorrect program := by
+  induction hprogram with
+  | skip => exact panValueCrepProgramCorrect_skip
+  | tick => exact panValueCrepProgramCorrect_tick
+  | controlBreak => exact panValueCrepProgramCorrect_break
+  | controlContinue => exact panValueCrepProgramCorrect_continue
+  | annot tag text => exact panValueCrepProgramCorrect_annot tag text
+  | returnConst value => exact panValueCrepProgramCorrect_return_const value
+  | @seq first second hfirst hsecond ihfirst ihsecond =>
+      exact panValueCrepProgramCorrect_seq first second ihfirst ihsecond
+
 end Flapjack

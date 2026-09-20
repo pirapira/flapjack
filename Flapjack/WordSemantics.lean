@@ -299,6 +299,78 @@ mutual
     termination_by fuel _ _ => fuel
 end
 
+/-! Call equations for the loop-aware evaluator.  A callee is supplied through
+    an evaluation witness over `WordLoopControlResult`, so the caller composes
+    with sequences, conditionals, FFI, and nested loops.  A callee that
+    falls through normally (or escapes with `break`/`continue`) is a Cake
+    `Error` at the caller, so the caller result is `none`. -/
+
+theorem evalWordLoopCallWithHandlersAndFfi_return_of_eval [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (fuel : Nat) (state calleeState bodyState : State width)
+    (target : Nat) (parameters arguments : List Nat)
+    (body : WordProg (Word width)) (values returnValues : List (Word width))
+    (hlookup : lookupWordFunction target functions = some (parameters, body))
+    (hread : readWordRegisters state arguments = some values)
+    (hbind : bindWordRegisters state parameters values = some calleeState)
+    (hbody : evalWordLoopProgWithHandlersAndFfi functions ffiHandler fuel
+      calleeState body = some (.returned bodyState returnValues)) :
+    evalWordLoopCallWithHandlersAndFfi functions ffiHandler (fuel + 1) state
+      none (some target) arguments none =
+      some (.returned { state with
+        memory := bodyState.memory
+        privilege := bodyState.privilege
+        mode := bodyState.mode } returnValues) := by
+  simp [evalWordLoopCallWithHandlersAndFfi, hlookup, hread, hbind, hbody]
+
+theorem evalWordLoopCallWithHandlersAndFfi_normal_none_of_eval [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (fuel : Nat) (state calleeState bodyState : State width)
+    (target : Nat) (parameters arguments : List Nat)
+    (body : WordProg (Word width)) (values : List (Word width))
+    (hlookup : lookupWordFunction target functions = some (parameters, body))
+    (hread : readWordRegisters state arguments = some values)
+    (hbind : bindWordRegisters state parameters values = some calleeState)
+    (hbody : evalWordLoopProgWithHandlersAndFfi functions ffiHandler fuel
+      calleeState body = some (.normal bodyState)) :
+    evalWordLoopCallWithHandlersAndFfi functions ffiHandler (fuel + 1) state
+      none (some target) arguments none = none := by
+  simp [evalWordLoopCallWithHandlersAndFfi, hlookup, hread, hbind, hbody]
+
+theorem evalWordLoopCallWithHandlersAndFfi_raise_handler_of_eval [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (fuel : Nat) (state calleeState bodyState : State width)
+    (target : Nat) (parameters arguments : List Nat)
+    (body : WordProg (Word width)) (values : List (Word width))
+    (exceptionValue handlerName handlerLabel entryLabel : Nat)
+    (handlerBody : WordProg (Word width)) (handlerRegister : Fin 32)
+    (handlerResult : WordLoopControlResult width)
+    (hlookup : lookupWordFunction target functions = some (parameters, body))
+    (hread : readWordRegisters state arguments = some values)
+    (hbind : bindWordRegisters state parameters values = some calleeState)
+    (hbody : evalWordLoopProgWithHandlersAndFfi functions ffiHandler fuel
+      calleeState body = some (.raised bodyState exceptionValue))
+    (hhandlerRegister : registerOfNat handlerName = some handlerRegister)
+    (hhandler : evalWordLoopProgWithHandlersAndFfi functions ffiHandler fuel
+      (writeRegister { state with
+        memory := bodyState.memory
+        privilege := bodyState.privilege
+        mode := bodyState.mode } handlerRegister
+        (BitVec.ofNat width exceptionValue)) handlerBody =
+        some handlerResult) :
+    evalWordLoopCallWithHandlersAndFfi functions ffiHandler (fuel + 1) state
+      (some ([], ([], []), .skip, 0, 0)) (some target) arguments
+      (some (handlerName, handlerBody, handlerLabel, entryLabel)) =
+      some handlerResult := by
+  simp [evalWordLoopCallWithHandlersAndFfi, hlookup, hread, hbind, hbody,
+    hhandlerRegister, hhandler]
+
 theorem evalWordLoopProgWithHandlersAndFfi_break [NeZero width]
     (functions : List (Nat × List Nat × WordProg (Word width)))
     (ffiHandler : FunName → Word width → Word width → Word width → Word width →

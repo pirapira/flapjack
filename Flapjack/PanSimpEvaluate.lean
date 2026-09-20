@@ -1,5 +1,6 @@
 import Flapjack.PanSimp
 import Flapjack.PanEvaluate
+import Flapjack.PanValueFfiClockFuel
 
 /-!
 # Evaluator-level `pan_simp` obligations
@@ -155,6 +156,52 @@ theorem evalPanValueFfiClockProg_while_body_same
         | rStruct fields => simp
         | nStruct nm fields => simp
 
+/-! Clocked counterpart of Cake's `evaluate_while_no_error_imp`
+    (`pan_simpProofScript.sml:89-103`).  When the condition is a nonzero word,
+    the clock is nonzero, and the loop succeeds, the body evaluator cannot
+    have returned an error (`none`). -/
+theorem evalPanValueFfiClockProg_while_some_implies_body_some
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (condition : Exp α) (body : Prog α)
+    (fuel clock : Nat) (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (contracts : Option PanValueCallContracts := none)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none)
+    (conditionValue : α)
+    (hcondition : evalPanValueExp structs locals globals memory
+      baseAddress topAddress bytesInWord condition
+      (memoryAccess := memoryAccess) = some (.word conditionValue))
+    (hconditionNonzero : (conditionValue == 0) = false)
+    (hclockNonzero : (clock == 0) = false)
+    (result : PanValueFfiClockResult α σ)
+    (hresult : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+      (.while condition body) (memoryAccess := memoryAccess)
+      (contracts := contracts) (memoryHandler := memoryHandler) = some result) :
+    ∃ bodyResult,
+      evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord fuel locals globals memory ffi
+        (decPanClock clock) body (memoryAccess := memoryAccess)
+        (contracts := contracts) (memoryHandler := memoryHandler) = some bodyResult := by
+  cases hbody : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory ffi
+      (decPanClock clock) body (memoryAccess := memoryAccess)
+      (contracts := contracts) (memoryHandler := memoryHandler) with
+  | none =>
+      simp [evalPanValueFfiClockProg, hcondition, hconditionNonzero,
+        hclockNonzero, hbody] at hresult
+  | some bodyResult =>
+      exact ⟨bodyResult, rfl⟩
+
 /-- Clocked counterpart of Cake's `evaluate_skip_seq`
     (`pan_simpProofScript.sml:52-54`): a leading `Skip` is absorbed. -/
 theorem evalPanValueFfiClockProg_skip_seq
@@ -245,5 +292,77 @@ theorem evalPanValueFfiClockProg_while_no_none
   intro hbody
   apply h
   simp [evalPanValueFfiClockProg, hcond, hw, hclock, hbody]
+
+/-- Congruence of the clocked evaluator under the first component of a `Seq`.
+    This is the fuel-compatible building block needed to reassociate sequences:
+    a `Seq` at `fuel + 1` evaluates its first component at `fuel`, so replacing
+    that component by an evaluation-equal one leaves the whole `Seq` equal. -/
+theorem evalPanValueFfiClockProg_seq_congr
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel clock : Nat) (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (first first' second : Prog α)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (h : evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
+        first ma c mh =
+      evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
+        first' ma c mh) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi
+        clock (.seq first second) ma c mh =
+      evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi
+        clock (.seq first' second) ma c mh := by
+  simp only [evalPanValueFfiClockProg]
+  rw [h]
+
+/-- Contrapositive of fuel monotonicity: a run that fails at a larger fuel also
+    fails at every smaller fuel.  This is the missing direction needed to line
+    up two runs whose structural fuel budgets differ, as happens for
+    `seqAssoc` (which inserts/removes `Seq` nodes) under the fuel-indexed
+    clocked evaluator. -/
+theorem evalPanValueFfiClockProg_fuel_anti
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    {fuel fuel' : Nat} (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (program : Prog α)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (hfuel : fuel ≤ fuel')
+    (hnone : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel' locals globals memory ffi clock program
+      ma c mh = none) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory ffi clock program
+      ma c mh = none := by
+  cases h : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory ffi clock program
+      ma c mh with
+  | none => rfl
+  | some result =>
+      have hmono := evalPanValueFfiClockProg_fuel_mono context primitive handler
+        structs functions baseAddress topAddress bytesInWord locals globals memory ffi
+        clock program ma c mh hfuel h
+      rw [hnone] at hmono
+      simp at hmono
 
 end Flapjack

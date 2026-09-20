@@ -84,6 +84,19 @@ def spillOnlyFrameOccupancy : Bool :=
 
 #guard spillOnlyFrameOccupancy
 
+/-! Cake's `format_var` maps even allocator colours below `k` to the
+    corresponding abstract register and maps the remaining colours to frame
+    slots from the top of the `f`-word frame
+    (`word_to_stackScript.sml:114-118`).  This direct guard covers the
+    register/frame boundary independently of the emitted bitmap fixtures. -/
+def cakeColourLocationOracleExact : Bool :=
+  CakeRegAlloc.cakeColourLocation 3 4 0 == .register 0 &&
+    CakeRegAlloc.cakeColourLocation 3 4 4 == .register 2 &&
+    CakeRegAlloc.cakeColourLocation 3 4 6 == .stack 3 &&
+    CakeRegAlloc.cakeColourLocation 3 4 8 == .stack 2
+
+#guard cakeColourLocationOracleExact
+
 /- The direct `compile_prog` frame equation is `MAX nextSpill
    (LENGTH parameters - reg_count)`.  These boundary values pin both
    allocator spill occupancy and Cake's RISC-V argument-frame threshold
@@ -170,6 +183,8 @@ def runChecks : IO Bool := do
         fixtureUsesFrame),
       ("bitmap-free allocator spills retain Cake frame occupancy",
         spillOnlyFrameOccupancy),
+      ("Cake colour locations match format_var register/frame slots",
+        cakeColourLocationOracleExact),
       ("cakeWordFrameSlots matches the direct Cake frame equation",
         cakeWordFrameSlotsOracleExact),
       ("allocator frame slots stay inside the frame word_to_stack allocates",

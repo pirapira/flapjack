@@ -91,4 +91,19 @@ termination_by declarations => sizeOf declarations
 theorem panSimpProg_skip : panSimpProg (.skip : Prog α) = .skip := by
   simp [panSimpProg, seqAssoc, retToTail]
 
+/-! `pan_simp` preserves the exception identifiers collected by the source
+    program. These are the two local preservation steps used by Cake's
+    `exp_ids_ret_to_tail_eq` and `exp_ids_seq_assoc_eq` proofs. -/
+
+theorem expIds_seqCallRet (program : Prog α) :
+    expIds (seqCallRet program) = expIds program := by
+  unfold seqCallRet
+  split
+  · split <;> simp [expIds]
+  · rfl
+
+theorem expIds_smartSeq (pre program : Prog α) :
+    expIds (smartSeq pre program) = expIds pre ++ expIds program := by
+  cases pre <;> simp [smartSeq, expIds]
+
 end Flapjack

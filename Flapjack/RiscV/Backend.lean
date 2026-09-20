@@ -731,6 +731,14 @@ theorem wordProgToRiscVCake_const [NeZero width] (destination : Nat)
       wordConstToInstructions destination value := by
   simp [wordProgToRiscVCake, wordExpToInstructionsCake]
 
+/-! The checked program boundary exposes Cake's position-aware LocValue
+    materialization to theorem clients instead of hiding it behind the
+    recursive program definition. -/
+theorem wordProgToRiscVCake_locValue [NeZero width] (destination source : Nat) :
+    wordProgToRiscVCake (.locValue destination source : WordProg (Word width)) =
+      wordLocValueToInstructionsCake (width := width) destination source 0 := by
+  simp [wordProgToRiscVCake]
+
 /-!
 `executeInstructions` is useful for straight-line code, but it deliberately
 does not interpret branch targets.  This runner treats `start` as the address
@@ -1116,6 +1124,13 @@ theorem wordFunctionToRiscVCake_const [NeZero width] (destination : Nat)
         (fun instructions => (instructions, [])) := by
   simp [wordFunctionToRiscVCake, wordExpToInstructionsCake]
   cases h : wordConstToInstructions destination value <;> rfl
+
+theorem wordFunctionToRiscVCake_locValue [NeZero width] (destination source : Nat) :
+    wordFunctionToRiscVCake (.locValue destination source : WordProg (Word width)) =
+      (wordLocValueToInstructionsCake (width := width) destination source 0).map
+        (fun instructions => (instructions, [])) := by
+  cases h : wordLocValueToInstructionsCake (width := width) destination source 0 <;>
+    simp [wordFunctionToRiscVCake, h]
 
 def evalWordCondition [NeZero width] (state : State width)
     (operator : Cmp) (condition : Nat) (rightValue : WordRegImm (Word width)) :

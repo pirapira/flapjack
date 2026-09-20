@@ -101,4 +101,281 @@ theorem evalPanValueProgWithPrimitive_seq_assoc (structs : StructContext)
               obtain ⟨sl, sg, sm, secondValues⟩ := secondResult
               cases secondValues <;> simp [hsecond]
 
+
+/-!
+Congruence helpers used to lift sequence-shape rewriting through the
+recursive `dec`, `seq` and `ite` clauses, and the resulting full
+`seqAssoc` preservation theorem (CakeML's `evaluate_seq_assoc`).
+-/
+
+abbrev SEval (structs : StructContext) (baseAddress topAddress bytesInWord : α)
+    (primitive : PanPrimitiveHandler α) (memoryAccess : Option (PanValueMemoryAccess α))
+    (locals globals : VarName → Option (PanValue α)) (memory : α → Option (PanValue α))
+    (program : Prog α) :=
+  evalPanValueProgWithPrimitive structs baseAddress topAddress bytesInWord locals globals
+    memory primitive program (memoryAccess := memoryAccess)
+
+theorem seq_congr_left (structs : StructContext) (baseAddress topAddress bytesInWord : α)
+    (primitive : PanPrimitiveHandler α) (memoryAccess : Option (PanValueMemoryAccess α))
+    (locals globals : VarName → Option (PanValue α)) (memory : α → Option (PanValue α))
+    (first first' second : Prog α)
+    (h : SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+          memory first
+       = SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+          memory first') :
+    SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+        memory (.seq first second)
+      = SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+        memory (.seq first' second) := by
+  simp only [SEval, evalPanValueProgWithPrimitive]
+  simp only [h]
+
+theorem seq_congr_right (structs : StructContext) (baseAddress topAddress bytesInWord : α)
+    (primitive : PanPrimitiveHandler α) (memoryAccess : Option (PanValueMemoryAccess α))
+    (first second second' : Prog α)
+    (h : ∀ (locals globals : VarName → Option (PanValue α)) (memory : α → Option (PanValue α)),
+        SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+          memory second
+        = SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+          memory second') :
+    ∀ (locals globals : VarName → Option (PanValue α)) (memory : α → Option (PanValue α)),
+      SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+          memory (.seq first second)
+        = SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+          memory (.seq first second') := by
+  intro locals globals memory
+  simp only [SEval, evalPanValueProgWithPrimitive]
+  cases hfirst : evalPanValueProgWithPrimitive structs baseAddress topAddress bytesInWord
+      locals globals memory primitive first (memoryAccess := memoryAccess) with
+  | none => simp
+  | some firstResult =>
+      obtain ⟨fl, fg, fm, fv⟩ := firstResult
+      cases fv with
+      | nil => simpa [Option.bind_some] using h fl fg fm
+      | cons value rest => simp
+
+theorem dec_congr (structs : StructContext) (baseAddress topAddress bytesInWord : α)
+    (primitive : PanPrimitiveHandler α) (memoryAccess : Option (PanValueMemoryAccess α))
+    (name : VarName) (shape : Shape) (value : Exp α) (body body' : Prog α)
+    (h : ∀ (locals globals : VarName → Option (PanValue α)) (memory : α → Option (PanValue α)),
+        SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+          memory body
+        = SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+          memory body') :
+    ∀ (locals globals : VarName → Option (PanValue α)) (memory : α → Option (PanValue α)),
+      SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+          memory (.dec name shape value body)
+        = SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+          memory (.dec name shape value body') := by
+  intro locals globals memory
+  simp only [SEval, evalPanValueProgWithPrimitive]
+  cases hval : evalPanValueExp structs locals globals memory baseAddress topAddress bytesInWord
+      value (memoryAccess := memoryAccess) with
+  | none => simp
+  | some v =>
+      simp
+      by_cases hmatch : panShapeMatches (panValueShape structs v) shape = true
+      · simp only [hmatch, if_true]
+        simp only [h (updatePanValueMap locals name v) globals memory]
+      · simp [hmatch]
+
+theorem ite_congr (structs : StructContext) (baseAddress topAddress bytesInWord : α)
+    (primitive : PanPrimitiveHandler α) (memoryAccess : Option (PanValueMemoryAccess α))
+    (condition : Exp α) (thenBranch thenBranch' elseBranch elseBranch' : Prog α)
+    (hthen : ∀ (locals globals : VarName → Option (PanValue α)) (memory : α → Option (PanValue α)),
+        SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+          memory thenBranch
+        = SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+          memory thenBranch')
+    (helse : ∀ (locals globals : VarName → Option (PanValue α)) (memory : α → Option (PanValue α)),
+        SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+          memory elseBranch
+        = SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+          memory elseBranch') :
+    ∀ (locals globals : VarName → Option (PanValue α)) (memory : α → Option (PanValue α)),
+      SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+          memory (.ite condition thenBranch elseBranch)
+        = SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+          memory (.ite condition thenBranch' elseBranch') := by
+  intro locals globals memory
+  simp only [SEval, evalPanValueProgWithPrimitive]
+  cases hcond : evalPanValueExp structs locals globals memory baseAddress topAddress bytesInWord
+      condition (memoryAccess := memoryAccess) with
+  | none => simp
+  | some v =>
+      simp
+      cases v with
+      | word w =>
+          by_cases hz : (w != 0) = true
+          · simp only [hz, if_true]
+            exact hthen locals globals memory
+          · simp [hz]
+            exact helse locals globals memory
+      | rStruct fields => simp
+      | nStruct name fields => simp
+
+theorem seq_annot (structs : StructContext) (baseAddress topAddress bytesInWord : α)
+    (primitive : PanPrimitiveHandler α) (memoryAccess : Option (PanValueMemoryAccess α))
+    (locals globals : VarName → Option (PanValue α)) (memory : α → Option (PanValue α))
+    (pre : Prog α) (tag text : String) :
+    SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+        memory (.seq pre (.annot tag text))
+      = SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+        memory pre := by
+  simp only [SEval, evalPanValueProgWithPrimitive]
+  cases h : evalPanValueProgWithPrimitive structs baseAddress topAddress bytesInWord
+      locals globals memory primitive pre (memoryAccess := memoryAccess) with
+  | none => simp
+  | some result =>
+      obtain ⟨l, g, m, values⟩ := result
+      cases values <;> simp
+
+theorem seq_skipEval (structs : StructContext) (baseAddress topAddress bytesInWord : α)
+    (locals globals : VarName → Option (PanValue α)) (memory : α → Option (PanValue α))
+    (primitive : PanPrimitiveHandler α) (program : Prog α)
+    (memoryAccess : Option (PanValueMemoryAccess α)) :
+    SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+        memory (.seq program (.skip : Prog α))
+      = SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+        memory program :=
+  evalPanValueProgWithPrimitive_seq_skip structs baseAddress topAddress bytesInWord locals globals
+    memory primitive program memoryAccess
+
+theorem skip_seqEval (structs : StructContext) (baseAddress topAddress bytesInWord : α)
+    (locals globals : VarName → Option (PanValue α)) (memory : α → Option (PanValue α))
+    (primitive : PanPrimitiveHandler α) (program : Prog α)
+    (memoryAccess : Option (PanValueMemoryAccess α)) :
+    SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+        memory (.seq (.skip : Prog α) program)
+      = SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+        memory program :=
+  evalPanValueProgWithPrimitive_skip_seq structs baseAddress topAddress bytesInWord locals globals
+    memory primitive program memoryAccess
+
+theorem smartSeqEval (structs : StructContext) (baseAddress topAddress bytesInWord : α)
+    (locals globals : VarName → Option (PanValue α)) (memory : α → Option (PanValue α))
+    (primitive : PanPrimitiveHandler α) (pre program : Prog α)
+    (memoryAccess : Option (PanValueMemoryAccess α)) :
+    SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+        memory (smartSeq pre program)
+      = SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+        memory (.seq pre program) :=
+  evalPanValueProgWithPrimitive_smartSeq structs baseAddress topAddress bytesInWord locals globals
+    memory primitive pre program memoryAccess
+
+theorem seq_assocEval (structs : StructContext) (baseAddress topAddress bytesInWord : α)
+    (locals globals : VarName → Option (PanValue α)) (memory : α → Option (PanValue α))
+    (primitive : PanPrimitiveHandler α) (first second third : Prog α)
+    (memoryAccess : Option (PanValueMemoryAccess α)) :
+    SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+        memory (.seq (.seq first second) third)
+      = SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+        memory (.seq first (.seq second third)) :=
+  evalPanValueProgWithPrimitive_seq_assoc structs baseAddress topAddress bytesInWord locals globals
+    memory primitive first second third memoryAccess
+
+theorem evalPanValueProgWithPrimitive_seqAssoc (structs : StructContext)
+    (baseAddress topAddress bytesInWord : α) (primitive : PanPrimitiveHandler α)
+    (memoryAccess : Option (PanValueMemoryAccess α)) :
+    ∀ (program pre : Prog α) (locals globals : VarName → Option (PanValue α))
+      (memory : α → Option (PanValue α)),
+      SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+          memory (seqAssoc pre program)
+        = SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+          memory (.seq pre program) := by
+  intro program pre locals globals memory
+  have main : ∀ n, ∀ (program : Prog α), sizeOf program = n →
+      ∀ (pre : Prog α) (locals globals : VarName → Option (PanValue α))
+        (memory : α → Option (PanValue α)),
+        SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+            memory (seqAssoc pre program)
+          = SEval structs baseAddress topAddress bytesInWord primitive memoryAccess locals globals
+            memory (.seq pre program) := by
+    intro n
+    induction n using Nat.strongRecOn with
+    | ind n ih =>
+      intro program hsize pre locals globals memory
+      cases program with
+      | skip =>
+          rw [seqAssoc.eq_1]
+          exact (seq_skipEval structs baseAddress topAddress bytesInWord locals globals memory
+            primitive pre memoryAccess).symm
+      | dec name shape value body =>
+          rw [seqAssoc.eq_2, smartSeqEval]
+          apply seq_congr_right
+          intro l g m
+          apply dec_congr
+          intro ll gg mm
+          rw [ih (sizeOf body) (by rw [← hsize]; decreasing_trivial) body rfl .skip ll gg mm]
+          exact skip_seqEval structs baseAddress topAddress bytesInWord ll gg mm primitive body
+            memoryAccess
+      | seq first second =>
+          rw [seqAssoc.eq_3]
+          rw [ih (sizeOf second) (by rw [← hsize]; decreasing_trivial) second rfl
+            (seqAssoc pre first) locals globals memory]
+          rw [seq_congr_left structs baseAddress topAddress bytesInWord primitive memoryAccess
+            locals globals memory (seqAssoc pre first) (.seq pre first) second
+            (ih (sizeOf first) (by rw [← hsize]; decreasing_trivial) first rfl pre
+              locals globals memory)]
+          exact seq_assocEval structs baseAddress topAddress bytesInWord locals globals memory
+            primitive pre first second memoryAccess
+      | ite condition thenBranch elseBranch =>
+          rw [seqAssoc.eq_4, smartSeqEval]
+          apply seq_congr_right
+          intro l g m
+          apply ite_congr
+          · intro ll gg mm
+            rw [ih (sizeOf thenBranch) (by rw [← hsize]; decreasing_trivial) thenBranch rfl
+              .skip ll gg mm]
+            exact skip_seqEval structs baseAddress topAddress bytesInWord ll gg mm primitive
+              thenBranch memoryAccess
+          · intro ll gg mm
+            rw [ih (sizeOf elseBranch) (by rw [← hsize]; decreasing_trivial) elseBranch rfl
+              .skip ll gg mm]
+            exact skip_seqEval structs baseAddress topAddress bytesInWord ll gg mm primitive
+              elseBranch memoryAccess
+      | «while» condition body =>
+          rw [seqAssoc.eq_5, smartSeqEval]
+          apply seq_congr_right
+          intro l g m
+          simp only [SEval, evalPanValueProgWithPrimitive]
+      | call info function arguments =>
+          cases info with
+          | none => rw [seqAssoc.eq_6, smartSeqEval]
+          | some info =>
+              obtain ⟨returns, handlerInfo⟩ := info
+              cases handlerInfo with
+              | none => rw [seqAssoc.eq_7, smartSeqEval]
+              | some handlerInfo =>
+                  obtain ⟨exception, handlerVar, handler⟩ := handlerInfo
+                  rw [seqAssoc.eq_8, smartSeqEval]
+                  apply seq_congr_right
+                  intro l g m
+                  simp only [SEval, evalPanValueProgWithPrimitive]
+      | decCall name shape function arguments body =>
+          rw [seqAssoc.eq_9, smartSeqEval]
+          apply seq_congr_right
+          intro l g m
+          simp only [SEval, evalPanValueProgWithPrimitive]
+      | annot tag text =>
+          rw [show seqAssoc pre (.annot tag text) = pre from by simp [seqAssoc]]
+          exact (seq_annot structs baseAddress topAddress bytesInWord primitive memoryAccess
+            locals globals memory pre tag text).symm
+      | assign kind name value => simp [seqAssoc, smartSeqEval]
+      | primitive name operator arguments => simp [seqAssoc, smartSeqEval]
+      | store address value => simp [seqAssoc, smartSeqEval]
+      | store32 address value => simp [seqAssoc, smartSeqEval]
+      | storeByte address value => simp [seqAssoc, smartSeqEval]
+      | «break» => simp [seqAssoc, smartSeqEval]
+      | «continue» => simp [seqAssoc, smartSeqEval]
+      | extCall function configuration configurationLength array arrayLength =>
+          simp [seqAssoc, smartSeqEval]
+      | «raise» exception value => simp [seqAssoc, smartSeqEval]
+      | «return» value => simp [seqAssoc, smartSeqEval]
+      | shMemLoad size kind name address => simp [seqAssoc, smartSeqEval]
+      | shMemStore size address value => simp [seqAssoc, smartSeqEval]
+      | tick => simp [seqAssoc, smartSeqEval]
+  exact main (sizeOf program) program rfl pre locals globals memory
+
+
 end Flapjack

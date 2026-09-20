@@ -65,4 +65,18 @@ example :
     (fun _ => none) (fun _ => none) (fun _ => none) (fun _ _ => none)
     (.tick : Prog Nat) (.skip : Prog Nat) (.tick : Prog Nat) none
 
+/-- Full `seqAssoc` correctness (CakeML `evaluate_seq_assoc`) on a concrete
+    program, exercising the recursive `while` wrapper path. -/
+example :
+    evalPanValueProgWithPrimitive ([] : StructContext) (0 : Nat) 0 1
+        (fun _ => none) (fun _ => none) (fun _ => none) (fun _ _ => none)
+        (seqAssoc (.tick : Prog Nat) (.while (.const 1) (.tick : Prog Nat)))
+      = evalPanValueProgWithPrimitive ([] : StructContext) (0 : Nat) 0 1
+        (fun _ => none) (fun _ => none) (fun _ => none) (fun _ _ => none)
+        (.seq (.tick : Prog Nat) (.while (.const 1) (.tick : Prog Nat))) :=
+  evalPanValueProgWithPrimitive_seqAssoc ([] : StructContext) (0 : Nat) 0 1
+    (fun _ _ => none) none
+    (.while (.const 1) (.tick : Prog Nat)) (.tick : Prog Nat)
+    (fun _ => none) (fun _ => none) (fun _ => none)
+
 end Flapjack

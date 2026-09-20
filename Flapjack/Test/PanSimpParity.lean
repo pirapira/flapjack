@@ -1,4 +1,5 @@
 import Flapjack.PanSimp
+import Flapjack.PanGlobals
 
 namespace Flapjack.Test.PanSimpParity
 
@@ -204,6 +205,11 @@ theorem pan_simp_compile_prog_map :
     panSimpDecls compileProgDeclsFixture =
       compileProgDeclsFixture.map panSimpDecl := by
   exact panSimpDecls_eq_map compileProgDeclsFixture
+
+theorem pan_simp_compile_prog_size_of_eids :
+    sizeOfEids (panSimpDecls compileProgDeclsFixture) =
+      sizeOfEids compileProgDeclsFixture := by
+  exact sizeOfEids_panSimpDecls compileProgDeclsFixture
 
 def parityGuard : Bool :=
   isSkip (smartSeq (.skip : Prog Nat) .skip) &&

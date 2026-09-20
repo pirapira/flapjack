@@ -13688,7 +13688,7 @@ theorem panValuePcCompileCorrect_of_context_code_and_clocked_normal
     rfl
   · simp [panValuePcResultRel, hclockState]
 
-/-! Lift the Cake struct-pass evaluator relation into the generic Raise
+    /-! Lift the Cake struct-pass evaluator relation into the generic Raise
     package consumed by `pc_compile_correct`.  The source/post structure
     contexts and all flattening, global-lookup, shape, and freshness premises
     remain explicit. -/

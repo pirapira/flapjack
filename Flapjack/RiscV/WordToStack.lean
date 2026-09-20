@@ -1712,23 +1712,8 @@ def wordStackCompileLoadNatNested (config : WordStackConfig) (destination : Nat)
           if (operator == .add || operator == .sub) && offset = 0 then
             wordStackWritePhysicalNat config destination
               (fun register => .inst (.mem .load register baseRegister))
-          else if offsetFits then
-            /- `scratch` carries the displacement only until the `arith`
-               consumes it, so a spilled destination may reuse it for the
-               loaded value afterwards.  A base that *is* `scratch` cannot be
-               clobbered before the `arith` reads it -- that happens whenever
-               the base was itself reloaded from the frame -- so the constant
-               goes in `addressScratch`, which the `arith` then reads and
-               overwrites in one instruction.  The Lab recogniser accepts
-               both shapes and emits the same `memOffset`. -/
-            let offsetRegister :=
-              if baseRegister == config.scratch then config.addressScratch
-              else config.scratch
-            wordStackWritePhysicalNat config destination
-              (fun register =>
-                .seq (.seq (.const offsetRegister offset)
-                    (.arith operator config.addressScratch baseRegister offsetRegister))
-                  (.inst (.mem .load register config.addressScratch)))
+          else if operator == .add && offsetFits then
+            wordStackLoadOffsetInst config .load destination base offset
           else general
       | some (.stack baseSlot) =>
           /- Cake reloads a spilled base into the spare register and then
@@ -1739,13 +1724,9 @@ def wordStackCompileLoadNatNested (config : WordStackConfig) (destination : Nat)
              is spilled there, so the register case above never fires. -/
           if (operator == .add || operator == .sub) && offset = 0 then
             general
-          else if offsetFits then do
+          else if operator == .add && offsetFits then do
             let body ← wordStackWritePhysicalNat config destination
-              (fun register =>
-                .seq (.seq (.const config.addressScratch offset)
-                    (.arith operator config.addressScratch config.scratch
-                      config.addressScratch))
-                  (.inst (.mem .load register config.addressScratch)))
+              (fun register => .inst (.memOffset .load register config.scratch offset))
             pure (.seq (.stackLoad config.scratch (wordStackOffset config baseSlot)) body)
           else general
       | _ => general

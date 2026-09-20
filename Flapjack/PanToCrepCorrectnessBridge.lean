@@ -5224,6 +5224,58 @@ theorem panValuePcCompileCorrectProgram_induction
     termination_by program => sizeOf program
   exact fun program => go program
 
+/-! The first concrete top-level constructor instance for the program
+    induction: compact `Skip` returns the related normal state directly from
+    the initial state relation. -/
+theorem panValuePcCompileCorrect_compact_skip
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α)
+    (sourceFuel targetFuel : Nat)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α)) :
+    PanValuePcCompileCorrect
+      (panValuePcCompactSourceEvaluator primitive sourceHandler sourceFunctions
+        baseAddress topAddress bytesInWord sourceFuel)
+      (crepPcCompactTargetEvaluator functions crepPrimitive ffi sharedMem
+        baseAddress topAddress targetFuel)
+      codeRel excpRel exceptionCode globalsLookup (.skip : Prog α) := by
+  intro context structs sourceInput targetInput exceptionRel sourceExecution
+    targetExecution hsourceStructs htargetStructs hlocalisedCode hlocalised
+    hcode hexcp hstate hnonerror hsource htarget hpostCode hpostExcp
+  cases sourceFuel with
+  | zero =>
+      simp [panValuePcCompactSourceEvaluator,
+        evalPanValueProgWithPrimitiveCallsAndFfi] at hsource
+  | succ sourceFuel =>
+      cases targetFuel with
+      | zero =>
+          simp [crepPcCompactTargetEvaluator, evalCrepFullProgState,
+            compileProg] at htarget
+      | succ targetFuel =>
+          simp [panValuePcCompactSourceEvaluator,
+            evalPanValueProgWithPrimitiveCallsAndFfi] at hsource
+          cases hsource
+          simp [crepPcCompactTargetEvaluator, evalCrepFullProgState,
+            compileProg] at htarget
+          obtain ⟨targetResult, htargetResult, htargetExecution⟩ := htarget
+          cases htargetExecution
+          simp [crepPcResultOfControl] at htargetResult
+          cases htargetResult
+          simpa [panValuePcResultOfControl, panValuePcResultRel,
+            panValueCrepControlRel] using hstate
+
 /-! A kernel-checked composition theorem for the stateful source-to-Crep
 proof.  `hsourceAdapter` and `htargetAdapter` identify the rich evaluator's
 successful result with the existing stateful evaluators.  Ordinary

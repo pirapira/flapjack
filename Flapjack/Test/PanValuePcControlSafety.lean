@@ -925,4 +925,6 @@ evaluator-evidence obligation. -/
 compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @panValueCrepProgramStateControlSafe_call_none
 
+#check @panValueCrepProgramStateControlSafe_call_returns
+
 end Flapjack.Test.PanValuePcControlSafety

@@ -1045,6 +1045,73 @@ theorem panCrepSemanticAgreement_of_pcCompileCorrectWithContextCode_cross_clock_
         (houtputExcpRel sourceClock targetClock))
     (hsourcePrefix := hsourcePrefix) (htargetPrefix := htargetPrefix)
 
+/-! The same pairwise evidence adapter without the prefix packaging.  This is
+    the direct choice-stability boundary: evaluator/code/state relations
+    discharge the cross-clock result relation, while exact cross-clock event
+    equality remains an explicit Cake monotonicity premise. -/
+theorem panCrepSemanticAgreement_of_pcCompileCorrectWithContextCode_cross_clock_from_pairwise_evidence
+    [BEq α] [OfNat α 0] [Add α]
+    (structs : StructContext) (context : CompileContext α) (program : Prog α)
+    (sourceEvaluate : PanValuePcEvaluator α)
+    (targetEvaluate : CrepPcEvaluator α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (panHooks : PanSemanticsHooks α σ)
+    (crepHooks : CrepSemanticsHooks α)
+    (hffiOutcome : ∀ event, panHooks.ffiOutcome event = event.outcome)
+    (hcorrect : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (hevidence : ∀ (clock : Nat), PanValuePcSemanticClockEvidence structs
+      context program clock sourceEvaluate targetEvaluate codeRel excpRel
+      exceptionRel exceptionCode globalsLookup panHooks crepHooks)
+    (hinputCodeRel : ∀ (sourceClock targetClock : Nat),
+      codeRel context (hevidence sourceClock).sourceInput.code
+        (hevidence targetClock).targetInput.code)
+    (hinputExcpRel : ∀ (sourceClock targetClock : Nat),
+      excpRel context (hevidence sourceClock).sourceInput.eshapes
+        (hevidence targetClock).targetInput.eshapes)
+    (hstateRel : ∀ (sourceClock targetClock : Nat),
+      panValueCrepStateRel structs context
+        (hevidence sourceClock).sourceInput.locals
+        (hevidence sourceClock).sourceInput.globals
+        (hevidence sourceClock).sourceInput.memory
+        (hevidence targetClock).targetInput.state)
+    (houtputCodeRel : ∀ (sourceClock targetClock : Nat),
+      codeRel context (hevidence sourceClock).sourceExecution.code
+        (hevidence targetClock).targetExecution.code)
+    (houtputExcpRel : ∀ (sourceClock targetClock : Nat),
+      excpRel context (hevidence sourceClock).sourceExecution.eshapes
+        (hevidence targetClock).targetExecution.eshapes)
+    (heventsCross : ∀ (sourceClock targetClock : Nat),
+      panResultEvents (some ((hevidence sourceClock).outcome,
+        (hevidence sourceClock).returnedClock)) =
+        crepHooks.ioEvents (hevidence targetClock).targetState) :
+    PanCrepSemanticAgreement panHooks crepHooks := by
+  have hplain := panValuePcCompileCorrect_of_withContextCode
+    sourceEvaluate targetEvaluate codeRel excpRel exceptionCode globalsLookup
+    program hcorrect
+  apply panCrepSemanticAgreement_of_pcCompileCorrect_cross_clock
+    (structs := structs) (context := context) (program := program)
+    (sourceEvaluate := sourceEvaluate) (targetEvaluate := targetEvaluate)
+    (codeRel := codeRel) (excpRel := excpRel)
+    (exceptionCode := exceptionCode) (globalsLookup := globalsLookup)
+    (exceptionRel := exceptionRel) (panHooks := panHooks)
+    (crepHooks := crepHooks) (hffiOutcome := hffiOutcome)
+    (hcorrect := hplain) (hevidence := hevidence)
+    (hresultCross := by
+      intro sourceClock targetClock
+      exact PanValuePcSemanticClockEvidence.crossResultRel_withContextCode
+        hcorrect sourceClock targetClock (hevidence sourceClock)
+        (hevidence targetClock) (hinputCodeRel sourceClock targetClock)
+        (hinputExcpRel sourceClock targetClock)
+        (hstateRel sourceClock targetClock)
+        (houtputCodeRel sourceClock targetClock)
+        (houtputExcpRel sourceClock targetClock))
+    (heventsCross := heventsCross)
+
 /-! ## A concrete no-final-FFI instantiation
 
 This instantiation has a normal run at clock `0` and a successful returned run at

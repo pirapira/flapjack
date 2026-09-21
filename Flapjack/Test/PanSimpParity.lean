@@ -196,6 +196,26 @@ theorem clocked_seq_skip_fragment_budget_succeeds :
         PanSimpSeqSkipFragment.skip PanSimpSeqSkipFragment.skip))
     (by simp [panSimpSeqSkipFuel])
 
+/-- The same `Skip`/`Seq` fragment succeeds at the call-aware budget
+    `progCallFuel`, which dominates the fragment budget. -/
+theorem clocked_seq_skip_fragment_progCallFuel_succeeds :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8
+      (progCallFuel 7 (.seq (.skip : Prog Nat) (.seq .skip .skip)))
+      (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1
+      (.seq (.skip : Prog Nat) (.seq .skip .skip)) none none none =
+    some (.control (.normal (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi), 1) := by
+  exact evalPanValueFfiClockProg_seqSkipFragment_some_progCallFuel evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 (fun _ => none)
+    (fun _ => none) (fun _ => none) evaluatorFfi 1
+    (.seq (.skip : Prog Nat) (.seq .skip .skip)) none none none
+    (PanSimpSeqSkipFragment.seq .skip (.seq .skip .skip)
+      PanSimpSeqSkipFragment.skip
+      (PanSimpSeqSkipFragment.seq .skip .skip
+        PanSimpSeqSkipFragment.skip PanSimpSeqSkipFragment.skip))
+
 /-! The fuel-adequacy formulation of the same rewrite: on the `Skip`/`Seq`
     fragment the structural budget alone guarantees success, so the common-fuel
     equality follows from `panSimpSeqSkipFuel` bounds rather than an explicit

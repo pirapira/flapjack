@@ -1117,6 +1117,7 @@ theorem evalPanValueFfiClockProg_seqSkipFragment_some
           simp only [Option.bind_eq_bind, Option.bind_some]
           exact ihsecond f locals globals memory ffi clock hf2
 
+
 /-- `seqAssoc` preserves the `Skip`/`Seq` fragment. -/
 theorem PanSimpSeqSkipFragment_seqAssoc {program : Prog α}
     (hfrag : PanSimpSeqSkipFragment program) :
@@ -1170,6 +1171,99 @@ theorem evalPanValueFfiClockProg_seqAssoc_eq_of_seqSkipFragment
         functions baseAddress topAddress bytesInWord commonFuel locals globals
         memory ffi clock (.seq pre program) ma c mh
         (.seq pre program hpre hprogram) hrightFuel]
+
+
+/-! ## `progSize`-based fuel adequacy on the `Skip`/`Seq` fragment
+
+The max-based structural budget `panSimpSeqSkipFuel` is dominated by the linear
+`progSize`, so the `seqAssoc` fuel-adequacy corollary can be restated at a
+common fuel computed purely from `progSize`, without a separate structural
+budget argument. -/
+
+theorem panSimpSeqSkipFuel_le_progSize {program : Prog α}
+    (hfrag : PanSimpSeqSkipFragment program) :
+    panSimpSeqSkipFuel program ≤ progSize program := by
+  induction hfrag with
+  | skip => simp [panSimpSeqSkipFuel, progSize]
+  | seq first second hfirst hsecond ihfirst ihsecond =>
+      simp only [panSimpSeqSkipFuel, progSize]
+      omega
+
+/-- The `Skip`/`Seq` fragment succeeds at the call-aware budget `progCallFuel`,
+    which dominates both the fragment budget and the plain structural size. -/
+theorem evalPanValueFfiClockProg_seqSkipFragment_some_progCallFuel
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat) (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (program : Prog α)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (hfrag : PanSimpSeqSkipFragment program) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (progCallFuel callBudget program)
+        locals globals memory ffi clock program ma c mh =
+      some (.control (.normal locals globals memory ffi), clock) := by
+  refine evalPanValueFfiClockProg_seqSkipFragment_some context primitive handler
+    structs functions baseAddress topAddress bytesInWord
+    (progCallFuel callBudget program) locals globals memory ffi clock program ma c mh
+    hfrag ?_
+  exact Nat.le_trans (panSimpSeqSkipFuel_le_progSize hfrag)
+    (progSize_le_progCallFuel callBudget program)
+
+theorem one_le_progSize_of_seqSkipFragment {program : Prog α}
+    (hfrag : PanSimpSeqSkipFragment program) : 1 ≤ progSize program := by
+  induction hfrag with
+  | skip => simp [progSize]
+  | seq first second hfirst hsecond ihfirst ihsecond =>
+      simp only [progSize]
+      omega
+
+theorem evalPanValueFfiClockProg_seqAssoc_eq_of_seqSkipFragment_progSize
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (pre program : Prog α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (hpre : PanSimpSeqSkipFragment pre)
+    (hprogram : PanSimpSeqSkipFragment program) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord
+        (progSize pre + 4 * progSize program) locals globals memory ffi
+        clock (seqAssoc pre program) ma c mh =
+      evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord
+        (progSize pre + 4 * progSize program) locals globals memory ffi
+        clock (.seq pre program) ma c mh := by
+  apply evalPanValueFfiClockProg_seqAssoc_eq_of_seqSkipFragment context primitive
+    handler structs functions baseAddress topAddress bytesInWord pre program
+    (progSize pre + 4 * progSize program) locals globals memory ffi clock
+    ma c mh hpre hprogram
+  · have hfrag := PanSimpSeqSkipFragment_seqAssoc hprogram pre hpre
+    exact Nat.le_trans (panSimpSeqSkipFuel_le_progSize hfrag)
+      (progSize_seqAssoc_le pre program)
+  · have h1 := panSimpSeqSkipFuel_le_progSize (.seq pre program hpre hprogram)
+    have hpos := one_le_progSize_of_seqSkipFragment hprogram
+    have h2 : progSize (.seq pre program) = 1 + progSize pre + progSize program := by
+      simp [progSize]
+    rw [h2] at h1
+    omega
 
 
 /-! ## Bridging the additive foundation to the evaluator corollary

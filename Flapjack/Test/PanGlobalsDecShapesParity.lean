@@ -80,4 +80,34 @@ def exceptionEntriesGuard : Bool :=
 #eval exceptionEntriesGuard
 #guard exceptionEntriesGuard
 
+/-! Counterpart of Cake's `exceptions_FILTER_is_function`
+    (`pan_globalsProofScript.sml:2515`), exercised on a mixed fixture. -/
+def exceptionEntriesFilterGuard : Bool :=
+  let declarations : List (Decl Nat) :=
+    [.function
+      { name := "f", inline := false, exported := false, params := [],
+        body := .skip, returnShape := .one },
+     .name "S" [], .exnDecl "E" (.named "T"),
+     .decl .one "h" (.const 9)]
+  (match exceptionEntries (globalDeclsFilter globalDeclIsFunction declarations) with
+   | [] => true
+   | _ => false) &&
+  (match exceptionEntries
+      (globalDeclsFilter (fun declaration => !globalDeclIsFunction declaration)
+        declarations) with
+   | [("E", .named "T")] => true
+   | _ => false) &&
+  (match exceptionEntries (globalDeclsFilter globalDeclIsException declarations) with
+   | [("E", .named "T")] => true
+   | _ => false) &&
+  (match exceptionEntries (globalDeclsFilter globalDeclIsName declarations) with
+   | [] => true
+   | _ => false) &&
+  (match exceptionEntries (globalDeclsFilter globalDeclIsGlobal declarations) with
+   | [] => true
+   | _ => false)
+
+#eval exceptionEntriesFilterGuard
+#guard exceptionEntriesFilterGuard
+
 end Flapjack.Test.PanGlobalsDecShapesParity

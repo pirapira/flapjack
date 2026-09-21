@@ -857,5 +857,11 @@ evaluator-evidence obligation. -/
 /- The arbitrary word-list Raise bridge preserves the same explicit clocked
    evaluator and state/result premises at the top-level boundary. -/
 #check @panValuePcCompileCorrect_compact_with_flat_global_evaluator_evidence_word_list_raise_context_code_and_clocked
+/- The fixed-width and nested-record raise instances also have context-coded
+   state-evidence forms returning the context-coded correctness boundary. -/
+#check @panValuePcCompileCorrect_compact_one_word_raise_of_state_evidence_context_code
+#check @panValuePcCompileCorrect_compact_two_word_raise_of_state_evidence_context_code
+#check @panValuePcCompileCorrect_compact_three_word_raise_of_state_evidence_context_code
+#check @panValuePcCompileCorrect_compact_four_word_raise_of_state_evidence_context_code
 
 end Flapjack.Test.PanValuePcControlSafety

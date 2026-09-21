@@ -229,4 +229,50 @@ def dropWhileMapGuard : Bool :=
 #eval dropWhileMapGuard
 #guard dropWhileMapGuard
 
+/-! Cake `pan_structs` `struct_infos_ok` (`pan_structsProofScript.sml:68`) and
+    its `_drop`/`_append` consequences (`:169`/`:198`). -/
+
+example : structInfosOk ([] : StructContext) := by
+  unfold structInfosOk
+  refine ⟨?_, ?_, ?_, ?_⟩ <;> simp
+
+def simpleContext : StructContext :=
+  [("S", { fields := [("f", Shape.one)], size := 1 })]
+
+example : structInfosOk simpleContext := by
+  unfold structInfosOk
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · intro entry hentry
+    simp [simpleContext] at hentry
+    rcases hentry with rfl
+    decide
+  · simp [simpleContext]
+  · intro i name info hget shape hmem
+    simp only [simpleContext] at hget
+    cases i with
+    | zero =>
+        simp only [List.getElem?_cons_zero, Option.some.injEq] at hget
+        obtain ⟨rfl, rfl⟩ := hget
+        simp only [List.map_cons, List.map_nil, List.mem_cons,
+          List.not_mem_nil, or_false] at hmem
+        rcases hmem with rfl
+        simp [isWfShape]
+    | succ i =>
+        simp only [List.getElem?_cons_succ, List.getElem?_nil] at hget
+        simp at hget
+  · intro entry hentry
+    simp only [simpleContext, List.mem_cons, List.not_mem_nil, or_false] at hentry
+    rcases hentry with rfl
+    simp only [List.map_cons, List.map_nil]
+    simp [shapeSizeWithContext]
+
+theorem structInfosOk_drop_fixture (h : structInfosOk simpleContext) :
+    structInfosOk (simpleContext.drop 1) :=
+  structInfosOk_drop 1 simpleContext h
+
+theorem structInfosOk_append_fixture (h : structInfosOk (simpleContext ++ [])) :
+    structInfosOk ([] : StructContext) :=
+  structInfosOk_append simpleContext [] h
+
+
 end Flapjack.Test.PanStructsAfindiParity

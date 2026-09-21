@@ -586,6 +586,22 @@ def respillBelowThresholdGuard : Bool :=
 #guard respillWorklistGuard
 #guard respillBelowThresholdGuard
 
+/- Cake's `do_prefreeze` (`reg_allocScript.sml:727-747`) filters the
+   coalescing worklists, resets move-related flags, partitions freeze nodes,
+   and immediately runs `do_simplify`.  With no related moves, both initial
+   freeze nodes are simplified in reverse worklist order; the low-degree
+   spill nodes are then reintroduced on the simplify worklist. -/
+def prefreezeTransitionGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      freezeWl := [1, 2]
+      spillWl := [3, 4] }
+  let (changed, out) := cakeDoPrefreeze 4 state
+  changed && out.stack == [2, 1] && out.simpWl == [4, 3] &&
+    out.freezeWl == [] && out.spillWl == []
+
+#guard prefreezeTransitionGuard
+
 /- Cake's `do_simplify` (`reg_allocScript.sml:400-415`) processes the whole
    simplify worklist before pushing it, preserving the worklist order in the
    reverse stack order and then clearing `simpWl`. -/
@@ -987,6 +1003,7 @@ def parityGuard : Bool :=
     && deadInstallLiveGuard && deadFfiLiveGuard && deadStoreConstsLiveGuard
     && cakeBijSetPatriciaGuard
     && coalesceParentCompressionGuard
+    && prefreezeTransitionGuard
     && sortMovesTailSplitGuard
 
 /- The aggregate guard is intentionally disabled while the allocator port is
@@ -1025,7 +1042,8 @@ def runChecks : IO Bool := do
     respillWorklistGuard,
     respillBelowThresholdGuard, simplifyBatchGuard, decDegreeOutOfDimGuard,
     decDegreeOutOfDimNoOpGuard, coalesceWorklistSuccessGuard,
-    freezeWorklistTransitionGuard, coalesceParentCompressionGuard]
+    freezeWorklistTransitionGuard, coalesceParentCompressionGuard,
+    prefreezeTransitionGuard]
   let names := [
     "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
@@ -1069,7 +1087,8 @@ def runChecks : IO Bool := do
     "respill freeze-to-spill transition",
     "respill below-threshold no-op", "do_simplify batch ordering",
     "dec_degree out-of-dimension no-op with outside adjacency",
-    "do_coalesce success transition", "do_freeze transition"]
+    "do_coalesce success transition", "do_freeze transition",
+    "do_prefreeze transition"]
   let mut all := true
   for (name, result) in names.zip results do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"

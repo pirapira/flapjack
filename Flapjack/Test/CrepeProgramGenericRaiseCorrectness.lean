@@ -3204,6 +3204,7 @@ def runChecks : IO Bool := do
   IO.println "PASS expression-state evidence supplies generic Raise fallback"
   IO.println "PASS expression-state evidence composes to clocked Returned"
   IO.println "PASS expression-state evidence composes to clocked Normal"
+  IO.println "PASS expression-state evidence composes to generic clocked control"
   IO.println "PASS nested raised semantic/global lookup lift"
   pure true
 

@@ -256,6 +256,22 @@ def assignStempUnboundColourGuard : Bool :=
   out.nodeTag.get 0 == some (.fixed 3)
 
 #guard assignStempUnboundColourGuard
+/- Cake's `assign_Atemps` (`reg_allocScript.sml:923-938`) consumes the
+   filtered heuristic list before its full in-dimension pass.  With no edges
+   and k=2, every remaining Atemp receives the first color, while the first
+   heuristic assignment is preserved by the second pass. -/
+def assignAtempsHeuristicThenRangeGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 3 with
+      nodeTag := CakeNodeMap.ofNatInfoMap 3
+        [(0, .aTemp), (1, .aTemp), (2, .aTemp)] }
+  let out := cakeAssignAtemps 2 [1] (fun _ _ _ => none) state
+  out.nodeTag.get 0 == some (.fixed 0) &&
+    out.nodeTag.get 1 == some (.fixed 0) &&
+    out.nodeTag.get 2 == some (.fixed 0)
+
+#guard assignAtempsHeuristicThenRangeGuard
+
 
 
 
@@ -1020,7 +1036,7 @@ def parityGuard : Bool :=
     && sortMovesTailSplitGuard && freezeWorklistTransitionGuard &&
       doSpillEqualDegreeGuard && coalesceSelfMoveRejectedGuard &&
       doStepSimplifyPriorityGuard && assignAtempFixedNeighbourGuard &&
-      assignStempUnboundColourGuard
+      assignStempUnboundColourGuard && assignAtempsHeuristicThenRangeGuard
 
 /- The aggregate guard is intentionally disabled while the allocator port is
    being aligned with CakeML.  Individual oracle cases remain available to
@@ -1058,7 +1074,8 @@ def runChecks : IO Bool := do
     coalesceWorklistSuccessGuard, coalesceParentCompressionGuard,
     prefreezeTransitionGuard, freezeWorklistTransitionGuard,
     doSpillEqualDegreeGuard, doStepSimplifyPriorityGuard,
-    assignAtempFixedNeighbourGuard, assignStempUnboundColourGuard]
+    assignAtempFixedNeighbourGuard, assignStempUnboundColourGuard,
+    assignAtempsHeuristicThenRangeGuard]
   let names := [
     "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
@@ -1102,7 +1119,7 @@ def runChecks : IO Bool := do
     "do_coalesce success transition", "do_prefreeze transition",
     "do_freeze transition", "do_spill equal-degree transition",
     "do_step simplify priority", "assign_Atemp fixed-neighbour colour",
-    "assign_Stemp unbound colour"]
+    "assign_Stemp unbound colour", "assign_Atemps heuristic then range"]
   let mut all := true
   for (name, result) in names.zip results do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"

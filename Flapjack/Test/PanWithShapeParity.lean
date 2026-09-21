@@ -405,6 +405,21 @@ def map3Guard : Bool :=
 #eval map3Guard
 #guard map3Guard
 
+/-! Cake's `map_map2_fst_lemma`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:118`). -/
+
+theorem zipWith_pair_fst_fixture :
+    (List.zipWith (fun (x y : Nat) => (x, y)) [1, 2, 3] [4, 5]).map Prod.fst =
+      ([1, 2, 3] : List Nat).take 2 :=
+  zipWith_pair_fst [1, 2, 3] [4, 5]
+
+def zipWithPairFstGuard : Bool :=
+  (List.zipWith (fun (x y : Nat) => (x, y)) [1, 2, 3] [4, 5]).map Prod.fst ==
+    ([1, 2] : List Nat)
+
+#eval zipWithPairFstGuard
+#guard zipWithPairFstGuard
+
 def checkDisjoint (name : String) (actual : Bool) : IO Bool := do
   if actual then
     IO.println s!"PASS {name}"
@@ -442,9 +457,11 @@ def runChecks : IO Bool := do
   let rangeFoldrMaxOk ←
     checkDisjoint "pan MAX_LIST_i_genlist" rangeFoldrMaxGuard
   let map3Ok ← checkDisjoint "pan MAP3_MAP2" map3Guard
+  let zipWithPairFstOk ←
+    checkDisjoint "pan map_map2_fst_lemma" zipWithPairFstGuard
   pure (results.all id && lengthOk && allDistinctOk && membershipOk && disjointOk &&
     shapeDisjointOk && nestedOk && distinctOk && distinctListsOk && zipWithShapeOk &&
     listIndexOk && foldrMaxOk && genlistOk && quadProjectionOk && quadCompOk &&
-    rangeFoldrMaxOk && map3Ok)
+    rangeFoldrMaxOk && map3Ok && zipWithPairFstOk)
 
 end Flapjack.Test.PanWithShapeParity

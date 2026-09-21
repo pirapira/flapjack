@@ -358,6 +358,17 @@ def globalCompileProg [BEq String] [Add α] [Mul α]
   | program => program
 termination_by program => sizeOf program
 
+/-- Cake's `exp_ids_compile_globals`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:135`): compiling a
+    program against the global context does not change its exception
+    identifiers. -/
+theorem globalCompileProg_expIds [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (program : Prog α) :
+    expIds (globalCompileProg context program) = expIds program := by
+  apply globalCompileProg.induct context
+    (motive := fun program => expIds (globalCompileProg context program) = expIds program)
+  all_goals intro <;> simp_all [globalCompileProg, expIds]
+
 /-! The declaration-order and function-permutation helpers used by
     CakeML's `pan_to_target`.  Keeping these transformations separate from
     global allocation makes their name-preservation contracts reusable by the
@@ -739,6 +750,27 @@ theorem globalDeclShapes_append (declarations rest : List (Decl α)) :
   | nil => rw [List.nil_append, globalDeclShapes_nil, List.nil_append]
   | cons declaration declarations ih =>
       cases declaration <;> simp [globalDeclShapes_cons, ih]
+
+/-- Cake's `dec_shapes_compile_prog`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:241`): `pan_simp` only
+    rewrites function bodies, so the collected declaration shapes are
+    unchanged. -/
+theorem globalDeclShapes_panSimpDecls (declarations : List (Decl α)) :
+    globalDeclShapes (panSimpDecls declarations) = globalDeclShapes declarations := by
+  rw [panSimpDecls_eq_map]
+  induction declarations with
+  | nil => simp [globalDeclShapes_nil]
+  | cons declaration declarations ih =>
+      cases declaration <;> simp [panSimpDecl, globalDeclShapes_cons, ih]
+
+/-- Cake's `function_names_compile_prog`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:248`): `pan_simp` only
+    rewrites function bodies, so the function-name table is unchanged. -/
+theorem functions_names_panSimpDecls (declarations : List (Decl α)) :
+    (functions (panSimpDecls declarations)).map Prod.fst =
+      (functions declarations).map Prod.fst := by
+  rw [functions_panSimpDecls, List.map_map]
+  rfl
 
 theorem globalDeclShapes_of_functions (declarations : List (Decl α))
     (hfunctions : ∀ declaration ∈ declarations, globalDeclIsFunction declaration = true) :
@@ -1171,6 +1203,28 @@ def globalCompileInitializers [BEq String] [Add α] [Mul α]
           (globalCompileExp context value)
       initializer :: globalCompileInitializers nextContext declarations
   | _ :: declarations => globalCompileInitializers context declarations
+
+/-- Cake's `compile_decs_no_exp_ids_main`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:174`): every compiled
+    global initializer mentions no exception identifiers, because each one is a
+    plain store. -/
+theorem globalCompileInitializers_expIds [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations : List (Decl α)) :
+    ∀ initializer ∈ globalCompileInitializers context declarations,
+      expIds initializer = [] := by
+  induction declarations generalizing context with
+  | nil => simp [globalCompileInitializers]
+  | cons declaration declarations ih =>
+      cases declaration with
+      | decl shape name value =>
+          simp only [globalCompileInitializers, List.mem_cons]
+          intro initializer hmem
+          rcases hmem with rfl | hmem
+          · simp [expIds]
+          · exact ih _ initializer hmem
+      | function function => simpa [globalCompileInitializers] using ih context
+      | exnDecl exception shape => simpa [globalCompileInitializers] using ih context
+      | name struct fields => simpa [globalCompileInitializers] using ih context
 
 /-! Counterpart of the context-threading append structure of Cake's
     `compile_decls_append` (`pan_globalsProofScript.sml:1997`): initializers

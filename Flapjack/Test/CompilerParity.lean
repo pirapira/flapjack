@@ -31,6 +31,7 @@ import Flapjack.Test.PanGlobalsFpermParity
 import Flapjack.Test.PanGlobalsFpermDecsParity
 import Flapjack.Test.PanGlobalsNewMainNameParity
 import Flapjack.Test.PanGlobalsDecShapesParity
+import Flapjack.Test.PanGlobalsExpIdsParity
 import Flapjack.Test.PanGlobalsCompileTopForStartParity
 import Flapjack.Test.CrepeDestConstParity
 import Flapjack.Test.CrepeDest2ExpParity
@@ -136,6 +137,7 @@ import Flapjack.Test.CompileProgParity
 import Flapjack.Test.PanSimpParity
 import Flapjack.Test.PanProgramSimpParity
 import Flapjack.Test.PanValueWfParity
+import Flapjack.Test.CrepeCompileExpVariablesParity
 import Flapjack.Test.PanPrimopWfParity
 import Flapjack.Test.PanGlobalsSemanticsParity
 import Flapjack.Test.PanSimpOthersParity

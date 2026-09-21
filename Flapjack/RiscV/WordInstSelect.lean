@@ -403,6 +403,37 @@ def wordInstSelectShareOffsetAllowed [WordInstSelectImmediate α]
     (_operator : WordMemOp) (offset : α) : Bool :=
   WordInstSelectImmediate.validSharedMemoryOffset _operator offset
 
+/-! Cake-faithful standalone Store boundary.
+
+`wordInstSelectProgram` retains the source-shaped positive-offset carrier for
+the currently parity-green Word-to-Stack path.  This separate boundary mirrors
+the `Store` clause of Cake's `inst_select_def`: a valid address offset is kept
+in `Mem Store ... (Addr temp offset)`, while every other address is selected
+into `temp` and emitted with a zero-offset memory instruction.  It is intended
+for checked theorem/API clients until the downstream carrier integration can
+be migrated without changing accepted artifacts. -/
+def wordInstSelectStoreCake [Sub α] [Add α] [AndOp α] [OrOp α]
+    [HXor α α α] [DecidableEq α] [OfNat α 0] [OfNat α 1]
+    [WordInstSelectImmediate α]
+    (temp : Nat) (address : WordExp α) (value : Nat) : WordProg α :=
+  let address := wordInstNormalizeExp address
+  match address with
+  | .op .add [base, .const offset] =>
+      if wordInstSelectShareOffsetAllowed .store offset then
+        let (prelude, _) := wordInstSelectAtom temp base
+        wordDeadSelectSeq prelude
+          (.inst (.memOffset .store value temp offset))
+      else
+        let (prelude, _) := wordInstSelectAtom temp base
+        let materialized :=
+          .seq prelude
+            (.seq (.inst (.const (temp + 1) offset))
+              (.inst (.arith (.binOp .add temp temp (.reg (temp + 1))))))
+        .seq materialized (.inst (.mem .store value temp))
+  | _ =>
+      let (prelude, _) := wordInstSelectAtom temp address
+      wordDeadSelectSeq prelude (.inst (.mem .store value temp))
+
 def wordInstSelectProgram [Sub α] [Add α] [AndOp α] [OrOp α] [HXor α α α]
     [DecidableEq α] [OfNat α 0] [OfNat α 1]
     [WordInstSelectImmediate α]

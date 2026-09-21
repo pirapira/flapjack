@@ -234,6 +234,39 @@ def cakeStoreOffsetOracle : Bool :=
        (.inst (.mem .store 10 7)) => true
    | _ => false)
 
+/- The checked standalone Cake Store boundary agrees with the three exact
+   `inst_select_def` shapes above.  The production source-shaped selector is
+   intentionally not rewired here; that carrier migration is a separate
+   downstream Word-to-Stack/allocator task. -/
+def cakeStoreSelectorPositiveShape : Bool :=
+  match wordInstSelectStoreCake (α := Nat) 7
+      (.op .add [.var 13, .const 8]) 10 with
+  | .seq (.move 0 [(7, 13)])
+      (.inst (.memOffset .store 10 7 8)) => true
+  | _ => false
+
+def cakeStoreSelectorNegativeShape : Bool :=
+  match wordInstSelectStoreCake (α := Nat) 7
+      (.op .add [.var 13, .const (2 ^ 64 - 8)]) 10 with
+  | .seq (.move 0 [(7, 13)])
+      (.inst (.memOffset .store 10 7 offset)) =>
+      offset == 2 ^ 64 - 8
+  | _ => false
+
+def cakeStoreSelectorOutOfRangeShape : Bool :=
+  match wordInstSelectStoreCake (α := Nat) 7
+      (.op .add [.var 13, .const 2048]) 10 with
+  | .seq
+      (.seq (.move 0 [(7, 13)])
+        (.seq (.inst (.const 8 2048))
+          (.inst (.arith (.binOp .add 7 7 (.reg 8))))))
+      (.inst (.mem .store 10 7)) => true
+  | _ => false
+
+#guard cakeStoreSelectorPositiveShape
+#guard cakeStoreSelectorNegativeShape
+#guard cakeStoreSelectorOutOfRangeShape
+
 #guard cakeLoadConstShape
 #guard cakeLoadVarShape
 #guard cakeLoadVarOffsetShape

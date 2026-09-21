@@ -809,6 +809,43 @@ example
     (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi))
     1 hcall₁ hcall₂
 
+/-- A destination call followed by a normal continuation composes at the
+sequence's call-aware budget, keeping the assigned state and clock. -/
+example
+    (hfunctions : PanValueFfiClockFunctionsReturnSucceed evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [("f", [], (.skip : Prog Nat))] 0 0 8
+      none none none)
+    (hassign : ∀ (finalGlobals : VarName → Option (PanValue Nat)),
+      ∃ (assignedLocals assignedGlobals : VarName → Option (PanValue Nat)),
+        assignPanValueCallResult (fun _ => none) finalGlobals (some (VarKind.local, "x"))
+          [.word 5] (structs := []) = some (assignedLocals, assignedGlobals))
+    (hargs : evalPanValueExps [] (fun _ => none) (fun _ => none) (fun _ => none) 0 0 8
+      ([] : List (Exp Nat)) (memoryAccess := none) = some ([] : List (PanValue Nat)))
+    (hlookup : lookupPanFunction "f" [("f", [], (.skip : Prog Nat))] =
+      some ([], (.skip : Prog Nat)))
+    (hbind : bindPanValueParameters [] ([] : List (PanValue Nat)) =
+      some (fun _ => none))
+    (hwithin : panValueValuesWithinLimit [] ([] : List (PanValue Nat)) = true) :
+    ∃ (assignedLocals assignedGlobals : VarName → Option (PanValue Nat))
+      (finalMemory : Nat → Option (PanValue Nat)) (finalFfi : FfiState Unit)
+      (finalClock : Nat),
+      evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+        [] [("f", [], (.skip : Prog Nat))] 0 0 8
+        (progCallFuel 5
+          (.seq (.call (some ((VarKind.local, "x"), none)) "f"
+            ([] : List (Exp Nat))) (.skip : Prog Nat)))
+        (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+        (.seq (.call (some ((VarKind.local, "x"), none)) "f" []) (.skip : Prog Nat))
+        none none none =
+      some (.control (.normal assignedLocals assignedGlobals finalMemory finalFfi),
+        finalClock) :=
+  evalPanValueFfiClockProg_seq_call_destination_normal_progCallFuel evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [("f", [], (.skip : Prog Nat))] 0 0 8 5
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1 "f" []
+    (some (VarKind.local, "x")) [] (.skip : Prog Nat) [] (fun _ => none)
+    (.skip : Prog Nat) none hfunctions (by simp [progSize]) hargs hlookup hbind
+    (by decide) hwithin hassign PanValueFfiClockNormalProg.skip
+
 /-- A conditional whose branches lie in the normal fragment stays normal with the
 state and clock unchanged. -/
 example :

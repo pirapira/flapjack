@@ -388,4 +388,20 @@ example : True := by
 #eval filterDeclsGuard
 #guard filterDeclsGuard
 
+/-! Counterpart of Cake's `FILTER_decs_fperm_decs`
+    (`pan_globalsProofScript.sml:2832`). -/
+def renameFilterNotFunctionGuard : Bool :=
+  (globalDeclsFilter (fun declaration => !globalDeclIsFunction declaration)
+      (globalRenameDecls "main" "entry" filterDeclsFixture)).length ==
+    (globalDeclsFilter (fun declaration => !globalDeclIsFunction declaration)
+      filterDeclsFixture).length
+
+example : True := by
+  have h :=
+    globalRenameDecls_filter_not_function "main" "entry" filterDeclsFixture
+  trivial
+
+#eval renameFilterNotFunctionGuard
+#guard renameFilterNotFunctionGuard
+
 end Flapjack.Test.PanGlobalsDecShapesParity

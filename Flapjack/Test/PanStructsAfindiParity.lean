@@ -314,4 +314,13 @@ def afindiLookupGuard : Bool :=
 #eval afindiLookupGuard
 #guard afindiLookupGuard
 
+/-! Cake's `alookup_map_structs_ok`
+    (`cakeml/pancake/proofs/pan_structsProofScript.sml:243`). -/
+
+example (info : StructInfo)
+    (hlookup : lookupInfo "S" simpleContext = some info)
+    (hok : structInfosOk simpleContext) :
+    (info.fields.map Prod.fst).Nodup :=
+  lookupInfo_fields_nodup "S" simpleContext info hlookup hok
+
 end Flapjack.Test.PanStructsAfindiParity

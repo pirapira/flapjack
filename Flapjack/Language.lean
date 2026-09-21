@@ -566,6 +566,33 @@ theorem listDisjoint_withShape_getElem (shapes : List Shape) (values : List α)
     exact listDisjoint_withShape_getElem_lt shapes values n' n hdistinct hn' hn
       hlt hvalues value hright hleft
 
+/-! Counterpart of Cake's `all_distinct_with_shape_distinct`
+    (`cakeml/pancake/semantics/panPropsScript.sml:357`): two distinct members of
+    the flat-value split are disjoint.  Cake's extra hypotheses `x <> []` and
+    `y <> []` are implied here, because membership of a list in
+    `withShape shapes values` already forces the component to be nonempty. -/
+theorem listDisjoint_of_withShape_mem (shapes : List Shape) (values : List α)
+    (x y : List α) (hdistinct : values.Nodup)
+    (hvalues : values.length = Shape.shapeSize (.comb shapes))
+    (hx : x ∈ withShape shapes values) (hy : y ∈ withShape shapes values)
+    (hne : x ≠ y) :
+    ListDisjoint x y := by
+  obtain ⟨n, hn, hnx⟩ := List.getElem_of_mem hx
+  obtain ⟨n', hn', hn'y⟩ := List.getElem_of_mem hy
+  have hnlen : n < shapes.length := by rw [withShape_length] at hn; exact hn
+  have hn'len : n' < shapes.length := by rw [withShape_length] at hn'; exact hn'
+  by_cases heq : n = n'
+  · subst n'
+    exact absurd (hnx.symm.trans hn'y) hne
+  · rcases Nat.lt_or_gt_of_ne heq with hlt | hlt
+    · rw [← hnx, ← hn'y]
+      exact listDisjoint_withShape_getElem shapes values n n' hdistinct hnlen hn'len
+        heq hvalues
+    · rw [← hnx, ← hn'y]
+      intro value hleft hright
+      exact listDisjoint_withShape_getElem shapes values n' n hdistinct hn'len hnlen
+        (Ne.symm heq) hvalues value hright hleft
+
 theorem shapeSize_drop_head_le (shapes : List Shape) (n : Nat)
     (hn : n < shapes.length) :
     Shape.shapeSize (shapes[n]'hn) ≤

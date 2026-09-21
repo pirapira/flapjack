@@ -725,6 +725,47 @@ theorem evalPanValueFfiClockProg_seq_terminal_ioEvents_prefix
       memoryHandler hfirst hterminal
   · exact hprefix
 
+/-! Call-aware terminal `Seq` propagation uses the shared `progCallFuel`
+    budget and still does not evaluate the second component. -/
+theorem evalPanValueFfiClockProg_seq_terminal_ioEvents_prefix_progCallFuel
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (callBudget : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (first second : Prog α)
+    (outcome : PanValueFfiClockOutcome α σ) (nextClock : Nat)
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (contracts : Option PanValueCallContracts)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ))
+    (hfirst : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord
+      (progCallFuel callBudget first + progCallFuel callBudget second)
+      locals globals memory ffi clock first (memoryAccess := memoryAccess)
+      (contracts := contracts) (memoryHandler := memoryHandler) =
+      some (outcome, nextClock))
+    (hterminal : ∀ l g m f, outcome ≠ .control (.normal l g m f))
+    (hprefix : ffi.ioEvents <+: (panResultFfi (outcome, nextClock)).ioEvents) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord
+      (progCallFuel callBudget (.seq first second)) locals globals memory ffi clock
+      (.seq first second) (memoryAccess := memoryAccess)
+      (contracts := contracts) (memoryHandler := memoryHandler) =
+      some (outcome, nextClock) ∧
+      ffi.ioEvents <+: (panResultFfi (outcome, nextClock)).ioEvents := by
+  constructor
+  · exact evalPanValueFfiClockProg_seq_terminal_some_progCallFuel context
+      primitive handler structs functions baseAddress topAddress bytesInWord
+      callBudget locals globals memory ffi clock first second outcome nextClock
+      memoryAccess contracts memoryHandler hfirst hterminal
+  · exact hprefix
+
 theorem evalPanValueFfiProgSteps_extCall_memoryHandler_ioEvents_prefix
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

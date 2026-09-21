@@ -928,4 +928,9 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 
 #check @panValueCrepProgramStateControlSafe_call_returns
 
+/-! A handler-free call now has one paired induction branch: arbitrary
+    state/evaluator evidence supplies simulation, while the call safety proof
+    supplies the final label-zero obligation. -/
+#check @panValueCrepProgramStateCorrect_and_controlSafe_call_none_of_relation
+
 end Flapjack.Test.PanValuePcControlSafety

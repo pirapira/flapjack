@@ -66,6 +66,27 @@ def crepGetEidsFromDecls (fromNat : Nat → α) (declarations : List (Decl α)) 
     InfoMap α :=
   pipelineExceptionCodes fromNat 0 declarations
 
+/-! The exception-code table has exactly one entry for each declared
+    exception.  This is the Lean counterpart of the size premise used by
+    Cake's `get_eids_imp_excp_rel`: the table's finite-domain cardinality is
+    fixed by the source declaration list, independently of the word map. -/
+theorem pipelineExceptionCodes_length
+    (fromNat : Nat → α) (index : Nat) (declarations : List (Decl α)) :
+    (pipelineExceptionCodes fromNat index declarations).length =
+      sizeOfEids declarations := by
+  induction declarations generalizing index with
+  | nil =>
+      simp [pipelineExceptionCodes, sizeOfEids]
+  | cons declaration declarations ih =>
+      cases declaration <;>
+        simp [pipelineExceptionCodes, sizeOfEids, isExnDecl, ih] <;> omega
+
+theorem crepGetEidsFromDecls_length
+    (fromNat : Nat → α) (declarations : List (Decl α)) :
+    (crepGetEidsFromDecls fromNat declarations).length =
+      sizeOfEids declarations := by
+  exact pipelineExceptionCodes_length fromNat 0 declarations
+
 /-! Cake's `get_eids_imp_excp_rel` begins by proving that every declared
     exception has a target code.  This constructive lookup half is useful at
     the generic Raise boundary: the exception-code premise is obtained from

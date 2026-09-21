@@ -39,6 +39,29 @@ theorem distinctFunctionDeclarations_compiled_params_nodup :
       function.params.Nodup := by
   exact compileToCrep_params_nodup _ _
 
+/-! The indexed source/compiled pairing used by Cake's
+    `el_compile_prog_el_prog_eq`: the first compiled function is sourced from
+    the first function declaration, even when exception/global declarations
+    precede it. -/
+theorem distinctFunctionDeclarations_first_compiled_origin :
+    ∃ declaration function,
+      (functionDeclarations distinctFunctionDeclarations)[0]? = some declaration ∧
+      (compileToCrep distinctCompileContext distinctFunctionDeclarations)[0]? =
+        some function ∧
+      function = compileFunDeclSource
+        { distinctCompileContext with
+          functions := functionInfos distinctFunctionDeclarations } declaration := by
+  have hcompiled :
+      ∃ function,
+        (compileToCrep distinctCompileContext distinctFunctionDeclarations)[0]? =
+          some function := by
+    simp [compileToCrep, compileFunctionsSource, distinctFunctionDeclarations]
+  obtain ⟨function, hcompiled⟩ := hcompiled
+  obtain ⟨declaration, hsource, horigin⟩ :=
+    compileToCrep_getElem?_origin distinctCompileContext
+      distinctFunctionDeclarations hcompiled
+  exact ⟨declaration, function, hsource, hcompiled, horigin⟩
+
 #guard
     (functionDeclarationNames duplicateFunctionDeclarations) = ["same", "same"]
 
@@ -49,5 +72,8 @@ theorem distinctFunctionDeclarations_compiled_params_nodup :
 #guard
     (compileToCrep distinctCompileContext distinctFunctionDeclarations).map
       CompiledFunction.params = [[0, 1, 2], []]
+
+#guard
+    (functionDeclarations distinctFunctionDeclarations).length = 2
 
 end Flapjack

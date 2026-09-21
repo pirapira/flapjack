@@ -35,4 +35,13 @@ example : ∃ code, lookupInfo "E"
   exact crepGetEidsFromDecls_lookup_of_exception id 0
     [.exnDecl "E" .one, .decl .one "x" (.const 0)] "E" .one (by simp [exceptionEntries])
 
+/-! The declaration-side table cardinality is the source `size_of_eids`
+    cardinality used by Cake's exception-relation proof. -/
+example :
+    (crepGetEidsFromDecls id
+      [.exnDecl "E" .one, .decl .one "x" (.const 0), .exnDecl "F" .one]).length =
+      sizeOfEids
+        [.exnDecl "E" .one, .decl .one "x" (.const 0), .exnDecl "F" .one] := by
+  exact crepGetEidsFromDecls_length id _
+
 end Flapjack.Test.PanGetEidsParity

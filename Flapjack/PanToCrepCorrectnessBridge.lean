@@ -1,5 +1,6 @@
 import Flapjack.PanToCrepCorrectnessBoundary
 import Flapjack.CrepeProgramGenericRaiseCorrectness
+import Flapjack.CrepeProgramCallCorrectness
 import Flapjack.CrepeProgramReturnGeneralCorrectness
 import Flapjack.CrepeProgramRaiseSourceWordRelation
 import Flapjack.CrepeSourceWordRecordRaiseCorrectness
@@ -24914,6 +24915,29 @@ theorem panValueCrepDecCallControlSafe_of_body_safe
   exact panValuePcControlLabelSafe_restore_declaration
     (sourceLocals name) state name (allocatedNames context shape)
     sourceResult crepResult hsafe
+
+/-! Pair the arbitrary state simulation of a handler-free call with the
+    independent label-zero safety fact.  The call relation remains supplied
+    by the caller, so this branch does not infer callee state or evaluator
+    results from the constructor alone. -/
+theorem panValueCrepProgramStateCorrect_and_controlSafe_call_none_of_relation
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (name : FunName) (args : List (Exp α))
+    (compiledInfo : CompileContext α →
+      Option (List Nat × Option (α × CrepProg α)))
+    (hcompile : ∀ (context : CompileContext α),
+      compileProg context (.call none name args) =
+        .call (compiledInfo context) name (compileArgs context args))
+    (hcall : PanValueCrepCallStateCorrect none compiledInfo name args) :
+    PanValueCrepProgramStateCorrect (.call none name args) ∧
+      PanValueCrepProgramStateControlSafe (.call none name args) := by
+  constructor
+  · exact panValueCrepProgramStateCorrect_call_of_relation
+      none compiledInfo name args hcompile hcall
+  · exact panValueCrepProgramStateControlSafe_call_none name args
 
 /-! A clocked arbitrary Raise can provide the HOL hraise package directly.
     This adapter preserves that package and exception lookup while reusing the

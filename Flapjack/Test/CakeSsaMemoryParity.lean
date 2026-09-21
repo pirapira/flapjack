@@ -34,6 +34,16 @@ def loadInstGuard : Bool :=
   | .seq (.move 1 []) (.inst (.mem .load 5 0)) => true
   | _ => false
 
+/- Cake's entry SSA namespace is observable when a memory instruction reads an
+   ABI parameter: parameter 0 is first renamed to 5, then the load destination
+   receives the next fresh name 9.  This is the nonempty-map counterpart to
+   the zero-input load row above. -/
+def mappedLoadInstGuard : Bool :=
+  match (wordFullSsaCcTrans 1
+      (.inst (.mem .load 0 0) : WordProg Nat)).2.2 with
+  | .seq (.move 1 [(5, 0)]) (.inst (.mem .load 9 5)) => true
+  | _ => false
+
 def storeInstGuard : Bool :=
   match (wordFullSsaCcTrans 0
       (.inst (.mem .store 1 2) : WordProg Nat)).2.2 with
@@ -163,6 +173,7 @@ def parityGuard : Bool :=
 #guard storeGuard
 #guard setGuard
 #guard loadInstGuard
+#guard mappedLoadInstGuard
 #guard storeInstGuard
 #guard load32InstGuard
 #guard store32InstGuard
@@ -191,6 +202,8 @@ def runChecks : IO Bool := do
       ("ssa_cc_trans Store renames Cake address and value", storeGuard),
       ("ssa_cc_trans Set renames Cake expression only", setGuard),
       ("ssa_cc_trans Mem Load freshens Cake destination", loadInstGuard),
+      ("ssa_cc_trans Mem Load reads the Cake entry SSA namespace",
+        mappedLoadInstGuard),
       ("ssa_cc_trans Mem Store renames Cake address and value", storeInstGuard),
       ("ssa_cc_trans Mem Load32 freshens Cake destination", load32InstGuard),
       ("ssa_cc_trans Mem Store32 renames Cake address and value", store32InstGuard),

@@ -1,4 +1,5 @@
 import Flapjack.PanToCrep
+import Flapjack.CrepeCompileExpVariables
 
 /-!
 # Original-domain parity for `pan_to_crep$comp_field`
@@ -33,6 +34,13 @@ def parityGuard : Bool := firstOK && secondOK && fallbackOK
 
 #eval parityGuard
 #guard parityGuard
+
+example :
+    ∀ expression ∈
+      (compileField 2 [.one] [.const 4]).1,
+      expression ∈ ([.const 4] : List (CrepExp Nat)) ∨ expression = .const 0 := by
+  intro expression hmem
+  exact compileField_mem_or_zero 2 [.one] [.const 4] expression hmem
 
 def runChecks : IO Bool := do
   if parityGuard then

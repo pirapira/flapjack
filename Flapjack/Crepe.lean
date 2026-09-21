@@ -130,6 +130,19 @@ def distinctLists (left right : List Nat) : Bool :=
     crepExpVars (.const value) = [] := by
   simp [crepExpVars]
 
+theorem crepExpVars_var {α : Type} (name : Nat) :
+    crepExpVars (α := α) (.var name) = [name] := by
+  simp [crepExpVars]
+
+/-- Faithful port of Cake `crepProps$map_var_cexp_eq_var`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:227`): mapping `Var` over a
+    variable list and flattening the variables recovers the list. -/
+theorem map_var_crepExpVars_eq {α : Type} (names : List Nat) :
+    (names.map (CrepExp.var (α := α))).flatMap crepExpVars = names := by
+  induction names with
+  | nil => rfl
+  | cons name names ih => simp [crepExpVars_var, ih]
+
 def loadShape [BEq α] [OfNat α 0] [Add α]
     (address stride : α) (count : Nat) (value : CrepExp α) : List (CrepExp α) :=
   match count with

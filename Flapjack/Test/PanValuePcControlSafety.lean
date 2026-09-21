@@ -856,6 +856,7 @@ evaluator-evidence obligation. -/
 #check @panValuePcCompileCorrect_compact_with_raw_word_lists_context_code_of_state_evidence
 #check @panValuePcCompileCorrect_compact_ite_source_word_of_state_evidence_context_code
 #check @panValuePcCompileCorrect_compact_while_source_word_of_state_evidence_context_code
+#check @panValuePcCompileCorrect_compact_while_source_word_of_state_evidence_context_code_and_clocked
 
 /- The arbitrary word-list Raise bridge preserves the same explicit clocked
    evaluator and state/result premises at the top-level boundary. -/
@@ -917,5 +918,10 @@ evaluator-evidence obligation. -/
     state evidence in plain and context-coded form. -/
 #check @panValuePcCompileCorrect_compact_return_of_state_evidence
 #check @panValuePcCompileCorrect_compact_return_with_context_code_of_state_evidence
+
+/-! The plain (non-context-coded) conditional and loop wrappers accept the
+    explicit state evidence instead of the opaque evaluator callback. -/
+#check @panValuePcCompileCorrect_compact_ite_source_word_of_state_evidence
+#check @panValuePcCompileCorrect_compact_while_source_word_of_state_evidence
 
 end Flapjack.Test.PanValuePcControlSafety

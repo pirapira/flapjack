@@ -55,6 +55,18 @@ def ifMergeAllocGuard : Bool :=
       (.move 1 [(9, 9), (7, 9)] : WordProg Nat)
       (.move 1 [(21, 21), (7, 21)] : WordProg Nat)) = [9, 21]
 
+/- The immediate branch equation removes only its condition from the
+   temporary set (`word_allocScript.sml:1746-1752`).  Start with a live
+   temporary so this checks the removal itself, rather than only the
+   whole-program empty-set wrapper.  The canonical HOL probe returns
+   `(LN,LN)` for this case. -/
+def ifImmediateRemovesTempGuard : Bool :=
+  cakeGetStackOnlyAux ([9], [])
+      (.ite .notEqual 9 (.imm 0) (.skip : WordProg Nat)
+        (.skip : WordProg Nat)) = ([], [])
+
+#guard ifImmediateRemovesTempGuard
+
 /-- Calls analyse and merge the return continuation and exception
     handler; 19 is a stack variable so only the continuation
     contributes (`{9}`). -/
@@ -890,7 +902,8 @@ def maxVarControlLabelGuard : Bool :=
 
 def parityGuard : Bool :=
   moveChainGuard && moveFromRegGuard && seqMovesGuard && ifMergeGuard &&
-    ifMergeAllocGuard && callMergeGuard && callTailGuard && mustTerminateGuard &&
+    ifMergeAllocGuard && ifImmediateRemovesTempGuard && callMergeGuard &&
+    callTailGuard && mustTerminateGuard &&
     loopBodyGuard && assignLeafGuard &&
     bijDeltaBasicGuard && bijDeltaDedupGuard && bijSeqOrderGuard &&
     bijBranchOrderGuard && bijBranchLiveGuard && bijSetGuard &&
@@ -925,7 +938,8 @@ def parityGuard : Bool :=
 def runChecks : IO Bool := do
   let results := [
     moveChainGuard, moveFromRegGuard, seqMovesGuard, ifMergeGuard,
-    ifMergeAllocGuard, callMergeGuard, callTailGuard, mustTerminateGuard,
+    ifMergeAllocGuard, ifImmediateRemovesTempGuard, callMergeGuard,
+    callTailGuard, mustTerminateGuard,
     loopBodyGuard, assignLeafGuard,
     bijDeltaBasicGuard, bijDeltaDedupGuard, bijSeqOrderGuard,
     bijBranchOrderGuard, bijBranchLiveGuard, bijSetGuard,
@@ -955,7 +969,8 @@ def runChecks : IO Bool := do
   let names := [
     "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
-    "get_stack_only if merge alloc", "get_stack_only call merge",
+    "get_stack_only if merge alloc", "get_stack_only immediate removes temp",
+    "get_stack_only call merge",
     "get_stack_only call tail", "get_stack_only MustTerminate",
     "get_stack_only Loop body", "get_stack_only assign leaf",
     "mk_bij delta basic", "mk_bij delta dedup", "mk_bij seq order",

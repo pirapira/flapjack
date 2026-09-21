@@ -50,6 +50,7 @@ import Flapjack.Test.CrepeMemorySemantics
 import Flapjack.Test.PanValueFfiSemantics
 import Flapjack.Test.PanValueFfiFuel
 import Flapjack.Test.PanValueFfiClockSemantics
+import Flapjack.Test.PanValueWfParity
 import Flapjack.Test.PanCost
 import Flapjack.Test.SourceSemanticsOps
 import Flapjack.Test.SourceToLoopHandlers

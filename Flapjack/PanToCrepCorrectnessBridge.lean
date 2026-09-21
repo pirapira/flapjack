@@ -30977,4 +30977,80 @@ theorem panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decC
     rfl
   · simp [panValuePcResultRelWithContextCode, panValuePcResultRel, hstate]
 
+/-! The direct `ExtCall` terminal-FFI branch composes Cake's source-step
+    equation with the context-coded Pc boundary.  The source post-state,
+    final event, and target-state relation remain explicit. -/
+theorem panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_extCall_finalFfi
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (program : Prog α)
+    (sourceEvaluate : PanValuePcEvaluator α)
+    (targetEvaluate : CrepPcEvaluator α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (hcompact : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (clockStructs : StructContext) (clockPcContext : CompileContext α)
+    (clockExceptionRel : ExceptionId → PanValue α → α → Prop)
+    (clockExceptionCode : ExceptionId → Option α)
+    (clockGlobalsLookup : CrepState α → PanValue α → Option (List α))
+    (clockContext : PanValueFfiContext α)
+    (clockPrimitive : PanPrimitiveHandler α)
+    (clockHandler : PanValueStatefulFfiHandler α σ)
+    (clockFunctions : List (FunName × List VarName × Prog α))
+    (clockBaseAddress clockTopAddress clockBytesInWord : α)
+    (fuel clock : Nat)
+    (clockLocals clockGlobals : VarName → Option (PanValue α))
+    (clockMemory : α → Option (PanValue α)) (clockFfi : FfiState σ)
+    (function : FunName) (configuration configurationLength array arrayLength : Exp α)
+    (finalFfi : FfiState σ) (event targetEvent : FfiFinalEvent) (steps : Nat)
+    (targetState : CrepState α)
+    (hsteps : evalPanValueFfiProgSteps clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord 1 clockLocals clockGlobals clockMemory clockFfi
+      (.extCall function configuration configurationLength array arrayLength) =
+      some (.finalFfi clockLocals clockGlobals clockMemory finalFfi event, steps))
+    (hstate : panValueCrepStateRel clockStructs clockPcContext clockLocals
+      clockGlobals clockMemory targetState)
+    (hevent : event = targetEvent) :
+    PanValuePcCompileCorrectWithContextCode sourceEvaluate targetEvaluate
+      codeRel excpRel exceptionCode globalsLookup program ∧
+    evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (fuel + 1) clockLocals clockGlobals clockMemory clockFfi
+      clock (.extCall function configuration configurationLength array arrayLength) =
+      some (.control (.finalFfi clockLocals clockGlobals clockMemory finalFfi event),
+        clock) ∧
+    (evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (fuel + 1) clockLocals clockGlobals clockMemory clockFfi
+      clock (.extCall function configuration configurationLength array arrayLength)).map
+      panValueFfiClockResultProjection =
+      some (.finalFfi clockLocals clockGlobals clockMemory finalFfi event clock) ∧
+    panValuePcResultRelWithContextCode clockStructs clockPcContext
+      clockExceptionRel clockExceptionCode clockGlobalsLookup
+      (.finalFfi clockLocals clockGlobals clockMemory event)
+      (.finalFfi targetState targetEvent) := by
+  have hclock := evalPanValueFfiClockProg_extCall_finalFfi
+    clockContext clockPrimitive clockHandler clockStructs clockFunctions
+    clockBaseAddress clockTopAddress clockBytesInWord fuel clock clockLocals
+    clockGlobals clockMemory clockFfi function configuration configurationLength
+    array arrayLength clockLocals clockGlobals clockMemory finalFfi event steps
+    hsteps
+  have hfinal := panValuePcFinalFfiResultRel_of_clocked_leaf
+    clockStructs clockPcContext clockExceptionRel clockExceptionCode
+    clockGlobalsLookup clockContext clockPrimitive clockHandler clockFunctions
+    clockBaseAddress clockTopAddress clockBytesInWord clock clockLocals
+    clockGlobals clockMemory clockFfi
+    (.extCall function configuration configurationLength array arrayLength)
+    targetState event targetEvent steps finalFfi hsteps hstate hevent
+  refine ⟨hcompact, hclock, ?_, ?_⟩
+  · rw [hclock]
+    rfl
+  · simpa [panValuePcResultRelWithContextCode] using hfinal.2.2
+
 end Flapjack

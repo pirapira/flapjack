@@ -565,6 +565,13 @@ example :
         .jalr 1 31 (BitVec.ofNat 64 0)] := by
   decide
 
+/- Cake's short `Call` form uses the link register x1 in the direct JAL. -/
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 4)] 0
+      (.call ⟨1, 0⟩) =
+      some [.jal 1 (BitVec.ofNat 64 4)] := by
+  decide
+
 /- Cake's CallFFI target also takes the AUIPC/JALR fallback when the current
    PC plus the service-stub distance leaves the direct-JAL range. -/
 example :

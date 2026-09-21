@@ -1134,6 +1134,56 @@ example :
         (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
         (.annot "tag" "text") (.annot "tag" "text")))
 
+/-- Lower-bounded adequacy also accepts clock-free programs. -/
+example :
+    PanValueFfiClockNormalAdequateProgFrom 5 evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 7 none none none
+      (.annot "tag" "text") :=
+  PanValueFfiClockNormalAdequateProgFrom_of_adequate 5 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+    (.annot "tag" "text")
+    (evalPanValueFfiClockProg_normalAdequate_of_normalProg evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+      (.annot "tag" "text") (.annot "tag" "text"))
+
+/-- A destination call is lower-bounded adequate from one, and sequences with a
+    clock-free continuation. -/
+example
+    (hfunctions : PanValueFfiClockFunctionsReturnSucceed evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [("f", [], (.skip : Prog Nat))]
+      0 0 8 none none none)
+    (hlookup : lookupPanFunction "f" [("f", [], (.skip : Prog Nat))] =
+      some ([], (.skip : Prog Nat)))
+    (hargs : ∀ (locals globals : VarName → Option (PanValue Nat))
+      (memory : Nat → Option (PanValue Nat)),
+      ∃ (values : List (PanValue Nat)) (calleeLocals : VarName → Option (PanValue Nat)),
+        evalPanValueExps [] locals globals memory 0 0 8 ([] : List (Exp Nat))
+          (memoryAccess := none) = some values ∧
+        bindPanValueParameters [] values = some calleeLocals ∧
+        panValueValuesWithinLimit [] values = true)
+    (hassign : ∀ (locals : VarName → Option (PanValue Nat))
+      (finalGlobals : VarName → Option (PanValue Nat)) (values : List (PanValue Nat)),
+      ∃ (assignedLocals assignedGlobals : VarName → Option (PanValue Nat)),
+        assignPanValueCallResult locals finalGlobals
+          (some (VarKind.local, "x")) values (structs := []) =
+          some (assignedLocals, assignedGlobals)) :
+    PanValueFfiClockNormalAdequateProgFrom 1 evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [("f", [], (.skip : Prog Nat))] 0 0 8 5 none none none
+      (.seq (.call (some ((VarKind.local, "x"), none)) "f" [])
+        (.annot "tag" "text")) :=
+  PanValueFfiClockNormalAdequateProgFrom_seq_adequate 1 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [("f", [], (.skip : Prog Nat))]
+    0 0 8 5 none none none
+    (.call (some ((VarKind.local, "x"), none)) "f" []) (.annot "tag" "text")
+    (PanValueFfiClockNormalAdequateProgFrom_call_destination 1 (by decide)
+      evaluatorContext (fun _ _ => none) evaluatorHandler []
+      [("f", [], (.skip : Prog Nat))] 0 0 8 5 none "f" []
+      (some (VarKind.local, "x")) [] (.skip : Prog Nat) hfunctions
+      (by simp [progSize]) hlookup hargs hassign)
+    (evalPanValueFfiClockProg_normalAdequate_of_normalProg evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [("f", [], (.skip : Prog Nat))]
+      0 0 8 5 none none none (.annot "tag" "text") (.annot "tag" "text"))
+
 /-- The raised `DecCall` outcome also lifts to the declaration's progSize. -/
 example
     (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)

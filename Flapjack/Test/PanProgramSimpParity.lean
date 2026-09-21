@@ -534,6 +534,9 @@ def noNameDecls : List (Decl Nat) :=
 
 def functionsOnlyDecls : List (Decl Nat) := [.function wfFunction]
 
+def functionOrExnDecls : List (Decl Nat) :=
+  [.function wfFunction, .exnDecl "E" .one]
+
 def structContextGuard : Bool :=
   (collectPanValueStructs noNameDecls ([] : StructContext)).isSome &&
     (collectPanValueStructs functionsOnlyDecls ([] : StructContext)).isSome
@@ -546,7 +549,11 @@ example : True := by
     (by decide)
   have _h2 := collectPanValueStructs_of_functions ([] : StructContext)
     functionsOnlyDecls (by decide)
+  have _h3 := collectPanValueStructs_of_functions_or_exnDecls ([] : StructContext)
+    functionOrExnDecls (by decide)
   trivial
+
+#check @collectPanValueStructs_of_functions_or_exnDecls
 
 /-! Cake's `evaluate_decls_only_exn_decls` (`panPropsScript.sml:1436`): an
     exception-only declaration list leaves every field except the
@@ -989,5 +996,28 @@ def updateMapGuard : Bool :=
 
 #eval updateMapGuard
 #guard updateMapGuard
+
+/-! Cake's `decs_stcnames_infos_ok`
+    (`cakeml/pancake/proofs/pan_structsProofScript.sml:1459`): collecting the
+    struct declarations preserves the `struct_infos_ok` invariant. -/
+
+def structInfoDecls : List (Decl Nat) :=
+  [.name "S" [("f", Shape.one)]]
+
+example (context' : StructContext)
+    (hcollect : collectPanValueStructs structInfoDecls ([] : StructContext) =
+      some context') :
+    structInfosOk context' :=
+  collectPanValueStructs_structInfosOk structInfoDecls [] context' hcollect
+    (by unfold structInfosOk; refine ⟨?_, ?_, ?_, ?_⟩ <;> simp)
+
+theorem lookupInfo_isSome_of_mem_fixture :
+    (lookupInfo "S" ([("S", { fields := [("f", Shape.one)], size := 1 })]
+      : StructContext)).isSome = true :=
+  lookupInfo_isSome_of_mem "S" [("S", { fields := [("f", Shape.one)], size := 1 })]
+    (by simp)
+
+#guard (lookupInfo "S" ([("S", { fields := [("f", Shape.one)], size := 1 })]
+  : StructContext)).isSome
 
 end Flapjack.Test.PanProgramSimpParity

@@ -1026,6 +1026,7 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 /-! Compositional source handler safety: a handler-free call and a declaration
     body that never exposes loop control. -/
 #check @PanValueProgNotBrokeContinued_call_of_no_handler
+#check @PanValueProgNotBrokeContinued_call_handler
 #check @PanValueProgNotBrokeContinued_dec
 
 /-! The direct `Call_Ret_Exception` branch of Cake's `pc_compile_correct`: a
@@ -1120,6 +1121,22 @@ example :
     ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat) (.const 0) (.skip : Prog Nat)
     (PanValueProgNotBrokeContinued_skip (fun _ _ => none) (fun _ _ _ _ _ _ => none)
       ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat))
+
+/-! The handler-carrying call leaf is dischargeable when the handler is `.skip`. -/
+example :
+    PanValueProgNotBrokeContinued (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat)
+      (.call (some (some (VarKind.local, "r"), some ("E", "x", (.skip : Prog Nat))))
+        "f" []) :=
+  PanValueProgNotBrokeContinued_call_handler (fun _ _ => none)
+    (fun _ _ _ _ _ _ => none) ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat)
+    (some (some (VarKind.local, "r"), some ("E", "x", (.skip : Prog Nat)))) "f" []
+    (by
+      intro handlerProgram hinfo
+      obtain ⟨destination, caught, handlerVariable, hinfoEq⟩ := hinfo
+      cases hinfoEq
+      exact PanValueProgNotBrokeContinued_skip (fun _ _ => none)
+        (fun _ _ _ _ _ _ => none) ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat))
 
 /-! The explicit handler-safety premise of the handler-carrying call control
     theorem is dischargeable for a concrete call: choose a call whose handler is
@@ -1295,9 +1312,23 @@ example
 #check @panValuePcCompileCorrect_compact_statefulCompact_context_code
 #check @panValuePcRaisedBoundedExpressionEvidence
 #check @panValuePcRaisedBoundedGenericEvidence
+#check @panValuePcRaisedBoundedExceptionResultRelWithContextCode
+#check @panValuePcClockedRaisedExceptionResultRel_of_bounded_evidence
+#check @panValuePcCompileCorrect_of_arbitrary_clocked_raised_with_bounded_evidence
+#check @panValuePcCompileCorrect_of_compact_evaluators_with_bounded_evidence_and_clocked_timeout
+#check @panValuePcCompileCorrect_of_compact_evaluators_with_bounded_evidence_and_clocked_final_ffi
+#check @panValuePcCompileCorrect_of_compact_evaluators_with_bounded_evidence_and_clocked_returned
+#check @panValuePcCompileCorrect_of_compact_evaluators_with_bounded_evidence_and_clocked_normal
+#check @panValuePcCompileCorrect_of_compact_evaluators_with_bounded_evidence_and_clocked_broke
+#check @panValuePcCompileCorrect_of_compact_evaluators_with_bounded_evidence_and_clocked_continued
+#check @panValuePcCompileCorrect_of_compact_evaluators_with_bounded_generic_raised_evidence_and_clocked_control
+#check @panValuePcCompileCorrect_of_compact_evaluators_with_bounded_generic_raised_evidence_and_clocked_raised
 #check @panValuePcCompileCorrect_compact_with_bounded_expression_state_evidence
 #check @panValuePcCompileCorrect_of_compact_evaluators_and_clocked_word_raise_hraise_data
 #check @panValuePcCompileCorrect_of_compact_evaluators_and_clocked_two_word_raise_hraise_data
+#check @panValuePcCompileCorrectWithContextCode_of_compact_evaluators_and_clocked_raised_control_evidence
+#check @panValuePcCompileCorrect_of_compact_evaluators_and_clocked_raised_control_evidence
+#check @panValuePcCompileCorrectAndResultRel_of_context_code
 
 /-! The scalar `wordExp` return also satisfies the control-safety obligation,
 via the `SourceWordExp` conversion. -/

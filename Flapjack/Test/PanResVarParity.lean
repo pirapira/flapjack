@@ -64,4 +64,31 @@ def lookupDiffGuard : Bool := isWord (panValueResVar locals "y" none "x") 3
 #guard lookupSameGuard
 #guard lookupDiffGuard
 
+/-! `FLOOKUP_pan_res_var_thm` (`panPropsScript.sml:236`). -/
+
+theorem panValueResVar_eq_ite_fixture :
+    panValueResVar locals "y" none "x" =
+      (if "x" == "y" then none else locals "x") :=
+  panValueResVar_eq_ite locals "y" none "x"
+
+def iteGuard : Bool := isWord (panValueResVar locals "y" none "x") 3
+
+#guard iteGuard
+
+/-! `res_var_commutes'` (`pan_to_crepProofScript.sml:4094`). -/
+
+theorem panValueResVar_comm_fixture :
+    panValueResVar (panValueResVar locals "y" none) "x" (some (.word 7)) =
+      panValueResVar (panValueResVar locals "x" (some (.word 7))) "y" none :=
+  panValueResVar_comm locals "y" "x" none (some (.word 7)) (by decide)
+
+def commGuard : Bool :=
+  isWord (panValueResVar (panValueResVar locals "y" none) "x"
+      (some (.word 7)) "x") 7 &&
+    isNone (panValueResVar (panValueResVar locals "y" none) "x"
+      (some (.word 7)) "y")
+
+#eval commGuard
+#guard commGuard
+
 end Flapjack.Test.PanResVarParity

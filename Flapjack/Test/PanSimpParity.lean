@@ -1,6 +1,11 @@
 import Flapjack.PanSimp
 import Flapjack.PanSimpEvaluate
 import Flapjack.PanGlobals
+import Flapjack.PanValueFfiClockShiftFull
+import Flapjack.PanValueFfiEventMonotonicity
+import Flapjack.PanValueFfiClockShift
+import Flapjack.PanValueFfiClockCorrectness
+import Flapjack.PanValueFfiClockEventMonotonicity
 
 namespace Flapjack.Test.PanSimpParity
 
@@ -2382,6 +2387,25 @@ def functionsCompileProgParity : Bool :=
 
 #guard functionsCompileProgParity
 
+/-! Counterpart of Cake's `functions_eq_FILTER`
+    (`panPropsScript.sml:1487`): the function table is the filter-map of the
+    function declarations. -/
+theorem functions_eq_filterMap_fixture :
+    functions compileProgDeclsFixture =
+      compileProgDeclsFixture.filterMap (fun declaration =>
+        match declaration with
+        | .function function =>
+            some (function.name, function.params, function.body,
+              function.returnShape)
+        | _ => none) :=
+  functions_eq_filterMap compileProgDeclsFixture
+
+def functionsFilterMapGuard : Bool :=
+  (functions compileProgDeclsFixture).length == 1
+
+#eval functionsFilterMapGuard
+#guard functionsFilterMapGuard
+
 /-! Counterpart of Cake's `el_compile_prog_el_prog_eq`
     (`pan_simpProofScript.sml:1047-1061`): an entry of the compiled function
     table still comes from the source table, because `pan_simp` only rewrites
@@ -2480,6 +2504,7 @@ def runChecks : IO Bool := do
   IO.println "PASS pan_simp functions_compile_prog Cake function-table equation"
   IO.println "PASS pan_simp first_compile_prog_all_distinct Cake name-distinctness preservation"
   IO.println "PASS pan_simp el_compile_prog_el_prog_eq Cake compiled-table entry provenance"
+  IO.println "PASS pan_simp functions_eq_FILTER Cake function-table filter-map equation"
   pure parityGuard
 
 /-! A nonzero-condition `While` whose body breaks exits normally, certified by the
@@ -2505,5 +2530,193 @@ example : PanValueFfiClockNormalAdequateProgFrom 1 evaluatorContext
 /-! The fuel-indexed while-exit certificate underpinning the nonzero-condition
 `While` adequacy constructor. -/
 #check @Flapjack.PanValueFfiClockWhileExitsNormally
+
+/-! A lower-bound-preserving sequence certificate.  Both `Skip` components
+    leave the clock unchanged, so the new floor-composition theorem can feed
+    the first result directly into the continuation's lower-bound premise. -/
+example : PanValueFfiClockNormalAdequateProgFromFloor 0 0 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+    (.seq (.skip : Prog Nat) .skip) := by
+  refine PanValueFfiClockNormalAdequateProgFromFloor_seq
+    (lo := 0) (firstFloor := 0) (finalFloor := 0)
+    (context := evaluatorContext) (primitive := fun _ _ => none)
+    (handler := evaluatorHandler) (structs := []) (functions := [])
+    (baseAddress := 0) (topAddress := 0) (bytesInWord := 8)
+    (callBudget := 7) (ma := none) (c := none) (mh := none)
+    (first := (.skip : Prog Nat)) (second := (.skip : Prog Nat)) ?_ ?_
+  all_goals
+    intro clock _ locals globals memory ffi
+    exact ⟨locals, globals, memory, ffi, clock, by
+      simp [progCallFuel, evalPanValueFfiClockProg, evalPanValueFfiClockLeaf,
+        evalPanValueFfiProgSteps], by omega⟩
+
+/-! Discharging the explicit floor premise: an adequate (clock-unbounded)
+    program has trivial floor `0`, the input bound can be raised, and a
+    lower-bounded first program composes with an adequate continuation. -/
+#check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_of_adequate
+#check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_weaken
+#check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_seq_adequate
+#check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_of_from
+#check @Flapjack.PanValueFfiClockNormalAdequateProgFrom_of_fromFloor
+#check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_while_zero
+#check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_decCall_returned
+
+/-! Clock-free annotations also keep their floor. -/
+example : PanValueFfiClockNormalAdequateProgFromFloor 0 0 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+    (.annot "tag" "text") :=
+  PanValueFfiClockNormalAdequateProgFromFloor_annot 0 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none "tag" "text"
+
+/-! The clock-free leaf preserves its floor, giving the floor-composition
+    theorem a base case; declarations and conditionals then preserve it. -/
+example : PanValueFfiClockNormalAdequateProgFromFloor 0 0 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+    (.skip : Prog Nat) :=
+  PanValueFfiClockNormalAdequateProgFromFloor_leaf 0 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none (.skip : Prog Nat)
+    PanValueFfiLeafProg.skip
+    (by
+      intro locals globals memory ffi
+      exact ⟨locals, globals, memory, ffi, 1, by simp [evalPanValueFfiProgSteps]⟩)
+
+example : PanValueFfiClockNormalAdequateProgFromFloor 0 0 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+    (.dec "x" .one (.const 5) (.skip : Prog Nat)) := by
+  refine PanValueFfiClockNormalAdequateProgFromFloor_dec 0 0 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none "x" .one
+    (.const 5) (.skip : Prog Nat) ?_ ?_
+  · intro locals globals memory
+    exact ⟨.word 5, by simp [evalPanValueExp],
+      by simp [panValueShape, panShapeMatches]⟩
+  · exact PanValueFfiClockNormalAdequateProgFromFloor_leaf 0 evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+      (.skip : Prog Nat) PanValueFfiLeafProg.skip
+      (by
+        intro locals globals memory ffi
+        exact ⟨locals, globals, memory, ffi, 1, by simp [evalPanValueFfiProgSteps]⟩)
+
+example : PanValueFfiClockNormalAdequateProgFromFloor 0 0 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+    (.ite (.const 5) (.skip : Prog Nat) (.skip : Prog Nat)) := by
+  have hskip : PanValueFfiClockNormalAdequateProgFromFloor 0 0 evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+      (.skip : Prog Nat) :=
+    PanValueFfiClockNormalAdequateProgFromFloor_leaf 0 evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+      (.skip : Prog Nat) PanValueFfiLeafProg.skip
+      (by
+        intro locals globals memory ffi
+        exact ⟨locals, globals, memory, ffi, 1, by simp [evalPanValueFfiProgSteps]⟩)
+  exact PanValueFfiClockNormalAdequateProgFromFloor_ite 0 0 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none (.const 5)
+    (.skip : Prog Nat) (.skip : Prog Nat) (fun _ _ _ => ⟨5, by simp [evalPanValueExp]⟩)
+    hskip hskip
+
+/-! A tick lowers the floor by one, and the floor-composition theorem then feeds
+    the lowered floor into a clock-free continuation. -/
+example : PanValueFfiClockNormalAdequateProgFromFloor 1 0 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+    (.seq (.tick : Prog Nat) (.skip : Prog Nat)) := by
+  refine PanValueFfiClockNormalAdequateProgFromFloor_seq (lo := 1) (firstFloor := 0)
+    (finalFloor := 0) (context := evaluatorContext) (primitive := fun _ _ => none)
+    (handler := evaluatorHandler) (structs := []) (functions := [])
+    (baseAddress := 0) (topAddress := 0) (bytesInWord := 8) (callBudget := 7)
+    (ma := none) (c := none) (mh := none)
+    (first := (.tick : Prog Nat)) (second := (.skip : Prog Nat)) ?_ ?_
+  · exact PanValueFfiClockNormalAdequateProgFromFloor_tick 1 (by decide) evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+  · exact PanValueFfiClockNormalAdequateProgFromFloor_leaf 0 evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+      (.skip : Prog Nat) PanValueFfiLeafProg.skip
+      (by
+        intro locals globals memory ffi
+        exact ⟨locals, globals, memory, ffi, 1, by simp [evalPanValueFfiProgSteps]⟩)
+
+/-- The inductive normal fragment enters the floor certificate at `floor = lo`. -/
+example : PanValueFfiClockNormalAdequateProgFromFloor 3 3 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+    (.seq (.skip : Prog Nat) (.annot "tag" "text")) :=
+  PanValueFfiClockNormalAdequateProgFromFloor_of_normalProg 3 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+    (.seq (.skip : Prog Nat) (.annot "tag" "text"))
+    (PanValueFfiClockNormalProg.seq (.skip : Prog Nat) (.annot "tag" "text")
+      PanValueFfiClockNormalProg.skip (PanValueFfiClockNormalProg.annot "tag" "text"))
+
+#check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_of_normalProg
+
+/-- The pan_simp transform of a normal program keeps a floor certificate. -/
+example : PanValueFfiClockNormalAdequateProgFromFloor 3 3 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+    (panSimpProg (.seq (.skip : Prog Nat) (.annot "tag" "text"))) :=
+  PanValueFfiClockNormalAdequateProgFromFloor_panSimpProg 3 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+    (.seq (.skip : Prog Nat) (.annot "tag" "text"))
+    (PanValueFfiClockNormalProg.seq (.skip : Prog Nat) (.annot "tag" "text")
+      PanValueFfiClockNormalProg.skip (PanValueFfiClockNormalProg.annot "tag" "text"))
+
+#check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_panSimpProg
+
+-- Clock-shift arithmetic needed by a whole-program analogue of Cake
+-- `evaluate_add_clock_eq`.
+#check @Flapjack.decPanClock_add
+#check @Flapjack.decPanClock_add_of_pos
+#check @Flapjack.evalPanValueFfiClockProg_tick_shift
+#check @Flapjack.evalPanValueFfiClock_shift
+#check @Flapjack.evalPanValueFfiClock_shift_panResultEvents
+#check @Flapjack.callFfi_return_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProg_seq_normal_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProg_seq_terminal_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProg_seq_terminal_ioEvents_prefix_progCallFuel
+#check @Flapjack.evalPanValueFfiProgSteps_extCall_memoryHandler_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiProgSteps_extCall_statefulHandler_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProg_shMemStore_normal_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProg_shMemLoad_normal_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProg_extCall_memoryHandler_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProg_extCall_statefulHandler_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProg_shMemLoad_normal_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProgram_of_declarations_and_raised_call_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProgram_of_declarations_and_timeout_call_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProg_decCall_raised_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProgram_of_declarations_and_returned_call_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProgram_of_declarations_and_returned_call_result_rel
+#check @Flapjack.evalPanValueFfiClockProgram_of_declarations_and_raised_call_result_rel
+#check @Flapjack.evalPanValueFfiClockProgram_of_declarations_and_raised_call_context_code
+#check @Flapjack.evalPanValueFfiClockProg_decCall_returned_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProg_while_normal_iteration_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProg_while_broke_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProg_while_continued_iteration_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProg_while_timeout_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProg_extCall_statefulHandler_normal_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProg_call_returned_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProg_call_raised_ioEvents_prefix
+#check @Flapjack.panValueFfiSharedLoad_ioEvents_prefix
+#check @Flapjack.panValueFfiSharedStore_ioEvents_prefix
+#check @Flapjack.panValueFfiExtCall_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiProgSteps_shMemLoad_normal_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiProgSteps_shMemStore_normal_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProg_while_zero_shift
+#check @Flapjack.evalPanValueFfiClockProg_while_normal_shift_step
+#check @Flapjack.evalPanValueFfiClockProg_while_broke_shift_step
+#check @Flapjack.evalPanValueFfiClockProg_while_continued_shift_step
+#check @Flapjack.evalPanValueFfiClockProgram_of_declarations_and_raised_call_cross_clock
+#check @Flapjack.evalPanValueFfiClockCall_raised_no_handler_shift_step
+#check @Flapjack.evalPanValueFfiClockProg_extCall_finalFfi_cross_clock
+
+example : decPanClock (5 + 3) = decPanClock 5 + 3 := decPanClock_add 5 3 (by decide)
+
+theorem clocked_while_timeout_preserves_events :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 2 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 0
+      (.while (.const 5) (.break : Prog Nat)) none none none =
+    some (.timeout (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi, 0) ∧
+      evaluatorFfi.ioEvents <+: evaluatorFfi.ioEvents := by
+  exact evalPanValueFfiClockProg_while_timeout_ioEvents_prefix evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 1
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 0
+    (.const 5) (.break : Prog Nat) none none none 5
+    (by simp [evalPanValueExp]) (by decide) (by decide)
 
 end Flapjack.Test.PanSimpParity

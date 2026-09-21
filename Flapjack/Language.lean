@@ -279,6 +279,16 @@ termination_by program => sizeOf program
 decreasing_by
   all_goals decreasing_trivial
 
+/-- Cake's `exp_ids_nested_seq`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:128`): the exception
+    identifiers of a nested sequence are the concatenation of the statements'
+    identifiers. -/
+theorem expIds_nestedSeq (statements : List (Prog α)) :
+    expIds (nestedSeq statements) = (statements.map expIds).flatten := by
+  induction statements with
+  | nil => simp [nestedSeq, expIds]
+  | cons statement statements ih => simp [nestedSeq, expIds, ih]
+
 /-! Direct source-shaped counterpart of `panLang$fun_ids`: collect the
     statically referenced function names, including call-handler bodies and
     declaration-call bodies. -/
@@ -864,6 +874,63 @@ theorem quadProjection_comp {α β γ δ ε ζ η θ ι κ ℓ μ : Type}
   funext p
   obtain ⟨x, y, z, t⟩ := p
   rfl
+
+/-- Cake's `MAP2` (`pan_commonScript.sml`): pointwise combination of two lists,
+    truncating at the shorter one. -/
+def panMap2 (f : α → β → γ) : List α → List β → List γ
+  | x :: xs, y :: ys => f x y :: panMap2 f xs ys
+  | _, _ => []
+
+/-- Cake's `MAP3` (`pan_commonScript.sml`): pointwise combination of three
+    lists, truncating at the shortest one. -/
+def panMap3 (f : α → β → γ → δ) : List α → List β → List γ → List δ
+  | x :: xs, y :: ys, z :: zs => f x y z :: panMap3 f xs ys zs
+  | _, _, _ => []
+
+/-- Counterpart of Cake's `MAP3_MAP2`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:827`): a three-way
+    pointwise map is a two-way pointwise map over the zipped first two lists
+    when the lengths agree. -/
+theorem panMap3_eq_map2_zip (f : α → β → γ → δ) (l1 : List α) (l2 : List β)
+    (l3 : List γ) (h1 : l1.length = l3.length) (h2 : l2.length = l3.length) :
+    panMap3 f l1 l2 l3 =
+      panMap2 (fun (pair : α × β) (z : γ) => f pair.1 pair.2 z)
+        (l1.zip l2) l3 := by
+  induction l3 generalizing l1 l2 with
+  | nil =>
+      obtain rfl := List.eq_nil_of_length_eq_zero h1
+      obtain rfl := List.eq_nil_of_length_eq_zero h2
+      rfl
+  | cons z zs ih =>
+      rw [List.length_cons] at h1 h2
+      cases l1 with
+      | nil => simp at h1
+      | cons x xs =>
+          cases l2 with
+          | nil => simp at h2
+          | cons y ys =>
+              have h1' : xs.length = zs.length := by simp at h1; omega
+              have h2' : ys.length = zs.length := by simp at h2; omega
+              simp only [panMap3, panMap2, List.zip_cons_cons, ih xs ys h1' h2']
+
+/-- Cake's `map_map2_fst_lemma`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:118`): the first
+    components of a pointwise pairing are the prefix of the first list cut at
+    the shorter length. -/
+theorem zipWith_pair_fst {α β : Type} (xs : List α) (ys : List β) :
+    (List.zipWith (fun x y => (x, y)) xs ys).map Prod.fst =
+      xs.take (min xs.length ys.length) := by
+  induction xs generalizing ys with
+  | nil => simp
+  | cons x xs ih =>
+      cases ys with
+      | nil => simp
+      | cons y ys =>
+          simp only [List.zipWith_cons_cons, List.map_cons, List.length_cons]
+          rw [ih]
+          have hk : min (xs.length + 1) (ys.length + 1) =
+              min xs.length ys.length + 1 := by omega
+          rw [hk, List.take_succ_cons]
 
 /-! Counterpart of Cake's `all_distinct_with_shape_distinct`
     (`cakeml/pancake/semantics/panPropsScript.sml:357`): two distinct members of

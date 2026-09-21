@@ -237,4 +237,56 @@ theorem evalPanValueExps_replicate_const_fixture :
 
 #check @evalPanValueExps_replicate_const
 
+/-! `shape_val` / `shape_vals` (`panLangScript.sml:190`) and their companion
+    `eval_shape_val_NONE` / `eval_shape_val_thm`
+    (`pan_globalsProofScript.sml:968`, `:980`). -/
+
+theorem shapeVal_shape_fixture :
+    panValueShape ([] : StructContext) (.word 0) = .one :=
+  shapeVal_shape ([] : StructContext) (fun _ => none) (fun _ => none)
+    (fun _ => none) 0 0 8 none .one (by simp [isWfShape]) (.word 0)
+    (by simp [shapeVal, evalPanValueExp])
+
+theorem shapeVal_isSome_fixture :
+    (evalPanValueExp ([] : StructContext) (fun _ => none) (fun _ => none)
+      (fun _ => none) 0 0 8 (shapeVal (.comb [.one])) none).isSome = true :=
+  shapeVal_isSome ([] : StructContext) (fun _ => none) (fun _ => none)
+    (fun _ => none) 0 0 8 none (.comb [.one])
+
+def shapeValGuard : Bool :=
+  match evalPanValueExp ([] : StructContext) (fun _ => none) (fun _ => none)
+      (fun _ => none) 0 0 8 (shapeVal (.comb [.one, .one])) none with
+  | some value =>
+      (match panValueShape ([] : StructContext) value with
+       | .comb [.one, .one] => true
+       | _ => false)
+  | none => false
+
+#eval shapeValGuard
+#guard shapeValGuard
+
+/-! `opt_mmap_eval_is_wf_shape_v` (`pan_to_crepProofScript.sml:2328`): a
+    successful evaluator list preserves well-formedness for constants and
+    source-local values alike. -/
+
+def evaluatorLocals : VarName → Option (PanValue Nat) :=
+  fun name => if name == "x" then some (.word 9) else none
+
+theorem evalPanValueExps_isWfShape_fixture :
+    panValueIsWfValues ([] : StructContext)
+        [.word 7, .word 9] = true := by
+  apply evalPanValueExps_isWfShape ([] : StructContext) evaluatorLocals
+    (fun _ => none) (fun _ => none) 0 0 8
+    (expressions := [.const 7, .var .local "x"])
+    (memoryAccess := none) (values := [.word 7, .word 9])
+  · intro name value hvalue
+    simp [evaluatorLocals] at hvalue
+    rcases hvalue with ⟨rfl, rfl⟩
+    simp [panValueIsWf]
+  · simp
+  · simp [evalPanValueExps, evalPanValueExp.evalPanValueExps,
+      evalPanValueExp, evaluatorLocals]
+
+#check @evalPanValueExps_isWfShape
+
 end Flapjack.Test.PanValueWfParity

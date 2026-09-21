@@ -48,6 +48,8 @@ import Flapjack.PanShMemStore
 import Flapjack.PanEval
 import Flapjack.PanEvaluate
 import Flapjack.PanObservationalSemantics
+import Flapjack.PanToCrepSemantics
+import Flapjack.PanCrepSemanticAgreement
 import Flapjack.PanHHandleCallRet
 import Flapjack.PanMrec
 import Flapjack.PanHProgDec
@@ -58,6 +60,7 @@ import Flapjack.PanHProgAssign
 import Flapjack.PanHProgWhile
 import Flapjack.PanSimp
 import Flapjack.PanSimpEvaluate
+import Flapjack.PanSimpLocalised
 import Flapjack.PanStructs
 import Flapjack.PanGlobals
 import Flapjack.Pipeline
@@ -304,12 +307,17 @@ import Flapjack.CrepeLoopContinueComposeFuelRelation
 import Flapjack.CrepeIdentityCallCorrectness
 import Flapjack.CrepeFfiCorrectness
 import Flapjack.PanValues
+import Flapjack.PanValueEvaluatorStability
 import Flapjack.PanSteppedSemantics
 import Flapjack.PanMemory
 import Flapjack.PanValueFfiFuel
 import Flapjack.PanValueFfiClockSemantics
 import Flapjack.PanValueFfiClockFuel
 import Flapjack.PanValueFfiClockCorrectness
+import Flapjack.PanValueFfiClockShift
+import Flapjack.PanValueFfiClockShiftFull
+import Flapjack.PanValueFfiEventMonotonicity
+import Flapjack.PanValueFfiClockEventMonotonicity
 import Flapjack.PanValueFfiClockProjection
 import Flapjack.PanCost
 import Flapjack.RiscV.Model

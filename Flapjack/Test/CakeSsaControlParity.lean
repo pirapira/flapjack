@@ -45,6 +45,32 @@ def storeConstsBoundaryGuard : Bool :=
   | _ => false
 
 #guard storeConstsBoundaryGuard
+def ffiProgram : WordProg Nat :=
+  .ffi "echo" 0 2 4 6 ([], [])
+
+def ffiBoundaryGuard : Bool :=
+  match (wordFullSsaCcTrans 0 ffiProgram).2.2 with
+  | .seq (.move 1 [])
+      (.seq (.move 0 [])
+        (.seq (.move 1 [(2, 0), (4, 0), (6, 0), (8, 0)])
+          (.seq (.ffi "echo" 2 4 6 8 ([], [])) (.move 0 [])))) => true
+  | _ => false
+
+#guard ffiBoundaryGuard
+def codeBufferWriteBoundaryGuard : Bool :=
+  match (wordFullSsaCcTrans 0
+      (.codeBufferWrite 0 2 : WordProg Nat)).2.2 with
+  | .seq (.move 1 []) (.codeBufferWrite 0 0) => true
+  | _ => false
+
+def dataBufferWriteBoundaryGuard : Bool :=
+  match (wordFullSsaCcTrans 0
+      (.dataBufferWrite 1 3 : WordProg Nat)).2.2 with
+  | .seq (.move 1 []) (.dataBufferWrite 0 0) => true
+  | _ => false
+
+#guard codeBufferWriteBoundaryGuard
+#guard dataBufferWriteBoundaryGuard
 
 def longDivProgram : WordProg Nat :=
   .inst (.arith (.longDiv 1 2 3 4 5))
@@ -179,17 +205,6 @@ def installCutsetBoundaryGuard : Bool :=
 
 #guard installCutsetBoundaryGuard
 
-def ffiBoundaryGuard : Bool :=
-  match (wordFullSsaCcTrans 0
-      (.ffi "foo" 1 2 3 4 ([], []) : WordProg Nat)).2.2 with
-  | .seq (.move 1 [])
-      (.seq (.move 0 [])
-        (.seq (.move 1 [(2, 0), (4, 0), (6, 0), (8, 0)])
-          (.seq (.ffi "foo" 2 4 6 8 ([], [])) (.move 0 [])))) => true
-  | _ => false
-
-#guard ffiBoundaryGuard
-
 def ffiCutsetBoundaryGuard : Bool :=
   match (wordFullSsaCcTrans 0
       (.ffi "foo" 1 2 3 4 ([1], [2]) : WordProg Nat)).2.2 with
@@ -204,6 +219,7 @@ def ffiCutsetBoundaryGuard : Bool :=
 
 def parityGuard : Bool :=
   raiseBoundaryGuard && callBoundaryGuard && storeConstsBoundaryGuard &&
+    ffiBoundaryGuard && codeBufferWriteBoundaryGuard && dataBufferWriteBoundaryGuard &&
     longDivBoundaryGuard && longMulBoundaryGuard && shiftBoundaryGuard &&
     addCarryBoundaryGuard && constBoundaryGuard && binOpBoundaryGuard &&
     divBoundaryGuard && codeBufferWriteGuard && dataBufferWriteGuard &&
@@ -221,6 +237,12 @@ def runChecks : IO Bool := do
         callBoundaryGuard),
       ("full_ssa_cc_trans StoreConsts preserves Cake reload moves",
         storeConstsBoundaryGuard),
+      ("full_ssa_cc_trans FFI preserves Cake ABI moves",
+        ffiBoundaryGuard),
+      ("full_ssa_cc_trans CodeBufferWrite preserves Cake names",
+        codeBufferWriteBoundaryGuard),
+      ("full_ssa_cc_trans DataBufferWrite preserves Cake names",
+        dataBufferWriteBoundaryGuard),
       ("full_ssa_cc_trans LongDiv preserves Cake fixed-register ABI",
         longDivBoundaryGuard),
       ("full_ssa_cc_trans LongMul preserves Cake fixed-register ABI",

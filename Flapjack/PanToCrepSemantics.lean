@@ -1,3 +1,4 @@
+import Flapjack.PanToCrepCorrectnessBoundary
 import Flapjack.PanObservationalSemantics
 import Flapjack.CrepObservationalSemantics
 
@@ -37,6 +38,120 @@ def panCrepBehaviourRel : PanBehaviour → CrepBehaviour → Prop
       .diverge targetFamily targetTrace =>
       sourceFamily = targetFamily ∧ sourceTrace.trace = targetTrace.trace
   | _, _ => False
+
+/-! The result constructors used by `pc_compile_correct` expose more state than
+the observational semantics needs.  These projections retain precisely the
+two successful observations that `semantics` can choose: a returned value and
+a terminal FFI event.  Timeout, control transfer, normal completion, and
+raised exceptions remain non-successful observations. -/
+def panValuePcResultOutcome : PanValuePcResult α → Option PanSemanticOutcome
+  | .returned .. => some .success
+  | .finalFfi _ _ _ event => some (.ffi event.outcome)
+  | _ => none
+
+def crepPcResultOutcome : CrepPcResult α → Option CrepSemanticOutcome
+  | .returned .. => some .success
+  | .finalFfi _ event => some (.ffi event.outcome)
+  | _ => none
+
+/-! A result relation from the compiler-correctness boundary preserves the
+semantic outcome.  This is the constructor-level part of the HOL
+`state_rel_imp_semantics_to_crep` lift; evaluator projection and
+choice-stability premises remain explicit for the caller. -/
+theorem panValuePcResultRel_semanticOutcomeRel
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceResult : PanValuePcResult α) (targetResult : CrepPcResult α)
+    (sourceOutcome : PanSemanticOutcome) (targetOutcome : CrepSemanticOutcome)
+    (hrel : panValuePcResultRel structs context exceptionRel exceptionCode
+      globalsLookup sourceResult targetResult)
+    (hsource : panValuePcResultOutcome sourceResult = some sourceOutcome)
+    (htarget : crepPcResultOutcome targetResult = some targetOutcome) :
+    panCrepSemanticOutcomeRel sourceOutcome targetOutcome := by
+  cases sourceResult <;> cases targetResult <;>
+    simp [panValuePcResultRel, panValuePcResultOutcome, crepPcResultOutcome]
+      at hrel hsource htarget ⊢ <;>
+    cases sourceOutcome <;> cases targetOutcome <;>
+    simp_all [panCrepSemanticOutcomeRel]
+
+/-! The outcome projection is non-`none` exactly on the two successful result
+    shapes.  These inversions let the top-level transport case on a
+    `pc_compile_correct` result without re-unfolding the projection. -/
+theorem panValuePcResultOutcome_eq_some_iff (result : PanValuePcResult α)
+    (outcome : PanSemanticOutcome) :
+    panValuePcResultOutcome result = some outcome ↔
+      (∃ (locals globals : VarName → Option (PanValue α))
+        (memory : α → Option (PanValue α)) (values : List (PanValue α)),
+        result = .returned locals globals memory values ∧ outcome = .success) ∨
+      (∃ (locals globals : VarName → Option (PanValue α))
+        (memory : α → Option (PanValue α)) (event : FfiFinalEvent),
+        result = .finalFfi locals globals memory event ∧
+          outcome = .ffi event.outcome) := by
+  constructor
+  · intro h
+    cases result with
+    | returned locals globals memory values =>
+        exact Or.inl ⟨locals, globals, memory, values, rfl,
+          (Option.some.inj h).symm⟩
+    | finalFfi locals globals memory event =>
+        exact Or.inr ⟨locals, globals, memory, event, rfl,
+          (Option.some.inj h).symm⟩
+    | error => simp [panValuePcResultOutcome] at h
+    | normal locals globals memory => simp [panValuePcResultOutcome] at h
+    | raised locals globals memory exception value =>
+        simp [panValuePcResultOutcome] at h
+    | broke locals globals memory => simp [panValuePcResultOutcome] at h
+    | continued locals globals memory => simp [panValuePcResultOutcome] at h
+    | timeout locals globals memory => simp [panValuePcResultOutcome] at h
+  · intro h
+    rcases h with
+      ⟨locals, globals, memory, values, rfl, rfl⟩ |
+      ⟨locals, globals, memory, event, rfl, rfl⟩ <;> rfl
+
+theorem crepPcResultOutcome_eq_some_iff (result : CrepPcResult α)
+    (outcome : CrepSemanticOutcome) :
+    crepPcResultOutcome result = some outcome ↔
+      (∃ (state : CrepState α) (values : List α),
+        result = .returned state values ∧ outcome = .success) ∨
+      (∃ (state : CrepState α) (event : FfiFinalEvent),
+        result = .finalFfi state event ∧ outcome = .ffi event.outcome) := by
+  constructor
+  · intro h
+    cases result with
+    | returned state values =>
+        exact Or.inl ⟨state, values, rfl, (Option.some.inj h).symm⟩
+    | finalFfi state event =>
+        exact Or.inr ⟨state, event, rfl, (Option.some.inj h).symm⟩
+    | error => simp [crepPcResultOutcome] at h
+    | normal state => simp [crepPcResultOutcome] at h
+    | raised state exception => simp [crepPcResultOutcome] at h
+    | broke state label => simp [crepPcResultOutcome] at h
+    | continued state label => simp [crepPcResultOutcome] at h
+    | timeout state => simp [crepPcResultOutcome] at h
+  · intro h
+    rcases h with
+      ⟨state, values, rfl, rfl⟩ |
+      ⟨state, event, rfl, rfl⟩ <;> rfl
+
+theorem panValuePcResultOutcome_eq_none_iff (result : PanValuePcResult α) :
+    panValuePcResultOutcome result = none ↔
+      (∀ (locals globals : VarName → Option (PanValue α))
+        (memory : α → Option (PanValue α)) (values : List (PanValue α)),
+        result ≠ .returned locals globals memory values) ∧
+      (∀ (locals globals : VarName → Option (PanValue α))
+        (memory : α → Option (PanValue α)) (event : FfiFinalEvent),
+        result ≠ .finalFfi locals globals memory event) := by
+  cases result <;> simp [panValuePcResultOutcome]
+
+theorem crepPcResultOutcome_eq_none_iff (result : CrepPcResult α) :
+    crepPcResultOutcome result = none ↔
+      (∀ (state : CrepState α) (values : List α),
+        result ≠ .returned state values) ∧
+      (∀ (state : CrepState α) (event : FfiFinalEvent),
+        result ≠ .finalFfi state event) := by
+  cases result <;> simp [crepPcResultOutcome]
 
 def panSuccessfulAt (hooks : PanSemanticsHooks α σ) (clock : Nat) : Prop :=
   ∃ result outcome,

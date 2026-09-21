@@ -100,6 +100,25 @@ def functions :
         declaration.returnShape) :: functions declarations
   | _ :: declarations => functions declarations
 
+/-- Counterpart of Cake's `functions_eq_FILTER`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1487`): the function table is
+    exactly the projection of the function declarations, with every other
+    declaration contributing nothing.  Cake writes the projection as a `MAP`
+    over `FILTER is_function` with an `ARB` default branch; `List.filterMap`
+    states the same content without needing a default value. -/
+theorem functions_eq_filterMap (declarations : List (Decl α)) :
+    functions declarations =
+      declarations.filterMap (fun declaration =>
+        match declaration with
+        | .function function =>
+            some (function.name, function.params, function.body,
+              function.returnShape)
+        | _ => none) := by
+  induction declarations with
+  | nil => rfl
+  | cons declaration declarations ih =>
+      cases declaration <;> simp [functions, ih]
+
 /-! Source-shaped counterpart of Cake's `compile_prog_pmatch`: `compile_prog`
     maps `compile` over function declarations and leaves other declarations
     unchanged. -/
@@ -532,6 +551,38 @@ theorem expIds_panSimpProg (program : Prog α) :
   simp only [panSimpProg]
   rw [expIds_retToTail, expIds_seqAssoc]
   simp [expIds]
+
+/-- The exception identifiers reachable from the bodies of the function
+    declarations in a declaration table: the projection that Cake's `get_eids`
+    scans. -/
+def declarationExceptionIds : List (Decl α) → List ExceptionId
+  | [] => []
+  | .function declaration :: declarations =>
+      expIds declaration.body ++ declarationExceptionIds declarations
+  | _ :: declarations => declarationExceptionIds declarations
+
+/-- The declaration-table pass of `pan_simp` preserves the exception
+    identifiers reachable from every function body.  This is the source-side
+    companion of Cake's `get_eids_from_decls` invariance: the finite domain of
+    the exception table cannot change when the bodies are simplified. -/
+theorem declarationExceptionIds_panSimpDecls (declarations : List (Decl α)) :
+    declarationExceptionIds (panSimpDecls declarations) =
+      declarationExceptionIds declarations := by
+  induction declarations with
+  | nil => simp [panSimpDecls, declarationExceptionIds]
+  | cons declaration declarations ih =>
+      cases declaration <;>
+        simp [panSimpDecls, declarationExceptionIds, expIds_panSimpProg, ih]
+
+/-- The function-only projection of the declaration table is exactly the flat
+    map of `expIds` over the function bodies, which is the list that Cake's
+    `get_eids` numbers before removing repeats. -/
+theorem declarationExceptionIds_map_function (functions : List (FunDecl α)) :
+    declarationExceptionIds (functions.map (fun function => Decl.function function)) =
+      functions.flatMap (fun function => expIds function.body) := by
+  induction functions with
+  | nil => simp [declarationExceptionIds]
+  | cons function functions ih => simp [declarationExceptionIds, ih]
 
 /-! ## A linear syntactic size bound for `seqAssoc`
 

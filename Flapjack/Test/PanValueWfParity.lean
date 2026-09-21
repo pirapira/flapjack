@@ -192,4 +192,18 @@ def flatLoadShapeGuard : Bool :=
 #eval flatLoadShapeGuard
 #guard flatLoadShapeGuard
 
+/-! `evaluate_replicate_const` (`pan_to_crepProofScript.sml:3051`): evaluating a
+    list of zero constants always succeeds, producing the same number of zero
+    words. -/
+
+theorem evalPanValueExps_replicate_const_fixture :
+    (List.replicate 3 (.const (0 : Nat))).mapM
+        (fun expression => evalPanValueExp ([] : StructContext) (fun _ => none)
+          (fun _ => none) (fun _ => none) 0 0 8 expression) =
+      some (List.replicate 3 (.word (0 : Nat))) :=
+  evalPanValueExps_replicate_const ([] : StructContext) (fun _ => none)
+    (fun _ => none) (fun _ => none) 0 0 8 3
+
+#check @evalPanValueExps_replicate_const
+
 end Flapjack.Test.PanValueWfParity

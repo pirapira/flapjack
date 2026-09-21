@@ -452,7 +452,103 @@ theorem panCrepSemanticAgreement_of_pcResultRel_pair
     rw [hpanSuccessEvents sourceClock sourceResult sourceOutcome hsource
         hsourceOutcome,
       hcrepSuccessEvents targetClock targetResult targetState targetOutcome
-        htarget htargetOutcome]
+      htarget htargetOutcome]
+
+/-! Full agreement with the Cake-style cross-clock choice premise. The raw
+target result and event equality stay explicit so the constructor can be
+instantiated by the monotone evaluator proof without treating FinalFFI as a
+Return or erasing its trace. -/
+theorem panCrepSemanticAgreement_of_pcResultRel_pair_cross_clock
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (panHooks : PanSemanticsHooks α σ) (crepHooks : CrepSemanticsHooks α)
+    (hffiOutcome : ∀ event, panHooks.ffiOutcome event = event.outcome)
+    (hpair : ∀ clock, ∃ (outcome : PanValueFfiClockOutcome α σ)
+      (returnedClock : Nat) (result : CrepControlResult α) (state : CrepState α),
+      panHooks.evaluate clock = some (outcome, returnedClock) ∧
+      crepHooks.evaluate clock =
+        (crepControlResultToSemantic (some result), state) ∧
+      panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
+        (panOutcomeToPcResult outcome) (crepControlToPcResult result) ∧
+      panResultEvents (some (outcome, returnedClock)) = crepHooks.ioEvents state)
+    (hcross : ∀ (sourceClock targetClock : Nat)
+      (sourceResult : PanValueFfiClockResult α σ)
+      (sourceOutcome : PanSemanticOutcome)
+      (targetResult : Option (CrepSemanticResult α))
+      (targetState : CrepState α) (targetOutcome : CrepSemanticOutcome),
+      panHooks.evaluate sourceClock = some sourceResult →
+      panResultOutcome panHooks (some sourceResult) = some sourceOutcome →
+      crepHooks.evaluate targetClock = (targetResult, targetState) →
+      crepResultOutcome targetResult = some targetOutcome →
+      ∃ (outcome : PanValueFfiClockOutcome α σ) (returnedClock : Nat)
+        (result : CrepControlResult α),
+        sourceResult = (outcome, returnedClock) ∧
+        targetResult = crepControlResultToSemantic (some result) ∧
+        panValuePcResultRel structs context exceptionRel exceptionCode
+          globalsLookup (panOutcomeToPcResult outcome) (crepControlToPcResult result) ∧
+        panResultEvents (some sourceResult) = crepHooks.ioEvents targetState) :
+    PanCrepSemanticAgreement panHooks crepHooks := by
+  refine ⟨?_, ?_, ?_, ?_, ?_⟩
+  · intro clock
+    obtain ⟨outcome, returnedClock, result, state, hpanClock, hcrepClock, _,
+      hevents⟩ := hpair clock
+    rw [hpanClock, hcrepClock]
+    exact hevents
+  · intro clock
+    obtain ⟨outcome, returnedClock, result, state, hpanClock, hcrepClock, hrel,
+      _⟩ := hpair clock
+    rw [hpanClock, hcrepClock]
+    exact panValuePcResultRel_forbidden_iff structs context exceptionRel
+      exceptionCode globalsLookup outcome result returnedClock hrel
+  · intro clock
+    obtain ⟨outcome, returnedClock, result, state, hpanClock, hcrepClock, hrel,
+      _⟩ := hpair clock
+    have hpanAt : panSuccessfulAt panHooks clock ↔
+        ∃ sourceOutcome,
+          panResultOutcome panHooks (some (outcome, returnedClock)) =
+            some sourceOutcome := by
+      constructor
+      · rintro ⟨result', outcome', heval, houtcome⟩
+        rw [hpanClock] at heval
+        cases heval
+        exact ⟨outcome', houtcome⟩
+      · rintro ⟨sourceOutcome, houtcome⟩
+        exact ⟨(outcome, returnedClock), sourceOutcome, hpanClock, houtcome⟩
+    have hcrepAt : crepSuccessfulAt crepHooks clock ↔
+        ∃ targetOutcome,
+          crepResultOutcome
+            (crepControlResultToSemantic (some result)) = some targetOutcome := by
+      constructor
+      · rintro ⟨result', state', outcome', heval, houtcome⟩
+        rw [hcrepClock] at heval
+        cases heval
+        exact ⟨outcome', houtcome⟩
+      · rintro ⟨targetOutcome, houtcome⟩
+        exact ⟨crepControlResultToSemantic (some result), state, targetOutcome,
+          hcrepClock, houtcome⟩
+    rw [hpanAt, hcrepAt]
+    exact panValuePcResultRel_success_iff structs context exceptionRel
+      exceptionCode globalsLookup panHooks outcome result returnedClock hrel
+  · intro sourceClock targetClock sourceResult sourceOutcome targetResult
+      targetState targetOutcome hsource hsourceOutcome htarget htargetOutcome
+    obtain ⟨outcome, returnedClock, result, hsourceResult, htargetResult, hrel,
+      _⟩ := hcross sourceClock targetClock sourceResult sourceOutcome targetResult
+      targetState targetOutcome hsource hsourceOutcome htarget htargetOutcome
+    subst sourceResult
+    subst targetResult
+    exact panCrepSemanticOutcomeRel_of_pcResultRel_cross_clock structs context
+      exceptionRel exceptionCode globalsLookup panHooks crepHooks hffiOutcome
+      sourceClock targetClock outcome returnedClock result targetState
+      sourceOutcome targetOutcome hsource htarget hrel hsourceOutcome
+      htargetOutcome
+  · intro sourceClock targetClock sourceResult sourceOutcome targetResult
+      targetState targetOutcome hsource hsourceOutcome htarget htargetOutcome
+    obtain ⟨_, _, _, _, _, _, hevents⟩ := hcross sourceClock targetClock
+      sourceResult sourceOutcome targetResult targetState targetOutcome hsource
+      hsourceOutcome htarget htargetOutcome
+    exact hevents
 
 /-! Instantiate the semantic agreement from the actual `pc_compile_correct`
     contract. The witness premise is the Lean form of Cake's

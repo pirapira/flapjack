@@ -7,6 +7,7 @@ open Flapjack
 
 #check @panCrepSemanticAgreement_of_pcCompileCorrect_witnesses
 #check @panCrepSemanticOutcomeRel_of_pcResultRel_cross_clock
+#check @panCrepSemanticAgreement_of_pcResultRel_pair_cross_clock
 
 def emptyPanHooks : PanSemanticsHooks Unit Unit where
   evaluate := fun _ => none

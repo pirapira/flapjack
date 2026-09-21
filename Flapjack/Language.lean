@@ -646,6 +646,59 @@ theorem listDisjoint_withShape_getElem (shapes : List Shape) (values : List α)
     exact listDisjoint_withShape_getElem_lt shapes values n' n hdistinct hn' hn
       hlt hvalues value hright hleft
 
+/-! Membership in a `zip` exposes the common index and both components.  Lean
+    core has no `List.mem_zip`, so this is the helper used to read Cake's
+    `MEM ... (ZIP ...)` hypotheses. -/
+theorem mem_zip_getElem (left : List α) (right : List β) (pair : α × β)
+    (hmem : pair ∈ left.zip right) :
+    ∃ (i : Nat) (hi : i < left.length) (hj : i < right.length),
+      left[i]'hi = pair.1 ∧ right[i]'hj = pair.2 := by
+  obtain ⟨i, hbound, hpi⟩ := List.mem_iff_getElem.mp hmem
+  rw [List.length_zip] at hbound
+  rw [List.getElem_zip] at hpi
+  refine ⟨i, Nat.lt_of_lt_of_le hbound (Nat.min_le_left ..),
+    Nat.lt_of_lt_of_le hbound (Nat.min_le_right ..), ?_, ?_⟩
+  · exact congrArg Prod.fst hpi
+  · exact congrArg Prod.snd hpi
+
+/-! Counterpart of Cake's `all_distinct_mem_zip_disjoint_with_shape`
+    (`cakeml/pancake/semantics/panPropsScript.sml:452`): two triples of the
+    aligned `(label, shape, component)` view whose labels differ have disjoint
+    components. -/
+theorem listDisjoint_of_mem_zip_withShape (labels : List α) (shapes : List Shape)
+    (values : List β) (left right : α × (Shape × List β))
+    (hlabels : labels.length = shapes.length)
+    (hshapes : shapes.length = (withShape shapes values).length)
+    (hdistinct : values.Nodup)
+    (hvalues : values.length = Shape.shapeSize (.comb shapes))
+    (hleft : left ∈ labels.zip (shapes.zip (withShape shapes values)))
+    (hright : right ∈ labels.zip (shapes.zip (withShape shapes values)))
+    (hne : left.1 ≠ right.1) :
+    ListDisjoint left.2.2 right.2.2 := by
+  obtain ⟨i, hi, _hiInner, hleftFirst, hleftSecond⟩ :=
+    mem_zip_getElem labels (shapes.zip (withShape shapes values)) left hleft
+  obtain ⟨j, hj, _hjInner, hrightFirst, hrightSecond⟩ :=
+    mem_zip_getElem labels (shapes.zip (withShape shapes values)) right hright
+  rw [List.getElem_zip] at hleftSecond
+  rw [List.getElem_zip] at hrightSecond
+  have hiShapes : i < shapes.length := by rw [hlabels] at hi; exact hi
+  have hjShapes : j < shapes.length := by rw [hlabels] at hj; exact hj
+  have hiValues : i < (withShape shapes values).length := by
+    rw [hshapes] at hiShapes; exact hiShapes
+  have hjValues : j < (withShape shapes values).length := by
+    rw [hshapes] at hjShapes; exact hjShapes
+  have hleftComponent : left.2.2 = (withShape shapes values)[i]'hiValues := by
+    simpa using (congrArg Prod.snd hleftSecond).symm
+  have hrightComponent : right.2.2 = (withShape shapes values)[j]'hjValues := by
+    simpa using (congrArg Prod.snd hrightSecond).symm
+  have hneIndex : i ≠ j := by
+    intro heq
+    subst heq
+    exact hne (by rw [← hleftFirst, ← hrightFirst])
+  rw [hleftComponent, hrightComponent]
+  exact listDisjoint_withShape_getElem shapes values i j hdistinct hiShapes hjShapes
+    hneIndex hvalues
+
 /-! Counterpart of Cake's `all_distinct_with_shape_distinct`
     (`cakeml/pancake/semantics/panPropsScript.sml:357`): two distinct members of
     the flat-value split are disjoint.  Cake's extra hypotheses `x <> []` and

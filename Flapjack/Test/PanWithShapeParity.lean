@@ -245,6 +245,34 @@ def distinctListsGuard : Bool :=
 #eval distinctListsGuard
 #guard distinctListsGuard
 
+theorem mem_zip_getElem_fixture :
+    ∃ (i : Nat) (hi : i < ([1, 2, 3] : List Nat).length)
+      (hj : i < ([4, 5, 6] : List Nat).length),
+      ([1, 2, 3] : List Nat)[i]'hi = (3 : Nat) ∧
+        ([4, 5, 6] : List Nat)[i]'hj = (6 : Nat) :=
+  mem_zip_getElem [1, 2, 3] [4, 5, 6] (3, 6) (by decide)
+
+theorem listDisjoint_of_mem_zip_withShape_fixture :
+    ListDisjoint ([1] : List Nat) [2, 3] := by
+  have hleft : (10, (Shape.one, [1])) ∈
+      ([10, 20, 30] : List Nat).zip
+        (oneCombNamed.zip (withShape oneCombNamed [1, 2, 3, 4])) := by
+    simp [oneCombNamed, withShape, Shape.shapeSize]
+  have hright : (20, (Shape.comb [Shape.one, Shape.one], [2, 3])) ∈
+      ([10, 20, 30] : List Nat).zip
+        (oneCombNamed.zip (withShape oneCombNamed [1, 2, 3, 4])) := by
+    simp [oneCombNamed, withShape, Shape.shapeSize]
+  exact listDisjoint_of_mem_zip_withShape [10, 20, 30] oneCombNamed [1, 2, 3, 4]
+    (10, (Shape.one, [1])) (20, (Shape.comb [Shape.one, Shape.one], [2, 3]))
+    (by simp [oneCombNamed]) (by simp [oneCombNamed, withShape, Shape.shapeSize])
+    (by decide) (by simp [oneCombNamed, Shape.shapeSize]) hleft hright (by decide)
+
+def zipWithShapeGuard : Bool :=
+  (([1] : List Nat).all (fun value => !([2, 3] : List Nat).contains value))
+
+#eval zipWithShapeGuard
+#guard zipWithShapeGuard
+
 def checkDisjoint (name : String) (actual : Bool) : IO Bool := do
   if actual then
     IO.println s!"PASS {name}"
@@ -271,7 +299,9 @@ def runChecks : IO Bool := do
   let distinctOk ←
     checkDisjoint "pan all_distinct_with_shape_distinct" withShapeDistinctGuard
   let distinctListsOk ← checkDisjoint "pan distinct_lists" distinctListsGuard
+  let zipWithShapeOk ←
+    checkDisjoint "pan all_distinct_mem_zip_disjoint_with_shape" zipWithShapeGuard
   pure (results.all id && lengthOk && allDistinctOk && membershipOk && disjointOk &&
-    shapeDisjointOk && nestedOk && distinctOk && distinctListsOk)
+    shapeDisjointOk && nestedOk && distinctOk && distinctListsOk && zipWithShapeOk)
 
 end Flapjack.Test.PanWithShapeParity

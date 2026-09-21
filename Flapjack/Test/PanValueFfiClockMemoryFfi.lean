@@ -66,4 +66,16 @@ def clockedRaisedProgramAccepted : Bool :=
 
 #guard clockedRaisedProgramAccepted
 
+def clockedTimeoutProgramResult :=
+  evalPanValueFfiClockProgram memoryFfiTestContext memoryFfiInitial 0
+    (fun _ _ => none) memoryFfiTestHandler 20 clockedRaisedDeclarations "main" []
+
+def clockedTimeoutProgramAccepted : Bool :=
+  match clockedTimeoutProgramResult with
+  | some (.timeout locals globals memory ffi, 0) =>
+      locals "x" = none && globals "x" = none && memory 200 = none && ffi.state = ()
+  | _ => false
+
+#guard clockedTimeoutProgramAccepted
+
 end Flapjack

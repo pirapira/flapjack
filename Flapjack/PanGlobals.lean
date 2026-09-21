@@ -595,6 +595,37 @@ theorem exceptionEntries_filter_global (declarations : List (Decl α)) :
     exceptionEntries (globalDeclsFilter globalDeclIsGlobal declarations) = [] :=
   exceptionEntries_globalDeclsFilter_of_false (fun _ _ => rfl) declarations
 
+/-! Counterpart of Cake's `not_is_function`
+    (`pan_globalsProofScript.sml:2527`): name, value, and exception
+    declarations are never function declarations. -/
+theorem isName_not_function (declaration : Decl α) :
+    isName declaration = true → globalDeclIsFunction declaration = false := by
+  cases declaration <;> simp [isName, globalDeclIsFunction]
+
+theorem isDecl_not_function (declaration : Decl α) :
+    isDecl declaration = true → globalDeclIsFunction declaration = false := by
+  cases declaration <;> simp [isDecl, globalDeclIsFunction]
+
+theorem isExnDecl_not_function (declaration : Decl α) :
+    isExnDecl declaration = true → globalDeclIsFunction declaration = false := by
+  cases declaration <;> simp [isExnDecl, globalDeclIsFunction]
+
+theorem not_is_function (declaration : Decl α) :
+    (isName declaration = true → globalDeclIsFunction declaration = false) ∧
+    (isDecl declaration = true → globalDeclIsFunction declaration = false) ∧
+    (isExnDecl declaration = true → globalDeclIsFunction declaration = false) :=
+  ⟨isName_not_function declaration, isDecl_not_function declaration,
+    isExnDecl_not_function declaration⟩
+
+/-! Counterpart of Cake's `decl_distinct`
+    (`pan_globalsProofScript.sml:2535`): a value declaration is disjoint
+    from the name, function, and exception declaration classes. -/
+theorem decl_distinct (declaration : Decl α) :
+    (isDecl declaration && isName declaration) = false ∧
+    (isDecl declaration && globalDeclIsFunction declaration) = false ∧
+    (isDecl declaration && isExnDecl declaration) = false := by
+  cases declaration <;> simp [isDecl, isName, isExnDecl, globalDeclIsFunction]
+
 def globalFindFunction [BEq String] (name : FunName) :
     List (Decl α) → Option (FunDecl α)
   | [] => none

@@ -270,6 +270,30 @@ def globalRenameFunctionName [BEq String]
     (source target name : FunName) : FunName :=
   if source == name then target else if target == name then source else name
 
+/-! Counterparts of Cake's `fperm_name_cancel` and `fperm_name_cong`
+    (`pan_globalsProofScript.sml:1622,1629`): the source/target renaming is an
+    involutive bijection of function names. -/
+theorem globalRenameFunctionName_cancel [BEq String] [LawfulBEq String]
+    (source target name : FunName) :
+    globalRenameFunctionName source target
+        (globalRenameFunctionName source target name) = name := by
+  unfold globalRenameFunctionName
+  simp only [beq_iff_eq]
+  repeat' split <;> simp_all
+
+theorem globalRenameFunctionName_cong [BEq String] [LawfulBEq String]
+    (source target left right : FunName) :
+    globalRenameFunctionName source target left =
+        globalRenameFunctionName source target right ↔
+      left = right := by
+  constructor
+  · intro h
+    have := congrArg (globalRenameFunctionName source target) h
+    rw [globalRenameFunctionName_cancel, globalRenameFunctionName_cancel] at this
+    exact this
+  · intro h
+    rw [h]
+
 def globalRenameProg [BEq String]
     (source target : FunName) : Prog α → Prog α
   | .dec name shape value body =>

@@ -282,4 +282,27 @@ theorem structCompileProg_seq [BEq String] (context : StructPassContext)
       .seq (structCompileProg context first) (structCompileProg context second) := by
   simp [structCompileProg]
 
+/-- Cake's `function_names_structs_compile_decs`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml`): the struct pass keeps
+    the function-name table. -/
+theorem functions_names_structCompileDecls [BEq String]
+    (declarations : List (Decl α)) (context : StructPassContext) :
+    (functions (structCompileDecls declarations context).1).map Prod.fst =
+      (functions declarations).map Prod.fst := by
+  induction declarations generalizing context with
+  | nil => simp [structCompileDecls]
+  | cons declaration declarations ih =>
+      cases declaration <;> simp [structCompileDecls, functions, ih]
+
+/-- Cake's `function_names_structs_compile_top`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:313`): the struct pass at
+    the declaration list level keeps the function-name table. -/
+theorem functions_names_structCompileTop (declarations : List (Decl α)) :
+    (functions (structCompileTop declarations)).map Prod.fst =
+      (functions declarations).map Prod.fst := by
+  unfold structCompileTop
+  dsimp only
+  exact functions_names_structCompileDecls declarations
+    (structGetNames { structs := [], locals := [], globals := [] } declarations)
+
 end Flapjack

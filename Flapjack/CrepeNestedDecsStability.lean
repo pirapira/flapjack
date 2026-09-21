@@ -482,6 +482,36 @@ theorem panValueCrepLocalsRel_updateCrepLocalList_fresh
     hlength (fun slot hslot => hfresh name shape slots hlookup slot hslot)]
   exact hold.2
 
+/-! Cake's `local_rel_gt_vmax_preserved`
+    (`pan_to_crepProofScript.sml:2245-2260`) is the one-slot instance of
+    fresh-local preservation.  The Cake context invariant
+    `ctxt_max_el_leq` is represented here by the explicit `hbound` premise:
+    every slot recorded for a related source local is at most `maxVar`.
+    Keeping that premise visible makes the theorem applicable to contexts
+    assembled by the Lean port without hiding the source proof obligation. -/
+theorem panValueCrepLocalsRel_update_fresh_slot
+    (structs : StructContext) (context : CompileContext α)
+    (sourceLocals : VarName → Option (PanValue α))
+    (crepLocals : Nat → Option α)
+    (slot : Nat) (value : α)
+    (hrel : panValueCrepLocalsRel structs context sourceLocals crepLocals)
+    (hslot : context.maxVar < slot)
+    (hbound : ∀ name shape slots,
+      lookupInfo name context.vars = some (shape, slots) →
+        ∀ current, current ∈ slots → current ≤ context.maxVar) :
+    panValueCrepLocalsRel structs context sourceLocals
+      (updateCrepLocal crepLocals slot value) := by
+  intro name currentValue shape slots hsource hlookup
+  have hold := hrel name currentValue shape slots hsource hlookup
+  refine ⟨hold.1, ?_⟩
+  have hnot : slot ∉ slots := by
+    intro hmem
+    have hle := hbound name shape slots hlookup slot hmem
+    omega
+  have hsame := readCrepLocals_update_of_not_mem
+    crepLocals slot value slots hnot
+  exact hsame.trans hold.2
+
 theorem panValueCrepStateRel_updateCrepLocalList_fresh
     (structs : StructContext) (context : CompileContext α)
     (sourceLocals sourceGlobals : VarName → Option (PanValue α))

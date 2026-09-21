@@ -1,5 +1,5 @@
 import Flapjack.Crepe
-import Flapjack.CrepeNestedDecsStability
+import Flapjack.CrepeGlobalStoreCorrectness
 
 /-!
 # Original-domain parity for `crepLang$load_globals`
@@ -154,7 +154,8 @@ def loadGlobalsState : CrepState Nat :=
   { locals := fun _ => none
     memory := fun address =>
       if address == 0 then some 10 else if address == 1 then some 11 else none
-    globals := fun _ => none }
+    globals := fun address =>
+      if address == 0 then some 10 else if address == 1 then some 11 else none }
 
 def loadGlobalsPrimitive : CrepPrimitiveHandler Nat := fun _ _ => none
 
@@ -198,6 +199,34 @@ theorem evalCrepFullProg_nestedDecs_loadGlobals_fixture :
       evalCrepFullExps, evalCrepFullExp]
   · simp [loadGlobalsResultState, loadGlobalsState, loadGlobalsNames,
       loadGlobalsValues, updateCrepLocalList, evalCrepFullProg]
+
+theorem crepNestedDecsStateEval_loadGlobals_fixture :
+    CrepNestedDecsStateEval [] loadGlobalsPrimitive loadGlobalsFfi
+      loadGlobalsSharedMem 0 0 1 loadGlobalsState loadGlobalsNames
+      (loadGlobals 0 1 2) .skip (.normal loadGlobalsResultState) := by
+  apply crepNestedDecsStateEval_loadGlobals_of_evalExps
+    (values := loadGlobalsValues)
+  · simp [loadGlobalsNames]
+  · simp [loadGlobalsState, loadGlobalsValues, loadGlobals,
+      evalCrepFullExpsState, evalCrepFullExpState]
+  · simp [loadGlobalsResultState, loadGlobalsState, loadGlobalsNames,
+      loadGlobalsValues, updateCrepLocalList, evalCrepFullProgState]
+
+theorem evalCrepFullProgState_nestedDecs_loadGlobals_fixture :
+    evalCrepFullProgState [] loadGlobalsPrimitive loadGlobalsFfi
+      loadGlobalsSharedMem 0 0 (1 + loadGlobalsNames.length)
+      loadGlobalsState
+      (nestedDecs loadGlobalsNames (loadGlobals 0 1 2) .skip) =
+      some (restoreCrepResultList loadGlobalsState.locals loadGlobalsNames
+        (.normal loadGlobalsResultState)) := by
+  apply evalCrepFullProgState_nestedDecs_loadGlobals_of_evalExps
+    (values := loadGlobalsValues)
+  · simp [loadGlobalsNames]
+  · simp [CrepDistinctNames, loadGlobalsNames]
+  · simp [loadGlobalsState, loadGlobalsValues, loadGlobals,
+      evalCrepFullExpsState, evalCrepFullExpState]
+  · simp [loadGlobalsResultState, loadGlobalsState, loadGlobalsNames,
+      loadGlobalsValues, updateCrepLocalList, evalCrepFullProgState]
 
 def runChecks : IO Bool := do
   let results := [

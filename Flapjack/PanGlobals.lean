@@ -1457,6 +1457,117 @@ def globalCompileTopForStart [BEq String] [Add α] [Mul α]
             returnShape := entry.returnShape }
       some (compiled.exceptions ++ [newMain] ++ compiled.functions)
 
+theorem globalDecls_all_or_of_all_left (predicate other : Decl α → Bool)
+    (declarations : List (Decl α))
+    (hall : declarations.all other = true) :
+    declarations.all
+      (fun declaration => predicate declaration || other declaration) = true := by
+  induction declarations with
+  | nil => simp
+  | cons declaration declarations ih =>
+      simp only [List.all_cons, Bool.and_eq_true] at hall ⊢
+      obtain ⟨hhead, htail⟩ := hall
+      exact ⟨by simp [hhead], ih htail⟩
+
+theorem globalDecls_all_or_of_all_right (predicate other : Decl α → Bool)
+    (declarations : List (Decl α))
+    (hall : declarations.all predicate = true) :
+    declarations.all
+      (fun declaration => predicate declaration || other declaration) = true := by
+  induction declarations with
+  | nil => simp
+  | cons declaration declarations ih =>
+      simp only [List.all_cons, Bool.and_eq_true] at hall ⊢
+      obtain ⟨hhead, htail⟩ := hall
+      exact ⟨by simp [hhead], ih htail⟩
+
+/-! Counterpart of Cake's `compile_top_only_functions_or_exns`
+    (`pan_globalsProofScript.sml:2611`): the declaration list produced by the
+    start-function entry point consists only of compiled functions and
+    exception declarations. -/
+theorem globalCompileDecs_result_all_function_or_exception [BEq String] [Add α]
+    [Mul α] (context : GlobalPassContext α) (declarations : List (Decl α))
+    (extra : Decl α) (hextra : globalDeclIsFunction extra = true) :
+    ((globalCompileDecs context declarations).exceptions ++ [extra] ++
+        (globalCompileDecs context declarations).functions).all
+      (fun declaration => globalDeclIsFunction declaration ||
+        globalDeclIsException declaration) = true := by
+  simp only [globalCompileDecs]
+  rw [List.all_append, List.all_append, Bool.and_eq_true, Bool.and_eq_true]
+  refine ⟨⟨?_, ?_⟩, ?_⟩
+  · exact globalDecls_all_or_of_all_left globalDeclIsFunction
+      globalDeclIsException _ (globalDeclsFilter_all globalDeclIsException _)
+  · simp [hextra]
+  · exact globalDecls_all_or_of_all_right globalDeclIsFunction
+      globalDeclIsException _ (globalDeclsFilter_all globalDeclIsFunction _)
+
+theorem globalCompileTopForStart_all_function_or_exception [BEq String] [Add α]
+    [Mul α] (bytesInWord : α) (fromNat : Nat → α)
+    (declarations : List (Decl α)) (start : FunName) (compiled : List (Decl α))
+    (hcompile : globalCompileTopForStart bytesInWord fromNat declarations start =
+      some compiled) :
+    compiled.all
+      (fun declaration => globalDeclIsFunction declaration ||
+        globalDeclIsException declaration) = true := by
+  unfold globalCompileTopForStart at hcompile
+  cases hfind : globalFindFunction start declarations with
+  | none => simp [hfind] at hcompile
+  | some entry =>
+      simp only [hfind, Option.some.injEq] at hcompile
+      subst hcompile
+      exact globalCompileDecs_result_all_function_or_exception _ _ _
+        (by simp [globalDeclIsFunction])
+
+/-! Counterpart of the exception projection of Cake's `compile_top`
+    (`pan_globalsProofScript.sml:2974`): the global pass preserves the
+    exception table exactly, so `exceptions (compile_top code start)` is
+    `exceptions code`. -/
+theorem exceptionEntries_globalCompileDecls [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations : List (Decl α)) :
+    exceptionEntries (globalCompileDecls context declarations) =
+      exceptionEntries declarations := by
+  induction declarations with
+  | nil => simp [globalCompileDecls, exceptionEntries]
+  | cons declaration declarations ih =>
+      cases declaration <;>
+        simp [globalCompileDecls, exceptionEntries_cons, ih]
+
+theorem exceptionEntries_globalRenameDecls [BEq String]
+    (source target : FunName) (declarations : List (Decl α)) :
+    exceptionEntries (globalRenameDecls source target declarations) =
+      exceptionEntries declarations := by
+  induction declarations with
+  | nil => simp [globalRenameDecls, exceptionEntries]
+  | cons declaration declarations ih =>
+      cases declaration <;>
+        simp [globalRenameDecls, exceptionEntries_cons, ih]
+
+theorem exceptionEntries_globalResortDecls (declarations : List (Decl α)) :
+    exceptionEntries (globalResortDecls declarations) =
+      exceptionEntries declarations := by
+  simp [globalResortDecls, exceptionEntries_append,
+    exceptionEntries_filter_name, exceptionEntries_filter_exception,
+    exceptionEntries_filter_global, exceptionEntries_filter_function]
+
+theorem globalCompileTopForStart_exceptionEntries [BEq String] [Add α] [Mul α]
+    (bytesInWord : α) (fromNat : Nat → α) (declarations : List (Decl α))
+    (start : FunName) (compiled : List (Decl α))
+    (hcompile : globalCompileTopForStart bytesInWord fromNat declarations start =
+      some compiled) :
+    exceptionEntries compiled = exceptionEntries declarations := by
+  unfold globalCompileTopForStart at hcompile
+  cases hfind : globalFindFunction start declarations with
+  | none => simp [hfind] at hcompile
+  | some entry =>
+      simp only [hfind, Option.some.injEq] at hcompile
+      subst hcompile
+      simp only [globalCompileDecs]
+      rw [exceptionEntries_append, exceptionEntries_append,
+        exceptionEntries_filter_exception, exceptionEntries_filter_function,
+        exceptionEntries_globalCompileDecls, exceptionEntries_globalRenameDecls,
+        exceptionEntries_globalResortDecls]
+      simp [exceptionEntries]
+
 def globalCompileTop [BEq String] [Add α] [Mul α]
     (bytesInWord : α) (fromNat : Nat → α) (declarations : List (Decl α)) :
     GlobalCompiledProgram α :=

@@ -5,6 +5,40 @@ namespace Flapjack.Test.PanValuePcControlSafety
 
 open Flapjack
 
+/-! The context-coded `pc_compile_correct` boundary keeps the full
+    evaluator/state/result obligation package explicit. -/
+example
+    (sourceEvaluate : PanValuePcEvaluator Nat)
+    (targetEvaluate : CrepPcEvaluator Nat)
+    (codeRel : PanValuePcCodeRel Nat)
+    (excpRel : PanValuePcExceptionShapeRel Nat)
+    (exceptionCode : ExceptionId → Option Nat)
+    (globalsLookup : CrepState Nat → PanValue Nat → Option (List Nat))
+    (program : Prog Nat)
+    (hobligation : ∀ (context : CompileContext Nat) (structs : StructContext)
+      (sourceInput : PanValuePcInput Nat) (targetInput : CrepPcInput Nat)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (sourceExecution : PanValuePcExecution Nat)
+      (targetExecution : CrepPcExecution Nat),
+      sourceInput.structs = structs → targetInput.structs = structs →
+      panValuePcLocalisedCode sourceInput.code → localisedProg program →
+      codeRel context sourceInput.code targetInput.code →
+      excpRel context sourceInput.eshapes targetInput.eshapes →
+      panValueCrepStateRel structs context sourceInput.locals sourceInput.globals
+        sourceInput.memory targetInput.state →
+      sourceExecution.result ≠ .error →
+      sourceEvaluate context sourceInput program = some sourceExecution →
+      targetEvaluate context targetInput (compileProg context program) =
+        some targetExecution →
+      codeRel context sourceExecution.code targetExecution.code →
+      excpRel context sourceExecution.eshapes targetExecution.eshapes →
+      panValuePcResultRelWithContextCode structs context exceptionRel exceptionCode
+        globalsLookup sourceExecution.result targetExecution.result) :
+    PanValuePcCompileCorrectWithContextCode sourceEvaluate targetEvaluate codeRel
+      excpRel exceptionCode globalsLookup program := by
+  exact panValuePcCompileCorrectWithContextCode_of_obligations sourceEvaluate
+    targetEvaluate codeRel excpRel exceptionCode globalsLookup program hobligation
+
 def controlContext : CompileContext Nat :=
   { vars := [], functions := [], exceptions := [], maxVar := 0,
     bytesInWord := 1 }

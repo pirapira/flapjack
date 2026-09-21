@@ -1,5 +1,6 @@
 import Flapjack.Semantics
 import Flapjack.PanMemoryModel
+import Flapjack.PanStructsAfindi
 
 /-!
 Structured source values and the corresponding executable expression/state
@@ -494,6 +495,45 @@ theorem panValueIsWf_isWfShape_panValueShape (structs : StructContext)
       simp only [panValueIsWfValues, Bool.and_eq_true] at h
       obtain ⟨h1, h2⟩ := h
       simp only [List.map_cons, isWfShape.isWfShapeList, Bool.and_eq_true]
+      exact ⟨ihValue h1, ihValues h2⟩
+
+/-- Counterpart of Cake's `is_wf_shape_v_drop`
+    (`cakeml/pancake/semantics/panPropsScript.sml:63`): well-formedness of a
+    value against a suffix of the struct context implies well-formedness
+    against the whole context, because a name found in the suffix is also
+    found (at least as far left) in the whole context. -/
+theorem panValueIsWf_of_drop (context : StructContext) (value : PanValue α)
+    (n : Nat) :
+    panValueIsWf (context.drop n) value = true →
+      panValueIsWf context value = true := by
+  induction value using panValueIsWf.induct
+    (motive2 := fun fields =>
+      panValueIsWfFields (context.drop n) fields = true →
+        panValueIsWfFields context fields = true)
+    (motive3 := fun values =>
+      panValueIsWfValues (context.drop n) values = true →
+        panValueIsWfValues context values = true) with
+  | case1 scalar => intro _; simp only [panValueIsWf]
+  | case2 fields ih =>
+      intro h
+      simp only [panValueIsWf] at h ⊢
+      exact ih h
+  | case3 name fields ih =>
+      intro h
+      simp only [panValueIsWf, Bool.and_eq_true] at h ⊢
+      obtain ⟨hname, hfields⟩ := h
+      exact ⟨lookupInfo_isSome_drop name context n hname, ih hfields⟩
+  | case4 => simp [panValueIsWfFields]
+  | case5 fst value fields ihValue ihFields =>
+      rename_i h
+      simp only [panValueIsWfFields, Bool.and_eq_true] at h ⊢
+      obtain ⟨h1, h2⟩ := h
+      exact ⟨ihValue h1, ihFields h2⟩
+  | case6 => simp [panValueIsWfValues]
+  | case7 value values ihValue ihValues =>
+      rename_i h
+      simp only [panValueIsWfValues, Bool.and_eq_true] at h ⊢
+      obtain ⟨h1, h2⟩ := h
       exact ⟨ihValue h1, ihValues h2⟩
 
 def panShapeMatches : Shape → Shape → Bool

@@ -46,4 +46,22 @@ theorem panValueIsWf_isWfShape_panValueShape_fixture :
     (by simp [panValueIsWf, panValueIsWfFields, namedContext, namedValue,
       lookupInfo])
 
+/-! `is_wf_shape_v_drop` (`panPropsScript.sml:63`): dropping a prefix of the
+    context preserves value well-formedness. -/
+
+def dropContext : StructContext :=
+  [("T", { fields := [], size := 1 }), ("S", { fields := [], size := 1 })]
+
+theorem panValueIsWf_of_drop_fixture :
+    panValueIsWf dropContext namedValue = true :=
+  panValueIsWf_of_drop dropContext namedValue 1 (by
+    simp [panValueIsWf, panValueIsWfFields, dropContext, namedValue, lookupInfo])
+
+def dropGuard : Bool :=
+  panValueIsWf (dropContext.drop 1) namedValue &&
+  panValueIsWf dropContext namedValue
+
+#eval dropGuard
+#guard dropGuard
+
 end Flapjack.Test.PanValueWfParity

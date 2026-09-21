@@ -207,6 +207,27 @@ def directCallDestinationCakeGuard : Bool :=
 
 #guard directCallDestinationCakeGuard
 
+/- Cake's returning direct-call wrapper includes the implicit return slot in
+   `StackArgs`, preserves the return-handler labels, and retains its explicit
+   zero `StackFree` tail. -/
+def returningCallCarrierCakeGuard : Bool :=
+  match wordToStackCallNoHandler (α := Nat) false 7 0 6 3 []
+      (.skip : StackProg Nat) 20 21 with
+  | .seq
+      (.seq (.stackAlloc words)
+        (.seq (.stackLoad loadRegister loadOffset)
+          (.stackStore storeRegister storeOffset)))
+      (.seq (.call (some (.skip, freeFrame, returnLabel, entryLabel))
+          (.label target) none)
+        (.stackFree freeWords)) =>
+      words == 1 && loadRegister == 3 && loadOffset == 6 &&
+        storeRegister == 3 && storeOffset == 0 && freeFrame == 0 &&
+        returnLabel == 20 && entryLabel == 21 && target == 7 &&
+        freeWords == 0
+  | _ => false
+
+#guard returningCallCarrierCakeGuard
+
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
     [ ("stack_arg_count and stack_free match the call oracle", callArgCountExact),
@@ -232,7 +253,9 @@ def runChecks : IO Bool := do
       ("StackArgs direct/indirect shapes match Cake's probe",
         stackArgsMatchesCakeProbe),
       ("direct call destination preserves Cake's label carrier",
-        directCallDestinationCakeGuard) ]
+        directCallDestinationCakeGuard),
+      ("returning direct call preserves Cake's carrier shape",
+        returningCallCarrierCakeGuard) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

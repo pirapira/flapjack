@@ -29,6 +29,7 @@ MANIFEST = REPO_ROOT / "scripts" / "parity-small-corpus.json"
 FIXTURES = (
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00634_dead_raise.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f01266_raise_live_continuation.pnk",
+    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f01266_raise_continuation.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00108_handler_spill_slot.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "allocator_frame_handler_min.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "gh1025_frame_bitmap.pnk",

@@ -257,6 +257,47 @@ example :
     wordFunctionToRiscVWithCallsCake, wordExpToInstructionsCake,
     wordConstToInstructions, wordConst32ToInstructions, registerOfNat]
 
+/- The FFI-aware wrapper preserves the same Cake call carriers when a
+   list-valued constant precedes an ordinary or tail call. -/
+example :
+    wordFunctionToRiscVWithCallsAndFfiCake (width := 64)
+        ({ targets := [(7, BitVec.ofNat 64 32, [2], [10])], services := [] } :
+          WordCallFfiContext 64)
+        (.seq (.assign 4 (.const (BitVec.ofNat 64 0x1234)))
+          (.call (some ([4], ([], []), .skip, 0, 0)) (some 7) [6] none)) =
+      some ([.lui 4 (BitVec.ofNat 64 1),
+        .addi 4 4 (BitVec.ofNat 64 0x234),
+        .addi 2 6 0,
+        .addi 30 30 (0 - BitVec.ofNat 64 8),
+        .storeWord 1 30,
+        .addi 31 0 (BitVec.ofNat 64 32),
+        .jalr 1 31 0,
+        .addi 4 10 0,
+        .loadWord 1 30,
+        .addi 30 30 (BitVec.ofNat 64 8)], []) := by
+  simp [wordFunctionToRiscVWithCallsAndFfiCake,
+    wordFunctionToRiscVWithCallsCake, wordExpToInstructionsCake,
+    wordConstToInstructions, wordConst32ToInstructions,
+    wordCallToRiscVWithStack, wordRegisterMoves, lookupWordCallTarget,
+    registerOfNat]
+
+example :
+    wordFunctionToRiscVWithCallsAndFfiCake (width := 64)
+        ({ targets := [(7, BitVec.ofNat 64 32, [2], [10])], services := [] } :
+          WordCallFfiContext 64)
+        (.seq (.assign 4 (.const (BitVec.ofNat 64 0x1234)))
+          (.call none (some 7) [6] none)) =
+      some ([.lui 4 (BitVec.ofNat 64 1),
+        .addi 4 4 (BitVec.ofNat 64 0x234),
+        .addi 2 6 0,
+        .addi 31 0 (BitVec.ofNat 64 32),
+        .jalr 0 31 0], [10]) := by
+  simp [wordFunctionToRiscVWithCallsAndFfiCake,
+    wordFunctionToRiscVWithCallsCake, wordExpToInstructionsCake,
+    wordConstToInstructions, wordConst32ToInstructions,
+    wordTailCallToRiscV, wordRegisterMoves, lookupWordCallTarget,
+    registerOfNat]
+
 example (state : State 64) :
     evalWordProgCake state
         (.assign 4 (.const (BitVec.ofNat 64 0x1234)) : WordProg (Word 64)) =

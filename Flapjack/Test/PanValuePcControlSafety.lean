@@ -1216,5 +1216,6 @@ example :
 #check @panValuePcExceptionResultRel_of_withContextCode
 #check @panValuePcResultRel_of_withContextCode
 #check @panValuePcCompileCorrect_of_withContextCode
+#check @panValuePcCompileCorrect_of_context_code_obligations
 
 end Flapjack.Test.PanValuePcControlSafety

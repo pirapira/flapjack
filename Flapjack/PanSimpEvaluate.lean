@@ -5125,4 +5125,30 @@ theorem PanValueFfiClockNormalAdequateProg_ite
         (.control (.normal finalLocals finalGlobals finalMemory finalFfi)) finalClock
         hcond hzfalse hmono⟩
 
+/-- A `While` whose condition is always zero exits immediately, at any clock, so
+    it belongs to the normal-adequate fragment. -/
+theorem PanValueFfiClockNormalAdequateProg_while_zero
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (condition : Exp α) (body : Prog α)
+    (hcondition : ∀ (locals globals : VarName → Option (PanValue α))
+        (memory : α → Option (PanValue α)),
+        ∃ w : α, evalPanValueExp structs locals globals memory baseAddress topAddress
+          bytesInWord condition (memoryAccess := ma) = some (.word w) ∧ (w == 0) = true) :
+    PanValueFfiClockNormalAdequateProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord callBudget ma c mh (.while condition body) := by
+  intro locals globals memory ffi clock
+  obtain ⟨w, hcond, hw⟩ := hcondition locals globals memory
+  exact ⟨locals, globals, memory, ffi, clock,
+    evalPanValueFfiClockProg_while_zero_some_progCallFuel context primitive handler
+      structs functions baseAddress topAddress bytesInWord callBudget locals globals
+      memory ffi clock condition body ma c mh w hcond hw⟩
+
 end Flapjack

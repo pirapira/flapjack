@@ -5151,4 +5151,40 @@ theorem PanValueFfiClockNormalAdequateProg_while_zero
       structs functions baseAddress topAddress bytesInWord callBudget locals globals
       memory ffi clock condition body ma c mh w hcond hw⟩
 
+/-! A declaration whose value is shape-valid and whose body is normal-adequate
+    is normal-adequate itself.  The introduced local is restored when the body
+    finishes, matching Cake's `evaluate` declaration case. -/
+theorem PanValueFfiClockNormalAdequateProg_dec
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (name : VarName) (shape : Shape) (value : Exp α) (body : Prog α)
+    (hvalue : ∀ (locals globals : VarName → Option (PanValue α))
+        (memory : α → Option (PanValue α)),
+        ∃ valueResult : PanValue α,
+          evalPanValueExp structs locals globals memory baseAddress topAddress
+            bytesInWord value (memoryAccess := ma) = some valueResult ∧
+          panShapeMatches (panValueShape structs valueResult) shape = true)
+    (hbody : PanValueFfiClockNormalAdequateProg context primitive handler structs
+      functions baseAddress topAddress bytesInWord callBudget ma c mh body) :
+    PanValueFfiClockNormalAdequateProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord callBudget ma c mh (.dec name shape value body) := by
+  intro locals globals memory ffi clock
+  obtain ⟨valueResult, hvalueEval, hmatch⟩ := hvalue locals globals memory
+  obtain ⟨finalLocals, finalGlobals, finalMemory, finalFfi, finalClock, hbodyEval⟩ :=
+    hbody (updatePanValueMap locals name valueResult) globals memory ffi clock
+  exact ⟨restorePanValueLocal finalLocals name (locals name), finalGlobals,
+    finalMemory, finalFfi, finalClock,
+    evalPanValueFfiClockProg_dec_some_progCallFuel context primitive handler structs
+      functions baseAddress topAddress bytesInWord callBudget locals globals memory ffi
+      clock name shape value body ma c mh valueResult
+      (.control (.normal finalLocals finalGlobals finalMemory finalFfi)) finalClock
+      hvalueEval hmatch hbodyEval⟩
+
 end Flapjack

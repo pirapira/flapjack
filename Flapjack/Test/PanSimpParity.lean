@@ -906,6 +906,20 @@ example :
     evaluatorHandler [] [] 0 0 8 5 none none none (.const 0) (.skip : Prog Nat)
     (fun _ _ _ => ⟨0, by simp [evalPanValueExp], by decide⟩)
 
+/-! A declaration with a shape-matching constant and a normal-adequate body. -/
+example :
+    PanValueFfiClockNormalAdequateProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 5 none none none
+      (.dec "x" .one (.const 5) (.skip : Prog Nat)) :=
+  PanValueFfiClockNormalAdequateProg_dec evaluatorContext (fun _ _ => none)
+    evaluatorHandler [] [] 0 0 8 5 none none none "x" .one (.const 5)
+    (.skip : Prog Nat)
+    (fun _ _ _ =>
+      ⟨.word 5, by simp [evalPanValueExp], by simp [panValueShape, panShapeMatches]⟩)
+    (evalPanValueFfiClockProg_normalAdequate_of_normalProg evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [] 0 0 8 5 none none none
+      (.skip : Prog Nat) PanValueFfiClockNormalProg.skip)
+
 /-- The raised `DecCall` outcome also lifts to the declaration's progSize. -/
 example
     (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)

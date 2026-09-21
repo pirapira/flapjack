@@ -186,6 +186,18 @@ def cakeListRemap : List Nat → CakeNodeBijection → CakeNodeBijection
               fromAllocator := (bijection.nextNode, name) :: bijection.fromAllocator
               nextNode := bijection.nextNode + 1 }
 
+/- A lookup-only index for the source-variable side of `mk_bij`.  Cake's
+   association list remains the canonical representation; this index is used
+   only by repeated `sp_default` lookups while constructing the graph and
+   node tags. -/
+def cakeSpDefaultIndex (entries : NatInfoMap Nat) : Std.HashMap Nat Nat :=
+  entries.foldl (fun index entry => index.insert entry.1 entry.2) {}
+
+def cakeSpDefaultIndexed (index : Std.HashMap Nat Nat) (n : Nat) : Nat :=
+  match index[n]? with
+  | some colour => colour
+  | none => if CakeAlloc.isPhyVar n then n / 2 else 0
+
 /-- `mk_bij_aux` (`reg_allocScript.sml:1105-1117`).  The `Set` case sorts
     its names first: the original walks `MAP FST (toAList t)` over a
     `num_set`, which enumerates keys in ascending order, while Flapjack's
@@ -452,8 +464,9 @@ def cakeMkTags (n : Nat) (fromAllocator : NatInfoMap Nat) (fs : List Nat) :
      per node; as a list that was a rescan per node.  Build the membership
      side once.  The tags themselves are unchanged. -/
   let stackOnly := Flapjack.natSetOfList fs
+  let sourceIndex := cakeSpDefaultIndex fromAllocator
   (List.range n).foldl (fun tags i =>
-      let v := CakeAlloc.spDefault fromAllocator i
+      let v := cakeSpDefaultIndexed sourceIndex i
       match v % 4 with
       | 1 => tags.set i (if stackOnly.contains v then .sTemp else .aTemp)
       | 3 => tags.set i .sTemp
@@ -464,7 +477,8 @@ def cakeMkTags (n : Nat) (fromAllocator : NatInfoMap Nat) (fs : List Nat) :
     state for a clash tree. -/
 def cakeInitRaStateFromBij (bij : CakeNodeBijection) (tree : WordClashTree)
     (forced : List (Nat × Nat)) (fs : List Nat) : CakeRaState :=
-  let ta := CakeAlloc.spDefault bij.toAllocator
+  let sourceIndex := cakeSpDefaultIndex bij.toAllocator
+  let ta := cakeSpDefaultIndexed sourceIndex
   let (adj, _) := cakeMkGraph ta tree [] (CakeNodeMap.ofSize bij.nextNode)
   let adj := cakeExtendGraph ta forced adj
   let tags := cakeMkTags bij.nextNode bij.fromAllocator fs

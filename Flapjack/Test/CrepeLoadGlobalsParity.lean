@@ -32,6 +32,16 @@ def parityGuard : Bool :=
 #eval parityGuard
 #guard parityGuard
 
+/-- Cake `crepProps$length_load_globals_eq_read_size` on the parity fixture. -/
+theorem loadGlobals_length_fixture : (loadGlobals 3 1 3).length = 3 :=
+  loadGlobals_length 3 1 3
+
+/-- Cake `crepProps$el_load_globals_elem` on the parity fixture: element `1`
+    reads address `3 + 1 * 1 = 4`. -/
+theorem loadGlobals_getElem_fixture :
+    (loadGlobals 3 1 3)[1]? = some (.loadGlob 4) := by
+  simpa using loadGlobals_getElem 3 1 3 1 (by decide)
+
 def runChecks : IO Bool := do
   let results := [
     isEmpty (loadGlobals 3 1 0),

@@ -658,6 +658,19 @@ def coalesceWorklistSuccessGuard : Bool :=
 
 #guard coalesceWorklistSuccessGuard
 
+/- Cake's `st_ex_FIRST`/`do_coalesce` (`reg_allocScript.sml:636-698`)
+   rejects a self-move through `consistency_ok`: it is not moved to the
+   unavailable list, while the failed coalescing pass clears avail_moves_wl. -/
+def coalesceSelfMoveRejectedGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 3 with
+      moveRelated := CakeNodeMap.ofNatInfoMap 3 [(1, true)]
+      availMovesWl := [(1, (1, 1))] }
+  let (changed, out) := cakeDoCoalesce 3 state
+  !changed && out.availMovesWl == [] && out.unavailMovesWl == []
+
+#guard coalesceSelfMoveRejectedGuard
+
 /-- Cake's coalesce_parent follows a non-fixed parent chain and compresses
    the starting node to the fixed ancestor (reg_allocScript.sml:589-612).
    This is distinct from the worklist coalesce guard above: it checks the
@@ -1021,6 +1034,7 @@ def parityGuard : Bool :=
     && prefreezeTransitionGuard
     && sortMovesTailSplitGuard && freezeWorklistTransitionGuard &&
       doSpillEqualDegreeGuard
+      && coalesceSelfMoveRejectedGuard
 
 /- The aggregate guard is intentionally disabled while the allocator port is
    being aligned with CakeML.  Individual oracle cases remain available to

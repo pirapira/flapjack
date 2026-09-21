@@ -871,4 +871,8 @@ evaluator-evidence obligation. -/
     state-evidence premises instead of the opaque raised-payload callback. -/
 #check @panValuePcRaisedHraiseCases_to_exception_result_rel_of_state_evidence
 
+/-! The context-coded exception-result dispatcher also accepts the explicit
+    state-evidence premises instead of the opaque raised-payload callback. -/
+#check @panValuePcRaisedHraiseCases_to_exception_result_rel_with_context_code_of_state_evidence
+
 end Flapjack.Test.PanValuePcControlSafety

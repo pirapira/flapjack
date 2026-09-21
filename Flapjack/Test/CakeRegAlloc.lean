@@ -911,6 +911,22 @@ def fullConsistencyGuard : Bool :=
 
 #guard fullConsistencyGuard
 
+/- Cake's `canonize_move` (`reg_allocScript.sml:614-624`) puts a fixed
+   endpoint first; otherwise it orders the two allocator nodes ascending. -/
+def canonizeMoveGuard : Bool :=
+  let fixedLeft : CakeRaState :=
+    { CakeRaState.empty 4 with
+      nodeTag := CakeNodeMap.ofNatInfoMap 4 [(2, .fixed 1), (3, .aTemp)] }
+  let fixedRight : CakeRaState :=
+    { CakeRaState.empty 4 with
+      nodeTag := CakeNodeMap.ofNatInfoMap 4 [(2, .aTemp), (3, .fixed 2)] }
+  let allAtemps : CakeRaState := CakeRaState.empty 6
+  cakeCanonizeMove fixedLeft 2 3 == (2, 3) &&
+    cakeCanonizeMove fixedRight 2 3 == (3, 2) &&
+    cakeCanonizeMove allAtemps 5 2 == (2, 5)
+
+#guard canonizeMoveGuard
+
 /- The HOL allocator updates fixed-size array cells.  Repeated writes to an
    existing node must therefore not retain an unbounded history in the Lean
    association-list representation. -/
@@ -1084,7 +1100,8 @@ def parityGuard : Bool :=
     qsortTiesTwoGuard && qsortTiesThreeGuard && qsortDescGuard &&
     stempBadColourTieGuard && raMovesStempGuard && raMovesStempHiGuard &&
     negFirstMatchProjectionGuard && biasedPreferenceGuard &&
-    negBiasedPreferenceGuard && fullConsistencyGuard
+    negBiasedPreferenceGuard && fullConsistencyGuard &&
+    canonizeMoveGuard
     && mapUpdateBoundedGuard && sourceSpillCostKeyGuard &&
     sourceSpillCostRoundTripGuard && sourceMovePhysicalFallbackGuard
     && deadMovePriorityGuard
@@ -1126,7 +1143,7 @@ def runChecks : IO Bool := do
     movesToSpOrderGuard, resortMovesSpOrderGuard,
     qsortTiesThreeGuard, qsortDescGuard, raMovesStempGuard,
     raMovesStempHiGuard, negFirstMatchProjectionGuard, biasedPreferenceGuard,
-    negBiasedPreferenceGuard, fullConsistencyGuard,
+    negBiasedPreferenceGuard, fullConsistencyGuard, canonizeMoveGuard,
     mapUpdateBoundedGuard,
     deadMovePriorityGuard, deadProgramPriorityGuard, sortMovesTailSplitGuard,
     sourceSpillCostKeyGuard, sourceMovePhysicalFallbackGuard,
@@ -1170,7 +1187,7 @@ def runChecks : IO Bool := do
     "sort_moves descending",
     "reg_alloc moves stack temp", "reg_alloc moves stack temp high",
     "neg_first_match_col projection", "biased preference",
-    "negative biased preference", "full consistency",
+    "negative biased preference", "full consistency", "canonize move",
     "Cake map updates stay bounded",
     "remove_dead keeps move priority", "remove_dead_prog keeps entry priority",
     "mk_bij uses Cake Patricia Set order", "sort_moves tail split oracle",

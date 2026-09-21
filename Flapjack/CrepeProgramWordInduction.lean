@@ -286,7 +286,7 @@ inductive StatefulWordProg (α : Type)
         panValueCrepControlRel structs context exceptionRel sourceResult
           crepResult) :
       StatefulWordProg α (.call info function arguments)
-  | decWord
+  | decExpression
       (name : VarName) (shape : Shape) (value : Exp α) (body : Prog α)
       (hbody : StatefulWordProg α body)
       (hname : ∀ (context : CompileContext α),
@@ -335,6 +335,10 @@ theorem panValueCrepProgramStateCorrect_statefulWord
   | decWord name expression body hbody hbytesInWord hlookup hname hfresh ihbody =>
       exact panValueCrepProgramStateCorrect_dec_one_word name expression body
         ihbody hbytesInWord hlookup hname hfresh
+  | decExpression name shape value body hbody hname hbounded hcompile hshape
+      hvalue ihbody =>
+      exact panValueCrepProgramStateCorrect_dec_of_expression_contract name shape
+        value body ihbody hname hbounded hcompile hshape hvalue
   | @seq first second hfirst hsecond ihfirst ihsecond =>
       exact panValueCrepProgramStateCorrect_seq first second ihfirst ihsecond
   | iteWord condition hcondition thenBranch elseBranch hthen helse
@@ -374,9 +378,4 @@ theorem panValueCrepProgramStateCorrect_statefulWord
       exact panValueCrepProgramStateCorrect_call_of_word_arguments info
         compiledInfo function arguments hcompile hword hbytesInWord hlookup hstate
         hcall
-  | decWord name shape value body hbody hname hbounded hcompile hshape hvalue
-      ihbody =>
-      exact panValueCrepProgramStateCorrect_dec_of_expression_contract name shape
-        value body ihbody hname hbounded hcompile hshape hvalue
-
 end Flapjack

@@ -356,4 +356,36 @@ example : True := by
 #eval renameAllGuard
 #guard renameAllGuard
 
+/-! Counterpart of Cake's `compile_decs_FILTER_decs`
+    (`pan_globalsProofScript.sml:2822`). -/
+def filterDeclsFixture : List (Decl Nat) :=
+  [.function
+    { name := "f", inline := false, exported := false, params := [],
+      body := .skip, returnShape := .one },
+   .decl (.comb [.one, .named "S"]) "g" (.const 7),
+   .name "S" [], .exnDecl "E" (.named "T"),
+   .decl .one "h" (.const 9)]
+
+def filterDeclsGuard : Bool :=
+  let context : GlobalPassContext Nat :=
+    { globals := [], globalsSize := 0, maxGlobalsSize := 0, bytesInWord := 8,
+      fromNat := fun n => n }
+  let onlyDecls := globalDeclsFilter isDecl filterDeclsFixture
+  let whole := globalCompileDecs context filterDeclsFixture
+  let filtered := globalCompileDecs context onlyDecls
+  (filtered.initializers.length == whole.initializers.length) &&
+    filtered.functions.isEmpty && filtered.exceptions.isEmpty &&
+    (globalCollect context onlyDecls).globals.length ==
+      (globalCollect context filterDeclsFixture).globals.length
+
+example : True := by
+  let context : GlobalPassContext Nat :=
+    { globals := [], globalsSize := 0, maxGlobalsSize := 0, bytesInWord := 8,
+      fromNat := fun n => n }
+  have h := globalCompileDecs_filter_isDecl context filterDeclsFixture
+  trivial
+
+#eval filterDeclsGuard
+#guard filterDeclsGuard
+
 end Flapjack.Test.PanGlobalsDecShapesParity

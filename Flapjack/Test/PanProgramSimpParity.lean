@@ -246,6 +246,18 @@ theorem evalPanValueDeclarations_exceptions_wf_fixture
     wfExceptionDecls none heval (exception := "E") (shape := .one) (by
       simp [wfExceptionDecls, wfException])
 
+theorem evalPanValueDeclarations_top_exceptions_wf_fixture
+    (state' : PanValueProgramState Nat)
+    (heval : evalPanValueDeclarations evalRelState wfExceptionDecls none = some state') :
+    ∃ structs : StructContext,
+      collectPanValueStructs wfExceptionDecls evalRelState.structs = some structs ∧
+        isWfShape structs (.one : Shape) = true := by
+  obtain ⟨structs, hcollect, hwf⟩ :=
+    evalPanValueDeclarations_exceptions_wf evalRelState state' wfExceptionDecls none
+      heval (exception := "E") (shape := .one) (by
+        simp [wfExceptionDecls, wfException])
+  exact ⟨structs, hcollect, hwf⟩
+
 /-! Regression for Cake's `evaluate_decls_append`
     (`cakeml/pancake/semantics/panPropsScript.sml:1540`): evaluating a
     concatenated declaration list is the sequential composition of evaluating
@@ -298,5 +310,64 @@ example : True := by
   have _h := evalPanValueDeclarationsWithStructs_function_decl_commute
     ([] : StructContext) evalRelState wfFunction .one "g" (.const 7) [] none
   trivial
+
+/-! Regression for Cake's `evaluate_decls_functions`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1518`): a successful
+    declaration evaluation only prepends the list's function entries to the
+    function table. -/
+
+def functionsDecls : List (Decl Nat) :=
+  [.decl .one "g" (.const 7), .function wfFunction,
+   .function
+     { name := "h", inline := false, exported := false, params := [],
+       body := (.skip : Prog Nat), returnShape := .one }]
+
+def functionsGuard : Bool :=
+  match evalPanValueDeclarationsWithStructs ([] : StructContext) evalRelState
+      functionsDecls none with
+  | some state' =>
+      state'.functions.length ==
+        (panFunctionEntries functionsDecls ++ evalRelState.functions).length
+  | none => false
+
+#eval functionsGuard
+#guard functionsGuard
+
+example : True := by
+  cases heval : evalPanValueDeclarationsWithStructs ([] : StructContext)
+      evalRelState functionsDecls none with
+  | none => trivial
+  | some state' =>
+      have _h := evalPanValueDeclarationsWithStructs_functions ([] : StructContext)
+        evalRelState state' functionsDecls none heval
+      trivial
+
+/-! Regression for Cake's `evaluate_decls_eshapes`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1409`): a successful
+    declaration evaluation only prepends the list's exception entries to the
+    exception-shape table. -/
+
+def exceptionsDecls : List (Decl Nat) :=
+  [.exnDecl "E" .one, .decl .one "g" (.const 7), .exnDecl "F" .one]
+
+def exceptionsGuard : Bool :=
+  match evalPanValueDeclarationsWithStructs ([] : StructContext) evalRelState
+      exceptionsDecls none with
+  | some state' =>
+      state'.exceptions.length ==
+        (panExceptionEntries exceptionsDecls ++ evalRelState.exceptions).length
+  | none => false
+
+#eval exceptionsGuard
+#guard exceptionsGuard
+
+example : True := by
+  cases heval : evalPanValueDeclarationsWithStructs ([] : StructContext)
+      evalRelState exceptionsDecls none with
+  | none => trivial
+  | some state' =>
+      have _h := evalPanValueDeclarationsWithStructs_exceptions ([] : StructContext)
+        evalRelState state' exceptionsDecls none heval
+      trivial
 
 end Flapjack.Test.PanProgramSimpParity

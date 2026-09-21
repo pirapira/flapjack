@@ -231,6 +231,73 @@ def evalPanValueProgram
   | some _, .returned _ _ _ _ => none
   | _, result => some result
 
+/-! Cake's top-level `evaluate_decls` boundary: once declaration evaluation
+    has produced the function/global state and the selected call has returned
+    one value, the program evaluator preserves that result exactly when the
+    entry return shape accepts the value.  The declaration state, globals,
+    call result, and shape check remain explicit for the correctness bridge. -/
+theorem evalPanValueProgram_of_declarations_and_returned_call
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (initial : PanValueProgramState α)
+    (primitive : PanPrimitiveHandler α) (ffi : PanValueFfiHandler α)
+    (fuel : Nat) (declarations : List (Decl α)) (entry : FunName)
+    (arguments : List (Exp α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (memoryHandler : Option (PanValueAcceleratorFfiHandler α))
+    (state : PanValueProgramState α)
+    (shape : Shape) (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (value : PanValue α)
+    (hdeclarations : evalPanValueDeclarations initial declarations
+      (memoryAccess := memoryAccess) = some state)
+    (hcall : evalPanValueCallWithPrimitiveCallsAndFfi primitive ffi
+      state.structs state.functions state.baseAddress state.topAddress
+      state.bytesInWord fuel (fun _ => none) state.globals state.memory none
+      entry arguments (memoryAccess := memoryAccess)
+      (contracts := some (PanValueCallContracts.mk state.returnShapes
+        state.exceptions state.parameterShapes))
+      (memoryHandler := memoryHandler) =
+      some (.returned locals globals memory [value]))
+    (hentry : lookupInfo entry state.returnShapes = some shape)
+    (hshape : panShapeMatches (panValueShape state.structs value) shape = true) :
+    evalPanValueProgram initial primitive ffi fuel declarations entry arguments
+      (memoryAccess := memoryAccess) (memoryHandler := memoryHandler) =
+      some (.returned locals globals memory [value]) := by
+  simp [evalPanValueProgram, hdeclarations, hcall, hentry, hshape]
+
+/-! The raised-result counterpart keeps arbitrary exception payloads visible at
+    the same top-level declaration/call boundary.  Unlike a returned value,
+    a raised call does not require an entry return-shape premise. -/
+theorem evalPanValueProgram_of_declarations_and_raised_call
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (initial : PanValueProgramState α)
+    (primitive : PanPrimitiveHandler α) (ffi : PanValueFfiHandler α)
+    (fuel : Nat) (declarations : List (Decl α)) (entry : FunName)
+    (arguments : List (Exp α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (memoryHandler : Option (PanValueAcceleratorFfiHandler α))
+    (state : PanValueProgramState α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (exception : ExceptionId)
+    (value : PanValue α)
+    (hdeclarations : evalPanValueDeclarations initial declarations
+      (memoryAccess := memoryAccess) = some state)
+    (hcall : evalPanValueCallWithPrimitiveCallsAndFfi primitive ffi
+      state.structs state.functions state.baseAddress state.topAddress
+      state.bytesInWord fuel (fun _ => none) state.globals state.memory none
+      entry arguments (memoryAccess := memoryAccess)
+      (contracts := some (PanValueCallContracts.mk state.returnShapes
+        state.exceptions state.parameterShapes))
+      (memoryHandler := memoryHandler) =
+      some (.raised locals globals memory exception value)) :
+    evalPanValueProgram initial primitive ffi fuel declarations entry arguments
+      (memoryAccess := memoryAccess) (memoryHandler := memoryHandler) =
+      some (.raised locals globals memory exception value) := by
+  simp [evalPanValueProgram, hdeclarations, hcall]
+
 def panValueProgramResult
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
@@ -398,5 +465,29 @@ theorem evalPanValueDeclarationsWithStructs_exceptions_wf
                 exact hwf
               · exact ih _ _ heval htail
             · simp [hexists, hwf] at heval
+
+/-! The same exception-shape invariant at the struct-collecting entry point,
+    where the successful declaration list determines the context used for
+    `isWfShape`. -/
+theorem evalPanValueDeclarations_exceptions_wf
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state state' : PanValueProgramState α) (declarations : List (Decl α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (heval : evalPanValueDeclarations state declarations memoryAccess = some state')
+    {exception : ExceptionId} {shape : Shape}
+    (hmem : (.exnDecl exception shape : Decl α) ∈ declarations) :
+    ∃ structs : StructContext,
+      collectPanValueStructs declarations state.structs = some structs ∧
+        isWfShape structs shape = true := by
+  simp only [evalPanValueDeclarations] at heval
+  cases hcollect : collectPanValueStructs declarations state.structs with
+  | none => simp [hcollect] at heval
+  | some structs =>
+      simp only [hcollect] at heval
+      have hwf := evalPanValueDeclarationsWithStructs_exceptions_wf structs
+        { state with structs := structs } state' declarations memoryAccess heval hmem
+      exact ⟨structs, rfl, hwf⟩
 
 end Flapjack

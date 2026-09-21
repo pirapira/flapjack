@@ -336,6 +336,64 @@ theorem panValuePcFinalFfiResultRel_of_clocked_decCall
     rfl
   · simp [panValuePcResultRel, hstate, hevent]
 
+/-! The direct `Call_Ret_FinalFFI` branch of Cake's `pc_compile_correct`.  A
+    direct call has no declaration continuation, so the callee's terminal FFI
+    event crosses the enclosing program boundary unchanged; the projection
+    theorem attaches the remaining clock, and the Pc relation again checks the
+    target event against the same source-side state relation. -/
+theorem panValuePcFinalFfiResultRel_of_clocked_call
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext) (pcContext : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel clock callClock : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (info : Option (Option (VarKind × VarName) ×
+      Option (ExceptionId × VarName × Prog α)))
+    (function : FunName) (arguments : List (Exp α))
+    (nextLocals nextGlobals : VarName → Option (PanValue α))
+    (nextMemory : α → Option (PanValue α)) (nextFfi : FfiState σ)
+    (event targetEvent : FfiFinalEvent) (targetState : CrepState α)
+    (hcall : evalPanValueFfiClockCall context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
+      info function arguments =
+      some (.control (.finalFfi nextLocals nextGlobals nextMemory nextFfi event),
+        callClock))
+    (hstate : panValueCrepStateRel structs pcContext nextLocals nextGlobals
+      nextMemory targetState)
+    (hevent : event = targetEvent) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+      (.call info function arguments) =
+      some (.control (.finalFfi nextLocals nextGlobals nextMemory nextFfi event),
+        callClock) ∧
+    (evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+      (.call info function arguments)).map
+      panValueFfiClockResultProjection =
+      some (.finalFfi nextLocals nextGlobals nextMemory nextFfi event callClock) ∧
+    panValuePcResultRel structs pcContext exceptionRel exceptionCode globalsLookup
+      (.finalFfi nextLocals nextGlobals nextMemory event)
+      (.finalFfi targetState targetEvent) := by
+  have hclock := evalPanValueFfiClockProg_call_finalFfi context primitive
+    handler structs functions baseAddress topAddress bytesInWord fuel clock
+    callClock locals globals memory ffi info function arguments
+    nextLocals nextGlobals nextMemory nextFfi event hcall
+  refine ⟨hclock, ?_, ?_⟩
+  · rw [hclock]
+    rfl
+  · simp [panValuePcResultRel, hstate, hevent]
+
 /-! The corresponding `DecCall` raised-result lift keeps the exception code,
     payload/global observation, and post-call state explicit.  This is the
     declaration-call counterpart of the direct clocked Raise bridge. -/
@@ -389,6 +447,66 @@ theorem panValuePcRaisedResultRelWithContextCode_of_clocked_decCall
   have hclock := evalPanValueFfiClockProg_decCall_raised context primitive handler
     structs functions baseAddress topAddress bytesInWord fuel clock callClock
     locals globals memory ffi name shape function arguments body nextGlobals
+    nextMemory nextFfi exception value hcall
+  refine ⟨hclock, ?_, ?_⟩
+  · rw [hclock]
+    rfl
+  · exact ⟨hstate, hraise⟩
+
+/-! The direct-call raised-result lift: the `Call_Ret_Exception` branch of
+    Cake's `pc_compile_correct` for a call with no handler.  The callee's
+    uncaught raise crosses the enclosing program boundary unchanged, keeping
+    the exception code, payload/global observation, and post-call state
+    explicit. -/
+theorem panValuePcRaisedResultRelWithContextCode_of_clocked_call
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext) (pcContext : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel clock callClock : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (function : FunName) (arguments : List (Exp α))
+    (nextGlobals : VarName → Option (PanValue α))
+    (nextMemory : α → Option (PanValue α)) (nextFfi : FfiState σ)
+    (exception : ExceptionId) (value : PanValue α)
+    (targetState : CrepState α) (targetException : α)
+    (hcall : evalPanValueFfiClockCall context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
+      none function arguments =
+      some (.control (.raised (fun _ => none) nextGlobals nextMemory nextFfi
+        exception value), callClock))
+    (hstate : panValueCrepStateRel structs pcContext (fun _ => none)
+      nextGlobals nextMemory targetState)
+    (hraise : panValuePcExceptionResultRelWithContextCode structs pcContext
+      exceptionRel exceptionCode globalsLookup nextGlobals nextMemory
+      exception value targetState targetException) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+      (.call none function arguments) =
+      some (.control (.raised (fun _ => none) nextGlobals nextMemory nextFfi
+        exception value), callClock) ∧
+    (evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+      (.call none function arguments)).map
+      panValueFfiClockResultProjection =
+      some (.raised (fun _ => none) nextGlobals nextMemory nextFfi
+        exception value callClock) ∧
+    panValuePcResultRelWithContextCode structs pcContext exceptionRel
+      exceptionCode globalsLookup
+      (.raised (fun _ => none) nextGlobals nextMemory exception value)
+      (.raised targetState targetException) := by
+  have hclock := evalPanValueFfiClockProg_call_raised context primitive handler
+    structs functions baseAddress topAddress bytesInWord fuel clock callClock
+    locals globals memory ffi function arguments nextGlobals
     nextMemory nextFfi exception value hcall
   refine ⟨hclock, ?_, ?_⟩
   · rw [hclock]
@@ -29829,5 +29947,79 @@ theorem panValueCrepProgramStateCorrect_and_controlSafe_call_handler_raise_of_re
   cases hinfo
   exact PanValueProgNotBrokeContinued_raise primitive sourceHandler structs
     sourceFunctions baseAddress topAddress bytesInWord exception expression
+
+/-! Context-coded counterpart of the direct `Call_Ret_FinalFFI` branch of
+    Cake's `pc_compile_correct`.  The terminal FFI result is not a raised
+    result, so the context-code relation reduces to the ordinary state/event
+    relation after the clocked call equation is composed with the compact
+    correctness boundary. -/
+theorem panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_finalFfi
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (program : Prog α)
+    (sourceEvaluate : PanValuePcEvaluator α)
+    (targetEvaluate : CrepPcEvaluator α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (hcompact : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (clockStructs : StructContext) (clockPcContext : CompileContext α)
+    (clockExceptionRel : ExceptionId → PanValue α → α → Prop)
+    (clockExceptionCode : ExceptionId → Option α)
+    (clockGlobalsLookup : CrepState α → PanValue α → Option (List α))
+    (clockContext : PanValueFfiContext α)
+    (clockPrimitive : PanPrimitiveHandler α)
+    (clockHandler : PanValueStatefulFfiHandler α σ)
+    (clockFunctions : List (FunName × List VarName × Prog α))
+    (clockBaseAddress clockTopAddress clockBytesInWord : α)
+    (fuel clock callClock : Nat)
+    (clockLocals clockGlobals : VarName → Option (PanValue α))
+    (clockMemory : α → Option (PanValue α)) (clockFfi : FfiState σ)
+    (info : Option (Option (VarKind × VarName) ×
+      Option (ExceptionId × VarName × Prog α)))
+    (function : FunName) (arguments : List (Exp α))
+    (nextLocals nextGlobals : VarName → Option (PanValue α))
+    (nextMemory : α → Option (PanValue α)) (nextFfi : FfiState σ)
+    (event targetEvent : FfiFinalEvent) (targetState : CrepState α)
+    (hcall : evalPanValueFfiClockCall clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord fuel clockLocals clockGlobals clockMemory clockFfi clock
+      info function arguments =
+      some (.control (.finalFfi nextLocals nextGlobals nextMemory nextFfi event),
+        callClock))
+    (hstate : panValueCrepStateRel clockStructs clockPcContext nextLocals
+      nextGlobals nextMemory targetState)
+    (hevent : event = targetEvent) :
+    PanValuePcCompileCorrectWithContextCode sourceEvaluate targetEvaluate
+      codeRel excpRel exceptionCode globalsLookup program ∧
+    evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (fuel + 1) clockLocals clockGlobals clockMemory clockFfi
+      clock (.call info function arguments) =
+      some (.control (.finalFfi nextLocals nextGlobals nextMemory nextFfi event),
+        callClock) ∧
+    (evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (fuel + 1) clockLocals clockGlobals clockMemory clockFfi
+      clock (.call info function arguments)).map panValueFfiClockResultProjection =
+      some (.finalFfi nextLocals nextGlobals nextMemory nextFfi event callClock) ∧
+    panValuePcResultRelWithContextCode clockStructs clockPcContext
+      clockExceptionRel clockExceptionCode clockGlobalsLookup
+      (.finalFfi nextLocals nextGlobals nextMemory event)
+      (.finalFfi targetState targetEvent) := by
+  have hfinal := panValuePcFinalFfiResultRel_of_clocked_call
+    clockStructs clockPcContext clockExceptionRel clockExceptionCode
+    clockGlobalsLookup
+    clockContext clockPrimitive clockHandler clockFunctions clockBaseAddress
+    clockTopAddress clockBytesInWord fuel clock callClock clockLocals
+    clockGlobals clockMemory clockFfi info function arguments nextLocals
+    nextGlobals nextMemory nextFfi event targetEvent targetState hcall hstate
+    hevent
+  refine ⟨hcompact, hfinal.1, hfinal.2.1, ?_⟩
+  simpa [panValuePcResultRelWithContextCode] using hfinal.2.2
 
 end Flapjack

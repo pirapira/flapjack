@@ -973,7 +973,6 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @compileProg_call_handler_missing_destination_of_compiled
 
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_handler
-<<<<<<< HEAD
 /-! The `Call_Ret` branch of Cake's `pc_compile_correct`: the
     assignment-producing call with no handler keeps the flattened destination
     slots when `wrap_rt` preserves the shape, and degrades to a tail call
@@ -990,5 +989,11 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
     callee raises with a matching code, the call's crep result is exactly the
     handler program's evaluation from the handler-entry state. -/
 #check @evalCrepFullCallState_raised_handler_of_callee
+
+/-! The direct `Call_Ret_FinalFFI` branch of Cake's `pc_compile_correct`: a
+    direct call propagates the callee's terminal FFI event unchanged. -/
+#check @panValuePcFinalFfiResultRel_of_clocked_call
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_finalFfi
+#check @panValuePcRaisedResultRelWithContextCode_of_clocked_call
 
 end Flapjack.Test.PanValuePcControlSafety

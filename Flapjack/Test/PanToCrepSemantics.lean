@@ -11,6 +11,7 @@ open Flapjack
 #check @Flapjack.PanValuePcSemanticClockEvidence
 #check @Flapjack.PanValuePcSemanticClockEvidence.resultRel
 #check @Flapjack.panCrepSemanticAgreement_of_pcCompileCorrect
+#check @Flapjack.panCrepSemanticAgreement_of_pcCompileCorrect_cross_clock
 
 def emptyPanHooks : PanSemanticsHooks Unit Unit where
   evaluate := fun _ => none

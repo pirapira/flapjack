@@ -959,6 +959,26 @@
       "source_reference": "CurrHeap-left/constant-right witness: `(@base | 7) #>> 1`. Cake's inst_select_exp (word_instScript.sml:246-251) tests is_Lookup_CurrHeap e1 before the e2 = Const w fold, so `| 7` keeps `Const temp 7; OpCurrHeap Or temp temp` instead of folding the constant into an ori (discrepancy #2, committed in coordinator 15a2b6d8).",
       "cake_sha256": "2cf935883087f0cb33f36d43403dadc4b7196d9312a9e56e73ac52f96779d1f4",
       "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/nested_handler_condition.pnk",
+      "source_reference": "Minimized differential-fuzz witness for Cake's `Seq_assoc` recursion through call return and exception-handler metadata. The handler condition `0 && (@base >=+ 0)` reaches the same pre-SSA branch shape only when the port reassociates those nested programs (word_simpScript.sml:21-38).",
+      "cake_sha256": "6ed17dd9c1886a1b31f46750d47c06c82efaf2272969dd40201a6c5f43c764e9",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/nested_currheap_xor.pnk",
+      "source_reference": "Minimized f00054 nested-expression witness: Cake selects the constant in `1000 ^ @base` into the fresh temporary and emits `OpCurrHeap Xor` even when the operation is nested inside a subtraction; the selector must not lower it as `Get CurrHeap` plus XORI.",
+      "cake_sha256": "f579626d1b36430b49a1acc5f20f18d3c1749c8443a9f868430efd22d16884ca",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.21"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/annotation_comments.pnk",
+      "source_reference": "Annotation-comment coverage: Cake lexes `/@ ... @/` as an annotation (panLexerScript.sml:242-254, panPtreeConversionScript.sml:483) and pan_simp drops it (`Annot _ _ => p`, pan_simpScript.sml), so top-level, in-body and multiline annotations plus `//` and `/* */` comments must not change RISC-V output. This fixture locks in the byte-exact Cake/Flapjack agreement for that under-tested construct.",
+      "cake_sha256": "b3d9a8219a6c45427270be0657e99e138cbae13902283dfad185e0e242668d22",
+      "tracked_beads": []
     }
   ]
 }

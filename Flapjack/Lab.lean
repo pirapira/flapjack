@@ -324,30 +324,15 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
           firstResult.terminal || secondResult.terminal, secondResult.nextLabel⟩
   | .seq (.const scratch value)
       (.seq (.arith operator destination left right) rest) =>
-      let canFuseAliasedAdd :=
-        scratch = destination && left = destination && operator = .add
-      if canFuseAliasedAdd then
-        let restResult :=
-          labFlatten false sectionId counter continues breaks rest
-        let arithmetic :=
-          if value = 0 then
-            []
-          else
-            [.asm (.arithImm .add destination right value) [] 0]
-        let separator :=
-          if tail then [labLabel sectionId 1] else []
-        ⟨arithmetic ++ separator ++ restResult.lines,
-          restResult.terminal, restResult.nextLabel⟩
-      else
-        let firstResult :=
-          labFlatten false sectionId counter continues breaks
-            (.seq (.const scratch value) (.arith operator destination left right))
-        let secondResult :=
-          labFlatten false sectionId firstResult.nextLabel continues breaks rest
-        let separator :=
-          if tail then [labLabel sectionId 1] else []
-        ⟨firstResult.lines ++ separator ++ secondResult.lines,
-          firstResult.terminal || secondResult.terminal, secondResult.nextLabel⟩
+      let firstResult :=
+        labFlatten false sectionId counter continues breaks
+          (.seq (.const scratch value) (.arith operator destination left right))
+      let secondResult :=
+        labFlatten false sectionId firstResult.nextLabel continues breaks rest
+      let separator :=
+        if tail then [labLabel sectionId 1] else []
+      ⟨firstResult.lines ++ separator ++ secondResult.lines,
+        firstResult.terminal || secondResult.terminal, secondResult.nextLabel⟩
   | .seq (.const scratch value)
       (.arith operator destination left right) =>
       let canFuse :=
@@ -359,20 +344,8 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
                   (value ≥ 2 ^ 64 - 2 ^ 11 && value < 2 ^ 64))
           | .sub => value != 0 && value ≤ 2 ^ 11
           | .and | .or | .xor => false
-      let canFuseAliasedAdd :=
-        scratch = destination && left = destination && operator = .add
-      if canFuse || canFuseAliasedAdd then
-        if operator = .add && destination = left && value = 0 then
-          /- Cake's lowering can leave a zero-add identity out of the line
-             stream when the preceding constant is fused.  A zero-sub is
-             different: Cake retains the register subtraction and its source
-             constant, so dropping that pair shifts every following label. -/
-          ⟨[], false, counter⟩
-        else
-          if canFuseAliasedAdd then
-            ⟨[.asm (.arithImm .add destination right value) [] 0], false, counter⟩
-          else
-            ⟨[.asm (.arithImm operator destination left value) [] 0], false, counter⟩
+      if canFuse then
+        ⟨[.asm (.arithImm operator destination left value) [] 0], false, counter⟩
       else
         let firstResult :=
           labFlatten false sectionId counter continues breaks (.const scratch value)

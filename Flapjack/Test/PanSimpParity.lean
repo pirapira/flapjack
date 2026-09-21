@@ -1106,6 +1106,13 @@ example
         (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
         (.skip : Prog Nat) PanValueFfiClockNormalProg.skip))
 
+/-- A tick is normal-adequate from a nonzero clock, with the clock decremented. -/
+example :
+    PanValueFfiClockNormalAdequateProgAt 5 evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 7 none none none (.tick : Prog Nat) :=
+  PanValueFfiClockNormalAdequateProgAt_tick 5 evaluatorContext (fun _ _ => none)
+    evaluatorHandler [] [] 0 0 8 7 none none none (by decide)
+
 /-- The raised `DecCall` outcome also lifts to the declaration's progSize. -/
 example
     (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)

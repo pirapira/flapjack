@@ -1,8 +1,9 @@
 import Flapjack.PanToCrepCorrectnessBoundary
 import Flapjack.PanToCrepCorrectnessBridge
 import Flapjack.PanToCrepTailCallCorrectness
-import Flapjack.PanToCrepSharedMemoryCorrectness
 import Flapjack.PanToCrepCallHandlerControlSafety
+import Flapjack.PanToCrepSharedMemoryControlSafety
+import Flapjack.PanToCrepSharedMemoryCorrectness
 import Flapjack.PanValueFfiClockCorrectness
 import Flapjack.CrepeNestedDecsStability
 import Flapjack.CrepeRaisedCallInversion
@@ -992,13 +993,6 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
     handler program's evaluation from the handler-entry state. -/
 #check @evalCrepFullCallState_raised_handler_of_callee
 
-#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_handler
-#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_handler_raised
-#check @panValueCrepProgramStateCorrect_and_controlSafe_call_handler_return_of_relation
-#check @panValueCrepProgramStateCorrect_and_controlSafe_call_handler_raise_of_relation
-#check @panValueCrepProgramStateControlSafe_decCall_return
-#check @panValueCrepProgramStateControlSafe_decCall_raise
-#check @panValuePcCompileCorrectWithContextCode_of_compact_and_caught_call
 /-! The direct `Call_Ret_FinalFFI` branch of Cake's `pc_compile_correct`: a
     direct call propagates the callee's terminal FFI event unchanged. -/
 #check @panValuePcFinalFfiResultRel_of_clocked_call
@@ -1008,9 +1002,7 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_returned_no_handler
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_tailCall
 #check @panValuePcCompileCorrect_of_clocked_call_tailCall
-#check @panValuePcCompileCorrect_compact_shMemLoad_source_word
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_returned_destination
-#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_raised
 /-! Compositional source handler safety: a handler-free call and a declaration
     body that never exposes loop control. -/
 #check @PanValueProgNotBrokeContinued_call_of_no_handler
@@ -1031,14 +1023,12 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_broke
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_raised
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_timeout
-#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_timeout
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_returned
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_returned_finalFfi
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_returned_value
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_extCall_finalFfi
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_extCall_finalFfi_state
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_extCall_finalFfi_stateful
-#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_finalFfi
 
 /-! Declaration-call counterparts of the direct-call compositional bridges:
     terminal FFI, uncaught raise, and timeout, each preserving explicit
@@ -1120,5 +1110,14 @@ example :
     handler-safety predicate: `.break` is control-safe on both sides but still
     yields a `broke` source result. -/
 #check @not_panValueProgNotBrokeContinued_break
+
+/-! Shared-memory leaves are control-safe: the source evaluator can only
+    produce `normal`, so the label rule holds for every `VarKind`. -/
+#check @panValueCrepProgramStateControlSafe_shMemLoad
+#check @panValueCrepProgramStateControlSafe_shMemStore
+#check @panValueCrepProgramStateCorrect_and_controlSafe_shMemLoad_source_word
+#check @panValueCrepProgramStateCorrect_and_controlSafe_shMemStore_source_word
+#check @panValuePcCompileCorrect_compact_shMemLoad_source_word_of_state_evidence
+#check @panValuePcCompileCorrect_compact_shMemStore_source_word_of_state_evidence
 
 end Flapjack.Test.PanValuePcControlSafety

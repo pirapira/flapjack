@@ -54,6 +54,12 @@ theorem loadShape_length_fixture :
     (loadShape 3 1 3 (.const 7)).length = 3 :=
   loadShape_length 3 1 3 (.const 7)
 
+/-- Cake `crepProps$map_var_cexp_eq_var` on a concrete variable list. -/
+theorem map_var_crepExpVars_eq_fixture :
+    (([2, 5, 9] : List Nat).map (CrepExp.var (α := Nat))).flatMap crepExpVars =
+      [2, 5, 9] :=
+  map_var_crepExpVars_eq (α := Nat) [2, 5, 9]
+
 def runChecks : IO Bool := do
   let results := [
     isEmpty (loadGlobals 3 1 0),

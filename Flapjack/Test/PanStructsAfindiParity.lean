@@ -274,6 +274,23 @@ theorem structInfosOk_append_fixture (h : structInfosOk (simpleContext ++ [])) :
     structInfosOk ([] : StructContext) :=
   structInfosOk_append simpleContext [] h
 
+/-! Cake's `struct_infos_ok_cons`
+    (`cakeml/pancake/proofs/pan_structsProofScript.sml:132`). -/
+
+def consInfo : StructInfo := { fields := [("f", Shape.one)], size := 1 }
+
+example : structInfosOk ((("S" : StructName), consInfo) :: ([] : StructContext)) :=
+  structInfosOk_cons [] "S" consInfo
+    (by unfold structInfosOk; refine ⟨?_, ?_, ?_, ?_⟩ <;> simp)
+    (by decide) (by simp)
+    (by
+      intro shape hmem
+      simp only [consInfo, List.map_cons, List.map_nil, List.mem_cons,
+        List.not_mem_nil, or_false] at hmem
+      rcases hmem with rfl
+      simp [isWfShape])
+    (by simp [consInfo, shapeSizeWithContext])
+
 
 /-! Cake's `map_fst_eq_alookup`
     (`cakeml/pancake/proofs/pan_structsProofScript.sml:278`). -/

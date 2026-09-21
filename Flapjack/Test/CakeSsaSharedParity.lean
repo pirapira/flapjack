@@ -24,6 +24,30 @@ def shareStoreGuard : Bool :=
   | .seq (.move 1 []) (.shareInst .store 0 (.var 0)) => true
   | _ => false
 
+def shareLoad8Guard : Bool :=
+  match (wordFullSsaCcTrans 0
+      (.shareInst .load8 7 (.var 2) : WordProg Nat)).2.2 with
+  | .seq (.move 1 []) (.shareInst .load8 9 (.var 0)) => true
+  | _ => false
+
+def shareStore8Guard : Bool :=
+  match (wordFullSsaCcTrans 0
+      (.shareInst .store8 7 (.var 2) : WordProg Nat)).2.2 with
+  | .seq (.move 1 []) (.shareInst .store8 0 (.var 0)) => true
+  | _ => false
+
+def shareLoad16Guard : Bool :=
+  match (wordFullSsaCcTrans 0
+      (.shareInst .load16 7 (.var 2) : WordProg Nat)).2.2 with
+  | .seq (.move 1 []) (.shareInst .load16 9 (.var 0)) => true
+  | _ => false
+
+def shareStore16Guard : Bool :=
+  match (wordFullSsaCcTrans 0
+      (.shareInst .store16 7 (.var 2) : WordProg Nat)).2.2 with
+  | .seq (.move 1 []) (.shareInst .store16 0 (.var 0)) => true
+  | _ => false
+
 def opCurrHeapGuard : Bool :=
   match (wordFullSsaCcTrans 0
       (.opCurrHeap .add 7 2 : WordProg Nat)).2.2 with
@@ -31,10 +55,15 @@ def opCurrHeapGuard : Bool :=
   | _ => false
 
 def parityGuard : Bool :=
-  shareLoadGuard && shareStoreGuard && opCurrHeapGuard
+  shareLoadGuard && shareStoreGuard && shareLoad8Guard && shareStore8Guard &&
+    shareLoad16Guard && shareStore16Guard && opCurrHeapGuard
 
 #guard shareLoadGuard
 #guard shareStoreGuard
+#guard shareLoad8Guard
+#guard shareStore8Guard
+#guard shareLoad16Guard
+#guard shareStore16Guard
 #guard opCurrHeapGuard
 #guard parityGuard
 #eval parityGuard
@@ -43,6 +72,10 @@ def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
     [ ("ssa_cc_trans ShareInst load freshens Cake destination", shareLoadGuard),
       ("ssa_cc_trans ShareInst store preserves Cake source", shareStoreGuard),
+      ("ssa_cc_trans ShareInst load8 freshens Cake destination", shareLoad8Guard),
+      ("ssa_cc_trans ShareInst store8 preserves Cake source", shareStore8Guard),
+      ("ssa_cc_trans ShareInst load16 freshens Cake destination", shareLoad16Guard),
+      ("ssa_cc_trans ShareInst store16 preserves Cake source", shareStore16Guard),
       ("ssa_cc_trans OpCurrHeap freshens Cake destination", opCurrHeapGuard) ]
   let mut ok := true
   for (name, result) in checks do

@@ -945,4 +945,8 @@ evaluator-evidence obligation. -/
     evidence for the generic hother callback. -/
 #check @panValuePcRaisedHraiseCases_with_raw_word_lists_retarget_globals_of_state_evidence
 
+/-! The raw-word-list context-coded exception-result dispatcher also accepts
+    explicit state evidence. -/
+#check @panValuePcRaisedHraiseCases_with_raw_word_lists_to_exception_result_rel_with_context_code_of_state_evidence
+
 end Flapjack.Test.PanValuePcControlSafety

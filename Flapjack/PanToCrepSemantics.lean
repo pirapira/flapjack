@@ -1,3 +1,4 @@
+import Flapjack.PanToCrepCorrectnessBoundary
 import Flapjack.PanObservationalSemantics
 import Flapjack.CrepObservationalSemantics
 
@@ -37,6 +38,43 @@ def panCrepBehaviourRel : PanBehaviour → CrepBehaviour → Prop
       .diverge targetFamily targetTrace =>
       sourceFamily = targetFamily ∧ sourceTrace.trace = targetTrace.trace
   | _, _ => False
+
+/-! The result constructors used by `pc_compile_correct` expose more state than
+the observational semantics needs.  These projections retain precisely the
+two successful observations that `semantics` can choose: a returned value and
+a terminal FFI event.  Timeout, control transfer, normal completion, and
+raised exceptions remain non-successful observations. -/
+def panValuePcResultOutcome : PanValuePcResult α → Option PanSemanticOutcome
+  | .returned .. => some .success
+  | .finalFfi _ _ _ event => some (.ffi event.outcome)
+  | _ => none
+
+def crepPcResultOutcome : CrepPcResult α → Option CrepSemanticOutcome
+  | .returned .. => some .success
+  | .finalFfi _ event => some (.ffi event.outcome)
+  | _ => none
+
+/-! A result relation from the compiler-correctness boundary preserves the
+semantic outcome.  This is the constructor-level part of the HOL
+`state_rel_imp_semantics_to_crep` lift; evaluator projection and
+choice-stability premises remain explicit for the caller. -/
+theorem panValuePcResultRel_semanticOutcomeRel
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceResult : PanValuePcResult α) (targetResult : CrepPcResult α)
+    (sourceOutcome : PanSemanticOutcome) (targetOutcome : CrepSemanticOutcome)
+    (hrel : panValuePcResultRel structs context exceptionRel exceptionCode
+      globalsLookup sourceResult targetResult)
+    (hsource : panValuePcResultOutcome sourceResult = some sourceOutcome)
+    (htarget : crepPcResultOutcome targetResult = some targetOutcome) :
+    panCrepSemanticOutcomeRel sourceOutcome targetOutcome := by
+  cases sourceResult <;> cases targetResult <;>
+    simp [panValuePcResultRel, panValuePcResultOutcome, crepPcResultOutcome]
+      at hrel hsource htarget ⊢ <;>
+    cases sourceOutcome <;> cases targetOutcome <;>
+    simp_all [panCrepSemanticOutcomeRel]
 
 def panSuccessfulAt (hooks : PanSemanticsHooks α σ) (clock : Nat) : Prop :=
   ∃ result outcome,

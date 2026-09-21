@@ -270,6 +270,30 @@ theorem clocked_pan_simp_source_common_fuel_matches_cake :
   · decide
   · decide
 
+theorem clocked_pan_simp_source_result_common_fuel :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 3 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 2
+      (panSimpProg (.seq (.skip : Prog Nat) .tick)) =
+    some (.control (.normal (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi), 1) := by
+  apply evalPanValueFfiClockProg_panSimpProg_result_of_common_fuel_source
+    (fuelCompiled := 2) (fuelAssoc := 2) (fuelSource := 2) (commonFuel := 3)
+    (result := (.control (.normal (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi), 1))
+    evaluatorContext (fun _ _ => none) evaluatorHandler [] [] 0 0 8
+    (.seq (.skip : Prog Nat) .tick)
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 2
+    none none none
+  · simp [panSimpProg, retToTail, seqAssoc, evalPanValueFfiClockProg]
+  · simp [seqAssoc, evalPanValueFfiClockProg]
+  · simp [evalPanValueFfiClockProg, evalPanValueFfiClockLeaf,
+      evalPanValueFfiProgSteps]
+  · decide
+  · decide
+  · decide
+  · decide
+
 theorem pan_simp_skip_seq_fuel_bound_matches_cake :
     panSimpSkipSeqFuel
         (seqAssoc (.skip : Prog Nat)
@@ -546,6 +570,7 @@ def runChecks : IO Bool := do
   IO.println "PASS pan_simp Skip/Seq fuel-adequacy fragment Cake bound"
   IO.println "PASS pan_simp clocked ret_to_tail common-fuel Cake equation"
   IO.println "PASS pan_simp clocked pan_simp common-fuel Cake equation"
+  IO.println "PASS pan_simp clocked transformed result common-fuel Cake equation"
   pure parityGuard
 
 end Flapjack.Test.PanSimpParity

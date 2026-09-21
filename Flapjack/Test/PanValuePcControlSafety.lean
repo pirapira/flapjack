@@ -2,6 +2,15 @@ import Flapjack.PanToCrepCorrectnessBoundary
 import Flapjack.PanToCrepCorrectnessBridge
 import Flapjack.PanToCrepTailCallCorrectness
 import Flapjack.PanToCrepCallHandlerControlSafety
+import Flapjack.PanToCrepAssignmentControlSafety
+import Flapjack.PanToCrepPrimitiveControlSafety
+import Flapjack.PanToCrepPrimitiveCorrectness
+import Flapjack.PanToCrepSharedMemoryControlSafety
+import Flapjack.PanToCrepSharedMemoryCorrectness
+import Flapjack.PanToCrepDeclarationControlSafety
+import Flapjack.PanToCrepAssignmentCorrectness
+import Flapjack.PanToCrepSequenceCorrectness
+import Flapjack.PanToCrepLeafCorrectness
 import Flapjack.PanValueFfiClockCorrectness
 import Flapjack.CrepeNestedDecsStability
 import Flapjack.CrepeRaisedCallInversion
@@ -1108,5 +1117,28 @@ example :
     handler-safety predicate: `.break` is control-safe on both sides but still
     yields a `broke` source result. -/
 #check @not_panValueProgNotBrokeContinued_break
+
+/-! Shared-memory leaves are control-safe: the source evaluator can only
+    produce `normal`, so the label rule holds for every `VarKind`. -/
+#check @panValueCrepProgramStateControlSafe_shMemLoad
+#check @panValueCrepProgramStateControlSafe_shMemStore
+#check @panValueCrepProgramStateCorrect_and_controlSafe_shMemLoad_source_word
+#check @panValueCrepProgramStateCorrect_and_controlSafe_shMemStore_source_word
+#check @panValuePcCompileCorrect_compact_shMemLoad_source_word_of_state_evidence
+#check @panValuePcCompileCorrect_compact_shMemStore_source_word_of_state_evidence
+#check @panValueCrepProgramStateControlSafe_dec
+#check @panValuePcCompileCorrect_compact_dec_of_state_evidence
+#check @panValueCrepProgramStateControlSafe_assign_local
+#check @panValuePcCompileCorrect_compact_assign_local_source_word_of_state_evidence
+#check @panValuePcCompileCorrect_compact_seq_of_state_evidence
+#check @panValuePcCompileCorrect_compact_tick
+#check @panValuePcCompileCorrect_compact_break
+#check @panValuePcCompileCorrect_compact_continue
+#check @panValuePcCompileCorrect_compact_annot
+#check @panValuePcCompileCorrect_compact_shMemLoad_source_word
+#check @panValuePcCompileCorrect_compact_shMemStore_source_word
+#check @panValueCrepProgramStateControlSafe_assign
+#check @panValueCrepProgramStateControlSafe_primitive
+#check @panValuePcCompileCorrect_compact_primitive_of_state_evidence
 
 end Flapjack.Test.PanValuePcControlSafety

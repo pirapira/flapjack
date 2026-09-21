@@ -587,6 +587,160 @@ theorem panValueIsWf_eq_isWfShape_panValueShape_of_nil (context : StructContext)
   exact ⟨panValueIsWf_of_isWfShape_panValueShape_nil value,
     panValueIsWf_isWfShape_panValueShape [] value⟩
 
+/-! CakeML `panPropsScript.sml` `mem_load_is_wf_shape_v`: whatever the flat
+    memory load returns is a well-formed value.  The fuel-based loaders below
+    mirror `mem_load`/`mem_loads`/`mem_load_flds`; the three-conjunct Cake
+    statement is expressed as one mutual induction over the three loaders. -/
+
+theorem lookupInfoWithRest_drop [BEq String] (name : String) (structs : StructContext)
+    (info : StructInfo) (rest : StructContext)
+    (h : lookupInfoWithRest name structs = some (info, rest)) :
+    ∃ k, rest = structs.drop k := by
+  induction structs with
+  | nil => simp [lookupInfoWithRest] at h
+  | cons entry tail ih =>
+      obtain ⟨candidate, value⟩ := entry
+      by_cases hc : candidate == name
+      · simp [lookupInfoWithRest, hc] at h
+        obtain ⟨-, hrest⟩ := h
+        subst hrest
+        exact ⟨1, rfl⟩
+      · simp [lookupInfoWithRest, hc] at h
+        obtain ⟨k, hk⟩ := ih h
+        exact ⟨k + 1, by rw [hk, List.drop_succ_cons]⟩
+
+theorem lookupInfoWithRest_isSome [BEq String] (name : String) (structs : StructContext)
+    (info : StructInfo) (rest : StructContext)
+    (h : lookupInfoWithRest name structs = some (info, rest)) :
+    (lookupInfo name structs).isSome = true := by
+  induction structs with
+  | nil => simp [lookupInfoWithRest] at h
+  | cons entry tail ih =>
+      obtain ⟨candidate, value⟩ := entry
+      by_cases hc : candidate == name
+      · simp [hc, lookupInfo]
+      · simp only [hc, lookupInfo]
+        exact ih (by simpa [lookupInfoWithRest, hc] using h)
+
+theorem panValueIsWfFields_of_drop (fields : List (FieldName × PanValue α))
+    (context : StructContext) (n : Nat) :
+    panValueIsWfFields (context.drop n) fields = true →
+      panValueIsWfFields context fields = true := by
+  induction fields with
+  | nil => intro _; simp [panValueIsWfFields]
+  | cons field fields ih =>
+      obtain ⟨name, value⟩ := field
+      intro h
+      simp only [panValueIsWfFields, Bool.and_eq_true] at h ⊢
+      exact ⟨panValueIsWf_of_drop context value n h.1, ih h.2⟩
+
+theorem panValueIsWfValues_of_drop (values : List (PanValue α))
+    (context : StructContext) (n : Nat) :
+    panValueIsWfValues (context.drop n) values = true →
+      panValueIsWfValues context values = true := by
+  induction values with
+  | nil => intro _; simp [panValueIsWfValues]
+  | cons value values ih =>
+      intro h
+      simp only [panValueIsWfValues, Bool.and_eq_true] at h ⊢
+      exact ⟨panValueIsWf_of_drop context value n h.1, ih h.2⟩
+
+theorem panValueFlatLoadFuel_wf [BEq α] [Add α]
+    (structs : StructContext) (readWord : α → Option α) (bytesInWord : α) :
+    ∀ (fuel : Nat) (shape : Shape) (address : α) (value : PanValue α),
+      panValueFlatLoadFuel structs readWord bytesInWord fuel shape address = some value →
+        panValueIsWf structs value = true := by
+  apply panValueFlatLoadFuel.induct (α := α) bytesInWord
+    (motive1 := fun structs fuel shape address => ∀ value,
+      panValueFlatLoadFuel structs readWord bytesInWord fuel shape address = some value →
+        panValueIsWf structs value = true)
+    (motive2 := fun structs fuel fields address => ∀ values,
+      panValueFlatLoadFieldsFuel structs readWord bytesInWord fuel fields address = some values →
+        panValueIsWfFields structs values = true)
+    (motive3 := fun structs fuel shapes address => ∀ values,
+      panValueFlatLoadListFuel structs readWord bytesInWord fuel shapes address = some values →
+        panValueIsWfValues structs values = true)
+  · intro structs x x_1 value h
+    simp [panValueFlatLoadFuel] at h
+  · intro structs fuel address value h
+    obtain ⟨word, -, rfl⟩ := by simpa [panValueFlatLoadFuel] using h
+    simp [panValueIsWf]
+  · intro structs fuel shapes address ih value h
+    obtain ⟨values, hvalues, rfl⟩ := by simpa [panValueFlatLoadFuel] using h
+    simpa [panValueIsWf] using ih values hvalues
+  · intro structs fuel name address ih value h
+    cases hlookup : lookupInfoWithRest name structs with
+    | none => simp [panValueFlatLoadFuel, hlookup] at h
+    | some pair =>
+        obtain ⟨info, rest⟩ := pair
+        cases hfields : panValueFlatLoadFieldsFuel rest readWord bytesInWord fuel
+            info.fields address with
+        | none => simp [panValueFlatLoadFuel, hlookup, hfields] at h
+        | some fields =>
+            simp [panValueFlatLoadFuel, hlookup, hfields] at h
+            subst h
+            have hisSome := lookupInfoWithRest_isSome name structs info rest hlookup
+            obtain ⟨k, hk⟩ := lookupInfoWithRest_drop name structs info rest hlookup
+            have hwfFields : panValueIsWfFields structs fields = true := by
+              rw [hk] at hfields
+              exact panValueIsWfFields_of_drop fields structs k
+                (ih info (structs.drop k) fields hfields)
+            simp [panValueIsWf, hisSome, hwfFields]
+  · intro structs x x_1 values h
+    simp [panValueFlatLoadFieldsFuel] at h
+    subst h
+    simp [panValueIsWfFields]
+  · intro structs head tail x values h
+    simp [panValueFlatLoadFieldsFuel] at h
+  · intro structs fuel field shape fields address ihHead ihTail values h
+    cases hvalue : panValueFlatLoadFuel structs readWord bytesInWord fuel shape address with
+    | none => simp [panValueFlatLoadFieldsFuel, hvalue] at h
+    | some value =>
+        cases hvalues : panValueFlatLoadFieldsFuel structs readWord bytesInWord fuel fields
+            (panValueFlatOffset bytesInWord address (shapeSizeWithContext structs shape)) with
+        | none => simp [panValueFlatLoadFieldsFuel, hvalue, hvalues] at h
+        | some rest =>
+            simp [panValueFlatLoadFieldsFuel, hvalue, hvalues] at h
+            subst h
+            simp only [panValueIsWfFields, Bool.and_eq_true]
+            exact ⟨ihHead value hvalue, ihTail rest hvalues⟩
+  · intro structs x x_1 values h
+    simp [panValueFlatLoadListFuel] at h
+    subst h
+    simp [panValueIsWfValues]
+  · intro structs head tail x values h
+    simp [panValueFlatLoadListFuel] at h
+  · intro structs fuel shape shapes address ihHead ihTail values h
+    cases hvalue : panValueFlatLoadFuel structs readWord bytesInWord fuel shape address with
+    | none => simp [panValueFlatLoadListFuel, hvalue] at h
+    | some value =>
+        cases hvalues : panValueFlatLoadListFuel structs readWord bytesInWord fuel shapes
+            (panValueFlatOffset bytesInWord address (shapeSizeWithContext structs shape)) with
+        | none => simp [panValueFlatLoadListFuel, hvalue, hvalues] at h
+        | some rest =>
+            simp [panValueFlatLoadListFuel, hvalue, hvalues] at h
+            subst h
+            simp only [panValueIsWfValues, Bool.and_eq_true]
+            exact ⟨ihHead value hvalue, ihTail rest hvalues⟩
+
+/-- Counterpart of Cake's `mem_load_is_wf_shape_v`
+    (`cakeml/pancake/semantics/panPropsScript.sml:90`): the flat memory load
+    only ever returns well-formed values. -/
+theorem panValueFlatLoad_wf [BEq α] [Add α] (structs : StructContext)
+    (memory : α → Option (PanValue α)) (bytesInWord : α) (address : α)
+    (shape : Shape) (memoryAccess : Option (PanValueMemoryAccess α))
+    (value : PanValue α)
+    (h : panValueFlatLoad structs memory bytesInWord address shape memoryAccess =
+      some value) :
+    panValueIsWf structs value = true := by
+  rw [panValueFlatLoad] at h
+  by_cases hwf : isWfShape structs shape = true
+  · rw [if_pos hwf] at h
+    exact panValueFlatLoadFuel_wf structs
+      (panValueFlatReadWord memory bytesInWord memoryAccess) bytesInWord _ shape address value h
+  · rw [if_neg hwf] at h
+    simp at h
+
 def panShapeMatches : Shape → Shape → Bool
   | .one, .one => true
   | .named left, .named right => left == right

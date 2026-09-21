@@ -90,4 +90,30 @@ def nilGuard : Bool :=
 #eval nilGuard
 #guard nilGuard
 
+/-! `mem_load_is_wf_shape_v` (`panPropsScript.sml:90`): the flat memory load
+    returns well-formed values. -/
+
+def flatMemory : Nat → Option (PanValue Nat) := fun _ => some (.word 5)
+
+def flatLoadGuard : Bool :=
+  match panValueFlatLoad ([] : StructContext) flatMemory 8 100 (.comb [.one]) with
+  | some value => panValueIsWf ([] : StructContext) value
+  | none => false
+
+#eval flatLoadGuard
+#guard flatLoadGuard
+
+theorem panValueFlatLoad_wf_fixture :
+    panValueIsWf ([] : StructContext) (.word 5) = true :=
+  panValueFlatLoad_wf ([] : StructContext) flatMemory 8 100 .one none (.word 5) (by
+    simp [panValueFlatLoad, isWfShape, panValueFlatLoadFuel, panValueFlatReadWord,
+      panValueFlatContextFuel, panValueFlatShapeFuel, flatMemory])
+
+example : True := by
+  match h : panValueFlatLoad ([] : StructContext) flatMemory 8 100 .one with
+  | some value =>
+      have _ := panValueFlatLoad_wf ([] : StructContext) flatMemory 8 100 .one none value h
+      trivial
+  | none => trivial
+
 end Flapjack.Test.PanValueWfParity

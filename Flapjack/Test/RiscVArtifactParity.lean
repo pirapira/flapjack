@@ -294,6 +294,40 @@ def emptyLocalsMainExactParity : Bool :=
       | _ => false
   | none => false
 
+/-! ## CurrHeap materialisation parity (GH #1128)
+
+Cake's word_inst inst_select_exp leaves a Lookup CurrHeap plus a
+materialised constant as a register operation.  The Lab stage must not apply
+an aliased-add peephole to that pair: it would emit a different immediate
+instruction, or erase CurrHeap - 0 entirely. -/
+def currHeapAddConstSource : String :=
+  "fun 1 main() { return @base + 255; }"
+
+def currHeapSubZeroSource : String :=
+  "fun 1 main() { return @base - 0; }"
+
+def currHeapAddConstExactParity : Bool :=
+  match compileRuntimeImage currHeapAddConstSource with
+  | some image =>
+      match emittedSections image with
+      | _ :: (_, _, mainBytes) :: _ =>
+          mainBytes ==
+            [0x13, 0x65, 0xF0, 0x0F, 0x33, 0x05, 0xA5, 0x01,
+             0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
+      | _ => false
+  | none => false
+
+def currHeapSubZeroExactParity : Bool :=
+  match compileRuntimeImage currHeapSubZeroSource with
+  | some image =>
+      match emittedSections image with
+      | _ :: (_, _, mainBytes) :: _ =>
+          mainBytes ==
+            [0x13, 0x65, 0x00, 0x00, 0x33, 0x05, 0xA5, 0x01,
+             0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
+      | _ => false
+  | none => false
+
 /-! ## Cake return-register oracle (`flapjack-pxn.8.5.10.1.1`)
 
 The original Cake `callee_abi.pnk` artifact keeps the allocator-selected
@@ -1177,6 +1211,68 @@ def currheapConstLeftExactParity : Bool :=
       | _ => false
   | none => false
 
+/-- Source of the `!ld8` CurrHeap-offset fixture (GitHub issue #1130, bead
+    `flapjack-pxn.8.5.14.20`): a shared 8-bit load whose address is
+    `@base + 8`.  Cake keeps CurrHeap (`@base`, lowered to a `CurrHeap`
+    lookup) as the load base and selects the byte-offset load
+    `word_instScript.sml` `MappedRead`/`Load8` encoding, i.e. the UNSIGNED
+    `lbu` (funct3 4), not `lb`. -/
+def ld8CurrheapOffsetSource : String :=
+  "fun 1 main() {\n" ++
+    "  var 1 y = 0;\n" ++
+    "  !ld8 y, (@base + 8);\n" ++
+    "  return y;\n" ++
+    "}"
+
+/-- Original CakeML `cml_main` bytes for the fixture (base 1004, 12 bytes):
+    `or a0,s10,s10; lbu a0,8(a0); ret`.  The port previously emitted
+    `lb` (funct3 0) and could materialise the base into a temporary. -/
+def cakeLd8CurrheapOffsetMainBytes : List (BitVec 8) :=
+  [0x33, 0x65, 0xAD, 0x01,
+   0x03, 0x45, 0x85, 0x00,
+   0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
+
+def ld8CurrheapOffsetExactParity : Bool :=
+  match compileRuntimeImage ld8CurrheapOffsetSource with
+  | some image =>
+      match emittedSections image with
+      | [(3, 1000, generated), (4, 1004, main)] =>
+          generated == [0x6F, 0x00, 0x40, 0x00].map (BitVec.ofNat 8) &&
+            main == cakeLd8CurrheapOffsetMainBytes
+      | _ => false
+  | none => false
+
+/-- Source of the CurrHeap large-offset load witness (GitHub issue #1132):
+    `lds 1 (@base + 2048)`.  Cake only splits an `Op Add [exp'; Const w]`
+    address when `addr_offset_ok c w` holds; 2048 is out of the 12-bit range,
+    so Cake selects the whole address, reaching `Const temp 2048; OpCurrHeap
+    Add tar temp` and keeping `s10` as the memory base. -/
+def currheapLoadLargeOffsetSource : String :=
+  "fun 1 main() {\n" ++
+    "  return lds 1 (@base + 2048);\n" ++
+    "}"
+
+/-- Original CakeML `cml_main` bytes for the fixture (base 1004, 20 bytes):
+    `lui a0,0xFFFFF; xori a0,a0,-2048; add a0,a0,s10; ld a0,0(a0); ret`.
+    The port previously materialised CurrHeap into a temporary, adding an
+    `or a0,s10,s10` and a register add. -/
+def cakeCurrheapLoadLargeOffsetMainBytes : List (BitVec 8) :=
+  [0x37, 0xF5, 0xFF, 0xFF,
+   0x13, 0x45, 0x05, 0x80,
+   0x33, 0x05, 0xA5, 0x01,
+   0x03, 0x35, 0x05, 0x00,
+   0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
+
+def currheapLoadLargeOffsetExactParity : Bool :=
+  match compileRuntimeImage currheapLoadLargeOffsetSource with
+  | some image =>
+      match emittedSections image with
+      | [(3, 1000, generated), (4, 1004, main)] =>
+          generated == [0x6F, 0x00, 0x40, 0x00].map (BitVec.ofNat 8) &&
+            main == cakeCurrheapLoadLargeOffsetMainBytes
+      | _ => false
+  | none => false
+
 /-- Source of the whole-artifact `hello.pnk` fixture (GitHub issue #1022 /
     bead `flapjack-8tb`). -/
 def helloSource : String :=
@@ -1316,6 +1412,8 @@ def sharedMemOffsetCarrierEncoding : Bool :=
 #guard currheapAddConstExactParity
 #guard currheapSubZeroExactParity
 #guard currheapConstLeftExactParity
+#guard ld8CurrheapOffsetExactParity
+#guard currheapLoadLargeOffsetExactParity
 #guard sharedWordStoreOffsetPeephole
 #guard sharedMemOffsetCarrierEncoding
 #guard artifactAccepted
@@ -1330,6 +1428,8 @@ def sharedMemOffsetCarrierEncoding : Bool :=
 #guard entryOrderExactParity
 #guard setVarMainExactParity
 #guard emptyLocalsMainExactParity
+#guard currHeapAddConstExactParity
+#guard currHeapSubZeroExactParity
 #guard rorChainBudgetMatches
 #guard flattenRorChainProbeMatches
 #guard wideOpBudgetMatches
@@ -1365,6 +1465,10 @@ def runChecks : IO Bool := do
         setVarMainExactParity),
       ("empty_locals direct-call main is byte-identical to Cake",
         emptyLocalsMainExactParity),
+      ("CurrHeap + materialised constant is byte-identical to Cake (GH #1128)",
+        currHeapAddConstExactParity),
+      ("CurrHeap - zero preserves Cake's register subtraction (GH #1128)",
+        currHeapSubZeroExactParity),
       ("nested_expression fixture accepted by the runtime-image entry point",
         nestedExpressionAccepted),
       ("nested_expression Word-to-Stack lowering uses the extended temp pool",
@@ -1434,7 +1538,11 @@ def runChecks : IO Bool := do
       ("CurrHeap zero sub keeps Cake's materialised constant and register add",
         currheapSubZeroExactParity),
       ("CurrHeap-left constant keeps Cake's materialised constant and register add",
-        currheapConstLeftExactParity) ]
+        currheapConstLeftExactParity),
+      ("ld8 CurrHeap-offset load keeps Cake's base and lbu funct3 (GH #1130)",
+        ld8CurrheapOffsetExactParity),
+      ("out-of-range CurrHeap load offset keeps Cake's base register (GH #1132)",
+        currheapLoadLargeOffsetExactParity) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

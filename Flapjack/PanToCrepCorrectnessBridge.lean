@@ -21001,4 +21001,52 @@ theorem panValuePcCompileCorrectWithContextCode_of_compact_evaluators_and_clocke
     clockLocals clockGlobals clockMemory clockFfi clockProgram clockTargetState
     clockException clockValue clockTargetException hclock hclockState hclockRaise
 
+/-! Package the expression-side evaluator contract into the generic Raise
+    compiled-expression witness.  Fresh-name noninterference remains an
+    explicit allocator premise; no expression or state premise is inferred. -/
+theorem panValueCrepExpressionStateEvidence_of_correct
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (expression : Exp α)
+    (hexpression : PanValueCrepExpressionStateCorrect expression)
+    (context : CompileContext α) (structs : StructContext)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (state : CrepState α)
+    (baseAddress topAddress bytesInWord : α) (sourceValue : PanValue α)
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory state)
+    (hsource : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord expression = some sourceValue)
+    (hnot : ∀ (compiled : List (CrepExp α)),
+      ∀ name ∈ freshNames context compiled.length 1,
+        ∀ value ∈ compiled, name ∉ crepExpVars value)
+    (hfresh : ∀ (compiled : List (CrepExp α)),
+      ∀ name ∈ freshNames context compiled.length 1,
+        state.locals name = none)
+    (hflatLength : (panValueFlatWords sourceValue).length =
+      Shape.shapeSize (panValueShape structs sourceValue)) :
+    ∃ (compiled : List (CrepExp α)) (shape : Shape) (values : List α),
+      panValuePayloadWithinLimit structs sourceValue = true ∧
+      compileExp context expression = (compiled, shape) ∧
+      compiled.length = Shape.shapeSize shape ∧
+      evalCrepFullExpsState state baseAddress topAddress compiled =
+        some values ∧
+      (∀ name ∈ freshNames context compiled.length 1,
+        ∀ value ∈ compiled, name ∉ crepExpVars value) ∧
+      (∀ name ∈ freshNames context compiled.length 1,
+        state.locals name = none) := by
+  obtain ⟨hvalid, compiled, hcompile, hcompiled⟩ :=
+    hexpression context structs sourceLocals sourceGlobals sourceMemory state
+      baseAddress topAddress bytesInWord sourceValue hrel hsource
+  have hlength : compiled.length =
+      Shape.shapeSize (panValueShape structs sourceValue) := by
+    have hvalues := evalCrepFullExpsState_length state baseAddress topAddress
+      compiled (panValueFlatWords sourceValue) hcompiled
+    exact hvalues.trans hflatLength
+  exact ⟨compiled, panValueShape structs sourceValue,
+    panValueFlatWords sourceValue, hvalid, hcompile, hlength, hcompiled,
+    hnot compiled, hfresh compiled⟩
+
 end Flapjack

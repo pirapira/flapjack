@@ -91,5 +91,23 @@ def globalCompileProgLocalisedGuard : Bool :=
 #eval globalCompileProgLocalisedGuard
 #guard globalCompileProgLocalisedGuard
 
+def compileDecsFunction : FunDecl Nat :=
+  { name := "f", inline := false, exported := false,
+    params := [], body := (.skip : Prog Nat), returnShape := .one }
+
+def compileDecsCode : List (Decl Nat) :=
+  [.function compileDecsFunction, .decl .one "g" (.const 1)]
+
+theorem globalCompileDecs_functions_localised_fixture :
+    ∀ entry ∈ functions (globalCompileDecs compileContext compileDecsCode).functions,
+      localisedProg entry.2.2.1 :=
+  globalCompileDecs_functions_localised compileContext compileDecsCode
+
+def globalCompileDecsLocalisedGuard : Bool :=
+  (functions (globalCompileDecs compileContext compileDecsCode).functions).length == 1
+
+#eval globalCompileDecsLocalisedGuard
+#guard globalCompileDecsLocalisedGuard
+
 
 end Flapjack

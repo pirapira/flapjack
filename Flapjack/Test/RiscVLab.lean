@@ -471,8 +471,20 @@ example :
 
 example :
     compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMem .store 4 5 7) [] 0]⟩ =
+      some [.storeWordOffset 4 5 (BitVec.ofNat 64 7)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
       ⟨4, [.asm (.stackMemSub .store 4 5 7) [] 0]⟩ =
       some [.storeWordOffset 4 5 (0 - BitVec.ofNat 64 7)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMemSub .load 4 5 7) [] 0]⟩ =
+      some [.loadWordOffset 4 5 (0 - BitVec.ofNat 64 7)] := by
   decide
 
 example :

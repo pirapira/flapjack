@@ -575,4 +575,71 @@ theorem structInfosOk_append (xs ys : StructContext)
   have hdrop := structInfosOk_drop xs.length (xs ++ ys) h
   rwa [List.drop_left] at hdrop
 
+/-! CakeML `pan_structsProofScript.sml` `map_fst_eq_alookup`: two association
+    lists with the same key order find the same key at the same index. -/
+
+theorem afindi_eq_of_map_fst_eq [BEq α] (key : α) :
+    ∀ (xs ys : List (α × β)), xs.map Prod.fst = ys.map Prod.fst →
+      afindi key xs = afindi key ys := by
+  intro xs
+  induction xs with
+  | nil =>
+      intro ys h
+      simp only [List.map_nil] at h
+      have hy : ys = [] := (List.map_eq_nil_iff.mp h.symm)
+      subst hy
+      simp [afindi]
+  | cons x xs ih =>
+      intro ys h
+      obtain ⟨cx, vx⟩ := x
+      cases ys with
+      | nil => simp at h
+      | cons y ys =>
+          obtain ⟨cy, vy⟩ := y
+          simp only [List.map_cons, List.cons.injEq] at h
+          obtain ⟨hhead, htail⟩ := h
+          have hcy : cx = cy := hhead
+          subst hcy
+          by_cases hbc : key == cx
+          · rw [afindi_cons key (cx, vx) xs, afindi_cons key (cx, vy) ys,
+              if_pos hbc, if_pos hbc]
+          · rw [afindi_cons key (cx, vx) xs, afindi_cons key (cx, vy) ys,
+              if_neg hbc, if_neg hbc, ih ys htail]
+
+/-- Counterpart of Cake's `map_fst_eq_alookup`
+    (`cakeml/pancake/proofs/pan_structsProofScript.sml:278`): if two
+    association lists have the same keys in the same order, a successful
+    lookup in the first is also found at the same index in the second. -/
+theorem map_fst_eq_lookup [BEq String] [LawfulBEq String]
+    (xs ys : List (String × β)) (nm : String) {v : β}
+    (hlen : xs.map Prod.fst = ys.map Prod.fst)
+    (hlookup : xs.lookup nm = some v) :
+    ∃ i, afindi nm xs = some i ∧ afindi nm ys = some i ∧
+      i < xs.length ∧ i < ys.length ∧
+      (xs[i]?).map Prod.snd = some v ∧ (ys[i]?).map Prod.snd = ys.lookup nm := by
+  have hafindi := afindi_eq_of_map_fst_eq nm xs ys hlen
+  have hbridge := afindi_lookup nm xs
+  rw [hlookup] at hbridge
+  cases h : afindi nm xs with
+  | none =>
+      rw [h] at hbridge
+      simp at hbridge
+  | some i =>
+      rw [h] at hbridge
+      simp only [Option.bind_some] at hbridge
+      have hxs : (xs[i]?).map Prod.snd = some v := hbridge.symm
+      have hi_xs : i < xs.length := afindi_less_length nm xs i h
+      have hys : afindi nm ys = some i := by rw [← hafindi]; exact h
+      have hi_ys : i < ys.length := afindi_less_length nm ys i hys
+      have hybridge := afindi_lookup nm ys
+      rw [hys] at hybridge
+      simp only [Option.bind_some] at hybridge
+      refine ⟨i, ?_, ?_, ?_, ?_, ?_, ?_⟩
+      · rfl
+      · exact hys
+      · exact hi_xs
+      · exact hi_ys
+      · exact hxs
+      · exact hybridge.symm
+
 end Flapjack

@@ -135,4 +135,15 @@ def shapeSizeWithContextGuard : Bool :=
 #eval shapeSizeWithContextGuard
 #guard shapeSizeWithContextGuard
 
+/-! Focused regression for the ported Cake `dropWhile_eq_cons_IMP`
+    (`panPropsScript.sml:74`). -/
+
+theorem dropWhile_eq_cons_imp_fixture :
+    ∃ n, n < ([0, 1, 3] : List Nat).length ∧
+      ([0, 1, 3] : List Nat)[n]? = some 3 ∧ (decide ((3 : Nat) < 2) = false) ∧
+      ([0, 1, 3] : List Nat).drop n = [3] :=
+  dropWhile_eq_cons_imp (fun n : Nat => n < 2) [0, 1, 3] 3 [] (by decide)
+
+#check @dropWhile_eq_cons_imp
+
 end Flapjack.Test.PanStructsAfindiParity

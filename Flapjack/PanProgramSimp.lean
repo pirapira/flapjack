@@ -230,6 +230,24 @@ theorem list_mapM_all_of_mem {α β : Type} (f : α → Option β) (P : β → B
               exact ⟨hf a b (by simp) hx,
                 ih ys' hxs (fun x y hx' hfy => hf x y (by simp [hx']) hfy)⟩
 
+/-- Cake's `OPT_MMAP_MEM_IMP`
+(`cakeml/pancake/semantics/panPropsScript.sml:115-123`): every element of a
+successful `OPT_MMAP` image has a preimage in the source list on which `f`
+succeeds. -/
+theorem list_mapM_mem_exists {α β : Type} (f : α → Option β) (xs : List α)
+    (ys : List β) (h : xs.mapM f = some ys) (y : β) (hy : y ∈ ys) :
+    ∃ x, x ∈ xs ∧ f x = some y := by
+  obtain ⟨_, hpt⟩ := (list_mapM_eq_some_iff f xs ys).mp h
+  obtain ⟨i, hi⟩ := List.mem_iff_getElem?.mp hy
+  have hi' : i < ys.length := (List.getElem?_eq_some_iff.mp hi).1
+  have hb := hpt i hi'
+  rw [hi] at hb
+  cases hx : xs[i]? with
+  | none => simp [hx] at hb
+  | some x =>
+      simp only [hx, Option.bind_some] at hb
+      exact ⟨x, List.mem_of_getElem? hx, hb⟩
+
 /-! Cake's `state_rel_imp_evaluate_decls`
 (`cakeml/pancake/proofs/pan_simpProofScript.sml:1303-1331`) says that evaluating a
 declaration list and evaluating the `pan_simp`-simplified declaration list agree

@@ -13,21 +13,38 @@ re-walking form produced.
 
 namespace Flapjack.RiscV
 
-/-- The previous, re-walking definition, kept as the oracle. -/
-def wordSimpSeqAssocRewalk : WordProg Nat → WordProg Nat
-  | .seq first second =>
-      let first := wordSimpSeqAssocRewalk first
-      let second := wordSimpSeqAssocRewalk second
+/-! The previous, re-walking definition, kept as the oracle.  It uses the
+    same structural fuel as the optimized implementation so call metadata is
+    included in the Cake `Seq_assoc` boundary as well. -/
+def wordSimpSeqAssocRewalkFuel : Nat → WordProg Nat → WordProg Nat
+  | 0, program => program
+  | fuel + 1, .seq first second =>
+      let first := wordSimpSeqAssocRewalkFuel fuel first
+      let second := wordSimpSeqAssocRewalkFuel fuel second
       wordSimpLeftSeq (wordSimpSeqItems first ++ wordSimpSeqItems second)
-  | .ite operator condition right thenBranch elseBranch =>
+  | fuel + 1, .ite operator condition right thenBranch elseBranch =>
       .ite operator condition right
-        (wordSimpSeqAssocRewalk thenBranch) (wordSimpSeqAssocRewalk elseBranch)
-  | .loop liveIn body liveOut =>
-      .loop liveIn (wordSimpSeqAssocRewalk body) liveOut
-  | .mustTerminate body => .mustTerminate (wordSimpSeqAssocRewalk body)
-  | program => program
-termination_by program => sizeOf program
-decreasing_by all_goals decreasing_trivial
+        (wordSimpSeqAssocRewalkFuel fuel thenBranch)
+        (wordSimpSeqAssocRewalkFuel fuel elseBranch)
+  | fuel + 1, .call returns target arguments handler =>
+      let returns := returns.map (fun metadata =>
+        let (names, cutsets, returnProgram, firstLabel, secondLabel) := metadata
+        (names, cutsets, wordSimpSeqAssocRewalkFuel fuel returnProgram,
+          firstLabel, secondLabel))
+      let handler := handler.map (fun metadata =>
+        let (exception, handlerProgram, firstLabel, secondLabel) := metadata
+        (exception, wordSimpSeqAssocRewalkFuel fuel handlerProgram,
+          firstLabel, secondLabel))
+      .call returns target arguments handler
+  | fuel + 1, .loop liveIn body liveOut =>
+      .loop liveIn (wordSimpSeqAssocRewalkFuel fuel body) liveOut
+  | fuel + 1, .mustTerminate body =>
+      .mustTerminate (wordSimpSeqAssocRewalkFuel fuel body)
+  | _, program => program
+termination_by fuel _ => fuel
+
+def wordSimpSeqAssocRewalk (program : WordProg Nat) : WordProg Nat :=
+  wordSimpSeqAssocRewalkFuel (wordSimpProgFuel program + 1) program
 
 private def tick : WordProg Nat := .tick
 private def a : WordProg Nat := .assign 1 (.const 1)

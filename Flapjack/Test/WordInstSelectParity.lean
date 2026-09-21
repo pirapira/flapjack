@@ -184,6 +184,26 @@ def cakeCurrentHeapOr : Bool :=
   | .seq (.inst (.const 23 value)) (.opCurrHeap .or 2 23) => value == 1
   | _ => false
 
+def cakeConstCurrentHeapXor : Bool :=
+  match wordInstSelectProgram (α := Nat) 23
+      (.assign 2 (.op .xor [.const 1000, .lookup .currHeap])) with
+  | .seq (.inst (.const 23 value)) (.opCurrHeap .xor 2 23) => value == 1000
+  | _ => false
+
+def cakeBitVecConstCurrentHeapXor : Bool :=
+  match wordInstSelectProgram (α := BitVec 64) 23
+      (.assign 2 (.op .xor [.const (BitVec.ofNat 64 1000), .lookup .currHeap])) with
+  | .seq (.inst (.const 23 value)) (.opCurrHeap .xor 2 23) =>
+      value == BitVec.ofNat 64 1000
+  | _ => false
+
+def cakeNestedConstCurrentHeapXor : Bool :=
+  match wordInstSelectAtom (α := BitVec 64) 23
+      (.op .xor [.lookup .currHeap, .const (BitVec.ofNat 64 1000)]) with
+  | (.seq (.inst (.const 23 value)) (.opCurrHeap .xor 23 23), .var 23) =>
+      value == BitVec.ofNat 64 1000
+  | _ => false
+
 /- Cake's word_simp materializes a non-atomic source Store address before
    word_inst sees the Store.  The selector therefore receives `Var temp` and
    emits a zero-offset Mem; the source/output regression secp_accel fixture
@@ -253,6 +273,9 @@ def cakeStoreOffsetOracle : Bool :=
 #guard cakeSharedByteOffsetMaterializesConstant
 #guard cakeSharedOddHalfwordOffset
 #guard cakeCurrentHeapOr
+#guard cakeConstCurrentHeapXor
+#guard cakeBitVecConstCurrentHeapXor
+#guard cakeNestedConstCurrentHeapXor
 #guard cakeWordSimpStoreShape
 #guard cakeStoreOffsetOracle
 

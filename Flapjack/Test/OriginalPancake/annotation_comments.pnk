@@ -1,0 +1,12 @@
+/@ top level annotation @/
+fun 1 add1(1 a, 1 b) { return a + b; }
+fun 1 main() {
+  // line comment
+  var 1 x = 0;
+  /* block comment */
+  var 1 y = add1(0, 0);
+  /@ multi
+     line
+     annotation @/
+  return y;
+}

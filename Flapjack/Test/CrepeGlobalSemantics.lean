@@ -72,6 +72,48 @@ theorem compile_full_pan_value_while_zero_state_correct_regression :
     (defaultCrepSharedMemHandler : CrepSharedMemHandler Nat) 0 100 1 9
     (.skip : Prog Nat)
 
+/- The nonzero loop composition theorem is exercised on a mutable local: the
+   first condition is true, the body clears it, and the recursive condition is
+   false.  This keeps the Cake source and full Crep state paths finite while
+   checking that the post-body local state is threaded into the loop result. -/
+def crepeGlobalLoopContext : CompileContext (RiscV.Word 8) :=
+  { vars := [("x", (.one, [1]))], functions := [], exceptions := [],
+    maxVar := 1, bytesInWord := 1 }
+
+def crepeGlobalLoopSourceLocals : VarName → Option (PanValue (RiscV.Word 8)) :=
+  fun name => if name == "x" then some (.word 1) else none
+
+def crepeGlobalLoopState : CrepState (RiscV.Word 8) :=
+  { locals := fun slot => if slot == 1 then some 1 else none
+    memory := fun _ => none
+    globals := fun _ => none }
+
+def crepeGlobalLoopBody : Prog (RiscV.Word 8) :=
+  .assign .local "x" (.const 0)
+
+def crepeGlobalLoopProgram : Prog (RiscV.Word 8) :=
+  .while (.var .local "x") crepeGlobalLoopBody
+
+#guard (evalPanValueProgWithPrimitiveCallsAndFfi
+    (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+    ([] : StructContext) [] 0 100 1 3
+    crepeGlobalLoopSourceLocals (fun _ => none) (fun _ => none)
+    crepeGlobalLoopProgram).map
+      (fun result => match result with
+      | .normal locals _ _ => match locals "x" with
+        | some (.word value) => value == 0
+        | _ => false
+      | _ => false) == some true
+
+#guard (evalCrepFullProgStateFull [] (fun _ _ => none)
+    (noCrepFfi (RiscV.Word 8))
+    (defaultCrepSharedMemHandler : CrepSharedMemHandler (RiscV.Word 8))
+    0 100 3 crepeGlobalLoopState
+    (compileProg crepeGlobalLoopContext crepeGlobalLoopProgram)).map
+      (fun result => match result with
+      | .normal state => state.locals 1 == some 0
+      | _ => false) == some true
+
 /-! The full Cake exception evaluator and full Crep evaluator agree on a
     closed raised word, including the global payload spill and exception-code
     lookup. -/

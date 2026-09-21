@@ -175,6 +175,49 @@ theorem evalPanValueFfiClockProg_decCall_raised_ioEvents_prefix
       exception value hcall
   · exact hprefix
 
+theorem evalPanValueFfiClockProgram_of_declarations_and_returned_call_ioEvents_prefix
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (initial : PanValueFfiProgramState α σ)
+    (clock : Nat)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (fuel : Nat) (declarations : List (Decl α))
+    (entry : FunName) (arguments : List (Exp α))
+    (state : PanValueProgramState α) (shape : Shape)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (value : PanValue α) (nextClock : Nat)
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ))
+    (hdeclarations : evalPanValueDeclarations initial.source declarations
+      (memoryAccess := memoryAccess) = some state)
+    (hcall : evalPanValueFfiClockCall context primitive handler state.structs
+      state.functions state.baseAddress state.topAddress state.bytesInWord fuel
+      (fun _ => none) state.globals state.memory initial.ffi clock none entry arguments
+      (memoryAccess := memoryAccess)
+      (contracts := some (PanValueCallContracts.mk state.returnShapes
+        state.exceptions state.parameterShapes))
+      (memoryHandler := memoryHandler) =
+      some (.control (.returned locals globals memory ffi [value]), nextClock))
+    (hentry : lookupInfo entry state.returnShapes = some shape)
+    (hshape : panShapeMatches (panValueShape state.structs value) shape = true)
+    (hprefix : initial.ffi.ioEvents <+: ffi.ioEvents) :
+    evalPanValueFfiClockProgram context initial clock primitive handler fuel
+      declarations entry arguments (memoryAccess := memoryAccess)
+      (memoryHandler := memoryHandler) =
+      some (.control (.returned locals globals memory ffi [value]), nextClock) ∧
+      initial.ffi.ioEvents <+: ffi.ioEvents := by
+  constructor
+  · exact evalPanValueFfiClockProgram_of_declarations_and_returned_call
+      context initial clock primitive handler fuel declarations entry arguments
+      state shape locals globals memory ffi value nextClock
+      (memoryAccess := memoryAccess) (memoryHandler := memoryHandler)
+      hdeclarations hcall hentry hshape
+  · exact hprefix
+
 theorem evalPanValueFfiClockProg_decCall_returned_ioEvents_prefix
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

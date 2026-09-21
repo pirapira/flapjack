@@ -1291,6 +1291,7 @@ example
     targetFuel hpost hcode hlookup hsize
 
 #check @panValuePcCompileCorrect_compact_statefulCompact
+#check @panValuePcCompileCorrect_compact_statefulCompact_canonical_globals
 #check @panValuePcCompileCorrect_compact_statefulCompact_context_code
 
 end Flapjack.Test.PanValuePcControlSafety

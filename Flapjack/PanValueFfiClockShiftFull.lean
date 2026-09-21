@@ -1,4 +1,5 @@
 import Flapjack.PanValueFfiClockShift
+import Flapjack.PanObservationalSemantics
 
 namespace Flapjack
 
@@ -625,5 +626,46 @@ theorem evalPanValueFfiClock_shift
     simp [evalPanValueFfiClockProg, hdec, hseq, hite, hcall, hdecCall, hwhile, htick,
       evalPanValueFfiClockLeaf, Function.comp_def]
     exact ⟨s, hsource⟩
+
+/-! The successful part of `evaluate_add_clock_io_events_mono` is equality in
+    this evaluator: once the full clock-shift theorem identifies the outcome,
+    the extra clock is not observable through `panResultEvents`. -/
+theorem evalPanValueFfiClock_shift_panResultEvents
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel : Nat) (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (info : Option (Option (VarKind × VarName) ×
+      Option (ExceptionId × VarName × Prog α))) (function : FunName)
+    (arguments : List (Exp α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (contracts : Option PanValueCallContracts)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ))
+    (outcome : PanValueFfiClockOutcome α σ) (resultClock extra : Nat)
+    (hrun : evalPanValueFfiClockCall context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory ffi clock info
+      function arguments (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) = some (outcome, resultClock))
+    (hnotimeout : ∀ l g m f, outcome ≠ .timeout l g m f) :
+    panResultEvents
+        (evalPanValueFfiClockCall context primitive handler structs functions
+          baseAddress topAddress bytesInWord fuel locals globals memory ffi clock info
+          function arguments (memoryAccess := memoryAccess) (contracts := contracts)
+          (memoryHandler := memoryHandler)) =
+      panResultEvents
+        (evalPanValueFfiClockCall context primitive handler structs functions
+          baseAddress topAddress bytesInWord fuel locals globals memory ffi
+          (clock + extra) info function arguments (memoryAccess := memoryAccess)
+          (contracts := contracts) (memoryHandler := memoryHandler)) := by
+  have hshift := (evalPanValueFfiClock_shift context primitive handler structs
+    functions baseAddress topAddress bytesInWord).1 fuel locals globals memory ffi
+    clock info function arguments memoryAccess contracts memoryHandler outcome
+    resultClock extra hrun hnotimeout
+  rw [hrun, hshift]
+  cases outcome with
+  | timeout => rfl
+  | control result => cases result <;> rfl
 
 end Flapjack

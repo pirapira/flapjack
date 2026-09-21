@@ -134,4 +134,16 @@ theorem list_mapM_eval_panValueProgramStateRel_fixture :
     [.const 1, .const 5] [.word 1, .word 5] none
     (by simp [evalPanValueExp])
 
+/-- Focused regression for the `state_rel_upd_inv` counterpart: a state
+    related by `panValueProgramStateRel` is recovered by resetting the
+    simplified function table. -/
+theorem panValueProgramStateRel_functions_recover_fixture :
+    ∃ functions,
+      evalRelState =
+        { { evalRelState with functions := panValueFunctionsSimp evalRelState.functions }
+          with functions := functions } :=
+  panValueProgramStateRel_functions_recover evalRelState
+    { evalRelState with functions := panValueFunctionsSimp evalRelState.functions }
+    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+
 end Flapjack.Test.PanProgramSimpParity

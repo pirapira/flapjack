@@ -135,6 +135,17 @@ def panValueProgramStateRel (s t : PanValueProgramState α) : Prop :=
   s.bytesInWord = t.bytesInWord ∧
   t.functions = panValueFunctionsSimp s.functions
 
+/-- Cake's `state_rel_upd_inv` (`pan_simpProofScript.sml:387`): the source
+    state can be recovered from the target state by resetting the simplified
+    function table. -/
+theorem panValueProgramStateRel_functions_recover
+    (s t : PanValueProgramState α) (hrel : panValueProgramStateRel s t) :
+    ∃ functions, s = { t with functions := functions } := by
+  refine ⟨s.functions, ?_⟩
+  cases s
+  cases t
+  simp_all [panValueProgramStateRel]
+
 theorem panSimpDecls_nil : panSimpDecls ([] : List (Decl α)) = [] := by
   simp [panSimpDecls]
 

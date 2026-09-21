@@ -209,4 +209,24 @@ def compileShapeGuard : Bool :=
 #eval compileShapeGuard
 #guard compileShapeGuard
 
+/-! Cake's `dropWhile_MAP_helper`
+    (`cakeml/pancake/proofs/pan_structsProofScript.sml:542`). -/
+
+theorem dropWhile_map_helper_fixture :
+    (([0, 1, 2, 3] : List Nat).map Nat.succ).dropWhile (fun n => n < 3) =
+      (([0, 1, 2, 3] : List Nat).dropWhile (fun n => n < 2)).map Nat.succ :=
+  dropWhile_map_helper (fun n => n < 2) (fun n => n < 3) Nat.succ
+    [0, 1, 2, 3] [2, 3] rfl
+    (by
+      intro x hx
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
+      rcases hx with rfl | rfl | rfl | rfl <;> decide)
+
+def dropWhileMapGuard : Bool :=
+  (([0, 1, 2, 3] : List Nat).map Nat.succ).dropWhile (fun n => n < 3) ==
+    [3, 4]
+
+#eval dropWhileMapGuard
+#guard dropWhileMapGuard
+
 end Flapjack.Test.PanStructsAfindiParity

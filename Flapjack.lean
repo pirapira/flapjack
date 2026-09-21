@@ -48,6 +48,8 @@ import Flapjack.PanShMemStore
 import Flapjack.PanEval
 import Flapjack.PanEvaluate
 import Flapjack.PanObservationalSemantics
+import Flapjack.PanToCrepSemantics
+import Flapjack.PanCrepSemanticAgreement
 import Flapjack.PanHHandleCallRet
 import Flapjack.PanMrec
 import Flapjack.PanHProgDec

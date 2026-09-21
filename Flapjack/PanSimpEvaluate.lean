@@ -2941,6 +2941,56 @@ theorem evalPanValueFfiClockProg_decCall_returned_some_progSize
     clock name shape function arguments body nextLocals nextGlobals nextMemory nextFfi value
     callClock outcome nextClock ma c mh hcall hmatch hbody
 
+/-- `progCallFuel`-indexed fuel adequacy for a returning `decCall`: the
+    declaration node adds one step above the common call/body budget. -/
+theorem evalPanValueFfiClockProg_decCall_returned_some_progCallFuel
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (name : VarName) (shape : Shape) (function : FunName)
+    (arguments : List (Exp α)) (body : Prog α)
+    (nextLocals nextGlobals : VarName → Option (PanValue α))
+    (nextMemory : α → Option (PanValue α)) (nextFfi : FfiState σ)
+    (value : PanValue α) (callClock : Nat)
+    (outcome : PanValueFfiClockOutcome α σ) (nextClock : Nat)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (hcall : evalPanValueFfiClockCall context primitive handler structs functions
+        baseAddress topAddress bytesInWord
+        (max callBudget (progCallFuel callBudget body)) locals globals memory ffi clock none
+        function arguments (memoryAccess := ma) (contracts := c)
+        (memoryHandler := mh) =
+        some (.control (.returned nextLocals nextGlobals nextMemory nextFfi [value]),
+          callClock))
+    (hmatch : panShapeMatches (panValueShape structs value) shape = true)
+    (hbody : evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord
+        (max callBudget (progCallFuel callBudget body))
+        (updatePanValueMap locals name value) nextGlobals nextMemory nextFfi callClock body
+        ma c mh = some (outcome, nextClock)) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord
+        (progCallFuel callBudget (.decCall name shape function arguments body))
+        locals globals memory ffi clock
+        (.decCall name shape function arguments body) ma c mh =
+      some (panValueFfiClockRestoreLocal name (locals name) outcome, nextClock) := by
+  have hsize : progCallFuel callBudget (.decCall name shape function arguments body) =
+      1 + max callBudget (progCallFuel callBudget body) := by
+    simp [progCallFuel]
+  rw [hsize]
+  simpa [Nat.add_comm] using
+    (evalPanValueFfiClockProg_decCall_returned_some context primitive handler structs
+      functions baseAddress topAddress bytesInWord
+      (max callBudget (progCallFuel callBudget body)) locals globals memory ffi clock
+      name shape function arguments body nextLocals nextGlobals nextMemory nextFfi value
+      callClock outcome nextClock ma c mh hcall hmatch hbody)
+
 /-! The remaining terminal `DecCall` outcomes have the same structural budget
     equation as the returned case.  They do not evaluate the declaration body,
     but the call node still consumes one fuel unit. -/

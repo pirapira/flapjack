@@ -5,6 +5,8 @@ namespace Flapjack.Test.PanToCrepSemantics
 
 open Flapjack
 
+#check @panCrepSemanticAgreement_of_pcCompileCorrect_witnesses
+
 def emptyPanHooks : PanSemanticsHooks Unit Unit where
   evaluate := fun _ => none
   ffiOutcome := fun _ => .failed

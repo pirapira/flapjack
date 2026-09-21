@@ -417,6 +417,107 @@ theorem panCrepSemanticAgreement_of_pcResultRel_pair
       hcrepSuccessEvents targetClock targetResult targetState targetOutcome
         htarget htargetOutcome]
 
+/-! Instantiate the semantic agreement from the actual `pc_compile_correct`
+    contract. The witness premise is the Lean form of Cake's
+    `state_rel_imp_semantics_to_crep` setup: source and target executions are
+    supplied at each clock, while code, localization, state, and non-error
+    premises remain explicit. -/
+theorem panCrepSemanticAgreement_of_pcCompileCorrect_witnesses
+    [BEq α] [OfNat α 0] [Add α]
+    (sourceEvaluate : PanValuePcEvaluator α)
+    (targetEvaluate : CrepPcEvaluator α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (program : Prog α)
+    (hcompile : PanValuePcCompileCorrect sourceEvaluate targetEvaluate codeRel
+      excpRel exceptionCode globalsLookup program)
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (panHooks : PanSemanticsHooks α σ) (crepHooks : CrepSemanticsHooks α)
+    (_hffiOutcome : ∀ event, panHooks.ffiOutcome event = event.outcome)
+    (hpanEval : ∀ clock, ∃ outcome returnedClock,
+      panHooks.evaluate clock = some (outcome, returnedClock))
+    (hcrepEval : ∀ clock, ∃ result state,
+      crepHooks.evaluate clock =
+        (crepControlResultToSemantic (some result), state))
+    (hwitness : ∀ clock (outcome : PanValueFfiClockOutcome α σ)
+      (returnedClock : Nat) (result : CrepControlResult α)
+      (state : CrepState α),
+      panHooks.evaluate clock = some (outcome, returnedClock) →
+      crepHooks.evaluate clock =
+        (crepControlResultToSemantic (some result), state) →
+      ∃ (sourceInput : PanValuePcInput α) (targetInput : CrepPcInput α)
+        (sourceExecution : PanValuePcExecution α)
+        (targetExecution : CrepPcExecution α),
+        sourceInput.structs = structs ∧
+        targetInput.structs = structs ∧
+        panValuePcLocalisedCode sourceInput.code ∧
+        localisedProg program ∧
+        codeRel context sourceInput.code targetInput.code ∧
+        excpRel context sourceInput.eshapes targetInput.eshapes ∧
+        panValueCrepStateRel structs context sourceInput.locals
+          sourceInput.globals sourceInput.memory targetInput.state ∧
+        sourceExecution.result ≠ .error ∧
+        sourceEvaluate context sourceInput program = some sourceExecution ∧
+        targetEvaluate context targetInput (compileProg context program) =
+          some targetExecution ∧
+        codeRel context sourceExecution.code targetExecution.code ∧
+        excpRel context sourceExecution.eshapes targetExecution.eshapes ∧
+        sourceExecution.result = panOutcomeToPcResult outcome ∧
+        targetExecution.result = crepControlToPcResult result)
+    (hevents : ∀ clock (outcome : PanValueFfiClockOutcome α σ)
+      (returnedClock : Nat) (result : CrepControlResult α)
+      (state : CrepState α),
+      panHooks.evaluate clock = some (outcome, returnedClock) →
+      crepHooks.evaluate clock =
+        (crepControlResultToSemantic (some result), state) →
+      panResultEvents (some (outcome, returnedClock)) =
+        crepHooks.ioEvents state)
+    (hpanSuccess : ∀ clock (sourceResult : PanValueFfiClockResult α σ)
+      (sourceOutcome : PanSemanticOutcome),
+      panHooks.evaluate clock = some sourceResult →
+      panResultOutcome panHooks (some sourceResult) = some sourceOutcome →
+      sourceOutcome = .success)
+    (hcrepSuccess : ∀ clock (targetResult : Option (CrepSemanticResult α))
+      (targetState : CrepState α) (targetOutcome : CrepSemanticOutcome),
+      crepHooks.evaluate clock = (targetResult, targetState) →
+      crepResultOutcome targetResult = some targetOutcome →
+      targetOutcome = .success)
+    (hpanSuccessEvents : ∀ clock (sourceResult : PanValueFfiClockResult α σ)
+      (sourceOutcome : PanSemanticOutcome),
+      panHooks.evaluate clock = some sourceResult →
+      panResultOutcome panHooks (some sourceResult) = some sourceOutcome →
+      panResultEvents (some sourceResult) = [])
+    (hcrepSuccessEvents : ∀ clock (targetResult : Option (CrepSemanticResult α))
+      (targetState : CrepState α) (targetOutcome : CrepSemanticOutcome),
+      crepHooks.evaluate clock = (targetResult, targetState) →
+      crepResultOutcome targetResult = some targetOutcome →
+      crepHooks.ioEvents targetState = []) :
+    PanCrepSemanticAgreement panHooks crepHooks := by
+  apply panCrepSemanticAgreement_of_pcResultRel_pair structs context exceptionRel
+    exceptionCode globalsLookup panHooks crepHooks
+  · intro clock
+    obtain ⟨outcome, returnedClock, hpanClock⟩ := hpanEval clock
+    obtain ⟨result, state, hcrepClock⟩ := hcrepEval clock
+    obtain ⟨sourceInput, targetInput, sourceExecution, targetExecution,
+      hsourceStructs, htargetStructs, hlocalisedCode, hlocalisedProgram,
+      hcodeInput, hexcpInput, hstate, hnonError, hsourceEval, htargetEval,
+      hcodeResult, hexcpResult, hsourceResult, htargetResult⟩ :=
+      hwitness clock outcome returnedClock result state hpanClock hcrepClock
+    have hresult := hcompile context structs sourceInput targetInput exceptionRel
+      sourceExecution targetExecution hsourceStructs htargetStructs
+      hlocalisedCode hlocalisedProgram hcodeInput hexcpInput hstate hnonError
+      hsourceEval htargetEval hcodeResult hexcpResult
+    exact ⟨outcome, returnedClock, result, state, hpanClock, hcrepClock,
+      by simpa [hsourceResult, htargetResult] using hresult,
+      hevents clock outcome returnedClock result state hpanClock hcrepClock⟩
+  · exact hpanSuccess
+  · exact hcrepSuccess
+  · exact hpanSuccessEvents
+  · exact hcrepSuccessEvents
+
 /-! ## A concrete no-final-FFI instantiation
 
 This instantiation has a normal run at clock `0` and a successful returned run at

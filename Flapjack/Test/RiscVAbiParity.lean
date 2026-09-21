@@ -194,6 +194,23 @@ def immediateCarrierInstruction : Bool :=
 
 #guard immediateCarrierInstruction
 
+/- Cake's `wInst (Arith (Binop ... (Imm ...)))` uses `wReg1` for a spilled
+   left operand and `wRegWrite1` for a spilled destination
+   (`word_to_stackScript.sml:91-99`).  This direct carrier guard pins the
+   source-shaped StackLang sequence, including both frame offsets. -/
+def spilledImmediateCarrierShape : Bool :=
+  match wordStackArithInst
+      { locations := [(1, .stack 2), (2, .stack 3)]
+        scratch := 31
+        stackBase := 10 }
+      (.binOp .add 1 2 (.imm 5) : WordArith Nat) with
+  | some (.seq (.stackLoad 31 13)
+      (.seq (.inst (.arith (.binOp .add 31 31 (.imm 5))))
+        (.stackStore 31 12))) => true
+  | _ => false
+
+#guard spilledImmediateCarrierShape
+
 def rotateImmediateCarrierInstructions : Bool :=
   match wordArithToInstructions (width := 64)
       (.shift .ror 1 2 (.imm 5) : WordArith (Word 64)) with

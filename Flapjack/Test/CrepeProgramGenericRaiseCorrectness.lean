@@ -2680,6 +2680,72 @@ theorem three_word_raise_pc_compile_correct_direct_clocked_raised
     (fun _ => none) directClockFfi (.raise "E" sourceExpression)
     targetState "E" sourceValue 9 hclock hclockState hclockRaiseData
 
+theorem nested_raise_pc_compile_correct_direct_clocked_raised
+    (sourceFuel targetFuel : Nat)
+    (targetState : CrepState Nat)
+    (hcompact : PanValuePcCompileCorrectWithContextCode
+      (panValuePcCompactSourceEvaluator
+        (fun _ _ => none) (fun _ _ _ _ _ _ => none) []
+        0 0 8 sourceFuel)
+      (crepPcCompactTargetEvaluator [] (fun _ _ => none)
+        (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none)
+        0 0 targetFuel)
+      (fun _ _ _ => True) (fun _ _ _ => True)
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8) (.raise "E" nestedSourceExpression))
+    (hclock :
+      evalPanValueFfiClockProg directClockContext (fun _ _ => none)
+        directClockHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+        (fun _ => none) directClockFfi 1 (.raise "E" nestedSourceExpression) =
+      some (.control (.raised (fun _ => none) (fun _ => none)
+        (fun _ => none) directClockFfi "E" nestedSourceValue), 1))
+    (hclockState : panValueCrepStateRel [] context
+      (fun _ => none) (fun _ => none) (fun _ => none) targetState)
+    (hclockRaiseData : panValuePcRaisedHraiseData
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8) [] context (fun _ _ code => code = 9)
+      (fun _ => none) (fun _ => none) (fun _ => none) "E" nestedSourceValue
+      targetState 9 ∧ lookupInfo "E" context.exceptions = some 9) :
+    PanValuePcCompileCorrectWithContextCode
+      (panValuePcCompactSourceEvaluator
+        (fun _ _ => none) (fun _ _ _ _ _ _ => none) [] 0 0 8 sourceFuel)
+      (crepPcCompactTargetEvaluator [] (fun _ _ => none)
+        (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none) 0 0 targetFuel)
+      (fun _ _ _ => True) (fun _ _ _ => True)
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8) (.raise "E" nestedSourceExpression) ∧
+    evalPanValueFfiClockProg directClockContext (fun _ _ => none)
+      directClockHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+      (fun _ => none) directClockFfi 1 (.raise "E" nestedSourceExpression) =
+      some (.control (.raised (fun _ => none) (fun _ => none)
+        (fun _ => none) directClockFfi "E" nestedSourceValue), 1) ∧
+    (evalPanValueFfiClockProg directClockContext (fun _ _ => none)
+      directClockHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+      (fun _ => none) directClockFfi 1 (.raise "E" nestedSourceExpression)).map
+        panValueFfiClockResultProjection =
+      some (.raised (fun _ => none) (fun _ => none)
+        (fun _ => none) directClockFfi "E" nestedSourceValue 1) ∧
+    panValuePcResultRelWithContextCode [] context
+      (fun _ _ code => code = 9)
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8)
+      (.raised (fun _ => none) (fun _ => none) (fun _ => none)
+        "E" nestedSourceValue) (.raised targetState 9) := by
+  exact panValuePcCompileCorrectWithContextCode_of_compact_evaluators_and_clocked_raised_hraise_data
+    (panValuePcCompactSourceEvaluator
+      (fun _ _ => none) (fun _ _ _ _ _ _ => none) [] 0 0 8 sourceFuel)
+    (crepPcCompactTargetEvaluator [] (fun _ _ => none)
+      (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none) 0 0 targetFuel)
+    (fun _ _ _ => True) (fun _ _ _ => True)
+    (fun exception => if exception = "E" then some 9 else none)
+    (crepPcFlatGlobalsLookup 8) (.raise "E" nestedSourceExpression)
+    hcompact [] context (fun _ _ code => code = 9)
+    (fun exception => if exception = "E" then some 9 else none)
+    (crepPcFlatGlobalsLookup 8) directClockContext (fun _ _ => none)
+    directClockHandler [] 0 0 8 0 1 (fun _ => none) (fun _ => none)
+    (fun _ => none) directClockFfi (.raise "E" nestedSourceExpression)
+    targetState "E" nestedSourceValue 9 hclock hclockState hclockRaiseData
+
 example
     (sourceFunctions : List (FunName × List VarName × Prog Nat))
     (functions : List (CompiledFunction Nat))

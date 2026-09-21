@@ -54,9 +54,18 @@ def opCurrHeapGuard : Bool :=
   | .seq (.move 1 []) (.opCurrHeap .add 9 0) => true
   | _ => false
 
+/- Cake reads the source through the entry SSA map before allocating the fresh
+   destination for OpCurrHeap. -/
+def mappedOpCurrHeapGuard : Bool :=
+  match (wordFullSsaCcTrans 1
+      (.opCurrHeap .add 0 0 : WordProg Nat)).2.2 with
+  | .seq (.move 1 [(5, 0)]) (.opCurrHeap .add 9 5) => true
+  | _ => false
+
 def parityGuard : Bool :=
   shareLoadGuard && shareStoreGuard && shareLoad8Guard && shareStore8Guard &&
     shareLoad16Guard && shareStore16Guard && opCurrHeapGuard
+    && mappedOpCurrHeapGuard
 
 #guard shareLoadGuard
 #guard shareStoreGuard
@@ -65,6 +74,7 @@ def parityGuard : Bool :=
 #guard shareLoad16Guard
 #guard shareStore16Guard
 #guard opCurrHeapGuard
+#guard mappedOpCurrHeapGuard
 #guard parityGuard
 #eval parityGuard
 
@@ -76,7 +86,9 @@ def runChecks : IO Bool := do
       ("ssa_cc_trans ShareInst store8 preserves Cake source", shareStore8Guard),
       ("ssa_cc_trans ShareInst load16 freshens Cake destination", shareLoad16Guard),
       ("ssa_cc_trans ShareInst store16 preserves Cake source", shareStore16Guard),
-      ("ssa_cc_trans OpCurrHeap freshens Cake destination", opCurrHeapGuard) ]
+      ("ssa_cc_trans OpCurrHeap freshens Cake destination", opCurrHeapGuard),
+      ("ssa_cc_trans OpCurrHeap reads the Cake entry SSA namespace",
+        mappedOpCurrHeapGuard) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

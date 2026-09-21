@@ -441,6 +441,7 @@ end
     established evaluator for compatibility while exposing the source-
     compatible shift semantics through the straight-line and conditional
     Loop fragment used by the source-to-Loop correctness bridge. -/
+mutual
 def evalLoopProgFull [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
@@ -525,9 +526,27 @@ def evalLoopProgFull [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
           pure (.normal { state with
             memory := updateLoopMemory state.memory address value })
   | _fuel + 1, state, .tick => some (.normal state)
+  | fuel + 1, state, .loop _ body _ =>
+      evalLoopRepeatFull fuel state body
   | fuel + 1, state, .mark body => evalLoopProgFull fuel state body
-  | _, _, .fail | _, _, .loop _ _ _ | _, _, .primitive _ _ _
+  | _, _, .fail | _, _, .primitive _ _ _
   | _, _, .arith _ | _, _, .call _ _ _ _ | _, _, .ffi _ _ _ _ _ _ => none
+
+def evalLoopRepeatFull [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+      [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [PanCmp α] [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
+    [Complement α]
+    : Nat → LoopState α → LoopProg α → Option (LoopResult α)
+  | 0, _, _ => none
+  | fuel + 1, state, body => do
+      let result ← evalLoopProgFull fuel state body
+      match result with
+      | .normal state => evalLoopRepeatFull fuel state body
+      | .continued state 0 => evalLoopRepeatFull fuel state body
+      | .broke state 0 => some (.normal state)
+      | result => some result
+end
 
 /-! Full evaluator extension for Cake's width-aware `LLongDiv`.  The legacy
     `evalLoopProgFull` remains unchanged for callers that intentionally use

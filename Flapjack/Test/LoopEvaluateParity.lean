@@ -87,6 +87,14 @@ def fullDivZero : Bool :=
   | none => true
   | _ => false
 
+def fullLoopBreak : Bool :=
+  match evalLoopProgFull 8 fullDivState
+      (.loop []
+        (.seq (.assign 1 (.const (BitVec.ofNat 8 9))) (.break 0)) [] :
+          LoopProg (RiscV.Word 8)) with
+  | some (.normal state) => state.locals 1 == some (BitVec.ofNat 8 9)
+  | _ => false
+
 /-! Width-aware `LLongDiv` oracle: Cake forms `high * 2^width + low`, writes
     the remainder to the right destination first, and then the quotient to the
     left destination. -/
@@ -144,6 +152,7 @@ def fullLongDivOverflow : Bool :=
 #guard fullLongDivSuccess
 #guard fullLongDivZero
 #guard fullLongDivOverflow
+#guard fullLoopBreak
 
 /-! Width-aware `LLongMul` oracle: Cake splits the product into high and low
     words and writes the high destination before the low destination. -/

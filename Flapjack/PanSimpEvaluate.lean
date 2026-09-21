@@ -5947,6 +5947,141 @@ theorem PanValueFfiClockNormalAdequateProgFromFloor_seq_adequate
       finalClock hfirstEval hsecondEval,
     Nat.zero_le finalClock⟩
 
+/-- A clock-free leaf preserves its input clock, so it is adequate from `lo`
+    down to the floor `lo`. -/
+theorem PanValueFfiClockNormalAdequateProgFromFloor_leaf
+    (lo : Nat)
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (ma : Option (PanValueMemoryAccess α))
+    (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (program : Prog α)
+    (hleaf : PanValueFfiLeafProg program)
+    (hnormal : ∀ (locals globals : VarName → Option (PanValue α))
+        (memory : α → Option (PanValue α)) (ffi : FfiState σ),
+        ∃ (finalLocals finalGlobals : VarName → Option (PanValue α))
+          (finalMemory : α → Option (PanValue α)) (finalFfi : FfiState σ) (steps : Nat),
+          evalPanValueFfiProgSteps context primitive handler structs functions
+            baseAddress topAddress bytesInWord 1 locals globals memory ffi program
+            (memoryAccess := ma) (contracts := c) (memoryHandler := mh) =
+          some (.normal finalLocals finalGlobals finalMemory finalFfi, steps)) :
+    PanValueFfiClockNormalAdequateProgFromFloor lo lo context primitive handler structs
+      functions baseAddress topAddress bytesInWord callBudget ma c mh program := by
+  intro clock hclock locals globals memory ffi
+  obtain ⟨finalLocals, finalGlobals, finalMemory, finalFfi, steps, hsteps⟩ :=
+    hnormal locals globals memory ffi
+  exact ⟨finalLocals, finalGlobals, finalMemory, finalFfi, clock,
+    evalPanValueFfiClockProg_leaf_some_progCallFuel context primitive handler structs
+      functions baseAddress topAddress bytesInWord callBudget program locals globals memory
+      ffi clock ma c mh hleaf (.normal finalLocals finalGlobals finalMemory finalFfi) steps
+      hsteps,
+    hclock⟩
+
+/-- A lower-bounded declaration: the value is evaluated at the input clock and
+    the body carries its own floor, so the floor is preserved. -/
+theorem PanValueFfiClockNormalAdequateProgFromFloor_dec
+    (lo floor : Nat)
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (ma : Option (PanValueMemoryAccess α))
+    (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (name : VarName) (shape : Shape) (value : Exp α) (body : Prog α)
+    (hvalue : ∀ (locals globals : VarName → Option (PanValue α))
+        (memory : α → Option (PanValue α)),
+        ∃ valueResult : PanValue α,
+          evalPanValueExp structs locals globals memory baseAddress topAddress
+            bytesInWord value (memoryAccess := ma) = some valueResult ∧
+          panShapeMatches (panValueShape structs valueResult) shape = true)
+    (hbody : PanValueFfiClockNormalAdequateProgFromFloor lo floor context primitive handler
+      structs functions baseAddress topAddress bytesInWord callBudget ma c mh body) :
+    PanValueFfiClockNormalAdequateProgFromFloor lo floor context primitive handler structs
+      functions baseAddress topAddress bytesInWord callBudget ma c mh
+      (.dec name shape value body) := by
+  intro clock hclock locals globals memory ffi
+  obtain ⟨valueResult, hvalueEval, hmatch⟩ := hvalue locals globals memory
+  obtain ⟨finalLocals, finalGlobals, finalMemory, finalFfi, finalClock, hbodyEval,
+      hfloor⟩ :=
+    hbody clock hclock (updatePanValueMap locals name valueResult) globals memory ffi
+  exact ⟨restorePanValueLocal finalLocals name (locals name), finalGlobals,
+    finalMemory, finalFfi, finalClock,
+    evalPanValueFfiClockProg_dec_some_progCallFuel context primitive handler structs
+      functions baseAddress topAddress bytesInWord callBudget locals globals memory ffi
+      clock name shape value body ma c mh valueResult
+      (.control (.normal finalLocals finalGlobals finalMemory finalFfi)) finalClock
+      hvalueEval hmatch hbodyEval,
+    hfloor⟩
+
+/-- A lower-bounded conditional: both branches preserve the same floor. -/
+theorem PanValueFfiClockNormalAdequateProgFromFloor_ite
+    (lo floor : Nat)
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (ma : Option (PanValueMemoryAccess α))
+    (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (condition : Exp α) (thenBranch elseBranch : Prog α)
+    (hcondition : ∀ (locals globals : VarName → Option (PanValue α))
+      (memory : α → Option (PanValue α)),
+      ∃ wordValue : α, evalPanValueExp structs locals globals memory baseAddress
+        topAddress bytesInWord condition (memoryAccess := ma) = some (.word wordValue))
+    (hthen : PanValueFfiClockNormalAdequateProgFromFloor lo floor context primitive handler
+      structs functions baseAddress topAddress bytesInWord callBudget ma c mh thenBranch)
+    (helse : PanValueFfiClockNormalAdequateProgFromFloor lo floor context primitive handler
+      structs functions baseAddress topAddress bytesInWord callBudget ma c mh elseBranch) :
+    PanValueFfiClockNormalAdequateProgFromFloor lo floor context primitive handler structs
+      functions baseAddress topAddress bytesInWord callBudget ma c mh
+      (.ite condition thenBranch elseBranch) := by
+  intro clock hclock locals globals memory ffi
+  obtain ⟨wordValue, hcond⟩ := hcondition locals globals memory
+  by_cases hz : (wordValue != 0) = true
+  · obtain ⟨finalLocals, finalGlobals, finalMemory, finalFfi, finalClock, hbranch,
+        hfloor⟩ := hthen clock hclock locals globals memory ffi
+    have hmono := evalPanValueFfiClockProg_fuel_mono context primitive handler structs
+      functions baseAddress topAddress bytesInWord
+      (fuel := progCallFuel callBudget thenBranch)
+      (fuel' := progCallFuel callBudget thenBranch + progCallFuel callBudget elseBranch)
+      locals globals memory ffi clock thenBranch ma c mh (by omega) hbranch
+    exact ⟨finalLocals, finalGlobals, finalMemory, finalFfi, finalClock,
+      evalPanValueFfiClockProg_ite_true_some_progCallFuel context primitive handler
+        structs functions baseAddress topAddress bytesInWord callBudget locals globals
+        memory ffi clock condition thenBranch elseBranch ma c mh wordValue
+        (.control (.normal finalLocals finalGlobals finalMemory finalFfi)) finalClock
+        hcond hz hmono,
+      hfloor⟩
+  · have hzfalse : (wordValue != 0) = false := by
+      cases hbool : (wordValue != 0) <;> simp_all
+    obtain ⟨finalLocals, finalGlobals, finalMemory, finalFfi, finalClock, hbranch,
+        hfloor⟩ := helse clock hclock locals globals memory ffi
+    have hmono := evalPanValueFfiClockProg_fuel_mono context primitive handler structs
+      functions baseAddress topAddress bytesInWord
+      (fuel := progCallFuel callBudget elseBranch)
+      (fuel' := progCallFuel callBudget thenBranch + progCallFuel callBudget elseBranch)
+      locals globals memory ffi clock elseBranch ma c mh (by omega) hbranch
+    exact ⟨finalLocals, finalGlobals, finalMemory, finalFfi, finalClock,
+      evalPanValueFfiClockProg_ite_false_some_progCallFuel context primitive handler
+        structs functions baseAddress topAddress bytesInWord callBudget locals globals
+        memory ffi clock condition thenBranch elseBranch ma c mh wordValue
+        (.control (.normal finalLocals finalGlobals finalMemory finalFfi)) finalClock
+        hcond hzfalse hmono,
+      hfloor⟩
+
 /-- A lower-bounded program may also contain a caught-handler call: the call
     raises, the matching handler body runs normally at the same structural
     budget, and the result is again normal from the input clock onward. -/

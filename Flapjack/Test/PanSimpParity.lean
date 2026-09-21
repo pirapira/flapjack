@@ -2552,4 +2552,49 @@ example : PanValueFfiClockNormalAdequateProgFromFloor 0 0 evaluatorContext
 #check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_weaken
 #check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_seq_adequate
 
+/-! The clock-free leaf preserves its floor, giving the floor-composition
+    theorem a base case; declarations and conditionals then preserve it. -/
+example : PanValueFfiClockNormalAdequateProgFromFloor 0 0 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+    (.skip : Prog Nat) :=
+  PanValueFfiClockNormalAdequateProgFromFloor_leaf 0 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none (.skip : Prog Nat)
+    PanValueFfiLeafProg.skip
+    (by
+      intro locals globals memory ffi
+      exact ⟨locals, globals, memory, ffi, 1, by simp [evalPanValueFfiProgSteps]⟩)
+
+example : PanValueFfiClockNormalAdequateProgFromFloor 0 0 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+    (.dec "x" .one (.const 5) (.skip : Prog Nat)) := by
+  refine PanValueFfiClockNormalAdequateProgFromFloor_dec 0 0 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none "x" .one
+    (.const 5) (.skip : Prog Nat) ?_ ?_
+  · intro locals globals memory
+    exact ⟨.word 5, by simp [evalPanValueExp],
+      by simp [panValueShape, panShapeMatches]⟩
+  · exact PanValueFfiClockNormalAdequateProgFromFloor_leaf 0 evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+      (.skip : Prog Nat) PanValueFfiLeafProg.skip
+      (by
+        intro locals globals memory ffi
+        exact ⟨locals, globals, memory, ffi, 1, by simp [evalPanValueFfiProgSteps]⟩)
+
+example : PanValueFfiClockNormalAdequateProgFromFloor 0 0 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+    (.ite (.const 5) (.skip : Prog Nat) (.skip : Prog Nat)) := by
+  have hskip : PanValueFfiClockNormalAdequateProgFromFloor 0 0 evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+      (.skip : Prog Nat) :=
+    PanValueFfiClockNormalAdequateProgFromFloor_leaf 0 evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+      (.skip : Prog Nat) PanValueFfiLeafProg.skip
+      (by
+        intro locals globals memory ffi
+        exact ⟨locals, globals, memory, ffi, 1, by simp [evalPanValueFfiProgSteps]⟩)
+  exact PanValueFfiClockNormalAdequateProgFromFloor_ite 0 0 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none (.const 5)
+    (.skip : Prog Nat) (.skip : Prog Nat) (fun _ _ _ => ⟨5, by simp [evalPanValueExp]⟩)
+    hskip hskip
+
 end Flapjack.Test.PanSimpParity

@@ -52,9 +52,34 @@ def store32InstGuard : Bool :=
   | .seq (.move 1 []) (.inst (.mem .store32 0 0)) => true
   | _ => false
 
+def loadOffsetGuard : Bool :=
+  match (wordFullSsaCcTrans 0
+      (.inst (.memOffset .load 1 2 7) : WordProg Nat)).2.2 with
+  | .seq (.move 1 []) (.inst (.memOffset .load 5 0 7)) => true
+  | _ => false
+
+def storeOffsetGuard : Bool :=
+  match (wordFullSsaCcTrans 0
+      (.inst (.memOffset .store 1 2 7) : WordProg Nat)).2.2 with
+  | .seq (.move 1 []) (.inst (.memOffset .store 0 0 7)) => true
+  | _ => false
+
+def load32OffsetGuard : Bool :=
+  match (wordFullSsaCcTrans 0
+      (.inst (.memOffset .load32 1 2 7) : WordProg Nat)).2.2 with
+  | .seq (.move 1 []) (.inst (.memOffset .load32 5 0 7)) => true
+  | _ => false
+
+def store32OffsetGuard : Bool :=
+  match (wordFullSsaCcTrans 0
+      (.inst (.memOffset .store32 1 2 7) : WordProg Nat)).2.2 with
+  | .seq (.move 1 []) (.inst (.memOffset .store32 0 0 7)) => true
+  | _ => false
+
 def parityGuard : Bool :=
   getGuard && storeGuard && setGuard && loadInstGuard && storeInstGuard &&
-    load32InstGuard && store32InstGuard
+    load32InstGuard && store32InstGuard && loadOffsetGuard && storeOffsetGuard &&
+    load32OffsetGuard && store32OffsetGuard
 
 #guard getGuard
 #guard storeGuard
@@ -63,6 +88,10 @@ def parityGuard : Bool :=
 #guard storeInstGuard
 #guard load32InstGuard
 #guard store32InstGuard
+#guard loadOffsetGuard
+#guard storeOffsetGuard
+#guard load32OffsetGuard
+#guard store32OffsetGuard
 #guard parityGuard
 #eval parityGuard
 
@@ -74,7 +103,11 @@ def runChecks : IO Bool := do
       ("ssa_cc_trans Mem Load freshens Cake destination", loadInstGuard),
       ("ssa_cc_trans Mem Store renames Cake address and value", storeInstGuard),
       ("ssa_cc_trans Mem Load32 freshens Cake destination", load32InstGuard),
-      ("ssa_cc_trans Mem Store32 renames Cake address and value", store32InstGuard) ]
+      ("ssa_cc_trans Mem Store32 renames Cake address and value", store32InstGuard),
+      ("ssa_cc_trans MemOffset Load keeps Cake offset", loadOffsetGuard),
+      ("ssa_cc_trans MemOffset Store keeps Cake offset", storeOffsetGuard),
+      ("ssa_cc_trans MemOffset Load32 keeps Cake offset", load32OffsetGuard),
+      ("ssa_cc_trans MemOffset Store32 keeps Cake offset", store32OffsetGuard) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

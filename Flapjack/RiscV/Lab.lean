@@ -365,7 +365,12 @@ def labCompilePlain [NeZero width] :
       match operator with
       | .load => pure [.loadWordOffset register base offset]
       | .store => pure [.storeWordOffset register base offset]
-      | .load8 | .store8 | .load16 | .store16 | .load32 | .store32 => none
+      | .load8 => pure [.loadByteOffset register base offset]
+      | .store8 => pure [.storeByteOffset register base offset]
+      | .load16 => pure [.loadHalfOffset register base offset]
+      | .store16 => pure [.storeHalfOffset register base offset]
+      | .load32 => pure [.load32Offset register base offset]
+      | .store32 => pure [.store32Offset register base offset]
   | .stackMemSub operator register base offset => do
       let register ← labRegisterOfNat (portToStack register)
       let base ← labRegisterOfNat (portToStack base)
@@ -373,7 +378,12 @@ def labCompilePlain [NeZero width] :
       match operator with
       | .load => pure [.loadWordOffset register base offset]
       | .store => pure [.storeWordOffset register base offset]
-      | .load8 | .store8 | .load16 | .store16 | .load32 | .store32 => none
+      | .load8 => pure [.loadByteOffset register base offset]
+      | .store8 => pure [.storeByteOffset register base offset]
+      | .load16 => pure [.loadHalfOffset register base offset]
+      | .store16 => pure [.storeHalfOffset register base offset]
+      | .load32 => pure [.load32Offset register base offset]
+      | .store32 => pure [.store32Offset register base offset]
   | .const destination value => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
       let destination ← labRegisterOfNat (portToStack destination)

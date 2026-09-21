@@ -528,6 +528,13 @@ theorem panValueIsWf_isWfShape_panValueShape (structs : StructContext)
       simp only [List.map_cons, isWfShape.isWfShapeList, Bool.and_eq_true]
       exact ⟨ihValue h1, ihValues h2⟩
 
+/-- Counterpart of Cake's `shape_of_val` (`panPropsScript.sml:14`) and
+    `shape_of_alt` (`pan_to_crepProofScript.sml:1906`): the shape of a scalar
+    value is `One`. -/
+theorem panValueShape_word (structs : StructContext) (value : α) :
+    panValueShape structs (.word value) = .one := by
+  simp [panValueShape]
+
 /-- Counterpart of Cake's `is_wf_shape_v_drop`
     (`cakeml/pancake/semantics/panPropsScript.sml:63`): well-formedness of a
     value against a suffix of the struct context implies well-formedness

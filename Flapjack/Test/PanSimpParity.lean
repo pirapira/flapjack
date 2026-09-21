@@ -558,6 +558,68 @@ example
           (updatePanValueMap (fun _ => none) "x" (.word 5)) (fun _ => none)
           (fun _ => none) evaluatorFfi 1 "tag" "text" none none none))
 
+/-- The raising `DecCall` at the call-aware budget. -/
+example
+    (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8
+      (max 7 (progCallFuel 7 (.annot "tag" "text" : Prog Nat)))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1 none "f" [] =
+      some (.control (.raised (fun _ => none) (fun _ => none) (fun _ => none)
+        evaluatorFfi "E" (.word 5)), 1)) :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+      [] [] 0 0 8
+      (progCallFuel 7 (.decCall "x" .one "f" [] (.annot "tag" "text" : Prog Nat)))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+      (.decCall "x" .one "f" [] (.annot "tag" "text")) none none none =
+    some (.control (.raised (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi "E" (.word 5)), 1) := by
+  exact evalPanValueFfiClockProg_decCall_raised_some_progCallFuel evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 (fun _ => none) (fun _ => none)
+    (fun _ => none) evaluatorFfi 1 "x" .one "f" [] (.annot "tag" "text")
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi "E" (.word 5) 1
+    none none none hcall
+
+/-- The timing-out `DecCall` at the call-aware budget. -/
+example
+    (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8
+      (max 7 (progCallFuel 7 (.annot "tag" "text" : Prog Nat)))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1 none "f" [] =
+      some (.timeout (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi, 1)) :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+      [] [] 0 0 8
+      (progCallFuel 7 (.decCall "x" .one "f" [] (.annot "tag" "text" : Prog Nat)))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+      (.decCall "x" .one "f" [] (.annot "tag" "text")) none none none =
+    some (.timeout (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi, 1) := by
+  exact evalPanValueFfiClockProg_decCall_timeout_some_progCallFuel evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 (fun _ => none) (fun _ => none)
+    (fun _ => none) evaluatorFfi 1 "x" .one "f" [] (.annot "tag" "text")
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    none none none hcall
+
+/-- The final-FFI `DecCall` at the call-aware budget. -/
+example
+    (event : FfiFinalEvent)
+    (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8
+      (max 7 (progCallFuel 7 (.annot "tag" "text" : Prog Nat)))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1 none "f" [] =
+      some (.control (.finalFfi (fun _ => none) (fun _ => none) (fun _ => none)
+        evaluatorFfi event), 1)) :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+      [] [] 0 0 8
+      (progCallFuel 7 (.decCall "x" .one "f" [] (.annot "tag" "text" : Prog Nat)))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+      (.decCall "x" .one "f" [] (.annot "tag" "text")) none none none =
+    some (.control (.finalFfi (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi event), 1) := by
+  exact evalPanValueFfiClockProg_decCall_finalFfi_some_progCallFuel evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 (fun _ => none) (fun _ => none)
+    (fun _ => none) evaluatorFfi 1 "x" .one "f" [] (.annot "tag" "text")
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi event 1
+    none none none hcall
+
 /-- A structural normal program succeeds normally at its call-aware budget. -/
 example :
     evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
@@ -573,6 +635,62 @@ example :
     (fun _ => none) evaluatorFfi 1 none none none
     (PanValueFfiClockNormalProg.seq (.skip : Prog Nat) (.annot "tag" "text")
       PanValueFfiClockNormalProg.skip (PanValueFfiClockNormalProg.annot "tag" "text"))
+
+/-- The normal fragment is preserved by the `pan_simp` transform. -/
+example :
+    PanValueFfiClockNormalProg
+      (panSimpProg (.seq (.skip : Prog Nat) (.annot "tag" "text"))) :=
+  PanValueFfiClockNormalProg_panSimpProg
+    (PanValueFfiClockNormalProg.seq (.skip : Prog Nat) (.annot "tag" "text")
+      PanValueFfiClockNormalProg.skip (PanValueFfiClockNormalProg.annot "tag" "text"))
+
+/-- The transformed normal fragment evaluates normally at its call-aware budget. -/
+example
+    (h : PanValueFfiClockNormalProg
+      (.seq (.skip : Prog Nat) (.annot "tag" "text"))) :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+      [] [] 0 0 8
+      (progCallFuel 5 (panSimpProg (.seq (.skip : Prog Nat) (.annot "tag" "text"))))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+      (panSimpProg (.seq (.skip : Prog Nat) (.annot "tag" "text"))) none none none =
+    some (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi), 1) :=
+  evalPanValueFfiClockProg_panSimpProg_normalProg_some_progCallFuel evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 5
+    (.seq (.skip : Prog Nat) (.annot "tag" "text")) (fun _ => none) (fun _ => none)
+    (fun _ => none) evaluatorFfi 1 none none none h
+
+/-- A call with a destination produces a `normal` result at the call-aware budget. -/
+example
+    (hfunctions : PanValueFfiClockFunctionsReturnSucceed evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [("f", [], (.skip : Prog Nat))] 0 0 8
+      none none none)
+    (hassign : ∀ (finalGlobals : VarName → Option (PanValue Nat)),
+      ∃ (assignedLocals assignedGlobals : VarName → Option (PanValue Nat)),
+        assignPanValueCallResult (fun _ => none) finalGlobals (some (VarKind.local, "x"))
+          [.word 5] (structs := []) = some (assignedLocals, assignedGlobals))
+    (hargs : evalPanValueExps [] (fun _ => none) (fun _ => none) (fun _ => none) 0 0 8
+      ([] : List (Exp Nat)) (memoryAccess := none) = some ([] : List (PanValue Nat)))
+    (hlookup : lookupPanFunction "f" [("f", [], (.skip : Prog Nat))] =
+      some ([], (.skip : Prog Nat)))
+    (hbind : bindPanValueParameters [] ([] : List (PanValue Nat)) =
+      some (fun _ => none))
+    (hwithin : panValueValuesWithinLimit [] ([] : List (PanValue Nat)) = true) :
+    ∃ (assignedLocals assignedGlobals : VarName → Option (PanValue Nat))
+      (finalMemory : Nat → Option (PanValue Nat)) (finalFfi : FfiState Unit)
+      (finalClock : Nat),
+      evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+        [] [("f", [], (.skip : Prog Nat))] 0 0 8
+        (progCallFuel 5 (.call (some ((VarKind.local, "x"), none)) "f" ([] : List (Exp Nat))))
+        (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+        (.call (some ((VarKind.local, "x"), none)) "f" []) none none none =
+      some (.control (.normal assignedLocals assignedGlobals finalMemory finalFfi),
+        finalClock) :=
+  evalPanValueFfiClockProg_call_destination_of_functions_progCallFuel evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [("f", [], (.skip : Prog Nat))] 0 0 8 5
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1 "f" []
+    (some (VarKind.local, "x")) [] (.skip : Prog Nat) [] (fun _ => none) none hfunctions
+    (by simp [progSize]) hargs hlookup hbind (by decide) hwithin hassign
 
 /-- The raised `DecCall` outcome also lifts to the declaration's progSize. -/
 example
@@ -1042,6 +1160,54 @@ example :
     (fun _ => none) (fun _ => none) evaluatorFfi 3 (.const 0) (.break : Prog Nat)
     none none none 0 (by simp [evalPanValueExp]) (by decide)
 
+/-! A continued loop body also re-enters the loop at the call-aware budget. -/
+example (bodyClock : Nat)
+    (hbody : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 (progCallFuel 7 (.continue : Prog Nat))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 0
+      (.continue : Prog Nat) none none none =
+      some (.control (.continued (fun _ => none) (fun _ => none)
+        (fun _ => none) evaluatorFfi), bodyClock)) :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8
+      (progCallFuel 7 (.while (.const 5) (.continue : Prog Nat)))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+      (.while (.const 5) (.continue : Prog Nat)) none none none =
+      evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+        evaluatorHandler [] [] 0 0 8 (progCallFuel 7 (.continue : Prog Nat))
+        (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi bodyClock
+        (.while (.const 5) (.continue : Prog Nat)) none none none := by
+  exact evalPanValueFfiClockProg_while_continued_some_progCallFuel
+    evaluatorContext (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    (.const 5) (.continue : Prog Nat) none none none 5
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi bodyClock
+    (by simp [evalPanValueExp]) (by decide) (by decide) hbody
+
+/-! A normal loop body re-enters the loop at the call-aware budget. -/
+example (bodyClock : Nat)
+    (hbody : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 (progCallFuel 7 (.skip : Prog Nat))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 0
+      (.skip : Prog Nat) none none none =
+      some (.control (.normal (fun _ => none) (fun _ => none)
+        (fun _ => none) evaluatorFfi), bodyClock)) :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8
+      (progCallFuel 7 (.while (.const 5) (.skip : Prog Nat)))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+      (.while (.const 5) (.skip : Prog Nat)) none none none =
+      evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+        evaluatorHandler [] [] 0 0 8 (progCallFuel 7 (.skip : Prog Nat))
+        (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi bodyClock
+        (.while (.const 5) (.skip : Prog Nat)) none none none := by
+  exact evalPanValueFfiClockProg_while_normal_some_progCallFuel
+    evaluatorContext (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    (.const 5) (.skip : Prog Nat) none none none 5
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi bodyClock
+    (by simp [evalPanValueExp]) (by decide) (by decide) hbody
+
 theorem clocked_seq_normal_exposes_components :
     ∃ (middleLocals middleGlobals : VarName → Option (PanValue Nat))
       (middleMemory : Nat → Option (PanValue Nat)) (middleFfi : FfiState Unit)
@@ -1231,12 +1397,12 @@ theorem exp_ids_ret_to_tail_preserves_raise :
 theorem exp_ids_ret_to_tail_preserves_nested_raise :
     expIds (retToTail
       (.call
-        (some (some (.local, "r"), some ("E", "h",
+        (some (some (VarKind.local, "r"), some ("E", "h",
           .seq (.raise "E2" (.const 0)) .tick)))
         "f" [] : Prog Nat)) = ["E", "E2"] := by
   simpa [expIds] using expIds_retToTail
     (.call
-      (some (some (.local, "r"), some ("E", "h",
+      (some (some (VarKind.local, "r"), some ("E", "h",
         .seq (.raise "E2" (.const 0)) .tick)))
       "f" [] : Prog Nat)
 
@@ -1245,7 +1411,7 @@ theorem exp_ids_ret_to_tail_preserves_nested_raise :
 theorem seq_call_ret_matching_return :
     seqCallRet
         (.seq
-          (.call (some (some (.local, "r"), none)) "f" [])
+          (.call (some (some (VarKind.local, "r"), none)) "f" [])
           (.return (.var .local "r")) : Prog Nat) =
       .call none "f" [] := by
   simp [seqCallRet]
@@ -1253,10 +1419,10 @@ theorem seq_call_ret_matching_return :
 theorem seq_call_ret_mismatching_return :
     seqCallRet
         (.seq
-          (.call (some (some (.local, "r"), none)) "f" [])
+          (.call (some (some (VarKind.local, "r"), none)) "f" [])
           (.return (.var .local "s")) : Prog Nat) =
       .seq
-        (.call (some (some (.local, "r"), none)) "f" [])
+        (.call (some (some (VarKind.local, "r"), none)) "f" [])
         (.return (.var .local "s")) := by
   simp [seqCallRet]
 
@@ -1273,7 +1439,7 @@ theorem ret_to_tail_skip :
 theorem ret_to_tail_matching_return :
     retToTail
         (.seq
-          (.call (some (some (.local, "r"), none)) "f" [])
+          (.call (some (some (VarKind.local, "r"), none)) "f" [])
           (.return (.var .local "r")) : Prog Nat) =
       .call none "f" [] := by
   simp [retToTail, seqCallRet]
@@ -1281,10 +1447,10 @@ theorem ret_to_tail_matching_return :
 theorem ret_to_tail_mismatching_return :
     retToTail
         (.seq
-          (.call (some (some (.local, "r"), none)) "f" [])
+          (.call (some (some (VarKind.local, "r"), none)) "f" [])
           (.return (.var .local "s")) : Prog Nat) =
       .seq
-        (.call (some (some (.local, "r"), none)) "f" [])
+        (.call (some (some (VarKind.local, "r"), none)) "f" [])
         (.return (.var .local "s")) := by
   simp [retToTail, seqCallRet]
 
@@ -1293,10 +1459,10 @@ theorem ret_to_tail_mismatching_return :
 theorem ret_to_tail_handler_seq :
     retToTail
         (.call
-          (some (some (.local, "r"), some ("E", "h", .seq .tick .tick)))
+          (some (some (VarKind.local, "r"), some ("E", "h", .seq .tick .tick)))
           "f" [] : Prog Nat) =
       .call
-        (some (some (.local, "r"), some ("E", "h", .seq .tick .tick)))
+        (some (some (VarKind.local, "r"), some ("E", "h", .seq .tick .tick)))
         "f" [] := by
   simp [retToTail, seqCallRet]
 
@@ -1313,7 +1479,7 @@ theorem pan_simp_compile_seq_skip_tick :
 theorem pan_simp_compile_tail_call :
     panSimpProg
         (.seq
-          (.call (some (some (.local, "r"), none)) "f" [])
+          (.call (some (some (VarKind.local, "r"), none)) "f" [])
           (.return (.var .local "r")) : Prog Nat) =
       .call none "f" [] := by
   simp [panSimpProg, seqAssoc, retToTail, seqCallRet, smartSeq]
@@ -1344,13 +1510,13 @@ def isTailCall : Prog Nat → Bool
 
 def isMismatchingCall : Prog Nat → Bool
   | .seq
-      (.call (some (some (.local, "r"), none)) "f" [])
+      (.call (some (some (VarKind.local, "r"), none)) "f" [])
       (.return (.var .local "s")) => true
   | _ => false
 
 def isHandlerSeq : Prog Nat → Bool
   | .call
-      (some (some (.local, "r"), some ("E", "h", .seq .tick .tick)))
+      (some (some (VarKind.local, "r"), some ("E", "h", .seq .tick .tick)))
       "f" [] => true
   | _ => false
 
@@ -1454,31 +1620,31 @@ def parityGuard : Bool :=
     isTickReturn (seqAssoc (.tick : Prog Nat) (.return (.const 7))) &&
     isTailCall (seqCallRet
       (.seq
-        (.call (some (some (.local, "r"), none)) "f" [])
+        (.call (some (some (VarKind.local, "r"), none)) "f" [])
         (.return (.var .local "r")) : Prog Nat)) &&
     isMismatchingCall (seqCallRet
       (.seq
-        (.call (some (some (.local, "r"), none)) "f" [])
+        (.call (some (some (VarKind.local, "r"), none)) "f" [])
         (.return (.var .local "s")) : Prog Nat)) &&
     isTick (seqCallRet (.tick : Prog Nat)) &&
     isSkip (retToTail (.skip : Prog Nat)) &&
     isTailCall (retToTail
       (.seq
-        (.call (some (some (.local, "r"), none)) "f" [])
+        (.call (some (some (VarKind.local, "r"), none)) "f" [])
         (.return (.var .local "r")) : Prog Nat)) &&
     isMismatchingCall (retToTail
       (.seq
-        (.call (some (some (.local, "r"), none)) "f" [])
+        (.call (some (some (VarKind.local, "r"), none)) "f" [])
         (.return (.var .local "s")) : Prog Nat)) &&
     isHandlerSeq (retToTail
       (.call
-        (some (some (.local, "r"), some ("E", "h", .seq .tick .tick)))
+        (some (some (VarKind.local, "r"), some ("E", "h", .seq .tick .tick)))
         "f" [] : Prog Nat)) &&
     isSkip (panSimpProg (.skip : Prog Nat)) &&
     isTick (panSimpProg (.seq (.skip : Prog Nat) .tick)) &&
     isTailCall (panSimpProg
       (.seq
-            (.call (some (some (.local, "r"), none)) "f" [])
+            (.call (some (some (VarKind.local, "r"), none)) "f" [])
             (.return (.var .local "r")) : Prog Nat)) &&
     functionsCompileProgParity &&
     functionsNamesNodupParity &&
@@ -1497,6 +1663,8 @@ def runChecks : IO Bool := do
   IO.println "PASS pan_simp clocked evaluate_seq_second_congr Cake equation"
   IO.println "PASS pan_simp clocked evaluate_seq_normal_components Cake equation"
   IO.println "PASS pan_simp clocked terminal Seq progCallFuel Cake equation"
+  IO.println "PASS pan_simp clocked continued While progCallFuel Cake equation"
+  IO.println "PASS pan_simp clocked normal While progCallFuel Cake equation"
   IO.println "PASS pan_simp Skip/Seq fuel-adequacy fragment Cake bound"
   IO.println "PASS pan_simp clocked ret_to_tail common-fuel Cake equation"
   IO.println "PASS pan_simp clocked pan_simp common-fuel Cake equation"

@@ -919,9 +919,8 @@ evaluator-evidence obligation. -/
 #check @panValuePcCompileCorrect_compact_return_of_state_evidence
 #check @panValuePcCompileCorrect_compact_return_with_context_code_of_state_evidence
 
-/-! The plain (non-context-coded) conditional and loop wrappers accept the
-    explicit state evidence instead of the opaque evaluator callback. -/
-#check @panValuePcCompileCorrect_compact_ite_source_word_of_state_evidence
-#check @panValuePcCompileCorrect_compact_while_source_word_of_state_evidence
+/-! The plain raw-word-list entrypoint also accepts explicit state evidence
+    for the generic `hother` callback. -/
+#check @panValuePcCompileCorrect_compact_with_raw_word_lists_of_state_evidence
 
 end Flapjack.Test.PanValuePcControlSafety

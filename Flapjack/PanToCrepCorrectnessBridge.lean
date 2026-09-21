@@ -20803,4 +20803,67 @@ theorem panValuePcControlLabelSafe_restore_declaration
       restoreCrepResultList_broke, restoreCrepResultList_continued] at hsafe ⊢ <;>
     try assumption
 
+/-! DecCall's body induction runs in the context extended by the callee's
+    result slots.  This bridge keeps that evaluator/state proof explicit while
+    lifting its Cake label-zero safety through the caller restoration. -/
+theorem panValueCrepDecCallControlSafe_of_body_safe
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (sourceLocals : VarName → Option (PanValue α))
+    (sourceCalleeGlobals : VarName → Option (PanValue α))
+    (sourceCalleeMemory : α → Option (PanValue α))
+    (state callState : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α)
+    (sourceFuel targetFuel : Nat)
+    (name : VarName) (shape : Shape) (body : Prog α)
+    (sourceValue : PanValue α)
+    (sourceResult : PanValueControlResult α)
+    (crepResult : CrepControlResult α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (hbody : PanValueCrepProgramStateControlSafe body)
+    (hrelBody : panValueCrepStateRel structs
+      { context with
+          vars := (name, (shape, allocatedNames context shape)) :: context.vars
+          maxVar := context.maxVar + Shape.shapeSize shape }
+      (updatePanValueMap sourceLocals name sourceValue)
+      sourceCalleeGlobals sourceCalleeMemory callState)
+    (hsourceBody : evalPanValueProgWithPrimitiveCallsAndFfi
+      primitive sourceHandler structs sourceFunctions
+      baseAddress topAddress bytesInWord sourceFuel
+      (updatePanValueMap sourceLocals name sourceValue)
+      sourceCalleeGlobals sourceCalleeMemory body = some sourceResult)
+    (hcrepBody : evalCrepFullProgState functions crepPrimitive ffi sharedMem
+      baseAddress topAddress (targetFuel + 1) callState
+      (compileProg
+        { context with
+            vars := (name, (shape, allocatedNames context shape)) :: context.vars
+            maxVar := context.maxVar + Shape.shapeSize shape }
+        body) = some crepResult) :
+    panValuePcControlLabelSafe
+      (restorePanValueControlLocal name (sourceLocals name) sourceResult)
+      (restoreCrepResultList state.locals
+        (allocatedNames context shape) crepResult) := by
+  have hsafe := hbody
+    { context with
+        vars := (name, (shape, allocatedNames context shape)) :: context.vars
+        maxVar := context.maxVar + Shape.shapeSize shape }
+    structs sourceFunctions functions
+    (updatePanValueMap sourceLocals name sourceValue)
+    sourceCalleeGlobals sourceCalleeMemory callState
+    primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord sourceFuel (targetFuel + 1)
+    exceptionRel sourceResult crepResult hrelBody hsourceBody hcrepBody
+  exact panValuePcControlLabelSafe_restore_declaration
+    (sourceLocals name) state name (allocatedNames context shape)
+    sourceResult crepResult hsafe
+
 end Flapjack

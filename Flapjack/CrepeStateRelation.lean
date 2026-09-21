@@ -47,6 +47,29 @@ theorem readCrepLocals_some_defined
                 simp [hlocal]
               · exact ih tailValues hvalues name htail
 
+theorem readCrepLocals_length
+    (locals : Nat → Option α) (names : List Nat) (values : List α)
+    (hread : readCrepLocals locals names = some values) :
+    values.length = names.length := by
+  induction names generalizing values with
+  | nil =>
+      simp [readCrepLocals] at hread
+      cases hread
+      rfl
+  | cons head names ih =>
+      cases hvalue : locals head with
+      | none =>
+          simp [readCrepLocals, hvalue] at hread
+      | some value =>
+          cases hvalues : readCrepLocals locals names with
+          | none =>
+              simp [readCrepLocals, hvalue, hvalues] at hread
+          | some tailValues =>
+              simp [readCrepLocals, hvalue, hvalues] at hread
+              subst values
+              have htail := ih tailValues hvalues
+              simp [htail]
+
 def panValueCrepValuesRel {α : Type u}
     (sourceValues : List (PanValue α)) (crepValues : List α) : Prop :=
   crepValues = sourceValues.flatMap panValueFlatWords
@@ -58,8 +81,24 @@ def panValueCrepLocalsRel {α : Type u}
   ∀ name value shape slots,
     sourceLocals name = some value →
     lookupInfo name context.vars = some (shape, slots) →
+      panShapeMatches (panValueShape structs value) shape = true ∧
+      readCrepLocals crepLocals slots = some (panValueFlatWords value)
+
+theorem panValueCrepLocalsRel_lookup_evidence
+    (structs : StructContext) (context : CompileContext α)
+    (sourceLocals : VarName → Option (PanValue α))
+    (crepLocals : Nat → Option α)
+    (name : VarName) (value : PanValue α)
+    (shape : Shape) (slots : List Nat)
+    (hrel : panValueCrepLocalsRel structs context sourceLocals crepLocals)
+    (hsource : sourceLocals name = some value)
+    (hlookup : lookupInfo name context.vars = some (shape, slots)) :
     panShapeMatches (panValueShape structs value) shape = true ∧
-    readCrepLocals crepLocals slots = some (panValueFlatWords value)
+      slots.length = (panValueFlatWords value).length ∧
+      readCrepLocals crepLocals slots = some (panValueFlatWords value) := by
+  have hevidence := hrel name value shape slots hsource hlookup
+  exact ⟨hevidence.1, (readCrepLocals_length crepLocals slots
+    (panValueFlatWords value) hevidence.2).symm, hevidence.2⟩
 
 def panValueCrepMemoryRel {α : Type u}
     (sourceMemory : α → Option (PanValue α))

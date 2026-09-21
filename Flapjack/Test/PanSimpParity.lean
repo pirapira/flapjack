@@ -1134,6 +1134,38 @@ example
       (fun _ _ => none) evaluatorHandler [] [("f", [], (.skip : Prog Nat))]
       0 0 8 5 none none none (.annot "tag" "text") (.annot "tag" "text"))
 
+/-- A caught-handler call is lower-bounded adequate from one, with explicit
+    raise and handler success evidence for the generic function table. -/
+example
+    (hfunctions : PanValueFfiClockFunctionsRaiseAsSucceed evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [("f", [], (.skip : Prog Nat))]
+      0 0 8 none none none "E")
+    (hhandler : PanValueFfiClockHandlerNormalSucceed evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [("f", [], (.skip : Prog Nat))]
+      0 0 8 none none none)
+    (hlookup : lookupPanFunction "f" [("f", [], (.skip : Prog Nat))] =
+      some ([], (.skip : Prog Nat)))
+    (hargs : ∀ (locals globals : VarName → Option (PanValue Nat))
+      (memory : Nat → Option (PanValue Nat)),
+      ∃ (values : List (PanValue Nat)) (calleeLocals : VarName → Option (PanValue Nat)),
+        evalPanValueExps [] locals globals memory 0 0 8 ([] : List (Exp Nat))
+          (memoryAccess := none) = some values ∧
+        bindPanValueParameters [] values = some calleeLocals ∧
+        panValueParametersValid [] none "f" values = true)
+    (hhandlerValid : ∀ (locals : VarName → Option (PanValue Nat))
+      (value : PanValue Nat),
+      panValueExceptionValid [] none "E" value = true →
+      panValuePayloadWithinLimit [] value = true →
+      panValueHandlerValid [] none locals "x" value = true) :
+    PanValueFfiClockNormalAdequateProgFrom 1 evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [("f", [], (.skip : Prog Nat))] 0 0 8 7 none none none
+      (.call (some (none, some ("E", "x", (.skip : Prog Nat)))) "f" []) :=
+  PanValueFfiClockNormalAdequateProgFrom_call_caught_handler 1 (by decide)
+    evaluatorContext (fun _ _ => none) evaluatorHandler []
+    [("f", [], (.skip : Prog Nat))] 0 0 8 7 none none none "f" [] []
+    (.skip : Prog Nat) "E" "E" "x" (.skip : Prog Nat) hfunctions hhandler
+    (by simp [progSize]) hlookup rfl hargs hhandlerValid
+
 /-- The raised `DecCall` outcome also lifts to the declaration's progSize. -/
 example
     (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)

@@ -937,4 +937,8 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @panValueCrepProgramStateCorrect_and_controlSafe_call_none_of_relation
 
 #check @panValueCrepProgramStateCorrect_and_controlSafe_call_returns_of_relation
+
+/-! Declaration calls now expose the paired state simulation and control-safety
+    package used by Pancake's `pc_compile_correct[DecCall]` branch. -/
+#check @panValueCrepDecCall_state_and_controlSafe_of_body
 end Flapjack.Test.PanValuePcControlSafety

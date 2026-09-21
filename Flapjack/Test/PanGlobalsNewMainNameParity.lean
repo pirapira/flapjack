@@ -24,4 +24,24 @@ def parityGuard : Bool :=
 #eval parityGuard
 #guard parityGuard
 
+/-! Counterpart of Cake's `new_main_name_correct`
+    (`pan_globalsProofScript.sml:2073`) and `fresh_name_correct` (`:993`). -/
+example : True := by
+  have h := globalNewMainName_not_mem
+    [functionDecl "main", functionDecl "main'"]
+  trivial
+
+example : True := by
+  have h := globalFreshName_not_mem "worker" ["worker", "worker'"]
+  trivial
+
+def correctnessGuard : Bool :=
+  let declarations : List (Decl Nat) :=
+    [functionDecl "main", functionDecl "main'", functionDecl "worker"]
+  !(globalFunctionNames declarations).contains
+    (globalNewMainName declarations)
+
+#eval correctnessGuard
+#guard correctnessGuard
+
 end Flapjack.Test.PanGlobalsNewMainNameParity

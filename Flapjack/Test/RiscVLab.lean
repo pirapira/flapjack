@@ -202,6 +202,16 @@ example :
       some [.mulHU 4 6 7, .mul 5 6 7] := by
   decide
 
+/- Cake's `riscv_ast (Inst (Arith (Div ...)))` selects the signed RISC-V
+   DIV encoding.  Flapjack's historical constructor is named `divU`, but its
+   encoder uses Cake's funct3=4/funct7=1 row; pin that source-shaped Lab
+   boundary explicitly so the name cannot hide a DIVU regression. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.div 4 5 6))) [] 0]⟩ =
+      some [.divU 4 5 6] := by
+  decide
+
 example :
     compileLabSection (width := 64) { services := [] }
       ⟨3, [.asm (.word (.arith (.addCarry 4 5 6 7 8))) [] 0]⟩ =

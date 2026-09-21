@@ -116,4 +116,23 @@ theorem shapeSizeWithContext_drop_fixture :
     simp [context, isWfShape, lookupInfo]
   exact shapeSizeWithContext_drop 1 context (.named "s") h (by decide)
 
+/-! Focused regression for the ported Cake `size_of_sh_with_ctxt_eq`
+    (`panPropsScript.sml:184`): for a shape well formed against the empty
+    context the context-sensitive size is the context-free `shapeSize`. -/
+
+theorem shapeSizeWithContext_eq_shapeSize_of_isWfShape_fixture :
+    shapeSizeWithContext ([] : StructContext)
+        (Shape.comb [Shape.one, Shape.one]) =
+      Shape.shapeSize (Shape.comb [Shape.one, Shape.one]) :=
+  shapeSizeWithContext_eq_shapeSize_of_isWfShape
+    (Shape.comb [Shape.one, Shape.one])
+    (by simp [isWfShape, isWfShape.isWfShapeList]) ([] : StructContext)
+
+def shapeSizeWithContextGuard : Bool :=
+  shapeSizeWithContext ([] : StructContext) (Shape.comb [Shape.one, Shape.one]) ==
+    Shape.shapeSize (Shape.comb [Shape.one, Shape.one])
+
+#eval shapeSizeWithContextGuard
+#guard shapeSizeWithContextGuard
+
 end Flapjack.Test.PanStructsAfindiParity

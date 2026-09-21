@@ -6,7 +6,8 @@ allocation, handler-frame continuation, colour permutation, returned-value
 allocation, wide-call argument occupancy, overflow-call frame slots, 64-bit
 register pressure, SSA cutsets/parallel moves, an indirect spilled-address
 carrier, five-word and nine-continuation frame occupancy, a 22-slot ABI
-call-frame, and a stack-allocation boundary.  Keep the list explicit
+call-frame, a whole-program 22-register parameter threshold, and a
+stack-allocation boundary.  Keep the list explicit
 so a change in the checked original-Cake witnesses is reviewable.
 The expected Cake stdout hashes are pinned in ``parity-small-corpus.json``.
 Comparing Flapjack's complete assembly stdout with those hashes keeps this
@@ -38,6 +39,7 @@ FIXTURES = (
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "wide_call_arguments.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "stack_args_overflow_slots.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "secp256k1_recover.pnk",
+    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "many_word_parameters.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "gh1049_stack_alloc.pnk",
 )
 

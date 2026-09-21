@@ -751,6 +751,49 @@ theorem mem_lt_foldr_max_add (values : List Nat) (x n m : Nat)
         have hmax : tail.foldr max n ≤ max head (tail.foldr max n) := Nat.le_max_right _ _
         omega
 
+/-- A fold of `max` never drops below its accumulator. -/
+theorem le_foldr_max (values : List Nat) (bound : Nat) :
+    bound ≤ values.foldr max bound := by
+  induction values with
+  | nil => simp
+  | cons head tail ih =>
+      simp only [List.foldr_cons]
+      exact Nat.le_trans ih (Nat.le_max_right head (List.foldr max bound tail))
+
+/-- A fold of `max` with accumulator `bound` returns `bound` when every element
+    is at most `bound`. -/
+theorem foldr_max_eq_of_le (values : List Nat) (bound : Nat)
+    (h : ∀ x ∈ values, x ≤ bound) :
+    values.foldr max bound = bound := by
+  induction values with
+  | nil => simp
+  | cons head tail ih =>
+      simp only [List.foldr_cons]
+      rw [Nat.max_eq_right
+        (Nat.le_trans (h head (by simp)) (le_foldr_max tail bound))]
+      exact ih (fun x hx => h x (by simp [hx]))
+
+/-- `MAX_LIST` of the first `n` naturals is `n - 1`. -/
+theorem range_foldr_max_self (n : Nat) :
+    (List.range n).foldr max n = n :=
+  foldr_max_eq_of_le (List.range n) n (fun x hx => by
+    rw [List.mem_range] at hx
+    omega)
+
+/-- Cake's `MAX_LIST_i_genlist` (`pan_commonPropsScript.sml:712`):
+    `MAX_LIST (GENLIST I n) = n - 1`, with `List.range` as the Flapjack
+    counterpart of `GENLIST I n` and `foldr max 0` as `MAX_LIST`. -/
+theorem range_foldr_max (n : Nat) :
+    (List.range n).foldr max 0 = n - 1 := by
+  induction n with
+  | zero => simp [List.range_zero]
+  | succ n _ih =>
+      rw [List.range_succ, List.foldr_append]
+      simp only [List.foldr_cons, List.foldr_nil]
+      rw [Nat.max_eq_left (Nat.zero_le n)]
+      rw [range_foldr_max_self]
+      omega
+
 /-- Cake's `mem_genlist_add_suc_val` (`pan_commonPropsScript.sml:234`):
     every value in `GENLIST (SUC · + k) n` lies in the interval `(k, n + k]`. -/
 theorem mem_genlist_add_suc_val (n x k : Nat) :
@@ -806,6 +849,20 @@ theorem map_fst_map_quad {α β γ δ ε ζ η θ : Type}
     ((l.map (fun p => (f1 p.1, f2 p.2.1, f3 p.2.2.1, f4 p.2.2.2))).map Prod.fst) =
       (l.map Prod.fst).map f1 := by
   rw [List.map_map, List.map_map]
+  rfl
+
+/-- Cake's `tuple_4_o` (`pan_globalsProofScript.sml:3003`): composing two
+    quadruple projections composes the four component functions pointwise. -/
+theorem quadProjection_comp {α β γ δ ε ζ η θ ι κ ℓ μ : Type}
+    (f1 : α → ε) (f2 : β → ζ) (f3 : γ → η) (f4 : δ → θ)
+    (g1 : ι → α) (g2 : κ → β) (g3 : ℓ → γ) (g4 : μ → δ) :
+    (fun p : ι × κ × ℓ × μ =>
+        (f1 (g1 p.1), f2 (g2 p.2.1), f3 (g3 p.2.2.1), f4 (g4 p.2.2.2))) =
+      ((fun q : α × β × γ × δ => (f1 q.1, f2 q.2.1, f3 q.2.2.1, f4 q.2.2.2)) ∘
+        (fun p : ι × κ × ℓ × μ =>
+          (g1 p.1, g2 p.2.1, g3 p.2.2.1, g4 p.2.2.2))) := by
+  funext p
+  obtain ⟨x, y, z, t⟩ := p
   rfl
 
 /-! Counterpart of Cake's `all_distinct_with_shape_distinct`

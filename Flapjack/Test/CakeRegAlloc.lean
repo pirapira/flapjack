@@ -500,6 +500,20 @@ def simplifyBatchGuard : Bool :=
     (simplified.degrees.get 2).getD 0 == 0
 
 #guard simplifyBatchGuard
+/- Cake's `do_coalesce` (`reg_allocScript.sml:676-698`) consumes the first
+   compatible move, coalesces its second endpoint into the first, clears the
+   available-move worklist, and pushes the coalesced endpoint onto the stack. -/
+def coalesceWorklistSuccessGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 3 with
+      moveRelated := CakeNodeMap.ofNatInfoMap 3 [(1, true), (2, true)]
+      availMovesWl := [(1, (1, 2))] }
+  let (changed, out) := cakeDoCoalesce 3 state
+  changed && out.availMovesWl == [] && out.unavailMovesWl == [] &&
+    (out.coalesced.get 2).getD 2 == 1 && out.stack == [2] &&
+    (out.moveRelated.get 2).getD true == false
+
+#guard coalesceWorklistSuccessGuard
 /- `get_prefs_def` uses `MAP ... ++ acc`, preserving each Move's source
    order.  These guards mirror the canonical `get_prefs_probe.out` output. -/
 def prefsMoveOrderGuard : Bool :=
@@ -856,7 +870,7 @@ def runChecks : IO Bool := do
     deadTailCallLiveGuard, deadAllocLiveGuard, deadInstallLiveGuard,
     deadFfiLiveGuard, deadStoreConstsLiveGuard, stExMinCostOrderGuard,
     stExMaxDegOrderGuard, respillWorklistGuard,
-    respillBelowThresholdGuard, simplifyBatchGuard]
+    respillBelowThresholdGuard, simplifyBatchGuard, coalesceWorklistSuccessGuard]
   let names := [
     "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
@@ -894,7 +908,8 @@ def runChecks : IO Bool := do
     "remove_dead Install liveness", "remove_dead FFI liveness",
     "remove_dead StoreConsts liveness", "st_ex_list_MIN_cost ordering",
     "st_ex_list_MAX_deg ordering", "respill freeze-to-spill transition",
-    "respill below-threshold no-op", "do_simplify batch ordering"]
+    "respill below-threshold no-op", "do_simplify batch ordering",
+    "do_coalesce success transition"]
   let mut all := true
   for (name, result) in names.zip results do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"

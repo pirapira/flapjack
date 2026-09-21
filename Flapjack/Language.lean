@@ -368,6 +368,71 @@ theorem all_distinct_withShape (shapes : List Shape) (values : List α) (n : Nat
             rw [List.length_drop, hvalues, shapeSize_comb_cons, Nat.add_sub_cancel_left]
           exact ih (values.drop (Shape.shapeSize shape)) k hdistinct.drop hn' hvalues'
 
+/-! Counterpart of Cake's `mem_with_shape_length`
+    (`cakeml/pancake/semantics/panPropsScript.sml:328`). -/
+theorem mem_withShape_length (shapes : List Shape) (values : List α) (n : Nat)
+    (hvalues : values.length = Shape.shapeSize (.comb shapes))
+    (hn : n < shapes.length) :
+    (withShape shapes values)[n]'(by rw [withShape_length]; exact hn) ∈
+      withShape shapes values := by
+  have _ := hvalues
+  exact List.getElem_mem _
+
+/-! Counterpart of Cake's `el_mem_with_shape`
+    (`cakeml/pancake/semantics/panPropsScript.sml:307`). -/
+theorem mem_of_withShape_mem (shapes : List Shape) (values : List α) (n : Nat)
+    (x : α)
+    (hn : n < (withShape shapes values).length)
+    (hvalues : values.length = Shape.shapeSize (.comb shapes))
+    (hmem : x ∈ (withShape shapes values)[n]'hn) :
+    x ∈ values := by
+  revert values n x
+  induction shapes with
+  | nil =>
+      intro values n x hn hvalues hmem
+      simp [withShape] at hn
+  | cons shape shapes ih =>
+      intro values n x hn hvalues hmem
+      simp only [withShape] at hn hmem
+      cases n with
+      | zero =>
+          exact List.mem_of_mem_take (by simpa using hmem)
+      | succ k =>
+          apply List.mem_of_mem_drop
+          have hk : k < (withShape shapes (values.drop (Shape.shapeSize shape))).length := by
+            simp only [List.length_cons] at hn; omega
+          have hvalues' : (values.drop (Shape.shapeSize shape)).length =
+              Shape.shapeSize (.comb shapes) := by
+            rw [List.length_drop, hvalues, shapeSize_comb_cons, Nat.add_sub_cancel_left]
+          exact ih (values.drop (Shape.shapeSize shape)) k x hk hvalues' hmem
+
+/-! Counterpart of Cake's `with_shape_el_take_drop_eq`
+    (`cakeml/pancake/semantics/panPropsScript.sml:341`). -/
+theorem withShape_getElem_eq_take_drop (shapes : List Shape) (values : List α)
+    (n : Nat)
+    (hvalues : values.length = Shape.shapeSize (.comb shapes))
+    (hn : n < shapes.length) :
+    (withShape shapes values)[n]'(by rw [withShape_length]; exact hn) =
+      (values.drop (Shape.shapeSize (.comb (shapes.take n)))).take
+        (Shape.shapeSize (shapes[n]'hn)) := by
+  revert values n
+  induction shapes with
+  | nil => intro values n hvalues hn; exact absurd hn (Nat.not_lt_zero n)
+  | cons shape shapes ih =>
+      intro values n hvalues hn
+      cases n with
+      | zero => simp [withShape, Shape.shapeSize]
+      | succ k =>
+          have hn' : k < shapes.length := by
+            simp only [List.length_cons] at hn; omega
+          have hvalues' : (values.drop (Shape.shapeSize shape)).length =
+              Shape.shapeSize (.comb shapes) := by
+            rw [List.length_drop, hvalues, shapeSize_comb_cons, Nat.add_sub_cancel_left]
+          simp only [withShape, List.getElem_cons_succ, List.take_succ_cons]
+          rw [ih (values.drop (Shape.shapeSize shape)) k hvalues' hn']
+          rw [shapeSize_comb_cons]
+          rw [← List.drop_drop]
+
 def expLocalVars : Exp α → List VarName
   | .const _ => []
   | .var .local name => [name]

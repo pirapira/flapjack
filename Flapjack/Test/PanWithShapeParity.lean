@@ -47,6 +47,34 @@ def allDistinctGuard : Bool :=
 #eval allDistinctGuard
 #guard allDistinctGuard
 
+theorem mem_withShape_length_fixture :
+    (withShape oneCombNamed [1, 2, 3, 4])[1]'(by rw [withShape_length]; decide) ∈
+      withShape oneCombNamed [1, 2, 3, 4] :=
+  mem_withShape_length oneCombNamed [1, 2, 3, 4] 1
+    (by simp [oneCombNamed, Shape.shapeSize]) (by decide)
+
+theorem mem_of_withShape_mem_fixture :
+    (2 : Nat) ∈ ([1, 2, 3, 4] : List Nat) :=
+  mem_of_withShape_mem oneCombNamed [1, 2, 3, 4] 1 2
+    (by rw [withShape_length]; decide)
+    (by simp [oneCombNamed, Shape.shapeSize])
+    (by simp [withShape, oneCombNamed, Shape.shapeSize])
+
+theorem withShape_getElem_eq_take_drop_fixture :
+    (withShape oneCombNamed [1, 2, 3, 4])[1]'(by rw [withShape_length]; decide) =
+      (([1, 2, 3, 4] : List Nat).drop
+          (Shape.shapeSize (.comb (oneCombNamed.take 1)))).take
+        (Shape.shapeSize (oneCombNamed[1]'(by decide))) :=
+  withShape_getElem_eq_take_drop oneCombNamed [1, 2, 3, 4] 1
+    (by simp [oneCombNamed, Shape.shapeSize]) (by decide)
+
+def withShapeMembersGuard : Bool :=
+  ((withShape oneCombNamed [1, 2, 3, 4])[1]'(by rw [withShape_length]; decide)).all
+    (fun value => ([1, 2, 3, 4] : List Nat).contains value)
+
+#eval withShapeMembersGuard
+#guard withShapeMembersGuard
+
 def checkAllDistinct (name : String) : IO Bool := do
   if ((withShape oneCombNamed [1, 2, 3, 4])[1]'(by rw [withShape_length]; decide)).Nodup then
     IO.println s!"PASS {name}"
@@ -71,6 +99,14 @@ def check (name : String) (actual expected : List (List Nat)) : IO Bool := do
     IO.println s!"FAIL {name}: expected {repr expected}, got {repr actual}"
     pure false
 
+def checkMembers (name : String) (actual expected : List Nat) : IO Bool := do
+  if actual == expected then
+    IO.println s!"PASS {name}"
+    pure true
+  else
+    IO.println s!"FAIL {name}: expected {repr expected}, got {repr actual}"
+    pure false
+
 def runChecks : IO Bool := do
   let results ← [
     check "pan with_shape empty" (withShape [] [1, 2, 3]) [],
@@ -80,6 +116,8 @@ def runChecks : IO Bool := do
       (withShape shortShapes [7]) [[7], []] ].mapM id
   let lengthOk ← checkLength "pan with_shape length"
   let allDistinctOk ← checkAllDistinct "pan all_distinct_with_shape"
-  pure (results.all id && lengthOk && allDistinctOk)
+  let membershipOk ← checkMembers "pan with_shape membership"
+    ((withShape oneCombNamed [1, 2, 3, 4])[1]'(by rw [withShape_length]; decide)) [2, 3]
+  pure (results.all id && lengthOk && allDistinctOk && membershipOk)
 
 end Flapjack.Test.PanWithShapeParity

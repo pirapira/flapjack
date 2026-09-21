@@ -3559,6 +3559,44 @@ theorem evalPanValueFfiClockProg_seq_terminal_some
   | timeout l g m f => rfl
 
 
+/-! Call-aware terminal propagation through `Seq`.  The first component is
+    evaluated at the common `progCallFuel` budget, and a non-normal outcome is
+    returned without evaluating the second component, exactly as Cake's
+    `evaluate_seq` terminal branch does. -/
+theorem evalPanValueFfiClockProg_seq_terminal_some_progCallFuel
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (callBudget : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (first second : Prog α) (outcome : PanValueFfiClockOutcome α σ)
+    (nextClock : Nat) (ma : Option (PanValueMemoryAccess α))
+    (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (hfirst : evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord
+        (progCallFuel callBudget first + progCallFuel callBudget second)
+        locals globals memory ffi clock first ma c mh =
+      some (outcome, nextClock))
+    (hterminal : ∀ l g m f, outcome ≠ .control (.normal l g m f)) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord
+        (progCallFuel callBudget (.seq first second))
+        locals globals memory ffi clock (.seq first second) ma c mh =
+      some (outcome, nextClock) := by
+  have hsize : progCallFuel callBudget (.seq first second) =
+      (progCallFuel callBudget first + progCallFuel callBudget second) + 1 := by
+    simp [progCallFuel]
+    omega
+  rw [hsize]
+  exact evalPanValueFfiClockProg_seq_terminal_some context primitive handler structs
+    functions baseAddress topAddress bytesInWord
+    (progCallFuel callBudget first + progCallFuel callBudget second)
+    locals globals memory ffi clock first second outcome nextClock ma c mh hfirst
+    hterminal
+
+
 theorem evalPanValueFfiClockProg_while_timeout_some
     (context : PanValueFfiContext α)
     (primitive : PanPrimitiveHandler α)

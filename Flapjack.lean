@@ -60,6 +60,7 @@ import Flapjack.PanHProgAssign
 import Flapjack.PanHProgWhile
 import Flapjack.PanSimp
 import Flapjack.PanSimpEvaluate
+import Flapjack.PanSimpLocalised
 import Flapjack.PanStructs
 import Flapjack.PanGlobals
 import Flapjack.Pipeline

@@ -91,6 +91,19 @@ jumps back `position + 32`.  `min21` is inclusive, so a distance of exactly
 #guard labCompileAsm (width := 64) ctx 0 [] (2 ^ 20 - 28) .install ==
   some [.auipc 31 (BitVec.ofInt 64 (-256)), .jalr 0 31 (BitVec.ofInt 64 (-4))]
 
+/-! The linked-FFI entrypoint resolves the service to an absolute target rather
+    than using the exported-stub distance.  It must nevertheless share the
+    same inclusive `Jump` boundary and AUIPC/JALR fallback. -/
+#guard labCompileAsmProgramWithLinkedFfiBase (width := 64) ctx (labLabelIndexOf [])
+    (2 ^ 20) 0
+    (.callFfi "write") ==
+  some [.jal 0 (0 - BitVec.ofNat 64 (2 ^ 20))]
+
+#guard labCompileAsmProgramWithLinkedFfiBase (width := 64) ctx (labLabelIndexOf [])
+    (2 ^ 20 + 4) 0
+    (.callFfi "write") ==
+  some [.auipc 31 (BitVec.ofInt 64 (-256)), .jalr 0 31 (BitVec.ofInt 64 (-4))]
+
 /-! The plain `Jump` boundary is unchanged and shares `min21`. -/
 #guard labJumpInstructions (width := 64) 0 0 (2 ^ 20) ==
   some [.jal 0 (0 - BitVec.ofNat 64 (2 ^ 20))]

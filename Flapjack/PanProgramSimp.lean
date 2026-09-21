@@ -957,11 +957,11 @@ theorem evalPanValueDeclarationsWithStructs_only_funs_and_exn_decls
       | name name fields =>
           simp [globalDeclIsFunction, isExnDecl] at hhead
 
-/-- Cake's `evaluate_decls_only_functions`
-    (`cakeml/pancake/semantics/panPropsScript.sml:1529`): when every declaration
-    is a function declaration, a successful evaluation changes only the function
-    table, together with Flapjack's separate return-shape and parameter-shape
-    maps. -/
+/-! Cake's `evaluate_decls_only_functions`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1528`): a function-only
+    declaration list changes only the function, return-shape, and
+    parameter-shape tables.  This specializes the mixed function/exception
+    equation while making the absence of exception entries explicit. -/
 theorem evalPanValueDeclarationsWithStructs_only_functions
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

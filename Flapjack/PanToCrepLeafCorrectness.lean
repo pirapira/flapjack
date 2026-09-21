@@ -131,7 +131,7 @@ theorem panValuePcCompileCorrect_compact_break
   exact panValuePcCompileCorrect_compact_with_raised_state_evidence
     (.break : Prog α) codeRel excpRel exceptionCode globalsLookup sourceFunctions
     functions primitive sourceHandler crepPrimitive ffi sharedMem baseAddress
-    topAddress bytesInWord sourceFuel targetFuel hprogram hprogramSafe hpost hcode
+      topAddress bytesInWord sourceFuel targetFuel hprogram hprogramSafe hpost hcode
     hlookup hsize
 
 set_option linter.unusedVariables false in

@@ -229,4 +229,33 @@ theorem evalPanValueDeclarations_functions_wf_fixture
       (declaration := wfFunction) (by simp [wfDecls])
   exact ⟨structs, hcollect, hreturn⟩
 
+/-! Regression for Cake's `evaluate_decls_append`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1540`): evaluating a
+    concatenated declaration list is the sequential composition of evaluating
+    the two parts in turn. -/
+
+def appendDecls : List (Decl Nat) :=
+  [.decl .one "g" (.const 7)]
+
+def appendRest : List (Decl Nat) :=
+  [.function wfFunction]
+
+def appendGuard : Bool :=
+  (evalPanValueDeclarationsWithStructs ([] : StructContext) evalRelState
+      (appendDecls ++ appendRest) none).isSome ==
+    (match evalPanValueDeclarationsWithStructs ([] : StructContext) evalRelState
+        appendDecls none with
+     | some state' =>
+         (evalPanValueDeclarationsWithStructs ([] : StructContext) state'
+           appendRest none).isSome
+     | none => false)
+
+#eval appendGuard
+#guard appendGuard
+
+example : True := by
+  have _h := evalPanValueDeclarationsWithStructs_append ([] : StructContext)
+    evalRelState appendDecls appendRest none
+  trivial
+
 end Flapjack.Test.PanProgramSimpParity

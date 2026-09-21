@@ -104,6 +104,16 @@ jumps back `position + 32`.  `min21` is inclusive, so a distance of exactly
     (.callFfi "write") ==
   some [.auipc 31 (BitVec.ofInt 64 (-256)), .jalr 0 31 (BitVec.ofInt 64 (-4))]
 
+/-! The linked-image wrappers with an FFI base and halt PC delegate to the
+    same Cake transfer rules; pin their direct and fallback boundaries too. -/
+#guard labCompileAsmProgramWithFfiBaseAndHalt (width := 64) ctx
+    (labLabelIndexOf []) (2 ^ 20 - 48) 0 0 (.callFfi "write") ==
+  some [.jal 0 (0 - BitVec.ofNat 64 (2 ^ 20))]
+
+#guard labCompileAsmProgramWithLinkedFfiBaseAndHalt (width := 64) ctx
+    (labLabelIndexOf []) (2 ^ 20 + 4) 0 0 (.callFfi "write") ==
+  some [.auipc 31 (BitVec.ofInt 64 (-256)), .jalr 0 31 (BitVec.ofInt 64 (-4))]
+
 /-! The plain `Jump` boundary is unchanged and shares `min21`. -/
 #guard labJumpInstructions (width := 64) 0 0 (2 ^ 20) ==
   some [.jal 0 (0 - BitVec.ofNat 64 (2 ^ 20))]

@@ -14,6 +14,14 @@ def raiseTailGuard : WordProg Nat → Bool
 
 #guard raiseTailGuard (wordRemoveDeadProgram raiseTail)
 
+/- Cake's `get_live (Raise a)` preserves the incoming live set; return labels
+   do not truncate it (`word_allocScript.sml:978-980`). -/
+def raisePreservesContinuationGuard : Bool :=
+  match wordDeadCodeAuxWithLabels (.raise 2 : WordProg Nat) [57] [] [197] with
+  | (.raise 2, live) => live == [2, 57]
+  | _ => false
+
+#guard raisePreservesContinuationGuard
 /- Cake's remove_dead drops an If after both branches become Skip, while
    retaining the condition in the backward live set. -/
 def deadIfBranchesGuard : Bool :=

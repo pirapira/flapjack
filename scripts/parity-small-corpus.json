@@ -913,6 +913,14 @@
       "tracked_beads": [
         "flapjack-8tb.9"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f01266_raise_continuation.pnk",
+      "source_reference": "Minimized f01266 allocator witness: Cake's Raise live equation preserves the continuation live set, retaining the return-handler move needed by the later shift.",
+      "cake_sha256": "8700bc4385d4f8f02fcc7e4ca961bdd4990eb55f60612d5644f53f812bec7e54",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.5"
+      ]
     }
   ]
 }

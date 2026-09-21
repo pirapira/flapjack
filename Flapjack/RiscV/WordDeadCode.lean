@@ -129,10 +129,8 @@ def wordDeadCodeAuxWithLabels : WordProg α → List Nat → List (List Nat × L
       (.break label, (wordClashTreeFindLoopFrame label frames).map Prod.snd |>.getD [])
   | .continue label, _live, frames, _ =>
       (.continue label, (wordClashTreeFindLoopFrame label frames).map Prod.fst |>.getD [])
-  | .raise exception, live, _, returnLabels =>
-      let retained := if returnLabels.isEmpty then live
-        else live.filter (fun name => name ∈ returnLabels)
-      (.raise exception, exception :: retained)
+  | .raise exception, live, _, _ =>
+      (.raise exception, exception :: live)
   | .return label values, live, _, _ =>
       (.return label values, wordDeadAddReads (label :: live) values)
   | .tick, live, _, _ => (.tick, live)
@@ -308,10 +306,8 @@ def wordDeadCodeWithStores [WordCseHash α] : WordProg α → List Nat →
       (.break label, (wordClashTreeFindLoopFrame label frames).map Prod.snd |>.getD [], [])
   | .continue label, _live, frames, _, _nlive =>
       (.continue label, (wordClashTreeFindLoopFrame label frames).map Prod.fst |>.getD [], [])
-  | .raise exception, live, _, returnLabels, _nlive =>
-      let retained := if returnLabels.isEmpty then live
-        else live.filter (fun name => name ∈ returnLabels)
-      (.raise exception, exception :: retained, [])
+  | .raise exception, live, _, _, _nlive =>
+      (.raise exception, exception :: live, [])
   | .return label values, live, _, _, _nlive =>
       (.return label values, wordDeadAddReads (label :: live) values, [])
   | .tick, live, _, _, nlive => (.tick, live, nlive)

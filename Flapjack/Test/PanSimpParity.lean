@@ -2603,5 +2603,11 @@ example : PanValueFfiClockNormalAdequateProgFrom 0 evaluatorContext
       (by
         intro locals globals memory ffi
         exact ⟨locals, globals, memory, ffi, 1, by simp [evalPanValueFfiProgSteps]⟩))
+/-! Discharging the explicit floor premise: an adequate (clock-unbounded)
+    program has trivial floor `0`, the input bound can be raised, and a
+    lower-bounded first program composes with an adequate continuation. -/
+#check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_of_adequate
+#check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_weaken
+#check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_seq_adequate
 
 end Flapjack.Test.PanSimpParity

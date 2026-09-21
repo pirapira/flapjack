@@ -146,4 +146,12 @@ theorem panValueProgramStateRel_functions_recover_fixture :
     { evalRelState with functions := panValueFunctionsSimp evalRelState.functions }
     ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
+/-- Focused regression for the `state_rel_intro` counterpart: the related target
+    state is the source state with the simplified function table. -/
+theorem panValueProgramStateRel_intro_fixture :
+    evalRelState =
+      { evalRelState with functions := panValueFunctionsSimp evalRelState.functions } :=
+  panValueProgramStateRel_intro evalRelState evalRelState
+    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+
 end Flapjack.Test.PanProgramSimpParity

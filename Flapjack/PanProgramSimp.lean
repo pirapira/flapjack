@@ -123,6 +123,31 @@ def panValueFunctionsSimp :
   | (name, parameters, body) :: rest =>
       (name, parameters, panSimpProg body) :: panValueFunctionsSimp rest
 
+/-! The evaluator uses the source-shaped `lookupPanFunction` table rather than
+    Cake's richer declaration projection.  This is the direct function-table
+    lookup bridge needed when lifting `state_rel_imp_semantics`: a successful
+    source lookup remains successful after `pan_simp`, with only the body
+    transformed. -/
+theorem lookupPanFunction_panValueFunctionsSimp
+    (functions : List (FunName × List VarName × Prog α)) (name : FunName)
+    {parameters : List VarName} {body : Prog α}
+    (hlookup : lookupPanFunction name functions = some (parameters, body)) :
+    lookupPanFunction name (panValueFunctionsSimp functions) =
+      some (parameters, panSimpProg body) := by
+  induction functions with
+  | nil =>
+      simp [lookupPanFunction] at hlookup
+  | cons entry functions ih =>
+      obtain ⟨candidate, parameters', body'⟩ := entry
+      by_cases hname : name == candidate
+      · simp [lookupPanFunction, panValueFunctionsSimp, hname] at hlookup ⊢
+        rcases hlookup with ⟨rfl, rfl⟩
+        simp
+      · have htail : lookupPanFunction name functions = some (parameters, body) := by
+          simpa [lookupPanFunction, hname] using hlookup
+        have htail' := ih htail
+        simpa [lookupPanFunction, panValueFunctionsSimp, hname] using htail'
+
 def panValueProgramStateRel (s t : PanValueProgramState α) : Prop :=
   s.structs = t.structs ∧
   s.globals = t.globals ∧

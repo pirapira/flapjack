@@ -526,6 +526,26 @@ def coalesceWorklistSuccessGuard : Bool :=
     (out.moveRelated.get 2).getD true == false
 
 #guard coalesceWorklistSuccessGuard
+
+/- Cake's `do_freeze` (`reg_allocScript.sml:749-764`) decrements the frozen
+   node's neighbours, pushes it, removes it from `freezeWl`, then unspills a
+   spill node that has become low degree into the simplify worklist. -/
+def freezeWorklistTransitionGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      adjLists := CakeNodeMap.ofNatInfoMap 4 [(1, [2]), (2, [1])]
+      degrees := CakeNodeMap.ofNatInfoMap 4 [(1, 1), (2, 1)]
+      moveRelated := CakeNodeMap.ofNatInfoMap 4 [(1, true), (2, false)]
+      freezeWl := [1]
+      spillWl := [2] }
+  let (changed, out) := cakeDoFreeze 2 state
+  changed && out.freezeWl == [] && out.spillWl == [] &&
+    out.simpWl == [2] && out.stack == [1] &&
+    (out.degrees.get 1).getD 0 == 0 &&
+    (out.degrees.get 2).getD 0 == 0 &&
+    (out.moveRelated.get 1).getD true == false
+
+#guard freezeWorklistTransitionGuard
 /- `get_prefs_def` uses `MAP ... ++ acc`, preserving each Move's source
    order.  These guards mirror the canonical `get_prefs_probe.out` output. -/
 def prefsMoveOrderGuard : Bool :=
@@ -923,7 +943,7 @@ def runChecks : IO Bool := do
     "st_ex_list_MAX_deg ordering", "respill freeze-to-spill transition",
     "respill below-threshold no-op", "do_simplify batch ordering",
     "dec_degree out-of-dimension no-op",
-    "do_coalesce success transition"]
+    "do_coalesce success transition", "do_freeze transition"]
   let mut all := true
   for (name, result) in names.zip results do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"

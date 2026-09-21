@@ -2766,6 +2766,18 @@ example
     exceptionCode globalsLookup function configuration configurationLength array
     arrayLength hffi hraiseEvidence
 
+example
+    (oldValue : Option (PanValue Nat)) (state : CrepState Nat)
+    (name : VarName) (names : List Nat)
+    (sourceResult : PanValueControlResult Nat)
+    (crepResult : CrepControlResult Nat)
+    (hsafe : panValuePcControlLabelSafe sourceResult crepResult) :
+    panValuePcControlLabelSafe
+      (restorePanValueControlLocal name oldValue sourceResult)
+      (restoreCrepResultList state.locals names crepResult) := by
+  exact panValuePcControlLabelSafe_restore_declaration
+    oldValue state name names sourceResult crepResult hsafe
+
 def runChecks : IO Bool := do
   IO.println "PASS generic three-word Raise evaluator relation"
   IO.println "PASS generic raised semantic/global lookup lift"
@@ -2774,6 +2786,7 @@ def runChecks : IO Bool := do
   IO.println "PASS direct arbitrary context-coded raised clock evaluator instantiation"
   IO.println "PASS compact ExtCall pc_compile_correct bridge instantiation"
   IO.println "PASS compact ExtCall context-coded bridge instantiation"
+  IO.println "PASS declaration restoration preserves control-label safety"
   IO.println "PASS nested raised semantic/global lookup lift"
   pure true
 

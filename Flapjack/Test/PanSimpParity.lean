@@ -177,6 +177,49 @@ theorem clocked_seq_assoc_common_fuel_matches_cake :
   · decide
   · decide
 
+/-- The structural budget alone makes the `Skip`/`Seq` fragment succeed, with no
+    external successful-run witness. -/
+theorem clocked_seq_skip_fragment_budget_succeeds :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 3 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1
+      (.seq (.skip : Prog Nat) (.seq .skip .skip)) none none none =
+    some (.control (.normal (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi), 1) := by
+  exact evalPanValueFfiClockProg_seqSkipFragment_some evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 3 (fun _ => none)
+    (fun _ => none) (fun _ => none) evaluatorFfi 1
+    (.seq (.skip : Prog Nat) (.seq .skip .skip)) none none none
+    (PanSimpSeqSkipFragment.seq .skip (.seq .skip .skip)
+      PanSimpSeqSkipFragment.skip
+      (PanSimpSeqSkipFragment.seq .skip .skip
+        PanSimpSeqSkipFragment.skip PanSimpSeqSkipFragment.skip))
+    (by simp [panSimpSeqSkipFuel])
+
+/-! The fuel-adequacy formulation of the same rewrite: on the `Skip`/`Seq`
+    fragment the structural budget alone guarantees success, so the common-fuel
+    equality follows from `panSimpSeqSkipFuel` bounds rather than an explicit
+    successful-run witness. -/
+theorem clocked_seq_assoc_fragment_budget_matches_cake :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 3 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1
+      (seqAssoc (.skip : Prog Nat) (.seq .skip .skip)) =
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 3 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1
+      (.seq (.skip : Prog Nat) (.seq .skip .skip)) := by
+  apply evalPanValueFfiClockProg_seqAssoc_eq_of_seqSkipFragment
+    evaluatorContext (fun _ _ => none) evaluatorHandler [] [] 0 0 8
+    (.skip : Prog Nat) (.seq .skip .skip) 3
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    none none none
+  · exact PanSimpSeqSkipFragment.skip
+  · exact PanSimpSeqSkipFragment.seq .skip .skip
+      PanSimpSeqSkipFragment.skip PanSimpSeqSkipFragment.skip
+  · simp [seqAssoc, panSimpSeqSkipFuel]
+  · simp [panSimpSeqSkipFuel]
+
 theorem clocked_seq_normal_exposes_components :
     ∃ (middleLocals middleGlobals : VarName → Option (PanValue Nat))
       (middleMemory : Nat → Option (PanValue Nat)) (middleFfi : FfiState Unit)

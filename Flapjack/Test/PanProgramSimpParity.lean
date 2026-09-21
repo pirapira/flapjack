@@ -769,5 +769,61 @@ example : True := by
       simp [wfFunction, isWfShape])
   trivial
 
+/-- Cake's `evaluate_decls_only_functions_and_exns_SOME`
+    (`pan_globalsProofScript.sml:2404`): a mixed function/exception declaration
+    list with well-formed function shapes and fresh, distinct, well-formed
+    exception shapes evaluates successfully and installs exactly both tables. -/
+def functionsAndExnsDecls : List (Decl Nat) :=
+  [.function wfFunction, .exnDecl "E" .one, .exnDecl "F" .one]
+
+def functionsAndExnsGuard : Bool :=
+  match evalPanValueDeclarationsWithStructs ([] : StructContext) evalRelState
+      functionsAndExnsDecls none with
+  | some state' =>
+      state'.functions.length ==
+          (panFunctionEntries functionsAndExnsDecls ++
+            evalRelState.functions).length &&
+        state'.exceptions.length ==
+          (panExceptionEntries functionsAndExnsDecls ++
+            evalRelState.exceptions).length
+  | none => false
+
+#eval functionsAndExnsGuard
+#guard functionsAndExnsGuard
+
+example : True := by
+  have hall : functionsAndExnsDecls.all
+      (fun declaration =>
+        globalDeclIsFunction declaration || isExnDecl declaration) = true := by
+    simp [functionsAndExnsDecls, globalDeclIsFunction, isExnDecl, wfFunction]
+  have hnodup :
+      ((panExceptionEntries functionsAndExnsDecls).map
+        (fun entry => entry.1)).Nodup := by
+    simp [functionsAndExnsDecls, panExceptionEntries, exceptionEntries]
+  have hnone : ∀ exception shape,
+      (exception, shape) ∈ panExceptionEntries functionsAndExnsDecls →
+        lookupInfo exception evalRelState.exceptions = none := by
+    intro exception shape _
+    simp [evalRelState, lookupInfo]
+  have hexns : ∀ exception shape,
+      (exception, shape) ∈ panExceptionEntries functionsAndExnsDecls →
+        isWfShape evalRelState.structs shape = true := by
+    intro exception shape hmem
+    simp [functionsAndExnsDecls, panExceptionEntries, exceptionEntries] at hmem
+    rcases hmem with h | h
+    · obtain ⟨rfl, rfl⟩ := h
+      simp [evalRelState, isWfShape]
+    · obtain ⟨rfl, rfl⟩ := h
+      simp [evalRelState, isWfShape]
+  have _h :=
+    evalPanValueDeclarationsWithStructs_only_functions_and_exns_sufficiency
+      ([] : StructContext) evalRelState functionsAndExnsDecls none rfl hall
+      (fun declaration hmem => by
+        simp [functionsAndExnsDecls] at hmem
+        rcases hmem with rfl | rfl | rfl
+        all_goals simp [wfFunction, isWfShape])
+      hnodup hnone hexns
+  trivial
+
 end Flapjack.Test.PanProgramSimpParity
 

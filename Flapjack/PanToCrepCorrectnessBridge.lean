@@ -5,6 +5,7 @@ import Flapjack.CrepeProgramRaiseSourceWordRelation
 import Flapjack.CrepeSourceWordRecordRaiseCorrectness
 import Flapjack.CrepeProgramExtCallCorrectness
 import Flapjack.PanValueFfiClockProjection
+import Flapjack.CrepeDeclarationRestorationRelation
 
 /-!
 Bridge from the existing stateful source-to-Crep program correctness contract
@@ -20771,5 +20772,35 @@ theorem panValuePcCompileCorrectWithContextCode_compact_extCall_const
       (.extCall function (.const configuration) (.const configurationLength)
         (.const array) (.const arrayLength)) context structs sourceInput
       targetInput targetExecution hstructs heval
+
+theorem panValuePcControlLabelSafe_restore_declaration
+    [OfNat α 0]
+    (oldValue : Option (PanValue α)) (state : CrepState α)
+    (name : VarName) (names : List Nat)
+    (sourceResult : PanValueControlResult α)
+    (crepResult : CrepControlResult α)
+    (hsafe : panValuePcControlLabelSafe sourceResult crepResult) :
+    panValuePcControlLabelSafe
+      (restorePanValueControlLocal name oldValue sourceResult)
+      (restoreCrepResultList state.locals names crepResult) := by
+  have hfinal : ∀ (locals : Nat → Option α) (names : List Nat)
+      (state : CrepState α) (event : FfiFinalEvent),
+      restoreCrepResultList locals names (.finalFfi state event) =
+        .finalFfi
+          { state with locals := restoreCrepLocalList locals names state.locals }
+          event := by
+    intro locals names state event
+    induction names generalizing locals state with
+    | nil => simp [restoreCrepResultList, restoreCrepLocalList]
+    | cons name names ih =>
+        simp only [restoreCrepResultList]
+        rw [ih (locals := updateCrepLocal locals name 0)]
+        rfl
+  cases sourceResult <;> cases crepResult <;>
+    simp [panValuePcControlLabelSafe, restorePanValueControlLocal, hfinal,
+      restoreCrepResultList_raised,
+      restoreCrepResultList_normal, restoreCrepResultList_returned,
+      restoreCrepResultList_broke, restoreCrepResultList_continued] at hsafe ⊢ <;>
+    try assumption
 
 end Flapjack

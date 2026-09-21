@@ -1051,6 +1051,7 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
     terminal FFI, uncaught raise, and timeout, each preserving explicit
     state/observation premises. -/
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_finalFfi
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_decCall_finalFfi
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_raised
 #check @panValuePcCompileCorrect_of_context_code_and_clocked_decCall_raised
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_timeout

@@ -43,6 +43,16 @@ val _ = print_eval "ra_stack_only"
 val _ = print_eval "ra_moves_coalesce"
   ``reg_alloc$reg_alloc reg_alloc$IRC (NONE:num sptree$num_map option) 4
       [(1,(1:num,5:num))] (reg_alloc$Delta [1] [5;3]) [] LN``;
+(* Simple allocation intentionally ignores move preferences before the
+   worklist is initialized; keep its full colouring distinct from IRC. *)
+val _ = print_eval "ra_simple_moves"
+  ``reg_alloc$reg_alloc reg_alloc$Simple (NONE:num sptree$num_map option) 4
+      [(1,(1:num,5:num))] (reg_alloc$Delta [1] [5;3]) [] LN``;
+(* A fixed physical-register endpoint exercises do_coalesce_real's fixed-x
+   branch: x=2 must not receive a degree increment when y=5 is coalesced. *)
+val _ = print_eval "ra_fixed_coalesce"
+  ``reg_alloc$reg_alloc reg_alloc$IRC (NONE:num sptree$num_map option) 4
+      [(1,(2:num,5:num))] (reg_alloc$Delta [2] [5;3]) [] LN``;
 val _ = print_eval "ra_moves_self_filtered"
   ``reg_alloc$reg_alloc reg_alloc$IRC (NONE:num sptree$num_map option) 4
       [(1,(1:num,1:num))] (reg_alloc$Delta [1] [5;3]) [] LN``;

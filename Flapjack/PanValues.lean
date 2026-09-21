@@ -1918,6 +1918,46 @@ theorem evalPanValueExp_isWfShape [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [M
               exact ⟨ihHead head hvalue, ihTail tail hvalues⟩
   exact hmain expression memoryAccess value heval
 
+/-! Cake's `opt_mmap_eval_is_wf_shape_v` (`pan_to_crepProofScript.sml:2328`)
+    lifts the single-expression evaluator result relation to a successful list
+    evaluation.  The local and global well-formedness premises remain explicit,
+    matching the source state's evaluator invariants. -/
+theorem evalPanValueExps_isWfShape [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α))
+    (baseAddress topAddress bytesInWord : α)
+    (hlocals : ∀ name value, locals name = some value → panValueIsWf structs value = true)
+    (hglobals : ∀ name value, globals name = some value → panValueIsWf structs value = true)
+    (expressions : List (Exp α)) (memoryAccess : Option (PanValueMemoryAccess α))
+    (values : List (PanValue α))
+    (heval : evalPanValueExps structs locals globals memory baseAddress topAddress
+      bytesInWord expressions memoryAccess = some values) :
+    panValueIsWfValues structs values = true := by
+  induction expressions generalizing values with
+  | nil =>
+      simp [evalPanValueExps, evalPanValueExp.evalPanValueExps] at heval
+      subst values
+      simp [panValueIsWfValues]
+  | cons expression expressions ih =>
+      simp only [evalPanValueExps, evalPanValueExp.evalPanValueExps] at heval
+      cases hhead : evalPanValueExp structs locals globals memory baseAddress
+          topAddress bytesInWord expression memoryAccess with
+      | none => simp [hhead] at heval
+      | some head =>
+          cases htail : evalPanValueExp.evalPanValueExps structs locals globals
+              memory baseAddress topAddress bytesInWord expressions memoryAccess with
+          | none => simp [hhead, htail] at heval
+          | some tail =>
+              simp [hhead, htail] at heval
+              subst values
+              simp only [panValueIsWfValues, Bool.and_eq_true]
+              exact ⟨evalPanValueExp_isWfShape structs locals globals memory
+                baseAddress topAddress bytesInWord hlocals hglobals expression
+                memoryAccess head hhead, ih tail htail⟩
+
 theorem evalPanValueExp_isSome_local
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

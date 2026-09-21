@@ -70,4 +70,35 @@ theorem evalPanValueFfiClockProg_tick_shift
   simp only [evalPanValueFfiClockProg, if_neg hpos, Option.pure_def]
   rw [decPanClock_add clock ck hclock]
 
+/-! A zero-condition `While` is independent of the clock.  This is the
+    terminating, non-spending branch of Cake's `evaluate_add_clock_eq`; it is
+    useful when composing the eventual mutual clock-shift theorem because it
+    does not require a body or recursive clock premise. -/
+theorem evalPanValueFfiClockProg_while_zero_shift
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (clock ck : Nat) (condition : Exp α) (body : Prog α)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (contracts : Option PanValueCallContracts := none)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none)
+    (hcondition : evalPanValueExp structs locals globals memory
+      baseAddress topAddress bytesInWord condition
+      (memoryAccess := memoryAccess) = some (.word 0)) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi
+      (clock + ck) (.while condition body)
+      (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) =
+      some (.control (.normal locals globals memory ffi), clock + ck) := by
+  simp [evalPanValueFfiClockProg, hcondition]
+
 end Flapjack

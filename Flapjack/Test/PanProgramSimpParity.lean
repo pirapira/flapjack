@@ -593,4 +593,44 @@ example : True := by
         functionsOnlyStateDecls none hall heval
       trivial
 
+/-- Focused regression for the `exns_wf_evaluate_decls` counterpart: the
+    distinct/no-shadowing/well-formedness conditions are sufficient for the
+    evaluator to install exactly the exception table. -/
+def exnsWfDecls : List (Decl Nat) :=
+  [.exnDecl "E" .one, .exnDecl "F" .one]
+
+def exnsWfGuard : Bool :=
+  match evalPanValueDeclarations evalRelState exnsWfDecls none with
+  | some state' =>
+      state'.exceptions.length ==
+        (panExceptionEntries exnsWfDecls ++ evalRelState.exceptions).length
+  | none => false
+
+#eval exnsWfGuard
+#guard exnsWfGuard
+
+example : True := by
+  have hall : exnsWfDecls.all isExnDecl = true := by decide
+  have hnodup : ((panExceptionEntries exnsWfDecls).map
+      (fun entry => entry.1)).Nodup := by
+    simp [exnsWfDecls, panExceptionEntries, exceptionEntries]
+  have hnone : ∀ exception shape,
+      (exception, shape) ∈ panExceptionEntries exnsWfDecls →
+        lookupInfo exception evalRelState.exceptions = none := by
+    intro exception shape _
+    simp [evalRelState, lookupInfo]
+  have hwf : ∀ exception shape,
+      (exception, shape) ∈ panExceptionEntries exnsWfDecls →
+        isWfShape evalRelState.structs shape = true := by
+    intro exception shape hmem
+    simp [exnsWfDecls, panExceptionEntries, exceptionEntries] at hmem
+    rcases hmem with h | h
+    · obtain ⟨rfl, rfl⟩ := h
+      simp [evalRelState, isWfShape]
+    · obtain ⟨rfl, rfl⟩ := h
+      simp [evalRelState, isWfShape]
+  have _h := evalPanValueDeclarations_exns_wf_sufficiency evalRelState exnsWfDecls
+    none hall hnodup hnone hwf
+  trivial
+
 end Flapjack.Test.PanProgramSimpParity

@@ -729,6 +729,48 @@ example : True := by
     ([] : StructContext) evalRelState wfFunction oneFunLastDecls none hrest
   trivial
 
+/-- Focused regression for the `pair_map_I` counterpart. -/
+theorem prod_mk_pair_eq_id_fixture :
+    (fun p : Nat × Nat => (p.1, p.2)) = id :=
+  prod_mk_pair_eq_id
+
+/-- Focused regression for the `not_none_then_some` counterpart. -/
+theorem option_ne_none_iff_exists_fixture :
+    (some 3 : Option Nat) ≠ none ↔ ∃ a, (some 3 : Option Nat) = some a :=
+  option_ne_none_iff_exists (some 3)
+/-- Focused regression for the `resort_decls_evaluate` counterpart: resorting
+    declarations into the name/exception/global/function partition preserves
+    the declaration evaluator's result. -/
+def resortDeclF : Decl Nat :=
+  .function { name := "f", inline := false, exported := false, params := [],
+              body := (.skip : Prog Nat), returnShape := .one }
+
+def resortDeclH : Decl Nat :=
+  .function { name := "h", inline := false, exported := false, params := [],
+              body := (.tick : Prog Nat), returnShape := .one }
+
+def resortDecls : List (Decl Nat) :=
+  [resortDeclF, .decl .one "g" (.const 7), .exnDecl "E" .one, resortDeclH]
+
+def resortDeclsGuard : Bool :=
+  (evalPanValueDeclarationsWithStructs ([] : StructContext) evalRelState
+      (globalResortDecls resortDecls) none).isSome ==
+    (evalPanValueDeclarationsWithStructs ([] : StructContext) evalRelState
+      resortDecls none).isSome
+
+#eval resortDeclsGuard
+#guard resortDeclsGuard
+
+example : True := by
+  have hall : resortDecls.all (fun declaration =>
+      isDecl declaration || isExnDecl declaration ||
+        globalDeclIsFunction declaration) = true := by
+    simp [resortDecls, resortDeclF, resortDeclH, isDecl, isExnDecl,
+      globalDeclIsFunction]
+  have _h := evalPanValueDeclarationsWithStructs_resortDecls
+    ([] : StructContext) evalRelState resortDecls none hall
+  trivial
+
 /-- Focused regression for the `filter_not_mem_self` counterpart. -/
 theorem filter_not_mem_self_fixture :
     ([1, 2, 3] : List Nat).filter (fun x => decide (x ∉ [1, 2, 3])) = [] :=
@@ -746,5 +788,31 @@ theorem map_flatten_eq_map_some_flatten_fixture :
 theorem mod_eq_of_lt_eq_fixture {n x m : Nat} (hn : n < x) (hm : m < x)
     (h : n % x = m % x) : n = m :=
   mod_eq_of_lt_eq hn hm h
+
+/-- `evaluate_decls_only_functions_SOME`
+    (`pan_globalsProofScript.sml:2390`): a function-only declaration list with
+    well-formed shapes evaluates successfully and installs exactly that table. -/
+def functionsSufficiencyGuard : Bool :=
+  match evalPanValueDeclarationsWithStructs ([] : StructContext) evalRelState
+      functionsOnlyDecls none with
+  | some state' =>
+      state'.functions.length ==
+        (panFunctionEntries functionsOnlyDecls ++
+          evalRelState.functions).length
+  | none => false
+
+#eval functionsSufficiencyGuard
+#guard functionsSufficiencyGuard
+
+example : True := by
+  have hall : functionsOnlyDecls.all globalDeclIsFunction = true := by
+    simp [functionsOnlyDecls, globalDeclIsFunction, wfFunction]
+  have _h := evalPanValueDeclarationsWithStructs_only_functions_sufficiency
+    ([] : StructContext) evalRelState functionsOnlyDecls none rfl hall
+    (fun declaration hmem => by
+      simp [functionsOnlyDecls] at hmem
+      rcases hmem with rfl
+      simp [wfFunction, isWfShape])
+  trivial
 
 end Flapjack.Test.PanProgramSimpParity

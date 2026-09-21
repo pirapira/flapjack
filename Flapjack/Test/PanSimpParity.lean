@@ -2447,4 +2447,8 @@ def runChecks : IO Bool := do
   IO.println "PASS pan_simp el_compile_prog_el_prog_eq Cake compiled-table entry provenance"
   pure parityGuard
 
+/-! The fuel-indexed while-exit certificate underpinning the nonzero-condition
+`While` adequacy constructor. -/
+#check @Flapjack.PanValueFfiClockWhileExitsNormally
+
 end Flapjack.Test.PanSimpParity

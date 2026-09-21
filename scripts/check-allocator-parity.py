@@ -39,6 +39,7 @@ FIXTURES = (
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "divmnu_copy_loop.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "bn_divmnu_allocator.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "mul64x64_allocator.pnk",
+    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "u256_mul_full.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "wide_call_arguments.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "wide_call_arity.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "stack_args_overflow_slots.pnk",

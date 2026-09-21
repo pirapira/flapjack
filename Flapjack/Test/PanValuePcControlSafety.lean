@@ -880,4 +880,10 @@ evaluator-evidence obligation. -/
     evidence plus the exception lookup instead of the opaque callbacks. -/
 #check @panValuePcRaisedHraiseCases_with_raw_word_lists_paired_of_state_evidence
 
+/-! The plain (non-context-coded) store state-evidence instances are the
+    companions used by the ordinary compact correctness boundary. -/
+#check @panValuePcCompileCorrect_compact_store_source_word_of_state_evidence
+#check @panValuePcCompileCorrect_compact_store32_source_word_of_state_evidence
+#check @panValuePcCompileCorrect_compact_storeByte_source_word_of_state_evidence
+
 end Flapjack.Test.PanValuePcControlSafety

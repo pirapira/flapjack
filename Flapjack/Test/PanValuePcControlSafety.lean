@@ -1182,5 +1182,6 @@ example :
 #check @panValuePcResultRel_rejects_broke_continued
 #check @panValuePcResultRel_rejects_timeout_normal
 #check @panValuePcResultRel_rejects_finalFfi_normal
+#check @panValuePcResultRel_constructor_eq
 
 end Flapjack.Test.PanValuePcControlSafety

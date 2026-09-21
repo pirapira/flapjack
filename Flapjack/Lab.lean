@@ -323,17 +323,6 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
         ⟨firstResult.lines ++ separator ++ secondResult.lines,
           firstResult.terminal || secondResult.terminal, secondResult.nextLabel⟩
   | .seq (.const scratch value)
-      (.seq (.arith operator destination left right) rest) =>
-      let firstResult :=
-        labFlatten false sectionId counter continues breaks
-          (.seq (.const scratch value) (.arith operator destination left right))
-      let secondResult :=
-        labFlatten false sectionId firstResult.nextLabel continues breaks rest
-      let separator :=
-        if tail then [labLabel sectionId 1] else []
-      ⟨firstResult.lines ++ separator ++ secondResult.lines,
-        firstResult.terminal || secondResult.terminal, secondResult.nextLabel⟩
-  | .seq (.const scratch value)
       (.arith operator destination left right) =>
       let canFuse :=
         scratch != destination && right == scratch &&

@@ -1126,6 +1126,59 @@ def constStoreReuseExactParity : Bool :=
       | _ => false
   | none => false
 
+/-- Source of the CurrHeap add fixture (differential-fuzz finding
+    `f00036-s65-i00036-mutate`): `@base` lowers to a `CurrHeap` lookup, so
+    Cake's `inst_select_exp` takes its `is_Lookup_CurrHeap` branch and
+    materialises the constant plus a register add
+    (`cakeml/compiler/backend/word_instScript.sml:246-275`) instead of folding
+    it into an `addi`. -/
+def currheapAddConstSource : String :=
+  "fun 1 main() {\n" ++
+    "  return @base + 255;\n" ++
+    "}"
+
+/-- Original CakeML `cml_main` bytes for `@base + 255`:
+    `li a0,255; add a0,a0,s10; ret` (s10 is the CurrHeap base). -/
+def cakeCurrheapAddConstMainBytes : List (BitVec 8) :=
+  [0x13, 0x65, 0xF0, 0x0F,
+   0x33, 0x05, 0xA5, 0x01,
+   0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
+
+def currheapAddConstExactParity : Bool :=
+  match compileRuntimeImage currheapAddConstSource with
+  | some image =>
+      match emittedSections image with
+      | [(3, 1000, generated), (4, 1004, main)] =>
+          generated == [0x6F, 0x00, 0x40, 0x00].map (BitVec.ofNat 8) &&
+            main == cakeCurrheapAddConstMainBytes
+      | _ => false
+  | none => false
+
+/-- Source of the CurrHeap zero-sub fixture: `@base - 0` reaches the same
+    materialised-constant register add, so Cake keeps `li a0,0; add a0,a0,s10`
+    rather than eliding the computation. -/
+def currheapSubZeroSource : String :=
+  "fun 1 main() {\n" ++
+    "  return @base - 0;\n" ++
+    "}"
+
+/-- Original CakeML `cml_main` bytes for `@base - 0`:
+    `li a0,0; add a0,a0,s10; ret`. -/
+def cakeCurrheapSubZeroMainBytes : List (BitVec 8) :=
+  [0x13, 0x65, 0x00, 0x00,
+   0x33, 0x05, 0xA5, 0x01,
+   0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
+
+def currheapSubZeroExactParity : Bool :=
+  match compileRuntimeImage currheapSubZeroSource with
+  | some image =>
+      match emittedSections image with
+      | [(3, 1000, generated), (4, 1004, main)] =>
+          generated == [0x6F, 0x00, 0x40, 0x00].map (BitVec.ofNat 8) &&
+            main == cakeCurrheapSubZeroMainBytes
+      | _ => false
+  | none => false
+
 /-- Source of the whole-artifact `hello.pnk` fixture (GitHub issue #1022 /
 bead `flapjack-8tb`). -/
 def helloSource : String :=
@@ -1262,6 +1315,8 @@ def sharedMemOffsetCarrierEncoding : Bool :=
 #guard relationalConditionExactParity
 #guard f01451ExactParity
 #guard constStoreReuseExactParity
+#guard currheapAddConstExactParity
+#guard currheapSubZeroExactParity
 #guard sharedWordStoreOffsetPeephole
 #guard sharedMemOffsetCarrierEncoding
 #guard artifactAccepted
@@ -1380,7 +1435,11 @@ def runChecks : IO Bool := do
       ("f01451 out-of-range shift section is byte-identical to Cake",
         f01451ExactParity),
       ("constant-store reuse keeps Cake's rematerialised `li` (GH #1127)",
-        constStoreReuseExactParity) ]
+        constStoreReuseExactParity),
+      ("CurrHeap add keeps Cake's materialised constant and register add",
+        currheapAddConstExactParity),
+      ("CurrHeap zero sub keeps Cake's materialised constant and register add",
+        currheapSubZeroExactParity) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

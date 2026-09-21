@@ -402,6 +402,66 @@ theorem clocked_leaf_skip_matches_steps :
     (.normal (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi) 1
   simp [evalPanValueFfiProgSteps]
 
+/-- The while recursive branch: a nonzero condition and a `normal` body result
+    iterate the loop from the body's final state and clock. -/
+example
+    (nextLocals nextGlobals : VarName → Option (PanValue Nat))
+    (nextMemory : Nat → Option (PanValue Nat)) (nextFfi : FfiState Unit)
+    (bodyClock : Nat)
+    (hbody : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 0 (.break : Prog Nat) none none none =
+      some (.control (.normal nextLocals nextGlobals nextMemory nextFfi),
+        bodyClock)) :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 2 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1 (.while (.const 5) (.break : Prog Nat))
+      none none none =
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 1 nextLocals nextGlobals nextMemory nextFfi
+      bodyClock (.while (.const 5) (.break : Prog Nat)) none none none := by
+  apply evalPanValueFfiClockProg_while_normal_some
+    evaluatorContext (fun _ _ => none) evaluatorHandler [] [] 0 0 8
+    1 (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    (.const 5) (.break : Prog Nat) none none none 5
+    nextLocals nextGlobals nextMemory nextFfi bodyClock
+  · simp [evalPanValueExp]
+  · decide
+  · decide
+  · exact hbody
+
+/-- A terminal (non-normal) first component propagates unchanged through `Seq`. -/
+example
+    (hfirst : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1
+      (.raise "E" (.const 1)) none none none =
+      some (.control (.raised (fun _ => none) (fun _ => none) (fun _ => none)
+        evaluatorFfi "E" (.word 1)), 1)) :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 2 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1
+      (.seq (.raise "E" (.const 1)) (.tick : Prog Nat)) none none none =
+      some (.control (.raised (fun _ => none) (fun _ => none) (fun _ => none)
+        evaluatorFfi "E" (.word 1)), 1) := by
+  exact evalPanValueFfiClockProg_seq_terminal_some evaluatorContext (fun _ _ => none)
+    evaluatorHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none) (fun _ => none)
+    evaluatorFfi 1 (.raise "E" (.const 1)) (.tick : Prog Nat)
+    (.control (.raised (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi "E" (.word 1))) 1 none none none hfirst
+    (by intro l g m f h; cases h)
+
+/-- A nonzero loop condition with an exhausted clock times out. -/
+example :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+      [] [] 0 0 8 2 (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi 0 (.while (.const 5) (.break : Prog Nat)) none none none =
+    some (.timeout (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi, 0) := by
+  exact evalPanValueFfiClockProg_while_timeout_some evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 1 (fun _ => none)
+    (fun _ => none) (fun _ => none) evaluatorFfi 0 (.const 5) (.break : Prog Nat)
+    none none none 5 (by simp [evalPanValueExp]) (by decide) (by decide)
+
 theorem clocked_seq_normal_exposes_components :
     ∃ (middleLocals middleGlobals : VarName → Option (PanValue Nat))
       (middleMemory : Nat → Option (PanValue Nat)) (middleFfi : FfiState Unit)

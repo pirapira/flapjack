@@ -1121,11 +1121,13 @@ def cakeTagIsAtemp (state : CakeRaState) (x : Nat) : Bool :=
   | _ => false
 
 def cakeFullConsistencyOk (state : CakeRaState) (k : Nat) (x y : Nat) : Bool :=
+  let fixedX := cakeIsFixedK state k x
+  let fixedY := cakeIsFixedK state k y
+  let eligibleX := fixedX || cakeTagIsAtemp state x
+  let eligibleY := fixedY || cakeTagIsAtemp state y
   x != y && x < state.dim && y < state.dim &&
     !cakeSortedMem x (cakeAdjSub state.adjLists y) &&
-    (cakeIsFixedK state k x || cakeTagIsAtemp state x) &&
-    (cakeIsFixedK state k y || cakeTagIsAtemp state y) &&
-    !(cakeIsFixedK state k x && cakeIsFixedK state k y)
+    eligibleX && eligibleY && !(fixedX && fixedY)
 
 /-- A lookup-only index for the source-variable side of `mk_bij`.
 

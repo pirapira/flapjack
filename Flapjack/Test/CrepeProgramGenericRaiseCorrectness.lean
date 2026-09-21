@@ -2913,7 +2913,8 @@ example
       (∀ name ∈ freshNames context compiled.length 1,
         ∀ value ∈ compiled, name ∉ crepExpVars value) ∧
       (∀ name ∈ freshNames context compiled.length 1,
-        state.locals name = none) := by
+        state.locals name = none) ∧
+      panValueFlatWords nestedSourceValue = values := by
   apply panValueCrepExpressionStateEvidence_of_correct
     nestedSourceExpression hexpression context [] (fun _ => none)
     (fun _ => none) (fun _ => none) state 0 0 8 nestedSourceValue
@@ -2929,6 +2930,54 @@ example
       panValueFlatValueFuel.panValueFlatValueListFuel,
       panValueShape, Shape.shapeSize]
 
+example
+    (exceptionCode : ExceptionId → Option Nat)
+    (globalsLookup : CrepState Nat → PanValue Nat → Option (List Nat))
+    (hlookup : ∀ (targetState : CrepState Nat) (sourceValue : PanValue Nat),
+      crepPcFlatGlobalsLookup 8 targetState sourceValue =
+        globalsLookup targetState sourceValue)
+    (hevidence : ∀ (context : CompileContext Nat) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+      (sourceMemory : Nat → Option (PanValue Nat)) (sourceException : ExceptionId)
+      (sourceValue : PanValue Nat) (targetState : CrepState Nat)
+      (targetException : Nat),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      ∃ (state : CrepState Nat) (expression : Exp Nat),
+        targetState =
+          { state with globals :=
+              (updateMemoryListAt state.globals 0 context.bytesInWord
+                (panValueFlatWords sourceValue)) } ∧
+        context.bytesInWord = 8 ∧
+        panValueCrepStateRel structs context sourceLocals sourceGlobals
+          sourceMemory state ∧
+        PanValueCrepExpressionStateCorrect expression ∧
+        evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+          0 0 8 expression = some sourceValue ∧
+        (∀ (compiled : List (CrepExp Nat)),
+          ∀ name ∈ freshNames context compiled.length 1,
+            ∀ value ∈ compiled, name ∉ crepExpVars value) ∧
+        (∀ (compiled : List (CrepExp Nat)),
+          ∀ name ∈ freshNames context compiled.length 1,
+            state.locals name = none) ∧
+        exceptionRel sourceException sourceValue targetException ∧
+        lookupInfo sourceException context.exceptions = some targetException ∧
+        exceptionCode sourceException = some targetException ∧
+        List.Pairwise (fun left right : Nat => left ≠ right)
+          (storeAddresses 0 context.bytesInWord
+            (panValueFlatWords sourceValue).length) ∧
+        Shape.shapeSize (panValueShape structs sourceValue) ≤ 32 ∧
+        (panValueFlatWords sourceValue).length =
+          Shape.shapeSize (panValueShape structs sourceValue)) :
+    True := by
+  have hbridge := panValuePcRaisedHraiseData_of_expression_state_evidence
+    exceptionCode globalsLookup [] [] (fun _ _ => none)
+    (fun _ _ _ _ _ _ => none) (fun _ _ => none)
+    (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none) 0 0 8 0 hlookup hevidence
+  trivial
+
 def runChecks : IO Bool := do
   IO.println "PASS generic three-word Raise evaluator relation"
   IO.println "PASS generic raised semantic/global lookup lift"
@@ -2941,6 +2990,8 @@ def runChecks : IO Bool := do
   IO.println "PASS DecCall body control safety survives caller restoration"
   IO.println "PASS generic clocked Raise projects to pc_compile_correct"
   IO.println "PASS expression-state contract packages generic Raise evidence"
+  IO.println "PASS expression-state evidence derives generic flat-global Raise package"
+  IO.println "PASS expression-state evidence composes to compact pc_compile_correct"
   IO.println "PASS nested raised semantic/global lookup lift"
   pure true
 

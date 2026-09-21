@@ -40,4 +40,10 @@ example :
       originalNStruct := by
   simp [panValueShape, originalNStruct]
 
+theorem panValueShape_word_fixture :
+    panValueShape shapeProbeContext (.word (3 : Nat)) = originalWord :=
+  panValueShape_word shapeProbeContext (3 : Nat)
+
+#check @panValueShape_word
+
 end Flapjack.Test.PanShapeParity

@@ -22,6 +22,18 @@ def parityGuard : Bool :=
 #eval parityGuard
 #guard parityGuard
 
+theorem cexpHeads_eq_cexpHeadsSimp_fixture :
+    cexpHeads ([[.const 1, .const 2], [.var 3, .var 4]] : List (List (CrepExp Nat))) =
+      cexpHeadsSimp (.const 0) [[.const 1, .const 2], [.var 3, .var 4]] :=
+  cexpHeads_eq_cexpHeadsSimp (.const 0) [[.const 1, .const 2], [.var 3, .var 4]]
+
+theorem cexpHeads_eq_cexpHeadsSimp_empty_fixture :
+    cexpHeads ([[], [.const 5]] : List (List (CrepExp Nat))) =
+      cexpHeadsSimp (.const 0) [[], [.const 5]] :=
+  cexpHeads_eq_cexpHeadsSimp (.const 0) [[], [.const 5]]
+
+#check @cexpHeads_eq_cexpHeadsSimp
+
 def runChecks : IO Bool := do
   if parityGuard then
     IO.println "PASS cexp_heads empty/heads/empty-head/empty-tail"

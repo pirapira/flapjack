@@ -194,6 +194,22 @@ def immediateCarrierInstruction : Bool :=
 
 #guard immediateCarrierInstruction
 
+/- Cake's `riscv_ast` handles `Binop Sub ... (Imm i)` separately from
+   `riscv_bop_i`: `riscv_targetScript.sml:121` emits ADDI with the
+   two's-complement immediate `-i`.  Keep this direct carrier boundary
+   explicit so a future immediate specialization cannot silently select a
+   non-Cake subtraction form. -/
+def subImmediateCarrierInstruction : Bool :=
+  match wordInstToInstruction (width := 64)
+      (.arith (.binOp .sub 1 2 (.imm (BitVec.ofNat 64 5))) :
+        WordInst (Word 64)) with
+  | some (.addi destination source immediate) =>
+      destination = 1 ∧ source = 2 ∧
+        immediate = (0 - BitVec.ofNat 64 5)
+  | _ => false
+
+#guard subImmediateCarrierInstruction
+
 /- Cake's `wInst (Arith (Binop ... (Imm ...)))` uses `wReg1` for a spilled
    left operand and `wRegWrite1` for a spilled destination
    (`word_to_stackScript.sml:91-99`).  This direct carrier guard pins the
@@ -631,6 +647,7 @@ def runChecks : IO Bool := do
     ("the Cake ABI argument registers match riscv_names", abiArgumentRegistersMatch),
     ("the Cake ABI link register is hardware one", abiLinkRegisterMatches),
     ("the Cake ABI name list includes the link slot", abiNamesIncludeLinkSlot),
+    ("Cake Sub immediate uses signed ADDI", subImmediateCarrierInstruction),
     ("parallel moves preserve a source that a later move reads",
       parallelMoveKeepsLiveSource),
     ("parallel location moves preserve a source that a later move reads",

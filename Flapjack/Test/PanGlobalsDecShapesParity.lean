@@ -110,4 +110,47 @@ def exceptionEntriesFilterGuard : Bool :=
 #eval exceptionEntriesFilterGuard
 #guard exceptionEntriesFilterGuard
 
+/-! Counterpart of Cake's `not_is_function` (`pan_globalsProofScript.sml:2527`). -/
+def notIsFunctionGuard : Bool :=
+  let declarations : List (Decl Nat) :=
+    [.function
+      { name := "f", inline := false, exported := false, params := [],
+        body := .skip, returnShape := .one },
+     .name "S" [], .exnDecl "E" (.named "T"), .decl .one "h" (.const 9)]
+  declarations.all (fun declaration =>
+    (!isName declaration || !globalDeclIsFunction declaration) &&
+    (!isDecl declaration || !globalDeclIsFunction declaration) &&
+    (!isExnDecl declaration || !globalDeclIsFunction declaration))
+
+#eval notIsFunctionGuard
+#guard notIsFunctionGuard
+
+/-! Counterpart of Cake's `decl_distinct` (`pan_globalsProofScript.sml:2535`). -/
+def declDistinctGuard : Bool :=
+  let declarations : List (Decl Nat) :=
+    [.function
+      { name := "f", inline := false, exported := false, params := [],
+        body := .skip, returnShape := .one },
+     .name "S" [], .exnDecl "E" (.named "T"), .decl .one "h" (.const 9)]
+  declarations.all (fun declaration =>
+    !(isDecl declaration && isName declaration) &&
+    !(isDecl declaration && globalDeclIsFunction declaration) &&
+    !(isDecl declaration && isExnDecl declaration))
+
+#eval declDistinctGuard
+#guard declDistinctGuard
+
+/-! Counterpart of Cake's `functions_filter_nil` (`pan_globalsProofScript.sml:2967`). -/
+def functionsFilterNilGuard : Bool :=
+  let declarations : List (Decl Nat) :=
+    [.function
+      { name := "f", inline := false, exported := false, params := [],
+        body := .skip, returnShape := .one },
+     .name "S" [], .exnDecl "E" (.named "T"), .decl .one "h" (.const 9)]
+  (functions (globalDeclsFilter
+    (fun declaration => !globalDeclIsFunction declaration) declarations)).isEmpty
+
+#eval functionsFilterNilGuard
+#guard functionsFilterNilGuard
+
 end Flapjack.Test.PanGlobalsDecShapesParity

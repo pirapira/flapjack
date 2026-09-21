@@ -844,4 +844,87 @@ theorem evalPanValueDeclarationsWithStructs_only_funs_and_exn_decls
       | name name fields =>
           simp [globalDeclIsFunction, isExnDecl] at hhead
 
+/-- Cake's `evaluate_decls_only_functions`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1529`): when every declaration
+    is a function declaration, a successful evaluation changes only the function
+    table, together with Flapjack's separate return-shape and parameter-shape
+    maps. -/
+theorem evalPanValueDeclarationsWithStructs_only_functions
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext) (state state' : PanValueProgramState α)
+    (declarations : List (Decl α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (hstructs : state.structs = structs)
+    (hall : declarations.all globalDeclIsFunction = true)
+    (heval : evalPanValueDeclarationsWithStructs structs state declarations
+      memoryAccess = some state') :
+    state' = { state with
+      structs := structs
+      functions := panFunctionEntries declarations ++ state.functions
+      returnShapes := panReturnShapeEntries declarations ++ state.returnShapes
+      parameterShapes :=
+        panParameterShapeEntries declarations ++ state.parameterShapes } := by
+  induction declarations generalizing state with
+  | nil =>
+      simp only [evalPanValueDeclarationsWithStructs] at heval
+      have hstate : state = state' := (Option.some.injEq _ _).mp heval
+      subst hstate
+      simp [panFunctionEntries, panReturnShapeEntries, panParameterShapeEntries,
+        functions, ← hstructs]
+  | cons declaration declarations ih =>
+      simp only [List.all_cons, Bool.and_eq_true] at hall
+      obtain ⟨hhead, htail⟩ := hall
+      cases declaration with
+      | function declaration =>
+          simp only [evalPanValueDeclarationsWithStructs] at heval
+          by_cases hwf : (declaration.params.all
+                (fun parameter => isWfShape structs parameter.2) &&
+              isWfShape structs declaration.returnShape) = true
+          · simp only [hwf] at heval
+            rw [ih _ (by rfl) htail heval]
+            simp [panFunctionEntries, panReturnShapeEntries,
+              panParameterShapeEntries, functions, List.reverse_cons,
+              List.map_append, List.append_assoc]
+          · simp [hwf] at heval
+      | decl shape name expression =>
+          simp [globalDeclIsFunction] at hhead
+      | exnDecl exception shape =>
+          simp [globalDeclIsFunction] at hhead
+      | name name fields =>
+          simp [globalDeclIsFunction] at hhead
+
+/-- Cake's `evaluate_decls_only_functions` (`panPropsScript.sml:1529`) at the
+    `evalPanValueDeclarations` level: struct-name collection is a no-op for a
+    function-only declaration list, so the state's struct context is kept. -/
+theorem evalPanValueDeclarations_only_functions
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state state' : PanValueProgramState α)
+    (declarations : List (Decl α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (hall : declarations.all globalDeclIsFunction = true)
+    (heval : evalPanValueDeclarations state declarations memoryAccess = some state') :
+    state' = { state with
+      functions := panFunctionEntries declarations ++ state.functions
+      returnShapes := panReturnShapeEntries declarations ++ state.returnShapes
+      parameterShapes :=
+        panParameterShapeEntries declarations ++ state.parameterShapes } := by
+  simp only [evalPanValueDeclarations] at heval
+  cases hcollect : collectPanValueStructs declarations state.structs with
+  | none => simp [hcollect] at heval
+  | some structs =>
+      simp only [hcollect] at heval
+      have hstructs : structs = state.structs := by
+        have hno := collectPanValueStructs_of_functions state.structs declarations hall
+        rw [hcollect] at hno
+        exact Option.some.inj hno
+      subst hstructs
+      have hmain := evalPanValueDeclarationsWithStructs_only_functions state.structs
+        { state with structs := state.structs } state' declarations memoryAccess
+        (by rfl) hall heval
+      simpa using hmain
+
 end Flapjack

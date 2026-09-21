@@ -1430,4 +1430,86 @@ theorem globalCompileProg_localised [BEq String] [Add α] [Mul α]
     | tick => simp [globalCompileProg, localisedProg]
     | annot tag text => simp [globalCompileProg, localisedProg]
 
+theorem mem_of_globalDeclsFilter {predicate : Decl α → Bool} {declaration : Decl α}
+    {declarations : List (Decl α)}
+    (hmem : declaration ∈ globalDeclsFilter predicate declarations) :
+    declaration ∈ declarations := by
+  induction declarations with
+  | nil => rw [globalDeclsFilter.eq_def] at hmem; simp at hmem
+  | cons head tail ih =>
+      simp only [globalDeclsFilter] at hmem
+      by_cases hpred : predicate head = true
+      · simp [hpred] at hmem
+        rcases hmem with heq | htail
+        · subst heq; exact List.mem_cons.mpr (Or.inl rfl)
+        · exact List.mem_cons.mpr (Or.inr (ih htail))
+      · simp [hpred] at hmem
+        exact List.mem_cons.mpr (Or.inr (ih hmem))
+
+theorem globalCompileDecls_function_bodies_localised [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations : List (Decl α)) :
+    ∀ declaration ∈ globalCompileDecls context declarations,
+      (match declaration with
+       | .function function => localisedProg function.body
+       | _ => True) := by
+  induction declarations with
+  | nil => simp [globalCompileDecls]
+  | cons declaration declarations ih =>
+      cases declaration with
+      | function function =>
+          simp only [globalCompileDecls, List.mem_cons]
+          intro found hmem
+          rcases hmem with rfl | hmem
+          · exact globalCompileProg_localised context function.body
+          · exact ih found hmem
+      | decl shape name value =>
+          simp only [globalCompileDecls]
+          intro found hmem
+          exact ih found hmem
+      | exnDecl exception shape =>
+          simp only [globalCompileDecls, List.mem_cons]
+          intro found hmem
+          rcases hmem with rfl | hmem
+          · trivial
+          · exact ih found hmem
+      | name struct fields =>
+          simp only [globalCompileDecls]
+          intro found hmem
+          exact ih found hmem
+
+theorem globalCompileDecs_functions_localised [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α)) :
+    ∀ entry ∈ functions (globalCompileDecs context code).functions,
+      localisedProg entry.2.2.1 := by
+  intro entry hmem
+  simp only [globalCompileDecs] at hmem
+  obtain ⟨declaration, hdecl, hentry⟩ := mem_functions hmem
+  have hmemCompiled : (.function declaration : Decl α) ∈
+      globalCompileDecls (globalCollect context code) code :=
+    mem_of_globalDeclsFilter hdecl
+  have hlocalised := globalCompileDecls_function_bodies_localised
+    (globalCollect context code) code (.function declaration) hmemCompiled
+  rw [hentry]
+  simpa using hlocalised
+
+theorem globalCompileInitializers_localised [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations : List (Decl α)) :
+    ∀ initializer ∈ globalCompileInitializers context declarations,
+      localisedProg initializer := by
+  induction declarations generalizing context with
+  | nil => simp [globalCompileInitializers]
+  | cons declaration declarations ih =>
+      cases declaration with
+      | decl shape name value =>
+          simp only [globalCompileInitializers, List.mem_cons]
+          intro initializer hmem
+          rcases hmem with rfl | hmem
+          · refine ⟨?_, globalCompileExp_localised context value⟩
+            simp [localisedExp, expGlobalVars, expGlobalVars.expGlobalVarsList]
+          · exact ih _ initializer hmem
+      | function function => simpa [globalCompileInitializers] using ih context
+      | exnDecl exception shape => simpa [globalCompileInitializers] using ih context
+      | name struct fields => simpa [globalCompileInitializers] using ih context
+
+
 end Flapjack

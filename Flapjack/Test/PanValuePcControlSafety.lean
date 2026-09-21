@@ -1015,6 +1015,7 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_raised_no_handler
 #check @panValuePcCompileCorrect_of_context_code_and_clocked_call_raised
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_returned_no_handler
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_call_returned_no_handler
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_tailCall
 #check @panValuePcCompileCorrect_of_clocked_call_tailCall
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_returned_destination
@@ -1038,6 +1039,7 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_broke
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_raised
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_timeout
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_call_timeout
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_returned
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_returned_finalFfi
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_returned_value
@@ -1052,6 +1054,11 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_raised
 #check @panValuePcCompileCorrect_of_context_code_and_clocked_decCall_raised
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_timeout
+
+/-! Declaration-call result theorem for the `shape_of v ≠ return_sh` sub-case:
+    a declaration call whose callee returns a wrong-shaped value evaluates to
+    `none`, so the source side of Cake's `DecCall` resume is vacuous. -/
+#check @evalPanValueFfiClockProg_decCall_shape_mismatch
 
 /-! More compositional source handler-safety leaves: clock, annotation, local
     assignment, and single-word store. -/

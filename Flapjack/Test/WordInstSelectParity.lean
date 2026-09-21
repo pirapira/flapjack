@@ -263,9 +263,23 @@ def cakeStoreSelectorOutOfRangeShape : Bool :=
       (.inst (.mem .store 10 7)) => true
   | _ => false
 
+def cakeStoreSelectorVarShape : Bool :=
+  match wordInstSelectStoreCake (α := Nat) 7 (.var 13) 10 with
+  | .seq (.move 0 [(7, 13)])
+      (.inst (.mem .store 10 7)) => true
+  | _ => false
+
+def cakeStoreSelectorConstShape : Bool :=
+  match wordInstSelectStoreCake (α := Nat) 7 (.const 2048) 10 with
+  | .seq (.inst (.const 7 2048))
+      (.inst (.mem .store 10 7)) => true
+  | _ => false
+
 #guard cakeStoreSelectorPositiveShape
 #guard cakeStoreSelectorNegativeShape
 #guard cakeStoreSelectorOutOfRangeShape
+#guard cakeStoreSelectorVarShape
+#guard cakeStoreSelectorConstShape
 
 #guard cakeLoadConstShape
 #guard cakeLoadVarShape

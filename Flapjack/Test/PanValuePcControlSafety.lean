@@ -1071,4 +1071,16 @@ example :
     (PanValueProgNotBrokeContinued_raise (fun _ _ => none) (fun _ _ _ _ _ _ => none)
       ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat) "E" (.const 0))
 
+#check @PanValueProgNotBrokeContinued_while
+
+/-! A while loop over a safe body is discharged by the recursive while leaf. -/
+example :
+    PanValueProgNotBrokeContinued (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat)
+      (.while (.const 0) (.skip : Prog Nat)) :=
+  PanValueProgNotBrokeContinued_while (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+    ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat) (.const 0) (.skip : Prog Nat)
+    (PanValueProgNotBrokeContinued_skip (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat))
+
 end Flapjack.Test.PanValuePcControlSafety

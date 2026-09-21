@@ -1070,4 +1070,78 @@ theorem PanValueProgNotBrokeContinued_shMemStore
           | nStruct structName fields =>
               simp [evalPanValueProgWithPrimitiveCallsAndFfi, haddress] at h
 
+/-! A while loop whose body never exposes a loop label is itself safe (the body
+    result is either normal/continued, which recurse, or returned/raised, which
+    propagate; a broke body result is converted to normal).  Proved by induction on
+    the structural fuel. -/
+theorem PanValueProgNotBrokeContinued_while
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (condition : Exp α) (body : Prog α)
+    (hbody : PanValueProgNotBrokeContinued primitive handler structs functions
+      baseAddress topAddress bytesInWord body) :
+    PanValueProgNotBrokeContinued primitive handler structs functions
+      baseAddress topAddress bytesInWord (.while condition body) := by
+  intro fuel
+  induction fuel with
+  | zero =>
+      intro locals globals memory result h
+      simp [evalPanValueProgWithPrimitiveCallsAndFfi] at h
+  | succ fuel ih =>
+      intro locals globals memory result h
+      cases hcond : evalPanValueExp structs locals globals memory baseAddress
+          topAddress bytesInWord condition with
+      | none => simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcond] at h
+      | some conditionResult =>
+          cases conditionResult with
+          | word conditionValue =>
+              by_cases hz : (conditionValue == 0) = true
+              · simp only [evalPanValueProgWithPrimitiveCallsAndFfi, hcond,
+                  Option.bind_eq_bind, Option.bind_some, hz, if_true, Option.pure_def,
+                  Option.some.injEq] at h
+                subst h
+                exact ⟨fun l g m => by simp, fun l g m => by simp⟩
+              · cases hbodyEval : evalPanValueProgWithPrimitiveCallsAndFfi primitive
+                    handler structs functions baseAddress topAddress bytesInWord fuel
+                    locals globals memory body with
+                | none =>
+                    simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcond, hz,
+                      hbodyEval] at h
+                | some bodyResult =>
+                    have hbsafe := hbody fuel locals globals memory bodyResult hbodyEval
+                    cases bodyResult with
+                    | normal bl bgl bm =>
+                        simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcond, hz,
+                          hbodyEval] at h
+                        exact ih bl bgl bm result h
+                    | continued bl bgl bm =>
+                        simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcond, hz,
+                          hbodyEval] at h
+                        exact ih bl bgl bm result h
+                    | broke bl bgl bm =>
+                        simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcond, hz,
+                          hbodyEval] at h
+                        subst h
+                        exact ⟨fun l g m => by simp, fun l g m => by simp⟩
+                    | returned bl bgl bm bv =>
+                        simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcond, hz,
+                          hbodyEval] at h
+                        subst h
+                        exact hbsafe
+                    | raised bl bgl bm bex bv =>
+                        simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcond, hz,
+                          hbodyEval] at h
+                        subst h
+                        exact hbsafe
+          | rStruct fields =>
+              simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcond] at h
+          | nStruct name fields =>
+              simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcond] at h
+
 end Flapjack

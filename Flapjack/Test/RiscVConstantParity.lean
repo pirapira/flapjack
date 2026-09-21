@@ -23,6 +23,17 @@ example :
       some [.ori 4 0 (BitVec.ofNat 64 0)] := by
   decide
 
+/- The same Cake boundary is preserved by the executable Lab materializer. -/
+example :
+    labConstInstructions (width := 64) 4 0 31 0 =
+      [.ori 4 0 (BitVec.ofNat 64 0)] := by
+  decide
+
+example :
+    labConstInstructions (width := 64) 4 0 31 (2 ^ 64 - 1) =
+      [.ori 4 0 (BitVec.ofNat 64 0xfff)] := by
+  decide
+
 example :
     wordConstToInstructions (width := 64) 4 (BitVec.ofNat 64 0x12) =
       some [.ori 4 0 (BitVec.ofNat 64 0x12)] := by

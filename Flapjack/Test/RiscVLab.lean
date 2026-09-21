@@ -575,4 +575,20 @@ example :
         .addi 1 1 (0 - BitVec.ofNat 64 4)] := by
   decide
 
+/- The negative PC-relative side uses the same Cake signed-low carry rule:
+   -2048 keeps a zero high word, while -2049 rounds the high word down. -/
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 0)] 2048
+      (.locValue 5 ⟨1, 0⟩) =
+      some [.auipc 5 (BitVec.ofNat 64 0),
+        .addi 5 5 (0 - BitVec.ofNat 64 2048)] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 0)] 2049
+      (.locValue 5 ⟨1, 0⟩) =
+      some [.auipc 5 (0 - BitVec.ofNat 64 1),
+        .addi 5 5 (BitVec.ofNat 64 2047)] := by
+  decide
+
 end Flapjack.RiscV

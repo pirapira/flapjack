@@ -703,6 +703,47 @@ theorem sizeOfEids_panSimpDecls (declarations : List (Decl α)) :
   rw [panSimpDecls_eq_map]
   exact sizeOfEids_map_panSimpDecl declarations
 
+/-- The cons equation for `sizeOfEids`, stated as an `if` on `isExnDecl`. -/
+theorem sizeOfEids_cons (declaration : Decl α) (declarations : List (Decl α)) :
+    sizeOfEids (declaration :: declarations) =
+      if isExnDecl declaration then 1 + sizeOfEids declarations
+      else sizeOfEids declarations := by
+  cases declaration <;> rw [sizeOfEids.eq_def] <;> simp [isExnDecl]
+
+/-- Cake's `size_of_eids_structs_compile_eq`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:305`): the `pan_structs`
+    pass keeps exactly the exception declarations, so the exception-identifier
+    count is unchanged. -/
+theorem sizeOfEids_structCompileDecls [BEq String]
+    (declarations : List (Decl α)) (context : StructPassContext) :
+    sizeOfEids (structCompileDecls declarations context).1 =
+      sizeOfEids declarations := by
+  induction declarations generalizing context with
+  | nil => simp [structCompileDecls]
+  | cons declaration declarations ih =>
+      cases declaration with
+      | decl shape name value =>
+          simp only [structCompileDecls]
+          simpa [sizeOfEids_cons, isExnDecl] using ih _
+      | function fn =>
+          simp only [structCompileDecls]
+          simpa [sizeOfEids_cons, isExnDecl] using ih context
+      | exnDecl exception shape =>
+          simp only [structCompileDecls]
+          simpa [sizeOfEids_cons, isExnDecl] using ih context
+      | name structName fields =>
+          simp only [structCompileDecls]
+          simpa [sizeOfEids_cons, isExnDecl] using ih context
+
+/-- Cake's `size_of_eids_structs_compile_eq`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:305`). -/
+theorem sizeOfEids_structCompileTop (declarations : List (Decl α)) :
+    sizeOfEids (structCompileTop declarations) = sizeOfEids declarations := by
+  unfold structCompileTop
+  dsimp only
+  exact sizeOfEids_structCompileDecls declarations
+    (structGetNames { structs := [], locals := [], globals := [] } declarations)
+
 def globalResortDecls (declarations : List (Decl α)) : List (Decl α) :=
   globalDeclsFilter globalDeclIsName declarations ++
     globalDeclsFilter globalDeclIsException declarations ++

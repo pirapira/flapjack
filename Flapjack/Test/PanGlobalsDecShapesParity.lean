@@ -504,4 +504,22 @@ def panSimpNoNamesGuard : Bool :=
 #eval panSimpNoNamesGuard
 #guard panSimpNoNamesGuard
 
+/-! Cake's `size_of_eids_structs_compile_eq`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:305`). -/
+
+def structEidsDecls : List (Decl Nat) :=
+  [.exnDecl "E" .one, .decl .one "g" (.const 1), .name "S" []]
+
+theorem sizeOfEids_structCompileTop_fixture :
+    sizeOfEids (structCompileTop structEidsDecls) =
+      sizeOfEids structEidsDecls :=
+  sizeOfEids_structCompileTop structEidsDecls
+
+def structEidsGuard : Bool :=
+  sizeOfEids (structCompileTop structEidsDecls) == 1 &&
+    sizeOfEids structEidsDecls == 1
+
+#eval structEidsGuard
+#guard structEidsGuard
+
 end Flapjack.Test.PanGlobalsDecShapesParity

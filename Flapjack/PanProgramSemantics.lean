@@ -169,6 +169,40 @@ theorem evalPanValueDeclarationsWithStructs_append
               exact ih _
             · simp [hexists, hwf]
 
+/-- Cake's `evaluate_decl_commute`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1472`): a function
+    declaration commutes past a global declaration, because the function's
+    well-formedness check depends only on the struct context while the global
+    initializer reads only globals and memory. -/
+theorem evalPanValueDeclarationsWithStructs_function_decl_commute
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext) (state : PanValueProgramState α)
+    (declaration : FunDecl α) (shape : Shape) (name : DeclarationName)
+    (expression : Exp α) (declarations : List (Decl α))
+    (memoryAccess : Option (PanValueMemoryAccess α)) :
+    evalPanValueDeclarationsWithStructs structs state
+        (.function declaration :: .decl shape name expression :: declarations)
+        memoryAccess =
+      evalPanValueDeclarationsWithStructs structs state
+        (.decl shape name expression :: .function declaration :: declarations)
+        memoryAccess := by
+  simp only [evalPanValueDeclarationsWithStructs]
+  cases hval : evalPanValueExp structs (fun _ => none) state.globals
+      state.memory state.baseAddress state.topAddress state.bytesInWord
+      expression (memoryAccess := memoryAccess) with
+  | none => simp
+  | some value =>
+      by_cases hmatch :
+          panShapeMatches (panValueShape structs value) shape = true
+      · by_cases hwf : (declaration.params.all
+            (fun parameter => isWfShape structs parameter.2) &&
+          isWfShape structs declaration.returnShape) = true
+        · simp [hmatch, hwf]
+        · simp [hwf]
+      · simp [hmatch]
+
 def evalPanValueProgram
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

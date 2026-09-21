@@ -868,6 +868,18 @@ def resetMoveRelatedGuard : Bool :=
 
 #guard resetMoveRelatedGuard
 
+/- Cake's `remove_colours` (`reg_allocScript.sml:874-897`) removes every
+   fixed-neighbour colour while leaving allocation and stack temporary tags
+   untouched. -/
+def removeColoursGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      nodeTag := CakeNodeMap.ofNatInfoMap 4
+        [(1, .fixed 0), (2, .fixed 2), (3, .aTemp)] }
+  cakeRemoveColours state [1, 3, 2] [0, 1, 2, 3] == [1, 3]
+
+#guard removeColoursGuard
+
 /- The HOL allocator updates fixed-size array cells.  Repeated writes to an
    existing node must therefore not retain an unbounded history in the Lean
    association-list representation. -/
@@ -1040,7 +1052,7 @@ def parityGuard : Bool :=
     resortMovesSpOrderGuard && bgOkOrderGuard &&
     qsortTiesTwoGuard && qsortTiesThreeGuard && qsortDescGuard &&
     stempBadColourTieGuard && raMovesStempGuard && raMovesStempHiGuard &&
-    negFirstMatchProjectionGuard && resetMoveRelatedGuard
+    negFirstMatchProjectionGuard && resetMoveRelatedGuard && removeColoursGuard
     && mapUpdateBoundedGuard && sourceSpillCostKeyGuard &&
     sourceSpillCostRoundTripGuard && sourceMovePhysicalFallbackGuard
     && deadMovePriorityGuard
@@ -1080,6 +1092,7 @@ def runChecks : IO Bool := do
     movesToSpOrderGuard, resortMovesSpOrderGuard,
     qsortTiesThreeGuard, qsortDescGuard, raMovesStempGuard,
     raMovesStempHiGuard, negFirstMatchProjectionGuard, resetMoveRelatedGuard,
+    removeColoursGuard,
     mapUpdateBoundedGuard,
     deadMovePriorityGuard, deadProgramPriorityGuard, sortMovesTailSplitGuard,
     sourceSpillCostKeyGuard, sourceMovePhysicalFallbackGuard,

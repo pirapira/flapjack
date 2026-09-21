@@ -307,6 +307,33 @@ def globalRenameDecls [BEq String]
       declaration :: globalRenameDecls source target declarations
 termination_by declarations => sizeOf declarations
 
+/-! Counterpart of Cake's `fperm_decs_append`
+    (`pan_globalsProofScript.sml:1663`): renaming distributes over
+    declaration-list concatenation. -/
+theorem globalRenameDecls_append [BEq String] (source target : FunName)
+    (declarations rest : List (Decl α)) :
+    globalRenameDecls source target (declarations ++ rest) =
+      globalRenameDecls source target declarations ++
+        globalRenameDecls source target rest := by
+  induction declarations with
+  | nil => simp [globalRenameDecls]
+  | cons declaration declarations ih =>
+      cases declaration <;> simp [globalRenameDecls, ih]
+
+/-! Counterpart of Cake's `functions_fperm_decs`
+    (`pan_globalsProofScript.sml:1701`): the function table of a renamed
+    declaration list is the renamed function table. -/
+theorem functions_globalRenameDecls [BEq String] (source target : FunName)
+    (declarations : List (Decl α)) :
+    functions (globalRenameDecls source target declarations) =
+      (functions declarations).map (fun entry =>
+        (globalRenameFunctionName source target entry.1, entry.2.1,
+          globalRenameProg source target entry.2.2.1, entry.2.2.2)) := by
+  induction declarations with
+  | nil => simp [globalRenameDecls, functions]
+  | cons declaration declarations ih =>
+      cases declaration <;> simp [globalRenameDecls, functions, ih]
+
 def globalFunctionNames : List (Decl α) → List FunName
   | [] => []
   | .function declaration :: declarations =>

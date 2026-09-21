@@ -252,4 +252,32 @@ theorem list_map_third_map_eq {α β γ δ ε : Type} (f : γ → δ) (g : δ �
   | nil => rfl
   | cons t ts ih => simp [ih]
 
+/-! Cake's `compile_eval_correct` (`pan_simpProofScript.sml:489-...`): an
+    expression that evaluates successfully before `pan_simp` evaluates to the
+    same value in any state related by `state_rel`.  `pan_simp` rewrites only
+    function bodies, which expression evaluation never observes, so the
+    Flapjack counterpart follows from the component equalities recorded in
+    `panValueProgramStateRel`. -/
+
+/-- Expression-level counterpart of Cake's `compile_eval_correct`: evaluation
+    is invariant under `panValueProgramStateRel` (locals are passed
+    explicitly because `PanValueProgramState` does not store them). -/
+theorem evalPanValueExp_panValueProgramStateRel
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext) (locals : VarName → Option (PanValue α))
+    (s t : PanValueProgramState α) (hrel : panValueProgramStateRel s t)
+    (expression : Exp α) (memoryAccess : Option (PanValueMemoryAccess α))
+    (value : PanValue α)
+    (hs : evalPanValueExp structs locals s.globals s.memory s.baseAddress
+        s.topAddress s.bytesInWord expression (memoryAccess := memoryAccess) =
+      some value) :
+    evalPanValueExp structs locals t.globals t.memory t.baseAddress
+      t.topAddress t.bytesInWord expression (memoryAccess := memoryAccess) =
+      some value := by
+  obtain ⟨_hstructs, hglobals, hmemory, _hret, _hparam, _hexn, hbase, htop,
+    hbiw, _hfuncs⟩ := hrel
+  simpa only [hglobals, hmemory, hbase, htop, hbiw] using hs
+
 end Flapjack

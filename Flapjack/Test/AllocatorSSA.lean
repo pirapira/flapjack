@@ -71,7 +71,7 @@ example :
     wordSsaFreshList, wordSsaFresh, wordSsaRead, lookupNatInfo,
     wordSsaReadCutsets, wordSsaRestrict, wordSsaSeq, List.eraseDups,
     List.eraseDupsBy, List.eraseDupsBy.loop,
-    NumSet.fromList, NumSet.toAList, NumSet.toSet, NumSet.insert,
+    NumSet.fromList, NumSet.fromAList, NumSet.toAList, NumSet.toSet, NumSet.insert,
     NumSet.insertFuel, NumSet.lrnext, NumSet.lrnextFuel, NumSet.insertList]
 
 example :
@@ -126,7 +126,7 @@ example :
     wordSsaFresh, wordSsaRenameExp, wordSsaRead, wordSsaKeys,
     wordSsaFixInconsistencies, wordSsaPriorityMove, wordSsaBranchPriority,
     wordSsaMergeMoves, wordSsaFakeInconsistencyMoves, wordSsaForceRename,
-    NumSet.fromList, NumSet.toAList, NumSet.toSet, NumSet.insert, NumSet.insertFuel, NumSet.lrnext, NumSet.lrnextFuel, NumSet.insertList,
+    NumSet.fromList, NumSet.fromAList, NumSet.toAList, NumSet.toSet, NumSet.insert, NumSet.insertFuel, NumSet.lrnext, NumSet.lrnextFuel, NumSet.insertList,
     wordSsaSeq, lookupNatInfo,
     List.eraseDups, List.eraseDupsBy, List.eraseDupsBy.loop]
 
@@ -193,7 +193,7 @@ example :
     wordSsaListNextVarRenameMove, wordSsaReadCutsets, wordSsaRestrict,
     wordSsaFreshList, wordSsaFresh, wordSsaRead, wordSsaSeq,
     List.eraseDups, List.eraseDupsBy, List.eraseDupsBy.loop, lookupNatInfo,
-    NumSet.fromList, NumSet.toAList, NumSet.toSet, NumSet.insert,
+    NumSet.fromList, NumSet.fromAList, NumSet.toAList, NumSet.toSet, NumSet.insert,
     NumSet.insertFuel, NumSet.lrnext, NumSet.lrnextFuel, NumSet.insertList]
 
 example :
@@ -236,7 +236,7 @@ example :
     wordSsaListNextVarRenameMove, wordSsaReadCutsets, wordSsaRestrict,
     wordSsaFreshList, wordSsaFresh, wordSsaRead, wordSsaSeq,
     List.eraseDups, List.eraseDupsBy, List.eraseDupsBy.loop, lookupNatInfo,
-    NumSet.fromList, NumSet.toAList, NumSet.toSet, NumSet.insert,
+    NumSet.fromList, NumSet.fromAList, NumSet.toAList, NumSet.toSet, NumSet.insert,
     NumSet.insertFuel, NumSet.lrnext, NumSet.lrnextFuel, NumSet.insertList]
 
 example :

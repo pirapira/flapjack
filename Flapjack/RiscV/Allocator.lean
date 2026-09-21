@@ -1659,7 +1659,8 @@ def wordProgClashAnalysis : WordProg α → List Nat →
         handlerEntryEdges ++ handlerEdges ++ returnEdges ++
           wordProgAtomicClashesFast callProgram liveAfter)
   | program, liveOut =>
-      (wordProgLiveBefore program liveOut, wordProgAtomicClashes program liveOut)
+      (wordProgLiveBeforeFast program liveOut,
+        wordProgAtomicClashesFast program liveOut)
 termination_by program => sizeOf program
 decreasing_by
   all_goals first | decreasing_trivial | simp_wf
@@ -2593,27 +2594,30 @@ theorem wordAllocateProgramWithClashTreeAndColour_success
 
 theorem wordProgClashAnalysis_skip :
     wordProgClashAnalysis (.skip : WordProg α) [] = ([], []) := by
-  simp [wordProgClashAnalysis, wordProgReadVars,
-    wordProgWriteVars, wordProgLiveBefore, wordProgAtomicClashes,
-    wordClashPairs]
+  simp [wordProgClashAnalysis, wordProgLiveBeforeFast,
+    wordProgReadVarsFastAcc, wordProgWriteVarsFast,
+    wordProgWriteVarsFastAcc, wordProgAtomicClashesFast,
+    wordClashPairsFast, wordClashPairsFastAcc]
 
 theorem wordProgClashAnalysis_seq :
     wordProgClashAnalysis
         ((.seq (.assign 0 (.var 1)) (.assign 2 (.var 0))) : WordProg α) [] =
       ([1], []) := by
-  simp [wordProgClashAnalysis, wordProgReadVars,
-    wordProgWriteVars, wordProgLiveBefore, wordProgAtomicClashes,
-    wordClashPairs,
-    wordExpReadVars]
+  simp [wordProgClashAnalysis, wordProgLiveBeforeFast,
+    wordProgReadVarsFastAcc, wordProgWriteVarsFast,
+    wordProgWriteVarsFastAcc, wordProgAtomicClashesFast,
+    wordClashPairsFast, wordClashPairsFastAcc, wordExpReadVarsFastAcc]
 
 theorem wordProgClashAnalysis_ite :
     wordProgClashAnalysis
         ((.ite .equal 0 (.reg 1)
           (.assign 2 (.var 0)) (.assign 3 (.var 0))) : WordProg α) [] =
       ([0, 1], []) := by
-  simp [wordProgClashAnalysis, wordProgReadVars, wordProgWriteVars,
-    wordProgLiveBefore, wordProgAtomicClashes, wordClashPairs,
-    wordListUnion, wordExpReadVars, List.eraseDups, List.eraseDupsBy,
+  simp [wordProgClashAnalysis, wordProgLiveBeforeFast,
+    wordProgReadVarsFastAcc, wordProgWriteVarsFast,
+    wordProgWriteVarsFastAcc, wordProgAtomicClashesFast,
+    wordClashPairsFast, wordClashPairsFastAcc, wordListUnion,
+    wordExpReadVarsFastAcc, List.eraseDups, List.eraseDupsBy,
     List.eraseDupsBy.loop]
 
 theorem wordLinearClashAnalysis_empty (liveOut : List Nat) :

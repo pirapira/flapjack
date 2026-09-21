@@ -113,9 +113,10 @@ example [OfNat α 1] :
     wordRegisterIsAllocatable,
     wordColouringUsesAllocatable, wordColouringRespectsClashes,
     wordProgClashAnalysis, wordProgVariables, wordProgReadVars,
-    wordProgWriteVars, wordProgLiveBefore, wordProgAtomicClashes,
-    wordClashPairs,
-    wordExpReadVars, loopAccVars, loopInsert,
+    wordProgWriteVars, wordProgLiveBeforeFast, wordProgReadVarsFastAcc,
+    wordProgWriteVarsFast, wordProgWriteVarsFastAcc,
+    wordProgAtomicClashesFast, wordClashPairsFast, wordClashPairsFastAcc,
+    wordExpReadVarsFastAcc, wordExpReadVars, loopAccVars, loopInsert,
     loopToWordProg, wordCompileExp, wordFindVar, wordMapVars, lookupNatInfo,
     List.eraseDups, List.eraseDupsBy, List.eraseDupsBy.loop]
 
@@ -130,8 +131,10 @@ example [OfNat α 1] :
     wordNeighbours, wordUsedRegisters, wordRegisterIsAllocatable,
     wordColouringUsesAllocatable, wordColouringRespectsClashes,
     wordProgClashAnalysis, wordProgVariables, wordProgReadVars,
-    wordProgWriteVars, wordProgLiveBefore, wordProgAtomicClashes,
-    wordClashPairs, wordExpReadVars, loopAccVars, loopInsert,
+    wordProgWriteVars, wordProgLiveBeforeFast, wordProgReadVarsFastAcc,
+    wordProgWriteVarsFast, wordProgWriteVarsFastAcc,
+    wordProgAtomicClashesFast, wordClashPairsFast, wordClashPairsFastAcc,
+    wordExpReadVarsFastAcc, wordExpReadVars, loopAccVars, loopInsert,
     loopToWordProg, wordCompileExp, wordFindVar,
     wordApplyColour, wordApplyColourExp, wordMapVars, lookupNatInfo,
     List.eraseDups, List.eraseDupsBy, List.eraseDupsBy.loop]

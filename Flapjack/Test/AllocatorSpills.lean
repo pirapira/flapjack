@@ -13,14 +13,16 @@ theorem wordAllocateSsaProgramWithSpills_example :
   simp [wordAllocateSsaProgramWithSpills, wordSsaRenameProgram,
     wordSsaRenameProgramWithLoops, wordSsaRenameExp, wordSsaFresh,
     wordSsaRead, wordProgClashAnalysis, wordProgReadVars,
-    wordProgWriteVars, wordProgLiveBefore, wordProgAtomicClashes,
-    wordClashPairs, wordProgVariables, wordAllocateVarsWithSpills,
+    wordProgWriteVars, wordProgLiveBeforeFast, wordProgReadVarsFastAcc,
+    wordProgWriteVarsFast, wordProgWriteVarsFastAcc,
+    wordProgAtomicClashesFast, wordClashPairsFast, wordClashPairsFastAcc,
+    wordProgVariables, wordAllocateVarsWithSpills,
     wordGreedyAllocateWithSpills, wordUsedLocationRegisters,
     wordColourCandidates, wordFirstAvailable, wordNeighbours,
     wordPreferredRegister, wordAllocatableRegisters,
     wordSpillAllocationRespectsClashes, lookupNatInfo,
     wordProgSpecialLocationsSafe,
-    wordExpReadVars, List.eraseDups, List.eraseDupsBy,
+    wordExpReadVarsFastAcc, wordExpReadVars, List.eraseDups, List.eraseDupsBy,
     List.eraseDupsBy.loop]
 
 example :
@@ -70,14 +72,16 @@ example :
     simp [wordAllocateSsaProgramWithSpills, wordSsaRenameProgram,
       wordSsaRenameProgramWithLoops, wordSsaRenameExp, wordSsaFresh,
       wordSsaRead, wordProgClashAnalysis, wordProgReadVars,
-      wordProgWriteVars, wordProgLiveBefore, wordProgAtomicClashes,
-      wordClashPairs, wordProgVariables, wordAllocateVarsWithSpills,
+      wordProgWriteVars, wordProgLiveBeforeFast, wordProgReadVarsFastAcc,
+      wordProgWriteVarsFast, wordProgWriteVarsFastAcc,
+      wordProgAtomicClashesFast, wordClashPairsFast, wordClashPairsFastAcc,
+      wordProgVariables, wordAllocateVarsWithSpills,
       wordGreedyAllocateWithSpills, wordUsedLocationRegisters,
       wordColourCandidates, wordFirstAvailable, wordNeighbours,
       wordPreferredRegister, wordAllocatableRegisters,
       wordSpillAllocationRespectsClashes, lookupNatInfo,
       wordProgSpecialLocationsSafe,
-      wordExpReadVars, List.eraseDups, List.eraseDupsBy,
+      wordExpReadVarsFastAcc, wordExpReadVars, List.eraseDups, List.eraseDupsBy,
       List.eraseDupsBy.loop]
   have h := wordAllocateSsaProgramWithSpills_maps_variables
     ({ current := [], next := 10 } : WordSsaState)

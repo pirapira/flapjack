@@ -1,6 +1,7 @@
 import Flapjack.PanSimp
 import Flapjack.PanSimpEvaluate
 import Flapjack.PanGlobals
+import Flapjack.PanValueFfiClockShift
 
 namespace Flapjack.Test.PanSimpParity
 
@@ -2651,5 +2652,12 @@ example : PanValueFfiClockNormalAdequateProgFromFloor 3 3 evaluatorContext
       PanValueFfiClockNormalProg.skip (PanValueFfiClockNormalProg.annot "tag" "text"))
 
 #check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_panSimpProg
+
+-- Clock-shift arithmetic needed by a whole-program analogue of Cake
+-- `evaluate_add_clock_eq`.
+#check @Flapjack.decPanClock_add
+#check @Flapjack.decPanClock_add_of_pos
+
+example : decPanClock (5 + 3) = decPanClock 5 + 3 := decPanClock_add 5 3 (by decide)
 
 end Flapjack.Test.PanSimpParity

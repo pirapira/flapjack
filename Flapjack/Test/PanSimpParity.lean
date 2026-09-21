@@ -1122,6 +1122,30 @@ example (bodyClock : Nat)
     (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi bodyClock
     (by simp [evalPanValueExp]) (by decide) (by decide) hbody
 
+/-! A normal loop body re-enters the loop at the call-aware budget. -/
+example (bodyClock : Nat)
+    (hbody : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 (progCallFuel 7 (.skip : Prog Nat))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 0
+      (.skip : Prog Nat) none none none =
+      some (.control (.normal (fun _ => none) (fun _ => none)
+        (fun _ => none) evaluatorFfi), bodyClock)) :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8
+      (progCallFuel 7 (.while (.const 5) (.skip : Prog Nat)))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+      (.while (.const 5) (.skip : Prog Nat)) none none none =
+      evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+        evaluatorHandler [] [] 0 0 8 (progCallFuel 7 (.skip : Prog Nat))
+        (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi bodyClock
+        (.while (.const 5) (.skip : Prog Nat)) none none none := by
+  exact evalPanValueFfiClockProg_while_normal_some_progCallFuel
+    evaluatorContext (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    (.const 5) (.skip : Prog Nat) none none none 5
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi bodyClock
+    (by simp [evalPanValueExp]) (by decide) (by decide) hbody
+
 theorem clocked_seq_normal_exposes_components :
     ∃ (middleLocals middleGlobals : VarName → Option (PanValue Nat))
       (middleMemory : Nat → Option (PanValue Nat)) (middleFfi : FfiState Unit)
@@ -1578,6 +1602,7 @@ def runChecks : IO Bool := do
   IO.println "PASS pan_simp clocked evaluate_seq_normal_components Cake equation"
   IO.println "PASS pan_simp clocked terminal Seq progCallFuel Cake equation"
   IO.println "PASS pan_simp clocked continued While progCallFuel Cake equation"
+  IO.println "PASS pan_simp clocked normal While progCallFuel Cake equation"
   IO.println "PASS pan_simp Skip/Seq fuel-adequacy fragment Cake bound"
   IO.println "PASS pan_simp clocked ret_to_tail common-fuel Cake equation"
   IO.println "PASS pan_simp clocked pan_simp common-fuel Cake equation"

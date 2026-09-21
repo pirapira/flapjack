@@ -4001,6 +4001,52 @@ theorem evalPanValueFfiClockProg_while_continued_some_progCallFuel
     ma c mh conditionValue nextLocals nextGlobals nextMemory nextFfi bodyClock
     hcondition hnonzero hclock hbody
 
+/-- Call-aware budget form of the normal `While` equation: a normal body
+    result re-enters the loop from the body's resulting state and clock. -/
+theorem evalPanValueFfiClockProg_while_normal_some_progCallFuel
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (clock : Nat) (conditionExp : Exp α) (body : Prog α)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (conditionValue : α)
+    (nextLocals nextGlobals : VarName → Option (PanValue α))
+    (nextMemory : α → Option (PanValue α)) (nextFfi : FfiState σ)
+    (bodyClock : Nat)
+    (hcondition : evalPanValueExp structs locals globals memory baseAddress topAddress
+        bytesInWord conditionExp (memoryAccess := ma) = some (.word conditionValue))
+    (hnonzero : (conditionValue == 0) = false)
+    (hclock : (clock == 0) = false)
+    (hbody : evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (progCallFuel callBudget body)
+        locals globals memory ffi (decPanClock clock) body ma c mh =
+      some (.control (.normal nextLocals nextGlobals nextMemory nextFfi), bodyClock)) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord
+        (progCallFuel callBudget (.while conditionExp body))
+        locals globals memory ffi clock (.while conditionExp body) ma c mh =
+      evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (progCallFuel callBudget body)
+        nextLocals nextGlobals nextMemory nextFfi bodyClock
+        (.while conditionExp body) ma c mh := by
+  have hsize : progCallFuel callBudget (.while conditionExp body) =
+      progCallFuel callBudget body + 1 := by
+    simp only [progCallFuel]
+    omega
+  rw [hsize]
+  exact evalPanValueFfiClockProg_while_normal_some context primitive handler
+    structs functions baseAddress topAddress bytesInWord
+    (progCallFuel callBudget body) locals globals memory ffi clock conditionExp body
+    ma c mh conditionValue nextLocals nextGlobals nextMemory nextFfi bodyClock
+    hcondition hnonzero hclock hbody
+
 /-- Call-aware budget form of the timeout `While` equation. -/
 theorem evalPanValueFfiClockProg_while_timeout_some_progCallFuel
     (context : PanValueFfiContext α)

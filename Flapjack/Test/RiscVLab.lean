@@ -591,4 +591,18 @@ example :
         .addi 5 5 (BitVec.ofNat 64 2047)] := by
   decide
 
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 0)] 2048
+      (.linkValue ⟨1, 0⟩) =
+      some [.auipc 1 (BitVec.ofNat 64 0),
+        .addi 1 1 (0 - BitVec.ofNat 64 2048)] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 0)] 2049
+      (.linkValue ⟨1, 0⟩) =
+      some [.auipc 1 (0 - BitVec.ofNat 64 1),
+        .addi 1 1 (BitVec.ofNat 64 2047)] := by
+  decide
+
 end Flapjack.RiscV

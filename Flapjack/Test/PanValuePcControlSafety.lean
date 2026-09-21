@@ -1067,18 +1067,11 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @PanValueProgNotBrokeContinued_store32
 #check @PanValueProgNotBrokeContinued_storeByte
 
-/-! More compositional source handler-safety leaves: clock, annotation, local
-    assignment, and single-word store. -/
-#check @PanValueProgNotBrokeContinued_tick
-#check @PanValueProgNotBrokeContinued_annot
-#check @PanValueProgNotBrokeContinued_assign_local
-#check @PanValueProgNotBrokeContinued_store
 
-/-! More source handler-safety leaves: global assignment, primitive call, and
-    32/8-bit stores. -/
-#check @PanValueProgNotBrokeContinued_assign_global
-#check @PanValueProgNotBrokeContinued_primitive
-#check @PanValueProgNotBrokeContinued_store32
-#check @PanValueProgNotBrokeContinued_storeByte
+/-! More source handler-safety leaves: external calls and shared-memory
+    load/store. -/
+#check @PanValueProgNotBrokeContinued_extCall
+#check @PanValueProgNotBrokeContinued_shMemLoad
+#check @PanValueProgNotBrokeContinued_shMemStore
 
 end Flapjack.Test.PanValuePcControlSafety

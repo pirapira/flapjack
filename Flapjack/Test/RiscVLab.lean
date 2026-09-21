@@ -292,7 +292,7 @@ example :
       some [
         .srli 31 5 (BitVec.ofNat 64 3),
         .slli 4 5 (BitVec.ofNat 64 61),
-      .or 4 4 31] := by
+        .or 4 4 31] := by
   decide
 
 /-! Cake's `riscv_ast (Inst (Mem mop r1 (Addr r2 a)))` supports every

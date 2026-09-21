@@ -258,6 +258,16 @@ theorem evalPanValueDeclarations_top_exceptions_wf_fixture
         simp [wfExceptionDecls, wfException])
   exact ⟨structs, hcollect, hwf⟩
 
+example (state' : PanValueProgramState Nat)
+    (heval : evalPanValueDeclarations evalRelState wfExceptionDecls none = some state') :
+    ∃ structs : StructContext,
+      collectPanValueStructs wfExceptionDecls evalRelState.structs = some structs ∧
+        state'.exceptions = panExceptionEntries wfExceptionDecls ++ evalRelState.exceptions ∧
+        isWfShape structs (.one : Shape) = true := by
+  exact evalPanValueDeclarations_exception_state_evidence evalRelState state'
+    wfExceptionDecls none (exception := "E") (shape := .one)
+    (by simp [wfExceptionDecls, wfException]) heval
+
 /-! Regression for Cake's `evaluate_decls_append`
     (`cakeml/pancake/semantics/panPropsScript.sml:1540`): evaluating a
     concatenated declaration list is the sequential composition of evaluating
@@ -398,6 +408,14 @@ example (state' : PanValueProgramState Nat)
   exact evalPanValueDeclarationsWithStructs_only_exn_decls ([] : StructContext)
     evalRelState state' onlyExceptionDecls none rfl (by decide) heval
 
+example (state' : PanValueProgramState Nat)
+    (heval : evalPanValueDeclarations evalRelState onlyExceptionDecls none =
+      some state') :
+    state' = { evalRelState with
+      exceptions := panExceptionEntries onlyExceptionDecls ++ evalRelState.exceptions } := by
+  exact evalPanValueDeclarations_only_exn_decls evalRelState state'
+    onlyExceptionDecls none (by decide) heval
+
 /-! Regression for Cake's `evaluate_decls_names`: structure-name
     declarations do not alter the program state during evaluation. -/
 
@@ -418,6 +436,33 @@ example (state' : PanValueProgramState Nat)
     (heval : evalPanValueDeclarations evalRelState exceptionsDecls none = some state') :
     state'.exceptions = panExceptionEntries exceptionsDecls ++ evalRelState.exceptions := by
   exact evalPanValueDeclarations_exceptions evalRelState state' exceptionsDecls none heval
+
+example
+    (primitive : PanPrimitiveHandler Nat) (ffi : PanValueFfiHandler Nat)
+    (fuel : Nat) (entry : FunName) (arguments : List (Exp Nat))
+    (memoryAccess : Option (PanValueMemoryAccess Nat))
+    (memoryHandler : Option (PanValueAcceleratorFfiHandler Nat))
+    (state : PanValueProgramState Nat)
+    (locals globals : VarName → Option (PanValue Nat))
+    (memory : Nat → Option (PanValue Nat)) (exception : ExceptionId)
+    (value : PanValue Nat)
+    (hdeclarations : evalPanValueDeclarations evalRelState exceptionsDecls
+      (memoryAccess := memoryAccess) = some state)
+    (hcall : evalPanValueCallWithPrimitiveCallsAndFfi primitive ffi
+      state.structs state.functions state.baseAddress state.topAddress
+      state.bytesInWord fuel (fun _ => none) state.globals state.memory none
+      entry arguments (memoryAccess := memoryAccess)
+      (contracts := some (PanValueCallContracts.mk state.returnShapes
+        state.exceptions state.parameterShapes))
+      (memoryHandler := memoryHandler) =
+      some (.raised locals globals memory exception value)) :
+    evalPanValueProgram evalRelState primitive ffi fuel exceptionsDecls entry arguments
+      (memoryAccess := memoryAccess) (memoryHandler := memoryHandler) =
+      some (.raised locals globals memory exception value) ∧
+    state.exceptions = panExceptionEntries exceptionsDecls ++ evalRelState.exceptions := by
+  exact evalPanValueProgram_of_declarations_and_raised_call_with_exception_state
+    evalRelState primitive ffi fuel exceptionsDecls entry arguments memoryAccess
+    memoryHandler state locals globals memory exception value hdeclarations hcall
 
 /-! Cake's `decs_stcnames_only_functions` / `decs_stcnames_only_functions2`
     (`cakeml/pancake/semantics/panPropsScript.sml:1592,1600`): struct-free and

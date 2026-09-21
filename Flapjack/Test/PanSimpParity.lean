@@ -266,6 +266,56 @@ theorem clocked_pan_simp_prog_fragment_matches_cake :
   · simp [panSimpProg, seqAssoc, retToTail, panSimpSeqSkipFuel]
   · simp [panSimpSeqSkipFuel]
 
+/-- `Annot` is transparent to the clocked evaluator. -/
+example : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+    [] [] 0 0 8 1 (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    (.annot "tag" "text") =
+    some (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi), 1) := by
+  exact evalPanValueFfiClockProg_annot_some evaluatorContext (fun _ _ => none)
+    evaluatorHandler [] [] 0 0 8 0 (fun _ => none) (fun _ => none) (fun _ => none)
+    evaluatorFfi 1 "tag" "text" none none none
+
+/-- A `Tick` with a nonzero clock succeeds and consumes one clock unit. -/
+example : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+    [] [] 0 0 8 1 (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    (.tick : Prog Nat) =
+    some (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi), 0) := by
+  exact evalPanValueFfiClockProg_tick_some evaluatorContext (fun _ _ => none)
+    evaluatorHandler [] [] 0 0 8 0 (fun _ => none) (fun _ => none) (fun _ => none)
+    evaluatorFfi 1 none none none (by decide)
+
+/-- Compositional success of `Seq`: the second component starts from the first
+    component's post-state and clock. -/
+example : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+    [] [] 0 0 8 2 (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    (.seq (.annot "tag" "text") (.tick : Prog Nat)) =
+    some (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi), 0) := by
+  exact evalPanValueFfiClockProg_seq_some evaluatorContext (fun _ _ => none)
+    evaluatorHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none) (fun _ => none)
+    evaluatorFfi 1 (.annot "tag" "text") (.tick : Prog Nat) none none none
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi)) 0
+    (evalPanValueFfiClockProg_annot_some evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 0 (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi 1 "tag" "text" none none none)
+    (evalPanValueFfiClockProg_tick_some evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 0 (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi 1 none none none (by decide))
+
+/-- A `While` whose condition is zero terminates immediately. -/
+example : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+    [] [] 0 0 8 1 (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    (.while (.const 0) (.skip : Prog Nat)) =
+    some (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi), 1) := by
+  exact evalPanValueFfiClockProg_while_zero_some evaluatorContext (fun _ _ => none)
+    evaluatorHandler [] [] 0 0 8 0 (fun _ => none) (fun _ => none) (fun _ => none)
+    evaluatorFfi 1 (.const 0) (.skip : Prog Nat) none none none 0
+    (by simp [evalPanValueExp]) (by decide)
+
 theorem clocked_seq_normal_exposes_components :
     ∃ (middleLocals middleGlobals : VarName → Option (PanValue Nat))
       (middleMemory : Nat → Option (PanValue Nat)) (middleFfi : FfiState Unit)

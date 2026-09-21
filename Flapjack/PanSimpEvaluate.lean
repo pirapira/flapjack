@@ -1354,4 +1354,130 @@ theorem evalPanValueFfiClockProg_panSimpProg_eq_of_seqSkipFragment
         functions baseAddress topAddress bytesInWord commonFuel locals globals memory
         ffi clock program ma c mh hprogram hsourceFuel]
 
+/-! ## Per-constructor success equations for the clocked evaluator
+
+These are the success-premise building blocks the general fuel-adequacy
+framework needs for the constructors whose leaf/recursive clauses were not yet
+covered: `Annot` and `Tick` (clock-preserving / clock-consuming leaves), `Seq`
+composition, and the terminating `While` with a zero condition.  Each keeps the
+source locals, globals, memory and FFI state visible. -/
+
+theorem evalPanValueFfiClockLeaf_annot
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (clock : Nat) (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (tag text : String)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ)) :
+    evalPanValueFfiClockLeaf context primitive handler structs functions
+        baseAddress topAddress bytesInWord clock locals globals memory ffi
+        (.annot tag text) ma c mh =
+      some (.control (.normal locals globals memory ffi), clock) := by
+  simp [evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps]
+
+theorem evalPanValueFfiClockProg_annot_some
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel : Nat) (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (tag text : String)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ)) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi
+        clock (.annot tag text) ma c mh =
+      some (.control (.normal locals globals memory ffi), clock) := by
+  simp [evalPanValueFfiClockProg, evalPanValueFfiClockLeaf_annot]
+
+theorem evalPanValueFfiClockProg_tick_some
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel : Nat) (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (hclock : clock ≠ 0) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi
+        clock (.tick : Prog α) ma c mh =
+      some (.control (.normal locals globals memory ffi), decPanClock clock) := by
+  simp [evalPanValueFfiClockProg, hclock]
+
+theorem evalPanValueFfiClockProg_seq_some
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel : Nat) (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (first second : Prog α)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (nextLocals nextGlobals : VarName → Option (PanValue α))
+    (nextMemory : α → Option (PanValue α)) (nextFfi : FfiState σ) (nextClock : Nat)
+    (result : PanValueFfiClockOutcome α σ) (resultClock : Nat)
+    (hfirst : evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
+        first ma c mh = some (.control (.normal nextLocals nextGlobals nextMemory nextFfi),
+          nextClock))
+    (hsecond : evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord fuel nextLocals nextGlobals nextMemory nextFfi
+        nextClock second ma c mh = some (result, resultClock)) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+        (.seq first second) ma c mh = some (result, resultClock) := by
+  simp [evalPanValueFfiClockProg, hfirst, hsecond]
+
+theorem evalPanValueFfiClockProg_while_zero_some
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel : Nat) (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (condition : Exp α) (body : Prog α)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (w : α)
+    (hcondition : evalPanValueExp structs locals globals memory baseAddress topAddress
+        bytesInWord condition (memoryAccess := ma) = some (.word w))
+    (hw : (w == 0) = true) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+        (.while condition body) ma c mh =
+      some (.control (.normal locals globals memory ffi), clock) := by
+  simp [evalPanValueFfiClockProg, hcondition, hw]
+
 end Flapjack

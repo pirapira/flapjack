@@ -119,6 +119,17 @@ def colourDefaultExtendedExact : Bool :=
 
 #guard colourDefaultExtendedExact
 
+/-- Direct `total_colour` rows from the Cake setup/colour probe:
+    mapped allocatable names are doubled, physical names retain their
+    hardware number, and unmapped names default to zero. -/
+def colourProbeExact : Bool :=
+  totalColour [(1, 7), (3, 9)] 1 == 14 &&
+    totalColour [(1, 7), (3, 9)] 3 == 18 &&
+    totalColour [(1, 7), (3, 9)] 2 == 2 &&
+    totalColour [(1, 7), (3, 9)] 5 == 0
+
+#guard colourProbeExact
+
 /-- More `merge_stack_only` cases, including allocatable-move propagation. -/
 def mergeStackOnlyExtendedExact : Bool :=
   mergeStackOnly 3 5 [] [7] == ([5], [7]) &&
@@ -161,6 +172,7 @@ def runChecks : IO Bool := do
         limitVarStructureExact),
       ("sp_default and total_colour agree on further oracle values",
         colourDefaultExtendedExact),
+      ("total_colour matches the Cake setup/colour probe", colourProbeExact),
       ("merge_stack_only propagates allocatable moves correctly",
         mergeStackOnlyExtendedExact),
       ("merge_stack_sets and remove_temp_stack agree on further oracle cases",

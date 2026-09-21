@@ -1280,5 +1280,308 @@ theorem option_ne_none_iff_exists {α : Type} (x : Option α) :
     | some a => exact ⟨a, rfl⟩
   · rintro ⟨a, rfl⟩
     exact Option.some_ne_none a
+/-- The well-founded declaration filter agrees with `List.filter`, which makes
+    the core list-filter API available for the resort argument. -/
+theorem globalDeclsFilter_eq_filter (predicate : Decl α → Bool)
+    (declarations : List (Decl α)) :
+    globalDeclsFilter predicate declarations =
+      List.filter predicate declarations := by
+  induction declarations with
+  | nil => simp [globalDeclsFilter]
+  | cons declaration declarations ih =>
+      cases h : predicate declaration <;> simp [globalDeclsFilter, h, ih]
+
+theorem globalDeclsFilter_append (predicate : Decl α → Bool)
+    (left right : List (Decl α)) :
+    globalDeclsFilter predicate (left ++ right) =
+      globalDeclsFilter predicate left ++ globalDeclsFilter predicate right := by
+  simp only [globalDeclsFilter_eq_filter, List.filter_append]
+
+/-- Exception declarations commute past global declarations. -/
+theorem evalPanValueDeclarationsWithStructs_exnDecl_decl_commute
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext) (state : PanValueProgramState α)
+    (exception : ExceptionId) (shape : Shape)
+    (declShape : Shape) (name : DeclarationName) (expression : Exp α)
+    (declarations : List (Decl α))
+    (memoryAccess : Option (PanValueMemoryAccess α)) :
+    evalPanValueDeclarationsWithStructs structs state
+        (.exnDecl exception shape :: .decl declShape name expression :: declarations)
+        memoryAccess =
+      evalPanValueDeclarationsWithStructs structs state
+        (.decl declShape name expression :: .exnDecl exception shape :: declarations)
+        memoryAccess := by
+  simp only [evalPanValueDeclarationsWithStructs]
+  cases hval : evalPanValueExp structs (fun _ => none) state.globals
+      state.memory state.baseAddress state.topAddress state.bytesInWord
+      expression (memoryAccess := memoryAccess) with
+  | none =>
+      by_cases hexists : (lookupInfo exception state.exceptions).isSome = true <;>
+        by_cases hshape : isWfShape structs shape = true <;>
+        simp [hexists, hshape]
+  | some value =>
+      by_cases hmatch : panShapeMatches (panValueShape structs value) declShape = true <;>
+        by_cases hexists : (lookupInfo exception state.exceptions).isSome = true <;>
+        by_cases hshape : isWfShape structs shape = true <;>
+        simp [hmatch, hexists, hshape]
+
+/-- Bubbling a declaration that commutes with every element of `rest` to the
+    end of that list. -/
+theorem evalPanValueDeclarationsWithStructs_bubble_last
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext) (memoryAccess : Option (PanValueMemoryAccess α))
+    (declaration : Decl α) (rest : List (Decl α))
+    (hcomm : ∀ other ∈ rest, ∀ state tail,
+      evalPanValueDeclarationsWithStructs structs state
+          (declaration :: other :: tail) memoryAccess =
+        evalPanValueDeclarationsWithStructs structs state
+          (other :: declaration :: tail) memoryAccess) :
+    ∀ state,
+      evalPanValueDeclarationsWithStructs structs state
+          (declaration :: rest) memoryAccess =
+        evalPanValueDeclarationsWithStructs structs state
+          (rest ++ [declaration]) memoryAccess := by
+  induction rest with
+  | nil => intro state; rw [List.nil_append]
+  | cons other rest ih =>
+      intro state
+      have hcomm' : ∀ x ∈ rest, ∀ state tail,
+          evalPanValueDeclarationsWithStructs structs state
+              (declaration :: x :: tail) memoryAccess =
+            evalPanValueDeclarationsWithStructs structs state
+              (x :: declaration :: tail) memoryAccess :=
+        fun x hx => hcomm x (List.mem_cons_of_mem other hx)
+      rw [hcomm other (List.mem_cons_self ..) state rest]
+      rw [List.cons_append]
+      rw [show other :: declaration :: rest = [other] ++ (declaration :: rest) from rfl]
+      rw [show other :: (rest ++ [declaration]) =
+        [other] ++ (rest ++ [declaration]) from rfl]
+      rw [evalPanValueDeclarationsWithStructs_append]
+      rw [evalPanValueDeclarationsWithStructs_append]
+      cases hstep : evalPanValueDeclarationsWithStructs structs state [other]
+          memoryAccess with
+      | none => rfl
+      | some state' => exact ih hcomm' state'
+
+/-- Moving a declaration out of a middle block and past a tail block it commutes
+    with. -/
+theorem evalPanValueDeclarationsWithStructs_insert_last
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext) (memoryAccess : Option (PanValueMemoryAccess α))
+    (declaration : Decl α) (middle tail : List (Decl α))
+    (hcomm : ∀ other ∈ tail, ∀ state rest,
+      evalPanValueDeclarationsWithStructs structs state
+          (declaration :: other :: rest) memoryAccess =
+        evalPanValueDeclarationsWithStructs structs state
+          (other :: declaration :: rest) memoryAccess) :
+    ∀ state,
+      evalPanValueDeclarationsWithStructs structs state
+          ((middle ++ [declaration]) ++ tail) memoryAccess =
+        evalPanValueDeclarationsWithStructs structs state
+          ((middle ++ tail) ++ [declaration]) memoryAccess := by
+  intro state
+  rw [show (middle ++ [declaration]) ++ tail =
+      middle ++ ([declaration] ++ tail) from by simp [List.append_assoc]]
+  rw [show (middle ++ tail) ++ [declaration] =
+      middle ++ (tail ++ [declaration]) from by simp [List.append_assoc]]
+  rw [evalPanValueDeclarationsWithStructs_append]
+  rw [evalPanValueDeclarationsWithStructs_append]
+  cases h : evalPanValueDeclarationsWithStructs structs state middle memoryAccess with
+  | none => rfl
+  | some state' =>
+      simpa using evalPanValueDeclarationsWithStructs_bubble_last structs memoryAccess
+        declaration tail hcomm state'
+
+/-- Cake's `resort_decls_evaluate`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1874`): the global pass's
+    declaration resort preserves declaration evaluation. -/
+theorem evalPanValueDeclarationsWithStructs_resortDecls
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext) (state : PanValueProgramState α)
+    (declarations : List (Decl α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (hall : declarations.all (fun declaration =>
+      isDecl declaration || isExnDecl declaration ||
+        globalDeclIsFunction declaration) = true) :
+    evalPanValueDeclarationsWithStructs structs state
+        (globalResortDecls declarations) memoryAccess =
+      evalPanValueDeclarationsWithStructs structs state declarations memoryAccess := by
+  have h : ∀ reversed : List (Decl α),
+      (reversed.reverse.all (fun declaration =>
+        isDecl declaration || isExnDecl declaration ||
+          globalDeclIsFunction declaration) = true) →
+      evalPanValueDeclarationsWithStructs structs state
+          (globalResortDecls reversed.reverse) memoryAccess =
+        evalPanValueDeclarationsWithStructs structs state reversed.reverse
+          memoryAccess := by
+    intro reversed
+    induction reversed with
+    | nil => intro _; simp [globalResortDecls, globalDeclsFilter]
+    | cons declaration rest ih =>
+        intro hall
+        rw [List.reverse_cons]
+        rw [List.reverse_cons] at hall
+        have hdecl : (isDecl declaration || isExnDecl declaration ||
+            globalDeclIsFunction declaration) = true :=
+          List.all_eq_true.mp hall declaration
+            (List.mem_append_right rest.reverse (List.mem_singleton_self declaration))
+        have hallRest : rest.reverse.all (fun entry =>
+            isDecl entry || isExnDecl entry ||
+              globalDeclIsFunction entry) = true :=
+          List.all_eq_true.mpr (fun entry hmem =>
+            List.all_eq_true.mp hall entry
+              (List.mem_append_left [declaration] hmem))
+        have hbase := ih hallRest
+        cases declaration with
+        | function function =>
+            have hresort : globalResortDecls (rest.reverse ++ [.function function]) =
+                globalResortDecls rest.reverse ++ [.function function] := by
+              simp only [globalResortDecls, globalDeclsFilter_append]
+              simp [globalDeclsFilter, globalDeclIsName, globalDeclIsException,
+                globalDeclIsGlobal, globalDeclIsFunction]
+            rw [hresort]
+            rw [evalPanValueDeclarationsWithStructs_append]
+            rw [hbase]
+            rw [evalPanValueDeclarationsWithStructs_append]
+        | decl shape name expression =>
+            have hresort : globalResortDecls
+                (rest.reverse ++ [.decl shape name expression]) =
+                (globalDeclsFilter globalDeclIsName rest.reverse ++
+                  globalDeclsFilter globalDeclIsException rest.reverse ++
+                  globalDeclsFilter globalDeclIsGlobal rest.reverse ++
+                  [.decl shape name expression]) ++
+                globalDeclsFilter globalDeclIsFunction rest.reverse := by
+              simp only [globalResortDecls, globalDeclsFilter_append]
+              simp [globalDeclsFilter, globalDeclIsName, globalDeclIsException,
+                globalDeclIsGlobal, globalDeclIsFunction, List.append_assoc]
+            have hcomm : ∀ other ∈
+                  globalDeclsFilter globalDeclIsFunction rest.reverse,
+                ∀ state' tail,
+                  evalPanValueDeclarationsWithStructs structs state'
+                      (.decl shape name expression :: other :: tail) memoryAccess =
+                    evalPanValueDeclarationsWithStructs structs state'
+                      (other :: .decl shape name expression :: tail) memoryAccess := by
+              intro other hmem state' tail
+              have hfun : globalDeclIsFunction other = true :=
+                List.all_eq_true.mp
+                  (globalDeclsFilter_all globalDeclIsFunction rest.reverse) other hmem
+              cases other with
+              | function function =>
+                  exact (evalPanValueDeclarationsWithStructs_function_decl_commute
+                    structs state' function shape name expression tail
+                    memoryAccess).symm
+              | decl _ _ _ => simp [globalDeclIsFunction] at hfun
+              | exnDecl _ _ => simp [globalDeclIsFunction] at hfun
+              | name _ _ => simp [globalDeclIsFunction] at hfun
+            rw [hresort]
+            rw [evalPanValueDeclarationsWithStructs_insert_last structs memoryAccess
+              (.decl shape name expression)
+              (globalDeclsFilter globalDeclIsName rest.reverse ++
+                globalDeclsFilter globalDeclIsException rest.reverse ++
+                globalDeclsFilter globalDeclIsGlobal rest.reverse)
+              (globalDeclsFilter globalDeclIsFunction rest.reverse) hcomm]
+            rw [show
+              (globalDeclsFilter globalDeclIsName rest.reverse ++
+                  globalDeclsFilter globalDeclIsException rest.reverse ++
+                  globalDeclsFilter globalDeclIsGlobal rest.reverse) ++
+                globalDeclsFilter globalDeclIsFunction rest.reverse =
+              globalResortDecls rest.reverse from rfl]
+            rw [evalPanValueDeclarationsWithStructs_append]
+            rw [hbase]
+            rw [evalPanValueDeclarationsWithStructs_append]
+        | exnDecl exception shape =>
+            have hresort : globalResortDecls (rest.reverse ++ [.exnDecl exception shape]) =
+                (globalDeclsFilter globalDeclIsName rest.reverse ++
+                  globalDeclsFilter globalDeclIsException rest.reverse ++
+                  [.exnDecl exception shape]) ++
+                (globalDeclsFilter globalDeclIsGlobal rest.reverse ++
+                  globalDeclsFilter globalDeclIsFunction rest.reverse) := by
+              simp only [globalResortDecls, globalDeclsFilter_append]
+              simp [globalDeclsFilter, globalDeclIsName, globalDeclIsException,
+                globalDeclIsGlobal, globalDeclIsFunction, List.append_assoc]
+            have hcomm : ∀ other ∈
+                  globalDeclsFilter globalDeclIsGlobal rest.reverse ++
+                    globalDeclsFilter globalDeclIsFunction rest.reverse,
+                ∀ state' tail,
+                  evalPanValueDeclarationsWithStructs structs state'
+                      (.exnDecl exception shape :: other :: tail) memoryAccess =
+                    evalPanValueDeclarationsWithStructs structs state'
+                      (other :: .exnDecl exception shape :: tail) memoryAccess := by
+              intro other hmem state' tail
+              rcases List.mem_append.mp hmem with hmem | hmem
+              · have hglobal : globalDeclIsGlobal other = true :=
+                  List.all_eq_true.mp
+                    (globalDeclsFilter_all globalDeclIsGlobal rest.reverse) other hmem
+                cases other with
+                | decl declShape declName declExpr =>
+                    exact evalPanValueDeclarationsWithStructs_exnDecl_decl_commute
+                      structs state' exception shape declShape declName declExpr
+                      tail memoryAccess
+                | function _ => simp [globalDeclIsGlobal] at hglobal
+                | exnDecl _ _ => simp [globalDeclIsGlobal] at hglobal
+                | name _ _ => simp [globalDeclIsGlobal] at hglobal
+              · have hfun : globalDeclIsFunction other = true :=
+                  List.all_eq_true.mp
+                    (globalDeclsFilter_all globalDeclIsFunction rest.reverse) other hmem
+                cases other with
+                | function function =>
+                    exact (evalPanValueDeclarationsWithStructs_function_exnDecl_commute
+                      structs state' function exception shape tail memoryAccess).symm
+                | decl _ _ _ => simp [globalDeclIsFunction] at hfun
+                | exnDecl _ _ => simp [globalDeclIsFunction] at hfun
+                | name _ _ => simp [globalDeclIsFunction] at hfun
+            rw [hresort]
+            rw [evalPanValueDeclarationsWithStructs_insert_last structs memoryAccess
+              (.exnDecl exception shape)
+              (globalDeclsFilter globalDeclIsName rest.reverse ++
+                globalDeclsFilter globalDeclIsException rest.reverse)
+              (globalDeclsFilter globalDeclIsGlobal rest.reverse ++
+                globalDeclsFilter globalDeclIsFunction rest.reverse) hcomm]
+            rw [show
+              (globalDeclsFilter globalDeclIsName rest.reverse ++
+                  globalDeclsFilter globalDeclIsException rest.reverse) ++
+                (globalDeclsFilter globalDeclIsGlobal rest.reverse ++
+                  globalDeclsFilter globalDeclIsFunction rest.reverse) =
+              globalResortDecls rest.reverse from by
+              rw [globalResortDecls]
+              exact (List.append_assoc
+                (globalDeclsFilter globalDeclIsName rest.reverse ++
+                  globalDeclsFilter globalDeclIsException rest.reverse)
+                (globalDeclsFilter globalDeclIsGlobal rest.reverse)
+                (globalDeclsFilter globalDeclIsFunction rest.reverse)).symm]
+            rw [evalPanValueDeclarationsWithStructs_append]
+            rw [hbase]
+            rw [evalPanValueDeclarationsWithStructs_append]
+        | name name fields =>
+            simp [isDecl, isExnDecl, globalDeclIsFunction] at hdecl
+  simpa using h declarations.reverse (by simpa using hall)
+
+/-- Cake's `resort_decls_evaluate_IMP`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1943`). -/
+theorem evalPanValueDeclarationsWithStructs_resortDecls_imp
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext) (state state' : PanValueProgramState α)
+    (declarations : List (Decl α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (hall : declarations.all (fun declaration =>
+      isDecl declaration || isExnDecl declaration ||
+        globalDeclIsFunction declaration) = true)
+    (heval : evalPanValueDeclarationsWithStructs structs state
+        (globalResortDecls declarations) memoryAccess = some state') :
+    evalPanValueDeclarationsWithStructs structs state declarations memoryAccess =
+      some state' := by
+  rw [evalPanValueDeclarationsWithStructs_resortDecls structs state declarations
+    memoryAccess hall] at heval
+  exact heval
 
 end Flapjack

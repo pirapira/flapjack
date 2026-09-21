@@ -2606,11 +2606,85 @@ theorem three_word_raise_pc_compile_correct_direct_clocked_normal
   · simp [panValuePcResultRelWithContextCode, panValuePcResultRel,
       hclockState]
 
+theorem three_word_raise_pc_compile_correct_direct_clocked_raised
+    (sourceFuel targetFuel : Nat)
+    (targetState : CrepState Nat)
+    (hcompact : PanValuePcCompileCorrectWithContextCode
+      (panValuePcCompactSourceEvaluator
+        (fun _ _ => none) (fun _ _ _ _ _ _ => none) []
+        0 0 8 sourceFuel)
+      (crepPcCompactTargetEvaluator [] (fun _ _ => none)
+        (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none)
+        0 0 targetFuel)
+      (fun _ _ _ => True)
+      (fun _ _ _ => True)
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8)
+      (.raise "E" sourceExpression))
+    (hclock :
+      evalPanValueFfiClockProg directClockContext (fun _ _ => none)
+        directClockHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+        (fun _ => none) directClockFfi 1 (.raise "E" sourceExpression) =
+      some (.control (.raised (fun _ => none) (fun _ => none)
+        (fun _ => none) directClockFfi "E" sourceValue), 1))
+    (hclockState : panValueCrepStateRel [] context
+      (fun _ => none) (fun _ => none) (fun _ => none) targetState)
+    (hclockRaise : panValuePcExceptionResultRelWithContextCode [] context
+      (fun _ _ code => code = 9)
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8)
+      (fun _ => none) (fun _ => none) "E" sourceValue targetState 9) :
+    PanValuePcCompileCorrectWithContextCode
+      (panValuePcCompactSourceEvaluator
+        (fun _ _ => none) (fun _ _ _ _ _ _ => none) []
+        0 0 8 sourceFuel)
+      (crepPcCompactTargetEvaluator [] (fun _ _ => none)
+        (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none)
+        0 0 targetFuel)
+      (fun _ _ _ => True)
+      (fun _ _ _ => True)
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8)
+      (.raise "E" sourceExpression) ∧
+    evalPanValueFfiClockProg directClockContext (fun _ _ => none)
+      directClockHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+      (fun _ => none) directClockFfi 1 (.raise "E" sourceExpression) =
+      some (.control (.raised (fun _ => none) (fun _ => none)
+        (fun _ => none) directClockFfi "E" sourceValue), 1) ∧
+    (evalPanValueFfiClockProg directClockContext (fun _ _ => none)
+      directClockHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+      (fun _ => none) directClockFfi 1 (.raise "E" sourceExpression)).map
+        panValueFfiClockResultProjection =
+      some (.raised (fun _ => none) (fun _ => none)
+        (fun _ => none) directClockFfi "E" sourceValue 1) ∧
+    panValuePcResultRelWithContextCode [] context
+      (fun _ _ code => code = 9)
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8)
+      (.raised (fun _ => none) (fun _ => none) (fun _ => none)
+        "E" sourceValue)
+      (.raised targetState 9) := by
+  exact panValuePcCompileCorrectWithContextCode_of_compact_evaluators_and_clocked_raised
+    (panValuePcCompactSourceEvaluator
+      (fun _ _ => none) (fun _ _ _ _ _ _ => none) [] 0 0 8 sourceFuel)
+    (crepPcCompactTargetEvaluator [] (fun _ _ => none)
+      (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none) 0 0 targetFuel)
+    (fun _ _ _ => True) (fun _ _ _ => True)
+    (fun exception => if exception = "E" then some 9 else none)
+    (crepPcFlatGlobalsLookup 8) (.raise "E" sourceExpression)
+    hcompact [] context (fun _ _ code => code = 9)
+    (fun exception => if exception = "E" then some 9 else none)
+    (crepPcFlatGlobalsLookup 8) directClockContext (fun _ _ => none)
+    directClockHandler [] 0 0 8 0 1 (fun _ => none) (fun _ => none)
+    (fun _ => none) directClockFfi (.raise "E" sourceExpression)
+    targetState "E" sourceValue 9 hclock hclockState hclockRaise
+
 def runChecks : IO Bool := do
   IO.println "PASS generic three-word Raise evaluator relation"
   IO.println "PASS generic raised semantic/global lookup lift"
   IO.println "PASS direct arbitrary context-coded pc_compile_correct evaluator instantiation"
   IO.println "PASS direct arbitrary context-coded clocked evaluator instantiation"
+  IO.println "PASS direct arbitrary context-coded raised clock evaluator instantiation"
   IO.println "PASS nested raised semantic/global lookup lift"
   pure true
 

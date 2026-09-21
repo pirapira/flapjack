@@ -279,6 +279,16 @@ termination_by program => sizeOf program
 decreasing_by
   all_goals decreasing_trivial
 
+/-- Cake's `exp_ids_nested_seq`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:128`): the exception
+    identifiers of a nested sequence are the concatenation of the statements'
+    identifiers. -/
+theorem expIds_nestedSeq (statements : List (Prog α)) :
+    expIds (nestedSeq statements) = (statements.map expIds).flatten := by
+  induction statements with
+  | nil => simp [nestedSeq, expIds]
+  | cons statement statements ih => simp [nestedSeq, expIds, ih]
+
 /-! Direct source-shaped counterpart of `panLang$fun_ids`: collect the
     statically referenced function names, including call-handler bodies and
     declaration-call bodies. -/

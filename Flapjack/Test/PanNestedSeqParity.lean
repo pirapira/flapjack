@@ -55,6 +55,30 @@ def check (name : String) (actual expected : Prog Nat) : IO Bool := do
     IO.println s!"FAIL {name}: expected {repr expected}, got {repr actual}"
     pure false
 
+def checkBool (name : String) (actual : Bool) : IO Bool := do
+  if actual then
+    IO.println s!"PASS {name}"
+    pure true
+  else
+    IO.println s!"FAIL {name}"
+    pure false
+
+/-! Cake's `exp_ids_nested_seq`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:128`). -/
+
+def expIdsProbe : List (Prog Nat) :=
+  [.raise "E" (.const 1), .tick, .raise "F" (.const 2)]
+
+theorem expIds_nestedSeq_fixture :
+    expIds (nestedSeq expIdsProbe) = (expIdsProbe.map expIds).flatten :=
+  expIds_nestedSeq expIdsProbe
+
+def expIdsGuard : Bool :=
+  expIds (nestedSeq expIdsProbe) == ["E", "F"]
+
+#eval expIdsGuard
+#guard expIdsGuard
+
 def runChecks : IO Bool := do
   let results ← [
     check "pan nested_seq empty" (nestedSeq probeEmpty) originalEmpty,
@@ -62,6 +86,7 @@ def runChecks : IO Bool := do
     check "pan nested_seq two statements" (nestedSeq probeTwo) originalTwo,
     check "pan nested_seq assign sequence"
       (nestedSeq probeAssignSeq) originalAssignSeq ].mapM id
-  pure (results.all id)
+  let expIdsOk ← checkBool "pan nested_seq exp_ids" expIdsGuard
+  pure (results.all id && expIdsOk)
 
 end Flapjack.Test.PanNestedSeqParity

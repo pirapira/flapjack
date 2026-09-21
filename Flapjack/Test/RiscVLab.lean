@@ -539,6 +539,18 @@ example :
       some [.jalr 0 4 0] := by
   decide
 
+/- Cake's `Return` carrier is the same `JumpReg` target operation, with
+   source register 0 denoting the conventional link register x1. -/
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [] 0 (.return 0) =
+      some [.jalr 0 1 0] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [] 0 (.return 4) =
+      some [.jalr 0 4 0] := by
+  decide
+
 example :
     labCompileAsm (width := 64) { services := [] } 1 [(0, 2 ^ 20)] 0
       (.jump ⟨1, 0⟩) =

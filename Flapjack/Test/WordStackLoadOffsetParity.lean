@@ -177,4 +177,19 @@ example :
   simp [wordStackCompileLoadNatNested, wordStackLoadOffsetInst,
     wordStackLocation, wordStackOffset, lookupNatInfo]
 
+/- Cake's subtraction-shaped address keeps the same source/target carrier;
+   the subtraction operator is applied in the reserved address register. -/
+example :
+    wordStackCompileStoreNatNested
+      { locations := [(0, .register 4), (1, .register 5)]
+        scratch := 31
+        addressScratch := 29
+        stackBase := 10 }
+      (.op .sub [.var 1, .const 8]) (.var 0) =
+      some (.seq (.seq (.const 31 8)
+        (.arith .sub 29 5 31))
+        (.inst (.mem .store 4 29)) : StackProg Nat) := by
+  simp [wordStackCompileStoreNatNested, wordStackLocation, lookupNatInfo,
+    wordStackJoin]
+
 end Flapjack.RiscV

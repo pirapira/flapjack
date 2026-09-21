@@ -2722,6 +2722,50 @@ example
     exceptionCode globalsLookup function configuration configurationLength array
     arrayLength hffi hraiseData
 
+example
+    (sourceFunctions : List (FunName × List VarName × Prog Nat))
+    (functions : List (CompiledFunction Nat))
+    (primitive : PanPrimitiveHandler Nat)
+    (sourceHandler : PanValueFfiHandler Nat)
+    (crepPrimitive : CrepPrimitiveHandler Nat)
+    (ffi : CrepFfiHandler Nat)
+    (sharedMem : CrepSharedMemHandler Nat)
+    (baseAddress topAddress bytesInWord sourceFuel targetFuel : Nat)
+    (codeRel : PanValuePcCodeRel Nat)
+    (excpRel : PanValuePcExceptionShapeRel Nat)
+    (exceptionCode : ExceptionId → Option Nat)
+    (globalsLookup : CrepState Nat → PanValue Nat → Option (List Nat))
+    (function : FunName)
+    (configuration configurationLength array arrayLength : Nat)
+    (hffi : ∀ (sourceHandler : PanValueFfiHandler Nat)
+      (ffi : CrepFfiHandler Nat), panValueCrepExtCallCorrect sourceHandler ffi)
+    (hraiseEvidence : ∀ (context : CompileContext Nat) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+      (sourceMemory : Nat → Option (PanValue Nat)) (sourceException : ExceptionId)
+      (sourceValue : PanValue Nat) (targetState : CrepState Nat)
+      (targetException : Nat),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      panValuePcRaisedHraiseData exceptionCode globalsLookup structs context
+        exceptionRel sourceLocals sourceGlobals sourceMemory sourceException
+        sourceValue targetState targetException ∧
+      lookupInfo sourceException context.exceptions = some targetException) :
+    PanValuePcCompileCorrectWithContextCode
+      (panValuePcCompactSourceEvaluator primitive sourceHandler sourceFunctions
+        baseAddress topAddress bytesInWord sourceFuel)
+      (crepPcCompactTargetEvaluator functions crepPrimitive ffi sharedMem
+        baseAddress topAddress targetFuel)
+      codeRel excpRel exceptionCode globalsLookup
+      (.extCall function (.const configuration) (.const configurationLength)
+        (.const array) (.const arrayLength)) := by
+  exact panValuePcCompileCorrectWithContextCode_compact_extCall_const
+    sourceFunctions functions primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord sourceFuel targetFuel codeRel excpRel
+    exceptionCode globalsLookup function configuration configurationLength array
+    arrayLength hffi hraiseEvidence
+
 def runChecks : IO Bool := do
   IO.println "PASS generic three-word Raise evaluator relation"
   IO.println "PASS generic raised semantic/global lookup lift"
@@ -2729,6 +2773,7 @@ def runChecks : IO Bool := do
   IO.println "PASS direct arbitrary context-coded clocked evaluator instantiation"
   IO.println "PASS direct arbitrary context-coded raised clock evaluator instantiation"
   IO.println "PASS compact ExtCall pc_compile_correct bridge instantiation"
+  IO.println "PASS compact ExtCall context-coded bridge instantiation"
   IO.println "PASS nested raised semantic/global lookup lift"
   pure true
 

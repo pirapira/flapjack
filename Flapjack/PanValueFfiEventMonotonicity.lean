@@ -159,4 +159,47 @@ theorem evalPanValueFfiProgSteps_shMemLoad_normal_ioEvents_prefix
       | final finalFfi event => simp [hload] at hresult
   · exact False.elim (hvalid hvalid')
 
+theorem evalPanValueFfiProgSteps_shMemStore_normal_ioEvents_prefix
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel : Nat) (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (size : OpSize) (address value : Exp α)
+    (access : PanValueMemoryAccess α) (contracts : Option PanValueCallContracts)
+    (addressWord valueWord : α) (addressSteps valueSteps : Nat)
+    (nextLocals nextGlobals : VarName → Option (PanValue α))
+    (nextMemory : α → Option (PanValue α)) (nextFfi : FfiState σ)
+    (haddress : evalPanValueExpCounted structs locals globals memory
+      baseAddress topAddress bytesInWord address (memoryAccess := some access) =
+      some (.word addressWord, addressSteps))
+    (hvalue : evalPanValueExpCounted structs locals globals memory
+      baseAddress topAddress bytesInWord value (memoryAccess := some access) =
+      some (.word valueWord, valueSteps))
+    (hresult : evalPanValueFfiProgSteps context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi
+      (.shMemStore size address value) (memoryAccess := some access)
+      (contracts := contracts) =
+      some (.normal nextLocals nextGlobals nextMemory nextFfi,
+        addressSteps + valueSteps + 1)) :
+    ffi.ioEvents <+: nextFfi.ioEvents := by
+  simp [evalPanValueFfiProgSteps, haddress, hvalue] at hresult
+  cases hstore : panValueFfiSharedStore context ffi size addressWord valueWord with
+  | none => simp [hstore] at hresult
+  | some result =>
+    cases result with
+    | loaded loadedFfi loadedValue => simp [hstore] at hresult
+    | stored storedFfi =>
+      rw [hstore] at hresult
+      simp at hresult
+      rcases hresult with ⟨_, ⟨_, ⟨_, hffi⟩⟩⟩
+      rw [← hffi]
+      exact panValueFfiSharedStore_ioEvents_prefix context ffi size addressWord valueWord
+        (.stored storedFfi) hstore
+    | final finalFfi event => simp [hstore] at hresult
+
 end Flapjack

@@ -997,6 +997,12 @@
       "source_reference": "Minimized ld8 @base+8 witness (GH #1130, flapjack-pxn.8.5.14.20): Cake keeps CurrHeap as the load base and encodes the byte-offset load with the unsigned lbu funct3 (get_memop_info Load8 = MappedRead,1w), not lb. The port's WordInstSelect selector and Encoding.loadByteOffset now match.",
       "cake_sha256": "5dbea1ef7c7fcb024a59e8204bd28ecd4e6a804d3dd8f2a4294e02188899858c",
       "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/currheap_load_large_offset.pnk",
+      "source_reference": "Minimized fuzz witness f00052-s88-i00052-generate (GH #1132, flapjack-pxn.8.5.14.24): for `lds 1 (@base + 2048)` the offset is outside Cake's addr_offset_ok 12-bit range, so inst_select_exp (word_instScript.sml:234-245) selects the whole address expression, reaching Const temp w; OpCurrHeap op tar temp and keeping s10 as the memory base. WordInstSelect previously split the offset unconditionally and materialised CurrHeap into a temporary.",
+      "cake_sha256": "5c24bc18ceac4941d4fa864062ed8bc427f03de35bd5d3a7d75b76a33714365d",
+      "tracked_beads": []
     }
   ]
 }

@@ -5643,6 +5643,56 @@ def PanValueFfiClockNormalAdequateProgFrom
       some (.control (.normal finalLocals finalGlobals finalMemory finalFfi),
         finalClock)
 
+/-- A fuel-indexed certificate that a `While` loop terminates normally (or via a
+`break`) before its clock is exhausted.  This is the faithful premise a
+nonzero-condition `While` needs: unlike Cake's tick-only clock, Flapjack's
+clocked evaluator returns a timeout when `clock` reaches `0` mid-loop. -/
+def PanValueFfiClockWhileExitsNormally
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (condition : Exp α) (body : Prog α) :
+    Nat → (VarName → Option (PanValue α)) → (VarName → Option (PanValue α)) →
+      (α → Option (PanValue α)) → FfiState σ → Nat → Prop
+  | 0, _, _, _, _, _ => False
+  | fuel + 1, locals, globals, memory, ffi, clock =>
+      (∃ w : α,
+        evalPanValueExp structs locals globals memory baseAddress topAddress
+          bytesInWord condition (memoryAccess := ma) = some (.word w) ∧
+        (w == 0) = true) ∨
+      (∃ w : α,
+        evalPanValueExp structs locals globals memory baseAddress topAddress
+          bytesInWord condition (memoryAccess := ma) = some (.word w) ∧
+        (w == 0) = false ∧ (clock == 0) = false ∧
+        ∃ (nextLocals nextGlobals : VarName → Option (PanValue α))
+          (nextMemory : α → Option (PanValue α)) (nextFfi : FfiState σ)
+          (bodyClock : Nat),
+          evalPanValueFfiClockProg context primitive handler structs functions
+            baseAddress topAddress bytesInWord fuel locals globals memory ffi
+            (decPanClock clock) body ma c mh =
+          some (.control (.normal nextLocals nextGlobals nextMemory nextFfi),
+            bodyClock) ∧
+          PanValueFfiClockWhileExitsNormally context primitive handler structs
+            functions baseAddress topAddress bytesInWord ma c mh condition body
+            fuel nextLocals nextGlobals nextMemory nextFfi bodyClock) ∨
+      (∃ w : α,
+        evalPanValueExp structs locals globals memory baseAddress topAddress
+          bytesInWord condition (memoryAccess := ma) = some (.word w) ∧
+        (w == 0) = false ∧ (clock == 0) = false ∧
+        ∃ (nextLocals nextGlobals : VarName → Option (PanValue α))
+          (nextMemory : α → Option (PanValue α)) (nextFfi : FfiState σ)
+          (bodyClock : Nat),
+          evalPanValueFfiClockProg context primitive handler structs functions
+            baseAddress topAddress bytesInWord fuel locals globals memory ffi
+            (decPanClock clock) body ma c mh =
+          some (.control (.broke nextLocals nextGlobals nextMemory nextFfi),
+            bodyClock))
+
 /-- Every all-clock normal-adequate program is normal-adequate from any bound. -/
 theorem PanValueFfiClockNormalAdequateProgFrom_of_adequate
     (lo : Nat)

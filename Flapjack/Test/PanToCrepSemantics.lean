@@ -10,8 +10,19 @@ open Flapjack
 #check @Flapjack.PanValuePcSemanticClockEvidence
 #check @Flapjack.PanValuePcSemanticClockEvidence.resultRel
 #check @Flapjack.PanValuePcSemanticClockEvidence.crossResultRel
+#check @Flapjack.PanValuePcSemanticClockEvidence.crossResultRel_withContextCode
 #check @Flapjack.panCrepSemanticAgreement_of_pcCompileCorrect
 #check @Flapjack.panCrepSemanticAgreement_of_pcCompileCorrect_cross_clock
+#check @Flapjack.panEventPrefix_antisymm
+#check @Flapjack.panCrepSemanticAgreement_of_pcCompileCorrect_cross_clock_prefix
+#check @Flapjack.panCrepSemanticAgreement_of_pcCompileCorrectWithContextCode_cross_clock_prefix
+
+example : panEventPrefix ([1] : List Nat) [1, 2] := by
+  exact ⟨[2], rfl⟩
+
+example {left right : List Nat} (hleft : panEventPrefix left right)
+    (hright : panEventPrefix right left) : left = right := by
+  exact panEventPrefix_antisymm hleft hright
 
 def emptyPanHooks : PanSemanticsHooks Unit Unit where
   evaluate := fun _ => none

@@ -363,6 +363,34 @@ def quadProjectionGuard : Bool :=
 #eval quadProjectionGuard
 #guard quadProjectionGuard
 
+/-! Cake's `tuple_4_o` (`pan_globalsProofScript.sml:3003`). -/
+
+theorem quadProjection_comp_fixture :
+    (fun p : Nat × Nat × Nat × Nat =>
+        (p.1 + 1, p.2.1, p.2.2.1, p.2.2.2)) =
+      ((fun q : Nat × Nat × Nat × Nat => (q.1 + 1, q.2.1, q.2.2.1, q.2.2.2)) ∘
+        (fun p : Nat × Nat × Nat × Nat => (p.1, p.2.1, p.2.2.1, p.2.2.2))) :=
+  quadProjection_comp (fun x => x + 1) id id id id id id id
+
+def quadCompGuard : Bool :=
+  ((fun q : Nat × Nat × Nat × Nat => (q.1 + 1, q.2.1, q.2.2.1, q.2.2.2)) ∘
+      (fun p : Nat × Nat × Nat × Nat => (p.1, p.2.1, p.2.2.1, p.2.2.2)))
+    (1, 2, 3, 4) == (2, 2, 3, 4)
+
+#eval quadCompGuard
+#guard quadCompGuard
+
+/-! Cake's `MAX_LIST_i_genlist` (`pan_commonPropsScript.sml:712`). -/
+
+theorem range_foldr_max_fixture : (List.range 4).foldr max 0 = 3 :=
+  range_foldr_max 4
+
+def rangeFoldrMaxGuard : Bool :=
+  (List.range 4).foldr max 0 == 3
+
+#eval rangeFoldrMaxGuard
+#guard rangeFoldrMaxGuard
+
 def checkDisjoint (name : String) (actual : Bool) : IO Bool := do
   if actual then
     IO.println s!"PASS {name}"
@@ -396,8 +424,12 @@ def runChecks : IO Bool := do
   let genlistOk ← checkDisjoint "pan genlist distinctness" genlistGuard
   let quadProjectionOk ←
     checkDisjoint "pan quad projection" quadProjectionGuard
+  let quadCompOk ← checkDisjoint "pan quad projection comp" quadCompGuard
+  let rangeFoldrMaxOk ←
+    checkDisjoint "pan MAX_LIST_i_genlist" rangeFoldrMaxGuard
   pure (results.all id && lengthOk && allDistinctOk && membershipOk && disjointOk &&
     shapeDisjointOk && nestedOk && distinctOk && distinctListsOk && zipWithShapeOk &&
-    listIndexOk && foldrMaxOk && genlistOk && quadProjectionOk)
+    listIndexOk && foldrMaxOk && genlistOk && quadProjectionOk && quadCompOk &&
+    rangeFoldrMaxOk)
 
 end Flapjack.Test.PanWithShapeParity

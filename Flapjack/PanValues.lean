@@ -405,6 +405,37 @@ def panValueFlatLoad [BEq α] [Add α]
       shape address
   else none
 
+/-- Counterpart of Cake's `mem_loads` (`cakeml/pancake/semantics/panSemScript.sml`):
+    the flat load of a whole list of shapes. -/
+def panValueFlatLoadList [BEq α] [Add α]
+    (structs : StructContext) (memory : α → Option (PanValue α))
+    (bytesInWord : α) (address : α) (shapes : List Shape)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none) :
+    Option (List (PanValue α)) :=
+  if shapes.all (isWfShape structs) then
+    panValueFlatLoadListFuel structs
+      (panValueFlatReadWord memory bytesInWord memoryAccess)
+      bytesInWord
+      (panValueFlatContextFuel structs +
+        panValueFlatShapeFuel.panValueFlatShapeListFuel shapes + 1)
+      shapes address
+  else none
+
+/-- Counterpart of Cake's `mem_load_flds` (`cakeml/pancake/semantics/panSemScript.sml`):
+    the flat load of a record's fields. -/
+def panValueFlatLoadFields [BEq α] [Add α]
+    (structs : StructContext) (memory : α → Option (PanValue α))
+    (bytesInWord : α) (address : α) (fields : List (FieldName × Shape))
+    (memoryAccess : Option (PanValueMemoryAccess α) := none) :
+    Option (List (FieldName × PanValue α)) :=
+  if fields.all (fun field => isWfShape structs field.2) then
+    panValueFlatLoadFieldsFuel structs
+      (panValueFlatReadWord memory bytesInWord memoryAccess)
+      bytesInWord
+      (panValueFlatContextFuel structs + panValueFlatFieldsFuel fields + 1)
+      fields address
+  else none
+
 def panValueFlatStoreWords [BEq α] [Add α]
     (storeWord : (α → Option (PanValue α)) → α → α →
       Option (α → Option (PanValue α)))
@@ -837,6 +868,112 @@ theorem panValueFlatLoad_shape [BEq α] [Add α] (structs : StructContext)
   · rw [if_neg hwf] at h
     simp at h
 
+/-- List conjunct of Cake's `mem_loads_some_shape_eq`
+    (`cakeml/pancake/semantics/panPropsScript.sml:194`). -/
+theorem panValueFlatLoadListFuel_shape [BEq α] [Add α]
+    (structs : StructContext) (readWord : α → Option α) (bytesInWord : α)
+    (fuel : Nat) :
+    ∀ (shapes : List Shape) (address : α) (values : List (PanValue α)),
+      panValueFlatLoadListFuel structs readWord bytesInWord fuel shapes address = some values →
+        values.map (panValueShape structs) = shapes := by
+  induction fuel using Nat.strongRecOn with
+  | ind fuel ih =>
+      intro shapes address values h
+      cases shapes with
+      | nil => simp [panValueFlatLoadListFuel] at h; subst h; simp
+      | cons shape shapes =>
+          cases fuel with
+          | zero => simp [panValueFlatLoadListFuel] at h
+          | succ fuel' =>
+              cases hvalue : panValueFlatLoadFuel structs readWord bytesInWord fuel' shape address with
+              | none => simp [panValueFlatLoadListFuel, hvalue] at h
+              | some value =>
+                  cases hvalues : panValueFlatLoadListFuel structs readWord bytesInWord fuel' shapes
+                      (panValueFlatOffset bytesInWord address
+                        (shapeSizeWithContext structs shape)) with
+                  | none => simp [panValueFlatLoadListFuel, hvalue, hvalues] at h
+                  | some rest =>
+                      simp [panValueFlatLoadListFuel, hvalue, hvalues] at h
+                      subst h
+                      have hhead : panValueShape structs value = shape :=
+                        panValueFlatLoadFuel_shape structs readWord bytesInWord fuel'
+                          shape address value hvalue
+                      have htail := ih fuel' (by omega) shapes
+                        (panValueFlatOffset bytesInWord address
+                          (shapeSizeWithContext structs shape)) rest hvalues
+                      rw [List.map_cons, hhead, htail]
+
+/-- Fields conjunct of Cake's `mem_loads_some_shape_eq`
+    (`cakeml/pancake/semantics/panPropsScript.sml:194`). -/
+theorem panValueFlatLoadFieldsFuel_shape [BEq α] [Add α]
+    (structs : StructContext) (readWord : α → Option α) (bytesInWord : α)
+    (fuel : Nat) :
+    ∀ (fields : List (FieldName × Shape)) (address : α)
+      (values : List (FieldName × PanValue α)),
+      panValueFlatLoadFieldsFuel structs readWord bytesInWord fuel fields address = some values →
+        values.map (fun field => panValueShape structs field.2) = fields.map Prod.snd := by
+  induction fuel using Nat.strongRecOn with
+  | ind fuel ih =>
+      intro fields address values h
+      cases fields with
+      | nil => simp [panValueFlatLoadFieldsFuel] at h; subst h; simp
+      | cons field fields =>
+          obtain ⟨fieldName, shape⟩ := field
+          cases fuel with
+          | zero => simp [panValueFlatLoadFieldsFuel] at h
+          | succ fuel' =>
+              cases hvalue : panValueFlatLoadFuel structs readWord bytesInWord fuel' shape address with
+              | none => simp [panValueFlatLoadFieldsFuel, hvalue] at h
+              | some value =>
+                  cases hvalues : panValueFlatLoadFieldsFuel structs readWord bytesInWord fuel' fields
+                      (panValueFlatOffset bytesInWord address
+                        (shapeSizeWithContext structs shape)) with
+                  | none => simp [panValueFlatLoadFieldsFuel, hvalue, hvalues] at h
+                  | some rest =>
+                      simp [panValueFlatLoadFieldsFuel, hvalue, hvalues] at h
+                      subst h
+                      have hhead : panValueShape structs value = shape :=
+                        panValueFlatLoadFuel_shape structs readWord bytesInWord fuel'
+                          shape address value hvalue
+                      have htail := ih fuel' (by omega) fields
+                        (panValueFlatOffset bytesInWord address
+                          (shapeSizeWithContext structs shape)) rest hvalues
+                      rw [List.map_cons, List.map_cons, hhead, htail]
+
+/-- List conjunct of Cake's `mem_loads_some_shape_eq`
+    (`cakeml/pancake/semantics/panPropsScript.sml:194`). -/
+theorem panValueFlatLoadList_shape [BEq α] [Add α] (structs : StructContext)
+    (memory : α → Option (PanValue α)) (bytesInWord : α) (address : α)
+    (shapes : List Shape) (memoryAccess : Option (PanValueMemoryAccess α))
+    (values : List (PanValue α))
+    (h : panValueFlatLoadList structs memory bytesInWord address shapes memoryAccess =
+      some values) :
+    values.map (panValueShape structs) = shapes := by
+  rw [panValueFlatLoadList] at h
+  by_cases hwf : shapes.all (isWfShape structs) = true
+  · rw [if_pos hwf] at h
+    exact panValueFlatLoadListFuel_shape structs
+      (panValueFlatReadWord memory bytesInWord memoryAccess) bytesInWord _ shapes address values h
+  · rw [if_neg hwf] at h
+    simp at h
+
+/-- Fields conjunct of Cake's `mem_loads_some_shape_eq`
+    (`cakeml/pancake/semantics/panPropsScript.sml:194`). -/
+theorem panValueFlatLoadFields_shape [BEq α] [Add α] (structs : StructContext)
+    (memory : α → Option (PanValue α)) (bytesInWord : α) (address : α)
+    (fields : List (FieldName × Shape)) (memoryAccess : Option (PanValueMemoryAccess α))
+    (values : List (FieldName × PanValue α))
+    (h : panValueFlatLoadFields structs memory bytesInWord address fields memoryAccess =
+      some values) :
+    values.map (fun field => panValueShape structs field.2) = fields.map Prod.snd := by
+  rw [panValueFlatLoadFields] at h
+  by_cases hwf : fields.all (fun field => isWfShape structs field.2) = true
+  · rw [if_pos hwf] at h
+    exact panValueFlatLoadFieldsFuel_shape structs
+      (panValueFlatReadWord memory bytesInWord memoryAccess) bytesInWord _ fields address values h
+  · rw [if_neg hwf] at h
+    simp at h
+
 def panShapeMatches : Shape → Shape → Bool
   | .one, .one => true
   | .named left, .named right => left == right
@@ -1195,6 +1332,27 @@ def evalPanValueExps [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
 theorem panValueIsWf_word (structs : StructContext) (value : α) :
     panValueIsWf structs (.word value) = true := by
   simp [panValueIsWf]
+
+/-- Counterpart of Cake's `evaluate_replicate_const`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:3051`): evaluating a
+    list of zero constants always succeeds, producing the same number of zero
+    words.  This is the `OPT_MMAP (eval s) (REPLICATE n (Const 0w))` shape used
+    when flattening zero-initialised aggregate values. -/
+theorem evalPanValueExps_replicate_const [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
+    [Mul α] [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext) (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (baseAddress topAddress bytesInWord : α)
+    (count : Nat) :
+    (List.replicate count (.const (0 : α))).mapM
+        (fun expression => evalPanValueExp structs locals globals memory
+          baseAddress topAddress bytesInWord expression) =
+      some (List.replicate count (.word (0 : α))) := by
+  induction count with
+  | zero => rfl
+  | succ count ih =>
+      rw [List.replicate_succ, List.mapM_cons]
+      simp [evalPanValueExp, ih, List.replicate_succ]
 
 theorem panValueIsWfValues_getElem? {context : StructContext} {values : List (PanValue α)}
     {index : Nat} {value : PanValue α}

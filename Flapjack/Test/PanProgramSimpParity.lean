@@ -957,6 +957,16 @@ theorem lookup_mem_exists_fixture :
 #check @map_getD_map_some
 #check @lookup_mem_exists
 
+theorem map_some_getD_eq_self_fixture :
+    ([1, 2, 3] : List Nat).map (fun x => (some x : Option Nat).getD 0) = [1, 2, 3] :=
+  map_some_getD_eq_self 0 [1, 2, 3]
+
+theorem mem_of_eq_mem_fixture : (2 : Nat) ∈ [1, 2, 3] :=
+  mem_of_eq_mem rfl (by decide)
+
+#check @map_some_getD_eq_self
+#check @mem_of_eq_mem
+
 def mapMoreFactsGuard : Bool :=
   (([2, 4, 6] : List Nat).mapM (fun x => (sampleMapF x).map (fun y => y + 1)) ==
       some [4, 6, 8]) &&

@@ -720,6 +720,45 @@ example
     (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1 hcall
     PanValueFfiClockNormalProg.skip
 
+/-- Two destination calls compose at the sequence's call-aware budget, keeping the
+second call's result and clock. -/
+example
+    (hcall₁ : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8
+      (progCallFuel 5 (.call (some ((VarKind.local, "x"), none)) "f"
+        ([] : List (Exp Nat))))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+      (.call (some ((VarKind.local, "x"), none)) "f" []) none none none =
+      some (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none)
+        evaluatorFfi), 1))
+    (hcall₂ : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8
+      (progCallFuel 5 (.call (some ((VarKind.local, "y"), none)) "g"
+        ([] : List (Exp Nat))))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+      (.call (some ((VarKind.local, "y"), none)) "g" []) none none none =
+      some (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none)
+        evaluatorFfi), 1)) :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+      [] [] 0 0 8
+      (progCallFuel 5 (.seq (.call (some ((VarKind.local, "x"), none)) "f"
+        ([] : List (Exp Nat))) (.call (some ((VarKind.local, "y"), none)) "g"
+        ([] : List (Exp Nat)))))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+      (.seq (.call (some ((VarKind.local, "x"), none)) "f" [])
+        (.call (some ((VarKind.local, "y"), none)) "g" []))
+      none none none =
+      some (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none)
+        evaluatorFfi), 1) :=
+  evalPanValueFfiClockProg_seq_of_first_normal_progCallFuel evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 5
+    (.call (some ((VarKind.local, "x"), none)) "f" ([] : List (Exp Nat)))
+    (.call (some ((VarKind.local, "y"), none)) "g" ([] : List (Exp Nat)))
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1 none none none
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi))
+    1 hcall₁ hcall₂
+
 /-- The raised `DecCall` outcome also lifts to the declaration's progSize. -/
 example
     (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)

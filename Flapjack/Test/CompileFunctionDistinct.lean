@@ -46,17 +46,19 @@ theorem distinctFunctionDeclarations_compiled_params_nodup :
 theorem distinctFunctionDeclarations_first_compiled_origin :
     ∃ declaration function,
       (functionDeclarations distinctFunctionDeclarations)[0]? = some declaration ∧
-      (compileFunctionsSource distinctCompileContext distinctFunctionDeclarations)[0]? =
+      (compileToCrep distinctCompileContext distinctFunctionDeclarations)[0]? =
         some function ∧
-      function = compileFunDeclSource distinctCompileContext declaration := by
+      function = compileFunDeclSource
+        { distinctCompileContext with
+          functions := functionInfos distinctFunctionDeclarations } declaration := by
   have hcompiled :
       ∃ function,
-        (compileFunctionsSource distinctCompileContext distinctFunctionDeclarations)[0]? =
+        (compileToCrep distinctCompileContext distinctFunctionDeclarations)[0]? =
           some function := by
-    simp [compileFunctionsSource, distinctFunctionDeclarations]
+    simp [compileToCrep, compileFunctionsSource, distinctFunctionDeclarations]
   obtain ⟨function, hcompiled⟩ := hcompiled
   obtain ⟨declaration, hsource, horigin⟩ :=
-    compileFunctionsSource_getElem?_origin distinctCompileContext
+    compileToCrep_getElem?_origin distinctCompileContext
       distinctFunctionDeclarations hcompiled
   exact ⟨declaration, function, hsource, hcompiled, horigin⟩
 

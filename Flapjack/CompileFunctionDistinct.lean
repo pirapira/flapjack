@@ -141,6 +141,20 @@ theorem compileFunctionsSource_getElem?_origin
           obtain ⟨found, hfound, horigin⟩ := ih htail
           exact ⟨found, by simpa [functionDeclarations] using hfound, horigin⟩
 
+/-! The same indexed provenance at the public `compileToCrep` boundary. -/
+theorem compileToCrep_getElem?_origin
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (declarations : List (Decl α))
+    {n : Nat} {function : CompiledFunction α}
+    (hcompiled : (compileToCrep context declarations)[n]? = some function) :
+    ∃ declaration : FunDecl α,
+      (functionDeclarations declarations)[n]? = some declaration ∧
+      function = compileFunDeclSource
+        { context with functions := functionInfos declarations } declaration := by
+  apply compileFunctionsSource_getElem?_origin
+    ({ context with functions := functionInfos declarations }) declarations
+  simpa [compileToCrep] using hcompiled
+
 theorem compileToCrep_names_nodup
     [BEq α] [OfNat α 0] [Add α]
     (context : CompileContext α) (declarations : List (Decl α))

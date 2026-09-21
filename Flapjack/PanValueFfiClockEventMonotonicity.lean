@@ -565,6 +565,43 @@ theorem evalPanValueFfiClockProg_while_continued_iteration_ioEvents_prefix
       hbody, hrest]
   · exact hbodyPrefix.trans hrestPrefix
 
+/-! Cake's zero-clock `While` timeout is terminal and therefore preserves the
+    incoming event trace unchanged. -/
+theorem evalPanValueFfiClockProg_while_timeout_ioEvents_prefix
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (condition : Exp α) (body : Prog α)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (contracts : Option PanValueCallContracts := none)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none)
+    (conditionValue : α)
+    (hcondition : evalPanValueExp structs locals globals memory
+      baseAddress topAddress bytesInWord condition
+      (memoryAccess := memoryAccess) = some (.word conditionValue))
+    (hconditionNonzero : (conditionValue == (0 : α)) = false)
+    (hclock : (clock == (0 : Nat)) = true) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+      (.while condition body) (memoryAccess := memoryAccess)
+      (contracts := contracts) (memoryHandler := memoryHandler) =
+      some (.timeout (fun _ => none) globals memory ffi, clock) ∧
+      ffi.ioEvents <+: ffi.ioEvents := by
+  constructor
+  · exact evalPanValueFfiClockProg_while_timeout_some context primitive handler
+      structs functions baseAddress topAddress bytesInWord fuel locals globals
+      memory ffi clock condition body memoryAccess contracts memoryHandler
+      conditionValue hcondition hconditionNonzero hclock
+  · exact List.prefix_refl _
+
 theorem evalPanValueFfiClockProg_seq_normal_ioEvents_prefix
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

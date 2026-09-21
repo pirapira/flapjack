@@ -2682,6 +2682,7 @@ example : PanValueFfiClockNormalAdequateProgFromFloor 3 3 evaluatorContext
 #check @Flapjack.evalPanValueFfiClockProg_while_normal_iteration_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProg_while_broke_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProg_while_continued_iteration_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProg_while_timeout_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProg_extCall_statefulHandler_normal_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProg_call_returned_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProg_call_raised_ioEvents_prefix
@@ -2699,5 +2700,19 @@ example : PanValueFfiClockNormalAdequateProgFromFloor 3 3 evaluatorContext
 #check @Flapjack.evalPanValueFfiClockProg_extCall_finalFfi_cross_clock
 
 example : decPanClock (5 + 3) = decPanClock 5 + 3 := decPanClock_add 5 3 (by decide)
+
+theorem clocked_while_timeout_preserves_events :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 2 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 0
+      (.while (.const 5) (.break : Prog Nat)) none none none =
+    some (.timeout (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi, 0) ∧
+      evaluatorFfi.ioEvents <+: evaluatorFfi.ioEvents := by
+  exact evalPanValueFfiClockProg_while_timeout_ioEvents_prefix evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 1
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 0
+    (.const 5) (.break : Prog Nat) none none none 5
+    (by simp [evalPanValueExp]) (by decide) (by decide)
 
 end Flapjack.Test.PanSimpParity

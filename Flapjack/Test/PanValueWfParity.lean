@@ -277,6 +277,8 @@ theorem evalPanValueExps_isWfShape_fixture :
         [.word 7, .word 9] = true := by
   apply evalPanValueExps_isWfShape ([] : StructContext) evaluatorLocals
     (fun _ => none) (fun _ => none) 0 0 8
+    (expressions := [.const 7, .var .local "x"])
+    (memoryAccess := none) (values := [.word 7, .word 9])
   · intro name value hvalue
     simp [evaluatorLocals] at hvalue
     rcases hvalue with ⟨rfl, rfl⟩

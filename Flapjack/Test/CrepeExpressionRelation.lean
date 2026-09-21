@@ -35,4 +35,30 @@ def shapeValLocalisedGuard : Bool :=
 #eval shapeValLocalisedGuard
 #guard shapeValLocalisedGuard
 
+/-! Cake's `compile_exp_localised` (`pan_globalsProofScript.sml:3196`). -/
+
+def compileContext : GlobalPassContext Nat :=
+  { globals := [("g", (Shape.one, 4))]
+    globalsSize := 4
+    maxGlobalsSize := 8
+    bytesInWord := 8
+    fromNat := fun n => n }
+
+theorem globalCompileExp_localised_fixture :
+    localisedExp (globalCompileExp compileContext (.var .global "g")) :=
+  globalCompileExp_localised compileContext (.var .global "g")
+
+theorem globalCompileExps_expGlobalVars_fixture :
+    expGlobalVars.expGlobalVarsList
+      (globalCompileExp.globalCompileExps compileContext
+        [.var .global "g", .topAddr]) = [] :=
+  globalCompileExps_expGlobalVars compileContext [.var .global "g", .topAddr]
+
+def globalCompileExpLocalisedGuard : Bool :=
+  (expGlobalVars (globalCompileExp compileContext (.var .global "g")) == []) &&
+    (expGlobalVars (globalCompileExp compileContext .topAddr) == [])
+
+#eval globalCompileExpLocalisedGuard
+#guard globalCompileExpLocalisedGuard
+
 end Flapjack

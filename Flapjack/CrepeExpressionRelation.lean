@@ -1,4 +1,5 @@
 import Flapjack.CrepeStateRelation
+import Flapjack.PanGlobals
 import Flapjack.Parser.Localise
 
 /-!
@@ -356,6 +357,108 @@ theorem localisedExp_shapeVals (shapes : List Shape) :
       rcases hmem with rfl | hmem
       · exact localisedExp_shapeVal shape
       · exact ih expression hmem
+
+/-- The `pan_globals` expression compiler never introduces a global variable:
+    every global read is replaced by a load from the address derived from
+    `topAddr`, and `topAddr` itself carries no global variable. -/
+theorem globalCompileExp_expGlobalVars [BEq String] (context : GlobalPassContext α)
+    (expression : Exp α) :
+    expGlobalVars (globalCompileExp context expression) = [] := by
+  have hmain : ∀ expression : Exp α,
+      expGlobalVars (globalCompileExp context expression) = [] := by
+    apply globalCompileExp.induct context
+      (motive1 := fun expressions =>
+        expGlobalVars.expGlobalVarsList
+          (globalCompileExp.globalCompileExps context expressions) = [])
+      (motive2 := fun expression =>
+        expGlobalVars (globalCompileExp context expression) = [])
+    · simp [globalCompileExp.globalCompileExps, expGlobalVars.expGlobalVarsList]
+    · intro expression expressions ihExpr ihExprs
+      simp only [globalCompileExp.globalCompileExps, expGlobalVars.expGlobalVarsList]
+      rw [ihExpr, ihExprs]
+      simp
+    · intro name
+      rw [globalCompileExp_local]
+      simp [expGlobalVars]
+    · intro name shape address hlookup
+      have hcomp : globalCompileExp context (.var .global name) =
+          .load shape (.op .sub [.topAddr, .const address]) := by
+        simp [globalCompileExp, hlookup]
+      rw [hcomp]
+      simp [expGlobalVars, expGlobalVars.expGlobalVarsList]
+    · intro name hlookup
+      have hcomp : globalCompileExp context (.var .global name) =
+          .const (context.fromNat 0) := by
+        simp [globalCompileExp, hlookup]
+      rw [hcomp]
+      simp [expGlobalVars]
+    · intro expressions ih
+      simpa only [globalCompileExp, expGlobalVars] using ih
+    · intro index expression ih
+      simpa only [globalCompileExp, expGlobalVars] using ih
+    · intro name fields
+      simp [globalCompileExp, expGlobalVars]
+    · intro name value
+      simp [globalCompileExp, expGlobalVars]
+    · intro shape address ih
+      simpa only [globalCompileExp, expGlobalVars] using ih
+    · intro address ih
+      simpa only [globalCompileExp, expGlobalVars] using ih
+    · intro address ih
+      simpa only [globalCompileExp, expGlobalVars] using ih
+    · intro operator expressions ih
+      simpa only [globalCompileExp, expGlobalVars] using ih
+    · intro operator expressions ih
+      simpa only [globalCompileExp, expGlobalVars] using ih
+    · intro operator left right ihL ihR
+      simp only [globalCompileExp, expGlobalVars]
+      rw [ihL, ihR]
+      simp
+    · intro operator left right ihL ihR
+      simp only [globalCompileExp, expGlobalVars]
+      rw [ihL, ihR]
+      simp
+    · simp [globalCompileExp, expGlobalVars, expGlobalVars.expGlobalVarsList]
+    · intro expression hlocal hglobal hrstruct hrfield hnstruct hnfield hload hload32
+        hloadbyte hop hpanop hcmp hshift htop
+      cases expression with
+      | const value => simp [globalCompileExp, expGlobalVars]
+      | baseAddr => simp [globalCompileExp, expGlobalVars]
+      | bytesInWord => simp [globalCompileExp, expGlobalVars]
+      | var kind name => cases kind <;> simp_all
+      | rStruct fields => exact absurd rfl (hrstruct fields)
+      | rField index value => exact absurd rfl (hrfield index value)
+      | nStruct name fields => exact absurd rfl (hnstruct name fields)
+      | nField name value => exact absurd rfl (hnfield name value)
+      | load shape address => exact absurd rfl (hload shape address)
+      | load32 address => exact absurd rfl (hload32 address)
+      | loadByte address => exact absurd rfl (hloadbyte address)
+      | op operator args => exact absurd rfl (hop operator args)
+      | panOp operator args => exact absurd rfl (hpanop operator args)
+      | cmp operator left right => exact absurd rfl (hcmp operator left right)
+      | shift operator left right => exact absurd rfl (hshift operator left right)
+      | topAddr => exact absurd rfl htop
+  exact hmain expression
+
+/-- List form of `globalCompileExp_expGlobalVars`. -/
+theorem globalCompileExps_expGlobalVars [BEq String] (context : GlobalPassContext α)
+    (expressions : List (Exp α)) :
+    expGlobalVars.expGlobalVarsList
+      (globalCompileExp.globalCompileExps context expressions) = [] := by
+  induction expressions with
+  | nil => simp [globalCompileExp.globalCompileExps, expGlobalVars.expGlobalVarsList]
+  | cons expression expressions ih =>
+      simp only [globalCompileExp.globalCompileExps, expGlobalVars.expGlobalVarsList]
+      rw [globalCompileExp_expGlobalVars, ih]
+      simp
+
+/-- Counterpart of Cake's `compile_exp_localised`
+    (`pan_globalsProofScript.sml:3196`): the `pan_globals` expression compiler
+    always produces a localised expression. -/
+theorem globalCompileExp_localised [BEq String] (context : GlobalPassContext α)
+    (expression : Exp α) :
+    localisedExp (globalCompileExp context expression) := by
+  simpa [localisedExp] using globalCompileExp_expGlobalVars context expression
 
 /-! Successful word operations cannot hide a failed or structured operand.
 This is the source-side inversion lemma needed before applying the

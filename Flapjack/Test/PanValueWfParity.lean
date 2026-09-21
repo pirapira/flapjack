@@ -237,4 +237,32 @@ theorem evalPanValueExps_replicate_const_fixture :
 
 #check @evalPanValueExps_replicate_const
 
+/-! `shape_val` / `shape_vals` (`panLangScript.sml:190`) and their companion
+    `eval_shape_val_NONE` / `eval_shape_val_thm`
+    (`pan_globalsProofScript.sml:968`, `:980`). -/
+
+theorem shapeVal_shape_fixture :
+    panValueShape ([] : StructContext) (.word 0) = .one :=
+  shapeVal_shape ([] : StructContext) (fun _ => none) (fun _ => none)
+    (fun _ => none) 0 0 8 none .one (by simp [isWfShape]) (.word 0)
+    (by simp [shapeVal, evalPanValueExp])
+
+theorem shapeVal_isSome_fixture :
+    (evalPanValueExp ([] : StructContext) (fun _ => none) (fun _ => none)
+      (fun _ => none) 0 0 8 (shapeVal (.comb [.one])) none).isSome = true :=
+  shapeVal_isSome ([] : StructContext) (fun _ => none) (fun _ => none)
+    (fun _ => none) 0 0 8 none (.comb [.one])
+
+def shapeValGuard : Bool :=
+  match evalPanValueExp ([] : StructContext) (fun _ => none) (fun _ => none)
+      (fun _ => none) 0 0 8 (shapeVal (.comb [.one, .one])) none with
+  | some value =>
+      (match panValueShape ([] : StructContext) value with
+       | .comb [.one, .one] => true
+       | _ => false)
+  | none => false
+
+#eval shapeValGuard
+#guard shapeValGuard
+
 end Flapjack.Test.PanValueWfParity

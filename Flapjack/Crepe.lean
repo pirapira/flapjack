@@ -203,6 +203,26 @@ theorem loadShape_getElem (address stride count n : Nat) (value : CrepExp Nat)
             ac_rfl
           simp only [haddr]
 
+/-- Original-domain counterpart of Cake's `load_glob_not_mem_load`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:688`): a global load absent
+    from an expression's expression list stays absent from every expression
+    produced by `loadShape`. -/
+theorem crepExps_loadShape_not_mem_loadGlob [BEq α] [OfNat α 0] [Add α]
+    (address stride : α) (count : Nat) (value : CrepExp α) (target : α)
+    (h : CrepExp.loadGlob target ∉ crepExps value) :
+    CrepExp.loadGlob target ∉ (loadShape address stride count value).flatMap crepExps := by
+  induction count generalizing address with
+  | zero => simp [loadShape]
+  | succ count ih =>
+      rw [loadShape]
+      simp only [List.flatMap_cons, List.mem_append, not_or]
+      refine ⟨?_, ih (address + stride)⟩
+      by_cases hz : address == 0
+      · simp only [hz, if_true]
+        simpa [crepExps] using h
+      · simp only [hz]
+        simp [crepExps, crepExps.crepExpsList, h]
+
 /-- Original-domain counterpart of Cake's `var_exp_load_shape`
     (`cakeml/pancake/semantics/crepPropsScript.sml:215`): every expression
     produced by `loadShape` has the same free variables as its source. -/

@@ -138,6 +138,15 @@ def loadShape [BEq α] [OfNat α 0] [Add α]
       let loaded := if address == 0 then .load value else .load (.op .add [value, .const address])
       loaded :: loadShape (address + stride) stride count value
 
+/-- Original-domain counterpart of Cake's `length_load_shape_eq_shape`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:30`). -/
+theorem loadShape_length [BEq α] [OfNat α 0] [Add α]
+    (address stride : α) (count : Nat) (value : CrepExp α) :
+    (loadShape address stride count value).length = count := by
+  induction count generalizing address with
+  | zero => rfl
+  | succ count ih => simp [loadShape, ih]
+
 /-- Original-domain counterpart of Cake's `load_shape_el_rel`
     (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:114`): the `n`-th
     loaded word reads from `address + n * stride`. -/

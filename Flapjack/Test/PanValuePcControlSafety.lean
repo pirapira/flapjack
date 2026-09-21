@@ -3,6 +3,7 @@ import Flapjack.PanToCrepCorrectnessBridge
 import Flapjack.PanToCrepCallHandlerControlSafety
 import Flapjack.PanValueFfiClockCorrectness
 import Flapjack.CrepeNestedDecsStability
+import Flapjack.CrepeRaisedCallInversion
 
 namespace Flapjack.Test.PanValuePcControlSafety
 
@@ -972,7 +973,6 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @compileProg_call_handler_missing_destination_of_compiled
 
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_handler
-<<<<<<< HEAD
 /-! The `Call_Ret` branch of Cake's `pc_compile_correct`: the
     assignment-producing call with no handler keeps the flattened destination
     slots when `wrap_rt` preserves the shape, and degrades to a tail call
@@ -980,5 +980,18 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @compileProg_call_destination_of_compiled
 #check @compileProg_call_destination_degraded_of_compiled
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_handler_raised
+#check @panValueCrepProgramStateCorrect_and_controlSafe_call_handler_return_of_relation
+#check @panValueCrepProgramStateCorrect_and_controlSafe_call_handler_raise_of_relation
+#check @panValueCrepProgramStateControlSafe_decCall_return
+#check @panValueCrepProgramStateControlSafe_decCall_raise
+
+/-! The caught-handler call exposes the outer-to-inner handler branch: when the
+    callee raises with a matching code, the call's crep result is exactly the
+    handler program's evaluation from the handler-entry state. -/
+#check @evalCrepFullCallState_raised_handler_of_callee
+
+/-! The direct `Call_Ret_FinalFFI` branch of Cake's `pc_compile_correct`: a
+    direct call propagates the callee's terminal FFI event unchanged. -/
+#check @panValuePcFinalFfiResultRel_of_clocked_call
 
 end Flapjack.Test.PanValuePcControlSafety

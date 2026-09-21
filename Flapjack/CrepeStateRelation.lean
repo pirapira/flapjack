@@ -125,6 +125,25 @@ theorem panValueCrepStateRel_sourceGlobals_eq_none
     sourceGlobals = (fun _ => none) :=
   hrel.1
 
+/-! Cake's `state_rel` carries ordinary memory unchanged.  This lookup form is
+    the state/evaluator bridge needed by expression and clocked-call cases:
+    only a source word is readable as a Crep word, and the related target state
+    must expose that same value at the address. -/
+theorem panValueCrepStateRel_memory_lookup
+    (structs : StructContext) (context : CompileContext α)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (crepState : CrepState α)
+    (address value : α)
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory crepState)
+    (hmemory : sourceMemory address = some (.word value)) :
+    crepState.memory address = some value := by
+  have hword : panValueWordMemory sourceMemory address = some value := by
+    simp [panValueWordMemory, hmemory]
+  have hstate := congrFun hrel.2.2 address
+  rw [hword] at hstate
+  exact hstate.symm
+
 theorem panValueCrepLocalsRel_word_slot
     (structs : StructContext) (context : CompileContext α)
     (sourceLocals : VarName → Option (PanValue α))

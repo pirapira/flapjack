@@ -908,4 +908,8 @@ evaluator-evidence obligation. -/
 #check @panValuePcCompileCorrect_compact_source_word_record_raise_of_state_evidence
 #check @panValuePcCompileCorrect_compact_source_word_record_raise_of_state_evidence_context_code
 
+/-! The retargeted-globals raw-word dispatcher also accepts explicit state
+    evidence for the generic hother callback. -/
+#check @panValuePcRaisedHraiseCases_with_raw_word_lists_retarget_globals_of_state_evidence
+
 end Flapjack.Test.PanValuePcControlSafety

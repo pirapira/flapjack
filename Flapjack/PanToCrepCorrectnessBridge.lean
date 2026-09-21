@@ -6432,6 +6432,83 @@ theorem panValuePcCompileCorrect_compact_while_source_word_of_state_evidence_con
         sourceGlobals sourceMemory sourceException sourceValue targetState
         targetException hcontrol⟩
 
+/-! Project the source-word While state-evidence theorem through the exact
+    clocked raised-result boundary.  The source/target evaluator correctness,
+    clock equation, state relation, and payload/global result relation remain
+    explicit; this is only the top-level composition needed by pc_compile_correct.
+ -/
+theorem panValuePcCompileCorrect_compact_while_source_word_of_state_evidence_context_code_and_clocked
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (condition : SourceWordExp α) (body : Prog α)
+    (sourceEvaluate : PanValuePcEvaluator α)
+    (targetEvaluate : CrepPcEvaluator α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (hwhile : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup
+      (.while condition.toExp body))
+    (clockStructs : StructContext) (clockPcContext : CompileContext α)
+    (clockExceptionRel : ExceptionId → PanValue α → α → Prop)
+    (clockExceptionCode : ExceptionId → Option α)
+    (clockGlobalsLookup : CrepState α → PanValue α → Option (List α))
+    (clockContext : PanValueFfiContext α)
+    (clockPrimitive : PanPrimitiveHandler α)
+    (clockHandler : PanValueStatefulFfiHandler α σ)
+    (clockFunctions : List (FunName × List VarName × Prog α))
+    (clockBaseAddress clockTopAddress clockBytesInWord : α)
+    (clockFuel clock : Nat)
+    (clockLocals clockGlobals : VarName → Option (PanValue α))
+    (clockMemory : α → Option (PanValue α)) (clockFfi : FfiState σ)
+    (clockProgram : Prog α) (clockTargetState : CrepState α)
+    (clockException : ExceptionId) (clockValue : PanValue α)
+    (clockTargetException : α)
+    (hclock : evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
+      clockFfi clock clockProgram = some
+        (.control (.raised clockLocals clockGlobals clockMemory clockFfi
+          clockException clockValue), clock))
+    (hclockState : panValueCrepStateRel clockStructs clockPcContext
+      clockLocals clockGlobals clockMemory clockTargetState)
+    (hclockRaise : panValuePcExceptionResultRelWithContextCode
+      clockStructs clockPcContext clockExceptionRel clockExceptionCode
+      clockGlobalsLookup clockGlobals clockMemory clockException clockValue
+      clockTargetState clockTargetException) :
+    PanValuePcCompileCorrectWithContextCode sourceEvaluate targetEvaluate
+      codeRel excpRel exceptionCode globalsLookup (.while condition.toExp body) ∧
+    evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
+      clockFfi clock clockProgram = some
+        (.control (.raised clockLocals clockGlobals clockMemory clockFfi
+          clockException clockValue), clock) ∧
+    (evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
+      clockFfi clock clockProgram).map panValueFfiClockResultProjection =
+      some (.raised clockLocals clockGlobals clockMemory clockFfi
+        clockException clockValue clock) ∧
+    panValuePcResultRelWithContextCode clockStructs clockPcContext
+      clockExceptionRel clockExceptionCode clockGlobalsLookup
+      (.raised clockLocals clockGlobals clockMemory clockException clockValue)
+      (.raised clockTargetState clockTargetException) := by
+  refine ⟨hwhile, hclock, ?_, ?_⟩
+  · rw [hclock]
+    rfl
+  · simpa [panValuePcResultRelWithContextCode] using
+      (show panValueCrepStateRel clockStructs clockPcContext clockLocals
+          clockGlobals clockMemory clockTargetState ∧
+        panValuePcExceptionResultRelWithContextCode clockStructs clockPcContext
+          clockExceptionRel clockExceptionCode clockGlobalsLookup clockGlobals
+          clockMemory clockException clockValue clockTargetState
+          clockTargetException from
+        ⟨hclockState, hclockRaise⟩)
+
 /-! Stateful `pc_compile_correct` composition with the raw-word dispatcher.
     This is the direct HOL-boundary entrypoint for evaluator-backed flat
     records; unsupported non-flat payloads remain an explicit hypothesis. -/

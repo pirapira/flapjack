@@ -97,6 +97,27 @@ def loopBodyGuard : Bool :=
 def assignLeafGuard : Bool :=
   cakeGetStackOnly (.assign 9 (.const 7 : WordExp Nat) : WordProg Nat) = []
 
+/- The TreeSet graph accumulator must materialize the same descending Cake
+   adjacency lists as the reference list insertion path. -/
+def graphSetAccumulatorGuard : Bool :=
+  let tree : WordClashTree :=
+    .seq
+      (.delta [1, 3] [2, 4])
+      (.branch (some [5, 6])
+        (.set [7, 8, 7])
+        (.delta [9] [1, 8]))
+  let bij := cakeMkBij tree
+  let sourceIndex := cakeSpDefaultIndex bij.toAllocator
+  let ta := cakeSpDefaultIndexed sourceIndex
+  let (reference, _) := cakeMkGraph ta tree [] (CakeNodeMap.ofSize bij.nextNode)
+  let reference := cakeExtendGraph ta [(1, 9), (8, 2)] reference
+  let (accumulated, _) :=
+    cakeMkGraphSet ta tree [] (cakeAdjSetMapOfSize bij.nextNode)
+  let accumulated := cakeExtendGraphSet ta [(1, 9), (8, 2)] accumulated
+  reference.toNatInfoMap == (accumulated.mapValues cakeAdjSetList).toNatInfoMap
+
+#guard graphSetAccumulatorGuard
+
 /-- Canonical form for comparing node bijections with the probed sptree
     outputs: both maps sorted by key. -/
 def sortBijectionMaps (bijection : CakeNodeBijection) :

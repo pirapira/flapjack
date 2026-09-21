@@ -454,6 +454,73 @@ def cakeExtendGraph (ta : Nat → Nat) : List (Nat × Nat) →
   | (x, y) :: rest, adj =>
       cakeExtendGraph ta rest (cakeInsertEdge (ta x) (ta y) adj)
 
+/-! Cake's observable adjacency lists are sorted
+    descending sets.  Accumulating those sets in TreeSets avoids rescanning a
+    long sorted list for every edge, then materializes the same list shape once
+    at the allocator boundary.  The live-list traversal above is deliberately
+    shared in shape and order with the reference builder. -/
+def cakeAdjSetMapOfSize (n : Nat) : CakeNodeMap (Std.TreeSet Nat) :=
+  { slots := Array.replicate n (some (∅ : Std.TreeSet Nat)) }
+
+def cakeAdjSetList (s : Std.TreeSet Nat) : List Nat := s.toList.reverse
+
+def cakeInsertEdgeSet (x y : Nat) (adj : CakeNodeMap (Std.TreeSet Nat)) :
+    CakeNodeMap (Std.TreeSet Nat) :=
+  let adjX := (adj.get x).getD ∅
+  let adjY := (adj.get y).getD ∅
+  (adj.set x (adjX.insert y)).set y (adjY.insert x)
+
+def cakeListInsertEdgeSet (x : Nat) : List Nat →
+    CakeNodeMap (Std.TreeSet Nat) → CakeNodeMap (Std.TreeSet Nat)
+  | [], adj => adj
+  | y :: ys, adj => cakeListInsertEdgeSet x ys (cakeInsertEdgeSet x y adj)
+
+def cakeCliqueInsertEdgeSet : List Nat → CakeNodeMap (Std.TreeSet Nat) →
+    CakeNodeMap (Std.TreeSet Nat)
+  | [], adj => adj
+  | x :: xs, adj => cakeCliqueInsertEdgeSet xs (cakeListInsertEdgeSet x xs adj)
+
+def cakeExtendCliqueSet : List Nat → List Nat →
+    CakeNodeMap (Std.TreeSet Nat) →
+    CakeNodeMap (Std.TreeSet Nat) × List Nat
+  | [], cli, adj => (adj, cli)
+  | x :: xs, cli, adj =>
+      if cli.contains x then cakeExtendCliqueSet xs cli adj
+      else cakeExtendCliqueSet xs (x :: cli) (cakeListInsertEdgeSet x cli adj)
+termination_by new _ _ => sizeOf new
+decreasing_by all_goals decreasing_trivial
+
+def cakeMkGraphSet (ta : Nat → Nat) : WordClashTree → List Nat →
+    CakeNodeMap (Std.TreeSet Nat) →
+    CakeNodeMap (Std.TreeSet Nat) × List Nat
+  | .delta writes reads, liveout, adj =>
+      let wta := writes.map ta
+      let rta := reads.map ta
+      let (adj1, live) := cakeExtendCliqueSet wta liveout adj
+      cakeExtendCliqueSet rta (live.filter (fun x => !wta.contains x)) adj1
+  | .set names, _liveout, adj =>
+      let live := (NumSet.fromAList names).map ta
+      (cakeCliqueInsertEdgeSet live adj, live)
+  | .branch topt t1 t2, liveout, adj =>
+      let (adj1, t1Live) := cakeMkGraphSet ta t1 liveout adj
+      let (adj2, t2Live) := cakeMkGraphSet ta t2 liveout adj1
+      match topt with
+      | none => cakeExtendCliqueSet t1Live t2Live adj2
+      | some t =>
+          let live := (NumSet.fromAList t).map ta
+          (cakeCliqueInsertEdgeSet live adj2, live)
+  | .seq t1 t2, liveout, adj =>
+      let (adj1, live) := cakeMkGraphSet ta t2 liveout adj
+      cakeMkGraphSet ta t1 live adj1
+termination_by tree _ _ => sizeOf tree
+decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+
+def cakeExtendGraphSet (ta : Nat → Nat) : List (Nat × Nat) →
+    CakeNodeMap (Std.TreeSet Nat) → CakeNodeMap (Std.TreeSet Nat)
+  | [], adj => adj
+  | (x, y) :: rest, adj =>
+      cakeExtendGraphSet ta rest (cakeInsertEdgeSet (ta x) (ta y) adj)
+
 /-- `mk_tags` (`reg_allocScript.sml:1159-1176`): tag every node with its
     original variable's role.  Stack-only variables (from `get_stack_only`,
     keyed by original variable name) become `Stemp`, other allocatable
@@ -482,8 +549,9 @@ def cakeInitRaStateFromBij (bij : CakeNodeBijection) (tree : WordClashTree)
     (forced : List (Nat × Nat)) (fs : List Nat) : CakeRaState :=
   let sourceIndex := cakeSpDefaultIndex bij.toAllocator
   let ta := cakeSpDefaultIndexed sourceIndex
-  let (adj, _) := cakeMkGraph ta tree [] (CakeNodeMap.ofSize bij.nextNode)
-  let adj := cakeExtendGraph ta forced adj
+  let (adj, _) := cakeMkGraphSet ta tree [] (cakeAdjSetMapOfSize bij.nextNode)
+  let adj := cakeExtendGraphSet ta forced adj
+  let adj := adj.mapValues cakeAdjSetList
   let tags := cakeMkTags bij.nextNode bij.fromAllocator fs
   { (CakeRaState.empty bij.nextNode) with
     adjLists := adj,

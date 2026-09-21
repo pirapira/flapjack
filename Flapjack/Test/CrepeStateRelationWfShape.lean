@@ -1,4 +1,4 @@
-import Flapjack.CrepeStateRelation
+import Flapjack.CrepeNestedDecsStability
 
 namespace Flapjack.Test.CrepeStateRelationWfShape
 
@@ -32,5 +32,27 @@ theorem locals_rel_wf_shape_fixture :
   · simp [sourceLocals]
   · simp [context, lookupInfo]
   · simp [panValueIsWf]
+
+theorem locals_rel_update_fresh_slot_fixture :
+    panValueCrepLocalsRel ([] : StructContext) context sourceLocals
+      (updateCrepLocal crepLocals 2 99) := by
+  apply panValueCrepLocalsRel_update_fresh_slot
+    ([] : StructContext) context sourceLocals crepLocals 2 99
+  · intro name value shape slots hsource hlookup
+    simp [sourceLocals] at hsource
+    rcases hsource with ⟨rfl, rfl⟩
+    have hshape : .one = shape ∧ [0] = slots := by
+      simpa [context, lookupInfo] using hlookup
+    rcases hshape with ⟨rfl, rfl⟩
+    simp [crepLocals, readCrepLocals,
+      panValueFlatWords, panValueFlatWordsFuel, panShapeMatches,
+      panValueShape]
+  · simp [context]
+  · intro name shape slots hlookup current hcurrent
+    have hshape : "x" = name ∧ .one = shape ∧ [0] = slots := by
+      simpa [context, lookupInfo] using hlookup
+    rcases hshape with ⟨rfl, rfl, rfl⟩
+    simp at hcurrent
+    omega
 
 end Flapjack.Test.CrepeStateRelationWfShape

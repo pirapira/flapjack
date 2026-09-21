@@ -18,6 +18,7 @@ import Flapjack.PanToCrepAnnotCorrectness
 import Flapjack.PanValueFfiClockCorrectness
 import Flapjack.CrepeNestedDecsStability
 import Flapjack.CrepeRaisedCallInversion
+import Flapjack.PanToCrepDecCallCorrectness
 import Flapjack.PanToCrepProgramComposition
 
 namespace Flapjack.Test.PanValuePcControlSafety
@@ -1021,6 +1022,7 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_tailCall
 #check @panValuePcCompileCorrect_of_clocked_call_tailCall
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_returned_destination
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_call_returned_destination
 /-! Compositional source handler safety: a handler-free call and a declaration
     body that never exposes loop control. -/
 #check @PanValueProgNotBrokeContinued_call_of_no_handler
@@ -1187,5 +1189,6 @@ example :
 #check @panValuePcResultRel_constructor_eq
 
 #check @panValuePcCompileCorrect_compact_of_state_and_control_safe_induction
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_decCall_returned
 
 end Flapjack.Test.PanValuePcControlSafety

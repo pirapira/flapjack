@@ -92,6 +92,48 @@ theorem panValueCrepProgramStateControlSafe_return_wordExp
     (panValueCrepProgramStateControlSafe_return_source_word
       (sourceWordExpOf expression hword) hbytesInWord hlookup)
 
+theorem panValueCrepProgramStateControlSafe_ite_wordExp
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (condition : Exp α) (hcondition : wordExp condition)
+    (thenBranch elseBranch : Prog α)
+    (hthenSafe : PanValueCrepProgramStateControlSafe thenBranch)
+    (helseSafe : PanValueCrepProgramStateControlSafe elseBranch)
+    (hbytesInWord : ∀ (context : CompileContext α) (bytesInWord : α),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext α)
+      (sourceLocals : VarName → Option (PanValue α))
+      (name : VarName) (value : PanValue α),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot])) :
+    PanValueCrepProgramStateControlSafe (.ite condition thenBranch elseBranch) := by
+  have hconditionToExp :
+      (sourceWordExpOf condition hcondition).toExp = condition :=
+    sourceWordExpOf_toExp condition hcondition
+  simpa [hconditionToExp] using
+    (panValueCrepProgramStateControlSafe_ite_source_word
+      (sourceWordExpOf condition hcondition) thenBranch elseBranch hthenSafe
+      helseSafe hbytesInWord hlookup)
+
+theorem panValueCrepProgramStateControlSafe_while_wordExp
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (condition : Exp α) (hcondition : wordExp condition)
+    (body : Prog α)
+    (hloopSafe : PanValueCrepProgramLoopStateControlSafe (.while condition body)) :
+    PanValueCrepProgramStateControlSafe (.while condition body) := by
+  have hconditionToExp :
+      (sourceWordExpOf condition hcondition).toExp = condition :=
+    sourceWordExpOf_toExp condition hcondition
+  simpa [hconditionToExp] using
+    (panValueCrepProgramStateControlSafe_while_of_loop_safe
+      (sourceWordExpOf condition hcondition) body
+      (by simpa [hconditionToExp] using hloopSafe))
+
 theorem panValueCrepProgramStateCorrect_ite_wordExp
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

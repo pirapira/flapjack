@@ -733,6 +733,24 @@ theorem getElem_fst_inj (values : List (α × β)) (n n' : Nat)
     rw [List.getElem_map, List.getElem_map, heq, heq']
   exact (List.getElem_inj hnodup).mp hmapped
 
+/-! Counterpart of Cake's `max_foldr_lt`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:768`): a member of a
+    list is strictly below the fold with `max` plus any positive slack. -/
+theorem mem_lt_foldr_max_add (values : List Nat) (x n m : Nat)
+    (hmem : x ∈ values) (hle : n ≤ x) (hm : 0 < m) :
+    x < values.foldr max n + m := by
+  have _ := hle
+  induction values with
+  | nil => simp at hmem
+  | cons head tail ih =>
+      rw [List.foldr_cons]
+      rcases List.mem_cons.mp hmem with rfl | hmem
+      · have hmax : x ≤ max x (tail.foldr max n) := Nat.le_max_left x _
+        omega
+      · have hrec := ih hmem
+        have hmax : tail.foldr max n ≤ max head (tail.foldr max n) := Nat.le_max_right _ _
+        omega
+
 /-! Counterpart of Cake's `all_distinct_with_shape_distinct`
     (`cakeml/pancake/semantics/panPropsScript.sml:357`): two distinct members of
     the flat-value split are disjoint.  Cake's extra hypotheses `x <> []` and

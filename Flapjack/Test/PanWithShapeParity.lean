@@ -296,6 +296,16 @@ def listIndexGuard : Bool :=
 #eval listIndexGuard
 #guard listIndexGuard
 
+theorem mem_lt_foldr_max_add_fixture :
+    (3 : Nat) < ([1, 3, 2] : List Nat).foldr max 0 + 1 :=
+  mem_lt_foldr_max_add [1, 3, 2] 3 0 1 (by decide) (by decide) (by decide)
+
+def foldrMaxGuard : Bool :=
+  (3 : Nat) < ([1, 3, 2] : List Nat).foldr max 0 + 1
+
+#eval foldrMaxGuard
+#guard foldrMaxGuard
+
 def checkDisjoint (name : String) (actual : Bool) : IO Bool := do
   if actual then
     IO.println s!"PASS {name}"
@@ -325,8 +335,9 @@ def runChecks : IO Bool := do
   let zipWithShapeOk ←
     checkDisjoint "pan all_distinct_mem_zip_disjoint_with_shape" zipWithShapeGuard
   let listIndexOk ← checkDisjoint "pan list index bridges" listIndexGuard
+  let foldrMaxOk ← checkDisjoint "pan max_foldr_lt" foldrMaxGuard
   pure (results.all id && lengthOk && allDistinctOk && membershipOk && disjointOk &&
     shapeDisjointOk && nestedOk && distinctOk && distinctListsOk && zipWithShapeOk &&
-    listIndexOk)
+    listIndexOk && foldrMaxOk)
 
 end Flapjack.Test.PanWithShapeParity

@@ -308,6 +308,22 @@ termination_by shapes => sizeOf shapes
 decreasing_by
   all_goals decreasing_trivial
 
+theorem withShape_length (shapes : List Shape) (values : List α) :
+    (withShape shapes values).length = shapes.length := by
+  induction shapes generalizing values with
+  | nil => simp [withShape]
+  | cons shape shapes ih => simp [withShape, ih]
+
+/-! Counterpart of Cake's `length_with_shape_eq_shape`
+    (`cakeml/pancake/semantics/panPropsScript.sml:265`): the flat-value split
+    produces one sub-list per requested shape, so the hypothesis on the flat
+    value count is retained only for fidelity with the original statement. -/
+theorem length_withShape_eq_shape (shapes : List Shape) (values : List α)
+    (hvalues : values.length = Shape.shapeSize (.comb shapes)) :
+    shapes.length = (withShape shapes values).length := by
+  have _ := hvalues
+  rw [withShape_length]
+
 def expLocalVars : Exp α → List VarName
   | .const _ => []
   | .var .local name => [name]

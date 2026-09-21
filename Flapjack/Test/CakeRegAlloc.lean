@@ -851,6 +851,66 @@ def negFirstMatchProjectionGuard : Bool :=
     Flapjack.RiscV.CakeRegAlloc.cakeNegFirstMatchCol state 3 [] [5, 7] ==
       none
 
+/- Cake's `biased_pref` first tries the coalesced root, then the move-partner
+   table; `neg_biased_pref` scans only non-conflicting stack colours. These
+   direct cases pin the preference inputs consumed by IRC. -/
+def biasedPreferenceGuard : Bool :=
+  let rootState : CakeRaState :=
+    { CakeRaState.empty 4 with
+      nodeTag := CakeNodeMap.ofNatInfoMap 4 [(2, .fixed 1)]
+      coalesced := CakeNodeMap.ofNatInfoMap 4 [(1, 2)] }
+  let partnerState : CakeRaState :=
+    { CakeRaState.empty 4 with
+      nodeTag := CakeNodeMap.ofNatInfoMap 4 [(3, .fixed 0)] }
+  let emptyMoves := CakeNodeMap.ofSize 4
+  let partnerMoves := CakeNodeMap.ofNatInfoMap 4 [(1, [3])]
+  cakeBiasedPref rootState emptyMoves 1 [0, 1] == some 1 &&
+    cakeBiasedPref partnerState partnerMoves 1 [0, 1] == some 0 &&
+    cakeBiasedPref partnerState partnerMoves 4 [0, 1] == none
+
+def negBiasedPreferenceGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      nodeTag := CakeNodeMap.ofNatInfoMap 4
+        [(2, .fixed 2), (3, .fixed 4)] }
+  let moves := CakeNodeMap.ofNatInfoMap 4 [(1, [2, 3])]
+  cakeNegBiasedPref state 2 moves 1 [2] == some 4 &&
+    cakeNegBiasedPref state 2 moves 4 [2] == none
+
+#guard biasedPreferenceGuard
+#guard negBiasedPreferenceGuard
+
+/- `full_consistency_ok` rejects out-of-dimension and clashing moves, permits
+   Atemp/low-fixed endpoints, and rejects two low fixed endpoints. -/
+def fullConsistencyGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      nodeTag := CakeNodeMap.ofNatInfoMap 4
+        [(0, .aTemp), (1, .aTemp), (2, .fixed 1), (3, .fixed 3)]
+      adjLists := CakeNodeMap.ofNatInfoMap 4 [(0, [2]), (2, [0])] }
+  cakeFullConsistencyOk state 2 0 1 &&
+    !cakeFullConsistencyOk state 2 0 2 &&
+    !cakeFullConsistencyOk state 2 2 3 &&
+    !cakeFullConsistencyOk state 2 0 4
+
+#guard fullConsistencyGuard
+
+/- `canonize_move` puts a fixed endpoint first; otherwise it orders allocator
+   nodes ascending, matching reg_allocScript.sml:614-624. -/
+def canonizeMoveGuard : Bool :=
+  let fixedLeft : CakeRaState :=
+    { CakeRaState.empty 4 with
+      nodeTag := CakeNodeMap.ofNatInfoMap 4 [(2, .fixed 1), (3, .aTemp)] }
+  let fixedRight : CakeRaState :=
+    { CakeRaState.empty 4 with
+      nodeTag := CakeNodeMap.ofNatInfoMap 4 [(2, .aTemp), (3, .fixed 2)] }
+  let allAtemps : CakeRaState := CakeRaState.empty 6
+  cakeCanonizeMove fixedLeft 2 3 == (2, 3) &&
+    cakeCanonizeMove fixedRight 2 3 == (3, 2) &&
+    cakeCanonizeMove allAtemps 5 2 == (2, 5)
+
+#guard canonizeMoveGuard
+
 /- Cake's `reset_move_related` (`reg_allocScript.sml:708-725`) first clears
    the whole dimension, then marks exactly the non-fixed endpoints of the
    surviving unavailable moves. -/
@@ -1052,7 +1112,9 @@ def parityGuard : Bool :=
     resortMovesSpOrderGuard && bgOkOrderGuard &&
     qsortTiesTwoGuard && qsortTiesThreeGuard && qsortDescGuard &&
     stempBadColourTieGuard && raMovesStempGuard && raMovesStempHiGuard &&
-    negFirstMatchProjectionGuard && resetMoveRelatedGuard && removeColoursGuard
+    negFirstMatchProjectionGuard && biasedPreferenceGuard &&
+    negBiasedPreferenceGuard && fullConsistencyGuard && canonizeMoveGuard &&
+    resetMoveRelatedGuard && removeColoursGuard
     && mapUpdateBoundedGuard && sourceSpillCostKeyGuard &&
     sourceSpillCostRoundTripGuard && sourceMovePhysicalFallbackGuard
     && deadMovePriorityGuard
@@ -1091,7 +1153,9 @@ def runChecks : IO Bool := do
     reviveOrderGuard, revivePartitionGuard, bgOkOrderGuard, qsortTiesTwoGuard,
     movesToSpOrderGuard, resortMovesSpOrderGuard,
     qsortTiesThreeGuard, qsortDescGuard, raMovesStempGuard,
-    raMovesStempHiGuard, negFirstMatchProjectionGuard, resetMoveRelatedGuard,
+    raMovesStempHiGuard, negFirstMatchProjectionGuard, biasedPreferenceGuard,
+    negBiasedPreferenceGuard, fullConsistencyGuard, canonizeMoveGuard,
+    resetMoveRelatedGuard,
     removeColoursGuard,
     mapUpdateBoundedGuard,
     deadMovePriorityGuard, deadProgramPriorityGuard, sortMovesTailSplitGuard,
@@ -1134,7 +1198,9 @@ def runChecks : IO Bool := do
     "sort_moves tie three", "sort_moves long tie",
     "sort_moves descending",
     "reg_alloc moves stack temp", "reg_alloc moves stack temp high",
-    "neg_first_match_col projection", "Cake map updates stay bounded",
+    "neg_first_match_col projection", "biased preference",
+    "negative biased preference", "full consistency", "canonize move",
+    "Cake map updates stay bounded",
     "remove_dead keeps move priority", "remove_dead_prog keeps entry priority",
     "mk_bij uses Cake Patricia Set order", "sort_moves tail split oracle",
     "source-keyed spill costs", "source-keyed spill-cost round trip",

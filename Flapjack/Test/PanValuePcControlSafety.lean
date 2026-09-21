@@ -899,4 +899,8 @@ evaluator-evidence obligation. -/
 #check @panValuePcCompileCorrect_compact_return_with_context_code_of_state_evidence
 #check @panValuePcCompileCorrect_compact_return_with_context_code_of_state_evidence_and_clocked
 
+/-! The plain raw-word-list entrypoint also accepts explicit state evidence
+    for the generic `hother` callback. -/
+#check @panValuePcCompileCorrect_compact_with_raw_word_lists_of_state_evidence
+
 end Flapjack.Test.PanValuePcControlSafety

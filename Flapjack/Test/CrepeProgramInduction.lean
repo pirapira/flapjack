@@ -1,4 +1,5 @@
 import Flapjack.PanToCrepCorrectnessBoundary
+import Flapjack.CrepeProgramWordInduction
 
 /-!
 Regression coverage for the assembled stateful source-to-Crep induction.
@@ -9,6 +10,14 @@ the recursive proof and the explicit source/compiled state relation.
 namespace Flapjack.Test.CrepeProgramInduction
 
 open Flapjack
+
+/-! The word-program induction now admits ordinary calls and one-word local
+declarations through the same relation-premised state-correctness
+constructors used by the Pancake cases. -/
+#check @StatefulWordProg.callWord
+#check @StatefulWordProg.decWord
+#check @StatefulWordProg.decContract
+#check @panValueCrepProgramStateCorrect_statefulWord
 
 def compactExample : Prog Nat :=
   .seq (.return (.const 7))

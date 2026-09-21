@@ -85,6 +85,7 @@ import Flapjack.Test.PanHProgReturnParity
 import Flapjack.Test.PanHProgRaiseParity
 import Flapjack.Test.PanValuePcRaisedPayloadCorrectness
 import Flapjack.Test.PanValueFfiClockLe
+import Flapjack.Test.PanToCrepMaxListParity
 import Flapjack.Test.CrepeGlobalStoreCorrectness
 import Flapjack.Test.PanHProgExtCallParity
 import Flapjack.Test.PanHProgStoreByteParity

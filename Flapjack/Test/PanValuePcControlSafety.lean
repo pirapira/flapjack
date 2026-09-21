@@ -1,6 +1,12 @@
 import Flapjack.PanToCrepCorrectnessBoundary
 import Flapjack.PanToCrepCorrectnessBridge
+import Flapjack.PanToCrepTailCallCorrectness
 import Flapjack.PanToCrepCallHandlerControlSafety
+import Flapjack.PanToCrepAssignmentControlSafety
+import Flapjack.PanToCrepSharedMemoryControlSafety
+import Flapjack.PanToCrepSharedMemoryCorrectness
+import Flapjack.PanToCrepDeclarationControlSafety
+import Flapjack.PanToCrepAssignmentCorrectness
 import Flapjack.PanValueFfiClockCorrectness
 import Flapjack.CrepeNestedDecsStability
 import Flapjack.CrepeRaisedCallInversion
@@ -997,6 +1003,8 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @panValuePcRaisedResultRelWithContextCode_of_clocked_call
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_raised_no_handler
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_returned_no_handler
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_tailCall
+#check @panValuePcCompileCorrect_of_clocked_call_tailCall
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_returned_destination
 /-! Compositional source handler safety: a handler-free call and a declaration
     body that never exposes loop control. -/
@@ -1019,6 +1027,7 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_raised
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_timeout
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_returned
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_returned_finalFfi
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_returned_value
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_extCall_finalFfi
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_extCall_finalFfi_state
@@ -1104,5 +1113,21 @@ example :
     handler-safety predicate: `.break` is control-safe on both sides but still
     yields a `broke` source result. -/
 #check @not_panValueProgNotBrokeContinued_break
+
+/-! Shared-memory leaves are control-safe: the source evaluator can only
+    produce `normal`, so the label rule holds for every `VarKind`. -/
+#check @panValueCrepProgramStateControlSafe_shMemLoad
+#check @panValueCrepProgramStateControlSafe_shMemStore
+#check @panValueCrepProgramStateCorrect_and_controlSafe_shMemLoad_source_word
+#check @panValueCrepProgramStateCorrect_and_controlSafe_shMemStore_source_word
+#check @panValuePcCompileCorrect_compact_shMemLoad_source_word_of_state_evidence
+#check @panValuePcCompileCorrect_compact_shMemStore_source_word_of_state_evidence
+#check @panValueCrepProgramStateControlSafe_dec
+#check @panValuePcCompileCorrect_compact_dec_of_state_evidence
+#check @panValueCrepProgramStateControlSafe_assign_local
+#check @panValuePcCompileCorrect_compact_assign_local_source_word_of_state_evidence
+#check @panValuePcCompileCorrect_compact_shMemLoad_source_word
+#check @panValuePcCompileCorrect_compact_shMemStore_source_word
+#check @panValueCrepProgramStateControlSafe_assign
 
 end Flapjack.Test.PanValuePcControlSafety

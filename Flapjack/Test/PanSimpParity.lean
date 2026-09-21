@@ -1166,6 +1166,100 @@ example
     (.skip : Prog Nat) "E" "E" "x" (.skip : Prog Nat) hfunctions hhandler
     (by simp [progSize]) hlookup rfl hargs hhandlerValid
 
+/-- The lower-bounded fragment also covers declarations, conditionals and ticks
+    (in addition to calls and sequences). -/
+example :
+    PanValueFfiClockNormalAdequateProgFrom 1 evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 7 none none none
+      (.dec "x" .one (.const 5) (.skip : Prog Nat)) :=
+  PanValueFfiClockNormalAdequateProgFrom_dec 1 evaluatorContext (fun _ _ => none)
+    evaluatorHandler [] [] 0 0 8 7 none none none "x" .one (.const 5)
+    (.skip : Prog Nat)
+    (fun _ _ _ => ⟨.word 5, by simp [evalPanValueExp],
+      by simp [panValueShape, panShapeMatches]⟩)
+    (PanValueFfiClockNormalAdequateProgFrom_of_adequate 1 evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+      (.skip : Prog Nat)
+      (evalPanValueFfiClockProg_normalAdequate_of_normalProg evaluatorContext
+        (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+        (.skip : Prog Nat) PanValueFfiClockNormalProg.skip))
+
+example :
+    PanValueFfiClockNormalAdequateProgFrom 1 evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 7 none none none
+      (.ite (.const 5) (.skip : Prog Nat) (.skip : Prog Nat)) :=
+  PanValueFfiClockNormalAdequateProgFrom_ite 1 evaluatorContext (fun _ _ => none)
+    evaluatorHandler [] [] 0 0 8 7 none none none (.const 5) (.skip : Prog Nat)
+    (.skip : Prog Nat) (fun _ _ _ => ⟨5, by simp [evalPanValueExp]⟩)
+    (PanValueFfiClockNormalAdequateProgFrom_of_adequate 1 evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+      (.skip : Prog Nat)
+      (evalPanValueFfiClockProg_normalAdequate_of_normalProg evaluatorContext
+        (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+        (.skip : Prog Nat) PanValueFfiClockNormalProg.skip))
+    (PanValueFfiClockNormalAdequateProgFrom_of_adequate 1 evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+      (.skip : Prog Nat)
+      (evalPanValueFfiClockProg_normalAdequate_of_normalProg evaluatorContext
+        (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+        (.skip : Prog Nat) PanValueFfiClockNormalProg.skip))
+
+example :
+    PanValueFfiClockNormalAdequateProgFrom 1 evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 7 none none none (.tick : Prog Nat) :=
+  PanValueFfiClockNormalAdequateProgFrom_tick 1 (by decide) evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+
+example :
+    PanValueFfiClockNormalAdequateProgFrom 0 evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 7 none none none
+      (.while (.const 0) (.skip : Prog Nat)) :=
+  PanValueFfiClockNormalAdequateProgFrom_while_zero 0 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+    (.const 0) (.skip : Prog Nat) (fun _ _ _ => ⟨0, by simp [evalPanValueExp], by decide⟩)
+
+/-- A returning declaration call is lower-bounded normal-adequate when the
+    caller supplies the call result and the body is all-clock adequate. -/
+example
+    (hcall : ∀ (clock : Nat), 1 ≤ clock →
+      ∀ (locals globals : VarName → Option (PanValue Nat))
+        (memory : Nat → Option (PanValue Nat)) (ffi : FfiState Unit),
+      ∃ (nextLocals nextGlobals : VarName → Option (PanValue Nat))
+        (nextMemory : Nat → Option (PanValue Nat)) (nextFfi : FfiState Unit)
+        (value : PanValue Nat) (callClock : Nat),
+        evalPanValueFfiClockCall evaluatorContext (fun _ _ => none) evaluatorHandler
+          [] [] 0 0 8 (max 7 (progCallFuel 7 (.skip : Prog Nat))) locals globals memory
+          ffi clock none "f" [] =
+          some (.control (.returned nextLocals nextGlobals nextMemory nextFfi [value]),
+            callClock))
+    (hmatch : ∀ value : PanValue Nat,
+      panShapeMatches (panValueShape [] value) .one = true) :
+    PanValueFfiClockNormalAdequateProgFrom 1 evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 7 none none none
+      (.decCall "x" .one "f" [] (.skip : Prog Nat)) :=
+  PanValueFfiClockNormalAdequateProgFrom_decCall_returned 1 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+    "x" .one "f" [] (.skip : Prog Nat) hcall hmatch
+    (evalPanValueFfiClockProg_normalAdequate_of_normalProg evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+      (.skip : Prog Nat) PanValueFfiClockNormalProg.skip)
+
+/-- A memory-store leaf is lower-bounded normal-adequate at any bound. -/
+example :
+    PanValueFfiClockNormalAdequateProgFrom 0 evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 5 none none none
+      (.store (.const 7) (.const 9)) :=
+  PanValueFfiClockNormalAdequateProgFrom_leaf 0 evaluatorContext (fun _ _ => none)
+    evaluatorHandler [] [] 0 0 8 5 none none none (.store (.const 7) (.const 9))
+    (PanValueFfiLeafProg.store (.const 7) (.const 9))
+    (by
+      intro locals globals memory ffi
+      exact ⟨locals, globals, updatePanValueMemory memory 7 (.word 9), ffi, 3, by
+        simp [evalPanValueFfiProgSteps, evalPanValueExpCounted, evalPanValueExp,
+          panValueExpStepCost, panValueStoreWithAccess, panValueFlatStoreWords,
+          panValueFlatWords, panValueFlatWordsFuel, panValueFlatOffset,
+          updatePanValueMemory]⟩)
+
 /-- The raised `DecCall` outcome also lifts to the declaration's progSize. -/
 example
     (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)
@@ -2352,5 +2446,9 @@ def runChecks : IO Bool := do
   IO.println "PASS pan_simp first_compile_prog_all_distinct Cake name-distinctness preservation"
   IO.println "PASS pan_simp el_compile_prog_el_prog_eq Cake compiled-table entry provenance"
   pure parityGuard
+
+/-! The fuel-indexed while-exit certificate underpinning the nonzero-condition
+`While` adequacy constructor. -/
+#check @Flapjack.PanValueFfiClockWhileExitsNormally
 
 end Flapjack.Test.PanSimpParity

@@ -902,5 +902,9 @@ evaluator-evidence obligation. -/
 /-! The paired raw-word-list dispatcher also accepts the explicit state
     evidence plus the exception lookup instead of the opaque callbacks. -/
 #check @panValuePcRaisedHraiseCases_with_raw_word_lists_paired_of_state_evidence
+/-! The plain (non-context-coded) conditional and loop wrappers accept the
+    explicit state evidence instead of the opaque evaluator callback. -/
+#check @panValuePcCompileCorrect_compact_ite_source_word_of_state_evidence
+#check @panValuePcCompileCorrect_compact_while_source_word_of_state_evidence
 
 end Flapjack.Test.PanValuePcControlSafety

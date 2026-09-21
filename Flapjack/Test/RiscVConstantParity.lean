@@ -15,6 +15,14 @@ checks cover the separate constants boundary, whose list shape follows
 
 namespace Flapjack.RiscV
 
+/-! Cake's signed-12 immediate path includes the zero boundary: even the
+    architectural zero is materialized as the explicit `ORI rd, x0, 0` in
+    `riscv_ast`, rather than being silently dropped. -/
+example :
+    wordConstToInstructions (width := 64) 4 (BitVec.ofNat 64 0) =
+      some [.ori 4 0 (BitVec.ofNat 64 0)] := by
+  decide
+
 example :
     wordConstToInstructions (width := 64) 4 (BitVec.ofNat 64 0x12) =
       some [.ori 4 0 (BitVec.ofNat 64 0x12)] := by

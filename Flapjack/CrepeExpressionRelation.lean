@@ -1273,4 +1273,161 @@ theorem compileSourceWordExp_state_relation
     compiled' hnoGlobal]
   simpa [hcompiledEq] using hcompiled
 
+
+theorem localisedExp_of_expGlobalVarsList_eq_nil {α : Type _} {expressions : List (Exp α)}
+    (h : expGlobalVars.expGlobalVarsList expressions = []) :
+    ∀ expression ∈ expressions, localisedExp expression := by
+  induction expressions with
+  | nil => simp
+  | cons head tail ih =>
+      simp only [expGlobalVars.expGlobalVarsList] at h
+      obtain ⟨hhead, htail⟩ := List.append_eq_nil_iff.mp h
+      intro expression hmem
+      simp only [List.mem_cons] at hmem
+      rcases hmem with rfl | hmem
+      · simpa [localisedExp] using hhead
+      · exact ih htail expression hmem
+
+theorem globalCompileExpList_expGlobalVars [BEq String] (context : GlobalPassContext α)
+    (expressions : List (Exp α)) :
+    expGlobalVars.expGlobalVarsList (globalCompileExpList context expressions) = [] := by
+  induction expressions with
+  | nil => simp [globalCompileExpList, expGlobalVars.expGlobalVarsList]
+  | cons expression expressions ih =>
+      simp only [globalCompileExpList, expGlobalVars.expGlobalVarsList]
+      rw [globalCompileExp_expGlobalVars, ih]
+      simp
+
+theorem localisedExps_globalCompileExpList [BEq String] (context : GlobalPassContext α)
+    (arguments : List (Exp α)) :
+    ∀ expression ∈ globalCompileExpList context arguments, localisedExp expression :=
+  localisedExp_of_expGlobalVarsList_eq_nil
+    (globalCompileExpList_expGlobalVars context arguments)
+
+set_option maxHeartbeats 800000 in
+set_option linter.unusedSimpArgs false in
+theorem globalCompileProg_localised [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (program : Prog α) :
+    localisedProg (globalCompileProg context program) := by
+  apply globalCompileProg.induct context
+    (motive := fun program => localisedProg (globalCompileProg context program))
+  · intro name shape value body ih
+    simp [globalCompileProg, localisedProg, globalCompileExp_localised, ih]
+  · intro name value shape address hlookup
+    simp [globalCompileProg, localisedProg, hlookup, globalCompileExp_expGlobalVars,
+      globalCompileExp_localised, localisedExp, expGlobalVars, expGlobalVars.expGlobalVarsList]
+  · intro name value hlookup
+    simp [globalCompileProg, localisedProg, hlookup]
+  · intro name value
+    simp [globalCompileProg, localisedProg, globalCompileExp_expGlobalVars,
+      globalCompileExp_localised]
+  · intro name operator arguments
+    simp only [globalCompileProg, localisedProg]
+    exact localisedExps_globalCompileExpList context arguments
+  · intro address value
+    simp [globalCompileProg, localisedProg, globalCompileExp_expGlobalVars,
+      globalCompileExp_localised]
+  · intro address value
+    simp [globalCompileProg, localisedProg, globalCompileExp_expGlobalVars,
+      globalCompileExp_localised]
+  · intro address value
+    simp [globalCompileProg, localisedProg, globalCompileExp_expGlobalVars,
+      globalCompileExp_localised]
+  · intro first second ihFirst ihSecond
+    simp [globalCompileProg, localisedProg, ihFirst, ihSecond]
+  · intro condition thenBranch elseBranch ihThen ihElse
+    simp [globalCompileProg, localisedProg, globalCompileExp_expGlobalVars,
+      globalCompileExp_localised, ihThen, ihElse]
+  · intro condition body ih
+    simp [globalCompileProg, localisedProg, globalCompileExp_expGlobalVars,
+      globalCompileExp_localised, ih]
+  · intro function arguments
+    simp only [globalCompileProg, localisedProg]
+    exact ⟨localisedExps_globalCompileExpList context arguments, trivial⟩
+  · intro function arguments
+    simp only [globalCompileProg, localisedProg]
+    exact ⟨localisedExps_globalCompileExpList context arguments, trivial⟩
+  · intro function arguments exception handlerVar handler ih
+    simp only [globalCompileProg, localisedProg]
+    exact ⟨localisedExps_globalCompileExpList context arguments, ih⟩
+  · intro function arguments name
+    simp only [globalCompileProg, localisedProg]
+    exact ⟨localisedExps_globalCompileExpList context arguments, trivial⟩
+  · intro function arguments name exception handlerVar handler ih
+    simp only [globalCompileProg, localisedProg]
+    exact ⟨localisedExps_globalCompileExpList context arguments, ih⟩
+  · intro function arguments name shape address hlookup
+    simp only [globalCompileProg, localisedProg, hlookup]
+    refine ⟨localisedExps_globalCompileExpList context arguments, ?_⟩
+    simp [localisedProg, localisedExp, expGlobalVars, expGlobalVars.expGlobalVarsList]
+  · intro function arguments name hlookup
+    simp only [globalCompileProg, localisedProg, hlookup]
+    exact ⟨localisedExps_globalCompileExpList context arguments, trivial⟩
+  · intro function arguments name exception handlerVar handler shape address hlookup ih
+    simp only [globalCompileProg, localisedProg, hlookup]
+    repeat' apply And.intro
+    all_goals first
+      | exact globalShapeVal_localised context shape
+      | exact localisedExps_globalCompileExpList context arguments
+      | exact ih
+      | simp [localisedExp, expGlobalVars, expGlobalVars.expGlobalVarsList]
+  · intro function arguments name exception handlerVar handler hlookup ih
+    simp only [globalCompileProg, localisedProg, hlookup]
+    exact ⟨localisedExps_globalCompileExpList context arguments, ih⟩
+  · intro name shape function arguments body ih
+    simp only [globalCompileProg, localisedProg]
+    exact ⟨localisedExps_globalCompileExpList context arguments, ih⟩
+  · intro function configuration configurationLength array arrayLength
+    simp [globalCompileProg, localisedProg, globalCompileExp_expGlobalVars,
+      globalCompileExp_localised]
+  · intro exception value
+    simp [globalCompileProg, localisedProg, globalCompileExp_expGlobalVars,
+      globalCompileExp_localised]
+  · intro value
+    simp [globalCompileProg, localisedProg, globalCompileExp_expGlobalVars,
+      globalCompileExp_localised]
+  · intro size name address
+    simp [globalCompileProg, localisedProg, globalCompileExp_expGlobalVars,
+      globalCompileExp_localised]
+  · intro size name address globalAddress hlookup
+    simp [globalCompileProg, localisedProg, hlookup, globalCompileExp_expGlobalVars,
+      globalCompileExp_localised, localisedExp, expGlobalVars,
+      expGlobalVars.expGlobalVarsList]
+  · intro size name address h
+    simp [globalCompileProg, localisedProg]
+  · intro size address value
+    simp [globalCompileProg, localisedProg, globalCompileExp_expGlobalVars,
+      globalCompileExp_localised]
+  · intro program hdec hassignG hassignL hprim hstore hstore32 hstorebyte hseq hite hwhile
+      hcall hdeccall hextcall hraise hreturn hshmemload hshmemstore
+    cases program with
+    | skip => simp [globalCompileProg, localisedProg]
+    | dec name shape value body => exact (hdec name shape value body rfl).elim
+    | assign kind name value =>
+        cases kind with
+        | «local» => exact (hassignL name value rfl).elim
+        | «global» => exact (hassignG name value rfl).elim
+    | primitive name operator arguments => exact (hprim name operator arguments rfl).elim
+    | store address value => exact (hstore address value rfl).elim
+    | store32 address value => exact (hstore32 address value rfl).elim
+    | storeByte address value => exact (hstorebyte address value rfl).elim
+    | seq first second => exact (hseq first second rfl).elim
+    | ite condition thenBranch elseBranch =>
+        exact (hite condition thenBranch elseBranch rfl).elim
+    | «while» condition body => exact (hwhile condition body rfl).elim
+    | «break» => simp [globalCompileProg, localisedProg]
+    | «continue» => simp [globalCompileProg, localisedProg]
+    | call info function arguments => exact (hcall info function arguments rfl).elim
+    | decCall name shape function arguments body =>
+        exact (hdeccall name shape function arguments body rfl).elim
+    | extCall function configuration configurationLength array arrayLength =>
+        exact (hextcall function configuration configurationLength array arrayLength rfl).elim
+    | raise exception value => exact (hraise exception value rfl).elim
+    | «return» value => exact (hreturn value rfl).elim
+    | shMemLoad size kind name address =>
+        exact (hshmemload size kind name address rfl).elim
+    | shMemStore size address value => exact (hshmemstore size address value rfl).elim
+    | tick => simp [globalCompileProg, localisedProg]
+    | annot tag text => simp [globalCompileProg, localisedProg]
+
 end Flapjack

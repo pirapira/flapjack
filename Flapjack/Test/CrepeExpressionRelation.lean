@@ -78,4 +78,18 @@ def nestedSeqLocalisedGuard : Bool :=
 #eval nestedSeqLocalisedGuard
 #guard nestedSeqLocalisedGuard
 
+
+theorem globalCompileProg_localised_fixture :
+    localisedProg
+      (globalCompileProg compileContext
+        (.seq .skip (.dec "x" .one (.const 1) .skip))) :=
+  globalCompileProg_localised compileContext _
+
+def globalCompileProgLocalisedGuard : Bool :=
+  expGlobalVars (globalCompileExp compileContext (.var .global "g")) == []
+
+#eval globalCompileProgLocalisedGuard
+#guard globalCompileProgLocalisedGuard
+
+
 end Flapjack

@@ -865,6 +865,35 @@ def negFirstMatchProjectionGuard : Bool :=
       none &&
     Flapjack.RiscV.CakeRegAlloc.cakeNegFirstMatchCol state 3 [] [5, 7] ==
       none
+/- Cake's `biased_pref` first tries the coalesced root, then the
+   move-partner table; `neg_biased_pref` scans only non-conflicting stack
+   colours.  These guards exercise both preference paths directly. -/
+def biasedPreferenceGuard : Bool :=
+  let rootState : CakeRaState :=
+    { CakeRaState.empty 4 with
+      nodeTag := CakeNodeMap.ofNatInfoMap 4 [(2, .fixed 1)]
+      coalesced := CakeNodeMap.ofNatInfoMap 4 [(1, 2)] }
+  let partnerState : CakeRaState :=
+    { CakeRaState.empty 4 with
+      nodeTag := CakeNodeMap.ofNatInfoMap 4 [(3, .fixed 0)] }
+  let emptyMoves := CakeNodeMap.ofSize 4
+  let partnerMoves := CakeNodeMap.ofNatInfoMap 4 [(1, [3])]
+  cakeBiasedPref rootState emptyMoves 1 [0, 1] == some 1 &&
+    cakeBiasedPref partnerState partnerMoves 1 [0, 1] == some 0 &&
+    cakeBiasedPref partnerState partnerMoves 4 [0, 1] == none
+
+def negBiasedPreferenceGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      nodeTag := CakeNodeMap.ofNatInfoMap 4
+        [(2, .fixed 2), (3, .fixed 4)] }
+  let moves := CakeNodeMap.ofNatInfoMap 4 [(1, [2, 3])]
+  cakeNegBiasedPref state 2 moves 1 [2] == some 4 &&
+    cakeNegBiasedPref state 2 moves 4 [2] == none
+
+#guard biasedPreferenceGuard
+#guard negBiasedPreferenceGuard
+
 
 /- The HOL allocator updates fixed-size array cells.  Repeated writes to an
    existing node must therefore not retain an unbounded history in the Lean
@@ -1038,7 +1067,8 @@ def parityGuard : Bool :=
     resortMovesSpOrderGuard && bgOkOrderGuard &&
     qsortTiesTwoGuard && qsortTiesThreeGuard && qsortDescGuard &&
     stempBadColourTieGuard && raMovesStempGuard && raMovesStempHiGuard &&
-    negFirstMatchProjectionGuard
+    negFirstMatchProjectionGuard && biasedPreferenceGuard &&
+    negBiasedPreferenceGuard
     && mapUpdateBoundedGuard && sourceSpillCostKeyGuard &&
     sourceSpillCostRoundTripGuard && sourceMovePhysicalFallbackGuard
     && deadMovePriorityGuard
@@ -1079,7 +1109,8 @@ def runChecks : IO Bool := do
     reviveOrderGuard, revivePartitionGuard, bgOkOrderGuard, qsortTiesTwoGuard,
     movesToSpOrderGuard, resortMovesSpOrderGuard,
     qsortTiesThreeGuard, qsortDescGuard, raMovesStempGuard,
-    raMovesStempHiGuard, negFirstMatchProjectionGuard, mapUpdateBoundedGuard,
+    raMovesStempHiGuard, negFirstMatchProjectionGuard, biasedPreferenceGuard,
+    negBiasedPreferenceGuard, mapUpdateBoundedGuard,
     deadMovePriorityGuard, deadProgramPriorityGuard, sortMovesTailSplitGuard,
     sourceSpillCostKeyGuard, sourceMovePhysicalFallbackGuard,
     deadTailCallLiveGuard, deadAllocLiveGuard, deadInstallLiveGuard,
@@ -1121,7 +1152,8 @@ def runChecks : IO Bool := do
     "sort_moves tie three", "sort_moves long tie",
     "sort_moves descending",
     "reg_alloc moves stack temp", "reg_alloc moves stack temp high",
-    "neg_first_match_col projection", "Cake map updates stay bounded",
+    "neg_first_match_col projection", "biased preference",
+    "negative biased preference", "Cake map updates stay bounded",
     "remove_dead keeps move priority", "remove_dead_prog keeps entry priority",
     "mk_bij uses Cake Patricia Set order", "sort_moves tail split oracle",
     "source-keyed spill costs", "source-keyed spill-cost round trip",

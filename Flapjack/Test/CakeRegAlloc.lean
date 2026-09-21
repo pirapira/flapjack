@@ -1103,6 +1103,7 @@ def maxVarControlLabelGuard : Bool :=
 
 #guard maxVarControlLabelGuard
 #guard sortMovesTailSplitGuard
+#guard sortMovesLongTieGuard
 #guard raDeltaTriangleGuard
 #guard raForcedEdgeGuard
 
@@ -1126,7 +1127,7 @@ def parityGuard : Bool :=
     prefsLoopOrderGuard && prefsControlFlowGuard &&
     partOrderGuard && reviveOrderGuard && movesToSpOrderGuard &&
     resortMovesSpOrderGuard && bgOkOrderGuard &&
-    qsortTiesTwoGuard && qsortTiesThreeGuard && qsortDescGuard &&
+    qsortTiesTwoGuard && qsortTiesThreeGuard && sortMovesLongTieGuard && qsortDescGuard &&
     stempBadColourTieGuard && raMovesStempGuard && raMovesStempHiGuard &&
     negFirstMatchProjectionGuard && biasedPreferenceGuard &&
     negBiasedPreferenceGuard && fullConsistencyGuard &&
@@ -1171,7 +1172,7 @@ def runChecks : IO Bool := do
     partOrderGuard,
     reviveOrderGuard, revivePartitionGuard, bgOkOrderGuard, qsortTiesTwoGuard,
     movesToSpOrderGuard, resortMovesSpOrderGuard,
-    qsortTiesThreeGuard, qsortDescGuard, raMovesStempGuard,
+    qsortTiesThreeGuard, sortMovesLongTieGuard, qsortDescGuard, raMovesStempGuard,
     raMovesStempHiGuard, negFirstMatchProjectionGuard, biasedPreferenceGuard,
     negBiasedPreferenceGuard, fullConsistencyGuard, canonizeMoveGuard,
     extractColorOrderGuard, resetMoveRelatedGuard, removeColoursGuard,

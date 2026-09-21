@@ -124,6 +124,54 @@ def crepeFullRaiseContext : CompileContext (RiscV.Word 8) :=
 def crepeFullRaiseState : CrepState (RiscV.Word 8) :=
   { locals := fun _ => none, memory := fun _ => none, globals := fun _ => none }
 
+/- The stateful nonzero/break composition rule is exercised on a closed loop.
+   Both evaluators consume the body's break and return normally with the
+   complete post-body state, including the global and memory projections. -/
+theorem compile_full_pan_value_while_break_compose_state_full_regression :
+    evalPanValueProgWithPrimitiveCallsAndFfi
+        (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+        ([] : StructContext) [] 0 100 1 3
+        (fun _ => none) (fun _ => none) (fun _ => none)
+        (.while (.const 1) (.break) : Prog (RiscV.Word 8)) =
+      some (.normal (fun _ => none) (fun _ => none) (fun _ => none)) ∧
+    evalCrepFullProgStateFull [] (fun _ _ => none)
+        (noCrepFfi (RiscV.Word 8))
+        (defaultCrepSharedMemHandler : CrepSharedMemHandler (RiscV.Word 8))
+        0 100 3 crepeFullRaiseState
+        (compileProg crepeFullRaiseContext
+          (.while (.const 1) (.break) : Prog (RiscV.Word 8))) =
+      some (.normal crepeFullRaiseState) := by
+  have hsourceBody :
+      evalPanValueProgWithPrimitiveCallsAndFfi
+        (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+        ([] : StructContext) [] 0 100 1 2
+        (fun _ => none) (fun _ => none) (fun _ => none)
+        (.break : Prog (RiscV.Word 8)) =
+      some (.broke (fun _ => none) (fun _ => none) (fun _ => none)) := by
+    simp [evalPanValueProgWithPrimitiveCallsAndFfi]
+  have hcrepBody :
+      evalCrepFullProgStateFull [] (fun _ _ => none)
+        (noCrepFfi (RiscV.Word 8))
+        (defaultCrepSharedMemHandler : CrepSharedMemHandler (RiscV.Word 8))
+        0 100 2 crepeFullRaiseState
+        (compileProg crepeFullRaiseContext (.break)) =
+      some (.broke crepeFullRaiseState 0) := by
+    simp [compileProg, evalCrepFullProgStateFull]
+  exact compile_full_pan_value_while_break_compose_state_full
+    crepeFullRaiseContext ([] : StructContext) [] []
+    (fun _ => none) (fun _ => none) (fun _ => none)
+    (fun _ => none) (fun _ => none) (fun _ => none)
+    crepeFullRaiseState crepeFullRaiseState
+    (fun _ _ => none) (fun _ _ _ _ _ _ => none) (fun _ _ => none)
+    (noCrepFfi (RiscV.Word 8))
+    (defaultCrepSharedMemHandler : CrepSharedMemHandler (RiscV.Word 8))
+    0 100 1 2 (.const 1) (.const 1) (.break)
+    (compileProg crepeFullRaiseContext (.break))
+    1 1 (by simp [compileExp]) (by rfl)
+    (by simp [evalPanValueExp])
+    (by simp [evalCrepFullExpStateFull]) rfl (by decide)
+    hsourceBody hcrepBody
+
 def crepeFullLoadContext : CompileContext (RiscV.Word 8) :=
   { vars := [("x", (.one, [1]))], functions := [], exceptions := [],
     maxVar := 1, bytesInWord := 1 }

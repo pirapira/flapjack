@@ -152,6 +152,103 @@ def globalFreshNameAux [BEq String] (name : String) (names : List String) :
 def globalFreshName [BEq String] (name : String) (names : List String) : String :=
   globalFreshNameAux name names 0 names.length
 
+/-! Counterpart of Cake's `fresh_name_correct`
+    (`pan_globalsProofScript.sml:993`): the name chosen by the fresh-name search
+    is never a member of the list it was searching.  The search starts with
+    `names.length` fuel and tries `name`, `name'`, `name''`, ... in turn, so if
+    it ran out of fuel it would have found `names.length + 1` distinct candidates
+    already present in `names`, which is impossible. -/
+theorem globalApostrophes_length (count : Nat) :
+    (globalApostrophes count).length = count := by
+  induction count with
+  | zero => rfl
+  | succ count ih =>
+      have hsingleton : ("'" : String).length = 1 := rfl
+      simp [globalApostrophes, String.length_append, ih, hsingleton]
+      omega
+
+theorem globalApostrophes_injective : Function.Injective globalApostrophes := by
+  intro left right heq
+  have hlen := congrArg String.length heq
+  rw [globalApostrophes_length, globalApostrophes_length] at hlen
+  exact hlen
+
+theorem append_globalApostrophes_injective (name : String) :
+    Function.Injective (fun count => name ++ globalApostrophes count) := by
+  intro left right heq
+  have hlen := congrArg String.length heq
+  rw [String.length_append, String.length_append, globalApostrophes_length,
+    globalApostrophes_length] at hlen
+  exact Nat.add_left_cancel hlen
+
+theorem globalFreshNameAux_not_mem_or_all_mem [BEq String] [LawfulBEq String]
+    (name : String) (names : List String) (candidate fuel : Nat) :
+    globalFreshNameAux name names candidate fuel ∉ names ∨
+      ∀ k, k ≤ fuel → name ++ globalApostrophes (candidate + k) ∈ names := by
+  induction fuel generalizing candidate with
+  | zero =>
+      rw [globalFreshNameAux]
+      by_cases hmem : name ++ globalApostrophes candidate ∈ names
+      · exact Or.inr (fun k hk => by
+          have hk0 : k = 0 := Nat.eq_zero_of_le_zero hk
+          subst hk0
+          exact hmem)
+      · exact Or.inl hmem
+  | succ fuel ih =>
+      rw [globalFreshNameAux]
+      by_cases hcontains :
+          names.contains (name ++ globalApostrophes candidate) = true
+      · rw [if_pos hcontains]
+        rcases ih (candidate + 1) with hnotmem | hall
+        · exact Or.inl hnotmem
+        · refine Or.inr (fun k hk => ?_)
+          cases k with
+          | zero =>
+              simpa using (List.contains_iff_mem.mp hcontains)
+          | succ j =>
+              have hj : j ≤ fuel := Nat.succ_le_succ_iff.mp hk
+              have hstep : candidate + (j + 1) = candidate + 1 + j := by omega
+              rw [hstep]
+              exact hall j hj
+      · rw [if_neg hcontains]
+        exact Or.inl (fun hmem =>
+          hcontains (List.contains_iff_mem.mpr hmem))
+
+theorem globalFreshName_not_mem [BEq String] [LawfulBEq String]
+    (name : String) (names : List String) :
+    globalFreshName name names ∉ names := by
+  intro hmem
+  rcases globalFreshNameAux_not_mem_or_all_mem name names 0 names.length with
+    hnotmem | hall
+  · exact hnotmem hmem
+  · have hsubset :
+        ∀ x ∈ (List.range (names.length + 1)).map
+            (fun k => name ++ globalApostrophes k), x ∈ names := by
+      intro x hx
+      obtain ⟨k, hk, rfl⟩ := List.mem_map.mp hx
+      rw [List.mem_range] at hk
+      simpa using hall k (by omega)
+    have hnodup :
+        ((List.range (names.length + 1)).map
+          (fun k => name ++ globalApostrophes k)).Nodup :=
+      List.Pairwise.map (fun k => name ++ globalApostrophes k)
+        (fun left right hne heq =>
+          hne (append_globalApostrophes_injective name heq))
+        List.nodup_range
+    have hle := List.Nodup.length_le_of_subset hnodup hsubset
+    simp at hle
+    omega
+
+/-! Counterpart of Cake's `fresh_name_correct'`
+    (`pan_globalsProofScript.sml:1003`): a name chosen fresh for `names` is
+    also absent from any list whose members all lie in `names`. -/
+theorem globalFreshName_not_mem_of_subset [BEq String] [LawfulBEq String]
+    (name : String) (names names' : List String)
+    (hsubset : ∀ candidate, candidate ∈ names' → candidate ∈ names) :
+    globalFreshName name names ∉ names' := by
+  intro hmem
+  exact globalFreshName_not_mem name names (hsubset _ hmem)
+
 def globalShapeVal (context : GlobalPassContext α) : Shape → Exp α
   | .one => .const (context.fromNat 0)
   | .named _ => .const (context.fromNat 0)
@@ -603,6 +700,14 @@ def globalResortDecls (declarations : List (Decl α)) : List (Decl α) :=
 
 def globalNewMainName [BEq String] (declarations : List (Decl α)) : FunName :=
   globalFreshName "main" (globalFunctionNames declarations)
+
+/-! Counterpart of Cake's `new_main_name_correct`
+    (`pan_globalsProofScript.sml:2073`): the synthesized `main` entry-point name
+    is never one of the program's existing function names. -/
+theorem globalNewMainName_not_mem [BEq String] [LawfulBEq String]
+    (declarations : List (Decl α)) :
+    globalNewMainName declarations ∉ globalFunctionNames declarations :=
+  globalFreshName_not_mem "main" (globalFunctionNames declarations)
 
 def globalDeclShapes : List (Decl α) → List Shape
   | [] => []
@@ -1157,6 +1262,53 @@ theorem globalCompileDecs_functions_eq_nil_of_no_functions [BEq String] [Add α]
   simp only [globalCompileDecs]
   exact globalDeclsFilter_eq_nil_of_all_not globalDeclIsFunction _
     (globalCompileDecls_all_not_function (globalCollect context code) code hnone)
+
+/-! Counterpart of Cake's `compile_decs_EVERY`
+    (`pan_globalsProofScript.sml:1986`): every function of the compiled table
+    satisfies a predicate that holds of each source function once its body has
+    been compiled with the collected context. -/
+theorem globalDeclsFilter_globalCompileDecls_all_of_predicate [BEq String]
+    [Add α] [Mul α] (context : GlobalPassContext α) (declarations : List (Decl α))
+    (predicate : Decl α → Bool)
+    (hsource : declarations.all
+      (fun declaration => match declaration with
+        | .function function =>
+            predicate (.function { function with
+              body := globalCompileProg context function.body })
+        | _ => true) = true) :
+    (globalDeclsFilter globalDeclIsFunction
+        (globalCompileDecls context declarations)).all predicate = true := by
+  induction declarations with
+  | nil => simp [globalCompileDecls, globalDeclsFilter]
+  | cons declaration declarations ih =>
+      simp only [List.all_cons, Bool.and_eq_true] at hsource
+      obtain ⟨hhead, htail⟩ := hsource
+      cases declaration with
+      | function function =>
+          simp [globalCompileDecls, globalDeclsFilter, globalDeclIsFunction,
+            hhead, ih htail]
+      | decl shape name value =>
+          exact ih htail
+      | exnDecl exception shape =>
+          simp [globalCompileDecls, globalDeclsFilter, globalDeclIsFunction,
+            ih htail]
+      | name struct fields =>
+          exact ih htail
+
+theorem globalCompileDecs_functions_all_of_predicate [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α))
+    (predicate : Decl α → Bool)
+    (hsource : code.all
+      (fun declaration => match declaration with
+        | .function function =>
+            predicate (.function { function with
+              body := globalCompileProg (globalCollect context code)
+                function.body })
+        | _ => true) = true) :
+    (globalCompileDecs context code).functions.all predicate = true := by
+  simp only [globalCompileDecs]
+  exact globalDeclsFilter_globalCompileDecls_all_of_predicate
+    (globalCollect context code) code predicate hsource
 
 /-! Counterpart of Cake's `compile_decs_exns_are_exns`
     (`pan_globalsProofScript.sml:2448`): the exception table is exactly the

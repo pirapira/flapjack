@@ -2532,4 +2532,10 @@ example : PanValueFfiClockNormalAdequateProgFromFloor 0 0 evaluatorContext
 #check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_weaken
 #check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_seq_adequate
 
+/-! The remaining clock-sensitive constructors preserve a floor: a conditional
+    exposes the minimum of its branch floors, and a declaration exposes its
+    body's floor. -/
+#check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_ite
+#check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_dec
+
 end Flapjack.Test.PanSimpParity

@@ -615,6 +615,33 @@ def sharedMemOffsetOperatorTable : Bool :=
 
 #guard sharedMemOffsetOperatorTable
 
+/- Cake's source-shaped `wordShareInstToInstructionsCake` keeps a variable
+   address as one direct `Mem` carrier.  Check every width in the target
+   `riscv_memop` table at this backend boundary, independently of the
+   stack-shaped offset table above. -/
+def cakeWordShareMemOperatorTable : Bool :=
+  [
+    wordShareInstToInstructionsCake (width := 64) .load 10 (.var 11),
+    wordShareInstToInstructionsCake (width := 64) .store 10 (.var 11),
+    wordShareInstToInstructionsCake (width := 64) .load8 10 (.var 11),
+    wordShareInstToInstructionsCake (width := 64) .store8 10 (.var 11),
+    wordShareInstToInstructionsCake (width := 64) .load16 10 (.var 11),
+    wordShareInstToInstructionsCake (width := 64) .store16 10 (.var 11),
+    wordShareInstToInstructionsCake (width := 64) .load32 10 (.var 11),
+    wordShareInstToInstructionsCake (width := 64) .store32 10 (.var 11)
+  ] == [
+    some [.loadWord 10 11],
+    some [.storeWord 10 11],
+    some [.loadByte 10 11],
+    some [.storeByte 10 11],
+    some [.loadHalf 10 11],
+    some [.storeHalf 10 11],
+    some [.load32 10 11],
+    some [.store32 10 11]
+  ]
+
+#guard cakeWordShareMemOperatorTable
+
 /- Cake's direct `Mem` address form preserves a subtractive displacement as a
    signed RISC-V offset while retaining the selected store width. -/
 example :

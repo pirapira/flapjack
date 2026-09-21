@@ -854,6 +854,7 @@ evaluator-evidence obligation. -/
    generic `hother` branch without an opaque raised-data obligation. -/
 #check @panValuePcRaisedHraiseCases_with_raw_word_lists_of_state_evidence
 #check @panValuePcCompileCorrect_compact_with_raw_word_lists_context_code_of_state_evidence
+#check @panValuePcCompileCorrect_compact_ite_source_word_of_state_evidence_context_code
 
 /- The arbitrary word-list Raise bridge preserves the same explicit clocked
    evaluator and state/result premises at the top-level boundary. -/

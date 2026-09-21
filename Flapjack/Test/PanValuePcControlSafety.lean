@@ -1011,5 +1011,6 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 /-! The direct `Call_Ret` timeout lift: a direct call whose callee runs out of
     clock crosses the enclosing program boundary as a `timeout` outcome. -/
 #check @panValuePcTimeoutResultRel_of_clocked_call
+#check @panValuePcCompileCorrectWithContextCode_of_compact_and_caught_call
 
 end Flapjack.Test.PanValuePcControlSafety

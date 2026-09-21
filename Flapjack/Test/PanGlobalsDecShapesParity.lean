@@ -233,4 +233,24 @@ example : True := by
     declsWithGlobals []
   trivial
 
+/-! Counterparts of Cake's `fperm_decs_append` (`pan_globalsProofScript.sml:1663`)
+    and `functions_fperm_decs` (`:1701`). -/
+example : True := by
+  have h := globalRenameDecls_append "main" "entry" declsWithGlobals []
+  trivial
+
+example : True := by
+  have h := functions_globalRenameDecls "main" "entry" declsWithGlobals
+  trivial
+
+def renameDeclsGuard : Bool :=
+  (functions (globalRenameDecls "main" "entry"
+      ([.function
+        { name := "main", inline := false, exported := false, params := [],
+          body := .skip, returnShape := .one }] : List (Decl Nat)))).map
+    (fun entry => entry.1) == ["entry"]
+
+#eval renameDeclsGuard
+#guard renameDeclsGuard
+
 end Flapjack.Test.PanGlobalsDecShapesParity

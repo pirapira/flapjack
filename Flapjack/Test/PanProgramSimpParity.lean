@@ -953,4 +953,19 @@ def mapMoreFactsGuard : Bool :=
 #eval mapMoreFactsGuard
 #guard mapMoreFactsGuard
 
+/-! Cake's `opt_mmap_flookup_update` (`pan_commonPropsScript.sml:156`). -/
+
+theorem list_mapM_updatePanValueMap_not_mem_fixture :
+    ([2, 4, 6] : List Nat).mapM
+        (fun x => updatePanValueMap sampleMapF 7 100 x) = some [3, 5, 7] :=
+  list_mapM_updatePanValueMap_not_mem sampleMapF [2, 4, 6] [3, 5, 7] 7 100
+    (by decide) (by decide)
+
+def updateMapGuard : Bool :=
+  ([2, 4, 6] : List Nat).mapM
+      (fun x => updatePanValueMap sampleMapF 7 100 x) == some [3, 5, 7]
+
+#eval updateMapGuard
+#guard updateMapGuard
+
 end Flapjack.Test.PanProgramSimpParity

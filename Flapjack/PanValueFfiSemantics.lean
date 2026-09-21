@@ -144,7 +144,7 @@ theorem panValueFfiExtCall_returned_ioEvents_prefix
           | returned returnedFfi returnedBytes =>
               simp [hconfiguration, harray, hffi] at hcall
               rcases hcall with ⟨_, rfl⟩
-              exact callFfi_returned_ioEvents_prefix ffi (.extCall function)
+              exact callFfi_return_ioEvents_prefix ffi (.extCall function)
                 configurationBytes arrayBytes returnedFfi returnedBytes hffi
 
 inductive PanValueFfiControlResult (α : Type u) (σ : Type v) where

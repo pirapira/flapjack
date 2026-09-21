@@ -16,7 +16,7 @@ example (state : FfiState Unit) (name : FfiName)
     (hcall : callFfi state name configuration bytes =
       .returned nextState nextBytes) :
     state.ioEvents <+: nextState.ioEvents :=
-  callFfi_returned_ioEvents_prefix state name configuration bytes nextState nextBytes hcall
+  callFfi_return_ioEvents_prefix state name configuration bytes nextState nextBytes hcall
 
 #check @panValueFfiExtCall_returned_ioEvents_prefix
 

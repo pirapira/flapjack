@@ -47,6 +47,40 @@ theorem collectPanValueStructs_panSimpDecls (declarations : List (Decl α))
       cases declaration <;>
         simp [panSimpDecl, collectPanValueStructs_cons, ih]
 
+/-- Cake's `decs_stcnames_only_functions`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1592`): a declaration list
+    without struct declarations leaves the struct-name context unchanged. -/
+theorem collectPanValueStructs_of_no_names (context : StructContext)
+    (declarations : List (Decl α))
+    (hall : declarations.all (fun declaration => !isName declaration) = true) :
+    collectPanValueStructs declarations context = some context := by
+  induction declarations generalizing context with
+  | nil => simp [collectPanValueStructs]
+  | cons declaration declarations ih =>
+      simp only [List.all_cons, Bool.and_eq_true] at hall
+      obtain ⟨hhead, htail⟩ := hall
+      have hnotname : isName declaration = false := by simpa using hhead
+      cases declaration with
+      | function declaration =>
+          simpa [collectPanValueStructs_cons] using ih context htail
+      | decl shape name value =>
+          simpa [collectPanValueStructs_cons] using ih context htail
+      | exnDecl exception shape =>
+          simpa [collectPanValueStructs_cons] using ih context htail
+      | name name fields => simp [isName] at hnotname
+
+/-- Cake's `decs_stcnames_only_functions2`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1600`): a list of function
+    declarations only leaves the struct-name context unchanged. -/
+theorem collectPanValueStructs_of_functions (context : StructContext)
+    (declarations : List (Decl α))
+    (hall : declarations.all globalDeclIsFunction = true) :
+    collectPanValueStructs declarations context = some context := by
+  refine collectPanValueStructs_of_no_names context declarations ?_
+  refine List.all_eq_true.mpr (fun declaration hmem => ?_)
+  have hfunction := List.all_eq_true.mp hall declaration hmem
+  cases declaration <;> simp_all [globalDeclIsFunction, isName]
+
 /-! Cake's `OPT_MMAP` is `List.mapM` for `Option`, so the list-mapping helper
 lemmas used by `compile_correct` (`cakeml/pancake/proofs/pan_simpProofScript.sml`)
 have the following `List.mapM` counterparts.  These are the pieces needed to

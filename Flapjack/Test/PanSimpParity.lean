@@ -430,7 +430,7 @@ example (outcome : PanValueFfiClockOutcome Nat Unit) (nextClock : Nat)
       some (outcome, nextClock)) :
     evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
       [] [] 0 0 8 (progSize (.call none "f" ([] : List (Exp Nat)))) (fun _ => none)
-      (fun _ => none) (fun _ => none) evaluatorFfi 1 (.call none "f" []) none none none =
+      (fun _ => none) (fun _ => none) evaluatorFfi 1 (.call none "f" ([] : List (Exp Nat))) none none none =
     some (outcome, nextClock) := by
   exact evalPanValueFfiClockProg_call_some_progSize evaluatorContext (fun _ _ => none)
     evaluatorHandler [] [] 0 0 8 (fun _ => none) (fun _ => none) (fun _ => none)
@@ -552,6 +552,39 @@ example (values : List (PanValue Nat))
     [("f", [], (.skip : Prog Nat))] 0 0 8 (fun _ => none) (fun _ => none)
     (fun _ => none) evaluatorFfi 1 "f" [] [] (.skip : Prog Nat) values calleeLocals
     none none none hfunctions hargs hlookup hbind (by decide) hparams hreturn hwithin
+
+/-- The call-aware budget form of the forall-functions call adequacy: with
+    `callBudget = 7` (dominating `progSize body + 1 = 2`) the same call returns at
+    `progCallFuel 7`. -/
+example (values : List (PanValue Nat))
+    (calleeLocals : VarName → Option (PanValue Nat))
+    (hfunctions : PanValueFfiClockFunctionsReturnSucceed evaluatorContext
+      (fun _ _ => none) evaluatorHandler []
+      [("f", [], (.skip : Prog Nat))] 0 0 8 none none none)
+    (hargs : evalPanValueExps [] (fun _ => none) (fun _ => none) (fun _ => none) 0 0 8
+      ([] : List (Exp Nat)) = some values)
+    (hlookup : lookupPanFunction "f" [("f", [], (.skip : Prog Nat))] =
+      some ([], (.skip : Prog Nat)))
+    (hbind : bindPanValueParameters [] values = some calleeLocals)
+    (hparams : panValueParametersValid [] none "f" values = true)
+    (hreturn : panValueReturnValid [] none "f" values = true)
+    (hwithin : panValueValuesWithinLimit [] values = true) :
+    ∃ (finalGlobals : VarName → Option (PanValue Nat))
+      (finalMemory : Nat → Option (PanValue Nat)) (finalFfi : FfiState Unit)
+      (finalClock : Nat),
+      evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+        [] [("f", [], (.skip : Prog Nat))] 0 0 8
+        (progCallFuel 7 (.call none "f" ([] : List (Exp Nat)))) (fun _ => none) (fun _ => none)
+        (fun _ => none) evaluatorFfi 1 (.call none "f" []) none none none =
+      some (.control (.returned (fun _ => none) finalGlobals finalMemory finalFfi values),
+        finalClock) := by
+  exact evalPanValueFfiClockProg_call_none_of_functions_progCallFuel (α := Nat) (σ := Unit)
+    evaluatorContext
+    (fun _ _ => none) evaluatorHandler []
+    [("f", [], (.skip : Prog Nat))] 0 0 8 7 (fun _ => none) (fun _ => none)
+    (fun _ => none) evaluatorFfi 1 "f" ([] : List (Exp Nat)) [] (.skip : Prog Nat) values calleeLocals
+    none none none hfunctions (by simp [progSize]) hargs hlookup hbind (by decide) hparams
+    hreturn hwithin
 
 /-- The general forall-functions timeout adequacy theorem, instantiated on a
     destination-free call into a single-entry table. -/

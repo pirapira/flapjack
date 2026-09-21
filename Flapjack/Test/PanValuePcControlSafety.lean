@@ -1161,7 +1161,9 @@ example :
 #check @panValuePcCompileCorrectWithContextCode_compact_with_generalized_flat_global_evaluator_evidence_and_clocked_control
 #check @panValuePcCompileCorrectWithContextCode_compact_with_generalized_flat_global_evaluator_evidence_and_clocked_raised
 #check @panValuePcCompileCorrectWithContextCode_compact_with_concrete_flat_global_evaluator_evidence_and_clocked_raised
+#check @panValuePcCompileCorrect_compact_with_flat_global_evaluator_evidence_compiled_raise_canonical_globals
 #check @panValuePcCompileCorrect_compact_with_generalized_clocked_raised_context_projection
+#check @panValuePcCompileCorrect_compact_with_concrete_flat_global_evaluator_evidence_and_clocked_raised_projection
 #check @panValuePcCompileCorrect_compact_with_generalized_clocked_normal_context_projection
 #check @panValuePcCompileCorrect_compact_break
 #check @panValuePcCompileCorrect_compact_continue
@@ -1222,6 +1224,7 @@ example :
 #check @panValuePcCompileCorrect_of_withContextCode
 #check @panValuePcCompileCorrect_of_context_code_obligations
 #check @panValuePcCompileCorrect_compact_with_expression_state_evidence_canonical_globals
+#check @panValueCrepExpressionStateEvidence_of_correct_with_bounded_vars
 
 /-! Concrete kernel-checked instantiation of the fragment-restricted
     composition: the `StatefulCompactProg` program `return 7; tick` yields the
@@ -1288,6 +1291,7 @@ example
     targetFuel hpost hcode hlookup hsize
 
 #check @panValuePcCompileCorrect_compact_statefulCompact
+#check @panValuePcCompileCorrect_compact_statefulCompact_canonical_globals
 #check @panValuePcCompileCorrect_compact_statefulCompact_context_code
 
 end Flapjack.Test.PanValuePcControlSafety

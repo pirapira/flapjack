@@ -127,4 +127,33 @@ theorem callFfi_oracle_final (state : FfiState σ)
           outcome := outcome } := by
   simp [callFfi, hname, horacle]
 
+/-! Every returned FFI call preserves the incoming event trace as a prefix.
+    This is the leaf invariant used by Cake's `evaluate_io_events_mono`; final
+    oracle outcomes have no returned state and are intentionally excluded. -/
+theorem callFfi_returned_ioEvents_prefix
+    (state : FfiState σ) (name : FfiName)
+    (configuration bytes : List UInt8)
+    (nextState : FfiState σ) (nextBytes : List UInt8)
+    (hcall : callFfi state name configuration bytes =
+      .returned nextState nextBytes) :
+    state.ioEvents <+: nextState.ioEvents := by
+  by_cases hname : name = .extCall ""
+  · simp [callFfi, hname] at hcall
+    rcases hcall with ⟨rfl, rfl⟩
+    exact List.prefix_refl _
+  · unfold callFfi at hcall
+    rw [if_neg hname] at hcall
+    cases horacle : state.oracle name state.state configuration bytes with
+    | returned oracleState oracleBytes =>
+        by_cases hlength : oracleBytes.length = bytes.length
+        · simp [horacle, hlength] at hcall
+          rcases hcall with ⟨rfl, rfl⟩
+          change state.ioEvents <+: state.ioEvents ++
+            [{ name := name, configuration := configuration,
+               bytes := bytes.zip oracleBytes }]
+          exact List.prefix_append state.ioEvents _
+        · simp [horacle, hlength] at hcall
+    | final outcome =>
+        simp [horacle] at hcall
+
 end Flapjack

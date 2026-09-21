@@ -139,11 +139,26 @@ def divBoundaryGuard : Bool :=
 
 #guard divBoundaryGuard
 
+def codeBufferWriteGuard : Bool :=
+  match (wordFullSsaCcTrans 0
+      (.codeBufferWrite 1 2 : WordProg Nat)).2.2 with
+  | .seq (.move 1 []) (.codeBufferWrite 0 0) => true
+  | _ => false
+
+def dataBufferWriteGuard : Bool :=
+  match (wordFullSsaCcTrans 0
+      (.dataBufferWrite 1 2 : WordProg Nat)).2.2 with
+  | .seq (.move 1 []) (.dataBufferWrite 0 0) => true
+  | _ => false
+
+#guard codeBufferWriteGuard
+#guard dataBufferWriteGuard
+
 def parityGuard : Bool :=
   raiseBoundaryGuard && callBoundaryGuard && storeConstsBoundaryGuard &&
     longDivBoundaryGuard && longMulBoundaryGuard && shiftBoundaryGuard &&
     addCarryBoundaryGuard && constBoundaryGuard && binOpBoundaryGuard &&
-    divBoundaryGuard
+    divBoundaryGuard && codeBufferWriteGuard && dataBufferWriteGuard
 
 #guard parityGuard
 #eval parityGuard
@@ -169,7 +184,11 @@ def runChecks : IO Bool := do
       ("full_ssa_cc_trans Binop rewrites Cake register operands",
         binOpBoundaryGuard),
       ("full_ssa_cc_trans Div rewrites Cake operands",
-        divBoundaryGuard) ]
+        divBoundaryGuard),
+      ("full_ssa_cc_trans code-buffer write rewrites Cake operands",
+        codeBufferWriteGuard),
+      ("full_ssa_cc_trans data-buffer write rewrites Cake operands",
+        dataBufferWriteGuard) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

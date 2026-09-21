@@ -602,5 +602,41 @@ example (state' : PanValueProgramState Nat)
       exceptions := evalRelState.exceptions } := by
   exact evalPanValueDeclarationsWithStructs_only_functions [] evalRelState state'
     functionsOnlyDecls none rfl (by decide) heval
+/-! Cake's `evaluate_decls_only_functions` (`panPropsScript.sml:1529`): a
+    function-only declaration list changes only the function table and the
+    separate return-shape / parameter-shape maps. -/
+
+def functionsOnlyStateDecls : List (Decl Nat) :=
+  [.function wfFunction,
+   .function
+     { name := "h", inline := false, exported := false, params := [],
+       body := (.skip : Prog Nat), returnShape := .one }]
+
+def functionsOnlyStateGuard : Bool :=
+  match evalPanValueDeclarations evalRelState functionsOnlyStateDecls none with
+  | some state' =>
+      state'.functions.length ==
+          (panFunctionEntries functionsOnlyStateDecls ++
+            evalRelState.functions).length &&
+        state'.returnShapes.length ==
+          (panReturnShapeEntries functionsOnlyStateDecls ++
+            evalRelState.returnShapes).length &&
+        state'.parameterShapes.length ==
+          (panParameterShapeEntries functionsOnlyStateDecls ++
+            evalRelState.parameterShapes).length
+  | none => false
+
+#eval functionsOnlyStateGuard
+#guard functionsOnlyStateGuard
+
+example : True := by
+  have hall : functionsOnlyStateDecls.all globalDeclIsFunction = true := by
+    decide
+  cases heval : evalPanValueDeclarations evalRelState functionsOnlyStateDecls none with
+  | none => trivial
+  | some state' =>
+      have _h := evalPanValueDeclarations_only_functions evalRelState state'
+        functionsOnlyStateDecls none hall heval
+      trivial
 
 end Flapjack.Test.PanProgramSimpParity

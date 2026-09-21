@@ -273,6 +273,29 @@ def zipWithShapeGuard : Bool :=
 #eval zipWithShapeGuard
 #guard zipWithShapeGuard
 
+theorem getElem_tail_eq_fixture :
+    ([1, 2, 3] : List Nat)[2]'(by decide) =
+      ([1, 2, 3] : List Nat).tail[1]'(by decide) :=
+  getElem_tail_eq [1, 2, 3] 2 (by decide) (by decide)
+
+theorem getElem_map_fst_fixture :
+    (1 : Nat) =
+      (([(1, 2, 3)] : List (Nat × Nat × Nat)).map Prod.fst)[0]'(by decide) :=
+  getElem_map_fst [(1, 2, 3)] 0 (by decide) rfl
+
+theorem getElem_fst_inj_fixture :
+    (0 : Nat) = 0 :=
+  getElem_fst_inj [(1, 2), (3, 4)] 0 0 (by decide) (by decide) (by decide) rfl rfl
+
+def listIndexGuard : Bool :=
+  (([1, 2, 3] : List Nat)[2]'(by decide) ==
+      ([1, 2, 3] : List Nat).tail[1]'(by decide)) &&
+    (((([(1, 2, 3)] : List (Nat × Nat × Nat))[0]'(by decide)).1) ==
+      (([(1, 2, 3)] : List (Nat × Nat × Nat)).map Prod.fst)[0]'(by decide))
+
+#eval listIndexGuard
+#guard listIndexGuard
+
 def checkDisjoint (name : String) (actual : Bool) : IO Bool := do
   if actual then
     IO.println s!"PASS {name}"
@@ -301,7 +324,9 @@ def runChecks : IO Bool := do
   let distinctListsOk ← checkDisjoint "pan distinct_lists" distinctListsGuard
   let zipWithShapeOk ←
     checkDisjoint "pan all_distinct_mem_zip_disjoint_with_shape" zipWithShapeGuard
+  let listIndexOk ← checkDisjoint "pan list index bridges" listIndexGuard
   pure (results.all id && lengthOk && allDistinctOk && membershipOk && disjointOk &&
-    shapeDisjointOk && nestedOk && distinctOk && distinctListsOk && zipWithShapeOk)
+    shapeDisjointOk && nestedOk && distinctOk && distinctListsOk && zipWithShapeOk &&
+    listIndexOk)
 
 end Flapjack.Test.PanWithShapeParity

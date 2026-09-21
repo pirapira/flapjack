@@ -699,6 +699,40 @@ theorem listDisjoint_of_mem_zip_withShape (labels : List α) (shapes : List Shap
   exact listDisjoint_withShape_getElem shapes values i j hdistinct hiShapes hjShapes
     hneIndex hvalues
 
+/-! Counterpart of Cake's `el_reduc_tl`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:360`): an index of the
+    tail is an index of the original list, shifted by one. -/
+theorem getElem_tail_eq (values : List α) (n : Nat) (hn : 0 < n)
+    (hbound : n < values.length) :
+    values[n]'hbound = (values.tail)[n - 1]'(by rw [List.length_tail]; omega) := by
+  rw [List.getElem_tail]
+  congr 1
+  omega
+
+/-! Counterpart of Cake's `el_pair_map_fst_el`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:722`): the first
+    component of an indexed triple is the indexed first projection. -/
+theorem getElem_map_fst (values : List (α × β × γ)) (n : Nat)
+    (hbound : n < values.length) {x : α} {y : β} {z : γ}
+    (heq : values[n]'hbound = (x, y, z)) :
+    x = (values.map Prod.fst)[n]'(by rwa [List.length_map]) := by
+  rw [List.getElem_map]
+  rw [heq]
+
+/-! Counterpart of Cake's `all_distinct_el_fst_same_eq`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:732`): in a list whose
+    first projections are distinct, equal first components force equal indices. -/
+theorem getElem_fst_inj (values : List (α × β)) (n n' : Nat)
+    (hnodup : (values.map Prod.fst).Nodup)
+    (hn : n < values.length) (hn' : n' < values.length)
+    {x : α} {y y' : β}
+    (heq : values[n]'hn = (x, y)) (heq' : values[n']'hn' = (x, y')) :
+    n = n' := by
+  have hmapped : (values.map Prod.fst)[n]'(by rwa [List.length_map]) =
+      (values.map Prod.fst)[n']'(by rwa [List.length_map]) := by
+    rw [List.getElem_map, List.getElem_map, heq, heq']
+  exact (List.getElem_inj hnodup).mp hmapped
+
 /-! Counterpart of Cake's `all_distinct_with_shape_distinct`
     (`cakeml/pancake/semantics/panPropsScript.sml:357`): two distinct members of
     the flat-value split are disjoint.  Cake's extra hypotheses `x <> []` and

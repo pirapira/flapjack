@@ -706,4 +706,27 @@ example : True := by
     none hall hnodup hnone hwf
   trivial
 
+/-- Focused regression for the `evaluate_decls_one_fun_last` counterpart: a
+    trailing function declaration may be moved to the front when every
+    preceding declaration is a global or exception declaration. -/
+def oneFunLastDecls : List (Decl Nat) :=
+  [.decl .one "g" (.const 7), .exnDecl "E" .one]
+
+def oneFunLastGuard : Bool :=
+  (evalPanValueDeclarationsWithStructs ([] : StructContext) evalRelState
+      (oneFunLastDecls ++ [.function wfFunction]) none).isSome ==
+    (evalPanValueDeclarationsWithStructs ([] : StructContext) evalRelState
+      (.function wfFunction :: oneFunLastDecls) none).isSome
+
+#eval oneFunLastGuard
+#guard oneFunLastGuard
+
+example : True := by
+  have hrest : oneFunLastDecls.all
+      (fun declaration => isDecl declaration || isExnDecl declaration) = true := by
+    simp [oneFunLastDecls, isDecl, isExnDecl]
+  have _h := evalPanValueDeclarationsWithStructs_one_fun_last
+    ([] : StructContext) evalRelState wfFunction oneFunLastDecls none hrest
+  trivial
+
 end Flapjack.Test.PanProgramSimpParity

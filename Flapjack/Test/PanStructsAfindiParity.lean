@@ -78,4 +78,18 @@ theorem lookup_drop_helper_fixture :
     "b" ∉ (entries.take 1).map Prod.fst ∧ List.lookup "b" entries = some 20 :=
   lookup_drop_helper 1 entries "b" 20 (by decide) (by decide)
 
+/-! Focused regression for the ported Cake `pan_structs`
+    `map_uncurry_zip_again` lemma. -/
+
+theorem list_zip_map_eq_fixture :
+    (([1, 2] : List Nat).zip ([10, 20] : List Nat)).map
+        (fun p => (p.1 + 1, p.2 * 2)) = ([2, 3] : List Nat).zip ([20, 40] : List Nat) :=
+  list_zip_map_eq (fun n : Nat => n + 1) (fun n : Nat => n * 2) [1, 2] [10, 20] rfl
+
+/-- Parity check for the Cake `UNCURRY_EQ_o_SND` lemma. -/
+theorem prod_uncurry_const_eq_comp_snd_fixture :
+    Function.uncurry (fun _ : Nat => (fun n : Nat => n + 1)) =
+        (fun n : Nat => n + 1) ∘ Prod.snd :=
+  prod_uncurry_const_eq_comp_snd (fun n : Nat => n + 1)
+
 end Flapjack.Test.PanStructsAfindiParity

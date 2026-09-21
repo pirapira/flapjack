@@ -815,4 +815,24 @@ example
   panValuePcRaisedHraiseCases_of_state_evidence exceptionCode globalsLookup
     hword htwo hthree hpost hcode hlookup hsize
 
+/- The context-code state-evidence wrapper is available at the expected
+signature (no opaque raised-data obligation). -/
+#check @panValuePcCompileCorrect_compact_with_raised_state_evidence_context_code
+
+/- The concrete one-word-record raise instance also drops the opaque
+evaluator-evidence obligation. -/
+#check @panValuePcCompileCorrect_compact_one_word_raise_of_state_evidence
+
+/- The two-word-record raise instance composes the same boundary with the
+   two-word Cake program-control theorem. -/
+#check @panValuePcCompileCorrect_compact_two_word_raise_of_state_evidence
+
+/- The three-word-record instance uses the corresponding Cake-shaped
+   program-control theorem and the same explicit raised-state evidence. -/
+#check @panValuePcCompileCorrect_compact_three_word_raise_of_state_evidence
+
+/- The four-word-record instance extends the same Cake-faithful construction
+   to the final fixed-width record payload. -/
+#check @panValuePcCompileCorrect_compact_four_word_raise_of_state_evidence
+
 end Flapjack.Test.PanValuePcControlSafety

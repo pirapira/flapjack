@@ -7,6 +7,18 @@ namespace Flapjack.Test.PanValuePcControlSafety
 
 open Flapjack
 
+/-! Regression for Cake's `state_rel_globals` projection: a related
+    source-to-Crep state always has the empty source-global environment. -/
+example
+    (structs : StructContext) (context : CompileContext Nat)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+    (sourceMemory : Nat → Option (PanValue Nat)) (state : CrepState Nat)
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory state) :
+    sourceGlobals = (fun _ => none) :=
+  panValueCrepStateRel_sourceGlobals_eq_none structs context sourceLocals
+    sourceGlobals sourceMemory state hrel
+
 /-! The context-coded `pc_compile_correct` boundary keeps the full
     evaluator/state/result obligation package explicit. -/
 example
@@ -353,6 +365,57 @@ example
       clockBytesInWord clockFuel clock clockLocals clockGlobals clockMemory
       clockFfi clockProgram clockTargetState clockException clockValue
       clockTargetException hclock hcontrol hevidence
+  exact ⟨hresult.1, hresult.2.2.2⟩
+
+example
+    (sourceEvaluate : PanValuePcEvaluator Nat)
+    (targetEvaluate : CrepPcEvaluator Nat)
+    (codeRel : PanValuePcCodeRel Nat)
+    (excpRel : PanValuePcExceptionShapeRel Nat)
+    (exceptionCode : ExceptionId → Option Nat)
+    (globalsLookup : CrepState Nat → PanValue Nat → Option (List Nat))
+    (program : Prog Nat)
+    (hcompact : PanValuePcCompileCorrect sourceEvaluate targetEvaluate codeRel
+      excpRel exceptionCode globalsLookup program)
+    (clockStructs : StructContext) (clockPcContext : CompileContext Nat)
+    (clockExceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+    (clockExceptionCode : ExceptionId → Option Nat)
+    (clockGlobalsLookup : CrepState Nat → PanValue Nat → Option (List Nat))
+    (clockContext : PanValueFfiContext Nat)
+    (clockPrimitive : PanPrimitiveHandler Nat)
+    (clockHandler : PanValueStatefulFfiHandler Nat Unit)
+    (clockFunctions : List (FunName × List VarName × Prog Nat))
+    (clockBaseAddress clockTopAddress clockBytesInWord : Nat)
+    (clockFuel clock : Nat)
+    (clockLocals clockGlobals : VarName → Option (PanValue Nat))
+    (clockMemory : Nat → Option (PanValue Nat)) (clockFfi : FfiState Unit)
+    (clockProgram : Prog Nat) (clockTargetState : CrepState Nat)
+    (clockException : ExceptionId) (clockValue : PanValue Nat)
+    (clockTargetException : Nat)
+    (hclock : evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
+      clockFfi clock clockProgram = some
+        (.control (.raised clockLocals clockGlobals clockMemory clockFfi
+          clockException clockValue), clock))
+    (hclockState : panValueCrepStateRel clockStructs clockPcContext
+      clockLocals clockGlobals clockMemory clockTargetState)
+    (hclockRaise : panValuePcExceptionResultRel clockStructs clockPcContext
+      clockExceptionRel clockExceptionCode clockGlobalsLookup clockGlobals
+      clockMemory clockException clockValue clockTargetState clockTargetException) :
+    PanValuePcCompileCorrect sourceEvaluate targetEvaluate codeRel excpRel
+      exceptionCode globalsLookup program ∧
+    panValuePcResultRel clockStructs clockPcContext clockExceptionRel
+      clockExceptionCode clockGlobalsLookup
+      (.raised clockLocals clockGlobals clockMemory clockException clockValue)
+      (.raised clockTargetState clockTargetException) := by
+  have hresult := panValuePcCompileCorrect_of_arbitrary_clocked_raised
+    sourceEvaluate targetEvaluate codeRel excpRel exceptionCode globalsLookup program
+    hcompact clockStructs clockPcContext clockExceptionRel clockExceptionCode
+    clockGlobalsLookup clockContext clockPrimitive clockHandler clockFunctions
+    clockBaseAddress clockTopAddress clockBytesInWord clockFuel clock clockLocals
+    clockGlobals clockMemory clockFfi clockProgram clockTargetState clockException
+    clockValue clockTargetException hclock hclockState hclockRaise
   exact ⟨hresult.1, hresult.2.2.2⟩
 
 def controlContext : CompileContext Nat :=

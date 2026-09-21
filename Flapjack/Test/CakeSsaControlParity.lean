@@ -179,12 +179,36 @@ def installCutsetBoundaryGuard : Bool :=
 
 #guard installCutsetBoundaryGuard
 
+def ffiBoundaryGuard : Bool :=
+  match (wordFullSsaCcTrans 0
+      (.ffi "foo" 1 2 3 4 ([], []) : WordProg Nat)).2.2 with
+  | .seq (.move 1 [])
+      (.seq (.move 0 [])
+        (.seq (.move 1 [(2, 0), (4, 0), (6, 0), (8, 0)])
+          (.seq (.ffi "foo" 2 4 6 8 ([], [])) (.move 0 [])))) => true
+  | _ => false
+
+#guard ffiBoundaryGuard
+
+def ffiCutsetBoundaryGuard : Bool :=
+  match (wordFullSsaCcTrans 0
+      (.ffi "foo" 1 2 3 4 ([1], [2]) : WordProg Nat)).2.2 with
+  | .seq (.move 1 [])
+      (.seq (.move 0 [(11, 0), (15, 0)])
+        (.seq (.move 1 [(2, 11), (4, 15), (6, 0), (8, 0)])
+          (.seq (.ffi "foo" 2 4 6 8 ([11], [15]))
+            (.move 0 [(21, 11), (25, 15)])))) => true
+  | _ => false
+
+#guard ffiCutsetBoundaryGuard
+
 def parityGuard : Bool :=
   raiseBoundaryGuard && callBoundaryGuard && storeConstsBoundaryGuard &&
     longDivBoundaryGuard && longMulBoundaryGuard && shiftBoundaryGuard &&
     addCarryBoundaryGuard && constBoundaryGuard && binOpBoundaryGuard &&
     divBoundaryGuard && codeBufferWriteGuard && dataBufferWriteGuard &&
-    installBoundaryGuard && installCutsetBoundaryGuard
+    installBoundaryGuard && installCutsetBoundaryGuard && ffiBoundaryGuard &&
+    ffiCutsetBoundaryGuard
 
 #guard parityGuard
 #eval parityGuard
@@ -218,7 +242,11 @@ def runChecks : IO Bool := do
       ("full_ssa_cc_trans Install preserves Cake buffer and pointer moves",
         installBoundaryGuard),
       ("full_ssa_cc_trans Install refreshes Cake cut sets",
-        installCutsetBoundaryGuard) ]
+        installCutsetBoundaryGuard),
+      ("full_ssa_cc_trans FFI preserves Cake argument ABI",
+        ffiBoundaryGuard),
+      ("full_ssa_cc_trans FFI refreshes Cake live cut sets",
+        ffiCutsetBoundaryGuard) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

@@ -213,7 +213,7 @@ example :
         ({ current := [], next := 10 } : WordSsaState)
       ((.loop [1] (.break 0) []) : WordProg Nat) =
       ({ current := [], next := 14 },
-        .seq (.seq (.inst (.const 10 0)) (.move 0 []))
+        .seq (.seq (.seq (.inst (.const 10 0)) .skip) (.move 0 []))
           (.loop [10] (.break 0) [])) := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaLoopSetup, wordSsaFakeMoves,

@@ -534,6 +534,9 @@ def noNameDecls : List (Decl Nat) :=
 
 def functionsOnlyDecls : List (Decl Nat) := [.function wfFunction]
 
+def functionOrExnDecls : List (Decl Nat) :=
+  [.function wfFunction, .exnDecl "E" .one]
+
 def structContextGuard : Bool :=
   (collectPanValueStructs noNameDecls ([] : StructContext)).isSome &&
     (collectPanValueStructs functionsOnlyDecls ([] : StructContext)).isSome
@@ -546,7 +549,11 @@ example : True := by
     (by decide)
   have _h2 := collectPanValueStructs_of_functions ([] : StructContext)
     functionsOnlyDecls (by decide)
+  have _h3 := collectPanValueStructs_of_functions_or_exnDecls ([] : StructContext)
+    functionOrExnDecls (by decide)
   trivial
+
+#check @collectPanValueStructs_of_functions_or_exnDecls
 
 /-! Cake's `evaluate_decls_only_exn_decls` (`panPropsScript.sml:1436`): an
     exception-only declaration list leaves every field except the

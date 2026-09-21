@@ -434,4 +434,97 @@ theorem compileProg_call_handler_of_compiled [BEq α] [OfNat α 0] [Add α]
   simp [compileProg, hfunction, hexception, hhandler, harguments,
     functionReturnNames, allocatedNames]
 
+/-! The `Call_Ret_Exception` branch of Cake's `pc_compile_correct` splits on
+    whether the handler's exception identifier is present in the context's
+    exception map.  When it is absent, `compileProg` cannot compile the
+    handler and drops it, so the emitted call carries no handler metadata.
+    The three equations below expose that degraded shape for the standalone
+    and destination-carrying calls; they are the explicit compile-side
+    premise for the "exception id in handler not found in context" sub-case. -/
+
+theorem compileProg_call_handler_missing_of_compiled [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (function : FunName)
+    (arguments : List (Exp α)) (returnShape : Shape)
+    (exception handlerVar : VarName)
+    (handlerProgram : Prog α)
+    (compiledArguments : List (CrepExp α))
+    (hfunction : lookupInfo function context.functions =
+      some ([], returnShape))
+    (hexception : lookupInfo exception context.exceptions = none)
+    (harguments : compileArgs context arguments = compiledArguments) :
+    compileProg context
+        (.call (some (none, some (exception, handlerVar, handlerProgram)))
+          function arguments) =
+      nestedDecs (allocatedNames context returnShape)
+        ((allocatedNames context returnShape).map (fun _ => (.const 0 : CrepExp α)))
+        (.call (some (allocatedNames context returnShape, none))
+          function compiledArguments) := by
+  simp [compileProg, hfunction, hexception, harguments,
+    functionReturnNames, allocatedNames]
+
+theorem compileProg_call_handler_missing_destination_degraded_of_compiled
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (function : FunName)
+    (arguments : List (Exp α)) (kind : VarKind) (name : VarName)
+    (exception handlerVar : VarName)
+    (handlerProgram : Prog α)
+    (compiledArguments : List (CrepExp α))
+    (hexception : lookupInfo exception context.exceptions = none)
+    (hnames : callDestinationNames context kind name = none)
+    (harguments : compileArgs context arguments = compiledArguments) :
+    compileProg context
+        (.call (some (some (kind, name),
+          some (exception, handlerVar, handlerProgram))) function arguments) =
+      .call none function compiledArguments := by
+  simp [compileProg, hexception, hnames, harguments]
+
+theorem compileProg_call_handler_missing_destination_of_compiled
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (function : FunName)
+    (arguments : List (Exp α)) (kind : VarKind) (name : VarName)
+    (names : List Nat)
+    (exception handlerVar : VarName)
+    (handlerProgram : Prog α)
+    (compiledArguments : List (CrepExp α))
+    (hexception : lookupInfo exception context.exceptions = none)
+    (hnames : callDestinationNames context kind name = some names)
+    (harguments : compileArgs context arguments = compiledArguments) :
+    compileProg context
+        (.call (some (some (kind, name),
+          some (exception, handlerVar, handlerProgram))) function arguments) =
+      .call (some (names, none)) function compiledArguments := by
+  simp [compileProg, hexception, hnames, harguments]
+
+/-! The `Call_Ret` branch of Cake's `pc_compile_correct` is the
+    assignment-producing call with no handler.  `compileProg` keeps the
+    flattened destination slots when `wrap_rt` preserves the variable's
+    shape and otherwise degrades the call to a tail call
+    (`pan_to_crepScript.sml:247-260`).  The two equations below expose those
+    emitted shapes as explicit compile-side premises. -/
+
+theorem compileProg_call_destination_of_compiled
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (function : FunName)
+    (arguments : List (Exp α)) (kind : VarKind) (name : VarName)
+    (names : List Nat)
+    (compiledArguments : List (CrepExp α))
+    (hnames : callDestinationNames context kind name = some names)
+    (harguments : compileArgs context arguments = compiledArguments) :
+    compileProg context
+        (.call (some (some (kind, name), none)) function arguments) =
+      .call (some (names, none)) function compiledArguments := by
+  simp [compileProg, hnames, harguments]
+
+theorem compileProg_call_destination_degraded_of_compiled
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (function : FunName)
+    (arguments : List (Exp α)) (kind : VarKind) (name : VarName)
+    (compiledArguments : List (CrepExp α))
+    (hnames : callDestinationNames context kind name = none)
+    (harguments : compileArgs context arguments = compiledArguments) :
+    compileProg context
+        (.call (some (some (kind, name), none)) function arguments) =
+      .call none function compiledArguments := by
+  simp [compileProg, hnames, harguments]
+
 end Flapjack

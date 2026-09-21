@@ -47,4 +47,21 @@ def isNone (value : Option (PanValue Nat)) : Bool :=
 #guard isWord deleteOther 3
 #guard isWord updateHit 7
 
+/-! `flookup_res_var_some_eq_lookup` (`panPropsScript.sml:220`) and
+    `flookup_res_var_diff_eq_org` (`:228`). -/
+
+theorem panValueResVar_lookup_same_fixture :
+    locals "x" = some (.word 3) :=
+  panValueResVar_lookup_same locals locals "x" (by simp [panValueResVar, locals])
+
+theorem panValueResVar_lookup_diff_fixture :
+    panValueResVar locals "y" none "x" = locals "x" :=
+  panValueResVar_lookup_diff locals "y" "x" none (by decide)
+
+def lookupSameGuard : Bool := isWord (locals "x") 3
+def lookupDiffGuard : Bool := isWord (panValueResVar locals "y" none "x") 3
+
+#guard lookupSameGuard
+#guard lookupDiffGuard
+
 end Flapjack.Test.PanResVarParity

@@ -292,7 +292,7 @@ example :
       some [
         .srli 31 5 (BitVec.ofNat 64 3),
         .slli 4 5 (BitVec.ofNat 64 61),
-      .or 4 4 31] := by
+        .or 4 4 31] := by
   decide
 
 /-! Cake's `riscv_ast (Inst (Mem mop r1 (Addr r2 a)))` supports every
@@ -439,6 +439,41 @@ def labSharedStoreOffsetFused : Bool :=
 
 #guard labSharedStoreOffsetFused
 
+/- Cake's `riscv_memop` table maps every shared-memory offset operator to its
+   corresponding RISC-V load/store width (`riscv_targetScript.sml:66-74,
+   165-169`).  Keep the complete table checked at the Lab boundary, not just
+   the byte-store case above. -/
+def sharedMemOffsetOperatorTable : Bool :=
+  [
+    labCompilePlain (width := 64)
+      (.shareMemOffset .load 10 11 (BitVec.ofNat 64 32)),
+    labCompilePlain (width := 64)
+      (.shareMemOffset .store 10 11 (BitVec.ofNat 64 32)),
+    labCompilePlain (width := 64)
+      (.shareMemOffset .load8 10 11 (BitVec.ofNat 64 32)),
+    labCompilePlain (width := 64)
+      (.shareMemOffset .store8 10 11 (BitVec.ofNat 64 32)),
+    labCompilePlain (width := 64)
+      (.shareMemOffset .load16 10 11 (BitVec.ofNat 64 32)),
+    labCompilePlain (width := 64)
+      (.shareMemOffset .store16 10 11 (BitVec.ofNat 64 32)),
+    labCompilePlain (width := 64)
+      (.shareMemOffset .load32 10 11 (BitVec.ofNat 64 32)),
+    labCompilePlain (width := 64)
+      (.shareMemOffset .store32 10 11 (BitVec.ofNat 64 32))
+  ] == [
+    some [.loadWordOffset 10 11 (BitVec.ofNat 64 32)],
+    some [.storeWordOffset 10 11 (BitVec.ofNat 64 32)],
+    some [.loadByteOffset 10 11 (BitVec.ofNat 64 32)],
+    some [.storeByteOffset 10 11 (BitVec.ofNat 64 32)],
+    some [.loadHalfOffset 10 11 (BitVec.ofNat 64 32)],
+    some [.storeHalfOffset 10 11 (BitVec.ofNat 64 32)],
+    some [.load32Offset 10 11 (BitVec.ofNat 64 32)],
+    some [.store32Offset 10 11 (BitVec.ofNat 64 32)]
+  ]
+
+#guard sharedMemOffsetOperatorTable
+
 -- reg1 holds the base and reg4 the byte: the store lands at base + 32.
 #guard
     labSharedStoreOffsetCode.bind (fun code =>
@@ -508,6 +543,117 @@ example :
         .jal 0 (BitVec.ofNat 64 4092)] := by
   decide
 
+/-! Cake inverts the tested relation, not just equality, around the far JAL.
+    Pin the direct/far boundary for every ordinary relational comparator. -/
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 4092)] 0
+      (.jumpCmp .notEqual 4 (.reg 5) ⟨1, 0⟩) =
+      some [.branchEq 4 5 (BitVec.ofNat 64 4092)] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 4096)] 0
+      (.jumpCmp .notEqual 4 (.reg 5) ⟨1, 0⟩) =
+      some [.branchNe 4 5 (BitVec.ofNat 64 8),
+        .jal 0 (BitVec.ofNat 64 4092)] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 4092)] 0
+      (.jumpCmp .less 4 (.reg 5) ⟨1, 0⟩) =
+      some [.branchGe 4 5 (BitVec.ofNat 64 4092)] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 4096)] 0
+      (.jumpCmp .less 4 (.reg 5) ⟨1, 0⟩) =
+      some [.branchLt 4 5 (BitVec.ofNat 64 8),
+        .jal 0 (BitVec.ofNat 64 4092)] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 4092)] 0
+      (.jumpCmp .lower 4 (.reg 5) ⟨1, 0⟩) =
+      some [.branchGeU 4 5 (BitVec.ofNat 64 4092)] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 4096)] 0
+      (.jumpCmp .lower 4 (.reg 5) ⟨1, 0⟩) =
+      some [.branchLtU 4 5 (BitVec.ofNat 64 8),
+        .jal 0 (BitVec.ofNat 64 4092)] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 4092)] 0
+      (.jumpCmp .notLess 4 (.reg 5) ⟨1, 0⟩) =
+      some [.branchLt 4 5 (BitVec.ofNat 64 4092)] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 4096)] 0
+      (.jumpCmp .notLess 4 (.reg 5) ⟨1, 0⟩) =
+      some [.branchGe 4 5 (BitVec.ofNat 64 8),
+        .jal 0 (BitVec.ofNat 64 4092)] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 4092)] 0
+      (.jumpCmp .notLower 4 (.reg 5) ⟨1, 0⟩) =
+      some [.branchLtU 4 5 (BitVec.ofNat 64 4092)] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 4096)] 0
+      (.jumpCmp .notLower 4 (.reg 5) ⟨1, 0⟩) =
+      some [.branchGeU 4 5 (BitVec.ofNat 64 8),
+        .jal 0 (BitVec.ofNat 64 4092)] := by
+  decide
+
+/-! The same five relations with an immediate RHS retain Cake's ORI prelude;
+    the direct branch therefore targets `a - 4`, while the far form skips the
+    inverted branch and jumps by `a - 8`. -/
+private def jumpCmpImmBoundary (operator : Cmp) (target : Nat) :
+    Option (List (Instruction 64)) :=
+  labCompileAsm (width := 64) { services := [] } 1 [(0, target)] 0
+    (.jumpCmp operator 4 (.imm 3) ⟨1, 0⟩)
+
+#guard jumpCmpImmBoundary .notEqual 4092 ==
+  some [.ori 31 0 (BitVec.ofNat 64 3),
+    .branchEq 4 31 (BitVec.ofNat 64 4088)]
+#guard jumpCmpImmBoundary .notEqual 4096 ==
+  some [.ori 31 0 (BitVec.ofNat 64 3),
+    .branchNe 4 31 (BitVec.ofNat 64 8),
+    .jal 0 (BitVec.ofNat 64 4088)]
+#guard jumpCmpImmBoundary .less 4092 ==
+  some [.ori 31 0 (BitVec.ofNat 64 3),
+    .branchGe 4 31 (BitVec.ofNat 64 4088)]
+#guard jumpCmpImmBoundary .less 4096 ==
+  some [.ori 31 0 (BitVec.ofNat 64 3),
+    .branchLt 4 31 (BitVec.ofNat 64 8),
+    .jal 0 (BitVec.ofNat 64 4088)]
+#guard jumpCmpImmBoundary .lower 4092 ==
+  some [.ori 31 0 (BitVec.ofNat 64 3),
+    .branchGeU 4 31 (BitVec.ofNat 64 4088)]
+#guard jumpCmpImmBoundary .lower 4096 ==
+  some [.ori 31 0 (BitVec.ofNat 64 3),
+    .branchLtU 4 31 (BitVec.ofNat 64 8),
+    .jal 0 (BitVec.ofNat 64 4088)]
+#guard jumpCmpImmBoundary .notLess 4092 ==
+  some [.ori 31 0 (BitVec.ofNat 64 3),
+    .branchLt 4 31 (BitVec.ofNat 64 4088)]
+#guard jumpCmpImmBoundary .notLess 4096 ==
+  some [.ori 31 0 (BitVec.ofNat 64 3),
+    .branchGe 4 31 (BitVec.ofNat 64 8),
+    .jal 0 (BitVec.ofNat 64 4088)]
+#guard jumpCmpImmBoundary .notLower 4092 ==
+  some [.ori 31 0 (BitVec.ofNat 64 3),
+    .branchLtU 4 31 (BitVec.ofNat 64 4088)]
+#guard jumpCmpImmBoundary .notLower 4096 ==
+  some [.ori 31 0 (BitVec.ofNat 64 3),
+    .branchGeU 4 31 (BitVec.ofNat 64 8),
+    .jal 0 (BitVec.ofNat 64 4088)]
+
 example :
     labCompileAsm (width := 64) { services := [] } 1 [(0, 2 ^ 20 - 2)] 0
       (.jump ⟨1, 0⟩) =
@@ -573,6 +719,36 @@ example :
       (.linkValue ⟨1, 0⟩) =
       some [.auipc 1 (BitVec.ofNat 64 1),
         .addi 1 1 (0 - BitVec.ofNat 64 4)] := by
+  decide
+
+/- The negative PC-relative side uses the same Cake signed-low carry rule:
+   -2048 keeps a zero high word, while -2049 rounds the high word down. -/
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 0)] 2048
+      (.locValue 5 ⟨1, 0⟩) =
+      some [.auipc 5 (BitVec.ofNat 64 0),
+        .addi 5 5 (0 - BitVec.ofNat 64 2048)] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 0)] 2049
+      (.locValue 5 ⟨1, 0⟩) =
+      some [.auipc 5 (0 - BitVec.ofNat 64 1),
+        .addi 5 5 (BitVec.ofNat 64 2047)] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 0)] 2048
+      (.linkValue ⟨1, 0⟩) =
+      some [.auipc 1 (BitVec.ofNat 64 0),
+        .addi 1 1 (0 - BitVec.ofNat 64 2048)] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 0)] 2049
+      (.linkValue ⟨1, 0⟩) =
+      some [.auipc 1 (0 - BitVec.ofNat 64 1),
+        .addi 1 1 (BitVec.ofNat 64 2047)] := by
   decide
 
 end Flapjack.RiscV

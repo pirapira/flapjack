@@ -58,12 +58,31 @@ def evalExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     (key : α → CrepGlobalAddress) (expression : LoopExp α) : Option α :=
   evalLoopExp (state.toLoopState key) expression
 
+/-! Target-word Loop expressions must use Cake's complete `word_sh` rule.  Keep
+    the historical evaluator above for compatibility, while exposing the
+    typed-global projection through the full evaluator for RISC-V callers. -/
+def evalExpFull [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [PanCmp α] [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
+    [Complement α] (state : LoopTypedGlobalState α)
+    (key : α → CrepGlobalAddress) (expression : LoopExp α) : Option α :=
+  evalLoopExpFull (state.toLoopState key) expression
+
 def setGlobal [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [PanCmp α] (state : LoopTypedGlobalState α)
     (key : α → CrepGlobalAddress) (address : α) (expression : LoopExp α) :
     Option (LoopTypedGlobalState α) := do
   let value ← state.evalExp key expression
+  pure (state.store key address value)
+
+def setGlobalFull [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [PanCmp α] [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
+    [Complement α] (state : LoopTypedGlobalState α)
+    (key : α → CrepGlobalAddress) (address : α) (expression : LoopExp α) :
+    Option (LoopTypedGlobalState α) := do
+  let value ← state.evalExpFull key expression
   pure (state.store key address value)
 
 theorem toLoopState_store [BEq α]
@@ -92,6 +111,19 @@ theorem setGlobal_load_alias [BEq α] [LawfulBEq α]
   simp [setGlobal, evalExp, load, store, evalLoopExp,
     evalCrepTypedLoad, storeCrepTypedGlobal, storeCrepGlobal]
 
+theorem setGlobalFull_load_alias [BEq α] [LawfulBEq α]
+    [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [PanCmp α] [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
+    [Complement α] (state : LoopTypedGlobalState α)
+    (key : α → CrepGlobalAddress) (address value loadAddress : α) :
+    (state.setGlobalFull key address (.const value)).bind
+        (fun next => next.load key loadAddress) =
+      evalCrepTypedLoad key
+        (storeCrepTypedGlobal key state.globals address value) loadAddress := by
+  simp [setGlobalFull, evalExpFull, load, store, evalLoopExpFull,
+    evalCrepTypedLoad, storeCrepTypedGlobal, storeCrepGlobal]
+
 /-! The legacy Loop projection can be used by executable callers without
     losing Cake's fixed-width global key.  This is the direct LoadGlob
     boundary after a typed StoreGlob; unlike `updateLoopGlobal`, it needs no
@@ -102,6 +134,22 @@ theorem store_toLoopState_load [BEq α]
     ((state.store key address value).toLoopState key).globals loadAddress =
       evalCrepTypedLoad key
         (storeCrepTypedGlobal key state.globals address value) loadAddress := by
+  rfl
+
+/-! The executable Loop expression evaluator can consume the typed store
+    directly through its lookup constructor.  This is the evaluator-facing
+    form of `store_toLoopState_load`; unlike raw `updateLoopGlobal`, the
+    typed store preserves Cake's fixed-width key and therefore needs no
+    injectivity premise. -/
+theorem store_evalExp_lookup [BEq α] [OfNat α 0] [OfNat α 1]
+    [Add α] [Mul α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [PanCmp α]
+    (state : LoopTypedGlobalState α)
+    (key : α → CrepGlobalAddress) (address value loadAddress : α) :
+    (state.store key address value).evalExp key (.lookup loadAddress) =
+      evalCrepTypedLoad key
+        (storeCrepTypedGlobal key state.globals address value) loadAddress := by
+  rw [LoopTypedGlobalState.evalExp_lookup]
   rfl
 
 end LoopTypedGlobalState
@@ -376,6 +424,56 @@ def store [BEq α] (state : CrepRuntimeTypedState α σ)
     CrepRuntimeTypedState α σ :=
   { state with globals := storeCrepGlobal state.globals (key address) value }
 
+/-! Target-word expression evaluation for the typed runtime boundary.  The
+    legacy `evalCrepRuntimeExp` remains available for compatibility, but a
+    RISC-V caller carrying Cake's typed global map must use the complete
+    `word_sh` semantics (including ASR/ROR and width checks).  This adapter
+    keeps runtime locals/memory while routing globals through the fixed-width
+    `CrepGlobalAddress` map. -/
+def evalExpFull
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [PanShiftWidth α] [ArithmeticShiftRight α]
+    [RotateRightOp α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeTypedState α σ)
+    (key : α → CrepGlobalAddress) (baseAddress topAddress : α) :
+    CrepExp α → Option α :=
+  evalCrepTypedExpFull key state.toGlobalState baseAddress topAddress
+
+/-! Typed runtime `StoreGlob` boundary.  This adapter evaluates the value and
+    updates Cake's fixed-width global map before projecting back to the legacy
+    runtime shape; existing raw runtime callers remain unchanged. -/
+def storeGlob
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [PanShiftWidth α] [ArithmeticShiftRight α]
+    [RotateRightOp α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeTypedState α σ)
+    (key : α → CrepGlobalAddress) (baseAddress topAddress : α)
+    (address : α) (expression : CrepExp α) :
+    Option (CrepRuntimeTypedState α σ) := do
+  let value ← state.evalExpFull key baseAddress topAddress expression
+  pure (state.store key address value)
+
+/-! Checked target-word evaluation for the same typed runtime boundary.  The
+    memory state is supplied explicitly because the legacy runtime record is
+    intentionally retained for compatibility; ordinary loads therefore use
+    Cake's domain/alignment/endianness model instead of its raw memory field. -/
+def evalExpCheckedFull
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [PanShiftWidth α] [ArithmeticShiftRight α]
+    [RotateRightOp α] [OfNat α 2] [OfNat α 3] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeTypedState α σ)
+    (key : α → CrepGlobalAddress) (memoryState : CrepMemoryState α)
+    (baseAddress topAddress : α) : CrepExp α → Option α :=
+  evalCrepCheckedExpStateFull state.runtime.locals
+    (fun address => state.globals (key address)) memoryState
+    baseAddress topAddress
+
 theorem toRuntime_relation (state : CrepRuntimeTypedState α σ)
     (key : α → CrepGlobalAddress) :
     crepRuntimeTypedGlobalRelation key (state.toRuntime key)
@@ -402,6 +500,25 @@ theorem store_toRuntime [BEq α]
         address value := by
   rfl
 
+theorem storeGlob_load_alias
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [PanShiftWidth α] [ArithmeticShiftRight α]
+    [RotateRightOp α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeTypedState α σ)
+    (key : α → CrepGlobalAddress) (baseAddress topAddress : α)
+    (address value loadAddress : α) :
+    (state.storeGlob key baseAddress topAddress address (.const value)).bind
+        (fun next => next.evalExpFull key baseAddress topAddress
+          (.loadGlob loadAddress)) =
+      evalCrepTypedLoad key
+        (storeCrepTypedGlobal key state.toGlobalState address value) loadAddress := by
+  simp [storeGlob, evalExpFull, store, evalCrepTypedExpFull,
+    CrepRuntimeTypedState.toGlobalState, CrepGlobalState.toCompact,
+    evalCrepFullExpStateFull, evalCrepTypedLoad, storeCrepTypedGlobal,
+    storeCrepGlobal]
+
 theorem load_after_store_toRuntime [BEq α] [OfNat α 0] [OfNat α 1]
     [Add α] [Mul α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
@@ -416,6 +533,38 @@ theorem load_after_store_toRuntime [BEq α] [OfNat α 0] [OfNat α 1]
   exact
     (evalCrepRuntimeExp_loadGlob_after_store_typedState state.runtime key
       state.toGlobalState address value loadAddress)
+
+theorem evalExpFull_load_after_store [BEq α]
+    [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [PanShiftWidth α] [ArithmeticShiftRight α]
+    [RotateRightOp α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeTypedState α σ)
+    (key : α → CrepGlobalAddress)
+    (address value loadAddress : α) (baseAddress topAddress : α) :
+    (state.store key address value).evalExpFull key baseAddress topAddress
+        (.loadGlob loadAddress) =
+      evalCrepTypedLoad key
+        (storeCrepTypedGlobal key state.toGlobalState address value) loadAddress := by
+  simp [evalExpFull, store, evalCrepTypedExpFull,
+    CrepRuntimeTypedState.toGlobalState, CrepGlobalState.toCompact,
+    evalCrepFullExpStateFull, evalCrepTypedLoad, storeCrepTypedGlobal]
+
+theorem evalExpCheckedFull_loadGlob [BEq α]
+    [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [PanShiftWidth α] [ArithmeticShiftRight α]
+    [RotateRightOp α] [OfNat α 2] [OfNat α 3] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeTypedState α σ)
+    (key : α → CrepGlobalAddress) (memoryState : CrepMemoryState α)
+    (address baseAddress topAddress : α) :
+    state.evalExpCheckedFull key memoryState baseAddress topAddress
+        (.loadGlob address) =
+      evalCrepTypedLoad key state.toGlobalState address := by
+  simp [evalExpCheckedFull, evalCrepCheckedExpStateFull,
+    CrepRuntimeTypedState.toGlobalState, evalCrepTypedLoad]
 
 end CrepRuntimeTypedState
 

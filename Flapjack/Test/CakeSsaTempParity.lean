@@ -99,9 +99,21 @@ def branchSsaGuard : Bool :=
       (.ite .equal 5 (.reg 9)
         (.seq
           (.seq (.assign 13 (.const 1)) (.assign 17 (.var 13)))
-          (.move 1 [(29, 13), (25, 17)]))
+          (.seq (.move 1 [(29, 13), (25, 17)]) .skip))
         (.seq (.assign 21 (.const 2))
-          (.move 1 [(29, 5), (25, 21)]))) => true
+          (.seq (.move 1 [(29, 5), (25, 21)]) .skip))) => true
+  | _ => false
+
+def branchSkipProgram : WordProg Nat :=
+  .ite .equal 0 (.reg 2) .skip (.assign 2 (.const 2))
+
+def branchSkipSsaGuard : Bool :=
+  match (wordFullSsaCcTrans 2 branchSkipProgram).2.2 with
+  | .seq (.move 1 [(5, 0), (9, 2)])
+      (.ite .equal 5 (.reg 9)
+        (.seq .skip (.seq (.move 2 [(17, 9)]) .skip))
+        (.seq (.assign 13 (.const 2))
+          (.seq (.move 1 [(17, 13)]) .skip))) => true
   | _ => false
 
 def loopProgram : WordProg Nat :=
@@ -110,7 +122,7 @@ def loopProgram : WordProg Nat :=
 def loopSsaGuard : Bool :=
   match (wordFullSsaCcTrans 2 loopProgram).2.2 with
   | .seq (.move 1 [(5, 0), (9, 2)])
-      (.seq (.move 0 [(13, 5)])
+      (.seq (.seq .skip (.move 0 [(13, 5)]))
         (.loop [13]
           (.seq
             (.seq (.assign 17 (.const 1))
@@ -118,13 +130,44 @@ def loopSsaGuard : Bool :=
             (.move 1 [(13, 17)])) [])) => true
   | _ => false
 
+def loopLiveOutProgram : WordProg Nat :=
+  .loop [0, 2] (.seq (.assign 0 (.const 1)) (.continue 0)) [2]
+
+def loopLiveOutGuard : Bool :=
+  match (wordFullSsaCcTrans 2 loopLiveOutProgram).2.2 with
+  | .seq (.move 1 [(5, 0), (9, 2)])
+      (.seq (.seq .skip (.move 0 [(13, 5), (17, 9)]))
+        (.loop [17, 13]
+          (.seq
+            (.seq (.assign 21 (.const 1))
+              (.seq (.move 1 [(13, 21)]) (.continue 0)))
+            (.move 1 [(13, 21)])) [17])) => true
+  | _ => false
+
+def loopBreakProgram : WordProg Nat :=
+  .loop [0] (.seq (.assign 0 (.const 1)) (.break 0)) []
+
+def loopBreakGuard : Bool :=
+  match (wordFullSsaCcTrans 2 loopBreakProgram).2.2 with
+  | .seq (.move 1 [(5, 0), (9, 2)])
+      (.seq (.seq .skip (.move 0 [(13, 5)]))
+        (.loop [13]
+          (.seq
+            (.seq (.assign 17 (.const 1)) (.break 0))
+            (.move 1 [(13, 17)])) [])) => true
+  | _ => false
+
 #guard branchSsaGuard
+#guard branchSkipSsaGuard
 #guard loopSsaGuard
+#guard loopLiveOutGuard
+#guard loopBreakGuard
 
 def parityGuard : Bool :=
   setupTwoGuard && fullTransMoveGuard && limitBaseGuard &&
     limitTwoAssignsGuard && setupTwoNextGuard && fullSkipMoveGuard &&
-    fullTwoAssignsGuard && branchSsaGuard && loopSsaGuard
+    fullTwoAssignsGuard && branchSsaGuard && branchSkipSsaGuard &&
+    loopSsaGuard && loopLiveOutGuard && loopBreakGuard
 
 #guard parityGuard
 #eval parityGuard
@@ -143,7 +186,13 @@ def runChecks : IO Bool := do
         fullTwoAssignsGuard),
       ("full_ssa_cc_trans reconciles Cake branch continuations",
         branchSsaGuard),
-      ("full_ssa_cc_trans reconciles Cake loop back edges", loopSsaGuard) ]
+      ("full_ssa_cc_trans preserves Cake skipped branch sequences",
+        branchSkipSsaGuard),
+      ("full_ssa_cc_trans reconciles Cake loop back edges", loopSsaGuard),
+      ("full_ssa_cc_trans preserves Cake loop exit cut sets",
+        loopLiveOutGuard),
+      ("full_ssa_cc_trans preserves Cake loop break reconciliation",
+        loopBreakGuard) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

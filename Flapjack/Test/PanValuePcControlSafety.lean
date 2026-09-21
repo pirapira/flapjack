@@ -1,11 +1,41 @@
 import Flapjack.PanToCrepCorrectnessBoundary
 import Flapjack.PanToCrepCorrectnessBridge
+import Flapjack.PanToCrepTailCallCorrectness
+import Flapjack.PanToCrepCallHandlerControlSafety
+import Flapjack.PanToCrepAssignmentControlSafety
+import Flapjack.PanToCrepPrimitiveControlSafety
+import Flapjack.PanToCrepPrimitiveCorrectness
+import Flapjack.PanToCrepCallCorrectness
+import Flapjack.PanToCrepCompileCorrectInduction
+import Flapjack.PanToCrepConditionalCorrectness
+import Flapjack.PanToCrepSharedMemoryControlSafety
+import Flapjack.PanToCrepSharedMemoryCorrectness
+import Flapjack.PanToCrepDeclarationControlSafety
+import Flapjack.PanToCrepAssignmentCorrectness
+import Flapjack.PanToCrepSequenceCorrectness
+import Flapjack.PanToCrepLeafCorrectness
+import Flapjack.PanToCrepAnnotCorrectness
 import Flapjack.PanValueFfiClockCorrectness
 import Flapjack.CrepeNestedDecsStability
+import Flapjack.CrepeRaisedCallInversion
+import Flapjack.PanToCrepDecCallCorrectness
+import Flapjack.PanToCrepProgramComposition
 
 namespace Flapjack.Test.PanValuePcControlSafety
 
 open Flapjack
+
+/-! Regression for Cake's `state_rel_globals` projection: a related
+    source-to-Crep state always has the empty source-global environment. -/
+example
+    (structs : StructContext) (context : CompileContext Nat)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+    (sourceMemory : Nat → Option (PanValue Nat)) (state : CrepState Nat)
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory state) :
+    sourceGlobals = (fun _ => none) :=
+  panValueCrepStateRel_sourceGlobals_eq_none structs context sourceLocals
+    sourceGlobals sourceMemory state hrel
 
 /-! The context-coded `pc_compile_correct` boundary keeps the full
     evaluator/state/result obligation package explicit. -/
@@ -355,6 +385,57 @@ example
       clockTargetException hclock hcontrol hevidence
   exact ⟨hresult.1, hresult.2.2.2⟩
 
+example
+    (sourceEvaluate : PanValuePcEvaluator Nat)
+    (targetEvaluate : CrepPcEvaluator Nat)
+    (codeRel : PanValuePcCodeRel Nat)
+    (excpRel : PanValuePcExceptionShapeRel Nat)
+    (exceptionCode : ExceptionId → Option Nat)
+    (globalsLookup : CrepState Nat → PanValue Nat → Option (List Nat))
+    (program : Prog Nat)
+    (hcompact : PanValuePcCompileCorrect sourceEvaluate targetEvaluate codeRel
+      excpRel exceptionCode globalsLookup program)
+    (clockStructs : StructContext) (clockPcContext : CompileContext Nat)
+    (clockExceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+    (clockExceptionCode : ExceptionId → Option Nat)
+    (clockGlobalsLookup : CrepState Nat → PanValue Nat → Option (List Nat))
+    (clockContext : PanValueFfiContext Nat)
+    (clockPrimitive : PanPrimitiveHandler Nat)
+    (clockHandler : PanValueStatefulFfiHandler Nat Unit)
+    (clockFunctions : List (FunName × List VarName × Prog Nat))
+    (clockBaseAddress clockTopAddress clockBytesInWord : Nat)
+    (clockFuel clock : Nat)
+    (clockLocals clockGlobals : VarName → Option (PanValue Nat))
+    (clockMemory : Nat → Option (PanValue Nat)) (clockFfi : FfiState Unit)
+    (clockProgram : Prog Nat) (clockTargetState : CrepState Nat)
+    (clockException : ExceptionId) (clockValue : PanValue Nat)
+    (clockTargetException : Nat)
+    (hclock : evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
+      clockFfi clock clockProgram = some
+        (.control (.raised clockLocals clockGlobals clockMemory clockFfi
+          clockException clockValue), clock))
+    (hclockState : panValueCrepStateRel clockStructs clockPcContext
+      clockLocals clockGlobals clockMemory clockTargetState)
+    (hclockRaise : panValuePcExceptionResultRel clockStructs clockPcContext
+      clockExceptionRel clockExceptionCode clockGlobalsLookup clockGlobals
+      clockMemory clockException clockValue clockTargetState clockTargetException) :
+    PanValuePcCompileCorrect sourceEvaluate targetEvaluate codeRel excpRel
+      exceptionCode globalsLookup program ∧
+    panValuePcResultRel clockStructs clockPcContext clockExceptionRel
+      clockExceptionCode clockGlobalsLookup
+      (.raised clockLocals clockGlobals clockMemory clockException clockValue)
+      (.raised clockTargetState clockTargetException) := by
+  have hresult := panValuePcCompileCorrect_of_arbitrary_clocked_raised
+    sourceEvaluate targetEvaluate codeRel excpRel exceptionCode globalsLookup program
+    hcompact clockStructs clockPcContext clockExceptionRel clockExceptionCode
+    clockGlobalsLookup clockContext clockPrimitive clockHandler clockFunctions
+    clockBaseAddress clockTopAddress clockBytesInWord clockFuel clock clockLocals
+    clockGlobals clockMemory clockFfi clockProgram clockTargetState clockException
+    clockValue clockTargetException hclock hclockState hclockRaise
+  exact ⟨hresult.1, hresult.2.2.2⟩
+
 def controlContext : CompileContext Nat :=
   { vars := [], functions := [], exceptions := [], maxVar := 0,
     bytesInWord := 1 }
@@ -607,5 +688,649 @@ example :
     (by
       intro name shape slots hlookup slot hslot
       simp [controlContext, lookupInfo] at hlookup)
+
+/-! Threading the source state relation through the raised dispatcher. The bare
+    control relation only exposes the except-spill memory relation and empty
+    locals, so the state/code/lookup/shape obligations stay explicit. -/
+set_option linter.unusedVariables false in
+example
+    (exceptionCode : ExceptionId → Option Nat)
+    (globalsLookup : CrepState Nat → PanValue Nat → Option (List Nat))
+    (hpost : ∀ (context : CompileContext Nat) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+      (sourceMemory : Nat → Option (PanValue Nat)) (sourceException : ExceptionId)
+      (sourceValue : PanValue Nat) (targetState : CrepState Nat)
+      (targetException : Nat),
+      panValueCrepStateRel structs context sourceLocals sourceGlobals sourceMemory
+        targetState)
+    (hcode : ∀ (context : CompileContext Nat) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+      (sourceMemory : Nat → Option (PanValue Nat)) (sourceException : ExceptionId)
+      (sourceValue : PanValue Nat) (targetState : CrepState Nat)
+      (targetException : Nat),
+      exceptionCode sourceException = some targetException)
+    (hlookup : ∀ (context : CompileContext Nat) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+      (sourceMemory : Nat → Option (PanValue Nat)) (sourceException : ExceptionId)
+      (sourceValue : PanValue Nat) (targetState : CrepState Nat)
+      (targetException : Nat),
+      1 ≤ Shape.shapeSize (panValueShape structs sourceValue) →
+      globalsLookup targetState sourceValue =
+        some (panValueFlatWords sourceValue))
+    (hsize : ∀ (context : CompileContext Nat) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+      (sourceMemory : Nat → Option (PanValue Nat)) (sourceException : ExceptionId)
+      (sourceValue : PanValue Nat) (targetState : CrepState Nat)
+      (targetException : Nat),
+      Shape.shapeSize (panValueShape structs sourceValue) ≤ 32) :
+    ∀ (context : CompileContext Nat) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+      (sourceMemory : Nat → Option (PanValue Nat)) (sourceException : ExceptionId)
+      (sourceValue : PanValue Nat) (targetState : CrepState Nat)
+      (targetException : Nat),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      panValuePcRaisedHraiseData exceptionCode globalsLookup structs context
+        exceptionRel sourceLocals sourceGlobals sourceMemory sourceException
+        sourceValue targetState targetException :=
+  panValuePcRaisedHraiseData_dispatch_of_state_rel exceptionCode globalsLookup
+    hpost hcode hlookup hsize
+
+/-! The generic raised-payload branch of the dispatcher can now be discharged
+    from the same explicit state evidence, leaving only the concrete payload
+    obligations `hword`/`htwo`/`hthree` to the caller. -/
+set_option linter.unusedVariables false in
+example
+    (exceptionCode : ExceptionId → Option Nat)
+    (globalsLookup : CrepState Nat → PanValue Nat → Option (List Nat))
+    (hword : ∀ (context : CompileContext Nat) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+      (sourceMemory : Nat → Option (PanValue Nat)) (sourceException : ExceptionId)
+      (value : Nat) (targetState : CrepState Nat) (targetException : Nat),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException
+          (.word value))
+        (.raised targetState targetException) →
+      panValuePcRaisedHraiseData exceptionCode globalsLookup structs context
+        exceptionRel sourceLocals sourceGlobals sourceMemory sourceException
+        (.word value) targetState targetException)
+    (htwo : ∀ (context : CompileContext Nat) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+      (sourceMemory : Nat → Option (PanValue Nat)) (sourceException : ExceptionId)
+      (left right : Nat) (targetState : CrepState Nat) (targetException : Nat),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException
+          (.rStruct [.word left, .word right]))
+        (.raised targetState targetException) →
+      panValuePcRaisedHraiseData exceptionCode globalsLookup structs context
+        exceptionRel sourceLocals sourceGlobals sourceMemory sourceException
+        (.rStruct [.word left, .word right]) targetState targetException)
+    (hthree : ∀ (context : CompileContext Nat) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+      (sourceMemory : Nat → Option (PanValue Nat)) (sourceException : ExceptionId)
+      (first second third : Nat) (targetState : CrepState Nat)
+      (targetException : Nat),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException
+          (.rStruct [.word first, .word second, .word third]))
+        (.raised targetState targetException) →
+      panValuePcRaisedHraiseData exceptionCode globalsLookup structs context
+        exceptionRel sourceLocals sourceGlobals sourceMemory sourceException
+        (.rStruct [.word first, .word second, .word third]) targetState
+        targetException)
+    (hpost : ∀ (context : CompileContext Nat) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+      (sourceMemory : Nat → Option (PanValue Nat)) (sourceException : ExceptionId)
+      (sourceValue : PanValue Nat) (targetState : CrepState Nat)
+      (targetException : Nat),
+      panValueCrepStateRel structs context sourceLocals sourceGlobals sourceMemory
+        targetState)
+    (hcode : ∀ (context : CompileContext Nat) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+      (sourceMemory : Nat → Option (PanValue Nat)) (sourceException : ExceptionId)
+      (sourceValue : PanValue Nat) (targetState : CrepState Nat)
+      (targetException : Nat),
+      exceptionCode sourceException = some targetException)
+    (hlookup : ∀ (context : CompileContext Nat) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+      (sourceMemory : Nat → Option (PanValue Nat)) (sourceException : ExceptionId)
+      (sourceValue : PanValue Nat) (targetState : CrepState Nat)
+      (targetException : Nat),
+      1 ≤ Shape.shapeSize (panValueShape structs sourceValue) →
+      globalsLookup targetState sourceValue =
+        some (panValueFlatWords sourceValue))
+    (hsize : ∀ (context : CompileContext Nat) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+      (sourceMemory : Nat → Option (PanValue Nat)) (sourceException : ExceptionId)
+      (sourceValue : PanValue Nat) (targetState : CrepState Nat)
+      (targetException : Nat),
+      Shape.shapeSize (panValueShape structs sourceValue) ≤ 32) :
+    ∀ (context : CompileContext Nat) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+      (sourceMemory : Nat → Option (PanValue Nat)) (sourceException : ExceptionId)
+      (sourceValue : PanValue Nat) (targetState : CrepState Nat)
+      (targetException : Nat),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      panValuePcRaisedHraiseData exceptionCode globalsLookup structs context
+        exceptionRel sourceLocals sourceGlobals sourceMemory sourceException
+        sourceValue targetState targetException :=
+  panValuePcRaisedHraiseCases_of_state_evidence exceptionCode globalsLookup
+    hword htwo hthree hpost hcode hlookup hsize
+
+/- The context-code state-evidence wrapper is available at the expected
+signature (no opaque raised-data obligation). -/
+#check @panValuePcCompileCorrect_compact_with_raised_state_evidence_context_code
+
+/- The concrete one-word-record raise instance also drops the opaque
+evaluator-evidence obligation. -/
+#check @panValuePcCompileCorrect_compact_one_word_raise_of_state_evidence
+
+/- The two-word-record raise instance composes the same boundary with the
+   two-word Cake program-control theorem. -/
+#check @panValuePcCompileCorrect_compact_two_word_raise_of_state_evidence
+
+/- The three-word-record instance uses the corresponding Cake-shaped
+   program-control theorem and the same explicit raised-state evidence. -/
+#check @panValuePcCompileCorrect_compact_three_word_raise_of_state_evidence
+
+/- The four-word-record instance extends the same Cake-faithful construction
+   to the final fixed-width record payload. -/
+#check @panValuePcCompileCorrect_compact_four_word_raise_of_state_evidence
+#check @panValuePcCompileCorrect_compact_word_list_raise_of_state_evidence
+
+/- The context-coded word-list raise instance uses the same state evidence and
+   additionally returns the context-coded correctness boundary. -/
+#check @panValuePcCompileCorrect_compact_word_list_raise_of_state_evidence_context_code
+
+/- The source-word and nested one-word-record raise instances also drop the
+   opaque evaluator-evidence obligation in favour of explicit state evidence. -/
+#check @panValuePcCompileCorrect_compact_raise_source_word_of_state_evidence
+#check @panValuePcCompileCorrect_compact_nested_one_word_raise_of_state_evidence
+#check @panValuePcCompileCorrect_compact_nested_one_word_raise_of_state_evidence_context_code
+
+/- The context-coded source-word raise instance uses the same state evidence and
+   additionally returns the context-coded correctness boundary. -/
+#check @panValuePcCompileCorrect_compact_raise_source_word_of_state_evidence_context_code
+
+/- The raw-word-list dispatcher also has a state-evidence form that discharges the
+   generic `hother` branch without an opaque raised-data obligation. -/
+#check @panValuePcRaisedHraiseCases_with_raw_word_lists_of_state_evidence
+#check @panValuePcCompileCorrect_compact_with_raw_word_lists_context_code_of_state_evidence
+#check @panValuePcCompileCorrect_compact_ite_source_word_of_state_evidence_context_code
+#check @panValuePcCompileCorrect_compact_while_source_word_of_state_evidence_context_code
+#check @panValuePcCompileCorrect_compact_while_source_word_of_state_evidence_context_code_and_clocked
+#check @panValuePcCompileCorrect_of_compact_evaluators_with_expression_state_evidence_and_clocked_raised
+#check @panValuePcCompileCorrect_of_compact_evaluators_with_expression_state_evidence_and_clocked_timeout
+#check @panValuePcCompileCorrect_of_compact_evaluators_with_expression_state_evidence_and_clocked_final_ffi
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_raised
+#check @panValuePcCompileCorrectWithContextCode_compact_with_expression_state_evidence
+#check @panValuePcCompileCorrectWithContextCode_of_compact_evaluators_with_expression_state_evidence_and_clocked_raised
+#check @panValuePcCompileCorrectWithContextCode_of_compact_evaluators_with_expression_state_evidence_and_clocked_timeout
+#check @panValuePcCompileCorrectWithContextCode_of_compact_evaluators_with_expression_state_evidence_and_clocked_final_ffi
+#check @panValuePcCompileCorrectWithContextCode_of_compact_evaluators_with_expression_state_evidence_and_clocked_returned
+#check @panValuePcCompileCorrectWithContextCode_of_compact_evaluators_with_expression_state_evidence_and_clocked_continued
+#check @panValuePcCompileCorrectWithContextCode_of_compact_evaluators_with_expression_state_evidence_and_clocked_broke
+#check @panValuePcCompileCorrectWithContextCode_of_compact_evaluators_with_expression_state_evidence_and_clocked_normal
+
+/- The arbitrary word-list Raise bridge preserves the same explicit clocked
+   evaluator and state/result premises at the top-level boundary. -/
+#check @panValuePcCompileCorrect_compact_with_flat_global_evaluator_evidence_word_list_raise_context_code_and_clocked
+/- The fixed-width and nested-record raise instances also have context-coded
+   state-evidence forms returning the context-coded correctness boundary. -/
+#check @panValuePcCompileCorrect_compact_one_word_raise_of_state_evidence_context_code
+#check @panValuePcCompileCorrect_compact_two_word_raise_of_state_evidence_context_code
+#check @panValuePcCompileCorrect_compact_three_word_raise_of_state_evidence_context_code
+#check @panValuePcCompileCorrect_compact_four_word_raise_of_state_evidence_context_code
+
+/-! The plain exception-result dispatcher likewise accepts the explicit
+    state-evidence premises instead of the opaque raised-payload callback. -/
+#check @panValuePcRaisedHraiseCases_to_exception_result_rel_of_state_evidence
+
+/-! The context-coded exception-result dispatcher also accepts the explicit
+    state-evidence premises instead of the opaque raised-payload callback. -/
+#check @panValuePcRaisedHraiseCases_to_exception_result_rel_with_context_code_of_state_evidence
+/-! The paired raw-word-list dispatcher also accepts the explicit state
+    evidence plus the exception lookup instead of the opaque callbacks. -/
+#check @panValuePcRaisedHraiseCases_with_raw_word_lists_paired_of_state_evidence
+
+/-! The plain (non-context-coded) store state-evidence instances are the
+    companions used by the ordinary compact correctness boundary. -/
+#check @panValuePcCompileCorrect_compact_store_source_word_of_state_evidence
+#check @panValuePcCompileCorrect_compact_store32_source_word_of_state_evidence
+#check @panValuePcCompileCorrect_compact_storeByte_source_word_of_state_evidence
+
+/-! The plain (non-context-coded) conditional and loop wrappers accept the
+    explicit state evidence instead of the opaque evaluator callback. -/
+#check @panValuePcCompileCorrect_compact_ite_source_word_of_state_evidence
+#check @panValuePcCompileCorrect_compact_while_source_word_of_state_evidence
+
+/-! The expression-parametric `Return` wrappers also accept explicit
+    state evidence in plain and context-coded form. -/
+#check @panValuePcCompileCorrect_compact_return_of_state_evidence
+#check @panValuePcCompileCorrect_compact_return_with_context_code_of_state_evidence
+#check @panValuePcCompileCorrect_compact_return_with_context_code_of_state_evidence_and_clocked
+
+/-! The plain raw-word-list entrypoint also accepts explicit state evidence
+    for the generic `hother` callback. -/
+#check @panValuePcCompileCorrect_compact_with_raw_word_lists_of_state_evidence
+
+/-! The source-word-record raise wrappers also accept explicit state evidence in
+    plain and context-coded form. -/
+#check @panValuePcCompileCorrect_compact_source_word_record_raise_of_state_evidence
+#check @panValuePcCompileCorrect_compact_source_word_record_raise_of_state_evidence_context_code
+
+/-! The retargeted-globals raw-word dispatcher also accepts explicit state
+    evidence for the generic hother callback. -/
+#check @panValuePcRaisedHraiseCases_with_raw_word_lists_retarget_globals_of_state_evidence
+
+/-! The raw-word-list context-coded exception-result dispatcher also accepts
+    explicit state evidence. -/
+#check @panValuePcRaisedHraiseCases_with_raw_word_lists_to_exception_result_rel_with_context_code_of_state_evidence
+
+/-! The handler-free call form discharges the control-safety premise of the
+compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
+#check @panValueCrepProgramStateControlSafe_call_none
+
+#check @panValueCrepProgramStateControlSafe_call_returns
+
+/-! A handler-free call now has one paired induction branch: arbitrary
+    state/evaluator evidence supplies simulation, while the call safety proof
+    supplies the final label-zero obligation. -/
+#check @panValueCrepProgramStateCorrect_and_controlSafe_call_none_of_relation
+
+#check @panValueCrepProgramStateCorrect_and_controlSafe_call_returns_of_relation
+
+/-! Declaration calls now expose the paired state simulation and control-safety
+    package used by Pancake's `pc_compile_correct[DecCall]` branch. -/
+#check @panValueCrepDecCall_state_and_controlSafe_of_body
+
+#check @panValueCrepProgramStateCorrect_and_controlSafe_call_handler_of_relation
+
+/-! A call whose metadata carries an exception handler needs explicit handler
+    safety: a handler program that never returns a loop-control result.  The
+    source-side never-broke-continued predicate and the resulting control-safety
+    theorem make that premise explicit. -/
+#check @PanValueProgNotBrokeContinued
+#check @evalPanValueCallWithPrimitiveCallsAndFfi_handler_not_broke_continued
+#check @panValueCrepProgramStateControlSafe_call_handler
+/-! The source-level handler-safety predicate is closed under leaves,
+    sequences, and conditionals, and it yields the handler-carrying decCall
+    control-safety instance. -/
+#check @PanValueProgNotBrokeContinued_skip
+#check @PanValueProgNotBrokeContinued_seq
+#check @PanValueProgNotBrokeContinued_ite
+#check @PanValueProgNotBrokeContinued_return
+#check @PanValueProgNotBrokeContinued_raise
+#check @panValueCrepProgramStateControlSafe_decCall
+
+/-! The "exception id in handler not found in context" sub-case of Cake's
+    `Call_Ret_Exception` branch: when the handler's exception is absent from
+    the compile context, the emitted call drops the handler metadata.  These
+    equations expose the standalone and both destination-carrying degraded
+    shapes as explicit compile-side premises. -/
+#check @compileProg_call_handler_missing_of_compiled
+#check @compileProg_call_handler_missing_destination_degraded_of_compiled
+#check @compileProg_call_handler_missing_destination_of_compiled
+
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_handler
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_handler_destination
+#check @evalPanValueFfiClockProg_call_caught_handler_destination
+/-! The `Call_Ret` branch of Cake's `pc_compile_correct`: the
+    assignment-producing call with no handler keeps the flattened destination
+    slots when `wrap_rt` preserves the shape, and degrades to a tail call
+    otherwise.  These equations expose both emitted shapes. -/
+#check @compileProg_call_destination_of_compiled
+#check @compileProg_call_destination_degraded_of_compiled
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_handler_raised
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_call_handler_raised
+#check @panValueCrepProgramStateCorrect_and_controlSafe_call_handler_return_of_relation
+#check @panValueCrepProgramStateCorrect_and_controlSafe_call_handler_raise_of_relation
+#check @panValueCrepProgramStateControlSafe_decCall_return
+#check @panValueCrepProgramStateControlSafe_decCall_raise
+
+/-! The caught-handler call exposes the outer-to-inner handler branch: when the
+    callee raises with a matching code, the call's crep result is exactly the
+    handler program's evaluation from the handler-entry state. -/
+#check @evalCrepFullCallState_raised_handler_of_callee
+
+/-! The direct `Call_Ret_FinalFFI` branch of Cake's `pc_compile_correct`: a
+    direct call propagates the callee's terminal FFI event unchanged. -/
+#check @panValuePcFinalFfiResultRel_of_clocked_call
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_finalFfi
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_call_finalFfi
+#check @panValuePcRaisedResultRelWithContextCode_of_clocked_call
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_raised_no_handler
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_call_raised
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_returned_no_handler
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_call_returned_no_handler
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_tailCall
+#check @panValuePcCompileCorrect_of_clocked_call_tailCall
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_returned_destination
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_call_returned_destination
+/-! Compositional source handler safety: a handler-free call and a declaration
+    body that never exposes loop control. -/
+#check @PanValueProgNotBrokeContinued_call_of_no_handler
+#check @PanValueProgNotBrokeContinued_dec
+
+/-! The direct `Call_Ret_Exception` branch of Cake's `pc_compile_correct`: a
+    direct call propagates the callee's uncaught raise unchanged. -/
+#check @panValuePcRaisedResultRelWithContextCode_of_clocked_call
+
+/-! The `DecCall` timeout lift: a declaration call whose callee runs out of
+    clock crosses the enclosing program boundary as a `timeout` outcome. -/
+#check @panValuePcTimeoutResultRel_of_clocked_decCall
+
+/-! The direct `Call_Ret` timeout lift: a direct call whose callee runs out of
+    clock crosses the enclosing program boundary as a `timeout` outcome. -/
+#check @panValuePcTimeoutResultRel_of_clocked_call
+#check @panValuePcCompileCorrectWithContextCode_of_compact_and_caught_call
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_broke
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_raised
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_timeout
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_call_timeout
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_returned
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_returned_finalFfi
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_decCall_returned_finalFfi
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_returned_value
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_extCall_finalFfi
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_extCall_finalFfi_state
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_extCall_finalFfi_state
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_extCall_finalFfi_stateful
+
+/-! Declaration-call counterparts of the direct-call compositional bridges:
+    terminal FFI, uncaught raise, and timeout, each preserving explicit
+    state/observation premises. -/
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_finalFfi
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_decCall_finalFfi
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_raised
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_decCall_raised
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_timeout
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_decCall_timeout
+
+/-! Declaration-call result theorem for the `shape_of v ≠ return_sh` sub-case:
+    a declaration call whose callee returns a wrong-shaped value evaluates to
+    `none`, so the source side of Cake's `DecCall` resume is vacuous. -/
+#check @evalPanValueFfiClockProg_decCall_shape_mismatch
+
+/-! More compositional source handler-safety leaves: clock, annotation, local
+    assignment, and single-word store. -/
+#check @PanValueProgNotBrokeContinued_tick
+#check @PanValueProgNotBrokeContinued_annot
+#check @PanValueProgNotBrokeContinued_assign_local
+#check @PanValueProgNotBrokeContinued_store
+
+/-! More source handler-safety leaves: global assignment, primitive call, and
+    32/8-bit stores. -/
+#check @PanValueProgNotBrokeContinued_assign_global
+#check @PanValueProgNotBrokeContinued_primitive
+#check @PanValueProgNotBrokeContinued_store32
+#check @PanValueProgNotBrokeContinued_storeByte
+
+/-! The original Pancake `ExtCall` branch accepts arbitrary word expressions;
+    this generalized context-coded bridge carries their source-word and
+    temporary-slot obligations into `pc_compile_correct`. -/
+#check @panValueCrepProgramStateControlSafe_extCall_wordExp
+#check @panValuePcCompileCorrectWithContextCode_compact_extCall_wordExp
+
+/-! More source handler-safety leaves: external calls and shared-memory
+    load/store. -/
+#check @PanValueProgNotBrokeContinued_extCall
+#check @PanValueProgNotBrokeContinued_shMemLoad
+#check @PanValueProgNotBrokeContinued_shMemStore
+
+/-! A concrete caught-handler body (local assignment then raise) discharges
+    compositionally from the individual source-safety leaves. -/
+example :
+    PanValueProgNotBrokeContinued (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat)
+      (.seq (.assign VarKind.local "x" (.const 9)) (.raise "E" (.const 0))) :=
+  PanValueProgNotBrokeContinued_seq (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+    ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat)
+    (.assign VarKind.local "x" (.const 9)) (.raise "E" (.const 0))
+    (PanValueProgNotBrokeContinued_assign_local (fun _ _ => none)
+      (fun _ _ _ _ _ _ => none) ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat)
+      "x" (.const 9))
+    (PanValueProgNotBrokeContinued_raise (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat) "E" (.const 0))
+
+#check @PanValueProgNotBrokeContinued_while
+
+/-! A while loop over a safe body is discharged by the recursive while leaf. -/
+example :
+    PanValueProgNotBrokeContinued (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat)
+      (.while (.const 0) (.skip : Prog Nat)) :=
+  PanValueProgNotBrokeContinued_while (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+    ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat) (.const 0) (.skip : Prog Nat)
+    (PanValueProgNotBrokeContinued_skip (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat))
+
+/-! The explicit handler-safety premise of the handler-carrying call control
+    theorem is dischargeable for a concrete call: choose a call whose handler is
+    `.skip`, so the premise reduces to the skip leaf. -/
+example :
+    PanValueCrepProgramStateControlSafe
+      (.call (some (some (VarKind.local, "r"), some ("E", "x", (.skip : Prog Nat))))
+        "f" []) :=
+  panValueCrepProgramStateControlSafe_call_handler _ _ _
+    (by
+      intro primitive sourceHandler structs sourceFunctions baseAddress topAddress
+        bytesInWord handlerProgram hinfo
+      obtain ⟨destination, caught, handlerVariable, hinfoEq⟩ := hinfo
+      cases hinfoEq
+      exact PanValueProgNotBrokeContinued_skip primitive sourceHandler structs
+        sourceFunctions baseAddress topAddress bytesInWord)
+
+/-! The Crep-side control-safety predicate cannot be exchanged for the source
+    handler-safety predicate: `.break` is control-safe on both sides but still
+    yields a `broke` source result. -/
+#check @not_panValueProgNotBrokeContinued_break
+
+/-! Shared-memory leaves are control-safe: the source evaluator can only
+    produce `normal`, so the label rule holds for every `VarKind`. -/
+#check @panValueCrepProgramStateControlSafe_shMemLoad
+#check @panValueCrepProgramStateControlSafe_shMemStore
+#check @panValueCrepProgramStateCorrect_and_controlSafe_shMemLoad_source_word
+#check @panValueCrepProgramStateCorrect_and_controlSafe_shMemStore_source_word
+#check @panValuePcCompileCorrect_compact_shMemLoad_source_word_of_state_evidence
+#check @panValuePcCompileCorrect_compact_shMemStore_source_word_of_state_evidence
+#check @panValueCrepProgramStateControlSafe_dec
+#check @panValuePcCompileCorrect_compact_dec_of_state_evidence
+#check @panValueCrepProgramStateControlSafe_assign_local
+#check @panValuePcCompileCorrect_compact_assign_local_source_word_of_state_evidence
+#check @panValuePcCompileCorrect_compact_assign_of_state_evidence
+#check @panValuePcCompileCorrect_compact_seq_of_state_evidence
+#check @panValuePcCompileCorrect_compact_tick
+#check @panValuePcCompileCorrect_compact_annot
+#check @panValuePcCompileCorrectWithContextCode_compact_with_generalized_flat_global_evaluator_evidence_and_clocked_control
+#check @panValuePcCompileCorrectWithContextCode_compact_with_generalized_flat_global_evaluator_evidence_and_clocked_raised
+#check @panValuePcCompileCorrectWithContextCode_compact_with_concrete_flat_global_evaluator_evidence_and_clocked_raised
+#check @panValuePcCompileCorrect_compact_with_flat_global_evaluator_evidence_compiled_raise_canonical_globals
+#check @panValuePcCompileCorrect_compact_with_generalized_clocked_raised_context_projection
+#check @panValuePcCompileCorrect_compact_with_concrete_flat_global_evaluator_evidence_and_clocked_raised_projection
+#check @panValuePcCompileCorrect_compact_with_generalized_clocked_normal_context_projection
+#check @panValuePcCompileCorrect_compact_break
+#check @panValuePcCompileCorrect_compact_continue
+#check @panValuePcCompileCorrect_compact_annot
+#check @panValuePcCompileCorrect_compact_shMemLoad_source_word
+#check @panValuePcCompileCorrect_compact_shMemStore_source_word
+#check @panValueCrepProgramStateControlSafe_assign
+#check @panValueCrepProgramStateControlSafe_primitive
+#check @panValuePcCompileCorrect_compact_primitive_of_state_evidence
+#check @panValuePcCompileCorrect_compact_call_of_state_evidence
+#check @panValuePcCompileCorrect_compact_decCall_of_state_evidence
+#check @panValuePcCompileCorrect_compact_extCall_of_state_evidence
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_handler_returned
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_call_handler_returned
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_handler_normal
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_call_handler
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_call_handler_destination
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_decCall_returned_value
+#check @panValueProg_compile_correct_induction
+#check @panValuePcCompileCorrect_compact_of_constructor_induction
+#check @panValuePcCompileCorrectWithContextCode_compact_of_constructor_induction
+#check @panValuePcCompileCorrect_compact_ite_word_exp_of_state_evidence_context_code
+#check @panValuePcCompileCorrect_compact_while_word_exp_of_state_evidence_context_code
+
+#check @panValuePcResultRel_rejects_source_error
+#check @panValuePcResultRel_rejects_target_error
+#check @panValuePcResultRel_rejects_normal_returned
+#check @panValuePcResultRel_rejects_broke_continued
+#check @panValuePcResultRel_rejects_timeout_normal
+#check @panValuePcResultRel_rejects_finalFfi_normal
+#check @panValuePcResultRel_constructor_eq
+
+#check @panValuePcCompileCorrect_compact_of_state_and_control_safe_induction
+
+#check @panValuePcResultRel_normal_iff
+#check @panValuePcResultRel_returned_iff
+#check @panValuePcResultRel_broke_iff
+#check @panValuePcResultRel_continued_iff
+#check @panValuePcResultRel_timeout_iff
+#check @panValuePcResultRel_finalFfi_iff
+#check @panValuePcResultRel_raised_iff
+#check @panValuePcResultRelWithContextCode_raised_iff
+#check @panValuePcResultRelWithContextCode_normal_iff
+#check @panValuePcResultRelWithContextCode_returned_iff
+#check @panValuePcResultRelWithContextCode_broke_iff
+#check @panValuePcResultRelWithContextCode_continued_iff
+#check @panValuePcResultRelWithContextCode_timeout_iff
+#check @panValuePcResultRelWithContextCode_finalFfi_iff
+#check @panValuePcExceptionResultRelWithContextCode_of_rel_and_lookup
+#check @panValuePcResultRelWithContextCode_raised_of_rel_and_lookup
+#check @panValuePcResultRelWithContextCode_broke_rejects_nonzero_label
+#check @panValuePcResultRelWithContextCode_continued_rejects_nonzero_label
+#check @panValuePcResultRelWithContextCode_constructor_eq
+#check @panValuePcResultRelWithContextCode_rejects_source_error
+#check @panValuePcResultRelWithContextCode_rejects_target_error
+#check @panValuePcExceptionResultRel_of_withContextCode
+#check @panValuePcResultRel_of_withContextCode
+#check @panValuePcCompileCorrect_of_withContextCode
+#check @panValuePcCompileCorrect_of_context_code_obligations
+#check @panValuePcCompileCorrect_compact_with_expression_state_evidence_canonical_globals
+#check @panValueCrepExpressionStateEvidence_of_correct_with_bounded_vars
+
+/-! Concrete kernel-checked instantiation of the fragment-restricted
+    composition: the `StatefulCompactProg` program `return 7; tick` yields the
+    plain compact `pc_compile_correct` boundary, with the raised-state premises
+    kept explicit.  This exercises the paired fragment induction rather than
+    only restating the generic composition theorem. -/
+set_option linter.unusedVariables false in
+example
+    (codeRel : PanValuePcCodeRel Nat)
+    (excpRel : PanValuePcExceptionShapeRel Nat)
+    (exceptionCode : ExceptionId → Option Nat)
+    (globalsLookup : CrepState Nat → PanValue Nat → Option (List Nat))
+    (primitive : PanPrimitiveHandler Nat)
+    (sourceHandler : PanValueFfiHandler Nat)
+    (crepPrimitive : CrepPrimitiveHandler Nat)
+    (ffi : CrepFfiHandler Nat)
+    (sharedMem : CrepSharedMemHandler Nat)
+    (baseAddress topAddress bytesInWord : Nat)
+    (sourceFuel targetFuel : Nat)
+    (hpost : ∀ (context : CompileContext Nat) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+      (sourceMemory : Nat → Option (PanValue Nat)) (sourceException : ExceptionId)
+      (sourceValue : PanValue Nat) (targetState : CrepState Nat)
+      (targetException : Nat),
+      panValueCrepStateRel structs context sourceLocals sourceGlobals
+        sourceMemory targetState)
+    (hcode : ∀ (context : CompileContext Nat) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+      (sourceMemory : Nat → Option (PanValue Nat)) (sourceException : ExceptionId)
+      (sourceValue : PanValue Nat) (targetState : CrepState Nat)
+      (targetException : Nat),
+      exceptionCode sourceException = some targetException)
+    (hlookup : ∀ (context : CompileContext Nat) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+      (sourceMemory : Nat → Option (PanValue Nat)) (sourceException : ExceptionId)
+      (sourceValue : PanValue Nat) (targetState : CrepState Nat)
+      (targetException : Nat),
+      1 ≤ Shape.shapeSize (panValueShape structs sourceValue) →
+      globalsLookup targetState sourceValue =
+        some (panValueFlatWords sourceValue))
+    (hsize : ∀ (context : CompileContext Nat) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+      (sourceMemory : Nat → Option (PanValue Nat)) (sourceException : ExceptionId)
+      (sourceValue : PanValue Nat) (targetState : CrepState Nat)
+      (targetException : Nat),
+      Shape.shapeSize (panValueShape structs sourceValue) ≤ 32) :
+    PanValuePcCompileCorrect
+      (panValuePcCompactSourceEvaluator primitive sourceHandler []
+        baseAddress topAddress bytesInWord sourceFuel)
+      (crepPcCompactTargetEvaluator [] crepPrimitive ffi sharedMem
+        baseAddress topAddress targetFuel)
+      codeRel excpRel exceptionCode globalsLookup
+      (.seq (.return (.const 7)) (.tick : Prog Nat)) :=
+  panValuePcCompileCorrect_compact_statefulCompact
+    (.seq (.return (.const 7)) (.tick : Prog Nat))
+    (StatefulCompactProg.seq (StatefulCompactProg.returnConst 7)
+      StatefulCompactProg.tick)
+    codeRel excpRel exceptionCode globalsLookup [] [] primitive sourceHandler
+    crepPrimitive ffi sharedMem baseAddress topAddress bytesInWord sourceFuel
+    targetFuel hpost hcode hlookup hsize
+
+#check @panValuePcCompileCorrect_compact_statefulCompact
+#check @panValuePcCompileCorrect_compact_statefulCompact_canonical_globals
+#check @panValuePcCompileCorrect_compact_statefulCompact_context_code
+#check @panValuePcRaisedBoundedExpressionEvidence
+#check @panValuePcRaisedBoundedGenericEvidence
+#check @panValuePcCompileCorrect_compact_with_bounded_expression_state_evidence
+#check @panValuePcCompileCorrect_of_compact_evaluators_and_clocked_word_raise_hraise_data
+#check @panValuePcCompileCorrect_of_compact_evaluators_and_clocked_two_word_raise_hraise_data
+
+/-! The scalar `wordExp` return also satisfies the control-safety obligation,
+via the `SourceWordExp` conversion. -/
+example
+    (hbytesInWord : ∀ (context : CompileContext Nat) (bytesInWord : Nat),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext Nat)
+      (sourceLocals : VarName → Option (PanValue Nat))
+      (name : VarName) (value : PanValue Nat),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot])) :
+    PanValueCrepProgramStateControlSafe (.return (.const 7)) :=
+  panValueCrepProgramStateControlSafe_return_wordExp (.const 7) trivial
+    hbytesInWord hlookup
+
+/-! The scalar `wordExp` conditional and while cases also lift. -/
+example
+    (hbytesInWord : ∀ (context : CompileContext Nat) (bytesInWord : Nat),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext Nat)
+      (sourceLocals : VarName → Option (PanValue Nat))
+      (name : VarName) (value : PanValue Nat),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot])) :
+    PanValueCrepProgramStateControlSafe
+      (.ite (.const 5) (.return (.const 7)) (.tick : Prog Nat)) :=
+  panValueCrepProgramStateControlSafe_ite_wordExp (.const 5) trivial
+    (.return (.const 7)) (.tick : Prog Nat)
+    (panValueCrepProgramStateControlSafe_return_wordExp (.const 7) trivial
+      hbytesInWord hlookup)
+    panValueCrepProgramStateControlSafe_tick
+    hbytesInWord hlookup
+
+#check @panValueCrepProgramStateControlSafe_while_wordExp
 
 end Flapjack.Test.PanValuePcControlSafety

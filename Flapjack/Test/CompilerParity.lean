@@ -84,6 +84,8 @@ import Flapjack.Test.PanHProgLoadParity
 import Flapjack.Test.PanHProgReturnParity
 import Flapjack.Test.PanHProgRaiseParity
 import Flapjack.Test.PanValuePcRaisedPayloadCorrectness
+import Flapjack.Test.PanValueFfiClockLe
+import Flapjack.Test.PanToCrepMaxListParity
 import Flapjack.Test.CrepeGlobalStoreCorrectness
 import Flapjack.Test.PanHProgExtCallParity
 import Flapjack.Test.PanHProgStoreByteParity
@@ -131,6 +133,8 @@ import Flapjack.Test.CompileToCrepeParity
 import Flapjack.Test.CompileProgParity
 import Flapjack.Test.PanSimpParity
 import Flapjack.Test.PanProgramSimpParity
+import Flapjack.Test.PanValueWfParity
+import Flapjack.Test.PanPrimopWfParity
 import Flapjack.Test.PanGlobalsSemanticsParity
 import Flapjack.Test.PanSimpOthersParity
 import Flapjack.Test.CrepProgIfParity
@@ -194,6 +198,7 @@ import Flapjack.Test.LoopCallEnvParity
 import Flapjack.Test.InstructionTransfer
 import Flapjack.Test.ArtifactFormat
 import Flapjack.Test.CrepeGlobalAddressParity
+import Flapjack.Test.RiscVMemOpParity
 import Flapjack.Test.ParsedFullSsaPipeline
 import Flapjack.Test.EndToEndParity
 import Flapjack.Test.RiscVArtifactParity
@@ -739,6 +744,7 @@ def main : IO Unit := do
     Flapjack.Test.EndToEndParity.runChecks,
     Flapjack.Test.CakeStackReseatParity.runChecks,
     Flapjack.Test.CrepeGlobalAddressParity.runChecks,
+    Flapjack.Test.RiscVMemOpParity.runChecks,
     Flapjack.Test.RiscVArtifactParity.runChecks,
     Flapjack.Test.RiscVRegisterMapParity.runChecks,
     Flapjack.Test.CakeAllocatorCore.runChecks,

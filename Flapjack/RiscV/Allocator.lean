@@ -637,10 +637,7 @@ def wordSsaBranchPriority (preferred : Option Bool) (leftBranch : Bool) : Nat :=
 
 def wordSsaPriorityMove (preferred : Option Bool) (leftBranch : Bool)
     (moves : List (Nat × Nat)) : WordProg α :=
-  if moves.isEmpty then
-    .skip
-  else
-    .move (wordSsaBranchPriority preferred leftBranch) moves
+  .move (wordSsaBranchPriority preferred leftBranch) moves
 
 def wordSsaMergeMoves : List Nat → WordSsaState → WordSsaState → Nat →
     List (Nat × Nat) × List (Nat × Nat) × Nat × WordSsaState × WordSsaState
@@ -669,15 +666,15 @@ def wordSsaFakeInconsistencyMoves [OfNat α 0] (preferred : Option Bool) :
         wordSsaFakeInconsistencyMoves preferred names left right next
       match lookupNatInfo name left.current, lookupNatInfo name right.current with
       | none, some rightName =>
-          (wordSsaSeq leftMoves (.inst (.const next 0)),
-            wordSsaSeq rightMoves
+          (.seq leftMoves (.inst (.const next 0)),
+            .seq rightMoves
               (.move (wordSsaBranchPriority preferred false) [(next, rightName)]),
             next + 4, wordSsaForceRename [(name, next)] left,
             wordSsaForceRename [(name, next)] right)
       | some leftName, none =>
-            (wordSsaSeq leftMoves
+            (.seq leftMoves
               (.move (wordSsaBranchPriority preferred true) [(next, leftName)]),
-            wordSsaSeq rightMoves (.inst (.const next 0)),
+            .seq rightMoves (.inst (.const next 0)),
             next + 4, wordSsaForceRename [(name, next)] left,
             wordSsaForceRename [(name, next)] right)
       | _, _ => (leftMoves, rightMoves, next, left, right)
@@ -693,8 +690,8 @@ def wordSsaFixInconsistencies [OfNat α 0] (preferred : Option Bool)
   let (fakeLeft, fakeRight, next, left, _right) :=
     wordSsaFakeInconsistencyMoves preferred names left right next
   ({ left with next := next },
-    wordSsaSeq (wordSsaPriorityMove preferred true mergeLeft) fakeLeft,
-    wordSsaSeq (wordSsaPriorityMove preferred false mergeRight) fakeRight)
+    .seq (wordSsaPriorityMove preferred true mergeLeft) fakeLeft,
+    .seq (wordSsaPriorityMove preferred false mergeRight) fakeRight)
 
 structure WordSsaLoopFrame where
   entry : WordSsaState
@@ -742,7 +739,7 @@ decreasing_by all_goals decreasing_trivial
 def wordSsaFakeMoves [OfNat α 0] : List Nat → WordProg α
   | [] => .skip
   | name :: names =>
-      wordSsaSeq (.inst (.const name 0)) (wordSsaFakeMoves names)
+      .seq (.inst (.const name 0)) (wordSsaFakeMoves names)
 
 def wordSsaLoopSetup [OfNat α 0] (state : WordSsaState)
     (liveIn liveOut : List Nat) : WordSsaState × WordProg α :=
@@ -755,7 +752,7 @@ def wordSsaLoopSetup [OfNat α 0] (state : WordSsaState)
   let fakeMoves := wordSsaFakeMoves freshNames
   let (state, _, refreshMove) :=
     wordSsaListNextVarRenameMove state state.next refresh
-  (state, wordSsaSeq fakeMoves refreshMove)
+  (state, .seq fakeMoves refreshMove)
 
 def wordSsaFindLoopFrame : Nat → List WordSsaLoopFrame →
     Option WordSsaLoopFrame
@@ -883,19 +880,14 @@ def wordSsaRenameProgramWithLoops [OfNat α 0] (frames : List WordSsaLoopFrame)
     | .call none target arguments none =>
         let renamedArguments := arguments.map (wordSsaRead state)
         let abiArguments := wordSsaCallAbiRegisters 0 arguments.length
-        let moveArguments :=
-          match abiArguments.zip renamedArguments with
-          | [] => .skip
-          | pairs => .move 1 pairs
+        let moveArguments := .move 1 (abiArguments.zip renamedArguments)
         (state, wordSsaSeq moveArguments
           (.call none target abiArguments none))
     | .call none target arguments
         (some (exception, body, handlerLabel, handlerEntryLabel)) =>
         let arguments := arguments.map (wordSsaRead state)
         let abiArguments := wordSsaCallAbiRegisters 0 arguments.length
-        let moveArguments := match abiArguments.zip arguments with
-          | [] => .skip
-          | pairs => .move 1 pairs
+        let moveArguments := .move 1 (abiArguments.zip arguments)
         (state, wordSsaSeq moveArguments
           (.call none target abiArguments
             (some (exception, body, handlerLabel, handlerEntryLabel))))
@@ -916,8 +908,8 @@ def wordSsaRenameProgramWithLoops [OfNat α 0] (frames : List WordSsaLoopFrame)
           wordSsaRenameProgramWithLoops frames state returnCode
         let abiReturns := wordSsaCallAbiRegisters 1 destinations.length
         let returnMove := .move 1 (destinations.zip abiReturns)
-        let returnHandler := wordSsaSeq restoreMove
-          (wordSsaSeq returnMove returnCode)
+        let returnHandler := .seq restoreMove
+          (.seq returnMove returnCode)
         (state, wordSsaSeq stackMove
           (wordSsaSeq moveArguments
             (.call (some (abiReturns, stackCutsets, returnHandler,
@@ -940,15 +932,15 @@ def wordSsaRenameProgramWithLoops [OfNat α 0] (frames : List WordSsaLoopFrame)
           wordSsaRenameProgramWithLoops frames returnState returnCode
         let abiReturns := wordSsaCallAbiRegisters 1 destinations.length
         let returnMove := .move 1 (destinations.zip abiReturns)
-        let returnHandler := wordSsaSeq restoreMove
-          (wordSsaSeq returnMove returnCode)
+        let returnHandler := .seq restoreMove
+          (.seq returnMove returnCode)
         let exceptionSeed := { restoreState with next := returnState.next }
         let (exceptionState, exceptionName) :=
           wordSsaFresh exceptionSeed exception
         let (exceptionState, body) :=
           wordSsaRenameProgramWithLoops frames exceptionState body
-        let exceptionHandler := wordSsaSeq restoreMove
-          (wordSsaSeq (.move 1 [(exceptionName, 2)]) body)
+        let exceptionHandler := .seq restoreMove
+          (.seq (.move 1 [(exceptionName, 2)]) body)
         let preferred := match returnHandler, exceptionHandler with
           | .skip, _ => some true
           | _, .skip => some false
@@ -1034,7 +1026,7 @@ def wordSsaRenameProgramWithLoops [OfNat α 0] (frames : List WordSsaLoopFrame)
            name that the body allocated.  Only `next` is taken from the body
            state; `current` stays the exit restriction. -/
         ({ exitState with next := bodyState.next },
-          wordSsaSeq setup program)
+          .seq setup program)
     | .mustTerminate body =>
         let (state, body) := wordSsaRenameProgramWithLoops frames state body
         (state, .mustTerminate body)
@@ -1053,8 +1045,8 @@ def wordSsaRenameProgramWithLoops [OfNat α 0] (frames : List WordSsaLoopFrame)
           wordSsaFixInconsistencies preferred thenState elseState elseState.next
         ({ current := merged.current, next := merged.next },
           .ite operator (wordSsaRead state condition) right
-            (wordSsaSeq thenBranch thenMoves)
-            (wordSsaSeq elseBranch elseMoves))
+            (.seq thenBranch thenMoves)
+            (.seq elseBranch elseMoves))
   termination_by program => sizeOf program
   decreasing_by all_goals decreasing_trivial
 
@@ -1068,11 +1060,13 @@ theorem wordSsaRenameProgram_ite [OfNat α 0] :
           (.assign 1 (.var 0)) (.assign 1 (.var 0)) : WordProg α) =
         ({ current := [(1, 18)], next := 22 },
         .ite .equal 0 (.reg 0)
-          (.seq (.assign 10 (.var 0)) (.move 1 [(18, 10)]))
-          (.seq (.assign 14 (.var 0)) (.move 1 [(18, 14)]))) := by
+          (.seq (.assign 10 (.var 0))
+            (.seq (.move 1 [(18, 10)]) .skip))
+          (.seq (.assign 14 (.var 0))
+            (.seq (.move 1 [(18, 14)]) .skip))) := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaRenameExp, wordSsaRenameRegImm,
-    wordSsaRead, wordSsaFresh, wordSsaKeys, wordSsaSeq,
+    wordSsaRead, wordSsaFresh, wordSsaKeys,
     wordSsaFixInconsistencies, wordSsaPriorityMove,
     wordSsaBranchPriority, wordSsaMergeMoves,
     wordSsaFakeInconsistencyMoves, wordSsaForceRename,
@@ -1161,11 +1155,63 @@ def wordExpReadVarsFastAcc : WordExp α → List Nat → List Nat
 def wordExpReadVarsFast (expression : WordExp α) : List Nat :=
   wordExpReadVarsFastAcc expression []
 
+def wordInstReadVarsFastAcc {α : Type u} : WordInst α → List Nat → List Nat
+  | .arith operation, tail =>
+      match operation with
+      | .longMul _ _ sourceLeft sourceRight => sourceLeft :: sourceRight :: tail
+      | .longDiv _ _ sourceLeft sourceRight quotient =>
+          sourceLeft :: sourceRight :: quotient :: tail
+      | .addCarry _ _ sourceLeft sourceRight carryIn =>
+          sourceLeft :: sourceRight :: carryIn :: tail
+      | .cakeAddCarry _ sourceLeft sourceRight carry =>
+          sourceLeft :: sourceRight :: carry :: tail
+      | .div _ dividend divisor => dividend :: divisor :: tail
+      | .binOp _ _ sourceLeft sourceRight =>
+          sourceLeft :: match sourceRight with
+            | .reg register => register :: tail
+            | .imm _ => tail
+      | .shift _ _ sourceLeft sourceRight =>
+          sourceLeft :: match sourceRight with
+            | .reg register => register :: tail
+            | .imm _ => tail
+  | .const _ _, tail => tail
+  | .mem operator destination address, tail =>
+      match operator with
+      | .load | .load8 | .load16 | .load32 => address :: tail
+      | .store | .store8 | .store16 | .store32 => destination :: address :: tail
+  | .memOffset operator destination address _, tail =>
+      match operator with
+      | .load | .load8 | .load16 | .load32 => address :: tail
+      | .store | .store8 | .store16 | .store32 => destination :: address :: tail
+
+def wordInstWriteVarsFastAcc {α : Type u} : WordInst α → List Nat → List Nat
+  | .arith operation, tail =>
+      match operation with
+      | .longMul destinationLeft destinationRight _ _ =>
+          destinationLeft :: destinationRight :: tail
+      | .longDiv destinationLeft destinationRight _ _ _ =>
+          destinationLeft :: destinationRight :: tail
+      | .addCarry destination resultCarry _ _ _ =>
+          destination :: resultCarry :: tail
+      | .cakeAddCarry destination _ _ carry => destination :: carry :: tail
+      | .div destination _ _ => destination :: tail
+      | .binOp _ destination _ _ => destination :: tail
+      | .shift _ destination _ _ => destination :: tail
+  | .const destination _, tail => destination :: tail
+  | .mem operator destination _, tail =>
+      match operator with
+      | .load | .load8 | .load16 | .load32 => destination :: tail
+      | .store | .store8 | .store16 | .store32 => tail
+  | .memOffset operator destination _ _, tail =>
+      match operator with
+      | .load | .load8 | .load16 | .load32 => destination :: tail
+      | .store | .store8 | .store16 | .store32 => tail
+
 def wordProgReadVarsFastAcc : WordProg α → List Nat → List Nat
   | .skip, tail => tail
   | .move _ moves, tail => moves.foldr (fun move rest => move.2 :: rest) tail
   | .assign _ value, tail => wordExpReadVarsFastAcc value tail
-  | .inst instruction, tail => wordListAppendAcc (wordInstReadVars instruction) tail
+  | .inst instruction, tail => wordInstReadVarsFastAcc instruction tail
   | .get _ _, tail => tail
   | .store address value, tail =>
       wordExpReadVarsFastAcc address (value :: tail)
@@ -1252,6 +1298,58 @@ def wordProgWriteVars : WordProg α → List Nat
       match operator with
       | .load | .load8 | .load16 | .load32 => [name]
       | .store | .store8 | .store16 | .store32 => []
+
+/-! A production-only difference-list inventory for writes.  This follows the
+    same left-to-right Cake traversal as `wordProgWriteVars`, but threads the
+    tail through nested calls and branches instead of copying each prefix with
+    `++`. -/
+def wordProgWriteVarsFastAcc : WordProg α → List Nat → List Nat
+  | .get destination _, tail => destination :: tail
+  | .skip, tail => tail
+  | .store _ _, tail => tail
+  | .set _ _, tail => tail
+  | .break _, tail => tail
+  | .continue _, tail => tail
+  | .raise _, tail => tail
+  | .return _ _, tail => tail
+  | .tick, tail => tail
+  | .move _ moves, tail =>
+      moves.foldr (fun move rest => move.1 :: rest) tail
+  | .assign name _, tail => name :: tail
+  | .inst instruction, tail => wordInstWriteVarsFastAcc instruction tail
+  | .seq first second, tail =>
+      wordProgWriteVarsFastAcc first (wordProgWriteVarsFastAcc second tail)
+  | .ite _ _ _ thenBranch elseBranch, tail =>
+      wordProgWriteVarsFastAcc thenBranch
+        (wordProgWriteVarsFastAcc elseBranch tail)
+  | .loop _ body _, tail | .mustTerminate body, tail =>
+      wordProgWriteVarsFastAcc body tail
+  | .locValue destination _, tail => destination :: tail
+  | .call returns _ _ handler, tail =>
+      let afterHandler := match handler with
+        | none => tail
+        | some (exception, body, _, _) =>
+            exception :: wordProgWriteVarsFastAcc body tail
+      match returns with
+      | none => afterHandler
+      | some (values, _, returnCode, _, _) =>
+          wordListAppendAcc values
+            (wordProgWriteVarsFastAcc returnCode afterHandler)
+  | .alloc destination _, tail => destination :: tail
+  | .storeConsts source bitmap codeLength dataLength _, tail =>
+      source :: bitmap :: codeLength :: dataLength :: tail
+  | .opCurrHeap _ destination _, tail => destination :: tail
+  | .install codeBuffer _ _ _ _, tail => codeBuffer :: tail
+  | .codeBufferWrite _ _, tail => tail
+  | .dataBufferWrite _ _, tail => tail
+  | .ffi _ _ _ _ _ _, tail => tail
+  | .shareInst operator name _, tail =>
+      match operator with
+      | .load | .load8 | .load16 | .load32 => name :: tail
+      | .store | .store8 | .store16 | .store32 => tail
+
+def wordProgWriteVarsFast (program : WordProg α) : List Nat :=
+  wordProgWriteVarsFastAcc program []
 
 def wordProgVariables (program : WordProg α) : List Nat :=
   wordProgReadVars program ++ wordProgWriteVars program
@@ -1479,8 +1577,8 @@ def wordProgLiveBefore (program : WordProg α) (liveAfter : List Nat) : List Nat
    prefix list at every nested call.  Keep the public equation above unchanged
    for the proof-facing allocator interface. -/
 def wordProgLiveBeforeFast (program : WordProg α) (liveAfter : List Nat) : List Nat :=
-  wordProgReadVarsFast program ++
-    liveAfter.filter (fun name => name ∉ wordProgWriteVars program)
+  wordProgReadVarsFastAcc program
+    (liveAfter.filter (fun name => name ∉ wordProgWriteVarsFast program))
 
 def wordListUnion (left right : List Nat) : List Nat :=
   (left ++ right).eraseDups
@@ -1492,6 +1590,14 @@ def wordProgAtomicClashes (program : WordProg α) (liveAfter : List Nat) :
       wordInstForcedClashes instruction ++
         wordClashPairs (wordProgWriteVars program) liveAfter
   | _ => wordClashPairs (wordProgWriteVars program) liveAfter
+
+def wordProgAtomicClashesFast (program : WordProg α) (liveAfter : List Nat) :
+    List (Nat × Nat) :=
+  match program with
+  | .inst instruction =>
+      wordInstForcedClashes instruction ++
+        wordClashPairs (wordProgWriteVarsFast program) liveAfter
+  | _ => wordClashPairs (wordProgWriteVarsFast program) liveAfter
 
 def wordProgClashAnalysis : WordProg α → List Nat →
     List Nat × List (Nat × Nat)
@@ -1519,7 +1625,7 @@ def wordProgClashAnalysis : WordProg α → List Nat →
         .call (some (destinations, cutsets, returnCode, returnLabel, entryLabel))
           target arguments none
       (wordListUnion returnLive (wordProgLiveBeforeFast callProgram liveAfter),
-        returnEdges ++ wordProgAtomicClashes callProgram liveAfter)
+        returnEdges ++ wordProgAtomicClashesFast callProgram liveAfter)
   | .call returns target arguments (some (exception, body, _, _)), liveAfter =>
       let (returnLive, returnEdges) := match returns with
         | none => ([], [])
@@ -1534,7 +1640,7 @@ def wordProgClashAnalysis : WordProg α → List Nat →
       (wordListUnion (exception :: handlerLive)
           (wordListUnion returnLive (wordProgLiveBeforeFast callProgram liveAfter)),
         handlerEntryEdges ++ handlerEdges ++ returnEdges ++
-          wordProgAtomicClashes callProgram liveAfter)
+          wordProgAtomicClashesFast callProgram liveAfter)
   | program, liveOut =>
       (wordProgLiveBefore program liveOut, wordProgAtomicClashes program liveOut)
 termination_by program => sizeOf program
@@ -2480,7 +2586,8 @@ theorem wordProgClashAnalysis_seq :
       ([1], []) := by
   simp [wordProgClashAnalysis, wordProgReadVars,
     wordProgWriteVars, wordProgLiveBefore, wordProgAtomicClashes,
-    wordClashPairs, wordExpReadVars]
+    wordClashPairs,
+    wordExpReadVars]
 
 theorem wordProgClashAnalysis_ite :
     wordProgClashAnalysis

@@ -21,12 +21,382 @@ def shortShapes : List Shape := [.comb [.one, .one], .one]
   [[1], [2, 3], [4]]
 #guard withShape shortShapes [7] == [[7], []]
 
+theorem withShape_length_fixture :
+    (withShape oneCombNamed [1, 2, 3, 4]).length = oneCombNamed.length :=
+  withShape_length oneCombNamed [1, 2, 3, 4]
+
+theorem length_withShape_eq_shape_fixture :
+    oneCombNamed.length = (withShape oneCombNamed [1, 2, 3, 4]).length :=
+  length_withShape_eq_shape oneCombNamed [1, 2, 3, 4]
+    (by simp [oneCombNamed, Shape.shapeSize])
+
+def lengthGuard : Bool :=
+  (withShape oneCombNamed [1, 2, 3, 4]).length == oneCombNamed.length
+
+#eval lengthGuard
+#guard lengthGuard
+
+theorem all_distinct_withShape_fixture :
+    ((withShape oneCombNamed [1, 2, 3, 4])[1]'(by rw [withShape_length]; decide)).Nodup :=
+  all_distinct_withShape oneCombNamed [1, 2, 3, 4] 1 (by decide) (by decide)
+    (by simp [oneCombNamed, Shape.shapeSize])
+
+def allDistinctGuard : Bool :=
+  ((withShape oneCombNamed [1, 2, 3, 4])[1]'(by rw [withShape_length]; decide)).Nodup
+
+#eval allDistinctGuard
+#guard allDistinctGuard
+
+theorem mem_withShape_length_fixture :
+    (withShape oneCombNamed [1, 2, 3, 4])[1]'(by rw [withShape_length]; decide) ∈
+      withShape oneCombNamed [1, 2, 3, 4] :=
+  mem_withShape_length oneCombNamed [1, 2, 3, 4] 1
+    (by simp [oneCombNamed, Shape.shapeSize]) (by decide)
+
+theorem mem_of_withShape_mem_fixture :
+    (2 : Nat) ∈ ([1, 2, 3, 4] : List Nat) :=
+  mem_of_withShape_mem oneCombNamed [1, 2, 3, 4] 1 2
+    (by rw [withShape_length]; decide)
+    (by simp [oneCombNamed, Shape.shapeSize])
+    (by simp [withShape, oneCombNamed, Shape.shapeSize])
+
+theorem withShape_getElem_eq_take_drop_fixture :
+    (withShape oneCombNamed [1, 2, 3, 4])[1]'(by rw [withShape_length]; decide) =
+      (([1, 2, 3, 4] : List Nat).drop
+          (Shape.shapeSize (.comb (oneCombNamed.take 1)))).take
+        (Shape.shapeSize (oneCombNamed[1]'(by decide))) :=
+  withShape_getElem_eq_take_drop oneCombNamed [1, 2, 3, 4] 1
+    (by simp [oneCombNamed, Shape.shapeSize]) (by decide)
+
+def withShapeMembersGuard : Bool :=
+  ((withShape oneCombNamed [1, 2, 3, 4])[1]'(by rw [withShape_length]; decide)).all
+    (fun value => ([1, 2, 3, 4] : List Nat).contains value)
+
+#eval withShapeMembersGuard
+#guard withShapeMembersGuard
+
+def checkAllDistinct (name : String) : IO Bool := do
+  if ((withShape oneCombNamed [1, 2, 3, 4])[1]'(by rw [withShape_length]; decide)).Nodup then
+    IO.println s!"PASS {name}"
+    pure true
+  else
+    IO.println s!"FAIL {name}"
+    pure false
+
+def checkLength (name : String) : IO Bool := do
+  if (withShape oneCombNamed [1, 2, 3, 4]).length == oneCombNamed.length then
+    IO.println s!"PASS {name}"
+    pure true
+  else
+    IO.println s!"FAIL {name}"
+    pure false
+
 def check (name : String) (actual expected : List (List Nat)) : IO Bool := do
   if actual == expected then
     IO.println s!"PASS {name}"
     pure true
   else
     IO.println s!"FAIL {name}: expected {repr expected}, got {repr actual}"
+    pure false
+
+def checkMembers (name : String) (actual expected : List Nat) : IO Bool := do
+  if actual == expected then
+    IO.println s!"PASS {name}"
+    pure true
+  else
+    IO.println s!"FAIL {name}: expected {repr expected}, got {repr actual}"
+    pure false
+
+theorem nodup_take_fixture :
+    (([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).take 3).Nodup :=
+  nodup_take _ 3 (by decide)
+
+theorem nodup_drop_fixture :
+    (([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).drop 3).Nodup :=
+  nodup_drop _ 3 (by decide)
+
+theorem listDisjoint_take_drop_sum_fixture :
+    ListDisjoint (([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).take 2)
+      ((([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).drop (2 + 1)).take 2) :=
+  listDisjoint_take_drop_sum _ 2 1 2 (by decide)
+
+theorem listDisjoint_drop_take_sum_fixture :
+    ListDisjoint ((([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).drop (2 + 1)).take 2)
+      (([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).take 2) :=
+  listDisjoint_drop_take_sum _ 2 1 2 (by decide)
+
+def disjointSumGuard : Bool :=
+  (([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).take 2).all
+    (fun value =>
+      !((([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).drop (2 + 1)).take 2).contains value)
+
+#eval disjointSumGuard
+#guard disjointSumGuard
+
+theorem listDisjoint_drop_take_drop_take_fixture :
+    ListDisjoint ((([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).drop 2).take 1)
+      ((([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).drop (2 + 2)).take 1) :=
+  listDisjoint_drop_take_drop_take _ 2 1 2 1 (by decide) (by decide)
+
+theorem listDisjoint_withShape_getElem_fixture :
+    ListDisjoint
+      ((withShape oneCombNamed [1, 2, 3, 4])[0]'(by rw [withShape_length]; decide))
+      ((withShape oneCombNamed [1, 2, 3, 4])[2]'(by rw [withShape_length]; decide)) :=
+  listDisjoint_withShape_getElem oneCombNamed [1, 2, 3, 4] 0 2
+    (by decide) (by decide) (by decide) (by decide)
+    (by simp [oneCombNamed, Shape.shapeSize])
+
+def withShapeDisjointGuard : Bool :=
+  ((withShape oneCombNamed [1, 2, 3, 4])[0]'(by rw [withShape_length]; decide)).all
+    (fun value =>
+      !((withShape oneCombNamed [1, 2, 3, 4])[2]'(by rw [withShape_length]; decide)).contains
+        value)
+
+#eval withShapeDisjointGuard
+#guard withShapeDisjointGuard
+
+theorem withShape_getElem_getElem_fixture :
+    ((withShape oneCombNamed [1, 2, 3, 4])[1]'(by rw [withShape_length]; decide))[1]'(by
+        simp [withShape, oneCombNamed, Shape.shapeSize]) =
+      ([1, 2, 3, 4] : List Nat)[(Shape.shapeSize (.comb (oneCombNamed.take 1))) + 1]'(by
+        simp [oneCombNamed, Shape.shapeSize]) :=
+  withShape_getElem_getElem oneCombNamed [1, 2, 3, 4] 1 1
+    (by simp [oneCombNamed, Shape.shapeSize]) (by decide)
+    (by simp [oneCombNamed, Shape.shapeSize])
+    (by simp [withShape, oneCombNamed, Shape.shapeSize])
+
+theorem withShape_getElem_length_fixture :
+    ((withShape oneCombNamed [1, 2, 3, 4])[1]'(by rw [withShape_length]; decide)).length =
+      Shape.shapeSize (oneCombNamed[1]'(by decide)) :=
+  withShape_getElem_length oneCombNamed [1, 2, 3, 4] 1
+    (by simp [oneCombNamed, Shape.shapeSize]) (by decide)
+
+def withShapeLengthGuard : Bool :=
+  ((withShape oneCombNamed [1, 2, 3, 4])[1]'(by rw [withShape_length]; decide)).length == 2
+
+#eval withShapeLengthGuard
+#guard withShapeLengthGuard
+
+#check @withShape_getElem_length
+
+def withShapeNestedGuard : Bool :=
+  (((withShape oneCombNamed [1, 2, 3, 4])[1]'(by rw [withShape_length]; decide))[1]'(by
+      simp [withShape, oneCombNamed, Shape.shapeSize]) == (3 : Nat))
+
+#eval withShapeNestedGuard
+#guard withShapeNestedGuard
+
+theorem listDisjoint_of_withShape_mem_fixture :
+    ListDisjoint ([1] : List Nat) [2, 3] :=
+  listDisjoint_of_withShape_mem oneCombNamed [1, 2, 3, 4] [1] [2, 3]
+    (by decide) (by simp [oneCombNamed, Shape.shapeSize])
+    (by simp [withShape, oneCombNamed, Shape.shapeSize])
+    (by simp [withShape, oneCombNamed, Shape.shapeSize])
+    (by decide)
+
+def withShapeDistinctGuard : Bool :=
+  ([1] : List Nat).all (fun value => !([2, 3] : List Nat).contains value)
+
+#eval withShapeDistinctGuard
+#guard withShapeDistinctGuard
+
+theorem listDisjoint_append_fixture :
+    ListDisjoint ([1, 2] : List Nat) [3, 4] :=
+  listDisjoint_append [1, 2] [3, 4] (by decide)
+
+theorem listDisjoint_comm_fixture :
+    ListDisjoint [3, 4] ([1, 2] : List Nat) :=
+  listDisjoint_comm [1, 2] [3, 4] (listDisjoint_append [1, 2] [3, 4] (by decide))
+
+theorem listDisjoint_of_append_left_fixture :
+    ListDisjoint ([2] : List Nat) [3] :=
+  listDisjoint_of_append_left [7] [2] [8] [3] (by
+    intro value hx hy
+    simp at hx hy
+    omega)
+
+theorem listDisjoint_of_cons_right_fixture :
+    ListDisjoint ([1] : List Nat) [3] :=
+  listDisjoint_of_cons_right [1] 2 [3] (by
+    intro value hx hy
+    simp at hx hy
+    omega)
+
+theorem listDisjoint_append_right_fixture :
+    ListDisjoint ([1] : List Nat) ([3] ++ [4]) :=
+  listDisjoint_append_right [1] [3] [4]
+    (listDisjoint_of_cons_right [1] 2 [3] (by
+      intro value hx hy
+      simp at hx hy
+      omega))
+    (by
+      intro value hx hy
+      simp at hx hy
+      omega)
+
+theorem listDisjoint_append_right_elim_fixture :
+    ListDisjoint ([1] : List Nat) [3] ∧ ListDisjoint [1] [4] :=
+  listDisjoint_append_right_elim [1] [3] [4] (by
+    intro value hx hy
+    simp at hx hy
+    omega)
+
+theorem listDisjoint_take_drop_fixture :
+    ListDisjoint (([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).take 3)
+      (([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).drop 3) :=
+  listDisjoint_take_drop [1, 2, 3, 4, 5, 6, 7, 8] 3 (by decide)
+
+theorem not_mem_of_listDisjoint_getElem_fixture :
+    (2 : Nat) ∉ ([3, 4] : List Nat) :=
+  not_mem_of_listDisjoint_getElem [1, 2] [3, 4] 1
+    (listDisjoint_append [1, 2] [3, 4] (by decide)) (by decide)
+
+def distinctListsGuard : Bool :=
+  (([1, 2] : List Nat).all (fun value => !([3, 4] : List Nat).contains value)) &&
+    ((([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).take 3).all
+      (fun value => !(([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).drop 3).contains value))
+
+#eval distinctListsGuard
+#guard distinctListsGuard
+
+theorem mem_zip_getElem_fixture :
+    ∃ (i : Nat) (hi : i < ([1, 2, 3] : List Nat).length)
+      (hj : i < ([4, 5, 6] : List Nat).length),
+      ([1, 2, 3] : List Nat)[i]'hi = (3 : Nat) ∧
+        ([4, 5, 6] : List Nat)[i]'hj = (6 : Nat) :=
+  mem_zip_getElem [1, 2, 3] [4, 5, 6] (3, 6) (by decide)
+
+theorem listDisjoint_of_mem_zip_withShape_fixture :
+    ListDisjoint ([1] : List Nat) [2, 3] := by
+  have hleft : (10, (Shape.one, [1])) ∈
+      ([10, 20, 30] : List Nat).zip
+        (oneCombNamed.zip (withShape oneCombNamed [1, 2, 3, 4])) := by
+    simp [oneCombNamed, withShape, Shape.shapeSize]
+  have hright : (20, (Shape.comb [Shape.one, Shape.one], [2, 3])) ∈
+      ([10, 20, 30] : List Nat).zip
+        (oneCombNamed.zip (withShape oneCombNamed [1, 2, 3, 4])) := by
+    simp [oneCombNamed, withShape, Shape.shapeSize]
+  exact listDisjoint_of_mem_zip_withShape [10, 20, 30] oneCombNamed [1, 2, 3, 4]
+    (10, (Shape.one, [1])) (20, (Shape.comb [Shape.one, Shape.one], [2, 3]))
+    (by simp [oneCombNamed]) (by simp [oneCombNamed, withShape, Shape.shapeSize])
+    (by decide) (by simp [oneCombNamed, Shape.shapeSize]) hleft hright (by decide)
+
+def zipWithShapeGuard : Bool :=
+  (([1] : List Nat).all (fun value => !([2, 3] : List Nat).contains value))
+
+#eval zipWithShapeGuard
+#guard zipWithShapeGuard
+
+theorem getElem_tail_eq_fixture :
+    ([1, 2, 3] : List Nat)[2]'(by decide) =
+      ([1, 2, 3] : List Nat).tail[1]'(by decide) :=
+  getElem_tail_eq [1, 2, 3] 2 (by decide) (by decide)
+
+theorem getElem_map_fst_fixture :
+    (1 : Nat) =
+      (([(1, 2, 3)] : List (Nat × Nat × Nat)).map Prod.fst)[0]'(by decide) :=
+  getElem_map_fst [(1, 2, 3)] 0 (by decide) rfl
+
+theorem getElem_fst_inj_fixture :
+    (0 : Nat) = 0 :=
+  getElem_fst_inj [(1, 2), (3, 4)] 0 0 (by decide) (by decide) (by decide) rfl rfl
+
+def listIndexGuard : Bool :=
+  (([1, 2, 3] : List Nat)[2]'(by decide) ==
+      ([1, 2, 3] : List Nat).tail[1]'(by decide)) &&
+    (((([(1, 2, 3)] : List (Nat × Nat × Nat))[0]'(by decide)).1) ==
+      (([(1, 2, 3)] : List (Nat × Nat × Nat)).map Prod.fst)[0]'(by decide))
+
+#eval listIndexGuard
+#guard listIndexGuard
+
+theorem mem_lt_foldr_max_add_fixture :
+    (3 : Nat) < ([1, 3, 2] : List Nat).foldr max 0 + 1 :=
+  mem_lt_foldr_max_add [1, 3, 2] 3 0 1 (by decide) (by decide) (by decide)
+
+def foldrMaxGuard : Bool :=
+  (3 : Nat) < ([1, 3, 2] : List Nat).foldr max 0 + 1
+
+#eval foldrMaxGuard
+#guard foldrMaxGuard
+
+/-! Cake's `mem_genlist_add_suc_val`, `genlist_distinct_max` and
+    `genlist_distinct_max'` (`pan_commonPropsScript.sml:234/208/221`). -/
+
+theorem mem_genlist_add_suc_val_fixture : (1 : Nat) < 3 ∧ 3 ≤ 4 + 1 :=
+  mem_genlist_add_suc_val 4 3 1 (by decide)
+
+theorem genlist_distinct_max_fixture :
+    ListDisjoint ((List.range 3).map (fun i => i + 1 + 0)) [0] :=
+  genlist_distinct_max 3 0 [0] (by intro y hy; simp at hy; omega)
+
+theorem genlist_distinct_max'_fixture :
+    ListDisjoint ((List.range 3).map (fun i => i + 1 + (0 + 2))) [0] :=
+  genlist_distinct_max' 3 0 2 [0] (by intro y hy; simp at hy; omega)
+
+def genlistGuard : Bool :=
+  ((List.range 3).map (fun i => i + 1 + 0)).all
+    (fun value => !([0] : List Nat).contains value)
+
+#eval genlistGuard
+#guard genlistGuard
+
+/-! Cake's `zero_not_mem_genlist_offset` (`pan_commonPropsScript.sml:367`) and
+    `map_pick_up_first` (`pan_globalsProofScript.sml:2995`). -/
+
+theorem zero_not_mem_genlist_offset_fixture :
+    (0 : BitVec 5) ∉
+      (List.range 3).map (fun i => BitVec.ofNat 5 (i + 1)) :=
+  zero_not_mem_genlist_offset ([1, 2, 3] : List Nat) (by decide)
+
+theorem map_fst_map_quad_fixture :
+    ((([(1, 2, 3, 4)] : List (Nat × Nat × Nat × Nat)).map
+        (fun p => (p.1 + 1, p.2.1, p.2.2.1, p.2.2.2))).map Prod.fst) =
+      ((([(1, 2, 3, 4)] : List (Nat × Nat × Nat × Nat)).map Prod.fst).map
+        (fun x => x + 1)) :=
+  map_fst_map_quad [(1, 2, 3, 4)] (fun x => x + 1) id id id
+
+def quadProjectionGuard : Bool :=
+  ((([(1, 2, 3, 4)] : List (Nat × Nat × Nat × Nat)).map
+      (fun p => (p.1 + 1, p.2.1, p.2.2.1, p.2.2.2))).map Prod.fst) == [2]
+
+#eval quadProjectionGuard
+#guard quadProjectionGuard
+
+/-! Cake's `tuple_4_o` (`pan_globalsProofScript.sml:3003`). -/
+
+theorem quadProjection_comp_fixture :
+    (fun p : Nat × Nat × Nat × Nat =>
+        (p.1 + 1, p.2.1, p.2.2.1, p.2.2.2)) =
+      ((fun q : Nat × Nat × Nat × Nat => (q.1 + 1, q.2.1, q.2.2.1, q.2.2.2)) ∘
+        (fun p : Nat × Nat × Nat × Nat => (p.1, p.2.1, p.2.2.1, p.2.2.2))) :=
+  quadProjection_comp (fun x => x + 1) id id id id id id id
+
+def quadCompGuard : Bool :=
+  ((fun q : Nat × Nat × Nat × Nat => (q.1 + 1, q.2.1, q.2.2.1, q.2.2.2)) ∘
+      (fun p : Nat × Nat × Nat × Nat => (p.1, p.2.1, p.2.2.1, p.2.2.2)))
+    (1, 2, 3, 4) == (2, 2, 3, 4)
+
+#eval quadCompGuard
+#guard quadCompGuard
+
+/-! Cake's `MAX_LIST_i_genlist` (`pan_commonPropsScript.sml:712`). -/
+
+theorem range_foldr_max_fixture : (List.range 4).foldr max 0 = 3 :=
+  range_foldr_max 4
+
+def rangeFoldrMaxGuard : Bool :=
+  (List.range 4).foldr max 0 == 3
+
+#eval rangeFoldrMaxGuard
+#guard rangeFoldrMaxGuard
+
+def checkDisjoint (name : String) (actual : Bool) : IO Bool := do
+  if actual then
+    IO.println s!"PASS {name}"
+    pure true
+  else
+    IO.println s!"FAIL {name}"
     pure false
 
 def runChecks : IO Bool := do
@@ -36,6 +406,30 @@ def runChecks : IO Bool := do
       (withShape oneCombNamed [1, 2, 3, 4, 5]) [[1], [2, 3], [4]],
     check "pan with_shape short input"
       (withShape shortShapes [7]) [[7], []] ].mapM id
-  pure (results.all id)
+  let lengthOk ← checkLength "pan with_shape length"
+  let allDistinctOk ← checkAllDistinct "pan all_distinct_with_shape"
+  let membershipOk ← checkMembers "pan with_shape membership"
+    ((withShape oneCombNamed [1, 2, 3, 4])[1]'(by rw [withShape_length]; decide)) [2, 3]
+  let disjointOk ← checkDisjoint "pan disjoint_take_drop_sum" disjointSumGuard
+  let shapeDisjointOk ←
+    checkDisjoint "pan all_distinct_disjoint_with_shape" withShapeDisjointGuard
+  let nestedOk ← checkDisjoint "pan el_el_with_shape" withShapeNestedGuard
+  let distinctOk ←
+    checkDisjoint "pan all_distinct_with_shape_distinct" withShapeDistinctGuard
+  let distinctListsOk ← checkDisjoint "pan distinct_lists" distinctListsGuard
+  let zipWithShapeOk ←
+    checkDisjoint "pan all_distinct_mem_zip_disjoint_with_shape" zipWithShapeGuard
+  let listIndexOk ← checkDisjoint "pan list index bridges" listIndexGuard
+  let foldrMaxOk ← checkDisjoint "pan max_foldr_lt" foldrMaxGuard
+  let genlistOk ← checkDisjoint "pan genlist distinctness" genlistGuard
+  let quadProjectionOk ←
+    checkDisjoint "pan quad projection" quadProjectionGuard
+  let quadCompOk ← checkDisjoint "pan quad projection comp" quadCompGuard
+  let rangeFoldrMaxOk ←
+    checkDisjoint "pan MAX_LIST_i_genlist" rangeFoldrMaxGuard
+  pure (results.all id && lengthOk && allDistinctOk && membershipOk && disjointOk &&
+    shapeDisjointOk && nestedOk && distinctOk && distinctListsOk && zipWithShapeOk &&
+    listIndexOk && foldrMaxOk && genlistOk && quadProjectionOk && quadCompOk &&
+    rangeFoldrMaxOk)
 
 end Flapjack.Test.PanWithShapeParity

@@ -200,6 +200,77 @@ def panToCrepCompileInlTop [BEq FunName] [LawfulBEq FunName]
     List (CompiledFunction α) :=
   crepInlineTopRecursiveByNames inlineNames functions
 
+/-! Cake's `first_compile_prog_all_distinct`
+    (`pan_to_crepProofScript.sml:4556-4564`): the recursive inline pass
+    rewrites function bodies but preserves the function-name table.  This
+    invariant is used by the top-level `pc_compile_correct` assembly and is
+    kept separate from the body-transformation proof. -/
+theorem crepInlineFunctionsRecursive_map_name
+    [BEq FunName] [LawfulBEq FunName] [LawfulHashable FunName]
+    [OfNat α 0] [OfNat α 1]
+    (inlineable : List (CrepInlineEntry α))
+    (active : Std.HashSet FunName)
+    (functions : List (CompiledFunction α)) :
+    (crepInlineFunctionsRecursive inlineable active functions).map
+        CompiledFunction.name = functions.map CompiledFunction.name := by
+  induction functions with
+  | nil => rfl
+  | cons function functions ih =>
+      simp only [crepInlineFunctionsRecursive, List.map_cons]
+      exact congrArg (fun names => function.name :: names) ih
+
+theorem panToCrepCompileInlTop_names_nodup
+    [BEq FunName] [LawfulBEq FunName] [LawfulHashable FunName]
+    [OfNat α 0] [OfNat α 1]
+    (inlineNames : List FunName)
+    (functions : List (CompiledFunction α))
+    (hnodup : (functions.map CompiledFunction.name).Nodup) :
+    (panToCrepCompileInlTop inlineNames functions).map
+        CompiledFunction.name |>.Nodup := by
+  rw [panToCrepCompileInlTop, crepInlineTopRecursiveByNames,
+    crepInlineTopRecursive]
+  rw [crepInlineFunctionsRecursive_map_name]
+  exact hnodup
+
+/-! Cake's `compile_prog_distinct_params`
+    (`pan_to_crepProofScript.sml:4684-4688`): recursive inlining rewrites
+    function bodies only, so the flattened parameter slots of every function
+    remain distinct. -/
+theorem crepInlineFunctionsRecursive_params_nodup
+    [BEq FunName] [LawfulBEq FunName] [LawfulHashable FunName]
+    [OfNat α 0] [OfNat α 1]
+    (inlineable : List (CrepInlineEntry α))
+    (active : Std.HashSet FunName)
+    (functions : List (CompiledFunction α))
+    (hparams : ∀ function ∈ functions, function.params.Nodup) :
+    ∀ function ∈ crepInlineFunctionsRecursive inlineable active functions,
+      function.params.Nodup := by
+  induction functions with
+  | nil => simp [crepInlineFunctionsRecursive]
+  | cons function functions ih =>
+      intro target htarget
+      simp only [crepInlineFunctionsRecursive, List.mem_cons] at htarget
+      rcases htarget with hhead | htail
+      · subst target
+        simpa using hparams function (by simp)
+      · apply ih
+        · intro candidate hcandidate
+          exact hparams candidate (by simp [hcandidate])
+        · exact htail
+
+theorem panToCrepCompileInlTop_params_nodup
+    [BEq FunName] [LawfulBEq FunName] [LawfulHashable FunName]
+    [OfNat α 0] [OfNat α 1]
+    (inlineNames : List FunName)
+    (functions : List (CompiledFunction α))
+    (hparams : ∀ function ∈ functions, function.params.Nodup) :
+    ∀ function ∈ panToCrepCompileInlTop inlineNames functions,
+      function.params.Nodup := by
+  unfold panToCrepCompileInlTop crepInlineTopRecursiveByNames
+    crepInlineTopRecursive
+  apply crepInlineFunctionsRecursive_params_nodup
+  exact hparams
+
 def crepInlineFunctions [BEq FunName] [OfNat α 0] [OfNat α 1]
     (inlineable : List (CrepInlineEntry α)) :
     List (CompiledFunction α) → List (CompiledFunction α)

@@ -37,6 +37,41 @@ def lookupInfo [BEq String] (name : String) : InfoMap α → Option α
   | (candidate, value) :: entries =>
       if candidate == name then some value else lookupInfo name entries
 
+/-- Cake's `ALOOKUP_MAP3` (`pan_globalsProofScript.sml:2841`): mapping a
+    function over the value component of every entry commutes with the
+    lookup. -/
+theorem lookupInfo_map3 [BEq String] (f : γ → δ) (name : String)
+    (entries : InfoMap (β × γ)) :
+    lookupInfo name (entries.map (fun entry => (entry.1, entry.2.1, f entry.2.2))) =
+      (lookupInfo name entries).map (fun value => (value.1, f value.2)) := by
+  induction entries with
+  | nil => simp [lookupInfo]
+  | cons entry entries ih =>
+      simp only [List.map_cons, lookupInfo]
+      by_cases h : (entry.1 == name) = true
+      · rw [if_pos h, if_pos h]
+        rfl
+      · rw [if_neg h, if_neg h]
+        exact ih
+
+/-- Cake's `ALOOKUP_MAP4` (`pan_globalsProofScript.sml:2851`): mapping a
+    function over the middle component of every entry commutes with the
+    lookup. -/
+theorem lookupInfo_map4 [BEq String] (f : γ → δ) (name : String)
+    (entries : InfoMap (β × γ × ε)) :
+    lookupInfo name
+        (entries.map (fun entry => (entry.1, entry.2.1, f entry.2.2.1, entry.2.2.2))) =
+      (lookupInfo name entries).map (fun value => (value.1, f value.2.1, value.2.2)) := by
+  induction entries with
+  | nil => simp [lookupInfo]
+  | cons entry entries ih =>
+      simp only [List.map_cons, lookupInfo]
+      by_cases h : (entry.1 == name) = true
+      · rw [if_pos h, if_pos h]
+        rfl
+      · rw [if_neg h, if_neg h]
+        exact ih
+
 /-! The original Pancake `mem_load` uses `dropWhile` to find a named
     structure and then evaluates its fields against the remaining context.
     Keeping the suffix is important: declarations only make earlier context
@@ -78,6 +113,47 @@ def shapeSizeWithContext (context : StructContext) : Shape → Nat
   | .one => 1
   | .comb shapes => shapes.foldl (fun total shape => total + shapeSizeWithContext context shape) 0
   | .named name => ((lookupInfo name context).map StructInfo.size).getD 1
+
+/-- Counterpart of Cake's `size_of_sh_with_ctxt_eq`
+    (`cakeml/pancake/semantics/panPropsScript.sml:184`): for a shape that is
+    well formed against the empty context, the context-sensitive size agrees
+    with the context-free `shapeSize`. -/
+theorem shapeSizeWithContext_eq_shapeSize_of_isWfShape :
+    ∀ (shape : Shape), isWfShape ([] : StructContext) shape = true →
+      ∀ (context : StructContext), shapeSizeWithContext context shape = Shape.shapeSize shape := by
+  intro shape
+  induction shape using shapeSizeWithContext.induct with
+  | case1 =>
+      intro _ context
+      simp [shapeSizeWithContext]
+  | case2 shapes ih =>
+      intro hwf context
+      simp only [isWfShape.eq_def] at hwf
+      simp only [shapeSizeWithContext, Shape.shapeSize]
+      exact foldl_shapeSizeWithContext_eq_shapeSize context shapes
+        (fun shape hmem h => ih shape hmem h context) hwf 0
+  | case3 name =>
+      intro hwf context
+      simp [isWfShape, lookupInfo] at hwf
+where
+  /-- Fold form of `shapeSizeWithContext_eq_shapeSize_of_isWfShape`, needed for
+      the `comb` case. -/
+  foldl_shapeSizeWithContext_eq_shapeSize (context : StructContext) (shapes : List Shape)
+      (hshape : ∀ shape ∈ shapes, isWfShape ([] : StructContext) shape = true →
+        shapeSizeWithContext context shape = Shape.shapeSize shape)
+      (hwf : isWfShape.isWfShapeList ([] : StructContext) shapes = true) (acc : Nat) :
+      shapes.foldl (fun total shape => total + shapeSizeWithContext context shape) acc =
+        shapes.foldl (fun total shape => total + Shape.shapeSize shape) acc := by
+    induction shapes generalizing acc with
+    | nil => rfl
+    | cons shape shapes ih =>
+        rw [isWfShape.isWfShapeList.eq_def] at hwf
+        rw [Bool.and_eq_true] at hwf
+        obtain ⟨hhead, htail⟩ := hwf
+        simp only [List.foldl_cons]
+        rw [hshape shape (by simp) hhead]
+        exact ih (fun s hs => hshape s (by simp [hs])) htail (acc + Shape.shapeSize shape)
+
 
 inductive StatErr where
   | scope (message : String)

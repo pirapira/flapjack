@@ -105,6 +105,18 @@ def heuristicEraseDupsAppendCases : List (List Nat × List Nat) :=
   (fun names => natEraseDupsAppend names.1 names.2 ==
     natEraseDups (names.1 ++ names.2))
 
+/- The fast call-set merge must preserve Cake's Patricia traversal, not merely
+   the duplicate-free key set. -/
+def heuristicMergeCallsFastCases : List (List Nat × List Nat) :=
+  [([], []), ([1, 4, 6], [7, 4, 12]),
+   ([7, 1, 4, 12, 6], [3, 1, 9, 3]),
+   (List.range 40, (List.range 20).reverse ++ List.range 20),
+   ((List.range 40).reverse, List.range 80)]
+
+#guard heuristicMergeCallsFastCases.all
+  (fun names => wordHeuristicMergeCallsFast names.1 names.2 ==
+    wordHeuristicMergeCalls names.1 names.2)
+
 /-! The merged map's order is Cake's Patricia traversal; pin it directly so a
     change in either implementation is visible here. -/
 #guard (wordHeuristicFast 7 heuristicParityMerge ({}, {})).1.keys ==

@@ -56,6 +56,6 @@ example (state : State 8) (hzero : ZeroRegister state) :
       riscVCondition (executeInstructions state [.ori 31 0 7]) .equal 1 31 := by
   apply wordConditionOperands_sound state .equal 1 (.imm (7 : Word 8)) hzero 1 31
     [.ori 31 0 7]
-  simp [wordConditionOperands, registerOfNat]
+  simp [wordConditionOperands, registerOfNat, iImmediate]
 
 end Flapjack.RiscV

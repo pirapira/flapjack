@@ -29,4 +29,19 @@ example : pipelineGetEids id sourceFunctions = [("E", 0), ("F", 1), ("G", 2)] :=
   simp [pipelineGetEids, pipelineExceptionIds, sourceFunctions, raiseE,
     expIds, List.eraseDups, List.eraseDupsBy, List.eraseDupsBy.loop]
 
+example : ∃ code, lookupInfo "E"
+    (crepGetEidsFromDecls id [.exnDecl "E" .one, .decl .one "x" (.const 0)]) =
+      some code := by
+  exact crepGetEidsFromDecls_lookup_of_exception id 0
+    [.exnDecl "E" .one, .decl .one "x" (.const 0)] "E" .one (by simp [exceptionEntries])
+
+/-! The declaration-side table cardinality is the source `size_of_eids`
+    cardinality used by Cake's exception-relation proof. -/
+example :
+    (crepGetEidsFromDecls id
+      [.exnDecl "E" .one, .decl .one "x" (.const 0), .exnDecl "F" .one]).length =
+      sizeOfEids
+        [.exnDecl "E" .one, .decl .one "x" (.const 0), .exnDecl "F" .one] := by
+  exact crepGetEidsFromDecls_length id _
+
 end Flapjack.Test.PanGetEidsParity

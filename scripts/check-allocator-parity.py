@@ -44,6 +44,7 @@ FIXTURES = (
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "secp256k1_recover.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "many_word_parameters.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "gh1049_stack_alloc.pnk",
+    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00014_loop_to_word_allocator.pnk",
 )
 
 

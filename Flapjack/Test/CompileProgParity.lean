@@ -66,6 +66,13 @@ theorem compile_prog_first_compile_prog_all_distinct :
   exact compileProgToCrep_names_nodup _ _ (by
     simp [compileProgProbeDecls, functionDeclarationNames])
 
+/-! Cake's `compile_prog_distinct_params` regression at the same complete
+    source-shaped boundary. -/
+theorem compile_prog_compile_prog_distinct_params :
+    ∀ function ∈ compileProgToCrep compileProgProbeContext compileProgProbeDecls,
+      function.params.Nodup := by
+  exact compileProgToCrep_params_nodup _ _
+
 def parityGuard : Bool :=
   match compileProgToCrep compileProgProbeContext compileProgProbeDecls with
   | [{ name := "leaf", params := [], body := .return [.const 7],

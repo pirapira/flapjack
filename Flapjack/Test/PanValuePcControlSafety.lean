@@ -919,4 +919,14 @@ evaluator-evidence obligation. -/
     evidence for the generic hother callback. -/
 #check @panValuePcRaisedHraiseCases_with_raw_word_lists_retarget_globals_of_state_evidence
 
+/-! The raw-word-list context-coded exception-result dispatcher also accepts
+    explicit state evidence. -/
+#check @panValuePcRaisedHraiseCases_with_raw_word_lists_to_exception_result_rel_with_context_code_of_state_evidence
+
+/-! The handler-free call form discharges the control-safety premise of the
+compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
+#check @panValueCrepProgramStateControlSafe_call_none
+
+#check @panValueCrepProgramStateControlSafe_call_returns
+
 end Flapjack.Test.PanValuePcControlSafety

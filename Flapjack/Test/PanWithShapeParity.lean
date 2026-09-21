@@ -36,6 +36,25 @@ def lengthGuard : Bool :=
 #eval lengthGuard
 #guard lengthGuard
 
+theorem all_distinct_withShape_fixture :
+    ((withShape oneCombNamed [1, 2, 3, 4])[1]'(by rw [withShape_length]; decide)).Nodup :=
+  all_distinct_withShape oneCombNamed [1, 2, 3, 4] 1 (by decide) (by decide)
+    (by simp [oneCombNamed, Shape.shapeSize])
+
+def allDistinctGuard : Bool :=
+  ((withShape oneCombNamed [1, 2, 3, 4])[1]'(by rw [withShape_length]; decide)).Nodup
+
+#eval allDistinctGuard
+#guard allDistinctGuard
+
+def checkAllDistinct (name : String) : IO Bool := do
+  if ((withShape oneCombNamed [1, 2, 3, 4])[1]'(by rw [withShape_length]; decide)).Nodup then
+    IO.println s!"PASS {name}"
+    pure true
+  else
+    IO.println s!"FAIL {name}"
+    pure false
+
 def checkLength (name : String) : IO Bool := do
   if (withShape oneCombNamed [1, 2, 3, 4]).length == oneCombNamed.length then
     IO.println s!"PASS {name}"
@@ -60,6 +79,7 @@ def runChecks : IO Bool := do
     check "pan with_shape short input"
       (withShape shortShapes [7]) [[7], []] ].mapM id
   let lengthOk ← checkLength "pan with_shape length"
-  pure (results.all id && lengthOk)
+  let allDistinctOk ← checkAllDistinct "pan all_distinct_with_shape"
+  pure (results.all id && lengthOk && allDistinctOk)
 
 end Flapjack.Test.PanWithShapeParity

@@ -30024,8 +30024,8 @@ theorem panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call
       (fun _ => none) nextGlobals nextMemory targetState)
     (hraise : panValuePcExceptionResultRelWithContextCode
       clockStructs clockPcContext clockExceptionRel clockExceptionCode
-      clockGlobalsLookup (fun _ => none) nextMemory exception value
-      targetState targetException) :
+      clockGlobalsLookup nextGlobals nextMemory exception value targetState
+      targetException) :
     PanValuePcCompileCorrectWithContextCode sourceEvaluate targetEvaluate
       codeRel excpRel exceptionCode globalsLookup program ∧
     evalPanValueFfiClockProg clockContext clockPrimitive clockHandler

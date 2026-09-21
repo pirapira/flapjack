@@ -898,6 +898,42 @@ theorem evalPanValueFfiClockProgram_of_declarations_and_timeout_call
       some (.timeout (fun _ => none) globals memory ffi, nextClock) := by
   simp [evalPanValueFfiClockProgram, hdeclarations, hcall]
 
+/-! The top-level clocked evaluator also preserves a terminal `FinalFFI`
+    outcome from the selected call.  This is the declaration-boundary form of
+    Cake's `pc_compile_correct[Call_FinalFFI]` case. -/
+theorem evalPanValueFfiClockProgram_of_declarations_and_finalFfi_call
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (initial : PanValueFfiProgramState α σ)
+    (clock : Nat)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (fuel : Nat) (declarations : List (Decl α))
+    (entry : FunName) (arguments : List (Exp α))
+    (state : PanValueProgramState α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (event : FfiFinalEvent) (nextClock : Nat)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none)
+    (hdeclarations : evalPanValueDeclarations initial.source declarations
+      (memoryAccess := memoryAccess) = some state)
+    (hcall : evalPanValueFfiClockCall context primitive handler state.structs
+      state.functions state.baseAddress state.topAddress state.bytesInWord fuel
+      (fun _ => none) state.globals state.memory initial.ffi clock none entry arguments
+      (memoryAccess := memoryAccess)
+      (contracts := some (PanValueCallContracts.mk state.returnShapes
+        state.exceptions state.parameterShapes))
+      (memoryHandler := memoryHandler) =
+      some (.control (.finalFfi locals globals memory ffi event), nextClock)) :
+    evalPanValueFfiClockProgram context initial clock primitive handler fuel
+      declarations entry arguments (memoryAccess := memoryAccess)
+      (memoryHandler := memoryHandler) =
+      some (.control (.finalFfi locals globals memory ffi event), nextClock) := by
+  simp [evalPanValueFfiClockProgram, hdeclarations, hcall]
+
 /-! A successful singleton return crosses the clocked declaration boundary only
     when Cake's entry shape accepts the returned value. -/
 theorem evalPanValueFfiClockProgram_of_declarations_and_returned_call

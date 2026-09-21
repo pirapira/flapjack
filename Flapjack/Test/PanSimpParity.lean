@@ -464,6 +464,26 @@ example : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorH
           evaluatorHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none) (fun _ => none)
           evaluatorFfi 1 "tag" "text" none none none))
 
+/-- The same nonzero `Ite` at the call-aware budget; the branch is evaluated at
+    the combined call-aware branch budget. -/
+example : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+    [] [] 0 0 8 (progCallFuel 7 (.ite (.const 5) (.annot "tag" "text") (.tick : Prog Nat)))
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    (.ite (.const 5) (.annot "tag" "text") (.tick : Prog Nat)) =
+    some (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi), 1) := by
+  exact evalPanValueFfiClockProg_ite_true_some_progCallFuel evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 (fun _ => none) (fun _ => none)
+    (fun _ => none) evaluatorFfi 1 (.const 5) (.annot "tag" "text") (.tick : Prog Nat)
+    none none none 5 (.control (.normal (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi)) 1
+    (by simp [evalPanValueExp]) (by decide)
+    (by
+      simpa only [progCallFuel] using
+        (evalPanValueFfiClockProg_annot_some evaluatorContext (fun _ _ => none)
+          evaluatorHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none) (fun _ => none)
+          evaluatorFfi 1 "tag" "text" none none none))
+
 /-- `progSize`-indexed `Call` fuel adequacy: one structural step covers the node. -/
 example (outcome : PanValueFfiClockOutcome Nat Unit) (nextClock : Nat)
     (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)

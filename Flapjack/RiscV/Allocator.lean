@@ -1371,6 +1371,9 @@ def wordProgWriteVarsFast (program : WordProg α) : List Nat :=
 def wordProgVariables (program : WordProg α) : List Nat :=
   wordProgReadVars program ++ wordProgWriteVars program
 
+def wordProgVariablesFast (program : WordProg α) : List Nat :=
+  wordProgReadVarsFastAcc program (wordProgWriteVarsFast program)
+
 /-! CakeML's `wordLang$max_var` is not the same scan as the allocator's
     read/write inventory.  In particular, `max_var (Call NONE ... h)` uses
     only the argument list and deliberately does not descend into `h`.
@@ -2205,7 +2208,7 @@ def wordAllocateProgramWithSlots (slots : List Nat) (program : WordProg α) :
     Option WordContext :=
   let (liveIn, edges) := wordProgClashAnalysis program []
   wordAllocateContextWithClashes
-    (slots ++ wordProgVariables program ++ liveIn) edges
+    (slots ++ wordProgVariablesFast program ++ liveIn) edges
 
 def wordAllocateProgram (program : WordProg α) : Option WordContext :=
   wordAllocateProgramWithSlots [] program
@@ -2366,7 +2369,7 @@ def wordAllocateProgramWithSlotsAndColour (slots : List Nat)
     (program : WordProg α) : Option (WordContext × WordProg α) :=
   let (liveIn, edges) := wordProgClashAnalysis program []
   (wordAllocateContextWithClashes
-      (slots ++ wordProgVariables program ++ liveIn) edges).map
+      (slots ++ wordProgVariablesFast program ++ liveIn) edges).map
     (fun context => (context, wordApplyColour (wordFindVar context) program))
 
 theorem wordApplyColour_assign (colour : Nat → Nat) (name source : Nat) :

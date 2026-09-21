@@ -18,6 +18,17 @@ implementation boundaries:
 A second Lean implementation, even if independently written, is not an
 original-equivalence test and cannot close the corresponding Bead.
 
+## Finding Lean declarations
+
+When working in an editor or agent session, use the Lean LSP for Lean-specific
+lookup before falling back to text search. Declaration search gives the
+namespace-qualified name, hover information gives the elaborated type and
+documentation, and reference search finds existing uses. Goal and diagnostic
+queries are also useful when a ported theorem appears not to apply. This keeps
+lookup aware of namespaces, notation, implicit arguments, and generated
+declarations. Use `rg`/`grep` for HOL/SML source references and broad
+repository-text searches, where LSP cannot help.
+
 Each fixture records:
 
 - the exact source file and definition name in `cakeml/pancake`;

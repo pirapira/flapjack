@@ -1144,4 +1144,26 @@ theorem PanValueProgNotBrokeContinued_while
           | nStruct name fields =>
               simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcond] at h
 
+/-- Source-level handler safety is strictly stronger than the Crep-side control
+    safety predicate.  The source `.break` program is control-safe on the Crep
+    side (both sides break at label 0), yet its source evaluation still returns
+    `broke`; hence `PanValueCrepProgramStateControlSafe` alone can never yield
+    `PanValueProgNotBrokeContinued`. -/
+theorem not_panValueProgNotBrokeContinued_break
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) :
+    ¬ PanValueProgNotBrokeContinued primitive handler structs functions
+      baseAddress topAddress bytesInWord (.break : Prog α) := by
+  intro h
+  have hres := h 1 (fun _ => none) (fun _ => none) (fun _ => none)
+    (.broke (fun _ => none) (fun _ => none) (fun _ => none))
+    (by simp [evalPanValueProgWithPrimitiveCallsAndFfi])
+  exact hres.1 _ _ _ rfl
+
 end Flapjack

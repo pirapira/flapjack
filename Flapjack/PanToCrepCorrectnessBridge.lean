@@ -30360,6 +30360,76 @@ theorem panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call
   · simp [panValuePcResultRelWithContextCode, panValuePcResultRel, hstate,
       hvalues]
 
+/-! The destination-bearing `Call_Ret_Return` branch installs the callee's
+    returned state in the caller.  The exact assigned locals/globals relation
+    is retained as the premise of the context-coded Pc result. -/
+theorem panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_returned_destination
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (program : Prog α)
+    (sourceEvaluate : PanValuePcEvaluator α)
+    (targetEvaluate : CrepPcEvaluator α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (hcompact : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (clockStructs : StructContext) (clockPcContext : CompileContext α)
+    (clockExceptionRel : ExceptionId → PanValue α → α → Prop)
+    (clockExceptionCode : ExceptionId → Option α)
+    (clockGlobalsLookup : CrepState α → PanValue α → Option (List α))
+    (clockContext : PanValueFfiContext α)
+    (clockPrimitive : PanPrimitiveHandler α)
+    (clockHandler : PanValueStatefulFfiHandler α σ)
+    (clockFunctions : List (FunName × List VarName × Prog α))
+    (clockBaseAddress clockTopAddress clockBytesInWord : α)
+    (fuel clock callClock : Nat)
+    (clockLocals clockGlobals : VarName → Option (PanValue α))
+    (clockMemory : α → Option (PanValue α)) (clockFfi : FfiState σ)
+    (destination : Option (VarKind × VarName)) (function : FunName)
+    (arguments : List (Exp α))
+    (assignedLocals assignedGlobals : VarName → Option (PanValue α))
+    (nextMemory : α → Option (PanValue α)) (nextFfi : FfiState σ)
+    (targetState : CrepState α)
+    (hcall : evalPanValueFfiClockCall clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord fuel clockLocals clockGlobals clockMemory clockFfi clock
+      (some (destination, none)) function arguments =
+      some (.control (.normal assignedLocals assignedGlobals nextMemory nextFfi),
+        callClock))
+    (hstate : panValueCrepStateRel clockStructs clockPcContext
+      assignedLocals assignedGlobals nextMemory targetState) :
+    PanValuePcCompileCorrectWithContextCode sourceEvaluate targetEvaluate
+      codeRel excpRel exceptionCode globalsLookup program ∧
+    evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (fuel + 1) clockLocals clockGlobals clockMemory clockFfi
+      clock (.call (some (destination, none)) function arguments) =
+      some (.control (.normal assignedLocals assignedGlobals nextMemory nextFfi),
+        callClock) ∧
+    (evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (fuel + 1) clockLocals clockGlobals clockMemory clockFfi
+      clock (.call (some (destination, none)) function arguments)).map
+      panValueFfiClockResultProjection =
+      some (.normal assignedLocals assignedGlobals nextMemory nextFfi callClock) ∧
+    panValuePcResultRelWithContextCode clockStructs clockPcContext
+      clockExceptionRel clockExceptionCode clockGlobalsLookup
+      (.normal assignedLocals assignedGlobals nextMemory)
+      (.normal targetState) := by
+  have hclock := evalPanValueFfiClockProg_call_returned_destination
+    clockContext clockPrimitive clockHandler clockStructs clockFunctions
+    clockBaseAddress clockTopAddress clockBytesInWord fuel clock callClock
+    clockLocals clockGlobals clockMemory clockFfi destination function arguments
+    assignedLocals assignedGlobals nextMemory nextFfi hcall
+  refine ⟨hcompact, hclock, ?_, ?_⟩
+  · rw [hclock]
+    rfl
+  · simp [panValuePcResultRelWithContextCode, panValuePcResultRel, hstate]
+
 /-! A return-only handler has Cake's explicit no-loop-control property, so the
     handler-bearing call induction branch can consume it without an opaque
     safety callback. -/

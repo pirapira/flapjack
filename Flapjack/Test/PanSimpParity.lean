@@ -266,6 +266,170 @@ theorem clocked_pan_simp_prog_fragment_matches_cake :
   · simp [panSimpProg, seqAssoc, retToTail, panSimpSeqSkipFuel]
   · simp [panSimpSeqSkipFuel]
 
+/-- `Annot` is transparent to the clocked evaluator. -/
+example : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+    [] [] 0 0 8 1 (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    (.annot "tag" "text") =
+    some (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi), 1) := by
+  exact evalPanValueFfiClockProg_annot_some evaluatorContext (fun _ _ => none)
+    evaluatorHandler [] [] 0 0 8 0 (fun _ => none) (fun _ => none) (fun _ => none)
+    evaluatorFfi 1 "tag" "text" none none none
+
+/-- A `Tick` with a nonzero clock succeeds and consumes one clock unit. -/
+example : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+    [] [] 0 0 8 1 (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    (.tick : Prog Nat) =
+    some (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi), 0) := by
+  exact evalPanValueFfiClockProg_tick_some evaluatorContext (fun _ _ => none)
+    evaluatorHandler [] [] 0 0 8 0 (fun _ => none) (fun _ => none) (fun _ => none)
+    evaluatorFfi 1 none none none (by decide)
+
+/-- Compositional success of `Seq`: the second component starts from the first
+    component's post-state and clock. -/
+example : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+    [] [] 0 0 8 2 (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    (.seq (.annot "tag" "text") (.tick : Prog Nat)) =
+    some (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi), 0) := by
+  exact evalPanValueFfiClockProg_seq_some evaluatorContext (fun _ _ => none)
+    evaluatorHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none) (fun _ => none)
+    evaluatorFfi 1 (.annot "tag" "text") (.tick : Prog Nat) none none none
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi)) 0
+    (evalPanValueFfiClockProg_annot_some evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 0 (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi 1 "tag" "text" none none none)
+    (evalPanValueFfiClockProg_tick_some evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 0 (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi 1 none none none (by decide))
+
+/-- A `While` whose condition is zero terminates immediately. -/
+example : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+    [] [] 0 0 8 1 (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    (.while (.const 0) (.skip : Prog Nat)) =
+    some (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi), 1) := by
+  exact evalPanValueFfiClockProg_while_zero_some evaluatorContext (fun _ _ => none)
+    evaluatorHandler [] [] 0 0 8 0 (fun _ => none) (fun _ => none) (fun _ => none)
+    evaluatorFfi 1 (.const 0) (.skip : Prog Nat) none none none 0
+    (by simp [evalPanValueExp]) (by decide)
+
+/-- `Dec` binds the value, runs the body under the updated local map, and
+    restores the shadowed local. -/
+example : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+    [] [] 0 0 8 2 (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    (.dec "x" .one (.const 5) (.annot "tag" "text")) =
+    some (panValueFfiClockRestoreLocal "x" none
+      (.control (.normal (updatePanValueMap (fun _ => none) "x" (.word 5))
+        (fun _ => none) (fun _ => none) evaluatorFfi)), 1) := by
+  exact evalPanValueFfiClockProg_dec_some evaluatorContext (fun _ _ => none)
+    evaluatorHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none) (fun _ => none)
+    evaluatorFfi 1 "x" .one (.const 5) (.annot "tag" "text") none none none
+    (.word 5)
+    (.control (.normal (updatePanValueMap (fun _ => none) "x" (.word 5))
+      (fun _ => none) (fun _ => none) evaluatorFfi)) 1
+    (by simp [evalPanValueExp]) (by simp [panValueShape, panShapeMatches])
+    (evalPanValueFfiClockProg_annot_some evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 0 (updatePanValueMap (fun _ => none) "x" (.word 5))
+      (fun _ => none) (fun _ => none) evaluatorFfi 1 "tag" "text" none none none)
+
+/-- A nonzero `Ite` condition selects the then-branch. -/
+example : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+    [] [] 0 0 8 2 (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    (.ite (.const 5) (.annot "tag" "text") (.tick : Prog Nat)) =
+    some (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi), 1) := by
+  exact evalPanValueFfiClockProg_ite_true_some evaluatorContext (fun _ _ => none)
+    evaluatorHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none) (fun _ => none)
+    evaluatorFfi 1 (.const 5) (.annot "tag" "text") (.tick : Prog Nat) none none none
+    5 (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi)) 1
+    (by simp [evalPanValueExp]) (by decide)
+    (evalPanValueFfiClockProg_annot_some evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 0 (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi 1 "tag" "text" none none none)
+
+/-- Lifting a successful `Call` outcome through the clocked evaluator. -/
+example (outcome : PanValueFfiClockOutcome Nat Unit) (nextClock : Nat)
+    (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1 none "f" [] = some (outcome, nextClock)) :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+      [] [] 0 0 8 2 (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+      (.call none "f" []) none none none = some (outcome, nextClock) := by
+  exact evalPanValueFfiClockProg_call_some evaluatorContext (fun _ _ => none)
+    evaluatorHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none) (fun _ => none)
+    evaluatorFfi 1 none "f" [] outcome nextClock none none none hcall
+
+/-- A single-word callee return runs the `DecCall` body and restores the local. -/
+example
+    (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1 none "f" [] =
+      some (.control (.returned (fun _ => none) (fun _ => none) (fun _ => none)
+        evaluatorFfi [.word 5]), 1)) :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+      [] [] 0 0 8 2 (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+      (.decCall "x" .one "f" [] (.annot "tag" "text")) none none none =
+    some (panValueFfiClockRestoreLocal "x" none
+      (.control (.normal (updatePanValueMap (fun _ => none) "x" (.word 5))
+        (fun _ => none) (fun _ => none) evaluatorFfi)), 1) := by
+  exact evalPanValueFfiClockProg_decCall_returned_some evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+    (fun _ => none) evaluatorFfi 1 "x" .one "f" [] (.annot "tag" "text")
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi (.word 5) 1
+    (.control (.normal (updatePanValueMap (fun _ => none) "x" (.word 5))
+      (fun _ => none) (fun _ => none) evaluatorFfi)) 1 none none none hcall
+    (by simp [panValueShape, panShapeMatches])
+    (evalPanValueFfiClockProg_annot_some evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 0 (updatePanValueMap (fun _ => none) "x" (.word 5))
+      (fun _ => none) (fun _ => none) evaluatorFfi 1 "tag" "text" none none none)
+
+/-- The leaf success equation instantiated on `Skip`, whose single-step
+    evaluation is `some (.normal ...)`. -/
+theorem clocked_leaf_skip_matches_steps :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 2 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1 (.skip : Prog Nat) =
+    some (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi), 1) := by
+  apply evalPanValueFfiClockProg_leaf_some evaluatorContext (fun _ _ => none)
+    evaluatorHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+    (fun _ => none) evaluatorFfi 1 (.skip : Prog Nat) none none none
+    PanValueFfiLeafProg.skip
+    (.normal (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi) 1
+  simp [evalPanValueFfiProgSteps]
+
+/-- The while recursive branch: a nonzero condition and a `normal` body result
+    iterate the loop from the body's final state and clock. -/
+example
+    (nextLocals nextGlobals : VarName → Option (PanValue Nat))
+    (nextMemory : Nat → Option (PanValue Nat)) (nextFfi : FfiState Unit)
+    (bodyClock : Nat)
+    (hbody : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 0 (.break : Prog Nat) none none none =
+      some (.control (.normal nextLocals nextGlobals nextMemory nextFfi),
+        bodyClock)) :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 2 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1 (.while (.const 5) (.break : Prog Nat))
+      none none none =
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 1 nextLocals nextGlobals nextMemory nextFfi
+      bodyClock (.while (.const 5) (.break : Prog Nat)) none none none := by
+  apply evalPanValueFfiClockProg_while_normal_some
+    evaluatorContext (fun _ _ => none) evaluatorHandler [] [] 0 0 8
+    1 (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    (.const 5) (.break : Prog Nat) none none none 5
+    nextLocals nextGlobals nextMemory nextFfi bodyClock
+  · simp [evalPanValueExp]
+  · decide
+  · decide
+  · exact hbody
+
 theorem clocked_seq_normal_exposes_components :
     ∃ (middleLocals middleGlobals : VarName → Option (PanValue Nat))
       (middleMemory : Nat → Option (PanValue Nat)) (middleFfi : FfiState Unit)

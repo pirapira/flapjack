@@ -921,6 +921,14 @@
       ]
     },
     {
+      "path": "Flapjack/Test/OriginalPancake/f01266_raise_continuation.pnk",
+      "source_reference": "Minimized f01266 allocator witness: Cake's Raise live equation preserves the continuation live set, retaining the return-handler move needed by the later shift.",
+      "cake_sha256": "8700bc4385d4f8f02fcc7e4ca961bdd4990eb55f60612d5644f53f812bec7e54",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.5"
+      ]
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/const_store_reuse.pnk",
       "source_reference": "Minimized differential-fuzz witness f00198-s6-i00198-mutate: Cake rematerialises the constant stored by a local store before reusing it; word_cse must emit the original OpCurrHeap source register (word_cseScript.sml:587-594) so the second Const stays live (GH #1127, flapjack-1kj).",
       "cake_sha256": "487452d7e96ded747bbd729b6ec232ca4a95c285426a6ab354e2f44191f599f2",

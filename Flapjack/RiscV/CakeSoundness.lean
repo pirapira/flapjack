@@ -427,6 +427,48 @@ def evalWordFunctionCake [NeZero width] (state : State width) :
   termination_by program => sizeOf program
   decreasing_by all_goals decreasing_trivial
 
+/-! The return-carrier branch is independent of instruction materialization:
+    Cake validates each returned register, emits no code, and reads the values
+    from the incoming machine state. -/
+
+theorem wordFunctionToRiscVCake_return_sound [NeZero width]
+    (state : State width) (store : Nat) (values : List Nat)
+    (code : List (Instruction width)) (returns : List (Fin 32))
+    (hcompile : wordFunctionToRiscVCake
+      ((.return store values) : WordProg (Word width)) =
+      some (code, returns)) :
+    evalWordFunctionCake state ((.return store values) : WordProg (Word width)) =
+      Option.map (fun returned => (executeInstructions state code, returned))
+        (values.mapM (fun name => do
+          let register ← registerOfNat name
+          pure (readRegister state register))) := by
+  cases hvalues : values.mapM registerOfNat with
+  | none =>
+      simp [wordFunctionToRiscVCake, hvalues] at hcompile
+  | some registers =>
+      have hshape : wordFunctionToRiscVCake
+          ((.return store values) : WordProg (Word width)) =
+          some ([], registers) := by
+        simp [wordFunctionToRiscVCake, hvalues]
+      have hpair : (([], registers) : List (Instruction width) × List (Fin 32)) =
+          (code, returns) := Option.some.inj (hshape.symm.trans hcompile)
+      have hcode : ([] : List (Instruction width)) = code :=
+        congrArg Prod.fst hpair
+      subst code
+      simp only [evalWordFunctionCake]
+      change (values.mapM (fun name => do
+        let register ← registerOfNat name
+        pure (readRegister state register)) : Option (List (Word width))).bind
+          (fun returned => some (state, returned)) =
+        Option.map (fun returned => (state, returned))
+          (values.mapM (fun name => do
+            let register ← registerOfNat name
+            pure (readRegister state register)))
+      cases hread : values.mapM (fun name => do
+        let register ← registerOfNat name
+        pure (readRegister state register)) with
+      | none => rfl
+      | some result => rfl
 /-- On the straight-line fragment the function-level Cake evaluator is the
 program-level Cake evaluator paired with the empty return carrier. -/
 theorem evalWordFunctionCake_wordRiscVStraightLine_eq_evalWordProgCake [NeZero width]

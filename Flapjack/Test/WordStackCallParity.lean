@@ -60,6 +60,20 @@ def frameReservationExact : Bool :=
 
 #guard frameReservationExact
 
+/- The RISC-V Cake ABI has `k = 22` allocator registers.  These rows are the
+   direct `compile_prog` reservation at the real argument-area boundary: no
+   overflow at 22 words, one overflow at 23, and the frame's extra link word
+   is retained while the argument area grows at 24 and 26 words.  The
+   `wide_call_arity.pnk` oracle exercises the same accepted source boundary;
+   this guard pins the intermediate `f - stack_arg_count` arithmetic. -/
+def riscvFrameReservationBoundaryExact : Bool :=
+  wordStackFrameWords (List.range 22) 22 0 == 0 &&
+    wordStackFrameWords (List.range 23) 22 1 == 1 &&
+    wordStackFrameWords (List.range 24) 22 2 == 1 &&
+    wordStackFrameWords (List.range 26) 22 4 == 1
+
+#guard riscvFrameReservationBoundaryExact
+
 def callFrameFreeCountExact : Bool :=
   wordStackCakeFrameSize
       { locations := [], scratch := 31, stackBase := 0, abiFrameSlots := 19 } == 20 &&
@@ -326,6 +340,8 @@ def runChecks : IO Bool := do
       ("SeqStackFree matches the port's tail-call frame free", seqStackFreeExact),
       ("wordStackFrameWords matches compile_prog's frame reservation",
         frameReservationExact),
+      ("RISC-V frame reservation crosses Cake's k=22 boundary",
+        riscvFrameReservationBoundaryExact),
       ("wordStackCallFreeCount matches stack_free for direct calls",
         callFrameFreeCountExact),
       ("source-shaped tail calls include the Cake link slot",

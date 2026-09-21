@@ -751,6 +751,49 @@ theorem mem_lt_foldr_max_add (values : List Nat) (x n m : Nat)
         have hmax : tail.foldr max n ≤ max head (tail.foldr max n) := Nat.le_max_right _ _
         omega
 
+/-- A fold of `max` never drops below its accumulator. -/
+theorem le_foldr_max (values : List Nat) (bound : Nat) :
+    bound ≤ values.foldr max bound := by
+  induction values with
+  | nil => simp
+  | cons head tail ih =>
+      simp only [List.foldr_cons]
+      exact Nat.le_trans ih (Nat.le_max_right head (List.foldr max bound tail))
+
+/-- A fold of `max` with accumulator `bound` returns `bound` when every element
+    is at most `bound`. -/
+theorem foldr_max_eq_of_le (values : List Nat) (bound : Nat)
+    (h : ∀ x ∈ values, x ≤ bound) :
+    values.foldr max bound = bound := by
+  induction values with
+  | nil => simp
+  | cons head tail ih =>
+      simp only [List.foldr_cons]
+      rw [Nat.max_eq_right
+        (Nat.le_trans (h head (by simp)) (le_foldr_max tail bound))]
+      exact ih (fun x hx => h x (by simp [hx]))
+
+/-- `MAX_LIST` of the first `n` naturals is `n - 1`. -/
+theorem range_foldr_max_self (n : Nat) :
+    (List.range n).foldr max n = n :=
+  foldr_max_eq_of_le (List.range n) n (fun x hx => by
+    rw [List.mem_range] at hx
+    omega)
+
+/-- Cake's `MAX_LIST_i_genlist` (`pan_commonPropsScript.sml:712`):
+    `MAX_LIST (GENLIST I n) = n - 1`, with `List.range` as the Flapjack
+    counterpart of `GENLIST I n` and `foldr max 0` as `MAX_LIST`. -/
+theorem range_foldr_max (n : Nat) :
+    (List.range n).foldr max 0 = n - 1 := by
+  induction n with
+  | zero => simp [List.range_zero]
+  | succ n _ih =>
+      rw [List.range_succ, List.foldr_append]
+      simp only [List.foldr_cons, List.foldr_nil]
+      rw [Nat.max_eq_left (Nat.zero_le n)]
+      rw [range_foldr_max_self]
+      omega
+
 /-- Cake's `mem_genlist_add_suc_val` (`pan_commonPropsScript.sml:234`):
     every value in `GENLIST (SUC · + k) n` lies in the interval `(k, n + k]`. -/
 theorem mem_genlist_add_suc_val (n x k : Nat) :

@@ -380,6 +380,17 @@ def quadCompGuard : Bool :=
 #eval quadCompGuard
 #guard quadCompGuard
 
+/-! Cake's `MAX_LIST_i_genlist` (`pan_commonPropsScript.sml:712`). -/
+
+theorem range_foldr_max_fixture : (List.range 4).foldr max 0 = 3 :=
+  range_foldr_max 4
+
+def rangeFoldrMaxGuard : Bool :=
+  (List.range 4).foldr max 0 == 3
+
+#eval rangeFoldrMaxGuard
+#guard rangeFoldrMaxGuard
+
 def checkDisjoint (name : String) (actual : Bool) : IO Bool := do
   if actual then
     IO.println s!"PASS {name}"
@@ -414,8 +425,11 @@ def runChecks : IO Bool := do
   let quadProjectionOk ←
     checkDisjoint "pan quad projection" quadProjectionGuard
   let quadCompOk ← checkDisjoint "pan quad projection comp" quadCompGuard
+  let rangeFoldrMaxOk ←
+    checkDisjoint "pan MAX_LIST_i_genlist" rangeFoldrMaxGuard
   pure (results.all id && lengthOk && allDistinctOk && membershipOk && disjointOk &&
     shapeDisjointOk && nestedOk && distinctOk && distinctListsOk && zipWithShapeOk &&
-    listIndexOk && foldrMaxOk && genlistOk && quadProjectionOk && quadCompOk)
+    listIndexOk && foldrMaxOk && genlistOk && quadProjectionOk && quadCompOk &&
+    rangeFoldrMaxOk)
 
 end Flapjack.Test.PanWithShapeParity

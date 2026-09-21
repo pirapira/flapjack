@@ -543,6 +543,37 @@ example (event : FfiFinalEvent)
     (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi event 1
     none none none hcall
 
+/-- The general forall-functions call-adequacy theorem: a destination-free call
+    into a single-entry table is discharged from an explicit hypothesis that
+    every listed body returns at its own `progSize` budget. -/
+example (values : List (PanValue Nat))
+    (calleeLocals : VarName → Option (PanValue Nat))
+    (hfunctions : PanValueFfiClockFunctionsReturnSucceed evaluatorContext
+      (fun _ _ => none) evaluatorHandler []
+      [("f", [], (.skip : Prog Nat))] 0 0 8 none none none)
+    (hargs : evalPanValueExps [] (fun _ => none) (fun _ => none) (fun _ => none) 0 0 8
+      ([] : List (Exp Nat)) = some values)
+    (hlookup : lookupPanFunction "f" [("f", [], (.skip : Prog Nat))] =
+      some ([], (.skip : Prog Nat)))
+    (hbind : bindPanValueParameters [] values = some calleeLocals)
+    (hparams : panValueParametersValid [] none "f" values = true)
+    (hreturn : panValueReturnValid [] none "f" values = true)
+    (hwithin : panValueValuesWithinLimit [] values = true) :
+    ∃ (finalGlobals : VarName → Option (PanValue Nat))
+      (finalMemory : Nat → Option (PanValue Nat)) (finalFfi : FfiState Unit)
+      (finalClock : Nat),
+      evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+        [] [("f", [], (.skip : Prog Nat))] 0 0 8
+        (progSize (.skip : Prog Nat) + 2) (fun _ => none) (fun _ => none)
+        (fun _ => none) evaluatorFfi 1 (.call none "f" []) none none none =
+      some (.control (.returned (fun _ => none) finalGlobals finalMemory finalFfi values),
+        finalClock) := by
+  exact evalPanValueFfiClockProg_call_none_of_functions evaluatorContext
+    (fun _ _ => none) evaluatorHandler []
+    [("f", [], (.skip : Prog Nat))] 0 0 8 (fun _ => none) (fun _ => none)
+    (fun _ => none) evaluatorFfi 1 "f" [] [] (.skip : Prog Nat) values calleeLocals
+    none none none hfunctions hargs hlookup hbind (by decide) hparams hreturn hwithin
+
 /-- Lifting a successful `Call` outcome through the clocked evaluator. -/
 example (outcome : PanValueFfiClockOutcome Nat Unit) (nextClock : Nat)
     (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)

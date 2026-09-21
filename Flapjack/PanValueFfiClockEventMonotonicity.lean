@@ -1064,4 +1064,29 @@ theorem evalPanValueFfiClockProg_extCall_statefulHandler_ioEvents_prefix
     (.normal nextLocals globals memory nextFfi) (expressionSteps + 1) hstep,
     hprefix⟩
 
+theorem evalPanValueFfiClockProg_tick_zero_timeout_ioEvents_prefix
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (contracts : Option PanValueCallContracts := none) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi 0
+      .tick (memoryAccess := memoryAccess) (contracts := contracts) =
+      some (.timeout (fun _ => none) globals memory ffi, 0) ∧
+      ffi.ioEvents <+: ffi.ioEvents := by
+  constructor
+  · exact evalPanValueFfiClockProg_tick_zero context primitive handler structs
+      functions baseAddress topAddress bytesInWord fuel locals globals memory ffi
+      memoryAccess contracts
+  · exact List.prefix_refl _
+
 end Flapjack

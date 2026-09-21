@@ -856,6 +856,7 @@ evaluator-evidence obligation. -/
 #check @panValuePcCompileCorrect_compact_with_raw_word_lists_context_code_of_state_evidence
 #check @panValuePcCompileCorrect_compact_ite_source_word_of_state_evidence_context_code
 #check @panValuePcCompileCorrect_compact_while_source_word_of_state_evidence_context_code
+#check @panValuePcCompileCorrect_compact_while_source_word_of_state_evidence_context_code_and_clocked
 
 /- The arbitrary word-list Raise bridge preserves the same explicit clocked
    evaluator and state/result premises at the top-level boundary. -/
@@ -877,5 +878,16 @@ evaluator-evidence obligation. -/
 /-! The paired raw-word-list dispatcher also accepts the explicit state
     evidence plus the exception lookup instead of the opaque callbacks. -/
 #check @panValuePcRaisedHraiseCases_with_raw_word_lists_paired_of_state_evidence
+
+/-! The plain (non-context-coded) store state-evidence instances are the
+    companions used by the ordinary compact correctness boundary. -/
+#check @panValuePcCompileCorrect_compact_store_source_word_of_state_evidence
+#check @panValuePcCompileCorrect_compact_store32_source_word_of_state_evidence
+#check @panValuePcCompileCorrect_compact_storeByte_source_word_of_state_evidence
+
+/-! The plain (non-context-coded) conditional and loop wrappers accept the
+    explicit state evidence instead of the opaque evaluator callback. -/
+#check @panValuePcCompileCorrect_compact_ite_source_word_of_state_evidence
+#check @panValuePcCompileCorrect_compact_while_source_word_of_state_evidence
 
 end Flapjack.Test.PanValuePcControlSafety

@@ -1006,7 +1006,6 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @compileProg_call_handler_missing_destination_of_compiled
 
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_handler
-<<<<<<< HEAD
 /-! The `Call_Ret` branch of Cake's `pc_compile_correct`: the
     assignment-producing call with no handler keeps the flattened destination
     slots when `wrap_rt` preserves the shape, and degrades to a tail call
@@ -1024,9 +1023,9 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
     handler program's evaluation from the handler-entry state. -/
 #check @evalCrepFullCallState_raised_handler_of_callee
 
-/-! The caught-handler call exposes the outer-to-inner handler branch: when the
-    callee raises with a matching code, the call's crep result is exactly the
-    handler program's evaluation from the handler-entry state. -/
-#check @evalCrepFullCallState_raised_handler_of_callee
+/-! Compositional source handler safety: a handler-free call and a declaration
+    body that never exposes loop control. -/
+#check @PanValueProgNotBrokeContinued_call_of_no_handler
+#check @PanValueProgNotBrokeContinued_dec
 
 end Flapjack.Test.PanValuePcControlSafety

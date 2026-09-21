@@ -935,6 +935,18 @@
       "tracked_beads": []
     },
     {
+      "path": "Flapjack/Test/OriginalPancake/gh1127_local_store_base.pnk",
+      "source_reference": "Original Cake local-store/current-heap backend oracle: storing to @base and reusing the current heap in a following bitwise operation remains byte-identical in Flapjack; this accepted witness is kept separate from the unresolved shared-Store carrier integration.",
+      "cake_sha256": "eb503d74ba413a9243ca2ceba8117910f8b455e35fe9f00679fb40212434272e",
+      "tracked_beads": ["flapjack-pxn.10"]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f84_frame_allocator.pnk",
+      "source_reference": "Fresh accepted frame/allocator witness from differential corpus f84-min: struct-returning mks/pair calls, nested local loads, and large constants produce byte-identical original Cake and Flapjack RISC-V artifacts.",
+      "cake_sha256": "c5683abc747d5e580dc25e2f80bed5182f2cf4fd356a08906ce22d7bf47205f8",
+      "tracked_beads": ["flapjack-pxn.8.5.14.1.5"]
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/currheap_add_const.pnk",
       "source_reference": "Differential-fuzz witness f00036-s65-i00036-mutate: `@base` lowers to a CurrHeap lookup, so Cake materialises the constant and emits a register add (`li a0,255; add a0,a0,s10`) instead of folding it into an `addi` (word_instScript.sml:246-275; GH #1128, flapjack-qxa).",
       "cake_sha256": "e8f57d997b29a84df77257814777fd08ff011cdbfd2cc782c4fdb854453a032c",
@@ -1021,6 +1033,22 @@
       "source_reference": "Minimized mixed-campaign witness (seed 20261004 index 108, flapjack-pxn.8.5.14.26): the nested call-handler, raise, loop and spill-pressure shape previously diverged in branch layout and output size. The merged Cake allocator-index and selector fixes now make the complete artifact byte-identical.",
       "cake_sha256": "9457abffc5e12e49d74dcdd9728c4612e879f0614c9b8359c9d4ef6d5e2cf3ad",
       "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00103_fuzz_global_struct_loop.pnk",
+      "source_reference": "Accepted original-Cake differential witness from seed 20261013: global-memory loads, struct/tuple fields, two FFI calls, stores, an exception, and a while body exercise the source-to-Word allocator/frame path. Cake and Flapjack artifacts are byte-identical.",
+      "cake_sha256": "b8eb375334d8e841abf6e566620ff5e90adb1b8f300b06c9e84cbde122c4cbe2",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.5"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00114_fuzz_global_pressure.pnk",
+      "source_reference": "Accepted original-Cake differential witness from seed 20261014 index 114: nested loops, exception handlers, struct/tuple fields, FFI calls, global-memory loads/stores, shifts, and register pressure exercise the allocator/frame path. Cake and Flapjack artifacts are byte-identical.",
+      "cake_sha256": "16b97031aaf03cf5b5ea7866f242201049fddec0198d8251e32afdf54f965712",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.5"
+      ]
     }
   ]
 }

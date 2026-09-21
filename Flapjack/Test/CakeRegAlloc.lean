@@ -651,6 +651,28 @@ def raMovesCoalesceGuard : Bool :=
       (.delta [1] [5, 3]) [] []).map sortColouring ==
     some (sortColouring [(1, 0), (3, 4), (5, 0)])
 
+/- Cake's `Simple` algorithm deliberately passes an empty move list to
+   `init_alloc1_heu`; this direct row mirrors `ra_simple_moves` in
+   `scripts/hol-probes/reg_alloc_probe.out` and keeps that algorithm branch
+   distinct from the IRC/coalescing path above. -/
+def raSimpleMovesGuard : Bool :=
+  (Flapjack.RiscV.CakeRegAlloc.cakeDoRegAlloc .simple none 4 [(1, (1, 5))]
+      (.delta [1] [5, 3]) [] []).map sortColouring ==
+    some (sortColouring [(1, 0), (3, 4), (5, 0)])
+
+#guard raSimpleMovesGuard
+
+/- The fixed physical endpoint follows Cake's `do_coalesce_real` branch:
+   x=2 is fixed, so coalescing y=5 into it does not increment x's degree.
+   The expected colouring is the direct `reg_alloc_probe.out` oracle
+   `ra_fixed_coalesce`. -/
+def raFixedCoalesceGuard : Bool :=
+  (Flapjack.RiscV.CakeRegAlloc.cakeDoRegAlloc .irc none 4
+      [(1, (2, 5))] (.delta [2] [5, 3]) [] []).map sortColouring ==
+    some (sortColouring [(2, 1), (3, 4), (5, 1)])
+
+#guard raFixedCoalesceGuard
+
 /-- A self move is filtered out by the consistency check; the colouring
     then matches the coalesced case. -/
 def raMovesSelfFilteredGuard : Bool :=
@@ -691,6 +713,25 @@ def doSpillEqualDegreeGuard : Bool :=
     (out.degrees.get 0).getD 0 == 0
 
 #guard doSpillEqualDegreeGuard
+
+/- Cake's `do_spill` returns `F` without touching the allocator state when
+   the spill worklist is empty (`reg_allocScript.sml:809-830`).  Keep this
+   boundary explicit so a driver cannot manufacture a stack entry or clear
+   unrelated worklists on an empty candidate set. -/
+def doSpillEmptyGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      simpWl := [1],
+      spillWl := [],
+      freezeWl := [2],
+      availMovesWl := [(3, (1, 2))],
+      unavailMovesWl := [(4, (2, 3))] }
+  let (changed, out) := cakeDoSpill none 4 state
+  !changed && out.dim == 4 && out.simpWl == [1] && out.spillWl == [] &&
+    out.freezeWl == [2] && out.availMovesWl == [(3, (1, 2))] &&
+    out.unavailMovesWl == [(4, (2, 3))] && out.stack == []
+
+#guard doSpillEmptyGuard
 
 /- Cake's `do_step` (`reg_allocScript.sml:832-857`) tries simplify before
    coalescing. With both worklists populated, simplify wins and leaves the
@@ -1364,6 +1405,7 @@ def maxVarControlLabelGuard : Bool :=
 
 #guard maxVarControlLabelGuard
 #guard sortMovesTailSplitGuard
+#guard sortMovesLongTieGuard
 #guard raDeltaTriangleGuard
 #guard raForcedEdgeGuard
 
@@ -1379,7 +1421,9 @@ def parityGuard : Bool :=
     graphTagsGuard && graphInitGuard && heuDeltaGuard && heuMovesGuard &&
     heuSpillGuard && heuFixedDegreeGuard && raDeltaPairGuard &&
     raDeltaFreeGuard && raDeltaTriangleGuard && raStackOnlyGuard &&
-    raMovesCoalesceGuard && raMovesSelfFilteredGuard && raForcedEdgeGuard &&
+    raMovesCoalesceGuard && raSimpleMovesGuard && raFixedCoalesceGuard &&
+      raMovesSelfFilteredGuard &&
+      raForcedEdgeGuard &&
     raOrderSeqGuard && raOrderCliqueGuard && raSpillCostGuard &&
     prefsMoveOrderGuard && prefsSeqOrderGuard && prefsControlFlowGuard &&
     prefsBranchOrderGuard &&
@@ -1407,7 +1451,8 @@ def parityGuard : Bool :=
     && coalesceParentCompressionGuard
     && prefreezeTransitionGuard
     && sortMovesTailSplitGuard && freezeWorklistTransitionGuard &&
-      doSpillEqualDegreeGuard && doStepSimplifyPriorityGuard &&
+      doSpillEqualDegreeGuard && doSpillEmptyGuard &&
+      doStepSimplifyPriorityGuard &&
       unspillTransitionGuard
       && coalesceSelfMoveRejectedGuard && applyColourProbeGuard
 
@@ -1427,7 +1472,8 @@ def runChecks : IO Bool := do
     graphTagsGuard, graphInitGuard, heuDeltaGuard, heuMovesGuard,
     heuSpillGuard, heuFixedDegreeGuard, raDeltaPairGuard, raDeltaFreeGuard,
     raDeltaTriangleGuard, raStackOnlyGuard, raMovesCoalesceGuard,
-    raMovesSelfFilteredGuard, raForcedEdgeGuard,
+    raSimpleMovesGuard,
+    raFixedCoalesceGuard, raMovesSelfFilteredGuard, raForcedEdgeGuard,
     raOrderSeqGuard, raOrderCliqueGuard, raSpillCostGuard,
     prefsMoveOrderGuard, prefsSeqOrderGuard, prefsControlFlowGuard,
     prefsBranchOrderGuard,
@@ -1456,7 +1502,7 @@ def runChecks : IO Bool := do
     respillBelowThresholdGuard, simplifyBatchGuard, decDegreeOutOfDimGuard,
     decDegreeOutOfDimNoOpGuard, coalesceWorklistSuccessGuard,
     freezeWorklistTransitionGuard, coalesceParentCompressionGuard,
-    prefreezeTransitionGuard, doSpillEqualDegreeGuard,
+    prefreezeTransitionGuard, doSpillEqualDegreeGuard, doSpillEmptyGuard,
     doStepSimplifyPriorityGuard, unspillTransitionGuard,
     worklistPrependGuard, extendCliqueGuard, splitDegreeGuard,
     smergePriorityGuard, applyColourProbeGuard]
@@ -1476,7 +1522,9 @@ def runChecks : IO Bool := do
     "init_alloc1_heu fixed degree", "reg_alloc delta pair",
     "reg_alloc delta free", "reg_alloc triangle",
     "reg_alloc stack only",
-    "reg_alloc moves coalesce", "reg_alloc moves self filtered",
+    "reg_alloc moves coalesce", "reg_alloc Simple ignores moves",
+    "reg_alloc fixed-endpoint coalesce",
+    "reg_alloc moves self filtered",
     "reg_alloc forced edge",
     "reg_alloc sequential pair order", "reg_alloc clique order",
     "reg_alloc spill-cost selection",
@@ -1511,6 +1559,7 @@ def runChecks : IO Bool := do
     "dec_degree out-of-dimension no-op with outside adjacency",
     "do_coalesce success transition", "do_freeze transition",
     "do_prefreeze transition", "do_spill equal-degree transition",
+    "do_spill empty-worklist no-op",
     "do_step simplify priority", "unspill transition", "worklist prepend",
     "extend clique", "split degree", "smerge priority",
     "apply_colour rewrites source Word register fields"]

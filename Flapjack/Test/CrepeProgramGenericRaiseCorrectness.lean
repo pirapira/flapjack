@@ -2680,6 +2680,146 @@ theorem three_word_raise_pc_compile_correct_direct_clocked_raised
     (fun _ => none) directClockFfi (.raise "E" sourceExpression)
     targetState "E" sourceValue 9 hclock hclockState hclockRaiseData
 
+theorem nested_raise_pc_compile_correct_direct_clocked_raised
+    (sourceFuel targetFuel : Nat)
+    (targetState : CrepState Nat)
+    (hcompact : PanValuePcCompileCorrectWithContextCode
+      (panValuePcCompactSourceEvaluator
+        (fun _ _ => none) (fun _ _ _ _ _ _ => none) []
+        0 0 8 sourceFuel)
+      (crepPcCompactTargetEvaluator [] (fun _ _ => none)
+        (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none)
+        0 0 targetFuel)
+      (fun _ _ _ => True) (fun _ _ _ => True)
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8) (.raise "E" nestedSourceExpression))
+    (hclock :
+      evalPanValueFfiClockProg directClockContext (fun _ _ => none)
+        directClockHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+        (fun _ => none) directClockFfi 1 (.raise "E" nestedSourceExpression) =
+      some (.control (.raised (fun _ => none) (fun _ => none)
+        (fun _ => none) directClockFfi "E" nestedSourceValue), 1))
+    (hclockState : panValueCrepStateRel [] context
+      (fun _ => none) (fun _ => none) (fun _ => none) targetState)
+    (hclockRaiseData : panValuePcRaisedHraiseData
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8) [] context (fun _ _ code => code = 9)
+      (fun _ => none) (fun _ => none) (fun _ => none) "E" nestedSourceValue
+      targetState 9 ∧ lookupInfo "E" context.exceptions = some 9) :
+    PanValuePcCompileCorrectWithContextCode
+      (panValuePcCompactSourceEvaluator
+        (fun _ _ => none) (fun _ _ _ _ _ _ => none) [] 0 0 8 sourceFuel)
+      (crepPcCompactTargetEvaluator [] (fun _ _ => none)
+        (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none) 0 0 targetFuel)
+      (fun _ _ _ => True) (fun _ _ _ => True)
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8) (.raise "E" nestedSourceExpression) ∧
+    evalPanValueFfiClockProg directClockContext (fun _ _ => none)
+      directClockHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+      (fun _ => none) directClockFfi 1 (.raise "E" nestedSourceExpression) =
+      some (.control (.raised (fun _ => none) (fun _ => none)
+        (fun _ => none) directClockFfi "E" nestedSourceValue), 1) ∧
+    (evalPanValueFfiClockProg directClockContext (fun _ _ => none)
+      directClockHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+      (fun _ => none) directClockFfi 1 (.raise "E" nestedSourceExpression)).map
+        panValueFfiClockResultProjection =
+      some (.raised (fun _ => none) (fun _ => none)
+        (fun _ => none) directClockFfi "E" nestedSourceValue 1) ∧
+    panValuePcResultRelWithContextCode [] context
+      (fun _ _ code => code = 9)
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8)
+      (.raised (fun _ => none) (fun _ => none) (fun _ => none)
+        "E" nestedSourceValue) (.raised targetState 9) := by
+  exact panValuePcCompileCorrectWithContextCode_of_compact_evaluators_and_clocked_raised_hraise_data
+    (panValuePcCompactSourceEvaluator
+      (fun _ _ => none) (fun _ _ _ _ _ _ => none) [] 0 0 8 sourceFuel)
+    (crepPcCompactTargetEvaluator [] (fun _ _ => none)
+      (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none) 0 0 targetFuel)
+    (fun _ _ _ => True) (fun _ _ _ => True)
+    (fun exception => if exception = "E" then some 9 else none)
+    (crepPcFlatGlobalsLookup 8) (.raise "E" nestedSourceExpression)
+    hcompact [] context (fun _ _ code => code = 9)
+    (fun exception => if exception = "E" then some 9 else none)
+    (crepPcFlatGlobalsLookup 8) directClockContext (fun _ _ => none)
+    directClockHandler [] 0 0 8 0 1 (fun _ => none) (fun _ => none)
+    (fun _ => none) directClockFfi (.raise "E" nestedSourceExpression)
+    targetState "E" nestedSourceValue 9 hclock hclockState hclockRaiseData
+
+theorem nested_raise_pc_compile_correct_direct_clocked_raised_projection
+    (sourceFuel targetFuel : Nat)
+    (targetState : CrepState Nat)
+    (hcontext :
+      PanValuePcCompileCorrectWithContextCode
+        (panValuePcCompactSourceEvaluator
+          (fun _ _ => none) (fun _ _ _ _ _ _ => none) [] 0 0 8 sourceFuel)
+        (crepPcCompactTargetEvaluator [] (fun _ _ => none)
+          (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none)
+          0 0 targetFuel)
+        (fun _ _ _ => True) (fun _ _ _ => True)
+        (fun exception => if exception = "E" then some 9 else none)
+        (crepPcFlatGlobalsLookup 8) (.raise "E" nestedSourceExpression) ∧
+      evalPanValueFfiClockProg directClockContext (fun _ _ => none)
+        directClockHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+        (fun _ => none) directClockFfi 1 (.raise "E" nestedSourceExpression) =
+        some (.control (.raised (fun _ => none) (fun _ => none)
+          (fun _ => none) directClockFfi "E" nestedSourceValue), 1) ∧
+      (evalPanValueFfiClockProg directClockContext (fun _ _ => none)
+        directClockHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+        (fun _ => none) directClockFfi 1 (.raise "E" nestedSourceExpression)).map
+          panValueFfiClockResultProjection =
+        some (.raised (fun _ => none) (fun _ => none)
+          (fun _ => none) directClockFfi "E" nestedSourceValue 1) ∧
+      panValuePcResultRelWithContextCode [] context
+        (fun _ _ code => code = 9)
+        (fun exception => if exception = "E" then some 9 else none)
+        (crepPcFlatGlobalsLookup 8)
+        (.raised (fun _ => none) (fun _ => none) (fun _ => none)
+          "E" nestedSourceValue) (.raised targetState 9)) :
+    PanValuePcCompileCorrect
+      (panValuePcCompactSourceEvaluator
+        (fun _ _ => none) (fun _ _ _ _ _ _ => none) [] 0 0 8 sourceFuel)
+      (crepPcCompactTargetEvaluator [] (fun _ _ => none)
+        (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none)
+        0 0 targetFuel)
+      (fun _ _ _ => True) (fun _ _ _ => True)
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8) (.raise "E" nestedSourceExpression) ∧
+    evalPanValueFfiClockProg directClockContext (fun _ _ => none)
+      directClockHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+      (fun _ => none) directClockFfi 1 (.raise "E" nestedSourceExpression) =
+      some (.control (.raised (fun _ => none) (fun _ => none)
+        (fun _ => none) directClockFfi "E" nestedSourceValue), 1) ∧
+    (evalPanValueFfiClockProg directClockContext (fun _ _ => none)
+      directClockHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+      (fun _ => none) directClockFfi 1 (.raise "E" nestedSourceExpression)).map
+        panValueFfiClockResultProjection =
+      some (.raised (fun _ => none) (fun _ => none)
+        (fun _ => none) directClockFfi "E" nestedSourceValue 1) ∧
+    panValuePcResultRel [] context
+      (fun _ _ code => code = 9)
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8)
+      (.raised (fun _ => none) (fun _ => none) (fun _ => none)
+        "E" nestedSourceValue) (.raised targetState 9) := by
+  exact panValuePcCompileCorrect_of_context_code_and_clocked_raised
+    (.raise "E" nestedSourceExpression)
+    (panValuePcCompactSourceEvaluator
+      (fun _ _ => none) (fun _ _ _ _ _ _ => none) [] 0 0 8 sourceFuel)
+    (crepPcCompactTargetEvaluator [] (fun _ _ => none)
+      (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none)
+      0 0 targetFuel)
+    (fun _ _ _ => True) (fun _ _ _ => True)
+    (fun exception => if exception = "E" then some 9 else none)
+    (crepPcFlatGlobalsLookup 8)
+    hcontext.1 [] context (fun _ _ code => code = 9)
+    (fun exception => if exception = "E" then some 9 else none)
+    (crepPcFlatGlobalsLookup 8) directClockContext (fun _ _ => none)
+    directClockHandler [] 0 0 8 0 1 (fun _ => none) (fun _ => none)
+    (fun _ => none) directClockFfi (.raise "E" nestedSourceExpression)
+    targetState "E" nestedSourceValue 9 hcontext.2.1 hcontext.2.2.2.1
+    hcontext.2.2.2.2
+
 example
     (sourceFunctions : List (FunName × List VarName × Prog Nat))
     (functions : List (CompiledFunction Nat))
@@ -2978,12 +3118,74 @@ example
     (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none) 0 0 8 0 hlookup hevidence
   trivial
 
+example
+    (sourceFuel targetFuel : Nat)
+    (hcompact : PanValuePcCompileCorrectWithContextCode
+      (panValuePcCompactSourceEvaluator
+        (fun _ _ => none) (fun _ _ _ _ _ _ => none) [] 0 0 8 sourceFuel)
+      (crepPcCompactTargetEvaluator [] (fun _ _ => none)
+        (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none) 0 0 targetFuel)
+      (fun _ _ _ => True) (fun _ _ _ => True)
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8) (.raise "E" sourceExpression))
+    (clockProgram : Prog Nat) (clockTargetState : CrepState Nat)
+    (event targetEvent : FfiFinalEvent) (finalFfi : FfiState Unit)
+    (hclock : evalPanValueFfiClockLeaf directClockContext (fun _ _ => none)
+      directClockHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+      (fun _ => none) directClockFfi clockProgram =
+      some (.control
+        (.finalFfi (fun _ => none) (fun _ => none) (fun _ => none)
+          finalFfi event), 1))
+    (hclockState : panValueCrepStateRel [] context
+      (fun _ => none) (fun _ => none) (fun _ => none) clockTargetState)
+    (hevent : event = targetEvent) :
+    PanValuePcCompileCorrectWithContextCode
+      (panValuePcCompactSourceEvaluator
+        (fun _ _ => none) (fun _ _ _ _ _ _ => none) [] 0 0 8 sourceFuel)
+      (crepPcCompactTargetEvaluator [] (fun _ _ => none)
+        (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none) 0 0 targetFuel)
+      (fun _ _ _ => True) (fun _ _ _ => True)
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8) (.raise "E" sourceExpression) ∧
+    evalPanValueFfiClockLeaf directClockContext (fun _ _ => none)
+      directClockHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+      (fun _ => none) directClockFfi clockProgram =
+      some (.control
+        (.finalFfi (fun _ => none) (fun _ => none) (fun _ => none)
+          finalFfi event), 1) ∧
+    (evalPanValueFfiClockLeaf directClockContext (fun _ _ => none)
+      directClockHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+      (fun _ => none) directClockFfi clockProgram).map
+        panValueFfiClockResultProjection =
+      some (.finalFfi (fun _ => none) (fun _ => none) (fun _ => none)
+        finalFfi event 1) ∧
+    panValuePcResultRelWithContextCode [] context (fun _ _ code => code = 9)
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8)
+      (.finalFfi (fun _ => none) (fun _ => none) (fun _ => none) event)
+      (.finalFfi clockTargetState targetEvent) := by
+  exact panValuePcCompileCorrectWithContextCode_of_compact_evaluators_and_clocked_final_ffi
+    (panValuePcCompactSourceEvaluator
+      (fun _ _ => none) (fun _ _ _ _ _ _ => none) [] 0 0 8 sourceFuel)
+    (crepPcCompactTargetEvaluator [] (fun _ _ => none)
+      (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none) 0 0 targetFuel)
+    (fun _ _ _ => True) (fun _ _ _ => True)
+    (fun exception => if exception = "E" then some 9 else none)
+    (crepPcFlatGlobalsLookup 8) (.raise "E" sourceExpression) hcompact [] context
+    (fun _ _ code => code = 9)
+    (fun exception => if exception = "E" then some 9 else none)
+    (crepPcFlatGlobalsLookup 8) directClockContext (fun _ _ => none)
+    directClockHandler [] 0 0 8 1 (fun _ => none) (fun _ => none)
+    (fun _ => none) directClockFfi clockProgram clockTargetState event
+    targetEvent finalFfi hclock hclockState hevent
+
 def runChecks : IO Bool := do
   IO.println "PASS generic three-word Raise evaluator relation"
   IO.println "PASS generic raised semantic/global lookup lift"
   IO.println "PASS direct arbitrary context-coded pc_compile_correct evaluator instantiation"
   IO.println "PASS direct arbitrary context-coded clocked evaluator instantiation"
   IO.println "PASS direct arbitrary context-coded raised clock evaluator instantiation"
+  IO.println "PASS nested arbitrary context-coded clocked Raise projects to pc_compile_correct"
   IO.println "PASS compact ExtCall pc_compile_correct bridge instantiation"
   IO.println "PASS compact ExtCall context-coded bridge instantiation"
   IO.println "PASS declaration restoration preserves control-label safety"
@@ -2993,6 +3195,9 @@ def runChecks : IO Bool := do
   IO.println "PASS expression-state evidence derives generic flat-global Raise package"
   IO.println "PASS expression-state evidence composes to compact pc_compile_correct"
   IO.println "PASS expression-state evidence composes to context-coded pc_compile_correct"
+  IO.println "PASS expression-state context bridge composes with clocked Raise"
+  IO.println "PASS expression-state context bridge composes with clocked Timeout"
+  IO.println "PASS compact context bridge composes with clocked FinalFFI"
   IO.println "PASS nested raised semantic/global lookup lift"
   pure true
 

@@ -1,0 +1,5 @@
+fun 1 main() {
+  var 1 y = 0;
+  !ld8 y, (@base + 8);
+  return y;
+}

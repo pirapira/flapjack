@@ -56,7 +56,10 @@ instance : WordInstSelectImmediate Nat where
      12-bit immediate test as the concrete `BitVec 64` instance. -/
   validBinOpImmediate operator value :=
     match operator with
-    | .sub => value < 2 ^ 11
+    /- RISC-V's `valid_imm` is strict at the negative endpoint for Sub:
+       `min12 < i <= max12`.  In the 64-bit word carrier this includes the
+       bit patterns for -2047 through -1 as well as 0 through 2047. -/
+    | .sub => value < 2 ^ 11 || value > 2 ^ 64 - 2 ^ 11
     | .add | .and | .or | .xor =>
         value < 2 ^ 11 || value ≥ 2 ^ 64 - 2 ^ 11
   validSharedMemoryOffset _operator value :=
@@ -71,7 +74,7 @@ instance : WordInstSelectImmediate (BitVec width) where
   validBinOpImmediate operator value :=
     let n := value.toNat
     match operator with
-    | .sub => n < 2 ^ 11
+    | .sub => n < 2 ^ 11 || n > 2 ^ width - 2 ^ 11
     | .add | .and | .or | .xor =>
         n < 2 ^ 11 || n ≥ 2 ^ width - 2 ^ 11
   validSharedMemoryOffset _operator value :=
@@ -143,7 +146,8 @@ def wordInstIsConstant : WordExp α → Bool
     uses the available `And`/`Or`/`Xor`/arithmetic operation classes for
     non-zero folds too.  Unlike the other operators, `And` folds its
     non-empty constant list from the first operand, so no all-ones identity
-    is required; `op_consts` for empty operand lists remains a separate gap. -/
+    is required; `op_consts` for empty operand lists is handled by
+    `wordInstOpConstants` below. -/
 def wordInstConstantValue : WordExp α → Option α
   | .const value => some value
   | _ => none

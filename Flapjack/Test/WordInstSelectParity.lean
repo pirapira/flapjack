@@ -153,6 +153,26 @@ def cakeWideAddMaterializesConstant : Bool :=
       value == 2 ^ 60
   | _ => false
 
+/- Cake's RISC-V `valid_imm` accepts the two's-complement Sub operand -2047
+   (word pattern 2^64-2047), whose encoder emits ADDI +2047. -/
+def cakeSubNegativeImmediateBoundary : Bool :=
+  match wordInstSelectAtom (α := Nat) 23
+      (.op .sub [.var 18, .const (2 ^ 64 - 2047)]) with
+  | (.seq (.move 0 [(23, 18)])
+      (.inst (.arith (.binOp .sub 23 23 (.imm value)))), .var 23) =>
+      value == 2 ^ 64 - 2047
+  | _ => false
+
+/- The strict Cake lower endpoint rejects -2048 for Sub and materializes it. -/
+def cakeSubNegativeImmediateExcluded : Bool :=
+  match wordInstSelectAtom (α := Nat) 23
+      (.op .sub [.var 18, .const (2 ^ 64 - 2048)]) with
+  | (.seq (.seq (.move 0 [(23, 18)])
+      (.inst (.const 24 value)))
+      (.inst (.arith (.binOp .sub 23 23 (.reg 24)))), .var 23) =>
+      value == 2 ^ 64 - 2048
+  | _ => false
+
 def cakeSharedByteOffsetMaterializesConstant : Bool :=
   match wordInstSelectProgram (α := Nat) 23
       (.shareInst .store8 10
@@ -336,6 +356,8 @@ def cakeStoreSelectorConstShape : Bool :=
 #guard cakeXorLogicalImmediateBoundary
 #guard cakeXorLogicalImmediateFirstMaterialized
 #guard cakeWideAddMaterializesConstant
+#guard cakeSubNegativeImmediateBoundary
+#guard cakeSubNegativeImmediateExcluded
 #guard cakeSharedByteOffsetMaterializesConstant
 #guard cakeSharedOddHalfwordOffset
 #guard cakeSharedLoad32PositiveBoundary

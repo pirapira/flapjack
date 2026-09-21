@@ -5909,4 +5909,32 @@ theorem PanValueFfiClockNormalAdequateProgFrom_tick
         baseAddress topAddress bytesInWord 0 locals globals memory ffi clock ma c mh
         (by intro hzero; omega))⟩
 
+/-- A lower-bounded adequate zero-condition `While`: the loop exits immediately
+    without spending a tick, so the bound is irrelevant. -/
+theorem PanValueFfiClockNormalAdequateProgFrom_while_zero
+    (lo : Nat)
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (ma : Option (PanValueMemoryAccess α))
+    (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (condition : Exp α) (body : Prog α)
+    (hcondition : ∀ (locals globals : VarName → Option (PanValue α))
+      (memory : α → Option (PanValue α)),
+      ∃ w : α, evalPanValueExp structs locals globals memory baseAddress topAddress
+        bytesInWord condition (memoryAccess := ma) = some (.word w) ∧ (w == 0) = true) :
+    PanValueFfiClockNormalAdequateProgFrom lo context primitive handler structs functions
+      baseAddress topAddress bytesInWord callBudget ma c mh (.while condition body) := by
+  intro clock _ locals globals memory ffi
+  obtain ⟨w, hcond, hw⟩ := hcondition locals globals memory
+  exact ⟨locals, globals, memory, ffi, clock,
+    evalPanValueFfiClockProg_while_zero_some_progCallFuel context primitive handler structs
+      functions baseAddress topAddress bytesInWord callBudget locals globals memory ffi clock
+      condition body ma c mh w hcond hw⟩
+
 end Flapjack

@@ -98,7 +98,6 @@ import Flapjack.CrepeProgramExtCallCorrectness
 import Flapjack.CrepeProgramInduction
 import Flapjack.PanToCrepCorrectnessBoundary
 import Flapjack.PanToCrepCorrectnessBridge
-import Flapjack.PanToCrepDecCallCorrectness
 import Flapjack.PanToCrepProgramComposition
 import Flapjack.PanToCrepTailCallCorrectness
 import Flapjack.PanToCrepMaxList

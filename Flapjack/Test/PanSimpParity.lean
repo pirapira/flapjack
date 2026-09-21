@@ -422,6 +422,26 @@ example : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorH
       evaluatorHandler [] [] 0 0 8 0 (fun _ => none) (fun _ => none) (fun _ => none)
       evaluatorFfi 1 "tag" "text" none none none)
 
+/-- The same nonzero `Ite` at its own `progSize` budget (no free fuel parameter);
+    the branch is evaluated at the combined `progSize` branch budget. -/
+example : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+    [] [] 0 0 8 (progSize (.ite (.const 5) (.annot "tag" "text") (.tick : Prog Nat)))
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    (.ite (.const 5) (.annot "tag" "text") (.tick : Prog Nat)) =
+    some (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi), 1) := by
+  exact evalPanValueFfiClockProg_ite_true_some_progSize evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 (fun _ => none) (fun _ => none)
+    (fun _ => none) evaluatorFfi 1 (.const 5) (.annot "tag" "text") (.tick : Prog Nat)
+    none none none 5 (.control (.normal (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi)) 1
+    (by simp [evalPanValueExp]) (by decide)
+    (by
+      simpa only [progSize] using
+        (evalPanValueFfiClockProg_annot_some evaluatorContext (fun _ _ => none)
+          evaluatorHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none) (fun _ => none)
+          evaluatorFfi 1 "tag" "text" none none none))
+
 /-- Lifting a successful `Call` outcome through the clocked evaluator. -/
 example (outcome : PanValueFfiClockOutcome Nat Unit) (nextClock : Nat)
     (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)

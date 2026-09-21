@@ -2543,4 +2543,8 @@ example : PanValueFfiClockNormalAdequateProgFromFloor 0 0 evaluatorContext
 #check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_of_from
 #check @Flapjack.PanValueFfiClockNormalAdequateProgFrom_of_fromFloor
 
+/-! Clock-preserving leaves also expose the input bound as their floor. -/
+#check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_while_zero
+#check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_leaf
+
 end Flapjack.Test.PanSimpParity

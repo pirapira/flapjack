@@ -971,6 +971,36 @@ theorem evalPanValueFfiClockProgram_of_declarations_and_returned_call
       some (.control (.returned locals globals memory ffi [value]), nextClock) := by
   simp [evalPanValueFfiClockProgram, hdeclarations, hcall, hentry, hshape]
 
+theorem evalPanValueFfiClockProgram_of_declarations_and_call
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (initial : PanValueFfiProgramState α σ)
+    (clock : Nat)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (fuel : Nat) (declarations : List (Decl α))
+    (entry : FunName) (arguments : List (Exp α))
+    (state : PanValueProgramState α)
+    (outcome : PanValueFfiClockOutcome α σ) (nextClock : Nat)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none)
+    (hdeclarations : evalPanValueDeclarations initial.source declarations
+      (memoryAccess := memoryAccess) = some state)
+    (hentry : lookupInfo entry state.returnShapes = none)
+    (hcall : evalPanValueFfiClockCall context primitive handler state.structs
+      state.functions state.baseAddress state.topAddress state.bytesInWord fuel
+      (fun _ => none) state.globals state.memory initial.ffi clock none entry arguments
+      (memoryAccess := memoryAccess)
+      (contracts := some (PanValueCallContracts.mk state.returnShapes
+        state.exceptions state.parameterShapes))
+      (memoryHandler := memoryHandler) = some (outcome, nextClock)) :
+    evalPanValueFfiClockProgram context initial clock primitive handler fuel
+      declarations entry arguments (memoryAccess := memoryAccess)
+      (memoryHandler := memoryHandler) = some (outcome, nextClock) := by
+  simp [evalPanValueFfiClockProgram, hdeclarations, hcall, hentry]
+
 variable {α σ : Type}
 variable [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Sub α] [AndOp α] [OrOp α]
 variable [HXor α α α] [ShiftLeft α] [ShiftRight α] [LT α]

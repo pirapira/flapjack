@@ -65,6 +65,18 @@ example :
         .or 4 4 31] := by
   decide
 
+/-! Negative wide values use the Cake high-word complement and XOR carrier. -/
+example :
+    wordConstToInstructions (width := 64) 4
+        (BitVec.ofNat 64 0xffeeddccbbaa9988) =
+      some [.lui 31 (BitVec.ofNat 64 0x44556),
+        .xori 31 31 (BitVec.ofNat 64 0x988),
+        .lui 4 (BitVec.ofNat 64 0x112),
+        .addi 4 4 (BitVec.ofNat 64 0x233),
+        .slli 4 4 (BitVec.ofNat 64 32),
+        .xor 4 4 31] := by
+  decide
+
 example :
     wordConstToInstructions (width := 64) 4 (BitVec.ofNat 64 (2 ^ 64 - 8)) =
       some [.ori 4 0 (BitVec.ofNat 64 0xff8)] := by

@@ -383,6 +383,19 @@ theorem map_getD_map_some {α β : Type} (f : α → Option β) (default : β)
           simp only [List.map_cons, hfx, Option.getD_some, List.cons.injEq]
           exact ⟨trivial, ih ys htail⟩
 
+/-- Cake's `map_the_some_cancel` (`pan_commonPropsScript.sml:332`):
+    mapping `THE ∘ SOME` over a list is the identity. Flapjack's total
+    `Option.getD` replaces Cake's partial `THE`, so the statement is the
+    `some`/`getD` form below. -/
+theorem map_some_getD_eq_self {α : Type} (default : α) (xs : List α) :
+    xs.map (fun x => (some x : Option α).getD default) = xs := by
+  simp
+
+/-- Cake's `set_eq_membership` (`pan_commonPropsScript.sml:624`): membership
+    transports along an equality. -/
+theorem mem_of_eq_mem {α : Type} {a b : α} {s : List α} (h : a = b)
+    (hmem : a ∈ s) : b ∈ s := h ▸ hmem
+
 /-- Cake's `lookup_some_el` (`pan_commonPropsScript.sml:758`), stated for the
     list-backed lookup that Flapjack uses instead of Cake's `fromAList` finite
     map: a successful lookup exposes an index carrying the entry. -/

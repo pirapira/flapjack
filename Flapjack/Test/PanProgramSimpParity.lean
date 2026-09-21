@@ -78,6 +78,16 @@ theorem list_mapM_eq_some_iff_length_fixture :
   ((list_mapM_eq_some_iff (fun n : Nat => if n == 4 then none else some (n + 1)) [3, 5]
     [4, 6]).mp (by decide)).1
 
+/-- `opt_mmap_eq_every` (`pan_structsProofScript.sml:255`). -/
+theorem list_mapM_all_of_mem_fixture :
+    ([4, 6] : List Nat).all (fun n => decide (n > 3)) = true :=
+  list_mapM_all_of_mem (fun n : Nat => if n == 4 then none else some (n + 1))
+    (fun n => decide (n > 3)) [3, 5] [4, 6] (by decide)
+    (by
+      intro x y hx hxy
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
+      rcases hx with rfl | rfl | rfl <;> simp_all <;> omega)
+
 /-! Regression for Cake's `state_rel_imp_evaluate_decls`
     (`pan_simpProofScript.sml:1303-1331`): the declaration-level evaluator
     preserves the state relation whose only non-trivial component simplifies
@@ -648,6 +658,29 @@ example : True := by
       simp [evalRelState, isWfShape]
   have _h := evalPanValueDeclarations_exns_wf_sufficiency evalRelState exnsWfDecls
     none hall hnodup hnone hwf
+  trivial
+
+/-- Focused regression for the `evaluate_decls_one_fun_last` counterpart: a
+    trailing function declaration may be moved to the front when every
+    preceding declaration is a global or exception declaration. -/
+def oneFunLastDecls : List (Decl Nat) :=
+  [.decl .one "g" (.const 7), .exnDecl "E" .one]
+
+def oneFunLastGuard : Bool :=
+  (evalPanValueDeclarationsWithStructs ([] : StructContext) evalRelState
+      (oneFunLastDecls ++ [.function wfFunction]) none).isSome ==
+    (evalPanValueDeclarationsWithStructs ([] : StructContext) evalRelState
+      (.function wfFunction :: oneFunLastDecls) none).isSome
+
+#eval oneFunLastGuard
+#guard oneFunLastGuard
+
+example : True := by
+  have hrest : oneFunLastDecls.all
+      (fun declaration => isDecl declaration || isExnDecl declaration) = true := by
+    simp [oneFunLastDecls, isDecl, isExnDecl]
+  have _h := evalPanValueDeclarationsWithStructs_one_fun_last
+    ([] : StructContext) evalRelState wfFunction oneFunLastDecls none hrest
   trivial
 
 end Flapjack.Test.PanProgramSimpParity

@@ -815,4 +815,12 @@ example
   panValuePcRaisedHraiseCases_of_state_evidence exceptionCode globalsLookup
     hword htwo hthree hpost hcode hlookup hsize
 
+/- The context-code state-evidence wrapper is available at the expected
+signature (no opaque raised-data obligation). -/
+#check @panValuePcCompileCorrect_compact_with_raised_state_evidence_context_code
+
+/- The concrete one-word-record raise instance also drops the opaque
+evaluator-evidence obligation. -/
+#check @panValuePcCompileCorrect_compact_one_word_raise_of_state_evidence
+
 end Flapjack.Test.PanValuePcControlSafety

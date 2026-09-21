@@ -65,4 +65,33 @@ example : PanValueCrepProgramStateCorrect
   exact panValueCrepProgramStateCorrect_seq_return_const 11 .tick
     panValueCrepProgramStateCorrect_tick
 
+example (locals : Nat → Option Nat) (names : List Nat) (values : List Nat)
+    (hread : readCrepLocals locals names = some values) :
+    values.length = names.length := by
+  exact readCrepLocals_length locals names values hread
+
+example (structs : StructContext) (context : CompileContext Nat)
+    (sourceLocals : VarName → Option (PanValue Nat))
+    (crepLocals : Nat → Option Nat) (name : VarName)
+    (value : PanValue Nat) (shape : Shape) (slots : List Nat)
+    (hrel : panValueCrepLocalsRel structs context sourceLocals crepLocals)
+    (hsource : sourceLocals name = some value)
+    (hlookup : lookupInfo name context.vars = some (shape, slots)) :
+    panShapeMatches (panValueShape structs value) shape = true ∧
+      slots.length = (panValueFlatWords value).length ∧
+      readCrepLocals crepLocals slots = some (panValueFlatWords value) := by
+  exact panValueCrepLocalsRel_lookup_evidence structs context sourceLocals
+    crepLocals name value shape slots hrel hsource hlookup
+
+example (structs : StructContext) (context : CompileContext Nat)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+    (sourceMemory : Nat → Option (PanValue Nat)) (crepState : CrepState Nat)
+    (address value : Nat)
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory crepState)
+    (hmemory : sourceMemory address = some (.word value)) :
+    crepState.memory address = some value := by
+  exact panValueCrepStateRel_memory_lookup structs context sourceLocals
+    sourceGlobals sourceMemory crepState address value hrel hmemory
+
 end Flapjack.Test.CrepeProgramInduction

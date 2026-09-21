@@ -86,4 +86,10 @@ theorem list_zip_map_eq_fixture :
         (fun p => (p.1 + 1, p.2 * 2)) = ([2, 3] : List Nat).zip ([20, 40] : List Nat) :=
   list_zip_map_eq (fun n : Nat => n + 1) (fun n : Nat => n * 2) [1, 2] [10, 20] rfl
 
+/-- Parity check for the Cake `UNCURRY_EQ_o_SND` lemma. -/
+theorem prod_uncurry_const_eq_comp_snd_fixture :
+    Function.uncurry (fun _ : Nat => (fun n : Nat => n + 1)) =
+        (fun n : Nat => n + 1) ∘ Prod.snd :=
+  prod_uncurry_const_eq_comp_snd (fun n : Nat => n + 1)
+
 end Flapjack.Test.PanStructsAfindiParity

@@ -1021,6 +1021,12 @@
       "source_reference": "Minimized mixed-campaign witness (seed 20261004 index 108, flapjack-pxn.8.5.14.26 / GH #1133): the nested call-handler, raise, loop and spill-pressure shape previously dropped a handler move and swapped Cake spill slots. The merged Cake allocator-index and selector fixes now make the complete artifact byte-identical.",
       "cake_sha256": "9457abffc5e12e49d74dcdd9728c4612e879f0614c9b8359c9d4ef6d5e2cf3ad",
       "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f01266_handler_spill_slots.pnk",
+      "source_reference": "Minimized f01266 call-handler clash-tree witness (GH #1133, flapjack-8tb.10): Cake retains the handler move `(57,47)` and therefore the original clash-tree traversal and spill-slot order. The merged Cake allocator-index fix restores this ordering and makes the artifact byte-identical.",
+      "cake_sha256": "8700bc4385d4f8f02fcc7e4ca961bdd4990eb55f60612d5644f53f812bec7e54",
+      "tracked_beads": []
     }
   ]
 }

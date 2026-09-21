@@ -884,4 +884,9 @@ evaluator-evidence obligation. -/
 #check @panValuePcCompileCorrect_compact_store32_source_word_of_state_evidence
 #check @panValuePcCompileCorrect_compact_storeByte_source_word_of_state_evidence
 
+/-! The plain (non-context-coded) conditional and loop wrappers accept the
+    explicit state evidence instead of the opaque evaluator callback. -/
+#check @panValuePcCompileCorrect_compact_ite_source_word_of_state_evidence
+#check @panValuePcCompileCorrect_compact_while_source_word_of_state_evidence
+
 end Flapjack.Test.PanValuePcControlSafety

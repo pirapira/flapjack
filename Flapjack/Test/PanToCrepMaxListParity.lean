@@ -26,6 +26,19 @@ theorem maxList_append_value_fixture : maxList (first ++ second) = 9 := by
 theorem maxList_not_mem_fixture : (10 : Nat) ∉ first :=
   maxList_not_mem 10 first (by decide)
 
+theorem maxList_ge_of_mem_fixture : (3 : Nat) ≤ maxList first :=
+  maxList_ge_of_mem first 3 (by decide)
+
+theorem maxList_add_one_not_mem_fixture : maxList first + 1 ∉ first :=
+  maxList_add_one_not_mem first
+
+theorem maxList_range_fixture : maxList (List.range 5) = 4 :=
+  maxList_range 5
+
+#check @maxList_ge_of_mem
+#check @maxList_add_one_not_mem
+#check @maxList_range
+
 #guard maxList first = 7
 #guard maxList (first ++ second) = 9
 #guard decide ((10 : Nat) ∉ first)

@@ -342,4 +342,32 @@ example : True := by
         evalRelState state' functionsDecls none heval
       trivial
 
+/-! Regression for Cake's `evaluate_decls_eshapes`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1409`): a successful
+    declaration evaluation only prepends the list's exception entries to the
+    exception-shape table. -/
+
+def exceptionsDecls : List (Decl Nat) :=
+  [.exnDecl "E" .one, .decl .one "g" (.const 7), .exnDecl "F" .one]
+
+def exceptionsGuard : Bool :=
+  match evalPanValueDeclarationsWithStructs ([] : StructContext) evalRelState
+      exceptionsDecls none with
+  | some state' =>
+      state'.exceptions.length ==
+        (panExceptionEntries exceptionsDecls ++ evalRelState.exceptions).length
+  | none => false
+
+#eval exceptionsGuard
+#guard exceptionsGuard
+
+example : True := by
+  cases heval : evalPanValueDeclarationsWithStructs ([] : StructContext)
+      evalRelState exceptionsDecls none with
+  | none => trivial
+  | some state' =>
+      have _h := evalPanValueDeclarationsWithStructs_exceptions ([] : StructContext)
+        evalRelState state' exceptionsDecls none heval
+      trivial
+
 end Flapjack.Test.PanProgramSimpParity

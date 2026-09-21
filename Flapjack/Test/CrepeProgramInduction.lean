@@ -16,7 +16,7 @@ declarations through the same relation-premised state-correctness
 constructors used by the Pancake cases. -/
 #check @StatefulWordProg.callWord
 #check @StatefulWordProg.decWord
-#check @StatefulWordProg.decExpression
+#check @StatefulWordProg.decContract
 #check @panValueCrepProgramStateCorrect_statefulWord
 
 def compactExample : Prog Nat :=

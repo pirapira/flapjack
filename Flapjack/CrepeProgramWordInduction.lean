@@ -6,9 +6,9 @@ import Flapjack.CrepeWordExtCallProgramCase
 import Flapjack.CrepeProgramWordRecordReturnCorrectness
 import Flapjack.CrepeProgramRecordFieldGeneralReturnCorrectness
 import Flapjack.CrepeProgramOneWordDeclarationCorrectness
+import Flapjack.CrepeProgramDeclarationContract
 import Flapjack.CrepeProgramGenericRaiseCorrectness
 import Flapjack.CrepeProgramWordCallCorrectness
-import Flapjack.CrepeProgramDeclarationContract
 
 /-!
 An induction assembly for the stateful source-to-Crep correctness boundary.
@@ -96,6 +96,28 @@ inductive StatefulWordProg (α : Type)
         lookupInfo oldName context.vars = some (oldShape, oldSlots) →
         context.maxVar + 1 ∉ oldSlots) :
       StatefulWordProg α (.dec name .one expression.toExp body)
+  | decContract
+      (name : VarName) (shape : Shape) (value : Exp α) (body : Prog α)
+      (hbody : StatefulWordProg α body)
+      (hname : ∀ (context : CompileContext α),
+        lookupInfo name context.vars = none)
+      (hbounded : ∀ (context : CompileContext α) oldName oldShape oldSlots,
+        lookupInfo oldName context.vars = some (oldShape, oldSlots) →
+        ∀ slot ∈ oldSlots, slot ≤ context.maxVar)
+      (hcompile : ∀ (context : CompileContext α),
+        ∃ compiledValues,
+          compileExp context value = (compiledValues, shape) ∧
+          (allocatedNames context shape).length = compiledValues.length)
+      (hshape : ∀ (_context : CompileContext α) (structs : StructContext)
+        (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+        (sourceMemory : α → Option (PanValue α))
+        (baseAddress topAddress bytesInWord : α),
+        ∃ sourceValue,
+          evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+            baseAddress topAddress bytesInWord value = some sourceValue ∧
+          panShapeMatches (panValueShape structs sourceValue) shape = true)
+      (hvalue : PanValueCrepExpressionStateCorrect value) :
+      StatefulWordProg α (.dec name shape value body)
   | seq {first second : Prog α} :
       StatefulWordProg α first →
       StatefulWordProg α second →
@@ -286,29 +308,6 @@ inductive StatefulWordProg (α : Type)
         panValueCrepControlRel structs context exceptionRel sourceResult
           crepResult) :
       StatefulWordProg α (.call info function arguments)
-  | decExpression
-      (name : VarName) (shape : Shape) (value : Exp α) (body : Prog α)
-      (hbody : StatefulWordProg α body)
-      (hname : ∀ (context : CompileContext α),
-        lookupInfo name context.vars = none)
-      (hbounded : ∀ (context : CompileContext α) oldName oldShape oldSlots,
-        lookupInfo oldName context.vars = some (oldShape, oldSlots) →
-        ∀ slot ∈ oldSlots, slot ≤ context.maxVar)
-      (hcompile : ∀ (context : CompileContext α),
-        ∃ compiledValues,
-          compileExp context value = (compiledValues, shape) ∧
-          (allocatedNames context shape).length = compiledValues.length)
-      (hshape : ∀ (_context : CompileContext α) (structs : StructContext)
-        (sourceLocals sourceGlobals : VarName → Option (PanValue α))
-        (sourceMemory : α → Option (PanValue α))
-        (baseAddress topAddress bytesInWord : α),
-        ∃ sourceValue,
-          evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
-            baseAddress topAddress bytesInWord value = some sourceValue ∧
-          panShapeMatches (panValueShape structs sourceValue) shape = true)
-      (hvalue : PanValueCrepExpressionStateCorrect value) :
-      StatefulWordProg α (.dec name shape value body)
-
 theorem panValueCrepProgramStateCorrect_statefulWord
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
@@ -335,10 +334,10 @@ theorem panValueCrepProgramStateCorrect_statefulWord
   | decWord name expression body hbody hbytesInWord hlookup hname hfresh ihbody =>
       exact panValueCrepProgramStateCorrect_dec_one_word name expression body
         ihbody hbytesInWord hlookup hname hfresh
-  | decExpression name shape value body hbody hname hbounded hcompile hshape
+  | decContract name shape value body hbody hname hbounded hcompile hshape
       hvalue ihbody =>
-      exact panValueCrepProgramStateCorrect_dec_of_expression_contract name shape
-        value body ihbody hname hbounded hcompile hshape hvalue
+      exact panValueCrepProgramStateCorrect_dec_of_expression_contract name
+        shape value body ihbody hname hbounded hcompile hshape hvalue
   | @seq first second hfirst hsecond ihfirst ihsecond =>
       exact panValueCrepProgramStateCorrect_seq first second ihfirst ihsecond
   | iteWord condition hcondition thenBranch elseBranch hthen helse

@@ -836,4 +836,8 @@ evaluator-evidence obligation. -/
 #check @panValuePcCompileCorrect_compact_four_word_raise_of_state_evidence
 #check @panValuePcCompileCorrect_compact_word_list_raise_of_state_evidence
 
+/- The context-coded word-list raise instance uses the same state evidence and
+   additionally returns the context-coded correctness boundary. -/
+#check @panValuePcCompileCorrect_compact_word_list_raise_of_state_evidence_context_code
+
 end Flapjack.Test.PanValuePcControlSafety

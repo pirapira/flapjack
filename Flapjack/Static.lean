@@ -79,6 +79,47 @@ def shapeSizeWithContext (context : StructContext) : Shape → Nat
   | .comb shapes => shapes.foldl (fun total shape => total + shapeSizeWithContext context shape) 0
   | .named name => ((lookupInfo name context).map StructInfo.size).getD 1
 
+/-- Counterpart of Cake's `size_of_sh_with_ctxt_eq`
+    (`cakeml/pancake/semantics/panPropsScript.sml:184`): for a shape that is
+    well formed against the empty context, the context-sensitive size agrees
+    with the context-free `shapeSize`. -/
+theorem shapeSizeWithContext_eq_shapeSize_of_isWfShape :
+    ∀ (shape : Shape), isWfShape ([] : StructContext) shape = true →
+      ∀ (context : StructContext), shapeSizeWithContext context shape = Shape.shapeSize shape := by
+  intro shape
+  induction shape using shapeSizeWithContext.induct with
+  | case1 =>
+      intro _ context
+      simp [shapeSizeWithContext]
+  | case2 shapes ih =>
+      intro hwf context
+      simp only [isWfShape.eq_def] at hwf
+      simp only [shapeSizeWithContext, Shape.shapeSize]
+      exact foldl_shapeSizeWithContext_eq_shapeSize context shapes
+        (fun shape hmem h => ih shape hmem h context) hwf 0
+  | case3 name =>
+      intro hwf context
+      simp [isWfShape, lookupInfo] at hwf
+where
+  /-- Fold form of `shapeSizeWithContext_eq_shapeSize_of_isWfShape`, needed for
+      the `comb` case. -/
+  foldl_shapeSizeWithContext_eq_shapeSize (context : StructContext) (shapes : List Shape)
+      (hshape : ∀ shape ∈ shapes, isWfShape ([] : StructContext) shape = true →
+        shapeSizeWithContext context shape = Shape.shapeSize shape)
+      (hwf : isWfShape.isWfShapeList ([] : StructContext) shapes = true) (acc : Nat) :
+      shapes.foldl (fun total shape => total + shapeSizeWithContext context shape) acc =
+        shapes.foldl (fun total shape => total + Shape.shapeSize shape) acc := by
+    induction shapes generalizing acc with
+    | nil => rfl
+    | cons shape shapes ih =>
+        rw [isWfShape.isWfShapeList.eq_def] at hwf
+        rw [Bool.and_eq_true] at hwf
+        obtain ⟨hhead, htail⟩ := hwf
+        simp only [List.foldl_cons]
+        rw [hshape shape (by simp) hhead]
+        exact ih (fun s hs => hshape s (by simp [hs])) htail (acc + Shape.shapeSize shape)
+
+
 inductive StatErr where
   | scope (message : String)
   | warning (message : String)

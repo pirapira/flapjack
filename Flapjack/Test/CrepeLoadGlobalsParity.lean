@@ -67,6 +67,11 @@ theorem crepExpVars_of_mem_loadShape_fixture :
   crepExpVars_of_mem_loadShape (α := Nat) 3 1 1 (.var 5)
     (.load (.op .add [.var 5, .const 3])) (by simp [loadShape])
 
+/-- Cake `crepProps$load_glob_not_mem_load` on the parity fixture. -/
+theorem crepExps_loadShape_not_mem_loadGlob_fixture :
+    CrepExp.loadGlob (3 : Nat) ∉ (loadShape 3 1 2 (CrepExp.var 5)).flatMap crepExps :=
+  crepExps_loadShape_not_mem_loadGlob (α := Nat) 3 1 2 (.var 5) 3 (by simp [crepExps])
+
 /-- Cake `crepProps$nested_seq_assigned_free_vars_eq` on a concrete list. -/
 theorem crepAssignedFreeVars_nestedSeq_assign_zipWith_fixture :
     crepAssignedFreeVars
@@ -130,6 +135,15 @@ theorem crepAssignedVars_nestedSeq_storeGlobals_fixture :
         (crepNestedSeq (storeGlobals 3 1 [CrepExp.const 7, CrepExp.const 8])) = [] :=
   crepAssignedVars_nestedSeq_storeGlobals (α := Nat) 3 1
     [CrepExp.const 7, CrepExp.const 8]
+
+theorem loadGlobals_crepExpVars_empty_fixture :
+    (loadGlobals 3 1 3).flatMap crepExpVars = [] :=
+  loadGlobals_crepExpVars_empty (α := Nat) 3 1 3
+
+theorem mem_crepAssignedFreeVars_imp_mem_crepAssignedVars_fixture :
+    (3 : Nat) ∈ crepAssignedVars (CrepProg.assign 3 (CrepExp.const 1)) :=
+  mem_crepAssignedFreeVars_imp_mem_crepAssignedVars
+    (CrepProg.assign 3 (CrepExp.const 1)) 3 (by simp [crepAssignedFreeVars])
 
 def runChecks : IO Bool := do
   let results := [

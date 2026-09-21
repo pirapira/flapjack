@@ -860,6 +860,8 @@ evaluator-evidence obligation. -/
 #check @panValuePcCompileCorrect_of_compact_evaluators_with_expression_state_evidence_and_clocked_raised
 #check @panValuePcCompileCorrect_of_compact_evaluators_with_expression_state_evidence_and_clocked_timeout
 #check @panValuePcCompileCorrect_of_compact_evaluators_with_expression_state_evidence_and_clocked_final_ffi
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_raised
+#check @panValuePcCompileCorrectWithContextCode_compact_with_expression_state_evidence
 
 /- The arbitrary word-list Raise bridge preserves the same explicit clocked
    evaluator and state/result premises at the top-level boundary. -/
@@ -911,5 +913,9 @@ evaluator-evidence obligation. -/
 /-! The retargeted-globals raw-word dispatcher also accepts explicit state
     evidence for the generic hother callback. -/
 #check @panValuePcRaisedHraiseCases_with_raw_word_lists_retarget_globals_of_state_evidence
+
+/-! The raw-word-list context-coded exception-result dispatcher also accepts
+    explicit state evidence. -/
+#check @panValuePcRaisedHraiseCases_with_raw_word_lists_to_exception_result_rel_with_context_code_of_state_evidence
 
 end Flapjack.Test.PanValuePcControlSafety

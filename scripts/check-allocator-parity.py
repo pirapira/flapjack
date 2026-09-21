@@ -55,6 +55,7 @@ FIXTURES = (
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00014_loop_to_word_allocator.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00097_ssa_unmapped_zero.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00356_zero_shift_self_move.pnk",
+    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00226_mks_out_of_range_shift.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "dec_temporary_cutset.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00068_throwminimal3.pnk",
 )

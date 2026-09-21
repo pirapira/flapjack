@@ -1,6 +1,7 @@
 import Flapjack.PanSimp
 import Flapjack.PanEvaluate
 import Flapjack.PanValueFfiClockFuel
+import Flapjack.PanValueFfiClockCorrectness
 
 /-!
 # Evaluator-level `pan_simp` obligations
@@ -18,6 +19,94 @@ source.  These are proof-only: no compiler code changes.
 -/
 
 namespace Flapjack
+
+/-! A small structural fragment used by the fuel-adequacy proof.  It contains
+    only `Skip` and sequencing, so its additive structural bound is independent
+    of the source clock and of runtime calls or loops. -/
+def panSimpSkipSeqProg : Prog α → Prop
+  | .skip => True
+  | .seq first second => panSimpSkipSeqProg first ∧ panSimpSkipSeqProg second
+  | _ => False
+
+def panSimpSkipSeqFuel : Prog α → Nat
+  | .skip => 1
+  | .seq first second =>
+      1 + panSimpSkipSeqFuel first + panSimpSkipSeqFuel second
+  | _ => 0
+
+theorem panSimpSkipSeqProg_seqAssoc (pre : Prog α) (program : Prog α)
+    (hpre : panSimpSkipSeqProg pre)
+    (hprogram : panSimpSkipSeqProg program) :
+    panSimpSkipSeqProg (seqAssoc pre program) := by
+  let rec go (pre : Prog α) : (program : Prog α) →
+      panSimpSkipSeqProg pre → panSimpSkipSeqProg program →
+      panSimpSkipSeqProg (seqAssoc pre program)
+    | .skip, hpre, _ => by simpa [seqAssoc] using hpre
+    | .seq first second, hpre, hprogram => by
+        simp only [seqAssoc]
+        exact go (seqAssoc pre first) second
+          (go pre first hpre hprogram.1) hprogram.2
+    | .dec _ _ _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .assign _ _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .primitive _ _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .store _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .store32 _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .storeByte _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .ite _ _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .while _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .break, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .continue, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .call _ _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .decCall _ _ _ _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .extCall _ _ _ _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .raise _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .return _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .shMemLoad _ _ _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .shMemStore _ _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .tick, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .annot _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    termination_by program => sizeOf program
+    decreasing_by all_goals decreasing_trivial
+  exact go pre program hpre hprogram
+
+theorem panSimpSkipSeqFuel_seqAssoc_le (pre : Prog α) (program : Prog α)
+    (hpre : panSimpSkipSeqProg pre)
+    (hprogram : panSimpSkipSeqProg program) :
+    panSimpSkipSeqFuel (seqAssoc pre program) ≤
+      panSimpSkipSeqFuel pre + panSimpSkipSeqFuel program := by
+  let rec go (pre : Prog α) : (program : Prog α) →
+      panSimpSkipSeqProg pre → panSimpSkipSeqProg program →
+      panSimpSkipSeqFuel (seqAssoc pre program) ≤
+        panSimpSkipSeqFuel pre + panSimpSkipSeqFuel program
+    | .skip, hpre, _ => by simp [seqAssoc, panSimpSkipSeqFuel]
+    | .seq first second, hpre, hprogram => by
+        simp only [seqAssoc, panSimpSkipSeqFuel]
+        have hfirst := go pre first hpre hprogram.1
+        have hsecond := go (seqAssoc pre first) second
+          (panSimpSkipSeqProg_seqAssoc pre first hpre hprogram.1) hprogram.2
+        omega
+    | .dec _ _ _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .assign _ _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .primitive _ _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .store _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .store32 _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .storeByte _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .ite _ _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .while _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .break, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .continue, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .call _ _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .decCall _ _ _ _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .extCall _ _ _ _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .raise _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .return _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .shMemLoad _ _ _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .shMemStore _ _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .tick, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .annot _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    termination_by program => sizeOf program
+    decreasing_by all_goals decreasing_trivial
+  exact go pre program hpre hprogram
 
 theorem evalPanValueFfiClockLeaf_skip
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
@@ -525,6 +614,80 @@ theorem evalPanValueFfiClockProg_panSimpProg_eq_of_common_fuel
     (fuelSource := fuelSource) (commonFuel := commonFuel) locals globals memory ffi clock
     ma c mh hcompiled hsource hcompiledFuel hsourceFuel
 
+/-! Direct source-shaped form of Cake's `compile_correct_same_state`.  The
+    clocked evaluator needs a separate successful run for the intermediate
+    `seqAssoc Skip` program: its structural fuel can differ from the original
+    program even though the Cake clock is unchanged.  Keeping that run and its
+    fuel bound explicit gives a faithful theorem without asserting a false
+    fixed-fuel equality. -/
+theorem evalPanValueFfiClockProg_panSimpProg_eq_of_common_fuel_source
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (program : Prog α)
+    {fuelCompiled fuelAssoc fuelSource commonFuel : Nat}
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    {result : PanValueFfiClockResult α σ}
+    (hcompiled : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuelCompiled locals globals memory ffi clock
+      (panSimpProg program) ma c mh = some result)
+    (hassoc : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuelAssoc locals globals memory ffi clock
+      (seqAssoc (.skip : Prog α) program) ma c mh = some result)
+    (hsource : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuelSource locals globals memory ffi clock
+      program ma c mh = some result)
+    (hcompiledFuel : fuelCompiled ≤ commonFuel)
+    (hassocFuel : fuelAssoc ≤ commonFuel)
+    (hsourceFuel : fuelSource ≤ commonFuel)
+    (hsourceSeqFuel : fuelSource + 1 ≤ commonFuel) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord commonFuel locals globals memory ffi clock
+      (panSimpProg program) ma c mh =
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord commonFuel locals globals memory ffi clock
+      program ma c mh := by
+  have hcompiledAssoc := evalPanValueFfiClockProg_panSimpProg_eq_of_common_fuel
+    context primitive handler structs functions baseAddress topAddress bytesInWord
+    program (fuelCompiled := fuelCompiled) (fuelSource := fuelAssoc)
+    (commonFuel := commonFuel) locals globals memory ffi clock ma c mh
+    hcompiled hassoc hcompiledFuel hassocFuel
+  have hsourceSeq : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuelSource + 1) locals globals memory ffi clock
+      (.seq (.skip : Prog α) program) ma c mh = some result := by
+    rw [evalPanValueFfiClockProg_skip_seq context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuelSource clock locals globals memory ffi
+      program ma c mh]
+    exact hsource
+  have hassocSource := evalPanValueFfiClockProg_seqAssoc_eq_of_common_fuel
+    context primitive handler structs functions baseAddress topAddress bytesInWord
+    (.skip : Prog α) program (fuelLeft := fuelAssoc) (fuelRight := fuelSource + 1)
+    (commonFuel := commonFuel) locals globals memory ffi clock ma c mh
+    hassoc hsourceSeq hassocFuel hsourceSeqFuel
+  have hsourceCommon := evalPanValueFfiClockProg_fuel_mono context primitive handler
+    structs functions baseAddress topAddress bytesInWord locals globals memory ffi clock
+    program ma c mh hsourceFuel hsource
+  have hsourceSeqCommon := evalPanValueFfiClockProg_fuel_mono context primitive handler
+    structs functions baseAddress topAddress bytesInWord locals globals memory ffi clock
+    (.seq (.skip : Prog α) program) ma c mh hsourceSeqFuel hsourceSeq
+  have hseqSource : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord commonFuel locals globals memory ffi clock
+      (.seq (.skip : Prog α) program) ma c mh =
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord commonFuel locals globals memory ffi clock
+      program ma c mh := by
+    rw [hsourceSeqCommon, hsourceCommon]
+  exact hcompiledAssoc.trans (hassocSource.trans hseqSource)
+
 /-! Congruence under the second component of a `Seq`.  The premise is
     quantified over the post-first state and clock because the first component
     may update every evaluator component before the second starts. -/
@@ -655,5 +818,180 @@ theorem evalPanValueFfiClockProg_seqAssoc_fuel_gap
         (.seq .skip (.seq .skip .skip)) = none := by
   constructor <;>
     simp [evalPanValueFfiClockProg, evalPanValueFfiClockLeaf_skip, seqAssoc]
+
+/-- The leaf evaluation of `Return (Var .local name)` reduces to the singleton
+    `.returned` of the local's value, retaining the caller's globals, memory,
+    FFI state and clock.  This is the read-back half of the `pan_simp`
+    tail-call fusion. -/
+theorem evalPanValueFfiClockLeaf_return_var
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (clock : Nat) (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (name : VarName) (value : PanValue α)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (hlookup : locals name = some value)
+    (hwithin : panValuePayloadWithinLimit structs value = true) :
+    evalPanValueFfiClockLeaf context primitive handler structs functions
+        baseAddress topAddress bytesInWord clock locals globals memory ffi
+        (.return (.var .local name)) ma c mh =
+      some (.control (.returned (fun _ => none) globals memory ffi [value]), clock) := by
+  simp [evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps, evalPanValueExpCounted,
+    evalPanValueExp, hlookup, hwithin]
+
+/-- Fusion of the `pan_simp` tail-call pattern.  When a call whose return value
+    is stored in local `returnName` returns normally, the sequence
+    `Call ... ; Return (Var returnName)` evaluates to exactly the `.returned`
+    result of the tail call `Call none ...`: the destination read-back supplies
+    the returned value.  This is the clocked, fuel-aware analogue of Cake's
+    `evaluate_seq_call_ret_eq`, stated with explicit successful-run premises
+    (the call result and the destination lookup) rather than a fixed-fuel
+    equality. -/
+theorem evalPanValueFfiClockProg_seq_call_return_returned
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel clock callClock : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (function : FunName) (arguments : List (Exp α))
+    (returnName returnedName : VarName) (value : PanValue α)
+    (assignedLocals assignedGlobals : VarName → Option (PanValue α))
+    (nextMemory : α → Option (PanValue α)) (nextFfi : FfiState σ)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (hcall : evalPanValueFfiClockCall context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
+      (some (some (.local, returnName), none)) function arguments ma c mh =
+      some (.control (.normal assignedLocals assignedGlobals nextMemory nextFfi),
+        callClock))
+    (hlookup : assignedLocals returnedName = some value)
+    (hwithin : panValuePayloadWithinLimit structs value = true) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (fuel + 2) locals globals memory ffi
+        clock (.seq (.call (some (some (.local, returnName), none)) function arguments)
+          (.return (.var .local returnedName))) ma c mh =
+      some (.control (.returned (fun _ => none) assignedGlobals nextMemory nextFfi
+        [value]), callClock) := by
+  simp only [evalPanValueFfiClockProg]
+  rw [hcall]
+  simp only [Option.bind_eq_bind, Option.bind_some]
+  exact evalPanValueFfiClockLeaf_return_var context primitive handler structs functions
+    baseAddress topAddress bytesInWord callClock assignedLocals assignedGlobals
+    nextMemory nextFfi returnedName value ma c mh hlookup hwithin
+
+/-- The `seqCallRet` tail-call fusion in the direction Cake uses.  If the
+    destination call `Call (SOME (SOME (Local, returnName), NONE)) ...` returns
+    normally from a body that itself `return`s `[value]`, then the tail call
+    `Call NONE ...` and the original sequence
+    `Call ... ; Return (Var returnName)` agree at the same structural fuel.
+    This is the clocked analogue of Cake's `evaluate_seq_call_ret_eq` with an
+    explicit successful-run premise instead of a fixed-fuel equality. -/
+theorem evalPanValueFfiClockProg_seq_call_return_tail_call
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel clock finalClock : Nat) (hclock : clock ≠ 0)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (value : PanValue α) (parameters : List VarName)
+    (calleeLocals bodyLocals finalGlobals : VarName → Option (PanValue α))
+    (finalMemory : α → Option (PanValue α)) (finalFfi : FfiState σ)
+    (body : Prog α) (function : FunName) (arguments : List (Exp α))
+    (returnName : VarName) (assignedLocals : VarName → Option (PanValue α))
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (hargs : evalPanValueExps structs locals globals memory baseAddress topAddress
+      bytesInWord arguments (memoryAccess := memoryAccess) = some [value])
+    (hlookup : lookupPanFunction function functions = some (parameters, body))
+    (hbind : bindPanValueParameters parameters [value] = some calleeLocals)
+    (hbody : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel calleeLocals globals memory ffi
+      (clock - 1) body (memoryAccess := memoryAccess) (contracts := none)
+      (memoryHandler := none) =
+      some (.control (.returned bodyLocals finalGlobals finalMemory finalFfi [value]),
+        finalClock))
+    (hwithin : panValueValuesWithinLimit structs [value] = true)
+    (hpayload : panValuePayloadWithinLimit structs value = true)
+    (hassign : assignPanValueCallResult locals finalGlobals (some (.local, returnName))
+      [value] (structs := structs) = some (assignedLocals, finalGlobals))
+    (hlookupReturn : assignedLocals returnName = some value) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (fuel + 3) locals globals memory ffi
+        clock (.call none function arguments) (memoryAccess := memoryAccess)
+        (contracts := none) (memoryHandler := none) =
+      evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (fuel + 3) locals globals memory ffi
+        clock (.seq (.call (some (some (.local, returnName), none)) function arguments)
+          (.return (.var .local returnName))) (memoryAccess := memoryAccess)
+        (contracts := none) (memoryHandler := none) := by
+  have hbodyFuel : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) calleeLocals globals memory ffi
+      (clock - 1) body (memoryAccess := memoryAccess) (contracts := none)
+      (memoryHandler := none) =
+      some (.control (.returned bodyLocals finalGlobals finalMemory finalFfi [value]),
+        finalClock) :=
+    evalPanValueFfiClockProg_fuel_mono context primitive handler structs functions
+      baseAddress topAddress bytesInWord (locals := calleeLocals) (globals := globals)
+      (memory := memory) (ffi := ffi) (clock := clock - 1) (program := body)
+      (ma := memoryAccess) (c := none) (mh := none) (by omega) hbody
+  have hL : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 3) locals globals memory ffi
+      clock (.call none function arguments) (memoryAccess := memoryAccess)
+      (contracts := none) (memoryHandler := none) =
+      some (.control (.returned (fun _ => none) finalGlobals finalMemory finalFfi
+        [value]), finalClock) := by
+    simp only [evalPanValueFfiClockProg]
+    exact evalPanValueFfiClockCall_returned_no_destination context primitive handler
+      structs functions baseAddress topAddress bytesInWord (fuel + 1) clock finalClock
+      locals globals memory ffi [value] parameters calleeLocals bodyLocals
+      finalGlobals finalMemory finalFfi body function arguments memoryAccess
+      hargs hlookup hbind hclock hbodyFuel hwithin
+  have hR : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 3) locals globals memory ffi
+      clock (.seq (.call (some (some (.local, returnName), none)) function arguments)
+        (.return (.var .local returnName))) (memoryAccess := memoryAccess)
+      (contracts := none) (memoryHandler := none) =
+      some (.control (.returned (fun _ => none) finalGlobals finalMemory finalFfi
+        [value]), finalClock) := by
+    simp only [evalPanValueFfiClockProg]
+    rw [evalPanValueFfiClockCall_returned_destination context primitive handler structs
+      functions baseAddress topAddress bytesInWord fuel clock finalClock locals
+      globals memory ffi [value] parameters calleeLocals bodyLocals finalGlobals
+      finalMemory finalFfi body function arguments (some (.local, returnName))
+      assignedLocals finalGlobals memoryAccess hargs hlookup hbind hclock hbody hwithin
+      hassign]
+    simp only [Option.bind_eq_bind, Option.bind_some]
+    exact evalPanValueFfiClockLeaf_return_var context primitive handler structs functions
+      baseAddress topAddress bytesInWord finalClock assignedLocals finalGlobals
+      finalMemory finalFfi returnName value memoryAccess none none hlookupReturn hpayload
+  rw [hL, hR]
+
+/-- Syntactic shape of the `seqCallRet` tail-call rewrite, used to connect the
+    evaluator fusion above to the `pan_simp` pass itself. -/
+theorem seqCallRet_tail_call (returnName : VarName) (function : FunName)
+    (arguments : List (Exp α)) :
+    seqCallRet (.seq (.call (some (some (.local, returnName), none)) function arguments)
+      (.return (.var .local returnName))) = .call none function arguments := by
+  simp [seqCallRet]
 
 end Flapjack

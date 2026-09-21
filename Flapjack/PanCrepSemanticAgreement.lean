@@ -210,6 +210,43 @@ theorem panValuePcResultRel_semanticOutcomeRel_of_outcome
     (crepControlToPcResult crepResult) sourceOutcome targetOutcome hrel hsource
     htarget
 
+/-! A cross-clock result relation is the missing choice-stability premise for
+the observational agreement. Unlike the no-final-FFI agreement constructor,
+this helper preserves the `Return`/`FinalFFI` distinction and therefore also
+covers a terminal FFI result. -/
+theorem panCrepSemanticOutcomeRel_of_pcResultRel_cross_clock
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (panHooks : PanSemanticsHooks α σ)
+    (crepHooks : CrepSemanticsHooks α)
+    (hffiOutcome : ∀ event, panHooks.ffiOutcome event = event.outcome)
+    (sourceClock targetClock : Nat)
+    (sourceOutcome : PanValueFfiClockOutcome α σ)
+    (returnedClock : Nat)
+    (targetResult : CrepControlResult α)
+    (targetState : CrepState α)
+    (sourceSemanticOutcome : PanSemanticOutcome)
+    (targetSemanticOutcome : CrepSemanticOutcome)
+    (_hsource : panHooks.evaluate sourceClock =
+      some (sourceOutcome, returnedClock))
+    (_htarget : crepHooks.evaluate targetClock =
+      (crepControlResultToSemantic (some targetResult), targetState))
+    (hrel : panValuePcResultRel structs context exceptionRel exceptionCode
+      globalsLookup (panOutcomeToPcResult sourceOutcome)
+      (crepControlToPcResult targetResult))
+    (hsourceOutcome : panResultOutcome panHooks
+      (some (sourceOutcome, returnedClock)) = some sourceSemanticOutcome)
+    (htargetOutcome : crepResultOutcome
+      (crepControlResultToSemantic (some targetResult)) =
+      some targetSemanticOutcome) :
+    panCrepSemanticOutcomeRel sourceSemanticOutcome targetSemanticOutcome := by
+  exact panValuePcResultRel_semanticOutcomeRel_of_outcome
+    structs context exceptionRel exceptionCode globalsLookup panHooks
+    hffiOutcome sourceOutcome targetResult returnedClock sourceSemanticOutcome
+    targetSemanticOutcome hrel hsourceOutcome htargetOutcome
+
 /-! ## The agreement from clocked compiler evidence -/
 
 /-- Build a `PanCrepSemanticAgreement` from a per-clock `panValuePcResultRel`

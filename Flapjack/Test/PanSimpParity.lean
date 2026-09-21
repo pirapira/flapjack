@@ -872,6 +872,31 @@ example :
     (PanValueFfiClockNormalProg.annot "tag" "text")
     PanValueFfiClockNormalProg.skip
 
+/-- Normal adequacy composes through sequences and conditionals: the normal
+    fragment is normal-adequate, and so is a conditional over it. -/
+example :
+    PanValueFfiClockNormalAdequateProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 5 none none none
+      (.ite (.const 5)
+        (.seq (.skip : Prog Nat) (.annot "tag" "text"))
+        (.skip : Prog Nat)) :=
+  PanValueFfiClockNormalAdequateProg_ite evaluatorContext (fun _ _ => none)
+    evaluatorHandler [] [] 0 0 8 5 none none none (.const 5)
+    (.seq (.skip : Prog Nat) (.annot "tag" "text")) (.skip : Prog Nat)
+    (fun _ _ _ => ⟨5, by simp [evalPanValueExp]⟩)
+    (PanValueFfiClockNormalAdequateProg_seq evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 5 none none none (.skip : Prog Nat)
+      (.annot "tag" "text")
+      (evalPanValueFfiClockProg_normalAdequate_of_normalProg evaluatorContext
+        (fun _ _ => none) evaluatorHandler [] [] 0 0 8 5 none none none
+        (.skip : Prog Nat) PanValueFfiClockNormalProg.skip)
+      (evalPanValueFfiClockProg_normalAdequate_of_normalProg evaluatorContext
+        (fun _ _ => none) evaluatorHandler [] [] 0 0 8 5 none none none
+        (.annot "tag" "text") (PanValueFfiClockNormalProg.annot "tag" "text")))
+    (evalPanValueFfiClockProg_normalAdequate_of_normalProg evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [] 0 0 8 5 none none none
+      (.skip : Prog Nat) PanValueFfiClockNormalProg.skip)
+
 /-- The raised `DecCall` outcome also lifts to the declaration's progSize. -/
 example
     (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)

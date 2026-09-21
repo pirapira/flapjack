@@ -537,6 +537,73 @@ theorem panValuePcResultRelWithContextCode_finalFfi_iff
         sourceMemory targetState ∧ sourceEvent = targetEvent := by
   simp [panValuePcResultRelWithContextCode, panValuePcResultRel]
 
+theorem panValuePcExceptionResultRelWithContextCode_of_rel_and_lookup
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (sourceException : ExceptionId) (sourceValue : PanValue α)
+    (targetState : CrepState α) (targetException : α)
+    (h : panValuePcExceptionResultRel structs context exceptionRel exceptionCode
+      globalsLookup sourceGlobals sourceMemory sourceException sourceValue
+      targetState targetException)
+    (hlookup : lookupInfo sourceException context.exceptions = some targetException) :
+    panValuePcExceptionResultRelWithContextCode structs context exceptionRel
+      exceptionCode globalsLookup sourceGlobals sourceMemory sourceException
+      sourceValue targetState targetException :=
+  ⟨h, hlookup⟩
+
+theorem panValuePcResultRelWithContextCode_raised_of_rel_and_lookup
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+    (sourceValue : PanValue α) (targetState : CrepState α)
+    (targetException : α)
+    (h : panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
+      (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+      (.raised targetState targetException))
+    (hlookup : lookupInfo sourceException context.exceptions = some targetException) :
+    panValuePcResultRelWithContextCode structs context exceptionRel exceptionCode
+      globalsLookup
+      (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+      (.raised targetState targetException) := by
+  simp only [panValuePcResultRelWithContextCode, panValuePcResultRel,
+    panValuePcExceptionResultRelWithContextCode] at h ⊢
+  exact ⟨h.1, h.2, hlookup⟩
+
+theorem panValuePcResultRelWithContextCode_broke_rejects_nonzero_label
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (targetState : CrepState α)
+    (label : Nat) (hlabel : label ≠ 0) :
+    ¬ panValuePcResultRelWithContextCode structs context exceptionRel
+      exceptionCode globalsLookup
+      (.broke sourceLocals sourceGlobals sourceMemory)
+      (.broke targetState label) := by
+  simp [panValuePcResultRelWithContextCode, panValuePcResultRel, hlabel]
+
+theorem panValuePcResultRelWithContextCode_continued_rejects_nonzero_label
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (targetState : CrepState α)
+    (label : Nat) (hlabel : label ≠ 0) :
+    ¬ panValuePcResultRelWithContextCode structs context exceptionRel
+      exceptionCode globalsLookup
+      (.continued sourceLocals sourceGlobals sourceMemory)
+      (.continued targetState label) := by
+  simp [panValuePcResultRelWithContextCode, panValuePcResultRel, hlabel]
+
 /-! Safety obligation for the compact `pc_compile_correct` bridge.  The
 intermediate control relation intentionally permits nonzero labels while a
 loop propagates them, but the final Pancake theorem only admits label `0` for

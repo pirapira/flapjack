@@ -41,4 +41,19 @@ example : ¬ localisedProg (.assign .global "g" (.const (1 : Nat)) : Prog Nat) :
 #check @localisedProg_retToTail
 #check @localisedProg_panSimpProg
 
+/-- The code-level localisation invariant survives the `pan_simp` table pass. -/
+example :
+    panValuePcLocalisedCode
+      (panValueFunctionsSimp
+        ([("f", [], (.assign .local "x" (.const (1 : Nat)) : Prog Nat))] :
+          PanValuePcSourceCode Nat)) :=
+  panValuePcLocalisedCode_panValueFunctionsSimp _
+    (by
+      intro entry hentry
+      simp only [List.mem_singleton] at hentry
+      subst hentry
+      simp only [localisedProg, localisedExp, expGlobalVars.eq_1])
+
+#check @panValuePcLocalisedCode_panValueFunctionsSimp
+
 end Flapjack

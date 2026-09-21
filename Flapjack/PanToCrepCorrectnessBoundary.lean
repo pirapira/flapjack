@@ -526,15 +526,16 @@ theorem panValueCrepProgramStateControlSafe_call_returns
             evalPanValueCallWithPrimitiveCallsAndFfi] at hsource
           cases hvalues : evalPanValueExps structs sourceLocals sourceGlobals sourceMemory
             baseAddress topAddress bytesInWord args with
-          | none => simp [hvalues, Option.bind_eq_bind, Option.bind_none] at hsource
+          | none => simp [hvalues, Option.bind_none] at hsource
           | some values =>
               cases hlookup : lookupPanFunction name sourceFunctions with
               | none =>
-                  simp [hvalues, hlookup, Option.bind_eq_bind, Option.bind_none] at hsource
+                  simp [hvalues, hlookup, Option.bind_none] at hsource
               | some pair =>
                   obtain ⟨parameters, body⟩ := pair
                   by_cases hparams : panValueParametersValid structs none name values = true
-                  · simp only [hvalues, hlookup, hparams, if_true, Option.bind_eq_bind,
+                  · simp only [hvalues, hlookup, hparams, if_true,
+                      Option.bind_eq_bind,
                       Option.bind_some] at hsource
                     cases hbind : bindPanValueParameters parameters values with
                     | none =>
@@ -555,9 +556,11 @@ theorem panValueCrepProgramStateControlSafe_call_returns
                                     panValueValuesWithinLimit structs values) = true
                                 · simp only [hcallee, Option.bind_some,
                                     hret, if_true, Option.pure_def] at hsource
-                                  cases hassign : assignPanValueCallResult sourceLocals
-                                    calleeGlobals destination values (structs := structs) with
-                                  | none => simp [hassign, Option.bind_none] at hsource
+                                  cases hassign : assignPanValueCallResult sourceLocals calleeGlobals
+                                    destination values (structs := structs) with
+                                  | none =>
+                                      simp [hassign,
+                                        Option.bind_none] at hsource
                                   | some assigned =>
                                       obtain ⟨assignedLocals, assignedGlobals⟩ := assigned
                                       simp only [hassign, Option.bind_some,

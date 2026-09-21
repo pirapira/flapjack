@@ -751,6 +751,27 @@ theorem globalDeclShapes_append (declarations rest : List (Decl α)) :
   | cons declaration declarations ih =>
       cases declaration <;> simp [globalDeclShapes_cons, ih]
 
+/-- Cake's `dec_shapes_compile_prog`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:241`): `pan_simp` only
+    rewrites function bodies, so the collected declaration shapes are
+    unchanged. -/
+theorem globalDeclShapes_panSimpDecls (declarations : List (Decl α)) :
+    globalDeclShapes (panSimpDecls declarations) = globalDeclShapes declarations := by
+  rw [panSimpDecls_eq_map]
+  induction declarations with
+  | nil => simp [globalDeclShapes_nil]
+  | cons declaration declarations ih =>
+      cases declaration <;> simp [panSimpDecl, globalDeclShapes_cons, ih]
+
+/-- Cake's `function_names_compile_prog`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:248`): `pan_simp` only
+    rewrites function bodies, so the function-name table is unchanged. -/
+theorem functions_names_panSimpDecls (declarations : List (Decl α)) :
+    (functions (panSimpDecls declarations)).map Prod.fst =
+      (functions declarations).map Prod.fst := by
+  rw [functions_panSimpDecls, List.map_map]
+  rfl
+
 theorem globalDeclShapes_of_functions (declarations : List (Decl α))
     (hfunctions : ∀ declaration ∈ declarations, globalDeclIsFunction declaration = true) :
     globalDeclShapes declarations = [] := by

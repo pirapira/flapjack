@@ -462,6 +462,42 @@ def progSize : Prog α → Nat
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial
 
+theorem progSize_pos : ∀ program : Prog α, 1 ≤ progSize program
+  | .dec _ _ _ _ => by simp only [progSize]; omega
+  | .seq _ _ => by simp only [progSize]; omega
+  | .ite _ _ _ => by simp only [progSize]; omega
+  | .while _ _ => by simp only [progSize]; omega
+  | .call info _ _ => by
+      cases info with
+      | none => simp only [progSize]; omega
+      | some info =>
+          cases info with
+          | mk returns handlerInfo =>
+              cases handlerInfo with
+              | none => simp only [progSize]; omega
+              | some handler =>
+                  cases handler with
+                  | mk exception handlerInfo =>
+                      cases handlerInfo with
+                      | mk handlerVar handlerProgram =>
+                          simp only [progSize]; omega
+  | .decCall _ _ _ _ _ => by simp only [progSize]; omega
+  | .skip => by simp only [progSize]; omega
+  | .annot _ _ => by simp only [progSize]; omega
+  | .assign _ _ _ => by simp only [progSize]; omega
+  | .primitive _ _ _ => by simp only [progSize]; omega
+  | .store _ _ => by simp only [progSize]; omega
+  | .store32 _ _ => by simp only [progSize]; omega
+  | .storeByte _ _ => by simp only [progSize]; omega
+  | .break => by simp only [progSize]; omega
+  | .continue => by simp only [progSize]; omega
+  | .extCall _ _ _ _ _ => by simp only [progSize]; omega
+  | .raise _ _ => by simp only [progSize]; omega
+  | .return _ => by simp only [progSize]; omega
+  | .shMemLoad _ _ _ _ => by simp only [progSize]; omega
+  | .shMemStore _ _ _ => by simp only [progSize]; omega
+  | .tick => by simp only [progSize]; omega
+
 theorem progSize_smartSeq_le (pre program : Prog α) :
     progSize (smartSeq pre program) ≤ progSize pre + progSize program + 1 := by
   unfold smartSeq

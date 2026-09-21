@@ -341,4 +341,62 @@ theorem evalPanValueDeclarations_functions_wf
           { state with structs := structs } state' declarations memoryAccess heval hmem
       exact ⟨structs, rfl, hparams, hreturn⟩
 
+/-! Cake's `evaluate_decls_exns_wf` (`panPropsScript.sml:1421`): a successful
+    declaration evaluation can only install an exception declaration whose
+    shape is well formed in the struct context.  This is the exception-side
+    counterpart of `evalPanValueDeclarationsWithStructs_functions_wf`. -/
+theorem evalPanValueDeclarationsWithStructs_exceptions_wf
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext) (state state' : PanValueProgramState α)
+    (declarations : List (Decl α)) (memoryAccess : Option (PanValueMemoryAccess α))
+    (heval : evalPanValueDeclarationsWithStructs structs state declarations
+      memoryAccess = some state')
+    {exception : ExceptionId} {shape : Shape}
+    (hmem : (.exnDecl exception shape : Decl α) ∈ declarations) :
+    isWfShape structs shape = true := by
+  induction declarations generalizing state state' with
+  | nil => simp at hmem
+  | cons head tail ih =>
+      cases head with
+      | name name fields =>
+          simp only [evalPanValueDeclarationsWithStructs] at heval
+          simp at hmem
+          exact ih state state' heval hmem
+      | decl declShape name expression =>
+          simp only [evalPanValueDeclarationsWithStructs] at heval
+          cases hval : evalPanValueExp structs (fun _ => none) state.globals
+              state.memory state.baseAddress state.topAddress state.bytesInWord
+              expression (memoryAccess := memoryAccess) with
+          | none => simp [hval] at heval
+          | some value =>
+              by_cases hmatch :
+                  panShapeMatches (panValueShape structs value) declShape = true
+              · simp [hval, hmatch] at heval
+                simp at hmem
+                exact ih _ _ heval hmem
+              · simp [hval, hmatch] at heval
+      | function function =>
+          simp only [evalPanValueDeclarationsWithStructs] at heval
+          by_cases hwf : (function.params.all
+              (fun parameter => isWfShape structs parameter.2) &&
+              isWfShape structs function.returnShape) = true
+          · simp [hwf] at heval
+            simp at hmem
+            exact ih _ _ heval hmem
+          · simp [hwf] at heval
+      | exnDecl headException headShape =>
+          simp only [evalPanValueDeclarationsWithStructs] at heval
+          by_cases hexists : (lookupInfo headException state.exceptions).isSome = true
+          · simp [hexists] at heval
+          · by_cases hwf : isWfShape structs headShape = true
+            · simp [hexists, hwf] at heval
+              simp only [List.mem_cons] at hmem
+              rcases hmem with hhead | htail
+              · cases hhead
+                exact hwf
+              · exact ih _ _ heval htail
+            · simp [hexists, hwf] at heval
+
 end Flapjack

@@ -229,6 +229,23 @@ theorem evalPanValueDeclarations_functions_wf_fixture
       (declaration := wfFunction) (by simp [wfDecls])
   exact ⟨structs, hcollect, hreturn⟩
 
+/-! Regression for Cake's `evaluate_decls_exns_wf`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1421`): a successful
+    declaration evaluation keeps every installed exception shape well formed. -/
+
+def wfException : Decl Nat := .exnDecl "E" .one
+
+def wfExceptionDecls : List (Decl Nat) := [wfException]
+
+theorem evalPanValueDeclarations_exceptions_wf_fixture
+    (state' : PanValueProgramState Nat)
+    (heval : evalPanValueDeclarationsWithStructs [] evalRelState
+      wfExceptionDecls none = some state') :
+    isWfShape ([] : StructContext) (.one : Shape) = true := by
+  exact evalPanValueDeclarationsWithStructs_exceptions_wf [] evalRelState state'
+    wfExceptionDecls none heval (exception := "E") (shape := .one) (by
+      simp [wfExceptionDecls, wfException])
+
 /-! Regression for Cake's `evaluate_decls_append`
     (`cakeml/pancake/semantics/panPropsScript.sml:1540`): evaluating a
     concatenated declaration list is the sequential composition of evaluating

@@ -958,6 +958,8 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @PanValueProgNotBrokeContinued_skip
 #check @PanValueProgNotBrokeContinued_seq
 #check @PanValueProgNotBrokeContinued_ite
+#check @PanValueProgNotBrokeContinued_return
+#check @PanValueProgNotBrokeContinued_raise
 #check @panValueCrepProgramStateControlSafe_decCall
 
 /-! The "exception id in handler not found in context" sub-case of Cake's

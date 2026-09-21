@@ -2126,6 +2126,13 @@ theorem pan_simp_compile_prog_first_all_distinct :
       (fun entry => entry.1)).Nodup := by
   exact functions_panSimpDecls_names_nodup compileProgDeclsFixture (by decide)
 
+theorem pan_simp_compile_prog_distinct_params :
+    ∀ entry ∈ functions (panSimpDecls compileProgDeclsFixture),
+      (entry.2.1.map Prod.fst).Nodup := by
+  apply functions_panSimpDecls_params_nodup compileProgDeclsFixture
+  intro entry hentry
+  simp [compileProgDeclsFixture, functions] at hentry ⊢
+
 def functionsNamesNodupParity : Bool :=
   decide (((functions (panSimpDecls compileProgDeclsFixture)).map
     (fun entry => entry.1)).Nodup)

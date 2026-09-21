@@ -3307,6 +3307,131 @@ theorem evalPanValueFfiClockProg_decCall_finalFfi_some_progSize
     clock name shape function arguments body nextLocals nextGlobals nextMemory nextFfi
     event callClock ma c mh hcall
 
+/-! ## Call-aware budget DecCall terminal outcomes
+
+The `raised`, `timeout` and `finalFfi` terminal outcomes of a declaration call are
+fuel-adequate at the call-aware `progCallFuel` budget: the call and body run at
+`max callBudget (progCallFuel callBudget body)` and the whole declaration call
+succeeds at `progCallFuel callBudget (.decCall name shape function arguments body)`. -/
+
+theorem evalPanValueFfiClockProg_decCall_raised_some_progCallFuel
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (name : VarName) (shape : Shape) (function : FunName)
+    (arguments : List (Exp α)) (body : Prog α)
+    (calleeLocals nextGlobals : VarName → Option (PanValue α))
+    (nextMemory : α → Option (PanValue α)) (nextFfi : FfiState σ)
+    (exception : ExceptionId) (value : PanValue α) (callClock : Nat)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (hcall : evalPanValueFfiClockCall context primitive handler structs functions
+        baseAddress topAddress bytesInWord
+        (max callBudget (progCallFuel callBudget body)) locals globals memory ffi clock
+        none function arguments (memoryAccess := ma) (contracts := c)
+        (memoryHandler := mh) =
+        some (.control (.raised calleeLocals nextGlobals nextMemory nextFfi exception
+          value), callClock)) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord
+        (progCallFuel callBudget (.decCall name shape function arguments body)) locals
+        globals memory ffi clock (.decCall name shape function arguments body) ma c mh =
+      some (.control (.raised (fun _ => none) nextGlobals nextMemory nextFfi exception
+        value), callClock) := by
+  have hsize : progCallFuel callBudget (.decCall name shape function arguments body) =
+      max callBudget (progCallFuel callBudget body) + 1 := by
+    simp only [progCallFuel]; omega
+  rw [hsize]
+  exact evalPanValueFfiClockProg_decCall_raised_some context primitive handler structs
+    functions baseAddress topAddress bytesInWord
+    (max callBudget (progCallFuel callBudget body)) locals globals memory ffi clock name
+    shape function arguments body calleeLocals nextGlobals nextMemory nextFfi exception
+    value callClock ma c mh hcall
+
+theorem evalPanValueFfiClockProg_decCall_timeout_some_progCallFuel
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (name : VarName) (shape : Shape) (function : FunName)
+    (arguments : List (Exp α)) (body : Prog α)
+    (nextLocals nextGlobals : VarName → Option (PanValue α))
+    (nextMemory : α → Option (PanValue α)) (nextFfi : FfiState σ)
+    (callClock : Nat)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (hcall : evalPanValueFfiClockCall context primitive handler structs functions
+        baseAddress topAddress bytesInWord
+        (max callBudget (progCallFuel callBudget body)) locals globals memory ffi clock
+        none function arguments (memoryAccess := ma) (contracts := c)
+        (memoryHandler := mh) =
+        some (.timeout nextLocals nextGlobals nextMemory nextFfi, callClock)) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord
+        (progCallFuel callBudget (.decCall name shape function arguments body)) locals
+        globals memory ffi clock (.decCall name shape function arguments body) ma c mh =
+      some (.timeout nextLocals nextGlobals nextMemory nextFfi, callClock) := by
+  have hsize : progCallFuel callBudget (.decCall name shape function arguments body) =
+      max callBudget (progCallFuel callBudget body) + 1 := by
+    simp only [progCallFuel]; omega
+  rw [hsize]
+  exact evalPanValueFfiClockProg_decCall_timeout_some context primitive handler structs
+    functions baseAddress topAddress bytesInWord
+    (max callBudget (progCallFuel callBudget body)) locals globals memory ffi clock name
+    shape function arguments body nextLocals nextGlobals nextMemory nextFfi callClock ma c
+    mh hcall
+
+theorem evalPanValueFfiClockProg_decCall_finalFfi_some_progCallFuel
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (name : VarName) (shape : Shape) (function : FunName)
+    (arguments : List (Exp α)) (body : Prog α)
+    (nextLocals nextGlobals : VarName → Option (PanValue α))
+    (nextMemory : α → Option (PanValue α)) (nextFfi : FfiState σ)
+    (event : FfiFinalEvent) (callClock : Nat)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (hcall : evalPanValueFfiClockCall context primitive handler structs functions
+        baseAddress topAddress bytesInWord
+        (max callBudget (progCallFuel callBudget body)) locals globals memory ffi clock
+        none function arguments (memoryAccess := ma) (contracts := c)
+        (memoryHandler := mh) =
+        some (.control (.finalFfi nextLocals nextGlobals nextMemory nextFfi event),
+          callClock)) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord
+        (progCallFuel callBudget (.decCall name shape function arguments body)) locals
+        globals memory ffi clock (.decCall name shape function arguments body) ma c mh =
+      some (.control (.finalFfi nextLocals nextGlobals nextMemory nextFfi event),
+        callClock) := by
+  have hsize : progCallFuel callBudget (.decCall name shape function arguments body) =
+      max callBudget (progCallFuel callBudget body) + 1 := by
+    simp only [progCallFuel]; omega
+  rw [hsize]
+  exact evalPanValueFfiClockProg_decCall_finalFfi_some context primitive handler structs
+    functions baseAddress topAddress bytesInWord
+    (max callBudget (progCallFuel callBudget body)) locals globals memory ffi clock name
+    shape function arguments body nextLocals nextGlobals nextMemory nextFfi event callClock
+    ma c mh hcall
+
 /-! ## Leaf success equation
 
 Every constructor that is neither recursive nor `tick`/`annot` is dispatched by

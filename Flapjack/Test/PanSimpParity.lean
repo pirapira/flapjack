@@ -558,6 +558,68 @@ example
           (updatePanValueMap (fun _ => none) "x" (.word 5)) (fun _ => none)
           (fun _ => none) evaluatorFfi 1 "tag" "text" none none none))
 
+/-- The raising `DecCall` at the call-aware budget. -/
+example
+    (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8
+      (max 7 (progCallFuel 7 (.annot "tag" "text" : Prog Nat)))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1 none "f" [] =
+      some (.control (.raised (fun _ => none) (fun _ => none) (fun _ => none)
+        evaluatorFfi "E" (.word 5)), 1)) :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+      [] [] 0 0 8
+      (progCallFuel 7 (.decCall "x" .one "f" [] (.annot "tag" "text" : Prog Nat)))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+      (.decCall "x" .one "f" [] (.annot "tag" "text")) none none none =
+    some (.control (.raised (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi "E" (.word 5)), 1) := by
+  exact evalPanValueFfiClockProg_decCall_raised_some_progCallFuel evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 (fun _ => none) (fun _ => none)
+    (fun _ => none) evaluatorFfi 1 "x" .one "f" [] (.annot "tag" "text")
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi "E" (.word 5) 1
+    none none none hcall
+
+/-- The timing-out `DecCall` at the call-aware budget. -/
+example
+    (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8
+      (max 7 (progCallFuel 7 (.annot "tag" "text" : Prog Nat)))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1 none "f" [] =
+      some (.timeout (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi, 1)) :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+      [] [] 0 0 8
+      (progCallFuel 7 (.decCall "x" .one "f" [] (.annot "tag" "text" : Prog Nat)))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+      (.decCall "x" .one "f" [] (.annot "tag" "text")) none none none =
+    some (.timeout (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi, 1) := by
+  exact evalPanValueFfiClockProg_decCall_timeout_some_progCallFuel evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 (fun _ => none) (fun _ => none)
+    (fun _ => none) evaluatorFfi 1 "x" .one "f" [] (.annot "tag" "text")
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    none none none hcall
+
+/-- The final-FFI `DecCall` at the call-aware budget. -/
+example
+    (event : FfiFinalEvent)
+    (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8
+      (max 7 (progCallFuel 7 (.annot "tag" "text" : Prog Nat)))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1 none "f" [] =
+      some (.control (.finalFfi (fun _ => none) (fun _ => none) (fun _ => none)
+        evaluatorFfi event), 1)) :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+      [] [] 0 0 8
+      (progCallFuel 7 (.decCall "x" .one "f" [] (.annot "tag" "text" : Prog Nat)))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+      (.decCall "x" .one "f" [] (.annot "tag" "text")) none none none =
+    some (.control (.finalFfi (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi event), 1) := by
+  exact evalPanValueFfiClockProg_decCall_finalFfi_some_progCallFuel evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 (fun _ => none) (fun _ => none)
+    (fun _ => none) evaluatorFfi 1 "x" .one "f" [] (.annot "tag" "text")
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi event 1
+    none none none hcall
+
 /-- A structural normal program succeeds normally at its call-aware budget. -/
 example :
     evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler

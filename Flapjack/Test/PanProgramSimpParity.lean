@@ -826,4 +826,29 @@ example : True := by
       hnodup hnone hexns
   trivial
 
+/-! Cake's `opt_mmap_length_eq`, `opt_mmap_mem_func` and `opt_mmap_el`
+    (`pan_commonPropsScript.sml:82/49/71`): basic facts about a successful
+    `OPT_MMAP`/`List.mapM`. -/
+
+def sampleMapF (n : Nat) : Option Nat := if n % 2 == 0 then some (n + 1) else none
+
+theorem list_mapM_length_fixture :
+    ([2, 4, 6] : List Nat).length = [3, 5, 7].length :=
+  list_mapM_length sampleMapF [2, 4, 6] [3, 5, 7] (by decide)
+
+theorem list_mapM_mem_func_fixture :
+    ∃ y, sampleMapF 4 = some y :=
+  list_mapM_mem_func (x := 4) (xs := [2, 4, 6]) sampleMapF [3, 5, 7] (by decide) (by decide)
+
+theorem list_mapM_getElem?_fixture :
+    (([2, 4, 6] : List Nat)[1]?).bind sampleMapF = ([3, 5, 7] : List Nat)[1]? :=
+  list_mapM_getElem? sampleMapF [2, 4, 6] [3, 5, 7] (by decide) 1
+
+def mapMFactsGuard : Bool :=
+  (([2, 4, 6] : List Nat).length == [3, 5, 7].length) &&
+    (([2, 4, 6] : List Nat)[1]?).bind sampleMapF == ([3, 5, 7] : List Nat)[1]?
+
+#eval mapMFactsGuard
+#guard mapMFactsGuard
+
 end Flapjack.Test.PanProgramSimpParity

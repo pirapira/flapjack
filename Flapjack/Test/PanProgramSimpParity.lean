@@ -683,6 +683,16 @@ example : True := by
     ([] : StructContext) evalRelState wfFunction oneFunLastDecls none hrest
   trivial
 
+/-- Focused regression for the `pair_map_I` counterpart. -/
+theorem prod_mk_pair_eq_id_fixture :
+    (fun p : Nat × Nat => (p.1, p.2)) = id :=
+  prod_mk_pair_eq_id
+
+/-- Focused regression for the `not_none_then_some` counterpart. -/
+theorem option_ne_none_iff_exists_fixture :
+    (some 3 : Option Nat) ≠ none ↔ ∃ a, (some 3 : Option Nat) = some a :=
+  option_ne_none_iff_exists (some 3)
+
 /-- Focused regression for the `resort_decls_evaluate` counterpart: resorting
     declarations into the name/exception/global/function partition preserves
     the declaration evaluator's result. -/

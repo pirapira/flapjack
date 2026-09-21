@@ -125,6 +125,22 @@ def firstMatchColGuard : Bool :=
 
 #guard firstMatchColGuard
 
+/- Cake's assign_Stemps (reg_allocScript.sml:984-990) visits every node in
+   ascending range order, assigning each Stemp the first available colour
+   at or above k after collecting its fixed-neighbour colours. -/
+def assignStempsTraversalGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      adjLists := CakeNodeMap.ofNatInfoMap 4 [(0, [2])]
+      nodeTag := CakeNodeMap.ofNatInfoMap 4
+        [(0, .sTemp), (1, .sTemp), (2, .fixed 2)] }
+  let out := cakeAssignStemps 2 (fun _ _ _ => none) state
+  out.nodeTag.get 0 == some (.fixed 3) &&
+    out.nodeTag.get 1 == some (.fixed 2) &&
+    out.nodeTag.get 2 == some (.fixed 2)
+
+#guard assignStempsTraversalGuard
+
 /-- Canonical form for comparing node bijections with the probed sptree
     outputs: both maps sorted by key. -/
 def sortBijectionMaps (bijection : CakeNodeBijection) :
@@ -1140,6 +1156,7 @@ def parityGuard : Bool :=
     ifMergeAllocGuard && ifImmediateRemovesTempGuard && callMergeGuard &&
     callTailGuard && mustTerminateGuard && sortedInsertMemGuard &&
     loopBodyGuard && assignLeafGuard && firstMatchColGuard &&
+      assignStempsTraversalGuard &&
     bijDeltaBasicGuard && bijDeltaDedupGuard && bijSeqOrderGuard &&
     bijBranchOrderGuard && bijBranchLiveGuard && bijSetGuard &&
     bijSetUnsortedGuard && bijCompositeGuard && graphDeltaDisjointGuard &&
@@ -1184,6 +1201,7 @@ def runChecks : IO Bool := do
     ifMergeAllocGuard, ifImmediateRemovesTempGuard, callMergeGuard,
     callTailGuard, mustTerminateGuard,
     loopBodyGuard, assignLeafGuard, sortedInsertMemGuard, firstMatchColGuard,
+    assignStempsTraversalGuard,
     bijDeltaBasicGuard, bijDeltaDedupGuard, bijSeqOrderGuard,
     bijBranchOrderGuard, bijBranchLiveGuard, bijSetGuard,
     bijSetUnsortedGuard, bijCompositeGuard, graphDeltaDisjointGuard,
@@ -1226,6 +1244,7 @@ def runChecks : IO Bool := do
     "get_stack_only Loop body", "get_stack_only assign leaf",
     "Cake sorted_insert/sorted_mem",
     "Cake first_match_col",
+    "Cake assign_Stemps traversal",
     "mk_bij delta basic", "mk_bij delta dedup", "mk_bij seq order",
     "mk_bij branch order", "mk_bij branch live", "mk_bij set",
     "mk_bij set unsorted", "mk_bij composite", "mk_graph delta disjoint",

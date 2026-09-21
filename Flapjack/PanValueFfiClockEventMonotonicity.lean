@@ -432,6 +432,80 @@ theorem evalPanValueFfiClockProgram_of_declarations_and_raised_call_context_code
     state.structs pcContext exceptionRel exceptionCode globalsLookup locals globals
     memory exception value targetState targetException hrel hlookup
 
+/-! Declaration calls preserve the incoming event trace when the callee times
+    out before the declaration continuation can run. -/
+theorem evalPanValueFfiClockProg_decCall_timeout_ioEvents_prefix
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel clock callClock : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (name : VarName) (shape : Shape) (function : FunName)
+    (arguments : List (Exp α)) (body : Prog α)
+    (nextGlobals : VarName → Option (PanValue α))
+    (nextMemory : α → Option (PanValue α)) (nextFfi : FfiState σ)
+    (hcall : evalPanValueFfiClockCall context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
+      none function arguments =
+      some (.timeout (fun _ => none) nextGlobals nextMemory nextFfi, callClock))
+    (hprefix : ffi.ioEvents <+: nextFfi.ioEvents) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+      (.decCall name shape function arguments body) =
+      some (.timeout (fun _ => none) nextGlobals nextMemory nextFfi, callClock) ∧
+      ffi.ioEvents <+: nextFfi.ioEvents := by
+  constructor
+  · exact evalPanValueFfiClockProg_decCall_timeout context primitive handler structs
+      functions baseAddress topAddress bytesInWord fuel clock callClock locals globals
+      memory ffi name shape function arguments body nextGlobals nextMemory nextFfi hcall
+  · exact hprefix
+
+/-! A declaration call propagates a callee's terminal FFI result without
+    entering its local continuation, while retaining the event prefix. -/
+theorem evalPanValueFfiClockProg_decCall_finalFfi_ioEvents_prefix
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel clock callClock : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (name : VarName) (shape : Shape) (function : FunName)
+    (arguments : List (Exp α)) (body : Prog α)
+    (nextLocals nextGlobals : VarName → Option (PanValue α))
+    (nextMemory : α → Option (PanValue α)) (nextFfi : FfiState σ)
+    (event : FfiFinalEvent)
+    (hcall : evalPanValueFfiClockCall context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
+      none function arguments =
+      some (.control (.finalFfi nextLocals nextGlobals nextMemory nextFfi event),
+        callClock))
+    (hprefix : ffi.ioEvents <+: nextFfi.ioEvents) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+      (.decCall name shape function arguments body) =
+      some (.control (.finalFfi nextLocals nextGlobals nextMemory nextFfi event),
+        callClock) ∧
+      ffi.ioEvents <+: nextFfi.ioEvents := by
+  constructor
+  · exact evalPanValueFfiClockProg_decCall_finalFfi context primitive handler structs
+      functions baseAddress topAddress bytesInWord fuel clock callClock locals globals
+      memory ffi name shape function arguments body nextLocals nextGlobals nextMemory
+      nextFfi event hcall
+  · exact hprefix
+
 theorem evalPanValueFfiClockProg_decCall_returned_ioEvents_prefix
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

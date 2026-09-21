@@ -280,4 +280,41 @@ theorem evalPanValueExp_panValueProgramStateRel
     hbiw, _hfuncs⟩ := hrel
   simpa only [hglobals, hmemory, hbase, htop, hbiw] using hs
 
+/-! Cake's `OPT_MMAP_eval_some_eq` (`pan_simpProofScript.sml:518`): a whole
+    list of expressions that evaluates successfully evaluates to the same
+    values under `state_rel`.  This is Cake's `OPT_MMAP_eval_some_eq`, whose
+    `OPT_MMAP` is `List.mapM` for `Option`, and it is the list-level consumer
+    of the `compile_eval_correct` bridge above. -/
+
+/-- List-level counterpart of Cake's `OPT_MMAP_eval_some_eq`: if a list of
+    expressions maps successfully under `state_rel`-related states, the
+    mapped values agree. -/
+theorem list_mapM_eval_panValueProgramStateRel
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext) (locals : VarName → Option (PanValue α))
+    (s t : PanValueProgramState α) (hrel : panValueProgramStateRel s t)
+    (expressions : List (Exp α)) (values : List (PanValue α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (hs : expressions.mapM (fun expression =>
+        evalPanValueExp structs locals s.globals s.memory s.baseAddress
+          s.topAddress s.bytesInWord expression (memoryAccess := memoryAccess)) =
+      some values) :
+    expressions.mapM (fun expression =>
+      evalPanValueExp structs locals t.globals t.memory t.baseAddress
+        t.topAddress t.bytesInWord expression (memoryAccess := memoryAccess)) =
+      some values :=
+  list_mapM_eq_some_of_eq_some
+    (fun expression => evalPanValueExp structs locals s.globals s.memory
+      s.baseAddress s.topAddress s.bytesInWord expression
+      (memoryAccess := memoryAccess))
+    (fun expression => evalPanValueExp structs locals t.globals t.memory
+      t.baseAddress t.topAddress t.bytesInWord expression
+      (memoryAccess := memoryAccess))
+    expressions values hs
+    (fun expression _ value heval =>
+      evalPanValueExp_panValueProgramStateRel structs locals s t hrel expression
+        memoryAccess value heval)
+
 end Flapjack

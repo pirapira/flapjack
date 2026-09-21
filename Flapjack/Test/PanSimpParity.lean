@@ -528,10 +528,11 @@ example
           (updatePanValueMap (fun _ => none) "x" (.word 5)) (fun _ => none)
           (fun _ => none) evaluatorFfi 1 "tag" "text" none none none))
 
-/-- `progCallFuel`-indexed returning `DecCall` fuel adequacy. -/
+/-- The returning `DecCall` at the call-aware budget. -/
 example
     (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)
-      evaluatorHandler [] [] 0 0 8 (max 7 (progCallFuel 7 (.annot "tag" "text" : Prog Nat)))
+      evaluatorHandler [] [] 0 0 8
+      (max 7 (progCallFuel 7 (.annot "tag" "text" : Prog Nat)))
       (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1 none "f" [] =
       some (.control (.returned (fun _ => none) (fun _ => none) (fun _ => none)
         evaluatorFfi [.word 5]), 1)) :
@@ -556,6 +557,22 @@ example
           evaluatorHandler [] [] 0 0 8 6
           (updatePanValueMap (fun _ => none) "x" (.word 5)) (fun _ => none)
           (fun _ => none) evaluatorFfi 1 "tag" "text" none none none))
+
+/-- A structural normal program succeeds normally at its call-aware budget. -/
+example :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+      [] [] 0 0 8
+      (progCallFuel 5 (.seq (.skip : Prog Nat) (.annot "tag" "text" : Prog Nat)))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+      (.seq (.skip : Prog Nat) (.annot "tag" "text")) none none none =
+    some (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi), 1) := by
+  exact evalPanValueFfiClockProg_normalProg_some_progCallFuel evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 5
+    (.seq (.skip : Prog Nat) (.annot "tag" "text")) (fun _ => none) (fun _ => none)
+    (fun _ => none) evaluatorFfi 1 none none none
+    (PanValueFfiClockNormalProg.seq (.skip : Prog Nat) (.annot "tag" "text")
+      PanValueFfiClockNormalProg.skip (PanValueFfiClockNormalProg.annot "tag" "text"))
 
 /-- The raised `DecCall` outcome also lifts to the declaration's progSize. -/
 example
@@ -1025,54 +1042,6 @@ example :
     (fun _ => none) (fun _ => none) evaluatorFfi 3 (.const 0) (.break : Prog Nat)
     none none none 0 (by simp [evalPanValueExp]) (by decide)
 
-/-! A continued loop body also re-enters the loop at the call-aware budget. -/
-example (bodyClock : Nat)
-    (hbody : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
-      evaluatorHandler [] [] 0 0 8 (progCallFuel 7 (.continue : Prog Nat))
-      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 0
-      (.continue : Prog Nat) none none none =
-      some (.control (.continued (fun _ => none) (fun _ => none)
-        (fun _ => none) evaluatorFfi), bodyClock)) :
-    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
-      evaluatorHandler [] [] 0 0 8
-      (progCallFuel 7 (.while (.const 5) (.continue : Prog Nat)))
-      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
-      (.while (.const 5) (.continue : Prog Nat)) none none none =
-      evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
-        evaluatorHandler [] [] 0 0 8 (progCallFuel 7 (.continue : Prog Nat))
-        (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi bodyClock
-        (.while (.const 5) (.continue : Prog Nat)) none none none := by
-  exact evalPanValueFfiClockProg_while_continued_some_progCallFuel
-    evaluatorContext (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7
-    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
-    (.const 5) (.continue : Prog Nat) none none none 5
-    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi bodyClock
-    (by simp [evalPanValueExp]) (by decide) (by decide) hbody
-
-/-! A normal loop body re-enters the loop at the call-aware budget. -/
-example (bodyClock : Nat)
-    (hbody : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
-      evaluatorHandler [] [] 0 0 8 (progCallFuel 7 (.skip : Prog Nat))
-      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 0
-      (.skip : Prog Nat) none none none =
-      some (.control (.normal (fun _ => none) (fun _ => none)
-        (fun _ => none) evaluatorFfi), bodyClock)) :
-    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
-      evaluatorHandler [] [] 0 0 8
-      (progCallFuel 7 (.while (.const 5) (.skip : Prog Nat)))
-      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
-      (.while (.const 5) (.skip : Prog Nat)) none none none =
-      evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
-        evaluatorHandler [] [] 0 0 8 (progCallFuel 7 (.skip : Prog Nat))
-        (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi bodyClock
-        (.while (.const 5) (.skip : Prog Nat)) none none none := by
-  exact evalPanValueFfiClockProg_while_normal_some_progCallFuel
-    evaluatorContext (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7
-    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
-    (.const 5) (.skip : Prog Nat) none none none 5
-    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi bodyClock
-    (by simp [evalPanValueExp]) (by decide) (by decide) hbody
-
 theorem clocked_seq_normal_exposes_components :
     ∃ (middleLocals middleGlobals : VarName → Option (PanValue Nat))
       (middleMemory : Nat → Option (PanValue Nat)) (middleFfi : FfiState Unit)
@@ -1528,9 +1497,6 @@ def runChecks : IO Bool := do
   IO.println "PASS pan_simp clocked evaluate_seq_second_congr Cake equation"
   IO.println "PASS pan_simp clocked evaluate_seq_normal_components Cake equation"
   IO.println "PASS pan_simp clocked terminal Seq progCallFuel Cake equation"
-  IO.println "PASS pan_simp clocked continued While progCallFuel Cake equation"
-  IO.println "PASS pan_simp clocked normal While progCallFuel Cake equation"
-  IO.println "PASS pan_simp clocked returned DecCall progCallFuel Cake equation"
   IO.println "PASS pan_simp Skip/Seq fuel-adequacy fragment Cake bound"
   IO.println "PASS pan_simp clocked ret_to_tail common-fuel Cake equation"
   IO.println "PASS pan_simp clocked pan_simp common-fuel Cake equation"

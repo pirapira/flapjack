@@ -651,6 +651,17 @@ def raMovesCoalesceGuard : Bool :=
       (.delta [1] [5, 3]) [] []).map sortColouring ==
     some (sortColouring [(1, 0), (3, 4), (5, 0)])
 
+/- Cake's `Simple` algorithm deliberately passes an empty move list to
+   `init_alloc1_heu`; this direct row mirrors `ra_simple_moves` in
+   `scripts/hol-probes/reg_alloc_probe.out` and keeps that algorithm branch
+   distinct from the IRC/coalescing path above. -/
+def raSimpleMovesGuard : Bool :=
+  (Flapjack.RiscV.CakeRegAlloc.cakeDoRegAlloc .simple none 4 [(1, (1, 5))]
+      (.delta [1] [5, 3]) [] []).map sortColouring ==
+    some (sortColouring [(1, 0), (3, 4), (5, 0)])
+
+#guard raSimpleMovesGuard
+
 /- The fixed physical endpoint follows Cake's `do_coalesce_real` branch:
    x=2 is fixed, so coalescing y=5 into it does not increment x's degree.
    The expected colouring is the direct `reg_alloc_probe.out` oracle
@@ -1410,7 +1421,8 @@ def parityGuard : Bool :=
     graphTagsGuard && graphInitGuard && heuDeltaGuard && heuMovesGuard &&
     heuSpillGuard && heuFixedDegreeGuard && raDeltaPairGuard &&
     raDeltaFreeGuard && raDeltaTriangleGuard && raStackOnlyGuard &&
-    raMovesCoalesceGuard && raFixedCoalesceGuard && raMovesSelfFilteredGuard &&
+    raMovesCoalesceGuard && raSimpleMovesGuard && raFixedCoalesceGuard &&
+      raMovesSelfFilteredGuard &&
       raForcedEdgeGuard &&
     raOrderSeqGuard && raOrderCliqueGuard && raSpillCostGuard &&
     prefsMoveOrderGuard && prefsSeqOrderGuard && prefsControlFlowGuard &&
@@ -1460,6 +1472,7 @@ def runChecks : IO Bool := do
     graphTagsGuard, graphInitGuard, heuDeltaGuard, heuMovesGuard,
     heuSpillGuard, heuFixedDegreeGuard, raDeltaPairGuard, raDeltaFreeGuard,
     raDeltaTriangleGuard, raStackOnlyGuard, raMovesCoalesceGuard,
+    raSimpleMovesGuard,
     raFixedCoalesceGuard, raMovesSelfFilteredGuard, raForcedEdgeGuard,
     raOrderSeqGuard, raOrderCliqueGuard, raSpillCostGuard,
     prefsMoveOrderGuard, prefsSeqOrderGuard, prefsControlFlowGuard,
@@ -1509,7 +1522,8 @@ def runChecks : IO Bool := do
     "init_alloc1_heu fixed degree", "reg_alloc delta pair",
     "reg_alloc delta free", "reg_alloc triangle",
     "reg_alloc stack only",
-    "reg_alloc moves coalesce", "reg_alloc fixed-endpoint coalesce",
+    "reg_alloc moves coalesce", "reg_alloc Simple ignores moves",
+    "reg_alloc fixed-endpoint coalesce",
     "reg_alloc moves self filtered",
     "reg_alloc forced edge",
     "reg_alloc sequential pair order", "reg_alloc clique order",

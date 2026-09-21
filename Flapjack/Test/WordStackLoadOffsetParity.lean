@@ -166,4 +166,15 @@ example :
   simp [wordStackCompileStoreNatNested, wordStackLocation, lookupNatInfo,
     wordStackJoin]
 
+example :
+    wordStackCompileLoadNatNested
+      { locations := [(0, .register 4), (1, .register 5)]
+        scratch := 31
+        addressScratch := 29
+        stackBase := 10 }
+      0 (.op .add [.var 1, .const 8]) =
+      some (.inst (.memOffset .load 4 5 8) : StackProg Nat) := by
+  simp [wordStackCompileLoadNatNested, wordStackLoadOffsetInst,
+    wordStackLocation, wordStackOffset, lookupNatInfo]
+
 end Flapjack.RiscV

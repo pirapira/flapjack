@@ -827,4 +827,8 @@ evaluator-evidence obligation. -/
    two-word Cake program-control theorem. -/
 #check @panValuePcCompileCorrect_compact_two_word_raise_of_state_evidence
 
+/- The three-word-record instance uses the corresponding Cake-shaped
+   program-control theorem and the same explicit raised-state evidence. -/
+#check @panValuePcCompileCorrect_compact_three_word_raise_of_state_evidence
+
 end Flapjack.Test.PanValuePcControlSafety

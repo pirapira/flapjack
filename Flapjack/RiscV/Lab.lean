@@ -122,6 +122,7 @@ def labLineInstructionCount : LabLine (Word width) → Nat
       | .shareMemOffset _ _ _ _ => 1
       | .arithImm _ destination left immediate =>
           if destination = left && immediate = 0 then 0 else 1
+      | .shiftImm .ror _ _ _ => 3
       | .shiftImm _ _ _ _ => 1
       | .tick => 0
       | _ => 1
@@ -401,7 +402,16 @@ def labCompilePlain [NeZero width] :
       | .lsl => pure [.slli destination left immediate]
       | .lsr => pure [.srli destination left immediate]
       | .asr => pure [.srai destination left immediate]
-      | .ror => none
+      | .ror =>
+          if destination.val == 31 || left.val == 31 then
+            none
+          else
+            let amount := shiftAmount immediate
+            pure [
+              .srli 31 left (BitVec.ofNat width amount),
+              .slli destination left
+                (BitVec.ofNat width ((width - amount) % width)),
+              .or destination destination 31]
   | .shift operator destination left right =>
       labShiftInstructions operator destination left right
   | .tick =>

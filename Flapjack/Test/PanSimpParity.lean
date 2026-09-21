@@ -530,6 +530,63 @@ example (values : List (PanValue Nat))
     (fun _ => none) evaluatorFfi 1 "f" [] [] (.skip : Prog Nat) values calleeLocals
     none none none hfunctions hargs hlookup hbind (by decide) hparams
 
+/-- The general forall-functions uncaught-raise adequacy theorem, instantiated
+    on a destination-free call into a single-entry table. -/
+example (values : List (PanValue Nat))
+    (calleeLocals : VarName → Option (PanValue Nat))
+    (hfunctions : PanValueFfiClockFunctionsRaiseSucceed evaluatorContext
+      (fun _ _ => none) evaluatorHandler []
+      [("f", [], (.skip : Prog Nat))] 0 0 8 none none none)
+    (hargs : evalPanValueExps [] (fun _ => none) (fun _ => none) (fun _ => none) 0 0 8
+      ([] : List (Exp Nat)) = some values)
+    (hlookup : lookupPanFunction "f" [("f", [], (.skip : Prog Nat))] =
+      some ([], (.skip : Prog Nat)))
+    (hbind : bindPanValueParameters [] values = some calleeLocals)
+    (hparams : panValueParametersValid [] none "f" values = true) :
+    ∃ (exception : ExceptionId) (value : PanValue Nat)
+      (finalGlobals : VarName → Option (PanValue Nat))
+      (finalMemory : Nat → Option (PanValue Nat)) (finalFfi : FfiState Unit)
+      (finalClock : Nat),
+      evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+        [] [("f", [], (.skip : Prog Nat))] 0 0 8
+        (progSize (.skip : Prog Nat) + 2) (fun _ => none) (fun _ => none)
+        (fun _ => none) evaluatorFfi 1 (.call none "f" []) none none none =
+      some (.control (.raised (fun _ => none) finalGlobals finalMemory finalFfi exception
+        value), finalClock) := by
+  exact evalPanValueFfiClockProg_call_raised_no_handler_of_functions evaluatorContext
+    (fun _ _ => none) evaluatorHandler []
+    [("f", [], (.skip : Prog Nat))] 0 0 8 (fun _ => none) (fun _ => none)
+    (fun _ => none) evaluatorFfi 1 "f" [] [] (.skip : Prog Nat) values calleeLocals
+    none none none hfunctions hargs hlookup hbind (by decide) hparams
+
+/-- The general forall-functions terminal-FFI adequacy theorem, instantiated on a
+    destination-free call into a single-entry table. -/
+example (values : List (PanValue Nat))
+    (calleeLocals : VarName → Option (PanValue Nat))
+    (hfunctions : PanValueFfiClockFunctionsFinalFfiSucceed evaluatorContext
+      (fun _ _ => none) evaluatorHandler []
+      [("f", [], (.skip : Prog Nat))] 0 0 8 none none none)
+    (hargs : evalPanValueExps [] (fun _ => none) (fun _ => none) (fun _ => none) 0 0 8
+      ([] : List (Exp Nat)) = some values)
+    (hlookup : lookupPanFunction "f" [("f", [], (.skip : Prog Nat))] =
+      some ([], (.skip : Prog Nat)))
+    (hbind : bindPanValueParameters [] values = some calleeLocals)
+    (hparams : panValueParametersValid [] none "f" values = true) :
+    ∃ (finalGlobals : VarName → Option (PanValue Nat))
+      (finalMemory : Nat → Option (PanValue Nat)) (finalFfi : FfiState Unit)
+      (event : FfiFinalEvent) (finalClock : Nat),
+      evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+        [] [("f", [], (.skip : Prog Nat))] 0 0 8
+        (progSize (.skip : Prog Nat) + 2) (fun _ => none) (fun _ => none)
+        (fun _ => none) evaluatorFfi 1 (.call none "f" []) none none none =
+      some (.control (.finalFfi (fun _ => none) finalGlobals finalMemory finalFfi event),
+        finalClock) := by
+  exact evalPanValueFfiClockProg_call_finalFfi_of_functions evaluatorContext
+    (fun _ _ => none) evaluatorHandler []
+    [("f", [], (.skip : Prog Nat))] 0 0 8 (fun _ => none) (fun _ => none)
+    (fun _ => none) evaluatorFfi 1 "f" [] [] (.skip : Prog Nat) values calleeLocals
+    none none none hfunctions hargs hlookup hbind (by decide) hparams
+
 /-- Lifting a successful `Call` outcome through the clocked evaluator. -/
 example (outcome : PanValueFfiClockOutcome Nat Unit) (nextClock : Nat)
     (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)

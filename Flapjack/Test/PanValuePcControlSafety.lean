@@ -1027,5 +1027,10 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
     body that never exposes loop control. -/
 #check @PanValueProgNotBrokeContinued_call_of_no_handler
 #check @PanValueProgNotBrokeContinued_dec
+/-! The direct `Call_Ret_FinalFFI` branch of Cake's `pc_compile_correct`: a
+    direct call propagates the callee's terminal FFI event unchanged. -/
+#check @panValuePcFinalFfiResultRel_of_clocked_call
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_finalFfi
+#check @panValuePcRaisedResultRelWithContextCode_of_clocked_call
 
 end Flapjack.Test.PanValuePcControlSafety

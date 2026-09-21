@@ -36,4 +36,37 @@ def parityGuard : Bool :=
 #eval parityGuard
 #guard parityGuard
 
+
+/-! Regression for Cake's `state_rel_imp_evaluate_decls`
+    (`pan_simpProofScript.sml:1303-1331`): the declaration-level evaluator
+    preserves the state relation whose only non-trivial component simplifies
+    every function body with `pan_simp`. -/
+
+def relationState : PanValueProgramState Nat :=
+  { structs := [], globals := fun _ => none,
+    functions := [("f", [], (.seq (.skip : Prog Nat) (.skip : Prog Nat)))],
+    returnShapes := [], parameterShapes := [], exceptions := [],
+    memory := fun _ => none, baseAddress := 0, topAddress := 0, bytesInWord := 8 }
+
+def relationDecls : List (Decl Nat) :=
+  [.decl .one "g" (.const 7),
+   .function
+     { name := "f", inline := false, exported := false, params := [],
+       body := (.seq (.skip : Prog Nat) (.skip : Prog Nat)), returnShape := .one }]
+
+theorem relationState_self :
+    panValueProgramStateRel relationState
+      { relationState with
+        functions := panValueFunctionsSimp relationState.functions } := by
+  exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+
+theorem relationDecls_preserved (s' : PanValueProgramState Nat)
+    (hs : evalPanValueDeclarations relationState relationDecls = some s') :
+    ∃ t', evalPanValueDeclarations
+        { relationState with functions := panValueFunctionsSimp relationState.functions }
+        (panSimpDecls relationDecls) = some t' ∧ panValueProgramStateRel s' t' :=
+  panValueProgramStateRel_evalPanValueDeclarations relationState _ relationState_self
+    relationDecls none s' hs
+
 end Flapjack.Test.PanProgramSimpParity
+

@@ -264,6 +264,14 @@ def longMulSuccess : Bool :=
     (longDivState (some (.word 20)) (some (.word 20)) none)) ==
     (none, some (.word 1), some (.word 144), 5)
 
+/-! Cake's `loop_arith` rejects an `LLongMul` operand that is a location rather
+    than a word (`loop_sem_loop_arith_probe.out:longmul_non_word=NONE`). -/
+def longMulMalformed : Bool :=
+  observeLongDiv (evaluateLoop 2 arithHooks
+    (.arith (.longMul 1 2 3 4))
+    (longDivState (some (.loc 9 0)) (some (.word 20)) none)) ==
+    (some .error, none, none, 5)
+
 def observe (step : LoopMachineStep) :
     Option (LoopMachineResult LoopWordLoc) × Option LoopWordLoc × Nat :=
   (step.1, step.2.locals 1, step.2.clock)
@@ -361,6 +369,7 @@ def duplicateAssignFirstWins : Bool :=
 #guard longDivMalformed
 #guard longDivSameDestination
 #guard longMulSuccess
+#guard longMulMalformed
 #guard sharedLoadSuccess
 #guard sharedStoreSuccess
 #guard sharedLoadDomainError

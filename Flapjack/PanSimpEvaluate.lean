@@ -3355,6 +3355,68 @@ theorem evalPanValueFfiClockProg_leaf_some_progCallFuel
     (progSize_le_progCallFuel callBudget program)
 
 
+/-! ## Structural normal programs
+
+The smallest program fragment whose clocked evaluation always terminates
+normally: skips, annotations and sequences thereof.  This is the program-level
+counterpart of the per-node `progCallFuel` corollaries, and the clock is
+preserved exactly, matching Cake's `evaluate` where these constructs spend no
+ticks. -/
+
+inductive PanValueFfiClockNormalProg : Prog α → Prop
+  | skip : PanValueFfiClockNormalProg (.skip : Prog α)
+  | annot (tag text : String) : PanValueFfiClockNormalProg (.annot tag text)
+  | seq (first second : Prog α) : PanValueFfiClockNormalProg first →
+      PanValueFfiClockNormalProg second →
+      PanValueFfiClockNormalProg (.seq first second)
+
+/-- A structural normal program succeeds normally at its call-aware budget,
+    preserving locals, globals, memory, FFI state and clock exactly. -/
+theorem evalPanValueFfiClockProg_normalProg_some_progCallFuel
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat) (program : Prog α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (h : PanValueFfiClockNormalProg program) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (progCallFuel callBudget program)
+        locals globals memory ffi clock program ma c mh =
+      some (.control (.normal locals globals memory ffi), clock) := by
+  induction h with
+  | skip =>
+      exact evalPanValueFfiClockProg_leaf_some_progCallFuel context primitive handler
+        structs functions baseAddress topAddress bytesInWord callBudget (.skip : Prog α)
+        locals globals memory ffi clock ma c mh PanValueFfiLeafProg.skip
+        (.normal locals globals memory ffi) 1 (by simp [evalPanValueFfiProgSteps])
+  | annot tag text =>
+      simpa [progCallFuel] using
+        (evalPanValueFfiClockProg_annot_some context primitive handler structs
+          functions baseAddress topAddress bytesInWord 0 locals globals memory ffi clock
+          tag text ma c mh)
+  | seq first second hfirst hsecond ihfirst ihsecond =>
+      have hmonoFirst := evalPanValueFfiClockProg_fuel_mono context primitive handler
+        structs functions baseAddress topAddress bytesInWord
+        (fuel := progCallFuel callBudget first)
+        (fuel' := progCallFuel callBudget first + progCallFuel callBudget second)
+        locals globals memory ffi clock first ma c mh (by omega) ihfirst
+      have hmonoSecond := evalPanValueFfiClockProg_fuel_mono context primitive handler
+        structs functions baseAddress topAddress bytesInWord
+        (fuel := progCallFuel callBudget second)
+        (fuel' := progCallFuel callBudget first + progCallFuel callBudget second)
+        locals globals memory ffi clock second ma c mh (by omega) ihsecond
+      exact evalPanValueFfiClockProg_seq_some_progCallFuel context primitive handler
+        structs functions baseAddress topAddress bytesInWord callBudget first second
+        locals globals memory ffi clock ma c mh locals globals memory ffi clock
+        (.control (.normal locals globals memory ffi)) clock hmonoFirst hmonoSecond
+
+
 /-! ## While-body step equations
 
 The recursive branch of the clocked `While` clause: with a nonzero condition and

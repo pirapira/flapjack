@@ -2577,4 +2577,24 @@ example : PanValueFfiClockNormalAdequateProgFromFloor 0 0 evaluatorContext
     (.skip : Prog Nat) (.skip : Prog Nat) (fun _ _ _ => ⟨5, by simp [evalPanValueExp]⟩)
     hskip hskip
 
+/-! A tick lowers the floor by one, and the floor-composition theorem then feeds
+    the lowered floor into a clock-free continuation. -/
+example : PanValueFfiClockNormalAdequateProgFromFloor 1 0 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+    (.seq (.tick : Prog Nat) (.skip : Prog Nat)) := by
+  refine PanValueFfiClockNormalAdequateProgFromFloor_seq (lo := 1) (firstFloor := 0)
+    (finalFloor := 0) (context := evaluatorContext) (primitive := fun _ _ => none)
+    (handler := evaluatorHandler) (structs := []) (functions := [])
+    (baseAddress := 0) (topAddress := 0) (bytesInWord := 8) (callBudget := 7)
+    (ma := none) (c := none) (mh := none)
+    (first := (.tick : Prog Nat)) (second := (.skip : Prog Nat)) ?_ ?_
+  · exact PanValueFfiClockNormalAdequateProgFromFloor_tick 1 (by decide) evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+  · exact PanValueFfiClockNormalAdequateProgFromFloor_leaf 0 evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+      (.skip : Prog Nat) PanValueFfiLeafProg.skip
+      (by
+        intro locals globals memory ffi
+        exact ⟨locals, globals, memory, ffi, 1, by simp [evalPanValueFfiProgSteps]⟩)
+
 end Flapjack.Test.PanSimpParity

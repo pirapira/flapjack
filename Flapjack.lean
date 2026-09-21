@@ -313,6 +313,8 @@ import Flapjack.PanValueFfiFuel
 import Flapjack.PanValueFfiClockSemantics
 import Flapjack.PanValueFfiClockFuel
 import Flapjack.PanValueFfiClockCorrectness
+import Flapjack.PanValueFfiClockShift
+import Flapjack.PanValueFfiClockShiftFull
 import Flapjack.PanValueFfiClockProjection
 import Flapjack.PanCost
 import Flapjack.RiscV.Model

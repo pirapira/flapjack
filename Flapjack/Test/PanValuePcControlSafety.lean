@@ -1,5 +1,6 @@
 import Flapjack.PanToCrepCorrectnessBoundary
 import Flapjack.PanToCrepCorrectnessBridge
+import Flapjack.PanToCrepCallHandlerControlSafety
 import Flapjack.PanValueFfiClockCorrectness
 import Flapjack.CrepeNestedDecsStability
 
@@ -867,6 +868,7 @@ evaluator-evidence obligation. -/
 #check @panValuePcCompileCorrectWithContextCode_of_compact_evaluators_with_expression_state_evidence_and_clocked_final_ffi
 #check @panValuePcCompileCorrectWithContextCode_of_compact_evaluators_with_expression_state_evidence_and_clocked_returned
 #check @panValuePcCompileCorrectWithContextCode_of_compact_evaluators_with_expression_state_evidence_and_clocked_continued
+#check @panValuePcCompileCorrectWithContextCode_of_compact_evaluators_with_expression_state_evidence_and_clocked_broke
 
 /- The arbitrary word-list Raise bridge preserves the same explicit clocked
    evaluator and state/result premises at the top-level boundary. -/
@@ -939,5 +941,15 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 /-! Declaration calls now expose the paired state simulation and control-safety
     package used by Pancake's `pc_compile_correct[DecCall]` branch. -/
 #check @panValueCrepDecCall_state_and_controlSafe_of_body
+
+#check @panValueCrepProgramStateCorrect_and_controlSafe_call_handler_of_relation
+
+/-! A call whose metadata carries an exception handler needs explicit handler
+    safety: a handler program that never returns a loop-control result.  The
+    source-side never-broke-continued predicate and the resulting control-safety
+    theorem make that premise explicit. -/
+#check @PanValueProgNotBrokeContinued
+#check @evalPanValueCallWithPrimitiveCallsAndFfi_handler_not_broke_continued
+#check @panValueCrepProgramStateControlSafe_call_handler
 
 end Flapjack.Test.PanValuePcControlSafety

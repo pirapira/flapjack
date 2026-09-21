@@ -1049,4 +1049,10 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @panValueCrepProgramStateControlSafe_extCall_wordExp
 #check @panValuePcCompileCorrectWithContextCode_compact_extCall_wordExp
 
+/-! More source handler-safety leaves: external calls and shared-memory
+    load/store. -/
+#check @PanValueProgNotBrokeContinued_extCall
+#check @PanValueProgNotBrokeContinued_shMemLoad
+#check @PanValueProgNotBrokeContinued_shMemStore
+
 end Flapjack.Test.PanValuePcControlSafety

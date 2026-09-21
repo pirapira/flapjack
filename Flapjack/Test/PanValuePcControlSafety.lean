@@ -960,4 +960,13 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @PanValueProgNotBrokeContinued_ite
 #check @panValueCrepProgramStateControlSafe_decCall
 
+/-! The "exception id in handler not found in context" sub-case of Cake's
+    `Call_Ret_Exception` branch: when the handler's exception is absent from
+    the compile context, the emitted call drops the handler metadata.  These
+    equations expose the standalone and both destination-carrying degraded
+    shapes as explicit compile-side premises. -/
+#check @compileProg_call_handler_missing_of_compiled
+#check @compileProg_call_handler_missing_destination_degraded_of_compiled
+#check @compileProg_call_handler_missing_destination_of_compiled
+
 end Flapjack.Test.PanValuePcControlSafety

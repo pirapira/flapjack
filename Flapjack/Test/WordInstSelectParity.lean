@@ -185,7 +185,6 @@ def cakeAddNegativeEndpointMaterializes : Bool :=
         (.inst (.arith (.binOp .add 5 23 (.reg 24))))) =>
       value == 2048
   | _ => false
-  | _ => false
 
 def cakeSharedByteOffsetMaterializesConstant : Bool :=
   match wordInstSelectProgram (α := Nat) 23

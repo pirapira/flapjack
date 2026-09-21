@@ -35,12 +35,24 @@ def isFlattened : Bool :=
       (.seq (.seq .skip .tick) (.assign 3 (.const 7) : CrepProg Nat))).map reprStr ==
     ([.skip, .tick, .assign 3 (.const 7)] : List (CrepProg Nat)).map reprStr
 
+def crepExpsProbe : List (CrepProg Nat) :=
+  [.assign 1 (.const 7), .while (.const 1) (.store (.const 2) (.const 3))]
+
+theorem crepExpsOf_nestedSeq_fixture :
+    crepExpsOf (crepNestedSeq crepExpsProbe) =
+      (crepExpsProbe.map crepExpsOf).flatten :=
+  crepExpsOf_nestedSeq crepExpsProbe
+
+def crepExpsGuard : Bool :=
+  (crepExpsOf (crepNestedSeq crepExpsProbe)).length == 4 &&
+    (crepExpsProbe.map crepExpsOf).flatten.length == 4
+
 def parityGuard : Bool :=
   isEmpty (crepNestedSeq []) &&
   isOne (crepNestedSeq [.skip]) &&
   isTwo (crepNestedSeq [.tick, .skip]) &&
   isAssignSeq (crepNestedSeq [.assign 1 (.const 7), .assign 2 (.const 9)]) &&
-  isFlattened
+  isFlattened && crepExpsGuard
 
 #eval parityGuard
 #guard parityGuard
@@ -51,15 +63,17 @@ def runChecks : IO Bool := do
     isOne (crepNestedSeq [.skip]),
     isTwo (crepNestedSeq [.tick, .skip]),
     isAssignSeq (crepNestedSeq [.assign 1 (.const 7), .assign 2 (.const 9)]),
-    isFlattened]
+    isFlattened,
+    crepExpsGuard]
   match results with
-  | [empty, one, two, assignment, flattened] =>
+  | [empty, one, two, assignment, flattened, exps] =>
       if empty then IO.println "PASS crep nested_seq empty" else IO.println "FAIL crep nested_seq empty"
       if one then IO.println "PASS crep nested_seq one" else IO.println "FAIL crep nested_seq one"
       if two then IO.println "PASS crep nested_seq two" else IO.println "FAIL crep nested_seq two"
       if assignment then IO.println "PASS crep nested_seq assignment sequence" else IO.println "FAIL crep nested_seq assignment sequence"
       if flattened then IO.println "PASS crep seqs flatten nested sequences" else IO.println "FAIL crep seqs flatten nested sequences"
-      pure (empty && one && two && assignment && flattened)
+      if exps then IO.println "PASS crep nested_seq exps_of" else IO.println "FAIL crep nested_seq exps_of"
+      pure (empty && one && two && assignment && flattened && exps)
   | _ =>
       IO.println "FAIL crep nested_seq result arity"
       pure false

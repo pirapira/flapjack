@@ -46,4 +46,14 @@ theorem afindi_map_eq_fixture :
   exact afindi_map_eq "c" (fun entry => (entry.1, entry.2 + 1)) entries
     (by intro x y _; rfl)
 
+theorem afindi_dropWhile_fixture :
+    entries.dropWhile (fun entry => !("b" == entry.1)) = entries.drop 1 := by
+  rw [afindi_dropWhile]
+  simp [afindi, entries]
+
+theorem afindi_lookup_fixture :
+    entries.lookup "b" = some 20 := by
+  rw [afindi_lookup]
+  simp [afindi, entries]
+
 end Flapjack.Test.PanStructsAfindiParity

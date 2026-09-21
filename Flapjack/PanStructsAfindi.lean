@@ -118,4 +118,37 @@ theorem afindi_map_eq [BEq α] (key : α) (f : α × β → α × γ)
       simp only [List.map_cons]
       rw [afindi_cons, afindi_cons, hhead, ih htail]
 
+theorem afindi_dropWhile [BEq α] (key : α) (entries : List (α × β)) :
+    entries.dropWhile (fun entry => !(key == entry.1)) =
+      match afindi key entries with
+      | none => []
+      | some index => entries.drop index := by
+  induction entries with
+  | nil => simp [afindi]
+  | cons entry rest ih =>
+      obtain ⟨candidate, value⟩ := entry
+      cases hb : (key == candidate) with
+      | true => simp [afindi_cons, hb]
+      | false =>
+          simp only [List.dropWhile_cons, afindi_cons, hb]
+          rw [ih]
+          cases afindi key rest with
+          | none => simp
+          | some index => simp [List.drop_succ_cons]
+
+theorem afindi_lookup [BEq α] (key : α) (entries : List (α × β)) :
+    entries.lookup key =
+      (afindi key entries).bind (fun index => (entries[index]?).map Prod.snd) := by
+  induction entries with
+  | nil => simp [afindi]
+  | cons entry rest ih =>
+      obtain ⟨candidate, value⟩ := entry
+      by_cases hbeq : key == candidate
+      · simp [List.lookup_cons, afindi_cons, hbeq]
+      · simp only [List.lookup_cons, hbeq, afindi_cons]
+        rw [ih]
+        cases afindi key rest with
+        | none => simp
+        | some index => simp [List.getElem?_cons_succ]
+
 end Flapjack

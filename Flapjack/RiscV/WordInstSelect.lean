@@ -312,21 +312,32 @@ def wordInstSelectAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α
       let materialized : WordProg α × WordExp α :=
         (wordDeadSelectSeq (wordDeadSelectSeq prelude (.inst (.const (temp + 1) value)))
           (.inst (.arith (.binOp operator temp temp (.reg (temp + 1))))), .var temp)
+      let normal :=
+        match selectedLeft with
+        | .var selected =>
+            if WordInstSelectImmediate.validBinOpImmediate operator value then
+              wordDeadSelectSeq prelude
+                (.inst (.arith (.binOp operator temp selected (.imm value))))
+            else if operator = .add &&
+                WordInstSelectImmediate.validBinOpImmediate .sub
+                  (WordInstSelectImmediate.negateImmediate value) then
+              wordDeadSelectSeq prelude
+                (.inst (.arith (.binOp .sub temp selected
+                  (.imm (WordInstSelectImmediate.negateImmediate value)))))
+            else materialized.1
+        | _ => materialized.1
       match selectedLeft with
-      | .var selected =>
-          if WordInstSelectImmediate.validBinOpImmediate operator value then
-            (wordDeadSelectSeq prelude
-              (.inst (.arith (.binOp operator temp selected (.imm value)))), .var temp)
-          else if operator = .add then
-            if WordInstSelectImmediate.validBinOpImmediate .sub
-                (WordInstSelectImmediate.negateImmediate value) then
-              (wordDeadSelectSeq prelude
-                  (.inst (.arith (.binOp .sub temp selected
-                    (.imm (WordInstSelectImmediate.negateImmediate value))))), .var temp)
-            else materialized
-          else materialized
+      | .var _selected =>
+          match left with
+          | .lookup .currHeap =>
+              if operator = .sub then
+                (normal, .var temp)
+              else
+                (wordDeadSelectSeq (.inst (.const temp value))
+                  (.opCurrHeap operator temp temp), .var temp)
+          | _ => (normal, .var temp)
       | _ =>
-          materialized
+          (materialized.1, .var temp)
   | .op operator [left, right] =>
       let (leftPrelude, _) := wordInstSelectAtom temp left
       let (rightPrelude, _) := wordInstSelectAtom (temp + 1) right

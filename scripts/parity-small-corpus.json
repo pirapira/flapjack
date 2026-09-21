@@ -957,6 +957,14 @@
       "source_reference": "Minimized differential-fuzz witness for Cake's `Seq_assoc` recursion through call return and exception-handler metadata. The handler condition `0 && (@base >=+ 0)` reaches the same pre-SSA branch shape only when the port reassociates those nested programs (word_simpScript.sml:21-38).",
       "cake_sha256": "6ed17dd9c1886a1b31f46750d47c06c82efaf2272969dd40201a6c5f43c764e9",
       "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/nested_currheap_xor.pnk",
+      "source_reference": "Minimized f00054 nested-expression witness: Cake selects the constant in `1000 ^ @base` into the fresh temporary and emits `OpCurrHeap Xor` even when the operation is nested inside a subtraction; the selector must not lower it as `Get CurrHeap` plus XORI.",
+      "cake_sha256": "f579626d1b36430b49a1acc5f20f18d3c1749c8443a9f868430efd22d16884ca",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.21"
+      ]
     }
   ]
 }

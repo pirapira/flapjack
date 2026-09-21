@@ -107,6 +107,7 @@ import Flapjack.Test.CrepToLoopCutsetParity
 import Flapjack.Test.CrepToLoopParity
 import Flapjack.Test.CrepToLoopDecLive
 import Flapjack.Test.CakeRegAlloc
+import Flapjack.Test.WordDeadCodeParity
 import Flapjack.Test.CrepeNestedSeqParity
 import Flapjack.Test.CrepAssignedFreeVarsParity
 import Flapjack.Test.CrepeStoresParity
@@ -129,6 +130,9 @@ import Flapjack.Test.CompileDefParity
 import Flapjack.Test.CompileToCrepeParity
 import Flapjack.Test.CompileProgParity
 import Flapjack.Test.PanSimpParity
+import Flapjack.Test.PanProgramSimpParity
+import Flapjack.Test.PanGlobalsSemanticsParity
+import Flapjack.Test.PanSimpOthersParity
 import Flapjack.Test.CrepProgIfParity
 import Flapjack.Test.CompileCrepOpParity
 import Flapjack.Test.CrepCompileExpParity
@@ -209,6 +213,15 @@ import Flapjack.Test.CakeSsaSetupParity
 import Flapjack.Test.ShapeToStringParity
 import Flapjack.Test.CakeApplyColourParity
 import Flapjack.Test.CakeSsaTempParity
+import Flapjack.Test.CakeSsaBoundaryParity
+import Flapjack.Test.CakeSsaControlParity
+import Flapjack.Test.CakeSsaCallParity
+import Flapjack.Test.CakeSsaInstParity
+import Flapjack.Test.CakeSsaSharedParity
+import Flapjack.Test.CakeSsaMemoryParity
+import Flapjack.Test.CakeSsaLeafParity
+import Flapjack.Test.CakeDeadCodeStateParity
+import Flapjack.Test.CakeReturnSoundness
 import Flapjack.Test.CakeApplyColourParity
 import Flapjack.Test.CakeSpillCostParity
 import Flapjack.Test.CakeFrameVectorParity
@@ -245,6 +258,20 @@ def cakeReturnWords (value : Nat) : List (BitVec 8) :=
     BitVec.ofNat 8 (value * 0x10), BitVec.ofNat 8 0x00,
     BitVec.ofNat 8 0x67, BitVec.ofNat 8 0x80,
     BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x00 ]
+
+/-! Cake's byte-load-with-offset instruction is an RV `lb` (funct3 4), not
+    the funct3 0 encoding.  This pins the field exposed by the
+    source-to-RISC-V differential fuzzer. -/
+def cakeLoadByteOffsetWords : List (BitVec 8) :=
+  RiscV.encodeInstructionBytes
+    (.loadByteOffset 10 5 (BitVec.ofNat 64 8))
+
+def cakeLoadByteOffsetEncodingParity : Bool :=
+  cakeLoadByteOffsetWords ==
+    [ BitVec.ofNat 8 0x03, BitVec.ofNat 8 0xC5,
+      BitVec.ofNat 8 0x82, BitVec.ofNat 8 0x00 ]
+
+#guard cakeLoadByteOffsetEncodingParity
 
 def leanReturnWords (value : Nat) : List (BitVec 8) :=
   RiscV.encodeInstructions
@@ -723,6 +750,15 @@ def main : IO Unit := do
     Flapjack.Test.CakeMkBijParity.runChecks,
     Flapjack.Test.CakeSsaSetupParity.runChecks,
     Flapjack.Test.CakeSsaTempParity.runChecks,
+    Flapjack.Test.CakeSsaBoundaryParity.runChecks,
+    Flapjack.Test.CakeSsaControlParity.runChecks,
+    Flapjack.Test.CakeSsaCallParity.runChecks,
+    Flapjack.Test.CakeSsaInstParity.runChecks,
+    Flapjack.Test.CakeSsaSharedParity.runChecks,
+    Flapjack.Test.CakeSsaMemoryParity.runChecks,
+    Flapjack.Test.CakeSsaLeafParity.runChecks,
+    Flapjack.Test.CakeDeadCodeStateParity.runChecks,
+    Flapjack.Test.CakeReturnSoundness.runChecks,
     Flapjack.Test.CakeApplyColourParity.runChecks,
     Flapjack.Test.CakeSpillCostParity.runChecks,
     Flapjack.Test.CakeFrameVectorParity.runChecks,

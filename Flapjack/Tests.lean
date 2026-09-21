@@ -2,6 +2,7 @@ import Flapjack.Test.Source
 import Flapjack.Test.Parser
 import Flapjack.Test.DisplayParity
 import Flapjack.Test.ParserStaticExamples
+import Flapjack.Test.ParserParseDefParity
 import Flapjack.Test.PanSteppedSemantics
 import Flapjack.Test.Backend
 import Flapjack.Test.Correctness
@@ -22,6 +23,7 @@ import Flapjack.Test.HeuristicPipeline
 import Flapjack.Test.HeuristicStackPipeline
 import Flapjack.RiscV.CorrectnessHeuristicStack
 import Flapjack.Test.RiscVEncoding
+import Flapjack.Test.RiscVConstantParity
 import Flapjack.Test.CorrectnessEncoding
 import Flapjack.RiscV.CorrectnessGraphLocations
 import Flapjack.Test.LongDivSemantics

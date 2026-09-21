@@ -387,5 +387,49 @@ theorem crepNestedDecsStateEval_body_of_evalExps_stable
                         (expressions := expressions) (values := values)
                         hlengthTail hnotTail htailStable htailNested
 
+/-! The state relation is preserved when the target installs a list of fresh
+locals (the shape produced by `nestedDecs`), as long as none of the fresh
+slots occurs in any variable slot list recorded in the compile context.  This
+is the target-side companion of `panValueCrepLocalsRel_update_word` and is the
+reusable ingredient for the deep store/declaration instances, whose compiled
+programs begin with `nestedDecs`. -/
+
+theorem panValueCrepLocalsRel_updateCrepLocalList_fresh
+    (structs : StructContext) (context : CompileContext α)
+    (sourceLocals : VarName → Option (PanValue α))
+    (crepLocals : Nat → Option α)
+    (names : List Nat) (values : List α)
+    (hrel : panValueCrepLocalsRel structs context sourceLocals crepLocals)
+    (hlength : names.length = values.length)
+    (hfresh : ∀ name shape slots,
+      lookupInfo name context.vars = some (shape, slots) →
+        ∀ slot, slot ∈ names → slot ∉ slots) :
+    panValueCrepLocalsRel structs context sourceLocals
+      (updateCrepLocalList crepLocals names values) := by
+  intro name currentValue shape slots hsource hlookup
+  have hold := hrel name currentValue shape slots hsource hlookup
+  refine ⟨hold.1, ?_⟩
+  rw [readCrepLocals_updateCrepLocalList_of_not_mem crepLocals names values slots
+    hlength (fun slot hslot => hfresh name shape slots hlookup slot hslot)]
+  exact hold.2
+
+theorem panValueCrepStateRel_updateCrepLocalList_fresh
+    (structs : StructContext) (context : CompileContext α)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (crepState : CrepState α)
+    (names : List Nat) (values : List α)
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory crepState)
+    (hlength : names.length = values.length)
+    (hfresh : ∀ name shape slots,
+      lookupInfo name context.vars = some (shape, slots) →
+        ∀ slot, slot ∈ names → slot ∉ slots) :
+    panValueCrepStateRel structs context sourceLocals sourceGlobals sourceMemory
+      { crepState with
+          locals := updateCrepLocalList crepState.locals names values } :=
+  ⟨hrel.1,
+    panValueCrepLocalsRel_updateCrepLocalList_fresh structs context sourceLocals
+      crepState.locals names values hrel.2.1 hlength hfresh,
+    hrel.2.2⟩
 
 end Flapjack

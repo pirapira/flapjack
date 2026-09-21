@@ -34,6 +34,17 @@ structure PanSemEvaluateState (α : Type u) (σ : Type v) where
   contracts : Option PanValueCallContracts := none
   memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none
 
+/-! Source-faithful callers carry the Cake memory operations as a required
+    field.  The legacy state remains optional for executable compatibility;
+    this wrapper is the typed boundary used by exact evaluator proofs. -/
+structure PanSemExactState (α : Type u) (σ : Type v) where
+  legacy : PanSemEvaluateState α σ
+  memoryAccess : PanValueMemoryAccess α
+
+def PanSemExactState.toEvaluateState (state : PanSemExactState α σ) :
+    PanSemEvaluateState α σ :=
+  { state.legacy with memoryAccess := some state.memoryAccess }
+
 mutual
   def panSemExpFuel : Exp α → Nat
     | .const _ | .var _ _ | .baseAddr | .topAddr | .bytesInWord => 1
@@ -145,5 +156,74 @@ def panSemEvaluateExact
     Option (PanValueFfiClockResult α σ) :=
   panSemEvaluate context primitive handler
     { state with memoryAccess := some memoryAccess } program
+
+/-! The exact source entrypoint is a state boundary, not a second evaluator:
+    it installs the explicit Cake memory operations before evaluating.  Keeping
+    this equation named makes exact correctness proofs unable to silently
+    select the legacy no-access compatibility path. -/
+theorem panSemEvaluateExact_uses_memory_access
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (memoryAccess : PanValueMemoryAccess α)
+    (state : PanSemEvaluateState α σ) (program : Prog α) :
+    panSemEvaluateExact context primitive handler memoryAccess state program =
+      panSemEvaluate context primitive handler
+        { state with memoryAccess := some memoryAccess } program := by
+  rfl
+
+def panSemEvaluateExactState
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (state : PanSemExactState α σ) (program : Prog α) :
+    Option (PanValueFfiClockResult α σ) :=
+  panSemEvaluate context primitive handler state.toEvaluateState program
+
+theorem panSemEvaluateExactState_eq
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (state : PanSemExactState α σ) (program : Prog α) :
+    panSemEvaluateExactState context primitive handler state program =
+      panSemEvaluate context primitive handler state.toEvaluateState program := by
+  rfl
+
+/-! A generic source `Raise` equation for the exact state boundary.  The
+    evaluator and payload-validity premises remain explicit so this theorem
+    does not silently discharge arbitrary exception contracts. -/
+theorem panSemEvaluateExactState_raise_of_eval
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (state : PanSemExactState α σ)
+    (exception : ExceptionId) (expression : Exp α) (value : PanValue α)
+    (heval : evalPanValueExp state.legacy.structs state.legacy.locals
+      state.legacy.globals state.legacy.memory state.legacy.baseAddress
+      state.legacy.topAddress state.legacy.bytesInWord expression
+      (memoryAccess := some state.memoryAccess) = some value)
+    (hvalid : panValueExceptionValid state.legacy.structs
+      state.legacy.contracts exception value = true)
+    (hlimit : panValuePayloadWithinLimit state.legacy.structs value = true) :
+    panSemEvaluateExactState context primitive handler state
+        (.raise exception expression) =
+      some (.control (.raised (fun _ => none) state.legacy.globals
+        state.legacy.memory state.legacy.ffi exception value), state.legacy.clock) := by
+  simp [panSemEvaluateExactState, panSemEvaluate, panSemEvaluateWithFuel,
+    panSemEvaluateFuel, evalPanValueFfiClockLeaf, evalPanValueFfiClockProg,
+    evalPanValueFfiProgSteps, evalPanValueExpCounted,
+    PanSemExactState.toEvaluateState, heval, hvalid, hlimit]
 
 end Flapjack

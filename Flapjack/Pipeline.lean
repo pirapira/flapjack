@@ -558,10 +558,9 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsa [NeZero width] :
          `max_var`, and therefore the fresh SSA names and final RISC-V bytes. -/
       let unallocatedBody :=
         RiscV.wordInstSelectProgramFrom
-          (RiscV.wordFuseConditionsAndFold
-            (RiscV.wordConstFp
-              (RiscV.wordFlattenProgramFrom
-                (LoopToWord.loopToWordCompFunc label parameters body))))
+          (RiscV.wordToWordPreSsa
+            (RiscV.wordFlattenProgramFrom
+              (LoopToWord.loopToWordCompFunc label parameters body)))
       let (_, renamedParameters, renamedProgram, allocation) ←
         RiscV.CakeRegAlloc.cakeAllocateWordFunctionAfterDead label wordParameters
           unallocatedBody

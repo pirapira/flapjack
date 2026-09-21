@@ -369,8 +369,8 @@ def wordSsaReadCutsets (state : WordSsaState)
      `toAList`: the Patricia traversal order can change when a key changes.
      Mapping an already enumerated list (the old port) preserved the wrong
      order and made FFI/call cutsets diverge from Cake after SSA. -/
-  (NumSet.fromList ((NumSet.fromList cutsets.1).map (wordSsaRead state)),
-    NumSet.fromList ((NumSet.fromList cutsets.2).map (wordSsaRead state)))
+  (NumSet.fromAList ((NumSet.fromAList cutsets.1).map (wordSsaRead state)),
+    NumSet.fromAList ((NumSet.fromAList cutsets.2).map (wordSsaRead state)))
 
 def wordSsaFresh (state : WordSsaState) (name : Nat) : WordSsaState × Nat :=
   ({ current := (name, state.next) ::
@@ -786,6 +786,21 @@ def wordSsaRenameProgramWithLoops [OfNat α 0] (frames : List WordSsaLoopFrame)
         let movOut := .move 1 [(freshRight, 0), (freshLeft, 6)]
         (state, wordSsaSeq movIn
           (wordSsaSeq (.inst (.arith (.longMul 6 0 0 4))) movOut))
+    | .inst (.arith (.longDiv destinationLeft destinationRight sourceLeft sourceRight quotient)) =>
+        /- Cake's `ssa_cc_trans_inst` uses the fixed LongDiv operand protocol:
+           numerator parts enter registers 6 and 0, the instruction writes
+           quotient/remainder through 0 and 6, and the fresh SSA results are
+           copied out in destination-right/destination-left order. -/
+        let sourceLeft := wordSsaRead state sourceLeft
+        let sourceRight := wordSsaRead state sourceRight
+        let quotient := wordSsaRead state quotient
+        let movIn : WordProg α := .move 1 [(6, sourceLeft), (0, sourceRight)]
+        let (state, freshRight) := wordSsaFresh state destinationRight
+        let (state, freshLeft) := wordSsaFresh state destinationLeft
+        let divide : WordProg α :=
+          .inst (.arith (.longDiv 0 6 6 0 quotient))
+        let movOut : WordProg α := .move 1 [(freshRight, 6), (freshLeft, 0)]
+        (state, wordSsaSeq movIn (wordSsaSeq divide movOut))
     | .inst (.arith (.cakeAddCarry destination sourceLeft sourceRight carry)) =>
         /- Cake's `ssa_cc_trans_inst` uses fixed carry register 0 for
            AddCarry.  The move-in/move-out is semantically observable to the
@@ -1675,7 +1690,7 @@ def wordClashTree : WordProg α → List (List Nat × List Nat) → WordClashTre
          clash tree.  In particular, a handler carried by the reduced Word
          carrier is not recursively coloured here, matching the upstream
          return-free equation. -/
-      .set arguments.eraseDups
+      .set (NumSet.fromList arguments.eraseDups)
   | .call (some (values, cutsets, returnCode, _, _)) _
       arguments (some (exception, body, _, _)), frames =>
       let cutSet := wordClashTreeCallSet cutsets.1 cutsets.2
@@ -2141,7 +2156,7 @@ def wordApplyColourInst (colour : Nat → Nat) : WordInst α → WordInst α
     `apply_nummap_key` rebuilds those sets through `fromAList`, so the result is
     canonical (sorted and duplicate-free), rather than a plain mapped list. -/
 def wordApplyColourNumSet (colour : Nat → Nat) (names : List Nat) : List Nat :=
-  NumSet.fromList (names.map colour)
+  NumSet.fromAList (names.map colour)
 
 def wordApplyColour (colour : Nat → Nat) : WordProg α → WordProg α
   | .skip => .skip

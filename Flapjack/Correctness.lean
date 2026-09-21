@@ -2157,7 +2157,7 @@ theorem loopBindParameters_single_parameter_agreement [NeZero width]
   refine ⟨updateLoopLocal (fun _ => none) name value,
     RiscV.writeRegister (RiscV.clearWordRegisters state) register value,
     ?_, ?_, ?_⟩
-  · simp [loopBindParameters]
+  · simp [loopBindParameters, loopLookupFirst_singleton]
   · exact bindWordRegisters_single_parameter context state name value register
       hregister
   · exact loopLocalsMappedToRiscV_single_parameter context state name value register
@@ -2527,7 +2527,7 @@ theorem loopToWord_call_return_simulation_single_parameter [NeZero width]
                                         some (LoopResult.normal finalLoop) := by
                                     simpa [evalLoopCallWithCallsAndFfi, hlookupLoop,
                                       hreadLoop, hcalleeBind, hbodyLoop,
-                                      loopAssignValues] using hloop
+                                      loopAssignValues, loopLookupFirst_singleton] using hloop
                                   let returnedWordState : RiscV.State width :=
                                     { wordState with
                                       memory := bodyWordState.memory

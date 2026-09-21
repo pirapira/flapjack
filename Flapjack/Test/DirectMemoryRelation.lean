@@ -5,6 +5,31 @@ import Flapjack.Test.MemorySpillRelation
 
 namespace Flapjack.RiscV
 
+/- Cake's `wInst (Mem Load ... (Addr ...))` applies `wReg1` to the address,
+   so an address spill is loaded through `k`, even when the instruction keeps
+   an immediate offset.  `wReg2`/`addressScratch` is reserved for store
+   values. -/
+example :
+    wordStackMemoryOffsetInst
+        { locations := [(1, .register 5), (2, .stack 2)],
+          scratch := 22, stackBase := 0, addressScratch := 23 }
+        .load 1 2 8 =
+      some (.seq (.stackLoad 22 2)
+        (.inst (.memOffset .load 5 22 8)) : StackProg Nat) := by
+  simp [wordStackMemoryOffsetInst, wordStackLoadOffsetInst,
+    wordStackLocation, wordStackOffset, lookupNatInfo]
+
+example :
+    wordStackMemoryOffsetInst
+        { locations := [(1, .stack 3), (2, .stack 2)],
+          scratch := 22, stackBase := 0, addressScratch := 23 }
+        .load 1 2 8 =
+      some (.seq (.stackLoad 22 2)
+        (.seq (.inst (.memOffset .load 22 22 8))
+          (.stackStore 22 3)) : StackProg Nat) := by
+  simp [wordStackMemoryOffsetInst, wordStackLoadOffsetInst,
+    wordStackLocation, wordStackOffset, lookupNatInfo]
+
 /- Cake's `wReg1` uses the first allocator register as the carrier when the
    address of a store is spilled.  This small case is the source-level shape
    that exposed the four-byte RISC-V parity discrepancy in the differential

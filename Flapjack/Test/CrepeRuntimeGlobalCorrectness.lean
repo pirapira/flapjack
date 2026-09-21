@@ -31,6 +31,22 @@ def runtimeTypedBaseState : CrepGlobalState Nat :=
     memory := fun _ => none
     globals := fun _ => none }
 
+def runtimeTypedRawState : CrepRuntimeTypedState Nat Unit :=
+  { runtime := globalLoadRuntimeState
+    globals := fun _ => none }
+
+/- The raw runtime wrapper keeps values as Nat but carries Cake's distinct
+   five-bit global key.  The aliased read is therefore a representation-level
+   guard, not a target-width-keyed update disguised as a global store. -/
+example :
+    evalCrepRuntimeExp
+        ((runtimeTypedRawState.store runtimeTypedKey 4 19).toRuntime
+          runtimeTypedKey) (.loadGlob 36) = some 19 := by
+  rw [CrepRuntimeTypedState.load_after_store_toRuntime]
+  simp [runtimeTypedRawState, CrepRuntimeTypedState.toGlobalState,
+    runtimeTypedKey, evalCrepTypedLoad, storeCrepTypedGlobal, storeCrepGlobal,
+    crepGlobalKeyOfNat]
+
 def runtimeTypedRuntimeState : CrepRuntimeState Nat Unit :=
   globalLoadRuntimeState.withTypedGlobalState runtimeTypedKey runtimeTypedBaseState
 
@@ -50,6 +66,79 @@ def runtimeTypedAliasedStoreLoadValue : Option Nat :=
       runtimeTypedBaseState 4 17) (.loadGlob 36)
 
 #guard runtimeTypedAliasedStoreLoadValue == some 17
+
+def runtimeTypedLoopBaseState : LoopState Nat :=
+  { locals := fun _ => none
+    globals := fun _ => none
+    memory := fun _ => none }
+
+def runtimeTypedLoopGlobalState : LoopTypedGlobalState Nat :=
+  { legacy := runtimeTypedLoopBaseState
+    globals := runtimeTypedBaseState }
+
+#guard ((runtimeTypedLoopGlobalState.setGlobal runtimeTypedKey 4 (.const 17)).bind
+    (fun state => state.load runtimeTypedKey 36)) == some 17
+
+example :
+    (runtimeTypedLoopGlobalState.store runtimeTypedKey 4 17).toLoopState
+        runtimeTypedKey =
+      loopStateWithTypedGlobalStore runtimeTypedLoopBaseState runtimeTypedKey
+        runtimeTypedBaseState 4 17 := by
+  exact LoopTypedGlobalState.toLoopState_store runtimeTypedLoopGlobalState
+    runtimeTypedKey 4 17
+
+example :
+    (runtimeTypedLoopGlobalState.setGlobal runtimeTypedKey 4 (.const 17)).bind
+        (fun state => state.load runtimeTypedKey 36) = some 17 := by
+  exact LoopTypedGlobalState.setGlobal_load_alias runtimeTypedLoopGlobalState
+    runtimeTypedKey 4 17 36
+
+example :
+    ((runtimeTypedLoopGlobalState.store runtimeTypedKey 4 17).toLoopState
+        runtimeTypedKey).globals 36 = some 17 := by
+  rw [LoopTypedGlobalState.store_toLoopState_load]
+  simp [runtimeTypedKey, storeCrepTypedGlobal,
+    evalCrepTypedLoad, storeCrepGlobal, crepGlobalKeyOfNat]
+
+def runtimeTypedAliasedLoopStoreState : LoopState Nat :=
+  loopStateWithTypedGlobalStore runtimeTypedLoopBaseState runtimeTypedKey
+    runtimeTypedBaseState 4 17
+
+/- The Loop adapter preserves Cake's fixed-key alias fiber: a store at 4 is
+   visible through the distinct target-width address 36, while its relation is
+   stated against the typed 5-bit map rather than against raw equality. -/
+#guard runtimeTypedAliasedLoopStoreState.globals 36 == some 17
+
+example :
+    CrepGlobalKeyRelation runtimeTypedKey
+      runtimeTypedAliasedLoopStoreState.globals
+      (storeCrepTypedGlobal runtimeTypedKey runtimeTypedBaseState 4 17).globals := by
+  exact loopStateWithTypedGlobalStore_relation runtimeTypedLoopBaseState
+    runtimeTypedKey runtimeTypedBaseState 4 17
+
+example :
+    runtimeTypedAliasedLoopStoreState.globals 36 =
+      (storeCrepTypedGlobal runtimeTypedKey runtimeTypedBaseState 4 17).globals
+        (runtimeTypedKey 36) := by
+  exact loopStateWithTypedGlobalStore_load runtimeTypedLoopBaseState
+    runtimeTypedKey runtimeTypedBaseState 4 36 17
+
+example :
+    evalCrepTypedLoad runtimeTypedKey
+        (storeCrepTypedGlobal runtimeTypedKey runtimeTypedBaseState 4 17) 36 =
+      runtimeTypedAliasedLoopStoreState.globals 36 := by
+  exact loopStateWithTypedGlobalStore_typed_load runtimeTypedLoopBaseState
+    runtimeTypedKey runtimeTypedBaseState 4 36 17
+
+example :
+    loopStateWithTypedGlobalStore
+        (loopStateOfCrepRuntimeStateForGlobals globalLoadRuntimeState)
+        runtimeTypedKey runtimeTypedBaseState 4 17 =
+      loopStateOfCrepRuntimeStateForGlobals
+        (storeCrepRuntimeTypedGlobalState globalLoadRuntimeState runtimeTypedKey
+          runtimeTypedBaseState 4 17) := by
+  exact loopStateWithTypedGlobalStore_runtime_adapter globalLoadRuntimeState
+    runtimeTypedKey runtimeTypedBaseState 4 17
 
 example :
     crepRuntimeTypedGlobalRelation runtimeTypedKey
@@ -96,6 +185,31 @@ example (state : CrepRuntimeState (BitVec 5) Unit)
       (storeCrepTypedGlobal id typedState address value) := by
   exact crepRuntimeTypedGlobalRelation_store_of_noalias id state typedState
     address value hrel (fun _ h => h)
+
+example (state : CrepRuntimeState (BitVec 5) Unit)
+    (typedState : CrepGlobalState (BitVec 5))
+    (address value : BitVec 5) :
+    crepRuntimeLoopTypedGlobalRel (id : BitVec 5 → CrepGlobalAddress)
+      { (state.withTypedGlobalState id typedState) with
+        globals := updateMemory
+          (state.withTypedGlobalState id typedState).globals address value }
+      { (loopStateOfCrepRuntimeStateForGlobals
+          (state.withTypedGlobalState id typedState)) with
+        globals := updateLoopGlobal
+          (state.withTypedGlobalState id typedState).globals address value }
+      (storeCrepTypedGlobal id typedState address value) := by
+  exact crepRuntimeLoopTypedGlobalRel_store_of_noalias state id typedState
+    address value (fun _ h => h)
+
+example (state : CrepRuntimeState (BitVec 5) Unit)
+    (typedState : CrepGlobalState (BitVec 5))
+    (address value : BitVec 5) :
+    CrepGlobalKeyRelation (id : BitVec 5 → CrepGlobalAddress)
+      (updateLoopGlobal (state.withTypedGlobalState id typedState).globals
+        address value)
+      (storeCrepTypedGlobal id typedState address value).globals := by
+  exact crepRuntimeTypedGlobalRelation_loopStore_of_noalias
+    state id typedState address value (fun _ h => h)
 
 /- The guard routes runtime LoadGlob through the typed StoreGlob entrypoint,
    whose expected value is the source `crepSem` store/load result. -/

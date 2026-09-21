@@ -1,0 +1,11 @@
+fun {1,1} pair(1 a, 1 b) { return <a, b>; }
+struct S { 1 f1, 1 f2 }
+fun S mks(1 a, 1 b) { return S <f1 = a, f2 = b>; }
+exception E : 1;
+var 1 ev = 0;
+fun 1 main() {
+  var S s965 = mks(2048, (((lds 1 (1000 + 12)) >= (ld8 @biw + 255)) - (ld8 ev + 0)));
+  var {1,1} p589 = pair((lds 1 (@top + 255)), (lds 1 (((@base + 255 + 1000) + 1000))));
+  !stw (1000 + 12), 255;
+  return 2048;
+}

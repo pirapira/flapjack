@@ -21,6 +21,18 @@ def exceptionDeclaration : Decl Nat := .exnDecl "E" .one
 
 def nameDeclaration : Decl Nat := .name "S" []
 
+def panSimpDeclarations : List (Decl Nat) :=
+  [.exnDecl "E" .one,
+   .function
+     { name := "f", inline := false, exported := false, params := [],
+       body := .raise "E" (.const 0), returnShape := .one },
+   .exnDecl "F" .one]
+
+theorem size_of_eids_pan_simp_preserves :
+    sizeOfEids (panSimpDecls panSimpDeclarations) =
+      sizeOfEids panSimpDeclarations := by
+  exact sizeOfEids_panSimpDecls panSimpDeclarations
+
 def parityGuard : Bool :=
   isDecl declaration &&
   !isDecl exceptionDeclaration &&
@@ -29,7 +41,9 @@ def parityGuard : Bool :=
   isName nameDeclaration &&
   !isName declaration &&
   sizeOfEids ([] : List (Decl Nat)) == 0 &&
-  sizeOfEids [declaration, nameDeclaration, exceptionDeclaration] == 1
+  sizeOfEids [declaration, nameDeclaration, exceptionDeclaration] == 1 &&
+  sizeOfEids (panSimpDecls panSimpDeclarations) ==
+    sizeOfEids panSimpDeclarations
 
 #guard originalProbeSource ==
   "cakeml/pancake/panLangScript.sml:234-253 (is_decl/is_exn_decl/is_name/size_of_eids)"

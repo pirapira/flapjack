@@ -332,5 +332,6 @@ example :
   apply crepToLoop_primitive_agreement
   · simp [primitiveCorrectnessLoopContext, lookupLoopVars, lookupNatInfo]
   · simp [primitiveCorrectnessLoopContext, lookupLoopVars, lookupNatInfo]
+  · simp [CrepDistinctNames]
 
 end Flapjack

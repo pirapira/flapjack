@@ -24,6 +24,18 @@ def shiftWord (value : Nat) : ShiftWord := BitVec.ofNat 8 value
 #guard evalLoopShiftFull .ror (shiftWord 0x81) (shiftWord 1) = some (shiftWord 0xc0)
 #guard evalLoopShiftFull .lsl (shiftWord 1) (shiftWord 8) = none
 
+/- The source evaluator must agree with Cake's target-word `word_sh`, not
+the historical compact helper which rejected ASR/ROR. -/
+#guard evalPanExpFull (fun _ => none)
+    (.shift .asr (.const (shiftWord 0x80)) (.const (shiftWord 1))) =
+    RiscV.panRiscVShift .asr (shiftWord 0x80) (shiftWord 1)
+#guard evalPanExpFull (fun _ => none)
+    (.shift .ror (.const (shiftWord 0x81)) (.const (shiftWord 1))) =
+    RiscV.panRiscVShift .ror (shiftWord 0x81) (shiftWord 1)
+#guard evalPanExpFull (fun _ => none)
+    (.shift .lsl (.const (shiftWord 1)) (.const (shiftWord 8))) =
+    RiscV.panRiscVShift .lsl (shiftWord 1) (shiftWord 8)
+
 def parsedShiftExpression (source : String) : Option (Exp ShiftWord) :=
   match Parser.parseProgram (BitVec.ofInt 8) source with
   | .ok (.return expression) => some expression
@@ -55,6 +67,61 @@ def evalRiscVAsr : Option (PanValue ShiftWord) :=
     (fun _ => false) (fun _ => none)
     (shiftWord 0) (shiftWord 0) (shiftWord 8)
     (.shift .asr (.const (shiftWord 0x80)) (.const (shiftWord 1)))
+
+/- The structured source evaluator must use the same Cake `word_sh` oracle,
+   including through a record-valued recursive expression. -/
+def evalStructuredRiscVAsrFull : Option (PanValue ShiftWord) :=
+  evalPanValueExpFull [] (fun _ => none) (fun _ => none) (fun _ => none)
+    (shiftWord 0) (shiftWord 0) (shiftWord 8)
+    (.shift .asr (.const (shiftWord 0x80)) (.const (shiftWord 1)))
+
+def evalStructuredRiscVRorFull : Option (PanValue ShiftWord) :=
+  evalPanValueExpFull [] (fun _ => none) (fun _ => none) (fun _ => none)
+    (shiftWord 0) (shiftWord 0) (shiftWord 8)
+    (.rStruct [.shift .ror (.const (shiftWord 0x81)) (.const (shiftWord 1))])
+
+#guard match evalStructuredRiscVAsrFull with
+  | some (.word value) => value == shiftWord 0xc0
+  | _ => false
+#guard match evalStructuredRiscVRorFull with
+  | some (.rStruct [.word value]) => value == shiftWord 0xc0
+  | _ => false
+def evalStructuredRiscVOutOfRangeFull : Option (PanValue ShiftWord) :=
+  evalPanValueExpFull [] (fun _ => none) (fun _ => none) (fun _ => none)
+    (shiftWord 0) (shiftWord 0) (shiftWord 8)
+    (.shift .lsl (.const (shiftWord 1)) (.const (shiftWord 8)))
+#guard evalStructuredRiscVOutOfRangeFull.isNone
+
+/- The target-word structured program boundary must preserve the same Cake
+   shift behavior when a shift is nested inside a returned record. -/
+def evalStructuredRiscVProgramShiftsFull : Option (List (PanValue ShiftWord)) :=
+  (evalPanValueProgFull [] (shiftWord 0) (shiftWord 0) (shiftWord 8)
+    (fun _ => none) (fun _ => none) (fun _ => none)
+    (.return (.rStruct
+      [.shift .asr (.const (shiftWord 0x80)) (.const (shiftWord 1)),
+       .shift .ror (.const (shiftWord 0x81)) (.const (shiftWord 1))]))).map
+    fun result => result.2.2.2
+
+#guard match evalStructuredRiscVProgramShiftsFull with
+  | some [.rStruct [.word asr, .word ror]] =>
+      asr == shiftWord 0xc0 && ror == shiftWord 0xc0
+  | _ => false
+
+/- A target-word call must keep the complete Cake shift semantics across the
+   callee boundary, rather than falling back to the compact evaluator. -/
+def evalStructuredRiscVCallShiftFull : Option (PanValueControlResult ShiftWord) :=
+  evalPanValueProgWithCallsAndFfiFull
+    [] [
+      ("shift", ["x"],
+        .return (.shift .asr (.var .local "x") (.const (shiftWord 1))))]
+    (fun _ _ _ _ _ locals => some locals)
+    (shiftWord 0) (shiftWord 0) (shiftWord 8) 8
+    (fun _ => none) (fun _ => none) (fun _ => none)
+    (.call none "shift" [.const (shiftWord 0x80)])
+
+#guard match evalStructuredRiscVCallShiftFull with
+  | some (.returned _ _ _ [.word value]) => value == shiftWord 0xc0
+  | _ => false
 
 def evalRiscVRor : Option (PanValue ShiftWord) :=
   RiscV.evalPanRiscVFlatExp [] (fun _ => none) (fun _ => none)

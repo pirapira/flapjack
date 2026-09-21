@@ -859,7 +859,7 @@ def localiseExpCakeParity : Bool :=
   match localiseExp ["x"] expression,
       localiseExp ["x"] (.load32 (.var .global "x") : Exp Nat) with
   | .op .add [.var .local "x", .var .global "y"],
-      .load32 (.var .local "x") => true
+      .load32 (.var .global "x") => true
   | _, _ => false
 
 #guard localiseExpCakeParity
@@ -1309,14 +1309,18 @@ The grammar cannot tell a local from a global, so every variable starts
                       (.return (.var .global "e")),
                     returnShape := .one }])
 
--- `ld32` and `st32` are localised. Upstream's `localise_exp` has no `Load32`
--- case and its `localise_prog` no `Store32` case, so both leave their operands
--- marked `Global`; those look like constructors added after the pass was
--- written.
+-- Upstream's catch-all localisation leaves `ld32` and `st32` operands marked
+-- `Global`; these cases must stay byte- and acceptance-compatible with Cake.
 #guard sameAst (prog "var v = 1; return ld32 v;")
-  (.ok (.dec "v" .one (.const 1) (.return (.load32 (.var .local "v")))))
+  (.ok (.dec "v" .one (.const 1) (.return (.load32 (.var .global "v")))))
 #guard sameAst (prog "var v = 1; st32 v, v;")
-  (.ok (.dec "v" .one (.const 1) (.store32 (.var .local "v") (.var .local "v"))))
+  (.ok (.dec "v" .one (.const 1) (.store32 (.var .global "v") (.var .global "v"))))
+
+-- Cake rejects a local-only ld32 source name because the catch-all leaves the
+-- operand global; keep the acceptance boundary as well as the AST shape.
+#guard match parseTopDecs ofI "fun 1 f() {\n  var 1 z = 7;\n  var 1 y = ld32 z;\n  return y;\n}" with
+  | .ok declarations => !staticResultOk (staticCheck declarations)
+  | .error _ => false
 
 /-! Direct oracle for `localise_prog_def` from
 `cakeml/pancake/parser/panPtreeConversionScript.sml:844`.  The scope extends
@@ -1700,6 +1704,13 @@ checker and its Pancake-to-Crepe compiler. -/
 -- And rejects one upstream also rejects: `main` may not take parameters. This
 -- is `ex_arg_main` from the static-checker examples.
 #guard match parseTopDecs ofI "fun 1 main (1 a) {\n  return 1;\n}" with
+  | .ok declarations => !staticResultOk (staticCheck declarations)
+  | .error _ => false
+
+-- Cake's catch-all localisation leaves this ld32 operand global, so a name
+-- that exists only as a local is rejected by the static checker just as in
+-- the original Pancake compiler (GH #1126).
+#guard match parseTopDecs ofI "fun 1 f() {\n  var 1 z = 7;\n  var 1 y = ld32 z;\n  return y;\n}" with
   | .ok declarations => !staticResultOk (staticCheck declarations)
   | .error _ => false
 

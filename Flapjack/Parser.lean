@@ -68,6 +68,17 @@ def parseTopDecs (ofInt : Int → α) (source : String) (locations : Bool := fal
           | none => .error [conversionFailed]
           | some declarations => .ok (localiseDecls declarations)
 
+/-! Cake's `parse_def` returns a success/error sum rather than exposing the
+    parser's internal exception encoding.  Keep that boundary explicit for
+    source-facing callers that compare the result with Pancake's `INL`/`INR`
+    result.  `parseTopDecs` remains the compatibility API used by the
+    compiler. -/
+def parseDef (ofInt : Int → α) (source : String) (locations : Bool := false) :
+    Sum (List (Decl α)) (List ParseError) :=
+  match parseTopDecs ofInt source locations with
+  | .ok declarations => .inl declarations
+  | .error errors => .inr errors
+
 /--
 `parse_to_ast`: a single statement sequence, as used for testing fragments.
 

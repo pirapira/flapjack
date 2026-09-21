@@ -159,13 +159,13 @@ def cakeMkBijBuildAux : WordClashTree → CakeNodeBijectionBuild → CakeNodeBij
   | .delta writes reads, bijection =>
       cakeListRemapBuild writes (cakeListRemapBuild reads bijection)
   | .set names, bijection =>
-      cakeListRemapBuild (NumSet.fromList names) bijection
+      cakeListRemapBuild (NumSet.fromAList names) bijection
   | .branch live thenBranch elseBranch, bijection =>
       let mapped := cakeMkBijBuildAux elseBranch
         (cakeMkBijBuildAux thenBranch bijection)
       match live with
       | none => mapped
-      | some names => cakeListRemapBuild (NumSet.fromList names) mapped
+      | some names => cakeListRemapBuild (NumSet.fromAList names) mapped
   | .seq first second, bijection =>
       cakeMkBijBuildAux first (cakeMkBijBuildAux second bijection)
 
@@ -186,6 +186,21 @@ def cakeListRemap : List Nat → CakeNodeBijection → CakeNodeBijection
               fromAllocator := (bijection.nextNode, name) :: bijection.fromAllocator
               nextNode := bijection.nextNode + 1 }
 
+/- A lookup-only index for the source-variable side of `mk_bij`.  Cake's
+   association list remains the canonical representation; this index is used
+   only by repeated `sp_default` lookups while constructing the graph and
+   node tags. -/
+def cakeSpDefaultIndex (entries : NatInfoMap Nat) : Std.HashMap Nat Nat :=
+  entries.foldl (fun index entry =>
+    match index[entry.1]? with
+    | some _ => index
+    | none => index.insert entry.1 entry.2) {}
+
+def cakeSpDefaultIndexed (index : Std.HashMap Nat Nat) (n : Nat) : Nat :=
+  match index[n]? with
+  | some colour => colour
+  | none => if CakeAlloc.isPhyVar n then n / 2 else 0
+
 /-- `mk_bij_aux` (`reg_allocScript.sml:1105-1117`).  The `Set` case sorts
     its names first: the original walks `MAP FST (toAList t)` over a
     `num_set`, which enumerates keys in ascending order, while Flapjack's
@@ -198,16 +213,16 @@ def cakeMkBijAux : WordClashTree → CakeNodeBijection → CakeNodeBijection
   | .set names, bijection =>
       /- A Cake `Set` is a Patricia-tree `num_set`, not an ordered list.
          `mk_bij_aux` enumerates it with `MAP FST (toAList t)`, whose order
-         is the mixed Patricia traversal reconstructed by `NumSet.fromList`.
+         is the mixed Patricia traversal reconstructed by `NumSet.fromAList`.
          Sorting here changes allocator node numbering and therefore can
          change otherwise valid register-colour tie breaks. -/
-      cakeListRemap (NumSet.fromList names) bijection
+      cakeListRemap (NumSet.fromAList names) bijection
   | .branch live thenBranch elseBranch, bijection =>
       let mapped := cakeMkBijAux elseBranch (cakeMkBijAux thenBranch bijection)
       match live with
       | none => mapped
       | some names =>
-          cakeListRemap (NumSet.fromList names) mapped
+          cakeListRemap (NumSet.fromAList names) mapped
   | .seq first second, bijection => cakeMkBijAux first (cakeMkBijAux second bijection)
 
 /-- `mk_bij` (`reg_allocScript.sml:1119-1127`): the node bijection for a
@@ -416,7 +431,7 @@ def cakeMkGraph (ta : Nat → Nat) : WordClashTree → List Nat →
       let (adj1, live) := cakeExtendClique wta liveout adj
       cakeExtendClique rta (live.filter (fun x => !wta.contains x)) adj1
   | .set names, _liveout, adj =>
-      let live := (NumSet.fromList names).map ta
+      let live := (NumSet.fromAList names).map ta
       (cakeCliqueInsertEdge live adj, live)
   | .branch topt t1 t2, liveout, adj =>
       let (adj1, t1Live) := cakeMkGraph ta t1 liveout adj
@@ -424,7 +439,7 @@ def cakeMkGraph (ta : Nat → Nat) : WordClashTree → List Nat →
       match topt with
       | none => cakeExtendClique t1Live t2Live adj2
       | some t =>
-          let live := (NumSet.fromList t).map ta
+          let live := (NumSet.fromAList t).map ta
           (cakeCliqueInsertEdge live adj2, live)
   | .seq t1 t2, liveout, adj =>
       let (adj1, live) := cakeMkGraph ta t2 liveout adj
@@ -452,8 +467,9 @@ def cakeMkTags (n : Nat) (fromAllocator : NatInfoMap Nat) (fs : List Nat) :
      per node; as a list that was a rescan per node.  Build the membership
      side once.  The tags themselves are unchanged. -/
   let stackOnly := Flapjack.natSetOfList fs
+  let sourceIndex := cakeSpDefaultIndex fromAllocator
   (List.range n).foldl (fun tags i =>
-      let v := CakeAlloc.spDefault fromAllocator i
+      let v := cakeSpDefaultIndexed sourceIndex i
       match v % 4 with
       | 1 => tags.set i (if stackOnly.contains v then .sTemp else .aTemp)
       | 3 => tags.set i .sTemp
@@ -462,16 +478,20 @@ def cakeMkTags (n : Nat) (fromAllocator : NatInfoMap Nat) (fs : List Nat) :
 
 /-- `init_ra_state` (`reg_allocScript.sml:1241-1250`): the initial allocator
     state for a clash tree. -/
-def cakeInitRaState (tree : WordClashTree) (forced : List (Nat × Nat))
-    (fs : List Nat) : CakeRaState :=
-  let bij := cakeMkBij tree
-  let ta := CakeAlloc.spDefault bij.toAllocator
+def cakeInitRaStateFromBij (bij : CakeNodeBijection) (tree : WordClashTree)
+    (forced : List (Nat × Nat)) (fs : List Nat) : CakeRaState :=
+  let sourceIndex := cakeSpDefaultIndex bij.toAllocator
+  let ta := cakeSpDefaultIndexed sourceIndex
   let (adj, _) := cakeMkGraph ta tree [] (CakeNodeMap.ofSize bij.nextNode)
   let adj := cakeExtendGraph ta forced adj
   let tags := cakeMkTags bij.nextNode bij.fromAllocator fs
   { (CakeRaState.empty bij.nextNode) with
     adjLists := adj,
     nodeTag := tags }
+
+def cakeInitRaState (tree : WordClashTree) (forced : List (Nat × Nat))
+    (fs : List Nat) : CakeRaState :=
+  cakeInitRaStateFromBij (cakeMkBij tree) tree forced fs
 
 /-- `is_Fixed` (`reg_allocScript.sml:449-454`): a physical node. -/
 def cakeIsFixed (state : CakeRaState) (x : Nat) : Bool :=
@@ -643,7 +663,10 @@ def cakeDecDeg (v : Nat) (state : CakeRaState) : CakeRaState :=
 
 /-- `dec_degree`: decrement the degrees of all nodes adjacent to `x`. -/
 def cakeDecDegree (x : Nat) (state : CakeRaState) : CakeRaState :=
-  (cakeAdjSub state.adjLists x).foldl (fun s v => cakeDecDeg v s) state
+  if x < state.dim then
+    (cakeAdjSub state.adjLists x).foldl (fun s v => cakeDecDeg v s) state
+  else
+    state
 
 /-- `push_stack` (`reg_allocScript.sml:300-307`). -/
 def cakePushStack (x : Nat) (state : CakeRaState) : CakeRaState :=
@@ -1084,8 +1107,12 @@ def cakeAssignStemps (k : Nat)
     table over the (ascending) allocator bijection. -/
 def cakeExtractColor (state : CakeRaState) (toAllocator : NatInfoMap Nat) :
     NatInfoMap Nat :=
-  (toAllocator.mergeSort (fun a b => a.1 < b.1)).foldl (fun acc entry =>
-      cakeMapUpdate acc entry.1 (cakeTagCol state entry.2)) []
+  /- `toAllocator` is a bijection, so its sorted keys are unique.  Cake's
+     update loop therefore appends each freshly seen key; mapping the sorted
+     entries directly preserves the observable association-list order while
+     avoiding a quadratic rebuild of the result. -/
+  (toAllocator.mergeSort (fun a b => a.1 < b.1)).map
+    (fun entry => (entry.1, cakeTagCol state entry.2))
 
 /-- `full_consistency_ok` (`reg_allocScript.sml:1385+`). -/
 def cakeTagIsAtemp (state : CakeRaState) (x : Nat) : Bool :=
@@ -1094,11 +1121,28 @@ def cakeTagIsAtemp (state : CakeRaState) (x : Nat) : Bool :=
   | _ => false
 
 def cakeFullConsistencyOk (state : CakeRaState) (k : Nat) (x y : Nat) : Bool :=
+  let fixedX := cakeIsFixedK state k x
+  let fixedY := cakeIsFixedK state k y
+  let eligibleX := fixedX || cakeTagIsAtemp state x
+  let eligibleY := fixedY || cakeTagIsAtemp state y
   x != y && x < state.dim && y < state.dim &&
     !cakeSortedMem x (cakeAdjSub state.adjLists y) &&
-    (cakeIsFixedK state k x || cakeTagIsAtemp state x) &&
-    (cakeIsFixedK state k y || cakeTagIsAtemp state y) &&
-    !(cakeIsFixedK state k x && cakeIsFixedK state k y)
+    eligibleX && eligibleY && !(fixedX && fixedY)
+
+/-- A lookup-only index for the source-variable side of `mk_bij`.
+
+    Cake's `toAllocator` association list is a bijection with unique source
+    keys.  The list remains the canonical ordered representation everywhere
+    observable; this index is used only for the repeated `update_move` lookups
+    in the allocator hot path. -/
+def cakeAllocatorIndex (toAllocator : NatInfoMap Nat) : Std.HashMap Nat Nat :=
+  toAllocator.foldl (fun index entry =>
+    match index[entry.1]? with
+    | some _ => index
+    | none => index.insert entry.1 entry.2) {}
+
+def cakeAllocatorIndexLookup (index : Std.HashMap Nat Nat) (name : Nat) : Nat :=
+  cakeSpDefaultIndexed index name
 
 /-- The allocator flavour, mirroring `algorithm` in the original. -/
 inductive CakeAlgorithm : Type
@@ -1108,12 +1152,11 @@ inductive CakeAlgorithm : Type
 /-- `do_reg_alloc` (`reg_allocScript.sml:1452-1470`): the complete IRC
     colouring pipeline over a clash tree, producing the var → colour
     table. -/
-def cakeDoRegAlloc (alg : CakeAlgorithm) (scost : Option (CakeNodeMap Nat))
-    (k : Nat) (moves : List (Nat × (Nat × Nat))) (tree : WordClashTree)
-    (forced : List (Nat × Nat)) (fs : List Nat) : Option (NatInfoMap Nat) :=
-  let bij := cakeMkBij tree
-  let state := cakeInitRaState tree forced fs
-  let spta := CakeAlloc.spDefault bij.toAllocator
+def cakeDoRegAllocFromState (alg : CakeAlgorithm) (scost : Option (CakeNodeMap Nat))
+    (k : Nat) (moves : List (Nat × (Nat × Nat)))
+    (bij : CakeNodeBijection) (state : CakeRaState) : Option (NatInfoMap Nat) :=
+  let sourceIndex := cakeAllocatorIndex bij.toAllocator
+  let spta := fun name => cakeAllocatorIndexLookup sourceIndex name
   let moves0 := moves.map (cakeUpdateMove spta)
   let movesF := filterReversed (fun m => cakeFullConsistencyOk state k m.2.1 m.2.2) moves0
   let selMoves := match alg with
@@ -1126,6 +1169,13 @@ def cakeDoRegAlloc (alg : CakeAlgorithm) (scost : Option (CakeNodeMap Nat))
   let state := cakeAssignAtemps k ls (fun s n ks => cakeBiasedPref s mvs n ks) s1
   let state := cakeAssignStemps k (fun s n bads => cakeNegBiasedPref s k mvs n bads) state
   some (cakeExtractColor state bij.toAllocator)
+
+def cakeDoRegAlloc (alg : CakeAlgorithm) (scost : Option (CakeNodeMap Nat))
+    (k : Nat) (moves : List (Nat × (Nat × Nat))) (tree : WordClashTree)
+    (forced : List (Nat × Nat)) (fs : List Nat) : Option (NatInfoMap Nat) :=
+  let bij := cakeMkBij tree
+  let state := cakeInitRaStateFromBij bij tree forced fs
+  cakeDoRegAllocFromState alg scost k moves bij state
 
 /-! Convert Cake's `total_colour` result back into the location contract used
     by Word-to-Stack.  Cake colours are even Word names; their half is the
@@ -1178,7 +1228,8 @@ def cakeAllocateWordFunction [OfNat α 0] (parameters : List Nat) (program : Wor
      Keep those keys intact; `CakeNodeMap` stores keys outside the allocator
      array when necessary, matching `lookup_any` in `st_ex_list_MIN_cost`. -/
   let scost := spillCosts.map (cakeSpillCostMap bij.nextNode)
-  match cakeDoRegAlloc .irc scost k moves tree forced fs with
+  let initialState := cakeInitRaStateFromBij bij tree forced fs
+  match cakeDoRegAllocFromState .irc scost k moves bij initialState with
   | none => none
   | some colouring =>
       some (state, renamedParameters, ssaProgram,
@@ -1189,7 +1240,7 @@ def cakeAllocateWordFunction [OfNat α 0] (parameters : List Nat) (program : Wor
 def cakeGetPrefs {α : Type u} [OfNat α 0] [OfNat α 1] :
     WordProg α → List (Nat × (Nat × Nat)) → List (Nat × (Nat × Nat))
   | .move priority moves, acc =>
-      moves.foldl (fun acc' move => (priority, (move.1, move.2)) :: acc') acc
+      moves.map (fun move => (priority, (move.1, move.2))) ++ acc
   | .mustTerminate body, acc => cakeGetPrefs body acc
   | .seq first second, acc => cakeGetPrefs first (cakeGetPrefs second acc)
   | .ite _ _ _ thenBranch elseBranch, acc =>
@@ -1228,7 +1279,8 @@ def cakeWordStackVarCount [OfNat α 0] [OfNat α 1]
   /- Keep the source-keyed spill table intact, as `word_alloc` passes it
      directly to `reg_alloc`; out-of-range keys live in `CakeNodeMap.outside`. -/
   let scost := spillCosts.map (cakeSpillCostMap bij.nextNode)
-  match cakeDoRegAlloc .irc scost k moves tree forced fs with
+  let initialState := cakeInitRaStateFromBij bij tree forced fs
+  match cakeDoRegAllocFromState .irc scost k moves bij initialState with
   | none => 0
   | some colouring =>
       let colour := CakeAlloc.totalColour colouring

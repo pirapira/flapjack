@@ -1,4 +1,5 @@
 import Flapjack.PanStructs
+import Flapjack.PanSimp
 
 /-!
 The core of Pancake's `pan_globals` pass.
@@ -151,6 +152,103 @@ def globalFreshNameAux [BEq String] (name : String) (names : List String) :
 def globalFreshName [BEq String] (name : String) (names : List String) : String :=
   globalFreshNameAux name names 0 names.length
 
+/-! Counterpart of Cake's `fresh_name_correct`
+    (`pan_globalsProofScript.sml:993`): the name chosen by the fresh-name search
+    is never a member of the list it was searching.  The search starts with
+    `names.length` fuel and tries `name`, `name'`, `name''`, ... in turn, so if
+    it ran out of fuel it would have found `names.length + 1` distinct candidates
+    already present in `names`, which is impossible. -/
+theorem globalApostrophes_length (count : Nat) :
+    (globalApostrophes count).length = count := by
+  induction count with
+  | zero => rfl
+  | succ count ih =>
+      have hsingleton : ("'" : String).length = 1 := rfl
+      simp [globalApostrophes, String.length_append, ih, hsingleton]
+      omega
+
+theorem globalApostrophes_injective : Function.Injective globalApostrophes := by
+  intro left right heq
+  have hlen := congrArg String.length heq
+  rw [globalApostrophes_length, globalApostrophes_length] at hlen
+  exact hlen
+
+theorem append_globalApostrophes_injective (name : String) :
+    Function.Injective (fun count => name ++ globalApostrophes count) := by
+  intro left right heq
+  have hlen := congrArg String.length heq
+  rw [String.length_append, String.length_append, globalApostrophes_length,
+    globalApostrophes_length] at hlen
+  exact Nat.add_left_cancel hlen
+
+theorem globalFreshNameAux_not_mem_or_all_mem [BEq String] [LawfulBEq String]
+    (name : String) (names : List String) (candidate fuel : Nat) :
+    globalFreshNameAux name names candidate fuel ∉ names ∨
+      ∀ k, k ≤ fuel → name ++ globalApostrophes (candidate + k) ∈ names := by
+  induction fuel generalizing candidate with
+  | zero =>
+      rw [globalFreshNameAux]
+      by_cases hmem : name ++ globalApostrophes candidate ∈ names
+      · exact Or.inr (fun k hk => by
+          have hk0 : k = 0 := Nat.eq_zero_of_le_zero hk
+          subst hk0
+          exact hmem)
+      · exact Or.inl hmem
+  | succ fuel ih =>
+      rw [globalFreshNameAux]
+      by_cases hcontains :
+          names.contains (name ++ globalApostrophes candidate) = true
+      · rw [if_pos hcontains]
+        rcases ih (candidate + 1) with hnotmem | hall
+        · exact Or.inl hnotmem
+        · refine Or.inr (fun k hk => ?_)
+          cases k with
+          | zero =>
+              simpa using (List.contains_iff_mem.mp hcontains)
+          | succ j =>
+              have hj : j ≤ fuel := Nat.succ_le_succ_iff.mp hk
+              have hstep : candidate + (j + 1) = candidate + 1 + j := by omega
+              rw [hstep]
+              exact hall j hj
+      · rw [if_neg hcontains]
+        exact Or.inl (fun hmem =>
+          hcontains (List.contains_iff_mem.mpr hmem))
+
+theorem globalFreshName_not_mem [BEq String] [LawfulBEq String]
+    (name : String) (names : List String) :
+    globalFreshName name names ∉ names := by
+  intro hmem
+  rcases globalFreshNameAux_not_mem_or_all_mem name names 0 names.length with
+    hnotmem | hall
+  · exact hnotmem hmem
+  · have hsubset :
+        ∀ x ∈ (List.range (names.length + 1)).map
+            (fun k => name ++ globalApostrophes k), x ∈ names := by
+      intro x hx
+      obtain ⟨k, hk, rfl⟩ := List.mem_map.mp hx
+      rw [List.mem_range] at hk
+      simpa using hall k (by omega)
+    have hnodup :
+        ((List.range (names.length + 1)).map
+          (fun k => name ++ globalApostrophes k)).Nodup :=
+      List.Pairwise.map (fun k => name ++ globalApostrophes k)
+        (fun left right hne heq =>
+          hne (append_globalApostrophes_injective name heq))
+        List.nodup_range
+    have hle := List.Nodup.length_le_of_subset hnodup hsubset
+    simp at hle
+    omega
+
+/-! Counterpart of Cake's `fresh_name_correct'`
+    (`pan_globalsProofScript.sml:1003`): a name chosen fresh for `names` is
+    also absent from any list whose members all lie in `names`. -/
+theorem globalFreshName_not_mem_of_subset [BEq String] [LawfulBEq String]
+    (name : String) (names names' : List String)
+    (hsubset : ∀ candidate, candidate ∈ names' → candidate ∈ names) :
+    globalFreshName name names ∉ names' := by
+  intro hmem
+  exact globalFreshName_not_mem name names (hsubset _ hmem)
+
 def globalShapeVal (context : GlobalPassContext α) : Shape → Exp α
   | .one => .const (context.fromNat 0)
   | .named _ => .const (context.fromNat 0)
@@ -269,6 +367,30 @@ def globalRenameFunctionName [BEq String]
     (source target name : FunName) : FunName :=
   if source == name then target else if target == name then source else name
 
+/-! Counterparts of Cake's `fperm_name_cancel` and `fperm_name_cong`
+    (`pan_globalsProofScript.sml:1622,1629`): the source/target renaming is an
+    involutive bijection of function names. -/
+theorem globalRenameFunctionName_cancel [BEq String] [LawfulBEq String]
+    (source target name : FunName) :
+    globalRenameFunctionName source target
+        (globalRenameFunctionName source target name) = name := by
+  unfold globalRenameFunctionName
+  simp only [beq_iff_eq]
+  repeat' split <;> simp_all
+
+theorem globalRenameFunctionName_cong [BEq String] [LawfulBEq String]
+    (source target left right : FunName) :
+    globalRenameFunctionName source target left =
+        globalRenameFunctionName source target right ↔
+      left = right := by
+  constructor
+  · intro h
+    have := congrArg (globalRenameFunctionName source target) h
+    rw [globalRenameFunctionName_cancel, globalRenameFunctionName_cancel] at this
+    exact this
+  · intro h
+    rw [h]
+
 def globalRenameProg [BEq String]
     (source target : FunName) : Prog α → Prog α
   | .dec name shape value body =>
@@ -306,6 +428,69 @@ def globalRenameDecls [BEq String]
       declaration :: globalRenameDecls source target declarations
 termination_by declarations => sizeOf declarations
 
+/-! Counterpart of Cake's `fperm_decs_append`
+    (`pan_globalsProofScript.sml:1663`): renaming distributes over
+    declaration-list concatenation. -/
+theorem globalRenameDecls_append [BEq String] (source target : FunName)
+    (declarations rest : List (Decl α)) :
+    globalRenameDecls source target (declarations ++ rest) =
+      globalRenameDecls source target declarations ++
+        globalRenameDecls source target rest := by
+  induction declarations with
+  | nil => simp [globalRenameDecls]
+  | cons declaration declarations ih =>
+      cases declaration <;> simp [globalRenameDecls, ih]
+
+/-! Counterpart of Cake's `functions_fperm_decs`
+    (`pan_globalsProofScript.sml:1701`): the function table of a renamed
+    declaration list is the renamed function table. -/
+theorem functions_globalRenameDecls [BEq String] (source target : FunName)
+    (declarations : List (Decl α)) :
+    functions (globalRenameDecls source target declarations) =
+      (functions declarations).map (fun entry =>
+        (globalRenameFunctionName source target entry.1, entry.2.1,
+          globalRenameProg source target entry.2.2.1, entry.2.2.2)) := by
+  induction declarations with
+  | nil => simp [globalRenameDecls, functions]
+  | cons declaration declarations ih =>
+      cases declaration <;> simp [globalRenameDecls, functions, ih]
+
+theorem nodup_globalRenameFunctionName_map [BEq String] [LawfulBEq String]
+    (source target : FunName) (names : List FunName) (hnodup : names.Nodup) :
+    (names.map (globalRenameFunctionName source target)).Nodup := by
+  induction names with
+  | nil => simp
+  | cons head tail ih =>
+      simp only [List.map_cons, List.nodup_cons] at hnodup ⊢
+      obtain ⟨hhead, htail⟩ := hnodup
+      refine ⟨?_, ih htail⟩
+      intro hmem
+      obtain ⟨name, hname, heq⟩ := List.mem_map.mp hmem
+      have hnamehead : name = head :=
+        (globalRenameFunctionName_cong source target name head).mp heq
+      rw [hnamehead] at hname
+      exact hhead hname
+
+theorem globalRenameDecls_names_nodup [BEq String] [LawfulBEq String]
+    (source target : FunName) (declarations : List (Decl α))
+    (hnodup : ((functions declarations).map (fun entry => entry.1)).Nodup) :
+    ((functions (globalRenameDecls source target declarations)).map
+        (fun entry => entry.1)).Nodup := by
+  rw [functions_globalRenameDecls, List.map_map]
+  have hcomp :
+      ((fun entry : FunName × List (VarName × Shape) × Prog α × Shape =>
+          entry.1) ∘
+        (fun entry : FunName × List (VarName × Shape) × Prog α × Shape =>
+          (globalRenameFunctionName source target entry.1, entry.2.1,
+            globalRenameProg source target entry.2.2.1, entry.2.2.2))) =
+      (globalRenameFunctionName source target) ∘
+        (fun entry : FunName × List (VarName × Shape) × Prog α × Shape =>
+          entry.1) := by
+    funext entry
+    rfl
+  rw [hcomp, ← List.map_map]
+  exact nodup_globalRenameFunctionName_map source target _ hnodup
+
 def globalFunctionNames : List (Decl α) → List FunName
   | [] => []
   | .function declaration :: declarations =>
@@ -333,6 +518,25 @@ def exceptionEntries : List (Decl α) → List (ExceptionId × Shape)
   | _ :: declarations => exceptionEntries declarations
 termination_by declarations => sizeOf declarations
 
+/-! Counterpart of Cake's `exceptions_append`
+    (`pan_globalsProofScript.sml:2507`): the exception table distributes over
+    list append. -/
+theorem exceptionEntries_cons (declaration : Decl α) (declarations : List (Decl α)) :
+    exceptionEntries (declaration :: declarations) =
+      (match declaration with
+       | .exnDecl exception shape =>
+           (exception, shape) :: exceptionEntries declarations
+       | _ => exceptionEntries declarations) := by
+  cases declaration <;> rw [exceptionEntries.eq_def]
+
+theorem exceptionEntries_append (declarations rest : List (Decl α)) :
+    exceptionEntries (declarations ++ rest) =
+      exceptionEntries declarations ++ exceptionEntries rest := by
+  induction declarations with
+  | nil => simp [exceptionEntries]
+  | cons declaration declarations ih =>
+      cases declaration <;> simp [exceptionEntries_cons, ih]
+
 def globalDeclsFilter (predicate : Decl α → Bool) : List (Decl α) → List (Decl α)
   | [] => []
   | declaration :: declarations =>
@@ -340,6 +544,31 @@ def globalDeclsFilter (predicate : Decl α → Bool) : List (Decl α) → List (
         declaration :: globalDeclsFilter predicate declarations
       else globalDeclsFilter predicate declarations
 termination_by declarations => sizeOf declarations
+
+theorem globalDeclsFilter_all (predicate : Decl α → Bool)
+    (declarations : List (Decl α)) :
+    (globalDeclsFilter predicate declarations).all predicate = true := by
+  induction declarations with
+  | nil => simp [globalDeclsFilter]
+  | cons declaration declarations ih =>
+      simp only [globalDeclsFilter]
+      by_cases hpred : predicate declaration = true
+      · rw [if_pos hpred]; simp [hpred, ih]
+      · rw [if_neg hpred]; exact ih
+
+theorem globalDeclsFilter_eq_nil_of_all_not (predicate : Decl α → Bool)
+    (declarations : List (Decl α))
+    (hall : declarations.all (fun declaration => !predicate declaration) = true) :
+    globalDeclsFilter predicate declarations = [] := by
+  induction declarations with
+  | nil => simp [globalDeclsFilter]
+  | cons declaration declarations ih =>
+      simp only [List.all_cons, Bool.and_eq_true] at hall
+      obtain ⟨hhead, htail⟩ := hall
+      simp only [globalDeclsFilter]
+      by_cases hpred : predicate declaration = true
+      · simp [hpred] at hhead
+      · rw [if_neg hpred]; exact ih htail
 
 def globalDeclIsName : Decl α → Bool
   | .name _ _ => true
@@ -356,6 +585,67 @@ def globalDeclIsGlobal : Decl α → Bool
 def globalDeclIsFunction : Decl α → Bool
   | .function _ => true
   | _ => false
+
+/-! Counterpart of Cake's `EVERY_fperm_decs`
+    (`pan_globalsProofScript.sml:2436`): if a predicate holds on every
+    non-function declaration and on every renamed function declaration, then
+    it holds on every declaration produced by the renaming pass. -/
+theorem globalRenameDecls_all_of_predicate [BEq String]
+    (source target : FunName) (predicate : Decl α → Bool)
+    (declarations : List (Decl α))
+    (hother : declarations.all
+      (fun declaration => globalDeclIsFunction declaration || predicate declaration) = true)
+    (hfunction : declarations.all
+      (fun declaration => match declaration with
+        | .function function =>
+            predicate (.function { function with
+              name := globalRenameFunctionName source target function.name
+              body := globalRenameProg source target function.body })
+        | _ => true) = true) :
+    (globalRenameDecls source target declarations).all predicate = true := by
+  induction declarations with
+  | nil => simp [globalRenameDecls]
+  | cons declaration declarations ih =>
+      have hotherTail : declarations.all
+          (fun declaration =>
+            globalDeclIsFunction declaration || predicate declaration) = true := by
+        simp only [List.all_cons, Bool.and_eq_true] at hother
+        exact hother.2
+      have hfunctionTail : declarations.all
+          (fun declaration => match declaration with
+            | .function function =>
+                predicate (.function { function with
+                  name := globalRenameFunctionName source target function.name
+                  body := globalRenameProg source target function.body })
+            | _ => true) = true := by
+        simp only [List.all_cons, Bool.and_eq_true] at hfunction
+        exact hfunction.2
+      have ih' := ih hotherTail hfunctionTail
+      have hotherHead := by
+        simp only [List.all_cons, Bool.and_eq_true] at hother
+        exact hother.1
+      have hfunctionHead := by
+        simp only [List.all_cons, Bool.and_eq_true] at hfunction
+        exact hfunction.1
+      cases declaration with
+      | function function =>
+          simp only [globalRenameDecls, List.all_cons, Bool.and_eq_true]
+          exact ⟨hfunctionHead, ih'⟩
+      | decl shape name value =>
+          simp only [globalRenameDecls, List.all_cons, Bool.and_eq_true]
+          refine ⟨?_, ih'⟩
+          simp [globalDeclIsFunction] at hotherHead
+          exact hotherHead
+      | exnDecl exception shape =>
+          simp only [globalRenameDecls, List.all_cons, Bool.and_eq_true]
+          refine ⟨?_, ih'⟩
+          simp [globalDeclIsFunction] at hotherHead
+          exact hotherHead
+      | name struct fields =>
+          simp only [globalRenameDecls, List.all_cons, Bool.and_eq_true]
+          refine ⟨?_, ih'⟩
+          simp [globalDeclIsFunction] at hotherHead
+          exact hotherHead
 
 /-! Direct source-shaped counterparts of the declaration predicates from
     `panLangScript.sml:234-249`.  The global-pass predicates above are kept
@@ -381,6 +671,27 @@ def sizeOfEids : List (Decl α) → Nat
         sizeOfEids declarations
 termination_by declarations => sizeOf declarations
 
+/-! `pan_simp` maps every function declaration to a function declaration and
+    leaves every other declaration unchanged, so it preserves the exception
+    identifier count.  This mirrors Cake's `size_of_eids_compile_eq`. -/
+
+theorem isExnDecl_panSimpDecl (declaration : Decl α) :
+    isExnDecl (panSimpDecl declaration) = isExnDecl declaration := by
+  cases declaration <;> rfl
+
+theorem sizeOfEids_map_panSimpDecl (declarations : List (Decl α)) :
+    sizeOfEids (declarations.map panSimpDecl) = sizeOfEids declarations := by
+  induction declarations with
+  | nil => rw [List.map_nil, sizeOfEids.eq_def]
+  | cons declaration declarations ih =>
+      rw [List.map_cons, sizeOfEids.eq_def, sizeOfEids.eq_def]
+      simp [isExnDecl_panSimpDecl, ih]
+
+theorem sizeOfEids_panSimpDecls (declarations : List (Decl α)) :
+    sizeOfEids (panSimpDecls declarations) = sizeOfEids declarations := by
+  rw [panSimpDecls_eq_map]
+  exact sizeOfEids_map_panSimpDecl declarations
+
 def globalResortDecls (declarations : List (Decl α)) : List (Decl α) :=
   globalDeclsFilter globalDeclIsName declarations ++
     globalDeclsFilter globalDeclIsException declarations ++
@@ -390,6 +701,14 @@ def globalResortDecls (declarations : List (Decl α)) : List (Decl α) :=
 def globalNewMainName [BEq String] (declarations : List (Decl α)) : FunName :=
   globalFreshName "main" (globalFunctionNames declarations)
 
+/-! Counterpart of Cake's `new_main_name_correct`
+    (`pan_globalsProofScript.sml:2073`): the synthesized `main` entry-point name
+    is never one of the program's existing function names. -/
+theorem globalNewMainName_not_mem [BEq String] [LawfulBEq String]
+    (declarations : List (Decl α)) :
+    globalNewMainName declarations ∉ globalFunctionNames declarations :=
+  globalFreshName_not_mem "main" (globalFunctionNames declarations)
+
 def globalDeclShapes : List (Decl α) → List Shape
   | [] => []
   | .function _ :: declarations => globalDeclShapes declarations
@@ -397,6 +716,400 @@ def globalDeclShapes : List (Decl α) → List Shape
   | .name _ _ :: declarations => globalDeclShapes declarations
   | .exnDecl _ _ :: declarations => globalDeclShapes declarations
 termination_by declarations => sizeOf declarations
+
+/-! Shape-projection counterparts of Cake's `dec_shapes` lemmas from
+    `pan_globalsProofScript.sml:2328-2361`.  The global pass reassociates and
+    filters declarations, and these lemmas record that the shape projection is
+    unchanged by that reorganisation. -/
+
+theorem globalDeclShapes_nil : globalDeclShapes ([] : List (Decl α)) = [] := by
+  rw [globalDeclShapes.eq_def]
+
+theorem globalDeclShapes_cons (declaration : Decl α) (declarations : List (Decl α)) :
+    globalDeclShapes (declaration :: declarations) =
+      (match declaration with
+       | .decl shape _ _ => shape :: globalDeclShapes declarations
+       | _ => globalDeclShapes declarations) := by
+  cases declaration <;> rw [globalDeclShapes.eq_def]
+
+theorem globalDeclShapes_append (declarations rest : List (Decl α)) :
+    globalDeclShapes (declarations ++ rest) =
+      globalDeclShapes declarations ++ globalDeclShapes rest := by
+  induction declarations with
+  | nil => rw [List.nil_append, globalDeclShapes_nil, List.nil_append]
+  | cons declaration declarations ih =>
+      cases declaration <;> simp [globalDeclShapes_cons, ih]
+
+theorem globalDeclShapes_of_functions (declarations : List (Decl α))
+    (hfunctions : ∀ declaration ∈ declarations, globalDeclIsFunction declaration = true) :
+    globalDeclShapes declarations = [] := by
+  induction declarations with
+  | nil => rw [globalDeclShapes.eq_def]
+  | cons declaration declarations ih =>
+      have hdecl : globalDeclIsFunction declaration = true :=
+        hfunctions declaration (by simp)
+      have hrest : ∀ d ∈ declarations, globalDeclIsFunction d = true :=
+        fun d hd => hfunctions d (by simp [hd])
+      cases declaration <;> simp_all [globalDeclIsFunction, globalDeclShapes_cons]
+
+theorem mem_globalDeclsFilter {predicate : Decl α → Bool} {declaration : Decl α}
+    {declarations : List (Decl α)}
+    (hmem : declaration ∈ globalDeclsFilter predicate declarations) :
+    predicate declaration = true := by
+  induction declarations with
+  | nil => rw [globalDeclsFilter.eq_def] at hmem; simp at hmem
+  | cons head tail ih =>
+      simp only [globalDeclsFilter] at hmem
+      by_cases hpred : predicate head = true
+      · simp [hpred] at hmem
+        rcases hmem with heq | htail
+        · subst heq; exact hpred
+        · exact ih htail
+      · simp [hpred] at hmem
+        exact ih hmem
+
+theorem globalDeclShapes_globalDeclsFilter_not_function (declarations : List (Decl α)) :
+    globalDeclShapes
+        (globalDeclsFilter (fun declaration => !globalDeclIsFunction declaration)
+          declarations) =
+      globalDeclShapes declarations := by
+  induction declarations with
+  | nil => rw [globalDeclsFilter.eq_def, globalDeclShapes.eq_def]
+  | cons declaration declarations ih =>
+      simp only [globalDeclsFilter]
+      cases declaration <;> simp only [globalDeclIsFunction] at ih ⊢ <;> simp [globalDeclShapes_cons, ih]
+
+theorem globalDeclShapes_globalDeclsFilter_function (declarations : List (Decl α)) :
+    globalDeclShapes (globalDeclsFilter globalDeclIsFunction declarations) = [] :=
+  globalDeclShapes_of_functions _
+    (fun _ hmem => mem_globalDeclsFilter (predicate := globalDeclIsFunction) hmem)
+
+theorem globalDeclShapes_globalDeclsFilter_name (declarations : List (Decl α)) :
+    globalDeclShapes (globalDeclsFilter globalDeclIsName declarations) = [] := by
+  induction declarations with
+  | nil => rw [globalDeclsFilter.eq_def, globalDeclShapes.eq_def]
+  | cons declaration declarations ih =>
+      simp only [globalDeclsFilter]
+      cases declaration <;> simp only [globalDeclIsName] at ih ⊢ <;> simp [globalDeclShapes_cons, ih]
+
+theorem globalDeclShapes_globalDeclsFilter_exception (declarations : List (Decl α)) :
+    globalDeclShapes (globalDeclsFilter globalDeclIsException declarations) = [] := by
+  induction declarations with
+  | nil => rw [globalDeclsFilter.eq_def, globalDeclShapes.eq_def]
+  | cons declaration declarations ih =>
+      simp only [globalDeclsFilter]
+      cases declaration <;> simp only [globalDeclIsException] at ih ⊢ <;> simp [globalDeclShapes_cons, ih]
+
+theorem globalDeclShapes_globalDeclsFilter_global (declarations : List (Decl α)) :
+    globalDeclShapes (globalDeclsFilter globalDeclIsGlobal declarations) =
+      globalDeclShapes declarations := by
+  induction declarations with
+  | nil => rw [globalDeclsFilter.eq_def, globalDeclShapes.eq_def]
+  | cons declaration declarations ih =>
+      simp only [globalDeclsFilter]
+      cases declaration <;> simp only [globalDeclIsGlobal] at ih ⊢ <;> simp [globalDeclShapes_cons, ih]
+
+theorem globalDeclShapes_globalResortDecls (declarations : List (Decl α)) :
+    globalDeclShapes (globalResortDecls declarations) =
+      globalDeclShapes declarations := by
+  rw [globalResortDecls, globalDeclShapes_append, globalDeclShapes_append,
+    globalDeclShapes_append, globalDeclShapes_globalDeclsFilter_name,
+    globalDeclShapes_globalDeclsFilter_exception,
+    globalDeclShapes_globalDeclsFilter_global,
+    globalDeclShapes_globalDeclsFilter_function]
+  simp
+
+/-! Counterpart of Cake's `exceptions_FILTER_is_function`
+    (`pan_globalsProofScript.sml:2515`). -/
+theorem exceptionEntries_globalDeclsFilter_of_true
+    {predicate : Decl α → Bool}
+    (hexn : ∀ exception shape, predicate (.exnDecl exception shape) = true)
+    (declarations : List (Decl α)) :
+    exceptionEntries (globalDeclsFilter predicate declarations) =
+      exceptionEntries declarations := by
+  induction declarations with
+  | nil => simp [globalDeclsFilter, exceptionEntries]
+  | cons declaration declarations ih =>
+      simp only [globalDeclsFilter]
+      by_cases hpred : predicate declaration = true
+      · rw [if_pos hpred]
+        cases declaration <;> simp_all [exceptionEntries_cons]
+      · rw [if_neg hpred]
+        cases declaration <;> simp_all [exceptionEntries_cons]
+
+theorem exceptionEntries_globalDeclsFilter_of_false
+    {predicate : Decl α → Bool}
+    (hexn : ∀ exception shape, predicate (.exnDecl exception shape) = false)
+    (declarations : List (Decl α)) :
+    exceptionEntries (globalDeclsFilter predicate declarations) = [] := by
+  induction declarations with
+  | nil => simp [globalDeclsFilter, exceptionEntries]
+  | cons declaration declarations ih =>
+      simp only [globalDeclsFilter]
+      by_cases hpred : predicate declaration = true
+      · rw [if_pos hpred]
+        cases declaration <;> simp_all [exceptionEntries_cons]
+      · rw [if_neg hpred]
+        cases declaration <;> simp_all
+
+theorem exceptionEntries_filter_function (declarations : List (Decl α)) :
+    exceptionEntries (globalDeclsFilter globalDeclIsFunction declarations) = [] :=
+  exceptionEntries_globalDeclsFilter_of_false (fun _ _ => rfl) declarations
+
+theorem exceptionEntries_filter_not_function (declarations : List (Decl α)) :
+    exceptionEntries (globalDeclsFilter (fun declaration => !globalDeclIsFunction declaration)
+      declarations) = exceptionEntries declarations :=
+  exceptionEntries_globalDeclsFilter_of_true (fun _ _ => rfl) declarations
+
+theorem exceptionEntries_filter_exception (declarations : List (Decl α)) :
+    exceptionEntries (globalDeclsFilter globalDeclIsException declarations) =
+      exceptionEntries declarations :=
+  exceptionEntries_globalDeclsFilter_of_true (fun _ _ => rfl) declarations
+
+theorem exceptionEntries_filter_name (declarations : List (Decl α)) :
+    exceptionEntries (globalDeclsFilter globalDeclIsName declarations) = [] :=
+  exceptionEntries_globalDeclsFilter_of_false (fun _ _ => rfl) declarations
+
+theorem exceptionEntries_filter_global (declarations : List (Decl α)) :
+    exceptionEntries (globalDeclsFilter globalDeclIsGlobal declarations) = [] :=
+  exceptionEntries_globalDeclsFilter_of_false (fun _ _ => rfl) declarations
+
+/-! Counterpart of Cake's `not_is_function`
+    (`pan_globalsProofScript.sml:2527`): name, value, and exception
+    declarations are never function declarations. -/
+theorem isName_not_function (declaration : Decl α) :
+    isName declaration = true → globalDeclIsFunction declaration = false := by
+  cases declaration <;> simp [isName, globalDeclIsFunction]
+
+theorem isDecl_not_function (declaration : Decl α) :
+    isDecl declaration = true → globalDeclIsFunction declaration = false := by
+  cases declaration <;> simp [isDecl, globalDeclIsFunction]
+
+theorem isExnDecl_not_function (declaration : Decl α) :
+    isExnDecl declaration = true → globalDeclIsFunction declaration = false := by
+  cases declaration <;> simp [isExnDecl, globalDeclIsFunction]
+
+theorem not_is_function (declaration : Decl α) :
+    (isName declaration = true → globalDeclIsFunction declaration = false) ∧
+    (isDecl declaration = true → globalDeclIsFunction declaration = false) ∧
+    (isExnDecl declaration = true → globalDeclIsFunction declaration = false) :=
+  ⟨isName_not_function declaration, isDecl_not_function declaration,
+    isExnDecl_not_function declaration⟩
+
+/-! Counterpart of Cake's `decl_distinct`
+    (`pan_globalsProofScript.sml:2535`): a value declaration is disjoint
+    from the name, function, and exception declaration classes. -/
+theorem decl_distinct (declaration : Decl α) :
+    (isDecl declaration && isName declaration) = false ∧
+    (isDecl declaration && globalDeclIsFunction declaration) = false ∧
+    (isDecl declaration && isExnDecl declaration) = false := by
+  cases declaration <;> simp [isDecl, isName, isExnDecl, globalDeclIsFunction]
+
+/-! Counterparts of Cake's `functions_filter_nil`, `functions_FILTER_exn_decl`,
+    and `functions_FILTER_is_name` (`pan_globalsProofScript.sml:2967, 2042,
+    2049`): filtering by a predicate that excludes function declarations
+    leaves an empty function table. -/
+theorem functions_globalDeclsFilter_nil_of_predicate
+    (predicate : Decl α → Bool)
+    (hpredicate : ∀ declaration, predicate declaration = true →
+      globalDeclIsFunction declaration = false)
+    (declarations : List (Decl α)) :
+    functions (globalDeclsFilter predicate declarations) = [] := by
+  induction declarations with
+  | nil => simp [globalDeclsFilter, functions]
+  | cons declaration declarations ih =>
+      simp only [globalDeclsFilter]
+      by_cases hpred : predicate declaration = true
+      · rw [if_pos hpred]
+        have hnotfun := hpredicate declaration hpred
+        cases declaration <;> simp [globalDeclIsFunction] at hnotfun
+        all_goals simp [functions]
+        all_goals exact ih
+      · rw [if_neg hpred]
+        exact ih
+
+theorem functions_globalDeclsFilter_not_function (declarations : List (Decl α)) :
+    functions
+      (globalDeclsFilter
+        (fun declaration => !globalDeclIsFunction declaration) declarations) = [] :=
+  functions_globalDeclsFilter_nil_of_predicate _
+    (fun declaration hpred => by simpa using hpred) declarations
+
+theorem functions_globalDeclsFilter_exnDecl (declarations : List (Decl α)) :
+    functions (globalDeclsFilter isExnDecl declarations) = [] :=
+  functions_globalDeclsFilter_nil_of_predicate _ isExnDecl_not_function declarations
+
+theorem functions_globalDeclsFilter_isName (declarations : List (Decl α)) :
+    functions (globalDeclsFilter isName declarations) = [] :=
+  functions_globalDeclsFilter_nil_of_predicate _ isName_not_function declarations
+
+theorem functions_globalDeclsFilter_isDecl (declarations : List (Decl α)) :
+    functions (globalDeclsFilter isDecl declarations) = [] :=
+  functions_globalDeclsFilter_nil_of_predicate _ isDecl_not_function declarations
+
+theorem globalDeclIsGlobal_not_function (declaration : Decl α) :
+    globalDeclIsGlobal declaration = true → globalDeclIsFunction declaration = false := by
+  cases declaration <;> simp [globalDeclIsGlobal, globalDeclIsFunction]
+
+theorem globalDeclIsName_not_function (declaration : Decl α) :
+    globalDeclIsName declaration = true → globalDeclIsFunction declaration = false := by
+  cases declaration <;> simp [globalDeclIsName, globalDeclIsFunction]
+
+theorem globalDeclIsException_not_function (declaration : Decl α) :
+    globalDeclIsException declaration = true → globalDeclIsFunction declaration = false := by
+  cases declaration <;> simp [globalDeclIsException, globalDeclIsFunction]
+
+theorem functions_globalDeclsFilter_globalName (declarations : List (Decl α)) :
+    functions (globalDeclsFilter globalDeclIsName declarations) = [] :=
+  functions_globalDeclsFilter_nil_of_predicate _ globalDeclIsName_not_function
+    declarations
+
+theorem functions_globalDeclsFilter_globalException (declarations : List (Decl α)) :
+    functions (globalDeclsFilter globalDeclIsException declarations) = [] :=
+  functions_globalDeclsFilter_nil_of_predicate _ globalDeclIsException_not_function
+    declarations
+
+theorem functions_globalDeclsFilter_isGlobal (declarations : List (Decl α)) :
+    functions (globalDeclsFilter globalDeclIsGlobal declarations) = [] :=
+  functions_globalDeclsFilter_nil_of_predicate _ globalDeclIsGlobal_not_function
+    declarations
+
+theorem functions_globalDeclsFilter_isFunction (declarations : List (Decl α)) :
+    functions (globalDeclsFilter globalDeclIsFunction declarations) =
+      functions declarations := by
+  induction declarations with
+  | nil => simp [globalDeclsFilter, functions]
+  | cons declaration declarations ih =>
+      simp only [globalDeclsFilter]
+      by_cases hpred : globalDeclIsFunction declaration = true
+      · rw [if_pos hpred]
+        cases declaration <;> simp_all [globalDeclIsFunction, functions]
+      · rw [if_neg hpred]
+        cases declaration <;> simp_all [globalDeclIsFunction, functions]
+
+theorem functions_append (declarations rest : List (Decl α)) :
+    functions (declarations ++ rest) = functions declarations ++ functions rest := by
+  induction declarations with
+  | nil => simp [functions]
+  | cons declaration declarations ih =>
+      cases declaration <;> simp [functions, ih]
+
+/-! Counterpart of Cake's `resort_decls_preserve_functions`
+    (`pan_globalsProofScript.sml:2055`): resorting declarations leaves the
+    function table unchanged. -/
+theorem functions_globalResortDecls (declarations : List (Decl α)) :
+    functions (globalResortDecls declarations) = functions declarations := by
+  rw [globalResortDecls, functions_append, functions_append, functions_append,
+    functions_globalDeclsFilter_globalName,
+    functions_globalDeclsFilter_globalException,
+    functions_globalDeclsFilter_isGlobal, List.nil_append, List.nil_append,
+    List.nil_append, functions_globalDeclsFilter_isFunction]
+
+/-! Counterpart of Cake's `fperm_decs_decls`
+    (`pan_globalsProofScript.sml:2023`): renaming leaves a declaration list
+    with no function declarations unchanged. -/
+theorem globalRenameDecls_eq_self_of_no_functions [BEq String]
+    (source target : FunName) (declarations : List (Decl α))
+    (hnone : declarations.all
+      (fun declaration => !globalDeclIsFunction declaration) = true) :
+    globalRenameDecls source target declarations = declarations := by
+  induction declarations with
+  | nil => simp [globalRenameDecls]
+  | cons declaration declarations ih =>
+      simp only [List.all_cons, Bool.and_eq_true] at hnone
+      obtain ⟨hhead, htail⟩ := hnone
+      have hnotfun : globalDeclIsFunction declaration = false := by
+        simpa using hhead
+      cases declaration with
+      | function declaration =>
+          simp [globalDeclIsFunction] at hnotfun
+      | decl shape name value =>
+          simp [globalRenameDecls, ih htail]
+      | exnDecl exception shape =>
+          simp [globalRenameDecls, ih htail]
+      | name struct fields =>
+          simp [globalRenameDecls, ih htail]
+
+/-! Counterpart of Cake's `fperm_decs_FILTER_is_function`
+    (`pan_globalsProofScript.sml:2032`): renaming commutes with filtering to
+    the function declarations. -/
+theorem globalRenameDecls_filter_function [BEq String]
+    (source target : FunName) (declarations : List (Decl α)) :
+    globalRenameDecls source target
+        (globalDeclsFilter globalDeclIsFunction declarations) =
+      globalDeclsFilter globalDeclIsFunction
+        (globalRenameDecls source target declarations) := by
+  induction declarations with
+  | nil => simp [globalDeclsFilter, globalRenameDecls]
+  | cons declaration declarations ih =>
+      simp only [globalDeclsFilter]
+      by_cases hpred : globalDeclIsFunction declaration = true
+      · rw [if_pos hpred]
+        cases declaration with
+        | function declaration =>
+            simp [globalRenameDecls, globalDeclsFilter, globalDeclIsFunction, ih]
+        | decl shape name value => simp [globalDeclIsFunction] at hpred
+        | exnDecl exception shape => simp [globalDeclIsFunction] at hpred
+        | name struct fields => simp [globalDeclIsFunction] at hpred
+      · rw [if_neg hpred]
+        cases declaration <;>
+          simp_all [globalRenameDecls, globalDeclsFilter, globalDeclIsFunction]
+
+/-! Counterpart of Cake's `FILTER_decs_fperm_decs`
+    (`pan_globalsProofScript.sml:2832`): renaming commutes with filtering to
+    the non-function declarations. -/
+theorem globalDeclsFilter_cons_true (predicate : Decl α → Bool)
+    (declaration : Decl α) (declarations : List (Decl α))
+    (hkeep : predicate declaration = true) :
+    globalDeclsFilter predicate (declaration :: declarations) =
+      declaration :: globalDeclsFilter predicate declarations := by
+  simp [globalDeclsFilter, hkeep]
+
+theorem globalDeclsFilter_cons_false (predicate : Decl α → Bool)
+    (declaration : Decl α) (declarations : List (Decl α))
+    (hdrop : predicate declaration = false) :
+    globalDeclsFilter predicate (declaration :: declarations) =
+      globalDeclsFilter predicate declarations := by
+  simp [globalDeclsFilter, hdrop]
+
+theorem globalRenameDecls_filter_not_function [BEq String]
+    (source target : FunName) (declarations : List (Decl α)) :
+    globalDeclsFilter (fun declaration => !globalDeclIsFunction declaration)
+        (globalRenameDecls source target declarations) =
+      globalDeclsFilter (fun declaration => !globalDeclIsFunction declaration)
+        declarations := by
+  induction declarations with
+  | nil => simp [globalDeclsFilter, globalRenameDecls]
+  | cons declaration declarations ih =>
+      cases declaration with
+      | function function =>
+          simp only [globalRenameDecls]
+          rw [globalDeclsFilter_cons_false _ _ _
+              (by simp [globalDeclIsFunction]),
+            globalDeclsFilter_cons_false _ _ _
+              (by simp [globalDeclIsFunction])]
+          exact ih
+      | decl shape name value =>
+          simp only [globalRenameDecls]
+          rw [globalDeclsFilter_cons_true _ _ _
+              (by simp [globalDeclIsFunction]),
+            globalDeclsFilter_cons_true _ _ _
+              (by simp [globalDeclIsFunction])]
+          rw [ih]
+      | exnDecl exception shape =>
+          simp only [globalRenameDecls]
+          rw [globalDeclsFilter_cons_true _ _ _
+              (by simp [globalDeclIsFunction]),
+            globalDeclsFilter_cons_true _ _ _
+              (by simp [globalDeclIsFunction])]
+          rw [ih]
+      | name struct fields =>
+          simp only [globalRenameDecls]
+          rw [globalDeclsFilter_cons_true _ _ _
+              (by simp [globalDeclIsFunction]),
+            globalDeclsFilter_cons_true _ _ _
+              (by simp [globalDeclIsFunction])]
+          rw [ih]
 
 def globalFindFunction [BEq String] (name : FunName) :
     List (Decl α) → Option (FunDecl α)
@@ -427,6 +1140,19 @@ def globalCompileDecls [BEq String] [Add α] [Mul α]
       .exnDecl exception shape :: globalCompileDecls context declarations
   | _ :: declarations => globalCompileDecls context declarations
 
+/-! Counterpart of the append structure of Cake's `compile_decls_append`
+    (`pan_globalsProofScript.sml:1997`).  The function/exception projection
+    does not thread the context, so appending splits as an ordinary append. -/
+theorem globalCompileDecls_append [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations rest : List (Decl α)) :
+    globalCompileDecls context (declarations ++ rest) =
+      globalCompileDecls context declarations ++
+        globalCompileDecls context rest := by
+  induction declarations with
+  | nil => simp [globalCompileDecls]
+  | cons declaration declarations ih =>
+      cases declaration <;> simp [globalCompileDecls, ih]
+
 def globalCompileInitializers [BEq String] [Add α] [Mul α]
     (context : GlobalPassContext α) : List (Decl α) → List (Prog α)
   | [] => []
@@ -445,6 +1171,21 @@ def globalCompileInitializers [BEq String] [Add α] [Mul α]
           (globalCompileExp context value)
       initializer :: globalCompileInitializers nextContext declarations
   | _ :: declarations => globalCompileInitializers context declarations
+
+/-! Counterpart of the context-threading append structure of Cake's
+    `compile_decls_append` (`pan_globalsProofScript.sml:1997`): initializers
+    of an appended program are the first part's initializers followed by the
+    second part's initializers evaluated under the context `globalCollect`
+    reaches after the first part. -/
+theorem globalCompileInitializers_append [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations rest : List (Decl α)) :
+    globalCompileInitializers context (declarations ++ rest) =
+      globalCompileInitializers context declarations ++
+        globalCompileInitializers (globalCollect context declarations) rest := by
+  induction declarations generalizing context with
+  | nil => simp [globalCompileInitializers, globalCollect]
+  | cons declaration declarations ih =>
+      cases declaration <;> simp [globalCompileInitializers, globalCollect, ih]
 
 /-! The four-result shape of Pancake's `pan_globals$compile_decs_def`
     (`pan_globalsScript.sml:160`).  Global declarations become initializer
@@ -466,6 +1207,220 @@ def globalCompileDecs [BEq String] [Add α] [Mul α]
     exceptions := globalDeclsFilter globalDeclIsException
       (globalCompileDecls collected declarations)
     context := collected }
+
+/-! Counterpart of Cake's `compile_decs_preserve_functions`
+    (`pan_globalsProofScript.sml:2062`): compiling declarations preserves the
+    function-name table. -/
+theorem functions_names_globalCompileDecls [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations : List (Decl α)) :
+    (functions (globalCompileDecls context declarations)).map
+        (fun entry => entry.1) =
+      (functions declarations).map (fun entry => entry.1) := by
+  induction declarations with
+  | nil => simp [globalCompileDecls, functions]
+  | cons declaration declarations ih =>
+      cases declaration <;> simp [globalCompileDecls, functions, ih]
+
+theorem globalCompileDecls_all_not_function [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations : List (Decl α))
+    (hnone : declarations.all
+      (fun declaration => !globalDeclIsFunction declaration) = true) :
+    (globalCompileDecls context declarations).all
+      (fun declaration => !globalDeclIsFunction declaration) = true := by
+  induction declarations with
+  | nil => simp [globalCompileDecls]
+  | cons declaration declarations ih =>
+      simp only [List.all_cons, Bool.and_eq_true] at hnone
+      obtain ⟨hhead, htail⟩ := hnone
+      cases declaration <;>
+        simp_all [globalCompileDecls, globalDeclIsFunction]
+
+theorem globalCompileDecs_preserve_functions [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α)) :
+    (functions (globalCompileDecs context code).functions).map
+        (fun entry => entry.1) =
+      (functions code).map (fun entry => entry.1) := by
+  simp only [globalCompileDecs]
+  rw [functions_globalDeclsFilter_isFunction, functions_names_globalCompileDecls]
+
+/-! Counterpart of Cake's `compile_decs_EVERY_is_function`
+    (`pan_globalsProofScript.sml:1977`): every declaration the compilation
+    pass emits into the function table is itself a function declaration. -/
+theorem globalCompileDecs_functions_all_isFunction [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α)) :
+    (globalCompileDecs context code).functions.all globalDeclIsFunction = true := by
+  simp only [globalCompileDecs]
+  exact globalDeclsFilter_all globalDeclIsFunction _
+
+/-! Counterpart of Cake's `compile_decs_decls_thm`
+    (`pan_globalsProofScript.sml:1967`): a program whose declarations contain
+    no functions compiles to an empty function table. -/
+theorem globalCompileDecs_functions_eq_nil_of_no_functions [BEq String] [Add α]
+    [Mul α] (context : GlobalPassContext α) (code : List (Decl α))
+    (hnone : code.all (fun declaration => !globalDeclIsFunction declaration) = true) :
+    (globalCompileDecs context code).functions = [] := by
+  simp only [globalCompileDecs]
+  exact globalDeclsFilter_eq_nil_of_all_not globalDeclIsFunction _
+    (globalCompileDecls_all_not_function (globalCollect context code) code hnone)
+
+/-! Counterpart of Cake's `compile_decs_EVERY`
+    (`pan_globalsProofScript.sml:1986`): every function of the compiled table
+    satisfies a predicate that holds of each source function once its body has
+    been compiled with the collected context. -/
+theorem globalDeclsFilter_globalCompileDecls_all_of_predicate [BEq String]
+    [Add α] [Mul α] (context : GlobalPassContext α) (declarations : List (Decl α))
+    (predicate : Decl α → Bool)
+    (hsource : declarations.all
+      (fun declaration => match declaration with
+        | .function function =>
+            predicate (.function { function with
+              body := globalCompileProg context function.body })
+        | _ => true) = true) :
+    (globalDeclsFilter globalDeclIsFunction
+        (globalCompileDecls context declarations)).all predicate = true := by
+  induction declarations with
+  | nil => simp [globalCompileDecls, globalDeclsFilter]
+  | cons declaration declarations ih =>
+      simp only [List.all_cons, Bool.and_eq_true] at hsource
+      obtain ⟨hhead, htail⟩ := hsource
+      cases declaration with
+      | function function =>
+          simp [globalCompileDecls, globalDeclsFilter, globalDeclIsFunction,
+            hhead, ih htail]
+      | decl shape name value =>
+          exact ih htail
+      | exnDecl exception shape =>
+          simp [globalCompileDecls, globalDeclsFilter, globalDeclIsFunction,
+            ih htail]
+      | name struct fields =>
+          exact ih htail
+
+theorem globalCompileDecs_functions_all_of_predicate [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α))
+    (predicate : Decl α → Bool)
+    (hsource : code.all
+      (fun declaration => match declaration with
+        | .function function =>
+            predicate (.function { function with
+              body := globalCompileProg (globalCollect context code)
+                function.body })
+        | _ => true) = true) :
+    (globalCompileDecs context code).functions.all predicate = true := by
+  simp only [globalCompileDecs]
+  exact globalDeclsFilter_globalCompileDecls_all_of_predicate
+    (globalCollect context code) code predicate hsource
+
+/-! Counterpart of Cake's `compile_decs_exns_are_exns`
+    (`pan_globalsProofScript.sml:2448`): the exception table is exactly the
+    exception declarations of the source program. -/
+theorem globalDeclsFilter_isException_globalCompileDecls [BEq String] [Add α]
+    [Mul α] (context : GlobalPassContext α) (declarations : List (Decl α)) :
+    globalDeclsFilter globalDeclIsException
+        (globalCompileDecls context declarations) =
+      globalDeclsFilter globalDeclIsException declarations := by
+  induction declarations with
+  | nil => simp [globalCompileDecls, globalDeclsFilter]
+  | cons declaration declarations ih =>
+      cases declaration <;>
+        simp [globalCompileDecls, globalDeclsFilter, globalDeclIsException, ih]
+
+theorem globalCompileDecs_exceptions_eq_filter [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α)) :
+    (globalCompileDecs context code).exceptions =
+      globalDeclsFilter globalDeclIsException code := by
+  simp only [globalCompileDecs]
+  exact globalDeclsFilter_isException_globalCompileDecls
+    (globalCollect context code) code
+
+/-! Counterpart of Cake's `compile_decs_FILTER_decs`
+    (`pan_globalsProofScript.sml:2822`): filtering the source program down to its
+    global declarations leaves the collected context and the initializer stores
+    unchanged, and empties the function and exception tables. -/
+theorem globalCollect_filter_isDecl [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations : List (Decl α)) :
+    globalCollect context (globalDeclsFilter isDecl declarations) =
+      globalCollect context declarations := by
+  induction declarations generalizing context with
+  | nil => simp [globalDeclsFilter, globalCollect]
+  | cons declaration declarations ih =>
+      simp only [globalDeclsFilter]
+      by_cases hpred : isDecl declaration = true
+      · rw [if_pos hpred]
+        cases declaration with
+        | decl shape name value => simp only [globalCollect, ih]
+        | function function => simp [isDecl] at hpred
+        | exnDecl exception shape => simp [isDecl] at hpred
+        | name struct fields => simp [isDecl] at hpred
+      · rw [if_neg hpred]
+        cases declaration with
+        | decl shape name value => simp [isDecl] at hpred
+        | function function =>
+            conv => rhs; rw [globalCollect.eq_def]
+            exact ih context
+        | exnDecl exception shape =>
+            conv => rhs; rw [globalCollect.eq_def]
+            exact ih context
+        | name struct fields =>
+            conv => rhs; rw [globalCollect.eq_def]
+            exact ih context
+
+theorem globalCompileInitializers_filter_isDecl [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations : List (Decl α)) :
+    globalCompileInitializers context (globalDeclsFilter isDecl declarations) =
+      globalCompileInitializers context declarations := by
+  induction declarations generalizing context with
+  | nil => simp [globalDeclsFilter, globalCompileInitializers]
+  | cons declaration declarations ih =>
+      simp only [globalDeclsFilter]
+      by_cases hpred : isDecl declaration = true
+      · rw [if_pos hpred]
+        cases declaration with
+        | decl shape name value => simp only [globalCompileInitializers, ih]
+        | function function => simp [isDecl] at hpred
+        | exnDecl exception shape => simp [isDecl] at hpred
+        | name struct fields => simp [isDecl] at hpred
+      · rw [if_neg hpred]
+        cases declaration with
+        | decl shape name value => simp [isDecl] at hpred
+        | function function =>
+            conv => rhs; rw [globalCompileInitializers.eq_def]
+            exact ih context
+        | exnDecl exception shape =>
+            conv => rhs; rw [globalCompileInitializers.eq_def]
+            exact ih context
+        | name struct fields =>
+            conv => rhs; rw [globalCompileInitializers.eq_def]
+            exact ih context
+
+theorem globalCompileDecls_filter_isDecl [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations : List (Decl α)) :
+    globalCompileDecls context (globalDeclsFilter isDecl declarations) = [] := by
+  induction declarations with
+  | nil => simp [globalDeclsFilter, globalCompileDecls]
+  | cons declaration declarations ih =>
+      simp only [globalDeclsFilter]
+      by_cases hpred : isDecl declaration = true
+      · rw [if_pos hpred]
+        cases declaration with
+        | decl shape name value => simp [globalCompileDecls, ih]
+        | function function => simp [isDecl] at hpred
+        | exnDecl exception shape => simp [isDecl] at hpred
+        | name struct fields => simp [isDecl] at hpred
+      · rw [if_neg hpred]
+        exact ih
+
+theorem globalCompileDecs_filter_isDecl [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α)) :
+    (globalCompileDecs context (globalDeclsFilter isDecl code)).initializers =
+        (globalCompileDecs context code).initializers ∧
+      (globalCompileDecs context (globalDeclsFilter isDecl code)).functions = [] ∧
+      (globalCompileDecs context (globalDeclsFilter isDecl code)).exceptions = [] ∧
+      (globalCompileDecs context (globalDeclsFilter isDecl code)).context =
+        (globalCompileDecs context code).context := by
+  simp only [globalCompileDecs]
+  rw [globalCompileDecls_filter_isDecl, globalCollect_filter_isDecl,
+    globalCompileInitializers_filter_isDecl]
+  refine ⟨rfl, ?_, ?_, rfl⟩ <;> simp [globalDeclsFilter]
 
 /-! The start-function form of CakeML's `pan_globals$compile_top_def`
     (`pan_globalsScript.sml:236`).  The existing `globalCompileTop` below
@@ -502,6 +1457,254 @@ def globalCompileTopForStart [BEq String] [Add α] [Mul α]
             returnShape := entry.returnShape }
       some (compiled.exceptions ++ [newMain] ++ compiled.functions)
 
+theorem globalDecls_all_or_of_all_left (predicate other : Decl α → Bool)
+    (declarations : List (Decl α))
+    (hall : declarations.all other = true) :
+    declarations.all
+      (fun declaration => predicate declaration || other declaration) = true := by
+  induction declarations with
+  | nil => simp
+  | cons declaration declarations ih =>
+      simp only [List.all_cons, Bool.and_eq_true] at hall ⊢
+      obtain ⟨hhead, htail⟩ := hall
+      exact ⟨by simp [hhead], ih htail⟩
+
+theorem globalDecls_all_or_of_all_right (predicate other : Decl α → Bool)
+    (declarations : List (Decl α))
+    (hall : declarations.all predicate = true) :
+    declarations.all
+      (fun declaration => predicate declaration || other declaration) = true := by
+  induction declarations with
+  | nil => simp
+  | cons declaration declarations ih =>
+      simp only [List.all_cons, Bool.and_eq_true] at hall ⊢
+      obtain ⟨hhead, htail⟩ := hall
+      exact ⟨by simp [hhead], ih htail⟩
+
+/-! Counterpart of Cake's `compile_top_only_functions_or_exns`
+    (`pan_globalsProofScript.sml:2611`): the declaration list produced by the
+    start-function entry point consists only of compiled functions and
+    exception declarations. -/
+theorem globalCompileDecs_result_all_function_or_exception [BEq String] [Add α]
+    [Mul α] (context : GlobalPassContext α) (declarations : List (Decl α))
+    (extra : Decl α) (hextra : globalDeclIsFunction extra = true) :
+    ((globalCompileDecs context declarations).exceptions ++ [extra] ++
+        (globalCompileDecs context declarations).functions).all
+      (fun declaration => globalDeclIsFunction declaration ||
+        globalDeclIsException declaration) = true := by
+  simp only [globalCompileDecs]
+  rw [List.all_append, List.all_append, Bool.and_eq_true, Bool.and_eq_true]
+  refine ⟨⟨?_, ?_⟩, ?_⟩
+  · exact globalDecls_all_or_of_all_left globalDeclIsFunction
+      globalDeclIsException _ (globalDeclsFilter_all globalDeclIsException _)
+  · simp [hextra]
+  · exact globalDecls_all_or_of_all_right globalDeclIsFunction
+      globalDeclIsException _ (globalDeclsFilter_all globalDeclIsFunction _)
+
+theorem globalCompileTopForStart_all_function_or_exception [BEq String] [Add α]
+    [Mul α] (bytesInWord : α) (fromNat : Nat → α)
+    (declarations : List (Decl α)) (start : FunName) (compiled : List (Decl α))
+    (hcompile : globalCompileTopForStart bytesInWord fromNat declarations start =
+      some compiled) :
+    compiled.all
+      (fun declaration => globalDeclIsFunction declaration ||
+        globalDeclIsException declaration) = true := by
+  unfold globalCompileTopForStart at hcompile
+  cases hfind : globalFindFunction start declarations with
+  | none => simp [hfind] at hcompile
+  | some entry =>
+      simp only [hfind, Option.some.injEq] at hcompile
+      subst hcompile
+      exact globalCompileDecs_result_all_function_or_exception _ _ _
+        (by simp [globalDeclIsFunction])
+
+/-! Counterpart of the exception projection of Cake's `compile_top`
+    (`pan_globalsProofScript.sml:2974`): the global pass preserves the
+    exception table exactly, so `exceptions (compile_top code start)` is
+    `exceptions code`. -/
+theorem exceptionEntries_globalCompileDecls [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations : List (Decl α)) :
+    exceptionEntries (globalCompileDecls context declarations) =
+      exceptionEntries declarations := by
+  induction declarations with
+  | nil => simp [globalCompileDecls, exceptionEntries]
+  | cons declaration declarations ih =>
+      cases declaration <;>
+        simp [globalCompileDecls, exceptionEntries_cons, ih]
+
+theorem exceptionEntries_globalRenameDecls [BEq String]
+    (source target : FunName) (declarations : List (Decl α)) :
+    exceptionEntries (globalRenameDecls source target declarations) =
+      exceptionEntries declarations := by
+  induction declarations with
+  | nil => simp [globalRenameDecls, exceptionEntries]
+  | cons declaration declarations ih =>
+      cases declaration <;>
+        simp [globalRenameDecls, exceptionEntries_cons, ih]
+
+theorem exceptionEntries_globalResortDecls (declarations : List (Decl α)) :
+    exceptionEntries (globalResortDecls declarations) =
+      exceptionEntries declarations := by
+  simp [globalResortDecls, exceptionEntries_append,
+    exceptionEntries_filter_name, exceptionEntries_filter_exception,
+    exceptionEntries_filter_global, exceptionEntries_filter_function]
+
+theorem globalCompileTopForStart_exceptionEntries [BEq String] [Add α] [Mul α]
+    (bytesInWord : α) (fromNat : Nat → α) (declarations : List (Decl α))
+    (start : FunName) (compiled : List (Decl α))
+    (hcompile : globalCompileTopForStart bytesInWord fromNat declarations start =
+      some compiled) :
+    exceptionEntries compiled = exceptionEntries declarations := by
+  unfold globalCompileTopForStart at hcompile
+  cases hfind : globalFindFunction start declarations with
+  | none => simp [hfind] at hcompile
+  | some entry =>
+      simp only [hfind, Option.some.injEq] at hcompile
+      subst hcompile
+      simp only [globalCompileDecs]
+      rw [exceptionEntries_append, exceptionEntries_append,
+        exceptionEntries_filter_exception, exceptionEntries_filter_function,
+        exceptionEntries_globalCompileDecls, exceptionEntries_globalRenameDecls,
+        exceptionEntries_globalResortDecls]
+      simp [exceptionEntries]
+
+theorem globalFunctionNames_eq_functions_map (declarations : List (Decl α)) :
+    globalFunctionNames declarations =
+      (functions declarations).map (fun entry => entry.1) := by
+  induction declarations with
+  | nil => rw [globalFunctionNames.eq_def]; rfl
+  | cons declaration declarations ih =>
+      cases declaration <;> rw [globalFunctionNames.eq_def] <;>
+        simp [functions, ih]
+
+theorem globalFindFunction_name_mem [BEq String] [LawfulBEq String]
+    (name : FunName) (declarations : List (Decl α)) (entry : FunDecl α)
+    (hfind : globalFindFunction name declarations = some entry) :
+    entry.name = name ∧ name ∈ globalFunctionNames declarations := by
+  induction declarations with
+  | nil => simp [globalFindFunction] at hfind
+  | cons declaration declarations ih =>
+      cases declaration with
+      | function function =>
+          rw [globalFindFunction.eq_def] at hfind
+          by_cases hname : (function.name == name) = true
+          · simp only [hname, if_pos] at hfind
+            have heq : entry = function := (Option.some.inj hfind).symm
+            subst heq
+            refine ⟨beq_iff_eq.mp hname, ?_⟩
+            rw [globalFunctionNames.eq_def]
+            exact List.mem_cons.mpr (Or.inl (beq_iff_eq.mp hname).symm)
+          · simp only [hname] at hfind
+            obtain ⟨hnameeq, hmem⟩ := ih hfind
+            refine ⟨hnameeq, ?_⟩
+            rw [globalFunctionNames.eq_def]
+            exact List.mem_cons.mpr (Or.inr hmem)
+      | decl shape name' value =>
+          rw [globalFindFunction.eq_def] at hfind
+          obtain ⟨hnameeq, hmem⟩ := ih hfind
+          refine ⟨hnameeq, ?_⟩
+          rw [globalFunctionNames.eq_def]
+          exact hmem
+      | exnDecl exception shape =>
+          rw [globalFindFunction.eq_def] at hfind
+          obtain ⟨hnameeq, hmem⟩ := ih hfind
+          refine ⟨hnameeq, ?_⟩
+          rw [globalFunctionNames.eq_def]
+          exact hmem
+      | name struct fields =>
+          rw [globalFindFunction.eq_def] at hfind
+          obtain ⟨hnameeq, hmem⟩ := ih hfind
+          refine ⟨hnameeq, ?_⟩
+          rw [globalFunctionNames.eq_def]
+          exact hmem
+
+theorem globalRenameFunctionName_eq_source_iff [BEq String] [LawfulBEq String]
+    (source target name : FunName) :
+    globalRenameFunctionName source target name = source ↔ name = target := by
+  unfold globalRenameFunctionName
+  simp only [beq_iff_eq]
+  by_cases h1 : source = name
+  · rw [if_pos h1]
+    rw [h1]
+    exact eq_comm
+  · rw [if_neg h1]
+    by_cases h2 : target = name
+    · rw [if_pos h2]
+      exact ⟨fun _ => h2.symm, fun _ => rfl⟩
+    · rw [if_neg h2]
+      exact ⟨fun h => absurd h.symm h1, fun h => absurd h.symm h2⟩
+
+theorem mem_map_globalRenameFunctionName_source [BEq String] [LawfulBEq String]
+    (source target : FunName) (names : List FunName) :
+    source ∈ names.map (globalRenameFunctionName source target) ↔
+      target ∈ names := by
+  rw [List.mem_map]
+  constructor
+  · rintro ⟨name, hname, heq⟩
+    have hname_target : name = target :=
+      (globalRenameFunctionName_eq_source_iff source target name).mp heq
+    rwa [hname_target] at hname
+  · intro htarget
+    refine ⟨target, htarget, ?_⟩
+    unfold globalRenameFunctionName
+    simp only [beq_iff_eq]
+    by_cases hst : source = target
+    · rw [if_pos hst]
+      exact hst.symm
+    · rw [if_neg hst]
+      simp
+
+theorem globalCompileDecs_functions_names [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations : List (Decl α)) :
+    ((functions (globalCompileDecs context declarations).functions).map
+        (fun entry => entry.1)) =
+      (functions declarations).map (fun entry => entry.1) := by
+  simp only [globalCompileDecs]
+  rw [functions_globalDeclsFilter_isFunction, functions_names_globalCompileDecls]
+
+theorem functions_globalRenameDecls_map_fst [BEq String] (source target : FunName)
+    (declarations : List (Decl α)) :
+    ((functions (globalRenameDecls source target declarations)).map
+        (fun entry => entry.1)) =
+      ((functions declarations).map (fun entry => entry.1)).map
+        (globalRenameFunctionName source target) := by
+  simp only [functions_globalRenameDecls, List.map_map]
+  rfl
+
+theorem globalCompileTopForStart_names_nodup [BEq String] [LawfulBEq String]
+    [Add α] [Mul α] (bytesInWord : α) (fromNat : Nat → α)
+    (declarations : List (Decl α)) (start : FunName) (compiled : List (Decl α))
+    (hcompile : globalCompileTopForStart bytesInWord fromNat declarations start =
+      some compiled)
+    (hnodup : ((functions declarations).map (fun entry => entry.1)).Nodup) :
+    ((functions compiled).map (fun entry => entry.1)).Nodup := by
+  unfold globalCompileTopForStart at hcompile
+  cases hfind : globalFindFunction start declarations with
+  | none => simp [hfind] at hcompile
+  | some entry =>
+      simp only [hfind, Option.some.injEq] at hcompile
+      subst hcompile
+      rw [functions_append, functions_append]
+      rw [globalCompileDecs_exceptions_eq_filter,
+        functions_globalDeclsFilter_globalException, List.nil_append]
+      rw [List.map_append]
+      simp only [functions, List.map_cons, List.map_nil,
+        List.singleton_append]
+      rw [globalCompileDecs_functions_names, functions_globalRenameDecls_map_fst,
+        functions_globalResortDecls]
+      rw [List.nodup_cons]
+      refine ⟨?_, ?_⟩
+      · intro hmem
+        have hmem' : globalNewMainName declarations ∈
+            (functions declarations).map (fun entry => entry.1) :=
+          (mem_map_globalRenameFunctionName_source start
+            (globalNewMainName declarations)
+            ((functions declarations).map (fun entry => entry.1))).mp hmem
+        rw [← globalFunctionNames_eq_functions_map] at hmem'
+        exact globalNewMainName_not_mem declarations hmem'
+      · exact nodup_globalRenameFunctionName_map start
+          (globalNewMainName declarations) _ hnodup
+
 def globalCompileTop [BEq String] [Add α] [Mul α]
     (bytesInWord : α) (fromNat : Nat → α) (declarations : List (Decl α)) :
     GlobalCompiledProgram α :=
@@ -521,6 +1724,12 @@ def globalCompileTop [BEq String] [Add α] [Mul α]
 @[simp] theorem globalCompileExp_local [BEq String]
     (context : GlobalPassContext α) (name : VarName) :
     globalCompileExp context (.var .local name) = .var .local name := by
+  simp [globalCompileExp]
+
+theorem globalCompileExp_topAddr [BEq String]
+    (context : GlobalPassContext α) :
+    globalCompileExp context .topAddr =
+      .op .sub [.topAddr, .const context.maxGlobalsSize] := by
   simp [globalCompileExp]
 
 theorem globalCompileExp_global [BEq String] [Add α] [Mul α]

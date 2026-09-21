@@ -12,6 +12,127 @@ def loopStateOfCrepRuntimeStateForGlobals (state : CrepRuntimeState α σ) : Loo
     globals := state.globals
     memory := state.memory }
 
+/-! A typed global-store adapter for the Loop-side state.  `LoopState` keeps
+    its historical compact map for executable compatibility, so this wrapper
+    projects a `CrepGlobalState` through `toCompact` after a Cake-typed store.
+    In particular, all target-width addresses sharing a 5-bit key observe
+    the same update; the adapter never replaces the source key with the raw
+    target-width address used by `updateLoopGlobal`. -/
+def loopStateWithTypedGlobalState
+    (state : LoopState α) (key : α → CrepGlobalAddress)
+    (typedState : CrepGlobalState α) : LoopState α :=
+  { state with globals := (typedState.toCompact key).globals }
+
+def loopStateWithTypedGlobalStore [BEq α]
+    (state : LoopState α) (key : α → CrepGlobalAddress)
+    (typedState : CrepGlobalState α) (address value : α) : LoopState α :=
+  loopStateWithTypedGlobalState state key
+    (storeCrepTypedGlobal key typedState address value)
+
+/-! A typed Loop-side state for the global operations that are source
+    `StoreGlob`/`LoadGlob` boundaries.  The legacy `LoopState` is retained as
+    the executable projection; only the global field is supplied by the typed
+    Cake state when that projection is requested. -/
+structure LoopTypedGlobalState (α : Type u) where
+  legacy : LoopState α
+  globals : CrepGlobalState α
+
+namespace LoopTypedGlobalState
+
+def toLoopState (state : LoopTypedGlobalState α)
+    (key : α → CrepGlobalAddress) : LoopState α :=
+  loopStateWithTypedGlobalState state.legacy key state.globals
+
+def store [BEq α] (state : LoopTypedGlobalState α)
+    (key : α → CrepGlobalAddress) (address value : α) :
+    LoopTypedGlobalState α :=
+  { state with globals := storeCrepTypedGlobal key state.globals address value }
+
+def load [BEq α] (state : LoopTypedGlobalState α)
+    (key : α → CrepGlobalAddress) (address : α) : Option α :=
+  evalCrepTypedLoad key state.globals address
+
+def evalExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [PanCmp α] (state : LoopTypedGlobalState α)
+    (key : α → CrepGlobalAddress) (expression : LoopExp α) : Option α :=
+  evalLoopExp (state.toLoopState key) expression
+
+def setGlobal [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [PanCmp α] (state : LoopTypedGlobalState α)
+    (key : α → CrepGlobalAddress) (address : α) (expression : LoopExp α) :
+    Option (LoopTypedGlobalState α) := do
+  let value ← state.evalExp key expression
+  pure (state.store key address value)
+
+theorem toLoopState_store [BEq α]
+    (state : LoopTypedGlobalState α) (key : α → CrepGlobalAddress)
+    (address value : α) :
+    (state.store key address value).toLoopState key =
+      loopStateWithTypedGlobalStore state.legacy key state.globals address value := by
+  rfl
+
+theorem evalExp_lookup [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [PanCmp α] (state : LoopTypedGlobalState α)
+    (key : α → CrepGlobalAddress) (address : α) :
+    state.evalExp key (.lookup address) = state.load key address := by
+  rfl
+
+theorem setGlobal_load_alias [BEq α] [LawfulBEq α]
+    [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [PanCmp α] (state : LoopTypedGlobalState α)
+    (key : α → CrepGlobalAddress) (address value loadAddress : α) :
+    (state.setGlobal key address (.const value)).bind
+        (fun next => next.load key loadAddress) =
+      evalCrepTypedLoad key
+        (storeCrepTypedGlobal key state.globals address value) loadAddress := by
+  simp [setGlobal, evalExp, load, store, evalLoopExp,
+    evalCrepTypedLoad, storeCrepTypedGlobal, storeCrepGlobal]
+
+/-! The legacy Loop projection can be used by executable callers without
+    losing Cake's fixed-width global key.  This is the direct LoadGlob
+    boundary after a typed StoreGlob; unlike `updateLoopGlobal`, it needs no
+    no-alias premise because the store happens in the typed map first. -/
+theorem store_toLoopState_load [BEq α]
+    (state : LoopTypedGlobalState α)
+    (key : α → CrepGlobalAddress) (address value loadAddress : α) :
+    ((state.store key address value).toLoopState key).globals loadAddress =
+      evalCrepTypedLoad key
+        (storeCrepTypedGlobal key state.globals address value) loadAddress := by
+  rfl
+
+end LoopTypedGlobalState
+
+theorem loopStateWithTypedGlobalStore_relation [BEq α]
+    (state : LoopState α) (key : α → CrepGlobalAddress)
+    (typedState : CrepGlobalState α) (address value : α) :
+    CrepGlobalKeyRelation key
+      (loopStateWithTypedGlobalStore state key typedState address value).globals
+      (storeCrepTypedGlobal key typedState address value).globals := by
+  exact CrepGlobalState.relation_toCompact key
+    (storeCrepTypedGlobal key typedState address value)
+
+theorem loopStateWithTypedGlobalStore_load [BEq α]
+    (state : LoopState α) (key : α → CrepGlobalAddress)
+    (typedState : CrepGlobalState α) (address loadAddress value : α) :
+    (loopStateWithTypedGlobalStore state key typedState address value).globals
+        loadAddress =
+      (storeCrepTypedGlobal key typedState address value).globals
+        (key loadAddress) := by
+  rfl
+
+theorem loopStateWithTypedGlobalStore_typed_load [BEq α]
+    (state : LoopState α) (key : α → CrepGlobalAddress)
+    (typedState : CrepGlobalState α) (address loadAddress value : α) :
+    evalCrepTypedLoad key
+        (storeCrepTypedGlobal key typedState address value) loadAddress =
+      (loopStateWithTypedGlobalStore state key typedState address value).globals
+        loadAddress := by
+  rfl
+
 def crepRuntimeLocalProjection (name : Nat)
     (step : CrepRuntimeStep α σ ε) : Option α :=
   match step.1 with
@@ -52,6 +173,18 @@ def crepRuntimeTypedGlobalRelation
     (typedState : CrepGlobalState α) : Prop :=
   CrepGlobalKeyRelation key state.globals typedState.globals
 
+/-! Typed global-aware replacement for the legacy raw runtime/Loop relation.
+    The executable fields remain related by equality, while globals are also
+    related to Cake's fixed-width map explicitly.  This is the parameterized
+    boundary callers can adopt without changing `CrepRuntimeState` itself. -/
+def crepRuntimeLoopTypedGlobalRel
+    (key : α → CrepGlobalAddress) (source : CrepRuntimeState α σ)
+    (target : LoopState α) (typedState : CrepGlobalState α) : Prop :=
+  source.locals = target.locals ∧
+  source.memory = target.memory ∧
+  source.globals = target.globals ∧
+  crepRuntimeTypedGlobalRelation key source typedState
+
 theorem crepRuntimeTypedGlobalRelation_adapter
     (state : CrepRuntimeState α σ) (key : α → CrepGlobalAddress)
     (typedState : CrepGlobalState α) :
@@ -59,6 +192,16 @@ theorem crepRuntimeTypedGlobalRelation_adapter
       (state.withTypedGlobalState key typedState) typedState := by
   intro address
   rfl
+
+theorem crepRuntimeLoopTypedGlobalRel_adapter
+    (state : CrepRuntimeState α σ) (key : α → CrepGlobalAddress)
+    (typedState : CrepGlobalState α) :
+    crepRuntimeLoopTypedGlobalRel key
+      (state.withTypedGlobalState key typedState)
+      (loopStateOfCrepRuntimeStateForGlobals
+        (state.withTypedGlobalState key typedState)) typedState := by
+  refine ⟨rfl, rfl, rfl, ?_⟩
+  exact crepRuntimeTypedGlobalRelation_adapter state key typedState
 
 /-! The Loop-side state produced by the typed runtime adapter retains the
     source-shaped global relation.  This is the explicit state boundary used
@@ -75,6 +218,44 @@ theorem crepRuntimeTypedGlobalRelation_loopState_adapter
   intro address
   rfl
 
+/-! When the key re-encoding is injective on the addresses in scope, the
+    existing Loop exact-address store is the same update as Cake's typed
+    StoreGlob after projection.  This is the explicit premise needed by the
+    raw Loop store bridge; aliases must use the typed evaluator adapter above.
+    -/
+theorem crepRuntimeTypedGlobalRelation_loopStore_of_noalias
+    [BEq α] [LawfulBEq α]
+    (state : CrepRuntimeState α σ) (key : α → CrepGlobalAddress)
+    (typedState : CrepGlobalState α) (address value : α)
+    (hnoalias : ∀ current, key current = key address → current = address) :
+    CrepGlobalKeyRelation key
+      (updateLoopGlobal
+        (state.withTypedGlobalState key typedState).globals address value)
+      (storeCrepTypedGlobal key typedState address value).globals := by
+  have hcompact :
+      CrepGlobalKeyRelation key
+        (state.withTypedGlobalState key typedState).globals typedState.globals :=
+    crepRuntimeTypedGlobalRelation_adapter state key typedState
+  have hstore := CrepGlobalKeyRelation.store key hcompact address value
+  have hupdate := updateCrepGlobalKeyedBy_eq_updateMemory_of_noalias
+    key (state.withTypedGlobalState key typedState).globals address value hnoalias
+  intro current
+  calc
+    (storeCrepTypedGlobal key typedState address value).globals (key current) =
+        updateCrepGlobalKeyedBy key
+          (state.withTypedGlobalState key typedState).globals address value current :=
+      hstore current
+    _ = updateMemory
+          (state.withTypedGlobalState key typedState).globals address value current :=
+      congrFun hupdate current
+    _ = updateLoopGlobal
+          (state.withTypedGlobalState key typedState).globals address value current := by
+      by_cases h : address = current
+      · subst current
+        simp [updateMemory, updateLoopGlobal]
+      · have h' : current ≠ address := Ne.symm h
+        simp [updateMemory, updateLoopGlobal, h, h']
+
 theorem crepRuntimeTypedGlobalRelation_store_of_noalias
     [BEq α] [LawfulBEq α]
     (key : α → CrepGlobalAddress) (state : CrepRuntimeState α σ)
@@ -90,11 +271,45 @@ theorem crepRuntimeTypedGlobalRelation_store_of_noalias
     key state.globals address value hnoalias
   simpa [storeCrepTypedGlobal, hupdate] using hstore
 
+theorem crepRuntimeLoopTypedGlobalRel_store_of_noalias
+    [BEq α] [LawfulBEq α]
+    (state : CrepRuntimeState α σ) (key : α → CrepGlobalAddress)
+    (typedState : CrepGlobalState α) (address value : α)
+    (hnoalias : ∀ current, key current = key address → current = address) :
+    crepRuntimeLoopTypedGlobalRel key
+      { (state.withTypedGlobalState key typedState) with
+        globals := updateMemory
+          (state.withTypedGlobalState key typedState).globals address value }
+      { (loopStateOfCrepRuntimeStateForGlobals
+          (state.withTypedGlobalState key typedState)) with
+        globals := updateLoopGlobal
+          (state.withTypedGlobalState key typedState).globals address value }
+      (storeCrepTypedGlobal key typedState address value) := by
+  refine ⟨rfl, rfl, ?_, ?_⟩
+  · funext current
+    by_cases h : address = current
+    · subst current
+      simp [updateMemory, updateLoopGlobal]
+    · have h' : current ≠ address := Ne.symm h
+      simp [updateMemory, updateLoopGlobal, h, h']
+  · exact crepRuntimeTypedGlobalRelation_store_of_noalias key
+      (state.withTypedGlobalState key typedState) typedState address value
+      (crepRuntimeTypedGlobalRelation_adapter state key typedState) hnoalias
+
 def storeCrepRuntimeTypedGlobalState [BEq α]
     (state : CrepRuntimeState α σ) (key : α → CrepGlobalAddress)
     (typedState : CrepGlobalState α) (address value : α) : CrepRuntimeState α σ :=
   state.withTypedGlobalState key
     (storeCrepTypedGlobal key typedState address value)
+
+theorem loopStateWithTypedGlobalStore_runtime_adapter [BEq α]
+    (state : CrepRuntimeState α σ) (key : α → CrepGlobalAddress)
+    (typedState : CrepGlobalState α) (address value : α) :
+    loopStateWithTypedGlobalStore
+        (loopStateOfCrepRuntimeStateForGlobals state) key typedState address value =
+      loopStateOfCrepRuntimeStateForGlobals
+        (storeCrepRuntimeTypedGlobalState state key typedState address value) := by
+  rfl
 
 theorem crepRuntimeTypedGlobalRelation_store_adapter
     [BEq α]
@@ -133,6 +348,76 @@ theorem evalCrepRuntimeExp_loadGlob_after_store_typedState
   simpa [storeCrepRuntimeTypedGlobalState] using
     (evalCrepRuntimeExp_loadGlob_typedState state key
       (storeCrepTypedGlobal key typedState address value) loadAddress)
+
+/-! A raw-runtime wrapper carrying Cake's typed global map.
+
+`CrepRuntimeState` remains the executable compatibility state, but its
+`globals` field is target-width keyed.  This wrapper is the explicit raw
+boundary for correctness statements: all runtime fields stay in the existing
+state, while the source global map is carried at `CrepGlobalAddress` and is
+projected only when the runtime evaluator is invoked. -/
+structure CrepRuntimeTypedState (α σ : Type u) where
+  runtime : CrepRuntimeState α σ
+  globals : CrepGlobalAddress → Option α
+
+namespace CrepRuntimeTypedState
+
+def toGlobalState (state : CrepRuntimeTypedState α σ) : CrepGlobalState α :=
+  { locals := state.runtime.locals
+    memory := state.runtime.memory
+    globals := state.globals }
+
+def toRuntime (state : CrepRuntimeTypedState α σ)
+    (key : α → CrepGlobalAddress) : CrepRuntimeState α σ :=
+  state.runtime.withTypedGlobalState key state.toGlobalState
+
+def store [BEq α] (state : CrepRuntimeTypedState α σ)
+    (key : α → CrepGlobalAddress) (address value : α) :
+    CrepRuntimeTypedState α σ :=
+  { state with globals := storeCrepGlobal state.globals (key address) value }
+
+theorem toRuntime_relation (state : CrepRuntimeTypedState α σ)
+    (key : α → CrepGlobalAddress) :
+    crepRuntimeTypedGlobalRelation key (state.toRuntime key)
+      state.toGlobalState := by
+  exact crepRuntimeTypedGlobalRelation_adapter state.runtime key state.toGlobalState
+
+theorem load_toRuntime [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeTypedState α σ)
+    (key : α → CrepGlobalAddress) (address : α) :
+    evalCrepRuntimeExp (state.toRuntime key) (.loadGlob address) =
+      evalCrepTypedLoad key state.toGlobalState address := by
+  simpa [CrepRuntimeTypedState.toRuntime] using
+    (evalCrepRuntimeExp_loadGlob_typedState state.runtime key
+      state.toGlobalState address)
+
+theorem store_toRuntime [BEq α]
+    (state : CrepRuntimeTypedState α σ)
+    (key : α → CrepGlobalAddress) (address value : α) :
+    (state.store key address value).toRuntime key =
+      storeCrepRuntimeTypedGlobalState state.runtime key state.toGlobalState
+        address value := by
+  rfl
+
+theorem load_after_store_toRuntime [BEq α] [OfNat α 0] [OfNat α 1]
+    [Add α] [Mul α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeTypedState α σ)
+    (key : α → CrepGlobalAddress) (address value loadAddress : α) :
+    evalCrepRuntimeExp
+        ((state.store key address value).toRuntime key) (.loadGlob loadAddress) =
+    evalCrepTypedLoad key
+        (storeCrepTypedGlobal key state.toGlobalState address value) loadAddress := by
+  rw [CrepRuntimeTypedState.store_toRuntime]
+  exact
+    (evalCrepRuntimeExp_loadGlob_after_store_typedState state.runtime key
+      state.toGlobalState address value loadAddress)
+
+end CrepRuntimeTypedState
 
 theorem crepRuntimeToLoop_loadGlob_assign_agreement
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]

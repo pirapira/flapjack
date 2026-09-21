@@ -122,6 +122,7 @@ def labLineInstructionCount : LabLine (Word width) → Nat
       | .shareMemOffset _ _ _ _ => 1
       | .arithImm _ destination left immediate =>
           if destination = left && immediate = 0 then 0 else 1
+      | .shiftImm .ror _ _ _ => 3
       | .shiftImm _ _ _ _ => 1
       | .tick => 0
       | _ => 1
@@ -356,7 +357,11 @@ def labCompilePlain [NeZero width] :
       let destination ← labRegisterOfNat (portToStack destination)
       let temporary ← labRegisterOfNat (portToStack 31)
       pure (labConstInstructions destination zero temporary value.toNat)
-  | .word instruction => (wordInstToInstruction instruction).map List.singleton
+  /- Cake's `riscv_ast (Inst (Const ...))` is list-valued: a Word
+     constant may expand to ORI or a LUI/ADDI sequence.  Keep the Lab
+     boundary on that list-valued API so its stored line length and emitted
+     code cannot diverge. -/
+  | .word instruction => wordInstToInstructionsCake instruction
   | .stackMem operator register base offset => do
       let register ← labRegisterOfNat (portToStack register)
       let base ← labRegisterOfNat (portToStack base)
@@ -364,7 +369,12 @@ def labCompilePlain [NeZero width] :
       match operator with
       | .load => pure [.loadWordOffset register base offset]
       | .store => pure [.storeWordOffset register base offset]
-      | .load8 | .store8 | .load16 | .store16 | .load32 | .store32 => none
+      | .load8 => pure [.loadByteOffset register base offset]
+      | .store8 => pure [.storeByteOffset register base offset]
+      | .load16 => pure [.loadHalfOffset register base offset]
+      | .store16 => pure [.storeHalfOffset register base offset]
+      | .load32 => pure [.load32Offset register base offset]
+      | .store32 => pure [.store32Offset register base offset]
   | .stackMemSub operator register base offset => do
       let register ← labRegisterOfNat (portToStack register)
       let base ← labRegisterOfNat (portToStack base)
@@ -372,7 +382,12 @@ def labCompilePlain [NeZero width] :
       match operator with
       | .load => pure [.loadWordOffset register base offset]
       | .store => pure [.storeWordOffset register base offset]
-      | .load8 | .store8 | .load16 | .store16 | .load32 | .store32 => none
+      | .load8 => pure [.loadByteOffset register base offset]
+      | .store8 => pure [.storeByteOffset register base offset]
+      | .load16 => pure [.loadHalfOffset register base offset]
+      | .store16 => pure [.storeHalfOffset register base offset]
+      | .load32 => pure [.load32Offset register base offset]
+      | .store32 => pure [.store32Offset register base offset]
   | .const destination value => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
       let destination ← labRegisterOfNat (portToStack destination)
@@ -392,7 +407,9 @@ def labCompilePlain [NeZero width] :
         match operator with
         | .add => pure [.addi destination left (BitVec.ofNat width immediate)]
         | .sub => pure [.addi destination left (0 - BitVec.ofNat width immediate)]
-        | .and | .or | .xor => none
+        | .and => pure [.andi destination left (BitVec.ofNat width immediate)]
+        | .or => pure [.ori destination left (BitVec.ofNat width immediate)]
+        | .xor => pure [.xori destination left (BitVec.ofNat width immediate)]
   | .shiftImm operator destination left immediate => do
       let destination ← labRegisterOfNat (portToStack destination)
       let left ← labRegisterOfNat (portToStack left)
@@ -401,7 +418,16 @@ def labCompilePlain [NeZero width] :
       | .lsl => pure [.slli destination left immediate]
       | .lsr => pure [.srli destination left immediate]
       | .asr => pure [.srai destination left immediate]
-      | .ror => none
+      | .ror =>
+          if destination.val == 31 || left.val == 31 then
+            none
+          else
+            let amount := shiftAmount immediate
+            pure [
+              .srli 31 left (BitVec.ofNat width amount),
+              .slli destination left
+                (BitVec.ofNat width ((width - amount) % width)),
+              .or destination destination 31]
   | .shift operator destination left right =>
       labShiftInstructions operator destination left right
   | .tick =>
@@ -449,6 +475,17 @@ def labCompilePlain [NeZero width] :
       (wordInstToInstruction (.mem .store8 value address)).map List.singleton
   | .dataBufferWrite address value =>
       (wordInstToInstruction (.mem .store value address)).map List.singleton
+
+/-! Cake's `riscv_ast (JumpReg r)` equation is a direct `JALR` through the
+    selected register (`riscv_targetScript.sml:264`).  Keep the executable
+    plain-Lab boundary available as a named reduction for correctness clients. -/
+theorem labCompilePlain_jumpReg [NeZero width] (register : Nat) :
+    labCompilePlain (width := width) (.jumpReg register) = (do
+      let zero ← labRegisterOfNat (portToStack portZeroRegister)
+      let selected ← labRegisterOfNat (portToStack register)
+      pure [.jalr zero selected zero]) := by
+  rfl
+
 
 /-! StackLang's `LocValue` uses register 0 as the conventional link
     register.  The port's ordinary register fields are hardware-numbered, so

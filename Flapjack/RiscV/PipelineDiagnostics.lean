@@ -160,10 +160,9 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked [NeZero width] :
          doing it here changes the fresh-name bound used by SSA. -/
       let unallocatedBody :=
         RiscV.wordInstSelectProgramFrom
-          (RiscV.wordFuseConditionsAndFold
-            (RiscV.wordConstFp
-              (RiscV.wordFlattenProgramFrom
-                (LoopToWord.loopToWordCompFunc label parameters body))))
+          (RiscV.wordToWordPreSsa
+            (RiscV.wordFlattenProgramFrom
+              (LoopToWord.loopToWordCompFunc label parameters body)))
       match RiscV.CakeRegAlloc.cakeAllocateWordFunctionAfterDead
           label wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)
@@ -228,10 +227,9 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsCheckedAux
       let wordParameters := wordSsaAbiParameters parameters.length
       let unallocatedBody :=
           RiscV.wordInstSelectProgramFrom
-            (RiscV.wordFuseConditionsAndFold
-              (RiscV.wordConstFp
-                (RiscV.wordFlattenProgramFrom
-                  (LoopToWord.loopToWordCompFunc label parameters body))))
+            (RiscV.wordToWordPreSsa
+              (RiscV.wordFlattenProgramFrom
+                (LoopToWord.loopToWordCompFunc label parameters body)))
       match RiscV.CakeRegAlloc.cakeAllocateWordFunctionAfterDead
           label wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)
@@ -305,9 +303,8 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordCheckedA
       let wordParameters := wordSsaAbiParameters arity
       let unallocatedBody :=
         RiscV.wordInstSelectProgramFrom
-          (RiscV.wordFuseConditionsAndFold
-            (RiscV.wordConstFp
-              (RiscV.wordFlattenProgramFrom body)))
+          (RiscV.wordToWordPreSsa
+            (RiscV.wordFlattenProgramFrom body))
       match RiscV.CakeRegAlloc.cakeAllocateWordFunctionAfterDead
           label wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)
@@ -454,8 +451,7 @@ def wordFfiDiscoveryBody [NeZero width]
     (body : WordProg (RiscV.Word width)) : WordProg (RiscV.Word width) :=
   RiscV.wordRemoveUnreachable (wordProgDCE
     (RiscV.wordInstSelectProgramFrom
-      (RiscV.wordFuseConditionsAndFold
-        (RiscV.wordConstFp (RiscV.wordFlattenProgramFrom body)))))
+      (RiscV.wordToWordPreSsa (RiscV.wordFlattenProgramFrom body))))
 
 /-! Checked sibling of `compileFlapjackRiscVViaStack`.  The historical
     `Option` entrypoint remains available for compatibility; this form makes

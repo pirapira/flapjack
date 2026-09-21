@@ -55,6 +55,18 @@ def ifMergeAllocGuard : Bool :=
       (.move 1 [(9, 9), (7, 9)] : WordProg Nat)
       (.move 1 [(21, 21), (7, 21)] : WordProg Nat)) = [9, 21]
 
+/- The immediate branch equation removes only its condition from the
+   temporary set (`word_allocScript.sml:1746-1752`).  Start with a live
+   temporary so this checks the removal itself, rather than only the
+   whole-program empty-set wrapper.  The canonical HOL probe returns
+   `(LN,LN)` for this case. -/
+def ifImmediateRemovesTempGuard : Bool :=
+  cakeGetStackOnlyAux ([9], [])
+      (.ite .notEqual 9 (.imm 0) (.skip : WordProg Nat)
+        (.skip : WordProg Nat)) = ([], [])
+
+#guard ifImmediateRemovesTempGuard
+
 /-- Calls analyse and merge the return continuation and exception
     handler; 19 is a stack variable so only the continuation
     contributes (`{9}`). -/
@@ -68,6 +80,17 @@ def callMergeGuard : Bool :=
 /-- Tail calls (no return tuple) leave the state untouched (`∅`). -/
 def callTailGuard : Bool :=
   cakeGetStackOnly (.call none (some 5) [0, 2] none : WordProg Nat) = []
+
+/- These control-flow cases mirror the Cake `MustTerminate` and `Loop`
+   equations in `word_allocScript.sml:1754-1769`.  The canonical HOL probe
+   returns `[9]` for each wrapper around the forced-stack move chain. -/
+def mustTerminateGuard : Bool :=
+  cakeGetStackOnly
+      (.mustTerminate (.move 1 [(9, 9), (7, 9)] : WordProg Nat)) = [9]
+
+def loopBodyGuard : Bool :=
+  cakeGetStackOnly
+      (.loop [] (.move 1 [(9, 9), (7, 9)]) [] : WordProg Nat) = [9]
 
 /-- A plain assignment is a clash-tree leaf: its written name is removed
     from the temporaries set (`∅`). -/
@@ -157,6 +180,58 @@ def bijIndexedBuilderParityGuard : Bool :=
       indexed.nextNode == reference.nextNode)
 
 #guard bijIndexedBuilderParityGuard
+
+/- The hot-path source index must preserve the Cake association-list lookup,
+   including the zero fallback for a name absent from the bijection. -/
+def allocatorIndexLookupGuard : Bool :=
+  let entries : NatInfoMap Nat := [(9, 4), (1, 2), (17, 6)]
+  let index := cakeAllocatorIndex entries
+  cakeAllocatorIndexLookup index 9 = 4 &&
+    cakeAllocatorIndexLookup index 1 = 2 &&
+    cakeAllocatorIndexLookup index 17 = 6 &&
+    cakeAllocatorIndexLookup index 99 = 0
+
+#guard allocatorIndexLookupGuard
+
+/- Cake's association-list lookup is first-binding.  The allocator index must
+   preserve that result even when presented with a duplicate-key map. -/
+def allocatorIndexFirstBindingGuard : Bool :=
+  let entries : NatInfoMap Nat := [(9, 4), (9, 6)]
+  let index := cakeAllocatorIndex entries
+  cakeAllocatorIndexLookup index 9 == 4
+
+#guard allocatorIndexFirstBindingGuard
+
+/- The graph/tag hot path uses an index only as a lookup acceleration; its
+   default and physical-register fallbacks must remain Cake's `sp_default`. -/
+def spDefaultIndexParityGuard : Bool :=
+  let entries : NatInfoMap Nat := [(9, 4), (1, 2), (17, 6)]
+  let index := cakeSpDefaultIndex entries
+  cakeSpDefaultIndexed index 9 == Flapjack.RiscV.CakeAlloc.spDefault entries 9 &&
+    cakeSpDefaultIndexed index 1 == Flapjack.RiscV.CakeAlloc.spDefault entries 1 &&
+    cakeSpDefaultIndexed index 17 == Flapjack.RiscV.CakeAlloc.spDefault entries 17 &&
+    cakeSpDefaultIndexed index 8 == Flapjack.RiscV.CakeAlloc.spDefault entries 8 &&
+    cakeSpDefaultIndexed index 7 == Flapjack.RiscV.CakeAlloc.spDefault entries 7
+
+/- Cake's association-list lookup is first-binding.  The indexed accelerator
+   must preserve that result if a source map contains a duplicate key. -/
+def spDefaultIndexFirstBindingGuard : Bool :=
+  let entries : NatInfoMap Nat := [(9, 4), (9, 6)]
+  let index := cakeSpDefaultIndex entries
+  cakeSpDefaultIndexed index 9 == Flapjack.RiscV.CakeAlloc.spDefault entries 9
+
+#guard spDefaultIndexFirstBindingGuard
+
+#guard spDefaultIndexParityGuard
+
+def extractColorOrderGuard : Bool :=
+  let tree : WordClashTree := .delta [9, 1] [17]
+  let bij := cakeMkBij tree
+  let state := cakeInitRaState tree [] []
+  cakeExtractColor state bij.toAllocator ==
+    [(1, 0), (9, 0), (17, 0)]
+
+#guard extractColorOrderGuard
 
 
 /-! ## IRC graph construction guards
@@ -336,6 +411,18 @@ def raDeltaPairGuard : Bool :=
       (.delta [1] [3]) [] []).map sortColouring ==
     some (sortColouring [(1, 0), (3, 4)])
 
+/-- The threaded allocator entrypoint is definitionally the same computation as
+    the compatibility wrapper, while allowing production callers to reuse the
+    bijection and initial graph state they already built. -/
+def threadedAllocatorEntryGuard : Bool :=
+  let tree : WordClashTree := .delta [1] [3]
+  let bij := cakeMkBij tree
+  let state := cakeInitRaStateFromBij bij tree [] []
+  cakeDoRegAlloc .irc none 4 [] tree [] [] ==
+    cakeDoRegAllocFromState .irc none 4 [] bij state
+
+#guard threadedAllocatorEntryGuard
+
 /-- A physical-register read keeps its own register colour (`2 ↦ 1`). -/
 def raDeltaFreeGuard : Bool :=
   (Flapjack.RiscV.CakeRegAlloc.cakeDoRegAlloc .irc none 4 []
@@ -375,6 +462,247 @@ def raForcedEdgeGuard : Bool :=
   (Flapjack.RiscV.CakeRegAlloc.cakeDoRegAlloc .irc none 4 []
       (.delta [1] [5, 3]) [(1, 5)] []).map sortColouring ==
     some (sortColouring [(1, 1), (3, 4), (5, 0)])
+
+/- These two outputs are direct `reg_alloc_probe.out` observations.  A
+   sequential pair has no interference and may share colour zero, while a
+   same-delta clique must receive distinct colours. -/
+def raOrderSeqGuard : Bool :=
+  (Flapjack.RiscV.CakeRegAlloc.cakeDoRegAlloc .irc none 4 []
+      (.seq (.delta [9] []) (.delta [13] [])) [] []).map sortColouring ==
+    some (sortColouring [(9, 0), (13, 0)])
+
+def raOrderCliqueGuard : Bool :=
+  (Flapjack.RiscV.CakeRegAlloc.cakeDoRegAlloc .irc none 4 []
+      (.delta [9, 13] []) [] []).map sortColouring ==
+    some (sortColouring [(9, 0), (13, 1)])
+/- Cake's `do_spill` (`reg_allocScript.sml:810-830`) chooses the first
+   equal-degree candidate, pushes it, and unspills the remaining low-degree
+   nodes onto the simplify worklist in Cake's reversed partition order. -/
+def doSpillEqualDegreeGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 3 with
+      degrees := CakeNodeMap.ofNatInfoMap 3 [(0, 0), (1, 0), (2, 0)]
+      spillWl := [0, 1, 2] }
+  let (changed, out) := cakeDoSpill none 1 state
+  changed && out.stack == [0] && out.spillWl == [] &&
+    out.simpWl == [2, 1] && out.freezeWl == [] &&
+    (out.degrees.get 0).getD 0 == 0
+
+#guard doSpillEqualDegreeGuard
+
+
+/- The canonical `reg_alloc_probe.out` cost-sensitive case exercises
+   `do_spill` with a non-`NONE` source-keyed table and one allocatable colour:
+   Cake selects the high-cost source 5 for colour 0, leaving 1 and 9 in the
+   two spill colours. -/
+def raSpillCostGuard : Bool :=
+  let costs : Flapjack.NatInfoMap Nat := [(1, 1), (5, 100), (9, 1)]
+  (Flapjack.RiscV.CakeRegAlloc.cakeDoRegAlloc .irc
+      (some (cakeSpillCostMap 3 costs)) 1 []
+      (.delta [1, 5, 9] []) [] []).map sortColouring ==
+    some (sortColouring [(1, 1), (5, 0), (9, 2)])
+
+/- Cake's `st_ex_list_MIN_cost` scans the remaining spill worklist in order,
+   replacing the selected node only on a strict lower cost.  This direct case
+   checks both the cost division and the reversed residual list from
+   `reg_allocScript.sml:773-790`. -/
+def stExMinCostOrderGuard : Bool :=
+  let degrees := CakeNodeMap.ofNatInfoMap 4 [(0, 2), (1, 1), (2, 2)]
+  let costs := CakeNodeMap.ofNatInfoMap 4 [(0, 10), (1, 100), (2, 1)]
+  cakeStExListMinCost degrees costs [1, 2] 4 0 5 [] == (2, [0, 1])
+
+#guard stExMinCostOrderGuard
+
+def stExMaxDegOrderGuard : Bool :=
+  let degrees := CakeNodeMap.ofNatInfoMap 4 [(0, 2), (1, 1), (2, 3)]
+  cakeStExListMaxDeg degrees [1, 2] 4 0 2 [] == (2, [0, 1])
+
+#guard stExMaxDegOrderGuard
+
+/- Cake's `respill` (`reg_allocScript.sml:659-674`) moves a freeze-worklist
+   node back to the spill worklist only when its degree reaches `k`; it
+   removes that node from `freezeWl` and prepends it to `spillWl`. -/
+def respillWorklistGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      degrees := CakeNodeMap.ofNatInfoMap 4 [(3, 4)]
+      spillWl := [1, 2]
+      freezeWl := [3] }
+  let moved := cakeRespill 4 3 state
+  moved.spillWl == [3, 1, 2] && moved.freezeWl == [] &&
+    (moved.degrees.get 3).getD 0 == 4
+
+def respillBelowThresholdGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      degrees := CakeNodeMap.ofNatInfoMap 4 [(3, 3)]
+      spillWl := [1]
+      freezeWl := [3] }
+  let unchanged := cakeRespill 4 3 state
+  unchanged.spillWl == [1] && unchanged.freezeWl == [3]
+
+#guard respillWorklistGuard
+#guard respillBelowThresholdGuard
+
+/- Cake's `do_prefreeze` (`reg_allocScript.sml:727-747`) filters the
+   coalescing worklists, resets move-related flags, partitions freeze nodes,
+   and immediately runs `do_simplify`.  With no related moves, both initial
+   freeze nodes are simplified in reverse worklist order; the low-degree
+   spill nodes are then reintroduced on the simplify worklist. -/
+def prefreezeTransitionGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      freezeWl := [1, 2]
+      spillWl := [3, 4] }
+  let (changed, out) := cakeDoPrefreeze 4 state
+  changed && out.stack == [2, 1] && out.simpWl == [4, 3] &&
+    out.freezeWl == [] && out.spillWl == []
+
+#guard prefreezeTransitionGuard
+
+/- Cake's `do_simplify` (`reg_allocScript.sml:400-415`) processes the whole
+   simplify worklist before pushing it, preserving the worklist order in the
+   reverse stack order and then clearing `simpWl`. -/
+def simplifyBatchGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      degrees := CakeNodeMap.ofNatInfoMap 4 [(1, 1), (2, 2)]
+      simpWl := [1, 2] }
+  let (changed, simplified) := cakeDoSimplify 3 state
+  changed && simplified.simpWl == [] && simplified.stack == [2, 1] &&
+    (simplified.degrees.get 1).getD 0 == 0 &&
+    (simplified.degrees.get 2).getD 0 == 0
+
+#guard simplifyBatchGuard
+/- Cake's `dec_degree` (`reg_allocScript.sml:263-272`) is a safe no-op for
+   an out-of-dimension node, even if an outside adjacency entry exists. -/
+def decDegreeOutOfDimGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 3 with
+      adjLists := CakeNodeMap.ofNatInfoMap 3 [(5, [1])]
+      degrees := CakeNodeMap.ofNatInfoMap 3 [(1, 2)] }
+  let out := cakeDecDegree 5 state
+  (out.degrees.get 1).getD 0 == 2
+
+#guard decDegreeOutOfDimGuard
+
+/- Cake's `do_coalesce` (`reg_allocScript.sml:676-698`) consumes the first
+   compatible move, coalesces its second endpoint into the first, clears the
+   available-move worklist, and pushes the coalesced endpoint onto the stack. -/
+def coalesceWorklistSuccessGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 3 with
+      moveRelated := CakeNodeMap.ofNatInfoMap 3 [(1, true), (2, true)]
+      availMovesWl := [(1, (1, 2))] }
+  let (changed, out) := cakeDoCoalesce 3 state
+  changed && out.availMovesWl == [] && out.unavailMovesWl == [] &&
+    (out.coalesced.get 2).getD 2 == 1 && out.stack == [2] &&
+    (out.moveRelated.get 2).getD true == false
+
+#guard coalesceWorklistSuccessGuard
+
+/- Cake's `st_ex_FIRST`/`do_coalesce` (`reg_allocScript.sml:636-698`)
+   rejects a self-move through `consistency_ok`: it is not moved to the
+   unavailable list, while the failed coalescing pass clears avail_moves_wl. -/
+def coalesceSelfMoveRejectedGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 3 with
+      moveRelated := CakeNodeMap.ofNatInfoMap 3 [(1, true)]
+      availMovesWl := [(1, (1, 1))] }
+  let (changed, out) := cakeDoCoalesce 3 state
+  !changed && out.availMovesWl == [] && out.unavailMovesWl == []
+
+#guard coalesceSelfMoveRejectedGuard
+
+/-- Cake's coalesce_parent follows a non-fixed parent chain and compresses
+   the starting node to the fixed ancestor (reg_allocScript.sml:589-612).
+   This is distinct from the worklist coalesce guard above: it checks the
+   recursive ancestor walk and its in-place parent update directly. -/
+def coalesceParentCompressionGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 5 with
+      nodeTag := CakeNodeMap.ofNatInfoMap 5 [(2, .fixed 1)]
+      coalesced := CakeNodeMap.ofNatInfoMap 5 [(4, 3), (3, 2)] }
+  let (root, out) := cakeCoalesceParent 4 state
+  root == 2 && (out.coalesced.get 4).getD 4 == 2
+
+#guard coalesceParentCompressionGuard
+
+/- Cake's `do_freeze` (`reg_allocScript.sml:749-764`) decrements the frozen
+   node's neighbours, pushes it, removes it from `freezeWl`, then unspills a
+   spill node that has become low degree into the simplify worklist. -/
+def freezeWorklistTransitionGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      adjLists := CakeNodeMap.ofNatInfoMap 4 [(1, [2]), (2, [1])]
+      degrees := CakeNodeMap.ofNatInfoMap 4 [(1, 1), (2, 1)]
+      moveRelated := CakeNodeMap.ofNatInfoMap 4 [(1, true), (2, false)]
+      freezeWl := [1]
+      spillWl := [2] }
+  let (changed, out) := cakeDoFreeze 2 state
+  changed && out.freezeWl == [] && out.spillWl == [] &&
+    out.simpWl == [2] && out.stack == [1] &&
+    (out.degrees.get 1).getD 0 == 0 &&
+    (out.degrees.get 2).getD 0 == 0 &&
+    (out.moveRelated.get 1).getD true == false
+
+#guard freezeWorklistTransitionGuard
+/- `get_prefs_def` uses `MAP ... ++ acc`, preserving each Move's source
+   order.  These guards mirror the canonical `get_prefs_probe.out` output. -/
+def prefsMoveOrderGuard : Bool :=
+  cakeGetPrefs (.move 7 [(1, 2), (3, 4)] : WordProg Nat) [] ==
+    [(7, (1, 2)), (7, (3, 4))]
+
+def prefsSeqOrderGuard : Bool :=
+  cakeGetPrefs
+      (.seq (.move 7 [(1, 2), (3, 4)])
+        (.move 8 [(5, 6), (7, 8)]) : WordProg Nat) [] ==
+    [(7, (1, 2)), (7, (3, 4)), (8, (5, 6)), (8, (7, 8))]
+
+def prefsControlFlowGuard : Bool :=
+  cakeGetPrefs
+      (.mustTerminate (.move 9 [(9, 10), (11, 12)]) : WordProg Nat) [] ==
+      [(9, (9, 10)), (9, (11, 12))] &&
+    cakeGetPrefs
+      (.loop [] (.move 10 [(13, 14), (15, 16)]) [] : WordProg Nat) [] ==
+      [(10, (13, 14)), (10, (15, 16))] &&
+    cakeGetPrefs
+      (.ite .notEqual 2 (.reg 3)
+        (.move 11 [(17, 18)]) (.move 12 [(19, 20)]) : WordProg Nat) [] ==
+    [(11, (17, 18)), (12, (19, 20))]
+
+/-! These control-flow cases mirror the remaining `get_prefs_def` equations
+    in Cake's `word_allocScript.sml`: both branch arms are traversed with the
+    else-arm as the incoming accumulator, and a handled call traverses its
+    handler after its return continuation. -/
+def prefsBranchOrderGuard : Bool :=
+  cakeGetPrefs
+      (.ite .notEqual 2 (.reg 3)
+        (.move 9 [(1, 2)]) (.move 10 [(3, 4)]) : WordProg Nat) [] ==
+    [(9, (1, 2)), (10, (3, 4))]
+
+def prefsCallHandlerOrderGuard : Bool :=
+    cakeGetPrefs
+      (.call (some ([9], ([], []),
+          (.move 11 [(5, 6)] : WordProg Nat), 0, 1))
+        (some 2) []
+        (some (12, (.move 13 [(7, 8)] : WordProg Nat), 0, 2)) : WordProg Nat) [] ==
+    [(13, (7, 8)), (11, (5, 6))]
+
+/- `get_prefs_def`'s handled-call `NONE` branch traverses only the return
+   handler; it must not invent preferences from an absent exception handler. -/
+def prefsCallReturnOnlyGuard : Bool :=
+  cakeGetPrefs
+      (.call (some ([9], ([], []),
+          (.move 15 [(1, 2)] : WordProg Nat), 0, 1))
+        (some 2) [] none : WordProg Nat) [] ==
+    [(15, (1, 2))]
+
+def prefsLoopOrderGuard : Bool :=
+  cakeGetPrefs
+      (.loop [2]
+        (.move 14 [(9, 10)] : WordProg Nat) [3] : WordProg Nat) [] ==
+    [(14, (9, 10))]
 
 /-- `sort_moves` flips equal-priority moves relative to the input order
     (probe `sort_moves_probe.out` `sm_ties_two`). -/
@@ -466,6 +794,35 @@ def negFirstMatchProjectionGuard : Bool :=
     Flapjack.RiscV.CakeRegAlloc.cakeNegFirstMatchCol state 3 [] [5, 7] ==
       none
 
+/- Cake's `reset_move_related` (`reg_allocScript.sml:708-725`) first clears
+   the whole dimension, then marks exactly the non-fixed endpoints of the
+   surviving unavailable moves. -/
+def resetMoveRelatedGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      nodeTag := CakeNodeMap.ofNatInfoMap 4 [(1, .fixed 2)]
+      moveRelated := CakeNodeMap.ofNatInfoMap 4
+        [(0, true), (1, true), (2, true), (3, true)] }
+  let out := cakeResetMoveRelated [(1, (0, 1)), (2, (2, 3))] state
+  (out.moveRelated.get 0).getD false == true &&
+    (out.moveRelated.get 1).getD true == false &&
+    (out.moveRelated.get 2).getD false == true &&
+    (out.moveRelated.get 3).getD false == true
+
+#guard resetMoveRelatedGuard
+
+/- Cake's `remove_colours` (`reg_allocScript.sml:874-897`) removes every
+   fixed-neighbour colour while leaving allocation and stack temporary tags
+   untouched. -/
+def removeColoursGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      nodeTag := CakeNodeMap.ofNatInfoMap 4
+        [(1, .fixed 0), (2, .fixed 2), (3, .aTemp)] }
+  cakeRemoveColours state [1, 3, 2] [0, 1, 2, 3] == [1, 3]
+
+#guard removeColoursGuard
+
 /- The HOL allocator updates fixed-size array cells.  Repeated writes to an
    existing node must therefore not retain an unbounded history in the Lean
    association-list representation. -/
@@ -488,9 +845,20 @@ def sourceSpillCostKeyGuard : Bool :=
   table.get 1 == some 10 && table.get 2 == some 1 && table.get 5 == some 20 &&
     table.get 0 == none
 
+/- Cake's fixed allocator array exposes source-keyed costs outside its dense
+   dimension through the same lookup/update semantics as the HOL sptree.
+   The first source binding also wins, matching lookup_any on the original map. -/
+def sourceSpillCostRoundTripGuard : Bool :=
+  let costs : Flapjack.NatInfoMap Nat := [(1, 10), (1, 11), (5, 20)]
+  let table := cakeSpillCostMap 3 costs
+  table.toNatInfoMap == [(1, 10), (5, 20)] &&
+    table.get 5 == some 20
+
 def sourceMovePhysicalFallbackGuard : Bool :=
+  let index := Flapjack.RiscV.CakeRegAlloc.cakeAllocatorIndex []
   Flapjack.RiscV.CakeRegAlloc.cakeUpdateMove
-      (Flapjack.RiscV.CakeAlloc.spDefault []) (7, (2, 9)) == (7, (0, 1))
+      (Flapjack.RiscV.CakeRegAlloc.cakeAllocatorIndexLookup index)
+      (7, (2, 9)) == (7, (0, 1))
 
 /-- Cake's `remove_dead (Move pri ls)` keeps the surviving move priority
     (`word_allocScript.sml:891-899`).  The priority orders the coalescing
@@ -508,6 +876,40 @@ def deadProgramPriorityGuard : Bool :=
   match Flapjack.RiscV.wordRemoveDeadProgram
       (.seq (.move 1 [(6, 2)]) (.return 0 [6]) : WordProg Nat) with
   | .seq (.move priority _) _ => priority == 1
+  | _ => false
+
+/- These three guards mirror the non-instruction `get_live` equations in
+   `word_allocScript.sml`: a tail call carries only its arguments, Alloc keeps
+   its result live with both cut-set components, and StoreConsts kills its
+   source/bitmap while retaining the produced lengths. -/
+def deadTailCallLiveGuard : Bool :=
+  match Flapjack.RiscV.wordDeadCodeAux
+      (.call none (some 7) [2, 4] none : WordProg Nat) [99] [] with
+  | (.call none (some 7) [2, 4] none, live) => live == [2, 4]
+  | _ => false
+
+def deadAllocLiveGuard : Bool :=
+  match Flapjack.RiscV.wordDeadCodeAux
+      (.alloc 7 ([2], [3]) : WordProg Nat) [99] [] with
+  | (.alloc 7 ([2], [3]), live) => live == [7, 2, 3]
+  | _ => false
+
+def deadInstallLiveGuard : Bool :=
+  match Flapjack.RiscV.wordDeadCodeAux
+      (.install 7 8 9 10 ([11], [12]) : WordProg Nat) [99] [] with
+  | (.install 7 8 9 10 ([11], [12]), live) => live == [7, 8, 9, 10, 11, 12]
+  | _ => false
+
+def deadFfiLiveGuard : Bool :=
+  match Flapjack.RiscV.wordDeadCodeAux
+      (.ffi "svc" 7 8 9 10 ([11], [12]) : WordProg Nat) [99] [] with
+  | (.ffi "svc" 7 8 9 10 ([11], [12]), live) => live == [7, 8, 9, 10, 11, 12]
+  | _ => false
+
+def deadStoreConstsLiveGuard : Bool :=
+  match Flapjack.RiscV.wordDeadCodeAux
+      (.storeConsts 1 2 3 4 [] : WordProg Nat) [1, 2, 9] [] with
+  | (.storeConsts 1 2 3 4 [], live) => live == [9, 3, 4]
   | _ => false
 
 def copyLastMoveSource : WordProg Nat → Option Nat
@@ -568,10 +970,14 @@ def maxVarControlLabelGuard : Bool :=
 
 #guard maxVarControlLabelGuard
 #guard sortMovesTailSplitGuard
+#guard raDeltaTriangleGuard
+#guard raForcedEdgeGuard
 
 def parityGuard : Bool :=
   moveChainGuard && moveFromRegGuard && seqMovesGuard && ifMergeGuard &&
-    ifMergeAllocGuard && callMergeGuard && callTailGuard && assignLeafGuard &&
+    ifMergeAllocGuard && ifImmediateRemovesTempGuard && callMergeGuard &&
+    callTailGuard && mustTerminateGuard &&
+    loopBodyGuard && assignLeafGuard &&
     bijDeltaBasicGuard && bijDeltaDedupGuard && bijSeqOrderGuard &&
     bijBranchOrderGuard && bijBranchLiveGuard && bijSetGuard &&
     bijSetUnsortedGuard && bijCompositeGuard && graphDeltaDisjointGuard &&
@@ -580,46 +986,73 @@ def parityGuard : Bool :=
     heuSpillGuard && heuFixedDegreeGuard && raDeltaPairGuard &&
     raDeltaFreeGuard && raDeltaTriangleGuard && raStackOnlyGuard &&
     raMovesCoalesceGuard && raMovesSelfFilteredGuard && raForcedEdgeGuard &&
+    raOrderSeqGuard && raOrderCliqueGuard && raSpillCostGuard &&
+    prefsMoveOrderGuard && prefsSeqOrderGuard && prefsControlFlowGuard &&
+    prefsBranchOrderGuard &&
+    prefsCallHandlerOrderGuard && prefsCallReturnOnlyGuard &&
+    prefsLoopOrderGuard && prefsControlFlowGuard &&
     partOrderGuard && reviveOrderGuard && movesToSpOrderGuard &&
     resortMovesSpOrderGuard && bgOkOrderGuard &&
     qsortTiesTwoGuard && qsortTiesThreeGuard && qsortDescGuard &&
     stempBadColourTieGuard && raMovesStempGuard && raMovesStempHiGuard &&
-    negFirstMatchProjectionGuard
-    && mapUpdateBoundedGuard && sourceSpillCostKeyGuard && sourceMovePhysicalFallbackGuard
+    negFirstMatchProjectionGuard && resetMoveRelatedGuard && removeColoursGuard
+    && mapUpdateBoundedGuard && sourceSpillCostKeyGuard &&
+    sourceSpillCostRoundTripGuard && sourceMovePhysicalFallbackGuard
     && deadMovePriorityGuard
-    && deadProgramPriorityGuard && cakeBijSetPatriciaGuard
-    && sortMovesTailSplitGuard
+    && deadProgramPriorityGuard && deadTailCallLiveGuard && deadAllocLiveGuard
+    && deadInstallLiveGuard && deadFfiLiveGuard && deadStoreConstsLiveGuard
+    && cakeBijSetPatriciaGuard
+    && coalesceParentCompressionGuard
+    && prefreezeTransitionGuard
+    && sortMovesTailSplitGuard && freezeWorklistTransitionGuard &&
+      doSpillEqualDegreeGuard
+      && coalesceSelfMoveRejectedGuard
 
 /- The aggregate guard is intentionally disabled while the allocator port is
    being aligned with CakeML.  Individual oracle cases remain available to
    select and repair without blocking the whole build on stale expectations. -/
 def runChecks : IO Bool := do
-  /- `raDeltaTriangleGuard` and `raForcedEdgeGuard` encode expectations for
-     allocator ordering that are currently being reworked toward CakeML.
-     Keep the probes above for diagnosis, but do not let these stale
-     expectations block the implementation-parity build. -/
   let results := [
     moveChainGuard, moveFromRegGuard, seqMovesGuard, ifMergeGuard,
-    ifMergeAllocGuard, callMergeGuard, callTailGuard, assignLeafGuard,
+    ifMergeAllocGuard, ifImmediateRemovesTempGuard, callMergeGuard,
+    callTailGuard, mustTerminateGuard,
+    loopBodyGuard, assignLeafGuard,
     bijDeltaBasicGuard, bijDeltaDedupGuard, bijSeqOrderGuard,
     bijBranchOrderGuard, bijBranchLiveGuard, bijSetGuard,
     bijSetUnsortedGuard, bijCompositeGuard, graphDeltaDisjointGuard,
     graphDeltaCliqueGuard, graphSetCliqueGuard, graphForcedEdgeGuard,
     graphTagsGuard, graphInitGuard, heuDeltaGuard, heuMovesGuard,
     heuSpillGuard, heuFixedDegreeGuard, raDeltaPairGuard, raDeltaFreeGuard,
-    raStackOnlyGuard, raMovesCoalesceGuard, raMovesSelfFilteredGuard,
+    raDeltaTriangleGuard, raStackOnlyGuard, raMovesCoalesceGuard,
+    raMovesSelfFilteredGuard, raForcedEdgeGuard,
+    raOrderSeqGuard, raOrderCliqueGuard, raSpillCostGuard,
+    prefsMoveOrderGuard, prefsSeqOrderGuard, prefsControlFlowGuard,
+    prefsBranchOrderGuard,
+    prefsCallHandlerOrderGuard, prefsCallReturnOnlyGuard, prefsLoopOrderGuard,
+    prefsControlFlowGuard,
     partOrderGuard,
     reviveOrderGuard, revivePartitionGuard, bgOkOrderGuard, qsortTiesTwoGuard,
     movesToSpOrderGuard, resortMovesSpOrderGuard,
     qsortTiesThreeGuard, qsortDescGuard, raMovesStempGuard,
-    raMovesStempHiGuard, negFirstMatchProjectionGuard, mapUpdateBoundedGuard,
+    raMovesStempHiGuard, negFirstMatchProjectionGuard, resetMoveRelatedGuard,
+    removeColoursGuard,
+    mapUpdateBoundedGuard,
     deadMovePriorityGuard, deadProgramPriorityGuard, sortMovesTailSplitGuard,
-    sourceSpillCostKeyGuard, sourceMovePhysicalFallbackGuard]
+    sourceSpillCostKeyGuard, sourceMovePhysicalFallbackGuard,
+    deadTailCallLiveGuard, deadAllocLiveGuard, deadInstallLiveGuard,
+    deadFfiLiveGuard, deadStoreConstsLiveGuard, stExMinCostOrderGuard,
+    stExMaxDegOrderGuard, respillWorklistGuard,
+    respillBelowThresholdGuard, simplifyBatchGuard, decDegreeOutOfDimGuard,
+    coalesceWorklistSuccessGuard, coalesceParentCompressionGuard,
+    prefreezeTransitionGuard, freezeWorklistTransitionGuard,
+    doSpillEqualDegreeGuard]
   let names := [
     "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
-    "get_stack_only if merge alloc", "get_stack_only call merge",
-    "get_stack_only call tail", "get_stack_only assign leaf",
+    "get_stack_only if merge alloc", "get_stack_only immediate removes temp",
+    "get_stack_only call merge",
+    "get_stack_only call tail", "get_stack_only MustTerminate",
+    "get_stack_only Loop body", "get_stack_only assign leaf",
     "mk_bij delta basic", "mk_bij delta dedup", "mk_bij seq order",
     "mk_bij branch order", "mk_bij branch live", "mk_bij set",
     "mk_bij set unsorted", "mk_bij composite", "mk_graph delta disjoint",
@@ -627,8 +1060,16 @@ def runChecks : IO Bool := do
     "mk_tags roles", "init_ra_state", "init_alloc1_heu delta",
     "init_alloc1_heu moves", "init_alloc1_heu spill",
     "init_alloc1_heu fixed degree", "reg_alloc delta pair",
-    "reg_alloc delta free", "reg_alloc stack only",
+    "reg_alloc delta free", "reg_alloc triangle",
+    "reg_alloc stack only",
     "reg_alloc moves coalesce", "reg_alloc moves self filtered",
+    "reg_alloc forced edge",
+    "reg_alloc sequential pair order", "reg_alloc clique order",
+    "reg_alloc spill-cost selection",
+    "get_prefs Move order", "get_prefs Seq order", "get_prefs control flow",
+    "get_prefs If order",
+    "get_prefs Call handler order", "get_prefs Call return-only order",
+    "get_prefs Loop order", "get_prefs control flow",
     "sorting partition order", "revive moves reversing partition", "revive partition direction", "bg_ok order",
     "sort_moves tie two", "moves_to_sp order", "resort_moves output order",
     "sort_moves tie three", "sort_moves long tie",
@@ -637,7 +1078,16 @@ def runChecks : IO Bool := do
     "neg_first_match_col projection", "Cake map updates stay bounded",
     "remove_dead keeps move priority", "remove_dead_prog keeps entry priority",
     "mk_bij uses Cake Patricia Set order", "sort_moves tail split oracle",
-    "source-keyed spill costs", "physical source move fallback"]
+    "source-keyed spill costs", "source-keyed spill-cost round trip",
+    "physical source move fallback",
+    "remove_dead tail-call liveness", "remove_dead Alloc liveness",
+    "remove_dead Install liveness", "remove_dead FFI liveness",
+    "remove_dead StoreConsts liveness", "st_ex_list_MIN_cost ordering",
+    "st_ex_list_MAX_deg ordering", "respill freeze-to-spill transition",
+    "respill below-threshold no-op", "do_simplify batch ordering",
+    "dec_degree out-of-dimension no-op",
+    "do_coalesce success transition", "do_prefreeze transition",
+    "do_freeze transition", "do_spill equal-degree transition"]
   let mut all := true
   for (name, result) in names.zip results do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"

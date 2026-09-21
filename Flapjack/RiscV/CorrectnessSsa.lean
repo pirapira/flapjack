@@ -1,4 +1,5 @@
 import Flapjack.RiscV.AllocatorCorrectness
+import Flapjack.RiscV.LocValue
 
 /-!
 Semantic facts for the SSA-renaming stage of the Word allocator.
@@ -374,6 +375,7 @@ theorem evalWordProg_ssaRename_locValue_destination [NeZero width]
     (ssa : WordSsaState) (source target : State width)
     (hmemory : source.memory = target.memory)
     (hzero : readRegister source 0 = readRegister target 0)
+    (hpc : source.pc = target.pc)
     (destination label : Nat)
     (hdestination : destination < 32)
     (hdestinationNonzero : destination ≠ 0)
@@ -390,17 +392,60 @@ theorem evalWordProg_ssaRename_locValue_destination [NeZero width]
   rw [wordSsaRenameProgram_locValue]
   have hzero' : source.registers 0 = target.registers 0 := by
     simpa [readRegister] using hzero
-  refine ⟨execute source (.addi ⟨destination, hdestination⟩ 0
-      (BitVec.ofNat width label)),
-    execute target (.addi ⟨(wordSsaFresh ssa destination).2, hfresh⟩ 0
-      (BitVec.ofNat width label)), ?_, ?_, ?_, ?_⟩
-  · simp [evalWordProg, wordLocValueToInstructions, executeInstructions,
+  refine ⟨executeInstructions source
+      ((wordLocValueToInstructions (width := width) destination label).getD []),
+    executeInstructions target
+      ((wordLocValueToInstructions (width := width)
+        (wordSsaFresh ssa destination).2 label).getD []), ?_, ?_, ?_, ?_⟩
+  · simp [evalWordProg, wordLocValueToInstructions,
+      wordLocValueToInstructionsCake, registerOfNat, hdestination]
+  · simp [evalWordProg, wordLocValueToInstructions,
+      wordLocValueToInstructionsCake, registerOfNat, hfresh]
+  · simp [wordLocValueToInstructions, wordLocValueToInstructionsCake,
       registerOfNat, hdestination]
-  · simp [evalWordProg, wordLocValueToInstructions, executeInstructions,
-      registerOfNat, hfresh]
-  · simp [execute, writeRegister, readRegister, hdestinationNonzero,
-      hfreshNonzero, hzero']
-  · simp [execute, writeRegister, hmemory, hdestinationNonzero, hfreshNonzero]
+    rw [execute_auipc_addi_read source ⟨destination, hdestination⟩
+      (by simpa using hdestinationNonzero)]
+    simp [hfresh]
+    rw [execute_auipc_addi_read target
+      ⟨(wordSsaFresh ssa destination).2, hfresh⟩
+      (by simpa using hfreshNonzero)]
+    simp [hpc]
+  · exact (wordLocValueToInstructions_memory source destination label
+      hdestination).trans
+      (hmemory.trans (wordLocValueToInstructions_memory target
+        (wordSsaFresh ssa destination).2 label hfresh).symm)
+
+/-- Cake-faithful, position-aware counterpart of
+`evalWordProg_ssaRename_locValue_destination`.  Cake's
+`riscv_ast (Loc r i)` is PC-relative, so the standalone Word boundary now uses
+the same AUIPC/ADDI pair at position zero.  This corollary states the SSA
+destination invariant directly: both states must share their program counter
+and memory, while the explicit zero-register agreement preserves the usual
+state relation.
+(bead flapjack-pxn.1.4) -/
+theorem evalWordProg_ssaRename_locValueCake_destination
+    (ssa : WordSsaState) (source target : State 64)
+    (destination label position : Nat)
+    (hdestination : destination < 32)
+    (hdestinationNonzero : destination ≠ 0)
+    (hfresh : (wordSsaFresh ssa destination).2 < 32)
+    (hfreshNonzero : (wordSsaFresh ssa destination).2 ≠ 0)
+    (hpcSource : source.pc = BitVec.ofNat 64 position)
+    (hpcTarget : target.pc = BitVec.ofNat 64 position)
+    (hlo : -(2 ^ 19) ≤ (label : Int) - (position : Int))
+    (hhi : (label : Int) - (position : Int) < 2 ^ 19) :
+    readRegister (executeInstructions source
+        ((wordLocValueToInstructionsCake (width := 64) destination label position).getD []))
+      ⟨destination, hdestination⟩ =
+    readRegister (executeInstructions target
+        ((wordLocValueToInstructionsCake (width := 64)
+          (wordSsaFresh ssa destination).2 label position).getD []))
+      ⟨(wordSsaFresh ssa destination).2, hfresh⟩ := by
+  rw [wordLocValueToInstructionsCake_execution_general source destination label
+    position hdestination hdestinationNonzero hpcSource hlo hhi]
+  rw [wordLocValueToInstructionsCake_execution_general target
+    (wordSsaFresh ssa destination).2 label position hfresh hfreshNonzero
+    hpcTarget hlo hhi]
 
 theorem wordSsaRenameProgram_assign_var [OfNat α 0]
     (ssa : WordSsaState) (destination source : Nat) :
@@ -411,6 +456,28 @@ theorem wordSsaRenameProgram_assign_var [OfNat α 0]
           (.var (wordSsaRead ssa source))) := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaRenameExp]
+
+/-- Cake Move namespace equation for a singleton move. -/
+theorem wordSsaRenameProgram_move_one [OfNat α 0]
+    (ssa : WordSsaState) (priority source destination : Nat) :
+    wordSsaRenameProgram ssa
+        (.move priority [(destination, source)] : WordProg α) =
+      let (freshState, fresh) := wordSsaFresh ssa destination
+      let finalState :=
+        if source = destination then freshState
+        else wordSsaForceRename [(source, fresh)] freshState
+      (finalState,
+        .move priority
+          [(fresh, if priority == 0 then wordSsaReadMoveSource ssa source
+            else wordSsaRead ssa source)]) := by
+  by_cases hsource : source = destination
+  · subst source
+    simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
+      wordSsaRenameMove, wordSsaFreshList, wordSsaForceRename,
+      wordSsaReadMoveSource]
+  · simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
+      wordSsaRenameMove, wordSsaFreshList, wordSsaForceRename, hsource,
+      wordSsaReadMoveSource]
 
 theorem evalWordProg_ssaRename_assign_var_destination [NeZero width]
     (ssa : WordSsaState) (source target : State width)

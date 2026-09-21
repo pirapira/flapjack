@@ -13,6 +13,16 @@ def p1Source : String :=
   "fun 1 id (1 x) { return x; }
 fun 1 main() { var 1 t = id(5); return 1; }"
 
+/- `p9` is the smallest accepted struct witness with two distinct values live
+   across two calls.  Cake's loop-to-word output has call cutsets `[0]` for
+   `mks` and `[0,4,8]` for the later `id` call after dense renaming. -/
+def p9Source : String :=
+  "struct S { 1 f, 1 g }\n" ++
+    "fun S mks (1 a, 1 b) { return S <f = a, g = b>; }\n" ++
+    "fun 1 id (1 a) { return a; }\n" ++
+    "fun 1 main() { var S s = mks(1,2); var 1 t = id(5); " ++
+      "return s.f + s.g; }"
+
 /-- Compile `p1` to its source-shaped loop-level functions, then lower each
     function through the source-facing pipeline boundary. -/
 def p1WordBoundaries :
@@ -59,6 +69,21 @@ def p1CallCutsets : Option (List (List (List Nat))) :=
       (collectCallCutsets body).map
         (fun live => live.mergeSort (fun a b => a < b))))
 
+def p9WordBoundaries :
+    Option (List (Nat × List Nat × WordProg (RiscV.Word 64))) := do
+  let declarations ← match Parser.parseTopDecs (BitVec.ofInt 64) p9Source with
+    | Except.ok declarations => some declarations | Except.error _ => none
+  let pipeline ← compileFlapjackEntry .rv64i (BitVec.ofNat 64 8)
+      (fun value => BitVec.ofNat 64 value) "main"
+      (panTargetDeclarationsWithDefaultMain declarations)
+  some (pipelineWordFunctionsSource pipeline.loop)
+
+def p9CallCutsets : Option (List (List (List Nat))) :=
+  p9WordBoundaries.map (fun functions =>
+    functions.map (fun (_, _, body) =>
+      (collectCallCutsets body).map
+        (fun live => live.mergeSort (fun a b => a < b))))
+
 def runChecks : IO Bool := do
   let expected : Option (List (List Nat)) := some [[0], [0, 2, 4], [0, 2, 4]]
   let cutsetsExpected : Option (List (List (List Nat))) :=
@@ -77,6 +102,16 @@ def runChecks : IO Bool := do
 
 #guard p1WordVariableNames == some [[0], [0, 2, 4], [0, 2, 4]]
 #guard p1CallCutsets == some [[], [[0]], []]
+#guard p9CallCutsets == some [[], [[0], [0, 4, 8]], [], []]
+
+/- Direct `mk_new_cutset` namespace equation: the checked Cake probe
+   `comp_call_live` maps source `3` to Word `6`, then inserts link register 0.
+   The same constructor is used by production call and FFI lowering. -/
+def callCutsetNamespaceOracle : Bool :=
+  wordMkNewCutset ({ vars := [(3, 6)] } : WordContext) [3] == [0, 6] &&
+    wordMkNewCutset ({ vars := [(3, 6)] } : WordContext) [] == [0]
+
+#guard callCutsetNamespaceOracle
 
 /- The source-facing entry path must use Cake's `comp_func` context and its
    `oCompile` loop-live pass, rather than the legacy pass-local context. -/

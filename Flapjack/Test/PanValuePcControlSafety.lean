@@ -1,8 +1,359 @@
 import Flapjack.PanToCrepCorrectnessBoundary
+import Flapjack.PanToCrepCorrectnessBridge
+import Flapjack.PanValueFfiClockCorrectness
+import Flapjack.CrepeNestedDecsStability
 
 namespace Flapjack.Test.PanValuePcControlSafety
 
 open Flapjack
+
+/-! The context-coded `pc_compile_correct` boundary keeps the full
+    evaluator/state/result obligation package explicit. -/
+example
+    (sourceEvaluate : PanValuePcEvaluator Nat)
+    (targetEvaluate : CrepPcEvaluator Nat)
+    (codeRel : PanValuePcCodeRel Nat)
+    (excpRel : PanValuePcExceptionShapeRel Nat)
+    (exceptionCode : ExceptionId → Option Nat)
+    (globalsLookup : CrepState Nat → PanValue Nat → Option (List Nat))
+    (program : Prog Nat)
+    (hobligation : ∀ (context : CompileContext Nat) (structs : StructContext)
+      (sourceInput : PanValuePcInput Nat) (targetInput : CrepPcInput Nat)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (sourceExecution : PanValuePcExecution Nat)
+      (targetExecution : CrepPcExecution Nat),
+      sourceInput.structs = structs → targetInput.structs = structs →
+      panValuePcLocalisedCode sourceInput.code → localisedProg program →
+      codeRel context sourceInput.code targetInput.code →
+      excpRel context sourceInput.eshapes targetInput.eshapes →
+      panValueCrepStateRel structs context sourceInput.locals sourceInput.globals
+        sourceInput.memory targetInput.state →
+      sourceExecution.result ≠ .error →
+      sourceEvaluate context sourceInput program = some sourceExecution →
+      targetEvaluate context targetInput (compileProg context program) =
+        some targetExecution →
+      codeRel context sourceExecution.code targetExecution.code →
+      excpRel context sourceExecution.eshapes targetExecution.eshapes →
+      panValuePcResultRelWithContextCode structs context exceptionRel exceptionCode
+        globalsLookup sourceExecution.result targetExecution.result) :
+    PanValuePcCompileCorrectWithContextCode sourceEvaluate targetEvaluate codeRel
+      excpRel exceptionCode globalsLookup program := by
+  exact panValuePcCompileCorrectWithContextCode_of_obligations sourceEvaluate
+    targetEvaluate codeRel excpRel exceptionCode globalsLookup program hobligation
+
+/-! The arbitrary context-coded evaluator path preserves the stronger result
+    relation when the clocked source reaches a normal state. -/
+example
+    (sourceEvaluate : PanValuePcEvaluator Nat)
+    (targetEvaluate : CrepPcEvaluator Nat)
+    (codeRel : PanValuePcCodeRel Nat)
+    (excpRel : PanValuePcExceptionShapeRel Nat)
+    (exceptionCode : ExceptionId → Option Nat)
+    (globalsLookup : CrepState Nat → PanValue Nat → Option (List Nat))
+    (program : Prog Nat)
+    (hcompact : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (clockStructs : StructContext) (clockPcContext : CompileContext Nat)
+    (clockExceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+    (clockExceptionCode : ExceptionId → Option Nat)
+    (clockGlobalsLookup : CrepState Nat → PanValue Nat → Option (List Nat))
+    (clockContext : PanValueFfiContext Nat)
+    (clockPrimitive : PanPrimitiveHandler Nat)
+    (clockHandler : PanValueStatefulFfiHandler Nat Unit)
+    (clockFunctions : List (FunName × List VarName × Prog Nat))
+    (clockBaseAddress clockTopAddress clockBytesInWord : Nat)
+    (clockFuel clock : Nat)
+    (clockLocals clockGlobals : VarName → Option (PanValue Nat))
+    (clockMemory : Nat → Option (PanValue Nat)) (clockFfi : FfiState Unit)
+    (clockProgram : Prog Nat) (clockTargetState : CrepState Nat)
+    (hclock : evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
+      clockFfi clock clockProgram =
+      some (.control (.normal clockLocals clockGlobals clockMemory clockFfi), clock))
+    (hclockState : panValueCrepStateRel clockStructs clockPcContext
+      clockLocals clockGlobals clockMemory clockTargetState) :
+    PanValuePcCompileCorrectWithContextCode sourceEvaluate targetEvaluate
+      codeRel excpRel exceptionCode globalsLookup program ∧
+    panValuePcResultRelWithContextCode clockStructs clockPcContext
+      clockExceptionRel clockExceptionCode clockGlobalsLookup
+      (.normal clockLocals clockGlobals clockMemory)
+      (.normal clockTargetState) := by
+  have hresult :=
+    panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_normal
+      program sourceEvaluate targetEvaluate codeRel excpRel exceptionCode
+      globalsLookup hcompact clockStructs clockPcContext clockExceptionRel
+      clockExceptionCode clockGlobalsLookup clockContext clockPrimitive
+      clockHandler clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord clockFuel clock clockLocals clockGlobals clockMemory
+      clockFfi clockProgram clockTargetState hclock hclockState
+  exact ⟨hresult.1, hresult.2.2.2⟩
+
+example
+    (sourceEvaluate : PanValuePcEvaluator Nat)
+    (targetEvaluate : CrepPcEvaluator Nat)
+    (codeRel : PanValuePcCodeRel Nat)
+    (excpRel : PanValuePcExceptionShapeRel Nat)
+    (exceptionCode : ExceptionId → Option Nat)
+    (globalsLookup : CrepState Nat → PanValue Nat → Option (List Nat))
+    (program : Prog Nat)
+    (hcompact : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (clockStructs : StructContext) (clockPcContext : CompileContext Nat)
+    (clockExceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+    (clockExceptionCode : ExceptionId → Option Nat)
+    (clockGlobalsLookup : CrepState Nat → PanValue Nat → Option (List Nat))
+    (clockContext : PanValueFfiContext Nat)
+    (clockPrimitive : PanPrimitiveHandler Nat)
+    (clockHandler : PanValueStatefulFfiHandler Nat Unit)
+    (clockFunctions : List (FunName × List VarName × Prog Nat))
+    (clockBaseAddress clockTopAddress clockBytesInWord : Nat)
+    (clockFuel clock : Nat)
+    (clockLocals clockGlobals : VarName → Option (PanValue Nat))
+    (clockMemory : Nat → Option (PanValue Nat)) (clockFfi : FfiState Unit)
+    (clockProgram : Prog Nat) (clockTargetState : CrepState Nat)
+    (clockValues : List (PanValue Nat)) (clockTargetValues : List Nat)
+    (hclock : evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
+      clockFfi clock clockProgram =
+      some (.control (.returned clockLocals clockGlobals clockMemory clockFfi
+        clockValues), clock))
+    (hclockState : panValueCrepStateRel clockStructs clockPcContext
+      clockLocals clockGlobals clockMemory clockTargetState)
+    (hclockValues : panValueCrepValuesRel clockValues clockTargetValues) :
+    PanValuePcCompileCorrectWithContextCode sourceEvaluate targetEvaluate
+      codeRel excpRel exceptionCode globalsLookup program ∧
+    panValuePcResultRelWithContextCode clockStructs clockPcContext
+      clockExceptionRel clockExceptionCode clockGlobalsLookup
+      (.returned clockLocals clockGlobals clockMemory clockValues)
+      (.returned clockTargetState clockTargetValues) := by
+  have hresult :=
+    panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_returned
+      program sourceEvaluate targetEvaluate codeRel excpRel exceptionCode
+      globalsLookup hcompact clockStructs clockPcContext clockExceptionRel
+      clockExceptionCode clockGlobalsLookup clockContext clockPrimitive
+      clockHandler clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord clockFuel clock clockLocals clockGlobals clockMemory
+      clockFfi clockProgram clockTargetState clockValues clockTargetValues
+      hclock hclockState hclockValues
+  exact ⟨hresult.1, hresult.2.2.2⟩
+
+/-! The arbitrary context-coded evaluator path also preserves a clocked
+    timeout without weakening the source/global result relation. -/
+example
+    (sourceEvaluate : PanValuePcEvaluator Nat)
+    (targetEvaluate : CrepPcEvaluator Nat)
+    (codeRel : PanValuePcCodeRel Nat)
+    (excpRel : PanValuePcExceptionShapeRel Nat)
+    (exceptionCode : ExceptionId → Option Nat)
+    (globalsLookup : CrepState Nat → PanValue Nat → Option (List Nat))
+    (program : Prog Nat)
+    (hcompact : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (clockStructs : StructContext) (clockPcContext : CompileContext Nat)
+    (clockExceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+    (clockExceptionCode : ExceptionId → Option Nat)
+    (clockGlobalsLookup : CrepState Nat → PanValue Nat → Option (List Nat))
+    (clockContext : PanValueFfiContext Nat)
+    (clockPrimitive : PanPrimitiveHandler Nat)
+    (clockHandler : PanValueStatefulFfiHandler Nat Unit)
+    (clockFunctions : List (FunName × List VarName × Prog Nat))
+    (clockBaseAddress clockTopAddress clockBytesInWord : Nat)
+    (clockFuel clock : Nat)
+    (clockLocals clockGlobals : VarName → Option (PanValue Nat))
+    (clockMemory : Nat → Option (PanValue Nat)) (clockFfi : FfiState Unit)
+    (clockProgram : Prog Nat) (clockTargetState : CrepState Nat)
+    (hclock : evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
+      clockFfi clock clockProgram =
+      some (.timeout clockLocals clockGlobals clockMemory clockFfi, clock))
+    (hclockState : panValueCrepStateRel clockStructs clockPcContext
+      clockLocals clockGlobals clockMemory clockTargetState) :
+    PanValuePcCompileCorrectWithContextCode sourceEvaluate targetEvaluate
+      codeRel excpRel exceptionCode globalsLookup program ∧
+    panValuePcResultRelWithContextCode clockStructs clockPcContext
+      clockExceptionRel clockExceptionCode clockGlobalsLookup
+      (.timeout clockLocals clockGlobals clockMemory)
+      (.timeout clockTargetState) := by
+  have hresult :=
+    panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_timeout
+      program sourceEvaluate targetEvaluate codeRel excpRel exceptionCode
+      globalsLookup hcompact clockStructs clockPcContext clockExceptionRel
+      clockExceptionCode clockGlobalsLookup clockContext clockPrimitive
+      clockHandler clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord clockFuel clock clockLocals clockGlobals clockMemory
+      clockFfi clockProgram clockTargetState hclock hclockState
+  exact ⟨hresult.1, hresult.2.2.2⟩
+
+/-! The arbitrary context-coded evaluator path preserves a terminal FFI event
+    and its explicit target-state relation. -/
+example
+    (sourceEvaluate : PanValuePcEvaluator Nat)
+    (targetEvaluate : CrepPcEvaluator Nat)
+    (codeRel : PanValuePcCodeRel Nat)
+    (excpRel : PanValuePcExceptionShapeRel Nat)
+    (exceptionCode : ExceptionId → Option Nat)
+    (globalsLookup : CrepState Nat → PanValue Nat → Option (List Nat))
+    (program : Prog Nat)
+    (hcompact : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (clockStructs : StructContext) (clockPcContext : CompileContext Nat)
+    (clockExceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+    (clockExceptionCode : ExceptionId → Option Nat)
+    (clockGlobalsLookup : CrepState Nat → PanValue Nat → Option (List Nat))
+    (clockContext : PanValueFfiContext Nat)
+    (clockPrimitive : PanPrimitiveHandler Nat)
+    (clockHandler : PanValueStatefulFfiHandler Nat Unit)
+    (clockFunctions : List (FunName × List VarName × Prog Nat))
+    (clockBaseAddress clockTopAddress clockBytesInWord : Nat)
+    (clock : Nat)
+    (clockLocals clockGlobals : VarName → Option (PanValue Nat))
+    (clockMemory : Nat → Option (PanValue Nat)) (clockFfi : FfiState Unit)
+    (clockProgram : Prog Nat) (clockTargetState : CrepState Nat)
+    (event targetEvent : FfiFinalEvent) (finalFfi : FfiState Unit)
+    (hclock : evalPanValueFfiClockLeaf clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord clock clockLocals clockGlobals clockMemory clockFfi
+      clockProgram =
+      some (.control
+        (.finalFfi clockLocals clockGlobals clockMemory finalFfi event), clock))
+    (hclockState : panValueCrepStateRel clockStructs clockPcContext
+      clockLocals clockGlobals clockMemory clockTargetState)
+    (hevent : event = targetEvent) :
+    PanValuePcCompileCorrectWithContextCode sourceEvaluate targetEvaluate
+      codeRel excpRel exceptionCode globalsLookup program ∧
+    panValuePcResultRelWithContextCode clockStructs clockPcContext
+      clockExceptionRel clockExceptionCode clockGlobalsLookup
+      (.finalFfi clockLocals clockGlobals clockMemory event)
+      (.finalFfi clockTargetState targetEvent) := by
+  have hresult :=
+    panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_final_ffi
+      program sourceEvaluate targetEvaluate codeRel excpRel exceptionCode
+      globalsLookup hcompact clockStructs clockPcContext clockExceptionRel
+      clockExceptionCode clockGlobalsLookup clockContext clockPrimitive
+      clockHandler clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord clock clockLocals clockGlobals clockMemory clockFfi
+      clockProgram clockTargetState event targetEvent finalFfi hclock
+      hclockState hevent
+  exact ⟨hresult.1, hresult.2.2.2⟩
+
+/-! The arbitrary context-coded evaluator path preserves a zero-label
+    continued result and its explicit target-state relation. -/
+example
+    (sourceEvaluate : PanValuePcEvaluator Nat)
+    (targetEvaluate : CrepPcEvaluator Nat)
+    (codeRel : PanValuePcCodeRel Nat)
+    (excpRel : PanValuePcExceptionShapeRel Nat)
+    (exceptionCode : ExceptionId → Option Nat)
+    (globalsLookup : CrepState Nat → PanValue Nat → Option (List Nat))
+    (program : Prog Nat)
+    (hcompact : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (clockStructs : StructContext) (clockPcContext : CompileContext Nat)
+    (clockExceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+    (clockExceptionCode : ExceptionId → Option Nat)
+    (clockGlobalsLookup : CrepState Nat → PanValue Nat → Option (List Nat))
+    (clockContext : PanValueFfiContext Nat)
+    (clockPrimitive : PanPrimitiveHandler Nat)
+    (clockHandler : PanValueStatefulFfiHandler Nat Unit)
+    (clockFunctions : List (FunName × List VarName × Prog Nat))
+    (clockBaseAddress clockTopAddress clockBytesInWord : Nat)
+    (clockFuel clock : Nat)
+    (clockLocals clockGlobals : VarName → Option (PanValue Nat))
+    (clockMemory : Nat → Option (PanValue Nat)) (clockFfi : FfiState Unit)
+    (clockProgram : Prog Nat) (clockTargetState : CrepState Nat)
+    (hclock : evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
+      clockFfi clock clockProgram =
+      some (.control (.continued clockLocals clockGlobals clockMemory clockFfi),
+        clock))
+    (hclockState : panValueCrepStateRel clockStructs clockPcContext
+      clockLocals clockGlobals clockMemory clockTargetState) :
+    PanValuePcCompileCorrectWithContextCode sourceEvaluate targetEvaluate
+      codeRel excpRel exceptionCode globalsLookup program ∧
+    panValuePcResultRelWithContextCode clockStructs clockPcContext
+      clockExceptionRel clockExceptionCode clockGlobalsLookup
+      (.continued clockLocals clockGlobals clockMemory)
+      (.continued clockTargetState 0) := by
+  have hresult :=
+    panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_continued
+      program sourceEvaluate targetEvaluate codeRel excpRel exceptionCode
+      globalsLookup hcompact clockStructs clockPcContext clockExceptionRel
+      clockExceptionCode clockGlobalsLookup clockContext clockPrimitive
+      clockHandler clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord clockFuel clock clockLocals clockGlobals clockMemory
+      clockFfi clockProgram clockTargetState hclock hclockState
+  exact ⟨hresult.1, hresult.2.2.2⟩
+
+/-! Generic raised evidence remains explicit at the arbitrary evaluator
+    boundary rather than being replaced by a test-only proposition. -/
+example
+    (sourceEvaluate : PanValuePcEvaluator Nat)
+    (targetEvaluate : CrepPcEvaluator Nat)
+    (codeRel : PanValuePcCodeRel Nat)
+    (excpRel : PanValuePcExceptionShapeRel Nat)
+    (exceptionCode : ExceptionId → Option Nat)
+    (globalsLookup : CrepState Nat → PanValue Nat → Option (List Nat))
+    (program : Prog Nat)
+    (hcompact : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (clockStructs : StructContext) (clockPcContext : CompileContext Nat)
+    (clockExceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+    (clockExceptionCode : ExceptionId → Option Nat)
+    (clockGlobalsLookup : CrepState Nat → PanValue Nat → Option (List Nat))
+    (clockContext : PanValueFfiContext Nat)
+    (clockPrimitive : PanPrimitiveHandler Nat)
+    (clockHandler : PanValueStatefulFfiHandler Nat Unit)
+    (clockFunctions : List (FunName × List VarName × Prog Nat))
+    (clockBaseAddress clockTopAddress clockBytesInWord : Nat)
+    (clockFuel clock : Nat)
+    (clockLocals clockGlobals : VarName → Option (PanValue Nat))
+    (clockMemory : Nat → Option (PanValue Nat)) (clockFfi : FfiState Unit)
+    (clockProgram : Prog Nat) (clockTargetState : CrepState Nat)
+    (clockException : ExceptionId) (clockValue : PanValue Nat)
+    (clockTargetException : Nat)
+    (hclock : evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
+      clockFfi clock clockProgram =
+      some (.control (.raised clockLocals clockGlobals clockMemory clockFfi
+        clockException clockValue), clock))
+    (hcontrol : panValueCrepControlRel clockStructs clockPcContext
+      clockExceptionRel
+      (.raised clockLocals clockGlobals clockMemory clockException clockValue)
+      (.raised clockTargetState clockTargetException))
+    (hevidence : ∀ (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+      (sourceMemory : Nat → Option (PanValue Nat)) (sourceException : ExceptionId)
+      (sourceValue : PanValue Nat) (targetState : CrepState Nat)
+      (targetException : Nat),
+      panValueCrepControlRel clockStructs clockPcContext clockExceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      panValueCrepStateRel clockStructs clockPcContext sourceLocals sourceGlobals
+        sourceMemory targetState ∧
+      panValuePcExceptionResultRelWithContextCode clockStructs clockPcContext
+        clockExceptionRel clockExceptionCode clockGlobalsLookup
+        sourceGlobals sourceMemory sourceException sourceValue targetState
+        targetException) :
+    PanValuePcCompileCorrectWithContextCode sourceEvaluate targetEvaluate
+      codeRel excpRel exceptionCode globalsLookup program ∧
+    panValuePcResultRelWithContextCode clockStructs clockPcContext
+      clockExceptionRel clockExceptionCode clockGlobalsLookup
+      (.raised clockLocals clockGlobals clockMemory clockException clockValue)
+      (.raised clockTargetState clockTargetException) := by
+  have hresult :=
+    panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_raised_evidence
+      program sourceEvaluate targetEvaluate codeRel excpRel exceptionCode
+      globalsLookup hcompact clockStructs clockPcContext clockExceptionRel
+      clockExceptionCode clockGlobalsLookup clockContext clockPrimitive
+      clockHandler clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord clockFuel clock clockLocals clockGlobals clockMemory
+      clockFfi clockProgram clockTargetState clockException clockValue
+      clockTargetException hclock hcontrol hevidence
+  exact ⟨hresult.1, hresult.2.2.2⟩
 
 def controlContext : CompileContext Nat :=
   { vars := [], functions := [], exceptions := [], maxVar := 0,
@@ -107,6 +458,125 @@ example (condition : SourceWordExp Nat) (body : Prog Nat)
   exact panValueCrepProgramStateCorrect_and_controlSafe_while_source_word
     condition body hbody hbodySafe hloopSafe hbytesInWord hlookup
 
+/-! The store bridge carries evaluator correctness and the boundary
+    control-label obligation together, with `hlookup`/`hstable` explicit. -/
+example
+    (hbytesInWord : ∀ (context : CompileContext Nat) (bytesInWord : Nat),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext Nat)
+      (sourceLocals : VarName → Option (PanValue Nat))
+      (name : VarName) (value : PanValue Nat),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot]))
+    (hstable : ∀ (state : CrepState Nat) (baseAddress topAddress : Nat)
+      (temporary : Nat) (compiled : CrepExp Nat) (value updateValue : Nat),
+      evalCrepFullExp state.locals state.memory baseAddress topAddress compiled =
+        some value →
+      evalCrepFullExp
+        (updateCrepLocal state.locals temporary updateValue) state.memory
+        baseAddress topAddress compiled = some value) :
+    PanValueCrepProgramStateCorrect
+        (.store (SourceWordExp.const (7 : Nat)).toExp
+          (SourceWordExp.const (9 : Nat)).toExp) ∧
+      PanValueCrepProgramStateControlSafe
+        (.store (SourceWordExp.const (7 : Nat)).toExp
+          (SourceWordExp.const (9 : Nat)).toExp) := by
+  exact panValueCrepProgramStateCorrect_and_controlSafe_store_source_word
+    (SourceWordExp.const 7) (SourceWordExp.const 9) hbytesInWord hlookup hstable
+
+/-! The paired fragment composes: a store followed by a control leaf carries
+    both evaluator correctness and the control-label obligation together. -/
+example
+    (hbytesInWord : ∀ (context : CompileContext Nat) (bytesInWord : Nat),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext Nat)
+      (sourceLocals : VarName → Option (PanValue Nat))
+      (name : VarName) (value : PanValue Nat),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot]))
+    (hstable : ∀ (state : CrepState Nat) (baseAddress topAddress : Nat)
+      (temporary : Nat) (compiled : CrepExp Nat) (value updateValue : Nat),
+      evalCrepFullExp state.locals state.memory baseAddress topAddress compiled =
+        some value →
+      evalCrepFullExp
+        (updateCrepLocal state.locals temporary updateValue) state.memory
+        baseAddress topAddress compiled = some value) :
+    PanValueCrepProgramStateCorrect
+        (.seq (.store (SourceWordExp.const (7 : Nat)).toExp
+            (SourceWordExp.const (9 : Nat)).toExp) (.skip : Prog Nat)) ∧
+      PanValueCrepProgramStateControlSafe
+        (.seq (.store (SourceWordExp.const (7 : Nat)).toExp
+            (SourceWordExp.const (9 : Nat)).toExp) (.skip : Prog Nat)) := by
+  obtain ⟨hstoreCorrect, hstoreSafe⟩ :=
+    panValueCrepProgramStateCorrect_and_controlSafe_store_source_word
+      (SourceWordExp.const 7) (SourceWordExp.const 9) hbytesInWord hlookup hstable
+  exact panValueCrepProgramStateCorrect_and_controlSafe_seq _ _
+    hstoreCorrect hstoreSafe
+    panValueCrepProgramStateCorrect_skip
+    panValueCrepProgramStateControlSafe_skip
+
+example
+    (hbytesInWord : ∀ (context : CompileContext Nat) (bytesInWord : Nat),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext Nat)
+      (sourceLocals : VarName → Option (PanValue Nat))
+      (name : VarName) (value : PanValue Nat),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot])) :
+    PanValueCrepProgramStateCorrect
+        (.store32 (SourceWordExp.const (7 : Nat)).toExp
+          (SourceWordExp.const (9 : Nat)).toExp) ∧
+      PanValueCrepProgramStateControlSafe
+        (.store32 (SourceWordExp.const (7 : Nat)).toExp
+          (SourceWordExp.const (9 : Nat)).toExp) := by
+  exact panValueCrepProgramStateCorrect_and_controlSafe_store32_source_word
+    (SourceWordExp.const 7) (SourceWordExp.const 9) hbytesInWord hlookup
+
+example
+    (hbytesInWord : ∀ (context : CompileContext Nat) (bytesInWord : Nat),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext Nat)
+      (sourceLocals : VarName → Option (PanValue Nat))
+      (name : VarName) (value : PanValue Nat),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot])) :
+    PanValueCrepProgramStateCorrect
+        (.storeByte (SourceWordExp.const (7 : Nat)).toExp
+          (SourceWordExp.const (9 : Nat)).toExp) ∧
+      PanValueCrepProgramStateControlSafe
+        (.storeByte (SourceWordExp.const (7 : Nat)).toExp
+          (SourceWordExp.const (9 : Nat)).toExp) := by
+  exact panValueCrepProgramStateCorrect_and_controlSafe_storeByte_source_word
+    (SourceWordExp.const 7) (SourceWordExp.const 9) hbytesInWord hlookup
+
+/-! The raise bridge carries evaluator correctness and the boundary
+    control-label obligation together for a raised source word. -/
+example
+    (exception : ExceptionId)
+    (hbytesInWord : ∀ (context : CompileContext Nat) (bytesInWord : Nat),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext Nat)
+      (sourceLocals : VarName → Option (PanValue Nat))
+      (name : VarName) (value : PanValue Nat),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot]))
+    (hlookupException : ∀ (context : CompileContext Nat),
+      ∃ exceptionCode, lookupInfo exception context.exceptions = some exceptionCode)
+    (hfresh : ∀ (context : CompileContext Nat) (state : CrepState Nat),
+      state.locals (context.maxVar + 1) = none)
+    (hexception : ∀ (context : CompileContext Nat)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (value exceptionCode : Nat),
+      lookupInfo exception context.exceptions = some exceptionCode →
+      exceptionRel exception (.word value) exceptionCode) :
+    PanValueCrepProgramStateCorrect
+        (.raise exception (SourceWordExp.const (9 : Nat)).toExp) ∧
+      PanValueCrepProgramStateControlSafe
+        (.raise exception (SourceWordExp.const (9 : Nat)).toExp) := by
+  exact panValueCrepProgramStateCorrect_and_controlSafe_raise_source_word
+    exception (SourceWordExp.const 9) hbytesInWord hlookup hlookupException
+    hfresh hexception
+
 /-! Nonzero labels remain rejected at the `pc_compile_correct` boundary. -/
 example :
     ¬ panValuePcResultRel [] controlContext (fun _ _ _ => True) (fun _ => some 0)
@@ -115,5 +585,27 @@ example :
         (.broke { locals := fun _ => none, memory := fun _ => none } 1) := by
   apply panValuePcResultRel_broke_rejects_nonzero_label
   decide
+
+/-! Target-side freshness of the declaration prefix.  A list of freshly
+allocated target locals preserves the state relation; with an empty variable
+map the freshness side condition is vacuous.  This is the reusable ingredient
+for the compiled store/declaration instances, whose programs start with
+`nestedDecs`. -/
+example :
+    panValueCrepStateRel ([] : StructContext) controlContext
+      (fun _ => none) (fun _ => none) (fun _ => none)
+      { locals := updateCrepLocalList (fun _ => none) [0, 1] [7, 9]
+        memory := fun _ => none } := by
+  have hrel : panValueCrepStateRel ([] : StructContext) controlContext
+      (fun _ => none) (fun _ => none) (fun _ => none)
+      { locals := fun _ => none, memory := fun _ => none } :=
+    ⟨rfl, panValueCrepLocalsRel_empty _ _ _, rfl⟩
+  exact panValueCrepStateRel_updateCrepLocalList_fresh
+    ([] : StructContext) controlContext (fun _ => none) (fun _ => none)
+    (fun _ => none) { locals := fun _ => none, memory := fun _ => none }
+    [0, 1] [7, 9] hrel rfl
+    (by
+      intro name shape slots hlookup slot hslot
+      simp [controlContext, lookupInfo] at hlookup)
 
 end Flapjack.Test.PanValuePcControlSafety

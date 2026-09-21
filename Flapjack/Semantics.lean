@@ -53,6 +53,51 @@ def evalPanOp [Mul α] (operator : PanOp) (values : List α) : Option α :=
     evalPanOp .mul [left, right] = some (left * right) := by
   rfl
 
+/-! CakeML's `panSem$eval` delegates every `Shift` expression to
+`word_sh`.  Keep the historical two-operation helper above for the small
+abstract fragment, but expose the complete source operation at the boundary
+used by target-word evaluators.  In particular, an amount equal to the word
+width is invalid while amount zero remains valid, matching `word_sh`. -/
+def evalPanShiftFull [PanShiftWidth α] [ShiftLeft α] [ShiftRight α]
+    [ArithmeticShiftRight α] [RotateRightOp α]
+    (operator : Shift) (left right : α) : Option α :=
+  let amount := PanShiftWidth.amount (α := α) right
+  if amount ≠ 0 ∧ PanShiftWidth.width (α := α) ≤ amount then none else
+    match operator with
+    | .lsl => some (ShiftLeft.shiftLeft left right)
+    | .lsr => some (ShiftRight.shiftRight left right)
+    | .asr => some (ArithmeticShiftRight.arithmeticShiftRight left right)
+    | .ror => some (RotateRightOp.rotateRight left right)
+
+/-! Full source expression evaluator paired with `evalPanShiftFull`.
+This is deliberately separate from the historical compact evaluator so
+existing abstract proofs retain their interfaces while target-word callers
+cannot silently turn Cake ASR/ROR into `none`. -/
+def evalPanExpFull [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [PanCmp α] [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
+    (locals : VarName → Option α) (expression : Exp α) : Option α := match expression with
+  | .const value => some value
+  | .var .local name => locals name
+  | .op operator [left, right] => do
+      let left ← evalPanExpFull locals left
+      let right ← evalPanExpFull locals right
+      pure (evalPanBinOp operator left right)
+  | .panOp operator [left, right] => do
+      let left ← evalPanExpFull locals left
+      let right ← evalPanExpFull locals right
+      evalPanOp operator [left, right]
+  | .cmp operator left right => do
+      let left ← evalPanExpFull locals left
+      let right ← evalPanExpFull locals right
+      pure (evalPanCmp operator left right)
+  | .shift operator left right => do
+      let left ← evalPanExpFull locals left
+      let right ← evalPanExpFull locals right
+      evalPanShiftFull operator left right
+  | _ => none
+termination_by structural expression
+
 /-!
 Complete shift semantics corresponding to CakeML's `word_sh`: ASR and ROR
 are intentionally supplied by separate interfaces so a target cannot
@@ -691,123 +736,5 @@ end
 
 def updateMemory [BEq α] (memory : α → Option α) (address value : α) : α → Option α :=
   fun current => if current == address then some value else memory current
-
-def evalPanMemExp [BEq α] [Add α] [Mul α]
-    (locals : VarName → Option α) (memory : α → Option α) : Exp α → Option α
-  | .const value => some value
-  | .var .local name => locals name
-  | .load _ address | .load32 address | .loadByte address => do
-      let address ← evalPanMemExp locals memory address
-      memory address
-  | .op .add [left, right] => do
-      let left ← evalPanMemExp locals memory left
-      let right ← evalPanMemExp locals memory right
-      pure (left + right)
-  | .panOp operator [left, right] => do
-      let left ← evalPanMemExp locals memory left
-      let right ← evalPanMemExp locals memory right
-      evalPanOp operator [left, right]
-  | _ => none
-termination_by expression => sizeOf expression
-
-def evalPanMemCondition [BEq α] [OfNat α 0] [Add α] [Mul α]
-    (locals : VarName → Option α) (memory : α → Option α) : Exp α → Option Bool
-  | .cmp .equal left right => do
-      let left ← evalPanMemExp locals memory left
-      let right ← evalPanMemExp locals memory right
-      pure (left == right)
-  | .cmp .notEqual left right => do
-      let left ← evalPanMemExp locals memory left
-      let right ← evalPanMemExp locals memory right
-      pure (left != right)
-  | expression => do
-      let value ← evalPanMemExp locals memory expression
-      pure ((value == 0) = false)
-
-def evalPanMemProgFuelBase [BEq α] [Add α] [Mul α] [OfNat α 0]
-    (fuel : Nat) (locals : VarName → Option α) (memory : α → Option α) :
-    Prog α → Option ((VarName → Option α) × (α → Option α) × List α) :=
-  fun program =>
-    match fuel, program with
-    | _, .skip => some (locals, memory, [])
-    | 0, _ => none
-    | fuel + 1, .dec name _ value body => do
-        let value ← evalPanMemExp locals memory value
-        evalPanMemProgFuelBase fuel (updatePanLocal locals name value) memory body
-    | _fuel + 1, .assign .local name value => do
-        let value ← evalPanMemExp locals memory value
-        pure (updatePanLocal locals name value, memory, [])
-    | _fuel + 1, .store address value => do
-        let address ← evalPanMemExp locals memory address
-        let value ← evalPanMemExp locals memory value
-        pure (locals, updateMemory memory address value, [])
-    | _fuel + 1, .store32 address value | _fuel + 1, .storeByte address value => do
-        let address ← evalPanMemExp locals memory address
-        let value ← evalPanMemExp locals memory value
-        pure (locals, updateMemory memory address value, [])
-    | _fuel + 1, .return value => do
-        let value ← evalPanMemExp locals memory value
-        pure (locals, memory, [value])
-    | fuel + 1, .seq first second => do
-        let (locals', memory', firstResult) ←
-          evalPanMemProgFuelBase fuel locals memory first
-        if firstResult.isEmpty then
-          evalPanMemProgFuelBase fuel locals' memory' second
-        else
-          pure (locals', memory', firstResult)
-    | fuel + 1, .ite condition thenBranch elseBranch => do
-        let condition ← evalPanMemCondition locals memory condition
-        if condition then
-          evalPanMemProgFuelBase fuel locals memory thenBranch
-        else
-          evalPanMemProgFuelBase fuel locals memory elseBranch
-    | _fuel + 1, .while _ _ => none
-    | _, _ => none
-termination_by fuel => fuel
-
-mutual
-  def evalPanMemProgFuel [BEq α] [Add α] [Mul α] [OfNat α 0]
-      : Nat → (VarName → Option α) → (α → Option α) → Prog α →
-        Option ((VarName → Option α) × (α → Option α) × List α)
-    | _, locals, memory, .skip => some (locals, memory, [])
-    | 0, _, _, _ => none
-    | fuel + 1, locals, memory, .dec name _ value body => do
-        let value ← evalPanMemExp locals memory value
-        evalPanMemProgFuel fuel (updatePanLocal locals name value) memory body
-    | fuel + 1, locals, memory, .seq first second => do
-        let (locals', memory', firstResult) ←
-          evalPanMemProgFuel fuel locals memory first
-        if firstResult.isEmpty then
-          evalPanMemProgFuel fuel locals' memory' second
-        else
-          pure (locals', memory', firstResult)
-    | fuel + 1, locals, memory, .ite condition thenBranch elseBranch => do
-        let condition ← evalPanMemCondition locals memory condition
-        if condition then
-          evalPanMemProgFuel fuel locals memory thenBranch
-        else
-          evalPanMemProgFuel fuel locals memory elseBranch
-    | fuel + 1, locals, memory, .while condition body =>
-        evalPanMemWhileFuel fuel locals memory condition body
-    | fuel, locals, memory, program => evalPanMemProgFuelBase fuel locals memory program
-    termination_by fuel => fuel
-
-  def evalPanMemWhileFuel [BEq α] [Add α] [Mul α] [OfNat α 0]
-      : Nat → (VarName → Option α) → (α → Option α) → Exp α → Prog α →
-        Option ((VarName → Option α) × (α → Option α) × List α)
-    | 0, locals, memory, condition, _ => do
-        let conditionValue ← evalPanMemCondition locals memory condition
-        if conditionValue then none else some (locals, memory, [])
-    | fuel + 1, locals, memory, condition, body => do
-        let conditionValue ← evalPanMemCondition locals memory condition
-        if conditionValue then
-          let result ← evalPanMemProgFuel fuel locals memory body
-          if result.2.2.isEmpty then
-            evalPanMemWhileFuel fuel result.1 result.2.1 condition body
-          else
-            some result
-        else some (locals, memory, [])
-    termination_by fuel _ _ _ _ => fuel
-end
 
 end Flapjack

@@ -1,4 +1,5 @@
 import Flapjack.LoopEvaluate
+import Flapjack.RiscV.PanSemantics
 
 /-!
 # Source parity for Pancake `loopSem$evaluate`
@@ -58,6 +59,18 @@ def hooks : LoopEvaluateHooks :=
     through the exact `evaluate_def` arithmetic boundary. -/
 def arithHooks : LoopEvaluateHooks :=
   { hooks with arith := fun state operation => loopArithMachine 8 state operation }
+
+/-! The primitive branch uses the same fixed-width Cake `AddCarry` handler as
+    `loop_primop` (`loopSemScript.sml:242-252`). -/
+def primitiveMachine : PrimOp → List LoopWordLoc → Option (List LoopWordLoc)
+  | .addCarry, [.word left, .word right, .word carry] =>
+      (RiscV.loopPrimitiveHandler (width := 64) .addCarry
+        [BitVec.ofNat 64 left, BitVec.ofNat 64 right, BitVec.ofNat 64 carry]).map
+        (fun values => values.map (fun value => .word value.toNat))
+  | _, _ => none
+
+def primitiveHooks : LoopEvaluateHooks :=
+  { arithHooks with primitive := primitiveMachine }
 
 /-! The source probes `loop_sem_sh_mem_load_probe.out` and
     `loop_sem_sh_mem_store_probe.out` cover `loopSemScript.sml:198-243`.
@@ -246,6 +259,81 @@ def longDivMalformed : Bool :=
     (longDivState (some (.loc 9 0)) (some (.word 3)) (some (.word 2)))) ==
     (some .error, none, none, 5)
 
+/-! Cake writes the remainder first and the quotient second, so coincident
+    destinations retain the quotient. -/
+def longDivSameDestination : Bool :=
+  observeLongDiv (evaluateLoop 2 arithHooks
+    (.arith (.longDiv 1 1 3 4 5))
+    (longDivState (some (.word 1)) (some (.word 3)) (some (.word 2)))) ==
+    (none, some (.word 129), none, 5)
+
+/-! The ordinary `LDiv` evaluator branch follows
+    `loopSemScript.sml:119-126`: it returns the quotient, and rejects zero or
+    non-word divisors. -/
+def divSuccess : Bool :=
+  observeLongDiv (evaluateLoop 2 arithHooks
+    (.arith (.div 1 3 4))
+    (longDivState (some (.word 7)) (some (.word 2)) none)) ==
+    (none, some (.word 3), none, 5)
+
+def divZero : Bool :=
+  observeLongDiv (evaluateLoop 2 arithHooks
+    (.arith (.div 1 3 4))
+    (longDivState (some (.word 7)) (some (.word 0)) none)) ==
+    (some .error, none, none, 5)
+
+def divMalformed : Bool :=
+  observeLongDiv (evaluateLoop 2 arithHooks
+    (.arith (.div 1 3 4))
+    (longDivState (some (.loc 9 0)) (some (.word 2)) none)) ==
+    (some .error, none, none, 5)
+
+/-! Exact `evaluate_def` primitive/result propagation for the HOL probe's
+    valid, carry-producing, and malformed `AddCarry` cases. -/
+def primitiveSuccess : Bool :=
+  observeLongDiv (evaluateLoop 2 primitiveHooks
+    (.primitive [1, 2] .addCarry [3, 4, 5])
+    (longDivState (some (.word 3)) (some (.word 4)) (some (.word 0)))) ==
+    (none, some (.word 7), some (.word 0), 5)
+
+def primitiveCarry : Bool :=
+  observeLongDiv (evaluateLoop 2 primitiveHooks
+    (.primitive [1, 2] .addCarry [3, 4, 5])
+    (longDivState (some (.word (2 ^ 64 - 1))) (some (.word 0)) (some (.word 1)))) ==
+    (none, some (.word 0), some (.word 1), 5)
+
+def primitiveMalformed : Bool :=
+  observeLongDiv (evaluateLoop 2 primitiveHooks
+    (.primitive [1, 2] .addCarry [3, 4])
+    (longDivState (some (.word 3)) (some (.word 4)) (some (.word 0)))) ==
+    (some .error, none, none, 5)
+
+/-! `loopSemScript.sml:118-145` also splits `LLongMul` into the high word
+    destination first and the low word destination second.  This exercises
+    that source arithmetic boundary through `evaluate_def`, not only through
+    the standalone `loop_arith` helper. -/
+def longMulSuccess : Bool :=
+  observeLongDiv (evaluateLoop 2 arithHooks
+    (.arith (.longMul 1 2 3 4))
+    (longDivState (some (.word 20)) (some (.word 20)) none)) ==
+    (none, some (.word 1), some (.word 144), 5)
+
+/-! Cake's `loop_arith` rejects an `LLongMul` operand that is a location rather
+    than a word (`loop_sem_loop_arith_probe.out:longmul_non_word=NONE`). -/
+def longMulMalformed : Bool :=
+  observeLongDiv (evaluateLoop 2 arithHooks
+    (.arith (.longMul 1 2 3 4))
+    (longDivState (some (.loc 9 0)) (some (.word 20)) none)) ==
+    (some .error, none, none, 5)
+
+/-! Cake's `set_var r2 ... (set_var r1 ... s)` ordering means a coincident
+    destination retains the low word (`loopSemScript.sml:127-132`). -/
+def longMulSameDestination : Bool :=
+  observeLongDiv (evaluateLoop 2 arithHooks
+    (.arith (.longMul 1 1 3 4))
+    (longDivState (some (.word 20)) (some (.word 20)) none)) ==
+    (none, some (.word 144), none, 5)
+
 def observe (step : LoopMachineStep) :
     Option (LoopMachineResult LoopWordLoc) × Option LoopWordLoc × Nat :=
   (step.1, step.2.locals 1, step.2.clock)
@@ -311,6 +399,22 @@ def callResultFirstWinsAndRestoresCaller : Bool :=
     (.call (some ([5], [])) (some 1) [1, 2] none) callResultState) ==
     (none, some (.word 7), none, 4)
 
+/-! `loopSemScript.sml:set_vars_def` is first-occurrence-wins for duplicate
+    names.  These direct guards exercise the two executable Loop entrypoints
+    that bind parameters and assign call results. -/
+def duplicateBindFirstWins : Bool :=
+  match loopBindParameters [1, 1]
+      ([.word 5, .word 7] : List LoopWordLoc)
+      (fun _ => none : Nat → Option LoopWordLoc) with
+  | some locals => locals 1 == some (.word 5)
+  | none => false
+
+def duplicateAssignFirstWins : Bool :=
+  match loopAssignValues (fun _ => none : Nat → Option LoopWordLoc) [1, 1]
+      ([.word 5, .word 7] : List LoopWordLoc) with
+  | some locals => locals 1 == some (.word 5)
+  | none => false
+
 #guard sequenceReturn
 #guard skip
 #guard assignment
@@ -319,10 +423,22 @@ def callResultFirstWinsAndRestoresCaller : Bool :=
 #guard timeout
 #guard tailCallNoResult
 #guard callResultFirstWinsAndRestoresCaller
+#guard duplicateBindFirstWins
+#guard duplicateAssignFirstWins
 #guard longDivSuccess
 #guard longDivZero
 #guard longDivOverflow
 #guard longDivMalformed
+#guard longDivSameDestination
+#guard divSuccess
+#guard divZero
+#guard divMalformed
+#guard primitiveSuccess
+#guard primitiveCarry
+#guard primitiveMalformed
+#guard longMulSuccess
+#guard longMulMalformed
+#guard longMulSameDestination
 #guard sharedLoadSuccess
 #guard sharedStoreSuccess
 #guard sharedLoadDomainError
@@ -346,10 +462,22 @@ def runChecks : IO Bool := do
     ("evaluate tail call maps callee NONE to Error", tailCallNoResult),
     ("evaluate Call uses first-wins bindings and restores caller locals",
       callResultFirstWinsAndRestoresCaller),
+    ("Loop parameter binding keeps the first duplicate", duplicateBindFirstWins),
+    ("Loop result assignment keeps the first duplicate", duplicateAssignFirstWins),
     ("evaluate LongDiv returns the HOL quotient and remainder", longDivSuccess),
     ("evaluate LongDiv rejects a zero divisor", longDivZero),
     ("evaluate LongDiv rejects quotient overflow", longDivOverflow),
     ("evaluate LongDiv rejects a non-word operand", longDivMalformed),
+    ("evaluate LDiv returns the Cake quotient", divSuccess),
+    ("evaluate LDiv rejects a zero divisor", divZero),
+    ("evaluate LDiv rejects a non-word operand", divMalformed),
+    ("evaluate Primitive propagates AddCarry results", primitiveSuccess),
+    ("evaluate Primitive propagates AddCarry carry", primitiveCarry),
+    ("evaluate Primitive rejects malformed AddCarry", primitiveMalformed),
+    ("evaluate LongMul splits high and low words", longMulSuccess),
+    ("evaluate LongMul rejects a non-word operand", longMulMalformed),
+    ("evaluate LongMul keeps the low word on a shared destination",
+      longMulSameDestination),
     ("evaluate shared load updates its destination", sharedLoadSuccess),
     ("evaluate shared store preserves its source", sharedStoreSuccess),
     ("evaluate shared load rejects an unmapped address", sharedLoadDomainError),

@@ -182,6 +182,14 @@
       ]
     },
     {
+      "path": "Flapjack/Test/OriginalPancake/conditional_comparators.pnk",
+      "source_reference": "GH #1027 conditional-lowering regression: signed less-than, unsigned lower-than, equality, and inequality source branches all retain CakeML direct-branch layouts and exact section bytes.",
+      "cake_sha256": "88fe750851c8f58e477a3b4c374f3f55a980120782555f8f86f648bfe7f45a15",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.11"
+      ]
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/hello.pnk",
       "source_reference": "hello.pnk whole-artifact parity (GitHub issue #1022 / bead flapjack-8tb): the checked fixture now has byte-identical Cake and Flapjack output, including cml_main, after the Cake FFI setup-order fix. Retain it as the primary exact-output regression while broader accepted-program parity remains tracked by flapjack-8tb and child beads.",
       "cake_sha256": "72e2d0d849bfcb8d5070a06c35d148d81c032982cd0ca5ce6e12bd91843dc270",
@@ -255,7 +263,7 @@
     },
     {
       "path": "Flapjack/Test/OriginalPancake/secp_accel_init_block.pnk",
-      "source_reference": "Minimized from the full guest's secp_accel_init_block: Cake preserves static base-plus-offset stores and register-resident struct words through word_to_stack and Lab.",
+      "source_reference": "Minimized from the full guest's secp_accel_init_block: Cake's word_simp first materializes non-atomic base-plus-offset Store addresses, word_inst then sees Store Var and emits zero-offset Mem, and word_to_stack/Lab preserve the resulting register-resident struct stores.",
       "cake_sha256": "2cdf414cfa245f284a23ad93df8be7909c5a083c3fb4b924db9b9162766d34af",
       "tracked_beads": [
         "flapjack-8tb.4.6"
@@ -461,9 +469,11 @@
     },
     {
       "path": "Flapjack/Test/OriginalPancake/spilled_load_offset.pnk",
-      "source_reference": "Reduced from the stateless guest's g1_double by scripts/parity-reduce.py. Cake's word_to_stack keeps Addr base offset through a load exactly as it does through a store, and the Lab pass recognises the const/arith/memory triple for loads as well as stores, emitting memOffset. wordStackCompileLoadNatNested had no Addr base offset case: it always materialised the whole address into addressScratch, so a load whose destination is spilled came out as addi x23, base, off; ld scratch, 0(x23); sd scratch, slot(x24) against Cake's ld scratch, off(base); sd scratch, slot(x24). Only the spilled destination was affected, because a register destination fuses through the statement-level path; register_load pins that half as exact, spilled_load the half that differed. Guest sections g1_double, swu_g1, ecp_add and g1_add were this shape.",
+      "source_reference": "Reduced from the stateless guest's g1_double by scripts/parity-reduce.py. Cake's word_to_stack carries Addr base offset through a spilled-destination load; Flapjack now uses the same memOffset carrier before allocation, preserving Cake's frame and register decisions. The register_load sibling remains exact as an independent register-destination oracle.",
       "cake_sha256": "136627fe4ef74e45e9421f4ba3a6914b806cac5d269d0cbb8d9983e681c8a4e8",
-      "tracked_beads": []
+      "tracked_beads": [
+        "flapjack-pxn.9.1"
+      ]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/allocator_colour_permutation.pnk",
@@ -618,6 +628,14 @@
       "cake_sha256": "4e75debf6843a5b0ad4308f2261f7879401b1118731da23b737ff75ef9ee5f13",
       "tracked_beads": [
         "flapjack-8tb.5.7"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/dead_if_branches.pnk",
+      "source_reference": "Cake word_alloc remove_dead collapses an If whose two branches are Skip after dead-program elimination, while retaining the condition variables in the backward live set.",
+      "cake_sha256": "0988fae715209e66b753a42b1b7199b6297cc7389080bea6593d8cb2e8a019fa",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.10.1.1.2"
       ]
     },
     {
@@ -815,6 +833,194 @@
       "tracked_beads": [
         "flapjack-8tb.8"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00634_dead_raise.pnk",
+      "source_reference": "Reduced f00634 oracle: Cake word_ssa remove_dead drops dead pre-If arithmetic while retaining the return label across a raised continuation.",
+      "cake_sha256": "e1fe1cf22287054dce867c408d4b076a826e7a83bb23bbc4121cae4531bb7ba9",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.3.1"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f01266_raise_live_continuation.pnk",
+      "source_reference": "Minimized f01266 differential witness: Cake's word_alloc Raise rule preserves the incoming live set and adds the exception payload, rather than filtering live values by return labels. This locks the resulting continuation frame and allocator order.",
+      "cake_sha256": "8700bc4385d4f8f02fcc7e4ca961bdd4990eb55f60612d5644f53f812bec7e54",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/ordinary_subword_offsets.pnk",
+      "source_reference": "Cake subword-offset oracle: ordinary local memory uses st8/st32 and ld8/ld32 at +4/+12; Cake's parser exposes st16/ld16 only as shared-memory forms, exercised at +8 rather than inventing unsupported ordinary syntax.",
+      "cake_sha256": "3b21d76021ccf6ec9d8c2b34d5327ed3a8c377ea41bfc794380223275f1dfd32",
+      "tracked_beads": [
+        "flapjack-pxn.8.9"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/odd_halfword_offset.pnk",
+      "source_reference": "Cake RISC-V selector oracle: a nonconstant shared-memory base with odd halfword offset +9 remains an Addr offset because hw_offset_ok uses offset_ok 0; Flapjack must keep the same address carrier.",
+      "cake_sha256": "747c4cf1851829d0dc8c004a459ba6979221dbf96ac38b4ed04d777653924e3f",
+      "tracked_beads": [
+        "flapjack-pxn.8.10"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/current_heap_or.pnk",
+      "source_reference": "Cake word_instScript.sml current-heap oracle: Op Or [Lookup CurrHeap, Const 1] selects the constant into the fresh temporary and emits OpCurrHeap Or, preserving Cake's addi-then-or instruction order.",
+      "cake_sha256": "df16ff855fb0f593fd727b6f4d7d326fd116ca635e79f64060d295b9725eb121",
+      "tracked_beads": [
+        "flapjack-pxn.8.11"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/ready_last_argument_permutation.pnk",
+      "source_reference": "Cake word_to_stackScript parmove oracle: a four-argument call with a cyclic permutation of live argument values exercises dependency-ready-last ordering while preserving every source value for the callee and caller continuation.",
+      "cake_sha256": "b3e2fdfffa39baa8bdbc3a644e9595d057e8e6dd647755c0debf5779074f9358",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.10.1.1.1"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/store_offset_boundaries.pnk",
+      "source_reference": "Minimized Cake word_inst Store-carrier oracle: one accepted function exercises valid +8, out-of-range +2048, and signed-negative -2048 local Store offsets; original Cake and Flapjack artifacts are byte-identical.",
+      "cake_sha256": "5b2c394a29f469e71a02b778eade822682a32a7840611c19a1199d37c05d20d6",
+      "tracked_beads": [
+        "flapjack-pxn.10"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/allocator_frame_handler_min.pnk",
+      "source_reference": "Fresh exact differential witness (seed 97): a struct-returning call, handled call, and loop exercise Cake frame/allocator and continuation layout with only small constants; Cake and Flapjack emit identical sections.",
+      "cake_sha256": "e89a29181eef14445829217319b7af9785bf475ebbcdc549dfc26007475b0e0b",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.5"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/localise_load32_shadow.pnk",
+      "source_reference": "GH #1126 P0 regression: a shadowed global/local name in ld32 must follow Cake's catch-all localisation and emit byte-identical RISC-V.",
+      "cake_sha256": "db997d0d9737c0a38761d2c31f5b31e78db395b6f72fdc15bb455bd12791dba8",
+      "tracked_beads": [
+        "flapjack-8tb.9"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/localise_store32_shadow.pnk",
+      "source_reference": "GH #1126 P0 regression: a shadowed global/local name in st32 must follow Cake's catch-all localisation and emit byte-identical RISC-V.",
+      "cake_sha256": "6a840c271cf587ce2c274c9e570d94e5b4652c7c07a540eabfff03d4c538163d",
+      "tracked_beads": [
+        "flapjack-8tb.9"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/gh1126_load32_store32.pnk",
+      "source_reference": "Cake panPtreeConversion localise_exp/localise_prog fall-through oracle: Load32 and Store32 operands remain global even inside shadowing declarations; the RISC-V output is byte-identical after preserving those operands.",
+      "cake_sha256": "9326d9fa812cb3d735ab72558da395d4e672b172a5aa0c130f187d08cb7391f3",
+      "tracked_beads": [
+        "flapjack-8tb.9"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f01266_raise_continuation.pnk",
+      "source_reference": "Minimized f01266 allocator witness (GH #1133, flapjack-8tb.10): Cake's Raise live equation preserves the continuation live set, retaining handler move `(57,47)` and the original clash-tree traversal and spill-slot order. The merged Cake allocator-index/WordDeadCode fixes make the complete artifact byte-identical.",
+      "cake_sha256": "8700bc4385d4f8f02fcc7e4ca961bdd4990eb55f60612d5644f53f812bec7e54",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.5"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/const_store_reuse.pnk",
+      "source_reference": "Minimized differential-fuzz witness f00198-s6-i00198-mutate: Cake rematerialises the constant stored by a local store before reusing it; word_cse must emit the original OpCurrHeap source register (word_cseScript.sml:587-594) so the second Const stays live (GH #1127, flapjack-1kj).",
+      "cake_sha256": "487452d7e96ded747bbd729b6ec232ca4a95c285426a6ab354e2f44191f599f2",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/currheap_add_const.pnk",
+      "source_reference": "Differential-fuzz witness f00036-s65-i00036-mutate: `@base` lowers to a CurrHeap lookup, so Cake materialises the constant and emits a register add (`li a0,255; add a0,a0,s10`) instead of folding it into an `addi` (word_instScript.sml:246-275; GH #1128, flapjack-qxa).",
+      "cake_sha256": "e8f57d997b29a84df77257814777fd08ff011cdbfd2cc782c4fdb854453a032c",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/currheap_sub_zero.pnk",
+      "source_reference": "CurrHeap zero-sub witness: `@base - 0` reaches the same materialised-constant register add, so Cake keeps `li a0,0; add a0,a0,s10` instead of eliding the computation (GH #1128, flapjack-qxa).",
+      "cake_sha256": "b0c0977bc4e3f55dba8183a6df675d6e527fcf13f0aa49fce55240c25431a9cb",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/nested_currheap_xor.pnk",
+      "source_reference": "Minimized f00054 nested-expression witness: Cake selects the constant in `1000 ^ @base` into the fresh temporary and emits `OpCurrHeap Xor` even when the operation is nested inside a subtraction; the selector must not lower it as `Get CurrHeap` plus XORI.",
+      "cake_sha256": "f579626d1b36430b49a1acc5f20f18d3c1749c8443a9f868430efd22d16884ca",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.21"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/currheap_const_left.pnk",
+      "source_reference": "CurrHeap-left/constant-right witness: `(@base | 7) #>> 1`. Cake's inst_select_exp (word_instScript.sml:246-251) tests is_Lookup_CurrHeap e1 before the e2 = Const w fold, so `| 7` keeps `Const temp 7; OpCurrHeap Or temp temp` instead of folding the constant into an ori (discrepancy #2, committed in coordinator 15a2b6d8).",
+      "cake_sha256": "2cf935883087f0cb33f36d43403dadc4b7196d9312a9e56e73ac52f96779d1f4",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/nested_handler_condition.pnk",
+      "source_reference": "Minimized differential-fuzz witness for Cake's `Seq_assoc` recursion through call return and exception-handler metadata. The handler condition `0 && (@base >=+ 0)` reaches the same pre-SSA branch shape only when the port reassociates those nested programs (word_simpScript.sml:21-38).",
+      "cake_sha256": "6ed17dd9c1886a1b31f46750d47c06c82efaf2272969dd40201a6c5f43c764e9",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/nested_currheap_xor.pnk",
+      "source_reference": "Minimized f00054 nested-expression witness: Cake selects the constant in `1000 ^ @base` into the fresh temporary and emits `OpCurrHeap Xor` even when the operation is nested inside a subtraction; the selector must not lower it as `Get CurrHeap` plus XORI.",
+      "cake_sha256": "f579626d1b36430b49a1acc5f20f18d3c1749c8443a9f868430efd22d16884ca",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.21"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/annotation_comments.pnk",
+      "source_reference": "Annotation-comment coverage: Cake lexes `/@ ... @/` as an annotation (panLexerScript.sml:242-254, panPtreeConversionScript.sml:483) and pan_simp drops it (`Annot _ _ => p`, pan_simpScript.sml), so top-level, in-body and multiline annotations plus `//` and `/* */` comments must not change RISC-V output. This fixture locks in the byte-exact Cake/Flapjack agreement for that under-tested construct.",
+      "cake_sha256": "b3d9a8219a6c45427270be0657e99e138cbae13902283dfad185e0e242668d22",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/nested_handler_comparison.pnk",
+      "source_reference": "Regression for the former nested `@base` comparison duplicate-if gap in a catch handler (GH #1131, flapjack-wl1). Cake's `Seq_assoc` traverses the handler program before `simp_duplicate_if`; the port now does the same through Call handler metadata.",
+      "cake_sha256": "ba54b0c626c7c6e5e4787f3e34db063c1ad353044c6e47ff35ffe4a9ccd5b302",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/and_comparison_handler.pnk",
+      "source_reference": "Regression for the former And/comparison-in-catch-handler byte gap (flapjack-pxn.1.5). The handler-aware Cake `Seq_assoc` traversal now preserves the original instruction selection and layout.",
+      "cake_sha256": "ba432bd957296c570f9b089dd35e8f00ad1f8bbb72b4715b14727a377e91be1c",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/ld8_currheap_offset.pnk",
+      "source_reference": "Minimized ld8 @base+8 witness (GH #1130, flapjack-pxn.8.5.14.20): Cake keeps CurrHeap as the load base and encodes the byte-offset load with the unsigned lbu funct3 (get_memop_info Load8 = MappedRead,1w), not lb. The port's WordInstSelect selector and Encoding.loadByteOffset now match.",
+      "cake_sha256": "5dbea1ef7c7fcb024a59e8204bd28ecd4e6a804d3dd8f2a4294e02188899858c",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/currheap_load_large_offset.pnk",
+      "source_reference": "Minimized fuzz witness f00052-s88-i00052-generate (GH #1132, flapjack-pxn.8.5.14.24): for `lds 1 (@base + 2048)` the offset is outside Cake's addr_offset_ok 12-bit range, so inst_select_exp (word_instScript.sml:234-245) selects the whole address expression, reaching Const temp w; OpCurrHeap op tar temp and keeping s10 as the memory base. WordInstSelect previously split the offset unconditionally and materialised CurrHeap into a temporary.",
+      "cake_sha256": "5c24bc18ceac4941d4fa864062ed8bc427f03de35bd5d3a7d75b76a33714365d",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f480_out_of_range_struct.pnk",
+      "source_reference": "Minimized mixed-campaign witness (seed 20260921 index 480, flapjack-pxn.8.5.14.22): the struct-returning call and `lds 1 (((@base + 255 + 1000) + 1000))` exercise the out-of-range address offset of GH #1132, so Cake selects the whole address expression and keeps s10 as the memory base. Fixed by the WordInstSelect whole-address selection (15d0dbd5).",
+      "cake_sha256": "2e7ef50db6a316023c1e36e3874150ec6164f9661609a5be8f4865ce03507845",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f860_try_loop_large_constant.pnk",
+      "source_reference": "Minimized mixed-campaign witness (seed 20260921 index 860, flapjack-pxn.8.5.14.23): try/catch, a loop, wide constants, local and CurrHeap loads, and a struct call exercise the allocator's temporary/index choices. The Cake and Flapjack artifacts are now exact after the Cake allocator-index and whole-address selection fixes.",
+      "cake_sha256": "c14cc1123af4e448513ba065e1a6c307f82ad679c9cbbcf3a8c2d8ac7cffa80a",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00108_handler_spill_slot.pnk",
+      "source_reference": "Minimized mixed-campaign witness (seed 20261004 index 108, flapjack-pxn.8.5.14.26): the nested call-handler, raise, loop and spill-pressure shape previously diverged in branch layout and output size. The merged Cake allocator-index and selector fixes now make the complete artifact byte-identical.",
+      "cake_sha256": "9457abffc5e12e49d74dcdd9728c4612e879f0614c9b8359c9d4ef6d5e2cf3ad",
+      "tracked_beads": []
     }
   ]
 }

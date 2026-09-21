@@ -877,8 +877,13 @@ def wordStackMemoryOffsetInst {α : Type} (config : WordStackConfig)
     Option (StackProg α) :=
   match operator with
   | .load => wordStackLoadOffsetInst config operator sourceOrDestination address offset
+  | .load8 => wordStackLoadOffsetInst config operator sourceOrDestination address offset
+  | .load16 => wordStackLoadOffsetInst config operator sourceOrDestination address offset
+  | .load32 => wordStackLoadOffsetInst config operator sourceOrDestination address offset
   | .store => wordStackStoreOffsetInst config operator sourceOrDestination address offset
-  | .load8 | .load16 | .load32 | .store8 | .store16 | .store32 => none
+  | .store8 => wordStackStoreOffsetInst config operator sourceOrDestination address offset
+  | .store16 => wordStackStoreOffsetInst config operator sourceOrDestination address offset
+  | .store32 => wordStackStoreOffsetInst config operator sourceOrDestination address offset
 
 def wordStackStoreLocationsSafe (config : WordStackConfig) :
     WordLocation → WordLocation → Bool
@@ -1021,12 +1026,10 @@ def wordStackReadRegister {α : Type} (config : WordStackConfig) (name temporary
 def wordStackConditionOperands {α : Type} (config : WordStackConfig) (condition : Nat)
     (right : WordRegImm α) :
     Option (StackProg α × Nat × WordRegImm α) := do
-  let conditionTemporary :=
-    match right with
-    | .imm _ => config.addressScratch
-    | .reg _ => config.scratch
   let (conditionPrelude, conditionRegister) ←
-    wordStackReadRegister config condition conditionTemporary
+    /- Cake's `comp If` always uses `wReg1` for the condition, including
+       the immediate-RHS branch (`word_to_stackScript.sml:472-487`). -/
+    wordStackReadRegister config condition config.scratch
   let (rightPrelude, rightOperand) ← match right with
     | .imm value => pure (.skip, .imm value)
     | .reg name => do
@@ -1709,23 +1712,8 @@ def wordStackCompileLoadNatNested (config : WordStackConfig) (destination : Nat)
           if (operator == .add || operator == .sub) && offset = 0 then
             wordStackWritePhysicalNat config destination
               (fun register => .inst (.mem .load register baseRegister))
-          else if offsetFits then
-            /- `scratch` carries the displacement only until the `arith`
-               consumes it, so a spilled destination may reuse it for the
-               loaded value afterwards.  A base that *is* `scratch` cannot be
-               clobbered before the `arith` reads it -- that happens whenever
-               the base was itself reloaded from the frame -- so the constant
-               goes in `addressScratch`, which the `arith` then reads and
-               overwrites in one instruction.  The Lab recogniser accepts
-               both shapes and emits the same `memOffset`. -/
-            let offsetRegister :=
-              if baseRegister == config.scratch then config.addressScratch
-              else config.scratch
-            wordStackWritePhysicalNat config destination
-              (fun register =>
-                .seq (.seq (.const offsetRegister offset)
-                    (.arith operator config.addressScratch baseRegister offsetRegister))
-                  (.inst (.mem .load register config.addressScratch)))
+          else if operator == .add && offsetFits then
+            wordStackLoadOffsetInst config .load destination base offset
           else general
       | some (.stack baseSlot) =>
           /- Cake reloads a spilled base into the spare register and then
@@ -1736,13 +1724,9 @@ def wordStackCompileLoadNatNested (config : WordStackConfig) (destination : Nat)
              is spilled there, so the register case above never fires. -/
           if (operator == .add || operator == .sub) && offset = 0 then
             general
-          else if offsetFits then do
+          else if operator == .add && offsetFits then do
             let body ← wordStackWritePhysicalNat config destination
-              (fun register =>
-                .seq (.seq (.const config.addressScratch offset)
-                    (.arith operator config.addressScratch config.scratch
-                      config.addressScratch))
-                  (.inst (.mem .load register config.addressScratch)))
+              (fun register => .inst (.memOffset .load register config.scratch offset))
             pure (.seq (.stackLoad config.scratch (wordStackOffset config baseSlot)) body)
           else general
       | _ => general
@@ -1774,9 +1758,8 @@ def wordStackCompileSharedNat (config : WordStackConfig)
             offset < 2 ^ 11 ||
               (offset ≥ 2 ^ 64 - 2 ^ 11 && offset < 2 ^ 64)
         | .load16 | .store16 =>
-            (offset % 2 = 0) &&
-              (offset < 2 ^ 11 ||
-                (offset ≥ 2 ^ 64 - 2 ^ 11 && offset < 2 ^ 64))
+            offset < 2 ^ 11 ||
+              (offset ≥ 2 ^ 64 - 2 ^ 11 && offset < 2 ^ 64)
       if offsetFits then
         match wordStackSharedMemoryOffsetInst config operator destination base offset with
         | some body => pure body

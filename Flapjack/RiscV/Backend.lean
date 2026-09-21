@@ -17,6 +17,58 @@ while the remaining Word instructions are ported.
 
 namespace Flapjack.RiscV
 
+/-! Cake's `riscv_ast (Inst (Const r i))` is a multi-instruction lowering for
+    constants which do not fit a signed 12-bit immediate.  Keep this boundary
+    separate from `wordExpToInstruction`: the latter is theorem-facing and
+    intentionally models the existing one-instruction Word API. -/
+def wordConst32ToInstructions {width : Nat} [NeZero width]
+    (destination : Fin 32) (value : Nat) :
+    List (Instruction width) :=
+  let low32 := value % 2 ^ 32
+  let high20 := low32 / 2 ^ 12
+  let low12 := low32 % 2 ^ 12
+  if low12 / 2 ^ 11 % 2 = 1 then
+    [.lui destination (BitVec.ofNat width ((2 ^ 20 - 1) - high20)),
+      .xori destination destination (BitVec.ofNat width low12)]
+  else
+    [.lui destination (BitVec.ofNat width high20),
+      .addi destination destination (BitVec.ofNat width low12)]
+
+def wordConstToInstructions [NeZero width] (destination : Nat)
+    (value : Word width) : Option (List (Instruction width)) := do
+  let destination ← registerOfNat destination
+  let zero ← registerOfNat 0
+  let temporary ← registerOfNat 31
+  let normalized := value.toNat
+  let low12 := normalized % 2 ^ 12
+  let fitsImm12 :=
+    normalized ==
+      (if low12 / 2 ^ 11 % 2 = 0 then
+        low12
+      else
+        (2 ^ width - (2 ^ 12 - low12)) % 2 ^ width)
+  if normalized < 2 ^ 11 || fitsImm12 then
+    pure [.ori destination zero (BitVec.ofNat width low12)]
+  else
+    let low32 := normalized % 2 ^ 32
+    let high32 := normalized / 2 ^ 32 % 2 ^ 32
+    let low32Sign := low32 / 2 ^ 31 % 2 = 1
+    let fitsSigned32 :=
+      (high32 = 0 ∧ !low32Sign) ||
+        (high32 = 2 ^ 32 - 1 ∧ low32Sign)
+    if fitsSigned32 then
+      pure (wordConst32ToInstructions destination low32)
+    else if low32Sign then
+      pure (wordConst32ToInstructions temporary low32 ++
+        wordConst32ToInstructions destination ((2 ^ 32 - 1) - high32) ++
+        [.slli destination destination (BitVec.ofNat width 32),
+          .xor destination destination temporary])
+    else
+      pure (wordConst32ToInstructions temporary low32 ++
+        wordConst32ToInstructions destination high32 ++
+        [.slli destination destination (BitVec.ofNat width 32),
+          .or destination destination temporary])
+
 def wordExpToInstruction [NeZero width] (destination : Nat) :
     WordExp (Word width) → Option (Instruction width)
   | .const value => do
@@ -134,13 +186,101 @@ def wordExpToInstruction [NeZero width] (destination : Nat) :
           .or destination destination 31]
   | expression => (wordExpToInstruction destination expression).map (fun instruction => [instruction])
 
-/-! The standalone Word selector has no layout table.  Its LocValue boundary
-    therefore materializes the abstract label number; the layout-aware Lab
-    selector later replaces this with the absolute target position. -/
-def wordLocValueToInstructions [NeZero width] (destination label : Nat) :
+/-! Cake's `riscv_ast (Const ...)` is a list-valued lowering.  Keep the
+    historical selector above unchanged for its one-instruction correctness
+    contracts, but expose the checked boundary needed by theorem clients that
+    accept the target's multi-instruction constant materialization.  The
+    recursive load case is important: Cake materializes the address before
+    emitting the load, so a wide address constant must not fall back to ADDI
+    truncation. -/
+def wordExpToInstructionsCake [NeZero width] (destination : Nat) :
+    WordExp (Word width) → Option (List (Instruction width))
+  | .const value => wordConstToInstructions destination value
+  | .load address => do
+      if destination == 31 then none
+      else
+        let addressInstructions ← wordExpToInstructionsCake 31 address
+        let destination ← registerOfNat destination
+        pure (addressInstructions ++ [.loadWord destination 31])
+  | expression => wordExpToInstructions destination expression
+
+/-! Constructor equations for theorem clients migrating from the historical
+    one-instruction expression API.  Only `.const` (and a load whose address
+    recursively contains a constant) uses the Cake list-valued boundary; the
+    remaining expression forms retain exactly the old result. -/
+theorem wordExpToInstructionsCake_const [NeZero width] (destination : Nat)
+    (value : Word width) :
+    wordExpToInstructionsCake destination (.const value) =
+      wordConstToInstructions destination value := by
+  rfl
+
+theorem wordExpToInstructionsCake_var [NeZero width] (destination source : Nat) :
+    wordExpToInstructionsCake destination
+        (.var source : WordExp (Word width)) =
+      wordExpToInstructions destination (.var source : WordExp (Word width)) := by
+  rfl
+
+theorem wordExpToInstructionsCake_lookup [NeZero width] (destination : Nat)
+    (store : WordStore (Word width)) :
+    wordExpToInstructionsCake destination (.lookup store) =
+      wordExpToInstructions destination (.lookup store) := by
+  rfl
+
+theorem wordExpToInstructionsCake_op [NeZero width] (destination : Nat)
+    (operator : BinOp) (args : List (WordExp (Word width))) :
+    wordExpToInstructionsCake destination (.op operator args) =
+      wordExpToInstructions destination (.op operator args) := by
+  rfl
+
+theorem wordExpToInstructionsCake_shift [NeZero width] (destination : Nat)
+    (operator : Shift) (left right : WordExp (Word width)) :
+    wordExpToInstructionsCake destination (.shift operator left right) =
+      wordExpToInstructions destination (.shift operator left right) := by
+  rfl
+
+theorem wordExpToInstructionsCake_load_var [NeZero width] (destination source : Nat) :
+    wordExpToInstructionsCake destination
+        (.load (.var source) : WordExp (Word width)) =
+      wordExpToInstructions destination
+        (.load (.var source) : WordExp (Word width)) := by
+  rfl
+
+/-! The Cake load boundary exposes the recursively materialized address.  This
+    equation is useful to theorem clients because a constant address is a
+    list-valued lowering, while a variable address retains the historical
+    selector result. -/
+theorem wordExpToInstructionsCake_load [NeZero width] (destination : Nat)
+    (address : WordExp (Word width)) :
+    wordExpToInstructionsCake destination (.load address) =
+      (if destination == 31 then none else do
+          let addressInstructions ← wordExpToInstructionsCake 31 address
+          let destination ← registerOfNat destination
+          pure (addressInstructions ++ [.loadWord destination 31])) := by
+  rfl
+
+/-! The checked, Cake-faithful LocValue boundary.  Cake's `riscv_ast (Loc r i)`
+    emits `AUIPC`/`ADDI` for the PC-relative offset `i - position`; the
+    standalone selector above has no layout table and so cannot produce this
+    shape.  This boundary takes the current `position` explicitly and mirrors
+    `labLocValueInstructions`, which is what the executable pipeline uses. -/
+def wordLocValueToInstructionsCake [NeZero width] (destination label position : Nat) :
     Option (List (Instruction width)) := do
   let destination ← registerOfNat destination
-  pure [.addi destination 0 (BitVec.ofNat width label)]
+  let delta : Int := Int.ofNat label - Int.ofNat position
+  let remainder := delta % 4096
+  let low := if remainder >= 2048 then remainder - 4096 else remainder
+  let upper := (delta - low) / 4096
+  pure [.auipc destination (BitVec.ofInt width upper),
+        .addi destination destination (BitVec.ofInt width low)]
+
+/-! The historical standalone Word entry point now uses Cake's position-zero
+    LocValue encoding.  Keeping this wrapper preserves its public arity while
+    removing the old single-ADDI truncation for labels outside the 12-bit range.
+    Layout-aware callers continue to pass their actual position through the
+    explicit Cake boundary above. -/
+def wordLocValueToInstructions [NeZero width] (destination label : Nat) :
+    Option (List (Instruction width)) :=
+  wordLocValueToInstructionsCake destination label 0
 
 def wordArithToInstruction [NeZero width] :
     WordArith (Word width) → Option (Instruction width)
@@ -310,11 +450,54 @@ def wordInstToInstruction [NeZero width] :
       let destination ← registerOfNat destination
       let address ← registerOfNat address
       pure (.loadWordOffset destination address offset)
+  | .memOffset .load8 destination address offset => do
+      let destination ← registerOfNat destination
+      let address ← registerOfNat address
+      pure (.loadByteOffset destination address offset)
+  | .memOffset .load16 destination address offset => do
+      let destination ← registerOfNat destination
+      let address ← registerOfNat address
+      pure (.loadHalfOffset destination address offset)
+  | .memOffset .load32 destination address offset => do
+      let destination ← registerOfNat destination
+      let address ← registerOfNat address
+      pure (.load32Offset destination address offset)
   | .memOffset .store source address offset => do
       let source ← registerOfNat source
       let address ← registerOfNat address
       pure (.storeWordOffset source address offset)
-  | .memOffset _ _ _ _ => none
+  | .memOffset .store8 source address offset => do
+      let source ← registerOfNat source
+      let address ← registerOfNat address
+      pure (.storeByteOffset source address offset)
+  | .memOffset .store16 source address offset => do
+      let source ← registerOfNat source
+      let address ← registerOfNat address
+      pure (.storeHalfOffset source address offset)
+  | .memOffset .store32 source address offset => do
+      let source ← registerOfNat source
+      let address ← registerOfNat address
+      pure (.store32Offset source address offset)
+
+/-! Cake's `riscv_ast (Inst (Const ...))` is list-valued: constants may need
+    several instructions, while ordinary Word instructions still lower to
+    their single-instruction backend boundary.  Keep this checked API
+    separate from `wordInstToInstruction`, whose one-instruction contract is
+    retained for existing theorem clients. -/
+def wordInstToInstructionsCake [NeZero width] :
+    WordInst (Word width) → Option (List (Instruction width))
+  | .const destination value => wordConstToInstructions destination value
+  | .arith operation => wordArithToInstructions operation
+  | instruction => (wordInstToInstruction instruction).map List.singleton
+
+/-! Constructor equation for the Cake constant boundary.  Keep this named
+    equation beside the definition so correctness clients can rewrite through
+    the checked list-valued API without unfolding unrelated instruction cases. -/
+theorem wordInstToInstructionsCake_const [NeZero width] (destination : Nat)
+    (value : Word width) :
+    wordInstToInstructionsCake (.const destination value) =
+      wordConstToInstructions destination value := by
+  rfl
 
 def executeInstructions [NeZero width] (state : State width) :
     List (Instruction width) → State width
@@ -469,6 +652,93 @@ def wordProgToRiscV [NeZero width] :
   | _ => none
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial
+
+def wordShareInstToInstructionsCake [NeZero width] (operator : WordMemOp)
+    (name : Nat) : WordExp (Word width) → Option (List (Instruction width))
+  | .var address => do
+      let instruction ← wordInstToInstruction (.mem operator name address)
+      pure [instruction]
+  | expression => do
+      if name == 31 then none
+      else
+        let address ← wordExpToInstructionsCake 31 expression
+        let instruction ← wordInstToInstruction (.mem operator name 31)
+        pure (address ++ [instruction])
+
+/-! Named Cake equation for a constant memory address.  This keeps the
+    recursive multi-instruction materialization visible to theorem clients;
+    the historical `wordShareInstToInstructions` boundary remains unchanged. -/
+theorem wordShareInstToInstructionsCake_const [NeZero width]
+    (operator : WordMemOp) (name : Nat) (value : Word width) :
+    wordShareInstToInstructionsCake operator name (.const value) =
+      if name == 31 then none else (do
+        let address ← wordConstToInstructions 31 value
+        let instruction ← wordInstToInstruction (.mem operator name 31)
+        pure (address ++ [instruction])) := by
+  rfl
+
+def wordProgToRiscVCake [NeZero width] :
+    WordProg (Word width) → Option (List (Instruction width))
+  | .skip => some []
+  | .move _ moves => wordMoveToInstructions moves
+  | .assign name value => wordExpToInstructionsCake name value
+  | .store address value => wordShareInstToInstructionsCake .store value address
+  | .shareInst operator name address =>
+      wordShareInstToInstructionsCake operator name address
+  | .locValue destination source => wordLocValueToInstructionsCake destination source 0
+  | .inst instruction => wordInstToInstructionsCake instruction
+  | .seq first second => do
+      let first ← wordProgToRiscVCake first
+      let second ← wordProgToRiscVCake second
+      pure (first ++ second)
+  | .tick => some [.addi 0 0 0]
+  | .ite operator condition rightValue thenBranch elseBranch => do
+      let (branchLeft, right, prelude) ←
+        wordConditionOperands operator condition rightValue
+      let thenCode ← wordProgToRiscVCake thenBranch
+      let elseCode ← wordProgToRiscVCake elseBranch
+      let falseOffset : Word width :=
+        BitVec.ofNat width (8 + 4 * thenCode.length)
+      let endOffset : Word width :=
+        BitVec.ofNat width (4 + 4 * elseCode.length)
+      let branchFalse ← match operator with
+        | .equal => pure (.branchNe branchLeft right falseOffset)
+        | .notEqual => pure (.branchEq branchLeft right falseOffset)
+        | .less => pure (.branchGe branchLeft right falseOffset)
+        | .notLess => pure (.branchLt branchLeft right falseOffset)
+        | .lower => pure (.branchGeU branchLeft right falseOffset)
+        | .notLower => pure (.branchLtU branchLeft right falseOffset)
+        | .test => pure (.branchNe branchLeft right falseOffset)
+        | .notTest => pure (.branchEq branchLeft right falseOffset)
+      pure (prelude ++ [branchFalse] ++ thenCode ++
+        [.branchEq 0 0 endOffset] ++ elseCode)
+  | _ => none
+termination_by program => sizeOf program
+decreasing_by all_goals decreasing_trivial
+
+/-! Named equations for theorem clients crossing the checked Cake program
+    boundary.  In particular, a constant assignment must retain the complete
+    list-valued materialization instead of reducing through the historical
+    one-instruction selector. -/
+theorem wordProgToRiscVCake_assign [NeZero width] (destination : Nat)
+    (value : WordExp (Word width)) :
+    wordProgToRiscVCake (.assign destination value) =
+      wordExpToInstructionsCake destination value := by
+  simp [wordProgToRiscVCake]
+
+theorem wordProgToRiscVCake_const [NeZero width] (destination : Nat)
+    (value : Word width) :
+    wordProgToRiscVCake (.assign destination (.const value)) =
+      wordConstToInstructions destination value := by
+  simp [wordProgToRiscVCake, wordExpToInstructionsCake]
+
+/-! The checked program boundary exposes Cake's position-aware LocValue
+    materialization to theorem clients instead of hiding it behind the
+    recursive program definition. -/
+theorem wordProgToRiscVCake_locValue [NeZero width] (destination source : Nat) :
+    wordProgToRiscVCake (.locValue destination source : WordProg (Word width)) =
+      wordLocValueToInstructionsCake (width := width) destination source 0 := by
+  simp [wordProgToRiscVCake]
 
 /-!
 `executeInstructions` is useful for straight-line code, but it deliberately
@@ -779,6 +1049,90 @@ def wordFunctionToRiscV [NeZero width] :
       pure ([], values)
   | _ => none
 
+/-! Function-level Cake constant boundary.  This mirrors the established
+    function selector but routes its code-producing branches through the
+    checked whole-program entrypoint above. -/
+def wordFunctionToRiscVCake [NeZero width] :
+    WordProg (Word width) → Option (List (Instruction width) × List (Fin 32))
+  | .skip => some ([], [])
+  | .assign name value => do
+      let instructions ← wordExpToInstructionsCake name value
+      pure (instructions, [])
+  | .inst instruction => do
+      let instructions ← wordInstToInstructionsCake instruction
+      pure (instructions, [])
+  | .store address value => do
+      let instructions ← wordShareInstToInstructionsCake .store value address
+      pure (instructions, [])
+  | .shareInst operator name address => do
+      let instructions ← wordShareInstToInstructionsCake operator name address
+      pure (instructions, [])
+  | .locValue destination source => do
+      let instructions ← wordLocValueToInstructionsCake destination source 0
+      pure (instructions, [])
+  | .tick => pure ([.addi 0 0 0], [])
+  | .ite operator condition rightValue thenBranch elseBranch => do
+      let (branchLeft, right, prelude) ←
+        wordConditionOperands operator condition rightValue
+      let (thenCode, thenReturns) ← wordFunctionToRiscVCake thenBranch
+      let (elseCode, elseReturns) ← wordFunctionToRiscVCake elseBranch
+      if thenReturns != elseReturns then none
+      else
+        let falseOffset : Word width :=
+          BitVec.ofNat width (8 + 4 * thenCode.length)
+        let endOffset : Word width :=
+          BitVec.ofNat width (4 + 4 * elseCode.length)
+        let branchFalse ← match operator with
+          | .equal => pure (.branchNe branchLeft right falseOffset)
+          | .notEqual => pure (.branchEq branchLeft right falseOffset)
+          | .less => pure (.branchGe branchLeft right falseOffset)
+          | .notLess => pure (.branchLt branchLeft right falseOffset)
+          | .lower => pure (.branchGeU branchLeft right falseOffset)
+          | .notLower => pure (.branchLtU branchLeft right falseOffset)
+          | .test => pure (.branchNe branchLeft right falseOffset)
+          | .notTest => pure (.branchEq branchLeft right falseOffset)
+        pure (prelude ++ [branchFalse] ++ thenCode ++
+          [.branchEq 0 0 endOffset] ++ elseCode, thenReturns)
+  | .mustTerminate body => wordFunctionToRiscVCake body
+  | .seq first second => do
+      let (firstCode, firstReturns) ← wordFunctionToRiscVCake first
+      if !firstReturns.isEmpty then
+        pure (firstCode, firstReturns)
+      else
+        let (secondCode, secondReturns) ← wordFunctionToRiscVCake second
+        pure (firstCode ++ secondCode, secondReturns)
+  | .return _ values => do
+      let values ← values.mapM registerOfNat
+      pure ([], values)
+  | _ => none
+termination_by program => sizeOf program
+decreasing_by all_goals decreasing_trivial
+
+/-! Function-level equations expose the same checked constant boundary through
+    the return carrier used by theorem-facing function compilation. -/
+theorem wordFunctionToRiscVCake_assign [NeZero width] (destination : Nat)
+    (value : WordExp (Word width)) :
+    wordFunctionToRiscVCake (.assign destination value) =
+      (wordExpToInstructionsCake destination value).map
+        (fun instructions => (instructions, [])) := by
+  simp [wordFunctionToRiscVCake]
+  cases h : wordExpToInstructionsCake destination value <;> rfl
+
+theorem wordFunctionToRiscVCake_const [NeZero width] (destination : Nat)
+    (value : Word width) :
+    wordFunctionToRiscVCake (.assign destination (.const value)) =
+      (wordConstToInstructions destination value).map
+        (fun instructions => (instructions, [])) := by
+  simp [wordFunctionToRiscVCake, wordExpToInstructionsCake]
+  cases h : wordConstToInstructions destination value <;> rfl
+
+theorem wordFunctionToRiscVCake_locValue [NeZero width] (destination source : Nat) :
+    wordFunctionToRiscVCake (.locValue destination source : WordProg (Word width)) =
+      (wordLocValueToInstructionsCake (width := width) destination source 0).map
+        (fun instructions => (instructions, [])) := by
+  cases h : wordLocValueToInstructionsCake (width := width) destination source 0 <;>
+    simp [wordFunctionToRiscVCake, h]
+
 def evalWordCondition [NeZero width] (state : State width)
     (operator : Cmp) (condition : Nat) (rightValue : WordRegImm (Word width)) :
     Option Bool := do
@@ -844,6 +1198,18 @@ def evalWordFunction [NeZero width] (state : State width) :
       let destination ← registerOfNat destination
       let address ← registerOfNat address
       pure (execute state (.loadWordOffset destination address offset), [])
+  | .inst (.memOffset .load8 destination address offset) => do
+      let destination ← registerOfNat destination
+      let address ← registerOfNat address
+      pure (execute state (.loadByteOffset destination address offset), [])
+  | .inst (.memOffset .load16 destination address offset) => do
+      let destination ← registerOfNat destination
+      let address ← registerOfNat address
+      pure (execute state (.loadHalfOffset destination address offset), [])
+  | .inst (.memOffset .load32 destination address offset) => do
+      let destination ← registerOfNat destination
+      let address ← registerOfNat address
+      pure (execute state (.load32Offset destination address offset), [])
   | .store address value => do
       let state ← evalWordShareInst state .store value address
       pure (state, [])
@@ -859,6 +1225,18 @@ def evalWordFunction [NeZero width] (state : State width) :
       let source ← registerOfNat source
       let address ← registerOfNat address
       pure (execute state (.storeWordOffset source address offset), [])
+  | .inst (.memOffset .store8 source address offset) => do
+      let source ← registerOfNat source
+      let address ← registerOfNat address
+      pure (execute state (.storeByteOffset source address offset), [])
+  | .inst (.memOffset .store16 source address offset) => do
+      let source ← registerOfNat source
+      let address ← registerOfNat address
+      pure (execute state (.storeHalfOffset source address offset), [])
+  | .inst (.memOffset .store32 source address offset) => do
+      let source ← registerOfNat source
+      let address ← registerOfNat address
+      pure (execute state (.store32Offset source address offset), [])
   | .shareInst operator name address => do
       let state ← evalWordShareInst state operator name address
       pure (state, [])
@@ -941,10 +1319,34 @@ def evalWordProg [NeZero width] (state : State width) :
       let destination ← registerOfNat destination
       let address ← registerOfNat address
       pure (execute state (.loadWordOffset destination address offset))
+  | .inst (.memOffset .load8 destination address offset) => do
+      let destination ← registerOfNat destination
+      let address ← registerOfNat address
+      pure (execute state (.loadByteOffset destination address offset))
+  | .inst (.memOffset .load16 destination address offset) => do
+      let destination ← registerOfNat destination
+      let address ← registerOfNat address
+      pure (execute state (.loadHalfOffset destination address offset))
+  | .inst (.memOffset .load32 destination address offset) => do
+      let destination ← registerOfNat destination
+      let address ← registerOfNat address
+      pure (execute state (.load32Offset destination address offset))
   | .inst (.memOffset .store source address offset) => do
       let source ← registerOfNat source
       let address ← registerOfNat address
       pure (execute state (.storeWordOffset source address offset))
+  | .inst (.memOffset .store8 source address offset) => do
+      let source ← registerOfNat source
+      let address ← registerOfNat address
+      pure (execute state (.storeByteOffset source address offset))
+  | .inst (.memOffset .store16 source address offset) => do
+      let source ← registerOfNat source
+      let address ← registerOfNat address
+      pure (execute state (.storeHalfOffset source address offset))
+  | .inst (.memOffset .store32 source address offset) => do
+      let source ← registerOfNat source
+      let address ← registerOfNat address
+      pure (execute state (.store32Offset source address offset))
   | .shareInst operator name address =>
       evalWordShareInst state operator name address
   | .locValue destination source => do
@@ -973,22 +1375,28 @@ theorem compileWordAdd_sound [NeZero width] (state : State width) :
 theorem wordFunctionToRiscV_locValue [NeZero width] :
     wordFunctionToRiscV
         ((.locValue 4 2) : WordProg (Word width)) =
-      some ([.addi 4 0 2], []) := by
-  simp [wordFunctionToRiscV, wordLocValueToInstructions, registerOfNat]
+      some ([.auipc 4 (BitVec.ofInt width 0),
+        .addi 4 4 (BitVec.ofInt width 2)], []) := by
+  simp [wordFunctionToRiscV, wordLocValueToInstructions,
+    wordLocValueToInstructionsCake, registerOfNat]
 
 theorem evalWordFunction_locValue [NeZero width] (state : State width) :
     evalWordFunction state
         ((.locValue 4 2) : WordProg (Word width)) =
-      some (execute state (.addi 4 0 2), []) := by
+      some (executeInstructions state
+        [.auipc 4 (BitVec.ofInt width 0),
+          .addi 4 4 (BitVec.ofInt width 2)], []) := by
   simp [evalWordFunction, wordLocValueToInstructions,
-    executeInstructions, registerOfNat]
+    wordLocValueToInstructionsCake, executeInstructions, registerOfNat]
 
 theorem compileWordLocValue_sound [NeZero width] (state : State width) :
     evalWordProg state
         ((.locValue 4 2) : WordProg (Word width)) =
-      some (executeInstructions state [.addi 4 0 2]) := by
+      some (executeInstructions state
+        [.auipc 4 (BitVec.ofInt width 0),
+          .addi 4 4 (BitVec.ofInt width 2)]) := by
   simp [evalWordProg, wordLocValueToInstructions,
-    executeInstructions, registerOfNat]
+    wordLocValueToInstructionsCake, executeInstructions, registerOfNat]
 
 theorem wordExpToInstruction_binOp [NeZero width] (operator : BinOp) :
     wordExpToInstruction (width := width) 1 (.op operator [.var 2, .var 3]) =

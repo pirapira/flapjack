@@ -507,6 +507,40 @@ def copyMergeKeepsClassIdentity : Bool :=
   RiscV.wordCopyLookup (RiscV.wordCopyMerge left right) 2373 == 2373
 
 #guard copyMergeKeepsClassIdentity
+
+
+/- Cake's `merge_eqs` intersects `store_to_eq` by both store name and
+   equivalence class.  Two branches that record the same store class must
+   therefore retain the following `Get` lookup after the merge. -/
+def copyMergeKeepsStoreEquivalence : Bool :=
+  let left := RiscV.wordCopySetStoreEq RiscV.wordCopyEmpty 77 145
+  let right := RiscV.wordCopySetStoreEq RiscV.wordCopyEmpty 77 145
+  let merged := RiscV.wordCopyMerge left right
+  RiscV.wordCopyLookupStoreEq merged 77 == some 145
+
+
+/- Cake's `merge_eqs` is conservative: a store absent from either branch
+   cannot survive the intersection, so the merged state must not propagate a
+   stale value through a later `Get`. -/
+def copyMergeDropsNonCommonStore : Bool :=
+  let left := RiscV.wordCopySetStoreEq RiscV.wordCopyEmpty 77 145
+  let right := RiscV.wordCopySetStoreEq RiscV.wordCopyEmpty 78 145
+  let merged := RiscV.wordCopyMerge left right
+  RiscV.wordCopyLookupStoreEq merged 77 == none &&
+    RiscV.wordCopyLookupStoreEq merged 78 == none
+
+#guard copyMergeDropsNonCommonStore
+#guard copyMergeKeepsStoreEquivalence
+/- Cake's `set_store_eq` records both the store-to-class relation and its
+   representative.  The production copy state keeps the Cake lists for
+   branch intersection, while the lookup-only indexes must expose the same
+   value to a following `Get`. -/
+def copyStoreEquivalenceIndexGuard : Bool :=
+  let state := RiscV.wordCopySetStoreEq RiscV.wordCopyEmpty 77 145
+  RiscV.wordCopyLookupStoreEq state 77 == some 145
+
+#guard copyStoreEquivalenceIndexGuard
+
 /-! ### Cake ABI argument overflow
 
     The original `format_var`/`wMoveSingle` materializes arguments past the

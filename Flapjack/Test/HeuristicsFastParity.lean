@@ -114,6 +114,37 @@ def heuristicCount (lhsConst lhsReg lhsMem rhsReg rhsMem : Nat) :
     WordHeuristicCounts :=
   { lhsConst, lhsReg, lhsMem, rhsReg, rhsMem }
 
+/- The direct HOL `word_alloc_cost_probe.out` values pin the weighted
+   `get_spillcost` equation, including its tail-call multiplier. -/
+def spillCostHolGuard : Bool :=
+  wordGetSpillCost (heuristicCount 1 0 0 0 0) false == 1 &&
+    wordGetSpillCost (heuristicCount 0 1 0 0 0) false == 2 &&
+    wordGetSpillCost (heuristicCount 0 0 1 0 0) false == 4 &&
+    wordGetSpillCost (heuristicCount 0 0 0 1 0) false == 2 &&
+    wordGetSpillCost (heuristicCount 0 0 0 0 1) false == 4 &&
+    wordGetSpillCost (heuristicCount 1 1 1 1 1) false == 13 &&
+    wordGetSpillCost (heuristicCount 1 1 1 1 1) true == 65
+
+#guard spillCostHolGuard
+
+/- The same HOL probe pins `get_coalescecost`: endpoint presence contributes
+   one point each, while priority two raises the base term from 10 to 30. -/
+def coalesceCostHolGuard : Bool :=
+  let move : WordCanonicalMove :=
+    { count := 3, maxPriority := 0, left := 1, right := 2 }
+  wordCoalesceMoveCost [] move == { priority := 30, left := 1, right := 2 } &&
+    wordCoalesceMoveCost [(1, 7)] move ==
+      { priority := 33, left := 1, right := 2 } &&
+    wordCoalesceMoveCost [(2, 9)] move ==
+      { priority := 33, left := 1, right := 2 } &&
+    wordCoalesceMoveCost [(1, 7), (2, 9)] move ==
+      { priority := 36, left := 1, right := 2 } &&
+    wordCoalesceMoveCost [(1, 7), (2, 9)]
+        { move with maxPriority := 2 } ==
+      { priority := 96, left := 1, right := 2 }
+
+#guard coalesceCostHolGuard
+
 /- Direct Cake `heu_max_all`/`heu_merge_call` oracle case:
    max_all emits [7,1,4,12,6] for the corresponding Patricia maps. -/
 def heuristicSourceMergeGuard : Bool :=

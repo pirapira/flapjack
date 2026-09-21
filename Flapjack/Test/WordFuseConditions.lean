@@ -144,6 +144,60 @@ def callHandlerRoundTripFuses : Bool :=
 
 #guard callHandlerRoundTripFuses
 
+/-! This is the reduced source-to-RISC-V parity witness for the nested
+    handler condition `0 && (@base >=+ 0)`.  Cake's `simp_duplicate_if`
+    hoists the final `Less` test through the preceding `NotLower` branches;
+    the branch-local constants then let `const_fp` remove the intermediate
+    `NotEqual` tests.  Keeping this as a direct Word regression makes the
+    byte-level discrepancy actionable at the pre-SSA pass boundary. -/
+def nestedHandlerConditionRoundTrip : WordProg (RiscV.Word 64) :=
+  .seq
+    (.ite .notLower 12 (.reg 26)
+      (.seq (.assign 12 (.const 1))
+        (.seq .tick
+          (.seq (.assign 22 (.const 0))
+            (.seq (.assign 16 (.var 12))
+              (.seq (.ite .notEqual 22 (.reg 16)
+                  (.assign 22 (.const 1)) (.assign 22 (.const 0)))
+                .skip)))))
+      (.seq (.assign 12 (.const 0))
+        (.seq .tick
+          (.seq (.assign 22 (.const 0))
+            (.seq (.assign 16 (.var 12))
+              (.seq (.ite .notEqual 22 (.reg 16)
+                  (.assign 22 (.const 1)) (.assign 22 (.const 0)))
+                .skip))))))
+    (.seq .tick
+      (.seq (.assign 2 (.op .and [.var 28, .var 22]))
+        (.seq (.assign 18 (.const 0))
+          (.seq (.ite .less 2 (.reg 18)
+              (.assign 2 (.const 1)) (.assign 2 (.const 0))) .skip))))
+
+def nestedHandlerConditionFuses : Bool :=
+  !wordProgHasNotEqualZeroTest
+    (wordFuseConditionsAndFold (wordConstFp nestedHandlerConditionRoundTrip))
+
+#guard nestedHandlerConditionFuses
+
+def cakePreSsaRoundTrip : WordProg (RiscV.Word 64) :=
+  wordToWordPreSsa
+    (.seq (.ite .less 1 (.reg 2)
+        (.assign 3 (.const 1)) (.assign 3 (.const 0)))
+      (.seq (.assign 4 (.var 3))
+        (.ite .notEqual 4 (.imm 0) (.assign 5 (.const 7)) .skip)))
+
+def cakePreSsaRoundTripMatchesCake : Bool :=
+  match wordProgToList cakePreSsaRoundTrip with
+  | [.ite .less 1 (.reg 2)
+      (.seq (.assign 3 (.const 1))
+        (.seq (.assign 4 (.const 1))
+          (.seq .skip (.assign 5 (.const 7)))))
+      (.seq (.assign 3 (.const 0))
+        (.seq (.assign 4 (.const 0)) (.seq .skip .skip)))] => true
+  | _ => false
+
+#guard cakePreSsaRoundTripMatchesCake
+
 def terminatingElseIsPushedOut : Bool :=
   match wordPushOutIf
       (.ite .less 1 (.reg 2) (.assign 3 (.var 4)) (.raise 0) : WordProg Nat) with
@@ -183,6 +237,10 @@ def runChecks : IO Bool := do
         nestedLoopRoundTripFuses),
       ("fusion handles materialized conditions in Loop branches",
         loopConditionMaterializationFuses),
+      ("fusion handles the reduced nested handler condition",
+        nestedHandlerConditionFuses),
+      ("Cake pre-SSA pass order keeps const propagation before fusion",
+        cakePreSsaRoundTripMatchesCake),
       ("Cake terminating conditional branches are pushed out",
         terminatingElseIsPushedOut),
       ("a clobbering materialisation uses Cake duplicate-if",

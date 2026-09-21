@@ -1,4 +1,4 @@
-import Flapjack.PanValueFfiClockSemantics
+import Flapjack.PanValueFfiClockCorrectness
 import Flapjack.Test.PanValueMemoryFfi
 
 /-! The clocked source evaluator must retain the accelerator-style memory FFI
@@ -46,5 +46,66 @@ def clockedMemoryFfiDecliningFinalIsReachable : Bool :=
   | _ => false
 
 #guard clockedMemoryFfiDecliningFinalIsReachable
+
+def clockedMemoryFfiDecliningFinalProgramResult :=
+  evalPanValueFfiClockProgram memoryFfiTestContext
+    { memoryFfiInitial with ffi := memoryFfiFinalState } 20
+    (fun _ _ => none) memoryFfiTestHandler 20
+    [.function
+      { name := "main", inline := false, exported := true, params := [],
+        body := memoryFfiFinalMain, returnShape := .one }]
+    "main" [] (memoryAccess := some memoryFfiTestMemoryAccess)
+    (memoryHandler := some memoryFfiDecliningHandler)
+
+def clockedMemoryFfiDecliningFinalProgramIsReachable : Bool :=
+  match clockedMemoryFfiDecliningFinalProgramResult with
+  | some (.control (.finalFfi locals _ memory ffi event), 19) =>
+      locals "x" = none && memory 200 = none && ffi.state = () &&
+        event.name = .extCall "unknown" && event.outcome = .failed
+  | _ => false
+
+#guard clockedMemoryFfiDecliningFinalProgramIsReachable
+
+def clockedRaisedDeclarations : List (Decl Nat) :=
+  [.exnDecl "E" .one,
+   .function
+     { name := "main", inline := false, exported := true, params := [],
+       body := .raise "E" (.const 7), returnShape := .one }]
+
+def clockedRaisedProgramResult :=
+  evalPanValueFfiClockProgram memoryFfiTestContext memoryFfiInitial 20
+    (fun _ _ => none) memoryFfiTestHandler 20 clockedRaisedDeclarations "main" []
+
+def clockedRaisedProgramAccepted : Bool :=
+  match clockedRaisedProgramResult with
+  | some (.control (.raised locals globals memory ffi exception (.word value)), 19) =>
+      exception == "E" && value == 7 && locals "x" = none &&
+        globals "x" = none && memory 200 = none && ffi.state = ()
+  | _ => false
+
+#guard clockedRaisedProgramAccepted
+
+def clockedTimeoutProgramResult :=
+  evalPanValueFfiClockProgram memoryFfiTestContext memoryFfiInitial 0
+    (fun _ _ => none) memoryFfiTestHandler 20 clockedRaisedDeclarations "main" []
+
+def clockedTimeoutProgramAccepted : Bool :=
+  match clockedTimeoutProgramResult with
+  | some (.timeout locals globals memory ffi, 0) =>
+      locals "x" = none && globals "x" = none && memory 200 = none && ffi.state = ()
+  | _ => false
+
+#guard clockedTimeoutProgramAccepted
+
+def clockedReturnedProgramAccepted : Bool :=
+  match clockedMemoryFfiResult with
+  | some (.control (.returned locals _ memory _ [.word value]), 19) =>
+      locals "x" = none && value == 8 &&
+        match memory 200 with
+        | some (.word stored) => stored == 8
+        | _ => false
+  | _ => false
+
+#guard clockedReturnedProgramAccepted
 
 end Flapjack

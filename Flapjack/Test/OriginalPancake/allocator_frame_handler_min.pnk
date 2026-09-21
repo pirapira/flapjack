@@ -1,0 +1,17 @@
+fun 1 leaf(1 x) { return x + 1; }
+fun {1,1} pair(1 a, 1 b) { return <a, b>; }
+exception E : 1;
+fun 1 main() {
+  var 1 x = 7;
+  var {1,1} p = pair(x, 3);
+  try
+    x = leaf(p.0)
+  catch E => x {
+    x = leaf(p.1);
+  }
+  while (x > 0) {
+    x = x - 1;
+      break;
+  }
+  return x + p.1;
+}

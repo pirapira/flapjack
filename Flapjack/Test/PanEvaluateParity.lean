@@ -90,10 +90,36 @@ def fixedLoadMemory : Word 64 → Option (PanValue (Word 64)) :=
 def fixedLoadAccess : PanValueMemoryAccess (Word 64) :=
   panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel fixedLoadDomain
 
+def evaluateExactProgramWord32 :=
+  evalPanValueProgExact [] (BitVec.ofNat 64 0) (BitVec.ofNat 64 100)
+    (BitVec.ofNat 64 8) (fun _ => none) (fun _ => none) fixedLoadMemory fixedLoadAccess
+    (.return (.load32 (.const (BitVec.ofNat 64 8))) : Prog (Word 64))
+
+def evaluateExactProgramByteDomainFailure :=
+  evalPanValueProgExact [] (BitVec.ofNat 64 0) (BitVec.ofNat 64 100)
+    (BitVec.ofNat 64 8) (fun _ => none) (fun _ => none) fixedLoadMemory fixedLoadAccess
+    (.return (.loadByte (.const (BitVec.ofNat 64 16))) : Prog (Word 64))
+
 def fixedLoadState (clock : Nat) : PanSemEvaluateState (Word 64) Unit :=
   { emptyPanState clock with
       memory := fixedLoadMemory
       memoryAccess := some fixedLoadAccess }
+
+def fixedLoadStateWithoutAccess (clock : Nat) : PanSemEvaluateState (Word 64) Unit :=
+  { fixedLoadState clock with memoryAccess := none }
+
+def fixedExactState : PanSemExactState (Word 64) Unit :=
+  { legacy := fixedLoadStateWithoutAccess 4
+    memoryAccess := fixedLoadAccess }
+
+def nestedRaiseExpression : Exp (Word 64) :=
+  .rStruct [.const (BitVec.ofNat 64 3),
+    .rStruct [.const (BitVec.ofNat 64 4), .const (BitVec.ofNat 64 5)]]
+
+def evaluateNestedRaise :=
+  panSemEvaluateExactState statefulTestContext statefulTestPrimitive
+    statefulTestHandler fixedExactState
+    (.raise "E" nestedRaiseExpression : Prog (Word 64))
 
 def fixedStoreLocals : VarName → Option (PanValue (Word 64)) :=
   fun name => if name == "kept" then some (.word (BitVec.ofNat 64 55)) else none
@@ -115,6 +141,27 @@ def evaluateFixedWord32 :=
   panSemEvaluateExact statefulTestContext statefulTestPrimitive statefulTestHandler
     fixedLoadAccess (fixedLoadState 4)
     (.return (.load32 (.const (BitVec.ofNat 64 8))) : Prog (Word 64))
+
+example :
+    panSemEvaluateExact statefulTestContext statefulTestPrimitive statefulTestHandler
+        fixedLoadAccess (fixedLoadStateWithoutAccess 4)
+        (.return (.load32 (.const (BitVec.ofNat 64 8))) : Prog (Word 64)) =
+      panSemEvaluate statefulTestContext statefulTestPrimitive statefulTestHandler
+        { fixedLoadStateWithoutAccess 4 with memoryAccess := some fixedLoadAccess }
+        (.return (.load32 (.const (BitVec.ofNat 64 8))) : Prog (Word 64)) := by
+  exact panSemEvaluateExact_uses_memory_access
+    statefulTestContext statefulTestPrimitive statefulTestHandler fixedLoadAccess
+    (fixedLoadStateWithoutAccess 4)
+    (.return (.load32 (.const (BitVec.ofNat 64 8))) : Prog (Word 64))
+
+example :
+    panSemEvaluateExactState statefulTestContext statefulTestPrimitive
+        statefulTestHandler fixedExactState
+        (.return (.load32 (.const (BitVec.ofNat 64 8))) : Prog (Word 64)) =
+      panSemEvaluateExact statefulTestContext statefulTestPrimitive
+        statefulTestHandler fixedLoadAccess (fixedLoadStateWithoutAccess 4)
+        (.return (.load32 (.const (BitVec.ofNat 64 8))) : Prog (Word 64)) := by
+  rfl
 
 def evaluateFixedByteDomainFailure :=
   panSemEvaluateExact statefulTestContext statefulTestPrimitive statefulTestHandler
@@ -188,6 +235,16 @@ def observeCall : Bool :=
       locals "x" = none && isWord 7 value
   | _ => false
 
+def observeNestedRaise : Bool :=
+  match evaluateNestedRaise with
+  | some (.control (.raised locals _ _ _ "E"
+      (.rStruct [.word first, .rStruct [.word second, .word third]])), 4) =>
+      locals "x" = none &&
+        first == BitVec.ofNat 64 3 &&
+        second == BitVec.ofNat 64 4 &&
+        third == BitVec.ofNat 64 5
+  | _ => false
+
 def observeFixedLoads : Bool :=
   match evaluateFixedByte, evaluateFixedWord32 with
   | some (.control (.returned _ _ _ _ [(.word byte)]), 4),
@@ -197,6 +254,15 @@ def observeFixedLoads : Bool :=
 
 def observeFixedLoadDomainFailure : Bool :=
   evaluateFixedByteDomainFailure.isNone
+
+def observeExactProgramMemoryAccess : Bool :=
+  match evaluateExactProgramWord32 with
+  | some (_, _, _, [(.word value)]) =>
+      value == BitVec.ofNat 64 0x04030201
+  | _ => false
+
+def observeExactProgramDomainFailure : Bool :=
+  evaluateExactProgramByteDomainFailure.isNone
 
 def isWordOption (expected : Nat) : Option (PanValue (Word 64)) → Bool
   | some (.word value) => value == BitVec.ofNat 64 expected
@@ -238,8 +304,11 @@ def observeFixedStoreFailures : Bool :=
 #guard observeSequence
 #guard observeTickAtZero
 #guard observeCall
+#guard observeNestedRaise
 #guard observeFixedLoads
 #guard observeFixedLoadDomainFailure
+#guard observeExactProgramMemoryAccess
+#guard observeExactProgramDomainFailure
 #guard observeFixedStore
 #guard observeFixedStore32
 #guard observeFixedStoreByte
@@ -251,10 +320,16 @@ def runChecks : IO Bool := do
   if observeSequence then IO.println "PASS evaluate sequence" else IO.println "FAIL evaluate sequence"
   if observeTickAtZero then IO.println "PASS evaluate timeout" else IO.println "FAIL evaluate timeout"
   if observeCall then IO.println "PASS evaluate call_id_7" else IO.println "FAIL evaluate call_id_7"
+  if observeNestedRaise then IO.println "PASS evaluate nested structured raise" else
+    IO.println "FAIL evaluate nested structured raise"
   if observeFixedLoads then IO.println "PASS evaluate fixed-width loads" else
     IO.println "FAIL evaluate fixed-width loads"
   if observeFixedLoadDomainFailure then IO.println "PASS evaluate fixed-width domain failure" else
     IO.println "FAIL evaluate fixed-width domain failure"
+  if observeExactProgramMemoryAccess then IO.println "PASS exact structured program memory access" else
+    IO.println "FAIL exact structured program memory access"
+  if observeExactProgramDomainFailure then IO.println "PASS exact structured program domain failure" else
+    IO.println "FAIL exact structured program domain failure"
   if observeFixedStore then IO.println "PASS evaluate explicit word store" else
     IO.println "FAIL evaluate explicit word store"
   if observeFixedStore32 then IO.println "PASS evaluate explicit Store32" else
@@ -264,7 +339,10 @@ def runChecks : IO Bool := do
   if observeFixedStoreFailures then IO.println "PASS evaluate explicit store failures" else
     IO.println "FAIL evaluate explicit store failures"
   pure (observeSkip && observeReturn41 && observeSequence && observeTickAtZero && observeCall &&
-    observeFixedLoads && observeFixedLoadDomainFailure && observeFixedStore &&
+    observeNestedRaise &&
+    observeFixedLoads && observeFixedLoadDomainFailure &&
+    observeExactProgramMemoryAccess && observeExactProgramDomainFailure &&
+    observeFixedStore &&
     observeFixedStore32 && observeFixedStoreByte && observeFixedStoreFailures)
 
 end Flapjack.Test.PanEvaluateParity

@@ -791,6 +791,230 @@ theorem compile_full_pan_value_raise_state_relation_of_evidence
         exact congrFun hrel.2.2 address
     exact ⟨hstate, hexception⟩
 
+theorem compile_full_pan_value_raise_state_relation_of_struct_pass_evidence
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (sourceStructs postStructs : StructContext)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (state : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α)
+    (sourceFuel : Nat) (exception : ExceptionId) (exceptionCode : α)
+    (name : StructName) (fields : List (FieldName × Exp α))
+    (values : List (FieldName × PanValue α)) (info : StructInfo)
+    (postExpression : Exp α) (postValue : PanValue α)
+    (compiled : List (CrepExp α)) (shape : Shape) (flatValues : List α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (hlookupException : lookupInfo exception context.exceptions = some exceptionCode)
+    (hlookupStruct : lookupInfo name sourceStructs = some info)
+    (hfields : evalPanValueExp.evalPanValueFields sourceStructs sourceLocals sourceGlobals
+      sourceMemory baseAddress topAddress bytesInWord fields = some values)
+    (hshape : panValueFieldsHaveShapes sourceStructs info.fields values = true)
+    (hpass : ∀ namedValue,
+      evalPanValueExp sourceStructs sourceLocals sourceGlobals sourceMemory
+        baseAddress topAddress bytesInWord (.nStruct name fields) = some namedValue →
+      evalPanValueExp postStructs sourceLocals sourceGlobals sourceMemory
+        baseAddress topAddress bytesInWord postExpression = some postValue)
+    (hrel : panValueCrepStateRel postStructs context sourceLocals sourceGlobals
+      sourceMemory state)
+    (hvalid : panValuePayloadWithinLimit postStructs postValue = true)
+    (hcompile : compileExp context postExpression = (compiled, shape))
+    (hlength : compiled.length = Shape.shapeSize shape)
+    (hcompiled : evalCrepFullExpsState state baseAddress topAddress compiled =
+      some flatValues)
+    (hflat : panValueFlatWords postValue = flatValues)
+    (hnot : ∀ name ∈ freshNames context compiled.length 1,
+      ∀ value ∈ compiled, name ∉ crepExpVars value)
+    (hfresh : ∀ name ∈ freshNames context compiled.length 1,
+      state.locals name = none)
+    (hexception : exceptionRel exception postValue exceptionCode) :
+    evalPanValueProgWithPrimitiveCallsAndFfi
+      primitive sourceHandler postStructs sourceFunctions
+      baseAddress topAddress bytesInWord (sourceFuel + 1)
+      sourceLocals sourceGlobals sourceMemory
+      (.raise exception postExpression) =
+      some (.raised (fun _ => none) sourceGlobals sourceMemory
+        exception postValue) ∧
+    evalCrepFullProgState functions crepPrimitive ffi sharedMem
+      baseAddress topAddress
+      (flatValues.length + (freshNames context compiled.length 1).length + 2)
+      state (compileProg context (.raise exception postExpression)) =
+      some (.raised
+        { state with globals :=
+            updateMemoryListAt state.globals 0 context.bytesInWord flatValues }
+        exceptionCode) ∧
+    panValueCrepRaisedControlRel postStructs context exceptionRel
+      sourceGlobals sourceMemory exception postValue
+      { state with globals :=
+          updateMemoryListAt state.globals 0 context.bytesInWord flatValues }
+      exceptionCode 0 := by
+  have hpostSource := evalPanValueExp_structPass_of_named_fields_evidence
+    sourceStructs postStructs sourceLocals sourceGlobals sourceMemory
+    baseAddress topAddress bytesInWord name fields values info postExpression
+    postValue hlookupStruct hfields hshape hpass
+  have hcompiled' : evalCrepFullExpsState state baseAddress topAddress compiled =
+      some (panValueFlatWords postValue) := by
+    rw [hflat]
+    exact hcompiled
+  have hgeneric := compile_full_pan_value_raise_state_relation_of_evidence
+    context postStructs sourceFunctions functions sourceLocals sourceGlobals
+    sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord sourceFuel exception exceptionCode
+    postExpression postValue compiled shape (panValueFlatWords postValue)
+    exceptionRel hlookupException hrel hpostSource hvalid hcompile hlength hcompiled'
+    hnot hfresh hexception
+  rw [hflat] at hgeneric
+  exact hgeneric
+
+/-! The generic program-level Raise case.  Unlike the word-record
+    constructors below, this accepts an arbitrary expression and exposes the
+    exact compiler/evaluator obligations needed by the Cake raise relation. -/
+set_option linter.unusedSimpArgs false in
+theorem panValueCrepProgramStateCorrect_raise_of_compiled_evidence
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (exception : ExceptionId) (expression : Exp α)
+    (hevidence : ∀ (context : CompileContext α) (structs : StructContext)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (state : CrepState α)
+      (baseAddress topAddress bytesInWord : α) (sourceValue : PanValue α),
+      evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+        baseAddress topAddress bytesInWord expression = some sourceValue →
+      ∃ (compiled : List (CrepExp α)) (shape : Shape) (values : List α),
+        panValuePayloadWithinLimit structs sourceValue = true ∧
+        compileExp context expression = (compiled, shape) ∧
+        compiled.length = Shape.shapeSize shape ∧
+        evalCrepFullExpsState state baseAddress topAddress compiled =
+          some values ∧
+        (∀ name ∈ freshNames context compiled.length 1,
+          ∀ value ∈ compiled, name ∉ crepExpVars value) ∧
+        (∀ name ∈ freshNames context compiled.length 1,
+          state.locals name = none))
+    (hlookupException : ∀ (context : CompileContext α),
+      ∃ exceptionCode, lookupInfo exception context.exceptions = some exceptionCode)
+    (hexception : ∀ (context : CompileContext α)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (sourceValue : PanValue α) (exceptionCode : α),
+      lookupInfo exception context.exceptions = some exceptionCode →
+      exceptionRel exception sourceValue exceptionCode) :
+    PanValueCrepProgramStateCorrect (.raise exception expression) := by
+  intro context structs sourceFunctions functions sourceLocals sourceGlobals
+    sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord sourceFuel targetFuel exceptionRel
+    sourceResult crepResult hrel hsource hcrep
+  cases sourceFuel with
+  | zero =>
+      simp [evalPanValueProgWithPrimitiveCallsAndFfi] at hsource
+  | succ sourceFuel =>
+      cases hvalue : evalPanValueExp structs sourceLocals sourceGlobals
+          sourceMemory baseAddress topAddress bytesInWord expression with
+      | none =>
+          simp [evalPanValueProgWithPrimitiveCallsAndFfi, hvalue] at hsource
+      | some sourceValue =>
+          obtain ⟨compiled, shape, values, hvalid, hcompile, hlength,
+            hcompiled, hnot, hfresh⟩ := hevidence context structs sourceLocals
+            sourceGlobals sourceMemory state baseAddress topAddress bytesInWord
+            sourceValue hvalue
+          obtain ⟨exceptionCode, hlookupCode⟩ := hlookupException context
+          have hsourceEq : sourceResult =
+              .raised (fun _ => none) sourceGlobals sourceMemory exception
+                sourceValue := by
+            have hsource' := hsource
+            simp [evalPanValueProgWithPrimitiveCallsAndFfi, hvalue, hvalid]
+              at hsource'
+            exact hsource'.symm
+          let temporaries := freshNames context compiled.length 1
+          let body := crepNestedSeq
+            (storeGlobals 0 context.bytesInWord
+              (temporaries.map (fun name => .var name)))
+          have hvaluesLength : compiled.length = values.length :=
+            evalCrepFullExpsState_length state baseAddress topAddress compiled
+              values hcompiled
+          have htemporaryLength : temporaries.length = values.length := by
+            simp [temporaries, freshNames, hvaluesLength]
+          have htemporaryDistinct : CrepDistinctNames temporaries := by
+            exact crepDistinctNames_freshNames context compiled.length 1
+          have htemporaryCompiledLength : temporaries.length = compiled.length := by
+            simp [temporaries, freshNames]
+          have hcompileProg :
+              compileProg context (.raise exception expression) =
+                .seq (nestedDecs temporaries compiled body)
+                  (.raise exceptionCode) := by
+            simp only [compileProg, hlookupCode, hcompile, hlength,
+              temporaries, body]
+            rfl
+          have hcrepSeq := hcrep
+          rw [hcompileProg] at hcrepSeq
+          cases targetFuel with
+          | zero =>
+              simp [evalCrepFullProgState] at hcrepSeq
+          | succ targetFuel =>
+              cases hfirst : evalCrepFullProgState functions crepPrimitive ffi
+                  sharedMem baseAddress topAddress targetFuel state
+                  (nestedDecs temporaries compiled body) with
+              | none =>
+                  simp [evalCrepFullProgState, hfirst] at hcrepSeq
+              | some firstResult =>
+                  obtain ⟨bodyFuel, bodyResult, hbodyFuel, hnested, hrestore⟩ :=
+                    crepNestedDecsStateEval_of_eval
+                      functions crepPrimitive ffi sharedMem baseAddress topAddress
+                      targetFuel state temporaries compiled body firstResult
+                      htemporaryDistinct htemporaryCompiledLength hfirst
+                  have hbodyEval := crepNestedDecsStateEval_body_of_evalExps_stable
+                    functions crepPrimitive ffi sharedMem baseAddress topAddress
+                    bodyFuel state temporaries compiled body bodyResult values
+                    htemporaryCompiledLength hnot hcompiled hnested
+                  have hbodyValues := evalCrepFullExpsState_varList_updateCrepLocalList
+                    state baseAddress topAddress temporaries values htemporaryLength
+                    htemporaryDistinct
+                  have hbodyFuelLower :=
+                    evalCrepFullProgState_storeGlobals_vars_fuel_lower_bound
+                      functions crepPrimitive ffi sharedMem baseAddress topAddress
+                      bodyFuel
+                      { state with locals :=
+                          updateCrepLocalList state.locals temporaries values }
+                      0 context.bytesInWord temporaries values bodyResult
+                      (by simpa using htemporaryLength) hbodyValues hbodyEval
+                  have hbaseFuel :
+                      values.length + temporaries.length + 2 ≤ targetFuel + 1 := by
+                    omega
+                  obtain ⟨extraFuel, htargetFuel⟩ :=
+                    Nat.exists_eq_add_of_le hbaseFuel
+                  have hexception' :=
+                    hexception context exceptionRel sourceValue exceptionCode
+                      hlookupCode
+                  have hbase := compile_full_pan_value_raise_state_relation_of_evidence
+                    context structs sourceFunctions functions sourceLocals sourceGlobals
+                    sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
+                    baseAddress topAddress bytesInWord sourceFuel exception exceptionCode
+                    expression sourceValue compiled shape values exceptionRel hlookupCode
+                    hrel hvalue hvalid hcompile hlength hcompiled hnot hfresh hexception'
+                  have htarget := evalCrepFullProgState_raise_of_evidence_of_fuel
+                    context functions state crepPrimitive ffi sharedMem baseAddress topAddress
+                    exception exceptionCode expression compiled shape values extraFuel
+                    hlookupCode hcompile hlength hcompiled hnot hfresh
+                  have hsourceEq' := Option.some.inj (hbase.1.symm.trans hsource)
+                  have hcrepAligned :
+                      evalCrepFullProgState functions crepPrimitive ffi sharedMem
+                        baseAddress topAddress
+                        (values.length + temporaries.length + 2 + extraFuel)
+                        state (compileProg context (.raise exception expression)) =
+                      some crepResult := by
+                    simpa [hcompileProg, htargetFuel] using hcrepSeq
+                  have hcrepEq := Option.some.inj (htarget.symm.trans hcrepAligned)
+                  cases hsourceEq'
+                  cases hcrepEq
+                  exact ⟨0, hbase.2.2⟩
+
 theorem compile_full_pan_value_raise_state_relation_of_evidence_fuel
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

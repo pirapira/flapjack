@@ -294,6 +294,40 @@ def emptyLocalsMainExactParity : Bool :=
       | _ => false
   | none => false
 
+/-! ## CurrHeap materialisation parity (GH #1128)
+
+Cake's word_inst inst_select_exp leaves a Lookup CurrHeap plus a
+materialised constant as a register operation.  The Lab stage must not apply
+an aliased-add peephole to that pair: it would emit a different immediate
+instruction, or erase CurrHeap - 0 entirely. -/
+def currHeapAddConstSource : String :=
+  "fun 1 main() { return @base + 255; }"
+
+def currHeapSubZeroSource : String :=
+  "fun 1 main() { return @base - 0; }"
+
+def currHeapAddConstExactParity : Bool :=
+  match compileRuntimeImage currHeapAddConstSource with
+  | some image =>
+      match emittedSections image with
+      | _ :: (_, _, mainBytes) :: _ =>
+          mainBytes ==
+            [0x13, 0x65, 0xF0, 0x0F, 0x33, 0x05, 0xA5, 0x01,
+             0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
+      | _ => false
+  | none => false
+
+def currHeapSubZeroExactParity : Bool :=
+  match compileRuntimeImage currHeapSubZeroSource with
+  | some image =>
+      match emittedSections image with
+      | _ :: (_, _, mainBytes) :: _ =>
+          mainBytes ==
+            [0x13, 0x65, 0x00, 0x00, 0x33, 0x05, 0xA5, 0x01,
+             0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
+      | _ => false
+  | none => false
+
 /-! ## Cake return-register oracle (`flapjack-pxn.8.5.10.1.1`)
 
 The original Cake `callee_abi.pnk` artifact keeps the allocator-selected
@@ -753,6 +787,24 @@ def bitmapCallsWordsMatch : Bool :=
   | some image => image.bitmaps.data == [4, 2, 2]
   | none => false
 
+/-! The `bc` oracle exercises two self-recursive non-tail calls.  Cake's
+    recursive continuations use the trivial frame word, yielding `[4, 2, 2]`.
+    This is distinct from the non-recursive `bitmap_calls` fixture. -/
+def frameOccupancyBcSource : String :=
+  "fun 1 f () {\n" ++
+    "  var 1 x = f();\n" ++
+    "  var 1 x = f();\n" ++
+    "  return 1;\n" ++
+    "}\n\n" ++
+    "fun 1 main() { return 0; }"
+
+def cakeFrameOccupancyBcBitmaps : List Nat := [4, 2, 2]
+
+def frameOccupancyBcBitmapsMatch : Bool :=
+  match compileRuntimeImage frameOccupancyBcSource with
+  | some image => image.bitmaps.data == cakeFrameOccupancyBcBitmaps
+  | none => false
+
 /-! The smallest frame-occupancy oracle from
 `scripts/parity-difffuzz-findings/frame-occupancy/p1.cake.S`.  Its single
 non-tail call has no live value across the call, so Cake emits exactly the
@@ -769,6 +821,112 @@ bitmap vector, including the initial header word. -/
 def frameOccupancyP1BitmapsMatch : Bool :=
   match compileRuntimeImage frameOccupancyP1Source with
   | some image => image.bitmaps.data == cakeFrameOccupancyP1Bitmaps
+  | none => false
+
+/-! The `p2` oracle is the scalar-live baseline: `x` remains live across the
+    non-tail `id` call, so Cake emits one two-word continuation frame
+    (`[4, 4]`). -/
+def frameOccupancyP2Source : String :=
+  "fun 1 id (x) { return x; }\n" ++
+    "fun 1 main() { var 1 x = 5; var 1 t = id(5); return x; }"
+
+def cakeFrameOccupancyP2Bitmaps : List Nat := [4, 4]
+
+def frameOccupancyP2BitmapsMatch : Bool :=
+  match compileRuntimeImage frameOccupancyP2Source with
+  | some image => image.bitmaps.data == cakeFrameOccupancyP2Bitmaps
+  | none => false
+
+/-! The `p3` oracle keeps a one-field struct value live across the same
+    non-tail call.  Cake's checked artifact has the minimal continuation
+    frame `[4, 4]`. -/
+def frameOccupancyP3Source : String :=
+  "struct S { 1 f }\n" ++
+    "fun 1 id (x) { return x; }\n" ++
+    "fun 1 main() { var S s = S <f = 1>; var 1 t = id(5); return s.f; }"
+
+def cakeFrameOccupancyP3Bitmaps : List Nat := [4, 4]
+
+def frameOccupancyP3BitmapsMatch : Bool :=
+  match compileRuntimeImage frameOccupancyP3Source with
+  | some image => image.bitmaps.data == cakeFrameOccupancyP3Bitmaps
+  | none => false
+
+/-! The `p4` oracle is the one-field CSE case: the same field is read twice
+    after the non-tail call, while Cake still emits the minimal `[4, 4]`
+    continuation vector. -/
+def frameOccupancyP4Source : String :=
+  "struct S { 1 f }\n" ++
+    "fun 1 id (x) { return x; }\n" ++
+    "fun 1 main() { var S s = S <f = 1>; var 1 t = id(5); return s.f + s.f; }"
+
+def cakeFrameOccupancyP4Bitmaps : List Nat := [4, 4]
+
+def frameOccupancyP4BitmapsMatch : Bool :=
+  match compileRuntimeImage frameOccupancyP4Source with
+  | some image => image.bitmaps.data == cakeFrameOccupancyP4Bitmaps
+  | none => false
+
+/-! The `p5` oracle keeps one field of a two-field struct live across the
+    non-tail call.  Cake's checked artifact uses the minimal continuation
+    vector `[4, 4]`. -/
+def frameOccupancyP5Source : String :=
+  "struct S { 1 f, 1 g }\n" ++
+    "fun 1 id (x) { return x; }\n" ++
+    "fun 1 main() { var S s = S <f = 1, g = 2>; var 1 t = id(5); return s.f; }"
+
+def cakeFrameOccupancyP5Bitmaps : List Nat := [4, 4]
+
+def frameOccupancyP5BitmapsMatch : Bool :=
+  match compileRuntimeImage frameOccupancyP5Source with
+  | some image => image.bitmaps.data == cakeFrameOccupancyP5Bitmaps
+  | none => false
+
+/-! The `p7` oracle keeps the scalar result of `id3` live across a second
+    non-tail call.  Cake emits two minimal continuation frames, `[4, 4, 4]`.
+    This is the scalar counterpart to the multi-call struct cases. -/
+def frameOccupancyP7Source : String :=
+  "fun 1 id3 (x) { return x; }\n" ++
+    "fun 1 id (1 a) { return a; }\n" ++
+    "fun 1 main() { var 1 x = id3(3); var 1 t = id(5); return x; }"
+
+def cakeFrameOccupancyP7Bitmaps : List Nat := [4, 4, 4]
+
+def frameOccupancyP7BitmapsMatch : Bool :=
+  match compileRuntimeImage frameOccupancyP7Source with
+  | some image => image.bitmaps.data == cakeFrameOccupancyP7Bitmaps
+  | none => false
+
+/-! The `bm_min2` oracle is the bitmap-min spill case: both fields of the
+    returned struct are read after `id`, so Cake emits two eight-word
+    continuation entries (`[4, 8, 8]`). -/
+def frameOccupancyBmMin2Source : String :=
+  "struct S { 1 f1, 1 f2 }\n" ++
+    "fun S mks(1 a, 1 b) { return S <f1 = a, f2 = b>; }\n" ++
+    "fun 1 id(1 a) { return a; }\n" ++
+    "fun 1 main() { var S s = mks(1, 2); var 1 t = id(5); return s.f1 + s.f2 + t; }"
+
+def cakeFrameOccupancyBmMin2Bitmaps : List Nat := [4, 8, 8]
+
+def frameOccupancyBmMin2BitmapsMatch : Bool :=
+  match compileRuntimeImage frameOccupancyBmMin2Source with
+  | some image => image.bitmaps.data == cakeFrameOccupancyBmMin2Bitmaps
+  | none => false
+
+/-! The `live1` oracle keeps one field of a two-field struct live across an
+    `id` call.  Cake's checked artifact has two minimal continuation entries,
+    `[4, 4, 4]`. -/
+def frameOccupancyLive1Source : String :=
+  "struct S { 1 f1, 1 f2 }\n" ++
+    "fun S mks(1 a, 1 b) { return S <f1 = a, f2 = b>; }\n" ++
+    "fun 1 id(1 a) { return a; }\n" ++
+    "fun 1 main() { var S s1 = mks(1, 2); var 1 t = id(7); return s1.f1 + t; }"
+
+def cakeFrameOccupancyLive1Bitmaps : List Nat := [4, 4, 4]
+
+def frameOccupancyLive1BitmapsMatch : Bool :=
+  match compileRuntimeImage frameOccupancyLive1Source with
+  | some image => image.bitmaps.data == cakeFrameOccupancyLive1Bitmaps
   | none => false
 
 /-! The `p9` frame-occupancy oracle (`p9.cake.S`) records the two-field
@@ -791,6 +949,94 @@ bitmap vector, including the initial header word. -/
 def frameOccupancyP9BitmapsMatch : Bool :=
   match compileRuntimeImage frameOccupancyP9Source with
   | some image => image.bitmaps.data == cakeFrameOccupancyP9Bitmaps
+  | none => false
+
+/-! The `p11` frame-occupancy oracle is the CSE-shaped companion to `p9`:
+    the two-field result is read twice at the same field, and Cake retains a
+    two-word frame for both non-tail continuations (`[4, 4, 4]`). -/
+def frameOccupancyP11Source : String :=
+  "struct S { 1 f, 1 g }\n" ++
+    "fun S mks (1 a, 1 b) { return S <f = a, g = b>; }\n" ++
+    "fun 1 id (1 a) { return a; }\n" ++
+    "fun 1 main() { var S s = mks(1,2); var 1 t = id(5); return s.f + s.f; }"
+
+def cakeFrameOccupancyP11Bitmaps : List Nat := [4, 4, 4]
+
+def frameOccupancyP11BitmapsMatch : Bool :=
+  match compileRuntimeImage frameOccupancyP11Source with
+  | some image => image.bitmaps.data == cakeFrameOccupancyP11Bitmaps
+  | none => false
+
+/-! The `wide` frame-occupancy oracle keeps the first and last fields of a
+    six-field struct live across the `id` call.  Cake's checked artifact uses
+    two eight-word continuation entries (`[4, 8, 8]`). -/
+def frameOccupancyWideSource : String :=
+  "struct S { 1 a, 1 b, 1 c, 1 d, 1 e, 1 f }\n" ++
+    "fun S mks(1 x) { return S <a=x,b=x,c=x,d=x,e=x,f=x>; }\n" ++
+    "fun 1 id(1 a) { return a; }\n" ++
+    "fun 1 main() { var S s = mks(1); var 1 t = id(2); return s.a + s.f + t; }"
+
+def cakeFrameOccupancyWideBitmaps : List Nat := [4, 8, 8]
+
+def frameOccupancyWideBitmapsMatch : Bool :=
+  match compileRuntimeImage frameOccupancyWideSource with
+  | some image => image.bitmaps.data == cakeFrameOccupancyWideBitmaps
+  | none => false
+
+/-! The `p10` frame-occupancy oracle is the first three-field struct case.
+Cake's two non-tail continuations both retain a four-word frame (`f' = 4`),
+so the checked bitmap payload is `[4, 16, 16]`.  The source is copied from
+`scripts/parity-difffuzz-findings/frame-occupancy/p10.pnk`; the expected
+vector is the corresponding `p10.cake.S` `.quad` payload. -/
+def frameOccupancyP10Source : String :=
+  "struct S { 1 f, 1 g, 1 h }\n" ++
+    "fun S mks3 (1 a, 1 b, 1 c) { return S <f = a, g = b, h = c>; }\n" ++
+    "fun 1 id (1 a) { return a; }\n" ++
+    "fun 1 main() { var S s = mks3(1,2,3); var 1 t = id(5); return s.f + s.g + s.h; }"
+
+def cakeFrameOccupancyP10Bitmaps : List Nat := [4, 16, 16]
+
+def frameOccupancyP10BitmapsMatch : Bool :=
+  match compileRuntimeImage frameOccupancyP10Source with
+  | some image => image.bitmaps.data == cakeFrameOccupancyP10Bitmaps
+  | none => false
+
+/-! The `p6` oracle covers the two-field struct return with two non-tail
+continuations.  Cake keeps a two-word frame for both continuations, yielding
+`[4, 4, 4]`; the source is copied from the checked p6 fixture. -/
+def frameOccupancyP6Source : String :=
+  "struct S { 1 f, 1 g }\n" ++
+    "fun S mks (1 a, 1 b) { return S <f = a, g = b>; }\n" ++
+    "fun 1 id (1 a) { return a; }\n" ++
+    "fun 1 main() { var S s = mks(1,2); var 1 t = id(5); return s.f; }"
+
+def cakeFrameOccupancyP6Bitmaps : List Nat := [4, 4, 4]
+
+def frameOccupancyP6BitmapsMatch : Bool :=
+  match compileRuntimeImage frameOccupancyP6Source with
+  | some image => image.bitmaps.data == cakeFrameOccupancyP6Bitmaps
+  | none => false
+
+/-! The `live3` oracle exercises four non-tail continuations over three
+struct-valued locals.  Cake retains a four-word frame for each continuation,
+so its checked bitmap payload is `[4, 16, 16, 16, 16]`. -/
+def frameOccupancyLive3Source : String :=
+  "struct S { 1 f1, 1 f2 }\n" ++
+    "fun S mks(1 a, 1 b) { return S <f1 = a, f2 = b>; }\n" ++
+    "fun 1 id(1 a) { return a; }\n" ++
+    "fun 1 main() {\n" ++
+    "  var S s1 = mks(1, 2);\n" ++
+    "  var S s2 = mks(3, 4);\n" ++
+    "  var S s3 = mks(5, 6);\n" ++
+    "  var 1 t = id(7);\n" ++
+    "  return s1.f1 + s2.f2 + s3.f1 + t;\n" ++
+    "}"
+
+def cakeFrameOccupancyLive3Bitmaps : List Nat := [4, 16, 16, 16, 16]
+
+def frameOccupancyLive3BitmapsMatch : Bool :=
+  match compileRuntimeImage frameOccupancyLive3Source with
+  | some image => image.bitmaps.data == cakeFrameOccupancyLive3Bitmaps
   | none => false
 
 /-- Source for the GH #1027 relational-condition case: `if x < 10` over a
@@ -847,8 +1093,188 @@ def f01451ExactParity : Bool :=
       | _ => false
   | none => false
 
+/-- Source of the constant-store-reuse fixture (GitHub issue #1127, bead
+    `flapjack-1kj`): a local store with a constant value followed by an
+    expression that reuses the same constant.  This is the minimized
+    differential-fuzz finding `f00198-s6-i00198-mutate`. -/
+def constStoreReuseSource : String :=
+  "fun 1 main() {\n" ++
+    "  st (0 + 0), 1;\n" ++
+    "  return @base | 1;\n" ++
+    "}"
+
+/-- Original CakeML `cml_main` bytes for the fixture.  Cake rematerialises the
+    store's constant (`li a0,1`) before the `or`; the port used to reuse the
+    live register and emit only one `li`, dropping an instruction Cake keeps.
+    `word_cse` must emit the original `OpCurrHeap` source register
+    (`cakeml/compiler/backend/word_cseScript.sml:587-594`). -/
+def cakeConstStoreReuseMainBytes : List (BitVec 8) :=
+  [0x13, 0x65, 0x10, 0x00,
+   0x93, 0x65, 0x00, 0x00,
+   0x23, 0xB0, 0xA5, 0x00,
+   0x13, 0x65, 0x10, 0x00,
+   0x33, 0x65, 0xA5, 0x01,
+   0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
+
+def constStoreReuseExactParity : Bool :=
+  match compileRuntimeImage constStoreReuseSource with
+  | some image =>
+      match emittedSections image with
+      | [(3, 1000, generated), (4, 1004, main)] =>
+          generated == [0x6F, 0x00, 0x40, 0x00].map (BitVec.ofNat 8) &&
+            main == cakeConstStoreReuseMainBytes
+      | _ => false
+  | none => false
+
+/-- Source of the CurrHeap add fixture (differential-fuzz finding
+    `f00036-s65-i00036-mutate`): `@base` lowers to a `CurrHeap` lookup, so
+    Cake's `inst_select_exp` takes its `is_Lookup_CurrHeap` branch and
+    materialises the constant plus a register add
+    (`cakeml/compiler/backend/word_instScript.sml:246-275`) instead of folding
+    it into an `addi`. -/
+def currheapAddConstSource : String :=
+  "fun 1 main() {\n" ++
+    "  return @base + 255;\n" ++
+    "}"
+
+/-- Original CakeML `cml_main` bytes for `@base + 255`:
+    `li a0,255; add a0,a0,s10; ret` (s10 is the CurrHeap base). -/
+def cakeCurrheapAddConstMainBytes : List (BitVec 8) :=
+  [0x13, 0x65, 0xF0, 0x0F,
+   0x33, 0x05, 0xA5, 0x01,
+   0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
+
+def currheapAddConstExactParity : Bool :=
+  match compileRuntimeImage currheapAddConstSource with
+  | some image =>
+      match emittedSections image with
+      | [(3, 1000, generated), (4, 1004, main)] =>
+          generated == [0x6F, 0x00, 0x40, 0x00].map (BitVec.ofNat 8) &&
+            main == cakeCurrheapAddConstMainBytes
+      | _ => false
+  | none => false
+
+/-- Source of the CurrHeap zero-sub fixture: `@base - 0` reaches the same
+    materialised-constant register add, so Cake keeps `li a0,0; add a0,a0,s10`
+    rather than eliding the computation. -/
+def currheapSubZeroSource : String :=
+  "fun 1 main() {\n" ++
+    "  return @base - 0;\n" ++
+    "}"
+
+/-- Original CakeML `cml_main` bytes for `@base - 0`:
+    `li a0,0; add a0,a0,s10; ret`. -/
+def cakeCurrheapSubZeroMainBytes : List (BitVec 8) :=
+  [0x13, 0x65, 0x00, 0x00,
+   0x33, 0x05, 0xA5, 0x01,
+   0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
+
+def currheapSubZeroExactParity : Bool :=
+  match compileRuntimeImage currheapSubZeroSource with
+  | some image =>
+      match emittedSections image with
+      | [(3, 1000, generated), (4, 1004, main)] =>
+          generated == [0x6F, 0x00, 0x40, 0x00].map (BitVec.ofNat 8) &&
+            main == cakeCurrheapSubZeroMainBytes
+      | _ => false
+  | none => false
+
+/-- Source of the CurrHeap-left / constant-right fixture:
+    `(@base | 7) #>> 1`.  Cake's `inst_select_exp`
+    (`cakeml/compiler/backend/word_instScript.sml:246-251`) tests
+    `is_Lookup_CurrHeap e1 ∧ op ≠ Sub` before the `e2 = Const w` immediate
+    fold, so the `| 7` keeps `Const temp 7; OpCurrHeap Or temp temp` instead
+    of folding the constant into an `ori`. -/
+def currheapConstLeftSource : String :=
+  "fun 1 main() {\n" ++
+    "  return (@base | 7) #>> 1;\n" ++
+    "}"
+
+/-- Original CakeML `cml_main` bytes for `(@base | 7) #>> 1`:
+    `ori a0,0,7; or a0,a0,s10; srli a0,a0,1; slli a0,a0,3;
+     or a0,a0,s10; ret` (s10 is the CurrHeap base). -/
+def cakeCurrheapConstLeftMainBytes : List (BitVec 8) :=
+  [0x13, 0x65, 0x70, 0x00,
+   0x33, 0x65, 0xA5, 0x01,
+   0x93, 0x5F, 0x15, 0x00,
+   0x13, 0x15, 0xF5, 0x03,
+   0x33, 0x65, 0xF5, 0x01,
+   0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
+
+def currheapConstLeftExactParity : Bool :=
+  match compileRuntimeImage currheapConstLeftSource with
+  | some image =>
+      match emittedSections image with
+      | [(3, 1000, generated), (4, 1004, main)] =>
+          generated == [0x6F, 0x00, 0x40, 0x00].map (BitVec.ofNat 8) &&
+            main == cakeCurrheapConstLeftMainBytes
+      | _ => false
+  | none => false
+
+/-- Source of the `!ld8` CurrHeap-offset fixture (GitHub issue #1130, bead
+    `flapjack-pxn.8.5.14.20`): a shared 8-bit load whose address is
+    `@base + 8`.  Cake keeps CurrHeap (`@base`, lowered to a `CurrHeap`
+    lookup) as the load base and selects the byte-offset load
+    `word_instScript.sml` `MappedRead`/`Load8` encoding, i.e. the UNSIGNED
+    `lbu` (funct3 4), not `lb`. -/
+def ld8CurrheapOffsetSource : String :=
+  "fun 1 main() {\n" ++
+    "  var 1 y = 0;\n" ++
+    "  !ld8 y, (@base + 8);\n" ++
+    "  return y;\n" ++
+    "}"
+
+/-- Original CakeML `cml_main` bytes for the fixture (base 1004, 12 bytes):
+    `or a0,s10,s10; lbu a0,8(a0); ret`.  The port previously emitted
+    `lb` (funct3 0) and could materialise the base into a temporary. -/
+def cakeLd8CurrheapOffsetMainBytes : List (BitVec 8) :=
+  [0x33, 0x65, 0xAD, 0x01,
+   0x03, 0x45, 0x85, 0x00,
+   0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
+
+def ld8CurrheapOffsetExactParity : Bool :=
+  match compileRuntimeImage ld8CurrheapOffsetSource with
+  | some image =>
+      match emittedSections image with
+      | [(3, 1000, generated), (4, 1004, main)] =>
+          generated == [0x6F, 0x00, 0x40, 0x00].map (BitVec.ofNat 8) &&
+            main == cakeLd8CurrheapOffsetMainBytes
+      | _ => false
+  | none => false
+
+/-- Source of the CurrHeap large-offset load witness (GitHub issue #1132):
+    `lds 1 (@base + 2048)`.  Cake only splits an `Op Add [exp'; Const w]`
+    address when `addr_offset_ok c w` holds; 2048 is out of the 12-bit range,
+    so Cake selects the whole address, reaching `Const temp 2048; OpCurrHeap
+    Add tar temp` and keeping `s10` as the memory base. -/
+def currheapLoadLargeOffsetSource : String :=
+  "fun 1 main() {\n" ++
+    "  return lds 1 (@base + 2048);\n" ++
+    "}"
+
+/-- Original CakeML `cml_main` bytes for the fixture (base 1004, 20 bytes):
+    `lui a0,0xFFFFF; xori a0,a0,-2048; add a0,a0,s10; ld a0,0(a0); ret`.
+    The port previously materialised CurrHeap into a temporary, adding an
+    `or a0,s10,s10` and a register add. -/
+def cakeCurrheapLoadLargeOffsetMainBytes : List (BitVec 8) :=
+  [0x37, 0xF5, 0xFF, 0xFF,
+   0x13, 0x45, 0x05, 0x80,
+   0x33, 0x05, 0xA5, 0x01,
+   0x03, 0x35, 0x05, 0x00,
+   0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
+
+def currheapLoadLargeOffsetExactParity : Bool :=
+  match compileRuntimeImage currheapLoadLargeOffsetSource with
+  | some image =>
+      match emittedSections image with
+      | [(3, 1000, generated), (4, 1004, main)] =>
+          generated == [0x6F, 0x00, 0x40, 0x00].map (BitVec.ofNat 8) &&
+            main == cakeCurrheapLoadLargeOffsetMainBytes
+      | _ => false
+  | none => false
+
 /-- Source of the whole-artifact `hello.pnk` fixture (GitHub issue #1022 /
-bead `flapjack-8tb`). -/
+    bead `flapjack-8tb`). -/
 def helloSource : String :=
   "// Smoke test: echo input length into the output region and halt.\n" ++
     "fun 1 main() {\n" ++
@@ -965,10 +1391,29 @@ def sharedMemOffsetCarrierEncoding : Bool :=
 #guard deadFfiStubDropped
 #guard deadFfiConstantFalseDropped
 #guard bitmapCallsWordsMatch
+#guard frameOccupancyBcBitmapsMatch
 #guard frameOccupancyP1BitmapsMatch
+#guard frameOccupancyP2BitmapsMatch
+#guard frameOccupancyP3BitmapsMatch
+#guard frameOccupancyP4BitmapsMatch
+#guard frameOccupancyP5BitmapsMatch
+#guard frameOccupancyP7BitmapsMatch
+#guard frameOccupancyBmMin2BitmapsMatch
+#guard frameOccupancyLive1BitmapsMatch
 #guard frameOccupancyP9BitmapsMatch
+#guard frameOccupancyP11BitmapsMatch
+#guard frameOccupancyWideBitmapsMatch
+#guard frameOccupancyP10BitmapsMatch
+#guard frameOccupancyP6BitmapsMatch
+#guard frameOccupancyLive3BitmapsMatch
 #guard relationalConditionExactParity
 #guard f01451ExactParity
+#guard constStoreReuseExactParity
+#guard currheapAddConstExactParity
+#guard currheapSubZeroExactParity
+#guard currheapConstLeftExactParity
+#guard ld8CurrheapOffsetExactParity
+#guard currheapLoadLargeOffsetExactParity
 #guard sharedWordStoreOffsetPeephole
 #guard sharedMemOffsetCarrierEncoding
 #guard artifactAccepted
@@ -983,6 +1428,8 @@ def sharedMemOffsetCarrierEncoding : Bool :=
 #guard entryOrderExactParity
 #guard setVarMainExactParity
 #guard emptyLocalsMainExactParity
+#guard currHeapAddConstExactParity
+#guard currHeapSubZeroExactParity
 #guard rorChainBudgetMatches
 #guard flattenRorChainProbeMatches
 #guard wideOpBudgetMatches
@@ -1018,6 +1465,10 @@ def runChecks : IO Bool := do
         setVarMainExactParity),
       ("empty_locals direct-call main is byte-identical to Cake",
         emptyLocalsMainExactParity),
+      ("CurrHeap + materialised constant is byte-identical to Cake (GH #1128)",
+        currHeapAddConstExactParity),
+      ("CurrHeap - zero preserves Cake's register subtraction (GH #1128)",
+        currHeapSubZeroExactParity),
       ("nested_expression fixture accepted by the runtime-image entry point",
         nestedExpressionAccepted),
       ("nested_expression Word-to-Stack lowering uses the extended temp pool",
@@ -1046,14 +1497,52 @@ def runChecks : IO Bool := do
          deadFfiStubDropped),
       ("bitmap_calls table matches the original [4, 2, 2]",
          bitmapCallsWordsMatch),
+      ("frame-occupancy bc exact vector matches the Cake oracle",
+         frameOccupancyBcBitmapsMatch),
       ("frame-occupancy p1 bitmap vector matches Cake [4, 2]",
          frameOccupancyP1BitmapsMatch),
+      ("frame-occupancy p2 exact vector matches the Cake oracle",
+         frameOccupancyP2BitmapsMatch),
+      ("frame-occupancy p3 exact vector matches the Cake oracle",
+         frameOccupancyP3BitmapsMatch),
+      ("frame-occupancy p4 exact vector matches the Cake oracle",
+         frameOccupancyP4BitmapsMatch),
+      ("frame-occupancy p5 exact vector matches the Cake oracle",
+         frameOccupancyP5BitmapsMatch),
+      ("frame-occupancy p7 exact vector matches the Cake oracle",
+         frameOccupancyP7BitmapsMatch),
+      ("frame-occupancy bm_min2 exact vector matches the Cake oracle",
+         frameOccupancyBmMin2BitmapsMatch),
+      ("frame-occupancy live1 exact vector matches the Cake oracle",
+         frameOccupancyLive1BitmapsMatch),
       ("frame-occupancy p9 exact vector matches the Cake oracle",
          frameOccupancyP9BitmapsMatch),
+      ("frame-occupancy p11 exact vector matches the Cake oracle",
+         frameOccupancyP11BitmapsMatch),
+      ("frame-occupancy wide exact vector matches the Cake oracle",
+         frameOccupancyWideBitmapsMatch),
+      ("frame-occupancy p10 exact vector matches the Cake oracle",
+         frameOccupancyP10BitmapsMatch),
+      ("frame-occupancy p6 exact vector matches the Cake oracle",
+         frameOccupancyP6BitmapsMatch),
+      ("frame-occupancy live3 exact vector matches the Cake oracle",
+         frameOccupancyLive3BitmapsMatch),
       ("relational condition direct-branch section is byte-identical to Cake",
         relationalConditionExactParity),
       ("f01451 out-of-range shift section is byte-identical to Cake",
-        f01451ExactParity) ]
+        f01451ExactParity),
+      ("constant-store reuse keeps Cake's rematerialised `li` (GH #1127)",
+        constStoreReuseExactParity),
+      ("CurrHeap add keeps Cake's materialised constant and register add",
+        currheapAddConstExactParity),
+      ("CurrHeap zero sub keeps Cake's materialised constant and register add",
+        currheapSubZeroExactParity),
+      ("CurrHeap-left constant keeps Cake's materialised constant and register add",
+        currheapConstLeftExactParity),
+      ("ld8 CurrHeap-offset load keeps Cake's base and lbu funct3 (GH #1130)",
+        ld8CurrheapOffsetExactParity),
+      ("out-of-range CurrHeap load offset keeps Cake's base register (GH #1132)",
+        currheapLoadLargeOffsetExactParity) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

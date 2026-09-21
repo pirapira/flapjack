@@ -161,6 +161,120 @@ def wordFunctionToRiscVWithCalls [NeZero width]
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial
 
+/-! Cake-faithful call-aware boundary for theorem clients.
+
+The historical `wordFunctionToRiscVWithCalls` selector intentionally returns
+the one-instruction `wordExpToInstructions` result because its correctness
+theorem identifies it with `wordProgToRiscV`. Cake's `Const` AST, however, is
+list-valued. Keep that theorem-facing contract intact and expose the checked
+boundary separately; the call protocol itself is unchanged, while assignments,
+instruction constants, stores, shared memory operations, and LocValue use the
+Cake list-valued lowerings. -/
+def wordFunctionToRiscVWithCallsCake [NeZero width]
+    (context : WordCallContext width) :
+  WordProg (Word width) → Option (List (Instruction width) × List (Fin 32))
+  | .skip => some ([], [])
+  | .move _ moves => do
+      let instructions ← wordMoveToInstructions moves
+      pure (instructions, [])
+  | .assign name value => do
+      let instructions ← wordExpToInstructionsCake name value
+      pure (instructions, [])
+  | .inst instruction => do
+      let instructions ← wordInstToInstructionsCake instruction
+      pure (instructions, [])
+  | .store address value => do
+      let instructions ← wordShareInstToInstructionsCake .store value address
+      pure (instructions, [])
+  | .shareInst operator name address => do
+      let instructions ← wordShareInstToInstructionsCake operator name address
+      pure (instructions, [])
+  | .locValue destination source => do
+      let instructions ← wordLocValueToInstructionsCake destination source 0
+      pure (instructions, [])
+  | .tick => pure ([.addi 0 0 0], [])
+  | .call (some ([], _, _, _, _)) (some label) arguments none => do
+      let (entry, parameters, returns) ← lookupWordCallTarget label context.targets
+      let code ← wordTailCallToRiscV entry parameters arguments
+      let returns ← returns.mapM registerOfNat
+      pure (code, returns)
+  | .call (some ([], _, _, _, _)) (some label) arguments (some (_, .raise _, _, _)) => do
+      let (entry, parameters, returns) ← lookupWordCallTarget label context.targets
+      let code ← wordTailCallToRiscV entry parameters arguments
+      let returns ← returns.mapM registerOfNat
+      pure (code, returns)
+  | .call (some (destinations, _, _, _, _)) (some label) arguments none => do
+      let (entry, parameters, returns) ← lookupWordCallTarget label context.targets
+      let code ← wordCallToRiscVWithStack entry parameters returns arguments destinations
+      pure (code, [])
+  | .call (some (destinations, _, _, _, _)) (some label) arguments
+        (some (_, .raise _, _, _)) => do
+      let (entry, parameters, returns) ← lookupWordCallTarget label context.targets
+      let code ← wordCallToRiscVWithStack entry parameters returns arguments destinations
+      pure (code, [])
+  | .call none (some label) arguments none => do
+      let (entry, parameters, returns) ← lookupWordCallTarget label context.targets
+      let code ← wordTailCallToRiscV entry parameters arguments
+      let returns ← returns.mapM registerOfNat
+      pure (code, returns)
+  | .call none (some label) arguments (some (_, .raise _, _, _)) => do
+      let (entry, parameters, returns) ← lookupWordCallTarget label context.targets
+      let code ← wordTailCallToRiscV entry parameters arguments
+      let returns ← returns.mapM registerOfNat
+      pure (code, returns)
+  | .ite operator condition rightValue thenBranch elseBranch => do
+      let (branchLeft, right, prelude) ←
+        wordConditionOperands operator condition rightValue
+      let (thenCode, thenReturns) ← wordFunctionToRiscVWithCallsCake context thenBranch
+      let (elseCode, elseReturns) ← wordFunctionToRiscVWithCallsCake context elseBranch
+      if thenReturns != elseReturns then none
+      else
+        let falseOffset : Word width := BitVec.ofNat width (8 + 4 * thenCode.length)
+        let endOffset : Word width := BitVec.ofNat width (4 + 4 * elseCode.length)
+        let branchFalse ← match operator with
+          | .equal => pure (.branchNe branchLeft right falseOffset)
+          | .notEqual => pure (.branchEq branchLeft right falseOffset)
+          | .less => pure (.branchGe branchLeft right falseOffset)
+          | .notLess => pure (.branchLt branchLeft right falseOffset)
+          | .lower => pure (.branchGeU branchLeft right falseOffset)
+          | .notLower => pure (.branchLtU branchLeft right falseOffset)
+          | .test => pure (.branchNe branchLeft right falseOffset)
+          | .notTest => pure (.branchEq branchLeft right falseOffset)
+        pure (prelude ++ [branchFalse] ++ thenCode ++
+          [.branchEq 0 0 endOffset] ++ elseCode, thenReturns)
+  | .mustTerminate body => wordFunctionToRiscVWithCallsCake context body
+  | .seq first second => do
+      let (firstCode, firstReturns) ← wordFunctionToRiscVWithCallsCake context first
+      if !firstReturns.isEmpty then
+        pure (firstCode, firstReturns)
+      else
+        let (secondCode, secondReturns) ← wordFunctionToRiscVWithCallsCake context second
+        pure (firstCode ++ secondCode, secondReturns)
+  | .return _ values => do
+      let values ← values.mapM registerOfNat
+      pure ([], values)
+  | _ => none
+termination_by program => sizeOf program
+decreasing_by all_goals decreasing_trivial
+
+theorem wordFunctionToRiscVWithCallsCake_assign [NeZero width]
+    (context : WordCallContext width) (destination : Nat)
+    (value : WordExp (Word width)) :
+    wordFunctionToRiscVWithCallsCake context (.assign destination value) =
+      (wordExpToInstructionsCake destination value).map
+        (fun instructions => (instructions, [])) := by
+  simp [wordFunctionToRiscVWithCallsCake]
+  cases h : wordExpToInstructionsCake destination value <;> rfl
+
+theorem wordFunctionToRiscVWithCallsCake_const [NeZero width]
+    (context : WordCallContext width) (destination : Nat) (value : Word width) :
+    wordFunctionToRiscVWithCallsCake context
+        (.assign destination (.const value)) =
+      (wordConstToInstructions destination value).map
+        (fun instructions => (instructions, [])) := by
+  simp [wordFunctionToRiscVWithCallsCake, wordExpToInstructionsCake]
+  cases h : wordConstToInstructions destination value <;> rfl
+
 mutual
   def wordFunctionToRiscVWithCallsAndLoopsAux [NeZero width]
       (context : WordCallContext width) :

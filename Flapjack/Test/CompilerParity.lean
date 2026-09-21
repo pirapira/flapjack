@@ -251,6 +251,20 @@ def cakeReturnWords (value : Nat) : List (BitVec 8) :=
     BitVec.ofNat 8 0x67, BitVec.ofNat 8 0x80,
     BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x00 ]
 
+/-! Cake's byte-load-with-offset instruction is an RV `lb` (funct3 4), not
+    the funct3 0 encoding.  This pins the field exposed by the
+    source-to-RISC-V differential fuzzer. -/
+def cakeLoadByteOffsetWords : List (BitVec 8) :=
+  RiscV.encodeInstructionBytes
+    (.loadByteOffset 10 5 (BitVec.ofNat 64 8))
+
+def cakeLoadByteOffsetEncodingParity : Bool :=
+  cakeLoadByteOffsetWords ==
+    [ BitVec.ofNat 8 0x03, BitVec.ofNat 8 0xC5,
+      BitVec.ofNat 8 0x82, BitVec.ofNat 8 0x00 ]
+
+#guard cakeLoadByteOffsetEncodingParity
+
 def leanReturnWords (value : Nat) : List (BitVec 8) :=
   RiscV.encodeInstructions
     [.ori 10 0 (BitVec.ofNat 64 value), .jalr 0 1 0]

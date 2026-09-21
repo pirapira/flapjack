@@ -61,4 +61,23 @@ def clusterGuard : Bool :=
 #eval clusterGuard
 #guard clusterGuard
 
+/-! Counterpart of Cake's `exceptions_append`
+    (`pan_globalsProofScript.sml:2507`), exercised on a mixed fixture. -/
+def exceptionEntriesGuard : Bool :=
+  let declarations : List (Decl Nat) :=
+    [.function
+      { name := "f", inline := false, exported := false, params := [],
+        body := .skip, returnShape := .one },
+     .name "S" [], .exnDecl "E" (.named "T")]
+  let rest : List (Decl Nat) := [.exnDecl "F" .one, .decl .one "k" (.const 11)]
+  (match exceptionEntries (declarations ++ rest) with
+   | [("E", .named "T"), ("F", .one)] => true
+   | _ => false) &&
+  (match exceptionEntries declarations ++ exceptionEntries rest with
+   | [("E", .named "T"), ("F", .one)] => true
+   | _ => false)
+
+#eval exceptionEntriesGuard
+#guard exceptionEntriesGuard
+
 end Flapjack.Test.PanGlobalsDecShapesParity

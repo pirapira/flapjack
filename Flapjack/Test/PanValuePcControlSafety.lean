@@ -1125,5 +1125,6 @@ example :
 #check @panValuePcCompileCorrect_compact_shMemStore_source_word
 #check @panValueCrepProgramStateControlSafe_assign
 #check @panValueCrepProgramStateControlSafe_dec
+#check @panValuePcCompileCorrect_compact_dec_of_state_evidence
 
 end Flapjack.Test.PanValuePcControlSafety

@@ -5200,6 +5200,73 @@ theorem panValuePcRaisedHraiseCases_to_exception_result_rel
     sourceLocals sourceGlobals sourceMemory sourceException sourceValue
     targetState targetException hcontrol
 
+set_option linter.unusedVariables false in
+/-- State-evidence companion for the exception-result dispatcher.  The raised
+    payload obligations are supplied through the explicit post-state relation,
+    the exception code, the flat-words lookup, and the shape bound, so the opaque
+    evaluator evidence is no longer required. -/
+theorem panValuePcRaisedHraiseCases_to_exception_result_rel_of_state_evidence
+    [BEq α] [LawfulBEq α]
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (hpost : ∀ (context : CompileContext α) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (sourceValue : PanValue α) (targetState : CrepState α)
+      (targetException : α),
+      panValueCrepStateRel structs context sourceLocals sourceGlobals
+        sourceMemory targetState)
+    (hcode : ∀ (context : CompileContext α) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (sourceValue : PanValue α) (targetState : CrepState α)
+      (targetException : α),
+      exceptionCode sourceException = some targetException)
+    (hlookup : ∀ (context : CompileContext α) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (sourceValue : PanValue α) (targetState : CrepState α)
+      (targetException : α),
+      1 ≤ Shape.shapeSize (panValueShape structs sourceValue) →
+      globalsLookup targetState sourceValue = some (panValueFlatWords sourceValue))
+    (hsize : ∀ (context : CompileContext α) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (sourceValue : PanValue α) (targetState : CrepState α)
+      (targetException : α),
+      Shape.shapeSize (panValueShape structs sourceValue) ≤ 32) :
+    ∀ (context : CompileContext α) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (sourceValue : PanValue α) (targetState : CrepState α)
+      (targetException : α),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      panValueCrepStateRel structs context sourceLocals sourceGlobals
+        sourceMemory targetState ∧
+      panValuePcExceptionResultRel structs context exceptionRel exceptionCode
+        globalsLookup sourceGlobals sourceMemory sourceException sourceValue
+        targetState targetException := by
+  intro context structs exceptionRel sourceLocals sourceGlobals sourceMemory
+    sourceException sourceValue targetState targetException hcontrol
+  exact panValuePcRaisedHraiseData_to_exception_result_rel
+    structs context exceptionRel exceptionCode globalsLookup
+    (fun sourceLocals sourceGlobals sourceMemory sourceException sourceValue
+      targetState targetException =>
+      panValuePcRaisedHraiseData_dispatch_of_state_rel exceptionCode globalsLookup
+        hpost hcode hlookup hsize context structs exceptionRel sourceLocals
+        sourceGlobals sourceMemory sourceException sourceValue targetState
+        targetException)
+    sourceLocals sourceGlobals sourceMemory sourceException sourceValue targetState
+    targetException hcontrol
+
+
 theorem panValuePcRaisedHraiseCases_to_exception_result_rel_with_context_code
     [BEq α] [LawfulBEq α]
     (exceptionCode : ExceptionId → Option α)

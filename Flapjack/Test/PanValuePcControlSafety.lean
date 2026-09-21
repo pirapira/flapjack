@@ -1326,6 +1326,7 @@ example
 #check @panValuePcCompileCorrect_compact_with_bounded_expression_state_evidence
 #check @panValuePcCompileCorrect_of_compact_evaluators_and_clocked_word_raise_hraise_data
 #check @panValuePcCompileCorrect_of_compact_evaluators_and_clocked_two_word_raise_hraise_data
+#check @panValuePcCompileCorrectWithContextCode_of_compact_evaluators_and_clocked_raised_control_evidence
 
 /-! The scalar `wordExp` return also satisfies the control-safety obligation,
 via the `SourceWordExp` conversion. -/

@@ -890,4 +890,9 @@ evaluator-evidence obligation. -/
 #check @panValuePcCompileCorrect_compact_ite_source_word_of_state_evidence
 #check @panValuePcCompileCorrect_compact_while_source_word_of_state_evidence
 
+/-! The expression-parametric `Return` wrappers also accept explicit
+    state evidence in plain and context-coded form. -/
+#check @panValuePcCompileCorrect_compact_return_of_state_evidence
+#check @panValuePcCompileCorrect_compact_return_with_context_code_of_state_evidence
+
 end Flapjack.Test.PanValuePcControlSafety

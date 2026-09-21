@@ -52,6 +52,19 @@ private def jumpCmpTestZeroAt (a : Int) : Option (List (Instruction 64)) :=
   some [.andi 31 5 (BitVec.ofNat 64 0), .branchEq 31 0 (BitVec.ofNat 64 8),
     .jal 0 (BitVec.ofNat 64 4088)]
 
+private def jumpCmpNotTestZeroAt (a : Int) : Option (List (Instruction 64)) :=
+  let position : Nat := 100000
+  labCompileAsm (width := 64) ctx 0 [(7, (Int.ofNat position + a).toNat)] position
+    (.jumpCmp .notTest 5 (.imm 0) ⟨0, 7⟩)
+
+#guard jumpCmpNotTestZeroAt 4092 ==
+  some [.andi 31 5 (BitVec.ofNat 64 0),
+    .branchEq 31 0 (BitVec.ofNat 64 4088)]
+
+#guard jumpCmpNotTestZeroAt 4096 ==
+  some [.andi 31 5 (BitVec.ofNat 64 0), .branchNe 31 0 (BitVec.ofNat 64 8),
+    .jal 0 (BitVec.ofNat 64 4088)]
+
 /-! `a = 4092`: the largest offset Cake still encodes short.  `off12` is
     `a - 4`, the distance from the branch. -/
 #guard jumpCmpAt 4092 ==

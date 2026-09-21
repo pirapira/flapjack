@@ -26649,6 +26649,97 @@ theorem panValuePcRaisedBoundedExceptionResultRelWithContextCode
     globalsLookup hlookupCode hrel hsource hvalid hcompile hlength hcompiled hnot
     hfresh hexception hcode hflat hdistinct hsize hlookupGlobals'
 
+/-! Instantiate the bounded result relation at a clocked context.  The
+    evaluator/global lookup and address equalities are transported explicitly;
+    the clocked control relation is the only source of the target state. -/
+theorem panValuePcClockedRaisedExceptionResultRel_of_bounded_evidence
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α)
+    (exceptionCode : ExceptionId → Option α)
+    (hbounded : ∀ (context : CompileContext α) (name : String)
+      (shape : Shape) (names : List Nat),
+      lookupInfo name context.vars = some (shape, names) →
+      ∀ varName ∈ names, varName ≤ context.maxVar)
+    (hevidence : ∀ (context : CompileContext α) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (sourceValue : PanValue α) (targetState : CrepState α)
+      (targetException : α),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      ∃ (state : CrepState α) (expression : Exp α),
+        targetState =
+          { state with globals :=
+              (updateMemoryListAt state.globals 0 context.bytesInWord
+                (panValueFlatWords sourceValue)) } ∧
+        context.bytesInWord = bytesInWord ∧
+        panValueCrepStateRel structs context sourceLocals sourceGlobals
+          sourceMemory state ∧
+        PanValueCrepExpressionStateCorrect expression ∧
+        evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+          baseAddress topAddress bytesInWord expression = some sourceValue ∧
+        (∀ (compiled : List (CrepExp α)),
+          ∀ name ∈ freshNames context compiled.length 1,
+            state.locals name = none) ∧
+        exceptionRel sourceException sourceValue targetException ∧
+        lookupInfo sourceException context.exceptions = some targetException ∧
+        exceptionCode sourceException = some targetException ∧
+        List.Pairwise (fun left right : α => left ≠ right)
+          (storeAddresses (0 : α) context.bytesInWord
+            (panValueFlatWords sourceValue).length) ∧
+        Shape.shapeSize (panValueShape structs sourceValue) ≤ 32 ∧
+        (panValueFlatWords sourceValue).length =
+          Shape.shapeSize (panValueShape structs sourceValue))
+    (clockStructs : StructContext) (clockPcContext : CompileContext α)
+    (clockExceptionRel : ExceptionId → PanValue α → α → Prop)
+    (clockExceptionCode : ExceptionId → Option α)
+    (clockGlobalsLookup : CrepState α → PanValue α → Option (List α))
+    (clockBaseAddress clockTopAddress clockBytesInWord : α)
+    (clockFuel : Nat)
+    (clockLocals clockGlobals : VarName → Option (PanValue α))
+    (clockMemory : α → Option (PanValue α))
+    (clockException : ExceptionId) (clockValue : PanValue α)
+    (clockTargetState : CrepState α) (clockTargetException : α)
+    (hclockControl : panValueCrepControlRel clockStructs clockPcContext
+      clockExceptionRel
+      (.raised clockLocals clockGlobals clockMemory clockException clockValue)
+      (.raised clockTargetState clockTargetException))
+    (hclockLookup : ∀ (targetState : CrepState α) (sourceValue : PanValue α),
+      crepPcFlatGlobalsLookup clockBytesInWord targetState sourceValue =
+        clockGlobalsLookup targetState sourceValue)
+    (hclockBaseAddress : clockBaseAddress = baseAddress)
+    (hclockTopAddress : clockTopAddress = topAddress)
+    (hclockBytesInWord : clockBytesInWord = bytesInWord)
+    (hclockExceptionCode : clockExceptionCode = exceptionCode) :
+    panValuePcExceptionResultRelWithContextCode clockStructs clockPcContext
+      clockExceptionRel clockExceptionCode clockGlobalsLookup
+      clockGlobals clockMemory clockException clockValue
+      clockTargetState clockTargetException := by
+  exact panValuePcRaisedBoundedExceptionResultRelWithContextCode
+    sourceFunctions functions primitive sourceHandler crepPrimitive ffi sharedMem
+    clockBaseAddress clockTopAddress clockBytesInWord clockFuel clockExceptionCode
+    clockGlobalsLookup hbounded (by
+      intro context structs exceptionRel sourceLocals sourceGlobals sourceMemory
+        sourceException sourceValue targetState targetException hcontrol
+      simpa [hclockBaseAddress, hclockTopAddress, hclockBytesInWord,
+        hclockExceptionCode] using
+        (hevidence context structs exceptionRel sourceLocals sourceGlobals
+        sourceMemory sourceException sourceValue targetState targetException
+          hcontrol)) hclockLookup clockPcContext clockStructs clockExceptionRel
+    clockLocals clockGlobals clockMemory clockException clockValue clockTargetState
+    clockTargetException hclockControl
+
 /-! Compose bounded arbitrary-Raise evaluator evidence directly with the
     clocked top-level bridge.  The clocked state, evaluator, exception-result,
     and global lookup premises remain explicit. -/

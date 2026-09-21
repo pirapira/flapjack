@@ -210,6 +210,24 @@ example :
       some [.sub 4 5 6] := by
   decide
 
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.binOp .and 4 5 (.reg 6)))) [] 0]⟩ =
+      some [.and 4 5 6] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.binOp .or 4 5 (.reg 6)))) [] 0]⟩ =
+      some [.or 4 5 6] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.binOp .xor 4 5 (.reg 6)))) [] 0]⟩ =
+      some [.xor 4 5 6] := by
+  decide
+
 /- Cake's `riscv_ast (Inst (Arith (Div ...)))` selects the signed RISC-V
    DIV encoding.  Flapjack's historical constructor is named `divU`, but its
    encoder uses Cake's funct3=4/funct7=1 row; pin that source-shaped Lab

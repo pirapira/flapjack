@@ -45,9 +45,20 @@ def storeConstsBoundaryGuard : Bool :=
   | _ => false
 
 #guard storeConstsBoundaryGuard
+def ffiProgram : WordProg Nat :=
+  .ffi "echo" 0 2 4 6 ([], [])
 
+def ffiBoundaryGuard : Bool :=
+  match (wordFullSsaCcTrans 0 ffiProgram).2.2 with
+  | .seq (.move 1 [])
+      (.seq (.move 0 [])
+        (.seq (.move 1 [(2, 0), (4, 0), (6, 0), (8, 0)])
+          (.seq (.ffi "echo" 2 4 6 8 ([], [])) (.move 0 [])))) => true
+  | _ => false
+
+#guard ffiBoundaryGuard
 def parityGuard : Bool :=
-  raiseBoundaryGuard && callBoundaryGuard && storeConstsBoundaryGuard
+  raiseBoundaryGuard && callBoundaryGuard && storeConstsBoundaryGuard && ffiBoundaryGuard
 
 #guard parityGuard
 #eval parityGuard
@@ -59,7 +70,9 @@ def runChecks : IO Bool := do
       ("full_ssa_cc_trans return-free Call preserves Cake argument ABI",
         callBoundaryGuard),
       ("full_ssa_cc_trans StoreConsts preserves Cake reload moves",
-        storeConstsBoundaryGuard) ]
+        storeConstsBoundaryGuard),
+      ("full_ssa_cc_trans FFI preserves Cake ABI moves",
+        ffiBoundaryGuard) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

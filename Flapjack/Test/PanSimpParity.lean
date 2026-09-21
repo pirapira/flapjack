@@ -220,6 +220,33 @@ theorem clocked_seq_assoc_fragment_budget_matches_cake :
   · simp [seqAssoc, panSimpSeqSkipFuel]
   · simp [panSimpSeqSkipFuel]
 
+/-- The same `seqAssoc` equality at a common fuel computed purely from
+    `progSize`: `progSize pre + 4 * progSize program`, with no separate
+    structural-budget side condition. -/
+theorem clocked_seq_assoc_fragment_progSize_matches_cake :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8
+      (progSize (.skip : Prog Nat) +
+        4 * progSize (.seq (.skip : Prog Nat) (.skip : Prog Nat)))
+      (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1
+      (seqAssoc (.skip : Prog Nat) (.seq (.skip : Prog Nat) (.skip : Prog Nat))) =
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8
+      (progSize (.skip : Prog Nat) +
+        4 * progSize (.seq (.skip : Prog Nat) (.skip : Prog Nat)))
+      (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1
+      (.seq (.skip : Prog Nat) (.seq (.skip : Prog Nat) (.skip : Prog Nat))) := by
+  exact evalPanValueFfiClockProg_seqAssoc_eq_of_seqSkipFragment_progSize
+    evaluatorContext (fun _ _ => none) evaluatorHandler [] [] 0 0 8
+    (.skip : Prog Nat) (.seq (.skip : Prog Nat) (.skip : Prog Nat))
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    none none none
+    PanSimpSeqSkipFragment.skip
+    (PanSimpSeqSkipFragment.seq (.skip : Prog Nat) (.skip : Prog Nat)
+      PanSimpSeqSkipFragment.skip PanSimpSeqSkipFragment.skip)
+
 /-- The same `seqAssoc` equality stated directly on the additive fuel foundation
     `panSimpSkipSeqProg`/`panSimpSkipSeqFuel`, at the common budget
     `panSimpSkipSeqFuel pre + panSimpSkipSeqFuel program + 1`. -/

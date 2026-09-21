@@ -107,6 +107,40 @@ def checkMembers (name : String) (actual expected : List Nat) : IO Bool := do
     IO.println s!"FAIL {name}: expected {repr expected}, got {repr actual}"
     pure false
 
+theorem nodup_take_fixture :
+    (([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).take 3).Nodup :=
+  nodup_take _ 3 (by decide)
+
+theorem nodup_drop_fixture :
+    (([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).drop 3).Nodup :=
+  nodup_drop _ 3 (by decide)
+
+theorem listDisjoint_take_drop_sum_fixture :
+    ListDisjoint (([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).take 2)
+      ((([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).drop (2 + 1)).take 2) :=
+  listDisjoint_take_drop_sum _ 2 1 2 (by decide)
+
+theorem listDisjoint_drop_take_sum_fixture :
+    ListDisjoint ((([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).drop (2 + 1)).take 2)
+      (([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).take 2) :=
+  listDisjoint_drop_take_sum _ 2 1 2 (by decide)
+
+def disjointSumGuard : Bool :=
+  (([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).take 2).all
+    (fun value =>
+      !((([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).drop (2 + 1)).take 2).contains value)
+
+#eval disjointSumGuard
+#guard disjointSumGuard
+
+def checkDisjoint (name : String) (actual : Bool) : IO Bool := do
+  if actual then
+    IO.println s!"PASS {name}"
+    pure true
+  else
+    IO.println s!"FAIL {name}"
+    pure false
+
 def runChecks : IO Bool := do
   let results ← [
     check "pan with_shape empty" (withShape [] [1, 2, 3]) [],
@@ -118,6 +152,7 @@ def runChecks : IO Bool := do
   let allDistinctOk ← checkAllDistinct "pan all_distinct_with_shape"
   let membershipOk ← checkMembers "pan with_shape membership"
     ((withShape oneCombNamed [1, 2, 3, 4])[1]'(by rw [withShape_length]; decide)) [2, 3]
-  pure (results.all id && lengthOk && allDistinctOk && membershipOk)
+  let disjointOk ← checkDisjoint "pan disjoint_take_drop_sum" disjointSumGuard
+  pure (results.all id && lengthOk && allDistinctOk && membershipOk && disjointOk)
 
 end Flapjack.Test.PanWithShapeParity

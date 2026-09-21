@@ -433,6 +433,51 @@ theorem withShape_getElem_eq_take_drop (shapes : List Shape) (values : List α)
           rw [shapeSize_comb_cons]
           rw [← List.drop_drop]
 
+/-- Cake's `DISJOINT (set left) (set right)` predicate, stated directly on
+    lists because `List` membership already expresses the element relation. -/
+def ListDisjoint (left right : List α) : Prop :=
+  ∀ value, value ∈ left → value ∈ right → False
+
+/-! Counterpart of Cake's `all_distinct_take`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:384`). -/
+theorem nodup_take (values : List α) (n : Nat) (h : values.Nodup) :
+    (values.take n).Nodup := h.take
+
+/-! Counterpart of Cake's `all_distinct_drop`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:392`). -/
+theorem nodup_drop (values : List α) (n : Nat) (h : values.Nodup) :
+    (values.drop n).Nodup := h.drop
+
+/-! Counterpart of Cake's `disjoint_take_drop_sum`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:399`): a prefix and a
+    suffix separated by `m` elements of a duplicate-free list cannot share an
+    element. -/
+theorem listDisjoint_take_drop_sum (values : List α) (n m p : Nat)
+    (h : values.Nodup) :
+    ListDisjoint (values.take n) ((values.drop (n + m)).take p) := by
+  intro value hleft hright
+  obtain ⟨i, hi, hix⟩ := List.getElem_of_mem hleft
+  obtain ⟨j, hj, hjx⟩ := List.getElem_of_mem hright
+  rw [List.getElem_take] at hix
+  rw [List.getElem_take] at hjx
+  rw [List.getElem_drop] at hjx
+  have hiLen : i < values.length := by
+    have := hi; rw [List.length_take] at this; omega
+  have hjLen : (n + m) + j < values.length := by
+    have := hj; rw [List.length_take, List.length_drop] at this; omega
+  have hinj : i = (n + m) + j := (List.getElem_inj h).mp (hix.trans hjx.symm)
+  have hiN : i < n := by
+    have := hi; rw [List.length_take] at this; omega
+  omega
+
+/-! Counterpart of Cake's `disjoint_drop_take_sum`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:413`). -/
+theorem listDisjoint_drop_take_sum (values : List α) (n m p : Nat)
+    (h : values.Nodup) :
+    ListDisjoint ((values.drop (n + m)).take p) (values.take n) :=
+  fun value hright hleft =>
+    listDisjoint_take_drop_sum values n m p h value hleft hright
+
 def expLocalVars : Exp α → List VarName
   | .const _ => []
   | .var .local name => [name]

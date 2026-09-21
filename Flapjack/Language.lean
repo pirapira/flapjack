@@ -279,6 +279,16 @@ termination_by program => sizeOf program
 decreasing_by
   all_goals decreasing_trivial
 
+/-- Cake's `exp_ids_nested_seq`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:128`): the exception
+    identifiers of a nested sequence are the concatenation of the statements'
+    identifiers. -/
+theorem expIds_nestedSeq (statements : List (Prog α)) :
+    expIds (nestedSeq statements) = (statements.map expIds).flatten := by
+  induction statements with
+  | nil => simp [nestedSeq, expIds]
+  | cons statement statements ih => simp [nestedSeq, expIds, ih]
+
 /-! Direct source-shaped counterpart of `panLang$fun_ids`: collect the
     statically referenced function names, including call-handler bodies and
     declaration-call bodies. -/
@@ -902,6 +912,25 @@ theorem panMap3_eq_map2_zip (f : α → β → γ → δ) (l1 : List α) (l2 : L
               have h1' : xs.length = zs.length := by simp at h1; omega
               have h2' : ys.length = zs.length := by simp at h2; omega
               simp only [panMap3, panMap2, List.zip_cons_cons, ih xs ys h1' h2']
+
+/-- Cake's `map_map2_fst_lemma`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:118`): the first
+    components of a pointwise pairing are the prefix of the first list cut at
+    the shorter length. -/
+theorem zipWith_pair_fst {α β : Type} (xs : List α) (ys : List β) :
+    (List.zipWith (fun x y => (x, y)) xs ys).map Prod.fst =
+      xs.take (min xs.length ys.length) := by
+  induction xs generalizing ys with
+  | nil => simp
+  | cons x xs ih =>
+      cases ys with
+      | nil => simp
+      | cons y ys =>
+          simp only [List.zipWith_cons_cons, List.map_cons, List.length_cons]
+          rw [ih]
+          have hk : min (xs.length + 1) (ys.length + 1) =
+              min xs.length ys.length + 1 := by omega
+          rw [hk, List.take_succ_cons]
 
 /-! Counterpart of Cake's `all_distinct_with_shape_distinct`
     (`cakeml/pancake/semantics/panPropsScript.sml:357`): two distinct members of

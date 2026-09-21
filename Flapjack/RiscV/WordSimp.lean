@@ -71,22 +71,55 @@ def wordSimpLeftSeqItems : List (WordProg α) → List (WordProg α)
     unchanged: `wordSimpSeqAssoc` is `wordSimpLeftSeq` of these items, and
     for a `Seq` the previous code took `wordSimpLeftSeq` of the same list
     before `wordSimpLeftSeqItems` dropped its leading `Skip`s -- which
-    `wordSimpLeftSeq` drops again on its own. -/
-def wordSimpSeqAssocItems : WordProg α → List (WordProg α)
-  | .seq first second =>
+    `wordSimpLeftSeq` drops again on its own.  Cake applies the same
+    reassociation under `Call` return and exception-handler metadata, so the
+    fuel-driven traversal below descends into those programs too. -/
+def wordSimpProgFuel : WordProg α → Nat
+  | .seq first second => 1 + wordSimpProgFuel first + wordSimpProgFuel second
+  | .ite _ _ _ thenBranch elseBranch =>
+      1 + wordSimpProgFuel thenBranch + wordSimpProgFuel elseBranch
+  | .loop _ body _ => 1 + wordSimpProgFuel body
+  | .mustTerminate body => 1 + wordSimpProgFuel body
+  | .call returns _ _ handler =>
+      1 + (match returns with
+           | some (_, _, returnProgram, _, _) => wordSimpProgFuel returnProgram
+           | none => 0)
+        + (match handler with
+           | some (_, handlerProgram, _, _) => wordSimpProgFuel handlerProgram
+           | none => 0)
+  | _ => 1
+
+def wordSimpSeqAssocItemsFuel : Nat → WordProg α → List (WordProg α)
+  | 0, program => [program]
+  | fuel + 1, .seq first second =>
       wordSimpLeftSeqItems
-        (wordSimpSeqAssocItems first ++ wordSimpSeqAssocItems second)
-  | .ite operator condition right thenBranch elseBranch =>
+        (wordSimpSeqAssocItemsFuel fuel first ++
+          wordSimpSeqAssocItemsFuel fuel second)
+  | fuel + 1, .ite operator condition right thenBranch elseBranch =>
       [.ite operator condition right
-        (wordSimpLeftSeq (wordSimpSeqAssocItems thenBranch))
-        (wordSimpLeftSeq (wordSimpSeqAssocItems elseBranch))]
-  | .loop liveIn body liveOut =>
-      [.loop liveIn (wordSimpLeftSeq (wordSimpSeqAssocItems body)) liveOut]
-  | .mustTerminate body =>
-      [.mustTerminate (wordSimpLeftSeq (wordSimpSeqAssocItems body))]
-  | program => [program]
-termination_by program => sizeOf program
-decreasing_by all_goals decreasing_trivial
+        (wordSimpLeftSeq (wordSimpSeqAssocItemsFuel fuel thenBranch))
+        (wordSimpLeftSeq (wordSimpSeqAssocItemsFuel fuel elseBranch))]
+  | fuel + 1, .call returns target arguments handler =>
+      let returns := returns.map (fun metadata =>
+        let (names, cutsets, returnProgram, firstLabel, secondLabel) := metadata
+        (names, cutsets,
+          wordSimpLeftSeq (wordSimpSeqAssocItemsFuel fuel returnProgram),
+          firstLabel, secondLabel))
+      let handler := handler.map (fun metadata =>
+        let (exception, handlerProgram, firstLabel, secondLabel) := metadata
+        (exception,
+          wordSimpLeftSeq (wordSimpSeqAssocItemsFuel fuel handlerProgram),
+          firstLabel, secondLabel))
+      [.call returns target arguments handler]
+  | fuel + 1, .loop liveIn body liveOut =>
+      [.loop liveIn (wordSimpLeftSeq (wordSimpSeqAssocItemsFuel fuel body)) liveOut]
+  | fuel + 1, .mustTerminate body =>
+      [.mustTerminate (wordSimpLeftSeq (wordSimpSeqAssocItemsFuel fuel body))]
+  | _, program => [program]
+termination_by fuel _ => fuel
+
+def wordSimpSeqAssocItems (program : WordProg α) : List (WordProg α) :=
+  wordSimpSeqAssocItemsFuel (wordSimpProgFuel program + 1) program
 
 def wordSimpSeqAssoc (program : WordProg α) : WordProg α :=
   wordSimpLeftSeq (wordSimpSeqAssocItems program)

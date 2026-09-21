@@ -796,6 +796,27 @@ def globalCompileDecs [BEq String] [Add α] [Mul α]
       (globalCompileDecls collected declarations)
     context := collected }
 
+/-! Counterpart of Cake's `compile_decs_preserve_functions`
+    (`pan_globalsProofScript.sml:2062`): compiling declarations preserves the
+    function-name table. -/
+theorem functions_names_globalCompileDecls [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations : List (Decl α)) :
+    (functions (globalCompileDecls context declarations)).map
+        (fun entry => entry.1) =
+      (functions declarations).map (fun entry => entry.1) := by
+  induction declarations with
+  | nil => simp [globalCompileDecls, functions]
+  | cons declaration declarations ih =>
+      cases declaration <;> simp [globalCompileDecls, functions, ih]
+
+theorem globalCompileDecs_preserve_functions [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α)) :
+    (functions (globalCompileDecs context code).functions).map
+        (fun entry => entry.1) =
+      (functions code).map (fun entry => entry.1) := by
+  simp only [globalCompileDecs]
+  rw [functions_globalDeclsFilter_isFunction, functions_names_globalCompileDecls]
+
 /-! The start-function form of CakeML's `pan_globals$compile_top_def`
     (`pan_globalsScript.sml:236`).  The existing `globalCompileTop` below
     exposes the lower-level context pass; this wrapper models the source

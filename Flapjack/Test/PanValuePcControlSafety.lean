@@ -1046,6 +1046,7 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
     state/observation premises. -/
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_finalFfi
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_raised
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_decCall_raised
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_timeout
 
 /-! More compositional source handler-safety leaves: clock, annotation, local

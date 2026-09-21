@@ -519,4 +519,37 @@ theorem PanValueProgNotBrokeContinued_raise
                   cases h
                   exact ⟨(fun l g m => by simp), (fun l g m => by simp)⟩
 
+/-! Concrete declaration-call handler leaves reuse the generic DecCall safety
+    rule while retaining the exact source evaluator body. -/
+theorem panValueCrepProgramStateControlSafe_decCall_return
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (name : VarName) (shape : Shape) (function : FunName)
+    (arguments : List (Exp α)) (expression : Exp α) :
+    PanValueCrepProgramStateControlSafe
+      (.decCall name shape function arguments (.return expression)) := by
+  exact panValueCrepProgramStateControlSafe_decCall name shape function arguments
+    (.return expression) (fun primitive handler structs functions baseAddress
+      topAddress bytesInWord =>
+      PanValueProgNotBrokeContinued_return primitive handler structs functions
+        baseAddress topAddress bytesInWord expression)
+
+theorem panValueCrepProgramStateControlSafe_decCall_raise
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (name : VarName) (shape : Shape) (function : FunName)
+    (arguments : List (Exp α)) (exception : ExceptionId)
+    (expression : Exp α) :
+    PanValueCrepProgramStateControlSafe
+      (.decCall name shape function arguments (.raise exception expression)) := by
+  exact panValueCrepProgramStateControlSafe_decCall name shape function arguments
+    (.raise exception expression) (fun primitive handler structs functions
+      baseAddress topAddress bytesInWord =>
+      PanValueProgNotBrokeContinued_raise primitive handler structs functions
+        baseAddress topAddress bytesInWord exception expression)
+
 end Flapjack

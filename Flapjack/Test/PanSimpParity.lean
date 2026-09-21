@@ -2666,6 +2666,7 @@ example : PanValueFfiClockNormalAdequateProgFromFloor 3 3 evaluatorContext
 #check @Flapjack.evalPanValueFfiClock_shift_panResultEvents
 #check @Flapjack.callFfi_return_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProg_seq_normal_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiProgSteps_extCall_memoryHandler_ioEvents_prefix
 #check @Flapjack.panValueFfiSharedLoad_ioEvents_prefix
 #check @Flapjack.panValueFfiSharedStore_ioEvents_prefix
 #check @Flapjack.panValueFfiExtCall_ioEvents_prefix

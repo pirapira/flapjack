@@ -3,6 +3,17 @@ import Flapjack.PanObservationalSemantics
 
 namespace Flapjack
 
+def panValueFfiMemoryHandlerPreservesIoEvents
+    (memoryHandler : PanValueMemoryFfiHandler α σ) : Prop :=
+  ∀ (function : FunName) (configuration configurationLength array arrayLength : α)
+    (locals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (nextLocals : VarName → Option (PanValue α))
+    (nextMemory : α → Option (PanValue α)) (nextFfi : FfiState σ),
+    memoryHandler function configuration configurationLength array arrayLength
+      locals memory ffi = some (nextLocals, nextMemory, nextFfi) →
+    ffi.ioEvents <+: nextFfi.ioEvents
+
 theorem evalPanValueFfiClockProg_seq_normal_ioEvents_prefix
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
@@ -45,5 +56,52 @@ theorem evalPanValueFfiClockProg_seq_normal_ioEvents_prefix
       first second outcome (memoryAccess := memoryAccess) (contracts := contracts)
       hfirst hsecond
   · exact hfirstPrefix.trans hsecondPrefix
+
+theorem evalPanValueFfiProgSteps_extCall_memoryHandler_ioEvents_prefix
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel : Nat) (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (function : FunName)
+    (configuration configurationLength array arrayLength : α)
+    (access : Option (PanValueMemoryAccess α))
+    (contracts : Option PanValueCallContracts)
+    (memoryHandler : PanValueMemoryFfiHandler α σ)
+    (nextLocals : VarName → Option (PanValue α))
+    (nextMemory : α → Option (PanValue α)) (nextFfi : FfiState σ)
+    (expressionSteps : Nat)
+    (hvalues : evalPanValueExpsCounted structs locals globals memory
+      baseAddress topAddress bytesInWord
+      [.const configuration, .const configurationLength,
+        .const array, .const arrayLength]
+      (memoryAccess := access) =
+      some ([.word configuration, .word configurationLength,
+        .word array, .word arrayLength], expressionSteps))
+    (hhandler : memoryHandler function configuration configurationLength
+      array arrayLength locals memory ffi =
+      some (nextLocals, nextMemory, nextFfi))
+    (hpreserves : panValueFfiMemoryHandlerPreservesIoEvents memoryHandler) :
+    evalPanValueFfiProgSteps context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi
+      (.extCall function (.const configuration) (.const configurationLength)
+        (.const array) (.const arrayLength))
+      (memoryAccess := access) (contracts := contracts)
+      (memoryHandler := some memoryHandler) =
+      some (.normal nextLocals globals nextMemory nextFfi, expressionSteps + 1) ∧
+      ffi.ioEvents <+: nextFfi.ioEvents := by
+  constructor
+  · exact evalPanValueFfiProgSteps_extCall_memoryHandler context primitive handler
+      structs functions baseAddress topAddress bytesInWord fuel locals globals memory ffi
+      function configuration configurationLength array arrayLength access contracts
+      memoryHandler nextLocals nextMemory nextFfi expressionSteps hvalues hhandler
+  · exact hpreserves function configuration configurationLength array arrayLength
+      locals memory ffi nextLocals nextMemory nextFfi hhandler
 
 end Flapjack

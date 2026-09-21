@@ -831,4 +831,8 @@ evaluator-evidence obligation. -/
    program-control theorem and the same explicit raised-state evidence. -/
 #check @panValuePcCompileCorrect_compact_three_word_raise_of_state_evidence
 
+/- The four-word-record instance extends the same Cake-faithful construction
+   to the final fixed-width record payload. -/
+#check @panValuePcCompileCorrect_compact_four_word_raise_of_state_evidence
+
 end Flapjack.Test.PanValuePcControlSafety

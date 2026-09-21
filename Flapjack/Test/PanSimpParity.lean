@@ -1218,6 +1218,32 @@ example :
     (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
     (.const 0) (.skip : Prog Nat) (fun _ _ _ => ⟨0, by simp [evalPanValueExp], by decide⟩)
 
+/-- A returning declaration call is lower-bounded normal-adequate when the
+    caller supplies the call result and the body is all-clock adequate. -/
+example
+    (hcall : ∀ (clock : Nat), 1 ≤ clock →
+      ∀ (locals globals : VarName → Option (PanValue Nat))
+        (memory : Nat → Option (PanValue Nat)) (ffi : FfiState Unit),
+      ∃ (nextLocals nextGlobals : VarName → Option (PanValue Nat))
+        (nextMemory : Nat → Option (PanValue Nat)) (nextFfi : FfiState Unit)
+        (value : PanValue Nat) (callClock : Nat),
+        evalPanValueFfiClockCall evaluatorContext (fun _ _ => none) evaluatorHandler
+          [] [] 0 0 8 (max 7 (progCallFuel 7 (.skip : Prog Nat))) locals globals memory
+          ffi clock none "f" [] =
+          some (.control (.returned nextLocals nextGlobals nextMemory nextFfi [value]),
+            callClock))
+    (hmatch : ∀ value : PanValue Nat,
+      panShapeMatches (panValueShape [] value) .one = true) :
+    PanValueFfiClockNormalAdequateProgFrom 1 evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 7 none none none
+      (.decCall "x" .one "f" [] (.skip : Prog Nat)) :=
+  PanValueFfiClockNormalAdequateProgFrom_decCall_returned 1 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+    "x" .one "f" [] (.skip : Prog Nat) hcall hmatch
+    (evalPanValueFfiClockProg_normalAdequate_of_normalProg evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+      (.skip : Prog Nat) PanValueFfiClockNormalProg.skip)
+
 /-- The raised `DecCall` outcome also lifts to the declaration's progSize. -/
 example
     (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)

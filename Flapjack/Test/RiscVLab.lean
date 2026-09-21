@@ -327,6 +327,26 @@ example :
       some [.store32Offset 4 5 (0 - BitVec.ofNat 64 7)] := by
   decide
 
+/-! Cake's immediate binary operators use the corresponding I-format
+    instruction, not a rejected lowering. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.arithImm .and 4 5 7) [] 0]⟩ =
+      some [.andi 4 5 (BitVec.ofNat 64 7)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.arithImm .or 4 5 7) [] 0]⟩ =
+      some [.ori 4 5 (BitVec.ofNat 64 7)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.arithImm .xor 4 5 7) [] 0]⟩ =
+      some [.xori 4 5 (BitVec.ofNat 64 7)] := by
+  decide
+
 /-! GH #1093 (bead flapjack-lhj): end-to-end regression for the `labFlatten`
    `ite` cases — a Stack-level conditional compiled all the way to RISC-V
    must execute the then-branch when the condition holds and the

@@ -70,6 +70,9 @@ CONSTS = [
     "9223372036854775807", "9223372036854775808",
 ]
 BINOPS = ["+", "-", "*", "&", "|", "^", "<<", ">>", ">>>"]
+COMPARISONS = ["==", "!=", "<", "<=", ">", ">=", "<+", "<=+", ">+", ">=+"]
+LOGICALS = ["&&", "||"]
+BASE_ATOMS = ["@base", "@top", "@biw"]
 
 FIXED_DECLS = (
     "fun 1 add1(1 a, 1 b) { return a + b; }\n"
@@ -110,12 +113,18 @@ class Generator:
         rng = self.rng
         roll = rng.random()
         if depth > 2 or roll < 0.3:
+            if rng.random() < 0.2:
+                return rng.choice(BASE_ATOMS)
             if self.words and rng.random() < 0.7:
                 return rng.choice(CONSTS + self.words)
             return rng.choice(CONSTS)
-        if roll < 0.55:
+        if roll < 0.48:
             return "(%s %s %s)" % (self.expr(depth + 1), rng.choice(BINOPS), self.expr(depth + 1))
-        if roll < 0.62:
+        if roll < 0.56:
+            return "(%s %s %s)" % (self.expr(depth + 1), rng.choice(COMPARISONS), self.expr(depth + 1))
+        if roll < 0.6:
+            return "(%s %s %s)" % (self.expr(depth + 1), rng.choice(LOGICALS), self.expr(depth + 1))
+        if roll < 0.64:
             return "(%s #>> %s)" % (self.expr(depth + 1), rng.choice(["1", "2", "7"]))
         if roll < 0.7 and self.structs:
             return "%s.%s" % (rng.choice(self.structs), rng.choice(["f1", "f2"]))
@@ -138,6 +147,8 @@ class Generator:
 
     def addr(self, depth=0):
         rng = self.rng
+        if rng.random() < 0.2:
+            return "%s + %s" % (rng.choice(["@base", "@top", "@biw"]), rng.choice(["0", "8", "16", "255"]))
         if self.globals and rng.random() < 0.25:
             return "%s + %s" % (rng.choice(self.globals), rng.choice(["0", "8", "16"]))
         if depth > 2 or rng.random() < 0.5:
@@ -161,23 +172,33 @@ class Generator:
             return p + "st (%s), %s;" % (self.addr(), self.expr())
         if roll < 0.35 and self.words:
             return p + "st8 (%s), %s;" % (self.addr(), self.expr())
-        if roll < 0.4 and self.words:
+        if roll < 0.38:
+            return p + "tick;"
+        if roll < 0.41 and self.words:
+            return p + "!st8 (%s), %s;" % (self.addr(), self.expr())
+        if roll < 0.44 and self.words:
+            return p + "!st32 (%s), %s;" % (self.addr(), self.expr())
+        if roll < 0.47 and self.words:
+            return p + "!ld8 %s, (%s);" % (self.word(), self.addr())
+        if roll < 0.5 and self.words:
+            return p + "!ld32 %s, (%s);" % (self.word(), self.addr())
+        if roll < 0.53 and self.words:
             return p + "!stw (%s), %s;" % (self.addr(), self.expr())
-        if roll < 0.45 and self.words:
+        if roll < 0.56 and self.words:
             return p + "!ldw %s, (%s);" % (self.word(), self.addr())
-        if roll < 0.5:
+        if roll < 0.57:
             return p + "@foo(%s, %s, %s, %s);" % (self.expr(), self.expr(), self.expr(), self.expr())
-        if roll < 0.58:
+        if roll < 0.68:
             body = "\n".join(self.stmt(indent + 2) for _ in range(rng.randint(1, 2)))
             other = "\n".join(self.stmt(indent + 2) for _ in range(rng.randint(1, 2)))
             return p + "if %s {\n%s\n%s} else {\n%s\n%s}" % (self.cond(), body, p, other, p)
-        if roll < 0.64:
+        if roll < 0.78:
             body = "\n".join(self.stmt(indent + 2) for _ in range(rng.randint(1, 2)))
             extra = rng.choice(["", p + "    break;", p + "    continue;"])
             return p + "while (x > 0) {\n%s\n%s\n%s}" % (body, extra, p)
-        if roll < 0.68:
+        if roll < 0.83:
             return p + "throw E %s;" % self.expr()
-        if roll < 0.73 and self.words:
+        if roll < 0.9 and self.words:
             cv = self.word()
             target = self.word()
             inner = "\n".join(self.stmt(indent + 4) for _ in range(rng.randint(1, 2)))

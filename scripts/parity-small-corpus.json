@@ -953,6 +953,12 @@
       "tracked_beads": [
         "flapjack-pxn.8.5.14.21"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/currheap_const_left.pnk",
+      "source_reference": "CurrHeap-left/constant-right witness: `(@base | 7) #>> 1`. Cake's inst_select_exp (word_instScript.sml:246-251) tests is_Lookup_CurrHeap e1 before the e2 = Const w fold, so `| 7` keeps `Const temp 7; OpCurrHeap Or temp temp` instead of folding the constant into an ori (discrepancy #2, committed in coordinator 15a2b6d8).",
+      "cake_sha256": "2cf935883087f0cb33f36d43403dadc4b7196d9312a9e56e73ac52f96779d1f4",
+      "tracked_beads": []
     }
   ]
 }

@@ -5913,6 +5913,29 @@ theorem PanValueFfiClockNormalAdequateProgFromFloor_of_normalProg
       locals globals memory ffi clock ma c mh h,
     hclock⟩
 
+/-- The `pan_simp` transform preserves the normal fragment, so a floor
+    certificate for a normal program transfers to its `panSimpProg` image.
+    This is the `compile` side of the top-level correctness chain. -/
+theorem PanValueFfiClockNormalAdequateProgFromFloor_panSimpProg
+    (lo : Nat)
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (program : Prog α)
+    (h : PanValueFfiClockNormalProg program) :
+    PanValueFfiClockNormalAdequateProgFromFloor lo lo
+      context primitive handler structs functions baseAddress topAddress bytesInWord
+      callBudget ma c mh (panSimpProg program) :=
+  PanValueFfiClockNormalAdequateProgFromFloor_of_normalProg lo context primitive
+    handler structs functions baseAddress topAddress bytesInWord callBudget ma c mh
+    (panSimpProg program) (PanValueFfiClockNormalProg_panSimpProg h)
+
 /-- Raising the required input bound: a certificate valid from `lo` is valid
     from any larger bound `lo'`, since `lo ≤ clock` follows from `lo ≤ lo' ≤ clock`.
     Useful to align the input floor of a continuation with the trivial bound

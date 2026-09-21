@@ -2619,4 +2619,16 @@ example : PanValueFfiClockNormalAdequateProgFromFloor 3 3 evaluatorContext
 
 #check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_of_normalProg
 
+/-- The pan_simp transform of a normal program keeps a floor certificate. -/
+example : PanValueFfiClockNormalAdequateProgFromFloor 3 3 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+    (panSimpProg (.seq (.skip : Prog Nat) (.annot "tag" "text"))) :=
+  PanValueFfiClockNormalAdequateProgFromFloor_panSimpProg 3 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+    (.seq (.skip : Prog Nat) (.annot "tag" "text"))
+    (PanValueFfiClockNormalProg.seq (.skip : Prog Nat) (.annot "tag" "text")
+      PanValueFfiClockNormalProg.skip (PanValueFfiClockNormalProg.annot "tag" "text"))
+
+#check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_panSimpProg
+
 end Flapjack.Test.PanSimpParity

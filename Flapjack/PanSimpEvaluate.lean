@@ -1982,6 +1982,99 @@ theorem evalPanValueFfiClockProg_ite_false_some_progSize
     (progSize thenBranch + progSize elseBranch) locals globals memory ffi clock
     condition thenBranch elseBranch ma c mh wordValue outcome nextClock
     hcondition hzero helse
+/-- Call-aware budget form of `evalPanValueFfiClockProg_ite_true_some`: the
+    selected branch is evaluated at the combined call-aware branch budget
+    `progCallFuel callBudget thenBranch + progCallFuel callBudget elseBranch`. -/
+theorem evalPanValueFfiClockProg_ite_true_some_progCallFuel
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (condition : Exp α) (thenBranch elseBranch : Prog α)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (wordValue : α)
+    (outcome : PanValueFfiClockOutcome α σ) (nextClock : Nat)
+    (hcondition : evalPanValueExp structs locals globals memory baseAddress topAddress
+        bytesInWord condition (memoryAccess := ma) = some (.word wordValue))
+    (hnonzero : (wordValue != 0) = true)
+    (hhnonzero : evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord
+        (progCallFuel callBudget thenBranch + progCallFuel callBudget elseBranch)
+        locals globals memory ffi clock thenBranch
+        (memoryAccess := ma) (contracts := c) (memoryHandler := mh) =
+      some (outcome, nextClock)) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord
+        (progCallFuel callBudget (.ite condition thenBranch elseBranch)) locals globals
+        memory ffi clock (.ite condition thenBranch elseBranch)
+        (memoryAccess := ma) (contracts := c) (memoryHandler := mh) =
+      some (outcome, nextClock) := by
+  have hsize : progCallFuel callBudget (.ite condition thenBranch elseBranch) =
+      (progCallFuel callBudget thenBranch + progCallFuel callBudget elseBranch) + 1 := by
+    simp only [progCallFuel]
+    omega
+  rw [hsize]
+  exact evalPanValueFfiClockProg_ite_true_some context primitive handler structs
+    functions baseAddress topAddress bytesInWord
+    (progCallFuel callBudget thenBranch + progCallFuel callBudget elseBranch)
+    locals globals memory ffi clock condition thenBranch elseBranch ma c mh wordValue
+    outcome nextClock hcondition hnonzero hhnonzero
+
+/-- Call-aware budget form of `evalPanValueFfiClockProg_ite_false_some`: the
+    selected branch is evaluated at the combined call-aware branch budget
+    `progCallFuel callBudget thenBranch + progCallFuel callBudget elseBranch`. -/
+theorem evalPanValueFfiClockProg_ite_false_some_progCallFuel
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (condition : Exp α) (thenBranch elseBranch : Prog α)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (wordValue : α)
+    (outcome : PanValueFfiClockOutcome α σ) (nextClock : Nat)
+    (hcondition : evalPanValueExp structs locals globals memory baseAddress topAddress
+        bytesInWord condition (memoryAccess := ma) = some (.word wordValue))
+    (hzero : (wordValue != 0) = false)
+    (hhzero : evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord
+        (progCallFuel callBudget thenBranch + progCallFuel callBudget elseBranch)
+        locals globals memory ffi clock elseBranch
+        (memoryAccess := ma) (contracts := c) (memoryHandler := mh) =
+      some (outcome, nextClock)) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord
+        (progCallFuel callBudget (.ite condition thenBranch elseBranch)) locals globals
+        memory ffi clock (.ite condition thenBranch elseBranch)
+        (memoryAccess := ma) (contracts := c) (memoryHandler := mh) =
+      some (outcome, nextClock) := by
+  have hsize : progCallFuel callBudget (.ite condition thenBranch elseBranch) =
+      (progCallFuel callBudget thenBranch + progCallFuel callBudget elseBranch) + 1 := by
+    simp only [progCallFuel]
+    omega
+  rw [hsize]
+  exact evalPanValueFfiClockProg_ite_false_some context primitive handler structs
+    functions baseAddress topAddress bytesInWord
+    (progCallFuel callBudget thenBranch + progCallFuel callBudget elseBranch)
+    locals globals memory ffi clock condition thenBranch elseBranch ma c mh wordValue
+    outcome nextClock hcondition hzero hhzero
 
 /-! ## Call and `decCall` success equations
 

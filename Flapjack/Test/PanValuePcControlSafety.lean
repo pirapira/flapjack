@@ -827,9 +827,12 @@ evaluator-evidence obligation. -/
    two-word Cake program-control theorem. -/
 #check @panValuePcCompileCorrect_compact_two_word_raise_of_state_evidence
 
-/- The three-word, four-word, and word-list raise instances compose the same
-   boundary with the corresponding Cake program-control theorems. -/
+/- The three-word-record instance uses the corresponding Cake-shaped
+   program-control theorem and the same explicit raised-state evidence. -/
 #check @panValuePcCompileCorrect_compact_three_word_raise_of_state_evidence
+
+/- The four-word-record instance extends the same Cake-faithful construction
+   to the final fixed-width record payload. -/
 #check @panValuePcCompileCorrect_compact_four_word_raise_of_state_evidence
 #check @panValuePcCompileCorrect_compact_word_list_raise_of_state_evidence
 

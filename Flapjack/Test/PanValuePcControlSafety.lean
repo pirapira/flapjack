@@ -3,6 +3,7 @@ import Flapjack.PanToCrepCorrectnessBridge
 import Flapjack.PanToCrepTailCallCorrectness
 import Flapjack.PanToCrepCallHandlerControlSafety
 import Flapjack.PanToCrepAssignmentControlSafety
+import Flapjack.PanToCrepPrimitiveControlSafety
 import Flapjack.PanToCrepSharedMemoryControlSafety
 import Flapjack.PanToCrepSharedMemoryCorrectness
 import Flapjack.PanToCrepDeclarationControlSafety
@@ -1129,5 +1130,6 @@ example :
 #check @panValuePcCompileCorrect_compact_shMemLoad_source_word
 #check @panValuePcCompileCorrect_compact_shMemStore_source_word
 #check @panValueCrepProgramStateControlSafe_assign
+#check @panValueCrepProgramStateControlSafe_primitive
 
 end Flapjack.Test.PanValuePcControlSafety

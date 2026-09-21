@@ -913,4 +913,235 @@ theorem PanValueProgNotBrokeContinued_storeByte
                   simp [evalPanValueProgWithPrimitiveCallsAndFfi, haddress,
                     hvalue] at h
 
+/-! An external call resolves to a normal result (or fails), so it never exposes a
+    loop label. -/
+theorem PanValueProgNotBrokeContinued_extCall
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (function : FunName) (configuration configurationLength
+      array arrayLength : Exp α) :
+    PanValueProgNotBrokeContinued primitive handler structs functions baseAddress
+      topAddress bytesInWord (.extCall function configuration configurationLength array
+        arrayLength) := by
+  intro fuel locals globals memory result h
+  cases fuel with
+  | zero => simp [evalPanValueProgWithPrimitiveCallsAndFfi] at h
+  | succ fuel =>
+      cases hvalues : evalPanValueExps structs locals globals memory baseAddress
+          topAddress bytesInWord
+          [configuration, configurationLength, array, arrayLength] with
+      | none => simp [evalPanValueProgWithPrimitiveCallsAndFfi, hvalues] at h
+      | some values =>
+          cases values with
+          | nil => simp [evalPanValueProgWithPrimitiveCallsAndFfi, hvalues] at h
+          | cons v1 rest1 =>
+              cases rest1 with
+              | nil => simp [evalPanValueProgWithPrimitiveCallsAndFfi, hvalues] at h
+              | cons v2 rest2 =>
+                  cases rest2 with
+                  | nil => simp [evalPanValueProgWithPrimitiveCallsAndFfi, hvalues] at h
+                  | cons v3 rest3 =>
+                      cases rest3 with
+                      | nil => simp [evalPanValueProgWithPrimitiveCallsAndFfi, hvalues] at h
+                      | cons v4 rest4 =>
+                          cases rest4 with
+                          | cons _ _ =>
+                              simp [evalPanValueProgWithPrimitiveCallsAndFfi, hvalues] at h
+                          | nil =>
+                              simp only [evalPanValueProgWithPrimitiveCallsAndFfi, hvalues,
+                                Option.bind_eq_bind, Option.bind_some] at h
+                              cases v1 with
+                              | word c1 =>
+                                  cases v2 with
+                                  | word c2 =>
+                                      cases v3 with
+                                      | word c3 =>
+                                          cases v4 with
+                                          | word c4 =>
+                                              cases hh : handler function c1 c2 c3 c4
+                                                  locals with
+                                              | none => simp [hh] at h
+                                              | some l' =>
+                                                  simp only [hh, Option.bind_some, Option.pure_def,
+                                                    Option.some.injEq] at h
+                                                  subst h
+                                                  exact ⟨fun l g m => by simp,
+                                                    fun l g m => by simp⟩
+                                          | rStruct f => simp at h
+                                          | nStruct n f => simp at h
+                                      | rStruct f => simp at h
+                                      | nStruct n f => simp at h
+                                  | rStruct f => simp at h
+                                  | nStruct n f => simp at h
+                              | rStruct f => simp at h
+                              | nStruct n f => simp at h
+
+/-! A shared-memory load returns normally (or fails), so it never exposes a loop
+    label. -/
+theorem PanValueProgNotBrokeContinued_shMemLoad
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (size : OpSize) (kind : VarKind)
+    (name : VarName) (address : Exp α) :
+    PanValueProgNotBrokeContinued primitive handler structs functions baseAddress
+      topAddress bytesInWord (.shMemLoad size kind name address) := by
+  intro fuel locals globals memory result h
+  cases fuel with
+  | zero => simp [evalPanValueProgWithPrimitiveCallsAndFfi] at h
+  | succ fuel =>
+      cases haddress : evalPanValueExp structs locals globals memory baseAddress
+          topAddress bytesInWord address with
+      | none => simp [evalPanValueProgWithPrimitiveCallsAndFfi, haddress] at h
+      | some addressResult =>
+          cases addressResult with
+          | word addressValue =>
+              simp only [evalPanValueProgWithPrimitiveCallsAndFfi, haddress,
+                Option.bind_eq_bind, Option.bind_some] at h
+              cases hmem : memory addressValue with
+              | none => simp [hmem] at h
+              | some value =>
+                  simp only [hmem, Option.bind_some] at h
+                  by_cases hvalid : panValueSharedLoadValid structs locals globals kind name
+                      value = true
+                  · cases kind <;>
+                      simp only [hvalid, if_true, Option.pure_def,
+                        Option.some.injEq] at h <;>
+                      subst h <;>
+                      exact ⟨fun l g m => by simp, fun l g m => by simp⟩
+                  · simp [hvalid] at h
+          | rStruct fields => simp [evalPanValueProgWithPrimitiveCallsAndFfi, haddress] at h
+          | nStruct structName fields =>
+              simp [evalPanValueProgWithPrimitiveCallsAndFfi, haddress] at h
+
+/-! A shared-memory store returns normally (or fails), so it never exposes a
+    loop label. -/
+theorem PanValueProgNotBrokeContinued_shMemStore
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (size : OpSize)
+    (address value : Exp α) :
+    PanValueProgNotBrokeContinued primitive handler structs functions baseAddress
+      topAddress bytesInWord (.shMemStore size address value) := by
+  intro fuel locals globals memory result h
+  cases fuel with
+  | zero => simp [evalPanValueProgWithPrimitiveCallsAndFfi] at h
+  | succ fuel =>
+      cases haddress : evalPanValueExp structs locals globals memory baseAddress
+          topAddress bytesInWord address with
+      | none => simp [evalPanValueProgWithPrimitiveCallsAndFfi, haddress] at h
+      | some addressResult =>
+          cases addressResult with
+          | word addressValue =>
+              cases hvalue : evalPanValueExp structs locals globals memory baseAddress
+                  topAddress bytesInWord value with
+              | none => simp [evalPanValueProgWithPrimitiveCallsAndFfi, haddress,
+                  hvalue] at h
+              | some storedValue =>
+                  cases storedValue with
+                  | word valueWord =>
+                      simp only [evalPanValueProgWithPrimitiveCallsAndFfi, haddress,
+                        hvalue, Option.bind_eq_bind, Option.bind_some, Option.pure_def,
+                        Option.some.injEq] at h
+                      subst h
+                      exact ⟨fun l g m => by simp, fun l g m => by simp⟩
+                  | rStruct fields =>
+                      simp [evalPanValueProgWithPrimitiveCallsAndFfi, haddress,
+                        hvalue] at h
+                  | nStruct structName fields =>
+                      simp [evalPanValueProgWithPrimitiveCallsAndFfi, haddress,
+                        hvalue] at h
+          | rStruct fields =>
+              simp [evalPanValueProgWithPrimitiveCallsAndFfi, haddress] at h
+          | nStruct structName fields =>
+              simp [evalPanValueProgWithPrimitiveCallsAndFfi, haddress] at h
+
+/-! A while loop whose body never exposes a loop label is itself safe (the body
+    result is either normal/continued, which recurse, or returned/raised, which
+    propagate; a broke body result is converted to normal).  Proved by induction on
+    the structural fuel. -/
+theorem PanValueProgNotBrokeContinued_while
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (condition : Exp α) (body : Prog α)
+    (hbody : PanValueProgNotBrokeContinued primitive handler structs functions
+      baseAddress topAddress bytesInWord body) :
+    PanValueProgNotBrokeContinued primitive handler structs functions
+      baseAddress topAddress bytesInWord (.while condition body) := by
+  intro fuel
+  induction fuel with
+  | zero =>
+      intro locals globals memory result h
+      simp [evalPanValueProgWithPrimitiveCallsAndFfi] at h
+  | succ fuel ih =>
+      intro locals globals memory result h
+      cases hcond : evalPanValueExp structs locals globals memory baseAddress
+          topAddress bytesInWord condition with
+      | none => simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcond] at h
+      | some conditionResult =>
+          cases conditionResult with
+          | word conditionValue =>
+              by_cases hz : (conditionValue == 0) = true
+              · simp only [evalPanValueProgWithPrimitiveCallsAndFfi, hcond,
+                  Option.bind_eq_bind, Option.bind_some, hz, if_true, Option.pure_def,
+                  Option.some.injEq] at h
+                subst h
+                exact ⟨fun l g m => by simp, fun l g m => by simp⟩
+              · cases hbodyEval : evalPanValueProgWithPrimitiveCallsAndFfi primitive
+                    handler structs functions baseAddress topAddress bytesInWord fuel
+                    locals globals memory body with
+                | none =>
+                    simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcond, hz,
+                      hbodyEval] at h
+                | some bodyResult =>
+                    have hbsafe := hbody fuel locals globals memory bodyResult hbodyEval
+                    cases bodyResult with
+                    | normal bl bgl bm =>
+                        simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcond, hz,
+                          hbodyEval] at h
+                        exact ih bl bgl bm result h
+                    | continued bl bgl bm =>
+                        simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcond, hz,
+                          hbodyEval] at h
+                        exact ih bl bgl bm result h
+                    | broke bl bgl bm =>
+                        simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcond, hz,
+                          hbodyEval] at h
+                        subst h
+                        exact ⟨fun l g m => by simp, fun l g m => by simp⟩
+                    | returned bl bgl bm bv =>
+                        simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcond, hz,
+                          hbodyEval] at h
+                        subst h
+                        exact hbsafe
+                    | raised bl bgl bm bex bv =>
+                        simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcond, hz,
+                          hbodyEval] at h
+                        subst h
+                        exact hbsafe
+          | rStruct fields =>
+              simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcond] at h
+          | nStruct name fields =>
+              simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcond] at h
+
 end Flapjack

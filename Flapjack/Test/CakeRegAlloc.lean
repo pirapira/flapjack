@@ -558,6 +558,20 @@ def coalesceWorklistSuccessGuard : Bool :=
 
 #guard coalesceWorklistSuccessGuard
 
+/-- Cake's coalesce_parent follows a non-fixed parent chain and compresses
+   the starting node to the fixed ancestor (reg_allocScript.sml:589-612).
+   This is distinct from the worklist coalesce guard above: it checks the
+   recursive ancestor walk and its in-place parent update directly. -/
+def coalesceParentCompressionGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 5 with
+      nodeTag := CakeNodeMap.ofNatInfoMap 5 [(2, .fixed 1)]
+      coalesced := CakeNodeMap.ofNatInfoMap 5 [(4, 3), (3, 2)] }
+  let (root, out) := cakeCoalesceParent 4 state
+  root == 2 && (out.coalesced.get 4).getD 4 == 2
+
+#guard coalesceParentCompressionGuard
+
 /- Cake's `do_freeze` (`reg_allocScript.sml:749-764`) decrements the frozen
    node's neighbours, pushes it, removes it from `freezeWl`, then unspills a
    spill node that has become low degree into the simplify worklist. -/
@@ -900,6 +914,7 @@ def parityGuard : Bool :=
     && deadProgramPriorityGuard && deadTailCallLiveGuard && deadAllocLiveGuard
     && deadInstallLiveGuard && deadFfiLiveGuard && deadStoreConstsLiveGuard
     && cakeBijSetPatriciaGuard
+    && coalesceParentCompressionGuard
     && sortMovesTailSplitGuard
 
 /- The aggregate guard is intentionally disabled while the allocator port is
@@ -934,7 +949,7 @@ def runChecks : IO Bool := do
     deadFfiLiveGuard, deadStoreConstsLiveGuard, stExMinCostOrderGuard,
     stExMaxDegOrderGuard, respillWorklistGuard,
     respillBelowThresholdGuard, simplifyBatchGuard, decDegreeOutOfDimGuard,
-    coalesceWorklistSuccessGuard]
+    coalesceWorklistSuccessGuard, coalesceParentCompressionGuard]
   let names := [
     "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",

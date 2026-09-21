@@ -945,6 +945,14 @@
       "source_reference": "CurrHeap zero-sub witness: `@base - 0` reaches the same materialised-constant register add, so Cake keeps `li a0,0; add a0,a0,s10` instead of eliding the computation (GH #1128, flapjack-qxa).",
       "cake_sha256": "b0c0977bc4e3f55dba8183a6df675d6e527fcf13f0aa49fce55240c25431a9cb",
       "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/nested_currheap_xor.pnk",
+      "source_reference": "Minimized f00054 nested-expression witness: Cake selects the constant in `1000 ^ @base` into the fresh temporary and emits `OpCurrHeap Xor` even when the operation is nested inside a subtraction; the selector must not lower it as `Get CurrHeap` plus XORI.",
+      "cake_sha256": "f579626d1b36430b49a1acc5f20f18d3c1749c8443a9f868430efd22d16884ca",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.21"
+      ]
     }
   ]
 }

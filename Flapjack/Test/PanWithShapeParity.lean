@@ -133,6 +133,28 @@ def disjointSumGuard : Bool :=
 #eval disjointSumGuard
 #guard disjointSumGuard
 
+theorem listDisjoint_drop_take_drop_take_fixture :
+    ListDisjoint ((([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).drop 2).take 1)
+      ((([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).drop (2 + 2)).take 1) :=
+  listDisjoint_drop_take_drop_take _ 2 1 2 1 (by decide) (by decide)
+
+theorem listDisjoint_withShape_getElem_fixture :
+    ListDisjoint
+      ((withShape oneCombNamed [1, 2, 3, 4])[0]'(by rw [withShape_length]; decide))
+      ((withShape oneCombNamed [1, 2, 3, 4])[2]'(by rw [withShape_length]; decide)) :=
+  listDisjoint_withShape_getElem oneCombNamed [1, 2, 3, 4] 0 2
+    (by decide) (by decide) (by decide) (by decide)
+    (by simp [oneCombNamed, Shape.shapeSize])
+
+def withShapeDisjointGuard : Bool :=
+  ((withShape oneCombNamed [1, 2, 3, 4])[0]'(by rw [withShape_length]; decide)).all
+    (fun value =>
+      !((withShape oneCombNamed [1, 2, 3, 4])[2]'(by rw [withShape_length]; decide)).contains
+        value)
+
+#eval withShapeDisjointGuard
+#guard withShapeDisjointGuard
+
 def checkDisjoint (name : String) (actual : Bool) : IO Bool := do
   if actual then
     IO.println s!"PASS {name}"
@@ -153,6 +175,9 @@ def runChecks : IO Bool := do
   let membershipOk ← checkMembers "pan with_shape membership"
     ((withShape oneCombNamed [1, 2, 3, 4])[1]'(by rw [withShape_length]; decide)) [2, 3]
   let disjointOk ← checkDisjoint "pan disjoint_take_drop_sum" disjointSumGuard
-  pure (results.all id && lengthOk && allDistinctOk && membershipOk && disjointOk)
+  let shapeDisjointOk ←
+    checkDisjoint "pan all_distinct_disjoint_with_shape" withShapeDisjointGuard
+  pure (results.all id && lengthOk && allDistinctOk && membershipOk && disjointOk &&
+    shapeDisjointOk)
 
 end Flapjack.Test.PanWithShapeParity

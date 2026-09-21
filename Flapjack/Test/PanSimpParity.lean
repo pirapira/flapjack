@@ -2590,4 +2590,18 @@ example : PanValueFfiClockNormalAdequateProgFromFloor 1 0 evaluatorContext
         intro locals globals memory ffi
         exact ⟨locals, globals, memory, ffi, 1, by simp [evalPanValueFfiProgSteps]⟩)
 
+/-! The floor certificate at floor = lo projects back to the plain
+    lower-bounded adequacy predicate. -/
+example : PanValueFfiClockNormalAdequateProgFrom 0 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+    (.skip : Prog Nat) :=
+  PanValueFfiClockNormalAdequateProgFrom_of_fromFloor 0 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none (.skip : Prog Nat)
+    (PanValueFfiClockNormalAdequateProgFromFloor_leaf 0 evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+      (.skip : Prog Nat) PanValueFfiLeafProg.skip
+      (by
+        intro locals globals memory ffi
+        exact ⟨locals, globals, memory, ffi, 1, by simp [evalPanValueFfiProgSteps]⟩))
+
 end Flapjack.Test.PanSimpParity

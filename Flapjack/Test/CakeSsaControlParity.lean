@@ -46,6 +46,21 @@ def storeConstsBoundaryGuard : Bool :=
 
 #guard storeConstsBoundaryGuard
 
+/- Cake preserves the StoreConsts write-set payload while still remapping the
+   four fixed operand carriers and refreshing their SSA names. -/
+def storeConstsCutsetProgram : WordProg Nat :=
+  .storeConsts 1 2 3 4 [(true, 7)]
+
+def storeConstsCutsetBoundaryGuard : Bool :=
+  match (wordFullSsaCcTrans 2 storeConstsCutsetProgram).2.2 with
+  | .seq (.move 1 [(9, 0), (13, 2)])
+      (.seq (.move 1 [(4, 0), (6, 0)])
+        (.seq (.storeConsts 0 2 4 6 [(true, 7)])
+          (.move 1 [(21, 4), (17, 6)]))) => true
+  | _ => false
+
+#guard storeConstsCutsetBoundaryGuard
+
 def longDivProgram : WordProg Nat :=
   .inst (.arith (.longDiv 1 2 3 4 5))
 
@@ -204,6 +219,7 @@ def ffiCutsetBoundaryGuard : Bool :=
 
 def parityGuard : Bool :=
   raiseBoundaryGuard && callBoundaryGuard && storeConstsBoundaryGuard &&
+    storeConstsCutsetBoundaryGuard &&
     longDivBoundaryGuard && longMulBoundaryGuard && shiftBoundaryGuard &&
     addCarryBoundaryGuard && constBoundaryGuard && binOpBoundaryGuard &&
     divBoundaryGuard && codeBufferWriteGuard && dataBufferWriteGuard &&
@@ -221,6 +237,8 @@ def runChecks : IO Bool := do
         callBoundaryGuard),
       ("full_ssa_cc_trans StoreConsts preserves Cake reload moves",
         storeConstsBoundaryGuard),
+      ("full_ssa_cc_trans StoreConsts preserves Cake write-set payload",
+        storeConstsCutsetBoundaryGuard),
       ("full_ssa_cc_trans LongDiv preserves Cake fixed-register ABI",
         longDivBoundaryGuard),
       ("full_ssa_cc_trans LongMul preserves Cake fixed-register ABI",

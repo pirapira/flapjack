@@ -157,4 +157,15 @@ example :
 example : 1 ≤ progSize (.while (.const 1) (.seq (.tick : Prog Nat) (.tick : Prog Nat))) :=
   progSize_pos _
 
+/-- The call-aware budget reserves a uniform callee allowance at a `Call`. -/
+example :
+    progCallFuel 5 (.call none "f" ([] : List (Exp Nat)) : Prog Nat) = 1 + 5 := by
+  simp [progCallFuel]
+
+/-- The call-aware budget dominates the plain structural size on a calling program. -/
+example :
+    progSize (.decCall "x" .one "f" [] (.tick : Prog Nat) : Prog Nat) ≤
+      progCallFuel 5 (.decCall "x" .one "f" [] (.tick : Prog Nat) : Prog Nat) :=
+  progSize_le_progCallFuel 5 _
+
 end Flapjack

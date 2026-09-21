@@ -19,3 +19,6 @@
 .difffuzz-work/
 difffuzz-findings/
 __pycache__/
+
+# Regenerable CakeML/HOL declaration and theory-dependency index
+.hol-index/

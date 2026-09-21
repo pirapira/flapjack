@@ -2554,6 +2554,7 @@ example : PanValueFfiClockNormalAdequateProgFromFloor 0 0 evaluatorContext
 #check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_of_from
 #check @Flapjack.PanValueFfiClockNormalAdequateProgFrom_of_fromFloor
 #check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_while_zero
+#check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_decCall_returned
 
 /-! Clock-free annotations also keep their floor. -/
 example : PanValueFfiClockNormalAdequateProgFromFloor 0 0 evaluatorContext

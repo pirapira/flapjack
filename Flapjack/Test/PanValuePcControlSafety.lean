@@ -11,6 +11,7 @@ import Flapjack.PanToCrepDeclarationControlSafety
 import Flapjack.PanToCrepAssignmentCorrectness
 import Flapjack.PanToCrepSequenceCorrectness
 import Flapjack.PanToCrepLeafCorrectness
+import Flapjack.PanToCrepAnnotCorrectness
 import Flapjack.PanValueFfiClockCorrectness
 import Flapjack.CrepeNestedDecsStability
 import Flapjack.CrepeRaisedCallInversion
@@ -1132,6 +1133,8 @@ example :
 #check @panValuePcCompileCorrect_compact_assign_local_source_word_of_state_evidence
 #check @panValuePcCompileCorrect_compact_seq_of_state_evidence
 #check @panValuePcCompileCorrect_compact_tick
+#check @panValuePcCompileCorrect_compact_annot
+#check @panValuePcCompileCorrectWithContextCode_compact_with_generalized_flat_global_evaluator_evidence_and_clocked_control
 #check @panValuePcCompileCorrect_compact_shMemLoad_source_word
 #check @panValuePcCompileCorrect_compact_shMemStore_source_word
 #check @panValueCrepProgramStateControlSafe_assign

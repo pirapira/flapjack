@@ -2897,6 +2897,38 @@ example
     (fun _ => none) directClockFfi (.raise "E" sourceExpression)
     (.raised targetState 9) "E" sourceValue hcontext
 
+example
+    (hexpression : PanValueCrepExpressionStateCorrect nestedSourceExpression)
+    (hnot : ∀ (compiled : List (CrepExp Nat)),
+      ∀ name ∈ freshNames context compiled.length 1,
+        ∀ value ∈ compiled, name ∉ crepExpVars value)
+    (hfresh : ∀ (compiled : List (CrepExp Nat)),
+      ∀ name ∈ freshNames context compiled.length 1,
+        state.locals name = none) :
+    ∃ (compiled : List (CrepExp Nat)) (shape : Shape) (values : List Nat),
+      panValuePayloadWithinLimit [] nestedSourceValue = true ∧
+      compileExp context nestedSourceExpression = (compiled, shape) ∧
+      compiled.length = Shape.shapeSize shape ∧
+      evalCrepFullExpsState state 0 0 compiled = some values ∧
+      (∀ name ∈ freshNames context compiled.length 1,
+        ∀ value ∈ compiled, name ∉ crepExpVars value) ∧
+      (∀ name ∈ freshNames context compiled.length 1,
+        state.locals name = none) := by
+  apply panValueCrepExpressionStateEvidence_of_correct
+    nestedSourceExpression hexpression context [] (fun _ => none)
+    (fun _ => none) (fun _ => none) state 0 0 8 nestedSourceValue
+  · refine ⟨rfl, ?_, rfl⟩
+    exact panValueCrepLocalsRel_empty [] context state.locals
+  · simp [nestedSourceExpression, nestedSourceValue, evalPanValueExp,
+      evalPanValueExp.evalPanValueExps]
+  · exact hnot
+  · exact hfresh
+  · simp [nestedSourceValue, panValueFlatWords, panValueFlatWordsFuel,
+      panValueFlatValueFuel,
+      panValueFlatWordsFuel.panValueFlatWordsListFuel,
+      panValueFlatValueFuel.panValueFlatValueListFuel,
+      panValueShape, Shape.shapeSize]
+
 def runChecks : IO Bool := do
   IO.println "PASS generic three-word Raise evaluator relation"
   IO.println "PASS generic raised semantic/global lookup lift"
@@ -2908,6 +2940,7 @@ def runChecks : IO Bool := do
   IO.println "PASS declaration restoration preserves control-label safety"
   IO.println "PASS DecCall body control safety survives caller restoration"
   IO.println "PASS generic clocked Raise projects to pc_compile_correct"
+  IO.println "PASS expression-state contract packages generic Raise evidence"
   IO.println "PASS nested raised semantic/global lookup lift"
   pure true
 

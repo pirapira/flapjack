@@ -212,6 +212,14 @@ example :
       some [.divU 4 5 6] := by
   decide
 
+/- Cake's direct RISC-V target rejects `LongDiv`; the Pancake runtime helper
+   is inserted earlier by the Stack pipeline, so Lab must not silently emit a
+   target instruction for an unexpanded LongDiv node. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.longDiv 4 5 6 7 8))) [] 0]⟩ = none := by
+  decide
+
 example :
     compileLabSection (width := 64) { services := [] }
       ⟨3, [.asm (.word (.arith (.addCarry 4 5 6 7 8))) [] 0]⟩ =

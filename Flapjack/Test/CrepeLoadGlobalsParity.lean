@@ -60,6 +60,13 @@ theorem map_var_crepExpVars_eq_fixture :
       [2, 5, 9] :=
   map_var_crepExpVars_eq (α := Nat) [2, 5, 9]
 
+/-- Cake `crepProps$var_exp_load_shape` on the parity fixture. -/
+theorem crepExpVars_of_mem_loadShape_fixture :
+    crepExpVars (α := Nat) (.load (.op .add [.var 5, .const 3])) =
+      crepExpVars (α := Nat) (.var 5) :=
+  crepExpVars_of_mem_loadShape (α := Nat) 3 1 1 (.var 5)
+    (.load (.op .add [.var 5, .const 3])) (by simp [loadShape])
+
 def runChecks : IO Bool := do
   let results := [
     isEmpty (loadGlobals 3 1 0),

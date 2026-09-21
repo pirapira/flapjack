@@ -387,6 +387,21 @@ example
       evaluatorHandler [] [] 0 0 8 0 (updatePanValueMap (fun _ => none) "x" (.word 5))
       (fun _ => none) (fun _ => none) evaluatorFfi 1 "tag" "text" none none none)
 
+/-- The leaf success equation instantiated on `Skip`, whose single-step
+    evaluation is `some (.normal ...)`. -/
+theorem clocked_leaf_skip_matches_steps :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 2 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1 (.skip : Prog Nat) =
+    some (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi), 1) := by
+  apply evalPanValueFfiClockProg_leaf_some evaluatorContext (fun _ _ => none)
+    evaluatorHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+    (fun _ => none) evaluatorFfi 1 (.skip : Prog Nat) none none none
+    PanValueFfiLeafProg.skip
+    (.normal (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi) 1
+  simp [evalPanValueFfiProgSteps]
+
 theorem clocked_seq_normal_exposes_components :
     ∃ (middleLocals middleGlobals : VarName → Option (PanValue Nat))
       (middleMemory : Nat → Option (PanValue Nat)) (middleFfi : FfiState Unit)

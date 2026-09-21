@@ -111,4 +111,33 @@ theorem evalPanValueExps_update_local_not_mem
       simp [evalPanValueExps, evalPanValueExp.evalPanValueExps,
         hexpression, hexpressions']
 
+theorem evalPanValueFields_update_local_not_mem
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    [BEq String] [LawfulBEq String]
+    (structs : StructContext)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α))
+    (baseAddress topAddress bytesInWord : α)
+    (fields : List (FieldName × Exp α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (name : VarName) (replacement : PanValue α)
+    (hname : ∀ field ∈ fields, name ∉ expLocalVars field.2) :
+    evalPanValueExp.evalPanValueFields structs
+        (updatePanValueMap locals name replacement) globals memory
+        baseAddress topAddress bytesInWord fields memoryAccess =
+      evalPanValueExp.evalPanValueFields structs locals globals memory
+        baseAddress topAddress bytesInWord fields memoryAccess := by
+  induction fields with
+  | nil => simp [evalPanValueExp.evalPanValueFields]
+  | cons field fields ih =>
+      rcases field with ⟨fieldName, expression⟩
+      have hexpression := evalPanValueExp_update_local_not_mem structs locals
+        globals memory baseAddress topAddress bytesInWord expression memoryAccess
+        name replacement (hname (fieldName, expression) (by simp))
+      have hfields := ih (fun field hmem => hname field (by simp [hmem]))
+      simp only [evalPanValueExp.evalPanValueFields]
+      rw [hexpression, hfields]
+
 end Flapjack

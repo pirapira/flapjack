@@ -276,6 +276,25 @@ def wordInstSelectAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α
   | .load address =>
       let (prelude, selectedAddress) := wordInstSelectAtom temp address
       wordInstSelectLoadTail temp prelude selectedAddress
+  | .op operator [.lookup .currHeap, .const value] =>
+      /- Cake's `inst_select_exp` (`word_instScript.sml:246-251`) tests
+         `is_Lookup_CurrHeap e1 ∧ op ≠ Sub` before the `e2 = Const w`
+         immediate fold, so a CurrHeap left operand keeps Cake's
+         `Const temp w; OpCurrHeap op temp temp` shape instead of folding
+         the constant into an immediate.  `Sub` is excluded by that test and
+         falls through to the ordinary immediate path. -/
+      if operator = .sub then
+        let prelude : WordProg α := .get temp .currHeap
+        let materialized : WordProg α × WordExp α :=
+          (wordDeadSelectSeq (wordDeadSelectSeq prelude (.inst (.const (temp + 1) value)))
+            (.inst (.arith (.binOp operator temp temp (.reg (temp + 1))))), .var temp)
+        if WordInstSelectImmediate.validBinOpImmediate operator value then
+          (wordDeadSelectSeq prelude
+            (.inst (.arith (.binOp operator temp temp (.imm value)))), .var temp)
+        else materialized
+      else
+        (wordDeadSelectSeq (.inst (.const temp value))
+          (.opCurrHeap operator temp temp), .var temp)
   | .op operator [left, .const value] =>
       /- `inst_select_exp c tar temp (Op op [e1; e2])` with `e2 = Const w`
          (`word_instScript.sml:252-275`) tests `c.valid_imm (INL op) w` for

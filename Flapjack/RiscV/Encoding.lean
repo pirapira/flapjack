@@ -165,7 +165,9 @@ def encodeInstruction [NeZero width] : Instruction width → BitVec 32
   | .storeWordOffset source address offset =>
       encodeS (width := width) 3 source address offset
   | .loadByteOffset destination address offset =>
-      encodeI 0x03 0 destination address offset
+      /- Cake's RISC-V `lb` encoding uses funct3 = 4, including for
+         base-plus-offset loads selected by `word_instScript.sml`. -/
+      encodeI 0x03 4 destination address offset
   | .storeByteOffset source address offset =>
       encodeS (width := width) 0 source address offset
   | .loadHalfOffset destination address offset =>

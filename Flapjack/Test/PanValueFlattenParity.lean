@@ -1,0 +1,49 @@
+import Flapjack.PanValueFlatten
+
+/-!
+# Original-domain parity for HOL `panSem$flatten`
+
+Fixtures mirror the original Pancake helpers
+`length_flatten_eq_size_of_shape` (`cakeml/pancake/semantics/panPropsScript.sml:171`)
+and `flatten_nil_no_size`
+(`cakeml/pancake/proofs/pan_to_crepProofScript.sml:3001`).
+-/
+
+namespace Flapjack.Test.PanValueFlattenParity
+
+open Flapjack
+
+def wordValue : PanValue Nat := .word 5
+
+def recordValue : PanValue Nat := .rStruct [.word 1, .word 2, .word 3]
+
+def nestedValue : PanValue Nat := .rStruct [.rStruct [.word 1, .word 2], .word 3]
+
+theorem panValueFlatten_word_fixture : panValueFlatten wordValue = [5] := by
+  simp [wordValue, panValueFlatten]
+
+theorem panValueFlatten_record_fixture : panValueFlatten recordValue = [1, 2, 3] := by
+  simp [recordValue, panValueFlatten, panValueFlattenValues]
+
+theorem panValueFlatten_nested_fixture : panValueFlatten nestedValue = [1, 2, 3] := by
+  simp [nestedValue, panValueFlatten, panValueFlattenValues]
+
+theorem nestedValue_wf :
+    isWfShape ([] : StructContext) (panValueShape ([] : StructContext) nestedValue) = true := by
+  simp [nestedValue, panValueShape, isWfShape, isWfShape.isWfShapeList]
+
+theorem panValueFlatten_length_eq_shapeSize_fixture :
+    (panValueFlatten nestedValue).length =
+      Shape.shapeSize (panValueShape ([] : StructContext) nestedValue) :=
+  panValueFlatten_length_eq_shapeSize nestedValue nestedValue_wf
+
+theorem panValueFlatten_eq_nil_iff_shapeSize_eq_zero_fixture :
+    panValueFlatten nestedValue = [] ↔
+      Shape.shapeSize (panValueShape ([] : StructContext) nestedValue) = 0 :=
+  panValueFlatten_eq_nil_iff_shapeSize_eq_zero nestedValue nestedValue_wf
+
+#check @panValueFlatten
+#check @panValueFlatten_length_eq_shapeSize
+#check @panValueFlatten_eq_nil_iff_shapeSize_eq_zero
+
+end Flapjack.Test.PanValueFlattenParity

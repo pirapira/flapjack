@@ -1,4 +1,5 @@
 import Flapjack.PanStructs
+import Flapjack.PanSimp
 
 /-!
 The core of Pancake's `pan_globals` pass.
@@ -594,6 +595,25 @@ theorem exceptionEntries_filter_name (declarations : List (Decl α)) :
 theorem exceptionEntries_filter_global (declarations : List (Decl α)) :
     exceptionEntries (globalDeclsFilter globalDeclIsGlobal declarations) = [] :=
   exceptionEntries_globalDeclsFilter_of_false (fun _ _ => rfl) declarations
+
+/-! Counterpart of Cake's `functions_filter_nil`
+    (`pan_globalsProofScript.sml:2967`): filtering out function declarations
+    leaves no function entries in the compiled function table. -/
+theorem functions_globalDeclsFilter_not_function (declarations : List (Decl α)) :
+    functions
+      (globalDeclsFilter
+        (fun declaration => !globalDeclIsFunction declaration) declarations) = [] := by
+  induction declarations with
+  | nil => simp [globalDeclsFilter, functions]
+  | cons declaration declarations ih =>
+      simp only [globalDeclsFilter]
+      by_cases hpred : (!globalDeclIsFunction declaration) = true
+      · rw [if_pos hpred]
+        cases declaration <;> simp [globalDeclIsFunction] at hpred
+        all_goals simp [functions]
+        all_goals exact ih
+      · rw [if_neg hpred]
+        exact ih
 
 /-! Counterpart of Cake's `not_is_function`
     (`pan_globalsProofScript.sml:2527`): name, value, and exception

@@ -2482,6 +2482,26 @@ def runChecks : IO Bool := do
   IO.println "PASS pan_simp el_compile_prog_el_prog_eq Cake compiled-table entry provenance"
   pure parityGuard
 
+/-! A nonzero-condition `While` whose body breaks exits normally, certified by the
+fuel-indexed exit certificate. -/
+example : PanValueFfiClockNormalAdequateProgFrom 1 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+    (.while (.const 5) (.break : Prog Nat)) :=
+  PanValueFfiClockNormalAdequateProgFrom_while 1 evaluatorContext (fun _ _ => none)
+    evaluatorHandler [] [] 0 0 8 7 none none none (.const 5) (.break : Prog Nat)
+    (fun clock hclock locals globals memory ffi => by
+      have hclockNe : (clock == 0) = false := by
+        cases hb : (clock == 0) with
+        | false => rfl
+        | true =>
+            rw [beq_iff_eq] at hb
+            omega
+      simp only [progCallFuel, PanValueFfiClockWhileExitsNormally]
+      exact Or.inr (Or.inr ⟨5, by simp [evalPanValueExp], by decide, hclockNe,
+        locals, globals, memory, ffi, decPanClock clock, by
+          simp [evalPanValueFfiClockProg, evalPanValueFfiClockLeaf,
+            evalPanValueFfiProgSteps]⟩))
+
 /-! The fuel-indexed while-exit certificate underpinning the nonzero-condition
 `While` adequacy constructor. -/
 #check @Flapjack.PanValueFfiClockWhileExitsNormally

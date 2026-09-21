@@ -282,4 +282,20 @@ def renameFilterGuard : Bool :=
 #eval renameFilterGuard
 #guard renameFilterGuard
 
+/-! Counterparts of Cake's `fperm_name_cancel`/`fperm_name_cong`
+    (`pan_globalsProofScript.sml:1622,1629`). -/
+example : True := by
+  have h := globalRenameFunctionName_cancel "main" "entry" "main"
+  have h2 := globalRenameFunctionName_cong "main" "entry" "foo" "foo"
+  trivial
+
+def renameNameGuard : Bool :=
+  (globalRenameFunctionName "main" "entry"
+      (globalRenameFunctionName "main" "entry" "main") == "main") &&
+  (globalRenameFunctionName "main" "entry" "other" == "other") &&
+  (globalRenameFunctionName "main" "entry" "entry" == "main")
+
+#eval renameNameGuard
+#guard renameNameGuard
+
 end Flapjack.Test.PanGlobalsDecShapesParity

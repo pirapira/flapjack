@@ -1015,9 +1015,11 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
     clock crosses the enclosing program boundary as a `timeout` outcome. -/
 #check @panValuePcTimeoutResultRel_of_clocked_call
 #check @panValuePcCompileCorrectWithContextCode_of_compact_and_caught_call
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_broke
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_raised
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_timeout
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_returned
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_returned_finalFfi
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_returned_value
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_extCall_finalFfi
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_extCall_finalFfi_state
@@ -1098,5 +1100,10 @@ example :
       cases hinfoEq
       exact PanValueProgNotBrokeContinued_skip primitive sourceHandler structs
         sourceFunctions baseAddress topAddress bytesInWord)
+
+/-! The Crep-side control-safety predicate cannot be exchanged for the source
+    handler-safety predicate: `.break` is control-safe on both sides but still
+    yields a `broke` source result. -/
+#check @not_panValueProgNotBrokeContinued_break
 
 end Flapjack.Test.PanValuePcControlSafety

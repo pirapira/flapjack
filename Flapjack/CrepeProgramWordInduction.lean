@@ -6,6 +6,7 @@ import Flapjack.CrepeWordExtCallProgramCase
 import Flapjack.CrepeProgramWordRecordReturnCorrectness
 import Flapjack.CrepeProgramRecordFieldGeneralReturnCorrectness
 import Flapjack.CrepeProgramGenericRaiseCorrectness
+import Flapjack.CrepeProgramWordCallCorrectness
 
 /-!
 An induction assembly for the stateful source-to-Crep correctness boundary.
@@ -20,9 +21,10 @@ exception, loop-safety, and FFI obligations remain explicit in the
 constructors that need them.
 
 This is an induction assembly, not a replacement for the HOL
-`pc_compile_correct` theorem: unsupported calls, declaration calls, and
+`pc_compile_correct` theorem: word-valued ordinary calls are admitted through
+an explicit Cake-equivalent call-state relation, while declaration calls and
 structured expressions remain outside the predicate and must acquire their
-own Cake-equivalent constructors before they can be admitted here.
+own constructors before they can be admitted here.
 -/
 
 namespace Flapjack
@@ -214,6 +216,56 @@ inductive StatefulWordProg (α : Type)
         ∀ temporary, temporary ∉ crepExpVars compiled) :
       StatefulWordProg α
         (.extCall function configuration configurationLength array arrayLength)
+  | callWord
+      (info : Option (Option (VarKind × VarName) ×
+        Option (ExceptionId × VarName × Prog α)))
+      (compiledInfo : CompileContext α →
+        Option (List Nat × Option (α × CrepProg α)))
+      (function : FunName) (arguments : List (Exp α))
+      (hcompile : ∀ (context : CompileContext α),
+        compileProg context (.call info function arguments) =
+          .call (compiledInfo context) function (compileArgs context arguments))
+      (hword : ∀ expression ∈ arguments, wordExp expression)
+      (hbytesInWord : ∀ (context : CompileContext α) (bytesInWord : α),
+        context.bytesInWord = bytesInWord)
+      (hlookup : ∀ (context : CompileContext α)
+        (sourceLocals : VarName → Option (PanValue α))
+        (name : VarName) (value : PanValue α),
+        sourceLocals name = some value →
+        ∃ slot, lookupInfo name context.vars = some (.one, [slot]))
+      (hstate : ∀ (context : CompileContext α) (structs : StructContext)
+        (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+        (sourceMemory : α → Option (PanValue α)) (state : CrepState α),
+        panValueCrepStateRel structs context sourceLocals sourceGlobals
+          sourceMemory state)
+      (hcall : ∀ (context : CompileContext α) (structs : StructContext)
+        (sourceFunctions : List (FunName × List VarName × Prog α))
+        (functions : List (CompiledFunction α))
+        (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+        (sourceMemory : α → Option (PanValue α)) (state : CrepState α)
+        (primitive : PanPrimitiveHandler α)
+        (sourceHandler : PanValueFfiHandler α)
+        (crepPrimitive : CrepPrimitiveHandler α)
+        (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+        (baseAddress topAddress bytesInWord : α)
+        (sourceFuel targetFuel : Nat)
+        (exceptionRel : ExceptionId → PanValue α → α → Prop)
+        (sourceResult : PanValueControlResult α)
+        (crepResult : CrepControlResult α)
+        (compiledArguments : List (CrepExp α)) (argumentValues : List α),
+        evalPanValueCallWithPrimitiveCallsAndFfi
+          primitive sourceHandler structs sourceFunctions
+          baseAddress topAddress bytesInWord sourceFuel
+          sourceLocals sourceGlobals sourceMemory info function arguments =
+          some sourceResult →
+        evalCrepFullExpsState state baseAddress topAddress compiledArguments =
+          some argumentValues →
+        evalCrepFullCallState functions crepPrimitive ffi sharedMem
+          baseAddress topAddress targetFuel state (compiledInfo context)
+          function compiledArguments = some crepResult →
+        panValueCrepControlRel structs context exceptionRel sourceResult
+          crepResult) :
+      StatefulWordProg α (.call info function arguments)
 
 theorem panValueCrepProgramStateCorrect_statefulWord
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
@@ -272,5 +324,10 @@ theorem panValueCrepProgramStateCorrect_statefulWord
       exact panValueCrepProgramStateCorrect_extCall_wordExp function
         configuration configurationLength array arrayLength hconfiguration
         hconfigurationLength harray harrayLength hffi hbytesInWord hlookup hfresh
+  | callWord info compiledInfo function arguments hcompile hword hbytesInWord
+      hlookup hstate hcall =>
+      exact panValueCrepProgramStateCorrect_call_of_word_arguments info
+        compiledInfo function arguments hcompile hword hbytesInWord hlookup hstate
+        hcall
 
 end Flapjack

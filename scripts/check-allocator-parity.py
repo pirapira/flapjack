@@ -5,8 +5,9 @@ These fixtures exercise distinct allocator/frame shapes: dead-raise
 allocation, handler-frame continuation, a nested handler spill slot, colour
 permutation, returned-value allocation, wide-call argument occupancy,
 overflow-call frame slots, 64-bit
-register pressure, SSA cutsets/parallel moves, an indirect spilled-address
-carrier, five-word and nine-continuation frame occupancy, a 22-slot ABI
+register pressure, SSA cutsets/parallel moves, loop copy-propagation state,
+an indirect spilled-address carrier, five-word and nine-continuation frame
+occupancy, a 22-slot ABI
 call-frame, a whole-program 22-register parameter threshold, and a
 stack-allocation boundary.  Keep the list explicit
 so a change in the checked original-Cake witnesses is reviewable.
@@ -36,6 +37,7 @@ FIXTURES = (
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "allocator_colour_permutation.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00068_allocator_return.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00028_allocator.pnk",
+    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "divmnu_copy_loop.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "bn_divmnu_allocator.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "mul64x64_allocator.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "wide_call_arguments.pnk",

@@ -2538,4 +2538,9 @@ example : PanValueFfiClockNormalAdequateProgFromFloor 0 0 evaluatorContext
 #check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_ite
 #check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_dec
 
+/-! Floor/bookkeeping conversions: the un-floored predicate is the floored one
+    at floor `0`, and a floored certificate forgets its floor. -/
+#check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_of_from
+#check @Flapjack.PanValueFfiClockNormalAdequateProgFrom_of_fromFloor
+
 end Flapjack.Test.PanSimpParity

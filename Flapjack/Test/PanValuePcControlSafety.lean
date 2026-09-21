@@ -919,4 +919,8 @@ evaluator-evidence obligation. -/
     explicit state evidence. -/
 #check @panValuePcRaisedHraiseCases_with_raw_word_lists_to_exception_result_rel_with_context_code_of_state_evidence
 
+/-! The handler-free call form discharges the control-safety premise of the
+compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
+#check @panValueCrepProgramStateControlSafe_call_none
+
 end Flapjack.Test.PanValuePcControlSafety

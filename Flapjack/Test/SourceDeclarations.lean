@@ -83,6 +83,40 @@ example
     memoryAccess memoryHandler sourceDeclarationInitialState shape locals globals
     memory value hempty hcall hentry hshape
 
+example
+    (primitive : PanPrimitiveHandler Nat) (ffi : PanValueFfiHandler Nat)
+    (fuel : Nat) (entry : FunName) (arguments : List (Exp Nat))
+    (memoryAccess : Option (PanValueMemoryAccess Nat))
+    (memoryHandler : Option (PanValueAcceleratorFfiHandler Nat))
+    (locals globals : VarName → Option (PanValue Nat))
+    (memory : Nat → Option (PanValue Nat)) (exception : ExceptionId)
+    (value : PanValue Nat)
+    (hcall : evalPanValueCallWithPrimitiveCallsAndFfi primitive ffi
+      sourceDeclarationInitialState.structs
+      sourceDeclarationInitialState.functions
+      sourceDeclarationInitialState.baseAddress
+      sourceDeclarationInitialState.topAddress
+      sourceDeclarationInitialState.bytesInWord fuel (fun _ => none)
+      sourceDeclarationInitialState.globals sourceDeclarationInitialState.memory
+      none entry arguments (memoryAccess := memoryAccess)
+      (contracts := some (PanValueCallContracts.mk
+        sourceDeclarationInitialState.returnShapes
+        sourceDeclarationInitialState.exceptions
+        sourceDeclarationInitialState.parameterShapes))
+      (memoryHandler := memoryHandler) =
+      some (.raised locals globals memory exception value)) :
+    evalPanValueProgram sourceDeclarationInitialState primitive ffi fuel [] entry
+      arguments (memoryAccess := memoryAccess) (memoryHandler := memoryHandler) =
+      some (.raised locals globals memory exception value) := by
+  have hempty : evalPanValueDeclarations sourceDeclarationInitialState []
+      (memoryAccess := memoryAccess) = some sourceDeclarationInitialState := by
+    simp [evalPanValueDeclarations, collectPanValueStructs,
+      evalPanValueDeclarationsWithStructs]
+  exact evalPanValueProgram_of_declarations_and_raised_call
+    sourceDeclarationInitialState primitive ffi fuel [] entry arguments
+    memoryAccess memoryHandler sourceDeclarationInitialState locals globals memory
+    exception value hempty hcall
+
 /-! These declaration fixtures mirror CakeML's
     panSemScript.sml:814-837 evaluate_decls_def: names are skipped,
     globals are evaluated with empty locals and shape-checked, functions add

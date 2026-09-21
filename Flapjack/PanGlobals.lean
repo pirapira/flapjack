@@ -361,6 +361,31 @@ def globalDeclsFilter (predicate : Decl α → Bool) : List (Decl α) → List (
       else globalDeclsFilter predicate declarations
 termination_by declarations => sizeOf declarations
 
+theorem globalDeclsFilter_all (predicate : Decl α → Bool)
+    (declarations : List (Decl α)) :
+    (globalDeclsFilter predicate declarations).all predicate = true := by
+  induction declarations with
+  | nil => simp [globalDeclsFilter]
+  | cons declaration declarations ih =>
+      simp only [globalDeclsFilter]
+      by_cases hpred : predicate declaration = true
+      · rw [if_pos hpred]; simp [hpred, ih]
+      · rw [if_neg hpred]; exact ih
+
+theorem globalDeclsFilter_eq_nil_of_all_not (predicate : Decl α → Bool)
+    (declarations : List (Decl α))
+    (hall : declarations.all (fun declaration => !predicate declaration) = true) :
+    globalDeclsFilter predicate declarations = [] := by
+  induction declarations with
+  | nil => simp [globalDeclsFilter]
+  | cons declaration declarations ih =>
+      simp only [List.all_cons, Bool.and_eq_true] at hall
+      obtain ⟨hhead, htail⟩ := hall
+      simp only [globalDeclsFilter]
+      by_cases hpred : predicate declaration = true
+      · simp [hpred] at hhead
+      · rw [if_neg hpred]; exact ih htail
+
 def globalDeclIsName : Decl α → Bool
   | .name _ _ => true
   | _ => false
@@ -756,6 +781,19 @@ def globalCompileDecls [BEq String] [Add α] [Mul α]
       .exnDecl exception shape :: globalCompileDecls context declarations
   | _ :: declarations => globalCompileDecls context declarations
 
+/-! Counterpart of the append structure of Cake's `compile_decls_append`
+    (`pan_globalsProofScript.sml:1997`).  The function/exception projection
+    does not thread the context, so appending splits as an ordinary append. -/
+theorem globalCompileDecls_append [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations rest : List (Decl α)) :
+    globalCompileDecls context (declarations ++ rest) =
+      globalCompileDecls context declarations ++
+        globalCompileDecls context rest := by
+  induction declarations with
+  | nil => simp [globalCompileDecls]
+  | cons declaration declarations ih =>
+      cases declaration <;> simp [globalCompileDecls, ih]
+
 def globalCompileInitializers [BEq String] [Add α] [Mul α]
     (context : GlobalPassContext α) : List (Decl α) → List (Prog α)
   | [] => []
@@ -774,6 +812,21 @@ def globalCompileInitializers [BEq String] [Add α] [Mul α]
           (globalCompileExp context value)
       initializer :: globalCompileInitializers nextContext declarations
   | _ :: declarations => globalCompileInitializers context declarations
+
+/-! Counterpart of the context-threading append structure of Cake's
+    `compile_decls_append` (`pan_globalsProofScript.sml:1997`): initializers
+    of an appended program are the first part's initializers followed by the
+    second part's initializers evaluated under the context `globalCollect`
+    reaches after the first part. -/
+theorem globalCompileInitializers_append [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations rest : List (Decl α)) :
+    globalCompileInitializers context (declarations ++ rest) =
+      globalCompileInitializers context declarations ++
+        globalCompileInitializers (globalCollect context declarations) rest := by
+  induction declarations generalizing context with
+  | nil => simp [globalCompileInitializers, globalCollect]
+  | cons declaration declarations ih =>
+      cases declaration <;> simp [globalCompileInitializers, globalCollect, ih]
 
 /-! The four-result shape of Pancake's `pan_globals$compile_decs_def`
     (`pan_globalsScript.sml:160`).  Global declarations become initializer
@@ -809,6 +862,20 @@ theorem functions_names_globalCompileDecls [BEq String] [Add α] [Mul α]
   | cons declaration declarations ih =>
       cases declaration <;> simp [globalCompileDecls, functions, ih]
 
+theorem globalCompileDecls_all_not_function [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations : List (Decl α))
+    (hnone : declarations.all
+      (fun declaration => !globalDeclIsFunction declaration) = true) :
+    (globalCompileDecls context declarations).all
+      (fun declaration => !globalDeclIsFunction declaration) = true := by
+  induction declarations with
+  | nil => simp [globalCompileDecls]
+  | cons declaration declarations ih =>
+      simp only [List.all_cons, Bool.and_eq_true] at hnone
+      obtain ⟨hhead, htail⟩ := hnone
+      cases declaration <;>
+        simp_all [globalCompileDecls, globalDeclIsFunction]
+
 theorem globalCompileDecs_preserve_functions [BEq String] [Add α] [Mul α]
     (context : GlobalPassContext α) (code : List (Decl α)) :
     (functions (globalCompileDecs context code).functions).map
@@ -816,6 +883,26 @@ theorem globalCompileDecs_preserve_functions [BEq String] [Add α] [Mul α]
       (functions code).map (fun entry => entry.1) := by
   simp only [globalCompileDecs]
   rw [functions_globalDeclsFilter_isFunction, functions_names_globalCompileDecls]
+
+/-! Counterpart of Cake's `compile_decs_EVERY_is_function`
+    (`pan_globalsProofScript.sml:1977`): every declaration the compilation
+    pass emits into the function table is itself a function declaration. -/
+theorem globalCompileDecs_functions_all_isFunction [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α)) :
+    (globalCompileDecs context code).functions.all globalDeclIsFunction = true := by
+  simp only [globalCompileDecs]
+  exact globalDeclsFilter_all globalDeclIsFunction _
+
+/-! Counterpart of Cake's `compile_decs_decls_thm`
+    (`pan_globalsProofScript.sml:1967`): a program whose declarations contain
+    no functions compiles to an empty function table. -/
+theorem globalCompileDecs_functions_eq_nil_of_no_functions [BEq String] [Add α]
+    [Mul α] (context : GlobalPassContext α) (code : List (Decl α))
+    (hnone : code.all (fun declaration => !globalDeclIsFunction declaration) = true) :
+    (globalCompileDecs context code).functions = [] := by
+  simp only [globalCompileDecs]
+  exact globalDeclsFilter_eq_nil_of_all_not globalDeclIsFunction _
+    (globalCompileDecls_all_not_function (globalCollect context code) code hnone)
 
 /-! The start-function form of CakeML's `pan_globals$compile_top_def`
     (`pan_globalsScript.sml:236`).  The existing `globalCompileTop` below

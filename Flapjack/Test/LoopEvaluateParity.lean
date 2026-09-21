@@ -60,6 +60,91 @@ def hooks : LoopEvaluateHooks :=
 def arithHooks : LoopEvaluateHooks :=
   { hooks with arith := fun state operation => loopArithMachine 8 state operation }
 
+/-! `evalLoopProgFull` retains Cake's generic target-word fragment.  Ordinary
+    `LDiv` has the same checked nonzero-divisor rule as loopSem's
+    `loop_arith`; the full evaluator must not silently reject it. -/
+def fullDivState : LoopState (RiscV.Word 8) :=
+  { locals := fun name =>
+      if name == 2 then some 12
+      else if name == 3 then some 3
+      else none
+    globals := fun _ => none
+    memory := fun _ => none }
+
+def fullDivSuccess : Bool :=
+  match evalLoopProgFull 1 fullDivState
+      (.arith (.div 1 2 3) : LoopProg (RiscV.Word 8)) with
+  | some (.normal state) => state.locals 1 == some 4
+  | _ => false
+
+def fullDivZero : Bool :=
+  match evalLoopProgFull 1
+      { fullDivState with locals := fun name =>
+          if name == 2 then some 12
+          else if name == 3 then some 0
+          else none }
+      (.arith (.div 1 2 3) : LoopProg (RiscV.Word 8)) with
+  | none => true
+  | _ => false
+
+/-! Width-aware `LLongDiv` oracle: Cake forms `high * 2^width + low`, writes
+    the remainder to the right destination first, and then the quotient to the
+    left destination. -/
+def wordLongDiv (width : Nat) (high low divisor : RiscV.Word width) :
+    Option (RiscV.Word width × RiscV.Word width) :=
+  let divisorValue := divisor.toNat
+  if divisorValue = 0 then
+    none
+  else
+    let numerator := high.toNat * 2 ^ width + low.toNat
+    let quotientValue := numerator / divisorValue
+    if quotientValue < 2 ^ width then
+      some (BitVec.ofNat width quotientValue,
+        BitVec.ofNat width (numerator % divisorValue))
+    else
+      none
+
+def fullLongDivState : LoopState (RiscV.Word 8) :=
+  { locals := fun name =>
+      if name == 2 then some (BitVec.ofNat 8 1)
+      else if name == 3 then some (BitVec.ofNat 8 44)
+      else if name == 4 then some (BitVec.ofNat 8 7)
+      else none
+    globals := fun _ => none
+    memory := fun _ => none }
+
+def fullLongDivSuccess : Bool :=
+  match evalLoopProgFullWithLongDiv (wordLongDiv 8) 2 fullLongDivState
+      (.arith (.longDiv 5 6 2 3 4) : LoopProg (RiscV.Word 8)) with
+  | some (.normal state) =>
+      state.locals 5 == some (BitVec.ofNat 8 42) &&
+      state.locals 6 == some (BitVec.ofNat 8 6)
+  | _ => false
+
+def fullLongDivZero : Bool :=
+  match evalLoopProgFullWithLongDiv (wordLongDiv 8) 1
+      { fullLongDivState with locals := fun name =>
+          if name == 7 then some (BitVec.ofNat 8 0)
+          else fullLongDivState.locals name }
+      (.arith (.longDiv 5 6 2 3 7) : LoopProg (RiscV.Word 8)) with
+  | none => true
+  | _ => false
+
+def fullLongDivOverflow : Bool :=
+  match evalLoopProgFullWithLongDiv (wordLongDiv 8) 1
+      { fullLongDivState with locals := fun name =>
+          if name == 2 then some (BitVec.ofNat 8 255)
+          else if name == 3 then some (BitVec.ofNat 8 255)
+          else if name == 4 then some (BitVec.ofNat 8 1)
+          else none }
+      (.arith (.longDiv 5 6 2 3 4) : LoopProg (RiscV.Word 8)) with
+  | none => true
+  | _ => false
+
+#guard fullLongDivSuccess
+#guard fullLongDivZero
+#guard fullLongDivOverflow
+
 /-! The primitive branch uses the same fixed-width Cake `AddCarry` handler as
     `loop_primop` (`loopSemScript.sml:242-252`). -/
 def primitiveMachine : PrimOp → List LoopWordLoc → Option (List LoopWordLoc)
@@ -426,6 +511,8 @@ def duplicateAssignFirstWins : Bool :=
 #guard duplicateBindFirstWins
 #guard duplicateAssignFirstWins
 #guard longDivSuccess
+#guard fullDivSuccess
+#guard fullDivZero
 #guard longDivZero
 #guard longDivOverflow
 #guard longDivMalformed

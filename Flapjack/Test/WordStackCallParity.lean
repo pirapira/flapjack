@@ -30,6 +30,8 @@ def callArgCountExact : Bool :=
     stackArgCount (.inr 3) 15 12 == 2 &&
     stackArgCount (.inl 0) 5 3 == 2 &&
     stackArgCount (.inr 0) 5 3 == 1 &&
+    stackFree (.inl 3) 15 12 20 19 == 17 &&
+    stackFree (.inr 3) 15 12 20 19 == 18 &&
     stackFree (.inl 0) 5 3 6 5 == 4 &&
     stackFree (.inr 0) 5 3 6 5 == 5
 
@@ -98,6 +100,56 @@ def returnFrameFreeExact : Bool :=
 
 #guard returnFrameFreeExact
 
+/- Cake's `copy_ret` copies stack-resident return values in descending frame
+   order, then frees exactly the temporary return slots.  These two shapes
+   are the direct `copy_ret_handler_2`/multi-value rows from
+   `word_stack_call_probe.out`; keeping them here covers the frame boundary
+   used by both ordinary returns and handler returns. -/
+def returnCopyCakeGuard : Bool :=
+  match stackCopyReturn (α := Nat) false false 1 31 4 [10, 12]
+      (.skip : StackProg Nat) with
+  | .seq
+      (.seq (.stackLoad 31 1)
+        (.seq (.stackStore 31 5)
+          (.seq (.stackLoad 31 0)
+            (.seq (.stackStore 31 4) .skip))))
+      (.seq (.stackFree 2) .skip) => true
+  | _ => false
+
+#guard returnCopyCakeGuard
+
+def handlerReturnCopyCakeGuard : Bool :=
+  match stackCopyReturn (α := Nat) true true 1 31 4 [10]
+      (.skip : StackProg Nat) with
+  | .seq
+      (.seq (.stackLoad 31 0)
+        (.seq (.stackStore 31 9) .skip))
+      (.seq (.stackFree 1) .skip) => true
+  | _ => false
+
+#guard handlerReturnCopyCakeGuard
+
+/- These are the canonical `word_stack_call_probe.out` rows, including the
+   handler-frame offset used by Cake's `copy_ret F T (2,6,5) [4;6;8]`. -/
+def copyRetProbeRowsCakeGuard : Bool :=
+  stackNumReturnSlots 12 [4, 6, 8] == 0 &&
+    stackNumReturnSlots 2 [4, 6, 8] == 2 &&
+    (match stackCopyReturn (α := Nat) false false 12 20 19 [4, 6, 8]
+        (.skip : StackProg Nat) with
+     | .skip => true
+     | _ => false) &&
+    (match stackCopyReturn (α := Nat) false true 2 2 6 [4, 6, 8]
+        (.skip : StackProg Nat) with
+     | .seq
+         (.seq (.stackLoad 2 1)
+           (.seq (.stackStore 2 10)
+             (.seq (.stackLoad 2 0)
+               (.seq (.stackStore 2 9) .skip))))
+         (.seq (.stackFree 2) .skip) => true
+     | _ => false)
+
+#guard copyRetProbeRowsCakeGuard
+
 /-! Indirect-call targets follow `call_dest NONE`: the last argument names the
     target, a register-resident target is used directly, a stack-resident one
     is loaded into `scratch`, and the remaining arguments are the formals. -/
@@ -161,12 +213,103 @@ def overflowArgumentSlotMatchesWMoveSingle : Bool :=
 #guard callFrameOffsetMatchesCakeF
 #guard overflowArgumentSlotMatchesWMoveSingle
 
+/- `StackArgs` rows from `word_stack_call_probe.out`: direct calls count the
+   target slot while indirect calls do not, and both copy overflow arguments
+   from the caller frame at its Cake `f` offset. -/
+def stackArgsMatchesCakeProbe : Bool :=
+  let emptyOk :=
+    match (stackArgs (α := Nat) 0 6 3) with
+    | .stackAlloc words => words == 0
+    | _ => false
+  let directOk :=
+    match (stackArgs (α := Nat) 2 6 3) with
+    | .seq
+        (.seq (.stackAlloc words)
+          (.seq (.stackLoad loadOne loadOffsetOne)
+            (.stackStore storeOne storeOffsetOne)))
+        (.seq (.stackLoad loadZero loadOffsetZero)
+          (.stackStore storeZero storeOffsetZero)) =>
+        words == 2 && loadOne == 3 && loadOffsetOne == 7 &&
+          storeOne == 3 && storeOffsetOne == 1 && loadZero == 3 &&
+          loadOffsetZero == 6 && storeZero == 3 && storeOffsetZero == 0
+    | _ => false
+  let indirectOk :=
+    match (stackArgs (α := Nat) 1 6 3) with
+    | .seq (.stackAlloc words)
+        (.seq (.stackLoad loadRegister loadOffset)
+          (.stackStore storeRegister storeOffset)) =>
+        words == 1 && loadRegister == 3 && loadOffset == 6 &&
+          storeRegister == 3 && storeOffset == 0
+    | _ => false
+  emptyOk && directOk && indirectOk
+
+#guard stackArgsMatchesCakeProbe
+
+/- Cake's direct `StackHandlerArgs F (INL 0) 3 (12,20,19)` row has no
+   stack-resident arguments: `stack_arg_count` is zero before the handler's
+   three reserved slots are added to the frame. -/
+def stackHandlerArgsMatchesCakeProbe : Bool :=
+  match (stackHandlerArgs (α := Nat) false 0 20 12) with
+  | .stackAlloc words => words == 0
+  | _ => false
+
+#guard stackHandlerArgsMatchesCakeProbe
+
+/- The direct `call_dest (SOME target)` path keeps the target as a label and
+   does not add a frame-free instruction when Cake's computed free count is
+   zero for an empty frame. -/
+def directCallDestinationCakeGuard : Bool :=
+  match wordToStackProgNat
+      { locations := [], scratch := 31, stackBase := 0 }
+      (.call none (some 7) [] none : WordProg Nat) with
+  | some (.call none (.label target) none) => target == 7
+  | _ => false
+
+#guard directCallDestinationCakeGuard
+
+/- Cake's returning direct-call wrapper includes the implicit return slot in
+   `StackArgs`, preserves the return-handler labels, and retains its explicit
+   zero `StackFree` tail. -/
+def returningCallCarrierCakeGuard : Bool :=
+  match wordToStackCallNoHandler (α := Nat) false 7 0 6 3 []
+      (.skip : StackProg Nat) 20 21 with
+  | .seq
+      (.seq (.stackAlloc words)
+        (.seq (.stackLoad loadRegister loadOffset)
+          (.stackStore storeRegister storeOffset)))
+      (.seq (.call (some (.skip, freeFrame, returnLabel, entryLabel))
+          (.label target) none)
+        (.stackFree freeWords)) =>
+      words == 1 && loadRegister == 3 && loadOffset == 6 &&
+        storeRegister == 3 && storeOffset == 0 && freeFrame == 0 &&
+        returnLabel == 20 && entryLabel == 21 && target == 7 &&
+        freeWords == 0
+  | _ => false
+
+#guard returningCallCarrierCakeGuard
+
+def containsHandlerCallCakeShape : StackProg Nat → Bool
+  | .call (some (_, freeFrame, returnLabel, entryLabel)) (.label target)
+      (some (_, exceptionLabel, handlerEntryLabel)) =>
+      freeFrame == 0 && returnLabel == 20 && entryLabel == 21 &&
+        target == 7 && exceptionLabel == 40 && handlerEntryLabel == 31
+  | .seq first second =>
+      containsHandlerCallCakeShape first || containsHandlerCallCakeShape second
+  | _ => false
+
+/- Cake's handler-call carrier keeps the target and all three label carriers in
+   the final call node after the handler setup and argument prefix. -/
+def handlerCallCarrierCakeGuard : Bool :=
+  containsHandlerCallCakeShape
+    (wordToStackCallWithHandlerInSection (α := Nat) false 7 0 6 3
+      (.skip : StackProg Nat) (.raise 4) 20 21 30 31 40)
+
+#guard handlerCallCarrierCakeGuard
+
 /-! The real Cake RISC-V ABI window has twelve value slots.  At the exact
     boundary, `format_var` keeps index 11 in the last ABI register and
     `wMoveSingle` places indices 12 and 13 at the top two slots of the
-    caller's four-word frame (`word_to_stackScript.sml`).  The earlier
-    overflow guard intentionally uses a 22-slot synthetic window; keep this
-    separate check tied to the production RISC-V configuration. -/
+    caller's four-word frame. -/
 def riscvAbiBoundaryPhysicalLocationsExact : Bool :=
   let config : WordStackConfig :=
     { locations := [], scratch := 22, stackBase := 0,
@@ -189,6 +332,12 @@ def runChecks : IO Bool := do
         sourceTailCallFreeCountExact),
       ("returns free the Cake current frame after ABI moves",
         returnFrameFreeExact),
+      ("copy_ret preserves Cake multi-value return frame order",
+        returnCopyCakeGuard),
+      ("copy_ret preserves Cake handler-frame return layout",
+        handlerReturnCopyCakeGuard),
+      ("copy_ret and num_stack_ret match Cake's direct probe rows",
+        copyRetProbeRowsCakeGuard),
       ("indirect calls take a register target from the last argument",
         indirectRegisterTargetExact),
       ("indirect calls load a stack target through scratch",
@@ -199,6 +348,16 @@ def runChecks : IO Bool := do
         callFrameOffsetMatchesCakeF),
       ("an overflow argument sits at wMoveSingle's f - 1 - (r - k)",
         overflowArgumentSlotMatchesWMoveSingle),
+      ("StackArgs direct/indirect shapes match Cake's probe",
+        stackArgsMatchesCakeProbe),
+      ("StackHandlerArgs matches Cake's direct handler probe",
+        stackHandlerArgsMatchesCakeProbe),
+      ("direct call destination preserves Cake's label carrier",
+        directCallDestinationCakeGuard),
+      ("returning direct call preserves Cake's carrier shape",
+        returningCallCarrierCakeGuard),
+      ("handler call preserves Cake's carrier metadata",
+        handlerCallCarrierCakeGuard),
       ("the RISC-V ABI boundary uses Cake's first two spill slots",
         riscvAbiBoundaryPhysicalLocationsExact) ]
   let mut ok := true

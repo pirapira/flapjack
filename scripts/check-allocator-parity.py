@@ -2,14 +2,8 @@
 """Check the original-Cake allocator witnesses for exact RISC-V bytes.
 
 These fixtures exercise distinct allocator/frame shapes: dead-raise
-allocation, handler-frame continuation, a nested handler spill slot, colour
-permutation, returned-value allocation, wide-call argument occupancy,
-overflow-call frame slots, 64-bit
-register pressure, SSA cutsets/parallel moves, loop copy-propagation state,
-an indirect spilled-address carrier, five-word and nine-continuation frame
-occupancy, a 22-slot ABI
-call-frame, a whole-program 22-register parameter threshold, and a
-stack-allocation boundary.  Keep the list explicit
+allocation, colour permutation, returned-value allocation, 64-bit
+register pressure, and a stack-allocation boundary.  Keep the list explicit
 so a change in the checked original-Cake witnesses is reviewable.
 The expected Cake stdout hashes are pinned in ``parity-small-corpus.json``.
 Comparing Flapjack's complete assembly stdout with those hashes keeps this
@@ -30,15 +24,8 @@ MANIFEST = REPO_ROOT / "scripts" / "parity-small-corpus.json"
 FIXTURES = (
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00634_dead_raise.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f01266_raise_live_continuation.pnk",
-    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00108_handler_spill_slot.pnk",
-    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "allocator_frame_handler_min.pnk",
-    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "gh1025_frame_bitmap.pnk",
-    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "gh1025_frame_bitmap_f00000.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "allocator_colour_permutation.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00068_allocator_return.pnk",
-    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00028_allocator.pnk",
-    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "divmnu_copy_loop.pnk",
-    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "bn_divmnu_allocator.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "mul64x64_allocator.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "wide_call_arguments.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "wide_call_arity.pnk",
@@ -52,15 +39,33 @@ FIXTURES = (
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00460_nested_handler_constant_fold.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "process_message_negative_offset.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "store_offset_boundaries.pnk",
+    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "spilled_load_offset.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "process_message_empty_catch.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "loop_body_condition_fuse.pnk",
+    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "set_transient_storage_copy_class.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "wide_call_spilled_base.pnk",
+    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "ready_last_argument_permutation.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "nested_shape_22_fields.pnk",
+    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00228_copy_share_store.pnk",
+    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "secp_accel_init_block.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "nested_handler_condition.pnk",
+    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "secp_accel_modmul.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "nested_handler_comparison.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "and_comparison_handler.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00238_handler_const_or.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "gh1039_handled_call_labels.pnk",
+    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "ordinary_subword_offsets.pnk",
+    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00017_nested_and_zero.pnk",
+    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00091_nested_and_constants.pnk",
+    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "gh1025_frame_bitmap.pnk",
+    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "gh1025_frame_bitmap_f00000.pnk",
+    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00108_handler_spill_slot.pnk",
+    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "allocator_frame_handler_min.pnk",
+    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00028_allocator.pnk",
+    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "divmnu_copy_loop.pnk",
+    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "bn_divmnu_allocator.pnk",
+    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "bitmap_calls.pnk",
+    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "u256_mul_full_bitmap_wrap.pnk",
 )
 
 

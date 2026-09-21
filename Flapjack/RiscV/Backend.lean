@@ -600,6 +600,8 @@ def wordMoveToInstructions [NeZero width] (moves : List (Nat × Nat)) :
         match operator with
         | .test | .notTest => pure (31, 0, [.and 31 condition 0])
         | _ => pure (condition, 0, [])
+      else if iImmediate value != value then
+        none
       else if condition == 31 then
         none
       else

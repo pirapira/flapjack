@@ -352,7 +352,7 @@ example :
       some [
         .srli 31 5 (BitVec.ofNat 64 3),
         .slli 4 5 (BitVec.ofNat 64 61),
-      .or 4 4 31] := by
+        .or 4 4 31] := by
   decide
 
 /-! Cake's `riscv_ast (Inst (Mem mop r1 (Addr r2 a)))` supports every
@@ -826,6 +826,36 @@ example :
       (.linkValue ⟨1, 0⟩) =
       some [.auipc 1 (BitVec.ofNat 64 1),
         .addi 1 1 (0 - BitVec.ofNat 64 4)] := by
+  decide
+
+/- The negative PC-relative side uses the same Cake signed-low carry rule:
+   -2048 keeps a zero high word, while -2049 rounds the high word down. -/
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 0)] 2048
+      (.locValue 5 ⟨1, 0⟩) =
+      some [.auipc 5 (BitVec.ofNat 64 0),
+        .addi 5 5 (0 - BitVec.ofNat 64 2048)] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 0)] 2049
+      (.locValue 5 ⟨1, 0⟩) =
+      some [.auipc 5 (0 - BitVec.ofNat 64 1),
+        .addi 5 5 (BitVec.ofNat 64 2047)] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 0)] 2048
+      (.linkValue ⟨1, 0⟩) =
+      some [.auipc 1 (BitVec.ofNat 64 0),
+        .addi 1 1 (0 - BitVec.ofNat 64 2048)] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 0)] 2049
+      (.linkValue ⟨1, 0⟩) =
+      some [.auipc 1 (0 - BitVec.ofNat 64 1),
+        .addi 1 1 (BitVec.ofNat 64 2047)] := by
   decide
 
 end Flapjack.RiscV

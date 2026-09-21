@@ -325,6 +325,16 @@ structure WordHeuristicCallSet where
   names : List Nat := []
   seen : Std.TreeSet Nat := ∅
 
+/-! The old source expression is `NumSet.fromList (left ++ right)`.  Its
+    `toSet` front end only removes duplicate keys before rebuilding the
+    Patricia tree; the tree traversal, not the insertion order, is the
+    observable result.  Keep that exact final tree, but use the existing
+    logarithmic duplicate scan and avoid materialising the concatenation. -/
+def wordHeuristicMergeCallsFast (left right : List Nat) : List Nat :=
+  let keys := natEraseDupsAppend left right
+  NumSet.toAList
+    (keys.foldr (fun key tree => NumSet.insert key tree) .empty) 0 []
+
 /-- `wordHeuristicMergeCalls`. -/
 def WordHeuristicCallSet.merge (left : WordHeuristicCallSet) (right : List Nat) :
     WordHeuristicCallSet :=
@@ -333,7 +343,7 @@ def WordHeuristicCallSet.merge (left : WordHeuristicCallSet) (right : List Nat) 
       if calls.seen.contains name then calls
       else { names := name :: calls.names, seen := calls.seen.insert name })
     left
-  { names := NumSet.fromList (left.names ++ right), seen := seen.seen }
+  { names := wordHeuristicMergeCallsFast left.names right, seen := seen.seen }
 
 /-- `wordHeuristicAddCall`. -/
 def WordHeuristicCallSet.addCall (calls : WordHeuristicCallSet)

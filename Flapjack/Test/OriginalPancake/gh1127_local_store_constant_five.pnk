@@ -1,0 +1,4 @@
+fun 1 main() {
+  st (0 + 0), 5;
+  return @base | 1;
+}

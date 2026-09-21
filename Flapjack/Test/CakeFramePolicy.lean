@@ -81,9 +81,9 @@ def temporaryNumberingExact : Bool :=
 
 #guard temporaryNumberingExact
 
-/- These are the direct HOL-EVAL max_var rows from
-   word_stack_frame_probe.out.  In particular, Move's register names do not
-   enlarge the frame, while a sequential assignment to Word name 26 does. -/
+/- Direct HOL-EVAL rows from `word_stack_frame_probe.out`: Cake's `max_var`
+   ignores register names in a Move, while a later assignment to Word name 26
+   contributes to the frame input. -/
 def maxVarFrameInputExact : Bool :=
   wordProgCakeMaxVar (.skip : WordProg Nat) == 0 &&
     wordProgCakeMaxVar (.move 0 [(0, 0)] : WordProg Nat) == 0 &&

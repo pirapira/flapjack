@@ -4332,6 +4332,73 @@ theorem evalPanValueFfiClockProg_seq_call_caught_handler_continuation_progCallFu
       continuation locals globals memory ffi clock ma c mh midLocals midGlobals
       midMemory midFfi midClock result resultClock hcall hcontinuationEval⟩
 
+/-- Composition rule for the state-relation fragment: a call with a destination
+    that returns normally, followed by an arbitrary continuation whose
+    evaluation is supplied by the caller from the returned state.  The caller
+    receives the state assigned by `assignPanValueCallResult` and must produce
+    the continuation's outcome at the call-aware budget; this is the chaining
+    rule used when the intermediate clock is only known after the call
+    returns. -/
+theorem evalPanValueFfiClockProg_seq_call_destination_continuation_progCallFuel
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (function : FunName) (arguments : List (Exp α))
+    (destination : Option (VarKind × VarName))
+    (parameters : List VarName) (body : Prog α) (values : List (PanValue α))
+    (calleeLocals : VarName → Option (PanValue α))
+    (continuation : Prog α)
+    (ma : Option (PanValueMemoryAccess α))
+    (hfunctions : PanValueFfiClockFunctionsReturnSucceed context primitive handler
+      structs functions baseAddress topAddress bytesInWord ma none none)
+    (hbudget : progSize body + 1 ≤ callBudget)
+    (hargs : evalPanValueExps structs locals globals memory baseAddress topAddress
+      bytesInWord arguments (memoryAccess := ma) = some values)
+    (hlookup : lookupPanFunction function functions = some (parameters, body))
+    (hbind : bindPanValueParameters parameters values = some calleeLocals)
+    (hclock : clock ≠ 0)
+    (hwithin : panValueValuesWithinLimit structs values = true)
+    (hassign : ∀ (finalGlobals : VarName → Option (PanValue α)),
+      ∃ (assignedLocals assignedGlobals : VarName → Option (PanValue α)),
+        assignPanValueCallResult locals finalGlobals destination values
+          (structs := structs) = some (assignedLocals, assignedGlobals))
+    (hcontinuation : ∀ (midLocals midGlobals : VarName → Option (PanValue α))
+      (midMemory : α → Option (PanValue α)) (midFfi : FfiState σ) (midClock : Nat),
+      ∃ (result : PanValueFfiClockOutcome α σ) (resultClock : Nat),
+        evalPanValueFfiClockProg context primitive handler structs functions
+          baseAddress topAddress bytesInWord (progCallFuel callBudget continuation)
+          midLocals midGlobals midMemory midFfi midClock continuation ma none none =
+        some (result, resultClock)) :
+    ∃ (result : PanValueFfiClockOutcome α σ) (resultClock : Nat),
+      evalPanValueFfiClockProg context primitive handler structs functions
+          baseAddress topAddress bytesInWord
+          (progCallFuel callBudget
+            (.seq (.call (some (destination, none)) function arguments) continuation))
+          locals globals memory ffi clock
+          (.seq (.call (some (destination, none)) function arguments) continuation)
+          ma none none =
+        some (result, resultClock) := by
+  obtain ⟨assignedLocals, assignedGlobals, finalMemory, finalFfi, finalClock, hcall⟩ :=
+    evalPanValueFfiClockProg_call_destination_of_functions_progCallFuel context
+      primitive handler structs functions baseAddress topAddress bytesInWord callBudget
+      locals globals memory ffi clock function arguments destination parameters body
+      values calleeLocals ma hfunctions hbudget hargs hlookup hbind hclock hwithin
+      hassign
+  obtain ⟨result, resultClock, hcontinuationEval⟩ :=
+    hcontinuation assignedLocals assignedGlobals finalMemory finalFfi finalClock
+  exact ⟨result, resultClock,
+    evalPanValueFfiClockProg_seq_of_first_normal_progCallFuel context primitive
+      handler structs functions baseAddress topAddress bytesInWord callBudget
+      (.call (some (destination, none)) function arguments) continuation locals globals
+      memory ffi clock ma none none assignedLocals assignedGlobals finalMemory finalFfi
+      finalClock result resultClock hcall hcontinuationEval⟩
+
 /-! ## Conditionals with normal branches
 
 When the selected branch lies in the normal fragment, the conditional returns

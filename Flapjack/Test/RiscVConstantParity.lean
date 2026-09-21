@@ -178,6 +178,15 @@ theorem cakeConstWide_execution_oracle :
       some (BitVec.ofNat 64 0x1122334455667788) := by
   decide
 
+/-! The signed-12 endpoints are executable Cake materialization boundaries,
+    not merely instruction-list shape checks. -/
+theorem cakeConst2047_execution_oracle :
+    (wordConstToInstructions (width := 64) 4 (BitVec.ofNat 64 2047)).map
+        (fun instructions =>
+          readRegister (executeInstructions (zeroState 64) instructions) 4) =
+      some (BitVec.ofNat 64 2047) := by
+  decide
+
 /-! The expression-facing Cake boundary preserves the same executable
     obligations while leaving the historical one-instruction selector intact.
     These are theorem-facing API checks, not production-caller migration. -/

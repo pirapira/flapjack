@@ -29,4 +29,10 @@ example : pipelineGetEids id sourceFunctions = [("E", 0), ("F", 1), ("G", 2)] :=
   simp [pipelineGetEids, pipelineExceptionIds, sourceFunctions, raiseE,
     expIds, List.eraseDups, List.eraseDupsBy, List.eraseDupsBy.loop]
 
+example : ∃ code, lookupInfo "E"
+    (crepGetEidsFromDecls id [.exnDecl "E" .one, .decl .one "x" (.const 0)]) =
+      some code := by
+  exact crepGetEidsFromDecls_lookup_of_exception id 0
+    [.exnDecl "E" .one, .decl .one "x" (.const 0)] "E" .one (by simp [exceptionEntries])
+
 end Flapjack.Test.PanGetEidsParity

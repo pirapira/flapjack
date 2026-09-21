@@ -259,4 +259,84 @@ theorem prod_uncurry_const_eq_comp_snd {α β γ : Type} (f : β → γ) :
   cases p
   rfl
 
+/-- `lookupInfo` is the `List.lookup` of the underlying association list. -/
+theorem lookupInfo_eq_lookup (name : String) (entries : InfoMap α) :
+    lookupInfo name entries = List.lookup name entries := by
+  induction entries with
+  | nil => rfl
+  | cons entry entries ih =>
+      obtain ⟨candidate, value⟩ := entry
+      simp only [lookupInfo, List.lookup_cons, ih]
+      by_cases h : (candidate == name) = true
+      · have h' : (name == candidate) = true := by
+          rw [beq_iff_eq] at h ⊢
+          exact h.symm
+        simp [h, h']
+      · have h' : (name == candidate) = false :=
+          beq_eq_false_iff_ne.mpr (fun hc => h (beq_iff_eq.mpr hc.symm))
+        simp [h, h']
+
+/-- Cake `pan_structs` `alookup_drop_helper` specialised to `lookupInfo`:
+a hit in a suffix survives dropping the prefix, provided the keys are distinct. -/
+theorem lookupInfo_drop_helper (n : Nat)
+    (context : StructContext) (name : String) (info : StructInfo)
+    (hlookup : lookupInfo name (context.drop n) = some info)
+    (hnodup : (context.map Prod.fst).Nodup) :
+    lookupInfo name context = some info := by
+  rw [lookupInfo_eq_lookup] at hlookup ⊢
+  exact (lookup_drop_helper n context name info hlookup hnodup).2
+
+/-- A member of a well-formed shape list is itself a well-formed shape. -/
+theorem isWfShape_of_mem {context : StructContext} {shapes : List Shape} {shape : Shape}
+    (h : isWfShape.isWfShapeList context shapes = true) (hmem : shape ∈ shapes) :
+    isWfShape context shape = true := by
+  induction shapes with
+  | nil => simp at hmem
+  | cons s ss ih =>
+      simp only [isWfShape.isWfShapeList, Bool.and_eq_true] at h
+      rcases List.mem_cons.mp hmem with rfl | hmem'
+      · exact h.1
+      · exact ih h.2 hmem'
+
+/-- Cake `pan_structs` `size_of_sh_with_ctxt_drop`: dropping a prefix of the
+structure context preserves the shape size, provided the remaining context
+still witnesses the shape and the context keys are distinct. -/
+theorem shapeSizeWithContext_drop (n : Nat) (context : StructContext) (shape : Shape)
+    (h : isWfShape (context.drop n) shape = true)
+    (hnodup : (context.map Prod.fst).Nodup) :
+    shapeSizeWithContext (context.drop n) shape = shapeSizeWithContext context shape := by
+  revert h hnodup
+  induction shape using shapeSizeWithContext.induct with
+  | case1 => intro _ _; simp only [shapeSizeWithContext]
+  | case2 shapes ih =>
+      intro h hnodup
+      have hlist : isWfShape.isWfShapeList (context.drop n) shapes = true := by
+        simpa [isWfShape] using h
+      have hpoint : ∀ s ∈ shapes,
+          shapeSizeWithContext (context.drop n) s = shapeSizeWithContext context s :=
+        fun s hs => ih s hs (isWfShape_of_mem hlist hs) hnodup
+      have hfold : ∀ (l : List Shape),
+          (∀ s ∈ l, shapeSizeWithContext (context.drop n) s = shapeSizeWithContext context s) →
+          ∀ acc, l.foldl (fun total shape => total + shapeSizeWithContext (context.drop n) shape) acc =
+              l.foldl (fun total shape => total + shapeSizeWithContext context shape) acc := by
+        intro l
+        induction l with
+        | nil => intro _ acc; rfl
+        | cons s ss ihs =>
+            intro hl acc
+            simp only [List.foldl_cons]
+            rw [hl s (by simp)]
+            exact ihs (fun t ht => hl t (by simp [ht])) (acc + shapeSizeWithContext context s)
+      simp only [shapeSizeWithContext]
+      exact hfold shapes hpoint 0
+  | case3 name =>
+      intro h hnodup
+      have hsome : (lookupInfo name (context.drop n)).isSome = true := by
+        simpa [isWfShape] using h
+      cases hlk : lookupInfo name (context.drop n) with
+      | none => simp [hlk] at hsome
+      | some info =>
+          have hctx := lookupInfo_drop_helper n context name info hlk hnodup
+          simp only [shapeSizeWithContext, hlk, hctx]
+
 end Flapjack

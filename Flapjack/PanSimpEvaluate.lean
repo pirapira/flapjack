@@ -5790,6 +5790,76 @@ theorem PanValueFfiClockNormalAdequateProgFrom_seq_adequate
       midClock (.control (.normal finalLocals finalGlobals finalMemory finalFfi))
       finalClock hfirstEval hsecondEval⟩
 
+/-! A lower-bound-preserving composition rule.
+
+`PanValueFfiClockNormalAdequateProgFrom` is enough when the continuation is
+adequate from every clock.  For the general Cake `evaluate` induction, however,
+the continuation may itself require a nonzero (or otherwise lower-bounded)
+clock.  The first program therefore has to expose a lower bound on the clock
+it leaves behind.  Keeping that bound in a separate predicate avoids silently
+assuming that the clocked evaluator preserves a source-level clock invariant.
+The result is the sound replacement for composing two clock-sensitive
+adequacy certificates. -/
+def PanValueFfiClockNormalAdequateProgFromFloor
+    (lo floor : Nat)
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (program : Prog α) : Prop :=
+  ∀ (clock : Nat), lo ≤ clock →
+  ∀ (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ),
+    ∃ (finalLocals finalGlobals : VarName → Option (PanValue α))
+      (finalMemory : α → Option (PanValue α)) (finalFfi : FfiState σ)
+      (finalClock : Nat),
+      evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (progCallFuel callBudget program) locals
+        globals memory ffi clock program ma c mh =
+      some (.control (.normal finalLocals finalGlobals finalMemory finalFfi),
+        finalClock) ∧
+      floor ≤ finalClock
+
+theorem PanValueFfiClockNormalAdequateProgFromFloor_seq
+    (lo firstFloor finalFloor : Nat)
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (first second : Prog α)
+    (hfirst : PanValueFfiClockNormalAdequateProgFromFloor lo firstFloor
+      context primitive handler structs functions baseAddress topAddress bytesInWord
+      callBudget ma c mh first)
+    (hsecond : PanValueFfiClockNormalAdequateProgFromFloor firstFloor finalFloor
+      context primitive handler structs functions baseAddress topAddress bytesInWord
+      callBudget ma c mh second) :
+    PanValueFfiClockNormalAdequateProgFromFloor lo finalFloor
+      context primitive handler structs functions baseAddress topAddress bytesInWord
+      callBudget ma c mh (.seq first second) := by
+  intro clock hclock locals globals memory ffi
+  obtain ⟨midLocals, midGlobals, midMemory, midFfi, midClock, hfirstEval,
+      hmidFloor⟩ := hfirst clock hclock locals globals memory ffi
+  obtain ⟨finalLocals, finalGlobals, finalMemory, finalFfi, finalClock,
+      hsecondEval, hfinalFloor⟩ :=
+    hsecond midClock hmidFloor midLocals midGlobals midMemory midFfi
+  exact ⟨finalLocals, finalGlobals, finalMemory, finalFfi, finalClock,
+    evalPanValueFfiClockProg_seq_of_first_normal_progCallFuel context primitive
+      handler structs functions baseAddress topAddress bytesInWord callBudget first second
+      locals globals memory ffi clock ma c mh midLocals midGlobals midMemory midFfi
+      midClock (.control (.normal finalLocals finalGlobals finalMemory finalFfi))
+      finalClock hfirstEval hsecondEval,
+    hfinalFloor⟩
+
 /-- A lower-bounded program may also contain a caught-handler call: the call
     raises, the matching handler body runs normally at the same structural
     budget, and the result is again normal from the input clock onward. -/

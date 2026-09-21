@@ -4,6 +4,7 @@ import Flapjack.PanToCrepTailCallCorrectness
 import Flapjack.PanToCrepCallHandlerControlSafety
 import Flapjack.PanToCrepSharedMemoryControlSafety
 import Flapjack.PanToCrepSharedMemoryCorrectness
+import Flapjack.PanToCrepDeclarationControlSafety
 import Flapjack.PanValueFfiClockCorrectness
 import Flapjack.CrepeNestedDecsStability
 import Flapjack.CrepeRaisedCallInversion
@@ -1119,5 +1120,6 @@ example :
 #check @panValueCrepProgramStateCorrect_and_controlSafe_shMemStore_source_word
 #check @panValuePcCompileCorrect_compact_shMemLoad_source_word_of_state_evidence
 #check @panValuePcCompileCorrect_compact_shMemStore_source_word_of_state_evidence
+#check @panValueCrepProgramStateControlSafe_dec
 
 end Flapjack.Test.PanValuePcControlSafety

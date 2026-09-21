@@ -177,6 +177,22 @@ theorem functions_panSimpDecls_names_nodup (declarations : List (Decl α))
   rw [hfun]
   exact hnames
 
+/-! Counterpart of Cake's `compile_prog_distinct_params`
+    (`pan_simpProofScript.sml:1064-1069`): rewriting function bodies does not
+    alter the parameter names of any function declaration.  Flapjack keeps
+    parameter shapes alongside names, so the invariant is stated for the
+    projected name list. -/
+theorem functions_panSimpDecls_params_nodup (declarations : List (Decl α))
+    (hparams : ∀ entry ∈ functions declarations,
+      (entry.2.1.map Prod.fst).Nodup) :
+    ∀ entry ∈ functions (panSimpDecls declarations),
+      (entry.2.1.map Prod.fst).Nodup := by
+  rw [functions_panSimpDecls]
+  intro entry hentry
+  simp only [List.mem_map] at hentry
+  obtain ⟨source, hsource, rfl⟩ := hentry
+  exact hparams source hsource
+
 /-- Counterpart of the original `ALOOKUP` on the function table
     (`panLangScript.sml:319-326`): first-occurrence lookup of a function name in
     the `(name, params, body, returnShape)` projection `functions` produces. -/

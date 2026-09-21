@@ -83,4 +83,15 @@ example (structs : StructContext) (context : CompileContext Nat)
   exact panValueCrepLocalsRel_lookup_evidence structs context sourceLocals
     crepLocals name value shape slots hrel hsource hlookup
 
+example (structs : StructContext) (context : CompileContext Nat)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+    (sourceMemory : Nat → Option (PanValue Nat)) (crepState : CrepState Nat)
+    (address value : Nat)
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory crepState)
+    (hmemory : sourceMemory address = some (.word value)) :
+    crepState.memory address = some value := by
+  exact panValueCrepStateRel_memory_lookup structs context sourceLocals
+    sourceGlobals sourceMemory crepState address value hrel hmemory
+
 end Flapjack.Test.CrepeProgramInduction

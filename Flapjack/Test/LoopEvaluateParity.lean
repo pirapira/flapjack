@@ -1,4 +1,5 @@
 import Flapjack.LoopEvaluate
+import Flapjack.RiscV.PanSemantics
 
 /-!
 # Source parity for Pancake `loopSem$evaluate`
@@ -58,6 +59,18 @@ def hooks : LoopEvaluateHooks :=
     through the exact `evaluate_def` arithmetic boundary. -/
 def arithHooks : LoopEvaluateHooks :=
   { hooks with arith := fun state operation => loopArithMachine 8 state operation }
+
+/-! The primitive branch uses the same fixed-width Cake `AddCarry` handler as
+    `loop_primop` (`loopSemScript.sml:242-252`). -/
+def primitiveMachine : PrimOp → List LoopWordLoc → Option (List LoopWordLoc)
+  | .addCarry, [.word left, .word right, .word carry] =>
+      (RiscV.loopPrimitiveHandler (width := 64) .addCarry
+        [BitVec.ofNat 64 left, BitVec.ofNat 64 right, BitVec.ofNat 64 carry]).map
+        (fun values => values.map (fun value => .word value.toNat))
+  | _, _ => none
+
+def primitiveHooks : LoopEvaluateHooks :=
+  { arithHooks with primitive := primitiveMachine }
 
 /-! The source probes `loop_sem_sh_mem_load_probe.out` and
     `loop_sem_sh_mem_store_probe.out` cover `loopSemScript.sml:198-243`.
@@ -275,6 +288,26 @@ def divMalformed : Bool :=
     (longDivState (some (.loc 9 0)) (some (.word 2)) none)) ==
     (some .error, none, none, 5)
 
+/-! Exact `evaluate_def` primitive/result propagation for the HOL probe's
+    valid, carry-producing, and malformed `AddCarry` cases. -/
+def primitiveSuccess : Bool :=
+  observeLongDiv (evaluateLoop 2 primitiveHooks
+    (.primitive [1, 2] .addCarry [3, 4, 5])
+    (longDivState (some (.word 3)) (some (.word 4)) (some (.word 0)))) ==
+    (none, some (.word 7), some (.word 0), 5)
+
+def primitiveCarry : Bool :=
+  observeLongDiv (evaluateLoop 2 primitiveHooks
+    (.primitive [1, 2] .addCarry [3, 4, 5])
+    (longDivState (some (.word (2 ^ 64 - 1))) (some (.word 0)) (some (.word 1)))) ==
+    (none, some (.word 0), some (.word 1), 5)
+
+def primitiveMalformed : Bool :=
+  observeLongDiv (evaluateLoop 2 primitiveHooks
+    (.primitive [1, 2] .addCarry [3, 4])
+    (longDivState (some (.word 3)) (some (.word 4)) (some (.word 0)))) ==
+    (some .error, none, none, 5)
+
 /-! `loopSemScript.sml:118-145` also splits `LLongMul` into the high word
     destination first and the low word destination second.  This exercises
     that source arithmetic boundary through `evaluate_def`, not only through
@@ -400,6 +433,9 @@ def duplicateAssignFirstWins : Bool :=
 #guard divSuccess
 #guard divZero
 #guard divMalformed
+#guard primitiveSuccess
+#guard primitiveCarry
+#guard primitiveMalformed
 #guard longMulSuccess
 #guard longMulMalformed
 #guard longMulSameDestination
@@ -435,6 +471,9 @@ def runChecks : IO Bool := do
     ("evaluate LDiv returns the Cake quotient", divSuccess),
     ("evaluate LDiv rejects a zero divisor", divZero),
     ("evaluate LDiv rejects a non-word operand", divMalformed),
+    ("evaluate Primitive propagates AddCarry results", primitiveSuccess),
+    ("evaluate Primitive propagates AddCarry carry", primitiveCarry),
+    ("evaluate Primitive rejects malformed AddCarry", primitiveMalformed),
     ("evaluate LongMul splits high and low words", longMulSuccess),
     ("evaluate LongMul rejects a non-word operand", longMulMalformed),
     ("evaluate LongMul keeps the low word on a shared destination",

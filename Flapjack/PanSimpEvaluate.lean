@@ -6131,6 +6131,60 @@ theorem PanValueFfiClockNormalAdequateProgFromFloor_seq_adequate
       finalClock hfirstEval hsecondEval,
     Nat.zero_le finalClock⟩
 
+/-- A clock-free annotation preserves its input clock, so it keeps the floor. -/
+theorem PanValueFfiClockNormalAdequateProgFromFloor_annot
+    (lo : Nat)
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (ma : Option (PanValueMemoryAccess α))
+    (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (tag text : String) :
+    PanValueFfiClockNormalAdequateProgFromFloor lo lo context primitive handler
+      structs functions baseAddress topAddress bytesInWord callBudget ma c mh
+      (.annot tag text) := by
+  intro clock hclock locals globals memory ffi
+  exact ⟨locals, globals, memory, ffi, clock, by
+    simpa [progCallFuel] using (evalPanValueFfiClockProg_annot_some context primitive
+      handler structs functions baseAddress topAddress bytesInWord 0 locals globals
+      memory ffi clock tag text ma c mh), hclock⟩
+
+/-- A zero-condition while exits immediately without consuming clock, so it
+    preserves the floor. -/
+theorem PanValueFfiClockNormalAdequateProgFromFloor_while_zero
+    (lo : Nat)
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (ma : Option (PanValueMemoryAccess α))
+    (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (condition : Exp α) (body : Prog α)
+    (hcondition : ∀ (locals globals : VarName → Option (PanValue α))
+      (memory : α → Option (PanValue α)),
+      ∃ w : α, evalPanValueExp structs locals globals memory baseAddress
+        topAddress bytesInWord condition (memoryAccess := ma) = some (.word w) ∧
+        (w == 0) = true) :
+    PanValueFfiClockNormalAdequateProgFromFloor lo lo context primitive handler
+      structs functions baseAddress topAddress bytesInWord callBudget ma c mh
+      (.while condition body) := by
+  intro clock hclock locals globals memory ffi
+  obtain ⟨w, hcond, hw⟩ := hcondition locals globals memory
+  exact ⟨locals, globals, memory, ffi, clock,
+    evalPanValueFfiClockProg_while_zero_some_progCallFuel context primitive handler
+      structs functions baseAddress topAddress bytesInWord callBudget locals globals
+      memory ffi clock condition body ma c mh w hcond hw,
+    hclock⟩
+
 /-- A lower-bounded program may also contain a caught-handler call: the call
     raises, the matching handler body runs normally at the same structural
     budget, and the result is again normal from the input clock onward. -/

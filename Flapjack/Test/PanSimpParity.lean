@@ -2610,4 +2610,18 @@ example : PanValueFfiClockNormalAdequateProgFrom 0 evaluatorContext
 #check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_weaken
 #check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_seq_adequate
 
+/-! Clock-free annotations and zero-condition whiles keep their floor. -/
+example : PanValueFfiClockNormalAdequateProgFromFloor 0 0 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+    (.annot "tag" "text") :=
+  PanValueFfiClockNormalAdequateProgFromFloor_annot 0 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none "tag" "text"
+
+example : PanValueFfiClockNormalAdequateProgFromFloor 0 0 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+    (.while (.const 0) (.skip : Prog Nat)) :=
+  PanValueFfiClockNormalAdequateProgFromFloor_while_zero 0 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none (.const 0)
+    (.skip : Prog Nat) (fun _ _ _ => ⟨0, by simp [evalPanValueExp], by decide⟩)
+
 end Flapjack.Test.PanSimpParity

@@ -358,6 +358,17 @@ def globalCompileProg [BEq String] [Add α] [Mul α]
   | program => program
 termination_by program => sizeOf program
 
+/-- Cake's `exp_ids_compile_globals`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:135`): compiling a
+    program against the global context does not change its exception
+    identifiers. -/
+theorem globalCompileProg_expIds [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (program : Prog α) :
+    expIds (globalCompileProg context program) = expIds program := by
+  apply globalCompileProg.induct context
+    (motive := fun program => expIds (globalCompileProg context program) = expIds program)
+  all_goals intro <;> simp_all [globalCompileProg, expIds]
+
 /-! The declaration-order and function-permutation helpers used by
     CakeML's `pan_to_target`.  Keeping these transformations separate from
     global allocation makes their name-preservation contracts reusable by the

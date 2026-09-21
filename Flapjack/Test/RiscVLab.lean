@@ -136,6 +136,18 @@ example :
           (.reg 2)))) [] 0 : LabLine (Word 64))) = 5 := by
   rfl
 
+/- The direct Word arithmetic boundary must preserve Cake's immediate rotate
+   expansion, not merely its retained instruction count. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.shift .ror 4 5
+        (.imm (BitVec.ofNat 64 3))))) [] 0]⟩ =
+      some [
+        .srli 31 5 (BitVec.ofNat 64 3),
+        .slli 4 5 (BitVec.ofNat 64 61),
+        .or 4 4 31] := by
+  decide
+
 example :
     compileLabSection (width := 64) { services := [] }
       ⟨3, [.asm (.codeBufferWrite 7 6) [] 0]⟩ =

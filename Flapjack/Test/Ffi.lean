@@ -1,5 +1,6 @@
 import Flapjack.RiscV.Link
 import Flapjack.Ffi
+import Flapjack.PanValueFfiSemantics
 
 namespace Flapjack
 
@@ -16,6 +17,8 @@ example (state : FfiState Unit) (name : FfiName)
       .returned nextState nextBytes) :
     state.ioEvents <+: nextState.ioEvents :=
   callFfi_returned_ioEvents_prefix state name configuration bytes nextState nextBytes hcall
+
+#check @panValueFfiExtCall_returned_ioEvents_prefix
 
 /-! The four observations below are transcribed from
 `scripts/hol-probes/ffi_call_probe.out`, generated from

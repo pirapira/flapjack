@@ -119,6 +119,34 @@ def panValueFfiExtCall [BEq α] [Add α] [OfNat α 1]
       pure (.returned memory nextFfi)
   | .final event => pure (.final ffi event)
 
+theorem panValueFfiExtCall_returned_ioEvents_prefix
+    [BEq α] [Add α] [OfNat α 1]
+    (access : PanValueMemoryAccess α) (context : PanValueFfiContext α)
+    (memory : α → Option (PanValue α)) (bytesInWord : α)
+    (ffi : FfiState σ) (function : FunName)
+    (configuration configurationLength array arrayLength : α)
+    (nextMemory : α → Option (PanValue α)) (nextFfi : FfiState σ)
+    (hcall : panValueFfiExtCall access context memory bytesInWord ffi function
+      configuration configurationLength array arrayLength =
+      some (.returned nextMemory nextFfi)) :
+    ffi.ioEvents <+: nextFfi.ioEvents := by
+  unfold panValueFfiExtCall at hcall
+  cases hconfiguration : panValueFfiReadBytes access context memory bytesInWord
+      configuration (context.valueToNat configurationLength) with
+  | none => simp [hconfiguration] at hcall
+  | some configurationBytes =>
+      cases harray : panValueFfiReadBytes access context memory bytesInWord
+          array (context.valueToNat arrayLength) with
+      | none => simp [hconfiguration, harray] at hcall
+      | some arrayBytes =>
+          cases hffi : callFfi ffi (.extCall function) configurationBytes arrayBytes with
+          | final event => simp [hconfiguration, harray, hffi] at hcall
+          | returned returnedFfi returnedBytes =>
+              simp [hconfiguration, harray, hffi] at hcall
+              rcases hcall with ⟨_, rfl⟩
+              exact callFfi_returned_ioEvents_prefix ffi (.extCall function)
+                configurationBytes arrayBytes returnedFfi returnedBytes hffi
+
 inductive PanValueFfiControlResult (α : Type u) (σ : Type v) where
   | normal (locals globals : VarName → Option (PanValue α))
       (memory : α → Option (PanValue α)) (ffi : FfiState σ)

@@ -78,9 +78,23 @@ def longMulBoundaryGuard : Bool :=
 
 #guard longMulBoundaryGuard
 
+def shiftProgram : WordProg Nat :=
+  .inst (.arith (.shift .lsl 1 2 (.reg 3)))
+
+/-! A register-valued Cake shift uses fixed register 8 for the shift amount;
+    the source move is part of `ssa_cc_trans_inst`, not a later backend pass. -/
+def shiftBoundaryGuard : Bool :=
+  match (wordFullSsaCcTrans 0 shiftProgram).2.2 with
+  | .seq (.move 1 [])
+      (.seq (.move 1 [(8, 0)])
+        (.inst (.arith (.shift .lsl 5 0 (.reg 8))))) => true
+  | _ => false
+
+#guard shiftBoundaryGuard
+
 def parityGuard : Bool :=
   raiseBoundaryGuard && callBoundaryGuard && storeConstsBoundaryGuard &&
-    longDivBoundaryGuard && longMulBoundaryGuard
+    longDivBoundaryGuard && longMulBoundaryGuard && shiftBoundaryGuard
 
 #guard parityGuard
 #eval parityGuard
@@ -96,7 +110,9 @@ def runChecks : IO Bool := do
       ("full_ssa_cc_trans LongDiv preserves Cake fixed-register ABI",
         longDivBoundaryGuard),
       ("full_ssa_cc_trans LongMul preserves Cake fixed-register ABI",
-        longMulBoundaryGuard) ]
+        longMulBoundaryGuard),
+      ("full_ssa_cc_trans register Shift preserves Cake fixed-register ABI",
+        shiftBoundaryGuard) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

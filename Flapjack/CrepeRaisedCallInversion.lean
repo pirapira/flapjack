@@ -307,4 +307,42 @@ theorem evalCrepFullCallState_raised_inversion
                       | continued callee label
                       | finalFfi callee event =>
                           simp [evalCrepFullCallState, hvalues, hlookup, hassign, hcallee] at hcall
+/-! When the callee raises with a code that matches the call's caught handler,
+    the call's crep result is exactly the handler program's evaluation from the
+    handler-entry state `CrepState.mk caller.locals callee.memory callee.globals`.
+    This exposes the outer-to-inner handler branch equation used to relate a
+    caught-handler call's control result to the handler program. -/
+theorem evalCrepFullCallState_raised_handler_of_callee
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (functions : List (CompiledFunction α))
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (caller : CrepState α) (destinations : List Nat)
+    (caught : α) (handler : CrepProg α)
+    (function : FunName) (arguments : List (CrepExp α))
+    (values : List α) (parameters : List Nat) (body : CrepProg α)
+    (calleeLocals : Nat → Option α) (callee : CrepState α) (calleeException : α)
+    (hvalues : evalCrepFullExpsState caller baseAddress topAddress arguments =
+      some values)
+    (hlookup : lookupCompiledFunction function functions =
+      some (parameters, body))
+    (hassign : assignCrepValues (fun _ => none) parameters values =
+      some calleeLocals)
+    (hcallee : evalCrepFullProgState functions primitive ffi sharedMem
+      baseAddress topAddress fuel
+      (CrepState.mk calleeLocals caller.memory caller.globals) body =
+      some (.raised callee calleeException))
+    (hcaught : (caught == calleeException) = true) :
+    evalCrepFullCallState functions primitive ffi sharedMem
+      baseAddress topAddress (fuel + 1) caller
+      (some (destinations, some (caught, handler))) function arguments =
+      evalCrepFullProgState functions primitive ffi sharedMem
+        baseAddress topAddress fuel
+        (CrepState.mk caller.locals callee.memory callee.globals) handler := by
+  simp [evalCrepFullCallState, hvalues, hlookup, hassign, hcallee, hcaught]
+
 end Flapjack

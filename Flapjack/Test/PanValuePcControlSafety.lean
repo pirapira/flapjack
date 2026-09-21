@@ -3,6 +3,7 @@ import Flapjack.PanToCrepCorrectnessBridge
 import Flapjack.PanToCrepCallHandlerControlSafety
 import Flapjack.PanValueFfiClockCorrectness
 import Flapjack.CrepeNestedDecsStability
+import Flapjack.CrepeRaisedCallInversion
 
 namespace Flapjack.Test.PanValuePcControlSafety
 
@@ -1005,5 +1006,10 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @compileProg_call_handler_missing_destination_of_compiled
 
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_handler
+
+/-! The caught-handler call exposes the outer-to-inner handler branch: when the
+    callee raises with a matching code, the call's crep result is exactly the
+    handler program's evaluation from the handler-entry state. -/
+#check @evalCrepFullCallState_raised_handler_of_callee
 
 end Flapjack.Test.PanValuePcControlSafety

@@ -203,6 +203,23 @@ example :
     wordStackLocation, wordStackOffset, lookupNatInfo, wordStackJoin]
 
 example :
+    wordStackCompileStoreNatNested
+      { locations := [(0, .stack 3), (1, .stack 2)]
+        scratch := 31
+        addressScratch := 29
+        stackBase := 10 }
+      (.op .add [.var 1, .const 8]) (.var 0) =
+      some (.seq
+        (.seq (.stackLoad 31 12)
+          (.inst (.arith (.binOp .add 29 31 (.imm 8)))))
+        (.seq (.stackLoad 31 13)
+          (.inst (.mem .store 31 29))) : StackProg Nat) := by
+  simp [wordStackCompileStoreNatNested, wordStackCompileExpToRegisterNat,
+    wordStackExpressionIsAtom, wordStackAtomNat, wordStackReadRegister,
+    wordStackExpressionTemporaries, wordStackExpressionTemporariesExcluding,
+    wordStackLocation, wordStackOffset, lookupNatInfo, wordStackJoin]
+
+example :
     wordStackCompileLoadNatNested
       { locations := [(0, .register 4), (1, .register 5)]
         scratch := 31

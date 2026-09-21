@@ -127,6 +127,23 @@ def withShapeDisjointGuard : Bool :=
 #eval withShapeDisjointGuard
 #guard withShapeDisjointGuard
 
+theorem withShape_getElem_getElem_fixture :
+    ((withShape oneCombNamed [1, 2, 3, 4])[1]'(by rw [withShape_length]; decide))[1]'(by
+        simp [withShape, oneCombNamed, Shape.shapeSize]) =
+      ([1, 2, 3, 4] : List Nat)[(Shape.shapeSize (.comb (oneCombNamed.take 1))) + 1]'(by
+        simp [oneCombNamed, Shape.shapeSize]) :=
+  withShape_getElem_getElem oneCombNamed [1, 2, 3, 4] 1 1
+    (by simp [oneCombNamed, Shape.shapeSize]) (by decide)
+    (by simp [oneCombNamed, Shape.shapeSize])
+    (by simp [withShape, oneCombNamed, Shape.shapeSize])
+
+def withShapeNestedGuard : Bool :=
+  (((withShape oneCombNamed [1, 2, 3, 4])[1]'(by rw [withShape_length]; decide))[1]'(by
+      simp [withShape, oneCombNamed, Shape.shapeSize]) == (3 : Nat))
+
+#eval withShapeNestedGuard
+#guard withShapeNestedGuard
+
 def checkDisjoint (name : String) (actual : Bool) : IO Bool := do
   if actual then
     IO.println s!"PASS {name}"
@@ -149,7 +166,8 @@ def runChecks : IO Bool := do
   let disjointOk ← checkDisjoint "pan disjoint_take_drop_sum" disjointSumGuard
   let shapeDisjointOk ←
     checkDisjoint "pan all_distinct_disjoint_with_shape" withShapeDisjointGuard
+  let nestedOk ← checkDisjoint "pan el_el_with_shape" withShapeNestedGuard
   pure (results.all id && lengthOk && allDistinctOk && membershipOk && disjointOk &&
-    shapeDisjointOk)
+    shapeDisjointOk && nestedOk)
 
 end Flapjack.Test.PanWithShapeParity

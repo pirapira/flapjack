@@ -1032,6 +1032,40 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @panValuePcFinalFfiResultRel_of_clocked_call
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_finalFfi
 #check @panValuePcRaisedResultRelWithContextCode_of_clocked_call
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_raised_no_handler
+/-! Compositional source handler safety: a handler-free call and a declaration
+    body that never exposes loop control. -/
+#check @PanValueProgNotBrokeContinued_call_of_no_handler
+#check @PanValueProgNotBrokeContinued_dec
+
+/-! The direct `Call_Ret_Exception` branch of Cake's `pc_compile_correct`: a
+    direct call propagates the callee's uncaught raise unchanged. -/
+#check @panValuePcRaisedResultRelWithContextCode_of_clocked_call
+
+/-! The `DecCall` timeout lift: a declaration call whose callee runs out of
+    clock crosses the enclosing program boundary as a `timeout` outcome. -/
+#check @panValuePcTimeoutResultRel_of_clocked_decCall
+
+/-! The direct `Call_Ret` timeout lift: a direct call whose callee runs out of
+    clock crosses the enclosing program boundary as a `timeout` outcome. -/
+#check @panValuePcTimeoutResultRel_of_clocked_call
+#check @panValuePcCompileCorrectWithContextCode_of_compact_and_caught_call
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_raised
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_timeout
+
+/-! More compositional source handler-safety leaves: clock, annotation, local
+    assignment, and single-word store. -/
+#check @PanValueProgNotBrokeContinued_tick
+#check @PanValueProgNotBrokeContinued_annot
+#check @PanValueProgNotBrokeContinued_assign_local
+#check @PanValueProgNotBrokeContinued_store
+
+/-! More source handler-safety leaves: global assignment, primitive call, and
+    32/8-bit stores. -/
+#check @PanValueProgNotBrokeContinued_assign_global
+#check @PanValueProgNotBrokeContinued_primitive
+#check @PanValueProgNotBrokeContinued_store32
+#check @PanValueProgNotBrokeContinued_storeByte
 
 /-! More compositional source handler-safety leaves: clock, annotation, local
     assignment, and single-word store. -/

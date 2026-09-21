@@ -50,6 +50,8 @@ FIXTURES = (
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "secp_accel_init_block.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "nested_handler_condition.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "secp_accel_modmul.pnk",
+    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "nested_handler_comparison.pnk",
+    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "and_comparison_handler.pnk",
 )
 
 

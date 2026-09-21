@@ -77,6 +77,16 @@ example (state : CrepRuntimeTypedState (RiscV.Word 8) Unit)
   exact CrepRuntimeTypedState.evalExpFull_load_after_store state key
     address value loadAddress baseAddress topAddress
 
+example (state : CrepRuntimeTypedState (RiscV.Word 8) Unit)
+    (key : RiscV.Word 8 → CrepGlobalAddress)
+    (memoryState : CrepMemoryState (RiscV.Word 8))
+    (address baseAddress topAddress : RiscV.Word 8) :
+    state.evalExpCheckedFull key memoryState baseAddress topAddress
+        (.loadGlob address) =
+      evalCrepTypedLoad key state.toGlobalState address := by
+  exact CrepRuntimeTypedState.evalExpCheckedFull_loadGlob state key
+    memoryState address baseAddress topAddress
+
 def runtimeTypedLoopBaseState : LoopState Nat :=
   { locals := fun _ => none
     globals := fun _ => none

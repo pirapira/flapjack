@@ -409,6 +409,23 @@ def evalExpFull
     CrepExp α → Option α :=
   evalCrepTypedExpFull key state.toGlobalState baseAddress topAddress
 
+/-! Checked target-word evaluation for the same typed runtime boundary.  The
+    memory state is supplied explicitly because the legacy runtime record is
+    intentionally retained for compatibility; ordinary loads therefore use
+    Cake's domain/alignment/endianness model instead of its raw memory field. -/
+def evalExpCheckedFull
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [PanShiftWidth α] [ArithmeticShiftRight α]
+    [RotateRightOp α] [OfNat α 2] [OfNat α 3] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeTypedState α σ)
+    (key : α → CrepGlobalAddress) (memoryState : CrepMemoryState α)
+    (baseAddress topAddress : α) : CrepExp α → Option α :=
+  evalCrepCheckedExpStateFull state.runtime.locals
+    (fun address => state.globals (key address)) memoryState
+    baseAddress topAddress
+
 theorem toRuntime_relation (state : CrepRuntimeTypedState α σ)
     (key : α → CrepGlobalAddress) :
     crepRuntimeTypedGlobalRelation key (state.toRuntime key)
@@ -466,6 +483,21 @@ theorem evalExpFull_load_after_store [BEq α]
   simp [evalExpFull, store, evalCrepTypedExpFull,
     CrepRuntimeTypedState.toGlobalState, CrepGlobalState.toCompact,
     evalCrepFullExpStateFull, evalCrepTypedLoad, storeCrepTypedGlobal]
+
+theorem evalExpCheckedFull_loadGlob [BEq α]
+    [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [PanShiftWidth α] [ArithmeticShiftRight α]
+    [RotateRightOp α] [OfNat α 2] [OfNat α 3] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeTypedState α σ)
+    (key : α → CrepGlobalAddress) (memoryState : CrepMemoryState α)
+    (address baseAddress topAddress : α) :
+    state.evalExpCheckedFull key memoryState baseAddress topAddress
+        (.loadGlob address) =
+      evalCrepTypedLoad key state.toGlobalState address := by
+  simp [evalExpCheckedFull, evalCrepCheckedExpStateFull,
+    CrepRuntimeTypedState.toGlobalState, evalCrepTypedLoad]
 
 end CrepRuntimeTypedState
 

@@ -404,4 +404,24 @@ example : True := by
 #eval renameFilterNotFunctionGuard
 #guard renameFilterNotFunctionGuard
 
+/-! Counterpart of Cake's `compile_decs_EVERY`
+    (`pan_globalsProofScript.sml:1986`). -/
+example : True := by
+  let context : GlobalPassContext Nat :=
+    { globals := [], globalsSize := 0, maxGlobalsSize := 0, bytesInWord := 8,
+      fromNat := fun n => n }
+  have h := globalCompileDecs_functions_all_of_predicate context
+    filterDeclsFixture globalDeclIsFunction (by decide)
+  trivial
+
+def functionsEveryGuard : Bool :=
+  let context : GlobalPassContext Nat :=
+    { globals := [], globalsSize := 0, maxGlobalsSize := 0, bytesInWord := 8,
+      fromNat := fun n => n }
+  (globalCompileDecs context filterDeclsFixture).functions.all
+    globalDeclIsFunction
+
+#eval functionsEveryGuard
+#guard functionsEveryGuard
+
 end Flapjack.Test.PanGlobalsDecShapesParity

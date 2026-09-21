@@ -192,6 +192,37 @@ def flatLoadShapeGuard : Bool :=
 #eval flatLoadShapeGuard
 #guard flatLoadShapeGuard
 
+/-! Cake's `mem_loads_some_shape_eq` (`panPropsScript.sml:194`): the list and
+    fields flat loads return values whose shapes are exactly the requested ones. -/
+
+def flatLoadListGuard : Bool :=
+  match panValueFlatLoadList ([] : StructContext) flatMemory 8 100 [.one] with
+  | some values =>
+      (match values.map (panValueShape ([] : StructContext)) with
+       | [.one] => true
+       | _ => false)
+  | none => false
+
+def flatLoadFieldsGuard : Bool :=
+  match panValueFlatLoadFields ([] : StructContext) flatMemory 8 100 [("f", .one)] with
+  | some values =>
+      (match values.map (fun field => panValueShape ([] : StructContext) field.2) with
+       | [.one] => true
+       | _ => false)
+  | none => false
+
+#eval flatLoadListGuard
+#guard flatLoadListGuard
+#eval flatLoadFieldsGuard
+#guard flatLoadFieldsGuard
+
+example : True := by
+  match h : panValueFlatLoadList ([] : StructContext) flatMemory 8 100 [.one] with
+  | some values =>
+      have _ := panValueFlatLoadList_shape ([] : StructContext) flatMemory 8 100 [.one]
+        none values h
+      trivial
+  | none => trivial
 /-! `evaluate_replicate_const` (`pan_to_crepProofScript.sml:3051`): evaluating a
     list of zero constants always succeeds, producing the same number of zero
     words. -/

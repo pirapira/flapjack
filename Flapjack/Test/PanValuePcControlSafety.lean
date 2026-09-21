@@ -1293,5 +1293,6 @@ example
 #check @panValuePcCompileCorrect_compact_statefulCompact
 #check @panValuePcCompileCorrect_compact_statefulCompact_canonical_globals
 #check @panValuePcCompileCorrect_compact_statefulCompact_context_code
+#check @panValuePcCompileCorrect_of_compact_evaluators_and_clocked_word_raise_hraise_data
 
 end Flapjack.Test.PanValuePcControlSafety

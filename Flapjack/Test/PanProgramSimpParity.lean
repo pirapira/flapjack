@@ -370,4 +370,27 @@ example : True := by
         evalRelState state' exceptionsDecls none heval
       trivial
 
+/-! Cake's `decs_stcnames_only_functions` / `decs_stcnames_only_functions2`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1592,1600`): struct-free and
+    function-only declaration lists leave the struct-name context unchanged. -/
+
+def noNameDecls : List (Decl Nat) :=
+  [.function wfFunction, .exnDecl "E" .one, .decl .one "g" (.const 7)]
+
+def functionsOnlyDecls : List (Decl Nat) := [.function wfFunction]
+
+def structContextGuard : Bool :=
+  (collectPanValueStructs noNameDecls ([] : StructContext)).isSome &&
+    (collectPanValueStructs functionsOnlyDecls ([] : StructContext)).isSome
+
+#eval structContextGuard
+#guard structContextGuard
+
+example : True := by
+  have _h := collectPanValueStructs_of_no_names ([] : StructContext) noNameDecls
+    (by decide)
+  have _h2 := collectPanValueStructs_of_functions ([] : StructContext)
+    functionsOnlyDecls (by decide)
+  trivial
+
 end Flapjack.Test.PanProgramSimpParity

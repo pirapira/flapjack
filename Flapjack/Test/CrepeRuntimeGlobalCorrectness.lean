@@ -124,6 +124,15 @@ example :
   exact LoopTypedGlobalState.setGlobal_load_alias runtimeTypedLoopGlobalState
     runtimeTypedKey 4 17 36
 
+example (state : LoopTypedGlobalState (RiscV.Word 8))
+    (key : RiscV.Word 8 → CrepGlobalAddress)
+    (address value loadAddress : RiscV.Word 8) :
+    (state.setGlobalFull key address (.const value)).bind
+        (fun next => next.load key loadAddress) =
+      evalCrepTypedLoad key
+        (storeCrepTypedGlobal key state.globals address value) loadAddress := by
+  exact LoopTypedGlobalState.setGlobalFull_load_alias state key address value loadAddress
+
 example :
     ((runtimeTypedLoopGlobalState.store runtimeTypedKey 4 17).toLoopState
         runtimeTypedKey).globals 36 = some 17 := by

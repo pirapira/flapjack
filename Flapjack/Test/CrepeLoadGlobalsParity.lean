@@ -131,6 +131,15 @@ theorem crepAssignedVars_nestedSeq_storeGlobals_fixture :
   crepAssignedVars_nestedSeq_storeGlobals (α := Nat) 3 1
     [CrepExp.const 7, CrepExp.const 8]
 
+theorem loadGlobals_crepExpVars_empty_fixture :
+    (loadGlobals 3 1 3).flatMap crepExpVars = [] :=
+  loadGlobals_crepExpVars_empty (α := Nat) 3 1 3
+
+theorem mem_crepAssignedFreeVars_imp_mem_crepAssignedVars_fixture :
+    (3 : Nat) ∈ crepAssignedVars (CrepProg.assign 3 (CrepExp.const 1)) :=
+  mem_crepAssignedFreeVars_imp_mem_crepAssignedVars
+    (CrepProg.assign 3 (CrepExp.const 1)) 3 (by simp [crepAssignedFreeVars])
+
 def runChecks : IO Bool := do
   let results := [
     isEmpty (loadGlobals 3 1 0),

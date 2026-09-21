@@ -324,6 +324,50 @@ theorem length_withShape_eq_shape (shapes : List Shape) (values : List α)
   have _ := hvalues
   rw [withShape_length]
 
+theorem shapeSize_comb_cons (head : Shape) (tail : List Shape) :
+    Shape.shapeSize (.comb (head :: tail)) =
+      Shape.shapeSize head + Shape.shapeSize (.comb tail) := by
+  have hfold : ∀ (shapes : List Shape) (acc : Nat),
+      shapes.foldl (fun total field => total + Shape.shapeSize field) acc =
+        acc + shapes.foldl (fun total field => total + Shape.shapeSize field) 0 := by
+    intro shapes
+    induction shapes with
+    | nil => intro acc; simp
+    | cons shape shapes ih =>
+        intro acc
+        simp only [List.foldl_cons]
+        rw [ih (acc + Shape.shapeSize shape), ih (0 + Shape.shapeSize shape)]
+        omega
+  simp only [Shape.shapeSize, List.foldl_cons, Nat.zero_add]
+  rw [hfold tail (Shape.shapeSize head)]
+
+/-! Counterpart of Cake's `all_distinct_with_shape`
+    (`cakeml/pancake/semantics/panPropsScript.sml:286`): the `n`-th component
+    produced by the flat-value split is distinct whenever the flat value list
+    is distinct. -/
+theorem all_distinct_withShape (shapes : List Shape) (values : List α) (n : Nat)
+    (hdistinct : values.Nodup)
+    (hn : n < shapes.length)
+    (hvalues : values.length = Shape.shapeSize (.comb shapes)) :
+    ((withShape shapes values)[n]'(by rw [withShape_length]; exact hn)).Nodup := by
+  revert values n
+  induction shapes with
+  | nil => intro values n hdistinct hn hvalues; exact absurd hn (Nat.not_lt_zero n)
+  | cons shape shapes ih =>
+      intro values n hdistinct hn hvalues
+      cases n with
+      | zero =>
+          simp only [withShape]
+          exact hdistinct.take
+      | succ k =>
+          simp only [withShape]
+          simp only [List.length_cons] at hn
+          have hn' : k < shapes.length := by omega
+          have hvalues' : (values.drop (Shape.shapeSize shape)).length =
+              Shape.shapeSize (.comb shapes) := by
+            rw [List.length_drop, hvalues, shapeSize_comb_cons, Nat.add_sub_cancel_left]
+          exact ih (values.drop (Shape.shapeSize shape)) k hdistinct.drop hn' hvalues'
+
 def expLocalVars : Exp α → List VarName
   | .const _ => []
   | .var .local name => [name]

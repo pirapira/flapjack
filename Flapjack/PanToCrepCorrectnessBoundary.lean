@@ -427,6 +427,26 @@ theorem panValuePcResultRel_raised_iff
         targetState targetException := by
   simp [panValuePcResultRel]
 
+theorem panValuePcResultRelWithContextCode_raised_iff
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+    (sourceValue : PanValue α) (targetState : CrepState α)
+    (targetException : α) :
+    panValuePcResultRelWithContextCode structs context exceptionRel exceptionCode
+      globalsLookup
+      (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+      (.raised targetState targetException) ↔
+      panValueCrepStateRel structs context sourceLocals sourceGlobals
+        sourceMemory targetState ∧
+      panValuePcExceptionResultRelWithContextCode structs context exceptionRel
+        exceptionCode globalsLookup sourceGlobals sourceMemory sourceException
+        sourceValue targetState targetException := by
+  simp [panValuePcResultRelWithContextCode]
+
 /-! Safety obligation for the compact `pc_compile_correct` bridge.  The
 intermediate control relation intentionally permits nonzero labels while a
 loop propagates them, but the final Pancake theorem only admits label `0` for
@@ -1868,6 +1888,65 @@ def PanValuePcCompileCorrectWithContextCode
     excpRel context sourceExecution.eshapes targetExecution.eshapes →
     panValuePcResultRelWithContextCode structs context exceptionRel exceptionCode
       globalsLookup sourceExecution.result targetExecution.result
+
+/-! The context-coded result relation strengthens only the raised clause with
+the exact Cake exception-code provenance.  Consequently the plain result
+relation is a projection of it, and a context-coded compiler-correctness
+instance yields the plain boundary instance.  These projections let plain
+consumers reuse the context-coded constructor bridges without restating the
+exception-code premise. -/
+theorem panValuePcExceptionResultRel_of_withContextCode
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (sourceException : ExceptionId) (sourceValue : PanValue α)
+    (targetState : CrepState α) (targetException : α)
+    (h : panValuePcExceptionResultRelWithContextCode structs context
+      exceptionRel exceptionCode globalsLookup sourceGlobals sourceMemory
+      sourceException sourceValue targetState targetException) :
+    panValuePcExceptionResultRel structs context exceptionRel exceptionCode
+      globalsLookup sourceGlobals sourceMemory sourceException sourceValue
+      targetState targetException :=
+  h.1
+
+theorem panValuePcResultRel_of_withContextCode
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceResult : PanValuePcResult α) (targetResult : CrepPcResult α)
+    (h : panValuePcResultRelWithContextCode structs context exceptionRel
+      exceptionCode globalsLookup sourceResult targetResult) :
+    panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
+      sourceResult targetResult := by
+  cases sourceResult <;> cases targetResult <;>
+    simp only [panValuePcResultRelWithContextCode, panValuePcResultRel] at h ⊢ <;>
+    (try exact h) <;> (try exact ⟨h.1, h.2.1⟩)
+
+theorem panValuePcCompileCorrect_of_withContextCode
+    [BEq α] [OfNat α 0] [Add α]
+    (sourceEvaluate : PanValuePcEvaluator α)
+    (targetEvaluate : CrepPcEvaluator α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (program : Prog α)
+    (h : PanValuePcCompileCorrectWithContextCode sourceEvaluate targetEvaluate
+      codeRel excpRel exceptionCode globalsLookup program) :
+    PanValuePcCompileCorrect sourceEvaluate targetEvaluate codeRel excpRel
+      exceptionCode globalsLookup program := by
+  intro context structs sourceInput targetInput exceptionRel sourceExecution
+    targetExecution hsourceStructs htargetStructs hlocalisedCode hlocalised
+    hcode hexcp hstate hnonerror hsource htarget hpostCode hpostExcp
+  exact panValuePcResultRel_of_withContextCode structs context exceptionRel
+    exceptionCode globalsLookup sourceExecution.result targetExecution.result
+    (h context structs sourceInput targetInput exceptionRel sourceExecution
+      targetExecution hsourceStructs htargetStructs hlocalisedCode hlocalised
+      hcode hexcp hstate hnonerror hsource htarget hpostCode hpostExcp)
 
 /-! Packaging theorem for a supported compiler subset.  Every HOL result case
 is an explicit obligation; in particular no proof can discharge this

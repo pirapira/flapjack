@@ -935,6 +935,16 @@ theorem map_eq_append_drop_fixture :
     (([1, 2, 3, 4] : List Nat).drop 2).map (fun x => x * 2) = [6, 8] :=
   map_eq_append_drop (fun x => x * 2) [1, 2, 3, 4] [2, 4] [6, 8] (by decide)
 
+theorem list_mapM_eq_some_map_some_fixture :
+    (([2, 4, 6] : List Nat).map sampleMapF) = ([3, 5, 7] : List Nat).map some :=
+  (list_mapM_eq_some_map_some sampleMapF [2, 4, 6] [3, 5, 7]).mp (by decide)
+
+theorem list_mapM_eq_some_map_some_rev_fixture :
+    ([2, 4, 6] : List Nat).mapM sampleMapF = some [3, 5, 7] :=
+  (list_mapM_eq_some_map_some sampleMapF [2, 4, 6] [3, 5, 7]).mpr (by decide)
+
+#check @list_mapM_eq_some_map_some
+
 def mapMoreFactsGuard : Bool :=
   (([2, 4, 6] : List Nat).mapM (fun x => (sampleMapF x).map (fun y => y + 1)) ==
       some [4, 6, 8]) &&

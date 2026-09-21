@@ -483,16 +483,16 @@ theorem wordColourStateRelation_executeImmediateBinary
           (readRegister target ⟨colour sourceName, valid sourceName hsource⟩ &&& value) hvalue)
   | or =>
       have hvalue :
-          readRegister source ⟨sourceName, hsource⟩ ||| value =
-            readRegister target ⟨colour sourceName, valid sourceName hsource⟩ ||| value := by
+          readRegister source ⟨sourceName, hsource⟩ ||| iImmediate value =
+            readRegister target ⟨colour sourceName, valid sourceName hsource⟩ ||| iImmediate value := by
         rw [hrelation.register sourceName hsource (valid sourceName hsource)]
       have hnext := wordColourStateRelation_nextPc colour valid source target hrelation
       simpa [execute] using
         (wordColourStateRelation_writeRegister colour valid injective colourZero
           {source with pc := nextPc source} {target with pc := nextPc target}
           hnext name hname
-          (readRegister source ⟨sourceName, hsource⟩ ||| value)
-          (readRegister target ⟨colour sourceName, valid sourceName hsource⟩ ||| value) hvalue)
+          (readRegister source ⟨sourceName, hsource⟩ ||| iImmediate value)
+          (readRegister target ⟨colour sourceName, valid sourceName hsource⟩ ||| iImmediate value) hvalue)
   | xor =>
       have hvalue :
           readRegister source ⟨sourceName, hsource⟩ ^^^ value =

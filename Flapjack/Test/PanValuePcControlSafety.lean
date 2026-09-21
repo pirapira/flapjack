@@ -18,6 +18,7 @@ import Flapjack.PanToCrepAnnotCorrectness
 import Flapjack.PanValueFfiClockCorrectness
 import Flapjack.CrepeNestedDecsStability
 import Flapjack.CrepeRaisedCallInversion
+import Flapjack.PanToCrepDecCallCorrectness
 import Flapjack.PanToCrepProgramComposition
 
 namespace Flapjack.Test.PanValuePcControlSafety
@@ -1201,5 +1202,9 @@ example :
 #check @panValuePcResultRel_timeout_iff
 #check @panValuePcResultRel_finalFfi_iff
 #check @panValuePcResultRel_raised_iff
+#check @panValuePcResultRelWithContextCode_raised_iff
+#check @panValuePcExceptionResultRel_of_withContextCode
+#check @panValuePcResultRel_of_withContextCode
+#check @panValuePcCompileCorrect_of_withContextCode
 
 end Flapjack.Test.PanValuePcControlSafety

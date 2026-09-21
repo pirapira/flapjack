@@ -266,6 +266,71 @@ theorem evalPanValueProgram_of_declarations_and_returned_call
       some (.returned locals globals memory [value]) := by
   simp [evalPanValueProgram, hdeclarations, hcall, hentry, hshape]
 
+/-! The raised-result counterpart keeps arbitrary exception payloads visible at
+    the same top-level declaration/call boundary.  Unlike a returned value,
+    a raised call does not require an entry return-shape premise. -/
+theorem evalPanValueProgram_of_declarations_and_raised_call
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (initial : PanValueProgramState α)
+    (primitive : PanPrimitiveHandler α) (ffi : PanValueFfiHandler α)
+    (fuel : Nat) (declarations : List (Decl α)) (entry : FunName)
+    (arguments : List (Exp α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (memoryHandler : Option (PanValueAcceleratorFfiHandler α))
+    (state : PanValueProgramState α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (exception : ExceptionId)
+    (value : PanValue α)
+    (hdeclarations : evalPanValueDeclarations initial declarations
+      (memoryAccess := memoryAccess) = some state)
+    (hcall : evalPanValueCallWithPrimitiveCallsAndFfi primitive ffi
+      state.structs state.functions state.baseAddress state.topAddress
+      state.bytesInWord fuel (fun _ => none) state.globals state.memory none
+      entry arguments (memoryAccess := memoryAccess)
+      (contracts := some (PanValueCallContracts.mk state.returnShapes
+        state.exceptions state.parameterShapes))
+      (memoryHandler := memoryHandler) =
+      some (.raised locals globals memory exception value)) :
+    evalPanValueProgram initial primitive ffi fuel declarations entry arguments
+      (memoryAccess := memoryAccess) (memoryHandler := memoryHandler) =
+      some (.raised locals globals memory exception value) := by
+  simp [evalPanValueProgram, hdeclarations, hcall]
+
+/-! The other singleton-return branch is rejected when the entry's declared
+    return shape does not accept the value.  This is the failure branch of
+    Cake's top-level `evaluate_decls` boundary, rather than a failure hidden
+    inside the callee evaluator. -/
+theorem evalPanValueProgram_of_declarations_and_returned_shape_mismatch
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (initial : PanValueProgramState α)
+    (primitive : PanPrimitiveHandler α) (ffi : PanValueFfiHandler α)
+    (fuel : Nat) (declarations : List (Decl α)) (entry : FunName)
+    (arguments : List (Exp α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (memoryHandler : Option (PanValueAcceleratorFfiHandler α))
+    (state : PanValueProgramState α)
+    (shape : Shape) (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (value : PanValue α)
+    (hdeclarations : evalPanValueDeclarations initial declarations
+      (memoryAccess := memoryAccess) = some state)
+    (hcall : evalPanValueCallWithPrimitiveCallsAndFfi primitive ffi
+      state.structs state.functions state.baseAddress state.topAddress
+      state.bytesInWord fuel (fun _ => none) state.globals state.memory none
+      entry arguments (memoryAccess := memoryAccess)
+      (contracts := some (PanValueCallContracts.mk state.returnShapes
+        state.exceptions state.parameterShapes))
+      (memoryHandler := memoryHandler) =
+      some (.returned locals globals memory [value]))
+    (hentry : lookupInfo entry state.returnShapes = some shape)
+    (hshape : panShapeMatches (panValueShape state.structs value) shape = false) :
+    evalPanValueProgram initial primitive ffi fuel declarations entry arguments
+      (memoryAccess := memoryAccess) (memoryHandler := memoryHandler) = none := by
+  simp [evalPanValueProgram, hdeclarations, hcall, hentry, hshape]
+
 def panValueProgramResult
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

@@ -311,5 +311,128 @@ example : True := by
     ([] : StructContext) evalRelState wfFunction .one "g" (.const 7) [] none
   trivial
 
+/-! Regression for Cake's `evaluate_decls_functions`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1518`): a successful
+    declaration evaluation only prepends the list's function entries to the
+    function table. -/
+
+def functionsDecls : List (Decl Nat) :=
+  [.decl .one "g" (.const 7), .function wfFunction,
+   .function
+     { name := "h", inline := false, exported := false, params := [],
+       body := (.skip : Prog Nat), returnShape := .one }]
+
+def functionsGuard : Bool :=
+  match evalPanValueDeclarationsWithStructs ([] : StructContext) evalRelState
+      functionsDecls none with
+  | some state' =>
+      state'.functions.length ==
+        (panFunctionEntries functionsDecls ++ evalRelState.functions).length
+  | none => false
+
+#eval functionsGuard
+#guard functionsGuard
+
+example : True := by
+  cases heval : evalPanValueDeclarationsWithStructs ([] : StructContext)
+      evalRelState functionsDecls none with
+  | none => trivial
+  | some state' =>
+      have _h := evalPanValueDeclarationsWithStructs_functions ([] : StructContext)
+        evalRelState state' functionsDecls none heval
+      trivial
+
+/-! Regression for Cake's `evaluate_decls_eshapes`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1409`): a successful
+    declaration evaluation only prepends the list's exception entries to the
+    exception-shape table. -/
+
+def exceptionsDecls : List (Decl Nat) :=
+  [.exnDecl "E" .one, .decl .one "g" (.const 7), .exnDecl "F" .one]
+
+def exceptionsGuard : Bool :=
+  match evalPanValueDeclarationsWithStructs ([] : StructContext) evalRelState
+      exceptionsDecls none with
+  | some state' =>
+      state'.exceptions.length ==
+        (panExceptionEntries exceptionsDecls ++ evalRelState.exceptions).length
+  | none => false
+
+#eval exceptionsGuard
+#guard exceptionsGuard
+
+example : True := by
+  cases heval : evalPanValueDeclarationsWithStructs ([] : StructContext)
+      evalRelState exceptionsDecls none with
+  | none => trivial
+  | some state' =>
+      have _h := evalPanValueDeclarationsWithStructs_exceptions ([] : StructContext)
+        evalRelState state' exceptionsDecls none heval
+      trivial
+
+/-! Regression for Cake's `evaluate_decls_only_exn_decls`: an all-exception
+    declaration list changes no program component except the exception table. -/
+
+def onlyExceptionDecls : List (Decl Nat) :=
+  [.exnDecl "E" .one, .exnDecl "F" .one]
+
+def onlyExceptionsGuard : Bool :=
+  match evalPanValueDeclarationsWithStructs ([] : StructContext) evalRelState
+      onlyExceptionDecls none with
+  | some state' =>
+      match state'.exceptions with
+      | [("F", .one), ("E", .one)] =>
+          state'.functions.isEmpty && state'.returnShapes.isEmpty &&
+            Option.isNone (state'.globals "g")
+      | _ => false
+  | none => false
+
+#eval onlyExceptionsGuard
+#guard onlyExceptionsGuard
+
+example (state' : PanValueProgramState Nat)
+    (heval : evalPanValueDeclarationsWithStructs ([] : StructContext) evalRelState
+      onlyExceptionDecls none = some state') :
+    state' = { evalRelState with
+      exceptions := panExceptionEntries onlyExceptionDecls ++ evalRelState.exceptions } := by
+  exact evalPanValueDeclarationsWithStructs_only_exn_decls ([] : StructContext)
+    evalRelState state' onlyExceptionDecls none (by decide) rfl heval
+
+/-! Regression for Cake's `evaluate_decls_names`: structure-name
+    declarations do not alter the program state during evaluation. -/
+
+def namesOnlyDecls : List (Decl Nat) :=
+  [.name "Pair" [ ("left", .one), ("right", .one) ],
+   .name "Triple" [ ("a", .one), ("b", .one), ("c", .one) ]]
+
+example :
+    evalPanValueDeclarationsWithStructs ([] : StructContext) evalRelState
+      namesOnlyDecls none = some evalRelState := by
+  exact evalPanValueDeclarationsWithStructs_names ([] : StructContext)
+    evalRelState namesOnlyDecls none (by decide)
+
+/-! Cake's `decs_stcnames_only_functions` / `decs_stcnames_only_functions2`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1592,1600`): struct-free and
+    function-only declaration lists leave the struct-name context unchanged. -/
+
+def noNameDecls : List (Decl Nat) :=
+  [.function wfFunction, .exnDecl "E" .one, .decl .one "g" (.const 7)]
+
+def functionsOnlyDecls : List (Decl Nat) := [.function wfFunction]
+
+def structContextGuard : Bool :=
+  (collectPanValueStructs noNameDecls ([] : StructContext)).isSome &&
+    (collectPanValueStructs functionsOnlyDecls ([] : StructContext)).isSome
+
+#eval structContextGuard
+#guard structContextGuard
+
+example : True := by
+  have _h := collectPanValueStructs_of_no_names ([] : StructContext) noNameDecls
+    (by decide)
+  have _h2 := collectPanValueStructs_of_functions ([] : StructContext)
+    functionsOnlyDecls (by decide)
+  trivial
+
 end Flapjack.Test.PanProgramSimpParity
 

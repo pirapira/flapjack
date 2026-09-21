@@ -867,4 +867,8 @@ evaluator-evidence obligation. -/
 #check @panValuePcCompileCorrect_compact_three_word_raise_of_state_evidence_context_code
 #check @panValuePcCompileCorrect_compact_four_word_raise_of_state_evidence_context_code
 
+/-! The plain exception-result dispatcher likewise accepts the explicit
+    state-evidence premises instead of the opaque raised-payload callback. -/
+#check @panValuePcRaisedHraiseCases_to_exception_result_rel_of_state_evidence
+
 end Flapjack.Test.PanValuePcControlSafety

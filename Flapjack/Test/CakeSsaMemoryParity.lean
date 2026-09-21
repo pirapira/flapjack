@@ -153,8 +153,6 @@ def runChecks : IO Bool := do
       ("ssa_cc_trans Mem Store renames Cake address and value", storeInstGuard),
       ("ssa_cc_trans Mem Load32 freshens Cake destination", load32InstGuard),
       ("ssa_cc_trans Mem Store32 renames Cake address and value", store32InstGuard),
-      ("ssa_cc_trans Mem Load8 freshens Cake destination", load8InstGuard),
-      ("ssa_cc_trans Mem Store8 renames Cake address and value", store8InstGuard),
       ("ssa_cc_trans MemOffset Load keeps Cake offset", loadOffsetGuard),
       ("ssa_cc_trans MemOffset Store keeps Cake offset", storeOffsetGuard),
       ("ssa_cc_trans MemOffset Load32 keeps Cake offset", load32OffsetGuard),

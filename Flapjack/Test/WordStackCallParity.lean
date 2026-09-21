@@ -245,6 +245,16 @@ def stackArgsMatchesCakeProbe : Bool :=
 
 #guard stackArgsMatchesCakeProbe
 
+/- Cake's direct `StackHandlerArgs F (INL 0) 3 (12,20,19)` row has no
+   stack-resident arguments: `stack_arg_count` is zero before the handler's
+   three reserved slots are added to the frame. -/
+def stackHandlerArgsMatchesCakeProbe : Bool :=
+  match (stackHandlerArgs (α := Nat) false 0 20 12) with
+  | .stackAlloc words => words == 0
+  | _ => false
+
+#guard stackHandlerArgsMatchesCakeProbe
+
 /- The direct `call_dest (SOME target)` path keeps the target as a label and
    does not add a frame-free instruction when Cake's computed free count is
    zero for an empty frame. -/
@@ -326,6 +336,8 @@ def runChecks : IO Bool := do
         overflowArgumentSlotMatchesWMoveSingle),
       ("StackArgs direct/indirect shapes match Cake's probe",
         stackArgsMatchesCakeProbe),
+      ("StackHandlerArgs matches Cake's direct handler probe",
+        stackHandlerArgsMatchesCakeProbe),
       ("direct call destination preserves Cake's label carrier",
         directCallDestinationCakeGuard),
       ("returning direct call preserves Cake's carrier shape",

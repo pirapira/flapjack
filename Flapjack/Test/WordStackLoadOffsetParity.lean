@@ -166,6 +166,22 @@ example :
   simp [wordStackCompileStoreNatNested, wordStackLocation, lookupNatInfo,
     wordStackJoin]
 
+/- Cake's signed-12 negative Store displacement remains in the source-shaped
+   carrier as the modulo-2^64 word (2^64 - 8); Lab later emits the signed
+   -8 MemOffset form. -/
+example :
+    wordStackCompileStoreNatNested
+      { locations := [(0, .register 4), (1, .register 5)]
+        scratch := 31
+        addressScratch := 29
+        stackBase := 10 }
+      (.op .add [.var 1, .const (2 ^ 64 - 8)]) (.var 0) =
+      some (.seq (.seq (.const 31 (2 ^ 64 - 8))
+        (.arith .add 29 5 31))
+        (.inst (.mem .store 4 29)) : StackProg Nat) := by
+  simp [wordStackCompileStoreNatNested, wordStackLocation, lookupNatInfo,
+    wordStackJoin]
+
 /- A spilled Store value still follows Cake's address/value staging: the
    address is formed first, then the value is reloaded through `wReg2`. -/
 example :

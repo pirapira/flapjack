@@ -376,4 +376,82 @@ theorem list_mapM_eval_panValueProgramStateRel
       evalPanValueExp_panValueProgramStateRel structs locals s t hrel expression
         memoryAccess value heval)
 
+/-! Cake's `evaluate_decls_functions`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1518`):
+
+        !s pan_code s'. evaluate_decls s pan_code = SOME s' ==>
+                     s'.code = s.code |++ functions pan_code
+
+    Evaluating a declaration list installs exactly the function declarations it
+    contains, in source order, leaving every other declaration constructor
+    untouched.  Cake's `|++` folds map updates in source order, so a later
+    function wins; Flapjack's function table is a lookup list that prepends each
+    installed function, so the accumulated table is the reversed source-order
+    projection of `functions`. -/
+
+/-- Source-order projection of a declaration list's function entries into the
+    `(name, parameter names, body)` shape stored by `PanValueProgramState`. -/
+def panFunctionEntries (declarations : List (Decl α)) :
+    List (FunName × List VarName × Prog α) :=
+  (functions declarations).reverse.map
+    (fun entry : FunName × List (VarName × Shape) × Prog α × Shape =>
+      (entry.1, entry.2.1.map Prod.fst, entry.2.2.1))
+
+/-- Cake's `evaluate_decls_functions` (`panPropsScript.sml:1518`): a successful
+    declaration evaluation only prepends the list's function entries to the
+    function table. -/
+theorem evalPanValueDeclarationsWithStructs_functions
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext) (state state' : PanValueProgramState α)
+    (declarations : List (Decl α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (heval : evalPanValueDeclarationsWithStructs structs state declarations
+      memoryAccess = some state') :
+    state'.functions = panFunctionEntries declarations ++ state.functions := by
+  induction declarations generalizing state with
+  | nil =>
+      simp only [evalPanValueDeclarationsWithStructs] at heval
+      have hstate : state = state' := (Option.some.injEq _ _).mp heval
+      subst hstate
+      simp [panFunctionEntries, functions]
+  | cons declaration declarations ih =>
+      cases declaration with
+      | name struct fields =>
+          simp only [evalPanValueDeclarationsWithStructs] at heval
+          rw [ih state heval]
+          simp [panFunctionEntries, functions]
+      | decl shape name expression =>
+          simp only [evalPanValueDeclarationsWithStructs] at heval
+          cases hval : evalPanValueExp structs (fun _ => none) state.globals
+              state.memory state.baseAddress state.topAddress state.bytesInWord
+              expression (memoryAccess := memoryAccess) with
+          | none => simp [hval] at heval
+          | some value =>
+              by_cases hmatch :
+                  panShapeMatches (panValueShape structs value) shape = true
+              · simp [hval, hmatch] at heval
+                rw [ih _ heval]
+                simp [panFunctionEntries, functions]
+              · simp [hval, hmatch] at heval
+      | function declaration =>
+          simp only [evalPanValueDeclarationsWithStructs] at heval
+          by_cases hwf : (declaration.params.all
+                (fun parameter => isWfShape structs parameter.2) &&
+              isWfShape structs declaration.returnShape) = true
+          · simp only [hwf] at heval
+            rw [ih _ heval]
+            simp [panFunctionEntries, functions, List.reverse_cons, List.map_append]
+          · simp [hwf] at heval
+      | exnDecl exception shape =>
+          simp only [evalPanValueDeclarationsWithStructs] at heval
+          by_cases hexists : (lookupInfo exception state.exceptions).isSome = true
+          · simp [hexists] at heval
+          · by_cases hwf : isWfShape structs shape = true
+            · simp only [hexists, hwf] at heval
+              rw [ih _ heval]
+              simp [panFunctionEntries, functions]
+            · simp [hexists, hwf] at heval
+
 end Flapjack

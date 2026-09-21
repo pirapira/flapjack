@@ -594,6 +594,21 @@ def cakeCliqueInsertEdgeSet : List Nat → CakeNodeMap (Std.TreeSet Nat) →
   | [], adj => adj
   | x :: xs, adj => cakeCliqueInsertEdgeSet xs (cakeListInsertEdgeSet x xs adj)
 
+/- For the duplicate-free sets produced by `NumSet.fromAList`, every node in
+   a clique receives the same partner set minus itself.  Unioning that set
+   once per node preserves the TreeSet graph while avoiding one insertion per
+   unordered pair.  Duplicate inputs retain the reference path exactly. -/
+def cakeCliqueInsertEdgeSetFast (live : List Nat)
+    (adj : CakeNodeMap (Std.TreeSet Nat)) : CakeNodeMap (Std.TreeSet Nat) :=
+  if h : live.Nodup then
+    let all := Std.TreeSet.ofList live
+    live.foldl (fun current x =>
+      let partners := all.erase x
+      let existing := (current.get x).getD ∅
+      current.set x (existing.union partners)) adj
+  else
+    cakeCliqueInsertEdgeSet live adj
+
 def cakeExtendCliqueSet : List Nat → List Nat →
     CakeNodeMap (Std.TreeSet Nat) →
     CakeNodeMap (Std.TreeSet Nat) × List Nat
@@ -614,7 +629,7 @@ def cakeMkGraphSet (ta : Nat → Nat) : WordClashTree → List Nat →
       cakeExtendCliqueSet rta (live.filter (fun x => !wta.contains x)) adj1
   | .set names, _liveout, adj =>
       let live := (NumSet.fromAList names).map ta
-      (cakeCliqueInsertEdgeSet live adj, live)
+      (cakeCliqueInsertEdgeSetFast live adj, live)
   | .branch topt t1 t2, liveout, adj =>
       let (adj1, t1Live) := cakeMkGraphSet ta t1 liveout adj
       let (adj2, t2Live) := cakeMkGraphSet ta t2 liveout adj1
@@ -622,7 +637,7 @@ def cakeMkGraphSet (ta : Nat → Nat) : WordClashTree → List Nat →
       | none => cakeExtendCliqueSet t1Live t2Live adj2
       | some t =>
           let live := (NumSet.fromAList t).map ta
-          (cakeCliqueInsertEdgeSet live adj2, live)
+          (cakeCliqueInsertEdgeSetFast live adj2, live)
   | .seq t1 t2, liveout, adj =>
       let (adj1, live) := cakeMkGraphSet ta t2 liveout adj
       cakeMkGraphSet ta t1 live adj1

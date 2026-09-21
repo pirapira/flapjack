@@ -118,6 +118,14 @@ def graphSetAccumulatorGuard : Bool :=
 
 #guard graphSetAccumulatorGuard
 
+def cliqueSetAccumulatorGuard : Bool :=
+  let live := [1, 3, 5, 7]
+  let initial := cakeAdjSetMapOfSize 8
+  (cakeCliqueInsertEdgeSetFast live initial).toNatInfoMap ==
+    (cakeCliqueInsertEdgeSet live initial).toNatInfoMap
+
+#guard cliqueSetAccumulatorGuard
+
 def indexedAdjacencyMembershipGuard : Bool :=
   let tree : WordClashTree := .delta [1, 3] [2, 4]
   let bij := cakeMkBij tree

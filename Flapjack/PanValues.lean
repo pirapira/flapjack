@@ -1537,6 +1537,283 @@ theorem evalPanValueExp_isWfShape [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [M
               exact ⟨ihHead head hvalue, ihTail tail hvalues⟩
   exact hmain expression memoryAccess value heval
 
+theorem evalPanValueExp_isSome_local
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext) (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (baseAddress topAddress bytesInWord : α)
+    (expression : Exp α) (memoryAccess : Option (PanValueMemoryAccess α))
+    (value : PanValue α)
+    (heval : evalPanValueExp structs locals globals memory baseAddress topAddress
+      bytesInWord expression memoryAccess = some value)
+    {name : VarName} (hmem : name ∈ expLocalVars expression) :
+    ∃ w, locals name = some w := by
+  have hmain : ∀ expression memoryAccess,
+      (∀ value, evalPanValueExp structs locals globals memory baseAddress
+          topAddress bytesInWord expression memoryAccess = some value →
+        ∀ name, name ∈ expLocalVars expression → ∃ w, locals name = some w) := by
+    apply evalPanValueExp.induct
+      (motive1 := fun expressions memoryAccess =>
+        ∀ values, evalPanValueExp.evalPanValueExps structs locals globals memory
+            baseAddress topAddress bytesInWord expressions memoryAccess = some values →
+          ∀ name, name ∈ expLocalVars.expLocalVarsList expressions →
+            ∃ w, locals name = some w)
+      (motive2 := fun expression memoryAccess =>
+        ∀ value, evalPanValueExp structs locals globals memory baseAddress
+            topAddress bytesInWord expression memoryAccess = some value →
+          ∀ name, name ∈ expLocalVars expression → ∃ w, locals name = some w)
+      (motive3 := fun fields memoryAccess =>
+        ∀ values, evalPanValueExp.evalPanValueFields structs locals globals memory
+            baseAddress topAddress bytesInWord fields memoryAccess = some values →
+          ∀ name, name ∈ expLocalVars.expLocalVarsFieldList fields →
+            ∃ w, locals name = some w)
+    · intro memoryAccess values hvalues name hmem
+      simp only [evalPanValueExp.evalPanValueExps,
+        Option.some.injEq] at hvalues
+      subst hvalues
+      simp [expLocalVars.expLocalVarsList] at hmem
+    · intro expression expressions memoryAccess ihExpr ihExprs values hvalues name hmem
+      simp only [evalPanValueExp.evalPanValueExps] at hvalues
+      cases hvalue : evalPanValueExp structs locals globals memory baseAddress
+          topAddress bytesInWord expression memoryAccess with
+      | none => simp [hvalue] at hvalues
+      | some head =>
+          cases hvalues' : evalPanValueExp.evalPanValueExps structs locals globals
+              memory baseAddress topAddress bytesInWord expressions memoryAccess with
+          | none => simp [hvalue, hvalues'] at hvalues
+          | some tail =>
+              simp [hvalue, hvalues'] at hvalues
+              subst hvalues
+              simp only [expLocalVars.expLocalVarsList, List.mem_append] at hmem
+              rcases hmem with hmem | hmem
+              · exact ihExpr head hvalue name hmem
+              · exact ihExprs tail hvalues' name hmem
+    · intro memoryAccess payload value heval name hmem
+      simp only [evalPanValueExp, Option.some.injEq] at heval
+      simp [expLocalVars] at hmem
+    · intro memoryAccess name value heval name' hmem
+      simp only [evalPanValueExp] at heval
+      simp [expLocalVars] at hmem
+      subst hmem
+      exact ⟨value, heval⟩
+    · intro memoryAccess name value heval name' hmem
+      simp only [evalPanValueExp] at heval
+      simp [expLocalVars] at hmem
+    · intro fields memoryAccess ihFields value hvalue name hmem
+      cases hfields : evalPanValueExp.evalPanValueExps structs locals globals memory
+          baseAddress topAddress bytesInWord fields memoryAccess with
+      | none => simp [evalPanValueExp, hfields] at hvalue
+      | some fieldValues =>
+          simp [evalPanValueExp, hfields] at hvalue
+          subst hvalue
+          simp only [expLocalVars] at hmem
+          exact ihFields fieldValues hfields name hmem
+    · intro index expression memoryAccess ihExpr value hvalue name hmem
+      simp only [evalPanValueExp] at hvalue
+      cases hinner : evalPanValueExp structs locals globals memory baseAddress
+          topAddress bytesInWord expression memoryAccess with
+      | none => simp [hinner] at hvalue
+      | some inner =>
+          simp [hinner] at hvalue
+          simp only [expLocalVars] at hmem
+          exact ihExpr inner hinner name hmem
+    · intro name fields memoryAccess ihFields value hvalue name' hmem
+      cases hinfo : lookupInfo name structs with
+      | none => simp [evalPanValueExp, hinfo] at hvalue
+      | some info =>
+          cases hfields : evalPanValueExp.evalPanValueFields structs locals globals
+              memory baseAddress topAddress bytesInWord fields memoryAccess with
+          | none => simp [evalPanValueExp, hinfo, hfields] at hvalue
+          | some fieldValues =>
+              by_cases hshapes : panValueFieldsHaveShapes structs info.fields fieldValues = true
+              · simp [evalPanValueExp, hinfo, hfields, hshapes] at hvalue
+                subst hvalue
+                simp only [expLocalVars] at hmem
+                exact ihFields fieldValues hfields name' hmem
+              · simp [evalPanValueExp, hinfo, hfields, hshapes] at hvalue
+    · intro name expression memoryAccess ihExpr value hvalue name' hmem
+      simp only [evalPanValueExp] at hvalue
+      cases hinner : evalPanValueExp structs locals globals memory baseAddress
+          topAddress bytesInWord expression memoryAccess with
+      | none => simp [hinner] at hvalue
+      | some inner =>
+          simp [hinner] at hvalue
+          simp only [expLocalVars] at hmem
+          exact ihExpr inner hinner name' hmem
+    · intro shape address memoryAccess ihAddr value hvalue name hmem
+      simp only [evalPanValueExp] at hvalue
+      cases haddr : evalPanValueExp structs locals globals memory baseAddress
+          topAddress bytesInWord address memoryAccess with
+      | none => simp [haddr] at hvalue
+      | some addrValue =>
+          simp [haddr] at hvalue
+          simp only [expLocalVars] at hmem
+          exact ihAddr addrValue haddr name hmem
+    · intro address memoryAccess ihAddr value hvalue name hmem
+      cases memoryAccess with
+      | none =>
+          simp only [evalPanValueExp] at hvalue
+          cases haddr : evalPanValueExp structs locals globals memory baseAddress
+              topAddress bytesInWord address none with
+          | none => simp [haddr] at hvalue
+          | some addrValue =>
+              simp [haddr] at hvalue
+              simp only [expLocalVars] at hmem
+              exact ihAddr addrValue haddr name hmem
+      | some access =>
+          simp only [evalPanValueExp] at hvalue
+          cases haddr : evalPanValueExp structs locals globals memory baseAddress
+              topAddress bytesInWord address (some access) with
+          | none => simp [haddr] at hvalue
+          | some addrValue =>
+              simp [haddr] at hvalue
+              simp only [expLocalVars] at hmem
+              exact ihAddr addrValue haddr name hmem
+    · intro address memoryAccess ihAddr value hvalue name hmem
+      cases memoryAccess with
+      | none =>
+          simp only [evalPanValueExp] at hvalue
+          cases haddr : evalPanValueExp structs locals globals memory baseAddress
+              topAddress bytesInWord address none with
+          | none => simp [haddr] at hvalue
+          | some addrValue =>
+              simp [haddr] at hvalue
+              simp only [expLocalVars] at hmem
+              exact ihAddr addrValue haddr name hmem
+      | some access =>
+          simp only [evalPanValueExp] at hvalue
+          cases haddr : evalPanValueExp structs locals globals memory baseAddress
+              topAddress bytesInWord address (some access) with
+          | none => simp [haddr] at hvalue
+          | some addrValue =>
+              simp [haddr] at hvalue
+              simp only [expLocalVars] at hmem
+              exact ihAddr addrValue haddr name hmem
+    · intro operator arguments memoryAccess ihArgs value hvalue name hmem
+      cases memoryAccess with
+      | none =>
+          simp only [evalPanValueExp] at hvalue
+          cases hargs : evalPanValueExp.evalPanValueExps structs locals globals memory
+              baseAddress topAddress bytesInWord arguments none with
+          | none => simp [hargs] at hvalue
+          | some argValues =>
+              simp [hargs] at hvalue
+              simp only [expLocalVars] at hmem
+              exact ihArgs argValues hargs name hmem
+      | some access =>
+          simp only [evalPanValueExp] at hvalue
+          cases hargs : evalPanValueExp.evalPanValueExps structs locals globals memory
+              baseAddress topAddress bytesInWord arguments (some access) with
+          | none => simp [hargs] at hvalue
+          | some argValues =>
+              simp [hargs] at hvalue
+              simp only [expLocalVars] at hmem
+              exact ihArgs argValues hargs name hmem
+    · intro operator arguments memoryAccess ihArgs value hvalue name hmem
+      simp only [evalPanValueExp] at hvalue
+      cases hargs : evalPanValueExp.evalPanValueExps structs locals globals memory
+          baseAddress topAddress bytesInWord arguments memoryAccess with
+      | none => simp [hargs] at hvalue
+      | some argValues =>
+          simp [hargs] at hvalue
+          simp only [expLocalVars] at hmem
+          exact ihArgs argValues hargs name hmem
+    · intro operator left right memoryAccess ihLeft ihRight value hvalue name hmem
+      cases memoryAccess with
+      | none =>
+          simp only [evalPanValueExp] at hvalue
+          cases hleft : evalPanValueExp structs locals globals memory baseAddress
+              topAddress bytesInWord left none with
+          | none => simp [hleft] at hvalue
+          | some leftValue =>
+              cases hright : evalPanValueExp structs locals globals memory baseAddress
+                  topAddress bytesInWord right none with
+              | none => simp [hleft, hright] at hvalue
+              | some rightValue =>
+                  simp [hleft, hright] at hvalue
+                  simp only [expLocalVars, List.mem_append] at hmem
+                  rcases hmem with hmem | hmem
+                  · exact ihLeft leftValue hleft name hmem
+                  · exact ihRight rightValue hright name hmem
+      | some access =>
+          simp only [evalPanValueExp] at hvalue
+          cases hleft : evalPanValueExp structs locals globals memory baseAddress
+              topAddress bytesInWord left (some access) with
+          | none => simp [hleft] at hvalue
+          | some leftValue =>
+              cases hright : evalPanValueExp structs locals globals memory baseAddress
+                  topAddress bytesInWord right (some access) with
+              | none => simp [hleft, hright] at hvalue
+              | some rightValue =>
+                  simp [hleft, hright] at hvalue
+                  simp only [expLocalVars, List.mem_append] at hmem
+                  rcases hmem with hmem | hmem
+                  · exact ihLeft leftValue hleft name hmem
+                  · exact ihRight rightValue hright name hmem
+    · intro operator left right memoryAccess ihLeft ihRight value hvalue name hmem
+      cases memoryAccess with
+      | none =>
+          simp only [evalPanValueExp] at hvalue
+          cases hleft : evalPanValueExp structs locals globals memory baseAddress
+              topAddress bytesInWord left none with
+          | none => simp [hleft] at hvalue
+          | some leftValue =>
+              cases hright : evalPanValueExp structs locals globals memory baseAddress
+                  topAddress bytesInWord right none with
+              | none => simp [hleft, hright] at hvalue
+              | some rightValue =>
+                  simp [hleft, hright] at hvalue
+                  simp only [expLocalVars, List.mem_append] at hmem
+                  rcases hmem with hmem | hmem
+                  · exact ihLeft leftValue hleft name hmem
+                  · exact ihRight rightValue hright name hmem
+      | some access =>
+          simp only [evalPanValueExp] at hvalue
+          cases hleft : evalPanValueExp structs locals globals memory baseAddress
+              topAddress bytesInWord left (some access) with
+          | none => simp [hleft] at hvalue
+          | some leftValue =>
+              cases hright : evalPanValueExp structs locals globals memory baseAddress
+                  topAddress bytesInWord right (some access) with
+              | none => simp [hleft, hright] at hvalue
+              | some rightValue =>
+                  simp [hleft, hright] at hvalue
+                  simp only [expLocalVars, List.mem_append] at hmem
+                  rcases hmem with hmem | hmem
+                  · exact ihLeft leftValue hleft name hmem
+                  · exact ihRight rightValue hright name hmem
+    · intro memoryAccess value heval name hmem
+      simp only [evalPanValueExp, Option.some.injEq] at heval
+      simp [expLocalVars] at hmem
+    · intro memoryAccess value heval name hmem
+      simp only [evalPanValueExp, Option.some.injEq] at heval
+      simp [expLocalVars] at hmem
+    · intro memoryAccess value heval name hmem
+      simp only [evalPanValueExp, Option.some.injEq] at heval
+      simp [expLocalVars] at hmem
+    · intro memoryAccess values hvalues name hmem
+      simp only [evalPanValueExp.evalPanValueFields, Option.some.injEq] at hvalues
+      subst hvalues
+      simp [expLocalVars.expLocalVarsFieldList] at hmem
+    · intro fieldName expression fields memoryAccess ihExpr ihFields values hvalues name hmem
+      simp only [evalPanValueExp.evalPanValueFields] at hvalues
+      cases hvalue : evalPanValueExp structs locals globals memory baseAddress
+          topAddress bytesInWord expression memoryAccess with
+      | none => simp [hvalue] at hvalues
+      | some head =>
+          cases hvalues' : evalPanValueExp.evalPanValueFields structs locals globals
+              memory baseAddress topAddress bytesInWord fields memoryAccess with
+          | none => simp [hvalue, hvalues'] at hvalues
+          | some tail =>
+              simp [hvalue, hvalues'] at hvalues
+              subst hvalues
+              simp only [expLocalVars.expLocalVarsFieldList, List.mem_append] at hmem
+              rcases hmem with hmem | hmem
+              · exact ihExpr head hvalue name hmem
+              · exact ihFields tail hvalues' name hmem
+  exact hmain expression memoryAccess value heval name hmem
+
 /-! Target-word counterpart of the structured expression evaluator.
 
     The generic evaluator above intentionally keeps the historical abstract

@@ -872,6 +872,16 @@ example : True := by
       hnodup hnone hexns
   trivial
 
+/-! Focused regression for the ported Cake `OPT_MMAP_MEM_IMP`
+    (`panPropsScript.sml:115`). -/
+
+theorem list_mapM_mem_exists_fixture :
+    ∃ x, x ∈ ([3, 5] : List Nat) ∧
+      (if x == 4 then none else some (x + 1)) = some 6 :=
+  list_mapM_mem_exists (fun n : Nat => if n == 4 then none else some (n + 1))
+    [3, 5] [4, 6] (by decide) 6 (by decide)
+
+#check @list_mapM_mem_exists
 /-! Cake's `opt_mmap_length_eq`, `opt_mmap_mem_func` and `opt_mmap_el`
     (`pan_commonPropsScript.sml:82/49/71`): basic facts about a successful
     `OPT_MMAP`/`List.mapM`. -/

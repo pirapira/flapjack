@@ -4048,6 +4048,70 @@ theorem evalPanValueFfiClockProg_seq_call_destination_normal_progCallFuel
       memory ffi clock ma none none assignedLocals assignedGlobals finalMemory finalFfi
       finalClock hcall hcontinuation⟩
 
+/-- Composition rule for the state-relation fragment: a normal node followed by a
+    call with a destination that returns normally.  Because the normal node
+    preserves the state, the call starts from the original state, and the
+    composite runs normally at the call-aware budget with the state assigned by
+    `assignPanValueCallResult`. -/
+theorem evalPanValueFfiClockProg_seq_normal_first_call_destination_progCallFuel
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (first : Prog α)
+    (function : FunName) (arguments : List (Exp α))
+    (destination : Option (VarKind × VarName))
+    (parameters : List VarName) (body : Prog α) (values : List (PanValue α))
+    (calleeLocals : VarName → Option (PanValue α))
+    (ma : Option (PanValueMemoryAccess α))
+    (hfirst : PanValueFfiClockNormalProg first)
+    (hfunctions : PanValueFfiClockFunctionsReturnSucceed context primitive handler
+      structs functions baseAddress topAddress bytesInWord ma none none)
+    (hbudget : progSize body + 1 ≤ callBudget)
+    (hargs : evalPanValueExps structs locals globals memory baseAddress topAddress
+      bytesInWord arguments (memoryAccess := ma) = some values)
+    (hlookup : lookupPanFunction function functions = some (parameters, body))
+    (hbind : bindPanValueParameters parameters values = some calleeLocals)
+    (hclock : clock ≠ 0)
+    (hwithin : panValueValuesWithinLimit structs values = true)
+    (hassign : ∀ (finalGlobals : VarName → Option (PanValue α)),
+      ∃ (assignedLocals assignedGlobals : VarName → Option (PanValue α)),
+        assignPanValueCallResult locals finalGlobals destination values
+          (structs := structs) = some (assignedLocals, assignedGlobals)) :
+    ∃ (assignedLocals assignedGlobals : VarName → Option (PanValue α))
+      (finalMemory : α → Option (PanValue α)) (finalFfi : FfiState σ)
+      (finalClock : Nat),
+      evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord
+        (progCallFuel callBudget
+          (.seq first (.call (some (destination, none)) function arguments)))
+        locals globals memory ffi clock
+        (.seq first (.call (some (destination, none)) function arguments))
+        ma none none =
+      some (.control (.normal assignedLocals assignedGlobals finalMemory finalFfi),
+        finalClock) := by
+  obtain ⟨assignedLocals, assignedGlobals, finalMemory, finalFfi, finalClock, hcall⟩ :=
+    evalPanValueFfiClockProg_call_destination_of_functions_progCallFuel context
+      primitive handler structs functions baseAddress topAddress bytesInWord callBudget
+      locals globals memory ffi clock function arguments destination parameters body
+      values calleeLocals ma hfunctions hbudget hargs hlookup hbind hclock hwithin
+      hassign
+  have hfirstEval := evalPanValueFfiClockProg_normalProg_some_progCallFuel context
+    primitive handler structs functions baseAddress topAddress bytesInWord callBudget
+    first locals globals memory ffi clock ma none none hfirst
+  exact ⟨assignedLocals, assignedGlobals, finalMemory, finalFfi, finalClock,
+    evalPanValueFfiClockProg_seq_of_first_normal_progCallFuel context primitive handler
+      structs functions baseAddress topAddress bytesInWord callBudget first
+      (.call (some (destination, none)) function arguments) locals globals memory ffi
+      clock ma none none locals globals memory ffi clock
+      (.control (.normal assignedLocals assignedGlobals finalMemory finalFfi)) finalClock
+      hfirstEval hcall⟩
+
 /-- Composition rule for the state-relation fragment: a call whose exception is
     caught by a normal handler, followed by a normal continuation, runs normally
     at the call-aware budget.  The continuation starts from the handler's final

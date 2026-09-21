@@ -986,6 +986,34 @@ example :
           panValueFlatWords, panValueFlatWordsFuel, panValueFlatOffset,
           updatePanValueMemory]⟩)
 
+/-- A destination call is normal-adequate from a nonzero clock, given the
+per-state argument/shape evidence and the destination assignment. -/
+example
+    (hfunctions : PanValueFfiClockFunctionsReturnSucceed evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [("f", [], (.skip : Prog Nat))] 0 0 8
+      none none none)
+    (hlookup : lookupPanFunction "f" [("f", [], (.skip : Prog Nat))] =
+      some ([], (.skip : Prog Nat)))
+    (hargs : ∀ (locals globals : VarName → Option (PanValue Nat))
+      (memory : Nat → Option (PanValue Nat)),
+      ∃ (values : List (PanValue Nat)) (calleeLocals : VarName → Option (PanValue Nat)),
+        evalPanValueExps [] locals globals memory 0 0 8 ([] : List (Exp Nat))
+          (memoryAccess := none) = some values ∧
+        bindPanValueParameters [] values = some calleeLocals ∧
+        panValueValuesWithinLimit [] values = true)
+    (hassign : ∀ (locals : VarName → Option (PanValue Nat))
+      (finalGlobals : VarName → Option (PanValue Nat)) (values : List (PanValue Nat)),
+      ∃ (assignedLocals assignedGlobals : VarName → Option (PanValue Nat)),
+        assignPanValueCallResult locals finalGlobals (some (VarKind.local, "x")) values
+          (structs := []) = some (assignedLocals, assignedGlobals)) :
+    PanValueFfiClockNormalAdequateProgAt 5 evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [("f", [], (.skip : Prog Nat))] 0 0 8 5 none none none
+      (.call (some ((VarKind.local, "x"), none)) "f" []) :=
+  PanValueFfiClockNormalAdequateProgAt_call_destination 5 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [("f", [], (.skip : Prog Nat))] 0 0 8 5
+    none "f" [] (some (VarKind.local, "x")) [] (.skip : Prog Nat) hfunctions
+    (by simp [progSize]) hlookup (by decide) hargs hassign
+
 /-- The raised `DecCall` outcome also lifts to the declaration's progSize. -/
 example
     (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)

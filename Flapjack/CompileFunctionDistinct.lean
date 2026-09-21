@@ -57,6 +57,38 @@ theorem compileToCrepe_names_nodup
       ({ context with functions := functionInfos declarations }) declarations
       (functionDeclarationNames declarations) rfl hnodup)
 
+/- The source-shaped `compileToCrep` uses `compileFunctionsSource` rather
+   than the context-normalized table above, but it preserves the same
+   declaration-name projection.  This is the name-distinctness premise needed
+   by the complete `compile_prog`/inline boundary. -/
+theorem compileFunctionsSource_map_name
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (declarations : List (Decl α)) :
+    (compileFunctionsSource context declarations).map CompiledFunction.name =
+      functionDeclarationNames declarations := by
+  induction declarations with
+  | nil => simp [compileFunctionsSource, functionDeclarationNames]
+  | cons declaration declarations ih =>
+      cases declaration with
+      | function declaration =>
+          simp [compileFunctionsSource, functionDeclarationNames, ih,
+            compileFunDeclSource]
+      | decl shape declaration value =>
+          simpa [compileFunctionsSource, functionDeclarationNames] using ih
+      | exnDecl exception shape =>
+          simpa [compileFunctionsSource, functionDeclarationNames] using ih
+      | name struct fields =>
+          simpa [compileFunctionsSource, functionDeclarationNames] using ih
+
+theorem compileToCrep_names_nodup
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (declarations : List (Decl α))
+    (hnodup : (functionDeclarationNames declarations).Nodup) :
+    (compileToCrep context declarations).map CompiledFunction.name |>.Nodup := by
+  rw [compileToCrep]
+  rw [compileFunctionsSource_map_name]
+  exact hnodup
+
 /- Cake's `compile_prog_distinct_params` theorem states that every compiled
    function has distinct flattened parameter slots.  The source-faithful
    `compileToCrep` boundary exposes those slots as `List.range`, so this

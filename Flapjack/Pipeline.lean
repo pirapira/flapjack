@@ -1,5 +1,6 @@
 import Flapjack.PanGlobals
 import Flapjack.Compile
+import Flapjack.CompileFunctionDistinct
 import Flapjack.CrepeInlinePass
 import Flapjack.CrepeArith
 import Flapjack.CrepToLoop
@@ -136,6 +137,20 @@ def compileProgToCrep [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α]
     List (CompiledFunction α) :=
   panToCrepCompileInlTop (pipelineInlineNames declarations)
     (compileToCrep context declarations)
+
+/-! Cake's `first_compile_prog_all_distinct`
+    (`pan_to_crepProofScript.sml:4556-4564`) at the complete
+    `compile_prog` boundary.  The source declaration-name invariant first
+    applies to `compile_to_crep`; the inline pass then preserves that table
+    invariant because it changes only function bodies. -/
+theorem compileProgToCrep_names_nodup
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α]
+    (context : CompileContext α) (declarations : List (Decl α))
+    (hnodup : (functionDeclarationNames declarations).Nodup) :
+    (compileProgToCrep context declarations).map CompiledFunction.name |>.Nodup := by
+  unfold compileProgToCrep
+  apply panToCrepCompileInlTop_names_nodup
+  exact compileToCrep_names_nodup context declarations hnodup
 
 def pipelineFindFunction (name : FunName) :
     List (Decl α) → Option (FunDecl α)

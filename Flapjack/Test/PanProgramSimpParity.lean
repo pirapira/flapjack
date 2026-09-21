@@ -105,5 +105,21 @@ theorem list_map_third_map_eq_fixture :
   rw [list_map_third_map_eq]
   decide
 
+/-- Focused regression for the `compile_eval_correct` counterpart: expression
+    evaluation is invariant under `panValueProgramStateRel`. -/
+def evalRelState : PanValueProgramState Nat :=
+  { structs := [], globals := fun _ => none, functions := [],
+    returnShapes := [], parameterShapes := [], exceptions := [],
+    memory := fun _ => none, baseAddress := 0, topAddress := 0, bytesInWord := 8 }
+
+theorem evalPanValueExp_panValueProgramStateRel_fixture :
+    evalPanValueExp ([] : StructContext) (fun _ => none) evalRelState.globals
+      evalRelState.memory evalRelState.baseAddress evalRelState.topAddress
+      evalRelState.bytesInWord (.const 5) = some (.word 5) :=
+  evalPanValueExp_panValueProgramStateRel ([] : StructContext) (fun _ => none)
+    evalRelState evalRelState
+    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+    (.const 5) none (.word 5) (by simp [evalPanValueExp])
+
 end Flapjack.Test.PanProgramSimpParity
 

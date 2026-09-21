@@ -182,4 +182,75 @@ example : True := by
   have h := globalCompileDecs_preserve_functions context declarations
   trivial
 
+/-! Counterparts of Cake's `compile_decs_EVERY_is_function`
+    (`pan_globalsProofScript.sml:1977`) and `compile_decs_decls_thm` (`:1967`). -/
+example : True := by
+  let declarations : List (Decl Nat) :=
+    [.function
+      { name := "f", inline := false, exported := false, params := [],
+        body := .skip, returnShape := .one },
+     .name "S" [], .exnDecl "E" (.named "T"), .decl .one "h" (.const 9)]
+  let context : GlobalPassContext Nat :=
+    { globals := [], globalsSize := 0, maxGlobalsSize := 0,
+      bytesInWord := 8, fromNat := fun n => n }
+  have h := globalCompileDecs_functions_all_isFunction context declarations
+  trivial
+
+def noFunctionsDecls : List (Decl Nat) :=
+  [.name "S" [], .exnDecl "E" (.named "T"), .decl .one "h" (.const 9)]
+
+def functionsEmptyGuard : Bool :=
+  ((globalCompileDecs
+    { globals := [], globalsSize := 0, maxGlobalsSize := 0,
+      bytesInWord := 8, fromNat := fun n => n } noFunctionsDecls).functions).isEmpty
+
+example : True := by
+  have h := globalCompileDecs_functions_eq_nil_of_no_functions
+    ({ globals := [], globalsSize := 0, maxGlobalsSize := 0,
+       bytesInWord := 8, fromNat := fun n => n } : GlobalPassContext Nat)
+    noFunctionsDecls (by decide)
+  trivial
+
+#eval functionsEmptyGuard
+#guard functionsEmptyGuard
+
+/-! Counterparts of the append structure of Cake's `compile_decls_append`
+    (`pan_globalsProofScript.sml:1997`). -/
+def declsWithGlobals : List (Decl Nat) :=
+  [.decl .one "g" (.const 7), .decl .one "h" (.const 9)]
+
+example : True := by
+  have h := globalCompileDecls_append
+    ({ globals := [], globalsSize := 0, maxGlobalsSize := 0,
+       bytesInWord := 8, fromNat := fun n => n } : GlobalPassContext Nat)
+    declsWithGlobals []
+  trivial
+
+example : True := by
+  have h := globalCompileInitializers_append
+    ({ globals := [], globalsSize := 0, maxGlobalsSize := 0,
+       bytesInWord := 8, fromNat := fun n => n } : GlobalPassContext Nat)
+    declsWithGlobals []
+  trivial
+
+/-! Counterparts of Cake's `fperm_decs_append` (`pan_globalsProofScript.sml:1663`)
+    and `functions_fperm_decs` (`:1701`). -/
+example : True := by
+  have h := globalRenameDecls_append "main" "entry" declsWithGlobals []
+  trivial
+
+example : True := by
+  have h := functions_globalRenameDecls "main" "entry" declsWithGlobals
+  trivial
+
+def renameDeclsGuard : Bool :=
+  (functions (globalRenameDecls "main" "entry"
+      ([.function
+        { name := "main", inline := false, exported := false, params := [],
+          body := .skip, returnShape := .one }] : List (Decl Nat)))).map
+    (fun entry => entry.1) == ["entry"]
+
+#eval renameDeclsGuard
+#guard renameDeclsGuard
+
 end Flapjack.Test.PanGlobalsDecShapesParity

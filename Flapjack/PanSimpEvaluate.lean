@@ -3505,4 +3505,112 @@ theorem evalPanValueFfiClockProg_while_timeout_some_progSize
     functions baseAddress topAddress bytesInWord (progSize body) locals globals memory
     ffi clock conditionExp body ma c mh conditionValue hcondition hnonzero hclock
 
+/-- Call-aware budget form of the zero-condition `While` equation: the loop
+    exits immediately at `progCallFuel callBudget (.while condition body)`. -/
+theorem evalPanValueFfiClockProg_while_zero_some_progCallFuel
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (condition : Exp α) (body : Prog α)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (w : α)
+    (hcondition : evalPanValueExp structs locals globals memory baseAddress topAddress
+        bytesInWord condition (memoryAccess := ma) = some (.word w))
+    (hw : (w == 0) = true) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (progCallFuel callBudget (.while condition body))
+        locals globals memory ffi clock (.while condition body) ma c mh =
+      some (.control (.normal locals globals memory ffi), clock) := by
+  have hsize : progCallFuel callBudget (.while condition body) =
+      progCallFuel callBudget body + 1 := by
+    simp only [progCallFuel]
+    omega
+  rw [hsize]
+  exact evalPanValueFfiClockProg_while_zero_some context primitive handler structs
+    functions baseAddress topAddress bytesInWord (progCallFuel callBudget body) locals
+    globals memory ffi clock condition body ma c mh w hcondition hw
+
+/-- Call-aware budget form of the break-exiting `While` equation: the body runs
+    at `progCallFuel callBudget body`. -/
+theorem evalPanValueFfiClockProg_while_broke_some_progCallFuel
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (conditionExp : Exp α) (body : Prog α)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (conditionValue : α)
+    (nextLocals nextGlobals : VarName → Option (PanValue α))
+    (nextMemory : α → Option (PanValue α)) (nextFfi : FfiState σ)
+    (bodyClock : Nat)
+    (hcondition : evalPanValueExp structs locals globals memory baseAddress topAddress
+        bytesInWord conditionExp (memoryAccess := ma) = some (.word conditionValue))
+    (hnonzero : (conditionValue == 0) = false)
+    (hclock : (clock == 0) = false)
+    (hbody : evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (progCallFuel callBudget body) locals globals
+        memory ffi (decPanClock clock) body ma c mh =
+      some (.control (.broke nextLocals nextGlobals nextMemory nextFfi), bodyClock)) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord
+        (progCallFuel callBudget (.while conditionExp body)) locals globals memory ffi
+        clock (.while conditionExp body) ma c mh =
+      some (.control (.normal nextLocals nextGlobals nextMemory nextFfi), bodyClock) := by
+  have hsize : progCallFuel callBudget (.while conditionExp body) =
+      progCallFuel callBudget body + 1 := by
+    simp only [progCallFuel]
+    omega
+  rw [hsize]
+  exact evalPanValueFfiClockProg_while_broke_some context primitive handler structs
+    functions baseAddress topAddress bytesInWord (progCallFuel callBudget body) locals
+    globals memory ffi clock conditionExp body ma c mh conditionValue nextLocals
+    nextGlobals nextMemory nextFfi bodyClock hcondition hnonzero hclock hbody
+
+/-- Call-aware budget form of the timeout `While` equation. -/
+theorem evalPanValueFfiClockProg_while_timeout_some_progCallFuel
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (conditionExp : Exp α) (body : Prog α)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (conditionValue : α)
+    (hcondition : evalPanValueExp structs locals globals memory baseAddress topAddress
+        bytesInWord conditionExp (memoryAccess := ma) = some (.word conditionValue))
+    (hnonzero : (conditionValue == 0) = false)
+    (hclock : (clock == 0) = true) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord
+        (progCallFuel callBudget (.while conditionExp body)) locals globals memory ffi
+        clock (.while conditionExp body) ma c mh =
+      some (.timeout (fun _ => none) globals memory ffi, clock) := by
+  have hsize : progCallFuel callBudget (.while conditionExp body) =
+      progCallFuel callBudget body + 1 := by
+    simp only [progCallFuel]
+    omega
+  rw [hsize]
+  exact evalPanValueFfiClockProg_while_timeout_some context primitive handler structs
+    functions baseAddress topAddress bytesInWord (progCallFuel callBudget body) locals
+    globals memory ffi clock conditionExp body ma c mh conditionValue hcondition hnonzero
+    hclock
+
 end Flapjack

@@ -1025,6 +1025,19 @@ example :
     (fun _ => none) (fun _ => none) evaluatorFfi 0 (.const 5) (.break : Prog Nat)
     none none none 5 (by simp [evalPanValueExp]) (by decide) (by decide)
 
+/-- The zero-condition `While` also succeeds at the call-aware budget. -/
+example :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+      [] [] 0 0 8 (progCallFuel 7 (.while (.const 0) (.break : Prog Nat)))
+      (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi 3 (.while (.const 0) (.break : Prog Nat)) none none none =
+    some (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi), 3) := by
+  exact evalPanValueFfiClockProg_while_zero_some_progCallFuel evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 (fun _ => none)
+    (fun _ => none) (fun _ => none) evaluatorFfi 3 (.const 0) (.break : Prog Nat)
+    none none none 0 (by simp [evalPanValueExp]) (by decide)
+
 theorem clocked_seq_normal_exposes_components :
     ∃ (middleLocals middleGlobals : VarName → Option (PanValue Nat))
       (middleMemory : Nat → Option (PanValue Nat)) (middleFfi : FfiState Unit)

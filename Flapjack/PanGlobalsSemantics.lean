@@ -264,4 +264,25 @@ theorem globalCompileTopForStart_shapes_wf
       · simp [panDeclShapesWellFormed, panFunctionShapesWellFormed, hwf.1, hwf.2]
       · simpa [panDeclShapesWellFormed, panFunctionShapesWellFormed] using hrenamed
 
+/-- Counterpart of Cake's `compile_top_shape_wf_nil`
+    (`pan_globalsProofScript.sml:2495`): the empty-struct-context instance of
+    `compile_top_shape_wf`, stated with Cake's `is_wf_shape_nil` reading (here
+    `isWfShape []`). -/
+theorem globalCompileTopForStart_shapes_wf_nil
+    [BEq String] [LawfulBEq String] [Add α] [Mul α]
+    [BEq α] [OfNat α 0] [OfNat α 1] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state state' : PanValueProgramState α) (declarations : List (Decl α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (bytesInWord : α) (fromNat : Nat → α) (start : FunName)
+    (compiled : List (Decl α))
+    (heval : evalPanValueDeclarationsWithStructs ([] : StructContext) state
+      declarations memoryAccess = some state')
+    (hcompile : globalCompileTopForStart bytesInWord fromNat declarations start =
+      some compiled) :
+    compiled.all (panDeclShapesWellFormed ([] : StructContext)) = true :=
+  globalCompileTopForStart_shapes_wf ([] : StructContext) state state'
+    declarations memoryAccess bytesInWord fromNat start compiled heval hcompile
+
 end Flapjack

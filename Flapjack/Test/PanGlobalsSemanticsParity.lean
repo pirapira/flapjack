@@ -45,4 +45,18 @@ theorem globalCompileTopForStart_shapes_wf_fixture
         state' shapeDecls memoryAccess 4 id "main" compiled heval hcompile
       trivial
 
+/-- `compile_top_shape_wf_nil` (`pan_globalsProofScript.sml:2495`): the
+    empty-struct-context instance of the shape invariant. -/
+theorem globalCompileTopForStart_shapes_wf_nil_fixture
+    (state state' : PanValueProgramState Nat)
+    (memoryAccess : Option (PanValueMemoryAccess Nat))
+    (heval : evalPanValueDeclarationsWithStructs ([] : StructContext) state
+      shapeDecls memoryAccess = some state') : True := by
+  cases hcompile : globalCompileTopForStart 4 id shapeDecls "main" with
+  | none => trivial
+  | some compiled =>
+      have h := globalCompileTopForStart_shapes_wf_nil state state' shapeDecls
+        memoryAccess 4 id "main" compiled heval hcompile
+      trivial
+
 end Flapjack.Test.PanGlobalsSemanticsParity

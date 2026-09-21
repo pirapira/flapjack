@@ -428,7 +428,6 @@ theorem panValueCrepProgramStateControlSafe_break
 program can propagate them.  Hence the control-label obligation is
 immediate for the handler-free call forms, which is the first concrete
 call instance of the safety premise used by the compact Pc bridge. -/
-set_option linter.unusedSimpArgs false in
 theorem panValueCrepProgramStateControlSafe_call_none
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
@@ -464,9 +463,9 @@ theorem panValueCrepProgramStateControlSafe_call_none
                       Option.bind_some] at hsource
                     cases hbind : bindPanValueParameters parameters values with
                     | none =>
-                        simp [hbind, Option.bind_eq_bind, Option.bind_none] at hsource
+                        simp [hbind, Option.bind_none] at hsource
                     | some calleeLocals =>
-                        simp only [hbind, Option.bind_eq_bind, Option.bind_some] at hsource
+                        simp only [hbind, Option.bind_some] at hsource
                         cases hcallee : evalPanValueProgWithPrimitiveCallsAndFfi primitive
                           sourceHandler structs sourceFunctions baseAddress topAddress bytesInWord
                           sourceFuel calleeLocals sourceGlobals sourceMemory body with
@@ -479,28 +478,27 @@ theorem panValueCrepProgramStateControlSafe_call_none
                             | returned locals calleeGlobals calleeMemory values =>
                                 by_cases hret : (panValueReturnValid structs none name values &&
                                     panValueValuesWithinLimit structs values) = true
-                                · simp only [hcallee, Option.bind_eq_bind, Option.bind_some,
+                                · simp only [hcallee, Option.bind_some,
                                     hret, if_true, Option.pure_def, Option.some.injEq] at hsource
                                   subst sourceResult
                                   simp [panValuePcControlLabelSafe]
-                                · simp only [hcallee, Option.bind_eq_bind, Option.bind_some] at hsource
+                                · simp only [hcallee, Option.bind_some] at hsource
                                   rw [if_neg hret] at hsource
                                   simp at hsource
                             | raised locals calleeGlobals calleeMemory exception value =>
                                 by_cases hexc : (panValueExceptionValid structs none exception value &&
                                     panValuePayloadWithinLimit structs value) = true
-                                · simp only [hcallee, Option.bind_eq_bind, Option.bind_some,
+                                · simp only [hcallee, Option.bind_some,
                                     hexc, if_true, Option.pure_def, Option.some.injEq] at hsource
                                   subst sourceResult
                                   simp [panValuePcControlLabelSafe]
-                                · simp only [hcallee, Option.bind_eq_bind, Option.bind_some] at hsource
+                                · simp only [hcallee, Option.bind_some] at hsource
                                   rw [if_neg hexc] at hsource
                                   simp at hsource
                   · simp only [hvalues, hlookup, Option.bind_eq_bind, Option.bind_some] at hsource
                     rw [if_neg hparams] at hsource
                     simp at hsource
 
-set_option linter.unusedSimpArgs false in
 /-- The handler-free call with a return destination also cannot propagate a
 source-level `break`/`continue`: the returned branch materialises a `normal`
 result through `assignPanValueCallResult`. -/
@@ -540,9 +538,9 @@ theorem panValueCrepProgramStateControlSafe_call_returns
                       Option.bind_some] at hsource
                     cases hbind : bindPanValueParameters parameters values with
                     | none =>
-                        simp [hbind, Option.bind_eq_bind, Option.bind_none] at hsource
+                        simp [hbind, Option.bind_none] at hsource
                     | some calleeLocals =>
-                        simp only [hbind, Option.bind_eq_bind, Option.bind_some] at hsource
+                        simp only [hbind, Option.bind_some] at hsource
                         cases hcallee : evalPanValueProgWithPrimitiveCallsAndFfi primitive
                           sourceHandler structs sourceFunctions baseAddress topAddress bytesInWord
                           sourceFuel calleeLocals sourceGlobals sourceMemory body with
@@ -555,30 +553,28 @@ theorem panValueCrepProgramStateControlSafe_call_returns
                             | returned locals calleeGlobals calleeMemory values =>
                                 by_cases hret : (panValueReturnValid structs none name values &&
                                     panValueValuesWithinLimit structs values) = true
-                                · simp only [hcallee, Option.bind_eq_bind, Option.bind_some,
+                                · simp only [hcallee, Option.bind_some,
                                     hret, if_true, Option.pure_def] at hsource
-                                  cases hassign : assignPanValueCallResult sourceLocals calleeGlobals
-                                    destination values (structs := structs) with
-                                  | none =>
-                                      simp [hassign, Option.bind_eq_bind,
-                                        Option.bind_none] at hsource
+                                  cases hassign : assignPanValueCallResult sourceLocals
+                                    calleeGlobals destination values (structs := structs) with
+                                  | none => simp [hassign, Option.bind_none] at hsource
                                   | some assigned =>
                                       obtain ⟨assignedLocals, assignedGlobals⟩ := assigned
-                                      simp only [hassign, Option.bind_eq_bind, Option.bind_some,
+                                      simp only [hassign, Option.bind_some,
                                         Option.some.injEq] at hsource
                                       subst sourceResult
                                       simp [panValuePcControlLabelSafe]
-                                · simp only [hcallee, Option.bind_eq_bind, Option.bind_some] at hsource
+                                · simp only [hcallee, Option.bind_some] at hsource
                                   rw [if_neg hret] at hsource
                                   simp at hsource
                             | raised locals calleeGlobals calleeMemory exception value =>
                                 by_cases hexc : (panValueExceptionValid structs none exception value &&
                                     panValuePayloadWithinLimit structs value) = true
-                                · simp only [hcallee, Option.bind_eq_bind, Option.bind_some,
+                                · simp only [hcallee, Option.bind_some,
                                     hexc, if_true, Option.pure_def, Option.some.injEq] at hsource
                                   subst sourceResult
                                   simp [panValuePcControlLabelSafe]
-                                · simp only [hcallee, Option.bind_eq_bind, Option.bind_some] at hsource
+                                · simp only [hcallee, Option.bind_some] at hsource
                                   rw [if_neg hexc] at hsource
                                   simp at hsource
                   · simp only [hvalues, hlookup, Option.bind_eq_bind, Option.bind_some] at hsource

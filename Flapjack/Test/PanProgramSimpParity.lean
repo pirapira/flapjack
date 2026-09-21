@@ -229,4 +229,74 @@ theorem evalPanValueDeclarations_functions_wf_fixture
       (declaration := wfFunction) (by simp [wfDecls])
   exact ⟨structs, hcollect, hreturn⟩
 
+/-! Regression for Cake's `evaluate_decls_exns_wf`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1421`): a successful
+    declaration evaluation keeps every installed exception shape well formed. -/
+
+def wfException : Decl Nat := .exnDecl "E" .one
+
+def wfExceptionDecls : List (Decl Nat) := [wfException]
+
+theorem evalPanValueDeclarations_exceptions_wf_fixture
+    (state' : PanValueProgramState Nat)
+    (heval : evalPanValueDeclarationsWithStructs [] evalRelState
+      wfExceptionDecls none = some state') :
+    isWfShape ([] : StructContext) (.one : Shape) = true := by
+  exact evalPanValueDeclarationsWithStructs_exceptions_wf [] evalRelState state'
+    wfExceptionDecls none heval (exception := "E") (shape := .one) (by
+      simp [wfExceptionDecls, wfException])
+
+/-! Regression for Cake's `evaluate_decls_append`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1540`): evaluating a
+    concatenated declaration list is the sequential composition of evaluating
+    the two parts in turn. -/
+
+def appendDecls : List (Decl Nat) :=
+  [.decl .one "g" (.const 7)]
+
+def appendRest : List (Decl Nat) :=
+  [.function wfFunction]
+
+def appendGuard : Bool :=
+  (evalPanValueDeclarationsWithStructs ([] : StructContext) evalRelState
+      (appendDecls ++ appendRest) none).isSome ==
+    (match evalPanValueDeclarationsWithStructs ([] : StructContext) evalRelState
+        appendDecls none with
+     | some state' =>
+         (evalPanValueDeclarationsWithStructs ([] : StructContext) state'
+           appendRest none).isSome
+     | none => false)
+
+#eval appendGuard
+#guard appendGuard
+
+example : True := by
+  have _h := evalPanValueDeclarationsWithStructs_append ([] : StructContext)
+    evalRelState appendDecls appendRest none
+  trivial
+
+def commuteFunction : Decl Nat :=
+  .function wfFunction
+
+def commuteDecl : Decl Nat :=
+  .decl .one "g" (.const 7)
+
+def commuteGuard : Bool :=
+  (match evalPanValueDeclarationsWithStructs ([] : StructContext) evalRelState
+        [commuteFunction, commuteDecl] none,
+      evalPanValueDeclarationsWithStructs ([] : StructContext) evalRelState
+        [commuteDecl, commuteFunction] none with
+   | some left, some right =>
+       (left.globals "g").isSome == (right.globals "g").isSome
+   | none, none => true
+   | _, _ => false)
+
+#eval commuteGuard
+#guard commuteGuard
+
+example : True := by
+  have _h := evalPanValueDeclarationsWithStructs_function_decl_commute
+    ([] : StructContext) evalRelState wfFunction .one "g" (.const 7) [] none
+  trivial
+
 end Flapjack.Test.PanProgramSimpParity

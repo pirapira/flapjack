@@ -1000,4 +1000,16 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @PanValueProgNotBrokeContinued_call_of_no_handler
 #check @PanValueProgNotBrokeContinued_dec
 
+/-! The direct `Call_Ret_Exception` branch of Cake's `pc_compile_correct`: a
+    direct call propagates the callee's uncaught raise unchanged. -/
+#check @panValuePcRaisedResultRelWithContextCode_of_clocked_call
+
+/-! The `DecCall` timeout lift: a declaration call whose callee runs out of
+    clock crosses the enclosing program boundary as a `timeout` outcome. -/
+#check @panValuePcTimeoutResultRel_of_clocked_decCall
+
+/-! The direct `Call_Ret` timeout lift: a direct call whose callee runs out of
+    clock crosses the enclosing program boundary as a `timeout` outcome. -/
+#check @panValuePcTimeoutResultRel_of_clocked_call
+
 end Flapjack.Test.PanValuePcControlSafety

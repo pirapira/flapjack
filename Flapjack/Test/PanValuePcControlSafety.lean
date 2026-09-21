@@ -954,4 +954,6 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @evalPanValueCallWithPrimitiveCallsAndFfi_handler_not_broke_continued
 #check @panValueCrepProgramStateControlSafe_call_handler
 
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_handler
+
 end Flapjack.Test.PanValuePcControlSafety

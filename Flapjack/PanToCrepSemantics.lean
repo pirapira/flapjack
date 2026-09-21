@@ -76,6 +76,83 @@ theorem panValuePcResultRel_semanticOutcomeRel
     cases sourceOutcome <;> cases targetOutcome <;>
     simp_all [panCrepSemanticOutcomeRel]
 
+/-! The outcome projection is non-`none` exactly on the two successful result
+    shapes.  These inversions let the top-level transport case on a
+    `pc_compile_correct` result without re-unfolding the projection. -/
+theorem panValuePcResultOutcome_eq_some_iff (result : PanValuePcResult α)
+    (outcome : PanSemanticOutcome) :
+    panValuePcResultOutcome result = some outcome ↔
+      (∃ (locals globals : VarName → Option (PanValue α))
+        (memory : α → Option (PanValue α)) (values : List (PanValue α)),
+        result = .returned locals globals memory values ∧ outcome = .success) ∨
+      (∃ (locals globals : VarName → Option (PanValue α))
+        (memory : α → Option (PanValue α)) (event : FfiFinalEvent),
+        result = .finalFfi locals globals memory event ∧
+          outcome = .ffi event.outcome) := by
+  constructor
+  · intro h
+    cases result with
+    | returned locals globals memory values =>
+        exact Or.inl ⟨locals, globals, memory, values, rfl,
+          (Option.some.inj h).symm⟩
+    | finalFfi locals globals memory event =>
+        exact Or.inr ⟨locals, globals, memory, event, rfl,
+          (Option.some.inj h).symm⟩
+    | error => simp [panValuePcResultOutcome] at h
+    | normal locals globals memory => simp [panValuePcResultOutcome] at h
+    | raised locals globals memory exception value =>
+        simp [panValuePcResultOutcome] at h
+    | broke locals globals memory => simp [panValuePcResultOutcome] at h
+    | continued locals globals memory => simp [panValuePcResultOutcome] at h
+    | timeout locals globals memory => simp [panValuePcResultOutcome] at h
+  · intro h
+    rcases h with
+      ⟨locals, globals, memory, values, rfl, rfl⟩ |
+      ⟨locals, globals, memory, event, rfl, rfl⟩ <;> rfl
+
+theorem crepPcResultOutcome_eq_some_iff (result : CrepPcResult α)
+    (outcome : CrepSemanticOutcome) :
+    crepPcResultOutcome result = some outcome ↔
+      (∃ (state : CrepState α) (values : List α),
+        result = .returned state values ∧ outcome = .success) ∨
+      (∃ (state : CrepState α) (event : FfiFinalEvent),
+        result = .finalFfi state event ∧ outcome = .ffi event.outcome) := by
+  constructor
+  · intro h
+    cases result with
+    | returned state values =>
+        exact Or.inl ⟨state, values, rfl, (Option.some.inj h).symm⟩
+    | finalFfi state event =>
+        exact Or.inr ⟨state, event, rfl, (Option.some.inj h).symm⟩
+    | error => simp [crepPcResultOutcome] at h
+    | normal state => simp [crepPcResultOutcome] at h
+    | raised state exception => simp [crepPcResultOutcome] at h
+    | broke state label => simp [crepPcResultOutcome] at h
+    | continued state label => simp [crepPcResultOutcome] at h
+    | timeout state => simp [crepPcResultOutcome] at h
+  · intro h
+    rcases h with
+      ⟨state, values, rfl, rfl⟩ |
+      ⟨state, event, rfl, rfl⟩ <;> rfl
+
+theorem panValuePcResultOutcome_eq_none_iff (result : PanValuePcResult α) :
+    panValuePcResultOutcome result = none ↔
+      (∀ (locals globals : VarName → Option (PanValue α))
+        (memory : α → Option (PanValue α)) (values : List (PanValue α)),
+        result ≠ .returned locals globals memory values) ∧
+      (∀ (locals globals : VarName → Option (PanValue α))
+        (memory : α → Option (PanValue α)) (event : FfiFinalEvent),
+        result ≠ .finalFfi locals globals memory event) := by
+  cases result <;> simp [panValuePcResultOutcome]
+
+theorem crepPcResultOutcome_eq_none_iff (result : CrepPcResult α) :
+    crepPcResultOutcome result = none ↔
+      (∀ (state : CrepState α) (values : List α),
+        result ≠ .returned state values) ∧
+      (∀ (state : CrepState α) (event : FfiFinalEvent),
+        result ≠ .finalFfi state event) := by
+  cases result <;> simp [crepPcResultOutcome]
+
 def panSuccessfulAt (hooks : PanSemanticsHooks α σ) (clock : Nat) : Prop :=
   ∃ result outcome,
     hooks.evaluate clock = some result ∧

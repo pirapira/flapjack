@@ -48,35 +48,29 @@ theorem evalWordStackMachine_longDiv_preserves_values [NeZero width]
   change lookupNatInfo divisor config.locations = some divisorLocation' at hdivisor
   cases divisorLocation' with
   | register divisorRegister =>
-      by_cases hdivisorZero : divisorRegister = 0
-      · simp [wordStackLongDivInst, wordStackLocation, hdivisor,
-          hdivisorZero] at heval
-      · by_cases hdivisorThree : divisorRegister = 3
-        · simp [wordStackLongDivInst, wordStackLocation, hdivisor,
-            hdivisorThree] at heval
-        · have hleftReg : state.registers 3 = leftValue := by
-            simpa [wordStackMachineValue, wordStackLocation, hthree] using
-              hleftValue
-          have hrightReg : state.registers 0 = rightValue := by
-            simpa [wordStackMachineValue, wordStackLocation, hzero] using
-              hrightValue
-          have hdivisorReg : state.registers divisorRegister = divisorValue := by
-            simpa [wordStackMachineValue, wordStackLocation, hdivisor] using
-              hdivisorValue
-          cases hresult : wordStackLongDivResult leftValue rightValue divisorValue with
-          | none =>
-              simp [wordStackLongDivInst, wordStackLocation, hdivisor,
-                hdivisorZero, hdivisorThree, evalWordStackMachine,
-                hleftReg, hrightReg, hdivisorReg, hresult] at heval
-          | some result =>
-              rcases result with ⟨quotient, remainder⟩
-              simp [wordStackLongDivInst, wordStackLocation, hdivisor,
-                hdivisorZero, hdivisorThree, evalWordStackMachine,
-                hleftReg, hrightReg, hdivisorReg, hresult] at heval
-              cases heval
-              constructor <;>
-                simp [wordStackMachineValue, wordStackLocation,
-                  wordStackMachineWriteRegister, hzero, hthree]
+      have hleftReg : state.registers 3 = leftValue := by
+        simpa [wordStackMachineValue, wordStackLocation, hthree] using
+          hleftValue
+      have hrightReg : state.registers 0 = rightValue := by
+        simpa [wordStackMachineValue, wordStackLocation, hzero] using
+          hrightValue
+      have hdivisorReg : state.registers divisorRegister = divisorValue := by
+        simpa [wordStackMachineValue, wordStackLocation, hdivisor] using
+          hdivisorValue
+      cases hresult : wordStackLongDivResult leftValue rightValue divisorValue with
+      | none =>
+          simp [wordStackLongDivInst, wordStackLocation, hdivisor,
+            evalWordStackMachine, hleftReg, hrightReg, hdivisorReg,
+            hresult] at heval
+      | some result =>
+          rcases result with ⟨quotient, remainder⟩
+          simp [wordStackLongDivInst, wordStackLocation, hdivisor,
+            evalWordStackMachine, hleftReg, hrightReg, hdivisorReg,
+            hresult] at heval
+          cases heval
+          constructor <;>
+            simp [wordStackMachineValue, wordStackLocation,
+              wordStackMachineWriteRegister, hzero, hthree]
   | stack divisorSlot =>
       have hleftReg : state.registers 3 = leftValue := by
         simpa [wordStackMachineValue, wordStackLocation, hthree] using

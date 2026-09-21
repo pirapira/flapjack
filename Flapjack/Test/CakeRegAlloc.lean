@@ -221,7 +221,6 @@ def spDefaultIndexFirstBindingGuard : Bool :=
   cakeSpDefaultIndexed index 9 == Flapjack.RiscV.CakeAlloc.spDefault entries 9
 
 #guard spDefaultIndexFirstBindingGuard
-
 #guard spDefaultIndexParityGuard
 
 def extractColorOrderGuard : Bool :=
@@ -232,6 +231,209 @@ def extractColorOrderGuard : Bool :=
     [(1, 0), (9, 0), (17, 0)]
 
 #guard extractColorOrderGuard
+
+/- Cake's `assign_Atemp_tag` removes colours used by fixed neighbours before
+   applying the preference oracle. A fixed neighbour at colour 1 forces node
+   0 to choose colour 0. -/
+def assignAtempFixedNeighbourGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 3 with
+      adjLists := CakeNodeMap.ofNatInfoMap 3 [(0, [1]), (1, [0])]
+      nodeTag := CakeNodeMap.ofNatInfoMap 3 [(0, .aTemp), (1, .fixed 1)] }
+  let out := cakeAssignAtempTag 3 (fun _ _ _ => none) 0 state
+  out.nodeTag.get 0 == some (.fixed 0)
+
+#guard assignAtempFixedNeighbourGuard
+
+/- Cake's `assign_Stemp_tag` assigns an unbound stack colour at or above k.
+   A fixed neighbour at colour 2 forces the first available stack colour to 3
+   when k=2. -/
+def assignStempUnboundColourGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 3 with
+      adjLists := CakeNodeMap.ofNatInfoMap 3 [(0, [1]), (1, [0])]
+      nodeTag := CakeNodeMap.ofNatInfoMap 3 [(0, .sTemp), (1, .fixed 2)] }
+  let out := cakeAssignStempTag 2 (fun _ _ _ => none) 0 state
+  out.nodeTag.get 0 == some (.fixed 3)
+
+#guard assignStempUnboundColourGuard
+
+/- Cake's `assign_Atemps` consumes the filtered heuristic list before its
+   full in-dimension pass. With no edges and k=2, all remaining Atemps take
+   the first available colour, preserving Cake's traversal order. -/
+def assignAtempsHeuristicThenRangeGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 3 with
+      nodeTag := CakeNodeMap.ofNatInfoMap 3
+        [(0, .aTemp), (1, .aTemp), (2, .aTemp)] }
+  let out := cakeAssignAtemps 2 [1] (fun _ _ _ => none) state
+  out.nodeTag.get 0 == some (.fixed 0) &&
+    out.nodeTag.get 1 == some (.fixed 0) &&
+    out.nodeTag.get 2 == some (.fixed 0)
+
+#guard assignAtempsHeuristicThenRangeGuard
+
+/- Cake's `sorted_insert`/`sorted_mem` maintain descending adjacency lists,
+   skip duplicate insertion, and stop membership search at the passed key. -/
+def sortedInsertMemGuard : Bool :=
+  cakeSortedInsert 6 [] == [6] &&
+    cakeSortedInsert 5 [7, 4, 2] == [7, 5, 4, 2] &&
+    cakeSortedInsert 4 [7, 4, 2] == [7, 4, 2] &&
+    cakeSortedInsert 1 [7, 4, 2] == [7, 4, 2, 1] &&
+    cakeSortedMem 4 [7, 4, 2] &&
+    !cakeSortedMem 5 [7, 4, 2] &&
+    !cakeSortedMem 1 [7, 4, 2] &&
+    cakeSortedMem 7 [7, 4, 2]
+
+#guard sortedInsertMemGuard
+
+/- Cake's `first_match_col` scans variables in order, ignores non-fixed tags,
+   and returns the first fixed neighbour whose colour is in the candidates. -/
+def firstMatchColGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 8 with
+      nodeTag := CakeNodeMap.ofNatInfoMap 8
+        [(1, .fixed 3), (2, .aTemp), (3, .fixed 5), (4, .fixed 7)] }
+  cakeFirstMatchCol state [5, 7] [1, 2, 3, 4] == some 5 &&
+    cakeFirstMatchCol state [2] [1, 3, 4] == none
+
+#guard firstMatchColGuard
+
+/- Cake's `assign_Stemps` visits every node in ascending range order and
+   assigns each Stemp the first available colour at or above k. -/
+def assignStempsTraversalGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      adjLists := CakeNodeMap.ofNatInfoMap 4 [(0, [2])]
+      nodeTag := CakeNodeMap.ofNatInfoMap 4
+        [(0, .sTemp), (1, .sTemp), (2, .fixed 2)] }
+  let out := cakeAssignStemps 2 (fun _ _ _ => none) state
+  out.nodeTag.get 0 == some (.fixed 3) &&
+    out.nodeTag.get 1 == some (.fixed 2) &&
+    out.nodeTag.get 2 == some (.fixed 2)
+
+#guard assignStempsTraversalGuard
+
+/- Cake's `insert_edge` reads both endpoint adjacency lists before writing,
+   inserts both directions, and keeps each list descending without duplicates. -/
+def insertEdgeGuard : Bool :=
+  let adj : CakeNodeMap (List Nat) := CakeNodeMap.ofSize 4
+  let one := cakeInsertEdge 1 3 adj
+  let two := cakeInsertEdge 1 2 one
+  let three := cakeInsertEdge 1 3 two
+  one.get 1 == some [3] &&
+    one.get 3 == some [1] &&
+    two.get 1 == some [3, 2] &&
+    two.get 2 == some [1] &&
+    three.get 1 == some [3, 2] &&
+    three.get 3 == some [1]
+
+#guard insertEdgeGuard
+
+/- Cake's list_insert_edge/clique_insert_edge inserts the tail first and
+   connects every clique pair exactly once. -/
+def cliqueInsertEdgeGuard : Bool :=
+  let listEdges := cakeListInsertEdge 0 [1, 3] (CakeNodeMap.ofSize 4)
+  let clique := cakeCliqueInsertEdge [0, 1, 2] (CakeNodeMap.ofSize 4)
+  listEdges.get 0 == some [3, 1] &&
+    listEdges.get 1 == some [0] &&
+    listEdges.get 3 == some [0] &&
+    clique.get 0 == some [2, 1] &&
+    clique.get 1 == some [2, 0] &&
+    clique.get 2 == some [1, 0]
+
+#guard cliqueInsertEdgeGuard
+
+/- Cake's `dec_degree` decrements exactly the neighbours of a node, saturates
+   at zero, and leaves the source and non-neighbour degrees unchanged. -/
+def decDegreeNeighboursGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      adjLists := CakeNodeMap.ofNatInfoMap 4 [(0, [1, 2])]
+      degrees := CakeNodeMap.ofNatInfoMap 4
+        [(0, 4), (1, 3), (2, 0), (3, 7)] }
+  let out := cakeDecDegree 0 state
+  out.degrees.get 0 == some 4 &&
+    out.degrees.get 1 == some 2 &&
+    out.degrees.get 2 == some 0 &&
+    out.degrees.get 3 == some 7
+
+#guard decDegreeNeighboursGuard
+
+/- Cake's `push_stack` zeroes the pushed node degree, clears its move-related
+   flag, and prepends it to the stack while preserving unrelated state. -/
+def pushStackGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      degrees := CakeNodeMap.ofNatInfoMap 4 [(1, 3), (2, 5)]
+      moveRelated := CakeNodeMap.ofNatInfoMap 4 [(1, true), (2, false)]
+      stack := [2] }
+  let out := cakePushStack 1 state
+  out.degrees.get 1 == some 0 &&
+    out.degrees.get 2 == some 5 &&
+    out.moveRelated.get 1 == some false &&
+    out.moveRelated.get 2 == some false &&
+    out.stack == [1, 2]
+
+#guard pushStackGuard
+
+/- Cake's worklist adders prepend their input lists without changing other
+   state, matching the array-state updates in reg_allocScript.sml. -/
+def worklistPrependGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      simpWl := [5]
+      spillWl := [6]
+      freezeWl := [7]
+      unavailMovesWl := [(9, (1, 2))] }
+  let simp := cakeAddSimpWl [1, 2] state
+  let spill := cakeAddSpillWl [3, 4] state
+  let freeze := cakeAddFreezeWl [8, 9] state
+  let unavailable := cakeAddUnavailMovesWl [(10, (3, 4))] state
+  simp.simpWl == [1, 2, 5] &&
+    spill.spillWl == [3, 4, 6] &&
+    freeze.freezeWl == [8, 9, 7] &&
+    unavailable.unavailMovesWl == [(10, (3, 4)), (9, (1, 2))]
+
+#guard worklistPrependGuard
+
+/- Cake's `extend_clique` skips members already live, prepends newly discovered
+   members to the live list, and links them to the existing clique. -/
+def extendCliqueGuard : Bool :=
+  let base := cakeCliqueInsertEdge [1, 2] (CakeNodeMap.ofSize 5)
+  let (out, live) := cakeExtendClique [2, 3] [1, 2] base
+  live == [3, 1, 2] &&
+    out.get 1 == some [3, 2] &&
+    out.get 2 == some [3, 1] &&
+    out.get 3 == some [2, 1]
+
+#guard extendCliqueGuard
+
+/- Cake's split_degree selects low-degree uncoalesced allocation nodes,
+   rejects high-degree/coalesced nodes, and keeps out-of-dimension nodes on
+   the worklist side. -/
+def splitDegreeGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      degrees := CakeNodeMap.ofNatInfoMap 4 [(0, 1), (1, 3), (2, 0)]
+      coalesced := CakeNodeMap.ofNatInfoMap 4 [(2, 1)] }
+  cakeSplitDegree state 4 2 0 &&
+    !cakeSplitDegree state 4 2 1 &&
+    !cakeSplitDegree state 4 2 2 &&
+    cakeSplitDegree state 4 2 4
+
+#guard splitDegreeGuard
+
+/- Cake's `smerge` merges descending priority lists and takes the left head
+   on equal priorities, preserving the tail order used by revive_moves. -/
+def smergePriorityGuard : Bool :=
+  cakeSMerge
+      [(7, (1, 2)), (5, (3, 4))]
+      [(7, (5, 6)), (6, (7, 8))] ==
+    [(7, (1, 2)), (7, (5, 6)), (6, (7, 8)), (5, (3, 4))] &&
+  cakeSMerge [] [(4, (9, 10))] == [(4, (9, 10))]
+
+#guard smergePriorityGuard
 
 
 /-! ## IRC graph construction guards
@@ -490,6 +692,36 @@ def doSpillEqualDegreeGuard : Bool :=
 
 #guard doSpillEqualDegreeGuard
 
+/- Cake's `do_step` (`reg_allocScript.sml:832-857`) tries simplify before
+   coalescing. With both worklists populated, simplify wins and leaves the
+   available move untouched. -/
+def doStepSimplifyPriorityGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 3 with
+      simpWl := [1]
+      moveRelated := CakeNodeMap.ofNatInfoMap 3 [(1, true), (2, true)]
+      availMovesWl := [(1, (1, 2))] }
+  let (changed, out) := cakeDoStep none 3 state
+  changed && out.stack == [1] && out.simpWl == [] &&
+    out.availMovesWl == [(1, (1, 2))] &&
+    (out.coalesced.get 2).getD 2 == 2
+
+#guard doStepSimplifyPriorityGuard
+
+/- Cake's `unspill` (`reg_allocScript.sml:378-391`) partitions the spill
+   worklist with the HOL reversed-accumulator order, sending newly low-degree,
+   non-move-related nodes to `simpWl`. -/
+def unspillTransitionGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 5 with
+      degrees := CakeNodeMap.ofNatInfoMap 5 [(1, 0), (2, 2), (3, 1)]
+      spillWl := [1, 2, 3] }
+  let out := cakeUnspill 2 state
+  out.spillWl == [2] && out.simpWl == [1, 3] &&
+    out.freezeWl == [] && out.stack == []
+
+#guard unspillTransitionGuard
+
 
 /- The canonical `reg_alloc_probe.out` cost-sensitive case exercises
    `do_spill` with a non-`NONE` source-keyed table and one allocatable colour:
@@ -513,11 +745,69 @@ def stExMinCostOrderGuard : Bool :=
 
 #guard stExMinCostOrderGuard
 
+/- Equal spill costs retain the first candidate: Cake's `v > cost` test is
+   strict, while each visited non-selected node is prepended to the residual
+   worklist. -/
+def stExMinCostTieGuard : Bool :=
+  let degrees := CakeNodeMap.ofNatInfoMap 4 [(0, 2), (1, 2), (2, 2)]
+  let costs := CakeNodeMap.ofNatInfoMap 4 [(0, 10), (1, 10), (2, 10)]
+  cakeStExListMinCost degrees costs [1, 2] 4 0 5 [] == (0, [2, 1])
+
+#guard stExMinCostTieGuard
+
+/- Cake's `safe_div` maps a zero degree to cost zero before the strict
+   comparison; this keeps the spill scan total without inventing a divisor. -/
+def stExMinCostZeroDegreeGuard : Bool :=
+  let degrees := CakeNodeMap.ofNatInfoMap 4 [(0, 2), (1, 0), (2, 2)]
+  let costs := CakeNodeMap.ofNatInfoMap 4 [(0, 10), (1, 7), (2, 1)]
+  cakeSafeDiv 7 0 == 0 &&
+    cakeStExListMinCost degrees costs [1, 2] 4 0 1 [] == (1, [2, 0])
+
+#guard stExMinCostZeroDegreeGuard
+
+/- Cake's cost-free `do_spill` fallback uses `st_ex_list_MAX_deg`: it scans
+   the remaining worklist, replacing the selected node only on a strict
+   degree increase and retaining the reversed residual list. -/
 def stExMaxDegOrderGuard : Bool :=
   let degrees := CakeNodeMap.ofNatInfoMap 4 [(0, 2), (1, 1), (2, 3)]
   cakeStExListMaxDeg degrees [1, 2] 4 0 2 [] == (2, [0, 1])
 
 #guard stExMaxDegOrderGuard
+
+/- Equal degrees retain the first spill candidate: Cake's comparison is
+   strict, so a tie must not perturb the selected node. -/
+def stExMaxDegTieGuard : Bool :=
+  let degrees := CakeNodeMap.ofNatInfoMap 4 [(0, 2), (1, 2), (2, 2)]
+  cakeStExListMaxDeg degrees [1, 2] 4 0 2 [] == (0, [2, 1])
+
+#guard stExMaxDegTieGuard
+
+/- End-to-end `do_spill` oracle: Cake selects node 2, pushes it, and
+   `unspill` moves the residual low-degree node 1 to the simplify worklist. -/
+def doSpillTransitionGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      degrees := CakeNodeMap.ofNatInfoMap 4 [(0, 2), (1, 1), (2, 3)],
+      spillWl := [1, 2] }
+  let (did, after) := cakeDoSpill none 4 state
+  did && after.stack == [2] && after.simpWl == [1] &&
+    after.freezeWl == [] && after.spillWl == []
+
+#guard doSpillTransitionGuard
+
+/- Cake's `dec_degree` skips an out-of-dimension node before reading its
+   adjacency list.  This matters for the functional map's explicit `outside`
+   bindings: an out-of-range edge must not decrement an in-range neighbour. -/
+def decDegreeOutOfDimGuard : Bool :=
+  let adj := cakeInsertEdge 3 1 (CakeNodeMap.ofSize 2)
+  let state : CakeRaState :=
+    { CakeRaState.empty 2 with
+      adjLists := adj,
+      degrees := CakeNodeMap.ofNatInfoMap 2 [(1, 2)] }
+  let after := cakeDecDegree 3 state
+  (after.degrees.get 1).getD 0 == 2
+
+#guard decDegreeOutOfDimGuard
 
 /- Cake's `respill` (`reg_allocScript.sml:659-674`) moves a freeze-worklist
    node back to the spill worklist only when its degree reaches `k`; it
@@ -576,7 +866,7 @@ def simplifyBatchGuard : Bool :=
 #guard simplifyBatchGuard
 /- Cake's `dec_degree` (`reg_allocScript.sml:263-272`) is a safe no-op for
    an out-of-dimension node, even if an outside adjacency entry exists. -/
-def decDegreeOutOfDimGuard : Bool :=
+def decDegreeOutOfDimNoOpGuard : Bool :=
   let state : CakeRaState :=
     { CakeRaState.empty 3 with
       adjLists := CakeNodeMap.ofNatInfoMap 3 [(5, [1])]
@@ -584,7 +874,7 @@ def decDegreeOutOfDimGuard : Bool :=
   let out := cakeDecDegree 5 state
   (out.degrees.get 1).getD 0 == 2
 
-#guard decDegreeOutOfDimGuard
+#guard decDegreeOutOfDimNoOpGuard
 
 /- Cake's `do_coalesce` (`reg_allocScript.sml:676-698`) consumes the first
    compatible move, coalesces its second endpoint into the first, clears the
@@ -794,6 +1084,66 @@ def negFirstMatchProjectionGuard : Bool :=
     Flapjack.RiscV.CakeRegAlloc.cakeNegFirstMatchCol state 3 [] [5, 7] ==
       none
 
+/- Cake's `biased_pref` first tries the coalesced root, then the move-partner
+   table; `neg_biased_pref` scans only non-conflicting stack colours. These
+   direct cases pin the preference inputs consumed by IRC. -/
+def biasedPreferenceGuard : Bool :=
+  let rootState : CakeRaState :=
+    { CakeRaState.empty 4 with
+      nodeTag := CakeNodeMap.ofNatInfoMap 4 [(2, .fixed 1)]
+      coalesced := CakeNodeMap.ofNatInfoMap 4 [(1, 2)] }
+  let partnerState : CakeRaState :=
+    { CakeRaState.empty 4 with
+      nodeTag := CakeNodeMap.ofNatInfoMap 4 [(3, .fixed 0)] }
+  let emptyMoves := CakeNodeMap.ofSize 4
+  let partnerMoves := CakeNodeMap.ofNatInfoMap 4 [(1, [3])]
+  cakeBiasedPref rootState emptyMoves 1 [0, 1] == some 1 &&
+    cakeBiasedPref partnerState partnerMoves 1 [0, 1] == some 0 &&
+    cakeBiasedPref partnerState partnerMoves 4 [0, 1] == none
+
+def negBiasedPreferenceGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      nodeTag := CakeNodeMap.ofNatInfoMap 4
+        [(2, .fixed 2), (3, .fixed 4)] }
+  let moves := CakeNodeMap.ofNatInfoMap 4 [(1, [2, 3])]
+  cakeNegBiasedPref state 2 moves 1 [2] == some 4 &&
+    cakeNegBiasedPref state 2 moves 4 [2] == none
+
+#guard biasedPreferenceGuard
+#guard negBiasedPreferenceGuard
+
+/- `full_consistency_ok` rejects out-of-dimension and clashing moves, permits
+   Atemp/low-fixed endpoints, and rejects two low fixed endpoints. -/
+def fullConsistencyGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      nodeTag := CakeNodeMap.ofNatInfoMap 4
+        [(0, .aTemp), (1, .aTemp), (2, .fixed 1), (3, .fixed 3)]
+      adjLists := CakeNodeMap.ofNatInfoMap 4 [(0, [2]), (2, [0])] }
+  cakeFullConsistencyOk state 2 0 1 &&
+    !cakeFullConsistencyOk state 2 0 2 &&
+    !cakeFullConsistencyOk state 2 2 3 &&
+    !cakeFullConsistencyOk state 2 0 4
+
+#guard fullConsistencyGuard
+
+/- `canonize_move` puts a fixed endpoint first; otherwise it orders allocator
+   nodes ascending, matching reg_allocScript.sml:614-624. -/
+def canonizeMoveGuard : Bool :=
+  let fixedLeft : CakeRaState :=
+    { CakeRaState.empty 4 with
+      nodeTag := CakeNodeMap.ofNatInfoMap 4 [(2, .fixed 1), (3, .aTemp)] }
+  let fixedRight : CakeRaState :=
+    { CakeRaState.empty 4 with
+      nodeTag := CakeNodeMap.ofNatInfoMap 4 [(2, .aTemp), (3, .fixed 2)] }
+  let allAtemps : CakeRaState := CakeRaState.empty 6
+  cakeCanonizeMove fixedLeft 2 3 == (2, 3) &&
+    cakeCanonizeMove fixedRight 2 3 == (3, 2) &&
+    cakeCanonizeMove allAtemps 5 2 == (2, 5)
+
+#guard canonizeMoveGuard
+
 /- Cake's `reset_move_related` (`reg_allocScript.sml:708-725`) first clears
    the whole dimension, then marks exactly the non-fixed endpoints of the
    surviving unavailable moves. -/
@@ -962,6 +1312,50 @@ def applyColourSetPatriciaGuard : Bool :=
 
 #guard applyColourSetPatriciaGuard
 
+/- The original Cake `apply_colour_probe.out` checks that allocator colours
+   reach every register-bearing field, while control labels remain unchanged:
+   assignment/return/raise, call cut sets and handler, and loop live sets. -/
+def applyColourProbeGuard : Bool :=
+  let colour := Flapjack.RiscV.CakeAlloc.totalColour [(1, 7), (3, 9)]
+  let assignOk :=
+    match wordApplyColour colour
+        (.assign 1 (.var 3) : WordProg Nat) with
+    | .assign name (.var source) => name == 14 && source == 18
+    | _ => false
+  let returnRaiseOk :=
+    match wordApplyColour colour
+        (.seq (.return 1 [3, 0]) (.raise 0) : WordProg Nat) with
+    | .seq (.return label values) (.raise exception) =>
+        label == 14 && values == [18, 0] && exception == 0
+    | _ => false
+  let callOk :=
+    match wordApplyColour colour
+        (.call (some ([1], ([3], [0]), .return 1 [3], 10, 11))
+          (some 12) [1, 3]
+          (some (0, .raise 3, 13, 14)) : WordProg Nat) with
+    | .call (some (returns, (normalCut, exceptionCut), ret, normalLabel, raiseLabel))
+        target arguments (some (handlerLabel, handler, handlerNormal, handlerRaise)) =>
+        returns == [14] && normalCut == [18] && exceptionCut == [0] &&
+          target == some 12 && arguments == [14, 18] &&
+          normalLabel == 10 && raiseLabel == 11 &&
+          handlerLabel == 0 && handlerNormal == 13 && handlerRaise == 14 &&
+          (match ret with
+          | .return label values => label == 14 && values == [18]
+          | _ => false) &&
+          (match handler with
+          | .raise exception => exception == 18
+          | _ => false)
+    | _ => false
+  let loopOk :=
+    match wordApplyColour colour
+        (.loop [0, 1] (.assign 1 (.var 3)) [3] : WordProg Nat) with
+    | .loop liveIn (.assign name (.var source)) liveOut =>
+        liveIn == [0, 14] && name == 14 && source == 18 && liveOut == [18]
+    | _ => false
+  assignOk && returnRaiseOk && callOk && loopOk
+
+#guard applyColourProbeGuard
+
 /- Cake's `max_var` ignores control-flow labels on Break and Continue; they
    are labels, not Word register names and must not enlarge the stack frame. -/
 def maxVarControlLabelGuard : Bool :=
@@ -995,7 +1389,15 @@ def parityGuard : Bool :=
     resortMovesSpOrderGuard && bgOkOrderGuard &&
     qsortTiesTwoGuard && qsortTiesThreeGuard && qsortDescGuard &&
     stempBadColourTieGuard && raMovesStempGuard && raMovesStempHiGuard &&
-    negFirstMatchProjectionGuard && resetMoveRelatedGuard && removeColoursGuard
+    negFirstMatchProjectionGuard && biasedPreferenceGuard &&
+    negBiasedPreferenceGuard && fullConsistencyGuard && canonizeMoveGuard &&
+    assignAtempFixedNeighbourGuard && assignStempUnboundColourGuard &&
+    assignAtempsHeuristicThenRangeGuard && sortedInsertMemGuard &&
+    firstMatchColGuard && assignStempsTraversalGuard && insertEdgeGuard &&
+    cliqueInsertEdgeGuard && decDegreeNeighboursGuard && pushStackGuard &&
+    worklistPrependGuard && extendCliqueGuard && splitDegreeGuard &&
+    smergePriorityGuard &&
+    resetMoveRelatedGuard && removeColoursGuard
     && mapUpdateBoundedGuard && sourceSpillCostKeyGuard &&
     sourceSpillCostRoundTripGuard && sourceMovePhysicalFallbackGuard
     && deadMovePriorityGuard
@@ -1005,8 +1407,9 @@ def parityGuard : Bool :=
     && coalesceParentCompressionGuard
     && prefreezeTransitionGuard
     && sortMovesTailSplitGuard && freezeWorklistTransitionGuard &&
-      doSpillEqualDegreeGuard
-      && coalesceSelfMoveRejectedGuard
+      doSpillEqualDegreeGuard && doStepSimplifyPriorityGuard &&
+      unspillTransitionGuard
+      && coalesceSelfMoveRejectedGuard && applyColourProbeGuard
 
 /- The aggregate guard is intentionally disabled while the allocator port is
    being aligned with CakeML.  Individual oracle cases remain available to
@@ -1034,18 +1437,29 @@ def runChecks : IO Bool := do
     reviveOrderGuard, revivePartitionGuard, bgOkOrderGuard, qsortTiesTwoGuard,
     movesToSpOrderGuard, resortMovesSpOrderGuard,
     qsortTiesThreeGuard, qsortDescGuard, raMovesStempGuard,
-    raMovesStempHiGuard, negFirstMatchProjectionGuard, resetMoveRelatedGuard,
+    raMovesStempHiGuard, negFirstMatchProjectionGuard, biasedPreferenceGuard,
+    negBiasedPreferenceGuard, fullConsistencyGuard, canonizeMoveGuard,
+    assignAtempFixedNeighbourGuard, assignStempUnboundColourGuard,
+    assignAtempsHeuristicThenRangeGuard, sortedInsertMemGuard,
+    firstMatchColGuard, assignStempsTraversalGuard, insertEdgeGuard,
+    cliqueInsertEdgeGuard, decDegreeNeighboursGuard, pushStackGuard,
+    resetMoveRelatedGuard,
     removeColoursGuard,
     mapUpdateBoundedGuard,
     deadMovePriorityGuard, deadProgramPriorityGuard, sortMovesTailSplitGuard,
     sourceSpillCostKeyGuard, sourceMovePhysicalFallbackGuard,
     deadTailCallLiveGuard, deadAllocLiveGuard, deadInstallLiveGuard,
     deadFfiLiveGuard, deadStoreConstsLiveGuard, stExMinCostOrderGuard,
-    stExMaxDegOrderGuard, respillWorklistGuard,
+    stExMinCostTieGuard, stExMinCostZeroDegreeGuard,
+    stExMaxDegOrderGuard, stExMaxDegTieGuard, doSpillTransitionGuard,
+    respillWorklistGuard,
     respillBelowThresholdGuard, simplifyBatchGuard, decDegreeOutOfDimGuard,
-    coalesceWorklistSuccessGuard, coalesceParentCompressionGuard,
-    prefreezeTransitionGuard, freezeWorklistTransitionGuard,
-    doSpillEqualDegreeGuard]
+    decDegreeOutOfDimNoOpGuard, coalesceWorklistSuccessGuard,
+    freezeWorklistTransitionGuard, coalesceParentCompressionGuard,
+    prefreezeTransitionGuard, doSpillEqualDegreeGuard,
+    doStepSimplifyPriorityGuard, unspillTransitionGuard,
+    worklistPrependGuard, extendCliqueGuard, splitDegreeGuard,
+    smergePriorityGuard, applyColourProbeGuard]
   let names := [
     "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
@@ -1075,7 +1489,13 @@ def runChecks : IO Bool := do
     "sort_moves tie three", "sort_moves long tie",
     "sort_moves descending",
     "reg_alloc moves stack temp", "reg_alloc moves stack temp high",
-    "neg_first_match_col projection", "Cake map updates stay bounded",
+    "neg_first_match_col projection", "biased preference",
+    "negative biased preference", "full consistency", "canonize move",
+    "assign_Atemp fixed neighbour", "assign_Stemp unbound colour",
+    "assign_Atemps heuristic then range", "sorted_insert/sorted_mem",
+    "first_match_col", "assign_Stemps traversal", "insert_edge",
+    "clique_insert_edge", "dec_degree neighbours", "push_stack",
+    "Cake map updates stay bounded",
     "remove_dead keeps move priority", "remove_dead_prog keeps entry priority",
     "mk_bij uses Cake Patricia Set order", "sort_moves tail split oracle",
     "source-keyed spill costs", "source-keyed spill-cost round trip",
@@ -1083,11 +1503,17 @@ def runChecks : IO Bool := do
     "remove_dead tail-call liveness", "remove_dead Alloc liveness",
     "remove_dead Install liveness", "remove_dead FFI liveness",
     "remove_dead StoreConsts liveness", "st_ex_list_MIN_cost ordering",
-    "st_ex_list_MAX_deg ordering", "respill freeze-to-spill transition",
+    "st_ex_list_MIN_cost tie ordering", "st_ex_list_MIN_cost zero degree",
+    "st_ex_list_MAX_deg ordering", "st_ex_list_MAX_deg tie ordering",
+    "do_spill transition", "dec_degree out-of-dimension guard",
+    "respill freeze-to-spill transition",
     "respill below-threshold no-op", "do_simplify batch ordering",
-    "dec_degree out-of-dimension no-op",
-    "do_coalesce success transition", "do_prefreeze transition",
-    "do_freeze transition", "do_spill equal-degree transition"]
+    "dec_degree out-of-dimension no-op with outside adjacency",
+    "do_coalesce success transition", "do_freeze transition",
+    "do_prefreeze transition", "do_spill equal-degree transition",
+    "do_step simplify priority", "unspill transition", "worklist prepend",
+    "extend clique", "split degree", "smerge priority",
+    "apply_colour rewrites source Word register fields"]
   let mut all := true
   for (name, result) in names.zip results do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"

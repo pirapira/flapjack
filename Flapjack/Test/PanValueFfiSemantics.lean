@@ -303,6 +303,40 @@ def statefulExactPublicProgram : Option (Word 64 × Nat) :=
 
 #guard statefulExactPublicProgram = some (BitVec.ofNat 64 0x42, 1)
 
+/- Cake's panSem store32/storeByte paths use the supplied fixed-width memory
+   operations, rather than the compatibility whole-cell update.  Keep both
+   byte-order and alignment visible at the exact program boundary. -/
+def statefulExactStore32Program : Option (Word 64 × Nat) :=
+  (evalPanValueFfiExactProgram statefulTestContext statefulExactPublicProgramState
+      statefulTestPrimitive statefulTestHandler 30
+      [.function
+        { name := "main", inline := false, exported := true, params := [],
+          body := .seq (.store32 (.const (BitVec.ofNat 64 8))
+              (.const (BitVec.ofNat 64 0x11223344)))
+            (.return (.load32 (.const (BitVec.ofNat 64 8)))),
+          returnShape := .one }]
+      "main" []).bind
+    fun result => match result with
+      | .returned _ _ _ _ [.word value] => some (value, 1)
+      | _ => none
+
+def statefulExactStoreByteProgram : Option (Word 64 × Nat) :=
+  (evalPanValueFfiExactProgram statefulTestContext statefulExactPublicProgramState
+      statefulTestPrimitive statefulTestHandler 30
+      [.function
+        { name := "main", inline := false, exported := true, params := [],
+          body := .seq (.storeByte (.const (BitVec.ofNat 64 9))
+              (.const (BitVec.ofNat 64 0xab)))
+            (.return (.loadByte (.const (BitVec.ofNat 64 9)))),
+          returnShape := .one }]
+      "main" []).bind
+    fun result => match result with
+      | .returned _ _ _ _ [.word value] => some (value, 1)
+      | _ => none
+
+#guard statefulExactStore32Program = some (BitVec.ofNat 64 0x11223344, 1)
+#guard statefulExactStoreByteProgram = some (BitVec.ofNat 64 0xab, 1)
+
 #guard
   match evalPanValueFfiExactProgramStepped statefulTestContext
       statefulExactPublicProgramState statefulTestPrimitive statefulTestHandler 30

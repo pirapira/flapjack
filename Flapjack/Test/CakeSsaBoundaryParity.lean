@@ -21,6 +21,19 @@ def returnBoundaryGuard : Bool :=
 
 #guard returnBoundaryGuard
 
+/- Cake's Return row maps every returned source value to its ABI result slot;
+   this two-value case is the direct `GENLIST (2 * (x + 1))` shape. -/
+def returnMultiProgram : WordProg Nat :=
+  .return 0 [2, 4]
+
+def returnMultiBoundaryGuard : Bool :=
+  match (wordFullSsaCcTrans 3 returnMultiProgram).2.2 with
+  | .seq (.move 1 [(9, 0), (13, 2), (17, 4)])
+      (.seq (.move 0 [(2, 13), (4, 17)]) (.return 9 [2, 4])) => true
+  | _ => false
+
+#guard returnMultiBoundaryGuard
+
 def allocProgram : WordProg Nat :=
   .alloc 2 ([], [])
 
@@ -34,7 +47,25 @@ def allocBoundaryGuard : Bool :=
 
 #guard allocBoundaryGuard
 
-def parityGuard : Bool := returnBoundaryGuard && allocBoundaryGuard
+/- Cake's nonempty Alloc row refreshes the cutset names in a new namespace,
+   resets the allocatable destination, and restores the source mapping after
+   the allocation.  This is the direct `AllocatorSSA` cutset witness. -/
+def allocCutsetNamespaceGuard : Bool :=
+  match wordSsaRenameProgram
+      ({ current := [(1, 100)], next := 200 } : WordSsaState)
+      ((.alloc 3 ([1], []) : WordProg Nat)) with
+  | ({ current := [(1, 208)], next := 212 },
+      .seq (.move 0 [(202, 100)])
+        (.seq (.move 1 [(2, 0)])
+          (.seq (.alloc 2 ([202], []))
+            (.move 0 [(208, 202)])))) => true
+  | _ => false
+
+#guard allocCutsetNamespaceGuard
+
+def parityGuard : Bool :=
+  returnBoundaryGuard && returnMultiBoundaryGuard && allocBoundaryGuard &&
+    allocCutsetNamespaceGuard
 
 #guard parityGuard
 #eval parityGuard
@@ -43,8 +74,12 @@ def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
     [ ("full_ssa_cc_trans Return preserves Cake ABI reconciliation",
         returnBoundaryGuard),
+      ("full_ssa_cc_trans Return preserves Cake multi-value ABI reconciliation",
+        returnMultiBoundaryGuard),
       ("full_ssa_cc_trans Alloc preserves Cake stack boundary moves",
-        allocBoundaryGuard) ]
+        allocBoundaryGuard),
+      ("ssa_cc_trans Alloc preserves Cake cutset namespace refresh",
+        allocCutsetNamespaceGuard) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

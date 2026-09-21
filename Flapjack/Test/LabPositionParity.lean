@@ -55,6 +55,21 @@ example :
       some [.jal 0 (0 - BitVec.ofNat 64 144)] := by
   decide
 
+/-! Cake's `riscv_ast (Loc r i)` always splits the PC-relative delta into a
+    signed-12 low part and the complementary upper part.  These guards pin
+    both sides of the signed-12 boundary and an exact negative page delta. -/
+#guard labLocValueInstructions (width := 64) 5 2047 0 ==
+  [.auipc 5 (BitVec.ofInt 64 0),
+   .addi 5 5 (BitVec.ofInt 64 2047)]
+
+#guard labLocValueInstructions (width := 64) 5 2048 0 ==
+  [.auipc 5 (BitVec.ofInt 64 1),
+   .addi 5 5 (BitVec.ofInt 64 (-2048))]
+
+#guard labLocValueInstructions (width := 64) 5 0 4096 ==
+  [.auipc 5 (BitVec.ofInt 64 (-1)),
+   .addi 5 5 (BitVec.ofInt 64 0)]
+
 /-! Cake can retain a LabAsm length of 5 after `add_nop`: its one-instruction
     body is followed by one complete encoded Skip even though the logical line
     length is not instruction-aligned. -/

@@ -741,6 +741,95 @@ theorem panValueFlatLoad_wf [BEq α] [Add α] (structs : StructContext)
   · rw [if_neg hwf] at h
     simp at h
 
+theorem panValueFlatLoadFuel_shape [BEq α] [Add α]
+    (structs : StructContext) (readWord : α → Option α) (bytesInWord : α) :
+    ∀ (fuel : Nat) (shape : Shape) (address : α) (value : PanValue α),
+      panValueFlatLoadFuel structs readWord bytesInWord fuel shape address = some value →
+        panValueShape structs value = shape := by
+  apply panValueFlatLoadFuel.induct (α := α) bytesInWord
+    (motive1 := fun structs fuel shape address => ∀ value,
+      panValueFlatLoadFuel structs readWord bytesInWord fuel shape address = some value →
+        panValueShape structs value = shape)
+    (motive2 := fun structs fuel fields address => ∀ values,
+      panValueFlatLoadFieldsFuel structs readWord bytesInWord fuel fields address = some values →
+        (values.map (fun field => panValueShape structs field.2)) = (fields.map Prod.snd))
+    (motive3 := fun structs fuel shapes address => ∀ values,
+      panValueFlatLoadListFuel structs readWord bytesInWord fuel shapes address = some values →
+        (values.map (panValueShape structs)) = shapes)
+  · intro structs x x_1 value h
+    simp [panValueFlatLoadFuel] at h
+  · intro structs fuel address value h
+    obtain ⟨word, -, rfl⟩ := by simpa [panValueFlatLoadFuel] using h
+    simp [panValueShape]
+  · intro structs fuel shapes address ih value h
+    obtain ⟨values, hvalues, rfl⟩ := by simpa [panValueFlatLoadFuel] using h
+    have hvalues' := ih values hvalues
+    simpa [panValueShape] using congrArg Shape.comb hvalues'
+  · intro structs fuel name address ih value h
+    cases hlookup : lookupInfoWithRest name structs with
+    | none => simp [panValueFlatLoadFuel, hlookup] at h
+    | some pair =>
+        obtain ⟨info, rest⟩ := pair
+        cases hfields : panValueFlatLoadFieldsFuel rest readWord bytesInWord fuel
+            info.fields address with
+        | none => simp [panValueFlatLoadFuel, hlookup, hfields] at h
+        | some fields =>
+            simp [panValueFlatLoadFuel, hlookup, hfields] at h
+            subst h
+            simp [panValueShape]
+  · intro structs x x_1 values h
+    simp [panValueFlatLoadFieldsFuel] at h
+    subst h
+    simp
+  · intro structs head tail x values h
+    simp [panValueFlatLoadFieldsFuel] at h
+  · intro structs fuel field shape fields address ihHead ihTail values h
+    cases hvalue : panValueFlatLoadFuel structs readWord bytesInWord fuel shape address with
+    | none => simp [panValueFlatLoadFieldsFuel, hvalue] at h
+    | some value =>
+        cases hvalues : panValueFlatLoadFieldsFuel structs readWord bytesInWord fuel fields
+            (panValueFlatOffset bytesInWord address (shapeSizeWithContext structs shape)) with
+        | none => simp [panValueFlatLoadFieldsFuel, hvalue, hvalues] at h
+        | some rest =>
+            simp [panValueFlatLoadFieldsFuel, hvalue, hvalues] at h
+            subst h
+            simp only [List.map_cons, ihHead value hvalue, ihTail rest hvalues]
+  · intro structs x x_1 values h
+    simp [panValueFlatLoadListFuel] at h
+    subst h
+    simp
+  · intro structs head tail x values h
+    simp [panValueFlatLoadListFuel] at h
+  · intro structs fuel shape shapes address ihHead ihTail values h
+    cases hvalue : panValueFlatLoadFuel structs readWord bytesInWord fuel shape address with
+    | none => simp [panValueFlatLoadListFuel, hvalue] at h
+    | some value =>
+        cases hvalues : panValueFlatLoadListFuel structs readWord bytesInWord fuel shapes
+            (panValueFlatOffset bytesInWord address (shapeSizeWithContext structs shape)) with
+        | none => simp [panValueFlatLoadListFuel, hvalue, hvalues] at h
+        | some rest =>
+            simp [panValueFlatLoadListFuel, hvalue, hvalues] at h
+            subst h
+            simp only [List.map_cons, ihHead value hvalue, ihTail rest hvalues]
+
+/-- Counterpart of Cake's `mem_load_some_shape_eq`
+    (`cakeml/pancake/semantics/panPropsScript.sml:212`): a successful flat load
+    returns a value whose shape is exactly the requested shape. -/
+theorem panValueFlatLoad_shape [BEq α] [Add α] (structs : StructContext)
+    (memory : α → Option (PanValue α)) (bytesInWord : α) (address : α)
+    (shape : Shape) (memoryAccess : Option (PanValueMemoryAccess α))
+    (value : PanValue α)
+    (h : panValueFlatLoad structs memory bytesInWord address shape memoryAccess =
+      some value) :
+    panValueShape structs value = shape := by
+  rw [panValueFlatLoad] at h
+  by_cases hwf : isWfShape structs shape = true
+  · rw [if_pos hwf] at h
+    exact panValueFlatLoadFuel_shape structs
+      (panValueFlatReadWord memory bytesInWord memoryAccess) bytesInWord _ shape address value h
+  · rw [if_neg hwf] at h
+    simp at h
+
 def panShapeMatches : Shape → Shape → Bool
   | .one, .one => true
   | .named left, .named right => left == right

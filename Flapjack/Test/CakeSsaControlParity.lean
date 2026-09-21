@@ -57,8 +57,24 @@ def ffiBoundaryGuard : Bool :=
   | _ => false
 
 #guard ffiBoundaryGuard
+def codeBufferWriteBoundaryGuard : Bool :=
+  match (wordFullSsaCcTrans 0
+      (.codeBufferWrite 0 2 : WordProg Nat)).2.2 with
+  | .seq (.move 1 []) (.codeBufferWrite 0 0) => true
+  | _ => false
+
+def dataBufferWriteBoundaryGuard : Bool :=
+  match (wordFullSsaCcTrans 0
+      (.dataBufferWrite 1 3 : WordProg Nat)).2.2 with
+  | .seq (.move 1 []) (.dataBufferWrite 0 0) => true
+  | _ => false
+
+#guard codeBufferWriteBoundaryGuard
+#guard dataBufferWriteBoundaryGuard
+
 def parityGuard : Bool :=
-  raiseBoundaryGuard && callBoundaryGuard && storeConstsBoundaryGuard && ffiBoundaryGuard
+  raiseBoundaryGuard && callBoundaryGuard && storeConstsBoundaryGuard &&
+    ffiBoundaryGuard && codeBufferWriteBoundaryGuard && dataBufferWriteBoundaryGuard
 
 #guard parityGuard
 #eval parityGuard
@@ -72,7 +88,11 @@ def runChecks : IO Bool := do
       ("full_ssa_cc_trans StoreConsts preserves Cake reload moves",
         storeConstsBoundaryGuard),
       ("full_ssa_cc_trans FFI preserves Cake ABI moves",
-        ffiBoundaryGuard) ]
+        ffiBoundaryGuard),
+      ("full_ssa_cc_trans CodeBufferWrite preserves Cake names",
+        codeBufferWriteBoundaryGuard),
+      ("full_ssa_cc_trans DataBufferWrite preserves Cake names",
+        dataBufferWriteBoundaryGuard) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

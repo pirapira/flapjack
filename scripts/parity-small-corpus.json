@@ -1049,6 +1049,14 @@
       "tracked_beads": [
         "flapjack-pxn.8.5.14.1.5"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00278_fuzz_global_struct_handler.pnk",
+      "source_reference": "Accepted original-Cake differential witness from seed 20260923 index 278: struct-returning mks/pair calls, nested while/try-catch control flow, global/local loads, shared/local stores, FFI, shifts, and high local register pressure exercise Cake allocator/frame continuation layout. Cake and Flapjack artifacts are byte-identical.",
+      "cake_sha256": "0daf376300c09baac090bdc881242ed50b15dd57fb421e8de76cc44cea1fbaa7",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.5"
+      ]
     }
   ]
 }

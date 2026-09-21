@@ -500,6 +500,18 @@ def simplifyBatchGuard : Bool :=
     (simplified.degrees.get 2).getD 0 == 0
 
 #guard simplifyBatchGuard
+/- Cake's `dec_degree` (`reg_allocScript.sml:263-272`) is a safe no-op for
+   an out-of-dimension node, even if an outside adjacency entry exists. -/
+def decDegreeOutOfDimGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 3 with
+      adjLists := CakeNodeMap.ofNatInfoMap 3 [(5, [1])]
+      degrees := CakeNodeMap.ofNatInfoMap 3 [(1, 2)] }
+  let out := cakeDecDegree 5 state
+  (out.degrees.get 1).getD 0 == 2
+
+#guard decDegreeOutOfDimGuard
+
 /- Cake's `do_coalesce` (`reg_allocScript.sml:676-698`) consumes the first
    compatible move, coalesces its second endpoint into the first, clears the
    available-move worklist, and pushes the coalesced endpoint onto the stack. -/
@@ -870,7 +882,8 @@ def runChecks : IO Bool := do
     deadTailCallLiveGuard, deadAllocLiveGuard, deadInstallLiveGuard,
     deadFfiLiveGuard, deadStoreConstsLiveGuard, stExMinCostOrderGuard,
     stExMaxDegOrderGuard, respillWorklistGuard,
-    respillBelowThresholdGuard, simplifyBatchGuard, coalesceWorklistSuccessGuard]
+    respillBelowThresholdGuard, simplifyBatchGuard, decDegreeOutOfDimGuard,
+    coalesceWorklistSuccessGuard]
   let names := [
     "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
@@ -909,6 +922,7 @@ def runChecks : IO Bool := do
     "remove_dead StoreConsts liveness", "st_ex_list_MIN_cost ordering",
     "st_ex_list_MAX_deg ordering", "respill freeze-to-spill transition",
     "respill below-threshold no-op", "do_simplify batch ordering",
+    "dec_degree out-of-dimension no-op",
     "do_coalesce success transition"]
   let mut all := true
   for (name, result) in names.zip results do

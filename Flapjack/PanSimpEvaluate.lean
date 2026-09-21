@@ -6552,4 +6552,27 @@ theorem PanValueFfiClockNormalAdequateProgFromFloor_while_zero
       condition body ma c mh w hcond hw,
     hclock⟩
 
+/-- A clock-free annotation preserves its input clock, so it keeps the floor. -/
+theorem PanValueFfiClockNormalAdequateProgFromFloor_annot
+    (lo : Nat)
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (ma : Option (PanValueMemoryAccess α))
+    (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (tag text : String) :
+    PanValueFfiClockNormalAdequateProgFromFloor lo lo context primitive handler
+      structs functions baseAddress topAddress bytesInWord callBudget ma c mh
+      (.annot tag text) := by
+  intro clock hclock locals globals memory ffi
+  exact ⟨locals, globals, memory, ffi, clock, by
+    simpa [progCallFuel] using (evalPanValueFfiClockProg_annot_some context primitive
+      handler structs functions baseAddress topAddress bytesInWord 0 locals globals
+      memory ffi clock tag text ma c mh), hclock⟩
+
 end Flapjack

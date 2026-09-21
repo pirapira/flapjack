@@ -76,7 +76,8 @@ example :
       wordProgAtomicClashes allocatorWriteVarsFastFixture [46, 47] := by
   simp [wordProgAtomicClashesFast, wordProgAtomicClashes,
     wordProgWriteVarsFast, wordProgWriteVarsFastAcc, wordProgWriteVars,
-    wordClashPairs, wordListAppendAcc,
+    wordClashPairs, wordClashPairsFast, wordClashPairsFastAcc,
+    wordListAppendAcc,
     allocatorWriteVarsFastFixture]
 
 example :
@@ -86,8 +87,14 @@ example :
         (.inst (.arith (.div 48 49 50)) : WordProg Nat) [51] := by
   simp [wordProgAtomicClashesFast, wordProgAtomicClashes,
     wordProgWriteVarsFast, wordProgWriteVarsFastAcc, wordProgWriteVars,
-    wordClashPairs, wordInstForcedClashes, wordInstWriteVars,
+    wordClashPairs, wordClashPairsFast, wordClashPairsFastAcc,
+    wordInstForcedClashes, wordInstWriteVars,
     wordInstWriteVarsFastAcc]
+
+example :
+    wordClashPairsFast [4, 5] [4, 6, 5, 7] =
+      wordClashPairs [4, 5] [4, 6, 5, 7] := by
+  rfl
 
 example [OfNat α 1] :
     pipelineWordFunctionsAllocated

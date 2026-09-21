@@ -303,6 +303,23 @@ def wordClashPairs (writes live : List Nat) : List (Nat × Nat) :=
   writes.flatMap (fun write =>
     (live.filter (fun name => name != write)).map (fun name => (write, name)))
 
+/-! The allocator's production clash path consumes these pairs in the same
+    left-to-right order as `wordClashPairs`.  Threading the suffix through
+    both traversals avoids constructing the filtered and mapped lists while
+    retaining the proof-facing definition above unchanged. -/
+def wordClashPairsFastAcc (writes live : List Nat)
+    (tail : List (Nat × Nat)) : List (Nat × Nat) :=
+  writes.foldr
+    (fun write rest =>
+      live.foldr
+        (fun name restLive =>
+          if name != write then (write, name) :: restLive else restLive)
+        rest)
+    tail
+
+def wordClashPairsFast (writes live : List Nat) : List (Nat × Nat) :=
+  wordClashPairsFastAcc writes live []
+
 def wordPairwiseClashes : List Nat → List (Nat × Nat)
   | [] => []
   | name :: names =>
@@ -1596,8 +1613,8 @@ def wordProgAtomicClashesFast (program : WordProg α) (liveAfter : List Nat) :
   match program with
   | .inst instruction =>
       wordInstForcedClashes instruction ++
-        wordClashPairs (wordProgWriteVarsFast program) liveAfter
-  | _ => wordClashPairs (wordProgWriteVarsFast program) liveAfter
+        wordClashPairsFast (wordProgWriteVarsFast program) liveAfter
+  | _ => wordClashPairsFast (wordProgWriteVarsFast program) liveAfter
 
 def wordProgClashAnalysis : WordProg α → List Nat →
     List Nat × List (Nat × Nat)
@@ -1636,7 +1653,7 @@ def wordProgClashAnalysis : WordProg α → List Nat →
       let callProgram : WordProg α :=
         .call returns target arguments (some (exception, body, 0, 0))
       let handlerEntryEdges :=
-        wordClashPairs [exception] (handlerLive ++ liveAfter)
+        wordClashPairsFast [exception] (handlerLive ++ liveAfter)
       (wordListUnion (exception :: handlerLive)
           (wordListUnion returnLive (wordProgLiveBeforeFast callProgram liveAfter)),
         handlerEntryEdges ++ handlerEdges ++ returnEdges ++

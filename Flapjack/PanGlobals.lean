@@ -333,6 +333,25 @@ def exceptionEntries : List (Decl α) → List (ExceptionId × Shape)
   | _ :: declarations => exceptionEntries declarations
 termination_by declarations => sizeOf declarations
 
+/-! Counterpart of Cake's `exceptions_append`
+    (`pan_globalsProofScript.sml:2507`): the exception table distributes over
+    list append. -/
+theorem exceptionEntries_cons (declaration : Decl α) (declarations : List (Decl α)) :
+    exceptionEntries (declaration :: declarations) =
+      (match declaration with
+       | .exnDecl exception shape =>
+           (exception, shape) :: exceptionEntries declarations
+       | _ => exceptionEntries declarations) := by
+  cases declaration <;> rw [exceptionEntries.eq_def]
+
+theorem exceptionEntries_append (declarations rest : List (Decl α)) :
+    exceptionEntries (declarations ++ rest) =
+      exceptionEntries declarations ++ exceptionEntries rest := by
+  induction declarations with
+  | nil => simp [exceptionEntries]
+  | cons declaration declarations ih =>
+      cases declaration <;> simp [exceptionEntries_cons, ih]
+
 def globalDeclsFilter (predicate : Decl α → Bool) : List (Decl α) → List (Decl α)
   | [] => []
   | declaration :: declarations =>

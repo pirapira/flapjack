@@ -969,17 +969,15 @@ def cakeBgOk (k x y : Nat) (state : CakeRaState) : Option (List Nat × List Nat)
   let (case1, case2) := partitionReversed (fun v => cakeAdjMem state v x) adjY
   let case1 := filterReversed (fun v => cakeConsideredVar state k v) case1
   let case2 := filterReversed (fun v => cakeConsideredVar state k v) case2
-  let case2degs := case2.map (fun v => cakeDegOrInf state k v)
-  if !case2degs.any (fun d => d >= k) then
+  let case2High := case2.countP (fun v => cakeDegOrInf state k v >= k)
+  if case2High = 0 then
     some (case1, case2)
   else
     let case3 := filterReversed (fun v => cakeConsideredVar state k v)
       (adjX.filter (fun v => !cakeAdjMem state v y))
-    let c1 := (case1.map (fun v => cakeDegOrInf state (k + 1) v)).countP
-      (fun d => d - 1 >= k)
-    let c2 := case2degs.countP (fun d => d >= k)
-    let c3 := (case3.map (fun v => cakeDegOrInf state k v)).countP
-      (fun d => d >= k)
+    let c1 := case1.countP (fun v => cakeDegOrInf state (k + 1) v - 1 >= k)
+    let c2 := case2High
+    let c3 := case3.countP (fun v => cakeDegOrInf state k v >= k)
     if c1 + c2 + c3 < k then some (case1, case2) else none
 
 /-- `consistency_ok` (`reg_allocScript.sml:568-586`). -/

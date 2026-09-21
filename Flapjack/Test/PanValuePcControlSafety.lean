@@ -1200,5 +1200,6 @@ example :
 #check @panValuePcResultRel_timeout_iff
 #check @panValuePcResultRel_finalFfi_iff
 #check @panValuePcResultRel_raised_iff
+#check @panValuePcResultRelWithContextCode_raised_iff
 
 end Flapjack.Test.PanValuePcControlSafety

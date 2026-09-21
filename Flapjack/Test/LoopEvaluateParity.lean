@@ -246,6 +246,16 @@ def longDivMalformed : Bool :=
     (longDivState (some (.loc 9 0)) (some (.word 3)) (some (.word 2)))) ==
     (some .error, none, none, 5)
 
+/-! `loopSemScript.sml:118-145` also splits `LLongMul` into the high word
+    destination first and the low word destination second.  This exercises
+    that source arithmetic boundary through `evaluate_def`, not only through
+    the standalone `loop_arith` helper. -/
+def longMulSuccess : Bool :=
+  observeLongDiv (evaluateLoop 2 arithHooks
+    (.arith (.longMul 1 2 3 4))
+    (longDivState (some (.word 20)) (some (.word 20)) none)) ==
+    (none, some (.word 1), some (.word 144), 5)
+
 def observe (step : LoopMachineStep) :
     Option (LoopMachineResult LoopWordLoc) × Option LoopWordLoc × Nat :=
   (step.1, step.2.locals 1, step.2.clock)
@@ -341,6 +351,7 @@ def duplicateAssignFirstWins : Bool :=
 #guard longDivZero
 #guard longDivOverflow
 #guard longDivMalformed
+#guard longMulSuccess
 #guard sharedLoadSuccess
 #guard sharedStoreSuccess
 #guard sharedLoadDomainError

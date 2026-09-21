@@ -442,6 +442,7 @@ end
     compatible shift semantics through the straight-line and conditional
     Loop fragment used by the source-to-Loop correctness bridge. -/
 def evalLoopProgFull [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+      [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [PanCmp α] [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
     [Complement α]
@@ -452,6 +453,12 @@ def evalLoopProgFull [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       let value ← evalLoopExpFull state expression
       pure (.normal { state with
         locals := updateLoopLocal state.locals name value })
+  | _fuel + 1, state, .arith (.div destination dividend divisor) => do
+      let dividend ← state.locals dividend
+      let divisor ← state.locals divisor
+      if divisor == 0 then none
+      else pure (.normal { state with
+        locals := updateLoopLocal state.locals destination (dividend / divisor) })
   | _fuel + 1, state, .store address value => do
       let address ← evalLoopExpFull state address
       let value ← state.locals value

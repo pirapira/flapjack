@@ -60,6 +60,33 @@ def hooks : LoopEvaluateHooks :=
 def arithHooks : LoopEvaluateHooks :=
   { hooks with arith := fun state operation => loopArithMachine 8 state operation }
 
+/-! `evalLoopProgFull` retains Cake's generic target-word fragment.  Ordinary
+    `LDiv` has the same checked nonzero-divisor rule as loopSem's
+    `loop_arith`; the full evaluator must not silently reject it. -/
+def fullDivState : LoopState (RiscV.Word 8) :=
+  { locals := fun name =>
+      if name == 2 then some 12
+      else if name == 3 then some 3
+      else none
+    globals := fun _ => none
+    memory := fun _ => none }
+
+def fullDivSuccess : Bool :=
+  match evalLoopProgFull 1 fullDivState
+      (.arith (.div 1 2 3) : LoopProg (RiscV.Word 8)) with
+  | some (.normal state) => state.locals 1 == some 4
+  | _ => false
+
+def fullDivZero : Bool :=
+  match evalLoopProgFull 1
+      { fullDivState with locals := fun name =>
+          if name == 2 then some 12
+          else if name == 3 then some 0
+          else none }
+      (.arith (.div 1 2 3) : LoopProg (RiscV.Word 8)) with
+  | none => true
+  | _ => false
+
 /-! The primitive branch uses the same fixed-width Cake `AddCarry` handler as
     `loop_primop` (`loopSemScript.sml:242-252`). -/
 def primitiveMachine : PrimOp → List LoopWordLoc → Option (List LoopWordLoc)
@@ -426,6 +453,8 @@ def duplicateAssignFirstWins : Bool :=
 #guard duplicateBindFirstWins
 #guard duplicateAssignFirstWins
 #guard longDivSuccess
+#guard fullDivSuccess
+#guard fullDivZero
 #guard longDivZero
 #guard longDivOverflow
 #guard longDivMalformed

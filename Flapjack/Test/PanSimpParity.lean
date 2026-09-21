@@ -2657,6 +2657,7 @@ example : PanValueFfiClockNormalAdequateProgFromFloor 3 3 evaluatorContext
 -- `evaluate_add_clock_eq`.
 #check @Flapjack.decPanClock_add
 #check @Flapjack.decPanClock_add_of_pos
+#check @Flapjack.evalPanValueFfiClockProg_tick_shift
 
 example : decPanClock (5 + 3) = decPanClock 5 + 3 := decPanClock_add 5 3 (by decide)
 

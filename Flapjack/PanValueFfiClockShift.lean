@@ -39,4 +39,35 @@ theorem decPanClock_add_of_pos (clock ck : Nat) (h : 0 < clock) :
     decPanClock (clock + ck) = decPanClock clock + ck :=
   decPanClock_add clock ck (Nat.pos_iff_ne_zero.mp h)
 
+/-- Program-level clock-shift instance for the clock-spending `Tick`
+constructor: on a nonzero clock, increasing the input clock by `ck` increases
+the returned clock by `ck` with the same `normal` outcome.  This is the
+simplest genuinely clock-spending case of the missing whole-program shift
+invariant (Cake `evaluate_add_clock_eq`). -/
+theorem evalPanValueFfiClockProg_tick_shift
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel ck : Nat) (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (contracts : Option PanValueCallContracts)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ))
+    (hclock : clock ≠ 0) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi
+      (clock + ck) (.tick : Prog α)
+      (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) =
+    some (.control (.normal locals globals memory ffi), decPanClock clock + ck) := by
+  have hpos : clock + ck ≠ 0 := by omega
+  simp only [evalPanValueFfiClockProg, if_neg hpos, Option.pure_def]
+  rw [decPanClock_add clock ck hclock]
+
 end Flapjack

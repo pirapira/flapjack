@@ -928,4 +928,9 @@ evaluator-evidence obligation. -/
 #check @panValuePcCompileCorrect_compact_return_of_state_evidence
 #check @panValuePcCompileCorrect_compact_return_with_context_code_of_state_evidence
 
+/-! The source-word-record raise wrappers also accept explicit state evidence in
+    plain and context-coded form. -/
+#check @panValuePcCompileCorrect_compact_source_word_record_raise_of_state_evidence
+#check @panValuePcCompileCorrect_compact_source_word_record_raise_of_state_evidence_context_code
+
 end Flapjack.Test.PanValuePcControlSafety

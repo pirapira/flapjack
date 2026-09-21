@@ -351,6 +351,42 @@ example : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorH
       evaluatorHandler [] [] 0 0 8 0 (fun _ => none) (fun _ => none) (fun _ => none)
       evaluatorFfi 1 "tag" "text" none none none)
 
+/-- Lifting a successful `Call` outcome through the clocked evaluator. -/
+example (outcome : PanValueFfiClockOutcome Nat Unit) (nextClock : Nat)
+    (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1 none "f" [] = some (outcome, nextClock)) :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+      [] [] 0 0 8 2 (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+      (.call none "f" []) none none none = some (outcome, nextClock) := by
+  exact evalPanValueFfiClockProg_call_some evaluatorContext (fun _ _ => none)
+    evaluatorHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none) (fun _ => none)
+    evaluatorFfi 1 none "f" [] outcome nextClock none none none hcall
+
+/-- A single-word callee return runs the `DecCall` body and restores the local. -/
+example
+    (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1 none "f" [] =
+      some (.control (.returned (fun _ => none) (fun _ => none) (fun _ => none)
+        evaluatorFfi [.word 5]), 1)) :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+      [] [] 0 0 8 2 (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+      (.decCall "x" .one "f" [] (.annot "tag" "text")) none none none =
+    some (panValueFfiClockRestoreLocal "x" none
+      (.control (.normal (updatePanValueMap (fun _ => none) "x" (.word 5))
+        (fun _ => none) (fun _ => none) evaluatorFfi)), 1) := by
+  exact evalPanValueFfiClockProg_decCall_returned_some evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+    (fun _ => none) evaluatorFfi 1 "x" .one "f" [] (.annot "tag" "text")
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi (.word 5) 1
+    (.control (.normal (updatePanValueMap (fun _ => none) "x" (.word 5))
+      (fun _ => none) (fun _ => none) evaluatorFfi)) 1 none none none hcall
+    (by simp [panValueShape, panShapeMatches])
+    (evalPanValueFfiClockProg_annot_some evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 0 (updatePanValueMap (fun _ => none) "x" (.word 5))
+      (fun _ => none) (fun _ => none) evaluatorFfi 1 "tag" "text" none none none)
+
 theorem clocked_seq_normal_exposes_components :
     ∃ (middleLocals middleGlobals : VarName → Option (PanValue Nat))
       (middleMemory : Nat → Option (PanValue Nat)) (middleFfi : FfiState Unit)

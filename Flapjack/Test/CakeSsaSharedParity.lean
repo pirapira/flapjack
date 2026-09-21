@@ -18,10 +18,22 @@ def shareLoadGuard : Bool :=
   | .seq (.move 1 []) (.shareInst .load 9 (.var 0)) => true
   | _ => false
 
+def mappedShareLoadGuard : Bool :=
+  match (wordFullSsaCcTrans 1
+      (.shareInst .load 0 (.var 0) : WordProg Nat)).2.2 with
+  | .seq (.move 1 [(5, 0)]) (.shareInst .load 9 (.var 5)) => true
+  | _ => false
+
 def shareStoreGuard : Bool :=
   match (wordFullSsaCcTrans 0
       (.shareInst .store 7 (.var 2) : WordProg Nat)).2.2 with
   | .seq (.move 1 []) (.shareInst .store 0 (.var 0)) => true
+  | _ => false
+
+def mappedShareStoreGuard : Bool :=
+  match (wordFullSsaCcTrans 1
+      (.shareInst .store 0 (.var 0) : WordProg Nat)).2.2 with
+  | .seq (.move 1 [(5, 0)]) (.shareInst .store 5 (.var 5)) => true
   | _ => false
 
 def shareLoad8Guard : Bool :=
@@ -63,12 +75,15 @@ def mappedOpCurrHeapGuard : Bool :=
   | _ => false
 
 def parityGuard : Bool :=
-  shareLoadGuard && shareStoreGuard && shareLoad8Guard && shareStore8Guard &&
+  shareLoadGuard && mappedShareLoadGuard && shareStoreGuard &&
+    mappedShareStoreGuard && shareLoad8Guard && shareStore8Guard &&
     shareLoad16Guard && shareStore16Guard && opCurrHeapGuard
     && mappedOpCurrHeapGuard
 
 #guard shareLoadGuard
+#guard mappedShareLoadGuard
 #guard shareStoreGuard
+#guard mappedShareStoreGuard
 #guard shareLoad8Guard
 #guard shareStore8Guard
 #guard shareLoad16Guard
@@ -81,7 +96,11 @@ def parityGuard : Bool :=
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
     [ ("ssa_cc_trans ShareInst load freshens Cake destination", shareLoadGuard),
+      ("ssa_cc_trans ShareInst load reads the Cake entry SSA namespace",
+        mappedShareLoadGuard),
       ("ssa_cc_trans ShareInst store preserves Cake source", shareStoreGuard),
+      ("ssa_cc_trans ShareInst store reads the Cake entry SSA namespace",
+        mappedShareStoreGuard),
       ("ssa_cc_trans ShareInst load8 freshens Cake destination", shareLoad8Guard),
       ("ssa_cc_trans ShareInst store8 preserves Cake source", shareStore8Guard),
       ("ssa_cc_trans ShareInst load16 freshens Cake destination", shareLoad16Guard),

@@ -70,7 +70,7 @@ def wordSsaLoopSetupOrderGuard : Bool :=
   match wordSsaLoopSetup (α := Nat)
       ({ current := [(0, 21), (4, 41), (6, 33), (12, 37)], next := 200 } :
         WordSsaState) [0, 4] [6, 12] with
-  | (state, .move 0 moves) =>
+  | (state, .seq .skip (.move 0 moves)) =>
       state.current == [(6, 212), (12, 208), (4, 204), (0, 200)] &&
         state.next == 216 &&
         moves == [(200, 21), (204, 41), (208, 37), (212, 33)]

@@ -118,4 +118,84 @@ theorem afindi_map_eq [BEq α] (key : α) (f : α × β → α × γ)
       simp only [List.map_cons]
       rw [afindi_cons, afindi_cons, hhead, ih htail]
 
+theorem afindi_dropWhile [BEq α] (key : α) (entries : List (α × β)) :
+    entries.dropWhile (fun entry => !(key == entry.1)) =
+      match afindi key entries with
+      | none => []
+      | some index => entries.drop index := by
+  induction entries with
+  | nil => simp [afindi]
+  | cons entry rest ih =>
+      obtain ⟨candidate, value⟩ := entry
+      cases hb : (key == candidate) with
+      | true => simp [afindi_cons, hb]
+      | false =>
+          simp only [List.dropWhile_cons, afindi_cons, hb]
+          rw [ih]
+          cases afindi key rest with
+          | none => simp
+          | some index => simp [List.drop_succ_cons]
+
+theorem afindi_lookup [BEq α] (key : α) (entries : List (α × β)) :
+    entries.lookup key =
+      (afindi key entries).bind (fun index => (entries[index]?).map Prod.snd) := by
+  induction entries with
+  | nil => simp [afindi]
+  | cons entry rest ih =>
+      obtain ⟨candidate, value⟩ := entry
+      by_cases hbeq : key == candidate
+      · simp [List.lookup_cons, afindi_cons, hbeq]
+      · simp only [List.lookup_cons, hbeq, afindi_cons]
+        rw [ih]
+        cases afindi key rest with
+        | none => simp
+        | some index => simp [List.getElem?_cons_succ]
+/-! CakeML `pan_structsProofScript.sml` `is_wf_shape_drop`: dropping a prefix
+    of the struct context preserves well-formedness of a shape, because a name
+    found in the suffix is also found (at least as far left) in the whole
+    context. -/
+
+theorem lookupInfo_isSome_drop (name : String) (context : StructContext) (n : Nat) :
+    (lookupInfo name (context.drop n)).isSome = true →
+      (lookupInfo name context).isSome = true := by
+  induction context generalizing n with
+  | nil => cases n <;> simp [lookupInfo]
+  | cons entry rest ih =>
+      obtain ⟨candidate, value⟩ := entry
+      cases n with
+      | zero => simp
+      | succ m =>
+          simp only [List.drop_succ_cons]
+          intro h
+          have hrest := ih m h
+          by_cases hc : candidate == name
+          · simp [lookupInfo, hc]
+          · simp only [lookupInfo, hc]
+            exact hrest
+
+theorem isWfShape_drop (shape : Shape) (context : StructContext) (n : Nat) :
+    isWfShape (context.drop n) shape = true → isWfShape context shape = true :=
+  (isWfShape.induct
+    (motive1 := fun shapes => ∀ (context : StructContext) (n : Nat),
+      isWfShape.isWfShapeList (context.drop n) shapes = true →
+        isWfShape.isWfShapeList context shapes = true)
+    (motive2 := fun shape => ∀ (context : StructContext) (n : Nat),
+      isWfShape (context.drop n) shape = true → isWfShape context shape = true)
+    (by intro context n _; simp [isWfShape.isWfShapeList])
+    (by
+      intro shape shapes ih1 ih2 context n h
+      simp only [isWfShape.isWfShapeList, Bool.and_eq_true] at h ⊢
+      exact ⟨ih1 context n h.1, ih2 context n h.2⟩)
+    (by intro context n _; simp [isWfShape])
+    (by
+      intro shapes ih context n h
+      have h' : isWfShape.isWfShapeList (context.drop n) shapes = true := by
+        simpa [isWfShape] using h
+      simpa [isWfShape] using ih context n h')
+    (by
+      intro name context n h
+      simp only [isWfShape] at h ⊢
+      exact lookupInfo_isSome_drop name context n h))
+    shape context n
+
 end Flapjack

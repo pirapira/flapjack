@@ -1063,6 +1063,27 @@ example :
   PanValueFfiClockNormalAdequateProgAt_tick 5 evaluatorContext (fun _ _ => none)
     evaluatorHandler [] [] 0 0 8 7 none none none (by decide)
 
+/-- Clock-bounded adequacy sequences two clock-free programs. -/
+example :
+    PanValueFfiClockNormalAdequateProgUpTo 5 evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 7 none none none
+      (.seq (.skip : Prog Nat) (.annot "tag" "text")) :=
+  PanValueFfiClockNormalAdequateProgUpTo_seq 5 evaluatorContext (fun _ _ => none)
+    evaluatorHandler [] [] 0 0 8 7 none none none (.skip : Prog Nat)
+    (.annot "tag" "text")
+    (PanValueFfiClockNormalAdequateProgUpTo_of_adequate 5 evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+      (.skip : Prog Nat)
+      (evalPanValueFfiClockProg_normalAdequate_of_normalProg evaluatorContext
+        (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+        (.skip : Prog Nat) PanValueFfiClockNormalProg.skip))
+    (PanValueFfiClockNormalAdequateProgUpTo_of_adequate 5 evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+      (.annot "tag" "text")
+      (evalPanValueFfiClockProg_normalAdequate_of_normalProg evaluatorContext
+        (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+        (.annot "tag" "text") (.annot "tag" "text")))
+
 /-- The raised `DecCall` outcome also lifts to the declaration's progSize. -/
 example
     (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)
@@ -2125,6 +2146,15 @@ theorem pan_simp_compile_prog_first_all_distinct :
     ((functions (panSimpDecls compileProgDeclsFixture)).map
       (fun entry => entry.1)).Nodup := by
   exact functions_panSimpDecls_names_nodup compileProgDeclsFixture (by decide)
+
+theorem pan_simp_compile_prog_distinct_params :
+    ∀ entry ∈ functions (panSimpDecls compileProgDeclsFixture),
+      (entry.2.1.map Prod.fst).Nodup := by
+  apply functions_panSimpDecls_params_nodup compileProgDeclsFixture
+  intro entry hentry
+  simp [compileProgDeclsFixture, functions] at hentry
+  rcases hentry with rfl
+  simp
 
 def functionsNamesNodupParity : Bool :=
   decide (((functions (panSimpDecls compileProgDeclsFixture)).map

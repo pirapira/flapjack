@@ -11,10 +11,11 @@ namespace Flapjack.Test.CrepeProgramInduction
 
 open Flapjack
 
-/-! The word-program induction now admits ordinary calls through the same
-relation-premised state-correctness constructor used by the Pancake call
-case. -/
+/-! The word-program induction now admits ordinary calls and one-word local
+declarations through the same relation-premised state-correctness
+constructors used by the Pancake cases. -/
 #check @StatefulWordProg.callWord
+#check @StatefulWordProg.decWord
 #check @panValueCrepProgramStateCorrect_statefulWord
 
 def compactExample : Prog Nat :=

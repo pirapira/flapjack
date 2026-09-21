@@ -1166,6 +1166,58 @@ example
     (.skip : Prog Nat) "E" "E" "x" (.skip : Prog Nat) hfunctions hhandler
     (by simp [progSize]) hlookup rfl hargs hhandlerValid
 
+/-- The lower-bounded fragment also covers declarations, conditionals and ticks
+    (in addition to calls and sequences). -/
+example :
+    PanValueFfiClockNormalAdequateProgFrom 1 evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 7 none none none
+      (.dec "x" .one (.const 5) (.skip : Prog Nat)) :=
+  PanValueFfiClockNormalAdequateProgFrom_dec 1 evaluatorContext (fun _ _ => none)
+    evaluatorHandler [] [] 0 0 8 7 none none none "x" .one (.const 5)
+    (.skip : Prog Nat)
+    (fun _ _ _ => ⟨.word 5, by simp [evalPanValueExp],
+      by simp [panValueShape, panShapeMatches]⟩)
+    (PanValueFfiClockNormalAdequateProgFrom_of_adequate 1 evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+      (.skip : Prog Nat)
+      (evalPanValueFfiClockProg_normalAdequate_of_normalProg evaluatorContext
+        (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+        (.skip : Prog Nat) PanValueFfiClockNormalProg.skip))
+
+example :
+    PanValueFfiClockNormalAdequateProgFrom 1 evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 7 none none none
+      (.ite (.const 5) (.skip : Prog Nat) (.skip : Prog Nat)) :=
+  PanValueFfiClockNormalAdequateProgFrom_ite 1 evaluatorContext (fun _ _ => none)
+    evaluatorHandler [] [] 0 0 8 7 none none none (.const 5) (.skip : Prog Nat)
+    (.skip : Prog Nat) (fun _ _ _ => ⟨5, by simp [evalPanValueExp]⟩)
+    (PanValueFfiClockNormalAdequateProgFrom_of_adequate 1 evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+      (.skip : Prog Nat)
+      (evalPanValueFfiClockProg_normalAdequate_of_normalProg evaluatorContext
+        (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+        (.skip : Prog Nat) PanValueFfiClockNormalProg.skip))
+    (PanValueFfiClockNormalAdequateProgFrom_of_adequate 1 evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+      (.skip : Prog Nat)
+      (evalPanValueFfiClockProg_normalAdequate_of_normalProg evaluatorContext
+        (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+        (.skip : Prog Nat) PanValueFfiClockNormalProg.skip))
+
+example :
+    PanValueFfiClockNormalAdequateProgFrom 1 evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 7 none none none (.tick : Prog Nat) :=
+  PanValueFfiClockNormalAdequateProgFrom_tick 1 (by decide) evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+
+example :
+    PanValueFfiClockNormalAdequateProgFrom 0 evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 7 none none none
+      (.while (.const 0) (.skip : Prog Nat)) :=
+  PanValueFfiClockNormalAdequateProgFrom_while_zero 0 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+    (.const 0) (.skip : Prog Nat) (fun _ _ _ => ⟨0, by simp [evalPanValueExp], by decide⟩)
+
 /-- The raised `DecCall` outcome also lifts to the declaration's progSize. -/
 example
     (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)

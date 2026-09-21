@@ -153,6 +153,50 @@ def lookupFunctionEntry (name : FunName) :
       if name == entry.1 then some (entry.2.1, entry.2.2.1, entry.2.2.2)
       else lookupFunctionEntry name functions
 
+/-! Counterpart of the function-table lookup fact used by Cake's
+    `state_rel_imp_semantics` (`pan_simpProofScript.sml:1073-1300`): a
+    successful lookup in the source table succeeds at the same name,
+    parameters, and return shape after `pan_simp`, with only the body
+    transformed. -/
+theorem lookupFunctionEntry_panSimpDecls
+    (declarations : List (Decl α)) (name : FunName)
+    {parameters : List (VarName × Shape)} {body : Prog α} {returnShape : Shape}
+    (hlookup : lookupFunctionEntry name (functions declarations) =
+      some (parameters, body, returnShape)) :
+    lookupFunctionEntry name (functions (panSimpDecls declarations)) =
+      some (parameters, panSimpProg body, returnShape) := by
+  induction declarations with
+  | nil =>
+      simp [functions, lookupFunctionEntry] at hlookup
+  | cons declaration declarations ih =>
+      cases declaration with
+      | function declaration =>
+          by_cases hname : name == declaration.name
+          · simp [functions, panSimpDecls, lookupFunctionEntry, hname] at hlookup ⊢
+            rcases hlookup with ⟨rfl, rfl, rfl⟩
+            simp
+          · have htail : lookupFunctionEntry name (functions declarations) =
+                some (parameters, body, returnShape) := by
+              simpa [functions, lookupFunctionEntry, hname] using hlookup
+            have htail' := ih htail
+            simpa [functions, panSimpDecls, lookupFunctionEntry, hname]
+              using htail'
+      | decl shape declarationName expression =>
+          have htail : lookupFunctionEntry name (functions declarations) =
+              some (parameters, body, returnShape) := by
+            simpa only [functions] using hlookup
+          simpa only [panSimpDecls, functions] using ih htail
+      | exnDecl exception shape =>
+          have htail : lookupFunctionEntry name (functions declarations) =
+              some (parameters, body, returnShape) := by
+            simpa only [functions] using hlookup
+          simpa only [panSimpDecls, functions] using ih htail
+      | name struct fields =>
+          have htail : lookupFunctionEntry name (functions declarations) =
+              some (parameters, body, returnShape) := by
+            simpa only [functions] using hlookup
+          simpa only [panSimpDecls, functions] using ih htail
+
 /-- `lookupFunctionEntry` returns the entry found at a given index whenever the
     function names are distinct. -/
 theorem lookupFunctionEntry_of_getElem?

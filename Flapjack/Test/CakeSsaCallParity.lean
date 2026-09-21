@@ -28,7 +28,24 @@ def returningCallGuard : Bool :=
 
 #guard returningCallGuard
 
-def parityGuard : Bool := returningCallGuard
+def returningCallCutsetProgram : WordProg Nat :=
+  .call (some ([4], ([4], []), .return 4 [6], 9, 10)) (some 7) [0, 2] none
+
+def returningCallCutsetGuard : Bool :=
+  match (wordFullSsaCcTrans 2 returningCallCutsetProgram).2.2 with
+  | .seq (.move 1 [(9, 0), (13, 2)])
+      (.seq (.move 0 [(19, 0)])
+        (.seq (.move 1 [(2, 9), (4, 13)])
+          (.call (some ([2], ([19], []),
+            .seq (.move 0 [(25, 19)])
+              (.seq (.move 1 [(29, 2)])
+                (.seq (.move 0 [(2, 0)]) (.return 29 [2]))), 9, 10))
+            (some 7) [2, 4] none))) => true
+  | _ => false
+
+#guard returningCallCutsetGuard
+
+def parityGuard : Bool := returningCallGuard && returningCallCutsetGuard
 
 #guard parityGuard
 #eval parityGuard
@@ -36,7 +53,9 @@ def parityGuard : Bool := returningCallGuard
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
     [ ("full_ssa_cc_trans returning Call preserves Cake return ABI",
-        returningCallGuard) ]
+        returningCallGuard),
+      ("full_ssa_cc_trans returning Call preserves Cake cut-set refresh",
+        returningCallCutsetGuard) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

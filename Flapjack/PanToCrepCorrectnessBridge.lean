@@ -3,6 +3,7 @@ import Flapjack.CrepeProgramGenericRaiseCorrectness
 import Flapjack.CrepeProgramReturnGeneralCorrectness
 import Flapjack.CrepeProgramRaiseSourceWordRelation
 import Flapjack.CrepeSourceWordRecordRaiseCorrectness
+import Flapjack.CrepeProgramExtCallCorrectness
 import Flapjack.PanValueFfiClockProjection
 
 /-!
@@ -20595,5 +20596,180 @@ theorem panValuePcCompileCorrectWithContextCode_compact_with_generalized_flat_gl
       clockBaseAddress clockTopAddress clockBytesInWord clockFuel clock
       clockLocals clockGlobals clockMemory clockFfi clockProgram clockTargetState
       hclock hclockState
+
+theorem panValueCrepProgramStateControlSafe_extCall_const
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (function : FunName)
+    (configuration configurationLength array arrayLength : α)
+    :
+    PanValueCrepProgramStateControlSafe
+      (.extCall function (.const configuration) (.const configurationLength)
+        (.const array) (.const arrayLength)) := by
+  intro context structs sourceFunctions functions sourceLocals sourceGlobals
+    sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord sourceFuel targetFuel exceptionRel
+    sourceResult crepResult hrel hsource hcrep
+  cases sourceFuel with
+  | zero =>
+      simp [evalPanValueProgWithPrimitiveCallsAndFfi] at hsource
+  | succ sourceFuel =>
+      cases hsourceHandler : sourceHandler function configuration
+          configurationLength array arrayLength sourceLocals with
+      | none =>
+          simp [evalPanValueProgWithPrimitiveCallsAndFfi, evalPanValueExps,
+            evalPanValueExp.evalPanValueExps, evalPanValueExp, hsourceHandler] at hsource
+      | some sourceLocals' =>
+          have hsourceResult :
+              PanValueControlResult.normal sourceLocals' sourceGlobals sourceMemory =
+                sourceResult := by
+            have hsource' := hsource
+            simp [evalPanValueProgWithPrimitiveCallsAndFfi, evalPanValueExps,
+              evalPanValueExp.evalPanValueExps, evalPanValueExp, hsourceHandler] at hsource'
+            exact hsource'
+          cases hsourceResult
+          cases crepResult <;>
+            exact True.intro
+
+theorem panValuePcCompileCorrect_compact_extCall_const
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α)
+    (sourceFuel targetFuel : Nat)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (function : FunName)
+    (configuration configurationLength array arrayLength : α)
+    (hffi : ∀ (sourceHandler : PanValueFfiHandler α)
+      (ffi : CrepFfiHandler α), panValueCrepExtCallCorrect sourceHandler ffi)
+    (hraiseData : ∀ (context : CompileContext α) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (sourceValue : PanValue α) (targetState : CrepState α)
+      (targetException : α),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      panValuePcRaisedHraiseData exceptionCode globalsLookup structs context
+        exceptionRel sourceLocals sourceGlobals sourceMemory sourceException
+        sourceValue targetState targetException) :
+    PanValuePcCompileCorrect
+      (panValuePcCompactSourceEvaluator primitive sourceHandler sourceFunctions
+        baseAddress topAddress bytesInWord sourceFuel)
+      (crepPcCompactTargetEvaluator functions crepPrimitive ffi sharedMem
+        baseAddress topAddress targetFuel)
+      codeRel excpRel exceptionCode globalsLookup
+      (.extCall function (.const configuration) (.const configurationLength)
+        (.const array) (.const arrayLength)) := by
+  have hprogram := panValueCrepProgramStateCorrect_extCall_const
+    function configuration configurationLength array arrayLength hffi
+  have hprogramSafe := panValueCrepProgramStateControlSafe_extCall_const
+    function configuration configurationLength array arrayLength
+  refine panValuePcCompileCorrect_of_stateful_program
+    (.extCall function (.const configuration) (.const configurationLength)
+      (.const array) (.const arrayLength))
+    (panValuePcCompactSourceEvaluator primitive sourceHandler sourceFunctions
+      baseAddress topAddress bytesInWord sourceFuel)
+    (crepPcCompactTargetEvaluator functions crepPrimitive ffi sharedMem
+      baseAddress topAddress targetFuel)
+    codeRel excpRel exceptionCode globalsLookup sourceFunctions functions
+    primitive sourceHandler crepPrimitive ffi sharedMem baseAddress topAddress
+    bytesInWord sourceFuel targetFuel hprogram hprogramSafe ?_ ?_ hraiseData
+  · intro context structs sourceInput targetInput sourceExecution hstructs heval
+    exact panValuePcCompactSourceEvaluator_adapter primitive sourceHandler
+      sourceFunctions baseAddress topAddress bytesInWord sourceFuel
+      (.extCall function (.const configuration) (.const configurationLength)
+        (.const array) (.const arrayLength)) context structs sourceInput
+      targetInput sourceExecution hstructs heval
+  · intro context structs sourceInput targetInput targetExecution hstructs heval
+    exact crepPcCompactTargetEvaluator_adapter functions crepPrimitive ffi
+      sharedMem baseAddress topAddress targetFuel
+      (.extCall function (.const configuration) (.const configurationLength)
+        (.const array) (.const arrayLength)) context structs sourceInput
+      targetInput targetExecution hstructs heval
+
+theorem panValuePcCompileCorrectWithContextCode_compact_extCall_const
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α)
+    (sourceFuel targetFuel : Nat)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (function : FunName)
+    (configuration configurationLength array arrayLength : α)
+    (hffi : ∀ (sourceHandler : PanValueFfiHandler α)
+      (ffi : CrepFfiHandler α), panValueCrepExtCallCorrect sourceHandler ffi)
+    (hraiseEvidence : ∀ (context : CompileContext α) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (sourceValue : PanValue α) (targetState : CrepState α)
+      (targetException : α),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      panValuePcRaisedHraiseData exceptionCode globalsLookup structs context
+        exceptionRel sourceLocals sourceGlobals sourceMemory sourceException
+        sourceValue targetState targetException ∧
+      lookupInfo sourceException context.exceptions = some targetException) :
+    PanValuePcCompileCorrectWithContextCode
+      (panValuePcCompactSourceEvaluator primitive sourceHandler sourceFunctions
+        baseAddress topAddress bytesInWord sourceFuel)
+      (crepPcCompactTargetEvaluator functions crepPrimitive ffi sharedMem
+        baseAddress topAddress targetFuel)
+      codeRel excpRel exceptionCode globalsLookup
+      (.extCall function (.const configuration) (.const configurationLength)
+        (.const array) (.const arrayLength)) := by
+  have hprogram := panValueCrepProgramStateCorrect_extCall_const
+    function configuration configurationLength array arrayLength hffi
+  have hprogramSafe := panValueCrepProgramStateControlSafe_extCall_const
+    function configuration configurationLength array arrayLength
+  refine panValuePcCompileCorrectWithContextCode_of_stateful_program
+    (.extCall function (.const configuration) (.const configurationLength)
+      (.const array) (.const arrayLength))
+    (panValuePcCompactSourceEvaluator primitive sourceHandler sourceFunctions
+      baseAddress topAddress bytesInWord sourceFuel)
+    (crepPcCompactTargetEvaluator functions crepPrimitive ffi sharedMem
+      baseAddress topAddress targetFuel)
+    codeRel excpRel exceptionCode globalsLookup sourceFunctions functions
+    primitive sourceHandler crepPrimitive ffi sharedMem baseAddress topAddress
+    bytesInWord sourceFuel targetFuel hprogram hprogramSafe ?_ ?_ hraiseEvidence
+  · intro context structs sourceInput targetInput sourceExecution hstructs heval
+    exact panValuePcCompactSourceEvaluator_adapter primitive sourceHandler
+      sourceFunctions baseAddress topAddress bytesInWord sourceFuel
+      (.extCall function (.const configuration) (.const configurationLength)
+        (.const array) (.const arrayLength)) context structs sourceInput
+      targetInput sourceExecution hstructs heval
+  · intro context structs sourceInput targetInput targetExecution hstructs heval
+    exact crepPcCompactTargetEvaluator_adapter functions crepPrimitive ffi
+      sharedMem baseAddress topAddress targetFuel
+      (.extCall function (.const configuration) (.const configurationLength)
+        (.const array) (.const arrayLength)) context structs sourceInput
+      targetInput targetExecution hstructs heval
 
 end Flapjack

@@ -20,6 +20,29 @@ example :
   simp [wordStackMemoryOffsetInst, wordStackLoadOffsetInst, wordStackLocation,
     wordStackOffset, lookupNatInfo]
 
+/- Cake's signed-12 positive endpoint remains attached to the memory
+   instruction; the later target encoder, not word_to_stack, decides whether
+   it is encodable. -/
+example :
+    wordStackMemoryOffsetInst
+      { locations := [(0, .register 4), (1, .register 5)]
+        scratch := 31
+        stackBase := 10 }
+      .load 0 1 2047 =
+      some (.inst (.memOffset .load 4 5 2047) : StackProg Nat) := by
+  simp [wordStackMemoryOffsetInst, wordStackLoadOffsetInst, wordStackLocation,
+    wordStackOffset, lookupNatInfo]
+
+example :
+    wordStackMemoryOffsetInst
+      { locations := [(0, .register 4), (1, .register 5)]
+        scratch := 31
+        stackBase := 10 }
+      .store 0 1 2047 =
+      some (.inst (.memOffset .store 4 5 2047) : StackProg Nat) := by
+  simp [wordStackMemoryOffsetInst, wordStackStoreOffsetInst, wordStackLocation,
+    wordStackOffset, lookupNatInfo]
+
 example :
     wordStackMemoryOffsetInst
       { locations := [(0, .register 4), (1, .register 5)]
@@ -126,5 +149,100 @@ example :
           (.stackStore 31 13)) : StackProg Nat) := by
   simp [wordStackMemoryOffsetInst, wordStackLoadOffsetInst, wordStackLocation,
     wordStackOffset, lookupNatInfo]
+
+/- The source-shaped address path retains Cake's `Addr base offset` carrier
+   before the final store instead of materialising an unrelated address
+   sequence. -/
+example :
+    wordStackCompileStoreNatNested
+      { locations := [(0, .register 4), (1, .register 5)]
+        scratch := 31
+        addressScratch := 29
+        stackBase := 10 }
+      (.op .add [.var 1, .const 8]) (.var 0) =
+      some (.seq (.seq (.const 31 8)
+        (.arith .add 29 5 31))
+        (.inst (.mem .store 4 29)) : StackProg Nat) := by
+  simp [wordStackCompileStoreNatNested, wordStackLocation, lookupNatInfo,
+    wordStackJoin]
+
+/- A spilled Store value still follows Cake's address/value staging: the
+   address is formed first, then the value is reloaded through `wReg2`. -/
+example :
+    wordStackCompileStoreNatNested
+      { locations := [(0, .stack 2), (1, .register 5)]
+        scratch := 31
+        addressScratch := 29
+        stackBase := 10 }
+      (.op .add [.var 1, .const 8]) (.var 0) =
+      some (.seq (.inst (.arith (.binOp .add 29 5 (.imm 8))))
+        (.seq (.stackLoad 31 12)
+          (.inst (.mem .store 31 29))) : StackProg Nat) := by
+  simp [wordStackCompileStoreNatNested, wordStackCompileExpToRegisterNat,
+    wordStackExpressionIsAtom, wordStackAtomNat, wordStackReadRegister,
+    wordStackExpressionTemporaries, wordStackExpressionTemporariesExcluding,
+    wordStackLocation, wordStackOffset, lookupNatInfo, wordStackJoin]
+
+/- The dual spill shape reloads the address through `wReg1` and preserves the
+   register-resident value through the independent store scratch. -/
+example :
+    wordStackCompileStoreNatNested
+      { locations := [(0, .register 4), (1, .stack 2)]
+        scratch := 31
+        addressScratch := 29
+        stackBase := 10 }
+      (.op .add [.var 1, .const 8]) (.var 0) =
+      some (.seq
+        (.seq (.stackLoad 31 12)
+          (.inst (.arith (.binOp .add 29 31 (.imm 8)))))
+        (.seq (.arith .or 31 4 4)
+          (.inst (.mem .store 31 29))) : StackProg Nat) := by
+  simp [wordStackCompileStoreNatNested, wordStackCompileExpToRegisterNat,
+    wordStackExpressionIsAtom, wordStackAtomNat, wordStackReadRegister,
+    wordStackExpressionTemporaries, wordStackExpressionTemporariesExcluding,
+    wordStackLocation, wordStackOffset, lookupNatInfo, wordStackJoin]
+
+example :
+    wordStackCompileStoreNatNested
+      { locations := [(0, .stack 3), (1, .stack 2)]
+        scratch := 31
+        addressScratch := 29
+        stackBase := 10 }
+      (.op .add [.var 1, .const 8]) (.var 0) =
+      some (.seq
+        (.seq (.stackLoad 31 12)
+          (.inst (.arith (.binOp .add 29 31 (.imm 8)))))
+        (.seq (.stackLoad 31 13)
+          (.inst (.mem .store 31 29))) : StackProg Nat) := by
+  simp [wordStackCompileStoreNatNested, wordStackCompileExpToRegisterNat,
+    wordStackExpressionIsAtom, wordStackAtomNat, wordStackReadRegister,
+    wordStackExpressionTemporaries, wordStackExpressionTemporariesExcluding,
+    wordStackLocation, wordStackOffset, lookupNatInfo, wordStackJoin]
+
+example :
+    wordStackCompileLoadNatNested
+      { locations := [(0, .register 4), (1, .register 5)]
+        scratch := 31
+        addressScratch := 29
+        stackBase := 10 }
+      0 (.op .add [.var 1, .const 8]) =
+      some (.inst (.memOffset .load 4 5 8) : StackProg Nat) := by
+  simp [wordStackCompileLoadNatNested, wordStackLoadOffsetInst,
+    wordStackLocation, wordStackOffset, lookupNatInfo]
+
+/- Cake's subtraction-shaped address keeps the same source/target carrier;
+   the subtraction operator is applied in the reserved address register. -/
+example :
+    wordStackCompileStoreNatNested
+      { locations := [(0, .register 4), (1, .register 5)]
+        scratch := 31
+        addressScratch := 29
+        stackBase := 10 }
+      (.op .sub [.var 1, .const 8]) (.var 0) =
+      some (.seq (.seq (.const 31 8)
+        (.arith .sub 29 5 31))
+        (.inst (.mem .store 4 29)) : StackProg Nat) := by
+  simp [wordStackCompileStoreNatNested, wordStackLocation, lookupNatInfo,
+    wordStackJoin]
 
 end Flapjack.RiscV

@@ -526,6 +526,80 @@ theorem evalPanValueFfiClockProg_panSimpProg_eq_of_common_fuel
     (fuelSource := fuelSource) (commonFuel := commonFuel) locals globals memory ffi clock
     ma c mh hcompiled hsource hcompiledFuel hsourceFuel
 
+/-! Direct source-shaped form of Cake's `compile_correct_same_state`.  The
+    clocked evaluator needs a separate successful run for the intermediate
+    `seqAssoc Skip` program: its structural fuel can differ from the original
+    program even though the Cake clock is unchanged.  Keeping that run and its
+    fuel bound explicit gives a faithful theorem without asserting a false
+    fixed-fuel equality. -/
+theorem evalPanValueFfiClockProg_panSimpProg_eq_of_common_fuel_source
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (program : Prog α)
+    {fuelCompiled fuelAssoc fuelSource commonFuel : Nat}
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    {result : PanValueFfiClockResult α σ}
+    (hcompiled : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuelCompiled locals globals memory ffi clock
+      (panSimpProg program) ma c mh = some result)
+    (hassoc : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuelAssoc locals globals memory ffi clock
+      (seqAssoc (.skip : Prog α) program) ma c mh = some result)
+    (hsource : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuelSource locals globals memory ffi clock
+      program ma c mh = some result)
+    (hcompiledFuel : fuelCompiled ≤ commonFuel)
+    (hassocFuel : fuelAssoc ≤ commonFuel)
+    (hsourceFuel : fuelSource ≤ commonFuel)
+    (hsourceSeqFuel : fuelSource + 1 ≤ commonFuel) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord commonFuel locals globals memory ffi clock
+      (panSimpProg program) ma c mh =
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord commonFuel locals globals memory ffi clock
+      program ma c mh := by
+  have hcompiledAssoc := evalPanValueFfiClockProg_panSimpProg_eq_of_common_fuel
+    context primitive handler structs functions baseAddress topAddress bytesInWord
+    program (fuelCompiled := fuelCompiled) (fuelSource := fuelAssoc)
+    (commonFuel := commonFuel) locals globals memory ffi clock ma c mh
+    hcompiled hassoc hcompiledFuel hassocFuel
+  have hsourceSeq : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuelSource + 1) locals globals memory ffi clock
+      (.seq (.skip : Prog α) program) ma c mh = some result := by
+    rw [evalPanValueFfiClockProg_skip_seq context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuelSource clock locals globals memory ffi
+      program ma c mh]
+    exact hsource
+  have hassocSource := evalPanValueFfiClockProg_seqAssoc_eq_of_common_fuel
+    context primitive handler structs functions baseAddress topAddress bytesInWord
+    (.skip : Prog α) program (fuelLeft := fuelAssoc) (fuelRight := fuelSource + 1)
+    (commonFuel := commonFuel) locals globals memory ffi clock ma c mh
+    hassoc hsourceSeq hassocFuel hsourceSeqFuel
+  have hsourceCommon := evalPanValueFfiClockProg_fuel_mono context primitive handler
+    structs functions baseAddress topAddress bytesInWord locals globals memory ffi clock
+    program ma c mh hsourceFuel hsource
+  have hsourceSeqCommon := evalPanValueFfiClockProg_fuel_mono context primitive handler
+    structs functions baseAddress topAddress bytesInWord locals globals memory ffi clock
+    (.seq (.skip : Prog α) program) ma c mh hsourceSeqFuel hsourceSeq
+  have hseqSource : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord commonFuel locals globals memory ffi clock
+      (.seq (.skip : Prog α) program) ma c mh =
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord commonFuel locals globals memory ffi clock
+      program ma c mh := by
+    rw [hsourceSeqCommon, hsourceCommon]
+  exact hcompiledAssoc.trans (hassocSource.trans hseqSource)
+
 /-! Congruence under the second component of a `Seq`.  The premise is
     quantified over the post-first state and clock because the first component
     may update every evaluator component before the second starts. -/

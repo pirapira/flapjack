@@ -1,12 +1,17 @@
 import Flapjack.CrepeExpressionRelation
+import Flapjack.CrepeCompileExpVariables
+import Flapjack.CrepeExpressionStability
 
 /-!
 Source-word correctness for the general `Store` statement.
 
 The compiler lowers a word store through two fresh temporary slots.  The
-explicit stability hypotheses are the freshness interface needed by this
-lowering: compiled address/value expressions must keep their evaluations when
-the temporaries are installed.
+compiled value is evaluated after the address temporary is installed, so its
+evaluation must be stable under that update.  Instead of taking that stability
+as an opaque semantic premise, the theorems below derive it from a static
+context bound: every slot recorded in `context.vars` is at most
+`context.maxVar`, so the fresh temporary `context.maxVar + 1` is never read by
+a compiled source-word expression.
 -/
 
 namespace Flapjack
@@ -33,16 +38,9 @@ theorem compile_full_pan_value_store_source_word_relation
       baseAddress topAddress bytesInWord address.toExp = some (.word addressValue))
     (hsourceValue : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
       baseAddress topAddress bytesInWord value.toExp = some (.word valueValue))
-    (haddressStable : ∀ compiled,
-      compileExp context address.toExp = ([compiled], .one) →
-      evalCrepFullExp
-      (updateCrepLocal state.locals (context.maxVar + 1) addressValue)
-      state.memory baseAddress topAddress compiled = some addressValue)
-    (hvalueStable : ∀ compiled,
-      compileExp context value.toExp = ([compiled], .one) →
-      evalCrepFullExp
-      (updateCrepLocal state.locals (context.maxVar + 1) addressValue)
-      state.memory baseAddress topAddress compiled = some valueValue) :
+    (hbound : ∀ name shape names,
+      lookupInfo name context.vars = some (shape, names) →
+      ∀ varName ∈ names, varName ≤ context.maxVar) :
     evalPanValueProgWithPrimitiveCallsAndFfi primitive sourceHandler structs
       sourceFunctions baseAddress topAddress bytesInWord 4 sourceLocals sourceGlobals
       sourceMemory (.store address.toExp value.toExp) =
@@ -63,8 +61,18 @@ theorem compile_full_pan_value_store_source_word_relation
     compileSourceWordExp_relation context structs sourceLocals
     sourceGlobals sourceMemory state.locals state.memory baseAddress topAddress
     bytesInWord hbytesInWord hlocals.2.1 hlookup value valueValue hsourceValue
-  have haddressStable' := haddressStable compiledAddress hcompileAddress
-  have hvalueStable' := hvalueStable compiledValue hcompileValue
+  have hvalueBounded := compileExp_vars_bounded context hbound value.toExp
+  have hvalueNotMem : (context.maxVar + 1) ∉ crepExpVars compiledValue := by
+    intro hmem
+    have hle := hvalueBounded (context.maxVar + 1)
+      (by simpa [hcompileValue] using hmem)
+    omega
+  have hvalueStable' : evalCrepFullExp
+      (updateCrepLocal state.locals (context.maxVar + 1) addressValue)
+      state.memory baseAddress topAddress compiledValue = some valueValue :=
+    evalCrepFullExp_update_of_not_mem state.locals state.memory baseAddress
+      topAddress compiledValue (context.maxVar + 1) valueValue addressValue
+      hvalueNotMem hcrepValue
   have hstoreMemory : panValueStoreWithAccess sourceMemory bytesInWord
       addressValue (.word valueValue) =
       some (updatePanValueMemory sourceMemory addressValue (.word valueValue)) := by
@@ -135,18 +143,9 @@ theorem compile_full_pan_value_store_source_word_state_relation
       baseAddress topAddress bytesInWord address.toExp = some (.word addressValue))
     (hsourceValue : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
       baseAddress topAddress bytesInWord value.toExp = some (.word valueValue))
-    (haddressStable : ∀ compiled,
-      compileExp context address.toExp = ([compiled], .one) →
-      evalCrepFullExpState
-        ({ state with locals :=
-            (updateCrepLocal state.locals (context.maxVar + 1) addressValue) })
-        baseAddress topAddress compiled = some addressValue)
-    (hvalueStable : ∀ compiled,
-      compileExp context value.toExp = ([compiled], .one) →
-      evalCrepFullExpState
-        ({ state with locals :=
-            (updateCrepLocal state.locals (context.maxVar + 1) addressValue) })
-        baseAddress topAddress compiled = some valueValue) :
+    (hbound : ∀ name shape names,
+      lookupInfo name context.vars = some (shape, names) →
+      ∀ varName ∈ names, varName ≤ context.maxVar) :
     evalPanValueProgWithPrimitiveCallsAndFfi primitive sourceHandler structs
       sourceFunctions baseAddress topAddress bytesInWord 4 sourceLocals sourceGlobals
       sourceMemory (.store address.toExp value.toExp) =
@@ -168,8 +167,19 @@ theorem compile_full_pan_value_store_source_word_state_relation
     compileSourceWordExp_state_relation context structs sourceLocals sourceGlobals
       sourceMemory state baseAddress topAddress bytesInWord hbytesInWord
       hlocals.2.1 hlookup value valueValue hsourceValue
-  have haddressStable' := haddressStable compiledAddress hcompileAddress
-  have hvalueStable' := hvalueStable compiledValue hcompileValue
+  have hvalueBounded := compileExp_vars_bounded context hbound value.toExp
+  have hvalueNotMem : (context.maxVar + 1) ∉ crepExpVars compiledValue := by
+    intro hmem
+    have hle := hvalueBounded (context.maxVar + 1)
+      (by simpa [hcompileValue] using hmem)
+    omega
+  have hvalueStable' : evalCrepFullExpState
+      ({ state with locals :=
+          (updateCrepLocal state.locals (context.maxVar + 1) addressValue) })
+      baseAddress topAddress compiledValue = some valueValue :=
+    evalCrepFullExpState_update_of_not_mem state baseAddress topAddress
+      compiledValue (context.maxVar + 1) valueValue addressValue
+      hvalueNotMem hcrepValue
   have hstoreMemory : panValueStoreWithAccess sourceMemory bytesInWord
       addressValue (.word valueValue) =
       some (updatePanValueMemory sourceMemory addressValue (.word valueValue)) := by

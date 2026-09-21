@@ -320,6 +320,34 @@ example :
       some [.loadByteOffset 4 5 (BitVec.ofNat 64 7)] := by
   decide
 
+/-! The direct Cake `Mem ... (Addr ...)` path uses the same `riscv_memop`
+    table as shared memory, but these word-width and halfword-width forms are
+    distinct from the shared-memory table above.  Pin both signed directions
+    at the Lab boundary against `riscv_targetScript.sml:66-74, 165-169`. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMem .load 4 5 7) [] 0]⟩ =
+      some [.loadWordOffset 4 5 (BitVec.ofNat 64 7)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMemSub .store 4 5 7) [] 0]⟩ =
+      some [.storeWordOffset 4 5 (0 - BitVec.ofNat 64 7)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMem .load16 4 5 7) [] 0]⟩ =
+      some [.loadHalfOffset 4 5 (BitVec.ofNat 64 7)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMemSub .store16 4 5 7) [] 0]⟩ =
+      some [.storeHalfOffset 4 5 (0 - BitVec.ofNat 64 7)] := by
+  decide
+
 example :
     compileLabSection (width := 64) { services := [] }
       ⟨4, [.asm (.stackMemSub .store32 4 5 7) [] 0]⟩ =

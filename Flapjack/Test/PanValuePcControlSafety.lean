@@ -846,4 +846,16 @@ evaluator-evidence obligation. -/
 #check @panValuePcCompileCorrect_compact_nested_one_word_raise_of_state_evidence
 #check @panValuePcCompileCorrect_compact_nested_one_word_raise_of_state_evidence_context_code
 
+/- The context-coded source-word raise instance uses the same state evidence and
+   additionally returns the context-coded correctness boundary. -/
+#check @panValuePcCompileCorrect_compact_raise_source_word_of_state_evidence_context_code
+
+/- The raw-word-list dispatcher also has a state-evidence form that discharges the
+   generic `hother` branch without an opaque raised-data obligation. -/
+#check @panValuePcRaisedHraiseCases_with_raw_word_lists_of_state_evidence
+
+/- The arbitrary word-list Raise bridge preserves the same explicit clocked
+   evaluator and state/result premises at the top-level boundary. -/
+#check @panValuePcCompileCorrect_compact_with_flat_global_evaluator_evidence_word_list_raise_context_code_and_clocked
+
 end Flapjack.Test.PanValuePcControlSafety

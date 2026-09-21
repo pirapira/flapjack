@@ -101,4 +101,80 @@ theorem evalPanValueFfiClockProg_while_zero_shift
       some (.control (.normal locals globals memory ffi), clock + ck) := by
   simp [evalPanValueFfiClockProg, hcondition]
 
+/-! A nonzero `While` iteration preserves the clock shift when both the body
+    and the resumed loop are supplied at the two clocks.  This is the local
+    recursive step needed by Cake's `evaluate_add_clock_eq`; the body and
+    resumed-loop witnesses remain explicit until the structural-fuel proof can
+    discharge them uniformly. -/
+theorem evalPanValueFfiClockProg_while_normal_shift_step
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel clock ck bodyClock finalClock : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (bodyLocals bodyGlobals : VarName → Option (PanValue α))
+    (bodyMemory : α → Option (PanValue α)) (bodyFfi : FfiState σ)
+    (conditionValue : α) (condition : Exp α) (body : Prog α)
+    (outcome : PanValueFfiClockOutcome α σ)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (contracts : Option PanValueCallContracts := none)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none)
+    (hcondition : evalPanValueExp structs locals globals memory
+      baseAddress topAddress bytesInWord condition
+      (memoryAccess := memoryAccess) = some (.word conditionValue))
+    (hconditionNonzero : (conditionValue == (0 : α)) = false)
+    (hclock : (clock == 0) = false)
+    (hbody : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory ffi
+      (decPanClock clock) body (memoryAccess := memoryAccess)
+      (contracts := contracts) (memoryHandler := memoryHandler) =
+      some (.control (.normal bodyLocals bodyGlobals bodyMemory bodyFfi), bodyClock))
+    (hbodyShift : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory ffi
+      (decPanClock clock + ck) body (memoryAccess := memoryAccess)
+      (contracts := contracts) (memoryHandler := memoryHandler) =
+      some (.control (.normal bodyLocals bodyGlobals bodyMemory bodyFfi), bodyClock + ck))
+    (hrest : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel bodyLocals bodyGlobals bodyMemory bodyFfi
+      bodyClock (.while condition body) (memoryAccess := memoryAccess)
+      (contracts := contracts) (memoryHandler := memoryHandler) =
+      some (outcome, finalClock))
+    (hrestShift : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel bodyLocals bodyGlobals bodyMemory bodyFfi
+      (bodyClock + ck) (.while condition body) (memoryAccess := memoryAccess)
+      (contracts := contracts) (memoryHandler := memoryHandler) =
+      some (outcome, finalClock + ck)) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi
+      clock (.while condition body) (memoryAccess := memoryAccess)
+      (contracts := contracts) (memoryHandler := memoryHandler) =
+      some (outcome, finalClock) ∧
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi
+      (clock + ck) (.while condition body) (memoryAccess := memoryAccess)
+      (contracts := contracts) (memoryHandler := memoryHandler) =
+      some (outcome, finalClock + ck) := by
+  have hclockNe : clock ≠ 0 := by
+    intro hzero
+    subst clock
+    simp at hclock
+  have hclockShift : ((clock + ck) == 0) = false := by
+    apply beq_eq_false_iff_ne.mpr
+    intro hsum
+    apply hclockNe
+    omega
+  have hdec : decPanClock (clock + ck) = decPanClock clock + ck :=
+    decPanClock_add clock ck hclockNe
+  constructor
+  · simp [evalPanValueFfiClockProg, hcondition, hconditionNonzero, hclock,
+      hbody, hrest]
+  · simp [evalPanValueFfiClockProg, hcondition, hconditionNonzero, hclockShift,
+      hdec, hbodyShift, hrestShift]
+
 end Flapjack

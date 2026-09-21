@@ -45,6 +45,21 @@ def returningCallCutsetGuard : Bool :=
 
 #guard returningCallCutsetGuard
 
+def returningCallSkipProgram : WordProg Nat :=
+  .call (some ([4], ([], []), .skip, 9, 10)) (some 7) [0, 2] none
+
+def returningCallSkipGuard : Bool :=
+  match (wordFullSsaCcTrans 2 returningCallSkipProgram).2.2 with
+  | .seq (.move 1 [(9, 0), (13, 2)])
+      (.seq (.move 0 [])
+        (.seq (.move 1 [(2, 9), (4, 13)])
+          (.call (some ([2], ([], []),
+            (.seq (.move 0 []) (.seq (.move 1 [(21, 2)]) .skip)), 9, 10))
+            (some 7) [2, 4] none))) => true
+  | _ => false
+
+#guard returningCallSkipGuard
+
 def handlerCallProgram : WordProg Nat :=
   .call (some ([4], ([], []), .skip, 9, 10)) (some 7) [0, 2]
     (some (3, .skip, 11, 12))
@@ -73,7 +88,8 @@ def handlerCallGuard : Bool :=
 #guard handlerCallGuard
 
 def parityGuard : Bool :=
-  returningCallGuard && returningCallCutsetGuard && handlerCallGuard
+  returningCallGuard && returningCallCutsetGuard && returningCallSkipGuard &&
+    handlerCallGuard
 
 #guard parityGuard
 #eval parityGuard
@@ -84,6 +100,8 @@ def runChecks : IO Bool := do
         returningCallGuard),
       ("full_ssa_cc_trans returning Call preserves Cake cut-set refresh",
         returningCallCutsetGuard),
+      ("full_ssa_cc_trans returning Call preserves Cake skipped return handler",
+        returningCallSkipGuard),
       ("full_ssa_cc_trans handler Call preserves Cake exception payload",
         handlerCallGuard) ]
   let mut ok := true

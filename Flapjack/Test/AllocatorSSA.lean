@@ -63,7 +63,7 @@ example :
           (.seq (.move 1 [(2, 100), (4, 0)])
             (.call (some ([2, 4], ([202], []),
               .seq (.move 0 [(208, 202)])
-                (.move 1 [(212, 2), (216, 4)]), 0, 0))
+                (.seq (.move 1 [(212, 2), (216, 4)]) .skip), 0, 0))
               (some 7) [2, 4] none))) := by
   have hAbi : wordSsaCallAbiRegisters 1 2 = [2, 4] := by rfl
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,

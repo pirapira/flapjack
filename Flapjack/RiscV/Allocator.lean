@@ -913,8 +913,8 @@ def wordSsaRenameProgramWithLoops [OfNat α 0] (frames : List WordSsaLoopFrame)
           wordSsaRenameProgramWithLoops frames state returnCode
         let abiReturns := wordSsaCallAbiRegisters 1 destinations.length
         let returnMove := .move 1 (destinations.zip abiReturns)
-        let returnHandler := wordSsaSeq restoreMove
-          (wordSsaSeq returnMove returnCode)
+        let returnHandler := .seq restoreMove
+          (.seq returnMove returnCode)
         (state, wordSsaSeq stackMove
           (wordSsaSeq moveArguments
             (.call (some (abiReturns, stackCutsets, returnHandler,

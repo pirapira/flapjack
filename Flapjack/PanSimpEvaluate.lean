@@ -1907,6 +1907,41 @@ theorem evalPanValueFfiClockProg_leaf_some
   cases hleaf <;>
     simp [evalPanValueFfiClockProg, evalPanValueFfiClockLeaf, hsteps]
 
+/-- Fuel adequacy for the leaf fragment: once the step evaluator succeeds at
+    unit fuel, the clocked evaluator returns the same control result at any
+    fuel dominating `progSize program`.  This turns the `fuel + 1` leaf equation
+    into a `progSize`-indexed statement. -/
+theorem evalPanValueFfiClockProg_leaf_some_progSize
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (program : Prog α) (fuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (hleaf : PanValueFfiLeafProg program)
+    (result : PanValueFfiControlResult α σ) (steps : Nat)
+    (hsteps : evalPanValueFfiProgSteps context primitive handler structs functions
+        baseAddress topAddress bytesInWord 1 locals globals memory ffi program
+        (memoryAccess := ma) (contracts := c) (memoryHandler := mh) =
+      some (result, steps))
+    (hfuel : progSize program ≤ fuel) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
+        program ma c mh = some (.control result, clock) := by
+  have hone : progSize program = 1 := by cases hleaf <;> simp [progSize]
+  cases fuel with
+  | zero => omega
+  | succ k =>
+      exact evalPanValueFfiClockProg_leaf_some context primitive handler structs
+        functions baseAddress topAddress bytesInWord k locals globals memory ffi
+        clock program ma c mh hleaf result steps hsteps
+
+
 /-! ## While-body step equations
 
 The recursive branch of the clocked `While` clause: with a nonzero condition and

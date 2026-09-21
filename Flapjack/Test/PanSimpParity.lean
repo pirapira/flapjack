@@ -452,6 +452,23 @@ theorem clocked_leaf_skip_matches_steps :
     (.normal (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi) 1
   simp [evalPanValueFfiProgSteps]
 
+/-- Leaf fuel adequacy at the `progSize` budget: the `fuel + 1` leaf equation
+    holds at any fuel dominating `progSize program`. -/
+theorem clocked_leaf_skip_progSize_succeeds :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 (progSize (.skip : Prog Nat))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+      (.skip : Prog Nat) =
+    some (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi), 1) := by
+  apply evalPanValueFfiClockProg_leaf_some_progSize evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 (.skip : Prog Nat)
+    (progSize (.skip : Prog Nat)) (fun _ => none) (fun _ => none)
+    (fun _ => none) evaluatorFfi 1 none none none PanValueFfiLeafProg.skip
+    (.normal (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi) 1
+  · simp [evalPanValueFfiProgSteps]
+  · exact Nat.le_refl _
+
 /-- The while recursive branch: a nonzero condition and a `normal` body result
     iterate the loop from the body's final state and clock. -/
 example

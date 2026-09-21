@@ -45,6 +45,38 @@ example :
   simp [wordStackMemoryOffsetInst, wordStackLoadOffsetInst, wordStackLocation,
     wordStackOffset, lookupNatInfo]
 
+/- The same source-shaped negative displacement is preserved for each Cake
+   subword memory operator; Lab performs the later signed-12 interpretation. -/
+example :
+    wordStackMemoryOffsetInst
+      { locations := [(0, .register 4), (1, .register 5)]
+        scratch := 31
+        stackBase := 10 }
+      .load8 0 1 (2 ^ 64 - 8) =
+      some (.inst (.memOffset .load8 4 5 (2 ^ 64 - 8)) : StackProg Nat) := by
+  simp [wordStackMemoryOffsetInst, wordStackLoadOffsetInst, wordStackLocation,
+    wordStackOffset, lookupNatInfo]
+
+example :
+    wordStackMemoryOffsetInst
+      { locations := [(0, .register 4), (1, .register 5)]
+        scratch := 31
+        stackBase := 10 }
+      .load16 0 1 (2 ^ 64 - 8) =
+      some (.inst (.memOffset .load16 4 5 (2 ^ 64 - 8)) : StackProg Nat) := by
+  simp [wordStackMemoryOffsetInst, wordStackLoadOffsetInst, wordStackLocation,
+    wordStackOffset, lookupNatInfo]
+
+example :
+    wordStackMemoryOffsetInst
+      { locations := [(0, .register 4), (1, .register 5)]
+        scratch := 31
+        stackBase := 10 }
+      .load32 0 1 (2 ^ 64 - 8) =
+      some (.inst (.memOffset .load32 4 5 (2 ^ 64 - 8)) : StackProg Nat) := by
+  simp [wordStackMemoryOffsetInst, wordStackLoadOffsetInst, wordStackLocation,
+    wordStackOffset, lookupNatInfo]
+
 example :
     wordStackMemoryOffsetInst
       { locations := [(0, .register 4), (1, .register 5)]
@@ -52,6 +84,36 @@ example :
         stackBase := 10 }
       .store 0 1 2047 =
       some (.inst (.memOffset .store 4 5 2047) : StackProg Nat) := by
+  simp [wordStackMemoryOffsetInst, wordStackStoreOffsetInst, wordStackLocation,
+    wordStackOffset, lookupNatInfo]
+
+example :
+    wordStackMemoryOffsetInst
+      { locations := [(0, .register 4), (1, .register 5)]
+        scratch := 31
+        stackBase := 10 }
+      .store8 0 1 (2 ^ 64 - 8) =
+      some (.inst (.memOffset .store8 4 5 (2 ^ 64 - 8)) : StackProg Nat) := by
+  simp [wordStackMemoryOffsetInst, wordStackStoreOffsetInst, wordStackLocation,
+    wordStackOffset, lookupNatInfo]
+
+example :
+    wordStackMemoryOffsetInst
+      { locations := [(0, .register 4), (1, .register 5)]
+        scratch := 31
+        stackBase := 10 }
+      .store16 0 1 (2 ^ 64 - 8) =
+      some (.inst (.memOffset .store16 4 5 (2 ^ 64 - 8)) : StackProg Nat) := by
+  simp [wordStackMemoryOffsetInst, wordStackStoreOffsetInst, wordStackLocation,
+    wordStackOffset, lookupNatInfo]
+
+example :
+    wordStackMemoryOffsetInst
+      { locations := [(0, .register 4), (1, .register 5)]
+        scratch := 31
+        stackBase := 10 }
+      .store32 0 1 (2 ^ 64 - 8) =
+      some (.inst (.memOffset .store32 4 5 (2 ^ 64 - 8)) : StackProg Nat) := by
   simp [wordStackMemoryOffsetInst, wordStackStoreOffsetInst, wordStackLocation,
     wordStackOffset, lookupNatInfo]
 

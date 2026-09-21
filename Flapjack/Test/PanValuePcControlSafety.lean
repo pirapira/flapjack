@@ -855,6 +855,7 @@ evaluator-evidence obligation. -/
 #check @panValuePcRaisedHraiseCases_with_raw_word_lists_of_state_evidence
 #check @panValuePcCompileCorrect_compact_with_raw_word_lists_context_code_of_state_evidence
 #check @panValuePcCompileCorrect_compact_ite_source_word_of_state_evidence_context_code
+#check @panValuePcCompileCorrect_compact_while_source_word_of_state_evidence_context_code
 
 /- The arbitrary word-list Raise bridge preserves the same explicit clocked
    evaluator and state/result premises at the top-level boundary. -/
@@ -865,5 +866,16 @@ evaluator-evidence obligation. -/
 #check @panValuePcCompileCorrect_compact_two_word_raise_of_state_evidence_context_code
 #check @panValuePcCompileCorrect_compact_three_word_raise_of_state_evidence_context_code
 #check @panValuePcCompileCorrect_compact_four_word_raise_of_state_evidence_context_code
+
+/-! The plain exception-result dispatcher likewise accepts the explicit
+    state-evidence premises instead of the opaque raised-payload callback. -/
+#check @panValuePcRaisedHraiseCases_to_exception_result_rel_of_state_evidence
+
+/-! The context-coded exception-result dispatcher also accepts the explicit
+    state-evidence premises instead of the opaque raised-payload callback. -/
+#check @panValuePcRaisedHraiseCases_to_exception_result_rel_with_context_code_of_state_evidence
+/-! The paired raw-word-list dispatcher also accepts the explicit state
+    evidence plus the exception lookup instead of the opaque callbacks. -/
+#check @panValuePcRaisedHraiseCases_with_raw_word_lists_paired_of_state_evidence
 
 end Flapjack.Test.PanValuePcControlSafety

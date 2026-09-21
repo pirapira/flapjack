@@ -484,4 +484,24 @@ def panSimpShapesGuard : Bool :=
 #eval panSimpShapesGuard
 #guard panSimpShapesGuard
 
+/-! Cake's `no_names_compile_prog`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:318`). -/
+
+def noNameDecls : List (Decl Nat) :=
+  [compileDeclF, .decl .one "g" (.const 7), .exnDecl "E" .one]
+
+theorem panSimpDecls_all_not_name_fixture :
+    (panSimpDecls noNameDecls).all
+      (fun declaration => !isName declaration) = true :=
+  panSimpDecls_all_not_name noNameDecls
+    (by simp [noNameDecls, compileDeclF, isName])
+
+def panSimpNoNamesGuard : Bool :=
+  (panSimpDecls noNameDecls).all (fun declaration => !isName declaration) &&
+    !(panSimpDecls (noNameDecls ++ [.name "S" []])).all
+      (fun declaration => !isName declaration)
+
+#eval panSimpNoNamesGuard
+#guard panSimpNoNamesGuard
+
 end Flapjack.Test.PanGlobalsDecShapesParity

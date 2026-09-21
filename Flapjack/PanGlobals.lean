@@ -772,6 +772,22 @@ theorem functions_names_panSimpDecls (declarations : List (Decl α)) :
   rw [functions_panSimpDecls, List.map_map]
   rfl
 
+/-- Cake's `no_names_compile_prog`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:318`): `pan_simp` keeps
+    the restriction that no declaration is a structure name, matching
+    `is_function ∨ is_decl ∨ is_exn_decl`. -/
+theorem panSimpDecls_all_not_name (declarations : List (Decl α))
+    (hall : declarations.all (fun declaration => !isName declaration) = true) :
+    (panSimpDecls declarations).all (fun declaration => !isName declaration) =
+      true := by
+  rw [panSimpDecls_eq_map]
+  induction declarations with
+  | nil => simp
+  | cons declaration declarations ih =>
+      simp only [List.map_cons, List.all_cons, Bool.and_eq_true] at hall ⊢
+      obtain ⟨hhead, htail⟩ := hall
+      cases declaration <;> simp_all [panSimpDecl, isName]
+
 theorem globalDeclShapes_of_functions (declarations : List (Decl α))
     (hfunctions : ∀ declaration ∈ declarations, globalDeclIsFunction declaration = true) :
     globalDeclShapes declarations = [] := by

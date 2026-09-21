@@ -5791,4 +5791,122 @@ theorem PanValueFfiClockNormalAdequateProgFrom_call_caught_handler
     hhandler hbudget hargsEval hlookup hbind (by intro hzero; omega) hparams hcaught
     (hhandlerValid locals)
 
+/-- A lower-bounded adequate declaration: the value evaluates to a matching
+    shape and the body is adequate from the same lower bound. -/
+theorem PanValueFfiClockNormalAdequateProgFrom_dec
+    (lo : Nat)
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (ma : Option (PanValueMemoryAccess α))
+    (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (name : VarName) (shape : Shape) (value : Exp α) (body : Prog α)
+    (hvalue : ∀ (locals globals : VarName → Option (PanValue α))
+        (memory : α → Option (PanValue α)),
+        ∃ valueResult : PanValue α,
+          evalPanValueExp structs locals globals memory baseAddress topAddress
+            bytesInWord value (memoryAccess := ma) = some valueResult ∧
+          panShapeMatches (panValueShape structs valueResult) shape = true)
+    (hbody : PanValueFfiClockNormalAdequateProgFrom lo context primitive handler structs
+      functions baseAddress topAddress bytesInWord callBudget ma c mh body) :
+    PanValueFfiClockNormalAdequateProgFrom lo context primitive handler structs functions
+      baseAddress topAddress bytesInWord callBudget ma c mh (.dec name shape value body) := by
+  intro clock hclock locals globals memory ffi
+  obtain ⟨valueResult, hvalueEval, hmatch⟩ := hvalue locals globals memory
+  obtain ⟨finalLocals, finalGlobals, finalMemory, finalFfi, finalClock, hbodyEval⟩ :=
+    hbody clock hclock (updatePanValueMap locals name valueResult) globals memory ffi
+  exact ⟨restorePanValueLocal finalLocals name (locals name), finalGlobals,
+    finalMemory, finalFfi, finalClock,
+    evalPanValueFfiClockProg_dec_some_progCallFuel context primitive handler structs
+      functions baseAddress topAddress bytesInWord callBudget locals globals memory ffi
+      clock name shape value body ma c mh valueResult
+      (.control (.normal finalLocals finalGlobals finalMemory finalFfi)) finalClock
+      hvalueEval hmatch hbodyEval⟩
+
+/-- A lower-bounded adequate conditional: both branches are adequate from the
+    same lower bound. -/
+theorem PanValueFfiClockNormalAdequateProgFrom_ite
+    (lo : Nat)
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (ma : Option (PanValueMemoryAccess α))
+    (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (condition : Exp α) (thenBranch elseBranch : Prog α)
+    (hcondition : ∀ (locals globals : VarName → Option (PanValue α))
+      (memory : α → Option (PanValue α)),
+      ∃ wordValue : α, evalPanValueExp structs locals globals memory baseAddress
+        topAddress bytesInWord condition (memoryAccess := ma) = some (.word wordValue))
+    (hthen : PanValueFfiClockNormalAdequateProgFrom lo context primitive handler structs
+      functions baseAddress topAddress bytesInWord callBudget ma c mh thenBranch)
+    (helse : PanValueFfiClockNormalAdequateProgFrom lo context primitive handler structs
+      functions baseAddress topAddress bytesInWord callBudget ma c mh elseBranch) :
+    PanValueFfiClockNormalAdequateProgFrom lo context primitive handler structs functions
+      baseAddress topAddress bytesInWord callBudget ma c mh
+      (.ite condition thenBranch elseBranch) := by
+  intro clock hclock locals globals memory ffi
+  obtain ⟨wordValue, hcond⟩ := hcondition locals globals memory
+  by_cases hz : (wordValue != 0) = true
+  · obtain ⟨finalLocals, finalGlobals, finalMemory, finalFfi, finalClock, hbranch⟩ :=
+      hthen clock hclock locals globals memory ffi
+    have hmono := evalPanValueFfiClockProg_fuel_mono context primitive handler structs
+      functions baseAddress topAddress bytesInWord
+      (fuel := progCallFuel callBudget thenBranch)
+      (fuel' := progCallFuel callBudget thenBranch + progCallFuel callBudget elseBranch)
+      locals globals memory ffi clock thenBranch ma c mh (by omega) hbranch
+    exact ⟨finalLocals, finalGlobals, finalMemory, finalFfi, finalClock,
+      evalPanValueFfiClockProg_ite_true_some_progCallFuel context primitive handler
+        structs functions baseAddress topAddress bytesInWord callBudget locals globals
+        memory ffi clock condition thenBranch elseBranch ma c mh wordValue
+        (.control (.normal finalLocals finalGlobals finalMemory finalFfi)) finalClock
+        hcond hz hmono⟩
+  · have hzfalse : (wordValue != 0) = false := by
+      cases hbool : (wordValue != 0) <;> simp_all
+    obtain ⟨finalLocals, finalGlobals, finalMemory, finalFfi, finalClock, hbranch⟩ :=
+      helse clock hclock locals globals memory ffi
+    have hmono := evalPanValueFfiClockProg_fuel_mono context primitive handler structs
+      functions baseAddress topAddress bytesInWord
+      (fuel := progCallFuel callBudget elseBranch)
+      (fuel' := progCallFuel callBudget thenBranch + progCallFuel callBudget elseBranch)
+      locals globals memory ffi clock elseBranch ma c mh (by omega) hbranch
+    exact ⟨finalLocals, finalGlobals, finalMemory, finalFfi, finalClock,
+      evalPanValueFfiClockProg_ite_false_some_progCallFuel context primitive handler
+        structs functions baseAddress topAddress bytesInWord callBudget locals globals
+        memory ffi clock condition thenBranch elseBranch ma c mh wordValue
+        (.control (.normal finalLocals finalGlobals finalMemory finalFfi)) finalClock
+        hcond hzfalse hmono⟩
+
+/-- A lower-bounded adequate tick: needs the lower bound to be at least one so
+    that every admissible clock is nonzero. -/
+theorem PanValueFfiClockNormalAdequateProgFrom_tick
+    (lo : Nat) (hlo : 1 ≤ lo)
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (ma : Option (PanValueMemoryAccess α))
+    (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ)) :
+    PanValueFfiClockNormalAdequateProgFrom lo context primitive handler structs functions
+      baseAddress topAddress bytesInWord callBudget ma c mh (.tick : Prog α) := by
+  intro clock hclock locals globals memory ffi
+  exact ⟨locals, globals, memory, ffi, decPanClock clock, by
+    simpa [progCallFuel] using
+      (evalPanValueFfiClockProg_tick_some context primitive handler structs functions
+        baseAddress topAddress bytesInWord 0 locals globals memory ffi clock ma c mh
+        (by intro hzero; omega))⟩
+
 end Flapjack

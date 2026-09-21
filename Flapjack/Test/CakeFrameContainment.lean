@@ -120,6 +120,25 @@ def cakeWordFrameSlotsOracleExact : Bool :=
 
 #guard cakeWordFrameSlotsOracleExact
 
+/- Cake's production colour-to-frame adapter combines `format_var` with the
+   coloured-program `max_var` equation.  These direct cases mirror
+   `word_to_stackScript.sml:114-118,586-592`: an in-window colour remains a
+   register, while the first spill colour is addressed from the top of the
+   four-word frame. -/
+def cakeColourWordSpillStateOracleExact : Bool :=
+  let registerProgram : WordProg Nat := .inst (.const 1 7)
+  let registerState := CakeRegAlloc.cakeColourWordSpillState
+      2 [] registerProgram [(1, 0)]
+  let spillProgram : WordProg Nat := .inst (.const 7 7)
+  let spillState := CakeRegAlloc.cakeColourWordSpillState
+      2 [] spillProgram [(7, 4)]
+  registerState.locations == [(1, .register 0)] &&
+    registerState.nextSpill == 0 &&
+    spillState.locations == [(7, .stack 1)] &&
+    spillState.nextSpill == 3
+
+#guard cakeColourWordSpillStateOracleExact
+
 /-- Cake's `max_var` ignores a handler on a no-return call.  This is distinct
     from the allocator inventory, which must retain the handler for liveness. -/
 def cakeMaxVarNoReturnHandler : Bool :=
@@ -187,6 +206,8 @@ def runChecks : IO Bool := do
         cakeColourLocationOracleExact),
       ("cakeWordFrameSlots matches the direct Cake frame equation",
         cakeWordFrameSlotsOracleExact),
+      ("Cake colour-to-spill adapter matches format_var and frame sizing",
+        cakeColourWordSpillStateOracleExact),
       ("allocator frame slots stay inside the frame word_to_stack allocates",
         frameContainmentExact) ]
   let mut ok := true

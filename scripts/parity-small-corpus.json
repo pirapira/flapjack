@@ -1015,6 +1015,12 @@
       "source_reference": "Minimized mixed-campaign witness (seed 20260921 index 860, flapjack-pxn.8.5.14.23): try/catch, a loop, wide constants, local and CurrHeap loads, and a struct call exercise the allocator's temporary/index choices. The Cake and Flapjack artifacts are now exact after the Cake allocator-index and whole-address selection fixes.",
       "cake_sha256": "c14cc1123af4e448513ba065e1a6c307f82ad679c9cbbcf3a8c2d8ac7cffa80a",
       "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00108_handler_spill_slot.pnk",
+      "source_reference": "Minimized mixed-campaign witness (seed 20261004 index 108, flapjack-pxn.8.5.14.26 / GH #1133): the nested call-handler, raise, loop and spill-pressure shape previously dropped a handler move and swapped Cake spill slots. The merged Cake allocator-index and selector fixes now make the complete artifact byte-identical.",
+      "cake_sha256": "9457abffc5e12e49d74dcdd9728c4612e879f0614c9b8359c9d4ef6d5e2cf3ad",
+      "tracked_beads": []
     }
   ]
 }

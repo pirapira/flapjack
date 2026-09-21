@@ -67,6 +67,16 @@ def runtimeTypedAliasedStoreLoadValue : Option Nat :=
 
 #guard runtimeTypedAliasedStoreLoadValue == some 17
 
+example (state : CrepRuntimeTypedState (RiscV.Word 8) Unit)
+    (key : RiscV.Word 8 → CrepGlobalAddress)
+    (address value loadAddress baseAddress topAddress : RiscV.Word 8) :
+    (state.store key address value).evalExpFull key baseAddress topAddress
+        (.loadGlob loadAddress) =
+      evalCrepTypedLoad key
+        (storeCrepTypedGlobal key state.toGlobalState address value) loadAddress := by
+  exact CrepRuntimeTypedState.evalExpFull_load_after_store state key
+    address value loadAddress baseAddress topAddress
+
 def runtimeTypedLoopBaseState : LoopState Nat :=
   { locals := fun _ => none
     globals := fun _ => none

@@ -392,6 +392,23 @@ def store [BEq α] (state : CrepRuntimeTypedState α σ)
     CrepRuntimeTypedState α σ :=
   { state with globals := storeCrepGlobal state.globals (key address) value }
 
+/-! Target-word expression evaluation for the typed runtime boundary.  The
+    legacy `evalCrepRuntimeExp` remains available for compatibility, but a
+    RISC-V caller carrying Cake's typed global map must use the complete
+    `word_sh` semantics (including ASR/ROR and width checks).  This adapter
+    keeps runtime locals/memory while routing globals through the fixed-width
+    `CrepGlobalAddress` map. -/
+def evalExpFull
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [PanShiftWidth α] [ArithmeticShiftRight α]
+    [RotateRightOp α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeTypedState α σ)
+    (key : α → CrepGlobalAddress) (baseAddress topAddress : α) :
+    CrepExp α → Option α :=
+  evalCrepTypedExpFull key state.toGlobalState baseAddress topAddress
+
 theorem toRuntime_relation (state : CrepRuntimeTypedState α σ)
     (key : α → CrepGlobalAddress) :
     crepRuntimeTypedGlobalRelation key (state.toRuntime key)
@@ -432,6 +449,23 @@ theorem load_after_store_toRuntime [BEq α] [OfNat α 0] [OfNat α 1]
   exact
     (evalCrepRuntimeExp_loadGlob_after_store_typedState state.runtime key
       state.toGlobalState address value loadAddress)
+
+theorem evalExpFull_load_after_store [BEq α]
+    [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [PanShiftWidth α] [ArithmeticShiftRight α]
+    [RotateRightOp α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeTypedState α σ)
+    (key : α → CrepGlobalAddress)
+    (address value loadAddress : α) (baseAddress topAddress : α) :
+    (state.store key address value).evalExpFull key baseAddress topAddress
+        (.loadGlob loadAddress) =
+      evalCrepTypedLoad key
+        (storeCrepTypedGlobal key state.toGlobalState address value) loadAddress := by
+  simp [evalExpFull, store, evalCrepTypedExpFull,
+    CrepRuntimeTypedState.toGlobalState, CrepGlobalState.toCompact,
+    evalCrepFullExpStateFull, evalCrepTypedLoad, storeCrepTypedGlobal]
 
 end CrepRuntimeTypedState
 

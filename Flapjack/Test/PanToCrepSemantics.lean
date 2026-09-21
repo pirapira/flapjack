@@ -116,4 +116,33 @@ example (event : FfiFinalEvent) :
       · trivial)
     (hsource := rfl) (htarget := rfl)
 
+/-! The outcome projections are characterised exactly on the successful
+    constructors, which is what the top-level transport cases on. -/
+example :
+    panValuePcResultOutcome
+        (.returned (fun _ => none) (fun _ => none) (fun _ => none) [] :
+          PanValuePcResult Nat) = some .success := by
+  rw [panValuePcResultOutcome_eq_some_iff]
+  exact Or.inl ⟨_, _, _, _, rfl, rfl⟩
+
+example :
+    panValuePcResultOutcome
+        (.timeout (fun _ => none) (fun _ => none) (fun _ => none) :
+          PanValuePcResult Nat) = none := by
+  simp [panValuePcResultOutcome]
+
+example :
+    crepPcResultOutcome
+        (.finalFfi { locals := fun _ => none, memory := fun _ => none }
+          { name := .extCall "f", configuration := [], bytes := [],
+            outcome := .failed } : CrepPcResult Nat) = some (.ffi .failed) := by
+  rw [crepPcResultOutcome_eq_some_iff]
+  exact Or.inr ⟨_, _, rfl, rfl⟩
+
+example :
+    crepPcResultOutcome
+        (.broke { locals := fun _ => none, memory := fun _ => none } 0 :
+          CrepPcResult Nat) = none := by
+  simp [crepPcResultOutcome]
+
 end Flapjack.Test.PanToCrepSemantics

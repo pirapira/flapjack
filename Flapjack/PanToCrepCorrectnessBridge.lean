@@ -35283,4 +35283,52 @@ theorem panValuePcCompileCorrectAndResultRel_of_context_code
     panValuePcResultRel_of_withContextCode structs context exceptionRel
       exceptionCode globalsLookup sourceResult targetResult hresult⟩
 
+/-! Raised-result specialization of the context-code projection.  The source
+    locals/globals/memory, target state, exception-code, and flattened global
+    lookup evidence remain explicit, so arbitrary payloads are not hidden
+    behind a weaker result proposition. -/
+theorem panValuePcCompileCorrectAndRaisedResultRel_of_context_code
+    [BEq α] [OfNat α 0] [Add α]
+    (sourceEvaluate : PanValuePcEvaluator α)
+    (targetEvaluate : CrepPcEvaluator α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (program : Prog α)
+    (hcompile : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+    (sourceValue : PanValue α) (targetState : CrepState α)
+    (targetException : α)
+    (hstate : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory targetState)
+    (hraise : panValuePcExceptionResultRelWithContextCode structs context
+      exceptionRel exceptionCode globalsLookup sourceGlobals sourceMemory
+      sourceException sourceValue targetState targetException) :
+    PanValuePcCompileCorrect sourceEvaluate targetEvaluate codeRel excpRel
+      exceptionCode globalsLookup program ∧
+    panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
+      (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+      (.raised targetState targetException) := by
+  have hresult : panValuePcResultRelWithContextCode structs context exceptionRel
+      exceptionCode globalsLookup
+      (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+      (.raised targetState targetException) := by
+    simpa [panValuePcResultRelWithContextCode] using
+      (show panValueCrepStateRel structs context sourceLocals sourceGlobals
+          sourceMemory targetState ∧
+        panValuePcExceptionResultRelWithContextCode structs context exceptionRel
+          exceptionCode globalsLookup sourceGlobals sourceMemory sourceException
+          sourceValue targetState targetException from
+        ⟨hstate, hraise⟩)
+  exact panValuePcCompileCorrectAndResultRel_of_context_code sourceEvaluate
+    targetEvaluate codeRel excpRel exceptionCode globalsLookup program hcompile
+    structs context exceptionRel
+    (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+    (.raised targetState targetException) hresult
+
 end Flapjack

@@ -523,4 +523,85 @@ theorem progSize_seqAssoc_le (pre program : Prog α) :
     decreasing_by all_goals decreasing_trivial
   exact go pre program
 
+/-! `retToTail` does not increase the syntactic size either, so the full
+    `pan_simp` transform `panSimpProg` also admits a linear `progSize` bound. -/
+
+theorem progSize_seqCallRet_le (program : Prog α) :
+    progSize (seqCallRet program) ≤ progSize program := by
+  unfold seqCallRet
+  split
+  · split <;> simp only [progSize] <;> omega
+  · omega
+
+theorem progSize_retToTail_le (program : Prog α) :
+    progSize (retToTail program) ≤ progSize program := by
+  let rec go : (program : Prog α) → progSize (retToTail program) ≤ progSize program
+    | .skip => by simp [retToTail, progSize]
+    | .dec name shape value body => by
+        simp only [retToTail, progSize]
+        have hb := go body
+        omega
+    | .seq first second => by
+        simp only [retToTail]
+        have h := progSize_seqCallRet_le (.seq (retToTail first) (retToTail second))
+        have h1 := go first
+        have h2 := go second
+        simp only [progSize] at h h1 h2 ⊢
+        omega
+    | .ite condition thenBranch elseBranch => by
+        simp only [retToTail, progSize]
+        have ht := go thenBranch
+        have he := go elseBranch
+        omega
+    | .while condition body => by
+        simp only [retToTail, progSize]
+        have hb := go body
+        omega
+    | .call info function arguments => by
+        cases info with
+        | none => simp [retToTail, progSize]
+        | some info =>
+            cases info with
+            | mk returns handlerInfo =>
+                cases handlerInfo with
+                | none => simp [retToTail, progSize]
+                | some handler =>
+                    cases handler with
+                    | mk exception handlerInfo =>
+                        cases handlerInfo with
+                        | mk handlerVar handlerProgram =>
+                            simp only [retToTail, progSize]
+                            have hh := go handlerProgram
+                            omega
+    | .decCall name shape function arguments body => by
+        simp only [retToTail, progSize]
+        have hb := go body
+        omega
+    | .annot tag text => by simp [retToTail, progSize]
+    | .assign kind name value => by simp [retToTail, progSize]
+    | .primitive name operator args => by simp [retToTail, progSize]
+    | .store address value => by simp [retToTail, progSize]
+    | .store32 address value => by simp [retToTail, progSize]
+    | .storeByte address value => by simp [retToTail, progSize]
+    | .break => by simp [retToTail, progSize]
+    | .continue => by simp [retToTail, progSize]
+    | .extCall function configuration configurationLength array arrayLength => by
+        simp [retToTail, progSize]
+    | .raise exception value => by simp [retToTail, progSize]
+    | .return value => by simp [retToTail, progSize]
+    | .shMemLoad size kind name address => by simp [retToTail, progSize]
+    | .shMemStore size address value => by simp [retToTail, progSize]
+    | .tick => by simp [retToTail, progSize]
+    termination_by program => sizeOf program
+    decreasing_by all_goals decreasing_trivial
+  exact go program
+
+theorem progSize_panSimpProg_le (program : Prog α) :
+    progSize (panSimpProg program) ≤ 1 + 4 * progSize program := by
+  simp only [panSimpProg]
+  have h1 := progSize_retToTail_le (seqAssoc (.skip : Prog α) program)
+  have h2 := progSize_seqAssoc_le (.skip : Prog α) program
+  simp only [progSize] at h2
+  omega
+
 end Flapjack

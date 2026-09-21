@@ -783,6 +783,31 @@ theorem genlist_distinct_max' (n m p : Nat) (ys : List Nat)
   have := hys _ hy
   omega
 
+/-- Cake's `zero_not_mem_genlist_offset` (`pan_commonPropsScript.sml:367`): for
+    a list of at most 31 elements, the `GENLIST` of one-based successors has no
+    zero when read as 5-bit words. -/
+theorem zero_not_mem_genlist_offset {α : Type} (t : List α) (h : t.length ≤ 31) :
+    (0 : BitVec 5) ∉
+      (List.range t.length).map (fun i => BitVec.ofNat 5 (i + 1)) := by
+  intro hmem
+  obtain ⟨i, hi, hzero⟩ := List.mem_map.mp hmem
+  rw [List.mem_range] at hi
+  have htoNat : (BitVec.ofNat 5 (i + 1)).toNat = i + 1 := by
+    rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
+  rw [hzero] at htoNat
+  simp at htoNat
+
+/-- Cake's `map_pick_up_first` (`pan_globalsProofScript.sml:2995`): projecting
+    the first component of a quadruple map recovers the mapped first
+    components. -/
+theorem map_fst_map_quad {α β γ δ ε ζ η θ : Type}
+    (l : List (α × β × γ × δ)) (f1 : α → ε) (f2 : β → ζ) (f3 : γ → η)
+    (f4 : δ → θ) :
+    ((l.map (fun p => (f1 p.1, f2 p.2.1, f3 p.2.2.1, f4 p.2.2.2))).map Prod.fst) =
+      (l.map Prod.fst).map f1 := by
+  rw [List.map_map, List.map_map]
+  rfl
+
 /-! Counterpart of Cake's `all_distinct_with_shape_distinct`
     (`cakeml/pancake/semantics/panPropsScript.sml:357`): two distinct members of
     the flat-value split are disjoint.  Cake's extra hypotheses `x <> []` and

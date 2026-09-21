@@ -779,6 +779,56 @@ theorem functions_globalResortDecls (declarations : List (Decl α)) :
     functions_globalDeclsFilter_isGlobal, List.nil_append, List.nil_append,
     List.nil_append, functions_globalDeclsFilter_isFunction]
 
+/-! Counterpart of Cake's `fperm_decs_decls`
+    (`pan_globalsProofScript.sml:2023`): renaming leaves a declaration list
+    with no function declarations unchanged. -/
+theorem globalRenameDecls_eq_self_of_no_functions [BEq String]
+    (source target : FunName) (declarations : List (Decl α))
+    (hnone : declarations.all
+      (fun declaration => !globalDeclIsFunction declaration) = true) :
+    globalRenameDecls source target declarations = declarations := by
+  induction declarations with
+  | nil => simp [globalRenameDecls]
+  | cons declaration declarations ih =>
+      simp only [List.all_cons, Bool.and_eq_true] at hnone
+      obtain ⟨hhead, htail⟩ := hnone
+      have hnotfun : globalDeclIsFunction declaration = false := by
+        simpa using hhead
+      cases declaration with
+      | function declaration =>
+          simp [globalDeclIsFunction] at hnotfun
+      | decl shape name value =>
+          simp [globalRenameDecls, ih htail]
+      | exnDecl exception shape =>
+          simp [globalRenameDecls, ih htail]
+      | name struct fields =>
+          simp [globalRenameDecls, ih htail]
+
+/-! Counterpart of Cake's `fperm_decs_FILTER_is_function`
+    (`pan_globalsProofScript.sml:2032`): renaming commutes with filtering to
+    the function declarations. -/
+theorem globalRenameDecls_filter_function [BEq String]
+    (source target : FunName) (declarations : List (Decl α)) :
+    globalRenameDecls source target
+        (globalDeclsFilter globalDeclIsFunction declarations) =
+      globalDeclsFilter globalDeclIsFunction
+        (globalRenameDecls source target declarations) := by
+  induction declarations with
+  | nil => simp [globalDeclsFilter, globalRenameDecls]
+  | cons declaration declarations ih =>
+      simp only [globalDeclsFilter]
+      by_cases hpred : globalDeclIsFunction declaration = true
+      · rw [if_pos hpred]
+        cases declaration with
+        | function declaration =>
+            simp [globalRenameDecls, globalDeclsFilter, globalDeclIsFunction, ih]
+        | decl shape name value => simp [globalDeclIsFunction] at hpred
+        | exnDecl exception shape => simp [globalDeclIsFunction] at hpred
+        | name struct fields => simp [globalDeclIsFunction] at hpred
+      · rw [if_neg hpred]
+        cases declaration <;>
+          simp_all [globalRenameDecls, globalDeclsFilter, globalDeclIsFunction]
+
 def globalFindFunction [BEq String] (name : FunName) :
     List (Decl α) → Option (FunDecl α)
   | [] => none

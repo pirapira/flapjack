@@ -986,6 +986,8 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @compileProg_call_handler_missing_destination_of_compiled
 
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_handler
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_handler_destination
+#check @evalPanValueFfiClockProg_call_caught_handler_destination
 /-! The `Call_Ret` branch of Cake's `pc_compile_correct`: the
     assignment-producing call with no handler keeps the flattened destination
     slots when `wrap_rt` preserves the shape, and degrades to a tail call
@@ -1139,6 +1141,7 @@ example :
 #check @panValuePcCompileCorrectWithContextCode_compact_with_generalized_flat_global_evaluator_evidence_and_clocked_control
 #check @panValuePcCompileCorrectWithContextCode_compact_with_generalized_flat_global_evaluator_evidence_and_clocked_raised
 #check @panValuePcCompileCorrect_compact_with_generalized_clocked_raised_context_projection
+#check @panValuePcCompileCorrect_compact_with_generalized_clocked_normal_context_projection
 #check @panValuePcCompileCorrect_compact_break
 #check @panValuePcCompileCorrect_compact_continue
 #check @panValuePcCompileCorrect_compact_annot

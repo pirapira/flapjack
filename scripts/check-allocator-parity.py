@@ -53,6 +53,7 @@ FIXTURES = (
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "nested_handler_comparison.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "and_comparison_handler.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "ordinary_subword_offsets.pnk",
+    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00017_nested_and_zero.pnk",
 )
 
 

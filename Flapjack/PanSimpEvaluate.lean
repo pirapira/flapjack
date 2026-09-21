@@ -1418,6 +1418,49 @@ theorem evalPanValueFfiClockProg_panSimpProg_eq_of_seqSkipFragment
         functions baseAddress topAddress bytesInWord commonFuel locals globals memory
         ffi clock program ma c mh hprogram hsourceFuel]
 
+/-- Fuel adequacy of the full `pan_simp` transform on the `Skip`/`Seq`
+    fragment at the `progSize`-based budget `1 + 4 * progSize program`, with no
+    free fuel parameter: this is Cake's `compile_correct_same_state` stated
+    with the structural size bound in place of an explicit common fuel. -/
+theorem evalPanValueFfiClockProg_panSimpProg_eq_of_seqSkipFragment_progSize
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (program : Prog α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (hprogram : PanSimpSeqSkipFragment program) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (1 + 4 * progSize program) locals
+        globals memory ffi clock (panSimpProg program) ma c mh =
+      evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (1 + 4 * progSize program) locals
+        globals memory ffi clock program ma c mh := by
+  have hseq : PanSimpSeqSkipFragment (seqAssoc (.skip : Prog α) program) :=
+    PanSimpSeqSkipFragment_seqAssoc hprogram (.skip : Prog α)
+      PanSimpSeqSkipFragment.skip
+  have hid : retToTail (seqAssoc (.skip : Prog α) program) =
+      seqAssoc (.skip : Prog α) program :=
+    PanSimpSeqSkipFragment_retToTail hseq
+  have hfragP : PanSimpSeqSkipFragment (panSimpProg program) := by
+    simp only [panSimpProg]
+    rw [hid]
+    exact hseq
+  exact evalPanValueFfiClockProg_panSimpProg_eq_of_seqSkipFragment context
+    primitive handler structs functions baseAddress topAddress bytesInWord program
+    (1 + 4 * progSize program) locals globals memory ffi clock ma c mh hprogram
+    (Nat.le_trans (panSimpSeqSkipFuel_le_progSize hfragP)
+      (progSize_panSimpProg_le program))
+    (Nat.le_trans (panSimpSeqSkipFuel_le_progSize hprogram) (by omega))
+
 /-! ## Per-constructor success equations for the clocked evaluator
 
 These are the success-premise building blocks the general fuel-adequacy

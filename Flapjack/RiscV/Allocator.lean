@@ -880,19 +880,14 @@ def wordSsaRenameProgramWithLoops [OfNat α 0] (frames : List WordSsaLoopFrame)
     | .call none target arguments none =>
         let renamedArguments := arguments.map (wordSsaRead state)
         let abiArguments := wordSsaCallAbiRegisters 0 arguments.length
-        let moveArguments :=
-          match abiArguments.zip renamedArguments with
-          | [] => .skip
-          | pairs => .move 1 pairs
+        let moveArguments := .move 1 (abiArguments.zip renamedArguments)
         (state, wordSsaSeq moveArguments
           (.call none target abiArguments none))
     | .call none target arguments
         (some (exception, body, handlerLabel, handlerEntryLabel)) =>
         let arguments := arguments.map (wordSsaRead state)
         let abiArguments := wordSsaCallAbiRegisters 0 arguments.length
-        let moveArguments := match abiArguments.zip arguments with
-          | [] => .skip
-          | pairs => .move 1 pairs
+        let moveArguments := .move 1 (abiArguments.zip arguments)
         (state, wordSsaSeq moveArguments
           (.call none target abiArguments
             (some (exception, body, handlerLabel, handlerEntryLabel))))

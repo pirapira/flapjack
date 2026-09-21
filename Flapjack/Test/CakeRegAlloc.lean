@@ -181,6 +181,19 @@ def allocatorIndexLookupGuard : Bool :=
 
 #guard allocatorIndexLookupGuard
 
+/- The graph/tag hot path uses an index only as a lookup acceleration; its
+   default and physical-register fallbacks must remain Cake's `sp_default`. -/
+def spDefaultIndexParityGuard : Bool :=
+  let entries : NatInfoMap Nat := [(9, 4), (1, 2), (17, 6)]
+  let index := cakeSpDefaultIndex entries
+  cakeSpDefaultIndexed index 9 == Flapjack.RiscV.CakeAlloc.spDefault entries 9 &&
+    cakeSpDefaultIndexed index 1 == Flapjack.RiscV.CakeAlloc.spDefault entries 1 &&
+    cakeSpDefaultIndexed index 17 == Flapjack.RiscV.CakeAlloc.spDefault entries 17 &&
+    cakeSpDefaultIndexed index 8 == Flapjack.RiscV.CakeAlloc.spDefault entries 8 &&
+    cakeSpDefaultIndexed index 7 == Flapjack.RiscV.CakeAlloc.spDefault entries 7
+
+#guard spDefaultIndexParityGuard
+
 def extractColorOrderGuard : Bool :=
   let tree : WordClashTree := .delta [9, 1] [17]
   let bij := cakeMkBij tree

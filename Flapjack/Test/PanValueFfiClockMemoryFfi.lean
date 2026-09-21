@@ -78,4 +78,15 @@ def clockedTimeoutProgramAccepted : Bool :=
 
 #guard clockedTimeoutProgramAccepted
 
+def clockedReturnedProgramAccepted : Bool :=
+  match clockedMemoryFfiResult with
+  | some (.control (.returned locals _ memory _ [.word value]), 19) =>
+      locals "x" = none && value == 8 &&
+        match memory 200 with
+        | some (.word stored) => stored == 8
+        | _ => false
+  | _ => false
+
+#guard clockedReturnedProgramAccepted
+
 end Flapjack

@@ -260,6 +260,15 @@ example :
         .add 4 4 31, .sltu 31 4 31, .or 5 5 31] := by
   decide
 
+/- Cake's four-register AddCarry carrier uses the carry register as both
+   input and output, unlike Pancake's five-register primitive above. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.cakeAddCarry 4 6 7 8))) [] 0]⟩ =
+      some [.sltu 31 0 8, .add 4 6 7, .sltu 8 4 7,
+        .add 4 4 31, .sltu 31 4 31, .or 8 8 31] := by
+  decide
+
 example :
     compileStackProgramToRiscV (width := 64) { services := [] }
       stackRemoveRiscVConfig 2 3

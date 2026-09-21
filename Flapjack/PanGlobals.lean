@@ -617,6 +617,15 @@ theorem not_is_function (declaration : Decl α) :
   ⟨isName_not_function declaration, isDecl_not_function declaration,
     isExnDecl_not_function declaration⟩
 
+/-! Counterpart of Cake's `decl_distinct`
+    (`pan_globalsProofScript.sml:2535`): a value declaration is disjoint
+    from the name, function, and exception declaration classes. -/
+theorem decl_distinct (declaration : Decl α) :
+    (isDecl declaration && isName declaration) = false ∧
+    (isDecl declaration && globalDeclIsFunction declaration) = false ∧
+    (isDecl declaration && isExnDecl declaration) = false := by
+  cases declaration <;> simp [isDecl, isName, isExnDecl, globalDeclIsFunction]
+
 def globalFindFunction [BEq String] (name : FunName) :
     List (Decl α) → Option (FunDecl α)
   | [] => none

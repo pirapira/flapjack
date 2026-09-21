@@ -125,4 +125,19 @@ def notIsFunctionGuard : Bool :=
 #eval notIsFunctionGuard
 #guard notIsFunctionGuard
 
+/-! Counterpart of Cake's `decl_distinct` (`pan_globalsProofScript.sml:2535`). -/
+def declDistinctGuard : Bool :=
+  let declarations : List (Decl Nat) :=
+    [.function
+      { name := "f", inline := false, exported := false, params := [],
+        body := .skip, returnShape := .one },
+     .name "S" [], .exnDecl "E" (.named "T"), .decl .one "h" (.const 9)]
+  declarations.all (fun declaration =>
+    !(isDecl declaration && isName declaration) &&
+    !(isDecl declaration && globalDeclIsFunction declaration) &&
+    !(isDecl declaration && isExnDecl declaration))
+
+#eval declDistinctGuard
+#guard declDistinctGuard
+
 end Flapjack.Test.PanGlobalsDecShapesParity

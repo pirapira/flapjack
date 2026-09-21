@@ -111,6 +111,21 @@ theorem list_mapM_eq_some_of_eq_some {α β : Type} (f g : α → Option β) :
                     (fun z hz' b hb => hfg z (by simp [hz']) b hb)]
               rfl
 
+/-- Cake's `opt_mmap_flookup_update` (`pan_commonPropsScript.sml:156`):
+    mapping a lookup over a list that does not mention the updated name is
+    unchanged by the update. -/
+theorem list_mapM_updatePanValueMap_not_mem {γ : Type} [BEq γ] [LawfulBEq γ]
+    {α : Type} (values : γ → Option α) (xs : List γ) (ys : List α)
+    (name : γ) (value : α)
+    (h : xs.mapM (fun x => values x) = some ys)
+    (hnotmem : name ∉ xs) :
+    xs.mapM (fun x => updatePanValueMap values name value x) = some ys := by
+  refine list_mapM_eq_some_of_eq_some (α := γ) (β := α) (fun x => values x)
+    (fun x => updatePanValueMap values name value x) xs ys h ?_
+  intro x hx y hy
+  have hne : x ≠ name := fun heq => hnotmem (heq ▸ hx)
+  simp [updatePanValueMap, beq_iff_eq, hne, hy]
+
 /-- Cake's `OPT_MMAP_NONE` (`pan_simpProofScript.sml:500`): a failing map has
     a failing element. -/
 theorem list_mapM_eq_none_exists {α β : Type} (f : α → Option β) (xs : List α)

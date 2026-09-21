@@ -1191,4 +1191,12 @@ example :
 #check @panValuePcCompileCorrect_compact_of_state_and_control_safe_induction
 #check @panValuePcCompileCorrect_of_context_code_and_clocked_decCall_returned
 
+#check @panValuePcResultRel_normal_iff
+#check @panValuePcResultRel_returned_iff
+#check @panValuePcResultRel_broke_iff
+#check @panValuePcResultRel_continued_iff
+#check @panValuePcResultRel_timeout_iff
+#check @panValuePcResultRel_finalFfi_iff
+#check @panValuePcResultRel_raised_iff
+
 end Flapjack.Test.PanValuePcControlSafety

@@ -632,6 +632,29 @@ theorem evalPanValueProgram_of_declarations_and_raised_call_with_exception_state
   · exact evalPanValueDeclarations_exceptions initial state declarations memoryAccess
       hdeclarations
 
+/-! Package the public declaration facts needed by the raised evaluator: the
+    collected struct context makes the exception payload shape well formed, and
+    the resulting state carries Cake's exact exception table equation. -/
+theorem evalPanValueDeclarations_exception_state_evidence
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state state' : PanValueProgramState α) (declarations : List (Decl α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    {exception : ExceptionId} {shape : Shape}
+    (hmem : (.exnDecl exception shape : Decl α) ∈ declarations)
+    (heval : evalPanValueDeclarations state declarations memoryAccess = some state') :
+    ∃ structs : StructContext,
+      collectPanValueStructs declarations state.structs = some structs ∧
+        state'.exceptions = panExceptionEntries declarations ++ state.exceptions ∧
+        isWfShape structs shape = true := by
+  obtain ⟨structs, hcollect, hwf⟩ :=
+    evalPanValueDeclarations_exceptions_wf state state' declarations memoryAccess
+      heval hmem
+  exact ⟨structs, hcollect,
+    evalPanValueDeclarations_exceptions state state' declarations memoryAccess heval,
+    hwf⟩
+
 /-! Cake's `evaluate_decls_only_exn_decls`
     (`cakeml/pancake/semantics/panPropsScript.sml:1436`): when every
     declaration is an exception declaration, successful evaluation changes

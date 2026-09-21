@@ -701,6 +701,39 @@ theorem evalPanValueDeclarationsWithStructs_only_exn_decls
               simp [panExceptionEntries_cons, List.append_assoc, hstructs]
             · simp [hexists, hwf] at heval
 
+/-! Cake's `evaluate_decls_only_exn_decls` at the public declaration entry
+    point.  Collecting struct names is a no-op for an exception-only list, so
+    the stronger state equation can be exposed without a struct premise. -/
+theorem evalPanValueDeclarations_only_exn_decls
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state state' : PanValueProgramState α)
+    (declarations : List (Decl α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (hall : declarations.all isExnDecl = true)
+    (heval : evalPanValueDeclarations state declarations memoryAccess = some state') :
+    state' = { state with
+      exceptions := panExceptionEntries declarations ++ state.exceptions } := by
+  simp only [evalPanValueDeclarations] at heval
+  cases hcollect : collectPanValueStructs declarations state.structs with
+  | none => simp [hcollect] at heval
+  | some structs =>
+      simp only [hcollect] at heval
+      have hnames : declarations.all (fun declaration => !isName declaration) = true := by
+        refine List.all_eq_true.mpr (fun declaration hmem => ?_)
+        have h := List.all_eq_true.mp hall declaration hmem
+        cases declaration <;> simp_all [isExnDecl, isName]
+      have hstructs : structs = state.structs := by
+        have hno := collectPanValueStructs_of_no_names state.structs declarations hnames
+        rw [hcollect] at hno
+        exact Option.some.inj hno
+      subst hstructs
+      have hmain := evalPanValueDeclarationsWithStructs_only_exn_decls
+        state.structs { state with structs := state.structs } state' declarations
+        memoryAccess hall rfl heval
+      simpa using hmain
+
 /-! Cake's `evaluate_decls_names`
     (`cakeml/pancake/semantics/panPropsScript.sml:1552`): a declaration list
     consisting only of structure names is skipped by declaration evaluation. -/

@@ -1700,6 +1700,92 @@ theorem evalPanValueFfiClockProg_dec_some
       some (panValueFfiClockRestoreLocal name (locals name) outcome, nextClock) := by
   simp [evalPanValueFfiClockProg, hvalue, hmatch, hbody]
 
+/-- `progSize`-indexed form of `evalPanValueFfiClockProg_dec_some`: the body
+    is evaluated at its own `progSize` budget, so a declaration succeeds at
+    `progSize (.dec name shape value body)`. -/
+theorem evalPanValueFfiClockProg_dec_some_progSize
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (name : VarName) (shape : Shape) (value : Exp α) (body : Prog α)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (valueResult : PanValue α)
+    (outcome : PanValueFfiClockOutcome α σ) (nextClock : Nat)
+    (hvalue : evalPanValueExp structs locals globals memory baseAddress topAddress
+        bytesInWord value (memoryAccess := ma) = some valueResult)
+    (hmatch : panShapeMatches (panValueShape structs valueResult) shape = true)
+    (hbody : evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (progSize body)
+        (updatePanValueMap locals name valueResult) globals memory ffi clock body
+        (memoryAccess := ma) (contracts := c) (memoryHandler := mh) =
+      some (outcome, nextClock)) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (progSize (.dec name shape value body))
+        locals globals memory ffi clock
+        (.dec name shape value body) (memoryAccess := ma) (contracts := c)
+        (memoryHandler := mh) =
+      some (panValueFfiClockRestoreLocal name (locals name) outcome, nextClock) := by
+  have hsize : progSize (.dec name shape value body) = progSize body + 1 := by
+    simp only [progSize]
+    omega
+  rw [hsize]
+  exact evalPanValueFfiClockProg_dec_some context primitive handler structs functions
+    baseAddress topAddress bytesInWord (progSize body) locals globals memory ffi clock
+    name shape value body ma c mh valueResult outcome nextClock hvalue hmatch hbody
+
+/-- Declaration adequacy at the call-aware budget: the declaration reserves
+    `1 + progCallFuel callBudget body`, so the body is evaluated at
+    `progCallFuel callBudget body`. -/
+theorem evalPanValueFfiClockProg_dec_some_progCallFuel
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (name : VarName) (shape : Shape) (value : Exp α) (body : Prog α)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (valueResult : PanValue α)
+    (outcome : PanValueFfiClockOutcome α σ) (nextClock : Nat)
+    (hvalue : evalPanValueExp structs locals globals memory baseAddress topAddress
+        bytesInWord value (memoryAccess := ma) = some valueResult)
+    (hmatch : panShapeMatches (panValueShape structs valueResult) shape = true)
+    (hbody : evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (progCallFuel callBudget body)
+        (updatePanValueMap locals name valueResult) globals memory ffi clock body
+        (memoryAccess := ma) (contracts := c) (memoryHandler := mh) =
+      some (outcome, nextClock)) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (progCallFuel callBudget (.dec name shape value body))
+        locals globals memory ffi clock
+        (.dec name shape value body) (memoryAccess := ma) (contracts := c)
+        (memoryHandler := mh) =
+      some (panValueFfiClockRestoreLocal name (locals name) outcome, nextClock) := by
+  have hsize : progCallFuel callBudget (.dec name shape value body) =
+      progCallFuel callBudget body + 1 := by
+    simp only [progCallFuel]
+    omega
+  rw [hsize]
+  exact evalPanValueFfiClockProg_dec_some context primitive handler structs functions
+    baseAddress topAddress bytesInWord (progCallFuel callBudget body) locals globals memory
+    ffi clock name shape value body ma c mh valueResult outcome nextClock hvalue hmatch hbody
+
 theorem evalPanValueFfiClockProg_ite_true_some
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

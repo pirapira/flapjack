@@ -9,6 +9,7 @@ import Flapjack.CrepeSourceWordRecordRaiseCorrectness
 import Flapjack.CrepeProgramExtCallCorrectness
 import Flapjack.PanValueFfiClockProjection
 import Flapjack.CrepeDeclarationRestorationRelation
+import Flapjack.CrepeRaisedCallInversion
 
 /-!
 Bridge from the existing stateful source-to-Crep program correctness contract
@@ -30064,5 +30065,59 @@ theorem panValueCrepProgramStateCorrect_and_controlSafe_call_handler_raise_of_re
   cases hinfo
   exact PanValueProgNotBrokeContinued_raise primitive sourceHandler structs
     sourceFunctions baseAddress topAddress bytesInWord exception expression
+
+/-! An arbitrary context-coded correctness proof can be paired with the exact
+    Crep caught-handler call equation.  The callee and handler evaluator
+    witnesses remain explicit, so this does not turn the handler branch into an
+    opaque target-result premise. -/
+theorem panValuePcCompileCorrectWithContextCode_of_compact_and_caught_call
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (program : Prog α)
+    (sourceEvaluate : PanValuePcEvaluator α)
+    (targetEvaluate : CrepPcEvaluator α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (hcompact : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (functions : List (CompiledFunction α))
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (caller : CrepState α) (destinations : List Nat)
+    (caught : α) (handler : CrepProg α)
+    (function : FunName) (arguments : List (CrepExp α))
+    (values : List α) (parameters : List Nat) (body : CrepProg α)
+    (calleeLocals : Nat → Option α) (callee : CrepState α)
+    (calleeException : α) (result : CrepControlResult α)
+    (hvalues : evalCrepFullExpsState caller baseAddress topAddress arguments =
+      some values)
+    (hlookup : lookupCompiledFunction function functions = some (parameters, body))
+    (hassign : assignCrepValues (fun _ => none) parameters values =
+      some calleeLocals)
+    (hcallee : evalCrepFullProgState functions primitive ffi sharedMem
+      baseAddress topAddress fuel
+      (CrepState.mk calleeLocals caller.memory caller.globals) body =
+      some (.raised callee calleeException))
+    (hcaught : (caught == calleeException) = true)
+    (hhandler : evalCrepFullProgState functions primitive ffi sharedMem
+      baseAddress topAddress fuel
+      (CrepState.mk caller.locals callee.memory callee.globals) handler =
+      some result) :
+    PanValuePcCompileCorrectWithContextCode sourceEvaluate targetEvaluate
+      codeRel excpRel exceptionCode globalsLookup program ∧
+    evalCrepFullCallState functions primitive ffi sharedMem
+      baseAddress topAddress (fuel + 1) caller
+      (some (destinations, some (caught, handler))) function arguments =
+      some result := by
+  have hcall := evalCrepFullCallState_raised_handler_of_callee
+    functions primitive ffi sharedMem baseAddress topAddress fuel caller
+    destinations caught handler function arguments values parameters body
+    calleeLocals callee calleeException hvalues hlookup hassign hcallee hcaught
+  exact ⟨hcompact, by rw [hcall]; exact hhandler⟩
 
 end Flapjack

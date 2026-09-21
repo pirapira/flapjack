@@ -35513,4 +35513,45 @@ theorem panValuePcCompileCorrectAndClockedRaisedResultRel_of_context_code
       (.raised clockLocals clockGlobals clockMemory clockException clockValue)
       (.raised clockTargetState clockTargetException) hclockResult⟩
 
+/-! Consume the explicit Cake raised-data package at the ordinary Pc boundary.
+    This keeps spill, exception-code, global-lookup, and shape evidence
+    visible while avoiding a second hand-built result relation. -/
+theorem panValuePcCompileCorrectAndRaisedResultRel_of_hraise_data
+    [BEq α] [LawfulBEq α] [OfNat α 0] [Add α]
+    (sourceEvaluate : PanValuePcEvaluator α)
+    (targetEvaluate : CrepPcEvaluator α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (program : Prog α)
+    (hcompile : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+    (sourceValue : PanValue α) (targetState : CrepState α)
+    (targetException : α)
+    (hraiseData : panValuePcRaisedHraiseData exceptionCode globalsLookup
+      structs context exceptionRel sourceLocals sourceGlobals sourceMemory
+      sourceException sourceValue targetState targetException ∧
+      lookupInfo sourceException context.exceptions = some targetException) :
+    PanValuePcCompileCorrect sourceEvaluate targetEvaluate codeRel excpRel
+      exceptionCode globalsLookup program ∧
+    panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
+      (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+      (.raised targetState targetException) := by
+  have hstate : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory targetState := hraiseData.1.1
+  have hraise := panValuePcExceptionResultRelWithContextCode_of_raised_hraise_data
+    structs context exceptionRel exceptionCode globalsLookup sourceLocals
+    sourceGlobals sourceMemory sourceException sourceValue targetState
+    targetException hraiseData
+  exact panValuePcCompileCorrectAndRaisedResultRel_of_context_code
+    sourceEvaluate targetEvaluate codeRel excpRel exceptionCode globalsLookup
+    program hcompile structs context exceptionRel sourceLocals sourceGlobals
+    sourceMemory sourceException sourceValue targetState targetException hstate
+    hraise
+
 end Flapjack

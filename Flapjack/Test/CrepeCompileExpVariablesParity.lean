@@ -19,4 +19,13 @@ theorem genlist_vmax_distinct_lists_compiled_exps_fixture :
   intro name shape names hlookup varName hvar
   simp [emptyContext, lookupInfo] at hlookup
 
+/-! Cake's `compile_exp_not_mem_load_glob` regression: localized expression
+    compilation cannot manufacture a global-load node. -/
+theorem compileExp_not_mem_loadGlob_fixture :
+    CrepExp.loadGlob (3 : Nat) ∉
+      (compileExp emptyContext
+        (Exp.op .add [.const 1, .const 2])).1.flatMap crepExps := by
+  exact compileExp_not_mem_loadGlob emptyContext
+    (.op .add [.const 1, .const 2]) 3
+
 end Flapjack.Test.CrepeCompileExpVariablesParity

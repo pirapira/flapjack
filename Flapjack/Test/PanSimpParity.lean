@@ -2,6 +2,9 @@ import Flapjack.PanSimp
 import Flapjack.PanSimpEvaluate
 import Flapjack.PanGlobals
 import Flapjack.PanValueFfiClockShiftFull
+import Flapjack.PanValueFfiEventMonotonicity
+import Flapjack.PanValueFfiClockShift
+import Flapjack.PanValueFfiClockCorrectness
 
 namespace Flapjack.Test.PanSimpParity
 
@@ -2661,6 +2664,16 @@ example : PanValueFfiClockNormalAdequateProgFromFloor 3 3 evaluatorContext
 #check @Flapjack.evalPanValueFfiClock_shift
 #check @Flapjack.evalPanValueFfiClock_shift_panResultEvents
 #check @Flapjack.callFfi_return_ioEvents_prefix
+#check @Flapjack.panValueFfiSharedLoad_ioEvents_prefix
+#check @Flapjack.panValueFfiSharedStore_ioEvents_prefix
+#check @Flapjack.panValueFfiExtCall_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProg_while_zero_shift
+#check @Flapjack.evalPanValueFfiClockProg_while_normal_shift_step
+#check @Flapjack.evalPanValueFfiClockProg_while_broke_shift_step
+#check @Flapjack.evalPanValueFfiClockProg_while_continued_shift_step
+#check @Flapjack.evalPanValueFfiClockProgram_of_declarations_and_raised_call_cross_clock
+#check @Flapjack.evalPanValueFfiClockCall_raised_no_handler_shift_step
+#check @Flapjack.evalPanValueFfiClockProg_extCall_finalFfi_cross_clock
 
 example : decPanClock (5 + 3) = decPanClock 5 + 3 := decPanClock_add 5 3 (by decide)
 

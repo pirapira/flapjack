@@ -116,7 +116,11 @@ def cakeWordFrameSlotsOracleExact : Bool :=
     cakeWordFrameSlots fourSpills (List.range 23)
       (WordProg.skip : WordProg (RiscV.Word 64)) == 4 &&
     cakeWordFrameSlots emptyAllocation (List.range 25)
-      (WordProg.skip : WordProg (RiscV.Word 64)) == 3
+      (WordProg.skip : WordProg (RiscV.Word 64)) == 3 &&
+    cakeWordFrameSlots emptyAllocation (List.range 26)
+      (WordProg.skip : WordProg (RiscV.Word 64)) == 4 &&
+    cakeWordFrameSlots oneSpill (List.range 26)
+      (WordProg.skip : WordProg (RiscV.Word 64)) == 4
 
 #guard cakeWordFrameSlotsOracleExact
 

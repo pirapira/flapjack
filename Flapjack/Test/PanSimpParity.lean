@@ -371,6 +371,50 @@ example : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorH
           evaluatorHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none) (fun _ => none)
           evaluatorFfi 1 "tag" "text" none none none))
 
+/-- `progSize`-indexed `Call` fuel adequacy: one structural step covers the node. -/
+example (outcome : PanValueFfiClockOutcome Nat Unit) (nextClock : Nat)
+    (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8
+      (progSize (.call none "f" ([] : List (Exp Nat))) - 1) (fun _ => none)
+      (fun _ => none) (fun _ => none) evaluatorFfi 1 none "f" [] =
+      some (outcome, nextClock)) :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+      [] [] 0 0 8 (progSize (.call none "f" ([] : List (Exp Nat)))) (fun _ => none)
+      (fun _ => none) (fun _ => none) evaluatorFfi 1 (.call none "f" []) none none none =
+    some (outcome, nextClock) := by
+  exact evalPanValueFfiClockProg_call_some_progSize evaluatorContext (fun _ _ => none)
+    evaluatorHandler [] [] 0 0 8 (fun _ => none) (fun _ => none) (fun _ => none)
+    evaluatorFfi 1 none "f" [] outcome nextClock none none none hcall
+
+/-- `progSize`-indexed returning `DecCall` fuel adequacy. -/
+example
+    (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 (progSize (.annot "tag" "text" : Prog Nat))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1 none "f" [] =
+      some (.control (.returned (fun _ => none) (fun _ => none) (fun _ => none)
+        evaluatorFfi [.word 5]), 1)) :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+      [] [] 0 0 8
+      (progSize (.decCall "x" .one "f" [] (.annot "tag" "text" : Prog Nat)))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+      (.decCall "x" .one "f" [] (.annot "tag" "text")) none none none =
+    some (panValueFfiClockRestoreLocal "x" none
+      (.control (.normal (updatePanValueMap (fun _ => none) "x" (.word 5))
+        (fun _ => none) (fun _ => none) evaluatorFfi)), 1) := by
+  exact evalPanValueFfiClockProg_decCall_returned_some_progSize evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 (fun _ => none) (fun _ => none)
+    (fun _ => none) evaluatorFfi 1 "x" .one "f" [] (.annot "tag" "text")
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi (.word 5) 1
+    (.control (.normal (updatePanValueMap (fun _ => none) "x" (.word 5))
+      (fun _ => none) (fun _ => none) evaluatorFfi)) 1 none none none hcall
+    (by simp [panValueShape, panShapeMatches])
+    (by
+      simpa only [progSize] using
+        (evalPanValueFfiClockProg_annot_some evaluatorContext (fun _ _ => none)
+          evaluatorHandler [] [] 0 0 8 0
+          (updatePanValueMap (fun _ => none) "x" (.word 5)) (fun _ => none)
+          (fun _ => none) evaluatorFfi 1 "tag" "text" none none none))
+
 /-- Lifting a successful `Call` outcome through the clocked evaluator. -/
 example (outcome : PanValueFfiClockOutcome Nat Unit) (nextClock : Nat)
     (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)
@@ -479,6 +523,53 @@ example :
     some (.timeout (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi, 0) := by
   exact evalPanValueFfiClockProg_while_timeout_some evaluatorContext
     (fun _ _ => none) evaluatorHandler [] [] 0 0 8 1 (fun _ => none)
+    (fun _ => none) (fun _ => none) evaluatorFfi 0 (.const 5) (.break : Prog Nat)
+    none none none 5 (by simp [evalPanValueExp]) (by decide) (by decide)
+
+/-- The zero-condition `While` succeeds at its structural `progSize` budget. -/
+example :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+      [] [] 0 0 8 (progSize (.while (.const 0) (.break : Prog Nat)))
+      (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi 3 (.while (.const 0) (.break : Prog Nat)) none none none =
+    some (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi), 3) := by
+  exact evalPanValueFfiClockProg_while_zero_some_progSize evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 (fun _ => none)
+    (fun _ => none) (fun _ => none) evaluatorFfi 3 (.const 0) (.break : Prog Nat)
+    none none none 0 (by simp [evalPanValueExp]) (by decide)
+
+/-- A `break` inside the body still returns normally at the structural budget. -/
+example
+    (nextLocals nextGlobals : VarName → Option (PanValue Nat))
+    (nextMemory : Nat → Option (PanValue Nat)) (nextFfi : FfiState Unit)
+    (bodyClock : Nat)
+    (hbody : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 (progSize (.break : Prog Nat))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 0
+      (.break : Prog Nat) none none none =
+      some (.control (.broke nextLocals nextGlobals nextMemory nextFfi),
+        bodyClock)) :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 (progSize (.while (.const 5) (.break : Prog Nat)))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+      (.while (.const 5) (.break : Prog Nat)) none none none =
+    some (.control (.normal nextLocals nextGlobals nextMemory nextFfi), bodyClock) := by
+  exact evalPanValueFfiClockProg_while_broke_some_progSize evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 (fun _ => none)
+    (fun _ => none) (fun _ => none) evaluatorFfi 1 (.const 5) (.break : Prog Nat)
+    none none none 5 nextLocals nextGlobals nextMemory nextFfi bodyClock
+    (by simp [evalPanValueExp]) (by decide) (by decide) hbody
+
+/-- The exhausted-clock timeout also lives at the structural `progSize` budget. -/
+example :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+      [] [] 0 0 8 (progSize (.while (.const 5) (.break : Prog Nat)))
+      (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi 0 (.while (.const 5) (.break : Prog Nat)) none none none =
+    some (.timeout (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi, 0) := by
+  exact evalPanValueFfiClockProg_while_timeout_some_progSize evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 (fun _ => none)
     (fun _ => none) (fun _ => none) evaluatorFfi 0 (.const 5) (.break : Prog Nat)
     none none none 5 (by simp [evalPanValueExp]) (by decide) (by decide)
 
@@ -849,6 +940,40 @@ def functionsCompileProgParity : Bool :=
 
 #guard functionsCompileProgParity
 
+/-! Counterpart of Cake's `el_compile_prog_el_prog_eq`
+    (`pan_simpProofScript.sml:1047-1061`): an entry of the compiled function
+    table still comes from the source table, because `pan_simp` only rewrites
+    bodies.  The fixture uses a `.skip` body so the transformed body is the
+    source body. -/
+def elCompileProgDeclsFixture : List (Decl Nat) :=
+  [.function
+     { name := "f", inline := false, exported := false, params := [],
+       body := .skip, returnShape := .one }]
+
+theorem pan_simp_compile_prog_el_compile_prog_el_prog_eq :
+    (functions elCompileProgDeclsFixture)[0]? =
+      some ("f", [], .skip, .one) := by
+  have hentry : (functions (panSimpDecls elCompileProgDeclsFixture))[0]? =
+      some ("f", [], .skip, .one) := by
+    rw [functions_panSimpDecls, List.getElem?_map]
+    rw [show (functions elCompileProgDeclsFixture)[0]? =
+      some ("f", [], .skip, .one) from rfl]
+    simp only [Option.map_some, panSimpProg_skip]
+  exact el_functions_panSimpDecls_eq
+    (declarations := elCompileProgDeclsFixture)
+    (n := 0) (start := "f") (pprog := .skip) (p := .skip)
+    (rshape := .one) hentry (by decide) (by decide) (by rfl)
+
+def functionsElCompileParity : Bool :=
+  match (functions elCompileProgDeclsFixture)[0]? with
+  | some (name, params, body, returnShape) =>
+      (name == "f") && params.isEmpty &&
+        (match body with | .skip => true | _ => false) &&
+        (match returnShape with | .one => true | _ => false)
+  | _ => false
+
+#guard functionsElCompileParity
+
 def parityGuard : Bool :=
   isSkip (smartSeq (.skip : Prog Nat) .skip) &&
     isTick (smartSeq (.skip : Prog Nat) .tick) &&
@@ -887,7 +1012,8 @@ def parityGuard : Bool :=
             (.call (some (some (.local, "r"), none)) "f" [])
             (.return (.var .local "r")) : Prog Nat)) &&
     functionsCompileProgParity &&
-    functionsNamesNodupParity
+    functionsNamesNodupParity &&
+    functionsElCompileParity
 
 #eval parityGuard
 #guard parityGuard
@@ -907,6 +1033,7 @@ def runChecks : IO Bool := do
   IO.println "PASS pan_simp clocked transformed result common-fuel Cake equation"
   IO.println "PASS pan_simp functions_compile_prog Cake function-table equation"
   IO.println "PASS pan_simp first_compile_prog_all_distinct Cake name-distinctness preservation"
+  IO.println "PASS pan_simp el_compile_prog_el_prog_eq Cake compiled-table entry provenance"
   pure parityGuard
 
 end Flapjack.Test.PanSimpParity

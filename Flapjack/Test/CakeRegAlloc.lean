@@ -962,8 +962,12 @@ def parityGuard : Bool :=
     && cakeBijSetPatriciaGuard
     && coalesceParentCompressionGuard
     && prefreezeTransitionGuard
+<<<<<<< HEAD
     && sortMovesTailSplitGuard && freezeWorklistTransitionGuard &&
       doSpillEqualDegreeGuard
+=======
+    && sortMovesTailSplitGuard
+>>>>>>> origin/compiler-execution-parity-next-18
 
 /- The aggregate guard is intentionally disabled while the allocator port is
    being aligned with CakeML.  Individual oracle cases remain available to
@@ -999,8 +1003,12 @@ def runChecks : IO Bool := do
     stExMaxDegOrderGuard, respillWorklistGuard,
     respillBelowThresholdGuard, simplifyBatchGuard, decDegreeOutOfDimGuard,
     coalesceWorklistSuccessGuard, coalesceParentCompressionGuard,
+<<<<<<< HEAD
     prefreezeTransitionGuard, freezeWorklistTransitionGuard,
     doSpillEqualDegreeGuard]
+=======
+    prefreezeTransitionGuard]
+>>>>>>> origin/compiler-execution-parity-next-18
   let names := [
     "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
@@ -1042,7 +1050,11 @@ def runChecks : IO Bool := do
     "respill below-threshold no-op", "do_simplify batch ordering",
     "dec_degree out-of-dimension no-op",
     "do_coalesce success transition", "do_prefreeze transition",
+<<<<<<< HEAD
     "do_freeze transition", "do_spill equal-degree transition"]
+=======
+    "do_freeze transition"]
+>>>>>>> origin/compiler-execution-parity-next-18
   let mut all := true
   for (name, result) in names.zip results do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"

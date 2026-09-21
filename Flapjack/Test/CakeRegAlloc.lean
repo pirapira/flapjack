@@ -377,6 +377,64 @@ def pushStackGuard : Bool :=
 
 #guard pushStackGuard
 
+/- Cake's worklist adders prepend their input lists without changing other
+   state, matching the array-state updates in reg_allocScript.sml. -/
+def worklistPrependGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      simpWl := [5]
+      spillWl := [6]
+      freezeWl := [7]
+      unavailMovesWl := [(9, (1, 2))] }
+  let simp := cakeAddSimpWl [1, 2] state
+  let spill := cakeAddSpillWl [3, 4] state
+  let freeze := cakeAddFreezeWl [8, 9] state
+  let unavailable := cakeAddUnavailMovesWl [(10, (3, 4))] state
+  simp.simpWl == [1, 2, 5] &&
+    spill.spillWl == [3, 4, 6] &&
+    freeze.freezeWl == [8, 9, 7] &&
+    unavailable.unavailMovesWl == [(10, (3, 4)), (9, (1, 2))]
+
+#guard worklistPrependGuard
+
+/- Cake's `extend_clique` skips members already live, prepends newly discovered
+   members to the live list, and links them to the existing clique. -/
+def extendCliqueGuard : Bool :=
+  let base := cakeCliqueInsertEdge [1, 2] (CakeNodeMap.ofSize 5)
+  let (out, live) := cakeExtendClique [2, 3] [1, 2] base
+  live == [3, 1, 2] &&
+    out.get 1 == some [3, 2] &&
+    out.get 2 == some [3, 1] &&
+    out.get 3 == some [2, 1]
+
+#guard extendCliqueGuard
+
+/- Cake's split_degree selects low-degree uncoalesced allocation nodes,
+   rejects high-degree/coalesced nodes, and keeps out-of-dimension nodes on
+   the worklist side. -/
+def splitDegreeGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      degrees := CakeNodeMap.ofNatInfoMap 4 [(0, 1), (1, 3), (2, 0)]
+      coalesced := CakeNodeMap.ofNatInfoMap 4 [(2, 1)] }
+  cakeSplitDegree state 4 2 0 &&
+    !cakeSplitDegree state 4 2 1 &&
+    !cakeSplitDegree state 4 2 2 &&
+    cakeSplitDegree state 4 2 4
+
+#guard splitDegreeGuard
+
+/- Cake's `smerge` merges descending priority lists and takes the left head
+   on equal priorities, preserving the tail order used by revive_moves. -/
+def smergePriorityGuard : Bool :=
+  cakeSMerge
+      [(7, (1, 2)), (5, (3, 4))]
+      [(7, (5, 6)), (6, (7, 8))] ==
+    [(7, (1, 2)), (7, (5, 6)), (6, (7, 8)), (5, (3, 4))] &&
+  cakeSMerge [] [(4, (9, 10))] == [(4, (9, 10))]
+
+#guard smergePriorityGuard
+
 
 /-! ## IRC graph construction guards
 
@@ -1293,6 +1351,8 @@ def parityGuard : Bool :=
     assignAtempsHeuristicThenRangeGuard && sortedInsertMemGuard &&
     firstMatchColGuard && assignStempsTraversalGuard && insertEdgeGuard &&
     cliqueInsertEdgeGuard && decDegreeNeighboursGuard && pushStackGuard &&
+    worklistPrependGuard && extendCliqueGuard && splitDegreeGuard &&
+    smergePriorityGuard &&
     resetMoveRelatedGuard && removeColoursGuard
     && mapUpdateBoundedGuard && sourceSpillCostKeyGuard &&
     sourceSpillCostRoundTripGuard && sourceMovePhysicalFallbackGuard
@@ -1352,7 +1412,10 @@ def runChecks : IO Bool := do
     respillBelowThresholdGuard, simplifyBatchGuard, decDegreeOutOfDimGuard,
     decDegreeOutOfDimNoOpGuard, coalesceWorklistSuccessGuard,
     freezeWorklistTransitionGuard, coalesceParentCompressionGuard,
-    prefreezeTransitionGuard, doSpillEqualDegreeGuard]
+    prefreezeTransitionGuard, doSpillEqualDegreeGuard,
+    doStepSimplifyPriorityGuard, unspillTransitionGuard,
+    worklistPrependGuard, extendCliqueGuard, splitDegreeGuard,
+    smergePriorityGuard]
   let names := [
     "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
@@ -1404,7 +1467,8 @@ def runChecks : IO Bool := do
     "dec_degree out-of-dimension no-op with outside adjacency",
     "do_coalesce success transition", "do_freeze transition",
     "do_prefreeze transition", "do_spill equal-degree transition",
-    "do_step simplify priority", "unspill transition"]
+    "do_step simplify priority", "unspill transition", "worklist prepend",
+    "extend clique", "split degree", "smerge priority"]
   let mut all := true
   for (name, result) in names.zip results do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"

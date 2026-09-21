@@ -743,4 +743,48 @@ example : True := by
     ([] : StructContext) evalRelState resortDecls none hall
   trivial
 
+/-- Focused regression for the `filter_not_mem_self` counterpart. -/
+theorem filter_not_mem_self_fixture :
+    ([1, 2, 3] : List Nat).filter (fun x => decide (x ∉ [1, 2, 3])) = [] :=
+  filter_not_mem_self [1, 2, 3]
+
+/-- Focused regression for the `MAP_SOME_MEM_lemma` counterpart. -/
+theorem map_flatten_eq_map_some_flatten_fixture :
+    ∃ y, (fun n : Nat => if n == 4 then none else some (n + 1)) 3 = some y ∧
+      y ∈ ([4, 6] : List Nat) :=
+  map_flatten_eq_map_some_flatten
+    (fun n : Nat => if n == 4 then none else some (n + 1))
+    [[3], [5]] [[4], [6]] [3] 3 (by decide) (by simp) (by simp)
+
+/-- Focused regression for the `mod_eq_lt_eq` counterpart. -/
+theorem mod_eq_of_lt_eq_fixture {n x m : Nat} (hn : n < x) (hm : m < x)
+    (h : n % x = m % x) : n = m :=
+  mod_eq_of_lt_eq hn hm h
+
+/-- `evaluate_decls_only_functions_SOME`
+    (`pan_globalsProofScript.sml:2390`): a function-only declaration list with
+    well-formed shapes evaluates successfully and installs exactly that table. -/
+def functionsSufficiencyGuard : Bool :=
+  match evalPanValueDeclarationsWithStructs ([] : StructContext) evalRelState
+      functionsOnlyDecls none with
+  | some state' =>
+      state'.functions.length ==
+        (panFunctionEntries functionsOnlyDecls ++
+          evalRelState.functions).length
+  | none => false
+
+#eval functionsSufficiencyGuard
+#guard functionsSufficiencyGuard
+
+example : True := by
+  have hall : functionsOnlyDecls.all globalDeclIsFunction = true := by
+    simp [functionsOnlyDecls, globalDeclIsFunction, wfFunction]
+  have _h := evalPanValueDeclarationsWithStructs_only_functions_sufficiency
+    ([] : StructContext) evalRelState functionsOnlyDecls none rfl hall
+    (fun declaration hmem => by
+      simp [functionsOnlyDecls] at hmem
+      rcases hmem with rfl
+      simp [wfFunction, isWfShape])
+  trivial
+
 end Flapjack.Test.PanProgramSimpParity

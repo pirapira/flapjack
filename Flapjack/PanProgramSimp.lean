@@ -1014,6 +1014,63 @@ theorem evalPanValueDeclarations_only_functions
         (by rfl) hall heval
       simpa using hmain
 
+/-- Cake's `evaluate_decls_only_functions_SOME`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2390`): when every
+    declaration is a function declaration whose parameter and return shapes are
+    well formed, evaluation succeeds and installs exactly the function table
+    together with Flapjack's separate return-shape and parameter-shape maps.
+    This is the converse direction of
+    `evalPanValueDeclarationsWithStructs_only_functions`. -/
+theorem evalPanValueDeclarationsWithStructs_only_functions_sufficiency
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext) (state : PanValueProgramState α)
+    (declarations : List (Decl α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (hstructs : state.structs = structs)
+    (hall : declarations.all globalDeclIsFunction = true)
+    (hwf : ∀ declaration, declaration ∈ declarations →
+      (match declaration with
+        | .function function =>
+            function.params.all
+                (fun parameter => isWfShape structs parameter.2) &&
+              isWfShape structs function.returnShape
+        | _ => true) = true) :
+    evalPanValueDeclarationsWithStructs structs state declarations memoryAccess =
+      some { state with
+        structs := structs
+        functions := panFunctionEntries declarations ++ state.functions
+        returnShapes := panReturnShapeEntries declarations ++ state.returnShapes
+        parameterShapes :=
+          panParameterShapeEntries declarations ++ state.parameterShapes } := by
+  induction declarations generalizing state with
+  | nil =>
+      simp [evalPanValueDeclarationsWithStructs, panFunctionEntries,
+        panReturnShapeEntries, panParameterShapeEntries, functions, ← hstructs]
+  | cons declaration declarations ih =>
+      simp only [List.all_cons, Bool.and_eq_true] at hall
+      obtain ⟨hhead, htail⟩ := hall
+      cases declaration with
+      | function declaration =>
+          simp only [evalPanValueDeclarationsWithStructs]
+          have hdeclWf : (declaration.params.all
+                (fun parameter => isWfShape structs parameter.2) &&
+              isWfShape structs declaration.returnShape) = true :=
+            hwf (.function declaration) (by simp)
+          rw [if_pos hdeclWf]
+          rw [ih _ (by rfl) htail
+            (fun other hmem => hwf other (by simp [hmem]))]
+          simp [panFunctionEntries, panReturnShapeEntries,
+            panParameterShapeEntries, functions, List.reverse_cons,
+            List.map_append, List.append_assoc]
+      | decl shape name expression =>
+          simp [globalDeclIsFunction] at hhead
+      | exnDecl exception shape =>
+          simp [globalDeclIsFunction] at hhead
+      | name name fields =>
+          simp [globalDeclIsFunction] at hhead
+
 /-! Cake's `exns_wf_evaluate_decls` (`cakeml/pancake/semantics/panPropsScript.sml:1448`):
     for an exception-only declaration list the exception-table well-formedness
     conditions (distinct ids, ids absent from the incoming table, well-formed

@@ -128,6 +128,25 @@ def indexedAdjacencyMembershipGuard : Bool :=
 
 #guard indexedAdjacencyMembershipGuard
 
+def stackOnlyFastReferenceGuard : Bool :=
+  let programs : List (WordProg Nat) :=
+    [ .skip,
+      .move 1 [(9, 9), (7, 9)],
+      .assign 9 (.var 7),
+      .seq (.move 1 [(13, 13), (2, 13)])
+        (.move 1 [(9, 9), (7, 9)]),
+      .ite .notEqual 2 (.reg 3)
+        (.move 1 [(9, 9), (7, 9)])
+        (.move 1 [(21, 21), (7, 21)]),
+      .loop [] (.move 1 [(9, 9), (7, 9)]) [],
+      .call (some ([9], ([], []),
+        (.move 1 [(9, 9), (7, 9)] : WordProg Nat), 0, 1))
+        (some 5) [2] none ]
+  programs.all (fun program =>
+    cakeGetStackOnly program == (cakeGetStackOnlyAux ([], []) program).2)
+
+#guard stackOnlyFastReferenceGuard
+
 /-- Canonical form for comparing node bijections with the probed sptree
     outputs: both maps sorted by key. -/
 def sortBijectionMaps (bijection : CakeNodeBijection) :

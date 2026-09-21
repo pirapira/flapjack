@@ -25,7 +25,7 @@ in `Flapjack.RiscV.CakeAlloc` (bead `.1.3.1`).
 namespace Flapjack.RiscV.CakeRegAlloc
 
 open Flapjack.RiscV.CakeAlloc (mergeStackOnly mergeStackSets removeTempStack
-  getForcedAddCarry getForcedLongMul)
+  getForcedAddCarry getForcedLongMul isAllocVar isPhyVar isStackVar)
 
 /-! RISC-V exposes 32 hardware registers, with five avoided by Cake's
     backend configuration (`0, 2, 3, 4, 31`).  `word_alloc` therefore colours
@@ -72,10 +72,115 @@ def cakeGetStackOnlyAux {α : Type u} :
       | sizeOf_list_dec | decreasing_tactic | decreasing_trivial
         <;> simp_arith
 
+/-! Fast internal form for the stack-only analysis.  The lists remain the
+    Cake-visible ordered representation; the carried sets only accelerate
+    membership and set algebra. -/
+structure CakeStackOnlyState where
+  ts : List Nat
+  fs : List Nat
+  tsSet : Std.TreeSet Nat
+  fsSet : Std.TreeSet Nat
+
+def cakeStackOnlyStateOfPair (tfs : List Nat × List Nat) : CakeStackOnlyState :=
+  { ts := tfs.1, fs := tfs.2,
+    tsSet := Flapjack.natSetOfList tfs.1,
+    fsSet := Flapjack.natSetOfList tfs.2 }
+
+def cakeStackOnlyInsert (x : Nat) (xs : List Nat)
+    (seen : Std.TreeSet Nat) : List Nat × Std.TreeSet Nat :=
+  if seen.contains x then (xs, seen) else (x :: xs, seen.insert x)
+
+def cakeStackOnlyDelete (x : Nat) (xs : List Nat)
+    (seen : Std.TreeSet Nat) : List Nat × Std.TreeSet Nat :=
+  (xs.erase x, seen.erase x)
+
+def cakeStackOnlyMergeMove (x y : Nat) (state : CakeStackOnlyState) :
+    CakeStackOnlyState :=
+  if state.tsSet.contains x then
+    let (ts, tsSet) := if isAllocVar y then
+      cakeStackOnlyInsert y state.ts state.tsSet else (state.ts, state.tsSet)
+    let (fs, fsSet) := if !isPhyVar y then
+      cakeStackOnlyInsert x state.fs state.fsSet else (state.fs, state.fsSet)
+    { state with ts, fs, tsSet, fsSet }
+  else if isStackVar x then
+    let (ts, tsSet) := if isAllocVar y then
+      cakeStackOnlyInsert y state.ts state.tsSet else (state.ts, state.tsSet)
+    { state with ts, tsSet }
+  else
+    let (ts, tsSet) := cakeStackOnlyDelete y state.ts state.tsSet
+    { state with ts, tsSet }
+
+def cakeStackOnlyUnion (left : List Nat) (leftSet : Std.TreeSet Nat)
+    (right : List Nat) : List Nat × Std.TreeSet Nat :=
+  (left ++ right.filter (fun x => !leftSet.contains x),
+   right.foldl (fun seen x => seen.insert x) leftSet)
+
+def cakeStackOnlyDiff (left : List Nat) (leftSet rightSet : Std.TreeSet Nat)
+    (right : List Nat) : List Nat × Std.TreeSet Nat :=
+  (left.filter (fun x => !rightSet.contains x),
+   right.foldl (fun seen x => seen.erase x) leftSet)
+
+def cakeStackOnlyInter (left : List Nat) (rightSet : Std.TreeSet Nat) :
+    List Nat × Std.TreeSet Nat :=
+  let kept := left.filter (fun x => rightSet.contains x)
+  (kept, Flapjack.natSetOfList kept)
+
+def cakeStackOnlyMergeSets (base left right : CakeStackOnlyState) :
+    CakeStackOnlyState :=
+  let (_inner, innerSet) := cakeStackOnlyInter left.ts base.tsSet
+  let (common, commonSet) := cakeStackOnlyInter right.ts innerSet
+  let (leftOnly, leftOnlySet) :=
+    cakeStackOnlyDiff left.ts left.tsSet base.tsSet base.ts
+  let (rightOnly, _rightOnlySet) :=
+    cakeStackOnlyDiff right.ts right.tsSet base.tsSet base.ts
+  let (different, _differentSet) :=
+    cakeStackOnlyUnion leftOnly leftOnlySet rightOnly
+  let (ts, tsSet) := cakeStackOnlyUnion common commonSet different
+  let (fs, fsSet) := cakeStackOnlyUnion left.fs left.fsSet right.fs
+  { ts, fs, tsSet, fsSet }
+
+def cakeStackOnlyDeleteMany (names : List Nat) (state : CakeStackOnlyState) :
+    CakeStackOnlyState :=
+  names.foldr (fun name state =>
+    let (ts, tsSet) := cakeStackOnlyDelete name state.ts state.tsSet
+    { state with ts, tsSet }) state
+
+def cakeGetStackOnlyAuxFast {α : Type u} :
+    CakeStackOnlyState → WordProg α → CakeStackOnlyState
+  | state, .move _ moves =>
+      moves.foldr (fun move state => cakeStackOnlyMergeMove move.1 move.2 state) state
+  | state, .seq first second =>
+      cakeGetStackOnlyAuxFast (cakeGetStackOnlyAuxFast state second) first
+  | state, .ite _ condition right thenBranch elseBranch =>
+      let left := cakeGetStackOnlyAuxFast state thenBranch
+      let rightState := cakeGetStackOnlyAuxFast state elseBranch
+      let merged := cakeStackOnlyMergeSets state left rightState
+      cakeStackOnlyDeleteMany
+        (condition :: match right with | .reg name => [name] | .imm _ => []) merged
+  | state, .mustTerminate body => cakeGetStackOnlyAuxFast state body
+  | state, .call (some (_, _, returnHandler, _, _)) _ _ handler =>
+      let returnState := cakeGetStackOnlyAuxFast state returnHandler
+      match handler with
+      | none => returnState
+      | some (_, handlerBody, _, _) =>
+          cakeStackOnlyMergeSets state returnState
+            (cakeGetStackOnlyAuxFast state handlerBody)
+  | state, .call none _ _ _ => state
+  | state, .loop _ body _ => cakeGetStackOnlyAuxFast state body
+  | state, program =>
+      match wordClashTree program [] with
+      | .delta writes reads => cakeStackOnlyDeleteMany (writes ++ reads) state
+      | _ => state
+  termination_by _state program => sizeOf program
+  decreasing_by
+    all_goals first
+      | sizeOf_list_dec | decreasing_tactic | decreasing_trivial
+        <;> simp_arith
+
 /-- `get_stack_only` (`word_allocScript.sml:1787-1789`): the forced-stack
     variable list for a whole program. -/
 def cakeGetStackOnly {α : Type u} (program : WordProg α) : List Nat :=
-  (cakeGetStackOnlyAux ([], []) program).2
+  (cakeGetStackOnlyAuxFast (cakeStackOnlyStateOfPair ([], [])) program).fs
 
 /-! RISC-V `get_forced` traversal.  The source adds hardware interference
     edges for the carry and long-multiply instructions, then walks sequence,

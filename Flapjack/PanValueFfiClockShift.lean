@@ -1,4 +1,4 @@
-import Flapjack.PanValueFfiClockSemantics
+import Flapjack.PanValueFfiClockCorrectness
 
 /-!
 # Clock-shift prerequisite for the clocked stateful-FFI evaluators
@@ -371,5 +371,56 @@ theorem evalPanValueFfiClockCall_raised_no_handler_shift_step
   · simp [evalPanValueFfiClockCall, hargs, hlookup, hbind, hclock, hbody, hwithin]
   · simp [evalPanValueFfiClockCall, hargs, hlookup, hbind, hclock, hdec,
       hbodyShift, hwithin]
+
+/-! Cross-clock ExtCall FinalFFI preserves the exact event and post-state;
+    only the remaining clock attached by the leaf shifts. -/
+theorem evalPanValueFfiClockProg_extCall_finalFfi_cross_clock
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel clock ck : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (function : FunName) (configuration configurationLength array arrayLength : Exp α)
+    (finalLocals finalGlobals : VarName → Option (PanValue α))
+    (finalMemory : α → Option (PanValue α)) (finalFfi : FfiState σ)
+    (event : FfiFinalEvent) (steps : Nat)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (contracts : Option PanValueCallContracts := none)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none)
+    (hsteps : evalPanValueFfiProgSteps context primitive handler structs functions
+      baseAddress topAddress bytesInWord 1 locals globals memory ffi
+      (.extCall function configuration configurationLength array arrayLength)
+      (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) =
+      some (.finalFfi finalLocals finalGlobals finalMemory finalFfi event, steps)) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+      (.extCall function configuration configurationLength array arrayLength)
+      (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) =
+      some (.control (.finalFfi finalLocals finalGlobals finalMemory finalFfi event), clock) ∧
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi (clock + ck)
+      (.extCall function configuration configurationLength array arrayLength)
+      (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) =
+      some (.control (.finalFfi finalLocals finalGlobals finalMemory finalFfi event), clock + ck) := by
+  constructor
+  · exact evalPanValueFfiClockProg_extCall_finalFfi context primitive handler structs
+      functions baseAddress topAddress bytesInWord fuel clock locals globals memory ffi
+      function configuration configurationLength array arrayLength finalLocals finalGlobals
+      finalMemory finalFfi event steps (memoryAccess := memoryAccess)
+      (contracts := contracts) (memoryHandler := memoryHandler) hsteps
+  · exact evalPanValueFfiClockProg_extCall_finalFfi context primitive handler structs
+      functions baseAddress topAddress bytesInWord fuel (clock + ck) locals globals memory ffi
+      function configuration configurationLength array arrayLength finalLocals finalGlobals
+      finalMemory finalFfi event steps (memoryAccess := memoryAccess)
+      (contracts := contracts) (memoryHandler := memoryHandler) hsteps
 
 end Flapjack

@@ -1136,7 +1136,10 @@ def cakeFullConsistencyOk (state : CakeRaState) (k : Nat) (x y : Nat) : Bool :=
     observable; this index is used only for the repeated `update_move` lookups
     in the allocator hot path. -/
 def cakeAllocatorIndex (toAllocator : NatInfoMap Nat) : Std.HashMap Nat Nat :=
-  toAllocator.foldl (fun index entry => index.insert entry.1 entry.2) {}
+  toAllocator.foldl (fun index entry =>
+    match index[entry.1]? with
+    | some _ => index
+    | none => index.insert entry.1 entry.2) {}
 
 def cakeAllocatorIndexLookup (index : Std.HashMap Nat Nat) (name : Nat) : Nat :=
   (index[name]?).getD 0

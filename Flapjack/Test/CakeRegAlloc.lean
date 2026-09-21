@@ -181,6 +181,15 @@ def allocatorIndexLookupGuard : Bool :=
 
 #guard allocatorIndexLookupGuard
 
+/- Cake's association-list lookup is first-binding.  The allocator index must
+   preserve that result even when presented with a duplicate-key map. -/
+def allocatorIndexFirstBindingGuard : Bool :=
+  let entries : NatInfoMap Nat := [(9, 4), (9, 6)]
+  let index := cakeAllocatorIndex entries
+  cakeAllocatorIndexLookup index 9 == 4
+
+#guard allocatorIndexFirstBindingGuard
+
 /- The graph/tag hot path uses an index only as a lookup acceleration; its
    default and physical-register fallbacks must remain Cake's `sp_default`. -/
 def spDefaultIndexParityGuard : Bool :=

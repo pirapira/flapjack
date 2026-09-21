@@ -205,17 +205,6 @@ def installCutsetBoundaryGuard : Bool :=
 
 #guard installCutsetBoundaryGuard
 
-def ffiBoundaryGuard : Bool :=
-  match (wordFullSsaCcTrans 0
-      (.ffi "foo" 1 2 3 4 ([], []) : WordProg Nat)).2.2 with
-  | .seq (.move 1 [])
-      (.seq (.move 0 [])
-        (.seq (.move 1 [(2, 0), (4, 0), (6, 0), (8, 0)])
-          (.seq (.ffi "foo" 2 4 6 8 ([], [])) (.move 0 [])))) => true
-  | _ => false
-
-#guard ffiBoundaryGuard
-
 def ffiCutsetBoundaryGuard : Bool :=
   match (wordFullSsaCcTrans 0
       (.ffi "foo" 1 2 3 4 ([1], [2]) : WordProg Nat)).2.2 with

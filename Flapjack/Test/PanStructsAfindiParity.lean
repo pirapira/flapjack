@@ -71,4 +71,11 @@ theorem isWfShape_drop_fixture : isWfShape context (.named "s") = true := by
     simp [context, isWfShape, lookupInfo]
   exact isWfShape_drop (.named "s") context 1 h
 
+/-! Focused regression for the ported Cake `pan_structs` `alookup_drop_helper`
+    lemma. -/
+
+theorem lookup_drop_helper_fixture :
+    "b" ∉ (entries.take 1).map Prod.fst ∧ List.lookup "b" entries = some 20 :=
+  lookup_drop_helper 1 entries "b" 20 (by decide) (by decide)
+
 end Flapjack.Test.PanStructsAfindiParity

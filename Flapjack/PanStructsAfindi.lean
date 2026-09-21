@@ -198,4 +198,39 @@ theorem isWfShape_drop (shape : Shape) (context : StructContext) (n : Nat) :
       exact lookupInfo_isSome_drop name context n h))
     shape context n
 
+/-! CakeML `pan_structsProofScript.sml` `alookup_drop_helper`: a successful
+    lookup in a suffix `DROP n xs` of a context with distinct keys is also a
+    successful lookup in the whole context, and the key does not occur in the
+    dropped prefix. -/
+
+theorem lookup_drop_helper [BEq α] [LawfulBEq α]
+    (n : Nat) (xs : List (α × β)) (key : α) (value : β)
+    (hlookup : List.lookup key (xs.drop n) = some value)
+    (hnodup : (xs.map Prod.fst).Nodup) :
+    key ∉ (xs.take n).map Prod.fst ∧ List.lookup key xs = some value := by
+  have hmem_drop : key ∈ (xs.drop n).map Prod.fst := by
+    obtain ⟨l₁, l₂, heq, _⟩ :=
+      (List.lookup_eq_some_iff (l := xs.drop n) (k := key) (b := value)).mp hlookup
+    exact List.mem_map.mpr ⟨(key, value), by rw [heq]; simp, rfl⟩
+  have hmap : xs.map Prod.fst =
+      (xs.take n).map Prod.fst ++ (xs.drop n).map Prod.fst := by
+    rw [← List.map_append, List.take_append_drop]
+  have hnodup' : ((xs.take n).map Prod.fst ++ (xs.drop n).map Prod.fst).Nodup := by
+    rw [← hmap]; exact hnodup
+  have hnot_mem : key ∉ (xs.take n).map Prod.fst := by
+    intro hk
+    exact (List.nodup_append.mp hnodup').2.2 key hk key hmem_drop rfl
+  refine ⟨hnot_mem, ?_⟩
+  have htake_none : List.lookup key (xs.take n) = none := by
+    rw [List.lookup_eq_none_iff]
+    intro p hp
+    rw [bne_iff_ne]
+    intro hkp
+    exact hnot_mem (List.mem_map.mpr ⟨p, hp, hkp.symm⟩)
+  have h1 := List.lookup_append (l₁ := xs.take n) (l₂ := xs.drop n) (k := key)
+  rw [htake_none] at h1
+  simp only [Option.none_or] at h1
+  rw [← List.take_append_drop n xs, h1]
+  exact hlookup
+
 end Flapjack

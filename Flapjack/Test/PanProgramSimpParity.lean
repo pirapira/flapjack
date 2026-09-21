@@ -36,4 +36,29 @@ def parityGuard : Bool :=
 #eval parityGuard
 #guard parityGuard
 
+/-! Focused regressions for the `OPT_MMAP` helper counterparts used by
+    `compile_correct` (`pan_simpProofScript.sml:394`, `:500`, `:509`). -/
+
+/-- The `some` branch of `opt_mmap_eq_some_helper`. -/
+theorem list_mapM_eq_some_of_eq_some_fixture :
+    ([3, 5] : List Nat).mapM (fun n => if n == 4 then none else some (n + 1)) =
+      some [4, 6] :=
+  list_mapM_eq_some_of_eq_some (fun n : Nat => if n == 4 then none else some (n + 1))
+    (fun n : Nat => if n == 4 then none else some (n + 1)) [3, 5] [4, 6] (by decide)
+    (fun _ _ _ h => h)
+
+/-- `OPT_MMAP_NONE`: the failing element is `4`. -/
+theorem list_mapM_eq_none_exists_fixture :
+    ∃ x ∈ ([3, 4, 5] : List Nat),
+      (fun n => if n == 4 then none else some (n + 1)) x = none :=
+  list_mapM_eq_none_exists (fun n : Nat => if n == 4 then none else some (n + 1)) [3, 4, 5]
+    (by decide)
+
+/-- `OPT_MMAP_NONE'`: member `4` makes the whole map fail. -/
+theorem list_mapM_eq_none_of_mem_fixture :
+    ([3, 4, 5] : List Nat).mapM (fun n => if n == 4 then none else some (n + 1)) =
+      none :=
+  list_mapM_eq_none_of_mem (f := fun n : Nat => if n == 4 then none else some (n + 1))
+    (x := 4) (xs := [3, 4, 5]) (by decide) (by decide)
+
 end Flapjack.Test.PanProgramSimpParity

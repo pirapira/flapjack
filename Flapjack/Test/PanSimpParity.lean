@@ -759,6 +759,43 @@ example
     (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi))
     1 hcall₁ hcall₂
 
+/-- A conditional whose branches lie in the normal fragment stays normal with the
+state and clock unchanged. -/
+example :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+      [] [] 0 0 8
+      (progCallFuel 5 (.ite (.const 5) (.annot "tag" "text") (.skip : Prog Nat)))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+      (.ite (.const 5) (.annot "tag" "text") (.skip : Prog Nat))
+      none none none =
+      some (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none)
+        evaluatorFfi), 1) :=
+  evalPanValueFfiClockProg_ite_true_normal_progCallFuel evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 5
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    (.const 5) (.annot "tag" "text") (.skip : Prog Nat) none none none 5
+    (by simp [evalPanValueExp]) (by decide)
+    (PanValueFfiClockNormalProg.annot "tag" "text")
+    PanValueFfiClockNormalProg.skip
+
+/-- The zero-condition branch of the same conditional also stays normal. -/
+example :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+      [] [] 0 0 8
+      (progCallFuel 5 (.ite (.const 0) (.annot "tag" "text") (.skip : Prog Nat)))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+      (.ite (.const 0) (.annot "tag" "text") (.skip : Prog Nat))
+      none none none =
+      some (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none)
+        evaluatorFfi), 1) :=
+  evalPanValueFfiClockProg_ite_false_normal_progCallFuel evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 5
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    (.const 0) (.annot "tag" "text") (.skip : Prog Nat) none none none 0
+    (by simp [evalPanValueExp]) (by decide)
+    (PanValueFfiClockNormalProg.annot "tag" "text")
+    PanValueFfiClockNormalProg.skip
+
 /-- The raised `DecCall` outcome also lifts to the declaration's progSize. -/
 example
     (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)

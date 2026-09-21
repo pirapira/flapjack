@@ -3784,6 +3784,87 @@ theorem evalPanValueFfiClockProg_seq_normal_of_first_normal_progCallFuel
       midLocals midGlobals midMemory midFfi midClock ma c mh hsecond)
 
 
+/-! ## Conditionals with normal branches
+
+When the selected branch lies in the normal fragment, the conditional returns
+`normal` with the state and clock unchanged at the call-aware budget.  The
+unselected branch only has to be normal for the statement to be symmetric. -/
+
+theorem evalPanValueFfiClockProg_ite_true_normal_progCallFuel
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (condition : Exp α) (thenBranch elseBranch : Prog α)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ)) (wordValue : α)
+    (hcondition : evalPanValueExp structs locals globals memory baseAddress topAddress
+        bytesInWord condition (memoryAccess := ma) = some (.word wordValue))
+    (hnonzero : (wordValue != 0) = true)
+    (hthen : PanValueFfiClockNormalProg thenBranch)
+    (_helse : PanValueFfiClockNormalProg elseBranch) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord
+        (progCallFuel callBudget (.ite condition thenBranch elseBranch))
+        locals globals memory ffi clock (.ite condition thenBranch elseBranch)
+        (memoryAccess := ma) (contracts := c) (memoryHandler := mh) =
+      some (.control (.normal locals globals memory ffi), clock) := by
+  have hbranch := evalPanValueFfiClockProg_normalProg_some_progCallFuel context
+    primitive handler structs functions baseAddress topAddress bytesInWord callBudget
+    thenBranch locals globals memory ffi clock ma c mh hthen
+  have hmono := evalPanValueFfiClockProg_fuel_mono context primitive handler structs
+    functions baseAddress topAddress bytesInWord
+    (fuel := progCallFuel callBudget thenBranch)
+    (fuel' := progCallFuel callBudget thenBranch + progCallFuel callBudget elseBranch)
+    locals globals memory ffi clock thenBranch ma c mh (by omega) hbranch
+  exact evalPanValueFfiClockProg_ite_true_some_progCallFuel context primitive handler
+    structs functions baseAddress topAddress bytesInWord callBudget locals globals memory
+    ffi clock condition thenBranch elseBranch ma c mh wordValue
+    (.control (.normal locals globals memory ffi)) clock hcondition hnonzero hmono
+
+theorem evalPanValueFfiClockProg_ite_false_normal_progCallFuel
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (condition : Exp α) (thenBranch elseBranch : Prog α)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ)) (wordValue : α)
+    (hcondition : evalPanValueExp structs locals globals memory baseAddress topAddress
+        bytesInWord condition (memoryAccess := ma) = some (.word wordValue))
+    (hzero : (wordValue != 0) = false)
+    (_hthen : PanValueFfiClockNormalProg thenBranch)
+    (helse : PanValueFfiClockNormalProg elseBranch) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord
+        (progCallFuel callBudget (.ite condition thenBranch elseBranch))
+        locals globals memory ffi clock (.ite condition thenBranch elseBranch)
+        (memoryAccess := ma) (contracts := c) (memoryHandler := mh) =
+      some (.control (.normal locals globals memory ffi), clock) := by
+  have hbranch := evalPanValueFfiClockProg_normalProg_some_progCallFuel context
+    primitive handler structs functions baseAddress topAddress bytesInWord callBudget
+    elseBranch locals globals memory ffi clock ma c mh helse
+  have hmono := evalPanValueFfiClockProg_fuel_mono context primitive handler structs
+    functions baseAddress topAddress bytesInWord
+    (fuel := progCallFuel callBudget elseBranch)
+    (fuel' := progCallFuel callBudget thenBranch + progCallFuel callBudget elseBranch)
+    locals globals memory ffi clock elseBranch ma c mh (by omega) hbranch
+  exact evalPanValueFfiClockProg_ite_false_some_progCallFuel context primitive handler
+    structs functions baseAddress topAddress bytesInWord callBudget locals globals memory
+    ffi clock condition thenBranch elseBranch ma c mh wordValue
+    (.control (.normal locals globals memory ffi)) clock hcondition hzero hmono
+
+
 /-! ## While-body step equations
 
 The recursive branch of the clocked `While` clause: with a nonzero condition and

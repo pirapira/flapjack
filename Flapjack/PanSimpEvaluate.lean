@@ -2144,6 +2144,59 @@ theorem evalPanValueFfiClockProg_call_none_of_functions
       none function arguments (.control (.returned (fun _ => none) finalGlobals finalMemory
         finalFfi values)) finalClock ma c mh hcall⟩
 
+/-- Program-level call adequacy at the call-aware budget `progCallFuel`: when the
+    callee body budget `progSize body + 1` fits inside `callBudget`, the
+    destination-free call node returns at `progCallFuel callBudget` (which is
+    `1 + callBudget`), by lifting the `progSize body + 2` result through fuel
+    monotonicity. -/
+theorem evalPanValueFfiClockProg_call_none_of_functions_progCallFuel
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (function : FunName) (arguments : List (Exp α))
+    (parameters : List VarName) (body : Prog α) (values : List (PanValue α))
+    (calleeLocals : VarName → Option (PanValue α))
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (hfunctions : PanValueFfiClockFunctionsReturnSucceed context primitive handler
+      structs functions baseAddress topAddress bytesInWord ma c mh)
+    (hbudget : progSize body + 1 ≤ callBudget)
+    (hargs : evalPanValueExps structs locals globals memory baseAddress topAddress
+      bytesInWord arguments (memoryAccess := ma) = some values)
+    (hlookup : lookupPanFunction function functions = some (parameters, body))
+    (hbind : bindPanValueParameters parameters values = some calleeLocals)
+    (hclock : clock ≠ 0)
+    (hparams : panValueParametersValid structs c function values = true)
+    (hreturn : panValueReturnValid structs c function values = true)
+    (hwithin : panValueValuesWithinLimit structs values = true) :
+    ∃ (finalGlobals : VarName → Option (PanValue α))
+      (finalMemory : α → Option (PanValue α)) (finalFfi : FfiState σ)
+      (finalClock : Nat),
+      evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord
+        (progCallFuel callBudget (.call none function arguments)) locals globals memory ffi
+        clock (.call none function arguments) ma c mh =
+      some (.control (.returned (fun _ => none) finalGlobals finalMemory finalFfi values),
+        finalClock) := by
+  obtain ⟨finalGlobals, finalMemory, finalFfi, finalClock, hrun⟩ :=
+    evalPanValueFfiClockProg_call_none_of_functions context primitive handler structs
+      functions baseAddress topAddress bytesInWord locals globals memory ffi clock function
+      arguments parameters body values calleeLocals ma c mh hfunctions hargs hlookup hbind
+      hclock hparams hreturn hwithin
+  refine ⟨finalGlobals, finalMemory, finalFfi, finalClock, ?_⟩
+  have hsize : progCallFuel callBudget (.call none function arguments) = 1 + callBudget := by
+    simp [progCallFuel]
+  rw [hsize]
+  exact evalPanValueFfiClockProg_fuel_mono context primitive handler structs functions
+    baseAddress topAddress bytesInWord (fuel := progSize body + 2) (fuel' := 1 + callBudget)
+    locals globals memory ffi clock (.call none function arguments) ma c mh (by omega) hrun
+
 /-- The timeout-adequate analogue of `PanValueFfiClockFunctionsReturnSucceed`:
     every listed body, from any state, runs out of clock at its own structural
     `progSize` budget. -/

@@ -552,6 +552,28 @@ theorem expIds_panSimpProg (program : Prog α) :
   rw [expIds_retToTail, expIds_seqAssoc]
   simp [expIds]
 
+/-- The exception identifiers reachable from the bodies of the function
+    declarations in a declaration table: the projection that Cake's `get_eids`
+    scans. -/
+def declarationExceptionIds : List (Decl α) → List ExceptionId
+  | [] => []
+  | .function declaration :: declarations =>
+      expIds declaration.body ++ declarationExceptionIds declarations
+  | _ :: declarations => declarationExceptionIds declarations
+
+/-- The declaration-table pass of `pan_simp` preserves the exception
+    identifiers reachable from every function body.  This is the source-side
+    companion of Cake's `get_eids_from_decls` invariance: the finite domain of
+    the exception table cannot change when the bodies are simplified. -/
+theorem declarationExceptionIds_panSimpDecls (declarations : List (Decl α)) :
+    declarationExceptionIds (panSimpDecls declarations) =
+      declarationExceptionIds declarations := by
+  induction declarations with
+  | nil => simp [panSimpDecls, declarationExceptionIds]
+  | cons declaration declarations ih =>
+      cases declaration <;>
+        simp [panSimpDecls, declarationExceptionIds, expIds_panSimpProg, ih]
+
 /-! ## A linear syntactic size bound for `seqAssoc`
 
 `seqAssoc` only reassociates sequences and never duplicates syntax, so a

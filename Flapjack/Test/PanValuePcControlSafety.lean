@@ -834,6 +834,16 @@ evaluator-evidence obligation. -/
 /- The four-word-record instance extends the same Cake-faithful construction
    to the final fixed-width record payload. -/
 #check @panValuePcCompileCorrect_compact_four_word_raise_of_state_evidence
+#check @panValuePcCompileCorrect_compact_word_list_raise_of_state_evidence
+
+/- The context-coded word-list raise instance uses the same state evidence and
+   additionally returns the context-coded correctness boundary. -/
+#check @panValuePcCompileCorrect_compact_word_list_raise_of_state_evidence_context_code
+
+/- The source-word and nested one-word-record raise instances also drop the
+   opaque evaluator-evidence obligation in favour of explicit state evidence. -/
+#check @panValuePcCompileCorrect_compact_raise_source_word_of_state_evidence
+#check @panValuePcCompileCorrect_compact_nested_one_word_raise_of_state_evidence
 
 /- The arbitrary word-list Raise bridge preserves the same explicit clocked
    evaluator and state/result premises at the top-level boundary. -/

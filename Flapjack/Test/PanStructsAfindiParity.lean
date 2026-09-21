@@ -146,4 +146,36 @@ theorem dropWhile_eq_cons_imp_fixture :
 
 #check @dropWhile_eq_cons_imp
 
+/-! Focused regression for the ported Cake `ALOOKUP_MAP3`/`ALOOKUP_MAP4`
+    (`pan_globalsProofScript.sml:2841`/`:2851`). -/
+
+theorem lookupInfo_map3_fixture :
+    lookupInfo "b"
+        (([("a", (1, 2)), ("b", (3, 4))] : InfoMap (Nat × Nat)).map
+          (fun entry => (entry.1, entry.2.1, entry.2.2 + 1))) =
+      (lookupInfo "b" ([("a", (1, 2)), ("b", (3, 4))] : InfoMap (Nat × Nat))).map
+        (fun value => (value.1, value.2 + 1)) :=
+  lookupInfo_map3 (fun x => x + 1) "b" _
+
+theorem lookupInfo_map4_fixture :
+    lookupInfo "b"
+        (([("a", (1, 2, 3)), ("b", (4, 5, 6))] : InfoMap (Nat × Nat × Nat)).map
+          (fun entry => (entry.1, entry.2.1, entry.2.2.1 + 1, entry.2.2.2))) =
+      (lookupInfo "b"
+        ([("a", (1, 2, 3)), ("b", (4, 5, 6))] : InfoMap (Nat × Nat × Nat))).map
+        (fun value => (value.1, value.2.1 + 1, value.2.2)) :=
+  lookupInfo_map4 (fun x => x + 1) "b" _
+
+def lookupInfoMapGuard : Bool :=
+  (lookupInfo "b"
+      (([("a", (1, 2)), ("b", (3, 4))] : InfoMap (Nat × Nat)).map
+        (fun entry => (entry.1, entry.2.1, entry.2.2 + 1))) ==
+    some ((3, 5) : Nat × Nat)) &&
+  (lookupInfo "z"
+      (([("a", (1, 2, 3))] : InfoMap (Nat × Nat × Nat)).map
+        (fun entry => (entry.1, entry.2.1, entry.2.2.1 + 1, entry.2.2.2)))).isNone
+
+#eval lookupInfoMapGuard
+#guard lookupInfoMapGuard
+
 end Flapjack.Test.PanStructsAfindiParity

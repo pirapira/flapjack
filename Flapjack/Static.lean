@@ -37,6 +37,41 @@ def lookupInfo [BEq String] (name : String) : InfoMap α → Option α
   | (candidate, value) :: entries =>
       if candidate == name then some value else lookupInfo name entries
 
+/-- Cake's `ALOOKUP_MAP3` (`pan_globalsProofScript.sml:2841`): mapping a
+    function over the value component of every entry commutes with the
+    lookup. -/
+theorem lookupInfo_map3 [BEq String] (f : γ → δ) (name : String)
+    (entries : InfoMap (β × γ)) :
+    lookupInfo name (entries.map (fun entry => (entry.1, entry.2.1, f entry.2.2))) =
+      (lookupInfo name entries).map (fun value => (value.1, f value.2)) := by
+  induction entries with
+  | nil => simp [lookupInfo]
+  | cons entry entries ih =>
+      simp only [List.map_cons, lookupInfo]
+      by_cases h : (entry.1 == name) = true
+      · rw [if_pos h, if_pos h]
+        rfl
+      · rw [if_neg h, if_neg h]
+        exact ih
+
+/-- Cake's `ALOOKUP_MAP4` (`pan_globalsProofScript.sml:2851`): mapping a
+    function over the middle component of every entry commutes with the
+    lookup. -/
+theorem lookupInfo_map4 [BEq String] (f : γ → δ) (name : String)
+    (entries : InfoMap (β × γ × ε)) :
+    lookupInfo name
+        (entries.map (fun entry => (entry.1, entry.2.1, f entry.2.2.1, entry.2.2.2))) =
+      (lookupInfo name entries).map (fun value => (value.1, f value.2.1, value.2.2)) := by
+  induction entries with
+  | nil => simp [lookupInfo]
+  | cons entry entries ih =>
+      simp only [List.map_cons, lookupInfo]
+      by_cases h : (entry.1 == name) = true
+      · rw [if_pos h, if_pos h]
+        rfl
+      · rw [if_neg h, if_neg h]
+        exact ih
+
 /-! The original Pancake `mem_load` uses `dropWhile` to find a named
     structure and then evaluates its fields against the remaining context.
     Keeping the suffix is important: declarations only make earlier context

@@ -120,4 +120,13 @@ def globalCompileInitializersLocalisedGuard : Bool :=
 #eval globalCompileInitializersLocalisedGuard
 #guard globalCompileInitializersLocalisedGuard
 
+
+theorem globalCompileTopForStart_functions_localised_fixture
+    (compiled : List (Decl Nat))
+    (hcompile : globalCompileTopForStart 8 id
+      [.function compileDecsFunction] "f" = some compiled) :
+    ∀ entry ∈ functions compiled, localisedProg entry.2.2.1 :=
+  globalCompileTopForStart_functions_localised 8 id
+    [.function compileDecsFunction] "f" compiled hcompile
+
 end Flapjack

@@ -1,7 +1,11 @@
 import Flapjack.RiscV.Link
 import Flapjack.Ffi
+import Flapjack.PanValueFfiSemantics
 
 namespace Flapjack
+
+#check @panValueFfiExtCall_returned_ioEvents_prefix
+#check @evalPanValueFfiProgSteps_extCall_returned_ioEvents_prefix
 
 def identityFfiOracle : FfiOracle Unit :=
   fun _ state _ bytes => .returned state bytes

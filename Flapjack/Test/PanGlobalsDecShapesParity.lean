@@ -214,4 +214,23 @@ example : True := by
 #eval functionsEmptyGuard
 #guard functionsEmptyGuard
 
+/-! Counterparts of the append structure of Cake's `compile_decls_append`
+    (`pan_globalsProofScript.sml:1997`). -/
+def declsWithGlobals : List (Decl Nat) :=
+  [.decl .one "g" (.const 7), .decl .one "h" (.const 9)]
+
+example : True := by
+  have h := globalCompileDecls_append
+    ({ globals := [], globalsSize := 0, maxGlobalsSize := 0,
+       bytesInWord := 8, fromNat := fun n => n } : GlobalPassContext Nat)
+    declsWithGlobals []
+  trivial
+
+example : True := by
+  have h := globalCompileInitializers_append
+    ({ globals := [], globalsSize := 0, maxGlobalsSize := 0,
+       bytesInWord := 8, fromNat := fun n => n } : GlobalPassContext Nat)
+    declsWithGlobals []
+  trivial
+
 end Flapjack.Test.PanGlobalsDecShapesParity

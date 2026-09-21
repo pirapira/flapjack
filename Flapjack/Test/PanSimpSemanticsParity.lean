@@ -133,4 +133,17 @@ example :
     (fun _ => none) (fun _ => none) (fun _ => none) (fun _ _ => none)
     (.tick : Prog Nat) none
 
+/-- CakeML `evaluate_seq_simp` (structured fragment): the full `pan_simp`
+    program transformation preserves evaluation on a concrete program. -/
+example :
+    evalPanValueProgWithPrimitive ([] : StructContext) (0 : Nat) 0 1
+        (fun _ => none) (fun _ => none) (fun _ => none) (fun _ _ => none)
+        (panSimpProg (.seq (.tick : Prog Nat) (.tick : Prog Nat)))
+      = evalPanValueProgWithPrimitive ([] : StructContext) (0 : Nat) 0 1
+        (fun _ => none) (fun _ => none) (fun _ => none) (fun _ _ => none)
+        (.seq (.tick : Prog Nat) (.tick : Prog Nat)) :=
+  evalPanValueProgWithPrimitive_panSimpProg ([] : StructContext) (0 : Nat) 0 1
+    (fun _ _ => none) none (.seq (.tick : Prog Nat) (.tick : Prog Nat))
+    (fun _ => none) (fun _ => none) (fun _ => none)
+
 end Flapjack

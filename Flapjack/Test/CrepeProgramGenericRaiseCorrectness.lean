@@ -3201,6 +3201,7 @@ def runChecks : IO Bool := do
   IO.println "PASS compact context bridge composes with clocked FinalFFI"
   IO.println "PASS expression-state ordinary bridge composes with clocked FinalFFI"
   IO.println "PASS expression-state evidence supplies generic Raise fallback"
+  IO.println "PASS expression-state evidence composes to clocked Returned"
   IO.println "PASS nested raised semantic/global lookup lift"
   pure true
 

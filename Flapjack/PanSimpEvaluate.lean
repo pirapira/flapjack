@@ -1117,6 +1117,7 @@ theorem evalPanValueFfiClockProg_seqSkipFragment_some
           simp only [Option.bind_eq_bind, Option.bind_some]
           exact ihsecond f locals globals memory ffi clock hf2
 
+
 /-- `seqAssoc` preserves the `Skip`/`Seq` fragment. -/
 theorem PanSimpSeqSkipFragment_seqAssoc {program : Prog α}
     (hfrag : PanSimpSeqSkipFragment program) :
@@ -1187,6 +1188,35 @@ theorem panSimpSeqSkipFuel_le_progSize {program : Prog α}
   | seq first second hfirst hsecond ihfirst ihsecond =>
       simp only [panSimpSeqSkipFuel, progSize]
       omega
+
+/-- The `Skip`/`Seq` fragment succeeds at the call-aware budget `progCallFuel`,
+    which dominates both the fragment budget and the plain structural size. -/
+theorem evalPanValueFfiClockProg_seqSkipFragment_some_progCallFuel
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat) (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (program : Prog α)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (hfrag : PanSimpSeqSkipFragment program) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (progCallFuel callBudget program)
+        locals globals memory ffi clock program ma c mh =
+      some (.control (.normal locals globals memory ffi), clock) := by
+  refine evalPanValueFfiClockProg_seqSkipFragment_some context primitive handler
+    structs functions baseAddress topAddress bytesInWord
+    (progCallFuel callBudget program) locals globals memory ffi clock program ma c mh
+    hfrag ?_
+  exact Nat.le_trans (panSimpSeqSkipFuel_le_progSize hfrag)
+    (progSize_le_progCallFuel callBudget program)
 
 theorem one_le_progSize_of_seqSkipFragment {program : Prog α}
     (hfrag : PanSimpSeqSkipFragment program) : 1 ≤ progSize program := by

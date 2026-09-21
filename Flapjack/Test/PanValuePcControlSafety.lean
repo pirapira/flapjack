@@ -827,4 +827,10 @@ evaluator-evidence obligation. -/
    two-word Cake program-control theorem. -/
 #check @panValuePcCompileCorrect_compact_two_word_raise_of_state_evidence
 
+/- The three-word, four-word, and word-list raise instances compose the same
+   boundary with the corresponding Cake program-control theorems. -/
+#check @panValuePcCompileCorrect_compact_three_word_raise_of_state_evidence
+#check @panValuePcCompileCorrect_compact_four_word_raise_of_state_evidence
+#check @panValuePcCompileCorrect_compact_word_list_raise_of_state_evidence
+
 end Flapjack.Test.PanValuePcControlSafety

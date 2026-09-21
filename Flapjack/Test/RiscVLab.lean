@@ -202,6 +202,13 @@ example :
       some [.mulHU 4 6 7, .mul 5 6 7] := by
   decide
 
+/- Cake rejects a LongMul when its high-result destination aliases either
+   source; the helper expansion is only valid after this source-boundary check. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.longMul 6 5 6 7))) [] 0]⟩ = none := by
+  decide
+
 /- Cake's register binary subtraction lowers directly to the RV64 SUB row;
    keep the register carrier distinct from the immediate ADDI form above. -/
 example :

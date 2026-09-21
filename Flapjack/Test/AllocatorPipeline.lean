@@ -59,6 +59,24 @@ example :
     wordListAppendAcc, wordExpReadVarsFastAcc, wordProgReadVars,
     wordProgWriteVars, wordExpReadVars, allocatorWriteVarsFastFixture]
 
+example :
+    wordProgAtomicClashesFast allocatorWriteVarsFastFixture [46, 47] =
+      wordProgAtomicClashes allocatorWriteVarsFastFixture [46, 47] := by
+  simp [wordProgAtomicClashesFast, wordProgAtomicClashes,
+    wordProgWriteVarsFast, wordProgWriteVarsFastAcc, wordProgWriteVars,
+    wordClashPairs, wordListAppendAcc,
+    allocatorWriteVarsFastFixture]
+
+example :
+    wordProgAtomicClashesFast
+        (.inst (.arith (.div 48 49 50)) : WordProg Nat) [51] =
+      wordProgAtomicClashes
+        (.inst (.arith (.div 48 49 50)) : WordProg Nat) [51] := by
+  simp [wordProgAtomicClashesFast, wordProgAtomicClashes,
+    wordProgWriteVarsFast, wordProgWriteVarsFastAcc, wordProgWriteVars,
+    wordClashPairs, wordInstForcedClashes, wordInstWriteVars,
+    wordListAppendAcc]
+
 example [OfNat α 1] :
     pipelineWordFunctionsAllocated
       ([] : List (Nat × List Nat × LoopProg α)) = some [] := by

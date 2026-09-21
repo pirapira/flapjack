@@ -1539,6 +1539,14 @@ def wordProgAtomicClashes (program : WordProg α) (liveAfter : List Nat) :
         wordClashPairs (wordProgWriteVars program) liveAfter
   | _ => wordClashPairs (wordProgWriteVars program) liveAfter
 
+def wordProgAtomicClashesFast (program : WordProg α) (liveAfter : List Nat) :
+    List (Nat × Nat) :=
+  match program with
+  | .inst instruction =>
+      wordInstForcedClashes instruction ++
+        wordClashPairs (wordProgWriteVarsFast program) liveAfter
+  | _ => wordClashPairs (wordProgWriteVarsFast program) liveAfter
+
 def wordProgClashAnalysis : WordProg α → List Nat →
     List Nat × List (Nat × Nat)
   | .seq first second, liveOut =>
@@ -1565,7 +1573,7 @@ def wordProgClashAnalysis : WordProg α → List Nat →
         .call (some (destinations, cutsets, returnCode, returnLabel, entryLabel))
           target arguments none
       (wordListUnion returnLive (wordProgLiveBeforeFast callProgram liveAfter),
-        returnEdges ++ wordProgAtomicClashes callProgram liveAfter)
+        returnEdges ++ wordProgAtomicClashesFast callProgram liveAfter)
   | .call returns target arguments (some (exception, body, _, _)), liveAfter =>
       let (returnLive, returnEdges) := match returns with
         | none => ([], [])
@@ -1580,7 +1588,7 @@ def wordProgClashAnalysis : WordProg α → List Nat →
       (wordListUnion (exception :: handlerLive)
           (wordListUnion returnLive (wordProgLiveBeforeFast callProgram liveAfter)),
         handlerEntryEdges ++ handlerEdges ++ returnEdges ++
-          wordProgAtomicClashes callProgram liveAfter)
+          wordProgAtomicClashesFast callProgram liveAfter)
   | program, liveOut =>
       (wordProgLiveBefore program liveOut, wordProgAtomicClashes program liveOut)
 termination_by program => sizeOf program
@@ -2526,7 +2534,8 @@ theorem wordProgClashAnalysis_seq :
       ([1], []) := by
   simp [wordProgClashAnalysis, wordProgReadVars,
     wordProgWriteVars, wordProgLiveBefore, wordProgAtomicClashes,
-    wordClashPairs, wordExpReadVars]
+    wordClashPairs,
+    wordExpReadVars]
 
 theorem wordProgClashAnalysis_ite :
     wordProgClashAnalysis

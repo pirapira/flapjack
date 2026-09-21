@@ -2,6 +2,7 @@ import Flapjack.PanToCrepCorrectnessBoundary
 import Flapjack.PanToCrepCorrectnessBridge
 import Flapjack.PanToCrepTailCallCorrectness
 import Flapjack.PanToCrepCallHandlerControlSafety
+import Flapjack.PanToCrepSharedMemoryControlSafety
 import Flapjack.PanValueFfiClockCorrectness
 import Flapjack.CrepeNestedDecsStability
 import Flapjack.CrepeRaisedCallInversion
@@ -1108,5 +1109,10 @@ example :
     handler-safety predicate: `.break` is control-safe on both sides but still
     yields a `broke` source result. -/
 #check @not_panValueProgNotBrokeContinued_break
+
+/-! Shared-memory leaves are control-safe: the source evaluator can only
+    produce `normal`, so the label rule holds for every `VarKind`. -/
+#check @panValueCrepProgramStateControlSafe_shMemLoad
+#check @panValueCrepProgramStateControlSafe_shMemStore
 
 end Flapjack.Test.PanValuePcControlSafety

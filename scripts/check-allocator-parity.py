@@ -37,6 +37,7 @@ FIXTURES = (
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "dec_temporary_cutset.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00068_throwminimal3.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00460_nested_handler_constant_fold.pnk",
+    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "process_message_negative_offset.pnk",
 )
 
 

@@ -508,6 +508,17 @@ def copyMergeKeepsClassIdentity : Bool :=
 
 #guard copyMergeKeepsClassIdentity
 
+
+/- Cake's `merge_eqs` intersects `store_to_eq` by both store name and
+   equivalence class.  Two branches that record the same store class must
+   therefore retain the following `Get` lookup after the merge. -/
+def copyMergeKeepsStoreEquivalence : Bool :=
+  let left := RiscV.wordCopySetStoreEq RiscV.wordCopyEmpty 77 145
+  let right := RiscV.wordCopySetStoreEq RiscV.wordCopyEmpty 77 145
+  let merged := RiscV.wordCopyMerge left right
+  RiscV.wordCopyLookupStoreEq merged 77 == some 145
+
+#guard copyMergeKeepsStoreEquivalence
 /- Cake's `set_store_eq` records both the store-to-class relation and its
    representative.  The production copy state keeps the Cake lists for
    branch intersection, while the lookup-only indexes must expose the same

@@ -458,4 +458,26 @@ theorem compileExp_vars_bounded
         | bytesInWord => simp [compileExp]
   exact hmain (sizeOf expression) expression rfl
 
+/-! Cake's `genlist_vmax_distinct_lists_compiled_exps`
+    (`pan_to_crepProofScript.sml:3094`): compiler temporaries allocated strictly
+    above `maxVar` cannot occur in the variables of compiled source arguments.
+    `List.range` is the Lean counterpart of Cake's `GENLIST`. -/
+theorem genlist_vmax_distinct_lists_compiled_exps
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (n : Nat) (argexps : List (Exp α))
+    (hbound : ∀ name shape names,
+      lookupInfo name context.vars = some (shape, names) →
+      ∀ varName ∈ names, varName ≤ context.maxVar) :
+    ListDisjoint ((List.range n).map (fun i => i + 1 + context.maxVar))
+      ((argexps.map (compileExp context)).flatMap
+        (fun entry => entry.1.flatMap crepExpVars)) := by
+  apply genlist_distinct_max n context.maxVar _
+  intro varName hvar
+  simp only [List.mem_flatMap] at hvar
+  obtain ⟨compiled, hcompiled, hvar⟩ := hvar
+  obtain ⟨expression, _, rfl⟩ := List.mem_map.mp hcompiled
+  apply compileExp_vars_bounded context hbound expression varName
+  obtain ⟨compiledExpression, hcompiledExpression, hvar⟩ := hvar
+  exact List.mem_flatMap.mpr ⟨compiledExpression, hcompiledExpression, hvar⟩
+
 end Flapjack

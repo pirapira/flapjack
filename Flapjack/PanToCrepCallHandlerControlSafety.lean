@@ -582,6 +582,43 @@ theorem PanValueProgNotBrokeContinued_call_of_no_handler
         primitive handler structs functions baseAddress topAddress bytesInWord
         fuel locals globals memory info function arguments result hnoHandler hcall
 
+/-- A handler-carrying call is `PanValueProgNotBrokeContinued` whenever the
+    handler program is: the callee's own loop control is dropped by the call,
+    and the only route to `broke`/`continued` is the handler body. This is the
+    program-level counterpart of `panValueCrepProgramStateControlSafe_call_handler`. -/
+theorem PanValueProgNotBrokeContinued_call_handler
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (info : Option (Option (VarKind × VarName) ×
+      Option (ExceptionId × VarName × Prog α)))
+    (function : FunName) (arguments : List (Exp α))
+    (hhandlerNotBroke : ∀ (handlerProgram : Prog α),
+      (∃ (destination : Option (VarKind × VarName)) (caught : ExceptionId)
+        (handlerVariable : VarName),
+        info = some (destination, some (caught, handlerVariable, handlerProgram))) →
+      PanValueProgNotBrokeContinued primitive handler structs functions
+        baseAddress topAddress bytesInWord handlerProgram) :
+    PanValueProgNotBrokeContinued primitive handler structs functions
+      baseAddress topAddress bytesInWord (.call info function arguments) := by
+  intro fuel locals globals memory result h
+  cases fuel with
+  | zero => simp [evalPanValueProgWithPrimitiveCallsAndFfi] at h
+  | succ fuel =>
+      have hcall :
+          evalPanValueCallWithPrimitiveCallsAndFfi primitive handler structs
+            functions baseAddress topAddress bytesInWord fuel locals globals
+            memory info function arguments = some result := by
+        simpa [evalPanValueProgWithPrimitiveCallsAndFfi] using h
+      exact evalPanValueCallWithPrimitiveCallsAndFfi_handler_not_broke_continued
+        primitive handler structs functions baseAddress topAddress bytesInWord
+        fuel locals globals memory info function arguments result hhandlerNotBroke hcall
+
 theorem PanValueProgNotBrokeContinued_dec
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

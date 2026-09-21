@@ -844,4 +844,60 @@ theorem evalPanValueDeclarationsWithStructs_only_funs_and_exn_decls
       | name name fields =>
           simp [globalDeclIsFunction, isExnDecl] at hhead
 
+/-! Cake's `evaluate_decls_only_functions`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1528`): a function-only
+    declaration list changes only the function, return-shape, and
+    parameter-shape tables.  This specializes the mixed function/exception
+    equation while making the absence of exception entries explicit. -/
+theorem evalPanValueDeclarationsWithStructs_only_functions
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext) (state state' : PanValueProgramState α)
+    (declarations : List (Decl α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (hstructs : state.structs = structs)
+    (hall : declarations.all globalDeclIsFunction = true)
+    (heval : evalPanValueDeclarationsWithStructs structs state declarations
+      memoryAccess = some state') :
+    state' = { state with
+      structs := structs
+      functions := panFunctionEntries declarations ++ state.functions
+      returnShapes := panReturnShapeEntries declarations ++ state.returnShapes
+      parameterShapes :=
+        panParameterShapeEntries declarations ++ state.parameterShapes
+      exceptions := state.exceptions } := by
+  have hallMixed : declarations.all
+      (fun declaration =>
+        globalDeclIsFunction declaration || isExnDecl declaration) = true := by
+    refine List.all_eq_true.mpr (fun declaration hmem => ?_)
+    have hfunction := List.all_eq_true.mp hall declaration hmem
+    simp [hfunction]
+  have hnoExceptions : panExceptionEntries declarations = [] := by
+    have hno : ∀ declarations : List (Decl α),
+        declarations.all globalDeclIsFunction = true →
+          panExceptionEntries declarations = [] := by
+      intro declarations
+      induction declarations with
+      | nil => simp [panExceptionEntries_nil]
+      | cons declaration declarations ih =>
+          intro hall'
+          have hhead := List.all_eq_true.mp hall' declaration (by simp)
+          have htail : declarations.all globalDeclIsFunction = true := by
+            exact List.all_eq_true.mpr (fun rest hmem =>
+              List.all_eq_true.mp hall' rest (by simp [hmem]))
+          cases declaration with
+          | function declaration =>
+              simpa [panExceptionEntries_cons] using ih htail
+          | decl shape name expression =>
+              simp [globalDeclIsFunction] at hhead
+          | name name fields =>
+              simp [globalDeclIsFunction] at hhead
+          | exnDecl exception shape =>
+              simp [globalDeclIsFunction] at hhead
+    exact hno declarations hall
+  have hmain := evalPanValueDeclarationsWithStructs_only_funs_and_exn_decls
+    structs state state' declarations memoryAccess hstructs hallMixed heval
+  simpa [hnoExceptions] using hmain
+
 end Flapjack

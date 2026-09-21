@@ -590,4 +590,17 @@ example : True := by
         heval
       trivial
 
+example (state' : PanValueProgramState Nat)
+    (heval : evalPanValueDeclarationsWithStructs ([] : StructContext)
+      evalRelState functionsOnlyDecls none = some state') :
+    state' = { evalRelState with
+      functions := panFunctionEntries functionsOnlyDecls ++ evalRelState.functions
+      returnShapes :=
+        panReturnShapeEntries functionsOnlyDecls ++ evalRelState.returnShapes
+      parameterShapes :=
+        panParameterShapeEntries functionsOnlyDecls ++ evalRelState.parameterShapes
+      exceptions := evalRelState.exceptions } := by
+  exact evalPanValueDeclarationsWithStructs_only_functions [] evalRelState state'
+    functionsOnlyDecls none rfl (by decide) heval
+
 end Flapjack.Test.PanProgramSimpParity

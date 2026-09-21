@@ -129,6 +129,27 @@ def handlerReturnCopyCakeGuard : Bool :=
 
 #guard handlerReturnCopyCakeGuard
 
+/- These are the canonical `word_stack_call_probe.out` rows, including the
+   handler-frame offset used by Cake's `copy_ret F T (2,6,5) [4;6;8]`. -/
+def copyRetProbeRowsCakeGuard : Bool :=
+  stackNumReturnSlots 12 [4, 6, 8] == 0 &&
+    stackNumReturnSlots 2 [4, 6, 8] == 2 &&
+    (match stackCopyReturn (α := Nat) false false 12 20 19 [4, 6, 8]
+        (.skip : StackProg Nat) with
+     | .skip => true
+     | _ => false) &&
+    (match stackCopyReturn (α := Nat) false true 2 2 6 [4, 6, 8]
+        (.skip : StackProg Nat) with
+     | .seq
+         (.seq (.stackLoad 2 1)
+           (.seq (.stackStore 2 10)
+             (.seq (.stackLoad 2 0)
+               (.seq (.stackStore 2 9) .skip))))
+         (.seq (.stackFree 2) .skip) => true
+     | _ => false)
+
+#guard copyRetProbeRowsCakeGuard
+
 /-! Indirect-call targets follow `call_dest NONE`: the last argument names the
     target, a register-resident target is used directly, a stack-resident one
     is loaded into `scratch`, and the remaining arguments are the formals. -/
@@ -291,6 +312,8 @@ def runChecks : IO Bool := do
         returnCopyCakeGuard),
       ("copy_ret preserves Cake handler-frame return layout",
         handlerReturnCopyCakeGuard),
+      ("copy_ret and num_stack_ret match Cake's direct probe rows",
+        copyRetProbeRowsCakeGuard),
       ("indirect calls take a register target from the last argument",
         indirectRegisterTargetExact),
       ("indirect calls load a stack target through scratch",

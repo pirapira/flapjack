@@ -1271,6 +1271,50 @@ def applyColourSetPatriciaGuard : Bool :=
 
 #guard applyColourSetPatriciaGuard
 
+/- The original Cake `apply_colour_probe.out` checks that allocator colours
+   reach every register-bearing field, while control labels remain unchanged:
+   assignment/return/raise, call cut sets and handler, and loop live sets. -/
+def applyColourProbeGuard : Bool :=
+  let colour := Flapjack.RiscV.CakeAlloc.totalColour [(1, 7), (3, 9)]
+  let assignOk :=
+    match wordApplyColour colour
+        (.assign 1 (.var 3) : WordProg Nat) with
+    | .assign name (.var source) => name == 14 && source == 18
+    | _ => false
+  let returnRaiseOk :=
+    match wordApplyColour colour
+        (.seq (.return 1 [3, 0]) (.raise 0) : WordProg Nat) with
+    | .seq (.return label values) (.raise exception) =>
+        label == 14 && values == [18, 0] && exception == 0
+    | _ => false
+  let callOk :=
+    match wordApplyColour colour
+        (.call (some ([1], ([3], [0]), .return 1 [3], 10, 11))
+          (some 12) [1, 3]
+          (some (0, .raise 3, 13, 14)) : WordProg Nat) with
+    | .call (some (returns, (normalCut, exceptionCut), ret, normalLabel, raiseLabel))
+        target arguments (some (handlerLabel, handler, handlerNormal, handlerRaise)) =>
+        returns == [14] && normalCut == [18] && exceptionCut == [0] &&
+          target == some 12 && arguments == [14, 18] &&
+          normalLabel == 10 && raiseLabel == 11 &&
+          handlerLabel == 0 && handlerNormal == 13 && handlerRaise == 14 &&
+          (match ret with
+          | .return label values => label == 14 && values == [18]
+          | _ => false) &&
+          (match handler with
+          | .raise exception => exception == 18
+          | _ => false)
+    | _ => false
+  let loopOk :=
+    match wordApplyColour colour
+        (.loop [0, 1] (.assign 1 (.var 3)) [3] : WordProg Nat) with
+    | .loop liveIn (.assign name (.var source)) liveOut =>
+        liveIn == [0, 14] && name == 14 && source == 18 && liveOut == [18]
+    | _ => false
+  assignOk && returnRaiseOk && callOk && loopOk
+
+#guard applyColourProbeGuard
+
 /- Cake's `max_var` ignores control-flow labels on Break and Continue; they
    are labels, not Word register names and must not enlarge the stack frame. -/
 def maxVarControlLabelGuard : Bool :=
@@ -1328,7 +1372,8 @@ def parityGuard : Bool :=
       doSpillEqualDegreeGuard && unspillTransitionGuard &&
       coalesceSelfMoveRejectedGuard &&
       doStepSimplifyPriorityGuard && assignAtempFixedNeighbourGuard &&
-      assignStempUnboundColourGuard && assignAtempsHeuristicThenRangeGuard
+      assignStempUnboundColourGuard && assignAtempsHeuristicThenRangeGuard &&
+      applyColourProbeGuard
 
 /- The aggregate guard is intentionally disabled while the allocator port is
    being aligned with CakeML.  Individual oracle cases remain available to
@@ -1378,7 +1423,7 @@ def runChecks : IO Bool := do
     doSpillEqualDegreeGuard, unspillTransitionGuard,
     doStepSimplifyPriorityGuard,
     assignAtempFixedNeighbourGuard, assignStempUnboundColourGuard,
-    assignAtempsHeuristicThenRangeGuard]
+    assignAtempsHeuristicThenRangeGuard, applyColourProbeGuard]
   let names := [
     "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
@@ -1436,7 +1481,8 @@ def runChecks : IO Bool := do
     "do_freeze transition", "do_spill equal-degree transition",
     "unspill transition", "do_step simplify priority",
     "assign_Atemp fixed-neighbour colour",
-    "assign_Stemp unbound colour", "assign_Atemps heuristic then range"]
+    "assign_Stemp unbound colour", "assign_Atemps heuristic then range",
+    "apply_colour rewrites source Word register fields"]
   let mut all := true
   for (name, result) in names.zip results do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"

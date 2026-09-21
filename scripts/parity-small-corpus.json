@@ -933,6 +933,18 @@
       "source_reference": "Minimized differential-fuzz witness f00198-s6-i00198-mutate: Cake rematerialises the constant stored by a local store before reusing it; word_cse must emit the original OpCurrHeap source register (word_cseScript.sml:587-594) so the second Const stays live (GH #1127, flapjack-1kj).",
       "cake_sha256": "487452d7e96ded747bbd729b6ec232ca4a95c285426a6ab354e2f44191f599f2",
       "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/currheap_add_const.pnk",
+      "source_reference": "Differential-fuzz witness f00036-s65-i00036-mutate: `@base` lowers to a CurrHeap lookup, so Cake materialises the constant and emits a register add (`li a0,255; add a0,a0,s10`) instead of folding it into an `addi` (word_instScript.sml:246-275; GH #1128, flapjack-qxa).",
+      "cake_sha256": "e8f57d997b29a84df77257814777fd08ff011cdbfd2cc782c4fdb854453a032c",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/currheap_sub_zero.pnk",
+      "source_reference": "CurrHeap zero-sub witness: `@base - 0` reaches the same materialised-constant register add, so Cake keeps `li a0,0; add a0,a0,s10` instead of eliding the computation (GH #1128, flapjack-qxa).",
+      "cake_sha256": "b0c0977bc4e3f55dba8183a6df675d6e527fcf13f0aa49fce55240c25431a9cb",
+      "tracked_beads": []
     }
   ]
 }

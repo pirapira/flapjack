@@ -1201,4 +1201,11 @@ example :
 #check @panValuePcCompileCorrect_compact_ite_word_exp_of_state_evidence_context_code
 #check @panValuePcCompileCorrect_compact_while_word_exp_of_state_evidence_context_code
 
+#check @panValuePcResultRel_rejects_source_error
+#check @panValuePcResultRel_rejects_target_error
+#check @panValuePcResultRel_rejects_normal_returned
+#check @panValuePcResultRel_rejects_broke_continued
+#check @panValuePcResultRel_rejects_timeout_normal
+#check @panValuePcResultRel_rejects_finalFfi_normal
+
 end Flapjack.Test.PanValuePcControlSafety

@@ -2629,11 +2629,12 @@ theorem three_word_raise_pc_compile_correct_direct_clocked_raised
         (fun _ => none) directClockFfi "E" sourceValue), 1))
     (hclockState : panValueCrepStateRel [] context
       (fun _ => none) (fun _ => none) (fun _ => none) targetState)
-    (hclockRaise : panValuePcExceptionResultRelWithContextCode [] context
-      (fun _ _ code => code = 9)
+    (hclockRaiseData : panValuePcRaisedHraiseData
       (fun exception => if exception = "E" then some 9 else none)
-      (crepPcFlatGlobalsLookup 8)
-      (fun _ => none) (fun _ => none) "E" sourceValue targetState 9) :
+      (crepPcFlatGlobalsLookup 8) [] context (fun _ _ code => code = 9)
+      (fun _ => none) (fun _ => none) (fun _ => none) "E" sourceValue
+      targetState 9 ∧
+      lookupInfo "E" context.exceptions = some 9) :
     PanValuePcCompileCorrectWithContextCode
       (panValuePcCompactSourceEvaluator
         (fun _ _ => none) (fun _ _ _ _ _ _ => none) []
@@ -2664,7 +2665,7 @@ theorem three_word_raise_pc_compile_correct_direct_clocked_raised
       (.raised (fun _ => none) (fun _ => none) (fun _ => none)
         "E" sourceValue)
       (.raised targetState 9) := by
-  exact panValuePcCompileCorrectWithContextCode_of_compact_evaluators_and_clocked_raised
+  exact panValuePcCompileCorrectWithContextCode_of_compact_evaluators_and_clocked_raised_hraise_data
     (panValuePcCompactSourceEvaluator
       (fun _ _ => none) (fun _ _ _ _ _ _ => none) [] 0 0 8 sourceFuel)
     (crepPcCompactTargetEvaluator [] (fun _ _ => none)
@@ -2677,7 +2678,7 @@ theorem three_word_raise_pc_compile_correct_direct_clocked_raised
     (crepPcFlatGlobalsLookup 8) directClockContext (fun _ _ => none)
     directClockHandler [] 0 0 8 0 1 (fun _ => none) (fun _ => none)
     (fun _ => none) directClockFfi (.raise "E" sourceExpression)
-    targetState "E" sourceValue 9 hclock hclockState hclockRaise
+    targetState "E" sourceValue 9 hclock hclockState hclockRaiseData
 
 example
     (sourceFunctions : List (FunName × List VarName × Prog Nat))
@@ -2778,6 +2779,55 @@ example
   exact panValuePcControlLabelSafe_restore_declaration
     oldValue state name names sourceResult crepResult hsafe
 
+example
+    (context : CompileContext Nat) (structs : StructContext)
+    (sourceFunctions : List (FunName × List VarName × Prog Nat))
+    (functions : List (CompiledFunction Nat))
+    (sourceLocals : VarName → Option (PanValue Nat))
+    (sourceCalleeGlobals : VarName → Option (PanValue Nat))
+    (sourceCalleeMemory : Nat → Option (PanValue Nat))
+    (state callState : CrepState Nat)
+    (primitive : PanPrimitiveHandler Nat)
+    (sourceHandler : PanValueFfiHandler Nat)
+    (crepPrimitive : CrepPrimitiveHandler Nat)
+    (ffi : CrepFfiHandler Nat) (sharedMem : CrepSharedMemHandler Nat)
+    (baseAddress topAddress bytesInWord : Nat)
+    (sourceFuel targetFuel : Nat)
+    (name : VarName) (shape : Shape) (body : Prog Nat)
+    (sourceValue : PanValue Nat)
+    (sourceResult : PanValueControlResult Nat)
+    (crepResult : CrepControlResult Nat)
+    (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+    (hbody : PanValueCrepProgramStateControlSafe body)
+    (hrelBody : panValueCrepStateRel structs
+      { context with
+          vars := (name, (shape, allocatedNames context shape)) :: context.vars
+          maxVar := context.maxVar + Shape.shapeSize shape }
+      (updatePanValueMap sourceLocals name sourceValue)
+      sourceCalleeGlobals sourceCalleeMemory callState)
+    (hsourceBody : evalPanValueProgWithPrimitiveCallsAndFfi
+      primitive sourceHandler structs sourceFunctions
+      baseAddress topAddress bytesInWord sourceFuel
+      (updatePanValueMap sourceLocals name sourceValue)
+      sourceCalleeGlobals sourceCalleeMemory body = some sourceResult)
+    (hcrepBody : evalCrepFullProgState functions crepPrimitive ffi sharedMem
+      baseAddress topAddress (targetFuel + 1) callState
+      (compileProg
+        { context with
+            vars := (name, (shape, allocatedNames context shape)) :: context.vars
+            maxVar := context.maxVar + Shape.shapeSize shape }
+        body) = some crepResult) :
+    panValuePcControlLabelSafe
+      (restorePanValueControlLocal name (sourceLocals name) sourceResult)
+      (restoreCrepResultList state.locals
+        (allocatedNames context shape) crepResult) := by
+  exact panValueCrepDecCallControlSafe_of_body_safe
+    context structs sourceFunctions functions sourceLocals
+    sourceCalleeGlobals sourceCalleeMemory state callState primitive
+    sourceHandler crepPrimitive ffi sharedMem baseAddress topAddress bytesInWord
+    sourceFuel targetFuel name shape body sourceValue sourceResult crepResult
+    exceptionRel hbody hrelBody hsourceBody hcrepBody
+
 def runChecks : IO Bool := do
   IO.println "PASS generic three-word Raise evaluator relation"
   IO.println "PASS generic raised semantic/global lookup lift"
@@ -2787,6 +2837,7 @@ def runChecks : IO Bool := do
   IO.println "PASS compact ExtCall pc_compile_correct bridge instantiation"
   IO.println "PASS compact ExtCall context-coded bridge instantiation"
   IO.println "PASS declaration restoration preserves control-label safety"
+  IO.println "PASS DecCall body control safety survives caller restoration"
   IO.println "PASS nested raised semantic/global lookup lift"
   pure true
 

@@ -308,6 +308,55 @@ theorem localisedProg_assign_global_false (name : VarName) (value : Exp α) :
     ¬ localisedProg (.assign .global name value : Prog α) := by
   simp [localisedProg]
 
+/-- A list of expressions all of which are localised has no global variables. -/
+theorem expGlobalVarsList_eq_nil_of_all_localised (expressions : List (Exp α))
+    (h : ∀ expression ∈ expressions, localisedExp expression) :
+    expGlobalVars.expGlobalVarsList expressions = [] := by
+  induction expressions with
+  | nil => simp [expGlobalVars.expGlobalVarsList]
+  | cons head tail ih =>
+      simp only [expGlobalVars.expGlobalVarsList]
+      rw [h head (by simp), List.nil_append]
+      exact ih (fun expression hmem => h expression (by simp [hmem]))
+
+/-- Counterpart of the first conjunct of Cake's `localised_exp_shape_val`
+    (`pan_globalsProofScript.sml:3207`): the placeholder expression generated
+    for a shape is localised. -/
+theorem localisedExp_shapeVal (shape : Shape) : localisedExp (shapeVal shape) := by
+  have hmain : ∀ shape : Shape, localisedExp (shapeVal shape) := by
+    apply shapeVal.induct
+      (motive1 := fun shape => localisedExp (shapeVal shape))
+      (motive2 := fun shapes => ∀ expression ∈ shapeVals shapes,
+        localisedExp expression)
+    · simp [shapeVal, localisedExp, expGlobalVars]
+    · intro shapes ih
+      simp only [shapeVal]
+      simpa only [localisedExp, expGlobalVars] using
+        expGlobalVarsList_eq_nil_of_all_localised (shapeVals shapes) ih
+    · intro name
+      simp [shapeVal, localisedExp, expGlobalVars]
+    · simp [shapeVals]
+    · intro shape shapes ihHead ihTail expression hmem
+      simp only [shapeVals, List.mem_cons] at hmem
+      rcases hmem with rfl | hmem
+      · exact ihHead
+      · exact ihTail expression hmem
+  exact hmain shape
+
+/-- Counterpart of the second conjunct of Cake's `localised_exp_shape_val`
+    (`pan_globalsProofScript.sml:3207`): every placeholder expression in a list
+    generated for a shape list is localised. -/
+theorem localisedExp_shapeVals (shapes : List Shape) :
+    ∀ expression ∈ shapeVals shapes, localisedExp expression := by
+  induction shapes with
+  | nil => simp [shapeVals]
+  | cons shape shapes ih =>
+      intro expression hmem
+      simp only [shapeVals, List.mem_cons] at hmem
+      rcases hmem with rfl | hmem
+      · exact localisedExp_shapeVal shape
+      · exact ih expression hmem
+
 /-! Successful word operations cannot hide a failed or structured operand.
 This is the source-side inversion lemma needed before applying the
 compositional operation boundaries below. -/

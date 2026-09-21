@@ -192,6 +192,24 @@ def decDegreeNeighboursGuard : Bool :=
 
 #guard decDegreeNeighboursGuard
 
+/- Cake's push_stack (reg_allocScript.sml:300-307) zeroes the pushed node's
+   degree, clears its move-related flag, and prepends it to the stack while
+   leaving unrelated state intact. -/
+def pushStackGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      degrees := CakeNodeMap.ofNatInfoMap 4 [(1, 3), (2, 5)]
+      moveRelated := CakeNodeMap.ofNatInfoMap 4 [(1, true), (2, false)]
+      stack := [2] }
+  let out := cakePushStack 1 state
+  out.degrees.get 1 == some 0 &&
+    out.degrees.get 2 == some 5 &&
+    out.moveRelated.get 1 == some false &&
+    out.moveRelated.get 2 == some false &&
+    out.stack == [1, 2]
+
+#guard pushStackGuard
+
 /-- Canonical form for comparing node bijections with the probed sptree
     outputs: both maps sorted by key. -/
 def sortBijectionMaps (bijection : CakeNodeBijection) :
@@ -1210,6 +1228,7 @@ def parityGuard : Bool :=
       assignStempsTraversalGuard &&
       insertEdgeGuard && cliqueInsertEdgeGuard &&
       decDegreeNeighboursGuard &&
+      pushStackGuard &&
     bijDeltaBasicGuard && bijDeltaDedupGuard && bijSeqOrderGuard &&
     bijBranchOrderGuard && bijBranchLiveGuard && bijSetGuard &&
     bijSetUnsortedGuard && bijCompositeGuard && graphDeltaDisjointGuard &&
@@ -1256,6 +1275,7 @@ def runChecks : IO Bool := do
     loopBodyGuard, assignLeafGuard, sortedInsertMemGuard, firstMatchColGuard,
     assignStempsTraversalGuard, insertEdgeGuard, cliqueInsertEdgeGuard,
     decDegreeNeighboursGuard,
+    pushStackGuard,
     bijDeltaBasicGuard, bijDeltaDedupGuard, bijSeqOrderGuard,
     bijBranchOrderGuard, bijBranchLiveGuard, bijSetGuard,
     bijSetUnsortedGuard, bijCompositeGuard, graphDeltaDisjointGuard,
@@ -1302,6 +1322,7 @@ def runChecks : IO Bool := do
     "Cake insert_edge",
     "Cake clique_insert_edge",
     "Cake dec_degree neighbours",
+    "Cake push_stack",
     "mk_bij delta basic", "mk_bij delta dedup", "mk_bij seq order",
     "mk_bij branch order", "mk_bij branch live", "mk_bij set",
     "mk_bij set unsorted", "mk_bij composite", "mk_graph delta disjoint",

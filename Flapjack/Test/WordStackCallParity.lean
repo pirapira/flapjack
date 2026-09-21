@@ -161,6 +161,22 @@ def overflowArgumentSlotMatchesWMoveSingle : Bool :=
 #guard callFrameOffsetMatchesCakeF
 #guard overflowArgumentSlotMatchesWMoveSingle
 
+/-! The real Cake RISC-V ABI window has twelve value slots.  At the exact
+    boundary, `format_var` keeps index 11 in the last ABI register and
+    `wMoveSingle` places indices 12 and 13 at the top two slots of the
+    caller's four-word frame (`word_to_stackScript.sml`).  The earlier
+    overflow guard intentionally uses a 22-slot synthetic window; keep this
+    separate check tied to the production RISC-V configuration. -/
+def riscvAbiBoundaryPhysicalLocationsExact : Bool :=
+  let config : WordStackConfig :=
+    { locations := [], scratch := 22, stackBase := 0,
+      abiRegisterCount := 12, abiFrameSlots := 3, frameOffset := 4 }
+  wordStackPhysicalLocation config 11 1 == .register 23 &&
+    wordStackPhysicalLocation config 12 1 == .stack 3 &&
+    wordStackPhysicalLocation config 13 1 == .stack 2
+
+#guard riscvAbiBoundaryPhysicalLocationsExact
+
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
     [ ("stack_arg_count and stack_free match the call oracle", callArgCountExact),
@@ -182,7 +198,9 @@ def runChecks : IO Bool := do
       ("StackArgs uses compile_prog's caller frame size f",
         callFrameOffsetMatchesCakeF),
       ("an overflow argument sits at wMoveSingle's f - 1 - (r - k)",
-        overflowArgumentSlotMatchesWMoveSingle) ]
+        overflowArgumentSlotMatchesWMoveSingle),
+      ("the RISC-V ABI boundary uses Cake's first two spill slots",
+        riscvAbiBoundaryPhysicalLocationsExact) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

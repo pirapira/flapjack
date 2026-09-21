@@ -89,6 +89,17 @@ def panSimpDecl : Decl α → Decl α
       .function { declaration with body := panSimpProg declaration.body }
   | declaration => declaration
 
+/-! Cake's `functions` projection (`panLangScript.sml:319-326`): the function
+    table as `(name, params, body, returnShape)` entries, with non-function
+    declarations dropped. -/
+def functions :
+    List (Decl α) → List (FunName × List (VarName × Shape) × Prog α × Shape)
+  | [] => []
+  | .function declaration :: declarations =>
+      (declaration.name, declaration.params, declaration.body,
+        declaration.returnShape) :: functions declarations
+  | _ :: declarations => functions declarations
+
 /-! Source-shaped counterpart of Cake's `compile_prog_pmatch`: `compile_prog`
     maps `compile` over function declarations and leaves other declarations
     unchanged. -/
@@ -98,6 +109,20 @@ theorem panSimpDecls_eq_map (declarations : List (Decl α)) :
   | nil => simp [panSimpDecls]
   | cons declaration declarations ih =>
       cases declaration <;> simp [panSimpDecls, panSimpDecl, ih]
+
+/-! Counterpart of Cake's `functions_compile_prog`
+    (`pan_simpProofScript.sml:1017-1022`): `pan_simp` rewrites each function
+    body through `panSimpProg` and leaves the name, parameters, and return
+    shape unchanged. -/
+theorem functions_panSimpDecls (declarations : List (Decl α)) :
+    functions (panSimpDecls declarations) =
+      (functions declarations).map (fun entry =>
+        (entry.1, entry.2.1, panSimpProg entry.2.2.1, entry.2.2.2)) := by
+  induction declarations with
+  | nil => simp [panSimpDecls, functions]
+  | cons declaration declarations ih =>
+      cases declaration <;>
+        simp [panSimpDecls, functions, ih]
 
 @[simp] theorem smartSeq_skip (program : Prog α) :
     smartSeq (.skip : Prog α) program = program := by

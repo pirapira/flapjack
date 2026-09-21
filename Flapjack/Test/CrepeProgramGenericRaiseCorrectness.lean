@@ -3210,6 +3210,7 @@ def runChecks : IO Bool := do
   IO.println "PASS expression-state evidence derives context-coded Raise result relation"
   IO.println "PASS expression-state evidence discharges arbitrary context-coded clocked control"
   IO.println "PASS expression-state evidence discharges arbitrary context-coded clocked Raise"
+  IO.println "PASS expression-state evidence discharges arbitrary ordinary clocked control"
   IO.println "PASS nested raised semantic/global lookup lift"
   pure true
 

@@ -87,6 +87,28 @@ theorem crepGetEidsFromDecls_length
       sizeOfEids declarations := by
   exact pipelineExceptionCodes_length fromNat 0 declarations
 
+/-- The exception-code table depends only on the exception declarations, so
+    simplifying the function bodies with `pan_simp` leaves it unchanged.  This
+    is the Flapjack counterpart of Cake's `get_eids_pan_simp_compile_eq`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:105`), whose
+    `FDOM (get_eids_from_decls prog)` is the finite-domain projection of
+    `crepGetEidsFromDecls`. -/
+theorem pipelineExceptionCodes_panSimpDecls (fromNat : Nat → α) (index : Nat)
+    (declarations : List (Decl α)) :
+    pipelineExceptionCodes fromNat index (panSimpDecls declarations) =
+      pipelineExceptionCodes fromNat index declarations := by
+  rw [panSimpDecls_eq_map]
+  induction declarations generalizing index with
+  | nil => simp [pipelineExceptionCodes]
+  | cons declaration declarations ih =>
+      cases declaration <;> simp [panSimpDecl, pipelineExceptionCodes, ih]
+
+theorem crepGetEidsFromDecls_panSimpDecls (fromNat : Nat → α)
+    (declarations : List (Decl α)) :
+    crepGetEidsFromDecls fromNat (panSimpDecls declarations) =
+      crepGetEidsFromDecls fromNat declarations :=
+  pipelineExceptionCodes_panSimpDecls fromNat 0 declarations
+
 /-! Cake's `get_eids_imp_excp_rel` begins by proving that every declared
     exception has a target code.  This constructive lookup half is useful at
     the generic Raise boundary: the exception-code premise is obtained from

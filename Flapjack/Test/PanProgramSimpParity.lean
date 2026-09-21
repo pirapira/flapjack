@@ -121,4 +121,17 @@ theorem evalPanValueExp_panValueProgramStateRel_fixture :
     ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
     (.const 5) none (.word 5) (by simp [evalPanValueExp])
 
+/-- Focused regression for the `OPT_MMAP_eval_some_eq` counterpart: a whole
+    expression list maps to the same values under `panValueProgramStateRel`. -/
+theorem list_mapM_eval_panValueProgramStateRel_fixture :
+    (([(.const 1), (.const 5)] : List (Exp Nat)).mapM (fun expression =>
+      evalPanValueExp ([] : StructContext) (fun _ => none) evalRelState.globals
+        evalRelState.memory evalRelState.baseAddress evalRelState.topAddress
+        evalRelState.bytesInWord expression)) = some [.word 1, .word 5] :=
+  list_mapM_eval_panValueProgramStateRel ([] : StructContext) (fun _ => none)
+    evalRelState evalRelState
+    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+    [.const 1, .const 5] [.word 1, .word 5] none
+    (by simp [evalPanValueExp])
+
 end Flapjack.Test.PanProgramSimpParity

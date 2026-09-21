@@ -398,6 +398,14 @@ example (state' : PanValueProgramState Nat)
   exact evalPanValueDeclarationsWithStructs_only_exn_decls ([] : StructContext)
     evalRelState state' onlyExceptionDecls none (by decide) rfl heval
 
+example (state' : PanValueProgramState Nat)
+    (heval : evalPanValueDeclarations evalRelState onlyExceptionDecls none =
+      some state') :
+    state' = { evalRelState with
+      exceptions := panExceptionEntries onlyExceptionDecls ++ evalRelState.exceptions } := by
+  exact evalPanValueDeclarations_only_exn_decls evalRelState state'
+    onlyExceptionDecls none (by decide) heval
+
 /-! Regression for Cake's `evaluate_decls_names`: structure-name
     declarations do not alter the program state during evaluation. -/
 

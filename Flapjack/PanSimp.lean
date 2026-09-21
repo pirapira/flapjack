@@ -498,6 +498,92 @@ theorem progSize_pos : ∀ program : Prog α, 1 ≤ progSize program
   | .shMemStore _ _ _ => by simp only [progSize]; omega
   | .tick => by simp only [progSize]; omega
 
+/-- A call-aware structural budget: `progSize` for the ordinary nodes, but each
+    `Call`/`DecCall` node reserves a uniform `callBudget` for its callee (and
+    `max` with the handler or continuation body where those run at the same
+    fuel).  This is the budget the program-level adequacy statement needs, since
+    `progSize` charges only one unit for a `Call` node and does not cover the
+    callee or handler bodies. -/
+def progCallFuel (callBudget : Nat) : Prog α → Nat
+  | .skip => 1
+  | .dec _ _ _ body => 1 + progCallFuel callBudget body
+  | .seq first second =>
+      1 + progCallFuel callBudget first + progCallFuel callBudget second
+  | .ite _ thenBranch elseBranch =>
+      1 + progCallFuel callBudget thenBranch + progCallFuel callBudget elseBranch
+  | .while _ body => 1 + progCallFuel callBudget body
+  | .call none _ _ => 1 + callBudget
+  | .call (some (_, none)) _ _ => 1 + callBudget
+  | .call (some (_, some (_, _, handler))) _ _ =>
+      1 + max callBudget (progCallFuel callBudget handler)
+  | .decCall _ _ _ _ body => 1 + max callBudget (progCallFuel callBudget body)
+  | .annot _ _ => 1
+  | _ => 1
+termination_by program => sizeOf program
+decreasing_by all_goals decreasing_trivial
+
+/-- The call-aware budget dominates the plain structural size. -/
+theorem progSize_le_progCallFuel (callBudget : Nat) (program : Prog α) :
+    progSize program ≤ progCallFuel callBudget program := by
+  let rec go : (program : Prog α) →
+      progSize program ≤ progCallFuel callBudget program
+    | .skip => by simp only [progSize, progCallFuel]; omega
+    | .dec _ _ _ body => by
+        simp only [progSize, progCallFuel]
+        have hb := go body
+        omega
+    | .seq first second => by
+        simp only [progSize, progCallFuel]
+        have h1 := go first
+        have h2 := go second
+        omega
+    | .ite _ thenBranch elseBranch => by
+        simp only [progSize, progCallFuel]
+        have ht := go thenBranch
+        have he := go elseBranch
+        omega
+    | .while _ body => by
+        simp only [progSize, progCallFuel]
+        have hb := go body
+        omega
+    | .call info _ _ => by
+        cases info with
+        | none => simp only [progSize, progCallFuel]; omega
+        | some info =>
+            cases info with
+            | mk returns handlerInfo =>
+                cases handlerInfo with
+                | none => simp only [progSize, progCallFuel]; omega
+                | some handler =>
+                    cases handler with
+                    | mk exception handlerInfo =>
+                        cases handlerInfo with
+                        | mk handlerVar handlerProgram =>
+                            simp only [progSize, progCallFuel]
+                            have hh := go handlerProgram
+                            omega
+    | .decCall _ _ _ _ body => by
+        simp only [progSize, progCallFuel]
+        have hb := go body
+        omega
+    | .annot _ _ => by simp only [progSize, progCallFuel]; omega
+    | .assign _ _ _ => by simp only [progSize, progCallFuel]; omega
+    | .primitive _ _ _ => by simp only [progSize, progCallFuel]; omega
+    | .store _ _ => by simp only [progSize, progCallFuel]; omega
+    | .store32 _ _ => by simp only [progSize, progCallFuel]; omega
+    | .storeByte _ _ => by simp only [progSize, progCallFuel]; omega
+    | .break => by simp only [progSize, progCallFuel]; omega
+    | .continue => by simp only [progSize, progCallFuel]; omega
+    | .extCall _ _ _ _ _ => by simp only [progSize, progCallFuel]; omega
+    | .raise _ _ => by simp only [progSize, progCallFuel]; omega
+    | .return _ => by simp only [progSize, progCallFuel]; omega
+    | .shMemLoad _ _ _ _ => by simp only [progSize, progCallFuel]; omega
+    | .shMemStore _ _ _ => by simp only [progSize, progCallFuel]; omega
+    | .tick => by simp only [progSize, progCallFuel]; omega
+    termination_by program => sizeOf program
+    decreasing_by all_goals decreasing_trivial
+  exact go program
+
 theorem progSize_smartSeq_le (pre program : Prog α) :
     progSize (smartSeq pre program) ≤ progSize pre + progSize program + 1 := by
   unfold smartSeq

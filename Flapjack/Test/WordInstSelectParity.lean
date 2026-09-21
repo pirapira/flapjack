@@ -176,6 +176,25 @@ def cakeSharedOddHalfwordOffset : Bool :=
         (.op .add [.var 23, .const 9])) => true
   | _ => false
 
+/- The same Cake offset predicate applies independently of memory width. -/
+def cakeSharedLoad32PositiveBoundary : Bool :=
+  match wordInstSelectProgram (α := Nat) 23
+      (.shareInst .load32 10
+        (.op .add [.var 12, .const 2047])) with
+  | .seq (.move 0 [(23, 12)])
+      (.shareInst .load32 10
+        (.op .add [.var 23, .const 2047])) => true
+  | _ => false
+
+def cakeSharedStore32NegativeBoundary : Bool :=
+  match wordInstSelectProgram (α := Nat) 23
+      (.shareInst .store32 10
+        (.op .add [.var 12, .const (2 ^ 64 - 8)])) with
+  | .seq (.move 0 [(23, 12)])
+      (.shareInst .store32 10
+        (.op .add [.var 23, .const offset])) => offset == 2 ^ 64 - 8
+  | _ => false
+
 /- Cake's `inst_select_exp` selects the non-heap operand into the fresh
    temporary before emitting the current-heap operation. -/
 def cakeCurrentHeapOr : Bool :=
@@ -254,6 +273,53 @@ def cakeStoreOffsetOracle : Bool :=
        (.inst (.mem .store 10 7)) => true
    | _ => false)
 
+/- The checked standalone Cake Store boundary agrees with the three exact
+   `inst_select_def` shapes above.  The production source-shaped selector is
+   intentionally not rewired here; that carrier migration is a separate
+   downstream Word-to-Stack/allocator task. -/
+def cakeStoreSelectorPositiveShape : Bool :=
+  match wordInstSelectStoreCake (α := Nat) 7
+      (.op .add [.var 13, .const 8]) 10 with
+  | .seq (.move 0 [(7, 13)])
+      (.inst (.memOffset .store 10 7 8)) => true
+  | _ => false
+
+def cakeStoreSelectorNegativeShape : Bool :=
+  match wordInstSelectStoreCake (α := Nat) 7
+      (.op .add [.var 13, .const (2 ^ 64 - 8)]) 10 with
+  | .seq (.move 0 [(7, 13)])
+      (.inst (.memOffset .store 10 7 offset)) =>
+      offset == 2 ^ 64 - 8
+  | _ => false
+
+def cakeStoreSelectorOutOfRangeShape : Bool :=
+  match wordInstSelectStoreCake (α := Nat) 7
+      (.op .add [.var 13, .const 2048]) 10 with
+  | .seq
+      (.seq (.move 0 [(7, 13)])
+        (.seq (.inst (.const 8 2048))
+          (.inst (.arith (.binOp .add 7 7 (.reg 8))))))
+      (.inst (.mem .store 10 7)) => true
+  | _ => false
+
+def cakeStoreSelectorVarShape : Bool :=
+  match wordInstSelectStoreCake (α := Nat) 7 (.var 13) 10 with
+  | .seq (.move 0 [(7, 13)])
+      (.inst (.mem .store 10 7)) => true
+  | _ => false
+
+def cakeStoreSelectorConstShape : Bool :=
+  match wordInstSelectStoreCake (α := Nat) 7 (.const 2048) 10 with
+  | .seq (.inst (.const 7 2048))
+      (.inst (.mem .store 10 7)) => true
+  | _ => false
+
+#guard cakeStoreSelectorPositiveShape
+#guard cakeStoreSelectorNegativeShape
+#guard cakeStoreSelectorOutOfRangeShape
+#guard cakeStoreSelectorVarShape
+#guard cakeStoreSelectorConstShape
+
 #guard cakeLoadConstShape
 #guard cakeLoadVarShape
 #guard cakeLoadVarOffsetShape
@@ -272,6 +338,8 @@ def cakeStoreOffsetOracle : Bool :=
 #guard cakeWideAddMaterializesConstant
 #guard cakeSharedByteOffsetMaterializesConstant
 #guard cakeSharedOddHalfwordOffset
+#guard cakeSharedLoad32PositiveBoundary
+#guard cakeSharedStore32NegativeBoundary
 #guard cakeCurrentHeapOr
 #guard cakeConstCurrentHeapXor
 #guard cakeBitVecConstCurrentHeapXor

@@ -136,7 +136,7 @@ example :
     wordStackArithInst
         { locations := [(4, .register 3)],
           scratch := 31, stackBase := 10 } (.longDiv 0 3 3 0 4) =
-      (none : Option (StackProg Nat)) := by
+      some (.inst (.arith (.longDiv 0 3 3 0 3)) : StackProg Nat) := by
   simp [wordStackArithInst, wordSpecialArithLocationsSafe,
     wordStackLongDivInst, wordStackLocation,
     lookupNatInfo]

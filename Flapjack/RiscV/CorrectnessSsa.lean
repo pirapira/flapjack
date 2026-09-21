@@ -796,8 +796,8 @@ theorem evalWordProg_ssaRename_assign_binary_var_const_destination [NeZero width
       · simp [execute, writeRegister, hmemory, hdestinationNonzero, hfreshNonzero]
   | or =>
       have hvalue :
-          readRegister sourceState ⟨source, hsource⟩ ||| value =
-            readRegister targetState ⟨wordSsaRead ssa source, hsourceSsa⟩ ||| value := by
+          readRegister sourceState ⟨source, hsource⟩ ||| iImmediate value =
+            readRegister targetState ⟨wordSsaRead ssa source, hsourceSsa⟩ ||| iImmediate value := by
         rw [hsourceValue]
       refine ⟨execute sourceState (.ori ⟨destination, hdestination⟩
           ⟨source, hsource⟩ value),
@@ -1370,6 +1370,8 @@ theorem evalWordProg_ssaRename_assign_rotate_var_var_destination [NeZero width]
        ⟨wordSsaRead ssa right, hrightSsa⟩,
      .or ⟨(wordSsaFresh ssa destination).2, hfresh⟩
        ⟨(wordSsaFresh ssa destination).2, hfresh⟩ 31]
+  have hwidthImm : iImmediate (BitVec.ofNat width width) = BitVec.ofNat width width := by
+    rcases hwidth with rfl | rfl <;> decide
   have hsourceDestination :
       readRegister (executeInstructions sourceState sourceCode)
           ⟨destination, hdestination⟩ =
@@ -1378,7 +1380,7 @@ theorem evalWordProg_ssaRename_assign_rotate_var_var_destination [NeZero width]
           (shiftAmount (readRegister sourceState ⟨right, hright⟩)) := by
     simp [sourceCode, executeInstructions, execute, readRegister, writeRegister,
       hzeroSource', hleftFinScratch, hrightFinScratch,
-      hdestinationFinNonzero, Ne.symm hdestinationFinScratch]
+      hdestinationFinNonzero, Ne.symm hdestinationFinScratch, hwidthImm]
     rw [hshift]
     simp [rotateRight, shiftAmount]
   have htargetDestination :
@@ -1390,7 +1392,7 @@ theorem evalWordProg_ssaRename_assign_rotate_var_var_destination [NeZero width]
             (readRegister targetState ⟨wordSsaRead ssa right, hrightSsa⟩)) := by
     simp [targetCode, executeInstructions, execute, readRegister, writeRegister,
       hzeroTarget', hleftSsaFinScratch, hrightSsaFinScratch,
-      hfreshFinNonzero, Ne.symm hfreshFinScratch]
+      hfreshFinNonzero, Ne.symm hfreshFinScratch, hwidthImm]
     rw [hshift]
     simp [rotateRight, shiftAmount]
   refine ⟨executeInstructions sourceState sourceCode,

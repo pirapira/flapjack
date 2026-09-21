@@ -442,6 +442,7 @@ end
     compatible shift semantics through the straight-line and conditional
     Loop fragment used by the source-to-Loop correctness bridge. -/
 def evalLoopProgFull [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+      [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [PanCmp α] [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
     [Complement α]
@@ -452,6 +453,12 @@ def evalLoopProgFull [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       let value ← evalLoopExpFull state expression
       pure (.normal { state with
         locals := updateLoopLocal state.locals name value })
+  | _fuel + 1, state, .arith (.div destination dividend divisor) => do
+      let dividend ← state.locals dividend
+      let divisor ← state.locals divisor
+      if divisor == 0 then none
+      else pure (.normal { state with
+        locals := updateLoopLocal state.locals destination (dividend / divisor) })
   | _fuel + 1, state, .store address value => do
       let address ← evalLoopExpFull state address
       let value ← state.locals value
@@ -521,6 +528,48 @@ def evalLoopProgFull [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
   | fuel + 1, state, .mark body => evalLoopProgFull fuel state body
   | _, _, .fail | _, _, .loop _ _ _ | _, _, .primitive _ _ _
   | _, _, .arith _ | _, _, .call _ _ _ _ | _, _, .ffi _ _ _ _ _ _ => none
+
+/-! Full evaluator extension for Cake's width-aware `LLongDiv`.  The legacy
+    `evalLoopProgFull` remains unchanged for callers that intentionally use
+    its smaller fragment; this wrapper adds the arithmetic branch and recurses
+    through sequence, conditionals, and marks so a long division is not
+    silently rejected merely because it is nested in source-shaped control. -/
+def evalLoopProgFullWithLongDiv [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [PanCmp α] [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
+    [Complement α]
+    (longDiv : α → α → α → Option (α × α))
+    : Nat → LoopState α → LoopProg α → Option (LoopResult α)
+  | 0, _, _ => none
+  | _fuel + 1, state, .arith
+      (.longDiv destinationLeft destinationRight sourceLeft sourceRight quotient) => do
+      let high ← state.locals sourceLeft
+      let low ← state.locals sourceRight
+      let divisor ← state.locals quotient
+      let (quotientValue, remainderValue) ← longDiv high low divisor
+      pure (.normal { state with
+        locals := updateLoopLocal
+          (updateLoopLocal state.locals destinationRight remainderValue)
+          destinationLeft quotientValue })
+  | fuel + 1, state, .seq first second => do
+      let result ← evalLoopProgFullWithLongDiv longDiv fuel state first
+      match result with
+      | .normal state => evalLoopProgFullWithLongDiv longDiv fuel state second
+      | result => pure result
+  | fuel + 1, state, .ite operator condition right thenBranch elseBranch _ => do
+      let left ← state.locals condition
+      let right ← match right with
+        | .imm value => some value
+        | .reg name => state.locals name
+      let choose ← evalLoopCondition operator left right
+      if choose then
+        evalLoopProgFullWithLongDiv longDiv fuel state thenBranch
+      else
+        evalLoopProgFullWithLongDiv longDiv fuel state elseBranch
+  | fuel + 1, state, .mark body =>
+      evalLoopProgFullWithLongDiv longDiv fuel state body
+  | fuel + 1, state, program => evalLoopProgFull fuel state program
 
 /-!
 At one unit of fuel, a Loop program classified as not writing `name` leaves

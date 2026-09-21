@@ -15,6 +15,25 @@ checks cover the separate constants boundary, whose list shape follows
 
 namespace Flapjack.RiscV
 
+/-! Cake's signed-12 immediate path includes the zero boundary: even the
+    architectural zero is materialized as the explicit `ORI rd, x0, 0` in
+    `riscv_ast`, rather than being silently dropped. -/
+example :
+    wordConstToInstructions (width := 64) 4 (BitVec.ofNat 64 0) =
+      some [.ori 4 0 (BitVec.ofNat 64 0)] := by
+  decide
+
+/- The same Cake boundary is preserved by the executable Lab materializer. -/
+example :
+    labConstInstructions (width := 64) 4 0 31 0 =
+      [.ori 4 0 (BitVec.ofNat 64 0)] := by
+  decide
+
+example :
+    labConstInstructions (width := 64) 4 0 31 (2 ^ 64 - 1) =
+      [.ori 4 0 (BitVec.ofNat 64 0xfff)] := by
+  decide
+
 example :
     wordConstToInstructions (width := 64) 4 (BitVec.ofNat 64 0x12) =
       some [.ori 4 0 (BitVec.ofNat 64 0x12)] := by
@@ -72,6 +91,18 @@ example :
         .addi 4 4 (BitVec.ofNat 64 0x344),
         .slli 4 4 (BitVec.ofNat 64 32),
         .or 4 4 31] := by
+  decide
+
+/-! Negative wide values use the Cake high-word complement and XOR carrier. -/
+example :
+    wordConstToInstructions (width := 64) 4
+        (BitVec.ofNat 64 0xffeeddccbbaa9988) =
+      some [.lui 31 (BitVec.ofNat 64 0x44556),
+        .xori 31 31 (BitVec.ofNat 64 0x988),
+        .lui 4 (BitVec.ofNat 64 0x112),
+        .addi 4 4 (BitVec.ofNat 64 0x233),
+        .slli 4 4 (BitVec.ofNat 64 32),
+        .xor 4 4 31] := by
   decide
 
 example :
@@ -147,6 +178,23 @@ theorem cakeConstWide_execution_oracle :
       some (BitVec.ofNat 64 0x1122334455667788) := by
   decide
 
+/-! The signed-12 endpoints are executable Cake materialization boundaries,
+    not merely instruction-list shape checks. -/
+theorem cakeConst2047_execution_oracle :
+    (wordConstToInstructions (width := 64) 4 (BitVec.ofNat 64 2047)).map
+        (fun instructions =>
+          readRegister (executeInstructions (zeroState 64) instructions) 4) =
+      some (BitVec.ofNat 64 2047) := by
+  decide
+
+theorem cakeConstNeg2048_execution_oracle :
+    (wordConstToInstructions (width := 64) 4
+        (BitVec.ofNat 64 (2 ^ 64 - 2048))).map
+        (fun instructions =>
+          readRegister (executeInstructions (zeroState 64) instructions) 4) =
+      some (BitVec.ofNat 64 (2 ^ 64 - 2048)) := by
+  decide
+
 /-! The expression-facing Cake boundary preserves the same executable
     obligations while leaving the historical one-instruction selector intact.
     These are theorem-facing API checks, not production-caller migration. -/
@@ -189,6 +237,45 @@ example :
           (fun instructions => (instructions, [])) := by
   exact wordFunctionToRiscVWithCallsCake_const _ 4
     (BitVec.ofNat 64 0x1122334455667788)
+
+/-! Cake's list-valued constant boundary composes with both call carriers.
+These are direct source-shaped sequences: the constant is fully materialized
+before the parameter move, and the ordinary call retains Cake's saved-link and
+return-move protocol. -/
+example :
+    wordFunctionToRiscVWithCallsCake (width := 64)
+        ({ targets := [(7, BitVec.ofNat 64 32, [2], [10])] } : WordCallContext 64)
+        (.seq (.assign 4 (.const (BitVec.ofNat 64 0x1234)))
+          (.call (some ([4], ([], []), .skip, 0, 0)) (some 7) [6] none)) =
+      some ([.lui 4 (BitVec.ofNat 64 1),
+        .addi 4 4 (BitVec.ofNat 64 0x234),
+        .addi 2 6 0,
+        .addi 30 30 (0 - BitVec.ofNat 64 8),
+        .storeWord 1 30,
+        .addi 31 0 (BitVec.ofNat 64 32),
+        .jalr 1 31 0,
+        .addi 4 10 0,
+        .loadWord 1 30,
+        .addi 30 30 (BitVec.ofNat 64 8)], []) := by
+  simp [wordFunctionToRiscVWithCallsCake, wordExpToInstructionsCake,
+    wordConstToInstructions, wordConst32ToInstructions,
+    wordCallToRiscVWithStack, wordRegisterMoves, lookupWordCallTarget,
+    registerOfNat]
+
+example :
+    wordFunctionToRiscVWithCallsCake (width := 64)
+        ({ targets := [(7, BitVec.ofNat 64 32, [2], [10])] } : WordCallContext 64)
+        (.seq (.assign 4 (.const (BitVec.ofNat 64 0x1234)))
+          (.call none (some 7) [6] none)) =
+      some ([.lui 4 (BitVec.ofNat 64 1),
+        .addi 4 4 (BitVec.ofNat 64 0x234),
+        .addi 2 6 0,
+        .addi 31 0 (BitVec.ofNat 64 32),
+        .jalr 0 31 0], [10]) := by
+  simp [wordFunctionToRiscVWithCallsCake, wordExpToInstructionsCake,
+    wordConstToInstructions, wordConst32ToInstructions,
+    wordTailCallToRiscV, wordRegisterMoves, lookupWordCallTarget,
+    registerOfNat]
 
 /-! A wide constant used as a memory address keeps Cake's complete address
     materialization before the final store carrier. -/
@@ -236,6 +323,47 @@ example :
   simp [wordFunctionToRiscVWithCallsAndFfiCake,
     wordFunctionToRiscVWithCallsCake, wordExpToInstructionsCake,
     wordConstToInstructions, wordConst32ToInstructions, registerOfNat]
+
+/- The FFI-aware wrapper preserves the same Cake call carriers when a
+   list-valued constant precedes an ordinary or tail call. -/
+example :
+    wordFunctionToRiscVWithCallsAndFfiCake (width := 64)
+        ({ targets := [(7, BitVec.ofNat 64 32, [2], [10])], services := [] } :
+          WordCallFfiContext 64)
+        (.seq (.assign 4 (.const (BitVec.ofNat 64 0x1234)))
+          (.call (some ([4], ([], []), .skip, 0, 0)) (some 7) [6] none)) =
+      some ([.lui 4 (BitVec.ofNat 64 1),
+        .addi 4 4 (BitVec.ofNat 64 0x234),
+        .addi 2 6 0,
+        .addi 30 30 (0 - BitVec.ofNat 64 8),
+        .storeWord 1 30,
+        .addi 31 0 (BitVec.ofNat 64 32),
+        .jalr 1 31 0,
+        .addi 4 10 0,
+        .loadWord 1 30,
+        .addi 30 30 (BitVec.ofNat 64 8)], []) := by
+  simp [wordFunctionToRiscVWithCallsAndFfiCake,
+    wordFunctionToRiscVWithCallsCake, wordExpToInstructionsCake,
+    wordConstToInstructions, wordConst32ToInstructions,
+    wordCallToRiscVWithStack, wordRegisterMoves, lookupWordCallTarget,
+    registerOfNat]
+
+example :
+    wordFunctionToRiscVWithCallsAndFfiCake (width := 64)
+        ({ targets := [(7, BitVec.ofNat 64 32, [2], [10])], services := [] } :
+          WordCallFfiContext 64)
+        (.seq (.assign 4 (.const (BitVec.ofNat 64 0x1234)))
+          (.call none (some 7) [6] none)) =
+      some ([.lui 4 (BitVec.ofNat 64 1),
+        .addi 4 4 (BitVec.ofNat 64 0x234),
+        .addi 2 6 0,
+        .addi 31 0 (BitVec.ofNat 64 32),
+        .jalr 0 31 0], [10]) := by
+  simp [wordFunctionToRiscVWithCallsAndFfiCake,
+    wordFunctionToRiscVWithCallsCake, wordExpToInstructionsCake,
+    wordConstToInstructions, wordConst32ToInstructions,
+    wordTailCallToRiscV, wordRegisterMoves, lookupWordCallTarget,
+    registerOfNat]
 
 example (state : State 64) :
     evalWordProgCake state

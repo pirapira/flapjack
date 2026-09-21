@@ -99,6 +99,7 @@ import Flapjack.CrepeProgramInduction
 import Flapjack.PanToCrepCorrectnessBoundary
 import Flapjack.PanToCrepCorrectnessBridge
 import Flapjack.PanToCrepTailCallCorrectness
+import Flapjack.PanToCrepSharedMemoryCorrectness
 import Flapjack.PanToCrepCallControlSafety
 import Flapjack.PanToCrepCallHandlerControlSafety
 import Flapjack.CrepeExtCallInversion

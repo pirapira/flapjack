@@ -601,6 +601,19 @@ def coalesceWorklistSuccessGuard : Bool :=
 
 #guard coalesceWorklistSuccessGuard
 
+/- Cake's `st_ex_FIRST`/`do_coalesce` (`reg_allocScript.sml:636-698`)
+   rejects a self-move through `consistency_ok`: it is not moved to the
+   unavailable list, while the failed coalescing pass clears avail_moves_wl. -/
+def coalesceSelfMoveRejectedGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 3 with
+      moveRelated := CakeNodeMap.ofNatInfoMap 3 [(1, true)]
+      availMovesWl := [(1, (1, 1))] }
+  let (changed, out) := cakeDoCoalesce 3 state
+  !changed && out.availMovesWl == [] && out.unavailMovesWl == []
+
+#guard coalesceSelfMoveRejectedGuard
+
 /-- Cake's coalesce_parent follows a non-fixed parent chain and compresses
    the starting node to the fixed ancestor (reg_allocScript.sml:589-612).
    This is distinct from the worklist coalesce guard above: it checks the
@@ -962,12 +975,8 @@ def parityGuard : Bool :=
     && cakeBijSetPatriciaGuard
     && coalesceParentCompressionGuard
     && prefreezeTransitionGuard
-<<<<<<< HEAD
     && sortMovesTailSplitGuard && freezeWorklistTransitionGuard &&
-      doSpillEqualDegreeGuard
-=======
-    && sortMovesTailSplitGuard
->>>>>>> origin/compiler-execution-parity-next-18
+      doSpillEqualDegreeGuard && coalesceSelfMoveRejectedGuard
 
 /- The aggregate guard is intentionally disabled while the allocator port is
    being aligned with CakeML.  Individual oracle cases remain available to
@@ -1003,12 +1012,8 @@ def runChecks : IO Bool := do
     stExMaxDegOrderGuard, respillWorklistGuard,
     respillBelowThresholdGuard, simplifyBatchGuard, decDegreeOutOfDimGuard,
     coalesceWorklistSuccessGuard, coalesceParentCompressionGuard,
-<<<<<<< HEAD
     prefreezeTransitionGuard, freezeWorklistTransitionGuard,
     doSpillEqualDegreeGuard]
-=======
-    prefreezeTransitionGuard]
->>>>>>> origin/compiler-execution-parity-next-18
   let names := [
     "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
@@ -1050,11 +1055,7 @@ def runChecks : IO Bool := do
     "respill below-threshold no-op", "do_simplify batch ordering",
     "dec_degree out-of-dimension no-op",
     "do_coalesce success transition", "do_prefreeze transition",
-<<<<<<< HEAD
     "do_freeze transition", "do_spill equal-degree transition"]
-=======
-    "do_freeze transition"]
->>>>>>> origin/compiler-execution-parity-next-18
   let mut all := true
   for (name, result) in names.zip results do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"

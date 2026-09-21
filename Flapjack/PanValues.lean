@@ -2444,6 +2444,15 @@ theorem panValueResVar_lookup_diff [BEq String] [LawfulBEq String]
     panValueResVar locals name oldValue other = locals other := by
   simp [panValueResVar, beq_iff_eq, hne]
 
+/-- Counterpart of Cake's `FLOOKUP_pan_res_var_thm`
+    (`cakeml/pancake/semantics/panPropsScript.sml:236`): the restored lookup is
+    the saved value at the restored name and the original binding elsewhere. -/
+theorem panValueResVar_eq_ite [BEq String] [LawfulBEq String]
+    (locals : VarName → Option (PanValue α)) (name : VarName)
+    (oldValue : Option (PanValue α)) (other : VarName) :
+    panValueResVar locals name oldValue other =
+      if other == name then oldValue else locals other := rfl
+
 def restorePanValueLocal [BEq String]
     (locals : VarName → Option (PanValue α)) (name : VarName)
     (oldValue : Option (PanValue α)) : VarName → Option (PanValue α) :=

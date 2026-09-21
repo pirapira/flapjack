@@ -245,6 +245,20 @@ example :
       some [.sll 4 5 6] := by
   decide
 
+/- Cake's register-variable shifts use the target SRL/SRA equations from
+   riscv_targetScript.sml, distinct from the immediate shift cases above. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.shift .lsr 4 5 (.reg 6)))) [] 0]⟩ =
+      some [.srl 4 5 6] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.shift .asr 4 5 (.reg 6)))) [] 0]⟩ =
+      some [.sra 4 5 6] := by
+  decide
+
 /- Cake's direct register Binop boundary emits the corresponding RISC-V
    register ALU instruction without an intermediate materialization. -/
 example :

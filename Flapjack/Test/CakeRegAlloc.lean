@@ -474,6 +474,21 @@ def raOrderCliqueGuard : Bool :=
   (Flapjack.RiscV.CakeRegAlloc.cakeDoRegAlloc .irc none 4 []
       (.delta [9, 13] []) [] []).map sortColouring ==
     some (sortColouring [(9, 0), (13, 1)])
+/- Cake's `do_spill` (`reg_allocScript.sml:810-830`) chooses the first
+   equal-degree candidate, pushes it, and unspills the remaining low-degree
+   nodes onto the simplify worklist in Cake's reversed partition order. -/
+def doSpillEqualDegreeGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 3 with
+      degrees := CakeNodeMap.ofNatInfoMap 3 [(0, 0), (1, 0), (2, 0)]
+      spillWl := [0, 1, 2] }
+  let (changed, out) := cakeDoSpill none 1 state
+  changed && out.stack == [0] && out.spillWl == [] &&
+    out.simpWl == [2, 1] && out.freezeWl == [] &&
+    (out.degrees.get 0).getD 0 == 0
+
+#guard doSpillEqualDegreeGuard
+
 
 /- The canonical `reg_alloc_probe.out` cost-sensitive case exercises
    `do_spill` with a non-`NONE` source-keyed table and one allocatable colour:
@@ -1004,7 +1019,8 @@ def parityGuard : Bool :=
     && cakeBijSetPatriciaGuard
     && coalesceParentCompressionGuard
     && prefreezeTransitionGuard
-    && sortMovesTailSplitGuard
+    && sortMovesTailSplitGuard && freezeWorklistTransitionGuard &&
+      doSpillEqualDegreeGuard
 
 /- The aggregate guard is intentionally disabled while the allocator port is
    being aligned with CakeML.  Individual oracle cases remain available to
@@ -1043,7 +1059,7 @@ def runChecks : IO Bool := do
     respillBelowThresholdGuard, simplifyBatchGuard, decDegreeOutOfDimGuard,
     decDegreeOutOfDimNoOpGuard, coalesceWorklistSuccessGuard,
     freezeWorklistTransitionGuard, coalesceParentCompressionGuard,
-    prefreezeTransitionGuard]
+    prefreezeTransitionGuard, doSpillEqualDegreeGuard]
   let names := [
     "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
@@ -1088,7 +1104,7 @@ def runChecks : IO Bool := do
     "respill below-threshold no-op", "do_simplify batch ordering",
     "dec_degree out-of-dimension no-op with outside adjacency",
     "do_coalesce success transition", "do_freeze transition",
-    "do_prefreeze transition"]
+    "do_prefreeze transition", "do_spill equal-degree transition"]
   let mut all := true
   for (name, result) in names.zip results do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"

@@ -1229,5 +1229,6 @@ example :
 #check @panValuePcResultRel_continued_iff
 #check @panValuePcResultRel_timeout_iff
 #check @panValuePcResultRel_finalFfi_iff
+#check @panValuePcResultRel_raised_iff
 
 end Flapjack.Test.PanValuePcControlSafety

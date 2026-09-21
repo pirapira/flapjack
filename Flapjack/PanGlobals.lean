@@ -781,6 +781,19 @@ def globalCompileDecls [BEq String] [Add α] [Mul α]
       .exnDecl exception shape :: globalCompileDecls context declarations
   | _ :: declarations => globalCompileDecls context declarations
 
+/-! Counterpart of the append structure of Cake's `compile_decls_append`
+    (`pan_globalsProofScript.sml:1997`).  The function/exception projection
+    does not thread the context, so appending splits as an ordinary append. -/
+theorem globalCompileDecls_append [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations rest : List (Decl α)) :
+    globalCompileDecls context (declarations ++ rest) =
+      globalCompileDecls context declarations ++
+        globalCompileDecls context rest := by
+  induction declarations with
+  | nil => simp [globalCompileDecls]
+  | cons declaration declarations ih =>
+      cases declaration <;> simp [globalCompileDecls, ih]
+
 def globalCompileInitializers [BEq String] [Add α] [Mul α]
     (context : GlobalPassContext α) : List (Decl α) → List (Prog α)
   | [] => []
@@ -799,6 +812,21 @@ def globalCompileInitializers [BEq String] [Add α] [Mul α]
           (globalCompileExp context value)
       initializer :: globalCompileInitializers nextContext declarations
   | _ :: declarations => globalCompileInitializers context declarations
+
+/-! Counterpart of the context-threading append structure of Cake's
+    `compile_decls_append` (`pan_globalsProofScript.sml:1997`): initializers
+    of an appended program are the first part's initializers followed by the
+    second part's initializers evaluated under the context `globalCollect`
+    reaches after the first part. -/
+theorem globalCompileInitializers_append [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations rest : List (Decl α)) :
+    globalCompileInitializers context (declarations ++ rest) =
+      globalCompileInitializers context declarations ++
+        globalCompileInitializers (globalCollect context declarations) rest := by
+  induction declarations generalizing context with
+  | nil => simp [globalCompileInitializers, globalCollect]
+  | cons declaration declarations ih =>
+      cases declaration <;> simp [globalCompileInitializers, globalCollect, ih]
 
 /-! The four-result shape of Pancake's `pan_globals$compile_decs_def`
     (`pan_globalsScript.sml:160`).  Global declarations become initializer

@@ -253,6 +253,14 @@ example :
         .add 4 4 31, .sltu 31 4 31, .or 7 7 31] := by
   decide
 
+/- Cake's list-valued Word `Binop` carrier preserves a register right
+   operand as one target ALU instruction. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.binOp .and 4 5 (.reg 6)))) [] 0]⟩ =
+      some [.and 4 5 6] := by
+  decide
+
 /- Cake's `riscv_ast (Inst (Arith (Div ...)))` reaches the target DIV
    encoding through the direct Lab word-arithmetic boundary. -/
 example :

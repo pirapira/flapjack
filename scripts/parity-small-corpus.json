@@ -843,6 +843,12 @@
       ]
     },
     {
+      "path": "Flapjack/Test/OriginalPancake/f01266_raise_live_continuation.pnk",
+      "source_reference": "Minimized f01266 differential witness: Cake's word_alloc Raise rule preserves the incoming live set and adds the exception payload, rather than filtering live values by return labels. This locks the resulting continuation frame and allocator order.",
+      "cake_sha256": "8700bc4385d4f8f02fcc7e4ca961bdd4990eb55f60612d5644f53f812bec7e54",
+      "tracked_beads": []
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/ordinary_subword_offsets.pnk",
       "source_reference": "Cake subword-offset oracle: ordinary local memory uses st8/st32 and ld8/ld32 at +4/+12; Cake's parser exposes st16/ld16 only as shared-memory forms, exercised at +8 rather than inventing unsupported ordinary syntax.",
       "cake_sha256": "3b21d76021ccf6ec9d8c2b34d5327ed3a8c377ea41bfc794380223275f1dfd32",

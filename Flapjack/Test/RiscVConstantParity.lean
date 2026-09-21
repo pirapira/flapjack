@@ -187,6 +187,14 @@ theorem cakeConst2047_execution_oracle :
       some (BitVec.ofNat 64 2047) := by
   decide
 
+theorem cakeConstNeg2048_execution_oracle :
+    (wordConstToInstructions (width := 64) 4
+        (BitVec.ofNat 64 (2 ^ 64 - 2048))).map
+        (fun instructions =>
+          readRegister (executeInstructions (zeroState 64) instructions) 4) =
+      some (BitVec.ofNat 64 (2 ^ 64 - 2048)) := by
+  decide
+
 /-! The expression-facing Cake boundary preserves the same executable
     obligations while leaving the historical one-instruction selector intact.
     These are theorem-facing API checks, not production-caller migration. -/

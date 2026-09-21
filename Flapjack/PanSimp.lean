@@ -124,6 +124,24 @@ theorem functions_panSimpDecls (declarations : List (Decl α)) :
       cases declaration <;>
         simp [panSimpDecls, functions, ih]
 
+/-! Counterpart of Cake's `first_compile_prog_all_distinct`
+    (`pan_simpProofScript.sml:1025-1041`): `pan_simp` preserves distinctness of
+    the function-name table.  This is the invariant `state_rel_imp_semantics`
+    needs for the compiled program. -/
+theorem functions_panSimpDecls_names_nodup (declarations : List (Decl α))
+    (hnames : ((functions declarations).map (fun entry => entry.1)).Nodup) :
+    ((functions (panSimpDecls declarations)).map (fun entry => entry.1)).Nodup := by
+  rw [functions_panSimpDecls, List.map_map]
+  have hfun :
+      ((fun entry : FunName × List (VarName × Shape) × Prog α × Shape => entry.1) ∘
+        (fun entry : FunName × List (VarName × Shape) × Prog α × Shape =>
+          (entry.1, entry.2.1, panSimpProg entry.2.2.1, entry.2.2.2))) =
+      (fun entry : FunName × List (VarName × Shape) × Prog α × Shape => entry.1) := by
+    funext entry
+    rfl
+  rw [hfun]
+  exact hnames
+
 @[simp] theorem smartSeq_skip (program : Prog α) :
     smartSeq (.skip : Prog α) program = program := by
   cases program <;> rfl

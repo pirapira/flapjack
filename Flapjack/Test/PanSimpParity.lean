@@ -612,6 +612,17 @@ theorem pan_simp_compile_prog_functions :
         (entry.1, entry.2.1, panSimpProg entry.2.2.1, entry.2.2.2)) := by
   exact functions_panSimpDecls compileProgDeclsFixture
 
+theorem pan_simp_compile_prog_first_all_distinct :
+    ((functions (panSimpDecls compileProgDeclsFixture)).map
+      (fun entry => entry.1)).Nodup := by
+  exact functions_panSimpDecls_names_nodup compileProgDeclsFixture (by decide)
+
+def functionsNamesNodupParity : Bool :=
+  decide (((functions (panSimpDecls compileProgDeclsFixture)).map
+    (fun entry => entry.1)).Nodup)
+
+#guard functionsNamesNodupParity
+
 def functionsCompileProgParity : Bool :=
   match functions (panSimpDecls compileProgDeclsFixture) with
   | [(name, params, body, returnShape)] =>
@@ -659,7 +670,8 @@ def parityGuard : Bool :=
       (.seq
             (.call (some (some (.local, "r"), none)) "f" [])
             (.return (.var .local "r")) : Prog Nat)) &&
-    functionsCompileProgParity
+    functionsCompileProgParity &&
+    functionsNamesNodupParity
 
 #eval parityGuard
 #guard parityGuard
@@ -678,6 +690,7 @@ def runChecks : IO Bool := do
   IO.println "PASS pan_simp clocked pan_simp common-fuel Cake equation"
   IO.println "PASS pan_simp clocked transformed result common-fuel Cake equation"
   IO.println "PASS pan_simp functions_compile_prog Cake function-table equation"
+  IO.println "PASS pan_simp first_compile_prog_all_distinct Cake name-distinctness preservation"
   pure parityGuard
 
 end Flapjack.Test.PanSimpParity

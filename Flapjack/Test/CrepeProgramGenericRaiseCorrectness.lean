@@ -3207,6 +3207,7 @@ def runChecks : IO Bool := do
   IO.println "PASS expression-state evidence composes to generic clocked control"
   IO.println "PASS expression-state evidence derives ordinary Raise result relation"
   IO.println "PASS compact correctness composes with generic clocked control"
+  IO.println "PASS expression-state evidence derives context-coded Raise result relation"
   IO.println "PASS nested raised semantic/global lookup lift"
   pure true
 

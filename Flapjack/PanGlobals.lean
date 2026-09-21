@@ -239,6 +239,16 @@ theorem globalFreshName_not_mem [BEq String] [LawfulBEq String]
     simp at hle
     omega
 
+/-! Counterpart of Cake's `fresh_name_correct'`
+    (`pan_globalsProofScript.sml:1003`): a name chosen fresh for `names` is
+    also absent from any list whose members all lie in `names`. -/
+theorem globalFreshName_not_mem_of_subset [BEq String] [LawfulBEq String]
+    (name : String) (names names' : List String)
+    (hsubset : ∀ candidate, candidate ∈ names' → candidate ∈ names) :
+    globalFreshName name names ∉ names' := by
+  intro hmem
+  exact globalFreshName_not_mem name names (hsubset _ hmem)
+
 def globalShapeVal (context : GlobalPassContext α) : Shape → Exp α
   | .one => .const (context.fromNat 0)
   | .named _ => .const (context.fromNat 0)
@@ -1252,6 +1262,53 @@ theorem globalCompileDecs_functions_eq_nil_of_no_functions [BEq String] [Add α]
   simp only [globalCompileDecs]
   exact globalDeclsFilter_eq_nil_of_all_not globalDeclIsFunction _
     (globalCompileDecls_all_not_function (globalCollect context code) code hnone)
+
+/-! Counterpart of Cake's `compile_decs_EVERY`
+    (`pan_globalsProofScript.sml:1986`): every function of the compiled table
+    satisfies a predicate that holds of each source function once its body has
+    been compiled with the collected context. -/
+theorem globalDeclsFilter_globalCompileDecls_all_of_predicate [BEq String]
+    [Add α] [Mul α] (context : GlobalPassContext α) (declarations : List (Decl α))
+    (predicate : Decl α → Bool)
+    (hsource : declarations.all
+      (fun declaration => match declaration with
+        | .function function =>
+            predicate (.function { function with
+              body := globalCompileProg context function.body })
+        | _ => true) = true) :
+    (globalDeclsFilter globalDeclIsFunction
+        (globalCompileDecls context declarations)).all predicate = true := by
+  induction declarations with
+  | nil => simp [globalCompileDecls, globalDeclsFilter]
+  | cons declaration declarations ih =>
+      simp only [List.all_cons, Bool.and_eq_true] at hsource
+      obtain ⟨hhead, htail⟩ := hsource
+      cases declaration with
+      | function function =>
+          simp [globalCompileDecls, globalDeclsFilter, globalDeclIsFunction,
+            hhead, ih htail]
+      | decl shape name value =>
+          exact ih htail
+      | exnDecl exception shape =>
+          simp [globalCompileDecls, globalDeclsFilter, globalDeclIsFunction,
+            ih htail]
+      | name struct fields =>
+          exact ih htail
+
+theorem globalCompileDecs_functions_all_of_predicate [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α))
+    (predicate : Decl α → Bool)
+    (hsource : code.all
+      (fun declaration => match declaration with
+        | .function function =>
+            predicate (.function { function with
+              body := globalCompileProg (globalCollect context code)
+                function.body })
+        | _ => true) = true) :
+    (globalCompileDecs context code).functions.all predicate = true := by
+  simp only [globalCompileDecs]
+  exact globalDeclsFilter_globalCompileDecls_all_of_predicate
+    (globalCollect context code) code predicate hsource
 
 /-! Counterpart of Cake's `compile_decs_exns_are_exns`
     (`pan_globalsProofScript.sml:2448`): the exception table is exactly the

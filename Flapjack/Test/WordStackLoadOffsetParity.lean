@@ -219,6 +219,22 @@ example :
     wordStackExpressionTemporaries, wordStackExpressionTemporariesExcluding,
     wordStackLocation, wordStackOffset, lookupNatInfo, wordStackJoin]
 
+/- Subword Stores retain the same Cake spill order: reload the address into
+   `wReg1`, reload the value into the independent store register, and keep the
+   offset on the final memory carrier. -/
+example :
+    wordStackMemoryOffsetInst
+      { locations := [(0, .stack 3), (1, .stack 2)]
+        scratch := 31
+        addressScratch := 29
+        stackBase := 10 }
+      .store32 0 1 24 =
+      some (.seq (.stackLoad 31 12)
+        (.seq (.stackLoad 29 13)
+          (.inst (.memOffset .store32 29 31 24))) : StackProg Nat) := by
+  simp [wordStackMemoryOffsetInst, wordStackStoreOffsetInst, wordStackLocation,
+    wordStackOffset, lookupNatInfo]
+
 example :
     wordStackCompileLoadNatNested
       { locations := [(0, .register 4), (1, .register 5)]

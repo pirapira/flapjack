@@ -177,6 +177,67 @@ theorem clocked_seq_assoc_common_fuel_matches_cake :
   · decide
   · decide
 
+/-- The structural budget alone makes the `Skip`/`Seq` fragment succeed, with no
+    external successful-run witness. -/
+theorem clocked_seq_skip_fragment_budget_succeeds :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 3 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1
+      (.seq (.skip : Prog Nat) (.seq .skip .skip)) none none none =
+    some (.control (.normal (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi), 1) := by
+  exact evalPanValueFfiClockProg_seqSkipFragment_some evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 3 (fun _ => none)
+    (fun _ => none) (fun _ => none) evaluatorFfi 1
+    (.seq (.skip : Prog Nat) (.seq .skip .skip)) none none none
+    (PanSimpSeqSkipFragment.seq .skip (.seq .skip .skip)
+      PanSimpSeqSkipFragment.skip
+      (PanSimpSeqSkipFragment.seq .skip .skip
+        PanSimpSeqSkipFragment.skip PanSimpSeqSkipFragment.skip))
+    (by simp [panSimpSeqSkipFuel])
+
+/-! The fuel-adequacy formulation of the same rewrite: on the `Skip`/`Seq`
+    fragment the structural budget alone guarantees success, so the common-fuel
+    equality follows from `panSimpSeqSkipFuel` bounds rather than an explicit
+    successful-run witness. -/
+theorem clocked_seq_assoc_fragment_budget_matches_cake :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 3 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1
+      (seqAssoc (.skip : Prog Nat) (.seq .skip .skip)) =
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 3 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1
+      (.seq (.skip : Prog Nat) (.seq .skip .skip)) := by
+  apply evalPanValueFfiClockProg_seqAssoc_eq_of_seqSkipFragment
+    evaluatorContext (fun _ _ => none) evaluatorHandler [] [] 0 0 8
+    (.skip : Prog Nat) (.seq .skip .skip) 3
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    none none none
+  · exact PanSimpSeqSkipFragment.skip
+  · exact PanSimpSeqSkipFragment.seq .skip .skip
+      PanSimpSeqSkipFragment.skip PanSimpSeqSkipFragment.skip
+  · simp [seqAssoc, panSimpSeqSkipFuel]
+  · simp [panSimpSeqSkipFuel]
+
+/-- The same `seqAssoc` equality stated directly on the additive fuel foundation
+    `panSimpSkipSeqProg`/`panSimpSkipSeqFuel`, at the common budget
+    `panSimpSkipSeqFuel pre + panSimpSkipSeqFuel program + 1`. -/
+theorem clocked_seq_assoc_skip_seq_fuel_matches_cake :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 5 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1
+      (seqAssoc (.skip : Prog Nat) (.seq .skip .skip)) =
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 5 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1
+      (.seq (.skip : Prog Nat) (.seq .skip .skip)) := by
+  exact evalPanValueFfiClockProg_seqAssoc_eq_of_skipSeqProg
+    evaluatorContext (fun _ _ => none) evaluatorHandler [] [] 0 0 8
+    (.skip : Prog Nat) (.seq .skip .skip)
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    none none none (by trivial) (by constructor <;> trivial)
+
 theorem clocked_seq_normal_exposes_components :
     ∃ (middleLocals middleGlobals : VarName → Option (PanValue Nat))
       (middleMemory : Nat → Option (PanValue Nat)) (middleFfi : FfiState Unit)
@@ -269,6 +330,23 @@ theorem clocked_pan_simp_source_common_fuel_matches_cake :
   · decide
   · decide
   · decide
+
+theorem pan_simp_skip_seq_fuel_bound_matches_cake :
+    panSimpSkipSeqFuel
+        (seqAssoc (.skip : Prog Nat)
+          (.seq .skip (.seq .skip .skip) : Prog Nat)) ≤
+      panSimpSkipSeqFuel (.skip : Prog Nat) +
+        panSimpSkipSeqFuel (.seq .skip (.seq .skip .skip) : Prog Nat) := by
+  apply panSimpSkipSeqFuel_seqAssoc_le
+  · simp [panSimpSkipSeqProg]
+  · simp [panSimpSkipSeqProg]
+
+theorem pan_simp_skip_seq_shape_matches_cake :
+    panSimpSkipSeqProg
+      (seqAssoc (.skip : Prog Nat) (.seq .skip (.seq .skip .skip))) := by
+  apply panSimpSkipSeqProg_seqAssoc
+  · simp [panSimpSkipSeqProg]
+  · simp [panSimpSkipSeqProg]
 
 /-! The expected values are the direct HOL evaluation of
     `pan_simp$SmartSeq` from `pan_simpScript.sml:13-16`. -/
@@ -526,6 +604,7 @@ def runChecks : IO Bool := do
   IO.println "PASS pan_simp clocked evaluate_while_body_same Cake equation"
   IO.println "PASS pan_simp clocked evaluate_seq_second_congr Cake equation"
   IO.println "PASS pan_simp clocked evaluate_seq_normal_components Cake equation"
+  IO.println "PASS pan_simp Skip/Seq fuel-adequacy fragment Cake bound"
   IO.println "PASS pan_simp clocked ret_to_tail common-fuel Cake equation"
   IO.println "PASS pan_simp clocked pan_simp common-fuel Cake equation"
   pure parityGuard

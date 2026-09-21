@@ -2606,11 +2606,187 @@ theorem three_word_raise_pc_compile_correct_direct_clocked_normal
   · simp [panValuePcResultRelWithContextCode, panValuePcResultRel,
       hclockState]
 
+theorem three_word_raise_pc_compile_correct_direct_clocked_raised
+    (sourceFuel targetFuel : Nat)
+    (targetState : CrepState Nat)
+    (hcompact : PanValuePcCompileCorrectWithContextCode
+      (panValuePcCompactSourceEvaluator
+        (fun _ _ => none) (fun _ _ _ _ _ _ => none) []
+        0 0 8 sourceFuel)
+      (crepPcCompactTargetEvaluator [] (fun _ _ => none)
+        (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none)
+        0 0 targetFuel)
+      (fun _ _ _ => True)
+      (fun _ _ _ => True)
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8)
+      (.raise "E" sourceExpression))
+    (hclock :
+      evalPanValueFfiClockProg directClockContext (fun _ _ => none)
+        directClockHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+        (fun _ => none) directClockFfi 1 (.raise "E" sourceExpression) =
+      some (.control (.raised (fun _ => none) (fun _ => none)
+        (fun _ => none) directClockFfi "E" sourceValue), 1))
+    (hclockState : panValueCrepStateRel [] context
+      (fun _ => none) (fun _ => none) (fun _ => none) targetState)
+    (hclockRaise : panValuePcExceptionResultRelWithContextCode [] context
+      (fun _ _ code => code = 9)
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8)
+      (fun _ => none) (fun _ => none) "E" sourceValue targetState 9) :
+    PanValuePcCompileCorrectWithContextCode
+      (panValuePcCompactSourceEvaluator
+        (fun _ _ => none) (fun _ _ _ _ _ _ => none) []
+        0 0 8 sourceFuel)
+      (crepPcCompactTargetEvaluator [] (fun _ _ => none)
+        (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none)
+        0 0 targetFuel)
+      (fun _ _ _ => True)
+      (fun _ _ _ => True)
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8)
+      (.raise "E" sourceExpression) ∧
+    evalPanValueFfiClockProg directClockContext (fun _ _ => none)
+      directClockHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+      (fun _ => none) directClockFfi 1 (.raise "E" sourceExpression) =
+      some (.control (.raised (fun _ => none) (fun _ => none)
+        (fun _ => none) directClockFfi "E" sourceValue), 1) ∧
+    (evalPanValueFfiClockProg directClockContext (fun _ _ => none)
+      directClockHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+      (fun _ => none) directClockFfi 1 (.raise "E" sourceExpression)).map
+        panValueFfiClockResultProjection =
+      some (.raised (fun _ => none) (fun _ => none)
+        (fun _ => none) directClockFfi "E" sourceValue 1) ∧
+    panValuePcResultRelWithContextCode [] context
+      (fun _ _ code => code = 9)
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8)
+      (.raised (fun _ => none) (fun _ => none) (fun _ => none)
+        "E" sourceValue)
+      (.raised targetState 9) := by
+  exact panValuePcCompileCorrectWithContextCode_of_compact_evaluators_and_clocked_raised
+    (panValuePcCompactSourceEvaluator
+      (fun _ _ => none) (fun _ _ _ _ _ _ => none) [] 0 0 8 sourceFuel)
+    (crepPcCompactTargetEvaluator [] (fun _ _ => none)
+      (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none) 0 0 targetFuel)
+    (fun _ _ _ => True) (fun _ _ _ => True)
+    (fun exception => if exception = "E" then some 9 else none)
+    (crepPcFlatGlobalsLookup 8) (.raise "E" sourceExpression)
+    hcompact [] context (fun _ _ code => code = 9)
+    (fun exception => if exception = "E" then some 9 else none)
+    (crepPcFlatGlobalsLookup 8) directClockContext (fun _ _ => none)
+    directClockHandler [] 0 0 8 0 1 (fun _ => none) (fun _ => none)
+    (fun _ => none) directClockFfi (.raise "E" sourceExpression)
+    targetState "E" sourceValue 9 hclock hclockState hclockRaise
+
+example
+    (sourceFunctions : List (FunName × List VarName × Prog Nat))
+    (functions : List (CompiledFunction Nat))
+    (primitive : PanPrimitiveHandler Nat)
+    (sourceHandler : PanValueFfiHandler Nat)
+    (crepPrimitive : CrepPrimitiveHandler Nat)
+    (ffi : CrepFfiHandler Nat)
+    (sharedMem : CrepSharedMemHandler Nat)
+    (baseAddress topAddress bytesInWord sourceFuel targetFuel : Nat)
+    (codeRel : PanValuePcCodeRel Nat)
+    (excpRel : PanValuePcExceptionShapeRel Nat)
+    (exceptionCode : ExceptionId → Option Nat)
+    (globalsLookup : CrepState Nat → PanValue Nat → Option (List Nat))
+    (function : FunName)
+    (configuration configurationLength array arrayLength : Nat)
+    (hffi : ∀ (sourceHandler : PanValueFfiHandler Nat)
+      (ffi : CrepFfiHandler Nat), panValueCrepExtCallCorrect sourceHandler ffi)
+    (hraiseData : ∀ (context : CompileContext Nat) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+      (sourceMemory : Nat → Option (PanValue Nat)) (sourceException : ExceptionId)
+      (sourceValue : PanValue Nat) (targetState : CrepState Nat)
+      (targetException : Nat),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      panValuePcRaisedHraiseData exceptionCode globalsLookup structs context
+        exceptionRel sourceLocals sourceGlobals sourceMemory sourceException
+        sourceValue targetState targetException) :
+    PanValuePcCompileCorrect
+      (panValuePcCompactSourceEvaluator primitive sourceHandler sourceFunctions
+        baseAddress topAddress bytesInWord sourceFuel)
+      (crepPcCompactTargetEvaluator functions crepPrimitive ffi sharedMem
+        baseAddress topAddress targetFuel)
+      codeRel excpRel exceptionCode globalsLookup
+      (.extCall function (.const configuration) (.const configurationLength)
+        (.const array) (.const arrayLength)) := by
+  exact panValuePcCompileCorrect_compact_extCall_const
+    sourceFunctions functions primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord sourceFuel targetFuel codeRel excpRel
+    exceptionCode globalsLookup function configuration configurationLength array
+    arrayLength hffi hraiseData
+
+example
+    (sourceFunctions : List (FunName × List VarName × Prog Nat))
+    (functions : List (CompiledFunction Nat))
+    (primitive : PanPrimitiveHandler Nat)
+    (sourceHandler : PanValueFfiHandler Nat)
+    (crepPrimitive : CrepPrimitiveHandler Nat)
+    (ffi : CrepFfiHandler Nat)
+    (sharedMem : CrepSharedMemHandler Nat)
+    (baseAddress topAddress bytesInWord sourceFuel targetFuel : Nat)
+    (codeRel : PanValuePcCodeRel Nat)
+    (excpRel : PanValuePcExceptionShapeRel Nat)
+    (exceptionCode : ExceptionId → Option Nat)
+    (globalsLookup : CrepState Nat → PanValue Nat → Option (List Nat))
+    (function : FunName)
+    (configuration configurationLength array arrayLength : Nat)
+    (hffi : ∀ (sourceHandler : PanValueFfiHandler Nat)
+      (ffi : CrepFfiHandler Nat), panValueCrepExtCallCorrect sourceHandler ffi)
+    (hraiseEvidence : ∀ (context : CompileContext Nat) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+      (sourceMemory : Nat → Option (PanValue Nat)) (sourceException : ExceptionId)
+      (sourceValue : PanValue Nat) (targetState : CrepState Nat)
+      (targetException : Nat),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      panValuePcRaisedHraiseData exceptionCode globalsLookup structs context
+        exceptionRel sourceLocals sourceGlobals sourceMemory sourceException
+        sourceValue targetState targetException ∧
+      lookupInfo sourceException context.exceptions = some targetException) :
+    PanValuePcCompileCorrectWithContextCode
+      (panValuePcCompactSourceEvaluator primitive sourceHandler sourceFunctions
+        baseAddress topAddress bytesInWord sourceFuel)
+      (crepPcCompactTargetEvaluator functions crepPrimitive ffi sharedMem
+        baseAddress topAddress targetFuel)
+      codeRel excpRel exceptionCode globalsLookup
+      (.extCall function (.const configuration) (.const configurationLength)
+        (.const array) (.const arrayLength)) := by
+  exact panValuePcCompileCorrectWithContextCode_compact_extCall_const
+    sourceFunctions functions primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord sourceFuel targetFuel codeRel excpRel
+    exceptionCode globalsLookup function configuration configurationLength array
+    arrayLength hffi hraiseEvidence
+
+example
+    (oldValue : Option (PanValue Nat)) (state : CrepState Nat)
+    (name : VarName) (names : List Nat)
+    (sourceResult : PanValueControlResult Nat)
+    (crepResult : CrepControlResult Nat)
+    (hsafe : panValuePcControlLabelSafe sourceResult crepResult) :
+    panValuePcControlLabelSafe
+      (restorePanValueControlLocal name oldValue sourceResult)
+      (restoreCrepResultList state.locals names crepResult) := by
+  exact panValuePcControlLabelSafe_restore_declaration
+    oldValue state name names sourceResult crepResult hsafe
+
 def runChecks : IO Bool := do
   IO.println "PASS generic three-word Raise evaluator relation"
   IO.println "PASS generic raised semantic/global lookup lift"
   IO.println "PASS direct arbitrary context-coded pc_compile_correct evaluator instantiation"
   IO.println "PASS direct arbitrary context-coded clocked evaluator instantiation"
+  IO.println "PASS direct arbitrary context-coded raised clock evaluator instantiation"
+  IO.println "PASS compact ExtCall pc_compile_correct bridge instantiation"
+  IO.println "PASS compact ExtCall context-coded bridge instantiation"
+  IO.println "PASS declaration restoration preserves control-label safety"
   IO.println "PASS nested raised semantic/global lookup lift"
   pure true
 

@@ -129,10 +129,13 @@ def wordDeadCodeAuxWithLabels : WordProg α → List Nat → List (List Nat × L
       (.break label, (wordClashTreeFindLoopFrame label frames).map Prod.snd |>.getD [])
   | .continue label, _live, frames, _ =>
       (.continue label, (wordClashTreeFindLoopFrame label frames).map Prod.fst |>.getD [])
-  | .raise exception, live, _, returnLabels =>
-      let retained := if returnLabels.isEmpty then live
-        else live.filter (fun name => name ∈ returnLabels)
-      (.raise exception, exception :: retained)
+  | .raise exception, live, _, _returnLabels =>
+      /- Cake's `get_live (Raise num)` preserves the incoming live set and
+         adds only the exception value.  In particular it does not filter
+         live names by the function's return labels; doing that changes the
+         liveness of values copied through a call continuation and diverges
+         from `word_allocScript.sml:get_live_def`. -/
+      (.raise exception, wordDeadAddReads live [exception])
   | .return label values, live, _, _ =>
       (.return label values, wordDeadAddReads (label :: live) values)
   | .tick, live, _, _ => (.tick, live)
@@ -308,10 +311,8 @@ def wordDeadCodeWithStores [WordCseHash α] : WordProg α → List Nat →
       (.break label, (wordClashTreeFindLoopFrame label frames).map Prod.snd |>.getD [], [])
   | .continue label, _live, frames, _, _nlive =>
       (.continue label, (wordClashTreeFindLoopFrame label frames).map Prod.fst |>.getD [], [])
-  | .raise exception, live, _, returnLabels, _nlive =>
-      let retained := if returnLabels.isEmpty then live
-        else live.filter (fun name => name ∈ returnLabels)
-      (.raise exception, exception :: retained, [])
+  | .raise exception, live, _, _returnLabels, _nlive =>
+      (.raise exception, wordDeadAddReads live [exception], [])
   | .return label values, live, _, _, _nlive =>
       (.return label values, wordDeadAddReads (label :: live) values, [])
   | .tick, live, _, _, nlive => (.tick, live, nlive)

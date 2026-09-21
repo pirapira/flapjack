@@ -37,7 +37,9 @@ example :
           (some (9, .return 0 [10], 0, 0)) : WordProg Nat) [] =
       .set [8] := by
   simp [wordClashTree, List.eraseDups,
-    List.eraseDupsBy, List.eraseDupsBy.loop]
+    List.eraseDupsBy, List.eraseDupsBy.loop,
+    NumSet.fromList, NumSet.toAList, NumSet.toSet, NumSet.insert,
+    NumSet.insertFuel, NumSet.lrnext, NumSet.lrnextFuel, NumSet.insertList]
 
 example :
     wordProgForcedClashes

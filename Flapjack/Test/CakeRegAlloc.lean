@@ -259,6 +259,20 @@ def splitDegreeGuard : Bool :=
 
 #guard splitDegreeGuard
 
+/- Cake's `smerge` (`reg_allocScript.sml:349-358`) merges descending
+   priority lists and takes the left head on equal priorities.  This direct
+   guard covers both the tie direction and the remaining-tail order used by
+   `revive_moves`. -/
+def smergePriorityGuard : Bool :=
+  Flapjack.RiscV.CakeRegAlloc.cakeSMerge
+      [(7, (1, 2)), (5, (3, 4))]
+      [(7, (5, 6)), (6, (7, 8))] ==
+    [(7, (1, 2)), (7, (5, 6)), (6, (7, 8)), (5, (3, 4))] &&
+  Flapjack.RiscV.CakeRegAlloc.cakeSMerge [] [(4, (9, 10))] ==
+    [(4, (9, 10))]
+
+#guard smergePriorityGuard
+
 /-- Canonical form for comparing node bijections with the probed sptree
     outputs: both maps sorted by key. -/
 def sortBijectionMaps (bijection : CakeNodeBijection) :
@@ -1280,7 +1294,7 @@ def parityGuard : Bool :=
       pushStackGuard &&
       worklistPrependGuard &&
       extendCliqueGuard &&
-      splitDegreeGuard &&
+      splitDegreeGuard && smergePriorityGuard &&
     bijDeltaBasicGuard && bijDeltaDedupGuard && bijSeqOrderGuard &&
     bijBranchOrderGuard && bijBranchLiveGuard && bijSetGuard &&
     bijSetUnsortedGuard && bijCompositeGuard && graphDeltaDisjointGuard &&
@@ -1331,6 +1345,7 @@ def runChecks : IO Bool := do
     worklistPrependGuard,
     extendCliqueGuard,
     splitDegreeGuard,
+    smergePriorityGuard,
     bijDeltaBasicGuard, bijDeltaDedupGuard, bijSeqOrderGuard,
     bijBranchOrderGuard, bijBranchLiveGuard, bijSetGuard,
     bijSetUnsortedGuard, bijCompositeGuard, graphDeltaDisjointGuard,
@@ -1381,6 +1396,7 @@ def runChecks : IO Bool := do
     "Cake worklist prepend",
     "Cake extend_clique",
     "Cake split_degree",
+    "Cake smerge",
     "mk_bij delta basic", "mk_bij delta dedup", "mk_bij seq order",
     "mk_bij branch order", "mk_bij branch live", "mk_bij set",
     "mk_bij set unsorted", "mk_bij composite", "mk_graph delta disjoint",

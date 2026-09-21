@@ -1203,6 +1203,12 @@ example :
 #check @panValuePcResultRel_finalFfi_iff
 #check @panValuePcResultRel_raised_iff
 #check @panValuePcResultRelWithContextCode_raised_iff
+#check @panValuePcResultRelWithContextCode_normal_iff
+#check @panValuePcResultRelWithContextCode_returned_iff
+#check @panValuePcResultRelWithContextCode_broke_iff
+#check @panValuePcResultRelWithContextCode_continued_iff
+#check @panValuePcResultRelWithContextCode_timeout_iff
+#check @panValuePcResultRelWithContextCode_finalFfi_iff
 #check @panValuePcExceptionResultRel_of_withContextCode
 #check @panValuePcResultRel_of_withContextCode
 #check @panValuePcCompileCorrect_of_withContextCode

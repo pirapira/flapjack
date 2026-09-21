@@ -176,6 +176,25 @@ def cakeSharedOddHalfwordOffset : Bool :=
         (.op .add [.var 23, .const 9])) => true
   | _ => false
 
+/- The same Cake offset predicate applies independently of memory width. -/
+def cakeSharedLoad32PositiveBoundary : Bool :=
+  match wordInstSelectProgram (α := Nat) 23
+      (.shareInst .load32 10
+        (.op .add [.var 12, .const 2047])) with
+  | .seq (.move 0 [(23, 12)])
+      (.shareInst .load32 10
+        (.op .add [.var 23, .const 2047])) => true
+  | _ => false
+
+def cakeSharedStore32NegativeBoundary : Bool :=
+  match wordInstSelectProgram (α := Nat) 23
+      (.shareInst .store32 10
+        (.op .add [.var 12, .const (2 ^ 64 - 8)])) with
+  | .seq (.move 0 [(23, 12)])
+      (.shareInst .store32 10
+        (.op .add [.var 23, .const offset])) => offset == 2 ^ 64 - 8
+  | _ => false
+
 /- Cake's `inst_select_exp` selects the non-heap operand into the fresh
    temporary before emitting the current-heap operation. -/
 def cakeCurrentHeapOr : Bool :=
@@ -319,6 +338,8 @@ def cakeStoreSelectorConstShape : Bool :=
 #guard cakeWideAddMaterializesConstant
 #guard cakeSharedByteOffsetMaterializesConstant
 #guard cakeSharedOddHalfwordOffset
+#guard cakeSharedLoad32PositiveBoundary
+#guard cakeSharedStore32NegativeBoundary
 #guard cakeCurrentHeapOr
 #guard cakeConstCurrentHeapXor
 #guard cakeBitVecConstCurrentHeapXor

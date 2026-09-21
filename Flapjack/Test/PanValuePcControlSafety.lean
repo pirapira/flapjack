@@ -1026,6 +1026,7 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 /-! Compositional source handler safety: a handler-free call and a declaration
     body that never exposes loop control. -/
 #check @PanValueProgNotBrokeContinued_call_of_no_handler
+#check @PanValueProgNotBrokeContinued_call_handler
 #check @PanValueProgNotBrokeContinued_dec
 
 /-! The direct `Call_Ret_Exception` branch of Cake's `pc_compile_correct`: a
@@ -1120,6 +1121,22 @@ example :
     ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat) (.const 0) (.skip : Prog Nat)
     (PanValueProgNotBrokeContinued_skip (fun _ _ => none) (fun _ _ _ _ _ _ => none)
       ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat))
+
+/-! The handler-carrying call leaf is dischargeable when the handler is `.skip`. -/
+example :
+    PanValueProgNotBrokeContinued (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat)
+      (.call (some (some (VarKind.local, "r"), some ("E", "x", (.skip : Prog Nat))))
+        "f" []) :=
+  PanValueProgNotBrokeContinued_call_handler (fun _ _ => none)
+    (fun _ _ _ _ _ _ => none) ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat)
+    (some (some (VarKind.local, "r"), some ("E", "x", (.skip : Prog Nat)))) "f" []
+    (by
+      intro handlerProgram hinfo
+      obtain ⟨destination, caught, handlerVariable, hinfoEq⟩ := hinfo
+      cases hinfoEq
+      exact PanValueProgNotBrokeContinued_skip (fun _ _ => none)
+        (fun _ _ _ _ _ _ => none) ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat))
 
 /-! The explicit handler-safety premise of the handler-carrying call control
     theorem is dischargeable for a concrete call: choose a call whose handler is

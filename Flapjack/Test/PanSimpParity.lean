@@ -558,6 +558,22 @@ example
           (updatePanValueMap (fun _ => none) "x" (.word 5)) (fun _ => none)
           (fun _ => none) evaluatorFfi 1 "tag" "text" none none none))
 
+/-- A structural normal program succeeds normally at its call-aware budget. -/
+example :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+      [] [] 0 0 8
+      (progCallFuel 5 (.seq (.skip : Prog Nat) (.annot "tag" "text" : Prog Nat)))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+      (.seq (.skip : Prog Nat) (.annot "tag" "text")) none none none =
+    some (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi), 1) := by
+  exact evalPanValueFfiClockProg_normalProg_some_progCallFuel evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 5
+    (.seq (.skip : Prog Nat) (.annot "tag" "text")) (fun _ => none) (fun _ => none)
+    (fun _ => none) evaluatorFfi 1 none none none
+    (PanValueFfiClockNormalProg.seq (.skip : Prog Nat) (.annot "tag" "text")
+      PanValueFfiClockNormalProg.skip (PanValueFfiClockNormalProg.annot "tag" "text"))
+
 /-- The raised `DecCall` outcome also lifts to the declaration's progSize. -/
 example
     (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)

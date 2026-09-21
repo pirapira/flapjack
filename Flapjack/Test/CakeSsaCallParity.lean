@@ -104,6 +104,52 @@ def handlerCallProgram : WordProg Nat :=
   .call (some ([4], ([], []), .skip, 9, 10)) (some 7) [0, 2]
     (some (3, .skip, 11, 12))
 
+def returningHandlerProgram : WordProg Nat :=
+  .call (some ([4, 6], ([], []), .return 4 [6, 8], 9, 10)) (some 7) [0, 2]
+    (some (3, .raise 5, 11, 12))
+
+/- Cake's returning Call with an exception handler refreshes both continuations:
+   the return path preserves both result carriers, while the exception path
+   moves the payload into ABI register 2 before Raise. -/
+def returningHandlerReturnShape : WordProg Nat → Bool
+  | .seq
+      (.seq (.move 0 [])
+        (.seq (.move 1 [(25, 2), (29, 4)])
+          (.seq (.move 0 [(2, 29), (4, 0)])
+            (.return 25 [2, 4]))))
+      (.seq (.move 1 [])
+        (.seq
+          (.seq (.seq .skip (.move 1 [(37, 29)]))
+            (.move 1 [(41, 25)]))
+          (.inst (.const 45 0)))) => true
+  | _ => false
+
+def returningHandlerExceptionShape : WordProg Nat → Bool
+  | .seq
+      (.seq (.move 0 [])
+        (.seq (.move 1 [(33, 2)])
+          (.seq (.move 1 [(2, 0)]) (.raise 2))))
+      (.seq (.move 1 [])
+        (.seq
+          (.seq (.seq .skip (.inst (.const 37 0)))
+            (.inst (.const 41 0)))
+          (.move 1 [(45, 33)]))) => true
+  | _ => false
+
+def returningHandlerGuard : Bool :=
+  match (wordFullSsaCcTrans 2 returningHandlerProgram).2.2 with
+  | .seq (.move 1 [(13, 0), (17, 2)])
+      (.seq (.move 0 [])
+        (.seq (.move 1 [(2, 13), (4, 17)])
+          (.call (some ([2, 4], ([], []), returnBody, 9, 10))
+            (some 7) [2, 4]
+            (some (2, exceptionBody, 11, 12))))) =>
+      returningHandlerReturnShape returnBody &&
+        returningHandlerExceptionShape exceptionBody
+  | _ => false
+
+#guard returningHandlerGuard
+
 def handlerCallGuard : Bool :=
   match (wordFullSsaCcTrans 2 handlerCallProgram).2.2 with
   | .seq (.move 1 [(9, 0), (13, 2)])
@@ -131,7 +177,7 @@ def parityGuard : Bool :=
   returningCallGuard && returningCallCutsetGuard && returningCallSkipGuard &&
     noReturnEmptyCallGuard && noReturnEmptyHandlerCallGuard &&
     productionNoReturnEmptyCallGuard && productionAfterDeadNoReturnEmptyCallGuard &&
-    handlerCallGuard
+    handlerCallGuard && returningHandlerGuard
 
 #guard parityGuard
 #eval parityGuard
@@ -153,7 +199,9 @@ def runChecks : IO Bool := do
       ("production Cake dead pass retains the effectful empty Call",
         productionAfterDeadNoReturnEmptyCallGuard),
       ("full_ssa_cc_trans handler Call preserves Cake exception payload",
-        handlerCallGuard) ]
+        handlerCallGuard),
+      ("full_ssa_cc_trans returning handler Call preserves both carriers",
+        returningHandlerGuard) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

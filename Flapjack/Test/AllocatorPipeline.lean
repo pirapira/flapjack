@@ -27,9 +27,21 @@ example :
     wordExpReadVars, allocatorReadVarsFastFixture]
 
 example :
+    wordInstReadVarsFastAcc
+        (.arith (.longDiv 1 2 3 4 5) : WordInst Nat) [6, 7] =
+      [3, 4, 5, 6, 7] := by
+  rfl
+
+example :
+    wordInstWriteVarsFastAcc
+        (.memOffset .store 8 9 10 : WordInst Nat) [11] =
+      [11] := by
+  rfl
+
+example :
     wordProgLiveBeforeFast allocatorReadVarsFastFixture [22, 23] =
       wordProgLiveBefore allocatorReadVarsFastFixture [22, 23] := by
-  simp [wordProgLiveBeforeFast, wordProgLiveBefore, wordProgReadVarsFast,
+  simp [wordProgLiveBeforeFast, wordProgLiveBefore,
     wordProgReadVarsFastAcc, wordListAppendAcc, wordExpReadVarsFastAcc,
     wordProgReadVars, wordProgWriteVarsFast, wordProgWriteVarsFastAcc,
     wordProgWriteVars, wordExpReadVars,
@@ -54,7 +66,7 @@ example :
 example :
     wordProgLiveBeforeFast allocatorWriteVarsFastFixture [41, 43, 44] =
       wordProgLiveBefore allocatorWriteVarsFastFixture [41, 43, 44] := by
-  simp [wordProgLiveBeforeFast, wordProgLiveBefore, wordProgReadVarsFast,
+  simp [wordProgLiveBeforeFast, wordProgLiveBefore,
     wordProgReadVarsFastAcc, wordProgWriteVarsFast, wordProgWriteVarsFastAcc,
     wordListAppendAcc, wordExpReadVarsFastAcc, wordProgReadVars,
     wordProgWriteVars, wordExpReadVars, allocatorWriteVarsFastFixture]
@@ -75,7 +87,7 @@ example :
   simp [wordProgAtomicClashesFast, wordProgAtomicClashes,
     wordProgWriteVarsFast, wordProgWriteVarsFastAcc, wordProgWriteVars,
     wordClashPairs, wordInstForcedClashes, wordInstWriteVars,
-    wordListAppendAcc]
+    wordInstWriteVarsFastAcc]
 
 example [OfNat α 1] :
     pipelineWordFunctionsAllocated

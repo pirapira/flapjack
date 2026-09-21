@@ -562,6 +562,14 @@ def sharedMemOffsetOperatorTable : Bool :=
 
 #guard sharedMemOffsetOperatorTable
 
+/- Cake's direct `Mem` address form preserves a subtractive displacement as a
+   signed RISC-V offset while retaining the selected store width. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.memOffset .store32 .sub 4 10 24) [] 0]⟩ =
+      some [.store32Offset 4 10 (0 - BitVec.ofNat 64 24)] := by
+  decide
+
 -- reg1 holds the base and reg4 the byte: the store lands at base + 32.
 #guard
     labSharedStoreOffsetCode.bind (fun code =>

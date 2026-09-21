@@ -40,6 +40,7 @@ FIXTURES = (
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "process_message_negative_offset.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "store_offset_boundaries.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "spilled_load_offset.pnk",
+    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "process_message_empty_catch.pnk",
 )
 
 

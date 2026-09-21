@@ -143,6 +143,64 @@ theorem list_mapM_eq_none_of_mem {α β : Type} (f : α → Option β) {x : α} 
       · cases hy : f y with
         | none => simp
         | some b => simp [ih hx']
+
+/-- Cake's `opt_mmap_eq_some_el` (`pan_structsProofScript.sml:19`): a successful
+    `OPT_MMAP` is exactly a length match together with a pointwise success
+    condition, adapted from total `EL` to `getElem?`. -/
+theorem list_mapM_eq_some_iff {α β : Type} (f : α → Option β) (xs : List α) (ys : List β) :
+    xs.mapM f = some ys ↔
+      xs.length = ys.length ∧ ∀ n, n < ys.length → (xs[n]?).bind f = ys[n]? := by
+  induction xs generalizing ys with
+  | nil =>
+      constructor
+      · intro h
+        cases h
+        simp
+      · intro h
+        obtain ⟨hlen, _⟩ := h
+        have : ys = [] := by simpa using hlen.symm
+        subst this
+        rfl
+  | cons x xs ih =>
+      rw [List.mapM_cons]
+      constructor
+      · intro h
+        cases hx : f x with
+        | none => simp [hx] at h
+        | some b =>
+            simp only [hx] at h
+            cases hxs : xs.mapM f with
+            | none => simp [hxs] at h
+            | some ys' =>
+                simp only [hxs] at h
+                have hb : b :: ys' = ys := by simpa using h
+                subst hb
+                obtain ⟨hlen, hpt⟩ := (ih ys').mp hxs
+                refine ⟨by simp [hlen], ?_⟩
+                intro n hn
+                cases n with
+                | zero => simp [hx]
+                | succ m =>
+                    simp only [List.getElem?_cons_succ, List.length_cons] at hn ⊢
+                    have hm : m < ys'.length := by omega
+                    simpa using hpt m hm
+      · intro h
+        obtain ⟨hlen, hpt⟩ := h
+        cases ys with
+        | nil => simp at hlen
+        | cons b ys' =>
+            have hfx : f x = some b := by
+              have := hpt 0 (by simp)
+              simpa using this
+            have htail : xs.length = ys'.length ∧
+                ∀ n, n < ys'.length → (xs[n]?).bind f = ys'[n]? := by
+              refine ⟨by simpa using hlen, ?_⟩
+              intro n hn
+              have := hpt (n + 1) (by simp; omega)
+              simpa [List.getElem?_cons_succ] using this
+            have hxs : xs.mapM f = some ys' := (ih ys').mpr htail
+            simp [hfx, hxs]
+
 /-! Cake's `state_rel_imp_evaluate_decls`
 (`cakeml/pancake/proofs/pan_simpProofScript.sml:1303-1331`) says that evaluating a
 declaration list and evaluating the `pan_simp`-simplified declaration list agree
@@ -926,5 +984,130 @@ theorem evalPanValueDeclarations_only_functions
         { state with structs := state.structs } state' declarations memoryAccess
         (by rfl) hall heval
       simpa using hmain
+
+/-! Cake's `exns_wf_evaluate_decls` (`cakeml/pancake/semantics/panPropsScript.sml:1448`):
+    for an exception-only declaration list the exception-table well-formedness
+    conditions (distinct ids, ids absent from the incoming table, well-formed
+    shapes) are sufficient for the evaluator to succeed and install exactly
+    that table.  This is the converse direction of
+    `evalPanValueDeclarationsWithStructs_exceptions_wf`. -/
+
+theorem lookupInfo_of_ne [BEq String] {name candidate : String} {value : α}
+    {entries : InfoMap α} (hne : (candidate == name) = false) :
+    lookupInfo name ((candidate, value) :: entries) =
+      lookupInfo name entries := by
+  simp [lookupInfo, hne]
+
+theorem evalPanValueDeclarationsWithStructs_exns_wf_sufficiency
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    [LawfulBEq String]
+    (structs : StructContext) (state : PanValueProgramState α)
+    (declarations : List (Decl α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (hstructs : state.structs = structs)
+    (hall : declarations.all isExnDecl = true)
+    (hnodup :
+      ((panExceptionEntries declarations).map (fun entry => entry.1)).Nodup)
+    (hnone : ∀ exception shape,
+      (exception, shape) ∈ panExceptionEntries declarations →
+        lookupInfo exception state.exceptions = none)
+    (hwf : ∀ exception shape,
+      (exception, shape) ∈ panExceptionEntries declarations →
+        isWfShape structs shape = true) :
+    evalPanValueDeclarationsWithStructs structs state declarations memoryAccess =
+      some { state with
+        structs := structs
+        exceptions := panExceptionEntries declarations ++ state.exceptions } := by
+  induction declarations generalizing state with
+  | nil =>
+      simp [evalPanValueDeclarationsWithStructs, panExceptionEntries_nil,
+        List.nil_append, ← hstructs]
+  | cons declaration declarations ih =>
+      simp only [List.all_cons, Bool.and_eq_true] at hall
+      obtain ⟨hhead, htail⟩ := hall
+      cases declaration with
+      | function function => simp [isExnDecl] at hhead
+      | decl shape name expression => simp [isExnDecl] at hhead
+      | exnDecl exception shape =>
+          simp only [panExceptionEntries_cons]
+          simp only [evalPanValueDeclarationsWithStructs]
+          have hheadNone : lookupInfo exception state.exceptions = none :=
+            hnone exception shape (by simp [panExceptionEntries_cons])
+          have hheadWf : isWfShape structs shape = true :=
+            hwf exception shape (by simp [panExceptionEntries_cons])
+          rw [hheadNone]
+          simp only [Option.isSome_none, Bool.false_eq_true, if_false,
+            hheadWf, if_true]
+          simp only [panExceptionEntries_cons, List.map_append, List.map_cons,
+            List.map_nil] at hnodup
+          obtain ⟨hnodupTail, _, hdisjoint⟩ := List.nodup_append.mp hnodup
+          let next : PanValueProgramState α :=
+            { state with
+              structs := structs
+              exceptions := (exception, shape) :: state.exceptions }
+          have htailNone : ∀ eid shape',
+              (eid, shape') ∈ panExceptionEntries declarations →
+                lookupInfo eid next.exceptions = none := by
+            intro eid shape' hmem
+            have heid : eid ∈ (panExceptionEntries declarations).map
+                (fun entry => entry.1) :=
+              List.mem_map.mpr ⟨(eid, shape'), hmem, rfl⟩
+            have hne : (exception == eid) = false := by
+              rw [Bool.eq_false_iff]
+              intro h
+              exact (hdisjoint eid heid exception (by simp))
+                (beq_iff_eq.mp h).symm
+            show lookupInfo eid ((exception, shape) :: state.exceptions) = none
+            rw [lookupInfo_of_ne (name := eid) (candidate := exception)
+              (value := shape) (entries := state.exceptions) hne]
+            exact hnone eid shape' (by
+              simp only [panExceptionEntries_cons]
+              exact List.mem_append_left _ hmem)
+          have htailWf : ∀ eid shape',
+              (eid, shape') ∈ panExceptionEntries declarations →
+                isWfShape structs shape' = true :=
+            fun eid shape' hmem =>
+              hwf eid shape' (by
+                simp only [panExceptionEntries_cons]
+                exact List.mem_append_left _ hmem)
+          have hrec := ih next (by rfl) htail hnodupTail htailNone htailWf
+          exact hrec.trans (by simp [next, List.append_assoc])
+      | name struct fields => simp [isExnDecl] at hhead
+
+/-- Cake's `exns_wf_evaluate_decls` at the `evalPanValueDeclarations` level:
+    the exception-only list collects no struct names, so the incoming struct
+    context is preserved. -/
+theorem evalPanValueDeclarations_exns_wf_sufficiency
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    [LawfulBEq String]
+    (state : PanValueProgramState α) (declarations : List (Decl α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (hall : declarations.all isExnDecl = true)
+    (hnodup :
+      ((panExceptionEntries declarations).map (fun entry => entry.1)).Nodup)
+    (hnone : ∀ exception shape,
+      (exception, shape) ∈ panExceptionEntries declarations →
+        lookupInfo exception state.exceptions = none)
+    (hwf : ∀ exception shape,
+      (exception, shape) ∈ panExceptionEntries declarations →
+        isWfShape state.structs shape = true) :
+    evalPanValueDeclarations state declarations memoryAccess =
+      some { state with
+        exceptions := panExceptionEntries declarations ++ state.exceptions } := by
+  simp only [evalPanValueDeclarations]
+  have hnames :
+      declarations.all (fun declaration => !isName declaration) = true := by
+    refine List.all_eq_true.mpr (fun declaration hmem => ?_)
+    have h := List.all_eq_true.mp hall declaration hmem
+    cases declaration <;> simp_all [isExnDecl, isName]
+  rw [collectPanValueStructs_of_no_names state.structs declarations hnames]
+  have hmain := evalPanValueDeclarationsWithStructs_exns_wf_sufficiency
+    state.structs { state with structs := state.structs } declarations
+    memoryAccess (by rfl) hall hnodup hnone hwf
+  simpa using hmain
 
 end Flapjack

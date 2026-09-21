@@ -7,6 +7,18 @@ namespace Flapjack.Test.PanValuePcControlSafety
 
 open Flapjack
 
+/-! Regression for Cake's `state_rel_globals` projection: a related
+    source-to-Crep state always has the empty source-global environment. -/
+example
+    (structs : StructContext) (context : CompileContext Nat)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+    (sourceMemory : Nat → Option (PanValue Nat)) (state : CrepState Nat)
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory state) :
+    sourceGlobals = (fun _ => none) :=
+  panValueCrepStateRel_sourceGlobals_eq_none structs context sourceLocals
+    sourceGlobals sourceMemory state hrel
+
 /-! The context-coded `pc_compile_correct` boundary keeps the full
     evaluator/state/result obligation package explicit. -/
 example

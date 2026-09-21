@@ -61,6 +61,23 @@ theorem list_mapM_eq_none_of_mem_fixture :
   list_mapM_eq_none_of_mem (f := fun n : Nat => if n == 4 then none else some (n + 1))
     (x := 4) (xs := [3, 4, 5]) (by decide) (by decide)
 
+/-- `opt_mmap_eq_some_el` (`pan_structsProofScript.sml:19`), reverse direction. -/
+theorem list_mapM_eq_some_iff_fixture :
+    ([3, 5] : List Nat).mapM (fun n => if n == 4 then none else some (n + 1)) =
+      some [4, 6] := by
+  rw [list_mapM_eq_some_iff]
+  refine ⟨by decide, ?_⟩
+  intro n hn
+  have hn' : n < 2 := by simpa using hn
+  have : n = 0 ∨ n = 1 := by omega
+  rcases this with rfl | rfl <;> decide
+
+/-- `opt_mmap_eq_some_el`, forward direction. -/
+theorem list_mapM_eq_some_iff_length_fixture :
+    ([3, 5] : List Nat).length = ([4, 6] : List Nat).length :=
+  ((list_mapM_eq_some_iff (fun n : Nat => if n == 4 then none else some (n + 1)) [3, 5]
+    [4, 6]).mp (by decide)).1
+
 /-! Regression for Cake's `state_rel_imp_evaluate_decls`
     (`pan_simpProofScript.sml:1303-1331`): the declaration-level evaluator
     preserves the state relation whose only non-trivial component simplifies
@@ -592,6 +609,46 @@ example : True := by
       have _h := evalPanValueDeclarations_only_functions evalRelState state'
         functionsOnlyStateDecls none hall heval
       trivial
+
+/-- Focused regression for the `exns_wf_evaluate_decls` counterpart: the
+    distinct/no-shadowing/well-formedness conditions are sufficient for the
+    evaluator to install exactly the exception table. -/
+def exnsWfDecls : List (Decl Nat) :=
+  [.exnDecl "E" .one, .exnDecl "F" .one]
+
+def exnsWfGuard : Bool :=
+  match evalPanValueDeclarations evalRelState exnsWfDecls none with
+  | some state' =>
+      state'.exceptions.length ==
+        (panExceptionEntries exnsWfDecls ++ evalRelState.exceptions).length
+  | none => false
+
+#eval exnsWfGuard
+#guard exnsWfGuard
+
+example : True := by
+  have hall : exnsWfDecls.all isExnDecl = true := by decide
+  have hnodup : ((panExceptionEntries exnsWfDecls).map
+      (fun entry => entry.1)).Nodup := by
+    simp [exnsWfDecls, panExceptionEntries, exceptionEntries]
+  have hnone : ∀ exception shape,
+      (exception, shape) ∈ panExceptionEntries exnsWfDecls →
+        lookupInfo exception evalRelState.exceptions = none := by
+    intro exception shape _
+    simp [evalRelState, lookupInfo]
+  have hwf : ∀ exception shape,
+      (exception, shape) ∈ panExceptionEntries exnsWfDecls →
+        isWfShape evalRelState.structs shape = true := by
+    intro exception shape hmem
+    simp [exnsWfDecls, panExceptionEntries, exceptionEntries] at hmem
+    rcases hmem with h | h
+    · obtain ⟨rfl, rfl⟩ := h
+      simp [evalRelState, isWfShape]
+    · obtain ⟨rfl, rfl⟩ := h
+      simp [evalRelState, isWfShape]
+  have _h := evalPanValueDeclarations_exns_wf_sufficiency evalRelState exnsWfDecls
+    none hall hnodup hnone hwf
+  trivial
 
 end Flapjack.Test.PanProgramSimpParity
 

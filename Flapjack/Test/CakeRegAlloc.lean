@@ -703,6 +703,25 @@ def doSpillEqualDegreeGuard : Bool :=
 
 #guard doSpillEqualDegreeGuard
 
+/- Cake's `do_spill` returns `F` without touching the allocator state when
+   the spill worklist is empty (`reg_allocScript.sml:809-830`).  Keep this
+   boundary explicit so a driver cannot manufacture a stack entry or clear
+   unrelated worklists on an empty candidate set. -/
+def doSpillEmptyGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      simpWl := [1],
+      spillWl := [],
+      freezeWl := [2],
+      availMovesWl := [(3, (1, 2))],
+      unavailMovesWl := [(4, (2, 3))] }
+  let (changed, out) := cakeDoSpill none 4 state
+  !changed && out.dim == 4 && out.simpWl == [1] && out.spillWl == [] &&
+    out.freezeWl == [2] && out.availMovesWl == [(3, (1, 2))] &&
+    out.unavailMovesWl == [(4, (2, 3))] && out.stack == []
+
+#guard doSpillEmptyGuard
+
 /- Cake's `do_step` (`reg_allocScript.sml:832-857`) tries simplify before
    coalescing. With both worklists populated, simplify wins and leaves the
    available move untouched. -/
@@ -1420,7 +1439,8 @@ def parityGuard : Bool :=
     && coalesceParentCompressionGuard
     && prefreezeTransitionGuard
     && sortMovesTailSplitGuard && freezeWorklistTransitionGuard &&
-      doSpillEqualDegreeGuard && doStepSimplifyPriorityGuard &&
+      doSpillEqualDegreeGuard && doSpillEmptyGuard &&
+      doStepSimplifyPriorityGuard &&
       unspillTransitionGuard
       && coalesceSelfMoveRejectedGuard && applyColourProbeGuard
 
@@ -1469,7 +1489,7 @@ def runChecks : IO Bool := do
     respillBelowThresholdGuard, simplifyBatchGuard, decDegreeOutOfDimGuard,
     decDegreeOutOfDimNoOpGuard, coalesceWorklistSuccessGuard,
     freezeWorklistTransitionGuard, coalesceParentCompressionGuard,
-    prefreezeTransitionGuard, doSpillEqualDegreeGuard,
+    prefreezeTransitionGuard, doSpillEqualDegreeGuard, doSpillEmptyGuard,
     doStepSimplifyPriorityGuard, unspillTransitionGuard,
     worklistPrependGuard, extendCliqueGuard, splitDegreeGuard,
     smergePriorityGuard, applyColourProbeGuard]
@@ -1525,6 +1545,7 @@ def runChecks : IO Bool := do
     "dec_degree out-of-dimension no-op with outside adjacency",
     "do_coalesce success transition", "do_freeze transition",
     "do_prefreeze transition", "do_spill equal-degree transition",
+    "do_spill empty-worklist no-op",
     "do_step simplify priority", "unspill transition", "worklist prepend",
     "extend clique", "split degree", "smerge priority",
     "apply_colour rewrites source Word register fields"]

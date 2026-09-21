@@ -236,6 +236,15 @@ example :
         .add 4 4 31, .sltu 31 4 31, .or 5 5 31] := by
   decide
 
+/- Cake's four-register AddCarry is distinct from Pancake's five-register
+   two-result carrier; pin its direct target expansion separately. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.cakeAddCarry 4 5 6 7))) [] 0]⟩ =
+      some [.sltu 31 0 7, .add 4 5 6, .sltu 7 4 6,
+        .add 4 4 31, .sltu 31 4 31, .or 7 7 31] := by
+  decide
+
 /- Cake's `riscv_ast (Inst (Arith (Div ...)))` reaches the target DIV
    encoding through the direct Lab word-arithmetic boundary. -/
 example :

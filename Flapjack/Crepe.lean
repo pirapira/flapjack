@@ -173,6 +173,33 @@ def loadGlobals [Add α] (address stride : α) (count : Nat) : List (CrepExp α)
   | 0 => []
   | count + 1 => .loadGlob address :: loadGlobals (address + stride) stride count
 
+/-- Faithful port of Cake `crepProps$length_load_globals_eq_read_size`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:467`). -/
+theorem loadGlobals_length [Add α] (address stride : α) (count : Nat) :
+    (loadGlobals address stride count).length = count := by
+  induction count generalizing address with
+  | zero => rfl
+  | succ count ih => simp [loadGlobals, ih]
+
+/-- Faithful port of Cake `crepProps$el_load_globals_elem`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:474`), generalised to an
+    explicit additive stride on `Nat`: the `n`-th generated load reads the
+    address `address + n * stride`. -/
+theorem loadGlobals_getElem (address stride count n : Nat) (h : n < count) :
+    (loadGlobals address stride count)[n]? =
+      some (.loadGlob (address + n * stride)) := by
+  induction count generalizing address n with
+  | zero => simp at h
+  | succ count ih =>
+      cases n with
+      | zero => simp [loadGlobals]
+      | succ k =>
+          simp only [loadGlobals, List.getElem?_cons_succ]
+          rw [ih (address + stride) k (by omega)]
+          congr 1
+          rw [Nat.add_mul, Nat.one_mul]
+          ac_rfl
+
 def assignRet [OfNat α 0] [Add α] (wordStride : α) (names : List Nat) : CrepProg α :=
   crepNestedSeq (names.zipWith (fun name value => .assign name value)
     (loadGlobals (0 : α) wordStride names.length))

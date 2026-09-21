@@ -895,6 +895,7 @@ evaluator-evidence obligation. -/
     state evidence in plain and context-coded form. -/
 #check @panValuePcCompileCorrect_compact_return_of_state_evidence
 #check @panValuePcCompileCorrect_compact_return_with_context_code_of_state_evidence
+#check @panValuePcCompileCorrect_compact_return_with_context_code_of_state_evidence_and_clocked
 
 /-! The plain raw-word-list entrypoint also accepts explicit state evidence
     for the generic `hother` callback. -/

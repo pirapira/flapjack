@@ -480,7 +480,7 @@ theorem mem_globalDeclsFilter {predicate : Decl α → Bool} {declaration : Decl
   induction declarations with
   | nil => rw [globalDeclsFilter.eq_def] at hmem; simp at hmem
   | cons head tail ih =>
-      rw [globalDeclsFilter.eq_def] at hmem
+      simp only [globalDeclsFilter] at hmem
       by_cases hpred : predicate head = true
       · simp [hpred] at hmem
         rcases hmem with heq | htail
@@ -497,7 +497,7 @@ theorem globalDeclShapes_globalDeclsFilter_not_function (declarations : List (De
   induction declarations with
   | nil => rw [globalDeclsFilter.eq_def, globalDeclShapes.eq_def]
   | cons declaration declarations ih =>
-      rw [globalDeclsFilter.eq_def]
+      simp only [globalDeclsFilter]
       cases declaration <;> simp only [globalDeclIsFunction] at ih ⊢ <;> simp [globalDeclShapes_cons, ih]
 
 theorem globalDeclShapes_globalDeclsFilter_function (declarations : List (Decl α)) :
@@ -510,7 +510,7 @@ theorem globalDeclShapes_globalDeclsFilter_name (declarations : List (Decl α)) 
   induction declarations with
   | nil => rw [globalDeclsFilter.eq_def, globalDeclShapes.eq_def]
   | cons declaration declarations ih =>
-      rw [globalDeclsFilter.eq_def]
+      simp only [globalDeclsFilter]
       cases declaration <;> simp only [globalDeclIsName] at ih ⊢ <;> simp [globalDeclShapes_cons, ih]
 
 theorem globalDeclShapes_globalDeclsFilter_exception (declarations : List (Decl α)) :
@@ -518,7 +518,7 @@ theorem globalDeclShapes_globalDeclsFilter_exception (declarations : List (Decl 
   induction declarations with
   | nil => rw [globalDeclsFilter.eq_def, globalDeclShapes.eq_def]
   | cons declaration declarations ih =>
-      rw [globalDeclsFilter.eq_def]
+      simp only [globalDeclsFilter]
       cases declaration <;> simp only [globalDeclIsException] at ih ⊢ <;> simp [globalDeclShapes_cons, ih]
 
 theorem globalDeclShapes_globalDeclsFilter_global (declarations : List (Decl α)) :
@@ -527,7 +527,7 @@ theorem globalDeclShapes_globalDeclsFilter_global (declarations : List (Decl α)
   induction declarations with
   | nil => rw [globalDeclsFilter.eq_def, globalDeclShapes.eq_def]
   | cons declaration declarations ih =>
-      rw [globalDeclsFilter.eq_def]
+      simp only [globalDeclsFilter]
       cases declaration <;> simp only [globalDeclIsGlobal] at ih ⊢ <;> simp [globalDeclShapes_cons, ih]
 
 theorem globalDeclShapes_globalResortDecls (declarations : List (Decl α)) :
@@ -539,6 +539,61 @@ theorem globalDeclShapes_globalResortDecls (declarations : List (Decl α)) :
     globalDeclShapes_globalDeclsFilter_global,
     globalDeclShapes_globalDeclsFilter_function]
   simp
+
+/-! Counterpart of Cake's `exceptions_FILTER_is_function`
+    (`pan_globalsProofScript.sml:2515`). -/
+theorem exceptionEntries_globalDeclsFilter_of_true
+    {predicate : Decl α → Bool}
+    (hexn : ∀ exception shape, predicate (.exnDecl exception shape) = true)
+    (declarations : List (Decl α)) :
+    exceptionEntries (globalDeclsFilter predicate declarations) =
+      exceptionEntries declarations := by
+  induction declarations with
+  | nil => simp [globalDeclsFilter, exceptionEntries]
+  | cons declaration declarations ih =>
+      simp only [globalDeclsFilter]
+      by_cases hpred : predicate declaration = true
+      · rw [if_pos hpred]
+        cases declaration <;> simp_all [exceptionEntries_cons]
+      · rw [if_neg hpred]
+        cases declaration <;> simp_all [exceptionEntries_cons]
+
+theorem exceptionEntries_globalDeclsFilter_of_false
+    {predicate : Decl α → Bool}
+    (hexn : ∀ exception shape, predicate (.exnDecl exception shape) = false)
+    (declarations : List (Decl α)) :
+    exceptionEntries (globalDeclsFilter predicate declarations) = [] := by
+  induction declarations with
+  | nil => simp [globalDeclsFilter, exceptionEntries]
+  | cons declaration declarations ih =>
+      simp only [globalDeclsFilter]
+      by_cases hpred : predicate declaration = true
+      · rw [if_pos hpred]
+        cases declaration <;> simp_all [exceptionEntries_cons]
+      · rw [if_neg hpred]
+        cases declaration <;> simp_all
+
+theorem exceptionEntries_filter_function (declarations : List (Decl α)) :
+    exceptionEntries (globalDeclsFilter globalDeclIsFunction declarations) = [] :=
+  exceptionEntries_globalDeclsFilter_of_false (fun _ _ => rfl) declarations
+
+theorem exceptionEntries_filter_not_function (declarations : List (Decl α)) :
+    exceptionEntries (globalDeclsFilter (fun declaration => !globalDeclIsFunction declaration)
+      declarations) = exceptionEntries declarations :=
+  exceptionEntries_globalDeclsFilter_of_true (fun _ _ => rfl) declarations
+
+theorem exceptionEntries_filter_exception (declarations : List (Decl α)) :
+    exceptionEntries (globalDeclsFilter globalDeclIsException declarations) =
+      exceptionEntries declarations :=
+  exceptionEntries_globalDeclsFilter_of_true (fun _ _ => rfl) declarations
+
+theorem exceptionEntries_filter_name (declarations : List (Decl α)) :
+    exceptionEntries (globalDeclsFilter globalDeclIsName declarations) = [] :=
+  exceptionEntries_globalDeclsFilter_of_false (fun _ _ => rfl) declarations
+
+theorem exceptionEntries_filter_global (declarations : List (Decl α)) :
+    exceptionEntries (globalDeclsFilter globalDeclIsGlobal declarations) = [] :=
+  exceptionEntries_globalDeclsFilter_of_false (fun _ _ => rfl) declarations
 
 def globalFindFunction [BEq String] (name : FunName) :
     List (Decl α) → Option (FunDecl α)

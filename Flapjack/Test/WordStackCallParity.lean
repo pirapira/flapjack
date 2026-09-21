@@ -100,6 +100,35 @@ def returnFrameFreeExact : Bool :=
 
 #guard returnFrameFreeExact
 
+/- Cake's `copy_ret` copies stack-resident return values in descending frame
+   order, then frees exactly the temporary return slots.  These two shapes
+   are the direct `copy_ret_handler_2`/multi-value rows from
+   `word_stack_call_probe.out`; keeping them here covers the frame boundary
+   used by both ordinary returns and handler returns. -/
+def returnCopyCakeGuard : Bool :=
+  match stackCopyReturn (α := Nat) false false 1 31 4 [10, 12]
+      (.skip : StackProg Nat) with
+  | .seq
+      (.seq (.stackLoad 31 1)
+        (.seq (.stackStore 31 5)
+          (.seq (.stackLoad 31 0)
+            (.seq (.stackStore 31 4) .skip))))
+      (.seq (.stackFree 2) .skip) => true
+  | _ => false
+
+#guard returnCopyCakeGuard
+
+def handlerReturnCopyCakeGuard : Bool :=
+  match stackCopyReturn (α := Nat) true true 1 31 4 [10]
+      (.skip : StackProg Nat) with
+  | .seq
+      (.seq (.stackLoad 31 0)
+        (.seq (.stackStore 31 9) .skip))
+      (.seq (.stackFree 1) .skip) => true
+  | _ => false
+
+#guard handlerReturnCopyCakeGuard
+
 /-! Indirect-call targets follow `call_dest NONE`: the last argument names the
     target, a register-resident target is used directly, a stack-resident one
     is loaded into `scratch`, and the remaining arguments are the formals. -/
@@ -258,6 +287,10 @@ def runChecks : IO Bool := do
         sourceTailCallFreeCountExact),
       ("returns free the Cake current frame after ABI moves",
         returnFrameFreeExact),
+      ("copy_ret preserves Cake multi-value return frame order",
+        returnCopyCakeGuard),
+      ("copy_ret preserves Cake handler-frame return layout",
+        handlerReturnCopyCakeGuard),
       ("indirect calls take a register target from the last argument",
         indirectRegisterTargetExact),
       ("indirect calls load a stack target through scratch",

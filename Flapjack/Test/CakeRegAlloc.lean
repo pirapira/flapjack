@@ -548,6 +548,20 @@ def doStepSimplifyPriorityGuard : Bool :=
 
 #guard doSpillEqualDegreeGuard
 
+/- Cake's `unspill` (`reg_allocScript.sml:378-391`) partitions the spill
+   worklist with the same reversed accumulator order as the HOL state monad,
+   then sends newly low-degree, non-move-related nodes to `simpWl`. -/
+def unspillTransitionGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 5 with
+      degrees := CakeNodeMap.ofNatInfoMap 5 [(1, 0), (2, 2), (3, 1)]
+      spillWl := [1, 2, 3] }
+  let out := cakeUnspill 2 state
+  out.spillWl == [2] && out.simpWl == [1, 3] &&
+    out.freezeWl == [] && out.stack == []
+
+#guard unspillTransitionGuard
+
 
 /- The canonical `reg_alloc_probe.out` cost-sensitive case exercises
    `do_spill` with a non-`NONE` source-keyed table and one allocatable colour:
@@ -1034,7 +1048,8 @@ def parityGuard : Bool :=
     && coalesceParentCompressionGuard
     && prefreezeTransitionGuard
     && sortMovesTailSplitGuard && freezeWorklistTransitionGuard &&
-      doSpillEqualDegreeGuard && coalesceSelfMoveRejectedGuard &&
+      doSpillEqualDegreeGuard && unspillTransitionGuard &&
+      coalesceSelfMoveRejectedGuard &&
       doStepSimplifyPriorityGuard && assignAtempFixedNeighbourGuard &&
       assignStempUnboundColourGuard && assignAtempsHeuristicThenRangeGuard
 
@@ -1073,7 +1088,8 @@ def runChecks : IO Bool := do
     respillBelowThresholdGuard, simplifyBatchGuard, decDegreeOutOfDimGuard,
     coalesceWorklistSuccessGuard, coalesceParentCompressionGuard,
     prefreezeTransitionGuard, freezeWorklistTransitionGuard,
-    doSpillEqualDegreeGuard, doStepSimplifyPriorityGuard,
+    doSpillEqualDegreeGuard, unspillTransitionGuard,
+    doStepSimplifyPriorityGuard,
     assignAtempFixedNeighbourGuard, assignStempUnboundColourGuard,
     assignAtempsHeuristicThenRangeGuard]
   let names := [
@@ -1118,7 +1134,8 @@ def runChecks : IO Bool := do
     "dec_degree out-of-dimension no-op",
     "do_coalesce success transition", "do_prefreeze transition",
     "do_freeze transition", "do_spill equal-degree transition",
-    "do_step simplify priority", "assign_Atemp fixed-neighbour colour",
+    "unspill transition", "do_step simplify priority",
+    "assign_Atemp fixed-neighbour colour",
     "assign_Stemp unbound colour", "assign_Atemps heuristic then range"]
   let mut all := true
   for (name, result) in names.zip results do

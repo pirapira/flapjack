@@ -1183,6 +1183,28 @@ def globalCompileInitializers [BEq String] [Add α] [Mul α]
       initializer :: globalCompileInitializers nextContext declarations
   | _ :: declarations => globalCompileInitializers context declarations
 
+/-- Cake's `compile_decs_no_exp_ids_main`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:174`): every compiled
+    global initializer mentions no exception identifiers, because each one is a
+    plain store. -/
+theorem globalCompileInitializers_expIds [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations : List (Decl α)) :
+    ∀ initializer ∈ globalCompileInitializers context declarations,
+      expIds initializer = [] := by
+  induction declarations generalizing context with
+  | nil => simp [globalCompileInitializers]
+  | cons declaration declarations ih =>
+      cases declaration with
+      | decl shape name value =>
+          simp only [globalCompileInitializers, List.mem_cons]
+          intro initializer hmem
+          rcases hmem with rfl | hmem
+          · simp [expIds]
+          · exact ih _ initializer hmem
+      | function function => simpa [globalCompileInitializers] using ih context
+      | exnDecl exception shape => simpa [globalCompileInitializers] using ih context
+      | name struct fields => simpa [globalCompileInitializers] using ih context
+
 /-! Counterpart of the context-threading append structure of Cake's
     `compile_decls_append` (`pan_globalsProofScript.sml:1997`): initializers
     of an appended program are the first part's initializers followed by the

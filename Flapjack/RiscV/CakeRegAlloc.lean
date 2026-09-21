@@ -191,7 +191,10 @@ def cakeListRemap : List Nat → CakeNodeBijection → CakeNodeBijection
    only by repeated `sp_default` lookups while constructing the graph and
    node tags. -/
 def cakeSpDefaultIndex (entries : NatInfoMap Nat) : Std.HashMap Nat Nat :=
-  entries.foldl (fun index entry => index.insert entry.1 entry.2) {}
+  entries.foldl (fun index entry =>
+    match index[entry.1]? with
+    | some _ => index
+    | none => index.insert entry.1 entry.2) {}
 
 def cakeSpDefaultIndexed (index : Std.HashMap Nat Nat) (n : Nat) : Nat :=
   match index[n]? with

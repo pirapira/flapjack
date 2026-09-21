@@ -192,6 +192,15 @@ def spDefaultIndexParityGuard : Bool :=
     cakeSpDefaultIndexed index 8 == Flapjack.RiscV.CakeAlloc.spDefault entries 8 &&
     cakeSpDefaultIndexed index 7 == Flapjack.RiscV.CakeAlloc.spDefault entries 7
 
+/- Cake's association-list lookup is first-binding.  The indexed accelerator
+   must preserve that result if a source map contains a duplicate key. -/
+def spDefaultIndexFirstBindingGuard : Bool :=
+  let entries : NatInfoMap Nat := [(9, 4), (9, 6)]
+  let index := cakeSpDefaultIndex entries
+  cakeSpDefaultIndexed index 9 == Flapjack.RiscV.CakeAlloc.spDefault entries 9
+
+#guard spDefaultIndexFirstBindingGuard
+
 #guard spDefaultIndexParityGuard
 
 def extractColorOrderGuard : Bool :=

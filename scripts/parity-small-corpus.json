@@ -1041,6 +1041,14 @@
       "tracked_beads": [
         "flapjack-pxn.8.5.14.1.5"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00114_fuzz_global_pressure.pnk",
+      "source_reference": "Accepted original-Cake differential witness from seed 20261014 index 114: nested loops, exception handlers, struct/tuple fields, FFI calls, global-memory loads/stores, shifts, and register pressure exercise the allocator/frame path. Cake and Flapjack artifacts are byte-identical.",
+      "cake_sha256": "16b97031aaf03cf5b5ea7866f242201049fddec0198d8251e32afdf54f965712",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.5"
+      ]
     }
   ]
 }

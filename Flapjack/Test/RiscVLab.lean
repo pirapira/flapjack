@@ -327,6 +327,21 @@ example :
       some [.store32Offset 4 5 (BitVec.ofNat 64 2047)] := by
   decide
 
+/- Cake preserves the signed displacement for a subtracting byte store too;
+   the width-specific target opcode must not erase the negative offset. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMemSub .store8 4 5 8) [] 0]⟩ =
+      some [.storeByteOffset 4 5 (0 - BitVec.ofNat 64 8)] := by
+  decide
+
+/- The largest positive signed-12 displacement remains a direct load32. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMem .load32 4 5 2047) [] 0]⟩ =
+      some [.load32Offset 4 5 (BitVec.ofNat 64 2047)] := by
+  decide
+
 /-! Cake's immediate binary operators use the corresponding I-format
     instruction, not a rejected lowering. -/
 example :

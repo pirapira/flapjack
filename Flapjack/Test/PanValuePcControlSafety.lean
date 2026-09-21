@@ -941,6 +941,9 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 /-! Declaration calls now expose the paired state simulation and control-safety
     package used by Pancake's `pc_compile_correct[DecCall]` branch. -/
 #check @panValueCrepDecCall_state_and_controlSafe_of_body
+
+#check @panValueCrepProgramStateCorrect_and_controlSafe_call_handler_of_relation
+
 /-! A call whose metadata carries an exception handler needs explicit handler
     safety: a handler program that never returns a loop-control result.  The
     source-side never-broke-continued predicate and the resulting control-safety

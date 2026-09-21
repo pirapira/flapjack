@@ -3,6 +3,7 @@ import Flapjack.CrepeProgramGenericRaiseCorrectness
 import Flapjack.CrepeProgramCallCorrectness
 import Flapjack.CrepeProgramDeclarationCallCorrectness
 import Flapjack.CrepeProgramReturnGeneralCorrectness
+import Flapjack.PanToCrepCallHandlerControlSafety
 import Flapjack.CrepeProgramRaiseSourceWordRelation
 import Flapjack.CrepeSourceWordRecordRaiseCorrectness
 import Flapjack.CrepeProgramExtCallCorrectness
@@ -25073,6 +25074,41 @@ theorem panValueCrepProgramStateCorrect_and_controlSafe_call_returns_of_relation
   · exact panValueCrepProgramStateCorrect_call_of_relation
       (some (destination, none)) compiledInfo name args hcompile hcall
   · exact panValueCrepProgramStateControlSafe_call_returns destination name args
+
+/-! The handler-carrying call branch pairs ordinary state simulation with the
+    conditional control-safety theorem.  The handler premise is kept
+    explicit: Pancake evaluates the matching handler directly, so its
+    `broke`/`continued` behavior cannot be discarded by the caller proof. -/
+theorem panValueCrepProgramStateCorrect_and_controlSafe_call_handler_of_relation
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (info : Option (Option (VarKind × VarName) ×
+      Option (ExceptionId × VarName × Prog α)))
+    (name : FunName) (args : List (Exp α))
+    (compiledInfo : CompileContext α →
+      Option (List Nat × Option (α × CrepProg α)))
+    (hcompile : ∀ (context : CompileContext α),
+      compileProg context (.call info name args) =
+        .call (compiledInfo context) name (compileArgs context args))
+    (hcall : PanValueCrepCallStateCorrect info compiledInfo name args)
+    (hhandlerNotBroke : ∀ (primitive : PanPrimitiveHandler α)
+      (sourceHandler : PanValueFfiHandler α) (structs : StructContext)
+      (sourceFunctions : List (FunName × List VarName × Prog α))
+      (baseAddress topAddress bytesInWord : α) (handlerProgram : Prog α),
+      (∃ (destination : Option (VarKind × VarName)) (caught : ExceptionId)
+        (handlerVariable : VarName),
+        info = some (destination, some (caught, handlerVariable, handlerProgram))) →
+      PanValueProgNotBrokeContinued primitive sourceHandler structs
+        sourceFunctions baseAddress topAddress bytesInWord handlerProgram) :
+    PanValueCrepProgramStateCorrect (.call info name args) ∧
+      PanValueCrepProgramStateControlSafe (.call info name args) := by
+  constructor
+  · exact panValueCrepProgramStateCorrect_call_of_relation
+      info compiledInfo name args hcompile hcall
+  · exact panValueCrepProgramStateControlSafe_call_handler info name args
+      hhandlerNotBroke
 
 /-! A clocked arbitrary Raise can provide the HOL hraise package directly.
     This adapter preserves that package and exception lookup while reusing the

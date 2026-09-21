@@ -53,9 +53,20 @@ theorem shapeSize_comb_map_panValueShape_eq_flatten_length_fixture :
       · exact nestedValue_wf
       · simp [wordValue, panValueShape, isWfShape])
 
+theorem shapeSize_eq_zero_or_flatten_length_fixture :
+    ([1, 2, 3] : List Nat).length =
+      Shape.shapeSize (panValueShape ([] : StructContext) recordValue) := by
+  apply shapeSize_eq_zero_or_flatten_length
+  · simp [recordValue, panValueShape, isWfShape, isWfShape.isWfShapeList]
+  · intro hzero
+    simp [recordValue, panValueShape, Shape.shapeSize] at hzero
+  · intro _
+    simp [recordValue, panValueFlatten, panValueFlattenValues]
+
 #check @panValueFlatten
 #check @panValueFlatten_length_eq_shapeSize
 #check @panValueFlatten_eq_nil_iff_shapeSize_eq_zero
 #check @shapeSize_comb_map_panValueShape_eq_flatten_length
+#check @shapeSize_eq_zero_or_flatten_length
 
 end Flapjack.Test.PanValueFlattenParity

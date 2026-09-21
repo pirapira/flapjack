@@ -333,6 +333,65 @@ theorem panValuePcFinalFfiResultRel_of_clocked_decCall
     rfl
   · simp [panValuePcResultRel, hstate, hevent]
 
+/-! The corresponding `DecCall` raised-result lift keeps the exception code,
+    payload/global observation, and post-call state explicit.  This is the
+    declaration-call counterpart of the direct clocked Raise bridge. -/
+theorem panValuePcRaisedResultRelWithContextCode_of_clocked_decCall
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext) (pcContext : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel clock callClock : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (name : VarName) (shape : Shape) (function : FunName)
+    (arguments : List (Exp α)) (body : Prog α)
+    (nextGlobals : VarName → Option (PanValue α))
+    (nextMemory : α → Option (PanValue α)) (nextFfi : FfiState σ)
+    (exception : ExceptionId) (value : PanValue α)
+    (targetState : CrepState α) (targetException : α)
+    (hcall : evalPanValueFfiClockCall context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
+      none function arguments =
+      some (.control (.raised (fun _ => none) nextGlobals nextMemory nextFfi
+        exception value), callClock))
+    (hstate : panValueCrepStateRel structs pcContext (fun _ => none)
+      nextGlobals nextMemory targetState)
+    (hraise : panValuePcExceptionResultRelWithContextCode structs pcContext
+      exceptionRel exceptionCode globalsLookup nextGlobals nextMemory
+      exception value targetState targetException) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+      (.decCall name shape function arguments body) =
+      some (.control (.raised (fun _ => none) nextGlobals nextMemory nextFfi
+        exception value), callClock) ∧
+    (evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+      (.decCall name shape function arguments body)).map
+      panValueFfiClockResultProjection =
+      some (.raised (fun _ => none) nextGlobals nextMemory nextFfi
+        exception value callClock) ∧
+    panValuePcResultRelWithContextCode structs pcContext exceptionRel
+      exceptionCode globalsLookup
+      (.raised (fun _ => none) nextGlobals nextMemory exception value)
+      (.raised targetState targetException) := by
+  have hclock := evalPanValueFfiClockProg_decCall_raised context primitive handler
+    structs functions baseAddress topAddress bytesInWord fuel clock callClock
+    locals globals memory ffi name shape function arguments body nextGlobals
+    nextMemory nextFfi exception value hcall
+  refine ⟨hclock, ?_, ?_⟩
+  · rw [hclock]
+    rfl
+  · exact ⟨hstate, hraise⟩
+
 /-! The zero-clock Tick branch supplies the corresponding Timeout lift.  The
     source correctness equation is used directly, so local clearing and the
     remaining clock are not abstracted away before entering the Pc boundary;

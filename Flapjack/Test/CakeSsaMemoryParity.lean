@@ -115,6 +115,18 @@ def shareStore32Guard : Bool :=
   | .seq (.move 1 []) (.shareInst .store32 0 (.var 0)) => true
   | _ => false
 
+def load8InstGuard : Bool :=
+  match (wordFullSsaCcTrans 0
+      (.inst (.mem .load8 1 2) : WordProg Nat)).2.2 with
+  | .seq (.move 1 []) (.inst (.mem .load8 5 0)) => true
+  | _ => false
+
+def store8InstGuard : Bool :=
+  match (wordFullSsaCcTrans 0
+      (.inst (.mem .store8 1 2) : WordProg Nat)).2.2 with
+  | .seq (.move 1 []) (.inst (.mem .store8 0 0)) => true
+  | _ => false
+
 def parityGuard : Bool :=
   getGuard && storeGuard && setGuard && loadInstGuard && storeInstGuard &&
     load32InstGuard && store32InstGuard && load8InstGuard && store8InstGuard &&

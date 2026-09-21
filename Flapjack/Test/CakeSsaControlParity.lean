@@ -165,12 +165,53 @@ def divBoundaryGuard : Bool :=
 
 #guard divBoundaryGuard
 
+def codeBufferWriteGuard : Bool :=
+  match (wordFullSsaCcTrans 0
+      (.codeBufferWrite 1 2 : WordProg Nat)).2.2 with
+  | .seq (.move 1 []) (.codeBufferWrite 0 0) => true
+  | _ => false
+
+def dataBufferWriteGuard : Bool :=
+  match (wordFullSsaCcTrans 0
+      (.dataBufferWrite 1 2 : WordProg Nat)).2.2 with
+  | .seq (.move 1 []) (.dataBufferWrite 0 0) => true
+  | _ => false
+
+#guard codeBufferWriteGuard
+#guard dataBufferWriteGuard
+
+def installBoundaryGuard : Bool :=
+  match (wordFullSsaCcTrans 0
+      (.install 1 2 3 4 ([], []) : WordProg Nat)).2.2 with
+  | .seq (.move 1 [])
+      (.seq (.move 0 [])
+        (.seq (.move 1 [(2, 0), (4, 0)])
+          (.seq (.install 2 4 0 0 ([], []))
+            (.seq (.move 1 [(13, 2)]) (.move 0 []))))) => true
+  | _ => false
+
+#guard installBoundaryGuard
+
+def installCutsetBoundaryGuard : Bool :=
+  match (wordFullSsaCcTrans 0
+      (.install 1 2 3 4 ([1], [2]) : WordProg Nat)).2.2 with
+  | .seq (.move 1 [])
+      (.seq (.move 0 [(11, 0), (15, 0)])
+        (.seq (.move 1 [(2, 11), (4, 15)])
+          (.seq (.install 2 4 0 0 ([11], [15]))
+            (.seq (.move 1 [(21, 2)])
+              (.move 0 [(25, 11), (29, 15)]))))) => true
+  | _ => false
+
+#guard installCutsetBoundaryGuard
+
 def parityGuard : Bool :=
   raiseBoundaryGuard && callBoundaryGuard && storeConstsBoundaryGuard &&
     ffiBoundaryGuard && codeBufferWriteBoundaryGuard && dataBufferWriteBoundaryGuard &&
     longDivBoundaryGuard && longMulBoundaryGuard && shiftBoundaryGuard &&
     addCarryBoundaryGuard && constBoundaryGuard && binOpBoundaryGuard &&
-    divBoundaryGuard
+    divBoundaryGuard && codeBufferWriteGuard && dataBufferWriteGuard &&
+    installBoundaryGuard && installCutsetBoundaryGuard
 
 #guard parityGuard
 #eval parityGuard
@@ -202,7 +243,15 @@ def runChecks : IO Bool := do
       ("full_ssa_cc_trans Binop rewrites Cake register operands",
         binOpBoundaryGuard),
       ("full_ssa_cc_trans Div rewrites Cake operands",
-        divBoundaryGuard) ]
+        divBoundaryGuard),
+      ("full_ssa_cc_trans code-buffer write rewrites Cake operands",
+        codeBufferWriteGuard),
+      ("full_ssa_cc_trans data-buffer write rewrites Cake operands",
+        dataBufferWriteGuard),
+      ("full_ssa_cc_trans Install preserves Cake buffer and pointer moves",
+        installBoundaryGuard),
+      ("full_ssa_cc_trans Install refreshes Cake cut sets",
+        installCutsetBoundaryGuard) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

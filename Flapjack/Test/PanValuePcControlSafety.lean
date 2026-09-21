@@ -1083,4 +1083,20 @@ example :
     (PanValueProgNotBrokeContinued_skip (fun _ _ => none) (fun _ _ _ _ _ _ => none)
       ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat))
 
+/-! The explicit handler-safety premise of the handler-carrying call control
+    theorem is dischargeable for a concrete call: choose a call whose handler is
+    `.skip`, so the premise reduces to the skip leaf. -/
+example :
+    PanValueCrepProgramStateControlSafe
+      (.call (some (some (VarKind.local, "r"), some ("E", "x", (.skip : Prog Nat))))
+        "f" []) :=
+  panValueCrepProgramStateControlSafe_call_handler _ _ _
+    (by
+      intro primitive sourceHandler structs sourceFunctions baseAddress topAddress
+        bytesInWord handlerProgram hinfo
+      obtain ⟨destination, caught, handlerVariable, hinfoEq⟩ := hinfo
+      cases hinfoEq
+      exact PanValueProgNotBrokeContinued_skip primitive sourceHandler structs
+        sourceFunctions baseAddress topAddress bytesInWord)
+
 end Flapjack.Test.PanValuePcControlSafety

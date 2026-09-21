@@ -1333,6 +1333,27 @@ theorem panValueIsWf_word (structs : StructContext) (value : α) :
     panValueIsWf structs (.word value) = true := by
   simp [panValueIsWf]
 
+/-- Counterpart of Cake's `evaluate_replicate_const`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:3051`): evaluating a
+    list of zero constants always succeeds, producing the same number of zero
+    words.  This is the `OPT_MMAP (eval s) (REPLICATE n (Const 0w))` shape used
+    when flattening zero-initialised aggregate values. -/
+theorem evalPanValueExps_replicate_const [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
+    [Mul α] [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext) (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (baseAddress topAddress bytesInWord : α)
+    (count : Nat) :
+    (List.replicate count (.const (0 : α))).mapM
+        (fun expression => evalPanValueExp structs locals globals memory
+          baseAddress topAddress bytesInWord expression) =
+      some (List.replicate count (.word (0 : α))) := by
+  induction count with
+  | zero => rfl
+  | succ count ih =>
+      rw [List.replicate_succ, List.mapM_cons]
+      simp [evalPanValueExp, ih, List.replicate_succ]
+
 theorem panValueIsWfValues_getElem? {context : StructContext} {values : List (PanValue α)}
     {index : Nat} {value : PanValue α}
     (hwf : panValueIsWfValues context values = true)

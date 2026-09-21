@@ -424,6 +424,78 @@ def panValueShape (context : StructContext) : PanValue α → Shape
   | .nStruct name _ => .named name
 termination_by value => sizeOf value
 
+mutual
+  /-- Counterpart of Cake's `is_wf_shape_v`
+      (`cakeml/pancake/semantics/panPropsScript.sml:24`): every scalar is well
+      formed, a record is well formed when all of its fields are, and a named
+      record additionally needs its name in the context. -/
+  def panValueIsWf (context : StructContext) : PanValue α → Bool
+    | .word _ => true
+    | .rStruct fields => panValueIsWfValues context fields
+    | .nStruct name fields =>
+        (lookupInfo name context).isSome && panValueIsWfFields context fields
+  termination_by value => sizeOf value
+  decreasing_by
+    all_goals first | sizeOf_list_dec | decreasing_trivial
+
+  def panValueIsWfValues (context : StructContext) : List (PanValue α) → Bool
+    | [] => true
+    | value :: values =>
+        panValueIsWf context value && panValueIsWfValues context values
+  termination_by values => sizeOf values
+  decreasing_by
+    all_goals first | sizeOf_list_dec | decreasing_trivial
+
+  def panValueIsWfFields (context : StructContext) :
+      List (FieldName × PanValue α) → Bool
+    | [] => true
+    | (_, value) :: fields =>
+        panValueIsWf context value && panValueIsWfFields context fields
+  termination_by fields => sizeOf fields
+  decreasing_by
+    all_goals first | sizeOf_list_dec | decreasing_trivial
+end
+
+/-- Counterpart of Cake's `is_wf_shape_of_v`
+    (`cakeml/pancake/semantics/panPropsScript.sml:38`). -/
+theorem panValueIsWf_isWfShape_panValueShape (structs : StructContext)
+    (value : PanValue α) :
+    panValueIsWf structs value = true →
+      isWfShape structs (panValueShape structs value) = true := by
+  induction value using panValueIsWf.induct
+    (motive2 := fun fields => panValueIsWfFields structs fields = true →
+      fields.all (fun field =>
+        isWfShape structs (panValueShape structs field.2)) = true)
+    (motive3 := fun values => panValueIsWfValues structs values = true →
+      isWfShape.isWfShapeList structs
+        (values.map (panValueShape structs)) = true) with
+  | case1 scalar => intro _; simp [panValueShape, isWfShape]
+  | case2 fields ih =>
+      intro h
+      simp only [panValueIsWf] at h
+      simp only [panValueShape, isWfShape]
+      exact ih h
+  | case3 name fields ih =>
+      intro h
+      simp only [panValueIsWf, Bool.and_eq_true] at h
+      obtain ⟨hname, _⟩ := h
+      simp only [panValueShape, isWfShape]
+      exact hname
+  | case4 => simp
+  | case5 fst value fields ihValue ihFields =>
+      rename_i h
+      simp only [panValueIsWfFields, Bool.and_eq_true] at h
+      obtain ⟨h1, h2⟩ := h
+      simp only [List.all_cons, Bool.and_eq_true]
+      exact ⟨ihValue h1, ihFields h2⟩
+  | case6 => simp [isWfShape.isWfShapeList]
+  | case7 value values ihValue ihValues =>
+      rename_i h
+      simp only [panValueIsWfValues, Bool.and_eq_true] at h
+      obtain ⟨h1, h2⟩ := h
+      simp only [List.map_cons, isWfShape.isWfShapeList, Bool.and_eq_true]
+      exact ⟨ihValue h1, ihValues h2⟩
+
 def panShapeMatches : Shape → Shape → Bool
   | .one, .one => true
   | .named left, .named right => left == right

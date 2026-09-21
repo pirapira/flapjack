@@ -9267,6 +9267,108 @@ theorem panValuePcCompileCorrect_compact_with_flat_global_evaluator_evidence_com
     baseAddress topAddress bytesInWord sourceFuel targetFuel hprogram hprogramSafe
     hlookup hevidence
 
+/-! Specialize the compiled arbitrary `Raise` instance to Pancake's canonical
+    flat-global lookup.  The compiled-expression, exception, and raised-state
+    evidence remain explicit; only the lookup adapter is discharged. -/
+theorem panValuePcCompileCorrect_compact_with_flat_global_evaluator_evidence_compiled_raise_canonical_globals
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (exception : ExceptionId) (expression : Exp α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α)
+    (sourceFuel targetFuel : Nat)
+    (hcompiledEvidence : ∀ (context : CompileContext α) (structs : StructContext)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (state : CrepState α)
+      (evidenceBaseAddress evidenceTopAddress evidenceBytesInWord : α)
+      (sourceValue : PanValue α),
+      evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+        evidenceBaseAddress evidenceTopAddress evidenceBytesInWord expression =
+          some sourceValue →
+      ∃ (compiled : List (CrepExp α)) (shape : Shape) (values : List α),
+        panValuePayloadWithinLimit structs sourceValue = true ∧
+        compileExp context expression = (compiled, shape) ∧
+        compiled.length = Shape.shapeSize shape ∧
+        evalCrepFullExpsState state evidenceBaseAddress evidenceTopAddress compiled =
+          some values ∧
+        (∀ name ∈ freshNames context compiled.length 1,
+          ∀ value ∈ compiled, name ∉ crepExpVars value) ∧
+        (∀ name ∈ freshNames context compiled.length 1,
+          state.locals name = none))
+    (hlookupException : ∀ (context : CompileContext α),
+      ∃ exceptionCode, lookupInfo exception context.exceptions = some exceptionCode)
+    (hexception : ∀ (context : CompileContext α)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (sourceValue : PanValue α) (exceptionCode : α),
+      lookupInfo exception context.exceptions = some exceptionCode →
+      exceptionRel exception sourceValue exceptionCode)
+    (hevidence : ∀ (context : CompileContext α) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (sourceValue : PanValue α) (targetState : CrepState α)
+      (targetException : α),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      ∃ (state : CrepState α) (raisedExpression : Exp α)
+        (compiled : List (CrepExp α)) (shape : Shape) (values : List α),
+        targetState =
+          { state with globals :=
+              updateMemoryListAt state.globals 0 context.bytesInWord values } ∧
+        context.bytesInWord = bytesInWord ∧
+        panValueCrepStateRel structs context sourceLocals sourceGlobals
+          sourceMemory state ∧
+        evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+          baseAddress topAddress bytesInWord raisedExpression = some sourceValue ∧
+        panValuePayloadWithinLimit structs sourceValue = true ∧
+        compileExp context raisedExpression = (compiled, shape) ∧
+        compiled.length = Shape.shapeSize shape ∧
+        evalCrepFullExpsState state baseAddress topAddress compiled = some values ∧
+        (∀ name ∈ freshNames context compiled.length 1,
+          ∀ value ∈ compiled, name ∉ crepExpVars value) ∧
+        (∀ name ∈ freshNames context compiled.length 1,
+          state.locals name = none) ∧
+        exceptionRel sourceException sourceValue targetException ∧
+        lookupInfo sourceException context.exceptions = some targetException ∧
+        exceptionCode sourceException = some targetException ∧
+        panValueFlatWords sourceValue = values ∧
+        List.Pairwise (fun left right : α => left ≠ right)
+          (storeAddresses (0 : α) context.bytesInWord values.length) ∧
+        Shape.shapeSize (panValueShape structs sourceValue) ≤ 32) :
+    PanValuePcCompileCorrect
+      (panValuePcCompactSourceEvaluator primitive sourceHandler sourceFunctions
+        baseAddress topAddress bytesInWord sourceFuel)
+      (crepPcCompactTargetEvaluator functions crepPrimitive ffi sharedMem
+        baseAddress topAddress targetFuel)
+      codeRel excpRel exceptionCode (crepPcFlatGlobalsLookup bytesInWord)
+      (.raise exception expression) := by
+  have hprogram := panValueCrepProgramStateCorrect_raise_of_compiled_evidence
+    exception expression (by
+      intro context structs sourceLocals sourceGlobals sourceMemory state
+        evidenceBaseAddress evidenceTopAddress evidenceBytesInWord sourceValue hsource
+      exact hcompiledEvidence context structs sourceLocals sourceGlobals
+        sourceMemory state evidenceBaseAddress evidenceTopAddress evidenceBytesInWord
+        sourceValue hsource)
+    hlookupException hexception
+  have hprogramSafe := panValueCrepProgramStateControlSafe_raise exception expression
+  exact panValuePcCompileCorrect_compact_with_flat_global_evaluator_evidence
+    (.raise exception expression) codeRel excpRel exceptionCode
+    (crepPcFlatGlobalsLookup bytesInWord) sourceFunctions functions primitive
+    sourceHandler crepPrimitive ffi sharedMem baseAddress topAddress bytesInWord
+    sourceFuel targetFuel hprogram hprogramSafe (fun _ _ => rfl) hevidence
+
 /-! Context-code companion for the compiled arbitrary `Raise` instance.  The
     Cake source-program obligations are discharged by the same compiled
     expression theorem, while the exception-code and evaluator/global

@@ -141,6 +141,23 @@ def assignStempsTraversalGuard : Bool :=
 
 #guard assignStempsTraversalGuard
 
+/- Cake's insert_edge (reg_allocScript.sml:201-212) reads both endpoint
+   adjacency lists before writing, inserts the edge in both directions, and
+   keeps each list descending without duplicate entries. -/
+def insertEdgeGuard : Bool :=
+  let adj : CakeNodeMap (List Nat) := CakeNodeMap.ofSize 4
+  let one := cakeInsertEdge 1 3 adj
+  let two := cakeInsertEdge 1 2 one
+  let three := cakeInsertEdge 1 3 two
+  one.get 1 == some [3] &&
+    one.get 3 == some [1] &&
+    two.get 1 == some [3, 2] &&
+    two.get 2 == some [1] &&
+    three.get 1 == some [3, 2] &&
+    three.get 3 == some [1]
+
+#guard insertEdgeGuard
+
 /-- Canonical form for comparing node bijections with the probed sptree
     outputs: both maps sorted by key. -/
 def sortBijectionMaps (bijection : CakeNodeBijection) :
@@ -1157,6 +1174,7 @@ def parityGuard : Bool :=
     callTailGuard && mustTerminateGuard && sortedInsertMemGuard &&
     loopBodyGuard && assignLeafGuard && firstMatchColGuard &&
       assignStempsTraversalGuard &&
+      insertEdgeGuard &&
     bijDeltaBasicGuard && bijDeltaDedupGuard && bijSeqOrderGuard &&
     bijBranchOrderGuard && bijBranchLiveGuard && bijSetGuard &&
     bijSetUnsortedGuard && bijCompositeGuard && graphDeltaDisjointGuard &&
@@ -1201,7 +1219,7 @@ def runChecks : IO Bool := do
     ifMergeAllocGuard, ifImmediateRemovesTempGuard, callMergeGuard,
     callTailGuard, mustTerminateGuard,
     loopBodyGuard, assignLeafGuard, sortedInsertMemGuard, firstMatchColGuard,
-    assignStempsTraversalGuard,
+    assignStempsTraversalGuard, insertEdgeGuard,
     bijDeltaBasicGuard, bijDeltaDedupGuard, bijSeqOrderGuard,
     bijBranchOrderGuard, bijBranchLiveGuard, bijSetGuard,
     bijSetUnsortedGuard, bijCompositeGuard, graphDeltaDisjointGuard,
@@ -1245,6 +1263,7 @@ def runChecks : IO Bool := do
     "Cake sorted_insert/sorted_mem",
     "Cake first_match_col",
     "Cake assign_Stemps traversal",
+    "Cake insert_edge",
     "mk_bij delta basic", "mk_bij delta dedup", "mk_bij seq order",
     "mk_bij branch order", "mk_bij branch live", "mk_bij set",
     "mk_bij set unsorted", "mk_bij composite", "mk_graph delta disjoint",

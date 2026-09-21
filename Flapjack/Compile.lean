@@ -495,4 +495,36 @@ theorem compileProg_call_handler_missing_destination_of_compiled
       .call (some (names, none)) function compiledArguments := by
   simp [compileProg, hexception, hnames, harguments]
 
+/-! The `Call_Ret` branch of Cake's `pc_compile_correct` is the
+    assignment-producing call with no handler.  `compileProg` keeps the
+    flattened destination slots when `wrap_rt` preserves the variable's
+    shape and otherwise degrades the call to a tail call
+    (`pan_to_crepScript.sml:247-260`).  The two equations below expose those
+    emitted shapes as explicit compile-side premises. -/
+
+theorem compileProg_call_destination_of_compiled
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (function : FunName)
+    (arguments : List (Exp α)) (kind : VarKind) (name : VarName)
+    (names : List Nat)
+    (compiledArguments : List (CrepExp α))
+    (hnames : callDestinationNames context kind name = some names)
+    (harguments : compileArgs context arguments = compiledArguments) :
+    compileProg context
+        (.call (some (some (kind, name), none)) function arguments) =
+      .call (some (names, none)) function compiledArguments := by
+  simp [compileProg, hnames, harguments]
+
+theorem compileProg_call_destination_degraded_of_compiled
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (function : FunName)
+    (arguments : List (Exp α)) (kind : VarKind) (name : VarName)
+    (compiledArguments : List (CrepExp α))
+    (hnames : callDestinationNames context kind name = none)
+    (harguments : compileArgs context arguments = compiledArguments) :
+    compileProg context
+        (.call (some (some (kind, name), none)) function arguments) =
+      .call none function compiledArguments := by
+  simp [compileProg, hnames, harguments]
+
 end Flapjack

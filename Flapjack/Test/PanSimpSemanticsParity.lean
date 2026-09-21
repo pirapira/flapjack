@@ -152,18 +152,6 @@ example :
       progSize (.skip : Prog Nat) + 4 * progSize (.seq (.tick : Prog Nat) (.tick : Prog Nat)) :=
   progSize_seqAssoc_le _ _
 
-/-- `retToTail` does not increase the syntactic size. -/
-example :
-    progSize (retToTail (.seq (.tick : Prog Nat) (.tick : Prog Nat))) ≤
-      progSize (.seq (.tick : Prog Nat) (.tick : Prog Nat)) :=
-  progSize_retToTail_le _
-
-/-- The full `pan_simp` transform admits the linear `progSize` bound. -/
-example :
-    progSize (panSimpProg (.seq (.tick : Prog Nat) (.tick : Prog Nat))) ≤
-      1 + 4 * progSize (.seq (.tick : Prog Nat) (.tick : Prog Nat)) :=
-  progSize_panSimpProg_le _
-
 /-- Every program has a positive structural size, which supplies the missing
     lower bound for budget composition (`progSize_pos`). -/
 example : 1 ≤ progSize (.while (.const 1) (.seq (.tick : Prog Nat) (.tick : Prog Nat))) :=

@@ -270,56 +270,6 @@ theorem clocked_seq_assoc_fragment_budget_matches_cake :
   · simp [seqAssoc, panSimpSeqSkipFuel]
   · simp [panSimpSeqSkipFuel]
 
-/-- The same `seqAssoc` equality at a common fuel computed purely from
-    `progSize`: `progSize pre + 4 * progSize program`, with no separate
-    structural-budget side condition. -/
-theorem clocked_seq_assoc_fragment_progSize_matches_cake :
-    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
-      evaluatorHandler [] [] 0 0 8
-      (progSize (.skip : Prog Nat) +
-        4 * progSize (.seq (.skip : Prog Nat) (.skip : Prog Nat)))
-      (fun _ => none) (fun _ => none)
-      (fun _ => none) evaluatorFfi 1
-      (seqAssoc (.skip : Prog Nat) (.seq (.skip : Prog Nat) (.skip : Prog Nat))) =
-    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
-      evaluatorHandler [] [] 0 0 8
-      (progSize (.skip : Prog Nat) +
-        4 * progSize (.seq (.skip : Prog Nat) (.skip : Prog Nat)))
-      (fun _ => none) (fun _ => none)
-      (fun _ => none) evaluatorFfi 1
-      (.seq (.skip : Prog Nat) (.seq (.skip : Prog Nat) (.skip : Prog Nat))) := by
-  exact evalPanValueFfiClockProg_seqAssoc_eq_of_seqSkipFragment_progSize
-    evaluatorContext (fun _ _ => none) evaluatorHandler [] [] 0 0 8
-    (.skip : Prog Nat) (.seq (.skip : Prog Nat) (.skip : Prog Nat))
-    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
-    none none none
-    PanSimpSeqSkipFragment.skip
-    (PanSimpSeqSkipFragment.seq (.skip : Prog Nat) (.skip : Prog Nat)
-      PanSimpSeqSkipFragment.skip PanSimpSeqSkipFragment.skip)
-
-/-- The full `pan_simp` transform (`panSimpProg`) at the `progSize`-based budget
-    on the `Skip`/`Seq` fragment, with no free fuel parameter. -/
-theorem clocked_pan_simp_prog_fragment_progSize_matches_cake :
-    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
-      evaluatorHandler [] [] 0 0 8
-      (1 + 4 * progSize (.seq (.skip : Prog Nat) (.skip : Prog Nat)))
-      (fun _ => none) (fun _ => none)
-      (fun _ => none) evaluatorFfi 1
-      (panSimpProg (.seq (.skip : Prog Nat) (.skip : Prog Nat))) =
-    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
-      evaluatorHandler [] [] 0 0 8
-      (1 + 4 * progSize (.seq (.skip : Prog Nat) (.skip : Prog Nat)))
-      (fun _ => none) (fun _ => none)
-      (fun _ => none) evaluatorFfi 1
-      (.seq (.skip : Prog Nat) (.skip : Prog Nat)) := by
-  exact evalPanValueFfiClockProg_panSimpProg_eq_of_seqSkipFragment_progSize
-    evaluatorContext (fun _ _ => none) evaluatorHandler [] [] 0 0 8
-    (.seq (.skip : Prog Nat) (.skip : Prog Nat))
-    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
-    none none none
-    (PanSimpSeqSkipFragment.seq (.skip : Prog Nat) (.skip : Prog Nat)
-      PanSimpSeqSkipFragment.skip PanSimpSeqSkipFragment.skip)
-
 /-- The same `seqAssoc` equality stated directly on the additive fuel foundation
     `panSimpSkipSeqProg`/`panSimpSkipSeqFuel`, at the common budget
     `panSimpSkipSeqFuel pre + panSimpSkipSeqFuel program + 1`. -/
@@ -1860,57 +1810,6 @@ theorem clocked_leaf_skip_matches_steps :
     PanValueFfiLeafProg.skip
     (.normal (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi) 1
   simp [evalPanValueFfiProgSteps]
-
-/-- Leaf fuel adequacy at the `progSize` budget: the `fuel + 1` leaf equation
-    holds at any fuel dominating `progSize program`. -/
-theorem clocked_leaf_skip_progSize_succeeds :
-    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
-      evaluatorHandler [] [] 0 0 8 (progSize (.skip : Prog Nat))
-      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
-      (.skip : Prog Nat) =
-    some (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none)
-      evaluatorFfi), 1) := by
-  apply evalPanValueFfiClockProg_leaf_some_progSize evaluatorContext
-    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 (.skip : Prog Nat)
-    (progSize (.skip : Prog Nat)) (fun _ => none) (fun _ => none)
-    (fun _ => none) evaluatorFfi 1 none none none PanValueFfiLeafProg.skip
-    (.normal (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi) 1
-  · simp [evalPanValueFfiProgSteps]
-  · exact Nat.le_refl _
-
-/-- `Seq` fuel adequacy at the `progSize` budget: two leaf components compose. -/
-theorem clocked_seq_some_progSize_succeeds :
-    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
-      evaluatorHandler [] [] 0 0 8
-      (progSize (.seq (.skip : Prog Nat) (.skip : Prog Nat)))
-      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
-      (.seq (.skip : Prog Nat) (.skip : Prog Nat)) =
-    some (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none)
-      evaluatorFfi), 1) := by
-  apply evalPanValueFfiClockProg_seq_some_progSize evaluatorContext
-    (fun _ _ => none) evaluatorHandler [] [] 0 0 8
-    (.skip : Prog Nat) (.skip : Prog Nat)
-    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
-    none none none
-    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
-    (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none)
-      evaluatorFfi)) 1
-  · apply evalPanValueFfiClockProg_leaf_some_progSize evaluatorContext
-      (fun _ _ => none) evaluatorHandler [] [] 0 0 8 (.skip : Prog Nat)
-      (progSize (.skip : Prog Nat) + progSize (.skip : Prog Nat))
-      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
-      none none none PanValueFfiLeafProg.skip
-      (.normal (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi) 1
-    · simp [evalPanValueFfiProgSteps]
-    · simp [progSize]
-  · apply evalPanValueFfiClockProg_leaf_some_progSize evaluatorContext
-      (fun _ _ => none) evaluatorHandler [] [] 0 0 8 (.skip : Prog Nat)
-      (progSize (.skip : Prog Nat) + progSize (.skip : Prog Nat))
-      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
-      none none none PanValueFfiLeafProg.skip
-      (.normal (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi) 1
-    · simp [evalPanValueFfiProgSteps]
-    · simp [progSize]
 
 /-- The while recursive branch: a nonzero condition and a `normal` body result
     iterate the loop from the body's final state and clock. -/

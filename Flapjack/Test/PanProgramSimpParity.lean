@@ -882,6 +882,17 @@ theorem list_mapM_mem_exists_fixture :
     [3, 5] [4, 6] (by decide) 6 (by decide)
 
 #check @list_mapM_mem_exists
+/-! Cake's `not_mem_map_flat` (`panPropsScript.sml:1035`): absence from a
+    flattened mapped list. -/
+
+theorem not_mem_map_flatten_fixture :
+    7 ∉ (([[1, 2], [3, 4]] : List (List Nat)).map id).flatten := by
+  rw [not_mem_map_flatten]
+  intro x hx
+  simp at hx
+  rcases hx with rfl | rfl <;> decide
+
+#check @not_mem_map_flatten
 /-! Cake's `opt_mmap_length_eq`, `opt_mmap_mem_func` and `opt_mmap_el`
     (`pan_commonPropsScript.sml:82/49/71`): basic facts about a successful
     `OPT_MMAP`/`List.mapM`. -/
@@ -933,4 +944,3 @@ def mapMoreFactsGuard : Bool :=
 #guard mapMoreFactsGuard
 
 end Flapjack.Test.PanProgramSimpParity
-

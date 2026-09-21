@@ -896,25 +896,17 @@ evaluator-evidence obligation. -/
 #check @panValuePcCompileCorrect_compact_two_word_raise_of_state_evidence_context_code
 #check @panValuePcCompileCorrect_compact_three_word_raise_of_state_evidence_context_code
 #check @panValuePcCompileCorrect_compact_four_word_raise_of_state_evidence_context_code
-#check @panValuePcCompileCorrect_compact_nested_one_word_raise_of_state_evidence_context_code
-
-/-! The context-coded exception-result dispatcher also accepts the explicit
-    state-evidence premises instead of the opaque raised-payload callback. -/
-#check @panValuePcRaisedHraiseCases_to_exception_result_rel_with_context_code_of_state_evidence
 
 /-! The plain exception-result dispatcher likewise accepts the explicit
     state-evidence premises instead of the opaque raised-payload callback. -/
 #check @panValuePcRaisedHraiseCases_to_exception_result_rel_of_state_evidence
 
+/-! The context-coded exception-result dispatcher also accepts the explicit
+    state-evidence premises instead of the opaque raised-payload callback. -/
+#check @panValuePcRaisedHraiseCases_to_exception_result_rel_with_context_code_of_state_evidence
 /-! The paired raw-word-list dispatcher also accepts the explicit state
     evidence plus the exception lookup instead of the opaque callbacks. -/
 #check @panValuePcRaisedHraiseCases_with_raw_word_lists_paired_of_state_evidence
-
-/-! The context-coded deep store instances also accept the explicit state
-    evidence plus the exception lookup instead of the flat-global bundle. -/
-#check @panValuePcCompileCorrect_compact_store_source_word_of_state_evidence_context_code
-#check @panValuePcCompileCorrect_compact_store32_source_word_of_state_evidence_context_code
-#check @panValuePcCompileCorrect_compact_storeByte_source_word_of_state_evidence_context_code
 
 /-! The plain (non-context-coded) store state-evidence instances are the
     companions used by the ordinary compact correctness boundary. -/
@@ -922,35 +914,10 @@ evaluator-evidence obligation. -/
 #check @panValuePcCompileCorrect_compact_store32_source_word_of_state_evidence
 #check @panValuePcCompileCorrect_compact_storeByte_source_word_of_state_evidence
 
-/-! The plain exception-result dispatcher likewise accepts the explicit
-    state-evidence premises instead of the opaque raised-payload callback. -/
-#check @panValuePcRaisedHraiseCases_to_exception_result_rel_of_state_evidence
-
-/-! The context-coded exception-result dispatcher also accepts the explicit
-    state-evidence premises instead of the opaque raised-payload callback. -/
-#check @panValuePcRaisedHraiseCases_to_exception_result_rel_with_context_code_of_state_evidence
-/-! The paired raw-word-list dispatcher also accepts the explicit state
-    evidence plus the exception lookup instead of the opaque callbacks. -/
-#check @panValuePcRaisedHraiseCases_with_raw_word_lists_paired_of_state_evidence
 /-! The plain (non-context-coded) conditional and loop wrappers accept the
     explicit state evidence instead of the opaque evaluator callback. -/
 #check @panValuePcCompileCorrect_compact_ite_source_word_of_state_evidence
 #check @panValuePcCompileCorrect_compact_while_source_word_of_state_evidence
-
-/-! The plain (non-context-coded) store state-evidence instances are the
-    companions used by the ordinary compact correctness boundary. -/
-#check @panValuePcCompileCorrect_compact_store_source_word_of_state_evidence
-#check @panValuePcCompileCorrect_compact_store32_source_word_of_state_evidence
-#check @panValuePcCompileCorrect_compact_storeByte_source_word_of_state_evidence
-
-/-! The expression-parametric `Return` wrappers also accept explicit
-    state evidence in plain and context-coded form. -/
-#check @panValuePcCompileCorrect_compact_return_of_state_evidence
-#check @panValuePcCompileCorrect_compact_return_with_context_code_of_state_evidence
-
-/-! The plain raw-word-list entrypoint also accepts explicit state evidence
-    for the generic `hother` callback. -/
-#check @panValuePcCompileCorrect_compact_with_raw_word_lists_of_state_evidence
 
 /-! The expression-parametric `Return` wrappers also accept explicit
     state evidence in plain and context-coded form. -/
@@ -1041,14 +1008,11 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
     handler program's evaluation from the handler-entry state. -/
 #check @evalCrepFullCallState_raised_handler_of_callee
 
-/-! Compositional source handler safety: a handler-free call and a declaration
-    body that never exposes loop control. -/
-#check @PanValueProgNotBrokeContinued_call_of_no_handler
-#check @PanValueProgNotBrokeContinued_dec
 /-! The direct `Call_Ret_FinalFFI` branch of Cake's `pc_compile_correct`: a
     direct call propagates the callee's terminal FFI event unchanged. -/
 #check @panValuePcFinalFfiResultRel_of_clocked_call
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_finalFfi
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_call_finalFfi
 #check @panValuePcRaisedResultRelWithContextCode_of_clocked_call
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_raised_no_handler
 #check @panValuePcCompileCorrect_of_context_code_and_clocked_call_raised
@@ -1057,6 +1021,7 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_tailCall
 #check @panValuePcCompileCorrect_of_clocked_call_tailCall
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_returned_destination
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_call_returned_destination
 /-! Compositional source handler safety: a handler-free call and a declaration
     body that never exposes loop control. -/
 #check @PanValueProgNotBrokeContinued_call_of_no_handler
@@ -1207,7 +1172,10 @@ example :
 #check @panValuePcCompileCorrect_compact_extCall_of_state_evidence
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_handler_returned
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_handler_normal
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_call_handler
 #check @panValuePcCompileCorrect_of_context_code_and_clocked_call_handler_destination
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_decCall_returned
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_decCall_returned_value
 #check @panValueProg_compile_correct_induction
 #check @panValuePcCompileCorrect_compact_of_constructor_induction
 #check @panValuePcCompileCorrectWithContextCode_compact_of_constructor_induction
@@ -1220,8 +1188,10 @@ example :
 #check @panValuePcResultRel_rejects_broke_continued
 #check @panValuePcResultRel_rejects_timeout_normal
 #check @panValuePcResultRel_rejects_finalFfi_normal
+#check @panValuePcResultRel_constructor_eq
 
 #check @panValuePcCompileCorrect_compact_of_state_and_control_safe_induction
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_decCall_returned
 
 #check @panValuePcResultRel_normal_iff
 #check @panValuePcResultRel_returned_iff

@@ -937,9 +937,7 @@ theorem progSize_seqAssoc_le (pre program : Prog α) :
 theorem progSize_panSimpProg_le (program : Prog α) :
     progSize (panSimpProg program) ≤ 1 + 4 * progSize program := by
   simp only [panSimpProg]
-  have h1 := progSize_retToTail_le (seqAssoc (.skip : Prog α) program)
-  have h2 := progSize_seqAssoc_le (.skip : Prog α) program
-  simp only [progSize] at h2
-  omega
+  exact Nat.le_trans (progSize_retToTail_le (seqAssoc .skip program))
+    (by simpa [progSize] using progSize_seqAssoc_le (.skip : Prog α) program)
 
 end Flapjack

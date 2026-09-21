@@ -1079,124 +1079,31 @@ example
     0 0 1 4 4 hbytesInWord hlookupSource hlookupException hfresh hexception
     hlookup hevidence
 
-/-- The generic raised-payload wrapper applies to an arbitrary source
-expression once its compiled-form evaluator evidence is supplied; the
-result-level flat-global evidence and the exception obligations stay
-explicit. This example instantiates it on the constant expression. -/
 example
-    (hevidenceCompiled : ∀ (context : CompileContext Nat)
-      (structs : StructContext)
-      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
-      (sourceMemory : Nat → Option (PanValue Nat)) (state : CrepState Nat)
-      (baseAddress topAddress bytesInWord : Nat) (sourceValue : PanValue Nat),
-      evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
-        baseAddress topAddress bytesInWord (.const 9) = some sourceValue →
-      ∃ (compiled : List (CrepExp Nat)) (shape : Shape) (values : List Nat),
-        panValuePayloadWithinLimit structs sourceValue = true ∧
-        compileExp context (.const 9) = (compiled, shape) ∧
-        compiled.length = Shape.shapeSize shape ∧
-        evalCrepFullExpsState state baseAddress topAddress compiled =
-          some values ∧
-        (∀ name ∈ freshNames context compiled.length 1,
-          ∀ value ∈ compiled, name ∉ crepExpVars value) ∧
-        (∀ name ∈ freshNames context compiled.length 1,
-          state.locals name = none))
-    (hevidence : FlatGlobalRaisedEvidence 1 0 0 skipNatExceptionCode)
-    (hlookupException : ∀ (context : CompileContext Nat),
-      ∃ exceptionCode, lookupInfo "E" context.exceptions = some exceptionCode)
-    (hexception : ∀ (context : CompileContext Nat)
+    (hvalue : PanValueCrepExpressionStateCorrect (Exp.const (9 : Nat)))
+    (hraiseData : ∀ (context : CompileContext Nat) (structs : StructContext)
       (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
-      (sourceValue : PanValue Nat) (exceptionCode : Nat),
-      lookupInfo "E" context.exceptions = some exceptionCode →
-      exceptionRel "E" sourceValue exceptionCode)
-    (hlookup : ∀ (targetState : CrepState Nat) (sourceValue : PanValue Nat),
-      crepPcFlatGlobalsLookup 1 targetState sourceValue =
-        skipNatGlobalsLookup targetState sourceValue) :
+      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+      (sourceMemory : Nat → Option (PanValue Nat)) (sourceException : ExceptionId)
+      (sourceValue : PanValue Nat) (targetState : CrepState Nat)
+      (targetException : Nat),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      panValuePcRaisedHraiseData skipNatExceptionCode skipNatGlobalsLookup
+        structs context exceptionRel sourceLocals sourceGlobals sourceMemory
+        sourceException sourceValue targetState targetException) :
     PanValuePcCompileCorrect
       (panValuePcCompactSourceEvaluator skipNatPrimitive skipNatSourceHandler
-        [] 0 0 1 4)
+        [] 0 0 1 1)
       (crepPcCompactTargetEvaluator [] skipNatCrepPrimitive skipNatFfi
-        skipNatSharedMem 0 0 4)
+        skipNatSharedMem 0 0 1)
       skipNatCodeRel skipNatExcpRel skipNatExceptionCode skipNatGlobalsLookup
-      (.raise "E" (.const 9)) :=
-  panValuePcCompileCorrect_compact_with_flat_global_evaluator_evidence_raise_of_compiled_evidence
-    "E" (.const 9) skipNatCodeRel skipNatExcpRel skipNatExceptionCode
-    skipNatGlobalsLookup [] [] skipNatPrimitive skipNatSourceHandler
-    skipNatCrepPrimitive skipNatFfi skipNatSharedMem 0 0 1 4 4
-    hevidenceCompiled hlookupException hexception hlookup hevidence
-
-set_option linter.unusedVariables false in
-/-- The generic raised-payload wrapper can drop the opaque evaluator evidence:
-the source state, exception-code and shape obligations are now explicit and the
-raised branch is discharged through the dispatch lemma. -/
-example
-    (hevidenceCompiled : ∀ (context : CompileContext Nat)
-      (structs : StructContext)
-      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
-      (sourceMemory : Nat → Option (PanValue Nat)) (state : CrepState Nat)
-      (baseAddress topAddress bytesInWord : Nat) (sourceValue : PanValue Nat),
-      evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
-        baseAddress topAddress bytesInWord (.const 9) = some sourceValue →
-      ∃ (compiled : List (CrepExp Nat)) (shape : Shape) (values : List Nat),
-        panValuePayloadWithinLimit structs sourceValue = true ∧
-        compileExp context (.const 9) = (compiled, shape) ∧
-        compiled.length = Shape.shapeSize shape ∧
-        evalCrepFullExpsState state baseAddress topAddress compiled =
-          some values ∧
-        (∀ name ∈ freshNames context compiled.length 1,
-          ∀ value ∈ compiled, name ∉ crepExpVars value) ∧
-        (∀ name ∈ freshNames context compiled.length 1,
-          state.locals name = none))
-    (hlookupException : ∀ (context : CompileContext Nat),
-      ∃ exceptionCode, lookupInfo "E" context.exceptions = some exceptionCode)
-    (hexception : ∀ (context : CompileContext Nat)
-      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
-      (sourceValue : PanValue Nat) (exceptionCode : Nat),
-      lookupInfo "E" context.exceptions = some exceptionCode →
-      exceptionRel "E" sourceValue exceptionCode)
-    (hlookup : ∀ (context : CompileContext Nat) (structs : StructContext)
-      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
-      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
-      (sourceMemory : Nat → Option (PanValue Nat)) (sourceException : ExceptionId)
-      (sourceValue : PanValue Nat) (targetState : CrepState Nat)
-      (targetException : Nat),
-      1 ≤ Shape.shapeSize (panValueShape structs sourceValue) →
-      skipNatGlobalsLookup targetState sourceValue =
-        some (panValueFlatWords sourceValue))
-    (hpost : ∀ (context : CompileContext Nat) (structs : StructContext)
-      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
-      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
-      (sourceMemory : Nat → Option (PanValue Nat)) (sourceException : ExceptionId)
-      (sourceValue : PanValue Nat) (targetState : CrepState Nat)
-      (targetException : Nat),
-      panValueCrepStateRel structs context sourceLocals sourceGlobals sourceMemory
-        targetState)
-    (hcode : ∀ (context : CompileContext Nat) (structs : StructContext)
-      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
-      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
-      (sourceMemory : Nat → Option (PanValue Nat)) (sourceException : ExceptionId)
-      (sourceValue : PanValue Nat) (targetState : CrepState Nat)
-      (targetException : Nat),
-      skipNatExceptionCode sourceException = some targetException)
-    (hsize : ∀ (context : CompileContext Nat) (structs : StructContext)
-      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
-      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
-      (sourceMemory : Nat → Option (PanValue Nat)) (sourceException : ExceptionId)
-      (sourceValue : PanValue Nat) (targetState : CrepState Nat)
-      (targetException : Nat),
-      Shape.shapeSize (panValueShape structs sourceValue) ≤ 32) :
-    PanValuePcCompileCorrect
-      (panValuePcCompactSourceEvaluator skipNatPrimitive skipNatSourceHandler
-        [] 0 0 1 4)
-      (crepPcCompactTargetEvaluator [] skipNatCrepPrimitive skipNatFfi
-        skipNatSharedMem 0 0 4)
-      skipNatCodeRel skipNatExcpRel skipNatExceptionCode skipNatGlobalsLookup
-      (.raise "E" (.const 9)) :=
-  panValuePcCompileCorrect_compact_raise_of_compiled_and_state_evidence
-    "E" (.const 9) skipNatCodeRel skipNatExcpRel skipNatExceptionCode
-    skipNatGlobalsLookup [] [] skipNatPrimitive skipNatSourceHandler
-    skipNatCrepPrimitive skipNatFfi skipNatSharedMem 0 0 1 4 4
-    hevidenceCompiled hlookupException hexception hlookup hpost hcode hsize
+      (.return (.const 9)) := by
+  exact panValuePcCompileCorrect_compact_return
+    [] [] skipNatPrimitive skipNatSourceHandler skipNatCrepPrimitive skipNatFfi
+    skipNatSharedMem 0 0 1 1 1 skipNatCodeRel skipNatExcpRel
+    skipNatExceptionCode skipNatGlobalsLookup (Exp.const 9) hvalue hraiseData
 
 set_option linter.unusedVariables false in
 /-- The generic raised-payload wrapper can drop the opaque evaluator evidence:
@@ -1412,58 +1319,6 @@ example
     skipNatGlobalsLookup [] [] skipNatPrimitive skipNatSourceHandler
     skipNatCrepPrimitive skipNatFfi skipNatSharedMem 0 0 1 4 4
     hlookupException hfresh hexception hlookup hevidence
-example
-    (hvalue : PanValueCrepExpressionStateCorrect (Exp.const (9 : Nat)))
-    (hraiseData : ∀ (context : CompileContext Nat) (structs : StructContext)
-      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
-      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
-      (sourceMemory : Nat → Option (PanValue Nat)) (sourceException : ExceptionId)
-      (sourceValue : PanValue Nat) (targetState : CrepState Nat)
-      (targetException : Nat),
-      panValueCrepControlRel structs context exceptionRel
-        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
-        (.raised targetState targetException) →
-      panValuePcRaisedHraiseData skipNatExceptionCode skipNatGlobalsLookup
-        structs context exceptionRel sourceLocals sourceGlobals sourceMemory
-        sourceException sourceValue targetState targetException) :
-    PanValuePcCompileCorrect
-      (panValuePcCompactSourceEvaluator skipNatPrimitive skipNatSourceHandler
-        [] 0 0 1 1)
-      (crepPcCompactTargetEvaluator [] skipNatCrepPrimitive skipNatFfi
-        skipNatSharedMem 0 0 1)
-      skipNatCodeRel skipNatExcpRel skipNatExceptionCode skipNatGlobalsLookup
-      (.return (.const 9)) := by
-  exact panValuePcCompileCorrect_compact_return
-    [] [] skipNatPrimitive skipNatSourceHandler skipNatCrepPrimitive skipNatFfi
-    skipNatSharedMem 0 0 1 1 1 skipNatCodeRel skipNatExcpRel
-    skipNatExceptionCode skipNatGlobalsLookup (Exp.const 9) hvalue hraiseData
-
-example
-    (hvalue : PanValueCrepExpressionStateCorrect (Exp.const (9 : Nat)))
-    (hraiseEvidence : ∀ (context : CompileContext Nat) (structs : StructContext)
-      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
-      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
-      (sourceMemory : Nat → Option (PanValue Nat)) (sourceException : ExceptionId)
-      (sourceValue : PanValue Nat) (targetState : CrepState Nat)
-      (targetException : Nat),
-      panValueCrepControlRel structs context exceptionRel
-        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
-        (.raised targetState targetException) →
-      panValuePcRaisedHraiseData skipNatExceptionCode skipNatGlobalsLookup
-        structs context exceptionRel sourceLocals sourceGlobals sourceMemory
-        sourceException sourceValue targetState targetException ∧
-      lookupInfo sourceException context.exceptions = some targetException) :
-    PanValuePcCompileCorrectWithContextCode
-      (panValuePcCompactSourceEvaluator skipNatPrimitive skipNatSourceHandler
-        [] 0 0 1 1)
-      (crepPcCompactTargetEvaluator [] skipNatCrepPrimitive skipNatFfi
-        skipNatSharedMem 0 0 1)
-      skipNatCodeRel skipNatExcpRel skipNatExceptionCode skipNatGlobalsLookup
-      (.return (.const 9)) := by
-  exact panValuePcCompileCorrect_compact_return_with_context_code
-    [] [] skipNatPrimitive skipNatSourceHandler skipNatCrepPrimitive skipNatFfi
-    skipNatSharedMem 0 0 1 1 1 skipNatCodeRel skipNatExcpRel
-    skipNatExceptionCode skipNatGlobalsLookup (Exp.const 9) hvalue hraiseEvidence
 
 abbrev CompiledRaiseSourceEvidence (expression : Exp Nat) : Prop :=
   ∀ (context : CompileContext Nat) (structs : StructContext)

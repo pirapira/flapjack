@@ -282,6 +282,45 @@ theorem panValuePcResultRel_rejects_finalFfi_normal
       (.normal targetState) := by
   simp [panValuePcResultRel]
 
+/-- The concrete rejection lemmas above are instances of a single
+constructor-agreement invariant: whenever `panValuePcResultRel` holds, the
+source and target results are observations of the same outcome constructor.
+Recording the invariant makes the set of excluded pairs exhaustive rather
+than a hand-maintained list. -/
+def panValuePcResultConstructor : PanValuePcResult α → Nat
+  | .error => 0
+  | .normal .. => 1
+  | .returned .. => 2
+  | .raised .. => 3
+  | .broke .. => 4
+  | .continued .. => 5
+  | .timeout .. => 6
+  | .finalFfi .. => 7
+
+def crepPcResultConstructor : CrepPcResult α → Nat
+  | .error => 0
+  | .normal .. => 1
+  | .returned .. => 2
+  | .raised .. => 3
+  | .broke .. => 4
+  | .continued .. => 5
+  | .timeout .. => 6
+  | .finalFfi .. => 7
+
+theorem panValuePcResultRel_constructor_eq
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceResult : PanValuePcResult α) (targetResult : CrepPcResult α)
+    (hrel : panValuePcResultRel structs context exceptionRel exceptionCode
+      globalsLookup sourceResult targetResult) :
+    panValuePcResultConstructor sourceResult =
+      crepPcResultConstructor targetResult := by
+  cases sourceResult <;> cases targetResult <;>
+    simp_all [panValuePcResultRel, panValuePcResultConstructor,
+      crepPcResultConstructor]
+
 /-! Constructor inversion lemmas for the result relation.  Each exposes the
 exact state/global/memory obligation of one reachable result pair, so
 downstream composition can rewrite instead of re-unfolding the definition. -/

@@ -983,6 +983,12 @@
       "source_reference": "Regression for the former And/comparison-in-catch-handler byte gap (flapjack-pxn.1.5). The handler-aware Cake `Seq_assoc` traversal now preserves the original instruction selection and layout.",
       "cake_sha256": "ba432bd957296c570f9b089dd35e8f00ad1f8bbb72b4715b14727a377e91be1c",
       "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/ld8_currheap_offset.pnk",
+      "source_reference": "Minimized ld8 @base+8 witness (GH #1130, flapjack-pxn.8.5.14.20): Cake keeps CurrHeap as the load base and encodes the byte-offset load with the unsigned lbu funct3 (get_memop_info Load8 = MappedRead,1w), not lb. The port's WordInstSelect selector and Encoding.loadByteOffset now match.",
+      "cake_sha256": "5dbea1ef7c7fcb024a59e8204bd28ecd4e6a804d3dd8f2a4294e02188899858c",
+      "tracked_beads": []
     }
   ]
 }

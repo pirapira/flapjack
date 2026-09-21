@@ -448,4 +448,75 @@ theorem panValueCrepProgramStateControlSafe_decCall
           | continued callLocals callGlobals callMemory =>
               simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcall] at hsource
 
+/-! Common handler leaves.  These source programs terminate with `returned` or
+    `raised`, so they cannot expose loop-control results to a surrounding call
+    handler. -/
+
+theorem PanValueProgNotBrokeContinued_return
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (expression : Exp α) :
+    PanValueProgNotBrokeContinued primitive handler structs functions
+      baseAddress topAddress bytesInWord (.return expression) := by
+  intro fuel locals globals memory result h
+  cases fuel with
+  | zero => simp [evalPanValueProgWithPrimitiveCallsAndFfi] at h
+  | succ fuel =>
+      cases hvalue : evalPanValueExp structs locals globals memory
+          baseAddress topAddress bytesInWord expression with
+      | none =>
+          simp [evalPanValueProgWithPrimitiveCallsAndFfi, hvalue] at h
+      | some value =>
+          cases hvalid : panValuePayloadWithinLimit structs value with
+          | false =>
+              simp [evalPanValueProgWithPrimitiveCallsAndFfi, hvalue, hvalid] at h
+          | true =>
+              simp [evalPanValueProgWithPrimitiveCallsAndFfi, hvalue, hvalid] at h
+              cases h
+              exact ⟨(fun l g m => by simp), (fun l g m => by simp)⟩
+
+theorem PanValueProgNotBrokeContinued_raise
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (exception : ExceptionId) (expression : Exp α) :
+    PanValueProgNotBrokeContinued primitive handler structs functions
+      baseAddress topAddress bytesInWord (.raise exception expression) := by
+  intro fuel locals globals memory result h
+  cases fuel with
+  | zero => simp [evalPanValueProgWithPrimitiveCallsAndFfi] at h
+  | succ fuel =>
+      cases hvalue : evalPanValueExp structs locals globals memory
+          baseAddress topAddress bytesInWord expression with
+      | none =>
+          simp [evalPanValueProgWithPrimitiveCallsAndFfi, hvalue] at h
+      | some value =>
+          cases hexception : panValueExceptionValid structs none exception value with
+          | false =>
+              simp [evalPanValueProgWithPrimitiveCallsAndFfi, hvalue] at h
+              rcases h with ⟨_, hresult⟩
+              cases hresult
+              exact ⟨(fun l g m => by simp), (fun l g m => by simp)⟩
+          | true =>
+              cases hvalid : panValuePayloadWithinLimit structs value with
+              | false =>
+                  simp [evalPanValueProgWithPrimitiveCallsAndFfi, hvalue,
+                    hvalid] at h
+              | true =>
+                  simp [evalPanValueProgWithPrimitiveCallsAndFfi, hvalue,
+                    hvalid] at h
+                  cases h
+                  exact ⟨(fun l g m => by simp), (fun l g m => by simp)⟩
+
 end Flapjack

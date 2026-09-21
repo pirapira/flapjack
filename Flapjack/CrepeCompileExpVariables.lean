@@ -458,6 +458,256 @@ theorem compileExp_vars_bounded
         | bytesInWord => simp [compileExp]
   exact hmain (sizeOf expression) expression rfl
 
+/-! The expression-list companions below are the syntactic part of Cake's
+    `compile_exp_not_mem_load_glob` (`pan_to_crepProofScript.sml:2013`).
+    Flapjack's localized `compileExp` has no global-load expression case: the
+    only `loadGlob` nodes are introduced by the explicit global-load prefix.
+    We therefore prove the stronger compiler-only statement, independently of
+    the source state relation used by the full Cake theorem. -/
+
+theorem flatMap_fst_crepExps_eq
+    (compiled : List (List (CrepExp α) × Shape)) :
+    (compiled.flatMap Prod.fst).flatMap crepExps =
+      compiled.flatMap (fun entry => entry.1.flatMap crepExps) := by
+  exact List.flatMap_assoc
+
+theorem flatMap_map_fst_crepExps_eq
+    (compiled : List (List (CrepExp α) × Shape)) :
+    (compiled.map Prod.fst).flatMap (List.flatMap crepExps) =
+      compiled.flatMap (fun entry => entry.1.flatMap crepExps) := by
+  rw [List.flatMap_map]
+
+theorem crepExpsList_eq_flatMap
+    (expressions : List (CrepExp α)) :
+    crepExps.crepExpsList expressions = expressions.flatMap crepExps := by
+  induction expressions with
+  | nil => simp [crepExps.crepExpsList]
+  | cons expression expressions ih =>
+      simp [crepExps.crepExpsList, ih]
+
+theorem cexpHeads_crepExps_mem
+    (expressions : List (List (CrepExp α))) (heads : List (CrepExp α))
+    (hheads : cexpHeads expressions = some heads) (target : α)
+    (hmem : CrepExp.loadGlob target ∈ heads.flatMap crepExps) :
+    CrepExp.loadGlob target ∈ expressions.flatMap (List.flatMap crepExps) := by
+  induction expressions generalizing heads with
+  | nil =>
+      simp [cexpHeads] at hheads
+      subst heads
+      simp at hmem
+  | cons expression expressions ih =>
+      cases expression with
+      | nil => simp [cexpHeads] at hheads
+      | cons head tail =>
+          cases hrest : cexpHeads expressions with
+          | none => simp [cexpHeads, hrest] at hheads
+          | some restHeads =>
+              have hheads' : heads = head :: restHeads := by
+                simpa [cexpHeads, hrest] using hheads.symm
+              subst heads
+              have hmem' : CrepExp.loadGlob target ∈ crepExps head ∨
+                  CrepExp.loadGlob target ∈ restHeads.flatMap crepExps := by
+                simpa only [List.flatMap_cons, List.mem_append] using hmem
+              rcases hmem' with hmem' | hmem'
+              · simp only [List.flatMap_cons, List.mem_append]
+                exact Or.inl (Or.inl hmem')
+              · have htail := ih restHeads hrest hmem'
+                simp only [List.flatMap_cons, List.mem_append]
+                exact Or.inr htail
+
+theorem compileField_crepExps_mem
+    [OfNat α 0]
+    (index : Nat) (shapes : List Shape) (expressions : List (CrepExp α))
+    (target : α) (hmem : CrepExp.loadGlob target ∈
+      (compileField index shapes expressions).1.flatMap crepExps) :
+    CrepExp.loadGlob target ∈ expressions.flatMap crepExps := by
+  induction shapes generalizing index expressions with
+  | nil =>
+      simp [compileField, crepExps] at hmem
+  | cons shape shapes ih =>
+      cases index with
+      | zero =>
+          obtain ⟨expression, hexpression, hmem⟩ :=
+            List.mem_flatMap.mp hmem
+          exact List.mem_flatMap.mpr ⟨expression,
+            List.mem_of_mem_take hexpression, hmem⟩
+      | succ index =>
+          have hmem' : CrepExp.loadGlob target ∈
+              (compileField index shapes
+                (expressions.drop (Shape.shapeSize shape))).1.flatMap crepExps := by
+            simpa [compileField] using hmem
+          have hsource := ih index (expressions.drop (Shape.shapeSize shape)) hmem'
+          obtain ⟨expression, hexpression, hmem⟩ :=
+            List.mem_flatMap.mp hsource
+          exact List.mem_flatMap.mpr ⟨expression,
+            List.mem_of_mem_drop hexpression, hmem⟩
+
+theorem compileExp_not_mem_loadGlob
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (expression : Exp α) (target : α) :
+    CrepExp.loadGlob target ∉
+      (compileExp context expression).1.flatMap crepExps := by
+  have hmain : ∀ n (expression : Exp α), sizeOf expression = n →
+      CrepExp.loadGlob target ∉
+        (compileExp context expression).1.flatMap crepExps := by
+    intro n
+    induction n using Nat.strongRecOn with
+    | ind n ih =>
+        intro expression hsize
+        have hcompileList : ∀ fields : List (Exp α),
+            (∀ field ∈ fields, sizeOf field < n) →
+            CrepExp.loadGlob target ∉
+              (compileExp.compileExpList context fields).flatMap
+                (fun entry => entry.1.flatMap crepExps) := by
+          intro fields
+          induction fields with
+          | nil =>
+              intro _
+              simp [compileExp.compileExpList]
+          | cons field fields ihFields =>
+              intro hsmall
+              have hfield := ih (sizeOf field)
+                (hsmall field (by simp)) field rfl
+              have htail := ihFields (fun current hcurrent =>
+                hsmall current (by simp [hcurrent]))
+              simp only [compileExp.compileExpList, List.flatMap_cons,
+                List.mem_append, not_or] at hfield htail ⊢
+              exact ⟨hfield, htail⟩
+        cases expression with
+        | const value => simp [compileExp, crepExps]
+        | var kind name =>
+            cases kind with
+            | «local» =>
+                cases hlookup : lookupInfo name context.vars with
+                | none => simp [compileExp, hlookup, crepExps]
+                | some info =>
+                    cases info with
+                    | mk shape names =>
+                        simp [compileExp, hlookup, crepExps]
+            | global => simp [compileExp, crepExps]
+        | rStruct fields =>
+            have hsmall : ∀ field ∈ fields, sizeOf field < n := by
+              intro field hfield
+              rw [← hsize]
+              decreasing_trivial
+            have hfields := hcompileList fields hsmall
+            simpa only [compileExp, flatMap_fst_crepExps_eq] using hfields
+        | rField index value =>
+            cases hcompiled : compileExp context value with
+            | mk expressions shape =>
+                cases shape with
+                | one => simp [compileExp, hcompiled, crepExps]
+                | named name => simp [compileExp, hcompiled, crepExps]
+                | comb shapes =>
+                    intro hmem
+                    have hsource := compileField_crepExps_mem index shapes
+                      expressions target (by
+                        simpa [compileExp, hcompiled] using hmem)
+                    have hvalue := ih (sizeOf value) (by
+                      rw [← hsize]
+                      decreasing_trivial) value rfl
+                    apply hvalue
+                    simpa [hcompiled] using hsource
+        | nStruct name fields => simp [compileExp, crepExps]
+        | nField name field => simp [compileExp, crepExps]
+        | load shape value =>
+            cases hcompiled : compileExp context value with
+            | mk expressions resultShape =>
+                cases expressions with
+                | nil => simp [compileExp, hcompiled, crepExps]
+                | cons compiledValue rest =>
+                    have hvalue := ih (sizeOf value) (by
+                      rw [← hsize]
+                      decreasing_trivial) value rfl
+                    have hhead : CrepExp.loadGlob target ∉ crepExps compiledValue := by
+                      intro hmem
+                      apply hvalue
+                      simp [hcompiled, hmem]
+                    have hload := crepExps_loadShape_not_mem_loadGlob
+                      (0 : α) context.bytesInWord (Shape.shapeSize shape)
+                      compiledValue target hhead
+                    simpa [compileExp, hcompiled] using hload
+        | load32 value | loadByte value =>
+            cases hcompiled : compileExp context value with
+            | mk expressions resultShape =>
+                cases expressions with
+                | nil => simp [compileExp, hcompiled, crepExps]
+                | cons compiledValue rest =>
+                    have hvalue := ih (sizeOf value) (by
+                      rw [← hsize]
+                      decreasing_trivial) value rfl
+                    have hhead : CrepExp.loadGlob target ∉ crepExps compiledValue := by
+                      intro hmem
+                      apply hvalue
+                      simp [hcompiled, hmem]
+                    cases resultShape with
+                    | one =>
+                        intro hmem
+                        apply hhead
+                        simpa [compileExp, hcompiled, crepExps] using hmem
+                    | comb shapes => simp [compileExp, hcompiled, crepExps]
+                    | named name => simp [compileExp, hcompiled, crepExps]
+        | op operator expressions | panOp operator expressions =>
+            have hsmall : ∀ field ∈ expressions, sizeOf field < n := by
+              intro field hfield
+              rw [← hsize]
+              decreasing_trivial
+            have hcompiledList := hcompileList expressions hsmall
+            cases hheads : cexpHeads
+                ((compileExp.compileExpList context expressions).map Prod.fst) with
+            | none => simp [compileExp, hheads, crepExps]
+            | some heads =>
+                intro hmem
+                have hsource : CrepExp.loadGlob target ∈
+                    ((compileExp.compileExpList context expressions).map Prod.fst).flatMap
+                      (List.flatMap crepExps) := by
+                  have hheadsMem : CrepExp.loadGlob target ∈
+                      heads.flatMap crepExps := by
+                    simpa [compileExp, hheads, crepExps,
+                      crepExpsList_eq_flatMap] using hmem
+                  exact cexpHeads_crepExps_mem _ heads hheads target hheadsMem
+                apply hcompiledList
+                simpa [flatMap_map_fst_crepExps_eq] using hsource
+        | cmp operator left right | shift operator left right =>
+            cases hleft : compileExp context left with
+            | mk leftExpressions leftShape =>
+                cases hright : compileExp context right with
+                | mk rightExpressions rightShape =>
+                    cases leftExpressions with
+                    | nil => simp [compileExp, hleft, hright, crepExps]
+                    | cons leftHead leftTail =>
+                        cases rightExpressions with
+                        | nil => simp [compileExp, hleft, hright, crepExps]
+                        | cons rightHead rightTail =>
+                            have hleft' := ih (sizeOf left) (by
+                              rw [← hsize]
+                              decreasing_trivial) left rfl
+                            have hright' := ih (sizeOf right) (by
+                              rw [← hsize]
+                              decreasing_trivial) right rfl
+                            have hleftList : CrepExp.loadGlob target ∉
+                                (leftHead :: leftTail).flatMap crepExps := by
+                              simpa [hleft] using hleft'
+                            have hrightList : CrepExp.loadGlob target ∉
+                                (rightHead :: rightTail).flatMap crepExps := by
+                              simpa [hright] using hright'
+                            have hleftHead : CrepExp.loadGlob target ∉
+                                crepExps leftHead := by
+                              intro hmem
+                              apply hleftList
+                              exact List.mem_flatMap.mpr ⟨leftHead, by simp, hmem⟩
+                            have hrightHead : CrepExp.loadGlob target ∉
+                                crepExps rightHead := by
+                              intro hmem
+                              apply hrightList
+                              exact List.mem_flatMap.mpr ⟨rightHead, by simp, hmem⟩
+                            simpa [compileExp, hleft, hright, crepExps] using
+                              And.intro hleftHead hrightHead
+        | baseAddr => simp [compileExp, crepExps]
+        | topAddr => simp [compileExp, crepExps]
+        | bytesInWord => simp [compileExp, crepExps]
+  exact hmain (sizeOf expression) expression rfl
+
 /-! Cake's `genlist_vmax_distinct_lists_compiled_exps`
     (`pan_to_crepProofScript.sml:3094`): compiler temporaries allocated strictly
     above `maxVar` cannot occur in the variables of compiled source arguments.

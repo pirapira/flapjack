@@ -1294,4 +1294,18 @@ example
 #check @panValuePcCompileCorrect_compact_statefulCompact_canonical_globals
 #check @panValuePcCompileCorrect_compact_statefulCompact_context_code
 
+/-! The scalar `wordExp` return also satisfies the control-safety obligation,
+via the `SourceWordExp` conversion. -/
+example
+    (hbytesInWord : ∀ (context : CompileContext Nat) (bytesInWord : Nat),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext Nat)
+      (sourceLocals : VarName → Option (PanValue Nat))
+      (name : VarName) (value : PanValue Nat),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot])) :
+    PanValueCrepProgramStateControlSafe (.return (.const 7)) :=
+  panValueCrepProgramStateControlSafe_return_wordExp (.const 7) trivial
+    hbytesInWord hlookup
+
 end Flapjack.Test.PanValuePcControlSafety

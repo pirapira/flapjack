@@ -1,6 +1,7 @@
 import Flapjack.CrepeWordExpressionContract
 import Flapjack.CrepeProgramIteCorrectness
 import Flapjack.CrepeProgramReturnGeneralCorrectness
+import Flapjack.PanToCrepCorrectnessBoundary
 
 /-!
 Lift the scalar expression contract from the auxiliary `SourceWordExp`
@@ -69,6 +70,27 @@ theorem panValueCrepProgramStateCorrect_return_wordExp
     PanValueCrepProgramStateCorrect (.return expression) := by
   exact panValueCrepProgramStateCorrect_return_of_expression_relation expression
     (panValueCrepExpressionStateCorrect_wordExp expression hword hbytesInWord hlookup)
+
+theorem panValueCrepProgramStateControlSafe_return_wordExp
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (expression : Exp α) (hword : wordExp expression)
+    (hbytesInWord : ∀ (context : CompileContext α) (bytesInWord : α),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext α)
+      (sourceLocals : VarName → Option (PanValue α))
+      (name : VarName) (value : PanValue α),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot])) :
+    PanValueCrepProgramStateControlSafe (.return expression) := by
+  have hconditionToExp :
+      (sourceWordExpOf expression hword).toExp = expression :=
+    sourceWordExpOf_toExp expression hword
+  simpa [hconditionToExp] using
+    (panValueCrepProgramStateControlSafe_return_source_word
+      (sourceWordExpOf expression hword) hbytesInWord hlookup)
 
 theorem panValueCrepProgramStateCorrect_ite_wordExp
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]

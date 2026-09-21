@@ -166,12 +166,25 @@ def installBoundaryGuard : Bool :=
 
 #guard installBoundaryGuard
 
+def installCutsetBoundaryGuard : Bool :=
+  match (wordFullSsaCcTrans 0
+      (.install 1 2 3 4 ([1], [2]) : WordProg Nat)).2.2 with
+  | .seq (.move 1 [])
+      (.seq (.move 0 [(11, 0), (15, 0)])
+        (.seq (.move 1 [(2, 11), (4, 15)])
+          (.seq (.install 2 4 0 0 ([11], [15]))
+            (.seq (.move 1 [(21, 2)])
+              (.move 0 [(25, 11), (29, 15)]))))) => true
+  | _ => false
+
+#guard installCutsetBoundaryGuard
+
 def parityGuard : Bool :=
   raiseBoundaryGuard && callBoundaryGuard && storeConstsBoundaryGuard &&
     longDivBoundaryGuard && longMulBoundaryGuard && shiftBoundaryGuard &&
     addCarryBoundaryGuard && constBoundaryGuard && binOpBoundaryGuard &&
     divBoundaryGuard && codeBufferWriteGuard && dataBufferWriteGuard &&
-    installBoundaryGuard
+    installBoundaryGuard && installCutsetBoundaryGuard
 
 #guard parityGuard
 #eval parityGuard
@@ -203,7 +216,9 @@ def runChecks : IO Bool := do
       ("full_ssa_cc_trans data-buffer write rewrites Cake operands",
         dataBufferWriteGuard),
       ("full_ssa_cc_trans Install preserves Cake buffer and pointer moves",
-        installBoundaryGuard) ]
+        installBoundaryGuard),
+      ("full_ssa_cc_trans Install refreshes Cake cut sets",
+        installCutsetBoundaryGuard) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

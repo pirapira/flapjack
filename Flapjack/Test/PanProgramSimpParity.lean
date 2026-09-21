@@ -370,6 +370,34 @@ example : True := by
         evalRelState state' exceptionsDecls none heval
       trivial
 
+/-! Regression for Cake's `evaluate_decls_only_exn_decls`: an all-exception
+    declaration list changes no program component except the exception table. -/
+
+def onlyExceptionDecls : List (Decl Nat) :=
+  [.exnDecl "E" .one, .exnDecl "F" .one]
+
+def onlyExceptionsGuard : Bool :=
+  match evalPanValueDeclarationsWithStructs ([] : StructContext) evalRelState
+      onlyExceptionDecls none with
+  | some state' =>
+      match state'.exceptions with
+      | [("F", .one), ("E", .one)] =>
+          state'.functions.isEmpty && state'.returnShapes.isEmpty &&
+            Option.isNone (state'.globals "g")
+      | _ => false
+  | none => false
+
+#eval onlyExceptionsGuard
+#guard onlyExceptionsGuard
+
+example (state' : PanValueProgramState Nat)
+    (heval : evalPanValueDeclarationsWithStructs ([] : StructContext) evalRelState
+      onlyExceptionDecls none = some state') :
+    state' = { evalRelState with
+      exceptions := panExceptionEntries onlyExceptionDecls ++ evalRelState.exceptions } := by
+  exact evalPanValueDeclarationsWithStructs_only_exn_decls ([] : StructContext)
+    evalRelState state' onlyExceptionDecls none rfl (by decide) heval
+
 /-! Cake's `decs_stcnames_only_functions` / `decs_stcnames_only_functions2`
     (`cakeml/pancake/semantics/panPropsScript.sml:1592,1600`): struct-free and
     function-only declaration lists leave the struct-name context unchanged. -/

@@ -610,6 +610,50 @@ example :
         .jal 0 (BitVec.ofNat 64 4092)] := by
   decide
 
+/-! The same five relations with an immediate RHS retain Cake's ORI prelude;
+    the direct branch therefore targets `a - 4`, while the far form skips the
+    inverted branch and jumps by `a - 8`. -/
+private def jumpCmpImmBoundary (operator : Cmp) (target : Nat) :
+    Option (List (Instruction 64)) :=
+  labCompileAsm (width := 64) { services := [] } 1 [(0, target)] 0
+    (.jumpCmp operator 4 (.imm 3) ⟨1, 0⟩)
+
+#guard jumpCmpImmBoundary .notEqual 4092 ==
+  some [.ori 31 0 (BitVec.ofNat 64 3),
+    .branchEq 4 31 (BitVec.ofNat 64 4088)]
+#guard jumpCmpImmBoundary .notEqual 4096 ==
+  some [.ori 31 0 (BitVec.ofNat 64 3),
+    .branchNe 4 31 (BitVec.ofNat 64 8),
+    .jal 0 (BitVec.ofNat 64 4088)]
+#guard jumpCmpImmBoundary .less 4092 ==
+  some [.ori 31 0 (BitVec.ofNat 64 3),
+    .branchGe 4 31 (BitVec.ofNat 64 4088)]
+#guard jumpCmpImmBoundary .less 4096 ==
+  some [.ori 31 0 (BitVec.ofNat 64 3),
+    .branchLt 4 31 (BitVec.ofNat 64 8),
+    .jal 0 (BitVec.ofNat 64 4088)]
+#guard jumpCmpImmBoundary .lower 4092 ==
+  some [.ori 31 0 (BitVec.ofNat 64 3),
+    .branchGeU 4 31 (BitVec.ofNat 64 4088)]
+#guard jumpCmpImmBoundary .lower 4096 ==
+  some [.ori 31 0 (BitVec.ofNat 64 3),
+    .branchLtU 4 31 (BitVec.ofNat 64 8),
+    .jal 0 (BitVec.ofNat 64 4088)]
+#guard jumpCmpImmBoundary .notLess 4092 ==
+  some [.ori 31 0 (BitVec.ofNat 64 3),
+    .branchLt 4 31 (BitVec.ofNat 64 4088)]
+#guard jumpCmpImmBoundary .notLess 4096 ==
+  some [.ori 31 0 (BitVec.ofNat 64 3),
+    .branchGe 4 31 (BitVec.ofNat 64 8),
+    .jal 0 (BitVec.ofNat 64 4088)]
+#guard jumpCmpImmBoundary .notLower 4092 ==
+  some [.ori 31 0 (BitVec.ofNat 64 3),
+    .branchLtU 4 31 (BitVec.ofNat 64 4088)]
+#guard jumpCmpImmBoundary .notLower 4096 ==
+  some [.ori 31 0 (BitVec.ofNat 64 3),
+    .branchGeU 4 31 (BitVec.ofNat 64 8),
+    .jal 0 (BitVec.ofNat 64 4088)]
+
 example :
     labCompileAsm (width := 64) { services := [] } 1 [(0, 2 ^ 20 - 2)] 0
       (.jump ⟨1, 0⟩) =

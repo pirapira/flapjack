@@ -112,6 +112,19 @@ def panValueCrepStateRel {α : Type u}
   panValueCrepLocalsRel structs context sourceLocals crepState.locals ∧
   panValueCrepMemoryRel sourceMemory crepState.memory
 
+/-! Cake's `state_rel_globals` (`pan_to_crepProofScript.sml:71-75`): the
+    source-global component of a related state is empty.  Flapjack keeps the
+    struct context explicit (and therefore does not impose Cake's initial
+    empty-struct assumption), but this global projection is unchanged. -/
+theorem panValueCrepStateRel_sourceGlobals_eq_none
+    (structs : StructContext) (context : CompileContext α)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (crepState : CrepState α)
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory crepState) :
+    sourceGlobals = (fun _ => none) :=
+  hrel.1
+
 theorem panValueCrepLocalsRel_word_slot
     (structs : StructContext) (context : CompileContext α)
     (sourceLocals : VarName → Option (PanValue α))

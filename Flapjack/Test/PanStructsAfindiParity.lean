@@ -55,5 +55,20 @@ theorem afindi_lookup_fixture :
     entries.lookup "b" = some 20 := by
   rw [afindi_lookup]
   simp [afindi, entries]
+/-! Focused regressions for the ported Cake `pan_structs` `is_wf_shape_drop`
+    lemma and its `lookupInfo` helper. -/
+
+def context : StructContext :=
+  [("t", { fields := [], size := 0 }),
+   ("s", { fields := [("x", Shape.one)], size := 1 })]
+
+theorem lookupInfo_isSome_drop_fixture :
+    (lookupInfo "s" (context.drop 1)).isSome = true := by
+  simp [context, lookupInfo]
+
+theorem isWfShape_drop_fixture : isWfShape context (.named "s") = true := by
+  have h : isWfShape (context.drop 1) (.named "s") = true := by
+    simp [context, isWfShape, lookupInfo]
+  exact isWfShape_drop (.named "s") context 1 h
 
 end Flapjack.Test.PanStructsAfindiParity

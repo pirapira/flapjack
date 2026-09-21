@@ -116,4 +116,40 @@ example : True := by
       trivial
   | none => trivial
 
+/-! `eval_is_wf_shape_v` (`panPropsScript.sml:126`): evaluation preserves
+    value well-formedness, given well-formed local and global stores. -/
+
+def evalWfLocals : VarName → Option (PanValue Nat) :=
+  fun name => if name == "x" then some (.word 7) else none
+
+def evalWfGlobals : VarName → Option (PanValue Nat) := fun _ => none
+
+def evalWfMemory : Nat → Option (PanValue Nat) := fun _ => none
+
+def evalWfGuard : Bool :=
+  match evalPanValueExp ([] : StructContext) evalWfLocals evalWfGlobals
+      evalWfMemory 0 0 8 (.op .add [.var .local "x", .const 1]) with
+  | some value => panValueIsWf ([] : StructContext) value
+  | none => false
+
+#eval evalWfGuard
+#guard evalWfGuard
+
+example : True := by
+  match h : evalPanValueExp ([] : StructContext) evalWfLocals evalWfGlobals
+      evalWfMemory 0 0 8 (.op .add [.var .local "x", .const 1]) with
+  | some value =>
+      have _ := evalPanValueExp_isWfShape ([] : StructContext) evalWfLocals
+        evalWfGlobals evalWfMemory 0 0 8
+        (fun name value hname => by
+          by_cases hx : (name == "x") = true
+          · simp [evalWfLocals, hx] at hname
+            subst hname
+            simp [panValueIsWf]
+          · simp [evalWfLocals, hx] at hname)
+        (fun name value hname => by simp [evalWfGlobals] at hname)
+        (.op .add [.var .local "x", .const 1]) none value h
+      trivial
+  | none => trivial
+
 end Flapjack.Test.PanValueWfParity

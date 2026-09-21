@@ -65,6 +65,57 @@ def crepGetEidsFromDecls (fromNat : Nat → α) (declarations : List (Decl α)) 
     InfoMap α :=
   pipelineExceptionCodes fromNat 0 declarations
 
+/-! Cake's `get_eids_imp_excp_rel` begins by proving that every declared
+    exception has a target code.  This constructive lookup half is useful at
+    the generic Raise boundary: the exception-code premise is obtained from
+    the source declaration table rather than guessed by an evaluator wrapper. -/
+theorem crepGetEidsFromDecls_lookup_of_exception
+    [BEq String] [LawfulBEq String]
+    (fromNat : Nat → α) (index : Nat) :
+    ∀ (declarations : List (Decl α)) (exception : ExceptionId) (shape : Shape),
+      (exception, shape) ∈ exceptionEntries declarations →
+      ∃ code, lookupInfo exception
+        (pipelineExceptionCodes fromNat index declarations) = some code := by
+  intro declarations
+  induction declarations generalizing index with
+  | nil =>
+      intro exception shape hmem
+      simp [exceptionEntries] at hmem
+  | cons declaration declarations ih =>
+      cases declaration with
+      | exnDecl declaredException declaredShape =>
+          intro exception shape hmem
+          by_cases heq : exception == declaredException
+          · have heq' : exception = declaredException := eq_of_beq heq
+            subst exception
+            exact ⟨fromNat index, by simp [pipelineExceptionCodes, lookupInfo]⟩
+          · have htail : (exception, shape) ∈ exceptionEntries declarations := by
+              have hmem' :
+                  (exception = declaredException ∧ shape = declaredShape) ∨
+                    (exception, shape) ∈ exceptionEntries declarations := by
+                simpa [exceptionEntries] using hmem
+              rcases hmem' with ⟨hname, _⟩ | htail
+              · exfalso
+                apply heq
+                simp [hname]
+              · exact htail
+            have hne : (declaredException == exception) = false := by
+              rw [Bool.eq_false_iff]
+              intro h
+              apply heq
+              exact beq_iff_eq.mpr (eq_of_beq h).symm
+            obtain ⟨code, hcode⟩ := ih (index + 1) exception shape htail
+            exact ⟨code, by simp [pipelineExceptionCodes, lookupInfo, hne, hcode]⟩
+      | decl declaredShape name value =>
+          intro exception shape hmem
+          exact ih index exception shape (by simpa [exceptionEntries] using hmem)
+      | function declaration =>
+          intro exception shape hmem
+          exact ih index exception shape (by simpa [exceptionEntries] using hmem)
+      | name struct fields =>
+          intro exception shape hmem
+          exact ih index exception shape (by simpa [exceptionEntries] using hmem)
+
 def pipelineInlineNames : List (Decl α) → List FunName
   | [] => []
   | .function declaration :: declarations =>

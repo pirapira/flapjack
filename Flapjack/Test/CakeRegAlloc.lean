@@ -158,6 +158,23 @@ def insertEdgeGuard : Bool :=
 
 #guard insertEdgeGuard
 
+/- Cake's list_insert_edge/clique_insert_edge (reg_allocScript.sml:214-232)
+   inserts the tail first, keeps each adjacency list descending, and connects
+   every pair in a clique exactly once. -/
+def cliqueInsertEdgeGuard : Bool :=
+  let listEdges :=
+    cakeListInsertEdge 0 [1, 3] (CakeNodeMap.ofSize 4)
+  let clique :=
+    cakeCliqueInsertEdge [0, 1, 2] (CakeNodeMap.ofSize 4)
+  listEdges.get 0 == some [3, 1] &&
+    listEdges.get 1 == some [0] &&
+    listEdges.get 3 == some [0] &&
+    clique.get 0 == some [2, 1] &&
+    clique.get 1 == some [2, 0] &&
+    clique.get 2 == some [1, 0]
+
+#guard cliqueInsertEdgeGuard
+
 /-- Canonical form for comparing node bijections with the probed sptree
     outputs: both maps sorted by key. -/
 def sortBijectionMaps (bijection : CakeNodeBijection) :
@@ -1174,7 +1191,7 @@ def parityGuard : Bool :=
     callTailGuard && mustTerminateGuard && sortedInsertMemGuard &&
     loopBodyGuard && assignLeafGuard && firstMatchColGuard &&
       assignStempsTraversalGuard &&
-      insertEdgeGuard &&
+      insertEdgeGuard && cliqueInsertEdgeGuard &&
     bijDeltaBasicGuard && bijDeltaDedupGuard && bijSeqOrderGuard &&
     bijBranchOrderGuard && bijBranchLiveGuard && bijSetGuard &&
     bijSetUnsortedGuard && bijCompositeGuard && graphDeltaDisjointGuard &&
@@ -1219,7 +1236,7 @@ def runChecks : IO Bool := do
     ifMergeAllocGuard, ifImmediateRemovesTempGuard, callMergeGuard,
     callTailGuard, mustTerminateGuard,
     loopBodyGuard, assignLeafGuard, sortedInsertMemGuard, firstMatchColGuard,
-    assignStempsTraversalGuard, insertEdgeGuard,
+    assignStempsTraversalGuard, insertEdgeGuard, cliqueInsertEdgeGuard,
     bijDeltaBasicGuard, bijDeltaDedupGuard, bijSeqOrderGuard,
     bijBranchOrderGuard, bijBranchLiveGuard, bijSetGuard,
     bijSetUnsortedGuard, bijCompositeGuard, graphDeltaDisjointGuard,
@@ -1264,6 +1281,7 @@ def runChecks : IO Bool := do
     "Cake first_match_col",
     "Cake assign_Stemps traversal",
     "Cake insert_edge",
+    "Cake clique_insert_edge",
     "mk_bij delta basic", "mk_bij delta dedup", "mk_bij seq order",
     "mk_bij branch order", "mk_bij branch live", "mk_bij set",
     "mk_bij set unsorted", "mk_bij composite", "mk_graph delta disjoint",

@@ -906,6 +906,36 @@ example :
     evaluatorHandler [] [] 0 0 8 5 none none none (.const 0) (.skip : Prog Nat)
     (fun _ _ _ => ⟨0, by simp [evalPanValueExp], by decide⟩)
 
+/-! A declaration with a shape-matching constant and a normal-adequate body. -/
+example :
+    PanValueFfiClockNormalAdequateProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 5 none none none
+      (.dec "x" .one (.const 5) (.skip : Prog Nat)) :=
+  PanValueFfiClockNormalAdequateProg_dec evaluatorContext (fun _ _ => none)
+    evaluatorHandler [] [] 0 0 8 5 none none none "x" .one (.const 5)
+    (.skip : Prog Nat)
+    (fun _ _ _ =>
+      ⟨.word 5, by simp [evalPanValueExp], by simp [panValueShape, panShapeMatches]⟩)
+    (evalPanValueFfiClockProg_normalAdequate_of_normalProg evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [] 0 0 8 5 none none none
+      (.skip : Prog Nat) PanValueFfiClockNormalProg.skip)
+
+/-- A memory-store leaf is normal-adequate via the generic leaf constructor. -/
+example :
+    PanValueFfiClockNormalAdequateProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 5 none none none
+      (.store (.const 7) (.const 9)) :=
+  PanValueFfiClockNormalAdequateProg_leaf evaluatorContext (fun _ _ => none)
+    evaluatorHandler [] [] 0 0 8 5 none none none (.store (.const 7) (.const 9))
+    (PanValueFfiLeafProg.store (.const 7) (.const 9))
+    (by
+      intro locals globals memory ffi
+      exact ⟨locals, globals, updatePanValueMemory memory 7 (.word 9), ffi, 3, by
+        simp [evalPanValueFfiProgSteps, evalPanValueExpCounted, evalPanValueExp,
+          panValueExpStepCost, panValueStoreWithAccess, panValueFlatStoreWords,
+          panValueFlatWords, panValueFlatWordsFuel, panValueFlatOffset,
+          updatePanValueMemory]⟩)
+
 /-- The raised `DecCall` outcome also lifts to the declaration's progSize. -/
 example
     (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)

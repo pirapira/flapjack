@@ -273,6 +273,47 @@ def assignAtempsHeuristicThenRangeGuard : Bool :=
 
 #guard assignAtempsHeuristicThenRangeGuard
 
+/- Cake's `sorted_insert`/`sorted_mem` maintain descending adjacency lists,
+   skip duplicate insertion, and stop membership search at the passed key. -/
+def sortedInsertMemGuard : Bool :=
+  cakeSortedInsert 6 [] == [6] &&
+    cakeSortedInsert 5 [7, 4, 2] == [7, 5, 4, 2] &&
+    cakeSortedInsert 4 [7, 4, 2] == [7, 4, 2] &&
+    cakeSortedInsert 1 [7, 4, 2] == [7, 4, 2, 1] &&
+    cakeSortedMem 4 [7, 4, 2] &&
+    !cakeSortedMem 5 [7, 4, 2] &&
+    !cakeSortedMem 1 [7, 4, 2] &&
+    cakeSortedMem 7 [7, 4, 2]
+
+#guard sortedInsertMemGuard
+
+/- Cake's `first_match_col` scans variables in order, ignores non-fixed tags,
+   and returns the first fixed neighbour whose colour is in the candidates. -/
+def firstMatchColGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 8 with
+      nodeTag := CakeNodeMap.ofNatInfoMap 8
+        [(1, .fixed 3), (2, .aTemp), (3, .fixed 5), (4, .fixed 7)] }
+  cakeFirstMatchCol state [5, 7] [1, 2, 3, 4] == some 5 &&
+    cakeFirstMatchCol state [2] [1, 3, 4] == none
+
+#guard firstMatchColGuard
+
+/- Cake's `assign_Stemps` visits every node in ascending range order and
+   assigns each Stemp the first available colour at or above k. -/
+def assignStempsTraversalGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      adjLists := CakeNodeMap.ofNatInfoMap 4 [(0, [2])]
+      nodeTag := CakeNodeMap.ofNatInfoMap 4
+        [(0, .sTemp), (1, .sTemp), (2, .fixed 2)] }
+  let out := cakeAssignStemps 2 (fun _ _ _ => none) state
+  out.nodeTag.get 0 == some (.fixed 3) &&
+    out.nodeTag.get 1 == some (.fixed 2) &&
+    out.nodeTag.get 2 == some (.fixed 2)
+
+#guard assignStempsTraversalGuard
+
 
 /-! ## IRC graph construction guards
 
@@ -1186,7 +1227,8 @@ def parityGuard : Bool :=
     negFirstMatchProjectionGuard && biasedPreferenceGuard &&
     negBiasedPreferenceGuard && fullConsistencyGuard && canonizeMoveGuard &&
     assignAtempFixedNeighbourGuard && assignStempUnboundColourGuard &&
-    assignAtempsHeuristicThenRangeGuard &&
+    assignAtempsHeuristicThenRangeGuard && sortedInsertMemGuard &&
+    firstMatchColGuard && assignStempsTraversalGuard &&
     resetMoveRelatedGuard && removeColoursGuard
     && mapUpdateBoundedGuard && sourceSpillCostKeyGuard &&
     sourceSpillCostRoundTripGuard && sourceMovePhysicalFallbackGuard
@@ -1230,7 +1272,8 @@ def runChecks : IO Bool := do
     raMovesStempHiGuard, negFirstMatchProjectionGuard, biasedPreferenceGuard,
     negBiasedPreferenceGuard, fullConsistencyGuard, canonizeMoveGuard,
     assignAtempFixedNeighbourGuard, assignStempUnboundColourGuard,
-    assignAtempsHeuristicThenRangeGuard,
+    assignAtempsHeuristicThenRangeGuard, sortedInsertMemGuard,
+    firstMatchColGuard, assignStempsTraversalGuard,
     resetMoveRelatedGuard,
     removeColoursGuard,
     mapUpdateBoundedGuard,
@@ -1277,7 +1320,8 @@ def runChecks : IO Bool := do
     "neg_first_match_col projection", "biased preference",
     "negative biased preference", "full consistency", "canonize move",
     "assign_Atemp fixed neighbour", "assign_Stemp unbound colour",
-    "assign_Atemps heuristic then range",
+    "assign_Atemps heuristic then range", "sorted_insert/sorted_mem",
+    "first_match_col", "assign_Stemps traversal",
     "Cake map updates stay bounded",
     "remove_dead keeps move priority", "remove_dead_prog keeps entry priority",
     "mk_bij uses Cake Patricia Set order", "sort_moves tail split oracle",

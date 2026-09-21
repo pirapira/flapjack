@@ -246,6 +246,14 @@ def longDivMalformed : Bool :=
     (longDivState (some (.loc 9 0)) (some (.word 3)) (some (.word 2)))) ==
     (some .error, none, none, 5)
 
+/-! Cake writes the remainder first and the quotient second, so coincident
+    destinations retain the quotient. -/
+def longDivSameDestination : Bool :=
+  observeLongDiv (evaluateLoop 2 arithHooks
+    (.arith (.longDiv 1 1 3 4 5))
+    (longDivState (some (.word 1)) (some (.word 3)) (some (.word 2)))) ==
+    (none, some (.word 129), none, 5)
+
 /-! `loopSemScript.sml:118-145` also splits `LLongMul` into the high word
     destination first and the low word destination second.  This exercises
     that source arithmetic boundary through `evaluate_def`, not only through
@@ -351,6 +359,7 @@ def duplicateAssignFirstWins : Bool :=
 #guard longDivZero
 #guard longDivOverflow
 #guard longDivMalformed
+#guard longDivSameDestination
 #guard longMulSuccess
 #guard sharedLoadSuccess
 #guard sharedStoreSuccess

@@ -541,4 +541,25 @@ theorem evalPanValueProgWithPrimitive_retToTail (structs : StructContext)
       | tick => simp [retToTail]
   exact main (sizeOf program) program rfl locals globals memory
 
+/-- CakeML's `compile_correct_same_state` / `evaluate_seq_simp` on the
+    structured fragment: running the whole `pan_simp` transformation
+    (`panSimpProg = retToTail (seqAssoc Skip ·)`) preserves evaluation. -/
+theorem evalPanValueProgWithPrimitive_panSimpProg (structs : StructContext)
+    (baseAddress topAddress bytesInWord : α)
+    (primitive : PanPrimitiveHandler α)
+    (memoryAccess : Option (PanValueMemoryAccess α)) :
+    ∀ (program : Prog α) (locals globals : VarName → Option (PanValue α))
+      (memory : α → Option (PanValue α)),
+      SEval structs baseAddress topAddress bytesInWord primitive memoryAccess
+          locals globals memory (panSimpProg program)
+        = SEval structs baseAddress topAddress bytesInWord primitive memoryAccess
+          locals globals memory program := by
+  intro program locals globals memory
+  simp only [panSimpProg]
+  rw [evalPanValueProgWithPrimitive_retToTail structs baseAddress topAddress
+    bytesInWord primitive memoryAccess (seqAssoc (.skip : Prog α) program)
+    locals globals memory]
+  exact evalPanValueProgWithPrimitive_seqAssoc_skip structs baseAddress topAddress
+    bytesInWord locals globals memory primitive program memoryAccess
+
 end Flapjack

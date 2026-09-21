@@ -578,6 +578,22 @@ theorem pan_simp_compile_prog_size_of_eids :
       sizeOfEids compileProgDeclsFixture := by
   exact sizeOfEids_panSimpDecls compileProgDeclsFixture
 
+theorem pan_simp_compile_prog_functions :
+    functions (panSimpDecls compileProgDeclsFixture) =
+      (functions compileProgDeclsFixture).map (fun entry =>
+        (entry.1, entry.2.1, panSimpProg entry.2.2.1, entry.2.2.2)) := by
+  exact functions_panSimpDecls compileProgDeclsFixture
+
+def functionsCompileProgParity : Bool :=
+  match functions (panSimpDecls compileProgDeclsFixture) with
+  | [(name, params, body, returnShape)] =>
+      (name == "f") && params.isEmpty &&
+        (match body with | .tick => true | _ => false) &&
+        (match returnShape with | .one => true | _ => false)
+  | _ => false
+
+#guard functionsCompileProgParity
+
 def parityGuard : Bool :=
   isSkip (smartSeq (.skip : Prog Nat) .skip) &&
     isTick (smartSeq (.skip : Prog Nat) .tick) &&
@@ -614,7 +630,8 @@ def parityGuard : Bool :=
     isTailCall (panSimpProg
       (.seq
             (.call (some (some (.local, "r"), none)) "f" [])
-            (.return (.var .local "r")) : Prog Nat))
+            (.return (.var .local "r")) : Prog Nat)) &&
+    functionsCompileProgParity
 
 #eval parityGuard
 #guard parityGuard
@@ -632,6 +649,7 @@ def runChecks : IO Bool := do
   IO.println "PASS pan_simp clocked ret_to_tail common-fuel Cake equation"
   IO.println "PASS pan_simp clocked pan_simp common-fuel Cake equation"
   IO.println "PASS pan_simp clocked transformed result common-fuel Cake equation"
+  IO.println "PASS pan_simp functions_compile_prog Cake function-table equation"
   pure parityGuard
 
 end Flapjack.Test.PanSimpParity

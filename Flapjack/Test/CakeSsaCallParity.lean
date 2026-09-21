@@ -1,5 +1,6 @@
 import Flapjack.RiscV.Allocator
 import Flapjack.RiscV.CakeRegAlloc
+import Flapjack.RiscV.WordDeadCode
 
 /-! Direct Cake parity for the returning `Call` equations in
     `cakeml/compiler/backend/word_allocScript.sml:494-535`.  These cases were
@@ -91,6 +92,14 @@ def productionNoReturnEmptyCallGuard : Bool :=
 
 #guard productionNoReturnEmptyCallGuard
 
+def productionAfterDeadNoReturnEmptyCallGuard : Bool :=
+  match Flapjack.RiscV.CakeRegAlloc.cakeAllocateWordFunctionAfterDead
+      0 ([] : List Nat) (.call none (some 7) [] none : WordProg Nat) with
+  | some (_, _, .call none (some 7) [] none, _) => true
+  | _ => false
+
+#guard productionAfterDeadNoReturnEmptyCallGuard
+
 def handlerCallProgram : WordProg Nat :=
   .call (some ([4], ([], []), .skip, 9, 10)) (some 7) [0, 2]
     (some (3, .skip, 11, 12))
@@ -121,7 +130,8 @@ def handlerCallGuard : Bool :=
 def parityGuard : Bool :=
   returningCallGuard && returningCallCutsetGuard && returningCallSkipGuard &&
     noReturnEmptyCallGuard && noReturnEmptyHandlerCallGuard &&
-    productionNoReturnEmptyCallGuard && handlerCallGuard
+    productionNoReturnEmptyCallGuard && productionAfterDeadNoReturnEmptyCallGuard &&
+    handlerCallGuard
 
 #guard parityGuard
 #eval parityGuard
@@ -140,6 +150,8 @@ def runChecks : IO Bool := do
         noReturnEmptyHandlerCallGuard),
       ("production Cake allocator retains empty return-free Call SSA shape",
         productionNoReturnEmptyCallGuard),
+      ("production Cake dead pass retains the effectful empty Call",
+        productionAfterDeadNoReturnEmptyCallGuard),
       ("full_ssa_cc_trans handler Call preserves Cake exception payload",
         handlerCallGuard) ]
   let mut ok := true

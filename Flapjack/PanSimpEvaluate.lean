@@ -5993,4 +5993,40 @@ theorem PanValueFfiClockNormalAdequateProgFrom_decCall_returned
       value callClock (.control (.normal finalLocals finalGlobals finalMemory finalFfi))
       finalClock ma c mh hcallEval (hmatch value) hbodyEvalMax⟩
 
+/-- A lower-bounded adequate leaf: a program in the leaf fragment whose stepped
+    evaluation returns a normal outcome is lower-bounded normal-adequate for any
+    bound, because leaves spend no clock ticks. -/
+theorem PanValueFfiClockNormalAdequateProgFrom_leaf
+    (lo : Nat)
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (ma : Option (PanValueMemoryAccess α))
+    (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (program : Prog α)
+    (hleaf : PanValueFfiLeafProg program)
+    (hnormal : ∀ (locals globals : VarName → Option (PanValue α))
+        (memory : α → Option (PanValue α)) (ffi : FfiState σ),
+        ∃ (finalLocals finalGlobals : VarName → Option (PanValue α))
+          (finalMemory : α → Option (PanValue α)) (finalFfi : FfiState σ) (steps : Nat),
+          evalPanValueFfiProgSteps context primitive handler structs functions
+            baseAddress topAddress bytesInWord 1 locals globals memory ffi program
+            (memoryAccess := ma) (contracts := c) (memoryHandler := mh) =
+          some (.normal finalLocals finalGlobals finalMemory finalFfi, steps)) :
+    PanValueFfiClockNormalAdequateProgFrom lo context primitive handler structs
+      functions baseAddress topAddress bytesInWord callBudget ma c mh program := by
+  intro clock _ locals globals memory ffi
+  obtain ⟨finalLocals, finalGlobals, finalMemory, finalFfi, steps, hsteps⟩ :=
+    hnormal locals globals memory ffi
+  exact ⟨finalLocals, finalGlobals, finalMemory, finalFfi, clock,
+    evalPanValueFfiClockProg_leaf_some_progCallFuel context primitive handler structs
+      functions baseAddress topAddress bytesInWord callBudget program locals globals memory
+      ffi clock ma c mh hleaf (.normal finalLocals finalGlobals finalMemory finalFfi) steps
+      hsteps⟩
+
 end Flapjack

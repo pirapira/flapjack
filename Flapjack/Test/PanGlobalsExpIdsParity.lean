@@ -51,4 +51,26 @@ def initializerExpIdsGuard : Bool :=
 #eval initializerExpIdsGuard
 #guard initializerExpIdsGuard
 
+/-! Cake's `compile_decs_exp_ids`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:153`). -/
+
+def expIdsFunctionDecl : FunDecl Nat :=
+  { name := "f", inline := false, exported := false, params := [],
+    body := (.seq (.raise "E" (.const 1)) .tick), returnShape := .one }
+
+def expIdsDecls : List (Decl Nat) :=
+  [.function expIdsFunctionDecl, .decl .one "g" (.const 2)]
+
+theorem globalCompileDecs_functions_expIds_fixture :
+    (functions (globalCompileDecs expIdsContext expIdsDecls).functions).map
+        (fun entry => expIds entry.2.2.1) =
+      (functions expIdsDecls).map (fun entry => expIds entry.2.2.1) :=
+  globalCompileDecs_functions_expIds expIdsContext expIdsDecls
+
+def compileDecsExpIdsGuard : Bool :=
+  (functions expIdsDecls).map (fun entry => expIds entry.2.2.1) == [["E"]]
+
+#eval compileDecsExpIdsGuard
+#guard compileDecsExpIdsGuard
+
 end Flapjack.Test.PanGlobalsExpIdsParity

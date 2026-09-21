@@ -1841,6 +1841,32 @@ theorem globalCompileDecs_functions_names [BEq String] [Add α] [Mul α]
   simp only [globalCompileDecs]
   rw [functions_globalDeclsFilter_isFunction, functions_names_globalCompileDecls]
 
+theorem functions_globalCompileDecls [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations : List (Decl α)) :
+    functions (globalCompileDecls context declarations) =
+      (functions declarations).map (fun entry =>
+        (entry.1, entry.2.1, globalCompileProg context entry.2.2.1, entry.2.2.2)) := by
+  induction declarations with
+  | nil => simp [globalCompileDecls, functions]
+  | cons declaration declarations ih =>
+      cases declaration <;> simp [globalCompileDecls, functions, ih]
+
+/-- Cake's `compile_decs_exp_ids`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:153`): compiling the
+    global declarations does not change the exception identifiers of the
+    function bodies. -/
+theorem globalCompileDecs_functions_expIds [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α)) :
+    (functions (globalCompileDecs context code).functions).map
+        (fun entry => expIds entry.2.2.1) =
+      (functions code).map (fun entry => expIds entry.2.2.1) := by
+  simp only [globalCompileDecs]
+  rw [functions_globalDeclsFilter_isFunction, functions_globalCompileDecls]
+  rw [List.map_map]
+  apply List.map_congr_left
+  intro entry hentry
+  simp [globalCompileProg_expIds]
+
 theorem functions_globalRenameDecls_map_fst [BEq String] (source target : FunName)
     (declarations : List (Decl α)) :
     ((functions (globalRenameDecls source target declarations)).map

@@ -292,12 +292,12 @@ theorem panValuePcCompileCorrect_compact_dec_skip_nat :
       simp [restorePanValueLocal, updatePanValueMap, hcurrent]
   have htargetLocals :
       restoreCrepLocal
-          (updateCrepLocal targetInput.state.locals (context.maxVar + 1) 7)
+          targetInput.state.locals
           (context.maxVar + 1) (targetInput.state.locals (context.maxVar + 1)) =
         targetInput.state.locals := by
     funext current
     by_cases hcurrent : current = context.maxVar + 1 <;>
-      simp [restoreCrepLocal, updateCrepLocal, hcurrent]
+      simp [restoreCrepLocal, hcurrent]
   rw [hsourceLocals, htargetLocals]
   simpa [panValuePcResultOfControl, panValuePcResultRel,
     panValueCrepControlRel] using hstate
@@ -340,14 +340,12 @@ theorem panValuePcCompileCorrect_compact_dec_assign_nat :
       simp [restorePanValueLocal, updatePanValueMap, hcurrent]
   have htargetLocals :
       restoreCrepLocal
-          (updateCrepLocal
-            (updateCrepLocal targetInput.state.locals (context.maxVar + 1) 7)
-            (context.maxVar + 1) 8)
+          targetInput.state.locals
           (context.maxVar + 1) (targetInput.state.locals (context.maxVar + 1)) =
         targetInput.state.locals := by
     funext current
     by_cases hcurrent : current = context.maxVar + 1 <;>
-      simp [restoreCrepLocal, updateCrepLocal, hcurrent]
+      simp [restoreCrepLocal, hcurrent]
   rw [hsourceLocals, htargetLocals]
   simpa [panValuePcResultOfControl, panValuePcResultRel,
     panValueCrepControlRel] using hstate
@@ -646,7 +644,7 @@ theorem skipNatRaiseConstTargetEval
   funext current
   by_cases hcurrent : current = context.maxVar + 1
   · simp [restoreCrepLocal, hcurrent]
-  · simp [restoreCrepLocal, updateCrepLocal, hcurrent]
+  · simp [restoreCrepLocal, hcurrent]
 
 /-- Regression for the raise helpers: a constant-payload raise evaluates on the
     source side to a raised control result and on the compiled side to a raised

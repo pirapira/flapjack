@@ -272,6 +272,14 @@ def longMulMalformed : Bool :=
     (longDivState (some (.loc 9 0)) (some (.word 20)) none)) ==
     (some .error, none, none, 5)
 
+/-! Cake's `set_var r2 ... (set_var r1 ... s)` ordering means a coincident
+    destination retains the low word (`loopSemScript.sml:127-132`). -/
+def longMulSameDestination : Bool :=
+  observeLongDiv (evaluateLoop 2 arithHooks
+    (.arith (.longMul 1 1 3 4))
+    (longDivState (some (.word 20)) (some (.word 20)) none)) ==
+    (none, some (.word 144), none, 5)
+
 def observe (step : LoopMachineStep) :
     Option (LoopMachineResult LoopWordLoc) × Option LoopWordLoc × Nat :=
   (step.1, step.2.locals 1, step.2.clock)
@@ -370,6 +378,7 @@ def duplicateAssignFirstWins : Bool :=
 #guard longDivSameDestination
 #guard longMulSuccess
 #guard longMulMalformed
+#guard longMulSameDestination
 #guard sharedLoadSuccess
 #guard sharedStoreSuccess
 #guard sharedLoadDomainError
@@ -399,6 +408,10 @@ def runChecks : IO Bool := do
     ("evaluate LongDiv rejects a zero divisor", longDivZero),
     ("evaluate LongDiv rejects quotient overflow", longDivOverflow),
     ("evaluate LongDiv rejects a non-word operand", longDivMalformed),
+    ("evaluate LongMul splits high and low words", longMulSuccess),
+    ("evaluate LongMul rejects a non-word operand", longMulMalformed),
+    ("evaluate LongMul keeps the low word on a shared destination",
+      longMulSameDestination),
     ("evaluate shared load updates its destination", sharedLoadSuccess),
     ("evaluate shared store preserves its source", sharedStoreSuccess),
     ("evaluate shared load rejects an unmapped address", sharedLoadDomainError),

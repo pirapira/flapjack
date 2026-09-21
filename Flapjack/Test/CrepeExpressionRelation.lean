@@ -61,4 +61,21 @@ def globalCompileExpLocalisedGuard : Bool :=
 #eval globalCompileExpLocalisedGuard
 #guard globalCompileExpLocalisedGuard
 
+theorem globalShapeVal_localised_fixture :
+    localisedExp (globalShapeVal compileContext (.comb [.one, .named "n"])) :=
+  globalShapeVal_localised compileContext (.comb [.one, .named "n"])
+
+theorem nestedSeq_localised_fixture :
+    localisedProg
+      (nestedSeq ([.skip, .annot "t" "x"] : List (Prog Nat))) :=
+  (nestedSeq_localised ([.skip, .annot "t" "x"] : List (Prog Nat))).mpr
+    (by intro statement hmem; simp at hmem; rcases hmem with rfl | rfl <;>
+      simp [localisedProg])
+
+def nestedSeqLocalisedGuard : Bool :=
+  (expGlobalVars (globalShapeVal compileContext (.comb [.one])) == [])
+
+#eval nestedSeqLocalisedGuard
+#guard nestedSeqLocalisedGuard
+
 end Flapjack

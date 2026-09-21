@@ -460,6 +460,40 @@ theorem globalCompileExp_localised [BEq String] (context : GlobalPassContext α)
     localisedExp (globalCompileExp context expression) := by
   simpa [localisedExp] using globalCompileExp_expGlobalVars context expression
 
+/-- A value placeholder generated for a shape is localised, in the
+    `pan_globals` context used by `globalCompileProg`.  This is the
+    `pan_globals` counterpart of the first conjunct of Cake's
+    `localised_exp_shape_val` (`pan_globalsProofScript.sml:3216` context). -/
+theorem globalShapeVal_localised [BEq String] (context : GlobalPassContext α)
+    (shape : Shape) : localisedExp (globalShapeVal context shape) := by
+  have hmain : ∀ shape : Shape, localisedExp (globalShapeVal context shape) := by
+    apply globalShapeVal.induct
+      (motive := fun shape => localisedExp (globalShapeVal context shape))
+    · simp [globalShapeVal, localisedExp, expGlobalVars]
+    · intro name
+      simp [globalShapeVal, localisedExp, expGlobalVars]
+    · intro shapes ih
+      simp only [globalShapeVal]
+      have hmap : ∀ expression ∈ shapes.map (globalShapeVal context),
+          localisedExp expression := by
+        intro expression hmem
+        obtain ⟨shape, hshape, rfl⟩ := List.mem_map.mp hmem
+        exact ih shape hshape
+      simpa only [localisedExp, expGlobalVars] using
+        expGlobalVarsList_eq_nil_of_all_localised
+          (shapes.map (globalShapeVal context)) hmap
+  exact hmain shape
+
+/-- Counterpart of Cake's `nested_seqs_localised`
+    (`pan_globalsProofScript.sml:3253`): a nested sequence is localised exactly
+    when every one of its statements is. -/
+theorem nestedSeq_localised (statements : List (Prog α)) :
+    localisedProg (nestedSeq statements) ↔
+      ∀ statement ∈ statements, localisedProg statement := by
+  induction statements with
+  | nil => simp [nestedSeq, localisedProg]
+  | cons statement statements ih => simp [nestedSeq, localisedProg, ih]
+
 /-! Successful word operations cannot hide a failed or structured operand.
 This is the source-side inversion lemma needed before applying the
 compositional operation boundaries below. -/

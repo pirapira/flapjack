@@ -126,6 +126,16 @@ def cliqueSetAccumulatorGuard : Bool :=
 
 #guard cliqueSetAccumulatorGuard
 
+def extendCliqueSetAccumulatorGuard : Bool :=
+  let newNames := [1, 4, 1, 3]
+  let live := [2, 4, 6]
+  let initial := cakeAdjSetMapOfSize 8
+  let fast := cakeExtendCliqueSetFast newNames live initial
+  let reference := cakeExtendCliqueSetReference newNames live initial
+  fast.2 == reference.2 && fast.1.toNatInfoMap == reference.1.toNatInfoMap
+
+#guard extendCliqueSetAccumulatorGuard
+
 def indexedAdjacencyMembershipGuard : Bool :=
   let tree : WordClashTree := .delta [1, 3] [2, 4]
   let bij := cakeMkBij tree

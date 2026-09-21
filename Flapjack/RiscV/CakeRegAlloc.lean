@@ -532,6 +532,30 @@ def cakeExtendClique : List Nat → List Nat → CakeNodeMap (List Nat) →
 termination_by new _ _ => sizeOf new
 decreasing_by all_goals decreasing_trivial
 
+/- The reference inserts each pair in a growing clique. For the TreeSet
+   accumulator, union the new node's partners once, then add the reverse
+   edge to each existing member. Overlap handling preserves the reference
+   live-list and graph behavior for duplicate names. -/
+def cakeExtendCliqueSetFast : List Nat → List Nat →
+    CakeNodeMap (Std.TreeSet Nat) → CakeNodeMap (Std.TreeSet Nat) × List Nat
+  | [], cli, adj => (adj, cli)
+  | x :: xs, cli, adj =>
+      if cli.contains x then cakeExtendCliqueSetFast xs cli adj
+      else
+        let partners := Std.TreeSet.ofList cli
+        let existingX := (adj.get x).getD ∅
+        let adjX := adj.set x (existingX.union partners)
+        let adjAll := cli.foldl (fun current y =>
+          let existingY := (current.get y).getD ∅
+          current.set y (existingY.insert x)) adjX
+        cakeExtendCliqueSetFast xs (x :: cli) adjAll
+termination_by new _ _ => sizeOf new
+decreasing_by all_goals decreasing_trivial
+
+def cakeExtendCliqueSet : List Nat → List Nat →
+    CakeNodeMap (Std.TreeSet Nat) → CakeNodeMap (Std.TreeSet Nat) × List Nat :=
+  cakeExtendCliqueSetFast
+
 /-- `mk_graph` (`reg_allocScript.sml:1179-1218`): build the adjacency
     representation from a clash tree, threading the live list.  `ta` maps
     original variable names to node ids (`sp_default` over the bijection).
@@ -609,13 +633,13 @@ def cakeCliqueInsertEdgeSetFast (live : List Nat)
   else
     cakeCliqueInsertEdgeSet live adj
 
-def cakeExtendCliqueSet : List Nat → List Nat →
+def cakeExtendCliqueSetReference : List Nat → List Nat →
     CakeNodeMap (Std.TreeSet Nat) →
     CakeNodeMap (Std.TreeSet Nat) × List Nat
   | [], cli, adj => (adj, cli)
   | x :: xs, cli, adj =>
-      if cli.contains x then cakeExtendCliqueSet xs cli adj
-      else cakeExtendCliqueSet xs (x :: cli) (cakeListInsertEdgeSet x cli adj)
+      if cli.contains x then cakeExtendCliqueSetReference xs cli adj
+      else cakeExtendCliqueSetReference xs (x :: cli) (cakeListInsertEdgeSet x cli adj)
 termination_by new _ _ => sizeOf new
 decreasing_by all_goals decreasing_trivial
 

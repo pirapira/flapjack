@@ -49,6 +49,7 @@ FIXTURES = (
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00228_copy_share_store.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "secp_accel_init_block.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "nested_handler_condition.pnk",
+    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "secp_accel_modmul.pnk",
 )
 
 

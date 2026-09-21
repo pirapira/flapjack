@@ -30,6 +30,8 @@ def callArgCountExact : Bool :=
     stackArgCount (.inr 3) 15 12 == 2 &&
     stackArgCount (.inl 0) 5 3 == 2 &&
     stackArgCount (.inr 0) 5 3 == 1 &&
+    stackFree (.inl 3) 15 12 20 19 == 17 &&
+    stackFree (.inr 3) 15 12 20 19 == 18 &&
     stackFree (.inl 0) 5 3 6 5 == 4 &&
     stackFree (.inr 0) 5 3 6 5 == 5
 

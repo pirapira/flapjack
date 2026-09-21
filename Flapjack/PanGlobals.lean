@@ -1041,6 +1041,28 @@ theorem globalCompileDecs_functions_eq_nil_of_no_functions [BEq String] [Add α]
   exact globalDeclsFilter_eq_nil_of_all_not globalDeclIsFunction _
     (globalCompileDecls_all_not_function (globalCollect context code) code hnone)
 
+/-! Counterpart of Cake's `compile_decs_exns_are_exns`
+    (`pan_globalsProofScript.sml:2448`): the exception table is exactly the
+    exception declarations of the source program. -/
+theorem globalDeclsFilter_isException_globalCompileDecls [BEq String] [Add α]
+    [Mul α] (context : GlobalPassContext α) (declarations : List (Decl α)) :
+    globalDeclsFilter globalDeclIsException
+        (globalCompileDecls context declarations) =
+      globalDeclsFilter globalDeclIsException declarations := by
+  induction declarations with
+  | nil => simp [globalCompileDecls, globalDeclsFilter]
+  | cons declaration declarations ih =>
+      cases declaration <;>
+        simp [globalCompileDecls, globalDeclsFilter, globalDeclIsException, ih]
+
+theorem globalCompileDecs_exceptions_eq_filter [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α)) :
+    (globalCompileDecs context code).exceptions =
+      globalDeclsFilter globalDeclIsException code := by
+  simp only [globalCompileDecs]
+  exact globalDeclsFilter_isException_globalCompileDecls
+    (globalCollect context code) code
+
 /-! The start-function form of CakeML's `pan_globals$compile_top_def`
     (`pan_globalsScript.sml:236`).  The existing `globalCompileTop` below
     exposes the lower-level context pass; this wrapper models the source

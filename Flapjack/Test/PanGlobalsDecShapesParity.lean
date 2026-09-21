@@ -323,4 +323,24 @@ def renameNodupGuard : Bool :=
 #eval renameNodupGuard
 #guard renameNodupGuard
 
+/-! Counterpart of Cake's `compile_decs_exns_are_exns`
+    (`pan_globalsProofScript.sml:2448`). -/
+def exceptionsFilterGuard : Bool :=
+  let context : GlobalPassContext Nat :=
+    { globals := [], globalsSize := 0, maxGlobalsSize := 0, bytesInWord := 8,
+      fromNat := fun n => n }
+  (globalCompileDecs context noFunctionsDecls).exceptions.length ==
+      (globalDeclsFilter globalDeclIsException noFunctionsDecls).length &&
+    (globalCompileDecs context noFunctionsDecls).exceptions.length == 1
+
+example : True := by
+  let context : GlobalPassContext Nat :=
+    { globals := [], globalsSize := 0, maxGlobalsSize := 0, bytesInWord := 8,
+      fromNat := fun n => n }
+  have h := globalCompileDecs_exceptions_eq_filter context noFunctionsDecls
+  trivial
+
+#eval exceptionsFilterGuard
+#guard exceptionsFilterGuard
+
 end Flapjack.Test.PanGlobalsDecShapesParity

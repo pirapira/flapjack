@@ -1120,5 +1120,6 @@ example :
 #check @panValuePcCompileCorrect_compact_shMemLoad_source_word_of_state_evidence
 #check @panValuePcCompileCorrect_compact_shMemStore_source_word_of_state_evidence
 #check @panValuePcCompileCorrect_compact_shMemLoad_source_word
+#check @panValuePcCompileCorrect_compact_shMemStore_source_word
 
 end Flapjack.Test.PanValuePcControlSafety

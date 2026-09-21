@@ -57,6 +57,15 @@ theorem compile_prog_inline_call_parity :
     crepInlineTail, crepArgLoad, crepInlineTmpNames, crepUnreachElim,
     nestedDecs]
 
+/-! Cake's `first_compile_prog_all_distinct` regression: the complete
+    source-shaped `compile_prog` boundary keeps every function name distinct
+    after the selected inline bodies have been rewritten. -/
+theorem compile_prog_first_compile_prog_all_distinct :
+    (compileProgToCrep compileProgProbeContext compileProgProbeDecls).map
+      CompiledFunction.name |>.Nodup := by
+  exact compileProgToCrep_names_nodup _ _ (by
+    simp [compileProgProbeDecls, functionDeclarationNames])
+
 def parityGuard : Bool :=
   match compileProgToCrep compileProgProbeContext compileProgProbeDecls with
   | [{ name := "leaf", params := [], body := .return [.const 7],

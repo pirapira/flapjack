@@ -878,4 +878,10 @@ evaluator-evidence obligation. -/
     evidence plus the exception lookup instead of the opaque callbacks. -/
 #check @panValuePcRaisedHraiseCases_with_raw_word_lists_paired_of_state_evidence
 
+/-! The context-coded deep store instances also accept the explicit state
+    evidence plus the exception lookup instead of the flat-global bundle. -/
+#check @panValuePcCompileCorrect_compact_store_source_word_of_state_evidence_context_code
+#check @panValuePcCompileCorrect_compact_store32_source_word_of_state_evidence_context_code
+#check @panValuePcCompileCorrect_compact_storeByte_source_word_of_state_evidence_context_code
+
 end Flapjack.Test.PanValuePcControlSafety

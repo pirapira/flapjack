@@ -947,6 +947,14 @@
       "tracked_beads": []
     },
     {
+      "path": "Flapjack/Test/OriginalPancake/nested_currheap_xor.pnk",
+      "source_reference": "Minimized f00054 nested-expression witness: Cake selects the constant in `1000 ^ @base` into the fresh temporary and emits `OpCurrHeap Xor` even when the operation is nested inside a subtraction; the selector must not lower it as `Get CurrHeap` plus XORI.",
+      "cake_sha256": "f579626d1b36430b49a1acc5f20f18d3c1749c8443a9f868430efd22d16884ca",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.21"
+      ]
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/currheap_const_left.pnk",
       "source_reference": "CurrHeap-left/constant-right witness: `(@base | 7) #>> 1`. Cake's inst_select_exp (word_instScript.sml:246-251) tests is_Lookup_CurrHeap e1 before the e2 = Const w fold, so `| 7` keeps `Const temp 7; OpCurrHeap Or temp temp` instead of folding the constant into an ori (discrepancy #2, committed in coordinator 15a2b6d8).",
       "cake_sha256": "2cf935883087f0cb33f36d43403dadc4b7196d9312a9e56e73ac52f96779d1f4",
@@ -982,6 +990,12 @@
       "path": "Flapjack/Test/OriginalPancake/and_comparison_handler.pnk",
       "source_reference": "Regression for the former And/comparison-in-catch-handler byte gap (flapjack-pxn.1.5). The handler-aware Cake `Seq_assoc` traversal now preserves the original instruction selection and layout.",
       "cake_sha256": "ba432bd957296c570f9b089dd35e8f00ad1f8bbb72b4715b14727a377e91be1c",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/ld8_currheap_offset.pnk",
+      "source_reference": "Minimized ld8 @base+8 witness (GH #1130, flapjack-pxn.8.5.14.20): Cake keeps CurrHeap as the load base and encodes the byte-offset load with the unsigned lbu funct3 (get_memop_info Load8 = MappedRead,1w), not lb. The port's WordInstSelect selector and Encoding.loadByteOffset now match.",
+      "cake_sha256": "5dbea1ef7c7fcb024a59e8204bd28ecd4e6a804d3dd8f2a4294e02188899858c",
       "tracked_beads": []
     }
   ]

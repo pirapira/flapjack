@@ -60,6 +60,42 @@ theorem evalPanValueFfiClockProg_shMemStore_normal_ioEvents_prefix
   · simp [evalPanValueFfiClockProg, evalPanValueFfiClockLeaf, hresult]
   · exact hprefix
 
+theorem evalPanValueFfiClockProg_shMemLoad_normal_ioEvents_prefix
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel clock : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (size : OpSize) (kind : VarKind) (name : VarName) (address : Exp α)
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (contracts : Option PanValueCallContracts)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ))
+    (nextLocals nextGlobals : VarName → Option (PanValue α))
+    (nextMemory : α → Option (PanValue α)) (nextFfi : FfiState σ)
+    (steps : Nat)
+    (hresult : evalPanValueFfiProgSteps context primitive handler structs functions
+      baseAddress topAddress bytesInWord 1 locals globals memory ffi
+      (.shMemLoad size kind name address) (memoryAccess := memoryAccess)
+      (contracts := contracts) (memoryHandler := memoryHandler) =
+      some (.normal nextLocals nextGlobals nextMemory nextFfi, steps))
+    (hprefix : ffi.ioEvents <+: nextFfi.ioEvents) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+      (.shMemLoad size kind name address) (memoryAccess := memoryAccess)
+      (contracts := contracts) (memoryHandler := memoryHandler) =
+      some (.control (.normal nextLocals nextGlobals nextMemory nextFfi), clock) ∧
+      ffi.ioEvents <+: nextFfi.ioEvents := by
+  constructor
+  · simp [evalPanValueFfiClockProg, evalPanValueFfiClockLeaf, hresult]
+  · exact hprefix
+
 theorem evalPanValueFfiClockProg_seq_normal_ioEvents_prefix
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

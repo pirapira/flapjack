@@ -1,4 +1,5 @@
 import Flapjack.PanToCrepCorrectnessBoundary
+import Flapjack.PanToCrepCallControlSafety
 
 /-!
 Control-safety for the source-to-Crep `call` constructor when the call
@@ -551,5 +552,81 @@ theorem panValueCrepProgramStateControlSafe_decCall_raise
       baseAddress topAddress bytesInWord =>
       PanValueProgNotBrokeContinued_raise primitive handler structs functions
         baseAddress topAddress bytesInWord exception expression)
+
+theorem PanValueProgNotBrokeContinued_call_of_no_handler
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (info : Option (Option (VarKind × VarName) ×
+      Option (ExceptionId × VarName × Prog α)))
+    (function : FunName) (arguments : List (Exp α))
+    (hnoHandler : ∀ destination caughtHandler,
+      info = some (destination, some caughtHandler) → False) :
+    PanValueProgNotBrokeContinued primitive handler structs functions
+      baseAddress topAddress bytesInWord (.call info function arguments) := by
+  intro fuel locals globals memory result h
+  cases fuel with
+  | zero => simp [evalPanValueProgWithPrimitiveCallsAndFfi] at h
+  | succ fuel =>
+      have hcall :
+          evalPanValueCallWithPrimitiveCallsAndFfi primitive handler structs
+            functions baseAddress topAddress bytesInWord fuel locals globals
+            memory info function arguments = some result := by
+        simpa [evalPanValueProgWithPrimitiveCallsAndFfi] using h
+      exact evalPanValueCallWithPrimitiveCallsAndFfi_no_handler_not_broke_continued
+        primitive handler structs functions baseAddress topAddress bytesInWord
+        fuel locals globals memory info function arguments result hnoHandler hcall
+
+theorem PanValueProgNotBrokeContinued_dec
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (name : VarName) (shape : Shape) (value : Exp α) (body : Prog α)
+    (hbody : PanValueProgNotBrokeContinued primitive handler structs functions
+      baseAddress topAddress bytesInWord body) :
+    PanValueProgNotBrokeContinued primitive handler structs functions
+      baseAddress topAddress bytesInWord (.dec name shape value body) := by
+  intro fuel locals globals memory result h
+  cases fuel with
+  | zero => simp [evalPanValueProgWithPrimitiveCallsAndFfi] at h
+  | succ fuel =>
+      cases hvalue : evalPanValueExp structs locals globals memory baseAddress
+          topAddress bytesInWord value with
+      | none =>
+          simp [evalPanValueProgWithPrimitiveCallsAndFfi, hvalue] at h
+      | some valueResult =>
+          cases hmatch : panShapeMatches (panValueShape structs valueResult) shape with
+          | false =>
+              simp [evalPanValueProgWithPrimitiveCallsAndFfi, hvalue, hmatch] at h
+          | true =>
+              cases hbodyEval : evalPanValueProgWithPrimitiveCallsAndFfi primitive
+                  handler structs functions baseAddress topAddress bytesInWord fuel
+                  (updatePanValueMap locals name valueResult) globals memory body with
+              | none =>
+                  simp [evalPanValueProgWithPrimitiveCallsAndFfi, hvalue, hmatch,
+                    hbodyEval] at h
+              | some bodyResult =>
+                  simp only [evalPanValueProgWithPrimitiveCallsAndFfi, hvalue,
+                    hmatch, hbodyEval, Option.bind_eq_bind, Option.bind_some,
+                    if_true, Option.pure_def, Option.some.injEq] at h
+                  subst h
+                  exact ⟨restorePanValueControlLocal_not_broke name (locals name)
+                      bodyResult
+                      (hbody fuel (updatePanValueMap locals name valueResult) globals
+                        memory bodyResult hbodyEval).1,
+                    restorePanValueControlLocal_not_continued name (locals name)
+                      bodyResult
+                      (hbody fuel (updatePanValueMap locals name valueResult) globals
+                        memory bodyResult hbodyEval).2⟩
 
 end Flapjack

@@ -232,6 +232,45 @@ theorem panToCrepCompileInlTop_names_nodup
   rw [crepInlineFunctionsRecursive_map_name]
   exact hnodup
 
+/-! Cake's `compile_prog_distinct_params`
+    (`pan_to_crepProofScript.sml:4684-4688`): recursive inlining rewrites
+    function bodies only, so the flattened parameter slots of every function
+    remain distinct. -/
+theorem crepInlineFunctionsRecursive_params_nodup
+    [BEq FunName] [LawfulBEq FunName] [LawfulHashable FunName]
+    [OfNat α 0] [OfNat α 1]
+    (inlineable : List (CrepInlineEntry α))
+    (active : Std.HashSet FunName)
+    (functions : List (CompiledFunction α))
+    (hparams : ∀ function ∈ functions, function.params.Nodup) :
+    ∀ function ∈ crepInlineFunctionsRecursive inlineable active functions,
+      function.params.Nodup := by
+  induction functions with
+  | nil => simp [crepInlineFunctionsRecursive]
+  | cons function functions ih =>
+      intro target htarget
+      simp only [crepInlineFunctionsRecursive, List.mem_cons] at htarget
+      rcases htarget with hhead | htail
+      · subst target
+        simpa using hparams function (by simp)
+      · apply ih
+        · intro candidate hcandidate
+          exact hparams candidate (by simp [hcandidate])
+        · exact htail
+
+theorem panToCrepCompileInlTop_params_nodup
+    [BEq FunName] [LawfulBEq FunName] [LawfulHashable FunName]
+    [OfNat α 0] [OfNat α 1]
+    (inlineNames : List FunName)
+    (functions : List (CompiledFunction α))
+    (hparams : ∀ function ∈ functions, function.params.Nodup) :
+    ∀ function ∈ panToCrepCompileInlTop inlineNames functions,
+      function.params.Nodup := by
+  unfold panToCrepCompileInlTop crepInlineTopRecursiveByNames
+    crepInlineTopRecursive
+  apply crepInlineFunctionsRecursive_params_nodup
+  exact hparams
+
 def crepInlineFunctions [BEq FunName] [OfNat α 0] [OfNat α 1]
     (inlineable : List (CrepInlineEntry α)) :
     List (CompiledFunction α) → List (CompiledFunction α)

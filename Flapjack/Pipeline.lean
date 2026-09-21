@@ -152,6 +152,19 @@ theorem compileProgToCrep_names_nodup
   apply panToCrepCompileInlTop_names_nodup
   exact compileToCrep_names_nodup context declarations hnodup
 
+/-! Cake's `compile_prog_distinct_params` at the complete source-shaped
+    `compile_prog` boundary.  The pre-inline parameter invariant is supplied
+    by `compileToCrep_params_nodup`; the inline pass preserves each record's
+    parameter field. -/
+theorem compileProgToCrep_params_nodup
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α]
+    (context : CompileContext α) (declarations : List (Decl α)) :
+    ∀ function ∈ compileProgToCrep context declarations,
+      function.params.Nodup := by
+  unfold compileProgToCrep
+  apply panToCrepCompileInlTop_params_nodup
+  exact compileToCrep_params_nodup _ _
+
 def pipelineFindFunction (name : FunName) :
     List (Decl α) → Option (FunDecl α)
   | [] => none

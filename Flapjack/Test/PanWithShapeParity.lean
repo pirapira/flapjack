@@ -158,6 +158,18 @@ def withShapeDistinctGuard : Bool :=
 #eval withShapeDistinctGuard
 #guard withShapeDistinctGuard
 
+theorem listDisjoint_of_mem_zip_withShape_fixture :
+    ListDisjoint ([1] : List Nat) [2, 3] :=
+  listDisjoint_of_mem_zip_withShape oneCombNamed [1, 2, 3, 4] [10, 20, 30] 10 20
+    .one (.comb [.one, .one]) [1] [2, 3]
+    (by simp [oneCombNamed, Shape.shapeSize])
+    (by decide)
+    (by simp [withShape, oneCombNamed, Shape.shapeSize])
+    (by simp [withShape, oneCombNamed, Shape.shapeSize])
+    (by decide)
+
+#check @listDisjoint_of_mem_zip_withShape
+
 def checkDisjoint (name : String) (actual : Bool) : IO Bool := do
   if actual then
     IO.println s!"PASS {name}"

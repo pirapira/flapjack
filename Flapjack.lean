@@ -107,6 +107,7 @@ import Flapjack.PanToCrepAssignmentControlSafety
 import Flapjack.PanToCrepPrimitiveControlSafety
 import Flapjack.PanToCrepPrimitiveCorrectness
 import Flapjack.PanToCrepCallCorrectness
+import Flapjack.PanToCrepCompileCorrectInduction
 import Flapjack.PanToCrepSharedMemoryControlSafety
 import Flapjack.PanToCrepSharedMemoryCorrectness
 import Flapjack.PanToCrepDeclarationControlSafety

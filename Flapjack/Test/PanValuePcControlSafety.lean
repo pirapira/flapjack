@@ -6,6 +6,7 @@ import Flapjack.PanToCrepAssignmentControlSafety
 import Flapjack.PanToCrepPrimitiveControlSafety
 import Flapjack.PanToCrepPrimitiveCorrectness
 import Flapjack.PanToCrepCallCorrectness
+import Flapjack.PanToCrepCompileCorrectInduction
 import Flapjack.PanToCrepSharedMemoryControlSafety
 import Flapjack.PanToCrepSharedMemoryCorrectness
 import Flapjack.PanToCrepDeclarationControlSafety
@@ -1132,6 +1133,7 @@ example :
 #check @panValuePcCompileCorrect_compact_dec_of_state_evidence
 #check @panValueCrepProgramStateControlSafe_assign_local
 #check @panValuePcCompileCorrect_compact_assign_local_source_word_of_state_evidence
+#check @panValuePcCompileCorrect_compact_assign_of_state_evidence
 #check @panValuePcCompileCorrect_compact_seq_of_state_evidence
 #check @panValuePcCompileCorrect_compact_tick
 #check @panValuePcCompileCorrect_compact_annot
@@ -1149,5 +1151,6 @@ example :
 #check @panValuePcCompileCorrect_compact_extCall_of_state_evidence
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_handler_returned
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_handler_normal
+#check @panValueProg_compile_correct_induction
 
 end Flapjack.Test.PanValuePcControlSafety

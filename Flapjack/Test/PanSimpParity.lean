@@ -1113,6 +1113,27 @@ example :
   PanValueFfiClockNormalAdequateProgAt_tick 5 evaluatorContext (fun _ _ => none)
     evaluatorHandler [] [] 0 0 8 7 none none none (by decide)
 
+/-- Clock-bounded adequacy sequences two clock-free programs. -/
+example :
+    PanValueFfiClockNormalAdequateProgUpTo 5 evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 7 none none none
+      (.seq (.skip : Prog Nat) (.annot "tag" "text")) :=
+  PanValueFfiClockNormalAdequateProgUpTo_seq 5 evaluatorContext (fun _ _ => none)
+    evaluatorHandler [] [] 0 0 8 7 none none none (.skip : Prog Nat)
+    (.annot "tag" "text")
+    (PanValueFfiClockNormalAdequateProgUpTo_of_adequate 5 evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+      (.skip : Prog Nat)
+      (evalPanValueFfiClockProg_normalAdequate_of_normalProg evaluatorContext
+        (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+        (.skip : Prog Nat) PanValueFfiClockNormalProg.skip))
+    (PanValueFfiClockNormalAdequateProgUpTo_of_adequate 5 evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+      (.annot "tag" "text")
+      (evalPanValueFfiClockProg_normalAdequate_of_normalProg evaluatorContext
+        (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+        (.annot "tag" "text") (.annot "tag" "text")))
+
 /-- The raised `DecCall` outcome also lifts to the declaration's progSize. -/
 example
     (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)

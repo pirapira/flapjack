@@ -683,4 +683,37 @@ example : True := by
     ([] : StructContext) evalRelState wfFunction oneFunLastDecls none hrest
   trivial
 
+/-- Focused regression for the `resort_decls_evaluate` counterpart: resorting
+    declarations into the name/exception/global/function partition preserves
+    the declaration evaluator's result. -/
+def resortDeclF : Decl Nat :=
+  .function { name := "f", inline := false, exported := false, params := [],
+              body := (.skip : Prog Nat), returnShape := .one }
+
+def resortDeclH : Decl Nat :=
+  .function { name := "h", inline := false, exported := false, params := [],
+              body := (.tick : Prog Nat), returnShape := .one }
+
+def resortDecls : List (Decl Nat) :=
+  [resortDeclF, .decl .one "g" (.const 7), .exnDecl "E" .one, resortDeclH]
+
+def resortDeclsGuard : Bool :=
+  (evalPanValueDeclarationsWithStructs ([] : StructContext) evalRelState
+      (globalResortDecls resortDecls) none).isSome ==
+    (evalPanValueDeclarationsWithStructs ([] : StructContext) evalRelState
+      resortDecls none).isSome
+
+#eval resortDeclsGuard
+#guard resortDeclsGuard
+
+example : True := by
+  have hall : resortDecls.all (fun declaration =>
+      isDecl declaration || isExnDecl declaration ||
+        globalDeclIsFunction declaration) = true := by
+    simp [resortDecls, resortDeclF, resortDeclH, isDecl, isExnDecl,
+      globalDeclIsFunction]
+  have _h := evalPanValueDeclarationsWithStructs_resortDecls
+    ([] : StructContext) evalRelState resortDecls none hall
+  trivial
+
 end Flapjack.Test.PanProgramSimpParity

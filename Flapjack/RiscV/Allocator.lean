@@ -786,6 +786,21 @@ def wordSsaRenameProgramWithLoops [OfNat α 0] (frames : List WordSsaLoopFrame)
         let movOut := .move 1 [(freshRight, 0), (freshLeft, 6)]
         (state, wordSsaSeq movIn
           (wordSsaSeq (.inst (.arith (.longMul 6 0 0 4))) movOut))
+    | .inst (.arith (.longDiv destinationLeft destinationRight sourceLeft sourceRight quotient)) =>
+        /- Cake's `ssa_cc_trans_inst` uses the fixed LongDiv operand protocol:
+           numerator parts enter registers 6 and 0, the instruction writes
+           quotient/remainder through 0 and 6, and the fresh SSA results are
+           copied out in destination-right/destination-left order. -/
+        let sourceLeft := wordSsaRead state sourceLeft
+        let sourceRight := wordSsaRead state sourceRight
+        let quotient := wordSsaRead state quotient
+        let movIn : WordProg α := .move 1 [(6, sourceLeft), (0, sourceRight)]
+        let (state, freshRight) := wordSsaFresh state destinationRight
+        let (state, freshLeft) := wordSsaFresh state destinationLeft
+        let divide : WordProg α :=
+          .inst (.arith (.longDiv 0 6 6 0 quotient))
+        let movOut : WordProg α := .move 1 [(freshRight, 6), (freshLeft, 0)]
+        (state, wordSsaSeq movIn (wordSsaSeq divide movOut))
     | .inst (.arith (.cakeAddCarry destination sourceLeft sourceRight carry)) =>
         /- Cake's `ssa_cc_trans_inst` uses fixed carry register 0 for
            AddCarry.  The move-in/move-out is semantically observable to the

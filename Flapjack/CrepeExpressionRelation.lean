@@ -1512,4 +1512,54 @@ theorem globalCompileInitializers_localised [BEq String] [Add α] [Mul α]
       | name struct fields => simpa [globalCompileInitializers] using ih context
 
 
+
+theorem localisedExp_var_local (name : VarName) :
+    localisedExp (.var .local name : Exp α) := by
+  simp [localisedExp, expGlobalVars]
+
+theorem globalCompileDecs_function_decls_localised [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α)) :
+    ∀ declaration ∈ (globalCompileDecs context code).functions,
+      (match declaration with
+       | .function function => localisedProg function.body
+       | _ => True) := by
+  intro declaration hmem
+  simp only [globalCompileDecs] at hmem
+  exact globalCompileDecls_function_bodies_localised (globalCollect context code)
+    code declaration (mem_of_globalDeclsFilter hmem)
+
+theorem globalCompileTopForStart_functions_localised [BEq String] [LawfulBEq String]
+    [Add α] [Mul α]
+    (bytesInWord : α) (fromNat : Nat → α) (declarations : List (Decl α))
+    (start : FunName) (compiled : List (Decl α))
+    (hcompile : globalCompileTopForStart bytesInWord fromNat declarations start =
+      some compiled) :
+    ∀ entry ∈ functions compiled, localisedProg entry.2.2.1 := by
+  unfold globalCompileTopForStart at hcompile
+  cases hfind : globalFindFunction start declarations with
+  | none => simp [hfind] at hcompile
+  | some found =>
+      simp only [hfind, Option.some.injEq] at hcompile
+      subst hcompile
+      intro entry hmem
+      obtain ⟨declaration, hdecl, hentry⟩ := mem_functions hmem
+      rcases List.mem_append.mp hdecl with hprefix | hfunctiondecls
+      · rcases List.mem_append.mp hprefix with hexceptions | hnewmain
+        · have hpred := mem_globalDeclsFilter (predicate := globalDeclIsException)
+            hexceptions
+          cases declaration <;> simp [globalDeclIsException] at hpred
+        · cases List.mem_singleton.mp hnewmain
+          rw [hentry]
+          simp only [localisedProg]
+          refine ⟨?_, ?_⟩
+          · exact (nestedSeq_localised _).mpr
+              (globalCompileInitializers_localised _ _)
+          · refine ⟨?_, trivial⟩
+            intro expression hexpression
+            obtain ⟨parameter, _, hparameter⟩ := List.mem_map.mp hexpression
+            rw [← hparameter]
+            exact localisedExp_var_local parameter.1
+      · rw [hentry]
+        exact globalCompileDecs_function_decls_localised _ _ (.function declaration) hfunctiondecls
+
 end Flapjack

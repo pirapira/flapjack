@@ -1014,4 +1014,11 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @panValuePcCompileCorrectWithContextCode_of_compact_and_caught_call
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_raised
 
+/-! More compositional source handler-safety leaves: clock, annotation, local
+    assignment, and single-word store. -/
+#check @PanValueProgNotBrokeContinued_tick
+#check @PanValueProgNotBrokeContinued_annot
+#check @PanValueProgNotBrokeContinued_assign_local
+#check @PanValueProgNotBrokeContinued_store
+
 end Flapjack.Test.PanValuePcControlSafety

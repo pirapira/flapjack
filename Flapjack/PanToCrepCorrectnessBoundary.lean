@@ -207,6 +207,81 @@ theorem panValuePcResultRel_continued_rejects_nonzero_label
       (.continued targetState label) := by
   simp [panValuePcResultRel, hlabel]
 
+/-! HOL `pc_compile_correct` excludes the source `Error` case by a premise,
+and the relation never relates it.  Record the remaining excluded
+constructor pairs explicitly so a future broadening of the match cannot
+silently admit an unreachable combination. -/
+theorem panValuePcResultRel_rejects_source_error
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (targetResult : CrepPcResult α) :
+    ¬ panValuePcResultRel structs context exceptionRel exceptionCode
+      globalsLookup PanValuePcResult.error targetResult := by
+  cases targetResult <;> simp [panValuePcResultRel]
+
+theorem panValuePcResultRel_rejects_target_error
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceResult : PanValuePcResult α) :
+    ¬ panValuePcResultRel structs context exceptionRel exceptionCode
+      globalsLookup sourceResult CrepPcResult.error := by
+  cases sourceResult <;> simp [panValuePcResultRel]
+
+theorem panValuePcResultRel_rejects_normal_returned
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (targetState : CrepState α)
+    (targetValues : List α) :
+    ¬ panValuePcResultRel structs context exceptionRel exceptionCode
+      globalsLookup (.normal sourceLocals sourceGlobals sourceMemory)
+      (.returned targetState targetValues) := by
+  simp [panValuePcResultRel]
+
+theorem panValuePcResultRel_rejects_broke_continued
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (targetState : CrepState α)
+    (label : Nat) :
+    ¬ panValuePcResultRel structs context exceptionRel exceptionCode
+      globalsLookup (.broke sourceLocals sourceGlobals sourceMemory)
+      (.continued targetState label) := by
+  simp [panValuePcResultRel]
+
+theorem panValuePcResultRel_rejects_timeout_normal
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (targetState : CrepState α) :
+    ¬ panValuePcResultRel structs context exceptionRel exceptionCode
+      globalsLookup (.timeout sourceLocals sourceGlobals sourceMemory)
+      (.normal targetState) := by
+  simp [panValuePcResultRel]
+
+theorem panValuePcResultRel_rejects_finalFfi_normal
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (sourceEvent : FfiFinalEvent)
+    (targetState : CrepState α) :
+    ¬ panValuePcResultRel structs context exceptionRel exceptionCode
+      globalsLookup (.finalFfi sourceLocals sourceGlobals sourceMemory sourceEvent)
+      (.normal targetState) := by
+  simp [panValuePcResultRel]
+
 /-! Safety obligation for the compact `pc_compile_correct` bridge.  The
 intermediate control relation intentionally permits nonzero labels while a
 loop propagates them, but the final Pancake theorem only admits label `0` for

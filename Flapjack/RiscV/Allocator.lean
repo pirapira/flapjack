@@ -637,10 +637,7 @@ def wordSsaBranchPriority (preferred : Option Bool) (leftBranch : Bool) : Nat :=
 
 def wordSsaPriorityMove (preferred : Option Bool) (leftBranch : Bool)
     (moves : List (Nat × Nat)) : WordProg α :=
-  if moves.isEmpty then
-    .skip
-  else
-    .move (wordSsaBranchPriority preferred leftBranch) moves
+  .move (wordSsaBranchPriority preferred leftBranch) moves
 
 def wordSsaMergeMoves : List Nat → WordSsaState → WordSsaState → Nat →
     List (Nat × Nat) × List (Nat × Nat) × Nat × WordSsaState × WordSsaState
@@ -669,15 +666,15 @@ def wordSsaFakeInconsistencyMoves [OfNat α 0] (preferred : Option Bool) :
         wordSsaFakeInconsistencyMoves preferred names left right next
       match lookupNatInfo name left.current, lookupNatInfo name right.current with
       | none, some rightName =>
-          (wordSsaSeq leftMoves (.inst (.const next 0)),
-            wordSsaSeq rightMoves
+          (.seq leftMoves (.inst (.const next 0)),
+            .seq rightMoves
               (.move (wordSsaBranchPriority preferred false) [(next, rightName)]),
             next + 4, wordSsaForceRename [(name, next)] left,
             wordSsaForceRename [(name, next)] right)
       | some leftName, none =>
-            (wordSsaSeq leftMoves
+            (.seq leftMoves
               (.move (wordSsaBranchPriority preferred true) [(next, leftName)]),
-            wordSsaSeq rightMoves (.inst (.const next 0)),
+            .seq rightMoves (.inst (.const next 0)),
             next + 4, wordSsaForceRename [(name, next)] left,
             wordSsaForceRename [(name, next)] right)
       | _, _ => (leftMoves, rightMoves, next, left, right)
@@ -693,8 +690,8 @@ def wordSsaFixInconsistencies [OfNat α 0] (preferred : Option Bool)
   let (fakeLeft, fakeRight, next, left, _right) :=
     wordSsaFakeInconsistencyMoves preferred names left right next
   ({ left with next := next },
-    wordSsaSeq (wordSsaPriorityMove preferred true mergeLeft) fakeLeft,
-    wordSsaSeq (wordSsaPriorityMove preferred false mergeRight) fakeRight)
+    .seq (wordSsaPriorityMove preferred true mergeLeft) fakeLeft,
+    .seq (wordSsaPriorityMove preferred false mergeRight) fakeRight)
 
 structure WordSsaLoopFrame where
   entry : WordSsaState
@@ -1053,8 +1050,8 @@ def wordSsaRenameProgramWithLoops [OfNat α 0] (frames : List WordSsaLoopFrame)
           wordSsaFixInconsistencies preferred thenState elseState elseState.next
         ({ current := merged.current, next := merged.next },
           .ite operator (wordSsaRead state condition) right
-            (wordSsaSeq thenBranch thenMoves)
-            (wordSsaSeq elseBranch elseMoves))
+            (.seq thenBranch thenMoves)
+            (.seq elseBranch elseMoves))
   termination_by program => sizeOf program
   decreasing_by all_goals decreasing_trivial
 
@@ -1068,11 +1065,13 @@ theorem wordSsaRenameProgram_ite [OfNat α 0] :
           (.assign 1 (.var 0)) (.assign 1 (.var 0)) : WordProg α) =
         ({ current := [(1, 18)], next := 22 },
         .ite .equal 0 (.reg 0)
-          (.seq (.assign 10 (.var 0)) (.move 1 [(18, 10)]))
-          (.seq (.assign 14 (.var 0)) (.move 1 [(18, 14)]))) := by
+          (.seq (.assign 10 (.var 0))
+            (.seq (.move 1 [(18, 10)]) .skip))
+          (.seq (.assign 14 (.var 0))
+            (.seq (.move 1 [(18, 14)]) .skip))) := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaRenameExp, wordSsaRenameRegImm,
-    wordSsaRead, wordSsaFresh, wordSsaKeys, wordSsaSeq,
+    wordSsaRead, wordSsaFresh, wordSsaKeys,
     wordSsaFixInconsistencies, wordSsaPriorityMove,
     wordSsaBranchPriority, wordSsaMergeMoves,
     wordSsaFakeInconsistencyMoves, wordSsaForceRename,

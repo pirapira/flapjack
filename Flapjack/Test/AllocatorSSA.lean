@@ -109,8 +109,12 @@ example :
               .seq
                 (.seq (.move 0 [(208, 202)]) (.move 1 [(212, 2)]))
                 (.seq
-                  (.seq (.move 1 [(224, 212)]) (.inst (.const 228 0)))
-                  (.inst (.const 232 0))), 0, 0))
+                  (.move 1 [])
+                  (.seq
+                    (.seq
+                      (.seq .skip (.move 1 [(224, 212)]))
+                      (.inst (.const 228 0)))
+                    (.inst (.const 232 0)))), 0, 0))
               (some 7) [2]
               (some (2,
                 .seq
@@ -118,8 +122,12 @@ example :
                     (.seq (.move 1 [(216, 2)])
                       (.assign 220 (.var 208))))
                   (.seq
-                    (.seq (.inst (.const 224 0)) (.move 1 [(228, 220)]))
-                    (.move 1 [(232, 216)])), 0, 0))))) := by
+                    (.move 1 [])
+                    (.seq
+                      (.seq
+                        (.seq .skip (.inst (.const 224 0)))
+                        (.move 1 [(228, 220)]))
+                      (.move 1 [(232, 216)]))), 0, 0))))) := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaListNextVarRenameMove, wordSsaCallAbiRegisters,
     wordSsaReadCutsets, wordSsaRestrict, wordSsaFreshList,
@@ -129,6 +137,17 @@ example :
     NumSet.fromList, NumSet.fromAList, NumSet.toAList, NumSet.toSet, NumSet.insert, NumSet.insertFuel, NumSet.lrnext, NumSet.lrnextFuel, NumSet.insertList,
     wordSsaSeq, lookupNatInfo,
     List.eraseDups, List.eraseDupsBy, List.eraseDupsBy.loop]
+/-
+  simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
+    wordSsaListNextVarRenameMove, wordSsaCallAbiRegisters,
+    wordSsaReadCutsets, wordSsaRestrict, wordSsaFreshList,
+    wordSsaFresh, wordSsaRenameExp, wordSsaRead, wordSsaKeys,
+    wordSsaFixInconsistencies, wordSsaPriorityMove, wordSsaBranchPriority,
+    wordSsaMergeMoves, wordSsaFakeInconsistencyMoves, wordSsaForceRename,
+    NumSet.fromList, NumSet.fromAList, NumSet.toAList, NumSet.toSet, NumSet.insert, NumSet.insertFuel, NumSet.lrnext, NumSet.lrnextFuel, NumSet.insertList,
+    wordSsaSeq, lookupNatInfo,
+    List.eraseDups, List.eraseDupsBy, List.eraseDupsBy.loop]
+ -/
 
 example :
     let originalState :=
@@ -271,11 +290,15 @@ example :
           (.assign 1 (.var 0)) .skip) : WordProg Nat) =
       ({ current := [(1, 14)], next := 18 },
         .ite .equal 0 (.reg 0)
-          (.seq (.assign 10 (.var 0)) (.move 1 [(14, 10)]))
-          (.inst (.const 14 0))) := by
+          (.seq (.assign 10 (.var 0))
+            (.seq (.move 1 [])
+              (.seq .skip (.move 1 [(14, 10)]))))
+          (.seq .skip
+            (.seq (.move 2 [])
+              (.seq .skip (.inst (.const 14 0)))))) := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaRenameExp, wordSsaRenameRegImm, wordSsaRead, wordSsaFresh,
-    wordSsaKeys, wordSsaSeq, wordSsaFixInconsistencies,
+    wordSsaKeys, wordSsaFixInconsistencies,
     wordSsaPriorityMove, wordSsaBranchPriority, wordSsaMergeMoves,
     wordSsaFakeInconsistencyMoves, wordSsaForceRename,
     NumSet.fromList, NumSet.toAList, NumSet.toSet, NumSet.insert, NumSet.insertFuel, NumSet.lrnext, NumSet.lrnextFuel, NumSet.insertList, List.eraseDups,

@@ -28,6 +28,7 @@ FIXTURES = (
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00103_fuzz_global_struct_loop.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00114_fuzz_global_pressure.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00278_fuzz_global_struct_handler.pnk",
+    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00268_fuzz_high_pressure_handler.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "allocator_colour_permutation.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00068_allocator_return.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "mul64x64_allocator.pnk",

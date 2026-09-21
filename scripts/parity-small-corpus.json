@@ -1057,6 +1057,14 @@
       "tracked_beads": [
         "flapjack-pxn.8.5.14.1.5"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00268_fuzz_high_pressure_handler.pnk",
+      "source_reference": "Accepted original-Cake differential witness from seed 20260924 index 268: duplicate local declaration, 20 locals, struct/tuple returns, nested loops, handler raise, global/local loads, byte and word stores, shifts, FFI, and high allocator pressure exercise the Cake IRC/frame path. Cake and Flapjack artifacts are byte-identical.",
+      "cake_sha256": "dfc7b3ca4c4ca62b1c79b162fda03b254d4df95cbfa577b39c6c459c0208dddb",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.5"
+      ]
     }
   ]
 }

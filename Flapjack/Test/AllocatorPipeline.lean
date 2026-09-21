@@ -41,7 +41,7 @@ example :
 example :
     wordProgLiveBeforeFast allocatorReadVarsFastFixture [22, 23] =
       wordProgLiveBefore allocatorReadVarsFastFixture [22, 23] := by
-  simp [wordProgLiveBeforeFast, wordProgLiveBefore, wordProgReadVarsFast,
+  simp [wordProgLiveBeforeFast, wordProgLiveBefore,
     wordProgReadVarsFastAcc, wordListAppendAcc, wordExpReadVarsFastAcc,
     wordProgReadVars, wordProgWriteVarsFast, wordProgWriteVarsFastAcc,
     wordProgWriteVars, wordExpReadVars,
@@ -66,7 +66,7 @@ example :
 example :
     wordProgLiveBeforeFast allocatorWriteVarsFastFixture [41, 43, 44] =
       wordProgLiveBefore allocatorWriteVarsFastFixture [41, 43, 44] := by
-  simp [wordProgLiveBeforeFast, wordProgLiveBefore, wordProgReadVarsFast,
+  simp [wordProgLiveBeforeFast, wordProgLiveBefore,
     wordProgReadVarsFastAcc, wordProgWriteVarsFast, wordProgWriteVarsFastAcc,
     wordListAppendAcc, wordExpReadVarsFastAcc, wordProgReadVars,
     wordProgWriteVars, wordExpReadVars, allocatorWriteVarsFastFixture]

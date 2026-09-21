@@ -1577,8 +1577,8 @@ def wordProgLiveBefore (program : WordProg α) (liveAfter : List Nat) : List Nat
    prefix list at every nested call.  Keep the public equation above unchanged
    for the proof-facing allocator interface. -/
 def wordProgLiveBeforeFast (program : WordProg α) (liveAfter : List Nat) : List Nat :=
-  wordProgReadVarsFast program ++
-    liveAfter.filter (fun name => name ∉ wordProgWriteVarsFast program)
+  wordProgReadVarsFastAcc program
+    (liveAfter.filter (fun name => name ∉ wordProgWriteVarsFast program))
 
 def wordListUnion (left right : List Nat) : List Nat :=
   (left ++ right).eraseDups

@@ -1059,6 +1059,39 @@ def f01451ExactParity : Bool :=
       | _ => false
   | none => false
 
+/-- Source of the constant-store-reuse fixture (GitHub issue #1127, bead
+    `flapjack-1kj`): a local store with a constant value followed by an
+    expression that reuses the same constant.  This is the minimized
+    differential-fuzz finding `f00198-s6-i00198-mutate`. -/
+def constStoreReuseSource : String :=
+  "fun 1 main() {\n" ++
+    "  st (0 + 0), 1;\n" ++
+    "  return @base | 1;\n" ++
+    "}"
+
+/-- Original CakeML `cml_main` bytes for the fixture.  Cake rematerialises the
+    store's constant (`li a0,1`) before the `or`; the port used to reuse the
+    live register and emit only one `li`, dropping an instruction Cake keeps.
+    `word_cse` must emit the original `OpCurrHeap` source register
+    (`cakeml/compiler/backend/word_cseScript.sml:587-594`). -/
+def cakeConstStoreReuseMainBytes : List (BitVec 8) :=
+  [0x13, 0x65, 0x10, 0x00,
+   0x93, 0x65, 0x00, 0x00,
+   0x23, 0xB0, 0xA5, 0x00,
+   0x13, 0x65, 0x10, 0x00,
+   0x33, 0x65, 0xA5, 0x01,
+   0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
+
+def constStoreReuseExactParity : Bool :=
+  match compileRuntimeImage constStoreReuseSource with
+  | some image =>
+      match emittedSections image with
+      | [(3, 1000, generated), (4, 1004, main)] =>
+          generated == [0x6F, 0x00, 0x40, 0x00].map (BitVec.ofNat 8) &&
+            main == cakeConstStoreReuseMainBytes
+      | _ => false
+  | none => false
+
 /-- Source of the whole-artifact `hello.pnk` fixture (GitHub issue #1022 /
 bead `flapjack-8tb`). -/
 def helloSource : String :=
@@ -1194,6 +1227,7 @@ def sharedMemOffsetCarrierEncoding : Bool :=
 #guard frameOccupancyLive3BitmapsMatch
 #guard relationalConditionExactParity
 #guard f01451ExactParity
+#guard constStoreReuseExactParity
 #guard sharedWordStoreOffsetPeephole
 #guard sharedMemOffsetCarrierEncoding
 #guard artifactAccepted
@@ -1304,7 +1338,9 @@ def runChecks : IO Bool := do
       ("relational condition direct-branch section is byte-identical to Cake",
         relationalConditionExactParity),
       ("f01451 out-of-range shift section is byte-identical to Cake",
-        f01451ExactParity) ]
+        f01451ExactParity),
+      ("constant-store reuse keeps Cake's rematerialised `li` (GH #1127)",
+        constStoreReuseExactParity) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

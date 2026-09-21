@@ -419,6 +419,108 @@ def globalDeclShapes : List (Decl α) → List Shape
   | .exnDecl _ _ :: declarations => globalDeclShapes declarations
 termination_by declarations => sizeOf declarations
 
+/-! Shape-projection counterparts of Cake's `dec_shapes` lemmas from
+    `pan_globalsProofScript.sml:2328-2361`.  The global pass reassociates and
+    filters declarations, and these lemmas record that the shape projection is
+    unchanged by that reorganisation. -/
+
+theorem globalDeclShapes_nil : globalDeclShapes ([] : List (Decl α)) = [] := by
+  rw [globalDeclShapes.eq_def]
+
+theorem globalDeclShapes_cons (declaration : Decl α) (declarations : List (Decl α)) :
+    globalDeclShapes (declaration :: declarations) =
+      (match declaration with
+       | .decl shape _ _ => shape :: globalDeclShapes declarations
+       | _ => globalDeclShapes declarations) := by
+  cases declaration <;> rw [globalDeclShapes.eq_def]
+
+theorem globalDeclShapes_append (declarations rest : List (Decl α)) :
+    globalDeclShapes (declarations ++ rest) =
+      globalDeclShapes declarations ++ globalDeclShapes rest := by
+  induction declarations with
+  | nil => rw [List.nil_append, globalDeclShapes_nil, List.nil_append]
+  | cons declaration declarations ih =>
+      cases declaration <;> simp [globalDeclShapes_cons, ih]
+
+theorem globalDeclShapes_of_functions (declarations : List (Decl α))
+    (hfunctions : ∀ declaration ∈ declarations, globalDeclIsFunction declaration = true) :
+    globalDeclShapes declarations = [] := by
+  induction declarations with
+  | nil => rw [globalDeclShapes.eq_def]
+  | cons declaration declarations ih =>
+      have hdecl : globalDeclIsFunction declaration = true :=
+        hfunctions declaration (by simp)
+      have hrest : ∀ d ∈ declarations, globalDeclIsFunction d = true :=
+        fun d hd => hfunctions d (by simp [hd])
+      cases declaration <;> simp_all [globalDeclIsFunction, globalDeclShapes_cons]
+
+theorem mem_globalDeclsFilter {predicate : Decl α → Bool} {declaration : Decl α}
+    {declarations : List (Decl α)}
+    (hmem : declaration ∈ globalDeclsFilter predicate declarations) :
+    predicate declaration = true := by
+  induction declarations with
+  | nil => rw [globalDeclsFilter.eq_def] at hmem; simp at hmem
+  | cons head tail ih =>
+      rw [globalDeclsFilter.eq_def] at hmem
+      by_cases hpred : predicate head = true
+      · simp [hpred] at hmem
+        rcases hmem with heq | htail
+        · subst heq; exact hpred
+        · exact ih htail
+      · simp [hpred] at hmem
+        exact ih hmem
+
+theorem globalDeclShapes_globalDeclsFilter_not_function (declarations : List (Decl α)) :
+    globalDeclShapes
+        (globalDeclsFilter (fun declaration => !globalDeclIsFunction declaration)
+          declarations) =
+      globalDeclShapes declarations := by
+  induction declarations with
+  | nil => rw [globalDeclsFilter.eq_def, globalDeclShapes.eq_def]
+  | cons declaration declarations ih =>
+      rw [globalDeclsFilter.eq_def]
+      cases declaration <;> simp only [globalDeclIsFunction] at ih ⊢ <;> simp [globalDeclShapes_cons, ih]
+
+theorem globalDeclShapes_globalDeclsFilter_function (declarations : List (Decl α)) :
+    globalDeclShapes (globalDeclsFilter globalDeclIsFunction declarations) = [] :=
+  globalDeclShapes_of_functions _
+    (fun _ hmem => mem_globalDeclsFilter (predicate := globalDeclIsFunction) hmem)
+
+theorem globalDeclShapes_globalDeclsFilter_name (declarations : List (Decl α)) :
+    globalDeclShapes (globalDeclsFilter globalDeclIsName declarations) = [] := by
+  induction declarations with
+  | nil => rw [globalDeclsFilter.eq_def, globalDeclShapes.eq_def]
+  | cons declaration declarations ih =>
+      rw [globalDeclsFilter.eq_def]
+      cases declaration <;> simp only [globalDeclIsName] at ih ⊢ <;> simp [globalDeclShapes_cons, ih]
+
+theorem globalDeclShapes_globalDeclsFilter_exception (declarations : List (Decl α)) :
+    globalDeclShapes (globalDeclsFilter globalDeclIsException declarations) = [] := by
+  induction declarations with
+  | nil => rw [globalDeclsFilter.eq_def, globalDeclShapes.eq_def]
+  | cons declaration declarations ih =>
+      rw [globalDeclsFilter.eq_def]
+      cases declaration <;> simp only [globalDeclIsException] at ih ⊢ <;> simp [globalDeclShapes_cons, ih]
+
+theorem globalDeclShapes_globalDeclsFilter_global (declarations : List (Decl α)) :
+    globalDeclShapes (globalDeclsFilter globalDeclIsGlobal declarations) =
+      globalDeclShapes declarations := by
+  induction declarations with
+  | nil => rw [globalDeclsFilter.eq_def, globalDeclShapes.eq_def]
+  | cons declaration declarations ih =>
+      rw [globalDeclsFilter.eq_def]
+      cases declaration <;> simp only [globalDeclIsGlobal] at ih ⊢ <;> simp [globalDeclShapes_cons, ih]
+
+theorem globalDeclShapes_globalResortDecls (declarations : List (Decl α)) :
+    globalDeclShapes (globalResortDecls declarations) =
+      globalDeclShapes declarations := by
+  rw [globalResortDecls, globalDeclShapes_append, globalDeclShapes_append,
+    globalDeclShapes_append, globalDeclShapes_globalDeclsFilter_name,
+    globalDeclShapes_globalDeclsFilter_exception,
+    globalDeclShapes_globalDeclsFilter_global,
+    globalDeclShapes_globalDeclsFilter_function]
+  simp
+
 def globalFindFunction [BEq String] (name : FunName) :
     List (Decl α) → Option (FunDecl α)
   | [] => none

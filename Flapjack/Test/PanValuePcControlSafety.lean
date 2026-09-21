@@ -1061,4 +1061,53 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @panValueCrepProgramStateControlSafe_extCall_wordExp
 #check @panValuePcCompileCorrectWithContextCode_compact_extCall_wordExp
 
+/-! More source handler-safety leaves: external calls and shared-memory
+    load/store. -/
+#check @PanValueProgNotBrokeContinued_extCall
+#check @PanValueProgNotBrokeContinued_shMemLoad
+#check @PanValueProgNotBrokeContinued_shMemStore
+
+/-! A concrete caught-handler body (local assignment then raise) discharges
+    compositionally from the individual source-safety leaves. -/
+example :
+    PanValueProgNotBrokeContinued (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat)
+      (.seq (.assign VarKind.local "x" (.const 9)) (.raise "E" (.const 0))) :=
+  PanValueProgNotBrokeContinued_seq (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+    ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat)
+    (.assign VarKind.local "x" (.const 9)) (.raise "E" (.const 0))
+    (PanValueProgNotBrokeContinued_assign_local (fun _ _ => none)
+      (fun _ _ _ _ _ _ => none) ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat)
+      "x" (.const 9))
+    (PanValueProgNotBrokeContinued_raise (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat) "E" (.const 0))
+
+#check @PanValueProgNotBrokeContinued_while
+
+/-! A while loop over a safe body is discharged by the recursive while leaf. -/
+example :
+    PanValueProgNotBrokeContinued (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat)
+      (.while (.const 0) (.skip : Prog Nat)) :=
+  PanValueProgNotBrokeContinued_while (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+    ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat) (.const 0) (.skip : Prog Nat)
+    (PanValueProgNotBrokeContinued_skip (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat))
+
+/-! The explicit handler-safety premise of the handler-carrying call control
+    theorem is dischargeable for a concrete call: choose a call whose handler is
+    `.skip`, so the premise reduces to the skip leaf. -/
+example :
+    PanValueCrepProgramStateControlSafe
+      (.call (some (some (VarKind.local, "r"), some ("E", "x", (.skip : Prog Nat))))
+        "f" []) :=
+  panValueCrepProgramStateControlSafe_call_handler _ _ _
+    (by
+      intro primitive sourceHandler structs sourceFunctions baseAddress topAddress
+        bytesInWord handlerProgram hinfo
+      obtain ⟨destination, caught, handlerVariable, hinfoEq⟩ := hinfo
+      cases hinfoEq
+      exact PanValueProgNotBrokeContinued_skip primitive sourceHandler structs
+        sourceFunctions baseAddress topAddress bytesInWord)
+
 end Flapjack.Test.PanValuePcControlSafety

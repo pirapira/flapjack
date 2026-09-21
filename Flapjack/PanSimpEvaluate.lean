@@ -5995,6 +5995,31 @@ theorem PanValueFfiClockNormalAdequateProgFromFloor_ite
         hcond hzfalse hmono,
       hfloor⟩
 
+/-- A lower-bounded tick consumes one clock, so it lowers the floor by one; the
+    lower bound `lo` must be at least one for the admissible clocks to be
+    nonzero. -/
+theorem PanValueFfiClockNormalAdequateProgFromFloor_tick
+    (lo : Nat) (hlo : 1 ≤ lo)
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (ma : Option (PanValueMemoryAccess α))
+    (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ)) :
+    PanValueFfiClockNormalAdequateProgFromFloor lo (lo - 1) context primitive handler
+      structs functions baseAddress topAddress bytesInWord callBudget ma c mh
+      (.tick : Prog α) := by
+  intro clock hclock locals globals memory ffi
+  exact ⟨locals, globals, memory, ffi, decPanClock clock, by
+    simpa [progCallFuel] using (evalPanValueFfiClockProg_tick_some context primitive
+      handler structs functions baseAddress topAddress bytesInWord 0 locals globals
+      memory ffi clock ma c mh (by intro hzero; omega)), by
+    simp only [decPanClock]; omega⟩
+
 /-- A lower-bounded program may also contain a caught-handler call: the call
     raises, the matching handler body runs normally at the same structural
     budget, and the result is again normal from the input clock onward. -/

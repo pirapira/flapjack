@@ -311,6 +311,22 @@ example :
       some [.store32Offset 4 5 (0 - BitVec.ofNat 64 7)] := by
   decide
 
+/- The same Cake `Addr` lowering preserves a negative halfword displacement
+   for the subtracting carrier, including the signed target encoding. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMemSub .load16 4 5 9) [] 0]⟩ =
+      some [.loadHalfOffset 4 5 (0 - BitVec.ofNat 64 9)] := by
+  decide
+
+/- A positive signed-12 boundary remains an offset instruction; materializing
+   it here would diverge from Cake's `riscv_targetScript.sml` Mem encoding. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMem .store32 4 5 2047) [] 0]⟩ =
+      some [.store32Offset 4 5 (BitVec.ofNat 64 2047)] := by
+  decide
+
 /-! Cake's immediate binary operators use the corresponding I-format
     instruction, not a rejected lowering. -/
 example :

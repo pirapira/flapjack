@@ -42,6 +42,13 @@ theorem loadGlobals_getElem_fixture :
     (loadGlobals 3 1 3)[1]? = some (.loadGlob 4) := by
   simpa using loadGlobals_getElem 3 1 3 1 (by decide)
 
+/-- Cake `pan_to_crep$load_shape_el_rel` on the parity fixture: element `1`
+    reads address `3 + 1 * 1 = 4`. -/
+theorem loadShape_getElem_fixture :
+    (loadShape 3 1 3 (.const 7))[1]? =
+      some (.load (.op .add [.const 7, .const 4])) := by
+  simpa using loadShape_getElem 3 1 3 1 (.const 7) (by decide)
+
 def runChecks : IO Bool := do
   let results := [
     isEmpty (loadGlobals 3 1 0),

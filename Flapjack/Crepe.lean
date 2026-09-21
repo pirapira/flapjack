@@ -138,6 +138,29 @@ def loadShape [BEq α] [OfNat α 0] [Add α]
       let loaded := if address == 0 then .load value else .load (.op .add [value, .const address])
       loaded :: loadShape (address + stride) stride count value
 
+/-- Original-domain counterpart of Cake's `load_shape_el_rel`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:114`): the `n`-th
+    loaded word reads from `address + n * stride`. -/
+theorem loadShape_getElem (address stride count n : Nat) (value : CrepExp Nat)
+    (h : n < count) :
+    (loadShape address stride count value)[n]? =
+      some (if address + n * stride == 0 then .load value
+            else .load (.op .add [value, .const (address + n * stride)])) := by
+  induction count generalizing address n with
+  | zero => simp at h
+  | succ count ih =>
+      cases n with
+      | zero => simp [loadShape]
+      | succ k =>
+          have hk : k < count := by omega
+          rw [loadShape]
+          simp only [List.getElem?_cons_succ]
+          rw [ih (address + stride) k hk]
+          have haddr : (address + stride) + k * stride = address + (k + 1) * stride := by
+            rw [Nat.add_mul, Nat.one_mul]
+            ac_rfl
+          simp only [haddr]
+
 def crepNestedSeq : List (CrepProg α) → CrepProg α
   | [] => .skip
   | statement :: statements => .seq statement (crepNestedSeq statements)

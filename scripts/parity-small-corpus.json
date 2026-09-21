@@ -935,6 +935,12 @@
       "tracked_beads": []
     },
     {
+      "path": "Flapjack/Test/OriginalPancake/f84_frame_allocator.pnk",
+      "source_reference": "Fresh accepted frame/allocator witness from differential corpus f84-min: struct-returning mks/pair calls, nested local loads, and large constants produce byte-identical original Cake and Flapjack RISC-V artifacts.",
+      "cake_sha256": "c5683abc747d5e580dc25e2f80bed5182f2cf4fd356a08906ce22d7bf47205f8",
+      "tracked_beads": ["flapjack-pxn.8.5.14.1.5"]
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/currheap_add_const.pnk",
       "source_reference": "Differential-fuzz witness f00036-s65-i00036-mutate: `@base` lowers to a CurrHeap lookup, so Cake materialises the constant and emits a register add (`li a0,255; add a0,a0,s10`) instead of folding it into an `addi` (word_instScript.sml:246-275; GH #1128, flapjack-qxa).",
       "cake_sha256": "e8f57d997b29a84df77257814777fd08ff011cdbfd2cc782c4fdb854453a032c",

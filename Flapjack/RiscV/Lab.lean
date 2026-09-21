@@ -403,7 +403,9 @@ def labCompilePlain [NeZero width] :
         match operator with
         | .add => pure [.addi destination left (BitVec.ofNat width immediate)]
         | .sub => pure [.addi destination left (0 - BitVec.ofNat width immediate)]
-        | .and | .or | .xor => none
+        | .and => pure [.andi destination left (BitVec.ofNat width immediate)]
+        | .or => pure [.ori destination left (BitVec.ofNat width immediate)]
+        | .xor => pure [.xori destination left (BitVec.ofNat width immediate)]
   | .shiftImm operator destination left immediate => do
       let destination ← labRegisterOfNat (portToStack destination)
       let left ← labRegisterOfNat (portToStack left)

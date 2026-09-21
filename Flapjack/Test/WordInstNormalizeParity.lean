@@ -189,6 +189,23 @@ def allConstantAndFolds : Bool :=
   | .const value => value == 1
   | _ => false
 
+/- Cake's `op_consts` maps an empty And to the all-ones word and every other
+   empty operator to zero (`word_instScript.sml:62-64,134,186`). -/
+def emptyAndUsesCakeIdentity : Bool :=
+  match wordInstNormalizeExp (α := Nat) (.op .and []) with
+  | .const value => value == 2 ^ 64 - 1
+  | _ => false
+
+def emptyOrUsesCakeZero : Bool :=
+  match wordInstNormalizeExp (α := Nat) (.op .or []) with
+  | .const value => value == 0
+  | _ => false
+
+def emptyAndUsesWordIdentity : Bool :=
+  match wordInstNormalizeExp (α := RiscV.Word 64) (.op .and []) with
+  | .const value => value == ~~~(0 : RiscV.Word 64)
+  | _ => false
+
 /-- Cake keeps a folded unary operator wrapper until `flatten_exp`; unwrapping
     it in `pull_exp` changes the enclosing operand order. -/
 def nestedFoldKeepsCakeWrapper : Bool :=
@@ -403,6 +420,9 @@ def wideSharedStoreMaterializesAddress : Bool :=
 #guard allConstantAddFolds
 #guard allConstantOrFolds
 #guard allConstantAndFolds
+#guard emptyAndUsesCakeIdentity
+#guard emptyOrUsesCakeZero
+#guard emptyAndUsesWordIdentity
 #guard nestedFoldKeepsCakeWrapper
 #guard subtractionConstantSecond
 #guard subtractionOperandOrderMatches

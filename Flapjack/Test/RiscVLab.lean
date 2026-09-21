@@ -439,6 +439,41 @@ def labSharedStoreOffsetFused : Bool :=
 
 #guard labSharedStoreOffsetFused
 
+/- Cake's `riscv_memop` table maps every shared-memory offset operator to its
+   corresponding RISC-V load/store width (`riscv_targetScript.sml:66-74,
+   165-169`).  Keep the complete table checked at the Lab boundary, not just
+   the byte-store case above. -/
+def sharedMemOffsetOperatorTable : Bool :=
+  [
+    labCompilePlain (width := 64)
+      (.shareMemOffset .load 10 11 (BitVec.ofNat 64 32)),
+    labCompilePlain (width := 64)
+      (.shareMemOffset .store 10 11 (BitVec.ofNat 64 32)),
+    labCompilePlain (width := 64)
+      (.shareMemOffset .load8 10 11 (BitVec.ofNat 64 32)),
+    labCompilePlain (width := 64)
+      (.shareMemOffset .store8 10 11 (BitVec.ofNat 64 32)),
+    labCompilePlain (width := 64)
+      (.shareMemOffset .load16 10 11 (BitVec.ofNat 64 32)),
+    labCompilePlain (width := 64)
+      (.shareMemOffset .store16 10 11 (BitVec.ofNat 64 32)),
+    labCompilePlain (width := 64)
+      (.shareMemOffset .load32 10 11 (BitVec.ofNat 64 32)),
+    labCompilePlain (width := 64)
+      (.shareMemOffset .store32 10 11 (BitVec.ofNat 64 32))
+  ] == [
+    some [.loadWordOffset 10 11 (BitVec.ofNat 64 32)],
+    some [.storeWordOffset 10 11 (BitVec.ofNat 64 32)],
+    some [.loadByteOffset 10 11 (BitVec.ofNat 64 32)],
+    some [.storeByteOffset 10 11 (BitVec.ofNat 64 32)],
+    some [.loadHalfOffset 10 11 (BitVec.ofNat 64 32)],
+    some [.storeHalfOffset 10 11 (BitVec.ofNat 64 32)],
+    some [.load32Offset 10 11 (BitVec.ofNat 64 32)],
+    some [.store32Offset 10 11 (BitVec.ofNat 64 32)]
+  ]
+
+#guard sharedMemOffsetOperatorTable
+
 -- reg1 holds the base and reg4 the byte: the store lands at base + 32.
 #guard
     labSharedStoreOffsetCode.bind (fun code =>

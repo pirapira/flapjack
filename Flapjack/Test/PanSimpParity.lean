@@ -220,6 +220,24 @@ theorem clocked_seq_assoc_fragment_budget_matches_cake :
   · simp [seqAssoc, panSimpSeqSkipFuel]
   · simp [panSimpSeqSkipFuel]
 
+/-- The same `seqAssoc` equality stated directly on the additive fuel foundation
+    `panSimpSkipSeqProg`/`panSimpSkipSeqFuel`, at the common budget
+    `panSimpSkipSeqFuel pre + panSimpSkipSeqFuel program + 1`. -/
+theorem clocked_seq_assoc_skip_seq_fuel_matches_cake :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 5 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1
+      (seqAssoc (.skip : Prog Nat) (.seq .skip .skip)) =
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 5 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1
+      (.seq (.skip : Prog Nat) (.seq .skip .skip)) := by
+  exact evalPanValueFfiClockProg_seqAssoc_eq_of_skipSeqProg
+    evaluatorContext (fun _ _ => none) evaluatorHandler [] [] 0 0 8
+    (.skip : Prog Nat) (.seq .skip .skip)
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    none none none (by trivial) (by constructor <;> trivial)
+
 theorem clocked_seq_normal_exposes_components :
     ∃ (middleLocals middleGlobals : VarName → Option (PanValue Nat))
       (middleMemory : Nat → Option (PanValue Nat)) (middleFfi : FfiState Unit)
@@ -297,6 +315,30 @@ theorem clocked_pan_simp_source_common_fuel_matches_cake :
       (fun _ => none) evaluatorFfi 2
       (.seq (.skip : Prog Nat) .tick) := by
   apply evalPanValueFfiClockProg_panSimpProg_eq_of_common_fuel_source
+    (fuelCompiled := 2) (fuelAssoc := 2) (fuelSource := 2) (commonFuel := 3)
+    (result := (.control (.normal (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi), 1))
+    evaluatorContext (fun _ _ => none) evaluatorHandler [] [] 0 0 8
+    (.seq (.skip : Prog Nat) .tick)
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 2
+    none none none
+  · simp [panSimpProg, retToTail, seqAssoc, evalPanValueFfiClockProg]
+  · simp [seqAssoc, evalPanValueFfiClockProg]
+  · simp [evalPanValueFfiClockProg, evalPanValueFfiClockLeaf,
+      evalPanValueFfiProgSteps]
+  · decide
+  · decide
+  · decide
+  · decide
+
+theorem clocked_pan_simp_source_result_common_fuel :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 3 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 2
+      (panSimpProg (.seq (.skip : Prog Nat) .tick)) =
+    some (.control (.normal (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi), 1) := by
+  apply evalPanValueFfiClockProg_panSimpProg_result_of_common_fuel_source
     (fuelCompiled := 2) (fuelAssoc := 2) (fuelSource := 2) (commonFuel := 3)
     (result := (.control (.normal (fun _ => none) (fun _ => none)
       (fun _ => none) evaluatorFfi), 1))
@@ -589,6 +631,7 @@ def runChecks : IO Bool := do
   IO.println "PASS pan_simp Skip/Seq fuel-adequacy fragment Cake bound"
   IO.println "PASS pan_simp clocked ret_to_tail common-fuel Cake equation"
   IO.println "PASS pan_simp clocked pan_simp common-fuel Cake equation"
+  IO.println "PASS pan_simp clocked transformed result common-fuel Cake equation"
   pure parityGuard
 
 end Flapjack.Test.PanSimpParity

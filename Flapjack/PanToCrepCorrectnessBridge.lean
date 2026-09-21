@@ -29991,4 +29991,78 @@ theorem panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call
     rfl
   · simpa [panValuePcResultRelWithContextCode] using And.intro hstate hraise
 
+/-! A return-only handler has Cake's explicit no-loop-control property, so the
+    handler-bearing call induction branch can consume it without an opaque
+    safety callback. -/
+theorem panValueCrepProgramStateCorrect_and_controlSafe_call_handler_return_of_relation
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (destination : Option (VarKind × VarName)) (caught : ExceptionId)
+    (handlerVariable : VarName) (expression : Exp α)
+    (name : FunName) (args : List (Exp α))
+    (compiledInfo : CompileContext α →
+      Option (List Nat × Option (α × CrepProg α)))
+    (hcompile : ∀ (context : CompileContext α),
+      compileProg context
+          (.call (some (destination,
+            some (caught, handlerVariable, .return expression))) name args) =
+        .call (compiledInfo context) name (compileArgs context args))
+    (hcall : PanValueCrepCallStateCorrect
+      (some (destination, some (caught, handlerVariable, .return expression)))
+      compiledInfo name args) :
+    PanValueCrepProgramStateCorrect
+        (.call (some (destination,
+          some (caught, handlerVariable, .return expression))) name args) ∧
+      PanValueCrepProgramStateControlSafe
+        (.call (some (destination,
+          some (caught, handlerVariable, .return expression))) name args) := by
+  apply panValueCrepProgramStateCorrect_and_controlSafe_call_handler_of_relation
+    (some (destination, some (caught, handlerVariable, .return expression)))
+    name args compiledInfo hcompile hcall
+  intro primitive sourceHandler structs sourceFunctions baseAddress topAddress
+    bytesInWord handlerProgram hinfo
+  rcases hinfo with ⟨destination', caught', handlerVariable', hinfo⟩
+  cases hinfo
+  exact PanValueProgNotBrokeContinued_return primitive sourceHandler structs
+    sourceFunctions baseAddress topAddress bytesInWord expression
+
+/-! The analogous raise-only handler specialization preserves the explicit
+    exception expression and uses Cake's validity/shape checks from the source
+    evaluator safety leaf. -/
+theorem panValueCrepProgramStateCorrect_and_controlSafe_call_handler_raise_of_relation
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (destination : Option (VarKind × VarName)) (caught exception : ExceptionId)
+    (handlerVariable : VarName) (expression : Exp α)
+    (name : FunName) (args : List (Exp α))
+    (compiledInfo : CompileContext α →
+      Option (List Nat × Option (α × CrepProg α)))
+    (hcompile : ∀ (context : CompileContext α),
+      compileProg context
+          (.call (some (destination,
+            some (caught, handlerVariable, .raise exception expression))) name args) =
+        .call (compiledInfo context) name (compileArgs context args))
+    (hcall : PanValueCrepCallStateCorrect
+      (some (destination, some (caught, handlerVariable, .raise exception expression)))
+      compiledInfo name args) :
+    PanValueCrepProgramStateCorrect
+        (.call (some (destination,
+          some (caught, handlerVariable, .raise exception expression))) name args) ∧
+      PanValueCrepProgramStateControlSafe
+        (.call (some (destination,
+          some (caught, handlerVariable, .raise exception expression))) name args) := by
+  apply panValueCrepProgramStateCorrect_and_controlSafe_call_handler_of_relation
+    (some (destination, some (caught, handlerVariable, .raise exception expression)))
+    name args compiledInfo hcompile hcall
+  intro primitive sourceHandler structs sourceFunctions baseAddress topAddress
+    bytesInWord handlerProgram hinfo
+  rcases hinfo with ⟨destination', caught', handlerVariable', hinfo⟩
+  cases hinfo
+  exact PanValueProgNotBrokeContinued_raise primitive sourceHandler structs
+    sourceFunctions baseAddress topAddress bytesInWord exception expression
+
 end Flapjack

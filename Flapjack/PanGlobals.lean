@@ -1124,6 +1124,96 @@ theorem globalCompileDecs_exceptions_eq_filter [BEq String] [Add α] [Mul α]
   exact globalDeclsFilter_isException_globalCompileDecls
     (globalCollect context code) code
 
+/-! Counterpart of Cake's `compile_decs_FILTER_decs`
+    (`pan_globalsProofScript.sml:2822`): filtering the source program down to its
+    global declarations leaves the collected context and the initializer stores
+    unchanged, and empties the function and exception tables. -/
+theorem globalCollect_filter_isDecl [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations : List (Decl α)) :
+    globalCollect context (globalDeclsFilter isDecl declarations) =
+      globalCollect context declarations := by
+  induction declarations generalizing context with
+  | nil => simp [globalDeclsFilter, globalCollect]
+  | cons declaration declarations ih =>
+      simp only [globalDeclsFilter]
+      by_cases hpred : isDecl declaration = true
+      · rw [if_pos hpred]
+        cases declaration with
+        | decl shape name value => simp only [globalCollect, ih]
+        | function function => simp [isDecl] at hpred
+        | exnDecl exception shape => simp [isDecl] at hpred
+        | name struct fields => simp [isDecl] at hpred
+      · rw [if_neg hpred]
+        cases declaration with
+        | decl shape name value => simp [isDecl] at hpred
+        | function function =>
+            conv => rhs; rw [globalCollect.eq_def]
+            exact ih context
+        | exnDecl exception shape =>
+            conv => rhs; rw [globalCollect.eq_def]
+            exact ih context
+        | name struct fields =>
+            conv => rhs; rw [globalCollect.eq_def]
+            exact ih context
+
+theorem globalCompileInitializers_filter_isDecl [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations : List (Decl α)) :
+    globalCompileInitializers context (globalDeclsFilter isDecl declarations) =
+      globalCompileInitializers context declarations := by
+  induction declarations generalizing context with
+  | nil => simp [globalDeclsFilter, globalCompileInitializers]
+  | cons declaration declarations ih =>
+      simp only [globalDeclsFilter]
+      by_cases hpred : isDecl declaration = true
+      · rw [if_pos hpred]
+        cases declaration with
+        | decl shape name value => simp only [globalCompileInitializers, ih]
+        | function function => simp [isDecl] at hpred
+        | exnDecl exception shape => simp [isDecl] at hpred
+        | name struct fields => simp [isDecl] at hpred
+      · rw [if_neg hpred]
+        cases declaration with
+        | decl shape name value => simp [isDecl] at hpred
+        | function function =>
+            conv => rhs; rw [globalCompileInitializers.eq_def]
+            exact ih context
+        | exnDecl exception shape =>
+            conv => rhs; rw [globalCompileInitializers.eq_def]
+            exact ih context
+        | name struct fields =>
+            conv => rhs; rw [globalCompileInitializers.eq_def]
+            exact ih context
+
+theorem globalCompileDecls_filter_isDecl [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations : List (Decl α)) :
+    globalCompileDecls context (globalDeclsFilter isDecl declarations) = [] := by
+  induction declarations with
+  | nil => simp [globalDeclsFilter, globalCompileDecls]
+  | cons declaration declarations ih =>
+      simp only [globalDeclsFilter]
+      by_cases hpred : isDecl declaration = true
+      · rw [if_pos hpred]
+        cases declaration with
+        | decl shape name value => simp [globalCompileDecls, ih]
+        | function function => simp [isDecl] at hpred
+        | exnDecl exception shape => simp [isDecl] at hpred
+        | name struct fields => simp [isDecl] at hpred
+      · rw [if_neg hpred]
+        exact ih
+
+theorem globalCompileDecs_filter_isDecl [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α)) :
+    (globalCompileDecs context (globalDeclsFilter isDecl code)).initializers =
+        (globalCompileDecs context code).initializers ∧
+      (globalCompileDecs context (globalDeclsFilter isDecl code)).functions = [] ∧
+      (globalCompileDecs context (globalDeclsFilter isDecl code)).exceptions = [] ∧
+      (globalCompileDecs context (globalDeclsFilter isDecl code)).context =
+        (globalCompileDecs context code).context := by
+  simp only [globalCompileDecs]
+  rw [globalCompileDecls_filter_isDecl, globalCollect_filter_isDecl,
+    globalCompileInitializers_filter_isDecl]
+  refine ⟨rfl, ?_, ?_, rfl⟩ <;> simp [globalDeclsFilter]
+
 /-! The start-function form of CakeML's `pan_globals$compile_top_def`
     (`pan_globalsScript.sml:236`).  The existing `globalCompileTop` below
     exposes the lower-level context pass; this wrapper models the source

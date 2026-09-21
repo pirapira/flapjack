@@ -261,4 +261,25 @@ example :
   simp [wordStackCompileStoreNatNested, wordStackLocation, lookupNatInfo,
     wordStackJoin]
 
+/- An out-of-range positive displacement does not use Cake's MemOffset
+   carrier.  `word_to_stack` materializes the constant, forms the address in
+   `addressScratch`, then stages the value in the independent store scratch
+   before the zero-offset store. -/
+example :
+    wordStackCompileStoreNatNested
+      { locations := [(0, .register 4), (1, .register 5)]
+        scratch := 31
+        addressScratch := 29
+        stackBase := 10 }
+      (.op .add [.var 1, .const 2048]) (.var 0) =
+      some (.seq
+        (.seq (.const 31 2048)
+          (.arith .add 29 5 31))
+        (.seq (.arith .or 31 4 4)
+          (.inst (.mem .store 31 29))) : StackProg Nat) := by
+  simp [wordStackCompileStoreNatNested, wordStackCompileExpToRegisterNat,
+    wordStackExpressionIsAtom, wordStackAtomNat, wordStackReadRegister,
+    wordStackExpressionTemporaries, wordStackExpressionTemporariesExcluding,
+    wordStackLocation, wordStackOffset, lookupNatInfo, wordStackJoin]
+
 end Flapjack.RiscV

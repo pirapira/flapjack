@@ -438,4 +438,174 @@ theorem expIds_panSimpProg (program : Prog α) :
   rw [expIds_retToTail, expIds_seqAssoc]
   simp [expIds]
 
+/-! ## A linear syntactic size bound for `seqAssoc`
+
+`seqAssoc` only reassociates sequences and never duplicates syntax, so a
+simple node-count measure grows by a constant factor.  This is the syntactic
+ingredient needed to turn the clocked evaluator's per-constructor success
+equations into a uniform `C(sizeOf program)` fuel adequacy statement. -/
+
+def progSize : Prog α → Nat
+  | .skip => 1
+  | .dec _ _ _ body => 1 + progSize body
+  | .seq first second => 1 + progSize first + progSize second
+  | .ite _ thenBranch elseBranch => 1 + progSize thenBranch + progSize elseBranch
+  | .while _ body => 1 + progSize body
+  | .call info _ _ =>
+      match info with
+      | none => 1
+      | some (_, none) => 1
+      | some (_, some (_, _, handler)) => 1 + progSize handler
+  | .decCall _ _ _ _ body => 1 + progSize body
+  | .annot _ _ => 1
+  | _ => 1
+termination_by program => sizeOf program
+decreasing_by all_goals decreasing_trivial
+
+theorem progSize_smartSeq_le (pre program : Prog α) :
+    progSize (smartSeq pre program) ≤ progSize pre + progSize program + 1 := by
+  unfold smartSeq
+  split
+  · simp only [progSize]
+    omega
+  · simp only [progSize]
+    omega
+
+theorem progSize_seqAssoc_le (pre program : Prog α) :
+    progSize (seqAssoc pre program) ≤ progSize pre + 4 * progSize program := by
+  let rec go (pre : Prog α) : (program : Prog α) →
+      progSize (seqAssoc pre program) ≤ progSize pre + 4 * progSize program
+    | .skip => by simp [seqAssoc, progSize]
+    | .dec name shape value body => by
+        simp only [seqAssoc]
+        have h := progSize_smartSeq_le pre (.dec name shape value (seqAssoc .skip body))
+        have hb := go .skip body
+        simp only [progSize] at h hb ⊢
+        omega
+    | .seq first second => by
+        simp only [seqAssoc, progSize]
+        have h1 := go (seqAssoc pre first) second
+        have h2 := go pre first
+        omega
+    | .ite condition thenBranch elseBranch => by
+        simp only [seqAssoc]
+        have h := progSize_smartSeq_le pre
+          (.ite condition (seqAssoc .skip thenBranch) (seqAssoc .skip elseBranch))
+        have ht := go .skip thenBranch
+        have he := go .skip elseBranch
+        simp only [progSize] at h ht he ⊢
+        omega
+    | .while condition body => by
+        simp only [seqAssoc]
+        have h := progSize_smartSeq_le pre (.while condition (seqAssoc .skip body))
+        have hb := go .skip body
+        simp only [progSize] at h hb ⊢
+        omega
+    | .call info function arguments => by
+        cases info with
+        | none =>
+            simp only [seqAssoc]
+            have h := progSize_smartSeq_le pre (.call none function arguments)
+            simp only [progSize] at h ⊢
+            omega
+        | some info =>
+            cases info with
+            | mk returns handlerInfo =>
+                cases handlerInfo with
+                | none =>
+                    simp only [seqAssoc]
+                    have h := progSize_smartSeq_le pre
+                      (.call (some (returns, none)) function arguments)
+                    simp only [progSize] at h ⊢
+                    omega
+                | some handler =>
+                    cases handler with
+                    | mk exception handlerInfo =>
+                        cases handlerInfo with
+                        | mk handlerVar handlerProgram =>
+                            simp only [seqAssoc]
+                            have h := progSize_smartSeq_le pre
+                              (.call (some (returns, some (exception, handlerVar,
+                                seqAssoc .skip handlerProgram))) function arguments)
+                            have hb := go .skip handlerProgram
+                            simp only [progSize] at h hb ⊢
+                            omega
+    | .decCall name shape function arguments body => by
+        simp only [seqAssoc]
+        have h := progSize_smartSeq_le pre
+          (.decCall name shape function arguments (seqAssoc .skip body))
+        have hb := go .skip body
+        simp only [progSize] at h hb ⊢
+        omega
+    | .annot tag text => by simp [seqAssoc, progSize]
+    | .assign kind name value => by
+        simp only [seqAssoc]
+        have h := progSize_smartSeq_le pre (.assign kind name value)
+        simp only [progSize] at h ⊢
+        omega
+    | .primitive name operator args => by
+        simp only [seqAssoc]
+        have h := progSize_smartSeq_le pre (.primitive name operator args)
+        simp only [progSize] at h ⊢
+        omega
+    | .store address value => by
+        simp only [seqAssoc]
+        have h := progSize_smartSeq_le pre (.store address value)
+        simp only [progSize] at h ⊢
+        omega
+    | .store32 address value => by
+        simp only [seqAssoc]
+        have h := progSize_smartSeq_le pre (.store32 address value)
+        simp only [progSize] at h ⊢
+        omega
+    | .storeByte address value => by
+        simp only [seqAssoc]
+        have h := progSize_smartSeq_le pre (.storeByte address value)
+        simp only [progSize] at h ⊢
+        omega
+    | .break => by
+        simp only [seqAssoc]
+        have h := progSize_smartSeq_le pre (.break : Prog α)
+        simp only [progSize] at h ⊢
+        omega
+    | .continue => by
+        simp only [seqAssoc]
+        have h := progSize_smartSeq_le pre (.continue : Prog α)
+        simp only [progSize] at h ⊢
+        omega
+    | .extCall function configuration configurationLength array arrayLength => by
+        simp only [seqAssoc]
+        have h := progSize_smartSeq_le pre
+          (.extCall function configuration configurationLength array arrayLength)
+        simp only [progSize] at h ⊢
+        omega
+    | .raise exception value => by
+        simp only [seqAssoc]
+        have h := progSize_smartSeq_le pre (.raise exception value)
+        simp only [progSize] at h ⊢
+        omega
+    | .return value => by
+        simp only [seqAssoc]
+        have h := progSize_smartSeq_le pre (.return value)
+        simp only [progSize] at h ⊢
+        omega
+    | .shMemLoad size kind name address => by
+        simp only [seqAssoc]
+        have h := progSize_smartSeq_le pre (.shMemLoad size kind name address)
+        simp only [progSize] at h ⊢
+        omega
+    | .shMemStore size address value => by
+        simp only [seqAssoc]
+        have h := progSize_smartSeq_le pre (.shMemStore size address value)
+        simp only [progSize] at h ⊢
+        omega
+    | .tick => by
+        simp only [seqAssoc]
+        have h := progSize_smartSeq_le pre (.tick : Prog α)
+        simp only [progSize] at h ⊢
+        omega
+    termination_by program => sizeOf program
+    decreasing_by all_goals decreasing_trivial
+  exact go pre program
+
 end Flapjack

@@ -1,0 +1,25 @@
+fun 1 add1(1 a, 1 b) { return a + b; }
+fun 1 sub1(1 a) { return a - 1; }
+fun {1,1} pair(1 a, 1 b) { return <a, b>; }
+struct S { 1 f1, 1 f2 }
+fun S mks(1 a, 1 b) { return S <f1 = a, f2 = b>; }
+exception E : 1;
+fun 1 main() {
+  var 1 x = 1;
+  var 1 y979 = (2147483647 + (ld8 1016));
+  var 1 y460 = (lds 1 ((1024 + 4)));
+  var 1 y939 = add1(255, 4095);
+  var S s575 = mks((ld8 (@biw + 8 + 8)), (ld8 @base + 255));
+  y460 = 2047;
+  while (x > 0) {
+      break;
+  }
+  try
+    x = sub1(@top)
+  catch E => y979 {
+      y939 = (lds 1 ((1016 + 16)));
+      y979 = 2147483647;
+  }
+  !stw (1024), (lds 1 (((@base + 255 + 1000) + 1000)));
+  return @top;
+}

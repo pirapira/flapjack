@@ -341,6 +341,28 @@ def genlistGuard : Bool :=
 #eval genlistGuard
 #guard genlistGuard
 
+/-! Cake's `zero_not_mem_genlist_offset` (`pan_commonPropsScript.sml:367`) and
+    `map_pick_up_first` (`pan_globalsProofScript.sml:2995`). -/
+
+theorem zero_not_mem_genlist_offset_fixture :
+    (0 : BitVec 5) ∉
+      (List.range 3).map (fun i => BitVec.ofNat 5 (i + 1)) :=
+  zero_not_mem_genlist_offset ([1, 2, 3] : List Nat) (by decide)
+
+theorem map_fst_map_quad_fixture :
+    ((([(1, 2, 3, 4)] : List (Nat × Nat × Nat × Nat)).map
+        (fun p => (p.1 + 1, p.2.1, p.2.2.1, p.2.2.2))).map Prod.fst) =
+      ((([(1, 2, 3, 4)] : List (Nat × Nat × Nat × Nat)).map Prod.fst).map
+        (fun x => x + 1)) :=
+  map_fst_map_quad [(1, 2, 3, 4)] (fun x => x + 1) id id id
+
+def quadProjectionGuard : Bool :=
+  ((([(1, 2, 3, 4)] : List (Nat × Nat × Nat × Nat)).map
+      (fun p => (p.1 + 1, p.2.1, p.2.2.1, p.2.2.2))).map Prod.fst) == [2]
+
+#eval quadProjectionGuard
+#guard quadProjectionGuard
+
 def checkDisjoint (name : String) (actual : Bool) : IO Bool := do
   if actual then
     IO.println s!"PASS {name}"
@@ -372,8 +394,10 @@ def runChecks : IO Bool := do
   let listIndexOk ← checkDisjoint "pan list index bridges" listIndexGuard
   let foldrMaxOk ← checkDisjoint "pan max_foldr_lt" foldrMaxGuard
   let genlistOk ← checkDisjoint "pan genlist distinctness" genlistGuard
+  let quadProjectionOk ←
+    checkDisjoint "pan quad projection" quadProjectionGuard
   pure (results.all id && lengthOk && allDistinctOk && membershipOk && disjointOk &&
     shapeDisjointOk && nestedOk && distinctOk && distinctListsOk && zipWithShapeOk &&
-    listIndexOk && foldrMaxOk && genlistOk)
+    listIndexOk && foldrMaxOk && genlistOk && quadProjectionOk)
 
 end Flapjack.Test.PanWithShapeParity

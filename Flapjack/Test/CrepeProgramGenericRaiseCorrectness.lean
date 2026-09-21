@@ -2978,6 +2978,67 @@ example
     (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none) 0 0 8 0 hlookup hevidence
   trivial
 
+example
+    (sourceFuel targetFuel : Nat)
+    (hcompact : PanValuePcCompileCorrectWithContextCode
+      (panValuePcCompactSourceEvaluator
+        (fun _ _ => none) (fun _ _ _ _ _ _ => none) [] 0 0 8 sourceFuel)
+      (crepPcCompactTargetEvaluator [] (fun _ _ => none)
+        (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none) 0 0 targetFuel)
+      (fun _ _ _ => True) (fun _ _ _ => True)
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8) (.raise "E" sourceExpression))
+    (clockProgram : Prog Nat) (clockTargetState : CrepState Nat)
+    (event targetEvent : FfiFinalEvent) (finalFfi : FfiState Unit)
+    (hclock : evalPanValueFfiClockLeaf directClockContext (fun _ _ => none)
+      directClockHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+      (fun _ => none) directClockFfi clockProgram =
+      some (.control
+        (.finalFfi (fun _ => none) (fun _ => none) (fun _ => none)
+          finalFfi event), 1))
+    (hclockState : panValueCrepStateRel [] context
+      (fun _ => none) (fun _ => none) (fun _ => none) clockTargetState)
+    (hevent : event = targetEvent) :
+    PanValuePcCompileCorrectWithContextCode
+      (panValuePcCompactSourceEvaluator
+        (fun _ _ => none) (fun _ _ _ _ _ _ => none) [] 0 0 8 sourceFuel)
+      (crepPcCompactTargetEvaluator [] (fun _ _ => none)
+        (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none) 0 0 targetFuel)
+      (fun _ _ _ => True) (fun _ _ _ => True)
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8) (.raise "E" sourceExpression) ∧
+    evalPanValueFfiClockLeaf directClockContext (fun _ _ => none)
+      directClockHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+      (fun _ => none) directClockFfi clockProgram =
+      some (.control
+        (.finalFfi (fun _ => none) (fun _ => none) (fun _ => none)
+          finalFfi event), 1) ∧
+    (evalPanValueFfiClockLeaf directClockContext (fun _ _ => none)
+      directClockHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+      (fun _ => none) directClockFfi clockProgram).map
+        panValueFfiClockResultProjection =
+      some (.finalFfi (fun _ => none) (fun _ => none) (fun _ => none)
+        finalFfi event 1) ∧
+    panValuePcResultRelWithContextCode [] context (fun _ _ code => code = 9)
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8)
+      (.finalFfi (fun _ => none) (fun _ => none) (fun _ => none) event)
+      (.finalFfi clockTargetState targetEvent) := by
+  exact panValuePcCompileCorrectWithContextCode_of_compact_evaluators_and_clocked_final_ffi
+    (panValuePcCompactSourceEvaluator
+      (fun _ _ => none) (fun _ _ _ _ _ _ => none) [] 0 0 8 sourceFuel)
+    (crepPcCompactTargetEvaluator [] (fun _ _ => none)
+      (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none) 0 0 targetFuel)
+    (fun _ _ _ => True) (fun _ _ _ => True)
+    (fun exception => if exception = "E" then some 9 else none)
+    (crepPcFlatGlobalsLookup 8) (.raise "E" sourceExpression) hcompact [] context
+    (fun _ _ code => code = 9)
+    (fun exception => if exception = "E" then some 9 else none)
+    (crepPcFlatGlobalsLookup 8) directClockContext (fun _ _ => none)
+    directClockHandler [] 0 0 8 1 (fun _ => none) (fun _ => none)
+    (fun _ => none) directClockFfi clockProgram clockTargetState event
+    targetEvent finalFfi hclock hclockState hevent
+
 def runChecks : IO Bool := do
   IO.println "PASS generic three-word Raise evaluator relation"
   IO.println "PASS generic raised semantic/global lookup lift"
@@ -2995,6 +3056,7 @@ def runChecks : IO Bool := do
   IO.println "PASS expression-state evidence composes to context-coded pc_compile_correct"
   IO.println "PASS expression-state context bridge composes with clocked Raise"
   IO.println "PASS expression-state context bridge composes with clocked Timeout"
+  IO.println "PASS compact context bridge composes with clocked FinalFFI"
   IO.println "PASS nested raised semantic/global lookup lift"
   pure true
 

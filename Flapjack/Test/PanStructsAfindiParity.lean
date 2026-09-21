@@ -92,4 +92,28 @@ theorem prod_uncurry_const_eq_comp_snd_fixture :
         (fun n : Nat => n + 1) ∘ Prod.snd :=
   prod_uncurry_const_eq_comp_snd (fun n : Nat => n + 1)
 
+/-! Focused regressions for the ported Cake `pan_structs` `alookup_drop_helper`
+    specialisation to `lookupInfo` and `size_of_sh_with_ctxt_drop`. -/
+
+theorem lookupInfo_eq_lookup_fixture :
+    lookupInfo "b" entries = List.lookup "b" entries :=
+  lookupInfo_eq_lookup "b" entries
+
+theorem lookupInfo_drop_helper_fixture :
+    lookupInfo "s" context = some { fields := [("x", Shape.one)], size := 1 } :=
+  lookupInfo_drop_helper 1 context "s" _ (by simp [context, lookupInfo]) (by decide)
+
+theorem isWfShape_of_mem_fixture : isWfShape context (.named "s") = true :=
+  isWfShape_of_mem (context := context) (shapes := [Shape.one, .named "s"])
+    (by
+      simp only [isWfShape.isWfShapeList.eq_def, isWfShape, context, lookupInfo]
+      rfl) (by simp)
+
+theorem shapeSizeWithContext_drop_fixture :
+    shapeSizeWithContext (context.drop 1) (.named "s") =
+      shapeSizeWithContext context (.named "s") := by
+  have h : isWfShape (context.drop 1) (.named "s") = true := by
+    simp [context, isWfShape, lookupInfo]
+  exact shapeSizeWithContext_drop 1 context (.named "s") h (by decide)
+
 end Flapjack.Test.PanStructsAfindiParity

@@ -183,6 +183,24 @@ theorem loadShape_getElem (address stride count n : Nat) (value : CrepExp Nat)
             ac_rfl
           simp only [haddr]
 
+/-- Original-domain counterpart of Cake's `var_exp_load_shape`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:215`): every expression
+    produced by `loadShape` has the same free variables as its source. -/
+theorem crepExpVars_of_mem_loadShape [BEq α] [OfNat α 0] [Add α]
+    (address stride : α) (count : Nat) (value n : CrepExp α)
+    (h : n ∈ loadShape address stride count value) :
+    crepExpVars n = crepExpVars value := by
+  induction count generalizing address with
+  | zero => simp [loadShape] at h
+  | succ count ih =>
+      rw [loadShape] at h
+      simp only [List.mem_cons] at h
+      rcases h with rfl | h
+      · by_cases hzero : address == 0
+        · simp [hzero, crepExpVars]
+        · simp [hzero, crepExpVars, crepExpVars.crepExpVarsList]
+      · exact ih (address + stride) h
+
 def crepNestedSeq : List (CrepProg α) → CrepProg α
   | [] => .skip
   | statement :: statements => .seq statement (crepNestedSeq statements)

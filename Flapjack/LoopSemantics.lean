@@ -612,6 +612,57 @@ def evalLoopProgFullWithLongMul [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul
       evalLoopProgFullWithLongMul longMul fuel state body
   | fuel + 1, state, program => evalLoopProgFull fuel state program
 
+/-! Composed width-aware arithmetic boundary.  Cake source programs can place
+    `LLongMul` and `LLongDiv` in the same sequence; this adapter preserves both
+    exact branches while keeping the legacy evaluator and the single-operation
+    adapters available to existing callers. -/
+def evalLoopProgFullWithLongMulDiv [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [PanCmp α] [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
+    [Complement α]
+    (longMul : α → α → Option (α × α))
+    (longDiv : α → α → α → Option (α × α))
+    : Nat → LoopState α → LoopProg α → Option (LoopResult α)
+  | 0, _, _ => none
+  | _fuel + 1, state, .arith
+      (.longMul destinationLeft destinationRight sourceLeft sourceRight) => do
+      let left ← state.locals sourceLeft
+      let right ← state.locals sourceRight
+      let (high, low) ← longMul left right
+      pure (.normal { state with
+        locals := updateLoopLocal
+          (updateLoopLocal state.locals destinationLeft high)
+          destinationRight low })
+  | _fuel + 1, state, .arith
+      (.longDiv destinationLeft destinationRight sourceLeft sourceRight quotient) => do
+      let high ← state.locals sourceLeft
+      let low ← state.locals sourceRight
+      let divisor ← state.locals quotient
+      let (quotientValue, remainderValue) ← longDiv high low divisor
+      pure (.normal { state with
+        locals := updateLoopLocal
+          (updateLoopLocal state.locals destinationRight remainderValue)
+          destinationLeft quotientValue })
+  | fuel + 1, state, .seq first second => do
+      let result ← evalLoopProgFullWithLongMulDiv longMul longDiv fuel state first
+      match result with
+      | .normal state => evalLoopProgFullWithLongMulDiv longMul longDiv fuel state second
+      | result => pure result
+  | fuel + 1, state, .ite operator condition right thenBranch elseBranch _ => do
+      let left ← state.locals condition
+      let right ← match right with
+        | .imm value => some value
+        | .reg name => state.locals name
+      let choose ← evalLoopCondition operator left right
+      if choose then
+        evalLoopProgFullWithLongMulDiv longMul longDiv fuel state thenBranch
+      else
+        evalLoopProgFullWithLongMulDiv longMul longDiv fuel state elseBranch
+  | fuel + 1, state, .mark body =>
+      evalLoopProgFullWithLongMulDiv longMul longDiv fuel state body
+  | fuel + 1, state, program => evalLoopProgFull fuel state program
+
 /-!
 At one unit of fuel, a Loop program classified as not writing `name` leaves
 that local unchanged whenever it produces a result.  This is the local

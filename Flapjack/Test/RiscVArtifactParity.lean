@@ -1179,8 +1179,40 @@ def currheapSubZeroExactParity : Bool :=
       | _ => false
   | none => false
 
+/-- Source of the CurrHeap-left / constant-right fixture:
+    `(@base | 7) #>> 1`.  Cake's `inst_select_exp`
+    (`cakeml/compiler/backend/word_instScript.sml:246-251`) tests
+    `is_Lookup_CurrHeap e1 ∧ op ≠ Sub` before the `e2 = Const w` immediate
+    fold, so the `| 7` keeps `Const temp 7; OpCurrHeap Or temp temp` instead
+    of folding the constant into an `ori`. -/
+def currheapConstLeftSource : String :=
+  "fun 1 main() {\n" ++
+    "  return (@base | 7) #>> 1;\n" ++
+    "}"
+
+/-- Original CakeML `cml_main` bytes for `(@base | 7) #>> 1`:
+    `ori a0,0,7; or a0,a0,s10; srli a0,a0,1; slli a0,a0,3;
+     or a0,a0,s10; ret` (s10 is the CurrHeap base). -/
+def cakeCurrheapConstLeftMainBytes : List (BitVec 8) :=
+  [0x13, 0x65, 0x70, 0x00,
+   0x33, 0x65, 0xA5, 0x01,
+   0x93, 0x5F, 0x15, 0x00,
+   0x13, 0x15, 0xF5, 0x03,
+   0x33, 0x65, 0xF5, 0x01,
+   0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
+
+def currheapConstLeftExactParity : Bool :=
+  match compileRuntimeImage currheapConstLeftSource with
+  | some image =>
+      match emittedSections image with
+      | [(3, 1000, generated), (4, 1004, main)] =>
+          generated == [0x6F, 0x00, 0x40, 0x00].map (BitVec.ofNat 8) &&
+            main == cakeCurrheapConstLeftMainBytes
+      | _ => false
+  | none => false
+
 /-- Source of the whole-artifact `hello.pnk` fixture (GitHub issue #1022 /
-bead `flapjack-8tb`). -/
+    bead `flapjack-8tb`). -/
 def helloSource : String :=
   "// Smoke test: echo input length into the output region and halt.\n" ++
     "fun 1 main() {\n" ++
@@ -1317,6 +1349,7 @@ def sharedMemOffsetCarrierEncoding : Bool :=
 #guard constStoreReuseExactParity
 #guard currheapAddConstExactParity
 #guard currheapSubZeroExactParity
+#guard currheapConstLeftExactParity
 #guard sharedWordStoreOffsetPeephole
 #guard sharedMemOffsetCarrierEncoding
 #guard artifactAccepted
@@ -1439,7 +1472,9 @@ def runChecks : IO Bool := do
       ("CurrHeap add keeps Cake's materialised constant and register add",
         currheapAddConstExactParity),
       ("CurrHeap zero sub keeps Cake's materialised constant and register add",
-        currheapSubZeroExactParity) ]
+        currheapSubZeroExactParity),
+      ("CurrHeap-left constant keeps Cake's materialised constant and register add",
+        currheapConstLeftExactParity) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

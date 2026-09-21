@@ -945,6 +945,12 @@
       "source_reference": "CurrHeap zero-sub witness: `@base - 0` reaches the same materialised-constant register add, so Cake keeps `li a0,0; add a0,a0,s10` instead of eliding the computation (GH #1128, flapjack-qxa).",
       "cake_sha256": "b0c0977bc4e3f55dba8183a6df675d6e527fcf13f0aa49fce55240c25431a9cb",
       "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/currheap_const_left.pnk",
+      "source_reference": "CurrHeap-left/constant-right witness: `(@base | 7) #>> 1`. Cake's inst_select_exp (word_instScript.sml:246-251) tests is_Lookup_CurrHeap e1 before the e2 = Const w fold, so `| 7` keeps `Const temp 7; OpCurrHeap Or temp temp` instead of folding the constant into an ori (discrepancy #2, committed in coordinator 15a2b6d8).",
+      "cake_sha256": "2cf935883087f0cb33f36d43403dadc4b7196d9312a9e56e73ac52f96779d1f4",
+      "tracked_beads": []
     }
   ]
 }

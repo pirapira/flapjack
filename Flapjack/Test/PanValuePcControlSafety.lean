@@ -974,5 +974,12 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @PanValueProgNotBrokeContinued
 #check @evalPanValueCallWithPrimitiveCallsAndFfi_handler_not_broke_continued
 #check @panValueCrepProgramStateControlSafe_call_handler
+/-! The source-level handler-safety predicate is closed under leaves,
+    sequences, and conditionals, and it yields the handler-carrying decCall
+    control-safety instance. -/
+#check @PanValueProgNotBrokeContinued_skip
+#check @PanValueProgNotBrokeContinued_seq
+#check @PanValueProgNotBrokeContinued_ite
+#check @panValueCrepProgramStateControlSafe_decCall
 
 end Flapjack.Test.PanValuePcControlSafety

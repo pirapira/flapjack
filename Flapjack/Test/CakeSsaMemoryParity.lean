@@ -64,9 +64,63 @@ def store8InstGuard : Bool :=
   | .seq (.move 1 []) (.inst (.mem .store8 0 0)) => true
   | _ => false
 
+def loadOffsetGuard : Bool :=
+  match (wordFullSsaCcTrans 0
+      (.inst (.memOffset .load 1 2 7) : WordProg Nat)).2.2 with
+  | .seq (.move 1 []) (.inst (.memOffset .load 5 0 7)) => true
+  | _ => false
+
+def storeOffsetGuard : Bool :=
+  match (wordFullSsaCcTrans 0
+      (.inst (.memOffset .store 1 2 7) : WordProg Nat)).2.2 with
+  | .seq (.move 1 []) (.inst (.memOffset .store 0 0 7)) => true
+  | _ => false
+
+def load32OffsetGuard : Bool :=
+  match (wordFullSsaCcTrans 0
+      (.inst (.memOffset .load32 1 2 7) : WordProg Nat)).2.2 with
+  | .seq (.move 1 []) (.inst (.memOffset .load32 5 0 7)) => true
+  | _ => false
+
+def store32OffsetGuard : Bool :=
+  match (wordFullSsaCcTrans 0
+      (.inst (.memOffset .store32 1 2 7) : WordProg Nat)).2.2 with
+  | .seq (.move 1 []) (.inst (.memOffset .store32 0 0 7)) => true
+  | _ => false
+
+/- Cake's shared-memory rows use the same `ssa_cc_trans_inst` carrier rule:
+   a load freshens its destination, while a store reads both the source value
+   and address through the current SSA map. -/
+def shareLoadGuard : Bool :=
+  match (wordFullSsaCcTrans 0
+      (.shareInst .load 1 (.var 2) : WordProg Nat)).2.2 with
+  | .seq (.move 1 []) (.shareInst .load 5 (.var 0)) => true
+  | _ => false
+
+def shareStoreGuard : Bool :=
+  match (wordFullSsaCcTrans 0
+      (.shareInst .store 1 (.var 2) : WordProg Nat)).2.2 with
+  | .seq (.move 1 []) (.shareInst .store 0 (.var 0)) => true
+  | _ => false
+
+def shareLoad32Guard : Bool :=
+  match (wordFullSsaCcTrans 0
+      (.shareInst .load32 1 (.var 2) : WordProg Nat)).2.2 with
+  | .seq (.move 1 []) (.shareInst .load32 5 (.var 0)) => true
+  | _ => false
+
+def shareStore32Guard : Bool :=
+  match (wordFullSsaCcTrans 0
+      (.shareInst .store32 1 (.var 2) : WordProg Nat)).2.2 with
+  | .seq (.move 1 []) (.shareInst .store32 0 (.var 0)) => true
+  | _ => false
+
 def parityGuard : Bool :=
   getGuard && storeGuard && setGuard && loadInstGuard && storeInstGuard &&
-    load32InstGuard && store32InstGuard && load8InstGuard && store8InstGuard
+    load32InstGuard && store32InstGuard && load8InstGuard && store8InstGuard &&
+    loadOffsetGuard && storeOffsetGuard &&
+    load32OffsetGuard && store32OffsetGuard && shareLoadGuard && shareStoreGuard &&
+    shareLoad32Guard && shareStore32Guard
 
 #guard getGuard
 #guard storeGuard
@@ -77,6 +131,14 @@ def parityGuard : Bool :=
 #guard storeInstGuard
 #guard load32InstGuard
 #guard store32InstGuard
+#guard loadOffsetGuard
+#guard storeOffsetGuard
+#guard load32OffsetGuard
+#guard store32OffsetGuard
+#guard shareLoadGuard
+#guard shareStoreGuard
+#guard shareLoad32Guard
+#guard shareStore32Guard
 #guard parityGuard
 #eval parityGuard
 
@@ -90,7 +152,15 @@ def runChecks : IO Bool := do
       ("ssa_cc_trans Mem Store8 renames Cake address and value", store8InstGuard),
       ("ssa_cc_trans Mem Store renames Cake address and value", storeInstGuard),
       ("ssa_cc_trans Mem Load32 freshens Cake destination", load32InstGuard),
-      ("ssa_cc_trans Mem Store32 renames Cake address and value", store32InstGuard) ]
+      ("ssa_cc_trans Mem Store32 renames Cake address and value", store32InstGuard),
+      ("ssa_cc_trans MemOffset Load keeps Cake offset", loadOffsetGuard),
+      ("ssa_cc_trans MemOffset Store keeps Cake offset", storeOffsetGuard),
+      ("ssa_cc_trans MemOffset Load32 keeps Cake offset", load32OffsetGuard),
+      ("ssa_cc_trans MemOffset Store32 keeps Cake offset", store32OffsetGuard),
+      ("ssa_cc_trans shared Load freshens Cake destination", shareLoadGuard),
+      ("ssa_cc_trans shared Store renames Cake address and value", shareStoreGuard),
+      ("ssa_cc_trans shared Load32 freshens Cake destination", shareLoad32Guard),
+      ("ssa_cc_trans shared Store32 renames Cake address and value", shareStore32Guard) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

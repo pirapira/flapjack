@@ -258,6 +258,16 @@ theorem evalPanValueDeclarations_top_exceptions_wf_fixture
         simp [wfExceptionDecls, wfException])
   exact ⟨structs, hcollect, hwf⟩
 
+example (state' : PanValueProgramState Nat)
+    (heval : evalPanValueDeclarations evalRelState wfExceptionDecls none = some state') :
+    ∃ structs : StructContext,
+      collectPanValueStructs wfExceptionDecls evalRelState.structs = some structs ∧
+        state'.exceptions = panExceptionEntries wfExceptionDecls ++ evalRelState.exceptions ∧
+        isWfShape structs (.one : Shape) = true := by
+  exact evalPanValueDeclarations_exception_state_evidence evalRelState state'
+    wfExceptionDecls none (exception := "E") (shape := .one)
+    (by simp [wfExceptionDecls, wfException]) heval
+
 /-! Regression for Cake's `evaluate_decls_append`
     (`cakeml/pancake/semantics/panPropsScript.sml:1540`): evaluating a
     concatenated declaration list is the sequential composition of evaluating
@@ -476,5 +486,74 @@ example : True := by
   have _h2 := collectPanValueStructs_of_functions ([] : StructContext)
     functionsOnlyDecls (by decide)
   trivial
+
+/-! Cake's `evaluate_decls_only_exn_decls` (`panPropsScript.sml:1436`): an
+    exception-only declaration list leaves every field except the
+    exception-shape table unchanged. -/
+
+def exnOnlyDecls : List (Decl Nat) := [.exnDecl "E" .one, .exnDecl "F" .one]
+
+def exnOnlyGuard : Bool :=
+  match evalPanValueDeclarations evalRelState exnOnlyDecls none with
+  | some state' =>
+      state'.exceptions.length ==
+        (panExceptionEntries exnOnlyDecls ++ evalRelState.exceptions).length
+  | none => false
+
+#eval exnOnlyGuard
+#guard exnOnlyGuard
+
+example : True := by
+  have hall : exnOnlyDecls.all isExnDecl = true := by decide
+  cases heval : evalPanValueDeclarations evalRelState exnOnlyDecls none with
+  | none => trivial
+  | some state' =>
+      have _h := evalPanValueDeclarations_only_exn_decls evalRelState state'
+        exnOnlyDecls none hall heval
+      trivial
+
+/-! Cake's `evaluate_decls_only_funs_and_exn_decls`
+    (`panPropsScript.sml:1561`): a list of functions and exception declarations
+    leaves every other field unchanged. -/
+
+def funsAndExnDecls : List (Decl Nat) :=
+  [.function wfFunction, .exnDecl "E" .one,
+   .function
+     { name := "h", inline := false, exported := false, params := [],
+       body := (.skip : Prog Nat), returnShape := .one },
+   .exnDecl "F" .one]
+
+def funsAndExnGuard : Bool :=
+  match evalPanValueDeclarationsWithStructs ([] : StructContext) evalRelState
+      funsAndExnDecls none with
+  | some state' =>
+      state'.functions.length ==
+          (panFunctionEntries funsAndExnDecls ++ evalRelState.functions).length &&
+        state'.returnShapes.length ==
+          (panReturnShapeEntries funsAndExnDecls ++
+            evalRelState.returnShapes).length &&
+        state'.parameterShapes.length ==
+          (panParameterShapeEntries funsAndExnDecls ++
+            evalRelState.parameterShapes).length &&
+        state'.exceptions.length ==
+          (panExceptionEntries funsAndExnDecls ++ evalRelState.exceptions).length
+  | none => false
+
+#eval funsAndExnGuard
+#guard funsAndExnGuard
+
+example : True := by
+  have hall : funsAndExnDecls.all
+      (fun declaration =>
+        globalDeclIsFunction declaration || isExnDecl declaration) = true := by
+    decide
+  cases heval : evalPanValueDeclarationsWithStructs ([] : StructContext)
+      evalRelState funsAndExnDecls none with
+  | none => trivial
+  | some state' =>
+      have _h := evalPanValueDeclarationsWithStructs_only_funs_and_exn_decls
+        ([] : StructContext) evalRelState state' funsAndExnDecls none rfl hall
+        heval
+      trivial
 
 end Flapjack.Test.PanProgramSimpParity

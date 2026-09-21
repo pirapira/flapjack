@@ -228,6 +228,24 @@ def returningCallCarrierCakeGuard : Bool :=
 
 #guard returningCallCarrierCakeGuard
 
+def containsHandlerCallCakeShape : StackProg Nat → Bool
+  | .call (some (_, freeFrame, returnLabel, entryLabel)) (.label target)
+      (some (_, exceptionLabel, handlerEntryLabel)) =>
+      freeFrame == 0 && returnLabel == 20 && entryLabel == 21 &&
+        target == 7 && exceptionLabel == 40 && handlerEntryLabel == 31
+  | .seq first second =>
+      containsHandlerCallCakeShape first || containsHandlerCallCakeShape second
+  | _ => false
+
+/- Cake's handler-call carrier keeps the target and all three label carriers in
+   the final call node after the handler setup and argument prefix. -/
+def handlerCallCarrierCakeGuard : Bool :=
+  containsHandlerCallCakeShape
+    (wordToStackCallWithHandlerInSection (α := Nat) false 7 0 6 3
+      (.skip : StackProg Nat) (.raise 4) 20 21 30 31 40)
+
+#guard handlerCallCarrierCakeGuard
+
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
     [ ("stack_arg_count and stack_free match the call oracle", callArgCountExact),
@@ -255,7 +273,9 @@ def runChecks : IO Bool := do
       ("direct call destination preserves Cake's label carrier",
         directCallDestinationCakeGuard),
       ("returning direct call preserves Cake's carrier shape",
-        returningCallCarrierCakeGuard) ]
+        returningCallCarrierCakeGuard),
+      ("handler call preserves Cake's carrier metadata",
+        handlerCallCarrierCakeGuard) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

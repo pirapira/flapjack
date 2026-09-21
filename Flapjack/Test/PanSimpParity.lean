@@ -313,6 +313,23 @@ theorem clocked_pan_simp_source_common_fuel_matches_cake :
   · decide
   · decide
 
+theorem pan_simp_skip_seq_fuel_bound_matches_cake :
+    panSimpSkipSeqFuel
+        (seqAssoc (.skip : Prog Nat)
+          (.seq .skip (.seq .skip .skip) : Prog Nat)) ≤
+      panSimpSkipSeqFuel (.skip : Prog Nat) +
+        panSimpSkipSeqFuel (.seq .skip (.seq .skip .skip) : Prog Nat) := by
+  apply panSimpSkipSeqFuel_seqAssoc_le
+  · simp [panSimpSkipSeqProg]
+  · simp [panSimpSkipSeqProg]
+
+theorem pan_simp_skip_seq_shape_matches_cake :
+    panSimpSkipSeqProg
+      (seqAssoc (.skip : Prog Nat) (.seq .skip (.seq .skip .skip))) := by
+  apply panSimpSkipSeqProg_seqAssoc
+  · simp [panSimpSkipSeqProg]
+  · simp [panSimpSkipSeqProg]
+
 /-! The expected values are the direct HOL evaluation of
     `pan_simp$SmartSeq` from `pan_simpScript.sml:13-16`. -/
 theorem smart_seq_skip_skip :
@@ -569,6 +586,7 @@ def runChecks : IO Bool := do
   IO.println "PASS pan_simp clocked evaluate_while_body_same Cake equation"
   IO.println "PASS pan_simp clocked evaluate_seq_second_congr Cake equation"
   IO.println "PASS pan_simp clocked evaluate_seq_normal_components Cake equation"
+  IO.println "PASS pan_simp Skip/Seq fuel-adequacy fragment Cake bound"
   IO.println "PASS pan_simp clocked ret_to_tail common-fuel Cake equation"
   IO.println "PASS pan_simp clocked pan_simp common-fuel Cake equation"
   pure parityGuard

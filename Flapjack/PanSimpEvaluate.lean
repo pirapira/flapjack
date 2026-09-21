@@ -20,6 +20,94 @@ source.  These are proof-only: no compiler code changes.
 
 namespace Flapjack
 
+/-! A small structural fragment used by the fuel-adequacy proof.  It contains
+    only `Skip` and sequencing, so its additive structural bound is independent
+    of the source clock and of runtime calls or loops. -/
+def panSimpSkipSeqProg : Prog α → Prop
+  | .skip => True
+  | .seq first second => panSimpSkipSeqProg first ∧ panSimpSkipSeqProg second
+  | _ => False
+
+def panSimpSkipSeqFuel : Prog α → Nat
+  | .skip => 1
+  | .seq first second =>
+      1 + panSimpSkipSeqFuel first + panSimpSkipSeqFuel second
+  | _ => 0
+
+theorem panSimpSkipSeqProg_seqAssoc (pre : Prog α) (program : Prog α)
+    (hpre : panSimpSkipSeqProg pre)
+    (hprogram : panSimpSkipSeqProg program) :
+    panSimpSkipSeqProg (seqAssoc pre program) := by
+  let rec go (pre : Prog α) : (program : Prog α) →
+      panSimpSkipSeqProg pre → panSimpSkipSeqProg program →
+      panSimpSkipSeqProg (seqAssoc pre program)
+    | .skip, hpre, _ => by simpa [seqAssoc] using hpre
+    | .seq first second, hpre, hprogram => by
+        simp only [seqAssoc]
+        exact go (seqAssoc pre first) second
+          (go pre first hpre hprogram.1) hprogram.2
+    | .dec _ _ _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .assign _ _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .primitive _ _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .store _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .store32 _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .storeByte _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .ite _ _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .while _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .break, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .continue, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .call _ _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .decCall _ _ _ _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .extCall _ _ _ _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .raise _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .return _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .shMemLoad _ _ _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .shMemStore _ _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .tick, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .annot _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    termination_by program => sizeOf program
+    decreasing_by all_goals decreasing_trivial
+  exact go pre program hpre hprogram
+
+theorem panSimpSkipSeqFuel_seqAssoc_le (pre : Prog α) (program : Prog α)
+    (hpre : panSimpSkipSeqProg pre)
+    (hprogram : panSimpSkipSeqProg program) :
+    panSimpSkipSeqFuel (seqAssoc pre program) ≤
+      panSimpSkipSeqFuel pre + panSimpSkipSeqFuel program := by
+  let rec go (pre : Prog α) : (program : Prog α) →
+      panSimpSkipSeqProg pre → panSimpSkipSeqProg program →
+      panSimpSkipSeqFuel (seqAssoc pre program) ≤
+        panSimpSkipSeqFuel pre + panSimpSkipSeqFuel program
+    | .skip, hpre, _ => by simp [seqAssoc, panSimpSkipSeqFuel]
+    | .seq first second, hpre, hprogram => by
+        simp only [seqAssoc, panSimpSkipSeqFuel]
+        have hfirst := go pre first hpre hprogram.1
+        have hsecond := go (seqAssoc pre first) second
+          (panSimpSkipSeqProg_seqAssoc pre first hpre hprogram.1) hprogram.2
+        omega
+    | .dec _ _ _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .assign _ _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .primitive _ _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .store _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .store32 _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .storeByte _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .ite _ _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .while _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .break, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .continue, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .call _ _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .decCall _ _ _ _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .extCall _ _ _ _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .raise _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .return _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .shMemLoad _ _ _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .shMemStore _ _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .tick, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    | .annot _ _, _, hprogram => by simp [panSimpSkipSeqProg] at hprogram
+    termination_by program => sizeOf program
+    decreasing_by all_goals decreasing_trivial
+  exact go pre program hpre hprogram
+
 theorem evalPanValueFfiClockLeaf_skip
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

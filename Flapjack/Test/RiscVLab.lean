@@ -481,6 +481,20 @@ example :
       some [.loadHalfOffset 4 5 (BitVec.ofNat 64 7)] := by
   decide
 
+/- The positive `Addr` carrier uses the same Cake width table for stores;
+   pin the byte and halfword store rows separately from the load rows above. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMem .store8 4 5 7) [] 0]⟩ =
+      some [.storeByteOffset 4 5 (BitVec.ofNat 64 7)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMem .store16 4 5 7) [] 0]⟩ =
+      some [.storeHalfOffset 4 5 (BitVec.ofNat 64 7)] := by
+  decide
+
 example :
     compileLabSection (width := 64) { services := [] }
       ⟨4, [.asm (.stackMemSub .store16 4 5 7) [] 0]⟩ =
@@ -499,6 +513,20 @@ example :
     compileLabSection (width := 64) { services := [] }
       ⟨4, [.asm (.stackMemSub .load16 4 5 9) [] 0]⟩ =
       some [.loadHalfOffset 4 5 (0 - BitVec.ofNat 64 9)] := by
+  decide
+
+/- The subtracting `Addr` carrier preserves the signed displacement for
+   byte and unsigned-word loads as well. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMemSub .load8 4 5 9) [] 0]⟩ =
+      some [.loadByteOffset 4 5 (0 - BitVec.ofNat 64 9)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMemSub .load32 4 5 9) [] 0]⟩ =
+      some [.load32Offset 4 5 (0 - BitVec.ofNat 64 9)] := by
   decide
 
 /- A positive signed-12 boundary remains an offset instruction; materializing

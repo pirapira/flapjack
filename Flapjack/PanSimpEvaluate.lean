@@ -1123,4 +1123,108 @@ theorem evalPanValueFfiClockProg_seqAssoc_eq_of_seqSkipFragment
         memory ffi clock (.seq pre program) ma c mh
         (.seq pre program hpre hprogram) hrightFuel]
 
+
+/-! ## Bridging the additive foundation to the evaluator corollary
+
+`panSimpSkipSeqProg`/`panSimpSkipSeqFuel` (the additive structural budget) and
+`PanSimpSeqSkipFragment`/`panSimpSeqSkipFuel` (the max-based budget) describe the
+same `Skip`/`Seq` fragment.  The bridges below let the additive foundation feed
+the evaluator-level `seqAssoc` corollary. -/
+
+theorem panSimpSeqSkipFragment_of_skipSeqProg {program : Prog α}
+    (h : panSimpSkipSeqProg program) : PanSimpSeqSkipFragment program := by
+  let rec go : (program : Prog α) → panSimpSkipSeqProg program →
+      PanSimpSeqSkipFragment program
+    | .skip, _ => .skip
+    | .seq first second, h => .seq first second (go first h.1) (go second h.2)
+    | .dec _ _ _ _, h => by simp [panSimpSkipSeqProg] at h
+    | .assign _ _ _, h => by simp [panSimpSkipSeqProg] at h
+    | .primitive _ _ _, h => by simp [panSimpSkipSeqProg] at h
+    | .store _ _, h => by simp [panSimpSkipSeqProg] at h
+    | .store32 _ _, h => by simp [panSimpSkipSeqProg] at h
+    | .storeByte _ _, h => by simp [panSimpSkipSeqProg] at h
+    | .ite _ _ _, h => by simp [panSimpSkipSeqProg] at h
+    | .while _ _, h => by simp [panSimpSkipSeqProg] at h
+    | .break, h => by simp [panSimpSkipSeqProg] at h
+    | .continue, h => by simp [panSimpSkipSeqProg] at h
+    | .call _ _ _, h => by simp [panSimpSkipSeqProg] at h
+    | .decCall _ _ _ _ _, h => by simp [panSimpSkipSeqProg] at h
+    | .extCall _ _ _ _ _, h => by simp [panSimpSkipSeqProg] at h
+    | .raise _ _, h => by simp [panSimpSkipSeqProg] at h
+    | .return _, h => by simp [panSimpSkipSeqProg] at h
+    | .shMemLoad _ _ _ _, h => by simp [panSimpSkipSeqProg] at h
+    | .shMemStore _ _ _, h => by simp [panSimpSkipSeqProg] at h
+    | .tick, h => by simp [panSimpSkipSeqProg] at h
+    | .annot _ _, h => by simp [panSimpSkipSeqProg] at h
+    termination_by program => sizeOf program
+    decreasing_by all_goals decreasing_trivial
+  exact go program h
+
+theorem panSimpSkipSeqProg_of_fragment {program : Prog α}
+    (h : PanSimpSeqSkipFragment program) : panSimpSkipSeqProg program := by
+  induction h with
+  | skip => trivial
+  | seq first second hfirst hsecond ihfirst ihsecond => exact ⟨ihfirst, ihsecond⟩
+
+theorem panSimpSeqSkipFuel_le_skipSeqFuel {program : Prog α}
+    (h : PanSimpSeqSkipFragment program) :
+    panSimpSeqSkipFuel program ≤ panSimpSkipSeqFuel program := by
+  induction h with
+  | skip => simp [panSimpSeqSkipFuel, panSimpSkipSeqFuel]
+  | seq first second hfirst hsecond ihfirst ihsecond =>
+      simp only [panSimpSeqSkipFuel, panSimpSkipSeqFuel]
+      have hmax1 := Nat.le_max_left (panSimpSeqSkipFuel first)
+        (panSimpSeqSkipFuel second)
+      have hmax2 := Nat.le_max_right (panSimpSeqSkipFuel first)
+        (panSimpSeqSkipFuel second)
+      omega
+
+/-- Evaluator-level Cake `evaluate_seq_assoc` corollary stated directly on the
+    additive foundation: the common budget
+    `panSimpSkipSeqFuel pre + panSimpSkipSeqFuel program + 1` dominates both
+    shapes' structural budgets, so the reassociated and source programs agree. -/
+theorem evalPanValueFfiClockProg_seqAssoc_eq_of_skipSeqProg
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (pre program : Prog α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (hpre : panSimpSkipSeqProg pre)
+    (hprogram : panSimpSkipSeqProg program) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord
+        (panSimpSkipSeqFuel pre + panSimpSkipSeqFuel program + 1)
+        locals globals memory ffi clock (seqAssoc pre program) ma c mh =
+      evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord
+        (panSimpSkipSeqFuel pre + panSimpSkipSeqFuel program + 1)
+        locals globals memory ffi clock (.seq pre program) ma c mh := by
+  apply evalPanValueFfiClockProg_seqAssoc_eq_of_seqSkipFragment
+    context primitive handler structs functions baseAddress topAddress bytesInWord
+    pre program (panSimpSkipSeqFuel pre + panSimpSkipSeqFuel program + 1)
+    locals globals memory ffi clock ma c mh
+    (panSimpSeqSkipFragment_of_skipSeqProg hpre)
+    (panSimpSeqSkipFragment_of_skipSeqProg hprogram)
+  · have hbridge := panSimpSeqSkipFuel_le_skipSeqFuel
+      (PanSimpSeqSkipFragment_seqAssoc
+        (panSimpSeqSkipFragment_of_skipSeqProg hprogram) pre
+        (panSimpSeqSkipFragment_of_skipSeqProg hpre))
+    have hadd := panSimpSkipSeqFuel_seqAssoc_le pre program hpre hprogram
+    omega
+  · simp only [panSimpSeqSkipFuel]
+    have hb1 := panSimpSeqSkipFuel_le_skipSeqFuel
+      (panSimpSeqSkipFragment_of_skipSeqProg hpre)
+    have hb2 := panSimpSeqSkipFuel_le_skipSeqFuel
+      (panSimpSeqSkipFragment_of_skipSeqProg hprogram)
+    omega
+
 end Flapjack

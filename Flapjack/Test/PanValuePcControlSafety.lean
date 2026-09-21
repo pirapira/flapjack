@@ -1,5 +1,6 @@
 import Flapjack.PanToCrepCorrectnessBoundary
 import Flapjack.PanToCrepCorrectnessBridge
+import Flapjack.PanToCrepCallHandlerControlSafety
 import Flapjack.PanValueFfiClockCorrectness
 import Flapjack.CrepeNestedDecsStability
 
@@ -965,5 +966,13 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
     state/evaluator evidence supplies simulation, while the call safety proof
     supplies the final label-zero obligation. -/
 #check @panValueCrepProgramStateCorrect_and_controlSafe_call_none_of_relation
+
+/-! A call whose metadata carries an exception handler needs explicit handler
+    safety: a handler program that never returns a loop-control result.  The
+    source-side never-broke-continued predicate and the resulting control-safety
+    theorem make that premise explicit. -/
+#check @PanValueProgNotBrokeContinued
+#check @evalPanValueCallWithPrimitiveCallsAndFfi_handler_not_broke_continued
+#check @panValueCrepProgramStateControlSafe_call_handler
 
 end Flapjack.Test.PanValuePcControlSafety

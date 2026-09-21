@@ -5947,6 +5947,30 @@ theorem PanValueFfiClockNormalAdequateProgFromFloor_seq_adequate
       finalClock hfirstEval hsecondEval,
     Nat.zero_le finalClock⟩
 
+/-- A program adequate from `lo` with floor `lo` is adequate in the plain
+    lower-bounded sense: the floor information can be discarded. -/
+theorem PanValueFfiClockNormalAdequateProgFrom_of_fromFloor
+    (lo : Nat)
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (ma : Option (PanValueMemoryAccess α))
+    (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (program : Prog α)
+    (h : PanValueFfiClockNormalAdequateProgFromFloor lo lo context primitive handler
+      structs functions baseAddress topAddress bytesInWord callBudget ma c mh program) :
+    PanValueFfiClockNormalAdequateProgFrom lo context primitive handler structs functions
+      baseAddress topAddress bytesInWord callBudget ma c mh program := by
+  intro clock hclock locals globals memory ffi
+  obtain ⟨finalLocals, finalGlobals, finalMemory, finalFfi, finalClock, heval, _⟩ :=
+    h clock hclock locals globals memory ffi
+  exact ⟨finalLocals, finalGlobals, finalMemory, finalFfi, finalClock, heval⟩
+
 /-- A clock-free leaf preserves its input clock, so it is adequate from `lo`
     down to the floor `lo`. -/
 theorem PanValueFfiClockNormalAdequateProgFromFloor_leaf

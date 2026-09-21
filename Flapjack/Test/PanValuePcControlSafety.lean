@@ -1220,6 +1220,7 @@ example :
 #check @panValuePcResultRel_of_withContextCode
 #check @panValuePcCompileCorrect_of_withContextCode
 #check @panValuePcCompileCorrect_of_context_code_obligations
+#check @panValuePcCompileCorrect_compact_with_expression_state_evidence_canonical_globals
 
 /-! Concrete kernel-checked instantiation of the fragment-restricted
     composition: the `StatefulCompactProg` program `return 7; tick` yields the

@@ -134,5 +134,22 @@ theorem panValueFlatten_eq_nil_iff_shapeSize_eq_zero (value : PanValue α)
   · intro hzero
     rw [List.eq_nil_iff_length_eq_zero, hlen, hzero]
 
+/-- Counterpart of Cake's `is_wf_shape_nil_length_flatten`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:2469`): a list is a valid
+    flattening of a well-formed value when it is empty at shape size zero and
+    the flattening at positive shape size, hence its length is the shape size. -/
+theorem shapeSize_eq_zero_or_flatten_length (value : PanValue α) (values : List α)
+    (hwf : isWfShape ([] : StructContext) (panValueShape ([] : StructContext) value) = true)
+    (hnil : Shape.shapeSize (panValueShape ([] : StructContext) value) = 0 → values = [])
+    (hpos : 0 < Shape.shapeSize (panValueShape ([] : StructContext) value) →
+      values = panValueFlatten value) :
+    values.length = Shape.shapeSize (panValueShape ([] : StructContext) value) := by
+  by_cases hzero : Shape.shapeSize (panValueShape ([] : StructContext) value) = 0
+  · rw [hnil hzero, hzero]
+    rfl
+  · have hpositive : 0 < Shape.shapeSize (panValueShape ([] : StructContext) value) :=
+      Nat.pos_of_ne_zero hzero
+    rw [hpos hpositive, panValueFlatten_length_eq_shapeSize value hwf]
+
 end Flapjack
 

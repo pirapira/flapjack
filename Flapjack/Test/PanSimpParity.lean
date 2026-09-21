@@ -2533,6 +2533,7 @@ example : PanValueFfiClockNormalAdequateProgFromFloor 0 0 evaluatorContext
 #check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_seq_adequate
 #check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_of_from
 #check @Flapjack.PanValueFfiClockNormalAdequateProgFrom_of_fromFloor
+#check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_while_zero
 
 /-! The clock-free leaf preserves its floor, giving the floor-composition
     theorem a base case; declarations and conditionals then preserve it. -/

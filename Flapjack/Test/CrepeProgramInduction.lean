@@ -15,6 +15,7 @@ open Flapjack
 relation-premised state-correctness constructor used by the Pancake call
 case. -/
 #check @StatefulWordProg.callWord
+#check @StatefulWordProg.decWord
 #check @panValueCrepProgramStateCorrect_statefulWord
 
 def compactExample : Prog Nat :=

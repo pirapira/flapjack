@@ -1096,6 +1096,447 @@ def evalPanValueExps [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
   evalPanValueExp.evalPanValueExps structs locals globals memory
     baseAddress topAddress bytesInWord expressions memoryAccess
 
+theorem panValueIsWf_word (structs : StructContext) (value : α) :
+    panValueIsWf structs (.word value) = true := by
+  simp [panValueIsWf]
+
+theorem panValueIsWfValues_getElem? {context : StructContext} {values : List (PanValue α)}
+    {index : Nat} {value : PanValue α}
+    (hwf : panValueIsWfValues context values = true)
+    (hget : values[index]? = some value) :
+    panValueIsWf context value = true := by
+  induction values generalizing index with
+  | nil => simp at hget
+  | cons head tail ih =>
+      cases index with
+      | zero =>
+          simp only [List.getElem?_cons_zero, Option.some.injEq] at hget
+          subst hget
+          simp only [panValueIsWfValues, Bool.and_eq_true] at hwf
+          exact hwf.1
+      | succ index =>
+          simp only [List.getElem?_cons_succ] at hget
+          simp only [panValueIsWfValues, Bool.and_eq_true] at hwf
+          exact ih hwf.2 hget
+
+theorem panValueIsWfFields_lookupPanValueField {context : StructContext}
+    {fields : List (FieldName × PanValue α)} {name : FieldName} {value : PanValue α}
+    (hwf : panValueIsWfFields context fields = true)
+    (hlookup : lookupPanValueField name fields = some value) :
+    panValueIsWf context value = true := by
+  induction fields with
+  | nil => simp [lookupPanValueField] at hlookup
+  | cons field fields ih =>
+      obtain ⟨candidate, fieldValue⟩ := field
+      simp only [lookupPanValueField] at hlookup
+      by_cases hname : (candidate == name) = true
+      · rw [if_pos hname] at hlookup
+        have heq : fieldValue = value := Option.some.inj hlookup
+        subst heq
+        simp only [panValueIsWfFields, Bool.and_eq_true] at hwf
+        exact hwf.1
+      · rw [if_neg hname] at hlookup
+        simp only [panValueIsWfFields, Bool.and_eq_true] at hwf
+        exact ih hwf.2 hlookup
+
+theorem evalPanValueExp_isWfShape [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α))
+    (baseAddress topAddress bytesInWord : α)
+    (hlocals : ∀ name value, locals name = some value → panValueIsWf structs value = true)
+    (hglobals : ∀ name value, globals name = some value → panValueIsWf structs value = true)
+    (expression : Exp α) (memoryAccess : Option (PanValueMemoryAccess α))
+    (value : PanValue α)
+    (heval : evalPanValueExp structs locals globals memory baseAddress topAddress
+      bytesInWord expression memoryAccess = some value) :
+    panValueIsWf structs value = true := by
+  have hmain : ∀ (expression : Exp α) (memoryAccess : Option (PanValueMemoryAccess α)),
+      (∀ value : PanValue α,
+        evalPanValueExp structs locals globals memory baseAddress topAddress
+          bytesInWord expression memoryAccess = some value →
+          panValueIsWf structs value = true) := by
+    apply evalPanValueExp.induct
+      (motive1 := fun expressions memoryAccess =>
+        ∀ values : List (PanValue α),
+          evalPanValueExps structs locals globals memory baseAddress topAddress
+            bytesInWord expressions memoryAccess = some values →
+            panValueIsWfValues structs values = true)
+      (motive2 := fun expression memoryAccess =>
+        ∀ value : PanValue α,
+          evalPanValueExp structs locals globals memory baseAddress topAddress
+            bytesInWord expression memoryAccess = some value →
+            panValueIsWf structs value = true)
+      (motive3 := fun fields memoryAccess =>
+        ∀ values : List (FieldName × PanValue α),
+          evalPanValueExp.evalPanValueFields structs locals globals memory
+            baseAddress topAddress bytesInWord fields memoryAccess = some values →
+            panValueIsWfFields structs values = true)
+    · intro memoryAccess values h
+      simp only [evalPanValueExps, evalPanValueExp.evalPanValueExps,
+        Option.some.injEq] at h
+      subst h
+      simp [panValueIsWfValues]
+    · intro expression expressions memoryAccess ihHead ihTail values h
+      simp only [evalPanValueExps, evalPanValueExp.evalPanValueExps] at h
+      cases hvalue : evalPanValueExp structs locals globals memory baseAddress
+          topAddress bytesInWord expression memoryAccess with
+      | none => simp [hvalue] at h
+      | some head =>
+          cases hvalues : evalPanValueExp.evalPanValueExps structs locals
+              globals memory baseAddress topAddress bytesInWord expressions
+              memoryAccess with
+          | none => simp [hvalue, hvalues] at h
+          | some tail =>
+              simp [hvalue, hvalues] at h
+              subst h
+              simp only [panValueIsWfValues, Bool.and_eq_true]
+              exact ⟨ihHead head hvalue, ihTail tail hvalues⟩
+    · intro memoryAccess payload value h
+      simp only [evalPanValueExp, Option.some.injEq] at h
+      subst h
+      exact panValueIsWf_word structs payload
+    · intro memoryAccess name value h
+      simp only [evalPanValueExp] at h
+      exact hlocals name value h
+    · intro memoryAccess name value h
+      simp only [evalPanValueExp] at h
+      exact hglobals name value h
+    · intro fields memoryAccess ih values h
+      cases hfields : evalPanValueExp.evalPanValueExps structs locals globals
+          memory baseAddress topAddress bytesInWord fields memoryAccess with
+      | none => simp [evalPanValueExp, hfields] at h
+      | some fieldValues =>
+          simp [evalPanValueExp, hfields] at h
+          subst h
+          simpa [panValueIsWf] using ih fieldValues hfields
+    · intro index expression memoryAccess ih value h
+      cases hexpr : evalPanValueExp structs locals globals memory baseAddress
+          topAddress bytesInWord expression memoryAccess with
+      | none => simp [evalPanValueExp, hexpr] at h
+      | some inner =>
+          cases inner with
+          | word w => simp [evalPanValueExp, hexpr] at h
+          | rStruct innerFields =>
+              cases hget : innerFields[index]? with
+              | none => simp [evalPanValueExp, hexpr, hget] at h
+              | some fieldValue =>
+                  simp [evalPanValueExp, hexpr, hget] at h
+                  subst h
+                  exact panValueIsWfValues_getElem?
+                    (by simpa [panValueIsWf] using ih (.rStruct innerFields) hexpr) hget
+          | nStruct nm fs => simp [evalPanValueExp, hexpr] at h
+    · intro name fields memoryAccess ih values h
+      cases hinfo : lookupInfo name structs with
+      | none => simp [evalPanValueExp, hinfo] at h
+      | some info =>
+          cases hfields : evalPanValueExp.evalPanValueFields structs locals
+              globals memory baseAddress topAddress bytesInWord fields
+              memoryAccess with
+          | none => simp [evalPanValueExp, hinfo, hfields] at h
+          | some fieldValues =>
+              by_cases hshapes :
+                  panValueFieldsHaveShapes structs info.fields fieldValues = true
+              · simp [evalPanValueExp, hinfo, hfields, hshapes] at h
+                subst h
+                simp only [panValueIsWf, Bool.and_eq_true]
+                refine ⟨?_, ih fieldValues hfields⟩
+                rw [hinfo]
+                rfl
+              · simp [evalPanValueExp, hinfo, hfields, hshapes] at h
+    · intro name expression memoryAccess ih value h
+      cases hexpr : evalPanValueExp structs locals globals memory baseAddress
+          topAddress bytesInWord expression memoryAccess with
+      | none => simp [evalPanValueExp, hexpr] at h
+      | some inner =>
+          cases inner with
+          | word w => simp [evalPanValueExp, hexpr] at h
+          | rStruct fs => simp [evalPanValueExp, hexpr] at h
+          | nStruct structName fields =>
+              by_cases hsome : (lookupInfo structName structs).isSome = true
+              · cases hlookup : lookupPanValueField name fields with
+                | none => simp [evalPanValueExp, hexpr, hsome, hlookup] at h
+                | some fieldValue =>
+                    simp [evalPanValueExp, hexpr, hsome, hlookup] at h
+                    subst h
+                    have hwfInner : panValueIsWf structs (.nStruct structName fields) = true :=
+                      ih (.nStruct structName fields) hexpr
+                    simp only [panValueIsWf, Bool.and_eq_true] at hwfInner
+                    exact panValueIsWfFields_lookupPanValueField hwfInner.2 hlookup
+              · simp [evalPanValueExp, hexpr, hsome] at h
+    · intro shape address memoryAccess ih value h
+      cases haddr : evalPanValueExp structs locals globals memory baseAddress
+          topAddress bytesInWord address memoryAccess with
+      | none => simp [evalPanValueExp, haddr] at h
+      | some addrValue =>
+          cases addrValue with
+          | word addr =>
+              simp [evalPanValueExp, haddr] at h
+              exact panValueFlatLoad_wf structs memory bytesInWord addr shape
+                memoryAccess value h
+          | rStruct fs => simp [evalPanValueExp, haddr] at h
+          | nStruct nm fs => simp [evalPanValueExp, haddr] at h
+    · intro address memoryAccess ih value h
+      cases memoryAccess with
+      | none =>
+          cases haddr : evalPanValueExp structs locals globals memory baseAddress
+              topAddress bytesInWord address none with
+          | none => simp [evalPanValueExp, haddr] at h
+          | some addrValue =>
+              cases addrValue with
+              | word addr =>
+                  cases hread : memory addr with
+                  | none => simp [evalPanValueExp, haddr, hread] at h
+                  | some memValue =>
+                      cases memValue with
+                      | word w =>
+                          simp [evalPanValueExp, haddr, hread] at h
+                          subst h
+                          exact panValueIsWf_word structs w
+                      | rStruct fs => simp [evalPanValueExp, haddr, hread] at h
+                      | nStruct nm fs => simp [evalPanValueExp, haddr, hread] at h
+              | rStruct fs => simp [evalPanValueExp, haddr] at h
+              | nStruct nm fs => simp [evalPanValueExp, haddr] at h
+      | some access =>
+          cases haddr : evalPanValueExp structs locals globals memory baseAddress
+              topAddress bytesInWord address (some access) with
+          | none => simp [evalPanValueExp, haddr] at h
+          | some addrValue =>
+              cases addrValue with
+              | word addr =>
+                  cases hread : access.read32 access.domain memory bytesInWord addr with
+                  | none => simp [evalPanValueExp, haddr, hread] at h
+                  | some w =>
+                      simp [evalPanValueExp, haddr, hread] at h
+                      subst h
+                      exact panValueIsWf_word structs w
+              | rStruct fs => simp [evalPanValueExp, haddr] at h
+              | nStruct nm fs => simp [evalPanValueExp, haddr] at h
+    · intro address memoryAccess ih value h
+      cases memoryAccess with
+      | none =>
+          cases haddr : evalPanValueExp structs locals globals memory baseAddress
+              topAddress bytesInWord address none with
+          | none => simp [evalPanValueExp, haddr] at h
+          | some addrValue =>
+              cases addrValue with
+              | word addr =>
+                  cases hread : memory addr with
+                  | none => simp [evalPanValueExp, haddr, hread] at h
+                  | some memValue =>
+                      cases memValue with
+                      | word w =>
+                          simp [evalPanValueExp, haddr, hread] at h
+                          subst h
+                          exact panValueIsWf_word structs w
+                      | rStruct fs => simp [evalPanValueExp, haddr, hread] at h
+                      | nStruct nm fs => simp [evalPanValueExp, haddr, hread] at h
+              | rStruct fs => simp [evalPanValueExp, haddr] at h
+              | nStruct nm fs => simp [evalPanValueExp, haddr] at h
+      | some access =>
+          cases haddr : evalPanValueExp structs locals globals memory baseAddress
+              topAddress bytesInWord address (some access) with
+          | none => simp [evalPanValueExp, haddr] at h
+          | some addrValue =>
+              cases addrValue with
+              | word addr =>
+                  cases hread : access.readByte access.domain memory bytesInWord addr with
+                  | none => simp [evalPanValueExp, haddr, hread] at h
+                  | some w =>
+                      simp [evalPanValueExp, haddr, hread] at h
+                      subst h
+                      exact panValueIsWf_word structs w
+              | rStruct fs => simp [evalPanValueExp, haddr] at h
+              | nStruct nm fs => simp [evalPanValueExp, haddr] at h
+    · intro operator arguments memoryAccess ih value h
+      cases memoryAccess with
+      | none =>
+          cases hargs : evalPanValueExp.evalPanValueExps structs locals globals
+              memory baseAddress topAddress bytesInWord arguments none with
+          | none => simp [evalPanValueExp, hargs] at h
+          | some argValues =>
+              simp [evalPanValueExp, hargs] at h
+              rw [Option.bind_eq_some_iff] at h
+              obtain ⟨nums, _hmap, hnums⟩ := h
+              cases nums with
+              | nil => simp at hnums
+              | cons a rest =>
+                  cases rest with
+                  | nil => simp at hnums
+                  | cons b rest2 =>
+                      cases rest2 with
+                      | nil =>
+                          simp at hnums
+                          subst hnums
+                          exact panValueIsWf_word structs _
+                      | cons c rest3 => simp at hnums
+      | some access =>
+          cases hargs : evalPanValueExp.evalPanValueExps structs locals globals
+              memory baseAddress topAddress bytesInWord arguments (some access) with
+          | none => simp [evalPanValueExp, hargs] at h
+          | some argValues =>
+              simp [evalPanValueExp, hargs] at h
+              rw [Option.bind_eq_some_iff] at h
+              obtain ⟨nums, _hmap, hnums⟩ := h
+              cases hword : access.wordOp operator nums with
+              | none => simp [hword] at hnums
+              | some w =>
+                  simp [hword] at hnums
+                  subst hnums
+                  exact panValueIsWf_word structs w
+    · intro operator arguments memoryAccess ih value h
+      cases hargs : evalPanValueExp.evalPanValueExps structs locals globals
+          memory baseAddress topAddress bytesInWord arguments memoryAccess with
+      | none => simp [evalPanValueExp, hargs] at h
+      | some argValues =>
+          cases argValues with
+          | nil => simp [evalPanValueExp, hargs] at h
+          | cons first rest =>
+              cases rest with
+              | nil => simp [evalPanValueExp, hargs] at h
+              | cons second rest2 =>
+                  cases rest2 with
+                  | cons third rest3 => simp [evalPanValueExp, hargs] at h
+                  | nil =>
+                      cases first with
+                      | word left =>
+                          cases second with
+                          | word right =>
+                              cases hpan : evalPanOp operator [left, right] with
+                              | none => simp [evalPanValueExp, hargs, hpan] at h
+                              | some w =>
+                                  simp [evalPanValueExp, hargs, hpan] at h
+                                  subst h
+                                  exact panValueIsWf_word structs w
+                          | rStruct fs => simp [evalPanValueExp, hargs] at h
+                          | nStruct nm fs => simp [evalPanValueExp, hargs] at h
+                      | rStruct fs => simp [evalPanValueExp, hargs] at h
+                      | nStruct nm fs => simp [evalPanValueExp, hargs] at h
+    · intro operator left right memoryAccess ihLeft ihRight value h
+      cases memoryAccess with
+      | none =>
+          cases hleft : evalPanValueExp structs locals globals memory baseAddress
+              topAddress bytesInWord left none with
+          | none => simp [evalPanValueExp, hleft] at h
+          | some leftValue =>
+              cases hright : evalPanValueExp structs locals globals memory baseAddress
+                  topAddress bytesInWord right none with
+              | none => simp [evalPanValueExp, hleft, hright] at h
+              | some rightValue =>
+                  cases leftValue with
+                  | word l =>
+                      cases rightValue with
+                      | word r =>
+                          simp [evalPanValueExp, hleft, hright] at h
+                          subst h
+                          exact panValueIsWf_word structs _
+                      | rStruct fs => simp [evalPanValueExp, hleft, hright] at h
+                      | nStruct nm fs => simp [evalPanValueExp, hleft, hright] at h
+                  | rStruct fs => simp [evalPanValueExp, hleft, hright] at h
+                  | nStruct nm fs => simp [evalPanValueExp, hleft, hright] at h
+      | some access =>
+          cases hleft : evalPanValueExp structs locals globals memory baseAddress
+              topAddress bytesInWord left (some access) with
+          | none => simp [evalPanValueExp, hleft] at h
+          | some leftValue =>
+              cases hright : evalPanValueExp structs locals globals memory baseAddress
+                  topAddress bytesInWord right (some access) with
+              | none => simp [evalPanValueExp, hleft, hright] at h
+              | some rightValue =>
+                  cases leftValue with
+                  | word l =>
+                      cases rightValue with
+                      | word r =>
+                          simp [evalPanValueExp, hleft, hright] at h
+                          subst h
+                          exact panValueIsWf_word structs _
+                      | rStruct fs => simp [evalPanValueExp, hleft, hright] at h
+                      | nStruct nm fs => simp [evalPanValueExp, hleft, hright] at h
+                  | rStruct fs => simp [evalPanValueExp, hleft, hright] at h
+                  | nStruct nm fs => simp [evalPanValueExp, hleft, hright] at h
+    · intro operator left right memoryAccess ihLeft ihRight value h
+      cases memoryAccess with
+      | none =>
+          cases hleft : evalPanValueExp structs locals globals memory baseAddress
+              topAddress bytesInWord left none with
+          | none => simp [evalPanValueExp, hleft] at h
+          | some leftValue =>
+              cases hright : evalPanValueExp structs locals globals memory baseAddress
+                  topAddress bytesInWord right none with
+              | none => simp [evalPanValueExp, hleft, hright] at h
+              | some rightValue =>
+                  cases leftValue with
+                  | word l =>
+                      cases rightValue with
+                      | word r =>
+                          cases hshift : evalPanShift operator l r with
+                          | none => simp [evalPanValueExp, hleft, hright, hshift] at h
+                          | some w =>
+                              simp [evalPanValueExp, hleft, hright, hshift] at h
+                              subst h
+                              exact panValueIsWf_word structs w
+                      | rStruct fs => simp [evalPanValueExp, hleft, hright] at h
+                      | nStruct nm fs => simp [evalPanValueExp, hleft, hright] at h
+                  | rStruct fs => simp [evalPanValueExp, hleft, hright] at h
+                  | nStruct nm fs => simp [evalPanValueExp, hleft, hright] at h
+      | some access =>
+          cases hleft : evalPanValueExp structs locals globals memory baseAddress
+              topAddress bytesInWord left (some access) with
+          | none => simp [evalPanValueExp, hleft] at h
+          | some leftValue =>
+              cases hright : evalPanValueExp structs locals globals memory baseAddress
+                  topAddress bytesInWord right (some access) with
+              | none => simp [evalPanValueExp, hleft, hright] at h
+              | some rightValue =>
+                  cases leftValue with
+                  | word l =>
+                      cases rightValue with
+                      | word r =>
+                          cases hshift : access.shift operator l r with
+                          | none => simp [evalPanValueExp, hleft, hright, hshift] at h
+                          | some w =>
+                              simp [evalPanValueExp, hleft, hright, hshift] at h
+                              subst h
+                              exact panValueIsWf_word structs w
+                      | rStruct fs => simp [evalPanValueExp, hleft, hright] at h
+                      | nStruct nm fs => simp [evalPanValueExp, hleft, hright] at h
+                  | rStruct fs => simp [evalPanValueExp, hleft, hright] at h
+                  | nStruct nm fs => simp [evalPanValueExp, hleft, hright] at h
+    · intro memoryAccess value h
+      simp only [evalPanValueExp, Option.some.injEq] at h
+      subst h
+      exact panValueIsWf_word structs _
+    · intro memoryAccess value h
+      simp only [evalPanValueExp, Option.some.injEq] at h
+      subst h
+      exact panValueIsWf_word structs _
+    · intro memoryAccess value h
+      simp only [evalPanValueExp, Option.some.injEq] at h
+      subst h
+      exact panValueIsWf_word structs _
+    · intro memoryAccess values h
+      simp only [evalPanValueExp.evalPanValueFields, Option.some.injEq] at h
+      subst h
+      simp [panValueIsWfFields]
+    · intro name expression fields memoryAccess ihHead ihTail values h
+      cases hvalue : evalPanValueExp structs locals globals memory baseAddress
+          topAddress bytesInWord expression memoryAccess with
+      | none => simp [evalPanValueExp.evalPanValueFields, hvalue] at h
+      | some head =>
+          cases hvalues : evalPanValueExp.evalPanValueFields structs locals
+              globals memory baseAddress topAddress bytesInWord fields
+              memoryAccess with
+          | none => simp [evalPanValueExp.evalPanValueFields, hvalue,
+              hvalues] at h
+          | some tail =>
+              simp [evalPanValueExp.evalPanValueFields, hvalue, hvalues] at h
+              subst h
+              simp only [panValueIsWfFields, Bool.and_eq_true]
+              exact ⟨ihHead head hvalue, ihTail tail hvalues⟩
+  exact hmain expression memoryAccess value heval
+
 /-! Target-word counterpart of the structured expression evaluator.
 
     The generic evaluator above intentionally keeps the historical abstract

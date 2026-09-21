@@ -593,47 +593,6 @@ theorem listDisjoint_of_withShape_mem (shapes : List Shape) (values : List α)
       exact listDisjoint_withShape_getElem shapes values n' n hdistinct hn'len hnlen
         (Ne.symm heq) hvalues value hright hleft
 
-/-! Counterpart of Cake's `all_distinct_mem_zip_disjoint_with_shape`
-    (`cakeml/pancake/semantics/panPropsScript.sml:452`): two groups selected
-    from the flat-value split by the parameter zip, carrying different leading
-    labels, are disjoint whenever the flat value list is distinct. -/
-theorem listDisjoint_of_mem_zip_withShape (shapes : List Shape) (values : List α)
-    (labels : List α) (first second : α) (firstShape secondShape : Shape)
-    (left right : List α)
-    (hvalues : values.length = Shape.shapeSize (.comb shapes))
-    (hdistinct : values.Nodup)
-    (hleft : (first, firstShape, left) ∈
-      labels.zip (shapes.zip (withShape shapes values)))
-    (hright : (second, secondShape, right) ∈
-      labels.zip (shapes.zip (withShape shapes values)))
-    (hne : first ≠ second) :
-    ListDisjoint left right := by
-  obtain ⟨i, hi⟩ := List.mem_iff_getElem?.mp hleft
-  obtain ⟨i', hi'⟩ := List.mem_iff_getElem?.mp hright
-  obtain ⟨hlabel, hzip⟩ := List.getElem?_zip_eq_some.mp hi
-  obtain ⟨hlabel', hzip'⟩ := List.getElem?_zip_eq_some.mp hi'
-  obtain ⟨hshape, hvalue⟩ := List.getElem?_zip_eq_some.mp hzip
-  obtain ⟨hshape', hvalue'⟩ := List.getElem?_zip_eq_some.mp hzip'
-  have hii' : i ≠ i' := by
-    intro heq
-    subst heq
-    rw [hlabel] at hlabel'
-    exact hne (Option.some.inj hlabel')
-  obtain ⟨hiLen, _⟩ := List.getElem?_eq_some_iff.mp hshape
-  obtain ⟨hiLen', _⟩ := List.getElem?_eq_some_iff.mp hshape'
-  have hdisj := listDisjoint_withShape_getElem shapes values i i' hdistinct
-    hiLen hiLen' hii' hvalues
-  have hleftEq :
-      (withShape shapes values)[i]'(by rw [withShape_length]; exact hiLen) =
-        left :=
-    (List.getElem_eq_iff (by rw [withShape_length]; exact hiLen)).mpr hvalue
-  have hrightEq :
-      (withShape shapes values)[i']'(by rw [withShape_length]; exact hiLen') =
-        right :=
-    (List.getElem_eq_iff (by rw [withShape_length]; exact hiLen')).mpr hvalue'
-  rw [hleftEq, hrightEq] at hdisj
-  exact hdisj
-
 theorem shapeSize_drop_head_le (shapes : List Shape) (n : Nat)
     (hn : n < shapes.length) :
     Shape.shapeSize (shapes[n]'hn) ≤

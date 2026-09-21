@@ -2,8 +2,9 @@
 """Check the original-Cake allocator witnesses for exact RISC-V bytes.
 
 These fixtures exercise distinct allocator/frame shapes: dead-raise
-allocation, colour permutation, returned-value allocation, 64-bit
-register pressure, and a stack-allocation boundary.  Keep the list explicit
+allocation, handler-frame continuation, colour permutation, returned-value
+allocation, 64-bit register pressure, and a stack-allocation boundary.  Keep
+the list explicit
 so a change in the checked original-Cake witnesses is reviewable.
 The expected Cake stdout hashes are pinned in ``parity-small-corpus.json``.
 Comparing Flapjack's complete assembly stdout with those hashes keeps this
@@ -24,6 +25,7 @@ MANIFEST = REPO_ROOT / "scripts" / "parity-small-corpus.json"
 FIXTURES = (
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00634_dead_raise.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f01266_raise_live_continuation.pnk",
+    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "allocator_frame_handler_min.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "allocator_colour_permutation.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00068_allocator_return.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "mul64x64_allocator.pnk",

@@ -161,6 +161,38 @@ def overflowArgumentSlotMatchesWMoveSingle : Bool :=
 #guard callFrameOffsetMatchesCakeF
 #guard overflowArgumentSlotMatchesWMoveSingle
 
+/- `StackArgs` rows from `word_stack_call_probe.out`: direct calls count the
+   target slot while indirect calls do not, and both copy overflow arguments
+   from the caller frame at its Cake `f` offset. -/
+def stackArgsMatchesCakeProbe : Bool :=
+  let emptyOk :=
+    match (stackArgs (α := Nat) 0 6 3) with
+    | .stackAlloc words => words == 0
+    | _ => false
+  let directOk :=
+    match (stackArgs (α := Nat) 2 6 3) with
+    | .seq
+        (.seq (.stackAlloc words)
+          (.seq (.stackLoad loadOne loadOffsetOne)
+            (.stackStore storeOne storeOffsetOne)))
+        (.seq (.stackLoad loadZero loadOffsetZero)
+          (.stackStore storeZero storeOffsetZero)) =>
+        words == 2 && loadOne == 3 && loadOffsetOne == 7 &&
+          storeOne == 3 && storeOffsetOne == 1 && loadZero == 3 &&
+          loadOffsetZero == 6 && storeZero == 3 && storeOffsetZero == 0
+    | _ => false
+  let indirectOk :=
+    match (stackArgs (α := Nat) 1 6 3) with
+    | .seq (.stackAlloc words)
+        (.seq (.stackLoad loadRegister loadOffset)
+          (.stackStore storeRegister storeOffset)) =>
+        words == 1 && loadRegister == 3 && loadOffset == 6 &&
+          storeRegister == 3 && storeOffset == 0
+    | _ => false
+  emptyOk && directOk && indirectOk
+
+#guard stackArgsMatchesCakeProbe
+
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
     [ ("stack_arg_count and stack_free match the call oracle", callArgCountExact),
@@ -182,7 +214,9 @@ def runChecks : IO Bool := do
       ("StackArgs uses compile_prog's caller frame size f",
         callFrameOffsetMatchesCakeF),
       ("an overflow argument sits at wMoveSingle's f - 1 - (r - k)",
-        overflowArgumentSlotMatchesWMoveSingle) ]
+        overflowArgumentSlotMatchesWMoveSingle),
+      ("StackArgs direct/indirect shapes match Cake's probe",
+        stackArgsMatchesCakeProbe) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

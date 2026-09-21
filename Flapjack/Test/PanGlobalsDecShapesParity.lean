@@ -253,4 +253,155 @@ def renameDeclsGuard : Bool :=
 #eval renameDeclsGuard
 #guard renameDeclsGuard
 
+/-! Counterparts of Cake's `fperm_decs_decls` (`pan_globalsProofScript.sml:2023`)
+    and `fperm_decs_FILTER_is_function` (`:2032`). -/
+example : True := by
+  have h := globalRenameDecls_eq_self_of_no_functions "main" "entry"
+    noFunctionsDecls (by decide)
+  trivial
+
+example : True := by
+  have h := globalRenameDecls_filter_function "main" "entry" declsWithGlobals
+  trivial
+
+def renameFilterGuard : Bool :=
+  let mixed : List (Decl Nat) :=
+    [.function
+      { name := "main", inline := false, exported := false, params := [],
+        body := .skip, returnShape := .one },
+     .decl .one "h" (.const 9)]
+  let renamed := globalRenameDecls "main" "entry" mixed
+  (globalRenameDecls "main" "entry"
+      (globalDeclsFilter globalDeclIsFunction mixed)).length ==
+    (globalDeclsFilter globalDeclIsFunction renamed).length &&
+  globalFunctionNames
+      (globalRenameDecls "main" "entry"
+        (globalDeclsFilter globalDeclIsFunction mixed)) ==
+    globalFunctionNames (globalDeclsFilter globalDeclIsFunction renamed)
+
+#eval renameFilterGuard
+#guard renameFilterGuard
+
+/-! Counterparts of Cake's `fperm_name_cancel`/`fperm_name_cong`
+    (`pan_globalsProofScript.sml:1622,1629`). -/
+example : True := by
+  have h := globalRenameFunctionName_cancel "main" "entry" "main"
+  have h2 := globalRenameFunctionName_cong "main" "entry" "foo" "foo"
+  trivial
+
+def renameNameGuard : Bool :=
+  (globalRenameFunctionName "main" "entry"
+      (globalRenameFunctionName "main" "entry" "main") == "main") &&
+  (globalRenameFunctionName "main" "entry" "other" == "other") &&
+  (globalRenameFunctionName "main" "entry" "entry" == "main")
+
+#eval renameNameGuard
+#guard renameNameGuard
+
+/-! Counterpart of Cake's `ALL_DISTINCT_fperm_decs`
+    (`pan_globalsProofScript.sml:1711`). -/
+def renameNodupDecls : List (Decl Nat) :=
+  [.function
+    { name := "main", inline := false, exported := false, params := [],
+      body := .skip, returnShape := .one },
+   .function
+    { name := "other", inline := false, exported := false, params := [],
+      body := .skip, returnShape := .one }]
+
+example : True := by
+  have hnodup :
+      ((functions renameNodupDecls).map (fun entry => entry.1)).Nodup := by
+    decide
+  have h := globalRenameDecls_names_nodup "main" "entry" renameNodupDecls hnodup
+  trivial
+
+def renameNodupGuard : Bool :=
+  let renamed := globalRenameDecls "main" "entry" renameNodupDecls
+  decide (((functions renamed).map (fun entry => entry.1)).Nodup) &&
+  (((functions renamed).map (fun entry => entry.1)).length == 2)
+
+#eval renameNodupGuard
+#guard renameNodupGuard
+
+/-! Counterpart of Cake's `compile_decs_exns_are_exns`
+    (`pan_globalsProofScript.sml:2448`). -/
+def exceptionsFilterGuard : Bool :=
+  let context : GlobalPassContext Nat :=
+    { globals := [], globalsSize := 0, maxGlobalsSize := 0, bytesInWord := 8,
+      fromNat := fun n => n }
+  (globalCompileDecs context noFunctionsDecls).exceptions.length ==
+      (globalDeclsFilter globalDeclIsException noFunctionsDecls).length &&
+    (globalCompileDecs context noFunctionsDecls).exceptions.length == 1
+
+example : True := by
+  let context : GlobalPassContext Nat :=
+    { globals := [], globalsSize := 0, maxGlobalsSize := 0, bytesInWord := 8,
+      fromNat := fun n => n }
+  have h := globalCompileDecs_exceptions_eq_filter context noFunctionsDecls
+  trivial
+
+#eval exceptionsFilterGuard
+#guard exceptionsFilterGuard
+
+/-! Counterpart of Cake's `EVERY_fperm_decs`
+    (`pan_globalsProofScript.sml:2436`). -/
+def renameAllGuard : Bool :=
+  (globalRenameDecls "main" "entry" renameNodupDecls).all (fun _ => true)
+
+example : True := by
+  have h := globalRenameDecls_all_of_predicate "main" "entry"
+    (fun _ : Decl Nat => true) renameNodupDecls (by decide) (by decide)
+  trivial
+
+#eval renameAllGuard
+#guard renameAllGuard
+
+/-! Counterpart of Cake's `compile_decs_FILTER_decs`
+    (`pan_globalsProofScript.sml:2822`). -/
+def filterDeclsFixture : List (Decl Nat) :=
+  [.function
+    { name := "f", inline := false, exported := false, params := [],
+      body := .skip, returnShape := .one },
+   .decl (.comb [.one, .named "S"]) "g" (.const 7),
+   .name "S" [], .exnDecl "E" (.named "T"),
+   .decl .one "h" (.const 9)]
+
+def filterDeclsGuard : Bool :=
+  let context : GlobalPassContext Nat :=
+    { globals := [], globalsSize := 0, maxGlobalsSize := 0, bytesInWord := 8,
+      fromNat := fun n => n }
+  let onlyDecls := globalDeclsFilter isDecl filterDeclsFixture
+  let whole := globalCompileDecs context filterDeclsFixture
+  let filtered := globalCompileDecs context onlyDecls
+  (filtered.initializers.length == whole.initializers.length) &&
+    filtered.functions.isEmpty && filtered.exceptions.isEmpty &&
+    (globalCollect context onlyDecls).globals.length ==
+      (globalCollect context filterDeclsFixture).globals.length
+
+example : True := by
+  let context : GlobalPassContext Nat :=
+    { globals := [], globalsSize := 0, maxGlobalsSize := 0, bytesInWord := 8,
+      fromNat := fun n => n }
+  have h := globalCompileDecs_filter_isDecl context filterDeclsFixture
+  trivial
+
+#eval filterDeclsGuard
+#guard filterDeclsGuard
+
+/-! Counterpart of Cake's `FILTER_decs_fperm_decs`
+    (`pan_globalsProofScript.sml:2832`). -/
+def renameFilterNotFunctionGuard : Bool :=
+  (globalDeclsFilter (fun declaration => !globalDeclIsFunction declaration)
+      (globalRenameDecls "main" "entry" filterDeclsFixture)).length ==
+    (globalDeclsFilter (fun declaration => !globalDeclIsFunction declaration)
+      filterDeclsFixture).length
+
+example : True := by
+  have h :=
+    globalRenameDecls_filter_not_function "main" "entry" filterDeclsFixture
+  trivial
+
+#eval renameFilterNotFunctionGuard
+#guard renameFilterNotFunctionGuard
+
 end Flapjack.Test.PanGlobalsDecShapesParity

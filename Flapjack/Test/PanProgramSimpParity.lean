@@ -121,5 +121,38 @@ theorem evalPanValueExp_panValueProgramStateRel_fixture :
     ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
     (.const 5) none (.word 5) (by simp [evalPanValueExp])
 
+/-- Focused regression for the `OPT_MMAP_eval_some_eq` counterpart: a whole
+    expression list maps to the same values under `panValueProgramStateRel`. -/
+theorem list_mapM_eval_panValueProgramStateRel_fixture :
+    (([(.const 1), (.const 5)] : List (Exp Nat)).mapM (fun expression =>
+      evalPanValueExp ([] : StructContext) (fun _ => none) evalRelState.globals
+        evalRelState.memory evalRelState.baseAddress evalRelState.topAddress
+        evalRelState.bytesInWord expression)) = some [.word 1, .word 5] :=
+  list_mapM_eval_panValueProgramStateRel ([] : StructContext) (fun _ => none)
+    evalRelState evalRelState
+    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+    [.const 1, .const 5] [.word 1, .word 5] none
+    (by simp [evalPanValueExp])
+
+/-- Focused regression for the `state_rel_upd_inv` counterpart: a state
+    related by `panValueProgramStateRel` is recovered by resetting the
+    simplified function table. -/
+theorem panValueProgramStateRel_functions_recover_fixture :
+    ∃ functions,
+      evalRelState =
+        { { evalRelState with functions := panValueFunctionsSimp evalRelState.functions }
+          with functions := functions } :=
+  panValueProgramStateRel_functions_recover evalRelState
+    { evalRelState with functions := panValueFunctionsSimp evalRelState.functions }
+    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+
+/-- Focused regression for the `state_rel_intro` counterpart: the related target
+    state is the source state with the simplified function table. -/
+theorem panValueProgramStateRel_intro_fixture :
+    evalRelState =
+      { evalRelState with functions := panValueFunctionsSimp evalRelState.functions } :=
+  panValueProgramStateRel_intro evalRelState evalRelState
+    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+
 end Flapjack.Test.PanProgramSimpParity
 

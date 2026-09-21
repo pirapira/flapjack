@@ -462,6 +462,115 @@ def progSize : Prog α → Nat
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial
 
+/-! `ret_to_tail` only removes the assign/return wrapper used for a tail call;
+    it does not add program nodes.  This small syntactic fact is used by the
+    evaluator-level `pan_simp` fuel bound. -/
+
+theorem progSize_seqCallRet_le (program : Prog α) :
+    progSize (seqCallRet program) ≤ progSize program := by
+  cases program with
+  | seq first second =>
+      cases first with
+      | call info function arguments =>
+          cases second with
+          | «return» value =>
+              cases value with
+              | var kind returnedName =>
+                  cases kind with
+                  | «local» =>
+                      cases info with
+                      | none => simp [seqCallRet, progSize]
+                      | some info =>
+                          cases info with
+                          | mk returns handler =>
+                              cases returns with
+                              | none => simp [seqCallRet, progSize]
+                              | some returnInfo =>
+                                  cases returnInfo with
+                                  | mk returnKind returnName =>
+                                      cases returnKind with
+                                      | «local» =>
+                                          cases handler with
+                                          | none =>
+                                              simp [seqCallRet, progSize] <;>
+                                                split <;> simp [progSize]
+                                          | some handler => simp [seqCallRet, progSize]
+                                      | global => simp [seqCallRet, progSize]
+                  | global => simp [seqCallRet, progSize]
+              | _ => simp [seqCallRet, progSize]
+          | _ => simp [seqCallRet, progSize]
+      | _ => simp [seqCallRet, progSize]
+  | _ => simp [seqCallRet, progSize]
+
+theorem progSize_retToTail_le (program : Prog α) :
+    progSize (retToTail program) ≤ progSize program := by
+  let rec go : (program : Prog α) → progSize (retToTail program) ≤ progSize program
+    | .skip => by simp [retToTail, progSize]
+    | .dec name shape value body => by
+        have h := go body
+        simp [retToTail, progSize]
+        omega
+    | .assign kind name value => by simp [retToTail, progSize]
+    | .primitive name operator args => by simp [retToTail, progSize]
+    | .store address value => by simp [retToTail, progSize]
+    | .store32 address value => by simp [retToTail, progSize]
+    | .storeByte address value => by simp [retToTail, progSize]
+    | .seq first second => by
+        have hfirst := go first
+        have hsecond := go second
+        calc
+          progSize (retToTail (.seq first second)) =
+              progSize (seqCallRet (.seq (retToTail first) (retToTail second))) := by
+                simp only [retToTail]
+          _ ≤ progSize (.seq (retToTail first) (retToTail second)) :=
+            progSize_seqCallRet_le _
+          _ = 1 + progSize (retToTail first) + progSize (retToTail second) := by
+            simp [progSize]
+          _ ≤ 1 + progSize first + progSize second := by omega
+          _ = progSize (.seq first second) := by simp [progSize]
+    | .ite condition thenBranch elseBranch => by
+        simp only [retToTail, progSize]
+        have hthen := go thenBranch
+        have helse := go elseBranch
+        omega
+    | .while condition body => by
+        have h := go body
+        simp [retToTail, progSize]
+        omega
+    | .break => by simp [retToTail, progSize]
+    | .continue => by simp [retToTail, progSize]
+    | .call info name args => by
+        cases info with
+        | none => simp [retToTail, progSize]
+        | some info =>
+            cases info with
+            | mk returns handlerInfo =>
+                cases handlerInfo with
+                | none => simp [retToTail, progSize]
+                | some handler =>
+                    cases handler with
+                    | mk exception handlerInfo =>
+                        cases handlerInfo with
+                        | mk handlerVar handlerProgram =>
+                            have h := go handlerProgram
+                            simp [retToTail, progSize]
+                            omega
+    | .decCall name shape function args body => by
+        have h := go body
+        simp [retToTail, progSize]
+        omega
+    | .extCall function configuration configurationLength array arrayLength =>
+        by simp [retToTail, progSize]
+    | .raise exception value => by simp [retToTail, progSize]
+    | .return value => by simp [retToTail, progSize]
+    | .shMemLoad size kind name address => by simp [retToTail, progSize]
+    | .shMemStore size address value => by simp [retToTail, progSize]
+    | .tick => by simp [retToTail, progSize]
+    | .annot tag text => by simp [retToTail, progSize]
+    termination_by program => sizeOf program
+    decreasing_by all_goals decreasing_trivial
+  exact go program
+
 theorem progSize_pos : ∀ program : Prog α, 1 ≤ progSize program
   | .dec _ _ _ _ => by simp only [progSize]; omega
   | .seq _ _ => by simp only [progSize]; omega
@@ -729,79 +838,6 @@ theorem progSize_seqAssoc_le (pre program : Prog α) :
     termination_by program => sizeOf program
     decreasing_by all_goals decreasing_trivial
   exact go pre program
-
-/-! `retToTail` does not increase the syntactic size either, so the full
-    `pan_simp` transform `panSimpProg` also admits a linear `progSize` bound. -/
-
-theorem progSize_seqCallRet_le (program : Prog α) :
-    progSize (seqCallRet program) ≤ progSize program := by
-  unfold seqCallRet
-  split
-  · split <;> simp only [progSize] <;> omega
-  · omega
-
-theorem progSize_retToTail_le (program : Prog α) :
-    progSize (retToTail program) ≤ progSize program := by
-  let rec go : (program : Prog α) → progSize (retToTail program) ≤ progSize program
-    | .skip => by simp [retToTail, progSize]
-    | .dec name shape value body => by
-        simp only [retToTail, progSize]
-        have hb := go body
-        omega
-    | .seq first second => by
-        simp only [retToTail]
-        have h := progSize_seqCallRet_le (.seq (retToTail first) (retToTail second))
-        have h1 := go first
-        have h2 := go second
-        simp only [progSize] at h h1 h2 ⊢
-        omega
-    | .ite condition thenBranch elseBranch => by
-        simp only [retToTail, progSize]
-        have ht := go thenBranch
-        have he := go elseBranch
-        omega
-    | .while condition body => by
-        simp only [retToTail, progSize]
-        have hb := go body
-        omega
-    | .call info function arguments => by
-        cases info with
-        | none => simp [retToTail, progSize]
-        | some info =>
-            cases info with
-            | mk returns handlerInfo =>
-                cases handlerInfo with
-                | none => simp [retToTail, progSize]
-                | some handler =>
-                    cases handler with
-                    | mk exception handlerInfo =>
-                        cases handlerInfo with
-                        | mk handlerVar handlerProgram =>
-                            simp only [retToTail, progSize]
-                            have hh := go handlerProgram
-                            omega
-    | .decCall name shape function arguments body => by
-        simp only [retToTail, progSize]
-        have hb := go body
-        omega
-    | .annot tag text => by simp [retToTail, progSize]
-    | .assign kind name value => by simp [retToTail, progSize]
-    | .primitive name operator args => by simp [retToTail, progSize]
-    | .store address value => by simp [retToTail, progSize]
-    | .store32 address value => by simp [retToTail, progSize]
-    | .storeByte address value => by simp [retToTail, progSize]
-    | .break => by simp [retToTail, progSize]
-    | .continue => by simp [retToTail, progSize]
-    | .extCall function configuration configurationLength array arrayLength => by
-        simp [retToTail, progSize]
-    | .raise exception value => by simp [retToTail, progSize]
-    | .return value => by simp [retToTail, progSize]
-    | .shMemLoad size kind name address => by simp [retToTail, progSize]
-    | .shMemStore size address value => by simp [retToTail, progSize]
-    | .tick => by simp [retToTail, progSize]
-    termination_by program => sizeOf program
-    decreasing_by all_goals decreasing_trivial
-  exact go program
 
 theorem progSize_panSimpProg_le (program : Prog α) :
     progSize (panSimpProg program) ≤ 1 + 4 * progSize program := by

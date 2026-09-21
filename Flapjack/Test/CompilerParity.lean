@@ -216,6 +216,7 @@ import Flapjack.Test.CakeSsaTempParity
 import Flapjack.Test.CakeSsaBoundaryParity
 import Flapjack.Test.CakeSsaControlParity
 import Flapjack.Test.CakeSsaCallParity
+import Flapjack.Test.CakeSsaInstParity
 import Flapjack.Test.CakeSsaSharedParity
 import Flapjack.Test.CakeSsaMemoryParity
 import Flapjack.Test.CakeSsaLeafParity
@@ -752,6 +753,7 @@ def main : IO Unit := do
     Flapjack.Test.CakeSsaBoundaryParity.runChecks,
     Flapjack.Test.CakeSsaControlParity.runChecks,
     Flapjack.Test.CakeSsaCallParity.runChecks,
+    Flapjack.Test.CakeSsaInstParity.runChecks,
     Flapjack.Test.CakeSsaSharedParity.runChecks,
     Flapjack.Test.CakeSsaMemoryParity.runChecks,
     Flapjack.Test.CakeSsaLeafParity.runChecks,

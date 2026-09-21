@@ -432,6 +432,21 @@ def panFunctionEntries (declarations : List (Decl α)) :
     (fun entry : FunName × List (VarName × Shape) × Prog α × Shape =>
       (entry.1, entry.2.1.map Prod.fst, entry.2.2.1))
 
+/-- Source-order projection of a declaration list's function entries into the
+    `(name, return shape)` pairs stored in `returnShapes`. -/
+def panReturnShapeEntries (declarations : List (Decl α)) : InfoMap Shape :=
+  (functions declarations).reverse.map
+    (fun entry : FunName × List (VarName × Shape) × Prog α × Shape =>
+      (entry.1, entry.2.2.2))
+
+/-- Source-order projection of a declaration list's function entries into the
+    `(name, parameters)` pairs stored in `parameterShapes`. -/
+def panParameterShapeEntries (declarations : List (Decl α)) :
+    InfoMap (List (VarName × Shape)) :=
+  (functions declarations).reverse.map
+    (fun entry : FunName × List (VarName × Shape) × Prog α × Shape =>
+      (entry.1, entry.2.1))
+
 /-- Cake's `evaluate_decls_functions` (`panPropsScript.sml:1518`): a successful
     declaration evaluation only prepends the list's function entries to the
     function table. -/
@@ -575,6 +590,86 @@ theorem evalPanValueDeclarationsWithStructs_exceptions
               simp [panExceptionEntries_cons, List.append_assoc]
             · simp [hexists, hwf] at heval
 
+/-! The same Cake `evaluate_decls_eshapes` equation at the public declaration
+    evaluator.  This wrapper exposes the exception table after struct
+    collection, which is the state needed by a later raised-call lookup. -/
+theorem evalPanValueDeclarations_exceptions
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state state' : PanValueProgramState α) (declarations : List (Decl α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (heval : evalPanValueDeclarations state declarations memoryAccess = some state') :
+    state'.exceptions = panExceptionEntries declarations ++ state.exceptions := by
+  simp only [evalPanValueDeclarations] at heval
+  cases hcollect : collectPanValueStructs declarations state.structs with
+  | none => simp [hcollect] at heval
+  | some structs =>
+      simp only [hcollect] at heval
+      exact evalPanValueDeclarationsWithStructs_exceptions structs
+        { state with structs := structs } state' declarations memoryAccess heval
+
+/-! Compose the public declaration-state equation with Cake's top-level raised
+    call boundary.  The result keeps both the raised payload and the exception
+    table available to the caller instead of hiding lookup in a premise. -/
+theorem evalPanValueProgram_of_declarations_and_raised_call_with_exception_state
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (initial : PanValueProgramState α)
+    (primitive : PanPrimitiveHandler α) (ffi : PanValueFfiHandler α)
+    (fuel : Nat) (declarations : List (Decl α)) (entry : FunName)
+    (arguments : List (Exp α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (memoryHandler : Option (PanValueAcceleratorFfiHandler α))
+    (state : PanValueProgramState α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (exception : ExceptionId)
+    (value : PanValue α)
+    (hdeclarations : evalPanValueDeclarations initial declarations
+      (memoryAccess := memoryAccess) = some state)
+    (hcall : evalPanValueCallWithPrimitiveCallsAndFfi primitive ffi
+      state.structs state.functions state.baseAddress state.topAddress
+      state.bytesInWord fuel (fun _ => none) state.globals state.memory none
+      entry arguments (memoryAccess := memoryAccess)
+      (contracts := some (PanValueCallContracts.mk state.returnShapes
+        state.exceptions state.parameterShapes))
+      (memoryHandler := memoryHandler) =
+      some (.raised locals globals memory exception value)) :
+    evalPanValueProgram initial primitive ffi fuel declarations entry arguments
+      (memoryAccess := memoryAccess) (memoryHandler := memoryHandler) =
+      some (.raised locals globals memory exception value) ∧
+    state.exceptions = panExceptionEntries declarations ++ initial.exceptions := by
+  constructor
+  · exact evalPanValueProgram_of_declarations_and_raised_call initial primitive ffi
+      fuel declarations entry arguments memoryAccess memoryHandler state locals globals
+      memory exception value hdeclarations hcall
+  · exact evalPanValueDeclarations_exceptions initial state declarations memoryAccess
+      hdeclarations
+
+/-! Package the public declaration facts needed by the raised evaluator: the
+    collected struct context makes the exception payload shape well formed, and
+    the resulting state carries Cake's exact exception table equation. -/
+theorem evalPanValueDeclarations_exception_state_evidence
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state state' : PanValueProgramState α) (declarations : List (Decl α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    {exception : ExceptionId} {shape : Shape}
+    (hmem : (.exnDecl exception shape : Decl α) ∈ declarations)
+    (heval : evalPanValueDeclarations state declarations memoryAccess = some state') :
+    ∃ structs : StructContext,
+      collectPanValueStructs declarations state.structs = some structs ∧
+        state'.exceptions = panExceptionEntries declarations ++ state.exceptions ∧
+        isWfShape structs shape = true := by
+  obtain ⟨structs, hcollect, hwf⟩ :=
+    evalPanValueDeclarations_exceptions_wf state state' declarations memoryAccess
+      heval hmem
+  exact ⟨structs, hcollect,
+    evalPanValueDeclarations_exceptions state state' declarations memoryAccess heval,
+    hwf⟩
+
 /-! Cake's `evaluate_decls_only_exn_decls`
     (`cakeml/pancake/semantics/panPropsScript.sml:1436`): when every
     declaration is an exception declaration, successful evaluation changes
@@ -621,6 +716,39 @@ theorem evalPanValueDeclarationsWithStructs_only_exn_decls
               simp [panExceptionEntries_cons, List.append_assoc, hstructs]
             · simp [hexists, hwf] at heval
 
+/-! Cake's `evaluate_decls_only_exn_decls` at the public declaration entry
+    point.  Collecting struct names is a no-op for an exception-only list, so
+    the stronger state equation can be exposed without a struct premise. -/
+theorem evalPanValueDeclarations_only_exn_decls
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state state' : PanValueProgramState α)
+    (declarations : List (Decl α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (hall : declarations.all isExnDecl = true)
+    (heval : evalPanValueDeclarations state declarations memoryAccess = some state') :
+    state' = { state with
+      exceptions := panExceptionEntries declarations ++ state.exceptions } := by
+  simp only [evalPanValueDeclarations] at heval
+  cases hcollect : collectPanValueStructs declarations state.structs with
+  | none => simp [hcollect] at heval
+  | some structs =>
+      simp only [hcollect] at heval
+      have hnames : declarations.all (fun declaration => !isName declaration) = true := by
+        refine List.all_eq_true.mpr (fun declaration hmem => ?_)
+        have h := List.all_eq_true.mp hall declaration hmem
+        cases declaration <;> simp_all [isExnDecl, isName]
+      have hstructs : structs = state.structs := by
+        have hno := collectPanValueStructs_of_no_names state.structs declarations hnames
+        rw [hcollect] at hno
+        exact Option.some.inj hno
+      subst hstructs
+      have hmain := evalPanValueDeclarationsWithStructs_only_exn_decls
+        state.structs { state with structs := state.structs } state' declarations
+        memoryAccess hall rfl heval
+      simpa using hmain
+
 /-! Cake's `evaluate_decls_names`
     (`cakeml/pancake/semantics/panPropsScript.sml:1552`): a declaration list
     consisting only of structure names is skipped by declaration evaluation. -/
@@ -651,5 +779,152 @@ theorem evalPanValueDeclarationsWithStructs_names
           simp [isName] at hname
       | exnDecl exception shape =>
           simp [isName] at hname
+
+/-- Cake's `evaluate_decls_only_funs_and_exn_decls`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1561`): when every declaration
+    is a function or an exception declaration, a successful evaluation changes
+    only the function and exception tables, together with Flapjack's separate
+    return-shape and parameter-shape maps. -/
+theorem evalPanValueDeclarationsWithStructs_only_funs_and_exn_decls
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext) (state state' : PanValueProgramState α)
+    (declarations : List (Decl α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (hstructs : state.structs = structs)
+    (hall : declarations.all
+      (fun declaration =>
+        globalDeclIsFunction declaration || isExnDecl declaration) = true)
+    (heval : evalPanValueDeclarationsWithStructs structs state declarations
+      memoryAccess = some state') :
+    state' = { state with
+      structs := structs
+      functions := panFunctionEntries declarations ++ state.functions
+      returnShapes := panReturnShapeEntries declarations ++ state.returnShapes
+      parameterShapes :=
+        panParameterShapeEntries declarations ++ state.parameterShapes
+      exceptions := panExceptionEntries declarations ++ state.exceptions } := by
+  induction declarations generalizing state with
+  | nil =>
+      simp only [evalPanValueDeclarationsWithStructs] at heval
+      have hstate : state = state' := (Option.some.injEq _ _).mp heval
+      subst hstate
+      simp [panFunctionEntries, panReturnShapeEntries, panParameterShapeEntries,
+        panExceptionEntries, functions, exceptionEntries, ← hstructs]
+  | cons declaration declarations ih =>
+      simp only [List.all_cons, Bool.and_eq_true] at hall
+      obtain ⟨hhead, htail⟩ := hall
+      cases declaration with
+      | function declaration =>
+          simp only [evalPanValueDeclarationsWithStructs] at heval
+          by_cases hwf : (declaration.params.all
+                (fun parameter => isWfShape structs parameter.2) &&
+              isWfShape structs declaration.returnShape) = true
+          · simp only [hwf] at heval
+            rw [ih _ (by rfl) htail heval]
+            simp [panFunctionEntries, panReturnShapeEntries,
+              panParameterShapeEntries, panExceptionEntries, functions,
+              exceptionEntries, List.reverse_cons, List.map_append,
+              List.append_assoc]
+          · simp [hwf] at heval
+      | exnDecl exception shape =>
+          simp only [evalPanValueDeclarationsWithStructs] at heval
+          by_cases hexists : (lookupInfo exception state.exceptions).isSome = true
+          · simp [hexists] at heval
+          · by_cases hwf : isWfShape structs shape = true
+            · simp only [hexists, hwf] at heval
+              rw [ih _ (by rfl) htail heval]
+              simp [panFunctionEntries, panReturnShapeEntries,
+                panParameterShapeEntries, panExceptionEntries_cons, functions,
+                List.append_assoc]
+            · simp [hexists, hwf] at heval
+      | decl shape name expression =>
+          simp [globalDeclIsFunction, isExnDecl] at hhead
+      | name name fields =>
+          simp [globalDeclIsFunction, isExnDecl] at hhead
+
+/-- Cake's `evaluate_decls_only_functions`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1529`): when every declaration
+    is a function declaration, a successful evaluation changes only the function
+    table, together with Flapjack's separate return-shape and parameter-shape
+    maps. -/
+theorem evalPanValueDeclarationsWithStructs_only_functions
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext) (state state' : PanValueProgramState α)
+    (declarations : List (Decl α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (hstructs : state.structs = structs)
+    (hall : declarations.all globalDeclIsFunction = true)
+    (heval : evalPanValueDeclarationsWithStructs structs state declarations
+      memoryAccess = some state') :
+    state' = { state with
+      structs := structs
+      functions := panFunctionEntries declarations ++ state.functions
+      returnShapes := panReturnShapeEntries declarations ++ state.returnShapes
+      parameterShapes :=
+        panParameterShapeEntries declarations ++ state.parameterShapes } := by
+  induction declarations generalizing state with
+  | nil =>
+      simp only [evalPanValueDeclarationsWithStructs] at heval
+      have hstate : state = state' := (Option.some.injEq _ _).mp heval
+      subst hstate
+      simp [panFunctionEntries, panReturnShapeEntries, panParameterShapeEntries,
+        functions, ← hstructs]
+  | cons declaration declarations ih =>
+      simp only [List.all_cons, Bool.and_eq_true] at hall
+      obtain ⟨hhead, htail⟩ := hall
+      cases declaration with
+      | function declaration =>
+          simp only [evalPanValueDeclarationsWithStructs] at heval
+          by_cases hwf : (declaration.params.all
+                (fun parameter => isWfShape structs parameter.2) &&
+              isWfShape structs declaration.returnShape) = true
+          · simp only [hwf] at heval
+            rw [ih _ (by rfl) htail heval]
+            simp [panFunctionEntries, panReturnShapeEntries,
+              panParameterShapeEntries, functions, List.reverse_cons,
+              List.map_append, List.append_assoc]
+          · simp [hwf] at heval
+      | decl shape name expression =>
+          simp [globalDeclIsFunction] at hhead
+      | exnDecl exception shape =>
+          simp [globalDeclIsFunction] at hhead
+      | name name fields =>
+          simp [globalDeclIsFunction] at hhead
+
+/-- Cake's `evaluate_decls_only_functions` (`panPropsScript.sml:1529`) at the
+    `evalPanValueDeclarations` level: struct-name collection is a no-op for a
+    function-only declaration list, so the state's struct context is kept. -/
+theorem evalPanValueDeclarations_only_functions
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state state' : PanValueProgramState α)
+    (declarations : List (Decl α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (hall : declarations.all globalDeclIsFunction = true)
+    (heval : evalPanValueDeclarations state declarations memoryAccess = some state') :
+    state' = { state with
+      functions := panFunctionEntries declarations ++ state.functions
+      returnShapes := panReturnShapeEntries declarations ++ state.returnShapes
+      parameterShapes :=
+        panParameterShapeEntries declarations ++ state.parameterShapes } := by
+  simp only [evalPanValueDeclarations] at heval
+  cases hcollect : collectPanValueStructs declarations state.structs with
+  | none => simp [hcollect] at heval
+  | some structs =>
+      simp only [hcollect] at heval
+      have hstructs : structs = state.structs := by
+        have hno := collectPanValueStructs_of_functions state.structs declarations hall
+        rw [hcollect] at hno
+        exact Option.some.inj hno
+      subst hstructs
+      have hmain := evalPanValueDeclarationsWithStructs_only_functions state.structs
+        { state with structs := state.structs } state' declarations memoryAccess
+        (by rfl) hall heval
+      simpa using hmain
 
 end Flapjack

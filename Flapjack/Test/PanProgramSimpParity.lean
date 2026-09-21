@@ -258,6 +258,16 @@ theorem evalPanValueDeclarations_top_exceptions_wf_fixture
         simp [wfExceptionDecls, wfException])
   exact ⟨structs, hcollect, hwf⟩
 
+example (state' : PanValueProgramState Nat)
+    (heval : evalPanValueDeclarations evalRelState wfExceptionDecls none = some state') :
+    ∃ structs : StructContext,
+      collectPanValueStructs wfExceptionDecls evalRelState.structs = some structs ∧
+        state'.exceptions = panExceptionEntries wfExceptionDecls ++ evalRelState.exceptions ∧
+        isWfShape structs (.one : Shape) = true := by
+  exact evalPanValueDeclarations_exception_state_evidence evalRelState state'
+    wfExceptionDecls none (exception := "E") (shape := .one)
+    (by simp [wfExceptionDecls, wfException]) heval
+
 /-! Regression for Cake's `evaluate_decls_append`
     (`cakeml/pancake/semantics/panPropsScript.sml:1540`): evaluating a
     concatenated declaration list is the sequential composition of evaluating
@@ -398,6 +408,14 @@ example (state' : PanValueProgramState Nat)
   exact evalPanValueDeclarationsWithStructs_only_exn_decls ([] : StructContext)
     evalRelState state' onlyExceptionDecls none (by decide) rfl heval
 
+example (state' : PanValueProgramState Nat)
+    (heval : evalPanValueDeclarations evalRelState onlyExceptionDecls none =
+      some state') :
+    state' = { evalRelState with
+      exceptions := panExceptionEntries onlyExceptionDecls ++ evalRelState.exceptions } := by
+  exact evalPanValueDeclarations_only_exn_decls evalRelState state'
+    onlyExceptionDecls none (by decide) heval
+
 /-! Regression for Cake's `evaluate_decls_names`: structure-name
     declarations do not alter the program state during evaluation. -/
 
@@ -410,6 +428,41 @@ example :
       namesOnlyDecls none = some evalRelState := by
   exact evalPanValueDeclarationsWithStructs_names ([] : StructContext)
     evalRelState namesOnlyDecls none (by decide)
+
+/-! The public declaration evaluator preserves the same exception table after
+    collecting the declaration-time struct context.  This is the direct
+    state/global lookup bridge used by the top-level raised evaluator. -/
+example (state' : PanValueProgramState Nat)
+    (heval : evalPanValueDeclarations evalRelState exceptionsDecls none = some state') :
+    state'.exceptions = panExceptionEntries exceptionsDecls ++ evalRelState.exceptions := by
+  exact evalPanValueDeclarations_exceptions evalRelState state' exceptionsDecls none heval
+
+example
+    (primitive : PanPrimitiveHandler Nat) (ffi : PanValueFfiHandler Nat)
+    (fuel : Nat) (entry : FunName) (arguments : List (Exp Nat))
+    (memoryAccess : Option (PanValueMemoryAccess Nat))
+    (memoryHandler : Option (PanValueAcceleratorFfiHandler Nat))
+    (state : PanValueProgramState Nat)
+    (locals globals : VarName → Option (PanValue Nat))
+    (memory : Nat → Option (PanValue Nat)) (exception : ExceptionId)
+    (value : PanValue Nat)
+    (hdeclarations : evalPanValueDeclarations evalRelState exceptionsDecls
+      (memoryAccess := memoryAccess) = some state)
+    (hcall : evalPanValueCallWithPrimitiveCallsAndFfi primitive ffi
+      state.structs state.functions state.baseAddress state.topAddress
+      state.bytesInWord fuel (fun _ => none) state.globals state.memory none
+      entry arguments (memoryAccess := memoryAccess)
+      (contracts := some (PanValueCallContracts.mk state.returnShapes
+        state.exceptions state.parameterShapes))
+      (memoryHandler := memoryHandler) =
+      some (.raised locals globals memory exception value)) :
+    evalPanValueProgram evalRelState primitive ffi fuel exceptionsDecls entry arguments
+      (memoryAccess := memoryAccess) (memoryHandler := memoryHandler) =
+      some (.raised locals globals memory exception value) ∧
+    state.exceptions = panExceptionEntries exceptionsDecls ++ evalRelState.exceptions := by
+  exact evalPanValueProgram_of_declarations_and_raised_call_with_exception_state
+    evalRelState primitive ffi fuel exceptionsDecls entry arguments memoryAccess
+    memoryHandler state locals globals memory exception value hdeclarations hcall
 
 /-! Cake's `decs_stcnames_only_functions` / `decs_stcnames_only_functions2`
     (`cakeml/pancake/semantics/panPropsScript.sml:1592,1600`): struct-free and
@@ -433,6 +486,112 @@ example : True := by
   have _h2 := collectPanValueStructs_of_functions ([] : StructContext)
     functionsOnlyDecls (by decide)
   trivial
+
+/-! Cake's `evaluate_decls_only_exn_decls` (`panPropsScript.sml:1436`): an
+    exception-only declaration list leaves every field except the
+    exception-shape table unchanged. -/
+
+def exnOnlyDecls : List (Decl Nat) := [.exnDecl "E" .one, .exnDecl "F" .one]
+
+def exnOnlyGuard : Bool :=
+  match evalPanValueDeclarations evalRelState exnOnlyDecls none with
+  | some state' =>
+      state'.exceptions.length ==
+        (panExceptionEntries exnOnlyDecls ++ evalRelState.exceptions).length
+  | none => false
+
+#eval exnOnlyGuard
+#guard exnOnlyGuard
+
+example : True := by
+  have hall : exnOnlyDecls.all isExnDecl = true := by decide
+  cases heval : evalPanValueDeclarations evalRelState exnOnlyDecls none with
+  | none => trivial
+  | some state' =>
+      have _h := evalPanValueDeclarations_only_exn_decls evalRelState state'
+        exnOnlyDecls none hall heval
+      trivial
+
+/-! Cake's `evaluate_decls_only_funs_and_exn_decls`
+    (`panPropsScript.sml:1561`): a list of functions and exception declarations
+    leaves every other field unchanged. -/
+
+def funsAndExnDecls : List (Decl Nat) :=
+  [.function wfFunction, .exnDecl "E" .one,
+   .function
+     { name := "h", inline := false, exported := false, params := [],
+       body := (.skip : Prog Nat), returnShape := .one },
+   .exnDecl "F" .one]
+
+def funsAndExnGuard : Bool :=
+  match evalPanValueDeclarationsWithStructs ([] : StructContext) evalRelState
+      funsAndExnDecls none with
+  | some state' =>
+      state'.functions.length ==
+          (panFunctionEntries funsAndExnDecls ++ evalRelState.functions).length &&
+        state'.returnShapes.length ==
+          (panReturnShapeEntries funsAndExnDecls ++
+            evalRelState.returnShapes).length &&
+        state'.parameterShapes.length ==
+          (panParameterShapeEntries funsAndExnDecls ++
+            evalRelState.parameterShapes).length &&
+        state'.exceptions.length ==
+          (panExceptionEntries funsAndExnDecls ++ evalRelState.exceptions).length
+  | none => false
+
+#eval funsAndExnGuard
+#guard funsAndExnGuard
+
+example : True := by
+  have hall : funsAndExnDecls.all
+      (fun declaration =>
+        globalDeclIsFunction declaration || isExnDecl declaration) = true := by
+    decide
+  cases heval : evalPanValueDeclarationsWithStructs ([] : StructContext)
+      evalRelState funsAndExnDecls none with
+  | none => trivial
+  | some state' =>
+      have _h := evalPanValueDeclarationsWithStructs_only_funs_and_exn_decls
+        ([] : StructContext) evalRelState state' funsAndExnDecls none rfl hall
+        heval
+      trivial
+
+/-! Cake's `evaluate_decls_only_functions` (`panPropsScript.sml:1529`): a
+    function-only declaration list changes only the function table and the
+    separate return-shape / parameter-shape maps. -/
+
+def functionsOnlyStateDecls : List (Decl Nat) :=
+  [.function wfFunction,
+   .function
+     { name := "h", inline := false, exported := false, params := [],
+       body := (.skip : Prog Nat), returnShape := .one }]
+
+def functionsOnlyStateGuard : Bool :=
+  match evalPanValueDeclarations evalRelState functionsOnlyStateDecls none with
+  | some state' =>
+      state'.functions.length ==
+          (panFunctionEntries functionsOnlyStateDecls ++
+            evalRelState.functions).length &&
+        state'.returnShapes.length ==
+          (panReturnShapeEntries functionsOnlyStateDecls ++
+            evalRelState.returnShapes).length &&
+        state'.parameterShapes.length ==
+          (panParameterShapeEntries functionsOnlyStateDecls ++
+            evalRelState.parameterShapes).length
+  | none => false
+
+#eval functionsOnlyStateGuard
+#guard functionsOnlyStateGuard
+
+example : True := by
+  have hall : functionsOnlyStateDecls.all globalDeclIsFunction = true := by
+    decide
+  cases heval : evalPanValueDeclarations evalRelState functionsOnlyStateDecls none with
+  | none => trivial
+  | some state' =>
+      have _h := evalPanValueDeclarations_only_functions evalRelState state'
+        functionsOnlyStateDecls none hall heval
+      trivial
 
 end Flapjack.Test.PanProgramSimpParity
 

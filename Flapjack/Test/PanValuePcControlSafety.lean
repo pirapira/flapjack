@@ -1027,6 +1027,7 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_raised
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_timeout
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_timeout
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_returned
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_finalFfi
 
 /-! Declaration-call counterparts of the direct-call compositional bridges:

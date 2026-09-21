@@ -574,6 +574,30 @@ example :
     (PanValueFfiClockNormalProg.seq (.skip : Prog Nat) (.annot "tag" "text")
       PanValueFfiClockNormalProg.skip (PanValueFfiClockNormalProg.annot "tag" "text"))
 
+/-- The normal fragment is preserved by the `pan_simp` transform. -/
+example :
+    PanValueFfiClockNormalProg
+      (panSimpProg (.seq (.skip : Prog Nat) (.annot "tag" "text"))) :=
+  PanValueFfiClockNormalProg_panSimpProg
+    (PanValueFfiClockNormalProg.seq (.skip : Prog Nat) (.annot "tag" "text")
+      PanValueFfiClockNormalProg.skip (PanValueFfiClockNormalProg.annot "tag" "text"))
+
+/-- The transformed normal fragment evaluates normally at its call-aware budget. -/
+example
+    (h : PanValueFfiClockNormalProg
+      (.seq (.skip : Prog Nat) (.annot "tag" "text"))) :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+      [] [] 0 0 8
+      (progCallFuel 5 (panSimpProg (.seq (.skip : Prog Nat) (.annot "tag" "text"))))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+      (panSimpProg (.seq (.skip : Prog Nat) (.annot "tag" "text"))) none none none =
+    some (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi), 1) :=
+  evalPanValueFfiClockProg_panSimpProg_normalProg_some_progCallFuel evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 5
+    (.seq (.skip : Prog Nat) (.annot "tag" "text")) (fun _ => none) (fun _ => none)
+    (fun _ => none) evaluatorFfi 1 none none none h
+
 /-- The raised `DecCall` outcome also lifts to the declaration's progSize. -/
 example
     (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)

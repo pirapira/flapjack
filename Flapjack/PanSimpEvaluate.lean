@@ -3416,6 +3416,93 @@ theorem evalPanValueFfiClockProg_normalProg_some_progCallFuel
         locals globals memory ffi clock ma c mh locals globals memory ffi clock
         (.control (.normal locals globals memory ffi)) clock hmonoFirst hmonoSecond
 
+/-! ## The normal fragment is closed under `pan_simp`
+
+The `pan_simp` transforms only touch call/return shapes, so the
+skip/annotation/sequence fragment is preserved by `seqCallRet`, `retToTail`,
+`seqAssoc` and hence `panSimpProg`.  These closure lemmas let the normal-fragment
+adequacy theorem be transported across the transform. -/
+
+omit [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α] [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α] in
+theorem PanValueFfiClockNormalProg_seqCallRet {program : Prog α}
+    (h : PanValueFfiClockNormalProg program) :
+    PanValueFfiClockNormalProg (seqCallRet program) := by
+  induction h with
+  | skip => simpa [seqCallRet] using PanValueFfiClockNormalProg.skip
+  | annot tag text =>
+      simpa [seqCallRet] using PanValueFfiClockNormalProg.annot tag text
+  | seq first second hfirst hsecond ihfirst ihsecond =>
+      cases hfirst with
+      | skip =>
+          simpa [seqCallRet] using PanValueFfiClockNormalProg.seq
+            (.skip : Prog α) second PanValueFfiClockNormalProg.skip hsecond
+      | annot tag text =>
+          simpa [seqCallRet] using PanValueFfiClockNormalProg.seq
+            (.annot tag text) second (PanValueFfiClockNormalProg.annot tag text)
+            hsecond
+      | seq a b ha hb =>
+          simpa [seqCallRet] using PanValueFfiClockNormalProg.seq
+            (.seq a b) second (PanValueFfiClockNormalProg.seq a b ha hb) hsecond
+
+omit [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α] [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α] in
+theorem PanValueFfiClockNormalProg_retToTail {program : Prog α}
+    (h : PanValueFfiClockNormalProg program) :
+    PanValueFfiClockNormalProg (retToTail program) := by
+  induction h with
+  | skip => simpa [retToTail] using PanValueFfiClockNormalProg.skip
+  | annot tag text =>
+      simpa [retToTail] using PanValueFfiClockNormalProg.annot tag text
+  | seq first second hfirst hsecond ihfirst ihsecond =>
+      have hs := PanValueFfiClockNormalProg_seqCallRet
+        (PanValueFfiClockNormalProg.seq (retToTail first) (retToTail second)
+          ihfirst ihsecond)
+      simpa [retToTail] using hs
+
+omit [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α] [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α] in
+theorem PanValueFfiClockNormalProg_seqAssoc (program pre : Prog α)
+    (hpre : PanValueFfiClockNormalProg pre)
+    (h : PanValueFfiClockNormalProg program) :
+    PanValueFfiClockNormalProg (seqAssoc pre program) := by
+  induction h generalizing pre with
+  | skip => rw [seqAssoc.eq_1]; exact hpre
+  | annot tag text => simpa [seqAssoc] using hpre
+  | seq first second hfirst hsecond ihfirst ihsecond =>
+      rw [seqAssoc.eq_3]
+      exact ihsecond (seqAssoc pre first) (ihfirst pre hpre)
+
+omit [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α] [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α] in
+theorem PanValueFfiClockNormalProg_panSimpProg {program : Prog α}
+    (h : PanValueFfiClockNormalProg program) :
+    PanValueFfiClockNormalProg (panSimpProg program) :=
+  PanValueFfiClockNormalProg_retToTail
+    (PanValueFfiClockNormalProg_seqAssoc program (.skip : Prog α)
+      PanValueFfiClockNormalProg.skip h)
+
+/-- The `pan_simp`-transformed normal fragment still evaluates normally at its
+    own call-aware budget, preserving the state and clock exactly. -/
+theorem evalPanValueFfiClockProg_panSimpProg_normalProg_some_progCallFuel
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat) (program : Prog α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (h : PanValueFfiClockNormalProg program) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord
+        (progCallFuel callBudget (panSimpProg program))
+        locals globals memory ffi clock (panSimpProg program) ma c mh =
+      some (.control (.normal locals globals memory ffi), clock) :=
+  evalPanValueFfiClockProg_normalProg_some_progCallFuel context primitive handler
+    structs functions baseAddress topAddress bytesInWord callBudget
+    (panSimpProg program) locals globals memory ffi clock ma c mh
+    (PanValueFfiClockNormalProg_panSimpProg h)
+
 
 /-! ## While-body step equations
 

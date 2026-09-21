@@ -298,4 +298,29 @@ def renameNameGuard : Bool :=
 #eval renameNameGuard
 #guard renameNameGuard
 
+/-! Counterpart of Cake's `ALL_DISTINCT_fperm_decs`
+    (`pan_globalsProofScript.sml:1711`). -/
+def renameNodupDecls : List (Decl Nat) :=
+  [.function
+    { name := "main", inline := false, exported := false, params := [],
+      body := .skip, returnShape := .one },
+   .function
+    { name := "other", inline := false, exported := false, params := [],
+      body := .skip, returnShape := .one }]
+
+example : True := by
+  have hnodup :
+      ((functions renameNodupDecls).map (fun entry => entry.1)).Nodup := by
+    decide
+  have h := globalRenameDecls_names_nodup "main" "entry" renameNodupDecls hnodup
+  trivial
+
+def renameNodupGuard : Bool :=
+  let renamed := globalRenameDecls "main" "entry" renameNodupDecls
+  decide (((functions renamed).map (fun entry => entry.1)).Nodup) &&
+  (((functions renamed).map (fun entry => entry.1)).length == 2)
+
+#eval renameNodupGuard
+#guard renameNodupGuard
+
 end Flapjack.Test.PanGlobalsDecShapesParity

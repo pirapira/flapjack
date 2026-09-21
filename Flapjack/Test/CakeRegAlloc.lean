@@ -460,6 +460,31 @@ def stExMaxDegOrderGuard : Bool :=
   cakeStExListMaxDeg degrees [1, 2] 4 0 2 [] == (2, [0, 1])
 
 #guard stExMaxDegOrderGuard
+
+/- Cake's `respill` (`reg_allocScript.sml:659-674`) moves a freeze-worklist
+   node back to the spill worklist only when its degree reaches `k`; it
+   removes that node from `freezeWl` and prepends it to `spillWl`. -/
+def respillWorklistGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      degrees := CakeNodeMap.ofNatInfoMap 4 [(3, 4)]
+      spillWl := [1, 2]
+      freezeWl := [3] }
+  let moved := cakeRespill 4 3 state
+  moved.spillWl == [3, 1, 2] && moved.freezeWl == [] &&
+    (moved.degrees.get 3).getD 0 == 4
+
+def respillBelowThresholdGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      degrees := CakeNodeMap.ofNatInfoMap 4 [(3, 3)]
+      spillWl := [1]
+      freezeWl := [3] }
+  let unchanged := cakeRespill 4 3 state
+  unchanged.spillWl == [1] && unchanged.freezeWl == [3]
+
+#guard respillWorklistGuard
+#guard respillBelowThresholdGuard
 /- `get_prefs_def` uses `MAP ... ++ acc`, preserving each Move's source
    order.  These guards mirror the canonical `get_prefs_probe.out` output. -/
 def prefsMoveOrderGuard : Bool :=
@@ -815,7 +840,8 @@ def runChecks : IO Bool := do
     sourceSpillCostKeyGuard, sourceMovePhysicalFallbackGuard,
     deadTailCallLiveGuard, deadAllocLiveGuard, deadInstallLiveGuard,
     deadFfiLiveGuard, deadStoreConstsLiveGuard, stExMinCostOrderGuard,
-    stExMaxDegOrderGuard]
+    stExMaxDegOrderGuard, respillWorklistGuard,
+    respillBelowThresholdGuard]
   let names := [
     "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
@@ -852,7 +878,8 @@ def runChecks : IO Bool := do
     "remove_dead tail-call liveness", "remove_dead Alloc liveness",
     "remove_dead Install liveness", "remove_dead FFI liveness",
     "remove_dead StoreConsts liveness", "st_ex_list_MIN_cost ordering",
-    "st_ex_list_MAX_deg ordering"]
+    "st_ex_list_MAX_deg ordering", "respill freeze-to-spill transition",
+    "respill below-threshold no-op"]
   let mut all := true
   for (name, result) in names.zip results do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"

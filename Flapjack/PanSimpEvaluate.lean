@@ -5860,6 +5860,93 @@ theorem PanValueFfiClockNormalAdequateProgFromFloor_seq
       finalClock hfirstEval hsecondEval,
     hfinalFloor⟩
 
+/-- A program that is adequate from every clock needs no floor evidence at all:
+    its lower bound is the trivial `0`.  This removes the explicit floor premise
+    from the `FromFloor` composition rule for such programs. -/
+theorem PanValueFfiClockNormalAdequateProgFromFloor_of_adequate
+    (lo : Nat)
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (program : Prog α)
+    (h : PanValueFfiClockNormalAdequateProg context primitive handler structs
+      functions baseAddress topAddress bytesInWord callBudget ma c mh program) :
+    PanValueFfiClockNormalAdequateProgFromFloor lo 0
+      context primitive handler structs functions baseAddress topAddress bytesInWord
+      callBudget ma c mh program := by
+  intro clock _ locals globals memory ffi
+  obtain ⟨finalLocals, finalGlobals, finalMemory, finalFfi, finalClock, hfinal⟩ :=
+    h locals globals memory ffi clock
+  exact ⟨finalLocals, finalGlobals, finalMemory, finalFfi, finalClock, hfinal,
+    Nat.zero_le finalClock⟩
+
+/-- Raising the required input bound: a certificate valid from `lo` is valid
+    from any larger bound `lo'`, since `lo ≤ clock` follows from `lo ≤ lo' ≤ clock`.
+    Useful to align the input floor of a continuation with the trivial bound
+    discharged by `PanValueFfiClockNormalAdequateProgFromFloor_of_adequate`. -/
+theorem PanValueFfiClockNormalAdequateProgFromFloor_weaken
+    (lo lo' floor : Nat) (hlo : lo ≤ lo')
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (program : Prog α)
+    (h : PanValueFfiClockNormalAdequateProgFromFloor lo floor
+      context primitive handler structs functions baseAddress topAddress bytesInWord
+      callBudget ma c mh program) :
+    PanValueFfiClockNormalAdequateProgFromFloor lo' floor
+      context primitive handler structs functions baseAddress topAddress bytesInWord
+      callBudget ma c mh program := by
+  intro clock hclock
+  exact h clock (Nat.le_trans hlo hclock)
+
+/-- Compose a lower-bounded first program with an adequate (clock-unbounded)
+    second program: the continuation needs no floor premise, so the result only
+    inherits the first program's floor. -/
+theorem PanValueFfiClockNormalAdequateProgFromFloor_seq_adequate
+    (lo firstFloor : Nat)
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (first second : Prog α)
+    (hfirst : PanValueFfiClockNormalAdequateProgFromFloor lo firstFloor
+      context primitive handler structs functions baseAddress topAddress bytesInWord
+      callBudget ma c mh first)
+    (hsecond : PanValueFfiClockNormalAdequateProg context primitive handler structs
+      functions baseAddress topAddress bytesInWord callBudget ma c mh second) :
+    PanValueFfiClockNormalAdequateProgFromFloor lo 0
+      context primitive handler structs functions baseAddress topAddress bytesInWord
+      callBudget ma c mh (.seq first second) := by
+  intro clock hclock locals globals memory ffi
+  obtain ⟨midLocals, midGlobals, midMemory, midFfi, midClock, hfirstEval,
+      _hmidFloor⟩ := hfirst clock hclock locals globals memory ffi
+  obtain ⟨finalLocals, finalGlobals, finalMemory, finalFfi, finalClock,
+      hsecondEval⟩ := hsecond midLocals midGlobals midMemory midFfi midClock
+  exact ⟨finalLocals, finalGlobals, finalMemory, finalFfi, finalClock,
+    evalPanValueFfiClockProg_seq_of_first_normal_progCallFuel context primitive
+      handler structs functions baseAddress topAddress bytesInWord callBudget first second
+      locals globals memory ffi clock ma c mh midLocals midGlobals midMemory midFfi
+      midClock (.control (.normal finalLocals finalGlobals finalMemory finalFfi))
+      finalClock hfirstEval hsecondEval,
+    Nat.zero_le finalClock⟩
+
 /-- A lower-bounded program may also contain a caught-handler call: the call
     raises, the matching handler body runs normally at the same structural
     budget, and the result is again normal from the input clock onward. -/

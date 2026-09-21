@@ -703,6 +703,47 @@ theorem sizeOfEids_panSimpDecls (declarations : List (Decl α)) :
   rw [panSimpDecls_eq_map]
   exact sizeOfEids_map_panSimpDecl declarations
 
+/-- The cons equation for `sizeOfEids`, stated as an `if` on `isExnDecl`. -/
+theorem sizeOfEids_cons (declaration : Decl α) (declarations : List (Decl α)) :
+    sizeOfEids (declaration :: declarations) =
+      if isExnDecl declaration then 1 + sizeOfEids declarations
+      else sizeOfEids declarations := by
+  cases declaration <;> rw [sizeOfEids.eq_def] <;> simp [isExnDecl]
+
+/-- Cake's `size_of_eids_structs_compile_eq`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:305`): the `pan_structs`
+    pass keeps exactly the exception declarations, so the exception-identifier
+    count is unchanged. -/
+theorem sizeOfEids_structCompileDecls [BEq String]
+    (declarations : List (Decl α)) (context : StructPassContext) :
+    sizeOfEids (structCompileDecls declarations context).1 =
+      sizeOfEids declarations := by
+  induction declarations generalizing context with
+  | nil => simp [structCompileDecls]
+  | cons declaration declarations ih =>
+      cases declaration with
+      | decl shape name value =>
+          simp only [structCompileDecls]
+          simpa [sizeOfEids_cons, isExnDecl] using ih _
+      | function fn =>
+          simp only [structCompileDecls]
+          simpa [sizeOfEids_cons, isExnDecl] using ih context
+      | exnDecl exception shape =>
+          simp only [structCompileDecls]
+          simpa [sizeOfEids_cons, isExnDecl] using ih context
+      | name structName fields =>
+          simp only [structCompileDecls]
+          simpa [sizeOfEids_cons, isExnDecl] using ih context
+
+/-- Cake's `size_of_eids_structs_compile_eq`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:305`). -/
+theorem sizeOfEids_structCompileTop (declarations : List (Decl α)) :
+    sizeOfEids (structCompileTop declarations) = sizeOfEids declarations := by
+  unfold structCompileTop
+  dsimp only
+  exact sizeOfEids_structCompileDecls declarations
+    (structGetNames { structs := [], locals := [], globals := [] } declarations)
+
 def globalResortDecls (declarations : List (Decl α)) : List (Decl α) :=
   globalDeclsFilter globalDeclIsName declarations ++
     globalDeclsFilter globalDeclIsException declarations ++
@@ -771,6 +812,22 @@ theorem functions_names_panSimpDecls (declarations : List (Decl α)) :
       (functions declarations).map Prod.fst := by
   rw [functions_panSimpDecls, List.map_map]
   rfl
+
+/-- Cake's `no_names_compile_prog`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:318`): `pan_simp` keeps
+    the restriction that no declaration is a structure name, matching
+    `is_function ∨ is_decl ∨ is_exn_decl`. -/
+theorem panSimpDecls_all_not_name (declarations : List (Decl α))
+    (hall : declarations.all (fun declaration => !isName declaration) = true) :
+    (panSimpDecls declarations).all (fun declaration => !isName declaration) =
+      true := by
+  rw [panSimpDecls_eq_map]
+  induction declarations with
+  | nil => simp
+  | cons declaration declarations ih =>
+      simp only [List.map_cons, List.all_cons, Bool.and_eq_true] at hall ⊢
+      obtain ⟨hhead, htail⟩ := hall
+      cases declaration <;> simp_all [panSimpDecl, isName]
 
 theorem globalDeclShapes_of_functions (declarations : List (Decl α))
     (hfunctions : ∀ declaration ∈ declarations, globalDeclIsFunction declaration = true) :
@@ -1840,6 +1897,32 @@ theorem globalCompileDecs_functions_names [BEq String] [Add α] [Mul α]
       (functions declarations).map (fun entry => entry.1) := by
   simp only [globalCompileDecs]
   rw [functions_globalDeclsFilter_isFunction, functions_names_globalCompileDecls]
+
+theorem functions_globalCompileDecls [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations : List (Decl α)) :
+    functions (globalCompileDecls context declarations) =
+      (functions declarations).map (fun entry =>
+        (entry.1, entry.2.1, globalCompileProg context entry.2.2.1, entry.2.2.2)) := by
+  induction declarations with
+  | nil => simp [globalCompileDecls, functions]
+  | cons declaration declarations ih =>
+      cases declaration <;> simp [globalCompileDecls, functions, ih]
+
+/-- Cake's `compile_decs_exp_ids`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:153`): compiling the
+    global declarations does not change the exception identifiers of the
+    function bodies. -/
+theorem globalCompileDecs_functions_expIds [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α)) :
+    (functions (globalCompileDecs context code).functions).map
+        (fun entry => expIds entry.2.2.1) =
+      (functions code).map (fun entry => expIds entry.2.2.1) := by
+  simp only [globalCompileDecs]
+  rw [functions_globalDeclsFilter_isFunction, functions_globalCompileDecls]
+  rw [List.map_map]
+  apply List.map_congr_left
+  intro entry hentry
+  simp [globalCompileProg_expIds]
 
 theorem functions_globalRenameDecls_map_fst [BEq String] (source target : FunName)
     (declarations : List (Decl α)) :

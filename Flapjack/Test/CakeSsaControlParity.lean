@@ -92,9 +92,25 @@ def shiftBoundaryGuard : Bool :=
 
 #guard shiftBoundaryGuard
 
+def addCarryProgram : WordProg Nat :=
+  .inst (.arith (.cakeAddCarry 1 2 3 4))
+
+/-! Cake's four-register AddCarry fixes the carry input/output at register 0;
+    the fresh result and carry names are restored by the surrounding moves. -/
+def addCarryBoundaryGuard : Bool :=
+  match (wordFullSsaCcTrans 0 addCarryProgram).2.2 with
+  | .seq (.move 1 [])
+      (.seq (.move 1 [(0, 0)])
+        (.seq (.inst (.arith (.cakeAddCarry 9 0 0 0)))
+          (.move 1 [(13, 0)]))) => true
+  | _ => false
+
+#guard addCarryBoundaryGuard
+
 def parityGuard : Bool :=
   raiseBoundaryGuard && callBoundaryGuard && storeConstsBoundaryGuard &&
-    longDivBoundaryGuard && longMulBoundaryGuard && shiftBoundaryGuard
+    longDivBoundaryGuard && longMulBoundaryGuard && shiftBoundaryGuard &&
+    addCarryBoundaryGuard
 
 #guard parityGuard
 #eval parityGuard
@@ -112,7 +128,9 @@ def runChecks : IO Bool := do
       ("full_ssa_cc_trans LongMul preserves Cake fixed-register ABI",
         longMulBoundaryGuard),
       ("full_ssa_cc_trans register Shift preserves Cake fixed-register ABI",
-        shiftBoundaryGuard) ]
+        shiftBoundaryGuard),
+      ("full_ssa_cc_trans AddCarry preserves Cake fixed-register ABI",
+        addCarryBoundaryGuard) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

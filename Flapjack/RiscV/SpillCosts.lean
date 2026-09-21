@@ -142,6 +142,27 @@ def wordCoalesceMoveCost (spillCosts : NatInfoMap Nat)
     left := move.left
     right := move.right }
 
+/-! Production uses the same membership predicate as `wordCoalesceMoveCost`,
+    but the reference `NatInfoMap` lookup is linear in the spill-cost list.
+    Build the key set once per canonical-move batch; values are not needed for
+    this boundary, only whether a variable has a spill cost. -/
+def wordSpillCostKeys (spillCosts : NatInfoMap Nat) : Std.TreeSet Nat :=
+  spillCosts.foldl (fun keys entry => keys.insert entry.1) ∅
+
+def wordCoalesceMoveCostFast (keys : Std.TreeSet Nat)
+    (move : WordCanonicalMove) : WordMove :=
+  let leftCost := if keys.contains move.left then 1 else 0
+  let rightCost := if keys.contains move.right then 1 else 0
+  { priority := move.count *
+      (10 * (move.maxPriority + 1) + leftCost + rightCost)
+    left := move.left
+    right := move.right }
+
+def wordCoalesceMoveCostsFast (spillCosts : NatInfoMap Nat)
+    (moves : List WordCanonicalMove) : List WordMove :=
+  let keys := wordSpillCostKeys spillCosts
+  moves.map (wordCoalesceMoveCostFast keys)
+
 /-- `wordHeuristicSpillCosts` over the tree-backed counter state.  The reference
     definition above stays as the specification; this is what the pipeline
     runs, because the association-list state makes the reference cubic in
@@ -159,7 +180,7 @@ def wordGetHeuristics (algorithm currentFunction : Nat) (program : WordProg α) 
   let moves := wordProgPrioritizedMoves program
   if algorithm % 2 = 1 then
     let spillCosts := wordHeuristicSpillCostsFast currentFunction program
-    (wordCanonicalizeMoves moves |>.map (wordCoalesceMoveCost spillCosts),
+    (wordCoalesceMoveCostsFast spillCosts (wordCanonicalizeMoves moves),
       some spillCosts)
   else
     (moves, none)

@@ -945,6 +945,12 @@
       "source_reference": "CurrHeap zero-sub witness: `@base - 0` reaches the same materialised-constant register add, so Cake keeps `li a0,0; add a0,a0,s10` instead of eliding the computation (GH #1128, flapjack-qxa).",
       "cake_sha256": "b0c0977bc4e3f55dba8183a6df675d6e527fcf13f0aa49fce55240c25431a9cb",
       "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/annotation_comments.pnk",
+      "source_reference": "Annotation-comment coverage: Cake lexes `/@ ... @/` as an annotation (panLexerScript.sml:242-254, panPtreeConversionScript.sml:483) and pan_simp drops it (`Annot _ _ => p`, pan_simpScript.sml), so top-level, in-body and multiline annotations plus `//` and `/* */` comments must not change RISC-V output. This fixture locks in the byte-exact Cake/Flapjack agreement for that under-tested construct.",
+      "cake_sha256": "b3d9a8219a6c45427270be0657e99e138cbae13902283dfad185e0e242668d22",
+      "tracked_beads": []
     }
   ]
 }

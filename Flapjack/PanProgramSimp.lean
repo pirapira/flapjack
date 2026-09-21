@@ -238,4 +238,18 @@ theorem panValueProgramStateRel_evalPanValueDeclarations
         memoryAccess s' hs
       exact ⟨rfl, hglobals, hmemory, hret, hparam, hexn, hbase, htop, hbiw, hfuncs⟩
 
+/-! Cake's `map_snd_f_eq` (`pan_simpProofScript.sml:43`): rewriting only the
+    body component of a declaration triple commutes with projecting that body
+    and applying a further function.  Stated for `List (α × β × γ)`, whose
+    nested `Prod.snd` projections are Cake's `SND ∘ SND`. -/
+
+/-- Cake's `map_snd_f_eq` (`pan_simpProofScript.sml:43`). -/
+theorem list_map_third_map_eq {α β γ δ ε : Type} (f : γ → δ) (g : δ → ε)
+    (p : List (α × β × γ)) :
+    (p.map (fun t => (t.1, t.2.1, f t.2.2))).map (fun t => g t.2.2) =
+      p.map (fun t => g (f t.2.2)) := by
+  induction p with
+  | nil => rfl
+  | cons t ts ih => simp [ih]
+
 end Flapjack

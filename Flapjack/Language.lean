@@ -903,6 +903,25 @@ theorem panMap3_eq_map2_zip (f : α → β → γ → δ) (l1 : List α) (l2 : L
               have h2' : ys.length = zs.length := by simp at h2; omega
               simp only [panMap3, panMap2, List.zip_cons_cons, ih xs ys h1' h2']
 
+/-- Cake's `map_map2_fst_lemma`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:118`): the first
+    components of a pointwise pairing are the prefix of the first list cut at
+    the shorter length. -/
+theorem zipWith_pair_fst {α β : Type} (xs : List α) (ys : List β) :
+    (List.zipWith (fun x y => (x, y)) xs ys).map Prod.fst =
+      xs.take (min xs.length ys.length) := by
+  induction xs generalizing ys with
+  | nil => simp
+  | cons x xs ih =>
+      cases ys with
+      | nil => simp
+      | cons y ys =>
+          simp only [List.zipWith_cons_cons, List.map_cons, List.length_cons]
+          rw [ih]
+          have hk : min (xs.length + 1) (ys.length + 1) =
+              min xs.length ys.length + 1 := by omega
+          rw [hk, List.take_succ_cons]
+
 /-! Counterpart of Cake's `all_distinct_with_shape_distinct`
     (`cakeml/pancake/semantics/panPropsScript.sml:357`): two distinct members of
     the flat-value split are disjoint.  Cake's extra hypotheses `x <> []` and

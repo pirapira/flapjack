@@ -1100,4 +1100,9 @@ example :
       exact PanValueProgNotBrokeContinued_skip primitive sourceHandler structs
         sourceFunctions baseAddress topAddress bytesInWord)
 
+/-! The Crep-side control-safety predicate cannot be exchanged for the source
+    handler-safety predicate: `.break` is control-safe on both sides but still
+    yields a `broke` source result. -/
+#check @not_panValueProgNotBrokeContinued_break
+
 end Flapjack.Test.PanValuePcControlSafety

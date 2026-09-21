@@ -223,6 +223,14 @@ example :
       some [.sll 4 5 6] := by
   decide
 
+/- Cake's direct register Binop boundary emits the corresponding RISC-V
+   register ALU instruction without an intermediate materialization. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.arith .xor 4 5 6) [] 0]⟩ =
+      some [.xor 4 5 6] := by
+  decide
+
 example :
     compileLabSection (width := 64) { services := [] }
       ⟨3, [.asm (.word (.arith (.longMul 4 5 6 7))) [] 0]⟩ =

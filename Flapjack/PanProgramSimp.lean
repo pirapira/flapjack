@@ -594,6 +594,44 @@ theorem evalPanValueDeclarations_exceptions
       exact evalPanValueDeclarationsWithStructs_exceptions structs
         { state with structs := structs } state' declarations memoryAccess heval
 
+/-! Compose the public declaration-state equation with Cake's top-level raised
+    call boundary.  The result keeps both the raised payload and the exception
+    table available to the caller instead of hiding lookup in a premise. -/
+theorem evalPanValueProgram_of_declarations_and_raised_call_with_exception_state
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (initial : PanValueProgramState α)
+    (primitive : PanPrimitiveHandler α) (ffi : PanValueFfiHandler α)
+    (fuel : Nat) (declarations : List (Decl α)) (entry : FunName)
+    (arguments : List (Exp α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (memoryHandler : Option (PanValueAcceleratorFfiHandler α))
+    (state : PanValueProgramState α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (exception : ExceptionId)
+    (value : PanValue α)
+    (hdeclarations : evalPanValueDeclarations initial declarations
+      (memoryAccess := memoryAccess) = some state)
+    (hcall : evalPanValueCallWithPrimitiveCallsAndFfi primitive ffi
+      state.structs state.functions state.baseAddress state.topAddress
+      state.bytesInWord fuel (fun _ => none) state.globals state.memory none
+      entry arguments (memoryAccess := memoryAccess)
+      (contracts := some (PanValueCallContracts.mk state.returnShapes
+        state.exceptions state.parameterShapes))
+      (memoryHandler := memoryHandler) =
+      some (.raised locals globals memory exception value)) :
+    evalPanValueProgram initial primitive ffi fuel declarations entry arguments
+      (memoryAccess := memoryAccess) (memoryHandler := memoryHandler) =
+      some (.raised locals globals memory exception value) ∧
+    state.exceptions = panExceptionEntries declarations ++ initial.exceptions := by
+  constructor
+  · exact evalPanValueProgram_of_declarations_and_raised_call initial primitive ffi
+      fuel declarations entry arguments memoryAccess memoryHandler state locals globals
+      memory exception value hdeclarations hcall
+  · exact evalPanValueDeclarations_exceptions initial state declarations memoryAccess
+      hdeclarations
+
 /-! Cake's `evaluate_decls_only_exn_decls`
     (`cakeml/pancake/semantics/panPropsScript.sml:1436`): when every
     declaration is an exception declaration, successful evaluation changes
@@ -639,6 +677,39 @@ theorem evalPanValueDeclarationsWithStructs_only_exn_decls
               rw [ih _ htail rfl heval]
               simp [panExceptionEntries_cons, List.append_assoc, hstructs]
             · simp [hexists, hwf] at heval
+
+/-! Cake's `evaluate_decls_only_exn_decls` at the public declaration entry
+    point.  Collecting struct names is a no-op for an exception-only list, so
+    the stronger state equation can be exposed without a struct premise. -/
+theorem evalPanValueDeclarations_only_exn_decls
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state state' : PanValueProgramState α)
+    (declarations : List (Decl α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (hall : declarations.all isExnDecl = true)
+    (heval : evalPanValueDeclarations state declarations memoryAccess = some state') :
+    state' = { state with
+      exceptions := panExceptionEntries declarations ++ state.exceptions } := by
+  simp only [evalPanValueDeclarations] at heval
+  cases hcollect : collectPanValueStructs declarations state.structs with
+  | none => simp [hcollect] at heval
+  | some structs =>
+      simp only [hcollect] at heval
+      have hnames : declarations.all (fun declaration => !isName declaration) = true := by
+        refine List.all_eq_true.mpr (fun declaration hmem => ?_)
+        have h := List.all_eq_true.mp hall declaration hmem
+        cases declaration <;> simp_all [isExnDecl, isName]
+      have hstructs : structs = state.structs := by
+        have hno := collectPanValueStructs_of_no_names state.structs declarations hnames
+        rw [hcollect] at hno
+        exact Option.some.inj hno
+      subst hstructs
+      have hmain := evalPanValueDeclarationsWithStructs_only_exn_decls
+        state.structs { state with structs := state.structs } state' declarations
+        memoryAccess hall rfl heval
+      simpa using hmain
 
 /-! Cake's `evaluate_decls_names`
     (`cakeml/pancake/semantics/panPropsScript.sml:1552`): a declaration list

@@ -246,6 +246,18 @@ theorem evalPanValueDeclarations_exceptions_wf_fixture
     wfExceptionDecls none heval (exception := "E") (shape := .one) (by
       simp [wfExceptionDecls, wfException])
 
+theorem evalPanValueDeclarations_top_exceptions_wf_fixture
+    (state' : PanValueProgramState Nat)
+    (heval : evalPanValueDeclarations evalRelState wfExceptionDecls none = some state') :
+    ∃ structs : StructContext,
+      collectPanValueStructs wfExceptionDecls evalRelState.structs = some structs ∧
+        isWfShape structs (.one : Shape) = true := by
+  obtain ⟨structs, hcollect, hwf⟩ :=
+    evalPanValueDeclarations_exceptions_wf evalRelState state' wfExceptionDecls none
+      heval (exception := "E") (shape := .one) (by
+        simp [wfExceptionDecls, wfException])
+  exact ⟨structs, hcollect, hwf⟩
+
 /-! Regression for Cake's `evaluate_decls_append`
     (`cakeml/pancake/semantics/panPropsScript.sml:1540`): evaluating a
     concatenated declaration list is the sequential composition of evaluating

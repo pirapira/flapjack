@@ -434,4 +434,28 @@ theorem evalPanValueDeclarationsWithStructs_exceptions_wf
               · exact ih _ _ heval htail
             · simp [hexists, hwf] at heval
 
+/-! The same exception-shape invariant at the struct-collecting entry point,
+    where the successful declaration list determines the context used for
+    `isWfShape`. -/
+theorem evalPanValueDeclarations_exceptions_wf
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state state' : PanValueProgramState α) (declarations : List (Decl α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (heval : evalPanValueDeclarations state declarations memoryAccess = some state')
+    {exception : ExceptionId} {shape : Shape}
+    (hmem : (.exnDecl exception shape : Decl α) ∈ declarations) :
+    ∃ structs : StructContext,
+      collectPanValueStructs declarations state.structs = some structs ∧
+        isWfShape structs shape = true := by
+  simp only [evalPanValueDeclarations] at heval
+  cases hcollect : collectPanValueStructs declarations state.structs with
+  | none => simp [hcollect] at heval
+  | some structs =>
+      simp only [hcollect] at heval
+      have hwf := evalPanValueDeclarationsWithStructs_exceptions_wf structs
+        { state with structs := structs } state' declarations memoryAccess heval hmem
+      exact ⟨structs, rfl, hwf⟩
+
 end Flapjack

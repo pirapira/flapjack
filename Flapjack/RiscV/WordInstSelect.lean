@@ -36,6 +36,19 @@ class WordInstSelectImmediate (α : Type u) where
      shape whose direct `Addr` carrier is required by the parity corpus. -/
   negativeAddressOffset : α → Bool
 
+/-! Cake's `op_consts` identity for an empty operation.  The source-facing
+    Nat carrier models 64-bit Pancake words, while concrete callers use
+    `BitVec width`; keeping the identity explicit avoids using unbounded Nat
+    complement for the abstract carrier. -/
+class WordInstSelectConstants (α : Type u) where
+  andIdentity : α
+
+instance : WordInstSelectConstants Nat where
+  andIdentity := 2 ^ 64 - 1
+
+instance (priority := 100) : WordInstSelectConstants (BitVec width) where
+  andIdentity := ~~~(0 : BitVec width)
+
 instance : WordInstSelectImmediate Nat where
   /- The source-facing pipeline carries RV64 words as `Nat` after the
      word-to-stack boundary.  This is not an unbounded integer target: the
@@ -43,7 +56,10 @@ instance : WordInstSelectImmediate Nat where
      12-bit immediate test as the concrete `BitVec 64` instance. -/
   validBinOpImmediate operator value :=
     match operator with
-    | .sub => value < 2 ^ 11
+    /- RISC-V's `valid_imm` is strict at the negative endpoint for Sub:
+       `min12 < i <= max12`.  In the 64-bit word carrier this includes the
+       bit patterns for -2047 through -1 as well as 0 through 2047. -/
+    | .sub => value < 2 ^ 11 || value > 2 ^ 64 - 2 ^ 11
     | .add | .and | .or | .xor =>
         value < 2 ^ 11 || value ≥ 2 ^ 64 - 2 ^ 11
   validSharedMemoryOffset _operator value :=
@@ -58,7 +74,7 @@ instance : WordInstSelectImmediate (BitVec width) where
   validBinOpImmediate operator value :=
     let n := value.toNat
     match operator with
-    | .sub => n < 2 ^ 11
+    | .sub => n < 2 ^ 11 || n > 2 ^ width - 2 ^ 11
     | .add | .and | .or | .xor =>
         n < 2 ^ 11 || n ≥ 2 ^ width - 2 ^ 11
   validSharedMemoryOffset _operator value :=
@@ -130,7 +146,8 @@ def wordInstIsConstant : WordExp α → Bool
     uses the available `And`/`Or`/`Xor`/arithmetic operation classes for
     non-zero folds too.  Unlike the other operators, `And` folds its
     non-empty constant list from the first operand, so no all-ones identity
-    is required; `op_consts` for empty operand lists remains a separate gap. -/
+    is required; `op_consts` for empty operand lists is handled by
+    `wordInstOpConstants` below. -/
 def wordInstConstantValue : WordExp α → Option α
   | .const value => some value
   | _ => none
@@ -180,9 +197,15 @@ def wordInstConvertSub [Sub α] [OfNat α 0] : List (WordExp α) → WordExp α
   | [expression, .const value] => .op .add [.const (0 - value), expression]
   | expressions => .op .sub expressions
 
+def wordInstOpConstants [OfNat α 0] [WordInstSelectConstants α]
+    (operator : BinOp) : WordExp α :=
+  match operator with
+  | .and => .const WordInstSelectConstants.andIdentity
+  | _ => .const 0
+
 def wordInstPullExp [Sub α] [Add α] [AndOp α] [OrOp α] [HXor α α α]
-    [DecidableEq α] [OfNat α 0] : WordExp α → WordExp α
-  | .op operator [] => .op operator []
+    [DecidableEq α] [OfNat α 0] [WordInstSelectConstants α] : WordExp α → WordExp α
+  | .op operator [] => wordInstOpConstants operator
   | .op _ [expression] => wordInstPullExp expression
   | .op .sub expressions =>
       wordInstConvertSub (expressions.map wordInstPullExp)
@@ -203,14 +226,14 @@ def wordInstPullExp [Sub α] [Add α] [AndOp α] [OrOp α] [HXor α α α]
 termination_by expression => sizeOf expression
 decreasing_by all_goals decreasing_trivial
 
-def wordInstFlattenExp : WordExp α → WordExp α
+def wordInstFlattenExp [WordInstSelectConstants α] [OfNat α 0] : WordExp α → WordExp α
   | .op .sub expressions =>
       -- Cake's `flatten_exp` preserves subtraction operands; the generic
       -- n-ary case below rebuilds an associative operation as
       -- `[flatten(rest), flatten(head)]`, which is valid for associative
       -- operators but reverses `Sub [left, right]`.
       .op .sub (expressions.map wordInstFlattenExp)
-  | .op operator [] => .op operator []
+  | .op operator [] => wordInstOpConstants operator
   | .op _ [expression] => wordInstFlattenExp expression
   | .op operator (expression :: expressions) =>
       .op operator
@@ -224,7 +247,8 @@ termination_by expression => sizeOf expression
 decreasing_by all_goals decreasing_trivial
 
 def wordInstNormalizeExp [Sub α] [Add α] [AndOp α] [OrOp α] [HXor α α α]
-    [DecidableEq α] [OfNat α 0] (expression : WordExp α) : WordExp α :=
+    [DecidableEq α] [OfNat α 0] [WordInstSelectConstants α]
+    (expression : WordExp α) : WordExp α :=
   wordInstFlattenExp (wordInstPullExp expression)
 
 /-- Shared tail of `inst_select_exp`'s `Load` case: the selected address is
@@ -466,7 +490,7 @@ for checked theorem/API clients until the downstream carrier integration can
 be migrated without changing accepted artifacts. -/
 def wordInstSelectStoreCake [Sub α] [Add α] [AndOp α] [OrOp α]
     [HXor α α α] [DecidableEq α] [OfNat α 0] [OfNat α 1]
-    [WordInstSelectImmediate α]
+    [WordInstSelectImmediate α] [WordInstSelectConstants α]
     (temp : Nat) (address : WordExp α) (value : Nat) : WordProg α :=
   let address := wordInstNormalizeExp address
   match address with
@@ -488,7 +512,7 @@ def wordInstSelectStoreCake [Sub α] [Add α] [AndOp α] [OrOp α]
 
 def wordInstSelectProgram [Sub α] [Add α] [AndOp α] [OrOp α] [HXor α α α]
     [DecidableEq α] [OfNat α 0] [OfNat α 1]
-    [WordInstSelectImmediate α]
+    [WordInstSelectImmediate α] [WordInstSelectConstants α]
     (temp : Nat) : WordProg α → WordProg α
   | .seq first second =>
       wordDeadSelectSeq (wordInstSelectProgram temp first)
@@ -690,7 +714,7 @@ decreasing_by all_goals decreasing_trivial
 
 def wordInstSelectProgramFrom [Sub α] [Add α] [AndOp α] [OrOp α] [HXor α α α]
     [DecidableEq α] [OfNat α 0] [OfNat α 1]
-    [WordInstSelectImmediate α]
+    [WordInstSelectImmediate α] [WordInstSelectConstants α]
     (program : WordProg α) : WordProg α :=
   wordInstSelectProgram (wordInstSelectMaximum (wordProgVariables program) + 1) program
 

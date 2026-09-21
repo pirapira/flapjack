@@ -5,6 +5,7 @@ import Flapjack.PanValueFfiClockShiftFull
 import Flapjack.PanValueFfiEventMonotonicity
 import Flapjack.PanValueFfiClockShift
 import Flapjack.PanValueFfiClockCorrectness
+import Flapjack.PanValueFfiClockEventMonotonicity
 
 namespace Flapjack.Test.PanSimpParity
 
@@ -2664,9 +2665,20 @@ example : PanValueFfiClockNormalAdequateProgFromFloor 3 3 evaluatorContext
 #check @Flapjack.evalPanValueFfiClock_shift
 #check @Flapjack.evalPanValueFfiClock_shift_panResultEvents
 #check @Flapjack.callFfi_return_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProg_seq_normal_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiProgSteps_extCall_memoryHandler_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiProgSteps_extCall_statefulHandler_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProg_shMemStore_normal_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProg_extCall_memoryHandler_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProg_extCall_statefulHandler_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProg_extCall_statefulHandler_normal_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProg_call_returned_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProg_call_raised_ioEvents_prefix
 #check @Flapjack.panValueFfiSharedLoad_ioEvents_prefix
 #check @Flapjack.panValueFfiSharedStore_ioEvents_prefix
 #check @Flapjack.panValueFfiExtCall_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiProgSteps_shMemLoad_normal_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiProgSteps_shMemStore_normal_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProg_while_zero_shift
 #check @Flapjack.evalPanValueFfiClockProg_while_normal_shift_step
 #check @Flapjack.evalPanValueFfiClockProg_while_broke_shift_step

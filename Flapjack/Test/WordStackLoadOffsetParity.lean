@@ -20,6 +20,29 @@ example :
   simp [wordStackMemoryOffsetInst, wordStackLoadOffsetInst, wordStackLocation,
     wordStackOffset, lookupNatInfo]
 
+/- Cake's signed-12 positive endpoint remains attached to the memory
+   instruction; the later target encoder, not word_to_stack, decides whether
+   it is encodable. -/
+example :
+    wordStackMemoryOffsetInst
+      { locations := [(0, .register 4), (1, .register 5)]
+        scratch := 31
+        stackBase := 10 }
+      .load 0 1 2047 =
+      some (.inst (.memOffset .load 4 5 2047) : StackProg Nat) := by
+  simp [wordStackMemoryOffsetInst, wordStackLoadOffsetInst, wordStackLocation,
+    wordStackOffset, lookupNatInfo]
+
+example :
+    wordStackMemoryOffsetInst
+      { locations := [(0, .register 4), (1, .register 5)]
+        scratch := 31
+        stackBase := 10 }
+      .store 0 1 2047 =
+      some (.inst (.memOffset .store 4 5 2047) : StackProg Nat) := by
+  simp [wordStackMemoryOffsetInst, wordStackStoreOffsetInst, wordStackLocation,
+    wordStackOffset, lookupNatInfo]
+
 example :
     wordStackMemoryOffsetInst
       { locations := [(0, .register 4), (1, .register 5)]

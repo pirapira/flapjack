@@ -275,4 +275,26 @@ theorem structInfosOk_append_fixture (h : structInfosOk (simpleContext ++ [])) :
   structInfosOk_append simpleContext [] h
 
 
+/-! Cake's `map_fst_eq_alookup`
+    (`cakeml/pancake/proofs/pan_structsProofScript.sml:278`). -/
+
+def assocXs : List (String × Nat) := [("a", 1), ("b", 2)]
+
+def assocYs : List (String × Nat) := [("a", 3), ("b", 4)]
+
+theorem map_fst_eq_lookup_fixture :
+    ∃ i, afindi "b" assocXs = some i ∧ afindi "b" assocYs = some i ∧
+      i < assocXs.length ∧ i < assocYs.length ∧
+      (assocXs[i]?).map Prod.snd = some 2 ∧
+      (assocYs[i]?).map Prod.snd = assocYs.lookup "b" :=
+  map_fst_eq_lookup assocXs assocYs "b" (by decide) (by decide)
+
+def afindiLookupGuard : Bool :=
+  (assocXs.lookup "b" == some 2) &&
+    (afindi "b" assocXs == afindi "b" assocYs) &&
+    (afindi "b" assocXs == some 1)
+
+#eval afindiLookupGuard
+#guard afindiLookupGuard
+
 end Flapjack.Test.PanStructsAfindiParity

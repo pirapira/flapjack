@@ -1941,4 +1941,29 @@ theorem evalPanValueFfiClockProg_seq_terminal_some
       | finalFfi l g m f event => rfl
   | timeout l g m f => rfl
 
+
+theorem evalPanValueFfiClockProg_while_timeout_some
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel : Nat) (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (conditionExp : Exp α) (body : Prog α)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (conditionValue : α)
+    (hcondition : evalPanValueExp structs locals globals memory baseAddress topAddress
+        bytesInWord conditionExp (memoryAccess := ma) = some (.word conditionValue))
+    (hnonzero : (conditionValue == 0) = false)
+    (hclock : (clock == 0) = true) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+        (.while conditionExp body) ma c mh =
+      some (.timeout (fun _ => none) globals memory ffi, clock) := by
+  simp [evalPanValueFfiClockProg, hcondition, hnonzero, hclock,
+    panValueFfiClockTimeout]
+
 end Flapjack

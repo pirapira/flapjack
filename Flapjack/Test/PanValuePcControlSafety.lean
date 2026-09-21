@@ -935,5 +935,4 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @panValueCrepProgramStateCorrect_and_controlSafe_call_none_of_relation
 
 #check @panValueCrepProgramStateCorrect_and_controlSafe_call_returns_of_relation
-
 end Flapjack.Test.PanValuePcControlSafety

@@ -575,9 +575,31 @@ theorem evalPanValueDeclarationsWithStructs_exceptions
               simp [panExceptionEntries_cons, List.append_assoc]
             · simp [hexists, hwf] at heval
 
-/-- Cake's `evaluate_decls_only_exn_decls` (`panPropsScript.sml:1436`): when
-    every declaration is an exception declaration, a successful evaluation
-    changes only the exception-shape table. -/
+/-! The same Cake `evaluate_decls_eshapes` equation at the public declaration
+    evaluator.  This wrapper exposes the exception table after struct
+    collection, which is the state needed by a later raised-call lookup. -/
+theorem evalPanValueDeclarations_exceptions
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state state' : PanValueProgramState α) (declarations : List (Decl α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (heval : evalPanValueDeclarations state declarations memoryAccess = some state') :
+    state'.exceptions = panExceptionEntries declarations ++ state.exceptions := by
+  simp only [evalPanValueDeclarations] at heval
+  cases hcollect : collectPanValueStructs declarations state.structs with
+  | none => simp [hcollect] at heval
+  | some structs =>
+      simp only [hcollect] at heval
+      exact evalPanValueDeclarationsWithStructs_exceptions structs
+        { state with structs := structs } state' declarations memoryAccess heval
+
+/-! Cake's `evaluate_decls_only_exn_decls`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1436`): when every
+    declaration is an exception declaration, successful evaluation changes
+    only the exception-shape table.  This stronger state equation is useful
+    when composing the exception environment with later function/global
+    declarations. -/
 theorem evalPanValueDeclarationsWithStructs_only_exn_decls
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

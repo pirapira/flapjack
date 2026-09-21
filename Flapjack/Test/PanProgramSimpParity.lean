@@ -411,6 +411,14 @@ example :
   exact evalPanValueDeclarationsWithStructs_names ([] : StructContext)
     evalRelState namesOnlyDecls none (by decide)
 
+/-! The public declaration evaluator preserves the same exception table after
+    collecting the declaration-time struct context.  This is the direct
+    state/global lookup bridge used by the top-level raised evaluator. -/
+example (state' : PanValueProgramState Nat)
+    (heval : evalPanValueDeclarations evalRelState exceptionsDecls none = some state') :
+    state'.exceptions = panExceptionEntries exceptionsDecls ++ evalRelState.exceptions := by
+  exact evalPanValueDeclarations_exceptions evalRelState state' exceptionsDecls none heval
+
 /-! Cake's `decs_stcnames_only_functions` / `decs_stcnames_only_functions2`
     (`cakeml/pancake/semantics/panPropsScript.sml:1592,1600`): struct-free and
     function-only declaration lists leave the struct-name context unchanged. -/

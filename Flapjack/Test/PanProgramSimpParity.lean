@@ -872,4 +872,64 @@ example : True := by
       hnodup hnone hexns
   trivial
 
+/-! Focused regression for the ported Cake `OPT_MMAP_MEM_IMP`
+    (`panPropsScript.sml:115`). -/
+
+theorem list_mapM_mem_exists_fixture :
+    ∃ x, x ∈ ([3, 5] : List Nat) ∧
+      (if x == 4 then none else some (x + 1)) = some 6 :=
+  list_mapM_mem_exists (fun n : Nat => if n == 4 then none else some (n + 1))
+    [3, 5] [4, 6] (by decide) 6 (by decide)
+
+#check @list_mapM_mem_exists
+/-! Cake's `opt_mmap_length_eq`, `opt_mmap_mem_func` and `opt_mmap_el`
+    (`pan_commonPropsScript.sml:82/49/71`): basic facts about a successful
+    `OPT_MMAP`/`List.mapM`. -/
+
+def sampleMapF (n : Nat) : Option Nat := if n % 2 == 0 then some (n + 1) else none
+
+theorem list_mapM_length_fixture :
+    ([2, 4, 6] : List Nat).length = [3, 5, 7].length :=
+  list_mapM_length sampleMapF [2, 4, 6] [3, 5, 7] (by decide)
+
+theorem list_mapM_mem_func_fixture :
+    ∃ y, sampleMapF 4 = some y :=
+  list_mapM_mem_func (x := 4) (xs := [2, 4, 6]) sampleMapF [3, 5, 7] (by decide) (by decide)
+
+theorem list_mapM_getElem?_fixture :
+    (([2, 4, 6] : List Nat)[1]?).bind sampleMapF = ([3, 5, 7] : List Nat)[1]? :=
+  list_mapM_getElem? sampleMapF [2, 4, 6] [3, 5, 7] (by decide) 1
+
+def mapMFactsGuard : Bool :=
+  (([2, 4, 6] : List Nat).length == [3, 5, 7].length) &&
+    (([2, 4, 6] : List Nat)[1]?).bind sampleMapF == ([3, 5, 7] : List Nat)[1]?
+
+#eval mapMFactsGuard
+#guard mapMFactsGuard
+
+/-! Cake's `opt_mmap_mem_defined`, `opt_mmap_opt_map` and `map_append_eq_drop`
+    (`pan_commonPropsScript.sml:59/92/39`). -/
+
+theorem list_mapM_mem_defined_fixture :
+    (3 : Nat) ∈ [3, 5, 7] :=
+  list_mapM_mem_defined (x := 2) (xs := [2, 4, 6]) (e := 3) (ys := [3, 5, 7])
+    sampleMapF (by decide) (by decide) (by decide)
+
+theorem list_mapM_map_fixture :
+    ([2, 4, 6] : List Nat).mapM (fun x => (sampleMapF x).map (fun y => y + 1)) =
+      some [4, 6, 8] :=
+  list_mapM_map sampleMapF [2, 4, 6] [3, 5, 7] (fun y => y + 1) (by decide)
+
+theorem map_eq_append_drop_fixture :
+    (([1, 2, 3, 4] : List Nat).drop 2).map (fun x => x * 2) = [6, 8] :=
+  map_eq_append_drop (fun x => x * 2) [1, 2, 3, 4] [2, 4] [6, 8] (by decide)
+
+def mapMoreFactsGuard : Bool :=
+  (([2, 4, 6] : List Nat).mapM (fun x => (sampleMapF x).map (fun y => y + 1)) ==
+      some [4, 6, 8]) &&
+    ((([1, 2, 3, 4] : List Nat).drop 2).map (fun x => x * 2) == [6, 8])
+
+#eval mapMoreFactsGuard
+#guard mapMoreFactsGuard
+
 end Flapjack.Test.PanProgramSimpParity

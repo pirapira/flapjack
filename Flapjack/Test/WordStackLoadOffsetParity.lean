@@ -33,6 +33,18 @@ example :
   simp [wordStackMemoryOffsetInst, wordStackLoadOffsetInst, wordStackLocation,
     wordStackOffset, lookupNatInfo]
 
+/- Cake retains a negative signed-12 Load displacement in the source-shaped
+   MemOffset carrier as its modulo-2^64 word; Lab later interprets it as -8. -/
+example :
+    wordStackMemoryOffsetInst
+      { locations := [(0, .register 4), (1, .register 5)]
+        scratch := 31
+        stackBase := 10 }
+      .load 0 1 (2 ^ 64 - 8) =
+      some (.inst (.memOffset .load 4 5 (2 ^ 64 - 8)) : StackProg Nat) := by
+  simp [wordStackMemoryOffsetInst, wordStackLoadOffsetInst, wordStackLocation,
+    wordStackOffset, lookupNatInfo]
+
 example :
     wordStackMemoryOffsetInst
       { locations := [(0, .register 4), (1, .register 5)]

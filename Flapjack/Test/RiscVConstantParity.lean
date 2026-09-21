@@ -44,6 +44,25 @@ example :
         .addi 4 4 (BitVec.ofNat 64 0x678)] := by
   decide
 
+/-! A negative signed-32 constant takes Cake's `riscv_const32` path too:
+    the sign-extended RV64 value keeps the low word and materializes it with
+    `LUI`/`ADDI`, rather than falling through to the wide two-word sequence. -/
+example :
+    wordConstToInstructions (width := 64) 4
+        (BitVec.ofNat 64 (2 ^ 64 - 2 ^ 31)) =
+      some [.lui 4 (BitVec.ofNat 64 0x80000),
+        .addi 4 4 (BitVec.ofNat 64 0)] := by
+  decide
+
+/-! The positive signed-32 endpoint uses Cake's sign-bit `XORI` form:
+    `LUI 0x80000` followed by `XORI -1` materializes `0x7fffffff`. -/
+example :
+    wordConstToInstructions (width := 64) 4
+        (BitVec.ofNat 64 (2 ^ 31 - 1)) =
+      some [.lui 4 (BitVec.ofNat 64 0x80000),
+        .xori 4 4 (BitVec.ofNat 64 0xfff)] := by
+  decide
+
 example :
     wordConstToInstructions (width := 64) 4
         (BitVec.ofNat 64 0x1122334455667788) =

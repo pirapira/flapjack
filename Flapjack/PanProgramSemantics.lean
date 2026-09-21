@@ -111,6 +111,64 @@ def evalPanValueDeclarations
         { state with structs := structs } declarations
         (memoryAccess := memoryAccess)
 
+/-- Cake's `evaluate_decls_append`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1540`): evaluating a
+    concatenated declaration list is the sequential composition of evaluating
+    each part in turn. -/
+theorem evalPanValueDeclarationsWithStructs_append
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext) (state : PanValueProgramState α)
+    (declarations rest : List (Decl α))
+    (memoryAccess : Option (PanValueMemoryAccess α)) :
+    evalPanValueDeclarationsWithStructs structs state (declarations ++ rest)
+        memoryAccess =
+      (match evalPanValueDeclarationsWithStructs structs state declarations
+          memoryAccess with
+       | some state' =>
+           evalPanValueDeclarationsWithStructs structs state' rest memoryAccess
+       | none => none) := by
+  induction declarations generalizing state with
+  | nil =>
+      simp [evalPanValueDeclarationsWithStructs]
+  | cons declaration declarations ih =>
+      cases declaration with
+      | name struct fields =>
+          rw [List.cons_append]
+          simp only [evalPanValueDeclarationsWithStructs]
+          exact ih state
+      | decl shape name expression =>
+          rw [List.cons_append]
+          simp only [evalPanValueDeclarationsWithStructs]
+          cases hval : evalPanValueExp structs (fun _ => none) state.globals
+              state.memory state.baseAddress state.topAddress state.bytesInWord
+              expression (memoryAccess := memoryAccess) with
+          | none => simp
+          | some value =>
+              by_cases hmatch :
+                  panShapeMatches (panValueShape structs value) shape = true
+              · simp [hmatch, ih]
+              · simp [hmatch]
+      | function declaration =>
+          rw [List.cons_append]
+          simp only [evalPanValueDeclarationsWithStructs]
+          by_cases hwf : (declaration.params.all
+                (fun parameter => isWfShape structs parameter.2) &&
+              isWfShape structs declaration.returnShape) = true
+          · simp only [hwf]
+            exact ih _
+          · simp [hwf]
+      | exnDecl exception shape =>
+          rw [List.cons_append]
+          simp only [evalPanValueDeclarationsWithStructs]
+          by_cases hexists : (lookupInfo exception state.exceptions).isSome = true
+          · simp [hexists]
+          · by_cases hwf : isWfShape structs shape = true
+            · simp only [hexists, hwf]
+              exact ih _
+            · simp [hexists, hwf]
+
 def evalPanValueProgram
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

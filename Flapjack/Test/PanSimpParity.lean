@@ -964,6 +964,77 @@ example
     none "f" [] (some (VarKind.local, "x")) [] (.skip : Prog Nat) hfunctions
     (by simp [progSize]) hlookup (by decide) hargs hassign
 
+/-- A caught-handler call is normal-adequate from a nonzero clock, given the
+per-state argument evidence, the handler validity, and the caught exception. -/
+example
+    (hfunctions : PanValueFfiClockFunctionsRaiseAsSucceed evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [("f", [], (.skip : Prog Nat))] 0 0 8
+      none none none "E")
+    (hhandler : PanValueFfiClockHandlerNormalSucceed evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [("f", [], (.skip : Prog Nat))] 0 0 8
+      none none none)
+    (hlookup : lookupPanFunction "f" [("f", [], (.skip : Prog Nat))] =
+      some ([], (.skip : Prog Nat)))
+    (hargs : ∀ (locals globals : VarName → Option (PanValue Nat))
+      (memory : Nat → Option (PanValue Nat)),
+      ∃ (values : List (PanValue Nat)) (calleeLocals : VarName → Option (PanValue Nat)),
+        evalPanValueExps [] locals globals memory 0 0 8 ([] : List (Exp Nat))
+          (memoryAccess := none) = some values ∧
+        bindPanValueParameters [] values = some calleeLocals ∧
+        panValueParametersValid [] none "f" values = true)
+    (hhandlerValid : ∀ (locals : VarName → Option (PanValue Nat)) (value : PanValue Nat),
+      panValueExceptionValid [] none "E" value = true →
+      panValuePayloadWithinLimit [] value = true →
+      panValueHandlerValid [] none locals "x" value = true) :
+    PanValueFfiClockNormalAdequateProgAt 5 evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [("f", [], (.skip : Prog Nat))] 0 0 8 7 none none none
+      (.call (some (none, some ("E", "x", (.skip : Prog Nat)))) "f" []) :=
+  PanValueFfiClockNormalAdequateProgAt_call_caught_handler 5 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [("f", [], (.skip : Prog Nat))] 0 0 8 7
+    none none none "f" [] [] (.skip : Prog Nat) "E" "E" "x" (.skip : Prog Nat)
+    hfunctions hhandler (by simp [progSize]) hlookup (by decide) hargs rfl hhandlerValid
+
+/-- A clock-indexed node (such as a call) can be followed by any clock-free
+normal continuation. -/
+example
+    (hfirst : PanValueFfiClockNormalAdequateProgAt 5 evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [("f", [], (.skip : Prog Nat))] 0 0 8 5
+      none none none (.call (some ((VarKind.local, "x"), none)) "f" [])) :
+    PanValueFfiClockNormalAdequateProgAt 5 evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [("f", [], (.skip : Prog Nat))] 0 0 8 5 none none none
+      (.seq (.call (some ((VarKind.local, "x"), none)) "f" []) (.skip : Prog Nat)) :=
+  PanValueFfiClockNormalAdequateProgAt_seq_of_adequate 5 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [("f", [], (.skip : Prog Nat))] 0 0 8 5
+    none none none (.call (some ((VarKind.local, "x"), none)) "f" []) (.skip : Prog Nat)
+    hfirst (evalPanValueFfiClockProg_normalAdequate_of_normalProg evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [("f", [], (.skip : Prog Nat))] 0 0 8 5
+      none none none (.skip : Prog Nat) PanValueFfiClockNormalProg.skip)
+
+/-- A returning decCall node with a singleton call result is clock-indexed
+normal-adequate. -/
+example
+    (hcall : ∀ (locals globals : VarName → Option (PanValue Nat))
+      (memory : Nat → Option (PanValue Nat)) (ffi : FfiState Unit),
+      ∃ (nextLocals nextGlobals : VarName → Option (PanValue Nat))
+        (nextMemory : Nat → Option (PanValue Nat)) (nextFfi : FfiState Unit)
+        (value : PanValue Nat) (callClock : Nat),
+        evalPanValueFfiClockCall evaluatorContext (fun _ _ => none) evaluatorHandler [] []
+          0 0 8 (max 7 (progCallFuel 7 (.skip : Prog Nat))) locals globals memory ffi 5
+          none "f" [] (memoryAccess := none) (contracts := none) (memoryHandler := none) =
+          some (.control (.returned nextLocals nextGlobals nextMemory nextFfi [value]),
+            callClock))
+    (hmatch : ∀ value : PanValue Nat,
+      panShapeMatches (panValueShape [] value) .one = true) :
+    PanValueFfiClockNormalAdequateProgAt 5 evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 7 none none none
+      (.decCall "x" .one "f" [] (.skip : Prog Nat)) :=
+  PanValueFfiClockNormalAdequateProgAt_decCall_returned 5 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none "x" .one "f" []
+    (.skip : Prog Nat) hcall hmatch
+    (evalPanValueFfiClockProg_normalAdequate_of_normalProg evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+      (.skip : Prog Nat) PanValueFfiClockNormalProg.skip)
+
 /-- The raised `DecCall` outcome also lifts to the declaration's progSize. -/
 example
     (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)

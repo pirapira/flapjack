@@ -945,6 +945,18 @@ theorem list_mapM_eq_some_map_some_rev_fixture :
 
 #check @list_mapM_eq_some_map_some
 
+theorem map_getD_map_some_fixture :
+    ([2, 4, 6] : List Nat).map (fun x => (sampleMapF x).getD 0) = [3, 5, 7] :=
+  map_getD_map_some sampleMapF 0 [2, 4, 6] [3, 5, 7] (by decide)
+
+theorem lookup_mem_exists_fixture :
+    ∃ m : Nat,
+      ([("a", 10), ("b", 20)] : List (String × Nat))[m]? = some ("b", 20) :=
+  lookup_mem_exists "b" [("a", 10), ("b", 20)] 20 (by decide)
+
+#check @map_getD_map_some
+#check @lookup_mem_exists
+
 def mapMoreFactsGuard : Bool :=
   (([2, 4, 6] : List Nat).mapM (fun x => (sampleMapF x).map (fun y => y + 1)) ==
       some [4, 6, 8]) &&

@@ -347,6 +347,40 @@ theorem list_mapM_eq_some_map_some {α β : Type} (f : α → Option β)
     rw [hmapid, h, hmapid']
     simpa using (List.mapM_pure (m := Option) (l := ys) (f := id))
 
+/-- Cake's `map_some_the_map` (`pan_commonPropsScript.sml:615`): if mapping `f`
+    over `xs` yields `ys` tagged with `some`, then recovering the payload with a
+    total `getD` returns `ys`.  Cake writes the payload recovery as `THE (f n)`;
+    the total `Option.getD` is the constructive analogue. -/
+theorem map_getD_map_some {α β : Type} (f : α → Option β) (default : β)
+    (xs : List α) (ys : List β) (h : xs.map f = ys.map some) :
+    xs.map (fun x => (f x).getD default) = ys := by
+  induction xs generalizing ys with
+  | nil =>
+      cases ys with
+      | nil => rfl
+      | cons y ys => simp at h
+  | cons x xs ih =>
+      cases ys with
+      | nil => simp at h
+      | cons y ys =>
+          simp only [List.map_cons, List.cons.injEq] at h
+          obtain ⟨hfx, htail⟩ := h
+          simp only [List.map_cons, hfx, Option.getD_some, List.cons.injEq]
+          exact ⟨trivial, ih ys htail⟩
+
+/-- Cake's `lookup_some_el` (`pan_commonPropsScript.sml:758`), stated for the
+    list-backed lookup that Flapjack uses instead of Cake's `fromAList` finite
+    map: a successful lookup exposes an index carrying the entry. -/
+theorem lookup_mem_exists {α β : Type} [BEq α] [LawfulBEq α]
+    (key : α) (xs : List (α × β)) (value : β) (h : xs.lookup key = some value) :
+    ∃ m : Nat, xs[m]? = some (key, value) := by
+  obtain ⟨l₁, l₂, heq, _⟩ :=
+    (List.lookup_eq_some_iff (l := xs) (k := key) (b := value)).mp h
+  have hmem : (key, value) ∈ xs := by
+    rw [heq]
+    exact List.mem_append_right _ (by simp)
+  exact List.mem_iff_getElem?.mp hmem
+
 /-- Cake's `map_append_eq_drop` (`pan_commonPropsScript.sml:39`): the tail of a
     mapped list after the first component of an append decomposition. -/
 theorem map_eq_append_drop {α β : Type} (f : α → β) (xs : List α)

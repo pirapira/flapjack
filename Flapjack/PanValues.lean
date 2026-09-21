@@ -1,5 +1,6 @@
 import Flapjack.Semantics
 import Flapjack.PanMemoryModel
+import Flapjack.PanStructsAfindi
 
 /-!
 Structured source values and the corresponding executable expression/state

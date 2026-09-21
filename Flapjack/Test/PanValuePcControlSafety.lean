@@ -1030,6 +1030,7 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @compileProg_call_destination_of_compiled
 #check @compileProg_call_destination_degraded_of_compiled
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_handler_raised
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_call_handler_raised
 #check @panValueCrepProgramStateCorrect_and_controlSafe_call_handler_return_of_relation
 #check @panValueCrepProgramStateCorrect_and_controlSafe_call_handler_raise_of_relation
 #check @panValueCrepProgramStateControlSafe_decCall_return
@@ -1050,7 +1051,9 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_finalFfi
 #check @panValuePcRaisedResultRelWithContextCode_of_clocked_call
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_raised_no_handler
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_call_raised
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_returned_no_handler
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_call_returned_no_handler
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_tailCall
 #check @panValuePcCompileCorrect_of_clocked_call_tailCall
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_returned_destination
@@ -1074,6 +1077,7 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_broke
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_raised
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_timeout
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_call_timeout
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_returned
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_returned_finalFfi
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_returned_value
@@ -1085,9 +1089,16 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
     terminal FFI, uncaught raise, and timeout, each preserving explicit
     state/observation premises. -/
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_finalFfi
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_decCall_finalFfi
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_raised
 #check @panValuePcCompileCorrect_of_context_code_and_clocked_decCall_raised
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_timeout
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_decCall_timeout
+
+/-! Declaration-call result theorem for the `shape_of v ≠ return_sh` sub-case:
+    a declaration call whose callee returns a wrong-shaped value evaluates to
+    `none`, so the source side of Cake's `DecCall` resume is vacuous. -/
+#check @evalPanValueFfiClockProg_decCall_shape_mismatch
 
 /-! More compositional source handler-safety leaves: clock, annotation, local
     assignment, and single-word store. -/
@@ -1196,6 +1207,7 @@ example :
 #check @panValuePcCompileCorrect_compact_extCall_of_state_evidence
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_handler_returned
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_handler_normal
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_call_handler_destination
 #check @panValueProg_compile_correct_induction
 #check @panValuePcCompileCorrect_compact_of_constructor_induction
 #check @panValuePcCompileCorrectWithContextCode_compact_of_constructor_induction

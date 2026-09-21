@@ -320,6 +320,27 @@ def foldrMaxGuard : Bool :=
 #eval foldrMaxGuard
 #guard foldrMaxGuard
 
+/-! Cake's `mem_genlist_add_suc_val`, `genlist_distinct_max` and
+    `genlist_distinct_max'` (`pan_commonPropsScript.sml:234/208/221`). -/
+
+theorem mem_genlist_add_suc_val_fixture : (1 : Nat) < 3 ∧ 3 ≤ 4 + 1 :=
+  mem_genlist_add_suc_val 4 3 1 (by decide)
+
+theorem genlist_distinct_max_fixture :
+    ListDisjoint ((List.range 3).map (fun i => i + 1 + 0)) [0] :=
+  genlist_distinct_max 3 0 [0] (by intro y hy; simp at hy; omega)
+
+theorem genlist_distinct_max'_fixture :
+    ListDisjoint ((List.range 3).map (fun i => i + 1 + (0 + 2))) [0] :=
+  genlist_distinct_max' 3 0 2 [0] (by intro y hy; simp at hy; omega)
+
+def genlistGuard : Bool :=
+  ((List.range 3).map (fun i => i + 1 + 0)).all
+    (fun value => !([0] : List Nat).contains value)
+
+#eval genlistGuard
+#guard genlistGuard
+
 def checkDisjoint (name : String) (actual : Bool) : IO Bool := do
   if actual then
     IO.println s!"PASS {name}"
@@ -350,8 +371,9 @@ def runChecks : IO Bool := do
     checkDisjoint "pan all_distinct_mem_zip_disjoint_with_shape" zipWithShapeGuard
   let listIndexOk ← checkDisjoint "pan list index bridges" listIndexGuard
   let foldrMaxOk ← checkDisjoint "pan max_foldr_lt" foldrMaxGuard
+  let genlistOk ← checkDisjoint "pan genlist distinctness" genlistGuard
   pure (results.all id && lengthOk && allDistinctOk && membershipOk && disjointOk &&
     shapeDisjointOk && nestedOk && distinctOk && distinctListsOk && zipWithShapeOk &&
-    listIndexOk && foldrMaxOk)
+    listIndexOk && foldrMaxOk && genlistOk)
 
 end Flapjack.Test.PanWithShapeParity

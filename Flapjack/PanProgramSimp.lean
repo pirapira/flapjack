@@ -230,6 +230,83 @@ theorem list_mapM_all_of_mem {α β : Type} (f : α → Option β) (P : β → B
               exact ⟨hf a b (by simp) hx,
                 ih ys' hxs (fun x y hx' hfy => hf x y (by simp [hx']) hfy)⟩
 
+/-- Cake's `OPT_MMAP_MEM_IMP`
+(`cakeml/pancake/semantics/panPropsScript.sml:115-123`): every element of a
+successful `OPT_MMAP` image has a preimage in the source list on which `f`
+succeeds. -/
+theorem list_mapM_mem_exists {α β : Type} (f : α → Option β) (xs : List α)
+    (ys : List β) (h : xs.mapM f = some ys) (y : β) (hy : y ∈ ys) :
+    ∃ x, x ∈ xs ∧ f x = some y := by
+  obtain ⟨_, hpt⟩ := (list_mapM_eq_some_iff f xs ys).mp h
+  obtain ⟨i, hi⟩ := List.mem_iff_getElem?.mp hy
+  have hi' : i < ys.length := (List.getElem?_eq_some_iff.mp hi).1
+  have hb := hpt i hi'
+  rw [hi] at hb
+  cases hx : xs[i]? with
+  | none => simp [hx] at hb
+  | some x =>
+      simp only [hx, Option.bind_some] at hb
+      exact ⟨x, List.mem_of_getElem? hx, hb⟩
+/-- Cake's `opt_mmap_length_eq` (`pan_commonPropsScript.sml:82`): a successful
+    `OPT_MMAP` preserves the list length. -/
+theorem list_mapM_length {α β : Type} (f : α → Option β) (xs : List α)
+    (ys : List β) (h : xs.mapM f = some ys) : xs.length = ys.length :=
+  (list_mapM_eq_some_iff f xs ys).mp h |>.1
+
+/-- Cake's `opt_mmap_mem_func` (`pan_commonPropsScript.sml:49`): every element
+    of a successfully mapped list has a successful image. -/
+theorem list_mapM_mem_func {α β : Type} (f : α → Option β) {x : α} {xs : List α}
+    (ys : List β) (h : xs.mapM f = some ys) (hx : x ∈ xs) : ∃ y, f x = some y := by
+  cases hf : f x with
+  | none => exact absurd (list_mapM_eq_none_of_mem f hx hf) (by rw [h]; simp)
+  | some y => exact ⟨y, rfl⟩
+
+/-- Cake's `opt_mmap_el` (`pan_commonPropsScript.sml:71`): a successful
+    `OPT_MMAP` maps the `n`-th element to the `n`-th image, stated with
+    `getElem?` so no length side condition is needed. -/
+theorem list_mapM_getElem? {α β : Type} (f : α → Option β) (xs : List α)
+    (ys : List β) (h : xs.mapM f = some ys) (n : Nat) :
+    (xs[n]?).bind f = ys[n]? := by
+  by_cases hn : n < ys.length
+  · exact (list_mapM_eq_some_iff f xs ys).mp h |>.2 n hn
+  · have hxsn : xs.length ≤ n := by
+      have hlen := list_mapM_length f xs ys h
+      omega
+    rw [List.getElem?_eq_none hxsn, List.getElem?_eq_none (by omega)]
+    rfl
+
+/-- Cake's `opt_mmap_mem_defined` (`pan_commonPropsScript.sml:59`): a
+    successful `OPT_MMAP` contains the image of every successful element map. -/
+theorem list_mapM_mem_defined {α β : Type} (f : α → Option β) {x : α} {xs : List α}
+    {e : β} {ys : List β} (h : xs.mapM f = some ys) (hx : x ∈ xs)
+    (hf : f x = some e) : e ∈ ys := by
+  obtain ⟨n, hn⟩ := List.mem_iff_getElem?.mp hx
+  have hpoint := list_mapM_getElem? f xs ys h n
+  rw [hn] at hpoint
+  rw [Option.bind_some] at hpoint
+  rw [hf] at hpoint
+  exact List.mem_of_getElem? hpoint.symm
+
+/-- Cake's `opt_mmap_opt_map` (`pan_commonPropsScript.sml:92`): mapping a
+    successful `OPT_MMAP` through a total function maps the result. -/
+theorem list_mapM_map {α β γ : Type} (f : α → Option β) (xs : List α)
+    (ys : List β) (g : β → γ) (h : xs.mapM f = some ys) :
+    xs.mapM (fun x => (f x).map g) = some (ys.map g) := by
+  refine (list_mapM_eq_some_iff (fun x => (f x).map g) xs (ys.map g)).mpr ⟨?_, ?_⟩
+  · rw [List.length_map, list_mapM_length f xs ys h]
+  · intro n _
+    have hpoint := list_mapM_getElem? f xs ys h n
+    rw [List.getElem?_map]
+    rw [show (fun x => (f x).map g) = (Option.map g ∘ f) from rfl]
+    rw [← Option.map_bind, hpoint]
+
+/-- Cake's `map_append_eq_drop` (`pan_commonPropsScript.sml:39`): the tail of a
+    mapped list after the first component of an append decomposition. -/
+theorem map_eq_append_drop {α β : Type} (f : α → β) (xs : List α)
+    (ys zs : List β) (h : xs.map f = ys ++ zs) :
+    (xs.drop ys.length).map f = zs := by
+  rw [List.map_drop, h, List.drop_left]
+
 /-! Cake's `state_rel_imp_evaluate_decls`
 (`cakeml/pancake/proofs/pan_simpProofScript.sml:1303-1331`) says that evaluating a
 declaration list and evaluating the `pan_simp`-simplified declaration list agree

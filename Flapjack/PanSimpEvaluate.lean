@@ -1746,4 +1746,58 @@ theorem evalPanValueFfiClockProg_decCall_finalFfi_some
         callClock) := by
   simp [evalPanValueFfiClockProg, hcall]
 
+/-! ## Leaf success equation
+
+Every constructor that is neither recursive nor `tick`/`annot` is dispatched by
+`evalPanValueFfiClockProg` to `evalPanValueFfiClockLeaf`, which runs the
+single-step evaluator `evalPanValueFfiProgSteps` at fuel `1` and wraps the
+control result at the unchanged clock.  The predicate below records exactly
+that class, and the success equation exposes the single-step evaluation as an
+explicit premise. -/
+
+inductive PanValueFfiLeafProg : Prog α → Prop
+  | skip : PanValueFfiLeafProg (.skip : Prog α)
+  | assign (kind : VarKind) (name : VarName) (value : Exp α) :
+      PanValueFfiLeafProg (.assign kind name value)
+  | primitive (name : VarName) (operator : PrimOp) (args : List (Exp α)) :
+      PanValueFfiLeafProg (.primitive name operator args)
+  | store (address value : Exp α) : PanValueFfiLeafProg (.store address value)
+  | store32 (address value : Exp α) : PanValueFfiLeafProg (.store32 address value)
+  | storeByte (address value : Exp α) : PanValueFfiLeafProg (.storeByte address value)
+  | break : PanValueFfiLeafProg (.break : Prog α)
+  | continue : PanValueFfiLeafProg (.continue : Prog α)
+  | extCall (function : FunName) (configuration configurationLength array arrayLength : Exp α) :
+      PanValueFfiLeafProg (.extCall function configuration configurationLength array arrayLength)
+  | raise (exception : ExceptionId) (value : Exp α) :
+      PanValueFfiLeafProg (.raise exception value)
+  | return (value : Exp α) : PanValueFfiLeafProg (.return value)
+  | shMemLoad (size : OpSize) (kind : VarKind) (name : VarName) (address : Exp α) :
+      PanValueFfiLeafProg (.shMemLoad size kind name address)
+  | shMemStore (size : OpSize) (address value : Exp α) :
+      PanValueFfiLeafProg (.shMemStore size address value)
+
+theorem evalPanValueFfiClockProg_leaf_some
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel : Nat) (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (program : Prog α)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (hleaf : PanValueFfiLeafProg program)
+    (result : PanValueFfiControlResult α σ) (steps : Nat)
+    (hsteps : evalPanValueFfiProgSteps context primitive handler structs functions
+        baseAddress topAddress bytesInWord 1 locals globals memory ffi program
+        (memoryAccess := ma) (contracts := c) (memoryHandler := mh) =
+      some (result, steps)) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+        program ma c mh = some (.control result, clock) := by
+  cases hleaf <;>
+    simp [evalPanValueFfiClockProg, evalPanValueFfiClockLeaf, hsteps]
+
 end Flapjack

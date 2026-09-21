@@ -515,6 +515,10 @@ def wordCseProg [WordCseHash α] : WordCseKnowledge → WordProg α → WordProg
         (.opCurrHeap operator destination source, data)
       else
         let canonicalSource := wordCseCanonicalRegs' destination data source
+        /- Cake uses the canonical source only for the fact-table key.  The
+           emitted OpCurrHeap retains the source register that was selected
+           by instruction selection; this keeps a rematerialised constant
+           live through the final dead-code pass. -/
         wordCseAddToFact (wordCseRegisterRead data canonicalSource) data.instrsMem destination
           [0, wordCseBinOpToNum operator, canonicalSource + 100]
           (.opCurrHeap operator destination source)

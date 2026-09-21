@@ -31,8 +31,51 @@ example :
       wordProgLiveBefore allocatorReadVarsFastFixture [22, 23] := by
   simp [wordProgLiveBeforeFast, wordProgLiveBefore, wordProgReadVarsFast,
     wordProgReadVarsFastAcc, wordListAppendAcc, wordExpReadVarsFastAcc,
-    wordProgReadVars, wordProgWriteVars, wordExpReadVars,
+    wordProgReadVars, wordProgWriteVarsFast, wordProgWriteVarsFastAcc,
+    wordProgWriteVars, wordExpReadVars,
     allocatorReadVarsFastFixture]
+
+def allocatorWriteVarsFastFixture : WordProg Nat :=
+  .seq
+    (.call (some ([31], ([], [32]),
+      .seq (.assign 33 (.var 34)) (.locValue 35 0), 7, 8))
+      (some 9) [10, 11]
+      (some (12, .seq (.assign 36 (.var 37)) (.get 38 .currHeap), 9, 10)))
+    (.ite .equal 39 (.reg 40)
+      (.assign 41 (.var 42))
+      (.seq (.alloc 43 ([], [])) (.shareInst .load 44 (.var 45))))
+
+example :
+    wordProgWriteVarsFast allocatorWriteVarsFastFixture =
+      wordProgWriteVars allocatorWriteVarsFastFixture := by
+  simp [wordProgWriteVarsFast, wordProgWriteVarsFastAcc, wordProgWriteVars,
+    wordListAppendAcc, allocatorWriteVarsFastFixture]
+
+example :
+    wordProgLiveBeforeFast allocatorWriteVarsFastFixture [41, 43, 44] =
+      wordProgLiveBefore allocatorWriteVarsFastFixture [41, 43, 44] := by
+  simp [wordProgLiveBeforeFast, wordProgLiveBefore, wordProgReadVarsFast,
+    wordProgReadVarsFastAcc, wordProgWriteVarsFast, wordProgWriteVarsFastAcc,
+    wordListAppendAcc, wordExpReadVarsFastAcc, wordProgReadVars,
+    wordProgWriteVars, wordExpReadVars, allocatorWriteVarsFastFixture]
+
+example :
+    wordProgAtomicClashesFast allocatorWriteVarsFastFixture [46, 47] =
+      wordProgAtomicClashes allocatorWriteVarsFastFixture [46, 47] := by
+  simp [wordProgAtomicClashesFast, wordProgAtomicClashes,
+    wordProgWriteVarsFast, wordProgWriteVarsFastAcc, wordProgWriteVars,
+    wordClashPairs, wordListAppendAcc,
+    allocatorWriteVarsFastFixture]
+
+example :
+    wordProgAtomicClashesFast
+        (.inst (.arith (.div 48 49 50)) : WordProg Nat) [51] =
+      wordProgAtomicClashes
+        (.inst (.arith (.div 48 49 50)) : WordProg Nat) [51] := by
+  simp [wordProgAtomicClashesFast, wordProgAtomicClashes,
+    wordProgWriteVarsFast, wordProgWriteVarsFastAcc, wordProgWriteVars,
+    wordClashPairs, wordInstForcedClashes, wordInstWriteVars,
+    wordListAppendAcc]
 
 example [OfNat α 1] :
     pipelineWordFunctionsAllocated

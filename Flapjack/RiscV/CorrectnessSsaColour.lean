@@ -465,8 +465,8 @@ theorem wordColourStateRelationExcept_executeImmediateBinary
           (readRegister target ⟨colour sourceName, valid sourceName hsource⟩ &&& value) hvalue)
   | or =>
       have hvalue :
-          readRegister source ⟨sourceName, hsource⟩ ||| value =
-            readRegister target ⟨colour sourceName, valid sourceName hsource⟩ ||| value := by
+          readRegister source ⟨sourceName, hsource⟩ ||| iImmediate value =
+            readRegister target ⟨colour sourceName, valid sourceName hsource⟩ ||| iImmediate value := by
         rw [hrelation.register sourceName hsource hsourceNe (valid sourceName hsource)]
       have hnext := wordColourStateRelationExcept_nextPc colour excluded source target hrelation
       simpa [execute] using
@@ -474,8 +474,8 @@ theorem wordColourStateRelationExcept_executeImmediateBinary
           {source with pc := nextPc source} {target with pc := nextPc target} hnext
           (by simpa [ZeroRegister, readRegister, nextPc] using hzeroSource)
           (by simpa [ZeroRegister, readRegister, nextPc] using hzeroTarget)
-          hname (readRegister source ⟨sourceName, hsource⟩ ||| value)
-          (readRegister target ⟨colour sourceName, valid sourceName hsource⟩ ||| value) hvalue)
+          hname (readRegister source ⟨sourceName, hsource⟩ ||| iImmediate value)
+          (readRegister target ⟨colour sourceName, valid sourceName hsource⟩ ||| iImmediate value) hvalue)
   | xor =>
       have hvalue :
           readRegister source ⟨sourceName, hsource⟩ ^^^ value =

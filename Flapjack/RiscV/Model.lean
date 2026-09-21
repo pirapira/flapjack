@@ -323,6 +323,21 @@ def uImmediate (immediate : Word width) : Word width :=
   BitVec.shiftLeft
     (BitVec.signExtend width (BitVec.ofNat 20 immediate.toNat)) 12
 
+/-! I-format immediates are encoded from twelve low bits but execute as
+    signed values.  Keeping this conversion at the machine boundary lets
+    Cake's raw `ORI ... 0x800` materialization execute as -2048 while the
+    encoder still emits the same twelve instruction bits. -/
+def iImmediate (immediate : Word width) : Word width :=
+  if immediate.toNat < 2 ^ 12 then
+    BitVec.signExtend width (BitVec.ofNat 12 immediate.toNat)
+  else
+    immediate
+
+@[simp] theorem iImmediate_zero [NeZero width] : iImmediate (0 : Word width) = 0 := by
+  unfold iImmediate
+  ext i
+  simp [BitVec.getElem_signExtend]
+
 /-! Signed ordering for the two's-complement word represented by `BitVec`. -/
 def signedLess (left right : Word width) : Bool :=
   let sign := 2 ^ (width - 1)
@@ -380,7 +395,7 @@ def execute (state : State width) : Instruction width → State width
         (readRegister state source &&& immediate)
   | .ori destination source immediate =>
       writeRegister { state with pc := nextPc state } destination
-        (readRegister state source ||| immediate)
+        (readRegister state source ||| iImmediate immediate)
   | .xori destination source immediate =>
       writeRegister { state with pc := nextPc state } destination
         (readRegister state source ^^^ immediate)

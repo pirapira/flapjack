@@ -531,6 +531,7 @@ def copyMergeDropsNonCommonStore : Bool :=
 
 #guard copyMergeDropsNonCommonStore
 #guard copyMergeKeepsStoreEquivalence
+
 /- Cake's `set_store_eq` records both the store-to-class relation and its
    representative.  The production copy state keeps the Cake lists for
    branch intersection, while the lookup-only indexes must expose the same

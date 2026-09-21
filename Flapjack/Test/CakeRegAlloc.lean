@@ -118,6 +118,16 @@ def graphSetAccumulatorGuard : Bool :=
 
 #guard graphSetAccumulatorGuard
 
+def indexedAdjacencyMembershipGuard : Bool :=
+  let tree : WordClashTree := .delta [1, 3] [2, 4]
+  let bij := cakeMkBij tree
+  let state := cakeInitRaStateFromBij bij tree [] []
+  (List.range state.dim).all (fun x =>
+    (List.range state.dim).all (fun y =>
+      cakeAdjMem state x y == cakeSortedMem x (cakeAdjSub state.adjLists y)))
+
+#guard indexedAdjacencyMembershipGuard
+
 /-- Canonical form for comparing node bijections with the probed sptree
     outputs: both maps sorted by key. -/
 def sortBijectionMaps (bijection : CakeNodeBijection) :

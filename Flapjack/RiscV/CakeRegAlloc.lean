@@ -334,6 +334,9 @@ def cakeSpillCostMap (nextNode : Nat) (costs : NatInfoMap Nat) : CakeNodeMap Nat
 /-- The IRC allocator state (`ra_state`), represented functionally. -/
 structure CakeRaState where
   adjLists : CakeNodeMap (List Nat)
+  /- Present for production states built by `cakeInitRaStateFromBij`; hand-
+     constructed proof/test states leave it absent and use `adjLists`. -/
+  adjSets : Option (CakeNodeMap (Std.TreeSet Nat))
   nodeTag : CakeNodeMap CakeNodeTag
   degrees : CakeNodeMap Nat
   coalesced : CakeNodeMap Nat
@@ -349,7 +352,8 @@ structure CakeRaState where
 
 /-- The empty allocator state for `n` nodes. -/
 def CakeRaState.empty (n : Nat) : CakeRaState :=
-  { adjLists := CakeNodeMap.ofSize n, nodeTag := CakeNodeMap.ofSize n,
+  { adjLists := CakeNodeMap.ofSize n, adjSets := none,
+    nodeTag := CakeNodeMap.ofSize n,
     degrees := CakeNodeMap.ofSize n, coalesced := CakeNodeMap.ofSize n,
     moveRelated := CakeNodeMap.ofSize n, dim := n,
     simpWl := [], spillWl := [], freezeWl := [],
@@ -379,6 +383,11 @@ def cakeSortedMem (x : Nat) : List Nat → Bool
 /-- Adjacency list of node `i` (`adj_ls_sub`). -/
 def cakeAdjSub (adj : CakeNodeMap (List Nat)) (i : Nat) : List Nat :=
   (adj.get i).getD []
+
+def cakeAdjMem (state : CakeRaState) (x y : Nat) : Bool :=
+  match state.adjSets with
+  | some adj => ((adj.get y).getD ∅).contains x
+  | none => cakeSortedMem x (cakeAdjSub state.adjLists y)
 
 /-- `adj_ls_sub` on the association-list form still used while the graph is
     being built, before it is read into the node-indexed field. -/
@@ -550,11 +559,12 @@ def cakeInitRaStateFromBij (bij : CakeNodeBijection) (tree : WordClashTree)
   let sourceIndex := cakeSpDefaultIndex bij.toAllocator
   let ta := cakeSpDefaultIndexed sourceIndex
   let (adj, _) := cakeMkGraphSet ta tree [] (cakeAdjSetMapOfSize bij.nextNode)
-  let adj := cakeExtendGraphSet ta forced adj
-  let adj := adj.mapValues cakeAdjSetList
+  let adjSets := cakeExtendGraphSet ta forced adj
+  let adj := adjSets.mapValues cakeAdjSetList
   let tags := cakeMkTags bij.nextNode bij.fromAllocator fs
   { (CakeRaState.empty bij.nextNode) with
     adjLists := adj,
+    adjSets := some adjSets,
     nodeTag := tags }
 
 def cakeInitRaState (tree : WordClashTree) (forced : List (Nat × Nat))
@@ -772,9 +782,9 @@ decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
 
 /-- `revive_moves` (`reg_allocScript.sml:363-375`). -/
 def cakeReviveMoves (vs : List Nat) (state : CakeRaState) : CakeRaState :=
-  let nbs := vs.map (fun v => cakeAdjSub state.adjLists v)
   let (revived, unavail) := partitionReversed (fun m =>
-      nbs.any (cakeSortedMem m.2.1) || nbs.any (cakeSortedMem m.2.2))
+      vs.any (fun v => cakeAdjMem state m.2.1 v) ||
+        vs.any (fun v => cakeAdjMem state m.2.2 v))
     state.unavailMovesWl
   { state with
     availMovesWl := cakeSMerge (cakeSortMoves revived) state.availMovesWl,
@@ -812,7 +822,7 @@ def cakeDegOrInf (state : CakeRaState) (k x : Nat) : Nat :=
 def cakeBgOk (k x y : Nat) (state : CakeRaState) : Option (List Nat × List Nat) :=
   let adjX := cakeAdjSub state.adjLists x
   let adjY := cakeAdjSub state.adjLists y
-  let (case1, case2) := partitionReversed (fun v => cakeSortedMem v adjX) adjY
+  let (case1, case2) := partitionReversed (fun v => cakeAdjMem state v x) adjY
   let case1 := filterReversed (fun v => cakeConsideredVar state k v) case1
   let case2 := filterReversed (fun v => cakeConsideredVar state k v) case2
   let case2degs := case2.map (fun v => cakeDegOrInf state k v)
@@ -820,7 +830,7 @@ def cakeBgOk (k x y : Nat) (state : CakeRaState) : Option (List Nat × List Nat)
     some (case1, case2)
   else
     let case3 := filterReversed (fun v => cakeConsideredVar state k v)
-      (adjX.filter (fun v => !cakeSortedMem v adjY))
+      (adjX.filter (fun v => !cakeAdjMem state v y))
     let c1 := (case1.map (fun v => cakeDegOrInf state (k + 1) v)).countP
       (fun d => d - 1 >= k)
     let c2 := case2degs.countP (fun d => d >= k)
@@ -830,7 +840,7 @@ def cakeBgOk (k x y : Nat) (state : CakeRaState) : Option (List Nat × List Nat)
 
 /-- `consistency_ok` (`reg_allocScript.sml:568-586`). -/
 def cakeConsistencyOk (state : CakeRaState) (x y : Nat) : Bool :=
-  x != y && !cakeSortedMem x (cakeAdjSub state.adjLists y) &&
+  x != y && !cakeAdjMem state x y &&
     (cakeIsFixed state x || (state.moveRelated.get x).getD false) &&
     (cakeIsFixed state y || (state.moveRelated.get y).getD false) &&
     !(cakeIsFixed state x && cakeIsFixed state y)
@@ -842,7 +852,8 @@ def cakeDoCoalesceReal (x y : Nat) (case1 case2 : List Nat)
   let state := if !cakeIsFixed state x then
     cakeIncDeg x case2.length state else state
   let state := { state with
-    adjLists := cakeListInsertEdge x case2 state.adjLists }
+    adjLists := cakeListInsertEdge x case2 state.adjLists
+    adjSets := state.adjSets.map (fun adj => cakeListInsertEdgeSet x case2 adj) }
   let state := case1.foldl (fun s v => cakeDecDeg v s) state
   cakePushStack y state
 
@@ -1194,7 +1205,7 @@ def cakeFullConsistencyOk (state : CakeRaState) (k : Nat) (x y : Nat) : Bool :=
   let eligibleX := fixedX || cakeTagIsAtemp state x
   let eligibleY := fixedY || cakeTagIsAtemp state y
   x != y && x < state.dim && y < state.dim &&
-    !cakeSortedMem x (cakeAdjSub state.adjLists y) &&
+    !cakeAdjMem state x y &&
     eligibleX && eligibleY && !(fixedX && fixedY)
 
 /-- A lookup-only index for the source-variable side of `mk_bij`.

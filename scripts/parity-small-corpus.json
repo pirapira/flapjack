@@ -935,6 +935,12 @@
       "tracked_beads": []
     },
     {
+      "path": "Flapjack/Test/OriginalPancake/gh1127_local_store_base.pnk",
+      "source_reference": "Original Cake local-store/current-heap backend oracle: storing to @base and reusing the current heap in a following bitwise operation remains byte-identical in Flapjack; this accepted witness is kept separate from the unresolved shared-Store carrier integration.",
+      "cake_sha256": "eb503d74ba413a9243ca2ceba8117910f8b455e35fe9f00679fb40212434272e",
+      "tracked_beads": ["flapjack-pxn.10"]
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/f84_frame_allocator.pnk",
       "source_reference": "Fresh accepted frame/allocator witness from differential corpus f84-min: struct-returning mks/pair calls, nested local loads, and large constants produce byte-identical original Cake and Flapjack RISC-V artifacts.",
       "cake_sha256": "c5683abc747d5e580dc25e2f80bed5182f2cf4fd356a08906ce22d7bf47205f8",

@@ -5947,9 +5947,11 @@ theorem PanValueFfiClockNormalAdequateProgFromFloor_seq_adequate
       finalClock hfirstEval hsecondEval,
     Nat.zero_le finalClock⟩
 
-/-- A program adequate from `lo` with floor `lo` is adequate in the plain
-    lower-bounded sense: the floor information can be discarded. -/
-theorem PanValueFfiClockNormalAdequateProgFrom_of_fromFloor
+/-- The un-floored predicate is the floored predicate at floor `0`: it records
+    no lower bound on the result clock.  This lets the floor-free constructors
+    (`_seq`, `_call_caught_handler`, ...) feed the floored composition rules
+    with the trivial floor. -/
+theorem PanValueFfiClockNormalAdequateProgFromFloor_of_from
     (lo : Nat)
     (context : PanValueFfiContext α)
     (primitive : PanPrimitiveHandler α)
@@ -5958,17 +5960,42 @@ theorem PanValueFfiClockNormalAdequateProgFrom_of_fromFloor
     (functions : List (FunName × List VarName × Prog α))
     (baseAddress topAddress bytesInWord : α)
     (callBudget : Nat)
-    (ma : Option (PanValueMemoryAccess α))
-    (c : Option PanValueCallContracts)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
     (mh : Option (PanValueMemoryFfiHandler α σ))
     (program : Prog α)
-    (h : PanValueFfiClockNormalAdequateProgFromFloor lo lo context primitive handler
+    (h : PanValueFfiClockNormalAdequateProgFrom lo context primitive handler
       structs functions baseAddress topAddress bytesInWord callBudget ma c mh program) :
-    PanValueFfiClockNormalAdequateProgFrom lo context primitive handler structs functions
-      baseAddress topAddress bytesInWord callBudget ma c mh program := by
+    PanValueFfiClockNormalAdequateProgFromFloor lo 0 context primitive handler
+      structs functions baseAddress topAddress bytesInWord callBudget ma c mh program := by
   intro clock hclock locals globals memory ffi
-  obtain ⟨finalLocals, finalGlobals, finalMemory, finalFfi, finalClock, heval, _⟩ :=
+  obtain ⟨finalLocals, finalGlobals, finalMemory, finalFfi, finalClock, heval⟩ :=
     h clock hclock locals globals memory ffi
+  exact ⟨finalLocals, finalGlobals, finalMemory, finalFfi, finalClock, heval,
+    Nat.zero_le finalClock⟩
+
+/-- Forgetting the floor: a floored certificate is in particular an un-floored
+    one.  The converse holds only at floor `0`
+    (`PanValueFfiClockNormalAdequateProgFromFloor_of_from`). -/
+theorem PanValueFfiClockNormalAdequateProgFrom_of_fromFloor
+    (lo floor : Nat)
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (program : Prog α)
+    (h : PanValueFfiClockNormalAdequateProgFromFloor lo floor context primitive
+      handler structs functions baseAddress topAddress bytesInWord callBudget ma c mh
+      program) :
+    PanValueFfiClockNormalAdequateProgFrom lo context primitive handler structs
+      functions baseAddress topAddress bytesInWord callBudget ma c mh program := by
+  intro clock hclock locals globals memory ffi
+  obtain ⟨finalLocals, finalGlobals, finalMemory, finalFfi, finalClock, heval,
+      _hfloor⟩ := h clock hclock locals globals memory ffi
   exact ⟨finalLocals, finalGlobals, finalMemory, finalFfi, finalClock, heval⟩
 
 /-- A clock-free leaf preserves its input clock, so it is adequate from `lo`

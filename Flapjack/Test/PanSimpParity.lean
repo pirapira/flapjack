@@ -385,6 +385,49 @@ example : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorH
       evaluatorHandler [] [] 0 0 8 0 (updatePanValueMap (fun _ => none) "x" (.word 5))
       (fun _ => none) (fun _ => none) evaluatorFfi 1 "tag" "text" none none none)
 
+/-- The same `Dec` at its own `progSize` budget (no free fuel parameter). -/
+example : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+    [] [] 0 0 8 (progSize (.dec "x" .one (.const 5) (.annot "tag" "text")))
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    (.dec "x" .one (.const 5) (.annot "tag" "text")) =
+    some (panValueFfiClockRestoreLocal "x" none
+      (.control (.normal (updatePanValueMap (fun _ => none) "x" (.word 5))
+        (fun _ => none) (fun _ => none) evaluatorFfi)), 1) := by
+  exact evalPanValueFfiClockProg_dec_some_progSize evaluatorContext (fun _ _ => none)
+    evaluatorHandler [] [] 0 0 8 (fun _ => none) (fun _ => none) (fun _ => none)
+    evaluatorFfi 1 "x" .one (.const 5) (.annot "tag" "text") none none none
+    (.word 5)
+    (.control (.normal (updatePanValueMap (fun _ => none) "x" (.word 5))
+      (fun _ => none) (fun _ => none) evaluatorFfi)) 1
+    (by simp [evalPanValueExp]) (by simp [panValueShape, panShapeMatches])
+    (by
+      simpa only [progSize] using
+        (evalPanValueFfiClockProg_annot_some evaluatorContext (fun _ _ => none)
+          evaluatorHandler [] [] 0 0 8 0 (updatePanValueMap (fun _ => none) "x" (.word 5))
+          (fun _ => none) (fun _ => none) evaluatorFfi 1 "tag" "text" none none none))
+
+/-- The same `Dec` at the call-aware budget, whose body budget is
+    `progCallFuel 7 body`. -/
+example : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+    [] [] 0 0 8 (progCallFuel 7 (.dec "x" .one (.const 5) (.annot "tag" "text")))
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    (.dec "x" .one (.const 5) (.annot "tag" "text")) =
+    some (panValueFfiClockRestoreLocal "x" none
+      (.control (.normal (updatePanValueMap (fun _ => none) "x" (.word 5))
+        (fun _ => none) (fun _ => none) evaluatorFfi)), 1) := by
+  exact evalPanValueFfiClockProg_dec_some_progCallFuel evaluatorContext (fun _ _ => none)
+    evaluatorHandler [] [] 0 0 8 7 (fun _ => none) (fun _ => none) (fun _ => none)
+    evaluatorFfi 1 "x" .one (.const 5) (.annot "tag" "text") none none none
+    (.word 5)
+    (.control (.normal (updatePanValueMap (fun _ => none) "x" (.word 5))
+      (fun _ => none) (fun _ => none) evaluatorFfi)) 1
+    (by simp [evalPanValueExp]) (by simp [panValueShape, panShapeMatches])
+    (by
+      simpa only [progCallFuel] using
+        (evalPanValueFfiClockProg_annot_some evaluatorContext (fun _ _ => none)
+          evaluatorHandler [] [] 0 0 8 0 (updatePanValueMap (fun _ => none) "x" (.word 5))
+          (fun _ => none) (fun _ => none) evaluatorFfi 1 "tag" "text" none none none))
+
 /-- A nonzero `Ite` condition selects the then-branch. -/
 example : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
     [] [] 0 0 8 2 (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
@@ -421,6 +464,26 @@ example : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorH
           evaluatorHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none) (fun _ => none)
           evaluatorFfi 1 "tag" "text" none none none))
 
+/-- The same nonzero `Ite` at the call-aware budget; the branch is evaluated at
+    the combined call-aware branch budget. -/
+example : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+    [] [] 0 0 8 (progCallFuel 7 (.ite (.const 5) (.annot "tag" "text") (.tick : Prog Nat)))
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    (.ite (.const 5) (.annot "tag" "text") (.tick : Prog Nat)) =
+    some (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi), 1) := by
+  exact evalPanValueFfiClockProg_ite_true_some_progCallFuel evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 (fun _ => none) (fun _ => none)
+    (fun _ => none) evaluatorFfi 1 (.const 5) (.annot "tag" "text") (.tick : Prog Nat)
+    none none none 5 (.control (.normal (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi)) 1
+    (by simp [evalPanValueExp]) (by decide)
+    (by
+      simpa only [progCallFuel] using
+        (evalPanValueFfiClockProg_annot_some evaluatorContext (fun _ _ => none)
+          evaluatorHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none) (fun _ => none)
+          evaluatorFfi 1 "tag" "text" none none none))
+
 /-- `progSize`-indexed `Call` fuel adequacy: one structural step covers the node. -/
 example (outcome : PanValueFfiClockOutcome Nat Unit) (nextClock : Nat)
     (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)
@@ -430,7 +493,7 @@ example (outcome : PanValueFfiClockOutcome Nat Unit) (nextClock : Nat)
       some (outcome, nextClock)) :
     evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
       [] [] 0 0 8 (progSize (.call none "f" ([] : List (Exp Nat)))) (fun _ => none)
-      (fun _ => none) (fun _ => none) evaluatorFfi 1 (.call none "f" []) none none none =
+      (fun _ => none) (fun _ => none) evaluatorFfi 1 (.call none "f" ([] : List (Exp Nat))) none none none =
     some (outcome, nextClock) := by
   exact evalPanValueFfiClockProg_call_some_progSize evaluatorContext (fun _ _ => none)
     evaluatorHandler [] [] 0 0 8 (fun _ => none) (fun _ => none) (fun _ => none)
@@ -553,6 +616,39 @@ example (values : List (PanValue Nat))
     (fun _ => none) evaluatorFfi 1 "f" [] [] (.skip : Prog Nat) values calleeLocals
     none none none hfunctions hargs hlookup hbind (by decide) hparams hreturn hwithin
 
+/-- The call-aware budget form of the forall-functions call adequacy: with
+    `callBudget = 7` (dominating `progSize body + 1 = 2`) the same call returns at
+    `progCallFuel 7`. -/
+example (values : List (PanValue Nat))
+    (calleeLocals : VarName → Option (PanValue Nat))
+    (hfunctions : PanValueFfiClockFunctionsReturnSucceed evaluatorContext
+      (fun _ _ => none) evaluatorHandler []
+      [("f", [], (.skip : Prog Nat))] 0 0 8 none none none)
+    (hargs : evalPanValueExps [] (fun _ => none) (fun _ => none) (fun _ => none) 0 0 8
+      ([] : List (Exp Nat)) = some values)
+    (hlookup : lookupPanFunction "f" [("f", [], (.skip : Prog Nat))] =
+      some ([], (.skip : Prog Nat)))
+    (hbind : bindPanValueParameters [] values = some calleeLocals)
+    (hparams : panValueParametersValid [] none "f" values = true)
+    (hreturn : panValueReturnValid [] none "f" values = true)
+    (hwithin : panValueValuesWithinLimit [] values = true) :
+    ∃ (finalGlobals : VarName → Option (PanValue Nat))
+      (finalMemory : Nat → Option (PanValue Nat)) (finalFfi : FfiState Unit)
+      (finalClock : Nat),
+      evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+        [] [("f", [], (.skip : Prog Nat))] 0 0 8
+        (progCallFuel 7 (.call none "f" ([] : List (Exp Nat)))) (fun _ => none) (fun _ => none)
+        (fun _ => none) evaluatorFfi 1 (.call none "f" []) none none none =
+      some (.control (.returned (fun _ => none) finalGlobals finalMemory finalFfi values),
+        finalClock) := by
+  exact evalPanValueFfiClockProg_call_none_of_functions_progCallFuel (α := Nat) (σ := Unit)
+    evaluatorContext
+    (fun _ _ => none) evaluatorHandler []
+    [("f", [], (.skip : Prog Nat))] 0 0 8 7 (fun _ => none) (fun _ => none)
+    (fun _ => none) evaluatorFfi 1 "f" ([] : List (Exp Nat)) [] (.skip : Prog Nat) values calleeLocals
+    none none none hfunctions (by simp [progSize]) hargs hlookup hbind (by decide) hparams
+    hreturn hwithin
+
 /-- The general forall-functions timeout adequacy theorem, instantiated on a
     destination-free call into a single-entry table. -/
 example (values : List (PanValue Nat))
@@ -669,6 +765,38 @@ example (values : List (PanValue Nat))
     (fun _ => none) evaluatorFfi 1 "f" [] [] (.skip : Prog Nat) values calleeLocals
     "E" "E" "x" (.skip : Prog Nat) none none none hfunctions hhandler hargs hlookup
     hbind (by decide) hparams rfl hhandlerValid
+
+/-- The caught-handler call adequacy at the call-aware budget. -/
+example (values : List (PanValue Nat))
+    (calleeLocals : VarName → Option (PanValue Nat))
+    (hfunctions : PanValueFfiClockFunctionsRaiseAsSucceed evaluatorContext
+      (fun _ _ => none) evaluatorHandler []
+      [("f", [], (.skip : Prog Nat))] 0 0 8 none none none "E")
+    (hhandler : PanValueFfiClockHandlerSucceed evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [("f", [], (.skip : Prog Nat))] 0 0 8 none none none)
+    (hargs : evalPanValueExps [] (fun _ => none) (fun _ => none) (fun _ => none) 0 0 8
+      ([] : List (Exp Nat)) = some values)
+    (hlookup : lookupPanFunction "f" [("f", [], (.skip : Prog Nat))] =
+      some ([], (.skip : Prog Nat)))
+    (hbind : bindPanValueParameters [] values = some calleeLocals)
+    (hparams : panValueParametersValid [] none "f" values = true)
+    (hhandlerValid : ∀ (value : PanValue Nat),
+      panValueExceptionValid [] none "E" value = true →
+      panValuePayloadWithinLimit [] value = true →
+      panValueHandlerValid [] none (fun _ => none) "x" value = true) :
+    ∃ (outcome : PanValueFfiClockOutcome Nat Unit) (finalClock : Nat),
+      evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+        [] [("f", [], (.skip : Prog Nat))] 0 0 8
+        (progCallFuel 7 (.call (some (none, some ("E", "x", (.skip : Prog Nat)))) "f" []))
+        (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+        (.call (some (none, some ("E", "x", (.skip : Prog Nat)))) "f" []) none none none =
+      some (outcome, finalClock) := by
+  exact evalPanValueFfiClockProg_call_caught_handler_of_functions_progCallFuel
+    evaluatorContext (fun _ _ => none) evaluatorHandler []
+    [("f", [], (.skip : Prog Nat))] 0 0 8 7 (fun _ => none) (fun _ => none)
+    (fun _ => none) evaluatorFfi 1 "f" [] [] (.skip : Prog Nat) values calleeLocals
+    "E" "E" "x" (.skip : Prog Nat) none none none hfunctions hhandler
+    (by simp [progSize]) hargs hlookup hbind (by decide) hparams rfl hhandlerValid
 
 /-- Lifting a successful `Call` outcome through the clocked evaluator. -/
 example (outcome : PanValueFfiClockOutcome Nat Unit) (nextClock : Nat)
@@ -827,6 +955,19 @@ example :
     (fun _ _ => none) evaluatorHandler [] [] 0 0 8 (fun _ => none)
     (fun _ => none) (fun _ => none) evaluatorFfi 0 (.const 5) (.break : Prog Nat)
     none none none 5 (by simp [evalPanValueExp]) (by decide) (by decide)
+
+/-- The zero-condition `While` also succeeds at the call-aware budget. -/
+example :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+      [] [] 0 0 8 (progCallFuel 7 (.while (.const 0) (.break : Prog Nat)))
+      (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi 3 (.while (.const 0) (.break : Prog Nat)) none none none =
+    some (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi), 3) := by
+  exact evalPanValueFfiClockProg_while_zero_some_progCallFuel evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 (fun _ => none)
+    (fun _ => none) (fun _ => none) evaluatorFfi 3 (.const 0) (.break : Prog Nat)
+    none none none 0 (by simp [evalPanValueExp]) (by decide)
 
 theorem clocked_seq_normal_exposes_components :
     ∃ (middleLocals middleGlobals : VarName → Option (PanValue Nat))

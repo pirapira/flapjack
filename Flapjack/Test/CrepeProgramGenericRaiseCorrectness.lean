@@ -2665,6 +2665,29 @@ theorem three_word_raise_pc_compile_correct_direct_clocked_raised
       (.raised (fun _ => none) (fun _ => none) (fun _ => none)
         "E" sourceValue)
       (.raised targetState 9) := by
+  have hordinaryCompact := panValuePcCompileCorrect_of_context_code
+    (panValuePcCompactSourceEvaluator
+      (fun _ _ => none) (fun _ _ _ _ _ _ => none) [] 0 0 8 sourceFuel)
+    (crepPcCompactTargetEvaluator [] (fun _ _ => none)
+      (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none) 0 0 targetFuel)
+    (fun _ _ _ => True) (fun _ _ _ => True)
+    (fun exception => if exception = "E" then some 9 else none)
+    (crepPcFlatGlobalsLookup 8) (.raise "E" sourceExpression) hcompact
+  have _hordinary :=
+    panValuePcCompileCorrect_of_compact_evaluators_and_clocked_raised_hraise_data
+      (panValuePcCompactSourceEvaluator
+        (fun _ _ => none) (fun _ _ _ _ _ _ => none) [] 0 0 8 sourceFuel)
+      (crepPcCompactTargetEvaluator [] (fun _ _ => none)
+        (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none) 0 0 targetFuel)
+      (fun _ _ _ => True) (fun _ _ _ => True)
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8) (.raise "E" sourceExpression)
+      hordinaryCompact [] context (fun _ _ code => code = 9)
+      (fun exception => if exception = "E" then some 9 else none)
+      (crepPcFlatGlobalsLookup 8) directClockContext (fun _ _ => none)
+      directClockHandler [] 0 0 8 0 1 (fun _ => none) (fun _ => none)
+      (fun _ => none) directClockFfi (.raise "E" sourceExpression)
+      targetState "E" sourceValue 9 hclock hclockState hclockRaiseData.1
   exact panValuePcCompileCorrectWithContextCode_of_compact_evaluators_and_clocked_raised_hraise_data
     (panValuePcCompactSourceEvaluator
       (fun _ _ => none) (fun _ _ _ _ _ _ => none) [] 0 0 8 sourceFuel)
@@ -3191,6 +3214,7 @@ def runChecks : IO Bool := do
   IO.println "PASS declaration restoration preserves control-label safety"
   IO.println "PASS DecCall body control safety survives caller restoration"
   IO.println "PASS generic clocked Raise projects to pc_compile_correct"
+  IO.println "PASS ordinary clocked Raise consumes explicit hraise data"
   IO.println "PASS expression-state contract packages generic Raise evidence"
   IO.println "PASS expression-state evidence derives generic flat-global Raise package"
   IO.println "PASS expression-state evidence composes to compact pc_compile_correct"

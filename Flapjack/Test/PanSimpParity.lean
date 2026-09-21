@@ -1035,6 +1035,34 @@ example
       (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
       (.skip : Prog Nat) PanValueFfiClockNormalProg.skip)
 
+/-- A clock-indexed conditional composes a clock-indexed branch (e.g. a call)
+    with a clock-free branch. -/
+example
+    (hthen : PanValueFfiClockNormalAdequateProgAt 5 evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+      (.call (some ((VarKind.local, "x"), none)) "f" [])) :
+    PanValueFfiClockNormalAdequateProgAt 5 evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 7 none none none
+      (.ite (.const 5) (.call (some ((VarKind.local, "x"), none)) "f" [])
+        (.skip : Prog Nat)) :=
+  PanValueFfiClockNormalAdequateProgAt_ite 5 evaluatorContext (fun _ _ => none)
+    evaluatorHandler [] [] 0 0 8 7 none none none (.const 5)
+    (.call (some ((VarKind.local, "x"), none)) "f" []) (.skip : Prog Nat)
+    (fun _ _ _ => ⟨5, by simp [evalPanValueExp]⟩) hthen
+    (PanValueFfiClockNormalAdequateProgAt_of_adequate evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+      (.skip : Prog Nat) 5
+      (evalPanValueFfiClockProg_normalAdequate_of_normalProg evaluatorContext
+        (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+        (.skip : Prog Nat) PanValueFfiClockNormalProg.skip))
+
+/-- A tick is normal-adequate from a nonzero clock, with the clock decremented. -/
+example :
+    PanValueFfiClockNormalAdequateProgAt 5 evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 7 none none none (.tick : Prog Nat) :=
+  PanValueFfiClockNormalAdequateProgAt_tick 5 evaluatorContext (fun _ _ => none)
+    evaluatorHandler [] [] 0 0 8 7 none none none (by decide)
+
 /-- The raised `DecCall` outcome also lifts to the declaration's progSize. -/
 example
     (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)

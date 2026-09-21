@@ -72,9 +72,56 @@ def dataBufferWriteBoundaryGuard : Bool :=
 #guard codeBufferWriteBoundaryGuard
 #guard dataBufferWriteBoundaryGuard
 
+def longDivProgram : WordProg Nat :=
+  .inst (.arith (.longDiv 1 2 3 4 5))
+
+/-! Cake's `ssa_cc_trans_inst` routes LongDiv through the fixed operand
+    registers, then copies the quotient/remainder results into fresh SSA
+    names.  This is the source-level contract used before the RISC-V target's
+    software helper selection. -/
+def longDivBoundaryGuard : Bool :=
+  match (wordFullSsaCcTrans 0 longDivProgram).2.2 with
+  | .seq (.move 1 [])
+      (.seq (.move 1 [(6, 0), (0, 0)])
+        (.seq (.inst (.arith (.longDiv 0 6 6 0 0)))
+          (.move 1 [(9, 6), (13, 0)]))) => true
+  | _ => false
+
+#guard longDivBoundaryGuard
+
+def longMulProgram : WordProg Nat :=
+  .inst (.arith (.longMul 1 2 3 4))
+
+/-! The neighboring Cake LongMul row uses the same fixed operand carriers,
+    with the two fresh results copied back in destination-right/left order. -/
+def longMulBoundaryGuard : Bool :=
+  match (wordFullSsaCcTrans 0 longMulProgram).2.2 with
+  | .seq (.move 1 [])
+      (.seq (.move 1 [(0, 0), (4, 0)])
+        (.seq (.inst (.arith (.longMul 6 0 0 4)))
+          (.move 1 [(13, 0), (9, 6)]))) => true
+  | _ => false
+
+#guard longMulBoundaryGuard
+
+def shiftProgram : WordProg Nat :=
+  .inst (.arith (.shift .lsl 1 2 (.reg 3)))
+
+/-! A register-valued Cake shift uses fixed register 8 for the shift amount;
+    the source move is part of `ssa_cc_trans_inst`, not a later backend pass. -/
+def shiftBoundaryGuard : Bool :=
+  match (wordFullSsaCcTrans 0 shiftProgram).2.2 with
+  | .seq (.move 1 [])
+      (.seq (.move 1 [(8, 0)])
+        (.inst (.arith (.shift .lsl 5 0 (.reg 8))))) => true
+  | _ => false
+
+#guard shiftBoundaryGuard
+
 def parityGuard : Bool :=
   raiseBoundaryGuard && callBoundaryGuard && storeConstsBoundaryGuard &&
-    ffiBoundaryGuard && codeBufferWriteBoundaryGuard && dataBufferWriteBoundaryGuard
+    ffiBoundaryGuard && codeBufferWriteBoundaryGuard && dataBufferWriteBoundaryGuard &&
+    longDivBoundaryGuard && longMulBoundaryGuard && shiftBoundaryGuard
 
 #guard parityGuard
 #eval parityGuard
@@ -92,7 +139,13 @@ def runChecks : IO Bool := do
       ("full_ssa_cc_trans CodeBufferWrite preserves Cake names",
         codeBufferWriteBoundaryGuard),
       ("full_ssa_cc_trans DataBufferWrite preserves Cake names",
-        dataBufferWriteBoundaryGuard) ]
+        dataBufferWriteBoundaryGuard),
+      ("full_ssa_cc_trans LongDiv preserves Cake fixed-register ABI",
+        longDivBoundaryGuard),
+      ("full_ssa_cc_trans LongMul preserves Cake fixed-register ABI",
+        longMulBoundaryGuard),
+      ("full_ssa_cc_trans register Shift preserves Cake fixed-register ABI",
+        shiftBoundaryGuard) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

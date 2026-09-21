@@ -485,6 +485,21 @@ def respillBelowThresholdGuard : Bool :=
 
 #guard respillWorklistGuard
 #guard respillBelowThresholdGuard
+
+/- Cake's `do_simplify` (`reg_allocScript.sml:400-415`) processes the whole
+   simplify worklist before pushing it, preserving the worklist order in the
+   reverse stack order and then clearing `simpWl`. -/
+def simplifyBatchGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      degrees := CakeNodeMap.ofNatInfoMap 4 [(1, 1), (2, 2)]
+      simpWl := [1, 2] }
+  let (changed, simplified) := cakeDoSimplify 3 state
+  changed && simplified.simpWl == [] && simplified.stack == [2, 1] &&
+    (simplified.degrees.get 1).getD 0 == 0 &&
+    (simplified.degrees.get 2).getD 0 == 0
+
+#guard simplifyBatchGuard
 /- `get_prefs_def` uses `MAP ... ++ acc`, preserving each Move's source
    order.  These guards mirror the canonical `get_prefs_probe.out` output. -/
 def prefsMoveOrderGuard : Bool :=
@@ -841,7 +856,7 @@ def runChecks : IO Bool := do
     deadTailCallLiveGuard, deadAllocLiveGuard, deadInstallLiveGuard,
     deadFfiLiveGuard, deadStoreConstsLiveGuard, stExMinCostOrderGuard,
     stExMaxDegOrderGuard, respillWorklistGuard,
-    respillBelowThresholdGuard]
+    respillBelowThresholdGuard, simplifyBatchGuard]
   let names := [
     "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
@@ -879,7 +894,7 @@ def runChecks : IO Bool := do
     "remove_dead Install liveness", "remove_dead FFI liveness",
     "remove_dead StoreConsts liveness", "st_ex_list_MIN_cost ordering",
     "st_ex_list_MAX_deg ordering", "respill freeze-to-spill transition",
-    "respill below-threshold no-op"]
+    "respill below-threshold no-op", "do_simplify batch ordering"]
   let mut all := true
   for (name, result) in names.zip results do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"

@@ -81,6 +81,12 @@ differential fuzzer `scripts/parity-difffuzz.py` compares full artifacts
 mismatch as a bead; see the differential-fuzzing section of
 [`docs/PARITY-TESTING.md`](docs/PARITY-TESTING.md).
 
+When porting a definition or theorem, generate the local CakeML/HOL source
+index with `python3 scripts/index-hol.py`. It records declaration locations,
+theory dependencies, and the CakeML commit used; see
+[`docs/HOL-INDEX.md`](docs/HOL-INDEX.md). The generated `.hol-index/` directory
+is gitignored.
+
 ## Project map
 
 The Lean library currently contains the core Pancake syntax in

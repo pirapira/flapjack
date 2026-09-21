@@ -1,4 +1,5 @@
 import Flapjack.PanStructs
+import Flapjack.PanSimp
 
 /-!
 The core of Pancake's `pan_globals` pass.
@@ -594,6 +595,75 @@ theorem exceptionEntries_filter_name (declarations : List (Decl α)) :
 theorem exceptionEntries_filter_global (declarations : List (Decl α)) :
     exceptionEntries (globalDeclsFilter globalDeclIsGlobal declarations) = [] :=
   exceptionEntries_globalDeclsFilter_of_false (fun _ _ => rfl) declarations
+
+/-! Counterpart of Cake's `not_is_function`
+    (`pan_globalsProofScript.sml:2527`): name, value, and exception
+    declarations are never function declarations. -/
+theorem isName_not_function (declaration : Decl α) :
+    isName declaration = true → globalDeclIsFunction declaration = false := by
+  cases declaration <;> simp [isName, globalDeclIsFunction]
+
+theorem isDecl_not_function (declaration : Decl α) :
+    isDecl declaration = true → globalDeclIsFunction declaration = false := by
+  cases declaration <;> simp [isDecl, globalDeclIsFunction]
+
+theorem isExnDecl_not_function (declaration : Decl α) :
+    isExnDecl declaration = true → globalDeclIsFunction declaration = false := by
+  cases declaration <;> simp [isExnDecl, globalDeclIsFunction]
+
+theorem not_is_function (declaration : Decl α) :
+    (isName declaration = true → globalDeclIsFunction declaration = false) ∧
+    (isDecl declaration = true → globalDeclIsFunction declaration = false) ∧
+    (isExnDecl declaration = true → globalDeclIsFunction declaration = false) :=
+  ⟨isName_not_function declaration, isDecl_not_function declaration,
+    isExnDecl_not_function declaration⟩
+
+/-! Counterpart of Cake's `decl_distinct`
+    (`pan_globalsProofScript.sml:2535`): a value declaration is disjoint
+    from the name, function, and exception declaration classes. -/
+theorem decl_distinct (declaration : Decl α) :
+    (isDecl declaration && isName declaration) = false ∧
+    (isDecl declaration && globalDeclIsFunction declaration) = false ∧
+    (isDecl declaration && isExnDecl declaration) = false := by
+  cases declaration <;> simp [isDecl, isName, isExnDecl, globalDeclIsFunction]
+
+/-! Counterparts of Cake's `functions_filter_nil`, `functions_FILTER_exn_decl`,
+    and `functions_FILTER_is_name` (`pan_globalsProofScript.sml:2967, 2042,
+    2049`): filtering by a predicate that excludes function declarations
+    leaves an empty function table. -/
+theorem functions_globalDeclsFilter_nil_of_predicate
+    (predicate : Decl α → Bool)
+    (hpredicate : ∀ declaration, predicate declaration = true →
+      globalDeclIsFunction declaration = false)
+    (declarations : List (Decl α)) :
+    functions (globalDeclsFilter predicate declarations) = [] := by
+  induction declarations with
+  | nil => simp [globalDeclsFilter, functions]
+  | cons declaration declarations ih =>
+      simp only [globalDeclsFilter]
+      by_cases hpred : predicate declaration = true
+      · rw [if_pos hpred]
+        have hnotfun := hpredicate declaration hpred
+        cases declaration <;> simp [globalDeclIsFunction] at hnotfun
+        all_goals simp [functions]
+        all_goals exact ih
+      · rw [if_neg hpred]
+        exact ih
+
+theorem functions_globalDeclsFilter_not_function (declarations : List (Decl α)) :
+    functions
+      (globalDeclsFilter
+        (fun declaration => !globalDeclIsFunction declaration) declarations) = [] :=
+  functions_globalDeclsFilter_nil_of_predicate _
+    (fun declaration hpred => by simpa using hpred) declarations
+
+theorem functions_globalDeclsFilter_exnDecl (declarations : List (Decl α)) :
+    functions (globalDeclsFilter isExnDecl declarations) = [] :=
+  functions_globalDeclsFilter_nil_of_predicate _ isExnDecl_not_function declarations
+
+theorem functions_globalDeclsFilter_isName (declarations : List (Decl α)) :
+    functions (globalDeclsFilter isName declarations) = [] :=
+  functions_globalDeclsFilter_nil_of_predicate _ isName_not_function declarations
 
 def globalFindFunction [BEq String] (name : FunName) :
     List (Decl α) → Option (FunDecl α)

@@ -201,6 +201,75 @@ theorem crepNestedDecsEval_of_evalExps_stable
                         (expressions := expressions) (values := values)
                         hlengthTail hnotTail htailStable hbodyTail
 
+/-! Cake `pan_to_crepProps$evaluate_nested_decs_load_globals` specializes the
+    ordinary nested-declaration argument to the generated global loads.  The
+    generated expressions are local-free, so loading them once and installing
+    their values in the declaration locals is stable under the recursive
+    prefix evaluation.  This is the compact-state counterpart of that source
+    theorem; the state-aware theorem can be obtained by the analogous
+    specialization of the state relation. -/
+theorem crepNestedDecsEval_loadGlobals_of_evalExps
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (functions : List (CompiledFunction α))
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress address stride : α) (fuel : Nat)
+    (state : CrepState α) (names : List Nat) (count : Nat)
+    (body : CrepProg α) (result : CrepControlResult α) (values : List α)
+    (hcount : names.length = count)
+    (heval : evalCrepFullExps state.locals state.memory
+      baseAddress topAddress (loadGlobals address stride count) = some values)
+    (hbody : evalCrepFullProg functions primitive ffi sharedMem
+      baseAddress topAddress fuel
+      { state with locals := updateCrepLocalList state.locals names values } body =
+      some result) :
+    CrepNestedDecsEval functions primitive ffi sharedMem
+      baseAddress topAddress fuel state names
+      (loadGlobals address stride count) body result := by
+  apply crepNestedDecsEval_of_evalExps_stable
+  · exact hcount.trans (loadGlobals_length address stride count).symm
+  · intro name hname expression hexpression hvariable
+    have hmem : name ∈ (loadGlobals address stride count).flatMap crepExpVars :=
+      List.mem_flatMap.mpr ⟨expression, hexpression, hvariable⟩
+    rw [loadGlobals_crepExpVars_empty] at hmem
+    simp at hmem
+  · exact heval
+  · exact hbody
+
+/-! The evaluator-facing form of the same Cake nested-global-load theorem. -/
+theorem evalCrepFullProg_nestedDecs_loadGlobals_of_evalExps
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (functions : List (CompiledFunction α))
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress address stride : α) (fuel : Nat)
+    (state : CrepState α) (names : List Nat) (count : Nat)
+    (body : CrepProg α) (result : CrepControlResult α) (values : List α)
+    (hcount : names.length = count)
+    (hdistinct : CrepDistinctNames names)
+    (heval : evalCrepFullExps state.locals state.memory
+      baseAddress topAddress (loadGlobals address stride count) = some values)
+    (hbody : evalCrepFullProg functions primitive ffi sharedMem
+      baseAddress topAddress fuel
+      { state with locals := updateCrepLocalList state.locals names values } body =
+      some result) :
+    evalCrepFullProg functions primitive ffi sharedMem
+      baseAddress topAddress (fuel + names.length) state
+      (nestedDecs names (loadGlobals address stride count) body) =
+      some (restoreCrepResultList state.locals names result) := by
+  have hnested := crepNestedDecsEval_loadGlobals_of_evalExps
+    functions primitive ffi sharedMem baseAddress topAddress address stride fuel
+    state names count body result values hcount heval hbody
+  exact evalCrepFullProg_nestedDecs_of_eval
+    functions primitive ffi sharedMem baseAddress topAddress fuel state names
+    (loadGlobals address stride count) body result hdistinct hnested
+
 theorem crepNestedDecsEval_body_of_evalExps_stable
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

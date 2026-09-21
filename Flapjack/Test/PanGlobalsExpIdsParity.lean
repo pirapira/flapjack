@@ -33,4 +33,22 @@ def expIdsCompileGuard : Bool :=
 #eval expIdsCompileGuard
 #guard expIdsCompileGuard
 
+/-! Cake's `compile_decs_no_exp_ids_main`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:174`). -/
+
+def initializerDecls : List (Decl Nat) :=
+  [.decl .one "g" (.const 2), .exnDecl "E" .one]
+
+theorem globalCompileInitializers_expIds_fixture :
+    ∀ initializer ∈ globalCompileInitializers expIdsContext initializerDecls,
+      expIds initializer = [] :=
+  globalCompileInitializers_expIds expIdsContext initializerDecls
+
+def initializerExpIdsGuard : Bool :=
+  (globalCompileInitializers expIdsContext initializerDecls).all
+    (fun initializer => expIds initializer == [])
+
+#eval initializerExpIdsGuard
+#guard initializerExpIdsGuard
+
 end Flapjack.Test.PanGlobalsExpIdsParity

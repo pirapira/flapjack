@@ -462,4 +462,26 @@ example : True := by
 #eval compileDecsFunctionsGuard
 #guard compileDecsFunctionsGuard
 
+/-! Cake's `dec_shapes_compile_prog` and `function_names_compile_prog`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:241`, `:248`). -/
+
+theorem globalDeclShapes_panSimpDecls_fixture :
+    globalDeclShapes (panSimpDecls filterDeclsFixture) =
+      globalDeclShapes filterDeclsFixture :=
+  globalDeclShapes_panSimpDecls filterDeclsFixture
+
+theorem functions_names_panSimpDecls_fixture :
+    (functions (panSimpDecls filterDeclsFixture)).map Prod.fst =
+      (functions filterDeclsFixture).map Prod.fst :=
+  functions_names_panSimpDecls filterDeclsFixture
+
+def panSimpShapesGuard : Bool :=
+  (globalDeclShapes (panSimpDecls filterDeclsFixture)).length ==
+      (globalDeclShapes filterDeclsFixture).length &&
+    ((functions (panSimpDecls filterDeclsFixture)).map Prod.fst).length ==
+      ((functions filterDeclsFixture).map Prod.fst).length
+
+#eval panSimpShapesGuard
+#guard panSimpShapesGuard
+
 end Flapjack.Test.PanGlobalsDecShapesParity

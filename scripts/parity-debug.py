@@ -28,7 +28,8 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 DIFFUZZ = ROOT / "scripts" / "parity-difffuzz.py"
 HOL_PROBE = ROOT / "scripts" / "hol-probes" / "pancake-stage-probeScript.sml"
-DEFAULT_CAKE = Path(os.environ.get("CAKE", str(ROOT / "cakeml/developers/bin/cake")))
+DEFAULT_CAKE = Path(os.environ.get(
+    "CAKE", os.path.expanduser("~/pancake-lean/cakeml/developers/bin/cake")))
 DEFAULT_FLAPJACK = Path(os.environ.get(
     "FLAPJACK", str(ROOT / ".lake/build/bin/flapjack-compile")))
 DEFAULT_DEBUG = Path(os.environ.get(

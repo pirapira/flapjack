@@ -34,8 +34,22 @@ def allocBoundaryGuard : Bool :=
 
 #guard allocBoundaryGuard
 
-def parityGuard : Bool := returnBoundaryGuard && allocBoundaryGuard
+def installProgram : WordProg Nat :=
+  .install 0 2 4 6 ([], [])
 
+def installBoundaryGuard : Bool :=
+  match (wordFullSsaCcTrans 0 installProgram).2.2 with
+  | .seq (.move 1 [])
+      (.seq (.move 0 [])
+        (.seq (.move 1 [(2, 0), (4, 0)])
+          (.seq (.install 2 4 0 0 ([], []))
+            (.seq (.move 1 [(13, 2)]) (.move 0 []))))) => true
+  | _ => false
+
+#guard installBoundaryGuard
+
+def parityGuard : Bool :=
+  returnBoundaryGuard && allocBoundaryGuard && installBoundaryGuard
 #guard parityGuard
 #eval parityGuard
 
@@ -44,7 +58,9 @@ def runChecks : IO Bool := do
     [ ("full_ssa_cc_trans Return preserves Cake ABI reconciliation",
         returnBoundaryGuard),
       ("full_ssa_cc_trans Alloc preserves Cake stack boundary moves",
-        allocBoundaryGuard) ]
+        allocBoundaryGuard),
+      ("full_ssa_cc_trans Install preserves Cake stack boundary moves",
+        installBoundaryGuard) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

@@ -110,7 +110,7 @@ def loopProgram : WordProg Nat :=
 def loopSsaGuard : Bool :=
   match (wordFullSsaCcTrans 2 loopProgram).2.2 with
   | .seq (.move 1 [(5, 0), (9, 2)])
-      (.seq (.move 0 [(13, 5)])
+      (.seq (.seq .skip (.move 0 [(13, 5)]))
         (.loop [13]
           (.seq
             (.seq (.assign 17 (.const 1))
@@ -118,13 +118,28 @@ def loopSsaGuard : Bool :=
             (.move 1 [(13, 17)])) [])) => true
   | _ => false
 
+def loopLiveOutProgram : WordProg Nat :=
+  .loop [0, 2] (.seq (.assign 0 (.const 1)) (.continue 0)) [2]
+
+def loopLiveOutGuard : Bool :=
+  match (wordFullSsaCcTrans 2 loopLiveOutProgram).2.2 with
+  | .seq (.move 1 [(5, 0), (9, 2)])
+      (.seq (.seq .skip (.move 0 [(13, 5), (17, 9)]))
+        (.loop [17, 13]
+          (.seq
+            (.seq (.assign 21 (.const 1))
+              (.seq (.move 1 [(13, 21)]) (.continue 0)))
+            (.move 1 [(13, 21)])) [17])) => true
+  | _ => false
+
 #guard branchSsaGuard
 #guard loopSsaGuard
+#guard loopLiveOutGuard
 
 def parityGuard : Bool :=
   setupTwoGuard && fullTransMoveGuard && limitBaseGuard &&
     limitTwoAssignsGuard && setupTwoNextGuard && fullSkipMoveGuard &&
-    fullTwoAssignsGuard && branchSsaGuard && loopSsaGuard
+    fullTwoAssignsGuard && branchSsaGuard && loopSsaGuard && loopLiveOutGuard
 
 #guard parityGuard
 #eval parityGuard
@@ -143,7 +158,9 @@ def runChecks : IO Bool := do
         fullTwoAssignsGuard),
       ("full_ssa_cc_trans reconciles Cake branch continuations",
         branchSsaGuard),
-      ("full_ssa_cc_trans reconciles Cake loop back edges", loopSsaGuard) ]
+      ("full_ssa_cc_trans reconciles Cake loop back edges", loopSsaGuard),
+      ("full_ssa_cc_trans preserves Cake loop exit cut sets",
+        loopLiveOutGuard) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

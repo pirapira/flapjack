@@ -97,6 +97,21 @@ def loopBodyGuard : Bool :=
 def assignLeafGuard : Bool :=
   cakeGetStackOnly (.assign 9 (.const 7 : WordExp Nat) : WordProg Nat) = []
 
+/- Cake's sorted_insert/sorted_mem (reg_allocScript.sml:184-198)
+   maintain descending adjacency lists, skip duplicate insertion, and stop
+   membership search once the sought key has passed the current entry. -/
+def sortedInsertMemGuard : Bool :=
+  cakeSortedInsert 6 [] == [6] &&
+    cakeSortedInsert 5 [7, 4, 2] == [7, 5, 4, 2] &&
+    cakeSortedInsert 4 [7, 4, 2] == [7, 4, 2] &&
+    cakeSortedInsert 1 [7, 4, 2] == [7, 4, 2, 1] &&
+    cakeSortedMem 4 [7, 4, 2] &&
+    !cakeSortedMem 5 [7, 4, 2] &&
+    !cakeSortedMem 1 [7, 4, 2] &&
+    cakeSortedMem 7 [7, 4, 2]
+
+#guard sortedInsertMemGuard
+
 /-- Canonical form for comparing node bijections with the probed sptree
     outputs: both maps sorted by key. -/
 def sortBijectionMaps (bijection : CakeNodeBijection) :
@@ -1110,7 +1125,7 @@ def maxVarControlLabelGuard : Bool :=
 def parityGuard : Bool :=
   moveChainGuard && moveFromRegGuard && seqMovesGuard && ifMergeGuard &&
     ifMergeAllocGuard && ifImmediateRemovesTempGuard && callMergeGuard &&
-    callTailGuard && mustTerminateGuard &&
+    callTailGuard && mustTerminateGuard && sortedInsertMemGuard &&
     loopBodyGuard && assignLeafGuard &&
     bijDeltaBasicGuard && bijDeltaDedupGuard && bijSeqOrderGuard &&
     bijBranchOrderGuard && bijBranchLiveGuard && bijSetGuard &&
@@ -1155,7 +1170,7 @@ def runChecks : IO Bool := do
     moveChainGuard, moveFromRegGuard, seqMovesGuard, ifMergeGuard,
     ifMergeAllocGuard, ifImmediateRemovesTempGuard, callMergeGuard,
     callTailGuard, mustTerminateGuard,
-    loopBodyGuard, assignLeafGuard,
+    loopBodyGuard, assignLeafGuard, sortedInsertMemGuard,
     bijDeltaBasicGuard, bijDeltaDedupGuard, bijSeqOrderGuard,
     bijBranchOrderGuard, bijBranchLiveGuard, bijSetGuard,
     bijSetUnsortedGuard, bijCompositeGuard, graphDeltaDisjointGuard,
@@ -1196,6 +1211,7 @@ def runChecks : IO Bool := do
     "get_stack_only call merge",
     "get_stack_only call tail", "get_stack_only MustTerminate",
     "get_stack_only Loop body", "get_stack_only assign leaf",
+    "Cake sorted_insert/sorted_mem",
     "mk_bij delta basic", "mk_bij delta dedup", "mk_bij seq order",
     "mk_bij branch order", "mk_bij branch live", "mk_bij set",
     "mk_bij set unsorted", "mk_bij composite", "mk_graph delta disjoint",

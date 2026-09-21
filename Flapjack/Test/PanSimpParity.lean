@@ -238,6 +238,34 @@ theorem clocked_seq_assoc_skip_seq_fuel_matches_cake :
     (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
     none none none (by trivial) (by constructor <;> trivial)
 
+/-- On the `Skip`/`Seq` fragment `retToTail` is the identity. -/
+example : retToTail (.seq (.skip : Prog Nat) .skip) = .seq .skip .skip := by
+  rw [PanSimpSeqSkipFragment_retToTail]
+  exact PanSimpSeqSkipFragment.seq .skip .skip
+    PanSimpSeqSkipFragment.skip PanSimpSeqSkipFragment.skip
+
+/-- Cake's `compile_correct_same_state` on the `Skip`/`Seq` fragment: the full
+    `panSimpProg` transform and the source program agree once the common fuel
+    dominates both structural budgets. -/
+theorem clocked_pan_simp_prog_fragment_matches_cake :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 3 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1
+      (panSimpProg (.seq (.skip : Prog Nat) .skip)) =
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 3 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1
+      (.seq (.skip : Prog Nat) .skip) := by
+  apply evalPanValueFfiClockProg_panSimpProg_eq_of_seqSkipFragment
+    evaluatorContext (fun _ _ => none) evaluatorHandler [] [] 0 0 8
+    (.seq (.skip : Prog Nat) .skip) 3
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    none none none
+  · exact PanSimpSeqSkipFragment.seq .skip .skip
+      PanSimpSeqSkipFragment.skip PanSimpSeqSkipFragment.skip
+  · simp [panSimpProg, seqAssoc, retToTail, panSimpSeqSkipFuel]
+  · simp [panSimpSeqSkipFuel]
+
 theorem clocked_seq_normal_exposes_components :
     ∃ (middleLocals middleGlobals : VarName → Option (PanValue Nat))
       (middleMemory : Nat → Option (PanValue Nat)) (middleFfi : FfiState Unit)

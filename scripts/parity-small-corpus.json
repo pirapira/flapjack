@@ -979,6 +979,18 @@
       "source_reference": "Annotation-comment coverage: Cake lexes `/@ ... @/` as an annotation (panLexerScript.sml:242-254, panPtreeConversionScript.sml:483) and pan_simp drops it (`Annot _ _ => p`, pan_simpScript.sml), so top-level, in-body and multiline annotations plus `//` and `/* */` comments must not change RISC-V output. This fixture locks in the byte-exact Cake/Flapjack agreement for that under-tested construct.",
       "cake_sha256": "b3d9a8219a6c45427270be0657e99e138cbae13902283dfad185e0e242668d22",
       "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/nested_handler_comparison.pnk",
+      "source_reference": "Regression for the former nested `@base` comparison duplicate-if gap in a catch handler (GH #1131, flapjack-wl1). Cake's `Seq_assoc` traverses the handler program before `simp_duplicate_if`; the port now does the same through Call handler metadata.",
+      "cake_sha256": "ba54b0c626c7c6e5e4787f3e34db063c1ad353044c6e47ff35ffe4a9ccd5b302",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/and_comparison_handler.pnk",
+      "source_reference": "Regression for the former And/comparison-in-catch-handler byte gap (flapjack-pxn.1.5). The handler-aware Cake `Seq_assoc` traversal now preserves the original instruction selection and layout.",
+      "cake_sha256": "ba432bd957296c570f9b089dd35e8f00ad1f8bbb72b4715b14727a377e91be1c",
+      "tracked_beads": []
     }
   ]
 }

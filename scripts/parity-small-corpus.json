@@ -1003,6 +1003,14 @@
       "source_reference": "Minimized fuzz witness f00052-s88-i00052-generate (GH #1132, flapjack-pxn.8.5.14.24): for `lds 1 (@base + 2048)` the offset is outside Cake's addr_offset_ok 12-bit range, so inst_select_exp (word_instScript.sml:234-245) selects the whole address expression, reaching Const temp w; OpCurrHeap op tar temp and keeping s10 as the memory base. WordInstSelect previously split the offset unconditionally and materialised CurrHeap into a temporary.",
       "cake_sha256": "5c24bc18ceac4941d4fa864062ed8bc427f03de35bd5d3a7d75b76a33714365d",
       "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f860_try_loop_large_constant.pnk",
+      "source_reference": "Minimized exact mixed differential campaign witness (seed 20260921, case index 860; bead flapjack-pxn.8.5.14.23). Exercises try/catch, a break-loop, large 2147483647/4095/2047 constants, ld8/lds and calls; Cake's handler-aware Seq_assoc recursion (word_simpScript.sml:21-38) must be traversed through Call return/exception-handler programs so the large-constant materialisation and store layout stay byte-exact.",
+      "cake_sha256": "c14cc1123af4e448513ba065e1a6c307f82ad679c9cbbcf3a8c2d8ac7cffa80a",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.23"
+      ]
     }
   ]
 }

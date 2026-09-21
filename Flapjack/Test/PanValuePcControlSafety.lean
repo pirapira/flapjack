@@ -823,4 +823,8 @@ signature (no opaque raised-data obligation). -/
 evaluator-evidence obligation. -/
 #check @panValuePcCompileCorrect_compact_one_word_raise_of_state_evidence
 
+/- The two-word-record raise instance composes the same boundary with the
+   two-word Cake program-control theorem. -/
+#check @panValuePcCompileCorrect_compact_two_word_raise_of_state_evidence
+
 end Flapjack.Test.PanValuePcControlSafety

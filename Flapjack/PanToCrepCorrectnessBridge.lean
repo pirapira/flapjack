@@ -9011,7 +9011,9 @@ theorem panValuePcCompileCorrect_compact_one_word_raise_of_state_evidence
 
 set_option linter.unusedVariables false in
 /-- Two-word-record raise instance without the opaque evaluator-evidence
-obligation. -/
+obligation.  The concrete Cake-shaped program theorem supplies the source
+state/control obligations; the generic raised-state boundary supplies the
+target relation from explicit state, code, lookup, and shape evidence. -/
 theorem panValuePcCompileCorrect_compact_two_word_raise_of_state_evidence
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

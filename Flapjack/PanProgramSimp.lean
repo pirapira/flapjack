@@ -1139,4 +1139,79 @@ theorem evalPanValueDeclarations_exns_wf_sufficiency
     memoryAccess (by rfl) hall hnodup hnone hwf
   simpa using hmain
 
+theorem evalPanValueDeclarationsWithStructs_function_exnDecl_commute
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext) (state : PanValueProgramState α)
+    (declaration : FunDecl α) (exception : ExceptionId) (shape : Shape)
+    (declarations : List (Decl α))
+    (memoryAccess : Option (PanValueMemoryAccess α)) :
+    evalPanValueDeclarationsWithStructs structs state
+        (.function declaration :: .exnDecl exception shape :: declarations)
+        memoryAccess =
+      evalPanValueDeclarationsWithStructs structs state
+        (.exnDecl exception shape :: .function declaration :: declarations)
+        memoryAccess := by
+  simp only [evalPanValueDeclarationsWithStructs]
+  by_cases hwf : (declaration.params.all
+        (fun parameter => isWfShape structs parameter.2) &&
+      isWfShape structs declaration.returnShape) = true
+  · by_cases hexists : (lookupInfo exception state.exceptions).isSome = true
+    · simp [hwf, hexists]
+    · by_cases hshape : isWfShape structs shape = true
+      · simp [hwf, hexists, hshape]
+      · simp [hwf, hexists, hshape]
+  · by_cases hexists : (lookupInfo exception state.exceptions).isSome = true
+    · simp [hwf, hexists]
+    · by_cases hshape : isWfShape structs shape = true
+      · simp [hwf, hexists, hshape]
+      · simp [hwf, hexists, hshape]
+
+/-- Cake's `evaluate_decls_one_fun_last`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1854`): a function
+    declaration may be moved to the front past a list of global and exception
+    declarations. -/
+theorem evalPanValueDeclarationsWithStructs_one_fun_last
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext) (state : PanValueProgramState α)
+    (declaration : FunDecl α) (declarations : List (Decl α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (hrest : declarations.all (fun declaration =>
+      isDecl declaration || isExnDecl declaration) = true) :
+    evalPanValueDeclarationsWithStructs structs state
+        (declarations ++ [.function declaration]) memoryAccess =
+      evalPanValueDeclarationsWithStructs structs state
+        (.function declaration :: declarations) memoryAccess := by
+  induction declarations generalizing state with
+  | nil => rfl
+  | cons head tail ih =>
+      simp only [List.all_cons, Bool.and_eq_true] at hrest
+      obtain ⟨hhead, htail⟩ := hrest
+      rw [List.cons_append]
+      cases head with
+      | function function => simp [isDecl, isExnDecl] at hhead
+      | name name fields => simp [isDecl, isExnDecl] at hhead
+      | decl shape name expression =>
+          rw [evalPanValueDeclarationsWithStructs_function_decl_commute]
+          simp only [evalPanValueDeclarationsWithStructs]
+          cases hval : evalPanValueExp structs (fun _ => none) state.globals
+              state.memory state.baseAddress state.topAddress state.bytesInWord
+              expression (memoryAccess := memoryAccess) with
+          | none => rfl
+          | some value =>
+              by_cases hmatch :
+                  panShapeMatches (panValueShape structs value) shape = true
+              · simp [hmatch]
+                rw [ih _ htail]
+                simp only [evalPanValueDeclarationsWithStructs]
+              · simp [hmatch]
+      | exnDecl exception shape =>
+          rw [evalPanValueDeclarationsWithStructs_function_exnDecl_commute]
+          simp only [evalPanValueDeclarationsWithStructs]
+          rw [ih _ htail]
+          simp only [evalPanValueDeclarationsWithStructs]
+
 end Flapjack

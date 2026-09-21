@@ -482,6 +482,53 @@ example :
     (fun _ => none) (fun _ => none) evaluatorFfi 0 (.const 5) (.break : Prog Nat)
     none none none 5 (by simp [evalPanValueExp]) (by decide) (by decide)
 
+/-- The zero-condition `While` succeeds at its structural `progSize` budget. -/
+example :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+      [] [] 0 0 8 (progSize (.while (.const 0) (.break : Prog Nat)))
+      (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi 3 (.while (.const 0) (.break : Prog Nat)) none none none =
+    some (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi), 3) := by
+  exact evalPanValueFfiClockProg_while_zero_some_progSize evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 (fun _ => none)
+    (fun _ => none) (fun _ => none) evaluatorFfi 3 (.const 0) (.break : Prog Nat)
+    none none none 0 (by simp [evalPanValueExp]) (by decide)
+
+/-- A `break` inside the body still returns normally at the structural budget. -/
+example
+    (nextLocals nextGlobals : VarName → Option (PanValue Nat))
+    (nextMemory : Nat → Option (PanValue Nat)) (nextFfi : FfiState Unit)
+    (bodyClock : Nat)
+    (hbody : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 (progSize (.break : Prog Nat))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 0
+      (.break : Prog Nat) none none none =
+      some (.control (.broke nextLocals nextGlobals nextMemory nextFfi),
+        bodyClock)) :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 (progSize (.while (.const 5) (.break : Prog Nat)))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+      (.while (.const 5) (.break : Prog Nat)) none none none =
+    some (.control (.normal nextLocals nextGlobals nextMemory nextFfi), bodyClock) := by
+  exact evalPanValueFfiClockProg_while_broke_some_progSize evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 (fun _ => none)
+    (fun _ => none) (fun _ => none) evaluatorFfi 1 (.const 5) (.break : Prog Nat)
+    none none none 5 nextLocals nextGlobals nextMemory nextFfi bodyClock
+    (by simp [evalPanValueExp]) (by decide) (by decide) hbody
+
+/-- The exhausted-clock timeout also lives at the structural `progSize` budget. -/
+example :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+      [] [] 0 0 8 (progSize (.while (.const 5) (.break : Prog Nat)))
+      (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi 0 (.while (.const 5) (.break : Prog Nat)) none none none =
+    some (.timeout (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi, 0) := by
+  exact evalPanValueFfiClockProg_while_timeout_some_progSize evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 (fun _ => none)
+    (fun _ => none) (fun _ => none) evaluatorFfi 0 (.const 5) (.break : Prog Nat)
+    none none none 5 (by simp [evalPanValueExp]) (by decide) (by decide)
+
 theorem clocked_seq_normal_exposes_components :
     ∃ (middleLocals middleGlobals : VarName → Option (PanValue Nat))
       (middleMemory : Nat → Option (PanValue Nat)) (middleFfi : FfiState Unit)

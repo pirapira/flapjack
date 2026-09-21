@@ -30849,4 +30849,69 @@ theorem panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call
   refine ⟨hcompact, htimeout.1, htimeout.2.1, ?_⟩
   simpa [panValuePcResultRelWithContextCode] using htimeout.2.2
 
+/-! The declaration-call timeout branch preserves the declaration metadata
+    while lifting the explicit post-timeout state through the Pc boundary. -/
+theorem panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_timeout
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (program : Prog α)
+    (sourceEvaluate : PanValuePcEvaluator α)
+    (targetEvaluate : CrepPcEvaluator α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (hcompact : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (clockStructs : StructContext) (clockPcContext : CompileContext α)
+    (clockExceptionRel : ExceptionId → PanValue α → α → Prop)
+    (clockExceptionCode : ExceptionId → Option α)
+    (clockGlobalsLookup : CrepState α → PanValue α → Option (List α))
+    (clockContext : PanValueFfiContext α)
+    (clockPrimitive : PanPrimitiveHandler α)
+    (clockHandler : PanValueStatefulFfiHandler α σ)
+    (clockFunctions : List (FunName × List VarName × Prog α))
+    (clockBaseAddress clockTopAddress clockBytesInWord : α)
+    (fuel clock callClock : Nat)
+    (clockLocals clockGlobals : VarName → Option (PanValue α))
+    (clockMemory : α → Option (PanValue α)) (clockFfi : FfiState σ)
+    (name : VarName) (shape : Shape) (function : FunName)
+    (arguments : List (Exp α)) (body : Prog α)
+    (nextGlobals : VarName → Option (PanValue α))
+    (nextMemory : α → Option (PanValue α)) (nextFfi : FfiState σ)
+    (targetState : CrepState α)
+    (hcall : evalPanValueFfiClockCall clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord fuel clockLocals clockGlobals clockMemory clockFfi clock
+      none function arguments =
+      some (.timeout (fun _ => none) nextGlobals nextMemory nextFfi, callClock))
+    (hstate : panValueCrepStateRel clockStructs clockPcContext
+      (fun _ => none) nextGlobals nextMemory targetState) :
+    PanValuePcCompileCorrectWithContextCode sourceEvaluate targetEvaluate
+      codeRel excpRel exceptionCode globalsLookup program ∧
+    evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (fuel + 1) clockLocals clockGlobals clockMemory clockFfi
+      clock (.decCall name shape function arguments body) =
+      some (.timeout (fun _ => none) nextGlobals nextMemory nextFfi, callClock) ∧
+    (evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (fuel + 1) clockLocals clockGlobals clockMemory clockFfi
+      clock (.decCall name shape function arguments body)).map
+      panValueFfiClockResultProjection =
+      some (.timeout (fun _ => none) nextGlobals nextMemory nextFfi callClock) ∧
+    panValuePcResultRelWithContextCode clockStructs clockPcContext
+      clockExceptionRel clockExceptionCode clockGlobalsLookup
+      (.timeout (fun _ => none) nextGlobals nextMemory)
+      (.timeout targetState) := by
+  have htimeout := panValuePcTimeoutResultRel_of_clocked_decCall
+    clockStructs clockPcContext clockExceptionRel clockExceptionCode
+    clockGlobalsLookup clockContext clockPrimitive clockHandler clockFunctions
+    clockBaseAddress clockTopAddress clockBytesInWord fuel clock callClock
+    clockLocals clockGlobals clockMemory clockFfi name shape function arguments
+    body nextGlobals nextMemory nextFfi targetState hcall hstate
+  exact ⟨hcompact, htimeout.1, htimeout.2.1, htimeout.2.2⟩
+
 end Flapjack

@@ -37,4 +37,25 @@ def cseDuplicateGlobalPrelude : WordProg (Word 64) :=
               (.move 0 [(45, 21)]))))) => true
   | _ => false)
 
+/-! `wordCse` must emit the *original* source register of an `OpCurrHeap`
+    even when that register has a recorded constant equivalence.  Cake's
+    `word_cse_def` uses `canonicalRegs'` only to build the fact key and passes
+    the original `OpCurrHeap b r1 r2` to `add_to_data_aux`
+    (`cakeml/compiler/backend/word_cseScript.sml:587-594`).  Emitting the
+    canonicalised source made the second `Const` look dead, so Flapjack
+    dropped an instruction Cake keeps (GH #1127, bead flapjack-1kj): for
+    `st (0 + 0), 1; return @base | 1;` Cake emits `li a0,1; ...; li a0,1;
+    or a0,a0,@base` while Flapjack emitted only one `li`.  This program is the
+    post-SSA shape of that fixture. -/
+def cseCurrHeapKeepsOriginalSource : WordProg (Word 64) :=
+  .seq (.inst (.const 21 1))
+    (.seq (.inst (.const 29 1))
+      (.opCurrHeap .or 33 29))
+
+#guard (match wordCseProp cseCurrHeapKeepsOriginalSource with
+  | .seq (.inst (.const 21 1))
+      (.seq (.inst (.const 29 1))
+        (.opCurrHeap .or 33 29)) => true
+  | _ => false)
+
 end Flapjack.RiscV

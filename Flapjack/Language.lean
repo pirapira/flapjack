@@ -566,6 +566,38 @@ theorem listDisjoint_withShape_getElem (shapes : List Shape) (values : List α)
     exact listDisjoint_withShape_getElem_lt shapes values n' n hdistinct hn' hn
       hlt hvalues value hright hleft
 
+theorem shapeSize_drop_head_le (shapes : List Shape) (n : Nat)
+    (hn : n < shapes.length) :
+    Shape.shapeSize (shapes[n]'hn) ≤
+      Shape.shapeSize (.comb (shapes.drop n)) := by
+  rw [List.drop_eq_getElem_cons (l := shapes) hn, shapeSize_comb_cons]
+  omega
+
+/-! Counterpart of Cake's `el_el_with_shape`
+    (`cakeml/pancake/semantics/panPropsScript.sml:568`): the `n'`-th element of
+    the `n`-th group produced by `with_shape` is the
+    `n' + size_of_shape (Comb (TAKE n shs))`-th element of the flat list.  Cake's
+    `EVERY is_wf_shape_nil shs` hypothesis is not needed here because
+    `Shape.shapeSize` is total. -/
+theorem withShape_getElem_getElem (shapes : List Shape) (values : List α)
+    (n n' : Nat)
+    (hvalues : values.length = Shape.shapeSize (.comb shapes))
+    (hn : n < shapes.length)
+    (hn' : n' < Shape.shapeSize (shapes[n]'hn))
+    (hbound : n' <
+      ((withShape shapes values)[n]'(by rw [withShape_length]; exact hn)).length) :
+    ((withShape shapes values)[n]'(by rw [withShape_length]; exact hn))[n']'hbound =
+      values[(Shape.shapeSize (.comb (shapes.take n))) + n']'(by
+        have hdrop : Shape.shapeSize (.comb (shapes.take n)) +
+              Shape.shapeSize (.comb (shapes.drop n)) =
+            Shape.shapeSize (.comb shapes) := by
+          rw [← shapeSize_comb_append, List.take_append_drop n shapes]
+        rw [hvalues, ← hdrop]
+        have hle := shapeSize_drop_head_le shapes n hn
+        omega) := by
+  simp only [withShape_getElem_eq_take_drop shapes values n hvalues hn,
+    List.getElem_take, List.getElem_drop]
+
 def expLocalVars : Exp α → List VarName
   | .const _ => []
   | .var .local name => [name]

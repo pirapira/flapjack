@@ -952,5 +952,25 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @PanValueProgNotBrokeContinued
 #check @evalPanValueCallWithPrimitiveCallsAndFfi_handler_not_broke_continued
 #check @panValueCrepProgramStateControlSafe_call_handler
+/-! The source-level handler-safety predicate is closed under leaves,
+    sequences, and conditionals, and it yields the handler-carrying decCall
+    control-safety instance. -/
+#check @PanValueProgNotBrokeContinued_skip
+#check @PanValueProgNotBrokeContinued_seq
+#check @PanValueProgNotBrokeContinued_ite
+#check @PanValueProgNotBrokeContinued_return
+#check @PanValueProgNotBrokeContinued_raise
+#check @panValueCrepProgramStateControlSafe_decCall
+
+/-! The "exception id in handler not found in context" sub-case of Cake's
+    `Call_Ret_Exception` branch: when the handler's exception is absent from
+    the compile context, the emitted call drops the handler metadata.  These
+    equations expose the standalone and both destination-carrying degraded
+    shapes as explicit compile-side premises. -/
+#check @compileProg_call_handler_missing_of_compiled
+#check @compileProg_call_handler_missing_destination_degraded_of_compiled
+#check @compileProg_call_handler_missing_destination_of_compiled
+
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_handler
 
 end Flapjack.Test.PanValuePcControlSafety

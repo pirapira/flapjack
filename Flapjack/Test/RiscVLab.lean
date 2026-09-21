@@ -278,6 +278,23 @@ example :
         .or 4 4 31] := by
   decide
 
+/- Cake's RV64 target has no RORI instruction.  A rotate with a constant
+   amount is the same three-instruction `riscv_ast` expansion as the Word
+   backend; the Lab path must not reject the fused StackRemove form. -/
+example :
+    labLineInstructionCount
+        (.asm (.shiftImm .ror 4 5 3) [] 0 : LabLine (Word 64)) = 3 := by
+  rfl
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.shiftImm .ror 4 5 3) [] 0]⟩ =
+      some [
+        .srli 31 5 (BitVec.ofNat 64 3),
+        .slli 4 5 (BitVec.ofNat 64 61),
+        .or 4 4 31] := by
+  decide
+
 /-! GH #1093 (bead flapjack-lhj): end-to-end regression for the `labFlatten`
    `ite` cases — a Stack-level conditional compiled all the way to RISC-V
    must execute the then-branch when the condition holds and the

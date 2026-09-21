@@ -247,6 +247,33 @@ theorem list_mapM_mem_exists {α β : Type} (f : α → Option β) (xs : List α
   | some x =>
       simp only [hx, Option.bind_some] at hb
       exact ⟨x, List.mem_of_getElem? hx, hb⟩
+/-- Cake's `opt_mmap_length_eq` (`pan_commonPropsScript.sml:82`): a successful
+    `OPT_MMAP` preserves the list length. -/
+theorem list_mapM_length {α β : Type} (f : α → Option β) (xs : List α)
+    (ys : List β) (h : xs.mapM f = some ys) : xs.length = ys.length :=
+  (list_mapM_eq_some_iff f xs ys).mp h |>.1
+
+/-- Cake's `opt_mmap_mem_func` (`pan_commonPropsScript.sml:49`): every element
+    of a successfully mapped list has a successful image. -/
+theorem list_mapM_mem_func {α β : Type} (f : α → Option β) {x : α} {xs : List α}
+    (ys : List β) (h : xs.mapM f = some ys) (hx : x ∈ xs) : ∃ y, f x = some y := by
+  cases hf : f x with
+  | none => exact absurd (list_mapM_eq_none_of_mem f hx hf) (by rw [h]; simp)
+  | some y => exact ⟨y, rfl⟩
+
+/-- Cake's `opt_mmap_el` (`pan_commonPropsScript.sml:71`): a successful
+    `OPT_MMAP` maps the `n`-th element to the `n`-th image, stated with
+    `getElem?` so no length side condition is needed. -/
+theorem list_mapM_getElem? {α β : Type} (f : α → Option β) (xs : List α)
+    (ys : List β) (h : xs.mapM f = some ys) (n : Nat) :
+    (xs[n]?).bind f = ys[n]? := by
+  by_cases hn : n < ys.length
+  · exact (list_mapM_eq_some_iff f xs ys).mp h |>.2 n hn
+  · have hxsn : xs.length ≤ n := by
+      have hlen := list_mapM_length f xs ys h
+      omega
+    rw [List.getElem?_eq_none hxsn, List.getElem?_eq_none (by omega)]
+    rfl
 
 /-! Cake's `state_rel_imp_evaluate_decls`
 (`cakeml/pancake/proofs/pan_simpProofScript.sml:1303-1331`) says that evaluating a

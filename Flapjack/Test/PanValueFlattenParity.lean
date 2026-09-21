@@ -42,8 +42,20 @@ theorem panValueFlatten_eq_nil_iff_shapeSize_eq_zero_fixture :
       Shape.shapeSize (panValueShape ([] : StructContext) nestedValue) = 0 :=
   panValueFlatten_eq_nil_iff_shapeSize_eq_zero nestedValue nestedValue_wf
 
+theorem shapeSize_comb_map_panValueShape_eq_flatten_length_fixture :
+    Shape.shapeSize (.comb ([nestedValue, wordValue].map (panValueShape ([] : StructContext)))) =
+      ([nestedValue, wordValue].map panValueFlatten).flatten.length :=
+  shapeSize_comb_map_panValueShape_eq_flatten_length [nestedValue, wordValue]
+    (by
+      intro value hmem
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at hmem
+      rcases hmem with rfl | rfl
+      · exact nestedValue_wf
+      · simp [wordValue, panValueShape, isWfShape])
+
 #check @panValueFlatten
 #check @panValueFlatten_length_eq_shapeSize
 #check @panValueFlatten_eq_nil_iff_shapeSize_eq_zero
+#check @shapeSize_comb_map_panValueShape_eq_flatten_length
 
 end Flapjack.Test.PanValueFlattenParity

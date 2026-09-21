@@ -224,6 +224,14 @@ example :
         .add 4 4 31, .sltu 31 4 31, .or 5 5 31] := by
   decide
 
+/- Cake's `riscv_ast (Inst (Arith (Div ...)))` reaches the target DIV
+   encoding through the direct Lab word-arithmetic boundary. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.div 4 5 6))) [] 0]⟩ =
+      some [.divU 4 5 6] := by
+  decide
+
 example :
     compileStackProgramToRiscV (width := 64) { services := [] }
       stackRemoveRiscVConfig 2 3

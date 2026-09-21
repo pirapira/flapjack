@@ -111,7 +111,7 @@ example :
     wordSsaListNextVarRenameMove, wordSsaReadCutsets, wordSsaFreshList,
     wordSsaFresh, wordSsaRead, wordSsaRestrict, wordSsaSeq, List.eraseDups,
     List.eraseDupsBy, List.eraseDupsBy.loop, lookupNatInfo,
-    NumSet.fromList, NumSet.toAList, NumSet.toSet, NumSet.insert,
+    NumSet.fromList, NumSet.fromAList, NumSet.toAList, NumSet.toSet, NumSet.insert,
     NumSet.insertFuel, NumSet.lrnext, NumSet.lrnextFuel, NumSet.insertList]
 
 /- The entry-aware graph boundary accepts an unused ABI formal and returns a

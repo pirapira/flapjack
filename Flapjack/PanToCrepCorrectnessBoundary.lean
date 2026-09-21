@@ -282,6 +282,93 @@ theorem panValuePcResultRel_rejects_finalFfi_normal
       (.normal targetState) := by
   simp [panValuePcResultRel]
 
+/-! Constructor inversion lemmas for the result relation.  Each exposes the
+exact state/global/memory obligation of one reachable result pair, so
+downstream composition can rewrite instead of re-unfolding the definition. -/
+theorem panValuePcResultRel_normal_iff
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (targetState : CrepState α) :
+    panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
+      (.normal sourceLocals sourceGlobals sourceMemory) (.normal targetState) ↔
+      panValueCrepStateRel structs context sourceLocals sourceGlobals
+        sourceMemory targetState := by
+  simp [panValuePcResultRel]
+
+theorem panValuePcResultRel_returned_iff
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (sourceValues : List (PanValue α))
+    (targetState : CrepState α) (targetValues : List α) :
+    panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
+      (.returned sourceLocals sourceGlobals sourceMemory sourceValues)
+      (.returned targetState targetValues) ↔
+      panValueCrepStateRel structs context sourceLocals sourceGlobals
+        sourceMemory targetState ∧
+      panValueCrepValuesRel sourceValues targetValues := by
+  simp [panValuePcResultRel]
+
+theorem panValuePcResultRel_broke_iff
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (targetState : CrepState α) :
+    panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
+      (.broke sourceLocals sourceGlobals sourceMemory) (.broke targetState 0) ↔
+      panValueCrepStateRel structs context sourceLocals sourceGlobals
+        sourceMemory targetState := by
+  simp [panValuePcResultRel]
+
+theorem panValuePcResultRel_continued_iff
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (targetState : CrepState α) :
+    panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
+      (.continued sourceLocals sourceGlobals sourceMemory)
+      (.continued targetState 0) ↔
+      panValueCrepStateRel structs context sourceLocals sourceGlobals
+        sourceMemory targetState := by
+  simp [panValuePcResultRel]
+
+theorem panValuePcResultRel_timeout_iff
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (targetState : CrepState α) :
+    panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
+      (.timeout sourceLocals sourceGlobals sourceMemory) (.timeout targetState) ↔
+      panValueCrepStateRel structs context sourceLocals sourceGlobals
+        sourceMemory targetState := by
+  simp [panValuePcResultRel]
+
+theorem panValuePcResultRel_finalFfi_iff
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (sourceEvent : FfiFinalEvent)
+    (targetState : CrepState α) (targetEvent : FfiFinalEvent) :
+    panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
+      (.finalFfi sourceLocals sourceGlobals sourceMemory sourceEvent)
+      (.finalFfi targetState targetEvent) ↔
+      panValueCrepStateRel structs context sourceLocals sourceGlobals
+        sourceMemory targetState ∧ sourceEvent = targetEvent := by
+  simp [panValuePcResultRel]
+
 /-! Safety obligation for the compact `pc_compile_correct` bridge.  The
 intermediate control relation intentionally permits nonzero labels while a
 loop propagates them, but the final Pancake theorem only admits label `0` for

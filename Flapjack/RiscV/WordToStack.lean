@@ -650,10 +650,7 @@ def wordStackLongDivInst {α : Type} (config : WordStackConfig)
       let location ← wordStackLocation config divisor
       match location with
       | .register divisorRegister =>
-          if divisorRegister = 0 || divisorRegister = 3 then
-            none
-          else
-            pure (.inst (.arith (.longDiv 0 3 3 0 divisorRegister)))
+          pure (.inst (.arith (.longDiv 0 3 3 0 divisorRegister)))
       | .stack slot =>
           pure (.seq (.stackLoad config.scratch (wordStackOffset config slot))
             (.inst (.arith (.longDiv 0 3 3 0 config.scratch))))

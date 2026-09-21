@@ -81,6 +81,17 @@ def temporaryNumberingExact : Bool :=
 
 #guard temporaryNumberingExact
 
+/- Direct HOL-EVAL rows from `word_stack_frame_probe.out`: Cake's `max_var`
+   ignores register names in a Move, while a later assignment to Word name 26
+   contributes to the frame input. -/
+def maxVarFrameInputExact : Bool :=
+  wordProgCakeMaxVar (.skip : WordProg Nat) == 0 &&
+    wordProgCakeMaxVar (.move 0 [(0, 0)] : WordProg Nat) == 0 &&
+    wordProgCakeMaxVar
+      (.seq (.assign 0 (.const 0)) (.assign 26 (.const 0)) : WordProg Nat) == 26
+
+#guard maxVarFrameInputExact
+
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
     [ ("wReg1/wReg2 preserve Cake frame slot numbering", registerFrameExact),
@@ -93,7 +104,9 @@ def runChecks : IO Bool := do
       ("location-derived frame bitmap chunk boundary matches Cake",
         locationBitmapChunkBoundaryExact),
       ("limit_var preserves the SSA temporary numbering base",
-        temporaryNumberingExact) ]
+        temporaryNumberingExact),
+      ("max_var frame inputs match the Cake HOL probe",
+        maxVarFrameInputExact) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

@@ -174,4 +174,22 @@ def varLookupGuard : Bool :=
 #eval varLookupGuard
 #guard varLookupGuard
 
+/-! `mem_load_some_shape_eq` (`panPropsScript.sml:212`): a successful flat load
+    returns a value of exactly the requested shape. -/
+
+theorem panValueFlatLoad_shape_fixture :
+    panValueShape ([] : StructContext) (.word 5) = .one :=
+  panValueFlatLoad_shape ([] : StructContext) flatMemory 8 100 .one none (.word 5)
+    (by simp [panValueFlatLoad, isWfShape, panValueFlatLoadFuel, panValueFlatReadWord,
+      panValueFlatContextFuel, panValueFlatShapeFuel, flatMemory])
+
+def flatLoadShapeGuard : Bool :=
+  match panValueFlatLoad ([] : StructContext) flatMemory 8 100 .one with
+  | some value =>
+      (match panValueShape ([] : StructContext) value with | .one => true | _ => false)
+  | none => false
+
+#eval flatLoadShapeGuard
+#guard flatLoadShapeGuard
+
 end Flapjack.Test.PanValueWfParity

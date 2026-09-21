@@ -67,6 +67,37 @@ def runtimeTypedAliasedStoreLoadValue : Option Nat :=
 
 #guard runtimeTypedAliasedStoreLoadValue == some 17
 
+example (state : CrepRuntimeTypedState (RiscV.Word 8) Unit)
+    (key : RiscV.Word 8 → CrepGlobalAddress)
+    (address value loadAddress baseAddress topAddress : RiscV.Word 8) :
+    (state.store key address value).evalExpFull key baseAddress topAddress
+        (.loadGlob loadAddress) =
+      evalCrepTypedLoad key
+        (storeCrepTypedGlobal key state.toGlobalState address value) loadAddress := by
+  exact CrepRuntimeTypedState.evalExpFull_load_after_store state key
+    address value loadAddress baseAddress topAddress
+
+example (state : CrepRuntimeTypedState (RiscV.Word 8) Unit)
+    (key : RiscV.Word 8 → CrepGlobalAddress)
+    (memoryState : CrepMemoryState (RiscV.Word 8))
+    (address baseAddress topAddress : RiscV.Word 8) :
+    state.evalExpCheckedFull key memoryState baseAddress topAddress
+        (.loadGlob address) =
+      evalCrepTypedLoad key state.toGlobalState address := by
+  exact CrepRuntimeTypedState.evalExpCheckedFull_loadGlob state key
+    memoryState address baseAddress topAddress
+
+example (state : CrepRuntimeTypedState (RiscV.Word 8) Unit)
+    (key : RiscV.Word 8 → CrepGlobalAddress)
+    (address value loadAddress baseAddress topAddress : RiscV.Word 8) :
+    (state.storeGlob key baseAddress topAddress address (.const value)).bind
+        (fun next => next.evalExpFull key baseAddress topAddress
+          (.loadGlob loadAddress)) =
+      evalCrepTypedLoad key
+        (storeCrepTypedGlobal key state.toGlobalState address value) loadAddress := by
+  exact CrepRuntimeTypedState.storeGlob_load_alias state key baseAddress topAddress
+    address value loadAddress
+
 def runtimeTypedLoopBaseState : LoopState Nat :=
   { locals := fun _ => none
     globals := fun _ => none
@@ -97,7 +128,14 @@ example :
     ((runtimeTypedLoopGlobalState.store runtimeTypedKey 4 17).toLoopState
         runtimeTypedKey).globals 36 = some 17 := by
   rw [LoopTypedGlobalState.store_toLoopState_load]
-  simp [runtimeTypedKey, storeCrepTypedGlobal,
+  simp [runtimeTypedLoopGlobalState, runtimeTypedKey, storeCrepTypedGlobal,
+    evalCrepTypedLoad, storeCrepGlobal, crepGlobalKeyOfNat]
+
+example :
+    (runtimeTypedLoopGlobalState.store runtimeTypedKey 4 17).evalExp
+        runtimeTypedKey (.lookup 36) = some 17 := by
+  rw [LoopTypedGlobalState.store_evalExp_lookup]
+  simp [runtimeTypedLoopGlobalState, runtimeTypedKey, storeCrepTypedGlobal,
     evalCrepTypedLoad, storeCrepGlobal, crepGlobalKeyOfNat]
 
 def runtimeTypedAliasedLoopStoreState : LoopState Nat :=

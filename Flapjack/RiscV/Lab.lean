@@ -502,8 +502,8 @@ def labLocValueRegister (register : Nat) : Option (Fin 32) :=
     explicit temporary, including the zero immediate.  The general evaluator
     helper uses x0 for `Imm 0`, which is semantically equivalent but changes
     the source-shaped artifact and the following label positions.  Preserve
-    Cake's `ORI temp, x0, 0` form at the Lab boundary; leave Test/NotTest on
-    the existing bit-test path. -/
+    Cake's `ORI temp, x0, 0` form for ordinary comparisons, while Test/NotTest
+    use Cake's explicit zero-ANDI path. -/
 def labWordConditionOperands [NeZero width] (operator : Cmp) (condition : Nat)
     (right : WordRegImm (Word width)) :
     Option (Fin 32 × Fin 32 × List (Instruction width)) :=

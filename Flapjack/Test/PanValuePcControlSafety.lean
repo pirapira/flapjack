@@ -14,6 +14,7 @@ import Flapjack.PanToCrepDeclarationControlSafety
 import Flapjack.PanToCrepAssignmentCorrectness
 import Flapjack.PanToCrepSequenceCorrectness
 import Flapjack.PanToCrepLeafCorrectness
+import Flapjack.PanToCrepAnnotCorrectness
 import Flapjack.PanValueFfiClockCorrectness
 import Flapjack.CrepeNestedDecsStability
 import Flapjack.CrepeRaisedCallInversion
@@ -986,6 +987,8 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @compileProg_call_handler_missing_destination_of_compiled
 
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_handler
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_handler_destination
+#check @evalPanValueFfiClockProg_call_caught_handler_destination
 /-! The `Call_Ret` branch of Cake's `pc_compile_correct`: the
     assignment-producing call with no handler keeps the flattened destination
     slots when `wrap_rt` preserves the shape, and degrades to a tail call
@@ -1045,6 +1048,7 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
     state/observation premises. -/
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_finalFfi
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_raised
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_decCall_raised
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_timeout
 
 /-! More compositional source handler-safety leaves: clock, annotation, local
@@ -1136,9 +1140,11 @@ example :
 #check @panValuePcCompileCorrect_compact_assign_of_state_evidence
 #check @panValuePcCompileCorrect_compact_seq_of_state_evidence
 #check @panValuePcCompileCorrect_compact_tick
+#check @panValuePcCompileCorrect_compact_annot
 #check @panValuePcCompileCorrectWithContextCode_compact_with_generalized_flat_global_evaluator_evidence_and_clocked_control
 #check @panValuePcCompileCorrectWithContextCode_compact_with_generalized_flat_global_evaluator_evidence_and_clocked_raised
 #check @panValuePcCompileCorrect_compact_with_generalized_clocked_raised_context_projection
+#check @panValuePcCompileCorrect_compact_with_generalized_clocked_normal_context_projection
 #check @panValuePcCompileCorrect_compact_break
 #check @panValuePcCompileCorrect_compact_continue
 #check @panValuePcCompileCorrect_compact_annot
@@ -1150,12 +1156,12 @@ example :
 #check @panValuePcCompileCorrect_compact_call_of_state_evidence
 #check @panValuePcCompileCorrect_compact_decCall_of_state_evidence
 #check @panValuePcCompileCorrect_compact_extCall_of_state_evidence
-#check @panValueProg_compile_correct_induction
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_handler_returned
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_handler_normal
-#check @panValuePcCompileCorrect_compact_ite_word_exp_of_state_evidence_context_code
+#check @panValueProg_compile_correct_induction
 #check @panValuePcCompileCorrect_compact_of_constructor_induction
 #check @panValuePcCompileCorrectWithContextCode_compact_of_constructor_induction
+#check @panValuePcCompileCorrect_compact_ite_word_exp_of_state_evidence_context_code
 #check @panValuePcCompileCorrect_compact_while_word_exp_of_state_evidence_context_code
 
 end Flapjack.Test.PanValuePcControlSafety

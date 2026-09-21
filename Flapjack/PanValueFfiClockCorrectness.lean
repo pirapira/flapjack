@@ -692,6 +692,39 @@ theorem evalPanValueFfiClockProg_call_caught_handler
       some (outcome, callClock) := by
   simp [evalPanValueFfiClockProg, hcall]
 
+/-! Cake's handler-bearing `Call_Ret_Exception` branch also carries the
+    syntactic assignment destination of the call (the `SOME (rts, SOME ...)`
+    shape).  The caught-handler path returns the handler result directly and
+    never reads that destination, so the same program-level lift applies to the
+    destination-bearing info. -/
+theorem evalPanValueFfiClockProg_call_caught_handler_destination
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel clock callClock : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (destination : Option (VarKind × VarName))
+    (caught : ExceptionId) (handlerVariable : VarName)
+    (handlerProgram : Prog α) (function : FunName) (arguments : List (Exp α))
+    (outcome : PanValueFfiClockOutcome α σ)
+    (hcall : evalPanValueFfiClockCall context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
+      (some (destination, some (caught, handlerVariable, handlerProgram)))
+      function arguments =
+      some (outcome, callClock)) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+      (.call (some (destination, some (caught, handlerVariable, handlerProgram)))
+        function arguments) =
+      some (outcome, callClock) := by
+  simp [evalPanValueFfiClockProg, hcall]
+
 /-! A caught exception resumes the handler in the callee's final state and
 remaining clock, rather than restoring the caller's pre-call globals or
 memory. -/

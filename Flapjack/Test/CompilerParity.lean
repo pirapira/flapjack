@@ -133,6 +133,8 @@ import Flapjack.Test.CompileToCrepeParity
 import Flapjack.Test.CompileProgParity
 import Flapjack.Test.PanSimpParity
 import Flapjack.Test.PanProgramSimpParity
+import Flapjack.Test.PanValueWfParity
+import Flapjack.Test.PanPrimopWfParity
 import Flapjack.Test.PanGlobalsSemanticsParity
 import Flapjack.Test.PanSimpOthersParity
 import Flapjack.Test.CrepProgIfParity

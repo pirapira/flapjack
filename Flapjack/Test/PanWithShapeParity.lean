@@ -47,6 +47,34 @@ def allDistinctGuard : Bool :=
 #eval allDistinctGuard
 #guard allDistinctGuard
 
+theorem mem_withShape_length_fixture :
+    (withShape oneCombNamed [1, 2, 3, 4])[1]'(by rw [withShape_length]; decide) ∈
+      withShape oneCombNamed [1, 2, 3, 4] :=
+  mem_withShape_length oneCombNamed [1, 2, 3, 4] 1
+    (by simp [oneCombNamed, Shape.shapeSize]) (by decide)
+
+theorem mem_of_withShape_mem_fixture :
+    (2 : Nat) ∈ ([1, 2, 3, 4] : List Nat) :=
+  mem_of_withShape_mem oneCombNamed [1, 2, 3, 4] 1 2
+    (by rw [withShape_length]; decide)
+    (by simp [oneCombNamed, Shape.shapeSize])
+    (by simp [withShape, oneCombNamed, Shape.shapeSize])
+
+theorem withShape_getElem_eq_take_drop_fixture :
+    (withShape oneCombNamed [1, 2, 3, 4])[1]'(by rw [withShape_length]; decide) =
+      (([1, 2, 3, 4] : List Nat).drop
+          (Shape.shapeSize (.comb (oneCombNamed.take 1)))).take
+        (Shape.shapeSize (oneCombNamed[1]'(by decide))) :=
+  withShape_getElem_eq_take_drop oneCombNamed [1, 2, 3, 4] 1
+    (by simp [oneCombNamed, Shape.shapeSize]) (by decide)
+
+def withShapeMembersGuard : Bool :=
+  ((withShape oneCombNamed [1, 2, 3, 4])[1]'(by rw [withShape_length]; decide)).all
+    (fun value => ([1, 2, 3, 4] : List Nat).contains value)
+
+#eval withShapeMembersGuard
+#guard withShapeMembersGuard
+
 def checkAllDistinct (name : String) : IO Bool := do
   if ((withShape oneCombNamed [1, 2, 3, 4])[1]'(by rw [withShape_length]; decide)).Nodup then
     IO.println s!"PASS {name}"
@@ -172,17 +200,125 @@ def withShapeDistinctGuard : Bool :=
 #eval withShapeDistinctGuard
 #guard withShapeDistinctGuard
 
-theorem listDisjoint_of_mem_zip_withShape_fixture :
-    ListDisjoint ([1] : List Nat) [2, 3] :=
-  listDisjoint_of_mem_zip_withShape oneCombNamed [1, 2, 3, 4] [10, 20, 30] 10 20
-    .one (.comb [.one, .one]) [1] [2, 3]
-    (by simp [oneCombNamed, Shape.shapeSize])
-    (by decide)
-    (by simp [withShape, oneCombNamed, Shape.shapeSize])
-    (by simp [withShape, oneCombNamed, Shape.shapeSize])
-    (by decide)
+theorem listDisjoint_append_fixture :
+    ListDisjoint ([1, 2] : List Nat) [3, 4] :=
+  listDisjoint_append [1, 2] [3, 4] (by decide)
 
-#check @listDisjoint_of_mem_zip_withShape
+theorem listDisjoint_comm_fixture :
+    ListDisjoint [3, 4] ([1, 2] : List Nat) :=
+  listDisjoint_comm [1, 2] [3, 4] (listDisjoint_append [1, 2] [3, 4] (by decide))
+
+theorem listDisjoint_of_append_left_fixture :
+    ListDisjoint ([2] : List Nat) [3] :=
+  listDisjoint_of_append_left [7] [2] [8] [3] (by
+    intro value hx hy
+    simp at hx hy
+    omega)
+
+theorem listDisjoint_of_cons_right_fixture :
+    ListDisjoint ([1] : List Nat) [3] :=
+  listDisjoint_of_cons_right [1] 2 [3] (by
+    intro value hx hy
+    simp at hx hy
+    omega)
+
+theorem listDisjoint_append_right_fixture :
+    ListDisjoint ([1] : List Nat) ([3] ++ [4]) :=
+  listDisjoint_append_right [1] [3] [4]
+    (listDisjoint_of_cons_right [1] 2 [3] (by
+      intro value hx hy
+      simp at hx hy
+      omega))
+    (by
+      intro value hx hy
+      simp at hx hy
+      omega)
+
+theorem listDisjoint_append_right_elim_fixture :
+    ListDisjoint ([1] : List Nat) [3] ∧ ListDisjoint [1] [4] :=
+  listDisjoint_append_right_elim [1] [3] [4] (by
+    intro value hx hy
+    simp at hx hy
+    omega)
+
+theorem listDisjoint_take_drop_fixture :
+    ListDisjoint (([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).take 3)
+      (([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).drop 3) :=
+  listDisjoint_take_drop [1, 2, 3, 4, 5, 6, 7, 8] 3 (by decide)
+
+theorem not_mem_of_listDisjoint_getElem_fixture :
+    (2 : Nat) ∉ ([3, 4] : List Nat) :=
+  not_mem_of_listDisjoint_getElem [1, 2] [3, 4] 1
+    (listDisjoint_append [1, 2] [3, 4] (by decide)) (by decide)
+
+def distinctListsGuard : Bool :=
+  (([1, 2] : List Nat).all (fun value => !([3, 4] : List Nat).contains value)) &&
+    ((([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).take 3).all
+      (fun value => !(([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).drop 3).contains value))
+
+#eval distinctListsGuard
+#guard distinctListsGuard
+
+theorem mem_zip_getElem_fixture :
+    ∃ (i : Nat) (hi : i < ([1, 2, 3] : List Nat).length)
+      (hj : i < ([4, 5, 6] : List Nat).length),
+      ([1, 2, 3] : List Nat)[i]'hi = (3 : Nat) ∧
+        ([4, 5, 6] : List Nat)[i]'hj = (6 : Nat) :=
+  mem_zip_getElem [1, 2, 3] [4, 5, 6] (3, 6) (by decide)
+
+theorem listDisjoint_of_mem_zip_withShape_fixture :
+    ListDisjoint ([1] : List Nat) [2, 3] := by
+  have hleft : (10, (Shape.one, [1])) ∈
+      ([10, 20, 30] : List Nat).zip
+        (oneCombNamed.zip (withShape oneCombNamed [1, 2, 3, 4])) := by
+    simp [oneCombNamed, withShape, Shape.shapeSize]
+  have hright : (20, (Shape.comb [Shape.one, Shape.one], [2, 3])) ∈
+      ([10, 20, 30] : List Nat).zip
+        (oneCombNamed.zip (withShape oneCombNamed [1, 2, 3, 4])) := by
+    simp [oneCombNamed, withShape, Shape.shapeSize]
+  exact listDisjoint_of_mem_zip_withShape [10, 20, 30] oneCombNamed [1, 2, 3, 4]
+    (10, (Shape.one, [1])) (20, (Shape.comb [Shape.one, Shape.one], [2, 3]))
+    (by simp [oneCombNamed]) (by simp [oneCombNamed, withShape, Shape.shapeSize])
+    (by decide) (by simp [oneCombNamed, Shape.shapeSize]) hleft hright (by decide)
+
+def zipWithShapeGuard : Bool :=
+  (([1] : List Nat).all (fun value => !([2, 3] : List Nat).contains value))
+
+#eval zipWithShapeGuard
+#guard zipWithShapeGuard
+
+theorem getElem_tail_eq_fixture :
+    ([1, 2, 3] : List Nat)[2]'(by decide) =
+      ([1, 2, 3] : List Nat).tail[1]'(by decide) :=
+  getElem_tail_eq [1, 2, 3] 2 (by decide) (by decide)
+
+theorem getElem_map_fst_fixture :
+    (1 : Nat) =
+      (([(1, 2, 3)] : List (Nat × Nat × Nat)).map Prod.fst)[0]'(by decide) :=
+  getElem_map_fst [(1, 2, 3)] 0 (by decide) rfl
+
+theorem getElem_fst_inj_fixture :
+    (0 : Nat) = 0 :=
+  getElem_fst_inj [(1, 2), (3, 4)] 0 0 (by decide) (by decide) (by decide) rfl rfl
+
+def listIndexGuard : Bool :=
+  (([1, 2, 3] : List Nat)[2]'(by decide) ==
+      ([1, 2, 3] : List Nat).tail[1]'(by decide)) &&
+    (((([(1, 2, 3)] : List (Nat × Nat × Nat))[0]'(by decide)).1) ==
+      (([(1, 2, 3)] : List (Nat × Nat × Nat)).map Prod.fst)[0]'(by decide))
+
+#eval listIndexGuard
+#guard listIndexGuard
+
+theorem mem_lt_foldr_max_add_fixture :
+    (3 : Nat) < ([1, 3, 2] : List Nat).foldr max 0 + 1 :=
+  mem_lt_foldr_max_add [1, 3, 2] 3 0 1 (by decide) (by decide) (by decide)
+
+def foldrMaxGuard : Bool :=
+  (3 : Nat) < ([1, 3, 2] : List Nat).foldr max 0 + 1
+
+#eval foldrMaxGuard
+#guard foldrMaxGuard
 
 def checkDisjoint (name : String) (actual : Bool) : IO Bool := do
   if actual then
@@ -209,7 +345,13 @@ def runChecks : IO Bool := do
   let nestedOk ← checkDisjoint "pan el_el_with_shape" withShapeNestedGuard
   let distinctOk ←
     checkDisjoint "pan all_distinct_with_shape_distinct" withShapeDistinctGuard
+  let distinctListsOk ← checkDisjoint "pan distinct_lists" distinctListsGuard
+  let zipWithShapeOk ←
+    checkDisjoint "pan all_distinct_mem_zip_disjoint_with_shape" zipWithShapeGuard
+  let listIndexOk ← checkDisjoint "pan list index bridges" listIndexGuard
+  let foldrMaxOk ← checkDisjoint "pan max_foldr_lt" foldrMaxGuard
   pure (results.all id && lengthOk && allDistinctOk && membershipOk && disjointOk &&
-    shapeDisjointOk && nestedOk && distinctOk)
+    shapeDisjointOk && nestedOk && distinctOk && distinctListsOk && zipWithShapeOk &&
+    listIndexOk && foldrMaxOk)
 
 end Flapjack.Test.PanWithShapeParity

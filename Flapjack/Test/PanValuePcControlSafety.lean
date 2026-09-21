@@ -1160,6 +1160,7 @@ example :
 #check @panValuePcCompileCorrect_compact_annot
 #check @panValuePcCompileCorrectWithContextCode_compact_with_generalized_flat_global_evaluator_evidence_and_clocked_control
 #check @panValuePcCompileCorrectWithContextCode_compact_with_generalized_flat_global_evaluator_evidence_and_clocked_raised
+#check @panValuePcCompileCorrectWithContextCode_compact_with_concrete_flat_global_evaluator_evidence_and_clocked_raised
 #check @panValuePcCompileCorrect_compact_with_generalized_clocked_raised_context_projection
 #check @panValuePcCompileCorrect_compact_with_generalized_clocked_normal_context_projection
 #check @panValuePcCompileCorrect_compact_break
@@ -1221,5 +1222,72 @@ example :
 #check @panValuePcCompileCorrect_of_withContextCode
 #check @panValuePcCompileCorrect_of_context_code_obligations
 #check @panValuePcCompileCorrect_compact_with_expression_state_evidence_canonical_globals
+
+/-! Concrete kernel-checked instantiation of the fragment-restricted
+    composition: the `StatefulCompactProg` program `return 7; tick` yields the
+    plain compact `pc_compile_correct` boundary, with the raised-state premises
+    kept explicit.  This exercises the paired fragment induction rather than
+    only restating the generic composition theorem. -/
+set_option linter.unusedVariables false in
+example
+    (codeRel : PanValuePcCodeRel Nat)
+    (excpRel : PanValuePcExceptionShapeRel Nat)
+    (exceptionCode : ExceptionId → Option Nat)
+    (globalsLookup : CrepState Nat → PanValue Nat → Option (List Nat))
+    (primitive : PanPrimitiveHandler Nat)
+    (sourceHandler : PanValueFfiHandler Nat)
+    (crepPrimitive : CrepPrimitiveHandler Nat)
+    (ffi : CrepFfiHandler Nat)
+    (sharedMem : CrepSharedMemHandler Nat)
+    (baseAddress topAddress bytesInWord : Nat)
+    (sourceFuel targetFuel : Nat)
+    (hpost : ∀ (context : CompileContext Nat) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+      (sourceMemory : Nat → Option (PanValue Nat)) (sourceException : ExceptionId)
+      (sourceValue : PanValue Nat) (targetState : CrepState Nat)
+      (targetException : Nat),
+      panValueCrepStateRel structs context sourceLocals sourceGlobals
+        sourceMemory targetState)
+    (hcode : ∀ (context : CompileContext Nat) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+      (sourceMemory : Nat → Option (PanValue Nat)) (sourceException : ExceptionId)
+      (sourceValue : PanValue Nat) (targetState : CrepState Nat)
+      (targetException : Nat),
+      exceptionCode sourceException = some targetException)
+    (hlookup : ∀ (context : CompileContext Nat) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+      (sourceMemory : Nat → Option (PanValue Nat)) (sourceException : ExceptionId)
+      (sourceValue : PanValue Nat) (targetState : CrepState Nat)
+      (targetException : Nat),
+      1 ≤ Shape.shapeSize (panValueShape structs sourceValue) →
+      globalsLookup targetState sourceValue =
+        some (panValueFlatWords sourceValue))
+    (hsize : ∀ (context : CompileContext Nat) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue Nat))
+      (sourceMemory : Nat → Option (PanValue Nat)) (sourceException : ExceptionId)
+      (sourceValue : PanValue Nat) (targetState : CrepState Nat)
+      (targetException : Nat),
+      Shape.shapeSize (panValueShape structs sourceValue) ≤ 32) :
+    PanValuePcCompileCorrect
+      (panValuePcCompactSourceEvaluator primitive sourceHandler []
+        baseAddress topAddress bytesInWord sourceFuel)
+      (crepPcCompactTargetEvaluator [] crepPrimitive ffi sharedMem
+        baseAddress topAddress targetFuel)
+      codeRel excpRel exceptionCode globalsLookup
+      (.seq (.return (.const 7)) (.tick : Prog Nat)) :=
+  panValuePcCompileCorrect_compact_statefulCompact
+    (.seq (.return (.const 7)) (.tick : Prog Nat))
+    (StatefulCompactProg.seq (StatefulCompactProg.returnConst 7)
+      StatefulCompactProg.tick)
+    codeRel excpRel exceptionCode globalsLookup [] [] primitive sourceHandler
+    crepPrimitive ffi sharedMem baseAddress topAddress bytesInWord sourceFuel
+    targetFuel hpost hcode hlookup hsize
+
+#check @panValuePcCompileCorrect_compact_statefulCompact
+#check @panValuePcCompileCorrect_compact_statefulCompact_context_code
 
 end Flapjack.Test.PanValuePcControlSafety

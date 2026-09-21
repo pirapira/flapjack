@@ -1142,7 +1142,7 @@ def cakeAllocatorIndex (toAllocator : NatInfoMap Nat) : Std.HashMap Nat Nat :=
     | none => index.insert entry.1 entry.2) {}
 
 def cakeAllocatorIndexLookup (index : Std.HashMap Nat Nat) (name : Nat) : Nat :=
-  (index[name]?).getD 0
+  cakeSpDefaultIndexed index name
 
 /-- The allocator flavour, mirroring `algorithm` in the original. -/
 inductive CakeAlgorithm : Type

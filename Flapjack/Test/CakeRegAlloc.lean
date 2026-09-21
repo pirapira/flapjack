@@ -770,8 +770,10 @@ def sourceSpillCostRoundTripGuard : Bool :=
     table.get 5 == some 20
 
 def sourceMovePhysicalFallbackGuard : Bool :=
+  let index := Flapjack.RiscV.CakeRegAlloc.cakeAllocatorIndex []
   Flapjack.RiscV.CakeRegAlloc.cakeUpdateMove
-      (Flapjack.RiscV.CakeAlloc.spDefault []) (7, (2, 9)) == (7, (0, 1))
+      (Flapjack.RiscV.CakeRegAlloc.cakeAllocatorIndexLookup index)
+      (7, (2, 9)) == (7, (0, 1))
 
 /-- Cake's `remove_dead (Move pri ls)` keeps the surviving move priority
     (`word_allocScript.sml:891-899`).  The priority orders the coalescing

@@ -651,6 +651,17 @@ def raMovesCoalesceGuard : Bool :=
       (.delta [1] [5, 3]) [] []).map sortColouring ==
     some (sortColouring [(1, 0), (3, 4), (5, 0)])
 
+/- The fixed physical endpoint follows Cake's `do_coalesce_real` branch:
+   x=2 is fixed, so coalescing y=5 into it does not increment x's degree.
+   The expected colouring is the direct `reg_alloc_probe.out` oracle
+   `ra_fixed_coalesce`. -/
+def raFixedCoalesceGuard : Bool :=
+  (Flapjack.RiscV.CakeRegAlloc.cakeDoRegAlloc .irc none 4
+      [(1, (2, 5))] (.delta [2] [5, 3]) [] []).map sortColouring ==
+    some (sortColouring [(2, 1), (3, 4), (5, 1)])
+
+#guard raFixedCoalesceGuard
+
 /-- A self move is filtered out by the consistency check; the colouring
     then matches the coalesced case. -/
 def raMovesSelfFilteredGuard : Bool :=
@@ -1380,7 +1391,8 @@ def parityGuard : Bool :=
     graphTagsGuard && graphInitGuard && heuDeltaGuard && heuMovesGuard &&
     heuSpillGuard && heuFixedDegreeGuard && raDeltaPairGuard &&
     raDeltaFreeGuard && raDeltaTriangleGuard && raStackOnlyGuard &&
-    raMovesCoalesceGuard && raMovesSelfFilteredGuard && raForcedEdgeGuard &&
+    raMovesCoalesceGuard && raFixedCoalesceGuard && raMovesSelfFilteredGuard &&
+      raForcedEdgeGuard &&
     raOrderSeqGuard && raOrderCliqueGuard && raSpillCostGuard &&
     prefsMoveOrderGuard && prefsSeqOrderGuard && prefsControlFlowGuard &&
     prefsBranchOrderGuard &&
@@ -1428,7 +1440,7 @@ def runChecks : IO Bool := do
     graphTagsGuard, graphInitGuard, heuDeltaGuard, heuMovesGuard,
     heuSpillGuard, heuFixedDegreeGuard, raDeltaPairGuard, raDeltaFreeGuard,
     raDeltaTriangleGuard, raStackOnlyGuard, raMovesCoalesceGuard,
-    raMovesSelfFilteredGuard, raForcedEdgeGuard,
+    raFixedCoalesceGuard, raMovesSelfFilteredGuard, raForcedEdgeGuard,
     raOrderSeqGuard, raOrderCliqueGuard, raSpillCostGuard,
     prefsMoveOrderGuard, prefsSeqOrderGuard, prefsControlFlowGuard,
     prefsBranchOrderGuard,
@@ -1477,7 +1489,8 @@ def runChecks : IO Bool := do
     "init_alloc1_heu fixed degree", "reg_alloc delta pair",
     "reg_alloc delta free", "reg_alloc triangle",
     "reg_alloc stack only",
-    "reg_alloc moves coalesce", "reg_alloc moves self filtered",
+    "reg_alloc moves coalesce", "reg_alloc fixed-endpoint coalesce",
+    "reg_alloc moves self filtered",
     "reg_alloc forced edge",
     "reg_alloc sequential pair order", "reg_alloc clique order",
     "reg_alloc spill-cost selection",

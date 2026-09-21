@@ -18,7 +18,6 @@ import Flapjack.PanToCrepAnnotCorrectness
 import Flapjack.PanValueFfiClockCorrectness
 import Flapjack.CrepeNestedDecsStability
 import Flapjack.CrepeRaisedCallInversion
-import Flapjack.PanToCrepDecCallCorrectness
 import Flapjack.PanToCrepProgramComposition
 
 namespace Flapjack.Test.PanValuePcControlSafety

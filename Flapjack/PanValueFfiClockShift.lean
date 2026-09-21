@@ -314,4 +314,62 @@ theorem evalPanValueFfiClockProg_while_continued_shift_step
   · simp [evalPanValueFfiClockProg, hcondition, hconditionNonzero, hclockShift,
       hdec, hbodyShift, hrestShift]
 
+/-! Cross-clock form of Cake's direct `Call_Ret_Raise` case.  The argument,
+    function lookup, parameter binding, payload bound, and callee evaluator
+    witnesses remain explicit at both clocks; the caller boundary only clears
+    callee locals. -/
+theorem evalPanValueFfiClockCall_raised_no_handler_shift_step
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel clock ck finalClock : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (values : List (PanValue α)) (parameters : List VarName)
+    (calleeLocals bodyLocals finalGlobals : VarName → Option (PanValue α))
+    (finalMemory : α → Option (PanValue α)) (finalFfi : FfiState σ)
+    (body : Prog α) (function : FunName) (arguments : List (Exp α))
+    (exception : ExceptionId) (value : PanValue α)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (hargs : evalPanValueExps structs locals globals memory
+      baseAddress topAddress bytesInWord arguments
+      (memoryAccess := memoryAccess) = some values)
+    (hlookup : lookupPanFunction function functions = some (parameters, body))
+    (hbind : bindPanValueParameters parameters values = some calleeLocals)
+    (hclock : clock ≠ 0)
+    (hbody : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel calleeLocals globals memory ffi
+      (decPanClock clock) body (memoryAccess := memoryAccess) (contracts := none) =
+      some (.control (.raised bodyLocals finalGlobals finalMemory finalFfi exception value),
+        finalClock))
+    (hbodyShift : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel calleeLocals globals memory ffi
+      (decPanClock clock + ck) body (memoryAccess := memoryAccess) (contracts := none) =
+      some (.control (.raised bodyLocals finalGlobals finalMemory finalFfi exception value),
+        finalClock + ck))
+    (hwithin : panValuePayloadWithinLimit structs value = true) :
+    evalPanValueFfiClockCall context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+      none function arguments (memoryAccess := memoryAccess) (contracts := none) =
+      some (.control (.raised (fun _ => none) finalGlobals finalMemory finalFfi exception value),
+        finalClock) ∧
+    evalPanValueFfiClockCall context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi (clock + ck)
+      none function arguments (memoryAccess := memoryAccess) (contracts := none) =
+      some (.control (.raised (fun _ => none) finalGlobals finalMemory finalFfi exception value),
+        finalClock + ck) := by
+  have hclockShift : clock + ck ≠ 0 := by omega
+  have hdec : decPanClock (clock + ck) = decPanClock clock + ck :=
+    decPanClock_add clock ck hclock
+  constructor
+  · simp [evalPanValueFfiClockCall, hargs, hlookup, hbind, hclock, hbody, hwithin]
+  · simp [evalPanValueFfiClockCall, hargs, hlookup, hbind, hclock, hdec,
+      hbodyShift, hwithin]
+
 end Flapjack

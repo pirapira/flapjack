@@ -2664,6 +2664,7 @@ example : PanValueFfiClockNormalAdequateProgFromFloor 3 3 evaluatorContext
 #check @Flapjack.evalPanValueFfiClockProg_while_broke_shift_step
 #check @Flapjack.evalPanValueFfiClockProg_while_continued_shift_step
 #check @Flapjack.evalPanValueFfiClockProgram_of_declarations_and_raised_call_cross_clock
+#check @Flapjack.evalPanValueFfiClockCall_raised_no_handler_shift_step
 
 example : decPanClock (5 + 3) = decPanClock 5 + 3 := decPanClock_add 5 3 (by decide)
 

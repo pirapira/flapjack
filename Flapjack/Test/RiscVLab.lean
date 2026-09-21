@@ -93,6 +93,21 @@ example :
       some [.addi 20 20 (0 - BitVec.ofNat 64 16)] := by
   decide
 
+/- Cake's `riscv_target` accepts exactly the signed-12 arithmetic immediate
+   interval.  Pin both endpoints at the Lab boundary so a future change to
+   immediate normalization cannot alter the emitted ADDI bytes. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.arithImm .add 20 20 2047) [] 0]⟩ =
+      some [.addi 20 20 (BitVec.ofNat 64 2047)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.arithImm .sub 20 20 2048) [] 0]⟩ =
+      some [.addi 20 20 (0 - BitVec.ofNat 64 2048)] := by
+  decide
+
 /- CakeML's final Lab filter removes arithmetic identities, including the
    zero-immediate forms that can arise from a fused stack-pointer update. -/
 example :

@@ -1879,6 +1879,115 @@ theorem evalPanValueFfiClockProg_call_none_of_functions
       none function arguments (.control (.returned (fun _ => none) finalGlobals finalMemory
         finalFfi values)) finalClock ma c mh hcall⟩
 
+/-- The timeout-adequate analogue of `PanValueFfiClockFunctionsReturnSucceed`:
+    every listed body, from any state, runs out of clock at its own structural
+    `progSize` budget. -/
+def PanValueFfiClockFunctionsTimeoutSucceed
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ)) : Prop :=
+  ∀ (name : FunName) (parameters : List VarName) (body : Prog α),
+    lookupPanFunction name functions = some (parameters, body) →
+    ∀ (fuel : Nat) (locals globals : VarName → Option (PanValue α))
+      (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat),
+      progSize body ≤ fuel →
+      ∃ (nextLocals nextGlobals : VarName → Option (PanValue α))
+        (nextMemory : α → Option (PanValue α)) (nextFfi : FfiState σ)
+        (finalClock : Nat),
+        evalPanValueFfiClockProg context primitive handler structs functions
+          baseAddress topAddress bytesInWord fuel locals globals memory ffi clock body
+          ma c mh =
+        some (.timeout nextLocals nextGlobals nextMemory nextFfi, finalClock)
+
+/-- General call adequacy for a timed-out callee: a destination-free call at the
+    callee-body budget `progSize body + 1` times out once the arguments evaluate,
+    the callee binds, the clock is nonzero, and the parameters are valid. -/
+theorem evalPanValueFfiClockCall_timeout_of_functions
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (function : FunName) (arguments : List (Exp α))
+    (parameters : List VarName) (body : Prog α) (values : List (PanValue α))
+    (calleeLocals : VarName → Option (PanValue α))
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (hfunctions : PanValueFfiClockFunctionsTimeoutSucceed context primitive handler
+      structs functions baseAddress topAddress bytesInWord ma c mh)
+    (hargs : evalPanValueExps structs locals globals memory baseAddress topAddress
+      bytesInWord arguments (memoryAccess := ma) = some values)
+    (hlookup : lookupPanFunction function functions = some (parameters, body))
+    (hbind : bindPanValueParameters parameters values = some calleeLocals)
+    (hclock : clock ≠ 0)
+    (hparams : panValueParametersValid structs c function values = true) :
+    ∃ (finalGlobals : VarName → Option (PanValue α))
+      (finalMemory : α → Option (PanValue α)) (finalFfi : FfiState σ)
+      (finalClock : Nat),
+      evalPanValueFfiClockCall context primitive handler structs functions
+        baseAddress topAddress bytesInWord (progSize body + 1) locals globals memory ffi
+        clock none function arguments (memoryAccess := ma) (contracts := c)
+        (memoryHandler := mh) =
+      some (.timeout (fun _ => none) finalGlobals finalMemory finalFfi, finalClock) := by
+  obtain ⟨_nextLocals, finalGlobals, finalMemory, finalFfi, finalClock, hbody⟩ :=
+    hfunctions function parameters body hlookup (progSize body) calleeLocals globals
+      memory ffi (clock - 1) (Nat.le_refl (progSize body))
+  exact ⟨finalGlobals, finalMemory, finalFfi, finalClock,
+    evalPanValueFfiClockCall_timeout context primitive handler structs functions
+      baseAddress topAddress bytesInWord (progSize body) clock finalClock locals globals
+      memory ffi values parameters calleeLocals _nextLocals finalGlobals finalMemory
+      finalFfi body function arguments ma c mh hargs hlookup hbind hparams hclock hbody⟩
+
+/-- Program-level form of timed-out call adequacy: the `Call` node costs one
+    structural step, so the call times out at `progSize body + 2`. -/
+theorem evalPanValueFfiClockProg_call_timeout_of_functions
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (function : FunName) (arguments : List (Exp α))
+    (parameters : List VarName) (body : Prog α) (values : List (PanValue α))
+    (calleeLocals : VarName → Option (PanValue α))
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (hfunctions : PanValueFfiClockFunctionsTimeoutSucceed context primitive handler
+      structs functions baseAddress topAddress bytesInWord ma c mh)
+    (hargs : evalPanValueExps structs locals globals memory baseAddress topAddress
+      bytesInWord arguments (memoryAccess := ma) = some values)
+    (hlookup : lookupPanFunction function functions = some (parameters, body))
+    (hbind : bindPanValueParameters parameters values = some calleeLocals)
+    (hclock : clock ≠ 0)
+    (hparams : panValueParametersValid structs c function values = true) :
+    ∃ (finalGlobals : VarName → Option (PanValue α))
+      (finalMemory : α → Option (PanValue α)) (finalFfi : FfiState σ)
+      (finalClock : Nat),
+      evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (progSize body + 2) locals globals memory ffi
+        clock (.call none function arguments) ma c mh =
+      some (.timeout (fun _ => none) finalGlobals finalMemory finalFfi, finalClock) := by
+  obtain ⟨finalGlobals, finalMemory, finalFfi, finalClock, hcall⟩ :=
+    evalPanValueFfiClockCall_timeout_of_functions context primitive handler structs
+      functions baseAddress topAddress bytesInWord locals globals memory ffi clock function
+      arguments parameters body values calleeLocals ma c mh hfunctions hargs hlookup hbind
+      hclock hparams
+  exact ⟨finalGlobals, finalMemory, finalFfi, finalClock,
+    evalPanValueFfiClockProg_call_some context primitive handler structs functions
+      baseAddress topAddress bytesInWord (progSize body + 1) locals globals memory ffi clock
+      none function arguments (.timeout (fun _ => none) finalGlobals finalMemory finalFfi)
+      finalClock ma c mh hcall⟩
+
 theorem evalPanValueFfiClockProg_decCall_returned_some
     (context : PanValueFfiContext α)
     (primitive : PanPrimitiveHandler α)

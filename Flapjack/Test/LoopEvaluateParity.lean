@@ -205,10 +205,21 @@ def fullLongMulDivSequence : Bool :=
       state.locals 11 == some (BitVec.ofNat 8 6)
   | _ => false
 
+def fullLongMulDivLoop : Bool :=
+  match evalLoopProgFullWithLongMulDiv (wordLongMul 8) (wordLongDiv 8) 8
+      fullLongMulDivSequenceState
+      (.loop []
+        (.seq (.arith (.longMul 5 6 2 3)) (.break 0)) [] : LoopProg (RiscV.Word 8)) with
+  | some (.normal state) =>
+      state.locals 5 == some (BitVec.ofNat 8 1) &&
+      state.locals 6 == some (BitVec.ofNat 8 144)
+  | _ => false
+
 #guard fullLongMulSuccess
 #guard fullLongMulMissingSource
 #guard fullLongMulSameDestination
 #guard fullLongMulDivSequence
+#guard fullLongMulDivLoop
 
 /-! The primitive branch uses the same fixed-width Cake `AddCarry` handler as
     `loop_primop` (`loopSemScript.sml:242-252`). -/

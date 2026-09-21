@@ -616,6 +616,7 @@ def evalLoopProgFullWithLongMul [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul
     `LLongMul` and `LLongDiv` in the same sequence; this adapter preserves both
     exact branches while keeping the legacy evaluator and the single-operation
     adapters available to existing callers. -/
+mutual
 def evalLoopProgFullWithLongMulDiv [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
@@ -661,7 +662,31 @@ def evalLoopProgFullWithLongMulDiv [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [
         evalLoopProgFullWithLongMulDiv longMul longDiv fuel state elseBranch
   | fuel + 1, state, .mark body =>
       evalLoopProgFullWithLongMulDiv longMul longDiv fuel state body
+  | fuel + 1, state, .loop _ body _ =>
+      evalLoopRepeatFullWithLongMulDiv longMul longDiv fuel state body
   | fuel + 1, state, program => evalLoopProgFull fuel state program
+
+def evalLoopRepeatFullWithLongMulDiv [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [PanCmp α] [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
+    [Complement α]
+    (longMul : α → α → Option (α × α))
+    (longDiv : α → α → α → Option (α × α))
+    : Nat → LoopState α → LoopProg α → Option (LoopResult α)
+  | 0, _, _ => none
+  | fuel + 1, state, body => do
+      let result ← evalLoopProgFullWithLongMulDiv longMul longDiv fuel state body
+      match result with
+      | .normal state =>
+          evalLoopRepeatFullWithLongMulDiv longMul longDiv fuel state body
+      | .continued state 0 =>
+          evalLoopRepeatFullWithLongMulDiv longMul longDiv fuel state body
+      | .broke state 0 =>
+          some (.normal state)
+      | result =>
+          some result
+end
 
 /-!
 At one unit of fuel, a Loop program classified as not writing `name` leaves

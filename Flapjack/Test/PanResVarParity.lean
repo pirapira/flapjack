@@ -75,4 +75,20 @@ def iteGuard : Bool := isWord (panValueResVar locals "y" none "x") 3
 
 #guard iteGuard
 
+/-! `res_var_commutes'` (`pan_to_crepProofScript.sml:4094`). -/
+
+theorem panValueResVar_comm_fixture :
+    panValueResVar (panValueResVar locals "y" none) "x" (some (.word 7)) =
+      panValueResVar (panValueResVar locals "x" (some (.word 7))) "y" none :=
+  panValueResVar_comm locals "y" "x" none (some (.word 7)) (by decide)
+
+def commGuard : Bool :=
+  isWord (panValueResVar (panValueResVar locals "y" none) "x"
+      (some (.word 7)) "x") 7 &&
+    isNone (panValueResVar (panValueResVar locals "y" none) "x"
+      (some (.word 7)) "y")
+
+#eval commGuard
+#guard commGuard
+
 end Flapjack.Test.PanResVarParity

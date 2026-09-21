@@ -2453,6 +2453,20 @@ theorem panValueResVar_eq_ite [BEq String] [LawfulBEq String]
     panValueResVar locals name oldValue other =
       if other == name then oldValue else locals other := rfl
 
+/-- Counterpart of Cake's `res_var_commutes'`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4094`): restoring two
+    distinct locals commutes. -/
+theorem panValueResVar_comm [BEq String] [LawfulBEq String]
+    (locals : VarName → Option (PanValue α)) (h n : VarName)
+    (v v' : Option (PanValue α)) (hne : n ≠ h) :
+    panValueResVar (panValueResVar locals h v) n v' =
+      panValueResVar (panValueResVar locals n v') h v := by
+  funext name
+  simp only [panValueResVar]
+  by_cases hh : (name == h) = true <;>
+    by_cases hn : (name == n) = true <;>
+    simp_all [beq_iff_eq]
+
 def restorePanValueLocal [BEq String]
     (locals : VarName → Option (PanValue α)) (name : VarName)
     (oldValue : Option (PanValue α)) : VarName → Option (PanValue α) :=

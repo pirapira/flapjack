@@ -457,6 +457,28 @@ def panValueShape (context : StructContext) : PanValue α → Shape
 termination_by value => sizeOf value
 
 mutual
+  /-- Counterpart of Cake's `shape_val` (`cakeml/pancake/panLangScript.sml:190`):
+      the canonical zero-valued expression of a shape.  A scalar and a named
+      shape both evaluate to the zero word; a combination evaluates to a record
+      of the component expressions. -/
+  def shapeVal [OfNat α 0] : Shape → Exp α
+    | .one => .const 0
+    | .comb shapes => .rStruct (shapeVals shapes)
+    | .named _ => .const 0
+  termination_by shape => sizeOf shape
+  decreasing_by
+    all_goals first | sizeOf_list_dec | decreasing_trivial
+
+  /-- Counterpart of Cake's `shape_vals` (`cakeml/pancake/panLangScript.sml:194`). -/
+  def shapeVals [OfNat α 0] : List Shape → List (Exp α)
+    | [] => []
+    | shape :: shapes => shapeVal shape :: shapeVals shapes
+  termination_by shapes => sizeOf shapes
+  decreasing_by
+    all_goals first | sizeOf_list_dec | decreasing_trivial
+end
+
+mutual
   /-- Counterpart of Cake's `is_wf_shape_v`
       (`cakeml/pancake/semantics/panPropsScript.sml:24`): every scalar is well
       formed, a record is well formed when all of its fields are, and a named
@@ -1328,6 +1350,111 @@ def evalPanValueExps [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       Option (List (PanValue α)) :=
   evalPanValueExp.evalPanValueExps structs locals globals memory
     baseAddress topAddress bytesInWord expressions memoryAccess
+
+
+theorem shapeVal_shape [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext) (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (baseAddress topAddress bytesInWord : α)
+    (memoryAccess : Option (PanValueMemoryAccess α)) (shape : Shape)
+    (hwf : isWfShape ([] : StructContext) shape = true) (value : PanValue α)
+    (heval : evalPanValueExp structs locals globals memory baseAddress topAddress
+      bytesInWord (shapeVal shape) memoryAccess = some value) :
+    panValueShape structs value = shape := by
+  have hmain : ∀ shape, isWfShape ([] : StructContext) shape = true →
+      ∀ value, evalPanValueExp structs locals globals memory baseAddress
+        topAddress bytesInWord (shapeVal shape) memoryAccess = some value →
+        panValueShape structs value = shape := by
+    apply shapeVal.induct
+      (motive1 := fun shape => isWfShape ([] : StructContext) shape = true →
+        ∀ value, evalPanValueExp structs locals globals memory baseAddress
+          topAddress bytesInWord (shapeVal shape) memoryAccess = some value →
+          panValueShape structs value = shape)
+      (motive2 := fun shapes =>
+        isWfShape.isWfShapeList ([] : StructContext) shapes = true →
+        ∀ values, evalPanValueExp.evalPanValueExps structs locals globals memory
+          baseAddress topAddress bytesInWord (shapeVals shapes) memoryAccess =
+          some values → values.map (panValueShape structs) = shapes)
+    · intro _ value h
+      simp only [shapeVal, evalPanValueExp, Option.some.injEq] at h
+      subst h
+      simp [panValueShape]
+    · intro shapes ih hwf value h
+      simp only [shapeVal] at h
+      have hwfList : isWfShape.isWfShapeList ([] : StructContext) shapes = true := by
+        rw [isWfShape.eq_def] at hwf
+        exact hwf
+      cases hvalues : evalPanValueExp.evalPanValueExps structs locals globals memory
+          baseAddress topAddress bytesInWord (shapeVals shapes) memoryAccess with
+      | none => simp [evalPanValueExp, hvalues] at h
+      | some values =>
+          simp [evalPanValueExp, hvalues] at h
+          subst h
+          rw [panValueShape]
+          rw [ih hwfList values hvalues]
+    · intro name hwf value h
+      simp [isWfShape, lookupInfo] at hwf
+    · intro _ values h
+      simp only [shapeVals, evalPanValueExp.evalPanValueExps, Option.some.injEq] at h
+      subst h
+      simp
+    · intro shape shapes ihHead ihTail hwf values h
+      rw [isWfShape.isWfShapeList.eq_def] at hwf
+      rw [Bool.and_eq_true] at hwf
+      obtain ⟨hwfHead, hwfTail⟩ := hwf
+      simp only [shapeVals, evalPanValueExp.evalPanValueExps] at h
+      cases hvalue : evalPanValueExp structs locals globals memory baseAddress
+          topAddress bytesInWord (shapeVal shape) memoryAccess with
+      | none => simp [hvalue] at h
+      | some head =>
+          cases hvalues : evalPanValueExp.evalPanValueExps structs locals globals
+              memory baseAddress topAddress bytesInWord (shapeVals shapes)
+              memoryAccess with
+          | none => simp [hvalue, hvalues] at h
+          | some tail =>
+              simp [hvalue, hvalues] at h
+              subst h
+              rw [List.map_cons, ihHead hwfHead head hvalue, ihTail hwfTail tail hvalues]
+  exact hmain shape hwf value heval
+
+
+theorem shapeVal_isSome [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext) (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (baseAddress topAddress bytesInWord : α)
+    (memoryAccess : Option (PanValueMemoryAccess α)) (shape : Shape) :
+    (evalPanValueExp structs locals globals memory baseAddress topAddress
+      bytesInWord (shapeVal shape) memoryAccess).isSome = true := by
+  have hmain : ∀ shape, (evalPanValueExp structs locals globals memory baseAddress
+        topAddress bytesInWord (shapeVal shape) memoryAccess).isSome = true := by
+    apply shapeVal.induct
+      (motive1 := fun shape => (evalPanValueExp structs locals globals memory baseAddress
+        topAddress bytesInWord (shapeVal shape) memoryAccess).isSome = true)
+      (motive2 := fun shapes => (evalPanValueExp.evalPanValueExps structs locals globals
+        memory baseAddress topAddress bytesInWord (shapeVals shapes) memoryAccess).isSome = true)
+    · simp [shapeVal, evalPanValueExp]
+    · intro shapes ih
+      simp only [shapeVal]
+      cases hvalues : evalPanValueExp.evalPanValueExps structs locals globals memory
+          baseAddress topAddress bytesInWord (shapeVals shapes) memoryAccess with
+      | none => rw [hvalues] at ih; exact absurd ih (by simp)
+      | some values => simp [evalPanValueExp, hvalues]
+    · intro name
+      simp [shapeVal, evalPanValueExp]
+    · simp [shapeVals, evalPanValueExp.evalPanValueExps]
+    · intro shape shapes ihHead ihTail
+      simp only [shapeVals, evalPanValueExp.evalPanValueExps]
+      cases hvalue : evalPanValueExp structs locals globals memory baseAddress
+          topAddress bytesInWord (shapeVal shape) memoryAccess with
+      | none => rw [hvalue] at ihHead; exact absurd ihHead (by simp)
+      | some head =>
+          cases hvalues : evalPanValueExp.evalPanValueExps structs locals globals
+              memory baseAddress topAddress bytesInWord (shapeVals shapes) memoryAccess with
+          | none => rw [hvalues] at ihTail; exact absurd ihTail (by simp)
+          | some tail => simp
+  exact hmain shape
 
 theorem panValueIsWf_word (structs : StructContext) (value : α) :
     panValueIsWf structs (.word value) = true := by

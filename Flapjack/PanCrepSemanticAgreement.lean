@@ -149,6 +149,67 @@ theorem panValuePcResultRel_success_outcome
         (try (subst sourceOutcome; subst targetOutcome;
               simp [panCrepSemanticOutcomeRel, hffiOutcome]))
 
+/-- The Pancake observational outcome of a clocked result is the outcome the
+    compiler-correctness projection assigns to its `PanValuePcResult`: normal,
+    raised, broke, continued and timeout observations are non-successful on both
+    sides, while `Return` and `FinalFFI` agree (the latter needs the source hook
+    to read `event.outcome`). -/
+theorem panResultOutcome_eq_pcResultOutcome
+    (panHooks : PanSemanticsHooks α σ)
+    (hffiOutcome : ∀ event, panHooks.ffiOutcome event = event.outcome)
+    (outcome : PanValueFfiClockOutcome α σ) (returnedClock : Nat) :
+    panResultOutcome panHooks (some (outcome, returnedClock)) =
+      panValuePcResultOutcome (panOutcomeToPcResult outcome) := by
+  cases outcome with
+  | control result =>
+      cases result <;>
+        simp [panResultOutcome, panOutcomeToPcResult, panValuePcResultOutcome,
+          hffiOutcome]
+  | timeout locals globals memory ffi =>
+      simp [panResultOutcome, panOutcomeToPcResult, panValuePcResultOutcome]
+
+/-- The Crep observational outcome of a control result is the outcome the
+    compiler-correctness projection assigns to its `CrepPcResult`; the `normal`
+    result is non-successful on both sides. -/
+theorem crepResultOutcome_eq_pcResultOutcome
+    (result : CrepControlResult α) :
+    crepResultOutcome (crepControlResultToSemantic (some result)) =
+      crepPcResultOutcome (crepControlToPcResult result) := by
+  cases result <;>
+    simp [crepControlResultToSemantic, crepControlToPcResult, crepResultOutcome,
+      crepPcResultOutcome]
+
+/-- The constructor-level semantic lift: a `panValuePcResultRel` pair together
+    with the two same-clock semantic outcome witnesses yields
+    `panCrepSemanticOutcomeRel`.  This transports the HOL
+    `state_rel_imp_semantics_to_crep` constructor step through the evaluator
+    outcome projections, so it also covers a `FinalFFI` observation. -/
+theorem panValuePcResultRel_semanticOutcomeRel_of_outcome
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (panHooks : PanSemanticsHooks α σ)
+    (hffiOutcome : ∀ event, panHooks.ffiOutcome event = event.outcome)
+    (outcome : PanValueFfiClockOutcome α σ) (crepResult : CrepControlResult α)
+    (returnedClock : Nat) (sourceOutcome : PanSemanticOutcome)
+    (targetOutcome : CrepSemanticOutcome)
+    (hrel : panValuePcResultRel structs context exceptionRel exceptionCode
+      globalsLookup (panOutcomeToPcResult outcome)
+      (crepControlToPcResult crepResult))
+    (hsource : panResultOutcome panHooks (some (outcome, returnedClock)) =
+      some sourceOutcome)
+    (htarget : crepResultOutcome (crepControlResultToSemantic (some crepResult)) =
+      some targetOutcome) :
+    panCrepSemanticOutcomeRel sourceOutcome targetOutcome := by
+  rw [panResultOutcome_eq_pcResultOutcome panHooks hffiOutcome outcome
+    returnedClock] at hsource
+  rw [crepResultOutcome_eq_pcResultOutcome crepResult] at htarget
+  exact panValuePcResultRel_semanticOutcomeRel structs context exceptionRel
+    exceptionCode globalsLookup (panOutcomeToPcResult outcome)
+    (crepControlToPcResult crepResult) sourceOutcome targetOutcome hrel hsource
+    htarget
+
 /-! ## The agreement from clocked compiler evidence -/
 
 /-- Build a `PanCrepSemanticAgreement` from a per-clock `panValuePcResultRel`

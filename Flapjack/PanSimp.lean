@@ -100,6 +100,25 @@ def functions :
         declaration.returnShape) :: functions declarations
   | _ :: declarations => functions declarations
 
+/-- Counterpart of Cake's `functions_eq_FILTER`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1487`): the function table is
+    exactly the projection of the function declarations, with every other
+    declaration contributing nothing.  Cake writes the projection as a `MAP`
+    over `FILTER is_function` with an `ARB` default branch; `List.filterMap`
+    states the same content without needing a default value. -/
+theorem functions_eq_filterMap (declarations : List (Decl α)) :
+    functions declarations =
+      declarations.filterMap (fun declaration =>
+        match declaration with
+        | .function function =>
+            some (function.name, function.params, function.body,
+              function.returnShape)
+        | _ => none) := by
+  induction declarations with
+  | nil => rfl
+  | cons declaration declarations ih =>
+      cases declaration <;> simp [functions, ih]
+
 /-! Source-shaped counterpart of Cake's `compile_prog_pmatch`: `compile_prog`
     maps `compile` over function declarations and leaves other declarations
     unchanged. -/

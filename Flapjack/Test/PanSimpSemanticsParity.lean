@@ -146,4 +146,10 @@ example :
     (fun _ _ => none) none (.seq (.tick : Prog Nat) (.tick : Prog Nat))
     (fun _ => none) (fun _ => none) (fun _ => none)
 
+/-- The `seqAssoc` syntactic size bound instantiates on a small program. -/
+example :
+    progSize (seqAssoc (.skip : Prog Nat) (.seq (.tick : Prog Nat) (.tick : Prog Nat))) ≤
+      progSize (.skip : Prog Nat) + 4 * progSize (.seq (.tick : Prog Nat) (.tick : Prog Nat)) :=
+  progSize_seqAssoc_le _ _
+
 end Flapjack

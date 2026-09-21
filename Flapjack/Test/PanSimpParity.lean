@@ -579,6 +579,24 @@ example
     (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi "E" (.word 5) 1
     none none none hcall
 
+ /-- A timed-out `DecCall` at the call-aware budget. -/
+example
+    (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8
+      (max 7 (progCallFuel 7 (.annot "tag" "text" : Prog Nat)))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1 none "f" [] =
+      some (.timeout (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi, 1)) :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+      [] [] 0 0 8
+      (progCallFuel 7 (.decCall "x" .one "f" [] (.annot "tag" "text" : Prog Nat)))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+      (.decCall "x" .one "f" [] (.annot "tag" "text")) none none none =
+    some (.timeout (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi, 1) := by
+  exact evalPanValueFfiClockProg_decCall_timeout_some_progCallFuel evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 (fun _ => none) (fun _ => none)
+    (fun _ => none) evaluatorFfi 1 "x" .one "f" [] (.annot "tag" "text")
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1 none none none hcall
+
 /-- A structural normal program succeeds normally at its call-aware budget. -/
 example :
     evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
@@ -1519,6 +1537,7 @@ def runChecks : IO Bool := do
   IO.println "PASS pan_simp clocked evaluate_seq_normal_components Cake equation"
   IO.println "PASS pan_simp clocked terminal Seq progCallFuel Cake equation"
   IO.println "PASS pan_simp clocked raised DecCall progCallFuel Cake equation"
+  IO.println "PASS pan_simp clocked timeout DecCall progCallFuel Cake equation"
   IO.println "PASS pan_simp Skip/Seq fuel-adequacy fragment Cake bound"
   IO.println "PASS pan_simp clocked ret_to_tail common-fuel Cake equation"
   IO.println "PASS pan_simp clocked pan_simp common-fuel Cake equation"

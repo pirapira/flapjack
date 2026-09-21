@@ -853,4 +853,12 @@ evaluator-evidence obligation. -/
    generic `hother` branch without an opaque raised-data obligation. -/
 #check @panValuePcRaisedHraiseCases_with_raw_word_lists_of_state_evidence
 
+/- The fixed-width and nested-record raise instances also have context-coded
+   state-evidence forms returning the context-coded correctness boundary. -/
+#check @panValuePcCompileCorrect_compact_one_word_raise_of_state_evidence_context_code
+#check @panValuePcCompileCorrect_compact_two_word_raise_of_state_evidence_context_code
+#check @panValuePcCompileCorrect_compact_three_word_raise_of_state_evidence_context_code
+#check @panValuePcCompileCorrect_compact_four_word_raise_of_state_evidence_context_code
+#check @panValuePcCompileCorrect_compact_nested_one_word_raise_of_state_evidence_context_code
+
 end Flapjack.Test.PanValuePcControlSafety

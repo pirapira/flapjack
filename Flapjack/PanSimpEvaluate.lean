@@ -5151,4 +5151,169 @@ theorem PanValueFfiClockNormalAdequateProg_while_zero
       structs functions baseAddress topAddress bytesInWord callBudget locals globals
       memory ffi clock condition body ma c mh w hcond hw⟩
 
+/-! A declaration whose value is shape-valid and whose body is normal-adequate
+    is normal-adequate itself.  The introduced local is restored when the body
+    finishes, matching Cake's `evaluate` declaration case. -/
+theorem PanValueFfiClockNormalAdequateProg_dec
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (name : VarName) (shape : Shape) (value : Exp α) (body : Prog α)
+    (hvalue : ∀ (locals globals : VarName → Option (PanValue α))
+        (memory : α → Option (PanValue α)),
+        ∃ valueResult : PanValue α,
+          evalPanValueExp structs locals globals memory baseAddress topAddress
+            bytesInWord value (memoryAccess := ma) = some valueResult ∧
+          panShapeMatches (panValueShape structs valueResult) shape = true)
+    (hbody : PanValueFfiClockNormalAdequateProg context primitive handler structs
+      functions baseAddress topAddress bytesInWord callBudget ma c mh body) :
+    PanValueFfiClockNormalAdequateProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord callBudget ma c mh (.dec name shape value body) := by
+  intro locals globals memory ffi clock
+  obtain ⟨valueResult, hvalueEval, hmatch⟩ := hvalue locals globals memory
+  obtain ⟨finalLocals, finalGlobals, finalMemory, finalFfi, finalClock, hbodyEval⟩ :=
+    hbody (updatePanValueMap locals name valueResult) globals memory ffi clock
+  exact ⟨restorePanValueLocal finalLocals name (locals name), finalGlobals,
+    finalMemory, finalFfi, finalClock,
+    evalPanValueFfiClockProg_dec_some_progCallFuel context primitive handler structs
+      functions baseAddress topAddress bytesInWord callBudget locals globals memory ffi
+      clock name shape value body ma c mh valueResult
+      (.control (.normal finalLocals finalGlobals finalMemory finalFfi)) finalClock
+      hvalueEval hmatch hbodyEval⟩
+
+/-- A leaf program whose per-state stepped evaluation always returns a normal
+    outcome belongs to the normal-adequate fragment at the call-aware budget.
+    This covers assignments and memory stores, whose clocked evaluation spends
+    no ticks (matching Cake's `evaluate`, where only ticks, calls and while
+    iterations consume the clock). -/
+theorem PanValueFfiClockNormalAdequateProg_leaf
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (program : Prog α)
+    (hleaf : PanValueFfiLeafProg program)
+    (hnormal : ∀ (locals globals : VarName → Option (PanValue α))
+        (memory : α → Option (PanValue α)) (ffi : FfiState σ),
+        ∃ (finalLocals finalGlobals : VarName → Option (PanValue α))
+          (finalMemory : α → Option (PanValue α)) (finalFfi : FfiState σ) (steps : Nat),
+          evalPanValueFfiProgSteps context primitive handler structs functions
+            baseAddress topAddress bytesInWord 1 locals globals memory ffi program
+            (memoryAccess := ma) (contracts := c) (memoryHandler := mh) =
+          some (.normal finalLocals finalGlobals finalMemory finalFfi, steps)) :
+    PanValueFfiClockNormalAdequateProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord callBudget ma c mh program := by
+  intro locals globals memory ffi clock
+  obtain ⟨finalLocals, finalGlobals, finalMemory, finalFfi, steps, hsteps⟩ :=
+    hnormal locals globals memory ffi
+  exact ⟨finalLocals, finalGlobals, finalMemory, finalFfi, clock,
+    evalPanValueFfiClockProg_leaf_some_progCallFuel context primitive handler structs
+      functions baseAddress topAddress bytesInWord callBudget program locals globals
+      memory ffi clock ma c mh hleaf
+      (.normal finalLocals finalGlobals finalMemory finalFfi) steps hsteps⟩
+
+/-- The clock-indexed variant of `PanValueFfiClockNormalAdequateProg`: a program
+    is normal-adequate from a specific initial clock.  Calls require a nonzero
+    clock, so the all-clock predicate cannot contain call nodes; this indexed
+    form is the fragment that admits them. -/
+def PanValueFfiClockNormalAdequateProgAt
+    (clock : Nat)
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (program : Prog α) : Prop :=
+  ∀ (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ),
+    ∃ (finalLocals finalGlobals : VarName → Option (PanValue α))
+      (finalMemory : α → Option (PanValue α)) (finalFfi : FfiState σ)
+      (finalClock : Nat),
+      evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (progCallFuel callBudget program) locals
+        globals memory ffi clock program ma c mh =
+      some (.control (.normal finalLocals finalGlobals finalMemory finalFfi),
+        finalClock)
+
+/-- Every all-clock normal-adequate program is normal-adequate from any specific
+    clock.  This transports the clock-free constructors (skip/annot/seq/dec/ite/
+    while-zero/leaf) into the clock-indexed fragment. -/
+theorem PanValueFfiClockNormalAdequateProgAt_of_adequate
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (program : Prog α) (clock : Nat)
+    (h : PanValueFfiClockNormalAdequateProg context primitive handler structs
+      functions baseAddress topAddress bytesInWord callBudget ma c mh program) :
+    PanValueFfiClockNormalAdequateProgAt clock context primitive handler structs
+      functions baseAddress topAddress bytesInWord callBudget ma c mh program :=
+  fun locals globals memory ffi => h locals globals memory ffi clock
+
+/-- A destination call that returns normally belongs to the clock-indexed
+    normal-adequate fragment.  The clock must be nonzero; the callee table must
+    return for every function; and the argument, shape and destination
+    assignment evidence is supplied per state, matching Cake's `evaluate`
+    call case. -/
+theorem PanValueFfiClockNormalAdequateProgAt_call_destination
+    (clock : Nat)
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (ma : Option (PanValueMemoryAccess α))
+    (function : FunName) (arguments : List (Exp α))
+    (destination : Option (VarKind × VarName))
+    (parameters : List VarName) (body : Prog α)
+    (hfunctions : PanValueFfiClockFunctionsReturnSucceed context primitive handler
+      structs functions baseAddress topAddress bytesInWord ma none none)
+    (hbudget : progSize body + 1 ≤ callBudget)
+    (hlookup : lookupPanFunction function functions = some (parameters, body))
+    (hclock : clock ≠ 0)
+    (hargs : ∀ (locals globals : VarName → Option (PanValue α))
+      (memory : α → Option (PanValue α)),
+      ∃ (values : List (PanValue α)) (calleeLocals : VarName → Option (PanValue α)),
+        evalPanValueExps structs locals globals memory baseAddress topAddress
+          bytesInWord arguments (memoryAccess := ma) = some values ∧
+        bindPanValueParameters parameters values = some calleeLocals ∧
+        panValueValuesWithinLimit structs values = true)
+    (hassign : ∀ (locals : VarName → Option (PanValue α))
+      (finalGlobals : VarName → Option (PanValue α)) (values : List (PanValue α)),
+      ∃ (assignedLocals assignedGlobals : VarName → Option (PanValue α)),
+        assignPanValueCallResult locals finalGlobals destination values
+          (structs := structs) = some (assignedLocals, assignedGlobals)) :
+    PanValueFfiClockNormalAdequateProgAt clock context primitive handler structs
+      functions baseAddress topAddress bytesInWord callBudget ma none none
+      (.call (some (destination, none)) function arguments) := by
+  intro locals globals memory ffi
+  obtain ⟨values, calleeLocals, hargsEval, hbind, hwithin⟩ := hargs locals globals memory
+  exact evalPanValueFfiClockProg_call_destination_of_functions_progCallFuel context
+    primitive handler structs functions baseAddress topAddress bytesInWord callBudget
+    locals globals memory ffi clock function arguments destination parameters body values
+    calleeLocals ma hfunctions hbudget hargsEval hlookup hbind hclock hwithin
+    (fun finalGlobals => hassign locals finalGlobals values)
+
 end Flapjack

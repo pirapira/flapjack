@@ -1062,6 +1062,40 @@ def functionsCompileProgParity : Bool :=
 
 #guard functionsCompileProgParity
 
+/-! Counterpart of Cake's `el_compile_prog_el_prog_eq`
+    (`pan_simpProofScript.sml:1047-1061`): an entry of the compiled function
+    table still comes from the source table, because `pan_simp` only rewrites
+    bodies.  The fixture uses a `.skip` body so the transformed body is the
+    source body. -/
+def elCompileProgDeclsFixture : List (Decl Nat) :=
+  [.function
+     { name := "f", inline := false, exported := false, params := [],
+       body := .skip, returnShape := .one }]
+
+theorem pan_simp_compile_prog_el_compile_prog_el_prog_eq :
+    (functions elCompileProgDeclsFixture)[0]? =
+      some ("f", [], .skip, .one) := by
+  have hentry : (functions (panSimpDecls elCompileProgDeclsFixture))[0]? =
+      some ("f", [], .skip, .one) := by
+    rw [functions_panSimpDecls, List.getElem?_map]
+    rw [show (functions elCompileProgDeclsFixture)[0]? =
+      some ("f", [], .skip, .one) from rfl]
+    simp only [Option.map_some, panSimpProg_skip]
+  exact el_functions_panSimpDecls_eq
+    (declarations := elCompileProgDeclsFixture)
+    (n := 0) (start := "f") (pprog := .skip) (p := .skip)
+    (rshape := .one) hentry (by decide) (by decide) (by rfl)
+
+def functionsElCompileParity : Bool :=
+  match (functions elCompileProgDeclsFixture)[0]? with
+  | some (name, params, body, returnShape) =>
+      (name == "f") && params.isEmpty &&
+        (match body with | .skip => true | _ => false) &&
+        (match returnShape with | .one => true | _ => false)
+  | _ => false
+
+#guard functionsElCompileParity
+
 def parityGuard : Bool :=
   isSkip (smartSeq (.skip : Prog Nat) .skip) &&
     isTick (smartSeq (.skip : Prog Nat) .tick) &&
@@ -1100,7 +1134,8 @@ def parityGuard : Bool :=
             (.call (some (some (.local, "r"), none)) "f" [])
             (.return (.var .local "r")) : Prog Nat)) &&
     functionsCompileProgParity &&
-    functionsNamesNodupParity
+    functionsNamesNodupParity &&
+    functionsElCompileParity
 
 #eval parityGuard
 #guard parityGuard
@@ -1120,6 +1155,7 @@ def runChecks : IO Bool := do
   IO.println "PASS pan_simp clocked transformed result common-fuel Cake equation"
   IO.println "PASS pan_simp functions_compile_prog Cake function-table equation"
   IO.println "PASS pan_simp first_compile_prog_all_distinct Cake name-distinctness preservation"
+  IO.println "PASS pan_simp el_compile_prog_el_prog_eq Cake compiled-table entry provenance"
   pure parityGuard
 
 end Flapjack.Test.PanSimpParity

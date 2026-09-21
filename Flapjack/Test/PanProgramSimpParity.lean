@@ -92,6 +92,12 @@ theorem relationDecls_preserved (s' : PanValueProgramState Nat)
   panValueProgramStateRel_evalPanValueDeclarations relationState _ relationState_self
     relationDecls none s' hs
 
+theorem lookupPanFunction_panValueFunctionsSimp_fixture :
+    lookupPanFunction "f" (panValueFunctionsSimp relationState.functions) =
+      some ([], panSimpProg (.seq (.skip : Prog Nat) (.skip : Prog Nat))) := by
+  apply lookupPanFunction_panValueFunctionsSimp relationState.functions "f"
+  simp [relationState, lookupPanFunction]
+
 /-! Regression for the function-table lookup bridge used by Cake's
     `state_rel_imp_semantics`: the entry keeps its parameters and return shape,
     while only its body is replaced by `panSimpProg`. -/

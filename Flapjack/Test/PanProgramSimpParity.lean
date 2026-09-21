@@ -98,6 +98,15 @@ theorem lookupPanFunction_panValueFunctionsSimp_fixture :
   apply lookupPanFunction_panValueFunctionsSimp relationState.functions "f"
   simp [relationState, lookupPanFunction]
 
+theorem panValueProgramStateRel_lookupPanFunction_fixture :
+    lookupPanFunction "f"
+        { relationState with functions := panValueFunctionsSimp relationState.functions }.functions =
+      some ([], panSimpProg (.seq (.skip : Prog Nat) (.skip : Prog Nat))) := by
+  apply panValueProgramStateRel_lookupPanFunction relationState
+    { relationState with functions := panValueFunctionsSimp relationState.functions }
+    relationState_self "f"
+  simp [relationState, lookupPanFunction]
+
 /-! Regression for the function-table lookup bridge used by Cake's
     `state_rel_imp_semantics`: the entry keeps its parameters and return shape,
     while only its body is replaced by `panSimpProg`. -/

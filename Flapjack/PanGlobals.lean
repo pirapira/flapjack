@@ -665,6 +665,68 @@ theorem functions_globalDeclsFilter_isName (declarations : List (Decl α)) :
     functions (globalDeclsFilter isName declarations) = [] :=
   functions_globalDeclsFilter_nil_of_predicate _ isName_not_function declarations
 
+theorem functions_globalDeclsFilter_isDecl (declarations : List (Decl α)) :
+    functions (globalDeclsFilter isDecl declarations) = [] :=
+  functions_globalDeclsFilter_nil_of_predicate _ isDecl_not_function declarations
+
+theorem globalDeclIsGlobal_not_function (declaration : Decl α) :
+    globalDeclIsGlobal declaration = true → globalDeclIsFunction declaration = false := by
+  cases declaration <;> simp [globalDeclIsGlobal, globalDeclIsFunction]
+
+theorem globalDeclIsName_not_function (declaration : Decl α) :
+    globalDeclIsName declaration = true → globalDeclIsFunction declaration = false := by
+  cases declaration <;> simp [globalDeclIsName, globalDeclIsFunction]
+
+theorem globalDeclIsException_not_function (declaration : Decl α) :
+    globalDeclIsException declaration = true → globalDeclIsFunction declaration = false := by
+  cases declaration <;> simp [globalDeclIsException, globalDeclIsFunction]
+
+theorem functions_globalDeclsFilter_globalName (declarations : List (Decl α)) :
+    functions (globalDeclsFilter globalDeclIsName declarations) = [] :=
+  functions_globalDeclsFilter_nil_of_predicate _ globalDeclIsName_not_function
+    declarations
+
+theorem functions_globalDeclsFilter_globalException (declarations : List (Decl α)) :
+    functions (globalDeclsFilter globalDeclIsException declarations) = [] :=
+  functions_globalDeclsFilter_nil_of_predicate _ globalDeclIsException_not_function
+    declarations
+
+theorem functions_globalDeclsFilter_isGlobal (declarations : List (Decl α)) :
+    functions (globalDeclsFilter globalDeclIsGlobal declarations) = [] :=
+  functions_globalDeclsFilter_nil_of_predicate _ globalDeclIsGlobal_not_function
+    declarations
+
+theorem functions_globalDeclsFilter_isFunction (declarations : List (Decl α)) :
+    functions (globalDeclsFilter globalDeclIsFunction declarations) =
+      functions declarations := by
+  induction declarations with
+  | nil => simp [globalDeclsFilter, functions]
+  | cons declaration declarations ih =>
+      simp only [globalDeclsFilter]
+      by_cases hpred : globalDeclIsFunction declaration = true
+      · rw [if_pos hpred]
+        cases declaration <;> simp_all [globalDeclIsFunction, functions]
+      · rw [if_neg hpred]
+        cases declaration <;> simp_all [globalDeclIsFunction, functions]
+
+theorem functions_append (declarations rest : List (Decl α)) :
+    functions (declarations ++ rest) = functions declarations ++ functions rest := by
+  induction declarations with
+  | nil => simp [functions]
+  | cons declaration declarations ih =>
+      cases declaration <;> simp [functions, ih]
+
+/-! Counterpart of Cake's `resort_decls_preserve_functions`
+    (`pan_globalsProofScript.sml:2055`): resorting declarations leaves the
+    function table unchanged. -/
+theorem functions_globalResortDecls (declarations : List (Decl α)) :
+    functions (globalResortDecls declarations) = functions declarations := by
+  rw [globalResortDecls, functions_append, functions_append, functions_append,
+    functions_globalDeclsFilter_globalName,
+    functions_globalDeclsFilter_globalException,
+    functions_globalDeclsFilter_isGlobal, List.nil_append, List.nil_append,
+    List.nil_append, functions_globalDeclsFilter_isFunction]
+
 def globalFindFunction [BEq String] (name : FunName) :
     List (Decl α) → Option (FunDecl α)
   | [] => none

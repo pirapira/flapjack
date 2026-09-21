@@ -155,4 +155,16 @@ def functionsFilterNilGuard : Bool :=
 #eval functionsFilterNilGuard
 #guard functionsFilterNilGuard
 
+/-! Counterpart of Cake's `resort_decls_preserve_functions`
+    (`pan_globalsProofScript.sml:2055`): resorting declarations leaves the
+    function table unchanged. -/
+example : True := by
+  let declarations : List (Decl Nat) :=
+    [.function
+      { name := "f", inline := false, exported := false, params := [],
+        body := .skip, returnShape := .one },
+     .name "S" [], .exnDecl "E" (.named "T"), .decl .one "h" (.const 9)]
+  have h := functions_globalResortDecls declarations
+  trivial
+
 end Flapjack.Test.PanGlobalsDecShapesParity

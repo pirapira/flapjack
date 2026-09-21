@@ -2334,6 +2334,76 @@ theorem evalPanValueFfiClockProg_call_none_of_functions_progCallFuel
     baseAddress topAddress bytesInWord (fuel := progSize body + 2) (fuel' := 1 + callBudget)
     locals globals memory ffi clock (.call none function arguments) ma c mh (by omega) hrun
 
+/-- Program-level adequacy for a call **with a destination**: when the callee
+    returns at the body budget `progSize body + 1` inside `callBudget` and the
+    returned values can be assigned to the destination, the call node produces a
+    `normal` result at the call-aware budget, updating the destination locals and
+    globals while carrying the callee memory/FFI state.  The call contracts are
+    `none` (the case covered by the call-level returned-destination equation). -/
+theorem evalPanValueFfiClockProg_call_destination_of_functions_progCallFuel
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (function : FunName) (arguments : List (Exp α))
+    (destination : Option (VarKind × VarName))
+    (parameters : List VarName) (body : Prog α) (values : List (PanValue α))
+    (calleeLocals : VarName → Option (PanValue α))
+    (ma : Option (PanValueMemoryAccess α))
+    (hfunctions : PanValueFfiClockFunctionsReturnSucceed context primitive handler
+      structs functions baseAddress topAddress bytesInWord ma none none)
+    (hbudget : progSize body + 1 ≤ callBudget)
+    (hargs : evalPanValueExps structs locals globals memory baseAddress topAddress
+      bytesInWord arguments (memoryAccess := ma) = some values)
+    (hlookup : lookupPanFunction function functions = some (parameters, body))
+    (hbind : bindPanValueParameters parameters values = some calleeLocals)
+    (hclock : clock ≠ 0)
+    (hwithin : panValueValuesWithinLimit structs values = true)
+    (hassign : ∀ (finalGlobals : VarName → Option (PanValue α)),
+      ∃ (assignedLocals assignedGlobals : VarName → Option (PanValue α)),
+        assignPanValueCallResult locals finalGlobals destination values
+          (structs := structs) = some (assignedLocals, assignedGlobals)) :
+    ∃ (assignedLocals assignedGlobals : VarName → Option (PanValue α))
+      (finalMemory : α → Option (PanValue α)) (finalFfi : FfiState σ)
+      (finalClock : Nat),
+      evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord
+        (progCallFuel callBudget
+          (.call (some (destination, none)) function arguments)) locals globals
+        memory ffi clock (.call (some (destination, none)) function arguments) ma none
+        none =
+      some (.control (.normal assignedLocals assignedGlobals finalMemory finalFfi),
+        finalClock) := by
+  obtain ⟨bodyLocals, finalGlobals, finalMemory, finalFfi, finalClock, hbody⟩ :=
+    hfunctions function parameters body hlookup (progSize body) calleeLocals globals
+      memory ffi (clock - 1) values (Nat.le_refl (progSize body))
+  obtain ⟨assignedLocals, assignedGlobals, hassign'⟩ := hassign finalGlobals
+  have hcall := evalPanValueFfiClockCall_returned_destination context primitive
+    handler structs functions baseAddress topAddress bytesInWord (progSize body) clock
+    finalClock locals globals memory ffi values parameters calleeLocals bodyLocals
+    finalGlobals finalMemory finalFfi body function arguments destination
+    assignedLocals assignedGlobals (memoryAccess := ma) hargs hlookup hbind hclock hbody
+    hwithin hassign'
+  have hprog := evalPanValueFfiClockProg_call_some context primitive handler structs
+    functions baseAddress topAddress bytesInWord (progSize body + 1) locals globals
+    memory ffi clock (some (destination, none)) function arguments
+    (.control (.normal assignedLocals assignedGlobals finalMemory finalFfi)) finalClock ma
+    none none hcall
+  refine ⟨assignedLocals, assignedGlobals, finalMemory, finalFfi, finalClock, ?_⟩
+  have hsize : progCallFuel callBudget
+      (.call (some (destination, none)) function arguments) = 1 + callBudget := by
+    simp [progCallFuel]
+  rw [hsize]
+  exact evalPanValueFfiClockProg_fuel_mono context primitive handler structs functions
+    baseAddress topAddress bytesInWord (fuel := progSize body + 2)
+    (fuel' := 1 + callBudget) locals globals memory ffi clock
+    (.call (some (destination, none)) function arguments) ma none none (by omega) hprog
+
 /-- The timeout-adequate analogue of `PanValueFfiClockFunctionsReturnSucceed`:
     every listed body, from any state, runs out of clock at its own structural
     `progSize` budget. -/

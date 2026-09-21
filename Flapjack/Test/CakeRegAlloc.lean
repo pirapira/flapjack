@@ -244,6 +244,21 @@ def extendCliqueGuard : Bool :=
 
 #guard extendCliqueGuard
 
+/- Cake's split_degree (reg_allocScript.sml:320-340) selects low-degree
+   uncoalesced allocation nodes, rejects high-degree or coalesced nodes, and
+   keeps out-of-dimension nodes on the worklist side. -/
+def splitDegreeGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      degrees := CakeNodeMap.ofNatInfoMap 4 [(0, 1), (1, 3), (2, 0)]
+      coalesced := CakeNodeMap.ofNatInfoMap 4 [(2, 1)] }
+  cakeSplitDegree state 4 2 0 &&
+    !cakeSplitDegree state 4 2 1 &&
+    !cakeSplitDegree state 4 2 2 &&
+    cakeSplitDegree state 4 2 4
+
+#guard splitDegreeGuard
+
 /-- Canonical form for comparing node bijections with the probed sptree
     outputs: both maps sorted by key. -/
 def sortBijectionMaps (bijection : CakeNodeBijection) :
@@ -1265,6 +1280,7 @@ def parityGuard : Bool :=
       pushStackGuard &&
       worklistPrependGuard &&
       extendCliqueGuard &&
+      splitDegreeGuard &&
     bijDeltaBasicGuard && bijDeltaDedupGuard && bijSeqOrderGuard &&
     bijBranchOrderGuard && bijBranchLiveGuard && bijSetGuard &&
     bijSetUnsortedGuard && bijCompositeGuard && graphDeltaDisjointGuard &&
@@ -1314,6 +1330,7 @@ def runChecks : IO Bool := do
     pushStackGuard,
     worklistPrependGuard,
     extendCliqueGuard,
+    splitDegreeGuard,
     bijDeltaBasicGuard, bijDeltaDedupGuard, bijSeqOrderGuard,
     bijBranchOrderGuard, bijBranchLiveGuard, bijSetGuard,
     bijSetUnsortedGuard, bijCompositeGuard, graphDeltaDisjointGuard,
@@ -1363,6 +1380,7 @@ def runChecks : IO Bool := do
     "Cake push_stack",
     "Cake worklist prepend",
     "Cake extend_clique",
+    "Cake split_degree",
     "mk_bij delta basic", "mk_bij delta dedup", "mk_bij seq order",
     "mk_bij branch order", "mk_bij branch live", "mk_bij set",
     "mk_bij set unsorted", "mk_bij composite", "mk_graph delta disjoint",

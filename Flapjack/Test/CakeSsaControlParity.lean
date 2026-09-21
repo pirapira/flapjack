@@ -63,9 +63,24 @@ def longDivBoundaryGuard : Bool :=
 
 #guard longDivBoundaryGuard
 
+def longMulProgram : WordProg Nat :=
+  .inst (.arith (.longMul 1 2 3 4))
+
+/-! The neighboring Cake LongMul row uses the same fixed operand carriers,
+    with the two fresh results copied back in destination-right/left order. -/
+def longMulBoundaryGuard : Bool :=
+  match (wordFullSsaCcTrans 0 longMulProgram).2.2 with
+  | .seq (.move 1 [])
+      (.seq (.move 1 [(0, 0), (4, 0)])
+        (.seq (.inst (.arith (.longMul 6 0 0 4)))
+          (.move 1 [(13, 0), (9, 6)]))) => true
+  | _ => false
+
+#guard longMulBoundaryGuard
+
 def parityGuard : Bool :=
   raiseBoundaryGuard && callBoundaryGuard && storeConstsBoundaryGuard &&
-    longDivBoundaryGuard
+    longDivBoundaryGuard && longMulBoundaryGuard
 
 #guard parityGuard
 #eval parityGuard
@@ -79,7 +94,9 @@ def runChecks : IO Bool := do
       ("full_ssa_cc_trans StoreConsts preserves Cake reload moves",
         storeConstsBoundaryGuard),
       ("full_ssa_cc_trans LongDiv preserves Cake fixed-register ABI",
-        longDivBoundaryGuard) ]
+        longDivBoundaryGuard),
+      ("full_ssa_cc_trans LongMul preserves Cake fixed-register ABI",
+        longMulBoundaryGuard) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

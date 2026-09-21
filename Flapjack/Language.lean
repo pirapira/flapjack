@@ -478,6 +478,86 @@ theorem listDisjoint_drop_take_sum (values : List α) (n m p : Nat)
   fun value hright hleft =>
     listDisjoint_take_drop_sum values n m p h value hleft hright
 
+/-! Counterpart of Cake's `distinct_lists_eq_disjoint`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:102`): Cake defines
+    `distinct_lists xs ys` as `EVERY (\x. ~MEM x ys) xs`, which is exactly the
+    `ListDisjoint` predicate below. -/
+theorem forall_not_mem_iff_listDisjoint (xs ys : List α) :
+    (∀ x, x ∈ xs → x ∉ ys) ↔ ListDisjoint xs ys :=
+  Iff.rfl
+
+/-! Counterpart of Cake's `distinct_lists_append`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:108`). -/
+theorem listDisjoint_append (xs ys : List α) (h : (xs ++ ys).Nodup) :
+    ListDisjoint xs ys := by
+  have hdisj := (List.nodup_append.mp h).2.2
+  intro value hx hy
+  exact absurd rfl (hdisj value hx value hy)
+
+/-! Counterpart of Cake's `distinct_lists_commutes`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:116`). -/
+theorem listDisjoint_comm (xs ys : List α) (h : ListDisjoint xs ys) :
+    ListDisjoint ys xs :=
+  fun value hy hx => h value hx hy
+
+/-! Counterpart of Cake's `distinct_lists_cons`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:125`). -/
+theorem listDisjoint_of_append_left (ns xs ys zs : List α)
+    (h : ListDisjoint (ns ++ xs) (ys ++ zs)) :
+    ListDisjoint xs zs :=
+  fun value hx hz =>
+    h value (List.mem_append_right ns hx) (List.mem_append_right ys hz)
+
+/-! Counterpart of Cake's `distinct_lists_simp_cons`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:133`). -/
+theorem listDisjoint_of_cons_right (xs : List α) (y : α) (ys : List α)
+    (h : ListDisjoint xs (y :: ys)) :
+    ListDisjoint xs ys :=
+  fun value hx hy => h value hx (List.mem_cons.mpr (Or.inr hy))
+
+/-! Counterpart of Cake's `distinct_lists_append_intro`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:141`). -/
+theorem listDisjoint_append_right (xs ys zs : List α)
+    (hys : ListDisjoint xs ys) (hzs : ListDisjoint xs zs) :
+    ListDisjoint xs (ys ++ zs) :=
+  fun value hx hmem => by
+    rcases List.mem_append.mp hmem with h | h
+    · exact hys value hx h
+    · exact hzs value hx h
+
+/-! Counterpart of Cake's `distinct_lists_append_right_elim`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:150`). -/
+theorem listDisjoint_append_right_elim (xs ys zs : List α)
+    (h : ListDisjoint xs (ys ++ zs)) :
+    ListDisjoint xs ys ∧ ListDisjoint xs zs :=
+  ⟨fun value hx hy => h value hx (List.mem_append_left zs hy),
+   fun value hx hz => h value hx (List.mem_append_right ys hz)⟩
+
+/-! Counterpart of Cake's `all_distinct_take_frop_disjoint`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:534`). -/
+theorem listDisjoint_take_drop (xs : List α) (n : Nat) (h : xs.Nodup) :
+    ListDisjoint (xs.take n) (xs.drop n) := by
+  intro value htake hdrop
+  obtain ⟨i, hi, hix⟩ := List.getElem_of_mem htake
+  obtain ⟨j, hj, hjx⟩ := List.getElem_of_mem hdrop
+  rw [List.getElem_take] at hix
+  rw [List.getElem_drop] at hjx
+  have hiLen : i < xs.length := by
+    have := hi; rw [List.length_take] at this; omega
+  have hjLen : n + j < xs.length := by
+    have := hj; rw [List.length_drop] at this; omega
+  have hinj : i = n + j := (List.getElem_inj h).mp (hix.trans hjx.symm)
+  have hiN : i < n := by
+    have := hi; rw [List.length_take] at this; omega
+  omega
+
+/-! Counterpart of Cake's `disjoint_not_mem_el`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:606`). -/
+theorem not_mem_of_listDisjoint_getElem (xs ys : List α) (n : Nat)
+    (h : ListDisjoint xs ys) (hn : n < xs.length) :
+    xs[n] ∉ ys :=
+  fun hmem => h xs[n] (List.getElem_mem hn) hmem
+
 /-! Shifted-window form of Cake's `disjoint_take_drop_sum`: a suffix window and
     a later suffix window of the same distinct list are disjoint whenever the
     first window ends before the second window starts. -/
@@ -566,6 +646,111 @@ theorem listDisjoint_withShape_getElem (shapes : List Shape) (values : List α)
     exact listDisjoint_withShape_getElem_lt shapes values n' n hdistinct hn' hn
       hlt hvalues value hright hleft
 
+/-! Membership in a `zip` exposes the common index and both components.  Lean
+    core has no `List.mem_zip`, so this is the helper used to read Cake's
+    `MEM ... (ZIP ...)` hypotheses. -/
+theorem mem_zip_getElem (left : List α) (right : List β) (pair : α × β)
+    (hmem : pair ∈ left.zip right) :
+    ∃ (i : Nat) (hi : i < left.length) (hj : i < right.length),
+      left[i]'hi = pair.1 ∧ right[i]'hj = pair.2 := by
+  obtain ⟨i, hbound, hpi⟩ := List.mem_iff_getElem.mp hmem
+  rw [List.length_zip] at hbound
+  rw [List.getElem_zip] at hpi
+  refine ⟨i, Nat.lt_of_lt_of_le hbound (Nat.min_le_left ..),
+    Nat.lt_of_lt_of_le hbound (Nat.min_le_right ..), ?_, ?_⟩
+  · exact congrArg Prod.fst hpi
+  · exact congrArg Prod.snd hpi
+
+/-! Counterpart of Cake's `all_distinct_mem_zip_disjoint_with_shape`
+    (`cakeml/pancake/semantics/panPropsScript.sml:452`): two triples of the
+    aligned `(label, shape, component)` view whose labels differ have disjoint
+    components. -/
+theorem listDisjoint_of_mem_zip_withShape (labels : List α) (shapes : List Shape)
+    (values : List β) (left right : α × (Shape × List β))
+    (hlabels : labels.length = shapes.length)
+    (hshapes : shapes.length = (withShape shapes values).length)
+    (hdistinct : values.Nodup)
+    (hvalues : values.length = Shape.shapeSize (.comb shapes))
+    (hleft : left ∈ labels.zip (shapes.zip (withShape shapes values)))
+    (hright : right ∈ labels.zip (shapes.zip (withShape shapes values)))
+    (hne : left.1 ≠ right.1) :
+    ListDisjoint left.2.2 right.2.2 := by
+  obtain ⟨i, hi, _hiInner, hleftFirst, hleftSecond⟩ :=
+    mem_zip_getElem labels (shapes.zip (withShape shapes values)) left hleft
+  obtain ⟨j, hj, _hjInner, hrightFirst, hrightSecond⟩ :=
+    mem_zip_getElem labels (shapes.zip (withShape shapes values)) right hright
+  rw [List.getElem_zip] at hleftSecond
+  rw [List.getElem_zip] at hrightSecond
+  have hiShapes : i < shapes.length := by rw [hlabels] at hi; exact hi
+  have hjShapes : j < shapes.length := by rw [hlabels] at hj; exact hj
+  have hiValues : i < (withShape shapes values).length := by
+    rw [hshapes] at hiShapes; exact hiShapes
+  have hjValues : j < (withShape shapes values).length := by
+    rw [hshapes] at hjShapes; exact hjShapes
+  have hleftComponent : left.2.2 = (withShape shapes values)[i]'hiValues := by
+    simpa using (congrArg Prod.snd hleftSecond).symm
+  have hrightComponent : right.2.2 = (withShape shapes values)[j]'hjValues := by
+    simpa using (congrArg Prod.snd hrightSecond).symm
+  have hneIndex : i ≠ j := by
+    intro heq
+    subst heq
+    exact hne (by rw [← hleftFirst, ← hrightFirst])
+  rw [hleftComponent, hrightComponent]
+  exact listDisjoint_withShape_getElem shapes values i j hdistinct hiShapes hjShapes
+    hneIndex hvalues
+
+/-! Counterpart of Cake's `el_reduc_tl`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:360`): an index of the
+    tail is an index of the original list, shifted by one. -/
+theorem getElem_tail_eq (values : List α) (n : Nat) (hn : 0 < n)
+    (hbound : n < values.length) :
+    values[n]'hbound = (values.tail)[n - 1]'(by rw [List.length_tail]; omega) := by
+  rw [List.getElem_tail]
+  congr 1
+  omega
+
+/-! Counterpart of Cake's `el_pair_map_fst_el`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:722`): the first
+    component of an indexed triple is the indexed first projection. -/
+theorem getElem_map_fst (values : List (α × β × γ)) (n : Nat)
+    (hbound : n < values.length) {x : α} {y : β} {z : γ}
+    (heq : values[n]'hbound = (x, y, z)) :
+    x = (values.map Prod.fst)[n]'(by rwa [List.length_map]) := by
+  rw [List.getElem_map]
+  rw [heq]
+
+/-! Counterpart of Cake's `all_distinct_el_fst_same_eq`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:732`): in a list whose
+    first projections are distinct, equal first components force equal indices. -/
+theorem getElem_fst_inj (values : List (α × β)) (n n' : Nat)
+    (hnodup : (values.map Prod.fst).Nodup)
+    (hn : n < values.length) (hn' : n' < values.length)
+    {x : α} {y y' : β}
+    (heq : values[n]'hn = (x, y)) (heq' : values[n']'hn' = (x, y')) :
+    n = n' := by
+  have hmapped : (values.map Prod.fst)[n]'(by rwa [List.length_map]) =
+      (values.map Prod.fst)[n']'(by rwa [List.length_map]) := by
+    rw [List.getElem_map, List.getElem_map, heq, heq']
+  exact (List.getElem_inj hnodup).mp hmapped
+
+/-! Counterpart of Cake's `max_foldr_lt`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:768`): a member of a
+    list is strictly below the fold with `max` plus any positive slack. -/
+theorem mem_lt_foldr_max_add (values : List Nat) (x n m : Nat)
+    (hmem : x ∈ values) (hle : n ≤ x) (hm : 0 < m) :
+    x < values.foldr max n + m := by
+  have _ := hle
+  induction values with
+  | nil => simp at hmem
+  | cons head tail ih =>
+      rw [List.foldr_cons]
+      rcases List.mem_cons.mp hmem with rfl | hmem
+      · have hmax : x ≤ max x (tail.foldr max n) := Nat.le_max_left x _
+        omega
+      · have hrec := ih hmem
+        have hmax : tail.foldr max n ≤ max head (tail.foldr max n) := Nat.le_max_right _ _
+        omega
+
 /-! Counterpart of Cake's `all_distinct_with_shape_distinct`
     (`cakeml/pancake/semantics/panPropsScript.sml:357`): two distinct members of
     the flat-value split are disjoint.  Cake's extra hypotheses `x <> []` and
@@ -592,47 +777,6 @@ theorem listDisjoint_of_withShape_mem (shapes : List Shape) (values : List α)
       intro value hleft hright
       exact listDisjoint_withShape_getElem shapes values n' n hdistinct hn'len hnlen
         (Ne.symm heq) hvalues value hright hleft
-
-/-! Counterpart of Cake's `all_distinct_mem_zip_disjoint_with_shape`
-    (`cakeml/pancake/semantics/panPropsScript.sml:452`): two groups selected
-    from the flat-value split by the parameter zip, carrying different leading
-    labels, are disjoint whenever the flat value list is distinct. -/
-theorem listDisjoint_of_mem_zip_withShape (shapes : List Shape) (values : List α)
-    (labels : List α) (first second : α) (firstShape secondShape : Shape)
-    (left right : List α)
-    (hvalues : values.length = Shape.shapeSize (.comb shapes))
-    (hdistinct : values.Nodup)
-    (hleft : (first, firstShape, left) ∈
-      labels.zip (shapes.zip (withShape shapes values)))
-    (hright : (second, secondShape, right) ∈
-      labels.zip (shapes.zip (withShape shapes values)))
-    (hne : first ≠ second) :
-    ListDisjoint left right := by
-  obtain ⟨i, hi⟩ := List.mem_iff_getElem?.mp hleft
-  obtain ⟨i', hi'⟩ := List.mem_iff_getElem?.mp hright
-  obtain ⟨hlabel, hzip⟩ := List.getElem?_zip_eq_some.mp hi
-  obtain ⟨hlabel', hzip'⟩ := List.getElem?_zip_eq_some.mp hi'
-  obtain ⟨hshape, hvalue⟩ := List.getElem?_zip_eq_some.mp hzip
-  obtain ⟨hshape', hvalue'⟩ := List.getElem?_zip_eq_some.mp hzip'
-  have hii' : i ≠ i' := by
-    intro heq
-    subst heq
-    rw [hlabel] at hlabel'
-    exact hne (Option.some.inj hlabel')
-  obtain ⟨hiLen, _⟩ := List.getElem?_eq_some_iff.mp hshape
-  obtain ⟨hiLen', _⟩ := List.getElem?_eq_some_iff.mp hshape'
-  have hdisj := listDisjoint_withShape_getElem shapes values i i' hdistinct
-    hiLen hiLen' hii' hvalues
-  have hleftEq :
-      (withShape shapes values)[i]'(by rw [withShape_length]; exact hiLen) =
-        left :=
-    (List.getElem_eq_iff (by rw [withShape_length]; exact hiLen)).mpr hvalue
-  have hrightEq :
-      (withShape shapes values)[i']'(by rw [withShape_length]; exact hiLen') =
-        right :=
-    (List.getElem_eq_iff (by rw [withShape_length]; exact hiLen')).mpr hvalue'
-  rw [hleftEq, hrightEq] at hdisj
-  exact hdisj
 
 theorem shapeSize_drop_head_le (shapes : List Shape) (n : Nat)
     (hn : n < shapes.length) :

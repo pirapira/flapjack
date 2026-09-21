@@ -433,7 +433,7 @@ example (state' : PanValueProgramState Nat)
     state' = { evalRelState with
       exceptions := panExceptionEntries onlyExceptionDecls ++ evalRelState.exceptions } := by
   exact evalPanValueDeclarationsWithStructs_only_exn_decls ([] : StructContext)
-    evalRelState state' onlyExceptionDecls none (by decide) rfl heval
+    evalRelState state' onlyExceptionDecls none rfl (by decide) heval
 
 /-! The public declaration evaluator preserves the same exception table after
     collecting the declaration-time struct context.  This is the direct
@@ -738,6 +738,7 @@ theorem prod_mk_pair_eq_id_fixture :
 theorem option_ne_none_iff_exists_fixture :
     (some 3 : Option Nat) ≠ none ↔ ∃ a, (some 3 : Option Nat) = some a :=
   option_ne_none_iff_exists (some 3)
+
 /-- Focused regression for the `resort_decls_evaluate` counterpart: resorting
     declarations into the name/exception/global/function partition preserves
     the declaration evaluator's result. -/

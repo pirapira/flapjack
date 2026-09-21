@@ -174,4 +174,41 @@ theorem panPrimitiveHandler_addCarry [NeZero width]
           (if 2 ^ width ≤ left.toNat + right.toNat then 1 else 0))]) := by
   simp [panPrimitiveHandler, addCarryWords]
 
+/-- Counterpart of Cake's `pan_primop_is_wf_shape_v`
+    (`cakeml/pancake/semantics/panPropsScript.sml:162`): the source-level
+    primitive handler only ever returns well-formed values. -/
+theorem panPrimitiveHandler_isWfShape [NeZero width]
+    (structs : StructContext) (operator : PrimOp)
+    (arguments : List (PanValue (Word width))) (value : PanValue (Word width))
+    (hvalue : panPrimitiveHandler operator arguments = some value) :
+    panValueIsWf structs value = true := by
+  cases operator
+  cases arguments with
+  | nil => simp [panPrimitiveHandler] at hvalue
+  | cons first rest =>
+      cases rest with
+      | nil => simp [panPrimitiveHandler] at hvalue
+      | cons second rest2 =>
+          cases rest2 with
+          | nil => simp [panPrimitiveHandler] at hvalue
+          | cons third rest3 =>
+              cases rest3 with
+              | cons _ _ => simp [panPrimitiveHandler] at hvalue
+              | nil =>
+                  cases first with
+                  | word left =>
+                      cases second with
+                      | word right =>
+                          cases third with
+                          | word carry =>
+                              simp [panPrimitiveHandler] at hvalue
+                              rw [← hvalue]
+                              simp [panValueIsWf, panValueIsWfValues]
+                          | rStruct fields => simp [panPrimitiveHandler] at hvalue
+                          | nStruct name fields => simp [panPrimitiveHandler] at hvalue
+                      | rStruct fields => simp [panPrimitiveHandler] at hvalue
+                      | nStruct name fields => simp [panPrimitiveHandler] at hvalue
+                  | rStruct fields => simp [panPrimitiveHandler] at hvalue
+                  | nStruct name fields => simp [panPrimitiveHandler] at hvalue
+
 end Flapjack.RiscV

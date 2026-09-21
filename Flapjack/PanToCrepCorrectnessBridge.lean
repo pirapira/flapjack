@@ -30145,6 +30145,105 @@ theorem panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call
   rw [hclock]
   rfl
 
+/-! The destination-bearing companion of the caught-handler call bridge.
+    Cake's `Call_Ret_Exception` handler case is the `SOME (rts, SOME ...)`
+    shape: the call syntactically carries an assignment destination alongside
+    its handler.  The caught path resumes the handler directly and never reads
+    that destination, so the same composition applies with the destination kept
+    explicit in the call shape. -/
+theorem panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_handler_destination
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (program : Prog α)
+    (sourceEvaluate : PanValuePcEvaluator α)
+    (targetEvaluate : CrepPcEvaluator α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (hcompact : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (clockStructs : StructContext) (clockPcContext : CompileContext α)
+    (clockExceptionRel : ExceptionId → PanValue α → α → Prop)
+    (clockExceptionCode : ExceptionId → Option α)
+    (clockGlobalsLookup : CrepState α → PanValue α → Option (List α))
+    (clockContext : PanValueFfiContext α)
+    (clockPrimitive : PanPrimitiveHandler α)
+    (clockHandler : PanValueStatefulFfiHandler α σ)
+    (clockFunctions : List (FunName × List VarName × Prog α))
+    (clockBaseAddress clockTopAddress clockBytesInWord : α)
+    (fuel clock callClock : Nat)
+    (clockLocals clockGlobals : VarName → Option (PanValue α))
+    (clockMemory : α → Option (PanValue α)) (clockFfi : FfiState σ)
+    (destination : Option (VarKind × VarName))
+    (caught : ExceptionId) (handlerVariable : VarName)
+    (handlerProgram : Prog α) (function : FunName)
+    (arguments : List (Exp α))
+    (sourceControl : PanValueControlResult α)
+    (clockTargetResult : CrepPcResult α)
+    (targetControl : CrepControlResult α)
+    (hraise : ∀ (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (sourceValue : PanValue α) (targetState : CrepState α)
+      (targetException : α),
+      panValueCrepControlRel clockStructs clockPcContext clockExceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      panValueCrepStateRel clockStructs clockPcContext sourceLocals sourceGlobals
+        sourceMemory targetState ∧
+      panValuePcExceptionResultRelWithContextCode clockStructs clockPcContext
+        clockExceptionRel clockExceptionCode clockGlobalsLookup
+        sourceGlobals sourceMemory sourceException sourceValue targetState
+        targetException)
+    (hcall : evalPanValueFfiClockCall clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord fuel clockLocals clockGlobals clockMemory clockFfi clock
+      (some (destination, some (caught, handlerVariable, handlerProgram)))
+      function arguments =
+      some (.control (panValueFfiControlResultOfControl clockFfi sourceControl),
+        callClock))
+    (hcontrol : panValueCrepControlRel clockStructs clockPcContext
+      clockExceptionRel sourceControl targetControl)
+    (hsafe : panValuePcControlLabelSafe sourceControl targetControl)
+    (hresult : crepPcResultOfControl targetControl = some clockTargetResult) :
+    PanValuePcCompileCorrectWithContextCode sourceEvaluate targetEvaluate
+      codeRel excpRel exceptionCode globalsLookup program ∧
+    evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (fuel + 1) clockLocals clockGlobals clockMemory clockFfi
+      clock
+      (.call (some (destination, some (caught, handlerVariable, handlerProgram)))
+        function arguments) =
+      some (.control (panValueFfiControlResultOfControl clockFfi sourceControl),
+        callClock) ∧
+    (evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (fuel + 1) clockLocals clockGlobals clockMemory clockFfi
+      clock
+      (.call (some (destination, some (caught, handlerVariable, handlerProgram)))
+        function arguments)).map panValueFfiClockResultProjection =
+      some (panValueFfiClockResultProjection
+        (.control (panValueFfiControlResultOfControl clockFfi sourceControl),
+          callClock)) ∧
+    panValuePcResultRelWithContextCode clockStructs clockPcContext
+      clockExceptionRel clockExceptionCode clockGlobalsLookup
+      (panValuePcResultOfControl sourceControl) clockTargetResult := by
+  have hclock := evalPanValueFfiClockProg_call_caught_handler_destination
+    clockContext clockPrimitive clockHandler clockStructs clockFunctions
+    clockBaseAddress clockTopAddress clockBytesInWord fuel clock callClock
+    clockLocals clockGlobals clockMemory clockFfi destination caught
+    handlerVariable handlerProgram function arguments
+    (.control (panValueFfiControlResultOfControl clockFfi sourceControl)) hcall
+  have hresultRel := panValuePcResultRelWithContextCode_of_control
+    clockStructs clockPcContext clockExceptionRel clockExceptionCode
+    clockGlobalsLookup hraise sourceControl targetControl clockTargetResult
+    hcontrol hsafe hresult
+  refine ⟨hcompact, hclock, ?_, hresultRel⟩
+  rw [hclock]
+  rfl
+
 /-! The caught-handler raised branch composes the handler's post-state relation
     with the exact exception payload/global-store relation.  This is the
     `Call_Ret_Exception` case after the handler resumes: handler locals and

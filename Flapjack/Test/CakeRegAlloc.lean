@@ -231,6 +231,19 @@ def worklistPrependGuard : Bool :=
 
 #guard worklistPrependGuard
 
+/- Cake's extend_clique (reg_allocScript.sml:235-249) skips members already
+   live, prepends each newly discovered member to the live list, and links it
+   to the existing clique. -/
+def extendCliqueGuard : Bool :=
+  let base := cakeCliqueInsertEdge [1, 2] (CakeNodeMap.ofSize 5)
+  let (out, live) := cakeExtendClique [2, 3] [1, 2] base
+  live == [3, 1, 2] &&
+    out.get 1 == some [3, 2] &&
+    out.get 2 == some [3, 1] &&
+    out.get 3 == some [2, 1]
+
+#guard extendCliqueGuard
+
 /-- Canonical form for comparing node bijections with the probed sptree
     outputs: both maps sorted by key. -/
 def sortBijectionMaps (bijection : CakeNodeBijection) :
@@ -1251,6 +1264,7 @@ def parityGuard : Bool :=
       decDegreeNeighboursGuard &&
       pushStackGuard &&
       worklistPrependGuard &&
+      extendCliqueGuard &&
     bijDeltaBasicGuard && bijDeltaDedupGuard && bijSeqOrderGuard &&
     bijBranchOrderGuard && bijBranchLiveGuard && bijSetGuard &&
     bijSetUnsortedGuard && bijCompositeGuard && graphDeltaDisjointGuard &&
@@ -1299,6 +1313,7 @@ def runChecks : IO Bool := do
     decDegreeNeighboursGuard,
     pushStackGuard,
     worklistPrependGuard,
+    extendCliqueGuard,
     bijDeltaBasicGuard, bijDeltaDedupGuard, bijSeqOrderGuard,
     bijBranchOrderGuard, bijBranchLiveGuard, bijSetGuard,
     bijSetUnsortedGuard, bijCompositeGuard, graphDeltaDisjointGuard,
@@ -1347,6 +1362,7 @@ def runChecks : IO Bool := do
     "Cake dec_degree neighbours",
     "Cake push_stack",
     "Cake worklist prepend",
+    "Cake extend_clique",
     "mk_bij delta basic", "mk_bij delta dedup", "mk_bij seq order",
     "mk_bij branch order", "mk_bij branch live", "mk_bij set",
     "mk_bij set unsorted", "mk_bij composite", "mk_graph delta disjoint",

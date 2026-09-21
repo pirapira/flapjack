@@ -489,6 +489,67 @@ def globalDeclIsFunction : Decl α → Bool
   | .function _ => true
   | _ => false
 
+/-! Counterpart of Cake's `EVERY_fperm_decs`
+    (`pan_globalsProofScript.sml:2436`): if a predicate holds on every
+    non-function declaration and on every renamed function declaration, then
+    it holds on every declaration produced by the renaming pass. -/
+theorem globalRenameDecls_all_of_predicate [BEq String]
+    (source target : FunName) (predicate : Decl α → Bool)
+    (declarations : List (Decl α))
+    (hother : declarations.all
+      (fun declaration => globalDeclIsFunction declaration || predicate declaration) = true)
+    (hfunction : declarations.all
+      (fun declaration => match declaration with
+        | .function function =>
+            predicate (.function { function with
+              name := globalRenameFunctionName source target function.name
+              body := globalRenameProg source target function.body })
+        | _ => true) = true) :
+    (globalRenameDecls source target declarations).all predicate = true := by
+  induction declarations with
+  | nil => simp [globalRenameDecls]
+  | cons declaration declarations ih =>
+      have hotherTail : declarations.all
+          (fun declaration =>
+            globalDeclIsFunction declaration || predicate declaration) = true := by
+        simp only [List.all_cons, Bool.and_eq_true] at hother
+        exact hother.2
+      have hfunctionTail : declarations.all
+          (fun declaration => match declaration with
+            | .function function =>
+                predicate (.function { function with
+                  name := globalRenameFunctionName source target function.name
+                  body := globalRenameProg source target function.body })
+            | _ => true) = true := by
+        simp only [List.all_cons, Bool.and_eq_true] at hfunction
+        exact hfunction.2
+      have ih' := ih hotherTail hfunctionTail
+      have hotherHead := by
+        simp only [List.all_cons, Bool.and_eq_true] at hother
+        exact hother.1
+      have hfunctionHead := by
+        simp only [List.all_cons, Bool.and_eq_true] at hfunction
+        exact hfunction.1
+      cases declaration with
+      | function function =>
+          simp only [globalRenameDecls, List.all_cons, Bool.and_eq_true]
+          exact ⟨hfunctionHead, ih'⟩
+      | decl shape name value =>
+          simp only [globalRenameDecls, List.all_cons, Bool.and_eq_true]
+          refine ⟨?_, ih'⟩
+          simp [globalDeclIsFunction] at hotherHead
+          exact hotherHead
+      | exnDecl exception shape =>
+          simp only [globalRenameDecls, List.all_cons, Bool.and_eq_true]
+          refine ⟨?_, ih'⟩
+          simp [globalDeclIsFunction] at hotherHead
+          exact hotherHead
+      | name struct fields =>
+          simp only [globalRenameDecls, List.all_cons, Bool.and_eq_true]
+          refine ⟨?_, ih'⟩
+          simp [globalDeclIsFunction] at hotherHead
+          exact hotherHead
+
 /-! Direct source-shaped counterparts of the declaration predicates from
     `panLangScript.sml:234-249`.  The global-pass predicates above are kept
     as its existing pass-facing names; these names retain the source API. -/

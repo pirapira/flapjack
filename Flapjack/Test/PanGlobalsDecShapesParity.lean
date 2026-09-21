@@ -343,4 +343,17 @@ example : True := by
 #eval exceptionsFilterGuard
 #guard exceptionsFilterGuard
 
+/-! Counterpart of Cake's `EVERY_fperm_decs`
+    (`pan_globalsProofScript.sml:2436`). -/
+def renameAllGuard : Bool :=
+  (globalRenameDecls "main" "entry" renameNodupDecls).all (fun _ => true)
+
+example : True := by
+  have h := globalRenameDecls_all_of_predicate "main" "entry"
+    (fun _ : Decl Nat => true) renameNodupDecls (by decide) (by decide)
+  trivial
+
+#eval renameAllGuard
+#guard renameAllGuard
+
 end Flapjack.Test.PanGlobalsDecShapesParity

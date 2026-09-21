@@ -58,6 +58,23 @@ def cseLoadAddressPreservesEmission : Bool :=
 
 #guard cseLoadAddressPreservesEmission
 
+/-! Cake's `word_cse` canonicalizes an `OpCurrHeap` source for its fact key,
+    but preserves the original selected source in the emitted instruction.
+    This is observable when a repeated constant is rematerialized: the later
+    constant must remain live through the final dead-code pass. -/
+
+def cseCurrHeapRematerializedConstant : WordProg Nat :=
+  .seq (.inst (.const 21 1))
+    (.seq (.inst (.const 29 1)) (.opCurrHeap .or 33 29))
+
+def cseCurrHeapPreservesSelectedSource : Bool :=
+  match wordCseProp cseCurrHeapRematerializedConstant with
+  | .seq (.inst (.const 21 1))
+      (.seq (.inst (.const 29 1)) (.opCurrHeap .or 33 29)) => true
+  | _ => false
+
+#guard cseCurrHeapPreservesSelectedSource
+
 /-- In-order atoms of an `Op Add` spine: `some name` for a variable, `none`
 for a constant. -/
 def addOperandAtoms : WordExp α → List (Option Nat)

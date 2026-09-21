@@ -253,4 +253,33 @@ def renameDeclsGuard : Bool :=
 #eval renameDeclsGuard
 #guard renameDeclsGuard
 
+/-! Counterparts of Cake's `fperm_decs_decls` (`pan_globalsProofScript.sml:2023`)
+    and `fperm_decs_FILTER_is_function` (`:2032`). -/
+example : True := by
+  have h := globalRenameDecls_eq_self_of_no_functions "main" "entry"
+    noFunctionsDecls (by decide)
+  trivial
+
+example : True := by
+  have h := globalRenameDecls_filter_function "main" "entry" declsWithGlobals
+  trivial
+
+def renameFilterGuard : Bool :=
+  let mixed : List (Decl Nat) :=
+    [.function
+      { name := "main", inline := false, exported := false, params := [],
+        body := .skip, returnShape := .one },
+     .decl .one "h" (.const 9)]
+  let renamed := globalRenameDecls "main" "entry" mixed
+  (globalRenameDecls "main" "entry"
+      (globalDeclsFilter globalDeclIsFunction mixed)).length ==
+    (globalDeclsFilter globalDeclIsFunction renamed).length &&
+  globalFunctionNames
+      (globalRenameDecls "main" "entry"
+        (globalDeclsFilter globalDeclIsFunction mixed)) ==
+    globalFunctionNames (globalDeclsFilter globalDeclIsFunction renamed)
+
+#eval renameFilterGuard
+#guard renameFilterGuard
+
 end Flapjack.Test.PanGlobalsDecShapesParity

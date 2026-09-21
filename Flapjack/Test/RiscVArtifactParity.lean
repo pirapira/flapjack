@@ -294,6 +294,40 @@ def emptyLocalsMainExactParity : Bool :=
       | _ => false
   | none => false
 
+/-! ## CurrHeap materialisation parity (GH #1128)
+
+Cake's word_inst inst_select_exp leaves a Lookup CurrHeap plus a
+materialised constant as a register operation.  The Lab stage must not apply
+an aliased-add peephole to that pair: it would emit a different immediate
+instruction, or erase CurrHeap - 0 entirely. -/
+def currHeapAddConstSource : String :=
+  "fun 1 main() { return @base + 255; }"
+
+def currHeapSubZeroSource : String :=
+  "fun 1 main() { return @base - 0; }"
+
+def currHeapAddConstExactParity : Bool :=
+  match compileRuntimeImage currHeapAddConstSource with
+  | some image =>
+      match emittedSections image with
+      | _ :: (_, _, mainBytes) :: _ =>
+          mainBytes ==
+            [0x13, 0x65, 0xF0, 0x0F, 0x33, 0x05, 0xA5, 0x01,
+             0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
+      | _ => false
+  | none => false
+
+def currHeapSubZeroExactParity : Bool :=
+  match compileRuntimeImage currHeapSubZeroSource with
+  | some image =>
+      match emittedSections image with
+      | _ :: (_, _, mainBytes) :: _ =>
+          mainBytes ==
+            [0x13, 0x65, 0x00, 0x00, 0x33, 0x05, 0xA5, 0x01,
+             0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
+      | _ => false
+  | none => false
+
 /-! ## Cake return-register oracle (`flapjack-pxn.8.5.10.1.1`)
 
 The original Cake `callee_abi.pnk` artifact keeps the allocator-selected
@@ -1394,6 +1428,8 @@ def sharedMemOffsetCarrierEncoding : Bool :=
 #guard entryOrderExactParity
 #guard setVarMainExactParity
 #guard emptyLocalsMainExactParity
+#guard currHeapAddConstExactParity
+#guard currHeapSubZeroExactParity
 #guard rorChainBudgetMatches
 #guard flattenRorChainProbeMatches
 #guard wideOpBudgetMatches
@@ -1429,6 +1465,10 @@ def runChecks : IO Bool := do
         setVarMainExactParity),
       ("empty_locals direct-call main is byte-identical to Cake",
         emptyLocalsMainExactParity),
+      ("CurrHeap + materialised constant is byte-identical to Cake (GH #1128)",
+        currHeapAddConstExactParity),
+      ("CurrHeap - zero preserves Cake's register subtraction (GH #1128)",
+        currHeapSubZeroExactParity),
       ("nested_expression fixture accepted by the runtime-image entry point",
         nestedExpressionAccepted),
       ("nested_expression Word-to-Stack lowering uses the extended temp pool",

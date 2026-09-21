@@ -1194,6 +1194,152 @@ theorem evalPanValueDeclarations_exns_wf_sufficiency
     memoryAccess (by rfl) hall hnodup hnone hwf
   simpa using hmain
 
+/-- Cake's `evaluate_decls_only_functions_and_exns_SOME`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2404`): for a list of
+    function and exception declarations, the per-function parameter/return
+    well-formedness conditions together with exception distinctness, freshness
+    and shape well-formedness are sufficient for the evaluator to succeed and
+    install exactly the function and exception tables.  This combines
+    `evalPanValueDeclarationsWithStructs_only_functions_sufficiency` and
+    `evalPanValueDeclarationsWithStructs_exns_wf_sufficiency`. -/
+theorem evalPanValueDeclarationsWithStructs_only_functions_and_exns_sufficiency
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    [LawfulBEq String]
+    (structs : StructContext) (state : PanValueProgramState α)
+    (declarations : List (Decl α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (hstructs : state.structs = structs)
+    (hall : declarations.all
+      (fun declaration =>
+        globalDeclIsFunction declaration || isExnDecl declaration) = true)
+    (hfunctions : ∀ declaration, declaration ∈ declarations →
+      (match declaration with
+        | .function function =>
+            function.params.all
+                (fun parameter => isWfShape structs parameter.2) &&
+              isWfShape structs function.returnShape
+        | _ => true) = true)
+    (hnodup :
+      ((panExceptionEntries declarations).map (fun entry => entry.1)).Nodup)
+    (hnone : ∀ exception shape,
+      (exception, shape) ∈ panExceptionEntries declarations →
+        lookupInfo exception state.exceptions = none)
+    (hexns : ∀ exception shape,
+      (exception, shape) ∈ panExceptionEntries declarations →
+        isWfShape structs shape = true) :
+    evalPanValueDeclarationsWithStructs structs state declarations memoryAccess =
+      some { state with
+        structs := structs
+        functions := panFunctionEntries declarations ++ state.functions
+        returnShapes := panReturnShapeEntries declarations ++ state.returnShapes
+        parameterShapes :=
+          panParameterShapeEntries declarations ++ state.parameterShapes
+        exceptions := panExceptionEntries declarations ++ state.exceptions } := by
+  induction declarations generalizing state with
+  | nil =>
+      simp [evalPanValueDeclarationsWithStructs, panFunctionEntries,
+        panReturnShapeEntries, panParameterShapeEntries, panExceptionEntries_nil,
+        functions, List.nil_append, ← hstructs]
+  | cons declaration declarations ih =>
+      simp only [List.all_cons, Bool.and_eq_true] at hall
+      obtain ⟨hhead, htail⟩ := hall
+      cases declaration with
+      | function function =>
+          simp only [evalPanValueDeclarationsWithStructs]
+          have hdeclWf : (function.params.all
+                (fun parameter => isWfShape structs parameter.2) &&
+              isWfShape structs function.returnShape) = true :=
+            hfunctions (.function function) (by simp)
+          rw [if_pos hdeclWf]
+          have hnodupTail :
+              ((panExceptionEntries declarations).map
+                (fun entry => entry.1)).Nodup := by
+            simpa [panExceptionEntries_cons] using hnodup
+          have hnoneTail : ∀ exception shape,
+              (exception, shape) ∈ panExceptionEntries declarations →
+                lookupInfo exception state.exceptions = none := by
+            intro exception shape hmem
+            exact hnone exception shape (by
+              simpa [panExceptionEntries_cons] using hmem)
+          have hexnsTail : ∀ exception shape,
+              (exception, shape) ∈ panExceptionEntries declarations →
+                isWfShape structs shape = true := by
+            intro exception shape hmem
+            exact hexns exception shape (by
+              simpa [panExceptionEntries_cons] using hmem)
+          let next : PanValueProgramState α :=
+            { state with
+              structs := structs
+              functions :=
+                (function.name, function.params.map Prod.fst, function.body) ::
+                  state.functions
+              returnShapes :=
+                (function.name, function.returnShape) :: state.returnShapes
+              parameterShapes :=
+                (function.name, function.params) :: state.parameterShapes }
+          exact (ih next (by rfl) htail
+            (fun other hmem => hfunctions other (by simp [hmem]))
+            hnodupTail hnoneTail hexnsTail).trans (by
+              simp [next, panFunctionEntries, panReturnShapeEntries,
+                panParameterShapeEntries, panExceptionEntries_cons, functions,
+                List.reverse_cons, List.map_append,
+                List.append_assoc])
+      | exnDecl exception shape =>
+          simp only [panExceptionEntries_cons]
+          simp only [evalPanValueDeclarationsWithStructs]
+          have hheadNone : lookupInfo exception state.exceptions = none :=
+            hnone exception shape (by simp [panExceptionEntries_cons])
+          have hheadWf : isWfShape structs shape = true :=
+            hexns exception shape (by simp [panExceptionEntries_cons])
+          rw [hheadNone]
+          simp only [Option.isSome_none, Bool.false_eq_true, if_false,
+            hheadWf, if_true]
+          simp only [panExceptionEntries_cons, List.map_append, List.map_cons,
+            List.map_nil] at hnodup
+          obtain ⟨hnodupTail, _, hdisjoint⟩ := List.nodup_append.mp hnodup
+          let next : PanValueProgramState α :=
+            { state with
+              structs := structs
+              exceptions := (exception, shape) :: state.exceptions }
+          have hnoneTail : ∀ eid shape',
+              (eid, shape') ∈ panExceptionEntries declarations →
+                lookupInfo eid next.exceptions = none := by
+            intro eid shape' hmem
+            have heid : eid ∈ (panExceptionEntries declarations).map
+                (fun entry => entry.1) :=
+              List.mem_map.mpr ⟨(eid, shape'), hmem, rfl⟩
+            have hne : (exception == eid) = false := by
+              rw [Bool.eq_false_iff]
+              intro h
+              exact (hdisjoint eid heid exception (by simp))
+                (beq_iff_eq.mp h).symm
+            show lookupInfo eid ((exception, shape) :: state.exceptions) = none
+            rw [lookupInfo_of_ne (name := eid) (candidate := exception)
+              (value := shape) (entries := state.exceptions) hne]
+            exact hnone eid shape' (by
+              simp only [panExceptionEntries_cons]
+              exact List.mem_append_left _ hmem)
+          have hexnsTail : ∀ eid shape',
+              (eid, shape') ∈ panExceptionEntries declarations →
+                isWfShape structs shape' = true :=
+            fun eid shape' hmem =>
+              hexns eid shape' (by
+                simp only [panExceptionEntries_cons]
+                exact List.mem_append_left _ hmem)
+          have hrec := ih next (by rfl) htail
+            (fun other hmem => hfunctions other (by simp [hmem]))
+            hnodupTail hnoneTail hexnsTail
+          exact hrec.trans (by
+            simp [next, panFunctionEntries,
+              panReturnShapeEntries, panParameterShapeEntries, functions,
+              List.append_assoc])
+      | decl shape name expression =>
+          simp [globalDeclIsFunction, isExnDecl] at hhead
+      | name name fields =>
+          simp [globalDeclIsFunction, isExnDecl] at hhead
+
 theorem evalPanValueDeclarationsWithStructs_function_exnDecl_commute
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

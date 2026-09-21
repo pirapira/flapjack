@@ -92,6 +92,16 @@ def maxVarFrameInputExact : Bool :=
 
 #guard maxVarFrameInputExact
 
+/- Direct HOL-EVAL rows from `word_stack_max_var_probe.out`: an instruction
+   contributes both its address and destination, while a Return contributes
+   its label and every returned value to the frame-sizing maximum. -/
+def maxVarInstructionReturnExact : Bool :=
+  wordProgCakeMaxVar
+      (.inst (.mem .store 7 12) : WordProg Nat) == 12 &&
+    wordProgCakeMaxVar (.return 7 [4, 12] : WordProg Nat) == 12
+
+#guard maxVarInstructionReturnExact
+
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
     [ ("wReg1/wReg2 preserve Cake frame slot numbering", registerFrameExact),
@@ -106,7 +116,9 @@ def runChecks : IO Bool := do
       ("limit_var preserves the SSA temporary numbering base",
         temporaryNumberingExact),
       ("max_var frame inputs match the Cake HOL probe",
-        maxVarFrameInputExact) ]
+        maxVarFrameInputExact),
+      ("max_var instruction and return inputs match the Cake probe",
+        maxVarInstructionReturnExact) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

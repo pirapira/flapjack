@@ -60,6 +60,20 @@ def frameReservationExact : Bool :=
 
 #guard frameReservationExact
 
+/- The RISC-V Cake ABI has `k = 22` allocator registers.  These rows are the
+   direct `compile_prog` reservation at the real argument-area boundary: no
+   overflow at 22 words, one overflow at 23, and the frame's extra link word
+   is retained while the argument area grows at 24 and 26 words.  The
+   `wide_call_arity.pnk` oracle exercises the same accepted source boundary;
+   this guard pins the intermediate `f - stack_arg_count` arithmetic. -/
+def riscvFrameReservationBoundaryExact : Bool :=
+  wordStackFrameWords (List.range 22) 22 0 == 0 &&
+    wordStackFrameWords (List.range 23) 22 1 == 1 &&
+    wordStackFrameWords (List.range 24) 22 2 == 1 &&
+    wordStackFrameWords (List.range 26) 22 4 == 1
+
+#guard riscvFrameReservationBoundaryExact
+
 def callFrameFreeCountExact : Bool :=
   wordStackCakeFrameSize
       { locations := [], scratch := 31, stackBase := 0, abiFrameSlots := 19 } == 20 &&
@@ -306,12 +320,28 @@ def handlerCallCarrierCakeGuard : Bool :=
 
 #guard handlerCallCarrierCakeGuard
 
+/-! The real Cake RISC-V ABI window has twelve value slots.  At the exact
+    boundary, `format_var` keeps index 11 in the last ABI register and
+    `wMoveSingle` places indices 12 and 13 at the top two slots of the
+    caller's four-word frame. -/
+def riscvAbiBoundaryPhysicalLocationsExact : Bool :=
+  let config : WordStackConfig :=
+    { locations := [], scratch := 22, stackBase := 0,
+      abiRegisterCount := 12, abiFrameSlots := 3, frameOffset := 4 }
+  wordStackPhysicalLocation config 11 1 == .register 23 &&
+    wordStackPhysicalLocation config 12 1 == .stack 3 &&
+    wordStackPhysicalLocation config 13 1 == .stack 2
+
+#guard riscvAbiBoundaryPhysicalLocationsExact
+
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
     [ ("stack_arg_count and stack_free match the call oracle", callArgCountExact),
       ("SeqStackFree matches the port's tail-call frame free", seqStackFreeExact),
       ("wordStackFrameWords matches compile_prog's frame reservation",
         frameReservationExact),
+      ("RISC-V frame reservation crosses Cake's k=22 boundary",
+        riscvFrameReservationBoundaryExact),
       ("wordStackCallFreeCount matches stack_free for direct calls",
         callFrameFreeCountExact),
       ("source-shaped tail calls include the Cake link slot",
@@ -343,7 +373,9 @@ def runChecks : IO Bool := do
       ("returning direct call preserves Cake's carrier shape",
         returningCallCarrierCakeGuard),
       ("handler call preserves Cake's carrier metadata",
-        handlerCallCarrierCakeGuard) ]
+        handlerCallCarrierCakeGuard),
+      ("the RISC-V ABI boundary uses Cake's first two spill slots",
+        riscvAbiBoundaryPhysicalLocationsExact) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

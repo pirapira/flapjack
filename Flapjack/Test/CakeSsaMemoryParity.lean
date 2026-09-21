@@ -52,6 +52,18 @@ def store32InstGuard : Bool :=
   | .seq (.move 1 []) (.inst (.mem .store32 0 0)) => true
   | _ => false
 
+def load8InstGuard : Bool :=
+  match (wordFullSsaCcTrans 0
+      (.inst (.mem .load8 1 2) : WordProg Nat)).2.2 with
+  | .seq (.move 1 []) (.inst (.mem .load8 5 0)) => true
+  | _ => false
+
+def store8InstGuard : Bool :=
+  match (wordFullSsaCcTrans 0
+      (.inst (.mem .store8 1 2) : WordProg Nat)).2.2 with
+  | .seq (.move 1 []) (.inst (.mem .store8 0 0)) => true
+  | _ => false
+
 def loadOffsetGuard : Bool :=
   match (wordFullSsaCcTrans 0
       (.inst (.memOffset .load 1 2 7) : WordProg Nat)).2.2 with
@@ -101,18 +113,6 @@ def shareStore32Guard : Bool :=
   match (wordFullSsaCcTrans 0
       (.shareInst .store32 1 (.var 2) : WordProg Nat)).2.2 with
   | .seq (.move 1 []) (.shareInst .store32 0 (.var 0)) => true
-  | _ => false
-
-def load8InstGuard : Bool :=
-  match (wordFullSsaCcTrans 0
-      (.inst (.mem .load8 1 2) : WordProg Nat)).2.2 with
-  | .seq (.move 1 []) (.inst (.mem .load8 5 0)) => true
-  | _ => false
-
-def store8InstGuard : Bool :=
-  match (wordFullSsaCcTrans 0
-      (.inst (.mem .store8 1 2) : WordProg Nat)).2.2 with
-  | .seq (.move 1 []) (.inst (.mem .store8 0 0)) => true
   | _ => false
 
 def parityGuard : Bool :=

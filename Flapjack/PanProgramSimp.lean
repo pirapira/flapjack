@@ -81,6 +81,72 @@ theorem collectPanValueStructs_of_functions (context : StructContext)
   have hfunction := List.all_eq_true.mp hall declaration hmem
   cases declaration <;> simp_all [globalDeclIsFunction, isName]
 
+theorem lookupInfo_isSome_of_mem [BEq String] [LawfulBEq String] (name : String)
+    (context : StructContext) (hmem : name ∈ context.map Prod.fst) :
+    (lookupInfo name context).isSome = true := by
+  induction context with
+  | nil => simp at hmem
+  | cons entry context ih =>
+      obtain ⟨candidate, info⟩ := entry
+      simp only [List.map_cons, List.mem_cons] at hmem
+      rcases hmem with heq | hmem
+      · subst heq
+        simp [lookupInfo]
+      · simp only [lookupInfo]
+        by_cases hc : (candidate == name) = true
+        · simp [hc]
+        · simp [hc]
+          exact ih hmem
+
+theorem collectPanValueStructs_structInfosOk {α : Type} (declarations : List (Decl α)) :
+    ∀ (context context' : StructContext),
+      collectPanValueStructs declarations context = some context' →
+        structInfosOk context → structInfosOk context' := by
+  induction declarations with
+  | nil =>
+      intro context context' hcollect hok
+      simp only [collectPanValueStructs] at hcollect
+      have : context' = context := (Option.some.injEq _ _).mp hcollect.symm
+      subst this
+      exact hok
+  | cons declaration declarations ih =>
+      intro context context' hcollect hok
+      cases declaration with
+      | name name fields =>
+          simp only [collectPanValueStructs_cons] at hcollect
+          by_cases hsome : (lookupInfo name context).isSome = true
+          · simp [hsome] at hcollect
+          · have hsomeFalse : (lookupInfo name context).isSome = false := by
+              simpa using hsome
+            by_cases hnodup : (fields.map (fun field => field.1)).Nodup
+            · by_cases hall : fields.all (fun field => isWfShape context field.2) = true
+              · simp only [hsomeFalse, hnodup, hall] at hcollect
+                have hfresh : name ∉ context.map Prod.fst := by
+                  intro hmem
+                  have hbin := lookupInfo_isSome_of_mem name context hmem
+                  rw [hsomeFalse] at hbin
+                  simp at hbin
+                have hwf : ∀ shape ∈ fields.map Prod.snd,
+                    isWfShape context shape = true := by
+                  intro shape hmem
+                  obtain ⟨field, hfield, rfl⟩ := List.mem_map.mp hmem
+                  exact List.all_eq_true.mp hall field hfield
+                exact ih ((name, panValueDeclStructInfo context fields) :: context)
+                  context' hcollect
+                  (structInfosOk_cons context name (panValueDeclStructInfo context fields)
+                    hok hnodup hfresh hwf rfl)
+              · simp [hsomeFalse, hnodup, hall] at hcollect
+            · simp [hsomeFalse, hnodup] at hcollect
+      | decl shape name value =>
+          simp only [collectPanValueStructs_cons] at hcollect
+          exact ih context context' hcollect hok
+      | exnDecl exception shape =>
+          simp only [collectPanValueStructs_cons] at hcollect
+          exact ih context context' hcollect hok
+      | function declaration =>
+          simp only [collectPanValueStructs_cons] at hcollect
+          exact ih context context' hcollect hok
+
 /-- Cake's `decs_stcnames_lemma`
     (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4966`): a list of
     declarations that are each either a function or an exception declaration

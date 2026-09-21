@@ -31,6 +31,7 @@ import Flapjack.Test.PanGlobalsFpermParity
 import Flapjack.Test.PanGlobalsFpermDecsParity
 import Flapjack.Test.PanGlobalsNewMainNameParity
 import Flapjack.Test.PanGlobalsDecShapesParity
+import Flapjack.Test.PanGlobalsExpIdsParity
 import Flapjack.Test.PanGlobalsCompileTopForStartParity
 import Flapjack.Test.CrepeDestConstParity
 import Flapjack.Test.CrepeDest2ExpParity
@@ -204,6 +205,7 @@ import Flapjack.Test.RiscVMemOpParity
 import Flapjack.Test.ParsedFullSsaPipeline
 import Flapjack.Test.EndToEndParity
 import Flapjack.Test.RiscVArtifactParity
+import Flapjack.Test.RiscVMemOpParity
 import Flapjack.Test.RiscVRegisterMapParity
 import Flapjack.Test.CakeAllocatorCore
 import Flapjack.Test.CakeFramePolicy
@@ -753,6 +755,7 @@ def main : IO Unit := do
     Flapjack.Test.CakeFramePolicy.runChecks,
     Flapjack.Test.CakeFrameContainment.runChecks,
     Flapjack.Test.WordStackCallParity.runChecks,
+    Flapjack.Test.RiscVMemOpParity.runChecks,
     Flapjack.Test.WordInstNormalizeParity.runChecks,
     Flapjack.Test.CakeForcedParity.runChecks,
     Flapjack.Test.CakeMkBijParity.runChecks,

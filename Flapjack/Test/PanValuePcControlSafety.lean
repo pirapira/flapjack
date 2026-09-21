@@ -1019,6 +1019,7 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_timeout
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_returned
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_extCall_finalFfi
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_extCall_finalFfi_state
 
 /-! Declaration-call counterparts of the direct-call compositional bridges:
     terminal FFI, uncaught raise, and timeout, each preserving explicit

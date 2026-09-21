@@ -511,7 +511,9 @@ def labWordConditionOperands [NeZero width] (operator : Cmp) (condition : Nat)
   | .imm value =>
       if value == 0 then
         match operator with
-        | .test | .notTest => wordConditionOperands operator condition right
+        | .test | .notTest => do
+            let condition ← registerOfNat condition
+            pure (31, 0, [.andi 31 condition (BitVec.ofNat width 0)])
         | _ => do
             let condition ← registerOfNat condition
             pure (condition, 31, [.ori 31 0 (BitVec.ofNat width 0)])

@@ -9274,7 +9274,7 @@ theorem panValuePcCompileCorrect_compact_with_flat_global_evaluator_evidence_sto
     baseAddress topAddress bytesInWord sourceFuel targetFuel hprogram hprogramSafe
     hlookup hevidence
 
-+set_option linter.unusedVariables false in
+set_option linter.unusedVariables false in
 /-- Plain (non-context-coded) state-evidence counterpart of the
     flat-global source-word store correctness wrapper: the raised branch
     and exception-code premises are supplied from explicit state evidence. -/

@@ -1,0 +1,8 @@
+load32=INL LWU
+load16=INL LHU
+load8=INL LBU
+load=INL LD
+store32=INR SW
+store16=INR SH
+store8=INR SB
+store=INR SD

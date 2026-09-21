@@ -1903,4 +1903,42 @@ theorem evalPanValueFfiClockProg_while_broke_some
       some (.control (.normal nextLocals nextGlobals nextMemory nextFfi), bodyClock) := by
   simp [evalPanValueFfiClockProg, hcondition, hnonzero, hclock, hbody]
 
+/-! ## Terminal propagation through `Seq`
+
+When the first component of a `Seq` finishes in a terminal outcome (anything
+other than a normal fall-through), the clocked evaluator returns that outcome
+unchanged.  This is the compositional dual of `evalPanValueFfiClockProg_seq_some`
+and keeps the source state, clock, and FFI configuration visible. -/
+
+theorem evalPanValueFfiClockProg_seq_terminal_some
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (first second : Prog α) (outcome : PanValueFfiClockOutcome α σ) (nextClock : Nat)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (hfirst : evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
+        first ma c mh = some (outcome, nextClock))
+    (hterminal : ∀ l g m f, outcome ≠ .control (.normal l g m f)) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+        (.seq first second) ma c mh = some (outcome, nextClock) := by
+  simp only [evalPanValueFfiClockProg]
+  rw [hfirst]
+  simp only [Option.bind_eq_bind, Option.bind_some]
+  cases outcome with
+  | control result =>
+      cases result with
+      | normal l g m f => exact absurd rfl (hterminal l g m f)
+      | returned l g m f vs => rfl
+      | raised l g m f e => rfl
+      | broke l g m f => rfl
+      | continued l g m f => rfl
+      | finalFfi l g m f event => rfl
+  | timeout l g m f => rfl
+
 end Flapjack

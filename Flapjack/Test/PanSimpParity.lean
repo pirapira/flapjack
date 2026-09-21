@@ -430,6 +430,27 @@ example
   · decide
   · exact hbody
 
+/-- A terminal (non-normal) first component propagates unchanged through `Seq`. -/
+example
+    (hfirst : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1
+      (.raise "E" (.const 1)) none none none =
+      some (.control (.raised (fun _ => none) (fun _ => none) (fun _ => none)
+        evaluatorFfi "E" (.word 1)), 1)) :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 2 (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1
+      (.seq (.raise "E" (.const 1)) (.tick : Prog Nat)) none none none =
+      some (.control (.raised (fun _ => none) (fun _ => none) (fun _ => none)
+        evaluatorFfi "E" (.word 1)), 1) := by
+  exact evalPanValueFfiClockProg_seq_terminal_some evaluatorContext (fun _ _ => none)
+    evaluatorHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none) (fun _ => none)
+    evaluatorFfi 1 (.raise "E" (.const 1)) (.tick : Prog Nat)
+    (.control (.raised (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi "E" (.word 1))) 1 none none none hfirst
+    (by intro l g m f h; cases h)
+
 theorem clocked_seq_normal_exposes_components :
     ∃ (middleLocals middleGlobals : VarName → Option (PanValue Nat))
       (middleMemory : Nat → Option (PanValue Nat)) (middleFfi : FfiState Unit)

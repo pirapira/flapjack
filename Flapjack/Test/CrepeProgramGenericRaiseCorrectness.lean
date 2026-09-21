@@ -3215,6 +3215,8 @@ def runChecks : IO Bool := do
   IO.println "PASS arbitrary ordinary clocked Timeout preserves state relation"
   IO.println "PASS arbitrary ordinary clocked FinalFFI preserves event relation"
   IO.println "PASS arbitrary ordinary clocked Returned preserves values relation"
+  IO.println "PASS arbitrary ordinary clocked Normal preserves state relation"
+  IO.println "PASS arbitrary ordinary clocked Broke preserves label zero"
   IO.println "PASS nested raised semantic/global lookup lift"
   pure true
 

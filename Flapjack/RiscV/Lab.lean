@@ -357,7 +357,11 @@ def labCompilePlain [NeZero width] :
       let destination ← labRegisterOfNat (portToStack destination)
       let temporary ← labRegisterOfNat (portToStack 31)
       pure (labConstInstructions destination zero temporary value.toNat)
-  | .word instruction => (wordInstToInstruction instruction).map List.singleton
+  /- Cake's `riscv_ast (Inst (Const ...))` is list-valued: a Word
+     constant may expand to ORI or a LUI/ADDI sequence.  Keep the Lab
+     boundary on that list-valued API so its stored line length and emitted
+     code cannot diverge. -/
+  | .word instruction => wordInstToInstructionsCake instruction
   | .stackMem operator register base offset => do
       let register ← labRegisterOfNat (portToStack register)
       let base ← labRegisterOfNat (portToStack base)

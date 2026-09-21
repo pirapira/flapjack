@@ -87,6 +87,27 @@ example :
       some [.add 4 5 6] := by
   decide
 
+/- Cake's `riscv_bop_r` table also maps register `Sub`, `And`, and `Or`
+   directly to their RISC-V R-type instructions.  Keep these distinct from
+   the immediate and Word-level guards below. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.arith .sub 4 5 6) [] 0]⟩ =
+      some [.sub 4 5 6] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.arith .and 4 5 6) [] 0]⟩ =
+      some [.and 4 5 6] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.arith .or 4 5 6) [] 0]⟩ =
+      some [.or 4 5 6] := by
+  decide
+
 example :
     compileLabSection (width := 64) { services := [] }
       ⟨3, [.asm (.arithImm .sub 20 20 16) [] 0]⟩ =

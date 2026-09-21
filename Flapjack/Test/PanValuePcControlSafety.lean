@@ -1039,4 +1039,10 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @PanValueProgNotBrokeContinued_store32
 #check @PanValueProgNotBrokeContinued_storeByte
 
+/-! The original Pancake `ExtCall` branch accepts arbitrary word expressions;
+    this generalized context-coded bridge carries their source-word and
+    temporary-slot obligations into `pc_compile_correct`. -/
+#check @panValueCrepProgramStateControlSafe_extCall_wordExp
+#check @panValuePcCompileCorrectWithContextCode_compact_extCall_wordExp
+
 end Flapjack.Test.PanValuePcControlSafety

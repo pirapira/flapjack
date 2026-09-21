@@ -994,5 +994,6 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
     direct call propagates the callee's terminal FFI event unchanged. -/
 #check @panValuePcFinalFfiResultRel_of_clocked_call
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_finalFfi
+#check @panValuePcRaisedResultRelWithContextCode_of_clocked_call
 
 end Flapjack.Test.PanValuePcControlSafety

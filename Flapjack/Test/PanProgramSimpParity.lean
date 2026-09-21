@@ -61,6 +61,23 @@ theorem list_mapM_eq_none_of_mem_fixture :
   list_mapM_eq_none_of_mem (f := fun n : Nat => if n == 4 then none else some (n + 1))
     (x := 4) (xs := [3, 4, 5]) (by decide) (by decide)
 
+/-- `opt_mmap_eq_some_el` (`pan_structsProofScript.sml:19`), reverse direction. -/
+theorem list_mapM_eq_some_iff_fixture :
+    ([3, 5] : List Nat).mapM (fun n => if n == 4 then none else some (n + 1)) =
+      some [4, 6] := by
+  rw [list_mapM_eq_some_iff]
+  refine ⟨by decide, ?_⟩
+  intro n hn
+  have hn' : n < 2 := by simpa using hn
+  have : n = 0 ∨ n = 1 := by omega
+  rcases this with rfl | rfl <;> decide
+
+/-- `opt_mmap_eq_some_el`, forward direction. -/
+theorem list_mapM_eq_some_iff_length_fixture :
+    ([3, 5] : List Nat).length = ([4, 6] : List Nat).length :=
+  ((list_mapM_eq_some_iff (fun n : Nat => if n == 4 then none else some (n + 1)) [3, 5]
+    [4, 6]).mp (by decide)).1
+
 /-! Regression for Cake's `state_rel_imp_evaluate_decls`
     (`pan_simpProofScript.sml:1303-1331`): the declaration-level evaluator
     preserves the state relation whose only non-trivial component simplifies

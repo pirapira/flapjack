@@ -489,6 +489,36 @@ def doSpillEqualDegreeGuard : Bool :=
 
 #guard doSpillEqualDegreeGuard
 
+/- Cake's `do_step` (`reg_allocScript.sml:832-857`) tries simplify before
+   coalescing. With both worklists populated, simplify wins and leaves the
+   available move untouched. -/
+def doStepSimplifyPriorityGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 3 with
+      simpWl := [1]
+      moveRelated := CakeNodeMap.ofNatInfoMap 3 [(1, true), (2, true)]
+      availMovesWl := [(1, (1, 2))] }
+  let (changed, out) := cakeDoStep none 3 state
+  changed && out.stack == [1] && out.simpWl == [] &&
+    out.availMovesWl == [(1, (1, 2))] &&
+    (out.coalesced.get 2).getD 2 == 2
+
+#guard doStepSimplifyPriorityGuard
+
+/- Cake's `unspill` (`reg_allocScript.sml:378-391`) partitions the spill
+   worklist with the HOL reversed-accumulator order, sending newly low-degree,
+   non-move-related nodes to `simpWl`. -/
+def unspillTransitionGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 5 with
+      degrees := CakeNodeMap.ofNatInfoMap 5 [(1, 0), (2, 2), (3, 1)]
+      spillWl := [1, 2, 3] }
+  let out := cakeUnspill 2 state
+  out.spillWl == [2] && out.simpWl == [1, 3] &&
+    out.freezeWl == [] && out.stack == []
+
+#guard unspillTransitionGuard
+
 
 /- The canonical `reg_alloc_probe.out` cost-sensitive case exercises
    `do_spill` with a non-`NONE` source-keyed table and one allocatable colour:
@@ -1124,7 +1154,8 @@ def parityGuard : Bool :=
     && coalesceParentCompressionGuard
     && prefreezeTransitionGuard
     && sortMovesTailSplitGuard && freezeWorklistTransitionGuard &&
-      doSpillEqualDegreeGuard
+      doSpillEqualDegreeGuard && doStepSimplifyPriorityGuard &&
+      unspillTransitionGuard
       && coalesceSelfMoveRejectedGuard
 
 /- The aggregate guard is intentionally disabled while the allocator port is
@@ -1215,7 +1246,8 @@ def runChecks : IO Bool := do
     "respill below-threshold no-op", "do_simplify batch ordering",
     "dec_degree out-of-dimension no-op with outside adjacency",
     "do_coalesce success transition", "do_freeze transition",
-    "do_prefreeze transition", "do_spill equal-degree transition"]
+    "do_prefreeze transition", "do_spill equal-degree transition",
+    "do_step simplify priority", "unspill transition"]
   let mut all := true
   for (name, result) in names.zip results do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"

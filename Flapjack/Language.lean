@@ -666,6 +666,27 @@ theorem withShape_getElem_getElem (shapes : List Shape) (values : List α)
   simp only [withShape_getElem_eq_take_drop shapes values n hvalues hn,
     List.getElem_take, List.getElem_drop]
 
+/-! Counterpart of the length obligation inside Cake's
+    `list_rel_flatten_with_shape_length`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:549`): the `n`-th group
+    produced by `with_shape` has exactly `size_of_shape (EL n sh)` elements. -/
+theorem withShape_getElem_length (shapes : List Shape) (values : List α) (n : Nat)
+    (hvalues : values.length = Shape.shapeSize (.comb shapes))
+    (hn : n < shapes.length) :
+    ((withShape shapes values)[n]'(by rw [withShape_length]; exact hn)).length =
+      Shape.shapeSize (shapes[n]'hn) := by
+  rw [withShape_getElem_eq_take_drop shapes values n hvalues hn, List.length_take]
+  have hdrop : (values.drop (Shape.shapeSize (.comb (shapes.take n)))).length =
+      Shape.shapeSize (.comb (shapes.drop n)) := by
+    have h : Shape.shapeSize (.comb shapes) =
+        Shape.shapeSize (.comb (shapes.take n)) +
+          Shape.shapeSize (.comb (shapes.drop n)) := by
+      simpa [List.take_append_drop] using
+        shapeSize_comb_append (shapes.take n) (shapes.drop n)
+    rw [List.length_drop, hvalues, h, Nat.add_sub_cancel_left]
+  rw [hdrop]
+  exact Nat.min_eq_left (shapeSize_drop_head_le shapes n hn)
+
 def expLocalVars : Exp α → List VarName
   | .const _ => []
   | .var .local name => [name]

@@ -137,6 +137,20 @@ theorem withShape_getElem_getElem_fixture :
     (by simp [oneCombNamed, Shape.shapeSize])
     (by simp [withShape, oneCombNamed, Shape.shapeSize])
 
+theorem withShape_getElem_length_fixture :
+    ((withShape oneCombNamed [1, 2, 3, 4])[1]'(by rw [withShape_length]; decide)).length =
+      Shape.shapeSize (oneCombNamed[1]'(by decide)) :=
+  withShape_getElem_length oneCombNamed [1, 2, 3, 4] 1
+    (by simp [oneCombNamed, Shape.shapeSize]) (by decide)
+
+def withShapeLengthGuard : Bool :=
+  ((withShape oneCombNamed [1, 2, 3, 4])[1]'(by rw [withShape_length]; decide)).length == 2
+
+#eval withShapeLengthGuard
+#guard withShapeLengthGuard
+
+#check @withShape_getElem_length
+
 def withShapeNestedGuard : Bool :=
   (((withShape oneCombNamed [1, 2, 3, 4])[1]'(by rw [withShape_length]; decide))[1]'(by
       simp [withShape, oneCombNamed, Shape.shapeSize]) == (3 : Nat))

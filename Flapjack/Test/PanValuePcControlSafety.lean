@@ -1018,6 +1018,13 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_raised
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_timeout
 
+/-! Declaration-call counterparts of the direct-call compositional bridges:
+    terminal FFI, uncaught raise, and timeout, each preserving explicit
+    state/observation premises. -/
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_finalFfi
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_raised
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_timeout
+
 /-! More compositional source handler-safety leaves: clock, annotation, local
     assignment, and single-word store. -/
 #check @PanValueProgNotBrokeContinued_tick
@@ -1031,5 +1038,11 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @PanValueProgNotBrokeContinued_primitive
 #check @PanValueProgNotBrokeContinued_store32
 #check @PanValueProgNotBrokeContinued_storeByte
+
+/-! The original Pancake `ExtCall` branch accepts arbitrary word expressions;
+    this generalized context-coded bridge carries their source-word and
+    temporary-slot obligations into `pc_compile_correct`. -/
+#check @panValueCrepProgramStateControlSafe_extCall_wordExp
+#check @panValuePcCompileCorrectWithContextCode_compact_extCall_wordExp
 
 end Flapjack.Test.PanValuePcControlSafety

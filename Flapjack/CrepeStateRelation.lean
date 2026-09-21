@@ -100,6 +100,27 @@ theorem panValueCrepLocalsRel_lookup_evidence
   exact ⟨hevidence.1, (readCrepLocals_length crepLocals slots
     (panValueFlatWords value) hevidence.2).symm, hevidence.2⟩
 
+/-! Cake's `locals_rel_wf_shape` (`pan_to_crepProofScript.sml:2345`)
+    transports the well-formed source-value shape through a related local.
+    The current Flapjack relation records the compiled shape match but keeps
+    value well-formedness as an explicit premise, so named-structure contexts
+    remain visible at this boundary. -/
+theorem panValueCrepLocalsRel_wf_shape
+    (structs : StructContext) (context : CompileContext α)
+    (sourceLocals : VarName → Option (PanValue α))
+    (crepLocals : Nat → Option α)
+    (name : VarName) (value : PanValue α)
+    (shape : Shape) (slots : List Nat)
+    (hrel : panValueCrepLocalsRel structs context sourceLocals crepLocals)
+    (hsource : sourceLocals name = some value)
+    (hlookup : lookupInfo name context.vars = some (shape, slots))
+    (hvalue : panValueIsWf structs value = true) :
+    panShapeMatches (panValueShape structs value) shape = true ∧
+      isWfShape structs (panValueShape structs value) = true := by
+  have hevidence := panValueCrepLocalsRel_lookup_evidence structs context
+    sourceLocals crepLocals name value shape slots hrel hsource hlookup
+  exact ⟨hevidence.1, panValueIsWf_isWfShape_panValueShape structs value hvalue⟩
+
 def panValueCrepMemoryRel {α : Type u}
     (sourceMemory : α → Option (PanValue α))
     (crepMemory : α → Option α) : Prop :=

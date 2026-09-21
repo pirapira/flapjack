@@ -16,6 +16,8 @@ open Flapjack
 #check @Flapjack.panEventPrefix_antisymm
 #check @Flapjack.panCrepSemanticAgreement_of_pcCompileCorrect_cross_clock_prefix
 #check @Flapjack.panCrepSemanticAgreement_of_pcCompileCorrectWithContextCode_cross_clock_prefix
+#check @Flapjack.panCrepSemanticAgreement_of_pcCompileCorrectWithContextCode_cross_clock_prefix_from_pairwise_evidence
+#check @Flapjack.panCrepSemanticAgreement_of_pcCompileCorrectWithContextCode_cross_clock_from_pairwise_evidence
 
 example : panEventPrefix ([1] : List Nat) [1, 2] := by
   exact ⟨[2], rfl⟩

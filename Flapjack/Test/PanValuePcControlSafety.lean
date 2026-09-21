@@ -1074,4 +1074,19 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @PanValueProgNotBrokeContinued_shMemLoad
 #check @PanValueProgNotBrokeContinued_shMemStore
 
+/-! A concrete caught-handler body (local assignment then raise) discharges
+    compositionally from the individual source-safety leaves. -/
+example :
+    PanValueProgNotBrokeContinued (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat)
+      (.seq (.assign VarKind.local "x" (.const 9)) (.raise "E" (.const 0))) :=
+  PanValueProgNotBrokeContinued_seq (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+    ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat)
+    (.assign VarKind.local "x" (.const 9)) (.raise "E" (.const 0))
+    (PanValueProgNotBrokeContinued_assign_local (fun _ _ => none)
+      (fun _ _ _ _ _ _ => none) ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat)
+      "x" (.const 9))
+    (PanValueProgNotBrokeContinued_raise (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat) "E" (.const 0))
+
 end Flapjack.Test.PanValuePcControlSafety

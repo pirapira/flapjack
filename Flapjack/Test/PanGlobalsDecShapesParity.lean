@@ -110,4 +110,19 @@ def exceptionEntriesFilterGuard : Bool :=
 #eval exceptionEntriesFilterGuard
 #guard exceptionEntriesFilterGuard
 
+/-! Counterpart of Cake's `not_is_function` (`pan_globalsProofScript.sml:2527`). -/
+def notIsFunctionGuard : Bool :=
+  let declarations : List (Decl Nat) :=
+    [.function
+      { name := "f", inline := false, exported := false, params := [],
+        body := .skip, returnShape := .one },
+     .name "S" [], .exnDecl "E" (.named "T"), .decl .one "h" (.const 9)]
+  declarations.all (fun declaration =>
+    (!isName declaration || !globalDeclIsFunction declaration) &&
+    (!isDecl declaration || !globalDeclIsFunction declaration) &&
+    (!isExnDecl declaration || !globalDeclIsFunction declaration))
+
+#eval notIsFunctionGuard
+#guard notIsFunctionGuard
+
 end Flapjack.Test.PanGlobalsDecShapesParity

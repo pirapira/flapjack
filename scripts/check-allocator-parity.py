@@ -44,6 +44,7 @@ FIXTURES = (
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "loop_body_condition_fuse.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "set_transient_storage_copy_class.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "wide_call_spilled_base.pnk",
+    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "ready_last_argument_permutation.pnk",
 )
 
 

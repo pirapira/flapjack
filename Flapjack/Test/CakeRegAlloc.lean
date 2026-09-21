@@ -314,6 +314,69 @@ def assignStempsTraversalGuard : Bool :=
 
 #guard assignStempsTraversalGuard
 
+/- Cake's `insert_edge` reads both endpoint adjacency lists before writing,
+   inserts both directions, and keeps each list descending without duplicates. -/
+def insertEdgeGuard : Bool :=
+  let adj : CakeNodeMap (List Nat) := CakeNodeMap.ofSize 4
+  let one := cakeInsertEdge 1 3 adj
+  let two := cakeInsertEdge 1 2 one
+  let three := cakeInsertEdge 1 3 two
+  one.get 1 == some [3] &&
+    one.get 3 == some [1] &&
+    two.get 1 == some [3, 2] &&
+    two.get 2 == some [1] &&
+    three.get 1 == some [3, 2] &&
+    three.get 3 == some [1]
+
+#guard insertEdgeGuard
+
+/- Cake's list_insert_edge/clique_insert_edge inserts the tail first and
+   connects every clique pair exactly once. -/
+def cliqueInsertEdgeGuard : Bool :=
+  let listEdges := cakeListInsertEdge 0 [1, 3] (CakeNodeMap.ofSize 4)
+  let clique := cakeCliqueInsertEdge [0, 1, 2] (CakeNodeMap.ofSize 4)
+  listEdges.get 0 == some [3, 1] &&
+    listEdges.get 1 == some [0] &&
+    listEdges.get 3 == some [0] &&
+    clique.get 0 == some [2, 1] &&
+    clique.get 1 == some [2, 0] &&
+    clique.get 2 == some [1, 0]
+
+#guard cliqueInsertEdgeGuard
+
+/- Cake's `dec_degree` decrements exactly the neighbours of a node, saturates
+   at zero, and leaves the source and non-neighbour degrees unchanged. -/
+def decDegreeNeighboursGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      adjLists := CakeNodeMap.ofNatInfoMap 4 [(0, [1, 2])]
+      degrees := CakeNodeMap.ofNatInfoMap 4
+        [(0, 4), (1, 3), (2, 0), (3, 7)] }
+  let out := cakeDecDegree 0 state
+  out.degrees.get 0 == some 4 &&
+    out.degrees.get 1 == some 2 &&
+    out.degrees.get 2 == some 0 &&
+    out.degrees.get 3 == some 7
+
+#guard decDegreeNeighboursGuard
+
+/- Cake's `push_stack` zeroes the pushed node degree, clears its move-related
+   flag, and prepends it to the stack while preserving unrelated state. -/
+def pushStackGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      degrees := CakeNodeMap.ofNatInfoMap 4 [(1, 3), (2, 5)]
+      moveRelated := CakeNodeMap.ofNatInfoMap 4 [(1, true), (2, false)]
+      stack := [2] }
+  let out := cakePushStack 1 state
+  out.degrees.get 1 == some 0 &&
+    out.degrees.get 2 == some 5 &&
+    out.moveRelated.get 1 == some false &&
+    out.moveRelated.get 2 == some false &&
+    out.stack == [1, 2]
+
+#guard pushStackGuard
+
 
 /-! ## IRC graph construction guards
 
@@ -1228,7 +1291,8 @@ def parityGuard : Bool :=
     negBiasedPreferenceGuard && fullConsistencyGuard && canonizeMoveGuard &&
     assignAtempFixedNeighbourGuard && assignStempUnboundColourGuard &&
     assignAtempsHeuristicThenRangeGuard && sortedInsertMemGuard &&
-    firstMatchColGuard && assignStempsTraversalGuard &&
+    firstMatchColGuard && assignStempsTraversalGuard && insertEdgeGuard &&
+    cliqueInsertEdgeGuard && decDegreeNeighboursGuard && pushStackGuard &&
     resetMoveRelatedGuard && removeColoursGuard
     && mapUpdateBoundedGuard && sourceSpillCostKeyGuard &&
     sourceSpillCostRoundTripGuard && sourceMovePhysicalFallbackGuard
@@ -1273,7 +1337,8 @@ def runChecks : IO Bool := do
     negBiasedPreferenceGuard, fullConsistencyGuard, canonizeMoveGuard,
     assignAtempFixedNeighbourGuard, assignStempUnboundColourGuard,
     assignAtempsHeuristicThenRangeGuard, sortedInsertMemGuard,
-    firstMatchColGuard, assignStempsTraversalGuard,
+    firstMatchColGuard, assignStempsTraversalGuard, insertEdgeGuard,
+    cliqueInsertEdgeGuard, decDegreeNeighboursGuard, pushStackGuard,
     resetMoveRelatedGuard,
     removeColoursGuard,
     mapUpdateBoundedGuard,
@@ -1321,7 +1386,8 @@ def runChecks : IO Bool := do
     "negative biased preference", "full consistency", "canonize move",
     "assign_Atemp fixed neighbour", "assign_Stemp unbound colour",
     "assign_Atemps heuristic then range", "sorted_insert/sorted_mem",
-    "first_match_col", "assign_Stemps traversal",
+    "first_match_col", "assign_Stemps traversal", "insert_edge",
+    "clique_insert_edge", "dec_degree neighbours", "push_stack",
     "Cake map updates stay bounded",
     "remove_dead keeps move priority", "remove_dead_prog keeps entry priority",
     "mk_bij uses Cake Patricia Set order", "sort_moves tail split oracle",

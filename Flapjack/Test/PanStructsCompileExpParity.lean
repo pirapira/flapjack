@@ -110,4 +110,14 @@ theorem structCompileExps_eq_map_fixture :
   rw [structCompileExps_eq_map]
   simp [structCompileExp_const]
 
+/- Cake `old_exp_shapes_eq` (`pan_structsProofScript.sml:679`): the list of
+   old expression shapes is the pointwise map of the single-expression
+   shape function. -/
+theorem structOldExpShapes_eq_map_fixture :
+    structOldExpShape.structOldExpShapes context
+        ([.const 1, .var .local "local"] : List (Exp Nat)) =
+      [.one, .comb [.one, .one]] := by
+  rw [structOldExpShapes_eq_map]
+  simp [structOldExpShape, context, lookupInfo]
+
 end Flapjack.Test.PanStructsCompileExpParity

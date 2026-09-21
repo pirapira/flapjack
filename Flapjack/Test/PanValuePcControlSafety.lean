@@ -1153,5 +1153,6 @@ example :
 #check @panValuePcCompileCorrect_compact_ite_word_exp_of_state_evidence_context_code
 #check @panValuePcCompileCorrect_compact_of_constructor_induction
 #check @panValuePcCompileCorrectWithContextCode_compact_of_constructor_induction
+#check @panValuePcCompileCorrect_compact_while_word_exp_of_state_evidence_context_code
 
 end Flapjack.Test.PanValuePcControlSafety

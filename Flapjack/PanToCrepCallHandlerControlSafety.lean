@@ -629,4 +629,122 @@ theorem PanValueProgNotBrokeContinued_dec
                       (hbody fuel (updatePanValueMap locals name valueResult) globals
                         memory bodyResult hbodyEval).2⟩
 
+/-! The clock and annotation leaves cannot expose loop control: they return a
+    normal result unconditionally. -/
+theorem PanValueProgNotBrokeContinued_tick
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) :
+    PanValueProgNotBrokeContinued primitive handler structs functions baseAddress
+      topAddress bytesInWord (.tick : Prog α) := by
+  intro fuel locals globals memory result h
+  cases fuel with
+  | zero => simp [evalPanValueProgWithPrimitiveCallsAndFfi] at h
+  | succ fuel =>
+      simp only [evalPanValueProgWithPrimitiveCallsAndFfi, Option.pure_def,
+        Option.some.injEq] at h
+      subst h
+      exact ⟨fun l g m => by simp, fun l g m => by simp⟩
+
+theorem PanValueProgNotBrokeContinued_annot
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (tag text : String) :
+    PanValueProgNotBrokeContinued primitive handler structs functions baseAddress
+      topAddress bytesInWord (.annot tag text) := by
+  intro fuel locals globals memory result h
+  cases fuel with
+  | zero => simp [evalPanValueProgWithPrimitiveCallsAndFfi] at h
+  | succ fuel =>
+      simp only [evalPanValueProgWithPrimitiveCallsAndFfi, Option.pure_def,
+        Option.some.injEq] at h
+      subst h
+      exact ⟨fun l g m => by simp, fun l g m => by simp⟩
+
+/-! Local assignments cannot expose loop control: they return a normal result
+    or fail. -/
+theorem PanValueProgNotBrokeContinued_assign_local
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (name : VarName) (value : Exp α) :
+    PanValueProgNotBrokeContinued primitive handler structs functions baseAddress
+      topAddress bytesInWord (.assign .local name value) := by
+  intro fuel locals globals memory result h
+  cases fuel with
+  | zero => simp [evalPanValueProgWithPrimitiveCallsAndFfi] at h
+  | succ fuel =>
+      cases hvalue : evalPanValueExp structs locals globals memory baseAddress
+          topAddress bytesInWord value with
+      | none => simp [evalPanValueProgWithPrimitiveCallsAndFfi, hvalue] at h
+      | some valueResult =>
+          by_cases hvalid : panValueAssignmentValid structs locals globals .local
+              name valueResult = true
+          · simp only [evalPanValueProgWithPrimitiveCallsAndFfi, hvalue, hvalid,
+              if_true, Option.bind_eq_bind, Option.bind_some, Option.pure_def,
+              Option.some.injEq] at h
+            subst h
+            exact ⟨fun l g m => by simp, fun l g m => by simp⟩
+          · simp [evalPanValueProgWithPrimitiveCallsAndFfi, hvalue, hvalid] at h
+
+/-! A single-word store writes memory and returns normally (or fails on a
+    non-word address), so it never exposes a loop label. -/
+theorem PanValueProgNotBrokeContinued_store
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (address value : Exp α) :
+    PanValueProgNotBrokeContinued primitive handler structs functions baseAddress
+      topAddress bytesInWord (.store address value) := by
+  intro fuel locals globals memory result h
+  cases fuel with
+  | zero => simp [evalPanValueProgWithPrimitiveCallsAndFfi] at h
+  | succ fuel =>
+      cases haddress : evalPanValueExp structs locals globals memory baseAddress
+          topAddress bytesInWord address with
+      | none => simp [evalPanValueProgWithPrimitiveCallsAndFfi, haddress] at h
+      | some addressResult =>
+          cases hvalue : evalPanValueExp structs locals globals memory baseAddress
+              topAddress bytesInWord value with
+          | none =>
+              simp [evalPanValueProgWithPrimitiveCallsAndFfi, haddress, hvalue] at h
+          | some storedValue =>
+              cases addressResult with
+              | word addressValue =>
+                  cases hstore : panValueStoreWithAccess memory bytesInWord
+                      addressValue storedValue none with
+                  | none =>
+                      simp [evalPanValueProgWithPrimitiveCallsAndFfi, haddress,
+                        hvalue, hstore] at h
+                  | some memory' =>
+                      simp only [evalPanValueProgWithPrimitiveCallsAndFfi, haddress,
+                        hvalue, hstore, Option.bind_eq_bind, Option.bind_some,
+                        Option.pure_def, Option.some.injEq] at h
+                      subst h
+                      exact ⟨fun l g m => by simp, fun l g m => by simp⟩
+              | rStruct fields =>
+                  simp [evalPanValueProgWithPrimitiveCallsAndFfi, haddress,
+                    hvalue] at h
+              | nStruct structName fields =>
+                  simp [evalPanValueProgWithPrimitiveCallsAndFfi, haddress,
+                    hvalue] at h
+
 end Flapjack

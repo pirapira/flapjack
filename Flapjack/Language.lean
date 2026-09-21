@@ -751,6 +751,38 @@ theorem mem_lt_foldr_max_add (values : List Nat) (x n m : Nat)
         have hmax : tail.foldr max n ≤ max head (tail.foldr max n) := Nat.le_max_right _ _
         omega
 
+/-- Cake's `mem_genlist_add_suc_val` (`pan_commonPropsScript.sml:234`):
+    every value in `GENLIST (SUC · + k) n` lies in the interval `(k, n + k]`. -/
+theorem mem_genlist_add_suc_val (n x k : Nat) :
+    x ∈ (List.range n).map (fun i => i + 1 + k) → k < x ∧ x ≤ n + k := by
+  intro hx
+  obtain ⟨i, hi, rfl⟩ := List.mem_map.mp hx
+  rw [List.mem_range] at hi
+  omega
+
+/-- Cake's `genlist_distinct_max` (`pan_commonPropsScript.sml:208`): a
+    `GENLIST` starting just above `m` is disjoint from any list bounded by
+    `m`. -/
+theorem genlist_distinct_max (n m : Nat) (ys : List Nat)
+    (hys : ∀ y, y ∈ ys → y ≤ m) :
+    ListDisjoint ((List.range n).map (fun i => i + 1 + m)) ys := by
+  intro value hx hy
+  obtain ⟨i, hi, rfl⟩ := List.mem_map.mp hx
+  rw [List.mem_range] at hi
+  have := hys _ hy
+  omega
+
+/-- Cake's `genlist_distinct_max'` (`pan_commonPropsScript.sml:221`): the
+    `m + p` variant of `genlist_distinct_max`. -/
+theorem genlist_distinct_max' (n m p : Nat) (ys : List Nat)
+    (hys : ∀ y, y ∈ ys → y ≤ m) :
+    ListDisjoint ((List.range n).map (fun i => i + 1 + (m + p))) ys := by
+  intro value hx hy
+  obtain ⟨i, hi, rfl⟩ := List.mem_map.mp hx
+  rw [List.mem_range] at hi
+  have := hys _ hy
+  omega
+
 /-! Counterpart of Cake's `all_distinct_with_shape_distinct`
     (`cakeml/pancake/semantics/panPropsScript.sml:357`): two distinct members of
     the flat-value split are disjoint.  Cake's extra hypotheses `x <> []` and

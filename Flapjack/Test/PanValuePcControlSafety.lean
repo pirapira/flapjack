@@ -1056,6 +1056,11 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_timeout
 #check @panValuePcCompileCorrect_of_context_code_and_clocked_decCall_timeout
 
+/-! Declaration-call result theorem for the `shape_of v ≠ return_sh` sub-case:
+    a declaration call whose callee returns a wrong-shaped value evaluates to
+    `none`, so the source side of Cake's `DecCall` resume is vacuous. -/
+#check @evalPanValueFfiClockProg_decCall_shape_mismatch
+
 /-! More compositional source handler-safety leaves: clock, annotation, local
     assignment, and single-word store. -/
 #check @PanValueProgNotBrokeContinued_tick

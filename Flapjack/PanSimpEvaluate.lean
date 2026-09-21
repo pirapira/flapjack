@@ -1227,4 +1227,83 @@ theorem evalPanValueFfiClockProg_seqAssoc_eq_of_skipSeqProg
       (panSimpSeqSkipFragment_of_skipSeqProg hprogram)
     omega
 
+/-! ## `retToTail` on the `Skip`/`Seq` fragment
+
+`retToTail` only rewrites `Call`/`Return` tail-call shapes, so on the
+`Skip`/`Seq` fragment it is the identity.  Consequently the full `pan_simp`
+program transform `panSimpProg = retToTail (seqAssoc .skip)` collapses to the
+sequence reassociation on the fragment, and Cake's `compile_correct_same_state`
+holds there with the same structural fuel budget. -/
+
+theorem PanSimpSeqSkipFragment_retToTail {program : Prog α}
+    (hfrag : PanSimpSeqSkipFragment program) : retToTail program = program := by
+  induction hfrag with
+  | skip => simp [retToTail]
+  | seq first second hfirst hsecond ihfirst ihsecond =>
+      rw [retToTail.eq_3, ihfirst, ihsecond]
+      cases hfirst <;> simp [seqCallRet]
+
+theorem evalPanValueFfiClockProg_retToTail_eq_of_seqSkipFragment
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (program : Prog α) (fuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (hprogram : PanSimpSeqSkipFragment program) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
+        (retToTail program) ma c mh =
+      evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
+        program ma c mh := by
+  rw [PanSimpSeqSkipFragment_retToTail hprogram]
+
+theorem evalPanValueFfiClockProg_panSimpProg_eq_of_seqSkipFragment
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (program : Prog α) (commonFuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (hprogram : PanSimpSeqSkipFragment program)
+    (hcompiledFuel : panSimpSeqSkipFuel (panSimpProg program) ≤ commonFuel)
+    (hsourceFuel : panSimpSeqSkipFuel program ≤ commonFuel) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord commonFuel locals globals memory ffi
+        clock (panSimpProg program) ma c mh =
+      evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord commonFuel locals globals memory ffi
+        clock program ma c mh := by
+  have hseq : PanSimpSeqSkipFragment (seqAssoc (.skip : Prog α) program) :=
+    PanSimpSeqSkipFragment_seqAssoc hprogram (.skip : Prog α)
+      PanSimpSeqSkipFragment.skip
+  have hid : retToTail (seqAssoc (.skip : Prog α) program) =
+      seqAssoc (.skip : Prog α) program :=
+    PanSimpSeqSkipFragment_retToTail hseq
+  simp only [panSimpProg] at hcompiledFuel ⊢
+  rw [hid] at hcompiledFuel ⊢
+  rw [evalPanValueFfiClockProg_seqSkipFragment_some context primitive handler structs
+        functions baseAddress topAddress bytesInWord commonFuel locals globals memory
+        ffi clock (seqAssoc (.skip : Prog α) program) ma c mh hseq hcompiledFuel,
+      evalPanValueFfiClockProg_seqSkipFragment_some context primitive handler structs
+        functions baseAddress topAddress bytesInWord commonFuel locals globals memory
+        ffi clock program ma c mh hprogram hsourceFuel]
+
 end Flapjack

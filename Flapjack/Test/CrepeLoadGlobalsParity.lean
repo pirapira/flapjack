@@ -91,6 +91,46 @@ theorem crepAssignedFreeVars_nestedSeq_storeGlobals_fixture :
   crepAssignedFreeVars_nestedSeq_storeGlobals (α := Nat) 3 1
     [CrepExp.const 7, CrepExp.const 8]
 
+/-- Cake `crepProps$assigned_vars_nested_decs_append` on a concrete list. -/
+theorem crepAssignedVars_nestedDecs_append_fixture :
+    crepAssignedVars
+        (nestedDecs [2, 5] [CrepExp.const 1, CrepExp.const 2] CrepProg.skip) =
+      [2, 5] := by
+  simpa [crepAssignedVars] using crepAssignedVars_nestedDecs_append (α := Nat) [2, 5]
+    [CrepExp.const 1, CrepExp.const 2] CrepProg.skip rfl
+
+/-- Cake `crepProps$assigned_free_vars_nested_decs_append` on a concrete list. -/
+theorem crepAssignedFreeVars_nestedDecs_append_fixture :
+    crepAssignedFreeVars
+        (nestedDecs [2, 5] [CrepExp.const 1, CrepExp.const 2] CrepProg.skip) =
+      [] := by
+  simpa [crepAssignedFreeVars] using crepAssignedFreeVars_nestedDecs_append (α := Nat) [2, 5]
+    [CrepExp.const 1, CrepExp.const 2] CrepProg.skip rfl
+
+/-- Cake `crepProps$nested_seq_assigned_vars_eq` on a concrete list. -/
+theorem crepAssignedVars_nestedSeq_assign_zipWith_fixture :
+    crepAssignedVars
+        (crepNestedSeq
+          (([2, 5] : List Nat).zipWith (fun name value => CrepProg.assign name value)
+            ([CrepExp.const 1, CrepExp.const 2] : List (CrepExp Nat)))) =
+      [2, 5] :=
+  crepAssignedVars_nestedSeq_assign_zipWith (α := Nat) [2, 5]
+    [CrepExp.const 1, CrepExp.const 2] rfl
+
+/-- Cake `crepProps$assigned_vars_seq_store_empty` on a concrete store list. -/
+theorem crepAssignedVars_nestedSeq_stores_fixture :
+    crepAssignedVars
+        (crepNestedSeq (stores (CrepExp.const 3) [CrepExp.const 7] 0 1)) = [] :=
+  crepAssignedVars_nestedSeq_stores (α := Nat) (CrepExp.const 3)
+    [CrepExp.const 7] 0 1
+
+/-- Cake `crepProps$assigned_vars_store_globals_empty` on a concrete list. -/
+theorem crepAssignedVars_nestedSeq_storeGlobals_fixture :
+    crepAssignedVars
+        (crepNestedSeq (storeGlobals 3 1 [CrepExp.const 7, CrepExp.const 8])) = [] :=
+  crepAssignedVars_nestedSeq_storeGlobals (α := Nat) 3 1
+    [CrepExp.const 7, CrepExp.const 8]
+
 def runChecks : IO Bool := do
   let results := [
     isEmpty (loadGlobals 3 1 0),

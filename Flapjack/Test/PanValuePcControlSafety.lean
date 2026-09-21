@@ -1033,6 +1033,8 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_finalFfi
 #check @panValuePcRaisedResultRelWithContextCode_of_clocked_call
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_raised_no_handler
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_returned_no_handler
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_returned_destination
 /-! Compositional source handler safety: a handler-free call and a declaration
     body that never exposes loop control. -/
 #check @PanValueProgNotBrokeContinued_call_of_no_handler
@@ -1052,6 +1054,17 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @panValuePcCompileCorrectWithContextCode_of_compact_and_caught_call
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_raised
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_timeout
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_returned
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_extCall_finalFfi
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_extCall_finalFfi_state
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_extCall_finalFfi_stateful
+
+/-! Declaration-call counterparts of the direct-call compositional bridges:
+    terminal FFI, uncaught raise, and timeout, each preserving explicit
+    state/observation premises. -/
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_finalFfi
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_raised
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_timeout
 
 /-! More compositional source handler-safety leaves: clock, annotation, local
     assignment, and single-word store. -/
@@ -1067,6 +1080,11 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @PanValueProgNotBrokeContinued_store32
 #check @PanValueProgNotBrokeContinued_storeByte
 
+/-! The original Pancake `ExtCall` branch accepts arbitrary word expressions;
+    this generalized context-coded bridge carries their source-word and
+    temporary-slot obligations into `pc_compile_correct`. -/
+#check @panValueCrepProgramStateControlSafe_extCall_wordExp
+#check @panValuePcCompileCorrectWithContextCode_compact_extCall_wordExp
 
 /-! More source handler-safety leaves: external calls and shared-memory
     load/store. -/

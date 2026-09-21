@@ -3110,6 +3110,74 @@ theorem evalPanValueFfiClockProg_call_caught_handler_of_functions_progCallFuel
     (.call (some (none, some (caught, handlerVariable, handlerProgram))) function arguments)
     ma c mh (by omega) hrun
 
+/-- Call-aware budget form of the normal-handler caught-call adequacy. -/
+theorem evalPanValueFfiClockProg_call_caught_handler_normal_of_functions_progCallFuel
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (function : FunName) (arguments : List (Exp α))
+    (parameters : List VarName) (body : Prog α) (values : List (PanValue α))
+    (calleeLocals : VarName → Option (PanValue α))
+    (caught exception : ExceptionId) (handlerVariable : VarName)
+    (handlerProgram : Prog α)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (hfunctions : PanValueFfiClockFunctionsRaiseAsSucceed context primitive handler
+      structs functions baseAddress topAddress bytesInWord ma c mh exception)
+    (hhandler : PanValueFfiClockHandlerNormalSucceed context primitive handler structs
+      functions baseAddress topAddress bytesInWord ma c mh)
+    (hbudget : max (progSize body) (progSize handlerProgram) + 1 ≤ callBudget)
+    (hargs : evalPanValueExps structs locals globals memory baseAddress topAddress
+      bytesInWord arguments (memoryAccess := ma) = some values)
+    (hlookup : lookupPanFunction function functions = some (parameters, body))
+    (hbind : bindPanValueParameters parameters values = some calleeLocals)
+    (hclock : clock ≠ 0)
+    (hparams : panValueParametersValid structs c function values = true)
+    (hcaught : caught = exception)
+    (hhandlerValid : ∀ (value : PanValue α),
+      panValueExceptionValid structs c exception value = true →
+      panValuePayloadWithinLimit structs value = true →
+      panValueHandlerValid structs c locals handlerVariable value = true) :
+    ∃ (finalLocals finalGlobals : VarName → Option (PanValue α))
+      (finalMemory : α → Option (PanValue α)) (finalFfi : FfiState σ) (finalClock : Nat),
+      evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord
+        (progCallFuel callBudget
+          (.call (some (none, some (caught, handlerVariable, handlerProgram)))
+            function arguments)) locals globals memory ffi clock
+        (.call (some (none, some (caught, handlerVariable, handlerProgram))) function
+          arguments) ma c mh =
+      some (.control (.normal finalLocals finalGlobals finalMemory finalFfi),
+        finalClock) := by
+  obtain ⟨finalLocals, finalGlobals, finalMemory, finalFfi, finalClock, hrun⟩ :=
+    evalPanValueFfiClockProg_call_caught_handler_normal_of_functions context primitive
+      handler structs functions baseAddress topAddress bytesInWord locals globals memory
+      ffi clock function arguments parameters body values calleeLocals caught exception
+      handlerVariable handlerProgram ma c mh hfunctions hhandler hargs hlookup hbind
+      hclock hparams hcaught hhandlerValid
+  refine ⟨finalLocals, finalGlobals, finalMemory, finalFfi, finalClock, ?_⟩
+  have hsize : progCallFuel callBudget
+      (.call (some (none, some (caught, handlerVariable, handlerProgram))) function
+        arguments) =
+      1 + max callBudget (progCallFuel callBudget handlerProgram) := by
+    simp [progCallFuel]
+  rw [hsize]
+  have hle : callBudget ≤ max callBudget (progCallFuel callBudget handlerProgram) :=
+    Nat.le_max_left _ _
+  exact evalPanValueFfiClockProg_fuel_mono context primitive handler structs functions
+    baseAddress topAddress bytesInWord
+    (fuel := max (progSize body) (progSize handlerProgram) + 2)
+    (fuel' := 1 + max callBudget (progCallFuel callBudget handlerProgram))
+    locals globals memory ffi clock
+    (.call (some (none, some (caught, handlerVariable, handlerProgram))) function arguments)
+    ma c mh (by omega) hrun
+
 theorem evalPanValueFfiClockProg_decCall_returned_some
     (context : PanValueFfiContext α)
     (primitive : PanPrimitiveHandler α)

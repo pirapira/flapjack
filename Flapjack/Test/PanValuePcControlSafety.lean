@@ -1294,4 +1294,38 @@ example
 #check @panValuePcCompileCorrect_compact_statefulCompact_canonical_globals
 #check @panValuePcCompileCorrect_compact_statefulCompact_context_code
 
+/-! The scalar `wordExp` return also satisfies the control-safety obligation,
+via the `SourceWordExp` conversion. -/
+example
+    (hbytesInWord : ∀ (context : CompileContext Nat) (bytesInWord : Nat),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext Nat)
+      (sourceLocals : VarName → Option (PanValue Nat))
+      (name : VarName) (value : PanValue Nat),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot])) :
+    PanValueCrepProgramStateControlSafe (.return (.const 7)) :=
+  panValueCrepProgramStateControlSafe_return_wordExp (.const 7) trivial
+    hbytesInWord hlookup
+
+/-! The scalar `wordExp` conditional and while cases also lift. -/
+example
+    (hbytesInWord : ∀ (context : CompileContext Nat) (bytesInWord : Nat),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext Nat)
+      (sourceLocals : VarName → Option (PanValue Nat))
+      (name : VarName) (value : PanValue Nat),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot])) :
+    PanValueCrepProgramStateControlSafe
+      (.ite (.const 5) (.return (.const 7)) (.tick : Prog Nat)) :=
+  panValueCrepProgramStateControlSafe_ite_wordExp (.const 5) trivial
+    (.return (.const 7)) (.tick : Prog Nat)
+    (panValueCrepProgramStateControlSafe_return_wordExp (.const 7) trivial
+      hbytesInWord hlookup)
+    panValueCrepProgramStateControlSafe_tick
+    hbytesInWord hlookup
+
+#check @panValueCrepProgramStateControlSafe_while_wordExp
+
 end Flapjack.Test.PanValuePcControlSafety

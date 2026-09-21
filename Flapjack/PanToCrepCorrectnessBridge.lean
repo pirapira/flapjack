@@ -9,7 +9,6 @@ import Flapjack.CrepeSourceWordRecordRaiseCorrectness
 import Flapjack.CrepeProgramExtCallCorrectness
 import Flapjack.CrepeWordExtCallProgramCase
 import Flapjack.PanValueFfiClockProjection
-import Flapjack.PanSimpEvaluate
 import Flapjack.CrepeDeclarationRestorationRelation
 import Flapjack.CrepeRaisedCallInversion
 
@@ -30311,113 +30310,6 @@ theorem panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call
     rfl
   · simp [panValuePcResultRelWithContextCode, panValuePcResultRel, hstate,
       hvalues]
-
-/-! Cake's `Call_TailCall` branch is the result of `seqCallRet` changing an
-    assigning call followed by `Return (Var returnName)` into a destination-free
-    call.  The evaluator fusion equation is kept as an explicit premise here:
-    this bridge packages it with the existing destination-free call-return
-    correctness boundary and exposes both source shapes at one common fuel. -/
-theorem panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_tailCall_fusion
-    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (program : Prog α)
-    (sourceEvaluate : PanValuePcEvaluator α)
-    (targetEvaluate : CrepPcEvaluator α)
-    (codeRel : PanValuePcCodeRel α)
-    (excpRel : PanValuePcExceptionShapeRel α)
-    (exceptionCode : ExceptionId → Option α)
-    (globalsLookup : CrepState α → PanValue α → Option (List α))
-    (hcompact : PanValuePcCompileCorrectWithContextCode sourceEvaluate
-      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
-    (clockStructs : StructContext) (clockPcContext : CompileContext α)
-    (clockExceptionRel : ExceptionId → PanValue α → α → Prop)
-    (clockExceptionCode : ExceptionId → Option α)
-    (clockGlobalsLookup : CrepState α → PanValue α → Option (List α))
-    (clockContext : PanValueFfiContext α)
-    (clockPrimitive : PanPrimitiveHandler α)
-    (clockHandler : PanValueStatefulFfiHandler α σ)
-    (clockFunctions : List (FunName × List VarName × Prog α))
-    (clockBaseAddress clockTopAddress clockBytesInWord : α)
-    (fuel clock callClock : Nat)
-    (clockLocals clockGlobals : VarName → Option (PanValue α))
-    (clockMemory : α → Option (PanValue α)) (clockFfi : FfiState σ)
-    (function : FunName) (arguments : List (Exp α))
-    (returnName : VarName) (values : List (PanValue α))
-    (nextGlobals : VarName → Option (PanValue α))
-    (nextMemory : α → Option (PanValue α)) (nextFfi : FfiState σ)
-    (targetState : CrepState α) (targetValues : List α)
-    (hcall : evalPanValueFfiClockCall clockContext clockPrimitive clockHandler
-      clockStructs clockFunctions clockBaseAddress clockTopAddress
-      clockBytesInWord fuel clockLocals clockGlobals clockMemory clockFfi clock
-      none function arguments =
-      some (.control (.returned (fun _ => none) nextGlobals nextMemory nextFfi
-        values), callClock))
-    (hcallAtFusionFuel :
-      evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
-        clockStructs clockFunctions clockBaseAddress clockTopAddress
-        clockBytesInWord (fuel + 3) clockLocals clockGlobals clockMemory clockFfi
-        clock (.call none function arguments) =
-        some (.control (.returned (fun _ => none) nextGlobals nextMemory nextFfi
-          values), callClock))
-    (hstate : panValueCrepStateRel clockStructs clockPcContext
-      (fun _ => none) nextGlobals nextMemory targetState)
-    (hvalues : panValueCrepValuesRel values targetValues)
-    (hfusion :
-      evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
-        clockStructs clockFunctions clockBaseAddress clockTopAddress
-        clockBytesInWord (fuel + 3) clockLocals clockGlobals clockMemory clockFfi
-        clock (.seq
-          (.call (some (some (.local, returnName), none)) function arguments)
-          (.return (.var .local returnName))) =
-      evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
-        clockStructs clockFunctions clockBaseAddress clockTopAddress
-        clockBytesInWord (fuel + 3) clockLocals clockGlobals clockMemory clockFfi
-        clock (.call none function arguments)) :
-    PanValuePcCompileCorrectWithContextCode sourceEvaluate targetEvaluate
-      codeRel excpRel exceptionCode globalsLookup program ∧
-    evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
-      clockStructs clockFunctions clockBaseAddress clockTopAddress
-      clockBytesInWord (fuel + 3) clockLocals clockGlobals clockMemory clockFfi
-      clock (.call none function arguments) =
-      some (.control (.returned (fun _ => none) nextGlobals nextMemory nextFfi
-        values), callClock) ∧
-    evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
-      clockStructs clockFunctions clockBaseAddress clockTopAddress
-      clockBytesInWord (fuel + 3) clockLocals clockGlobals clockMemory clockFfi
-      clock (.seq
-        (.call (some (some (.local, returnName), none)) function arguments)
-        (.return (.var .local returnName))) =
-      some (.control (.returned (fun _ => none) nextGlobals nextMemory nextFfi
-        values), callClock) ∧
-    (evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
-      clockStructs clockFunctions clockBaseAddress clockTopAddress
-      clockBytesInWord (fuel + 3) clockLocals clockGlobals clockMemory clockFfi
-      clock (.seq
-        (.call (some (some (.local, returnName), none)) function arguments)
-        (.return (.var .local returnName)))).map
-      panValueFfiClockResultProjection =
-      some (.returned (fun _ => none) nextGlobals nextMemory nextFfi values
-        callClock) ∧
-    panValuePcResultRelWithContextCode clockStructs clockPcContext
-      clockExceptionRel clockExceptionCode clockGlobalsLookup
-      (.returned (fun _ => none) nextGlobals nextMemory values)
-      (.returned targetState targetValues) := by
-  have hreturned :=
-    panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_returned_no_handler
-      program sourceEvaluate targetEvaluate codeRel excpRel exceptionCode
-      globalsLookup hcompact clockStructs clockPcContext clockExceptionRel
-      clockExceptionCode clockGlobalsLookup clockContext clockPrimitive
-      clockHandler clockFunctions clockBaseAddress clockTopAddress
-      clockBytesInWord fuel clock callClock clockLocals clockGlobals clockMemory
-      clockFfi function arguments values nextGlobals nextMemory nextFfi targetState
-      targetValues hcall hstate hvalues
-  refine ⟨hcompact, hcallAtFusionFuel, ?_, ?_, hreturned.2.2.2⟩
-  · rw [hfusion]
-    exact hcallAtFusionFuel
-  · rw [hfusion, hcallAtFusionFuel]
-    rfl
 
 /-! The destination-bearing `Call_Ret_Return` branch installs the callee's
     returned state in the caller.  The exact assigned locals/globals relation

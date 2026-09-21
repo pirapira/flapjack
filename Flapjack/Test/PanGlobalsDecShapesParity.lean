@@ -522,4 +522,14 @@ def structEidsGuard : Bool :=
 #eval structEidsGuard
 #guard structEidsGuard
 
+/-! Cake's `size_of_eids_compile_top`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:364`). -/
+
+def eidsTopDecls : List (Decl Nat) := [compileDeclF, .exnDecl "E" .one]
+
+example (compiled : List (Decl Nat))
+    (hcompile : globalCompileTopForStart 8 id eidsTopDecls "f" = some compiled) :
+    sizeOfEids compiled = sizeOfEids eidsTopDecls :=
+  globalCompileTopForStart_sizeOfEids 8 id eidsTopDecls "f" compiled hcompile
+
 end Flapjack.Test.PanGlobalsDecShapesParity

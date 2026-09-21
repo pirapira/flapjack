@@ -1155,11 +1155,63 @@ def wordExpReadVarsFastAcc : WordExp α → List Nat → List Nat
 def wordExpReadVarsFast (expression : WordExp α) : List Nat :=
   wordExpReadVarsFastAcc expression []
 
+def wordInstReadVarsFastAcc {α : Type u} : WordInst α → List Nat → List Nat
+  | .arith operation, tail =>
+      match operation with
+      | .longMul _ _ sourceLeft sourceRight => sourceLeft :: sourceRight :: tail
+      | .longDiv _ _ sourceLeft sourceRight quotient =>
+          sourceLeft :: sourceRight :: quotient :: tail
+      | .addCarry _ _ sourceLeft sourceRight carryIn =>
+          sourceLeft :: sourceRight :: carryIn :: tail
+      | .cakeAddCarry _ sourceLeft sourceRight carry =>
+          sourceLeft :: sourceRight :: carry :: tail
+      | .div _ dividend divisor => dividend :: divisor :: tail
+      | .binOp _ _ sourceLeft sourceRight =>
+          sourceLeft :: match sourceRight with
+            | .reg register => register :: tail
+            | .imm _ => tail
+      | .shift _ _ sourceLeft sourceRight =>
+          sourceLeft :: match sourceRight with
+            | .reg register => register :: tail
+            | .imm _ => tail
+  | .const _ _, tail => tail
+  | .mem operator destination address, tail =>
+      match operator with
+      | .load | .load8 | .load16 | .load32 => address :: tail
+      | .store | .store8 | .store16 | .store32 => destination :: address :: tail
+  | .memOffset operator destination address _, tail =>
+      match operator with
+      | .load | .load8 | .load16 | .load32 => address :: tail
+      | .store | .store8 | .store16 | .store32 => destination :: address :: tail
+
+def wordInstWriteVarsFastAcc {α : Type u} : WordInst α → List Nat → List Nat
+  | .arith operation, tail =>
+      match operation with
+      | .longMul destinationLeft destinationRight _ _ =>
+          destinationLeft :: destinationRight :: tail
+      | .longDiv destinationLeft destinationRight _ _ _ =>
+          destinationLeft :: destinationRight :: tail
+      | .addCarry destination resultCarry _ _ _ =>
+          destination :: resultCarry :: tail
+      | .cakeAddCarry destination _ _ carry => destination :: carry :: tail
+      | .div destination _ _ => destination :: tail
+      | .binOp _ destination _ _ => destination :: tail
+      | .shift _ destination _ _ => destination :: tail
+  | .const destination _, tail => destination :: tail
+  | .mem operator destination _, tail =>
+      match operator with
+      | .load | .load8 | .load16 | .load32 => destination :: tail
+      | .store | .store8 | .store16 | .store32 => tail
+  | .memOffset operator destination _ _, tail =>
+      match operator with
+      | .load | .load8 | .load16 | .load32 => destination :: tail
+      | .store | .store8 | .store16 | .store32 => tail
+
 def wordProgReadVarsFastAcc : WordProg α → List Nat → List Nat
   | .skip, tail => tail
   | .move _ moves, tail => moves.foldr (fun move rest => move.2 :: rest) tail
   | .assign _ value, tail => wordExpReadVarsFastAcc value tail
-  | .inst instruction, tail => wordListAppendAcc (wordInstReadVars instruction) tail
+  | .inst instruction, tail => wordInstReadVarsFastAcc instruction tail
   | .get _ _, tail => tail
   | .store address value, tail =>
       wordExpReadVarsFastAcc address (value :: tail)
@@ -1264,7 +1316,7 @@ def wordProgWriteVarsFastAcc : WordProg α → List Nat → List Nat
   | .move _ moves, tail =>
       moves.foldr (fun move rest => move.1 :: rest) tail
   | .assign name _, tail => name :: tail
-  | .inst instruction, tail => wordListAppendAcc (wordInstWriteVars instruction) tail
+  | .inst instruction, tail => wordInstWriteVarsFastAcc instruction tail
   | .seq first second, tail =>
       wordProgWriteVarsFastAcc first (wordProgWriteVarsFastAcc second tail)
   | .ite _ _ _ thenBranch elseBranch, tail =>
@@ -1525,8 +1577,8 @@ def wordProgLiveBefore (program : WordProg α) (liveAfter : List Nat) : List Nat
    prefix list at every nested call.  Keep the public equation above unchanged
    for the proof-facing allocator interface. -/
 def wordProgLiveBeforeFast (program : WordProg α) (liveAfter : List Nat) : List Nat :=
-  wordProgReadVarsFast program ++
-    liveAfter.filter (fun name => name ∉ wordProgWriteVarsFast program)
+  wordProgReadVarsFastAcc program
+    (liveAfter.filter (fun name => name ∉ wordProgWriteVarsFast program))
 
 def wordListUnion (left right : List Nat) : List Nat :=
   (left ++ right).eraseDups

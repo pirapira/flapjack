@@ -1492,4 +1492,24 @@ theorem globalCompileDecs_functions_localised [BEq String] [Add α] [Mul α]
   rw [hentry]
   simpa using hlocalised
 
+theorem globalCompileInitializers_localised [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations : List (Decl α)) :
+    ∀ initializer ∈ globalCompileInitializers context declarations,
+      localisedProg initializer := by
+  induction declarations generalizing context with
+  | nil => simp [globalCompileInitializers]
+  | cons declaration declarations ih =>
+      cases declaration with
+      | decl shape name value =>
+          simp only [globalCompileInitializers, List.mem_cons]
+          intro initializer hmem
+          rcases hmem with rfl | hmem
+          · refine ⟨?_, globalCompileExp_localised context value⟩
+            simp [localisedExp, expGlobalVars, expGlobalVars.expGlobalVarsList]
+          · exact ih _ initializer hmem
+      | function function => simpa [globalCompileInitializers] using ih context
+      | exnDecl exception shape => simpa [globalCompileInitializers] using ih context
+      | name struct fields => simpa [globalCompileInitializers] using ih context
+
+
 end Flapjack

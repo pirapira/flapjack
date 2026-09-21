@@ -109,5 +109,15 @@ def globalCompileDecsLocalisedGuard : Bool :=
 #eval globalCompileDecsLocalisedGuard
 #guard globalCompileDecsLocalisedGuard
 
+theorem globalCompileInitializers_localised_fixture :
+    ∀ initializer ∈ globalCompileInitializers compileContext compileDecsCode,
+      localisedProg initializer :=
+  globalCompileInitializers_localised compileContext compileDecsCode
+
+def globalCompileInitializersLocalisedGuard : Bool :=
+  (globalCompileInitializers compileContext compileDecsCode).length == 1
+
+#eval globalCompileInitializersLocalisedGuard
+#guard globalCompileInitializersLocalisedGuard
 
 end Flapjack

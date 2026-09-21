@@ -258,6 +258,38 @@ theorem list_mapM_getElem? {α β : Type} (f : α → Option β) (xs : List α)
     rw [List.getElem?_eq_none hxsn, List.getElem?_eq_none (by omega)]
     rfl
 
+/-- Cake's `opt_mmap_mem_defined` (`pan_commonPropsScript.sml:59`): a
+    successful `OPT_MMAP` contains the image of every successful element map. -/
+theorem list_mapM_mem_defined {α β : Type} (f : α → Option β) {x : α} {xs : List α}
+    {e : β} {ys : List β} (h : xs.mapM f = some ys) (hx : x ∈ xs)
+    (hf : f x = some e) : e ∈ ys := by
+  obtain ⟨n, hn⟩ := List.mem_iff_getElem?.mp hx
+  have hpoint := list_mapM_getElem? f xs ys h n
+  rw [hn] at hpoint
+  rw [Option.bind_some] at hpoint
+  rw [hf] at hpoint
+  exact List.mem_of_getElem? hpoint.symm
+
+/-- Cake's `opt_mmap_opt_map` (`pan_commonPropsScript.sml:92`): mapping a
+    successful `OPT_MMAP` through a total function maps the result. -/
+theorem list_mapM_map {α β γ : Type} (f : α → Option β) (xs : List α)
+    (ys : List β) (g : β → γ) (h : xs.mapM f = some ys) :
+    xs.mapM (fun x => (f x).map g) = some (ys.map g) := by
+  refine (list_mapM_eq_some_iff (fun x => (f x).map g) xs (ys.map g)).mpr ⟨?_, ?_⟩
+  · rw [List.length_map, list_mapM_length f xs ys h]
+  · intro n _
+    have hpoint := list_mapM_getElem? f xs ys h n
+    rw [List.getElem?_map]
+    rw [show (fun x => (f x).map g) = (Option.map g ∘ f) from rfl]
+    rw [← Option.map_bind, hpoint]
+
+/-- Cake's `map_append_eq_drop` (`pan_commonPropsScript.sml:39`): the tail of a
+    mapped list after the first component of an append decomposition. -/
+theorem map_eq_append_drop {α β : Type} (f : α → β) (xs : List α)
+    (ys zs : List β) (h : xs.map f = ys ++ zs) :
+    (xs.drop ys.length).map f = zs := by
+  rw [List.map_drop, h, List.drop_left]
+
 /-! Cake's `state_rel_imp_evaluate_decls`
 (`cakeml/pancake/proofs/pan_simpProofScript.sml:1303-1331`) says that evaluating a
 declaration list and evaluating the `pan_simp`-simplified declaration list agree

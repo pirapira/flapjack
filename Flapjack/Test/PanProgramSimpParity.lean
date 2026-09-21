@@ -897,4 +897,29 @@ def mapMFactsGuard : Bool :=
 #eval mapMFactsGuard
 #guard mapMFactsGuard
 
+/-! Cake's `opt_mmap_mem_defined`, `opt_mmap_opt_map` and `map_append_eq_drop`
+    (`pan_commonPropsScript.sml:59/92/39`). -/
+
+theorem list_mapM_mem_defined_fixture :
+    (3 : Nat) ∈ [3, 5, 7] :=
+  list_mapM_mem_defined (x := 2) (xs := [2, 4, 6]) (e := 3) (ys := [3, 5, 7])
+    sampleMapF (by decide) (by decide) (by decide)
+
+theorem list_mapM_map_fixture :
+    ([2, 4, 6] : List Nat).mapM (fun x => (sampleMapF x).map (fun y => y + 1)) =
+      some [4, 6, 8] :=
+  list_mapM_map sampleMapF [2, 4, 6] [3, 5, 7] (fun y => y + 1) (by decide)
+
+theorem map_eq_append_drop_fixture :
+    (([1, 2, 3, 4] : List Nat).drop 2).map (fun x => x * 2) = [6, 8] :=
+  map_eq_append_drop (fun x => x * 2) [1, 2, 3, 4] [2, 4] [6, 8] (by decide)
+
+def mapMoreFactsGuard : Bool :=
+  (([2, 4, 6] : List Nat).mapM (fun x => (sampleMapF x).map (fun y => y + 1)) ==
+      some [4, 6, 8]) &&
+    ((([1, 2, 3, 4] : List Nat).drop 2).map (fun x => x * 2) == [6, 8])
+
+#eval mapMoreFactsGuard
+#guard mapMoreFactsGuard
+
 end Flapjack.Test.PanProgramSimpParity

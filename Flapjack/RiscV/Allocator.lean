@@ -742,7 +742,7 @@ decreasing_by all_goals decreasing_trivial
 def wordSsaFakeMoves [OfNat α 0] : List Nat → WordProg α
   | [] => .skip
   | name :: names =>
-      wordSsaSeq (.inst (.const name 0)) (wordSsaFakeMoves names)
+      .seq (.inst (.const name 0)) (wordSsaFakeMoves names)
 
 def wordSsaLoopSetup [OfNat α 0] (state : WordSsaState)
     (liveIn liveOut : List Nat) : WordSsaState × WordProg α :=
@@ -755,7 +755,7 @@ def wordSsaLoopSetup [OfNat α 0] (state : WordSsaState)
   let fakeMoves := wordSsaFakeMoves freshNames
   let (state, _, refreshMove) :=
     wordSsaListNextVarRenameMove state state.next refresh
-  (state, wordSsaSeq fakeMoves refreshMove)
+  (state, .seq fakeMoves refreshMove)
 
 def wordSsaFindLoopFrame : Nat → List WordSsaLoopFrame →
     Option WordSsaLoopFrame
@@ -1034,7 +1034,7 @@ def wordSsaRenameProgramWithLoops [OfNat α 0] (frames : List WordSsaLoopFrame)
            name that the body allocated.  Only `next` is taken from the body
            state; `current` stays the exit restriction. -/
         ({ exitState with next := bodyState.next },
-          wordSsaSeq setup program)
+          .seq setup program)
     | .mustTerminate body =>
         let (state, body) := wordSsaRenameProgramWithLoops frames state body
         (state, .mustTerminate body)

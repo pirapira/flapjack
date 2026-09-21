@@ -956,7 +956,7 @@ example :
     evaluatorHandler [] [] 0 0 8 5 none none none (.const 0) (.skip : Prog Nat)
     (fun _ _ _ => ⟨0, by simp [evalPanValueExp], by decide⟩)
 
-/-- A `dec` with a shape-matching constant value and a normal-adequate body. -/
+/-! A declaration with a shape-matching constant and a normal-adequate body. -/
 example :
     PanValueFfiClockNormalAdequateProg evaluatorContext (fun _ _ => none)
       evaluatorHandler [] [] 0 0 8 5 none none none

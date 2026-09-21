@@ -124,6 +124,41 @@ theorem functions_panSimpDecls (declarations : List (Decl α)) :
       cases declaration <;>
         simp [panSimpDecls, functions, ih]
 
+/-! Cake's `MEM_functions` (`pan_globalsProofScript.sml:2380`): every entry of
+    the `functions` projection comes from a function declaration of the source
+    list, with the entry being that declaration's name, parameters, body, and
+    return shape. -/
+theorem mem_functions {declarations : List (Decl α)}
+    {entry : FunName × List (VarName × Shape) × Prog α × Shape}
+    (hmem : entry ∈ functions declarations) :
+    ∃ declaration : FunDecl α,
+      (.function declaration : Decl α) ∈ declarations ∧
+        entry = (declaration.name, declaration.params, declaration.body,
+          declaration.returnShape) := by
+  induction declarations with
+  | nil => simp [functions] at hmem
+  | cons declaration declarations ih =>
+      cases declaration with
+      | function function =>
+          simp only [functions, List.mem_cons] at hmem
+          rcases hmem with hentry | htail
+          · subst hentry
+            exact ⟨function, by simp, rfl⟩
+          · obtain ⟨found, hfound, hentry⟩ := ih htail
+            exact ⟨found, by simp [hfound], hentry⟩
+      | decl shape name value =>
+          simp only [functions] at hmem
+          obtain ⟨found, hfound, hentry⟩ := ih hmem
+          exact ⟨found, by simp [hfound], hentry⟩
+      | exnDecl exception shape =>
+          simp only [functions] at hmem
+          obtain ⟨found, hfound, hentry⟩ := ih hmem
+          exact ⟨found, by simp [hfound], hentry⟩
+      | name struct fields =>
+          simp only [functions] at hmem
+          obtain ⟨found, hfound, hentry⟩ := ih hmem
+          exact ⟨found, by simp [hfound], hentry⟩
+
 /-! Counterpart of Cake's `first_compile_prog_all_distinct`
     (`pan_simpProofScript.sml:1025-1041`): `pan_simp` preserves distinctness of
     the function-name table.  This is the invariant `state_rel_imp_semantics`

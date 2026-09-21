@@ -89,6 +89,106 @@ example
       clockFfi clockProgram clockTargetState hclock hclockState
   exact ⟨hresult.1, hresult.2.2.2⟩
 
+/-! The arbitrary context-coded evaluator path also preserves a clocked
+    timeout without weakening the source/global result relation. -/
+example
+    (sourceEvaluate : PanValuePcEvaluator Nat)
+    (targetEvaluate : CrepPcEvaluator Nat)
+    (codeRel : PanValuePcCodeRel Nat)
+    (excpRel : PanValuePcExceptionShapeRel Nat)
+    (exceptionCode : ExceptionId → Option Nat)
+    (globalsLookup : CrepState Nat → PanValue Nat → Option (List Nat))
+    (program : Prog Nat)
+    (hcompact : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (clockStructs : StructContext) (clockPcContext : CompileContext Nat)
+    (clockExceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+    (clockExceptionCode : ExceptionId → Option Nat)
+    (clockGlobalsLookup : CrepState Nat → PanValue Nat → Option (List Nat))
+    (clockContext : PanValueFfiContext Nat)
+    (clockPrimitive : PanPrimitiveHandler Nat)
+    (clockHandler : PanValueStatefulFfiHandler Nat Unit)
+    (clockFunctions : List (FunName × List VarName × Prog Nat))
+    (clockBaseAddress clockTopAddress clockBytesInWord : Nat)
+    (clockFuel clock : Nat)
+    (clockLocals clockGlobals : VarName → Option (PanValue Nat))
+    (clockMemory : Nat → Option (PanValue Nat)) (clockFfi : FfiState Unit)
+    (clockProgram : Prog Nat) (clockTargetState : CrepState Nat)
+    (hclock : evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
+      clockFfi clock clockProgram =
+      some (.timeout clockLocals clockGlobals clockMemory clockFfi, clock))
+    (hclockState : panValueCrepStateRel clockStructs clockPcContext
+      clockLocals clockGlobals clockMemory clockTargetState) :
+    PanValuePcCompileCorrectWithContextCode sourceEvaluate targetEvaluate
+      codeRel excpRel exceptionCode globalsLookup program ∧
+    panValuePcResultRelWithContextCode clockStructs clockPcContext
+      clockExceptionRel clockExceptionCode clockGlobalsLookup
+      (.timeout clockLocals clockGlobals clockMemory)
+      (.timeout clockTargetState) := by
+  have hresult :=
+    panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_timeout
+      program sourceEvaluate targetEvaluate codeRel excpRel exceptionCode
+      globalsLookup hcompact clockStructs clockPcContext clockExceptionRel
+      clockExceptionCode clockGlobalsLookup clockContext clockPrimitive
+      clockHandler clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord clockFuel clock clockLocals clockGlobals clockMemory
+      clockFfi clockProgram clockTargetState hclock hclockState
+  exact ⟨hresult.1, hresult.2.2.2⟩
+
+/-! The arbitrary context-coded evaluator path preserves a terminal FFI event
+    and its explicit target-state relation. -/
+example
+    (sourceEvaluate : PanValuePcEvaluator Nat)
+    (targetEvaluate : CrepPcEvaluator Nat)
+    (codeRel : PanValuePcCodeRel Nat)
+    (excpRel : PanValuePcExceptionShapeRel Nat)
+    (exceptionCode : ExceptionId → Option Nat)
+    (globalsLookup : CrepState Nat → PanValue Nat → Option (List Nat))
+    (program : Prog Nat)
+    (hcompact : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (clockStructs : StructContext) (clockPcContext : CompileContext Nat)
+    (clockExceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+    (clockExceptionCode : ExceptionId → Option Nat)
+    (clockGlobalsLookup : CrepState Nat → PanValue Nat → Option (List Nat))
+    (clockContext : PanValueFfiContext Nat)
+    (clockPrimitive : PanPrimitiveHandler Nat)
+    (clockHandler : PanValueStatefulFfiHandler Nat Unit)
+    (clockFunctions : List (FunName × List VarName × Prog Nat))
+    (clockBaseAddress clockTopAddress clockBytesInWord : Nat)
+    (clock : Nat)
+    (clockLocals clockGlobals : VarName → Option (PanValue Nat))
+    (clockMemory : Nat → Option (PanValue Nat)) (clockFfi : FfiState Unit)
+    (clockProgram : Prog Nat) (clockTargetState : CrepState Nat)
+    (event targetEvent : FfiFinalEvent) (finalFfi : FfiState Unit)
+    (hclock : evalPanValueFfiClockLeaf clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord clock clockLocals clockGlobals clockMemory clockFfi
+      clockProgram =
+      some (.control
+        (.finalFfi clockLocals clockGlobals clockMemory finalFfi event), clock))
+    (hclockState : panValueCrepStateRel clockStructs clockPcContext
+      clockLocals clockGlobals clockMemory clockTargetState)
+    (hevent : event = targetEvent) :
+    PanValuePcCompileCorrectWithContextCode sourceEvaluate targetEvaluate
+      codeRel excpRel exceptionCode globalsLookup program ∧
+    panValuePcResultRelWithContextCode clockStructs clockPcContext
+      clockExceptionRel clockExceptionCode clockGlobalsLookup
+      (.finalFfi clockLocals clockGlobals clockMemory event)
+      (.finalFfi clockTargetState targetEvent) := by
+  have hresult :=
+    panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_final_ffi
+      program sourceEvaluate targetEvaluate codeRel excpRel exceptionCode
+      globalsLookup hcompact clockStructs clockPcContext clockExceptionRel
+      clockExceptionCode clockGlobalsLookup clockContext clockPrimitive
+      clockHandler clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord clock clockLocals clockGlobals clockMemory clockFfi
+      clockProgram clockTargetState event targetEvent finalFfi hclock
+      hclockState hevent
+  exact ⟨hresult.1, hresult.2.2.2⟩
+
 def controlContext : CompileContext Nat :=
   { vars := [], functions := [], exceptions := [], maxVar := 0,
     bytesInWord := 1 }

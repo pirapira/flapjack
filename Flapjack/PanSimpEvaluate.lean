@@ -5151,9 +5151,9 @@ theorem PanValueFfiClockNormalAdequateProg_while_zero
       structs functions baseAddress topAddress bytesInWord callBudget locals globals
       memory ffi clock condition body ma c mh w hcond hw⟩
 
-/-- A `dec` whose value expression always evaluates and matches its shape, and
-    whose body is normal-adequate, is itself normal-adequate: the introduced
-    local is restored on exit, so the final locals are the restored ones. -/
+/-! A declaration whose value is shape-valid and whose body is normal-adequate
+    is normal-adequate itself.  The introduced local is restored when the body
+    finishes, matching Cake's `evaluate` declaration case. -/
 theorem PanValueFfiClockNormalAdequateProg_dec
     (context : PanValueFfiContext α)
     (primitive : PanPrimitiveHandler α)

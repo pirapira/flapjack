@@ -120,11 +120,11 @@ def cakeWordFrameSlotsOracleExact : Bool :=
 
 #guard cakeWordFrameSlotsOracleExact
 
-/- Cake's production colour-to-frame adapter combines `format_var` with the
-   coloured-program `max_var` equation.  These direct cases mirror
-   `word_to_stackScript.sml:114-118,586-592`: an in-window colour remains a
-   register, while the first spill colour is addressed from the top of the
-   four-word frame. -/
+/- The production adapter combines Cake's `total_colour`/`format_var` result
+   with the coloured-program `max_var` frame equation.  These two direct
+   cases mirror `word_to_stackScript.sml:114-118,586-592`: an in-window
+   colour stays a register, while a colour at the first spill boundary is
+   addressed from the top of the four-word frame. -/
 def cakeColourWordSpillStateOracleExact : Bool :=
   let registerProgram : WordProg Nat := .inst (.const 1 7)
   let registerState := CakeRegAlloc.cakeColourWordSpillState

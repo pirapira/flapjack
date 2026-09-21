@@ -21,12 +21,149 @@ def shortShapes : List Shape := [.comb [.one, .one], .one]
   [[1], [2, 3], [4]]
 #guard withShape shortShapes [7] == [[7], []]
 
+theorem withShape_length_fixture :
+    (withShape oneCombNamed [1, 2, 3, 4]).length = oneCombNamed.length :=
+  withShape_length oneCombNamed [1, 2, 3, 4]
+
+theorem length_withShape_eq_shape_fixture :
+    oneCombNamed.length = (withShape oneCombNamed [1, 2, 3, 4]).length :=
+  length_withShape_eq_shape oneCombNamed [1, 2, 3, 4]
+    (by simp [oneCombNamed, Shape.shapeSize])
+
+def lengthGuard : Bool :=
+  (withShape oneCombNamed [1, 2, 3, 4]).length == oneCombNamed.length
+
+#eval lengthGuard
+#guard lengthGuard
+
+theorem all_distinct_withShape_fixture :
+    ((withShape oneCombNamed [1, 2, 3, 4])[1]'(by rw [withShape_length]; decide)).Nodup :=
+  all_distinct_withShape oneCombNamed [1, 2, 3, 4] 1 (by decide) (by decide)
+    (by simp [oneCombNamed, Shape.shapeSize])
+
+def allDistinctGuard : Bool :=
+  ((withShape oneCombNamed [1, 2, 3, 4])[1]'(by rw [withShape_length]; decide)).Nodup
+
+#eval allDistinctGuard
+#guard allDistinctGuard
+
+def checkAllDistinct (name : String) : IO Bool := do
+  if ((withShape oneCombNamed [1, 2, 3, 4])[1]'(by rw [withShape_length]; decide)).Nodup then
+    IO.println s!"PASS {name}"
+    pure true
+  else
+    IO.println s!"FAIL {name}"
+    pure false
+
+def checkLength (name : String) : IO Bool := do
+  if (withShape oneCombNamed [1, 2, 3, 4]).length == oneCombNamed.length then
+    IO.println s!"PASS {name}"
+    pure true
+  else
+    IO.println s!"FAIL {name}"
+    pure false
+
 def check (name : String) (actual expected : List (List Nat)) : IO Bool := do
   if actual == expected then
     IO.println s!"PASS {name}"
     pure true
   else
     IO.println s!"FAIL {name}: expected {repr expected}, got {repr actual}"
+    pure false
+
+def checkMembers (name : String) (actual expected : List Nat) : IO Bool := do
+  if actual == expected then
+    IO.println s!"PASS {name}"
+    pure true
+  else
+    IO.println s!"FAIL {name}: expected {repr expected}, got {repr actual}"
+    pure false
+
+theorem nodup_take_fixture :
+    (([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).take 3).Nodup :=
+  nodup_take _ 3 (by decide)
+
+theorem nodup_drop_fixture :
+    (([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).drop 3).Nodup :=
+  nodup_drop _ 3 (by decide)
+
+theorem listDisjoint_take_drop_sum_fixture :
+    ListDisjoint (([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).take 2)
+      ((([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).drop (2 + 1)).take 2) :=
+  listDisjoint_take_drop_sum _ 2 1 2 (by decide)
+
+theorem listDisjoint_drop_take_sum_fixture :
+    ListDisjoint ((([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).drop (2 + 1)).take 2)
+      (([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).take 2) :=
+  listDisjoint_drop_take_sum _ 2 1 2 (by decide)
+
+def disjointSumGuard : Bool :=
+  (([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).take 2).all
+    (fun value =>
+      !((([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).drop (2 + 1)).take 2).contains value)
+
+#eval disjointSumGuard
+#guard disjointSumGuard
+
+theorem listDisjoint_drop_take_drop_take_fixture :
+    ListDisjoint ((([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).drop 2).take 1)
+      ((([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).drop (2 + 2)).take 1) :=
+  listDisjoint_drop_take_drop_take _ 2 1 2 1 (by decide) (by decide)
+
+theorem listDisjoint_withShape_getElem_fixture :
+    ListDisjoint
+      ((withShape oneCombNamed [1, 2, 3, 4])[0]'(by rw [withShape_length]; decide))
+      ((withShape oneCombNamed [1, 2, 3, 4])[2]'(by rw [withShape_length]; decide)) :=
+  listDisjoint_withShape_getElem oneCombNamed [1, 2, 3, 4] 0 2
+    (by decide) (by decide) (by decide) (by decide)
+    (by simp [oneCombNamed, Shape.shapeSize])
+
+def withShapeDisjointGuard : Bool :=
+  ((withShape oneCombNamed [1, 2, 3, 4])[0]'(by rw [withShape_length]; decide)).all
+    (fun value =>
+      !((withShape oneCombNamed [1, 2, 3, 4])[2]'(by rw [withShape_length]; decide)).contains
+        value)
+
+#eval withShapeDisjointGuard
+#guard withShapeDisjointGuard
+
+theorem withShape_getElem_getElem_fixture :
+    ((withShape oneCombNamed [1, 2, 3, 4])[1]'(by rw [withShape_length]; decide))[1]'(by
+        simp [withShape, oneCombNamed, Shape.shapeSize]) =
+      ([1, 2, 3, 4] : List Nat)[(Shape.shapeSize (.comb (oneCombNamed.take 1))) + 1]'(by
+        simp [oneCombNamed, Shape.shapeSize]) :=
+  withShape_getElem_getElem oneCombNamed [1, 2, 3, 4] 1 1
+    (by simp [oneCombNamed, Shape.shapeSize]) (by decide)
+    (by simp [oneCombNamed, Shape.shapeSize])
+    (by simp [withShape, oneCombNamed, Shape.shapeSize])
+
+def withShapeNestedGuard : Bool :=
+  (((withShape oneCombNamed [1, 2, 3, 4])[1]'(by rw [withShape_length]; decide))[1]'(by
+      simp [withShape, oneCombNamed, Shape.shapeSize]) == (3 : Nat))
+
+#eval withShapeNestedGuard
+#guard withShapeNestedGuard
+
+theorem listDisjoint_of_withShape_mem_fixture :
+    ListDisjoint ([1] : List Nat) [2, 3] :=
+  listDisjoint_of_withShape_mem oneCombNamed [1, 2, 3, 4] [1] [2, 3]
+    (by decide) (by simp [oneCombNamed, Shape.shapeSize])
+    (by simp [withShape, oneCombNamed, Shape.shapeSize])
+    (by simp [withShape, oneCombNamed, Shape.shapeSize])
+    (by decide)
+
+def withShapeDistinctGuard : Bool :=
+  ([1] : List Nat).all (fun value => !([2, 3] : List Nat).contains value)
+
+#eval withShapeDistinctGuard
+#guard withShapeDistinctGuard
+
+def checkDisjoint (name : String) (actual : Bool) : IO Bool := do
+  if actual then
+    IO.println s!"PASS {name}"
+    pure true
+  else
+    IO.println s!"FAIL {name}"
     pure false
 
 def runChecks : IO Bool := do
@@ -36,6 +173,17 @@ def runChecks : IO Bool := do
       (withShape oneCombNamed [1, 2, 3, 4, 5]) [[1], [2, 3], [4]],
     check "pan with_shape short input"
       (withShape shortShapes [7]) [[7], []] ].mapM id
-  pure (results.all id)
+  let lengthOk ← checkLength "pan with_shape length"
+  let allDistinctOk ← checkAllDistinct "pan all_distinct_with_shape"
+  let membershipOk ← checkMembers "pan with_shape membership"
+    ((withShape oneCombNamed [1, 2, 3, 4])[1]'(by rw [withShape_length]; decide)) [2, 3]
+  let disjointOk ← checkDisjoint "pan disjoint_take_drop_sum" disjointSumGuard
+  let shapeDisjointOk ←
+    checkDisjoint "pan all_distinct_disjoint_with_shape" withShapeDisjointGuard
+  let nestedOk ← checkDisjoint "pan el_el_with_shape" withShapeNestedGuard
+  let distinctOk ←
+    checkDisjoint "pan all_distinct_with_shape_distinct" withShapeDistinctGuard
+  pure (results.all id && lengthOk && allDistinctOk && membershipOk && disjointOk &&
+    shapeDisjointOk && nestedOk && distinctOk)
 
 end Flapjack.Test.PanWithShapeParity

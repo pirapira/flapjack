@@ -1332,6 +1332,131 @@ theorem globalCompileDecs_exceptions_eq_filter [BEq String] [Add α] [Mul α]
   exact globalDeclsFilter_isException_globalCompileDecls
     (globalCollect context code) code
 
+theorem globalDeclsFilter_eq_self_of_all (predicate : Decl α → Bool)
+    (declarations : List (Decl α))
+    (hall : declarations.all predicate = true) :
+    globalDeclsFilter predicate declarations = declarations := by
+  induction declarations with
+  | nil => simp [globalDeclsFilter]
+  | cons declaration declarations ih =>
+      simp only [List.all_cons, Bool.and_eq_true] at hall
+      obtain ⟨hhead, htail⟩ := hall
+      rw [globalDeclsFilter_cons_true predicate declaration declarations hhead,
+        ih htail]
+
+/-! Counterpart of Cake's `compile_decs_functions_thm`
+    (`pan_globalsProofScript.sml:1967`): a function-only declaration list
+    compiles to no initializer stores, no exception declarations, an unchanged
+    collected context, and a function table that is the source list with each
+    body compiled under that unchanged context. -/
+theorem globalCollect_of_functions [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations : List (Decl α))
+    (hall : declarations.all globalDeclIsFunction = true) :
+    globalCollect context declarations = context := by
+  induction declarations with
+  | nil => simp [globalCollect]
+  | cons declaration declarations ih =>
+      simp only [List.all_cons, Bool.and_eq_true] at hall
+      obtain ⟨hhead, htail⟩ := hall
+      have hfunction : globalDeclIsFunction declaration = true := hhead
+      cases declaration with
+      | function function => simp [globalCollect, ih htail]
+      | decl shape name value => simp [globalDeclIsFunction] at hfunction
+      | exnDecl exception shape => simp [globalDeclIsFunction] at hfunction
+      | name struct fields => simp [globalDeclIsFunction] at hfunction
+
+theorem globalCompileInitializers_of_functions [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations : List (Decl α))
+    (hall : declarations.all globalDeclIsFunction = true) :
+    globalCompileInitializers context declarations = [] := by
+  induction declarations with
+  | nil => simp [globalCompileInitializers]
+  | cons declaration declarations ih =>
+      simp only [List.all_cons, Bool.and_eq_true] at hall
+      obtain ⟨hhead, htail⟩ := hall
+      have hfunction : globalDeclIsFunction declaration = true := hhead
+      cases declaration with
+      | function function => simp [globalCompileInitializers, ih htail]
+      | decl shape name value => simp [globalDeclIsFunction] at hfunction
+      | exnDecl exception shape => simp [globalDeclIsFunction] at hfunction
+      | name struct fields => simp [globalDeclIsFunction] at hfunction
+
+theorem globalCompileDecls_all_isFunction [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations : List (Decl α))
+    (hall : declarations.all globalDeclIsFunction = true) :
+    (globalCompileDecls context declarations).all globalDeclIsFunction = true := by
+  induction declarations with
+  | nil => simp [globalCompileDecls]
+  | cons declaration declarations ih =>
+      simp only [List.all_cons, Bool.and_eq_true] at hall
+      obtain ⟨hhead, htail⟩ := hall
+      have hfunction : globalDeclIsFunction declaration = true := hhead
+      cases declaration with
+      | function function =>
+          simp [globalCompileDecls, globalDeclIsFunction, ih htail]
+      | decl shape name value => simp [globalDeclIsFunction] at hfunction
+      | exnDecl exception shape => simp [globalDeclIsFunction] at hfunction
+      | name struct fields => simp [globalDeclIsFunction] at hfunction
+
+theorem globalCompileDecls_of_functions [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations : List (Decl α))
+    (hall : declarations.all globalDeclIsFunction = true) :
+    globalCompileDecls context declarations =
+      declarations.map (fun declaration => match declaration with
+        | .function function =>
+            .function { function with
+              body := globalCompileProg context function.body }
+        | _ => declaration) := by
+  induction declarations with
+  | nil => simp [globalCompileDecls]
+  | cons declaration declarations ih =>
+      simp only [List.all_cons, Bool.and_eq_true] at hall
+      obtain ⟨hhead, htail⟩ := hall
+      have hfunction : globalDeclIsFunction declaration = true := hhead
+      cases declaration with
+      | function function => simp [globalCompileDecls, ih htail]
+      | decl shape name value => simp [globalDeclIsFunction] at hfunction
+      | exnDecl exception shape => simp [globalDeclIsFunction] at hfunction
+      | name struct fields => simp [globalDeclIsFunction] at hfunction
+
+theorem globalCompileDecs_functions_thm [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations : List (Decl α))
+    (hall : declarations.all globalDeclIsFunction = true) :
+    (globalCompileDecs context declarations).initializers = [] ∧
+    (globalCompileDecs context declarations).functions =
+      declarations.map (fun declaration => match declaration with
+        | .function function =>
+            .function { function with
+              body := globalCompileProg context function.body }
+        | _ => declaration) ∧
+    (globalCompileDecs context declarations).exceptions = [] ∧
+    (globalCompileDecs context declarations).context = context := by
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · simp only [globalCompileDecs]
+    exact globalCompileInitializers_of_functions context declarations hall
+  · simp only [globalCompileDecs]
+    rw [globalCollect_of_functions context declarations hall]
+    rw [globalCompileDecls_of_functions context declarations hall]
+    refine globalDeclsFilter_eq_self_of_all globalDeclIsFunction _ ?_
+    refine List.all_eq_true.mpr (fun declaration hmem => ?_)
+    obtain ⟨source, hsource, rfl⟩ := List.mem_map.mp hmem
+    have hfunction : globalDeclIsFunction source = true :=
+      List.all_eq_true.mp hall source hsource
+    cases source with
+    | function function => simp [globalDeclIsFunction]
+    | decl shape name value => simp [globalDeclIsFunction] at hfunction
+    | exnDecl exception shape => simp [globalDeclIsFunction] at hfunction
+    | name struct fields => simp [globalDeclIsFunction] at hfunction
+  · simp only [globalCompileDecs]
+    rw [globalDeclsFilter_isException_globalCompileDecls]
+    refine globalDeclsFilter_eq_nil_of_all_not globalDeclIsException declarations ?_
+    refine List.all_eq_true.mpr (fun declaration hmem => ?_)
+    have hfunction : globalDeclIsFunction declaration = true :=
+      List.all_eq_true.mp hall declaration hmem
+    cases declaration <;> simp_all [globalDeclIsFunction, globalDeclIsException]
+  · simp only [globalCompileDecs]
+    exact globalCollect_of_functions context declarations hall
+
 /-! Counterpart of Cake's `compile_decs_FILTER_decs`
     (`pan_globalsProofScript.sml:2822`): filtering the source program down to its
     global declarations leaves the collected context and the initializer stores

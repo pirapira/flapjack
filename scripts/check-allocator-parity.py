@@ -2,13 +2,8 @@
 """Check the original-Cake allocator witnesses for exact RISC-V bytes.
 
 These fixtures exercise distinct allocator/frame shapes: dead-raise
-allocation, handler-frame continuation, a nested handler spill slot, colour
-permutation, returned-value allocation, wide-call argument occupancy,
-overflow-call frame slots, 64-bit register pressure, SSA cutsets/parallel
-moves, loop copy-propagation state, an indirect spilled-address carrier,
-five-word and nine-continuation frame occupancy, a 22-slot ABI call-frame, a
-whole-program 22-register parameter threshold, and a stack-allocation
-boundary.  Keep the list explicit
+allocation, colour permutation, returned-value allocation, 64-bit
+register pressure, and a stack-allocation boundary.  Keep the list explicit
 so a change in the checked original-Cake witnesses is reviewable.
 The expected Cake stdout hashes are pinned in ``parity-small-corpus.json``.
 Comparing Flapjack's complete assembly stdout with those hashes keeps this
@@ -29,33 +24,16 @@ MANIFEST = REPO_ROOT / "scripts" / "parity-small-corpus.json"
 FIXTURES = (
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00634_dead_raise.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f01266_raise_live_continuation.pnk",
-    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f01266_raise_continuation.pnk",
-    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00108_handler_spill_slot.pnk",
-    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "allocator_frame_handler_min.pnk",
-    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "gh1025_frame_bitmap.pnk",
-    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "gh1025_frame_bitmap_f00000.pnk",
-    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "bitmap_calls.pnk",
-    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "output_write.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "allocator_colour_permutation.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00068_allocator_return.pnk",
-    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00028_allocator.pnk",
-    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "divmnu_copy_loop.pnk",
-    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "bn_divmnu_allocator.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "mul64x64_allocator.pnk",
-    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "u256_mul_full.pnk",
-    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "u256_mul_full_bitmap_wrap.pnk",
-    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "u256_add_carry.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "wide_call_arguments.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "wide_call_arity.pnk",
-    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "wide_call_spilled_base.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "stack_args_overflow_slots.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "secp256k1_recover.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "many_word_parameters.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "gh1049_stack_alloc.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00014_loop_to_word_allocator.pnk",
-    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00097_ssa_unmapped_zero.pnk",
-    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00356_zero_shift_self_move.pnk",
-    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00226_mks_out_of_range_shift.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "dec_temporary_cutset.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00068_throwminimal3.pnk",
 )

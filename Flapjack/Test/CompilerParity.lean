@@ -84,6 +84,7 @@ import Flapjack.Test.PanHProgLoadParity
 import Flapjack.Test.PanHProgReturnParity
 import Flapjack.Test.PanHProgRaiseParity
 import Flapjack.Test.PanValuePcRaisedPayloadCorrectness
+import Flapjack.Test.PanValueFfiClockLe
 import Flapjack.Test.CrepeGlobalStoreCorrectness
 import Flapjack.Test.PanHProgExtCallParity
 import Flapjack.Test.PanHProgStoreByteParity
@@ -217,6 +218,7 @@ import Flapjack.Test.CakeSsaTempParity
 import Flapjack.Test.CakeSsaBoundaryParity
 import Flapjack.Test.CakeSsaControlParity
 import Flapjack.Test.CakeSsaCallParity
+import Flapjack.Test.CakeSsaInstParity
 import Flapjack.Test.CakeSsaSharedParity
 import Flapjack.Test.CakeSsaMemoryParity
 import Flapjack.Test.CakeSsaLeafParity
@@ -754,6 +756,7 @@ def main : IO Unit := do
     Flapjack.Test.CakeSsaBoundaryParity.runChecks,
     Flapjack.Test.CakeSsaControlParity.runChecks,
     Flapjack.Test.CakeSsaCallParity.runChecks,
+    Flapjack.Test.CakeSsaInstParity.runChecks,
     Flapjack.Test.CakeSsaSharedParity.runChecks,
     Flapjack.Test.CakeSsaMemoryParity.runChecks,
     Flapjack.Test.CakeSsaLeafParity.runChecks,

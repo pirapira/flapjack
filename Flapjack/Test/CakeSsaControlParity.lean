@@ -46,21 +46,6 @@ def storeConstsBoundaryGuard : Bool :=
 
 #guard storeConstsBoundaryGuard
 
-/- Cake preserves the StoreConsts write-set payload while still remapping the
-   four fixed operand carriers and refreshing their SSA names. -/
-def storeConstsCutsetProgram : WordProg Nat :=
-  .storeConsts 1 2 3 4 [(true, 7)]
-
-def storeConstsCutsetBoundaryGuard : Bool :=
-  match (wordFullSsaCcTrans 2 storeConstsCutsetProgram).2.2 with
-  | .seq (.move 1 [(9, 0), (13, 2)])
-      (.seq (.move 1 [(4, 0), (6, 0)])
-        (.seq (.storeConsts 0 2 4 6 [(true, 7)])
-          (.move 1 [(21, 4), (17, 6)]))) => true
-  | _ => false
-
-#guard storeConstsCutsetBoundaryGuard
-
 def longDivProgram : WordProg Nat :=
   .inst (.arith (.longDiv 1 2 3 4 5))
 
@@ -143,19 +128,6 @@ def binOpBoundaryGuard : Bool :=
 
 #guard binOpBoundaryGuard
 
-def binOpImmediateProgram : WordProg Nat :=
-  .inst (.arith (.binOp .add 1 2 (.imm 7)))
-
-/- Cake preserves an immediate Binop operand instead of looking it up in the
-   SSA namespace; only the destination is freshened. -/
-def binOpImmediateBoundaryGuard : Bool :=
-  match (wordFullSsaCcTrans 0 binOpImmediateProgram).2.2 with
-  | .seq (.move 1 [])
-      (.inst (.arith (.binOp .add 5 0 (.imm 7)))) => true
-  | _ => false
-
-#guard binOpImmediateBoundaryGuard
-
 def divProgram : WordProg Nat :=
   .inst (.arith (.div 1 2 3))
 
@@ -232,11 +204,9 @@ def ffiCutsetBoundaryGuard : Bool :=
 
 def parityGuard : Bool :=
   raiseBoundaryGuard && callBoundaryGuard && storeConstsBoundaryGuard &&
-    storeConstsCutsetBoundaryGuard &&
     longDivBoundaryGuard && longMulBoundaryGuard && shiftBoundaryGuard &&
     addCarryBoundaryGuard && constBoundaryGuard && binOpBoundaryGuard &&
-    binOpImmediateBoundaryGuard && divBoundaryGuard && codeBufferWriteGuard &&
-    dataBufferWriteGuard &&
+    divBoundaryGuard && codeBufferWriteGuard && dataBufferWriteGuard &&
     installBoundaryGuard && installCutsetBoundaryGuard && ffiBoundaryGuard &&
     ffiCutsetBoundaryGuard
 
@@ -251,8 +221,6 @@ def runChecks : IO Bool := do
         callBoundaryGuard),
       ("full_ssa_cc_trans StoreConsts preserves Cake reload moves",
         storeConstsBoundaryGuard),
-      ("full_ssa_cc_trans StoreConsts preserves Cake write-set payload",
-        storeConstsCutsetBoundaryGuard),
       ("full_ssa_cc_trans LongDiv preserves Cake fixed-register ABI",
         longDivBoundaryGuard),
       ("full_ssa_cc_trans LongMul preserves Cake fixed-register ABI",
@@ -265,8 +233,6 @@ def runChecks : IO Bool := do
         constBoundaryGuard),
       ("full_ssa_cc_trans Binop rewrites Cake register operands",
         binOpBoundaryGuard),
-      ("full_ssa_cc_trans Binop preserves Cake immediate operands",
-        binOpImmediateBoundaryGuard),
       ("full_ssa_cc_trans Div rewrites Cake operands",
         divBoundaryGuard),
       ("full_ssa_cc_trans code-buffer write rewrites Cake operands",

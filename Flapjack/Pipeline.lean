@@ -1,5 +1,6 @@
 import Flapjack.PanGlobals
 import Flapjack.Compile
+import Flapjack.CompileFunctionDistinct
 import Flapjack.CrepeInlinePass
 import Flapjack.CrepeArith
 import Flapjack.CrepToLoop
@@ -65,6 +66,78 @@ def crepGetEidsFromDecls (fromNat : Nat → α) (declarations : List (Decl α)) 
     InfoMap α :=
   pipelineExceptionCodes fromNat 0 declarations
 
+/-! The exception-code table has exactly one entry for each declared
+    exception.  This is the Lean counterpart of the size premise used by
+    Cake's `get_eids_imp_excp_rel`: the table's finite-domain cardinality is
+    fixed by the source declaration list, independently of the word map. -/
+theorem pipelineExceptionCodes_length
+    (fromNat : Nat → α) (index : Nat) (declarations : List (Decl α)) :
+    (pipelineExceptionCodes fromNat index declarations).length =
+      sizeOfEids declarations := by
+  induction declarations generalizing index with
+  | nil =>
+      simp [pipelineExceptionCodes, sizeOfEids]
+  | cons declaration declarations ih =>
+      cases declaration <;>
+        simp [pipelineExceptionCodes, sizeOfEids, isExnDecl, ih] <;> omega
+
+theorem crepGetEidsFromDecls_length
+    (fromNat : Nat → α) (declarations : List (Decl α)) :
+    (crepGetEidsFromDecls fromNat declarations).length =
+      sizeOfEids declarations := by
+  exact pipelineExceptionCodes_length fromNat 0 declarations
+
+/-! Cake's `get_eids_imp_excp_rel` begins by proving that every declared
+    exception has a target code.  This constructive lookup half is useful at
+    the generic Raise boundary: the exception-code premise is obtained from
+    the source declaration table rather than guessed by an evaluator wrapper. -/
+theorem crepGetEidsFromDecls_lookup_of_exception
+    [BEq String] [LawfulBEq String]
+    (fromNat : Nat → α) (index : Nat) :
+    ∀ (declarations : List (Decl α)) (exception : ExceptionId) (shape : Shape),
+      (exception, shape) ∈ exceptionEntries declarations →
+      ∃ code, lookupInfo exception
+        (pipelineExceptionCodes fromNat index declarations) = some code := by
+  intro declarations
+  induction declarations generalizing index with
+  | nil =>
+      intro exception shape hmem
+      simp [exceptionEntries] at hmem
+  | cons declaration declarations ih =>
+      cases declaration with
+      | exnDecl declaredException declaredShape =>
+          intro exception shape hmem
+          by_cases heq : exception == declaredException
+          · have heq' : exception = declaredException := eq_of_beq heq
+            subst exception
+            exact ⟨fromNat index, by simp [pipelineExceptionCodes, lookupInfo]⟩
+          · have htail : (exception, shape) ∈ exceptionEntries declarations := by
+              have hmem' :
+                  (exception = declaredException ∧ shape = declaredShape) ∨
+                    (exception, shape) ∈ exceptionEntries declarations := by
+                simpa [exceptionEntries] using hmem
+              rcases hmem' with ⟨hname, _⟩ | htail
+              · exfalso
+                apply heq
+                simp [hname]
+              · exact htail
+            have hne : (declaredException == exception) = false := by
+              rw [Bool.eq_false_iff]
+              intro h
+              apply heq
+              exact beq_iff_eq.mpr (eq_of_beq h).symm
+            obtain ⟨code, hcode⟩ := ih (index + 1) exception shape htail
+            exact ⟨code, by simp [pipelineExceptionCodes, lookupInfo, hne, hcode]⟩
+      | decl declaredShape name value =>
+          intro exception shape hmem
+          exact ih index exception shape (by simpa [exceptionEntries] using hmem)
+      | function declaration =>
+          intro exception shape hmem
+          exact ih index exception shape (by simpa [exceptionEntries] using hmem)
+      | name struct fields =>
+          intro exception shape hmem
+          exact ih index exception shape (by simpa [exceptionEntries] using hmem)
+
 def pipelineInlineNames : List (Decl α) → List FunName
   | [] => []
   | .function declaration :: declarations =>
@@ -85,6 +158,33 @@ def compileProgToCrep [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α]
     List (CompiledFunction α) :=
   panToCrepCompileInlTop (pipelineInlineNames declarations)
     (compileToCrep context declarations)
+
+/-! Cake's `first_compile_prog_all_distinct`
+    (`pan_to_crepProofScript.sml:4556-4564`) at the complete
+    `compile_prog` boundary.  The source declaration-name invariant first
+    applies to `compile_to_crep`; the inline pass then preserves that table
+    invariant because it changes only function bodies. -/
+theorem compileProgToCrep_names_nodup
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α]
+    (context : CompileContext α) (declarations : List (Decl α))
+    (hnodup : (functionDeclarationNames declarations).Nodup) :
+    (compileProgToCrep context declarations).map CompiledFunction.name |>.Nodup := by
+  unfold compileProgToCrep
+  apply panToCrepCompileInlTop_names_nodup
+  exact compileToCrep_names_nodup context declarations hnodup
+
+/-! Cake's `compile_prog_distinct_params` at the complete source-shaped
+    `compile_prog` boundary.  The pre-inline parameter invariant is supplied
+    by `compileToCrep_params_nodup`; the inline pass preserves each record's
+    parameter field. -/
+theorem compileProgToCrep_params_nodup
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α]
+    (context : CompileContext α) (declarations : List (Decl α)) :
+    ∀ function ∈ compileProgToCrep context declarations,
+      function.params.Nodup := by
+  unfold compileProgToCrep
+  apply panToCrepCompileInlTop_params_nodup
+  exact compileToCrep_params_nodup _ _
 
 def pipelineFindFunction (name : FunName) :
     List (Decl α) → Option (FunDecl α)

@@ -84,6 +84,26 @@ termination_by program => sizeOf program
 decreasing_by
   all_goals decreasing_trivial
 
+/-! Faithful port of `crepLang$assigned_vars` from
+    `cakeml/pancake/crepLangScript.sml:164-176`. -/
+def crepAssignedVars : CrepProg α → List Nat
+  | .skip => []
+  | .dec name _ body => name :: crepAssignedVars body
+  | .assign name _ => [name]
+  | .primitive names _ _ => names
+  | .seq first second => crepAssignedVars first ++ crepAssignedVars second
+  | .ite _ thenBranch elseBranch =>
+      crepAssignedVars thenBranch ++ crepAssignedVars elseBranch
+  | .while _ body => crepAssignedVars body
+  | .call (some (returns, some (_, handler))) _ _ =>
+      returns ++ crepAssignedVars handler
+  | .call (some (returns, none)) _ _ => returns
+  | .shMem _ name _ => [name]
+  | _ => []
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
+
 def crepExpVars : CrepExp α → List Nat
   | .const _ => []
   | .var name => [name]
@@ -130,6 +150,19 @@ def distinctLists (left right : List Nat) : Bool :=
     crepExpVars (.const value) = [] := by
   simp [crepExpVars]
 
+theorem crepExpVars_var {α : Type} (name : Nat) :
+    crepExpVars (α := α) (.var name) = [name] := by
+  simp [crepExpVars]
+
+/-- Faithful port of Cake `crepProps$map_var_cexp_eq_var`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:227`): mapping `Var` over a
+    variable list and flattening the variables recovers the list. -/
+theorem map_var_crepExpVars_eq {α : Type} (names : List Nat) :
+    (names.map (CrepExp.var (α := α))).flatMap crepExpVars = names := by
+  induction names with
+  | nil => rfl
+  | cons name names ih => simp [crepExpVars_var, ih]
+
 def loadShape [BEq α] [OfNat α 0] [Add α]
     (address stride : α) (count : Nat) (value : CrepExp α) : List (CrepExp α) :=
   match count with
@@ -137,6 +170,76 @@ def loadShape [BEq α] [OfNat α 0] [Add α]
   | count + 1 =>
       let loaded := if address == 0 then .load value else .load (.op .add [value, .const address])
       loaded :: loadShape (address + stride) stride count value
+
+/-- Original-domain counterpart of Cake's `length_load_shape_eq_shape`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:30`). -/
+theorem loadShape_length [BEq α] [OfNat α 0] [Add α]
+    (address stride : α) (count : Nat) (value : CrepExp α) :
+    (loadShape address stride count value).length = count := by
+  induction count generalizing address with
+  | zero => rfl
+  | succ count ih => simp [loadShape, ih]
+
+/-- Original-domain counterpart of Cake's `load_shape_el_rel`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:114`): the `n`-th
+    loaded word reads from `address + n * stride`. -/
+theorem loadShape_getElem (address stride count n : Nat) (value : CrepExp Nat)
+    (h : n < count) :
+    (loadShape address stride count value)[n]? =
+      some (if address + n * stride == 0 then .load value
+            else .load (.op .add [value, .const (address + n * stride)])) := by
+  induction count generalizing address n with
+  | zero => simp at h
+  | succ count ih =>
+      cases n with
+      | zero => simp [loadShape]
+      | succ k =>
+          have hk : k < count := by omega
+          rw [loadShape]
+          simp only [List.getElem?_cons_succ]
+          rw [ih (address + stride) k hk]
+          have haddr : (address + stride) + k * stride = address + (k + 1) * stride := by
+            rw [Nat.add_mul, Nat.one_mul]
+            ac_rfl
+          simp only [haddr]
+
+/-- Original-domain counterpart of Cake's `load_glob_not_mem_load`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:688`): a global load absent
+    from an expression's expression list stays absent from every expression
+    produced by `loadShape`. -/
+theorem crepExps_loadShape_not_mem_loadGlob [BEq α] [OfNat α 0] [Add α]
+    (address stride : α) (count : Nat) (value : CrepExp α) (target : α)
+    (h : CrepExp.loadGlob target ∉ crepExps value) :
+    CrepExp.loadGlob target ∉ (loadShape address stride count value).flatMap crepExps := by
+  induction count generalizing address with
+  | zero => simp [loadShape]
+  | succ count ih =>
+      rw [loadShape]
+      simp only [List.flatMap_cons, List.mem_append, not_or]
+      refine ⟨?_, ih (address + stride)⟩
+      by_cases hz : address == 0
+      · simp only [hz, if_true]
+        simpa [crepExps] using h
+      · simp only [hz]
+        simp [crepExps, crepExps.crepExpsList, h]
+
+/-- Original-domain counterpart of Cake's `var_exp_load_shape`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:215`): every expression
+    produced by `loadShape` has the same free variables as its source. -/
+theorem crepExpVars_of_mem_loadShape [BEq α] [OfNat α 0] [Add α]
+    (address stride : α) (count : Nat) (value n : CrepExp α)
+    (h : n ∈ loadShape address stride count value) :
+    crepExpVars n = crepExpVars value := by
+  induction count generalizing address with
+  | zero => simp [loadShape] at h
+  | succ count ih =>
+      rw [loadShape] at h
+      simp only [List.mem_cons] at h
+      rcases h with rfl | h
+      · by_cases hzero : address == 0
+        · simp [hzero, crepExpVars]
+        · simp [hzero, crepExpVars, crepExpVars.crepExpVarsList]
+      · exact ih (address + stride) h
 
 def crepNestedSeq : List (CrepProg α) → CrepProg α
   | [] => .skip
@@ -172,6 +275,199 @@ def loadGlobals [Add α] (address stride : α) (count : Nat) : List (CrepExp α)
   match count with
   | 0 => []
   | count + 1 => .loadGlob address :: loadGlobals (address + stride) stride count
+
+/-- Faithful port of Cake `crepProps$length_load_globals_eq_read_size`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:467`). -/
+theorem loadGlobals_length [Add α] (address stride : α) (count : Nat) :
+    (loadGlobals address stride count).length = count := by
+  induction count generalizing address with
+  | zero => rfl
+  | succ count ih => simp [loadGlobals, ih]
+
+/-- Faithful port of Cake `crepProps$el_load_globals_elem`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:474`), generalised to an
+    explicit additive stride on `Nat`: the `n`-th generated load reads the
+    address `address + n * stride`. -/
+theorem loadGlobals_getElem (address stride count n : Nat) (h : n < count) :
+    (loadGlobals address stride count)[n]? =
+      some (.loadGlob (address + n * stride)) := by
+  induction count generalizing address n with
+  | zero => simp at h
+  | succ count ih =>
+      cases n with
+      | zero => simp [loadGlobals]
+      | succ k =>
+          simp only [loadGlobals, List.getElem?_cons_succ]
+          rw [ih (address + stride) k (by omega)]
+          congr 1
+          rw [Nat.add_mul, Nat.one_mul]
+          ac_rfl
+
+/-- Faithful port of Cake `crepProps$var_cexp_load_globals_empty`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:698`): the loads generated by
+    `load_globals` contain no local variables. -/
+theorem loadGlobals_crepExpVars_empty [Add α] (address stride : α) (count : Nat) :
+    (loadGlobals address stride count).flatMap crepExpVars = [] := by
+  induction count generalizing address with
+  | zero => simp [loadGlobals]
+  | succ count ih => simp [loadGlobals, ih, crepExpVars]
+
+/-- Faithful port of Cake `crepProps$assigned_free_vars_IMP_assigned_vars`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:373`): every free variable of
+    a program is an assigned variable of that program. -/
+theorem mem_crepAssignedFreeVars_imp_mem_crepAssignedVars (program : CrepProg α) (name : Nat)
+    (h : name ∈ crepAssignedFreeVars program) : name ∈ crepAssignedVars program := by
+  revert h
+  induction program using crepAssignedFreeVars.induct with
+  | case1 => intro h; simp [crepAssignedFreeVars] at h
+  | case2 => intro h; simp_all [crepAssignedFreeVars, crepAssignedVars]
+  | case3 => intro h; simpa [crepAssignedFreeVars, crepAssignedVars] using h
+  | case4 => intro h; simpa [crepAssignedFreeVars, crepAssignedVars] using h
+  | case5 =>
+      intro h
+      simp only [crepAssignedFreeVars, crepAssignedVars, List.mem_append] at h ⊢
+      rcases h with h | h <;> simp_all
+  | case6 =>
+      intro h
+      simp only [crepAssignedFreeVars, crepAssignedVars, List.mem_append] at h ⊢
+      rcases h with h | h <;> simp_all
+  | case7 => intro h; simp_all [crepAssignedFreeVars, crepAssignedVars]
+  | case8 =>
+      intro h
+      simp only [crepAssignedFreeVars, crepAssignedVars, List.mem_append] at h ⊢
+      rcases h with h | h <;> simp_all
+  | case9 => intro h; simpa [crepAssignedFreeVars, crepAssignedVars] using h
+  | case10 => intro h; simpa [crepAssignedFreeVars, crepAssignedVars] using h
+  | case11 => intro h; simp [crepAssignedFreeVars] at h
+
+/-- Faithful port of Cake `crepProps$nested_seq_assigned_free_vars_eq`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:420`): the assignments
+    generated by `nested_seq (MAP2 Assign ns vs)` assign exactly `ns`. -/
+theorem crepAssignedFreeVars_nestedSeq_assign_zipWith (names : List Nat)
+    (values : List (CrepExp α)) (h : names.length = values.length) :
+    crepAssignedFreeVars
+        (crepNestedSeq
+          (names.zipWith (fun name value => CrepProg.assign name value) values)) =
+      names := by
+  induction names generalizing values with
+  | nil =>
+      cases values with
+      | nil => simp [crepNestedSeq, crepAssignedFreeVars]
+      | cons value values => simp at h
+  | cons name names ih =>
+      cases values with
+      | nil => simp at h
+      | cons value values =>
+          simp only [List.zipWith_cons_cons, List.length_cons] at h ⊢
+          simp [crepNestedSeq, crepAssignedFreeVars, ih values (by omega)]
+
+/-- Faithful port of Cake `crepProps$assigned_free_vars_seq_store_empty`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:439`). -/
+theorem crepAssignedFreeVars_nestedSeq_stores [BEq α] [OfNat α 0] [Add α]
+    (address : CrepExp α) (values : List (CrepExp α)) (offset stride : α) :
+    crepAssignedFreeVars (crepNestedSeq (stores address values offset stride)) = [] := by
+  induction values generalizing offset with
+  | nil => simp [stores, crepNestedSeq, crepAssignedFreeVars]
+  | cons value values ih =>
+      simp [stores, crepNestedSeq, crepAssignedFreeVars, ih]
+
+/-- Faithful port of Cake `crepProps$assigned_free_vars_store_globals_empty`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:458`). -/
+theorem crepAssignedFreeVars_nestedSeq_storeGlobals [Add α]
+    (address stride : α) (values : List (CrepExp α)) :
+    crepAssignedFreeVars (crepNestedSeq (storeGlobals address stride values)) = [] := by
+  induction values generalizing address with
+  | nil => simp [storeGlobals, crepNestedSeq, crepAssignedFreeVars]
+  | cons value values ih =>
+      simp [storeGlobals, crepNestedSeq, crepAssignedFreeVars, ih]
+
+/-- Faithful port of Cake `crepProps$assigned_vars_nested_decs_append`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:390`). -/
+theorem crepAssignedVars_nestedDecs_append (names : List Nat)
+    (values : List (CrepExp α)) (body : CrepProg α)
+    (h : names.length = values.length) :
+    crepAssignedVars (nestedDecs names values body) = names ++ crepAssignedVars body := by
+  induction names generalizing values with
+  | nil =>
+      cases values with
+      | nil => simp [nestedDecs]
+      | cons value values => simp at h
+  | cons name names ih =>
+      cases values with
+      | nil => simp at h
+      | cons value values =>
+          simp only [List.length_cons] at h
+          simp [nestedDecs, crepAssignedVars, ih values (by omega)]
+
+/-- Faithful port of Cake `crepProps$assigned_free_vars_nested_decs_append`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:400`). -/
+theorem crepAssignedFreeVars_nestedDecs_append (names : List Nat)
+    (values : List (CrepExp α)) (body : CrepProg α)
+    (h : names.length = values.length) :
+    crepAssignedFreeVars (nestedDecs names values body) =
+      (crepAssignedFreeVars body).filter
+        (fun candidate => decide (candidate ∉ names)) := by
+  induction names generalizing values with
+  | nil =>
+      cases values with
+      | nil =>
+          simp only [nestedDecs, List.not_mem_nil]
+          symm
+          exact List.filter_eq_self.mpr (fun _ _ => rfl)
+      | cons value values => simp at h
+  | cons name names ih =>
+      cases values with
+      | nil => simp at h
+      | cons value values =>
+          simp only [List.length_cons] at h
+          rw [nestedDecs, crepAssignedFreeVars, ih values (by omega), List.filter_filter]
+          congr 1
+          funext candidate
+          by_cases hc : candidate = name
+          · subst hc
+            simp
+          · simp [hc, List.mem_cons, bne_iff_ne]
+
+/-- Faithful port of Cake `crepProps$nested_seq_assigned_vars_eq`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:411`): the assignments
+    generated by `nested_seq (MAP2 Assign ns vs)` assign exactly `ns`. -/
+theorem crepAssignedVars_nestedSeq_assign_zipWith (names : List Nat)
+    (values : List (CrepExp α)) (h : names.length = values.length) :
+    crepAssignedVars
+        (crepNestedSeq
+          (names.zipWith (fun name value => CrepProg.assign name value) values)) =
+      names := by
+  induction names generalizing values with
+  | nil =>
+      cases values with
+      | nil => simp [crepNestedSeq, crepAssignedVars]
+      | cons value values => simp at h
+  | cons name names ih =>
+      cases values with
+      | nil => simp at h
+      | cons value values =>
+          simp only [List.zipWith_cons_cons, List.length_cons] at h ⊢
+          simp [crepNestedSeq, crepAssignedVars, ih values (by omega)]
+
+/-- Faithful port of Cake `crepProps$assigned_vars_seq_store_empty`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:429`). -/
+theorem crepAssignedVars_nestedSeq_stores [BEq α] [OfNat α 0] [Add α]
+    (address : CrepExp α) (values : List (CrepExp α)) (offset stride : α) :
+    crepAssignedVars (crepNestedSeq (stores address values offset stride)) = [] := by
+  induction values generalizing offset with
+  | nil => simp [stores, crepNestedSeq, crepAssignedVars]
+  | cons value values ih =>
+      simp [stores, crepNestedSeq, crepAssignedVars, ih]
+
+/-- Faithful port of Cake `crepProps$assigned_vars_store_globals_empty`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:449`). -/
+theorem crepAssignedVars_nestedSeq_storeGlobals [Add α]
+    (address stride : α) (values : List (CrepExp α)) :
+    crepAssignedVars (crepNestedSeq (storeGlobals address stride values)) = [] := by
+  induction values generalizing address with
+  | nil => simp [storeGlobals, crepNestedSeq, crepAssignedVars]
+  | cons value values ih =>
+      simp [storeGlobals, crepNestedSeq, crepAssignedVars, ih]
 
 def assignRet [OfNat α 0] [Add α] (wordStride : α) (names : List Nat) : CrepProg α :=
   crepNestedSeq (names.zipWith (fun name value => .assign name value)

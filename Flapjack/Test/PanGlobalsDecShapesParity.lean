@@ -424,4 +424,42 @@ def functionsEveryGuard : Bool :=
 #eval functionsEveryGuard
 #guard functionsEveryGuard
 
+/-! Counterpart of Cake's `compile_decs_functions_thm`
+    (`pan_globalsProofScript.sml:1967`). -/
+def compileDeclF : Decl Nat :=
+  .function
+    { name := "f", inline := false, exported := false, params := [],
+      body := (.skip : Prog Nat), returnShape := .one }
+
+def compileDeclG : Decl Nat :=
+  .function
+    { name := "g", inline := false, exported := false, params := [],
+      body := (.tick : Prog Nat), returnShape := .one }
+
+def functionsOnlyCompileDecls : List (Decl Nat) :=
+  [compileDeclF, compileDeclG]
+
+def compileDecsFunctionsGuard : Bool :=
+  let context : GlobalPassContext Nat :=
+    { globals := [], globalsSize := 0, maxGlobalsSize := 0, bytesInWord := 8,
+      fromNat := fun n => n }
+  (globalCompileDecs context functionsOnlyCompileDecls).initializers.isEmpty &&
+    (globalCompileDecs context functionsOnlyCompileDecls).exceptions.isEmpty &&
+    (globalCompileDecs context functionsOnlyCompileDecls).functions.length ==
+      functionsOnlyCompileDecls.length
+
+example : True := by
+  let context : GlobalPassContext Nat :=
+    { globals := [], globalsSize := 0, maxGlobalsSize := 0, bytesInWord := 8,
+      fromNat := fun n => n }
+  have hall : functionsOnlyCompileDecls.all globalDeclIsFunction = true := by
+    simp [functionsOnlyCompileDecls, compileDeclF, compileDeclG,
+      globalDeclIsFunction]
+  have h :=
+    globalCompileDecs_functions_thm context functionsOnlyCompileDecls hall
+  trivial
+
+#eval compileDecsFunctionsGuard
+#guard compileDecsFunctionsGuard
+
 end Flapjack.Test.PanGlobalsDecShapesParity

@@ -1,0 +1,2 @@
+load8=Seq (Move1 []) (Inst (Mem Load8 5 (Addr 0 0w)))
+store8=Seq (Move1 []) (Inst (Mem Store8 0 (Addr 0 0w)))

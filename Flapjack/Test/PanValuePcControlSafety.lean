@@ -874,4 +874,8 @@ evaluator-evidence obligation. -/
     state-evidence premises instead of the opaque raised-payload callback. -/
 #check @panValuePcRaisedHraiseCases_to_exception_result_rel_of_state_evidence
 
+/-! The paired raw-word-list dispatcher also accepts the explicit state
+    evidence plus the exception lookup instead of the opaque callbacks. -/
+#check @panValuePcRaisedHraiseCases_with_raw_word_lists_paired_of_state_evidence
+
 end Flapjack.Test.PanValuePcControlSafety

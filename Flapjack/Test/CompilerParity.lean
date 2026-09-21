@@ -137,6 +137,7 @@ import Flapjack.Test.CompileProgParity
 import Flapjack.Test.PanSimpParity
 import Flapjack.Test.PanProgramSimpParity
 import Flapjack.Test.PanValueWfParity
+import Flapjack.Test.CrepeCompileExpVariablesParity
 import Flapjack.Test.PanPrimopWfParity
 import Flapjack.Test.PanGlobalsSemanticsParity
 import Flapjack.Test.PanSimpOthersParity

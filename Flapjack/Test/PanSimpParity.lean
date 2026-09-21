@@ -371,6 +371,50 @@ example : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorH
           evaluatorHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none) (fun _ => none)
           evaluatorFfi 1 "tag" "text" none none none))
 
+/-- `progSize`-indexed `Call` fuel adequacy: one structural step covers the node. -/
+example (outcome : PanValueFfiClockOutcome Nat Unit) (nextClock : Nat)
+    (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8
+      (progSize (.call none "f" ([] : List (Exp Nat))) - 1) (fun _ => none)
+      (fun _ => none) (fun _ => none) evaluatorFfi 1 none "f" [] =
+      some (outcome, nextClock)) :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+      [] [] 0 0 8 (progSize (.call none "f" ([] : List (Exp Nat)))) (fun _ => none)
+      (fun _ => none) (fun _ => none) evaluatorFfi 1 (.call none "f" []) none none none =
+    some (outcome, nextClock) := by
+  exact evalPanValueFfiClockProg_call_some_progSize evaluatorContext (fun _ _ => none)
+    evaluatorHandler [] [] 0 0 8 (fun _ => none) (fun _ => none) (fun _ => none)
+    evaluatorFfi 1 none "f" [] outcome nextClock none none none hcall
+
+/-- `progSize`-indexed returning `DecCall` fuel adequacy. -/
+example
+    (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 (progSize (.annot "tag" "text" : Prog Nat))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1 none "f" [] =
+      some (.control (.returned (fun _ => none) (fun _ => none) (fun _ => none)
+        evaluatorFfi [.word 5]), 1)) :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+      [] [] 0 0 8
+      (progSize (.decCall "x" .one "f" [] (.annot "tag" "text" : Prog Nat)))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+      (.decCall "x" .one "f" [] (.annot "tag" "text")) none none none =
+    some (panValueFfiClockRestoreLocal "x" none
+      (.control (.normal (updatePanValueMap (fun _ => none) "x" (.word 5))
+        (fun _ => none) (fun _ => none) evaluatorFfi)), 1) := by
+  exact evalPanValueFfiClockProg_decCall_returned_some_progSize evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 (fun _ => none) (fun _ => none)
+    (fun _ => none) evaluatorFfi 1 "x" .one "f" [] (.annot "tag" "text")
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi (.word 5) 1
+    (.control (.normal (updatePanValueMap (fun _ => none) "x" (.word 5))
+      (fun _ => none) (fun _ => none) evaluatorFfi)) 1 none none none hcall
+    (by simp [panValueShape, panShapeMatches])
+    (by
+      simpa only [progSize] using
+        (evalPanValueFfiClockProg_annot_some evaluatorContext (fun _ _ => none)
+          evaluatorHandler [] [] 0 0 8 0
+          (updatePanValueMap (fun _ => none) "x" (.word 5)) (fun _ => none)
+          (fun _ => none) evaluatorFfi 1 "tag" "text" none none none))
+
 /-- Lifting a successful `Call` outcome through the clocked evaluator. -/
 example (outcome : PanValueFfiClockOutcome Nat Unit) (nextClock : Nat)
     (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)

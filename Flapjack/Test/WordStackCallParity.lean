@@ -195,6 +195,18 @@ def stackArgsMatchesCakeProbe : Bool :=
 
 #guard stackArgsMatchesCakeProbe
 
+/- The direct `call_dest (SOME target)` path keeps the target as a label and
+   does not add a frame-free instruction when Cake's computed free count is
+   zero for an empty frame. -/
+def directCallDestinationCakeGuard : Bool :=
+  match wordToStackProgNat
+      { locations := [], scratch := 31, stackBase := 0 }
+      (.call none (some 7) [] none : WordProg Nat) with
+  | some (.call none (.label target) none) => target == 7
+  | _ => false
+
+#guard directCallDestinationCakeGuard
+
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
     [ ("stack_arg_count and stack_free match the call oracle", callArgCountExact),
@@ -218,7 +230,9 @@ def runChecks : IO Bool := do
       ("an overflow argument sits at wMoveSingle's f - 1 - (r - k)",
         overflowArgumentSlotMatchesWMoveSingle),
       ("StackArgs direct/indirect shapes match Cake's probe",
-        stackArgsMatchesCakeProbe) ]
+        stackArgsMatchesCakeProbe),
+      ("direct call destination preserves Cake's label carrier",
+        directCallDestinationCakeGuard) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

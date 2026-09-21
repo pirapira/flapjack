@@ -140,7 +140,9 @@ def dumpSourceWordPasses (entry : Nat × Nat × WordProg (RiscV.Word 64)) : IO U
   let unallocated := selected
   let (_ssaState, renamedParameters, ssaProgram) :=
     wordFullSsaCcTrans arity unallocated
-  let deadAfterSsa := RiscV.wordRemoveDeadProgram ssaProgram
+  let (deadAfterSsa, deadLive, deadNLive) :=
+    RiscV.wordDeadCodeWithStores ssaProgram [] []
+      (RiscV.wordDeadReturnLabels ssaProgram) []
   let cse := RiscV.wordCseProp deadAfterSsa
   let copy := RiscV.wordCopyProp cse
   let two := RiscV.wordThreeToTwoReg copy
@@ -155,6 +157,7 @@ def dumpSourceWordPasses (entry : Nat × Nat × WordProg (RiscV.Word 64)) : IO U
   emit "stage=source_word_unallocated" unallocated
   emit "stage=source_word_ssa" (label, arity, renamedParameters, ssaProgram)
   emit "stage=source_word_dead_ssa" deadAfterSsa
+  emit "stage=source_word_dead_ssa_live" (deadLive, deadNLive)
   emit "stage=source_word_cse" cse
   emit "stage=source_word_copy" copy
   emit "stage=source_word_two_reg" two
@@ -195,10 +198,17 @@ def dumpSourceWordPasses (entry : Nat × Nat × WordProg (RiscV.Word 64)) : IO U
   emit "stage=source_word_allocator_trace"
     (allocationFuel, state1.simpWl, state1.freezeWl, state1.spillWl,
       state2.stack, state2.coalesced, state3.nodeTag, state4.nodeTag)
-  emit "stage=source_word_colour"
-    (RiscV.CakeRegAlloc.cakeDoRegAlloc .irc scost
-      RiscV.CakeRegAlloc.cakeRiscVRegisterCount moves tree forced
-      (RiscV.CakeRegAlloc.cakeGetStackOnly dead))
+  let colouring := RiscV.CakeRegAlloc.cakeDoRegAlloc .irc scost
+    RiscV.CakeRegAlloc.cakeRiscVRegisterCount moves tree forced
+    (RiscV.CakeRegAlloc.cakeGetStackOnly dead)
+  emit "stage=source_word_colour" colouring
+  emit "stage=source_word_total_colour"
+    (colouring.map (fun colouring =>
+      let colour := RiscV.CakeAlloc.totalColour colouring
+      [ (0, colour 0), (2, colour 2), (4, colour 4), (21, colour 21),
+        (25, colour 25), (37, colour 37), (41, colour 41),
+        (47, colour 47), (51, colour 51), (73, colour 73),
+        (197, colour 197), (201, colour 201) ]))
   match RiscV.CakeRegAlloc.cakeAllocateWordFunctionAfterDead label
       (wordSsaAbiParameters arity) unallocated with
   | none => emit "stage=source_word_allocator" "none"

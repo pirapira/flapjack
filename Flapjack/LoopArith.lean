@@ -21,8 +21,9 @@ def loopArithDiv (destination dividend divisor : Nat) (locals : Nat → Option N
 /--
 Faithful port of the `LLongMul` branch of `loop_arith`.
 
-The original writes the low word first as an inner update and the high word as
-the outer update, so the high word wins when both destinations coincide.
+The original writes the high word first as an inner update and the low word as
+the outer update, so the low word wins when both destinations coincide
+(`loopSemScript.sml:127-132`).
 -/
 def loopArithLongMul (width destinationLeft destinationRight sourceLeft sourceRight : Nat)
     (locals : Nat → Option Nat) : Option (Nat → Option Nat) :=

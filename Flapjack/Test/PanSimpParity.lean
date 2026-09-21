@@ -2525,6 +2525,23 @@ example : PanValueFfiClockNormalAdequateProgFromFloor 0 0 evaluatorContext
       simp [progCallFuel, evalPanValueFfiClockProg, evalPanValueFfiClockLeaf,
         evalPanValueFfiProgSteps], by omega⟩
 
+/-! Discharging the explicit floor premise: an adequate (clock-unbounded)
+    program has trivial floor `0`, the input bound can be raised, and a
+    lower-bounded first program composes with an adequate continuation. -/
+#check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_of_adequate
+#check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_weaken
+#check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_seq_adequate
+#check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_of_from
+#check @Flapjack.PanValueFfiClockNormalAdequateProgFrom_of_fromFloor
+#check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_while_zero
+
+/-! Clock-free annotations also keep their floor. -/
+example : PanValueFfiClockNormalAdequateProgFromFloor 0 0 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+    (.annot "tag" "text") :=
+  PanValueFfiClockNormalAdequateProgFromFloor_annot 0 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none "tag" "text"
+
 /-! The clock-free leaf preserves its floor, giving the floor-composition
     theorem a base case; declarations and conditionals then preserve it. -/
 example : PanValueFfiClockNormalAdequateProgFromFloor 0 0 evaluatorContext
@@ -2589,39 +2606,5 @@ example : PanValueFfiClockNormalAdequateProgFromFloor 1 0 evaluatorContext
       (by
         intro locals globals memory ffi
         exact ⟨locals, globals, memory, ffi, 1, by simp [evalPanValueFfiProgSteps]⟩)
-
-/-! The floor certificate at floor = lo projects back to the plain
-    lower-bounded adequacy predicate. -/
-example : PanValueFfiClockNormalAdequateProgFrom 0 evaluatorContext
-    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
-    (.skip : Prog Nat) :=
-  PanValueFfiClockNormalAdequateProgFrom_of_fromFloor 0 evaluatorContext
-    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none (.skip : Prog Nat)
-    (PanValueFfiClockNormalAdequateProgFromFloor_leaf 0 evaluatorContext
-      (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
-      (.skip : Prog Nat) PanValueFfiLeafProg.skip
-      (by
-        intro locals globals memory ffi
-        exact ⟨locals, globals, memory, ffi, 1, by simp [evalPanValueFfiProgSteps]⟩))
-/-! Discharging the explicit floor premise: an adequate (clock-unbounded)
-    program has trivial floor `0`, the input bound can be raised, and a
-    lower-bounded first program composes with an adequate continuation. -/
-#check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_of_adequate
-#check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_weaken
-#check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_seq_adequate
-
-/-! Clock-free annotations and zero-condition whiles keep their floor. -/
-example : PanValueFfiClockNormalAdequateProgFromFloor 0 0 evaluatorContext
-    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
-    (.annot "tag" "text") :=
-  PanValueFfiClockNormalAdequateProgFromFloor_annot 0 evaluatorContext
-    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none "tag" "text"
-
-example : PanValueFfiClockNormalAdequateProgFromFloor 0 0 evaluatorContext
-    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
-    (.while (.const 0) (.skip : Prog Nat)) :=
-  PanValueFfiClockNormalAdequateProgFromFloor_while_zero 0 evaluatorContext
-    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none (.const 0)
-    (.skip : Prog Nat) (fun _ _ _ => ⟨0, by simp [evalPanValueExp], by decide⟩)
 
 end Flapjack.Test.PanSimpParity

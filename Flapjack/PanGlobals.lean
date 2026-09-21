@@ -358,6 +358,42 @@ theorem functions_globalRenameDecls [BEq String] (source target : FunName)
   | cons declaration declarations ih =>
       cases declaration <;> simp [globalRenameDecls, functions, ih]
 
+theorem nodup_globalRenameFunctionName_map [BEq String] [LawfulBEq String]
+    (source target : FunName) (names : List FunName) (hnodup : names.Nodup) :
+    (names.map (globalRenameFunctionName source target)).Nodup := by
+  induction names with
+  | nil => simp
+  | cons head tail ih =>
+      simp only [List.map_cons, List.nodup_cons] at hnodup ⊢
+      obtain ⟨hhead, htail⟩ := hnodup
+      refine ⟨?_, ih htail⟩
+      intro hmem
+      obtain ⟨name, hname, heq⟩ := List.mem_map.mp hmem
+      have hnamehead : name = head :=
+        (globalRenameFunctionName_cong source target name head).mp heq
+      rw [hnamehead] at hname
+      exact hhead hname
+
+theorem globalRenameDecls_names_nodup [BEq String] [LawfulBEq String]
+    (source target : FunName) (declarations : List (Decl α))
+    (hnodup : ((functions declarations).map (fun entry => entry.1)).Nodup) :
+    ((functions (globalRenameDecls source target declarations)).map
+        (fun entry => entry.1)).Nodup := by
+  rw [functions_globalRenameDecls, List.map_map]
+  have hcomp :
+      ((fun entry : FunName × List (VarName × Shape) × Prog α × Shape =>
+          entry.1) ∘
+        (fun entry : FunName × List (VarName × Shape) × Prog α × Shape =>
+          (globalRenameFunctionName source target entry.1, entry.2.1,
+            globalRenameProg source target entry.2.2.1, entry.2.2.2))) =
+      (globalRenameFunctionName source target) ∘
+        (fun entry : FunName × List (VarName × Shape) × Prog α × Shape =>
+          entry.1) := by
+    funext entry
+    rfl
+  rw [hcomp, ← List.map_map]
+  exact nodup_globalRenameFunctionName_map source target _ hnodup
+
 def globalFunctionNames : List (Decl α) → List FunName
   | [] => []
   | .function declaration :: declarations =>

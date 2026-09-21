@@ -261,6 +261,15 @@ example :
       some [.and 4 5 6] := by
   decide
 
+/- Cake's list-valued Word `Binop Sub` carrier keeps an immediate operand in
+   the I-format signed-negation form rather than treating it as a register. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith
+        (.binOp .sub 4 5 (.imm (BitVec.ofNat 64 24))))) [] 0]⟩ =
+      some [.addi 4 5 (0 - BitVec.ofNat 64 24)] := by
+  decide
+
 /- Cake's `riscv_ast (Inst (Arith (Div ...)))` reaches the target DIV
    encoding through the direct Lab word-arithmetic boundary. -/
 example :

@@ -24939,6 +24939,32 @@ theorem panValueCrepProgramStateCorrect_and_controlSafe_call_none_of_relation
       none compiledInfo name args hcompile hcall
   · exact panValueCrepProgramStateControlSafe_call_none name args
 
+/-! The return-destination form has the same paired induction branch.  Its
+    safety proof is separate because `assignPanValueCallResult` materialises
+    a normal result after a callee return. -/
+theorem panValueCrepProgramStateCorrect_and_controlSafe_call_returns_of_relation
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (destination : Option (VarKind × VarName)) (name : FunName)
+    (args : List (Exp α))
+    (compiledInfo : CompileContext α →
+      Option (List Nat × Option (α × CrepProg α)))
+    (hcompile : ∀ (context : CompileContext α),
+      compileProg context (.call (some (destination, none)) name args) =
+        .call (compiledInfo context) name (compileArgs context args))
+    (hcall : PanValueCrepCallStateCorrect
+      (some (destination, none)) compiledInfo name args) :
+    PanValueCrepProgramStateCorrect
+        (.call (some (destination, none)) name args) ∧
+      PanValueCrepProgramStateControlSafe
+        (.call (some (destination, none)) name args) := by
+  constructor
+  · exact panValueCrepProgramStateCorrect_call_of_relation
+      (some (destination, none)) compiledInfo name args hcompile hcall
+  · exact panValueCrepProgramStateControlSafe_call_returns destination name args
+
 /-! A clocked arbitrary Raise can provide the HOL hraise package directly.
     This adapter preserves that package and exception lookup while reusing the
     evaluator-level clocked theorem; no payload, state, or evaluator premise

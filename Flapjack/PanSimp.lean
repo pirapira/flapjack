@@ -574,6 +574,16 @@ theorem declarationExceptionIds_panSimpDecls (declarations : List (Decl α)) :
       cases declaration <;>
         simp [panSimpDecls, declarationExceptionIds, expIds_panSimpProg, ih]
 
+/-- The function-only projection of the declaration table is exactly the flat
+    map of `expIds` over the function bodies, which is the list that Cake's
+    `get_eids` numbers before removing repeats. -/
+theorem declarationExceptionIds_map_function (functions : List (FunDecl α)) :
+    declarationExceptionIds (functions.map (fun function => Decl.function function)) =
+      functions.flatMap (fun function => expIds function.body) := by
+  induction functions with
+  | nil => simp [declarationExceptionIds]
+  | cons function functions ih => simp [declarationExceptionIds, ih]
+
 /-! ## A linear syntactic size bound for `seqAssoc`
 
 `seqAssoc` only reassociates sequences and never duplicates syntax, so a

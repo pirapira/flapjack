@@ -181,4 +181,16 @@ example :
 
 #check @declarationExceptionIds_panSimpDecls
 
+/-- The function projection of the declaration table is the flat map of
+    `expIds` over the function bodies (the list Cake's `get_eids` numbers). -/
+private def demoFunDecl : FunDecl Nat :=
+  { name := "f", inline := false, exported := false, params := [], body := .raise "E" (.const 0), returnShape := .one }
+
+example :
+    declarationExceptionIds ([demoFunDecl].map (fun function => Decl.function function)) =
+      [demoFunDecl].flatMap (fun function => expIds function.body) :=
+  declarationExceptionIds_map_function _
+
+#check @declarationExceptionIds_map_function
+
 end Flapjack

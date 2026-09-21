@@ -1036,6 +1036,7 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_raised_no_handler
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_returned_no_handler
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_tailCall
+#check @panValuePcCompileCorrect_of_clocked_call_tailCall
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_returned_destination
 /-! Compositional source handler safety: a handler-free call and a declaration
     body that never exposes loop control. -/

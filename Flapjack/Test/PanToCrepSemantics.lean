@@ -63,4 +63,24 @@ theorem emptySemanticFailure :
     emptyPanHooks emptyCrepHooks emptySemanticAgreement emptyPanLub emptyCrepLub
   rfl
 
+/-! The compiler result relation feeds the semantic outcome relation without
+    losing the success constructor.  State/value correctness is intentionally
+    a premise here, exactly as it is in the full `pc_compile_correct` lift. -/
+example {α : Type} (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (targetState : CrepState α)
+    (hrel : panValuePcResultRel structs context exceptionRel exceptionCode
+      globalsLookup
+      (.returned sourceLocals sourceGlobals sourceMemory [])
+      (.returned targetState [])) :
+    panCrepSemanticOutcomeRel .success .success := by
+  simpa [panValuePcResultOutcome, crepPcResultOutcome] using
+    (panValuePcResultRel_semanticOutcomeRel structs context exceptionRel
+      exceptionCode globalsLookup
+      (.returned sourceLocals sourceGlobals sourceMemory [])
+      (.returned targetState []) .success .success hrel rfl rfl)
+
 end Flapjack.Test.PanToCrepSemantics

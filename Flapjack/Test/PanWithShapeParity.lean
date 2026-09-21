@@ -21,6 +21,29 @@ def shortShapes : List Shape := [.comb [.one, .one], .one]
   [[1], [2, 3], [4]]
 #guard withShape shortShapes [7] == [[7], []]
 
+theorem withShape_length_fixture :
+    (withShape oneCombNamed [1, 2, 3, 4]).length = oneCombNamed.length :=
+  withShape_length oneCombNamed [1, 2, 3, 4]
+
+theorem length_withShape_eq_shape_fixture :
+    oneCombNamed.length = (withShape oneCombNamed [1, 2, 3, 4]).length :=
+  length_withShape_eq_shape oneCombNamed [1, 2, 3, 4]
+    (by simp [oneCombNamed, Shape.shapeSize])
+
+def lengthGuard : Bool :=
+  (withShape oneCombNamed [1, 2, 3, 4]).length == oneCombNamed.length
+
+#eval lengthGuard
+#guard lengthGuard
+
+def checkLength (name : String) : IO Bool := do
+  if (withShape oneCombNamed [1, 2, 3, 4]).length == oneCombNamed.length then
+    IO.println s!"PASS {name}"
+    pure true
+  else
+    IO.println s!"FAIL {name}"
+    pure false
+
 def check (name : String) (actual expected : List (List Nat)) : IO Bool := do
   if actual == expected then
     IO.println s!"PASS {name}"
@@ -36,6 +59,7 @@ def runChecks : IO Bool := do
       (withShape oneCombNamed [1, 2, 3, 4, 5]) [[1], [2, 3], [4]],
     check "pan with_shape short input"
       (withShape shortShapes [7]) [[7], []] ].mapM id
-  pure (results.all id)
+  let lengthOk ← checkLength "pan with_shape length"
+  pure (results.all id && lengthOk)
 
 end Flapjack.Test.PanWithShapeParity

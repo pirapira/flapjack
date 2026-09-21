@@ -1562,6 +1562,47 @@ theorem evalPanValueFfiClockProg_seq_some
         (.seq first second) ma c mh = some (result, resultClock) := by
   simp [evalPanValueFfiClockProg, hfirst, hsecond]
 
+/-- Fuel adequacy for `Seq`: at the `progSize` budget the two components are
+    evaluated at the intermediate fuel `progSize first + progSize second`, and
+    the whole sequence then succeeds at `progSize (.seq first second)`. -/
+theorem evalPanValueFfiClockProg_seq_some_progSize
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (first second : Prog α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (nextLocals nextGlobals : VarName → Option (PanValue α))
+    (nextMemory : α → Option (PanValue α)) (nextFfi : FfiState σ) (nextClock : Nat)
+    (result : PanValueFfiClockOutcome α σ) (resultClock : Nat)
+    (hfirst : evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (progSize first + progSize second)
+        locals globals memory ffi clock first ma c mh =
+      some (.control (.normal nextLocals nextGlobals nextMemory nextFfi), nextClock))
+    (hsecond : evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (progSize first + progSize second)
+        nextLocals nextGlobals nextMemory nextFfi nextClock second ma c mh =
+      some (result, resultClock)) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (progSize (.seq first second))
+        locals globals memory ffi clock (.seq first second) ma c mh =
+      some (result, resultClock) := by
+  have hsize : progSize (.seq first second) =
+      (progSize first + progSize second) + 1 := by simp [progSize]; omega
+  rw [hsize]
+  exact evalPanValueFfiClockProg_seq_some context primitive handler structs
+    functions baseAddress topAddress bytesInWord (progSize first + progSize second)
+    locals globals memory ffi clock first second ma c mh nextLocals nextGlobals
+    nextMemory nextFfi nextClock result resultClock hfirst hsecond
+
 theorem evalPanValueFfiClockProg_while_zero_some
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

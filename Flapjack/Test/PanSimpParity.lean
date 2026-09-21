@@ -469,6 +469,40 @@ theorem clocked_leaf_skip_progSize_succeeds :
   · simp [evalPanValueFfiProgSteps]
   · exact Nat.le_refl _
 
+/-- `Seq` fuel adequacy at the `progSize` budget: two leaf components compose. -/
+theorem clocked_seq_some_progSize_succeeds :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8
+      (progSize (.seq (.skip : Prog Nat) (.skip : Prog Nat)))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+      (.seq (.skip : Prog Nat) (.skip : Prog Nat)) =
+    some (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi), 1) := by
+  apply evalPanValueFfiClockProg_seq_some_progSize evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8
+    (.skip : Prog Nat) (.skip : Prog Nat)
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    none none none
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi)) 1
+  · apply evalPanValueFfiClockProg_leaf_some_progSize evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [] 0 0 8 (.skip : Prog Nat)
+      (progSize (.skip : Prog Nat) + progSize (.skip : Prog Nat))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+      none none none PanValueFfiLeafProg.skip
+      (.normal (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi) 1
+    · simp [evalPanValueFfiProgSteps]
+    · simp [progSize]
+  · apply evalPanValueFfiClockProg_leaf_some_progSize evaluatorContext
+      (fun _ _ => none) evaluatorHandler [] [] 0 0 8 (.skip : Prog Nat)
+      (progSize (.skip : Prog Nat) + progSize (.skip : Prog Nat))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+      none none none PanValueFfiLeafProg.skip
+      (.normal (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi) 1
+    · simp [evalPanValueFfiProgSteps]
+    · simp [progSize]
+
 /-- The while recursive branch: a nonzero condition and a `normal` body result
     iterate the loop from the body's final state and clock. -/
 example

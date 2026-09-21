@@ -5,8 +5,8 @@ These fixtures exercise distinct allocator/frame shapes: dead-raise
 allocation, handler-frame continuation, colour permutation, returned-value
 allocation, wide-call argument occupancy, overflow-call frame slots, 64-bit
 register pressure, SSA cutsets/parallel moves, an indirect spilled-address
-carrier, five-word frame occupancy, and a stack-allocation boundary.  Keep the
-list explicit
+carrier, five-word and nine-continuation frame occupancy, and a stack-allocation
+boundary.  Keep the list explicit
 so a change in the checked original-Cake witnesses is reviewable.
 The expected Cake stdout hashes are pinned in ``parity-small-corpus.json``.
 Comparing Flapjack's complete assembly stdout with those hashes keeps this
@@ -29,6 +29,7 @@ FIXTURES = (
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f01266_raise_live_continuation.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "allocator_frame_handler_min.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "gh1025_frame_bitmap.pnk",
+    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "gh1025_frame_bitmap_f00000.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "allocator_colour_permutation.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00068_allocator_return.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00028_allocator.pnk",

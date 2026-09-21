@@ -701,4 +701,14 @@ theorem mod_eq_of_lt_eq_fixture {n x m : Nat} (hn : n < x) (hm : m < x)
     (h : n % x = m % x) : n = m :=
   mod_eq_of_lt_eq hn hm h
 
+/-- Focused regression for the `pair_map_I` counterpart. -/
+theorem prod_mk_pair_eq_id_fixture :
+    (fun p : Nat × Nat => (p.1, p.2)) = id :=
+  prod_mk_pair_eq_id
+
+/-- Focused regression for the `not_none_then_some` counterpart. -/
+theorem option_ne_none_iff_exists_fixture :
+    (some 3 : Option Nat) ≠ none ↔ ∃ a, (some 3 : Option Nat) = some a :=
+  option_ne_none_iff_exists (some 3)
+
 end Flapjack.Test.PanProgramSimpParity

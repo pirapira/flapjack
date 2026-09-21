@@ -1255,4 +1255,30 @@ theorem mod_eq_of_lt_eq {n x m : Nat} (hn : n < x) (hm : m < x)
   rw [Nat.mod_eq_of_lt hn, Nat.mod_eq_of_lt hm] at h
   exact h
 
+/-! Counterpart of Cake's `pair_map_I`
+(`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4630`):
+
+    (λ(x,y). (x,y)) = I
+
+The anonymous pair constructor is the identity on pairs. -/
+theorem prod_mk_pair_eq_id {α β : Type} :
+    (fun p : α × β => (p.1, p.2)) = id := by
+  funext p
+  cases p
+  rfl
+
+/-! Counterpart of Cake's `not_none_then_some`
+(`cakeml/pancake/proofs/pan_to_crepProofScript.sml:3593`):
+
+    x <> NONE <=> ?a. x = SOME a -/
+theorem option_ne_none_iff_exists {α : Type} (x : Option α) :
+    x ≠ none ↔ ∃ a, x = some a := by
+  constructor
+  · intro h
+    cases x with
+    | none => exact absurd rfl h
+    | some a => exact ⟨a, rfl⟩
+  · rintro ⟨a, rfl⟩
+    exact Option.some_ne_none a
+
 end Flapjack

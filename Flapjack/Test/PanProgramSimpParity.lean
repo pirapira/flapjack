@@ -432,6 +432,18 @@ example
   exact evalPanValueProgram_of_declarations_and_raised_call_with_exception_state
     evalRelState primitive ffi fuel exceptionsDecls entry arguments memoryAccess
     memoryHandler state locals globals memory exception value hdeclarations hcall
+/-! Regression for Cake's `evaluate_decls_names`: structure-name
+    declarations do not alter the program state during evaluation. -/
+
+def namesOnlyDecls : List (Decl Nat) :=
+  [.name "Pair" [ ("left", .one), ("right", .one) ],
+   .name "Triple" [ ("a", .one), ("b", .one), ("c", .one) ]]
+
+example :
+    evalPanValueDeclarationsWithStructs ([] : StructContext) evalRelState
+      namesOnlyDecls none = some evalRelState := by
+  exact evalPanValueDeclarationsWithStructs_names ([] : StructContext)
+    evalRelState namesOnlyDecls none (by decide)
 
 /-! Cake's `decs_stcnames_only_functions` / `decs_stcnames_only_functions2`
     (`cakeml/pancake/semantics/panPropsScript.sml:1592,1600`): struct-free and

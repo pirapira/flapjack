@@ -47,6 +47,25 @@ def clockedMemoryFfiDecliningFinalIsReachable : Bool :=
 
 #guard clockedMemoryFfiDecliningFinalIsReachable
 
+def clockedMemoryFfiDecliningFinalProgramResult :=
+  evalPanValueFfiClockProgram memoryFfiTestContext
+    { memoryFfiInitial with ffi := memoryFfiFinalState } 20
+    (fun _ _ => none) memoryFfiTestHandler 20
+    [.function
+      { name := "main", inline := false, exported := true, params := [],
+        body := memoryFfiFinalMain, returnShape := .one }]
+    "main" [] (memoryAccess := some memoryFfiTestMemoryAccess)
+    (memoryHandler := some memoryFfiDecliningHandler)
+
+def clockedMemoryFfiDecliningFinalProgramIsReachable : Bool :=
+  match clockedMemoryFfiDecliningFinalProgramResult with
+  | some (.control (.finalFfi locals _ memory ffi event), 19) =>
+      locals "x" = none && memory 200 = none && ffi.state = () &&
+        event.name = .extCall "unknown" && event.outcome = .failed
+  | _ => false
+
+#guard clockedMemoryFfiDecliningFinalProgramIsReachable
+
 def clockedRaisedDeclarations : List (Decl Nat) :=
   [.exnDecl "E" .one,
    .function

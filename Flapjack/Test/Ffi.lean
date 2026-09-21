@@ -19,6 +19,7 @@ example (state : FfiState Unit) (name : FfiName)
   callFfi_return_ioEvents_prefix state name configuration bytes nextState nextBytes hcall
 
 #check @panValueFfiExtCall_returned_ioEvents_prefix
+#check @evalPanValueFfiProgSteps_extCall_returned_ioEvents_prefix
 
 /-! The four observations below are transcribed from
 `scripts/hol-probes/ffi_call_probe.out`, generated from

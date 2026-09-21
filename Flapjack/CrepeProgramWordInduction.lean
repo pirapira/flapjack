@@ -308,7 +308,6 @@ inductive StatefulWordProg (α : Type)
         panValueCrepControlRel structs context exceptionRel sourceResult
           crepResult) :
       StatefulWordProg α (.call info function arguments)
-
 theorem panValueCrepProgramStateCorrect_statefulWord
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
@@ -378,5 +377,4 @@ theorem panValueCrepProgramStateCorrect_statefulWord
       exact panValueCrepProgramStateCorrect_call_of_word_arguments info
         compiledInfo function arguments hcompile hword hbytesInWord hlookup hstate
         hcall
-
 end Flapjack

@@ -435,6 +435,40 @@ example (state' : PanValueProgramState Nat)
   exact evalPanValueDeclarationsWithStructs_only_exn_decls ([] : StructContext)
     evalRelState state' onlyExceptionDecls none rfl (by decide) heval
 
+/-! The public declaration evaluator preserves the same exception table after
+    collecting the declaration-time struct context.  This is the direct
+    state/global lookup bridge used by the top-level raised evaluator. -/
+example (state' : PanValueProgramState Nat)
+    (heval : evalPanValueDeclarations evalRelState exceptionsDecls none = some state') :
+    state'.exceptions = panExceptionEntries exceptionsDecls ++ evalRelState.exceptions := by
+  exact evalPanValueDeclarations_exceptions evalRelState state' exceptionsDecls none heval
+
+example
+    (primitive : PanPrimitiveHandler Nat) (ffi : PanValueFfiHandler Nat)
+    (fuel : Nat) (entry : FunName) (arguments : List (Exp Nat))
+    (memoryAccess : Option (PanValueMemoryAccess Nat))
+    (memoryHandler : Option (PanValueAcceleratorFfiHandler Nat))
+    (state : PanValueProgramState Nat)
+    (locals globals : VarName → Option (PanValue Nat))
+    (memory : Nat → Option (PanValue Nat)) (exception : ExceptionId)
+    (value : PanValue Nat)
+    (hdeclarations : evalPanValueDeclarations evalRelState exceptionsDecls
+      (memoryAccess := memoryAccess) = some state)
+    (hcall : evalPanValueCallWithPrimitiveCallsAndFfi primitive ffi
+      state.structs state.functions state.baseAddress state.topAddress
+      state.bytesInWord fuel (fun _ => none) state.globals state.memory none
+      entry arguments (memoryAccess := memoryAccess)
+      (contracts := some (PanValueCallContracts.mk state.returnShapes
+        state.exceptions state.parameterShapes))
+      (memoryHandler := memoryHandler) =
+      some (.raised locals globals memory exception value)) :
+    evalPanValueProgram evalRelState primitive ffi fuel exceptionsDecls entry arguments
+      (memoryAccess := memoryAccess) (memoryHandler := memoryHandler) =
+      some (.raised locals globals memory exception value) ∧
+    state.exceptions = panExceptionEntries exceptionsDecls ++ evalRelState.exceptions := by
+  exact evalPanValueProgram_of_declarations_and_raised_call_with_exception_state
+    evalRelState primitive ffi fuel exceptionsDecls entry arguments memoryAccess
+    memoryHandler state locals globals memory exception value hdeclarations hcall
 example (state' : PanValueProgramState Nat)
     (heval : evalPanValueDeclarations evalRelState onlyExceptionDecls none =
       some state') :
@@ -583,6 +617,18 @@ example : True := by
         heval
       trivial
 
+example (state' : PanValueProgramState Nat)
+    (heval : evalPanValueDeclarationsWithStructs ([] : StructContext)
+      evalRelState functionsOnlyDecls none = some state') :
+    state' = { evalRelState with
+      functions := panFunctionEntries functionsOnlyDecls ++ evalRelState.functions
+      returnShapes :=
+        panReturnShapeEntries functionsOnlyDecls ++ evalRelState.returnShapes
+      parameterShapes :=
+        panParameterShapeEntries functionsOnlyDecls ++ evalRelState.parameterShapes
+      exceptions := evalRelState.exceptions } := by
+  exact evalPanValueDeclarationsWithStructs_only_functions [] evalRelState state'
+    functionsOnlyDecls none rfl (by decide) heval
 /-! Cake's `evaluate_decls_only_functions` (`panPropsScript.sml:1529`): a
     function-only declaration list changes only the function table and the
     separate return-shape / parameter-shape maps. -/

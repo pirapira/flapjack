@@ -369,5 +369,4 @@ theorem panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call
   · rw [hclock]
     rfl
   · simp [panValuePcResultRelWithContextCode, panValuePcResultRel, hstate]
-
 end Flapjack

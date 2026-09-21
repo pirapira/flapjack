@@ -100,6 +100,77 @@ theorem panValueCrepLocalsRel_lookup_evidence
   exact ⟨hevidence.1, (readCrepLocals_length crepLocals slots
     (panValueFlatWords value) hevidence.2).symm, hevidence.2⟩
 
+/-! Cake's shape relation is used by `locals_rel_wf_shape` to transfer
+    well-formedness from the variable-context shape to a source value.  The
+    executable `panShapeMatches` relation is Boolean, so expose its
+    proof-relevant injectivity explicitly before using it in that theorem. -/
+theorem panShapeMatches_eq_of_true :
+    ∀ (left right : Shape), panShapeMatches left right = true → left = right := by
+  apply panShapeMatches.induct
+    (motive1 := fun left right =>
+      panShapeMatches (.comb left) (.comb right) = true → left = right)
+    (motive2 := fun left right =>
+      panShapeMatches left right = true → left = right)
+  · intro h
+    rfl
+  · intro left leftRest right rightRest ihHead ihTail h
+    rw [panShapeMatches.eq_3] at h
+    rw [panShapeMatches.panShapeListMatches.eq_2] at h
+    have hparts := Bool.and_eq_true_iff.mp h
+    have htail : panShapeMatches (.comb leftRest) (.comb rightRest) = true := by
+      rw [panShapeMatches.eq_3]
+      exact hparts.2
+    have hleftEq := ihHead hparts.1
+    have htailEq := ihTail htail
+    exact Eq.trans
+      (congrArg (fun x : Shape => x :: leftRest) hleftEq)
+      (congrArg (fun xs : List Shape => right :: xs) htailEq)
+  · intro x x1 hnil hcons h
+    have hfalse : panShapeMatches.panShapeListMatches x x1 = false :=
+      panShapeMatches.panShapeListMatches.eq_3 x x1 hnil hcons
+    rw [panShapeMatches.eq_3, hfalse] at h
+    simp at h
+  · intro h
+    rfl
+  · intro left right h
+    rw [panShapeMatches.eq_2] at h
+    exact congrArg Shape.named (by simpa using h)
+  · intro left right ih h
+    rw [panShapeMatches.eq_3] at h
+    exact congrArg Shape.comb (ih (by rw [panShapeMatches.eq_3]; exact h))
+  · intro x x1 hone hnamed hcomb h
+    have hfalse := panShapeMatches.eq_4 x x1 hone hnamed hcomb
+    rw [hfalse] at h
+    simp at h
+
+/-! Faithful Lean counterpart of Cake's `locals_rel_wf_shape` helper
+    (`pan_to_crepProofScript.sml:3008-3014`).  The explicit existence premise
+    records the source invariant that every live local has a variable-context
+    entry; the shape premise is the corresponding well-formed context
+    invariant. -/
+theorem panValueCrepLocalsRel_wf_shape_nil
+    (context : CompileContext α)
+    (sourceLocals : VarName → Option (PanValue α))
+    (crepLocals : Nat → Option α)
+    (hshape : ∀ name shape slots,
+      lookupInfo name context.vars = some (shape, slots) →
+      isWfShape ([] : StructContext) shape = true)
+    (hrel : panValueCrepLocalsRel ([] : StructContext) context
+      sourceLocals crepLocals)
+    (name : VarName) (value : PanValue α)
+    (hsource : sourceLocals name = some value)
+    (hlookup : ∃ shape slots,
+      lookupInfo name context.vars = some (shape, slots)) :
+    panValueIsWf ([] : StructContext) value = true := by
+  rcases hlookup with ⟨shape, slots, hlookup⟩
+  have hevidence := hrel name value shape slots hsource hlookup
+  have hshapeEq : panValueShape ([] : StructContext) value = shape :=
+    panShapeMatches_eq_of_true _ _ hevidence.1
+  have hwf : isWfShape ([] : StructContext)
+      (panValueShape ([] : StructContext) value) = true := by
+    simpa [hshapeEq] using hshape name shape slots hlookup
+  exact panValueIsWf_of_isWfShape_panValueShape_nil value hwf
+
 def panValueCrepMemoryRel {α : Type u}
     (sourceMemory : α → Option (PanValue α))
     (crepMemory : α → Option α) : Prop :=

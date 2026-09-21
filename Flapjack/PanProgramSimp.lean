@@ -649,4 +649,35 @@ theorem evalPanValueDeclarations_only_exn_decls
         (by rfl) hall heval
       simpa using hmain
 
+/-! Cake's `evaluate_decls_names`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1552`): a declaration list
+    consisting only of structure names is skipped by declaration evaluation. -/
+theorem evalPanValueDeclarationsWithStructs_names
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext) (state : PanValueProgramState α)
+    (declarations : List (Decl α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (hall : declarations.all isName = true) :
+    evalPanValueDeclarationsWithStructs structs state declarations
+      memoryAccess = some state := by
+  induction declarations with
+  | nil =>
+      simp [evalPanValueDeclarationsWithStructs]
+  | cons declaration declarations ih =>
+      simp only [List.all_cons, Bool.and_eq_true] at hall
+      obtain ⟨hhead, htail⟩ := hall
+      have hname : isName declaration = true := hhead
+      cases declaration with
+      | name name fields =>
+          simp only [evalPanValueDeclarationsWithStructs]
+          exact ih htail
+      | decl shape name expression =>
+          simp [isName] at hname
+      | function declaration =>
+          simp [isName] at hname
+      | exnDecl exception shape =>
+          simp [isName] at hname
+
 end Flapjack

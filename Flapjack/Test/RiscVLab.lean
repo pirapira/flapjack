@@ -202,6 +202,14 @@ example :
       some [.mulHU 4 6 7, .mul 5 6 7] := by
   decide
 
+/- Cake's register binary subtraction lowers directly to the RV64 SUB row;
+   keep the register carrier distinct from the immediate ADDI form above. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.binOp .sub 4 5 (.reg 6)))) [] 0]⟩ =
+      some [.sub 4 5 6] := by
+  decide
+
 /- Cake's `riscv_ast (Inst (Arith (Div ...)))` selects the signed RISC-V
    DIV encoding.  Flapjack's historical constructor is named `divU`, but its
    encoder uses Cake's funct3=4/funct7=1 row; pin that source-shaped Lab

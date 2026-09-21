@@ -145,6 +145,47 @@ def fullLongDivOverflow : Bool :=
 #guard fullLongDivZero
 #guard fullLongDivOverflow
 
+/-! Width-aware `LLongMul` oracle: Cake splits the product into high and low
+    words and writes the high destination before the low destination. -/
+def wordLongMul (width : Nat) (left right : RiscV.Word width) :
+    Option (RiscV.Word width × RiscV.Word width) :=
+  let base := 2 ^ width
+  let product := left.toNat * right.toNat
+  some (BitVec.ofNat width ((product / base) % base),
+    BitVec.ofNat width (product % base))
+
+def fullLongMulState : LoopState (RiscV.Word 8) :=
+  { locals := fun name =>
+      if name == 2 then some (BitVec.ofNat 8 20)
+      else if name == 3 then some (BitVec.ofNat 8 20)
+      else none
+    globals := fun _ => none
+    memory := fun _ => none }
+
+def fullLongMulSuccess : Bool :=
+  match evalLoopProgFullWithLongMul (wordLongMul 8) 2 fullLongMulState
+      (.arith (.longMul 5 6 2 3) : LoopProg (RiscV.Word 8)) with
+  | some (.normal state) =>
+      state.locals 5 == some (BitVec.ofNat 8 1) &&
+      state.locals 6 == some (BitVec.ofNat 8 144)
+  | _ => false
+
+def fullLongMulMissingSource : Bool :=
+  match evalLoopProgFullWithLongMul (wordLongMul 8) 1 fullLongMulState
+      (.arith (.longMul 5 6 2 4) : LoopProg (RiscV.Word 8)) with
+  | none => true
+  | _ => false
+
+def fullLongMulSameDestination : Bool :=
+  match evalLoopProgFullWithLongMul (wordLongMul 8) 2 fullLongMulState
+      (.arith (.longMul 5 5 2 3) : LoopProg (RiscV.Word 8)) with
+  | some (.normal state) => state.locals 5 == some (BitVec.ofNat 8 144)
+  | _ => false
+
+#guard fullLongMulSuccess
+#guard fullLongMulMissingSource
+#guard fullLongMulSameDestination
+
 /-! The primitive branch uses the same fixed-width Cake `AddCarry` handler as
     `loop_primop` (`loopSemScript.sml:242-252`). -/
 def primitiveMachine : PrimOp → List LoopWordLoc → Option (List LoopWordLoc)

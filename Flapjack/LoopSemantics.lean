@@ -571,6 +571,47 @@ def evalLoopProgFullWithLongDiv [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul
       evalLoopProgFullWithLongDiv longDiv fuel state body
   | fuel + 1, state, program => evalLoopProgFull fuel state program
 
+/-! Full evaluator extension for Cake's width-aware `LLongMul`.  As with the
+    long-division extension above, this is opt-in so legacy callers retain
+    their established fragment.  Cake's `loop_arith` writes the high word
+    first and the low word second; retaining that order is observable when
+    the two destinations alias. -/
+def evalLoopProgFullWithLongMul [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [PanCmp α] [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
+    [Complement α]
+    (longMul : α → α → Option (α × α))
+    : Nat → LoopState α → LoopProg α → Option (LoopResult α)
+  | 0, _, _ => none
+  | _fuel + 1, state, .arith
+      (.longMul destinationLeft destinationRight sourceLeft sourceRight) => do
+      let left ← state.locals sourceLeft
+      let right ← state.locals sourceRight
+      let (high, low) ← longMul left right
+      pure (.normal { state with
+        locals := updateLoopLocal
+          (updateLoopLocal state.locals destinationLeft high)
+          destinationRight low })
+  | fuel + 1, state, .seq first second => do
+      let result ← evalLoopProgFullWithLongMul longMul fuel state first
+      match result with
+      | .normal state => evalLoopProgFullWithLongMul longMul fuel state second
+      | result => pure result
+  | fuel + 1, state, .ite operator condition right thenBranch elseBranch _ => do
+      let left ← state.locals condition
+      let right ← match right with
+        | .imm value => some value
+        | .reg name => state.locals name
+      let choose ← evalLoopCondition operator left right
+      if choose then
+        evalLoopProgFullWithLongMul longMul fuel state thenBranch
+      else
+        evalLoopProgFullWithLongMul longMul fuel state elseBranch
+  | fuel + 1, state, .mark body =>
+      evalLoopProgFullWithLongMul longMul fuel state body
+  | fuel + 1, state, program => evalLoopProgFull fuel state program
+
 /-!
 At one unit of fuel, a Loop program classified as not writing `name` leaves
 that local unchanged whenever it produces a result.  This is the local

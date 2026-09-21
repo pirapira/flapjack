@@ -528,6 +528,52 @@ example
           (updatePanValueMap (fun _ => none) "x" (.word 5)) (fun _ => none)
           (fun _ => none) evaluatorFfi 1 "tag" "text" none none none))
 
+/-- The returning `DecCall` at the call-aware budget. -/
+example
+    (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8
+      (max 7 (progCallFuel 7 (.annot "tag" "text" : Prog Nat)))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1 none "f" [] =
+      some (.control (.returned (fun _ => none) (fun _ => none) (fun _ => none)
+        evaluatorFfi [.word 5]), 1)) :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+      [] [] 0 0 8
+      (progCallFuel 7 (.decCall "x" .one "f" [] (.annot "tag" "text" : Prog Nat)))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+      (.decCall "x" .one "f" [] (.annot "tag" "text")) none none none =
+    some (panValueFfiClockRestoreLocal "x" none
+      (.control (.normal (updatePanValueMap (fun _ => none) "x" (.word 5))
+        (fun _ => none) (fun _ => none) evaluatorFfi)), 1) := by
+  exact evalPanValueFfiClockProg_decCall_returned_some_progCallFuel evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 (fun _ => none) (fun _ => none)
+    (fun _ => none) evaluatorFfi 1 "x" .one "f" [] (.annot "tag" "text")
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi (.word 5) 1
+    (.control (.normal (updatePanValueMap (fun _ => none) "x" (.word 5))
+      (fun _ => none) (fun _ => none) evaluatorFfi)) 1 none none none hcall
+    (by simp [panValueShape, panShapeMatches])
+    (by
+      simpa [progCallFuel] using
+        (evalPanValueFfiClockProg_annot_some evaluatorContext (fun _ _ => none)
+          evaluatorHandler [] [] 0 0 8 6
+          (updatePanValueMap (fun _ => none) "x" (.word 5)) (fun _ => none)
+          (fun _ => none) evaluatorFfi 1 "tag" "text" none none none))
+
+/-- A structural normal program succeeds normally at its call-aware budget. -/
+example :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+      [] [] 0 0 8
+      (progCallFuel 5 (.seq (.skip : Prog Nat) (.annot "tag" "text" : Prog Nat)))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+      (.seq (.skip : Prog Nat) (.annot "tag" "text")) none none none =
+    some (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi), 1) := by
+  exact evalPanValueFfiClockProg_normalProg_some_progCallFuel evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 5
+    (.seq (.skip : Prog Nat) (.annot "tag" "text")) (fun _ => none) (fun _ => none)
+    (fun _ => none) evaluatorFfi 1 none none none
+    (PanValueFfiClockNormalProg.seq (.skip : Prog Nat) (.annot "tag" "text")
+      PanValueFfiClockNormalProg.skip (PanValueFfiClockNormalProg.annot "tag" "text"))
+
 /-- The raised `DecCall` outcome also lifts to the declaration's progSize. -/
 example
     (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)
@@ -894,6 +940,33 @@ example
   exact evalPanValueFfiClockProg_seq_terminal_some evaluatorContext (fun _ _ => none)
     evaluatorHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none) (fun _ => none)
     evaluatorFfi 1 (.raise "E" (.const 1)) (.tick : Prog Nat)
+    (.control (.raised (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi "E" (.word 1))) 1 none none none hfirst
+    (by intro l g m f h; cases h)
+
+/-! The same terminal propagation holds at Cake's call-aware `progCallFuel`
+    budget, without evaluating the second component. -/
+example
+    (hfirst : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8
+      (progCallFuel 7 (.raise "E" (.const 1) : Prog Nat) +
+        progCallFuel 7 (.tick : Prog Nat))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+      (.raise "E" (.const 1)) none none none =
+      some (.control (.raised (fun _ => none) (fun _ => none) (fun _ => none)
+        evaluatorFfi "E" (.word 1)), 1)) :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8
+      (progCallFuel 7
+        (.seq (.raise "E" (.const 1)) (.tick : Prog Nat)))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+      (.seq (.raise "E" (.const 1)) (.tick : Prog Nat)) none none none =
+      some (.control (.raised (fun _ => none) (fun _ => none) (fun _ => none)
+        evaluatorFfi "E" (.word 1)), 1) := by
+  exact evalPanValueFfiClockProg_seq_terminal_some_progCallFuel evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    (.raise "E" (.const 1)) (.tick : Prog Nat)
     (.control (.raised (fun _ => none) (fun _ => none) (fun _ => none)
       evaluatorFfi "E" (.word 1))) 1 none none none hfirst
     (by intro l g m f h; cases h)
@@ -1423,6 +1496,7 @@ def runChecks : IO Bool := do
   IO.println "PASS pan_simp clocked evaluate_while_body_same Cake equation"
   IO.println "PASS pan_simp clocked evaluate_seq_second_congr Cake equation"
   IO.println "PASS pan_simp clocked evaluate_seq_normal_components Cake equation"
+  IO.println "PASS pan_simp clocked terminal Seq progCallFuel Cake equation"
   IO.println "PASS pan_simp Skip/Seq fuel-adequacy fragment Cake bound"
   IO.println "PASS pan_simp clocked ret_to_tail common-fuel Cake equation"
   IO.println "PASS pan_simp clocked pan_simp common-fuel Cake equation"

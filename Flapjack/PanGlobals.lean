@@ -270,6 +270,30 @@ def globalRenameFunctionName [BEq String]
     (source target name : FunName) : FunName :=
   if source == name then target else if target == name then source else name
 
+/-! Counterparts of Cake's `fperm_name_cancel` and `fperm_name_cong`
+    (`pan_globalsProofScript.sml:1622,1629`): the source/target renaming is an
+    involutive bijection of function names. -/
+theorem globalRenameFunctionName_cancel [BEq String] [LawfulBEq String]
+    (source target name : FunName) :
+    globalRenameFunctionName source target
+        (globalRenameFunctionName source target name) = name := by
+  unfold globalRenameFunctionName
+  simp only [beq_iff_eq]
+  repeat' split <;> simp_all
+
+theorem globalRenameFunctionName_cong [BEq String] [LawfulBEq String]
+    (source target left right : FunName) :
+    globalRenameFunctionName source target left =
+        globalRenameFunctionName source target right ↔
+      left = right := by
+  constructor
+  · intro h
+    have := congrArg (globalRenameFunctionName source target) h
+    rw [globalRenameFunctionName_cancel, globalRenameFunctionName_cancel] at this
+    exact this
+  · intro h
+    rw [h]
+
 def globalRenameProg [BEq String]
     (source target : FunName) : Prog α → Prog α
   | .dec name shape value body =>
@@ -778,6 +802,56 @@ theorem functions_globalResortDecls (declarations : List (Decl α)) :
     functions_globalDeclsFilter_globalException,
     functions_globalDeclsFilter_isGlobal, List.nil_append, List.nil_append,
     List.nil_append, functions_globalDeclsFilter_isFunction]
+
+/-! Counterpart of Cake's `fperm_decs_decls`
+    (`pan_globalsProofScript.sml:2023`): renaming leaves a declaration list
+    with no function declarations unchanged. -/
+theorem globalRenameDecls_eq_self_of_no_functions [BEq String]
+    (source target : FunName) (declarations : List (Decl α))
+    (hnone : declarations.all
+      (fun declaration => !globalDeclIsFunction declaration) = true) :
+    globalRenameDecls source target declarations = declarations := by
+  induction declarations with
+  | nil => simp [globalRenameDecls]
+  | cons declaration declarations ih =>
+      simp only [List.all_cons, Bool.and_eq_true] at hnone
+      obtain ⟨hhead, htail⟩ := hnone
+      have hnotfun : globalDeclIsFunction declaration = false := by
+        simpa using hhead
+      cases declaration with
+      | function declaration =>
+          simp [globalDeclIsFunction] at hnotfun
+      | decl shape name value =>
+          simp [globalRenameDecls, ih htail]
+      | exnDecl exception shape =>
+          simp [globalRenameDecls, ih htail]
+      | name struct fields =>
+          simp [globalRenameDecls, ih htail]
+
+/-! Counterpart of Cake's `fperm_decs_FILTER_is_function`
+    (`pan_globalsProofScript.sml:2032`): renaming commutes with filtering to
+    the function declarations. -/
+theorem globalRenameDecls_filter_function [BEq String]
+    (source target : FunName) (declarations : List (Decl α)) :
+    globalRenameDecls source target
+        (globalDeclsFilter globalDeclIsFunction declarations) =
+      globalDeclsFilter globalDeclIsFunction
+        (globalRenameDecls source target declarations) := by
+  induction declarations with
+  | nil => simp [globalDeclsFilter, globalRenameDecls]
+  | cons declaration declarations ih =>
+      simp only [globalDeclsFilter]
+      by_cases hpred : globalDeclIsFunction declaration = true
+      · rw [if_pos hpred]
+        cases declaration with
+        | function declaration =>
+            simp [globalRenameDecls, globalDeclsFilter, globalDeclIsFunction, ih]
+        | decl shape name value => simp [globalDeclIsFunction] at hpred
+        | exnDecl exception shape => simp [globalDeclIsFunction] at hpred
+        | name struct fields => simp [globalDeclIsFunction] at hpred
+      · rw [if_neg hpred]
+        cases declaration <;>
+          simp_all [globalRenameDecls, globalDeclsFilter, globalDeclIsFunction]
 
 def globalFindFunction [BEq String] (name : FunName) :
     List (Decl α) → Option (FunDecl α)

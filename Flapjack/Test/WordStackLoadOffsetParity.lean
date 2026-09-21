@@ -57,6 +57,16 @@ example :
       { locations := [(0, .register 4), (1, .register 5)]
         scratch := 31
         stackBase := 10 }
+      .store 0 1 8 =
+      some (.inst (.memOffset .store 4 5 8) : StackProg Nat) := by
+  simp [wordStackMemoryOffsetInst, wordStackStoreOffsetInst, wordStackLocation,
+    wordStackOffset, lookupNatInfo]
+
+example :
+    wordStackMemoryOffsetInst
+      { locations := [(0, .register 4), (1, .register 5)]
+        scratch := 31
+        stackBase := 10 }
       .store32 0 1 12 =
       some (.inst (.memOffset .store32 4 5 12) : StackProg Nat) := by
   simp [wordStackMemoryOffsetInst, wordStackStoreOffsetInst, wordStackLocation,

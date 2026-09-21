@@ -2506,4 +2506,23 @@ example : PanValueFfiClockNormalAdequateProgFrom 1 evaluatorContext
 `While` adequacy constructor. -/
 #check @Flapjack.PanValueFfiClockWhileExitsNormally
 
+/-! A lower-bound-preserving sequence certificate.  Both `Skip` components
+    leave the clock unchanged, so the new floor-composition theorem can feed
+    the first result directly into the continuation's lower-bound premise. -/
+example : PanValueFfiClockNormalAdequateProgFromFloor 0 0 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+    (.seq (.skip : Prog Nat) .skip) := by
+  refine PanValueFfiClockNormalAdequateProgFromFloor_seq
+    (lo := 0) (firstFloor := 0) (finalFloor := 0)
+    (context := evaluatorContext) (primitive := fun _ _ => none)
+    (handler := evaluatorHandler) (structs := []) (functions := [])
+    (baseAddress := 0) (topAddress := 0) (bytesInWord := 8)
+    (callBudget := 7) (ma := none) (c := none) (mh := none)
+    (first := (.skip : Prog Nat)) (second := (.skip : Prog Nat)) ?_ ?_
+  all_goals
+    intro clock _ locals globals memory ffi
+    exact ⟨locals, globals, memory, ffi, clock, by
+      simp [progCallFuel, evalPanValueFfiClockProg, evalPanValueFfiClockLeaf,
+        evalPanValueFfiProgSteps], by omega⟩
+
 end Flapjack.Test.PanSimpParity

@@ -91,6 +91,19 @@ theorem relationDecls_preserved (s' : PanValueProgramState Nat)
         (panSimpDecls relationDecls) = some t' ∧ panValueProgramStateRel s' t' :=
   panValueProgramStateRel_evalPanValueDeclarations relationState _ relationState_self
     relationDecls none s' hs
+/-- Focused regression for `map_snd_f_eq` (`pan_simpProofScript.sml:43`):
+    rewriting the body component then projecting it is the same as projecting
+    it first and rewriting afterwards. -/
+def bodyInc (n : Nat) : Nat := n + 10
+
+def bodyDbl (n : Nat) : Nat := n * 2
+
+theorem list_map_third_map_eq_fixture :
+    (([("a", 1, 2), ("b", 2, 3)] : List (String × Nat × Nat)).map
+        (fun t => (t.1, t.2.1, bodyInc t.2.2))).map (fun t => bodyDbl t.2.2) =
+      [24, 26] := by
+  rw [list_map_third_map_eq]
+  decide
 
 end Flapjack.Test.PanProgramSimpParity
 

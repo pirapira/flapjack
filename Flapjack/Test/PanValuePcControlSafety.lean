@@ -901,4 +901,9 @@ evaluator-evidence obligation. -/
     for the generic `hother` callback. -/
 #check @panValuePcCompileCorrect_compact_with_raw_word_lists_of_state_evidence
 
+/-! The source-word-record raise wrappers also accept explicit state evidence in
+    plain and context-coded form. -/
+#check @panValuePcCompileCorrect_compact_source_word_record_raise_of_state_evidence
+#check @panValuePcCompileCorrect_compact_source_word_record_raise_of_state_evidence_context_code
+
 end Flapjack.Test.PanValuePcControlSafety

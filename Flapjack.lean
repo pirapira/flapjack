@@ -102,6 +102,8 @@ import Flapjack.PanToCrepTailCallCorrectness
 import Flapjack.PanToCrepMaxList
 import Flapjack.PanToCrepCallControlSafety
 import Flapjack.PanToCrepCallHandlerControlSafety
+import Flapjack.PanToCrepSharedMemoryControlSafety
+import Flapjack.PanToCrepSharedMemoryCorrectness
 import Flapjack.CrepeExtCallInversion
 import Flapjack.CrepeProgramExtCallSourceWordCorrectness
 import Flapjack.CrepeProgramExtCallSourceWordStateCorrectness

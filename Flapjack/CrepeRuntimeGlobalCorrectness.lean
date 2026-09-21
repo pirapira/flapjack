@@ -58,12 +58,31 @@ def evalExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     (key : α → CrepGlobalAddress) (expression : LoopExp α) : Option α :=
   evalLoopExp (state.toLoopState key) expression
 
+/-! Target-word Loop expressions must use Cake's complete `word_sh` rule.  Keep
+    the historical evaluator above for compatibility, while exposing the
+    typed-global projection through the full evaluator for RISC-V callers. -/
+def evalExpFull [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [PanCmp α] [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
+    [Complement α] (state : LoopTypedGlobalState α)
+    (key : α → CrepGlobalAddress) (expression : LoopExp α) : Option α :=
+  evalLoopExpFull (state.toLoopState key) expression
+
 def setGlobal [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [PanCmp α] (state : LoopTypedGlobalState α)
     (key : α → CrepGlobalAddress) (address : α) (expression : LoopExp α) :
     Option (LoopTypedGlobalState α) := do
   let value ← state.evalExp key expression
+  pure (state.store key address value)
+
+def setGlobalFull [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [PanCmp α] [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
+    [Complement α] (state : LoopTypedGlobalState α)
+    (key : α → CrepGlobalAddress) (address : α) (expression : LoopExp α) :
+    Option (LoopTypedGlobalState α) := do
+  let value ← state.evalExpFull key expression
   pure (state.store key address value)
 
 theorem toLoopState_store [BEq α]
@@ -90,6 +109,19 @@ theorem setGlobal_load_alias [BEq α] [LawfulBEq α]
       evalCrepTypedLoad key
         (storeCrepTypedGlobal key state.globals address value) loadAddress := by
   simp [setGlobal, evalExp, load, store, evalLoopExp,
+    evalCrepTypedLoad, storeCrepTypedGlobal, storeCrepGlobal]
+
+theorem setGlobalFull_load_alias [BEq α] [LawfulBEq α]
+    [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [PanCmp α] [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
+    [Complement α] (state : LoopTypedGlobalState α)
+    (key : α → CrepGlobalAddress) (address value loadAddress : α) :
+    (state.setGlobalFull key address (.const value)).bind
+        (fun next => next.load key loadAddress) =
+      evalCrepTypedLoad key
+        (storeCrepTypedGlobal key state.globals address value) loadAddress := by
+  simp [setGlobalFull, evalExpFull, load, store, evalLoopExpFull,
     evalCrepTypedLoad, storeCrepTypedGlobal, storeCrepGlobal]
 
 /-! The legacy Loop projection can be used by executable callers without

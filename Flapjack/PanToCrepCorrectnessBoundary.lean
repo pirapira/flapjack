@@ -537,6 +537,111 @@ theorem panValuePcResultRelWithContextCode_finalFfi_iff
         sourceMemory targetState ∧ sourceEvent = targetEvent := by
   simp [panValuePcResultRelWithContextCode, panValuePcResultRel]
 
+theorem panValuePcExceptionResultRelWithContextCode_of_rel_and_lookup
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (sourceException : ExceptionId) (sourceValue : PanValue α)
+    (targetState : CrepState α) (targetException : α)
+    (h : panValuePcExceptionResultRel structs context exceptionRel exceptionCode
+      globalsLookup sourceGlobals sourceMemory sourceException sourceValue
+      targetState targetException)
+    (hlookup : lookupInfo sourceException context.exceptions = some targetException) :
+    panValuePcExceptionResultRelWithContextCode structs context exceptionRel
+      exceptionCode globalsLookup sourceGlobals sourceMemory sourceException
+      sourceValue targetState targetException :=
+  ⟨h, hlookup⟩
+
+theorem panValuePcResultRelWithContextCode_raised_of_rel_and_lookup
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+    (sourceValue : PanValue α) (targetState : CrepState α)
+    (targetException : α)
+    (h : panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
+      (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+      (.raised targetState targetException))
+    (hlookup : lookupInfo sourceException context.exceptions = some targetException) :
+    panValuePcResultRelWithContextCode structs context exceptionRel exceptionCode
+      globalsLookup
+      (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+      (.raised targetState targetException) := by
+  simp only [panValuePcResultRelWithContextCode, panValuePcResultRel,
+    panValuePcExceptionResultRelWithContextCode] at h ⊢
+  exact ⟨h.1, h.2, hlookup⟩
+
+theorem panValuePcResultRelWithContextCode_broke_rejects_nonzero_label
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (targetState : CrepState α)
+    (label : Nat) (hlabel : label ≠ 0) :
+    ¬ panValuePcResultRelWithContextCode structs context exceptionRel
+      exceptionCode globalsLookup
+      (.broke sourceLocals sourceGlobals sourceMemory)
+      (.broke targetState label) := by
+  simp [panValuePcResultRelWithContextCode, panValuePcResultRel, hlabel]
+
+theorem panValuePcResultRelWithContextCode_continued_rejects_nonzero_label
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (targetState : CrepState α)
+    (label : Nat) (hlabel : label ≠ 0) :
+    ¬ panValuePcResultRelWithContextCode structs context exceptionRel
+      exceptionCode globalsLookup
+      (.continued sourceLocals sourceGlobals sourceMemory)
+      (.continued targetState label) := by
+  simp [panValuePcResultRelWithContextCode, panValuePcResultRel, hlabel]
+
+/-- The context-coded relation agrees with the plain relation on every pair
+except `raised`/`raised`, so the constructor-agreement invariant transfers. -/
+theorem panValuePcResultRelWithContextCode_constructor_eq
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceResult : PanValuePcResult α) (targetResult : CrepPcResult α)
+    (hrel : panValuePcResultRelWithContextCode structs context exceptionRel
+      exceptionCode globalsLookup sourceResult targetResult) :
+    panValuePcResultConstructor sourceResult =
+      crepPcResultConstructor targetResult := by
+  cases sourceResult <;> cases targetResult <;>
+    simp_all [panValuePcResultRelWithContextCode, panValuePcResultRel,
+      panValuePcResultConstructor, crepPcResultConstructor]
+
+theorem panValuePcResultRelWithContextCode_rejects_source_error
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (targetResult : CrepPcResult α) :
+    ¬ panValuePcResultRelWithContextCode structs context exceptionRel
+      exceptionCode globalsLookup PanValuePcResult.error targetResult := by
+  cases targetResult <;> simp [panValuePcResultRelWithContextCode,
+    panValuePcResultRel]
+
+theorem panValuePcResultRelWithContextCode_rejects_target_error
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceResult : PanValuePcResult α) :
+    ¬ panValuePcResultRelWithContextCode structs context exceptionRel
+      exceptionCode globalsLookup sourceResult CrepPcResult.error := by
+  cases sourceResult <;> simp [panValuePcResultRelWithContextCode,
+    panValuePcResultRel]
+
 /-! Safety obligation for the compact `pc_compile_correct` bridge.  The
 intermediate control relation intentionally permits nonzero labels while a
 loop propagates them, but the final Pancake theorem only admits label `0` for
@@ -2122,5 +2227,46 @@ theorem panValuePcCompileCorrectWithContextCode_of_obligations
   exact hobligation context structs sourceInput targetInput exceptionRel
     sourceExecution targetExecution hlocalisedCode hlocalised hcode
     hexcp hstate hnonerror hsource htarget hpostCode hpostExcp
+
+/-! Assemble explicit context-coded evaluator obligations into the ordinary
+    `pc_compile_correct` boundary.  The source/target state, code, exception,
+    and every evaluator result premise remain visible to the caller. -/
+theorem panValuePcCompileCorrect_of_context_code_obligations
+    [BEq α] [OfNat α 0] [Add α]
+    (sourceEvaluate : PanValuePcEvaluator α)
+    (targetEvaluate : CrepPcEvaluator α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (program : Prog α)
+    (hobligation : ∀ (context : CompileContext α) (structs : StructContext)
+      (sourceInput : PanValuePcInput α) (targetInput : CrepPcInput α)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (sourceExecution : PanValuePcExecution α)
+      (targetExecution : CrepPcExecution α),
+      sourceInput.structs = structs →
+      targetInput.structs = structs →
+      panValuePcLocalisedCode sourceInput.code →
+      localisedProg program →
+      codeRel context sourceInput.code targetInput.code →
+      excpRel context sourceInput.eshapes targetInput.eshapes →
+      panValueCrepStateRel structs context sourceInput.locals sourceInput.globals
+        sourceInput.memory targetInput.state →
+      sourceExecution.result ≠ .error →
+      sourceEvaluate context sourceInput program = some sourceExecution →
+      targetEvaluate context targetInput (compileProg context program) =
+        some targetExecution →
+      codeRel context sourceExecution.code targetExecution.code →
+      excpRel context sourceExecution.eshapes targetExecution.eshapes →
+      panValuePcResultRelWithContextCode structs context exceptionRel
+        exceptionCode globalsLookup sourceExecution.result targetExecution.result) :
+    PanValuePcCompileCorrect sourceEvaluate targetEvaluate codeRel excpRel
+      exceptionCode globalsLookup program := by
+  apply panValuePcCompileCorrect_of_withContextCode sourceEvaluate targetEvaluate
+    codeRel excpRel exceptionCode globalsLookup program
+  exact panValuePcCompileCorrectWithContextCode_of_obligations
+    sourceEvaluate targetEvaluate codeRel excpRel exceptionCode globalsLookup
+    program hobligation
 
 end Flapjack

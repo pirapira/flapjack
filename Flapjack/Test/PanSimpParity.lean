@@ -196,6 +196,36 @@ theorem clocked_seq_skip_fragment_budget_succeeds :
         PanSimpSeqSkipFragment.skip PanSimpSeqSkipFragment.skip))
     (by simp [panSimpSeqSkipFuel])
 
+/-- The `Seq` composition law at the call-aware budget, exercised on two
+    `Skip` leaves whose component budgets are lifted to the common fuel. -/
+theorem clocked_seq_progCallFuel_composes :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8
+      (progCallFuel 7 (.seq (.skip : Prog Nat) (.skip : Prog Nat)))
+      (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi 1
+      (.seq (.skip : Prog Nat) (.skip : Prog Nat)) none none none =
+    some (.control (.normal (fun _ => none) (fun _ => none)
+      (fun _ => none) evaluatorFfi), 1) := by
+  have hskip := evalPanValueFfiClockProg_leaf_some_progCallFuel evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 (.skip : Prog Nat)
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1 none none none
+    PanValueFfiLeafProg.skip
+    (.normal (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi) 1
+    (by simp [evalPanValueFfiProgSteps])
+  have hfirst := evalPanValueFfiClockProg_fuel_mono evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8
+    (fuel := progCallFuel 7 (.skip : Prog Nat))
+    (fuel' := progCallFuel 7 (.skip : Prog Nat) + progCallFuel 7 (.skip : Prog Nat))
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1 (.skip : Prog Nat)
+    none none none (by simp [progCallFuel]) hskip
+  exact evalPanValueFfiClockProg_seq_some_progCallFuel evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 (.skip : Prog Nat) (.skip : Prog Nat)
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1 none none none
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi)) 1
+    hfirst (by simpa using hfirst)
+
 /-- The same `Skip`/`Seq` fragment succeeds at the call-aware budget
     `progCallFuel`, which dominates the fragment budget. -/
 theorem clocked_seq_skip_fragment_progCallFuel_succeeds :

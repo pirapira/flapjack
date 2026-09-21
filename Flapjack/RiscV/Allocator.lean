@@ -937,15 +937,15 @@ def wordSsaRenameProgramWithLoops [OfNat α 0] (frames : List WordSsaLoopFrame)
           wordSsaRenameProgramWithLoops frames returnState returnCode
         let abiReturns := wordSsaCallAbiRegisters 1 destinations.length
         let returnMove := .move 1 (destinations.zip abiReturns)
-        let returnHandler := wordSsaSeq restoreMove
-          (wordSsaSeq returnMove returnCode)
+        let returnHandler := .seq restoreMove
+          (.seq returnMove returnCode)
         let exceptionSeed := { restoreState with next := returnState.next }
         let (exceptionState, exceptionName) :=
           wordSsaFresh exceptionSeed exception
         let (exceptionState, body) :=
           wordSsaRenameProgramWithLoops frames exceptionState body
-        let exceptionHandler := wordSsaSeq restoreMove
-          (wordSsaSeq (.move 1 [(exceptionName, 2)]) body)
+        let exceptionHandler := .seq restoreMove
+          (.seq (.move 1 [(exceptionName, 2)]) body)
         let preferred := match returnHandler, exceptionHandler with
           | .skip, _ => some true
           | _, .skip => some false

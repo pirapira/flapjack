@@ -107,7 +107,8 @@ example :
           (.seq (.move 1 [(2, 100)])
             (.call (some ([2], ([202], []),
               .seq
-                (.seq (.move 0 [(208, 202)]) (.move 1 [(212, 2)]))
+                (.seq (.move 0 [(208, 202)])
+                  (.seq (.move 1 [(212, 2)]) .skip))
                 (.seq
                   (.move 1 [])
                   (.seq

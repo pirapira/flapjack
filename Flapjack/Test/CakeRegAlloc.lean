@@ -232,6 +232,19 @@ def extractColorOrderGuard : Bool :=
     [(1, 0), (9, 0), (17, 0)]
 
 #guard extractColorOrderGuard
+/- Cake's `assign_Atemp_tag` (`reg_allocScript.sml:903-927`) removes colors
+   used by fixed neighbors before applying the preference oracle.  With a
+   fixed neighbor at color 1 and no preference, node 0 must choose color 0. -/
+def assignAtempFixedNeighbourGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 3 with
+      adjLists := CakeNodeMap.ofNatInfoMap 3 [(0, [1]), (1, [0])]
+      nodeTag := CakeNodeMap.ofNatInfoMap 3 [(0, .aTemp), (1, .fixed 1)] }
+  let out := cakeAssignAtempTag 3 (fun _ _ _ => none) 0 state
+  out.nodeTag.get 0 == some (.fixed 0)
+
+#guard assignAtempFixedNeighbourGuard
+
 
 
 /-! ## IRC graph construction guards
@@ -993,7 +1006,7 @@ def parityGuard : Bool :=
     && prefreezeTransitionGuard
     && sortMovesTailSplitGuard && freezeWorklistTransitionGuard &&
       doSpillEqualDegreeGuard && coalesceSelfMoveRejectedGuard &&
-      doStepSimplifyPriorityGuard
+      doStepSimplifyPriorityGuard && assignAtempFixedNeighbourGuard
 
 /- The aggregate guard is intentionally disabled while the allocator port is
    being aligned with CakeML.  Individual oracle cases remain available to
@@ -1030,7 +1043,8 @@ def runChecks : IO Bool := do
     respillBelowThresholdGuard, simplifyBatchGuard, decDegreeOutOfDimGuard,
     coalesceWorklistSuccessGuard, coalesceParentCompressionGuard,
     prefreezeTransitionGuard, freezeWorklistTransitionGuard,
-    doSpillEqualDegreeGuard, doStepSimplifyPriorityGuard]
+    doSpillEqualDegreeGuard, doStepSimplifyPriorityGuard,
+    assignAtempFixedNeighbourGuard]
   let names := [
     "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
@@ -1073,7 +1087,7 @@ def runChecks : IO Bool := do
     "dec_degree out-of-dimension no-op",
     "do_coalesce success transition", "do_prefreeze transition",
     "do_freeze transition", "do_spill equal-degree transition",
-    "do_step simplify priority"]
+    "do_step simplify priority", "assign_Atemp fixed-neighbour colour"]
   let mut all := true
   for (name, result) in names.zip results do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"

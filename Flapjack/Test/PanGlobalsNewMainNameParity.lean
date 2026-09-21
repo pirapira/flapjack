@@ -44,4 +44,21 @@ def correctnessGuard : Bool :=
 #eval correctnessGuard
 #guard correctnessGuard
 
+/-! Counterpart of Cake's `fresh_name_correct'`
+    (`pan_globalsProofScript.sml:1003`). -/
+example : True := by
+  have h := globalFreshName_not_mem_of_subset "worker" ["worker", "worker'"]
+    (names' := ["worker"]) (fun candidate hmem => by
+      simp at hmem ⊢
+      exact Or.inl hmem)
+  trivial
+
+def subsetCorrectnessGuard : Bool :=
+  let names : List String := ["worker", "worker'"]
+  let names' : List String := ["worker"]
+  !names'.contains (globalFreshName "worker" names)
+
+#eval subsetCorrectnessGuard
+#guard subsetCorrectnessGuard
+
 end Flapjack.Test.PanGlobalsNewMainNameParity

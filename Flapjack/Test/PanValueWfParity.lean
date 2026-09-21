@@ -64,4 +64,30 @@ def dropGuard : Bool :=
 #eval dropGuard
 #guard dropGuard
 
+/-! `is_wf_shape_v_nil` (`panPropsScript.sml:56`): at the empty struct context,
+    value well-formedness coincides with shape well-formedness. -/
+
+theorem panValueIsWf_eq_isWfShape_panValueShape_of_nil_fixture :
+    isWfShape ([] : StructContext)
+        (panValueShape ([] : StructContext) namedValue) =
+      panValueIsWf ([] : StructContext) namedValue :=
+  panValueIsWf_eq_isWfShape_panValueShape_of_nil ([] : StructContext) namedValue
+    rfl
+
+theorem panValueIsWf_of_isWfShape_panValueShape_nil_fixture :
+    panValueIsWf ([] : StructContext) recordValue = true :=
+  panValueIsWf_of_isWfShape_panValueShape_nil recordValue (by
+    simp [panValueShape, isWfShape, isWfShape.isWfShapeList, recordValue])
+
+def nilGuard : Bool :=
+  (isWfShape ([] : StructContext)
+      (panValueShape ([] : StructContext) wordValue) ==
+    panValueIsWf ([] : StructContext) wordValue) &&
+  (isWfShape ([] : StructContext)
+      (panValueShape ([] : StructContext) recordValue) ==
+    panValueIsWf ([] : StructContext) recordValue)
+
+#eval nilGuard
+#guard nilGuard
+
 end Flapjack.Test.PanValueWfParity

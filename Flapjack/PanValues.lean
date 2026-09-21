@@ -536,6 +536,57 @@ theorem panValueIsWf_of_drop (context : StructContext) (value : PanValue α)
       obtain ⟨h1, h2⟩ := h
       exact ⟨ihValue h1, ihValues h2⟩
 
+/-- Converse direction of `panValueIsWf_isWfShape_panValueShape` at the empty
+    struct context: a value whose shape is well formed has no named records,
+    hence is well formed itself.  This is the local helper behind Cake's
+    `is_wf_shape_v_nil` (`cakeml/pancake/semantics/panPropsScript.sml:56`). -/
+theorem panValueIsWf_of_isWfShape_panValueShape_nil (value : PanValue α) :
+    isWfShape ([] : StructContext) (panValueShape ([] : StructContext) value) = true →
+      panValueIsWf ([] : StructContext) value = true := by
+  induction value using panValueIsWf.induct
+    (motive2 := fun fields =>
+      isWfShape.isWfShapeList ([] : StructContext)
+        (fields.map (fun (field : FieldName × PanValue α) =>
+          panValueShape ([] : StructContext) field.2)) = true →
+        panValueIsWfFields ([] : StructContext) fields = true)
+    (motive3 := fun values =>
+      isWfShape.isWfShapeList ([] : StructContext)
+        (values.map (panValueShape ([] : StructContext))) = true →
+        panValueIsWfValues ([] : StructContext) values = true) with
+  | case1 _ => intro _; simp only [panValueIsWf]
+  | case2 fields ih =>
+      intro h
+      simp only [panValueIsWf]
+      exact ih (by simpa [panValueShape, isWfShape] using h)
+  | case3 _ _ _ => intro h; simp [panValueShape, isWfShape, lookupInfo] at h
+  | case4 => simp [panValueIsWfFields]
+  | case5 fst value fields ihValue ihFields =>
+      rename_i h
+      simp only [List.map_cons, isWfShape.isWfShapeList, Bool.and_eq_true] at h
+      obtain ⟨h1, h2⟩ := h
+      simp only [panValueIsWfFields, Bool.and_eq_true]
+      exact ⟨ihValue h1, ihFields h2⟩
+  | case6 => simp [panValueIsWfValues]
+  | case7 value values ihValue ihValues =>
+      rename_i h
+      simp only [List.map_cons, isWfShape.isWfShapeList, Bool.and_eq_true] at h
+      obtain ⟨h1, h2⟩ := h
+      simp only [panValueIsWfValues, Bool.and_eq_true]
+      exact ⟨ihValue h1, ihValues h2⟩
+
+/-- Counterpart of Cake's `is_wf_shape_v_nil`
+    (`cakeml/pancake/semantics/panPropsScript.sml:56`): at the empty struct
+    context, well-formedness of a value is exactly well-formedness of its
+    shape. -/
+theorem panValueIsWf_eq_isWfShape_panValueShape_of_nil (context : StructContext)
+    (value : PanValue α) (hcontext : context = []) :
+    isWfShape context (panValueShape context value) =
+      panValueIsWf context value := by
+  subst hcontext
+  rw [Bool.eq_iff_iff]
+  exact ⟨panValueIsWf_of_isWfShape_panValueShape_nil value,
+    panValueIsWf_isWfShape_panValueShape [] value⟩
+
 def panShapeMatches : Shape → Shape → Bool
   | .one, .one => true
   | .named left, .named right => left == right

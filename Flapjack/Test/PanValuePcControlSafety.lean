@@ -1029,6 +1029,13 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_timeout
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_finalFfi
 
+/-! Declaration-call counterparts of the direct-call compositional bridges:
+    terminal FFI, uncaught raise, and timeout, each preserving explicit
+    state/observation premises. -/
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_finalFfi
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_raised
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_timeout
+
 /-! More compositional source handler-safety leaves: clock, annotation, local
     assignment, and single-word store. -/
 #check @PanValueProgNotBrokeContinued_tick

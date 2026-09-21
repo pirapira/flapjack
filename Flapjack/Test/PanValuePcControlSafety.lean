@@ -1132,6 +1132,7 @@ example :
 #check @panValuePcCompileCorrect_compact_dec_of_state_evidence
 #check @panValueCrepProgramStateControlSafe_assign_local
 #check @panValuePcCompileCorrect_compact_assign_local_source_word_of_state_evidence
+#check @panValuePcCompileCorrect_compact_assign_of_state_evidence
 #check @panValuePcCompileCorrect_compact_seq_of_state_evidence
 #check @panValuePcCompileCorrect_compact_tick
 #check @panValuePcCompileCorrect_compact_break

@@ -478,6 +478,86 @@ theorem listDisjoint_drop_take_sum (values : List α) (n m p : Nat)
   fun value hright hleft =>
     listDisjoint_take_drop_sum values n m p h value hleft hright
 
+/-! Counterpart of Cake's `distinct_lists_eq_disjoint`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:102`): Cake defines
+    `distinct_lists xs ys` as `EVERY (\x. ~MEM x ys) xs`, which is exactly the
+    `ListDisjoint` predicate below. -/
+theorem forall_not_mem_iff_listDisjoint (xs ys : List α) :
+    (∀ x, x ∈ xs → x ∉ ys) ↔ ListDisjoint xs ys :=
+  Iff.rfl
+
+/-! Counterpart of Cake's `distinct_lists_append`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:108`). -/
+theorem listDisjoint_append (xs ys : List α) (h : (xs ++ ys).Nodup) :
+    ListDisjoint xs ys := by
+  have hdisj := (List.nodup_append.mp h).2.2
+  intro value hx hy
+  exact absurd rfl (hdisj value hx value hy)
+
+/-! Counterpart of Cake's `distinct_lists_commutes`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:116`). -/
+theorem listDisjoint_comm (xs ys : List α) (h : ListDisjoint xs ys) :
+    ListDisjoint ys xs :=
+  fun value hy hx => h value hx hy
+
+/-! Counterpart of Cake's `distinct_lists_cons`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:125`). -/
+theorem listDisjoint_of_append_left (ns xs ys zs : List α)
+    (h : ListDisjoint (ns ++ xs) (ys ++ zs)) :
+    ListDisjoint xs zs :=
+  fun value hx hz =>
+    h value (List.mem_append_right ns hx) (List.mem_append_right ys hz)
+
+/-! Counterpart of Cake's `distinct_lists_simp_cons`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:133`). -/
+theorem listDisjoint_of_cons_right (xs : List α) (y : α) (ys : List α)
+    (h : ListDisjoint xs (y :: ys)) :
+    ListDisjoint xs ys :=
+  fun value hx hy => h value hx (List.mem_cons.mpr (Or.inr hy))
+
+/-! Counterpart of Cake's `distinct_lists_append_intro`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:141`). -/
+theorem listDisjoint_append_right (xs ys zs : List α)
+    (hys : ListDisjoint xs ys) (hzs : ListDisjoint xs zs) :
+    ListDisjoint xs (ys ++ zs) :=
+  fun value hx hmem => by
+    rcases List.mem_append.mp hmem with h | h
+    · exact hys value hx h
+    · exact hzs value hx h
+
+/-! Counterpart of Cake's `distinct_lists_append_right_elim`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:150`). -/
+theorem listDisjoint_append_right_elim (xs ys zs : List α)
+    (h : ListDisjoint xs (ys ++ zs)) :
+    ListDisjoint xs ys ∧ ListDisjoint xs zs :=
+  ⟨fun value hx hy => h value hx (List.mem_append_left zs hy),
+   fun value hx hz => h value hx (List.mem_append_right ys hz)⟩
+
+/-! Counterpart of Cake's `all_distinct_take_frop_disjoint`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:534`). -/
+theorem listDisjoint_take_drop (xs : List α) (n : Nat) (h : xs.Nodup) :
+    ListDisjoint (xs.take n) (xs.drop n) := by
+  intro value htake hdrop
+  obtain ⟨i, hi, hix⟩ := List.getElem_of_mem htake
+  obtain ⟨j, hj, hjx⟩ := List.getElem_of_mem hdrop
+  rw [List.getElem_take] at hix
+  rw [List.getElem_drop] at hjx
+  have hiLen : i < xs.length := by
+    have := hi; rw [List.length_take] at this; omega
+  have hjLen : n + j < xs.length := by
+    have := hj; rw [List.length_drop] at this; omega
+  have hinj : i = n + j := (List.getElem_inj h).mp (hix.trans hjx.symm)
+  have hiN : i < n := by
+    have := hi; rw [List.length_take] at this; omega
+  omega
+
+/-! Counterpart of Cake's `disjoint_not_mem_el`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:606`). -/
+theorem not_mem_of_listDisjoint_getElem (xs ys : List α) (n : Nat)
+    (h : ListDisjoint xs ys) (hn : n < xs.length) :
+    xs[n] ∉ ys :=
+  fun hmem => h xs[n] (List.getElem_mem hn) hmem
+
 /-! Shifted-window form of Cake's `disjoint_take_drop_sum`: a suffix window and
     a later suffix window of the same distinct list are disjoint whenever the
     first window ends before the second window starts. -/

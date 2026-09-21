@@ -186,6 +186,65 @@ def withShapeDistinctGuard : Bool :=
 #eval withShapeDistinctGuard
 #guard withShapeDistinctGuard
 
+theorem listDisjoint_append_fixture :
+    ListDisjoint ([1, 2] : List Nat) [3, 4] :=
+  listDisjoint_append [1, 2] [3, 4] (by decide)
+
+theorem listDisjoint_comm_fixture :
+    ListDisjoint [3, 4] ([1, 2] : List Nat) :=
+  listDisjoint_comm [1, 2] [3, 4] (listDisjoint_append [1, 2] [3, 4] (by decide))
+
+theorem listDisjoint_of_append_left_fixture :
+    ListDisjoint ([2] : List Nat) [3] :=
+  listDisjoint_of_append_left [7] [2] [8] [3] (by
+    intro value hx hy
+    simp at hx hy
+    omega)
+
+theorem listDisjoint_of_cons_right_fixture :
+    ListDisjoint ([1] : List Nat) [3] :=
+  listDisjoint_of_cons_right [1] 2 [3] (by
+    intro value hx hy
+    simp at hx hy
+    omega)
+
+theorem listDisjoint_append_right_fixture :
+    ListDisjoint ([1] : List Nat) ([3] ++ [4]) :=
+  listDisjoint_append_right [1] [3] [4]
+    (listDisjoint_of_cons_right [1] 2 [3] (by
+      intro value hx hy
+      simp at hx hy
+      omega))
+    (by
+      intro value hx hy
+      simp at hx hy
+      omega)
+
+theorem listDisjoint_append_right_elim_fixture :
+    ListDisjoint ([1] : List Nat) [3] ∧ ListDisjoint [1] [4] :=
+  listDisjoint_append_right_elim [1] [3] [4] (by
+    intro value hx hy
+    simp at hx hy
+    omega)
+
+theorem listDisjoint_take_drop_fixture :
+    ListDisjoint (([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).take 3)
+      (([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).drop 3) :=
+  listDisjoint_take_drop [1, 2, 3, 4, 5, 6, 7, 8] 3 (by decide)
+
+theorem not_mem_of_listDisjoint_getElem_fixture :
+    (2 : Nat) ∉ ([3, 4] : List Nat) :=
+  not_mem_of_listDisjoint_getElem [1, 2] [3, 4] 1
+    (listDisjoint_append [1, 2] [3, 4] (by decide)) (by decide)
+
+def distinctListsGuard : Bool :=
+  (([1, 2] : List Nat).all (fun value => !([3, 4] : List Nat).contains value)) &&
+    ((([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).take 3).all
+      (fun value => !(([1, 2, 3, 4, 5, 6, 7, 8] : List Nat).drop 3).contains value))
+
+#eval distinctListsGuard
+#guard distinctListsGuard
+
 def checkDisjoint (name : String) (actual : Bool) : IO Bool := do
   if actual then
     IO.println s!"PASS {name}"
@@ -211,7 +270,8 @@ def runChecks : IO Bool := do
   let nestedOk ← checkDisjoint "pan el_el_with_shape" withShapeNestedGuard
   let distinctOk ←
     checkDisjoint "pan all_distinct_with_shape_distinct" withShapeDistinctGuard
+  let distinctListsOk ← checkDisjoint "pan distinct_lists" distinctListsGuard
   pure (results.all id && lengthOk && allDistinctOk && membershipOk && disjointOk &&
-    shapeDisjointOk && nestedOk && distinctOk)
+    shapeDisjointOk && nestedOk && distinctOk && distinctListsOk)
 
 end Flapjack.Test.PanWithShapeParity

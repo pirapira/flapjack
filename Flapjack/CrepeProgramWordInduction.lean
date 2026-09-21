@@ -5,6 +5,7 @@ import Flapjack.CrepeWordLoopProgramCase
 import Flapjack.CrepeWordExtCallProgramCase
 import Flapjack.CrepeProgramWordRecordReturnCorrectness
 import Flapjack.CrepeProgramRecordFieldGeneralReturnCorrectness
+import Flapjack.CrepeProgramOneWordDeclarationCorrectness
 import Flapjack.CrepeProgramGenericRaiseCorrectness
 import Flapjack.CrepeProgramWordCallCorrectness
 import Flapjack.CrepeProgramDeclarationContract
@@ -22,10 +23,11 @@ exception, loop-safety, and FFI obligations remain explicit in the
 constructors that need them.
 
 This is an induction assembly, not a replacement for the HOL
-`pc_compile_correct` theorem: word-valued ordinary calls are admitted through
-an explicit Cake-equivalent call-state relation, while declaration calls and
-structured expressions remain outside the predicate and must acquire their
-own constructors before they can be admitted here.
+`pc_compile_correct` theorem: word-valued ordinary calls and one-word local
+declarations are admitted through explicit Cake-equivalent correctness
+premises, while declaration calls and structured expressions remain outside
+the predicate and must acquire their own constructors before they can be
+admitted here.
 -/
 
 namespace Flapjack
@@ -77,6 +79,23 @@ inductive StatefulWordProg (α : Type)
         ∃ slot, lookupInfo name context.vars = some (.one, [slot])) :
       StatefulWordProg α
         (.return (.rField index (.rStruct (fields.map SourceWordExp.toExp))))
+  | decWord
+      (name : VarName) (expression : SourceWordExp α) (body : Prog α)
+      (hbody : StatefulWordProg α body)
+      (hbytesInWord : ∀ (context : CompileContext α) (bytesInWord : α),
+        context.bytesInWord = bytesInWord)
+      (hlookup : ∀ (context : CompileContext α)
+        (sourceLocals : VarName → Option (PanValue α))
+        (current : VarName) (value : PanValue α),
+        sourceLocals current = some value →
+        ∃ slot, lookupInfo current context.vars = some (.one, [slot]))
+      (hname : ∀ (context : CompileContext α),
+        lookupInfo name context.vars = none)
+      (hfresh : ∀ (context : CompileContext α) oldName oldShape oldSlots,
+        oldName ≠ name →
+        lookupInfo oldName context.vars = some (oldShape, oldSlots) →
+        context.maxVar + 1 ∉ oldSlots) :
+      StatefulWordProg α (.dec name .one expression.toExp body)
   | seq {first second : Prog α} :
       StatefulWordProg α first →
       StatefulWordProg α second →
@@ -313,6 +332,9 @@ theorem panValueCrepProgramStateCorrect_statefulWord
   | returnWordRecordField fields index hbytesInWord hlookup =>
       exact panValueCrepProgramStateCorrect_return_rField_word_record fields
         index hbytesInWord hlookup
+  | decWord name expression body hbody hbytesInWord hlookup hname hfresh ihbody =>
+      exact panValueCrepProgramStateCorrect_dec_one_word name expression body
+        ihbody hbytesInWord hlookup hname hfresh
   | @seq first second hfirst hsecond ihfirst ihsecond =>
       exact panValueCrepProgramStateCorrect_seq first second ihfirst ihsecond
   | iteWord condition hcondition thenBranch elseBranch hthen helse

@@ -119,6 +119,9 @@ def panValueFfiExtCall [BEq α] [Add α] [OfNat α 1]
       pure (.returned memory nextFfi)
   | .final event => pure (.final ffi event)
 
+/-! The successful byte-array ExtCall path preserves the incoming Cake FFI
+    trace.  This is the concrete FFI premise used by the evaluator-level
+    `evaluate_io_events_mono` bridge below. -/
 theorem panValueFfiExtCall_returned_ioEvents_prefix
     [BEq α] [Add α] [OfNat α 1]
     (access : PanValueMemoryAccess α) (context : PanValueFfiContext α)

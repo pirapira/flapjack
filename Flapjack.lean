@@ -307,6 +307,7 @@ import Flapjack.CrepeLoopContinueComposeFuelRelation
 import Flapjack.CrepeIdentityCallCorrectness
 import Flapjack.CrepeFfiCorrectness
 import Flapjack.PanValues
+import Flapjack.PanValueEvaluatorStability
 import Flapjack.PanSteppedSemantics
 import Flapjack.PanMemory
 import Flapjack.PanValueFfiFuel

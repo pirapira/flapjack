@@ -76,6 +76,16 @@ def fromList (set : List Nat) : List Nat :=
   let tree := (toSet set).foldr (fun key tree => insert key tree) .empty
   toAList tree 0 []
 
+/-! Reconstruct a Patricia tree from the key order returned by `toAList`.
+    Cake's `fromAList` folds these already-materialized keys from the left;
+    this is distinct from `fromList`, whose input is a source list and is
+    folded from the right by `list_to_num_set`.  Keeping the two operations
+    separate matters because the mixed traversal order is observable in
+    allocator node numbering. -/
+def fromAList (set : List Nat) : List Nat :=
+  let tree := set.foldl (fun tree key => insert key tree) .empty
+  toAList tree 0 []
+
 /-- `fromList` for a list whose entries are already known to be distinct.
     `toSet` is the identity on such a list -- it only removes duplicates, at
     the cost of a membership scan per element -- so the Patricia

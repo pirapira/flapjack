@@ -159,13 +159,13 @@ def cakeMkBijBuildAux : WordClashTree → CakeNodeBijectionBuild → CakeNodeBij
   | .delta writes reads, bijection =>
       cakeListRemapBuild writes (cakeListRemapBuild reads bijection)
   | .set names, bijection =>
-      cakeListRemapBuild (NumSet.fromList names) bijection
+      cakeListRemapBuild (NumSet.fromAList names) bijection
   | .branch live thenBranch elseBranch, bijection =>
       let mapped := cakeMkBijBuildAux elseBranch
         (cakeMkBijBuildAux thenBranch bijection)
       match live with
       | none => mapped
-      | some names => cakeListRemapBuild (NumSet.fromList names) mapped
+      | some names => cakeListRemapBuild (NumSet.fromAList names) mapped
   | .seq first second, bijection =>
       cakeMkBijBuildAux first (cakeMkBijBuildAux second bijection)
 
@@ -198,16 +198,16 @@ def cakeMkBijAux : WordClashTree → CakeNodeBijection → CakeNodeBijection
   | .set names, bijection =>
       /- A Cake `Set` is a Patricia-tree `num_set`, not an ordered list.
          `mk_bij_aux` enumerates it with `MAP FST (toAList t)`, whose order
-         is the mixed Patricia traversal reconstructed by `NumSet.fromList`.
+         is the mixed Patricia traversal reconstructed by `NumSet.fromAList`.
          Sorting here changes allocator node numbering and therefore can
          change otherwise valid register-colour tie breaks. -/
-      cakeListRemap (NumSet.fromList names) bijection
+      cakeListRemap (NumSet.fromAList names) bijection
   | .branch live thenBranch elseBranch, bijection =>
       let mapped := cakeMkBijAux elseBranch (cakeMkBijAux thenBranch bijection)
       match live with
       | none => mapped
       | some names =>
-          cakeListRemap (NumSet.fromList names) mapped
+          cakeListRemap (NumSet.fromAList names) mapped
   | .seq first second, bijection => cakeMkBijAux first (cakeMkBijAux second bijection)
 
 /-- `mk_bij` (`reg_allocScript.sml:1119-1127`): the node bijection for a
@@ -416,7 +416,7 @@ def cakeMkGraph (ta : Nat → Nat) : WordClashTree → List Nat →
       let (adj1, live) := cakeExtendClique wta liveout adj
       cakeExtendClique rta (live.filter (fun x => !wta.contains x)) adj1
   | .set names, _liveout, adj =>
-      let live := (NumSet.fromList names).map ta
+      let live := (NumSet.fromAList names).map ta
       (cakeCliqueInsertEdge live adj, live)
   | .branch topt t1 t2, liveout, adj =>
       let (adj1, t1Live) := cakeMkGraph ta t1 liveout adj
@@ -424,7 +424,7 @@ def cakeMkGraph (ta : Nat → Nat) : WordClashTree → List Nat →
       match topt with
       | none => cakeExtendClique t1Live t2Live adj2
       | some t =>
-          let live := (NumSet.fromList t).map ta
+          let live := (NumSet.fromAList t).map ta
           (cakeCliqueInsertEdge live adj2, live)
   | .seq t1 t2, liveout, adj =>
       let (adj1, live) := cakeMkGraph ta t2 liveout adj

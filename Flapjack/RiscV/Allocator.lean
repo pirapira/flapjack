@@ -369,8 +369,8 @@ def wordSsaReadCutsets (state : WordSsaState)
      `toAList`: the Patricia traversal order can change when a key changes.
      Mapping an already enumerated list (the old port) preserved the wrong
      order and made FFI/call cutsets diverge from Cake after SSA. -/
-  (NumSet.fromList ((NumSet.fromList cutsets.1).map (wordSsaRead state)),
-    NumSet.fromList ((NumSet.fromList cutsets.2).map (wordSsaRead state)))
+  (NumSet.fromAList ((NumSet.fromAList cutsets.1).map (wordSsaRead state)),
+    NumSet.fromAList ((NumSet.fromAList cutsets.2).map (wordSsaRead state)))
 
 def wordSsaFresh (state : WordSsaState) (name : Nat) : WordSsaState × Nat :=
   ({ current := (name, state.next) ::
@@ -1675,7 +1675,7 @@ def wordClashTree : WordProg α → List (List Nat × List Nat) → WordClashTre
          clash tree.  In particular, a handler carried by the reduced Word
          carrier is not recursively coloured here, matching the upstream
          return-free equation. -/
-      .set arguments.eraseDups
+      .set (NumSet.fromList arguments.eraseDups)
   | .call (some (values, cutsets, returnCode, _, _)) _
       arguments (some (exception, body, _, _)), frames =>
       let cutSet := wordClashTreeCallSet cutsets.1 cutsets.2
@@ -2141,7 +2141,7 @@ def wordApplyColourInst (colour : Nat → Nat) : WordInst α → WordInst α
     `apply_nummap_key` rebuilds those sets through `fromAList`, so the result is
     canonical (sorted and duplicate-free), rather than a plain mapped list. -/
 def wordApplyColourNumSet (colour : Nat → Nat) (names : List Nat) : List Nat :=
-  NumSet.fromList (names.map colour)
+  NumSet.fromAList (names.map colour)
 
 def wordApplyColour (colour : Nat → Nat) : WordProg α → WordProg α
   | .skip => .skip

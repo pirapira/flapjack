@@ -2555,6 +2555,13 @@ example : PanValueFfiClockNormalAdequateProgFromFloor 0 0 evaluatorContext
 #check @Flapjack.PanValueFfiClockNormalAdequateProgFrom_of_fromFloor
 #check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_while_zero
 
+/-! Clock-free annotations also keep their floor. -/
+example : PanValueFfiClockNormalAdequateProgFromFloor 0 0 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+    (.annot "tag" "text") :=
+  PanValueFfiClockNormalAdequateProgFromFloor_annot 0 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none "tag" "text"
+
 /-! The clock-free leaf preserves its floor, giving the floor-composition
     theorem a base case; declarations and conditionals then preserve it. -/
 example : PanValueFfiClockNormalAdequateProgFromFloor 0 0 evaluatorContext

@@ -3699,12 +3699,56 @@ theorem evalPanValueFfiClockProg_panSimpProg_normalProg_some_progCallFuel
     (PanValueFfiClockNormalProg_panSimpProg h)
 
 
-/-! ## Composing a normal-producing node with a normal continuation
+/-! ## Composing a normal-producing node with a continuation
 
 The call-aware budget of a sequence is the sum of the component budgets plus one,
 so a first component that runs normally (e.g. a destination call) can be composed
-with any node from the normal fragment while preserving the intermediate state and
-clock.  This is the composition rule used to build the state-relation fragment. -/
+with an arbitrary second component evaluated from the intermediate state, keeping
+its result and clock.  This is the composition rule used to build the
+state-relation fragment. -/
+
+theorem evalPanValueFfiClockProg_seq_of_first_normal_progCallFuel
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat) (first second : Prog α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (midLocals midGlobals : VarName → Option (PanValue α))
+    (midMemory : α → Option (PanValue α)) (midFfi : FfiState σ) (midClock : Nat)
+    (result : PanValueFfiClockOutcome α σ) (resultClock : Nat)
+    (hfirst : evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (progCallFuel callBudget first)
+        locals globals memory ffi clock first ma c mh =
+      some (.control (.normal midLocals midGlobals midMemory midFfi), midClock))
+    (hsecond : evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (progCallFuel callBudget second)
+        midLocals midGlobals midMemory midFfi midClock second ma c mh =
+      some (result, resultClock)) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord
+        (progCallFuel callBudget (.seq first second))
+        locals globals memory ffi clock (.seq first second) ma c mh =
+      some (result, resultClock) := by
+  have hmonoFirst := evalPanValueFfiClockProg_fuel_mono context primitive handler
+    structs functions baseAddress topAddress bytesInWord
+    (fuel := progCallFuel callBudget first)
+    (fuel' := progCallFuel callBudget first + progCallFuel callBudget second)
+    locals globals memory ffi clock first ma c mh (by omega) hfirst
+  have hmonoSecond := evalPanValueFfiClockProg_fuel_mono context primitive handler
+    structs functions baseAddress topAddress bytesInWord
+    (fuel := progCallFuel callBudget second)
+    (fuel' := progCallFuel callBudget first + progCallFuel callBudget second)
+    midLocals midGlobals midMemory midFfi midClock second ma c mh (by omega) hsecond
+  exact evalPanValueFfiClockProg_seq_some_progCallFuel context primitive handler
+    structs functions baseAddress topAddress bytesInWord callBudget first second
+    locals globals memory ffi clock ma c mh midLocals midGlobals midMemory midFfi
+    midClock result resultClock hmonoFirst hmonoSecond
 
 theorem evalPanValueFfiClockProg_seq_normal_of_first_normal_progCallFuel
     (context : PanValueFfiContext α)
@@ -3729,25 +3773,15 @@ theorem evalPanValueFfiClockProg_seq_normal_of_first_normal_progCallFuel
         baseAddress topAddress bytesInWord
         (progCallFuel callBudget (.seq first second))
         locals globals memory ffi clock (.seq first second) ma c mh =
-      some (.control (.normal midLocals midGlobals midMemory midFfi), midClock) := by
-  have hmonoFirst := evalPanValueFfiClockProg_fuel_mono context primitive handler
-    structs functions baseAddress topAddress bytesInWord
-    (fuel := progCallFuel callBudget first)
-    (fuel' := progCallFuel callBudget first + progCallFuel callBudget second)
-    locals globals memory ffi clock first ma c mh (by omega) hfirst
-  have hsecondEval := evalPanValueFfiClockProg_normalProg_some_progCallFuel
-    context primitive handler structs functions baseAddress topAddress bytesInWord
-    callBudget second midLocals midGlobals midMemory midFfi midClock ma c mh hsecond
-  have hmonoSecond := evalPanValueFfiClockProg_fuel_mono context primitive handler
-    structs functions baseAddress topAddress bytesInWord
-    (fuel := progCallFuel callBudget second)
-    (fuel' := progCallFuel callBudget first + progCallFuel callBudget second)
-    midLocals midGlobals midMemory midFfi midClock second ma c mh (by omega) hsecondEval
-  exact evalPanValueFfiClockProg_seq_some_progCallFuel context primitive handler
+      some (.control (.normal midLocals midGlobals midMemory midFfi), midClock) :=
+  evalPanValueFfiClockProg_seq_of_first_normal_progCallFuel context primitive handler
     structs functions baseAddress topAddress bytesInWord callBudget first second
     locals globals memory ffi clock ma c mh midLocals midGlobals midMemory midFfi
     midClock (.control (.normal midLocals midGlobals midMemory midFfi)) midClock
-    hmonoFirst hmonoSecond
+    hfirst
+    (evalPanValueFfiClockProg_normalProg_some_progCallFuel context primitive handler
+      structs functions baseAddress topAddress bytesInWord callBudget second
+      midLocals midGlobals midMemory midFfi midClock ma c mh hsecond)
 
 
 /-! ## While-body step equations

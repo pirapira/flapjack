@@ -865,6 +865,7 @@ evaluator-evidence obligation. -/
 #check @panValuePcCompileCorrectWithContextCode_of_compact_evaluators_with_expression_state_evidence_and_clocked_raised
 #check @panValuePcCompileCorrectWithContextCode_of_compact_evaluators_with_expression_state_evidence_and_clocked_timeout
 #check @panValuePcCompileCorrectWithContextCode_of_compact_evaluators_with_expression_state_evidence_and_clocked_final_ffi
+#check @panValuePcCompileCorrectWithContextCode_of_compact_evaluators_with_expression_state_evidence_and_clocked_returned
 
 /- The arbitrary word-list Raise bridge preserves the same explicit clocked
    evaluator and state/result premises at the top-level boundary. -/
@@ -924,5 +925,7 @@ evaluator-evidence obligation. -/
 /-! The handler-free call form discharges the control-safety premise of the
 compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @panValueCrepProgramStateControlSafe_call_none
+
+#check @panValueCrepProgramStateControlSafe_call_returns
 
 end Flapjack.Test.PanValuePcControlSafety

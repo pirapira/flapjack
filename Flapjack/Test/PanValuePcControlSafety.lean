@@ -1114,5 +1114,7 @@ example :
     produce `normal`, so the label rule holds for every `VarKind`. -/
 #check @panValueCrepProgramStateControlSafe_shMemLoad
 #check @panValueCrepProgramStateControlSafe_shMemStore
+#check @panValueCrepProgramStateCorrect_and_controlSafe_shMemLoad_source_word
+#check @panValueCrepProgramStateCorrect_and_controlSafe_shMemStore_source_word
 
 end Flapjack.Test.PanValuePcControlSafety

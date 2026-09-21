@@ -856,7 +856,6 @@ evaluator-evidence obligation. -/
    generic `hother` branch without an opaque raised-data obligation. -/
 #check @panValuePcRaisedHraiseCases_with_raw_word_lists_of_state_evidence
 #check @panValuePcCompileCorrect_compact_with_raw_word_lists_context_code_of_state_evidence
-#check @panValuePcCompileCorrect_compact_with_raw_word_lists_context_code_of_state_evidence_and_clocked
 #check @panValuePcCompileCorrect_compact_ite_source_word_of_state_evidence_context_code
 #check @panValuePcCompileCorrect_compact_while_source_word_of_state_evidence_context_code
 #check @panValuePcCompileCorrect_compact_while_source_word_of_state_evidence_context_code_and_clocked
@@ -1024,6 +1023,7 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
     clock crosses the enclosing program boundary as a `timeout` outcome. -/
 #check @panValuePcTimeoutResultRel_of_clocked_call
 #check @panValuePcCompileCorrectWithContextCode_of_compact_and_caught_call
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_broke
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_raised
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_timeout
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_timeout

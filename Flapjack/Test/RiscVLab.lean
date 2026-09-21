@@ -347,6 +347,16 @@ example :
       some [.addi 4 5 (0 - BitVec.ofNat 64 24)] := by
   decide
 
+/- Cake's `riscv_ast` immediate-Binop rule maps `Add` through
+   `riscv_bop_i Add = ADDI`; keep this distinct from the signed-negation
+   `Sub` case above (riscv_targetScript.sml:47-51, 117-120). -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith
+        (.binOp .add 4 5 (.imm (BitVec.ofNat 64 24))))) [] 0]⟩ =
+      some [.addi 4 5 (BitVec.ofNat 64 24)] := by
+  decide
+
 /- Cake's `riscv_ast (Inst (Arith (Div ...)))` reaches the target DIV
    encoding through the direct Lab word-arithmetic boundary. -/
 example :

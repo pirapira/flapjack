@@ -1,4 +1,5 @@
 import Flapjack.PanToCrepSemantics
+import Flapjack.PanCrepSemanticAgreement
 
 namespace Flapjack.Test.PanToCrepSemantics
 
@@ -82,5 +83,35 @@ example {α : Type} (structs : StructContext) (context : CompileContext α)
       exceptionCode globalsLookup
       (.returned sourceLocals sourceGlobals sourceMemory [])
       (.returned targetState []) .success .success hrel rfl rfl)
+
+/-! The same-clock semantic lift also covers a terminal-FFI observation, which
+    the no-final-FFI success hypotheses cannot reach. -/
+example (event : FfiFinalEvent) :
+    panCrepSemanticOutcomeRel (.ffi event.outcome) (.ffi event.outcome) := by
+  exact panValuePcResultRel_semanticOutcomeRel_of_outcome
+    (structs := [])
+    (context := { vars := [], functions := [], exceptions := [], maxVar := 0, bytesInWord := 8 })
+    (exceptionRel := fun _ _ _ => True) (exceptionCode := fun _ => none)
+    (globalsLookup := fun _ _ => none)
+    (panHooks := { evaluate := fun _ => none, ffiOutcome := fun e => e.outcome })
+    (hffiOutcome := fun _ => rfl)
+    (outcome := .control (.finalFfi (fun _ => none) (fun _ => none) (fun _ => none)
+      { oracle := fun _ _ _ _ => .final .failed, state := (), ioEvents := [] } event))
+    (crepResult := .finalFfi { locals := fun _ => none, memory := fun _ => none } event)
+    (returnedClock := 0)
+    (sourceOutcome := .ffi event.outcome) (targetOutcome := .ffi event.outcome)
+    (hrel := by
+      simp only [panValuePcResultRel, panOutcomeToPcResult, crepControlToPcResult]
+      constructor
+      · simp only [panValueCrepStateRel]
+        constructor
+        · trivial
+        · constructor
+          · intro name value shape slots hsource _
+            simp at hsource
+          · funext address
+            simp [panValueWordMemory]
+      · trivial)
+    (hsource := rfl) (htarget := rfl)
 
 end Flapjack.Test.PanToCrepSemantics

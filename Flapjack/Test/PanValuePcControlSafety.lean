@@ -835,4 +835,8 @@ evaluator-evidence obligation. -/
    to the final fixed-width record payload. -/
 #check @panValuePcCompileCorrect_compact_four_word_raise_of_state_evidence
 
+/- The arbitrary word-list Raise bridge preserves the same explicit clocked
+   evaluator and state/result premises at the top-level boundary. -/
+#check @panValuePcCompileCorrect_compact_with_flat_global_evaluator_evidence_word_list_raise_context_code_and_clocked
+
 end Flapjack.Test.PanValuePcControlSafety

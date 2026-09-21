@@ -1247,6 +1247,58 @@ def wordProgWriteVars : WordProg α → List Nat
       | .load | .load8 | .load16 | .load32 => [name]
       | .store | .store8 | .store16 | .store32 => []
 
+/-! A production-only difference-list inventory for writes.  This follows the
+    same left-to-right Cake traversal as `wordProgWriteVars`, but threads the
+    tail through nested calls and branches instead of copying each prefix with
+    `++`. -/
+def wordProgWriteVarsFastAcc : WordProg α → List Nat → List Nat
+  | .get destination _, tail => destination :: tail
+  | .skip, tail => tail
+  | .store _ _, tail => tail
+  | .set _ _, tail => tail
+  | .break _, tail => tail
+  | .continue _, tail => tail
+  | .raise _, tail => tail
+  | .return _ _, tail => tail
+  | .tick, tail => tail
+  | .move _ moves, tail =>
+      moves.foldr (fun move rest => move.1 :: rest) tail
+  | .assign name _, tail => name :: tail
+  | .inst instruction, tail => wordListAppendAcc (wordInstWriteVars instruction) tail
+  | .seq first second, tail =>
+      wordProgWriteVarsFastAcc first (wordProgWriteVarsFastAcc second tail)
+  | .ite _ _ _ thenBranch elseBranch, tail =>
+      wordProgWriteVarsFastAcc thenBranch
+        (wordProgWriteVarsFastAcc elseBranch tail)
+  | .loop _ body _, tail | .mustTerminate body, tail =>
+      wordProgWriteVarsFastAcc body tail
+  | .locValue destination _, tail => destination :: tail
+  | .call returns _ _ handler, tail =>
+      let afterHandler := match handler with
+        | none => tail
+        | some (exception, body, _, _) =>
+            exception :: wordProgWriteVarsFastAcc body tail
+      match returns with
+      | none => afterHandler
+      | some (values, _, returnCode, _, _) =>
+          wordListAppendAcc values
+            (wordProgWriteVarsFastAcc returnCode afterHandler)
+  | .alloc destination _, tail => destination :: tail
+  | .storeConsts source bitmap codeLength dataLength _, tail =>
+      source :: bitmap :: codeLength :: dataLength :: tail
+  | .opCurrHeap _ destination _, tail => destination :: tail
+  | .install codeBuffer _ _ _ _, tail => codeBuffer :: tail
+  | .codeBufferWrite _ _, tail => tail
+  | .dataBufferWrite _ _, tail => tail
+  | .ffi _ _ _ _ _ _, tail => tail
+  | .shareInst operator name _, tail =>
+      match operator with
+      | .load | .load8 | .load16 | .load32 => name :: tail
+      | .store | .store8 | .store16 | .store32 => tail
+
+def wordProgWriteVarsFast (program : WordProg α) : List Nat :=
+  wordProgWriteVarsFastAcc program []
+
 def wordProgVariables (program : WordProg α) : List Nat :=
   wordProgReadVars program ++ wordProgWriteVars program
 
@@ -1474,7 +1526,7 @@ def wordProgLiveBefore (program : WordProg α) (liveAfter : List Nat) : List Nat
    for the proof-facing allocator interface. -/
 def wordProgLiveBeforeFast (program : WordProg α) (liveAfter : List Nat) : List Nat :=
   wordProgReadVarsFast program ++
-    liveAfter.filter (fun name => name ∉ wordProgWriteVars program)
+    liveAfter.filter (fun name => name ∉ wordProgWriteVarsFast program)
 
 def wordListUnion (left right : List Nat) : List Nat :=
   (left ++ right).eraseDups

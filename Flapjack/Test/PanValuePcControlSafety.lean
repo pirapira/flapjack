@@ -1012,5 +1012,6 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
     clock crosses the enclosing program boundary as a `timeout` outcome. -/
 #check @panValuePcTimeoutResultRel_of_clocked_call
 #check @panValuePcCompileCorrectWithContextCode_of_compact_and_caught_call
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_raised
 
 end Flapjack.Test.PanValuePcControlSafety

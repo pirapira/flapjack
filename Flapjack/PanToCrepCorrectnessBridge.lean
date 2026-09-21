@@ -31040,7 +31040,7 @@ theorem panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_extC
     clockBaseAddress clockTopAddress clockBytesInWord fuel clock clockLocals
     clockGlobals clockMemory clockFfi function configuration configurationLength
     array arrayLength clockLocals clockGlobals clockMemory finalFfi event steps
-    hsteps
+    (memoryAccess := none) (contracts := none) (memoryHandler := none) hsteps
   have hfinal := panValuePcFinalFfiResultRel_of_clocked_leaf
     clockStructs clockPcContext clockExceptionRel clockExceptionCode
     clockGlobalsLookup clockContext clockPrimitive clockHandler clockFunctions
@@ -31118,7 +31118,7 @@ theorem panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_extC
     clockBaseAddress clockTopAddress clockBytesInWord fuel clock clockLocals
     clockGlobals clockMemory clockFfi function configuration configurationLength
     array arrayLength finalLocals finalGlobals finalMemory finalFfi event steps
-    hsteps
+    (memoryAccess := none) (contracts := none) (memoryHandler := none) hsteps
   refine ⟨hcompact, hclock, ?_, ?_⟩
   · rw [hclock]
     rfl

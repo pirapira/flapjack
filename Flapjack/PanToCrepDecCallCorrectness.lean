@@ -3,11 +3,10 @@ import Flapjack.PanToCrepCorrectnessBridge
 namespace Flapjack
 
 /-! Ordinary projection for Cake's successful `DecCall` branch of
-    `pc_compile_correct`.  The context-coded bridge already carries the
-    declaration-call shape check, body evaluator equation, caller-local
-    restoration, post-state relation, and final clock.  This wrapper exposes
-    the ordinary result relation while preserving every one of those
-    premises. -/
+    `pc_compile_correct`. The context-coded bridge carries the declaration-call
+    shape check, body evaluator equation, caller-local restoration, post-state
+    relation, and final clock; this wrapper exposes the ordinary result
+    relation without dropping any of those premises. -/
 set_option linter.unusedVariables false in
 theorem panValuePcCompileCorrect_of_context_code_and_clocked_decCall_returned
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]

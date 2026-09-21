@@ -770,42 +770,40 @@ theorem evalPanValueDeclarationsWithStructs_only_exn_decls
     (structs : StructContext) (state state' : PanValueProgramState α)
     (declarations : List (Decl α))
     (memoryAccess : Option (PanValueMemoryAccess α))
+    (hstructs : state.structs = structs)
     (hall : declarations.all isExnDecl = true)
-    (hstructs : structs = state.structs)
     (heval : evalPanValueDeclarationsWithStructs structs state declarations
       memoryAccess = some state') :
     state' = { state with
+      structs := structs
       exceptions := panExceptionEntries declarations ++ state.exceptions } := by
   induction declarations generalizing state with
   | nil =>
       simp only [evalPanValueDeclarationsWithStructs] at heval
       have hstate : state = state' := (Option.some.injEq _ _).mp heval
       subst hstate
-      simp [panExceptionEntries_nil]
+      rw [panExceptionEntries_nil, List.nil_append, ← hstructs]
   | cons declaration declarations ih =>
       simp only [List.all_cons, Bool.and_eq_true] at hall
       obtain ⟨hhead, htail⟩ := hall
-      have hheadExn : isExnDecl declaration = true := hhead
+      have hexndecl : isExnDecl declaration = true := hhead
       cases declaration with
-      | name struct fields =>
-          simp [isExnDecl] at hheadExn
-      | decl shape name expression =>
-          simp [isExnDecl] at hheadExn
-      | function declaration =>
-          simp [isExnDecl] at hheadExn
       | exnDecl exception shape =>
           simp only [evalPanValueDeclarationsWithStructs] at heval
           by_cases hexists : (lookupInfo exception state.exceptions).isSome = true
           · simp [hexists] at heval
           · by_cases hwf : isWfShape structs shape = true
             · simp only [hexists, hwf] at heval
-              rw [ih _ htail rfl heval]
-              simp [panExceptionEntries_cons, List.append_assoc, hstructs]
+              rw [ih _ (by rfl) htail heval]
+              simp [panExceptionEntries_cons, List.append_assoc]
             · simp [hexists, hwf] at heval
+      | function _ => simp [isExnDecl] at hexndecl
+      | decl _ _ _ => simp [isExnDecl] at hexndecl
+      | name _ _ => simp [isExnDecl] at hexndecl
 
-/-! Cake's `evaluate_decls_only_exn_decls` at the public declaration entry
-    point.  Collecting struct names is a no-op for an exception-only list, so
-    the stronger state equation can be exposed without a struct premise. -/
+/-- Cake's `evaluate_decls_only_exn_decls` (`panPropsScript.sml:1436`) at the
+    `evalPanValueDeclarations` level: struct-name collection is a no-op for an
+    exception-only declaration list, so the state's struct context is kept. -/
 theorem evalPanValueDeclarations_only_exn_decls
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
@@ -831,9 +829,9 @@ theorem evalPanValueDeclarations_only_exn_decls
         rw [hcollect] at hno
         exact Option.some.inj hno
       subst hstructs
-      have hmain := evalPanValueDeclarationsWithStructs_only_exn_decls
-        state.structs { state with structs := state.structs } state' declarations
-        memoryAccess hall rfl heval
+      have hmain := evalPanValueDeclarationsWithStructs_only_exn_decls state.structs
+        { state with structs := state.structs } state' declarations memoryAccess
+        (by rfl) hall heval
       simpa using hmain
 
 /-! Cake's `evaluate_decls_names`
@@ -1417,72 +1415,6 @@ theorem evalPanValueDeclarationsWithStructs_one_fun_last
           rw [ih _ htail]
           simp only [evalPanValueDeclarationsWithStructs]
 
-/-! Counterpart of Cake's `filter_not_mem_self`
-(`cakeml/pancake/proofs/pan_to_crepProofScript.sml:1407`):
-
-    FILTER (\x. ~MEM x l) l = []
-
-Filtering a list by its own complement of membership removes every element. -/
-theorem filter_not_mem_self {α : Type} [DecidableEq α] (l : List α) :
-    l.filter (fun x => decide (x ∉ l)) = [] := by
-  rw [List.filter_eq_nil_iff]
-  intro x hx
-  simp [hx]
-
-/-! Counterpart of Cake's `MAP_SOME_MEM_lemma`
-(`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4060`):
-
-    MAP f (FLAT xs) = MAP SOME (FLAT ys) /\ MEM zs xs /\ MEM z zs
-      ==> ?y. f z = SOME y /\ MEM y (FLAT ys)
-
-The unused existential of the original is dropped. -/
-theorem map_flatten_eq_map_some_flatten {α β : Type} (f : α → Option β)
-    (xs : List (List α)) (ys : List (List β)) (zs : List α) (z : α)
-    (h : xs.flatten.map f = ys.flatten.map some)
-    (hzs : zs ∈ xs) (hz : z ∈ zs) :
-    ∃ y, f z = some y ∧ y ∈ ys.flatten := by
-  have hzflat : z ∈ xs.flatten := List.mem_flatten.mpr ⟨zs, hzs, hz⟩
-  have hzmap : f z ∈ xs.flatten.map f := List.mem_map.mpr ⟨z, hzflat, rfl⟩
-  rw [h] at hzmap
-  obtain ⟨y, hy, hfy⟩ := List.mem_map.mp hzmap
-  exact ⟨y, hfy.symm, hy⟩
-
-/-! Counterpart of Cake's `mod_eq_lt_eq`
-(`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4621`):
-
-    !n x m. n < x /\ m < x /\ n MOD x = m MOD x ==> n = m
-
-Below the modulus, reduction is the identity. -/
-theorem mod_eq_of_lt_eq {n x m : Nat} (hn : n < x) (hm : m < x)
-    (h : n % x = m % x) : n = m := by
-  rw [Nat.mod_eq_of_lt hn, Nat.mod_eq_of_lt hm] at h
-  exact h
-
-/-! Counterpart of Cake's `pair_map_I`
-(`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4630`):
-
-    (λ(x,y). (x,y)) = I
-
-The anonymous pair constructor is the identity on pairs. -/
-theorem prod_mk_pair_eq_id {α β : Type} :
-    (fun p : α × β => (p.1, p.2)) = id := by
-  funext p
-  cases p
-  rfl
-
-/-! Counterpart of Cake's `not_none_then_some`
-(`cakeml/pancake/proofs/pan_to_crepProofScript.sml:3593`):
-
-    x <> NONE <=> ?a. x = SOME a -/
-theorem option_ne_none_iff_exists {α : Type} (x : Option α) :
-    x ≠ none ↔ ∃ a, x = some a := by
-  constructor
-  · intro h
-    cases x with
-    | none => exact absurd rfl h
-    | some a => exact ⟨a, rfl⟩
-  · rintro ⟨a, rfl⟩
-    exact Option.some_ne_none a
 /-- The well-founded declaration filter agrees with `List.filter`, which makes
     the core list-filter API available for the resort argument. -/
 theorem globalDeclsFilter_eq_filter (predicate : Decl α → Bool)
@@ -1786,5 +1718,72 @@ theorem evalPanValueDeclarationsWithStructs_resortDecls_imp
   rw [evalPanValueDeclarationsWithStructs_resortDecls structs state declarations
     memoryAccess hall] at heval
   exact heval
+
+/-! Counterpart of Cake's `filter_not_mem_self`
+(`cakeml/pancake/proofs/pan_to_crepProofScript.sml:1407`):
+
+    FILTER (\x. ~MEM x l) l = []
+
+Filtering a list by its own complement of membership removes every element. -/
+theorem filter_not_mem_self {α : Type} [DecidableEq α] (l : List α) :
+    l.filter (fun x => decide (x ∉ l)) = [] := by
+  rw [List.filter_eq_nil_iff]
+  intro x hx
+  simp [hx]
+
+/-! Counterpart of Cake's `MAP_SOME_MEM_lemma`
+(`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4060`):
+
+    MAP f (FLAT xs) = MAP SOME (FLAT ys) /\ MEM zs xs /\ MEM z zs
+      ==> ?y. f z = SOME y /\ MEM y (FLAT ys)
+
+The unused existential of the original is dropped. -/
+theorem map_flatten_eq_map_some_flatten {α β : Type} (f : α → Option β)
+    (xs : List (List α)) (ys : List (List β)) (zs : List α) (z : α)
+    (h : xs.flatten.map f = ys.flatten.map some)
+    (hzs : zs ∈ xs) (hz : z ∈ zs) :
+    ∃ y, f z = some y ∧ y ∈ ys.flatten := by
+  have hzflat : z ∈ xs.flatten := List.mem_flatten.mpr ⟨zs, hzs, hz⟩
+  have hzmap : f z ∈ xs.flatten.map f := List.mem_map.mpr ⟨z, hzflat, rfl⟩
+  rw [h] at hzmap
+  obtain ⟨y, hy, hfy⟩ := List.mem_map.mp hzmap
+  exact ⟨y, hfy.symm, hy⟩
+
+/-! Counterpart of Cake's `mod_eq_lt_eq`
+(`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4621`):
+
+    !n x m. n < x /\ m < x /\ n MOD x = m MOD x ==> n = m
+
+Below the modulus, reduction is the identity. -/
+theorem mod_eq_of_lt_eq {n x m : Nat} (hn : n < x) (hm : m < x)
+    (h : n % x = m % x) : n = m := by
+  rw [Nat.mod_eq_of_lt hn, Nat.mod_eq_of_lt hm] at h
+  exact h
+
+/-! Counterpart of Cake's `pair_map_I`
+(`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4630`):
+
+    (λ(x,y). (x,y)) = I
+
+The anonymous pair constructor is the identity on pairs. -/
+theorem prod_mk_pair_eq_id {α β : Type} :
+    (fun p : α × β => (p.1, p.2)) = id := by
+  funext p
+  cases p
+  rfl
+
+/-! Counterpart of Cake's `not_none_then_some`
+(`cakeml/pancake/proofs/pan_to_crepProofScript.sml:3593`):
+
+    x <> NONE <=> ?a. x = SOME a -/
+theorem option_ne_none_iff_exists {α : Type} (x : Option α) :
+    x ≠ none ↔ ∃ a, x = some a := by
+  constructor
+  · intro h
+    cases x with
+    | none => exact absurd rfl h
+    | some a => exact ⟨a, rfl⟩
+  · rintro ⟨a, rfl⟩
+    exact Option.some_ne_none a
 
 end Flapjack

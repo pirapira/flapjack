@@ -144,16 +144,30 @@ def loopLiveOutGuard : Bool :=
             (.move 1 [(13, 21)])) [17])) => true
   | _ => false
 
+def loopBreakProgram : WordProg Nat :=
+  .loop [0] (.seq (.assign 0 (.const 1)) (.break 0)) []
+
+def loopBreakGuard : Bool :=
+  match (wordFullSsaCcTrans 2 loopBreakProgram).2.2 with
+  | .seq (.move 1 [(5, 0), (9, 2)])
+      (.seq (.seq .skip (.move 0 [(13, 5)]))
+        (.loop [13]
+          (.seq
+            (.seq (.assign 17 (.const 1)) (.break 0))
+            (.move 1 [(13, 17)])) [])) => true
+  | _ => false
+
 #guard branchSsaGuard
 #guard branchSkipSsaGuard
 #guard loopSsaGuard
 #guard loopLiveOutGuard
+#guard loopBreakGuard
 
 def parityGuard : Bool :=
   setupTwoGuard && fullTransMoveGuard && limitBaseGuard &&
     limitTwoAssignsGuard && setupTwoNextGuard && fullSkipMoveGuard &&
     fullTwoAssignsGuard && branchSsaGuard && branchSkipSsaGuard &&
-    loopSsaGuard && loopLiveOutGuard
+    loopSsaGuard && loopLiveOutGuard && loopBreakGuard
 
 #guard parityGuard
 #eval parityGuard
@@ -176,7 +190,9 @@ def runChecks : IO Bool := do
         branchSkipSsaGuard),
       ("full_ssa_cc_trans reconciles Cake loop back edges", loopSsaGuard),
       ("full_ssa_cc_trans preserves Cake loop exit cut sets",
-        loopLiveOutGuard) ]
+        loopLiveOutGuard),
+      ("full_ssa_cc_trans preserves Cake loop break reconciliation",
+        loopBreakGuard) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

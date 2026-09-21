@@ -98,6 +98,15 @@ theorem lookupPanFunction_panValueFunctionsSimp_fixture :
   apply lookupPanFunction_panValueFunctionsSimp relationState.functions "f"
   simp [relationState, lookupPanFunction]
 
+theorem panValueProgramStateRel_lookupPanFunction_fixture :
+    lookupPanFunction "f"
+        { relationState with functions := panValueFunctionsSimp relationState.functions }.functions =
+      some ([], panSimpProg (.seq (.skip : Prog Nat) (.skip : Prog Nat))) := by
+  apply panValueProgramStateRel_lookupPanFunction relationState
+    { relationState with functions := panValueFunctionsSimp relationState.functions }
+    relationState_self "f"
+  simp [relationState, lookupPanFunction]
+
 /-! Regression for the function-table lookup bridge used by Cake's
     `state_rel_imp_semantics`: the entry keeps its parameters and return shape,
     while only its body is replaced by `panSimpProg`. -/
@@ -169,5 +178,55 @@ theorem panValueProgramStateRel_intro_fixture :
       { evalRelState with functions := panValueFunctionsSimp evalRelState.functions } :=
   panValueProgramStateRel_intro evalRelState evalRelState
     ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+
+/-! Regressions for Cake's `MEM_functions` (`pan_globalsProofScript.sml:2380`)
+    and `evaluate_decls_functions_wf` (`:2367`). -/
+
+/-- `MEM_functions`: the single function entry of `relationDecls` comes from the
+    source function declaration. -/
+theorem mem_functions_fixture :
+    ∃ declaration : FunDecl Nat,
+      (.function declaration : Decl Nat) ∈ relationDecls ∧
+        ("f", [], (.seq (.skip : Prog Nat) (.skip : Prog Nat)), .one) =
+          (declaration.name, declaration.params, declaration.body,
+            declaration.returnShape) :=
+  mem_functions (declarations := relationDecls)
+    (entry := ("f", [], (.seq (.skip : Prog Nat) (.skip : Prog Nat)), .one))
+    (by simp [relationDecls, functions])
+
+def wfFunction : FunDecl Nat :=
+  { name := "f", inline := false, exported := false, params := [],
+    body := (.skip : Prog Nat), returnShape := .one }
+
+def wfDecls : List (Decl Nat) := [.function wfFunction]
+
+def wfEvalSucceeds : Bool :=
+  (evalPanValueDeclarationsWithStructs ([] : StructContext) evalRelState wfDecls
+    none).isSome
+
+#eval wfEvalSucceeds
+#guard wfEvalSucceeds
+
+/-- `evaluate_decls_functions_wf` for the struct-explicit evaluator: any function
+    declaration reached by a successful evaluation is well formed. -/
+theorem evalPanValueDeclarationsWithStructs_functions_wf_fixture
+    (state' : PanValueProgramState Nat)
+    (heval : evalPanValueDeclarationsWithStructs ([] : StructContext) evalRelState
+      wfDecls none = some state') :
+    isWfShape ([] : StructContext) (.one : Shape) = true :=
+  (evalPanValueDeclarationsWithStructs_functions_wf ([] : StructContext) evalRelState
+    state' wfDecls none heval (declaration := wfFunction) (by simp [wfDecls])).2
+
+/-- `evaluate_decls_functions_wf` for the struct-collecting entry point. -/
+theorem evalPanValueDeclarations_functions_wf_fixture
+    (state' : PanValueProgramState Nat)
+    (heval : evalPanValueDeclarations evalRelState wfDecls none = some state') :
+    ∃ structs : StructContext,
+      collectPanValueStructs wfDecls evalRelState.structs = some structs ∧
+        isWfShape structs (.one : Shape) = true := by
+  obtain ⟨structs, hcollect, _hparams, hreturn⟩ :=
+    evalPanValueDeclarations_functions_wf evalRelState state' wfDecls none heval
+      (declaration := wfFunction) (by simp [wfDecls])
+  exact ⟨structs, hcollect, hreturn⟩
 
 end Flapjack.Test.PanProgramSimpParity

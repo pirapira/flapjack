@@ -160,6 +160,20 @@ def panValueProgramStateRel (s t : PanValueProgramState α) : Prop :=
   s.bytesInWord = t.bytesInWord ∧
   t.functions = panValueFunctionsSimp s.functions
 
+/-! State-relation form of the lookup bridge.  This is the call-site fact used
+    by the Cake `state_rel_imp_semantics` induction: related states differ in
+    function bodies only, so a source callee lookup lifts to its `pan_simp`
+    body in the target state. -/
+theorem panValueProgramStateRel_lookupPanFunction
+    (s t : PanValueProgramState α) (hrel : panValueProgramStateRel s t)
+    (name : FunName) {parameters : List VarName} {body : Prog α}
+    (hlookup : lookupPanFunction name s.functions = some (parameters, body)) :
+    lookupPanFunction name t.functions = some (parameters, panSimpProg body) := by
+  obtain ⟨_hstructs, _hglobals, _hmemory, _hreturnShapes, _hparameterShapes,
+    _hexceptions, _hbaseAddress, _htopAddress, _hbytesInWord, hfunctions⟩ := hrel
+  rw [hfunctions]
+  exact lookupPanFunction_panValueFunctionsSimp s.functions name hlookup
+
 /-- Cake's `state_rel_upd_inv` (`pan_simpProofScript.sml:387`): the source
     state can be recovered from the target state by resetting the simplified
     function table. -/

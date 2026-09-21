@@ -164,4 +164,89 @@ theorem evalPanValueDeclarations_empty
   simp [evalPanValueDeclarations, collectPanValueStructs,
     evalPanValueDeclarationsWithStructs]
 
+/-! Cake's `evaluate_decls_functions_wf` (`pan_globalsProofScript.sml:2367`):
+    a successful declaration evaluation only installs function declarations
+    whose parameter and return shapes are well formed in the struct context.
+    Flapjack checks well-formedness before installing a function, so the
+    invariant is immediate by induction on the declaration list. -/
+theorem evalPanValueDeclarationsWithStructs_functions_wf
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext) (state state' : PanValueProgramState α)
+    (declarations : List (Decl α)) (memoryAccess : Option (PanValueMemoryAccess α))
+    (heval : evalPanValueDeclarationsWithStructs structs state declarations
+      memoryAccess = some state')
+    {declaration : FunDecl α} (hmem : (.function declaration : Decl α) ∈ declarations) :
+    declaration.params.all (fun parameter => isWfShape structs parameter.2) = true ∧
+      isWfShape structs declaration.returnShape = true := by
+  induction declarations generalizing state state' with
+  | nil => simp at hmem
+  | cons head tail ih =>
+      cases head with
+      | name name fields =>
+          simp only [evalPanValueDeclarationsWithStructs] at heval
+          simp at hmem
+          exact ih state state' heval hmem
+      | decl shape name expression =>
+          simp only [evalPanValueDeclarationsWithStructs] at heval
+          cases hval : evalPanValueExp structs (fun _ => none) state.globals
+              state.memory state.baseAddress state.topAddress state.bytesInWord
+              expression (memoryAccess := memoryAccess) with
+          | none => simp [hval] at heval
+          | some value =>
+              by_cases hmatch :
+                  panShapeMatches (panValueShape structs value) shape = true
+              · simp [hval, hmatch] at heval
+                simp at hmem
+                exact ih _ _ heval hmem
+              · simp [hval, hmatch] at heval
+      | function function =>
+          simp only [evalPanValueDeclarationsWithStructs] at heval
+          by_cases hwf : (function.params.all
+              (fun parameter => isWfShape structs parameter.2) &&
+              isWfShape structs function.returnShape) = true
+          · simp [hwf] at heval
+            simp only [List.mem_cons] at hmem
+            rcases hmem with hhead | htail
+            · cases hhead
+              simpa only [Bool.and_eq_true] using hwf
+            · exact ih _ _ heval htail
+          · simp [hwf] at heval
+      | exnDecl exception shape =>
+          simp only [evalPanValueDeclarationsWithStructs] at heval
+          by_cases hexists : (lookupInfo exception state.exceptions).isSome = true
+          · simp [hexists] at heval
+          · by_cases hwf : isWfShape structs shape = true
+            · simp [hexists, hwf] at heval
+              simp at hmem
+              exact ih _ _ heval hmem
+            · simp [hexists, hwf] at heval
+
+/-- Cake's `evaluate_decls_functions_wf` stated for the struct-collecting entry
+    point `evalPanValueDeclarations`: a function declaration in a successfully
+    evaluated list has well-formed shapes in the context collected from that
+    list. -/
+theorem evalPanValueDeclarations_functions_wf
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state state' : PanValueProgramState α) (declarations : List (Decl α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (heval : evalPanValueDeclarations state declarations memoryAccess = some state')
+    {declaration : FunDecl α} (hmem : (.function declaration : Decl α) ∈ declarations) :
+    ∃ structs : StructContext,
+      collectPanValueStructs declarations state.structs = some structs ∧
+        declaration.params.all (fun parameter => isWfShape structs parameter.2) = true ∧
+        isWfShape structs declaration.returnShape = true := by
+  simp only [evalPanValueDeclarations] at heval
+  cases hcollect : collectPanValueStructs declarations state.structs with
+  | none => simp [hcollect] at heval
+  | some structs =>
+      simp only [hcollect] at heval
+      obtain ⟨hparams, hreturn⟩ :=
+        evalPanValueDeclarationsWithStructs_functions_wf structs
+          { state with structs := structs } state' declarations memoryAccess heval hmem
+      exact ⟨structs, rfl, hparams, hreturn⟩
+
 end Flapjack

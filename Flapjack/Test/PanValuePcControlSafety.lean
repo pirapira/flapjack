@@ -1054,6 +1054,7 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_raised
 #check @panValuePcCompileCorrect_of_context_code_and_clocked_decCall_raised
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_decCall_timeout
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_decCall_timeout
 
 /-! Declaration-call result theorem for the `shape_of v ≠ return_sh` sub-case:
     a declaration call whose callee returns a wrong-shaped value evaluates to

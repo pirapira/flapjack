@@ -385,6 +385,27 @@ example : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorH
       evaluatorHandler [] [] 0 0 8 0 (updatePanValueMap (fun _ => none) "x" (.word 5))
       (fun _ => none) (fun _ => none) evaluatorFfi 1 "tag" "text" none none none)
 
+/-- The same `Dec` at its own `progSize` budget (no free fuel parameter). -/
+example : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+    [] [] 0 0 8 (progSize (.dec "x" .one (.const 5) (.annot "tag" "text")))
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    (.dec "x" .one (.const 5) (.annot "tag" "text")) =
+    some (panValueFfiClockRestoreLocal "x" none
+      (.control (.normal (updatePanValueMap (fun _ => none) "x" (.word 5))
+        (fun _ => none) (fun _ => none) evaluatorFfi)), 1) := by
+  exact evalPanValueFfiClockProg_dec_some_progSize evaluatorContext (fun _ _ => none)
+    evaluatorHandler [] [] 0 0 8 (fun _ => none) (fun _ => none) (fun _ => none)
+    evaluatorFfi 1 "x" .one (.const 5) (.annot "tag" "text") none none none
+    (.word 5)
+    (.control (.normal (updatePanValueMap (fun _ => none) "x" (.word 5))
+      (fun _ => none) (fun _ => none) evaluatorFfi)) 1
+    (by simp [evalPanValueExp]) (by simp [panValueShape, panShapeMatches])
+    (by
+      simpa only [progSize] using
+        (evalPanValueFfiClockProg_annot_some evaluatorContext (fun _ _ => none)
+          evaluatorHandler [] [] 0 0 8 0 (updatePanValueMap (fun _ => none) "x" (.word 5))
+          (fun _ => none) (fun _ => none) evaluatorFfi 1 "tag" "text" none none none))
+
 /-- A nonzero `Ite` condition selects the then-branch. -/
 example : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
     [] [] 0 0 8 2 (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1

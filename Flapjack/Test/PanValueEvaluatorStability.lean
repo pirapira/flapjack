@@ -35,6 +35,9 @@ theorem fresh_local_stability_fixture :
 def fields : List (FieldName × Exp Nat) :=
   [("left", .op .add [.const 1, .const 2]), ("right", .const 4)]
 
+def namedStructs : StructContext :=
+  [("Pair", { fields := [("left", .one), ("right", .one)], size := 2 })]
+
 theorem fresh_field_list_stability_fixture :
     evalPanValueExp.evalPanValueFields ([] : StructContext)
         (updatePanValueMap baseLocals "fresh" (.word 99)) (fun _ => none)
@@ -56,6 +59,20 @@ theorem fresh_field_list_stability_fixture :
     _ = some [("left", .word 3), ("right", .word 4)] := by
       simp [fields, evalPanValueExp, evalPanValueExp.evalPanValueFields,
         evalPanValueExp.evalPanValueExps, evalPanBinOp]
+
+theorem fresh_named_struct_stability_fixture :
+    evalPanValueExp namedStructs
+        (updatePanValueMap baseLocals "fresh" (.word 99)) (fun _ => none)
+        (fun _ => none) 0 0 8 (.nStruct "Pair" fields) none =
+      evalPanValueExp namedStructs baseLocals (fun _ => none) (fun _ => none)
+        0 0 8 (.nStruct "Pair" fields) none := by
+  exact evalPanValueExp_nStruct_update_local_not_mem namedStructs baseLocals
+    (fun _ => none) (fun _ => none) 0 0 8 "Pair" fields none "fresh"
+    (.word 99) (by
+      intro field hfield
+      simp [fields] at hfield
+      rcases hfield with rfl | rfl <;>
+        simp [expLocalVars, expLocalVars.expLocalVarsList])
 
 def resultGuard : Bool := match evalPanValueExp ([] : StructContext)
     (updatePanValueMap baseLocals "fresh" (.word 99)) (fun _ => none)

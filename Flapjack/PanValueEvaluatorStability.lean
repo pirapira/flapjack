@@ -140,4 +140,27 @@ theorem evalPanValueFields_update_local_not_mem
       simp only [evalPanValueExp.evalPanValueFields]
       rw [hexpression, hfields]
 
+theorem evalPanValueExp_nStruct_update_local_not_mem
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    [BEq String] [LawfulBEq String]
+    (structs : StructContext)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α))
+    (baseAddress topAddress bytesInWord : α)
+    (structName : StructName)
+    (fields : List (FieldName × Exp α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (name : VarName) (replacement : PanValue α)
+    (hname : ∀ field ∈ fields, name ∉ expLocalVars field.2) :
+    evalPanValueExp structs (updatePanValueMap locals name replacement)
+        globals memory baseAddress topAddress bytesInWord
+        (.nStruct structName fields) memoryAccess =
+      evalPanValueExp structs locals globals memory baseAddress topAddress
+        bytesInWord (.nStruct structName fields) memoryAccess := by
+  simp only [evalPanValueExp]
+  rw [evalPanValueFields_update_local_not_mem structs locals globals memory
+    baseAddress topAddress bytesInWord fields memoryAccess name replacement hname]
+
 end Flapjack

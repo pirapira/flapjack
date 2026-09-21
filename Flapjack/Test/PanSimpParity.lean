@@ -742,6 +742,34 @@ example
     (some (VarKind.local, "x")) [] (.skip : Prog Nat) [] (fun _ => none) none hfunctions
     (by simp [progSize]) hargs hlookup hbind (by decide) hwithin hassign
 
+/-- A destination call composed with a normal continuation keeps the intermediate
+state and clock at the sequence's call-aware budget. -/
+example
+    (hcall : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8
+      (progCallFuel 5 (.call (some ((VarKind.local, "x"), none)) "f"
+        ([] : List (Exp Nat))))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+      (.call (some ((VarKind.local, "x"), none)) "f" []) none none none =
+      some (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none)
+        evaluatorFfi), 1)) :
+    evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+      [] [] 0 0 8
+      (progCallFuel 5 (.seq (.call (some ((VarKind.local, "x"), none)) "f"
+        ([] : List (Exp Nat))) (.skip : Prog Nat)))
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+      (.seq (.call (some ((VarKind.local, "x"), none)) "f" []) (.skip : Prog Nat))
+      none none none =
+      some (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none)
+        evaluatorFfi), 1) :=
+  evalPanValueFfiClockProg_seq_normal_of_first_normal_progCallFuel evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 5
+    (.call (some ((VarKind.local, "x"), none)) "f" ([] : List (Exp Nat)))
+    (.skip : Prog Nat)
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1 none none none
+    (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1 hcall
+    PanValueFfiClockNormalProg.skip
+
 /-- The raised `DecCall` outcome also lifts to the declaration's progSize. -/
 example
     (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)

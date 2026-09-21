@@ -148,7 +148,9 @@ def functionsFilterNilGuard : Bool :=
         body := .skip, returnShape := .one },
      .name "S" [], .exnDecl "E" (.named "T"), .decl .one "h" (.const 9)]
   (functions (globalDeclsFilter
-    (fun declaration => !globalDeclIsFunction declaration) declarations)).isEmpty
+    (fun declaration => !globalDeclIsFunction declaration) declarations)).isEmpty &&
+  (functions (globalDeclsFilter isExnDecl declarations)).isEmpty &&
+  (functions (globalDeclsFilter isName declarations)).isEmpty
 
 #eval functionsFilterNilGuard
 #guard functionsFilterNilGuard

@@ -316,6 +316,41 @@ example : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorH
     evaluatorFfi 1 (.const 0) (.skip : Prog Nat) none none none 0
     (by simp [evalPanValueExp]) (by decide)
 
+/-- `Dec` binds the value, runs the body under the updated local map, and
+    restores the shadowed local. -/
+example : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+    [] [] 0 0 8 2 (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    (.dec "x" .one (.const 5) (.annot "tag" "text")) =
+    some (panValueFfiClockRestoreLocal "x" none
+      (.control (.normal (updatePanValueMap (fun _ => none) "x" (.word 5))
+        (fun _ => none) (fun _ => none) evaluatorFfi)), 1) := by
+  exact evalPanValueFfiClockProg_dec_some evaluatorContext (fun _ _ => none)
+    evaluatorHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none) (fun _ => none)
+    evaluatorFfi 1 "x" .one (.const 5) (.annot "tag" "text") none none none
+    (.word 5)
+    (.control (.normal (updatePanValueMap (fun _ => none) "x" (.word 5))
+      (fun _ => none) (fun _ => none) evaluatorFfi)) 1
+    (by simp [evalPanValueExp]) (by simp [panValueShape, panShapeMatches])
+    (evalPanValueFfiClockProg_annot_some evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 0 (updatePanValueMap (fun _ => none) "x" (.word 5))
+      (fun _ => none) (fun _ => none) evaluatorFfi 1 "tag" "text" none none none)
+
+/-- A nonzero `Ite` condition selects the then-branch. -/
+example : evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
+    [] [] 0 0 8 2 (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1
+    (.ite (.const 5) (.annot "tag" "text") (.tick : Prog Nat)) =
+    some (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi), 1) := by
+  exact evalPanValueFfiClockProg_ite_true_some evaluatorContext (fun _ _ => none)
+    evaluatorHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none) (fun _ => none)
+    evaluatorFfi 1 (.const 5) (.annot "tag" "text") (.tick : Prog Nat) none none none
+    5 (.control (.normal (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi)) 1
+    (by simp [evalPanValueExp]) (by decide)
+    (evalPanValueFfiClockProg_annot_some evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 0 (fun _ => none) (fun _ => none) (fun _ => none)
+      evaluatorFfi 1 "tag" "text" none none none)
+
 theorem clocked_seq_normal_exposes_components :
     ∃ (middleLocals middleGlobals : VarName → Option (PanValue Nat))
       (middleMemory : Nat → Option (PanValue Nat)) (middleFfi : FfiState Unit)

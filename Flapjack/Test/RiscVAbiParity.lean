@@ -507,6 +507,17 @@ def copyMergeKeepsClassIdentity : Bool :=
   RiscV.wordCopyLookup (RiscV.wordCopyMerge left right) 2373 == 2373
 
 #guard copyMergeKeepsClassIdentity
+
+/- Cake's `set_store_eq` records both the store-to-class relation and its
+   representative.  The production copy state keeps the Cake lists for
+   branch intersection, while the lookup-only indexes must expose the same
+   value to a following `Get`. -/
+def copyStoreEquivalenceIndexGuard : Bool :=
+  let state := RiscV.wordCopySetStoreEq RiscV.wordCopyEmpty 77 145
+  RiscV.wordCopyLookupStoreEq state 77 == some 145
+
+#guard copyStoreEquivalenceIndexGuard
+
 /-! ### Cake ABI argument overflow
 
     The original `format_var`/`wMoveSingle` materializes arguments past the

@@ -37,16 +37,9 @@ theorem closed_source_word_generic_store_bridge :
       simp at hvalue)
     (hsourceAddress := by simp [SourceWordExp.toExp, evalPanValueExp])
     (hsourceValue := by simp [SourceWordExp.toExp, evalPanValueExp])
-    (haddressStable := by
-      intro compiled hcompile
-      simp [SourceWordExp.toExp, compileExp] at hcompile
-      subst compiled
-      simp [evalCrepFullExp])
-    (hvalueStable := by
-      intro compiled hcompile
-      simp [SourceWordExp.toExp, compileExp] at hcompile
-      subst compiled
-      simp [evalCrepFullExp])
+    (hbound := by
+      intro name shape names hlookup
+      simp [sourceWordGenericStoreContext, lookupInfo] at hlookup)
   exact ⟨_, h.2.1⟩
 
 end Flapjack

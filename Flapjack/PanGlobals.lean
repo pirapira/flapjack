@@ -1443,6 +1443,22 @@ theorem globalCompileDecs_exceptions_eq_filter [BEq String] [Add α] [Mul α]
   exact globalDeclsFilter_isException_globalCompileDecls
     (globalCollect context code) code
 
+theorem functions_globalDeclsFilter_isException (declarations : List (Decl α)) :
+    functions (globalDeclsFilter globalDeclIsException declarations) = [] :=
+  functions_globalDeclsFilter_nil_of_predicate _
+    (fun declaration hpred => by
+      cases declaration <;> simp_all [globalDeclIsException, globalDeclIsFunction])
+    declarations
+
+/-- Cake's `functions_compile_decs_exns`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:519`): the exception
+    component of `compile_decs` contains no function declarations. -/
+theorem globalCompileDecs_exceptions_functions [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α)) :
+    functions (globalCompileDecs context code).exceptions = [] := by
+  rw [globalCompileDecs_exceptions_eq_filter]
+  exact functions_globalDeclsFilter_isException code
+
 theorem globalDeclsFilter_eq_self_of_all (predicate : Decl α → Bool)
     (declarations : List (Decl α))
     (hall : declarations.all predicate = true) :

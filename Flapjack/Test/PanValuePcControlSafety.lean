@@ -855,13 +855,12 @@ evaluator-evidence obligation. -/
 #check @panValuePcRaisedHraiseCases_with_raw_word_lists_of_state_evidence
 #check @panValuePcCompileCorrect_compact_with_raw_word_lists_context_code_of_state_evidence
 #check @panValuePcCompileCorrect_compact_with_raw_word_lists_context_code_of_state_evidence_and_clocked
+#check @panValuePcCompileCorrect_compact_ite_source_word_of_state_evidence_context_code
+#check @panValuePcCompileCorrect_compact_while_source_word_of_state_evidence_context_code
 
 /- The arbitrary word-list Raise bridge preserves the same explicit clocked
    evaluator and state/result premises at the top-level boundary. -/
 #check @panValuePcCompileCorrect_compact_with_flat_global_evaluator_evidence_word_list_raise_context_code_and_clocked
-/- The clocked source-word-record Raise bridge keeps arbitrary field
-   expressions and all evaluator/state/result premises explicit. -/
-#check @panValuePcCompileCorrect_compact_with_flat_global_evaluator_evidence_source_word_record_context_code_and_clocked
 /- The fixed-width and nested-record raise instances also have context-coded
    state-evidence forms returning the context-coded correctness boundary. -/
 #check @panValuePcCompileCorrect_compact_one_word_raise_of_state_evidence_context_code

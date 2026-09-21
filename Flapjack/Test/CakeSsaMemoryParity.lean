@@ -103,9 +103,22 @@ def shareStore32Guard : Bool :=
   | .seq (.move 1 []) (.shareInst .store32 0 (.var 0)) => true
   | _ => false
 
+def load8InstGuard : Bool :=
+  match (wordFullSsaCcTrans 0
+      (.inst (.mem .load8 1 2) : WordProg Nat)).2.2 with
+  | .seq (.move 1 []) (.inst (.mem .load8 5 0)) => true
+  | _ => false
+
+def store8InstGuard : Bool :=
+  match (wordFullSsaCcTrans 0
+      (.inst (.mem .store8 1 2) : WordProg Nat)).2.2 with
+  | .seq (.move 1 []) (.inst (.mem .store8 0 0)) => true
+  | _ => false
+
 def parityGuard : Bool :=
   getGuard && storeGuard && setGuard && loadInstGuard && storeInstGuard &&
-    load32InstGuard && store32InstGuard && loadOffsetGuard && storeOffsetGuard &&
+    load32InstGuard && store32InstGuard && load8InstGuard && store8InstGuard &&
+    loadOffsetGuard && storeOffsetGuard &&
     load32OffsetGuard && store32OffsetGuard && shareLoadGuard && shareStoreGuard &&
     shareLoad32Guard && shareStore32Guard
 
@@ -113,6 +126,8 @@ def parityGuard : Bool :=
 #guard storeGuard
 #guard setGuard
 #guard loadInstGuard
+#guard load8InstGuard
+#guard store8InstGuard
 #guard storeInstGuard
 #guard load32InstGuard
 #guard store32InstGuard
@@ -133,6 +148,8 @@ def runChecks : IO Bool := do
       ("ssa_cc_trans Store renames Cake address and value", storeGuard),
       ("ssa_cc_trans Set renames Cake expression only", setGuard),
       ("ssa_cc_trans Mem Load freshens Cake destination", loadInstGuard),
+      ("ssa_cc_trans Mem Load8 freshens Cake destination", load8InstGuard),
+      ("ssa_cc_trans Mem Store8 renames Cake address and value", store8InstGuard),
       ("ssa_cc_trans Mem Store renames Cake address and value", storeInstGuard),
       ("ssa_cc_trans Mem Load32 freshens Cake destination", load32InstGuard),
       ("ssa_cc_trans Mem Store32 renames Cake address and value", store32InstGuard),

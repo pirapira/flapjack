@@ -543,6 +543,73 @@ example :
         .jal 0 (BitVec.ofNat 64 4092)] := by
   decide
 
+/-! Cake inverts the tested relation, not just equality, around the far JAL.
+    Pin the direct/far boundary for every ordinary relational comparator. -/
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 4092)] 0
+      (.jumpCmp .notEqual 4 (.reg 5) ⟨1, 0⟩) =
+      some [.branchEq 4 5 (BitVec.ofNat 64 4092)] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 4096)] 0
+      (.jumpCmp .notEqual 4 (.reg 5) ⟨1, 0⟩) =
+      some [.branchNe 4 5 (BitVec.ofNat 64 8),
+        .jal 0 (BitVec.ofNat 64 4092)] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 4092)] 0
+      (.jumpCmp .less 4 (.reg 5) ⟨1, 0⟩) =
+      some [.branchGe 4 5 (BitVec.ofNat 64 4092)] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 4096)] 0
+      (.jumpCmp .less 4 (.reg 5) ⟨1, 0⟩) =
+      some [.branchLt 4 5 (BitVec.ofNat 64 8),
+        .jal 0 (BitVec.ofNat 64 4092)] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 4092)] 0
+      (.jumpCmp .lower 4 (.reg 5) ⟨1, 0⟩) =
+      some [.branchGeU 4 5 (BitVec.ofNat 64 4092)] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 4096)] 0
+      (.jumpCmp .lower 4 (.reg 5) ⟨1, 0⟩) =
+      some [.branchLtU 4 5 (BitVec.ofNat 64 8),
+        .jal 0 (BitVec.ofNat 64 4092)] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 4092)] 0
+      (.jumpCmp .notLess 4 (.reg 5) ⟨1, 0⟩) =
+      some [.branchLt 4 5 (BitVec.ofNat 64 4092)] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 4096)] 0
+      (.jumpCmp .notLess 4 (.reg 5) ⟨1, 0⟩) =
+      some [.branchGe 4 5 (BitVec.ofNat 64 8),
+        .jal 0 (BitVec.ofNat 64 4092)] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 4092)] 0
+      (.jumpCmp .notLower 4 (.reg 5) ⟨1, 0⟩) =
+      some [.branchLtU 4 5 (BitVec.ofNat 64 4092)] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 4096)] 0
+      (.jumpCmp .notLower 4 (.reg 5) ⟨1, 0⟩) =
+      some [.branchGeU 4 5 (BitVec.ofNat 64 8),
+        .jal 0 (BitVec.ofNat 64 4092)] := by
+  decide
+
 example :
     labCompileAsm (width := 64) { services := [] } 1 [(0, 2 ^ 20 - 2)] 0
       (.jump ⟨1, 0⟩) =

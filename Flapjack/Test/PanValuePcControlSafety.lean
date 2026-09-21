@@ -1224,5 +1224,6 @@ example :
 #check @panValuePcCompileCorrect_of_withContextCode
 #check @panValuePcCompileCorrect_of_context_code_obligations
 #check @panValuePcCompileCorrect_compact_with_expression_state_evidence_canonical_globals
+#check @panValueCrepExpressionStateEvidence_of_correct_with_bounded_vars
 
 end Flapjack.Test.PanValuePcControlSafety

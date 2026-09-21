@@ -26288,6 +26288,62 @@ theorem panValuePcCompileCorrect_compact_with_expression_state_evidence
     hexception, hlookupCode, hcode, hflat, (by simpa [hflat] using hdistinct),
     hsize⟩
 
+/-! Derive the fresh-name side conditions of expression-state evidence from
+    Cake's compiler-variable bound.  This keeps the source/state/evaluator
+    premises explicit while removing a duplicated allocator proof obligation
+    from arbitrary Raise callers. -/
+theorem panValueCrepExpressionStateEvidence_of_correct_with_bounded_vars
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (expression : Exp α)
+    (hexpression : PanValueCrepExpressionStateCorrect expression)
+    (context : CompileContext α) (structs : StructContext)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (state : CrepState α)
+    (baseAddress topAddress bytesInWord : α) (sourceValue : PanValue α)
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory state)
+    (hsource : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord expression = some sourceValue)
+    (hbound : ∀ name shape names,
+      lookupInfo name context.vars = some (shape, names) →
+      ∀ varName ∈ names, varName ≤ context.maxVar)
+    (hflatLength : (panValueFlatWords sourceValue).length =
+      Shape.shapeSize (panValueShape structs sourceValue))
+    (hfresh : ∀ (compiled : List (CrepExp α)),
+      ∀ name ∈ freshNames context compiled.length 1,
+        state.locals name = none) :
+    ∃ (compiled : List (CrepExp α)) (shape : Shape) (values : List α),
+      panValuePayloadWithinLimit structs sourceValue = true ∧
+      compileExp context expression = (compiled, shape) ∧
+      compiled.length = Shape.shapeSize shape ∧
+      evalCrepFullExpsState state baseAddress topAddress compiled =
+        some values ∧
+      (∀ name ∈ freshNames context compiled.length 1,
+        ∀ value ∈ compiled, name ∉ crepExpVars value) ∧
+      (∀ name ∈ freshNames context compiled.length 1,
+        state.locals name = none) ∧
+      panValueFlatWords sourceValue = values := by
+  obtain ⟨hvalid, compiled, hcompile, hcompiled⟩ := hexpression
+    context structs sourceLocals sourceGlobals sourceMemory state
+    baseAddress topAddress bytesInWord sourceValue hrel hsource
+  have hlength : compiled.length =
+      Shape.shapeSize (panValueShape structs sourceValue) := by
+    have hvalues := evalCrepFullExpsState_length state baseAddress topAddress
+      compiled (panValueFlatWords sourceValue) hcompiled
+    exact hvalues.trans hflatLength
+  have hvars := compileExp_vars_bounded context hbound expression
+  rw [hcompile] at hvars
+  have hnot := freshNames_not_mem_of_expVars_bounded context compiled.length 1
+    compiled (by omega) (by
+      intro value hvalue varName hvar
+      exact hvars varName (by simpa using List.mem_flatMap.mpr ⟨value, hvalue, hvar⟩))
+  exact ⟨compiled, panValueShape structs sourceValue,
+    panValueFlatWords sourceValue, hvalid, hcompile, hlength, hcompiled,
+    hnot, hfresh compiled, rfl⟩
+
 /-! Specialize expression-state Raise evidence to Pancake's canonical typed
     flat-global lookup.  The evaluator, state, freshness, shape, and payload
     premises remain explicit; only the abstract lookup adapter is discharged

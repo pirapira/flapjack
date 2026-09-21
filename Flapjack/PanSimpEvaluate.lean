@@ -2905,6 +2905,142 @@ theorem evalPanValueFfiClockProg_call_caught_handler_of_functions
       clock (some (none, some (caught, handlerVariable, handlerProgram))) function
       arguments outcome finalClock ma c mh hcall⟩
 
+/-- Handler-program adequacy with a `normal` outcome: every handler body succeeds
+    normally from any state at a sufficient structural budget. -/
+def PanValueFfiClockHandlerNormalSucceed
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ)) : Prop :=
+  ∀ (handlerProgram : Prog α)
+    (handlerLocals handlerGlobals : VarName → Option (PanValue α))
+    (handlerMemory : α → Option (PanValue α)) (handlerFfi : FfiState σ)
+    (handlerFuel handlerClock : Nat),
+    progSize handlerProgram ≤ handlerFuel →
+    ∃ (finalLocals finalGlobals : VarName → Option (PanValue α))
+      (finalMemory : α → Option (PanValue α)) (finalFfi : FfiState σ) (finalClock : Nat),
+      evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord handlerFuel handlerLocals handlerGlobals
+        handlerMemory handlerFfi handlerClock handlerProgram ma c mh =
+      some (.control (.normal finalLocals finalGlobals finalMemory finalFfi), finalClock)
+
+/-- Call adequacy for a caught callee exception whose handler returns `normal`:
+    the call yields the handler's normal result. -/
+theorem evalPanValueFfiClockCall_caught_handler_normal_of_functions
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (function : FunName) (arguments : List (Exp α))
+    (parameters : List VarName) (body : Prog α) (values : List (PanValue α))
+    (calleeLocals : VarName → Option (PanValue α))
+    (caught exception : ExceptionId) (handlerVariable : VarName)
+    (handlerProgram : Prog α)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (hfunctions : PanValueFfiClockFunctionsRaiseAsSucceed context primitive handler
+      structs functions baseAddress topAddress bytesInWord ma c mh exception)
+    (hhandler : PanValueFfiClockHandlerNormalSucceed context primitive handler structs
+      functions baseAddress topAddress bytesInWord ma c mh)
+    (hargs : evalPanValueExps structs locals globals memory baseAddress topAddress
+      bytesInWord arguments (memoryAccess := ma) = some values)
+    (hlookup : lookupPanFunction function functions = some (parameters, body))
+    (hbind : bindPanValueParameters parameters values = some calleeLocals)
+    (hclock : clock ≠ 0)
+    (hparams : panValueParametersValid structs c function values = true)
+    (hcaught : caught = exception)
+    (hhandlerValid : ∀ (value : PanValue α),
+      panValueExceptionValid structs c exception value = true →
+      panValuePayloadWithinLimit structs value = true →
+      panValueHandlerValid structs c locals handlerVariable value = true) :
+    ∃ (finalLocals finalGlobals : VarName → Option (PanValue α))
+      (finalMemory : α → Option (PanValue α)) (finalFfi : FfiState σ) (finalClock : Nat),
+      evalPanValueFfiClockCall context primitive handler structs functions
+        baseAddress topAddress bytesInWord
+        (max (progSize body) (progSize handlerProgram) + 1) locals globals memory ffi
+        clock (some (none, some (caught, handlerVariable, handlerProgram))) function
+        arguments (memoryAccess := ma) (contracts := c) (memoryHandler := mh) =
+      some (.control (.normal finalLocals finalGlobals finalMemory finalFfi),
+        finalClock) := by
+  obtain ⟨_bodyLocals, calleeGlobals, calleeMemory, calleeFfi, value, bodyClock,
+    hexceptionValid, hwithin, hbody⟩ :=
+    hfunctions function parameters body hlookup
+      (max (progSize body) (progSize handlerProgram)) calleeLocals globals memory ffi
+      (decPanClock clock) (Nat.le_max_left _ _)
+  have hvalid := hhandlerValid value hexceptionValid hwithin
+  obtain ⟨finalLocals, finalGlobals, finalMemory, finalFfi, finalClock, hhandlerEval⟩ :=
+    hhandler handlerProgram (updatePanValueMap locals handlerVariable value)
+      calleeGlobals calleeMemory calleeFfi
+      (max (progSize body) (progSize handlerProgram)) bodyClock
+      (Nat.le_max_right _ _)
+  exact ⟨finalLocals, finalGlobals, finalMemory, finalFfi, finalClock,
+    by
+      simp [evalPanValueFfiClockCall, hargs, hlookup, hbind, hclock, hbody, hcaught,
+        hparams, hvalid, hhandlerEval, hwithin, hexceptionValid]⟩
+
+/-- Program-level form of the normal-handler caught-call adequacy. -/
+theorem evalPanValueFfiClockProg_call_caught_handler_normal_of_functions
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (function : FunName) (arguments : List (Exp α))
+    (parameters : List VarName) (body : Prog α) (values : List (PanValue α))
+    (calleeLocals : VarName → Option (PanValue α))
+    (caught exception : ExceptionId) (handlerVariable : VarName)
+    (handlerProgram : Prog α)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (hfunctions : PanValueFfiClockFunctionsRaiseAsSucceed context primitive handler
+      structs functions baseAddress topAddress bytesInWord ma c mh exception)
+    (hhandler : PanValueFfiClockHandlerNormalSucceed context primitive handler structs
+      functions baseAddress topAddress bytesInWord ma c mh)
+    (hargs : evalPanValueExps structs locals globals memory baseAddress topAddress
+      bytesInWord arguments (memoryAccess := ma) = some values)
+    (hlookup : lookupPanFunction function functions = some (parameters, body))
+    (hbind : bindPanValueParameters parameters values = some calleeLocals)
+    (hclock : clock ≠ 0)
+    (hparams : panValueParametersValid structs c function values = true)
+    (hcaught : caught = exception)
+    (hhandlerValid : ∀ (value : PanValue α),
+      panValueExceptionValid structs c exception value = true →
+      panValuePayloadWithinLimit structs value = true →
+      panValueHandlerValid structs c locals handlerVariable value = true) :
+    ∃ (finalLocals finalGlobals : VarName → Option (PanValue α))
+      (finalMemory : α → Option (PanValue α)) (finalFfi : FfiState σ) (finalClock : Nat),
+      evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord
+        (max (progSize body) (progSize handlerProgram) + 2) locals globals memory ffi
+        clock (.call (some (none, some (caught, handlerVariable, handlerProgram)))
+          function arguments) ma c mh =
+      some (.control (.normal finalLocals finalGlobals finalMemory finalFfi),
+        finalClock) := by
+  obtain ⟨finalLocals, finalGlobals, finalMemory, finalFfi, finalClock, hcall⟩ :=
+    evalPanValueFfiClockCall_caught_handler_normal_of_functions context primitive
+      handler structs functions baseAddress topAddress bytesInWord locals globals memory
+      ffi clock function arguments parameters body values calleeLocals caught exception
+      handlerVariable handlerProgram ma c mh hfunctions hhandler hargs hlookup hbind
+      hclock hparams hcaught hhandlerValid
+  exact ⟨finalLocals, finalGlobals, finalMemory, finalFfi, finalClock,
+    evalPanValueFfiClockProg_call_some context primitive handler structs functions
+      baseAddress topAddress bytesInWord
+      (max (progSize body) (progSize handlerProgram) + 1) locals globals memory ffi
+      clock (some (none, some (caught, handlerVariable, handlerProgram))) function
+      arguments (.control (.normal finalLocals finalGlobals finalMemory finalFfi))
+      finalClock ma c mh hcall⟩
+
 /-- Call-aware budget form of the caught-handler call adequacy: when the
     combined callee/handler cost fits inside `callBudget`, the caught call
     succeeds at `progCallFuel callBudget` (the call node reserves
@@ -3697,6 +3833,172 @@ theorem evalPanValueFfiClockProg_panSimpProg_normalProg_some_progCallFuel
     structs functions baseAddress topAddress bytesInWord callBudget
     (panSimpProg program) locals globals memory ffi clock ma c mh
     (PanValueFfiClockNormalProg_panSimpProg h)
+
+
+/-! ## Composing a normal-producing node with a continuation
+
+The call-aware budget of a sequence is the sum of the component budgets plus one,
+so a first component that runs normally (e.g. a destination call) can be composed
+with an arbitrary second component evaluated from the intermediate state, keeping
+its result and clock.  This is the composition rule used to build the
+state-relation fragment. -/
+
+theorem evalPanValueFfiClockProg_seq_of_first_normal_progCallFuel
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat) (first second : Prog α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (midLocals midGlobals : VarName → Option (PanValue α))
+    (midMemory : α → Option (PanValue α)) (midFfi : FfiState σ) (midClock : Nat)
+    (result : PanValueFfiClockOutcome α σ) (resultClock : Nat)
+    (hfirst : evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (progCallFuel callBudget first)
+        locals globals memory ffi clock first ma c mh =
+      some (.control (.normal midLocals midGlobals midMemory midFfi), midClock))
+    (hsecond : evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (progCallFuel callBudget second)
+        midLocals midGlobals midMemory midFfi midClock second ma c mh =
+      some (result, resultClock)) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord
+        (progCallFuel callBudget (.seq first second))
+        locals globals memory ffi clock (.seq first second) ma c mh =
+      some (result, resultClock) := by
+  have hmonoFirst := evalPanValueFfiClockProg_fuel_mono context primitive handler
+    structs functions baseAddress topAddress bytesInWord
+    (fuel := progCallFuel callBudget first)
+    (fuel' := progCallFuel callBudget first + progCallFuel callBudget second)
+    locals globals memory ffi clock first ma c mh (by omega) hfirst
+  have hmonoSecond := evalPanValueFfiClockProg_fuel_mono context primitive handler
+    structs functions baseAddress topAddress bytesInWord
+    (fuel := progCallFuel callBudget second)
+    (fuel' := progCallFuel callBudget first + progCallFuel callBudget second)
+    midLocals midGlobals midMemory midFfi midClock second ma c mh (by omega) hsecond
+  exact evalPanValueFfiClockProg_seq_some_progCallFuel context primitive handler
+    structs functions baseAddress topAddress bytesInWord callBudget first second
+    locals globals memory ffi clock ma c mh midLocals midGlobals midMemory midFfi
+    midClock result resultClock hmonoFirst hmonoSecond
+
+theorem evalPanValueFfiClockProg_seq_normal_of_first_normal_progCallFuel
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat) (first second : Prog α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (midLocals midGlobals : VarName → Option (PanValue α))
+    (midMemory : α → Option (PanValue α)) (midFfi : FfiState σ) (midClock : Nat)
+    (hfirst : evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (progCallFuel callBudget first)
+        locals globals memory ffi clock first ma c mh =
+      some (.control (.normal midLocals midGlobals midMemory midFfi), midClock))
+    (hsecond : PanValueFfiClockNormalProg second) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord
+        (progCallFuel callBudget (.seq first second))
+        locals globals memory ffi clock (.seq first second) ma c mh =
+      some (.control (.normal midLocals midGlobals midMemory midFfi), midClock) :=
+  evalPanValueFfiClockProg_seq_of_first_normal_progCallFuel context primitive handler
+    structs functions baseAddress topAddress bytesInWord callBudget first second
+    locals globals memory ffi clock ma c mh midLocals midGlobals midMemory midFfi
+    midClock (.control (.normal midLocals midGlobals midMemory midFfi)) midClock
+    hfirst
+    (evalPanValueFfiClockProg_normalProg_some_progCallFuel context primitive handler
+      structs functions baseAddress topAddress bytesInWord callBudget second
+      midLocals midGlobals midMemory midFfi midClock ma c mh hsecond)
+
+
+/-! ## Conditionals with normal branches
+
+When the selected branch lies in the normal fragment, the conditional returns
+`normal` with the state and clock unchanged at the call-aware budget.  The
+unselected branch only has to be normal for the statement to be symmetric. -/
+
+theorem evalPanValueFfiClockProg_ite_true_normal_progCallFuel
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (condition : Exp α) (thenBranch elseBranch : Prog α)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ)) (wordValue : α)
+    (hcondition : evalPanValueExp structs locals globals memory baseAddress topAddress
+        bytesInWord condition (memoryAccess := ma) = some (.word wordValue))
+    (hnonzero : (wordValue != 0) = true)
+    (hthen : PanValueFfiClockNormalProg thenBranch)
+    (_helse : PanValueFfiClockNormalProg elseBranch) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord
+        (progCallFuel callBudget (.ite condition thenBranch elseBranch))
+        locals globals memory ffi clock (.ite condition thenBranch elseBranch)
+        (memoryAccess := ma) (contracts := c) (memoryHandler := mh) =
+      some (.control (.normal locals globals memory ffi), clock) := by
+  have hbranch := evalPanValueFfiClockProg_normalProg_some_progCallFuel context
+    primitive handler structs functions baseAddress topAddress bytesInWord callBudget
+    thenBranch locals globals memory ffi clock ma c mh hthen
+  have hmono := evalPanValueFfiClockProg_fuel_mono context primitive handler structs
+    functions baseAddress topAddress bytesInWord
+    (fuel := progCallFuel callBudget thenBranch)
+    (fuel' := progCallFuel callBudget thenBranch + progCallFuel callBudget elseBranch)
+    locals globals memory ffi clock thenBranch ma c mh (by omega) hbranch
+  exact evalPanValueFfiClockProg_ite_true_some_progCallFuel context primitive handler
+    structs functions baseAddress topAddress bytesInWord callBudget locals globals memory
+    ffi clock condition thenBranch elseBranch ma c mh wordValue
+    (.control (.normal locals globals memory ffi)) clock hcondition hnonzero hmono
+
+theorem evalPanValueFfiClockProg_ite_false_normal_progCallFuel
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (condition : Exp α) (thenBranch elseBranch : Prog α)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ)) (wordValue : α)
+    (hcondition : evalPanValueExp structs locals globals memory baseAddress topAddress
+        bytesInWord condition (memoryAccess := ma) = some (.word wordValue))
+    (hzero : (wordValue != 0) = false)
+    (_hthen : PanValueFfiClockNormalProg thenBranch)
+    (helse : PanValueFfiClockNormalProg elseBranch) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord
+        (progCallFuel callBudget (.ite condition thenBranch elseBranch))
+        locals globals memory ffi clock (.ite condition thenBranch elseBranch)
+        (memoryAccess := ma) (contracts := c) (memoryHandler := mh) =
+      some (.control (.normal locals globals memory ffi), clock) := by
+  have hbranch := evalPanValueFfiClockProg_normalProg_some_progCallFuel context
+    primitive handler structs functions baseAddress topAddress bytesInWord callBudget
+    elseBranch locals globals memory ffi clock ma c mh helse
+  have hmono := evalPanValueFfiClockProg_fuel_mono context primitive handler structs
+    functions baseAddress topAddress bytesInWord
+    (fuel := progCallFuel callBudget elseBranch)
+    (fuel' := progCallFuel callBudget thenBranch + progCallFuel callBudget elseBranch)
+    locals globals memory ffi clock elseBranch ma c mh (by omega) hbranch
+  exact evalPanValueFfiClockProg_ite_false_some_progCallFuel context primitive handler
+    structs functions baseAddress topAddress bytesInWord callBudget locals globals memory
+    ffi clock condition thenBranch elseBranch ma c mh wordValue
+    (.control (.normal locals globals memory ffi)) clock hcondition hzero hmono
 
 
 /-! ## While-body step equations

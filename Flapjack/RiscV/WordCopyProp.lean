@@ -36,11 +36,17 @@ structure WordCopyState where
   aliasIndex : Std.TreeMap Nat Nat := ∅
   classOfIndex : Std.TreeMap Nat Nat := ∅
   classRepIndex : Std.TreeMap Nat Nat := ∅
+  /- Lookup-only indexes for Cake's store equivalence maps.  The association
+     lists remain authoritative for branch intersection and preserve Cake's
+     order; these indexes only avoid repeated linear lookups on Get. -/
+  storeToEqIndex : Std.TreeMap Nat Nat := ∅
+  classStoreIndex : Std.TreeMap Nat Nat := ∅
   deriving Repr
 
 def wordCopyEmpty : WordCopyState :=
   { aliases := [], storeToEq := [], classOf := [], classRep := [],
-    classStore := [], classNext := 0, indicesReady := true }
+    classStore := [], classNext := 0, indicesReady := true,
+    storeToEqIndex := ∅, classStoreIndex := ∅ }
 
 def wordCopyLookupIndexed (ready : Bool) (index : Std.TreeMap Nat Nat)
     (entries : NatInfoMap Nat) (name : Nat) : Option Nat :=
@@ -144,7 +150,8 @@ def wordCopySet (state : WordCopyState) (destination source : Nat) : WordCopySta
     class no longer exists; the port's representative is live exactly when the
     alias map still carries it. -/
 def wordCopyLookupStoreEq (state : WordCopyState) (store : Nat) : Option Nat :=
-  match lookupNatInfo store state.storeToEq with
+  match (if state.indicesReady then state.storeToEqIndex[store]?
+    else lookupNatInfo store state.storeToEq) with
   | none => none
   | some representative =>
       if (wordCopyLookupIndexed state.indicesReady state.aliasIndex
@@ -164,26 +171,39 @@ def wordCopySetStoreEq (state : WordCopyState) (store name : Nat) : WordCopyStat
             state.classRep classId).isSome then
           { state with
             storeToEq := (store, wordCopyLookup state name) ::
-              state.storeToEq.filter (fun entry => entry.1 != store)
+              state.storeToEq.filter (fun entry => entry.1 != store),
+            storeToEqIndex := if state.indicesReady then
+                (state.storeToEqIndex.erase store).insert store
+                  (wordCopyLookup state name)
+              else ∅,
             classStore := (store, classId) ::
-              state.classStore.filter (fun entry => entry.1 != store) }
+              state.classStore.filter (fun entry => entry.1 != store),
+            classStoreIndex := if state.indicesReady then
+                (state.classStoreIndex.erase store).insert store classId
+              else ∅ }
         else
           { state with
             aliases := (name, name) ::
               state.aliases.filter (fun entry => entry.1 != name)
             storeToEq := (store, name) ::
-              state.storeToEq.filter (fun entry => entry.1 != store)
-            classOf := (name, state.classNext) :: state.classOf
-            classRep := (state.classNext, name) :: state.classRep
+              state.storeToEq.filter (fun entry => entry.1 != store),
+            storeToEqIndex := if state.indicesReady then
+                (state.storeToEqIndex.erase store).insert store name
+              else ∅,
+            classOf := (name, state.classNext) :: state.classOf,
+            classRep := (state.classNext, name) :: state.classRep,
             classStore := (store, state.classNext) ::
-              state.classStore.filter (fun entry => entry.1 != store)
-            classNext := state.classNext + 1
+              state.classStore.filter (fun entry => entry.1 != store),
+            classStoreIndex := if state.indicesReady then
+                (state.classStoreIndex.erase store).insert store state.classNext
+              else ∅,
+            classNext := state.classNext + 1,
             aliasIndex := if state.indicesReady then
                 (state.aliasIndex.erase name).insert name name
-              else ∅
+              else ∅,
             classOfIndex := if state.indicesReady then
                 state.classOfIndex.insert name state.classNext
-              else ∅
+              else ∅,
             classRepIndex := if state.indicesReady then
                 state.classRepIndex.insert state.classNext name
               else ∅ }
@@ -192,18 +212,24 @@ def wordCopySetStoreEq (state : WordCopyState) (store name : Nat) : WordCopyStat
           aliases := (name, name) ::
             state.aliases.filter (fun entry => entry.1 != name)
           storeToEq := (store, name) ::
-            state.storeToEq.filter (fun entry => entry.1 != store)
-          classOf := (name, state.classNext) :: state.classOf
-          classRep := (state.classNext, name) :: state.classRep
+            state.storeToEq.filter (fun entry => entry.1 != store),
+          storeToEqIndex := if state.indicesReady then
+              (state.storeToEqIndex.erase store).insert store name
+            else ∅,
+          classOf := (name, state.classNext) :: state.classOf,
+          classRep := (state.classNext, name) :: state.classRep,
           classStore := (store, state.classNext) ::
-            state.classStore.filter (fun entry => entry.1 != store)
-          classNext := state.classNext + 1
+            state.classStore.filter (fun entry => entry.1 != store),
+          classStoreIndex := if state.indicesReady then
+              (state.classStoreIndex.erase store).insert store state.classNext
+            else ∅,
+          classNext := state.classNext + 1,
           aliasIndex := if state.indicesReady then
               (state.aliasIndex.erase name).insert name name
-            else ∅
+            else ∅,
           classOfIndex := if state.indicesReady then
               state.classOfIndex.insert name state.classNext
-            else ∅
+            else ∅,
           classRepIndex := if state.indicesReady then
               state.classRepIndex.insert state.classNext name
             else ∅ }
@@ -293,6 +319,10 @@ def wordCopyMerge (left right : WordCopyState) : WordCopyState :=
     else wordCopyIndex right.classOf
   let rightClassRep := if right.indicesReady then right.classRepIndex
     else wordCopyIndex right.classRep
+  let rightStoreToEq := if right.indicesReady then right.storeToEqIndex
+    else wordCopyIndex right.storeToEq
+  let rightClassStore := if right.indicesReady then right.classStoreIndex
+    else wordCopyIndex right.classStore
   let aliases := left.aliases.filter (fun entry =>
       rightAliases[entry.1]? == some entry.2 &&
       match wordCopyLookupIndexed left.indicesReady left.classOfIndex
@@ -307,19 +337,23 @@ def wordCopyMerge (left right : WordCopyState) : WordCopyState :=
       rightClassOf[entry.1]? == some entry.2)
   let classRep := left.classRep.filter (fun entry =>
       rightClassRep[entry.1]? == some entry.2)
+  let storeToEq := left.storeToEq.filter (fun entry =>
+      rightStoreToEq[entry.1]? == some entry.2)
+  let classStore := left.classStore.filter (fun entry =>
+      rightClassStore[entry.1]? == some entry.2)
   let ready := left.indicesReady && right.indicesReady
   { aliases := aliases,
-    storeToEq := left.storeToEq.filter (fun entry =>
-      lookupNatInfo entry.1 right.storeToEq == some entry.2),
+    storeToEq := storeToEq,
     classOf := classOf,
     classRep := classRep,
-    classStore := left.classStore.filter (fun entry =>
-      lookupNatInfo entry.1 right.classStore == some entry.2),
+    classStore := classStore,
     classNext := max left.classNext right.classNext,
     indicesReady := ready,
     aliasIndex := if ready then wordCopyIndex aliases else ∅,
     classOfIndex := if ready then wordCopyIndex classOf else ∅,
-    classRepIndex := if ready then wordCopyIndex classRep else ∅ }
+    classRepIndex := if ready then wordCopyIndex classRep else ∅,
+    storeToEqIndex := if ready then wordCopyIndex storeToEq else ∅,
+    classStoreIndex := if ready then wordCopyIndex classStore else ∅ }
 
 def wordCopyMoves : WordCopyState → List (Nat × Nat) →
     List (Nat × Nat) × WordCopyState

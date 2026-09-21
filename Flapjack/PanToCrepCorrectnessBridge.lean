@@ -35254,4 +35254,33 @@ theorem panValuePcCompileCorrect_of_compact_evaluators_and_clocked_raised_contro
       clockException clockValue clockTargetException hclock hclockState hraiseData
   exact ⟨hresult.1, hresult.2.2.2⟩
 
+/-! Package an arbitrary context-coded evaluator proof and its concrete result
+    evidence into the plain `pc_compile_correct` boundary.  The exception-code
+    and global-store premises remain in the supplied context-coded relation;
+    this theorem only performs the proven boundary projections. -/
+theorem panValuePcCompileCorrectAndResultRel_of_context_code
+    [BEq α] [OfNat α 0] [Add α]
+    (sourceEvaluate : PanValuePcEvaluator α)
+    (targetEvaluate : CrepPcEvaluator α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (program : Prog α)
+    (hcompile : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (sourceResult : PanValuePcResult α) (targetResult : CrepPcResult α)
+    (hresult : panValuePcResultRelWithContextCode structs context exceptionRel
+      exceptionCode globalsLookup sourceResult targetResult) :
+    PanValuePcCompileCorrect sourceEvaluate targetEvaluate codeRel excpRel
+      exceptionCode globalsLookup program ∧
+    panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
+      sourceResult targetResult := by
+  exact ⟨panValuePcCompileCorrect_of_withContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program hcompile,
+    panValuePcResultRel_of_withContextCode structs context exceptionRel
+      exceptionCode globalsLookup sourceResult targetResult hresult⟩
+
 end Flapjack

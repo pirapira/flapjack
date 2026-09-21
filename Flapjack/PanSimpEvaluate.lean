@@ -5503,4 +5503,27 @@ theorem PanValueFfiClockNormalAdequateProgAt_ite
         (.control (.normal finalLocals finalGlobals finalMemory finalFfi)) finalClock
         hcond hzfalse hmono⟩
 
+/-- A tick is normal-adequate from any nonzero clock: it returns the unchanged
+state with the clock decremented. This is the clock-indexed (call-capable)
+counterpart of the clock-free constructors. -/
+theorem PanValueFfiClockNormalAdequateProgAt_tick
+    (clock : Nat)
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (hclock : clock ≠ 0) :
+    PanValueFfiClockNormalAdequateProgAt clock context primitive handler structs functions
+      baseAddress topAddress bytesInWord callBudget ma c mh (.tick : Prog α) := by
+  intro locals globals memory ffi
+  exact ⟨locals, globals, memory, ffi, decPanClock clock, by
+    simpa [progCallFuel] using
+      (evalPanValueFfiClockProg_tick_some context primitive handler structs functions
+        baseAddress topAddress bytesInWord 0 locals globals memory ffi clock ma c mh hclock)⟩
+
 end Flapjack

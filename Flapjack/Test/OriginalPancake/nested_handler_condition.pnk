@@ -1,0 +1,14 @@
+fun 1 add1(1 a, 1 b) { return a + b; }
+fun {1,1} pair(1 a, 1 b) { return <a, b>; }
+exception E : 1;
+fun 1 main() {
+  var 1 x = 0;
+  var 1 y598 = 0;
+  var {1,1} p863 = pair(x, 0);
+  try
+    y598 = add1(0, 0)
+  catch E => x {
+      throw E (0 > (0 && (@base >=+ 0)));
+  }
+  return 0;
+}

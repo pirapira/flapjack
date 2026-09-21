@@ -55,6 +55,18 @@ def ifMergeAllocGuard : Bool :=
       (.move 1 [(9, 9), (7, 9)] : WordProg Nat)
       (.move 1 [(21, 21), (7, 21)] : WordProg Nat)) = [9, 21]
 
+/- The immediate branch equation removes only its condition from the
+   temporary set (`word_allocScript.sml:1746-1752`).  Start with a live
+   temporary so this checks the removal itself, rather than only the
+   whole-program empty-set wrapper.  The canonical HOL probe returns
+   `(LN,LN)` for this case. -/
+def ifImmediateRemovesTempGuard : Bool :=
+  cakeGetStackOnlyAux ([9], [])
+      (.ite .notEqual 9 (.imm 0) (.skip : WordProg Nat)
+        (.skip : WordProg Nat)) = ([], [])
+
+#guard ifImmediateRemovesTempGuard
+
 /-- Calls analyse and merge the return continuation and exception
     handler; 19 is a stack variable so only the continuation
     contributes (`{9}`). -/
@@ -180,6 +192,15 @@ def allocatorIndexLookupGuard : Bool :=
     cakeAllocatorIndexLookup index 99 = 0
 
 #guard allocatorIndexLookupGuard
+
+/- Cake's association-list lookup is first-binding.  The allocator index must
+   preserve that result even when presented with a duplicate-key map. -/
+def allocatorIndexFirstBindingGuard : Bool :=
+  let entries : NatInfoMap Nat := [(9, 4), (9, 6)]
+  let index := cakeAllocatorIndex entries
+  cakeAllocatorIndexLookup index 9 == 4
+
+#guard allocatorIndexFirstBindingGuard
 
 /- The graph/tag hot path uses an index only as a lookup acceleration; its
    default and physical-register fallbacks must remain Cake's `sp_default`. -/
@@ -606,6 +627,20 @@ def coalesceWorklistSuccessGuard : Bool :=
 
 #guard coalesceWorklistSuccessGuard
 
+/-- Cake's coalesce_parent follows a non-fixed parent chain and compresses
+   the starting node to the fixed ancestor (reg_allocScript.sml:589-612).
+   This is distinct from the worklist coalesce guard above: it checks the
+   recursive ancestor walk and its in-place parent update directly. -/
+def coalesceParentCompressionGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 5 with
+      nodeTag := CakeNodeMap.ofNatInfoMap 5 [(2, .fixed 1)]
+      coalesced := CakeNodeMap.ofNatInfoMap 5 [(4, 3), (3, 2)] }
+  let (root, out) := cakeCoalesceParent 4 state
+  root == 2 && (out.coalesced.get 4).getD 4 == 2
+
+#guard coalesceParentCompressionGuard
+
 /- Cake's `do_freeze` (`reg_allocScript.sml:749-764`) decrements the frozen
    node's neighbours, pushes it, removes it from `freezeWl`, then unspills a
    spill node that has become low degree into the simplify worklist. -/
@@ -804,8 +839,10 @@ def sourceSpillCostRoundTripGuard : Bool :=
     table.get 5 == some 20
 
 def sourceMovePhysicalFallbackGuard : Bool :=
+  let index := Flapjack.RiscV.CakeRegAlloc.cakeAllocatorIndex []
   Flapjack.RiscV.CakeRegAlloc.cakeUpdateMove
-      (Flapjack.RiscV.CakeAlloc.spDefault []) (7, (2, 9)) == (7, (0, 1))
+      (Flapjack.RiscV.CakeRegAlloc.cakeAllocatorIndexLookup index)
+      (7, (2, 9)) == (7, (0, 1))
 
 /-- Cake's `remove_dead (Move pri ls)` keeps the surviving move priority
     (`word_allocScript.sml:891-899`).  The priority orders the coalescing
@@ -922,7 +959,8 @@ def maxVarControlLabelGuard : Bool :=
 
 def parityGuard : Bool :=
   moveChainGuard && moveFromRegGuard && seqMovesGuard && ifMergeGuard &&
-    ifMergeAllocGuard && callMergeGuard && callTailGuard && mustTerminateGuard &&
+    ifMergeAllocGuard && ifImmediateRemovesTempGuard && callMergeGuard &&
+    callTailGuard && mustTerminateGuard &&
     loopBodyGuard && assignLeafGuard &&
     bijDeltaBasicGuard && bijDeltaDedupGuard && bijSeqOrderGuard &&
     bijBranchOrderGuard && bijBranchLiveGuard && bijSetGuard &&
@@ -948,6 +986,7 @@ def parityGuard : Bool :=
     && deadProgramPriorityGuard && deadTailCallLiveGuard && deadAllocLiveGuard
     && deadInstallLiveGuard && deadFfiLiveGuard && deadStoreConstsLiveGuard
     && cakeBijSetPatriciaGuard
+    && coalesceParentCompressionGuard
     && sortMovesTailSplitGuard
 
 /- The aggregate guard is intentionally disabled while the allocator port is
@@ -956,7 +995,8 @@ def parityGuard : Bool :=
 def runChecks : IO Bool := do
   let results := [
     moveChainGuard, moveFromRegGuard, seqMovesGuard, ifMergeGuard,
-    ifMergeAllocGuard, callMergeGuard, callTailGuard, mustTerminateGuard,
+    ifMergeAllocGuard, ifImmediateRemovesTempGuard, callMergeGuard,
+    callTailGuard, mustTerminateGuard,
     loopBodyGuard, assignLeafGuard,
     bijDeltaBasicGuard, bijDeltaDedupGuard, bijSeqOrderGuard,
     bijBranchOrderGuard, bijBranchLiveGuard, bijSetGuard,
@@ -985,11 +1025,12 @@ def runChecks : IO Bool := do
     respillWorklistGuard,
     respillBelowThresholdGuard, simplifyBatchGuard, decDegreeOutOfDimGuard,
     decDegreeOutOfDimNoOpGuard, coalesceWorklistSuccessGuard,
-    freezeWorklistTransitionGuard]
+    freezeWorklistTransitionGuard, coalesceParentCompressionGuard]
   let names := [
     "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
-    "get_stack_only if merge alloc", "get_stack_only call merge",
+    "get_stack_only if merge alloc", "get_stack_only immediate removes temp",
+    "get_stack_only call merge",
     "get_stack_only call tail", "get_stack_only MustTerminate",
     "get_stack_only Loop body", "get_stack_only assign leaf",
     "mk_bij delta basic", "mk_bij delta dedup", "mk_bij seq order",

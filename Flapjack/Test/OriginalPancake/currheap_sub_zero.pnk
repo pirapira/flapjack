@@ -1,3 +1,1 @@
-fun 1 main() {
-  return @base - 0;
-}
+fun 1 main() { return @base - 0; }

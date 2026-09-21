@@ -1,0 +1,11 @@
+fun 1 sub1(1 a) { return a - 1; }
+exception E : 1;
+fun 1 main() {
+  var 1 x = 2;
+  try
+    x = sub1(0)
+  catch E => x {
+      x = (0 <+ 0) && (0 <+ 0);
+  }
+  return 0;
+}

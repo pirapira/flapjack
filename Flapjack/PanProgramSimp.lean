@@ -81,6 +81,21 @@ theorem collectPanValueStructs_of_functions (context : StructContext)
   have hfunction := List.all_eq_true.mp hall declaration hmem
   cases declaration <;> simp_all [globalDeclIsFunction, isName]
 
+/-- Cake's `decs_stcnames_lemma`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4966`): a list of
+    declarations that are each either a function or an exception declaration
+    leaves the struct-name context unchanged.  This is the disjunctive form
+    used by `state_rel_imp_semantics_decls_to_crep`. -/
+theorem collectPanValueStructs_of_functions_or_exnDecls (context : StructContext)
+    (declarations : List (Decl α))
+    (hall : declarations.all
+      (fun declaration => globalDeclIsFunction declaration || isExnDecl declaration) = true) :
+    collectPanValueStructs declarations context = some context := by
+  refine collectPanValueStructs_of_no_names context declarations ?_
+  refine List.all_eq_true.mpr (fun declaration hmem => ?_)
+  have hfunction := List.all_eq_true.mp hall declaration hmem
+  cases declaration <;> simp_all [globalDeclIsFunction, isExnDecl, isName]
+
 /-! Cake's `OPT_MMAP` is `List.mapM` for `Option`, so the list-mapping helper
 lemmas used by `compile_correct` (`cakeml/pancake/proofs/pan_simpProofScript.sml`)
 have the following `List.mapM` counterparts.  These are the pieces needed to

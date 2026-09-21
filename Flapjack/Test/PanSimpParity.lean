@@ -2382,6 +2382,25 @@ def functionsCompileProgParity : Bool :=
 
 #guard functionsCompileProgParity
 
+/-! Counterpart of Cake's `functions_eq_FILTER`
+    (`panPropsScript.sml:1487`): the function table is the filter-map of the
+    function declarations. -/
+theorem functions_eq_filterMap_fixture :
+    functions compileProgDeclsFixture =
+      compileProgDeclsFixture.filterMap (fun declaration =>
+        match declaration with
+        | .function function =>
+            some (function.name, function.params, function.body,
+              function.returnShape)
+        | _ => none) :=
+  functions_eq_filterMap compileProgDeclsFixture
+
+def functionsFilterMapGuard : Bool :=
+  (functions compileProgDeclsFixture).length == 1
+
+#eval functionsFilterMapGuard
+#guard functionsFilterMapGuard
+
 /-! Counterpart of Cake's `el_compile_prog_el_prog_eq`
     (`pan_simpProofScript.sml:1047-1061`): an entry of the compiled function
     table still comes from the source table, because `pan_simp` only rewrites
@@ -2480,6 +2499,7 @@ def runChecks : IO Bool := do
   IO.println "PASS pan_simp functions_compile_prog Cake function-table equation"
   IO.println "PASS pan_simp first_compile_prog_all_distinct Cake name-distinctness preservation"
   IO.println "PASS pan_simp el_compile_prog_el_prog_eq Cake compiled-table entry provenance"
+  IO.println "PASS pan_simp functions_eq_FILTER Cake function-table filter-map equation"
   pure parityGuard
 
 /-! A nonzero-condition `While` whose body breaks exits normally, certified by the
@@ -2534,6 +2554,7 @@ example : PanValueFfiClockNormalAdequateProgFromFloor 0 0 evaluatorContext
 #check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_of_from
 #check @Flapjack.PanValueFfiClockNormalAdequateProgFrom_of_fromFloor
 #check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_while_zero
+#check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_decCall_returned
 
 /-! Clock-free annotations also keep their floor. -/
 example : PanValueFfiClockNormalAdequateProgFromFloor 0 0 evaluatorContext

@@ -258,4 +258,28 @@ example : True := by
     evalRelState appendDecls appendRest none
   trivial
 
+def commuteFunction : Decl Nat :=
+  .function wfFunction
+
+def commuteDecl : Decl Nat :=
+  .decl .one "g" (.const 7)
+
+def commuteGuard : Bool :=
+  (match evalPanValueDeclarationsWithStructs ([] : StructContext) evalRelState
+        [commuteFunction, commuteDecl] none,
+      evalPanValueDeclarationsWithStructs ([] : StructContext) evalRelState
+        [commuteDecl, commuteFunction] none with
+   | some left, some right =>
+       (left.globals "g").isSome == (right.globals "g").isSome
+   | none, none => true
+   | _, _ => false)
+
+#eval commuteGuard
+#guard commuteGuard
+
+example : True := by
+  have _h := evalPanValueDeclarationsWithStructs_function_decl_commute
+    ([] : StructContext) evalRelState wfFunction .one "g" (.const 7) [] none
+  trivial
+
 end Flapjack.Test.PanProgramSimpParity

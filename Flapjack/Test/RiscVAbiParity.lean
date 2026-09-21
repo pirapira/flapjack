@@ -211,6 +211,17 @@ def spilledImmediateCarrierShape : Bool :=
 
 #guard spilledImmediateCarrierShape
 
+/- Cake's `riscv_bop_i` table keeps an immediate `Or` as one ORI at the
+   signed-12 upper boundary (`riscv_targetScript.sml:114-120`).  This direct
+   Word backend guard is separate from the spilled-carrier shape above and
+   pins the target operation selected for the source-shaped immediate. -/
+def immediateOrUpperBoundary : Bool :=
+  wordArithToInstruction (width := 64)
+      (.binOp .or 4 5 (.imm (BitVec.ofNat 64 2047))) ==
+    some (.ori 4 5 (BitVec.ofNat 64 2047))
+
+#guard immediateOrUpperBoundary
+
 def rotateImmediateCarrierInstructions : Bool :=
   match wordArithToInstructions (width := 64)
       (.shift .ror 1 2 (.imm 5) : WordArith (Word 64)) with

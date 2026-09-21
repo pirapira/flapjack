@@ -148,6 +148,19 @@ example :
         .or 4 4 31] := by
   decide
 
+/- Cake's variable Word rotate-right keeps the five-instruction temporary
+   sequence at the list-valued arithmetic boundary. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.shift .ror 4 5 (.reg 6)))) [] 0]⟩ =
+      some [
+        .ori 31 0 (BitVec.ofNat 64 64),
+        .sub 31 31 6,
+        .sll 31 5 31,
+        .srl 4 5 6,
+        .or 4 4 31] := by
+  decide
+
 /- Cake's list-valued Word arithmetic keeps an immediate arithmetic shift as
    one target shift instruction; this pins the non-rotate ASR case. -/
 example :

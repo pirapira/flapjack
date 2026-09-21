@@ -461,6 +461,71 @@ def stExMaxDegOrderGuard : Bool :=
 
 #guard stExMaxDegOrderGuard
 
+/- Cake's `respill` (`reg_allocScript.sml:659-674`) moves a freeze-worklist
+   node back to the spill worklist only when its degree reaches `k`; it
+   removes that node from `freezeWl` and prepends it to `spillWl`. -/
+def respillWorklistGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      degrees := CakeNodeMap.ofNatInfoMap 4 [(3, 4)]
+      spillWl := [1, 2]
+      freezeWl := [3] }
+  let moved := cakeRespill 4 3 state
+  moved.spillWl == [3, 1, 2] && moved.freezeWl == [] &&
+    (moved.degrees.get 3).getD 0 == 4
+
+def respillBelowThresholdGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      degrees := CakeNodeMap.ofNatInfoMap 4 [(3, 3)]
+      spillWl := [1]
+      freezeWl := [3] }
+  let unchanged := cakeRespill 4 3 state
+  unchanged.spillWl == [1] && unchanged.freezeWl == [3]
+
+#guard respillWorklistGuard
+#guard respillBelowThresholdGuard
+
+/- Cake's `do_simplify` (`reg_allocScript.sml:400-415`) processes the whole
+   simplify worklist before pushing it, preserving the worklist order in the
+   reverse stack order and then clearing `simpWl`. -/
+def simplifyBatchGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      degrees := CakeNodeMap.ofNatInfoMap 4 [(1, 1), (2, 2)]
+      simpWl := [1, 2] }
+  let (changed, simplified) := cakeDoSimplify 3 state
+  changed && simplified.simpWl == [] && simplified.stack == [2, 1] &&
+    (simplified.degrees.get 1).getD 0 == 0 &&
+    (simplified.degrees.get 2).getD 0 == 0
+
+#guard simplifyBatchGuard
+/- Cake's `dec_degree` (`reg_allocScript.sml:263-272`) is a safe no-op for
+   an out-of-dimension node, even if an outside adjacency entry exists. -/
+def decDegreeOutOfDimGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 3 with
+      adjLists := CakeNodeMap.ofNatInfoMap 3 [(5, [1])]
+      degrees := CakeNodeMap.ofNatInfoMap 3 [(1, 2)] }
+  let out := cakeDecDegree 5 state
+  (out.degrees.get 1).getD 0 == 2
+
+#guard decDegreeOutOfDimGuard
+
+/- Cake's `do_coalesce` (`reg_allocScript.sml:676-698`) consumes the first
+   compatible move, coalesces its second endpoint into the first, clears the
+   available-move worklist, and pushes the coalesced endpoint onto the stack. -/
+def coalesceWorklistSuccessGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 3 with
+      moveRelated := CakeNodeMap.ofNatInfoMap 3 [(1, true), (2, true)]
+      availMovesWl := [(1, (1, 2))] }
+  let (changed, out) := cakeDoCoalesce 3 state
+  changed && out.availMovesWl == [] && out.unavailMovesWl == [] &&
+    (out.coalesced.get 2).getD 2 == 1 && out.stack == [2] &&
+    (out.moveRelated.get 2).getD true == false
+
+#guard coalesceWorklistSuccessGuard
 /- `get_prefs_def` uses `MAP ... ++ acc`, preserving each Move's source
    order.  These guards mirror the canonical `get_prefs_probe.out` output. -/
 def prefsMoveOrderGuard : Bool :=
@@ -816,7 +881,9 @@ def runChecks : IO Bool := do
     sourceSpillCostKeyGuard, sourceMovePhysicalFallbackGuard,
     deadTailCallLiveGuard, deadAllocLiveGuard, deadInstallLiveGuard,
     deadFfiLiveGuard, deadStoreConstsLiveGuard, stExMinCostOrderGuard,
-    stExMaxDegOrderGuard]
+    stExMaxDegOrderGuard, respillWorklistGuard,
+    respillBelowThresholdGuard, simplifyBatchGuard, decDegreeOutOfDimGuard,
+    coalesceWorklistSuccessGuard]
   let names := [
     "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
@@ -853,7 +920,10 @@ def runChecks : IO Bool := do
     "remove_dead tail-call liveness", "remove_dead Alloc liveness",
     "remove_dead Install liveness", "remove_dead FFI liveness",
     "remove_dead StoreConsts liveness", "st_ex_list_MIN_cost ordering",
-    "st_ex_list_MAX_deg ordering"]
+    "st_ex_list_MAX_deg ordering", "respill freeze-to-spill transition",
+    "respill below-threshold no-op", "do_simplify batch ordering",
+    "dec_degree out-of-dimension no-op",
+    "do_coalesce success transition"]
   let mut all := true
   for (name, result) in names.zip results do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"

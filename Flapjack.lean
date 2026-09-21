@@ -115,6 +115,7 @@ import Flapjack.PanToCrepDeclarationControlSafety
 import Flapjack.PanToCrepAssignmentCorrectness
 import Flapjack.PanToCrepSequenceCorrectness
 import Flapjack.PanToCrepLeafCorrectness
+import Flapjack.PanToCrepAnnotCorrectness
 import Flapjack.CrepeExtCallInversion
 import Flapjack.CrepeProgramExtCallSourceWordCorrectness
 import Flapjack.CrepeProgramExtCallSourceWordStateCorrectness

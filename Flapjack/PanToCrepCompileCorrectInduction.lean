@@ -318,5 +318,4 @@ theorem panValuePcCompileCorrectWithContextCode_compact_of_constructor_induction
     hskip hdec hassign hprimitive hstore hstore32 hstoreByte hseq hite hwhile
     hbreak hcontinue hcall hdecCall hextCall hraise hreturn hshMemLoad hshMemStore
     htick hannot
-
 end Flapjack

@@ -254,6 +254,27 @@ def longDivSameDestination : Bool :=
     (longDivState (some (.word 1)) (some (.word 3)) (some (.word 2)))) ==
     (none, some (.word 129), none, 5)
 
+/-! The ordinary `LDiv` evaluator branch follows
+    `loopSemScript.sml:119-126`: it returns the quotient, and rejects zero or
+    non-word divisors. -/
+def divSuccess : Bool :=
+  observeLongDiv (evaluateLoop 2 arithHooks
+    (.arith (.div 1 3 4))
+    (longDivState (some (.word 7)) (some (.word 2)) none)) ==
+    (none, some (.word 3), none, 5)
+
+def divZero : Bool :=
+  observeLongDiv (evaluateLoop 2 arithHooks
+    (.arith (.div 1 3 4))
+    (longDivState (some (.word 7)) (some (.word 0)) none)) ==
+    (some .error, none, none, 5)
+
+def divMalformed : Bool :=
+  observeLongDiv (evaluateLoop 2 arithHooks
+    (.arith (.div 1 3 4))
+    (longDivState (some (.loc 9 0)) (some (.word 2)) none)) ==
+    (some .error, none, none, 5)
+
 /-! `loopSemScript.sml:118-145` also splits `LLongMul` into the high word
     destination first and the low word destination second.  This exercises
     that source arithmetic boundary through `evaluate_def`, not only through
@@ -376,6 +397,9 @@ def duplicateAssignFirstWins : Bool :=
 #guard longDivOverflow
 #guard longDivMalformed
 #guard longDivSameDestination
+#guard divSuccess
+#guard divZero
+#guard divMalformed
 #guard longMulSuccess
 #guard longMulMalformed
 #guard longMulSameDestination
@@ -408,6 +432,9 @@ def runChecks : IO Bool := do
     ("evaluate LongDiv rejects a zero divisor", longDivZero),
     ("evaluate LongDiv rejects quotient overflow", longDivOverflow),
     ("evaluate LongDiv rejects a non-word operand", longDivMalformed),
+    ("evaluate LDiv returns the Cake quotient", divSuccess),
+    ("evaluate LDiv rejects a zero divisor", divZero),
+    ("evaluate LDiv rejects a non-word operand", divMalformed),
     ("evaluate LongMul splits high and low words", longMulSuccess),
     ("evaluate LongMul rejects a non-word operand", longMulMalformed),
     ("evaluate LongMul keeps the low word on a shared destination",

@@ -858,6 +858,7 @@ evaluator-evidence obligation. -/
 #check @panValuePcCompileCorrect_compact_ite_source_word_of_state_evidence_context_code
 #check @panValuePcCompileCorrect_compact_while_source_word_of_state_evidence_context_code
 #check @panValuePcCompileCorrect_compact_while_source_word_of_state_evidence_context_code_and_clocked
+#check @panValuePcCompileCorrect_of_compact_evaluators_with_expression_state_evidence_and_clocked_raised
 
 /- The arbitrary word-list Raise bridge preserves the same explicit clocked
    evaluator and state/result premises at the top-level boundary. -/

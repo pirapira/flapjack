@@ -1633,6 +1633,51 @@ theorem evalPanValueFfiClockProg_seq_some_progSize
     locals globals memory ffi clock first second ma c mh nextLocals nextGlobals
     nextMemory nextFfi nextClock result resultClock hfirst hsecond
 
+/-- Sequence composition at the call-aware budget: the whole `Seq` node reserves
+    `1 +` the sum of the two component budgets, so both components evaluate at
+    the same common fuel `progCallFuel callBudget first + progCallFuel callBudget second`. -/
+theorem evalPanValueFfiClockProg_seq_some_progCallFuel
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat) (first second : Prog α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (nextLocals nextGlobals : VarName → Option (PanValue α))
+    (nextMemory : α → Option (PanValue α)) (nextFfi : FfiState σ) (nextClock : Nat)
+    (result : PanValueFfiClockOutcome α σ) (resultClock : Nat)
+    (hfirst : evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord
+        (progCallFuel callBudget first + progCallFuel callBudget second)
+        locals globals memory ffi clock first ma c mh =
+      some (.control (.normal nextLocals nextGlobals nextMemory nextFfi), nextClock))
+    (hsecond : evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord
+        (progCallFuel callBudget first + progCallFuel callBudget second)
+        nextLocals nextGlobals nextMemory nextFfi nextClock second ma c mh =
+      some (result, resultClock)) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (progCallFuel callBudget (.seq first second))
+        locals globals memory ffi clock (.seq first second) ma c mh =
+      some (result, resultClock) := by
+  have hsize : progCallFuel callBudget (.seq first second) =
+      (progCallFuel callBudget first + progCallFuel callBudget second) + 1 := by
+    simp [progCallFuel]; omega
+  rw [hsize]
+  exact evalPanValueFfiClockProg_seq_some context primitive handler structs
+    functions baseAddress topAddress bytesInWord
+    (progCallFuel callBudget first + progCallFuel callBudget second)
+    locals globals memory ffi clock first second ma c mh nextLocals nextGlobals
+    nextMemory nextFfi nextClock result resultClock hfirst hsecond
+
 theorem evalPanValueFfiClockProg_while_zero_some
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
@@ -2971,6 +3016,35 @@ theorem evalPanValueFfiClockProg_leaf_some_progSize
       exact evalPanValueFfiClockProg_leaf_some context primitive handler structs
         functions baseAddress topAddress bytesInWord k locals globals memory ffi
         clock program ma c mh hleaf result steps hsteps
+
+/-- Leaf adequacy at the call-aware budget `progCallFuel`, which dominates the
+    structural size of every leaf program. -/
+theorem evalPanValueFfiClockProg_leaf_some_progCallFuel
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat) (program : Prog α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (hleaf : PanValueFfiLeafProg program)
+    (result : PanValueFfiControlResult α σ) (steps : Nat)
+    (hsteps : evalPanValueFfiProgSteps context primitive handler structs functions
+        baseAddress topAddress bytesInWord 1 locals globals memory ffi program
+        (memoryAccess := ma) (contracts := c) (memoryHandler := mh) =
+      some (result, steps)) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (progCallFuel callBudget program)
+        locals globals memory ffi clock program ma c mh =
+      some (.control result, clock) :=
+  evalPanValueFfiClockProg_leaf_some_progSize context primitive handler structs
+    functions baseAddress topAddress bytesInWord program (progCallFuel callBudget program)
+    locals globals memory ffi clock ma c mh hleaf result steps hsteps
+    (progSize_le_progCallFuel callBudget program)
 
 
 /-! ## While-body step equations

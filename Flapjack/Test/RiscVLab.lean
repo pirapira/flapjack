@@ -371,6 +371,12 @@ example :
       some [.jal 0 (BitVec.ofNat 64 4)] := by
   decide
 
+/- Cake's `riscv_ast (JumpReg r)` emits the direct zero-link JALR form. -/
+example :
+    labCompilePlain (width := 64) (.jumpReg 4) =
+      some [.jalr 0 4 0] := by
+  decide
+
 example :
     labCompileAsm (width := 64) { services := [] } 1 [(0, 2 ^ 20)] 0
       (.jump ⟨1, 0⟩) =

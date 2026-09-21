@@ -450,6 +450,17 @@ def labCompilePlain [NeZero width] :
   | .dataBufferWrite address value =>
       (wordInstToInstruction (.mem .store value address)).map List.singleton
 
+/-! Cake's `riscv_ast (JumpReg r)` equation is a direct `JALR` through the
+    selected register (`riscv_targetScript.sml:264`).  Keep the executable
+    plain-Lab boundary available as a named reduction for correctness clients. -/
+theorem labCompilePlain_jumpReg [NeZero width] (register : Nat) :
+    labCompilePlain (width := width) (.jumpReg register) = (do
+      let zero ← labRegisterOfNat (portToStack portZeroRegister)
+      let selected ← labRegisterOfNat (portToStack register)
+      pure [.jalr zero selected zero]) := by
+  rfl
+
+
 /-! StackLang's `LocValue` uses register 0 as the conventional link
     register.  The port's ordinary register fields are hardware-numbered, so
     this special carrier must be translated separately; sending port register

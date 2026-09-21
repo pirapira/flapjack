@@ -2133,6 +2133,25 @@ def panValueResVar [BEq String]
     (oldValue : Option (PanValue α)) : VarName → Option (PanValue α) :=
   fun current => if current == name then oldValue else locals current
 
+/-- Counterpart of Cake's `flookup_res_var_some_eq_lookup`
+    (`cakeml/pancake/semantics/panPropsScript.sml:220`): looking up the restored
+    name returns the saved value. -/
+theorem panValueResVar_lookup_same [BEq String] [LawfulBEq String]
+    (locals locals' : VarName → Option (PanValue α)) (name : VarName)
+    {value : PanValue α}
+    (h : panValueResVar locals name (locals' name) name = some value) :
+    locals' name = some value := by
+  simpa [panValueResVar] using h
+
+/-- Counterpart of Cake's `flookup_res_var_diff_eq_org`
+    (`cakeml/pancake/semantics/panPropsScript.sml:228`): a different name keeps
+    the original binding. -/
+theorem panValueResVar_lookup_diff [BEq String] [LawfulBEq String]
+    (locals : VarName → Option (PanValue α)) (name other : VarName)
+    (oldValue : Option (PanValue α)) (hne : other ≠ name) :
+    panValueResVar locals name oldValue other = locals other := by
+  simp [panValueResVar, beq_iff_eq, hne]
+
 def restorePanValueLocal [BEq String]
     (locals : VarName → Option (PanValue α)) (name : VarName)
     (oldValue : Option (PanValue α)) : VarName → Option (PanValue α) :=

@@ -393,4 +393,29 @@ example : True := by
     functionsOnlyDecls (by decide)
   trivial
 
+/-! Cake's `evaluate_decls_only_exn_decls` (`panPropsScript.sml:1436`): an
+    exception-only declaration list leaves every field except the
+    exception-shape table unchanged. -/
+
+def exnOnlyDecls : List (Decl Nat) := [.exnDecl "E" .one, .exnDecl "F" .one]
+
+def exnOnlyGuard : Bool :=
+  match evalPanValueDeclarations evalRelState exnOnlyDecls none with
+  | some state' =>
+      state'.exceptions.length ==
+        (panExceptionEntries exnOnlyDecls ++ evalRelState.exceptions).length
+  | none => false
+
+#eval exnOnlyGuard
+#guard exnOnlyGuard
+
+example : True := by
+  have hall : exnOnlyDecls.all isExnDecl = true := by decide
+  cases heval : evalPanValueDeclarations evalRelState exnOnlyDecls none with
+  | none => trivial
+  | some state' =>
+      have _h := evalPanValueDeclarations_only_exn_decls evalRelState state'
+        exnOnlyDecls none hall heval
+      trivial
+
 end Flapjack.Test.PanProgramSimpParity

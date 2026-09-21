@@ -1210,6 +1210,14 @@ example :
   PanValueFfiClockNormalAdequateProgFrom_tick 1 (by decide) evaluatorContext
     (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
 
+example :
+    PanValueFfiClockNormalAdequateProgFrom 0 evaluatorContext (fun _ _ => none)
+      evaluatorHandler [] [] 0 0 8 7 none none none
+      (.while (.const 0) (.skip : Prog Nat)) :=
+  PanValueFfiClockNormalAdequateProgFrom_while_zero 0 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+    (.const 0) (.skip : Prog Nat) (fun _ _ _ => ⟨0, by simp [evalPanValueExp], by decide⟩)
+
 /-- The raised `DecCall` outcome also lifts to the declaration's progSize. -/
 example
     (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)

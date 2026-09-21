@@ -1147,5 +1147,6 @@ example :
 #check @panValuePcCompileCorrect_compact_call_of_state_evidence
 #check @panValuePcCompileCorrect_compact_decCall_of_state_evidence
 #check @panValuePcCompileCorrect_compact_extCall_of_state_evidence
+#check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_handler_returned
 
 end Flapjack.Test.PanValuePcControlSafety

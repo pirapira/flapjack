@@ -467,4 +467,48 @@ example : True := by
         exnOnlyDecls none hall heval
       trivial
 
+/-! Cake's `evaluate_decls_only_funs_and_exn_decls`
+    (`panPropsScript.sml:1561`): a list of functions and exception declarations
+    leaves every other field unchanged. -/
+
+def funsAndExnDecls : List (Decl Nat) :=
+  [.function wfFunction, .exnDecl "E" .one,
+   .function
+     { name := "h", inline := false, exported := false, params := [],
+       body := (.skip : Prog Nat), returnShape := .one },
+   .exnDecl "F" .one]
+
+def funsAndExnGuard : Bool :=
+  match evalPanValueDeclarationsWithStructs ([] : StructContext) evalRelState
+      funsAndExnDecls none with
+  | some state' =>
+      state'.functions.length ==
+          (panFunctionEntries funsAndExnDecls ++ evalRelState.functions).length &&
+        state'.returnShapes.length ==
+          (panReturnShapeEntries funsAndExnDecls ++
+            evalRelState.returnShapes).length &&
+        state'.parameterShapes.length ==
+          (panParameterShapeEntries funsAndExnDecls ++
+            evalRelState.parameterShapes).length &&
+        state'.exceptions.length ==
+          (panExceptionEntries funsAndExnDecls ++ evalRelState.exceptions).length
+  | none => false
+
+#eval funsAndExnGuard
+#guard funsAndExnGuard
+
+example : True := by
+  have hall : funsAndExnDecls.all
+      (fun declaration =>
+        globalDeclIsFunction declaration || isExnDecl declaration) = true := by
+    decide
+  cases heval : evalPanValueDeclarationsWithStructs ([] : StructContext)
+      evalRelState funsAndExnDecls none with
+  | none => trivial
+  | some state' =>
+      have _h := evalPanValueDeclarationsWithStructs_only_funs_and_exn_decls
+        ([] : StructContext) evalRelState state' funsAndExnDecls none rfl hall
+        heval
+      trivial
+
 end Flapjack.Test.PanProgramSimpParity

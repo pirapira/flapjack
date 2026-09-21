@@ -514,12 +514,12 @@ def wordCseProg [WordCseHash α] : WordCseKnowledge → WordProg α → WordProg
       if source % 2 == 0 || source = destination then
         (.opCurrHeap operator destination source, data)
       else
-        let source := wordCseCanonicalRegs' destination data source
-        wordCseAddToFact (wordCseRegisterRead data source) data.instrsMem destination
-          [0, wordCseBinOpToNum operator, source + 100]
+        let canonicalSource := wordCseCanonicalRegs' destination data source
+        wordCseAddToFact (wordCseRegisterRead data canonicalSource) data.instrsMem destination
+          [0, wordCseBinOpToNum operator, canonicalSource + 100]
           (.opCurrHeap operator destination source)
           (fun data register => wordCseRecordInst data register
-            [0, wordCseBinOpToNum operator, source + 100])
+            [0, wordCseBinOpToNum operator, canonicalSource + 100])
   | data, .locValue destination source =>
       let data := wordCseInvalidate data destination
       wordCseAddToFact data data.instrsMem destination [48, source]

@@ -2607,4 +2607,16 @@ example : PanValueFfiClockNormalAdequateProgFromFloor 1 0 evaluatorContext
         intro locals globals memory ffi
         exact ⟨locals, globals, memory, ffi, 1, by simp [evalPanValueFfiProgSteps]⟩)
 
+/-- The inductive normal fragment enters the floor certificate at `floor = lo`. -/
+example : PanValueFfiClockNormalAdequateProgFromFloor 3 3 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+    (.seq (.skip : Prog Nat) (.annot "tag" "text")) :=
+  PanValueFfiClockNormalAdequateProgFromFloor_of_normalProg 3 evaluatorContext
+    (fun _ _ => none) evaluatorHandler [] [] 0 0 8 7 none none none
+    (.seq (.skip : Prog Nat) (.annot "tag" "text"))
+    (PanValueFfiClockNormalProg.seq (.skip : Prog Nat) (.annot "tag" "text")
+      PanValueFfiClockNormalProg.skip (PanValueFfiClockNormalProg.annot "tag" "text"))
+
+#check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_of_normalProg
+
 end Flapjack.Test.PanSimpParity

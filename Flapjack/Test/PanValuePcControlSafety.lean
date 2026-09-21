@@ -844,5 +844,6 @@ evaluator-evidence obligation. -/
    opaque evaluator-evidence obligation in favour of explicit state evidence. -/
 #check @panValuePcCompileCorrect_compact_raise_source_word_of_state_evidence
 #check @panValuePcCompileCorrect_compact_nested_one_word_raise_of_state_evidence
+#check @panValuePcCompileCorrect_compact_nested_one_word_raise_of_state_evidence_context_code
 
 end Flapjack.Test.PanValuePcControlSafety

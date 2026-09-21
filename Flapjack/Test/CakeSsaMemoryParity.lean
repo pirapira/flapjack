@@ -50,6 +50,14 @@ def storeInstGuard : Bool :=
   | .seq (.move 1 []) (.inst (.mem .store 0 0)) => true
   | _ => false
 
+/- The corresponding Cake store row reads both source operands from the
+   nonempty entry namespace and does not allocate a fresh destination. -/
+def mappedStoreInstGuard : Bool :=
+  match (wordFullSsaCcTrans 1
+      (.inst (.mem .store 0 0) : WordProg Nat)).2.2 with
+  | .seq (.move 1 [(5, 0)]) (.inst (.mem .store 5 5)) => true
+  | _ => false
+
 def load32InstGuard : Bool :=
   match (wordFullSsaCcTrans 0
       (.inst (.mem .load32 1 2) : WordProg Nat)).2.2 with
@@ -175,6 +183,7 @@ def parityGuard : Bool :=
 #guard loadInstGuard
 #guard mappedLoadInstGuard
 #guard storeInstGuard
+#guard mappedStoreInstGuard
 #guard load32InstGuard
 #guard store32InstGuard
 #guard load8InstGuard
@@ -205,6 +214,8 @@ def runChecks : IO Bool := do
       ("ssa_cc_trans Mem Load reads the Cake entry SSA namespace",
         mappedLoadInstGuard),
       ("ssa_cc_trans Mem Store renames Cake address and value", storeInstGuard),
+      ("ssa_cc_trans Mem Store reads the Cake entry SSA namespace",
+        mappedStoreInstGuard),
       ("ssa_cc_trans Mem Load32 freshens Cake destination", load32InstGuard),
       ("ssa_cc_trans Mem Store32 renames Cake address and value", store32InstGuard),
       ("ssa_cc_trans Mem Load8 freshens Cake destination", load8InstGuard),

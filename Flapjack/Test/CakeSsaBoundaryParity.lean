@@ -21,6 +21,19 @@ def returnBoundaryGuard : Bool :=
 
 #guard returnBoundaryGuard
 
+/- Cake's Return row maps every returned source value to its ABI result slot;
+   this two-value case is the direct `GENLIST (2 * (x + 1))` shape. -/
+def returnMultiProgram : WordProg Nat :=
+  .return 0 [2, 4]
+
+def returnMultiBoundaryGuard : Bool :=
+  match (wordFullSsaCcTrans 3 returnMultiProgram).2.2 with
+  | .seq (.move 1 [(9, 0), (13, 2), (17, 4)])
+      (.seq (.move 0 [(2, 13), (4, 17)]) (.return 9 [2, 4])) => true
+  | _ => false
+
+#guard returnMultiBoundaryGuard
+
 def allocProgram : WordProg Nat :=
   .alloc 2 ([], [])
 
@@ -34,7 +47,8 @@ def allocBoundaryGuard : Bool :=
 
 #guard allocBoundaryGuard
 
-def parityGuard : Bool := returnBoundaryGuard && allocBoundaryGuard
+def parityGuard : Bool :=
+  returnBoundaryGuard && returnMultiBoundaryGuard && allocBoundaryGuard
 
 #guard parityGuard
 #eval parityGuard
@@ -43,6 +57,8 @@ def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
     [ ("full_ssa_cc_trans Return preserves Cake ABI reconciliation",
         returnBoundaryGuard),
+      ("full_ssa_cc_trans Return preserves Cake multi-value ABI reconciliation",
+        returnMultiBoundaryGuard),
       ("full_ssa_cc_trans Alloc preserves Cake stack boundary moves",
         allocBoundaryGuard) ]
   let mut ok := true

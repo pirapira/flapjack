@@ -140,4 +140,17 @@ def declDistinctGuard : Bool :=
 #eval declDistinctGuard
 #guard declDistinctGuard
 
+/-! Counterpart of Cake's `functions_filter_nil` (`pan_globalsProofScript.sml:2967`). -/
+def functionsFilterNilGuard : Bool :=
+  let declarations : List (Decl Nat) :=
+    [.function
+      { name := "f", inline := false, exported := false, params := [],
+        body := .skip, returnShape := .one },
+     .name "S" [], .exnDecl "E" (.named "T"), .decl .one "h" (.const 9)]
+  (functions (globalDeclsFilter
+    (fun declaration => !globalDeclIsFunction declaration) declarations)).isEmpty
+
+#eval functionsFilterNilGuard
+#guard functionsFilterNilGuard
+
 end Flapjack.Test.PanGlobalsDecShapesParity

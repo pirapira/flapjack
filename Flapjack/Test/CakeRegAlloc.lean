@@ -851,6 +851,23 @@ def negFirstMatchProjectionGuard : Bool :=
     Flapjack.RiscV.CakeRegAlloc.cakeNegFirstMatchCol state 3 [] [5, 7] ==
       none
 
+/- Cake's `reset_move_related` (`reg_allocScript.sml:708-725`) first clears
+   the whole dimension, then marks exactly the non-fixed endpoints of the
+   surviving unavailable moves. -/
+def resetMoveRelatedGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      nodeTag := CakeNodeMap.ofNatInfoMap 4 [(1, .fixed 2)]
+      moveRelated := CakeNodeMap.ofNatInfoMap 4
+        [(0, true), (1, true), (2, true), (3, true)] }
+  let out := cakeResetMoveRelated [(1, (0, 1)), (2, (2, 3))] state
+  (out.moveRelated.get 0).getD false == true &&
+    (out.moveRelated.get 1).getD true == false &&
+    (out.moveRelated.get 2).getD false == true &&
+    (out.moveRelated.get 3).getD false == true
+
+#guard resetMoveRelatedGuard
+
 /- The HOL allocator updates fixed-size array cells.  Repeated writes to an
    existing node must therefore not retain an unbounded history in the Lean
    association-list representation. -/
@@ -1023,7 +1040,7 @@ def parityGuard : Bool :=
     resortMovesSpOrderGuard && bgOkOrderGuard &&
     qsortTiesTwoGuard && qsortTiesThreeGuard && qsortDescGuard &&
     stempBadColourTieGuard && raMovesStempGuard && raMovesStempHiGuard &&
-    negFirstMatchProjectionGuard
+    negFirstMatchProjectionGuard && resetMoveRelatedGuard
     && mapUpdateBoundedGuard && sourceSpillCostKeyGuard &&
     sourceSpillCostRoundTripGuard && sourceMovePhysicalFallbackGuard
     && deadMovePriorityGuard
@@ -1062,7 +1079,8 @@ def runChecks : IO Bool := do
     reviveOrderGuard, revivePartitionGuard, bgOkOrderGuard, qsortTiesTwoGuard,
     movesToSpOrderGuard, resortMovesSpOrderGuard,
     qsortTiesThreeGuard, qsortDescGuard, raMovesStempGuard,
-    raMovesStempHiGuard, negFirstMatchProjectionGuard, mapUpdateBoundedGuard,
+    raMovesStempHiGuard, negFirstMatchProjectionGuard, resetMoveRelatedGuard,
+    mapUpdateBoundedGuard,
     deadMovePriorityGuard, deadProgramPriorityGuard, sortMovesTailSplitGuard,
     sourceSpillCostKeyGuard, sourceMovePhysicalFallbackGuard,
     deadTailCallLiveGuard, deadAllocLiveGuard, deadInstallLiveGuard,

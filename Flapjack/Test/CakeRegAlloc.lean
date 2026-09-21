@@ -1101,7 +1101,7 @@ def parityGuard : Bool :=
     stempBadColourTieGuard && raMovesStempGuard && raMovesStempHiGuard &&
     negFirstMatchProjectionGuard && biasedPreferenceGuard &&
     negBiasedPreferenceGuard && fullConsistencyGuard &&
-    canonizeMoveGuard
+    canonizeMoveGuard && extractColorOrderGuard
     && mapUpdateBoundedGuard && sourceSpillCostKeyGuard &&
     sourceSpillCostRoundTripGuard && sourceMovePhysicalFallbackGuard
     && deadMovePriorityGuard
@@ -1144,6 +1144,7 @@ def runChecks : IO Bool := do
     qsortTiesThreeGuard, qsortDescGuard, raMovesStempGuard,
     raMovesStempHiGuard, negFirstMatchProjectionGuard, biasedPreferenceGuard,
     negBiasedPreferenceGuard, fullConsistencyGuard, canonizeMoveGuard,
+    extractColorOrderGuard,
     mapUpdateBoundedGuard,
     deadMovePriorityGuard, deadProgramPriorityGuard, sortMovesTailSplitGuard,
     sourceSpillCostKeyGuard, sourceMovePhysicalFallbackGuard,

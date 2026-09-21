@@ -18,7 +18,6 @@ import Flapjack.PanToCrepAnnotCorrectness
 import Flapjack.PanValueFfiClockCorrectness
 import Flapjack.CrepeNestedDecsStability
 import Flapjack.CrepeRaisedCallInversion
-import Flapjack.PanToCrepDecCallCorrectness
 import Flapjack.PanToCrepProgramComposition
 
 namespace Flapjack.Test.PanValuePcControlSafety
@@ -1173,7 +1172,10 @@ example :
 #check @panValuePcCompileCorrect_compact_extCall_of_state_evidence
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_handler_returned
 #check @panValuePcCompileCorrectWithContextCode_of_context_code_and_clocked_call_handler_normal
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_call_handler
 #check @panValuePcCompileCorrect_of_context_code_and_clocked_call_handler_destination
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_decCall_returned
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_decCall_returned_value
 #check @panValueProg_compile_correct_induction
 #check @panValuePcCompileCorrect_compact_of_constructor_induction
 #check @panValuePcCompileCorrectWithContextCode_compact_of_constructor_induction
@@ -1190,5 +1192,13 @@ example :
 
 #check @panValuePcCompileCorrect_compact_of_state_and_control_safe_induction
 #check @panValuePcCompileCorrect_of_context_code_and_clocked_decCall_returned
+
+#check @panValuePcResultRel_normal_iff
+#check @panValuePcResultRel_returned_iff
+#check @panValuePcResultRel_broke_iff
+#check @panValuePcResultRel_continued_iff
+#check @panValuePcResultRel_timeout_iff
+#check @panValuePcResultRel_finalFfi_iff
+#check @panValuePcResultRel_raised_iff
 
 end Flapjack.Test.PanValuePcControlSafety

@@ -850,4 +850,8 @@ evaluator-evidence obligation. -/
    evaluator and state/result premises at the top-level boundary. -/
 #check @panValuePcCompileCorrect_compact_with_flat_global_evaluator_evidence_word_list_raise_context_code_and_clocked
 
+/- The clocked source-word-record Raise bridge preserves arbitrary field
+   expressions while keeping evaluator, state, and result premises explicit. -/
+#check @panValuePcCompileCorrect_compact_with_flat_global_evaluator_evidence_source_word_record_context_code_and_clocked
+
 end Flapjack.Test.PanValuePcControlSafety

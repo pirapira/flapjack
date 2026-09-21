@@ -10366,6 +10366,155 @@ theorem panValuePcCompileCorrect_compact_with_flat_global_evaluator_evidence_sou
     sourceHandler crepPrimitive ffi sharedMem baseAddress topAddress bytesInWord
     sourceFuel targetFuel hprogram hprogramSafe hlookup hevidence
 
+/-! Clocked top-level counterpart for an arbitrary source-word record Raise.
+    The source payload compilation evidence and the clocked target result
+    relation remain separate explicit Cake obligations. -/
+theorem panValuePcCompileCorrect_compact_with_flat_global_evaluator_evidence_source_word_record_context_code_and_clocked
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (exception : ExceptionId) (fields : List (SourceWordExp α))
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α)
+    (sourceFuel targetFuel : Nat)
+    (hbytesInWord : ∀ (context : CompileContext α) (wordSize : α),
+      context.bytesInWord = wordSize)
+    (hlookupVar : ∀ (context : CompileContext α)
+      (sourceLocals : VarName → Option (PanValue α))
+      (name : VarName) (value : PanValue α),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot]))
+    (hbounded : ∀ (context : CompileContext α) (name : VarName)
+      (shape : Shape) (slots : List Nat),
+      lookupInfo name context.vars = some (shape, slots) →
+      ∀ slot ∈ slots, slot ≤ context.maxVar)
+    (hlookupException : ∀ (context : CompileContext α),
+      ∃ exceptionCode, lookupInfo exception context.exceptions = some exceptionCode)
+    (hfresh : ∀ (context : CompileContext α) (state : CrepState α)
+      (name : Nat), name ∈ freshNames context fields.length 1 →
+      state.locals name = none)
+    (hexception : ∀ (context : CompileContext α)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (exceptionCode : α) (values : List α),
+      lookupInfo exception context.exceptions = some exceptionCode →
+      exceptionRel exception (.rStruct (values.map PanValue.word)) exceptionCode)
+    (hlookup : ∀ (targetState : CrepState α) (sourceValue : PanValue α),
+      crepPcFlatGlobalsLookup bytesInWord targetState sourceValue =
+        globalsLookup targetState sourceValue)
+    (hevidence : ∀ (context : CompileContext α) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (sourceValue : PanValue α) (targetState : CrepState α)
+      (targetException : α),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      ∃ (state : CrepState α) (expression : Exp α)
+        (compiled : List (CrepExp α)) (shape : Shape) (values : List α),
+        targetState =
+          { state with globals :=
+              updateMemoryListAt state.globals 0 context.bytesInWord values } ∧
+        context.bytesInWord = bytesInWord ∧
+        panValueCrepStateRel structs context sourceLocals sourceGlobals
+          sourceMemory state ∧
+        evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+          baseAddress topAddress bytesInWord expression = some sourceValue ∧
+        panValuePayloadWithinLimit structs sourceValue = true ∧
+        compileExp context expression = (compiled, shape) ∧
+        compiled.length = Shape.shapeSize shape ∧
+        evalCrepFullExpsState state baseAddress topAddress compiled =
+          some values ∧
+        (∀ name ∈ freshNames context compiled.length 1,
+          ∀ value ∈ compiled, name ∉ crepExpVars value) ∧
+        (∀ name ∈ freshNames context compiled.length 1,
+          state.locals name = none) ∧
+        exceptionRel sourceException sourceValue targetException ∧
+        lookupInfo sourceException context.exceptions = some targetException ∧
+        exceptionCode sourceException = some targetException ∧
+        panValueFlatWords sourceValue = values ∧
+        List.Pairwise (fun left right : α => left ≠ right)
+          (storeAddresses (0 : α) context.bytesInWord values.length) ∧
+        Shape.shapeSize (panValueShape structs sourceValue) ≤ 32)
+    (clockStructs : StructContext) (clockPcContext : CompileContext α)
+    (clockExceptionRel : ExceptionId → PanValue α → α → Prop)
+    (clockExceptionCode : ExceptionId → Option α)
+    (clockGlobalsLookup : CrepState α → PanValue α → Option (List α))
+    (clockContext : PanValueFfiContext α)
+    (clockPrimitive : PanPrimitiveHandler α)
+    (clockHandler : PanValueStatefulFfiHandler α σ)
+    (clockFunctions : List (FunName × List VarName × Prog α))
+    (clockBaseAddress clockTopAddress clockBytesInWord : α)
+    (clockFuel clock : Nat)
+    (clockLocals clockGlobals : VarName → Option (PanValue α))
+    (clockMemory : α → Option (PanValue α)) (clockFfi : FfiState σ)
+    (clockProgram : Prog α) (clockTargetState : CrepState α)
+    (clockException : ExceptionId) (clockValue : PanValue α)
+    (clockTargetException : α)
+    (hclock : evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
+      clockFfi clock clockProgram = some
+        (.control (.raised clockLocals clockGlobals clockMemory clockFfi
+          clockException clockValue), clock))
+    (hclockState : panValueCrepStateRel clockStructs clockPcContext
+      clockLocals clockGlobals clockMemory clockTargetState)
+    (hclockRaise : panValuePcExceptionResultRelWithContextCode
+      clockStructs clockPcContext clockExceptionRel clockExceptionCode
+      clockGlobalsLookup clockGlobals clockMemory clockException clockValue
+      clockTargetState clockTargetException) :
+    PanValuePcCompileCorrectWithContextCode
+      (panValuePcCompactSourceEvaluator primitive sourceHandler sourceFunctions
+        baseAddress topAddress bytesInWord sourceFuel)
+      (crepPcCompactTargetEvaluator functions crepPrimitive ffi sharedMem
+        baseAddress topAddress targetFuel)
+      codeRel excpRel exceptionCode globalsLookup
+      (.raise exception (.rStruct (fields.map SourceWordExp.toExp))) ∧
+    evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
+      clockFfi clock clockProgram = some
+        (.control (.raised clockLocals clockGlobals clockMemory clockFfi
+          clockException clockValue), clock) ∧
+    (evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
+      clockFfi clock clockProgram).map panValueFfiClockResultProjection =
+      some (.raised clockLocals clockGlobals clockMemory clockFfi
+        clockException clockValue clock) ∧
+    panValuePcResultRelWithContextCode clockStructs clockPcContext
+      clockExceptionRel clockExceptionCode clockGlobalsLookup
+      (.raised clockLocals clockGlobals clockMemory clockException clockValue)
+      (.raised clockTargetState clockTargetException) := by
+  have hcompact :=
+    panValuePcCompileCorrect_compact_with_flat_global_evaluator_evidence_source_word_record_context_code
+      exception fields codeRel excpRel exceptionCode globalsLookup sourceFunctions
+      functions primitive sourceHandler crepPrimitive ffi sharedMem baseAddress
+      topAddress bytesInWord sourceFuel targetFuel hbytesInWord hlookupVar hbounded
+      hlookupException hfresh hexception hlookup hevidence
+  refine ⟨hcompact, hclock, ?_, ?_⟩
+  · rw [hclock]
+    rfl
+  · simpa [panValuePcResultRelWithContextCode] using
+      (show panValueCrepStateRel clockStructs clockPcContext clockLocals
+          clockGlobals clockMemory clockTargetState ∧
+        panValuePcExceptionResultRelWithContextCode clockStructs clockPcContext
+          clockExceptionRel clockExceptionCode clockGlobalsLookup clockGlobals
+          clockMemory clockException clockValue clockTargetState
+          clockTargetException from
+        ⟨hclockState, hclockRaise⟩)
+
 /-! Convert direct flat-spill state evidence into the raised package.  This is
     the state-level companion to the evaluator-backed adapter above: it keeps
     payload storage and global lookup explicit without requiring expression

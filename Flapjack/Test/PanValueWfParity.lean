@@ -152,4 +152,26 @@ example : True := by
       trivial
   | none => trivial
 
+/-! `eval_some_var_exp_local_lookup` (`panPropsScript.sml:621`): a successfully
+    evaluated expression has all of its free local variables bound. -/
+
+def varLookupLocals : VarName → Option (PanValue Nat) :=
+  fun name => if name == "x" then some (.word 3) else none
+
+theorem evalPanValueExp_isSome_local_fixture :
+    ∃ w, varLookupLocals "x" = some w :=
+  evalPanValueExp_isSome_local ([] : StructContext) varLookupLocals (fun _ => none)
+    (fun _ => none) 0 0 8 (.var .local "x") none (.word 3)
+    (by simp [evalPanValueExp, varLookupLocals])
+    (by simp [expLocalVars])
+
+def varLookupGuard : Bool :=
+  match evalPanValueExp ([] : StructContext) varLookupLocals (fun _ => none)
+      (fun _ => none) 0 0 8 (.var .local "x") none with
+  | some _ => (varLookupLocals "x").isSome
+  | none => false
+
+#eval varLookupGuard
+#guard varLookupGuard
+
 end Flapjack.Test.PanValueWfParity

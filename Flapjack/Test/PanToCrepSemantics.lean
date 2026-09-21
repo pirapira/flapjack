@@ -10,6 +10,7 @@ open Flapjack
 #check @Flapjack.PanValuePcSemanticClockEvidence
 #check @Flapjack.PanValuePcSemanticClockEvidence.resultRel
 #check @Flapjack.PanValuePcSemanticClockEvidence.crossResultRel
+#check @Flapjack.PanValuePcSemanticClockEvidence.crossResultRel_withContextCode
 #check @Flapjack.panCrepSemanticAgreement_of_pcCompileCorrect
 #check @Flapjack.panCrepSemanticAgreement_of_pcCompileCorrect_cross_clock
 #check @Flapjack.panEventPrefix_antisymm

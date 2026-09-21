@@ -2993,6 +2993,7 @@ def runChecks : IO Bool := do
   IO.println "PASS expression-state evidence derives generic flat-global Raise package"
   IO.println "PASS expression-state evidence composes to compact pc_compile_correct"
   IO.println "PASS expression-state evidence composes to context-coded pc_compile_correct"
+  IO.println "PASS expression-state context bridge composes with clocked Raise"
   IO.println "PASS nested raised semantic/global lookup lift"
   pure true
 

@@ -147,6 +147,11 @@ def stackOnlyFastReferenceGuard : Bool :=
 
 #guard stackOnlyFastReferenceGuard
 
+def filterReversedGuard : Bool :=
+  filterReversed (fun x : Nat => x % 2 = 1) [1, 2, 3, 4, 5, 6] = [5, 3, 1]
+
+#guard filterReversedGuard
+
 /-- Canonical form for comparing node bijections with the probed sptree
     outputs: both maps sorted by key. -/
 def sortBijectionMaps (bijection : CakeNodeBijection) :

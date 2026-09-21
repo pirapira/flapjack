@@ -710,7 +710,7 @@ def cakeSplitDegree (state : CakeRaState) (d k v : Nat) : Bool :=
 /-- `st_ex_filter`/`st_ex_partition` accumulate by prepending, so the
     results are reversed (`reg_allocScript.sml:158-180`). -/
 def filterReversed {α : Type u} (p : α → Bool) (l : List α) : List α :=
-  (l.filter p).reverse
+  l.foldl (fun acc x => if p x then x :: acc else acc) []
 
 def partitionReversed {α : Type u} (p : α → Bool) (l : List α) : List α × List α :=
   let (tt, ff) := l.partition p

@@ -280,8 +280,14 @@ example :
       some [.sll 4 5 6] := by
   decide
 
-/- Cake's register-variable shifts use the target SRL/SRA equations from
+/- Cake's register-variable shifts use the target SLL/SRL/SRA equations from
    riscv_targetScript.sml, distinct from the immediate shift cases above. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.shift .lsl 4 5 (.reg 6)))) [] 0]⟩ =
+      some [.sll 4 5 6] := by
+  decide
+
 example :
     compileLabSection (width := 64) { services := [] }
       ⟨3, [.asm (.word (.arith (.shift .lsr 4 5 (.reg 6)))) [] 0]⟩ =

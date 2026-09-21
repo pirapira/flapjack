@@ -39,4 +39,23 @@ def parityGuard : Bool :=
 #eval parityGuard
 #guard parityGuard
 
+def correctnessGuard : Bool :=
+  match globalCompileTopForStart 4 id [mainFunction] "main" with
+  | some compiled =>
+      compiled.all
+        (fun declaration => globalDeclIsFunction declaration ||
+          globalDeclIsException declaration)
+  | none => false
+
+#eval correctnessGuard
+#guard correctnessGuard
+
+example : True := by
+  cases hcompile : globalCompileTopForStart 4 id [mainFunction] "main" with
+  | none => trivial
+  | some compiled =>
+      have h := globalCompileTopForStart_all_function_or_exception 4 id
+        [mainFunction] "main" compiled hcompile
+      trivial
+
 end Flapjack.Test.PanGlobalsCompileTopForStartParity

@@ -604,6 +604,44 @@ theorem panValuePcResultRelWithContextCode_continued_rejects_nonzero_label
       (.continued targetState label) := by
   simp [panValuePcResultRelWithContextCode, panValuePcResultRel, hlabel]
 
+/-- The context-coded relation agrees with the plain relation on every pair
+except `raised`/`raised`, so the constructor-agreement invariant transfers. -/
+theorem panValuePcResultRelWithContextCode_constructor_eq
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceResult : PanValuePcResult α) (targetResult : CrepPcResult α)
+    (hrel : panValuePcResultRelWithContextCode structs context exceptionRel
+      exceptionCode globalsLookup sourceResult targetResult) :
+    panValuePcResultConstructor sourceResult =
+      crepPcResultConstructor targetResult := by
+  cases sourceResult <;> cases targetResult <;>
+    simp_all [panValuePcResultRelWithContextCode, panValuePcResultRel,
+      panValuePcResultConstructor, crepPcResultConstructor]
+
+theorem panValuePcResultRelWithContextCode_rejects_source_error
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (targetResult : CrepPcResult α) :
+    ¬ panValuePcResultRelWithContextCode structs context exceptionRel
+      exceptionCode globalsLookup PanValuePcResult.error targetResult := by
+  cases targetResult <;> simp [panValuePcResultRelWithContextCode,
+    panValuePcResultRel]
+
+theorem panValuePcResultRelWithContextCode_rejects_target_error
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceResult : PanValuePcResult α) :
+    ¬ panValuePcResultRelWithContextCode structs context exceptionRel
+      exceptionCode globalsLookup sourceResult CrepPcResult.error := by
+  cases sourceResult <;> simp [panValuePcResultRelWithContextCode,
+    panValuePcResultRel]
+
 /-! Safety obligation for the compact `pc_compile_correct` bridge.  The
 intermediate control relation intentionally permits nonzero labels while a
 loop propagates them, but the final Pancake theorem only admits label `0` for

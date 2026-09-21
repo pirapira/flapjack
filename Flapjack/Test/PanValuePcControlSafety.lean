@@ -1213,6 +1213,9 @@ example :
 #check @panValuePcResultRelWithContextCode_raised_of_rel_and_lookup
 #check @panValuePcResultRelWithContextCode_broke_rejects_nonzero_label
 #check @panValuePcResultRelWithContextCode_continued_rejects_nonzero_label
+#check @panValuePcResultRelWithContextCode_constructor_eq
+#check @panValuePcResultRelWithContextCode_rejects_source_error
+#check @panValuePcResultRelWithContextCode_rejects_target_error
 #check @panValuePcExceptionResultRel_of_withContextCode
 #check @panValuePcResultRel_of_withContextCode
 #check @panValuePcCompileCorrect_of_withContextCode

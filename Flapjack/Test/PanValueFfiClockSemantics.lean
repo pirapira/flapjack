@@ -359,4 +359,36 @@ example (event : FfiFinalEvent)
           cases h
         · rfl) rfl).2.2
 
+/-! The `DecCall` Raise lift keeps the Cake exception-code and payload relation
+    explicit while projecting the clocked evaluator result. -/
+example (targetState : CrepState (Word 64)) (targetException : Word 64)
+    (hcall : evalPanValueFfiClockCall statefulTestContext statefulTestPrimitive
+      statefulTestHandler [] clockedRaiseFunctions
+      (BitVec.ofNat 64 0) (BitVec.ofNat 64 100) (BitVec.ofNat 64 8) 20
+      (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState 1
+      none "raiseOne" [] =
+      some (.control (.raised (fun _ => none) (fun _ => none)
+        (fun _ => none) statefulTestFfiState "E"
+        (.word (BitVec.ofNat 64 1))), 0))
+    (hstate : panValueCrepStateRel [] clockedPcContext
+      (fun _ => none) (fun _ => none) (fun _ => none) targetState)
+    (hraise : panValuePcExceptionResultRelWithContextCode [] clockedPcContext
+      (fun _ _ _ => True) (fun _ => none) (fun _ _ => none)
+      (fun _ => none) (fun _ => none) "E"
+      (.word (BitVec.ofNat 64 1)) targetState targetException) :
+    panValuePcResultRelWithContextCode [] clockedPcContext
+      (fun _ _ _ => True) (fun _ => none) (fun _ _ => none)
+      (.raised (fun _ => none) (fun _ => none) (fun _ => none)
+        "E" (.word (BitVec.ofNat 64 1)))
+      (.raised targetState targetException) :=
+  (panValuePcRaisedResultRelWithContextCode_of_clocked_decCall [] clockedPcContext
+    (fun _ _ _ => True) (fun _ => none) (fun _ _ => none)
+    statefulTestContext statefulTestPrimitive statefulTestHandler
+    clockedRaiseFunctions (BitVec.ofNat 64 0) (BitVec.ofNat 64 100)
+    (BitVec.ofNat 64 8) 20 1 0
+    (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState
+    "x" .one "raiseOne" [] .skip
+    (fun _ => none) (fun _ => none) statefulTestFfiState "E"
+    (.word (BitVec.ofNat 64 1)) targetState targetException hcall hstate hraise).2.2
+
 end Flapjack

@@ -2629,11 +2629,12 @@ theorem three_word_raise_pc_compile_correct_direct_clocked_raised
         (fun _ => none) directClockFfi "E" sourceValue), 1))
     (hclockState : panValueCrepStateRel [] context
       (fun _ => none) (fun _ => none) (fun _ => none) targetState)
-    (hclockRaise : panValuePcExceptionResultRelWithContextCode [] context
-      (fun _ _ code => code = 9)
+    (hclockRaiseData : panValuePcRaisedHraiseData
       (fun exception => if exception = "E" then some 9 else none)
-      (crepPcFlatGlobalsLookup 8)
-      (fun _ => none) (fun _ => none) "E" sourceValue targetState 9) :
+      (crepPcFlatGlobalsLookup 8) [] context (fun _ _ code => code = 9)
+      (fun _ => none) (fun _ => none) (fun _ => none) "E" sourceValue
+      targetState 9 ∧
+      lookupInfo "E" context.exceptions = some 9) :
     PanValuePcCompileCorrectWithContextCode
       (panValuePcCompactSourceEvaluator
         (fun _ _ => none) (fun _ _ _ _ _ _ => none) []
@@ -2664,7 +2665,7 @@ theorem three_word_raise_pc_compile_correct_direct_clocked_raised
       (.raised (fun _ => none) (fun _ => none) (fun _ => none)
         "E" sourceValue)
       (.raised targetState 9) := by
-  exact panValuePcCompileCorrectWithContextCode_of_compact_evaluators_and_clocked_raised
+  exact panValuePcCompileCorrectWithContextCode_of_compact_evaluators_and_clocked_raised_hraise_data
     (panValuePcCompactSourceEvaluator
       (fun _ _ => none) (fun _ _ _ _ _ _ => none) [] 0 0 8 sourceFuel)
     (crepPcCompactTargetEvaluator [] (fun _ _ => none)
@@ -2677,7 +2678,7 @@ theorem three_word_raise_pc_compile_correct_direct_clocked_raised
     (crepPcFlatGlobalsLookup 8) directClockContext (fun _ _ => none)
     directClockHandler [] 0 0 8 0 1 (fun _ => none) (fun _ => none)
     (fun _ => none) directClockFfi (.raise "E" sourceExpression)
-    targetState "E" sourceValue 9 hclock hclockState hclockRaise
+    targetState "E" sourceValue 9 hclock hclockState hclockRaiseData
 
 example
     (sourceFunctions : List (FunName × List VarName × Prog Nat))

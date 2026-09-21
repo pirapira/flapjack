@@ -5316,4 +5316,84 @@ theorem PanValueFfiClockNormalAdequateProgAt_call_destination
     calleeLocals ma hfunctions hbudget hargsEval hlookup hbind hclock hwithin
     (fun finalGlobals => hassign locals finalGlobals values)
 
+theorem PanValueFfiClockNormalAdequateProgAt_call_caught_handler
+    (clock : Nat)
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (ma : Option (PanValueMemoryAccess α))
+    (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (function : FunName) (arguments : List (Exp α))
+    (parameters : List VarName) (body : Prog α)
+    (caught exception : ExceptionId) (handlerVariable : VarName)
+    (handlerProgram : Prog α)
+    (hfunctions : PanValueFfiClockFunctionsRaiseAsSucceed context primitive handler
+      structs functions baseAddress topAddress bytesInWord ma c mh exception)
+    (hhandler : PanValueFfiClockHandlerNormalSucceed context primitive handler structs
+      functions baseAddress topAddress bytesInWord ma c mh)
+    (hbudget : max (progSize body) (progSize handlerProgram) + 1 ≤ callBudget)
+    (hlookup : lookupPanFunction function functions = some (parameters, body))
+    (hclock : clock ≠ 0)
+    (hargs : ∀ (locals globals : VarName → Option (PanValue α))
+      (memory : α → Option (PanValue α)),
+      ∃ (values : List (PanValue α)) (calleeLocals : VarName → Option (PanValue α)),
+        evalPanValueExps structs locals globals memory baseAddress topAddress
+          bytesInWord arguments (memoryAccess := ma) = some values ∧
+        bindPanValueParameters parameters values = some calleeLocals ∧
+        panValueParametersValid structs c function values = true)
+    (hcaught : caught = exception)
+    (hhandlerValid : ∀ (locals : VarName → Option (PanValue α)) (value : PanValue α),
+      panValueExceptionValid structs c exception value = true →
+      panValuePayloadWithinLimit structs value = true →
+      panValueHandlerValid structs c locals handlerVariable value = true) :
+    PanValueFfiClockNormalAdequateProgAt clock context primitive handler structs
+      functions baseAddress topAddress bytesInWord callBudget ma c mh
+      (.call (some (none, some (caught, handlerVariable, handlerProgram))) function
+        arguments) := by
+  intro locals globals memory ffi
+  obtain ⟨values, calleeLocals, hargsEval, hbind, hparams⟩ := hargs locals globals memory
+  exact evalPanValueFfiClockProg_call_caught_handler_normal_of_functions_progCallFuel
+    context primitive handler structs functions baseAddress topAddress bytesInWord
+    callBudget locals globals memory ffi clock function arguments parameters body values
+    calleeLocals caught exception handlerVariable handlerProgram ma c mh hfunctions
+    hhandler hbudget hargsEval hlookup hbind hclock hparams hcaught
+    (hhandlerValid locals)
+
+theorem PanValueFfiClockNormalAdequateProgAt_seq_of_adequate
+    (clock : Nat)
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (ma : Option (PanValueMemoryAccess α))
+    (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (first second : Prog α)
+    (hfirst : PanValueFfiClockNormalAdequateProgAt clock context primitive handler
+      structs functions baseAddress topAddress bytesInWord callBudget ma c mh first)
+    (hsecond : PanValueFfiClockNormalAdequateProg context primitive handler structs
+      functions baseAddress topAddress bytesInWord callBudget ma c mh second) :
+    PanValueFfiClockNormalAdequateProgAt clock context primitive handler structs
+      functions baseAddress topAddress bytesInWord callBudget ma c mh
+      (.seq first second) := by
+  intro locals globals memory ffi
+  obtain ⟨midLocals, midGlobals, midMemory, midFfi, midClock, hfirstEval⟩ :=
+    hfirst locals globals memory ffi
+  obtain ⟨finalLocals, finalGlobals, finalMemory, finalFfi, finalClock, hsecondEval⟩ :=
+    hsecond midLocals midGlobals midMemory midFfi midClock
+  exact ⟨finalLocals, finalGlobals, finalMemory, finalFfi, finalClock,
+    evalPanValueFfiClockProg_seq_of_first_normal_progCallFuel context primitive
+      handler structs functions baseAddress topAddress bytesInWord callBudget first second
+      locals globals memory ffi clock ma c mh midLocals midGlobals midMemory midFfi
+      midClock (.control (.normal finalLocals finalGlobals finalMemory finalFfi)) finalClock
+      hfirstEval hsecondEval⟩
+
 end Flapjack

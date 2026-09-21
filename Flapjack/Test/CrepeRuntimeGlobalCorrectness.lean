@@ -97,7 +97,14 @@ example :
     ((runtimeTypedLoopGlobalState.store runtimeTypedKey 4 17).toLoopState
         runtimeTypedKey).globals 36 = some 17 := by
   rw [LoopTypedGlobalState.store_toLoopState_load]
-  simp [runtimeTypedKey, storeCrepTypedGlobal,
+  simp [runtimeTypedLoopGlobalState, runtimeTypedKey, storeCrepTypedGlobal,
+    evalCrepTypedLoad, storeCrepGlobal, crepGlobalKeyOfNat]
+
+example :
+    (runtimeTypedLoopGlobalState.store runtimeTypedKey 4 17).evalExp
+        runtimeTypedKey (.lookup 36) = some 17 := by
+  rw [LoopTypedGlobalState.store_evalExp_lookup]
+  simp [runtimeTypedLoopGlobalState, runtimeTypedKey, storeCrepTypedGlobal,
     evalCrepTypedLoad, storeCrepGlobal, crepGlobalKeyOfNat]
 
 def runtimeTypedAliasedLoopStoreState : LoopState Nat :=

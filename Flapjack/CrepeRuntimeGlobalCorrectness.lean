@@ -104,6 +104,22 @@ theorem store_toLoopState_load [BEq α]
         (storeCrepTypedGlobal key state.globals address value) loadAddress := by
   rfl
 
+/-! The executable Loop expression evaluator can consume the typed store
+    directly through its lookup constructor.  This is the evaluator-facing
+    form of `store_toLoopState_load`; unlike raw `updateLoopGlobal`, the
+    typed store preserves Cake's fixed-width key and therefore needs no
+    injectivity premise. -/
+theorem store_evalExp_lookup [BEq α] [OfNat α 0] [OfNat α 1]
+    [Add α] [Mul α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [PanCmp α]
+    (state : LoopTypedGlobalState α)
+    (key : α → CrepGlobalAddress) (address value loadAddress : α) :
+    (state.store key address value).evalExp key (.lookup loadAddress) =
+      evalCrepTypedLoad key
+        (storeCrepTypedGlobal key state.globals address value) loadAddress := by
+  rw [LoopTypedGlobalState.evalExp_lookup]
+  rfl
+
 end LoopTypedGlobalState
 
 theorem loopStateWithTypedGlobalStore_relation [BEq α]

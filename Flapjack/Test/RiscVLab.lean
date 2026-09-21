@@ -232,6 +232,14 @@ example :
       some [.divU 4 5 6] := by
   decide
 
+/- Cake's riscv_targetScript.sml maps direct `LongDiv` to
+   riscv_encode_fail; the Lab arithmetic boundary preserves that rejection. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.longDiv 4 5 6 7 8))) [] 0]⟩ =
+      none := by
+  decide
+
 example :
     compileStackProgramToRiscV (width := 64) { services := [] }
       stackRemoveRiscVConfig 2 3

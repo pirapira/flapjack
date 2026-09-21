@@ -178,4 +178,35 @@ def lookupInfoMapGuard : Bool :=
 #eval lookupInfoMapGuard
 #guard lookupInfoMapGuard
 
+
+/-! Cake `pan_structs$compile_shape` / `compile_shapes` and
+    `is_wf_shape_compile_shape` (`pan_structsProofScript.sml:298`). -/
+
+def shapeContext : StructContext :=
+  [("S", { fields := [("f1", Shape.one), ("f2", Shape.named "T")], size := 2 }),
+   ("T", { fields := [("g", Shape.one)], size := 1 })]
+
+def isCompiledS : Shape -> Bool
+  | .comb [.one, .comb [.one]] => true
+  | _ => false
+
+theorem compileShape_isWfShape_fixture :
+    isWfShape shapeContext (compileShape shapeContext (.named "S")) = true :=
+  compileShape_isWfShape shapeContext (.named "S")
+
+theorem compileShapes_eq_map_fixture :
+    compileShapes shapeContext [Shape.one, Shape.named "S"] =
+      [Shape.one, Shape.named "S"].map (compileShape shapeContext) :=
+  compileShapes_eq_map shapeContext [Shape.one, Shape.named "S"]
+
+def compileShapeGuard : Bool :=
+  isCompiledS (compileShape shapeContext (.named "S")) &&
+  isWfShape shapeContext (compileShape shapeContext (.named "S")) &&
+  (match compileShape shapeContext (.named "Unknown") with
+   | .one => true
+   | _ => false)
+
+#eval compileShapeGuard
+#guard compileShapeGuard
+
 end Flapjack.Test.PanStructsAfindiParity

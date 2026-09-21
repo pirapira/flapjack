@@ -292,7 +292,23 @@ example :
       some [
         .srli 31 5 (BitVec.ofNat 64 3),
         .slli 4 5 (BitVec.ofNat 64 61),
-        .or 4 4 31] := by
+      .or 4 4 31] := by
+  decide
+
+/-! Cake's `riscv_ast (Inst (Mem mop r1 (Addr r2 a)))` supports every
+    `WordMemOp`, including the narrow and unsigned-width operations.  The
+    compatibility `stackMem` Lab constructors must preserve those target
+    encodings instead of silently returning `none`. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMem .load8 4 5 7) [] 0]⟩ =
+      some [.loadByteOffset 4 5 (BitVec.ofNat 64 7)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMemSub .store32 4 5 7) [] 0]⟩ =
+      some [.store32Offset 4 5 (0 - BitVec.ofNat 64 7)] := by
   decide
 
 /-! GH #1093 (bead flapjack-lhj): end-to-end regression for the `labFlatten`

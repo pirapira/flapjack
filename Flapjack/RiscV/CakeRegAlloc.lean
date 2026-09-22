@@ -1008,6 +1008,12 @@ def cakeUnspill (k : Nat) (state : CakeRaState) : CakeRaState :=
   let state := cakeAddSimpWl simp state
   cakeAddFreezeWl freeze state
 
+/- Cake's unspill (reg_allocScript.sml:378-391) only partitions and revives
+   worklists.  Its stack carrier is observationally unchanged. -/
+theorem cakeUnspill_stack_eq (k : Nat) (state : CakeRaState) :
+    (cakeUnspill k state).stack = state.stack := by
+  simp [cakeUnspill, cakeReviveMoves, cakeAddSimpWl, cakeAddFreezeWl]
+
 /-- `do_simplify` (`reg_allocScript.sml:400-421`). -/
 def cakeDoSimplify (k : Nat) (state : CakeRaState) : Bool × CakeRaState :=
   match state.simpWl with

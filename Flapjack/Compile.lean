@@ -25,6 +25,22 @@ def allocatedNames (context : CompileContext α) (shape : Shape) : List Nat :=
 def freshNames (context : CompileContext α) (count start : Nat) : List Nat :=
   (List.range count).map (fun offset => context.maxVar + start + offset)
 
+/-- Every slot allocated by `allocatedNames` lies strictly above the context's
+    current `maxVar`.  This is the bound Cake's `not_mem_context_assigned_mem_gt`
+    uses to rule out collisions between fresh temporaries and live variables. -/
+theorem allocatedNames_gt (context : CompileContext α) (shape : Shape) {slot : Nat}
+    (hmem : slot ∈ allocatedNames context shape) : context.maxVar < slot := by
+  obtain ⟨offset, _hoffset, rfl⟩ := List.mem_map.mp hmem
+  omega
+
+/-- Every slot allocated by `freshNames` lies strictly above the context's
+    current `maxVar`, provided the fresh window starts above zero (Cake always
+    calls it with `start ≥ 1`). -/
+theorem freshNames_gt (context : CompileContext α) (count start : Nat) (hstart : 0 < start)
+    {slot : Nat} (hmem : slot ∈ freshNames context count start) : context.maxVar < slot := by
+  obtain ⟨offset, _hoffset, rfl⟩ := List.mem_map.mp hmem
+  omega
+
 /-! Cake's ExtCall lowering chooses its temporary base from the largest
     variable occurring in all four compiled expressions, rather than from the
     context's cached `vmax`.  `ShMemStore` chooses its temporary from the

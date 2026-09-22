@@ -692,6 +692,41 @@ theorem crepAssignedFreeVars_seq_assignRet_compileProg [BEq α] [OfNat α 0] [Ad
       handlerNames ++ crepAssignedFreeVars (compileProg context handlerProgram) := by
   simp [crepAssignedFreeVars, crepAssignedFreeVars_assignRet]
 
+/-- Looking up the freshly bound name after a context extension (`|+` update
+    self case, `finite_mapTheory.FLOOKUP_UPDATE`). -/
+theorem lookupInfo_cons_self [BEq String] [LawfulBEq String] (name : String)
+    (value : α) (entries : InfoMap α) :
+    lookupInfo name ((name, value) :: entries) = some value := by
+  simp [lookupInfo]
+
+/-- Looking up a different name after a context extension is unchanged (`|+`
+    update other case, `finite_mapTheory.FLOOKUP_UPDATE`). -/
+theorem lookupInfo_cons_ne [BEq String] (key name : String) (value : α)
+    (entries : InfoMap α) (h : (name == key) = false) :
+    lookupInfo key ((name, value) :: entries) = lookupInfo key entries := by
+  simp [lookupInfo, h]
+
+/-- Extending a compilation context with a declaration whose slot names all
+    lie strictly above the current maximum introduces no context slots at or
+    below that maximum.  This is the transport used by the recursive cases of
+    the assigned-memory bound: when a slot variable is already bounded by
+    `context.maxVar`, a slot in the extended context is a slot in the original
+    one, because the fresh declaration's names all exceed the maximum. -/
+theorem crepContextSlot_cons_of_le [BEq String] (context : CompileContext α)
+    (name : String) (shape : Shape) (names : List Nat)
+    (hnames : ∀ y ∈ names, context.maxVar < y) {x : Nat} (hx : x ≤ context.maxVar)
+    (h : CrepContextSlot
+      { context with vars := (name, (shape, names)) :: context.vars } x) :
+    CrepContextSlot context x := by
+  obtain ⟨n, sh, slots, hlookup, hmem⟩ := h
+  simp only [lookupInfo] at hlookup
+  split at hlookup
+  · have hpair : (shape, names) = (sh, slots) := Option.some.inj hlookup
+    have hslots : slots = names := (congrArg Prod.snd hpair).symm
+    rw [hslots] at hmem
+    exact absurd (hnames x hmem) (by omega)
+  · exact ⟨n, sh, slots, hlookup, hmem⟩
+
 /-- Membership of a compiled nested declaration body's free variables in the
     free variables of the body alone (the declared names only remove entries). -/
 theorem mem_crepAssignedFreeVars_nestedDecs {α : Type} (names : List Nat)
@@ -701,5 +736,170 @@ theorem mem_crepAssignedFreeVars_nestedDecs {α : Type} (names : List Nat)
     x ∈ crepAssignedFreeVars body := by
   rw [crepAssignedFreeVars_nestedDecs_append names values body h] at hmem
   exact (List.mem_filter.mp hmem).1
+
+/-! Full structural counterpart of Cake's
+    `not_mem_context_assigned_mem_gt` (`pan_to_crepProofScript.sml:1252`).
+    The context maximum and slot-map hypotheses are threaded through the
+    declaration constructors; all expression temporaries are hidden by the
+    corresponding `nestedDecs` equations. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_bound
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (program : Prog α) (x : Nat)
+    (hmax : panValueCtxtMax context.maxVar context.vars)
+    (hslot : panValueSlotBound x context.vars)
+    (hx : x ≤ context.maxVar) :
+    x ∉ crepAssignedFreeVars (compileProg context program) := by
+  refine (prog_sizeOf_induction (motive := fun program =>
+    ∀ (context : CompileContext α) (x : Nat),
+      panValueCtxtMax context.maxVar context.vars →
+      panValueSlotBound x context.vars →
+      x ≤ context.maxVar →
+      x ∉ crepAssignedFreeVars (compileProg context program))
+    (step := ?_) program) context x hmax hslot hx
+  intro program ih context x hmax hslot hx
+  cases program with
+  | skip => simp [compileProg, crepAssignedFreeVars]
+  | dec name declaredShape value body =>
+      cases hcompile : compileExp context value with
+      | mk expressions valueShape =>
+          simp only [compileProg, hcompile]
+          by_cases hlength : (allocatedNames context valueShape).length = expressions.length
+          · rw [if_pos hlength]
+            have hmaxAtNew : panValueCtxtMax
+                (context.maxVar + Shape.shapeSize valueShape) context.vars := by
+              refine ⟨by omega, ?_⟩
+              intro oldName oldShape oldSlots hlookup slot hmem
+              have hle := hmax.2 oldName oldShape oldSlots hlookup slot hmem
+              omega
+            have hmaxNext : panValueCtxtMax
+                (context.maxVar + Shape.shapeSize valueShape)
+                ((name, (valueShape, allocatedNames context valueShape)) :: context.vars) :=
+              panValueCtxtMax_cons_of _ _ _ _ _ hmaxAtNew (by
+                intro slot hmem
+                exact allocatedNames_slot_le context valueShape slot hmem)
+            have hslotNext : panValueSlotBound x
+                ((name, (valueShape, allocatedNames context valueShape)) :: context.vars) :=
+              panValueSlotBound_cons_of x name valueShape
+                (allocatedNames context valueShape) context.vars hslot
+                (not_mem_allocatedNames context valueShape hx)
+            have hxNext : x ≤ context.maxVar + Shape.shapeSize valueShape := by omega
+            have hbody := ih body (by decreasing_trivial)
+              { context with
+                vars := (name, (valueShape, allocatedNames context valueShape)) :: context.vars
+                maxVar := context.maxVar + Shape.shapeSize valueShape }
+              x hmaxNext hslotNext hxNext
+            apply not_mem_crepAssignedFreeVars_nestedDecs
+            · simpa [allocatedNames_length] using hlength
+            · exact hbody
+          · rw [if_neg hlength]
+            simp [crepAssignedFreeVars]
+  | assign kind name value =>
+      cases kind with
+      | global => simp [compileProg, crepAssignedFreeVars]
+      | «local» =>
+          apply not_mem_crepAssignedFreeVars_compileProg_assign_local context name value x
+          intro shape slots hlookup
+          exact hslot name shape slots hlookup
+  | primitive name operator arguments =>
+      apply not_mem_crepAssignedFreeVars_compileProg_primitive
+        context name operator arguments x
+      intro shape slots hlookup
+      exact hslot name shape slots hlookup
+  | store address value =>
+      exact not_mem_crepAssignedFreeVars_compileProg_store context address value x
+  | store32 address value =>
+      exact not_mem_crepAssignedFreeVars_compileProg_store32 context address value x
+  | storeByte address value =>
+      exact not_mem_crepAssignedFreeVars_compileProg_storeByte context address value x
+  | seq first second =>
+      apply not_mem_crepAssignedFreeVars_compileProg_seq context first second x
+      · exact ih first (by decreasing_trivial) context x hmax hslot hx
+      · exact ih second (by decreasing_trivial) context x hmax hslot hx
+  | ite condition thenBranch elseBranch =>
+      apply not_mem_crepAssignedFreeVars_compileProg_ite context condition thenBranch elseBranch x
+      · exact ih thenBranch (by decreasing_trivial) context x hmax hslot hx
+      · exact ih elseBranch (by decreasing_trivial) context x hmax hslot hx
+  | «while» condition body =>
+      apply not_mem_crepAssignedFreeVars_compileProg_while context condition body x
+      exact ih body (by decreasing_trivial) context x hmax hslot hx
+  | «break» => exact not_mem_crepAssignedFreeVars_compileProg_break context x
+  | «continue» => exact not_mem_crepAssignedFreeVars_compileProg_continue context x
+  | call info function arguments =>
+      cases info with
+      | none => simp [compileProg, crepAssignedFreeVars]
+      | some info =>
+          obtain ⟨destination, handler⟩ := info
+          cases handler with
+          | none =>
+              apply not_mem_crepAssignedFreeVars_compileProg_call_no_handler
+                context function arguments destination x hx
+              intro name shape slots hlookup
+              exact hslot name shape slots hlookup
+          | some handlerInfo =>
+              obtain ⟨exception, handlerVar, handlerProgram⟩ := handlerInfo
+              cases hlookup : lookupInfo exception context.exceptions with
+              | none =>
+                  simpa [compileProg, hlookup] using
+                    (not_mem_crepAssignedFreeVars_compileProg_call_no_handler
+                      context function arguments destination x hx (by
+                        intro name shape slots hlookup
+                        exact hslot name shape slots hlookup))
+              | some code =>
+                  apply not_mem_crepAssignedFreeVars_compileProg_call_known_handler
+                    context function arguments destination exception handlerVar
+                    handlerProgram code x hx hlookup
+                    (ih handlerProgram (by decreasing_trivial) context x hmax hslot hx)
+                  intro name shape slots hlookup
+                  exact hslot name shape slots hlookup
+  | decCall name shape function arguments body =>
+      have hmaxAtNew : panValueCtxtMax
+          (context.maxVar + Shape.shapeSize shape) context.vars := by
+        refine ⟨by omega, ?_⟩
+        intro oldName oldShape oldSlots hlookup slot hmem
+        have hle := hmax.2 oldName oldShape oldSlots hlookup slot hmem
+        omega
+      have hmaxNext : panValueCtxtMax
+          (context.maxVar + Shape.shapeSize shape)
+          ((name, (shape, allocatedNames context shape)) :: context.vars) :=
+        panValueCtxtMax_cons_of _ _ _ _ _ hmaxAtNew (by
+          intro slot hmem
+          exact allocatedNames_slot_le context shape slot hmem)
+      have hslotNext : panValueSlotBound x
+          ((name, (shape, allocatedNames context shape)) :: context.vars) :=
+        panValueSlotBound_cons_of x name shape (allocatedNames context shape)
+          context.vars hslot (not_mem_allocatedNames context shape hx)
+      have hxNext : x ≤ context.maxVar + Shape.shapeSize shape := by omega
+      have hbody := ih body (by decreasing_trivial)
+        { context with
+          vars := (name, (shape, allocatedNames context shape)) :: context.vars
+          maxVar := context.maxVar + Shape.shapeSize shape }
+        x hmaxNext hslotNext hxNext
+      simp only [compileProg]
+      apply not_mem_crepAssignedFreeVars_nestedDecs
+      · simp
+      · simp only [crepAssignedFreeVars, List.mem_append]
+        intro h
+        rcases h with h | h
+        · exact not_mem_allocatedNames context shape hx h
+        · exact hbody h
+  | extCall function configuration configurationLength array arrayLength =>
+      exact not_mem_crepAssignedFreeVars_compileProg_extCall context function
+        configuration configurationLength array arrayLength x
+  | raise exception value =>
+      exact not_mem_crepAssignedFreeVars_compileProg_raise context exception value x
+  | «return» value =>
+      exact not_mem_crepAssignedFreeVars_compileProg_return context value x
+  | shMemLoad size kind name address =>
+      cases kind with
+      | global => simp [compileProg, crepAssignedFreeVars]
+      | «local» =>
+          apply not_mem_crepAssignedFreeVars_compileProg_shMemLoad_local
+            context size name address x
+          intro shape slots hlookup
+          exact hslot name shape slots hlookup
+  | shMemStore size address value =>
+      exact not_mem_crepAssignedFreeVars_compileProg_shMemStore context size address value x
+  | tick => exact not_mem_crepAssignedFreeVars_compileProg_tick context x
+  | annot tag text => exact not_mem_crepAssignedFreeVars_compileProg_annot context tag text x
 
 end Flapjack

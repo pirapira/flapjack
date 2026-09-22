@@ -496,6 +496,25 @@ theorem comp_raise_correct
   · simp [evalLoopProg, hvalue]
   · simp [labelsIn, lookup]
 
+theorem comp_break_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (environment : LocationEnv) (state : LoopState α) (label : Nat)
+    (henvironment : labelsIn environment state.locals) :
+    evalLoopProg 1 state
+        (comp environment (.break label : LoopProg α)).1 =
+        some (.broke state label) ∧
+      labelsIn (comp environment (.break label : LoopProg α)).2 state.locals := by
+  have hcompiled :
+      comp environment (.break label : LoopProg α) = (.break label, environment) := by
+    simp [comp]
+  rw [hcompiled]
+  constructor
+  · exact evalLoopProg_break state label
+  · exact henvironment
+
 theorem lookup_of_listDelete
     (destinations : List Nat) (environment : LocationEnv)
     (name location : Nat)

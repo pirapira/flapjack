@@ -1008,6 +1008,12 @@ def cakeUnspill (k : Nat) (state : CakeRaState) : CakeRaState :=
   let state := cakeAddSimpWl simp state
   cakeAddFreezeWl freeze state
 
+/- Cake's unspill (reg_allocScript.sml:378-391) only partitions and revives
+   worklists.  Its stack carrier is observationally unchanged. -/
+theorem cakeUnspill_stack_eq (k : Nat) (state : CakeRaState) :
+    (cakeUnspill k state).stack = state.stack := by
+  simp [cakeUnspill, cakeReviveMoves, cakeAddSimpWl, cakeAddFreezeWl]
+
 /-- `do_simplify` (`reg_allocScript.sml:400-421`). -/
 def cakeDoSimplify (k : Nat) (state : CakeRaState) : Bool × CakeRaState :=
   match state.simpWl with
@@ -1016,6 +1022,64 @@ def cakeDoSimplify (k : Nat) (state : CakeRaState) : Bool × CakeRaState :=
       let state := state.simpWl.foldl (fun s x => cakeDecDegree x s) state
       let state := state.simpWl.foldl (fun s x => cakePushStack x s) state
       (true, cakeUnspill k { state with simpWl := [] })
+
+/- Cake do_simplify pushes every simplify-worklist node before unspill;
+   unspill only rearranges worklists and leaves the built stack unchanged. -/
+theorem cakeDoSimplify_stack_eq
+    (k : Nat) (state : CakeRaState) (items : List Nat)
+    (hsimp : state.simpWl = items) (hitems : items ≠ []) :
+    (cakeDoSimplify k state).2.stack = items.reverse ++ state.stack := by
+  have hdecDegStack : ∀ (s : CakeRaState) (xs : List Nat),
+      (xs.foldl (fun s x => cakeDecDeg x s) s).stack = s.stack := by
+    intro s xs
+    induction xs generalizing s with
+    | nil => rfl
+    | cons x xs ih =>
+        simp only [List.foldl]
+        rw [ih]
+        simp [cakeDecDeg]
+  have hdecDegSimp : ∀ (s : CakeRaState) (xs : List Nat),
+      (xs.foldl (fun s x => cakeDecDeg x s) s).simpWl = s.simpWl := by
+    intro s xs
+    induction xs generalizing s with
+    | nil => rfl
+    | cons x xs ih =>
+        simp only [List.foldl]
+        rw [ih]
+        simp [cakeDecDeg]
+  have hdec : ∀ (s : CakeRaState) (xs : List Nat),
+      (xs.foldl (fun s x => cakeDecDegree x s) s).stack = s.stack := by
+    intro s xs
+    induction xs generalizing s with
+    | nil => rfl
+    | cons x xs ih =>
+        simp only [List.foldl]
+        rw [ih]
+        by_cases hlt : x < s.dim
+        · simp [cakeDecDegree, hlt, hdecDegStack]
+        · simp [cakeDecDegree, hlt]
+  have hdecSimp : ∀ (s : CakeRaState) (xs : List Nat),
+      (xs.foldl (fun s x => cakeDecDegree x s) s).simpWl = s.simpWl := by
+    intro s xs
+    induction xs generalizing s with
+    | nil => rfl
+    | cons x xs ih =>
+        simp only [List.foldl]
+        rw [ih]
+        by_cases hlt : x < s.dim
+        · simp [cakeDecDegree, hlt, hdecDegSimp]
+        · simp [cakeDecDegree, hlt]
+  have hpush : ∀ (s : CakeRaState) (xs : List Nat),
+      (xs.foldl (fun s x => cakePushStack x s) s).stack = xs.reverse ++ s.stack := by
+    intro s xs
+    induction xs generalizing s with
+    | nil => simp
+    | cons x xs ih =>
+        simp only [List.foldl]
+        rw [ih]
+        simp [cakePushStack, List.reverse_cons, List.append_assoc]
+  simp [cakeDoSimplify, hsimp, hdec, hdecSimp, hpush, cakeUnspill,
+    cakeReviveMoves, cakeAddSimpWl, cakeAddFreezeWl]
 
 /-- `inc_deg` (`reg_allocScript.sml:424-429`). -/
 def cakeIncDeg (n d : Nat) (state : CakeRaState) : CakeRaState :=
@@ -1063,6 +1127,30 @@ def cakeDoCoalesceReal (x y : Nat) (case1 case2 : List Nat)
     adjSets := state.adjSets.map (fun adj => cakeListInsertEdgeSet x case2 adj) }
   let state := case1.foldl (fun s v => cakeDecDeg v s) state
   cakePushStack y state
+
+/- Cake's do_coalesce_real (reg_allocScript.sml:458-471) performs all
+   adjacency and degree updates before pushing the coalesced node y. -/
+theorem cakeDoCoalesceReal_selected_stack_lt_dim
+    (x y : Nat) (case1 case2 : List Nat) (state : CakeRaState)
+    (hy : y < state.dim) :
+    ∃ selected, selected < state.dim ∧
+      (cakeDoCoalesceReal x y case1 case2 state).stack = selected :: state.stack := by
+  have hdecDeg : ∀ (s : CakeRaState) (xs : List Nat),
+      (xs.foldl (fun s v => cakeDecDeg v s) s).stack = s.stack := by
+    intro s xs
+    induction xs generalizing s with
+    | nil => rfl
+    | cons v xs ih =>
+        simp only [List.foldl]
+        rw [ih]
+        simp [cakeDecDeg]
+  refine ⟨y, hy, ?_⟩
+  let coalescedState := { state with coalesced := state.coalesced.set y x }
+  by_cases hfixed : !cakeIsFixed coalescedState x
+  · simp [cakeDoCoalesceReal, coalescedState, hfixed, hdecDeg,
+      cakeIncDeg, cakePushStack]
+  · simp [cakeDoCoalesceReal, coalescedState, hfixed, hdecDeg,
+      cakePushStack]
 
 /-- `coalesce_parent` (`reg_allocScript.sml:592-612`) with path
     compression. -/
@@ -1167,6 +1255,28 @@ def cakeDoFreeze (k : Nat) (state : CakeRaState) : Bool × CakeRaState :=
   | x :: xs =>
       let state := cakePushStack x (cakeDecDegree x state)
       (true, cakeUnspill k { state with freezeWl := xs })
+
+/- Cake's do_freeze (reg_allocScript.sml:749-764) pushes the head of the
+   freeze worklist before unspill.  Pin both the selected-node bound and the
+   resulting newest-first stack carrier. -/
+theorem cakeDoFreeze_selected_stack_lt_dim
+    (k : Nat) (state : CakeRaState) (item : Nat) (rest : List Nat)
+    (hfreeze : state.freezeWl = item :: rest)
+    (hitem : item < state.dim) :
+    ∃ selected, selected < state.dim ∧
+      (cakeDoFreeze k state).2.stack = selected :: state.stack := by
+  have hdecDeg : ∀ (s : CakeRaState) (xs : List Nat),
+      (xs.foldl (fun s x => cakeDecDeg x s) s).stack = s.stack := by
+    intro s xs
+    induction xs generalizing s with
+    | nil => rfl
+    | cons x xs ih =>
+        simp only [List.foldl]
+        rw [ih]
+        simp [cakeDecDeg]
+  refine ⟨item, hitem, ?_⟩
+  simp [cakeDoFreeze, hfreeze, cakePushStack, cakeDecDegree, hitem,
+    hdecDeg, cakeUnspill, cakeReviveMoves, cakeAddSimpWl, cakeAddFreezeWl]
 
 /-- `safe_div` (`reg_allocScript.sml:771`). -/
 def cakeSafeDiv (x v : Nat) : Nat := if v = 0 then 0 else x / v
@@ -1677,6 +1787,31 @@ theorem cakeColourLocation_stack_slot_lt_frame
   refine ⟨f - 1 - (register - k),
     cakeColourLocation_stack_boundary k f register hregister, ?_⟩
   omega
+
+/- Cake's `format_var` keeps physical-register colours and frame-slot colours
+   distinct, and the frame offset is injective on the allocated range.  This
+   packages the location fact needed by the RISC-V allocator correctness
+   boundary: two distinct even Cake colours below the register-plus-frame
+   bound cannot collapse to the same Word-to-Stack location. -/
+theorem cakeColourLocation_even_injective
+    (k f register₁ register₂ : Nat)
+    (h₁ : register₁ < k + f) (h₂ : register₂ < k + f)
+    (h : cakeColourLocation k f (2 * register₁) =
+      cakeColourLocation k f (2 * register₂)) :
+    register₁ = register₂ := by
+  by_cases h₁k : register₁ < k
+  · by_cases h₂k : register₂ < k
+    · simpa [cakeColourLocation, h₁k, h₂k] using h
+    · have h₂k' : k ≤ register₂ := Nat.le_of_not_gt h₂k
+      simp [cakeColourLocation, h₁k, h₂k] at h
+  · have h₁k' : k ≤ register₁ := Nat.le_of_not_gt h₁k
+    by_cases h₂k : register₂ < k
+    · simp [cakeColourLocation, h₁k, h₂k] at h
+    · have h₂k' : k ≤ register₂ := Nat.le_of_not_gt h₂k
+      simp [cakeColourLocation, h₁k, h₂k] at h
+      have h₁slot : register₁ - k ≤ f - 1 := by omega
+      have h₂slot : register₂ - k ≤ f - 1 := by omega
+      omega
 
 def cakeColourFrameSlots (k : Nat) (parameters : List Nat)
     (program : WordProg α) (colouring : NatInfoMap Nat) : Nat × Nat :=

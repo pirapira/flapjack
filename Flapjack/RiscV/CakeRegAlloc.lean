@@ -1300,6 +1300,45 @@ def cakeDoSpill (scost : Option (CakeNodeMap Nat)) (k : Nat)
       let state := cakePushStack y (cakeDecDegree y state)
       (true, cakeUnspill k { state with spillWl := ys })
 
+/- Both Cake spill-selection paths push the selected bounded allocator node
+   onto the stack before `unspill` rearranges only the worklists. -/
+theorem cakeDoSpill_selected_stack_lt_dim
+    (scost : Option (CakeNodeMap Nat)) (k : Nat) (state : CakeRaState)
+    (item : Nat) (rest : List Nat)
+    (hspill : state.spillWl = item :: rest)
+    (hitem : item < state.dim)
+    (hrest : ∀ x ∈ rest, x < state.dim) :
+    ∃ selected, selected < state.dim ∧
+      (cakeDoSpill scost k state).2.stack = selected :: state.stack := by
+  have hfold : ∀ (s : CakeRaState) (xs : List Nat),
+      (xs.foldl (fun s v => cakeDecDeg v s) s).stack = s.stack := by
+    intro s xs
+    induction xs generalizing s with
+    | nil => rfl
+    | cons x xs ih =>
+        simp only [List.foldl]
+        rw [ih]
+        rfl
+  cases hcost : scost with
+  | none =>
+      have hbounds := cakeStExListMaxDeg_bounds state.degrees rest
+        state.dim item ((state.degrees.get item).getD 0) [] hrest
+        (by simp) hitem
+      refine ⟨(cakeStExListMaxDeg state.degrees rest state.dim item
+        ((state.degrees.get item).getD 0) []).1, hbounds.1, ?_⟩
+      simp [cakeDoSpill, hspill, cakePushStack, cakeDecDegree, hbounds.1, hfold,
+        cakeUnspill, cakeReviveMoves, cakeAddSimpWl, cakeAddFreezeWl]
+  | some costs =>
+      have hbounds := cakeStExListMinCost_bounds state.degrees costs rest
+        state.dim item
+        (cakeSafeDiv ((costs.get item).getD 0)
+          ((state.degrees.get item).getD 0)) [] hrest (by simp) hitem
+      refine ⟨(cakeStExListMinCost state.degrees costs rest state.dim item
+        (cakeSafeDiv ((costs.get item).getD 0)
+          ((state.degrees.get item).getD 0)) []).1, hbounds.1, ?_⟩
+      simp [cakeDoSpill, hspill, cakePushStack, cakeDecDegree, hbounds.1, hfold,
+        cakeUnspill, cakeReviveMoves, cakeAddSimpWl, cakeAddFreezeWl]
+
 /-- `do_step` (`reg_allocScript.sml:832-857`): the first successful
     transition wins. -/
 def cakeDoStep (scost : Option (CakeNodeMap Nat)) (k : Nat)

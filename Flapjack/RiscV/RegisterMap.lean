@@ -348,4 +348,22 @@ theorem readRegisterInternal_writeRegisterInternalNat_self {width : Nat}
   simp [readRegisterInternal, writeRegisterInternalNat, h,
     readRegister, writeRegister, hzero]
 
+/-- A Cake internal write leaves a distinct mapped register unchanged.  This
+    is the noninterference companion to the read-after-write theorem above and
+    is the register-map relation used by allocator correctness. -/
+theorem readRegisterInternal_writeRegisterInternalNat_other {width : Nat}
+    (state : State width) {source target : Nat}
+    {sourceRegister targetRegister : Fin 32} (value : Word width)
+    (hsource : labRegisterOfNat source = some sourceRegister)
+    (htarget : labRegisterOfNat target = some targetRegister)
+    (hne : targetRegister ≠ sourceRegister) :
+    readRegisterInternal
+        (writeRegisterInternalNat state source value) target =
+      readRegisterInternal state target := by
+  by_cases hsourceZero : sourceRegister = 0
+  · simp [readRegisterInternal, writeRegisterInternalNat, hsource, htarget,
+      readRegister, writeRegister, hsourceZero]
+  · simp [readRegisterInternal, writeRegisterInternalNat, hsource, htarget,
+      readRegister, writeRegister, hsourceZero, hne]
+
 end Flapjack.RiscV

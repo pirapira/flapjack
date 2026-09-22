@@ -165,6 +165,23 @@ theorem tick_compile_correct_fixture :
   subst source
   exact ⟨100, by simp [load32State]⟩
 
+theorem setGlobal_compile_correct_fixture :
+    evalLoopProg 1 load32State
+        (comp [(3, 2)] (.setGlobal 9 (.const 11) : LoopProg Nat)).1 =
+        some (.normal { load32State with
+          globals := updateLoopGlobal load32State.globals 9 11 }) ∧
+      labelsIn (comp [(3, 2)] (.setGlobal 9 (.const 11) : LoopProg Nat)).2
+        ({ load32State with
+          globals := updateLoopGlobal load32State.globals 9 11 }).locals := by
+  apply comp_setGlobal_correct
+  · simp [evalLoopExp]
+  · intro name source hlookup
+    have hpair : 3 = name ∧ 2 = source := by
+      simpa [lookup] using hlookup
+    have hsource : source = 2 := hpair.2.symm
+    subst source
+    exact ⟨100, by simp [load32State]⟩
+
 theorem primitive_labelsIn_fixture :
     (comp [(3, 2), (4, 3)] (.primitive [3] .addCarry [2, 3]) :
       LoopProg Nat × LocationEnv).1 = .primitive [3] .addCarry [2, 3] ∧
@@ -204,6 +221,7 @@ theorem primitive_labelsIn_fixture :
 #check comp_skip_correct
 #check comp_assign_var_correct
 #check comp_tick_correct
+#check comp_setGlobal_correct
 #check comp_primitive_labelsIn
 
 end Flapjack.Test.LoopCallCorrectness

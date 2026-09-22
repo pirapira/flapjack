@@ -395,6 +395,30 @@ theorem comp_tick_correct
   · exact evalLoopProg_tick state
   · simp [labelsIn, lookup]
 
+theorem comp_setGlobal_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (environment : LocationEnv) (state : LoopState α)
+    (address : α) (expression : LoopExp α) (value : α)
+    (hvalue : evalLoopExp state expression = some value)
+    (henvironment : labelsIn environment state.locals) :
+    evalLoopProg 1 state
+        (comp environment (.setGlobal address expression : LoopProg α)).1 =
+        some (.normal { state with
+          globals := updateLoopGlobal state.globals address value }) ∧
+      labelsIn (comp environment (.setGlobal address expression : LoopProg α)).2
+        ({ state with globals := updateLoopGlobal state.globals address value }).locals := by
+  have hcompiled :
+      comp environment (.setGlobal address expression : LoopProg α) =
+        (.setGlobal address expression, environment) := by
+    simp [comp]
+  rw [hcompiled]
+  constructor
+  · simp [evalLoopProg, hvalue]
+  · exact henvironment
+
 theorem lookup_of_listDelete
     (destinations : List Nat) (environment : LocationEnv)
     (name location : Nat)

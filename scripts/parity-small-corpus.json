@@ -1230,6 +1230,22 @@
       "tracked_beads": [
         "flapjack-pxn.8.5.14.1.5"
       ]
+    },
+    {
+      "path": "scripts/parity-difffuzz-findings/frame-occupancy/live1.pnk",
+      "source_reference": "Original-Cake live1 frame-occupancy witness: one retained struct field across a non-tail call requires two minimal continuation frames [4,4,4].",
+      "cake_sha256": "c1829c6958c08508a2ab59ffda36c0d48809e04afa54dc790ce8b6dbfbe376a6",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.5"
+      ]
+    },
+    {
+      "path": "scripts/parity-difffuzz-findings/frame-occupancy/live3.pnk",
+      "source_reference": "Original-Cake live3 frame-occupancy witness: three retained struct values across four non-tail continuations require exact sixteen-word frames [4,16,16,16,16].",
+      "cake_sha256": "712a26b9bf5f17fa9066468dfae8b9e052065499b397204bbeab824ac4404856",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.5"
+      ]
     }
   ]
 }

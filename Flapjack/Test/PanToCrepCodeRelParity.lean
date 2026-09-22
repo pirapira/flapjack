@@ -54,6 +54,24 @@ def compiledReturnGuard : Bool :=
   | .return [.var 0] => true
   | _ => false
 
+/-! The direct HOL `global_dest` probe in `compile_prog_probe.out` emits
+    `Call (SOME ([0; 1], NONE))`. `freeVarIds` omits the Global destination,
+    so this fixture guards the proof adapter's additional lookup projection.
+    `localisedProg` still excludes this source from `codeRel` itself. -/
+def globalDestinationProofContext : PanToCrepProofContext Nat :=
+  { vars := FUPDATE FEMPTY ("pair", (.comb [.one, .one], [0, 1]))
+    funcs := FUPDATE FEMPTY ("f", ([], .comb [.one, .one]))
+    eids := FEMPTY
+    vmax := 1 }
+
+def globalDestinationBody : Prog Nat :=
+  .call (some (some (.global, "pair"), none)) "f" []
+
+def compiledGlobalDestinationMatchesHolOracle : Bool :=
+  match compileCodeRelProg globalDestinationProofContext globalDestinationBody with
+  | .call (some ([0, 1], none)) "f" [] => true
+  | _ => false
+
 def compilerContext : CompileContext Nat :=
   compileCodeRelContext proofContext sourceBody
 
@@ -67,7 +85,9 @@ theorem parameterVariableProjection :
 
 theorem compilerContextVariables :
     compilerContext.vars = [("x", (.one, [0]))] := by
-  simp [compilerContext, compileCodeRelContext, sourceBodyFreeVariables,
+  have hcalls : callVarsUsedByProg sourceBody = [] := by
+    simp [sourceBody, callVarsUsedByProg]
+  simp [compilerContext, compileCodeRelContext, sourceBodyFreeVariables, hcalls,
     parameterVariableProjection]
 
 theorem compiledReturnMatchesHolOracle :
@@ -151,12 +171,14 @@ theorem rejectsUnlocalisedSource :
 #guard matchingTargetGuard
 #guard wrongBodyTargetGuard
 #guard compiledReturnGuard
+#guard compiledGlobalDestinationMatchesHolOracle
 
 def runChecks : IO Bool := do
   let checks := [
     ("HOL code_rel matching source and target entries", matchingTargetGuard),
     ("HOL code_rel wrong-body target fixture", wrongBodyTargetGuard),
-    ("HOL code_rel compiled parameter return", compiledReturnGuard)]
+    ("HOL code_rel compiled parameter return", compiledReturnGuard),
+    ("HOL global call destination adapter", compiledGlobalDestinationMatchesHolOracle)]
   for (name, passed) in checks do
     IO.println s!"{if passed then "PASS" else "FAIL"} {name}"
   pure (checks.all Prod.snd)

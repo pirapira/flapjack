@@ -123,9 +123,36 @@ def functionsUsedByProg : Prog α → List FunName
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial
 
+/-! Flapjack-specific projection support, not a port of HOL `free_var_ids`.
+    HOL's `free_var_ids` intentionally omits Global call destinations, but
+    `pan_to_crep$compile` looks up a call destination in `ctxt.vars` regardless
+    of its kind. Keep `freeVarIds` faithful and additionally retain every name
+    the executable call compiler queries, including handler payload names. -/
+def callVarsUsedByProg : Prog α → List VarName
+  | .dec _ _ _ body => callVarsUsedByProg body
+  | .seq first second => callVarsUsedByProg first ++ callVarsUsedByProg second
+  | .ite _ thenBranch elseBranch =>
+      callVarsUsedByProg thenBranch ++ callVarsUsedByProg elseBranch
+  | .while _ body => callVarsUsedByProg body
+  | .call info _ _ =>
+      match info with
+      | none => []
+      | some (destination, handler) =>
+          (match destination with
+           | none => []
+           | some (_, name) => [name]) ++
+          (match handler with
+           | none => []
+           | some (_, name, body) => name :: callVarsUsedByProg body)
+  | .decCall _ _ _ _ body => callVarsUsedByProg body
+  | _ => []
+termination_by program => sizeOf program
+decreasing_by all_goals decreasing_trivial
+
 def compileCodeRelContext [BEq String] [OfNat α 8] (context : PanToCrepProofContext α)
     (program : Prog α) : CompileContext α :=
-  { vars := projectFiniteMapToInfoMap (freeVarIds program) context.vars
+  { vars := projectFiniteMapToInfoMap
+      (freeVarIds program ++ callVarsUsedByProg program) context.vars
     functions := projectFiniteMapToInfoMap (functionsUsedByProg program) context.funcs
     exceptions := projectFiniteMapToInfoMap (expIds program) context.eids
     maxVar := context.vmax

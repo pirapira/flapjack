@@ -1941,6 +1941,75 @@ theorem PanValuePcSemanticClockEvidence.crossClockRaisedResultRelWithContextCode
     sourceMemory sourceException sourceValue targetState targetException hrel hlookup,
     hstate⟩
 
+/-! Consume Cake's complete arbitrary-Raise package at the cross-clock boundary.
+    Unlike the lookup-only adapter above, this theorem retains the explicit
+    flattened global-store and output-state evidence carried by
+    `panValuePcRaisedHraiseData`; evaluator, input-state, result, and exception
+    premises remain visible to the declaration induction. -/
+theorem PanValuePcSemanticClockEvidence.crossClockRaisedResultRelWithContextCode_of_hraiseData
+    {α σ : Type}
+    [BEq α] [OfNat α 0] [Add α]
+    {structs : StructContext} {context : CompileContext α}
+    {program : Prog α}
+    {sourceEvaluate : PanValuePcEvaluator α}
+    {targetEvaluate : CrepPcEvaluator α}
+    {codeRel : PanValuePcCodeRel α}
+    {excpRel : PanValuePcExceptionShapeRel α}
+    {exceptionRel : ExceptionId → PanValue α → α → Prop}
+    {exceptionCode : ExceptionId → Option α}
+    {globalsLookup : CrepState α → PanValue α → Option (List α)}
+    {panHooks : PanSemanticsHooks α σ}
+    {crepHooks : CrepSemanticsHooks α}
+    (hcorrect : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (sourceClock targetClock : Nat)
+    (sourceEvidence : PanValuePcSemanticClockEvidence structs context program
+      sourceClock sourceEvaluate targetEvaluate codeRel excpRel exceptionRel
+      exceptionCode globalsLookup panHooks crepHooks)
+    (targetEvidence : PanValuePcSemanticClockEvidence structs context program
+      targetClock sourceEvaluate targetEvaluate codeRel excpRel exceptionRel
+      exceptionCode globalsLookup panHooks crepHooks)
+    (inputCodeRel : codeRel context sourceEvidence.sourceInput.code
+      targetEvidence.targetInput.code)
+    (inputExcpRel : excpRel context sourceEvidence.sourceInput.eshapes
+      targetEvidence.targetInput.eshapes)
+    (inputStateRel : panValueCrepStateRelWithContext structs context
+      sourceEvidence.sourceInput.locals sourceEvidence.sourceInput.globals
+      sourceEvidence.sourceInput.memory targetEvidence.targetInput.state)
+    (outputCodeRel : codeRel context sourceEvidence.sourceExecution.code
+      targetEvidence.targetExecution.code)
+    (outputExcpRel : excpRel context sourceEvidence.sourceExecution.eshapes
+      targetEvidence.targetExecution.eshapes)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (sourceFfi : FfiState σ)
+    (sourceException : ExceptionId) (sourceValue : PanValue α)
+    (targetState : CrepState α) (targetException : α)
+    (hraiseData : panValuePcRaisedHraiseData exceptionCode globalsLookup
+      structs context exceptionRel sourceLocals sourceGlobals sourceMemory
+      sourceException sourceValue targetState targetException ∧
+      lookupInfo sourceException context.exceptions = some targetException)
+    (houtcome : sourceEvidence.outcome =
+      .control (.raised sourceLocals sourceGlobals sourceMemory sourceFfi
+        sourceException sourceValue))
+    (hresult : targetEvidence.result = .raised targetState targetException) :
+    panValuePcResultRelWithContextCode structs context exceptionRel exceptionCode
+      globalsLookup
+      (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+      (.raised targetState targetException) ∧
+    panValueCrepStateRelWithContext structs context sourceLocals sourceGlobals
+      sourceMemory targetState := by
+  rcases inputStateRel with ⟨hoverlap, hmax, hstateRel⟩
+  have hbase := PanValuePcSemanticClockEvidence.crossClockRaisedResultRel_withContext
+    hcorrect sourceClock targetClock sourceEvidence targetEvidence inputCodeRel
+    inputExcpRel hstateRel outputCodeRel outputExcpRel sourceLocals sourceGlobals
+    sourceMemory sourceFfi sourceException sourceValue targetState targetException
+    hoverlap hmax houtcome hresult
+  have hcontext := panValuePcResultRelWithContextCode_raised_of_rel_and_lookup
+    structs context exceptionRel exceptionCode globalsLookup sourceLocals sourceGlobals
+    sourceMemory sourceException sourceValue targetState targetException hbase.1
+    hraiseData.2
+  exact ⟨hcontext, ⟨hoverlap, hmax, hraiseData.1.1⟩⟩
+
 /-! The cross-clock normal-control branch of Cake's semantic induction.
     Normal results are forbidden observations, but unlike the generic
     forbidden wrapper this theorem exposes the concrete source/target states

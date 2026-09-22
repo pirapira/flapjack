@@ -113,10 +113,11 @@ theorem afindi_map_eq [DecidableEq α] (key : α) (f : α × β → α × γ)
       simp only [List.map_cons]
       rw [afindi_cons, afindi_cons, hhead, ih htail]
 
-/-! Executable equality-based adaptation of Cake `dropWhile_afindi`
-    (`cakeml/pancake/proofs/pan_structsProofScript.sml:334`). This still uses
-    Lean's Bool-valued `dropWhile` predicate, expressed by deciding HOL-style
-    inequality, so it is untagged. -/
+/-! Faithful API translation of Cake `dropWhile_afindi`
+    (`cakeml/pancake/proofs/pan_structsProofScript.sml:334`). HOL's logical
+    inequality predicate is expressed with `decide` for Lean's Bool-valued
+    `List.dropWhile`; HOL `DROP` translates to `List.drop`. -/
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "dropWhile_afindi"]
 theorem afindi_dropWhile [DecidableEq α] (key : α) (entries : List (α × β)) :
     entries.dropWhile (fun entry => decide (key ≠ entry.1)) =
       match afindi key entries with
@@ -135,10 +136,12 @@ theorem afindi_dropWhile [DecidableEq α] (key : α) (entries : List (α × β))
         | none => simp
         | some index => simp [List.drop_succ_cons]
 
-/-! Lean `List.lookup`/`getElem?` adaptation of Cake `ALOOKUP_eq_afindi`
-    (`cakeml/pancake/proofs/pan_structsProofScript.sml:405`). It uses the
-    `BEq` synthesized from `DecidableEq`, but remains untagged because its
-    statement is expressed through Lean's lookup and optional-index APIs. -/
+/-! Faithful API translation of Cake `ALOOKUP_eq_afindi`
+    (`cakeml/pancake/proofs/pan_structsProofScript.sml:405`). `List.lookup`
+    translates `ALOOKUP`; the optional indexed projection translates HOL's
+    `OPTION_MAP` of `SND ∘ EL`, with `afindi_less_length` ensuring successful
+    indices are in range. Its synthesized `BEq` comes from `DecidableEq`. -/
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "ALOOKUP_eq_afindi"]
 theorem afindi_lookup [DecidableEq α] (key : α) (entries : List (α × β)) :
     entries.lookup key =
       (afindi key entries).bind (fun index => (entries[index]?).map Prod.snd) := by

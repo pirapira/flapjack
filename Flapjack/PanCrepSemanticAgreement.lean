@@ -3238,6 +3238,116 @@ theorem panValuePcResultRelWithContextCode_of_pairwise_normalOrRaised_evidence
     (houtputCodeRel sourceClock targetClock) (houtputExcpRel sourceClock targetClock)
     (hbranch sourceClock targetClock)
 
+/-! Generalize the normal/raised result bridge to the clocked production
+    evaluator family.  Cake's top-level induction compares a source evaluator
+    fixed at one clock with a target evaluator fixed at another; this adapter
+    keeps that pairwise `pc_compile_correct` premise visible instead of
+    collapsing the family to one evaluator pair. -/
+theorem panValuePcResultRelWithContextCode_of_clocked_normalOrRaised_evidence
+    {α σ : Type}
+    [BEq α] [OfNat α 0] [Add α]
+    {structs : StructContext} {context : CompileContext α}
+    {program : Prog α}
+    (sourceEvaluate : Nat → PanValuePcEvaluator α)
+    (targetEvaluate : Nat → CrepPcEvaluator α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (panHooks : PanSemanticsHooks α σ)
+    (crepHooks : CrepSemanticsHooks α)
+    (hcorrect : ∀ (sourceClock targetClock : Nat),
+      PanValuePcCompileCorrectWithContextCode
+        (sourceEvaluate sourceClock) (targetEvaluate targetClock)
+        codeRel excpRel exceptionCode globalsLookup program)
+    (hevidence : ∀ (clock : Nat),
+      PanValuePcSemanticClockEvidence structs context program clock
+        (sourceEvaluate clock) (targetEvaluate clock) codeRel excpRel
+        exceptionRel exceptionCode globalsLookup panHooks crepHooks)
+    (hinputCodeRel : ∀ (sourceClock targetClock : Nat),
+      codeRel context (hevidence sourceClock).sourceInput.code
+        (hevidence targetClock).targetInput.code)
+    (hinputExcpRel : ∀ (sourceClock targetClock : Nat),
+      excpRel context (hevidence sourceClock).sourceInput.eshapes
+        (hevidence targetClock).targetInput.eshapes)
+    (hinputStateRel : ∀ (sourceClock targetClock : Nat),
+      panValueCrepStateRelWithContext structs context
+        (hevidence sourceClock).sourceInput.locals
+        (hevidence sourceClock).sourceInput.globals
+        (hevidence sourceClock).sourceInput.memory
+        (hevidence targetClock).targetInput.state)
+    (houtputCodeRel : ∀ (sourceClock targetClock : Nat),
+      codeRel context (hevidence sourceClock).sourceExecution.code
+        (hevidence targetClock).targetExecution.code)
+    (houtputExcpRel : ∀ (sourceClock targetClock : Nat),
+      excpRel context (hevidence sourceClock).sourceExecution.eshapes
+        (hevidence targetClock).targetExecution.eshapes)
+    (hbranch : ∀ (sourceClock targetClock : Nat),
+      (∃ sourceLocals sourceGlobals sourceMemory sourceFfi targetState,
+        (hevidence sourceClock).outcome =
+          .control (.normal sourceLocals sourceGlobals sourceMemory sourceFfi) ∧
+        (hevidence targetClock).result = .normal targetState) ∨
+      (∃ sourceLocals sourceGlobals sourceMemory sourceFfi sourceException
+          sourceValue targetState targetException,
+        (hevidence sourceClock).outcome =
+          .control (.raised sourceLocals sourceGlobals sourceMemory sourceFfi
+            sourceException sourceValue) ∧
+        (hevidence targetClock).result = .raised targetState targetException ∧
+        lookupInfo sourceException context.exceptions = some targetException)) :
+    ∀ (sourceClock targetClock : Nat),
+      panValuePcResultRelWithContextCode structs context exceptionRel exceptionCode
+        globalsLookup (panOutcomeToPcResult (hevidence sourceClock).outcome)
+        (crepControlToPcResult (hevidence targetClock).result) ∧
+      ∃ sourceLocals sourceGlobals sourceMemory targetState,
+        panValueCrepStateRelWithContext structs context sourceLocals sourceGlobals
+          sourceMemory targetState := by
+  intro sourceClock targetClock
+  have hresult := panValuePcResultRelWithContextCode_of_clocked_evidence_pair
+    sourceClock targetClock (hcorrect sourceClock targetClock)
+    (hevidence sourceClock) (hevidence targetClock)
+    (hinputCodeRel sourceClock targetClock)
+    (hinputExcpRel sourceClock targetClock)
+    (hinputStateRel sourceClock targetClock).2.2
+    (houtputCodeRel sourceClock targetClock)
+    (houtputExcpRel sourceClock targetClock)
+  rcases hbranch sourceClock targetClock with hnormal | hraised
+  · rcases hnormal with ⟨sourceLocals, sourceGlobals, sourceMemory, sourceFfi,
+      targetState, houtcome, htarget⟩
+    have hnormalResult :
+        panValuePcResultRelWithContextCode structs context exceptionRel
+          exceptionCode globalsLookup
+          (.normal sourceLocals sourceGlobals sourceMemory) (.normal targetState) := by
+      simpa [houtcome, htarget, panOutcomeToPcResult, crepControlToPcResult]
+        using hresult
+    have hstate := (panValuePcResultRelWithContextCode_normal_iff structs context
+      exceptionRel exceptionCode globalsLookup sourceLocals sourceGlobals
+      sourceMemory targetState).1 hnormalResult
+    refine ⟨?_, ⟨sourceLocals, sourceGlobals, sourceMemory, targetState,
+      ⟨(hinputStateRel sourceClock targetClock).1,
+        (hinputStateRel sourceClock targetClock).2.1, hstate⟩⟩⟩
+    simpa [houtcome, htarget, panOutcomeToPcResult, crepControlToPcResult]
+      using hnormalResult
+  · rcases hraised with ⟨sourceLocals, sourceGlobals, sourceMemory, sourceFfi,
+      sourceException, sourceValue, targetState, targetException, houtcome,
+      htarget, hlookup⟩
+    have hraisedResult :
+        panValuePcResultRelWithContextCode structs context exceptionRel
+          exceptionCode globalsLookup
+          (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+          (.raised targetState targetException) := by
+      simpa [houtcome, htarget, panOutcomeToPcResult, crepControlToPcResult]
+        using hresult
+    have hstate := (panValuePcResultRelWithContextCode_raised_iff structs context
+      exceptionRel exceptionCode globalsLookup sourceLocals sourceGlobals
+      sourceMemory sourceException sourceValue targetState targetException).1
+      hraisedResult
+    refine ⟨?_, ⟨sourceLocals, sourceGlobals, sourceMemory, targetState,
+      ⟨(hinputStateRel sourceClock targetClock).1,
+        (hinputStateRel sourceClock targetClock).2.1, hstate.1⟩⟩⟩
+    simpa [houtcome, htarget, panOutcomeToPcResult, crepControlToPcResult]
+      using hraisedResult
+
 theorem panCrepSemanticAgreement_of_pcCompileCorrectWithContextCode_pairwise_evidence
     [BEq α] [OfNat α 0] [Add α]
     (structs : StructContext) (context : CompileContext α) (program : Prog α)

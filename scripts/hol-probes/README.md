@@ -43,6 +43,13 @@ The `excp_rel` cases deliberately use a word-valued compiler-code map and a
 shape-valued source map, matching the definition's independent HOL value types.
 The `ctxt_fc` cases record `with_shape` slot slicing, ZIP truncation, and
 `MAX_LIST` on an empty name list.
+`code_rel_probe.out` records the HOL-inferred source/target code-map types,
+compiled parameter return, localisation outcomes, function-signature lookup,
+and target entry. The probe also proves matching and deliberately mismatching
+`code_rel` instances against `code_rel_def`; the corresponding Lean relation
+analogue tests live in `Flapjack.Test.PanToCrepCodeRelParity`. The Lean
+relation remains untagged until its list-backed compiler body is replaced by
+the exact HOL `compile` port tracked by bead `flapjack-pxn.18.3.1.4`.
 `pan_globals_compile_top_probe.out` records original Pancake HOL evaluation
 of `pan_globals$compile_top` for an absent start function (the total empty-list
 result), a present `main` entry, and a global initializer in a nonempty

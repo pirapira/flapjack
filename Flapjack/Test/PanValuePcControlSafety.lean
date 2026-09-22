@@ -1114,6 +1114,18 @@ example :
 
 #check @PanValueProgNotBrokeContinued_while
 
+/-! A declaration call whose body is safe is itself safe. -/
+example :
+    PanValueProgNotBrokeContinued (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat)
+      (.decCall "x" .one "f" [] (.skip : Prog Nat)) :=
+  PanValueProgNotBrokeContinued_decCall (fun _ _ => none)
+    (fun _ _ _ _ _ _ => none) ([] : StructContext) [] (0 : Nat) (0 : Nat)
+    (1 : Nat) "x" .one "f" [] (.skip : Prog Nat)
+    (PanValueProgNotBrokeContinued_skip (fun _ _ => none)
+      (fun _ _ _ _ _ _ => none) ([] : StructContext) [] (0 : Nat) (0 : Nat)
+      (1 : Nat))
+
 /-! A while loop over a safe body is discharged by the recursive while leaf. -/
 example :
     PanValueProgNotBrokeContinued (fun _ _ => none) (fun _ _ _ _ _ _ => none)

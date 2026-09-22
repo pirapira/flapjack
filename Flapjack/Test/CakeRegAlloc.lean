@@ -147,6 +147,29 @@ def extendCliqueSetBatchGuard : Bool :=
 
 #guard extendCliqueSetBatchGuard
 
+def extendCliqueSetBatchEmptyLiveGuard : Bool :=
+  let newNames := [9, 9, 4, 2]
+  let live := []
+  let initial := cakeAdjSetMapOfSize 12
+  let seeded := cakeInsertEdgeSet 1 6 initial
+  let batch := cakeExtendCliqueSetBatch newNames live seeded
+  let reference := cakeExtendCliqueSetReference newNames live seeded
+  batch.2 == reference.2 && batch.1.toNatInfoMap == reference.1.toNatInfoMap
+
+#guard extendCliqueSetBatchEmptyLiveGuard
+
+def extendCliqueSetBatchOverlappingCliqueGuard : Bool :=
+  let newNames := [1, 4, 1, 3, 8, 3]
+  let live := [2, 4, 6, 4, 8]
+  let initial := cakeAdjSetMapOfSize 12
+  let seeded := cakeInsertEdgeSet 0 11
+    (cakeInsertEdgeSet 5 6 initial)
+  let batch := cakeExtendCliqueSetBatch newNames live seeded
+  let reference := cakeExtendCliqueSetReference newNames live seeded
+  batch.2 == reference.2 && batch.1.toNatInfoMap == reference.1.toNatInfoMap
+
+#guard extendCliqueSetBatchOverlappingCliqueGuard
+
 def indexedAdjacencyMembershipGuard : Bool :=
   let tree : WordClashTree := .delta [1, 3] [2, 4]
   let bij := cakeMkBij tree
@@ -1569,6 +1592,8 @@ def runChecks : IO Bool := do
     bijBranchOrderGuard, bijBranchLiveGuard, bijSetGuard,
     bijSetUnsortedGuard, bijCompositeGuard, graphDeltaDisjointGuard,
     graphDeltaCliqueGuard, graphSetCliqueGuard, graphForcedEdgeGuard,
+    extendCliqueSetBatchGuard, extendCliqueSetBatchEmptyLiveGuard,
+    extendCliqueSetBatchOverlappingCliqueGuard,
     graphTagsGuard, graphInitGuard, heuDeltaGuard, heuMovesGuard,
     heuSpillGuard, heuFixedDegreeGuard, raDeltaPairGuard, raDeltaFreeGuard,
     raDeltaTriangleGuard, raStackOnlyGuard, raMovesCoalesceGuard,
@@ -1618,6 +1643,8 @@ def runChecks : IO Bool := do
     "mk_bij set unsorted", "mk_bij composite", "mk_graph delta disjoint",
     "mk_graph delta clique", "mk_graph set clique", "extend_graph forced",
     "extend clique batch",
+    "extend clique batch empty live",
+    "extend clique batch overlapping clique",
     "mk_tags roles", "init_ra_state", "init_alloc1_heu delta",
     "init_alloc1_heu moves", "init_alloc1_heu spill",
     "init_alloc1_heu fixed degree", "reg_alloc delta pair",

@@ -2,6 +2,7 @@ import Flapjack.PanValueFfiClockCorrectness
 import Flapjack.PanSimpEvaluate
 import Flapjack.PanObservationalSemantics
 import Flapjack.PanToCrepCorrectnessBoundary
+import Flapjack.PanValueFfiEventMonotonicity
 
 namespace Flapjack
 
@@ -1997,5 +1998,358 @@ theorem evalPanValueFfiClock_ioEvents_prefix
     have hc : resultClock = clock := congrArg Prod.snd heq.symm
     rw [ho, hc]
     exact hleaf locals globals memory ffi clock program r s memoryAccess contracts memoryHandler hstep
+
+
+inductive PanValueFfiEventSafeLeaf : Prog α → Prop
+  | skip : PanValueFfiEventSafeLeaf (.skip : Prog α)
+  | assign (kind : VarKind) (name : VarName) (value : Exp α) :
+      PanValueFfiEventSafeLeaf (.assign kind name value)
+  | primitive (name : VarName) (operator : PrimOp) (args : List (Exp α)) :
+      PanValueFfiEventSafeLeaf (.primitive name operator args)
+  | store (address value : Exp α) : PanValueFfiEventSafeLeaf (.store address value)
+  | store32 (address value : Exp α) : PanValueFfiEventSafeLeaf (.store32 address value)
+  | storeByte (address value : Exp α) : PanValueFfiEventSafeLeaf (.storeByte address value)
+  | break : PanValueFfiEventSafeLeaf (.break : Prog α)
+  | continue : PanValueFfiEventSafeLeaf (.continue : Prog α)
+  | raise (exception : ExceptionId) (value : Exp α) :
+      PanValueFfiEventSafeLeaf (.raise exception value)
+  | return (value : Exp α) : PanValueFfiEventSafeLeaf (.return value)
+  | shMemLoad (size : OpSize) (kind : VarKind) (name : VarName) (address : Exp α) :
+      PanValueFfiEventSafeLeaf (.shMemLoad size kind name address)
+  | shMemStore (size : OpSize) (address value : Exp α) :
+      PanValueFfiEventSafeLeaf (.shMemStore size address value)
+
+set_option linter.unusedSimpArgs false in
+theorem evalPanValueFfiProgSteps_eventSafeLeaf_ioEvents_prefix
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (program : Prog α) (hleaf : PanValueFfiEventSafeLeaf program)
+    (result : PanValueFfiControlResult α σ) (steps : Nat)
+    (memoryAccess : Option (PanValueMemoryAccess α)) (contracts : Option PanValueCallContracts)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ)) (clock : Nat)
+    (hstep : evalPanValueFfiProgSteps context primitive handler structs functions
+      baseAddress topAddress bytesInWord (Nat.succ fuel) locals globals memory ffi
+      program (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) = some (result, steps)) :
+    ffi.ioEvents <+: (panResultFfi ((.control result : PanValueFfiClockOutcome α σ), clock)).ioEvents := by
+  cases hleaf with
+  | skip =>
+      rw [evalPanValueFfiProgSteps] at hstep
+      simp only [Option.some.injEq, Prod.mk.injEq] at hstep
+      obtain ⟨rfl, rfl⟩ := hstep
+      simp only [panResultFfi]
+      exact List.prefix_refl _
+  | assign kind name value =>
+      cases kind <;>
+      · rw [evalPanValueFfiProgSteps] at hstep
+        cases hvalue : evalPanValueExpCounted structs locals globals memory
+          baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess) with
+        | none =>
+            simp only [hvalue, Option.bind_eq_bind, Option.bind_none] at hstep
+            exact absurd hstep (by simp)
+        | some pair =>
+            obtain ⟨valueResult, valueSteps⟩ := pair
+            simp only [hvalue, Option.bind_eq_bind, Option.bind_some] at hstep
+            split at hstep
+            · obtain ⟨rfl, rfl⟩ := hstep
+              simp only [panResultFfi]
+              exact List.prefix_refl _
+            · simp at hstep
+  | primitive name operator args =>
+      rw [evalPanValueFfiProgSteps] at hstep
+      cases hvalues : evalPanValueExpsCounted structs locals globals memory
+        baseAddress topAddress bytesInWord args (memoryAccess := memoryAccess) with
+      | none =>
+          simp only [hvalues, Option.bind_eq_bind, Option.bind_none] at hstep
+          exact absurd hstep (by simp)
+      | some pair =>
+          obtain ⟨valuesResult, valueSteps⟩ := pair
+          simp only [hvalues, Option.bind_eq_bind, Option.bind_some] at hstep
+          cases hprim : primitive operator valuesResult with
+          | none =>
+              simp only [hprim, Option.bind_eq_bind, Option.bind_none] at hstep
+              exact absurd hstep (by simp)
+          | some primValue =>
+              simp only [hprim, Option.bind_eq_bind, Option.bind_some] at hstep
+              cases hold : locals name with
+              | none =>
+                  simp only [hold, Option.bind_eq_bind, Option.bind_none] at hstep
+                  exact absurd hstep (by simp)
+              | some oldValue =>
+                  simp only [hold, Option.bind_eq_bind, Option.bind_some] at hstep
+                  split at hstep
+                  · obtain ⟨rfl, rfl⟩ := hstep
+                    simp only [panResultFfi]
+                    exact List.prefix_refl _
+                  · simp at hstep
+  | store address value =>
+      rw [evalPanValueFfiProgSteps] at hstep
+      cases haddress : evalPanValueExpCounted structs locals globals memory
+        baseAddress topAddress bytesInWord address (memoryAccess := memoryAccess) with
+      | none =>
+          simp only [haddress, Option.bind_eq_bind, Option.bind_none] at hstep
+          exact absurd hstep (by simp)
+      | some pair =>
+          obtain ⟨addressResult, addressSteps⟩ := pair
+          simp only [haddress, Option.bind_eq_bind, Option.bind_some] at hstep
+          cases hvalue : evalPanValueExpCounted structs locals globals memory
+            baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess) with
+          | none =>
+              simp only [hvalue, Option.bind_eq_bind, Option.bind_none] at hstep
+              exact absurd hstep (by simp)
+          | some pair2 =>
+              obtain ⟨valueResult, valueSteps⟩ := pair2
+              simp only [hvalue, Option.bind_eq_bind, Option.bind_some] at hstep
+              cases addressResult with
+              | word addressWord =>
+                  cases hstore : panValueStoreWithAccess memory bytesInWord
+                    addressWord valueResult memoryAccess with
+                  | none =>
+                      simp only [hstore, Option.bind_eq_bind, Option.bind_none] at hstep
+                      exact absurd hstep (by simp)
+                  | some memory' =>
+                      simp only [hstore, Option.bind_eq_bind, Option.bind_some, Option.pure_def] at hstep
+                      obtain ⟨rfl, rfl⟩ := hstep
+                      simp only [panResultFfi]
+                      exact List.prefix_refl _
+              | rStruct _ => simp at hstep
+              | nStruct _ _ => simp at hstep
+  | «break» =>
+      rw [evalPanValueFfiProgSteps] at hstep
+      simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hstep
+      obtain ⟨rfl, rfl⟩ := hstep
+      simp only [panResultFfi]
+      exact List.prefix_refl _
+  | «continue» =>
+      rw [evalPanValueFfiProgSteps] at hstep
+      simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hstep
+      obtain ⟨rfl, rfl⟩ := hstep
+      simp only [panResultFfi]
+      exact List.prefix_refl _
+  | raise exception value =>
+      rw [evalPanValueFfiProgSteps] at hstep
+      cases hvalue : evalPanValueExpCounted structs locals globals memory
+        baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess) with
+      | none =>
+          simp only [hvalue, Option.bind_eq_bind, Option.bind_none] at hstep
+          exact absurd hstep (by simp)
+      | some pair =>
+          obtain ⟨valueResult, valueSteps⟩ := pair
+          simp only [hvalue, Option.bind_eq_bind, Option.bind_some] at hstep
+          split at hstep
+          · obtain ⟨rfl, rfl⟩ := hstep
+            simp only [panResultFfi]
+            exact List.prefix_refl _
+          · simp at hstep
+  | «return» value =>
+      rw [evalPanValueFfiProgSteps] at hstep
+      cases hvalue : evalPanValueExpCounted structs locals globals memory
+        baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess) with
+      | none =>
+          simp only [hvalue, Option.bind_eq_bind, Option.bind_none] at hstep
+          exact absurd hstep (by simp)
+      | some pair =>
+          obtain ⟨valueResult, valueSteps⟩ := pair
+          simp only [hvalue, Option.bind_eq_bind, Option.bind_some] at hstep
+          split at hstep
+          · obtain ⟨rfl, rfl⟩ := hstep
+            simp only [panResultFfi]
+            exact List.prefix_refl _
+          · simp at hstep
+  | store32 address value =>
+      rw [evalPanValueFfiProgSteps] at hstep
+      cases haddress : evalPanValueExpCounted structs locals globals memory
+        baseAddress topAddress bytesInWord address (memoryAccess := memoryAccess) with
+      | none =>
+          simp only [haddress, Option.bind_eq_bind, Option.bind_none] at hstep
+          exact absurd hstep (by simp)
+      | some pair =>
+          obtain ⟨addressResult, addressSteps⟩ := pair
+          simp only [haddress, Option.bind_eq_bind, Option.bind_some] at hstep
+          cases hvalue : evalPanValueExpCounted structs locals globals memory
+            baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess) with
+          | none =>
+              simp only [hvalue, Option.bind_eq_bind, Option.bind_none] at hstep
+              exact absurd hstep (by simp)
+          | some pair2 =>
+              obtain ⟨valueResult, valueSteps⟩ := pair2
+              simp only [hvalue, Option.bind_eq_bind, Option.bind_some] at hstep
+              cases addressResult with
+              | word addressWord =>
+                  cases valueResult with
+                  | word valueWord =>
+                      cases memoryAccess with
+                      | none =>
+                          simp only [Option.bind_eq_bind, Option.bind_some] at hstep
+                          obtain ⟨rfl, rfl⟩ := hstep
+                          simp only [panResultFfi]
+                          exact List.prefix_refl _
+                      | some access =>
+                          simp only [Option.bind_eq_bind] at hstep
+                          cases hm : access.store32 access.domain memory bytesInWord
+                            addressWord valueWord with
+                          | none =>
+                              simp only [hm, Option.bind_eq_bind, Option.bind_none] at hstep
+                              exact absurd hstep (by simp)
+                          | some memory' =>
+                              simp only [hm, Option.bind_eq_bind, Option.bind_some] at hstep
+                              obtain ⟨rfl, rfl⟩ := hstep
+                              simp only [panResultFfi]
+                              exact List.prefix_refl _
+                  | rStruct _ => simp at hstep
+                  | nStruct _ _ => simp at hstep
+              | rStruct _ => simp at hstep
+              | nStruct _ _ => simp at hstep
+  | storeByte address value =>
+      rw [evalPanValueFfiProgSteps] at hstep
+      cases haddress : evalPanValueExpCounted structs locals globals memory
+        baseAddress topAddress bytesInWord address (memoryAccess := memoryAccess) with
+      | none =>
+          simp only [haddress, Option.bind_eq_bind, Option.bind_none] at hstep
+          exact absurd hstep (by simp)
+      | some pair =>
+          obtain ⟨addressResult, addressSteps⟩ := pair
+          simp only [haddress, Option.bind_eq_bind, Option.bind_some] at hstep
+          cases hvalue : evalPanValueExpCounted structs locals globals memory
+            baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess) with
+          | none =>
+              simp only [hvalue, Option.bind_eq_bind, Option.bind_none] at hstep
+              exact absurd hstep (by simp)
+          | some pair2 =>
+              obtain ⟨valueResult, valueSteps⟩ := pair2
+              simp only [hvalue, Option.bind_eq_bind, Option.bind_some] at hstep
+              cases addressResult with
+              | word addressWord =>
+                  cases valueResult with
+                  | word valueWord =>
+                      cases memoryAccess with
+                      | none =>
+                          simp only [Option.bind_eq_bind, Option.bind_some] at hstep
+                          obtain ⟨rfl, rfl⟩ := hstep
+                          simp only [panResultFfi]
+                          exact List.prefix_refl _
+                      | some access =>
+                          simp only [Option.bind_eq_bind] at hstep
+                          cases hm : access.storeByte access.domain memory bytesInWord
+                            addressWord valueWord with
+                          | none =>
+                              simp only [hm, Option.bind_eq_bind, Option.bind_none] at hstep
+                              exact absurd hstep (by simp)
+                          | some memory' =>
+                              simp only [hm, Option.bind_eq_bind, Option.bind_some] at hstep
+                              obtain ⟨rfl, rfl⟩ := hstep
+                              simp only [panResultFfi]
+                              exact List.prefix_refl _
+                  | rStruct _ => simp at hstep
+                  | nStruct _ _ => simp at hstep
+              | rStruct _ => simp at hstep
+              | nStruct _ _ => simp at hstep
+  | shMemLoad size kind name address =>
+      rw [evalPanValueFfiProgSteps] at hstep
+      cases haddress : evalPanValueExpCounted structs locals globals memory
+        baseAddress topAddress bytesInWord address (memoryAccess := memoryAccess) with
+      | none =>
+          simp only [haddress, Option.bind_eq_bind, Option.bind_none] at hstep
+          exact absurd hstep (by simp)
+      | some pair =>
+          obtain ⟨addressResult, addressSteps⟩ := pair
+          simp only [haddress, Option.bind_eq_bind, Option.bind_some] at hstep
+          cases addressResult with
+          | word addressWord =>
+              by_cases hvalid :
+                  panValueSharedLoadValid structs locals globals kind name (.word 0) = true
+              · simp only [hvalid, if_true, Option.bind_eq_bind] at hstep
+                cases hload : panValueFfiSharedLoad context ffi size addressWord with
+                | none =>
+                    simp only [hload, Option.bind_eq_bind, Option.bind_none] at hstep
+                    exact absurd hstep (by simp)
+                | some res =>
+                    cases res with
+                    | loaded nextFfi value =>
+                        simp only [hload, Option.bind_eq_bind, Option.bind_some, Option.pure_def] at hstep
+                        cases kind <;>
+                        · simp only [Option.bind_eq_bind, Option.bind_some, Option.pure_def] at hstep
+                          simp only [Option.some.injEq, Prod.mk.injEq] at hstep
+                          obtain ⟨rfl, rfl⟩ := hstep
+                          simp only [panResultFfi]
+                          simpa [panValueFfiSharedResultFfi] using
+                            panValueFfiSharedLoad_ioEvents_prefix context ffi size addressWord
+                              (.loaded nextFfi value) hload
+                    | final nextFfi event =>
+                        simp only [hload, Option.bind_eq_bind, Option.bind_some, Option.pure_def] at hstep
+                        simp only [Option.some.injEq, Prod.mk.injEq] at hstep
+                        obtain ⟨rfl, rfl⟩ := hstep
+                        simp only [panResultFfi]
+                        simpa [panValueFfiSharedResultFfi] using
+                          panValueFfiSharedLoad_ioEvents_prefix context ffi size addressWord
+                            (.final nextFfi event) hload
+                    | stored _ =>
+                        simp only [hload, Option.bind_eq_bind, Option.bind_none] at hstep
+                        exact absurd hstep (by simp)
+              · simp only [hvalid, if_false] at hstep
+                exact absurd hstep (by simp)
+          | rStruct _ => simp at hstep
+          | nStruct _ _ => simp at hstep
+  | shMemStore size address value =>
+      rw [evalPanValueFfiProgSteps] at hstep
+      cases haddress : evalPanValueExpCounted structs locals globals memory
+        baseAddress topAddress bytesInWord address (memoryAccess := memoryAccess) with
+      | none =>
+          simp only [haddress, Option.bind_eq_bind, Option.bind_none] at hstep
+          exact absurd hstep (by simp)
+      | some pair =>
+          obtain ⟨addressResult, addressSteps⟩ := pair
+          simp only [haddress, Option.bind_eq_bind, Option.bind_some] at hstep
+          cases hvalue : evalPanValueExpCounted structs locals globals memory
+            baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess) with
+          | none =>
+              simp only [hvalue, Option.bind_eq_bind, Option.bind_none] at hstep
+              exact absurd hstep (by simp)
+          | some pair2 =>
+              obtain ⟨valueResult, valueSteps⟩ := pair2
+              simp only [hvalue, Option.bind_eq_bind, Option.bind_some] at hstep
+              cases addressResult with
+              | word addressWord =>
+                  cases valueResult with
+                  | word valueWord =>
+                      cases hstore : panValueFfiSharedStore context ffi size addressWord
+                        valueWord with
+                      | none =>
+                          simp only [hstore, Option.bind_eq_bind, Option.bind_none] at hstep
+                          exact absurd hstep (by simp)
+                      | some res =>
+                          cases res with
+                          | stored nextFfi =>
+                              simp only [hstore, Option.bind_eq_bind, Option.bind_some, Option.pure_def] at hstep
+                              simp only [Option.some.injEq, Prod.mk.injEq] at hstep
+                              obtain ⟨rfl, rfl⟩ := hstep
+                              simp only [panResultFfi]
+                              simpa [panValueFfiSharedResultFfi] using
+                                panValueFfiSharedStore_ioEvents_prefix context ffi size
+                                  addressWord valueWord (.stored nextFfi) hstore
+                          | final nextFfi event =>
+                              simp only [hstore, Option.bind_eq_bind, Option.bind_some, Option.pure_def] at hstep
+                              simp only [Option.some.injEq, Prod.mk.injEq] at hstep
+                              obtain ⟨rfl, rfl⟩ := hstep
+                              simp only [panResultFfi]
+                              simpa [panValueFfiSharedResultFfi] using
+                                panValueFfiSharedStore_ioEvents_prefix context ffi size
+                                  addressWord valueWord (.final nextFfi event) hstore
+                          | loaded _ _ =>
+                              simp only [hstore, Option.bind_eq_bind, Option.bind_none] at hstep
+                              exact absurd hstep (by simp)
+                  | rStruct _ => simp at hstep
+                  | nStruct _ _ => simp at hstep
+              | rStruct _ => simp at hstep
+              | nStruct _ _ => simp at hstep
+
 
 end Flapjack

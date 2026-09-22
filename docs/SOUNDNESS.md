@@ -20,8 +20,9 @@ implemented by `Flapjack.CompileMain`.
 - The repository builds with `lake build Flapjack.lean`.
 - `lake test` runs executable regression tests for selected parser, lowering,
   linked-image, and RISC-V encoding cases.
-- Many pass-local correctness theorems cover selected source, Crepe, Loop,
-  Word, Stack, and RISC-V fragments.
+- Selected pass-local theorems cover small source, allocation, Stack, and
+  RISC-V fragments. Their statements have not received an independent
+  correspondence review against HOL.
 - The source-facing compiler reports parse, static-check, entry-point, and
   lowering failures instead of silently treating every unsupported construct as
   compiled code. The default CLI artifact is Pancake-compatible RISC-V
@@ -35,22 +36,20 @@ do not establish whole-compiler equivalence.
 
 The following are open review or verification obligations:
 
-1. The checked boundary in
-   `Flapjack/PanToCrepCorrectnessBoundary.lean` maps the full HOL
-   `pc_compile_correct` result contract, including normal, return, exception,
-   break, continue, timeout, and FinalFFI cases. Its evaluator obligations
-   remain parameterized, and the complete Pancake compiler-correctness proof
-   has not yet been discharged in Flapjack. Therefore the current collection
-   of lower-level theorems does not imply soundness or semantic preservation
-   for the whole source-to-RISC-V compiler.
+1. Flapjack has no top-level Pancake compiler-correctness theorem. In
+   particular, `pc_compile_correct` and its required pass simulations have not
+   been ported. `Flapjack/PanToCrepCorrectnessBoundary.lean` now contains only
+   elementary value-context and non-overlap facts; it is not a compiler
+   correctness boundary. Therefore the current lower-level theorems do not
+   imply soundness or semantic preservation for the whole source-to-RISC-V
+   compiler.
 2. The RISC-V semantics in Flapjack have not yet been compared systematically
    with the Sail RISC-V model. The HOL reference model is available at
    `/home/zksecurity/HOL/examples/l3-machine-code/riscv/model/riscv.sml` in the
    development environment, but correspondence to Sail is not claimed here.
 3. Compiler behavior has not been tested extensively against the original
-   Pancake compiler. The current executable parity suite contains only a small
-   set of CakeML-derived byte vectors and Lean pipeline goldens; it is not a
-   differential test of the full Pancake corpus.
+   Pancake compiler. The executable parity suite and differential fuzzer cover
+   only a small corpus and do not establish equivalence for arbitrary input.
    This limitation applies to internal and intermediate regression tests as
    well: a test that compares two Lean definitions is not evidence of Pancake
    equivalence. New porting tests must use an original CakeML executable run

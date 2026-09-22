@@ -38,22 +38,20 @@ def constantFunction : FunDecl Nat :=
   { name := "constant", inline := false, exported := false, params := [],
     body := .return (.const 7), returnShape := .one }
 
-example :
-    (compileFunDecl assignmentContext identityFunction).params = [0] := by
-  simp [compileFunDecl, compileParamVars, identityFunction]
+#guard (compileFunDeclSource assignmentContext identityFunction).params == [0]
 
 example :
-    (compileFunDecl assignmentContext identityFunction).body =
+    (compileFunDeclSource assignmentContext identityFunction).body =
       .return [.var 0] := by
-  simp [compileFunDecl, panToCrepMakeVmap, compileParamVars, identityFunction, compileProg, compileExp,
-    lookupInfo]
+  simp [compileFunDeclSource, panToCrepCompFunc, panToCrepMakeVmap,
+    identityFunction, compileProg, compileExp, compileParamVars, lookupInfo]
 
 example :
-    (compileToCrepe assignmentContext [.function constantFunction]).head?.map
+    (compileToCrep assignmentContext [.function constantFunction]).head?.map
         CompiledFunction.body =
       some (.return [.const 7]) := by
-  simp [compileToCrepe, compileFunctions, compileFunDecl, compileParamVars,
-    functionInfos, constantFunction, compileProg, compileExp]
+  simp [compileToCrep, compileFunctionsSource, compileFunDeclSource,
+    panToCrepCompFunc, functionInfos, constantFunction, compileProg, compileExp]
 
 example :
     compileExp crepContext (Exp.var .local "pair") =
@@ -207,30 +205,6 @@ example :
       some [3, 0] := by
   decide +kernel
 
-def crepWordContext : CompileContext (RiscV.Word 64) :=
-  { vars := [("pair", (.comb [.one, .one], [0, 1]))], functions := [],
-    exceptions := [], maxVar := 1, bytesInWord := BitVec.ofNat 64 8 }
-
-def crepPrimitiveSource : Prog (RiscV.Word 64) :=
-  .seq
-    (.primitive "pair" .addCarry
-      [.const 1, .const 2, .const 0])
-    (.return (.var .local "pair"))
-
-def crepPrimitiveSourceLocals : VarName → Option (PanValue (RiscV.Word 64)) :=
-  fun name => if name == "pair" then
-    some (.rStruct [.word 0, .word 0])
-  else none
-
-example :
-    (evalCrepStateProgWithPrimitive RiscV.loopPrimitiveHandler (fun _ => none)
-      (compileProg crepWordContext crepPrimitiveSource)).map Prod.snd =
-      (evalPanValueProgWithPrimitive (α := RiscV.Word 64) [] 0 100 8
-        crepPrimitiveSourceLocals (fun _ => none) (fun _ => none)
-        RiscV.panPrimitiveHandler crepPrimitiveSource).map
-        (fun result => result.2.2.2.flatMap panValueWords) := by
-  decide +kernel
-
 example :
     (loopCompileExp loopContext 3 [] (.load32 (.const (α := Nat) 8))).code =
       [.assign 3 (.const 8), .load32 3 3] := by
@@ -256,16 +230,6 @@ example :
 example :
     loopToWordExp (LoopExp.baseAddr : LoopExp Nat) = some (.lookup .currHeap) := by
   simp [loopToWordExp]
-
-example :
-    loopToWordProg wordContext (.assign 3 (.const (α := Nat) 7)) =
-      .assign 2 (.const 7) := by
-  simp [loopToWordProg, wordCompileExp, wordFindVar, lookupNatInfo, wordContext]
-
-example :
-    loopToWordProg wordContext (.seq (.load32 3 4) (.store32 3 4)) =
-      .seq (.inst (.mem .load32 3 2)) (.inst (.mem .store32 3 2)) := by
-  simp [loopToWordProg, wordFindVar, lookupNatInfo, wordContext]
 
 example :
     loopVarsOfExp ((LoopExp.op .add [.var 1, .load (.var 2)]) : LoopExp Nat) =

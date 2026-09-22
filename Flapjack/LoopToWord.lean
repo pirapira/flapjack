@@ -196,8 +196,8 @@ def differenceNumSet (names excluded : List Nat) : List Nat :=
 
 /-! Port of `comp_func_def` from `loop_to_wordScript.sml:164-169`.
     `loopAccVars` supplies the source `acc_vars` set, parameters are removed,
-    `makeCtxt` assigns the consecutive even registers, and the existing
-    `loopToWordProg` supplies the first component of `comp`. -/
+    `makeCtxt` assigns the consecutive even registers, and the state-threaded
+    compiler supplies the first component of `comp`. -/
 def loopToWordCompContext (params : List Nat) (body : LoopProg α) :
     List (Nat × Nat) :=
   let assigned := loopAccVars body []

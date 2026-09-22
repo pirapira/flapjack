@@ -453,44 +453,6 @@ def wordFfiDiscoveryBody [NeZero width]
     (RiscV.wordInstSelectProgramFrom
       (RiscV.wordToWordPreSsa (RiscV.wordFlattenProgramFrom body))))
 
-/-! Checked sibling of `compileFlapjackRiscVViaStack`.  The historical
-    `Option` entrypoint remains available for compatibility; this form makes
-    a failed Word section distinguishable from a later StackRemove/Lab/RISC-V
-    failure. -/
-def compileFlapjackRiscVViaStackChecked [NeZero width]
-    [BEq (RiscV.Word width)]
-    [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
-    [Add (RiscV.Word width)] [Mul (RiscV.Word width)]
-    (architecture : RiscV.Architecture) (bytesInWord : RiscV.Word width)
-    (fromNat : Nat → RiscV.Word width) (services : List (FunName × Nat))
-    (removeConfig : StackRemoveConfig)
-    (declarations : List (Decl (RiscV.Word width))) :
-    Except PipelineRiscVLoweringError (List (RiscV.Instruction width)) :=
-  let pipeline := compileFlapjackCore architecture bytesInWord fromNat declarations
-  match RiscV.pipelineWordFunctionsToStackChecked pipeline.word with
-  | .error error => .error (.wordToStack error)
-  | .ok functions =>
-      match RiscV.compileStackProgramNatListWithRaiseStubToRiscVChecked
-          { services := services } removeConfig 0 0
-          (functions.map (fun (label, _, body) => (label, body))) with
-      | .ok instructions => .ok instructions
-      | .error error => .error (.labToRiscV error)
-
-/-! Artifact-facing sibling of the checked instruction pipeline.  CakeML's
-    RISC-V target exposes a little-endian byte list, so keep lowering errors
-    intact while applying the concrete encoder only to successful code. -/
-def compileFlapjackRiscVViaStackBytesChecked [NeZero width]
-    [BEq (RiscV.Word width)]
-    [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
-    [Add (RiscV.Word width)] [Mul (RiscV.Word width)]
-    (architecture : RiscV.Architecture) (bytesInWord : RiscV.Word width)
-    (fromNat : Nat → RiscV.Word width) (services : List (FunName × Nat))
-    (removeConfig : StackRemoveConfig)
-    (declarations : List (Decl (RiscV.Word width))) :
-    Except PipelineRiscVLoweringError (List (BitVec 8)) :=
-  (compileFlapjackRiscVViaStackChecked architecture bytesInWord fromNat services
-    removeConfig declarations).map RiscV.encodeInstructions
-
 /-! Source-facing entrypoint. Parsing and static checking are kept ahead of
     the existing entry-aware pipeline so callers can distinguish front-end,
     missing-entry, and target-lowering failures. -/

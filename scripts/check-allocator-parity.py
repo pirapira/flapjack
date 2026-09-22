@@ -74,6 +74,7 @@ FIXTURES = (
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "gh1025_frame_bitmap_f00000.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00108_handler_spill_slot.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f860_try_loop_large_constant.pnk",
+    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "collapse_branch_full.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "allocator_frame_handler_min.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00028_allocator.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "divmnu_copy_loop.pnk",

@@ -4735,6 +4735,46 @@ theorem panSemEvaluate_ioEvents_prefix_of_handlerPreserves
     state.memoryHandler result.1 result.2 hrun
   simpa [panResultEvents] using hprefix
 
+/-! Expose the full Cake-style mutual prefix induction at the production
+    `panSemEvaluate` boundary.  The unit-fuel leaf event relation stays an
+    explicit premise, so this bridge does not hide the only backend-specific
+    obligation in the top-level correctness theorem. -/
+theorem panSemEvaluate_ioEvents_prefix_of_leaf
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (state : PanSemEvaluateState α σ)
+    (program : Prog α)
+    (hleaf : ∀ (locals globals : VarName → Option (PanValue α))
+      (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+      (program : Prog α) (result : PanValueFfiControlResult α σ) (steps : Nat)
+      (memoryAccess : Option (PanValueMemoryAccess α))
+      (contracts : Option PanValueCallContracts)
+      (memoryHandler : Option (PanValueMemoryFfiHandler α σ)),
+      evalPanValueFfiProgSteps context primitive handler state.structs state.functions
+        state.baseAddress state.topAddress state.bytesInWord 1 locals globals memory ffi
+        program (memoryAccess := memoryAccess) (contracts := contracts)
+        (memoryHandler := memoryHandler) = some (result, steps) →
+      ffi.ioEvents <+:
+        (panResultFfi ((.control result : PanValueFfiClockOutcome α σ), clock)).ioEvents) :
+    ∀ outcome returnedClock,
+      panSemEvaluate context primitive handler state program =
+        some (outcome, returnedClock) →
+      state.ffi.ioEvents <+: panResultEvents (some (outcome, returnedClock)) := by
+  intro outcome returnedClock hrun
+  unfold panSemEvaluate panSemEvaluateWithFuel at hrun
+  have hclockPrefix := evalPanValueFfiClock_ioEvents_prefix
+    context primitive handler state.structs state.functions state.baseAddress
+    state.topAddress state.bytesInWord hleaf
+  have hprefix := hclockPrefix.2
+    (panSemEvaluateFuel state program)
+    state.locals state.globals state.memory state.ffi state.clock program
+    state.memoryAccess state.contracts state.memoryHandler outcome returnedClock hrun
+  simpa [panResultEvents] using hprefix
+
 /-! The zero-clock `While` timeout is the base case of Cake's
     `evaluate_add_clock_io_events_mono`: the low-clock result exposes exactly
     the incoming FFI trace, so the generic high-clock prefix theorem lifts it

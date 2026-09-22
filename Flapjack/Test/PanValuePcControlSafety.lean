@@ -20,6 +20,8 @@ import Flapjack.CrepeNestedDecsStability
 import Flapjack.CrepeRaisedCallInversion
 import Flapjack.PanToCrepDecCallCorrectness
 import Flapjack.PanToCrepProgramComposition
+import Flapjack.PanToCrepCodeRelation
+import Flapjack.PanSimpLocalised
 
 namespace Flapjack.Test.PanValuePcControlSafety
 
@@ -1323,6 +1325,7 @@ example
 #check @panValuePcCompileCorrect_of_compact_evaluators_with_bounded_evidence_and_clocked_continued
 #check @panValuePcCompileCorrect_of_compact_evaluators_with_bounded_generic_raised_evidence_and_clocked_control
 #check @panValuePcCompileCorrect_of_compact_evaluators_with_bounded_generic_raised_evidence_and_clocked_raised
+#check @panValuePcCompileCorrectWithContextCode_of_compact_evaluators_with_bounded_generic_raised_evidence_and_clocked_raised
 #check @panValuePcCompileCorrect_compact_with_bounded_expression_state_evidence
 #check @panValuePcCompileCorrect_of_compact_evaluators_and_clocked_word_raise_hraise_data
 #check @panValuePcCompileCorrect_of_compact_evaluators_and_clocked_two_word_raise_hraise_data
@@ -1394,8 +1397,31 @@ example (context : CompileContext Nat) (eshapes : InfoMap Shape) :
 
 #check @panValuePcExceptionShapeRelConcrete
 #check @panValuePcExceptionShapeRelConcrete_refl
+#check @panValuePcExceptionShapeRelConcrete_of_declaration_evaluation
 
 #check @lookupPanFunction_mem
 #check @panValuePcLocalisedCode_lookup
+
+/-! The concrete `code_rel` analogue is non-vacuous on a source-faithful,
+nonempty function table: instantiating Cake's `mk_ctxt_code_imp_code_rel` port
+on a single declaration whose body is a localised `skip`. -/
+private def concreteRelContext : CompileContext Nat :=
+  { vars := [], functions := [], exceptions := [], maxVar := 0, bytesInWord := 8 }
+
+private def concreteRelDecls : List (Decl Nat) :=
+  [Decl.function { name := "f", inline := false, exported := false, params := [], body := (.skip : Prog Nat), returnShape := .one }]
+
+example :
+    panValuePcCodeRelConcrete
+      { concreteRelContext with functions := functionInfos concreteRelDecls }
+      (sourceFunctionEntries concreteRelDecls)
+      (compileToCrep concreteRelContext concreteRelDecls) :=
+  panValuePcCodeRelConcrete_compileToCrep concreteRelContext concreteRelDecls (by
+    intro entry hentry
+    simp [concreteRelDecls, sourceFunctionEntries] at hentry
+    rcases hentry with rfl
+    exact localisedProg_skip)
+
+#check @panValuePcCodeRelConcrete_compileToCrep
 
 end Flapjack.Test.PanValuePcControlSafety

@@ -658,6 +658,33 @@ example :
       some [.load32Offset 4 5 (BitVec.ofNat 64 2047)] := by
   decide
 
+/- The same Cake signed-12 positive endpoint applies to the remaining
+   width-specific memory operations; preserve the target opcode and offset
+   together rather than checking only the word-width row. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMem .load8 4 5 2047) [] 0]⟩ =
+      some [.loadByteOffset 4 5 (BitVec.ofNat 64 2047)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMem .load16 4 5 2047) [] 0]⟩ =
+      some [.loadHalfOffset 4 5 (BitVec.ofNat 64 2047)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMem .store8 4 5 2047) [] 0]⟩ =
+      some [.storeByteOffset 4 5 (BitVec.ofNat 64 2047)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMem .store16 4 5 2047) [] 0]⟩ =
+      some [.storeHalfOffset 4 5 (BitVec.ofNat 64 2047)] := by
+  decide
+
 /-! Cake's immediate binary operators use the corresponding I-format
     instruction, not a rejected lowering. -/
 example :

@@ -1,0 +1,21 @@
+fun 1 add1(1 a, 1 b) { return a + b; }
+fun 1 sub1(1 a) { return a - 1; }
+fun {1,1} pair(1 a, 1 b) { return <a, b>; }
+struct S { 1 f1, 1 f2 }
+fun S mks(1 a, 1 b) { return S <f1 = a, f2 = b>; }
+exception E : 1;
+fun 1 main() {
+  var 1 x = 255;
+  var 1 y580 = 1;
+  var 1 y559 = ((lds 1 (1000 + 12)) >> (lds 1 (1016)));
+  var S s740 = mks(3, 1);
+  var {1,1} p222 = pair((y580 #>> 1), ((lds 1 ((1000 + 24 + 1000))) + (lds 1 ((1000 + 12)))));
+  st8 (1008), (1000 | ((lds 1 (0)) ^ (255 #>> 2)));
+  if (((255 >> 7) | y580) > 7) {
+    @foo(3, (s740.f1 >> 1000), (((x ^ 7) #>> 1) #>> 1), ((p222.1 & (0 + 0)) | (p222.1 >> p222.0)));
+  } else {
+    st (1000), s740.f1;
+    @foo(s740.f1, s740.f1, 3, ((lds 1 (0)) - y559));
+  }
+  return sub1((lds 1 ((1000 + 8))));
+}

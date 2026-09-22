@@ -90,6 +90,37 @@ def simpleSpillAllocatorGuard : Bool :=
 
 #guard simpleSpillAllocatorGuard
 
+/-! The same source through Cake's default IRC allocator with `k=1` crosses
+    the register/frame boundary.  This pins the colour choice and return ABI
+    after the spill worklist has run, rather than only checking the 22-register
+    driver path above. -/
+def cakeWordAllocIrcK1 : Option (WordProg Nat) :=
+  let tree := wordClashTree add1Program []
+  let forcedStack := cakeGetStackOnly add1Program
+  let forced := cakeGetForced add1Program
+  let (wordMoves, spillCosts) := wordGetHeuristics 3 5 add1Program
+  let moves := wordMoves.map (fun move => (move.priority, (move.left, move.right)))
+  let bij := cakeMkBij tree
+  let scost := spillCosts.map (cakeSpillCostMap bij.nextNode)
+  let initialState := cakeInitRaStateFromBij bij tree forced forcedStack
+  match cakeDoRegAllocFromState .irc scost 1 moves bij initialState with
+  | none => none
+  | some colouring =>
+      some (wordApplyColour (CakeAlloc.totalColour colouring) add1Program)
+
+def ircK1AllocatorGuard : Bool :=
+  match cakeWordAllocIrcK1 with
+  | some
+      (.seq (.move 1 [(4, 0), (0, 2), (2, 4)])
+        (.seq
+          (.seq (.move 0 [(2, 2)])
+            (.seq (.move 0 [(0, 0)])
+              (.inst (.arith (.binOp .add 0 2 (.reg 0))))))
+          (.seq (.move 0 [(2, 0)]) (.return 4 [2])))) => true
+  | _ => false
+
+#guard ircK1AllocatorGuard
+
 def runChecks : IO Bool := do
   if add1AllocatorGuard then
     IO.println "PASS Cake word_alloc add1 output matches the checked HOL oracle"
@@ -99,6 +130,10 @@ def runChecks : IO Bool := do
     IO.println "PASS Cake word_alloc simple+spill output matches the checked HOL oracle"
   else
     IO.println "FAIL Cake word_alloc simple+spill output matches the checked HOL oracle"
-  pure (add1AllocatorGuard && simpleSpillAllocatorGuard)
+  if ircK1AllocatorGuard then
+    IO.println "PASS Cake word_alloc IRC k=1 output matches the checked HOL oracle"
+  else
+    IO.println "FAIL Cake word_alloc IRC k=1 output matches the checked HOL oracle"
+  pure (add1AllocatorGuard && simpleSpillAllocatorGuard && ircK1AllocatorGuard)
 
 end Flapjack.Test.CakeWordAllocParity

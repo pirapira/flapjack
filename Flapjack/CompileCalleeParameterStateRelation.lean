@@ -215,6 +215,35 @@ theorem compileFunDecl_body_eq_compileProg_parameter_context
         declaration.body := by
   simp [compileFunDecl, panToCrepMakeVmap]
 
+theorem compileFunDecl_parameter_context_slots_bounded
+    [LawfulBEq String]
+    (context : CompileContext α) (declaration : FunDecl α)
+    (hnames : (declaration.params.map Prod.fst).Nodup) :
+    ∀ name shape names,
+      lookupInfo name
+          ({ context with
+              vars := panToCrepMakeVmap declaration.params
+              maxVar := (compileParamVars declaration.params 0).2.2 } :
+            CompileContext α).vars = some (shape, names) →
+      ∀ slot ∈ names,
+        slot ≤ ({ context with
+          vars := panToCrepMakeVmap declaration.params
+          maxVar := (compileParamVars declaration.params 0).2.2 } :
+        CompileContext α).maxVar := by
+  intro name shape names hlookup slot hslot
+  have hnamesCompiled := compileParamVars_names_nodup
+    declaration.params 0 hnames
+  have hlookupRaw : lookupInfo name
+      (compileParamVars declaration.params 0).1 = some (shape, names) := by
+    change lookupInfo name (compileParamVars declaration.params 0).1.reverse =
+      some (shape, names) at hlookup
+    rw [← lookupInfo_reverse_of_nodup name
+      (compileParamVars declaration.params 0).1 hnamesCompiled] at hlookup
+    exact hlookup
+  change slot ≤ (compileParamVars declaration.params 0).2.2
+  exact compileParamVars_slot_le declaration.params 0 name shape names
+    hlookupRaw slot hslot
+
 theorem panValueCrepStateRel_compileFunDecl_context_of_folds
     [OfNat α 0]
     [LawfulBEq String]

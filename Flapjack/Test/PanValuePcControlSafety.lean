@@ -1426,4 +1426,29 @@ example :
 
 #check @panValuePcCodeRelConcrete_compileToCrep
 
+/-! Cake's generated parameter context satisfies the slot bound needed by
+    the raised-payload evaluator, after reversing the source-name map. -/
+private def boundedParameterDecl : FunDecl Nat :=
+  { name := "f"
+    inline := false
+    exported := false
+    params := [("pair", .comb [.one, .one])]
+    body := (.skip : Prog Nat)
+    returnShape := .one }
+
+example :
+    ∀ name shape names,
+      lookupInfo name
+          ({ concreteRelContext with
+              vars := panToCrepMakeVmap boundedParameterDecl.params
+              maxVar := (compileParamVars boundedParameterDecl.params 0).2.2 } :
+            CompileContext Nat).vars = some (shape, names) →
+      ∀ slot ∈ names,
+        slot ≤ ({ concreteRelContext with
+          vars := panToCrepMakeVmap boundedParameterDecl.params
+          maxVar := (compileParamVars boundedParameterDecl.params 0).2.2 } :
+        CompileContext Nat).maxVar :=
+  compileFunDecl_parameter_context_slots_bounded concreteRelContext
+    boundedParameterDecl (by simp [boundedParameterDecl])
+
 end Flapjack.Test.PanValuePcControlSafety

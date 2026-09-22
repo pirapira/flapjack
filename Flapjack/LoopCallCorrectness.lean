@@ -1388,6 +1388,52 @@ theorem comp_ffi_labelsIn
   · simp [comp]
   · simp [comp, labelsIn, lookup]
 
+theorem comp_ffi_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (functions : List (Nat × List Nat × LoopProg α))
+    (ffiHandler : FunName → α → α → α → α → LoopState α → Option (LoopState α))
+    (environment : LocationEnv) (state : LoopState α) (fuel : Nat)
+    (function : FunName) (configuration configurationLength array arrayLength : Nat)
+    (live : List Nat)
+    (configurationValue configurationLengthValue arrayValue arrayLengthValue : α)
+    (resultState : LoopState α)
+    (hconfiguration : state.locals configuration = some configurationValue)
+    (hconfigurationLength : state.locals configurationLength =
+      some configurationLengthValue)
+    (harray : state.locals array = some arrayValue)
+    (harrayLength : state.locals arrayLength = some arrayLengthValue)
+    (hffi : ffiHandler function configurationValue configurationLengthValue
+      arrayValue arrayLengthValue state = some resultState) :
+    evalLoopProgWithCallsAndFfi functions ffiHandler (fuel + 1) state
+        (comp environment
+          (.ffi function configuration configurationLength array arrayLength live :
+            LoopProg α)).1 =
+        some (.normal resultState) ∧
+      labelsIn
+        (comp environment
+          (.ffi function configuration configurationLength array arrayLength live :
+            LoopProg α)).2
+        resultState.locals := by
+  have hcompiled :
+      comp environment
+          (.ffi function configuration configurationLength array arrayLength live :
+            LoopProg α) =
+        (.ffi function configuration configurationLength array arrayLength live, []) := by
+    simp [comp]
+  have heval :
+      evalLoopProgWithCallsAndFfi functions ffiHandler (fuel + 1) state
+          (.ffi function configuration configurationLength array arrayLength live) =
+        some (.normal resultState) := by
+    simp [evalLoopProgWithCallsAndFfi, hconfiguration, hconfigurationLength,
+      harray, harrayLength, hffi]
+  rw [hcompiled]
+  constructor
+  · exact heval
+  · simp [labelsIn, lookup]
+
 theorem comp_primitive_labelsIn
     (environment : LocationEnv) (destinations : List Nat)
     (operator : PrimOp) (arguments : List Nat)

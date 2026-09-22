@@ -159,10 +159,31 @@ theorem panValueCtxtMax_empty [BEq String] (bound : Nat) (hbound : 0 ≤ bound) 
   intro name shape slots hlookup
   simp [lookupInfo] at hlookup
 
+/-- Extending a `ctxt_max` context with an entry whose slots are all bounded
+    preserves `ctxt_max`.  This is the context-extension step for the `dec` and
+    `decCall` cases of Cake's `not_mem_context_assigned_mem_gt`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:1252`). -/
+theorem panValueCtxtMax_cons_of [BEq String] (bound : Nat)
+    (vars : InfoMap (Shape × List Nat)) (name : String) (shape : Shape)
+    (slots : List Nat) (hmax : panValueCtxtMax bound vars)
+    (hslots : ∀ slot ∈ slots, slot ≤ bound) :
+    panValueCtxtMax bound ((name, (shape, slots)) :: vars) := by
+  refine ⟨hmax.1, ?_⟩
+  intro name' shape' slots' hlookup
+  cases hb : (name == name') with
+  | false =>
+      simp only [lookupInfo, hb] at hlookup
+      exact hmax.2 name' shape' slots' hlookup
+  | true =>
+      simp only [lookupInfo, hb] at hlookup
+      have hpair : (shape, slots) = (shape', slots') := by simpa using hlookup
+      have hslotsEq : slots = slots' := congrArg Prod.snd hpair
+      rw [← hslotsEq]
+      exact hslots
+
 /-- Cake `ctxt_max_el_leq` (`pan_to_crepProofScript.sml:1493`): in a
 `ctxt_max` context, every recorded slot number of a variable is bounded by the
-context bound. -/
-theorem panValueCtxtMax_getElem_le [BEq String] (bound : Nat)
+context bound. -/theorem panValueCtxtMax_getElem_le [BEq String] (bound : Nat)
     (vars : InfoMap (Shape × List Nat)) (name : String) (shape : Shape)
     (slots : List Nat) (n : Nat)
     (hmax : panValueCtxtMax bound vars)

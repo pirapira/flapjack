@@ -87,6 +87,13 @@ theorem mem_compField_imp_mem_fixture :
 #check @compField
 #check @mem_compField_imp_mem
 
+theorem mem_compField_imp_mem_of_any_fixture :
+    (3 : Nat) ∈ ([1, 2, 3, 4] : List Nat) :=
+  mem_compField_imp_mem_of_any 1 oneCombNamed [1, 2, 3, 4] 3
+    (by simp [compField, oneCombNamed, Shape.shapeSize])
+
+#check @mem_compField_imp_mem_of_any
+
 def withShapeMembersGuard : Bool :=
   ((withShape oneCombNamed [1, 2, 3, 4])[1]'(by rw [withShape_length]; decide)).all
     (fun value => ([1, 2, 3, 4] : List Nat).contains value)

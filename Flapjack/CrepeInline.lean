@@ -1126,4 +1126,63 @@ theorem crepUnreachElim_preserve_notBranchRet (program : CrepProg α) :
   intro hh q r he
   exact h (sizeOf program + 1) program (Nat.lt_succ_self _) hh he
 
+/-! CakeML's `crep_inlineProofScript.sml` `unreach_elim_nested_decs` (:1697),
+    `unreach_elim_arg_load` (:1709) and `unreach_elim_arg_load_perm` (:1720):
+    wrapping an `unreach_elim` fixpoint in nested declarations preserves the
+    fixpoint and its reported early exit. -/
+
+theorem crepUnreachElim_dec_fixpoint (name : Nat) (value : CrepExp α) (program : CrepProg α)
+    (r : Option CrepEarlyExit)
+    (hfix : crepUnreachElim program = (program, r)) :
+    crepUnreachElim (.dec name value program) = (.dec name value program, r) := by
+  rw [crepUnreachElim.eq_def]
+  dsimp only
+  rw [hfix]
+
+theorem crepUnreachElim_nestedDecs (names : List Nat) (values : List (CrepExp α))
+    (program : CrepProg α) (r : Option CrepEarlyExit)
+    (hlen : names.length = values.length)
+    (hfix : crepUnreachElim program = (program, r)) :
+    crepUnreachElim (nestedDecs names values program) =
+      (nestedDecs names values program, r) := by
+  induction names generalizing values program r with
+  | nil =>
+      cases values with
+      | nil => simpa [nestedDecs] using hfix
+      | cons value values => simp at hlen
+  | cons name names ih =>
+      cases values with
+      | nil => simp at hlen
+      | cons value values =>
+          simp only [nestedDecs]
+          exact crepUnreachElim_dec_fixpoint name value
+            (nestedDecs names values program) r
+            (ih values program r (by simpa using hlen) hfix)
+
+theorem crepUnreachElim_argLoad (program : CrepProg α) (tmpVars : List Nat)
+    (args : List (CrepExp α)) (argsVName : List Nat) (r : Option CrepEarlyExit)
+    (hlen1 : tmpVars.length = args.length)
+    (hlen2 : args.length = argsVName.length)
+    (hfix : crepUnreachElim program = (program, r)) :
+    crepUnreachElim (argLoad tmpVars args argsVName program) =
+      (argLoad tmpVars args argsVName program, r) := by
+  unfold argLoad
+  have hinner : crepUnreachElim
+      (nestedDecs argsVName (tmpVars.map CrepExp.var) program) =
+      (nestedDecs argsVName (tmpVars.map CrepExp.var) program, r) :=
+    crepUnreachElim_nestedDecs argsVName (tmpVars.map CrepExp.var) program r
+      (by rw [List.length_map]; omega) hfix
+  exact crepUnreachElim_nestedDecs tmpVars args
+    (nestedDecs argsVName (tmpVars.map CrepExp.var) program) r hlen1 hinner
+
+theorem crepUnreachElim_argLoad_perm (program : CrepProg α) (tmpVars : List Nat)
+    (args : List (CrepExp α)) (argsVName : List Nat) (r : Option CrepEarlyExit)
+    (hlen1 : tmpVars.length = argsVName.length)
+    (hlen2 : args.length = argsVName.length)
+    (hfix : crepUnreachElim program = (program, r)) :
+    crepUnreachElim (argLoad tmpVars args argsVName program) =
+      (argLoad tmpVars args argsVName program, r) :=
+  crepUnreachElim_argLoad program tmpVars args argsVName r
+    (by omega) hlen2 hfix
+
 end Flapjack

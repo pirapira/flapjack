@@ -196,6 +196,32 @@ def loadShapeBytes [BEq α] [OfNat α 0] [Add α] [CrepBytesInWord α]
       let loaded := if address == 0 then .load value else .load (.op .add [value, .const address])
       loaded :: loadShapeBytes (address + CrepBytesInWord.bytesInWord) count value
 
+/-- Checked invariant connecting the pipeline's parameterized `loadShape` to the
+    faithful fixed-width `loadShapeBytes`: when the explicit stride is the
+    machine byte width, the two agree.  The production `.load` lowering passes
+    `context.bytesInWord` as that stride, so the bridge
+    `compileExp_load_eq_loadShapeBytes` below certifies its fixed-width
+    behavior.  This is Flapjack infrastructure; HOL has no parameterized
+    `load_shape`. -/
+theorem loadShape_eq_loadShapeBytes_of_stride_eq [BEq α] [OfNat α 0] [Add α]
+    [CrepBytesInWord α] (address stride : α) (count : Nat) (value : CrepExp α)
+    (hstride : stride = CrepBytesInWord.bytesInWord) :
+    loadShape address stride count value = loadShapeBytes address count value := by
+  subst hstride
+  induction count generalizing address with
+  | zero => rfl
+  | succ count ih => simp [loadShape, loadShapeBytes, ih]
+
+/-- The RISC-V compile context byte width is the fixed machine byte width: the
+    pipeline entry points supply `8` for the 64-bit word, which is exactly
+    `byte$bytes_in_word` (`n2w (dimindex (:'a) DIV 8)`). -/
+theorem riscvBytesInWord_eq : (8 : BitVec 64) = CrepBytesInWord.bytesInWord := rfl
+
+/-- The 32-bit oracle probe width is the fixed machine byte width: the checked-in
+    `crep_load_shape_probe.out` was produced with `32 word` values, for which
+    `byte$bytes_in_word = 4`. -/
+theorem probeBytesInWord_eq : (4 : BitVec 32) = CrepBytesInWord.bytesInWord := rfl
+
 /-- Original-domain counterpart of Cake's `load_shape_el_rel`
     (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:114`): the `n`-th
     loaded word reads from `address + n * stride`. -/

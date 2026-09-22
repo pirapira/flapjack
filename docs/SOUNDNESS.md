@@ -84,15 +84,11 @@ The following are open review or verification obligations:
    state and selected regressions. It does not review the mathematical
    adequacy of the specifications or prove untested source programs compile
    identically to CakeML.
-7. HOL's `panSem$evaluate_decls` has not yet been ported as a faithful Lean
-   definition. The existing `evalPanValueDeclarationsWithStructs` is distinct,
-   and its behavior has not been reviewed and tested as a translation of that
-   HOL evaluator. Consequently a theorem assuming only the existing Lean
-   evaluator is not a port of HOL `compile_top_shape_wf`. Porting the HOL
-   evaluator and checking it against direct HOL probes are tracked by bead
-   `flapjack-pxn.18.3.2.6`; the theorem is tracked by
-   `flapjack-pxn.18.3.2.1`. Neither bead asks for a cross-prover equivalence
-   proof.
+7. HOL's `panSem$evaluate_decls` now has a faithful Lean definition,
+   `evaluateDecls`, checked against direct HOL probes. The distinct
+   `evalPanValueDeclarationsWithStructs` remains Flapjack-specific and is not
+   used as evidence for the exact `compile_top_shape_wf` port. This work does
+   not claim a cross-prover equivalence proof.
 
 ## Trust and reproducibility notes
 

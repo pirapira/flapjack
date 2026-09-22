@@ -1711,14 +1711,26 @@ def globalCompileTopForStartSome [BEq String] [Add α] [Mul α]
             returnShape := entry.returnShape }
       some (compiled.exceptions ++ [newMain] ++ compiled.functions)
 
-/-! CakeML's total `pan_globals$compile_top_def` (`pan_globalsScript.sml:236`).
-    In particular, a missing start function compiles to the empty declaration
-    list, matching the `NONE => []` branch in HOL. -/
-@[hol "cakeml/pancake/pan_globalsScript.sml" "compile_top_def"]
+/-! Generalized total compiler analogue. Its word size and natural-number
+    conversion are explicit so Flapjack callers can use different targets; it
+    is not itself the exact HOL `compile_top` interface. The fixed-word
+    `globalCompileTopCake` wrapper below is the exact-shaped interface. -/
 def globalCompileTopForStart [BEq String] [Add α] [Mul α]
     (bytesInWord : α) (fromNat : Nat → α) (declarations : List (Decl α))
     (start : FunName) : List (Decl α) :=
   (globalCompileTopForStartSome bytesInWord fromNat declarations start).getD []
+
+/-! HOL's `compile_top` fixes its compiler context to
+    `bytes_in_word` and `n2w`. For a word of `width` bits, those are represented
+    by `width / 8` and `BitVec.ofNat width` respectively. This wrapper keeps
+    those choices out of the caller interface while remaining polymorphic in
+    the HOL word width. -/
+@[hol "cakeml/pancake/pan_globalsScript.sml" "compile_top_def"]
+def globalCompileTopCake [BEq String] [Add (BitVec width)] [Mul (BitVec width)]
+    (declarations : List (Decl (BitVec width))) (start : FunName) :
+    List (Decl (BitVec width)) :=
+  globalCompileTopForStart (BitVec.ofNat width (width / 8))
+    (BitVec.ofNat width) declarations start
 
 theorem globalDecls_all_or_of_all_left (predicate other : Decl α → Bool)
     (declarations : List (Decl α))

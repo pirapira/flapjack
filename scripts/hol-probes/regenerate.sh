@@ -42,6 +42,9 @@ run_probe() {
   local probe_name="$1"
   local output_name="$2"
   shift 2
+  if [[ -n "${HOL_PROBE_ONLY:-}" && "$probe_name" != "$HOL_PROBE_ONLY" ]]; then
+    return 0
+  fi
   local labels=()
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -58,10 +61,14 @@ run_probe() {
   local source="$1"
   shift
   local workdir="${1:-$cake_dir/pancake}"
+  local hol_workdir="$workdir"
+  if [[ -d "$workdir/.hol/objs" ]]; then
+    hol_workdir="$workdir/.hol/objs"
+  fi
   local probe="$probe_dir/$probe_name"
   local output="$probe_dir/$output_name"
   if probe_needs_refresh "$output" "$probe" "$source"; then
-    (cd "$workdir" && \
+    (cd "$hol_workdir" && \
       "$hol_dir/bin/hol" run "$probe") >"$tmp"
     if [[ ${#labels[@]} -eq 0 ]]; then
       cp "$tmp" "$output"
@@ -72,9 +79,9 @@ run_probe() {
   fi
 }
 
-# Run from Pancake's source directory so HOL's ordinary theory loader finds
-# the checked-in theory objects without modifying the CakeML submodule or
-# requiring its CAKEMLDIR project mapping in this repository.
+# Run from the local HOL object directory when Holmake has populated it, so
+# HOL's ordinary theory loader finds compiled CakeML theories. Fall back to
+# the source directory for checkouts whose Holmake places objects there.
 run_probe loop_to_word_probeScript.sml loop_to_word_probe.out \
   find_var_empty find_reg_imm_ctxt "$cake_dir/pancake/loop_to_wordScript.sml"
 # The get_stack_only probe observes the allocator driver's stack-only
@@ -326,6 +333,8 @@ run_probe crep_primop_probeScript.sml crep_primop_probe.out \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe crep_load_shape_probeScript.sml crep_load_shape_probe.out \
   empty nonzero_two "$cake_dir/pancake/crepLangScript.sml"
+run_probe crep_load_shape64_probeScript.sml crep_load_shape64_probe.out \
+  empty64 nonzero_two64 "$cake_dir/pancake/crepLangScript.sml"
 run_probe crep_to_loop_cutset_probeScript.sml crep_to_loop_cutset_probe.out \
   cut_set_const_args handler_original_live "$cake_dir/pancake/crep_to_loopScript.sml"
 run_probe crep_nested_seq_probeScript.sml crep_nested_seq_probe.out \
@@ -379,7 +388,7 @@ run_probe ctxt_fc_probeScript.sml ctxt_fc_probe.out \
   "$cake_dir/pancake/proofs/pan_to_crepProofScript.sml" \
   "$cake_dir/pancake/proofs"
 run_probe pan_globals_compile_top_probeScript.sml pan_globals_compile_top_probe.out \
-  missing_start present_start "$cake_dir/pancake/pan_globalsScript.sml"
+  missing_start global_present present_start "$cake_dir/pancake/pan_globalsScript.sml"
 run_probe smart_seq_probeScript.sml smart_seq_probe.out \
   skip_skip skip_tick tick_skip tick_tick "$cake_dir/pancake/pan_simpScript.sml"
 run_probe seq_assoc_probeScript.sml seq_assoc_probe.out \

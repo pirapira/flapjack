@@ -2773,3 +2773,6 @@ including `extCall`, under the explicit handler-preservation premises. -/
 /-! Concrete composed leaf bridge: the clocked leaf run and its event prefix,
 with the handler-preservation premises discharged. -/
 #check @Flapjack.evalPanValueFfiClockProg_leaf_of_handlerPreserves
+
+#check @Flapjack.panValueFfiStatefulHandlerPreservesIoEvents_fails
+#check @Flapjack.panValueFfiMemoryHandlerPreservesIoEvents_fails

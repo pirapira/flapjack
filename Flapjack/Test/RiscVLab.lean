@@ -667,6 +667,20 @@ example :
       some [.load32Offset 4 5 (0 - BitVec.ofNat 64 2048)] := by
   decide
 
+/- The full-width Cake Word carriers use the same lower signed-12 endpoint;
+   retain `-2048` for ordinary Load/Store, not only Load32/Store32. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMemSub .store 4 5 2048) [] 0]⟩ =
+      some [.storeWordOffset 4 5 (0 - BitVec.ofNat 64 2048)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMemSub .load 4 5 2048) [] 0]⟩ =
+      some [.loadWordOffset 4 5 (0 - BitVec.ofNat 64 2048)] := by
+  decide
+
 /- The same Cake lower signed-12 boundary applies independently to the
    byte/halfword memory-op rows; retain each width-specific target opcode. -/
 example :

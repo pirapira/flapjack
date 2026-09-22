@@ -487,6 +487,17 @@ theorem loopAssignedVars_nestedSeq (statements : List (LoopProg α)) :
   | cons statement statements ih =>
       simp [loopNestedSeq, loopAssignedVars_seq, ih]
 
+/-- Cake's `assigned_vars_nested_seq_split`
+    (`cakeml/pancake/semantics/loopPropsScript.sml:880`): the variables
+    assigned by a nested sequence of two statement lists is the concatenation
+    of the two lists' assigned variables. -/
+theorem loopAssignedVars_nestedSeq_append (statements rest : List (LoopProg α)) :
+    loopAssignedVars (loopNestedSeq (statements ++ rest)) =
+      loopAssignedVars (loopNestedSeq statements) ++
+        loopAssignedVars (loopNestedSeq rest) := by
+  rw [loopAssignedVars_nestedSeq, loopAssignedVars_nestedSeq,
+    loopAssignedVars_nestedSeq, List.flatMap_append]
+
 def loopAssignNames (names : List Nat) (expression : LoopExp α) :
     List (LoopProg α) :=
   names.map (fun name => .assign name expression)

@@ -113,6 +113,24 @@ def cutSetsAppendGuard : Bool :=
           [.assign 4 (.const 1)])) ==
     [3, 4, 9]
 
+/-! Cake `loopPropsScript.sml:880` `assigned_vars_nested_seq_split`. -/
+
+theorem loopAssignedVars_nestedSeq_append_fixture :
+    loopAssignedVars
+        (loopNestedSeq
+          (([.assign 3 (.const 0)] : List (LoopProg Nat)) ++
+            [.assign 4 (.const 1)])) =
+      loopAssignedVars (loopNestedSeq ([.assign 3 (.const 0)] : List (LoopProg Nat))) ++
+        loopAssignedVars (loopNestedSeq ([.assign 4 (.const 1)] : List (LoopProg Nat))) :=
+  loopAssignedVars_nestedSeq_append [.assign 3 (.const 0)] [.assign 4 (.const 1)]
+
+def assignedVarsSplitGuard : Bool :=
+  loopAssignedVars
+      (loopNestedSeq
+        (([.assign 3 (.const 0)] : List (LoopProg Nat)) ++
+          [.assign 4 (.const 1)])) ==
+    [3, 4]
+
 def check (name : String) (actual expected : List Nat) : IO Bool := do
   if actual == expected then
     IO.println s!"PASS {name}"
@@ -139,7 +157,8 @@ def runChecks : IO Bool := do
       (loopCutSets [9] probeAssignPairs) [3, 4, 5, 9],
     checkBool "survives MAPi Assign" survivesStructureGuard,
     checkBool "survives nested_seq append" survivesAppendGuard,
-    checkBool "cut_sets nested_seq append" cutSetsAppendGuard ].mapM id
+    checkBool "cut_sets nested_seq append" cutSetsAppendGuard,
+    checkBool "assigned_vars nested_seq split" assignedVarsSplitGuard ].mapM id
   pure (results.all id)
 
 end Flapjack.Test.LoopAssignedVarsParity

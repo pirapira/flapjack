@@ -1325,6 +1325,8 @@ example
 #check @panValuePcCompileCorrect_of_compact_evaluators_with_bounded_evidence_and_clocked_continued
 #check @panValuePcCompileCorrect_of_compact_evaluators_with_bounded_generic_raised_evidence_and_clocked_control
 #check @panValuePcCompileCorrect_of_compact_evaluators_with_bounded_generic_raised_evidence_and_clocked_raised
+#check @panValuePcCompileCorrectWithContextCode_of_compact_evaluators_with_bounded_generic_raised_evidence_and_clocked_raised
+#check @panValuePcCompileCorrectWithContextCode_of_arbitrary_clocked_raised_with_bounded_evidence
 #check @panValuePcCompileCorrect_compact_with_bounded_expression_state_evidence
 #check @panValuePcCompileCorrect_of_compact_evaluators_and_clocked_word_raise_hraise_data
 #check @panValuePcCompileCorrect_of_compact_evaluators_and_clocked_two_word_raise_hraise_data
@@ -1336,6 +1338,7 @@ example
 #check @panValuePcCompileCorrectAndClockedRaisedResultRel_of_hraise_data
 #check @panValuePcCompileCorrectAndClockedRaisedResultRel_of_control_evidence
 #check @panValuePcCompileCorrectAndClockedTimeoutResultRel_of_context_code
+#check @panValuePcCompileCorrectWithContextCodeAndClockedTimeoutResultRel_of_state
 #check @panValuePcCompileCorrectAndClockedFinalFfiResultRel_of_context_code
 #check @panValuePcCompileCorrectAndClockedReturnedResultRel_of_context_code
 #check @panValuePcCompileCorrectAndClockedNormalResultRel_of_context_code
@@ -1396,6 +1399,7 @@ example (context : CompileContext Nat) (eshapes : InfoMap Shape) :
 
 #check @panValuePcExceptionShapeRelConcrete
 #check @panValuePcExceptionShapeRelConcrete_refl
+#check @panValuePcExceptionShapeRelConcrete_of_declaration_evaluation
 
 #check @lookupPanFunction_mem
 #check @panValuePcLocalisedCode_lookup
@@ -1421,5 +1425,47 @@ example :
     exact localisedProg_skip)
 
 #check @panValuePcCodeRelConcrete_compileToCrep
+
+/-! Cake's generated parameter context satisfies the slot bound needed by
+    the raised-payload evaluator, after reversing the source-name map. -/
+private def boundedParameterDecl : FunDecl Nat :=
+  { name := "f"
+    inline := false
+    exported := false
+    params := [("pair", .comb [.one, .one])]
+    body := (.skip : Prog Nat)
+    returnShape := .one }
+
+example :
+    ∀ name shape names,
+      lookupInfo name
+          ({ concreteRelContext with
+              vars := panToCrepMakeVmap boundedParameterDecl.params
+              maxVar := (compileParamVars boundedParameterDecl.params 0).2.2 } :
+            CompileContext Nat).vars = some (shape, names) →
+      ∀ slot ∈ names,
+        slot ≤ ({ concreteRelContext with
+          vars := panToCrepMakeVmap boundedParameterDecl.params
+          maxVar := (compileParamVars boundedParameterDecl.params 0).2.2 } :
+        CompileContext Nat).maxVar :=
+  compileFunDecl_parameter_context_slots_bounded concreteRelContext
+    boundedParameterDecl (by simp [boundedParameterDecl])
+
+example :
+    ∀ name shape names,
+      lookupInfo name
+          ({ concreteRelContext with
+              vars := panToCrepMakeVmap boundedParameterDecl.params
+              maxVar := Shape.shapeSize
+                (.comb (boundedParameterDecl.params.map Prod.snd)) - 1 } :
+            CompileContext Nat).vars = some (shape, names) →
+      ∀ slot ∈ names,
+        slot ≤ ({ concreteRelContext with
+          vars := panToCrepMakeVmap boundedParameterDecl.params
+          maxVar := Shape.shapeSize
+            (.comb (boundedParameterDecl.params.map Prod.snd)) - 1 } :
+        CompileContext Nat).maxVar :=
+  compileFunDeclSource_parameter_context_slots_bounded concreteRelContext
+    boundedParameterDecl (by simp [boundedParameterDecl])
 
 end Flapjack.Test.PanValuePcControlSafety

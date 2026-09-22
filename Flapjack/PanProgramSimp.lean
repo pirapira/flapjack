@@ -98,6 +98,27 @@ theorem lookupInfo_isSome_of_mem [BEq String] [LawfulBEq String] (name : String)
         · simp [hc]
           exact ih hmem
 
+theorem lookupInfo_eq_some_of_mem_of_nodup [BEq String] [LawfulBEq String]
+    (name : String) (context : InfoMap β) (value : β)
+    (hmem : (name, value) ∈ context)
+    (hnodup : context.map Prod.fst |>.Nodup) :
+    lookupInfo name context = some value := by
+  induction context with
+  | nil => simp at hmem
+  | cons entry context ih =>
+      obtain ⟨candidate, candidateValue⟩ := entry
+      simp only [List.map_cons, List.nodup_cons, List.mem_cons] at hmem hnodup
+      rcases hmem with hhead | htail
+      · cases hhead
+        simp [lookupInfo]
+      · have hne : candidate ≠ name := by
+          intro heq
+          subst candidate
+          apply hnodup.1
+          exact List.mem_map.mpr ⟨(name, value), htail, rfl⟩
+        have hlookup := ih htail hnodup.2
+        simp [lookupInfo, hne, hlookup]
+
 theorem collectPanValueStructs_structInfosOk {α : Type} (declarations : List (Decl α)) :
     ∀ (context context' : StructContext),
       collectPanValueStructs declarations context = some context' →
@@ -1079,6 +1100,31 @@ theorem evalPanValueDeclarations_exception_lookup_isSome
     exact List.mem_append_left _ hname
   exact lookupInfo_isSome_of_mem exception
     (panExceptionEntries declarations ++ state.exceptions) hname'
+
+theorem evalPanValueDeclarations_exception_shape_lookup
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    [LawfulBEq String]
+    (state state' : PanValueProgramState α) (declarations : List (Decl α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    {exception : ExceptionId} {shape : Shape}
+    (hmem : (.exnDecl exception shape : Decl α) ∈ declarations)
+    (hnodup : (state'.exceptions.map Prod.fst).Nodup)
+    (heval : evalPanValueDeclarations state declarations memoryAccess = some state') :
+    lookupInfo exception state'.exceptions = some shape := by
+  have hentries : (exception, shape) ∈ panExceptionEntries declarations :=
+    panExceptionEntries_mem_of_exnDecl_mem declarations hmem
+  have htable := evalPanValueDeclarations_exceptions state state' declarations
+    memoryAccess heval
+  have hnodup' :
+      ((panExceptionEntries declarations ++ state.exceptions).map Prod.fst).Nodup := by
+    rw [← htable]
+    exact hnodup
+  rw [htable]
+  exact lookupInfo_eq_some_of_mem_of_nodup exception
+    (panExceptionEntries declarations ++ state.exceptions) shape
+    (List.mem_append_left _ hentries) hnodup'
 
 /-! Package the source-side raised call with the declaration-derived exception
     context.  This is the evaluator evidence needed before a generic raised

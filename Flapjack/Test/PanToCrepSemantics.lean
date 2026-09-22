@@ -215,4 +215,7 @@ example :
           CrepPcResult Nat) = none := by
   simp [crepPcResultOutcome]
 
+#check @panCrepBehaviourRel_of_pcCompileCorrectWithContextCode_pairwise_evidence
+#check @panCrepBehaviourRel_of_pcCompileCorrectWithContextCode_cross_clock_prefix_from_pairwise_evidence
+
 end Flapjack.Test.PanToCrepSemantics

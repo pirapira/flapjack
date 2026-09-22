@@ -61,6 +61,7 @@ import Flapjack.Test.CrepeFfiRelation
 import Flapjack.Test.CrepeFfiSequenceRelation
 import Flapjack.Test.CrepeDeclarationFfiRelation
 import Flapjack.Test.PanToCrepSemantics
+import Flapjack.Test.PanToCrepExceptionRelation
 import Flapjack.Test.CrepeHandlerCorrectness
 /- These legacy Crep-to-Loop theorem fixtures still assume identity variable
    resolution; source parity coverage remains in `Test.SourceToLoop`. -/

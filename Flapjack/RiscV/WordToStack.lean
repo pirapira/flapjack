@@ -1325,6 +1325,8 @@ def wordStackInstall {α : Type} (config : WordStackConfig)
 
 def wordStackBufferWrite {α : Type} (config : WordStackConfig) (isCode : Bool)
     (address value : Nat) : Option (StackProg α) := do
+  /- Cake comp CodeBufferWrite/DataBufferWrite uses wReg1 for the address
+     and wReg2 for the value (word_to_stackScript.sml:546-551). -/
   let address ← wordStackLocation config address
   let value ← wordStackLocation config value
   match address, value with
@@ -1332,31 +1334,31 @@ def wordStackBufferWrite {α : Type} (config : WordStackConfig) (isCode : Bool)
       pure (if isCode then .codeBufferWrite address value
         else .dataBufferWrite address value)
   | .stack address, .register value =>
-      if value = config.addressScratch then
+      if value = config.scratch then
         none
       else
         pure (wordStackJoin
-          (.stackLoad config.addressScratch (wordStackOffset config address))
-          (if isCode then .codeBufferWrite config.addressScratch value
-          else .dataBufferWrite config.addressScratch value))
+          (.stackLoad config.scratch (wordStackOffset config address))
+          (if isCode then .codeBufferWrite config.scratch value
+          else .dataBufferWrite config.scratch value))
   | .register address, .stack value =>
-      if address = config.scratch then
+      if address = config.addressScratch then
         none
       else
         pure (wordStackJoin
-          (.stackLoad config.scratch (wordStackOffset config value))
-          (if isCode then .codeBufferWrite address config.scratch
-          else .dataBufferWrite address config.scratch))
+          (.stackLoad config.addressScratch (wordStackOffset config value))
+          (if isCode then .codeBufferWrite address config.addressScratch
+          else .dataBufferWrite address config.addressScratch))
   | .stack address, .stack value =>
       if config.scratch = config.addressScratch then
         none
       else
         pure (wordStackJoin
-          (.stackLoad config.addressScratch (wordStackOffset config address))
+          (.stackLoad config.scratch (wordStackOffset config address))
           (wordStackJoin
-            (.stackLoad config.scratch (wordStackOffset config value))
-            (if isCode then .codeBufferWrite config.addressScratch config.scratch
-            else .dataBufferWrite config.addressScratch config.scratch)))
+            (.stackLoad config.addressScratch (wordStackOffset config value))
+            (if isCode then .codeBufferWrite config.scratch config.addressScratch
+            else .dataBufferWrite config.scratch config.addressScratch)))
 
 def wordStackAtomNat (config : WordStackConfig) (temporary : Nat) :
     WordExp Nat → Option (StackProg Nat × Nat)
@@ -1376,19 +1378,18 @@ def wordStackWritePhysicalNat (config : WordStackConfig) (destination : Nat)
       pure (wordStackJoin (body config.scratch)
         (.stackStore config.scratch (wordStackOffset config slot)))
 
-/- Cake's `wReg2` writes a spilled value through `k+1`, while `wReg1`
-   writes through `k`.  Shared stores use the former for their value carrier;
-   keep this temporary choice explicit rather than reusing the load/destination
-   helper above. -/
-def wordStackWritePhysicalNatWith (config : WordStackConfig)
-    (destination temporary : Nat) (body : Nat → StackProg Nat) :
+/- Cake wReg2 reads a spilled shared-store value through k+1, while wReg1
+   reads an address through k. Shared stores use the read carrier below. -/
+def wordStackReadPhysicalNatWith (config : WordStackConfig)
+    (source temporary : Nat) (body : Nat → StackProg Nat) :
     Option (StackProg Nat) := do
-  let location ← wordStackLocation config destination
+  let location ← wordStackLocation config source
   match location with
   | .register register => pure (body register)
   | .stack slot =>
-      pure (wordStackJoin (body temporary)
-        (.stackStore temporary (wordStackOffset config slot)))
+      pure (wordStackJoin
+        (.stackLoad temporary (wordStackOffset config slot))
+        (body temporary))
 
 def wordStackWritePhysical {α : Type} (config : WordStackConfig) (destination : Nat)
     (body : Nat → StackProg α) : Option (StackProg α) := do
@@ -1755,7 +1756,7 @@ def wordStackCompileSharedNat (config : WordStackConfig)
           wordStackAtomNat config config.scratch address
         let body ← match operator with
           | .store | .store8 | .store16 | .store32 =>
-              wordStackWritePhysicalNatWith config destination config.addressScratch
+              wordStackReadPhysicalNatWith config destination config.addressScratch
                 (fun register => .shMem operator register addressRegister)
           | .load | .load8 | .load16 | .load32 =>
               wordStackWritePhysicalNat config destination
@@ -1767,7 +1768,7 @@ def wordStackCompileSharedNat (config : WordStackConfig)
             (wordStackExpressionTemporaries config config.scratch) address
         let body ← match operator with
           | .store | .store8 | .store16 | .store32 =>
-              wordStackWritePhysicalNatWith config destination config.addressScratch
+              wordStackReadPhysicalNatWith config destination config.addressScratch
                 (fun register => .shMem operator register config.scratch)
           | .load | .load8 | .load16 | .load32 =>
               wordStackWritePhysicalNat config destination

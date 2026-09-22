@@ -1081,6 +1081,80 @@ theorem PanValuePcSemanticClockEvidence.crossClockRaisedForbiddenResultRel
     (.raised targetState targetException) sourceEvidence.returnedClock hraisedRel
   exact ⟨hraisedRel, by simpa [houtcome, hresult] using hforbidden⟩
 
+/-! The cross-clock normal-control branch of Cake's semantic induction.
+    Normal results are forbidden observations, but unlike the generic
+    forbidden wrapper this theorem exposes the concrete source/target states
+    and re-applies `pc_compile_correct` across the two clock witnesses. -/
+theorem PanValuePcSemanticClockEvidence.crossClockNormalForbiddenResultRel
+    {α σ : Type}
+    [BEq α] [OfNat α 0] [Add α]
+    {structs : StructContext} {context : CompileContext α}
+    {program : Prog α}
+    {sourceEvaluate : PanValuePcEvaluator α}
+    {targetEvaluate : CrepPcEvaluator α}
+    {codeRel : PanValuePcCodeRel α}
+    {excpRel : PanValuePcExceptionShapeRel α}
+    {exceptionRel : ExceptionId → PanValue α → α → Prop}
+    {exceptionCode : ExceptionId → Option α}
+    {globalsLookup : CrepState α → PanValue α → Option (List α)}
+    {panHooks : PanSemanticsHooks α σ}
+    {crepHooks : CrepSemanticsHooks α}
+    (hcorrect : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (sourceClock targetClock : Nat)
+    (sourceEvidence : PanValuePcSemanticClockEvidence structs context program
+      sourceClock sourceEvaluate targetEvaluate codeRel excpRel exceptionRel
+      exceptionCode globalsLookup panHooks crepHooks)
+    (targetEvidence : PanValuePcSemanticClockEvidence structs context program
+      targetClock sourceEvaluate targetEvaluate codeRel excpRel exceptionRel
+      exceptionCode globalsLookup panHooks crepHooks)
+    (inputCodeRel : codeRel context sourceEvidence.sourceInput.code
+      targetEvidence.targetInput.code)
+    (inputExcpRel : excpRel context sourceEvidence.sourceInput.eshapes
+      targetEvidence.targetInput.eshapes)
+    (stateRel : panValueCrepStateRel structs context
+      sourceEvidence.sourceInput.locals sourceEvidence.sourceInput.globals
+      sourceEvidence.sourceInput.memory targetEvidence.targetInput.state)
+    (outputCodeRel : codeRel context sourceEvidence.sourceExecution.code
+      targetEvidence.targetExecution.code)
+    (outputExcpRel : excpRel context sourceEvidence.sourceExecution.eshapes
+      targetEvidence.targetExecution.eshapes)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (sourceFfi : FfiState σ)
+    (targetState : CrepState α)
+    (houtcome : sourceEvidence.outcome =
+      .control (.normal sourceLocals sourceGlobals sourceMemory sourceFfi))
+    (hresult : targetEvidence.result = .normal targetState) :
+    panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
+      (.normal sourceLocals sourceGlobals sourceMemory)
+      (.normal targetState) ∧
+    (panForbiddenResult
+        (some (sourceEvidence.outcome, sourceEvidence.returnedClock)) ↔
+      crepForbiddenResult
+        (crepControlResultToSemantic (some targetEvidence.result))) := by
+  have hrel := hcorrect context structs sourceEvidence.sourceInput
+    targetEvidence.targetInput exceptionRel sourceEvidence.sourceExecution
+    targetEvidence.targetExecution sourceEvidence.sourceInputStructs
+    targetEvidence.targetInputStructs sourceEvidence.sourceLocalisedCode
+    sourceEvidence.programLocalised inputCodeRel inputExcpRel stateRel
+    sourceEvidence.sourceNotError sourceEvidence.sourceEval
+    targetEvidence.targetEval outputCodeRel outputExcpRel
+  have hnormalRel :
+      panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
+        (.normal sourceLocals sourceGlobals sourceMemory)
+        (.normal targetState) := by
+    have hcontext := panValuePcResultRel_of_withContextCode structs context
+      exceptionRel exceptionCode globalsLookup
+      sourceEvidence.sourceExecution.result targetEvidence.targetExecution.result hrel
+    rw [sourceEvidence.sourceResult, targetEvidence.targetResult] at hcontext
+    simpa [houtcome, hresult, panOutcomeToPcResult, crepControlToPcResult]
+      using hcontext
+  have hforbidden := panValuePcResultRel_forbidden_iff
+    structs context exceptionRel exceptionCode globalsLookup
+    (.control (.normal sourceLocals sourceGlobals sourceMemory sourceFfi))
+    (.normal targetState) sourceEvidence.returnedClock hnormalRel
+  exact ⟨hnormalRel, by simpa [houtcome, hresult] using hforbidden⟩
+
 /-! Reapply `pc_compile_correct` across two clock witnesses. This is the
 source/target execution step used by Cake's `evaluate_add_clock_eq` cases: the
 clocked evaluator monotonicity itself is not assumed here, but every

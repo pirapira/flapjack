@@ -2234,6 +2234,64 @@ theorem evalPanValueFfiClockProgram_of_declarations_and_normal_call_context_code
   exact (panValuePcResultRelWithContextCode_normal_iff state.structs pcContext
     exceptionRel exceptionCode globalsLookup locals globals memory targetState).2 hstate
 
+/-! The direct returned-call branch has the same context-code state boundary as
+    the normal branch.  The return-shape lookup, evaluator result, source/target
+    state relation, and flattened value relation remain explicit for the
+    returned constructor of `state_rel_imp_semantics_to_crep`. -/
+theorem evalPanValueFfiClockProgram_of_declarations_and_returned_call_context_code
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (initial : PanValueFfiProgramState α σ)
+    (clock : Nat)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (fuel : Nat) (declarations : List (Decl α))
+    (entry : FunName) (arguments : List (Exp α))
+    (state : PanValueProgramState α) (shape : Shape)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (value : PanValue α) (nextClock : Nat)
+    (pcContext : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (targetState : CrepState α) (targetValues : List α)
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ))
+    (hdeclarations : evalPanValueDeclarations initial.source declarations
+      (memoryAccess := memoryAccess) = some state)
+    (hcall : evalPanValueFfiClockCall context primitive handler state.structs
+      state.functions state.baseAddress state.topAddress state.bytesInWord fuel
+      (fun _ => none) state.globals state.memory initial.ffi clock none entry arguments
+      (memoryAccess := memoryAccess)
+      (contracts := some (PanValueCallContracts.mk state.returnShapes
+        state.exceptions state.parameterShapes))
+      (memoryHandler := memoryHandler) =
+      some (.control (.returned locals globals memory ffi [value]), nextClock))
+    (hentry : lookupInfo entry state.returnShapes = some shape)
+    (hshape : panShapeMatches (panValueShape state.structs value) shape = true)
+    (hstate : panValueCrepStateRel state.structs pcContext locals globals
+      memory targetState)
+    (hvalues : panValueCrepValuesRel [value] targetValues) :
+    evalPanValueFfiClockProgram context initial clock primitive handler fuel
+      declarations entry arguments (memoryAccess := memoryAccess)
+      (memoryHandler := memoryHandler) =
+      some (.control (.returned locals globals memory ffi [value]), nextClock) ∧
+    panValuePcResultRelWithContextCode state.structs pcContext exceptionRel
+      exceptionCode globalsLookup
+      (.returned locals globals memory [value]) (.returned targetState targetValues) := by
+  have hprogram := evalPanValueFfiClockProgram_of_declarations_and_returned_call
+    context initial clock primitive handler fuel declarations entry arguments
+    state shape locals globals memory ffi value nextClock
+    (memoryAccess := memoryAccess) (memoryHandler := memoryHandler)
+    hdeclarations hcall hentry hshape
+  refine ⟨hprogram, ?_⟩
+  exact (panValuePcResultRelWithContextCode_returned_iff state.structs pcContext
+    exceptionRel exceptionCode globalsLookup locals globals memory [value]
+    targetState targetValues).2 ⟨hstate, hvalues⟩
+
 /-! The timeout declaration branch has the same context-code boundary as the
     normal branch.  This is the clock-exhaustion case of
     `state_rel_imp_semantics_to_crep`: declaration evaluation and the call

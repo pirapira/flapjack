@@ -61,6 +61,15 @@ theorem compileProg_dec_assigned_free_fixture :
   · simp [compileExp]
   · simp [compileProg, crepAssignedFreeVars]
 
+theorem compileProg_decCall_assigned_free_fixture :
+    (7 : Nat) ∉ crepAssignedFreeVars
+      (compileProg boundedContext
+        (.decCall "fresh" .one "callee" [] .skip)) := by
+  apply not_mem_crepAssignedFreeVars_compileProg_decCall
+    boundedContext "fresh" .one "callee" [] .skip 7
+  · simp [compileProg, crepAssignedFreeVars]
+  · simp [allocatedNames, boundedContext]
+
 def runChecks : IO Bool := do
   if parityGuard then
     IO.println "PASS crep assigned_free_vars skip/assign/dec/seq/if/while/shmem/fallback"

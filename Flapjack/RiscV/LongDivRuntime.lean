@@ -135,7 +135,7 @@ def cakeLongDivStackAdapter : StackProg Nat :=
     .arith .or (2 + 4) 0 0,
     .call (some
       (stackSeq [
-        .arith .or 0 2 2,
+        .arith .or 0 11 11,
         .get 3 (.temp 28)], 0, 0, 0))
       (.label cakeLongDivLocation) none]
 

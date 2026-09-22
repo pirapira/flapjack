@@ -361,4 +361,115 @@ theorem crepHasReturn_false_imp_unreachElim_notReturn
   rw [hElim] at hNotReturn
   exact hNotReturn
 
+
+theorem crepExpsOf_unreachElim (program : CrepProg α) :
+    ∀ {q : CrepProg α} {r : Option CrepEarlyExit} {e : CrepExp α},
+      crepUnreachElim program = (q, r) → e ∈ crepExpsOf q → e ∈ crepExpsOf program := by
+  apply crepUnreachElim.induct
+    (motive := fun program => ∀ {q : CrepProg α} {r : Option CrepEarlyExit} {e : CrepExp α},
+      crepUnreachElim program = (q, r) → e ∈ crepExpsOf q → e ∈ crepExpsOf program)
+  · intro values q r e h hmem
+    rw [crepUnreachElim.eq_def] at h
+    cases h
+    exact hmem
+  · intro exception q r e h hmem
+    rw [crepUnreachElim.eq_def] at h
+    cases h
+    exact hmem
+  · intro label q r e h hmem
+    rw [crepUnreachElim.eq_def] at h
+    cases h
+    exact hmem
+  · intro label q r e h hmem
+    rw [crepUnreachElim.eq_def] at h
+    cases h
+    exact hmem
+  · intro first second second' secondExit hfirst hsome ihFirst q r e h hmem
+    have hunf : crepUnreachElim (first.seq second) = (second', secondExit) := by
+      rw [crepUnreachElim.eq_def]
+      dsimp only
+      rw [hfirst]
+      simp [hsome]
+    rw [hunf] at h
+    cases h
+    simp only [crepExpsOf]
+    exact List.mem_append.mpr (Or.inl (ihFirst hfirst hmem))
+  · intro first second second' secondExit hfirst hnotsome second'' secondExit' hsecond ihFirst ihSecond q r e h hmem
+    have hunf : crepUnreachElim (first.seq second) = (.seq second' second'', secondExit') := by
+      rw [crepUnreachElim.eq_def]
+      dsimp only
+      rw [hfirst]
+      simp [hnotsome, hsecond]
+    rw [hunf] at h
+    cases h
+    simp only [crepExpsOf] at hmem
+    simp only [crepExpsOf]
+    rcases List.mem_append.mp hmem with hm | hm
+    · exact List.mem_append.mpr (Or.inl (ihFirst hfirst hm))
+    · exact List.mem_append.mpr (Or.inr (ihSecond hsecond hm))
+  · intro name value body body' bodyExit hbody ih q r e h hmem
+    have hunf : crepUnreachElim (.dec name value body) = (.dec name value body', bodyExit) := by
+      rw [crepUnreachElim.eq_def]
+      dsimp only
+      rw [hbody]
+    rw [hunf] at h
+    cases h
+    simp only [crepExpsOf, List.mem_cons] at hmem
+    simp only [crepExpsOf, List.mem_cons]
+    rcases hmem with heq | hmem
+    · exact Or.inl heq
+    · exact Or.inr (ih hbody hmem)
+  · intro condition thenBranch elseBranch then' thenExit hthen then'' elseExit helse ihThen ihElse q r e h hmem
+    have hunf : crepUnreachElim (.ite condition thenBranch elseBranch) =
+        (.ite condition then' then'', crepMergeExit thenExit elseExit) := by
+      rw [crepUnreachElim.eq_def]
+      dsimp only
+      rw [hthen]
+      dsimp only
+      rw [helse]
+    rw [hunf] at h
+    cases h
+    simp only [crepExpsOf, List.mem_cons] at hmem
+    simp only [crepExpsOf, List.mem_cons]
+    rcases hmem with heq | hmem
+    · exact Or.inl heq
+    · rcases List.mem_append.mp hmem with hm | hm
+      · exact Or.inr (List.mem_append.mpr (Or.inl (ihThen hthen hm)))
+      · exact Or.inr (List.mem_append.mpr (Or.inr (ihElse helse hm)))
+  · intro condition body body' bodyExit hbody ih q r e h hmem
+    have hunf : crepUnreachElim (.while condition body) = (.while condition body', none) := by
+      rw [crepUnreachElim.eq_def]
+      dsimp only
+      rw [hbody]
+    rw [hunf] at h
+    cases h
+    simp only [crepExpsOf, List.mem_cons] at hmem
+    simp only [crepExpsOf, List.mem_cons]
+    rcases hmem with heq | hmem
+    · exact Or.inl heq
+    · exact Or.inr (ih hbody hmem)
+  · intro name arguments q r e h hmem
+    rw [crepUnreachElim.eq_def] at h
+    cases h
+    exact hmem
+  · intro names name arguments q r e h hmem
+    rw [crepUnreachElim.eq_def] at h
+    cases h
+    exact hmem
+  · intro names handler body name arguments second' secondExit hbody ih q r e h hmem
+    have hunf : crepUnreachElim (.call (some (names, some (handler, body))) name arguments) =
+        (.call (some (names, some (handler, second'))) name arguments, none) := by
+      rw [crepUnreachElim.eq_def]
+      dsimp only
+      rw [hbody]
+    rw [hunf] at h
+    cases h
+    simp only [crepExpsOf] at hmem ⊢
+    rcases List.mem_append.mp hmem with hm | hm
+    · exact List.mem_append.mpr (Or.inl hm)
+    · exact List.mem_append.mpr (Or.inr (ih hbody hm))
+  · intro program hret hraise hbreak hcontinue hseq hdec hite hwhile hcallnone hcallsomenone hcallsomesome
+    intro q r e h hmem
+    cases program <;> simp_all [crepUnreachElim]
+
 end Flapjack

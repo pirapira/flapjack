@@ -1017,6 +1017,64 @@ def cakeDoSimplify (k : Nat) (state : CakeRaState) : Bool × CakeRaState :=
       let state := state.simpWl.foldl (fun s x => cakePushStack x s) state
       (true, cakeUnspill k { state with simpWl := [] })
 
+/- Cake do_simplify pushes every simplify-worklist node before unspill;
+   unspill only rearranges worklists and leaves the built stack unchanged. -/
+theorem cakeDoSimplify_stack_eq
+    (k : Nat) (state : CakeRaState) (items : List Nat)
+    (hsimp : state.simpWl = items) (hitems : items ≠ []) :
+    (cakeDoSimplify k state).2.stack = items.reverse ++ state.stack := by
+  have hdecDegStack : ∀ (s : CakeRaState) (xs : List Nat),
+      (xs.foldl (fun s x => cakeDecDeg x s) s).stack = s.stack := by
+    intro s xs
+    induction xs generalizing s with
+    | nil => rfl
+    | cons x xs ih =>
+        simp only [List.foldl]
+        rw [ih]
+        simp [cakeDecDeg]
+  have hdecDegSimp : ∀ (s : CakeRaState) (xs : List Nat),
+      (xs.foldl (fun s x => cakeDecDeg x s) s).simpWl = s.simpWl := by
+    intro s xs
+    induction xs generalizing s with
+    | nil => rfl
+    | cons x xs ih =>
+        simp only [List.foldl]
+        rw [ih]
+        simp [cakeDecDeg]
+  have hdec : ∀ (s : CakeRaState) (xs : List Nat),
+      (xs.foldl (fun s x => cakeDecDegree x s) s).stack = s.stack := by
+    intro s xs
+    induction xs generalizing s with
+    | nil => rfl
+    | cons x xs ih =>
+        simp only [List.foldl]
+        rw [ih]
+        by_cases hlt : x < s.dim
+        · simp [cakeDecDegree, hlt, hdecDegStack]
+        · simp [cakeDecDegree, hlt]
+  have hdecSimp : ∀ (s : CakeRaState) (xs : List Nat),
+      (xs.foldl (fun s x => cakeDecDegree x s) s).simpWl = s.simpWl := by
+    intro s xs
+    induction xs generalizing s with
+    | nil => rfl
+    | cons x xs ih =>
+        simp only [List.foldl]
+        rw [ih]
+        by_cases hlt : x < s.dim
+        · simp [cakeDecDegree, hlt, hdecDegSimp]
+        · simp [cakeDecDegree, hlt]
+  have hpush : ∀ (s : CakeRaState) (xs : List Nat),
+      (xs.foldl (fun s x => cakePushStack x s) s).stack = xs.reverse ++ s.stack := by
+    intro s xs
+    induction xs generalizing s with
+    | nil => simp
+    | cons x xs ih =>
+        simp only [List.foldl]
+        rw [ih]
+        simp [cakePushStack, List.reverse_cons, List.append_assoc]
+  simp [cakeDoSimplify, hsimp, hdec, hdecSimp, hpush, cakeUnspill,
+    cakeReviveMoves, cakeAddSimpWl, cakeAddFreezeWl]
+
 /-- `inc_deg` (`reg_allocScript.sml:424-429`). -/
 def cakeIncDeg (n d : Nat) (state : CakeRaState) : CakeRaState :=
   let old := (state.degrees.get n).getD 0

@@ -199,6 +199,135 @@ def crepControlToPcResult : CrepControlResult α → CrepPcResult α
   | .continued state label => .continued state label
   | .finalFfi state event => .finalFfi state event
 
+/-! ## Clocked evaluator adapters
+
+The compact `pc_compile_correct` boundary quantifies over an evaluator whose
+clock is implicit in the evaluator value.  The production semantics exposes
+that clock explicitly through `panSemEvaluate` and `crepEvaluate`.  These
+adapters make the correspondence executable: fixing a clock produces a
+`PanValuePcEvaluator`/`CrepPcEvaluator`, while retaining timeout and
+`FinalFFI` in the result constructors.  The adapter lemmas below are the
+small, reusable link needed when the stateful program proofs are assembled
+into the clocked Cake theorem; they do not assert any compiler correctness by
+themselves.
+-/
+
+def panValuePcClockedSourceEvaluator
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (clock : Nat)
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (state : PanSemEvaluateState α σ) : PanValuePcEvaluator α :=
+  fun _ input program =>
+    (panSemEvaluate context primitive handler
+      { state with
+        structs := input.structs
+        locals := input.locals
+        globals := input.globals
+        memory := input.memory
+        clock := clock } program).map
+      (fun result =>
+        { code := input.code
+          eshapes := input.eshapes
+          result := panOutcomeToPcResult result.1 })
+
+def crepPcClockedTargetEvaluator
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (clock : Nat)
+    (functions : List (CompiledFunction α))
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) : CrepPcEvaluator α :=
+  fun _ input program =>
+    (crepEvaluate functions primitive ffi sharedMem baseAddress topAddress
+      clock input.state program).map
+      (fun result =>
+        { code := input.code
+          eshapes := input.eshapes
+          result := crepControlToPcResult result })
+
+theorem panValuePcClockedSourceEvaluator_adapter
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (clock : Nat) (compileContext : CompileContext α)
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (state : PanSemEvaluateState α σ)
+    (input : PanValuePcInput α) (program : Prog α)
+    (execution : PanValuePcExecution α)
+    (heval : panValuePcClockedSourceEvaluator clock context primitive handler
+      state compileContext input program = some execution) :
+    ∃ result,
+      panSemEvaluate context primitive handler
+        { state with
+          structs := input.structs
+          locals := input.locals
+          globals := input.globals
+          memory := input.memory
+          clock := clock } program = some result ∧
+      execution.result = panOutcomeToPcResult result.1 := by
+  cases hsource : panSemEvaluate context primitive handler
+      { state with
+        structs := input.structs
+        locals := input.locals
+        globals := input.globals
+        memory := input.memory
+        clock := clock } program with
+  | none => simp [panValuePcClockedSourceEvaluator, hsource] at heval
+  | some result =>
+      refine ⟨result, ?_, ?_⟩
+      · rfl
+      have heval' :
+          ({ code := input.code
+            , eshapes := input.eshapes
+            , result := panOutcomeToPcResult result.1 } :
+            PanValuePcExecution α) = execution := by
+        simpa [panValuePcClockedSourceEvaluator, hsource] using heval
+      exact (congrArg (fun value : PanValuePcExecution α => value.result)
+        heval').symm
+
+theorem crepPcClockedTargetEvaluator_adapter
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (clock : Nat) (compileContext : CompileContext α)
+    (functions : List (CompiledFunction α))
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (input : CrepPcInput α)
+    (program : CrepProg α) (execution : CrepPcExecution α)
+    (heval : crepPcClockedTargetEvaluator clock functions primitive ffi sharedMem
+      baseAddress topAddress compileContext input program = some execution) :
+    ∃ result,
+      crepEvaluate functions primitive ffi sharedMem baseAddress topAddress
+        clock input.state program = some result ∧
+      execution.result = crepControlToPcResult result := by
+  cases htarget : evalCrepFullProgState functions primitive ffi sharedMem
+      baseAddress topAddress clock input.state program with
+  | none => simp [crepPcClockedTargetEvaluator, crepEvaluate, htarget] at heval
+  | some result =>
+      refine ⟨result, ?_, ?_⟩
+      · simpa [crepEvaluate] using htarget
+      have heval' :
+          ({ code := input.code
+            , eshapes := input.eshapes
+            , result := crepControlToPcResult result } :
+            CrepPcExecution α) = execution := by
+        simpa [crepPcClockedTargetEvaluator, crepEvaluate, htarget] using heval
+      exact (congrArg (fun value : CrepPcExecution α => value.result)
+        heval').symm
+
 /-! ## Same-clock field transport -/
 
 set_option linter.unusedSimpArgs false in

@@ -314,11 +314,71 @@ example :
       some [.mulHU 4 6 7, .mul 5 6 7] := by
   decide
 
+/- Cake rejects a LongMul when its high-result destination aliases either
+   source; the helper expansion is only valid after this source-boundary check. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.longMul 6 5 6 7))) [] 0]⟩ = none := by
+  decide
+
+/- Cake's register binary subtraction lowers directly to the RV64 SUB row;
+   keep the register carrier distinct from the immediate ADDI form above. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.binOp .sub 4 5 (.reg 6)))) [] 0]⟩ =
+      some [.sub 4 5 6] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.binOp .and 4 5 (.reg 6)))) [] 0]⟩ =
+      some [.and 4 5 6] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.binOp .or 4 5 (.reg 6)))) [] 0]⟩ =
+      some [.or 4 5 6] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.binOp .xor 4 5 (.reg 6)))) [] 0]⟩ =
+      some [.xor 4 5 6] := by
+  decide
+
+/- Cake's `riscv_ast (Inst (Arith (Div ...)))` selects the signed RISC-V
+   DIV encoding.  Flapjack's historical constructor is named `divU`, but its
+   encoder uses Cake's funct3=4/funct7=1 row; pin that source-shaped Lab
+   boundary explicitly so the name cannot hide a DIVU regression. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.div 4 5 6))) [] 0]⟩ =
+      some [.divU 4 5 6] := by
+  decide
+
+/- Cake's direct RISC-V target rejects `LongDiv`; the Pancake runtime helper
+   is inserted earlier by the Stack pipeline, so Lab must not silently emit a
+   target instruction for an unexpanded LongDiv node. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.longDiv 4 5 6 7 8))) [] 0]⟩ = none := by
+  decide
+
 example :
     compileLabSection (width := 64) { services := [] }
       ⟨3, [.asm (.word (.arith (.addCarry 4 5 6 7 8))) [] 0]⟩ =
       some [.sltu 31 0 8, .add 4 6 7, .sltu 5 4 7,
         .add 4 4 31, .sltu 31 4 31, .or 5 5 31] := by
+  decide
+
+/- Cake's four-register AddCarry carrier uses the carry register as both
+   input and output, unlike Pancake's five-register primitive above. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.cakeAddCarry 4 6 7 8))) [] 0]⟩ =
+      some [.sltu 31 0 8, .add 4 6 7, .sltu 8 4 7,
+        .add 4 4 31, .sltu 31 4 31, .or 8 8 31] := by
   decide
 
 /- Cake's four-register AddCarry is distinct from Pancake's five-register

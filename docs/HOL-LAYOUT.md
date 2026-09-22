@@ -35,8 +35,11 @@ provenance is recorded by `@[hol ...]` and checked by
 `compile_top_shape_wf` from `proofs/pan_globalsProofScript.sml` is ported in
 `Flapjack/Pancake/Proofs/PanGlobals.lean`. It assumes successful faithful
 `evaluateDecls` and HOL's admissible-declaration condition, then proves the
-function-shape property of the total `globalCompileTopForStart` result. Its
-statement contract is checked by
+function-shape property of the total `globalCompileTopCake` result, whose
+interface fixes HOL's `bytes_in_word` and `n2w` compiler context for each
+`BitVec` width. The generalized `globalCompileTopForStart` proof remains
+untagged because it exposes those choices to callers. The statement contract
+is checked by
 `Flapjack/Test/PanGlobalsCompileTopShapeWfParity.lean`. The related
 `compile_top_shape_wf_nil` corollary remains open under bead
 `flapjack-pxn.18.3.2.2`.

@@ -9,8 +9,6 @@ namespace Flapjack
     (\`cakeml/pancake/proofs/pan_globalsProofScript.sml:2611\`). The public
     \`globalCompileTopForStart\` is total, so the missing-start branch is the
     empty list and satisfies the result predicate vacuously. -/
-@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml"
-  "compile_top_only_functions_or_exns"]
 theorem globalCompileTopForStart_all_function_or_exception [BEq String]
     [Add α] [Mul α] (bytesInWord : α) (fromNat : Nat → α)
     (declarations : List (Decl α)) (start : FunName) :
@@ -26,12 +24,17 @@ theorem globalCompileTopForStart_all_function_or_exception [BEq String]
       exact globalCompileDecs_result_all_function_or_exception _ _ _
         (by simp [globalDeclIsFunction])
 
-/-! Exact-shaped port of Cake's `compile_top_shape_wf`
-    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2458`). The output
-    predicate is stated as a membership property equivalent to HOL `EVERY`;
-    successful `evaluateDecls` and the source admissibility condition are the
-    only semantic hypotheses. -/
-@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "compile_top_shape_wf"]
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "compile_top_only_functions_or_exns"]
+theorem globalCompileTopCake_all_function_or_exception {width : Nat}
+    (declarations : List (Decl (BitVec width))) (start : FunName) :
+    (globalCompileTopCake declarations start).all
+      (fun declaration => globalDeclIsFunction declaration ||
+        globalDeclIsException declaration) = true := by
+  simpa [globalCompileTopCake] using
+    (globalCompileTopForStart_all_function_or_exception
+      (BitVec.ofNat width (width / 8)) (BitVec.ofNat width) declarations start)
+
+/-! Generalized proof behind the exact fixed-word theorem below. -/
 theorem globalCompileTopForStart_shapes_wf
     [LawfulBEq String] [Add α] [Mul α]
     [BEq α] [OfNat α 0] [OfNat α 1]
@@ -148,5 +151,30 @@ theorem globalCompileTopForStart_shapes_wf
       | decl shape name expression => cases heq
       | exnDecl exception shape => cases heq
       | name name fields => cases heq
+
+/-! Exact-shaped port of Cake's `compile_top_shape_wf`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2458`). The output
+    predicate is stated as a membership property equivalent to HOL `EVERY`;
+    successful `evaluateDecls` and the source admissibility condition are the
+    only semantic hypotheses. `globalCompileTopCake` fixes the HOL
+    `bytes_in_word` and `n2w` choices instead of exposing caller-controlled
+    compiler configuration. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "compile_top_shape_wf"]
+theorem globalCompileTopCake_shapes_wf {width : Nat} [LawfulBEq String]
+    [ShiftLeft (BitVec width)] [ShiftRight (BitVec width)]
+    (state : PanSemDeclarationState (BitVec width) σ)
+    (declarations : List (Decl (BitVec width))) (start : FunName)
+    (state' : PanSemDeclarationState (BitVec width) σ)
+    (heval : evaluateDecls state declarations = some state')
+    (hadmissible : declarations.all panSemCompileTopAdmissible = true) :
+    ∀ output, output ∈ globalCompileTopCake declarations start →
+      ∀ function, output = .function function →
+        function.params.all (fun parameter =>
+          isWfShape state.runtime.structs parameter.2) = true ∧
+          isWfShape state.runtime.structs function.returnShape = true := by
+  simpa [globalCompileTopCake] using
+    (globalCompileTopForStart_shapes_wf
+      (BitVec.ofNat width (width / 8)) (BitVec.ofNat width)
+      state declarations start state' heval hadmissible)
 
 end Flapjack

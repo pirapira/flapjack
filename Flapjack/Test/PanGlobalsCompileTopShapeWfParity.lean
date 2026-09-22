@@ -12,18 +12,23 @@ namespace Flapjack.Test.PanGlobalsCompileTopShapeWfParity
 
 open Flapjack
 
-example
-    (bytesInWord : Nat) (fromNat : Nat → Nat)
-    (state : PanSemDeclarationState Nat Unit) (declarations : List (Decl Nat))
-    (start : FunName) (state' : PanSemDeclarationState Nat Unit)
+example {width : Nat} (declarations : List (Decl (BitVec width)))
+    (start : FunName) :
+    globalCompileTopCake declarations start =
+      globalCompileTopForStart (BitVec.ofNat width (width / 8))
+        (BitVec.ofNat width) declarations start := rfl
+
+example {width : Nat} [ShiftLeft (BitVec width)] [ShiftRight (BitVec width)]
+    (state : PanSemDeclarationState (BitVec width) Unit)
+    (declarations : List (Decl (BitVec width)))
+    (start : FunName) (state' : PanSemDeclarationState (BitVec width) Unit)
     (heval : evaluateDecls state declarations = some state')
     (hadmissible : declarations.all panSemCompileTopAdmissible = true) :
-    ∀ output, output ∈ globalCompileTopForStart bytesInWord fromNat declarations start →
+    ∀ output, output ∈ globalCompileTopCake declarations start →
       ∀ function, output = .function function →
         function.params.all (fun parameter =>
           isWfShape state.runtime.structs parameter.2) = true ∧
           isWfShape state.runtime.structs function.returnShape = true :=
-  globalCompileTopForStart_shapes_wf bytesInWord fromNat state declarations
-    start state' heval hadmissible
+  globalCompileTopCake_shapes_wf state declarations start state' heval hadmissible
 
 end Flapjack.Test.PanGlobalsCompileTopShapeWfParity

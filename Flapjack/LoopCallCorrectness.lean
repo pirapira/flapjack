@@ -504,6 +504,31 @@ theorem comp_seq_labelsIn
   · rfl
   · simp [labelsIn, lookup]
 
+theorem comp_seq_normal_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (environment : LocationEnv) (state : LoopState α) (fuel : Nat)
+    (first second : LoopProg α) (middle : LoopState α) (result : LoopResult α)
+    (hfirst : evalLoopProg fuel state (comp environment first).1 = some (.normal middle))
+    (hsecond :
+      evalLoopProg fuel middle (comp (comp environment first).2 second).1 = some result) :
+    evalLoopProg (fuel + 1) state
+        (comp environment (.seq first second : LoopProg α)).1 = some result ∧
+      labelsIn (comp environment (.seq first second : LoopProg α)).2
+        (loopResultState result).locals := by
+  have hcompiled :
+      comp environment (.seq first second : LoopProg α) =
+        (.seq (comp environment first).1
+          (comp (comp environment first).2 second).1, []) := by
+    simp [comp]
+  rw [hcompiled]
+  constructor
+  · exact evalLoopProg_seq_normal fuel state (comp environment first).1
+      (comp (comp environment first).2 second).1 middle result hfirst hsecond
+  · simp [labelsIn, lookup]
+
 theorem comp_ite_labelsIn
     (environment : LocationEnv) (operator : Cmp) (condition : Nat)
     (right : RegImm α) (thenBranch elseBranch : LoopProg α)
@@ -521,6 +546,95 @@ theorem comp_ite_labelsIn
           (.ite operator condition right thenBranch elseBranch live : LoopProg α) =
         (.ite operator condition right (comp environment thenBranch).1
           (comp environment elseBranch).1 live, []) := by
+    simp [comp]
+  rw [hcompiled]
+  constructor
+  · rfl
+  · simp [labelsIn, lookup]
+
+theorem comp_ite_true_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (environment : LocationEnv) (state : LoopState α) (fuel : Nat)
+    (operator : Cmp) (condition : Nat) (right : RegImm α)
+    (thenBranch elseBranch : LoopProg α) (live : List Nat)
+    (leftValue rightValue : α) (result : LoopResult α)
+    (hleft : state.locals condition = some leftValue)
+    (hright : (match right with
+      | .imm value => some value
+      | .reg name => state.locals name) = some rightValue)
+    (hchoose : evalLoopCondition operator leftValue rightValue = some true)
+    (hthen : evalLoopProg fuel state (comp environment thenBranch).1 = some result) :
+    evalLoopProg (fuel + 1) state
+        (comp environment
+          (.ite operator condition right thenBranch elseBranch live : LoopProg α)).1 =
+        some result ∧
+      labelsIn
+        (comp environment
+          (.ite operator condition right thenBranch elseBranch live : LoopProg α)).2
+        (loopResultState result).locals := by
+  have hcompiled :
+      comp environment
+          (.ite operator condition right thenBranch elseBranch live : LoopProg α) =
+        (.ite operator condition right (comp environment thenBranch).1
+          (comp environment elseBranch).1 live, []) := by
+    simp [comp]
+  rw [hcompiled]
+  constructor
+  · exact evalLoopProg_ite_true fuel state operator condition right
+      (comp environment thenBranch).1 (comp environment elseBranch).1 live
+      leftValue rightValue result hleft hright hchoose hthen
+  · simp [labelsIn, lookup]
+
+theorem comp_ite_false_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (environment : LocationEnv) (state : LoopState α) (fuel : Nat)
+    (operator : Cmp) (condition : Nat) (right : RegImm α)
+    (thenBranch elseBranch : LoopProg α) (live : List Nat)
+    (leftValue rightValue : α) (result : LoopResult α)
+    (hleft : state.locals condition = some leftValue)
+    (hright : (match right with
+      | .imm value => some value
+      | .reg name => state.locals name) = some rightValue)
+    (hchoose : evalLoopCondition operator leftValue rightValue = some false)
+    ( helse : evalLoopProg fuel state (comp environment elseBranch).1 = some result) :
+    evalLoopProg (fuel + 1) state
+        (comp environment
+          (.ite operator condition right thenBranch elseBranch live : LoopProg α)).1 =
+        some result ∧
+      labelsIn
+        (comp environment
+          (.ite operator condition right thenBranch elseBranch live : LoopProg α)).2
+        (loopResultState result).locals := by
+  have hcompiled :
+      comp environment
+          (.ite operator condition right thenBranch elseBranch live : LoopProg α) =
+        (.ite operator condition right (comp environment thenBranch).1
+          (comp environment elseBranch).1 live, []) := by
+    simp [comp]
+  rw [hcompiled]
+  constructor
+  · exact evalLoopProg_ite_false fuel state operator condition right
+      (comp environment thenBranch).1 (comp environment elseBranch).1 live
+      leftValue rightValue result hleft hright hchoose helse
+  · simp [labelsIn, lookup]
+
+theorem comp_loop_labelsIn
+    (environment : LocationEnv) (liveIn liveOut : List Nat)
+    (body : LoopProg α) (locals : Nat → Option α) :
+    (comp environment (.loop liveIn body liveOut : LoopProg α)).1 =
+        .loop liveIn (comp ([] : LocationEnv) body).1 liveOut ∧
+      labelsIn
+        (comp environment (.loop liveIn body liveOut : LoopProg α)).2
+        locals := by
+  have hcompiled :
+      comp environment (.loop liveIn body liveOut : LoopProg α) =
+        (.loop liveIn (comp ([] : LocationEnv) body).1 liveOut, []) := by
     simp [comp]
   rw [hcompiled]
   constructor

@@ -1870,6 +1870,55 @@ theorem panValuePcCompileCorrectAndClockedRaisedResultRel_of_program_state_corre
       (.raised clockLocals clockGlobals clockMemory clockException clockValue)
       (.raised clockTargetState clockTargetException) hclockResult⟩
 
+/-! The normal control case needs no payload-specific obligations: the
+    stateful program relation already carries the complete post-state relation.
+    This is the direct normal-result counterpart used by the Cake declaration
+    semantics proof. -/
+theorem panValuePcNormalResultRelWithContextCode_of_program_state_correct
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (program : Prog α)
+    (hprogram : PanValueCrepProgramStateCorrect program)
+    (context : CompileContext α) (structs : StructContext)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (state targetState : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α)
+    (sourceFuel targetFuel : Nat)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory state)
+    (hsource : evalPanValueProgWithPrimitiveCallsAndFfi
+      primitive sourceHandler structs sourceFunctions
+      baseAddress topAddress bytesInWord sourceFuel
+      sourceLocals sourceGlobals sourceMemory program =
+      some (.normal sourceLocals sourceGlobals sourceMemory))
+    (hcrep : evalCrepFullProgState functions crepPrimitive ffi sharedMem
+      baseAddress topAddress targetFuel state (compileProg context program) =
+      some (.normal targetState)) :
+    panValuePcResultRelWithContextCode structs context exceptionRel
+      exceptionCode globalsLookup
+      (.normal sourceLocals sourceGlobals sourceMemory)
+      (.normal targetState) := by
+  have hcontrol := hprogram context structs sourceFunctions functions
+    sourceLocals sourceGlobals sourceMemory state primitive sourceHandler
+    crepPrimitive ffi sharedMem baseAddress topAddress bytesInWord sourceFuel
+    targetFuel exceptionRel
+    (.normal sourceLocals sourceGlobals sourceMemory)
+    (.normal targetState) hrel hsource hcrep
+  change panValueCrepStateRel structs context sourceLocals sourceGlobals
+    sourceMemory targetState
+  exact hcontrol
+
 theorem panValuePcRaisedWordHraiseData_retarget_globals
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

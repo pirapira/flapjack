@@ -1448,6 +1448,52 @@ example (context : CompileContext Nat) (eshapes : InfoMap Shape) :
 #check @lookupPanFunction_mem
 #check @panValuePcLocalisedCode_lookup
 
+/-! Cake's `ctxt_max_def`/`no_overlap_def` (`pan_commonPropsScript.sml:11,18`)
+are ported as concrete predicates on the variable map, with the empty map as a
+kernel-checked inhabitant. -/
+#check @panValueCtxtMax
+#check @panValueNoOverlap
+#check @panValueCtxtMax_empty
+#check @panValueNoOverlap_empty
+#check @panValueCtxtMax_compileParamVars
+#check @panValueNoOverlap_compileParamVars
+
+/-! The generated formal-parameter context satisfies the two Cake invariants
+    used by `locals_rel`, with the original source-shaped maximum convention.
+    These examples keep the construction executable while checking the
+    theorem-level bridge on both scalar and structured parameters. -/
+private def parameterContextFixture : List (VarName × Shape) :=
+  [("word", .one), ("pair", .comb [.one, .one]), ("empty", .comb [])]
+
+example :
+    panValueNoOverlap (panToCrepMakeVmap parameterContextFixture) := by
+  simpa [panToCrepMakeVmap] using
+    panValueNoOverlap_compileParamVars parameterContextFixture 0
+
+example :
+    panValueCtxtMax
+      (Shape.shapeSize (.comb (parameterContextFixture.map Prod.snd)) - 1)
+      (panToCrepMakeVmap parameterContextFixture) := by
+  have hnames : (parameterContextFixture.map Prod.fst).Nodup := by
+    simp [parameterContextFixture]
+  have h := panValueCtxtMax_compileParamVars parameterContextFixture 0 hnames
+  rw [compileParamVars_next_offset] at h
+  simpa [panToCrepMakeVmap] using h
+#check @panValueNoOverlap_lookup_disjoint
+
+/-- Regression for Cake `no_overlap_flookup_distinct`: the lemma is applicable
+to any `no_overlap` variable map with two distinct looked-up variables. -/
+example (name name' : String) (shape shape' : Shape) (slots slots' : List Nat)
+    (hne : name ≠ name')
+    (hlookup : lookupInfo name ([] : InfoMap (Shape × List Nat)) =
+      some (shape, slots))
+    (hlookup' : lookupInfo name' ([] : InfoMap (Shape × List Nat)) =
+      some (shape', slots')) :
+    ListDisjoint slots slots' :=
+  panValueNoOverlap_lookup_disjoint
+    ([] : InfoMap (Shape × List Nat)) name name' shape shape' slots slots'
+    panValueNoOverlap_empty hne hlookup hlookup'
+
 /-! The concrete `code_rel` analogue is non-vacuous on a source-faithful,
 nonempty function table: instantiating Cake's `mk_ctxt_code_imp_code_rel` port
 on a single declaration whose body is a localised `skip`. -/

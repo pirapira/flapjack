@@ -336,6 +336,74 @@ theorem not_mem_crepAssignedFreeVars_compileProg_shMemStore
               compiledAddress) (by simp)]
           simp [crepAssignedFreeVars]
 
+/-! Fixed-width stores lower directly to Crepe store instructions (or `Skip`)
+    and therefore have no assigned-free locals. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_store32
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (address value : Exp α) (x : Nat) :
+    x ∉ crepAssignedFreeVars
+      (compileProg context (.store32 address value)) := by
+  simp only [compileProg]
+  cases haddress : compileExp context address with
+  | mk addressExpressions addressShape =>
+      cases addressExpressions with
+      | nil => simp [crepAssignedFreeVars]
+      | cons compiledAddress rest =>
+          cases hvalue : compileExp context value with
+          | mk values valueShape =>
+              cases values with
+              | nil => simp [crepAssignedFreeVars]
+              | cons compiledValue rest => simp [crepAssignedFreeVars]
+
+theorem not_mem_crepAssignedFreeVars_compileProg_storeByte
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (address value : Exp α) (x : Nat) :
+    x ∉ crepAssignedFreeVars
+      (compileProg context (.storeByte address value)) := by
+  simp only [compileProg]
+  cases haddress : compileExp context address with
+  | mk addressExpressions addressShape =>
+      cases addressExpressions with
+      | nil => simp [crepAssignedFreeVars]
+      | cons compiledAddress rest =>
+          cases hvalue : compileExp context value with
+          | mk values valueShape =>
+              cases values with
+              | nil => simp [crepAssignedFreeVars]
+              | cons compiledValue rest => simp [crepAssignedFreeVars]
+
+/-! A local shared-memory load assigns the first slot of its destination;
+    Cake's context-slot hypothesis rules that slot out.  Unknown/global
+    destinations and malformed addresses use `Skip`. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_shMemLoad_local
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (size : OpSize) (name : VarName)
+    (address : Exp α) (x : Nat)
+    (hslot : ∀ shape slots,
+      lookupInfo name context.vars = some (shape, slots) → x ∉ slots) :
+    x ∉ crepAssignedFreeVars
+      (compileProg context (.shMemLoad size .local name address)) := by
+  simp only [compileProg]
+  cases hlookup : lookupInfo name context.vars with
+  | none => simp [crepAssignedFreeVars]
+  | some info =>
+      obtain ⟨shape, names⟩ := info
+      cases hnames : names with
+      | nil => simp [crepAssignedFreeVars]
+      | cons destination rest =>
+          cases haddress : firstCompiledExpAnyShape context address with
+          | none => simp [crepAssignedFreeVars]
+          | some compiledAddress =>
+              simp only
+              intro hx
+              have hlookup' : lookupInfo name context.vars =
+                  some (shape, destination :: rest) := by
+                simpa [hnames] using hlookup
+              have hdestination : x = destination := by
+                simpa [crepAssignedFreeVars] using hx
+              apply hslot shape (destination :: rest) hlookup'
+              simp [hdestination]
+
 /-- `crepNestedSeq` of `assign` statements built from a zip of names with
     variables introduced by `freshNames` still has exactly `names` as its
     assigned free variables. -/

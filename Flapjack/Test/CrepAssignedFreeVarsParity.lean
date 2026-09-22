@@ -131,6 +131,29 @@ theorem compileProg_shMemStore_assigned_free_fixture :
   exact not_mem_crepAssignedFreeVars_compileProg_shMemStore
     boundedContext .opW (.const 0) (.const 1) 9
 
+theorem compileProg_store32_assigned_free_fixture :
+    (9 : Nat) ∉ crepAssignedFreeVars
+      (compileProg boundedContext (.store32 (.const 0) (.const 1))) := by
+  exact not_mem_crepAssignedFreeVars_compileProg_store32
+    boundedContext (.const 0) (.const 1) 9
+
+theorem compileProg_storeByte_assigned_free_fixture :
+    (9 : Nat) ∉ crepAssignedFreeVars
+      (compileProg boundedContext (.storeByte (.const 0) (.const 1))) := by
+  exact not_mem_crepAssignedFreeVars_compileProg_storeByte
+    boundedContext (.const 0) (.const 1) 9
+
+theorem compileProg_shMemLoad_local_assigned_free_fixture :
+    (7 : Nat) ∉ crepAssignedFreeVars
+      (compileProg boundedContext
+        (.shMemLoad .opW .local "fresh" (.const 0))) := by
+  apply not_mem_crepAssignedFreeVars_compileProg_shMemLoad_local
+    boundedContext .opW "fresh" (.const 0) 7
+  intro shape slots hlookup
+  simp [boundedContext, lookupInfo] at hlookup
+  rcases hlookup with ⟨rfl, rfl⟩
+  simp
+
 def runChecks : IO Bool := do
   if parityGuard then
     IO.println "PASS crep assigned_free_vars skip/assign/dec/seq/if/while/shmem/fallback"

@@ -35,6 +35,17 @@ level while their exact HOL counterparts and statement shapes are reviewed.
 `Flapjack/PanStructsAfindi.lean` retains residual shape-context helpers; the
 `afindi` implementation and its matched proof declarations now live in the
 listed Pancake modules.
-In particular, placement under `Proofs` does not imply that a whole pass
-correctness theorem has been established. The remaining moves and review gate
-are tracked by beads `flapjack-pxn.18.3.1`–`flapjack-pxn.18.3.3`.
+
+There is currently no Lean port of `compile_top_shape_wf` or
+`compile_top_shape_wf_nil` from `proofs/pan_globalsProofScript.sml`. The earlier
+Flapjack-specific analogues were removed because they did not preserve the HOL
+statement shape: Cake assumes `evaluate_decls` succeeds and concludes an
+`EVERY` property of `compile_top code start`. A faithful port remains open; it
+must establish that result with the corresponding evaluator and compiler
+interfaces.
+These gaps are tracked by beads `flapjack-pxn.18.3.2.1` and
+`flapjack-pxn.18.3.2.2`.
+
+Placement under `Proofs` does not imply that a whole pass correctness theorem
+has been established. The remaining moves and review gate are tracked by beads
+`flapjack-pxn.18.3.1`–`flapjack-pxn.18.3.3`.

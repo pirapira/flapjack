@@ -3034,5 +3034,158 @@ theorem panValueFfiMemoryHandlerPreservesIoEvents_fails
     nextMemory nextFfi h
   exact absurd h (by simp)
 
+set_option linter.unusedSimpArgs false in
+theorem evalPanValueFfiProgSteps_ite_one_none
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (condition : Exp α) (thenBranch elseBranch : Prog α)
+    (memoryAccess : Option (PanValueMemoryAccess α)) (contracts : Option PanValueCallContracts)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ)) :
+    evalPanValueFfiProgSteps context primitive handler structs functions baseAddress topAddress
+      bytesInWord 1 locals globals memory ffi (.ite condition thenBranch elseBranch)
+      (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler) =
+      none := by
+  rw [evalPanValueFfiProgSteps]
+  simp only [evalPanValueFfiProgSteps]
+  cases hx : evalPanValueExpCounted structs locals globals memory baseAddress topAddress
+    bytesInWord condition (memoryAccess := memoryAccess) with
+  | none => rfl
+  | some p => obtain ⟨a, b⟩ := p; cases a <;> simp [Option.bind_eq_bind]
+
+set_option linter.unusedSimpArgs false in
+theorem evalPanValueFfiProgSteps_dec_one_none
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (name : VarName) (shape : Shape) (value : Exp α) (body : Prog α)
+    (memoryAccess : Option (PanValueMemoryAccess α)) (contracts : Option PanValueCallContracts)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ)) :
+    evalPanValueFfiProgSteps context primitive handler structs functions baseAddress topAddress
+      bytesInWord 1 locals globals memory ffi (.dec name shape value body)
+      (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler) =
+      none := by
+  rw [evalPanValueFfiProgSteps]
+  simp only [evalPanValueFfiProgSteps, Option.bind_eq_bind]
+  cases hv : evalPanValueExpCounted structs locals globals memory baseAddress topAddress
+    bytesInWord value (memoryAccess := memoryAccess) with
+  | none => simp [hv]
+  | some p =>
+      obtain ⟨a, b⟩ := p
+      by_cases hm : panShapeMatches (panValueShape structs a) shape = true <;> simp [hv, hm]
+
+theorem evalPanValueFfiProgSteps_seq_one_none
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (first second : Prog α)
+    (memoryAccess : Option (PanValueMemoryAccess α)) (contracts : Option PanValueCallContracts)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ)) :
+    evalPanValueFfiProgSteps context primitive handler structs functions baseAddress topAddress
+      bytesInWord 1 locals globals memory ffi (.seq first second)
+      (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler) =
+      none := by
+  rw [evalPanValueFfiProgSteps]
+  simp only [evalPanValueFfiProgSteps, Option.bind_eq_bind, Option.bind_none]
+
+theorem evalPanValueFfiProgSteps_call_one_none
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (info : Option (Option (VarKind × VarName) × Option (ExceptionId × VarName × Prog α)))
+    (function : FunName) (arguments : List (Exp α))
+    (memoryAccess : Option (PanValueMemoryAccess α)) (contracts : Option PanValueCallContracts)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ)) :
+    evalPanValueFfiProgSteps context primitive handler structs functions baseAddress topAddress
+      bytesInWord 1 locals globals memory ffi (.call info function arguments)
+      (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler) =
+      none := by
+  rw [evalPanValueFfiProgSteps]
+  simp only [evalPanValueFfiCallSteps, Option.bind_eq_bind, Option.bind_none]
+
+theorem evalPanValueFfiProgSteps_decCall_one_none
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (name : VarName) (shape : Shape) (function : FunName) (arguments : List (Exp α))
+    (body : Prog α)
+    (memoryAccess : Option (PanValueMemoryAccess α)) (contracts : Option PanValueCallContracts)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ)) :
+    evalPanValueFfiProgSteps context primitive handler structs functions baseAddress topAddress
+      bytesInWord 1 locals globals memory ffi (.decCall name shape function arguments body)
+      (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler) =
+      none := by
+  rw [evalPanValueFfiProgSteps]
+  simp only [evalPanValueFfiCallSteps, Option.bind_eq_bind, Option.bind_none]
+
+set_option linter.unusedSimpArgs false in
+theorem evalPanValueFfiProgSteps_while_one_ioEvents_prefix
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (condition : Exp α) (body : Prog α)
+    (memoryAccess : Option (PanValueMemoryAccess α)) (contracts : Option PanValueCallContracts)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ)) (clock : Nat)
+    (result : PanValueFfiControlResult α σ) (steps : Nat)
+    (hstep : evalPanValueFfiProgSteps context primitive handler structs functions baseAddress
+      topAddress bytesInWord 1 locals globals memory ffi (.while condition body)
+      (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler) =
+      some (result, steps)) :
+    ffi.ioEvents <+: (panResultFfi (((.control result) : PanValueFfiClockOutcome α σ), clock)).ioEvents := by
+  rw [evalPanValueFfiProgSteps] at hstep
+  simp only [evalPanValueFfiProgSteps] at hstep
+  cases hc : evalPanValueExpCounted structs locals globals memory baseAddress topAddress
+    bytesInWord condition (memoryAccess := memoryAccess) with
+  | none => simp [hc] at hstep
+  | some p =>
+      obtain ⟨v, cs⟩ := p
+      cases v with
+      | word cv =>
+          by_cases hz : (cv == 0) = true
+          · simp only [hc, hz, Option.bind_eq_bind, Option.bind_some, Option.pure_def,
+              Option.some.injEq, Prod.mk.injEq] at hstep
+            obtain ⟨rfl, rfl⟩ := hstep
+            simp only [panResultFfi]
+            exact List.prefix_refl _
+          · simp only [hc, hz, Option.bind_eq_bind, Option.bind_some] at hstep
+            simp at hstep
+      | rStruct _ => simp [hc] at hstep
+      | nStruct _ _ => simp [hc] at hstep
 
 end Flapjack

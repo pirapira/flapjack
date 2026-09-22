@@ -28,6 +28,9 @@ jobs:
           lake build flapjack-compile
           python3 scripts/check-parity-goldens.py
 
+      - name: Check Pan-to-Crep intermediate fixture coverage
+        run: python3 scripts/pan-to-crep-coverage-report.py --check
+
       - name: Check guest.pp.pnk exact Pancake RISC-V parity
         run: |
           curl --fail --location --retry 3 --retry-delay 2 \

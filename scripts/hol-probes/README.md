@@ -73,3 +73,9 @@ the CakeML semantic definition exercised by the fixture, and the P1 beads that
 own any current generated/user-code differences. The runner compares the
 complete runtime, generated-entry, and user-function sections; it does not
 normalize instruction bytes.
+
+The focused Pan-to-Crep fixtures are summarized in
+[`docs/PAN-TO-CREP-PARITY-COVERAGE.md`](../../docs/PAN-TO-CREP-PARITY-COVERAGE.md).
+CI validates that each listed direct-HOL case remains present in its committed
+probe output and in the corresponding Lean test with
+`scripts/pan-to-crep-coverage-report.py --check`.

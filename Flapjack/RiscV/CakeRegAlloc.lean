@@ -890,20 +890,21 @@ def cakeInitAlloc1Heu (moves : List (Nat × (Nat × Nat))) (k : Nat)
     (state : CakeRaState) : Nat × CakeRaState :=
   let dim := state.dim
   let ds := List.range dim
-  let allocs := filterReversed (fun i =>
-      (state.nodeTag.get i).getD .aTemp == .aTemp) ds
-  /- These three node-indexed initialisations touch disjoint fields.  Cake's
-     sequential folds therefore commute into one pass; `cakeConsideredVar`
-     reads only the immutable node tags, so the degree result is unchanged. -/
-  let initialized :=
-    ds.foldl (fun st i =>
+  /- The allocatable-node collection and the three disjoint initialisations
+     share the same Cake node traversal.  Prepending matches
+     `filterReversed`; tags are immutable during this pass. -/
+  let (allocs, initialized) :=
+    ds.foldl (fun (acc : List Nat × CakeRaState) i =>
+        let (allocs, st) := acc
         let neighbours := (st.adjLists.get i).getD []
         let fills := neighbours.filter (cakeConsideredVar st k)
-        { st with
+        let allocs := if (state.nodeTag.get i).getD .aTemp == .aTemp then
+          i :: allocs else allocs
+        (allocs, { st with
           degrees := st.degrees.set i fills.length
           coalesced := st.coalesced.set i i
-          moveRelated := st.moveRelated.set i false })
-      state
+          moveRelated := st.moveRelated.set i false }))
+      ([], state)
   let withMoves :=
     { initialized with
       availMovesWl := cakeSortMoves moves }

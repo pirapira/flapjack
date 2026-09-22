@@ -1,0 +1,65 @@
+fun 1 add1(1 a, 1 b) { return a + b; }
+fun 1 sub1(1 a) { return a - 1; }
+fun {1,1} pair(1 a, 1 b) { return <a, b>; }
+struct S { 1 f1, 1 f2 }
+fun S mks(1 a, 1 b) { return S <f1 = a, f2 = b>; }
+exception E : 1;
+fun 1 main() {
+  var 1 x = 9223372036854775807;
+  var 1 y376 = 2147483647;
+  var 1 y258 = (ld8 @base + 255);
+  x = @base;
+  while (x > 0) {
+    throw E @base;
+    if (x == 2147483647) {
+      while (x > 0) {
+        y376 = ((2147483647 #>> 2) - @biw);
+        !st8 ((0 + 16)), 4294967295;
+          break;
+      }
+      while (x > 0) {
+        st8 (1008), 2;
+
+      }
+    } else {
+      y376 = add1(255, (ld8 (1000 + 12 + 16)));
+    }
+
+  }
+  x = (4095 && (ld8 1000));
+  if ((lds 1 (@base + 255)) != (ld8 (@base + 8 + 4))) {
+    x = @top;
+  } else {
+    if ((lds 1 (1000 + 12)) > (@top >= (1000 >+ 9223372036854775807))) {
+      if (((lds 1 (1000 + 12)) | 1000) <= 255) {
+        throw E 7;
+        !st32 (1008), ((ld8 1024) && @base);
+      } else {
+        x = add1((lds 1 (1000 + 12)), @base);
+        while (x > 0) {
+          if (9223372036854775807 != (ld8 1000 + 24)) {
+            x = (lds 1 (1016));
+            if ((ld8 (1008 + 12)) > 9223372036854775808) {
+              y258 = sub1((2048 + (lds 1 (@top + 0))));
+              st (@biw + 255), y376;
+            } else {
+              y376 = (lds 1 (1000 + 24));
+            }
+          } else {
+            y258 = (lds 1 (@top + 255));
+          }
+            continue;
+        }
+      }
+      try
+        y376 = sub1(2147483647)
+      catch E => y376 {
+          !ld32 y258, (1008);
+      }
+    } else {
+      y376 = 7;
+      y376 = 1000;
+    }
+  }
+  return (7 != 2);
+}

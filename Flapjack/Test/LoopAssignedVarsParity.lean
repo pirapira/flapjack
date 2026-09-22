@@ -58,6 +58,24 @@ theorem loopCutSets_loopAssignPairs_fixture :
   loopCutSets_loopAssignPairs [9] [3, 4, 5] [.const 0, .const 1, .const 2]
     (by decide)
 
+/-! Cake `crep_to_loopProofScript.sml:368` `survives_MAPi_Assign`. -/
+
+theorem loopSurvives_loopAssignPairs_fixture :
+    loopSurvives 3 probeAssignPairs :=
+  loopSurvives_loopAssignPairs 3 [3, 4, 5] [.const 0, .const 1, .const 2]
+    (by decide)
+
+def checkBool (name : String) (value : Bool) : IO Bool := do
+  if value then
+    IO.println s!"PASS {name}"
+    pure true
+  else
+    IO.println s!"FAIL {name}"
+    pure false
+
+def survivesStructureGuard : Bool :=
+  (loopAssignPairs [3, 4, 5] [.const 0, .const 1, .const 2]).length == 3
+
 def check (name : String) (actual expected : List Nat) : IO Bool := do
   if actual == expected then
     IO.println s!"PASS {name}"
@@ -81,7 +99,8 @@ def runChecks : IO Bool := do
     check "assigned_vars nested_seq Assign"
       (loopAssignedVars probeAssignPairs) [3, 4, 5],
     check "cut_sets MAPi Assign"
-      (loopCutSets [9] probeAssignPairs) [3, 4, 5, 9] ].mapM id
+      (loopCutSets [9] probeAssignPairs) [3, 4, 5, 9],
+    checkBool "survives MAPi Assign" survivesStructureGuard ].mapM id
   pure (results.all id)
 
 end Flapjack.Test.LoopAssignedVarsParity

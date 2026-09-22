@@ -598,4 +598,49 @@ theorem loopCutSets_loopTempNames (live : List Nat) (offset count : Nat)
       loopListInsert (loopTempNames offset count) live :=
   loopCutSets_loopAssignPairs live _ expressions hlen
 
+/-- Counterpart of Cake `survives_def` (`cakeml/pancake/semantics/loopPropsScript.sml:25`):
+    a variable survives a Loop program when every control-flow path that can
+    reach a use of it keeps it live.  Flapjack's live sets are plain lists, so
+    Cake's `n ∈ domain cs` becomes list membership. -/
+def loopSurvives (name : Nat) : LoopProg α → Prop
+  | .ite _ _ _ thenBranch elseBranch live =>
+      loopSurvives name thenBranch ∧ loopSurvives name elseBranch ∧ name ∈ live
+  | .loop liveIn body liveOut =>
+      name ∈ liveIn ∧ name ∈ liveOut ∧ loopSurvives name body
+  | .call (some (_, cs)) _ _ none => name ∈ cs
+  | .call (some (_, cs)) _ _ (some (_, first, second, ps)) =>
+      name ∈ cs ∧ name ∈ ps ∧ loopSurvives name first ∧ loopSurvives name second
+  | .ffi _ _ _ _ _ live => name ∈ live
+  | .mark body => loopSurvives name body
+  | .seq first second => loopSurvives name first ∧ loopSurvives name second
+  | _ => True
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
+
+/-- Cake `crep_to_loopProofScript.sml:368` `survives_MAPi_Assign`, stated for
+    the `loopAssignPairs` numbering produced by the executable inliner. -/
+theorem loopSurvives_loopAssignPairs (name : Nat) (names : List Nat)
+    (expressions : List (LoopExp α)) (hlen : names.length = expressions.length) :
+    loopSurvives name (loopNestedSeq (loopAssignPairs names expressions)) := by
+  induction names generalizing expressions with
+  | nil =>
+      cases expressions with
+      | nil => simp [loopAssignPairs, loopNestedSeq, loopSurvives]
+      | cons expression expressions => simp at hlen
+  | cons first rest ih =>
+      cases expressions with
+      | nil => simp at hlen
+      | cons expression expressions =>
+          simp only [loopAssignPairs_cons, loopNestedSeq, loopSurvives]
+          exact ⟨trivial, ih expressions (by simpa using hlen)⟩
+
+/-- Cake `crep_to_loopProofScript.sml:368`, for the `loopTempNames` numbering. -/
+theorem loopSurvives_loopTempNames (name : Nat) (offset count : Nat)
+    (expressions : List (LoopExp α))
+    (hlen : (loopTempNames offset count).length = expressions.length) :
+    loopSurvives name
+      (loopNestedSeq (loopAssignPairs (loopTempNames offset count) expressions)) :=
+  loopSurvives_loopAssignPairs name _ expressions hlen
+
 end Flapjack

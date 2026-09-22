@@ -75,9 +75,29 @@ def oneLoc : Nat → Option ProbeWordLoc
 #guard loopReadLocals twoWords [2, 1] == originalOrder
 #guard loopReadLocals oneLoc [1] == originalLoc
 
+/-! Counterpart of CakeML's `get_vars_local_update_some_eq`
+    (`cakeml/pancake/semantics/loopPropsScript.sml:278`): reading a list of
+    distinct names from the local state built by inserting the paired values
+    returns those values. -/
+
+theorem loopReadLocals_loopLookupFirst_zip_fixture :
+    loopReadLocals
+        (loopLookupFirst (fun _ => none)
+          ([1, 2].zip [ProbeWordLoc.word 5, ProbeWordLoc.word 7]))
+        [1, 2] =
+      some [ProbeWordLoc.word 5, ProbeWordLoc.word 7] :=
+  loopReadLocals_loopLookupFirst_zip (fun _ => none) [1, 2]
+    [ProbeWordLoc.word 5, ProbeWordLoc.word 7] (by decide) (by decide)
+
 def runChecks : IO Bool := do
   let checks :=
     [ ("Loop get_vars hit order", loopReadLocals twoWords [1, 2] == originalHit),
+      ("Loop get_vars local update roundtrip",
+        loopReadLocals
+            (loopLookupFirst (fun _ => none)
+              ([1, 2].zip [ProbeWordLoc.word 5, ProbeWordLoc.word 7]))
+            [1, 2] ==
+          some [ProbeWordLoc.word 5, ProbeWordLoc.word 7]),
       ("Loop get_vars missing local", loopReadLocals oneWord [1, 3] == originalMiss),
       ("Loop get_vars empty list", loopReadLocals oneWord [] == originalEmpty),
       ("Loop get_vars preserves request order",

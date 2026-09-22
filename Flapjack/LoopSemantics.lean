@@ -1796,6 +1796,60 @@ theorem loopLookupFirst_eq_foldl_of_nodup (locals : Nat → Option α)
                   (updateLoopLocal locals name value) entries current :=
                 htail.symm
 
+/-- Two local-state functions that agree on a name list read the same values
+    from that list. -/
+theorem loopReadLocals_congr (f g : Nat → Option α) (names : List Nat)
+    (h : ∀ name ∈ names, f name = g name) :
+    loopReadLocals f names = loopReadLocals g names := by
+  induction names with
+  | nil => simp [loopReadLocals]
+  | cons name names ih =>
+      simp only [loopReadLocals]
+      rw [h name (by simp)]
+      have htail : ∀ m ∈ names, f m = g m := fun m hm => h m (by simp [hm])
+      rw [ih htail]
+
+/-- Counterpart of CakeML's `get_vars_local_update_some_eq`
+    (`cakeml/pancake/semantics/loopPropsScript.sml:278`): reading a list of
+    distinct names from the local state obtained by inserting the paired values
+    returns exactly those values. -/
+theorem loopReadLocals_loopLookupFirst_zip (locals : Nat → Option α)
+    (names : List Nat) (values : List α)
+    (hdistinct : names.Nodup) (hlen : names.length = values.length) :
+    loopReadLocals (loopLookupFirst locals (names.zip values)) names =
+      some values := by
+  induction names generalizing values locals with
+  | nil =>
+      cases values with
+      | nil => simp [loopReadLocals]
+      | cons v vs => simp at hlen
+  | cons name names ih =>
+      cases values with
+      | nil => simp at hlen
+      | cons value values =>
+          obtain ⟨hnot, hnodup⟩ := List.nodup_cons.mp hdistinct
+          have hlen' : names.length = values.length := by
+            simp only [List.length_cons] at hlen
+            omega
+          have hlook :
+              loopLookupFirst locals ((name, value) :: names.zip values) name =
+                some value := by
+            simp [loopLookupFirst]
+          have htail :
+              loopReadLocals
+                  (loopLookupFirst locals ((name, value) :: names.zip values))
+                  names =
+                loopReadLocals (loopLookupFirst locals (names.zip values))
+                  names := by
+            apply loopReadLocals_congr
+            intro m hm
+            have hne : m ≠ name := fun heq => hnot (heq ▸ hm)
+            simp [loopLookupFirst, hne]
+          simp only [List.zip_cons_cons, loopReadLocals]
+          rw [hlook]
+          rw [htail, ih locals values hnodup hlen']
+          rfl
+
 def loopBindParameters (parameters : List Nat) (values : List α)
     (locals : Nat → Option α) : Option (Nat → Option α) :=
   if parameters.length != values.length then none

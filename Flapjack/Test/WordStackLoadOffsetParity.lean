@@ -87,6 +87,18 @@ example :
   simp [wordStackMemoryOffsetInst, wordStackStoreOffsetInst, wordStackLocation,
     wordStackOffset, lookupNatInfo]
 
+/- Cake's signed-12 positive endpoint is retained for subword stores too;
+   the target encoder applies the width-specific instruction mapping later. -/
+example :
+    wordStackMemoryOffsetInst
+      { locations := [(0, .register 4), (1, .register 5)]
+        scratch := 31
+        stackBase := 10 }
+      .store32 0 1 2047 =
+      some (.inst (.memOffset .store32 4 5 2047) : StackProg Nat) := by
+  simp [wordStackMemoryOffsetInst, wordStackStoreOffsetInst, wordStackLocation,
+    wordStackOffset, lookupNatInfo]
+
 example :
     wordStackMemoryOffsetInst
       { locations := [(0, .register 4), (1, .register 5)]

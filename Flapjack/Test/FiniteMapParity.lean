@@ -138,4 +138,55 @@ theorem localsRel_empty_fixture :
 #check @localsRel_empty
 #check @localsRel_of_empty_source
 
+/-- Cake `flookup_res_var_distinct_eq` on a concrete fold. -/
+theorem FLOOKUP_foldl_resVar_not_mem_fixture :
+    FLOOKUP (([(3, some 30), (4, some 40)] : List (Nat × Option Nat)).foldl resVar
+      (FUPDATE_LIST FEMPTY [(2, 20)])) 2 = some 20 := by
+  rw [FLOOKUP_foldl_resVar_not_mem]
+  · simp [FLOOKUP, FUPDATE_LIST, FUPDATE]
+  · simp
+
+/-- Cake `flookup_res_var_distinct_zip_eq` on a concrete fold. -/
+theorem FLOOKUP_foldl_resVar_zip_not_mem_fixture :
+    FLOOKUP (([2, 5] : List Nat).zip ([some 20, some 50] : List (Option Nat)) |>.foldl resVar
+      (FUPDATE_LIST FEMPTY [(3, 30)])) 3 = some 30 := by
+  rw [FLOOKUP_foldl_resVar_zip_not_mem]
+  · simp [FLOOKUP, FUPDATE_LIST, FUPDATE]
+  · rfl
+  · simp
+
+/-- Cake `flookup_res_var_distinct` on a concrete fold. -/
+theorem map_FLOOKUP_foldl_resVar_zip_fixture :
+    ([3, 4] : List Nat).map (fun y =>
+        FLOOKUP (([2, 5] : List Nat).zip ([some 20, some 50] : List (Option Nat)) |>.foldl resVar
+          (FUPDATE_LIST FEMPTY [(3, 30), (4, 40)])) y) =
+      ([3, 4] : List Nat).map (fun y =>
+        FLOOKUP (FUPDATE_LIST FEMPTY [(3, 30), (4, 40)]) y) := by
+  apply map_FLOOKUP_foldl_resVar_zip
+  · intro value hvalue hvalue'
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hvalue hvalue'
+    omega
+  · rfl
+
+#check @FLOOKUP_foldl_resVar_not_mem
+#check @FLOOKUP_foldl_resVar_zip_not_mem
+#check @map_FLOOKUP_foldl_resVar_zip
+
+theorem map_FLOOKUP_foldl_resVar_zip_fupdate_fixture :
+    ([3, 4] : List Nat).map (fun y =>
+        FLOOKUP (([2, 5] : List Nat).zip ([some 20, some 50] : List (Option Nat)) |>.foldl resVar
+          (FUPDATE_LIST (FUPDATE_LIST FEMPTY [(3, 30), (4, 40)]) (([2, 5] : List Nat).zip ([20, 50] : List Nat)))) y) =
+      ([3, 4] : List Nat).map (fun y =>
+        FLOOKUP (FUPDATE_LIST FEMPTY [(3, 30), (4, 40)]) y) := by
+  apply map_FLOOKUP_foldl_resVar_zip_fupdate
+  · intro value hvalue hvalue'
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hvalue hvalue'
+    omega
+  · rfl
+  · rfl
+
+#check @FLOOKUP_FUPDATE_LIST_zip_not_mem
+#check @map_FLOOKUP_FUPDATE_LIST_zip_not_mem
+#check @map_FLOOKUP_foldl_resVar_zip_fupdate
+
 end Flapjack.Test.FiniteMapParity

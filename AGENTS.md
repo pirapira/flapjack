@@ -2,6 +2,12 @@
 
 ## Lean/Lake cache artifacts
 
+Prefer a targeted repair over a global cache reset. When a build is blocked by
+one bad or hardlinked cache artifact, remove that individual local `.olean`
+(and its matching generated `.ilean`, `.ilean.hash`, or `.trace` metadata when
+present) and rebuild the affected target. Do not use `lake clean` for this
+class of problem: it discards unrelated, reusable cache state.
+
 OLean files under `.lake/` are local build outputs, not source artifacts. If
 Lake reports that an expected `.olean` is missing or a hardlink is stale,
 identify the exact module path and remove only that module's local generated

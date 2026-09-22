@@ -1334,6 +1334,9 @@ example
 #check @panValuePcCompileCorrectAndClockedRaisedResultRel_of_hraise_data
 #check @panValuePcCompileCorrectAndClockedRaisedResultRel_of_control_evidence
 #check @panValuePcCompileCorrectAndClockedTimeoutResultRel_of_context_code
+#check @panValuePcCompileCorrectAndClockedFinalFfiResultRel_of_context_code
+#check @panValuePcCompileCorrectAndClockedReturnedResultRel_of_context_code
+#check @panValuePcCompileCorrectAndClockedNormalResultRel_of_context_code
 #check @panValuePcCompileCorrectAndResultRel_of_context_code
 #check @panValuePcCompileCorrectAndRaisedResultRel_of_context_code
 
@@ -1370,5 +1373,15 @@ example
     hbytesInWord hlookup
 
 #check @panValueCrepProgramStateControlSafe_while_wordExp
+
+/-! The concrete Cake `code_rel` analogue is an inhabitant of the abstract
+`PanValuePcCodeRel` parameter, so it can be supplied directly to
+`pc_compile_correct`. -/
+example (context : CompileContext Nat) (target : PanValuePcTargetCode Nat) :
+    panValuePcCodeRelConcrete context [] target :=
+  panValuePcCodeRelConcrete_nil context target
+
+#check @panValuePcCodeRelConcrete
+#check @panValuePcCodeRelConcrete_localised
 
 end Flapjack.Test.PanValuePcControlSafety

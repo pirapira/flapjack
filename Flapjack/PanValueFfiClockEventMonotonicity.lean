@@ -4565,4 +4565,33 @@ theorem evalPanValueFfiClockProg_ioEvents_prefix_of_handlerPreserves
       evalPanValueFfiProgSteps_one_ioEvents_prefix context primitive handler structs functions
         baseAddress topAddress bytesInWord locals globals memory ffi program memoryAccess contracts
         memoryHandler clock result steps hstateful hmemory hstep)).2
+
+/-! Lift the generic clocked prefix theorem through Cake's production
+    `panSemEvaluate` fuel/state wrapper.  This is the top-level event-prefix
+    premise needed by the semantic state-rel induction; handler and memory
+    preservation remain explicit rather than being hidden in the hook type. -/
+theorem panSemEvaluate_ioEvents_prefix_of_handlerPreserves
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (state : PanSemEvaluateState α σ)
+    (program : Prog α)
+    (hstateful : panValueFfiStatefulHandlerPreservesIoEvents handler)
+    (hmemory : ∀ (memoryHandler : PanValueMemoryFfiHandler α σ),
+      panValueFfiMemoryHandlerPreservesIoEvents memoryHandler) :
+    ∀ result,
+      panSemEvaluate context primitive handler state program = some result →
+      state.ffi.ioEvents <+: panResultEvents (some result) := by
+  intro result hrun
+  unfold panSemEvaluate panSemEvaluateWithFuel at hrun
+  have hprefix := evalPanValueFfiClockProg_ioEvents_prefix_of_handlerPreserves
+    context primitive handler state.structs state.functions state.baseAddress
+    state.topAddress state.bytesInWord hstateful hmemory
+    (panSemEvaluateFuel state program) state.locals state.globals state.memory
+    state.ffi state.clock program state.memoryAccess state.contracts
+    state.memoryHandler result.1 result.2 hrun
+  simpa [panResultEvents] using hprefix
 end Flapjack

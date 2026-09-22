@@ -528,7 +528,7 @@ def structEidsGuard : Bool :=
 def eidsTopDecls : List (Decl Nat) := [compileDeclF, .exnDecl "E" .one]
 
 example (compiled : List (Decl Nat))
-    (hcompile : globalCompileTopForStart 8 id eidsTopDecls "f" = some compiled) :
+    (hcompile : globalCompileTopForStartSome 8 id eidsTopDecls "f" = some compiled) :
     sizeOfEids compiled = sizeOfEids eidsTopDecls :=
   globalCompileTopForStart_sizeOfEids 8 id eidsTopDecls "f" compiled hcompile
 

@@ -15,6 +15,7 @@ provenance is recorded by `@[hol ...]` and checked by
 | `pan_structsScript.sml` | `Flapjack/Pancake/PanStructs.lean` |
 | `proofs/pan_structsProofScript.sml` | `Flapjack/Pancake/Proofs/PanStructs.lean` |
 | `pan_globalsScript.sml` | `Flapjack/Pancake/PanGlobals.lean` |
+| `proofs/pan_globalsProofScript.sml` | `Flapjack/Pancake/Proofs/PanGlobals.lean`, `PanGlobals/ShapeInfrastructure.lean` |
 | `pan_to_crepScript.sml` | `Flapjack/Pancake/PanToCrep.lean`, `PanToCrep/Compile.lean` |
 | `crepLangScript.sml` | `Flapjack/Pancake/CrepLang.lean` |
 | `crep_arithScript.sml` | `Flapjack/Pancake/CrepArith.lean` |
@@ -39,6 +40,12 @@ must establish that result with the corresponding evaluator and compiler
 interfaces.
 These gaps are tracked by beads `flapjack-pxn.18.3.2.1` and
 `flapjack-pxn.18.3.2.2`.
+
+The total `compile_top_def` result and the HOL-shaped
+`compile_top_only_functions_or_exns` theorem are now present. Reusable
+Flapjack-specific shape predicates and pass lemmas live in
+`PanGlobals/ShapeInfrastructure.lean`; they use Flapjack's value evaluator
+and are infrastructure, not ports of the two open HOL shape theorems.
 
 Additional helper, semantic, and proof modules still live at the old top
 level while their exact HOL counterparts and statement shapes are reviewed.

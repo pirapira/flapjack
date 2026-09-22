@@ -1,4 +1,5 @@
-(* Direct HOL-EVAL fixture for pan_globals$compile_top_def. *)
+(* Direct HOL-EVAL fixture for pan_globals$compile_top, including its
+   missing-start fallback to the empty declaration list. *)
 load "bossLib";
 load "preamble";
 load "pan_globalsTheory";
@@ -15,13 +16,13 @@ fun print_eval label q =
     print "\n"
   end
 
-val _ = print_eval "missing"
-  ``pan_globals$compile_top
-      [panLang$Function <| name := «main»; inline := F; export := F;
-         params := []; body := panLang$Skip; return := panLang$One |>]
-      «absent»``;
-val _ = print_eval "simple"
-  ``pan_globals$compile_top
-      [panLang$Function <| name := «main»; inline := F; export := F;
-         params := []; body := panLang$Skip; return := panLang$One |>]
-      «main»``;
+val main =
+  ``panLang$Function
+      <| name := «main»; inline := F; export := F; params := [];
+         body := panLang$Skip; return := panLang$One |>``
+
+val _ = print_eval "missing_start"
+  ``pan_globals$compile_top [^main] «absent»``;
+
+val _ = print_eval "present_start"
+  ``pan_globals$compile_top [^main] «main»``;

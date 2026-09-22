@@ -32,6 +32,10 @@ the same source.
 call destinations through `pan_to_crep$compile`: absent lookups, the
 `One`/empty-list fallback, and inconsistent shape/name-list lengths. The
 matching Lean cases live in `Flapjack.Test.CompileDefParity`.
+`pan_globals_compile_top_probe.out` records original Pancake HOL evaluation
+of `pan_globals$compile_top` for an absent start function (the total empty-list
+result) and a present `main` entry. Its Lean checks live in
+`Flapjack.Test.PanGlobalsCompileTopForStartParity`.
 The `longdiv_code_probe.out` fixture probes the original software LongDiv
 helper at `cakeml/compiler/backend/data_to_wordScript.sml:829-867` and the
 RISC-V target's deliberate LongDiv encoding rejection.

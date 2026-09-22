@@ -2237,6 +2237,7 @@ theorem seq_call_ret_fallback :
   rfl
 
 #check evalPanValueFfiClockProg_seqCallRet_returned
+#check PanValueFfiClockNormalAdequateProgFromFloor_call_caught_handler
 
 /-! The expected values are the direct HOL evaluation of
     `pan_simp$ret_to_tail` from `pan_simpScript.sml:50-66`. -/

@@ -5026,6 +5026,78 @@ theorem panCrepBehaviourRel_of_pcCompileCorrectWithContextCode_cross_clock_prefi
       hsourcePrefix htargetPrefix
   exact panSemantics_rel_crepSemantics panHooks crepHooks hagreement panChain crepChain
 
+/-! Derive the source prefix chain from a target chain when the production
+    evidence already provides all pairwise result and event-prefix obligations.
+    This is the target-chain counterpart of the previous behavior adapter and
+    keeps the complete HOL premises explicit. -/
+theorem panCrepBehaviourRel_of_pcCompileCorrectWithContextCode_cross_clock_prefix_from_pairwise_evidence_of_crep_chain
+    [BEq α] [OfNat α 0] [Add α]
+    (structs : StructContext) (context : CompileContext α) (program : Prog α)
+    (sourceEvaluate : PanValuePcEvaluator α)
+    (targetEvaluate : CrepPcEvaluator α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (panHooks : PanSemanticsHooks α σ)
+    (crepHooks : CrepSemanticsHooks α)
+    (hffiOutcome : ∀ event, panHooks.ffiOutcome event = event.outcome)
+    (hcorrect : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (hevidence : ∀ (clock : Nat), PanValuePcSemanticClockEvidence structs
+      context program clock sourceEvaluate targetEvaluate codeRel excpRel
+      exceptionRel exceptionCode globalsLookup panHooks crepHooks)
+    (hinputCodeRel : ∀ (sourceClock targetClock : Nat),
+      codeRel context (hevidence sourceClock).sourceInput.code
+        (hevidence targetClock).targetInput.code)
+    (hinputExcpRel : ∀ (sourceClock targetClock : Nat),
+      excpRel context (hevidence sourceClock).sourceInput.eshapes
+        (hevidence targetClock).targetInput.eshapes)
+    (hstateRel : ∀ (sourceClock targetClock : Nat),
+      panValueCrepStateRel structs context
+        (hevidence sourceClock).sourceInput.locals
+        (hevidence sourceClock).sourceInput.globals
+        (hevidence sourceClock).sourceInput.memory
+        (hevidence targetClock).targetInput.state)
+    (houtputCodeRel : ∀ (sourceClock targetClock : Nat),
+      codeRel context (hevidence sourceClock).sourceExecution.code
+        (hevidence targetClock).targetExecution.code)
+    (houtputExcpRel : ∀ (sourceClock targetClock : Nat),
+      excpRel context (hevidence sourceClock).sourceExecution.eshapes
+        (hevidence targetClock).targetExecution.eshapes)
+    (hsourcePrefix : ∀ (sourceClock targetClock : Nat),
+      panEventPrefix
+        (panResultEvents (some ((hevidence sourceClock).outcome,
+          (hevidence sourceClock).returnedClock)))
+        (crepHooks.ioEvents (hevidence targetClock).targetState))
+    (htargetPrefix : ∀ (sourceClock targetClock : Nat),
+      panEventPrefix
+        (crepHooks.ioEvents (hevidence targetClock).targetState)
+        (panResultEvents (some ((hevidence sourceClock).outcome,
+          (hevidence sourceClock).returnedClock))))
+    (crepChain : crepLprefixChain
+      (fun clock => crepHooks.ioEvents (crepHooks.evaluate clock).2)) :
+    panCrepBehaviourRel
+      (panSemantics panHooks
+        (panLprefixChain_of_crepLprefixChain_of_semantic_agreement
+          panHooks crepHooks
+          (panCrepSemanticAgreement_of_pcCompileCorrectWithContextCode_cross_clock_prefix_from_pairwise_evidence
+            structs context program sourceEvaluate targetEvaluate codeRel excpRel
+            exceptionCode globalsLookup exceptionRel panHooks crepHooks hffiOutcome
+            hcorrect hevidence hinputCodeRel hinputExcpRel hstateRel houtputCodeRel
+            houtputExcpRel hsourcePrefix htargetPrefix)
+          crepChain))
+      (crepSemantics crepHooks crepChain) := by
+  have hagreement :=
+    panCrepSemanticAgreement_of_pcCompileCorrectWithContextCode_cross_clock_prefix_from_pairwise_evidence
+      structs context program sourceEvaluate targetEvaluate codeRel excpRel
+      exceptionCode globalsLookup exceptionRel panHooks crepHooks hffiOutcome hcorrect
+      hevidence hinputCodeRel hinputExcpRel hstateRel houtputCodeRel houtputExcpRel
+      hsourcePrefix htargetPrefix
+  exact panSemantics_rel_crepSemantics_of_crep_chain panHooks crepHooks hagreement
+    crepChain
+
 /-! The same pairwise evidence adapter without the prefix packaging.  This is
     the direct choice-stability boundary: evaluator/code/state relations
     discharge the cross-clock result relation, while exact cross-clock event

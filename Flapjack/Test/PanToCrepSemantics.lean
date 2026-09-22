@@ -303,5 +303,6 @@ example {α σ : Type} [BEq α] [OfNat α 0] [Add α]
 #check @panValuePcResultRelWithContextCode_of_pairwise_normalOrRaised_evidence
 
 #check @panCrepBehaviourRel_of_pcCompileCorrectWithContextCode_cross_clock_prefix_from_pairwise_stateRelWithContext
+#check @Flapjack.panCrepBehaviourRel_of_pcCompileCorrectWithContextCode_cross_clock_prefix_from_pairwise_evidence_of_crep_chain
 
 end Flapjack.Test.PanToCrepSemantics

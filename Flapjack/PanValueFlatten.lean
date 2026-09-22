@@ -151,5 +151,44 @@ theorem shapeSize_eq_zero_or_flatten_length (value : PanValue α) (values : List
       Nat.pos_of_ne_zero hzero
     rw [hpos hpositive, panValueFlatten_length_eq_shapeSize value hwf]
 
+/-- Counterpart of Cake's `list_rel_length_shape_of_flatten_better`
+    (`cakeml/pancake/semantics/panPropsScript.sml:244`): the pointwise
+    shape-relation form of `shapeSize_comb_map_panValueShape_eq_flatten_length`,
+    where the shape list is related to the value list entrywise rather than
+    being its image. -/
+theorem shapeSize_comb_eq_flatten_length_of_getElem (vshs : List Shape)
+    (args : List (PanValue α)) (hlen : vshs.length = args.length)
+    (hrel : ∀ i, i < args.length →
+      vshs[i]? = (args[i]?).map (panValueShape ([] : StructContext)))
+    (hwf : ∀ arg, arg ∈ args →
+      isWfShape ([] : StructContext) (panValueShape ([] : StructContext) arg) = true) :
+    Shape.shapeSize (.comb vshs) = (args.map panValueFlatten).flatten.length := by
+  induction args generalizing vshs with
+  | nil =>
+    cases vshs with
+    | nil => simp [Shape.shapeSize]
+    | cons sh shs => simp at hlen
+  | cons arg args ih =>
+    cases vshs with
+    | nil => simp at hlen
+    | cons vsh vshs =>
+      have hhead : vsh = panValueShape ([] : StructContext) arg := by
+        have h0 := hrel 0 (by simp)
+        simp only [List.getElem?_cons_zero, Option.map_some] at h0
+        exact Option.some.inj h0
+      have hlenTail : vshs.length = args.length := by simpa using hlen
+      have hrelTail : ∀ i, i < args.length →
+          vshs[i]? = (args[i]?).map (panValueShape ([] : StructContext)) := by
+        intro i hi
+        have h := hrel (i + 1) (by simp [hi])
+        simpa [List.getElem?_cons_succ] using h
+      have hwfTail : ∀ other, other ∈ args →
+          isWfShape [] (panValueShape [] other) = true :=
+        fun other hmem => hwf other (by simp [hmem])
+      simp only [List.map_cons, List.flatten_cons, List.length_append]
+      rw [shapeSize_comb_cons, hhead,
+        panValueFlatten_length_eq_shapeSize arg (hwf arg (by simp)),
+        ih vshs hlenTail hrelTail hwfTail]
+
 end Flapjack
 

@@ -489,4 +489,47 @@ theorem resVar_commutes [BEq α] [LawfulBEq α] (lc lc' : FiniteMap α β) (n h 
       simp only [resVar]
       rw [FUPDATE_comm lc h vh n vn hne.symm]
 
+/-- Counterpart of Cake's `flookup_res_var_distinct_eq` (crepPropsScript.sml:763):
+folding `res_var` over a list whose keys do not contain `x` leaves `x` untouched. -/
+theorem FLOOKUP_foldl_resVar_not_mem [BEq α] [LawfulBEq α]
+    (xs : List (α × Option β)) (f : FiniteMap α β) (x : α)
+    (h : x ∉ xs.map Prod.fst) :
+    FLOOKUP (xs.foldl resVar f) x = FLOOKUP f x := by
+  induction xs generalizing f with
+  | nil => rfl
+  | cons entry rest ih =>
+    simp only [List.map_cons, List.mem_cons, not_or] at h
+    obtain ⟨hne, hrest⟩ := h
+    rw [List.foldl_cons, ih (resVar f entry) hrest, FLOOKUP_resVar]
+    have hfalse : (x == entry.1) = false := beq_eq_false_iff_ne.mpr hne
+    simp [hfalse]
+
+/-- Counterpart of Cake's `flookup_res_var_distinct_zip_eq` (crepPropsScript.sml:777):
+the zipped form of `FLOOKUP_foldl_resVar_not_mem`. -/
+theorem FLOOKUP_foldl_resVar_zip_not_mem [BEq α] [LawfulBEq α]
+    (xs : List α) (ys : List (Option β)) (f : FiniteMap α β) (x : α)
+    (hlen : xs.length = ys.length) (h : x ∉ xs) :
+    FLOOKUP ((xs.zip ys).foldl resVar f) x = FLOOKUP f x := by
+  apply FLOOKUP_foldl_resVar_not_mem
+  rw [List.map_fst_zip (by omega)]
+  exact h
+
+/-- Counterpart of Cake's `flookup_res_var_distinct` (crepPropsScript.sml:796):
+looking up a key list disjoint from the updated key list is unaffected by the fold. -/
+theorem map_FLOOKUP_foldl_resVar_zip [BEq α] [LawfulBEq α]
+    (xs : List α) (ys : List α) (zs : List (Option β)) (f : FiniteMap α β)
+    (hdisj : ListDisjoint xs ys) (hlen : xs.length = zs.length) :
+    ys.map (fun y => FLOOKUP ((xs.zip zs).foldl resVar f) y) =
+      ys.map (fun y => FLOOKUP f y) := by
+  revert hdisj
+  induction ys with
+  | nil => intro _; rfl
+  | cons y rest ih =>
+    intro hdisj
+    simp only [List.map_cons, List.cons.injEq]
+    refine ⟨?_, ?_⟩
+    · exact FLOOKUP_foldl_resVar_zip_not_mem xs zs f y hlen
+        (fun hy => hdisj y hy (by simp))
+    · exact ih (fun v hv hmem => hdisj v hv (by simp [hmem]))
+
 end Flapjack

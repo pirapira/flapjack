@@ -925,6 +925,32 @@ example :
       (.shareMemOffset .store16 10 11 (BitVec.ofNat 64 (2 ^ 64 - 8))) =
       some [.storeHalfOffset 10 11 (0 - BitVec.ofNat 64 8)] := by
   decide
+
+/- The full-width shared-memory carriers retain Cake's lower signed-12
+   endpoint as direct offset instructions, independently of the narrow rows. -/
+example :
+    labCompilePlain (width := 64)
+      (.shareMemOffset .load 10 11 (BitVec.ofNat 64 (2 ^ 64 - 2048))) =
+      some [.loadWordOffset 10 11 (0 - BitVec.ofNat 64 2048)] := by
+  decide
+
+example :
+    labCompilePlain (width := 64)
+      (.shareMemOffset .store 10 11 (BitVec.ofNat 64 (2 ^ 64 - 2048))) =
+      some [.storeWordOffset 10 11 (0 - BitVec.ofNat 64 2048)] := by
+  decide
+
+example :
+    labCompilePlain (width := 64)
+      (.shareMemOffset .load32 10 11 (BitVec.ofNat 64 (2 ^ 64 - 2048))) =
+      some [.load32Offset 10 11 (0 - BitVec.ofNat 64 2048)] := by
+  decide
+
+example :
+    labCompilePlain (width := 64)
+      (.shareMemOffset .store32 10 11 (BitVec.ofNat 64 (2 ^ 64 - 2048))) =
+      some [.store32Offset 10 11 (0 - BitVec.ofNat 64 2048)] := by
+  decide
 /- Cake's source-shaped `wordShareInstToInstructionsCake` keeps a variable
    address as one direct `Mem` carrier.  Check every width in the target
    `riscv_memop` table at this backend boundary, independently of the

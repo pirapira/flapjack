@@ -1,3 +1,4 @@
+import Flapjack.HolRef
 import Flapjack.PanGlobals
 import Flapjack.PanProgramSemantics
 import Flapjack.PanSimp
@@ -35,6 +36,7 @@ theorem collectPanValueStructs_cons (declaration : Decl α) (declarations : List
 
 /-- Cake's `decs_stcnames_compile_prog`: `pan_simp` preserves the
     struct-name context collected from a declaration list. -/
+@[hol "cakeml/pancake/proofs/pan_simpProofScript.sml" "decs_stcnames_compile_prog"]
 theorem collectPanValueStructs_panSimpDecls (declarations : List (Decl α))
     (context : StructContext) :
     collectPanValueStructs (panSimpDecls declarations) context =

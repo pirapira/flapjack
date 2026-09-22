@@ -1,0 +1,142 @@
+#!/usr/bin/env python3
+"""Verify `@[hol "<path>" "<name>"]` cross-references and emit the HOL-to-Lean map.
+
+Every Lean declaration that ports a HOL4 declaration carries
+`@[hol "cakeml/.../fooScript.sml" "theorem_name"]` (see `Flapjack/HolRef.lean`
+and `AGENTS.md`).  This script checks, without running Lean, that
+
+* the cited file exists in the `cakeml` submodule, and
+* a HOL declaration with exactly that name is declared in that file
+  (`Theorem`, `Triviality`, `Definition`, `Datatype`, `Inductive`,
+  `CoInductive`, `Overload`, `Type`, or an SML-level `val name = ...`).
+
+Usage:
+  scripts/check-hol-refs.py            # check; exit 1 on any bad reference
+  scripts/check-hol-refs.py --mapping  # also print a TSV mapping to stdout:
+                                       #   lean_file:line  lean_decl  hol_path  hol_name
+
+Uses only the standard library.
+"""
+
+from __future__ import annotations
+
+import os
+import re
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+LEAN_DIRS = [ROOT / "Flapjack", ROOT / "Flapjack.lean"]
+
+ATTR_RE = re.compile(r'\bhol\s+"([^"]+)"\s+"([^"]+)"')
+DECL_RE = re.compile(
+    r"^\s*(?:@\[[^\]]*\]\s*)?(?:private\s+|protected\s+|noncomputable\s+|partial\s+|unsafe\s+)*"
+    r"(?:theorem|lemma|def|abbrev|instance|inductive|structure|class|opaque|axiom)\s+"
+    r"([^\s:({\[]+)"
+)
+HOL_HEADER_KEYWORDS = (
+    "Theorem",
+    "Triviality",
+    "Definition",
+    "Datatype",
+    "Inductive",
+    "CoInductive",
+    "Overload",
+    "Type",
+)
+
+
+def lean_files() -> list[Path]:
+    files: list[Path] = []
+    for entry in LEAN_DIRS:
+        if entry.is_file():
+            files.append(entry)
+        elif entry.is_dir():
+            files.extend(sorted(entry.rglob("*.lean")))
+    return files
+
+
+def find_lean_decl(lines: list[str], start: int) -> str:
+    """Name of the declaration that the attribute at `lines[start]` decorates."""
+    for offset in range(0, 8):
+        index = start + offset
+        if index >= len(lines):
+            break
+        match = DECL_RE.match(lines[index])
+        if match:
+            return match.group(1)
+    return "?"
+
+
+def hol_declares(path: Path, name: str, cache: dict[Path, set[str]]) -> bool:
+    if path not in cache:
+        names: set[str] = set()
+        header = re.compile(
+            r"^(?:%s)\s+([A-Za-z0-9_']+)" % "|".join(HOL_HEADER_KEYWORDS)
+        )
+        sml_val = re.compile(r"^val\s+([A-Za-z0-9_']+)\s*=")
+        with path.open(encoding="utf-8", errors="replace") as handle:
+            for line in handle:
+                match = header.match(line) or sml_val.match(line)
+                if match:
+                    names.add(match.group(1))
+        cache[path] = names
+    return name in cache[path]
+
+
+def main(argv: list[str]) -> int:
+    want_mapping = "--mapping" in argv
+    errors: list[str] = []
+    mapping: list[tuple[str, str, str, str]] = []
+    cache: dict[Path, set[str]] = {}
+
+    for lean_path in lean_files():
+        rel = lean_path.relative_to(ROOT).as_posix()
+        lines = lean_path.read_text(encoding="utf-8").splitlines()
+        comment_depth = 0
+        for number, line in enumerate(lines, start=1):
+            # Skip block comments (`/- ... -/`, nestable), so examples in module
+            # docstrings are not treated as attribute sites.
+            in_comment = comment_depth > 0
+            comment_depth += line.count("/-") - line.count("-/")
+            if in_comment or comment_depth > 0:
+                continue
+            stripped = line.lstrip()
+            if stripped.startswith("--"):
+                continue
+            # Only attribute sites, not prose mentioning the attribute.
+            if not stripped.startswith("@[") or "hol " not in stripped:
+                continue
+            for hol_path, hol_name in ATTR_RE.findall(stripped):
+                where = f"{rel}:{number}"
+                lean_decl = find_lean_decl(lines, number - 1)
+                target = ROOT / hol_path
+                if not hol_path.startswith("cakeml/") or not hol_path.endswith(".sml"):
+                    errors.append(f"{where}: path is not a cakeml/...sml file: {hol_path}")
+                    continue
+                if not target.is_file():
+                    errors.append(f"{where}: HOL file does not exist: {hol_path}")
+                    continue
+                if not hol_declares(target, hol_name, cache):
+                    errors.append(
+                        f"{where}: {hol_path} declares no `{hol_name}` "
+                        f"(cited by {lean_decl})"
+                    )
+                    continue
+                mapping.append((where, lean_decl, hol_path, hol_name))
+
+    if want_mapping:
+        for row in mapping:
+            print("\t".join(row))
+
+    if errors:
+        for error in errors:
+            print(f"error: {error}", file=sys.stderr)
+        print(f"{len(errors)} bad @[hol] reference(s)", file=sys.stderr)
+        return 1
+    print(f"{len(mapping)} @[hol] reference(s) checked", file=sys.stderr)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

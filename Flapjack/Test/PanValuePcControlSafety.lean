@@ -1394,6 +1394,7 @@ example (context : CompileContext Nat) (eshapes : InfoMap Shape) :
 
 #check @panValuePcExceptionShapeRelConcrete
 #check @panValuePcExceptionShapeRelConcrete_refl
+#check @panValuePcExceptionShapeRelConcrete_of_declaration_evaluation
 
 #check @lookupPanFunction_mem
 #check @panValuePcLocalisedCode_lookup

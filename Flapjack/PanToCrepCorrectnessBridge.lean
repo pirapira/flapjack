@@ -11,6 +11,7 @@ import Flapjack.CrepeWordExtCallProgramCase
 import Flapjack.PanValueFfiClockProjection
 import Flapjack.CrepeDeclarationRestorationRelation
 import Flapjack.CrepeRaisedCallInversion
+import Flapjack.PanProgramSimp
 
 /-!
 Bridge from the existing stateful source-to-Crep program correctness contract
@@ -22,6 +23,30 @@ can instantiate the full boundary.
 -/
 
 namespace Flapjack
+
+/-! Transport the exact source exception shape installed by Cake declaration
+    evaluation through the concrete exception-shape relation.  The target
+    exception code, raised payload observation, and state relation remain
+    separate premises at the `pc_compile_correct` boundary. -/
+theorem panValuePcExceptionShapeRelConcrete_of_declaration_evaluation
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    [LawfulBEq String]
+    (context : CompileContext α) (sourceState sourceState' : PanValueProgramState α)
+    (declarations : List (Decl α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (targetEshapes : InfoMap Shape) {exception : ExceptionId} {shape : Shape}
+    (hmem : (.exnDecl exception shape : Decl α) ∈ declarations)
+    (hnodup : (sourceState'.exceptions.map Prod.fst).Nodup)
+    (heval : evalPanValueDeclarations sourceState declarations memoryAccess =
+      some sourceState')
+    (hrel : panValuePcExceptionShapeRelConcrete context
+      sourceState'.exceptions targetEshapes) :
+    lookupInfo exception targetEshapes = some shape := by
+  apply (hrel exception shape).mp
+  exact evalPanValueDeclarations_exception_shape_lookup sourceState sourceState'
+    declarations memoryAccess hmem hnodup heval
 
 def panValuePcResultOfControl :
     PanValueControlResult α → PanValuePcResult α

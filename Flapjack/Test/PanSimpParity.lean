@@ -3039,3 +3039,4 @@ premises. -/
     remain unchanged. -/
 #check @Flapjack.panSemEvaluate_clock_shift_panResultEvents
 #check @Flapjack.evalPanValueFfiClockProg_seq_raised
+#check @Flapjack.evalPanValueFfiClockProg_seq_timeout

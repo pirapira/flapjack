@@ -3008,6 +3008,8 @@ with the handler-preservation premises discharged. -/
 
 #check @Flapjack.panValueFfiStatefulHandlerPreservesIoEvents_fails
 #check @Flapjack.panValueFfiMemoryHandlerPreservesIoEvents_fails
+#check @Flapjack.panValueFfiStatefulHandlerPreservesIoEvents_ffi
+#check @Flapjack.panValueFfiMemoryHandlerPreservesIoEvents_ffi
 
 /-! Unit-fuel structural step lemmas used by the residual-free event-prefix
 dispatch: conditional/declaration/sequence/call/decCall cannot succeed at unit
@@ -3028,3 +3030,8 @@ be instantiated without a residual premise. -/
 discharges the `hleaf` obligation, leaving only the explicit handler-preservation
 premises. -/
 #check @Flapjack.evalPanValueFfiClockProg_ioEvents_prefix_of_handlerPreserves
+
+/-! Source-entry clock shift: the evaluator's clock-dependent termination fuel is
+    increased together with the clock, while successful non-timeout I/O events
+    remain unchanged. -/
+#check @Flapjack.panSemEvaluate_clock_shift_panResultEvents

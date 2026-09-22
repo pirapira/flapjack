@@ -762,6 +762,87 @@ theorem evalPanValueFfiClockProgram_of_related_declarations_and_normal_call_resu
     htargetFunction, htargetExceptions, htargetEntry,
     hnormal.1, hnormal.2.1, hnormal.2.2⟩
 
+/-! The raised adequacy branch exposes the same declaration-state facts while
+    retaining the explicit exception payload and result relation. -/
+theorem evalPanValueFfiClockProgram_of_related_declarations_and_raised_call_result_rel_adequacy
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (initial : PanValueFfiProgramState α σ)
+    (clock : Nat)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (fuel : Nat) (declarations : List (Decl α))
+    (entry : FunName) (arguments : List (Exp α))
+    (state : PanValueProgramState α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (exception : ExceptionId) (value : PanValue α) (nextClock : Nat)
+    (pcContext : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (targetState : CrepState α) (targetException : α)
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ))
+    (targetInitial : PanValueProgramState α)
+    (hinitial : panValueProgramStateRel initial.source targetInitial)
+    (hdeclarations : evalPanValueDeclarations initial.source declarations
+      (memoryAccess := memoryAccess) = some state)
+    {parameters : List VarName} {body : Prog α}
+    (hfunction : lookupPanFunction entry state.functions = some (parameters, body))
+    (hcall : evalPanValueFfiClockCall context primitive handler state.structs
+      state.functions state.baseAddress state.topAddress state.bytesInWord fuel
+      (fun _ => none) state.globals state.memory initial.ffi clock none entry arguments
+      (memoryAccess := memoryAccess)
+      (contracts := some (PanValueCallContracts.mk state.returnShapes
+        state.exceptions state.parameterShapes))
+      (memoryHandler := memoryHandler) =
+      some (.control (.raised (fun _ => none) globals memory ffi exception value),
+        nextClock))
+    (hstate : panValueCrepStateRel state.structs pcContext locals globals
+      memory targetState)
+    (hresult : panValuePcExceptionResultRel state.structs pcContext exceptionRel
+      exceptionCode globalsLookup globals memory exception value targetState
+      targetException)
+    (hprefix : initial.ffi.ioEvents <+: ffi.ioEvents) :
+    ∃ targetDeclaration,
+      evalPanValueDeclarations targetInitial (panSimpDecls declarations)
+        (memoryAccess := memoryAccess) = some targetDeclaration ∧
+      panValueProgramStateRel state targetDeclaration ∧
+      lookupPanFunction entry targetDeclaration.functions =
+        some (parameters, panSimpProg body) ∧
+      state.exceptions = targetDeclaration.exceptions ∧
+      evalPanValueFfiClockProgram context initial clock primitive handler fuel
+        declarations entry arguments (memoryAccess := memoryAccess)
+        (memoryHandler := memoryHandler) =
+        some (.control (.raised (fun _ => none) globals memory ffi exception value),
+          nextClock) ∧
+      panValuePcResultRel state.structs pcContext exceptionRel exceptionCode
+        globalsLookup (.raised locals globals memory exception value)
+        (.raised targetState targetException) ∧
+      initial.ffi.ioEvents <+: ffi.ioEvents := by
+  obtain ⟨targetDeclaration, htargetDeclarations, hpostRel,
+    htargetFunction, htargetExceptions⟩ :=
+    panValueProgramStateRel_evalDeclarations_adequacy
+      initial.source targetInitial hinitial declarations memoryAccess state
+      hdeclarations entry hfunction
+  rcases hpostRel with ⟨hstructs, hglobals, hmemory, hreturnShapes,
+    hparameterShapes, hexceptions, hbaseAddress, htopAddress, hbytesInWord,
+    hfunctions⟩
+  have hraised :=
+    evalPanValueFfiClockProgram_of_declarations_and_raised_call_result_rel_ioEvents_prefix
+      context initial clock primitive handler fuel declarations entry arguments state
+      locals globals memory ffi exception value nextClock pcContext exceptionRel
+      exceptionCode globalsLookup targetState targetException memoryAccess memoryHandler
+      hdeclarations hcall hstate hresult hprefix
+  exact ⟨targetDeclaration, htargetDeclarations,
+    ⟨hstructs, hglobals, hmemory, hreturnShapes, hparameterShapes, hexceptions,
+      hbaseAddress, htopAddress, hbytesInWord, hfunctions⟩,
+    htargetFunction, htargetExceptions,
+    hraised.1, hraised.2.1, hraised.2.2⟩
+
 /-! The raised branch uses the same declaration-state transport while retaining
     the explicit payload, exception-code, global-lookup, and spill relation
     premises required by the Cake `state_rel_imp_semantics_to_crep` proof. -/

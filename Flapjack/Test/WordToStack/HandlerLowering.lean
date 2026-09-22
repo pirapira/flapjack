@@ -23,8 +23,9 @@ example :
       2 26 0 64 none handlerLoweringInitial
       (.call (some ([], ([], []), .skip, 0, 0)) (some 7) []
         (some (1, handlerLoweringBody, 30, 21))) =
-      some (wordToStackCallWithHandlerInSection false 7 0
-        (wordStackCallFrameOffset handlerLoweringConfig) 31 .skip
+      some (wordToStackCallWithHandlerInSectionAtRegisterCountReturn false 7 0 2
+        (wordStackCallFrameOffset handlerLoweringConfig) 31
+        (wordStackReturnStackSuffix handlerLoweringConfig []) .skip
         (.seq .skip (.call none (.label 0) none))
           (wordStackReturnLabel handlerLoweringConfig
             (some ([], ([], []), .skip, 0, 0)))

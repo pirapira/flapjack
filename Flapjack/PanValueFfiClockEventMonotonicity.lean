@@ -1455,6 +1455,42 @@ theorem evalPanValueFfiClockProg_raise_ioEvents_prefix
       steps hsteps
   · exact hprefix
 
+theorem evalPanValueFfiClockProg_leaf_ioEvents_prefix
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (program : Prog α) (hleaf : PanValueFfiLeafProg program)
+    (result : PanValueFfiControlResult α σ) (steps : Nat)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (contracts : Option PanValueCallContracts := none)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none)
+    (hsteps : evalPanValueFfiProgSteps context primitive handler structs functions
+      baseAddress topAddress bytesInWord 1 locals globals memory ffi program
+      (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) = some (result, steps))
+    (hprefix : ffi.ioEvents <+: (panResultFfi ((.control result :
+      PanValueFfiClockOutcome α σ), clock)).ioEvents) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+      program memoryAccess contracts memoryHandler =
+      some (.control result, clock) ∧
+      ffi.ioEvents <+:
+        (panResultFfi ((.control result : PanValueFfiClockOutcome α σ),
+          clock)).ioEvents := by
+  constructor
+  · exact evalPanValueFfiClockProg_leaf_some context primitive handler structs
+      functions baseAddress topAddress bytesInWord fuel locals globals memory ffi
+      clock program memoryAccess contracts memoryHandler hleaf result steps hsteps
+  · exact hprefix
+
 theorem panResultFfi_panValueFfiClockRestoreLocal [BEq String]
     (name : VarName) (oldValue : Option (PanValue α))
     (outcome : PanValueFfiClockOutcome α σ) (clock : Nat) :

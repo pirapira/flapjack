@@ -2743,3 +2743,5 @@ theorem clocked_while_timeout_preserves_events :
     (by simp [evalPanValueExp]) (by decide) (by decide)
 
 end Flapjack.Test.PanSimpParity
+
+#check @Flapjack.evalPanValueFfiClockProg_leaf_ioEvents_prefix

@@ -79,3 +79,13 @@ already imply the trace-equality conclusion. Theorems about simplified
 evaluators (no clock, no memory domain, compile-and-execute "semantics") are
 not ports of HOL theorems about the faithful semantics and must not carry
 the tag of one.
+
+**A matching name is not enough.** Before adding `@[hol]`, compare the HOL and
+Lean declarations' definitions, quantified variables, hypotheses, side
+conditions, and conclusions. A different evaluator, an extra successful-pass
+assumption, a weaker result, or a key comparison that does not implement HOL
+equality is a mismatch even if a proof builds and the reference checker accepts
+the name. Fix such a mismatch immediately. If a faithful correction is not
+tractable in the current change, remove the deviating implementation/proof
+instead of retaining it as a purported or renamed port, and record the missing
+HOL declaration as a bead. Do not merge a known mismatch for later cleanup.

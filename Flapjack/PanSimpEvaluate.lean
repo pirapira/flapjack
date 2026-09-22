@@ -6567,6 +6567,35 @@ theorem evalPanValueFfiClockProg_while_of_exitsNormally
         exact ⟨nextLocals, nextGlobals, nextMemory, nextFfi, bodyClock, by
           simp [evalPanValueFfiClockProg, hcond, hnonzero, hclock, hbody]⟩
 
+/-! A fixed-clock nonzero `While` constructor consumes the same fuel-indexed
+    exit certificate as the lower-bounded form, without quantifying over clocks. -/
+theorem PanValueFfiClockNormalAdequateProgAt_while
+    (clock : Nat)
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (ma : Option (PanValueMemoryAccess α))
+    (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (condition : Exp α) (body : Prog α)
+    (hloop : ∀ (locals globals : VarName → Option (PanValue α))
+      (memory : α → Option (PanValue α)) (ffi : FfiState σ),
+      PanValueFfiClockWhileExitsNormally context primitive handler structs
+        functions baseAddress topAddress bytesInWord ma c mh condition body
+        (progCallFuel callBudget (.while condition body)) locals globals memory ffi clock) :
+    PanValueFfiClockNormalAdequateProgAt clock context primitive handler structs
+      functions baseAddress topAddress bytesInWord callBudget ma c mh
+      (.while condition body) := by
+  intro locals globals memory ffi
+  exact evalPanValueFfiClockProg_while_of_exitsNormally context primitive handler
+    structs functions baseAddress topAddress bytesInWord ma c mh condition body
+    (progCallFuel callBudget (.while condition body)) locals globals memory ffi clock
+    (hloop locals globals memory ffi)
+
 /-- A lower-bounded adequate nonzero-condition `While`, given a fuel-indexed
     exit certificate: the loop must leave the condition or `break` before the
     clock is exhausted. -/

@@ -42,8 +42,19 @@ theorem excluded_memory_context_second_write_fixture :
     { locals := fun _ => none, memory := updateMemory (fun _ => none) 4 7 }
     12 9 (fun address => address = 4 ∨ address = 12) hfirst (Or.inr rfl)
 
+
+theorem excluded_memory_context_projection_fixture :
+    panValueCrepStateRelExcept [] emptyContext
+      (fun _ => none) (fun _ => none) (fun _ => none)
+      { locals := (fun _ => none),
+        memory := updateMemory (updateMemory (fun _ => none) 4 7) 12 9 }
+      (fun address => address = 4 ∨ address = 12) := by
+  apply panValueCrepStateRelExceptWithContext_to_stateRelExcept
+  exact excluded_memory_context_second_write_fixture
+
 #check @Flapjack.panValueCrepStateRelExceptWithContext_of_state_rel
 #check @Flapjack.panValueCrepStateRelExceptWithContext_update_crep_at_excluded
 
 #check @Flapjack.panValueCrepStateRelExceptWithContext_update_crep_at_excluded_again
+#check @Flapjack.panValueCrepStateRelExceptWithContext_to_stateRelExcept
 end Flapjack.Test.CrepeStateRelationExceptContext

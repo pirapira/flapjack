@@ -472,4 +472,72 @@ theorem crepExpsOf_unreachElim (program : CrepProg α) :
     intro q r e h hmem
     cases program <;> simp_all [crepUnreachElim]
 
+theorem crepExpsOf_nestedSeq_assign_zipWith (names : List Nat) :
+    ∀ (values : List (CrepExp α)) {e : CrepExp α},
+      e ∈ crepExpsOf
+          (crepNestedSeq (names.zipWith (fun name value => .assign name value)
+            values)) →
+        e ∈ values := by
+  induction names with
+  | nil =>
+      intro values e hmem
+      cases values with
+      | nil => simp [crepNestedSeq, crepExpsOf] at hmem
+      | cons value values => simp [crepNestedSeq, crepExpsOf] at hmem
+  | cons name names ih =>
+      intro values e hmem
+      cases values with
+      | nil => simp [List.zipWith, crepNestedSeq, crepExpsOf] at hmem
+      | cons value values =>
+          simp only [List.zipWith_cons_cons, crepNestedSeq, crepExpsOf,
+            List.singleton_append, List.mem_cons] at hmem
+          rcases hmem with heq | hmem
+          · subst heq; exact by simp
+          · exact List.mem_cons.mpr (Or.inr (ih values hmem))
+
+theorem crepExpsOf_transformEoc (returnNames : List Nat) (program : CrepProg α) :
+    ∀ {e : CrepExp α},
+      e ∈ crepExpsOf (crepTransformEoc returnNames program) →
+        e ∈ crepExpsOf program := by
+  apply crepTransformEoc.induct
+    (motive := fun program => ∀ {e : CrepExp α},
+      e ∈ crepExpsOf (crepTransformEoc returnNames program) →
+        e ∈ crepExpsOf program)
+  · intro values e hmem
+    simp only [crepTransformEoc, crepExpsOf] at hmem ⊢
+    exact crepExpsOf_nestedSeq_assign_zipWith returnNames values hmem
+  · intro name arguments e hmem
+    simpa only [crepTransformEoc, crepExpsOf] using hmem
+  · intro names name arguments e hmem
+    simpa only [crepTransformEoc, crepExpsOf] using hmem
+  · intro names handler body name arguments ih e hmem
+    simp only [crepTransformEoc, crepExpsOf] at hmem ⊢
+    rcases List.mem_append.mp hmem with h | h
+    · exact List.mem_append.mpr (Or.inl h)
+    · exact List.mem_append.mpr (Or.inr (ih h))
+  · intro name value body ih e hmem
+    simp only [crepTransformEoc, crepExpsOf, List.mem_cons] at hmem ⊢
+    rcases hmem with h | h
+    · exact Or.inl h
+    · exact Or.inr (ih h)
+  · intro condition body ih e hmem
+    simp only [crepTransformEoc, crepExpsOf, List.mem_cons] at hmem ⊢
+    rcases hmem with h | h
+    · exact Or.inl h
+    · exact Or.inr (ih h)
+  · intro first second ihFirst ihSecond e hmem
+    simp only [crepTransformEoc, crepExpsOf] at hmem ⊢
+    rcases List.mem_append.mp hmem with h | h
+    · exact List.mem_append.mpr (Or.inl (ihFirst h))
+    · exact List.mem_append.mpr (Or.inr (ihSecond h))
+  · intro condition thenBranch elseBranch ihThen ihElse e hmem
+    simp only [crepTransformEoc, crepExpsOf, List.mem_cons] at hmem ⊢
+    rcases hmem with h | h
+    · exact Or.inl h
+    · rcases List.mem_append.mp h with h | h
+      · exact Or.inr (List.mem_append.mpr (Or.inl (ihThen h)))
+      · exact Or.inr (List.mem_append.mpr (Or.inr (ihElse h)))
+  · intro program h1 h2 h3 h4 h5 h6 h7 h8 e hmem
+    cases program <;> simp_all [crepTransformEoc]
+
 end Flapjack

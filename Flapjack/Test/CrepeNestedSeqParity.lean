@@ -97,13 +97,28 @@ def unreachElimExpsGuard : Bool :=
   (crepExpsOf unreachElimProbe.1).length == 1 &&
   decide (unreachElimProbe.2 = some .return)
 
+/-! Cake's `exps_of_transform_eoc` (`crep_inlineProofScript.sml:3100`). -/
+
+example {e : CrepExp Nat}
+    (hmem : e ∈ crepExpsOf
+      (crepTransformEoc [7]
+        (.seq (.return [.const 1]) (.assign 4 (.const 9)) : CrepProg Nat))) :
+    e ∈ crepExpsOf
+      (.seq (.return [.const 1]) (.assign 4 (.const 9)) : CrepProg Nat) :=
+  crepExpsOf_transformEoc [7] _ hmem
+
+def transformEocExpsGuard : Bool :=
+  (crepExpsOf
+    (crepTransformEoc [7]
+      (.seq (.return [.const 1]) (.assign 4 (.const 9)) : CrepProg Nat))).length == 2
+
 def parityGuard : Bool :=
   isEmpty (crepNestedSeq []) &&
   isOne (crepNestedSeq [.skip]) &&
   isTwo (crepNestedSeq [.tick, .skip]) &&
   isAssignSeq (crepNestedSeq [.assign 1 (.const 7), .assign 2 (.const 9)]) &&
   isFlattened && crepExpsGuard && inlineExpsGuard && argLoadGuard &&
-  unreachElimExpsGuard
+  unreachElimExpsGuard && transformEocExpsGuard
 
 #eval parityGuard
 #guard parityGuard
@@ -118,9 +133,10 @@ def runChecks : IO Bool := do
     crepExpsGuard,
     inlineExpsGuard,
     argLoadGuard,
-    unreachElimExpsGuard]
+    unreachElimExpsGuard,
+    transformEocExpsGuard]
   match results with
-  | [empty, one, two, assignment, flattened, exps, inlineExps, argLoad, unreach] =>
+  | [empty, one, two, assignment, flattened, exps, inlineExps, argLoad, unreach, transformEoc] =>
       if empty then IO.println "PASS crep nested_seq empty" else IO.println "FAIL crep nested_seq empty"
       if one then IO.println "PASS crep nested_seq one" else IO.println "FAIL crep nested_seq one"
       if two then IO.println "PASS crep nested_seq two" else IO.println "FAIL crep nested_seq two"
@@ -130,7 +146,8 @@ def runChecks : IO Bool := do
       if inlineExps then IO.println "PASS crep inline exps_of membership" else IO.println "FAIL crep inline exps_of membership"
       if argLoad then IO.println "PASS crep inline exps_of arg_load" else IO.println "FAIL crep inline exps_of arg_load"
       if unreach then IO.println "PASS crep inline exps_of unreach_elim" else IO.println "FAIL crep inline exps_of unreach_elim"
-      pure (empty && one && two && assignment && flattened && exps && inlineExps && argLoad && unreach)
+      if transformEoc then IO.println "PASS crep inline exps_of transform_eoc" else IO.println "FAIL crep inline exps_of transform_eoc"
+      pure (empty && one && two && assignment && flattened && exps && inlineExps && argLoad && unreach && transformEoc)
   | _ =>
       IO.println "FAIL crep nested_seq result arity"
       pure false

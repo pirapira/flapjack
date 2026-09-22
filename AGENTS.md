@@ -6,9 +6,10 @@ OLean files under `.lake/` are local build outputs, not source artifacts. If
 Lake reports that an expected `.olean` is missing or a hardlink is stale,
 identify the exact module path and remove only that module's local generated
 `.olean`/`.ilean` file (and, when the OLean is absent, its matching generated
-trace/hash metadata), then rebuild the required target from source. Do not use
-a broad `lake clean` for this routine repair; deleting the one problematic
-artifact is the intended fix.
+trace/hash metadata), then rebuild the required target from source. The
+recommended repair is to remove the individual problematic OLean, not to run
+`lake clean`; a broad clean throws away unrelated useful cache state and is
+unnecessary for this failure mode.
 
 In particular, when a hardlink is the immediate cause, resolve the exact
 `.olean` path first and remove that individual generated file; do not replace it

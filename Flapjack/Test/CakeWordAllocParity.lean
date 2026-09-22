@@ -94,11 +94,11 @@ def simpleAllocatorGuard : Bool :=
 /-! Cake algorithms 4 and above select `linear_scan_reg_alloc`.  Its source
     bijection and retained pass-1 colours are exercised here, then converted
     from compressed colours to the even Word RISC-V names at the boundary. -/
-def cakeWordAllocLinearScanSource : Option (WordProg Nat) :=
+def cakeWordAllocLinearScanSourceFor (registerColours : Nat) : Option (WordProg Nat) :=
   let tree := wordClashTree add1Program []
   let forced := cakeGetForced add1Program
   let moves := (wordGetHeuristics 4 5 add1Program).1
-  match wordLinearScanAllocateSource 22 forced moves tree with
+  match wordLinearScanAllocateSource registerColours forced moves tree with
   | none => none
   | some allocation =>
       some (wordApplyColour
@@ -107,6 +107,9 @@ def cakeWordAllocLinearScanSource : Option (WordProg Nat) :=
           | some colour => colour
           | none => 0)
         add1Program)
+
+def cakeWordAllocLinearScanSource : Option (WordProg Nat) :=
+  cakeWordAllocLinearScanSourceFor 22
 
 def linearScanSourceAllocatorGuard : Bool :=
   match cakeWordAllocLinearScanSource with
@@ -120,6 +123,19 @@ def linearScanSourceAllocatorGuard : Bool :=
   | _ => false
 
 #guard linearScanSourceAllocatorGuard
+
+def linearScanSourceK1AllocatorGuard : Bool :=
+  match cakeWordAllocLinearScanSourceFor 1 with
+  | some
+      (.seq (.move 1 [(4, 0), (6, 2), (0, 4)])
+        (.seq
+          (.seq (.move 0 [(0, 0)])
+            (.seq (.move 0 [(6, 6)])
+              (.inst (.arith (.binOp .add 0 0 (.reg 6))))))
+          (.seq (.move 0 [(2, 0)]) (.return 4 [2])))) => true
+  | _ => false
+
+#guard linearScanSourceK1AllocatorGuard
 
 
 /-! Cake's `word_alloc 5 riscv_config 1 22` takes the simple allocator with

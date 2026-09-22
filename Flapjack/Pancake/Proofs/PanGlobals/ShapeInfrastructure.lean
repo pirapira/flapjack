@@ -1,14 +1,16 @@
 import Flapjack.Pancake.PanGlobals
-import Flapjack.PanProgramSemantics
+import Flapjack.Pancake.Semantics.PanSem
 
 /-!
-Reusable, Flapjack-specific shape infrastructure for the global pass. These
-predicates and helper lemmas describe Flapjack's `isWfShape` relation and
-value evaluator; they are not ports of Cake's `compile_top_shape_wf` because
-they do not use Cake's `evaluate_decls` premise. The faithful HOL theorems
-remain open under beads `flapjack-pxn.18.3.2.1` and
-`flapjack-pxn.18.3.2.2`. The helper lemmas are Flapjack-specific support;
-none claims a direct HOL theorem correspondence.
+Shape infrastructure for the global pass. The relation between a successful
+declaration evaluation and well-formed function shapes is proved over the
+faithful `panSem$evaluate_decls` port (`evaluateDecls`), as the tagged
+`evaluate_decls_functions_wf` port. The remaining predicates and helper lemmas
+describe Flapjack's own `isWfShape` bookkeeping and list/filter support; they
+are Flapjack-specific infrastructure with no separate HOL theorem, and none
+claims a direct HOL correspondence. The full HOL `compile_top_shape_wf` and
+`compile_top_shape_wf_nil` theorems remain open under beads
+`flapjack-pxn.18.3.2.1` and `flapjack-pxn.18.3.2.2`.
 -/
 
 namespace Flapjack
@@ -89,29 +91,72 @@ theorem globalDeclsFilter_isException_all_shapes (structs : StructContext)
   | exnDecl exception shape => simp [panDeclShapesWellFormed]
   | name struct fields => simp [globalDeclIsException] at hpred
 
-/-- Flapjack-specific list invariant from its value evaluator's
-    function-shape result. It has no HOL reference because that evaluator is
-    not HOL `evaluate_decls`; this does not discharge the HOL
-    `compile_top_shape_wf` premise. -/
-theorem evalPanValueDeclarationsWithStructs_all_shapes
+/-- Exact-shaped port of Cake's `evaluate_decls_functions_wf`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2367`): a successful
+    declaration evaluation only installs function declarations whose parameter
+    and return shapes are well formed in the source struct context. The
+    admissibility premise is HOL's `EVERY (\d. is_function d ∨ is_decl d ∨
+    is_exn_decl d) code`; the faithful `evaluate_decls` port checks the
+    function shapes before installing each entry. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "evaluate_decls_functions_wf"]
+theorem evaluateDecls_functions_wf
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (structs : StructContext) (state state' : PanValueProgramState α)
-    (declarations : List (Decl α)) (memoryAccess : Option (PanValueMemoryAccess α))
-    (heval : evalPanValueDeclarationsWithStructs structs state declarations
-      memoryAccess = some state') :
-    declarations.all (panDeclShapesWellFormed structs) = true := by
-  refine List.all_eq_true.mpr (fun declaration hmem => ?_)
-  cases declaration with
-  | function function =>
-      have hwf := evalPanValueDeclarationsWithStructs_functions_wf structs state
-        state' declarations memoryAccess heval hmem
-      simpa [panDeclShapesWellFormed, panFunctionShapesWellFormed,
-        Bool.and_eq_true] using hwf
-  | decl shape name value => simp [panDeclShapesWellFormed]
-  | exnDecl exception shape => simp [panDeclShapesWellFormed]
-  | name struct fields => simp [panDeclShapesWellFormed]
+    [BEq String]
+    (state : PanSemDeclarationState α σ) (code : List (Decl α))
+    (state' : PanSemDeclarationState α σ)
+    (heval : evaluateDecls state code = some state')
+    {fi : FunDecl α} (hmem : (.function fi : Decl α) ∈ code)
+    (hadm : code.all
+      (fun declaration => globalDeclIsFunction declaration ||
+        isDecl declaration || isExnDecl declaration) = true) :
+    fi.params.all
+        (fun parameter => isWfShape state.runtime.structs parameter.2) = true ∧
+      isWfShape state.runtime.structs fi.returnShape = true := by
+  induction code generalizing state with
+  | nil => simp at hmem
+  | cons head tail ih =>
+      have hadm_tail : tail.all
+          (fun declaration => globalDeclIsFunction declaration ||
+            isDecl declaration || isExnDecl declaration) = true := by
+        have h := hadm
+        rw [List.all_cons, Bool.and_eq_true] at h
+        exact h.2
+      cases head with
+      | name name fields =>
+          simp only [evaluateDecls] at heval
+          simp only [List.mem_cons] at hmem
+          rcases hmem with h | h
+          · exact absurd h (by simp)
+          · exact ih state heval h hadm_tail
+      | decl shape name expression =>
+          simp only [evaluateDecls] at heval
+          split at heval
+          · simp at heval
+          · split at heval
+            · have hres := ih _ heval (by simpa using hmem) hadm_tail
+              exact hres
+            · simp at heval
+      | function function =>
+          simp only [evaluateDecls] at heval
+          split at heval
+          · rename_i hwf
+            simp only [List.mem_cons] at hmem
+            rcases hmem with h | h
+            · injection h with h; subst h
+              simpa only [Bool.and_eq_true] using hwf
+            · have hres := ih _ heval h hadm_tail
+              exact hres
+          · simp at heval
+      | exnDecl exception shape =>
+          simp only [evaluateDecls] at heval
+          split at heval
+          · simp at heval
+          · split at heval
+            · have hres := ih _ heval (by simpa using hmem) hadm_tail
+              exact hres
+            · simp at heval
 
 /-- Flapjack-specific lookup support; this representation-specific fact has
     no separate HOL theorem declaration. -/

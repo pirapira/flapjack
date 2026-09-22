@@ -753,6 +753,43 @@ structure PanValuePcSemanticClockEvidence
   events : panResultEvents (some (outcome, returnedClock)) =
     crepHooks.ioEvents targetState
 
+/-! Preserve the full context-coded `pc_compile_correct` result at one clock.
+    This is the evaluator boundary used by the declaration induction: all
+    source/target state, localisation, evaluator, and post-code premises remain
+    visible, while the exception-code and global-lookup evidence is retained. -/
+theorem PanValuePcSemanticClockEvidence.resultRelWithContextCode
+    {α σ : Type}
+    [BEq α] [OfNat α 0] [Add α]
+    {structs : StructContext} {context : CompileContext α}
+    {program : Prog α}
+    {sourceEvaluate : PanValuePcEvaluator α}
+    {targetEvaluate : CrepPcEvaluator α}
+    {codeRel : PanValuePcCodeRel α}
+    {excpRel : PanValuePcExceptionShapeRel α}
+    {exceptionRel : ExceptionId → PanValue α → α → Prop}
+    {exceptionCode : ExceptionId → Option α}
+    {globalsLookup : CrepState α → PanValue α → Option (List α)}
+    {panHooks : PanSemanticsHooks α σ}
+    {crepHooks : CrepSemanticsHooks α}
+    (hcorrect : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (evidenceClock : Nat)
+    (evidence : PanValuePcSemanticClockEvidence structs context program evidenceClock
+      sourceEvaluate targetEvaluate codeRel excpRel exceptionRel exceptionCode
+      globalsLookup panHooks crepHooks) :
+    panValuePcResultRelWithContextCode structs context exceptionRel exceptionCode
+      globalsLookup (panOutcomeToPcResult evidence.outcome)
+      (crepControlToPcResult evidence.result) := by
+  have hrel := hcorrect context structs evidence.sourceInput
+    evidence.targetInput exceptionRel evidence.sourceExecution
+    evidence.targetExecution evidence.sourceInputStructs
+    evidence.targetInputStructs evidence.sourceLocalisedCode
+    evidence.programLocalised evidence.inputCodeRel evidence.inputExcpRel
+    evidence.stateRel evidence.sourceNotError evidence.sourceEval
+    evidence.targetEval evidence.outputCodeRel evidence.outputExcpRel
+  rw [evidence.sourceResult, evidence.targetResult] at hrel
+  exact hrel
+
 theorem PanValuePcSemanticClockEvidence.resultRel
     {α σ : Type}
     [BEq α] [OfNat α 0] [Add α]

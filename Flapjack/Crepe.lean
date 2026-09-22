@@ -245,6 +245,40 @@ def crepNestedSeq : List (CrepProg α) → CrepProg α
   | [] => .skip
   | statement :: statements => .seq statement (crepNestedSeq statements)
 
+/-- Faithful port of Cake `crepProps$exps_of` from
+    `cakeml/pancake/semantics/crepPropsScript.sml:1282`: collect the
+    expressions that occur directly in a Crepe program. -/
+def crepExpsOf : CrepProg α → List (CrepExp α)
+  | .dec _ value body => value :: crepExpsOf body
+  | .seq first second => crepExpsOf first ++ crepExpsOf second
+  | .ite condition thenBranch elseBranch =>
+      condition :: (crepExpsOf thenBranch ++ crepExpsOf elseBranch)
+  | .while condition body => condition :: crepExpsOf body
+  | .call info _ args =>
+      args ++ (match info with
+               | some (_, some (_, handler)) => crepExpsOf handler
+               | _ => [])
+  | .store address value => [address, value]
+  | .store32 address value => [address, value]
+  | .storeByte address value => [address, value]
+  | .storeGlob _ value => [value]
+  | .return values => values
+  | .assign _ value => [value]
+  | .shMem _ _ address => [address]
+  | _ => []
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
+
+/-- Cake's `crepProps$exps_of_nested_seq`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:1010`). -/
+theorem crepExpsOf_nestedSeq (statements : List (CrepProg α)) :
+    crepExpsOf (crepNestedSeq statements) =
+      (statements.map crepExpsOf).flatten := by
+  induction statements with
+  | nil => simp [crepNestedSeq, crepExpsOf]
+  | cons statement statements ih => simp [crepNestedSeq, crepExpsOf, ih]
+
 /-! Faithful port of Cake `crep_seqs_def` from
     `cakeml/pancake/pan_passesScript.sml:377`: flatten only `Seq` nodes,
     preserving the left-to-right order of all other Crepe statements. -/
@@ -266,6 +300,75 @@ def nestedDecs : List Nat → List (CrepExp α) → CrepProg α → CrepProg α
   | [], [], body => body
   | name :: names, value :: values, body => .dec name value (nestedDecs names values body)
   | _, _, _ => .skip
+
+theorem crepExpsOf_nestedDecs (names : List Nat) :
+    ∀ (values : List (CrepExp α)) (body : CrepProg α) {e : CrepExp α},
+      e ∈ crepExpsOf (nestedDecs names values body) →
+        e ∈ values ∨ e ∈ crepExpsOf body := by
+  induction names with
+  | nil =>
+      intro values body e hmem
+      cases values with
+      | nil => exact Or.inr (by simpa [nestedDecs] using hmem)
+      | cons value values => simp [nestedDecs, crepExpsOf] at hmem
+  | cons name names ih =>
+      intro values body e hmem
+      cases values with
+      | nil => simp [nestedDecs, crepExpsOf] at hmem
+      | cons value values =>
+          simp only [nestedDecs, crepExpsOf, List.mem_cons] at hmem
+          rcases hmem with rfl | hmem
+          · exact Or.inl (by simp)
+          · rcases ih values body hmem with hv | hb
+            · exact Or.inl (by simp [hv])
+            · exact Or.inr hb
+
+theorem crepExpsOf_nestedSeq_assign (names : List Nat) :
+    ∀ (values : List (CrepExp α)) {e : CrepExp α},
+      e ∈ crepExpsOf
+          (crepNestedSeq (panMap2 (fun name value => .assign name value)
+            names values)) →
+        e ∈ values := by
+  induction names with
+  | nil =>
+      intro values e hmem
+      cases values with
+      | nil => simp [panMap2, crepNestedSeq, crepExpsOf] at hmem
+      | cons value values => simp [panMap2, crepNestedSeq, crepExpsOf] at hmem
+  | cons name names ih =>
+      intro values e hmem
+      cases values with
+      | nil => simp [panMap2, crepNestedSeq, crepExpsOf] at hmem
+      | cons value values =>
+          simp only [panMap2, crepNestedSeq, crepExpsOf, List.mem_cons,
+            List.singleton_append] at hmem
+          rcases hmem with heq | hmem
+          · subst heq; exact by simp
+          · exact List.mem_cons.mpr (Or.inr (ih values hmem))
+
+/-- Faithful port of Cake `arg_load_def` from
+    `cakeml/pancake/crep_inlineScript.sml:59`: simulate the argument loading
+    of a function call as a pair of nested declaration blocks. -/
+def argLoad (tmpVars : List Nat) (args : List (CrepExp α))
+    (argsVName : List Nat) (body : CrepProg α) : CrepProg α :=
+  nestedDecs tmpVars args (nestedDecs argsVName (tmpVars.map CrepExp.var) body)
+
+/-- Cake's `exps_of_arg_load` (`cakeml/pancake/proofs/crep_inlineProofScript.sml:3057`):
+    an expression occurring in an argument load is either one of the loaded
+    argument expressions, a temporary variable, or an expression of the body. -/
+theorem crepExpsOf_argLoad (tmpVars : List Nat) (args : List (CrepExp α))
+    (argsVName : List Nat) (body : CrepProg α) {e : CrepExp α}
+    (hmem : e ∈ crepExpsOf (argLoad tmpVars args argsVName body)) :
+    e ∈ args ∨ (∃ c, c ∈ tmpVars ∧ e = .var c) ∨ e ∈ crepExpsOf body := by
+  unfold argLoad at hmem
+  rcases crepExpsOf_nestedDecs tmpVars args
+      (nestedDecs argsVName (tmpVars.map CrepExp.var) body) hmem with hargs | hinner
+  · exact Or.inl hargs
+  · rcases crepExpsOf_nestedDecs argsVName (tmpVars.map CrepExp.var) body hinner with
+      hvars | hbody
+    · rcases List.mem_map.mp hvars with ⟨c, hc, heq⟩
+      exact Or.inr (Or.inl ⟨c, hc, heq.symm⟩)
+    · exact Or.inr (Or.inr hbody)
 
 def storeGlobals [Add α] (address stride : α) : List (CrepExp α) → List (CrepProg α)
   | [] => []

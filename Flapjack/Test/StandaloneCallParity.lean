@@ -48,7 +48,7 @@ example :
     compileProg standalonePairContext
       (.call (some (some (.local, "missing"), none)) "f" []) =
       .call none "f" [] := by
-  simp [compileProg, compileArgs, callDestinationNames, wrapRt,
+  simp [compileProg, compileArgs, callDestinationNames,
     standalonePairContext, lookupInfo]
 
 /-- An assigned call to a global destination is a tail call. -/
@@ -56,8 +56,7 @@ example :
     compileProg standalonePairContext
       (.call (some (some (.global, "x"), none)) "f" []) =
       .call none "f" [] := by
-  simp [compileProg, compileArgs, callDestinationNames,
-    standalonePairContext]
+  simp [compileProg, compileArgs, callDestinationNames]
 
 /-- An assigned call to a local whose shape `wrap_rt` drops (a one-word
     variable) is a tail call. -/
@@ -76,7 +75,7 @@ example :
       (.call (some (some (.local, "missing"),
         some ("E", "pair", .skip))) "f" []) =
       .call (some ([], some (9, .seq (assignRet 1 [0, 1]) .skip))) "f" [] := by
-  simp [compileProg, compileArgs, callDestinationNames, wrapRt,
+  simp [compileProg, compileArgs, callDestinationNames,
     handlerContext, lookupInfo]
 
 end Flapjack

@@ -340,7 +340,7 @@ partial def phaseWalk
       let bij := RiscV.CakeRegAlloc.cakeMkBij tree
       let chk := chk + bij.nextNode
       let p5 ← IO.monoMsNow
-      let state0 := RiscV.CakeRegAlloc.cakeInitRaState tree forced fs
+      let state0 := RiscV.CakeRegAlloc.cakeInitRaStateFromBij bij tree forced fs
       let chk := chk + state0.dim + state0.adjLists.slots.size
       let p6 ← IO.monoMsNow
       let k := RiscV.CakeRegAlloc.cakeRiscVRegisterCount
@@ -544,7 +544,7 @@ def main : IO Unit := do
                     (costs.filterMap (fun entry =>
                       (lookupNatInfo entry.1 bij.toAllocator).map (fun node => (node, entry.2)))))
                 let k := RiscV.CakeRegAlloc.cakeRiscVRegisterCount
-                let state0 := RiscV.CakeRegAlloc.cakeInitRaState tree forced fs
+                let state0 := RiscV.CakeRegAlloc.cakeInitRaStateFromBij bij tree forced fs
                 let edges := state0.adjLists.toNatInfoMap.foldl
                   (fun acc entry => acc + entry.2.length) 0
                 let a6 ← stage "as:initRaState" a5 edges

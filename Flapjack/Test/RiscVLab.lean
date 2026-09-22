@@ -87,10 +87,46 @@ example :
       some [.add 4 5 6] := by
   decide
 
+/- Cake's `riscv_bop_r` table also maps register `Sub`, `And`, and `Or`
+   directly to their RISC-V R-type instructions.  Keep these distinct from
+   the immediate and Word-level guards below. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.arith .sub 4 5 6) [] 0]⟩ =
+      some [.sub 4 5 6] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.arith .and 4 5 6) [] 0]⟩ =
+      some [.and 4 5 6] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.arith .or 4 5 6) [] 0]⟩ =
+      some [.or 4 5 6] := by
+  decide
+
 example :
     compileLabSection (width := 64) { services := [] }
       ⟨3, [.asm (.arithImm .sub 20 20 16) [] 0]⟩ =
       some [.addi 20 20 (0 - BitVec.ofNat 64 16)] := by
+  decide
+
+/- Cake's `riscv_target` accepts exactly the signed-12 arithmetic immediate
+   interval.  Pin both endpoints at the Lab boundary so a future change to
+   immediate normalization cannot alter the emitted ADDI bytes. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.arithImm .add 20 20 2047) [] 0]⟩ =
+      some [.addi 20 20 (BitVec.ofNat 64 2047)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.arithImm .sub 20 20 2048) [] 0]⟩ =
+      some [.addi 20 20 (0 - BitVec.ofNat 64 2048)] := by
   decide
 
 /- CakeML's final Lab filter removes arithmetic identities, including the
@@ -120,6 +156,54 @@ example :
         (.asm (.word (.arith (.shift .ror 10 1
           (.reg 2)))) [] 0 : LabLine (Word 64))) = 5 := by
   rfl
+
+/- The direct Word arithmetic boundary must preserve Cake's immediate rotate
+   expansion, not merely its retained instruction count. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.shift .ror 4 5
+        (.imm (BitVec.ofNat 64 3))))) [] 0]⟩ =
+      some [
+        .srli 31 5 (BitVec.ofNat 64 3),
+        .slli 4 5 (BitVec.ofNat 64 61),
+        .or 4 4 31] := by
+  decide
+
+/- Cake's variable Word rotate-right keeps the five-instruction temporary
+   sequence at the list-valued arithmetic boundary. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.shift .ror 4 5 (.reg 6)))) [] 0]⟩ =
+      some [
+        .ori 31 0 (BitVec.ofNat 64 64),
+        .sub 31 31 6,
+        .sll 31 5 31,
+        .srl 4 5 6,
+        .or 4 4 31] := by
+  decide
+
+/- Cake's list-valued Word arithmetic keeps an immediate arithmetic shift as
+   one target shift instruction; pin all three `riscv_sh` mappings. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.shift .lsl 4 5
+        (.imm (BitVec.ofNat 64 7))))) [] 0]⟩ =
+      some [.slli 4 5 (BitVec.ofNat 64 7)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.shift .lsr 4 5
+        (.imm (BitVec.ofNat 64 7))))) [] 0]⟩ =
+      some [.srli 4 5 (BitVec.ofNat 64 7)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.shift .asr 4 5
+        (.imm (BitVec.ofNat 64 7))))) [] 0]⟩ =
+      some [.srai 4 5 (BitVec.ofNat 64 7)] := by
+  decide
 
 example :
     compileLabSection (width := 64) { services := [] }
@@ -196,10 +280,89 @@ example :
       some [.sll 4 5 6] := by
   decide
 
+/- Cake's register-variable shifts use the target SLL/SRL/SRA equations from
+   riscv_targetScript.sml, distinct from the immediate shift cases above. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.shift .lsl 4 5 (.reg 6)))) [] 0]⟩ =
+      some [.sll 4 5 6] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.shift .lsr 4 5 (.reg 6)))) [] 0]⟩ =
+      some [.srl 4 5 6] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.shift .asr 4 5 (.reg 6)))) [] 0]⟩ =
+      some [.sra 4 5 6] := by
+  decide
+
+/- Cake's direct register Binop boundary emits the corresponding RISC-V
+   register ALU instruction without an intermediate materialization. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.arith .xor 4 5 6) [] 0]⟩ =
+      some [.xor 4 5 6] := by
+  decide
+
 example :
     compileLabSection (width := 64) { services := [] }
       ⟨3, [.asm (.word (.arith (.longMul 4 5 6 7))) [] 0]⟩ =
       some [.mulHU 4 6 7, .mul 5 6 7] := by
+  decide
+
+/- Cake rejects a LongMul when its high-result destination aliases either
+   source; the helper expansion is only valid after this source-boundary check. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.longMul 6 5 6 7))) [] 0]⟩ = none := by
+  decide
+
+/- Cake's register binary subtraction lowers directly to the RV64 SUB row;
+   keep the register carrier distinct from the immediate ADDI form above. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.binOp .sub 4 5 (.reg 6)))) [] 0]⟩ =
+      some [.sub 4 5 6] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.binOp .and 4 5 (.reg 6)))) [] 0]⟩ =
+      some [.and 4 5 6] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.binOp .or 4 5 (.reg 6)))) [] 0]⟩ =
+      some [.or 4 5 6] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.binOp .xor 4 5 (.reg 6)))) [] 0]⟩ =
+      some [.xor 4 5 6] := by
+  decide
+
+/- Cake's `riscv_ast (Inst (Arith (Div ...)))` selects the signed RISC-V
+   DIV encoding.  Flapjack's historical constructor is named `divU`, but its
+   encoder uses Cake's funct3=4/funct7=1 row; pin that source-shaped Lab
+   boundary explicitly so the name cannot hide a DIVU regression. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.div 4 5 6))) [] 0]⟩ =
+      some [.divU 4 5 6] := by
+  decide
+
+/- Cake's direct RISC-V target rejects `LongDiv`; the Pancake runtime helper
+   is inserted earlier by the Stack pipeline, so Lab must not silently emit a
+   target instruction for an unexpanded LongDiv node. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.longDiv 4 5 6 7 8))) [] 0]⟩ = none := by
   decide
 
 example :
@@ -207,6 +370,91 @@ example :
       ⟨3, [.asm (.word (.arith (.addCarry 4 5 6 7 8))) [] 0]⟩ =
       some [.sltu 31 0 8, .add 4 6 7, .sltu 5 4 7,
         .add 4 4 31, .sltu 31 4 31, .or 5 5 31] := by
+  decide
+
+/- Cake's four-register AddCarry carrier uses the carry register as both
+   input and output, unlike Pancake's five-register primitive above. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.cakeAddCarry 4 6 7 8))) [] 0]⟩ =
+      some [.sltu 31 0 8, .add 4 6 7, .sltu 8 4 7,
+        .add 4 4 31, .sltu 31 4 31, .or 8 8 31] := by
+  decide
+
+/- Cake's four-register AddCarry is distinct from Pancake's five-register
+   two-result carrier; pin its direct target expansion separately. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.cakeAddCarry 4 5 6 7))) [] 0]⟩ =
+      some [.sltu 31 0 7, .add 4 5 6, .sltu 7 4 6,
+        .add 4 4 31, .sltu 31 4 31, .or 7 7 31] := by
+  decide
+
+/- Cake's list-valued Word `Binop` carrier preserves a register right
+   operand as one target ALU instruction. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.binOp .and 4 5 (.reg 6)))) [] 0]⟩ =
+      some [.and 4 5 6] := by
+  decide
+
+/- Cake's list-valued Word `Binop Sub` carrier keeps an immediate operand in
+   the I-format signed-negation form rather than treating it as a register. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith
+        (.binOp .sub 4 5 (.imm (BitVec.ofNat 64 24))))) [] 0]⟩ =
+      some [.addi 4 5 (0 - BitVec.ofNat 64 24)] := by
+  decide
+
+/- Cake's `riscv_ast` immediate-Binop rule maps `Add` through
+   `riscv_bop_i Add = ADDI`; keep this distinct from the signed-negation
+   `Sub` case above (riscv_targetScript.sml:47-51, 117-120). -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith
+        (.binOp .add 4 5 (.imm (BitVec.ofNat 64 24))))) [] 0]⟩ =
+      some [.addi 4 5 (BitVec.ofNat 64 24)] := by
+  decide
+
+/- Cake's `riscv_bop_i` table applies the same immediate-carrier boundary to
+   the remaining logical binary operators; keep these distinct from the
+   direct `arithImm` constructors above. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith
+        (.binOp .and 4 5 (.imm (BitVec.ofNat 64 24))))) [] 0]⟩ =
+      some [.andi 4 5 (BitVec.ofNat 64 24)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith
+        (.binOp .or 4 5 (.imm (BitVec.ofNat 64 24))))) [] 0]⟩ =
+      some [.ori 4 5 (BitVec.ofNat 64 24)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith
+        (.binOp .xor 4 5 (.imm (BitVec.ofNat 64 24))))) [] 0]⟩ =
+      some [.xori 4 5 (BitVec.ofNat 64 24)] := by
+  decide
+
+/- Cake's `riscv_ast (Inst (Arith (Div ...)))` reaches the target DIV
+   encoding through the direct Lab word-arithmetic boundary. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.div 4 5 6))) [] 0]⟩ =
+      some [.divU 4 5 6] := by
+  decide
+
+/- Cake's riscv_targetScript.sml maps direct `LongDiv` to
+   riscv_encode_fail; the Lab arithmetic boundary preserves that rejection. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.longDiv 4 5 6 7 8))) [] 0]⟩ =
+      none := by
   decide
 
 example :
@@ -305,6 +553,60 @@ example :
       some [.loadByteOffset 4 5 (BitVec.ofNat 64 7)] := by
   decide
 
+/-! The direct Cake `Mem ... (Addr ...)` path uses the same `riscv_memop`
+    table as shared memory, but these word-width and halfword-width forms are
+    distinct from the shared-memory table above.  Pin both signed directions
+    at the Lab boundary against `riscv_targetScript.sml:66-74, 165-169`. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMem .load 4 5 7) [] 0]⟩ =
+      some [.loadWordOffset 4 5 (BitVec.ofNat 64 7)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMem .store 4 5 7) [] 0]⟩ =
+      some [.storeWordOffset 4 5 (BitVec.ofNat 64 7)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMemSub .store 4 5 7) [] 0]⟩ =
+      some [.storeWordOffset 4 5 (0 - BitVec.ofNat 64 7)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMemSub .load 4 5 7) [] 0]⟩ =
+      some [.loadWordOffset 4 5 (0 - BitVec.ofNat 64 7)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMem .load16 4 5 7) [] 0]⟩ =
+      some [.loadHalfOffset 4 5 (BitVec.ofNat 64 7)] := by
+  decide
+
+/- The positive `Addr` carrier uses the same Cake width table for stores;
+   pin the byte and halfword store rows separately from the load rows above. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMem .store8 4 5 7) [] 0]⟩ =
+      some [.storeByteOffset 4 5 (BitVec.ofNat 64 7)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMem .store16 4 5 7) [] 0]⟩ =
+      some [.storeHalfOffset 4 5 (BitVec.ofNat 64 7)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMemSub .store16 4 5 7) [] 0]⟩ =
+      some [.storeHalfOffset 4 5 (0 - BitVec.ofNat 64 7)] := by
+  decide
+
 example :
     compileLabSection (width := 64) { services := [] }
       ⟨4, [.asm (.stackMemSub .store32 4 5 7) [] 0]⟩ =
@@ -317,6 +619,20 @@ example :
     compileLabSection (width := 64) { services := [] }
       ⟨4, [.asm (.stackMemSub .load16 4 5 9) [] 0]⟩ =
       some [.loadHalfOffset 4 5 (0 - BitVec.ofNat 64 9)] := by
+  decide
+
+/- The subtracting `Addr` carrier preserves the signed displacement for
+   byte and unsigned-word loads as well. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMemSub .load8 4 5 9) [] 0]⟩ =
+      some [.loadByteOffset 4 5 (0 - BitVec.ofNat 64 9)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMemSub .load32 4 5 9) [] 0]⟩ =
+      some [.load32Offset 4 5 (0 - BitVec.ofNat 64 9)] := by
   decide
 
 /- A positive signed-12 boundary remains an offset instruction; materializing
@@ -340,6 +656,33 @@ example :
     compileLabSection (width := 64) { services := [] }
       ⟨4, [.asm (.stackMem .load32 4 5 2047) [] 0]⟩ =
       some [.load32Offset 4 5 (BitVec.ofNat 64 2047)] := by
+  decide
+
+/- The same Cake signed-12 positive endpoint applies to the remaining
+   width-specific memory operations; preserve the target opcode and offset
+   together rather than checking only the word-width row. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMem .load8 4 5 2047) [] 0]⟩ =
+      some [.loadByteOffset 4 5 (BitVec.ofNat 64 2047)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMem .load16 4 5 2047) [] 0]⟩ =
+      some [.loadHalfOffset 4 5 (BitVec.ofNat 64 2047)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMem .store8 4 5 2047) [] 0]⟩ =
+      some [.storeByteOffset 4 5 (BitVec.ofNat 64 2047)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMem .store16 4 5 2047) [] 0]⟩ =
+      some [.storeHalfOffset 4 5 (BitVec.ofNat 64 2047)] := by
   decide
 
 /-! Cake's immediate binary operators use the corresponding I-format
@@ -474,6 +817,68 @@ def sharedMemOffsetOperatorTable : Bool :=
 
 #guard sharedMemOffsetOperatorTable
 
+/- The shared-memory Cake path uses the same signed-12 endpoint as the
+   stack-memory path, but it is a separate `shareMemOffset` carrier.  Pin the
+   narrow rows here so the shared-memory encoder cannot regress independently. -/
+example :
+    labCompilePlain (width := 64)
+      (.shareMemOffset .load8 10 11 (BitVec.ofNat 64 2047)) =
+      some [.loadByteOffset 10 11 (BitVec.ofNat 64 2047)] := by
+  decide
+
+example :
+    labCompilePlain (width := 64)
+      (.shareMemOffset .load16 10 11 (BitVec.ofNat 64 2047)) =
+      some [.loadHalfOffset 10 11 (BitVec.ofNat 64 2047)] := by
+  decide
+
+example :
+    labCompilePlain (width := 64)
+      (.shareMemOffset .store8 10 11 (BitVec.ofNat 64 2047)) =
+      some [.storeByteOffset 10 11 (BitVec.ofNat 64 2047)] := by
+  decide
+
+example :
+    labCompilePlain (width := 64)
+      (.shareMemOffset .store16 10 11 (BitVec.ofNat 64 2047)) =
+      some [.storeHalfOffset 10 11 (BitVec.ofNat 64 2047)] := by
+  decide
+
+/- Cake's source-shaped `wordShareInstToInstructionsCake` keeps a variable
+   address as one direct `Mem` carrier.  Check every width in the target
+   `riscv_memop` table at this backend boundary, independently of the
+   stack-shaped offset table above. -/
+def cakeWordShareMemOperatorTable : Bool :=
+  [
+    wordShareInstToInstructionsCake (width := 64) .load 10 (.var 11),
+    wordShareInstToInstructionsCake (width := 64) .store 10 (.var 11),
+    wordShareInstToInstructionsCake (width := 64) .load8 10 (.var 11),
+    wordShareInstToInstructionsCake (width := 64) .store8 10 (.var 11),
+    wordShareInstToInstructionsCake (width := 64) .load16 10 (.var 11),
+    wordShareInstToInstructionsCake (width := 64) .store16 10 (.var 11),
+    wordShareInstToInstructionsCake (width := 64) .load32 10 (.var 11),
+    wordShareInstToInstructionsCake (width := 64) .store32 10 (.var 11)
+  ] == [
+    some [.loadWord 10 11],
+    some [.storeWord 10 11],
+    some [.loadByte 10 11],
+    some [.storeByte 10 11],
+    some [.loadHalf 10 11],
+    some [.storeHalf 10 11],
+    some [.load32 10 11],
+    some [.store32 10 11]
+  ]
+
+#guard cakeWordShareMemOperatorTable
+
+/- Cake's direct `Mem` address form preserves a subtractive displacement as a
+   signed RISC-V offset while retaining the selected store width. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.memOffset .store32 .sub 4 10 24) [] 0]⟩ =
+      some [.store32Offset 4 10 (0 - BitVec.ofNat 64 24)] := by
+  decide
+
 -- reg1 holds the base and reg4 the byte: the store lands at base + 32.
 #guard
     labSharedStoreOffsetCode.bind (fun code =>
@@ -496,6 +901,18 @@ example :
       some [.jalr 0 4 0] := by
   decide
 
+/- Cake's `Return` carrier is the same `JumpReg` target operation, with
+   source register 0 denoting the conventional link register x1. -/
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [] 0 (.return 0) =
+      some [.jalr 0 1 0] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [] 0 (.return 4) =
+      some [.jalr 0 4 0] := by
+  decide
+
 example :
     labCompileAsm (width := 64) { services := [] } 1 [(0, 2 ^ 20)] 0
       (.jump ⟨1, 0⟩) =
@@ -508,6 +925,13 @@ example :
       (.call ⟨1, 0⟩) =
       some [.auipc 31 (BitVec.ofNat 64 256),
         .jalr 1 31 (BitVec.ofNat 64 0)] := by
+  decide
+
+/- Cake's short `Call` form uses the link register x1 in the direct JAL. -/
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 4)] 0
+      (.call ⟨1, 0⟩) =
+      some [.jal 1 (BitVec.ofNat 64 4)] := by
   decide
 
 /- Cake's CallFFI target also takes the AUIPC/JALR fallback when the current

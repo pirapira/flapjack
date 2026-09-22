@@ -97,6 +97,16 @@ def cakeColourLocationOracleExact : Bool :=
 
 #guard cakeColourLocationOracleExact
 
+/- The actual RISC-V allocator window has `k = 22` Cake stack-register
+   colours.  `format_var` keeps colour 42 (register 21) in the ABI window and
+   numbers colours 44 and 46 from the top of a five-word frame. -/
+def cakeRiscVColourLocationOracleExact : Bool :=
+  CakeRegAlloc.cakeColourLocation 22 5 42 == .register 21 &&
+    CakeRegAlloc.cakeColourLocation 22 5 44 == .stack 4 &&
+    CakeRegAlloc.cakeColourLocation 22 5 46 == .stack 3
+
+#guard cakeRiscVColourLocationOracleExact
+
 /- The direct `compile_prog` frame equation is `MAX nextSpill
    (LENGTH parameters - reg_count)`.  These boundary values pin both
    allocator spill occupancy and Cake's RISC-V argument-frame threshold
@@ -116,7 +126,11 @@ def cakeWordFrameSlotsOracleExact : Bool :=
     cakeWordFrameSlots fourSpills (List.range 23)
       (WordProg.skip : WordProg (RiscV.Word 64)) == 4 &&
     cakeWordFrameSlots emptyAllocation (List.range 25)
-      (WordProg.skip : WordProg (RiscV.Word 64)) == 3
+      (WordProg.skip : WordProg (RiscV.Word 64)) == 3 &&
+    cakeWordFrameSlots emptyAllocation (List.range 26)
+      (WordProg.skip : WordProg (RiscV.Word 64)) == 4 &&
+    cakeWordFrameSlots oneSpill (List.range 26)
+      (WordProg.skip : WordProg (RiscV.Word 64)) == 4
 
 #guard cakeWordFrameSlotsOracleExact
 
@@ -147,6 +161,15 @@ def cakeMaxVarNoReturnHandler : Bool :=
         (some (54, (.assign 54 (.var 54) : WordProg Nat), 0, 0)) : WordProg Nat) == 2
 
 #guard cakeMaxVarNoReturnHandler
+
+/- The checked Cake word_stack_frame_probe.out reports max_var = 26 for
+   two sequential assignments. Keep this source-level frame input distinct
+   from the no-return-handler case above. -/
+def cakeMaxVarSequenceOracle : Bool :=
+  wordProgCakeMaxVar
+      (.seq (.assign 0 (.const 0)) (.assign 26 (.const 0)) : WordProg Nat) == 26
+
+#guard cakeMaxVarSequenceOracle
 
 def spillingWordFunctions : Option (List (Nat × Nat × WordProg (RiscV.Word 64))) :=
   match parseTopDecs (BitVec.ofInt 64) spillingSource with
@@ -204,10 +227,14 @@ def runChecks : IO Bool := do
         spillOnlyFrameOccupancy),
       ("Cake colour locations match format_var register/frame slots",
         cakeColourLocationOracleExact),
+      ("RISC-V Cake colours cross the k=22 frame boundary",
+        cakeRiscVColourLocationOracleExact),
       ("cakeWordFrameSlots matches the direct Cake frame equation",
         cakeWordFrameSlotsOracleExact),
       ("Cake colour-to-spill adapter matches format_var and frame sizing",
         cakeColourWordSpillStateOracleExact),
+      ("Cake max_var preserves the sequential-assignment frame input",
+        cakeMaxVarSequenceOracle),
       ("allocator frame slots stay inside the frame word_to_stack allocates",
         frameContainmentExact) ]
   let mut ok := true

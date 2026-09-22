@@ -302,13 +302,20 @@ def wordLinearScanTwoPass (colours : Nat)
     register % 2 == 0 && register < 2 * colours)
   let first := wordLinearScanApplyRegisterExchange firstPhysical firstRaw
   let stackRegisters ← wordLinearScanStackRegisters colours registers first
+  let secondInitial :=
+    { (wordLinearScanInitialState (colours + stackRegisters.length)
+        (colours + stackRegisters.length)) with
+      nextColour := colours
+      nextSpill := colours + stackRegisters.length
+      -- Cake resets the allocator cursors for pass 2 but retains the hidden
+      -- colors array populated by pass 1.
+      colours := first.colours
+      locations := first.locations }
   let secondRaw ← wordLinearScanPass2
     (wordLinearScanFilterAdjacency stackRegisters forcedAdjacency)
     (wordLinearScanFilterAdjacency stackRegisters moveAdjacency)
     stackRegisters beginnings endings
-    { (wordLinearScanInitialState (colours + stackRegisters.length) (colours + stackRegisters.length)) with
-      nextColour := colours
-      nextSpill := colours + stackRegisters.length }
+    secondInitial
   let secondPhysical := stackRegisters.filter (fun register =>
     register % 2 == 0 && 2 * colours ≤ register)
   let second := wordLinearScanApplyRegisterExchange secondPhysical secondRaw
@@ -382,6 +389,29 @@ def wordLinearScanExtractColouring
             | none => 0
           wordLinearScanExtractColouring fromNode registers colours
             ((source, colour) :: colouring.filter (fun entry => entry.1 != source))
+
+/-! The linear-scan state uses compressed colours `0, 1, ...`, while the Word
+    RISC-V carrier uses the even names `0, 2, ...` at this boundary. -/
+def wordLinearScanToWordColouring (colouring : NatInfoMap Nat) : NatInfoMap Nat :=
+  colouring.map (fun entry => (entry.1, 2 * entry.2))
+
+theorem lookupNatInfo_wordLinearScanToWordColouring
+    (colouring : NatInfoMap Nat) (name colour : Nat)
+    (hlookup : lookupNatInfo name colouring = some colour) :
+    lookupNatInfo name (wordLinearScanToWordColouring colouring) =
+      some (2 * colour) := by
+  induction colouring with
+  | nil =>
+      simp [lookupNatInfo] at hlookup
+  | cons entry tail ih =>
+      rcases entry with ⟨key, value⟩
+      by_cases hkey : key = name
+      · subst key
+        simp [lookupNatInfo, wordLinearScanToWordColouring] at hlookup ⊢
+        cases hlookup
+        rfl
+      · simp [lookupNatInfo, wordLinearScanToWordColouring, hkey] at hlookup ⊢
+        exact ih hlookup
 
 def wordGetIntervalsCtAux : WordClashTree → Int → NatInfoMap Int →
     NatInfoMap Int → List Nat →

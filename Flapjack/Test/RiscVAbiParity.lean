@@ -194,6 +194,50 @@ def immediateCarrierInstruction : Bool :=
 
 #guard immediateCarrierInstruction
 
+/- Cake's `riscv_ast` handles `Binop Sub ... (Imm i)` separately from
+   `riscv_bop_i`: `riscv_targetScript.sml:121` emits ADDI with the
+   two's-complement immediate `-i`.  Keep this direct carrier boundary
+   explicit so a future immediate specialization cannot silently select a
+   non-Cake subtraction form. -/
+def subImmediateCarrierInstruction : Bool :=
+  match wordInstToInstruction (width := 64)
+      (.arith (.binOp .sub 1 2 (.imm (BitVec.ofNat 64 5))) :
+        WordInst (Word 64)) with
+  | some (.addi destination source immediate) =>
+      destination = 1 ∧ source = 2 ∧
+        immediate = (0 - BitVec.ofNat 64 5)
+  | _ => false
+
+#guard subImmediateCarrierInstruction
+
+/- Cake's `wInst (Arith (Binop ... (Imm ...)))` uses `wReg1` for a spilled
+   left operand and `wRegWrite1` for a spilled destination
+   (`word_to_stackScript.sml:91-99`).  This direct carrier guard pins the
+   source-shaped StackLang sequence, including both frame offsets. -/
+def spilledImmediateCarrierShape : Bool :=
+  match wordStackArithInst
+      { locations := [(1, .stack 2), (2, .stack 3)]
+        scratch := 31
+        stackBase := 10 }
+      (.binOp .add 1 2 (.imm 5) : WordArith Nat) with
+  | some (.seq (.stackLoad 31 13)
+      (.seq (.inst (.arith (.binOp .add 31 31 (.imm 5))))
+        (.stackStore 31 12))) => true
+  | _ => false
+
+#guard spilledImmediateCarrierShape
+
+/- Cake's `riscv_bop_i` table keeps an immediate `Or` as one ORI at the
+   signed-12 upper boundary (`riscv_targetScript.sml:114-120`).  This direct
+   Word backend guard is separate from the spilled-carrier shape above and
+   pins the target operation selected for the source-shaped immediate. -/
+def immediateOrUpperBoundary : Bool :=
+  wordArithToInstruction (width := 64)
+      (.binOp .or 4 5 (.imm (BitVec.ofNat 64 2047))) ==
+    some (.ori 4 5 (BitVec.ofNat 64 2047))
+
+#guard immediateOrUpperBoundary
+
 def rotateImmediateCarrierInstructions : Bool :=
   match wordArithToInstructions (width := 64)
       (.shift .ror 1 2 (.imm 5) : WordArith (Word 64)) with
@@ -603,6 +647,7 @@ def runChecks : IO Bool := do
     ("the Cake ABI argument registers match riscv_names", abiArgumentRegistersMatch),
     ("the Cake ABI link register is hardware one", abiLinkRegisterMatches),
     ("the Cake ABI name list includes the link slot", abiNamesIncludeLinkSlot),
+    ("Cake Sub immediate uses signed ADDI", subImmediateCarrierInstruction),
     ("parallel moves preserve a source that a later move reads",
       parallelMoveKeepsLiveSource),
     ("parallel location moves preserve a source that a later move reads",

@@ -51,6 +51,25 @@ def panValueFfiClockResultProjection :
   | (.control (.finalFfi locals globals memory ffi event), clock) =>
       .finalFfi locals globals memory ffi event clock
 
+/-! Adding clock fuel changes only the observable remaining-clock field. -/
+def panValueFfiClockResultProjection_shiftClock (extra : Nat) :
+    PanValueFfiClockResultProjection α σ →
+      PanValueFfiClockResultProjection α σ
+  | .normal locals globals memory ffi clock =>
+      .normal locals globals memory ffi (clock + extra)
+  | .returned locals globals memory ffi values clock =>
+      .returned locals globals memory ffi values (clock + extra)
+  | .raised locals globals memory ffi exception value clock =>
+      .raised locals globals memory ffi exception value (clock + extra)
+  | .broke locals globals memory ffi clock =>
+      .broke locals globals memory ffi (clock + extra)
+  | .continued locals globals memory ffi clock =>
+      .continued locals globals memory ffi (clock + extra)
+  | .timeout locals globals memory ffi clock =>
+      .timeout locals globals memory ffi (clock + extra)
+  | .finalFfi locals globals memory ffi event clock =>
+      .finalFfi locals globals memory ffi event (clock + extra)
+
 theorem panValueFfiClockResultProjection_finalFfi
     (locals globals : VarName → Option (PanValue α))
     (memory : α → Option (PanValue α)) (ffi : FfiState σ)

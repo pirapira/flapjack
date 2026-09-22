@@ -76,7 +76,8 @@ example :
       wordProgAtomicClashes allocatorWriteVarsFastFixture [46, 47] := by
   simp [wordProgAtomicClashesFast, wordProgAtomicClashes,
     wordProgWriteVarsFast, wordProgWriteVarsFastAcc, wordProgWriteVars,
-    wordClashPairs, wordListAppendAcc,
+    wordClashPairs, wordClashPairsFast, wordClashPairsFastAcc,
+    wordListAppendAcc,
     allocatorWriteVarsFastFixture]
 
 example :
@@ -86,8 +87,14 @@ example :
         (.inst (.arith (.div 48 49 50)) : WordProg Nat) [51] := by
   simp [wordProgAtomicClashesFast, wordProgAtomicClashes,
     wordProgWriteVarsFast, wordProgWriteVarsFastAcc, wordProgWriteVars,
-    wordClashPairs, wordInstForcedClashes, wordInstWriteVars,
+    wordClashPairs, wordClashPairsFast, wordClashPairsFastAcc,
+    wordInstForcedClashes, wordInstWriteVars,
     wordInstWriteVarsFastAcc]
+
+example :
+    wordClashPairsFast [4, 5] [4, 6, 5, 7] =
+      wordClashPairs [4, 5] [4, 6, 5, 7] := by
+  rfl
 
 example [OfNat α 1] :
     pipelineWordFunctionsAllocated
@@ -105,10 +112,11 @@ example [OfNat α 1] :
     wordAllocatableRegisters, wordNeighbours, wordUsedRegisters,
     wordRegisterIsAllocatable,
     wordColouringUsesAllocatable, wordColouringRespectsClashes,
-    wordProgClashAnalysis, wordProgVariables, wordProgReadVars,
-    wordProgWriteVars, wordProgLiveBefore, wordProgAtomicClashes,
-    wordClashPairs,
-    wordExpReadVars, loopAccVars, loopInsert,
+    wordProgClashAnalysis, wordProgVariablesFast,
+    wordProgLiveBeforeFast, wordProgReadVarsFastAcc,
+    wordProgWriteVarsFast, wordProgWriteVarsFastAcc,
+    wordProgAtomicClashesFast, wordClashPairsFast, wordClashPairsFastAcc,
+    wordExpReadVarsFastAcc, loopAccVars, loopInsert,
     loopToWordProg, wordCompileExp, wordFindVar, wordMapVars, lookupNatInfo,
     List.eraseDups, List.eraseDupsBy, List.eraseDupsBy.loop]
 
@@ -122,9 +130,11 @@ example [OfNat α 1] :
     wordFirstAvailable, wordPreferredRegister, wordAllocatableRegisters,
     wordNeighbours, wordUsedRegisters, wordRegisterIsAllocatable,
     wordColouringUsesAllocatable, wordColouringRespectsClashes,
-    wordProgClashAnalysis, wordProgVariables, wordProgReadVars,
-    wordProgWriteVars, wordProgLiveBefore, wordProgAtomicClashes,
-    wordClashPairs, wordExpReadVars, loopAccVars, loopInsert,
+    wordProgClashAnalysis, wordProgVariablesFast,
+    wordProgLiveBeforeFast, wordProgReadVarsFastAcc,
+    wordProgWriteVarsFast, wordProgWriteVarsFastAcc,
+    wordProgAtomicClashesFast, wordClashPairsFast, wordClashPairsFastAcc,
+    wordExpReadVarsFastAcc, loopAccVars, loopInsert,
     loopToWordProg, wordCompileExp, wordFindVar,
     wordApplyColour, wordApplyColourExp, wordMapVars, lookupNatInfo,
     List.eraseDups, List.eraseDupsBy, List.eraseDupsBy.loop]

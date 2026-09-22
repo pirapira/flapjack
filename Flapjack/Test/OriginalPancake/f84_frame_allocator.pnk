@@ -1,0 +1,12 @@
+fun 1 add1(1 a, 1 b) { return a + b; }
+fun 1 sub1(1 a) { return a - 1; }
+fun {1,1} pair(1 a, 1 b) { return <a, b>; }
+struct S { 1 f1, 1 f2 }
+fun S mks(1 a, 1 b) { return S <f1 = a, f2 = b>; }
+exception E : 1;
+fun 1 main() {
+  var 1 x = 9223372036854775807;
+  var S s460 = mks(9223372036854775807, (((lds 1 (1000 + 24)) | (lds 1 (1016))) * ((lds 1 (1016)) - (@top ^ 2147483647))));
+  var {1,1} p154 = pair((lds 1 (((1000 + 8) + 1000))), s460.f2);
+  return 0;
+}

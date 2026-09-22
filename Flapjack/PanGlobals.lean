@@ -358,6 +358,17 @@ def globalCompileProg [BEq String] [Add α] [Mul α]
   | program => program
 termination_by program => sizeOf program
 
+/-- Cake's `exp_ids_compile_globals`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:135`): compiling a
+    program against the global context does not change its exception
+    identifiers. -/
+theorem globalCompileProg_expIds [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (program : Prog α) :
+    expIds (globalCompileProg context program) = expIds program := by
+  apply globalCompileProg.induct context
+    (motive := fun program => expIds (globalCompileProg context program) = expIds program)
+  all_goals intro <;> simp_all [globalCompileProg, expIds]
+
 /-! The declaration-order and function-permutation helpers used by
     CakeML's `pan_to_target`.  Keeping these transformations separate from
     global allocation makes their name-preservation contracts reusable by the
@@ -692,6 +703,47 @@ theorem sizeOfEids_panSimpDecls (declarations : List (Decl α)) :
   rw [panSimpDecls_eq_map]
   exact sizeOfEids_map_panSimpDecl declarations
 
+/-- The cons equation for `sizeOfEids`, stated as an `if` on `isExnDecl`. -/
+theorem sizeOfEids_cons (declaration : Decl α) (declarations : List (Decl α)) :
+    sizeOfEids (declaration :: declarations) =
+      if isExnDecl declaration then 1 + sizeOfEids declarations
+      else sizeOfEids declarations := by
+  cases declaration <;> rw [sizeOfEids.eq_def] <;> simp [isExnDecl]
+
+/-- Cake's `size_of_eids_structs_compile_eq`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:305`): the `pan_structs`
+    pass keeps exactly the exception declarations, so the exception-identifier
+    count is unchanged. -/
+theorem sizeOfEids_structCompileDecls [BEq String]
+    (declarations : List (Decl α)) (context : StructPassContext) :
+    sizeOfEids (structCompileDecls declarations context).1 =
+      sizeOfEids declarations := by
+  induction declarations generalizing context with
+  | nil => simp [structCompileDecls]
+  | cons declaration declarations ih =>
+      cases declaration with
+      | decl shape name value =>
+          simp only [structCompileDecls]
+          simpa [sizeOfEids_cons, isExnDecl] using ih _
+      | function fn =>
+          simp only [structCompileDecls]
+          simpa [sizeOfEids_cons, isExnDecl] using ih context
+      | exnDecl exception shape =>
+          simp only [structCompileDecls]
+          simpa [sizeOfEids_cons, isExnDecl] using ih context
+      | name structName fields =>
+          simp only [structCompileDecls]
+          simpa [sizeOfEids_cons, isExnDecl] using ih context
+
+/-- Cake's `size_of_eids_structs_compile_eq`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:305`). -/
+theorem sizeOfEids_structCompileTop (declarations : List (Decl α)) :
+    sizeOfEids (structCompileTop declarations) = sizeOfEids declarations := by
+  unfold structCompileTop
+  dsimp only
+  exact sizeOfEids_structCompileDecls declarations
+    (structGetNames { structs := [], locals := [], globals := [] } declarations)
+
 def globalResortDecls (declarations : List (Decl α)) : List (Decl α) :=
   globalDeclsFilter globalDeclIsName declarations ++
     globalDeclsFilter globalDeclIsException declarations ++
@@ -739,6 +791,43 @@ theorem globalDeclShapes_append (declarations rest : List (Decl α)) :
   | nil => rw [List.nil_append, globalDeclShapes_nil, List.nil_append]
   | cons declaration declarations ih =>
       cases declaration <;> simp [globalDeclShapes_cons, ih]
+
+/-- Cake's `dec_shapes_compile_prog`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:241`): `pan_simp` only
+    rewrites function bodies, so the collected declaration shapes are
+    unchanged. -/
+theorem globalDeclShapes_panSimpDecls (declarations : List (Decl α)) :
+    globalDeclShapes (panSimpDecls declarations) = globalDeclShapes declarations := by
+  rw [panSimpDecls_eq_map]
+  induction declarations with
+  | nil => simp [globalDeclShapes_nil]
+  | cons declaration declarations ih =>
+      cases declaration <;> simp [panSimpDecl, globalDeclShapes_cons, ih]
+
+/-- Cake's `function_names_compile_prog`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:248`): `pan_simp` only
+    rewrites function bodies, so the function-name table is unchanged. -/
+theorem functions_names_panSimpDecls (declarations : List (Decl α)) :
+    (functions (panSimpDecls declarations)).map Prod.fst =
+      (functions declarations).map Prod.fst := by
+  rw [functions_panSimpDecls, List.map_map]
+  rfl
+
+/-- Cake's `no_names_compile_prog`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:318`): `pan_simp` keeps
+    the restriction that no declaration is a structure name, matching
+    `is_function ∨ is_decl ∨ is_exn_decl`. -/
+theorem panSimpDecls_all_not_name (declarations : List (Decl α))
+    (hall : declarations.all (fun declaration => !isName declaration) = true) :
+    (panSimpDecls declarations).all (fun declaration => !isName declaration) =
+      true := by
+  rw [panSimpDecls_eq_map]
+  induction declarations with
+  | nil => simp
+  | cons declaration declarations ih =>
+      simp only [List.map_cons, List.all_cons, Bool.and_eq_true] at hall ⊢
+      obtain ⟨hhead, htail⟩ := hall
+      cases declaration <;> simp_all [panSimpDecl, isName]
 
 theorem globalDeclShapes_of_functions (declarations : List (Decl α))
     (hfunctions : ∀ declaration ∈ declarations, globalDeclIsFunction declaration = true) :
@@ -1172,6 +1261,28 @@ def globalCompileInitializers [BEq String] [Add α] [Mul α]
       initializer :: globalCompileInitializers nextContext declarations
   | _ :: declarations => globalCompileInitializers context declarations
 
+/-- Cake's `compile_decs_no_exp_ids_main`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:174`): every compiled
+    global initializer mentions no exception identifiers, because each one is a
+    plain store. -/
+theorem globalCompileInitializers_expIds [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations : List (Decl α)) :
+    ∀ initializer ∈ globalCompileInitializers context declarations,
+      expIds initializer = [] := by
+  induction declarations generalizing context with
+  | nil => simp [globalCompileInitializers]
+  | cons declaration declarations ih =>
+      cases declaration with
+      | decl shape name value =>
+          simp only [globalCompileInitializers, List.mem_cons]
+          intro initializer hmem
+          rcases hmem with rfl | hmem
+          · simp [expIds]
+          · exact ih _ initializer hmem
+      | function function => simpa [globalCompileInitializers] using ih context
+      | exnDecl exception shape => simpa [globalCompileInitializers] using ih context
+      | name struct fields => simpa [globalCompileInitializers] using ih context
+
 /-! Counterpart of the context-threading append structure of Cake's
     `compile_decls_append` (`pan_globalsProofScript.sml:1997`): initializers
     of an appended program are the first part's initializers followed by the
@@ -1331,6 +1442,22 @@ theorem globalCompileDecs_exceptions_eq_filter [BEq String] [Add α] [Mul α]
   simp only [globalCompileDecs]
   exact globalDeclsFilter_isException_globalCompileDecls
     (globalCollect context code) code
+
+theorem functions_globalDeclsFilter_isException (declarations : List (Decl α)) :
+    functions (globalDeclsFilter globalDeclIsException declarations) = [] :=
+  functions_globalDeclsFilter_nil_of_predicate _
+    (fun declaration hpred => by
+      cases declaration <;> simp_all [globalDeclIsException, globalDeclIsFunction])
+    declarations
+
+/-- Cake's `functions_compile_decs_exns`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:519`): the exception
+    component of `compile_decs` contains no function declarations. -/
+theorem globalCompileDecs_exceptions_functions [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α)) :
+    functions (globalCompileDecs context code).exceptions = [] := by
+  rw [globalCompileDecs_exceptions_eq_filter]
+  exact functions_globalDeclsFilter_isException code
 
 theorem globalDeclsFilter_eq_self_of_all (predicate : Decl α → Bool)
     (declarations : List (Decl α))
@@ -1787,6 +1914,32 @@ theorem globalCompileDecs_functions_names [BEq String] [Add α] [Mul α]
   simp only [globalCompileDecs]
   rw [functions_globalDeclsFilter_isFunction, functions_names_globalCompileDecls]
 
+theorem functions_globalCompileDecls [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations : List (Decl α)) :
+    functions (globalCompileDecls context declarations) =
+      (functions declarations).map (fun entry =>
+        (entry.1, entry.2.1, globalCompileProg context entry.2.2.1, entry.2.2.2)) := by
+  induction declarations with
+  | nil => simp [globalCompileDecls, functions]
+  | cons declaration declarations ih =>
+      cases declaration <;> simp [globalCompileDecls, functions, ih]
+
+/-- Cake's `compile_decs_exp_ids`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:153`): compiling the
+    global declarations does not change the exception identifiers of the
+    function bodies. -/
+theorem globalCompileDecs_functions_expIds [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α)) :
+    (functions (globalCompileDecs context code).functions).map
+        (fun entry => expIds entry.2.2.1) =
+      (functions code).map (fun entry => expIds entry.2.2.1) := by
+  simp only [globalCompileDecs]
+  rw [functions_globalDeclsFilter_isFunction, functions_globalCompileDecls]
+  rw [List.map_map]
+  apply List.map_congr_left
+  intro entry hentry
+  simp [globalCompileProg_expIds]
+
 theorem functions_globalRenameDecls_map_fst [BEq String] (source target : FunName)
     (declarations : List (Decl α)) :
     ((functions (globalRenameDecls source target declarations)).map
@@ -1829,6 +1982,149 @@ theorem globalCompileTopForStart_names_nodup [BEq String] [LawfulBEq String]
         exact globalNewMainName_not_mem declarations hmem'
       · exact nodup_globalRenameFunctionName_map start
           (globalNewMainName declarations) _ hnodup
+
+/-! Cake's `size_of_eids_compile_top`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:364`): the exception
+    identifier count is preserved by the whole top-level compilation.  The
+    counting lemmas below are the ingredients: appends add, the exception
+    filter keeps the same count, and compilation/renaming/partitioning each
+    preserve it. -/
+
+theorem sizeOfEids_append (xs ys : List (Decl α)) :
+    sizeOfEids (xs ++ ys) = sizeOfEids xs + sizeOfEids ys := by
+  induction xs with
+  | nil => simp [sizeOfEids]
+  | cons d ds ih =>
+      rw [List.cons_append, sizeOfEids_cons, sizeOfEids_cons, ih]
+      split <;> omega
+
+theorem sizeOfEids_globalDeclsFilter_isException (xs : List (Decl α)) :
+    sizeOfEids (globalDeclsFilter globalDeclIsException xs) = sizeOfEids xs := by
+  induction xs with
+  | nil => simp [globalDeclsFilter, sizeOfEids]
+  | cons d ds ih =>
+      simp only [globalDeclsFilter]
+      by_cases h : globalDeclIsException d = true
+      · rw [if_pos h, sizeOfEids_cons, sizeOfEids_cons]
+        have hExn : isExnDecl d = true := by
+          cases d <;> simp_all [globalDeclIsException, isExnDecl]
+        rw [if_pos hExn, if_pos hExn]
+        exact congrArg (fun n => 1 + n) ih
+      · rw [if_neg h, sizeOfEids_cons]
+        have hExn : isExnDecl d = false := by
+          cases d <;> simp_all [globalDeclIsException, isExnDecl]
+        rw [if_neg (by simp [hExn])]
+        exact ih
+
+theorem sizeOfEids_globalCompileDecls [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (xs : List (Decl α)) :
+    sizeOfEids (globalCompileDecls context xs) = sizeOfEids xs := by
+  induction xs with
+  | nil => simp [globalCompileDecls, sizeOfEids]
+  | cons d ds ih =>
+      cases d with
+      | function fn =>
+          simp only [globalCompileDecls]
+          simpa [sizeOfEids_cons, isExnDecl] using ih
+      | exnDecl e sh =>
+          simp only [globalCompileDecls]
+          simpa [sizeOfEids_cons, isExnDecl] using ih
+      | decl sh nm v =>
+          simp only [globalCompileDecls]
+          simpa [sizeOfEids_cons, isExnDecl] using ih
+      | name nm flds =>
+          simp only [globalCompileDecls]
+          simpa [sizeOfEids_cons, isExnDecl] using ih
+
+theorem sizeOfEids_globalRenameDecls [BEq String] (source target : FunName)
+    (xs : List (Decl α)) :
+    sizeOfEids (globalRenameDecls source target xs) = sizeOfEids xs := by
+  induction xs with
+  | nil => simp [globalRenameDecls, sizeOfEids]
+  | cons d ds ih =>
+      cases d with
+      | function fn =>
+          simp only [globalRenameDecls]
+          simpa [sizeOfEids_cons, isExnDecl] using ih
+      | exnDecl e sh =>
+          simp only [globalRenameDecls]
+          simpa [sizeOfEids_cons, isExnDecl] using ih
+      | decl sh nm v =>
+          simp only [globalRenameDecls]
+          simpa [sizeOfEids_cons, isExnDecl] using ih
+      | name nm flds =>
+          simp only [globalRenameDecls]
+          simpa [sizeOfEids_cons, isExnDecl] using ih
+
+theorem sizeOfEids_globalDeclsFilter_isFunction (xs : List (Decl α)) :
+    sizeOfEids (globalDeclsFilter globalDeclIsFunction xs) = 0 := by
+  induction xs with
+  | nil => simp [globalDeclsFilter, sizeOfEids]
+  | cons d ds ih =>
+      cases d <;>
+        simp_all [globalDeclsFilter, globalDeclIsFunction, sizeOfEids_cons,
+          isExnDecl]
+
+theorem sizeOfEids_globalDeclsFilter_isName (xs : List (Decl α)) :
+    sizeOfEids (globalDeclsFilter globalDeclIsName xs) = 0 := by
+  induction xs with
+  | nil => simp [globalDeclsFilter, sizeOfEids]
+  | cons d ds ih =>
+      cases d <;>
+        simp_all [globalDeclsFilter, globalDeclIsName, sizeOfEids_cons,
+          isExnDecl]
+
+theorem sizeOfEids_globalDeclsFilter_isGlobal (xs : List (Decl α)) :
+    sizeOfEids (globalDeclsFilter globalDeclIsGlobal xs) = 0 := by
+  induction xs with
+  | nil => simp [globalDeclsFilter, sizeOfEids]
+  | cons d ds ih =>
+      cases d <;>
+        simp_all [globalDeclsFilter, globalDeclIsGlobal, sizeOfEids_cons,
+          isExnDecl]
+
+theorem sizeOfEids_globalResortDecls (xs : List (Decl α)) :
+    sizeOfEids (globalResortDecls xs) = sizeOfEids xs := by
+  rw [globalResortDecls, sizeOfEids_append, sizeOfEids_append, sizeOfEids_append,
+    sizeOfEids_globalDeclsFilter_isName,
+    sizeOfEids_globalDeclsFilter_isException,
+    sizeOfEids_globalDeclsFilter_isGlobal,
+    sizeOfEids_globalDeclsFilter_isFunction]
+  omega
+
+theorem sizeOfEids_globalCompileDecs_exceptions [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α)) :
+    sizeOfEids (globalCompileDecs context code).exceptions = sizeOfEids code := by
+  simp only [globalCompileDecs]
+  rw [sizeOfEids_globalDeclsFilter_isException, sizeOfEids_globalCompileDecls]
+
+theorem sizeOfEids_globalCompileDecs_functions [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α)) :
+    sizeOfEids (globalCompileDecs context code).functions = 0 := by
+  simp only [globalCompileDecs]
+  exact sizeOfEids_globalDeclsFilter_isFunction _
+
+/-- Cake's `size_of_eids_compile_top`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:364`). -/
+theorem globalCompileTopForStart_sizeOfEids [BEq String] [Add α] [Mul α]
+    (bytesInWord : α) (fromNat : Nat → α) (declarations : List (Decl α))
+    (start : FunName) (compiled : List (Decl α))
+    (hcompile : globalCompileTopForStart bytesInWord fromNat declarations start =
+      some compiled) :
+    sizeOfEids compiled = sizeOfEids declarations := by
+  unfold globalCompileTopForStart at hcompile
+  cases hfind : globalFindFunction start declarations with
+  | none => simp [hfind] at hcompile
+  | some entry =>
+      simp only [hfind, Option.some.injEq] at hcompile
+      subst hcompile
+      have hnil : sizeOfEids ([] : List (Decl α)) = 0 := by
+        rw [sizeOfEids.eq_def]
+      rw [sizeOfEids_append, sizeOfEids_append,
+        sizeOfEids_globalCompileDecs_exceptions,
+        sizeOfEids_globalCompileDecs_functions,
+        sizeOfEids_globalRenameDecls, sizeOfEids_globalResortDecls]
+      simp [sizeOfEids_cons, isExnDecl, hnil]
 
 def globalCompileTop [BEq String] [Add α] [Mul α]
     (bytesInWord : α) (fromNat : Nat → α) (declarations : List (Decl α)) :

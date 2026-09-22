@@ -178,4 +178,162 @@ def lookupInfoMapGuard : Bool :=
 #eval lookupInfoMapGuard
 #guard lookupInfoMapGuard
 
+
+/-! Cake `pan_structs$compile_shape` / `compile_shapes` and
+    `is_wf_shape_compile_shape` (`pan_structsProofScript.sml:298`). -/
+
+def shapeContext : StructContext :=
+  [("S", { fields := [("f1", Shape.one), ("f2", Shape.named "T")], size := 2 }),
+   ("T", { fields := [("g", Shape.one)], size := 1 })]
+
+def isCompiledS : Shape -> Bool
+  | .comb [.one, .comb [.one]] => true
+  | _ => false
+
+theorem compileShape_isWfShape_fixture :
+    isWfShape shapeContext (compileShape shapeContext (.named "S")) = true :=
+  compileShape_isWfShape shapeContext (.named "S")
+
+theorem compileShapes_eq_map_fixture :
+    compileShapes shapeContext [Shape.one, Shape.named "S"] =
+      [Shape.one, Shape.named "S"].map (compileShape shapeContext) :=
+  compileShapes_eq_map shapeContext [Shape.one, Shape.named "S"]
+
+def compileShapeGuard : Bool :=
+  isCompiledS (compileShape shapeContext (.named "S")) &&
+  isWfShape shapeContext (compileShape shapeContext (.named "S")) &&
+  (match compileShape shapeContext (.named "Unknown") with
+   | .one => true
+   | _ => false)
+
+#eval compileShapeGuard
+#guard compileShapeGuard
+
+/-! Cake's `dropWhile_MAP_helper`
+    (`cakeml/pancake/proofs/pan_structsProofScript.sml:542`). -/
+
+theorem dropWhile_map_helper_fixture :
+    (([0, 1, 2, 3] : List Nat).map Nat.succ).dropWhile (fun n => n < 3) =
+      (([0, 1, 2, 3] : List Nat).dropWhile (fun n => n < 2)).map Nat.succ :=
+  dropWhile_map_helper (fun n => n < 2) (fun n => n < 3) Nat.succ
+    [0, 1, 2, 3] [2, 3] rfl
+    (by
+      intro x hx
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
+      rcases hx with rfl | rfl | rfl | rfl <;> decide)
+
+def dropWhileMapGuard : Bool :=
+  (([0, 1, 2, 3] : List Nat).map Nat.succ).dropWhile (fun n => n < 3) ==
+    [3, 4]
+
+#eval dropWhileMapGuard
+#guard dropWhileMapGuard
+
+/-! Cake `pan_structs` `struct_infos_ok` (`pan_structsProofScript.sml:68`) and
+    its `_drop`/`_append` consequences (`:169`/`:198`). -/
+
+example : structInfosOk ([] : StructContext) := by
+  unfold structInfosOk
+  refine ⟨?_, ?_, ?_, ?_⟩ <;> simp
+
+def simpleContext : StructContext :=
+  [("S", { fields := [("f", Shape.one)], size := 1 })]
+
+example : structInfosOk simpleContext := by
+  unfold structInfosOk
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · intro entry hentry
+    simp [simpleContext] at hentry
+    rcases hentry with rfl
+    decide
+  · simp [simpleContext]
+  · intro i name info hget shape hmem
+    simp only [simpleContext] at hget
+    cases i with
+    | zero =>
+        simp only [List.getElem?_cons_zero, Option.some.injEq] at hget
+        obtain ⟨rfl, rfl⟩ := hget
+        simp only [List.map_cons, List.map_nil, List.mem_cons,
+          List.not_mem_nil, or_false] at hmem
+        rcases hmem with rfl
+        simp [isWfShape]
+    | succ i =>
+        simp only [List.getElem?_cons_succ, List.getElem?_nil] at hget
+        simp at hget
+  · intro entry hentry
+    simp only [simpleContext, List.mem_cons, List.not_mem_nil, or_false] at hentry
+    rcases hentry with rfl
+    simp only [List.map_cons, List.map_nil]
+    simp [shapeSizeWithContext]
+
+theorem structInfosOk_drop_fixture (h : structInfosOk simpleContext) :
+    structInfosOk (simpleContext.drop 1) :=
+  structInfosOk_drop 1 simpleContext h
+
+theorem structInfosOk_append_fixture (h : structInfosOk (simpleContext ++ [])) :
+    structInfosOk ([] : StructContext) :=
+  structInfosOk_append simpleContext [] h
+
+/-! Cake's `struct_infos_ok_cons`
+    (`cakeml/pancake/proofs/pan_structsProofScript.sml:132`). -/
+
+def consInfo : StructInfo := { fields := [("f", Shape.one)], size := 1 }
+
+example : structInfosOk ((("S" : StructName), consInfo) :: ([] : StructContext)) :=
+  structInfosOk_cons [] "S" consInfo
+    (by unfold structInfosOk; refine ⟨?_, ?_, ?_, ?_⟩ <;> simp)
+    (by decide) (by simp)
+    (by
+      intro shape hmem
+      simp only [consInfo, List.map_cons, List.map_nil, List.mem_cons,
+        List.not_mem_nil, or_false] at hmem
+      rcases hmem with rfl
+      simp [isWfShape])
+    (by simp [consInfo, shapeSizeWithContext])
+
+
+/-! Cake's `map_fst_eq_alookup`
+    (`cakeml/pancake/proofs/pan_structsProofScript.sml:278`). -/
+
+def assocXs : List (String × Nat) := [("a", 1), ("b", 2)]
+
+def assocYs : List (String × Nat) := [("a", 3), ("b", 4)]
+
+theorem map_fst_eq_lookup_fixture :
+    ∃ i, afindi "b" assocXs = some i ∧ afindi "b" assocYs = some i ∧
+      i < assocXs.length ∧ i < assocYs.length ∧
+      (assocXs[i]?).map Prod.snd = some 2 ∧
+      (assocYs[i]?).map Prod.snd = assocYs.lookup "b" :=
+  map_fst_eq_lookup assocXs assocYs "b" (by decide) (by decide)
+
+def afindiLookupGuard : Bool :=
+  (assocXs.lookup "b" == some 2) &&
+    (afindi "b" assocXs == afindi "b" assocYs) &&
+    (afindi "b" assocXs == some 1)
+
+#eval afindiLookupGuard
+#guard afindiLookupGuard
+
+/-! Cake's `alookup_map_structs_ok`
+    (`cakeml/pancake/proofs/pan_structsProofScript.sml:243`). -/
+
+example (info : StructInfo)
+    (hlookup : lookupInfo "S" simpleContext = some info)
+    (hok : structInfosOk simpleContext) :
+    (info.fields.map Prod.fst).Nodup :=
+  lookupInfo_fields_nodup "S" simpleContext info hlookup hok
+
+/-! Cake's `mem_lookup_fromalist_some`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:3813`). -/
+
+theorem list_lookup_of_mem_of_nodup_fixture :
+    assocXs.lookup "b" = some 2 :=
+  list_lookup_of_mem_of_nodup (by decide) (by decide)
+
+def memLookupGuard : Bool :=
+  assocXs.lookup "b" == some 2 && assocXs.lookup "a" == some 1
+
+#eval memLookupGuard
+#guard memLookupGuard
+
 end Flapjack.Test.PanStructsAfindiParity

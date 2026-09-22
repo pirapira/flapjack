@@ -1,0 +1,38 @@
+spill_allocator=Seq (Move1 [(0,0); (4,2); (2,4)])
+  (Seq
+     (Seq (Move0 [(2,2)])
+        (Seq (Move0 [(4,4)]) (Inst (Arith (Binop Add 2 2 (Reg 4))))))
+     (Seq (Move0 [(2,2)]) (Return 0 [2])))
+
+spill_allocator_simple_unweighted=Seq (Move1 [(0,0); (4,2); (2,4)])
+  (Seq
+     (Seq (Move0 [(2,2)])
+        (Seq (Move0 [(4,4)]) (Inst (Arith (Binop Add 2 2 (Reg 4))))))
+     (Seq (Move0 [(2,2)]) (Return 0 [2])))
+
+spill_allocator_linear_scan=Seq (Move1 [(0,0); (4,2); (6,4)])
+  (Seq
+     (Seq (Move0 [(6,6)])
+        (Seq (Move0 [(4,4)]) (Inst (Arith (Binop Add 6 6 (Reg 4))))))
+     (Seq (Move0 [(2,6)]) (Return 0 [2])))
+
+spill_allocator_linear_scan_k1=Seq (Move1 [(4,0); (6,2); (0,4)])
+  (Seq
+     (Seq (Move0 [(0,0)])
+        (Seq (Move0 [(6,6)]) (Inst (Arith (Binop Add 0 0 (Reg 6))))))
+     (Seq (Move0 [(2,0)]) (Return 4 [2])))
+
+spill_allocator_k1=Seq (Move1 [(4,0); (0,2); (2,4)])
+  (Seq
+     (Seq (Move0 [(2,2)])
+        (Seq (Move0 [(0,0)]) (Inst (Arith (Binop Add 0 2 (Reg 0))))))
+     (Seq (Move0 [(2,0)]) (Return 4 [2])))
+
+spill_allocator_k1_unweighted=Seq (Move1 [(4,0); (2,2); (0,4)])
+  (Seq
+     (Seq (Move0 [(0,0)])
+        (Seq (Move0 [(2,2)]) (Inst (Arith (Binop Add 0 0 (Reg 2))))))
+     (Seq (Move0 [(2,0)]) (Return 4 [2])))
+
+add_carry_allocator=Seq (Move1 [(0,0); (2,2); (4,4); (6,6)])
+  (Seq (Inst (Arith (AddCarry 6 6 4 2))) (Return 0 [6; 2]))

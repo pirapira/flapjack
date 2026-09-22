@@ -134,6 +134,22 @@ theorem panValueProgramStateRel_lookupPanFunction_fixture :
     relationState_self "f"
   simp [relationState, lookupPanFunction]
 
+/-! The declaration adequacy package keeps the post-state relation, the
+    `pan_simp` callee body, and the exception-table equality together. -/
+theorem panValueProgramStateRel_evalDeclarations_adequacy_fixture
+    (s' : PanValueProgramState Nat)
+    (hs : evalPanValueDeclarations relationState relationDecls = some s')
+    (body : Prog Nat)
+    (hlookup : lookupPanFunction "f" s'.functions = some ([], body)) :
+    ∃ t', evalPanValueDeclarations
+        { relationState with functions := panValueFunctionsSimp relationState.functions }
+        (panSimpDecls relationDecls) = some t' ∧
+      panValueProgramStateRel s' t' ∧
+      lookupPanFunction "f" t'.functions = some ([], panSimpProg body) ∧
+      s'.exceptions = t'.exceptions := by
+  exact panValueProgramStateRel_evalDeclarations_adequacy relationState _
+    relationState_self relationDecls none s' hs "f" hlookup
+
 /-! Regression for the function-table lookup bridge used by Cake's
     `state_rel_imp_semantics`: the entry keeps its parameters and return shape,
     while only its body is replaced by `panSimpProg`. -/
@@ -534,6 +550,9 @@ def noNameDecls : List (Decl Nat) :=
 
 def functionsOnlyDecls : List (Decl Nat) := [.function wfFunction]
 
+def functionOrExnDecls : List (Decl Nat) :=
+  [.function wfFunction, .exnDecl "E" .one]
+
 def structContextGuard : Bool :=
   (collectPanValueStructs noNameDecls ([] : StructContext)).isSome &&
     (collectPanValueStructs functionsOnlyDecls ([] : StructContext)).isSome
@@ -546,7 +565,11 @@ example : True := by
     (by decide)
   have _h2 := collectPanValueStructs_of_functions ([] : StructContext)
     functionsOnlyDecls (by decide)
+  have _h3 := collectPanValueStructs_of_functions_or_exnDecls ([] : StructContext)
+    functionOrExnDecls (by decide)
   trivial
+
+#check @collectPanValueStructs_of_functions_or_exnDecls
 
 /-! Cake's `evaluate_decls_only_exn_decls` (`panPropsScript.sml:1436`): an
     exception-only declaration list leaves every field except the
@@ -957,6 +980,16 @@ theorem lookup_mem_exists_fixture :
 #check @map_getD_map_some
 #check @lookup_mem_exists
 
+theorem map_some_getD_eq_self_fixture :
+    ([1, 2, 3] : List Nat).map (fun x => (some x : Option Nat).getD 0) = [1, 2, 3] :=
+  map_some_getD_eq_self 0 [1, 2, 3]
+
+theorem mem_of_eq_mem_fixture : (2 : Nat) ∈ [1, 2, 3] :=
+  mem_of_eq_mem rfl (by decide)
+
+#check @map_some_getD_eq_self
+#check @mem_of_eq_mem
+
 def mapMoreFactsGuard : Bool :=
   (([2, 4, 6] : List Nat).mapM (fun x => (sampleMapF x).map (fun y => y + 1)) ==
       some [4, 6, 8]) &&
@@ -979,5 +1012,29 @@ def updateMapGuard : Bool :=
 
 #eval updateMapGuard
 #guard updateMapGuard
+
+/-! Cake's `decs_stcnames_infos_ok`
+    (`cakeml/pancake/proofs/pan_structsProofScript.sml:1459`): collecting the
+    struct declarations preserves the `struct_infos_ok` invariant. -/
+
+def structInfoDecls : List (Decl Nat) :=
+  [.name "S" [("f", Shape.one)]]
+
+example (context' : StructContext)
+    (hcollect : collectPanValueStructs structInfoDecls ([] : StructContext) =
+      some context') :
+    structInfosOk context' :=
+  collectPanValueStructs_structInfosOk structInfoDecls [] context' hcollect
+    (by unfold structInfosOk; refine ⟨?_, ?_, ?_, ?_⟩ <;> simp)
+
+theorem lookupInfo_isSome_of_mem_fixture :
+    (lookupInfo "S" ([("S", { fields := [("f", Shape.one)], size := 1 })]
+      : StructContext)).isSome = true :=
+  lookupInfo_isSome_of_mem "S"
+    ([("S", { fields := [("f", Shape.one)], size := 1 })] : StructContext)
+    (by simp)
+
+#guard (lookupInfo "S" ([("S", { fields := [("f", Shape.one)], size := 1 })]
+  : StructContext)).isSome
 
 end Flapjack.Test.PanProgramSimpParity

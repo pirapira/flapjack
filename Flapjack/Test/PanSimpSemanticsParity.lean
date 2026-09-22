@@ -168,4 +168,29 @@ example :
       progCallFuel 5 (.decCall "x" .one "f" [] (.tick : Prog Nat) : Prog Nat) :=
   progSize_le_progCallFuel 5 _
 
+/-- The declaration-table pass preserves the exception identifiers reachable
+    from function bodies (source-side companion of Cake's `get_eids`). -/
+private def demoSimpDecls : List (Decl Nat) :=
+  [Decl.function { name := "f", inline := false, exported := false, params := [], body := .raise "E" (.const 0), returnShape := .one },
+   Decl.exnDecl "E" .one]
+
+example :
+    declarationExceptionIds (panSimpDecls demoSimpDecls) =
+      declarationExceptionIds demoSimpDecls :=
+  declarationExceptionIds_panSimpDecls demoSimpDecls
+
+#check @declarationExceptionIds_panSimpDecls
+
+/-- The function projection of the declaration table is the flat map of
+    `expIds` over the function bodies (the list Cake's `get_eids` numbers). -/
+private def demoFunDecl : FunDecl Nat :=
+  { name := "f", inline := false, exported := false, params := [], body := .raise "E" (.const 0), returnShape := .one }
+
+example :
+    declarationExceptionIds ([demoFunDecl].map (fun function => Decl.function function)) =
+      [demoFunDecl].flatMap (fun function => expIds function.body) :=
+  declarationExceptionIds_map_function _
+
+#check @declarationExceptionIds_map_function
+
 end Flapjack

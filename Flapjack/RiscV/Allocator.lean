@@ -303,6 +303,23 @@ def wordClashPairs (writes live : List Nat) : List (Nat × Nat) :=
   writes.flatMap (fun write =>
     (live.filter (fun name => name != write)).map (fun name => (write, name)))
 
+/-! The allocator's production clash path consumes these pairs in the same
+    left-to-right order as `wordClashPairs`.  Threading the suffix through
+    both traversals avoids constructing the filtered and mapped lists while
+    retaining the proof-facing definition above unchanged. -/
+def wordClashPairsFastAcc (writes live : List Nat)
+    (tail : List (Nat × Nat)) : List (Nat × Nat) :=
+  writes.foldr
+    (fun write rest =>
+      live.foldr
+        (fun name restLive =>
+          if name != write then (write, name) :: restLive else restLive)
+        rest)
+    tail
+
+def wordClashPairsFast (writes live : List Nat) : List (Nat × Nat) :=
+  wordClashPairsFastAcc writes live []
+
 def wordPairwiseClashes : List Nat → List (Nat × Nat)
   | [] => []
   | name :: names =>
@@ -1354,6 +1371,9 @@ def wordProgWriteVarsFast (program : WordProg α) : List Nat :=
 def wordProgVariables (program : WordProg α) : List Nat :=
   wordProgReadVars program ++ wordProgWriteVars program
 
+def wordProgVariablesFast (program : WordProg α) : List Nat :=
+  wordProgReadVarsFastAcc program (wordProgWriteVarsFast program)
+
 /-! CakeML's `wordLang$max_var` is not the same scan as the allocator's
     read/write inventory.  In particular, `max_var (Call NONE ... h)` uses
     only the argument list and deliberately does not descend into `h`.
@@ -1596,8 +1616,8 @@ def wordProgAtomicClashesFast (program : WordProg α) (liveAfter : List Nat) :
   match program with
   | .inst instruction =>
       wordInstForcedClashes instruction ++
-        wordClashPairs (wordProgWriteVarsFast program) liveAfter
-  | _ => wordClashPairs (wordProgWriteVarsFast program) liveAfter
+        wordClashPairsFast (wordProgWriteVarsFast program) liveAfter
+  | _ => wordClashPairsFast (wordProgWriteVarsFast program) liveAfter
 
 def wordProgClashAnalysis : WordProg α → List Nat →
     List Nat × List (Nat × Nat)
@@ -1636,13 +1656,14 @@ def wordProgClashAnalysis : WordProg α → List Nat →
       let callProgram : WordProg α :=
         .call returns target arguments (some (exception, body, 0, 0))
       let handlerEntryEdges :=
-        wordClashPairs [exception] (handlerLive ++ liveAfter)
+        wordClashPairsFast [exception] (handlerLive ++ liveAfter)
       (wordListUnion (exception :: handlerLive)
           (wordListUnion returnLive (wordProgLiveBeforeFast callProgram liveAfter)),
         handlerEntryEdges ++ handlerEdges ++ returnEdges ++
           wordProgAtomicClashesFast callProgram liveAfter)
   | program, liveOut =>
-      (wordProgLiveBefore program liveOut, wordProgAtomicClashes program liveOut)
+      (wordProgLiveBeforeFast program liveOut,
+        wordProgAtomicClashesFast program liveOut)
 termination_by program => sizeOf program
 decreasing_by
   all_goals first | decreasing_trivial | simp_wf
@@ -2187,7 +2208,7 @@ def wordAllocateProgramWithSlots (slots : List Nat) (program : WordProg α) :
     Option WordContext :=
   let (liveIn, edges) := wordProgClashAnalysis program []
   wordAllocateContextWithClashes
-    (slots ++ wordProgVariables program ++ liveIn) edges
+    (slots ++ wordProgVariablesFast program ++ liveIn) edges
 
 def wordAllocateProgram (program : WordProg α) : Option WordContext :=
   wordAllocateProgramWithSlots [] program
@@ -2348,7 +2369,7 @@ def wordAllocateProgramWithSlotsAndColour (slots : List Nat)
     (program : WordProg α) : Option (WordContext × WordProg α) :=
   let (liveIn, edges) := wordProgClashAnalysis program []
   (wordAllocateContextWithClashes
-      (slots ++ wordProgVariables program ++ liveIn) edges).map
+      (slots ++ wordProgVariablesFast program ++ liveIn) edges).map
     (fun context => (context, wordApplyColour (wordFindVar context) program))
 
 theorem wordApplyColour_assign (colour : Nat → Nat) (name source : Nat) :
@@ -2576,27 +2597,30 @@ theorem wordAllocateProgramWithClashTreeAndColour_success
 
 theorem wordProgClashAnalysis_skip :
     wordProgClashAnalysis (.skip : WordProg α) [] = ([], []) := by
-  simp [wordProgClashAnalysis, wordProgReadVars,
-    wordProgWriteVars, wordProgLiveBefore, wordProgAtomicClashes,
-    wordClashPairs]
+  simp [wordProgClashAnalysis, wordProgLiveBeforeFast,
+    wordProgReadVarsFastAcc, wordProgWriteVarsFast,
+    wordProgWriteVarsFastAcc, wordProgAtomicClashesFast,
+    wordClashPairsFast, wordClashPairsFastAcc]
 
 theorem wordProgClashAnalysis_seq :
     wordProgClashAnalysis
         ((.seq (.assign 0 (.var 1)) (.assign 2 (.var 0))) : WordProg α) [] =
       ([1], []) := by
-  simp [wordProgClashAnalysis, wordProgReadVars,
-    wordProgWriteVars, wordProgLiveBefore, wordProgAtomicClashes,
-    wordClashPairs,
-    wordExpReadVars]
+  simp [wordProgClashAnalysis, wordProgLiveBeforeFast,
+    wordProgReadVarsFastAcc, wordProgWriteVarsFast,
+    wordProgWriteVarsFastAcc, wordProgAtomicClashesFast,
+    wordClashPairsFast, wordClashPairsFastAcc, wordExpReadVarsFastAcc]
 
 theorem wordProgClashAnalysis_ite :
     wordProgClashAnalysis
         ((.ite .equal 0 (.reg 1)
           (.assign 2 (.var 0)) (.assign 3 (.var 0))) : WordProg α) [] =
       ([0, 1], []) := by
-  simp [wordProgClashAnalysis, wordProgReadVars, wordProgWriteVars,
-    wordProgLiveBefore, wordProgAtomicClashes, wordClashPairs,
-    wordListUnion, wordExpReadVars, List.eraseDups, List.eraseDupsBy,
+  simp [wordProgClashAnalysis, wordProgLiveBeforeFast,
+    wordProgReadVarsFastAcc, wordProgWriteVarsFast,
+    wordProgWriteVarsFastAcc, wordProgAtomicClashesFast,
+    wordClashPairsFast, wordClashPairsFastAcc, wordListUnion,
+    wordExpReadVarsFastAcc, List.eraseDups, List.eraseDupsBy,
     List.eraseDupsBy.loop]
 
 theorem wordLinearClashAnalysis_empty (liveOut : List Nat) :

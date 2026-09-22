@@ -98,6 +98,19 @@ example (state : CrepRuntimeTypedState (RiscV.Word 8) Unit)
   exact CrepRuntimeTypedState.storeGlob_load_alias state key baseAddress topAddress
     address value loadAddress
 
+example (state : CrepRuntimeTypedState (RiscV.Word 8) Unit)
+    (key : RiscV.Word 8 → CrepGlobalAddress)
+    (baseAddress topAddress address loadAddress value : RiscV.Word 8)
+    (expression : CrepExp (RiscV.Word 8))
+    (heval : state.evalExpFull key baseAddress topAddress expression = some value) :
+    (state.storeGlob key baseAddress topAddress address expression).bind
+        (fun next => next.evalExpFull key baseAddress topAddress
+          (.loadGlob loadAddress)) =
+      evalCrepTypedLoad key
+        (storeCrepTypedGlobal key state.toGlobalState address value) loadAddress := by
+  exact CrepRuntimeTypedState.storeGlob_load_alias_of_eval state key baseAddress
+    topAddress address expression value loadAddress heval
+
 def runtimeTypedLoopBaseState : LoopState Nat :=
   { locals := fun _ => none
     globals := fun _ => none

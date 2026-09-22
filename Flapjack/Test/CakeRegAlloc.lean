@@ -97,6 +97,129 @@ def loopBodyGuard : Bool :=
 def assignLeafGuard : Bool :=
   cakeGetStackOnly (.assign 9 (.const 7 : WordExp Nat) : WordProg Nat) = []
 
+/- The TreeSet graph accumulator must materialize the same descending Cake
+   adjacency lists as the reference list insertion path. -/
+def graphSetAccumulatorGuard : Bool :=
+  let tree : WordClashTree :=
+    .seq
+      (.delta [1, 3] [2, 4])
+      (.branch (some [5, 6])
+        (.set [7, 8, 7])
+        (.delta [9] [1, 8]))
+  let bij := cakeMkBij tree
+  let sourceIndex := cakeSpDefaultIndex bij.toAllocator
+  let ta := cakeSpDefaultIndexed sourceIndex
+  let (reference, _) := cakeMkGraph ta tree [] (CakeNodeMap.ofSize bij.nextNode)
+  let reference := cakeExtendGraph ta [(1, 9), (8, 2)] reference
+  let (accumulated, _) :=
+    cakeMkGraphSet ta tree [] (cakeAdjSetMapOfSize bij.nextNode)
+  let accumulated := cakeExtendGraphSet ta [(1, 9), (8, 2)] accumulated
+  reference.toNatInfoMap == (accumulated.mapValues cakeAdjSetList).toNatInfoMap
+
+#guard graphSetAccumulatorGuard
+
+def cliqueSetAccumulatorGuard : Bool :=
+  let live := [1, 3, 5, 7]
+  let initial := cakeAdjSetMapOfSize 8
+  (cakeCliqueInsertEdgeSetFast live initial).toNatInfoMap ==
+    (cakeCliqueInsertEdgeSet live initial).toNatInfoMap
+
+#guard cliqueSetAccumulatorGuard
+
+def extendCliqueSetAccumulatorGuard : Bool :=
+  let newNames := [1, 4, 1, 3]
+  let live := [2, 4, 6]
+  let initial := cakeAdjSetMapOfSize 8
+  let fast := cakeExtendCliqueSetFast newNames live initial
+  let reference := cakeExtendCliqueSetReference newNames live initial
+  fast.2 == reference.2 && fast.1.toNatInfoMap == reference.1.toNatInfoMap
+
+#guard extendCliqueSetAccumulatorGuard
+
+def extendCliqueSetBatchGuard : Bool :=
+  let newNames := [9, 4, 9, 2, 7]
+  let live := [2, 4, 6, 4]
+  let initial := cakeAdjSetMapOfSize 12
+  let seeded := cakeInsertEdgeSet 1 6 initial
+  let batch := cakeExtendCliqueSetBatch newNames live seeded
+  let reference := cakeExtendCliqueSetReference newNames live seeded
+  batch.2 == reference.2 && batch.1.toNatInfoMap == reference.1.toNatInfoMap
+
+#guard extendCliqueSetBatchGuard
+
+def extendCliqueSetBatchEmptyLiveGuard : Bool :=
+  let newNames := [9, 9, 4, 2]
+  let live := []
+  let initial := cakeAdjSetMapOfSize 12
+  let seeded := cakeInsertEdgeSet 1 6 initial
+  let batch := cakeExtendCliqueSetBatch newNames live seeded
+  let reference := cakeExtendCliqueSetReference newNames live seeded
+  batch.2 == reference.2 && batch.1.toNatInfoMap == reference.1.toNatInfoMap
+
+#guard extendCliqueSetBatchEmptyLiveGuard
+
+def extendCliqueSetBatchOverlappingCliqueGuard : Bool :=
+  let newNames := [1, 4, 1, 3, 8, 3]
+  let live := [2, 4, 6, 4, 8]
+  let initial := cakeAdjSetMapOfSize 12
+  let seeded := cakeInsertEdgeSet 0 11
+    (cakeInsertEdgeSet 5 6 initial)
+  let batch := cakeExtendCliqueSetBatch newNames live seeded
+  let reference := cakeExtendCliqueSetReference newNames live seeded
+  batch.2 == reference.2 && batch.1.toNatInfoMap == reference.1.toNatInfoMap
+
+#guard extendCliqueSetBatchOverlappingCliqueGuard
+
+def indexedAdjacencyMembershipGuard : Bool :=
+  let tree : WordClashTree := .delta [1, 3] [2, 4]
+  let bij := cakeMkBij tree
+  let state := cakeInitRaStateFromBij bij tree [] []
+  (List.range state.dim).all (fun x =>
+    (List.range state.dim).all (fun y =>
+      cakeAdjMem state x y == cakeSortedMem x (cakeAdjSub state.adjLists y)))
+
+#guard indexedAdjacencyMembershipGuard
+
+def stackOnlyFastReferenceGuard : Bool :=
+  let programs : List (WordProg Nat) :=
+    [ .skip,
+      .move 1 [(9, 9), (7, 9)],
+      .assign 9 (.var 7),
+      .seq (.move 1 [(13, 13), (2, 13)])
+        (.move 1 [(9, 9), (7, 9)]),
+      .ite .notEqual 2 (.reg 3)
+        (.move 1 [(9, 9), (7, 9)])
+        (.move 1 [(21, 21), (7, 21)]),
+      .loop [] (.move 1 [(9, 9), (7, 9)]) [],
+      .call (some ([9], ([], []),
+        (.move 1 [(9, 9), (7, 9)] : WordProg Nat), 0, 1))
+        (some 5) [2] none ]
+  programs.all (fun program =>
+    cakeGetStackOnly program == (cakeGetStackOnlyAux ([], []) program).2)
+
+#guard stackOnlyFastReferenceGuard
+
+def stackOnlyMergeSetsReferenceGuard : Bool :=
+  let mkState (ts fs : List Nat) : CakeStackOnlyState :=
+    { ts, fs,
+      tsSet := Flapjack.natSetOfList ts,
+      fsSet := Flapjack.natSetOfList fs }
+  let base := mkState [13, 9, 9] [17]
+  let left := mkState [21, 13, 5] [19, 17]
+  let right := mkState [25, 9, 5] [23, 19]
+  let reference := cakeStackOnlyMergeSetsReference base left right
+  let fast := cakeStackOnlyMergeSets base left right
+  fast.ts == reference.ts && fast.fs == reference.fs &&
+    fast.tsSet.toList == reference.tsSet.toList &&
+    fast.fsSet.toList == reference.fsSet.toList
+
+#guard stackOnlyMergeSetsReferenceGuard
+
+def filterReversedGuard : Bool :=
+  filterReversed (fun x : Nat => x % 2 = 1) [1, 2, 3, 4, 5, 6] = [5, 3, 1]
+
+#guard filterReversedGuard
+
 /-- Canonical form for comparing node bijections with the probed sptree
     outputs: both maps sorted by key. -/
 def sortBijectionMaps (bijection : CakeNodeBijection) :
@@ -651,6 +774,28 @@ def raMovesCoalesceGuard : Bool :=
       (.delta [1] [5, 3]) [] []).map sortColouring ==
     some (sortColouring [(1, 0), (3, 4), (5, 0)])
 
+/- Cake's `Simple` algorithm deliberately passes an empty move list to
+   `init_alloc1_heu`; this direct row mirrors `ra_simple_moves` in
+   `scripts/hol-probes/reg_alloc_probe.out` and keeps that algorithm branch
+   distinct from the IRC/coalescing path above. -/
+def raSimpleMovesGuard : Bool :=
+  (Flapjack.RiscV.CakeRegAlloc.cakeDoRegAlloc .simple none 4 [(1, (1, 5))]
+      (.delta [1] [5, 3]) [] []).map sortColouring ==
+    some (sortColouring [(1, 0), (3, 4), (5, 0)])
+
+#guard raSimpleMovesGuard
+
+/- The fixed physical endpoint follows Cake's `do_coalesce_real` branch:
+   x=2 is fixed, so coalescing y=5 into it does not increment x's degree.
+   The expected colouring is the direct `reg_alloc_probe.out` oracle
+   `ra_fixed_coalesce`. -/
+def raFixedCoalesceGuard : Bool :=
+  (Flapjack.RiscV.CakeRegAlloc.cakeDoRegAlloc .irc none 4
+      [(1, (2, 5))] (.delta [2] [5, 3]) [] []).map sortColouring ==
+    some (sortColouring [(2, 1), (3, 4), (5, 1)])
+
+#guard raFixedCoalesceGuard
+
 /-- A self move is filtered out by the consistency check; the colouring
     then matches the coalesced case. -/
 def raMovesSelfFilteredGuard : Bool :=
@@ -691,6 +836,25 @@ def doSpillEqualDegreeGuard : Bool :=
     (out.degrees.get 0).getD 0 == 0
 
 #guard doSpillEqualDegreeGuard
+
+/- Cake's `do_spill` returns `F` without touching the allocator state when
+   the spill worklist is empty (`reg_allocScript.sml:809-830`).  Keep this
+   boundary explicit so a driver cannot manufacture a stack entry or clear
+   unrelated worklists on an empty candidate set. -/
+def doSpillEmptyGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 4 with
+      simpWl := [1],
+      spillWl := [],
+      freezeWl := [2],
+      availMovesWl := [(3, (1, 2))],
+      unavailMovesWl := [(4, (2, 3))] }
+  let (changed, out) := cakeDoSpill none 4 state
+  !changed && out.dim == 4 && out.simpWl == [1] && out.spillWl == [] &&
+    out.freezeWl == [2] && out.availMovesWl == [(3, (1, 2))] &&
+    out.unavailMovesWl == [(4, (2, 3))] && out.stack == []
+
+#guard doSpillEmptyGuard
 
 /- Cake's `do_step` (`reg_allocScript.sml:832-857`) tries simplify before
    coalescing. With both worklists populated, simplify wins and leaves the
@@ -1364,6 +1528,7 @@ def maxVarControlLabelGuard : Bool :=
 
 #guard maxVarControlLabelGuard
 #guard sortMovesTailSplitGuard
+#guard sortMovesLongTieGuard
 #guard raDeltaTriangleGuard
 #guard raForcedEdgeGuard
 
@@ -1379,7 +1544,9 @@ def parityGuard : Bool :=
     graphTagsGuard && graphInitGuard && heuDeltaGuard && heuMovesGuard &&
     heuSpillGuard && heuFixedDegreeGuard && raDeltaPairGuard &&
     raDeltaFreeGuard && raDeltaTriangleGuard && raStackOnlyGuard &&
-    raMovesCoalesceGuard && raMovesSelfFilteredGuard && raForcedEdgeGuard &&
+    raMovesCoalesceGuard && raSimpleMovesGuard && raFixedCoalesceGuard &&
+      raMovesSelfFilteredGuard &&
+      raForcedEdgeGuard &&
     raOrderSeqGuard && raOrderCliqueGuard && raSpillCostGuard &&
     prefsMoveOrderGuard && prefsSeqOrderGuard && prefsControlFlowGuard &&
     prefsBranchOrderGuard &&
@@ -1407,7 +1574,8 @@ def parityGuard : Bool :=
     && coalesceParentCompressionGuard
     && prefreezeTransitionGuard
     && sortMovesTailSplitGuard && freezeWorklistTransitionGuard &&
-      doSpillEqualDegreeGuard && doStepSimplifyPriorityGuard &&
+      doSpillEqualDegreeGuard && doSpillEmptyGuard &&
+      doStepSimplifyPriorityGuard &&
       unspillTransitionGuard
       && coalesceSelfMoveRejectedGuard && applyColourProbeGuard
 
@@ -1424,10 +1592,13 @@ def runChecks : IO Bool := do
     bijBranchOrderGuard, bijBranchLiveGuard, bijSetGuard,
     bijSetUnsortedGuard, bijCompositeGuard, graphDeltaDisjointGuard,
     graphDeltaCliqueGuard, graphSetCliqueGuard, graphForcedEdgeGuard,
+    extendCliqueSetBatchGuard, extendCliqueSetBatchEmptyLiveGuard,
+    extendCliqueSetBatchOverlappingCliqueGuard,
     graphTagsGuard, graphInitGuard, heuDeltaGuard, heuMovesGuard,
     heuSpillGuard, heuFixedDegreeGuard, raDeltaPairGuard, raDeltaFreeGuard,
     raDeltaTriangleGuard, raStackOnlyGuard, raMovesCoalesceGuard,
-    raMovesSelfFilteredGuard, raForcedEdgeGuard,
+    raSimpleMovesGuard,
+    raFixedCoalesceGuard, raMovesSelfFilteredGuard, raForcedEdgeGuard,
     raOrderSeqGuard, raOrderCliqueGuard, raSpillCostGuard,
     prefsMoveOrderGuard, prefsSeqOrderGuard, prefsControlFlowGuard,
     prefsBranchOrderGuard,
@@ -1456,7 +1627,7 @@ def runChecks : IO Bool := do
     respillBelowThresholdGuard, simplifyBatchGuard, decDegreeOutOfDimGuard,
     decDegreeOutOfDimNoOpGuard, coalesceWorklistSuccessGuard,
     freezeWorklistTransitionGuard, coalesceParentCompressionGuard,
-    prefreezeTransitionGuard, doSpillEqualDegreeGuard,
+    prefreezeTransitionGuard, doSpillEqualDegreeGuard, doSpillEmptyGuard,
     doStepSimplifyPriorityGuard, unspillTransitionGuard,
     worklistPrependGuard, extendCliqueGuard, splitDegreeGuard,
     smergePriorityGuard, applyColourProbeGuard]
@@ -1471,12 +1642,17 @@ def runChecks : IO Bool := do
     "mk_bij branch order", "mk_bij branch live", "mk_bij set",
     "mk_bij set unsorted", "mk_bij composite", "mk_graph delta disjoint",
     "mk_graph delta clique", "mk_graph set clique", "extend_graph forced",
+    "extend clique batch",
+    "extend clique batch empty live",
+    "extend clique batch overlapping clique",
     "mk_tags roles", "init_ra_state", "init_alloc1_heu delta",
     "init_alloc1_heu moves", "init_alloc1_heu spill",
     "init_alloc1_heu fixed degree", "reg_alloc delta pair",
     "reg_alloc delta free", "reg_alloc triangle",
     "reg_alloc stack only",
-    "reg_alloc moves coalesce", "reg_alloc moves self filtered",
+    "reg_alloc moves coalesce", "reg_alloc Simple ignores moves",
+    "reg_alloc fixed-endpoint coalesce",
+    "reg_alloc moves self filtered",
     "reg_alloc forced edge",
     "reg_alloc sequential pair order", "reg_alloc clique order",
     "reg_alloc spill-cost selection",
@@ -1511,6 +1687,7 @@ def runChecks : IO Bool := do
     "dec_degree out-of-dimension no-op with outside adjacency",
     "do_coalesce success transition", "do_freeze transition",
     "do_prefreeze transition", "do_spill equal-degree transition",
+    "do_spill empty-worklist no-op",
     "do_step simplify priority", "unspill transition", "worklist prepend",
     "extend clique", "split degree", "smerge priority",
     "apply_colour rewrites source Word register fields"]

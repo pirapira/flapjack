@@ -118,16 +118,16 @@ example :
 example :
     wordToStackProgNat wordOperationSpillConfig
         (.codeBufferWrite 0 1 : WordProg Nat) =
-      some (.seq (.stackLoad 29 13)
-        (.codeBufferWrite 29 6)) := by
+      some (.seq (.stackLoad 31 13)
+        (.codeBufferWrite 31 6)) := by
   simp [wordToStackProgNat, wordStackBufferWrite, wordStackLocation,
     wordStackOffset, wordStackJoin, lookupNatInfo, wordOperationSpillConfig]
 
 example :
     wordToStackProgNat wordOperationSpillConfig
         (.dataBufferWrite 1 0 : WordProg Nat) =
-      some (.seq (.stackLoad 31 13)
-        (.dataBufferWrite 6 31)) := by
+      some (.seq (.stackLoad 29 13)
+        (.dataBufferWrite 6 29)) := by
   simp [wordToStackProgNat, wordStackBufferWrite, wordStackLocation,
     wordStackOffset, wordStackJoin, lookupNatInfo, wordOperationSpillConfig]
 
@@ -136,9 +136,9 @@ example :
         { wordOperationSpillConfig with locations :=
             [(0, .stack 3), (1, .stack 2)] }
         (.codeBufferWrite 0 1 : WordProg Nat) =
-      some (.seq (.stackLoad 29 13)
-        (.seq (.stackLoad 31 12)
-          (.codeBufferWrite 29 31))) := by
+      some (.seq (.stackLoad 31 13)
+        (.seq (.stackLoad 29 12)
+          (.codeBufferWrite 31 29))) := by
   simp [wordToStackProgNat, wordStackBufferWrite, wordStackLocation,
     wordStackOffset, wordStackJoin, lookupNatInfo, wordOperationSpillConfig]
 
@@ -156,6 +156,67 @@ example :
       some (.seq (.opCurrHeap .add 31 6) (.stackStore 31 13)) := by
   simp [wordToStackProgNat, wordStackOpCurrHeap, wordStackReadRegister,
     wordStackLocation, wordStackOffset, lookupNatInfo, wordStackJoin,
+    wordOperationSpillConfig]
+
+/- Cake word_to_stackScript.sml line 461 uses wReg1 for the OpCurrHeap
+   source. Pin the spilled-source case to the first temporary k; using
+   addressScratch here changes the emitted RISC-V carrier. -/
+example :
+    wordToStackProgNat
+        { wordOperationSpillConfig with locations :=
+            [(0, .register 5), (1, .stack 3)] }
+        (.opCurrHeap .add 0 1 : WordProg Nat) =
+      some (.seq (.stackLoad 31 13)
+        (.opCurrHeap .add 5 31)) := by
+  simp [wordToStackProgNat, wordStackOpCurrHeap, wordStackReadRegister,
+    wordStackLocation, wordStackOffset, lookupNatInfo, wordStackJoin,
+    wordOperationSpillConfig]
+
+/- Cake wShareInst (word_to_stackScript.sml:186-222) uses wReg1 for the
+   shared address and wReg2 for a spilled store value. Pin each spill
+   direction, including the simultaneous-spill case, at the direct
+   Word-to-Stack boundary. -/
+example :
+    wordToStackProgNat wordOperationSpillConfig
+        (.shareInst .load 1 (.var 0) : WordProg Nat) =
+      some (.seq (.stackLoad 31 13)
+        (.shMem .load 6 31)) := by
+  simp [wordToStackProgNat, wordStackCompileSharedNat, wordStackAtomNat,
+    wordStackReadRegister, wordStackWritePhysicalNat,
+    wordStackLocation, wordStackOffset, wordStackJoin, lookupNatInfo,
+    wordOperationSpillConfig]
+
+example :
+    wordToStackProgNat wordOperationSpillConfig
+        (.shareInst .load 0 (.var 1) : WordProg Nat) =
+      some (.seq (.shMem .load 31 6)
+        (.stackStore 31 13)) := by
+  simp [wordToStackProgNat, wordStackCompileSharedNat, wordStackAtomNat,
+    wordStackReadRegister, wordStackWritePhysicalNat,
+    wordStackLocation, wordStackOffset, wordStackJoin, lookupNatInfo,
+    wordOperationSpillConfig]
+
+example :
+    wordToStackProgNat wordOperationSpillConfig
+        (.shareInst .store 0 (.var 1) : WordProg Nat) =
+      some (.seq (.stackLoad 29 13)
+        (.shMem .store 29 6)) := by
+  simp [wordToStackProgNat, wordStackCompileSharedNat, wordStackAtomNat,
+    wordStackReadRegister, wordStackReadPhysicalNatWith,
+    wordStackLocation, wordStackOffset, wordStackJoin, lookupNatInfo,
+    wordOperationSpillConfig]
+
+example :
+    wordToStackProgNat
+        { wordOperationSpillConfig with locations :=
+            [(0, .stack 3), (1, .stack 2)] }
+        (.shareInst .store 0 (.var 1) : WordProg Nat) =
+      some (.seq (.stackLoad 31 12)
+        (.seq (.stackLoad 29 13)
+          (.shMem .store 29 31))) := by
+  simp [wordToStackProgNat, wordStackCompileSharedNat, wordStackAtomNat,
+    wordStackReadRegister, wordStackReadPhysicalNatWith,
+    wordStackLocation, wordStackOffset, wordStackJoin, lookupNatInfo,
     wordOperationSpillConfig]
 
 end Flapjack

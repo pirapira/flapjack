@@ -1,0 +1,5 @@
+add1_allocator=Seq (Move1 [(0,0); (2,2); (4,4)])
+  (Seq
+     (Seq (Move0 [(4,4)])
+        (Seq (Move0 [(2,2)]) (Inst (Arith (Binop Add 2 4 (Reg 2))))))
+     (Seq (Move0 [(2,2)]) (Return 0 [2])))

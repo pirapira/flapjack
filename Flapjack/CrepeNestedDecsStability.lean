@@ -201,6 +201,75 @@ theorem crepNestedDecsEval_of_evalExps_stable
                         (expressions := expressions) (values := values)
                         hlengthTail hnotTail htailStable hbodyTail
 
+/-! Cake `pan_to_crepProps$evaluate_nested_decs_load_globals` specializes the
+    ordinary nested-declaration argument to the generated global loads.  The
+    generated expressions are local-free, so loading them once and installing
+    their values in the declaration locals is stable under the recursive
+    prefix evaluation.  This is the compact-state counterpart of that source
+    theorem; the state-aware theorem can be obtained by the analogous
+    specialization of the state relation. -/
+theorem crepNestedDecsEval_loadGlobals_of_evalExps
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (functions : List (CompiledFunction α))
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress address stride : α) (fuel : Nat)
+    (state : CrepState α) (names : List Nat) (count : Nat)
+    (body : CrepProg α) (result : CrepControlResult α) (values : List α)
+    (hcount : names.length = count)
+    (heval : evalCrepFullExps state.locals state.memory
+      baseAddress topAddress (loadGlobals address stride count) = some values)
+    (hbody : evalCrepFullProg functions primitive ffi sharedMem
+      baseAddress topAddress fuel
+      { state with locals := updateCrepLocalList state.locals names values } body =
+      some result) :
+    CrepNestedDecsEval functions primitive ffi sharedMem
+      baseAddress topAddress fuel state names
+      (loadGlobals address stride count) body result := by
+  apply crepNestedDecsEval_of_evalExps_stable
+  · exact hcount.trans (loadGlobals_length address stride count).symm
+  · intro name hname expression hexpression hvariable
+    have hmem : name ∈ (loadGlobals address stride count).flatMap crepExpVars :=
+      List.mem_flatMap.mpr ⟨expression, hexpression, hvariable⟩
+    rw [loadGlobals_crepExpVars_empty] at hmem
+    simp at hmem
+  · exact heval
+  · exact hbody
+
+/-! The evaluator-facing form of the same Cake nested-global-load theorem. -/
+theorem evalCrepFullProg_nestedDecs_loadGlobals_of_evalExps
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (functions : List (CompiledFunction α))
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress address stride : α) (fuel : Nat)
+    (state : CrepState α) (names : List Nat) (count : Nat)
+    (body : CrepProg α) (result : CrepControlResult α) (values : List α)
+    (hcount : names.length = count)
+    (hdistinct : CrepDistinctNames names)
+    (heval : evalCrepFullExps state.locals state.memory
+      baseAddress topAddress (loadGlobals address stride count) = some values)
+    (hbody : evalCrepFullProg functions primitive ffi sharedMem
+      baseAddress topAddress fuel
+      { state with locals := updateCrepLocalList state.locals names values } body =
+      some result) :
+    evalCrepFullProg functions primitive ffi sharedMem
+      baseAddress topAddress (fuel + names.length) state
+      (nestedDecs names (loadGlobals address stride count) body) =
+      some (restoreCrepResultList state.locals names result) := by
+  have hnested := crepNestedDecsEval_loadGlobals_of_evalExps
+    functions primitive ffi sharedMem baseAddress topAddress address stride fuel
+    state names count body result values hcount heval hbody
+  exact evalCrepFullProg_nestedDecs_of_eval
+    functions primitive ffi sharedMem baseAddress topAddress fuel state names
+    (loadGlobals address stride count) body result hdistinct hnested
+
 theorem crepNestedDecsEval_body_of_evalExps_stable
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
@@ -412,6 +481,36 @@ theorem panValueCrepLocalsRel_updateCrepLocalList_fresh
   rw [readCrepLocals_updateCrepLocalList_of_not_mem crepLocals names values slots
     hlength (fun slot hslot => hfresh name shape slots hlookup slot hslot)]
   exact hold.2
+
+/-! Cake's `local_rel_gt_vmax_preserved`
+    (`pan_to_crepProofScript.sml:2245-2260`) is the one-slot instance of
+    fresh-local preservation.  The Cake context invariant
+    `ctxt_max_el_leq` is represented here by the explicit `hbound` premise:
+    every slot recorded for a related source local is at most `maxVar`.
+    Keeping that premise visible makes the theorem applicable to contexts
+    assembled by the Lean port without hiding the source proof obligation. -/
+theorem panValueCrepLocalsRel_update_fresh_slot
+    (structs : StructContext) (context : CompileContext α)
+    (sourceLocals : VarName → Option (PanValue α))
+    (crepLocals : Nat → Option α)
+    (slot : Nat) (value : α)
+    (hrel : panValueCrepLocalsRel structs context sourceLocals crepLocals)
+    (hslot : context.maxVar < slot)
+    (hbound : ∀ name shape slots,
+      lookupInfo name context.vars = some (shape, slots) →
+        ∀ current, current ∈ slots → current ≤ context.maxVar) :
+    panValueCrepLocalsRel structs context sourceLocals
+      (updateCrepLocal crepLocals slot value) := by
+  intro name currentValue shape slots hsource hlookup
+  have hold := hrel name currentValue shape slots hsource hlookup
+  refine ⟨hold.1, ?_⟩
+  have hnot : slot ∉ slots := by
+    intro hmem
+    have hle := hbound name shape slots hlookup slot hmem
+    omega
+  have hsame := readCrepLocals_update_of_not_mem
+    crepLocals slot value slots hnot
+  exact hsame.trans hold.2
 
 theorem panValueCrepStateRel_updateCrepLocalList_fresh
     (structs : StructContext) (context : CompileContext α)

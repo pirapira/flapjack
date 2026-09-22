@@ -25,7 +25,7 @@ in `Flapjack.RiscV.CakeAlloc` (bead `.1.3.1`).
 namespace Flapjack.RiscV.CakeRegAlloc
 
 open Flapjack.RiscV.CakeAlloc (mergeStackOnly mergeStackSets removeTempStack
-  getForcedAddCarry getForcedLongMul)
+  getForcedAddCarry getForcedLongMul isAllocVar isPhyVar isStackVar)
 
 /-! RISC-V exposes 32 hardware registers, with five avoided by Cake's
     backend configuration (`0, 2, 3, 4, 31`).  `word_alloc` therefore colours
@@ -72,10 +72,133 @@ def cakeGetStackOnlyAux {α : Type u} :
       | sizeOf_list_dec | decreasing_tactic | decreasing_trivial
         <;> simp_arith
 
+/-! Fast internal form for the stack-only analysis.  The lists remain the
+    Cake-visible ordered representation; the carried sets only accelerate
+    membership and set algebra. -/
+structure CakeStackOnlyState where
+  ts : List Nat
+  fs : List Nat
+  tsSet : Std.TreeSet Nat
+  fsSet : Std.TreeSet Nat
+
+def cakeStackOnlyStateOfPair (tfs : List Nat × List Nat) : CakeStackOnlyState :=
+  { ts := tfs.1, fs := tfs.2,
+    tsSet := Flapjack.natSetOfList tfs.1,
+    fsSet := Flapjack.natSetOfList tfs.2 }
+
+def cakeStackOnlyInsert (x : Nat) (xs : List Nat)
+    (seen : Std.TreeSet Nat) : List Nat × Std.TreeSet Nat :=
+  if seen.contains x then (xs, seen) else (x :: xs, seen.insert x)
+
+def cakeStackOnlyDelete (x : Nat) (xs : List Nat)
+    (seen : Std.TreeSet Nat) : List Nat × Std.TreeSet Nat :=
+  (xs.erase x, seen.erase x)
+
+def cakeStackOnlyMergeMove (x y : Nat) (state : CakeStackOnlyState) :
+    CakeStackOnlyState :=
+  if state.tsSet.contains x then
+    let (ts, tsSet) := if isAllocVar y then
+      cakeStackOnlyInsert y state.ts state.tsSet else (state.ts, state.tsSet)
+    let (fs, fsSet) := if !isPhyVar y then
+      cakeStackOnlyInsert x state.fs state.fsSet else (state.fs, state.fsSet)
+    { state with ts, fs, tsSet, fsSet }
+  else if isStackVar x then
+    let (ts, tsSet) := if isAllocVar y then
+      cakeStackOnlyInsert y state.ts state.tsSet else (state.ts, state.tsSet)
+    { state with ts, tsSet }
+  else
+    let (ts, tsSet) := cakeStackOnlyDelete y state.ts state.tsSet
+    { state with ts, tsSet }
+
+def cakeStackOnlyUnion (left : List Nat) (leftSet : Std.TreeSet Nat)
+    (right : List Nat) : List Nat × Std.TreeSet Nat :=
+  (left ++ right.filter (fun x => !leftSet.contains x),
+   right.foldl (fun seen x => seen.insert x) leftSet)
+
+def cakeStackOnlyDiff (left : List Nat) (leftSet rightSet : Std.TreeSet Nat)
+    (right : List Nat) : List Nat × Std.TreeSet Nat :=
+  (left.filter (fun x => !rightSet.contains x),
+   right.foldl (fun seen x => seen.erase x) leftSet)
+
+def cakeStackOnlyInter (left : List Nat) (rightSet : Std.TreeSet Nat) :
+    List Nat × Std.TreeSet Nat :=
+  let kept := left.filter (fun x => rightSet.contains x)
+  (kept, Flapjack.natSetOfList kept)
+
+def cakeStackOnlyMergeSetsReference (base left right : CakeStackOnlyState) :
+    CakeStackOnlyState :=
+  let (_inner, innerSet) := cakeStackOnlyInter left.ts base.tsSet
+  let (common, commonSet) := cakeStackOnlyInter right.ts innerSet
+  let (leftOnly, leftOnlySet) :=
+    cakeStackOnlyDiff left.ts left.tsSet base.tsSet base.ts
+  let (rightOnly, _rightOnlySet) :=
+    cakeStackOnlyDiff right.ts right.tsSet base.tsSet base.ts
+  let (different, _differentSet) :=
+    cakeStackOnlyUnion leftOnly leftOnlySet rightOnly
+  let (ts, tsSet) := cakeStackOnlyUnion common commonSet different
+  let (fs, fsSet) := cakeStackOnlyUnion left.fs left.fsSet right.fs
+  { ts, fs, tsSet, fsSet }
+
+/-! The two `Diff` results below are consumed only through their list
+    projections. Keep the Cake list order, but avoid constructing the
+    discarded intermediate TreeSets; the final union still rebuilds exactly
+    the same sets as the reference. -/
+def cakeStackOnlyMergeSets (base left right : CakeStackOnlyState) :
+    CakeStackOnlyState :=
+  let (_inner, innerSet) := cakeStackOnlyInter left.ts base.tsSet
+  let (common, commonSet) := cakeStackOnlyInter right.ts innerSet
+  let leftOnly := left.ts.filter (fun x => !base.tsSet.contains x)
+  let leftOnlySet := Flapjack.natSetOfList leftOnly
+  let rightOnly := right.ts.filter (fun x => !base.tsSet.contains x)
+  let different := leftOnly ++ rightOnly.filter (fun x => !leftOnlySet.contains x)
+  let ts := common ++ different.filter (fun x => !commonSet.contains x)
+  let tsSet := different.foldl (fun seen x => seen.insert x) commonSet
+  let fs := left.fs ++ right.fs.filter (fun x => !left.fsSet.contains x)
+  let fsSet := right.fs.foldl (fun seen x => seen.insert x) left.fsSet
+  { ts, fs, tsSet, fsSet }
+
+def cakeStackOnlyDeleteMany (names : List Nat) (state : CakeStackOnlyState) :
+    CakeStackOnlyState :=
+  names.foldr (fun name state =>
+    let (ts, tsSet) := cakeStackOnlyDelete name state.ts state.tsSet
+    { state with ts, tsSet }) state
+
+def cakeGetStackOnlyAuxFast {α : Type u} :
+    CakeStackOnlyState → WordProg α → CakeStackOnlyState
+  | state, .move _ moves =>
+      moves.foldr (fun move state => cakeStackOnlyMergeMove move.1 move.2 state) state
+  | state, .seq first second =>
+      cakeGetStackOnlyAuxFast (cakeGetStackOnlyAuxFast state second) first
+  | state, .ite _ condition right thenBranch elseBranch =>
+      let left := cakeGetStackOnlyAuxFast state thenBranch
+      let rightState := cakeGetStackOnlyAuxFast state elseBranch
+      let merged := cakeStackOnlyMergeSets state left rightState
+      cakeStackOnlyDeleteMany
+        (condition :: match right with | .reg name => [name] | .imm _ => []) merged
+  | state, .mustTerminate body => cakeGetStackOnlyAuxFast state body
+  | state, .call (some (_, _, returnHandler, _, _)) _ _ handler =>
+      let returnState := cakeGetStackOnlyAuxFast state returnHandler
+      match handler with
+      | none => returnState
+      | some (_, handlerBody, _, _) =>
+          cakeStackOnlyMergeSets state returnState
+            (cakeGetStackOnlyAuxFast state handlerBody)
+  | state, .call none _ _ _ => state
+  | state, .loop _ body _ => cakeGetStackOnlyAuxFast state body
+  | state, program =>
+      match wordClashTree program [] with
+      | .delta writes reads => cakeStackOnlyDeleteMany (writes ++ reads) state
+      | _ => state
+  termination_by _state program => sizeOf program
+  decreasing_by
+    all_goals first
+      | sizeOf_list_dec | decreasing_tactic | decreasing_trivial
+        <;> simp_arith
+
 /-- `get_stack_only` (`word_allocScript.sml:1787-1789`): the forced-stack
     variable list for a whole program. -/
 def cakeGetStackOnly {α : Type u} (program : WordProg α) : List Nat :=
-  (cakeGetStackOnlyAux ([], []) program).2
+  (cakeGetStackOnlyAuxFast (cakeStackOnlyStateOfPair ([], [])) program).fs
 
 /-! RISC-V `get_forced` traversal.  The source adds hardware interference
     edges for the carry and long-multiply instructions, then walks sequence,
@@ -334,6 +457,9 @@ def cakeSpillCostMap (nextNode : Nat) (costs : NatInfoMap Nat) : CakeNodeMap Nat
 /-- The IRC allocator state (`ra_state`), represented functionally. -/
 structure CakeRaState where
   adjLists : CakeNodeMap (List Nat)
+  /- Present for production states built by `cakeInitRaStateFromBij`; hand-
+     constructed proof/test states leave it absent and use `adjLists`. -/
+  adjSets : Option (CakeNodeMap (Std.TreeSet Nat))
   nodeTag : CakeNodeMap CakeNodeTag
   degrees : CakeNodeMap Nat
   coalesced : CakeNodeMap Nat
@@ -349,7 +475,8 @@ structure CakeRaState where
 
 /-- The empty allocator state for `n` nodes. -/
 def CakeRaState.empty (n : Nat) : CakeRaState :=
-  { adjLists := CakeNodeMap.ofSize n, nodeTag := CakeNodeMap.ofSize n,
+  { adjLists := CakeNodeMap.ofSize n, adjSets := none,
+    nodeTag := CakeNodeMap.ofSize n,
     degrees := CakeNodeMap.ofSize n, coalesced := CakeNodeMap.ofSize n,
     moveRelated := CakeNodeMap.ofSize n, dim := n,
     simpWl := [], spillWl := [], freezeWl := [],
@@ -379,6 +506,11 @@ def cakeSortedMem (x : Nat) : List Nat → Bool
 /-- Adjacency list of node `i` (`adj_ls_sub`). -/
 def cakeAdjSub (adj : CakeNodeMap (List Nat)) (i : Nat) : List Nat :=
   (adj.get i).getD []
+
+def cakeAdjMem (state : CakeRaState) (x y : Nat) : Bool :=
+  match state.adjSets with
+  | some adj => ((adj.get y).getD ∅).contains x
+  | none => cakeSortedMem x (cakeAdjSub state.adjLists y)
 
 /-- `adj_ls_sub` on the association-list form still used while the graph is
     being built, before it is read into the node-indexed field. -/
@@ -418,6 +550,57 @@ def cakeExtendClique : List Nat → List Nat → CakeNodeMap (List Nat) →
 termination_by new _ _ => sizeOf new
 decreasing_by all_goals decreasing_trivial
 
+/- The reference inserts each pair in a growing clique. For the TreeSet
+   accumulator, union the new node's partners once, then add the reverse
+   edge to each existing member. Overlap handling preserves the reference
+   live-list and graph behavior for duplicate names. -/
+def cakeExtendCliqueSetFastAux : List Nat → List Nat → Std.TreeSet Nat →
+    CakeNodeMap (Std.TreeSet Nat) → CakeNodeMap (Std.TreeSet Nat) × List Nat
+  | [], cli, _members, adj => (adj, cli)
+  | x :: xs, cli, members, adj =>
+      if members.contains x then
+        cakeExtendCliqueSetFastAux xs cli members adj
+      else
+        let existingX := (adj.get x).getD ∅
+        let adjX := adj.set x (existingX.union members)
+        let adjAll := cli.foldl (fun current y =>
+          let existingY := (current.get y).getD ∅
+          current.set y (existingY.insert x)) adjX
+        cakeExtendCliqueSetFastAux xs (x :: cli) (members.insert x) adjAll
+termination_by new _ _ _ => sizeOf new
+decreasing_by all_goals decreasing_trivial
+
+/- Batch the set unions performed by `cakeExtendCliqueSetFastAux`.  The
+   reference adds each admitted node to every existing member in turn; since
+   adjacency is a TreeSet, unioning the complete admitted set gives the same
+   graph, while `addedRev ++ cli` preserves the reference's newest-first live
+   list.  Duplicate names are collected with the same first-admission rule. -/
+def cakeExtendCliqueSetBatch (new : List Nat) (cli : List Nat)
+    (adj : CakeNodeMap (Std.TreeSet Nat)) :
+    CakeNodeMap (Std.TreeSet Nat) × List Nat :=
+  let initial := Std.TreeSet.ofList cli
+  let (members, addedRev) := new.foldl (fun (state : Std.TreeSet Nat × List Nat) x =>
+    let (seen, added) := state
+    if seen.contains x then (seen, added)
+    else (seen.insert x, x :: added)) (initial, [])
+  let addedSet := Std.TreeSet.ofList addedRev
+  let adjNew := addedRev.foldl (fun current x =>
+    let existing := (current.get x).getD ∅
+    current.set x (existing.union (members.erase x))) adj
+  let adjAll := cli.foldl (fun current y =>
+    let existing := (current.get y).getD ∅
+    current.set y (existing.union addedSet)) adjNew
+  (adjAll, addedRev ++ cli)
+
+def cakeExtendCliqueSetFast : List Nat → List Nat →
+    CakeNodeMap (Std.TreeSet Nat) → CakeNodeMap (Std.TreeSet Nat) × List Nat
+  | new, cli, adj =>
+      cakeExtendCliqueSetBatch new cli adj
+
+def cakeExtendCliqueSet : List Nat → List Nat →
+    CakeNodeMap (Std.TreeSet Nat) → CakeNodeMap (Std.TreeSet Nat) × List Nat :=
+  cakeExtendCliqueSetFast
+
 /-- `mk_graph` (`reg_allocScript.sml:1179-1218`): build the adjacency
     representation from a clash tree, threading the live list.  `ta` maps
     original variable names to node ids (`sp_default` over the bijection).
@@ -454,6 +637,88 @@ def cakeExtendGraph (ta : Nat → Nat) : List (Nat × Nat) →
   | (x, y) :: rest, adj =>
       cakeExtendGraph ta rest (cakeInsertEdge (ta x) (ta y) adj)
 
+/-! Cake's observable adjacency lists are sorted
+    descending sets.  Accumulating those sets in TreeSets avoids rescanning a
+    long sorted list for every edge, then materializes the same list shape once
+    at the allocator boundary.  The live-list traversal above is deliberately
+    shared in shape and order with the reference builder. -/
+def cakeAdjSetMapOfSize (n : Nat) : CakeNodeMap (Std.TreeSet Nat) :=
+  { slots := Array.replicate n (some (∅ : Std.TreeSet Nat)) }
+
+def cakeAdjSetList (s : Std.TreeSet Nat) : List Nat := s.toList.reverse
+
+def cakeInsertEdgeSet (x y : Nat) (adj : CakeNodeMap (Std.TreeSet Nat)) :
+    CakeNodeMap (Std.TreeSet Nat) :=
+  let adjX := (adj.get x).getD ∅
+  let adjY := (adj.get y).getD ∅
+  (adj.set x (adjX.insert y)).set y (adjY.insert x)
+
+def cakeListInsertEdgeSet (x : Nat) : List Nat →
+    CakeNodeMap (Std.TreeSet Nat) → CakeNodeMap (Std.TreeSet Nat)
+  | [], adj => adj
+  | y :: ys, adj => cakeListInsertEdgeSet x ys (cakeInsertEdgeSet x y adj)
+
+def cakeCliqueInsertEdgeSet : List Nat → CakeNodeMap (Std.TreeSet Nat) →
+    CakeNodeMap (Std.TreeSet Nat)
+  | [], adj => adj
+  | x :: xs, adj => cakeCliqueInsertEdgeSet xs (cakeListInsertEdgeSet x xs adj)
+
+/- For the duplicate-free sets produced by `NumSet.fromAList`, every node in
+   a clique receives the same partner set minus itself.  Unioning that set
+   once per node preserves the TreeSet graph while avoiding one insertion per
+   unordered pair.  Duplicate inputs retain the reference path exactly. -/
+def cakeCliqueInsertEdgeSetFast (live : List Nat)
+    (adj : CakeNodeMap (Std.TreeSet Nat)) : CakeNodeMap (Std.TreeSet Nat) :=
+  if h : live.Nodup then
+    let all := Std.TreeSet.ofList live
+    live.foldl (fun current x =>
+      let partners := all.erase x
+      let existing := (current.get x).getD ∅
+      current.set x (existing.union partners)) adj
+  else
+    cakeCliqueInsertEdgeSet live adj
+
+def cakeExtendCliqueSetReference : List Nat → List Nat →
+    CakeNodeMap (Std.TreeSet Nat) →
+    CakeNodeMap (Std.TreeSet Nat) × List Nat
+  | [], cli, adj => (adj, cli)
+  | x :: xs, cli, adj =>
+      if cli.contains x then cakeExtendCliqueSetReference xs cli adj
+      else cakeExtendCliqueSetReference xs (x :: cli) (cakeListInsertEdgeSet x cli adj)
+termination_by new _ _ => sizeOf new
+decreasing_by all_goals decreasing_trivial
+
+def cakeMkGraphSet (ta : Nat → Nat) : WordClashTree → List Nat →
+    CakeNodeMap (Std.TreeSet Nat) →
+    CakeNodeMap (Std.TreeSet Nat) × List Nat
+  | .delta writes reads, liveout, adj =>
+      let wta := writes.map ta
+      let rta := reads.map ta
+      let (adj1, live) := cakeExtendCliqueSet wta liveout adj
+      cakeExtendCliqueSet rta (live.filter (fun x => !wta.contains x)) adj1
+  | .set names, _liveout, adj =>
+      let live := (NumSet.fromAList names).map ta
+      (cakeCliqueInsertEdgeSetFast live adj, live)
+  | .branch topt t1 t2, liveout, adj =>
+      let (adj1, t1Live) := cakeMkGraphSet ta t1 liveout adj
+      let (adj2, t2Live) := cakeMkGraphSet ta t2 liveout adj1
+      match topt with
+      | none => cakeExtendCliqueSet t1Live t2Live adj2
+      | some t =>
+          let live := (NumSet.fromAList t).map ta
+          (cakeCliqueInsertEdgeSetFast live adj2, live)
+  | .seq t1 t2, liveout, adj =>
+      let (adj1, live) := cakeMkGraphSet ta t2 liveout adj
+      cakeMkGraphSet ta t1 live adj1
+termination_by tree _ _ => sizeOf tree
+decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+
+def cakeExtendGraphSet (ta : Nat → Nat) : List (Nat × Nat) →
+    CakeNodeMap (Std.TreeSet Nat) → CakeNodeMap (Std.TreeSet Nat)
+  | [], adj => adj
+  | (x, y) :: rest, adj =>
+      cakeExtendGraphSet ta rest (cakeInsertEdgeSet (ta x) (ta y) adj)
+
 /-- `mk_tags` (`reg_allocScript.sml:1159-1176`): tag every node with its
     original variable's role.  Stack-only variables (from `get_stack_only`,
     keyed by original variable name) become `Stemp`, other allocatable
@@ -482,11 +747,13 @@ def cakeInitRaStateFromBij (bij : CakeNodeBijection) (tree : WordClashTree)
     (forced : List (Nat × Nat)) (fs : List Nat) : CakeRaState :=
   let sourceIndex := cakeSpDefaultIndex bij.toAllocator
   let ta := cakeSpDefaultIndexed sourceIndex
-  let (adj, _) := cakeMkGraph ta tree [] (CakeNodeMap.ofSize bij.nextNode)
-  let adj := cakeExtendGraph ta forced adj
+  let (adj, _) := cakeMkGraphSet ta tree [] (cakeAdjSetMapOfSize bij.nextNode)
+  let adjSets := cakeExtendGraphSet ta forced adj
+  let adj := adjSets.mapValues cakeAdjSetList
   let tags := cakeMkTags bij.nextNode bij.fromAllocator fs
   { (CakeRaState.empty bij.nextNode) with
     adjLists := adj,
+    adjSets := some adjSets,
     nodeTag := tags }
 
 def cakeInitRaState (tree : WordClashTree) (forced : List (Nat × Nat))
@@ -527,7 +794,7 @@ def cakeSplitDegree (state : CakeRaState) (d k v : Nat) : Bool :=
 /-- `st_ex_filter`/`st_ex_partition` accumulate by prepending, so the
     results are reversed (`reg_allocScript.sml:158-180`). -/
 def filterReversed {α : Type u} (p : α → Bool) (l : List α) : List α :=
-  (l.filter p).reverse
+  l.foldl (fun acc x => if p x then x :: acc else acc) []
 
 def partitionReversed {α : Type u} (p : α → Bool) (l : List α) : List α × List α :=
   let (tt, ff) := l.partition p
@@ -704,9 +971,9 @@ decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
 
 /-- `revive_moves` (`reg_allocScript.sml:363-375`). -/
 def cakeReviveMoves (vs : List Nat) (state : CakeRaState) : CakeRaState :=
-  let nbs := vs.map (fun v => cakeAdjSub state.adjLists v)
   let (revived, unavail) := partitionReversed (fun m =>
-      nbs.any (cakeSortedMem m.2.1) || nbs.any (cakeSortedMem m.2.2))
+      vs.any (fun v => cakeAdjMem state m.2.1 v) ||
+        vs.any (fun v => cakeAdjMem state m.2.2 v))
     state.unavailMovesWl
   { state with
     availMovesWl := cakeSMerge (cakeSortMoves revived) state.availMovesWl,
@@ -744,25 +1011,23 @@ def cakeDegOrInf (state : CakeRaState) (k x : Nat) : Nat :=
 def cakeBgOk (k x y : Nat) (state : CakeRaState) : Option (List Nat × List Nat) :=
   let adjX := cakeAdjSub state.adjLists x
   let adjY := cakeAdjSub state.adjLists y
-  let (case1, case2) := partitionReversed (fun v => cakeSortedMem v adjX) adjY
+  let (case1, case2) := partitionReversed (fun v => cakeAdjMem state v x) adjY
   let case1 := filterReversed (fun v => cakeConsideredVar state k v) case1
   let case2 := filterReversed (fun v => cakeConsideredVar state k v) case2
-  let case2degs := case2.map (fun v => cakeDegOrInf state k v)
-  if !case2degs.any (fun d => d >= k) then
+  let case2High := case2.countP (fun v => cakeDegOrInf state k v >= k)
+  if case2High = 0 then
     some (case1, case2)
   else
     let case3 := filterReversed (fun v => cakeConsideredVar state k v)
-      (adjX.filter (fun v => !cakeSortedMem v adjY))
-    let c1 := (case1.map (fun v => cakeDegOrInf state (k + 1) v)).countP
-      (fun d => d - 1 >= k)
-    let c2 := case2degs.countP (fun d => d >= k)
-    let c3 := (case3.map (fun v => cakeDegOrInf state k v)).countP
-      (fun d => d >= k)
+      (adjX.filter (fun v => !cakeAdjMem state v y))
+    let c1 := case1.countP (fun v => cakeDegOrInf state (k + 1) v - 1 >= k)
+    let c2 := case2High
+    let c3 := case3.countP (fun v => cakeDegOrInf state k v >= k)
     if c1 + c2 + c3 < k then some (case1, case2) else none
 
 /-- `consistency_ok` (`reg_allocScript.sml:568-586`). -/
 def cakeConsistencyOk (state : CakeRaState) (x y : Nat) : Bool :=
-  x != y && !cakeSortedMem x (cakeAdjSub state.adjLists y) &&
+  x != y && !cakeAdjMem state x y &&
     (cakeIsFixed state x || (state.moveRelated.get x).getD false) &&
     (cakeIsFixed state y || (state.moveRelated.get y).getD false) &&
     !(cakeIsFixed state x && cakeIsFixed state y)
@@ -774,7 +1039,8 @@ def cakeDoCoalesceReal (x y : Nat) (case1 case2 : List Nat)
   let state := if !cakeIsFixed state x then
     cakeIncDeg x case2.length state else state
   let state := { state with
-    adjLists := cakeListInsertEdge x case2 state.adjLists }
+    adjLists := cakeListInsertEdge x case2 state.adjLists
+    adjSets := state.adjSets.map (fun adj => cakeListInsertEdgeSet x case2 adj) }
   let state := case1.foldl (fun s v => cakeDecDeg v s) state
   cakePushStack y state
 
@@ -1126,7 +1392,7 @@ def cakeFullConsistencyOk (state : CakeRaState) (k : Nat) (x y : Nat) : Bool :=
   let eligibleX := fixedX || cakeTagIsAtemp state x
   let eligibleY := fixedY || cakeTagIsAtemp state y
   x != y && x < state.dim && y < state.dim &&
-    !cakeSortedMem x (cakeAdjSub state.adjLists y) &&
+    !cakeAdjMem state x y &&
     eligibleX && eligibleY && !(fixedX && fixedY)
 
 /-- A lookup-only index for the source-variable side of `mk_bij`.
@@ -1190,6 +1456,17 @@ def cakeColourLocation (k f colour : Nat) : WordLocation :=
     .register stackRegister
   else
     .stack (f - 1 - (stackRegister - k))
+
+theorem cakeColourLocation_register_boundary
+    (k f register : Nat) (hregister : register < k) :
+    cakeColourLocation k f (2 * register) = .register register := by
+  simp [cakeColourLocation, hregister]
+
+theorem cakeColourLocation_stack_boundary
+    (k f register : Nat) (hregister : k ≤ register) :
+    cakeColourLocation k f (2 * register) =
+      .stack (f - 1 - (register - k)) := by
+  simp [cakeColourLocation, hregister]
 
 def cakeColourFrameSlots (k : Nat) (parameters : List Nat)
     (program : WordProg α) (colouring : NatInfoMap Nat) : Nat × Nat :=

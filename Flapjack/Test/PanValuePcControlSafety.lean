@@ -20,6 +20,8 @@ import Flapjack.CrepeNestedDecsStability
 import Flapjack.CrepeRaisedCallInversion
 import Flapjack.PanToCrepDecCallCorrectness
 import Flapjack.PanToCrepProgramComposition
+import Flapjack.PanToCrepCodeRelation
+import Flapjack.PanSimpLocalised
 
 namespace Flapjack.Test.PanValuePcControlSafety
 
@@ -1026,6 +1028,7 @@ compact Pc bridge directly, without an opaque evaluator-evidence argument. -/
 /-! Compositional source handler safety: a handler-free call and a declaration
     body that never exposes loop control. -/
 #check @PanValueProgNotBrokeContinued_call_of_no_handler
+#check @PanValueProgNotBrokeContinued_call_handler
 #check @PanValueProgNotBrokeContinued_dec
 
 /-! The direct `Call_Ret_Exception` branch of Cake's `pc_compile_correct`: a
@@ -1111,6 +1114,22 @@ example :
 
 #check @PanValueProgNotBrokeContinued_while
 
+#check @PanValueProgNotBrokeContinued_decCall
+#check @PanValueProgNotBrokeContinued_smartSeq
+#check @PanValueProgNotBrokeContinued_seqCallRet
+
+/-! A declaration call whose body is safe is itself safe. -/
+example :
+    PanValueProgNotBrokeContinued (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat)
+      (.decCall "x" .one "f" [] (.skip : Prog Nat)) :=
+  PanValueProgNotBrokeContinued_decCall (fun _ _ => none)
+    (fun _ _ _ _ _ _ => none) ([] : StructContext) [] (0 : Nat) (0 : Nat)
+    (1 : Nat) "x" .one "f" [] (.skip : Prog Nat)
+    (PanValueProgNotBrokeContinued_skip (fun _ _ => none)
+      (fun _ _ _ _ _ _ => none) ([] : StructContext) [] (0 : Nat) (0 : Nat)
+      (1 : Nat))
+
 /-! A while loop over a safe body is discharged by the recursive while leaf. -/
 example :
     PanValueProgNotBrokeContinued (fun _ _ => none) (fun _ _ _ _ _ _ => none)
@@ -1120,6 +1139,22 @@ example :
     ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat) (.const 0) (.skip : Prog Nat)
     (PanValueProgNotBrokeContinued_skip (fun _ _ => none) (fun _ _ _ _ _ _ => none)
       ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat))
+
+/-! The handler-carrying call leaf is dischargeable when the handler is `.skip`. -/
+example :
+    PanValueProgNotBrokeContinued (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat)
+      (.call (some (some (VarKind.local, "r"), some ("E", "x", (.skip : Prog Nat))))
+        "f" []) :=
+  PanValueProgNotBrokeContinued_call_handler (fun _ _ => none)
+    (fun _ _ _ _ _ _ => none) ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat)
+    (some (some (VarKind.local, "r"), some ("E", "x", (.skip : Prog Nat)))) "f" []
+    (by
+      intro handlerProgram hinfo
+      obtain ⟨destination, caught, handlerVariable, hinfoEq⟩ := hinfo
+      cases hinfoEq
+      exact PanValueProgNotBrokeContinued_skip (fun _ _ => none)
+        (fun _ _ _ _ _ _ => none) ([] : StructContext) [] (0 : Nat) (0 : Nat) (1 : Nat))
 
 /-! The explicit handler-safety premise of the handler-carrying call control
     theorem is dischargeable for a concrete call: choose a call whose handler is
@@ -1295,9 +1330,66 @@ example
 #check @panValuePcCompileCorrect_compact_statefulCompact_context_code
 #check @panValuePcRaisedBoundedExpressionEvidence
 #check @panValuePcRaisedBoundedGenericEvidence
+#check @panValuePcRaisedBoundedExceptionResultRelWithContextCode
+#check @panValuePcClockedRaisedExceptionResultRel_of_bounded_evidence
+#check @panValuePcCompileCorrect_of_arbitrary_clocked_raised_with_bounded_evidence
+#check @panValuePcCompileCorrect_of_compact_evaluators_with_bounded_evidence_and_clocked_timeout
+#check @panValuePcCompileCorrect_of_compact_evaluators_with_bounded_evidence_and_clocked_final_ffi
+#check @panValuePcCompileCorrect_of_compact_evaluators_with_bounded_evidence_and_clocked_returned
+#check @panValuePcCompileCorrect_of_compact_evaluators_with_bounded_evidence_and_clocked_normal
+#check @panValuePcCompileCorrect_of_compact_evaluators_with_bounded_evidence_and_clocked_broke
+#check @panValuePcCompileCorrect_of_compact_evaluators_with_bounded_evidence_and_clocked_continued
+#check @panValuePcCompileCorrect_of_compact_evaluators_with_bounded_generic_raised_evidence_and_clocked_control
+#check @panValuePcCompileCorrect_of_compact_evaluators_with_bounded_generic_raised_evidence_and_clocked_raised
+#check @panValuePcCompileCorrectWithContextCode_of_compact_evaluators_with_bounded_generic_raised_evidence_and_clocked_raised
+#check @panValuePcCompileCorrectWithContextCode_of_arbitrary_clocked_raised_with_bounded_evidence
 #check @panValuePcCompileCorrect_compact_with_bounded_expression_state_evidence
+#check @panValuePcCompileCorrect_compact_with_bounded_expression_state_evidence_canonical_globals
+#check @panValuePcCompileCorrect_compact_one_word_raise_with_bounded_expression_state_evidence
+#check @panValuePcCompileCorrect_compact_two_word_raise_with_bounded_expression_state_evidence
+#check @panValuePcCompileCorrect_compact_three_word_raise_with_bounded_expression_state_evidence
+#check @panValuePcCompileCorrect_compact_four_word_raise_with_bounded_expression_state_evidence
+#check @panValuePcCompileCorrect_compact_word_list_raise_with_bounded_expression_state_evidence
+#check @panValuePcCompileCorrect_compact_raise_source_word_with_bounded_expression_state_evidence
+#check @panValuePcCompileCorrectWithContextCode_compact_with_expression_state_evidence_canonical_globals
+#check @panValuePcCompileCorrectWithContextCode_compact_one_word_raise_with_bounded_expression_state_evidence
+#check @panValuePcCompileCorrectWithContextCode_compact_two_word_raise_with_bounded_expression_state_evidence
+#check @panValuePcCompileCorrectWithContextCode_compact_three_word_raise_with_bounded_expression_state_evidence
+#check @panValuePcCompileCorrectWithContextCode_compact_four_word_raise_with_bounded_expression_state_evidence
+#check @panValuePcCompileCorrectWithContextCode_compact_word_list_raise_with_bounded_expression_state_evidence
+#check @panValuePcCompileCorrectWithContextCode_compact_raise_source_word_with_bounded_expression_state_evidence
+#check @panValuePcCompileCorrectWithContextCode_compact_nested_one_word_raise_with_bounded_expression_state_evidence
+#check @panValuePcCompileCorrect_compact_nested_one_word_raise_with_bounded_expression_state_evidence
 #check @panValuePcCompileCorrect_of_compact_evaluators_and_clocked_word_raise_hraise_data
 #check @panValuePcCompileCorrect_of_compact_evaluators_and_clocked_two_word_raise_hraise_data
+#check @panValuePcCompileCorrectWithContextCode_of_compact_evaluators_and_clocked_raised_control_evidence
+#check @panValuePcCompileCorrect_of_compact_evaluators_and_clocked_raised_control_evidence
+#check @panValuePcCompileCorrectAndClockedResultRel_of_context_code
+#check @panValuePcCompileCorrectAndClockedRaisedResultRel_of_context_code
+#check @panValuePcCompileCorrectAndRaisedResultRel_of_hraise_data
+#check @panValuePcCompileCorrectAndClockedRaisedResultRel_of_hraise_data
+#check @panValuePcCompileCorrectAndClockedRaisedResultRel_of_control_evidence
+#check @panValuePcCompileCorrectAndClockedTimeoutResultRel_of_context_code
+#check @panValuePcCompileCorrectWithContextCodeAndClockedTimeoutResultRel_of_state
+#check @panValuePcCompileCorrectAndClockedFinalFfiResultRel_of_context_code
+#check @panValuePcCompileCorrectAndClockedReturnedResultRel_of_context_code
+#check @panValuePcCompileCorrectAndClockedReturnedResultRel_of_program_state_correct
+#check @panValuePcCompileCorrectAndClockedNormalResultRel_of_program_state_correct
+#check @panValuePcCompileCorrectAndClockedBrokeResultRel_of_program_state_correct
+#check @panValuePcCompileCorrectAndClockedContinuedResultRel_of_program_state_correct
+#check @panValuePcCompileCorrectAndClockedNormalResultRel_of_context_code
+#check @panValuePcCompileCorrectAndClockedBrokeResultRel_of_context_code
+#check @panValuePcCompileCorrectAndClockedContinuedResultRel_of_context_code
+#check @panValueCrepControlRel_of_program_state_correct
+#check @panValueCrepClockControlRel_of_program_state_correct
+#check @panValuePcCompileCorrect_of_context_code_and_clocked_control_of_program_state_correct
+#check @panValuePcClockedRaisedHraiseData_of_program_state_correct
+#check @panValuePcClockedRaisedExceptionResultRel_of_program_state_correct
+#check @panValuePcCompileCorrectAndClockedRaisedResultRel_of_clocked_program_state_correct
+#check @panValuePcCompileCorrectAndClockedTimeoutResultRel_of_normal_program_state_correct
+#check @panValuePcCompileCorrectAndClockedFinalFfiResultRel_of_normal_program_state_correct
+#check @panValuePcCompileCorrectAndResultRel_of_context_code
+#check @panValuePcCompileCorrectAndRaisedResultRel_of_context_code
 
 /-! The scalar `wordExp` return also satisfies the control-safety obligation,
 via the `SourceWordExp` conversion. -/
@@ -1332,5 +1424,127 @@ example
     hbytesInWord hlookup
 
 #check @panValueCrepProgramStateControlSafe_while_wordExp
+
+/-! The concrete Cake `code_rel` analogue is an inhabitant of the abstract
+`PanValuePcCodeRel` parameter, so it can be supplied directly to
+`pc_compile_correct`. -/
+example (context : CompileContext Nat) (target : PanValuePcTargetCode Nat) :
+    panValuePcCodeRelConcrete context [] target :=
+  panValuePcCodeRelConcrete_nil context target
+
+#check @panValuePcCodeRelConcrete
+#check @panValuePcCodeRelConcrete_localised
+
+/-! The concrete Cake `excp_rel` analogue is likewise an inhabitant of the
+abstract `PanValuePcExceptionShapeRel` parameter. -/
+example (context : CompileContext Nat) (eshapes : InfoMap Shape) :
+    panValuePcExceptionShapeRelConcrete context eshapes eshapes :=
+  panValuePcExceptionShapeRelConcrete_refl context eshapes
+
+#check @panValuePcExceptionShapeRelConcrete
+#check @panValuePcExceptionShapeRelConcrete_refl
+#check @panValuePcExceptionShapeRelConcrete_of_declaration_evaluation
+
+#check @lookupPanFunction_mem
+#check @panValuePcLocalisedCode_lookup
+
+/-! The concrete `code_rel` analogue is non-vacuous on a source-faithful,
+nonempty function table: instantiating Cake's `mk_ctxt_code_imp_code_rel` port
+on a single declaration whose body is a localised `skip`. -/
+private def concreteRelContext : CompileContext Nat :=
+  { vars := [], functions := [], exceptions := [], maxVar := 0, bytesInWord := 8 }
+
+private def concreteRelDecls : List (Decl Nat) :=
+  [Decl.function { name := "f", inline := false, exported := false, params := [], body := (.skip : Prog Nat), returnShape := .one }]
+
+example :
+    panValuePcCodeRelConcrete
+      { concreteRelContext with functions := functionInfos concreteRelDecls }
+      (sourceFunctionEntries concreteRelDecls)
+      (compileToCrep concreteRelContext concreteRelDecls) :=
+  panValuePcCodeRelConcrete_compileToCrep concreteRelContext concreteRelDecls (by
+    intro entry hentry
+    simp [concreteRelDecls, sourceFunctionEntries] at hentry
+    rcases hentry with rfl
+    exact localisedProg_skip)
+
+#check @panValuePcCodeRelConcrete_compileToCrep
+#check @panValuePcRaisedHraiseData_of_program_state_correct
+#check @panValuePcCompileCorrectAndClockedRaisedResultRel_of_program_state_correct
+#check @panValuePcCompileCorrectAndClockedRaisedResultRel_of_both_program_state_correct
+#check @panValuePcCompileCorrectAndClockedRaisedResultRel_of_hraise_data_with_clock_context
+#check @panValuePcCompileCorrectAndClockedRaisedResultRel_of_clocked_program_state_correct_with_clock_context
+#check @panValuePcCompileCorrectAndClockedRaisedResultRel_of_both_program_state_correct_with_clock_context
+#check @panValuePcCompileCorrectWithContextCode_of_compact_evaluators_with_expression_state_evidence_and_clocked_raised_control_evidence
+#check @panValuePcCompileCorrectAndClockedReturnedResultRel_of_both_program_state_correct_with_clock_context
+#check @panValuePcCompileCorrectAndClockedNormalResultRel_of_both_program_state_correct_with_clock_context
+#check @panValuePcCompileCorrectAndClockedResultRel_of_program_state_correct_with_context_code
+#check @panValuePcCompileCorrectAndClockedBrokeResultRel_of_both_program_state_correct_with_clock_context
+#check @panValuePcCompileCorrectAndClockedContinuedResultRel_of_both_program_state_correct_with_clock_context
+#check @panValuePcCompileCorrectAndClockedTimeoutResultRel_of_both_program_state_correct_with_clock_context
+#check @panValuePcCompileCorrectAndClockedResultRel_of_both_program_state_correct_with_clock_context
+#check @panValuePcRaisedHraiseData_callback_to_control_exception_result_rel_with_context_code
+#check @panValuePcCompileCorrectAndClockedFinalFfiResultRel_of_both_program_state_correct_with_clock_context
+#check @panValuePcCompileCorrectAndResultRel_of_program_state_correct_with_context_code
+#check @panValuePcCompileCorrectAndRaisedResultRel_of_program_state_correct_with_context_code
+#check @panValuePcCompileCorrectAndClockedResultRel_of_normal_program_state_correct_with_context_code
+#check @panValuePcCompileCorrectAndClockedReturnedSourceResultRel_of_program_state_correct_with_context_code
+#check @panValuePcRaisedHraiseData_of_flat_global_evaluator_evidence_with_bounded_state_locals
+#check @panValuePcRaisedControlResultRel_callback_of_flat_global_evaluator_evidence_bounded_state_locals
+#check @panValuePcCompileCorrect_compact_with_flat_global_evaluator_evidence_bounded_state_locals
+#check @panValuePcNormalResultRelWithContextCode_of_program_state_correct
+#check @panValuePcReturnedResultRelWithContextCode_of_program_state_correct
+#check @panValuePcBrokeResultRelWithContextCode_of_program_state_correct
+#check @panValuePcContinuedResultRelWithContextCode_of_program_state_correct
+
+/-! Cake's generated parameter context satisfies the slot bound needed by
+    the raised-payload evaluator, after reversing the source-name map. -/
+private def boundedParameterDecl : FunDecl Nat :=
+  { name := "f"
+    inline := false
+    exported := false
+    params := [("pair", .comb [.one, .one])]
+    body := (.skip : Prog Nat)
+    returnShape := .one }
+
+example :
+    ∀ name shape names,
+      lookupInfo name
+          ({ concreteRelContext with
+              vars := panToCrepMakeVmap boundedParameterDecl.params
+              maxVar := (compileParamVars boundedParameterDecl.params 0).2.2 } :
+            CompileContext Nat).vars = some (shape, names) →
+      ∀ slot ∈ names,
+        slot ≤ ({ concreteRelContext with
+          vars := panToCrepMakeVmap boundedParameterDecl.params
+          maxVar := (compileParamVars boundedParameterDecl.params 0).2.2 } :
+        CompileContext Nat).maxVar :=
+  compileFunDecl_parameter_context_slots_bounded concreteRelContext
+    boundedParameterDecl (by simp [boundedParameterDecl])
+
+example :
+    ∀ name shape names,
+      lookupInfo name
+          ({ concreteRelContext with
+              vars := panToCrepMakeVmap boundedParameterDecl.params
+              maxVar := Shape.shapeSize
+                (.comb (boundedParameterDecl.params.map Prod.snd)) - 1 } :
+            CompileContext Nat).vars = some (shape, names) →
+      ∀ slot ∈ names,
+        slot ≤ ({ concreteRelContext with
+          vars := panToCrepMakeVmap boundedParameterDecl.params
+          maxVar := Shape.shapeSize
+            (.comb (boundedParameterDecl.params.map Prod.snd)) - 1 } :
+        CompileContext Nat).maxVar :=
+  compileFunDeclSource_parameter_context_slots_bounded concreteRelContext
+    boundedParameterDecl (by simp [boundedParameterDecl])
+
+/-! Cake's `eval_var_cexp_present_ctxt` (`pan_to_crepProofScript.sml:693`):
+    every variable in a compiled expression is a slot bound in the compile
+    context.  Flapjack's companion of `compileExp_vars_bounded`. -/
+#check @Flapjack.compileExp_vars_present
+
+/-! Cake's `eval_map_var_cexp_present_ctxt` list companion (`pan_to_crepProofScript.sml:1077`). -/
+#check @Flapjack.compileExpList_vars_present
 
 end Flapjack.Test.PanValuePcControlSafety

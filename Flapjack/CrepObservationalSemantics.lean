@@ -110,6 +110,31 @@ noncomputable def crepSemantics
       (fun clock => hooks.ioEvents (hooks.evaluate clock).2)) : CrepBehaviour :=
   crepSemanticsWithLub hooks (crepBuildLprefixLub _ divergenceChain)
 
+/-! `crepSem` observes the post-state returned by `evaluate`, not the initial
+    state used to start the call.  Keep that projection explicit so the
+    observational wrapper cannot accidentally erase state updates. -/
+def crepControlResultState (fallback : CrepState α)
+    (result : Option (CrepControlResult α)) : CrepState α :=
+  match result with
+  | none => fallback
+  | some (.normal state) => state
+  | some (.returned state _) => state
+  | some (.raised state _) => state
+  | some (.broke state _) => state
+  | some (.continued state _) => state
+  | some (.finalFfi state _) => state
+
+@[simp] theorem crepControlResultState_some
+    (fallback : CrepState α) (result : CrepControlResult α) :
+    crepControlResultState fallback (some result) = match result with
+      | .normal state => state
+      | .returned state _ => state
+      | .raised state _ => state
+      | .broke state _ => state
+      | .continued state _ => state
+      | .finalFfi state _ => state := by
+  cases result <;> rfl
+
 def crepEvaluateHooks
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
@@ -120,10 +145,9 @@ def crepEvaluateHooks
     (baseAddress topAddress : α) (state : CrepState α) :
     CrepSemanticsHooks α where
   evaluate clock :=
-    (crepControlResultToSemantic
-      (crepEvaluate functions primitive ffi sharedMem
-        baseAddress topAddress clock state
-        (.call none "main" [])), state)
+    let result := crepEvaluate functions primitive ffi sharedMem
+      baseAddress topAddress clock state (.call none "main" [])
+    (crepControlResultToSemantic result, crepControlResultState state result)
   ioEvents := fun _ => []
 
 end Flapjack

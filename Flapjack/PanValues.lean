@@ -457,6 +457,28 @@ def panValueShape (context : StructContext) : PanValue α → Shape
 termination_by value => sizeOf value
 
 mutual
+  /-- Counterpart of Cake's `shape_val` (`cakeml/pancake/panLangScript.sml:190`):
+      the canonical zero-valued expression of a shape.  A scalar and a named
+      shape both evaluate to the zero word; a combination evaluates to a record
+      of the component expressions. -/
+  def shapeVal [OfNat α 0] : Shape → Exp α
+    | .one => .const 0
+    | .comb shapes => .rStruct (shapeVals shapes)
+    | .named _ => .const 0
+  termination_by shape => sizeOf shape
+  decreasing_by
+    all_goals first | sizeOf_list_dec | decreasing_trivial
+
+  /-- Counterpart of Cake's `shape_vals` (`cakeml/pancake/panLangScript.sml:194`). -/
+  def shapeVals [OfNat α 0] : List Shape → List (Exp α)
+    | [] => []
+    | shape :: shapes => shapeVal shape :: shapeVals shapes
+  termination_by shapes => sizeOf shapes
+  decreasing_by
+    all_goals first | sizeOf_list_dec | decreasing_trivial
+end
+
+mutual
   /-- Counterpart of Cake's `is_wf_shape_v`
       (`cakeml/pancake/semantics/panPropsScript.sml:24`): every scalar is well
       formed, a record is well formed when all of its fields are, and a named
@@ -1329,6 +1351,111 @@ def evalPanValueExps [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
   evalPanValueExp.evalPanValueExps structs locals globals memory
     baseAddress topAddress bytesInWord expressions memoryAccess
 
+
+theorem shapeVal_shape [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext) (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (baseAddress topAddress bytesInWord : α)
+    (memoryAccess : Option (PanValueMemoryAccess α)) (shape : Shape)
+    (hwf : isWfShape ([] : StructContext) shape = true) (value : PanValue α)
+    (heval : evalPanValueExp structs locals globals memory baseAddress topAddress
+      bytesInWord (shapeVal shape) memoryAccess = some value) :
+    panValueShape structs value = shape := by
+  have hmain : ∀ shape, isWfShape ([] : StructContext) shape = true →
+      ∀ value, evalPanValueExp structs locals globals memory baseAddress
+        topAddress bytesInWord (shapeVal shape) memoryAccess = some value →
+        panValueShape structs value = shape := by
+    apply shapeVal.induct
+      (motive1 := fun shape => isWfShape ([] : StructContext) shape = true →
+        ∀ value, evalPanValueExp structs locals globals memory baseAddress
+          topAddress bytesInWord (shapeVal shape) memoryAccess = some value →
+          panValueShape structs value = shape)
+      (motive2 := fun shapes =>
+        isWfShape.isWfShapeList ([] : StructContext) shapes = true →
+        ∀ values, evalPanValueExp.evalPanValueExps structs locals globals memory
+          baseAddress topAddress bytesInWord (shapeVals shapes) memoryAccess =
+          some values → values.map (panValueShape structs) = shapes)
+    · intro _ value h
+      simp only [shapeVal, evalPanValueExp, Option.some.injEq] at h
+      subst h
+      simp [panValueShape]
+    · intro shapes ih hwf value h
+      simp only [shapeVal] at h
+      have hwfList : isWfShape.isWfShapeList ([] : StructContext) shapes = true := by
+        rw [isWfShape.eq_def] at hwf
+        exact hwf
+      cases hvalues : evalPanValueExp.evalPanValueExps structs locals globals memory
+          baseAddress topAddress bytesInWord (shapeVals shapes) memoryAccess with
+      | none => simp [evalPanValueExp, hvalues] at h
+      | some values =>
+          simp [evalPanValueExp, hvalues] at h
+          subst h
+          rw [panValueShape]
+          rw [ih hwfList values hvalues]
+    · intro name hwf value h
+      simp [isWfShape, lookupInfo] at hwf
+    · intro _ values h
+      simp only [shapeVals, evalPanValueExp.evalPanValueExps, Option.some.injEq] at h
+      subst h
+      simp
+    · intro shape shapes ihHead ihTail hwf values h
+      rw [isWfShape.isWfShapeList.eq_def] at hwf
+      rw [Bool.and_eq_true] at hwf
+      obtain ⟨hwfHead, hwfTail⟩ := hwf
+      simp only [shapeVals, evalPanValueExp.evalPanValueExps] at h
+      cases hvalue : evalPanValueExp structs locals globals memory baseAddress
+          topAddress bytesInWord (shapeVal shape) memoryAccess with
+      | none => simp [hvalue] at h
+      | some head =>
+          cases hvalues : evalPanValueExp.evalPanValueExps structs locals globals
+              memory baseAddress topAddress bytesInWord (shapeVals shapes)
+              memoryAccess with
+          | none => simp [hvalue, hvalues] at h
+          | some tail =>
+              simp [hvalue, hvalues] at h
+              subst h
+              rw [List.map_cons, ihHead hwfHead head hvalue, ihTail hwfTail tail hvalues]
+  exact hmain shape hwf value heval
+
+
+theorem shapeVal_isSome [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext) (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (baseAddress topAddress bytesInWord : α)
+    (memoryAccess : Option (PanValueMemoryAccess α)) (shape : Shape) :
+    (evalPanValueExp structs locals globals memory baseAddress topAddress
+      bytesInWord (shapeVal shape) memoryAccess).isSome = true := by
+  have hmain : ∀ shape, (evalPanValueExp structs locals globals memory baseAddress
+        topAddress bytesInWord (shapeVal shape) memoryAccess).isSome = true := by
+    apply shapeVal.induct
+      (motive1 := fun shape => (evalPanValueExp structs locals globals memory baseAddress
+        topAddress bytesInWord (shapeVal shape) memoryAccess).isSome = true)
+      (motive2 := fun shapes => (evalPanValueExp.evalPanValueExps structs locals globals
+        memory baseAddress topAddress bytesInWord (shapeVals shapes) memoryAccess).isSome = true)
+    · simp [shapeVal, evalPanValueExp]
+    · intro shapes ih
+      simp only [shapeVal]
+      cases hvalues : evalPanValueExp.evalPanValueExps structs locals globals memory
+          baseAddress topAddress bytesInWord (shapeVals shapes) memoryAccess with
+      | none => rw [hvalues] at ih; exact absurd ih (by simp)
+      | some values => simp [evalPanValueExp, hvalues]
+    · intro name
+      simp [shapeVal, evalPanValueExp]
+    · simp [shapeVals, evalPanValueExp.evalPanValueExps]
+    · intro shape shapes ihHead ihTail
+      simp only [shapeVals, evalPanValueExp.evalPanValueExps]
+      cases hvalue : evalPanValueExp structs locals globals memory baseAddress
+          topAddress bytesInWord (shapeVal shape) memoryAccess with
+      | none => rw [hvalue] at ihHead; exact absurd ihHead (by simp)
+      | some head =>
+          cases hvalues : evalPanValueExp.evalPanValueExps structs locals globals
+              memory baseAddress topAddress bytesInWord (shapeVals shapes) memoryAccess with
+          | none => rw [hvalues] at ihTail; exact absurd ihTail (by simp)
+          | some tail => simp
+  exact hmain shape
+
 theorem panValueIsWf_word (structs : StructContext) (value : α) :
     panValueIsWf structs (.word value) = true := by
   simp [panValueIsWf]
@@ -1790,6 +1917,46 @@ theorem evalPanValueExp_isWfShape [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [M
               simp only [panValueIsWfFields, Bool.and_eq_true]
               exact ⟨ihHead head hvalue, ihTail tail hvalues⟩
   exact hmain expression memoryAccess value heval
+
+/-! Cake's `opt_mmap_eval_is_wf_shape_v` (`pan_to_crepProofScript.sml:2328`)
+    lifts the single-expression evaluator result relation to a successful list
+    evaluation.  The local and global well-formedness premises remain explicit,
+    matching the source state's evaluator invariants. -/
+theorem evalPanValueExps_isWfShape [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α))
+    (baseAddress topAddress bytesInWord : α)
+    (hlocals : ∀ name value, locals name = some value → panValueIsWf structs value = true)
+    (hglobals : ∀ name value, globals name = some value → panValueIsWf structs value = true)
+    (expressions : List (Exp α)) (memoryAccess : Option (PanValueMemoryAccess α))
+    (values : List (PanValue α))
+    (heval : evalPanValueExps structs locals globals memory baseAddress topAddress
+      bytesInWord expressions memoryAccess = some values) :
+    panValueIsWfValues structs values = true := by
+  induction expressions generalizing values with
+  | nil =>
+      simp [evalPanValueExps, evalPanValueExp.evalPanValueExps] at heval
+      subst values
+      simp [panValueIsWfValues]
+  | cons expression expressions ih =>
+      simp only [evalPanValueExps, evalPanValueExp.evalPanValueExps] at heval
+      cases hhead : evalPanValueExp structs locals globals memory baseAddress
+          topAddress bytesInWord expression memoryAccess with
+      | none => simp [hhead] at heval
+      | some head =>
+          cases htail : evalPanValueExp.evalPanValueExps structs locals globals
+              memory baseAddress topAddress bytesInWord expressions memoryAccess with
+          | none => simp [hhead, htail] at heval
+          | some tail =>
+              simp [hhead, htail] at heval
+              subst values
+              simp only [panValueIsWfValues, Bool.and_eq_true]
+              exact ⟨evalPanValueExp_isWfShape structs locals globals memory
+                baseAddress topAddress bytesInWord hlocals hglobals expression
+                memoryAccess head hhead, ih tail htail⟩
 
 theorem evalPanValueExp_isSome_local
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
@@ -2316,6 +2483,106 @@ theorem panValueResVar_lookup_diff [BEq String] [LawfulBEq String]
     (oldValue : Option (PanValue α)) (hne : other ≠ name) :
     panValueResVar locals name oldValue other = locals other := by
   simp [panValueResVar, beq_iff_eq, hne]
+
+/-- Counterpart of Cake's `FLOOKUP_pan_res_var_thm`
+    (`cakeml/pancake/semantics/panPropsScript.sml:236`): the restored lookup is
+    the saved value at the restored name and the original binding elsewhere. -/
+theorem panValueResVar_eq_ite [BEq String] [LawfulBEq String]
+    (locals : VarName → Option (PanValue α)) (name : VarName)
+    (oldValue : Option (PanValue α)) (other : VarName) :
+    panValueResVar locals name oldValue other =
+      if other == name then oldValue else locals other := rfl
+
+/-- Counterpart of Cake's `res_var_commutes'`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4094`): restoring two
+    distinct locals commutes. -/
+theorem panValueResVar_comm [BEq String] [LawfulBEq String]
+    (locals : VarName → Option (PanValue α)) (h n : VarName)
+    (v v' : Option (PanValue α)) (hne : n ≠ h) :
+    panValueResVar (panValueResVar locals h v) n v' =
+      panValueResVar (panValueResVar locals n v') h v := by
+  funext name
+  simp only [panValueResVar]
+  by_cases hh : (name == h) = true <;>
+    by_cases hn : (name == n) = true <;>
+    simp_all [beq_iff_eq]
+
+/-- Counterpart of Cake's `res_var_commutes_strong`
+    (`cakeml/pancake/proofs/crep_inlineProofScript.sml:699`): restoring two
+    locals commutes even when the two names coincide, because each side reads
+    the original binding of the other name from `locals'`. -/
+theorem panValueResVar_comm_strong [BEq String] [LawfulBEq String]
+    (locals locals' : VarName → Option (PanValue α)) (h n : VarName) :
+    panValueResVar (panValueResVar locals h (locals' h)) n (locals' n) =
+      panValueResVar (panValueResVar locals n (locals' n)) h (locals' h) := by
+  funext x
+  by_cases hx : (x == n) = true <;> by_cases hh : (x == h) = true <;>
+    simp_all [panValueResVar, beq_iff_eq]
+
+/-- Cake's `FOLDL res_var lc1 (ZIP (vs, MAP (FLOOKUP lc2) vs))`
+    (`cakeml/pancake/proofs/crep_inlineProofScript.sml`), used to restore a list
+    of locals. -/
+def panValueResVarFold [BEq String]
+    (locals locals' : VarName → Option (PanValue α)) (names : List VarName) :
+    VarName → Option (PanValue α) :=
+  (names.zip (names.map locals')).foldl
+    (fun (current : VarName → Option (PanValue α))
+      (entry : VarName × Option (PanValue α)) =>
+      panValueResVar current entry.1 entry.2) locals
+
+theorem panValueResVarFold_cons [BEq String]
+    (locals locals' : VarName → Option (PanValue α)) (name : VarName)
+    (names : List VarName) :
+    panValueResVarFold locals locals' (name :: names) =
+      panValueResVarFold (panValueResVar locals name (locals' name)) locals' names := by
+  simp [panValueResVarFold]
+
+theorem panValueResVarFold_comm [BEq String] [LawfulBEq String]
+    (locals locals' : VarName → Option (PanValue α)) (h : VarName) :
+    ∀ names,
+      panValueResVar (panValueResVarFold locals locals' names) h (locals' h) =
+        panValueResVarFold (panValueResVar locals h (locals' h)) locals' names := by
+  intro names
+  induction names generalizing locals with
+  | nil => simp [panValueResVarFold]
+  | cons name names ih =>
+      simp only [panValueResVarFold, List.zip_cons_cons, List.map_cons,
+        List.foldl_cons] at ih ⊢
+      rw [ih (panValueResVar locals name (locals' name))]
+      rw [← panValueResVar_comm_strong locals locals' h name]
+
+theorem panValueResVarFold_not_mem [BEq String] [LawfulBEq String]
+    (locals locals' : VarName → Option (PanValue α)) (names : List VarName) (x : VarName)
+    (hmem : x ∉ names) :
+    panValueResVarFold locals locals' names x = locals x := by
+  induction names generalizing locals with
+  | nil => simp [panValueResVarFold]
+  | cons name names ih =>
+      rw [panValueResVarFold_cons]
+      simp only [List.mem_cons, not_or] at hmem
+      have hstep : panValueResVar locals name (locals' name) x = locals x := by
+        rw [panValueResVar_eq_ite]
+        simp [beq_iff_eq, hmem.1]
+      rw [ih (panValueResVar locals name (locals' name)) hmem.2, hstep]
+
+theorem panValueResVarFold_mem [BEq String] [LawfulBEq String]
+    (locals locals' : VarName → Option (PanValue α)) (names : List VarName) {x : VarName}
+    (hmem : x ∈ names) :
+    panValueResVarFold locals locals' names x = locals' x := by
+  induction names generalizing locals with
+  | nil => simp at hmem
+  | cons name names ih =>
+      rw [panValueResVarFold_cons]
+      simp only [List.mem_cons] at hmem
+      by_cases hmemRest : x ∈ names
+      · exact ih _ hmemRest
+      · rcases hmem with heq | hmem
+        · rw [panValueResVarFold_not_mem _ locals' names x hmemRest]
+          rw [panValueResVar_eq_ite]
+          rw [if_pos (by rw [beq_iff_eq]; exact heq)]
+          rw [heq]
+        · exact absurd hmem hmemRest
+
 
 def restorePanValueLocal [BEq String]
     (locals : VarName → Option (PanValue α)) (name : VarName)

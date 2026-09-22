@@ -1,4 +1,5 @@
 import Flapjack.CrepeStateRelation
+import Flapjack.PanGlobals
 import Flapjack.Parser.Localise
 
 /-!
@@ -307,6 +308,191 @@ theorem localisedExp_iff_no_global (expression : Exp α) :
 theorem localisedProg_assign_global_false (name : VarName) (value : Exp α) :
     ¬ localisedProg (.assign .global name value : Prog α) := by
   simp [localisedProg]
+
+/-- A list of expressions all of which are localised has no global variables. -/
+theorem expGlobalVarsList_eq_nil_of_all_localised (expressions : List (Exp α))
+    (h : ∀ expression ∈ expressions, localisedExp expression) :
+    expGlobalVars.expGlobalVarsList expressions = [] := by
+  induction expressions with
+  | nil => simp [expGlobalVars.expGlobalVarsList]
+  | cons head tail ih =>
+      simp only [expGlobalVars.expGlobalVarsList]
+      rw [h head (by simp), List.nil_append]
+      exact ih (fun expression hmem => h expression (by simp [hmem]))
+
+/-- Counterpart of the first conjunct of Cake's `localised_exp_shape_val`
+    (`pan_globalsProofScript.sml:3207`): the placeholder expression generated
+    for a shape is localised. -/
+theorem localisedExp_shapeVal (shape : Shape) : localisedExp (shapeVal shape) := by
+  have hmain : ∀ shape : Shape, localisedExp (shapeVal shape) := by
+    apply shapeVal.induct
+      (motive1 := fun shape => localisedExp (shapeVal shape))
+      (motive2 := fun shapes => ∀ expression ∈ shapeVals shapes,
+        localisedExp expression)
+    · simp [shapeVal, localisedExp, expGlobalVars]
+    · intro shapes ih
+      simp only [shapeVal]
+      simpa only [localisedExp, expGlobalVars] using
+        expGlobalVarsList_eq_nil_of_all_localised (shapeVals shapes) ih
+    · intro name
+      simp [shapeVal, localisedExp, expGlobalVars]
+    · simp [shapeVals]
+    · intro shape shapes ihHead ihTail expression hmem
+      simp only [shapeVals, List.mem_cons] at hmem
+      rcases hmem with rfl | hmem
+      · exact ihHead
+      · exact ihTail expression hmem
+  exact hmain shape
+
+/-- Counterpart of the second conjunct of Cake's `localised_exp_shape_val`
+    (`pan_globalsProofScript.sml:3207`): every placeholder expression in a list
+    generated for a shape list is localised. -/
+theorem localisedExp_shapeVals (shapes : List Shape) :
+    ∀ expression ∈ shapeVals shapes, localisedExp expression := by
+  induction shapes with
+  | nil => simp [shapeVals]
+  | cons shape shapes ih =>
+      intro expression hmem
+      simp only [shapeVals, List.mem_cons] at hmem
+      rcases hmem with rfl | hmem
+      · exact localisedExp_shapeVal shape
+      · exact ih expression hmem
+
+/-- The `pan_globals` expression compiler never introduces a global variable:
+    every global read is replaced by a load from the address derived from
+    `topAddr`, and `topAddr` itself carries no global variable. -/
+theorem globalCompileExp_expGlobalVars [BEq String] (context : GlobalPassContext α)
+    (expression : Exp α) :
+    expGlobalVars (globalCompileExp context expression) = [] := by
+  have hmain : ∀ expression : Exp α,
+      expGlobalVars (globalCompileExp context expression) = [] := by
+    apply globalCompileExp.induct context
+      (motive1 := fun expressions =>
+        expGlobalVars.expGlobalVarsList
+          (globalCompileExp.globalCompileExps context expressions) = [])
+      (motive2 := fun expression =>
+        expGlobalVars (globalCompileExp context expression) = [])
+    · simp [globalCompileExp.globalCompileExps, expGlobalVars.expGlobalVarsList]
+    · intro expression expressions ihExpr ihExprs
+      simp only [globalCompileExp.globalCompileExps, expGlobalVars.expGlobalVarsList]
+      rw [ihExpr, ihExprs]
+      simp
+    · intro name
+      rw [globalCompileExp_local]
+      simp [expGlobalVars]
+    · intro name shape address hlookup
+      have hcomp : globalCompileExp context (.var .global name) =
+          .load shape (.op .sub [.topAddr, .const address]) := by
+        simp [globalCompileExp, hlookup]
+      rw [hcomp]
+      simp [expGlobalVars, expGlobalVars.expGlobalVarsList]
+    · intro name hlookup
+      have hcomp : globalCompileExp context (.var .global name) =
+          .const (context.fromNat 0) := by
+        simp [globalCompileExp, hlookup]
+      rw [hcomp]
+      simp [expGlobalVars]
+    · intro expressions ih
+      simpa only [globalCompileExp, expGlobalVars] using ih
+    · intro index expression ih
+      simpa only [globalCompileExp, expGlobalVars] using ih
+    · intro name fields
+      simp [globalCompileExp, expGlobalVars]
+    · intro name value
+      simp [globalCompileExp, expGlobalVars]
+    · intro shape address ih
+      simpa only [globalCompileExp, expGlobalVars] using ih
+    · intro address ih
+      simpa only [globalCompileExp, expGlobalVars] using ih
+    · intro address ih
+      simpa only [globalCompileExp, expGlobalVars] using ih
+    · intro operator expressions ih
+      simpa only [globalCompileExp, expGlobalVars] using ih
+    · intro operator expressions ih
+      simpa only [globalCompileExp, expGlobalVars] using ih
+    · intro operator left right ihL ihR
+      simp only [globalCompileExp, expGlobalVars]
+      rw [ihL, ihR]
+      simp
+    · intro operator left right ihL ihR
+      simp only [globalCompileExp, expGlobalVars]
+      rw [ihL, ihR]
+      simp
+    · simp [globalCompileExp, expGlobalVars, expGlobalVars.expGlobalVarsList]
+    · intro expression hlocal hglobal hrstruct hrfield hnstruct hnfield hload hload32
+        hloadbyte hop hpanop hcmp hshift htop
+      cases expression with
+      | const value => simp [globalCompileExp, expGlobalVars]
+      | baseAddr => simp [globalCompileExp, expGlobalVars]
+      | bytesInWord => simp [globalCompileExp, expGlobalVars]
+      | var kind name => cases kind <;> simp_all
+      | rStruct fields => exact absurd rfl (hrstruct fields)
+      | rField index value => exact absurd rfl (hrfield index value)
+      | nStruct name fields => exact absurd rfl (hnstruct name fields)
+      | nField name value => exact absurd rfl (hnfield name value)
+      | load shape address => exact absurd rfl (hload shape address)
+      | load32 address => exact absurd rfl (hload32 address)
+      | loadByte address => exact absurd rfl (hloadbyte address)
+      | op operator args => exact absurd rfl (hop operator args)
+      | panOp operator args => exact absurd rfl (hpanop operator args)
+      | cmp operator left right => exact absurd rfl (hcmp operator left right)
+      | shift operator left right => exact absurd rfl (hshift operator left right)
+      | topAddr => exact absurd rfl htop
+  exact hmain expression
+
+/-- List form of `globalCompileExp_expGlobalVars`. -/
+theorem globalCompileExps_expGlobalVars [BEq String] (context : GlobalPassContext α)
+    (expressions : List (Exp α)) :
+    expGlobalVars.expGlobalVarsList
+      (globalCompileExp.globalCompileExps context expressions) = [] := by
+  induction expressions with
+  | nil => simp [globalCompileExp.globalCompileExps, expGlobalVars.expGlobalVarsList]
+  | cons expression expressions ih =>
+      simp only [globalCompileExp.globalCompileExps, expGlobalVars.expGlobalVarsList]
+      rw [globalCompileExp_expGlobalVars, ih]
+      simp
+
+/-- Counterpart of Cake's `compile_exp_localised`
+    (`pan_globalsProofScript.sml:3196`): the `pan_globals` expression compiler
+    always produces a localised expression. -/
+theorem globalCompileExp_localised [BEq String] (context : GlobalPassContext α)
+    (expression : Exp α) :
+    localisedExp (globalCompileExp context expression) := by
+  simpa [localisedExp] using globalCompileExp_expGlobalVars context expression
+
+/-- A value placeholder generated for a shape is localised, in the
+    `pan_globals` context used by `globalCompileProg`.  This is the
+    `pan_globals` counterpart of the first conjunct of Cake's
+    `localised_exp_shape_val` (`pan_globalsProofScript.sml:3216` context). -/
+theorem globalShapeVal_localised [BEq String] (context : GlobalPassContext α)
+    (shape : Shape) : localisedExp (globalShapeVal context shape) := by
+  have hmain : ∀ shape : Shape, localisedExp (globalShapeVal context shape) := by
+    apply globalShapeVal.induct
+      (motive := fun shape => localisedExp (globalShapeVal context shape))
+    · simp [globalShapeVal, localisedExp, expGlobalVars]
+    · intro name
+      simp [globalShapeVal, localisedExp, expGlobalVars]
+    · intro shapes ih
+      simp only [globalShapeVal]
+      have hmap : ∀ expression ∈ shapes.map (globalShapeVal context),
+          localisedExp expression := by
+        intro expression hmem
+        obtain ⟨shape, hshape, rfl⟩ := List.mem_map.mp hmem
+        exact ih shape hshape
+      simpa only [localisedExp, expGlobalVars] using
+        expGlobalVarsList_eq_nil_of_all_localised
+          (shapes.map (globalShapeVal context)) hmap
+  exact hmain shape
+
+/-- Counterpart of Cake's `nested_seqs_localised`
+    (`pan_globalsProofScript.sml:3253`): a nested sequence is localised exactly
+    when every one of its statements is. -/
+theorem nestedSeq_localised (statements : List (Prog α)) :
+    localisedProg (nestedSeq statements) ↔
+      ∀ statement ∈ statements, localisedProg statement := by
+  induction statements with
+  | nil => simp [nestedSeq, localisedProg]
+  | cons statement statements ih => simp [nestedSeq, localisedProg, ih]
 
 /-! Successful word operations cannot hide a failed or structured operand.
 This is the source-side inversion lemma needed before applying the
@@ -1086,5 +1272,294 @@ theorem compileSourceWordExp_state_relation
   rw [evalCrepFullExpState_eq_of_noGlobal state baseAddress topAddress
     compiled' hnoGlobal]
   simpa [hcompiledEq] using hcompiled
+
+
+theorem localisedExp_of_expGlobalVarsList_eq_nil {α : Type _} {expressions : List (Exp α)}
+    (h : expGlobalVars.expGlobalVarsList expressions = []) :
+    ∀ expression ∈ expressions, localisedExp expression := by
+  induction expressions with
+  | nil => simp
+  | cons head tail ih =>
+      simp only [expGlobalVars.expGlobalVarsList] at h
+      obtain ⟨hhead, htail⟩ := List.append_eq_nil_iff.mp h
+      intro expression hmem
+      simp only [List.mem_cons] at hmem
+      rcases hmem with rfl | hmem
+      · simpa [localisedExp] using hhead
+      · exact ih htail expression hmem
+
+theorem globalCompileExpList_expGlobalVars [BEq String] (context : GlobalPassContext α)
+    (expressions : List (Exp α)) :
+    expGlobalVars.expGlobalVarsList (globalCompileExpList context expressions) = [] := by
+  induction expressions with
+  | nil => simp [globalCompileExpList, expGlobalVars.expGlobalVarsList]
+  | cons expression expressions ih =>
+      simp only [globalCompileExpList, expGlobalVars.expGlobalVarsList]
+      rw [globalCompileExp_expGlobalVars, ih]
+      simp
+
+theorem localisedExps_globalCompileExpList [BEq String] (context : GlobalPassContext α)
+    (arguments : List (Exp α)) :
+    ∀ expression ∈ globalCompileExpList context arguments, localisedExp expression :=
+  localisedExp_of_expGlobalVarsList_eq_nil
+    (globalCompileExpList_expGlobalVars context arguments)
+
+set_option maxHeartbeats 800000 in
+set_option linter.unusedSimpArgs false in
+theorem globalCompileProg_localised [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (program : Prog α) :
+    localisedProg (globalCompileProg context program) := by
+  apply globalCompileProg.induct context
+    (motive := fun program => localisedProg (globalCompileProg context program))
+  · intro name shape value body ih
+    simp [globalCompileProg, localisedProg, globalCompileExp_localised, ih]
+  · intro name value shape address hlookup
+    simp [globalCompileProg, localisedProg, hlookup, globalCompileExp_expGlobalVars,
+      globalCompileExp_localised, localisedExp, expGlobalVars, expGlobalVars.expGlobalVarsList]
+  · intro name value hlookup
+    simp [globalCompileProg, localisedProg, hlookup]
+  · intro name value
+    simp [globalCompileProg, localisedProg, globalCompileExp_expGlobalVars,
+      globalCompileExp_localised]
+  · intro name operator arguments
+    simp only [globalCompileProg, localisedProg]
+    exact localisedExps_globalCompileExpList context arguments
+  · intro address value
+    simp [globalCompileProg, localisedProg, globalCompileExp_expGlobalVars,
+      globalCompileExp_localised]
+  · intro address value
+    simp [globalCompileProg, localisedProg, globalCompileExp_expGlobalVars,
+      globalCompileExp_localised]
+  · intro address value
+    simp [globalCompileProg, localisedProg, globalCompileExp_expGlobalVars,
+      globalCompileExp_localised]
+  · intro first second ihFirst ihSecond
+    simp [globalCompileProg, localisedProg, ihFirst, ihSecond]
+  · intro condition thenBranch elseBranch ihThen ihElse
+    simp [globalCompileProg, localisedProg, globalCompileExp_expGlobalVars,
+      globalCompileExp_localised, ihThen, ihElse]
+  · intro condition body ih
+    simp [globalCompileProg, localisedProg, globalCompileExp_expGlobalVars,
+      globalCompileExp_localised, ih]
+  · intro function arguments
+    simp only [globalCompileProg, localisedProg]
+    exact ⟨localisedExps_globalCompileExpList context arguments, trivial⟩
+  · intro function arguments
+    simp only [globalCompileProg, localisedProg]
+    exact ⟨localisedExps_globalCompileExpList context arguments, trivial⟩
+  · intro function arguments exception handlerVar handler ih
+    simp only [globalCompileProg, localisedProg]
+    exact ⟨localisedExps_globalCompileExpList context arguments, ih⟩
+  · intro function arguments name
+    simp only [globalCompileProg, localisedProg]
+    exact ⟨localisedExps_globalCompileExpList context arguments, trivial⟩
+  · intro function arguments name exception handlerVar handler ih
+    simp only [globalCompileProg, localisedProg]
+    exact ⟨localisedExps_globalCompileExpList context arguments, ih⟩
+  · intro function arguments name shape address hlookup
+    simp only [globalCompileProg, localisedProg, hlookup]
+    refine ⟨localisedExps_globalCompileExpList context arguments, ?_⟩
+    simp [localisedProg, localisedExp, expGlobalVars, expGlobalVars.expGlobalVarsList]
+  · intro function arguments name hlookup
+    simp only [globalCompileProg, localisedProg, hlookup]
+    exact ⟨localisedExps_globalCompileExpList context arguments, trivial⟩
+  · intro function arguments name exception handlerVar handler shape address hlookup ih
+    simp only [globalCompileProg, localisedProg, hlookup]
+    repeat' apply And.intro
+    all_goals first
+      | exact globalShapeVal_localised context shape
+      | exact localisedExps_globalCompileExpList context arguments
+      | exact ih
+      | simp [localisedExp, expGlobalVars, expGlobalVars.expGlobalVarsList]
+  · intro function arguments name exception handlerVar handler hlookup ih
+    simp only [globalCompileProg, localisedProg, hlookup]
+    exact ⟨localisedExps_globalCompileExpList context arguments, ih⟩
+  · intro name shape function arguments body ih
+    simp only [globalCompileProg, localisedProg]
+    exact ⟨localisedExps_globalCompileExpList context arguments, ih⟩
+  · intro function configuration configurationLength array arrayLength
+    simp [globalCompileProg, localisedProg, globalCompileExp_expGlobalVars,
+      globalCompileExp_localised]
+  · intro exception value
+    simp [globalCompileProg, localisedProg, globalCompileExp_expGlobalVars,
+      globalCompileExp_localised]
+  · intro value
+    simp [globalCompileProg, localisedProg, globalCompileExp_expGlobalVars,
+      globalCompileExp_localised]
+  · intro size name address
+    simp [globalCompileProg, localisedProg, globalCompileExp_expGlobalVars,
+      globalCompileExp_localised]
+  · intro size name address globalAddress hlookup
+    simp [globalCompileProg, localisedProg, hlookup, globalCompileExp_expGlobalVars,
+      globalCompileExp_localised, localisedExp, expGlobalVars,
+      expGlobalVars.expGlobalVarsList]
+  · intro size name address h
+    simp [globalCompileProg, localisedProg]
+  · intro size address value
+    simp [globalCompileProg, localisedProg, globalCompileExp_expGlobalVars,
+      globalCompileExp_localised]
+  · intro program hdec hassignG hassignL hprim hstore hstore32 hstorebyte hseq hite hwhile
+      hcall hdeccall hextcall hraise hreturn hshmemload hshmemstore
+    cases program with
+    | skip => simp [globalCompileProg, localisedProg]
+    | dec name shape value body => exact (hdec name shape value body rfl).elim
+    | assign kind name value =>
+        cases kind with
+        | «local» => exact (hassignL name value rfl).elim
+        | «global» => exact (hassignG name value rfl).elim
+    | primitive name operator arguments => exact (hprim name operator arguments rfl).elim
+    | store address value => exact (hstore address value rfl).elim
+    | store32 address value => exact (hstore32 address value rfl).elim
+    | storeByte address value => exact (hstorebyte address value rfl).elim
+    | seq first second => exact (hseq first second rfl).elim
+    | ite condition thenBranch elseBranch =>
+        exact (hite condition thenBranch elseBranch rfl).elim
+    | «while» condition body => exact (hwhile condition body rfl).elim
+    | «break» => simp [globalCompileProg, localisedProg]
+    | «continue» => simp [globalCompileProg, localisedProg]
+    | call info function arguments => exact (hcall info function arguments rfl).elim
+    | decCall name shape function arguments body =>
+        exact (hdeccall name shape function arguments body rfl).elim
+    | extCall function configuration configurationLength array arrayLength =>
+        exact (hextcall function configuration configurationLength array arrayLength rfl).elim
+    | raise exception value => exact (hraise exception value rfl).elim
+    | «return» value => exact (hreturn value rfl).elim
+    | shMemLoad size kind name address =>
+        exact (hshmemload size kind name address rfl).elim
+    | shMemStore size address value => exact (hshmemstore size address value rfl).elim
+    | tick => simp [globalCompileProg, localisedProg]
+    | annot tag text => simp [globalCompileProg, localisedProg]
+
+theorem mem_of_globalDeclsFilter {predicate : Decl α → Bool} {declaration : Decl α}
+    {declarations : List (Decl α)}
+    (hmem : declaration ∈ globalDeclsFilter predicate declarations) :
+    declaration ∈ declarations := by
+  induction declarations with
+  | nil => rw [globalDeclsFilter.eq_def] at hmem; simp at hmem
+  | cons head tail ih =>
+      simp only [globalDeclsFilter] at hmem
+      by_cases hpred : predicate head = true
+      · simp [hpred] at hmem
+        rcases hmem with heq | htail
+        · subst heq; exact List.mem_cons.mpr (Or.inl rfl)
+        · exact List.mem_cons.mpr (Or.inr (ih htail))
+      · simp [hpred] at hmem
+        exact List.mem_cons.mpr (Or.inr (ih hmem))
+
+theorem globalCompileDecls_function_bodies_localised [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations : List (Decl α)) :
+    ∀ declaration ∈ globalCompileDecls context declarations,
+      (match declaration with
+       | .function function => localisedProg function.body
+       | _ => True) := by
+  induction declarations with
+  | nil => simp [globalCompileDecls]
+  | cons declaration declarations ih =>
+      cases declaration with
+      | function function =>
+          simp only [globalCompileDecls, List.mem_cons]
+          intro found hmem
+          rcases hmem with rfl | hmem
+          · exact globalCompileProg_localised context function.body
+          · exact ih found hmem
+      | decl shape name value =>
+          simp only [globalCompileDecls]
+          intro found hmem
+          exact ih found hmem
+      | exnDecl exception shape =>
+          simp only [globalCompileDecls, List.mem_cons]
+          intro found hmem
+          rcases hmem with rfl | hmem
+          · trivial
+          · exact ih found hmem
+      | name struct fields =>
+          simp only [globalCompileDecls]
+          intro found hmem
+          exact ih found hmem
+
+theorem globalCompileDecs_functions_localised [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α)) :
+    ∀ entry ∈ functions (globalCompileDecs context code).functions,
+      localisedProg entry.2.2.1 := by
+  intro entry hmem
+  simp only [globalCompileDecs] at hmem
+  obtain ⟨declaration, hdecl, hentry⟩ := mem_functions hmem
+  have hmemCompiled : (.function declaration : Decl α) ∈
+      globalCompileDecls (globalCollect context code) code :=
+    mem_of_globalDeclsFilter hdecl
+  have hlocalised := globalCompileDecls_function_bodies_localised
+    (globalCollect context code) code (.function declaration) hmemCompiled
+  rw [hentry]
+  simpa using hlocalised
+
+theorem globalCompileInitializers_localised [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations : List (Decl α)) :
+    ∀ initializer ∈ globalCompileInitializers context declarations,
+      localisedProg initializer := by
+  induction declarations generalizing context with
+  | nil => simp [globalCompileInitializers]
+  | cons declaration declarations ih =>
+      cases declaration with
+      | decl shape name value =>
+          simp only [globalCompileInitializers, List.mem_cons]
+          intro initializer hmem
+          rcases hmem with rfl | hmem
+          · refine ⟨?_, globalCompileExp_localised context value⟩
+            simp [localisedExp, expGlobalVars, expGlobalVars.expGlobalVarsList]
+          · exact ih _ initializer hmem
+      | function function => simpa [globalCompileInitializers] using ih context
+      | exnDecl exception shape => simpa [globalCompileInitializers] using ih context
+      | name struct fields => simpa [globalCompileInitializers] using ih context
+
+
+
+theorem localisedExp_var_local (name : VarName) :
+    localisedExp (.var .local name : Exp α) := by
+  simp [localisedExp, expGlobalVars]
+
+theorem globalCompileDecs_function_decls_localised [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α)) :
+    ∀ declaration ∈ (globalCompileDecs context code).functions,
+      (match declaration with
+       | .function function => localisedProg function.body
+       | _ => True) := by
+  intro declaration hmem
+  simp only [globalCompileDecs] at hmem
+  exact globalCompileDecls_function_bodies_localised (globalCollect context code)
+    code declaration (mem_of_globalDeclsFilter hmem)
+
+theorem globalCompileTopForStart_functions_localised [BEq String] [LawfulBEq String]
+    [Add α] [Mul α]
+    (bytesInWord : α) (fromNat : Nat → α) (declarations : List (Decl α))
+    (start : FunName) (compiled : List (Decl α))
+    (hcompile : globalCompileTopForStart bytesInWord fromNat declarations start =
+      some compiled) :
+    ∀ entry ∈ functions compiled, localisedProg entry.2.2.1 := by
+  unfold globalCompileTopForStart at hcompile
+  cases hfind : globalFindFunction start declarations with
+  | none => simp [hfind] at hcompile
+  | some found =>
+      simp only [hfind, Option.some.injEq] at hcompile
+      subst hcompile
+      intro entry hmem
+      obtain ⟨declaration, hdecl, hentry⟩ := mem_functions hmem
+      rcases List.mem_append.mp hdecl with hprefix | hfunctiondecls
+      · rcases List.mem_append.mp hprefix with hexceptions | hnewmain
+        · have hpred := mem_globalDeclsFilter (predicate := globalDeclIsException)
+            hexceptions
+          cases declaration <;> simp [globalDeclIsException] at hpred
+        · cases List.mem_singleton.mp hnewmain
+          rw [hentry]
+          simp only [localisedProg]
+          refine ⟨?_, ?_⟩
+          · exact (nestedSeq_localised _).mpr
+              (globalCompileInitializers_localised _ _)
+          · refine ⟨?_, trivial⟩
+            intro expression hexpression
+            obtain ⟨parameter, _, hparameter⟩ := List.mem_map.mp hexpression
+            rw [← hparameter]
+            exact localisedExp_var_local parameter.1
+      · rw [hentry]
+        exact globalCompileDecs_function_decls_localised _ _ (.function declaration) hfunctiondecls
 
 end Flapjack

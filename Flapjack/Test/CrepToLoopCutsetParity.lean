@@ -124,9 +124,73 @@ def handlerGuard : Bool :=
   loopCallLivePairs (loopCompileProg probeContext probeLive handlerProgram)
     = [([5], [5])]
 
+/-! CakeML's `insert_insert_eq`, `list_insert_SNOC`, `list_insert_append`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:380/:386/:414`) and
+    `domain_list_insert`, ported to the Flapjack list-backed live sets. -/
+
+theorem insertNatSorted_idem_fixture :
+    insertNatSorted 3 (insertNatSorted 3 [1, 2, 5]) =
+      insertNatSorted 3 [1, 2, 5] :=
+  insertNatSorted_idem 3 [1, 2, 5]
+
+theorem loopListInsert_snoc_fixture :
+    loopListInsert (([1, 2] : List Nat) ++ [3]) [5] =
+      insertNatSorted 3 (loopListInsert [1, 2] [5]) :=
+  loopListInsert_snoc 3 [1, 2] [5]
+
+theorem loopListInsert_append_fixture :
+    loopListInsert (([1] : List Nat) ++ [2, 3]) [5] =
+      loopListInsert [2, 3] (loopListInsert [1] [5]) :=
+  loopListInsert_append [1] [2, 3] [5]
+
+theorem loopListInsert_mem_fixture :
+    (2 : Nat) ∈ loopListInsert [1, 2] [5] :=
+  (loopListInsert_mem 2 [1, 2] [5]).mpr (Or.inl (by simp))
+
+theorem insertNatSorted_mem_fixture :
+    (3 : Nat) ∈ insertNatSorted 3 [1, 2, 5] ∧ (4 : Nat) ∉ insertNatSorted 3 [1, 2, 5] := by
+  constructor
+  · exact (insertNatSorted_mem 3 [1, 2, 5] 3).mpr (Or.inl rfl)
+  · intro hmem
+    rcases (insertNatSorted_mem 3 [1, 2, 5] 4).mp hmem with h | h
+    · omega
+    · simp at h
+
+theorem insertNatSorted_comm_fixture :
+    insertNatSorted 0 (insertNatSorted 2 ([1, 3] : List Nat)) =
+      insertNatSorted 2 (insertNatSorted 0 [1, 3]) :=
+  insertNatSorted_comm 0 2 [1, 3]
+
+theorem loopListInsert_insertNatSorted_comm_fixture :
+    insertNatSorted 4 (loopListInsert [1, 2] ([5] : List Nat)) =
+      loopListInsert [1, 2] (insertNatSorted 4 [5]) :=
+  loopListInsert_insertNatSorted_comm 4 [1, 2] [5]
+
+def insertCommGuard : Bool :=
+  insertNatSorted 0 (insertNatSorted 2 ([1, 3] : List Nat)) ==
+      insertNatSorted 2 (insertNatSorted 0 [1, 3]) &&
+    insertNatSorted 4 (loopListInsert [1, 2] ([5] : List Nat)) ==
+      loopListInsert [1, 2] (insertNatSorted 4 [5])
+
+#eval insertCommGuard
+#guard insertCommGuard
+
+def insertSortedGuard : Bool :=
+  loopListInsert (([1, 2] : List Nat) ++ [3]) [5] ==
+      insertNatSorted 3 (loopListInsert [1, 2] [5]) &&
+    loopListInsert (([1] : List Nat) ++ [2, 3]) [5] ==
+      loopListInsert [2, 3] (loopListInsert [1] [5]) &&
+    insertNatSorted 3 (insertNatSorted 3 [1, 2, 5]) ==
+      insertNatSorted 3 [1, 2, 5] &&
+    (loopListInsert (([1, 2] : List Nat) ++ [3]) []).all
+      (fun x => x == 1 || x == 2 || x == 3)
+
+#eval insertSortedGuard
+#guard insertSortedGuard
+
 def parityGuard : Bool :=
   constArgsGuard && load32ArgGuard && decContinuationGuard && ifBranchesGuard &&
-    whileBodyGuard && handlerGuard
+    whileBodyGuard && handlerGuard && insertCommGuard
 
 #eval parityGuard
 #guard parityGuard
@@ -134,11 +198,12 @@ def parityGuard : Bool :=
 def runChecks : IO Bool := do
   let results := [
     constArgsGuard, load32ArgGuard, decContinuationGuard, ifBranchesGuard,
-    whileBodyGuard, handlerGuard]
+    whileBodyGuard, handlerGuard, insertSortedGuard, insertCommGuard]
   let names := [
     "crep_to_loop cutset const args", "crep_to_loop cutset load32 arg",
     "crep_to_loop dec continuation live", "crep_to_loop if branches live",
-    "crep_to_loop while condition live", "crep_to_loop handler live"]
+    "crep_to_loop while condition live", "crep_to_loop handler live",
+    "crep_to_loop list_insert lemmas", "crep_to_loop list_insert commutation"]
   let mut all := true
   for (name, result) in names.zip results do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"

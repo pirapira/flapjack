@@ -164,6 +164,29 @@ theorem compileToCrep_names_nodup
   rw [compileFunctionsSource_map_name]
   exact hnodup
 
+/-! The HOL theorem `first_compile_to_crep_all_distinct` is stated over the
+    source function projection, rather than over the declaration-list helper
+    used by the recursive compiler proof above.  Keep that source-facing
+    statement explicit so callers porting the original correctness proof do
+    not need to unfold the declaration filter themselves. -/
+theorem functionDeclarationNames_eq_functionDeclarations_map_name
+    (declarations : List (Decl α)) :
+    functionDeclarationNames declarations =
+      (functionDeclarations declarations).map (fun declaration => declaration.name) := by
+  induction declarations with
+  | nil => simp [functionDeclarationNames, functionDeclarations]
+  | cons declaration declarations ih =>
+      cases declaration <;> simp [functionDeclarationNames, functionDeclarations, ih]
+
+theorem compileToCrep_names_nodup_of_functionDeclarations
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (declarations : List (Decl α))
+    (hnodup : ((functionDeclarations declarations).map
+      (fun declaration => declaration.name)).Nodup) :
+    (compileToCrep context declarations).map CompiledFunction.name |>.Nodup := by
+  apply compileToCrep_names_nodup context declarations
+  simpa [functionDeclarationNames_eq_functionDeclarations_map_name] using hnodup
+
 /- Cake's `compile_prog_distinct_params` theorem states that every compiled
    function has distinct flattened parameter slots.  The source-faithful
    `compileToCrep` boundary exposes those slots as `List.range`, so this

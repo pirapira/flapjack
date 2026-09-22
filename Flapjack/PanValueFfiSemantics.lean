@@ -119,6 +119,37 @@ def panValueFfiExtCall [BEq α] [Add α] [OfNat α 1]
       pure (.returned memory nextFfi)
   | .final event => pure (.final ffi event)
 
+/-! The successful byte-array ExtCall path preserves the incoming Cake FFI
+    trace.  This is the concrete FFI premise used by the evaluator-level
+    `evaluate_io_events_mono` bridge below. -/
+theorem panValueFfiExtCall_returned_ioEvents_prefix
+    [BEq α] [Add α] [OfNat α 1]
+    (access : PanValueMemoryAccess α) (context : PanValueFfiContext α)
+    (memory : α → Option (PanValue α)) (bytesInWord : α)
+    (ffi : FfiState σ) (function : FunName)
+    (configuration configurationLength array arrayLength : α)
+    (nextMemory : α → Option (PanValue α)) (nextFfi : FfiState σ)
+    (hcall : panValueFfiExtCall access context memory bytesInWord ffi function
+      configuration configurationLength array arrayLength =
+      some (.returned nextMemory nextFfi)) :
+    ffi.ioEvents <+: nextFfi.ioEvents := by
+  unfold panValueFfiExtCall at hcall
+  cases hconfiguration : panValueFfiReadBytes access context memory bytesInWord
+      configuration (context.valueToNat configurationLength) with
+  | none => simp [hconfiguration] at hcall
+  | some configurationBytes =>
+      cases harray : panValueFfiReadBytes access context memory bytesInWord
+          array (context.valueToNat arrayLength) with
+      | none => simp [hconfiguration, harray] at hcall
+      | some arrayBytes =>
+          cases hffi : callFfi ffi (.extCall function) configurationBytes arrayBytes with
+          | final event => simp [hconfiguration, harray, hffi] at hcall
+          | returned returnedFfi returnedBytes =>
+              simp [hconfiguration, harray, hffi] at hcall
+              rcases hcall with ⟨_, rfl⟩
+              exact callFfi_return_ioEvents_prefix ffi (.extCall function)
+                configurationBytes arrayBytes returnedFfi returnedBytes hffi
+
 inductive PanValueFfiControlResult (α : Type u) (σ : Type v) where
   | normal (locals globals : VarName → Option (PanValue α))
       (memory : α → Option (PanValue α)) (ffi : FfiState σ)
@@ -568,6 +599,55 @@ theorem evalPanValueFfiProgSteps_extCall_memoryHandler
       (memoryHandler := some memoryHandler) =
       some (.normal nextLocals globals nextMemory nextFfi, expressionSteps + 1) := by
   simp [evalPanValueFfiProgSteps, hvalues, hhandler]
+
+theorem evalPanValueFfiProgSteps_extCall_returned_ioEvents_prefix
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel : Nat) (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (function : FunName)
+    (configuration configurationLength array arrayLength : α)
+    (contracts : Option PanValueCallContracts)
+    (access : PanValueMemoryAccess α)
+    (nextLocals : VarName → Option (PanValue α))
+    (nextMemory : α → Option (PanValue α)) (nextFfi : FfiState σ)
+    (expressionSteps : Nat)
+    (hvalues : evalPanValueExpsCounted structs locals globals memory
+      baseAddress topAddress bytesInWord
+      [.const configuration, .const configurationLength,
+        .const array, .const arrayLength]
+      (memoryAccess := some access) =
+      some ([.word configuration, .word configurationLength,
+        .word array, .word arrayLength], expressionSteps))
+    (hresult : evalPanValueFfiProgSteps context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi
+      (.extCall function (.const configuration) (.const configurationLength)
+        (.const array) (.const arrayLength))
+      (memoryAccess := some access) (contracts := contracts)
+      (memoryHandler := none) =
+      some (.normal nextLocals globals nextMemory nextFfi, expressionSteps + 1)) :
+    ffi.ioEvents <+: nextFfi.ioEvents := by
+  simp [evalPanValueFfiProgSteps, hvalues] at hresult
+  cases hcall : panValueFfiExtCall access context memory bytesInWord ffi function
+      configuration configurationLength array arrayLength with
+  | none => simp [hcall] at hresult
+  | some result =>
+      cases result with
+      | returned returnedMemory returnedFfi =>
+          simp [hcall] at hresult
+          rcases hresult with ⟨_, ⟨_, hffi⟩⟩
+          rw [← hffi]
+          exact panValueFfiExtCall_returned_ioEvents_prefix access context memory
+            bytesInWord ffi function configuration configurationLength array arrayLength
+            returnedMemory returnedFfi hcall
+      | final event => simp [hcall] at hresult
 
 def evalPanValueFfiProgramSteps
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]

@@ -310,6 +310,25 @@ def lookupPanFunction :
       if name == candidate then some (parameters, body)
       else lookupPanFunction name functions
 
+/-- A successful `lookupPanFunction` yields a member of the source table. -/
+theorem lookupPanFunction_mem [LawfulBEq String] {name : FunName}
+    {functions : List (FunName × List VarName × Prog α)}
+    {parameters : List VarName} {body : Prog α}
+    (h : lookupPanFunction name functions = some (parameters, body)) :
+    (name, parameters, body) ∈ functions := by
+  induction functions with
+  | nil => simp [lookupPanFunction] at h
+  | cons entry functions ih =>
+      obtain ⟨candidate, candidateParameters, candidateBody⟩ := entry
+      unfold lookupPanFunction at h
+      split at h
+      · rename_i hcond
+        have hname : name = candidate := beq_iff_eq.mp hcond
+        subst hname
+        cases h
+        exact List.mem_cons_self ..
+      · exact List.mem_cons_of_mem _ (ih h)
+
 def evalPanExps [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]

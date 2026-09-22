@@ -279,6 +279,53 @@ termination_by program => sizeOf program
 decreasing_by
   all_goals decreasing_trivial
 
+/-- Cake's `exp_ids_nested_seq`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:128`): the exception
+    identifiers of a nested sequence are the concatenation of the statements'
+    identifiers. -/
+theorem expIds_nestedSeq (statements : List (Prog α)) :
+    expIds (nestedSeq statements) = (statements.map expIds).flatten := by
+  induction statements with
+  | nil => simp [nestedSeq, expIds]
+  | cons statement statements ih => simp [nestedSeq, expIds, ih]
+
+/-- Source-shaped counterpart of Pancake's `panProps$exps_of`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1336`): collect the
+    expressions that occur directly in a program. -/
+def expsOf : Prog α → List (Exp α)
+  | .raise _ e => [e]
+  | .dec _ _ e body => e :: expsOf body
+  | .seq p q => expsOf p ++ expsOf q
+  | .ite e p q => e :: (expsOf p ++ expsOf q)
+  | .while e body => e :: expsOf body
+  | .call info _ es =>
+      es ++ (match info with
+             | some (_, some (_, _, handler)) => expsOf handler
+             | _ => [])
+  | .decCall _ _ _ es body => es ++ expsOf body
+  | .store a b => [a, b]
+  | .store32 a b => [a, b]
+  | .storeByte a b => [a, b]
+  | .return e => [e]
+  | .extCall _ e1 e2 e3 e4 => [e1, e2, e3, e4]
+  | .assign _ _ e => [e]
+  | .primitive _ _ es => es
+  | .shMemLoad _ _ _ e => [e]
+  | .shMemStore _ a b => [a, b]
+  | _ => []
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
+
+/-- Cake's `pan_exps_of_nested_seq`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:1018`): the expressions
+    of a nested sequence are the concatenation of the statements' expressions. -/
+theorem expsOf_nestedSeq (statements : List (Prog α)) :
+    expsOf (nestedSeq statements) = (statements.map expsOf).flatten := by
+  induction statements with
+  | nil => simp [nestedSeq, expsOf]
+  | cons statement statements ih => simp [nestedSeq, expsOf, ih]
+
 /-! Direct source-shaped counterpart of `panLang$fun_ids`: collect the
     statically referenced function names, including call-handler bodies and
     declaration-call bodies. -/
@@ -840,6 +887,32 @@ theorem zero_not_mem_genlist_offset {α : Type} (t : List α) (h : t.length ≤ 
   rw [hzero] at htoNat
   simp at htoNat
 
+/-- Cake's `genlist_less_than` (`crep_inlineProofScript.sml:629`): every value
+    in `GENLIST (λx. a + SUC x) n` is strictly above `a`. -/
+theorem genlist_less_than (n a v : Nat) :
+    v ∈ (List.range n).map (fun x => a + (x + 1)) → a < v := by
+  intro hx
+  obtain ⟨i, hi, rfl⟩ := List.mem_map.mp hx
+  rw [List.mem_range] at hi
+  omega
+
+/-- Cake's `genlist_not_in` (`crep_inlineProofScript.sml:636`): values at or
+    below `a` do not occur in `GENLIST (λx. a + SUC x) n`. -/
+theorem genlist_not_in (n a v : Nat) (h : v ≤ a) :
+    v ∉ (List.range n).map (fun x => a + (x + 1)) := by
+  intro hmem
+  have := genlist_less_than n a v hmem
+  omega
+
+/-- Cake's `genlist_all_distinct` (`crep_inlineProofScript.sml:643`):
+    `GENLIST (λx. a + SUC x) n` has no duplicates. -/
+theorem genlist_all_distinct (n a : Nat) :
+    ((List.range n).map (fun x => a + (x + 1))).Nodup :=
+  List.Pairwise.map (fun x => a + (x + 1))
+    (fun _left _right hne heq =>
+      hne (Nat.add_right_cancel (Nat.add_left_cancel heq)))
+    List.nodup_range
+
 /-- Cake's `map_pick_up_first` (`pan_globalsProofScript.sml:2995`): projecting
     the first component of a quadruple map recovers the mapped first
     components. -/
@@ -864,6 +937,140 @@ theorem quadProjection_comp {α β γ δ ε ζ η θ ι κ ℓ μ : Type}
   funext p
   obtain ⟨x, y, z, t⟩ := p
   rfl
+
+/-- Cake's `MAP2` (`pan_commonScript.sml`): pointwise combination of two lists,
+    truncating at the shorter one. -/
+def panMap2 (f : α → β → γ) : List α → List β → List γ
+  | x :: xs, y :: ys => f x y :: panMap2 f xs ys
+  | _, _ => []
+
+/-- Cake's `MAP3` (`pan_commonScript.sml`): pointwise combination of three
+    lists, truncating at the shortest one. -/
+def panMap3 (f : α → β → γ → δ) : List α → List β → List γ → List δ
+  | x :: xs, y :: ys, z :: zs => f x y z :: panMap3 f xs ys zs
+  | _, _, _ => []
+
+/-- Counterpart of Cake's `MAP3_MAP2`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:827`): a three-way
+    pointwise map is a two-way pointwise map over the zipped first two lists
+    when the lengths agree. -/
+theorem panMap3_eq_map2_zip (f : α → β → γ → δ) (l1 : List α) (l2 : List β)
+    (l3 : List γ) (h1 : l1.length = l3.length) (h2 : l2.length = l3.length) :
+    panMap3 f l1 l2 l3 =
+      panMap2 (fun (pair : α × β) (z : γ) => f pair.1 pair.2 z)
+        (l1.zip l2) l3 := by
+  induction l3 generalizing l1 l2 with
+  | nil =>
+      obtain rfl := List.eq_nil_of_length_eq_zero h1
+      obtain rfl := List.eq_nil_of_length_eq_zero h2
+      rfl
+  | cons z zs ih =>
+      rw [List.length_cons] at h1 h2
+      cases l1 with
+      | nil => simp at h1
+      | cons x xs =>
+          cases l2 with
+          | nil => simp at h2
+          | cons y ys =>
+              have h1' : xs.length = zs.length := by simp at h1; omega
+              have h2' : ys.length = zs.length := by simp at h2; omega
+              simp only [panMap3, panMap2, List.zip_cons_cons, ih xs ys h1' h2']
+
+/-- Counterpart of Cake's `map_map2_fst`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:3799`): when two lists
+    have equal length, projecting the first component of a pointwise map that
+    keeps its first argument recovers the first list.  CakeML states this for
+    the concrete `MAP2` used by `make_funcs`; here the second component is
+    arbitrary, since only `FST` is observed. -/
+theorem panMap2_fst_eq {α β γ : Type} (f : α → β → γ) :
+    ∀ (xs : List α) (ys : List β), xs.length = ys.length →
+      (panMap2 (fun x y => (x, f x y)) xs ys).map Prod.fst = xs := by
+  intro xs
+  induction xs with
+  | nil => intro ys _; rfl
+  | cons x xs ih =>
+      intro ys hlen
+      cases ys with
+      | nil => simp at hlen
+      | cons y ys =>
+          simp only [List.length_cons] at hlen
+          simp only [panMap2, List.map_cons]
+          rw [ih ys (by omega)]
+
+/-- Counterpart of Cake's `mem_lookup_fromalist_some`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:3813`): looking up a
+    key in an association list with distinct keys returns the value paired with
+    it.  CakeML states this for `lookup`/`fromAList`; the list-backed Flapjack
+    analogue is `List.lookup` on the association list itself. -/
+theorem list_lookup_of_mem_of_nodup [BEq α] [LawfulBEq α] {entries : List (α × β)}
+    {key : α} {value : β}
+    (hnodup : (entries.map Prod.fst).Nodup) (hmem : (key, value) ∈ entries) :
+    entries.lookup key = some value := by
+  induction entries with
+  | nil => simp at hmem
+  | cons entry entries ih =>
+      obtain ⟨headKey, headValue⟩ := entry
+      simp only [List.map_cons, List.nodup_cons] at hnodup
+      obtain ⟨hhead, htail⟩ := hnodup
+      simp only [List.mem_cons, Prod.mk.injEq] at hmem
+      rw [List.lookup_cons]
+      split
+      · rename_i hk
+        rcases hmem with hpair | hmem
+        · obtain ⟨_, hvalue⟩ := hpair
+          subst hvalue
+          rfl
+        · exfalso
+          have hkey : key = headKey := beq_iff_eq.mp hk
+          have hmemKey : key ∈ entries.map Prod.fst :=
+            List.mem_map.mpr ⟨(key, value), hmem, rfl⟩
+          rw [← hkey] at hhead
+          exact hhead hmemKey
+      · rename_i hk
+        rcases hmem with hpair | hmem
+        · exfalso
+          obtain ⟨hkey, _⟩ := hpair
+          have htrue : (key == headKey) = true := by rw [hkey]; exact beq_iff_eq.mpr rfl
+          rw [htrue] at hk
+          exact Bool.false_ne_true hk.symm
+        · exact ih htail hmem
+
+/-- Counterpart of Cake's `MEM_MAP2_IMP`
+    (`cakeml/pancake/proofs/crep_inlineProofScript.sml:2233`): every element of
+    a pointwise map comes from elements of both input lists. -/
+theorem panMap2_mem {α β γ : Type} {f : α → β → γ} {l1 : List α} {l2 : List β}
+    {x : γ} (hmem : x ∈ panMap2 f l1 l2) :
+    ∃ y1 y2, x = f y1 y2 ∧ y1 ∈ l1 ∧ y2 ∈ l2 := by
+  induction l1 generalizing l2 with
+  | nil => simp [panMap2] at hmem
+  | cons a as ih =>
+      cases l2 with
+      | nil => simp [panMap2] at hmem
+      | cons b bs =>
+          simp only [panMap2, List.mem_cons] at hmem
+          rcases hmem with heq | hmem
+          · exact ⟨a, b, heq, by simp, by simp⟩
+          · obtain ⟨y1, y2, heq, h1, h2⟩ := ih hmem
+            exact ⟨y1, y2, heq, by simp [h1], by simp [h2]⟩
+
+/-- Cake's `map_map2_fst_lemma`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:118`): the first
+    components of a pointwise pairing are the prefix of the first list cut at
+    the shorter length. -/
+theorem zipWith_pair_fst {α β : Type} (xs : List α) (ys : List β) :
+    (List.zipWith (fun x y => (x, y)) xs ys).map Prod.fst =
+      xs.take (min xs.length ys.length) := by
+  induction xs generalizing ys with
+  | nil => simp
+  | cons x xs ih =>
+      cases ys with
+      | nil => simp
+      | cons y ys =>
+          simp only [List.zipWith_cons_cons, List.map_cons, List.length_cons]
+          rw [ih]
+          have hk : min (xs.length + 1) (ys.length + 1) =
+              min xs.length ys.length + 1 := by omega
+          rw [hk, List.take_succ_cons]
 
 /-! Counterpart of Cake's `all_distinct_with_shape_distinct`
     (`cakeml/pancake/semantics/panPropsScript.sml:357`): two distinct members of

@@ -157,6 +157,19 @@ def coalesceCostHolGuard : Bool :=
 
 #guard coalesceCostHolGuard
 
+/- The production batch path must agree with the reference per-move lookup;
+   the key-set construction is an optimization only, not a new cost rule. -/
+def coalesceBatchFastGuard : Bool :=
+  let moves : List WordCanonicalMove :=
+    [{ count := 1, maxPriority := 0, left := 7, right := 2 },
+     { count := 3, maxPriority := 2, left := 1, right := 12 },
+     { count := 2, maxPriority := 1, left := 4, right := 4 }]
+  let spillCosts : NatInfoMap Nat := [(1, 7), (4, 9), (12, 11), (1, 13)]
+  wordCoalesceMoveCostsFast spillCosts moves ==
+    moves.map (wordCoalesceMoveCost spillCosts)
+
+#guard coalesceBatchFastGuard
+
 /- Direct Cake `heu_max_all`/`heu_merge_call` oracle case:
    max_all emits [7,1,4,12,6] for the corresponding Patricia maps. -/
 def heuristicSourceMergeGuard : Bool :=

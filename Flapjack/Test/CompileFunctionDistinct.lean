@@ -34,6 +34,15 @@ theorem distinctFunctionDeclarations_compiled_names_nodup :
   exact compileToCrepe_names_nodup _ _
     distinctFunctionDeclarations_names_nodup
 
+/-! Source-facing counterpart of Cake's
+    `first_compile_to_crep_all_distinct`: the hypothesis is expressed on the
+    filtered function projection, not on the declaration-list helper. -/
+theorem distinctFunctionDeclarations_compiled_names_nodup_from_source :
+    (compileToCrep distinctCompileContext distinctFunctionDeclarations).map
+      CompiledFunction.name |>.Nodup := by
+  apply compileToCrep_names_nodup_of_functionDeclarations
+  simp [distinctFunctionDeclarations, functionDeclarations]
+
 theorem distinctFunctionDeclarations_compiled_params_nodup :
     ∀ function ∈ compileToCrep distinctCompileContext distinctFunctionDeclarations,
       function.params.Nodup := by

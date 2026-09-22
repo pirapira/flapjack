@@ -54,8 +54,33 @@ def storeOffsetGuard : Bool :=
 
 #guard storeOffsetGuard
 
+/- These byte-memory rows are the exact `word_alloc_mem8_probe.out` results
+   for Cake's `ssa_cc_trans_inst` equations at word_allocScript.sml:223-230. -/
+def load8Program : WordProg Nat :=
+  .inst (.mem .load8 1 2)
+
+def load8Guard : Bool :=
+  match (wordFullSsaCcTrans 0 load8Program).2.2 with
+  | .seq (.move 1 [])
+      (.inst (.mem .load8 5 0)) => true
+  | _ => false
+
+#guard load8Guard
+
+def store8Program : WordProg Nat :=
+  .inst (.mem .store8 1 2)
+
+def store8Guard : Bool :=
+  match (wordFullSsaCcTrans 0 store8Program).2.2 with
+  | .seq (.move 1 [])
+      (.inst (.mem .store8 0 0)) => true
+  | _ => false
+
+#guard store8Guard
+
 def parityGuard : Bool :=
-  binOpRegisterGuard && binOpImmediateGuard && loadOffsetGuard && storeOffsetGuard
+  binOpRegisterGuard && binOpImmediateGuard && loadOffsetGuard && storeOffsetGuard &&
+    load8Guard && store8Guard
 
 #guard parityGuard
 #eval parityGuard
@@ -69,7 +94,11 @@ def runChecks : IO Bool := do
       ("ssa_cc_trans Load preserves Cake offset and fresh destination",
         loadOffsetGuard),
       ("ssa_cc_trans Store preserves Cake offset and source mapping",
-        storeOffsetGuard) ]
+        storeOffsetGuard),
+      ("ssa_cc_trans Load8 preserves Cake byte-load mapping",
+        load8Guard),
+      ("ssa_cc_trans Store8 preserves Cake byte-store mapping",
+        store8Guard) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

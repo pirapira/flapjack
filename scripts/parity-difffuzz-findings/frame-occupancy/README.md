@@ -10,6 +10,7 @@ Cake bitmap .quad words are 2^fprime per call continuation (word 0 = 4 header).
   p5  [4,4]          2-field struct, one read
   p6  [4,4,4]        struct from call, one read; shared ra slot
   p7  [4,4,4]        scalar from call live across second call
+  p8  [4,32,32,32]   two 2-field structs and all fields live across a later call
   p9  [4,8,8]        2-field struct, two distinct reads (separate ra slots)
   p10 [4,16,16]      3-field struct, three reads
   p11 [4,4,4]        2-field struct, same field twice (CSE)

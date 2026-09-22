@@ -96,6 +96,15 @@ example :
         (.return 0 [0, 2] : WordProg Nat) := by
   exact wordFullSsaCcTrans_eq_named_entry 2 _
 
+/- Cake's `limit_var` is taken from the source body before the ABI entry move.
+   This higher-numbered body pins the production boundary at the original
+   `limit_var = 29`, rather than deriving the fresh stream from the formals. -/
+def highLimitGuard : Bool :=
+  wordSsaLimitVar [0, 2]
+      (.seq (.assign 0 (.const 0)) (.assign 26 (.var 0)) : WordProg Nat) == 29
+
+#guard highLimitGuard
+
 
 /- The FFI SSA boundary refreshes the live cut set around the ABI call and
    restores it afterwards, matching CakeML's `ssa_cc_trans` shape. -/

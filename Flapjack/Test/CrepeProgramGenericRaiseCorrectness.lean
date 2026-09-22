@@ -1,5 +1,6 @@
 import Flapjack.CrepeProgramGenericRaiseCorrectness
 import Flapjack.PanToCrepCorrectnessBridge
+import Flapjack.PanCrepSemanticAgreement
 import Flapjack.PanStructs
 
 /-! Concrete non-word/non-two-word evidence for the generic structured Raise
@@ -26,6 +27,32 @@ def sourceExpression : Exp Nat :=
 def pcGlobalsLookup (_state : CrepState Nat) (value : PanValue Nat) :
     Option (List Nat) :=
   some (panValueFlatWords value)
+
+#check @Flapjack.panValuePcClockedRaisedResultRel_of_hraise_data
+
+example
+    {σ : Type} (panHooks : PanSemanticsHooks Nat σ)
+    (crepHooks : CrepSemanticsHooks Nat)
+    (hcorrect : PanValuePcCompileCorrectWithContextCode
+      (fun _ _ _ => none) (fun _ _ _ => none)
+      (fun _ _ _ => True) (fun _ _ _ => True)
+      (fun _ => some 9) pcGlobalsLookup (.raise "E" sourceExpression))
+    (evidence : PanValuePcSemanticClockEvidence [] context
+      (.raise "E" sourceExpression) 1
+      (fun _ _ _ => none) (fun _ _ _ => none)
+      (fun _ _ _ => True) (fun _ _ _ => True)
+      (fun _ _ code => code = 9) (fun _ => some 9) pcGlobalsLookup
+      panHooks crepHooks)
+    (hffiOutcome : ∀ event, panHooks.ffiOutcome event = event.outcome)
+    (sourceOutcome : PanSemanticOutcome) (targetOutcome : CrepSemanticOutcome)
+    (hsourceOutcome : panResultOutcome panHooks
+      (some (evidence.outcome, evidence.returnedClock)) = some sourceOutcome)
+    (htargetOutcome : crepResultOutcome
+      (crepControlResultToSemantic (some evidence.result)) = some targetOutcome) :
+    panCrepSemanticOutcomeRel sourceOutcome targetOutcome := by
+  exact PanValuePcSemanticClockEvidence.semanticOutcomeRel_withContextCode
+    hcorrect 1 evidence hffiOutcome sourceOutcome targetOutcome
+    hsourceOutcome htargetOutcome
 
 example
     (hevidence : ∀ (context : CompileContext Nat) (structs : StructContext)
@@ -3204,6 +3231,7 @@ example
 
 def runChecks : IO Bool := do
   IO.println "PASS generic three-word Raise evaluator relation"
+  IO.println "PASS context-coded clock evidence projects to semantic outcome relation"
   IO.println "PASS generic raised semantic/global lookup lift"
   IO.println "PASS direct arbitrary context-coded pc_compile_correct evaluator instantiation"
   IO.println "PASS direct arbitrary context-coded clocked evaluator instantiation"

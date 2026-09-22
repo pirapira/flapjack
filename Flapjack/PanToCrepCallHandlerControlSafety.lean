@@ -1,5 +1,6 @@
 import Flapjack.PanToCrepCorrectnessBoundary
 import Flapjack.PanToCrepCallControlSafety
+import Flapjack.PanSimp
 
 /-!
 Control-safety for the source-to-Crep `call` constructor when the call
@@ -581,6 +582,43 @@ theorem PanValueProgNotBrokeContinued_call_of_no_handler
       exact evalPanValueCallWithPrimitiveCallsAndFfi_no_handler_not_broke_continued
         primitive handler structs functions baseAddress topAddress bytesInWord
         fuel locals globals memory info function arguments result hnoHandler hcall
+
+/-- A handler-carrying call is `PanValueProgNotBrokeContinued` whenever the
+    handler program is: the callee's own loop control is dropped by the call,
+    and the only route to `broke`/`continued` is the handler body. This is the
+    program-level counterpart of `panValueCrepProgramStateControlSafe_call_handler`. -/
+theorem PanValueProgNotBrokeContinued_call_handler
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (info : Option (Option (VarKind × VarName) ×
+      Option (ExceptionId × VarName × Prog α)))
+    (function : FunName) (arguments : List (Exp α))
+    (hhandlerNotBroke : ∀ (handlerProgram : Prog α),
+      (∃ (destination : Option (VarKind × VarName)) (caught : ExceptionId)
+        (handlerVariable : VarName),
+        info = some (destination, some (caught, handlerVariable, handlerProgram))) →
+      PanValueProgNotBrokeContinued primitive handler structs functions
+        baseAddress topAddress bytesInWord handlerProgram) :
+    PanValueProgNotBrokeContinued primitive handler structs functions
+      baseAddress topAddress bytesInWord (.call info function arguments) := by
+  intro fuel locals globals memory result h
+  cases fuel with
+  | zero => simp [evalPanValueProgWithPrimitiveCallsAndFfi] at h
+  | succ fuel =>
+      have hcall :
+          evalPanValueCallWithPrimitiveCallsAndFfi primitive handler structs
+            functions baseAddress topAddress bytesInWord fuel locals globals
+            memory info function arguments = some result := by
+        simpa [evalPanValueProgWithPrimitiveCallsAndFfi] using h
+      exact evalPanValueCallWithPrimitiveCallsAndFfi_handler_not_broke_continued
+        primitive handler structs functions baseAddress topAddress bytesInWord
+        fuel locals globals memory info function arguments result hhandlerNotBroke hcall
 
 theorem PanValueProgNotBrokeContinued_dec
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
@@ -1165,5 +1203,132 @@ theorem not_panValueProgNotBrokeContinued_break
     (.broke (fun _ => none) (fun _ => none) (fun _ => none))
     (by simp [evalPanValueProgWithPrimitiveCallsAndFfi])
   exact hres.1 _ _ _ rfl
+
+/-! The declaration-call form cannot expose loop control when its body cannot:
+    the call itself only yields `returned` (body inlined) or `raised`, and the
+    `returned` branch is closed by transporting the body's safety through the
+    local restoration. -/
+theorem PanValueProgNotBrokeContinued_decCall
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (name : VarName) (shape : Shape) (function : FunName)
+    (arguments : List (Exp α)) (body : Prog α)
+    (hbody : PanValueProgNotBrokeContinued primitive handler structs functions
+      baseAddress topAddress bytesInWord body) :
+    PanValueProgNotBrokeContinued primitive handler structs functions
+      baseAddress topAddress bytesInWord
+      (.decCall name shape function arguments body) := by
+  intro fuel locals globals memory result h
+  cases fuel with
+  | zero => simp [evalPanValueProgWithPrimitiveCallsAndFfi] at h
+  | succ fuel =>
+      cases hcall : evalPanValueCallWithPrimitiveCallsAndFfi primitive handler
+          structs functions baseAddress topAddress bytesInWord fuel locals globals
+          memory none function arguments with
+      | none => simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcall] at h
+      | some callResult =>
+          cases callResult with
+          | normal callLocals callGlobals callMemory =>
+              simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcall] at h
+          | broke callLocals callGlobals callMemory =>
+              simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcall] at h
+          | continued callLocals callGlobals callMemory =>
+              simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcall] at h
+          | raised callLocals callGlobals callMemory exception value =>
+              have hres : result =
+                  PanValueControlResult.raised (fun _ => none) callGlobals
+                    callMemory exception value := by
+                simpa [evalPanValueProgWithPrimitiveCallsAndFfi, hcall] using h.symm
+              rw [hres]
+              exact ⟨fun l g m => by simp, fun l g m => by simp⟩
+          | returned callLocals callGlobals callMemory values =>
+              cases values with
+              | nil =>
+                  simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcall] at h
+              | cons value rest =>
+                  cases rest with
+                  | cons v vs =>
+                      simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcall] at h
+                  | nil =>
+                      by_cases hshape : panShapeMatches (panValueShape structs value)
+                          shape = true
+                      · cases hbodyEval : evalPanValueProgWithPrimitiveCallsAndFfi
+                            primitive handler structs functions baseAddress topAddress
+                            bytesInWord fuel (updatePanValueMap locals name value)
+                            callGlobals callMemory body with
+                        | none =>
+                            simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcall,
+                              hshape, hbodyEval] at h
+                        | some bodyResult =>
+                            have hsafe := hbody fuel
+                              (updatePanValueMap locals name value) callGlobals
+                              callMemory bodyResult hbodyEval
+                            simp only [evalPanValueProgWithPrimitiveCallsAndFfi, hcall,
+                              hshape, if_true, hbodyEval, Option.bind_eq_bind,
+                              Option.bind_some, Option.pure_def,
+                              Option.some.injEq] at h
+                            subst h
+                            exact
+                              ⟨restorePanValueControlLocal_not_broke name
+                                  (locals name) bodyResult hsafe.1,
+                                restorePanValueControlLocal_not_continued name
+                                  (locals name) bodyResult hsafe.2⟩
+                      · simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcall,
+                          hshape] at h
+
+/-! Source handler safety is preserved by the two pure shape rewrites of
+    `pan_simp`: inserting a `smartSeq` around a program, and collapsing the
+    `call`/`return` tail shape into a destination-free `call`. -/
+theorem PanValueProgNotBrokeContinued_smartSeq
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (pre program : Prog α)
+    (hpre : PanValueProgNotBrokeContinued primitive handler structs functions
+      baseAddress topAddress bytesInWord pre)
+    (hprogram : PanValueProgNotBrokeContinued primitive handler structs functions
+      baseAddress topAddress bytesInWord program) :
+    PanValueProgNotBrokeContinued primitive handler structs functions
+      baseAddress topAddress bytesInWord (smartSeq pre program) := by
+  unfold smartSeq
+  split
+  · exact hprogram
+  · exact PanValueProgNotBrokeContinued_seq primitive handler structs functions
+      baseAddress topAddress bytesInWord pre program hpre hprogram
+
+theorem PanValueProgNotBrokeContinued_seqCallRet
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (program : Prog α)
+    (h : PanValueProgNotBrokeContinued primitive handler structs functions
+      baseAddress topAddress bytesInWord program) :
+    PanValueProgNotBrokeContinued primitive handler structs functions
+      baseAddress topAddress bytesInWord (seqCallRet program) := by
+  unfold seqCallRet
+  split
+  · rename_i returnName function arguments returnedName
+    split
+    · exact PanValueProgNotBrokeContinued_call_of_no_handler primitive handler
+        structs functions baseAddress topAddress bytesInWord none function
+        arguments (by intro destination caughtHandler hinfo; simp at hinfo)
+    · exact h
+  · exact h
 
 end Flapjack

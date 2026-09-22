@@ -519,6 +519,30 @@ theorem storeGlob_load_alias
     evalCrepFullExpStateFull, evalCrepTypedLoad, storeCrepTypedGlobal,
     storeCrepGlobal]
 
+/-! The same StoreGlob/LoadGlob boundary for an arbitrary value expression.
+    The premise is exactly the source evaluator result; no extra assumption is
+    made about the expression's shape or about the target-width address key. -/
+theorem storeGlob_load_alias_of_eval
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [PanShiftWidth α] [ArithmeticShiftRight α]
+    [RotateRightOp α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeTypedState α σ)
+    (key : α → CrepGlobalAddress) (baseAddress topAddress : α)
+    (address : α) (expression : CrepExp α) (value loadAddress : α)
+    (heval : state.evalExpFull key baseAddress topAddress expression = some value) :
+    (state.storeGlob key baseAddress topAddress address expression).bind
+        (fun next => next.evalExpFull key baseAddress topAddress
+          (.loadGlob loadAddress)) =
+      evalCrepTypedLoad key
+        (storeCrepTypedGlobal key state.toGlobalState address value) loadAddress := by
+  simp only [storeGlob, heval]
+  simp [store, evalExpFull, evalCrepTypedExpFull,
+    CrepRuntimeTypedState.toGlobalState, CrepGlobalState.toCompact,
+    evalCrepFullExpStateFull, evalCrepTypedLoad, storeCrepTypedGlobal,
+    storeCrepGlobal]
+
 theorem load_after_store_toRuntime [BEq α] [OfNat α 0] [OfNat α 1]
     [Add α] [Mul α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]

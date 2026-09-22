@@ -85,4 +85,25 @@ def compileTopParityGuard : Bool :=
 #eval compileTopParityGuard
 #guard compileTopParityGuard
 
+/-! Cake's `function_names_structs_compile_top`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:313`). -/
+
+def namesFunction : FunDecl Nat :=
+  { name := "f", inline := false, exported := false, params := [],
+    body := (.skip : Prog Nat), returnShape := .one }
+
+def namesDecls : List (Decl Nat) :=
+  [.function namesFunction, .decl .one "g" (.const 1), .name "S" []]
+
+theorem functions_names_structCompileTop_fixture :
+    (functions (structCompileTop namesDecls)).map Prod.fst =
+      (functions namesDecls).map Prod.fst :=
+  functions_names_structCompileTop namesDecls
+
+def structNamesGuard : Bool :=
+  (functions (structCompileTop namesDecls)).map Prod.fst == ["f"]
+
+#eval structNamesGuard
+#guard structNamesGuard
+
 end Flapjack.Test.PanStructsCompileShapeParity

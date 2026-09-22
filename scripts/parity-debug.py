@@ -28,7 +28,8 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 DIFFUZZ = ROOT / "scripts" / "parity-difffuzz.py"
 HOL_PROBE = ROOT / "scripts" / "hol-probes" / "pancake-stage-probeScript.sml"
-DEFAULT_CAKE = Path(os.environ.get("CAKE", str(ROOT / "cakeml/developers/bin/cake")))
+DEFAULT_CAKE = Path(os.environ.get(
+    "CAKE", os.path.expanduser("~/pancake-lean/cakeml/developers/bin/cake")))
 DEFAULT_FLAPJACK = Path(os.environ.get(
     "FLAPJACK", str(ROOT / ".lake/build/bin/flapjack-compile")))
 DEFAULT_DEBUG = Path(os.environ.get(
@@ -146,8 +147,14 @@ def main(argv=None):
         write_bytes(out / "flapjack-stages.err", debug["stderr"])
         hol_env = os.environ.copy()
         hol_env["PANCAKE_SOURCE"] = str(stage_source)
+        # Cake's generated .ui files resolve their theory objects through
+        # CAKEMLDIR. Derive it from the selected canonical Cake executable
+        # unless the caller supplied an explicit tree.
+        cake_root = args.cake.resolve().parents[2]
+        if "CAKEMLDIR" not in hol_env:
+            hol_env["CAKEMLDIR"] = str(cake_root)
         hol = run([args.hol, "run", str(HOL_PROBE)], env=hol_env,
-                  cwd=ROOT / "cakeml" / "pancake",
+                  cwd=cake_root / "pancake",
                   timeout=args.timeout)
         write_bytes(out / "cake-stages.txt", hol["stdout"])
         write_bytes(out / "cake-stages.err", hol["stderr"])

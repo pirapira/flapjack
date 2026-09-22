@@ -127,4 +127,46 @@ theorem callFfi_oracle_final (state : FfiState σ)
           outcome := outcome } := by
   simp [callFfi, hname, horacle]
 
+/-! A single successful FFI call cannot discard an earlier observable trace.
+    This is the local transition lemma used when lifting Cake's
+    `evaluate_io_events_mono` to the clocked Pancake evaluator. -/
+theorem callFfi_return_ioEvents_prefix (state : FfiState σ)
+    (name : FfiName) (configuration bytes : List UInt8)
+    (nextState : FfiState σ) (nextBytes : List UInt8)
+    (hresult : callFfi state name configuration bytes =
+      .returned nextState nextBytes) :
+    state.ioEvents <+: nextState.ioEvents := by
+  by_cases hname : name = .extCall ""
+  · subst name
+    simp [callFfi] at hresult
+    simp_all
+  · rw [callFfi] at hresult
+    simp only [hname, ↓reduceIte] at hresult
+    split at hresult
+    · split at hresult
+      · cases hresult
+        exact List.prefix_append _ _
+      · cases hresult
+    · cases hresult
+
+/-! The same monotonicity statement in the result's sum form.  The `final`
+    branch keeps the current FFI state, while a successful return uses the
+    append performed by `callFfi_return_ioEvents_prefix`.  This form is useful
+    at the Pancake shared-memory leaves, where the evaluator exposes either
+    result constructor directly. -/
+theorem callFfi_result_ioEvents_prefix (state : FfiState σ)
+    (name : FfiName) (configuration bytes : List UInt8)
+    (result : FfiResult σ)
+    (hresult : callFfi state name configuration bytes = result) :
+    state.ioEvents <+:
+      match result with
+      | .returned nextFfi _ => nextFfi.ioEvents
+      | .final _ => state.ioEvents := by
+  cases result with
+  | returned nextFfi nextBytes =>
+      exact callFfi_return_ioEvents_prefix state name configuration bytes
+        nextFfi nextBytes hresult
+  | final event =>
+      exact List.prefix_refl _
+
 end Flapjack

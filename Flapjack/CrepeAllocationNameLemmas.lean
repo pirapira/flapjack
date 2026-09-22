@@ -103,4 +103,27 @@ theorem freshNames_not_mem_of_expVars_bounded
   have hvariableBound := hbound expression hexpression temporary hvariable
   omega
 
+/-! Cake's fresh-slot side condition is usually discharged together with
+    `MEM_compile_exp_vmax`: source locals occupy only slots at or below the
+    context maximum, while `freshNames context count 1` starts above it.  Keep
+    that small composition available to the correctness bridge instead of
+    repeating the list-membership argument at every expression/program case.
+    This is the state-local analogue of the `fresh_names` obligations in
+    `pan_to_crepProofScript.sml`. -/
+theorem freshNames_state_locals_none_of_bounded
+    (context : CompileContext α) (state : CrepState α) (count : Nat)
+    (hbound : ∀ name, state.locals name ≠ none → name ≤ context.maxVar) :
+    ∀ name ∈ freshNames context count 1, state.locals name = none := by
+  intro name hname
+  by_cases hnone : state.locals name = none
+  · exact hnone
+  · have hnot := freshNames_not_mem_of_bounded context count 1 [name]
+      (by omega)
+      (by
+        intro slot hslot
+        simp only [List.mem_singleton] at hslot
+        subst slot
+        exact hbound name hnone)
+    exact False.elim ((hnot name hname) (by simp))
+
 end Flapjack

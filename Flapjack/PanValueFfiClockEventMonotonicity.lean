@@ -2748,4 +2748,39 @@ theorem evalPanValueFfiProgSteps_leaf_ioEvents_prefix
         memoryAccess contracts memoryHandler clock hstep
 
 
+
+set_option linter.unusedSimpArgs false in
+theorem evalPanValueFfiClockProg_leaf_of_handlerPreserves
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (hstateful : panValueFfiStatefulHandlerPreservesIoEvents handler)
+    (hmemory : ∀ (memoryHandler : PanValueMemoryFfiHandler α σ),
+      panValueFfiMemoryHandlerPreservesIoEvents memoryHandler)
+    (fuel : Nat) (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (program : Prog α) (hleaf : PanValueFfiLeafProg program)
+    (result : PanValueFfiControlResult α σ) (steps : Nat)
+    (memoryAccess : Option (PanValueMemoryAccess α)) (contracts : Option PanValueCallContracts)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ))
+    (hstep : evalPanValueFfiProgSteps context primitive handler structs functions
+      baseAddress topAddress bytesInWord 1 locals globals memory ffi program
+      (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler) =
+      some (result, steps)) :
+    evalPanValueFfiClockProg context primitive handler structs functions baseAddress topAddress
+        bytesInWord (fuel + 1) locals globals memory ffi clock program memoryAccess contracts
+        memoryHandler = some (.control result, clock) ∧
+      ffi.ioEvents <+: (panResultFfi ((.control result : PanValueFfiClockOutcome α σ), clock)).ioEvents :=
+  ⟨evalPanValueFfiClockProg_leaf_some context primitive handler structs functions baseAddress
+      topAddress bytesInWord fuel locals globals memory ffi clock program memoryAccess contracts
+      memoryHandler hleaf result steps hstep,
+   evalPanValueFfiProgSteps_leaf_ioEvents_prefix context primitive handler structs functions
+      baseAddress topAddress bytesInWord 0 locals globals memory ffi program hleaf result steps
+      memoryAccess contracts memoryHandler clock hstateful hmemory hstep⟩
+
+
 end Flapjack

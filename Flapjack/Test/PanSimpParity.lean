@@ -2769,3 +2769,7 @@ remaining sub-case of the generic `hleaf` obligation. -/
 /-! Fully-discharged leaf event-prefix: all 13 `PanValueFfiLeafProg` constructors,
 including `extCall`, under the explicit handler-preservation premises. -/
 #check @Flapjack.evalPanValueFfiProgSteps_leaf_ioEvents_prefix
+
+/-! Concrete composed leaf bridge: the clocked leaf run and its event prefix,
+with the handler-preservation premises discharged. -/
+#check @Flapjack.evalPanValueFfiClockProg_leaf_of_handlerPreserves

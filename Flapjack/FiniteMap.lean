@@ -532,4 +532,37 @@ theorem map_FLOOKUP_foldl_resVar_zip [BEq α] [LawfulBEq α]
         (fun hy => hdisj y hy (by simp))
     · exact ih (fun v hv hmem => hdisj v hv (by simp [hmem]))
 
+theorem FLOOKUP_FUPDATE_LIST_zip_not_mem [BEq α] [LawfulBEq α]
+    (xs : List α) (ys : List β) (f : FiniteMap α β) (n : α)
+    (hlen : xs.length = ys.length) (h : n ∉ xs) :
+    FLOOKUP (FUPDATE_LIST f (xs.zip ys)) n = FLOOKUP f n := by
+  apply FLOOKUP_FUPDATE_LIST_not_mem
+  rw [List.map_fst_zip (by omega)]
+  exact h
+
+theorem map_FLOOKUP_FUPDATE_LIST_zip_not_mem [BEq α] [LawfulBEq α]
+    (xs : List α) (ys : List α) (zs : List β) (f : FiniteMap α β)
+    (hdisj : ListDisjoint xs ys) (hlen : xs.length = zs.length) :
+    ys.map (fun y => FLOOKUP (FUPDATE_LIST f (xs.zip zs)) y) =
+      ys.map (fun y => FLOOKUP f y) := by
+  revert hdisj
+  induction ys with
+  | nil => intro _; rfl
+  | cons y rest ih =>
+    intro hdisj
+    simp only [List.map_cons, List.cons.injEq]
+    refine ⟨?_, ?_⟩
+    · exact FLOOKUP_FUPDATE_LIST_zip_not_mem xs zs f y hlen
+        (fun hy => hdisj y hy (by simp))
+    · exact ih (fun v hv hmem => hdisj v hv (by simp [hmem]))
+
+theorem map_FLOOKUP_foldl_resVar_zip_fupdate [BEq α] [LawfulBEq α]
+    (xs : List α) (ys : List α) (as : List β) (cs : List (Option β))
+    (fm : FiniteMap α β) (hdisj : ListDisjoint xs ys)
+    (hlenAs : xs.length = as.length) (hlenCs : xs.length = cs.length) :
+    ys.map (fun y => FLOOKUP ((xs.zip cs).foldl resVar (FUPDATE_LIST fm (xs.zip as))) y) =
+      ys.map (fun y => FLOOKUP fm y) := by
+  rw [map_FLOOKUP_foldl_resVar_zip xs ys cs (FUPDATE_LIST fm (xs.zip as)) hdisj hlenCs]
+  exact map_FLOOKUP_FUPDATE_LIST_zip_not_mem xs ys as fm hdisj hlenAs
+
 end Flapjack

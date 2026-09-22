@@ -172,4 +172,21 @@ theorem map_FLOOKUP_foldl_resVar_zip_fixture :
 #check @FLOOKUP_foldl_resVar_zip_not_mem
 #check @map_FLOOKUP_foldl_resVar_zip
 
+theorem map_FLOOKUP_foldl_resVar_zip_fupdate_fixture :
+    ([3, 4] : List Nat).map (fun y =>
+        FLOOKUP (([2, 5] : List Nat).zip ([some 20, some 50] : List (Option Nat)) |>.foldl resVar
+          (FUPDATE_LIST (FUPDATE_LIST FEMPTY [(3, 30), (4, 40)]) (([2, 5] : List Nat).zip ([20, 50] : List Nat)))) y) =
+      ([3, 4] : List Nat).map (fun y =>
+        FLOOKUP (FUPDATE_LIST FEMPTY [(3, 30), (4, 40)]) y) := by
+  apply map_FLOOKUP_foldl_resVar_zip_fupdate
+  · intro value hvalue hvalue'
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hvalue hvalue'
+    omega
+  · rfl
+  · rfl
+
+#check @FLOOKUP_FUPDATE_LIST_zip_not_mem
+#check @map_FLOOKUP_FUPDATE_LIST_zip_not_mem
+#check @map_FLOOKUP_foldl_resVar_zip_fupdate
+
 end Flapjack.Test.FiniteMapParity

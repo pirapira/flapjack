@@ -15,6 +15,7 @@ open Flapjack
 #check @Flapjack.PanValuePcSemanticClockEvidence.forbiddenResultRel
 #check @Flapjack.PanValuePcSemanticClockEvidence.finalFfiSemanticOutcomeRel
 #check @Flapjack.PanValuePcSemanticClockEvidence.raisedForbiddenResultRel
+#check @Flapjack.PanValuePcSemanticClockEvidence.normalForbiddenResultRel
 #check @Flapjack.PanValuePcSemanticClockEvidence.crossClockRaisedForbiddenResultRel
 #check @Flapjack.PanValuePcSemanticClockEvidence.crossClockReturnedSemanticOutcomeRel
 #check @Flapjack.panCrepSemanticAgreement_of_pcCompileCorrect

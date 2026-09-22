@@ -2708,14 +2708,19 @@ example : PanValueFfiClockNormalAdequateProgFromFloor 3 3 evaluatorContext
 #check @Flapjack.evalPanValueFfiClockProg_while_continued_iteration_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProg_while_timeout_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProg_shift_panResultEvents
+#check @Flapjack.evalPanValueFfiClockProg_shift_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProg_extCall_statefulHandler_normal_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProg_call_returned_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProgram_of_declarations_and_normal_call_result_rel_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProgram_of_related_declarations_and_normal_call_result_rel_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProgram_of_related_declarations_and_normal_call_result_rel_adequacy
 #check @Flapjack.evalPanValueFfiClockProgram_of_related_declarations_and_raised_call_result_rel_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProgram_of_related_declarations_and_raised_call_result_rel_adequacy
 #check @Flapjack.evalPanValueFfiClockProgram_of_related_declarations_and_timeout_call_result_rel_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProgram_of_related_declarations_and_returned_call_result_rel_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProgram_of_related_declarations_and_returned_call_result_rel_adequacy
 #check @Flapjack.evalPanValueFfiClockProgram_of_related_declarations_and_finalFfi_call_result_rel_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProgram_of_related_declarations_and_finalFfi_call_result_rel_adequacy
 
 /-! Typed regression for the normal-call declaration-state branch of Cake's
     `state_rel_imp_semantics_decls_to_crep`: the source declaration evaluator,
@@ -2936,6 +2941,7 @@ theorem related_declarations_finalFfi_call_result_rel_fixture
     memoryAccess memoryHandler targetInitial hinitial hdeclarations hcall hstate
     hevent hprefix
 
+#check @Flapjack.evalPanValueFfiClockProgram_of_related_declarations_and_raised_call_result_rel_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProg_call_raised_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProg_call_timeout_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProg_call_finalFfi_ioEvents_prefix
@@ -3005,6 +3011,8 @@ with the handler-preservation premises discharged. -/
 
 #check @Flapjack.panValueFfiStatefulHandlerPreservesIoEvents_fails
 #check @Flapjack.panValueFfiMemoryHandlerPreservesIoEvents_fails
+#check @Flapjack.panValueFfiStatefulHandlerPreservesIoEvents_ffi
+#check @Flapjack.panValueFfiMemoryHandlerPreservesIoEvents_ffi
 
 /-! Unit-fuel structural step lemmas used by the residual-free event-prefix
 dispatch: conditional/declaration/sequence/call/decCall cannot succeed at unit
@@ -3025,3 +3033,8 @@ be instantiated without a residual premise. -/
 discharges the `hleaf` obligation, leaving only the explicit handler-preservation
 premises. -/
 #check @Flapjack.evalPanValueFfiClockProg_ioEvents_prefix_of_handlerPreserves
+
+/-! Source-entry clock shift: the evaluator's clock-dependent termination fuel is
+    increased together with the clock, while successful non-timeout I/O events
+    remain unchanged. -/
+#check @Flapjack.panSemEvaluate_clock_shift_panResultEvents

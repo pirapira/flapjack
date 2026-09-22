@@ -1,6 +1,8 @@
 import Flapjack.PanValueFfiClockShift
+import Flapjack.PanValueFfiClockFuel
 import Flapjack.PanValueFfiClockProjection
 import Flapjack.PanObservationalSemantics
+import Flapjack.PanValueFfiClockEventMonotonicity
 
 namespace Flapjack
 
@@ -705,6 +707,138 @@ theorem evalPanValueFfiClockProg_shift_panResultEvents
   cases outcome with
   | timeout => rfl
   | control result => cases result <;> rfl
+
+/-! The source-facing evaluator derives its Lean termination fuel from the
+    input clock.  Consequently the fixed-fuel shift theorem above is not by
+    itself enough to transport `panSemEvaluate`: after shifting the clock, the
+    source entry point also asks for a larger fuel bound.  Fuel monotonicity
+    supplies that final step.  This is the direct analogue of Cake's
+    `evaluate_add_clock_eq` event observation for successful, non-timeout
+    source evaluations. -/
+theorem panSemEvaluate_clock_shift_panResultEvents
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (state : PanSemEvaluateState α σ)
+    (program : Prog α) (extra : Nat)
+    (outcome : PanValueFfiClockOutcome α σ) (resultClock : Nat)
+    (hrun : panSemEvaluate context primitive handler state program =
+      some (outcome, resultClock))
+    (hnotimeout : ∀ l g m f, outcome ≠ .timeout l g m f) :
+    panResultEvents (panSemEvaluate context primitive handler state program) =
+      panResultEvents
+        (panSemEvaluate context primitive handler
+          { state with clock := state.clock + extra } program) := by
+  have hrun' : evalPanValueFfiClockProg context primitive handler state.structs
+      state.functions state.baseAddress state.topAddress state.bytesInWord
+      (panSemEvaluateFuel state program) state.locals state.globals state.memory
+      state.ffi state.clock program
+      (memoryAccess := state.memoryAccess) (contracts := state.contracts)
+      (memoryHandler := state.memoryHandler) = some (outcome, resultClock) := by
+    simpa [panSemEvaluate, panSemEvaluateWithFuel] using hrun
+  have hevents := evalPanValueFfiClockProg_shift_panResultEvents
+      context primitive handler state.structs state.functions state.baseAddress
+      state.topAddress state.bytesInWord (panSemEvaluateFuel state program)
+      state.locals state.globals state.memory state.ffi state.clock program
+      state.memoryAccess state.contracts state.memoryHandler outcome resultClock extra
+      hrun' hnotimeout
+  have hshift : evalPanValueFfiClockProg context primitive handler state.structs
+      state.functions state.baseAddress state.topAddress state.bytesInWord
+      (panSemEvaluateFuel state program) state.locals state.globals state.memory
+      state.ffi (state.clock + extra) program
+      (memoryAccess := state.memoryAccess) (contracts := state.contracts)
+      (memoryHandler := state.memoryHandler) = some (outcome, resultClock + extra) := by
+    exact (evalPanValueFfiClock_shift context primitive handler state.structs
+      state.functions state.baseAddress state.topAddress state.bytesInWord).2
+      (panSemEvaluateFuel state program) state.locals state.globals state.memory
+      state.ffi state.clock program state.memoryAccess state.contracts
+      state.memoryHandler outcome resultClock extra hrun' hnotimeout
+  have hfuel :
+      panSemEvaluateFuel state program ≤
+        panSemEvaluateFuel { state with clock := state.clock + extra } program := by
+    simp [panSemEvaluateFuel, Nat.add_assoc, Nat.add_comm]
+  have hshift' : evalPanValueFfiClockProg context primitive handler state.structs
+      state.functions state.baseAddress state.topAddress state.bytesInWord
+      (panSemEvaluateFuel { state with clock := state.clock + extra } program)
+      state.locals state.globals state.memory state.ffi (state.clock + extra) program
+      (memoryAccess := state.memoryAccess) (contracts := state.contracts)
+      (memoryHandler := state.memoryHandler) = some (outcome, resultClock + extra) := by
+    exact evalPanValueFfiClockProg_fuel_mono context primitive handler state.structs
+      state.functions state.baseAddress state.topAddress state.bytesInWord
+      (hfuel := hfuel) state.locals state.globals state.memory state.ffi
+      (state.clock + extra) program state.memoryAccess state.contracts
+      state.memoryHandler hshift
+  have hrun'' :
+      panSemEvaluate context primitive handler
+          { state with clock := state.clock + extra } program =
+        some (outcome, resultClock + extra) := by
+    simpa [panSemEvaluate, panSemEvaluateWithFuel] using hshift'
+  rw [hrun'] at hevents
+  rw [hshift] at hevents
+  calc
+    panResultEvents (panSemEvaluate context primitive handler state program) =
+        panResultEvents (some (outcome, resultClock)) :=
+      congrArg panResultEvents hrun
+    _ = panResultEvents (some (outcome, resultClock + extra)) := hevents
+    _ = panResultEvents
+        (panSemEvaluate context primitive handler
+          { state with clock := state.clock + extra } program) :=
+      (congrArg panResultEvents hrun'').symm
+/-! Cake's `evaluate_add_clock_io_events_mono` has a timeout branch in which
+    the smaller-clock run contributes only its incoming FFI trace.  The
+    larger-clock run may continue, so that branch is a prefix statement rather
+    than the equality proved above.  For a non-timeout run, the full clock
+    shift identifies the larger result and the event prefix is inherited from
+    the smaller run. -/
+theorem evalPanValueFfiClockProg_shift_ioEvents_prefix
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (hstateful : panValueFfiStatefulHandlerPreservesIoEvents handler)
+    (hmemory : ∀ (memoryHandler : PanValueMemoryFfiHandler α σ),
+      panValueFfiMemoryHandlerPreservesIoEvents memoryHandler)
+    (fuel : Nat) (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (program : Prog α) (memoryAccess : Option (PanValueMemoryAccess α))
+    (contracts : Option PanValueCallContracts)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ))
+    (outcome : PanValueFfiClockOutcome α σ) (resultClock extra : Nat)
+    (highOutcome : PanValueFfiClockOutcome α σ) (highClock : Nat)
+    (hrun : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
+      program (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) = some (outcome, resultClock))
+    (hrunHigh : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory ffi
+      (clock + extra) program (memoryAccess := memoryAccess)
+      (contracts := contracts) (memoryHandler := memoryHandler) =
+      some (highOutcome, highClock)) :
+    ffi.ioEvents <+: (panResultFfi (highOutcome, highClock)).ioEvents := by
+  cases outcome with
+  | timeout timeoutLocals timeoutGlobals timeoutMemory timeoutFfi =>
+      exact (evalPanValueFfiClockProg_ioEvents_prefix_of_handlerPreserves
+        context primitive handler structs functions baseAddress topAddress bytesInWord
+        hstateful hmemory fuel locals globals memory ffi (clock + extra) program
+        memoryAccess contracts memoryHandler highOutcome highClock hrunHigh)
+  | control controlResult =>
+      have hlow :=
+        (evalPanValueFfiClockProg_ioEvents_prefix_of_handlerPreserves
+          context primitive handler structs functions baseAddress topAddress bytesInWord
+          hstateful hmemory fuel locals globals memory ffi clock program memoryAccess
+          contracts memoryHandler (.control controlResult) resultClock hrun)
+      have hshift :=
+        (evalPanValueFfiClock_shift context primitive handler structs functions
+          baseAddress topAddress bytesInWord).2 fuel locals globals memory ffi clock
+          program memoryAccess contracts memoryHandler (.control controlResult) resultClock extra hrun
+          (by
+            intro timeoutLocals timeoutGlobals timeoutMemory timeoutFfi htimeout
+            cases htimeout)
+      have hpair : (highOutcome, highClock) =
+          (.control controlResult, resultClock + extra) :=
+        Option.some.inj (hrunHigh.symm.trans hshift)
+      cases hpair
+      cases controlResult <;> exact hlow
 
 /-! The evaluator shift also transports the full source-facing result
     projection.  This is the direct clocked top-level bridge used when a

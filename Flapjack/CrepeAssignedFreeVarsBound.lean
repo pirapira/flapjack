@@ -169,5 +169,28 @@ theorem not_mem_crepAssignedFreeVars_compileProg_decCall
     rcases hx with hx | hx
     · exact hfresh hx
     · exact hbody hx
+/-- `crepNestedSeq` of `assign` statements built from a zip of names with
+    variables introduced by `freshNames` still has exactly `names` as its
+    assigned free variables. -/
+theorem crepAssignedFreeVars_assignVar_zipWith {α : Type} (names temporaries : List Nat)
+    (h : names.length = temporaries.length) :
+    crepAssignedFreeVars
+        (crepNestedSeq
+          (names.zipWith (fun name temporary => CrepProg.assign name (.var (α := α) temporary))
+            temporaries)) = names := by
+  rw [← List.zipWith_map_right (f := fun t => (CrepExp.var (α := α) t))
+        (g := fun name value => CrepProg.assign name value)]
+  exact crepAssignedFreeVars_nestedSeq_assign_zipWith names
+    (temporaries.map (fun t => (CrepExp.var (α := α) t))) (by rw [h, List.length_map])
+
+/-- A successful call-destination lookup (for either variable kind) returns
+    exactly the slot list stored for that variable in the context. -/
+theorem callDestinationNames_some_slot (context : CompileContext α) (kind : VarKind)
+    (name : VarName) (names : List Nat)
+    (h : callDestinationNames context kind name = some names) :
+    ∃ shape slots, lookupInfo name context.vars = some (shape, slots) ∧ names = slots := by
+  cases kind with
+  | «global» => simp [callDestinationNames] at h
+  | «local» => exact callDestinationNames_local_of_some context name names h
 
 end Flapjack

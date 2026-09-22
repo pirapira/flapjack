@@ -1323,6 +1323,81 @@ theorem labelsIn_listDelete
   exact henvironment name location
     (lookup_of_listDelete destinations environment name location hlookup)
 
+theorem loopLookupFirst_of_mem
+    (locals : Nat → Option α) (entries : List (Nat × α)) (name : Nat)
+    (hmem : name ∈ entries.map Prod.fst) :
+    ∃ value, loopLookupFirst locals entries name = some value := by
+  induction entries with
+  | nil =>
+      simp at hmem
+  | cons entry entries ih =>
+      obtain ⟨entryName, entryValue⟩ := entry
+      by_cases hsame : name = entryName
+      · exact ⟨entryValue, by simp [loopLookupFirst, hsame]⟩
+      · have htail : name ∈ entries.map Prod.fst := by
+          simpa [hsame] using hmem
+        obtain ⟨value, hvalue⟩ := ih htail
+        exact ⟨value, by simp [loopLookupFirst, hsame, hvalue]⟩
+
+theorem loopLookupFirst_not_mem
+    (locals : Nat → Option α) (entries : List (Nat × α)) (name : Nat)
+    (hmem : name ∉ entries.map Prod.fst) :
+    loopLookupFirst locals entries name = locals name := by
+  induction entries with
+  | nil => rfl
+  | cons entry entries ih =>
+      obtain ⟨entryName, entryValue⟩ := entry
+      by_cases hsame : name = entryName
+      · exact False.elim (hmem (by simp [hsame]))
+      · have htail : name ∉ entries.map Prod.fst := by
+          intro htail
+          exact hmem (by simp [hsame, htail])
+        simp [loopLookupFirst, hsame, ih htail]
+
+theorem mem_zip_fst_iff
+    (location : Nat) (destinations : List Nat) (values : List α)
+    (hlength : destinations.length = values.length) :
+    location ∈ (destinations.zip values).map Prod.fst ↔
+      location ∈ destinations := by
+  induction destinations generalizing values with
+  | nil =>
+      cases values with
+      | nil => simp
+      | cons value values => simp at hlength
+  | cons destination destinations ih =>
+      cases values with
+      | nil => simp at hlength
+      | cons value values =>
+          simp only [List.length_cons] at hlength
+          by_cases hsame : location = destination
+          · simp [hsame]
+          · have htail := ih (values := values) (by omega)
+            simpa [hsame] using htail
+
+theorem labelsIn_listDelete_zipUpdate
+    (destinations : List Nat) (values : List α)
+    (environment : LocationEnv) (locals : Nat → Option α)
+    (hlength : destinations.length = values.length)
+    (henvironment : labelsIn environment locals) :
+    labelsIn (listDelete destinations environment)
+      (loopLookupFirst locals (destinations.zip values)) := by
+  intro name location hlookup
+  have hlookup' :=
+    lookup_of_listDelete destinations environment name location hlookup
+  obtain ⟨oldValue, holdValue⟩ := henvironment name location hlookup'
+  have hzip := mem_zip_fst_iff location destinations values hlength
+  by_cases hdestination : location ∈ destinations
+  · obtain ⟨value, hvalue⟩ :=
+      loopLookupFirst_of_mem locals (destinations.zip values) location
+        (hzip.mpr hdestination)
+    exact ⟨value, hvalue⟩
+  · have hnotzip : location ∉ (destinations.zip values).map Prod.fst := by
+      intro hmem
+      exact hdestination (hzip.mp hmem)
+    have hvalue := loopLookupFirst_not_mem locals
+      (destinations.zip values) location hnotzip
+    exact ⟨oldValue, by rw [hvalue]; exact holdValue⟩
+
 theorem comp_call_labelsIn
     (environment : LocationEnv)
     (returns : Option (List Nat × List Nat)) (target : Option Nat)
@@ -1530,6 +1605,47 @@ theorem comp_primitive_single_correct
   · simpa [listDelete, loopLookupFirst_singleton] using
       (labelsIn_delete_update environment state.locals destination value
         henvironment)
+
+theorem comp_primitive_general_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (primitive : LoopPrimitiveHandler α)
+    (environment : LocationEnv) (state : LoopState α) (fuel : Nat)
+    (destinations : List Nat) (operator : PrimOp) (arguments : List Nat)
+    (argumentValues values : List α)
+    (harguments : loopReadLocals state.locals arguments = some argumentValues)
+    (hprimitive : primitive operator argumentValues = some values)
+    (hlength : destinations.length = values.length)
+    (henvironment : labelsIn environment state.locals) :
+    evalLoopProgWithPrimitive primitive (fuel + 1) state
+        (comp environment
+          (.primitive destinations operator arguments : LoopProg α)).1 =
+        some (.normal { state with
+          locals := loopLookupFirst state.locals (destinations.zip values) }) ∧
+      labelsIn
+        (comp environment
+          (.primitive destinations operator arguments : LoopProg α)).2
+        (loopLookupFirst state.locals (destinations.zip values)) := by
+  have hcompiled :
+      comp environment
+          (.primitive destinations operator arguments : LoopProg α) =
+        (.primitive destinations operator arguments,
+          listDelete destinations environment) := by
+    simp [comp]
+  have heval :
+      evalLoopProgWithPrimitive primitive (fuel + 1) state
+          (.primitive destinations operator arguments) =
+        some (.normal { state with
+          locals := loopLookupFirst state.locals (destinations.zip values) }) := by
+    simp [evalLoopProgWithPrimitive, harguments, hprimitive,
+      loopAssignValues, hlength]
+  rw [hcompiled]
+  constructor
+  · exact heval
+  · exact labelsIn_listDelete_zipUpdate destinations values environment
+      state.locals hlength henvironment
 
 end LoopCall
 end Flapjack

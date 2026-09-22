@@ -35,7 +35,7 @@ theorem localisedProg_seqCallRet (program : Prog α) (h : localisedProg program)
   split
   · split
     · simp only [localisedProg] at h ⊢
-      exact ⟨h.1.1, trivial⟩
+      exact ⟨h.1.1, ⟨trivial, trivial⟩⟩
     · exact h
   · exact h
 
@@ -100,8 +100,9 @@ theorem localisedProg_seqAssoc (pre program : Prog α)
                                 simp only [seqAssoc]
                                 refine localisedProg_smartSeq pre _ hpre ?_
                                 simp only [localisedProg] at hprogram ⊢
-                                exact ⟨hprogram.1,
-                                  go .skip localisedProg_skip handlerProgram hprogram.2⟩
+                                exact ⟨hprogram.1, ⟨
+                                  go .skip localisedProg_skip handlerProgram hprogram.2.1,
+                                  hprogram.2.2⟩⟩
                 | some ret =>
                     cases ret with
                     | mk kind name =>
@@ -121,12 +122,12 @@ theorem localisedProg_seqAssoc (pre program : Prog α)
                                         simp only [seqAssoc]
                                         refine localisedProg_smartSeq pre _ hpre ?_
                                         simp only [localisedProg] at hprogram ⊢
-                                        exact ⟨hprogram.1,
+                                        exact ⟨hprogram.1, ⟨
                                           go .skip localisedProg_skip handlerProgram
-                                            hprogram.2⟩
+                                            hprogram.2.1,
+                                          hprogram.2.2⟩⟩
                         | «global» =>
-                            simp only [localisedProg] at hprogram
-                            exact hprogram.2.elim
+                            cases handlerInfo <;> simp [localisedProg] at hprogram
     | .decCall name shape function arguments body => by
         intro hprogram
         simp only [seqAssoc]
@@ -246,7 +247,8 @@ theorem localisedProg_retToTail (program : Prog α) (h : localisedProg program) 
                             | mk handlerVar handlerProgram =>
                                 simp only [retToTail]
                                 simp only [localisedProg] at hprogram ⊢
-                                exact ⟨hprogram.1, go handlerProgram hprogram.2⟩
+                                exact ⟨hprogram.1, ⟨go handlerProgram hprogram.2.1,
+                                  hprogram.2.2⟩⟩
                 | some ret =>
                     cases ret with
                     | mk kind name =>
@@ -263,10 +265,10 @@ theorem localisedProg_retToTail (program : Prog α) (h : localisedProg program) 
                                     | mk handlerVar handlerProgram =>
                                         simp only [retToTail]
                                         simp only [localisedProg] at hprogram ⊢
-                                        exact ⟨hprogram.1, go handlerProgram hprogram.2⟩
+                                        exact ⟨hprogram.1, ⟨go handlerProgram hprogram.2.1,
+                                          hprogram.2.2⟩⟩
                         | «global» =>
-                            simp only [localisedProg] at hprogram
-                            exact hprogram.2.elim
+                            cases handlerInfo <;> simp [localisedProg] at hprogram
     | .decCall name shape function arguments body => by
         intro hprogram
         simp only [retToTail]

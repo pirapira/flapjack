@@ -417,6 +417,30 @@ example :
       some [.addi 4 5 (BitVec.ofNat 64 24)] := by
   decide
 
+/- Cake's `riscv_bop_i` table applies the same immediate-carrier boundary to
+   the remaining logical binary operators; keep these distinct from the
+   direct `arithImm` constructors above. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith
+        (.binOp .and 4 5 (.imm (BitVec.ofNat 64 24))))) [] 0]⟩ =
+      some [.andi 4 5 (BitVec.ofNat 64 24)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith
+        (.binOp .or 4 5 (.imm (BitVec.ofNat 64 24))))) [] 0]⟩ =
+      some [.ori 4 5 (BitVec.ofNat 64 24)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith
+        (.binOp .xor 4 5 (.imm (BitVec.ofNat 64 24))))) [] 0]⟩ =
+      some [.xori 4 5 (BitVec.ofNat 64 24)] := by
+  decide
+
 /- Cake's `riscv_ast (Inst (Arith (Div ...)))` reaches the target DIV
    encoding through the direct Lab word-arithmetic boundary. -/
 example :

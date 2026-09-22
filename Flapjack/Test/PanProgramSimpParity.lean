@@ -1014,7 +1014,8 @@ example (context' : StructContext)
 theorem lookupInfo_isSome_of_mem_fixture :
     (lookupInfo "S" ([("S", { fields := [("f", Shape.one)], size := 1 })]
       : StructContext)).isSome = true :=
-  lookupInfo_isSome_of_mem "S" [("S", { fields := [("f", Shape.one)], size := 1 })]
+  lookupInfo_isSome_of_mem "S"
+    ([("S", { fields := [("f", Shape.one)], size := 1 })] : StructContext)
     (by simp)
 
 #guard (lookupInfo "S" ([("S", { fields := [("f", Shape.one)], size := 1 })]

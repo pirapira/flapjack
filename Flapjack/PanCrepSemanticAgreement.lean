@@ -3464,6 +3464,63 @@ theorem PanValuePcSemanticClockEvidence.crossClockNormalOrRaisedResultRelWithCon
     simpa [houtcome, hresult, panOutcomeToPcResult, crepControlToPcResult]
       using hraisedRel.1
 
+/-! The same-clock normal-or-raised dispatcher is the combined ordinary
+    declaration step of `state_rel_imp_semantics_to_crep`.  It keeps the
+    evaluator, bundled input state, output code, and constructor witness
+    explicit while specializing the cross-clock branch to one clock. -/
+theorem PanValuePcSemanticClockEvidence.normalOrRaisedResultRelWithContextCode_of_stateRelWithContext
+    {α σ : Type}
+    [BEq α] [OfNat α 0] [Add α]
+    {structs : StructContext} {context : CompileContext α}
+    {program : Prog α}
+    {sourceEvaluate : PanValuePcEvaluator α}
+    {targetEvaluate : CrepPcEvaluator α}
+    {codeRel : PanValuePcCodeRel α}
+    {excpRel : PanValuePcExceptionShapeRel α}
+    {exceptionRel : ExceptionId → PanValue α → α → Prop}
+    {exceptionCode : ExceptionId → Option α}
+    {globalsLookup : CrepState α → PanValue α → Option (List α)}
+    {panHooks : PanSemanticsHooks α σ}
+    {crepHooks : CrepSemanticsHooks α}
+    (hcorrect : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (clock : Nat)
+    (evidence : PanValuePcSemanticClockEvidence structs context program
+      clock sourceEvaluate targetEvaluate codeRel excpRel exceptionRel
+      exceptionCode globalsLookup panHooks crepHooks)
+    (inputCodeRel : codeRel context evidence.sourceInput.code
+      evidence.targetInput.code)
+    (inputExcpRel : excpRel context evidence.sourceInput.eshapes
+      evidence.targetInput.eshapes)
+    (inputStateRel : panValueCrepStateRelWithContext structs context
+      evidence.sourceInput.locals evidence.sourceInput.globals
+      evidence.sourceInput.memory evidence.targetInput.state)
+    (outputCodeRel : codeRel context evidence.sourceExecution.code
+      evidence.targetExecution.code)
+    (outputExcpRel : excpRel context evidence.sourceExecution.eshapes
+      evidence.targetExecution.eshapes)
+    (hbranch :
+      (∃ sourceLocals sourceGlobals sourceMemory sourceFfi targetState,
+        evidence.outcome =
+          .control (.normal sourceLocals sourceGlobals sourceMemory sourceFfi) ∧
+        evidence.result = .normal targetState) ∨
+      (∃ sourceLocals sourceGlobals sourceMemory sourceFfi sourceException
+          sourceValue targetState targetException,
+        evidence.outcome =
+          .control (.raised sourceLocals sourceGlobals sourceMemory sourceFfi
+            sourceException sourceValue) ∧
+        evidence.result = .raised targetState targetException ∧
+        lookupInfo sourceException context.exceptions = some targetException)) :
+    panValuePcResultRelWithContextCode structs context exceptionRel exceptionCode
+      globalsLookup (panOutcomeToPcResult evidence.outcome)
+      (crepControlToPcResult evidence.result) ∧
+    ∃ sourceLocals sourceGlobals sourceMemory targetState,
+      panValueCrepStateRelWithContext structs context sourceLocals sourceGlobals
+        sourceMemory targetState := by
+  exact PanValuePcSemanticClockEvidence.crossClockNormalOrRaisedResultRelWithContextCode_of_stateRelWithContext
+    hcorrect clock clock evidence evidence inputCodeRel inputExcpRel inputStateRel
+    outputCodeRel outputExcpRel hbranch
+
 /-! Lift the branch dispatcher over the arbitrary clock family used by
     `state_rel_imp_semantics_to_crep`.  This is the result-relation half of the
     top-level evaluator instantiation: all per-clock input/output relations

@@ -1,3 +1,4 @@
+import Flapjack.HolRef
 import Flapjack.Pancake.PanSimp
 import Flapjack.Pancake.PanStatic
 
@@ -12,6 +13,31 @@ field list); the static checker is responsible for rejecting such programs.
 -/
 
 namespace Flapjack
+
+/-! Faithful executable port of `pan_structs$afindi` from
+    `cakeml/pancake/pan_structsScript.sml:25-32`. For a lawful `BEq` instance,
+    the key comparison implements HOL equality; the recursion returns the
+    first zero-based matching position. -/
+@[hol "cakeml/pancake/pan_structsScript.sml" "afindi_def"]
+def afindi [BEq α] (key : α) : List (α × β) → Option Nat
+  | [] => none
+  | (candidate, _) :: entries =>
+      if key == candidate then some 0
+      else match afindi key entries with
+        | none => none
+        | some index => some (index + 1)
+termination_by entries => sizeOf entries
+decreasing_by
+  all_goals first | sizeOf_list_dec | decreasing_trivial
+
+theorem afindi_cons [BEq α] (key : α) (entry : α × β) (rest : List (α × β)) :
+    afindi key (entry :: rest) =
+      if key == entry.1 then some 0
+      else match afindi key rest with
+        | none => none
+        | some index => some (index + 1) := by
+  obtain ⟨candidate, value⟩ := entry
+  simp [afindi]
 
 structure StructPassContext where
   structs : StructContext

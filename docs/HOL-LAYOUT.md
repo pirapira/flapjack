@@ -13,6 +13,7 @@ provenance is recorded by `@[hol ...]` and checked by
 | `panStaticScript.sml` | `Flapjack/Pancake/PanStatic.lean` |
 | `pan_simpScript.sml` | `Flapjack/Pancake/PanSimp.lean` |
 | `pan_structsScript.sml` | `Flapjack/Pancake/PanStructs.lean` |
+| `proofs/pan_structsProofScript.sml` | `Flapjack/Pancake/Proofs/PanStructs.lean` |
 | `pan_globalsScript.sml` | `Flapjack/Pancake/PanGlobals.lean` |
 | `pan_to_crepScript.sml` | `Flapjack/Pancake/PanToCrep.lean`, `PanToCrep/Compile.lean` |
 | `crepLangScript.sml` | `Flapjack/Pancake/CrepLang.lean` |
@@ -31,6 +32,9 @@ provenance is recorded by `@[hol ...]` and checked by
 
 Additional helper, semantic, and proof modules still live at the old top
 level while their exact HOL counterparts and statement shapes are reviewed.
+`Flapjack/PanStructsAfindi.lean` retains residual shape-context helpers; the
+`afindi` implementation and its matched proof declarations now live in the
+listed Pancake modules.
 In particular, placement under `Proofs` does not imply that a whole pass
 correctness theorem has been established. The remaining moves and review gate
 are tracked by beads `flapjack-pxn.18.3.1`–`flapjack-pxn.18.3.3`.

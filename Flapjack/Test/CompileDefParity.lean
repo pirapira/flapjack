@@ -15,6 +15,42 @@ open Flapjack
 def context : CompileContext Nat :=
   { vars := [], functions := [], exceptions := [], maxVar := 0, bytesInWord := 1 }
 
+def emptyOneGlobalContext : CompileContext Nat :=
+  { vars := [("empty_one", (.one, []))], functions := [], exceptions := [],
+    maxVar := 0, bytesInWord := 1 }
+
+def extraNamesGlobalContext : CompileContext Nat :=
+  { vars := [("extra_names", (.one, [4, 5]))], functions := [], exceptions := [],
+    maxVar := 5, bytesInWord := 1 }
+
+def missingNamesGlobalContext : CompileContext Nat :=
+  { vars := [("missing_names", (.comb [.one, .one], [4]))],
+    functions := [], exceptions := [], maxVar := 4, bytesInWord := 1 }
+
+def missingGlobalCall : Prog Nat :=
+  .call (some (some (.global, "missing"), none)) "f" []
+
+def emptyOneGlobalCall : Prog Nat :=
+  .call (some (some (.global, "empty_one"), none)) "f" []
+
+def extraNamesGlobalCall : Prog Nat :=
+  .call (some (some (.global, "extra_names"), none)) "f" []
+
+def missingNamesGlobalCall : Prog Nat :=
+  .call (some (some (.global, "missing_names"), none)) "f" []
+
+def isTailCallToF : CrepProg Nat → Bool
+  | .call none "f" [] => true
+  | _ => false
+
+def isExtraNamesCallToF : CrepProg Nat → Bool
+  | .call (some ([4, 5], none)) "f" [] => true
+  | _ => false
+
+def isMissingNamesCallToF : CrepProg Nat → Bool
+  | .call (some ([4], none)) "f" [] => true
+  | _ => false
+
 def isSkip : CrepProg Nat → Bool
   | .skip => true
   | _ => false
@@ -40,14 +76,39 @@ def parityGuard : Bool :=
   isReturnSeven (compileProg context (.return (.const 7))) &&
   isBreak (compileProg context (.break : Prog Nat)) &&
   isContinue (compileProg context (.continue : Prog Nat)) &&
-  isSeqSkipTick (compileProg context (.seq .skip (.tick : Prog Nat)))
+  isSeqSkipTick (compileProg context (.seq .skip (.tick : Prog Nat))) &&
+  isTailCallToF (compileProg context missingGlobalCall) &&
+  isTailCallToF (compileProg emptyOneGlobalContext emptyOneGlobalCall) &&
+  isExtraNamesCallToF (compileProg extraNamesGlobalContext extraNamesGlobalCall) &&
+  isMissingNamesCallToF (compileProg missingNamesGlobalContext missingNamesGlobalCall)
+
+example : compileProg context missingGlobalCall = .call none "f" [] := by
+  simp [missingGlobalCall, compileProg, compileArgs, callDestinationNames,
+    wrapRt, context, lookupInfo]
+
+example :
+    compileProg emptyOneGlobalContext emptyOneGlobalCall = .call none "f" [] := by
+  simp [emptyOneGlobalCall, compileProg, compileArgs, callDestinationNames,
+    wrapRt, emptyOneGlobalContext, lookupInfo]
+
+example :
+    compileProg extraNamesGlobalContext extraNamesGlobalCall =
+      .call (some ([4, 5], none)) "f" [] := by
+  simp [extraNamesGlobalCall, compileProg, compileArgs, callDestinationNames,
+    wrapRt, extraNamesGlobalContext, lookupInfo]
+
+example :
+    compileProg missingNamesGlobalContext missingNamesGlobalCall =
+      .call (some ([4], none)) "f" [] := by
+  simp [missingNamesGlobalCall, compileProg, compileArgs, callDestinationNames,
+    wrapRt, missingNamesGlobalContext, lookupInfo]
 
 #eval parityGuard
 #guard parityGuard
 
 def runChecks : IO Bool := do
   if parityGuard then
-    IO.println "PASS compile_def skip/return/break/continue/seq parity"
+    IO.println "PASS compile_def skip/return/break/continue/seq and Global destination parity"
   else
     IO.println "FAIL compile_def parity"
   pure parityGuard

@@ -67,7 +67,7 @@ run_probe() {
       cp "$tmp" "$output"
     else
       sed -n "/^${first_label}=/,/^${last_label}=/p" "$tmp" \
-        | sed '/^<<HOL message:/,/^  pattern completion.*>>$/d' > "$output"
+        | sed '/^<<HOL message:/,/^  pattern completion.*>>$/d; /^$/d' > "$output"
     fi
   fi
 }
@@ -361,7 +361,8 @@ run_probe ret_hdl_probeScript.sml ret_hdl_probe.out \
 run_probe wrap_rt_probeScript.sml wrap_rt_probe.out \
   none named "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe compile_def_probeScript.sml compile_def_probe.out \
-  return return "$cake_dir/pancake/pan_to_crepScript.sml"
+  return missing_global empty_one_global extra_names_global missing_names_global \
+  "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe compile_to_crep_probeScript.sml compile_to_crep_probe.out \
   empty raise_const raise_pair done "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe compile_prog_probeScript.sml compile_prog_probe.out \

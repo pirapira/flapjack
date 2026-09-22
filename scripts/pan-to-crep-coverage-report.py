@@ -36,10 +36,10 @@ FIXTURES = [
         "area": "Expression handler setup",
         "boundary": "exp_hdl",
         "probe": "exp_hdl_probe",
-        "hol_labels": ["missing", "known"],
+        "hol_labels": ["missing", "known", "dup_update", "dup_list"],
         "lean": "Flapjack/Test/ExpHdlParity.lean",
-        "lean_markers": ["parityGuard"],
-        "covers": "missing and known handler variables",
+        "lean_markers": ["expHdlFiniteMap", "parityGuard", "dupUpdateOK", "dupListOK"],
+        "covers": "missing and known handler variables; duplicate finite-map updates in both FUPDATE and FUPDATE_LIST form, where the last binding wins",
     },
     {
         "area": "Return handler",

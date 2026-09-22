@@ -1788,6 +1788,31 @@ theorem cakeColourLocation_stack_slot_lt_frame
     cakeColourLocation_stack_boundary k f register hregister, ?_⟩
   omega
 
+/- Cake's `format_var` keeps physical-register colours and frame-slot colours
+   distinct, and the frame offset is injective on the allocated range.  This
+   packages the location fact needed by the RISC-V allocator correctness
+   boundary: two distinct even Cake colours below the register-plus-frame
+   bound cannot collapse to the same Word-to-Stack location. -/
+theorem cakeColourLocation_even_injective
+    (k f register₁ register₂ : Nat)
+    (h₁ : register₁ < k + f) (h₂ : register₂ < k + f)
+    (h : cakeColourLocation k f (2 * register₁) =
+      cakeColourLocation k f (2 * register₂)) :
+    register₁ = register₂ := by
+  by_cases h₁k : register₁ < k
+  · by_cases h₂k : register₂ < k
+    · simpa [cakeColourLocation, h₁k, h₂k] using h
+    · have h₂k' : k ≤ register₂ := Nat.le_of_not_gt h₂k
+      simp [cakeColourLocation, h₁k, h₂k] at h
+  · have h₁k' : k ≤ register₁ := Nat.le_of_not_gt h₁k
+    by_cases h₂k : register₂ < k
+    · simp [cakeColourLocation, h₁k, h₂k] at h
+    · have h₂k' : k ≤ register₂ := Nat.le_of_not_gt h₂k
+      simp [cakeColourLocation, h₁k, h₂k] at h
+      have h₁slot : register₁ - k ≤ f - 1 := by omega
+      have h₂slot : register₂ - k ≤ f - 1 := by omega
+      omega
+
 def cakeColourFrameSlots (k : Nat) (parameters : List Nat)
     (program : WordProg α) (colouring : NatInfoMap Nat) : Nat × Nat :=
   let colour := CakeAlloc.totalColour colouring

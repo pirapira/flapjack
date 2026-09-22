@@ -1407,5 +1407,46 @@ theorem comp_primitive_labelsIn
   · rfl
   · exact labelsIn_listDelete destinations environment locals henvironment
 
+theorem comp_primitive_single_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (primitive : LoopPrimitiveHandler α)
+    (environment : LocationEnv) (state : LoopState α) (fuel : Nat)
+    (destination : Nat) (operator : PrimOp) (arguments : List Nat)
+    (argumentValues : List α) (value : α)
+    (harguments : loopReadLocals state.locals arguments = some argumentValues)
+    (hprimitive : primitive operator argumentValues = some [value])
+    (henvironment : labelsIn environment state.locals) :
+    evalLoopProgWithPrimitive primitive (fuel + 1) state
+        (comp environment
+          (.primitive [destination] operator arguments : LoopProg α)).1 =
+        some (.normal { state with
+          locals := updateLoopLocal state.locals destination value }) ∧
+      labelsIn
+        (comp environment
+          (.primitive [destination] operator arguments : LoopProg α)).2
+        (updateLoopLocal state.locals destination value) := by
+  have hcompiled :
+      comp environment
+          (.primitive [destination] operator arguments : LoopProg α) =
+        (.primitive [destination] operator arguments,
+          listDelete [destination] environment) := by
+    simp [comp]
+  have heval :
+      evalLoopProgWithPrimitive primitive (fuel + 1) state
+          (.primitive [destination] operator arguments) =
+        some (.normal { state with
+          locals := updateLoopLocal state.locals destination value }) := by
+    simp [evalLoopProgWithPrimitive, harguments, hprimitive,
+      loopAssignValues, loopLookupFirst_singleton]
+  rw [hcompiled]
+  constructor
+  · exact heval
+  · simpa [listDelete, loopLookupFirst_singleton] using
+      (labelsIn_delete_update environment state.locals destination value
+        henvironment)
+
 end LoopCall
 end Flapjack

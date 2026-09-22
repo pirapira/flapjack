@@ -95,6 +95,30 @@ def probeFallback : LoopProg Nat := .store (.const 0) 1
 #guard lookup 1 (compiledEnv [(1, 7)] probeDiv) == none
 #guard lookup 1 (compiledEnv [(1, 7)] probeFallback) == some 7
 
+/-! Basic lookup facts for the association-list location environment, used by
+    the `loop_call` correctness proof. -/
+
+theorem lookup_insert_same_fixture : lookup 1 (insert 1 9 [(2, 8)]) = some 9 :=
+  lookup_insert_same 1 9 [(2, 8)]
+
+theorem lookup_insert_other_fixture : lookup 2 (insert 1 9 [(2, 8)]) = some 8 :=
+  lookup_insert_other 1 9 2 [(2, 8)] (by decide)
+
+theorem lookup_delete_same_fixture : lookup 1 (delete 1 [(1, 7), (2, 8)]) = none :=
+  lookup_delete_same 1 [(1, 7), (2, 8)]
+
+theorem lookup_delete_other_fixture : lookup 2 (delete 1 [(1, 7), (2, 8)]) = some 8 :=
+  lookup_delete_other 1 2 [(1, 7), (2, 8)] (by decide)
+
+def lookupFactsGuard : Bool :=
+  lookup 1 (insert 1 9 [(2, 8)]) == some 9 &&
+    lookup 2 (insert 1 9 [(2, 8)]) == some 8 &&
+    lookup 1 (delete 1 [(1, 7), (2, 8)]) == none &&
+    lookup 2 (delete 1 [(1, 7), (2, 8)]) == some 8
+
+#eval lookupFactsGuard
+#guard lookupFactsGuard
+
 def check (name : String) (actual expected : Bool) : IO Bool := do
   if actual == expected then
     IO.println s!"PASS {name}"
@@ -127,7 +151,8 @@ def runChecks : IO Bool := do
     check "loop_call arithmetic" 
       (lookup 1 (compiledEnv sourceEnvironmentTwo probeLongMul) == none) true,
     check "loop_call fallback" 
-      (lookup 1 (compiledEnv [(1, 7)] probeFallback) == some 7) true ].mapM id
+      (lookup 1 (compiledEnv [(1, 7)] probeFallback) == some 7) true,
+    check "loop_call environment lookup facts" lookupFactsGuard true ].mapM id
   pure (results.all id)
 
 end Flapjack.Test.LoopCallParity

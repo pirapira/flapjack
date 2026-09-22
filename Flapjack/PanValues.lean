@@ -2519,6 +2519,71 @@ theorem panValueResVar_comm_strong [BEq String] [LawfulBEq String]
   by_cases hx : (x == n) = true <;> by_cases hh : (x == h) = true <;>
     simp_all [panValueResVar, beq_iff_eq]
 
+/-- Cake's `FOLDL res_var lc1 (ZIP (vs, MAP (FLOOKUP lc2) vs))`
+    (`cakeml/pancake/proofs/crep_inlineProofScript.sml`), used to restore a list
+    of locals. -/
+def panValueResVarFold [BEq String]
+    (locals locals' : VarName → Option (PanValue α)) (names : List VarName) :
+    VarName → Option (PanValue α) :=
+  (names.zip (names.map locals')).foldl
+    (fun (current : VarName → Option (PanValue α))
+      (entry : VarName × Option (PanValue α)) =>
+      panValueResVar current entry.1 entry.2) locals
+
+theorem panValueResVarFold_cons [BEq String]
+    (locals locals' : VarName → Option (PanValue α)) (name : VarName)
+    (names : List VarName) :
+    panValueResVarFold locals locals' (name :: names) =
+      panValueResVarFold (panValueResVar locals name (locals' name)) locals' names := by
+  simp [panValueResVarFold]
+
+theorem panValueResVarFold_comm [BEq String] [LawfulBEq String]
+    (locals locals' : VarName → Option (PanValue α)) (h : VarName) :
+    ∀ names,
+      panValueResVar (panValueResVarFold locals locals' names) h (locals' h) =
+        panValueResVarFold (panValueResVar locals h (locals' h)) locals' names := by
+  intro names
+  induction names generalizing locals with
+  | nil => simp [panValueResVarFold]
+  | cons name names ih =>
+      simp only [panValueResVarFold, List.zip_cons_cons, List.map_cons,
+        List.foldl_cons] at ih ⊢
+      rw [ih (panValueResVar locals name (locals' name))]
+      rw [← panValueResVar_comm_strong locals locals' h name]
+
+theorem panValueResVarFold_not_mem [BEq String] [LawfulBEq String]
+    (locals locals' : VarName → Option (PanValue α)) (names : List VarName) (x : VarName)
+    (hmem : x ∉ names) :
+    panValueResVarFold locals locals' names x = locals x := by
+  induction names generalizing locals with
+  | nil => simp [panValueResVarFold]
+  | cons name names ih =>
+      rw [panValueResVarFold_cons]
+      simp only [List.mem_cons, not_or] at hmem
+      have hstep : panValueResVar locals name (locals' name) x = locals x := by
+        rw [panValueResVar_eq_ite]
+        simp [beq_iff_eq, hmem.1]
+      rw [ih (panValueResVar locals name (locals' name)) hmem.2, hstep]
+
+theorem panValueResVarFold_mem [BEq String] [LawfulBEq String]
+    (locals locals' : VarName → Option (PanValue α)) (names : List VarName) {x : VarName}
+    (hmem : x ∈ names) :
+    panValueResVarFold locals locals' names x = locals' x := by
+  induction names generalizing locals with
+  | nil => simp at hmem
+  | cons name names ih =>
+      rw [panValueResVarFold_cons]
+      simp only [List.mem_cons] at hmem
+      by_cases hmemRest : x ∈ names
+      · exact ih _ hmemRest
+      · rcases hmem with heq | hmem
+        · rw [panValueResVarFold_not_mem _ locals' names x hmemRest]
+          rw [panValueResVar_eq_ite]
+          rw [if_pos (by rw [beq_iff_eq]; exact heq)]
+          rw [heq]
+        · exact absurd hmem hmemRest
+
+
 def restorePanValueLocal [BEq String]
     (locals : VarName → Option (PanValue α)) (name : VarName)
     (oldValue : Option (PanValue α)) : VarName → Option (PanValue α) :=

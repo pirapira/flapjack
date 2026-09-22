@@ -110,4 +110,23 @@ def commStrongGuard : Bool :=
 #eval commStrongGuard
 #guard commStrongGuard
 
+/-! `res_var_foldl_commutes_strong` (`crep_inlineProofScript.sml:706`) and
+    `flookup_res_var_is_mem_zip_eq` (`crep_inlineProofScript.sml:802`). -/
+
+theorem panValueResVarFold_comm_fixture :
+    panValueResVar (panValueResVarFold locals locals ["x", "y"]) "y" (locals "y") =
+      panValueResVarFold (panValueResVar locals "y" (locals "y")) locals ["x", "y"] :=
+  panValueResVarFold_comm locals locals "y" ["x", "y"]
+
+theorem panValueResVarFold_mem_fixture :
+    panValueResVarFold locals locals ["x", "y"] "x" = locals "x" :=
+  panValueResVarFold_mem locals locals ["x", "y"] (by simp)
+
+def foldGuard : Bool :=
+  isWord (panValueResVarFold locals locals ["x", "y"] "x") 3 &&
+    isNone (panValueResVarFold locals locals ["x", "y"] "z")
+
+#eval foldGuard
+#guard foldGuard
+
 end Flapjack.Test.PanResVarParity

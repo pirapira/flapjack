@@ -227,6 +227,54 @@ theorem seq_labelsIn_fixture :
     (second := .tick) (locals := load32State.locals)
   simpa [comp] using hseq
 
+theorem seq_normal_compile_correct_fixture :
+    evalLoopProg 2 load32State
+        (comp [(3, 2)]
+          (.seq (.tick : LoopProg Nat) .tick)).1 =
+        some (.normal load32State) ∧
+      labelsIn
+        (comp [(3, 2)]
+          (.seq (.tick : LoopProg Nat) .tick)).2
+        (loopResultState (.normal load32State)).locals := by
+  have hseq := comp_seq_normal_correct
+    (environment := [(3, 2)]) (state := load32State) (fuel := 1)
+    (first := (.tick : LoopProg Nat)) (second := .tick)
+    (middle := load32State) (result := .normal load32State)
+    (by simp [comp, evalLoopProg]) (by simp [comp, evalLoopProg])
+  simpa [comp, loopResultState] using hseq
+
+theorem seq_returned_compile_correct_fixture :
+    evalLoopProg 2 load32State
+        (comp [(3, 2)]
+          (.seq (.return [] : LoopProg Nat) .tick)).1 =
+        some (.returned load32State []) ∧
+      labelsIn
+        (comp [(3, 2)]
+          (.seq (.return [] : LoopProg Nat) .tick)).2
+        load32State.locals := by
+  have hseq := comp_seq_returned_correct
+    (environment := [(3, 2)]) (state := load32State) (fuel := 1)
+    (first := (.return [] : LoopProg Nat)) (second := .tick)
+    (middle := load32State) (values := [])
+    (by simp [comp, evalLoopProg, loopReadLocals])
+  simpa [comp] using hseq
+
+theorem seq_broke_compile_correct_fixture :
+    evalLoopProg 2 load32State
+        (comp [(3, 2)]
+          (.seq (.break 7 : LoopProg Nat) .tick)).1 =
+        some (.broke load32State 7) ∧
+      labelsIn
+        (comp [(3, 2)]
+          (.seq (.break 7 : LoopProg Nat) .tick)).2
+        load32State.locals := by
+  have hseq := comp_seq_broke_correct
+    (environment := [(3, 2)]) (state := load32State) (fuel := 1)
+    (first := (.break 7 : LoopProg Nat)) (second := .tick)
+    (middle := load32State) (label := 7)
+    (by simp [comp, evalLoopProg])
+  simpa [comp] using hseq
+
 theorem ite_labelsIn_fixture :
     (comp [(3, 2)]
       (.ite .equal 2 (.imm 7) (.fail : LoopProg Nat) .tick [2]) :
@@ -241,6 +289,44 @@ theorem ite_labelsIn_fixture :
     (right := .imm 7) (thenBranch := (.fail : LoopProg Nat))
     (elseBranch := .tick) (live := [2]) (locals := load32State.locals)
   simpa [comp] using hite
+
+theorem ite_true_compile_correct_fixture :
+    evalLoopProg 2 load32State
+        (comp [(3, 2)]
+          (.ite .notEqual 2 (.imm 7) (.tick : LoopProg Nat) .fail [2])).1 =
+        some (.normal load32State) ∧
+      labelsIn
+        (comp [(3, 2)]
+          (.ite .notEqual 2 (.imm 7) (.tick : LoopProg Nat) .fail [2])).2
+        (loopResultState (.normal load32State)).locals := by
+  have hite := comp_ite_true_correct
+    (environment := [(3, 2)]) (state := load32State) (fuel := 1)
+    (operator := .notEqual) (condition := 2) (right := .imm 7)
+    (thenBranch := (.tick : LoopProg Nat)) (elseBranch := .fail)
+    (live := [2]) (leftValue := 100) (rightValue := 7)
+    (result := .normal load32State)
+    (by simp [load32State]) (by simp)
+    (by simp [evalLoopCondition]) (by simp [comp, evalLoopProg])
+  simpa [comp, loopResultState] using hite
+
+theorem ite_false_compile_correct_fixture :
+    evalLoopProg 2 load32State
+        (comp [(3, 2)]
+          (.ite .equal 2 (.imm 7) (.fail : LoopProg Nat) .tick [2])).1 =
+        some (.normal load32State) ∧
+      labelsIn
+        (comp [(3, 2)]
+          (.ite .equal 2 (.imm 7) (.fail : LoopProg Nat) .tick [2])).2
+        (loopResultState (.normal load32State)).locals := by
+  have hite := comp_ite_false_correct
+    (environment := [(3, 2)]) (state := load32State) (fuel := 1)
+    (operator := .equal) (condition := 2) (right := .imm 7)
+    (thenBranch := (.fail : LoopProg Nat)) (elseBranch := .tick)
+    (live := [2]) (leftValue := 100) (rightValue := 7)
+    (result := .normal load32State)
+    (by simp [load32State]) (by simp)
+    (by simp [evalLoopCondition]) (by simp [comp, evalLoopProg])
+  simpa [comp, loopResultState] using hite
 
 theorem loop_labelsIn_fixture :
     (comp [(3, 2)]
@@ -501,7 +587,12 @@ theorem ffi_labelsIn_fixture :
 #check comp_fail_correct
 #check comp_mark_labelsIn
 #check comp_seq_labelsIn
+#check comp_seq_normal_correct
+#check comp_seq_returned_correct
+#check comp_seq_broke_correct
 #check comp_ite_labelsIn
+#check comp_ite_true_correct
+#check comp_ite_false_correct
 #check comp_loop_labelsIn
 #check comp_setGlobal_correct
 #check comp_return_correct

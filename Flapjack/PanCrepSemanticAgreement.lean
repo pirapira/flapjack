@@ -811,6 +811,45 @@ theorem PanValuePcSemanticClockEvidence.returnedSemanticOutcomeRel
     hcorrect evidenceClock evidence hffiOutcome .success .success hsourceOutcome
     htargetOutcome
 
+/-! The non-success counterpart of `returnedSemanticOutcomeRel`. Cake's
+    `state_rel_imp_semantics_to_crep` induction has separate normal, raised,
+    and clock-exhaustion cases, but all three are transported by the same
+    result relation before the observational semantics classifies them as a
+    forbidden run. Keep the evaluator equations and state relation inside
+    `evidence`: this is a real composition bridge, not a premise-only alias
+    for `panValuePcResultRel_forbidden_iff`. -/
+theorem PanValuePcSemanticClockEvidence.forbiddenResultRel
+    {α σ : Type}
+    [BEq α] [OfNat α 0] [Add α]
+    {structs : StructContext} {context : CompileContext α}
+    {program : Prog α}
+    {sourceEvaluate : PanValuePcEvaluator α}
+    {targetEvaluate : CrepPcEvaluator α}
+    {codeRel : PanValuePcCodeRel α}
+    {excpRel : PanValuePcExceptionShapeRel α}
+    {exceptionRel : ExceptionId → PanValue α → α → Prop}
+    {exceptionCode : ExceptionId → Option α}
+    {globalsLookup : CrepState α → PanValue α → Option (List α)}
+    {panHooks : PanSemanticsHooks α σ}
+    {crepHooks : CrepSemanticsHooks α}
+    (hcorrect : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (evidenceClock : Nat)
+    (evidence : PanValuePcSemanticClockEvidence structs context program evidenceClock
+      sourceEvaluate targetEvaluate codeRel excpRel exceptionRel exceptionCode
+      globalsLookup panHooks crepHooks) :
+    panForbiddenResult
+        (some (evidence.outcome, evidence.returnedClock)) ↔
+      crepForbiddenResult
+        (crepControlResultToSemantic (some evidence.result)) := by
+  apply panValuePcResultRel_forbidden_iff structs context exceptionRel
+    exceptionCode globalsLookup evidence.outcome evidence.result
+    evidence.returnedClock
+  exact PanValuePcSemanticClockEvidence.resultRel
+    (panValuePcCompileCorrect_of_withContextCode sourceEvaluate targetEvaluate
+      codeRel excpRel exceptionCode globalsLookup program hcorrect)
+    evidenceClock evidence
+
 /-! Reapply `pc_compile_correct` across two clock witnesses. This is the
 source/target execution step used by Cake's `evaluate_add_clock_eq` cases: the
 clocked evaluator monotonicity itself is not assumed here, but every

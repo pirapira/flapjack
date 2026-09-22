@@ -12,6 +12,7 @@ open Flapjack
 #check @Flapjack.PanValuePcSemanticClockEvidence.crossResultRel
 #check @Flapjack.PanValuePcSemanticClockEvidence.crossResultRel_withContextCode
 #check @Flapjack.PanValuePcSemanticClockEvidence.returnedSemanticOutcomeRel
+#check @Flapjack.PanValuePcSemanticClockEvidence.forbiddenResultRel
 #check @Flapjack.panCrepSemanticAgreement_of_pcCompileCorrect
 #check @Flapjack.panCrepSemanticAgreement_of_pcCompileCorrect_cross_clock
 #check @Flapjack.panEventPrefix_antisymm
@@ -215,6 +216,33 @@ example :
         (.broke { locals := fun _ => none, memory := fun _ => none } 0 :
           CrepPcResult Nat) = none := by
   simp [crepPcResultOutcome]
+
+/-! The forbidden-result bridge is the evaluator/state-relation composition
+    used by Cake's normal, raised, and timeout induction branches. -/
+example {α σ : Type} [BEq α] [OfNat α 0] [Add α]
+    {structs : StructContext} {context : CompileContext α}
+    {program : Prog α}
+    {sourceEvaluate : PanValuePcEvaluator α}
+    {targetEvaluate : CrepPcEvaluator α}
+    {codeRel : PanValuePcCodeRel α}
+    {excpRel : PanValuePcExceptionShapeRel α}
+    {exceptionRel : ExceptionId → PanValue α → α → Prop}
+    {exceptionCode : ExceptionId → Option α}
+    {globalsLookup : CrepState α → PanValue α → Option (List α)}
+    {panHooks : PanSemanticsHooks α σ}
+    {crepHooks : CrepSemanticsHooks α}
+    (hcorrect : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (evidenceClock : Nat)
+    (evidence : PanValuePcSemanticClockEvidence structs context program evidenceClock
+      sourceEvaluate targetEvaluate codeRel excpRel exceptionRel exceptionCode
+      globalsLookup panHooks crepHooks) :
+    panForbiddenResult
+        (some (evidence.outcome, evidence.returnedClock)) ↔
+      crepForbiddenResult
+        (crepControlResultToSemantic (some evidence.result)) := by
+  exact PanValuePcSemanticClockEvidence.forbiddenResultRel hcorrect
+    evidenceClock evidence
 
 #check @panCrepBehaviourRel_of_pcCompileCorrectWithContextCode_pairwise_evidence
 #check @panCrepBehaviourRel_of_pcCompileCorrectWithContextCode_cross_clock_prefix_from_pairwise_evidence

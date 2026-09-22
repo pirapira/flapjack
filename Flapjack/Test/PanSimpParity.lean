@@ -2780,3 +2780,4 @@ with the handler-preservation premises discharged. -/
 
 #check @Flapjack.panValueFfiStatefulHandlerPreservesIoEvents_fails
 #check @Flapjack.panValueFfiMemoryHandlerPreservesIoEvents_fails
+#check @Flapjack.evalPanValueFfiClockProg_seq_raised

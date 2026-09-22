@@ -28,9 +28,11 @@ provenance is recorded by `@[hol ...]` and checked by
 | `semantics/crepPropsScript.sml` | `Flapjack/Pancake/Semantics/CrepProps.lean` |
 | `semantics/loopSemScript.sml` | `Flapjack/Pancake/Semantics/LoopSem.lean` |
 | `proofs/pan_simpProofScript.sml` | `Flapjack/Pancake/Proofs/PanSimp.lean`, `PanSimp/Evaluate.lean` |
+| `proofs/pan_globalsProofScript.sml` | `Flapjack/Pancake/Proofs/PanGlobals.lean` (shape well-formedness theorems) |
 
-Additional helper, semantic, and proof modules still live at the old top
-level while their exact HOL counterparts and statement shapes are reviewed.
-In particular, placement under `Proofs` does not imply that a whole pass
-correctness theorem has been established. The remaining moves and review gate
-are tracked by beads `flapjack-pxn.18.3.1`–`flapjack-pxn.18.3.3`.
+Flapjack-specific helper lemmas supporting the shape proofs remain in
+`Flapjack/PanGlobalsSemantics.lean`; they are not themselves attributed to HOL.
+Their whole-list predicates and start-function interfaces are Flapjack-specific.
+Placement under `Proofs` does not imply that a whole pass correctness theorem
+has been established. The remaining moves and review gate are tracked by beads
+`flapjack-pxn.18.3.1`–`flapjack-pxn.18.3.3`.

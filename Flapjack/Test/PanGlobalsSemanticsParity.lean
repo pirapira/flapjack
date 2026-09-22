@@ -1,4 +1,4 @@
-import Flapjack.PanGlobalsSemantics
+import Flapjack.Pancake.Proofs.PanGlobals
 
 namespace Flapjack.Test.PanGlobalsSemanticsParity
 

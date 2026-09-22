@@ -2792,3 +2792,8 @@ fuel, and a zero-condition while preserves the input events. -/
 #check @Flapjack.evalPanValueFfiProgSteps_call_one_none
 #check @Flapjack.evalPanValueFfiProgSteps_decCall_one_none
 #check @Flapjack.evalPanValueFfiProgSteps_while_one_ioEvents_prefix
+
+/-! Residual-free unit-fuel dispatch: every `Prog` constructor's unit-fuel step
+run preserves the input events, so the generic clocked event-prefix theorem can
+be instantiated without a residual premise. -/
+#check @Flapjack.evalPanValueFfiProgSteps_one_ioEvents_prefix

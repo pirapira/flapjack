@@ -174,7 +174,7 @@ theorem extended_context_slot_fixture :
       maxVar := compileProgProbeContext.maxVar + Shape.shapeSize .one }
   have hslot : CrepContextSlot extended 3 := by
     refine ⟨"fresh", .one, [3], ?_, by simp⟩
-    simp [extended, compileProgProbeContext, lookupInfo]
+    simp [extended, lookupInfo]
   rcases crepContextSlot_extended_or_gt compileProgProbeContext
       "fresh" .one [3] (by
         intro x hx

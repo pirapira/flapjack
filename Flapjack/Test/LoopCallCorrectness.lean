@@ -242,6 +242,19 @@ theorem ite_labelsIn_fixture :
     (elseBranch := .tick) (live := [2]) (locals := load32State.locals)
   simpa [comp] using hite
 
+theorem loop_labelsIn_fixture :
+    (comp [(3, 2)]
+      (.loop [2] (.fail : LoopProg Nat) [3]) : LoopProg Nat × LocationEnv).1 =
+        .loop [2] .fail [3] ∧
+      labelsIn
+        (comp [(3, 2)]
+          (.loop [2] (.fail : LoopProg Nat) [3])).2
+        load32State.locals := by
+  have hloop := comp_loop_labelsIn
+    (environment := [(3, 2)]) (liveIn := [2]) (body := (.fail : LoopProg Nat))
+    (liveOut := [3]) (locals := load32State.locals)
+  simpa [comp] using hloop
+
 theorem setGlobal_compile_correct_fixture :
     evalLoopProg 1 load32State
         (comp [(3, 2)] (.setGlobal 9 (.const 11) : LoopProg Nat)).1 =
@@ -489,6 +502,7 @@ theorem ffi_labelsIn_fixture :
 #check comp_mark_labelsIn
 #check comp_seq_labelsIn
 #check comp_ite_labelsIn
+#check comp_loop_labelsIn
 #check comp_setGlobal_correct
 #check comp_return_correct
 #check comp_raise_correct

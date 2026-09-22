@@ -862,6 +862,56 @@ theorem PanValuePcSemanticClockEvidence.finalFfiSemanticOutcomeRel
     hcorrect evidenceClock evidence hffiOutcome (.ffi sourceEvent.outcome)
     (.ffi targetEvent.outcome) hsourceOutcome htargetOutcome
 
+theorem PanValuePcSemanticClockEvidence.raisedForbiddenResultRel
+    {α σ : Type}
+    [BEq α] [OfNat α 0] [Add α]
+    {structs : StructContext} {context : CompileContext α}
+    {program : Prog α}
+    {sourceEvaluate : PanValuePcEvaluator α}
+    {targetEvaluate : CrepPcEvaluator α}
+    {codeRel : PanValuePcCodeRel α}
+    {excpRel : PanValuePcExceptionShapeRel α}
+    {exceptionRel : ExceptionId → PanValue α → α → Prop}
+    {exceptionCode : ExceptionId → Option α}
+    {globalsLookup : CrepState α → PanValue α → Option (List α)}
+    {panHooks : PanSemanticsHooks α σ}
+    {crepHooks : CrepSemanticsHooks α}
+    (hcorrect : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (evidenceClock : Nat)
+    (evidence : PanValuePcSemanticClockEvidence structs context program evidenceClock
+      sourceEvaluate targetEvaluate codeRel excpRel exceptionRel exceptionCode
+      globalsLookup panHooks crepHooks)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (sourceFfi : FfiState σ)
+    (sourceException : ExceptionId) (sourceValue : PanValue α)
+    (targetState : CrepState α) (targetException : α)
+    (houtcome : evidence.outcome =
+      .control (.raised sourceLocals sourceGlobals sourceMemory sourceFfi
+        sourceException sourceValue))
+    (hresult : evidence.result = .raised targetState targetException) :
+    panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
+      (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+      (.raised targetState targetException) ∧
+    (panForbiddenResult (some (evidence.outcome, evidence.returnedClock)) ↔
+      crepForbiddenResult (crepControlResultToSemantic (some evidence.result))) := by
+  have hrel := PanValuePcSemanticClockEvidence.resultRel
+    (panValuePcCompileCorrect_of_withContextCode sourceEvaluate targetEvaluate
+      codeRel excpRel exceptionCode globalsLookup program hcorrect)
+    evidenceClock evidence
+  rw [houtcome, hresult] at hrel
+  have hraisedRel :
+      panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) := by
+    simpa [panOutcomeToPcResult, crepControlToPcResult] using hrel
+  have hforbidden := panValuePcResultRel_forbidden_iff
+    structs context exceptionRel exceptionCode globalsLookup
+    (.control (.raised sourceLocals sourceGlobals sourceMemory sourceFfi
+      sourceException sourceValue))
+    (.raised targetState targetException) evidence.returnedClock hraisedRel
+  exact ⟨hraisedRel, by simpa [houtcome, hresult] using hforbidden⟩
+
 /-! Reapply `pc_compile_correct` across two clock witnesses. This is the
 source/target execution step used by Cake's `evaluate_add_clock_eq` cases: the
 clocked evaluator monotonicity itself is not assumed here, but every

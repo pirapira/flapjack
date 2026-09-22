@@ -3542,7 +3542,170 @@ theorem evalPanValueFfiProgSteps_while_one_ioEvents_prefix
             exact List.prefix_refl _
           · simp only [hc, hz, Option.bind_eq_bind, Option.bind_some] at hstep
             simp at hstep
-      | rStruct _ => simp [hc] at hstep
+          | rStruct _ => simp [hc] at hstep
       | nStruct _ _ => simp [hc] at hstep
 
+set_option linter.unusedSimpArgs false in
+set_option linter.unusedVariables false in
+theorem evalPanValueFfiProgSteps_one_ioEvents_prefix
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (program : Prog α) (memoryAccess : Option (PanValueMemoryAccess α))
+    (contracts : Option PanValueCallContracts)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ))
+    (clock : Nat) (result : PanValueFfiControlResult α σ) (steps : Nat)
+    (hstateful : panValueFfiStatefulHandlerPreservesIoEvents handler)
+    (hmemory : ∀ (memoryHandler : PanValueMemoryFfiHandler α σ),
+      panValueFfiMemoryHandlerPreservesIoEvents memoryHandler)
+    (hstep : evalPanValueFfiProgSteps context primitive handler structs functions baseAddress
+      topAddress bytesInWord 1 locals globals memory ffi program
+      (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler) =
+      some (result, steps)) :
+    ffi.ioEvents <+: (panResultFfi ((.control result : PanValueFfiClockOutcome α σ), clock)).ioEvents := by
+  cases program with
+  | skip =>
+      exact evalPanValueFfiProgSteps_leaf_ioEvents_prefix context primitive handler structs
+        functions baseAddress topAddress bytesInWord 0 locals globals memory ffi
+        (.skip : Prog α) .skip result steps memoryAccess contracts memoryHandler clock
+        hstateful hmemory hstep
+  | dec name shape value body =>
+      rw [evalPanValueFfiProgSteps_dec_one_none context primitive handler structs functions
+        baseAddress topAddress bytesInWord locals globals memory ffi name shape value body
+        memoryAccess contracts memoryHandler] at hstep
+      exact absurd hstep (by simp)
+  | assign kind name value =>
+      exact evalPanValueFfiProgSteps_leaf_ioEvents_prefix context primitive handler structs
+        functions baseAddress topAddress bytesInWord 0 locals globals memory ffi
+        (.assign kind name value) (.assign kind name value) result steps memoryAccess contracts
+        memoryHandler clock hstateful hmemory hstep
+  | primitive name operator args =>
+      exact evalPanValueFfiProgSteps_leaf_ioEvents_prefix context primitive handler structs
+        functions baseAddress topAddress bytesInWord 0 locals globals memory ffi
+        (.primitive name operator args) (.primitive name operator args) result steps memoryAccess
+        contracts memoryHandler clock hstateful hmemory hstep
+  | store address value =>
+      exact evalPanValueFfiProgSteps_leaf_ioEvents_prefix context primitive handler structs
+        functions baseAddress topAddress bytesInWord 0 locals globals memory ffi
+        (.store address value) (.store address value) result steps memoryAccess contracts
+        memoryHandler clock hstateful hmemory hstep
+  | store32 address value =>
+      exact evalPanValueFfiProgSteps_leaf_ioEvents_prefix context primitive handler structs
+        functions baseAddress topAddress bytesInWord 0 locals globals memory ffi
+        (.store32 address value) (.store32 address value) result steps memoryAccess contracts
+        memoryHandler clock hstateful hmemory hstep
+  | storeByte address value =>
+      exact evalPanValueFfiProgSteps_leaf_ioEvents_prefix context primitive handler structs
+        functions baseAddress topAddress bytesInWord 0 locals globals memory ffi
+        (.storeByte address value) (.storeByte address value) result steps memoryAccess contracts
+        memoryHandler clock hstateful hmemory hstep
+  | seq first second =>
+      rw [evalPanValueFfiProgSteps_seq_one_none context primitive handler structs functions
+        baseAddress topAddress bytesInWord locals globals memory ffi first second memoryAccess
+        contracts memoryHandler] at hstep
+      exact absurd hstep (by simp)
+  | ite condition thenBranch elseBranch =>
+      rw [evalPanValueFfiProgSteps_ite_one_none context primitive handler structs functions
+        baseAddress topAddress bytesInWord locals globals memory ffi condition thenBranch
+        elseBranch memoryAccess contracts memoryHandler] at hstep
+      exact absurd hstep (by simp)
+  | «while» condition body =>
+      exact evalPanValueFfiProgSteps_while_one_ioEvents_prefix context primitive handler structs
+        functions baseAddress topAddress bytesInWord locals globals memory ffi condition body
+        memoryAccess contracts memoryHandler clock result steps hstep
+  | «break» =>
+      exact evalPanValueFfiProgSteps_leaf_ioEvents_prefix context primitive handler structs
+        functions baseAddress topAddress bytesInWord 0 locals globals memory ffi
+        (.break : Prog α) .break result steps memoryAccess contracts memoryHandler clock
+        hstateful hmemory hstep
+  | «continue» =>
+      exact evalPanValueFfiProgSteps_leaf_ioEvents_prefix context primitive handler structs
+        functions baseAddress topAddress bytesInWord 0 locals globals memory ffi
+        (.continue : Prog α) .continue result steps memoryAccess contracts memoryHandler clock
+        hstateful hmemory hstep
+  | call info function arguments =>
+      rw [evalPanValueFfiProgSteps_call_one_none context primitive handler structs functions
+        baseAddress topAddress bytesInWord locals globals memory ffi info function arguments
+        memoryAccess contracts memoryHandler] at hstep
+      exact absurd hstep (by simp)
+  | decCall name shape function arguments body =>
+      rw [evalPanValueFfiProgSteps_decCall_one_none context primitive handler structs functions
+        baseAddress topAddress bytesInWord locals globals memory ffi name shape function arguments
+        body memoryAccess contracts memoryHandler] at hstep
+      exact absurd hstep (by simp)
+  | extCall function configuration configurationLength array arrayLength =>
+      exact evalPanValueFfiProgSteps_leaf_ioEvents_prefix context primitive handler structs
+        functions baseAddress topAddress bytesInWord 0 locals globals memory ffi
+        (.extCall function configuration configurationLength array arrayLength)
+        (.extCall function configuration configurationLength array arrayLength) result
+        steps memoryAccess contracts memoryHandler clock hstateful hmemory hstep
+  | raise exception value =>
+      exact evalPanValueFfiProgSteps_leaf_ioEvents_prefix context primitive handler structs
+        functions baseAddress topAddress bytesInWord 0 locals globals memory ffi
+        (.raise exception value) (.raise exception value) result steps memoryAccess contracts
+        memoryHandler clock hstateful hmemory hstep
+  | «return» value =>
+      exact evalPanValueFfiProgSteps_leaf_ioEvents_prefix context primitive handler structs
+        functions baseAddress topAddress bytesInWord 0 locals globals memory ffi
+        (.return value) (.return value) result steps memoryAccess contracts
+        memoryHandler clock hstateful hmemory hstep
+  | shMemLoad size kind name address =>
+      exact evalPanValueFfiProgSteps_leaf_ioEvents_prefix context primitive handler structs
+        functions baseAddress topAddress bytesInWord 0 locals globals memory ffi
+        (.shMemLoad size kind name address) (.shMemLoad size kind name address) result steps
+        memoryAccess contracts memoryHandler clock hstateful hmemory hstep
+  | shMemStore size address value =>
+      exact evalPanValueFfiProgSteps_leaf_ioEvents_prefix context primitive handler structs
+        functions baseAddress topAddress bytesInWord 0 locals globals memory ffi
+        (.shMemStore size address value) (.shMemStore size address value) result steps
+        memoryAccess contracts memoryHandler clock hstateful hmemory hstep
+  | tick =>
+      rw [evalPanValueFfiProgSteps] at hstep
+      simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hstep
+      obtain ⟨rfl, rfl⟩ := hstep
+      simp only [panResultFfi]
+      exact List.prefix_refl _
+  | annot tag text =>
+      rw [evalPanValueFfiProgSteps] at hstep
+      simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hstep
+      obtain ⟨rfl, rfl⟩ := hstep
+      simp only [panResultFfi]
+      exact List.prefix_refl _
+
+set_option linter.unusedSimpArgs false in
+set_option linter.unusedVariables false in
+theorem evalPanValueFfiClockProg_ioEvents_prefix_of_handlerPreserves
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (hstateful : panValueFfiStatefulHandlerPreservesIoEvents handler)
+    (hmemory : ∀ (memoryHandler : PanValueMemoryFfiHandler α σ),
+      panValueFfiMemoryHandlerPreservesIoEvents memoryHandler) :
+    ∀ (fuel : Nat) (locals globals : VarName → Option (PanValue α))
+      (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat) (program : Prog α)
+      (memoryAccess : Option (PanValueMemoryAccess α)) (contracts : Option PanValueCallContracts)
+      (memoryHandler : Option (PanValueMemoryFfiHandler α σ))
+      (outcome : PanValueFfiClockOutcome α σ) (resultClock : Nat),
+      evalPanValueFfiClockProg context primitive handler structs functions baseAddress topAddress
+        bytesInWord fuel locals globals memory ffi clock program
+        (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler) =
+        some (outcome, resultClock) →
+      ffi.ioEvents <+: (panResultFfi (outcome, resultClock)).ioEvents :=
+  (evalPanValueFfiClock_ioEvents_prefix context primitive handler structs functions baseAddress
+    topAddress bytesInWord
+    (fun locals globals memory ffi clock program result steps memoryAccess contracts memoryHandler
+        hstep =>
+      evalPanValueFfiProgSteps_one_ioEvents_prefix context primitive handler structs functions
+        baseAddress topAddress bytesInWord locals globals memory ffi program memoryAccess contracts
+        memoryHandler clock result steps hstateful hmemory hstep)).2
 end Flapjack

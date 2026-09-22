@@ -791,6 +791,61 @@ theorem panCrepSemanticAgreement_of_pcCompileCorrectWithContextCode_pairwise_evi
   · exact hpanSuccessEvents
   · exact hcrepSuccessEvents
 
+/-! Compose pairwise `pc_compile_correct` evidence with the two observational
+    prefix chains.  This is the top-level semantic counterpart of Cake's
+    `state_rel_imp_semantics_to_crep`; evaluator, state, success, event, and
+    chain premises remain explicit. -/
+theorem panCrepBehaviourRel_of_pcCompileCorrectWithContextCode_pairwise_evidence
+    [BEq α] [OfNat α 0] [Add α]
+    (structs : StructContext) (context : CompileContext α) (program : Prog α)
+    (sourceEvaluate : PanValuePcEvaluator α)
+    (targetEvaluate : CrepPcEvaluator α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (panHooks : PanSemanticsHooks α σ)
+    (crepHooks : CrepSemanticsHooks α)
+    (hcorrect : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (hevidence : ∀ (clock : Nat), PanValuePcSemanticClockEvidence structs
+      context program clock sourceEvaluate targetEvaluate codeRel excpRel
+      exceptionRel exceptionCode globalsLookup panHooks crepHooks)
+    (hpanSuccess : ∀ clock (sourceResult : PanValueFfiClockResult α σ)
+      (sourceOutcome : PanSemanticOutcome),
+      panHooks.evaluate clock = some sourceResult →
+      panResultOutcome panHooks (some sourceResult) = some sourceOutcome →
+      sourceOutcome = .success)
+    (hcrepSuccess : ∀ clock (targetResult : Option (CrepSemanticResult α))
+      (targetState : CrepState α) (targetOutcome : CrepSemanticOutcome),
+      crepHooks.evaluate clock = (targetResult, targetState) →
+      crepResultOutcome targetResult = some targetOutcome →
+      targetOutcome = .success)
+    (hpanSuccessEvents : ∀ clock (sourceResult : PanValueFfiClockResult α σ)
+      (sourceOutcome : PanSemanticOutcome),
+      panHooks.evaluate clock = some sourceResult →
+      panResultOutcome panHooks (some sourceResult) = some sourceOutcome →
+      panResultEvents (some sourceResult) = [])
+    (hcrepSuccessEvents : ∀ clock (targetResult : Option (CrepSemanticResult α))
+      (targetState : CrepState α) (targetOutcome : CrepSemanticOutcome),
+      crepHooks.evaluate clock = (targetResult, targetState) →
+      crepResultOutcome targetResult = some targetOutcome →
+      crepHooks.ioEvents targetState = [])
+    (panChain : panLprefixChain
+      (fun clock => panResultEvents (panHooks.evaluate clock)))
+    (crepChain : crepLprefixChain
+      (fun clock => crepHooks.ioEvents (crepHooks.evaluate clock).2)) :
+    panCrepBehaviourRel
+      (panSemantics panHooks panChain)
+      (crepSemantics crepHooks crepChain) := by
+  have hagreement :=
+    panCrepSemanticAgreement_of_pcCompileCorrectWithContextCode_pairwise_evidence
+      structs context program sourceEvaluate targetEvaluate codeRel excpRel
+      exceptionCode globalsLookup exceptionRel panHooks crepHooks hcorrect hevidence
+      hpanSuccess hcrepSuccess hpanSuccessEvents hcrepSuccessEvents
+  exact panSemantics_rel_crepSemantics panHooks crepHooks hagreement panChain crepChain
+
 theorem panCrepSemanticAgreement_of_pcCompileCorrect
     [BEq α] [OfNat α 0] [Add α]
     (structs : StructContext) (context : CompileContext α) (program : Prog α)

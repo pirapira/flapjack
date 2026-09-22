@@ -82,4 +82,30 @@ theorem maxList_range (n : Nat) : maxList (List.range n) = n - 1 := by
       rw [List.range_succ, maxList_append, ih]
       simp [maxList]
 
+/-- Cake's `max_list_genlist_add_suc_val`
+    (`cakeml/pancake/proofs/crep_inlineProofScript.sml:2579`): the maximum of
+    `GENLIST (λx. SUC x + k) n` is `n + k` for `n ≠ 0`.  `List.range n` is the
+    Flapjack counterpart of `GENLIST I n`. -/
+theorem maxList_genlist_add_suc_val (k : Nat) :
+    ∀ n, n ≠ 0 →
+      maxList ((List.range n).map (fun x => (x + 1) + k)) = n + k := by
+  intro n
+  induction n with
+  | zero => intro h; exact absurd rfl h
+  | succ m ih =>
+      intro _
+      rw [List.range_succ, List.map_append, maxList_append]
+      simp only [List.map_cons, List.map_nil]
+      have hsingle : maxList [((m + 1) + k)] = (m + 1) + k := by
+        simp only [maxList]
+        exact Nat.max_eq_left (Nat.zero_le _)
+      rw [hsingle]
+      cases m with
+      | zero =>
+          simp only [List.range_zero, List.map_nil, maxList]
+          exact Nat.max_eq_right (Nat.zero_le _)
+      | succ m' =>
+          rw [ih (by omega)]
+          exact Nat.max_eq_right (by omega)
+
 end Flapjack

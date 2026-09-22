@@ -474,4 +474,50 @@ theorem loopAccVars_skip (names : List Nat) :
     loopAccVars (.skip : LoopProg α) names = names := by
   rfl
 
+/-! Cake `crep_to_loopProofScript.sml:355` `assigned_vars_MAPi_Assign`:
+    a nested sequence of assignments to `offset, …, offset + count - 1`
+    assigns exactly those variables.  `loopAssignNames` is the Flapjack
+    counterpart of Cake's `MAPi (λn. Assign (n + offset))`. -/
+
+theorem loopAssignedVars_nestedSeq (statements : List (LoopProg α)) :
+    loopAssignedVars (loopNestedSeq statements) =
+      statements.flatMap loopAssignedVars := by
+  induction statements with
+  | nil => simp [loopNestedSeq, loopAssignedVars]
+  | cons statement statements ih =>
+      simp [loopNestedSeq, loopAssignedVars_seq, ih]
+
+def loopAssignNames (names : List Nat) (expression : LoopExp α) :
+    List (LoopProg α) :=
+  names.map (fun name => .assign name expression)
+
+theorem loopAssignNames_cons (name : Nat) (names : List Nat)
+    (expression : LoopExp α) :
+    loopAssignNames (name :: names) expression =
+      .assign name expression :: loopAssignNames names expression := by
+  simp [loopAssignNames]
+
+theorem loopAssignedVars_loopAssignNames (names : List Nat)
+    (expression : LoopExp α) :
+    loopAssignedVars (loopNestedSeq (loopAssignNames names expression)) =
+      names := by
+  rw [loopAssignedVars_nestedSeq]
+  induction names with
+  | nil => simp [loopAssignNames]
+  | cons name names ih =>
+      rw [loopAssignNames_cons]
+      simp only [List.flatMap_cons]
+      rw [loopAssignedVars, ih]
+      rfl
+
+/-- Cake `crep_to_loopProofScript.sml:355` `assigned_vars_MAPi_Assign`, stated
+    for the `loopTempNames offset count` numbering produced by the executable
+    inliner. -/
+theorem loopAssignedVars_loopTempNames (offset count : Nat)
+    (expression : LoopExp α) :
+    loopAssignedVars
+        (loopNestedSeq (loopAssignNames (loopTempNames offset count) expression)) =
+      loopTempNames offset count :=
+  loopAssignedVars_loopAssignNames _ _
+
 end Flapjack

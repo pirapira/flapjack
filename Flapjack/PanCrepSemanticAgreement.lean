@@ -23,6 +23,91 @@ has to strengthen with the monotone-evaluator theorem.
 
 namespace Flapjack
 
+/-! ## The concrete source evaluator hook
+
+`PanSemanticsHooks` is intentionally evaluator-agnostic so the semantic
+transport lemmas can be reused by small tests.  The production Pancake
+semantics, however, evaluates a fixed source program at each clock.  This
+adapter exposes the actual `panSemEvaluate` entry point at that boundary; in
+particular, it does not replace the clocked evaluator by the older compact
+compatibility evaluator.  Keeping this definition here avoids a dependency
+cycle between `PanEvaluate` and `PanObservationalSemantics`.
+-/
+
+def panSemEvaluateHooks
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (state : PanSemEvaluateState α σ)
+    (program : Prog α) : PanSemanticsHooks α σ where
+  evaluate clock :=
+    panSemEvaluate context primitive handler { state with clock := clock } program
+  ffiOutcome event := event.outcome
+
+@[simp] theorem panSemEvaluateHooks_evaluate
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (state : PanSemEvaluateState α σ)
+    (program : Prog α) (clock : Nat) :
+    (panSemEvaluateHooks context primitive handler state program).evaluate clock =
+      panSemEvaluate context primitive handler { state with clock := clock } program := by
+  rfl
+
+@[simp] theorem panSemEvaluateHooks_ffiOutcome
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (state : PanSemEvaluateState α σ)
+    (program : Prog α) (event : FfiFinalEvent) :
+    (panSemEvaluateHooks context primitive handler state program).ffiOutcome event =
+      event.outcome := by
+  rfl
+
+/-! Once the concrete source evaluator has been shown to satisfy the
+    `PanCrepSemanticAgreement` record, this is the direct top-level behavior
+    statement.  The agreement remains an explicit premise: it is the ported
+    analogue of the per-clock `pc_compile_correct` and choice-stability work in
+    Cake's `state_rel_imp_semantics_to_crep` proof, and must not be replaced by
+    an unproved compatibility axiom. -/
+theorem panCrepBehaviourRel_of_panSemEvaluate_agreement
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (state : PanSemEvaluateState α σ)
+    (program : Prog α)
+    (crepHooks : CrepSemanticsHooks β)
+    (agreement : PanCrepSemanticAgreement
+      (panSemEvaluateHooks context primitive handler state program) crepHooks)
+    (panChain : panLprefixChain
+      (fun clock => panResultEvents
+        ((panSemEvaluateHooks context primitive handler state program).evaluate clock)))
+    (crepChain : crepLprefixChain
+      (fun clock => crepHooks.ioEvents (crepHooks.evaluate clock).2)) :
+    panCrepBehaviourRel
+      (panSemantics (panSemEvaluateHooks context primitive handler state program)
+        panChain)
+      (crepSemantics crepHooks crepChain) := by
+  exact panSemantics_rel_crepSemantics
+    (panSemEvaluateHooks context primitive handler state program) crepHooks
+    agreement panChain crepChain
+
 /-! ## Clocked results as compact `pc` results -/
 
 /-- Project a clocked source outcome onto the compact `pc_compile_correct`

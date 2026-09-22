@@ -382,7 +382,8 @@
       "source_reference": "Cake word_copyScript.sml:377-380: copy_prop_prog resets the incoming equivalence state after a Loop. This isolates the fp_pow4 table/loop and call-result pressure that previously emitted a 20-byte surplus.",
       "cake_sha256": "b4e2f41c484dc86b90a267cd0980789a024e0836cfc19a29b923a196453c75b2",
       "tracked_beads": [
-        "flapjack-8tb.4.6"
+        "flapjack-8tb.4.6",
+        "flapjack-pxn.8.5.14.1.5"
       ]
     },
     {
@@ -1200,6 +1201,14 @@
       "cake_sha256": "4f4b27f3fbdd5ffbe321d27b46ebdbd3ef49a2a9e007b8a254806234f0da4838",
       "tracked_beads": [
         "flapjack-pxn.8.10"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/riscv_narrow_lower_offset.pnk",
+      "source_reference": "Original-Cake narrow load-offset fixture: ld8 (p + 2048) preserves the exact lower signed-12 boundary through source-to-RISC-V lowering.",
+      "cake_sha256": "fe597203b6b8371b914165486775b69a81cf3aa48be438f1f3aef2c18ba496ed",
+      "tracked_beads": [
+        "flapjack-pxn.10"
       ]
     }
   ]

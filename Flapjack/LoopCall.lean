@@ -125,6 +125,63 @@ termination_by _ program => sizeOf program
 decreasing_by
   all_goals decreasing_trivial
 
+/-! Basic lookup facts for the association-list location environment.  These
+    are the list-backed counterparts of the `num |-> num` map facts
+    (`lookup_insert`, `lookup_delete`) that CakeML's `loop_call` correctness
+    proof relies on. -/
+
+theorem lookup_cons (name candidate location : Nat) (entries : LocationEnv) :
+    lookup name ((candidate, location) :: entries) =
+      if candidate = name then some location else lookup name entries := rfl
+
+theorem delete_cons (name candidate location : Nat) (entries : LocationEnv) :
+    delete name ((candidate, location) :: entries) =
+      if candidate = name then delete name entries
+      else (candidate, location) :: delete name entries := rfl
+
+theorem lookup_insert_same (name location : Nat) (environment : LocationEnv) :
+    lookup name (insert name location environment) = some location := by
+  simp [lookup, insert]
+
+theorem lookup_insert_other (name location other : Nat) (environment : LocationEnv)
+    (h : other ≠ name) :
+    lookup other (insert name location environment) = lookup other environment := by
+  simp only [insert]
+  rw [lookup_cons, if_neg (fun hc => h hc.symm)]
+
+theorem lookup_delete_same (name : Nat) (environment : LocationEnv) :
+    lookup name (delete name environment) = none := by
+  induction environment with
+  | nil => simp [delete, lookup]
+  | cons entry environment ih =>
+      obtain ⟨candidate, location⟩ := entry
+      rw [delete_cons]
+      by_cases hc : candidate = name
+      · rw [if_pos hc]
+        exact ih
+      · rw [if_neg hc]
+        rw [lookup_cons, if_neg hc]
+        exact ih
+
+theorem lookup_delete_other (name other : Nat) (environment : LocationEnv)
+    (h : other ≠ name) :
+    lookup other (delete name environment) = lookup other environment := by
+  induction environment with
+  | nil => simp [delete, lookup]
+  | cons entry environment ih =>
+      obtain ⟨candidate, location⟩ := entry
+      rw [delete_cons]
+      by_cases hc : candidate = name
+      · rw [if_pos hc]
+        rw [lookup_cons, if_neg (fun hc' => h (hc'.symm.trans hc))]
+        exact ih
+      · rw [if_neg hc]
+        by_cases ho : candidate = other
+        · rw [lookup_cons, if_pos ho, lookup_cons, if_pos ho]
+        · rw [lookup_cons, if_neg ho]
+          rw [lookup_cons, if_neg ho]
+          exact ih
+
 end LoopCall
 
 end Flapjack

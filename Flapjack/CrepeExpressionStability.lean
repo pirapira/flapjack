@@ -403,5 +403,122 @@ theorem evalCrepFullExpsState_update_of_forall_not_mem
               cases hvalues
               simp [evalCrepFullExpsState, hvalue', htail']
 
+/-- Cake's `eval_some_var_cexp_local_lookup` (`crepPropsScript.sml:835`):
+a successfully evaluated expression binds every variable that occurs in it. -/
+theorem evalCrepFullExpState_local_lookup_of_mem
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepState α) (baseAddress topAddress : α)
+    (expression : CrepExp α) (value : α) (name : Nat)
+    (heval : evalCrepFullExpState state baseAddress topAddress expression = some value)
+    (hmem : name ∈ crepExpVars expression) :
+    ∃ w, state.locals name = some w := by
+  let rec go (expression : CrepExp α) (value : α)
+      (heval : evalCrepFullExpState state baseAddress topAddress expression = some value)
+      (hmem : name ∈ crepExpVars expression) :
+      ∃ w, state.locals name = some w :=
+    match expression with
+    | .const _ => by simp at hmem
+    | .var variableName => by
+        have hname : name = variableName := by simpa [crepExpVars] using hmem
+        exact ⟨value, by rw [hname]; simpa [evalCrepFullExpState] using heval⟩
+    | .load address => by
+        cases haddress : evalCrepFullExpState state baseAddress topAddress address with
+        | none => simp [evalCrepFullExpState, haddress] at heval
+        | some addressValue =>
+            exact go address addressValue haddress (by simpa [crepExpVars] using hmem)
+    | .load32 address => by
+        cases haddress : evalCrepFullExpState state baseAddress topAddress address with
+        | none => simp [evalCrepFullExpState, haddress] at heval
+        | some addressValue =>
+            exact go address addressValue haddress (by simpa [crepExpVars] using hmem)
+    | .loadByte address => by
+        cases haddress : evalCrepFullExpState state baseAddress topAddress address with
+        | none => simp [evalCrepFullExpState, haddress] at heval
+        | some addressValue =>
+            exact go address addressValue haddress (by simpa [crepExpVars] using hmem)
+    | .loadGlob _ => by simp [crepExpVars] at hmem
+    | .op operator expressions => by
+        cases expressions with
+        | nil => simp [evalCrepFullExpState] at heval
+        | cons left expressions =>
+            cases expressions with
+            | nil => simp [evalCrepFullExpState] at heval
+            | cons right expressions =>
+                cases expressions with
+                | nil =>
+                    have hmem' : name ∈ crepExpVars left ∨ name ∈ crepExpVars right := by
+                      simpa [crepExpVars, crepExpVars.crepExpVarsList] using hmem
+                    cases hleft : evalCrepFullExpState state baseAddress topAddress left with
+                    | none =>
+                        simp [evalCrepFullExpState, hleft] at heval
+                    | some leftValue =>
+                        cases hright : evalCrepFullExpState state baseAddress topAddress right with
+                        | none =>
+                            simp [evalCrepFullExpState, hleft, hright] at heval
+                        | some rightValue =>
+                            rcases hmem' with hmemLeft | hmemRight
+                            · exact go left leftValue hleft hmemLeft
+                            · exact go right rightValue hright hmemRight
+                | cons expression expressions => simp [evalCrepFullExpState] at heval
+    | .crepOp operator expressions => by
+        cases operator
+        cases expressions with
+        | nil => simp [evalCrepFullExpState] at heval
+        | cons left expressions =>
+            cases expressions with
+            | nil => simp [evalCrepFullExpState] at heval
+            | cons right expressions =>
+                cases expressions with
+                | nil =>
+                    have hmem' : name ∈ crepExpVars left ∨ name ∈ crepExpVars right := by
+                      simpa [crepExpVars, crepExpVars.crepExpVarsList] using hmem
+                    cases hleft : evalCrepFullExpState state baseAddress topAddress left with
+                    | none =>
+                        simp [evalCrepFullExpState, hleft] at heval
+                    | some leftValue =>
+                        cases hright : evalCrepFullExpState state baseAddress topAddress right with
+                        | none =>
+                            simp [evalCrepFullExpState, hleft, hright] at heval
+                        | some rightValue =>
+                            rcases hmem' with hmemLeft | hmemRight
+                            · exact go left leftValue hleft hmemLeft
+                            · exact go right rightValue hright hmemRight
+                | cons expression expressions => simp [evalCrepFullExpState] at heval
+    | .cmp operator left right => by
+        have hmem' : name ∈ crepExpVars left ∨ name ∈ crepExpVars right := by
+          simpa [crepExpVars] using hmem
+        cases hleft : evalCrepFullExpState state baseAddress topAddress left with
+        | none =>
+            simp [evalCrepFullExpState, hleft] at heval
+        | some leftValue =>
+            cases hright : evalCrepFullExpState state baseAddress topAddress right with
+            | none =>
+                simp [evalCrepFullExpState, hleft, hright] at heval
+            | some rightValue =>
+                rcases hmem' with hmemLeft | hmemRight
+                · exact go left leftValue hleft hmemLeft
+                · exact go right rightValue hright hmemRight
+    | .shift operator left right => by
+        have hmem' : name ∈ crepExpVars left ∨ name ∈ crepExpVars right := by
+          simpa [crepExpVars] using hmem
+        cases hleft : evalCrepFullExpState state baseAddress topAddress left with
+        | none =>
+            simp [evalCrepFullExpState, hleft] at heval
+        | some leftValue =>
+            cases hright : evalCrepFullExpState state baseAddress topAddress right with
+            | none =>
+                simp [evalCrepFullExpState, hleft, hright] at heval
+            | some rightValue =>
+                rcases hmem' with hmemLeft | hmemRight
+                · exact go left leftValue hleft hmemLeft
+                · exact go right rightValue hright hmemRight
+    | .baseAddr => by simp [crepExpVars] at hmem
+    | .topAddr => by simp [crepExpVars] at hmem
+    termination_by structural expression
+  exact go expression value heval hmem
+
 end Flapjack
 

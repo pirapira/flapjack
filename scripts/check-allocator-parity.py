@@ -68,6 +68,7 @@ FIXTURES = (
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00238_handler_const_or.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "gh1039_handled_call_labels.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "ordinary_subword_offsets.pnk",
+    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "address_shift_operand.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00017_nested_and_zero.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f00091_nested_and_constants.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "gh1025_frame_bitmap.pnk",

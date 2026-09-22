@@ -1210,6 +1210,42 @@
       "tracked_beads": [
         "flapjack-pxn.10"
       ]
+    },
+    {
+      "path": "scripts/parity-difffuzz-findings/bitmap-min/case.pnk",
+      "source_reference": "Previously recorded bitmap/frame allocator witness: current Cake and Flapjack outputs are now byte-identical after the frame/allocator parity fixes.",
+      "cake_sha256": "e7fa7109be00b18e6048000c97e19de23c21c7c92bd4ea978b62b06d367134da",
+      "tracked_beads": []
+    },
+    {
+      "path": "scripts/parity-difffuzz-findings/ffi-min/case.pnk",
+      "source_reference": "Previously recorded FFI/frame allocator witness: current Cake and Flapjack outputs are now byte-identical after the frame/allocator parity fixes.",
+      "cake_sha256": "f6b049c7f654ddb5887b2d33a625785430e37dfa9c96340216d7bbd14dad67f1",
+      "tracked_beads": []
+    },
+    {
+      "path": "scripts/parity-difffuzz-findings/frame-occupancy/p9.pnk",
+      "source_reference": "Original-Cake p9 frame-occupancy witness: two retained struct fields across a non-tail call require exact continuation bitmap words [4,8,8].",
+      "cake_sha256": "231edf4c3210768c8d1b8df52a0fc2a59cbcc7ff472a85fc1835cfee7d903483",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.5"
+      ]
+    },
+    {
+      "path": "scripts/parity-difffuzz-findings/frame-occupancy/live1.pnk",
+      "source_reference": "Original-Cake live1 frame-occupancy witness: one retained struct field across a non-tail call requires two minimal continuation frames [4,4,4].",
+      "cake_sha256": "c1829c6958c08508a2ab59ffda36c0d48809e04afa54dc790ce8b6dbfbe376a6",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.5"
+      ]
+    },
+    {
+      "path": "scripts/parity-difffuzz-findings/frame-occupancy/live3.pnk",
+      "source_reference": "Original-Cake live3 frame-occupancy witness: three retained struct values across four non-tail continuations require exact sixteen-word frames [4,16,16,16,16].",
+      "cake_sha256": "712a26b9bf5f17fa9066468dfae8b9e052065499b397204bbeab824ac4404856",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.5"
+      ]
     }
   ]
 }

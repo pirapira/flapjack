@@ -307,5 +307,6 @@ example {α σ : Type} [BEq α] [OfNat α 0] [Add α]
 
 #check @panCrepBehaviourRel_of_pcCompileCorrectWithContextCode_cross_clock_prefix_from_pairwise_stateRelWithContext
 #check @panCrepBehaviourRel_of_clocked_pcCompileCorrectWithContextCode_cross_clock_prefix_from_pairwise_stateRelWithContext
+#check @panCrepBehaviourRel_of_clocked_pcCompileCorrectWithContextCode_cross_clock_prefix_from_pairwise_stateRelWithContext_of_crep_chain
 
 end Flapjack.Test.PanToCrepSemantics

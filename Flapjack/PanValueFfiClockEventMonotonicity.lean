@@ -1296,4 +1296,82 @@ theorem evalPanValueFfiClockProg_while_zero_ioEvents_prefix
       hcondition hw
   · exact List.prefix_refl _
 
+theorem evalPanValueFfiClockProg_ite_true_ioEvents_prefix
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (condition : Exp α) (thenBranch elseBranch : Prog α)
+    (wordValue : α) (outcome : PanValueFfiClockOutcome α σ) (nextClock : Nat)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (contracts : Option PanValueCallContracts := none)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none)
+    (hcondition : evalPanValueExp structs locals globals memory baseAddress
+      topAddress bytesInWord condition (memoryAccess := memoryAccess) =
+      some (.word wordValue))
+    (hnonzero : (wordValue != 0) = true)
+    (hthen : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
+      thenBranch (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) = some (outcome, nextClock))
+    (hprefix : ffi.ioEvents <+:
+      (panResultFfi (outcome, nextClock)).ioEvents) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+      (.ite condition thenBranch elseBranch) memoryAccess contracts memoryHandler =
+      some (outcome, nextClock) ∧
+      ffi.ioEvents <+: (panResultFfi (outcome, nextClock)).ioEvents := by
+  constructor
+  · exact evalPanValueFfiClockProg_ite_true_some context primitive handler structs
+      functions baseAddress topAddress bytesInWord fuel locals globals memory ffi
+      clock condition thenBranch elseBranch memoryAccess contracts memoryHandler
+      wordValue outcome nextClock hcondition hnonzero hthen
+  · exact hprefix
+
+theorem evalPanValueFfiClockProg_ite_false_ioEvents_prefix
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (condition : Exp α) (thenBranch elseBranch : Prog α)
+    (wordValue : α) (outcome : PanValueFfiClockOutcome α σ) (nextClock : Nat)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (contracts : Option PanValueCallContracts := none)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none)
+    (hcondition : evalPanValueExp structs locals globals memory baseAddress
+      topAddress bytesInWord condition (memoryAccess := memoryAccess) =
+      some (.word wordValue))
+    (hzero : (wordValue != 0) = false)
+    (helse : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
+      elseBranch (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) = some (outcome, nextClock))
+    (hprefix : ffi.ioEvents <+:
+      (panResultFfi (outcome, nextClock)).ioEvents) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+      (.ite condition thenBranch elseBranch) memoryAccess contracts memoryHandler =
+      some (outcome, nextClock) ∧
+      ffi.ioEvents <+: (panResultFfi (outcome, nextClock)).ioEvents := by
+  constructor
+  · exact evalPanValueFfiClockProg_ite_false_some context primitive handler structs
+      functions baseAddress topAddress bytesInWord fuel locals globals memory ffi
+      clock condition thenBranch elseBranch memoryAccess contracts memoryHandler
+      wordValue outcome nextClock hcondition hzero helse
+  · exact hprefix
+
 end Flapjack

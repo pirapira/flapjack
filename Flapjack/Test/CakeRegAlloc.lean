@@ -183,6 +183,9 @@ def indexedAdjacencyMembershipGuard : Bool :=
 def stackOnlyFastReferenceGuard : Bool :=
   let programs : List (WordProg Nat) :=
     [ .skip,
+      .tick,
+      .break 0,
+      .continue 0,
       .move 1 [(9, 9), (7, 9)],
       .assign 9 (.var 7),
       .seq (.move 1 [(13, 13), (2, 13)])
@@ -662,6 +665,18 @@ def heuFixedDegreeGuard : Bool :=
   count == 1 &&
     after.degrees.get 1 == some 1 &&
     after.simpWl == [1] && after.spillWl == []
+
+/-- Missing node tags use Cake's `sp_default`-style Atemp default in
+    `considered_var`; stack temporaries remain unconsidered. -/
+def consideredVarTagGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 2 with
+      nodeTag := CakeNodeMap.ofNatInfoMap 2 [(0, .sTemp), (1, .fixed 2)] }
+  !cakeConsideredVar state 4 0 &&
+    cakeConsideredVar state 4 1 &&
+    cakeConsideredVar state 4 7
+
+#guard consideredVarTagGuard
 
 /-- Normalise a colouring to the ascending original-variable order that the
     original sptree iteration produces. -/

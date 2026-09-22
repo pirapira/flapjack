@@ -258,6 +258,84 @@ theorem not_mem_crepAssignedFreeVars_compileProg_assign_local
           · rw [if_neg hlength]
             simp [crepAssignedFreeVars]
 
+/-! ExtCall introduces four fresh declarations around a Crepe `extCall`, which
+    has no assigned-free locals.  This is the corresponding `ExtCall` branch
+    of Cake's induction; malformed expressions take the `Skip` fallback. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_extCall
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (function : FunName)
+    (configuration configurationLength array arrayLength : Exp α) (x : Nat) :
+    x ∉ crepAssignedFreeVars
+      (compileProg context
+        (.extCall function configuration configurationLength array arrayLength)) := by
+  simp only [compileProg]
+  cases hconfiguration : firstCompiledExp context configuration with
+  | none => simp [crepAssignedFreeVars]
+  | some compiledConfiguration =>
+      cases hconfigurationLength : firstCompiledExp context configurationLength with
+      | none => simp [crepAssignedFreeVars]
+      | some compiledConfigurationLength =>
+          cases harray : firstCompiledExp context array with
+          | none => simp [crepAssignedFreeVars]
+          | some compiledArray =>
+              cases harrayLength : firstCompiledExp context arrayLength with
+              | none => simp [crepAssignedFreeVars]
+              | some compiledArrayLength =>
+                  simp only
+                  apply not_mem_crepAssignedFreeVars_nestedDecs
+                  · simp
+                  · simp [crepAssignedFreeVars]
+
+/-! Raising stores the payload in globals through a declaration nest, then
+    raises.  Both the store-global sequence and the raise have empty
+    assigned-free sets, so the branch is independent of the chosen exception
+    code and payload shape. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_raise
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (exception : ExceptionId) (value : Exp α) (x : Nat) :
+    x ∉ crepAssignedFreeVars
+      (compileProg context (.raise exception value)) := by
+  simp only [compileProg]
+  cases hexception : lookupInfo exception context.exceptions with
+  | none => simp [crepAssignedFreeVars]
+  | some code =>
+      cases hcompile : compileExp context value with
+      | mk expressions valueShape =>
+          simp only
+          by_cases hlength : expressions.length = Shape.shapeSize valueShape
+          · rw [if_pos hlength]
+            simp only [crepAssignedFreeVars, List.append_nil]
+            apply not_mem_crepAssignedFreeVars_nestedDecs
+            · simp [freshNames_length, hlength]
+            · rw [crepAssignedFreeVars_nestedSeq_storeGlobals]
+              simp
+          · rw [if_neg hlength]
+            simp [crepAssignedFreeVars]
+
+/-! `ShMemStore` binds its single temporary around the generated `shMem`
+    instruction.  Unlike the sufficient nested-declaration lemma used for
+    stores, this branch uses the exact declaration-filter equation because
+    the temporary is itself assigned by the body and is then removed. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_shMemStore
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (size : OpSize)
+    (address value : Exp α) (x : Nat) :
+    x ∉ crepAssignedFreeVars
+      (compileProg context (.shMemStore size address value)) := by
+  simp only [compileProg]
+  cases haddress : firstCompiledExpAnyShape context address with
+  | none => simp [crepAssignedFreeVars]
+  | some compiledAddress =>
+      cases hvalue : firstCompiledExpAnyShape context value with
+      | none => simp [crepAssignedFreeVars]
+      | some compiledValue =>
+          simp only
+          rw [crepAssignedFreeVars_nestedDecs_append
+            [maxCrepExpVar [compiledAddress] + 1] [compiledValue]
+            (.shMem (storeMemOp size) (maxCrepExpVar [compiledAddress] + 1)
+              compiledAddress) (by simp)]
+          simp [crepAssignedFreeVars]
+
 /-- `crepNestedSeq` of `assign` statements built from a zip of names with
     variables introduced by `freshNames` still has exactly `names` as its
     assigned free variables. -/

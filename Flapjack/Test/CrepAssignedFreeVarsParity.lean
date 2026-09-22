@@ -37,6 +37,9 @@ def boundedContext : CompileContext Nat :=
   { vars := [("fresh", (.one, [3]))], functions := [], exceptions := [],
     maxVar := 3, bytesInWord := 1 }
 
+def raiseContext : CompileContext Nat :=
+  { boundedContext with exceptions := [("error", 11)] }
+
 /-! This fixture exercises the Cake `ctxt_max_el_leq` bridge on the same
     context-slot representation used by the assigned-free-vars proof. -/
 theorem context_slot_bound_fixture :
@@ -107,6 +110,26 @@ theorem compileProg_assign_local_temporary_assigned_free_fixture :
   simp [boundedContext, lookupInfo] at hlookup
   rcases hlookup with ⟨rfl, rfl⟩
   simp
+
+theorem compileProg_extCall_assigned_free_fixture :
+    (9 : Nat) ∉ crepAssignedFreeVars
+      (compileProg boundedContext
+        (.extCall "ffi" (.const 1) (.const 2) (.const 3) (.const 4))) := by
+  exact not_mem_crepAssignedFreeVars_compileProg_extCall
+    boundedContext "ffi" (.const 1) (.const 2) (.const 3) (.const 4) 9
+
+theorem compileProg_raise_assigned_free_fixture :
+    (9 : Nat) ∉ crepAssignedFreeVars
+      (compileProg raiseContext (.raise "error" (.const 1))) := by
+  exact not_mem_crepAssignedFreeVars_compileProg_raise
+    raiseContext "error" (.const 1) 9
+
+theorem compileProg_shMemStore_assigned_free_fixture :
+    (9 : Nat) ∉ crepAssignedFreeVars
+      (compileProg boundedContext
+        (.shMemStore .opW (.const 0) (.const 1))) := by
+  exact not_mem_crepAssignedFreeVars_compileProg_shMemStore
+    boundedContext .opW (.const 0) (.const 1) 9
 
 def runChecks : IO Bool := do
   if parityGuard then

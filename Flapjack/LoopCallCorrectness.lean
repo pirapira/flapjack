@@ -142,5 +142,35 @@ theorem comp_load32_correct
   · exact labelsIn_load32_update environment state.locals destination value
       henvironment
 
+theorem comp_loadByte_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (environment : LocationEnv) (state : LoopState α)
+    (address destination : Nat) (addressValue value : α)
+    (haddress : state.locals address = some addressValue)
+    (hvalue : state.memory addressValue = some value)
+    (henvironment : labelsIn environment state.locals) :
+    evalLoopProg 1 state
+        (comp environment (.loadByte address destination : LoopProg α)).1 =
+        some (.normal { state with
+          locals := updateLoopLocal state.locals destination value }) ∧
+      labelsIn (comp environment (.loadByte address destination : LoopProg α)).2
+        (updateLoopLocal state.locals destination value) := by
+  have hcompiled :
+      comp environment (.loadByte address destination : LoopProg α) =
+        (.loadByte address destination,
+          match lookup destination environment with
+          | none => environment
+          | some _ => delete destination environment) := by
+    simp [comp] <;> rfl
+  rw [hcompiled]
+  constructor
+  · exact evalLoopProg_loadByte state address destination addressValue value
+      haddress hvalue
+  · exact labelsIn_load32_update environment state.locals destination value
+      henvironment
+
 end LoopCall
 end Flapjack

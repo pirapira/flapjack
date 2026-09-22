@@ -49,7 +49,25 @@ theorem load32_compile_correct_fixture :
     subst source
     exact ⟨100, by simp [load32State]⟩
 
+theorem loadByte_compile_correct_fixture :
+    evalLoopProg 1 load32State
+        (comp [(3, 2)] (.loadByte 2 3) : LoopProg Nat × LocationEnv).1 =
+        some (.normal { load32State with
+          locals := updateLoopLocal load32State.locals 3 7 }) ∧
+      labelsIn (comp [(3, 2)] (.loadByte 2 3) : LoopProg Nat × LocationEnv).2
+        (updateLoopLocal load32State.locals 3 7) := by
+  apply comp_loadByte_correct (addressValue := 100) (value := 7)
+  · simp [load32State]
+  · simp [load32State]
+  · intro name source hlookup
+    have hpair : 3 = name ∧ 2 = source := by
+      simpa [lookup] using hlookup
+    have hsource : source = 2 := hpair.2.symm
+    subst source
+    exact ⟨100, by simp [load32State]⟩
+
 #check comp_locValue_correct
 #check comp_load32_correct
+#check comp_loadByte_correct
 
 end Flapjack.Test.LoopCallCorrectness

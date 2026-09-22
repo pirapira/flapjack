@@ -761,6 +761,39 @@ theorem panValueProgramStateRel_evalDeclarations_adequacy
     exact hexceptions
   exact ⟨t', ht, hrel', hlookup', hexceptions⟩
 
+/-! The returned-call declaration step only needs the return-shape projection
+    of the full adequacy package.  Keep this smaller bridge available to the
+    `state_rel_imp_semantics_decls_to_crep` induction so a caller can consume
+    the target declaration evaluator, post-state relation, and callee shape
+    without unpacking the function-table lookup case. -/
+theorem panValueProgramStateRel_evalDeclarations_returnShape_adequacy
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (s t : PanValueProgramState α) (hrel : panValueProgramStateRel s t)
+    (declarations : List (Decl α)) (memoryAccess : Option (PanValueMemoryAccess α))
+    (s' : PanValueProgramState α)
+    (hs : evalPanValueDeclarations s declarations memoryAccess = some s')
+    (name : FunName) (shape : Shape)
+    (hlookup : lookupInfo name s'.returnShapes = some shape) :
+    ∃ t', evalPanValueDeclarations t (panSimpDecls declarations) memoryAccess = some t' ∧
+      panValueProgramStateRel s' t' ∧
+      lookupInfo name t'.returnShapes = some shape ∧
+      s'.exceptions = t'.exceptions := by
+  obtain ⟨t', ht, hrel'⟩ :=
+    panValueProgramStateRel_evalPanValueDeclarations
+      s t hrel declarations memoryAccess s' hs
+  rcases hrel' with ⟨hstructs, hglobals, hmemory, hreturnShapes,
+    hparameterShapes, hexceptions', hbaseAddress, htopAddress, hbytesInWord,
+    hfunctions⟩
+  have htargetLookup : lookupInfo name t'.returnShapes = some shape := by
+    rw [← hreturnShapes]
+    exact hlookup
+  exact ⟨t', ht,
+    ⟨hstructs, hglobals, hmemory, hreturnShapes, hparameterShapes, hexceptions',
+      hbaseAddress, htopAddress, hbytesInWord, hfunctions⟩,
+    htargetLookup, by exact hexceptions'⟩
+
 /-! Cake's `map_snd_f_eq` (`pan_simpProofScript.sml:43`): rewriting only the
     body component of a declaration triple commutes with projecting that body
     and applying a further function.  Stated for `List (α × β × γ)`, whose

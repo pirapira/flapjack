@@ -784,6 +784,7 @@ theorem panSemEvaluate_clock_shift_panResultEvents
         (panSemEvaluate context primitive handler
           { state with clock := state.clock + extra } program) :=
       (congrArg panResultEvents hrun'').symm
+ 
 /-! Cake's `evaluate_add_clock_io_events_mono` has a timeout branch in which
     the smaller-clock run contributes only its incoming FFI trace.  The
     larger-clock run may continue, so that branch is a prefix statement rather

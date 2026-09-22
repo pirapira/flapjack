@@ -1501,6 +1501,16 @@ theorem cakeColourLocation_stack_boundary
       .stack (f - 1 - (register - k)) := by
   simp [cakeColourLocation, hregister]
 
+/-- A Cake stack colour whose spill index fits the `f`-word frame is assigned
+    a concrete slot strictly below that frame, as `format_var` requires. -/
+theorem cakeColourLocation_stack_slot_lt_frame
+    (k f register : Nat) (hregister : k ≤ register)
+    (hslot : register - k < f) :
+    ∃ slot, cakeColourLocation k f (2 * register) = .stack slot ∧ slot < f := by
+  refine ⟨f - 1 - (register - k),
+    cakeColourLocation_stack_boundary k f register hregister, ?_⟩
+  omega
+
 def cakeColourFrameSlots (k : Nat) (parameters : List Nat)
     (program : WordProg α) (colouring : NatInfoMap Nat) : Nat × Nat :=
   let colour := CakeAlloc.totalColour colouring
@@ -1556,6 +1566,16 @@ theorem cakeColourWordSpillState_nextSpill_le_frame
     (cakeColourWordSpillState k parameters program colouring).nextSpill ≤
       (cakeColourFrameSlots k parameters program colouring).2 := by
   simp [cakeColourWordSpillState]
+  split <;> omega
+
+/-- The production Cake allocator adapter retains exactly the `f'` spill
+    occupancy from `compile_prog`, including the zero-occupancy case. -/
+theorem cakeColourWordSpillState_nextSpill_eq_occupancy
+    (k : Nat) (parameters : List Nat) (program : WordProg α)
+    (colouring : NatInfoMap Nat) :
+    (cakeColourWordSpillState k parameters program colouring).nextSpill =
+      (cakeColourFrameSlots k parameters program colouring).1 := by
+  simp [cakeColourWordSpillState, cakeColourFrameSlots]
   split <;> omega
 
 /-! Production-facing Cake allocator adapter.  This keeps Cake's full SSA

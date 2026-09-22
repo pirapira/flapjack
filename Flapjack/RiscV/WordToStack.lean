@@ -4307,8 +4307,9 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
           registerCount bitmapRegister frameSlots wordBits storeConstsStub state returnProgram
       let (handlerCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
         registerCount bitmapRegister frameSlots wordBits storeConstsStub state body
-      let callCode := wordToStackCallWithHandlerInSectionAtRegisterCount config.perf target
-        arguments.length registerCount (wordStackCallFrameOffset config) config.scratch returnCode handlerCode
+      let callCode := wordToStackCallWithHandlerInSectionAtRegisterCountReturn config.perf target
+        arguments.length registerCount (wordStackCallFrameOffset config) config.scratch
+        (wordStackReturnStackSuffix config destinations) returnCode handlerCode
         returnLabel entryLabel
         (wordStackHandlerLabel config handlerLabel)
         (wordStackHandlerEntryLabel config handlerEntryLabel) exception

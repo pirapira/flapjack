@@ -40,9 +40,10 @@ interface fixes HOL's `bytes_in_word` and `n2w` compiler context for each
 `BitVec` width. The generalized `globalCompileTopForStart` proof remains
 untagged because it exposes those choices to callers. The statement contract
 is checked by
-`Flapjack/Test/PanGlobalsCompileTopShapeWfParity.lean`. The related
-`compile_top_shape_wf_nil` corollary remains open under bead
-`flapjack-pxn.18.3.2.2`.
+`Flapjack/Test/PanGlobalsCompileTopShapeWfParity.lean`. The exact
+`compile_top_shape_wf_nil` corollary is also ported there; it adds the
+empty-structure premise and states function shapes with the empty-context
+`isWfShapeNil` predicate.
 
 `excp_rel_def` and `ctxt_fc_def` from `proofs/pan_to_crepProofScript.sml` are
 tagged in `Flapjack/Pancake/Proofs/PanToCrep.lean`. Its HOL-shaped `codeRel`
@@ -69,8 +70,8 @@ The total `compile_top_def` result and the HOL-shaped
 Flapjack-specific shape predicates and pass lemmas live in
 `PanGlobals/ShapeInfrastructure.lean`; they use Flapjack's value evaluator
 and are infrastructure, not ports of HOL shape theorems. The exact
-`compile_top_shape_wf` result uses the faithful evaluator and lives in
-`PanGlobals.lean`; its `_nil` corollary is still open.
+`compile_top_shape_wf` result and its `_nil` corollary use the faithful
+evaluator and live in `PanGlobals.lean`.
 
 Additional helper, semantic, and proof modules still live at the old top
 level while their exact HOL counterparts and statement shapes are reviewed.

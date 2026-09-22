@@ -472,7 +472,7 @@ def compileFlapjackRiscVSourceBytesChecked [NeZero width]
       | .error error => .error (.static error)
       | .ok _ =>
           let warnings := checked.2
-          match compileFlapjackEntry architecture bytesInWord
+          match compileFlapjackEntryCake architecture bytesInWord
               (fun value => fromNat value) start
               (panTargetDeclarationsWithDefaultMain declarations) with
           | none => .error .entryNotFound
@@ -538,7 +538,7 @@ def compileFlapjackRiscVSourceImageChecked [NeZero width]
       | .error error => .error (.static error)
       | .ok _ =>
           let warnings := checked.2
-          match compileFlapjackEntry architecture bytesInWord (fun value => fromNat value)
+          match compileFlapjackEntryCake architecture bytesInWord (fun value => fromNat value)
               start (panTargetDeclarationsWithDefaultMain declarations) with
           | none => .error .entryNotFound
           | some pipeline =>
@@ -585,7 +585,7 @@ def compileFlapjackRiscVSourceRuntimeImageChecked [NeZero width]
       | .error error => .error (.static error)
       | .ok _ =>
           let warnings := checked.2
-          match compileFlapjackEntry architecture bytesInWord (fun value => fromNat value)
+          match compileFlapjackEntryCake architecture bytesInWord (fun value => fromNat value)
               start (panTargetDeclarationsWithDefaultMain declarations) with
           | none => .error .entryNotFound
           | some pipeline =>

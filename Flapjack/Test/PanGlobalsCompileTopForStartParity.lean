@@ -1,4 +1,5 @@
 import Flapjack.Pancake.Proofs.PanGlobals
+import Flapjack.Pipeline
 
 namespace Flapjack.Test.PanGlobalsCompileTopForStartParity
 
@@ -48,6 +49,32 @@ def globalPresentParityGuard : Bool :=
 
 #eval globalPresentParityGuard
 #guard globalPresentParityGuard
+
+/-! The source-facing entry helper carries the tagged HOL definition's result
+    into the declarations compiled by the downstream Crep pass. -/
+def sourceEntryUsesCakeGlobalOutput : Bool :=
+  match compileFlapjackEntryCake .rv64i (BitVec.ofNat 64 8)
+      (BitVec.ofNat 64) "main" [word64Global, word64MainFunction] with
+  | none => false
+  | some pipeline =>
+      match pipeline.globals.declarations with
+      | [.function main, .function renamed] =>
+          main.name == "main" && main.params.isEmpty &&
+          (match main.body with
+          | .seq
+              (.seq
+                (.store (.op .sub [.topAddr, .const address]) (.const value))
+                .skip)
+              (.call none "main'" []) =>
+                address == BitVec.ofNat 64 8 && value == BitVec.ofNat 64 7
+          | _ => false) &&
+          renamed.name == "main'" && (match renamed.body with
+            | .skip => true
+            | _ => false)
+      | _ => false
+
+#eval sourceEntryUsesCakeGlobalOutput
+#guard sourceEntryUsesCakeGlobalOutput
 
 def parityGuard : Bool :=
   let missing :=

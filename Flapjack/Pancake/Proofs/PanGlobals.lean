@@ -177,4 +177,27 @@ theorem globalCompileTopCake_shapes_wf {width : Nat} [LawfulBEq String]
       (BitVec.ofNat width (width / 8)) (BitVec.ofNat width)
       state declarations start state' heval hadmissible)
 
+/-! Cake's `is_wf_shape_nil` predicate is the well-formedness test with no
+    declared structures. This local spelling keeps the corollary's conclusion
+    in the same shape as HOL while reusing the shared Flapjack predicate. -/
+def isWfShapeNil : Shape → Bool := isWfShape []
+
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "compile_top_shape_wf_nil"]
+theorem globalCompileTopCake_shapes_wf_nil {width : Nat} [LawfulBEq String]
+    [ShiftLeft (BitVec width)] [ShiftRight (BitVec width)]
+    (state : PanSemDeclarationState (BitVec width) σ)
+    (declarations : List (Decl (BitVec width))) (start : FunName)
+    (state' : PanSemDeclarationState (BitVec width) σ)
+    (heval : evaluateDecls state declarations = some state')
+    (hstructs : state.runtime.structs = [])
+    (hadmissible : declarations.all panSemCompileTopAdmissible = true) :
+    ∀ output, output ∈ globalCompileTopCake declarations start →
+      ∀ function, output = .function function →
+        function.params.all (fun parameter =>
+          isWfShapeNil parameter.2) = true ∧
+          isWfShapeNil function.returnShape = true := by
+  have hshapes := globalCompileTopCake_shapes_wf
+    state declarations start state' heval hadmissible
+  simpa [isWfShapeNil, hstructs] using hshapes
+
 end Flapjack

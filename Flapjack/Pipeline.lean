@@ -624,6 +624,39 @@ def compileFlapjackEntry [BEq α] [OfNat α 0] [OfNat α 1]
       let word := pipelineWordFunctionsSource loop
       some (FlapjackPipelineResult.mk simplified structured globals crepe loop word)
 
+/-! Source-facing Pancake compiler entry point.  Unlike the generic
+    pass-local helper above, this version executes the fixed-interface
+    `globalCompileTopCake` result at the global pass boundary.  The remaining
+    metadata is retained from `globalCompileTop` for callers that inspect the
+    intermediate pipeline record; the declarations sent into Crep are the
+    direct output of Cake's tagged `compile_top`. -/
+def compileFlapjackEntryCake [BEq (BitVec width)] [OfNat (BitVec width) 0]
+    [OfNat (BitVec width) 1] [Add (BitVec width)] [Mul (BitVec width)]
+    [AndOp (BitVec width)] [ShiftRight (BitVec width)]
+    [PanShiftWidth (BitVec width)]
+    (architecture : RiscV.Architecture) (bytesInWord : BitVec width)
+    (fromNat : Nat → BitVec width) (start : FunName)
+    (declarations : List (Decl (BitVec width))) :
+    Option (FlapjackPipelineResult (BitVec width)) :=
+  let declarations := panTargetMoveStartToFront start declarations
+  let simplified := panSimpDecls declarations
+  let structured := structCompileTop simplified
+  let cakeDeclarations := globalCompileTopCake structured start
+  match cakeDeclarations with
+  | [] => none
+  | _ :: _ =>
+      let renamed := globalNewMainName structured
+      let prepared := globalRenameDecls start renamed (globalResortDecls structured)
+      let metadata := globalCompileTop bytesInWord fromNat prepared
+      let globals := { metadata with declarations := cakeDeclarations }
+      let crepeContext := pipelineCrepeContext bytesInWord fromNat globals
+      let compiled := compileToCrep crepeContext cakeDeclarations
+      let crepe := crepSimpFunctions fromNat
+        (crepInlineTopRecursiveByNames (pipelineInlineNames cakeDeclarations) compiled)
+      let loop := pipelineLoopFunctionsSource architecture 1 crepe
+      let word := pipelineWordFunctionsSource loop
+      some (FlapjackPipelineResult.mk simplified structured globals crepe loop word)
+
 /-! Executable mirror of the missing-`main` branch of `pan_to_target_all`
     (`cakeml/pancake/pan_passesScript.sml:20-37`): when the program has no
     `main` declaration the original synthesizes `main = «return 0»` and

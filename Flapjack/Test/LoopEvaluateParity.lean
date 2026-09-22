@@ -87,6 +87,14 @@ def fullDivZero : Bool :=
   | none => true
   | _ => false
 
+def fullLoopBreak : Bool :=
+  match evalLoopProgFull 8 fullDivState
+      (.loop []
+        (.seq (.assign 1 (.const (BitVec.ofNat 8 9))) (.break 0)) [] :
+          LoopProg (RiscV.Word 8)) with
+  | some (.normal state) => state.locals 1 == some (BitVec.ofNat 8 9)
+  | _ => false
+
 /-! Width-aware `LLongDiv` oracle: Cake forms `high * 2^width + low`, writes
     the remainder to the right destination first, and then the quotient to the
     left destination. -/
@@ -144,6 +152,83 @@ def fullLongDivOverflow : Bool :=
 #guard fullLongDivSuccess
 #guard fullLongDivZero
 #guard fullLongDivOverflow
+#guard fullLoopBreak
+
+/-! Width-aware `LLongMul` oracle: Cake splits the product into high and low
+    words and writes the high destination before the low destination. -/
+def wordLongMul (width : Nat) (left right : RiscV.Word width) :
+    Option (RiscV.Word width × RiscV.Word width) :=
+  let base := 2 ^ width
+  let product := left.toNat * right.toNat
+  some (BitVec.ofNat width ((product / base) % base),
+    BitVec.ofNat width (product % base))
+
+def fullLongMulState : LoopState (RiscV.Word 8) :=
+  { locals := fun name =>
+      if name == 2 then some (BitVec.ofNat 8 20)
+      else if name == 3 then some (BitVec.ofNat 8 20)
+      else none
+    globals := fun _ => none
+    memory := fun _ => none }
+
+def fullLongMulSuccess : Bool :=
+  match evalLoopProgFullWithLongMul (wordLongMul 8) 2 fullLongMulState
+      (.arith (.longMul 5 6 2 3) : LoopProg (RiscV.Word 8)) with
+  | some (.normal state) =>
+      state.locals 5 == some (BitVec.ofNat 8 1) &&
+      state.locals 6 == some (BitVec.ofNat 8 144)
+  | _ => false
+
+def fullLongMulMissingSource : Bool :=
+  match evalLoopProgFullWithLongMul (wordLongMul 8) 1 fullLongMulState
+      (.arith (.longMul 5 6 2 4) : LoopProg (RiscV.Word 8)) with
+  | none => true
+  | _ => false
+
+def fullLongMulSameDestination : Bool :=
+  match evalLoopProgFullWithLongMul (wordLongMul 8) 2 fullLongMulState
+      (.arith (.longMul 5 5 2 3) : LoopProg (RiscV.Word 8)) with
+  | some (.normal state) => state.locals 5 == some (BitVec.ofNat 8 144)
+  | _ => false
+
+def fullLongMulDivSequenceState : LoopState (RiscV.Word 8) :=
+  { locals := fun name =>
+      if name == 2 then some (BitVec.ofNat 8 20)
+      else if name == 3 then some (BitVec.ofNat 8 20)
+      else if name == 7 then some (BitVec.ofNat 8 1)
+      else if name == 8 then some (BitVec.ofNat 8 44)
+      else if name == 9 then some (BitVec.ofNat 8 7)
+      else none
+    globals := fun _ => none
+    memory := fun _ => none }
+
+def fullLongMulDivSequence : Bool :=
+  match evalLoopProgFullWithLongMulDiv (wordLongMul 8) (wordLongDiv 8) 3
+      fullLongMulDivSequenceState
+      (.seq (.arith (.longMul 5 6 2 3))
+        (.arith (.longDiv 10 11 7 8 9)) : LoopProg (RiscV.Word 8)) with
+  | some (.normal state) =>
+      state.locals 5 == some (BitVec.ofNat 8 1) &&
+      state.locals 6 == some (BitVec.ofNat 8 144) &&
+      state.locals 10 == some (BitVec.ofNat 8 42) &&
+      state.locals 11 == some (BitVec.ofNat 8 6)
+  | _ => false
+
+def fullLongMulDivLoop : Bool :=
+  match evalLoopProgFullWithLongMulDiv (wordLongMul 8) (wordLongDiv 8) 8
+      fullLongMulDivSequenceState
+      (.loop []
+        (.seq (.arith (.longMul 5 6 2 3)) (.break 0)) [] : LoopProg (RiscV.Word 8)) with
+  | some (.normal state) =>
+      state.locals 5 == some (BitVec.ofNat 8 1) &&
+      state.locals 6 == some (BitVec.ofNat 8 144)
+  | _ => false
+
+#guard fullLongMulSuccess
+#guard fullLongMulMissingSource
+#guard fullLongMulSameDestination
+#guard fullLongMulDivSequence
+#guard fullLongMulDivLoop
 
 /-! The primitive branch uses the same fixed-width Cake `AddCarry` handler as
     `loop_primop` (`loopSemScript.sml:242-252`). -/

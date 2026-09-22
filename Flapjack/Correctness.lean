@@ -376,7 +376,7 @@ def pipelineStructuredNoFfi : PanValueFfiHandler (RiscV.Word 64) :=
   fun _ _ _ _ _ _ => none
 
 theorem pipelineCall_structured_source_semantics :
-    (evalPanValueProgWithCallsAndFfi (α := RiscV.Word 64) []
+    (evalPanValueProgWithCallsAndFfiFull (α := RiscV.Word 64) []
       pipelineCallSourceFunctions pipelineStructuredNoFfi
       0 (BitVec.ofNat 64 100) 8 20
       (fun _ => none) (fun _ => none) (fun _ => none)
@@ -453,7 +453,7 @@ def pipelineStructuredFfiHandler :
     else none
 
 theorem pipelineFfi_structured_call_source_semantics :
-    (evalPanValueProgWithCallsAndFfi (α := RiscV.Word 64) []
+    (evalPanValueProgWithCallsAndFfiFull (α := RiscV.Word 64) []
       pipelineFfiCallFunctions pipelineStructuredFfiHandler
       0 (BitVec.ofNat 64 100) 8 50
       (fun _ => none) (fun _ => none) (fun _ => none)

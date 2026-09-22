@@ -1456,6 +1456,81 @@ theorem evalPanValueFfiClockProg_raise_ioEvents_prefix
       steps hsteps
   · exact hprefix
 
+theorem evalPanValueFfiProgSteps_raise_ioEvents_prefix
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (clock : Nat) (exception : ExceptionId) (value : Exp α)
+    (result : PanValueFfiControlResult α σ) (steps : Nat)
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (contracts : Option PanValueCallContracts)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ))
+    (hsteps : evalPanValueFfiProgSteps context primitive handler structs functions
+      baseAddress topAddress bytesInWord 1 locals globals memory ffi
+      (.raise exception value) (memoryAccess := memoryAccess)
+      (contracts := contracts) (memoryHandler := memoryHandler) =
+      some (result, steps)) :
+    ffi.ioEvents <+:
+      (panResultFfi ((.control result : PanValueFfiClockOutcome α σ), clock)).ioEvents := by
+  cases hvalue : evalPanValueExpCounted structs locals globals memory baseAddress topAddress
+      bytesInWord value (memoryAccess := memoryAccess) with
+  | none =>
+      simp [evalPanValueFfiProgSteps, hvalue] at hsteps
+  | some pair =>
+      obtain ⟨valueResult, valueSteps⟩ := pair
+      by_cases hvalid :
+          (panValueExceptionValid structs contracts exception valueResult &&
+            panValuePayloadWithinLimit structs valueResult) = true
+      · simp [evalPanValueFfiProgSteps, hvalue] at hsteps
+        rcases hsteps with ⟨_, hresult, _⟩
+        rw [← hresult]
+        exact List.prefix_refl _
+      · simp [evalPanValueFfiProgSteps, hvalue] at hsteps
+        rcases hsteps with ⟨hvalids, _, _⟩
+        apply False.elim
+        apply hvalid
+        simp [hvalids.1, hvalids.2]
+
+theorem evalPanValueFfiProgSteps_return_ioEvents_prefix
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (clock : Nat) (value : Exp α)
+    (result : PanValueFfiControlResult α σ) (steps : Nat)
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (contracts : Option PanValueCallContracts)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ))
+    (hsteps : evalPanValueFfiProgSteps context primitive handler structs functions
+      baseAddress topAddress bytesInWord 1 locals globals memory ffi
+      (.return value) (memoryAccess := memoryAccess)
+      (contracts := contracts) (memoryHandler := memoryHandler) =
+      some (result, steps)) :
+    ffi.ioEvents <+:
+      (panResultFfi ((.control result : PanValueFfiClockOutcome α σ), clock)).ioEvents := by
+  cases hvalue : evalPanValueExpCounted structs locals globals memory
+      baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess) with
+  | none =>
+      simp [evalPanValueFfiProgSteps, hvalue] at hsteps
+  | some pair =>
+      obtain ⟨valueResult, valueSteps⟩ := pair
+      by_cases hvalid : panValuePayloadWithinLimit structs valueResult = true
+      · simp [evalPanValueFfiProgSteps, hvalue, hvalid] at hsteps
+        rcases hsteps with ⟨rfl, rfl⟩
+        exact List.prefix_refl _
+      · simp [evalPanValueFfiProgSteps, hvalue, hvalid] at hsteps
+
 theorem evalPanValueFfiClockProg_leaf_ioEvents_prefix
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

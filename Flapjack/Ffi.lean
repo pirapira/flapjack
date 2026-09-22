@@ -149,4 +149,24 @@ theorem callFfi_return_ioEvents_prefix (state : FfiState σ)
       · cases hresult
     · cases hresult
 
+/-! The same monotonicity statement in the result's sum form.  The `final`
+    branch keeps the current FFI state, while a successful return uses the
+    append performed by `callFfi_return_ioEvents_prefix`.  This form is useful
+    at the Pancake shared-memory leaves, where the evaluator exposes either
+    result constructor directly. -/
+theorem callFfi_result_ioEvents_prefix (state : FfiState σ)
+    (name : FfiName) (configuration bytes : List UInt8)
+    (result : FfiResult σ)
+    (hresult : callFfi state name configuration bytes = result) :
+    state.ioEvents <+:
+      match result with
+      | .returned nextFfi _ => nextFfi.ioEvents
+      | .final _ => state.ioEvents := by
+  cases result with
+  | returned nextFfi nextBytes =>
+      exact callFfi_return_ioEvents_prefix state name configuration bytes
+        nextFfi nextBytes hresult
+  | final event =>
+      exact List.prefix_refl _
+
 end Flapjack

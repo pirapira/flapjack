@@ -1,0 +1,125 @@
+fun 1 add1(1 a, 1 b) { return a + b; }
+fun 1 sub1(1 a) { return a - 1; }
+fun {1,1} pair(1 a, 1 b) { return <a, b>; }
+struct S { 1 f1, 1 f2 }
+fun S mks(1 a, 1 b) { return S <f1 = a, f2 = b>; }
+exception E : 1;
+var 1 ev = 0;
+fun 1 main() {
+  var 1 x = 1000;
+  var 1 y579 = ((255 >> 1000) #>> 1);
+  var 1 y785 = sub1((lds 1 ((1000 + 8))));
+  var 1 y593 = (3 + (3 >> 1));
+  var 1 y849 = add1(7, (ld8 ev + 0));
+  var 1 y205 = add1(255, (ld8 (1000 + 24 + 12)));
+  var 1 y697 = 1;
+  var 1 y602 = sub1((ld8 ev + 8));
+  var 1 y399 = sub1((7 * (lds 1 (1008))));
+  var 1 y865 = sub1(y579);
+  var 1 y509 = 1000;
+  var 1 y110 = sub1((ld8 ev + 16));
+  var 1 y781 = (lds 1 (ev + 16));
+  var 1 y356 = (lds 1 (ev + 8));
+  var 1 y178 = ((y579 >> x) & (y602 | y602));
+  var 1 y469 = ((7 * 1) - (0 - 3));
+  var 1 y321 = (lds 1 ((1000 + 24 + 1000)));
+  var 1 y699 = ((lds 1 (1000)) | (1000 - y697));
+  var 1 y721 = ((lds 1 (1016)) #>> 1);
+  var 1 y738 = add1(2, x);
+  var 1 y457 = 0;
+  var 1 y228 = (lds 1 (0));
+  var {1,1} p550 = pair(y356, ((lds 1 (1024)) * (ld8 1016)));
+  y593 = p550.0;
+  try
+    y399 = sub1((ld8 (0 + 8)))
+  catch E => y469 {
+      y738 = ((ld8 1000 + 12) * p550.1);
+      y321 = add1(y178, (ld8 ev + 8));
+  }
+  !stw (ev + 0), y321;
+  st8 ((ev + 16 + 4)), (lds 1 (ev + 0));
+  !ldw y781, (1008);
+  !ldw y110, (1000);
+  y593 = (2 + (ld8 1008));
+  y178 = sub1(1000);
+  throw E 255;
+  if ((y228 >> p550.1) >= p550.0) {
+    y228 = 0;
+  } else {
+    @foo(2, p550.1, y457, 0);
+    y399 = y356;
+  }
+  st (ev + 0), 255;
+  while (x > 0) {
+    !ldw y699, (ev + 16);
+    while (x > 0) {
+      st (ev + 8), (ld8 ev + 0);
+      if (p550.1 >= (y399 >>> y356)) {
+        throw E 2;
+      } else {
+        !ldw y721, (ev + 16);
+        while (x > 0) {
+          try
+            y579 = add1(y699, ((3 ^ 1000) #>> 1))
+          catch E => y699 {
+              while (x > 0) {
+                y602 = (lds 1 (ev + 16));
+                  continue;
+              }
+              y178 = (lds 1 (1008));
+          }
+            continue;
+        }
+      }
+        break;
+    }
+      continue;
+  }
+  !stw (1000), p550.1;
+  @foo(y205, (ld8 ev + 8), (y699 - (ld8 ev + 16)), p550.0);
+  !ldw y849, (ev + 8);
+  if (((3 << 3) * y178) != (ld8 1000)) {
+    while (x > 0) {
+      @foo(0, (lds 1 (0)), (lds 1 (1016)), y356);
+      y110 = sub1(y865);
+
+    }
+    if ((lds 1 ((0 + 8))) < ((7 ^ 0) >>> 1000)) {
+      if ((lds 1 ((ev + 8 + 16))) == ((3 #>> 2) - (7 | y228))) {
+        y457 = (3 #>> 2);
+        try
+          y399 = add1(1, (lds 1 (1000)))
+        catch E => y509 {
+            y228 = (lds 1 (1008));
+            try
+              y738 = add1((lds 1 (1000)), y469)
+            catch E => y509 {
+                @foo(1, ((ld8 ev + 8) ^ (lds 1 (ev + 0))), (lds 1 ((1008 + 16))), (ld8 ev + 16));
+            }
+        }
+      } else {
+        while (x > 0) {
+          @foo(2, y509, p550.1, 1);
+          y699 = ((lds 1 (ev + 0)) ^ p550.0);
+
+        }
+        y178 = add1((y110 & (y699 + y110)), (lds 1 (0)));
+      }
+      @foo((((y469 - y399) >> (lds 1 (1016))) - (lds 1 ((0 + 4)))), y593, 2, 2);
+    } else {
+      y457 = ((lds 1 (ev + 8)) | (y699 & y321));
+    }
+  } else {
+    y356 = p550.0;
+  }
+  y399 = (ld8 (ev + 16 + 1000));
+  y205 = (ld8 0);
+  @foo(p550.1, y738, ((p550.0 + 1) - y228), (y228 & (lds 1 (1016))));
+  !ldw y738, (ev + 0);
+  !ldw y110, (1000);
+  st (0), (255 #>> 2);
+  y699 = sub1(((ld8 1024) #>> 7));
+  y399 = sub1((1000 | (lds 1 (1000 + 24))));
+  st (1016), (lds 1 (1000));
+  return 1;
+}

@@ -1456,6 +1456,7 @@ kernel-checked inhabitant. -/
 #check @panValueCtxtMax_empty
 #check @panValueNoOverlap_empty
 #check @panValueNoOverlap_lookup_disjoint
+#check @panValueCrepStateRel_compileFunDecl_context_with_invariants_of_folds
 
 /-- Regression for Cake `no_overlap_flookup_distinct`: the lemma is applicable
 to any `no_overlap` variable map with two distinct looked-up variables. -/

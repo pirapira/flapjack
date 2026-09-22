@@ -372,6 +372,14 @@ run_probe compile_to_crep_probeScript.sml compile_to_crep_probe.out \
 run_probe compile_prog_probeScript.sml compile_prog_probe.out \
   empty inline_call global_dest handled_missing_dest done \
   "$cake_dir/pancake/pan_to_crepScript.sml"
+run_probe excp_rel_probeScript.sml excp_rel_probe.out \
+  empty_maps noninjective_compiler_codes \
+  "$cake_dir/pancake/proofs/pan_to_crepProofScript.sml" \
+  "$cake_dir/pancake/proofs"
+run_probe ctxt_fc_probeScript.sml ctxt_fc_probe.out \
+  shaped_slots empty_maximum \
+  "$cake_dir/pancake/proofs/pan_to_crepProofScript.sml" \
+  "$cake_dir/pancake/proofs"
 run_probe pan_globals_compile_top_probeScript.sml pan_globals_compile_top_probe.out \
   missing_start present_start "$cake_dir/pancake/pan_globalsScript.sml"
 run_probe smart_seq_probeScript.sml smart_seq_probe.out \

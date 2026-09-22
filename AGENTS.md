@@ -26,6 +26,28 @@ Do not copy `.olean` files between worktrees or overwrite one with a copied
 artifact: a copied OLean can be newer than its source and hide subsequent
 source changes. Cache cleanup is local-only; do not stage `.lake` outputs.
 
+## Fleet workflow
+
+Keep the CakeML/HOL submodule read-only. Put HOL probes and captured oracle
+outputs on the Flapjack side under `scripts/hol-probes/`; follow that directory's
+README and `docs/PARITY-TESTING.md` for the detailed procedure.
+
+Claim a commit-sized bead before starting work. Record the pushed branch and
+commit, verification results, or exact blocked reason on the bead, and notify
+the coordinator. Keep dependency beads open until their own acceptance criteria
+are met.
+
+Maintain one fleet integration PR. Agents push their own branches but do not
+open separate PRs; the coordinator merges reviewed work into the integration
+branch. Merge the updated integration branch back into agent branches with
+ordinary merges. Do not rebase or cherry-pick shared work.
+
+Before reporting a port complete, build affected Lean modules, run `lake test`,
+`scripts/check-hol-refs.py`, and `scripts/check-warnings.sh`. For executable
+compiler changes, compare the executed output with original Pancake where an
+oracle exists; see `docs/PARITY-TESTING.md`. State which checks actually ran and
+which remain pending (including CI).
+
 ## Porting HOL theorems: placement, cross-reference, and shape
 
 Every Lean declaration that ports a declaration from the CakeML/HOL4
@@ -91,3 +113,15 @@ docstring, and file a bead for the faithful port. Preserve useful Flapjack-only
 infrastructure; delete a declaration only when it is unsalvageable or itself
 implements behavior that must be replaced. Do not merge a known mismatch as a
 claimed HOL port.
+
+**Port the executable path, too.** As HOL definitions are ported, make the
+compiler that `flapjack-compile` actually runs call the reviewed `@[hol]`
+definitions. A tagged proof-only duplicate beside a different production
+implementation is an intermediate step, not completion of the compiler port;
+track the production replacement in a dependency-linked bead and test the executed path
+against the original Pancake output. Keep a different executable implementation
+only for a documented, material performance reason (for example, avoiding a
+whole-array copy for each element update), and state the exact relationship to
+the HOL-shaped definition and the evidence for the exception. Do not use a
+performance exception merely because an existing Flapjack helper has a more
+convenient interface.

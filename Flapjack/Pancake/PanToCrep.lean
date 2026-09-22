@@ -20,6 +20,7 @@ structure CompileContext (α : Type u) where
   bytesInWord : α
   deriving Repr
 
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "cexp_heads_def"]
 def cexpHeads : List (List (CrepExp α)) → Option (List (CrepExp α))
   | [] => some []
   | expressions :: rest =>
@@ -51,6 +52,7 @@ theorem cexpHeads_eq_cexpHeadsSimp (fallback : CrepExp α)
           simp only [cexpHeads, ih, cexpHeadsSimp]
           split <;> simp_all
 
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "comp_field_def"]
 def compileField [OfNat α 0] (index : Nat) :
     List Shape → List (CrepExp α) → List (CrepExp α) × Shape
   | [], _ => ([.const 0], .one)
@@ -58,6 +60,7 @@ def compileField [OfNat α 0] (index : Nat) :
       if index = 0 then (expressions.take (Shape.shapeSize shape), shape)
       else compileField (index - 1) shapes (expressions.drop (Shape.shapeSize shape))
 
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "compile_panop_def"]
 def compilePanOp : PanOp → CrepOp
   | .mul => .mul
 
@@ -89,8 +92,9 @@ def retVar (shape : Shape) (names : List Nat) : Option Nat :=
       if Shape.shapeSize (.comb fields) = 1 then names.head? else none
   | .named _ => none
 
-/-! Source-shaped port of CakeML Pancake's `shape_vars_def`
-    (`cakeml/pancake/pan_to_crepScript.sml:319-322`).  The source consumes the
+/-! Flapjack-only helper modeled on the commented-out `shape_vars_def` text
+    (`cakeml/pancake/pan_to_crepScript.sml:319-324`); HOL does not define this
+    function. The helper consumes the
     flattened word list one shape at a time: each result keeps exactly
     `size_of_shape sh` words, and the recursive call receives the remaining
     `DROP` suffix.  In particular, short input is not padded and excess input
@@ -122,6 +126,7 @@ def retHdl [OfNat α 0] [OfNat α 1] [Add α]
 
     The empty one-word return slot is normalized to no return slot; every
     other option is preserved unchanged. -/
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "wrap_rt_def"]
 def wrapRt : Option (Shape × List Nat) → Option (Shape × List Nat)
   | none => none
   | some (.one, []) => none

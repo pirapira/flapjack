@@ -506,6 +506,12 @@
       "tracked_beads": []
     },
     {
+      "path": "Flapjack/Test/OriginalPancake/wide_return_22.pnk",
+      "source_reference": "Original-Cake wide-return frame witness: a 22-word returned structure crosses the RISC-V allocator boundary and exercises Cake copy_ret/stack-free lowering; the corrected Flapjack artifact is byte-identical to Cake.",
+      "cake_sha256": "e952d989344c8a625691318012eceae4dd29ada0ff0b38f7ccb34a2ce634ee43",
+      "tracked_beads": ["flapjack-pxn.8.5.14.1.5"]
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/wide_call_spilled_base.pnk",
       "source_reference": "Resolved flapjack-01k. Cake's StackArgs uses the caller's frame size f as the source displacement for stack_move; Flapjack now derives that same Cake frame size from abiFrameSlots at the WordToStack call boundary. The reduced spilled-base witness is byte-exact at 396 bytes, including the 112(x24) to 32(x24) pre-call copy.",
       "cake_sha256": "bcab84ac1a923c846aef8f3f40996dc885b6157fe4a7eeaacc5cd0a654b99090",

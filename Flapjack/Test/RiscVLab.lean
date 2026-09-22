@@ -1220,6 +1220,22 @@ private def jumpCmpImmBoundary (operator : Cmp) (target : Nat) :
     .branchGeU 4 31 (BitVec.ofNat 64 8),
     .jal 0 (BitVec.ofNat 64 4088)]
 
+/- The corresponding negative signed-12 boundary is measured from the whole
+   Cake `JumpCmp` line, including its ORI prelude: -4092 remains a direct
+   branch, while -4096 takes Cake's inverted-branch/JAL fallback. -/
+private def jumpCmpImmNegativeBoundary (position : Nat) :
+    Option (List (Instruction 64)) :=
+  labCompileAsm (width := 64) { services := [] } 1 [(0, 0)] position
+    (.jumpCmp .notEqual 4 (.imm 3) ⟨1, 0⟩)
+
+#guard jumpCmpImmNegativeBoundary 4092 ==
+  some [.ori 31 0 (BitVec.ofNat 64 3),
+    .branchEq 4 31 (0 - BitVec.ofNat 64 4096)]
+#guard jumpCmpImmNegativeBoundary 4096 ==
+  some [.ori 31 0 (BitVec.ofNat 64 3),
+    .branchNe 4 31 (BitVec.ofNat 64 8),
+    .jal 0 (0 - BitVec.ofNat 64 4104)]
+
 example :
     labCompileAsm (width := 64) { services := [] } 1 [(0, 2 ^ 20 - 2)] 0
       (.jump ⟨1, 0⟩) =

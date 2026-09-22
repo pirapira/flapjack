@@ -51,4 +51,35 @@ theorem panValueCrepStateRelExceptWithContext_update_crep_at_excluded
     sourceLocals sourceGlobals sourceMemory state address value excluded
     hrel.2.2 hexcluded
 
+ theorem panValueCrepStateRelExceptWithContext_update_crep_at_excluded_again
+    [BEq α] [LawfulBEq α]
+    (structs : StructContext) (context : CompileContext α)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (state : CrepState α)
+    (address value : α) (excluded : α → Prop)
+    (hrel : panValueCrepStateRelExceptWithContext structs context sourceLocals
+      sourceGlobals sourceMemory state excluded)
+    (hexcluded : excluded address) :
+    panValueCrepStateRelExceptWithContext structs context sourceLocals
+      sourceGlobals sourceMemory
+      { state with memory := updateMemory state.memory address value }
+      excluded := by
+  refine ⟨hrel.1, hrel.2.1, ?_⟩
+  exact ⟨hrel.2.2.1, hrel.2.2.2.1,
+    panValueCrepMemoryRelExcept_update_crep_at_excluded sourceMemory
+      state.memory address value excluded hrel.2.2.2.2 hexcluded⟩
+
+
+theorem panValueCrepStateRelExceptWithContext_to_stateRelExcept
+    [BEq String]
+    (structs : StructContext) (context : CompileContext α)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (state : CrepState α)
+    (excluded : α → Prop)
+    (hrel : panValueCrepStateRelExceptWithContext structs context sourceLocals
+      sourceGlobals sourceMemory state excluded) :
+    panValueCrepStateRelExcept structs context sourceLocals sourceGlobals
+      sourceMemory state excluded :=
+  hrel.2.2
+
 end Flapjack

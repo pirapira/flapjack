@@ -33,7 +33,19 @@ theorem raised_global_spill_context_fixture :
   refine ⟨panValueNoOverlap_empty, panValueCtxtMax_empty 0 (by omega), ?_⟩
   exact ⟨rfl, panValueCrepLocalsRel_empty _ _ _, rfl⟩
 
+theorem raised_global_spill_projection_fixture :
+    panValueCrepRaisedStateRel [] emptyContext (fun _ => none) (fun _ => none)
+      { locals := fun _ => none, memory := fun _ => none,
+        globals := updateMemory (fun _ => none) 4 7 } 4 := by
+  apply panValueCrepRaisedStateRelExceptWithContext_to_raisedStateRel
+  apply panValueCrepRaisedStateRelExceptWithContext_global_spill
+    ([] : StructContext) emptyContext (fun _ => none) (fun _ => none)
+    (fun _ => none) { locals := (fun _ => none), memory := (fun _ => none), globals := (fun _ => none) } 4 7
+  refine ⟨panValueNoOverlap_empty, panValueCtxtMax_empty 0 (by omega), ?_⟩
+  exact ⟨rfl, panValueCrepLocalsRel_empty _ _ _, rfl⟩
+
 #check @Flapjack.panValueCrepRaisedStateRelExceptWithContext_two_word_spill
 #check @Flapjack.panValueCrepRaisedStateRelExceptWithContext_global_spill
 
+#check @Flapjack.panValueCrepRaisedStateRelExceptWithContext_to_raisedStateRel
 end Flapjack.Test.CrepeRaisedStateRelationContext

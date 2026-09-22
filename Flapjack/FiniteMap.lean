@@ -234,6 +234,29 @@ theorem localsRel_lookup_ctxt [BEq String]
   · rw [hflat]
     exact hmap
 
+/-- Cake `mk_ctxt_imp_locals_rel` (`pan_to_crepProofScript.sml:4677`),
+source-map-empty generalization: any context map that satisfies `no_overlap`
+and `ctxt_max` is related to an arbitrary target locals map when the source
+locals map is `FEMPTY` (the third conjunct is vacuous). -/
+theorem localsRel_of_empty_source [BEq String]
+    (vars : InfoMap (Shape × List Nat)) (vmax : Nat)
+    (tLocals : FiniteMap Nat α)
+    (hnooverlap : panValueNoOverlap vars)
+    (hmax : panValueCtxtMax vmax vars) :
+    localsRel vars vmax (FEMPTY : FiniteMap String (PanValue α)) tLocals := by
+  refine ⟨hnooverlap, hmax, ?_⟩
+  intro vname v hlookup
+  simp [FLOOKUP_empty] at hlookup
+
+/-- Cake `mk_ctxt_imp_locals_rel` (`pan_to_crepProofScript.sml:4677`) at the
+empty context `mk_ctxt FEMPTY (make_funcs pc) 0 es`: the empty variable map
+satisfies `no_overlap` and `ctxt_max`, and the source locals map is empty. -/
+theorem localsRel_empty [BEq String] (vmax : Nat) (tLocals : FiniteMap Nat α) :
+    localsRel ([] : InfoMap (Shape × List Nat)) vmax
+      (FEMPTY : FiniteMap String (PanValue α)) tLocals :=
+  localsRel_of_empty_source [] vmax tLocals panValueNoOverlap_empty
+    (panValueCtxtMax_empty vmax (Nat.zero_le vmax))
+
 /-- Cake `local_rel_le_zip_update_preserved`
 (`pan_to_crepProofScript.sml:2263`): overwriting a variable with a
 shape-compatible value and refreshing the target map through the variable's
@@ -350,5 +373,120 @@ theorem localsRel_extend_new_var [BEq String] [LawfulBEq String]
               (panValueShape [] v'') ns'' hrel.2.1 (hbounds slot hmem).1 hctxt'' hmem'
           rw [opt_mmap_disj_zip_flookup ns l' ns'' (panValueFlatten v) hdisj'' hlenFlat]
           exact hmap''
+
+/-! ### Domain subtraction and Cake's `res_var` -/
+
+/-- Counterpart of HOL4's `\\` (domain subtraction) on finite maps:
+    `FDOMSUB f key` removes `key` from the domain of `f`. -/
+def FDOMSUB [BEq α] (f : FiniteMap α β) (key : α) : FiniteMap α β :=
+  fun k => if key == k then none else f k
+
+/-- Counterpart of Cake's `res_var_def` (cakeml/pancake/semantics/crepSemScript.sml:163):
+    `res_var lc (n, NONE) = lc \\ n` and `res_var lc (n, SOME v) = lc |+ (n,v)`. -/
+def resVar [BEq α] (f : FiniteMap α β) (entry : α × Option β) : FiniteMap α β :=
+  match entry.2 with
+  | none => FDOMSUB f entry.1
+  | some v => FUPDATE f (entry.1, v)
+
+theorem FLOOKUP_domsub [BEq α] [LawfulBEq α] (f : FiniteMap α β) (key k : α) :
+    FLOOKUP (FDOMSUB f key) k = if key == k then none else FLOOKUP f k := rfl
+
+theorem FDOMSUB_FUPDATE_neq [BEq α] [LawfulBEq α] (f : FiniteMap α β) (key m : α) (v : β)
+    (h : key ≠ m) :
+    FDOMSUB (FUPDATE f (m, v)) key = FUPDATE (FDOMSUB f key) (m, v) := by
+  funext k
+  simp only [FDOMSUB, FUPDATE]
+  by_cases hkm : m == k
+  · simp only [hkm, if_true]
+    have hkm' : k = m := (beq_iff_eq.mp hkm).symm
+    have hkeyk : (key == k) = false := by
+      rw [beq_eq_false_iff_ne]
+      intro hc
+      exact h (hc.trans hkm')
+    simp only [hkeyk, Bool.false_eq_true, if_false]
+  · simp only [hkm, Bool.false_eq_true, if_false]
+
+theorem FDOMSUB_commutes [BEq α] [LawfulBEq α] (f : FiniteMap α β) (n m : α)
+    (h : n ≠ m) : FDOMSUB (FDOMSUB f n) m = FDOMSUB (FDOMSUB f m) n := by
+  funext k
+  simp only [FDOMSUB]
+  by_cases hmn : m == k
+  · have hmn' : k = m := (beq_iff_eq.mp hmn).symm
+    have hnk : (n == k) = false := by
+      rw [beq_eq_false_iff_ne]
+      intro hc
+      exact h (hc.trans hmn')
+    simp only [hmn, if_true, hnk, Bool.false_eq_true, if_false]
+  · by_cases hnk : n == k
+    · have hnk' : k = n := (beq_iff_eq.mp hnk).symm
+      have hmk : (m == k) = false := by
+        rw [beq_eq_false_iff_ne]
+        intro hc
+        exact h (hnk'.symm.trans hc.symm)
+      simp only [hnk, if_true, hmk, Bool.false_eq_true, if_false]
+    · simp only [hmn, hnk, Bool.false_eq_true, if_false]
+
+/-- Counterpart of Cake's `flookup_res_var_thm` (crepPropsScript.sml:257),
+    stated with the Boolean equality that `resVar` is implemented with. -/
+theorem FLOOKUP_resVar [BEq α] [LawfulBEq α] (f : FiniteMap α β) (m n : α)
+    (v : Option β) :
+    FLOOKUP (resVar f (m, v)) n = if n == m then v else FLOOKUP f n := by
+  cases v with
+  | none =>
+    simp only [resVar, FDOMSUB, FLOOKUP]
+    by_cases h : n == m
+    · have hm : (m == n) = true := by
+        rw [beq_iff_eq]
+        exact (beq_iff_eq.mp h).symm
+      simp only [hm, if_true, h]
+    · have hm : (m == n) = false := by
+        rw [beq_eq_false_iff_ne]
+        intro hc
+        exact h (beq_iff_eq.mpr hc.symm)
+      simp only [hm, Bool.false_eq_true, if_false, h]
+  | some w =>
+    simp only [resVar, FUPDATE, FLOOKUP]
+    by_cases h : n == m
+    · have hm : (m == n) = true := by
+        rw [beq_iff_eq]
+        exact (beq_iff_eq.mp h).symm
+      simp only [hm, if_true, h]
+    · have hm : (m == n) = false := by
+        rw [beq_eq_false_iff_ne]
+        intro hc
+        exact h (beq_iff_eq.mpr hc.symm)
+      simp only [hm, Bool.false_eq_true, if_false, h]
+
+/-- Counterpart of Cake's `flookup_res_var_diff_eq` (crepPropsScript.sml:249). -/
+theorem FLOOKUP_resVar_diff_eq [BEq α] [LawfulBEq α] (f : FiniteMap α β) (m n : α)
+    (v : β) (h : n ≠ m) : FLOOKUP (resVar f (m, some v)) n = FLOOKUP f n := by
+  rw [FLOOKUP_resVar]
+  have hb : (n == m) = false := by
+    rw [beq_eq_false_iff_ne]
+    exact h
+  simp only [hb, Bool.false_eq_true, if_false]
+
+/-- Counterpart of Cake's `res_var_commutes` (crepPropsScript.sml:234). -/
+theorem resVar_commutes [BEq α] [LawfulBEq α] (lc lc' : FiniteMap α β) (n h : α)
+    (hne : n ≠ h) :
+    resVar (resVar lc (h, FLOOKUP lc' h)) (n, FLOOKUP lc' n) =
+    resVar (resVar lc (n, FLOOKUP lc' n)) (h, FLOOKUP lc' h) := by
+  cases hh : FLOOKUP lc' h with
+  | none =>
+    cases hn : FLOOKUP lc' n with
+    | none =>
+      simp only [resVar]
+      rw [FDOMSUB_commutes lc n h hne]
+    | some vn =>
+      simp only [resVar]
+      rw [FDOMSUB_FUPDATE_neq lc h n vn hne.symm]
+  | some vh =>
+    cases hn : FLOOKUP lc' n with
+    | none =>
+      simp only [resVar]
+      rw [FDOMSUB_FUPDATE_neq lc n h vh hne]
+    | some vn =>
+      simp only [resVar]
+      rw [FUPDATE_comm lc h vh n vn hne.symm]
 
 end Flapjack

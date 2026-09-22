@@ -333,6 +333,39 @@ theorem crepLprefixChain_of_panLprefixChain_of_semantic_agreement
     funext (fun clock => agreement.eventsAt clock)
   simpa [crepLprefixChain, hfamily] using panChain
 
+/-! Reverse the chain transport when the target evaluator provides the
+    monotonicity witness first.  This keeps the original HOL prefix-LUB
+    obligation symmetric and lets production callers choose either evaluator
+    as the source of the chain. -/
+theorem panLprefixChain_of_crepLprefixChain_of_semantic_agreement
+    (panHooks : PanSemanticsHooks α σ)
+    (crepHooks : CrepSemanticsHooks β)
+    (agreement : PanCrepSemanticAgreement panHooks crepHooks)
+    (crepChain : crepLprefixChain
+      (fun clock => crepHooks.ioEvents (crepHooks.evaluate clock).2)) :
+    panLprefixChain
+      (fun clock => panResultEvents (panHooks.evaluate clock)) := by
+  have hfamily :
+      (fun clock => panResultEvents (panHooks.evaluate clock)) =
+        (fun clock => crepHooks.ioEvents (crepHooks.evaluate clock).2) :=
+    funext (fun clock => agreement.eventsAt clock)
+  simpa [panLprefixChain, crepLprefixChain, hfamily] using crepChain
+
+theorem panSemantics_rel_crepSemantics_of_crep_chain
+    (panHooks : PanSemanticsHooks α σ)
+    (crepHooks : CrepSemanticsHooks β)
+    (agreement : PanCrepSemanticAgreement panHooks crepHooks)
+    (crepChain : crepLprefixChain
+      (fun clock => crepHooks.ioEvents (crepHooks.evaluate clock).2)) :
+    panCrepBehaviourRel
+      (panSemantics panHooks
+        (panLprefixChain_of_crepLprefixChain_of_semantic_agreement
+          panHooks crepHooks agreement crepChain))
+      (crepSemantics crepHooks crepChain) := by
+  exact panSemantics_rel_crepSemantics panHooks crepHooks agreement
+    (panLprefixChain_of_crepLprefixChain_of_semantic_agreement
+      panHooks crepHooks agreement crepChain) crepChain
+
 theorem panSemantics_rel_crepSemantics_of_pan_chain
     (panHooks : PanSemanticsHooks α σ)
     (crepHooks : CrepSemanticsHooks β)

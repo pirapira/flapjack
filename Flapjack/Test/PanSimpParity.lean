@@ -1,4 +1,5 @@
 import Flapjack.PanSimp
+import Flapjack.PanProgramSimp
 import Flapjack.PanSimpEvaluate
 import Flapjack.PanGlobals
 import Flapjack.PanValueFfiClockShiftFull
@@ -2708,6 +2709,7 @@ example : PanValueFfiClockNormalAdequateProgFromFloor 3 3 evaluatorContext
 #check @Flapjack.evalPanValueFfiClockProgram_of_declarations_and_raised_call_cross_clock
 #check @Flapjack.evalPanValueFfiClockCall_raised_no_handler_shift_step
 #check @Flapjack.evalPanValueFfiClockProg_extCall_finalFfi_cross_clock
+#check @Flapjack.evalPanValueProgram_of_declarations_and_raised_call_with_exception_evidence
 
 example : decPanClock (5 + 3) = decPanClock 5 + 3 := decPanClock_add 5 3 (by decide)
 

@@ -135,6 +135,101 @@ theorem skip_compile_correct_fixture :
   subst source
   exact ⟨100, by simp [load32State]⟩
 
+theorem assign_var_compile_correct_fixture :
+    evalLoopProg 1 load32State
+        (comp [(3, 2)] (.assign 4 (.var 3)) : LoopProg Nat × LocationEnv).1 =
+        some (.normal { load32State with
+          locals := updateLoopLocal load32State.locals 4 7 }) ∧
+      labelsIn (comp [(3, 2)] (.assign 4 (.var 3)) : LoopProg Nat × LocationEnv).2
+        (updateLoopLocal load32State.locals 4 7) := by
+  apply comp_assign_var_correct
+  · simp [load32State]
+  · intro name source hlookup
+    have hpair : 3 = name ∧ 2 = source := by
+      simpa [lookup] using hlookup
+    have hsource : source = 2 := hpair.2.symm
+    subst source
+    exact ⟨100, by simp [load32State]⟩
+
+theorem assign_const_compile_correct_fixture :
+    evalLoopProg 1 load32State
+        (comp [(3, 2)] (.assign 4 (.const 11)) : LoopProg Nat × LocationEnv).1 =
+        some (.normal { load32State with
+          locals := updateLoopLocal load32State.locals 4 11 }) ∧
+      labelsIn (comp [(3, 2)] (.assign 4 (.const 11)) : LoopProg Nat × LocationEnv).2
+        (updateLoopLocal load32State.locals 4 11) := by
+  apply comp_assign_nonvar_correct
+  · intro source
+    simp
+  · simp [evalLoopExp]
+  · intro name source hlookup
+    have hpair : 3 = name ∧ 2 = source := by
+      simpa [lookup] using hlookup
+    have hsource : source = 2 := hpair.2.symm
+    subst source
+    exact ⟨100, by simp [load32State]⟩
+
+theorem tick_compile_correct_fixture :
+    evalLoopProg 1 load32State
+        (comp [(3, 2)] (.tick : LoopProg Nat)).1 =
+        some (.normal load32State) ∧
+      labelsIn (comp [(3, 2)] (.tick : LoopProg Nat)).2
+        load32State.locals := by
+  apply comp_tick_correct
+  intro name source hlookup
+  have hpair : 3 = name ∧ 2 = source := by
+    simpa [lookup] using hlookup
+  have hsource : source = 2 := hpair.2.symm
+  subst source
+  exact ⟨100, by simp [load32State]⟩
+
+theorem setGlobal_compile_correct_fixture :
+    evalLoopProg 1 load32State
+        (comp [(3, 2)] (.setGlobal 9 (.const 11) : LoopProg Nat)).1 =
+        some (.normal { load32State with
+          globals := updateLoopGlobal load32State.globals 9 11 }) ∧
+      labelsIn (comp [(3, 2)] (.setGlobal 9 (.const 11) : LoopProg Nat)).2
+        ({ load32State with
+          globals := updateLoopGlobal load32State.globals 9 11 }).locals := by
+  apply comp_setGlobal_correct
+  · simp [evalLoopExp]
+  · intro name source hlookup
+    have hpair : 3 = name ∧ 2 = source := by
+      simpa [lookup] using hlookup
+    have hsource : source = 2 := hpair.2.symm
+    subst source
+    exact ⟨100, by simp [load32State]⟩
+
+theorem primitive_labelsIn_fixture :
+    (comp [(3, 2), (4, 3)] (.primitive [3] .addCarry [2, 3]) :
+      LoopProg Nat × LocationEnv).1 = .primitive [3] .addCarry [2, 3] ∧
+      labelsIn
+        (comp [(3, 2), (4, 3)] (.primitive [3] .addCarry [2, 3] : LoopProg Nat)).2
+        load32State.locals := by
+  apply comp_primitive_labelsIn
+  intro name source hlookup
+  by_cases hname : name = 3
+  · subst name
+    have hsource : source = 2 := by
+      have hpair : 1 = 1 ∧ 2 = source := by
+        simpa [lookup] using hlookup
+      exact hpair.2.symm
+    subst source
+    exact ⟨100, by simp [load32State]⟩
+  · have hname' : 3 ≠ name := Ne.symm hname
+    by_cases hname4 : name = 4
+    · subst name
+      have hsource : source = 3 := by
+        have hpair : 3 = 3 ∧ 3 = source := by
+          simpa [lookup] using hlookup
+        exact hpair.2.symm
+      subst source
+      exact ⟨7, by simp [load32State]⟩
+    · have hnone : lookup name [(3, 2), (4, 3)] = none := by
+        have hname4' : 4 ≠ name := Ne.symm hname4
+        simp [lookup, hname', hname4']
+      simp [hnone] at hlookup
+
 #check comp_locValue_correct
 #check comp_load32_correct
 #check comp_loadByte_correct
@@ -142,5 +237,10 @@ theorem skip_compile_correct_fixture :
 #check comp_storeByte_correct
 #check comp_store_correct
 #check comp_skip_correct
+#check comp_assign_var_correct
+#check comp_assign_nonvar_correct
+#check comp_tick_correct
+#check comp_setGlobal_correct
+#check comp_primitive_labelsIn
 
 end Flapjack.Test.LoopCallCorrectness

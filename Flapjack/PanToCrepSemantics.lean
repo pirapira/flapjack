@@ -314,4 +314,38 @@ theorem panSemantics_rel_crepSemantics
     panHooks crepHooks agreement (buildPanLprefixLub _ panChain)
     (crepBuildLprefixLub _ crepChain) htrace
 
+/-! The source and target chains are the same obligation once semantic
+    agreement identifies their event families pointwise.  The HOL proof builds
+    both chains from the corresponding evaluator monotonicity lemmas; this
+    adapter keeps that argument reusable while requiring only the source chain
+    at the semantic boundary. -/
+theorem crepLprefixChain_of_panLprefixChain_of_semantic_agreement
+    (panHooks : PanSemanticsHooks α σ)
+    (crepHooks : CrepSemanticsHooks β)
+    (agreement : PanCrepSemanticAgreement panHooks crepHooks)
+    (panChain : panLprefixChain
+      (fun clock => panResultEvents (panHooks.evaluate clock))) :
+    crepLprefixChain
+      (fun clock => crepHooks.ioEvents (crepHooks.evaluate clock).2) := by
+  have hfamily :
+      (fun clock => panResultEvents (panHooks.evaluate clock)) =
+        (fun clock => crepHooks.ioEvents (crepHooks.evaluate clock).2) :=
+    funext (fun clock => agreement.eventsAt clock)
+  simpa [crepLprefixChain, hfamily] using panChain
+
+theorem panSemantics_rel_crepSemantics_of_pan_chain
+    (panHooks : PanSemanticsHooks α σ)
+    (crepHooks : CrepSemanticsHooks β)
+    (agreement : PanCrepSemanticAgreement panHooks crepHooks)
+    (panChain : panLprefixChain
+      (fun clock => panResultEvents (panHooks.evaluate clock))) :
+    panCrepBehaviourRel
+      (panSemantics panHooks panChain)
+      (crepSemantics crepHooks
+        (crepLprefixChain_of_panLprefixChain_of_semantic_agreement
+          panHooks crepHooks agreement panChain)) := by
+  exact panSemantics_rel_crepSemantics panHooks crepHooks agreement panChain
+    (crepLprefixChain_of_panLprefixChain_of_semantic_agreement
+      panHooks crepHooks agreement panChain)
+
 end Flapjack

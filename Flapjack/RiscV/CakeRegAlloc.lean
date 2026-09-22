@@ -887,24 +887,22 @@ def cakeInitAlloc1Heu (moves : List (Nat × (Nat × Nat))) (k : Nat)
   let dim := state.dim
   let ds := List.range dim
   let allocs := filterReversed (fun i =>
-    (state.nodeTag.get i).getD .aTemp == .aTemp) ds
-  let withDegrees :=
+      (state.nodeTag.get i).getD .aTemp == .aTemp) ds
+  /- These three node-indexed initialisations touch disjoint fields.  Cake's
+     sequential folds therefore commute into one pass; `cakeConsideredVar`
+     reads only the immutable node tags, so the degree result is unchanged. -/
+  let initialized :=
     ds.foldl (fun st i =>
         let neighbours := (st.adjLists.get i).getD []
         let fills := neighbours.filter (cakeConsideredVar st k)
-        { st with degrees := st.degrees.set i fills.length })
+        { st with
+          degrees := st.degrees.set i fills.length
+          coalesced := st.coalesced.set i i
+          moveRelated := st.moveRelated.set i false })
       state
-  let withCoalesced :=
-    ds.foldl (fun st i =>
-        { st with coalesced := st.coalesced.set i (0 + i) })
-      withDegrees
   let withMoves :=
-    { withCoalesced with
+    { initialized with
       availMovesWl := cakeSortMoves moves }
-  let cleared :=
-    ds.foldl (fun st i =>
-        { st with moveRelated := st.moveRelated.set i false })
-      withMoves
   let withRelated :=
     moves.foldl (fun st move =>
         let x := move.2.1
@@ -913,7 +911,7 @@ def cakeInitAlloc1Heu (moves : List (Nat × (Nat × Nat))) (k : Nat)
         let fixedY := cakeIsFixed st y
         let st := { st with moveRelated := st.moveRelated.set x (!fixedX) }
         { st with moveRelated := st.moveRelated.set y (!fixedY) })
-      cleared
+      withMoves
   let (ltk, gtk) := partitionReversed (fun v => cakeSplitDegree withRelated dim k v) allocs
   let (ltkfreeze, ltksimp) := partitionReversed (fun v => cakeMoveRelatedSub withRelated v) ltk
   let final :=

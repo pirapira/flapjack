@@ -854,6 +854,72 @@ theorem call_target_return_compile_correct_fixture :
         loopLookupFirst, loopAssignValues, load32State])
   simpa [comp, loopResultState] using hcall
 
+theorem call_target_return_assign_compile_correct_fixture :
+    evalLoopProgWithCallsAndFfi
+        [(1, [3], (.return [3] : LoopProg Nat))]
+        (fun _ _ _ _ _ _ => none) 3 load32State
+        (comp [(3, 2)]
+          (.call (some ([4], [])) (some 1) [3] none : LoopProg Nat) :
+            LoopProg Nat × LocationEnv).1 =
+        some (.normal { load32State with
+          locals := updateLoopLocal load32State.locals 4 7 }) ∧
+      labelsIn
+        (comp [(3, 2)]
+          (.call (some ([4], [])) (some 1) [3] none : LoopProg Nat) :
+            LoopProg Nat × LocationEnv).2
+        (updateLoopLocal load32State.locals 4 7) := by
+  apply comp_call_target_return_assign_no_handler_correct
+    (functions := [(1, [3], (.return [3] : LoopProg Nat))])
+    (ffiHandler := (fun _ _ _ _ _ _ => none))
+    (environment := [(3, 2)]) (state := load32State) (fuel := 1)
+    (returns := ([4], [])) (target := 1) (arguments := [3])
+    (parameters := [3]) (body := (.return [3] : LoopProg Nat))
+    (argumentValues := [7])
+    (calleeLocals := { load32State with
+      locals := fun name => if name = 3 then some 7 else none })
+    (calleeState := { load32State with
+      locals := fun name => if name = 3 then some 7 else none })
+    (values := [7]) (assignedLocals := updateLoopLocal load32State.locals 4 7)
+  · simp [lookupLoopFunction]
+  · simp [load32State, loopReadLocals]
+  · simp [loopBindParameters, loopLookupFirst]
+  · simp [evalLoopProgWithCallsAndFfi, loopReadLocals, evalLoopProg, load32State]
+  · simp [loopAssignValues]
+    funext name
+    by_cases hname : name = 4
+    · subst name
+      simp [loopLookupFirst, updateLoopLocal]
+    · simp [loopLookupFirst, updateLoopLocal, hname]
+
+theorem call_target_normal_failure_compile_correct_fixture :
+    evalLoopProgWithCallsAndFfi
+        [(1, [3], (.skip : LoopProg Nat))]
+        (fun _ _ _ _ _ _ => none) 3 load32State
+        (comp [(3, 2)]
+          (.call none (some 1) [3] none : LoopProg Nat) :
+            LoopProg Nat × LocationEnv).1 = none ∧
+      labelsIn
+        (comp [(3, 2)]
+          (.call none (some 1) [3] none : LoopProg Nat) :
+            LoopProg Nat × LocationEnv).2
+        load32State.locals := by
+  apply comp_call_target_normal_failure_correct
+    (functions := [(1, [3], (.skip : LoopProg Nat))])
+    (ffiHandler := (fun _ _ _ _ _ _ => none))
+    (environment := [(3, 2)]) (state := load32State) (fuel := 1)
+    (returns := none) (target := 1) (arguments := [3])
+    (parameters := [3]) (body := (.skip : LoopProg Nat))
+    (argumentValues := [7])
+    (calleeLocals := { load32State with
+      locals := fun name => if name = 3 then some 7 else none })
+    (calleeState := { load32State with
+      locals := fun name => if name = 3 then some 7 else none })
+    (handler := none)
+  · simp [lookupLoopFunction]
+  · simp [load32State, loopReadLocals]
+  · simp [loopBindParameters, loopLookupFirst]
+  · simp [evalLoopProgWithCallsAndFfi, evalLoopProg, load32State]
+
 theorem call_target_return_no_handler_semantic_fixture :
     evalLoopCallWithCallsAndFfi
         [(1, [3], (.return [3] : LoopProg Nat))]
@@ -1248,6 +1314,10 @@ theorem loop_compile_result_fixture :
 #check evalLoopCallWithCallsAndFfi_timeout
 #check comp_call_target_timeout_correct
 #check evalLoopCallWithCallsAndFfi_returned_no_handler
+#check evalLoopCallWithCallsAndFfi_returned_assign_no_handler
+#check comp_call_target_return_assign_no_handler_correct
+#check evalLoopCallWithCallsAndFfi_normal_failure
+#check comp_call_target_normal_failure_correct
 #check comp_call_target_raised_no_handler_correct
 #check comp_call_target_raised_handler_correct
 #check comp_call_target_raised_handler_result_correct

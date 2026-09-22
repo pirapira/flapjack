@@ -1201,6 +1201,14 @@
       "tracked_beads": [
         "flapjack-pxn.8.10"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/riscv_narrow_lower_offset.pnk",
+      "source_reference": "Original-Cake narrow load-offset fixture: ld8 (p + 2048) preserves the exact lower signed-12 boundary through source-to-RISC-V lowering.",
+      "cake_sha256": "fe597203b6b8371b914165486775b69a81cf3aa48be438f1f3aef2c18ba496ed",
+      "tracked_beads": [
+        "flapjack-pxn.10"
+      ]
     }
   ]
 }

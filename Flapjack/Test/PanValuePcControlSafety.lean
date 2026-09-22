@@ -1499,6 +1499,8 @@ example :
   panValueCtxtMax_zip_withShape [0, 1] ["a", "b"]
     [Shape.one, Shape.one] (by decide) (by simp [Shape.shapeSize]) (by decide)
 
+#check @panValueCtxtMax_cons_of
+
 #check @panValueCtxtMax_getElem_le
 
 /-- Regression for Cake `ctxt_max_el_leq`: a recorded slot number is bounded by

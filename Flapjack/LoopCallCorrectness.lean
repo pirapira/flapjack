@@ -1081,6 +1081,94 @@ theorem comp_arith_longDiv_labelsIn
           · exact labelsIn_delete (delete destinationRight environment) locals destinationLeft
               (labelsIn_delete environment locals destinationRight henvironment)
 
+theorem comp_arith_longDiv_full_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [PanCmp α] [PanShiftWidth α]
+    [ArithmeticShiftRight α] [RotateRightOp α] [Complement α]
+    (longDiv : α → α → α → Option (α × α))
+    (environment : LocationEnv) (state : LoopState α) (fuel : Nat)
+    (destinationLeft destinationRight sourceLeft sourceRight quotient : Nat)
+    (highValue lowValue divisorValue quotientValue remainderValue : α)
+    (hhigh : state.locals sourceLeft = some highValue)
+    (hlow : state.locals sourceRight = some lowValue)
+    (hdivisor : state.locals quotient = some divisorValue)
+    (hcompute : longDiv highValue lowValue divisorValue =
+      some (quotientValue, remainderValue))
+    (henvironment : labelsIn environment state.locals) :
+    evalLoopProgFullWithLongDiv longDiv (fuel + 1) state
+        (comp environment
+          (.arith (.longDiv destinationLeft destinationRight sourceLeft sourceRight quotient) :
+            LoopProg α)).1 =
+        some (.normal { state with
+          locals := updateLoopLocal
+            (updateLoopLocal state.locals destinationRight remainderValue)
+            destinationLeft quotientValue }) ∧
+      labelsIn
+        (comp environment
+          (.arith (.longDiv destinationLeft destinationRight sourceLeft sourceRight quotient) :
+            LoopProg α)).2
+        (updateLoopLocal
+          (updateLoopLocal state.locals destinationRight remainderValue)
+          destinationLeft quotientValue) := by
+  have hcompiled :
+      comp environment
+          (.arith (.longDiv destinationLeft destinationRight sourceLeft sourceRight quotient) :
+            LoopProg α) =
+        (.arith (.longDiv destinationLeft destinationRight sourceLeft sourceRight quotient),
+          match lookup destinationLeft environment, lookup destinationRight environment with
+          | none, none => environment
+          | some _, none => delete destinationLeft environment
+          | none, some _ => delete destinationRight environment
+          | some _, some _ => delete destinationLeft (delete destinationRight environment)) := by
+    simp [comp, compArith] <;> rfl
+  have heval :
+      evalLoopProgFullWithLongDiv longDiv (fuel + 1) state
+          (.arith (.longDiv destinationLeft destinationRight sourceLeft sourceRight quotient)) =
+        some (.normal { state with
+          locals := updateLoopLocal
+            (updateLoopLocal state.locals destinationRight remainderValue)
+            destinationLeft quotientValue }) := by
+    simp [evalLoopProgFullWithLongDiv, hhigh, hlow, hdivisor, hcompute]
+  rw [hcompiled]
+  cases hleftDestination : lookup destinationLeft environment with
+  | none =>
+      cases hrightDestination : lookup destinationRight environment with
+      | none =>
+          constructor
+          · exact heval
+          · exact labelsIn_update environment
+              (updateLoopLocal state.locals destinationRight remainderValue)
+              destinationLeft quotientValue
+              (labelsIn_update environment state.locals destinationRight remainderValue
+                henvironment)
+      | some _ =>
+          constructor
+          · exact heval
+          · exact labelsIn_update (delete destinationRight environment)
+              (updateLoopLocal state.locals destinationRight remainderValue)
+              destinationLeft quotientValue
+              (labelsIn_delete_update_any environment state.locals destinationRight
+                destinationRight remainderValue henvironment)
+  | some _ =>
+      cases hrightDestination : lookup destinationRight environment with
+      | none =>
+          constructor
+          · exact heval
+          · exact labelsIn_update (delete destinationLeft environment)
+              (updateLoopLocal state.locals destinationRight remainderValue)
+              destinationLeft quotientValue
+              (labelsIn_delete_update_any environment state.locals destinationLeft
+                destinationRight remainderValue henvironment)
+      | some _ =>
+          constructor
+          · exact heval
+          · exact labelsIn_delete_update_any (delete destinationRight environment)
+              (updateLoopLocal state.locals destinationRight remainderValue)
+              destinationLeft destinationLeft quotientValue
+              (labelsIn_delete_update_any environment state.locals destinationRight
+                destinationRight remainderValue henvironment)
+
 theorem lookup_of_listDelete
     (destinations : List Nat) (environment : LocationEnv)
     (name location : Nat)

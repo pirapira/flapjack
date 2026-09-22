@@ -1,4 +1,5 @@
 import Flapjack.LoopCallCorrectness
+import Flapjack.RiscV.Model
 
 namespace Flapjack.Test.LoopCallCorrectness
 
@@ -572,6 +573,7 @@ theorem primitive_labelsIn_fixture :
       exact hpair.2.symm
     subst source
     exact ⟨100, by simp [load32State]⟩
+
   · have hname' : 3 ≠ name := Ne.symm hname
     by_cases hname4 : name = 4
     · subst name
@@ -585,6 +587,46 @@ theorem primitive_labelsIn_fixture :
         have hname4' : 4 ≠ name := Ne.symm hname4
         simp [lookup, hname', hname4']
       simp [hnone] at hlookup
+
+def longDivWordState : LoopState (RiscV.Word 64) :=
+  { locals := fun name => if name = 2 then some 100 else
+      if name = 3 then some 7 else none
+    globals := fun _ => none
+    memory := fun _ => none }
+
+theorem arith_longDiv_full_compile_correct_fixture :
+    evalLoopProgFullWithLongDiv
+        (fun high low divisor : RiscV.Word 64 => some (high + low, divisor)) 1
+        longDivWordState
+        (comp [(3, 2)]
+          (.arith (.longDiv 4 5 3 2 2)) :
+            LoopProg (RiscV.Word 64) × LocationEnv).1 =
+        some (.normal { longDivWordState with
+          locals := updateLoopLocal
+            (updateLoopLocal longDivWordState.locals 5 100) 4 107 }) ∧
+      labelsIn
+        (comp [(3, 2)]
+          (.arith (.longDiv 4 5 3 2 2)) :
+            LoopProg (RiscV.Word 64) × LocationEnv).2
+        (updateLoopLocal
+          (updateLoopLocal longDivWordState.locals 5 100) 4 107) := by
+  have hlong := comp_arith_longDiv_full_correct
+    (longDiv := (fun high low divisor : RiscV.Word 64 => some (high + low, divisor)))
+    (environment := [(3, 2)]) (state := longDivWordState) (fuel := 0)
+    (destinationLeft := 4) (destinationRight := 5)
+    (sourceLeft := 3) (sourceRight := 2) (quotient := 2)
+    (highValue := 7) (lowValue := 100) (divisorValue := 100)
+    (quotientValue := 107) (remainderValue := 100)
+    (by simp [longDivWordState]) (by simp [longDivWordState])
+    (by simp [longDivWordState])
+    (by simp) (by
+      intro name source hlookup
+      have hpair : 3 = name ∧ 2 = source := by
+        simpa [lookup] using hlookup
+      have hsource : source = 2 := hpair.2.symm
+      subst source
+      exact ⟨100, by simp [longDivWordState]⟩)
+  simpa using hlong
 
 theorem call_labelsIn_fixture :
     (comp [(3, 2)]
@@ -654,6 +696,7 @@ theorem ffi_labelsIn_fixture :
 #check comp_arith_div_correct
 #check comp_arith_longMul_correct
 #check comp_arith_longDiv_labelsIn
+#check comp_arith_longDiv_full_correct
 #check comp_primitive_labelsIn
 #check comp_call_labelsIn
 #check comp_ffi_labelsIn

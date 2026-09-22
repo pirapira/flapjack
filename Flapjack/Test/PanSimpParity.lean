@@ -2756,3 +2756,16 @@ end Flapjack.Test.PanSimpParity
 /-! The generic residual/timeout event-prefix induction reduces whole-program event monotonicity
 to the explicit per-leaf residual obligation `hleaf`. -/
 #check @Flapjack.evalPanValueFfiClock_ioEvents_prefix
+
+/-! Event-prefix for the event-safe leaf fragment (every `PanValueFfiLeafProg` constructor
+except `extCall`, whose event preservation depends on the handler premises). -/
+#check @Flapjack.PanValueFfiEventSafeLeaf
+#check @Flapjack.evalPanValueFfiProgSteps_eventSafeLeaf_ioEvents_prefix
+
+/-! The `extCall` leaf needs explicit handler event-preservation premises; this is the
+remaining sub-case of the generic `hleaf` obligation. -/
+#check @Flapjack.evalPanValueFfiProgSteps_extCall_ioEvents_prefix
+
+/-! Fully-discharged leaf event-prefix: all 13 `PanValueFfiLeafProg` constructors,
+including `extCall`, under the explicit handler-preservation premises. -/
+#check @Flapjack.evalPanValueFfiProgSteps_leaf_ioEvents_prefix

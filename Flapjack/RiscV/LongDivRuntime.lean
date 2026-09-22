@@ -127,15 +127,18 @@ def cakeLongDivStackEntryCode (config : WordStackConfig) (width : Nat) :
 
 /-! Adapt the source helper's Loc convention to the normalized StackLang
     LongDiv convention: the caller supplies high and low in x3 and x0, the
-    divisor in x6, and observes quotient x0 and remainder x3. -/
+    divisor in x6, and observes quotient x0 and remainder x3.  Cake's
+    `LongDiv_code` leaves the quotient in adjusted word register 10 and the
+    remainder in `Temp 28`; copy those helper carriers into the normalized
+    result registers in the return continuation. -/
 def cakeLongDivStackAdapter : StackProg Nat :=
   stackSeq [
     .arith .or (2 + 6) 6 6,
     .arith .or (2 + 2) 3 3,
-    .arith .or (2 + 4) 0 0,
-    .call (some
+      .arith .or (2 + 4) 0 0,
+      .call (some
       (stackSeq [
-        .arith .or 0 2 2,
+        .arith .or 0 10 10,
         .get 3 (.temp 28)], 0, 0, 0))
       (.label cakeLongDivLocation) none]
 

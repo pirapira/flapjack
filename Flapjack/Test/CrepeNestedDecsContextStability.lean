@@ -22,6 +22,21 @@ theorem fresh_context_state_fixture :
   · intro name shape slots hlookup slot hslot
     simp [emptyContext, lookupInfo] at hlookup
 
+theorem fresh_context_state_slot_fixture :
+    panValueCrepStateRelWithContext ([] : StructContext) emptyContext
+      (fun _ => none) (fun _ => none) (fun _ => none)
+      { locals := updateCrepLocal (fun _ => none) 2 99
+        memory := fun _ => none } := by
+  apply panValueCrepStateRelWithContext_update_fresh_slot
+    ([] : StructContext) emptyContext (fun _ => none) (fun _ => none)
+    (fun _ => none) { locals := fun _ => none, memory := fun _ => none } 2 99
+  · refine ⟨panValueNoOverlap_empty, panValueCtxtMax_empty 0 (by omega), ?_⟩
+    exact ⟨rfl, panValueCrepLocalsRel_empty _ _ _, rfl⟩
+  · simp [emptyContext]
+  · intro name shape slots hlookup current hcurrent
+    simp [emptyContext, lookupInfo] at hlookup
+
 #check @Flapjack.panValueCrepStateRelWithContext_updateCrepLocalList_fresh
+#check @Flapjack.panValueCrepStateRelWithContext_update_fresh_slot
 
 end Flapjack.Test.CrepeNestedDecsContextStability

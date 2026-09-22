@@ -169,6 +169,28 @@ theorem not_mem_crepAssignedFreeVars_compileProg_decCall
     rcases hx with hx | hx
     · exact hfresh hx
     · exact hbody hx
+
+/-! The primitive branch of the Cake bound proof: the destination slots come
+    from the context, while the generated argument temporaries are hidden by
+    the surrounding declaration nest. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_primitive
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (name : VarName) (operator : PrimOp)
+    (arguments : List (Exp α)) (x : Nat)
+    (hslot : ∀ shape slots,
+      lookupInfo name context.vars = some (shape, slots) → x ∉ slots) :
+    x ∉ crepAssignedFreeVars
+      (compileProg context (.primitive name operator arguments)) := by
+  simp only [compileProg]
+  cases hlookup : lookupInfo name context.vars with
+  | none => simp [crepAssignedFreeVars]
+  | some info =>
+      obtain ⟨shape, slots⟩ := info
+      apply not_mem_crepAssignedFreeVars_nestedDecs
+      · simp [freshNames]
+      · simp only [crepAssignedFreeVars]
+        exact hslot shape slots hlookup
+
 /-- `crepNestedSeq` of `assign` statements built from a zip of names with
     variables introduced by `freshNames` still has exactly `names` as its
     assigned free variables. -/

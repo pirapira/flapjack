@@ -132,6 +132,40 @@ theorem panValuePcExceptionShapeRelConcrete_refl (context : CompileContext α)
   intro exception shape
   rfl
 
+/-- Cake `ctxt_max_def` (`pan_commonPropsScript.sml:11`) port: the slot bound
+recorded by `mk_ctxt`/`ctxt_fc` holds for every variable slot. -/
+def panValueCtxtMax [BEq String] (bound : Nat)
+    (vars : InfoMap (Shape × List Nat)) : Prop :=
+  0 ≤ bound ∧
+    ∀ name shape slots, lookupInfo name vars = some (shape, slots) →
+      ∀ slot ∈ slots, slot ≤ bound
+
+/-- Cake `no_overlap_def` (`pan_commonPropsScript.sml:18`) port: within each
+variable the slots are duplicate-free, and slots of two distinct variables
+cannot share a slot number. -/
+def panValueNoOverlap [BEq String] (vars : InfoMap (Shape × List Nat)) : Prop :=
+  (∀ name shape slots, lookupInfo name vars = some (shape, slots) → slots.Nodup) ∧
+    ∀ name name' shape shape' slots slots',
+      lookupInfo name vars = some (shape, slots) →
+      lookupInfo name' vars = some (shape', slots') →
+      (∃ slot, slot ∈ slots ∧ slot ∈ slots') → name = name'
+
+/-- The empty variable map satisfies Cake's `ctxt_max`. -/
+theorem panValueCtxtMax_empty [BEq String] (bound : Nat) (hbound : 0 ≤ bound) :
+    panValueCtxtMax bound ([] : InfoMap (Shape × List Nat)) := by
+  refine ⟨hbound, ?_⟩
+  intro name shape slots hlookup
+  simp [lookupInfo] at hlookup
+
+/-- The empty variable map satisfies Cake's `no_overlap`. -/
+theorem panValueNoOverlap_empty [BEq String] :
+    panValueNoOverlap ([] : InfoMap (Shape × List Nat)) := by
+  refine ⟨?_, ?_⟩
+  · intro name shape slots hlookup
+    simp [lookupInfo] at hlookup
+  · intro name name' shape shape' slots slots' hlookup hlookup' hcommon
+    simp [lookupInfo] at hlookup
+
 def panValuePcLocalisedCode (code : PanValuePcSourceCode α) : Prop :=
   ∀ entry ∈ code, localisedProg entry.2.2
 

@@ -337,6 +337,20 @@ theorem arith_longMul_compile_correct_fixture :
     subst source
     exact ⟨100, by simp [load32State]⟩
 
+theorem arith_longDiv_labelsIn_fixture :
+    (comp [(3, 2)] (.arith (.longDiv 4 4 3 2 5)) : LoopProg Nat × LocationEnv).1 =
+        .arith (.longDiv 4 4 3 2 5) ∧
+      labelsIn
+        (comp [(3, 2)] (.arith (.longDiv 4 4 3 2 5)) : LoopProg Nat × LocationEnv).2
+        load32State.locals := by
+  apply comp_arith_longDiv_labelsIn
+  intro name source hlookup
+  have hpair : 3 = name ∧ 2 = source := by
+    simpa [lookup] using hlookup
+  have hsource : source = 2 := hpair.2.symm
+  subst source
+  exact ⟨100, by simp [load32State]⟩
+
 theorem primitive_labelsIn_fixture :
     (comp [(3, 2), (4, 3)] (.primitive [3] .addCarry [2, 3]) :
       LoopProg Nat × LocationEnv).1 = .primitive [3] .addCarry [2, 3] ∧
@@ -386,6 +400,7 @@ theorem primitive_labelsIn_fixture :
 #check comp_shMem_store_correct
 #check comp_arith_div_correct
 #check comp_arith_longMul_correct
+#check comp_arith_longDiv_labelsIn
 #check comp_primitive_labelsIn
 
 end Flapjack.Test.LoopCallCorrectness

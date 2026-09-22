@@ -721,6 +721,51 @@ theorem comp_arith_longMul_correct
               state.locals destinationLeft (leftValue * rightValue)
               (labelsIn_delete environment state.locals destinationRight henvironment)
 
+theorem comp_arith_longDiv_labelsIn
+    (environment : LocationEnv) (locals : Nat → Option α)
+    (destinationLeft destinationRight sourceLeft sourceRight quotient : Nat)
+    (henvironment : labelsIn environment locals) :
+    (comp environment
+      (.arith (.longDiv destinationLeft destinationRight sourceLeft sourceRight quotient) : LoopProg α)).1 =
+        .arith (.longDiv destinationLeft destinationRight sourceLeft sourceRight quotient) ∧
+      labelsIn
+        (comp environment
+          (.arith (.longDiv destinationLeft destinationRight sourceLeft sourceRight quotient) : LoopProg α)).2
+        locals := by
+  have hcompiled :
+      comp environment
+          (.arith (.longDiv destinationLeft destinationRight sourceLeft sourceRight quotient) : LoopProg α) =
+        (.arith (.longDiv destinationLeft destinationRight sourceLeft sourceRight quotient),
+          match lookup destinationLeft environment, lookup destinationRight environment with
+          | none, none => environment
+          | some _, none => delete destinationLeft environment
+          | none, some _ => delete destinationRight environment
+          | some _, some _ => delete destinationLeft (delete destinationRight environment)) := by
+    simp [comp, compArith] <;> rfl
+  rw [hcompiled]
+  cases hleftDestination : lookup destinationLeft environment with
+  | none =>
+      cases hrightDestination : lookup destinationRight environment with
+      | none =>
+          constructor
+          · rfl
+          · exact henvironment
+      | some _ =>
+          constructor
+          · rfl
+          · exact labelsIn_delete environment locals destinationRight henvironment
+  | some _ =>
+      cases hrightDestination : lookup destinationRight environment with
+      | none =>
+          constructor
+          · rfl
+          · exact labelsIn_delete environment locals destinationLeft henvironment
+      | some _ =>
+          constructor
+          · rfl
+          · exact labelsIn_delete (delete destinationRight environment) locals destinationLeft
+              (labelsIn_delete environment locals destinationRight henvironment)
+
 theorem lookup_of_listDelete
     (destinations : List Nat) (environment : LocationEnv)
     (name location : Nat)

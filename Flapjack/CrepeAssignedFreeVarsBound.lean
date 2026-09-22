@@ -117,4 +117,14 @@ theorem crepAssignedFreeVars_seq_assignRet_compileProg [BEq α] [OfNat α 0] [Ad
       handlerNames ++ crepAssignedFreeVars (compileProg context handlerProgram) := by
   simp [crepAssignedFreeVars, crepAssignedFreeVars_assignRet]
 
+/-- Membership of a compiled nested declaration body's free variables in the
+    free variables of the body alone (the declared names only remove entries). -/
+theorem mem_crepAssignedFreeVars_nestedDecs {α : Type} (names : List Nat)
+    (values : List (CrepExp α)) (body : CrepProg α)
+    (h : names.length = values.length) {x : Nat}
+    (hmem : x ∈ crepAssignedFreeVars (nestedDecs names values body)) :
+    x ∈ crepAssignedFreeVars body := by
+  rw [crepAssignedFreeVars_nestedDecs_append names values body h] at hmem
+  exact (List.mem_filter.mp hmem).1
+
 end Flapjack

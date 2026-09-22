@@ -35,12 +35,53 @@ def isFlattened : Bool :=
       (.seq (.seq .skip .tick) (.assign 3 (.const 7) : CrepProg Nat))).map reprStr ==
     ([.skip, .tick, .assign 3 (.const 7)] : List (CrepProg Nat)).map reprStr
 
+def crepExpsProbe : List (CrepProg Nat) :=
+  [.assign 1 (.const 7), .while (.const 1) (.store (.const 2) (.const 3))]
+
+theorem crepExpsOf_nestedSeq_fixture :
+    crepExpsOf (crepNestedSeq crepExpsProbe) =
+      (crepExpsProbe.map crepExpsOf).flatten :=
+  crepExpsOf_nestedSeq crepExpsProbe
+
+def crepExpsGuard : Bool :=
+  (crepExpsOf (crepNestedSeq crepExpsProbe)).length == 4 &&
+    (crepExpsProbe.map crepExpsOf).flatten.length == 4
+
+def nestedDecsProbe : CrepProg Nat :=
+  nestedDecs [1, 2] [.const 1, .const 2] (.assign 3 (.const 4))
+
+def nestedSeqAssignProbe : CrepProg Nat :=
+  crepNestedSeq (panMap2 (fun n v => .assign n v) [1, 2] [.const 5, .const 6])
+
+example (e : CrepExp Nat) (hmem : e ∈ crepExpsOf nestedDecsProbe) :
+    e ∈ [.const 1, .const 2] ∨ e ∈ crepExpsOf (.assign 3 (.const 4)) :=
+  crepExpsOf_nestedDecs [1, 2] [.const 1, .const 2] (.assign 3 (.const 4)) hmem
+
+example (e : CrepExp Nat) (hmem : e ∈ crepExpsOf nestedSeqAssignProbe) :
+    e ∈ [.const 5, .const 6] :=
+  crepExpsOf_nestedSeq_assign [1, 2] [.const 5, .const 6] hmem
+
+def inlineExpsGuard : Bool :=
+  (crepExpsOf nestedDecsProbe).length == 3 &&
+    (crepExpsOf nestedSeqAssignProbe).length == 2
+
+def argLoadProbe : CrepProg Nat :=
+  argLoad [9] [.const 1] [2] (.assign 3 (.const 4))
+
+example (e : CrepExp Nat) (hmem : e ∈ crepExpsOf argLoadProbe) :
+    e ∈ [.const 1] ∨ (∃ c, c ∈ [9] ∧ e = .var c) ∨
+      e ∈ crepExpsOf (.assign 3 (.const 4)) :=
+  crepExpsOf_argLoad [9] [.const 1] [2] (.assign 3 (.const 4)) hmem
+
+def argLoadGuard : Bool :=
+  (crepExpsOf argLoadProbe).length == 3
+
 def parityGuard : Bool :=
   isEmpty (crepNestedSeq []) &&
   isOne (crepNestedSeq [.skip]) &&
   isTwo (crepNestedSeq [.tick, .skip]) &&
   isAssignSeq (crepNestedSeq [.assign 1 (.const 7), .assign 2 (.const 9)]) &&
-  isFlattened
+  isFlattened && crepExpsGuard && inlineExpsGuard && argLoadGuard
 
 #eval parityGuard
 #guard parityGuard
@@ -51,15 +92,21 @@ def runChecks : IO Bool := do
     isOne (crepNestedSeq [.skip]),
     isTwo (crepNestedSeq [.tick, .skip]),
     isAssignSeq (crepNestedSeq [.assign 1 (.const 7), .assign 2 (.const 9)]),
-    isFlattened]
+    isFlattened,
+    crepExpsGuard,
+    inlineExpsGuard,
+    argLoadGuard]
   match results with
-  | [empty, one, two, assignment, flattened] =>
+  | [empty, one, two, assignment, flattened, exps, inlineExps, argLoad] =>
       if empty then IO.println "PASS crep nested_seq empty" else IO.println "FAIL crep nested_seq empty"
       if one then IO.println "PASS crep nested_seq one" else IO.println "FAIL crep nested_seq one"
       if two then IO.println "PASS crep nested_seq two" else IO.println "FAIL crep nested_seq two"
       if assignment then IO.println "PASS crep nested_seq assignment sequence" else IO.println "FAIL crep nested_seq assignment sequence"
       if flattened then IO.println "PASS crep seqs flatten nested sequences" else IO.println "FAIL crep seqs flatten nested sequences"
-      pure (empty && one && two && assignment && flattened)
+      if exps then IO.println "PASS crep nested_seq exps_of" else IO.println "FAIL crep nested_seq exps_of"
+      if inlineExps then IO.println "PASS crep inline exps_of membership" else IO.println "FAIL crep inline exps_of membership"
+      if argLoad then IO.println "PASS crep inline exps_of arg_load" else IO.println "FAIL crep inline exps_of arg_load"
+      pure (empty && one && two && assignment && flattened && exps && inlineExps && argLoad)
   | _ =>
       IO.println "FAIL crep nested_seq result arity"
       pure false

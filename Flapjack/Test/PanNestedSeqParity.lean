@@ -79,6 +79,24 @@ def expIdsGuard : Bool :=
 #eval expIdsGuard
 #guard expIdsGuard
 
+/-! Cake's `pan_exps_of_nested_seq`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:1018`). -/
+
+def expsProbe : List (Prog Nat) :=
+  [.assign .local "x" (.const 1),
+   .while (.var .local "x") (.raise "E" (.const 2))]
+
+theorem expsOf_nestedSeq_fixture :
+    expsOf (nestedSeq expsProbe) = (expsProbe.map expsOf).flatten :=
+  expsOf_nestedSeq expsProbe
+
+def expsOfGuard : Bool :=
+  (expsOf (nestedSeq expsProbe)).length == 3 &&
+    (expsProbe.map expsOf).flatten.length == 3
+
+#eval expsOfGuard
+#guard expsOfGuard
+
 def runChecks : IO Bool := do
   let results ← [
     check "pan nested_seq empty" (nestedSeq probeEmpty) originalEmpty,
@@ -87,6 +105,7 @@ def runChecks : IO Bool := do
     check "pan nested_seq assign sequence"
       (nestedSeq probeAssignSeq) originalAssignSeq ].mapM id
   let expIdsOk ← checkBool "pan nested_seq exp_ids" expIdsGuard
-  pure (results.all id && expIdsOk)
+  let expsOk ← checkBool "pan nested_seq exps_of" expsOfGuard
+  pure (results.all id && expIdsOk && expsOk)
 
 end Flapjack.Test.PanNestedSeqParity

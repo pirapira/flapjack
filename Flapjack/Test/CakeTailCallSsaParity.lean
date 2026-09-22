@@ -23,7 +23,7 @@ def cakeReturnSuffixConfig : WordStackConfig :=
 def cakeReturnSuffixShape : Bool :=
   wordStackReturnStackSuffix cakeReturnSuffixConfig [2] == [] &&
     stackNumReturnSlots 12 (wordStackReturnStackSuffix cakeReturnSuffixConfig [2]) == 0 &&
-    wordStackReturnStackSuffix cakeReturnSuffixConfig (List.range 14) == [12, 13]
+    wordStackReturnStackSuffix cakeReturnSuffixConfig (List.range 14) == [11, 12, 13]
 
 #guard cakeReturnSuffixShape
 

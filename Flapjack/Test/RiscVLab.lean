@@ -869,7 +869,6 @@ example :
       (.shareMemOffset .store16 10 11 (BitVec.ofNat 64 (2 ^ 64 - 8))) =
       some [.storeHalfOffset 10 11 (0 - BitVec.ofNat 64 8)] := by
   decide
-
 /- Cake's source-shaped `wordShareInstToInstructionsCake` keeps a variable
    address as one direct `Mem` carrier.  Check every width in the target
    `riscv_memop` table at this backend boundary, independently of the

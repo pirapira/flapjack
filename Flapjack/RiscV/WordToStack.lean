@@ -2318,7 +2318,9 @@ def wordStackFfiCake {α : Type} (config : WordStackConfig) (function : FunName)
       arrayRegister arrayLengthRegister 0))
 
 def wordStackReturnStackSuffix (config : WordStackConfig) (values : List Nat) : List Nat :=
-  values.drop config.abiRegisterCount
+  -- Cake's `Return v1 vs` keeps `v1` outside `vs`: the first
+  -- `k - 1` entries of `vs` share the remaining ABI result registers.
+  values.drop (config.abiRegisterCount - 1)
 
 def wordStackReturnCode {α : Type} (config : WordStackConfig) :
     Option (List Nat × (List Nat × List Nat) × WordProg α × Nat × Nat) →
@@ -2329,11 +2331,13 @@ def wordStackReturnCode {α : Type} (config : WordStackConfig) :
 
 /-! The `Return v1 vs` case in Cake's `comp` frees the part of the current
     frame occupied by returned values which do not fit in the ABI result
-    registers.  Flapjack stores all returned values in one list (where Cake
-    stores `v1` separately from `vs`), so the corresponding count is
-    `f - (LENGTH values - k)`. -/
+    registers.  Flapjack's flattened `values` is Cake's `vs`, so Cake's
+    `num_stack_ret k vs = LENGTH vs + 1 - k` must retain the implicit `v1`.
+    This `+1` is observable when a returned structure reaches the ABI
+    boundary. -/
 def wordStackReturnFreeCount (config : WordStackConfig) (values : List Nat) : Nat :=
-  wordStackCakeFrameSize config - (values.length - config.abiRegisterCount)
+  wordStackCakeFrameSize config -
+    (values.length + 1 - config.abiRegisterCount)
 
 /-! Cake's `wReg1` emits a `StackLoad` when the return address has been
     spilled to the frame, jumping through the spare register afterwards.  The

@@ -2696,8 +2696,11 @@ example : PanValueFfiClockNormalAdequateProgFromFloor 3 3 evaluatorContext
 #check @Flapjack.panSemantics_rel_crepSemantics_of_pan_chain
 #check @Flapjack.evalPanValueFfiClockProgram_of_declarations_and_returned_call_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProgram_of_declarations_and_returned_call_result_rel
+#check @Flapjack.evalPanValueFfiClockProgram_of_declarations_and_returned_call_result_rel_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProgram_of_declarations_and_finalFfi_call_result_rel_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProgram_of_declarations_and_raised_call_result_rel
 #check @Flapjack.evalPanValueFfiClockProgram_of_declarations_and_raised_call_result_rel_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProgram_of_declarations_and_timeout_call_result_rel_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProgram_of_declarations_and_raised_call_context_code
 #check @Flapjack.evalPanValueFfiClockProg_decCall_returned_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProg_while_normal_iteration_ioEvents_prefix
@@ -2707,6 +2710,68 @@ example : PanValueFfiClockNormalAdequateProgFromFloor 3 3 evaluatorContext
 #check @Flapjack.evalPanValueFfiClockProg_shift_panResultEvents
 #check @Flapjack.evalPanValueFfiClockProg_extCall_statefulHandler_normal_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProg_call_returned_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProgram_of_declarations_and_normal_call_result_rel_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProgram_of_related_declarations_and_normal_call_result_rel_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProgram_of_related_declarations_and_raised_call_result_rel_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProgram_of_related_declarations_and_timeout_call_result_rel_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProgram_of_related_declarations_and_returned_call_result_rel_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProgram_of_related_declarations_and_finalFfi_call_result_rel_ioEvents_prefix
+
+/-! Typed regression for the normal-call declaration-state branch of Cake's
+    `state_rel_imp_semantics_decls_to_crep`: the source declaration evaluator,
+    target declaration evaluator, call result, state relation, and incoming
+    event prefix all remain explicit. -/
+theorem related_declarations_normal_call_result_rel_fixture
+    (initial : PanValueFfiProgramState Nat Unit)
+    (targetInitial : PanValueProgramState Nat)
+    (clock : Nat) (fuel : Nat)
+    (declarations : List (Decl Nat)) (entry : FunName)
+    (arguments : List (Exp Nat))
+    (state : PanValueProgramState Nat)
+    (locals globals : VarName → Option (PanValue Nat))
+    (memory : Nat → Option (PanValue Nat)) (ffi : FfiState Unit)
+    (nextClock : Nat)
+    (pcContext : CompileContext Nat)
+    (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+    (exceptionCode : ExceptionId → Option Nat)
+    (globalsLookup : CrepState Nat → PanValue Nat → Option (List Nat))
+    (targetState : CrepState Nat)
+    (memoryAccess : Option (PanValueMemoryAccess Nat))
+    (memoryHandler : Option (PanValueMemoryFfiHandler Nat Unit))
+    (hinitial : panValueProgramStateRel initial.source targetInitial)
+    (hdeclarations : evalPanValueDeclarations initial.source declarations
+      (memoryAccess := memoryAccess) = some state)
+    (hentry : lookupInfo entry state.returnShapes = none)
+    (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)
+      evaluatorHandler state.structs state.functions state.baseAddress
+      state.topAddress state.bytesInWord fuel (fun _ => none) state.globals
+      state.memory initial.ffi clock none entry arguments
+      (memoryAccess := memoryAccess)
+      (contracts := some (PanValueCallContracts.mk state.returnShapes
+        state.exceptions state.parameterShapes))
+      (memoryHandler := memoryHandler) =
+      some (.control (.normal locals globals memory ffi), nextClock))
+    (hstate : panValueCrepStateRel state.structs pcContext locals globals
+      memory targetState)
+    (hprefix : initial.ffi.ioEvents <+: ffi.ioEvents) :
+    ∃ targetDeclaration,
+      evalPanValueDeclarations targetInitial (panSimpDecls declarations)
+        (memoryAccess := memoryAccess) = some targetDeclaration ∧
+      panValueProgramStateRel state targetDeclaration ∧
+      lookupInfo entry targetDeclaration.returnShapes = none ∧
+      evalPanValueFfiClockProgram evaluatorContext initial clock
+        (fun _ _ => none) evaluatorHandler fuel declarations entry arguments
+        (memoryAccess := memoryAccess) (memoryHandler := memoryHandler) =
+        some (.control (.normal locals globals memory ffi), nextClock) ∧
+      panValuePcResultRel state.structs pcContext exceptionRel exceptionCode
+        globalsLookup (.normal locals globals memory) (.normal targetState) ∧
+      initial.ffi.ioEvents <+: ffi.ioEvents := by
+  exact evalPanValueFfiClockProgram_of_related_declarations_and_normal_call_result_rel_ioEvents_prefix
+    evaluatorContext initial clock (fun _ _ => none) evaluatorHandler fuel
+    declarations entry arguments state locals globals memory ffi nextClock pcContext
+    exceptionRel exceptionCode globalsLookup targetState memoryAccess memoryHandler
+    targetInitial hinitial hdeclarations hentry hcall hstate hprefix
+
 #check @Flapjack.evalPanValueFfiClockProg_call_raised_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProg_call_timeout_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProg_call_finalFfi_ioEvents_prefix
@@ -2776,3 +2841,23 @@ with the handler-preservation premises discharged. -/
 
 #check @Flapjack.panValueFfiStatefulHandlerPreservesIoEvents_fails
 #check @Flapjack.panValueFfiMemoryHandlerPreservesIoEvents_fails
+
+/-! Unit-fuel structural step lemmas used by the residual-free event-prefix
+dispatch: conditional/declaration/sequence/call/decCall cannot succeed at unit
+fuel, and a zero-condition while preserves the input events. -/
+#check @Flapjack.evalPanValueFfiProgSteps_ite_one_none
+#check @Flapjack.evalPanValueFfiProgSteps_dec_one_none
+#check @Flapjack.evalPanValueFfiProgSteps_seq_one_none
+#check @Flapjack.evalPanValueFfiProgSteps_call_one_none
+#check @Flapjack.evalPanValueFfiProgSteps_decCall_one_none
+#check @Flapjack.evalPanValueFfiProgSteps_while_one_ioEvents_prefix
+
+/-! Residual-free unit-fuel dispatch: every `Prog` constructor's unit-fuel step
+run preserves the input events, so the generic clocked event-prefix theorem can
+be instantiated without a residual premise. -/
+#check @Flapjack.evalPanValueFfiProgSteps_one_ioEvents_prefix
+
+/-! Residual-premise-free clocked program event-prefix: the unit-fuel dispatch
+discharges the `hleaf` obligation, leaving only the explicit handler-preservation
+premises. -/
+#check @Flapjack.evalPanValueFfiClockProg_ioEvents_prefix_of_handlerPreserves

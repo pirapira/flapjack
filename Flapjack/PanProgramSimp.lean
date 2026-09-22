@@ -731,6 +731,36 @@ theorem panValueProgramStateRel_evalDeclarations_lookupPanFunction
   refine ⟨t', ht, ?_⟩
   exact panValueProgramStateRel_lookupPanFunction s' t' hrel' name hlookup
 
+/-! The declaration-state adequacy package used by the Cake
+    `state_rel_imp_semantics_decls_to_crep` induction.  Besides transporting a
+    callee lookup, retain the whole post-declaration state relation and its
+    exception-table component.  This makes the evaluator output—not merely the
+    relation premise—available to the subsequent returned/raised call bridge. -/
+theorem panValueProgramStateRel_evalDeclarations_adequacy
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (s t : PanValueProgramState α) (hrel : panValueProgramStateRel s t)
+    (declarations : List (Decl α)) (memoryAccess : Option (PanValueMemoryAccess α))
+    (s' : PanValueProgramState α)
+    (hs : evalPanValueDeclarations s declarations memoryAccess = some s')
+    (name : FunName) {parameters : List VarName} {body : Prog α}
+    (hlookup : lookupPanFunction name s'.functions = some (parameters, body)) :
+    ∃ t', evalPanValueDeclarations t (panSimpDecls declarations) memoryAccess = some t' ∧
+      panValueProgramStateRel s' t' ∧
+      lookupPanFunction name t'.functions =
+        some (parameters, panSimpProg body) ∧
+      s'.exceptions = t'.exceptions := by
+  obtain ⟨t', ht, hrel'⟩ := panValueProgramStateRel_evalPanValueDeclarations
+    s t hrel declarations memoryAccess s' hs
+  have hlookup' := panValueProgramStateRel_lookupPanFunction s' t' hrel' name hlookup
+  have hexceptions : s'.exceptions = t'.exceptions := by
+    rcases hrel' with ⟨_hstructs, _hglobals, _hmemory, _hreturnShapes,
+      _hparameterShapes, hexceptions, _hbaseAddress, _htopAddress, _hbytesInWord,
+      _hfunctions⟩
+    exact hexceptions
+  exact ⟨t', ht, hrel', hlookup', hexceptions⟩
+
 /-! Cake's `map_snd_f_eq` (`pan_simpProofScript.sml:43`): rewriting only the
     body component of a declaration triple commutes with projecting that body
     and applying a further function.  Stated for `List (α × β × γ)`, whose

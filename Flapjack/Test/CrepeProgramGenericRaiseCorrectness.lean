@@ -28,6 +28,8 @@ def pcGlobalsLookup (_state : CrepState Nat) (value : PanValue Nat) :
     Option (List Nat) :=
   some (panValueFlatWords value)
 
+#check @Flapjack.panValuePcClockedRaisedResultRel_of_hraise_data
+
 example
     {σ : Type} (panHooks : PanSemanticsHooks Nat σ)
     (crepHooks : CrepSemanticsHooks Nat)

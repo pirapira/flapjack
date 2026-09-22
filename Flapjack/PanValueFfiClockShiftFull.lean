@@ -805,7 +805,7 @@ theorem evalPanValueFfiClockProg_shift_ioEvents_prefix
     (memoryHandler : Option (PanValueMemoryFfiHandler α σ))
     (outcome : PanValueFfiClockOutcome α σ) (resultClock extra : Nat)
     (highOutcome : PanValueFfiClockOutcome α σ) (highClock : Nat)
-    (hrun : evalPanValueFfiClockProg context primitive handler structs functions
+    (_hrun : evalPanValueFfiClockProg context primitive handler structs functions
       baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
       program (memoryAccess := memoryAccess) (contracts := contracts)
       (memoryHandler := memoryHandler) = some (outcome, resultClock))
@@ -815,30 +815,10 @@ theorem evalPanValueFfiClockProg_shift_ioEvents_prefix
       (contracts := contracts) (memoryHandler := memoryHandler) =
       some (highOutcome, highClock)) :
     ffi.ioEvents <+: (panResultFfi (highOutcome, highClock)).ioEvents := by
-  cases outcome with
-  | timeout timeoutLocals timeoutGlobals timeoutMemory timeoutFfi =>
-      exact (evalPanValueFfiClockProg_ioEvents_prefix_of_handlerPreserves
-        context primitive handler structs functions baseAddress topAddress bytesInWord
-        hstateful hmemory fuel locals globals memory ffi (clock + extra) program
-        memoryAccess contracts memoryHandler highOutcome highClock hrunHigh)
-  | control controlResult =>
-      have hlow :=
-        (evalPanValueFfiClockProg_ioEvents_prefix_of_handlerPreserves
-          context primitive handler structs functions baseAddress topAddress bytesInWord
-          hstateful hmemory fuel locals globals memory ffi clock program memoryAccess
-          contracts memoryHandler (.control controlResult) resultClock hrun)
-      have hshift :=
-        (evalPanValueFfiClock_shift context primitive handler structs functions
-          baseAddress topAddress bytesInWord).2 fuel locals globals memory ffi clock
-          program memoryAccess contracts memoryHandler (.control controlResult) resultClock extra hrun
-          (by
-            intro timeoutLocals timeoutGlobals timeoutMemory timeoutFfi htimeout
-            cases htimeout)
-      have hpair : (highOutcome, highClock) =
-          (.control controlResult, resultClock + extra) :=
-        Option.some.inj (hrunHigh.symm.trans hshift)
-      cases hpair
-  cases controlResult <;> exact hlow
+  exact evalPanValueFfiClockProg_ioEvents_prefix_of_handlerPreserves
+    context primitive handler structs functions baseAddress topAddress bytesInWord
+    hstateful hmemory fuel locals globals memory ffi (clock + extra) program
+    memoryAccess contracts memoryHandler highOutcome highClock hrunHigh
 
 /-! The evaluator shift also transports the full source-facing result
     projection.  This is the direct clocked top-level bridge used when a

@@ -420,6 +420,29 @@ def zipWithPairFstGuard : Bool :=
 #eval zipWithPairFstGuard
 #guard zipWithPairFstGuard
 
+/-! Cake's `genlist_less_than`, `genlist_not_in` and `genlist_all_distinct`
+    (`cakeml/pancake/proofs/crep_inlineProofScript.sml:629/636/643`). -/
+
+theorem genlist_less_than_fixture :
+    (4 : Nat) < 4 + (0 + 1) :=
+  genlist_less_than 4 4 (4 + (0 + 1))
+    (List.mem_map.mpr ⟨0, by simp [List.mem_range], rfl⟩)
+
+theorem genlist_not_in_fixture :
+    (2 : Nat) ∉ (List.range 4).map (fun x => 4 + (x + 1)) :=
+  genlist_not_in 4 4 2 (by decide)
+
+theorem genlist_all_distinct_fixture :
+    ((List.range 4).map (fun x => 4 + (x + 1))).Nodup :=
+  genlist_all_distinct 4 4
+
+def genlistAllDistinctGuard : Bool :=
+  ((List.range 4).map (fun x => 4 + (x + 1))).Nodup &&
+    ((List.range 4).map (fun x => 4 + (x + 1))).all (fun v => decide (4 < v))
+
+#eval genlistAllDistinctGuard
+#guard genlistAllDistinctGuard
+
 def checkDisjoint (name : String) (actual : Bool) : IO Bool := do
   if actual then
     IO.println s!"PASS {name}"
@@ -459,9 +482,11 @@ def runChecks : IO Bool := do
   let map3Ok ← checkDisjoint "pan MAP3_MAP2" map3Guard
   let zipWithPairFstOk ←
     checkDisjoint "pan map_map2_fst_lemma" zipWithPairFstGuard
+  let genlistAllDistinctOk ←
+    checkDisjoint "pan genlist_all_distinct" genlistAllDistinctGuard
   pure (results.all id && lengthOk && allDistinctOk && membershipOk && disjointOk &&
     shapeDisjointOk && nestedOk && distinctOk && distinctListsOk && zipWithShapeOk &&
     listIndexOk && foldrMaxOk && genlistOk && quadProjectionOk && quadCompOk &&
-    rangeFoldrMaxOk && map3Ok && zipWithPairFstOk)
+    rangeFoldrMaxOk && map3Ok && zipWithPairFstOk && genlistAllDistinctOk)
 
 end Flapjack.Test.PanWithShapeParity

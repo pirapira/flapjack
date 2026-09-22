@@ -183,6 +183,19 @@ theorem tick_compile_correct_fixture :
   subst source
   exact ⟨100, by simp [load32State]⟩
 
+theorem fail_compile_correct_fixture :
+    evalLoopProg 1 load32State
+        (comp [(3, 2)] (.fail : LoopProg Nat)).1 = none ∧
+      labelsIn (comp [(3, 2)] (.fail : LoopProg Nat)).2
+        load32State.locals := by
+  apply comp_fail_correct
+  intro name source hlookup
+  have hpair : 3 = name ∧ 2 = source := by
+    simpa [lookup] using hlookup
+  have hsource : source = 2 := hpair.2.symm
+  subst source
+  exact ⟨100, by simp [load32State]⟩
+
 theorem setGlobal_compile_correct_fixture :
     evalLoopProg 1 load32State
         (comp [(3, 2)] (.setGlobal 9 (.const 11) : LoopProg Nat)).1 =
@@ -426,6 +439,7 @@ theorem ffi_labelsIn_fixture :
 #check comp_assign_var_correct
 #check comp_assign_nonvar_correct
 #check comp_tick_correct
+#check comp_fail_correct
 #check comp_setGlobal_correct
 #check comp_return_correct
 #check comp_raise_correct

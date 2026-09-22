@@ -453,6 +453,24 @@ theorem comp_tick_correct
   · exact evalLoopProg_tick state
   · simp [labelsIn, lookup]
 
+theorem comp_fail_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (environment : LocationEnv) (state : LoopState α)
+    (henvironment : labelsIn environment state.locals) :
+    evalLoopProg 1 state
+        (comp environment (.fail : LoopProg α)).1 = none ∧
+      labelsIn (comp environment (.fail : LoopProg α)).2 state.locals := by
+  have hcompiled :
+      comp environment (.fail : LoopProg α) = (.fail, environment) := by
+    simp [comp]
+  rw [hcompiled]
+  constructor
+  · simp [evalLoopProg]
+  · exact henvironment
+
 theorem comp_setGlobal_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]

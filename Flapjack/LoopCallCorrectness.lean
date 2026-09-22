@@ -487,6 +487,29 @@ theorem comp_mark_labelsIn
   · rfl
   · exact hbody
 
+theorem comp_mark_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (environment : LocationEnv) (state : LoopState α) (fuel : Nat)
+    (body : LoopProg α) (result : LoopResult α)
+    (hbody : evalLoopProg fuel state (comp environment body).1 = some result)
+    (hlabels : labelsIn (comp environment body).2
+      (loopResultState result).locals) :
+    evalLoopProg (fuel + 1) state
+        (comp environment (.mark body : LoopProg α)).1 = some result ∧
+      labelsIn (comp environment (.mark body : LoopProg α)).2
+        (loopResultState result).locals := by
+  have hcompiled :
+      comp environment (.mark body : LoopProg α) =
+        (.mark (comp environment body).1, (comp environment body).2) := by
+    simp [comp]
+  rw [hcompiled]
+  constructor
+  · simp [evalLoopProg, hbody]
+  · exact hlabels
+
 theorem comp_seq_labelsIn
     (environment : LocationEnv) (first second : LoopProg α)
     (locals : Nat → Option α) :

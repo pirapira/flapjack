@@ -1510,6 +1510,20 @@ def cakeColourFrameSlots (k : Nat) (parameters : List Nat)
   let f' := max ((maxVar / 2 + 1) - k) stackArgs
   (f', if f' = 0 then 0 else f' + 1)
 
+/- Cake's `compile_prog` takes the argument-area floor when it dominates the
+   coloured program's spill demand.  Keep this branch kernel-checked beside
+   the allocator adapter: it is the frame equation used by the RISC-V
+   Word-to-Stack boundary, not a heuristic reconstruction. -/
+theorem cakeColourFrameSlots_arg_area_dominates
+    (k : Nat) (parameters : List Nat) (program : WordProg α)
+    (colouring : NatInfoMap Nat)
+    (hdom : (wordProgCakeMaxVar
+        (wordApplyColour (CakeAlloc.totalColour colouring) program) / 2 + 1) - k ≤
+      parameters.length - k) :
+    (cakeColourFrameSlots k parameters program colouring).1 =
+      parameters.length - k := by
+  simp [cakeColourFrameSlots, hdom]
+
 def cakeColourWordSpillState (k : Nat) (parameters : List Nat)
     (program : WordProg α) (colouring : NatInfoMap Nat) : WordSpillState :=
   let colour := CakeAlloc.totalColour colouring

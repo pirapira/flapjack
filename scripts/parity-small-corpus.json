@@ -1065,6 +1065,14 @@
       "tracked_beads": [
         "flapjack-pxn.8.5.14.1.5"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00000_fuzz_global_pressure_20261015.pnk",
+      "source_reference": "Fresh exact differential witness from seed 20261015 index 0: five accepted functions exercise global and shared/local memory, nested struct/tuple construction, handlers, shifts, wide constants, and register-pressure-sensitive calls. Cake and Flapjack artifacts are byte-identical.",
+      "cake_sha256": "3504f4c7ea6bcc6644cce16a74cecbb41cda27f12f6d23c7b927f6d2e82a75fa",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.5"
+      ]
     }
   ]
 }

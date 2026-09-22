@@ -69,4 +69,25 @@ def getEidsPanSimpGuard : Bool :=
 #eval getEidsPanSimpGuard
 #guard getEidsPanSimpGuard
 
+/-! Cake's `distinct_make_funcs`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:3757`): the function
+    table built by `make_funcs` assigns distinct labels. -/
+
+def distinctFuncsCode : List (CompiledFunction Nat) :=
+  [{ name := "first", params := [], body := .skip, returnShape := .one },
+   { name := "second", params := [], body := .skip, returnShape := .one }]
+
+theorem crepDistinctFuncs_crepMakeFuncs_fixture :
+    crepDistinctFuncs (crepMakeFuncs distinctFuncsCode) :=
+  crepDistinctFuncs_crepMakeFuncs distinctFuncsCode
+
+def distinctFuncsGuard : Bool :=
+  match lookupInfo "first" (crepMakeFuncs distinctFuncsCode),
+        lookupInfo "second" (crepMakeFuncs distinctFuncsCode) with
+  | some (n, _), some (m, _) => n != m
+  | _, _ => false
+
+#eval distinctFuncsGuard
+#guard distinctFuncsGuard
+
 end Flapjack.Test.PanGetEidsParity

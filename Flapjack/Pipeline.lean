@@ -195,6 +195,19 @@ theorem compileProgToCrep_names_nodup
   apply panToCrepCompileInlTop_names_nodup
   exact compileToCrep_names_nodup context declarations hnodup
 
+/-! Source-facing form of Cake's `first_compile_prog_all_distinct`: the
+    distinctness premise is stated on the filtered function projection and
+    the result includes the complete inline boundary. -/
+theorem compileProgToCrep_names_nodup_of_functionDeclarations
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α]
+    (context : CompileContext α) (declarations : List (Decl α))
+    (hnodup : ((functionDeclarations declarations).map
+      (fun declaration => declaration.name)).Nodup) :
+    (compileProgToCrep context declarations).map CompiledFunction.name |>.Nodup := by
+  unfold compileProgToCrep
+  apply panToCrepCompileInlTop_names_nodup
+  exact compileToCrep_names_nodup_of_functionDeclarations context declarations hnodup
+
 /-! Cake's `compile_prog_distinct_params` at the complete source-shaped
     `compile_prog` boundary.  The pre-inline parameter invariant is supplied
     by `compileToCrep_params_nodup`; the inline pass preserves each record's

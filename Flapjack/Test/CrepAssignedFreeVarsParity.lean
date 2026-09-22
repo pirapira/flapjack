@@ -154,6 +154,20 @@ theorem compileProg_shMemLoad_local_assigned_free_fixture :
   rcases hlookup with ⟨rfl, rfl⟩
   simp
 
+theorem compileProg_structural_composition_assigned_free_fixture :
+    (7 : Nat) ∉ crepAssignedFreeVars
+      (compileProg boundedContext
+        (.seq .skip (.ite (.const 1) .skip (.while (.const 1) .skip)))) := by
+  apply not_mem_crepAssignedFreeVars_compileProg_seq
+    boundedContext .skip (.ite (.const 1) .skip (.while (.const 1) .skip)) 7
+  · simp [compileProg, crepAssignedFreeVars]
+  · apply not_mem_crepAssignedFreeVars_compileProg_ite
+      boundedContext (.const 1) .skip (.while (.const 1) .skip) 7
+    · simp [compileProg, crepAssignedFreeVars]
+    · apply not_mem_crepAssignedFreeVars_compileProg_while
+        boundedContext (.const 1) .skip 7
+      simp [compileProg, crepAssignedFreeVars]
+
 def runChecks : IO Bool := do
   if parityGuard then
     IO.println "PASS crep assigned_free_vars skip/assign/dec/seq/if/while/shmem/fallback"

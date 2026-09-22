@@ -404,6 +404,91 @@ theorem not_mem_crepAssignedFreeVars_compileProg_shMemLoad_local
               apply hslot shape (destination :: rest) hlookup'
               simp [hdestination]
 
+/-! Structural sequence composition for the recursive `compileProg` proof. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_seq
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (first second : Prog α) (x : Nat)
+    (hfirst : x ∉ crepAssignedFreeVars (compileProg context first))
+    (hsecond : x ∉ crepAssignedFreeVars (compileProg context second)) :
+    x ∉ crepAssignedFreeVars (compileProg context (.seq first second)) := by
+  simp only [compileProg, crepAssignedFreeVars, List.mem_append]
+  intro h
+  rcases h with h | h
+  · exact hfirst h
+  · exact hsecond h
+
+/-! Conditional composition: the compiled condition does not assign locals;
+    only the two recursive branches contribute to `crepAssignedFreeVars`. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_ite
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (condition : Exp α)
+    (thenBranch elseBranch : Prog α) (x : Nat)
+    (hthen : x ∉ crepAssignedFreeVars (compileProg context thenBranch))
+    ( helse : x ∉ crepAssignedFreeVars (compileProg context elseBranch)) :
+    x ∉ crepAssignedFreeVars
+      (compileProg context (.ite condition thenBranch elseBranch)) := by
+  simp only [compileProg]
+  cases hcondition : compileExp context condition with
+  | mk expressions conditionShape =>
+      cases expressions with
+      | nil => simp [crepAssignedFreeVars]
+      | cons compiledCondition rest =>
+          simp only
+          simp only [crepAssignedFreeVars, List.mem_append]
+          intro h
+          rcases h with h | h
+          · exact hthen h
+          · exact helse h
+
+/-! While-loop composition: the condition is an expression and the body is
+    the only possible source of assigned-free locals. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_while
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (condition : Exp α) (body : Prog α) (x : Nat)
+    (hbody : x ∉ crepAssignedFreeVars (compileProg context body)) :
+    x ∉ crepAssignedFreeVars
+      (compileProg context (.while condition body)) := by
+  simp only [compileProg]
+  cases hcondition : compileExp context condition with
+  | mk expressions conditionShape =>
+      cases expressions with
+      | nil => simp [crepAssignedFreeVars]
+      | cons compiledCondition rest =>
+          simp only
+          simpa [crepAssignedFreeVars] using hbody
+
+/-! Terminal source constructors lower to Crepe instructions with empty
+    assigned-free sets (or to `Skip`). -/
+theorem not_mem_crepAssignedFreeVars_compileProg_return
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (value : Exp α) (x : Nat) :
+    x ∉ crepAssignedFreeVars (compileProg context (.return value)) := by
+  simp [compileProg, crepAssignedFreeVars]
+
+theorem not_mem_crepAssignedFreeVars_compileProg_break
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (x : Nat) :
+    x ∉ crepAssignedFreeVars (compileProg context .break) := by
+  simp [compileProg, crepAssignedFreeVars]
+
+theorem not_mem_crepAssignedFreeVars_compileProg_continue
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (x : Nat) :
+    x ∉ crepAssignedFreeVars (compileProg context .continue) := by
+  simp [compileProg, crepAssignedFreeVars]
+
+theorem not_mem_crepAssignedFreeVars_compileProg_tick
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (x : Nat) :
+    x ∉ crepAssignedFreeVars (compileProg context .tick) := by
+  simp [compileProg, crepAssignedFreeVars]
+
+theorem not_mem_crepAssignedFreeVars_compileProg_annot
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (tag text : String) (x : Nat) :
+    x ∉ crepAssignedFreeVars (compileProg context (.annot tag text)) := by
+  simp [compileProg, crepAssignedFreeVars]
+
 /-- `crepNestedSeq` of `assign` statements built from a zip of names with
     variables introduced by `freshNames` still has exactly `names` as its
     assigned free variables. -/

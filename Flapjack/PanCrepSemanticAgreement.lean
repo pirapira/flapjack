@@ -1,5 +1,6 @@
 import Flapjack.PanToCrepSemantics
 import Flapjack.PanToCrepCorrectnessBoundary
+import Flapjack.PanToCrepCorrectnessBridge
 import Flapjack.PanValueFfiClockShiftFull
 
 /-!

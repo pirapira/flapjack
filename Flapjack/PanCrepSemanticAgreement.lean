@@ -2572,6 +2572,72 @@ theorem panCrepSemanticAgreement_of_pcCompileCorrectWithContextCode_branch_evide
   exact (PanValuePcSemanticClockEvidence.normalOrRaisedResultRelWithContextCode_of_branch
     hcorrect _clock (hevidence _clock) (hinputStateRel _clock) (hbranch _clock)).2
 
+/-! The normal declaration-call branch of `state_rel_imp_semantics_to_crep` is
+    useful on its own when the source evaluator has already established that
+    every clock terminates normally.  Keep the evaluator, state, result,
+    success, and event premises explicit; only the raised alternative is
+    discharged by this specialized induction case. -/
+theorem panCrepSemanticAgreement_of_pcCompileCorrectWithContextCode_normal_call_evidence
+    [BEq α] [OfNat α 0] [Add α]
+    (structs : StructContext) (context : CompileContext α) (program : Prog α)
+    (sourceEvaluate : PanValuePcEvaluator α)
+    (targetEvaluate : CrepPcEvaluator α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (panHooks : PanSemanticsHooks α σ)
+    (crepHooks : CrepSemanticsHooks α)
+    (hcorrect : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (hevidence : ∀ (clock : Nat), PanValuePcSemanticClockEvidence structs
+      context program clock sourceEvaluate targetEvaluate codeRel excpRel
+      exceptionRel exceptionCode globalsLookup panHooks crepHooks)
+    (hinputStateRel : ∀ (clock : Nat),
+      panValueCrepStateRelWithContext structs context
+        (hevidence clock).sourceInput.locals
+        (hevidence clock).sourceInput.globals
+        (hevidence clock).sourceInput.memory
+        (hevidence clock).targetInput.state)
+    (hnormal : ∀ (clock : Nat),
+      ∃ sourceLocals sourceGlobals sourceMemory sourceFfi targetState,
+        (hevidence clock).outcome =
+          .control (.normal sourceLocals sourceGlobals sourceMemory sourceFfi) ∧
+        (hevidence clock).result = .normal targetState)
+    (hpanSuccess : ∀ clock (sourceResult : PanValueFfiClockResult α σ)
+      (sourceOutcome : PanSemanticOutcome),
+      panHooks.evaluate clock = some sourceResult →
+      panResultOutcome panHooks (some sourceResult) = some sourceOutcome →
+      sourceOutcome = .success)
+    (hcrepSuccess : ∀ clock (targetResult : Option (CrepSemanticResult α))
+      (targetState : CrepState α) (targetOutcome : CrepSemanticOutcome),
+      crepHooks.evaluate clock = (targetResult, targetState) →
+      crepResultOutcome targetResult = some targetOutcome →
+      targetOutcome = .success)
+    (hpanSuccessEvents : ∀ clock (sourceResult : PanValueFfiClockResult α σ)
+      (sourceOutcome : PanSemanticOutcome),
+      panHooks.evaluate clock = some sourceResult →
+      panResultOutcome panHooks (some sourceResult) = some sourceOutcome →
+      panResultEvents (some sourceResult) = [])
+    (hcrepSuccessEvents : ∀ clock (targetResult : Option (CrepSemanticResult α))
+      (targetState : CrepState α) (targetOutcome : CrepSemanticOutcome),
+      crepHooks.evaluate clock = (targetResult, targetState) →
+      crepResultOutcome targetResult = some targetOutcome →
+      crepHooks.ioEvents targetState = []) :
+    PanCrepSemanticAgreement panHooks crepHooks ∧
+    ∀ (_clock : Nat), ∃ sourceLocals sourceGlobals sourceMemory targetState,
+      panValueCrepStateRelWithContext structs context sourceLocals sourceGlobals
+        sourceMemory targetState := by
+  apply panCrepSemanticAgreement_of_pcCompileCorrectWithContextCode_branch_evidence
+    structs context program sourceEvaluate targetEvaluate codeRel excpRel
+    exceptionCode globalsLookup exceptionRel panHooks crepHooks hcorrect hevidence
+    hinputStateRel (hbranch := by
+      intro clock
+      left
+      exact hnormal clock)
+    hpanSuccess hcrepSuccess hpanSuccessEvents hcrepSuccessEvents
+
 /-! Compose pairwise `pc_compile_correct` evidence with the two observational
     prefix chains.  This is the top-level semantic counterpart of Cake's
     `state_rel_imp_semantics_to_crep`; evaluator, state, success, event, and

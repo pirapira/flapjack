@@ -1,2 +1,10 @@
 missing_start=[]
+global_present=[Function
+   <|name := «main»; inline := F; export := F; params := [];
+     body :=
+       Seq (Seq (Store (Op Sub [TopAddr; Const 8w]) (Const 7w)) Skip)
+         (TailCall «main'» []); return := One|>;
+ Function
+   <|name := «main'»; inline := F; export := F; params := []; body := Skip;
+     return := One|>]
 present_start=[Function

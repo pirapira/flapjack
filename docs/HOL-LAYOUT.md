@@ -32,14 +32,16 @@ provenance is recorded by `@[hol ...]` and checked by
 | `semantics/loopSemScript.sml` | `Flapjack/Pancake/Semantics/LoopSem.lean` |
 | `proofs/pan_simpProofScript.sml` | `Flapjack/Pancake/Proofs/PanSimp.lean`, `PanSimp/Evaluate.lean` |
 
-There is currently no Lean port of `compile_top_shape_wf` or
-`compile_top_shape_wf_nil` from `proofs/pan_globalsProofScript.sml`. The earlier
-Flapjack-specific analogues were removed because they did not preserve the HOL
-statement shape: Cake assumes `evaluate_decls` succeeds and concludes an
-`EVERY` property of `compile_top code start`. A faithful port remains open; it
-must establish that result with the corresponding evaluator and compiler
-interfaces.
-These gaps are tracked by beads `flapjack-pxn.18.3.2.1` and
+`compile_top_shape_wf` from `proofs/pan_globalsProofScript.sml` is ported in
+`Flapjack/Pancake/Proofs/PanGlobals.lean`. It assumes successful faithful
+`evaluateDecls` and HOL's admissible-declaration condition, then proves the
+function-shape property of the total `globalCompileTopCake` result, whose
+interface fixes HOL's `bytes_in_word` and `n2w` compiler context for each
+`BitVec` width. The generalized `globalCompileTopForStart` proof remains
+untagged because it exposes those choices to callers. The statement contract
+is checked by
+`Flapjack/Test/PanGlobalsCompileTopShapeWfParity.lean`. The related
+`compile_top_shape_wf_nil` corollary remains open under bead
 `flapjack-pxn.18.3.2.2`.
 
 `evaluate_decls_def` from `semantics/panSemScript.sml` is ported in
@@ -54,7 +56,9 @@ The total `compile_top_def` result and the HOL-shaped
 `compile_top_only_functions_or_exns` theorem are now present. Reusable
 Flapjack-specific shape predicates and pass lemmas live in
 `PanGlobals/ShapeInfrastructure.lean`; they use Flapjack's value evaluator
-and are infrastructure, not ports of the two open HOL shape theorems.
+and are infrastructure, not ports of HOL shape theorems. The exact
+`compile_top_shape_wf` result uses the faithful evaluator and lives in
+`PanGlobals.lean`; its `_nil` corollary is still open.
 
 Additional helper, semantic, and proof modules still live at the old top
 level while their exact HOL counterparts and statement shapes are reviewed.

@@ -102,6 +102,35 @@ def find_lean_decl(lines: list[str], start: int) -> str:
     return "?"
 
 
+def hol_attribute_sites(lines: list[str]):
+    """Yield HOL attributes, including attributes split across Lean lines."""
+    comment_depth = 0
+    start: int | None = None
+    chunks: list[str] = []
+    for number, line in enumerate(lines, start=1):
+        # Ignore documentation/examples in nestable Lean block comments.
+        in_comment = comment_depth > 0
+        comment_depth += line.count("/-") - line.count("-/")
+        if in_comment or comment_depth > 0:
+            continue
+        stripped = line.lstrip()
+        if stripped.startswith("--"):
+            continue
+        if start is None:
+            if not stripped.startswith("@["):
+                continue
+            start = number
+        chunks.append(stripped)
+        if "]" not in stripped:
+            continue
+        attribute = " ".join(chunks)
+        if "hol " in attribute:
+            for hol_path, hol_name in ATTR_RE.findall(attribute):
+                yield start, hol_path, hol_name
+        start = None
+        chunks = []
+
+
 def hol_declares(path: Path, name: str, cache: dict[Path, set[str]]) -> bool:
     if path not in cache:
         names: set[str] = set()
@@ -139,44 +168,30 @@ def main(argv: list[str]) -> int:
         lines = lean_path.read_text(encoding="utf-8").splitlines()
         module = module_name(lean_path)
         module_reported = False
-        comment_depth = 0
-        for number, line in enumerate(lines, start=1):
-            # Skip block comments (`/- ... -/`, nestable), so examples in module
-            # docstrings are not treated as attribute sites.
-            in_comment = comment_depth > 0
-            comment_depth += line.count("/-") - line.count("-/")
-            if in_comment or comment_depth > 0:
+        for number, hol_path, hol_name in hol_attribute_sites(lines):
+            where = f"{rel}:{number}"
+            lean_decl = find_lean_decl(lines, number - 1)
+            if module not in reachable and not module_reported:
+                module_reported = True
+                errors.append(
+                    f"{rel}: module {module} carries @[hol] but is not imported "
+                    f"(transitively) from Flapjack.lean, so `lake build Flapjack` "
+                    f"never checks it; add the import to Flapjack.lean"
+                )
+            target = ROOT / hol_path
+            if not hol_path.startswith("cakeml/") or not hol_path.endswith(".sml"):
+                errors.append(f"{where}: path is not a cakeml/...sml file: {hol_path}")
                 continue
-            stripped = line.lstrip()
-            if stripped.startswith("--"):
+            if not target.is_file():
+                errors.append(f"{where}: HOL file does not exist: {hol_path}")
                 continue
-            # Only attribute sites, not prose mentioning the attribute.
-            if not stripped.startswith("@[") or "hol " not in stripped:
+            if not hol_declares(target, hol_name, cache):
+                errors.append(
+                    f"{where}: {hol_path} declares no `{hol_name}` "
+                    f"(cited by {lean_decl})"
+                )
                 continue
-            for hol_path, hol_name in ATTR_RE.findall(stripped):
-                where = f"{rel}:{number}"
-                lean_decl = find_lean_decl(lines, number - 1)
-                if module not in reachable and not module_reported:
-                    module_reported = True
-                    errors.append(
-                        f"{rel}: module {module} carries @[hol] but is not imported "
-                        f"(transitively) from Flapjack.lean, so `lake build Flapjack` "
-                        f"never checks it; add the import to Flapjack.lean"
-                    )
-                target = ROOT / hol_path
-                if not hol_path.startswith("cakeml/") or not hol_path.endswith(".sml"):
-                    errors.append(f"{where}: path is not a cakeml/...sml file: {hol_path}")
-                    continue
-                if not target.is_file():
-                    errors.append(f"{where}: HOL file does not exist: {hol_path}")
-                    continue
-                if not hol_declares(target, hol_name, cache):
-                    errors.append(
-                        f"{where}: {hol_path} declares no `{hol_name}` "
-                        f"(cited by {lean_decl})"
-                    )
-                    continue
-                mapping.append((where, lean_decl, hol_path, hol_name))
+            mapping.append((where, lean_decl, hol_path, hol_name))
 
     if want_mapping:
         for row in mapping:

@@ -62,6 +62,36 @@ def panSemEvaluateHooks
       panSemEvaluate context primitive handler { state with clock := clock } program := by
   rfl
 
+/-! Cake's clock-monotonicity proof produces a prefix for each ordered pair of
+    evaluator states, while the observational wrapper consumes the weaker
+    unordered-chain predicate.  This bridge makes that stateful evaluator
+    obligation explicit and discharges the chain by totality of `Nat.le`. -/
+theorem panLprefixChain_of_panSemEvaluate_event_prefix
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (state : PanSemEvaluateState α σ)
+    (program : Prog α)
+    (hprefix : ∀ (left right : Nat), left ≤ right →
+      panResultEvents
+          (panSemEvaluate context primitive handler
+            { state with clock := left } program) <+:
+        panResultEvents
+          (panSemEvaluate context primitive handler
+            { state with clock := right } program)) :
+    panLprefixChain (fun clock =>
+      panResultEvents
+        (panSemEvaluate context primitive handler
+          { state with clock := clock } program)) := by
+  intro left right
+  rcases Nat.le_total left right with hleft | hright
+  · exact Or.inl (hprefix left right hleft)
+  · exact Or.inr (hprefix right left hright)
+
 @[simp] theorem panSemEvaluateHooks_ffiOutcome
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

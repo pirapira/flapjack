@@ -36,6 +36,45 @@ theorem labelsIn_insert_update
       exact ⟨value, by simp [updateLoopLocal]⟩
     · exact ⟨oldValue, by simp [updateLoopLocal, hsame, holdValue]⟩
 
+theorem labelsIn_update
+    (environment : LocationEnv) (locals : Nat → Option α)
+    (destination : Nat) (value : α)
+    (henvironment : labelsIn environment locals) :
+    labelsIn environment (updateLoopLocal locals destination value) := by
+  intro name location hlookup
+  obtain ⟨oldValue, holdValue⟩ := henvironment name location hlookup
+  by_cases hsame : location = destination
+  · subst location
+    exact ⟨value, by simp [updateLoopLocal]⟩
+  · exact ⟨oldValue, by simpa [updateLoopLocal, hsame] using holdValue⟩
+
+theorem labelsIn_insert_update_any
+    (environment : LocationEnv) (locals : Nat → Option α)
+    (destination source : Nat) (sourceValue value : α)
+    (hsource : locals source = some sourceValue)
+    (henvironment : labelsIn environment locals) :
+    labelsIn (insert destination source environment)
+      (updateLoopLocal locals destination value) := by
+  intro name location hlookup
+  by_cases hdestination : destination = name
+  · subst name
+    have hsourceLocation : source = location := by
+      simpa [insert, lookup] using hlookup
+    have hlocation : location = source := hsourceLocation.symm
+    subst location
+    by_cases hsourceDestination : source = destination
+    · subst source
+      exact ⟨value, by simp [updateLoopLocal]⟩
+    · exact ⟨sourceValue, by
+        simpa [updateLoopLocal, hsourceDestination] using hsource⟩
+  · have hlookup' : lookup name environment = some location := by
+      simpa [insert, lookup, hdestination] using hlookup
+    obtain ⟨oldValue, holdValue⟩ := henvironment name location hlookup'
+    by_cases hsame : location = destination
+    · subst location
+      exact ⟨value, by simp [updateLoopLocal]⟩
+    · exact ⟨oldValue, by simp [updateLoopLocal, hsame, holdValue]⟩
+
 theorem comp_locValue_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
@@ -272,6 +311,190 @@ theorem comp_skip_correct
   constructor
   · exact evalLoopProg_skip state
   · exact henvironment
+
+theorem comp_assign_var_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (environment : LocationEnv) (state : LoopState α)
+    (destination source : Nat) (value : α)
+    (hvalue : state.locals source = some value)
+    (henvironment : labelsIn environment state.locals) :
+    evalLoopProg 1 state
+        (comp environment (.assign destination (.var source) : LoopProg α)).1 =
+        some (.normal { state with
+          locals := updateLoopLocal state.locals destination value }) ∧
+      labelsIn
+        (comp environment (.assign destination (.var source) : LoopProg α)).2
+        (updateLoopLocal state.locals destination value) := by
+  have hexpression : evalLoopExp state (.var source) = some value :=
+    evalLoopExp_var state source value hvalue
+  cases hdestination : lookup destination environment with
+  | none =>
+      cases hsource : lookup source environment with
+      | none =>
+          have hcompiled :
+              comp environment (.assign destination (.var source) : LoopProg α) =
+                (.assign destination (.var source), environment) := by
+            simp [comp, hdestination, hsource]
+          rw [hcompiled]
+          constructor
+          · exact evalLoopProg_assign state destination (.var source) value hexpression
+          · exact labelsIn_update environment state.locals destination value henvironment
+      | some location =>
+          have hcompiled :
+              comp environment (.assign destination (.var source) : LoopProg α) =
+                (.assign destination (.var source), insert destination location environment) := by
+            simp [comp, hdestination, hsource]
+          obtain ⟨sourceValue, hsourceValue⟩ := henvironment source location hsource
+          rw [hcompiled]
+          constructor
+          · exact evalLoopProg_assign state destination (.var source) value hexpression
+          · exact labelsIn_insert_update_any environment state.locals destination location
+              sourceValue value hsourceValue henvironment
+  | some _ =>
+      cases hsource : lookup source environment with
+      | none =>
+          have hcompiled :
+              comp environment (.assign destination (.var source) : LoopProg α) =
+                (.assign destination (.var source), delete destination environment) := by
+            simp [comp, hdestination, hsource]
+          rw [hcompiled]
+          constructor
+          · exact evalLoopProg_assign state destination (.var source) value hexpression
+          · exact labelsIn_delete_update environment state.locals destination value henvironment
+      | some location =>
+          have hcompiled :
+              comp environment (.assign destination (.var source) : LoopProg α) =
+                (.assign destination (.var source), insert destination location environment) := by
+            simp [comp, hdestination, hsource]
+          obtain ⟨sourceValue, hsourceValue⟩ := henvironment source location hsource
+          rw [hcompiled]
+          constructor
+          · exact evalLoopProg_assign state destination (.var source) value hexpression
+          · exact labelsIn_insert_update_any environment state.locals destination location
+              sourceValue value hsourceValue henvironment
+
+theorem comp_assign_nonvar_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (environment : LocationEnv) (state : LoopState α)
+    (destination : Nat) (expression : LoopExp α) (value : α)
+    (hnotvar : ∀ source, expression ≠ .var source)
+    (hvalue : evalLoopExp state expression = some value)
+    (henvironment : labelsIn environment state.locals) :
+    evalLoopProg 1 state
+        (comp environment (.assign destination expression : LoopProg α)).1 =
+        some (.normal { state with
+          locals := updateLoopLocal state.locals destination value }) ∧
+      labelsIn
+        (comp environment (.assign destination expression : LoopProg α)).2
+        (updateLoopLocal state.locals destination value) := by
+  have hcompiled :
+      comp environment (.assign destination expression : LoopProg α) =
+        (.assign destination expression,
+          match lookup destination environment with
+          | none => environment
+          | some _ => delete destination environment) := by
+    cases expression <;> simp_all [comp] <;> rfl
+  rw [hcompiled]
+  cases hdestination : lookup destination environment with
+  | none =>
+      constructor
+      · exact evalLoopProg_assign state destination expression value hvalue
+      · exact labelsIn_update environment state.locals destination value henvironment
+  | some _ =>
+      constructor
+      · exact evalLoopProg_assign state destination expression value hvalue
+      · exact labelsIn_delete_update environment state.locals destination value henvironment
+
+theorem comp_tick_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (environment : LocationEnv) (state : LoopState α)
+    (_henvironment : labelsIn environment state.locals) :
+    evalLoopProg 1 state
+        (comp environment (.tick : LoopProg α)).1 =
+        some (.normal state) ∧
+      labelsIn (comp environment (.tick : LoopProg α)).2 state.locals := by
+  have hcompiled :
+      comp environment (.tick : LoopProg α) = (.tick, []) := by
+    simp [comp]
+  rw [hcompiled]
+  constructor
+  · exact evalLoopProg_tick state
+  · simp [labelsIn, lookup]
+
+theorem comp_setGlobal_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (environment : LocationEnv) (state : LoopState α)
+    (address : α) (expression : LoopExp α) (value : α)
+    (hvalue : evalLoopExp state expression = some value)
+    (henvironment : labelsIn environment state.locals) :
+    evalLoopProg 1 state
+        (comp environment (.setGlobal address expression : LoopProg α)).1 =
+        some (.normal { state with
+          globals := updateLoopGlobal state.globals address value }) ∧
+      labelsIn (comp environment (.setGlobal address expression : LoopProg α)).2
+        ({ state with globals := updateLoopGlobal state.globals address value }).locals := by
+  have hcompiled :
+      comp environment (.setGlobal address expression : LoopProg α) =
+        (.setGlobal address expression, environment) := by
+    simp [comp]
+  rw [hcompiled]
+  constructor
+  · simp [evalLoopProg, hvalue]
+  · exact henvironment
+
+theorem comp_return_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (environment : LocationEnv) (state : LoopState α)
+    (names : List Nat) (values : List α)
+    (hvalues : loopReadLocals state.locals names = some values)
+    (_henvironment : labelsIn environment state.locals) :
+    evalLoopProg 1 state
+        (comp environment (.return names : LoopProg α)).1 =
+        some (.returned state values) ∧
+      labelsIn (comp environment (.return names : LoopProg α)).2 state.locals := by
+  have hcompiled :
+      comp environment (.return names : LoopProg α) = (.return names, []) := by
+    simp [comp]
+  rw [hcompiled]
+  constructor
+  · exact evalLoopProg_return state names values hvalues
+  · simp [labelsIn, lookup]
+
+theorem comp_raise_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (environment : LocationEnv) (state : LoopState α)
+    (exception : Nat) (value : α)
+    (hvalue : state.locals exception = some value)
+    (_henvironment : labelsIn environment state.locals) :
+    evalLoopProg 1 state
+        (comp environment (.raise exception : LoopProg α)).1 =
+        some (.raised state value) ∧
+      labelsIn (comp environment (.raise exception : LoopProg α)).2 state.locals := by
+  have hcompiled :
+      comp environment (.raise exception : LoopProg α) = (.raise exception, []) := by
+    simp [comp]
+  rw [hcompiled]
+  constructor
+  · simp [evalLoopProg, hvalue]
+  · simp [labelsIn, lookup]
 
 theorem lookup_of_listDelete
     (destinations : List Nat) (environment : LocationEnv)

@@ -121,6 +121,37 @@ def ircK1AllocatorGuard : Bool :=
 
 #guard ircK1AllocatorGuard
 
+/-! Cake algorithm 2 is the unweighted IRC path.  At the same `k=1` frame
+    boundary it deliberately chooses a different colour ordering from the
+    heuristic path, so this is an independent guard for the optional spill
+    cost table rather than a duplicate output assertion. -/
+def cakeWordAllocIrcK1Unweighted : Option (WordProg Nat) :=
+  let tree := wordClashTree add1Program []
+  let forcedStack := cakeGetStackOnly add1Program
+  let forced := cakeGetForced add1Program
+  let (wordMoves, spillCosts) := wordGetHeuristics 2 5 add1Program
+  let moves := wordMoves.map (fun move => (move.priority, (move.left, move.right)))
+  let bij := cakeMkBij tree
+  let scost := spillCosts.map (cakeSpillCostMap bij.nextNode)
+  let initialState := cakeInitRaStateFromBij bij tree forced forcedStack
+  match cakeDoRegAllocFromState .irc scost 1 moves bij initialState with
+  | none => none
+  | some colouring =>
+      some (wordApplyColour (CakeAlloc.totalColour colouring) add1Program)
+
+def ircK1UnweightedAllocatorGuard : Bool :=
+  match cakeWordAllocIrcK1Unweighted with
+  | some
+      (.seq (.move 1 [(4, 0), (2, 2), (0, 4)])
+        (.seq
+          (.seq (.move 0 [(0, 0)])
+            (.seq (.move 0 [(2, 2)])
+              (.inst (.arith (.binOp .add 0 0 (.reg 2))))))
+          (.seq (.move 0 [(2, 0)]) (.return 4 [2])))) => true
+  | _ => false
+
+#guard ircK1UnweightedAllocatorGuard
+
 def runChecks : IO Bool := do
   if add1AllocatorGuard then
     IO.println "PASS Cake word_alloc add1 output matches the checked HOL oracle"
@@ -134,6 +165,11 @@ def runChecks : IO Bool := do
     IO.println "PASS Cake word_alloc IRC k=1 output matches the checked HOL oracle"
   else
     IO.println "FAIL Cake word_alloc IRC k=1 output matches the checked HOL oracle"
-  pure (add1AllocatorGuard && simpleSpillAllocatorGuard && ircK1AllocatorGuard)
+  if ircK1UnweightedAllocatorGuard then
+    IO.println "PASS Cake word_alloc IRC k=1 unweighted output matches the checked HOL oracle"
+  else
+    IO.println "FAIL Cake word_alloc IRC k=1 unweighted output matches the checked HOL oracle"
+  pure (add1AllocatorGuard && simpleSpillAllocatorGuard && ircK1AllocatorGuard &&
+    ircK1UnweightedAllocatorGuard)
 
 end Flapjack.Test.CakeWordAllocParity

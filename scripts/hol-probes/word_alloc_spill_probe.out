@@ -9,3 +9,9 @@ spill_allocator_k1=Seq (Move1 [(4,0); (0,2); (2,4)])
      (Seq (Move0 [(2,2)])
         (Seq (Move0 [(0,0)]) (Inst (Arith (Binop Add 0 2 (Reg 0))))))
      (Seq (Move0 [(2,0)]) (Return 4 [2])))
+
+spill_allocator_k1_unweighted=Seq (Move1 [(4,0); (2,2); (0,4)])
+  (Seq
+     (Seq (Move0 [(0,0)])
+        (Seq (Move0 [(2,2)]) (Inst (Arith (Binop Add 0 0 (Reg 2))))))
+     (Seq (Move0 [(2,0)]) (Return 4 [2])))

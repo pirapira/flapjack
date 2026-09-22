@@ -160,6 +160,51 @@ theorem crepGetEidsFromDecls_lookup_of_exception
           intro exception shape hmem
           exact ih index exception shape (by simpa [exceptionEntries] using hmem)
 
+/-! The finite-domain half of Cake get_eids_imp_excp_rel: the generated exception-code table has a lookup exactly when the source declaration list contains that exception. The code value remains abstract, matching Cake separate word-size and code-assignment premises. -/
+theorem crepGetEidsFromDecls_lookup_iff_exception
+    [BEq String] [LawfulBEq String]
+    (fromNat : Nat → α) (index : Nat) :
+    ∀ (declarations : List (Decl α)) (exception : ExceptionId),
+      (∃ shape, (exception, shape) ∈ exceptionEntries declarations) ↔
+        ∃ code, lookupInfo exception
+          (pipelineExceptionCodes fromNat index declarations) = some code := by
+  intro declarations
+  induction declarations generalizing index with
+  | nil =>
+      intro exception
+      simp [exceptionEntries, pipelineExceptionCodes, lookupInfo]
+  | cons declaration declarations ih =>
+      cases declaration with
+      | exnDecl declaredException declaredShape =>
+          intro exception
+          by_cases heq : exception == declaredException
+          · have heqEq : exception = declaredException := eq_of_beq heq
+            subst exception
+            simp [exceptionEntries, pipelineExceptionCodes, lookupInfo]
+          · have hneq : exception ≠ declaredException := by
+              intro h
+              apply heq
+              simp [h]
+            have hne : (declaredException == exception) = false := by
+              rw [Bool.eq_false_iff]
+              intro h
+              apply heq
+              exact beq_iff_eq.mpr (eq_of_beq h).symm
+            simpa [exceptionEntries, pipelineExceptionCodes, lookupInfo, heq, hne, hneq] using
+              (ih (index + 1) exception)
+      | decl declaredShape name value =>
+          intro exception
+          simpa [exceptionEntries, pipelineExceptionCodes, lookupInfo] using
+            (ih index exception)
+      | function declaration =>
+          intro exception
+          simpa [exceptionEntries, pipelineExceptionCodes, lookupInfo] using
+            (ih index exception)
+      | name struct fields =>
+          intro exception
+          simpa [exceptionEntries, pipelineExceptionCodes, lookupInfo] using
+            (ih index exception)
+
 def pipelineInlineNames : List (Decl α) → List FunName
   | [] => []
   | .function declaration :: declarations =>

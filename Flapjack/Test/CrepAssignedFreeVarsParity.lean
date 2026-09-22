@@ -40,6 +40,10 @@ def boundedContext : CompileContext Nat :=
 def raiseContext : CompileContext Nat :=
   { boundedContext with exceptions := [("error", 11)] }
 
+def handlerContext : CompileContext Nat :=
+  { vars := [], functions := [], exceptions := [("error", 11)],
+    maxVar := 0, bytesInWord := 1 }
+
 /-! This fixture exercises the Cake `ctxt_max_el_leq` bridge on the same
     context-slot representation used by the assigned-free-vars proof. -/
 theorem context_slot_bound_fixture :
@@ -167,6 +171,45 @@ theorem compileProg_structural_composition_assigned_free_fixture :
     · apply not_mem_crepAssignedFreeVars_compileProg_while
         boundedContext (.const 1) .skip 7
       simp [compileProg, crepAssignedFreeVars]
+
+theorem compileProg_call_no_handler_assigned_free_fixture :
+    (2 : Nat) ∉ crepAssignedFreeVars
+      (compileProg boundedContext
+        (.call (some (some (.local, "fresh"), none)) "callee" [])) := by
+  apply not_mem_crepAssignedFreeVars_compileProg_call_no_handler
+    boundedContext "callee" [] (some (.local, "fresh")) 2 (by simp [boundedContext])
+  intro queriedName shape slots hlookup
+  cases hname : ("fresh" == queriedName) with
+  | false =>
+      simp [boundedContext, lookupInfo] at hlookup
+      rcases hlookup with ⟨hnameEq, hshapeEq, hslotsEq⟩
+      subst queriedName
+      simp at hname
+  | true =>
+      simp [boundedContext, lookupInfo] at hlookup
+      rcases hlookup with ⟨hnameEq, hshapeEq, hslotsEq⟩
+      rw [← hslotsEq]
+      simp
+
+theorem compileProg_call_known_handler_assigned_free_fixture :
+    (0 : Nat) ∉ crepAssignedFreeVars
+      (compileProg handlerContext
+        (.call (some (none, some ("error", "missing", .skip))) "callee" [])) := by
+  have hbody : (0 : Nat) ∉ crepAssignedFreeVars
+      (compileProg handlerContext (.skip : Prog Nat)) := by
+    rw [compileProg_skip]
+    simp [crepAssignedFreeVars]
+  have hslot : ∀ name shape slots,
+      lookupInfo name handlerContext.vars = some (shape, slots) →
+        (0 : Nat) ∉ slots := by
+    intro name shape slots hlookup
+    change lookupInfo name ([] : InfoMap (Shape × List Nat)) = some (shape, slots) at hlookup
+    simp [lookupInfo] at hlookup
+  apply not_mem_crepAssignedFreeVars_compileProg_call_known_handler
+    handlerContext "callee" [] none "error" "missing" .skip 11 0
+    (by simp [handlerContext])
+    (by simp [handlerContext, lookupInfo])
+    hbody hslot
 
 def runChecks : IO Bool := do
   if parityGuard then

@@ -1465,6 +1465,14 @@ example :
 #check @panValuePcCompileCorrectAndClockedBrokeResultRel_of_both_program_state_correct_with_clock_context
 #check @panValuePcCompileCorrectAndClockedContinuedResultRel_of_both_program_state_correct_with_clock_context
 #check @panValuePcCompileCorrectAndClockedTimeoutResultRel_of_both_program_state_correct_with_clock_context
+#check @panValuePcCompileCorrectAndClockedResultRel_of_both_program_state_correct_with_clock_context
+#check @panValuePcRaisedHraiseData_callback_to_control_exception_result_rel_with_context_code
+#check @panValuePcCompileCorrectAndClockedFinalFfiResultRel_of_both_program_state_correct_with_clock_context
+#check @panValuePcCompileCorrectAndResultRel_of_program_state_correct_with_context_code
+#check @panValuePcCompileCorrectAndRaisedResultRel_of_program_state_correct_with_context_code
+#check @panValuePcCompileCorrectAndClockedResultRel_of_normal_program_state_correct_with_context_code
+#check @panValuePcCompileCorrectAndClockedReturnedSourceResultRel_of_program_state_correct_with_context_code
+#check @panValuePcRaisedHraiseData_of_flat_global_evaluator_evidence_with_bounded_state_locals
 #check @panValuePcNormalResultRelWithContextCode_of_program_state_correct
 #check @panValuePcReturnedResultRelWithContextCode_of_program_state_correct
 #check @panValuePcBrokeResultRelWithContextCode_of_program_state_correct
@@ -1511,5 +1519,13 @@ example :
         CompileContext Nat).maxVar :=
   compileFunDeclSource_parameter_context_slots_bounded concreteRelContext
     boundedParameterDecl (by simp [boundedParameterDecl])
+
+/-! Cake's `eval_var_cexp_present_ctxt` (`pan_to_crepProofScript.sml:693`):
+    every variable in a compiled expression is a slot bound in the compile
+    context.  Flapjack's companion of `compileExp_vars_bounded`. -/
+#check @Flapjack.compileExp_vars_present
+
+/-! Cake's `eval_map_var_cexp_present_ctxt` list companion (`pan_to_crepProofScript.sml:1077`). -/
+#check @Flapjack.compileExpList_vars_present
 
 end Flapjack.Test.PanValuePcControlSafety

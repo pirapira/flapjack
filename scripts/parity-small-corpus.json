@@ -1145,6 +1145,14 @@
       "tracked_beads": [
         "flapjack-pxn.8.5.14.1.5"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00276_fuzz_frame_allocator_20260928.pnk",
+      "source_reference": "Fresh exact differential witness from seed 20260928 index 276: nested loops and branches, repeated local/shared loads and stores, struct field accesses, shifts, calls, and high temporary/frame pressure exercise Cake IRC continuation layout. Cake and Flapjack artifacts are byte-identical.",
+      "cake_sha256": "97a19ed4f8ef7dc079fcd929abba2e2348a6c6ed78abb1415d7eda11990cb997",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.5"
+      ]
     }
   ]
 }

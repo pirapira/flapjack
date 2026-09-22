@@ -1042,6 +1042,61 @@ theorem seqCallRet_tail_call (returnName : VarName) (function : FunName)
       (.return (.var .local returnName))) = .call none function arguments := by
   simp [seqCallRet]
 
+-- Pass-level Cake evaluate_seq_call_ret_eq bridge: the seqCallRet
+-- transformer has the same clocked evaluator result as the recognized
+-- call/return sequence, under the explicit returned-call premises above.
+theorem evalPanValueFfiClockProg_seqCallRet_returned
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel clock finalClock : Nat) (hclock : clock ≠ 0)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (value : PanValue α) (parameters : List VarName)
+    (calleeLocals bodyLocals finalGlobals : VarName → Option (PanValue α))
+    (finalMemory : α → Option (PanValue α)) (finalFfi : FfiState σ)
+    (body : Prog α) (function : FunName) (arguments : List (Exp α))
+    (returnName : VarName) (assignedLocals : VarName → Option (PanValue α))
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (hargs : evalPanValueExps structs locals globals memory baseAddress topAddress
+      bytesInWord arguments (memoryAccess := memoryAccess) = some [value])
+    (hlookup : lookupPanFunction function functions = some (parameters, body))
+    (hbind : bindPanValueParameters parameters [value] = some calleeLocals)
+    (hbody : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel calleeLocals globals memory ffi
+      (clock - 1) body (memoryAccess := memoryAccess) (contracts := none)
+      (memoryHandler := none) =
+      some (.control (.returned bodyLocals finalGlobals finalMemory finalFfi [value]),
+        finalClock))
+    (hwithin : panValueValuesWithinLimit structs [value] = true)
+    (hpayload : panValuePayloadWithinLimit structs value = true)
+    (hassign : assignPanValueCallResult locals finalGlobals (some (.local, returnName))
+      [value] (structs := structs) = some (assignedLocals, finalGlobals))
+    (hlookupReturn : assignedLocals returnName = some value) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (fuel + 3) locals globals memory ffi
+        clock (seqCallRet (.seq (.call (some (some (.local, returnName), none)) function arguments)
+          (.return (.var .local returnName)))) (memoryAccess := memoryAccess)
+        (contracts := none) (memoryHandler := none) =
+      evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (fuel + 3) locals globals memory ffi
+        clock (.seq (.call (some (some (.local, returnName), none)) function arguments)
+          (.return (.var .local returnName))) (memoryAccess := memoryAccess)
+        (contracts := none) (memoryHandler := none) := by
+  rw [seqCallRet_tail_call]
+  exact evalPanValueFfiClockProg_seq_call_return_tail_call
+    context primitive handler structs functions baseAddress topAddress bytesInWord
+    fuel clock finalClock hclock locals globals memory ffi value parameters
+    calleeLocals bodyLocals finalGlobals finalMemory finalFfi body function arguments
+    returnName assignedLocals memoryAccess hargs hlookup hbind hbody hwithin
+    hpayload hassign hlookupReturn
+
 /-! ## Fuel adequacy for the `Skip`/`Seq` fragment
 
 Cake's `evaluate_seq_assoc` holds at a fixed clock because `Seq` does not

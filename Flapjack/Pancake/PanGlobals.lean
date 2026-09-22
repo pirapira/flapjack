@@ -1711,10 +1711,11 @@ def globalCompileTopForStartSome [BEq String] [Add α] [Mul α]
             returnShape := entry.returnShape }
       some (compiled.exceptions ++ [newMain] ++ compiled.functions)
 
-/-! CakeML's total `pan_globals$compile_top_def` (`pan_globalsScript.sml:236`).
-    In particular, a missing start function compiles to the empty declaration
-    list, matching the `NONE => []` branch in HOL. -/
-@[hol "cakeml/pancake/pan_globalsScript.sml" "compile_top_def"]
+/-! Flapjack's total analogue of `pan_globals$compile_top_def`, not yet an
+    exact HOL port: HOL fixes `bytes_in_word` and `n2w` internally, whereas
+    this helper accepts caller-controlled `bytesInWord` and `fromNat`.
+    Bead `flapjack-pxn.18.3.2.9` tracks the exact-shaped definition. A missing
+    start function still compiles to the empty declaration list. -/
 def globalCompileTopForStart [BEq String] [Add α] [Mul α]
     (bytesInWord : α) (fromNat : Nat → α) (declarations : List (Decl α))
     (start : FunName) : List (Decl α) :=

@@ -64,12 +64,14 @@ def compileField [OfNat α 0] (index : Nat) :
 def compilePanOp : PanOp → CrepOp
   | .mul => .mul
 
-/-! Faithful port of `pan_to_crep$exp_hdl` from
-    `cakeml/pancake/pan_to_crepScript.sml:106-112`.
+/-! Executable analogue of `pan_to_crep$exp_hdl` from
+    `cakeml/pancake/pan_to_crepScript.sml:106-112`. HOL takes a finite map and
+    uses `FLOOKUP`; this list-backed `InfoMap` helper uses first-match lookup,
+    so it is not tagged as the HOL definition. Bead `flapjack-pxn.18.3.1.6`
+    tracks the exact map-shaped port and executable bridge.
 
     A known variable is initialized from the global return area, one word per
     flattened local, and the assignments are nested in source order. -/
-@[hol "cakeml/pancake/pan_to_crepScript.sml" "exp_hdl_def"]
 def expHdl [OfNat α 0] [OfNat α 1] [Add α]
     (vars : InfoMap (Shape × List Nat)) (name : VarName) : CrepProg α :=
   match lookupInfo name vars with

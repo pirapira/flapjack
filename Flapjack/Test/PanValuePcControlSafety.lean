@@ -1355,6 +1355,7 @@ example
 #check @panValueCrepControlRel_of_program_state_correct
 #check @panValueCrepClockControlRel_of_program_state_correct
 #check @panValuePcCompileCorrect_of_context_code_and_clocked_control_of_program_state_correct
+#check @panValuePcClockedRaisedHraiseData_of_program_state_correct
 #check @panValuePcCompileCorrectAndResultRel_of_context_code
 #check @panValuePcCompileCorrectAndRaisedResultRel_of_context_code
 

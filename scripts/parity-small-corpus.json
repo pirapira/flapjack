@@ -1129,6 +1129,14 @@
       "tracked_beads": [
         "flapjack-pxn.8.5.14.1.5"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00333_fuzz_frame_pressure_20260924.pnk",
+      "source_reference": "Fresh exact differential witness from seed 20260924 index 333: duplicate local-name pressure, struct/tuple calls, nested loops with break/continue, shared/local loads/stores, handlers, and high allocator/frame pressure exercise Cake IRC and continuation layout. Cake and Flapjack artifacts are byte-identical.",
+      "cake_sha256": "36b3f90bcf1028c01c218fbe8f2f7bcc0dfda8cbf45e64ea8a8138b9da44f9f5",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.5"
+      ]
     }
   ]
 }

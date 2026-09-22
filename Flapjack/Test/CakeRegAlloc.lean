@@ -901,6 +901,34 @@ def doStepCoalescePriorityGuard : Bool :=
 
 #guard doStepCoalescePriorityGuard
 
+/- With no simplify/coalesce progress and an un-related freeze node, Cake's
+   driver takes the pre-freeze branch; the pre-freeze pass immediately
+   simplifies that node and leaves the allocator worklists empty. -/
+def doStepPrefreezePriorityGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 3 with
+      freezeWl := [1] }
+  let (changed, out) := cakeDoStep none 3 state
+  changed && out.stack == [1] && out.simpWl == [] &&
+    out.freezeWl == [] && out.spillWl == []
+
+#guard doStepPrefreezePriorityGuard
+
+/- A move-related freeze node survives pre-freeze, so Cake's driver reaches
+   `do_freeze` only after simplify/coalesce/pre-freeze report no progress. -/
+def doStepFreezePriorityGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 3 with
+      freezeWl := [1]
+      moveRelated := CakeNodeMap.ofNatInfoMap 3 [(1, true), (2, true)]
+      unavailMovesWl := [(1, (1, 2))] }
+  let (changed, out) := cakeDoStep none 3 state
+  changed && out.stack == [1] && out.simpWl == [] &&
+    out.freezeWl == [] && out.spillWl == [] &&
+    out.unavailMovesWl == [(1, (1, 2))]
+
+#guard doStepFreezePriorityGuard
+
 /- Cake's `do_step` reaches `do_spill` only after simplify, coalesce,
    pre-freeze, and freeze all report no progress.  With no cost table,
    `do_spill` selects the highest-degree candidate, preserving the residual

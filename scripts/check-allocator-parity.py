@@ -79,6 +79,7 @@ FIXTURES = (
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "u256_mul_full.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "u256_mul_full_bitmap_wrap.pnk",
     REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "f84_frame_allocator.pnk",
+    REPO_ROOT / "Flapjack" / "Test" / "OriginalPancake" / "p8_frame_pressure.pnk",
 )
 
 

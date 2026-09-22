@@ -134,6 +134,22 @@ theorem panValueProgramStateRel_lookupPanFunction_fixture :
     relationState_self "f"
   simp [relationState, lookupPanFunction]
 
+/-! The declaration adequacy package keeps the post-state relation, the
+    `pan_simp` callee body, and the exception-table equality together. -/
+theorem panValueProgramStateRel_evalDeclarations_adequacy_fixture
+    (s' : PanValueProgramState Nat)
+    (hs : evalPanValueDeclarations relationState relationDecls = some s')
+    (body : Prog Nat)
+    (hlookup : lookupPanFunction "f" s'.functions = some ([], body)) :
+    ∃ t', evalPanValueDeclarations
+        { relationState with functions := panValueFunctionsSimp relationState.functions }
+        (panSimpDecls relationDecls) = some t' ∧
+      panValueProgramStateRel s' t' ∧
+      lookupPanFunction "f" t'.functions = some ([], panSimpProg body) ∧
+      s'.exceptions = t'.exceptions := by
+  exact panValueProgramStateRel_evalDeclarations_adequacy relationState _
+    relationState_self relationDecls none s' hs "f" hlookup
+
 /-! Regression for the function-table lookup bridge used by Cake's
     `state_rel_imp_semantics`: the entry keeps its parameters and return shape,
     while only its body is replaced by `panSimpProg`. -/

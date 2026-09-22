@@ -448,6 +448,33 @@ example :
     wordStackAtomNat, wordStackJoin, wordStackReadRegister,
     wordStackLocation, lookupNatInfo]
 
+/- Cake's `inst_select_def` keeps a valid Store displacement attached to the
+   address carrier.  The source-shaped Flapjack Store path must reach the same
+   StackLang shape before Lab fuses the add/Store pair into `memOffset`. -/
+example :
+    wordStackCompileStoreNatNested
+        { locations := [(13, .register 5), (10, .register 6)],
+          scratch := 31, stackBase := 0, addressScratch := 29 }
+        (.op .add [.var 13, .const 8]) (.var 10) =
+      some (.seq (.seq (.const 31 8) (.arith .add 29 5 31))
+        (.inst (.mem .store 6 29)) : StackProg Nat) := by
+  rfl
+
+/- Invalid Cake address offsets are materialized and then stored at zero
+   offset.  Keep this separate from the valid-offset carrier guard. -/
+example :
+    wordStackCompileStoreNatNested
+        { locations := [(13, .register 5), (10, .register 6)],
+          scratch := 31, stackBase := 0, addressScratch := 29 }
+        (.op .add [.var 13, .const 2048]) (.var 10) =
+      some (.seq (.seq (.const 31 2048)
+          (.arith .add 29 5 31))
+        (.seq (.arith .or 31 6 6) (.inst (.mem .store 31 29))) : StackProg Nat) := by
+  simp [wordStackCompileStoreNatNested, wordStackCompileExpToRegisterNat,
+    wordStackExpressionIsAtom, wordStackAtomNat, wordStackReadRegister,
+    wordStackLocation, lookupNatInfo, wordStackExpressionTemporaries,
+    wordStackExpressionTemporariesExcluding, wordStackJoin]
+
 example :
     wordToStackProgNat
         { locations := [(0, .register 5)], scratch := 31, stackBase := 10 }

@@ -33,6 +33,18 @@ example :
   simp [wordStackMemoryOffsetInst, wordStackLoadOffsetInst, wordStackLocation,
     wordStackOffset, lookupNatInfo]
 
+/- The Cake word_to_stack offset boundary is width-independent: Load32 also
+   retains the largest signed-12 positive displacement. -/
+example :
+    wordStackMemoryOffsetInst
+      { locations := [(0, .register 4), (1, .register 5)]
+        scratch := 31
+        stackBase := 10 }
+      .load32 0 1 2047 =
+      some (.inst (.memOffset .load32 4 5 2047) : StackProg Nat) := by
+  simp [wordStackMemoryOffsetInst, wordStackLoadOffsetInst, wordStackLocation,
+    wordStackOffset, lookupNatInfo]
+
 /- Cake retains a negative signed-12 Load displacement in the source-shaped
    MemOffset carrier as its modulo-2^64 word; Lab later interprets it as -8. -/
 example :
@@ -84,6 +96,18 @@ example :
         stackBase := 10 }
       .store 0 1 2047 =
       some (.inst (.memOffset .store 4 5 2047) : StackProg Nat) := by
+  simp [wordStackMemoryOffsetInst, wordStackStoreOffsetInst, wordStackLocation,
+    wordStackOffset, lookupNatInfo]
+
+/- Cake's signed-12 positive endpoint is retained for subword stores too;
+   the target encoder applies the width-specific instruction mapping later. -/
+example :
+    wordStackMemoryOffsetInst
+      { locations := [(0, .register 4), (1, .register 5)]
+        scratch := 31
+        stackBase := 10 }
+      .store32 0 1 2047 =
+      some (.inst (.memOffset .store32 4 5 2047) : StackProg Nat) := by
   simp [wordStackMemoryOffsetInst, wordStackStoreOffsetInst, wordStackLocation,
     wordStackOffset, lookupNatInfo]
 

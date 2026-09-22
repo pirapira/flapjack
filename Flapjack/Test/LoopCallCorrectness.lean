@@ -230,6 +230,113 @@ theorem raise_compile_correct_fixture :
     subst source
     exact ⟨100, by simp [load32State]⟩
 
+theorem break_compile_correct_fixture :
+    evalLoopProg 1 load32State
+        (comp [(3, 2)] (.break 7 : LoopProg Nat)).1 =
+        some (.broke load32State 7) ∧
+      labelsIn (comp [(3, 2)] (.break 7 : LoopProg Nat)).2
+        load32State.locals := by
+  apply comp_break_correct
+  intro name source hlookup
+  have hpair : 3 = name ∧ 2 = source := by
+    simpa [lookup] using hlookup
+  have hsource : source = 2 := hpair.2.symm
+  subst source
+  exact ⟨100, by simp [load32State]⟩
+
+theorem continue_compile_correct_fixture :
+    evalLoopProg 1 load32State
+        (comp [(3, 2)] (.continue 7 : LoopProg Nat)).1 =
+        some (.continued load32State 7) ∧
+      labelsIn (comp [(3, 2)] (.continue 7 : LoopProg Nat)).2
+        load32State.locals := by
+  apply comp_continue_correct
+  intro name source hlookup
+  have hpair : 3 = name ∧ 2 = source := by
+    simpa [lookup] using hlookup
+  have hsource : source = 2 := hpair.2.symm
+  subst source
+  exact ⟨100, by simp [load32State]⟩
+
+theorem shMem_load_compile_correct_fixture :
+    evalLoopProg 1 load32State
+        (comp [(3, 2)] (.shMem .load 4 (.var 2)) : LoopProg Nat × LocationEnv).1 =
+        some (.normal { load32State with
+          locals := updateLoopLocal load32State.locals 4 7 }) ∧
+      labelsIn
+        (comp [(3, 2)] (.shMem .load 4 (.var 2)) : LoopProg Nat × LocationEnv).2
+        (updateLoopLocal load32State.locals 4 7) := by
+  apply comp_shMem_load_correct (addressValue := 100) (value := 7)
+  · exact Or.inl rfl
+  · simp [evalLoopExp, load32State]
+  · simp [load32State]
+  · intro name source hlookup
+    have hpair : 3 = name ∧ 2 = source := by
+      simpa [lookup] using hlookup
+    have hsource : source = 2 := hpair.2.symm
+    subst source
+    exact ⟨100, by simp [load32State]⟩
+
+theorem shMem_store_compile_correct_fixture :
+    evalLoopProg 1 load32State
+        (comp [(3, 2)] (.shMem .store 3 (.var 2)) : LoopProg Nat × LocationEnv).1 =
+        some (.normal { load32State with
+          memory := updateLoopMemory load32State.memory 100 7 }) ∧
+      labelsIn
+        (comp [(3, 2)] (.shMem .store 3 (.var 2)) : LoopProg Nat × LocationEnv).2
+        ({ load32State with
+          memory := updateLoopMemory load32State.memory 100 7 }).locals := by
+  apply comp_shMem_store_correct (addressValue := 100) (value := 7)
+  · exact Or.inl rfl
+  · simp [evalLoopExp, load32State]
+  · simp [load32State]
+  · intro name source hlookup
+    have hpair : 3 = name ∧ 2 = source := by
+      simpa [lookup] using hlookup
+    have hsource : source = 2 := hpair.2.symm
+    subst source
+    exact ⟨100, by simp [load32State]⟩
+
+theorem arith_div_compile_correct_fixture :
+    evalLoopProg 1 load32State
+        (comp [(3, 2)] (.arith (.div 4 3 2)) : LoopProg Nat × LocationEnv).1 =
+        some (.normal { load32State with
+          locals := updateLoopLocal load32State.locals 4 (7 / 100) }) ∧
+      labelsIn
+        (comp [(3, 2)] (.arith (.div 4 3 2)) : LoopProg Nat × LocationEnv).2
+        (updateLoopLocal load32State.locals 4 (7 / 100)) := by
+  apply comp_arith_div_correct (destination := 4) (dividend := 3) (divisor := 2)
+    (dividendValue := 7) (divisorValue := 100)
+  · simp [load32State]
+  · simp [load32State]
+  · simp
+  · intro name source hlookup
+    have hpair : 3 = name ∧ 2 = source := by
+      simpa [lookup] using hlookup
+    have hsource : source = 2 := hpair.2.symm
+    subst source
+    exact ⟨100, by simp [load32State]⟩
+
+theorem arith_longMul_compile_correct_fixture :
+    evalLoopProg 1 load32State
+        (comp [(3, 2)] (.arith (.longMul 4 4 3 2)) : LoopProg Nat × LocationEnv).1 =
+        some (.normal { load32State with
+          locals := updateLoopLocal load32State.locals 4 (7 * 100) }) ∧
+      labelsIn
+        (comp [(3, 2)] (.arith (.longMul 4 4 3 2)) : LoopProg Nat × LocationEnv).2
+        (updateLoopLocal load32State.locals 4 (7 * 100)) := by
+  apply comp_arith_longMul_correct (destinationLeft := 4) (destinationRight := 4)
+    (sourceLeft := 3) (sourceRight := 2) (leftValue := 7) (rightValue := 100)
+  · rfl
+  · simp [load32State]
+  · simp [load32State]
+  · intro name source hlookup
+    have hpair : 3 = name ∧ 2 = source := by
+      simpa [lookup] using hlookup
+    have hsource : source = 2 := hpair.2.symm
+    subst source
+    exact ⟨100, by simp [load32State]⟩
+
 theorem primitive_labelsIn_fixture :
     (comp [(3, 2), (4, 3)] (.primitive [3] .addCarry [2, 3]) :
       LoopProg Nat × LocationEnv).1 = .primitive [3] .addCarry [2, 3] ∧
@@ -273,6 +380,12 @@ theorem primitive_labelsIn_fixture :
 #check comp_setGlobal_correct
 #check comp_return_correct
 #check comp_raise_correct
+#check comp_break_correct
+#check comp_continue_correct
+#check comp_shMem_load_correct
+#check comp_shMem_store_correct
+#check comp_arith_div_correct
+#check comp_arith_longMul_correct
 #check comp_primitive_labelsIn
 
 end Flapjack.Test.LoopCallCorrectness

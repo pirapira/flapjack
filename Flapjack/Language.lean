@@ -480,6 +480,48 @@ theorem withShape_getElem_eq_take_drop (shapes : List Shape) (values : List α)
           rw [shapeSize_comb_cons]
           rw [← List.drop_drop]
 
+/-! Counterpart of Cake's `comp_field`
+    (`cakeml/pancake/pan_to_crepScript.sml:28`).  Cake returns the pair
+    `(TAKE (size_of_shape sh) es, sh)` for the selected field and recurses on
+    `DROP (size_of_shape sh) es`; here we keep only the expression-list
+    component (the shape component is `shapes[index]`).  Cake's empty-list
+    fallback `[Const 0w]` is represented by `[]` because every use below
+    assumes `index < shapes.length`, so that branch is unreachable. -/
+def compField (index : Nat) (shapes : List Shape) (values : List α) : List α :=
+  match shapes with
+  | [] => []
+  | shape :: shapes =>
+      if index = 0 then values.take (Shape.shapeSize shape)
+      else compField (index - 1) shapes (values.drop (Shape.shapeSize shape))
+
+/-- Counterpart of Cake's `mem_comp_field`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:666`): an expression of
+    a selected field is an expression of the flattened record. -/
+theorem mem_compField_imp_mem (index : Nat) (shapes : List Shape)
+    (values : List α) (candidate : α)
+    (hindex : index < shapes.length)
+    (hvalues : values.length = Shape.shapeSize (.comb shapes))
+    (hmem : candidate ∈ compField index shapes values) :
+    candidate ∈ values := by
+  revert values index
+  induction shapes with
+  | nil => intro index values hindex; exact absurd hindex (Nat.not_lt_zero index)
+  | cons shape shapes ih =>
+      intro index values hindex hvalues hmem
+      simp only [List.length_cons] at hindex
+      cases index with
+      | zero =>
+          simp only [compField] at hmem
+          exact List.mem_of_mem_take hmem
+      | succ k =>
+          have hk : k < shapes.length := by omega
+          have hvalues' : (values.drop (Shape.shapeSize shape)).length =
+              Shape.shapeSize (.comb shapes) := by
+            rw [List.length_drop, hvalues, shapeSize_comb_cons, Nat.add_sub_cancel_left]
+          simp only [compField, Nat.succ_ne_zero, if_false] at hmem
+          exact List.mem_of_mem_drop
+            (ih k (values.drop (Shape.shapeSize shape)) hk hvalues' hmem)
+
 /-- Cake's `DISJOINT (set left) (set right)` predicate, stated directly on
     lists because `List` membership already expresses the element relation. -/
 def ListDisjoint (left right : List α) : Prop :=

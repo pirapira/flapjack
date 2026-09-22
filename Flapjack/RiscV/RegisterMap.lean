@@ -312,6 +312,14 @@ def writeRegisterInternalNat {width : Nat} (state : State width) (name : Nat)
     (value : Word width) : State width :=
   (labRegisterOfNat name).elim state (fun register => writeRegister state register value)
 
+/-- Cake's internal zero stack register is mapped to architectural `x0`, so
+    writes through the internal accessor are discarded just like hardware
+    writes to `x0`. -/
+@[simp] theorem writeRegisterInternalNat_zeroStack {width : Nat}
+    (state : State width) (value : Word width) :
+    writeRegisterInternalNat state 27 value = state := by
+  simp [writeRegisterInternalNat, writeRegister]
+
 /-- Writing an internal register whose name is out of architectural range is a
 no-op. -/
 @[simp] theorem writeRegisterInternalNat_of_none {width : Nat} (state : State width)

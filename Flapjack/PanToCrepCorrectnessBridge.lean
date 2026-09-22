@@ -40928,6 +40928,134 @@ theorem panValuePcCompileCorrectAndClockedReturnedResultRel_of_both_program_stat
     clockExceptionRel clockExceptionCode clockGlobalsLookup clockValues
     clockTargetValues hclockReturned.1 hvalues hclock
 
+/-! Preserve the Cake context package for a returned result.  The ordinary
+    returned theorem above proves the flattened value relation, while this
+    companion carries the strengthened source and clocked post-state facts
+    needed by the enclosing state-relation induction. -/
+theorem panValuePcCompileCorrectAndClockedReturnedResultRel_of_both_program_state_correct_with_clock_context_of_state_context
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (sourceEvaluate : PanValuePcEvaluator α)
+    (targetEvaluate : CrepPcEvaluator α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (program : Prog α)
+    (hcompile : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (hprogram : PanValueCrepProgramStateCorrect program)
+    (structs : StructContext) (context : CompileContext α)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (state targetState : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α)
+    (sourceFuel targetFuel : Nat)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (sourceValues : List (PanValue α)) (targetValues : List α)
+    (hrelContext : panValueCrepStateRelWithContext structs context
+      sourceLocals sourceGlobals sourceMemory state)
+    (hsource : evalPanValueProgWithPrimitiveCallsAndFfi
+      primitive sourceHandler structs sourceFunctions baseAddress topAddress
+      bytesInWord sourceFuel sourceLocals sourceGlobals sourceMemory program =
+      some (.returned sourceLocals sourceGlobals sourceMemory sourceValues))
+    (hcrep : evalCrepFullProgState functions crepPrimitive ffi sharedMem
+      baseAddress topAddress targetFuel state (compileProg context program) =
+      some (.returned targetState targetValues))
+    (hpostContext : panValueCrepStateRelWithContext structs context
+      sourceLocals sourceGlobals sourceMemory targetState)
+    (clockContext : PanValueFfiContext α)
+    (clockPrimitive : PanPrimitiveHandler α)
+    (clockHandler : PanValueStatefulFfiHandler α σ)
+    (clockStructs : StructContext) (clockPcContext : CompileContext α)
+    (clockFunctions : List (FunName × List VarName × Prog α))
+    (clockProgram : Prog α)
+    (hclockProgram : PanValueCrepProgramStateCorrect clockProgram)
+    (clockCompiledFunctions : List (CompiledFunction α))
+    (clockLocals clockGlobals : VarName → Option (PanValue α))
+    (clockMemory : α → Option (PanValue α))
+    (clockState clockTargetState : CrepState α)
+    (clockSourceHandler : PanValueFfiHandler α)
+    (clockCrepPrimitive : CrepPrimitiveHandler α)
+    (clockFfiHandler : CrepFfiHandler α)
+    (clockSharedMem : CrepSharedMemHandler α)
+    (clockBaseAddress clockTopAddress clockBytesInWord : α)
+    (clockSourceFuel clockTargetFuel : Nat)
+    (clockExceptionRel : ExceptionId → PanValue α → α → Prop)
+    (clockExceptionCode : ExceptionId → Option α)
+    (clockGlobalsLookup : CrepState α → PanValue α → Option (List α))
+    (clockValues : List (PanValue α)) (clockTargetValues : List α)
+    (hclockRelContext : panValueCrepStateRelWithContext clockStructs
+      clockPcContext clockLocals clockGlobals clockMemory clockState)
+    (hclockSource : evalPanValueProgWithPrimitiveCallsAndFfi
+      clockPrimitive clockSourceHandler clockStructs clockFunctions
+      clockBaseAddress clockTopAddress clockBytesInWord clockSourceFuel
+      clockLocals clockGlobals clockMemory clockProgram =
+      some (.returned clockLocals clockGlobals clockMemory clockValues))
+    (hclockCrep : evalCrepFullProgState clockCompiledFunctions clockCrepPrimitive
+      clockFfiHandler clockSharedMem clockBaseAddress clockTopAddress
+      clockTargetFuel clockState (compileProg clockPcContext clockProgram) =
+      some (.returned clockTargetState clockTargetValues))
+    (hclockPostContext : panValueCrepStateRelWithContext clockStructs
+      clockPcContext clockLocals clockGlobals clockMemory clockTargetState)
+    (clockFfi : FfiState σ) (clockFuel clock : Nat)
+    (hclock : evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
+      clockFfi clock clockProgram =
+      some (.control (.returned clockLocals clockGlobals clockMemory clockFfi
+        clockValues), clock))
+    (hvalues : panValueCrepValuesRel clockValues clockTargetValues) :
+    PanValuePcCompileCorrect sourceEvaluate targetEvaluate codeRel excpRel
+      exceptionCode globalsLookup program ∧
+    evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
+      clockFfi clock clockProgram =
+      some (.control (.returned clockLocals clockGlobals clockMemory clockFfi
+        clockValues), clock) ∧
+    (evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
+      clockFfi clock clockProgram).map panValueFfiClockResultProjection =
+      some (.returned clockLocals clockGlobals clockMemory clockFfi clockValues
+        clock) ∧
+    panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
+      (.returned sourceLocals sourceGlobals sourceMemory sourceValues)
+      (.returned targetState targetValues) ∧
+    panValuePcResultRel clockStructs clockPcContext clockExceptionRel
+      clockExceptionCode clockGlobalsLookup
+      (.returned clockLocals clockGlobals clockMemory clockValues)
+      (.returned clockTargetState clockTargetValues) ∧
+    panValueCrepStateRelWithContext structs context sourceLocals sourceGlobals
+      sourceMemory targetState ∧
+    panValueCrepStateRelWithContext clockStructs clockPcContext clockLocals
+      clockGlobals clockMemory clockTargetState := by
+  have hresult :=
+    panValuePcCompileCorrectAndClockedReturnedResultRel_of_both_program_state_correct_with_clock_context
+      sourceEvaluate targetEvaluate codeRel excpRel exceptionCode globalsLookup program
+      hcompile hprogram structs context sourceFunctions functions sourceLocals
+      sourceGlobals sourceMemory state targetState primitive sourceHandler
+      crepPrimitive ffi sharedMem baseAddress topAddress bytesInWord sourceFuel
+      targetFuel exceptionRel sourceValues targetValues hrelContext.2.2 hsource
+      hcrep clockContext clockPrimitive clockHandler clockStructs clockPcContext
+      clockFunctions clockProgram hclockProgram clockCompiledFunctions
+      clockLocals clockGlobals clockMemory clockState clockTargetState
+      clockSourceHandler clockCrepPrimitive clockFfiHandler clockSharedMem
+      clockBaseAddress clockTopAddress clockBytesInWord clockSourceFuel
+      clockTargetFuel clockExceptionRel clockExceptionCode clockGlobalsLookup
+      clockValues clockTargetValues hclockRelContext.2.2 hclockSource hclockCrep
+      clockFfi clockFuel clock hclock hvalues
+  exact ⟨hresult.1, hresult.2.1, hresult.2.2.1, hresult.2.2.2.1,
+    hresult.2.2.2.2, hpostContext, hclockPostContext⟩
+
 /-! Instantiate the Normal case from independent source and clocked
     program-state witnesses.  Normal results carry no exception payload, so
     the theorem exercises the state-rel semantic wiring directly. -/

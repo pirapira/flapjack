@@ -2748,6 +2748,7 @@ theorem clocked_while_timeout_preserves_events :
 end Flapjack.Test.PanSimpParity
 
 #check @Flapjack.evalPanValueFfiClockProg_leaf_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiProgSteps_raise_ioEvents_prefix
 /-! The generic residual/timeout event-prefix induction reduces whole-program event monotonicity
 to the explicit per-leaf residual obligation `hleaf`. -/
 #check @Flapjack.evalPanValueFfiClock_ioEvents_prefix

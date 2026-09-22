@@ -1452,4 +1452,21 @@ example :
   compileFunDecl_parameter_context_slots_bounded concreteRelContext
     boundedParameterDecl (by simp [boundedParameterDecl])
 
+example :
+    ∀ name shape names,
+      lookupInfo name
+          ({ concreteRelContext with
+              vars := panToCrepMakeVmap boundedParameterDecl.params
+              maxVar := Shape.shapeSize
+                (.comb (boundedParameterDecl.params.map Prod.snd)) - 1 } :
+            CompileContext Nat).vars = some (shape, names) →
+      ∀ slot ∈ names,
+        slot ≤ ({ concreteRelContext with
+          vars := panToCrepMakeVmap boundedParameterDecl.params
+          maxVar := Shape.shapeSize
+            (.comb (boundedParameterDecl.params.map Prod.snd)) - 1 } :
+        CompileContext Nat).maxVar :=
+  compileFunDeclSource_parameter_context_slots_bounded concreteRelContext
+    boundedParameterDecl (by simp [boundedParameterDecl])
+
 end Flapjack.Test.PanValuePcControlSafety

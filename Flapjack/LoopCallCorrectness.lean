@@ -515,6 +515,25 @@ theorem comp_break_correct
   · exact evalLoopProg_break state label
   · exact henvironment
 
+theorem comp_continue_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (environment : LocationEnv) (state : LoopState α) (label : Nat)
+    (henvironment : labelsIn environment state.locals) :
+    evalLoopProg 1 state
+        (comp environment (.continue label : LoopProg α)).1 =
+        some (.continued state label) ∧
+      labelsIn (comp environment (.continue label : LoopProg α)).2 state.locals := by
+  have hcompiled :
+      comp environment (.continue label : LoopProg α) = (.continue label, environment) := by
+    simp [comp]
+  rw [hcompiled]
+  constructor
+  · exact evalLoopProg_continue state label
+  · exact henvironment
+
 theorem lookup_of_listDelete
     (destinations : List Nat) (environment : LocationEnv)
     (name location : Nat)

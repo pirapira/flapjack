@@ -136,6 +136,17 @@ def extendCliqueSetAccumulatorGuard : Bool :=
 
 #guard extendCliqueSetAccumulatorGuard
 
+def extendCliqueSetBatchGuard : Bool :=
+  let newNames := [9, 4, 9, 2, 7]
+  let live := [2, 4, 6, 4]
+  let initial := cakeAdjSetMapOfSize 12
+  let seeded := cakeInsertEdgeSet 1 6 initial
+  let batch := cakeExtendCliqueSetBatch newNames live seeded
+  let reference := cakeExtendCliqueSetReference newNames live seeded
+  batch.2 == reference.2 && batch.1.toNatInfoMap == reference.1.toNatInfoMap
+
+#guard extendCliqueSetBatchGuard
+
 def indexedAdjacencyMembershipGuard : Bool :=
   let tree : WordClashTree := .delta [1, 3] [2, 4]
   let bij := cakeMkBij tree
@@ -1606,6 +1617,7 @@ def runChecks : IO Bool := do
     "mk_bij branch order", "mk_bij branch live", "mk_bij set",
     "mk_bij set unsorted", "mk_bij composite", "mk_graph delta disjoint",
     "mk_graph delta clique", "mk_graph set clique", "extend_graph forced",
+    "extend clique batch",
     "mk_tags roles", "init_ra_state", "init_alloc1_heu delta",
     "init_alloc1_heu moves", "init_alloc1_heu spill",
     "init_alloc1_heu fixed degree", "reg_alloc delta pair",

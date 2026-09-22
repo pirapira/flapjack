@@ -5207,6 +5207,66 @@ theorem panCrepSemanticAgreement_of_indexed_pcCompileCorrect_evidence
       witness.events⟩
   · exact hcross
 
+/-! Make the indexed choice-stability witness consumable from the concrete
+    source/target result and event relations.  This keeps the semantic outcome
+    cases explicit while avoiding a premise-only `hcross` alias: the caller
+    supplies the actual cross-clock `pc` result relation and trace equality. -/
+theorem panCrepSemanticAgreement_of_indexed_pcCompileCorrect_evidence_of_cross_result
+    {α σ : Type}
+    [BEq α] [OfNat α 0] [Add α]
+    (structs : StructContext) (context : CompileContext α) (program : Prog α)
+    (sourceEvaluate : Nat → PanValuePcEvaluator α)
+    (targetEvaluate : Nat → CrepPcEvaluator α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (panHooks : PanSemanticsHooks α σ)
+    (crepHooks : CrepSemanticsHooks α)
+    (hffiOutcome : ∀ event, panHooks.ffiOutcome event = event.outcome)
+    (hcorrect : ∀ clock, PanValuePcCompileCorrectWithContextCode
+      (sourceEvaluate clock) (targetEvaluate clock) codeRel excpRel
+      exceptionCode globalsLookup program)
+    (hevidence : ∀ clock, PanValuePcIndexedSemanticClockEvidence structs context
+      program clock sourceEvaluate targetEvaluate codeRel excpRel exceptionRel
+      exceptionCode globalsLookup panHooks crepHooks)
+    (hresultCross : ∀ (sourceClock targetClock : Nat),
+      panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
+        (panOutcomeToPcResult (hevidence sourceClock).outcome)
+        (crepControlToPcResult (hevidence targetClock).result))
+    (heventsCross : ∀ (sourceClock targetClock : Nat),
+      panResultEvents (some ((hevidence sourceClock).outcome,
+        (hevidence sourceClock).returnedClock)) =
+        crepHooks.ioEvents (hevidence targetClock).targetState) :
+    PanCrepSemanticAgreement panHooks crepHooks := by
+  apply panCrepSemanticAgreement_of_indexed_pcCompileCorrect_evidence
+    structs context program sourceEvaluate targetEvaluate codeRel excpRel
+    exceptionCode globalsLookup exceptionRel panHooks crepHooks hffiOutcome
+    hcorrect hevidence
+  intro sourceClock targetClock sourceResult sourceOutcome targetResult
+      targetState targetOutcome hsource hsourceOutcome htarget htargetOutcome
+  let sourceEvidence := hevidence sourceClock
+  let targetEvidence := hevidence targetClock
+  have hsourceResult : sourceResult =
+      (sourceEvidence.outcome, sourceEvidence.returnedClock) := by
+    apply Option.some.inj
+    exact hsource.symm.trans sourceEvidence.panEval
+  have htargetPair : (targetResult, targetState) =
+      (crepControlResultToSemantic (some targetEvidence.result),
+        targetEvidence.targetState) :=
+    htarget.symm.trans targetEvidence.crepEval
+  have htargetResult : targetResult =
+      crepControlResultToSemantic (some targetEvidence.result) :=
+    congrArg Prod.fst htargetPair
+  have htargetState : targetState = targetEvidence.targetState :=
+    congrArg Prod.snd htargetPair
+  refine ⟨sourceEvidence.outcome, sourceEvidence.returnedClock,
+    targetEvidence.result, hsourceResult, htargetResult, ?_, ?_⟩
+  · exact hresultCross sourceClock targetClock
+  · simpa [hsourceResult, htargetState] using
+      heventsCross sourceClock targetClock
+
 /-! ## A concrete no-final-FFI instantiation
 
 This instantiation has a normal run at clock `0` and a successful returned run at

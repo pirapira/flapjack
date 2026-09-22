@@ -152,6 +152,11 @@ def runChecks : IO Bool := do
   pure (parityGuard && compileProgUnreachableInlineGuard &&
     shMemStoreAddressTempParity)
 
+#check @not_mem_allocatedNames
+#check @not_mem_freshNames
+#check @panValueSlotBound
+#check @panValueSlotBound_cons_of
+
 #check @compileProg_break
 #check @compileProg_continue
 #check @compileProg_tick

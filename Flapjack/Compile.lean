@@ -41,6 +41,43 @@ theorem freshNames_gt (context : CompileContext α) (count start : Nat) (hstart 
   obtain ⟨offset, _hoffset, rfl⟩ := List.mem_map.mp hmem
   omega
 
+theorem not_mem_allocatedNames (context : CompileContext α) (shape : Shape) {x : Nat}
+    (hx : x ≤ context.maxVar) : x ∉ allocatedNames context shape := by
+  intro hmem
+  have := allocatedNames_gt context shape hmem
+  omega
+
+theorem not_mem_freshNames (context : CompileContext α) (count start : Nat)
+    (hstart : 0 < start) {x : Nat} (hx : x ≤ context.maxVar) :
+    x ∉ freshNames context count start := by
+  intro hmem
+  have := freshNames_gt context count start hstart hmem
+  omega
+
+/-- `x` occurs in no slot list stored in the variable context.  This is the
+    second hypothesis of Cake's `not_mem_context_assigned_mem_gt`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:1252`). -/
+def panValueSlotBound [BEq String] (x : Nat) (vars : InfoMap (Shape × List Nat)) : Prop :=
+  ∀ name shape slots, lookupInfo name vars = some (shape, slots) → x ∉ slots
+
+/-- Extending the variable context with an entry whose slots avoid `x` preserves
+    the `panValueSlotBound` invariant. -/
+theorem panValueSlotBound_cons_of [BEq String] (x : Nat) (name : String)
+    (shape : Shape) (slots : List Nat) (vars : InfoMap (Shape × List Nat))
+    (h : panValueSlotBound x vars) (hslots : x ∉ slots) :
+    panValueSlotBound x ((name, (shape, slots)) :: vars) := by
+  intro name' shape' slots' hlookup
+  cases hb : (name == name') with
+  | false =>
+      simp only [lookupInfo, hb] at hlookup
+      exact h name' shape' slots' hlookup
+  | true =>
+      simp only [lookupInfo, hb] at hlookup
+      have hpair : (shape, slots) = (shape', slots') := by simpa using hlookup
+      have hslotsEq : slots = slots' := congrArg Prod.snd hpair
+      rw [← hslotsEq]
+      exact hslots
+
 /-! Cake's ExtCall lowering chooses its temporary base from the largest
     variable occurring in all four compiled expressions, rather than from the
     context's cached `vmax`.  `ShMemStore` chooses its temporary from the

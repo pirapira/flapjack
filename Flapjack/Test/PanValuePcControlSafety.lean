@@ -1387,4 +1387,7 @@ example (context : CompileContext Nat) (eshapes : InfoMap Shape) :
 #check @panValuePcExceptionShapeRelConcrete
 #check @panValuePcExceptionShapeRelConcrete_refl
 
+#check @lookupPanFunction_mem
+#check @panValuePcLocalisedCode_lookup
+
 end Flapjack.Test.PanValuePcControlSafety

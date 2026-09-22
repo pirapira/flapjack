@@ -152,6 +152,39 @@ def ircK1UnweightedAllocatorGuard : Bool :=
 
 #guard ircK1UnweightedAllocatorGuard
 
+/-! This post-SSA Cake `AddCarry` fixture exercises `get_forced` and its
+    carry interference edges through the complete word_alloc driver. -/
+def addCarryProgram : WordProg Nat :=
+  .seq
+    (.move 1 [(13, 0), (17, 2), (21, 4), (25, 6)])
+    (.seq
+      (.inst (.arith (.cakeAddCarry 29 25 21 17)))
+      (.return 13 [29, 17]))
+
+def cakeWordAllocAddCarry : Option (WordProg Nat) :=
+  let tree := wordClashTree addCarryProgram []
+  let forcedStack := cakeGetStackOnly addCarryProgram
+  let forced := cakeGetForced addCarryProgram
+  let (wordMoves, spillCosts) := wordGetHeuristics 3 5 addCarryProgram
+  let moves := wordMoves.map (fun move => (move.priority, (move.left, move.right)))
+  let bij := cakeMkBij tree
+  let scost := spillCosts.map (cakeSpillCostMap bij.nextNode)
+  let initialState := cakeInitRaStateFromBij bij tree forced forcedStack
+  match cakeDoRegAllocFromState .irc scost 22 moves bij initialState with
+  | none => none
+  | some colouring =>
+      some (wordApplyColour (CakeAlloc.totalColour colouring) addCarryProgram)
+
+def addCarryAllocatorGuard : Bool :=
+  match cakeWordAllocAddCarry with
+  | some
+      (.seq (.move 1 [(0, 0), (2, 2), (4, 4), (6, 6)])
+        (.seq (.inst (.arith (.cakeAddCarry 6 6 4 2)))
+          (.return 0 [6, 2]))) => true
+  | _ => false
+
+#guard addCarryAllocatorGuard
+
 def runChecks : IO Bool := do
   if add1AllocatorGuard then
     IO.println "PASS Cake word_alloc add1 output matches the checked HOL oracle"
@@ -169,7 +202,11 @@ def runChecks : IO Bool := do
     IO.println "PASS Cake word_alloc IRC k=1 unweighted output matches the checked HOL oracle"
   else
     IO.println "FAIL Cake word_alloc IRC k=1 unweighted output matches the checked HOL oracle"
+  if addCarryAllocatorGuard then
+    IO.println "PASS Cake word_alloc AddCarry output matches the checked HOL oracle"
+  else
+    IO.println "FAIL Cake word_alloc AddCarry output matches the checked HOL oracle"
   pure (add1AllocatorGuard && simpleSpillAllocatorGuard && ircK1AllocatorGuard &&
-    ircK1UnweightedAllocatorGuard)
+    ircK1UnweightedAllocatorGuard && addCarryAllocatorGuard)
 
 end Flapjack.Test.CakeWordAllocParity

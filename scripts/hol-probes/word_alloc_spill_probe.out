@@ -15,3 +15,6 @@ spill_allocator_k1_unweighted=Seq (Move1 [(4,0); (2,2); (0,4)])
      (Seq (Move0 [(0,0)])
         (Seq (Move0 [(2,2)]) (Inst (Arith (Binop Add 0 0 (Reg 2))))))
      (Seq (Move0 [(2,0)]) (Return 4 [2])))
+
+add_carry_allocator=Seq (Move1 [(0,0); (2,2); (4,4); (6,6)])
+  (Seq (Inst (Arith (AddCarry 6 6 4 2))) (Return 0 [6; 2]))

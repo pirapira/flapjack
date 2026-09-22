@@ -1466,6 +1466,7 @@ example :
 #check @panValuePcCompileCorrectAndClockedContinuedResultRel_of_both_program_state_correct_with_clock_context
 #check @panValuePcCompileCorrectAndClockedTimeoutResultRel_of_both_program_state_correct_with_clock_context
 #check @panValuePcCompileCorrectAndClockedResultRel_of_both_program_state_correct_with_clock_context
+#check @panValuePcRaisedHraiseData_callback_to_control_exception_result_rel_with_context_code
 #check @panValuePcNormalResultRelWithContextCode_of_program_state_correct
 #check @panValuePcReturnedResultRelWithContextCode_of_program_state_correct
 #check @panValuePcBrokeResultRelWithContextCode_of_program_state_correct
@@ -1512,5 +1513,10 @@ example :
         CompileContext Nat).maxVar :=
   compileFunDeclSource_parameter_context_slots_bounded concreteRelContext
     boundedParameterDecl (by simp [boundedParameterDecl])
+
+/-! Cake's `eval_var_cexp_present_ctxt` (`pan_to_crepProofScript.sml:693`):
+    every variable in a compiled expression is a slot bound in the compile
+    context.  Flapjack's companion of `compileExp_vars_bounded`. -/
+#check @Flapjack.compileExp_vars_present
 
 end Flapjack.Test.PanValuePcControlSafety

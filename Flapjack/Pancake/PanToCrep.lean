@@ -213,4 +213,21 @@ theorem compileExp_bytesInWord [BEq α] [OfNat α 0] [Add α]
     compileExp context .bytesInWord = ([.const context.bytesInWord], .one) := by
   simp [compileExp]
 
+/-- Production `.load` lowering with a machine-byte-width compile context agrees
+    with Cake's fixed-stride `load_shape` (`loadShapeBytes`).  The pipeline passes
+    `context.bytesInWord`; `hbytes` is the checked invariant that this field is
+    the fixed machine byte width — `riscvBytesInWord_eq` certifies the RV64 entry
+    points, which supply `8`. -/
+theorem compileExp_load_eq_loadShapeBytes [BEq α] [OfNat α 0] [Add α]
+    [CrepBytesInWord α] (context : CompileContext α)
+    (hbytes : context.bytesInWord = CrepBytesInWord.bytesInWord)
+    (shape : Shape) (expression : Exp α) (head : CrepExp α)
+    (rest : List (CrepExp α)) (shape' : Shape)
+    (hcompile : compileExp context expression = (head :: rest, shape')) :
+    (compileExp context (.load shape expression)).1 =
+      loadShapeBytes 0 (Shape.shapeSize shape) head := by
+  rw [compileExp]
+  simp only [hcompile]
+  rw [loadShape_eq_loadShapeBytes_of_stride_eq _ _ _ _ hbytes]
+
 end Flapjack

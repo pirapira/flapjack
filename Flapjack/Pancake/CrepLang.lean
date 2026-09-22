@@ -157,6 +157,23 @@ theorem crepExpVars_var {α : Type} (name : Nat) :
     crepExpVars (α := α) (.var name) = [name] := by
   simp [crepExpVars]
 
+/-- The fixed machine byte width `byte$bytes_in_word` that Cake's
+    `crepLang$load_shape` uses for its stride
+    (`cakeml/pancake/crepLangScript.sml:82-86`).  Cake derives it from the word
+    type as `n2w (dimindex (:'a) DIV 8)`; Flapjack's value type is abstract, so a
+    target supplies the same fixed constant through an instance, exactly as
+    `[OfNat α 1]` supplies the fixed increment of `load_globals`. -/
+class CrepBytesInWord (α : Type u) where
+  bytesInWord : α
+
+/-- The RISC-V style instance: a `BitVec w` word has `w / 8` bytes. -/
+instance bitVecCrepBytesInWord (w : Nat) : CrepBytesInWord (BitVec w) where
+  bytesInWord := BitVec.ofNat w (w / 8)
+
+/-- General-stride loading used by the Flapjack pipeline.  Cake's
+    `crepLang$load_shape` fixes the stride to `byte$bytes_in_word`; the pipeline
+    passes the stride from its compile context, so this remains Flapjack-specific
+    infrastructure.  The faithful fixed-width port is `loadShapeBytes`. -/
 def loadShape [BEq α] [OfNat α 0] [Add α]
     (address stride : α) (count : Nat) (value : CrepExp α) : List (CrepExp α) :=
   match count with
@@ -164,6 +181,20 @@ def loadShape [BEq α] [OfNat α 0] [Add α]
   | count + 1 =>
       let loaded := if address == 0 then .load value else .load (.op .add [value, .const address])
       loaded :: loadShape (address + stride) stride count value
+
+/-- Faithful port of `crepLang$load_shape_def`
+    (`cakeml/pancake/crepLangScript.sml:82-86`): load `count` consecutive words
+    starting at `address`, stepping by the fixed machine byte width.  Unlike the
+    pipeline's `loadShape`, the stride is not a parameter; it is the fixed
+    `byte$bytes_in_word` supplied by the `CrepBytesInWord` instance. -/
+@[hol "cakeml/pancake/crepLangScript.sml" "load_shape_def"]
+def loadShapeBytes [BEq α] [OfNat α 0] [Add α] [CrepBytesInWord α]
+    (address : α) (count : Nat) (value : CrepExp α) : List (CrepExp α) :=
+  match count with
+  | 0 => []
+  | count + 1 =>
+      let loaded := if address == 0 then .load value else .load (.op .add [value, .const address])
+      loaded :: loadShapeBytes (address + CrepBytesInWord.bytesInWord) count value
 
 /-- Original-domain counterpart of Cake's `load_shape_el_rel`
     (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:114`): the `n`-th

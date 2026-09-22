@@ -39,6 +39,26 @@ def parityGuard : Bool :=
 #eval parityGuard
 #guard parityGuard
 
+/-- The same four HOL-EVAL observations through the exact fixed-byte-width
+    interface `loadShapeBytes`.  `BitVec 32` instantiates `CrepBytesInWord` with
+    `bytesInWord = 4` (`byte$bytes_in_word` for a 32-bit word), matching the
+    probe's `32 word` values. -/
+def fixedProbeValue : CrepExp (BitVec 32) := .const (BitVec.ofNat 32 7)
+
+def fixedParityGuard : Bool :=
+  (loadShapeBytes (0 : BitVec 32) 0 fixedProbeValue).isEmpty &&
+  (loadShapeBytes (0 : BitVec 32) 1 fixedProbeValue ==
+    [.load (.const (BitVec.ofNat 32 7))]) &&
+  (loadShapeBytes (0 : BitVec 32) 2 fixedProbeValue ==
+    [.load (.const (BitVec.ofNat 32 7)),
+     .load (.op .add [.const (BitVec.ofNat 32 7), .const (BitVec.ofNat 32 4)])]) &&
+  (loadShapeBytes (BitVec.ofNat 32 4) 2 fixedProbeValue ==
+    [.load (.op .add [.const (BitVec.ofNat 32 7), .const (BitVec.ofNat 32 4)]),
+     .load (.op .add [.const (BitVec.ofNat 32 7), .const (BitVec.ofNat 32 8)])])
+
+#eval fixedParityGuard
+#guard fixedParityGuard
+
 def check (name : String) (actual expected : Bool) : IO Bool := do
   if actual == expected then
     IO.println s!"PASS {name}"
@@ -53,7 +73,8 @@ def runChecks : IO Bool := do
     check "crep load_shape zero one" (isZeroOne (loadShape 0 4 1 probeValue)) true,
     check "crep load_shape zero two" (isZeroTwo (loadShape 0 4 2 probeValue)) true,
     check "crep load_shape nonzero two"
-      (isNonzeroTwo (loadShape 4 4 2 probeValue)) true ].mapM id
+      (isNonzeroTwo (loadShape 4 4 2 probeValue)) true,
+    check "crep load_shape fixed byte width" fixedParityGuard true ].mapM id
   pure (results.all id)
 
 end Flapjack.Test.CrepeLoadShapeParity

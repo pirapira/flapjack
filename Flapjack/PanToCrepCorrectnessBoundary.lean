@@ -159,6 +159,18 @@ theorem panValueCtxtMax_empty [BEq String] (bound : Nat) (hbound : 0 ≤ bound) 
   intro name shape slots hlookup
   simp [lookupInfo] at hlookup
 
+/-- Cake `ctxt_max_el_leq` (`pan_to_crepProofScript.sml:1493`): in a
+`ctxt_max` context, every recorded slot number of a variable is bounded by the
+context bound. -/
+theorem panValueCtxtMax_getElem_le [BEq String] (bound : Nat)
+    (vars : InfoMap (Shape × List Nat)) (name : String) (shape : Shape)
+    (slots : List Nat) (n : Nat)
+    (hmax : panValueCtxtMax bound vars)
+    (hlookup : lookupInfo name vars = some (shape, slots))
+    (hn : n < slots.length) :
+    slots[n] ≤ bound :=
+  hmax.2 name shape slots hlookup slots[n] (List.getElem_mem hn)
+
 /-- The empty variable map satisfies Cake's `no_overlap`. -/
 theorem panValueNoOverlap_empty [BEq String] :
     panValueNoOverlap ([] : InfoMap (Shape × List Nat)) := by

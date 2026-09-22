@@ -489,4 +489,140 @@ theorem resVar_commutes [BEq α] [LawfulBEq α] (lc lc' : FiniteMap α β) (n h 
       simp only [resVar]
       rw [FUPDATE_comm lc h vh n vn hne.symm]
 
+/-- Counterpart of Cake's `flookup_res_var_distinct_eq` (crepPropsScript.sml:763):
+folding `res_var` over a list whose keys do not contain `x` leaves `x` untouched. -/
+theorem FLOOKUP_foldl_resVar_not_mem [BEq α] [LawfulBEq α]
+    (xs : List (α × Option β)) (f : FiniteMap α β) (x : α)
+    (h : x ∉ xs.map Prod.fst) :
+    FLOOKUP (xs.foldl resVar f) x = FLOOKUP f x := by
+  induction xs generalizing f with
+  | nil => rfl
+  | cons entry rest ih =>
+    simp only [List.map_cons, List.mem_cons, not_or] at h
+    obtain ⟨hne, hrest⟩ := h
+    rw [List.foldl_cons, ih (resVar f entry) hrest, FLOOKUP_resVar]
+    have hfalse : (x == entry.1) = false := beq_eq_false_iff_ne.mpr hne
+    simp [hfalse]
+
+/-- Counterpart of Cake's `flookup_res_var_distinct_zip_eq` (crepPropsScript.sml:777):
+the zipped form of `FLOOKUP_foldl_resVar_not_mem`. -/
+theorem FLOOKUP_foldl_resVar_zip_not_mem [BEq α] [LawfulBEq α]
+    (xs : List α) (ys : List (Option β)) (f : FiniteMap α β) (x : α)
+    (hlen : xs.length = ys.length) (h : x ∉ xs) :
+    FLOOKUP ((xs.zip ys).foldl resVar f) x = FLOOKUP f x := by
+  apply FLOOKUP_foldl_resVar_not_mem
+  rw [List.map_fst_zip (by omega)]
+  exact h
+
+/-- Counterpart of Cake's `flookup_res_var_distinct` (crepPropsScript.sml:796):
+looking up a key list disjoint from the updated key list is unaffected by the fold. -/
+theorem map_FLOOKUP_foldl_resVar_zip [BEq α] [LawfulBEq α]
+    (xs : List α) (ys : List α) (zs : List (Option β)) (f : FiniteMap α β)
+    (hdisj : ListDisjoint xs ys) (hlen : xs.length = zs.length) :
+    ys.map (fun y => FLOOKUP ((xs.zip zs).foldl resVar f) y) =
+      ys.map (fun y => FLOOKUP f y) := by
+  revert hdisj
+  induction ys with
+  | nil => intro _; rfl
+  | cons y rest ih =>
+    intro hdisj
+    simp only [List.map_cons, List.cons.injEq]
+    refine ⟨?_, ?_⟩
+    · exact FLOOKUP_foldl_resVar_zip_not_mem xs zs f y hlen
+        (fun hy => hdisj y hy (by simp))
+    · exact ih (fun v hv hmem => hdisj v hv (by simp [hmem]))
+
+theorem FLOOKUP_FUPDATE_LIST_zip_not_mem [BEq α] [LawfulBEq α]
+    (xs : List α) (ys : List β) (f : FiniteMap α β) (n : α)
+    (hlen : xs.length = ys.length) (h : n ∉ xs) :
+    FLOOKUP (FUPDATE_LIST f (xs.zip ys)) n = FLOOKUP f n := by
+  apply FLOOKUP_FUPDATE_LIST_not_mem
+  rw [List.map_fst_zip (by omega)]
+  exact h
+
+theorem map_FLOOKUP_FUPDATE_LIST_zip_not_mem [BEq α] [LawfulBEq α]
+    (xs : List α) (ys : List α) (zs : List β) (f : FiniteMap α β)
+    (hdisj : ListDisjoint xs ys) (hlen : xs.length = zs.length) :
+    ys.map (fun y => FLOOKUP (FUPDATE_LIST f (xs.zip zs)) y) =
+      ys.map (fun y => FLOOKUP f y) := by
+  revert hdisj
+  induction ys with
+  | nil => intro _; rfl
+  | cons y rest ih =>
+    intro hdisj
+    simp only [List.map_cons, List.cons.injEq]
+    refine ⟨?_, ?_⟩
+    · exact FLOOKUP_FUPDATE_LIST_zip_not_mem xs zs f y hlen
+        (fun hy => hdisj y hy (by simp))
+    · exact ih (fun v hv hmem => hdisj v hv (by simp [hmem]))
+
+theorem map_FLOOKUP_foldl_resVar_zip_fupdate [BEq α] [LawfulBEq α]
+    (xs : List α) (ys : List α) (as : List β) (cs : List (Option β))
+    (fm : FiniteMap α β) (hdisj : ListDisjoint xs ys)
+    (hlenAs : xs.length = as.length) (hlenCs : xs.length = cs.length) :
+    ys.map (fun y => FLOOKUP ((xs.zip cs).foldl resVar (FUPDATE_LIST fm (xs.zip as))) y) =
+      ys.map (fun y => FLOOKUP fm y) := by
+  rw [map_FLOOKUP_foldl_resVar_zip xs ys cs (FUPDATE_LIST fm (xs.zip as)) hdisj hlenCs]
+  exact map_FLOOKUP_FUPDATE_LIST_zip_not_mem xs ys as fm hdisj hlenAs
+
+/-- Cake `domsub_commutes_fupdate` (pan_commonPropsScript.sml:319): domain
+subtraction at a key absent from the update list commutes with the list update. -/
+theorem FDOMSUB_FUPDATE_LIST_commutes [BEq α] [LawfulBEq α]
+    (xs : List α) (ys : List β) (fm : FiniteMap α β) (x : α)
+    (h : x ∉ xs) (hlen : xs.length = ys.length) :
+    FDOMSUB (FUPDATE_LIST fm (xs.zip ys)) x =
+      FUPDATE_LIST (FDOMSUB fm x) (xs.zip ys) := by
+  induction xs generalizing fm ys with
+  | nil =>
+    cases ys with
+    | nil => simp [FUPDATE_LIST_nil]
+    | cons y ys => simp at hlen
+  | cons a xs ih =>
+    cases ys with
+    | nil => simp at hlen
+    | cons y ys =>
+      have hne : x ≠ a := by
+        intro he
+        exact h (by simp [he])
+      have htail : x ∉ xs := by
+        intro hmem
+        exact h (by simp [hmem])
+      have hlenTail : xs.length = ys.length := by simpa using hlen
+      rw [List.zip_cons_cons, FUPDATE_LIST_cons]
+      rw [ih ys (FUPDATE fm (a, y)) htail hlenTail]
+      rw [FDOMSUB_FUPDATE_neq fm x a y hne]
+      rw [FUPDATE_LIST_cons]
+
+/-- Cake `update_eq_zip_flookup` (pan_commonPropsScript.sml:244): a key occurring
+in a distinct key list looks up its paired value in the updated map. -/
+theorem FLOOKUP_FUPDATE_LIST_zip_getElem [BEq α] [LawfulBEq α]
+    (xs : List α) (ys : List β) (f : FiniteMap α β) (n : Nat)
+    (hdistinct : xs.Nodup) (hlen : xs.length = ys.length) (hn : n < xs.length) :
+    FLOOKUP (FUPDATE_LIST f (xs.zip ys)) (xs[n]'hn) =
+      some (ys[n]'(by rw [← hlen]; exact hn)) := by
+  induction xs generalizing f ys n with
+  | nil => simp at hn
+  | cons a xs ih =>
+    cases ys with
+    | nil => simp at hlen
+    | cons y ys =>
+      rw [List.nodup_cons] at hdistinct
+      obtain ⟨ha, hdistinctTail⟩ := hdistinct
+      have hlenTail : xs.length = ys.length := by simpa using hlen
+      cases n with
+      | zero =>
+        simp only [List.getElem_cons_zero]
+        rw [List.zip_cons_cons, FUPDATE_LIST_cons]
+        rw [FLOOKUP_FUPDATE_LIST_not_mem (FUPDATE f (a, y)) (xs.zip ys) a
+          (by rw [List.map_fst_zip (by omega)]; exact ha)]
+        rw [FLOOKUP_update]
+        simp
+      | succ k =>
+        have hk : k < xs.length := by
+          simp only [List.length_cons] at hn
+          omega
+        simp only [List.getElem_cons_succ]
+        rw [List.zip_cons_cons, FUPDATE_LIST_cons]
+        exact ih ys (FUPDATE f (a, y)) k hdistinctTail hlenTail hk
+
 end Flapjack

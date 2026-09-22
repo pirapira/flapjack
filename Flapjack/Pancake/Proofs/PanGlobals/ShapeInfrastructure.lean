@@ -8,10 +8,9 @@ faithful `panSem$evaluate_decls` port (`evaluateDecls`), as the tagged
 `evaluate_decls_functions_wf` port. The remaining predicates and helper lemmas
 describe Flapjack's own `isWfShape` bookkeeping and list/filter support; they
 are Flapjack-specific infrastructure with no separate HOL theorem, and none
-claims a direct HOL correspondence. The full HOL `compile_top_shape_wf` is
-proved in `Flapjack/Pancake/Proofs/PanGlobals.lean`; the
-`compile_top_shape_wf_nil` corollary remains open under bead
-`flapjack-pxn.18.3.2.2`.
+claims a direct HOL correspondence. The full HOL `compile_top_shape_wf` and
+its `compile_top_shape_wf_nil` corollary are proved in
+`Flapjack/Pancake/Proofs/PanGlobals.lean`.
 -/
 
 namespace Flapjack

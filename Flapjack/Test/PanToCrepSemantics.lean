@@ -21,6 +21,7 @@ open Flapjack
 #check @Flapjack.PanValuePcSemanticClockEvidence.crossClockNormalForbiddenResultRel
 #check @Flapjack.PanValuePcSemanticClockEvidence.crossClockReturnedSemanticOutcomeRel
 #check @Flapjack.PanValuePcSemanticClockEvidence.crossClockReturnedResultRel
+#check @Flapjack.PanValuePcSemanticClockEvidence.crossClockReturnedResultRel_withContext
 #check @Flapjack.PanValuePcSemanticClockEvidence.crossClockNormalResultRel
 #check @Flapjack.PanValuePcSemanticClockEvidence.crossClockNormalResultRel_withContext
 #check @Flapjack.panCrepSemanticAgreement_of_pcCompileCorrect

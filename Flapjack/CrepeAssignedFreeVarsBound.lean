@@ -964,4 +964,24 @@ theorem rewrittenContext_unassigned [LawfulBEq String]
       vars := (v, (sh, nvars)) :: ctxt.vars
       maxVar := ctxt.maxVar + Shape.shapeSize sh } p x hmaxN hslot hxbound hmem
 
+/-! Cake `no_overlap_wrap_rt_some_all_distinct`
+    (`pan_to_crepProofScript.sml:2461`): if a variable's slot list survives
+    `wrap_rt` (i.e. is a genuine multi-word return slot list), then it is
+    duplicate-free in a `no_overlap` context.  This is the distinctness
+    obligation used when a call installs the callee's parameter slots into the
+    caller's context. -/
+theorem panValueNoOverlap_wrapRt_nodup [BEq String] [LawfulBEq String]
+    (vars : InfoMap (Shape × List Nat)) (r : VarName)
+    (vsh : Shape) (ns : List Nat)
+    (hnooverlap : panValueNoOverlap vars)
+    (hwrap : wrapRt (lookupInfo r vars) = some (vsh, ns)) :
+    ns.Nodup := by
+  cases hlk : lookupInfo r vars with
+  | none => simp [hlk, wrapRt] at hwrap
+  | some info =>
+      simp only [hlk] at hwrap
+      have hns : ns = info.2 := congrArg Prod.snd (wrapRt_some_eq_some hwrap)
+      rw [hns]
+      exact hnooverlap.1 r info.1 info.2 hlk
+
 end Flapjack

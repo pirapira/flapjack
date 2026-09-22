@@ -540,4 +540,51 @@ theorem crepExpsOf_transformEoc (returnNames : List Nat) (program : CrepProg α)
   · intro program h1 h2 h3 h4 h5 h6 h7 h8 e hmem
     cases program <;> simp_all [crepTransformEoc]
 
+theorem crepExpsOf_transformBranch (loopDepth : Nat) (returnNames : List Nat)
+    (program : CrepProg α) :
+    ∀ {e : CrepExp α},
+      e ∈ crepExpsOf (crepTransformBranch loopDepth returnNames program) →
+        e ∈ crepExpsOf program := by
+  apply crepTransformBranch.induct (motive := fun loopDepth program =>
+    ∀ {e : CrepExp α},
+      e ∈ crepExpsOf (crepTransformBranch loopDepth returnNames program) →
+        e ∈ crepExpsOf program)
+  · intro loopDepth values e hmem
+    simp only [crepTransformBranch, crepExpsOf, List.append_nil] at hmem ⊢
+    exact crepExpsOf_nestedSeq_assign_zipWith returnNames values hmem
+  · intro loopDepth name arguments e hmem
+    simp only [crepTransformBranch, crepExpsOf, List.append_nil] at hmem ⊢
+    exact hmem
+  · intro loopDepth names name arguments e hmem
+    simpa only [crepTransformBranch, crepExpsOf] using hmem
+  · intro loopDepth names handler body name arguments ih e hmem
+    simp only [crepTransformBranch, crepExpsOf] at hmem ⊢
+    rcases List.mem_append.mp hmem with h | h
+    · exact List.mem_append.mpr (Or.inl h)
+    · exact List.mem_append.mpr (Or.inr (ih h))
+  · intro loopDepth name value body ih e hmem
+    simp only [crepTransformBranch, crepExpsOf, List.mem_cons] at hmem ⊢
+    rcases hmem with heq | hmem
+    · exact Or.inl heq
+    · exact Or.inr (ih hmem)
+  · intro loopDepth condition body ih e hmem
+    simp only [crepTransformBranch, crepExpsOf, List.mem_cons] at hmem ⊢
+    rcases hmem with heq | hmem
+    · exact Or.inl heq
+    · exact Or.inr (ih hmem)
+  · intro loopDepth first second ihFirst ihSecond e hmem
+    simp only [crepTransformBranch, crepExpsOf] at hmem ⊢
+    rcases List.mem_append.mp hmem with h | h
+    · exact List.mem_append.mpr (Or.inl (ihFirst h))
+    · exact List.mem_append.mpr (Or.inr (ihSecond h))
+  · intro loopDepth condition thenBranch elseBranch ihThen ihElse e hmem
+    simp only [crepTransformBranch, crepExpsOf, List.mem_cons] at hmem ⊢
+    rcases hmem with heq | hmem
+    · exact Or.inl heq
+    · rcases List.mem_append.mp hmem with h | h
+      · exact Or.inr (List.mem_append.mpr (Or.inl (ihThen h)))
+      · exact Or.inr (List.mem_append.mpr (Or.inr (ihElse h)))
+  · intro loopDepth program h1 h2 h3 h4 h5 h6 h7 h8 e hmem
+    cases program <;> simp_all [crepTransformBranch]
+
 end Flapjack

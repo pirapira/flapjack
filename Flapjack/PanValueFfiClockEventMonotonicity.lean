@@ -2427,4 +2427,179 @@ theorem evalPanValueFfiProgSteps_eventSafeLeaf_ioEvents_prefix
               | nStruct _ _ => simp at hstep
 
 
+
+set_option linter.unusedSimpArgs false in
+theorem evalPanValueFfiProgSteps_extCall_ioEvents_prefix
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (function : FunName)
+    (configuration configurationLength array arrayLength : Exp α)
+    (result : PanValueFfiControlResult α σ) (steps : Nat)
+    (memoryAccess : Option (PanValueMemoryAccess α)) (contracts : Option PanValueCallContracts)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ)) (clock : Nat)
+    (hstateful : panValueFfiStatefulHandlerPreservesIoEvents handler)
+    (hmemory : ∀ (memoryHandler : PanValueMemoryFfiHandler α σ),
+      panValueFfiMemoryHandlerPreservesIoEvents memoryHandler)
+    (hstep : evalPanValueFfiProgSteps context primitive handler structs functions
+      baseAddress topAddress bytesInWord (Nat.succ fuel) locals globals memory ffi
+      (.extCall function configuration configurationLength array arrayLength)
+      (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) = some (result, steps)) :
+    ffi.ioEvents <+: (panResultFfi ((.control result : PanValueFfiClockOutcome α σ), clock)).ioEvents := by
+  rw [evalPanValueFfiProgSteps] at hstep
+  cases hvalues : evalPanValueExpsCounted structs locals globals memory
+      baseAddress topAddress bytesInWord
+      [configuration, configurationLength, array, arrayLength]
+      (memoryAccess := memoryAccess) with
+  | none =>
+      simp only [hvalues, Option.bind_eq_bind, Option.bind_none] at hstep
+      exact absurd hstep (by simp)
+  | some pair =>
+      obtain ⟨valuesResult, valueSteps⟩ := pair
+      simp only [hvalues, Option.bind_eq_bind, Option.bind_some] at hstep
+      cases valuesResult with
+      | nil => simp at hstep
+      | cons v1 rest1 =>
+        cases rest1 with
+        | nil => simp at hstep
+        | cons v2 rest2 =>
+          cases rest2 with
+          | nil => simp at hstep
+          | cons v3 rest3 =>
+            cases rest3 with
+            | nil => simp at hstep
+            | cons v4 rest4 =>
+              cases rest4 with
+              | cons _ _ => simp at hstep
+              | nil =>
+                cases v1 with
+                | word configurationValue =>
+                  cases v2 with
+                  | word configurationLengthValue =>
+                    cases v3 with
+                    | word arrayValue =>
+                      cases v4 with
+                      | word arrayLengthValue =>
+                        cases memoryHandler with
+                        | some mh =>
+                          cases hcall : mh function configurationValue configurationLengthValue
+                              arrayValue arrayLengthValue locals memory ffi with
+                          | none =>
+                            simp only [hcall, Option.bind_eq_bind, Option.bind_none] at hstep
+                            cases memoryAccess with
+                            | none =>
+                              cases hhandler : handler function configurationValue
+                                  configurationLengthValue arrayValue arrayLengthValue locals ffi with
+                              | none =>
+                                simp only [hhandler, Option.bind_eq_bind, Option.bind_none] at hstep
+                                exact absurd hstep (by simp)
+                              | some pairH =>
+                                obtain ⟨nextLocals, nextFfi⟩ := pairH
+                                simp only [hhandler, Option.bind_eq_bind, Option.bind_some,
+                                  Option.pure_def] at hstep
+                                obtain ⟨rfl, rfl⟩ := hstep
+                                simp only [panResultFfi]
+                                exact hstateful function configurationValue configurationLengthValue
+                                  arrayValue arrayLengthValue locals ffi nextLocals nextFfi hhandler
+                            | some access =>
+                              cases hx : panValueFfiExtCall access context memory bytesInWord ffi
+                                  function configurationValue configurationLengthValue arrayValue
+                                  arrayLengthValue with
+                              | none =>
+                                simp only [hx, Option.bind_eq_bind, Option.bind_none] at hstep
+                                exact absurd hstep (by simp)
+                              | some res =>
+                                cases res with
+                                | returned nextMemory nextFfi =>
+                                  simp only [hx, Option.bind_eq_bind, Option.bind_some,
+                                    Option.pure_def] at hstep
+                                  obtain ⟨rfl, rfl⟩ := hstep
+                                  simp only [panResultFfi]
+                                  simpa [panValueFfiExtCallResultFfi] using
+                                    panValueFfiExtCall_ioEvents_prefix access context memory
+                                      bytesInWord ffi function configurationValue
+                                      configurationLengthValue arrayValue arrayLengthValue
+                                      (.returned nextMemory nextFfi) hx
+                                | final nextFfi event =>
+                                  simp only [hx, Option.bind_eq_bind, Option.bind_some,
+                                    Option.pure_def] at hstep
+                                  obtain ⟨rfl, rfl⟩ := hstep
+                                  simp only [panResultFfi]
+                                  simpa [panValueFfiExtCallResultFfi] using
+                                    panValueFfiExtCall_ioEvents_prefix access context memory
+                                      bytesInWord ffi function configurationValue
+                                      configurationLengthValue arrayValue arrayLengthValue
+                                      (.final nextFfi event) hx
+                          | some triple =>
+                            obtain ⟨nextLocals, nextMemory, nextFfi⟩ := triple
+                            simp only [hcall, Option.bind_eq_bind, Option.bind_some,
+                              Option.pure_def] at hstep
+                            obtain ⟨rfl, rfl⟩ := hstep
+                            simp only [panResultFfi]
+                            exact hmemory mh function configurationValue configurationLengthValue
+                              arrayValue arrayLengthValue locals memory ffi nextLocals nextMemory
+                              nextFfi hcall
+                        | none =>
+                          cases memoryAccess with
+                          | none =>
+                            cases hhandler : handler function configurationValue
+                                configurationLengthValue arrayValue arrayLengthValue locals ffi with
+                            | none =>
+                              simp only [hhandler, Option.bind_eq_bind, Option.bind_none] at hstep
+                              exact absurd hstep (by simp)
+                            | some pairH =>
+                              obtain ⟨nextLocals, nextFfi⟩ := pairH
+                              simp only [hhandler, Option.bind_eq_bind, Option.bind_some,
+                                Option.pure_def] at hstep
+                              obtain ⟨rfl, rfl⟩ := hstep
+                              simp only [panResultFfi]
+                              exact hstateful function configurationValue configurationLengthValue
+                                arrayValue arrayLengthValue locals ffi nextLocals nextFfi hhandler
+                          | some access =>
+                            cases hx : panValueFfiExtCall access context memory bytesInWord ffi
+                                function configurationValue configurationLengthValue arrayValue
+                                arrayLengthValue with
+                            | none =>
+                              simp only [hx, Option.bind_eq_bind, Option.bind_none] at hstep
+                              exact absurd hstep (by simp)
+                            | some res =>
+                              cases res with
+                              | returned nextMemory nextFfi =>
+                                simp only [hx, Option.bind_eq_bind, Option.bind_some,
+                                  Option.pure_def] at hstep
+                                obtain ⟨rfl, rfl⟩ := hstep
+                                simp only [panResultFfi]
+                                simpa [panValueFfiExtCallResultFfi] using
+                                  panValueFfiExtCall_ioEvents_prefix access context memory
+                                    bytesInWord ffi function configurationValue
+                                    configurationLengthValue arrayValue arrayLengthValue
+                                    (.returned nextMemory nextFfi) hx
+                              | final nextFfi event =>
+                                simp only [hx, Option.bind_eq_bind, Option.bind_some,
+                                  Option.pure_def] at hstep
+                                obtain ⟨rfl, rfl⟩ := hstep
+                                simp only [panResultFfi]
+                                simpa [panValueFfiExtCallResultFfi] using
+                                  panValueFfiExtCall_ioEvents_prefix access context memory
+                                    bytesInWord ffi function configurationValue
+                                    configurationLengthValue arrayValue arrayLengthValue
+                                    (.final nextFfi event) hx
+                      | rStruct _ => simp at hstep
+                      | nStruct _ _ => simp at hstep
+                    | rStruct _ => simp at hstep
+                    | nStruct _ _ => simp at hstep
+                  | rStruct _ => simp at hstep
+                  | nStruct _ _ => simp at hstep
+                | rStruct _ => simp at hstep
+                | nStruct _ _ => simp at hstep
+
+
 end Flapjack

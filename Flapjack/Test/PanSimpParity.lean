@@ -2758,3 +2758,7 @@ to the explicit per-leaf residual obligation `hleaf`. -/
 except `extCall`, whose event preservation depends on the handler premises). -/
 #check @Flapjack.PanValueFfiEventSafeLeaf
 #check @Flapjack.evalPanValueFfiProgSteps_eventSafeLeaf_ioEvents_prefix
+
+/-! The `extCall` leaf needs explicit handler event-preservation premises; this is the
+remaining sub-case of the generic `hleaf` obligation. -/
+#check @Flapjack.evalPanValueFfiProgSteps_extCall_ioEvents_prefix

@@ -755,6 +755,76 @@ theorem evalPanValueFfiClockProgram_of_related_declarations_and_normal_call_resu
     htargetEntry,
     hnormal.1, hnormal.2.1, hnormal.2.2⟩
 
+/-! The normal declaration bridge also has a context-preserving form without
+    requiring a callee-body lookup.  This is the direct state-relation step
+    needed when the enclosing `state_rel_imp_semantics_to_crep` induction has
+    already established the call result but not the stronger declaration
+    adequacy facts. -/
+theorem evalPanValueFfiClockProgram_of_related_declarations_and_normal_call_result_rel_ioEvents_prefix_with_context
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (initial : PanValueFfiProgramState α σ)
+    (clock : Nat)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (fuel : Nat) (declarations : List (Decl α))
+    (entry : FunName) (arguments : List (Exp α))
+    (state : PanValueProgramState α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (nextClock : Nat)
+    (pcContext : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (targetState : CrepState α)
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ))
+    (targetInitial : PanValueProgramState α)
+    (hinitial : panValueProgramStateRel initial.source targetInitial)
+    (hdeclarations : evalPanValueDeclarations initial.source declarations
+      (memoryAccess := memoryAccess) = some state)
+    (hentry : lookupInfo entry state.returnShapes = none)
+    (hcall : evalPanValueFfiClockCall context primitive handler state.structs
+      state.functions state.baseAddress state.topAddress state.bytesInWord fuel
+      (fun _ => none) state.globals state.memory initial.ffi clock none entry arguments
+      (memoryAccess := memoryAccess)
+      (contracts := some (PanValueCallContracts.mk state.returnShapes
+        state.exceptions state.parameterShapes))
+      (memoryHandler := memoryHandler) =
+      some (.control (.normal locals globals memory ffi), nextClock))
+    (hstateContext : panValueCrepStateRelWithContext state.structs pcContext
+      locals globals memory targetState)
+    (hprefix : initial.ffi.ioEvents <+: ffi.ioEvents) :
+    ∃ targetDeclaration,
+      evalPanValueDeclarations targetInitial (panSimpDecls declarations)
+        (memoryAccess := memoryAccess) = some targetDeclaration ∧
+      panValueProgramStateRel state targetDeclaration ∧
+      lookupInfo entry targetDeclaration.returnShapes = none ∧
+      evalPanValueFfiClockProgram context initial clock primitive handler fuel
+        declarations entry arguments (memoryAccess := memoryAccess)
+        (memoryHandler := memoryHandler) =
+        some (.control (.normal locals globals memory ffi), nextClock) ∧
+      panValuePcResultRel state.structs pcContext exceptionRel exceptionCode
+        globalsLookup (.normal locals globals memory) (.normal targetState) ∧
+      panValueCrepStateRelWithContext state.structs pcContext locals globals
+        memory targetState ∧
+      initial.ffi.ioEvents <+: ffi.ioEvents := by
+  have hstate := panValueCrepStateRelWithContext_to_stateRel
+    state.structs pcContext locals globals memory targetState hstateContext
+  have hnormal :=
+    evalPanValueFfiClockProgram_of_related_declarations_and_normal_call_result_rel_ioEvents_prefix
+      context initial clock primitive handler fuel declarations entry arguments state
+      locals globals memory ffi nextClock pcContext exceptionRel exceptionCode
+      globalsLookup targetState memoryAccess memoryHandler targetInitial
+      hinitial hdeclarations hentry hcall hstate hprefix
+  rcases hnormal with ⟨targetDeclaration, htargetDeclarations, hpostRel,
+    htargetEntry, hprogram, hresult, hprefix'⟩
+  exact ⟨targetDeclaration, htargetDeclarations, hpostRel, htargetEntry,
+    hprogram, hresult, hstateContext, hprefix'⟩
+
 /-! The adequacy-strengthened normal branch exposes the declaration facts needed
     by the subsequent `state_rel` induction: the transformed callee body and
     exception table are returned alongside the clocked evaluator result. -/

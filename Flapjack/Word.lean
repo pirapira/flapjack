@@ -133,7 +133,7 @@ inductive WordProg (α : Type u) where
      used by the handler.  Keeping all five fields here is important: the
      allocator and StackLang lowering use the cut sets to establish the
      caller boundary and the handler program/labels to preserve control flow.
-     The reduced Loop carrier is lifted to this shape by `loopToWordProg`
+     The reduced Loop carrier is lifted to this shape by `loopToWordCompFunc`
      until the Loop syntax itself is migrated to the exact carrier. -/
   | call (returns : Option
       (List Nat × (List Nat × List Nat) × WordProg α × Nat × Nat))
@@ -286,8 +286,7 @@ def wordCompileExpWithContext [OfNat α 1] (context : WordContext)
     word program never carries unreachable continuations.  A `.seq` whose first
     component ends in a transfer is terminal itself, hence the recursion in
     `wordProgIsTerminal`.  `wordProgDCE` mirrors that discarding as a pass over
-    an already lowered program; keeping it separate from `loopToWordProg`
-    preserves the raw translation used by the correctness proofs. -/
+    an already lowered program. -/
 def wordProgIsTerminal : WordProg α → Bool
   | .raise _ | .return _ _ | .break _ | .continue _ => true
   | .call none _ _ _ => true
@@ -317,7 +316,10 @@ def wordProgDCE : WordProg α → WordProg α
   decreasing_by
     all_goals decreasing_trivial
 
-def loopToWordProg [OfNat α 1] (context : WordContext) :
+/-! Atomic cases shared by the state-threaded `loop_to_word$comp` port below.
+    Structured control flow is handled there so this helper is not a second
+    program compiler. -/
+private def loopToWordAtom [OfNat α 1] (context : WordContext) :
     LoopProg α → WordProg α
   | .skip => .skip
   | .assign name value =>
@@ -353,37 +355,20 @@ def loopToWordProg [OfNat α 1] (context : WordContext) :
       .inst (.mem .store32 (wordFindVar context value) (wordFindVar context address))
   | .storeByte address value =>
       .inst (.mem .store8 (wordFindVar context value) (wordFindVar context address))
-  | .seq first second => .seq (loopToWordProg context first) (loopToWordProg context second)
-  | .ite operator condition right thenBranch elseBranch _ =>
-      .seq (.ite operator (wordFindVar context condition) (wordRegImm context right)
-        (loopToWordProg context thenBranch) (loopToWordProg context elseBranch)) .tick
-  | .loop liveIn body liveOut =>
-      .seq .tick (.seq (.loop (wordMkNewCutset context liveIn)
-        (loopToWordProg context body) (wordMkNewCutset context liveOut)) .tick)
+  | .seq _ _ | .ite _ _ _ _ _ _ | .loop _ _ _ => .skip
   | .break label => .break label
   | .continue label => .continue label
   | .raise exception => .raise (wordFindVar context exception)
   | .return values => .return 0 (wordMapVars context values)
   | .tick => .tick
-  | .mark body => loopToWordProg context body
+  | .mark _ => .skip
   | .fail => .skip
   | .locValue destination source =>
       /- The second field is a code label, not a virtual register.  CakeML's
          loop_to_word pass renames only the destination variable and preserves
          the label for the later code-environment lookup. -/
       .locValue (wordFindVar context destination) source
-  | .call returns target arguments none =>
-      .call (returns.map (fun (values, live) =>
-        (wordMapVars context values, (wordMkNewCutset context live, []),
-          .skip, 0, 0))) target
-        (wordMapVars context arguments)
-        none
-  | .call returns target arguments (some (exception, body, _, _)) =>
-      .call (returns.map (fun (values, live) =>
-        (wordMapVars context values, (wordMkNewCutset context live, []),
-          .skip, 0, 0))) target
-        (wordMapVars context arguments)
-        (some (wordFindVar context exception, loopToWordProg context body, 0, 0))
+  | .call _ _ _ _ => .skip
   | .ffi function configuration configurationLength array arrayLength live =>
       .ffi function (wordFindVar context configuration)
         (wordFindVar context configurationLength) (wordFindVar context array)
@@ -393,15 +378,9 @@ def loopToWordProg [OfNat α 1] (context : WordContext) :
       | some operator, some address =>
           .shareInst operator (wordFindVar context name) address
       | _, _ => .skip
-termination_by program => sizeOf program
-decreasing_by
-  all_goals decreasing_trivial
-
-/-! Stateful Loop-to-Word companion for the source-shaped compiler boundary.
+/-! Stateful Loop-to-Word compiler for the source-shaped compiler boundary.
     Cake's `comp` threads `(function label, fresh local label)` through calls;
-    the return and handler labels are observable in the final RISC-V artifact.
-    The older stateless helper above remains available to the pass-local
-    semantics and uses the historical zero labels. -/
+    the return and handler labels are observable in the final RISC-V artifact. -/
 def loopToWordProgWithLabels [OfNat α 1] (context : WordContext) :
     (Nat × Nat) → LoopProg α → WordProg α × (Nat × Nat)
   | labels, .seq first second =>
@@ -442,19 +421,9 @@ def loopToWordProgWithLabels [OfNat α 1] (context : WordContext) :
           (wordMapVars context arguments)
           (some (wordFindVar context exception, handlerBody,
             handlerLabels.1, handlerLabels.2))) .tick, finalLabels)
-  | labels, program => (loopToWordProg context program, labels)
+  | labels, program => (loopToWordAtom context program, labels)
   termination_by _ program => sizeOf program
   decreasing_by
     all_goals decreasing_trivial
-
-theorem loopToWordProg_skip [OfNat α 1] (context : WordContext) :
-    loopToWordProg context (.skip : LoopProg α) = .skip := by
-  simp [loopToWordProg]
-
-theorem loopToWordProg_seq [OfNat α 1] (context : WordContext)
-    (first second : LoopProg α) :
-    loopToWordProg context (.seq first second) =
-      .seq (loopToWordProg context first) (loopToWordProg context second) := by
-  simp [loopToWordProg]
 
 end Flapjack

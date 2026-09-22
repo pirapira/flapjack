@@ -1,5 +1,4 @@
 import Flapjack.LoopSemantics
-import Flapjack.RiscV.PanSemantics
 
 /-!
 # Pancake Loop primitive semantics

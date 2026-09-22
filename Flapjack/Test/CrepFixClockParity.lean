@@ -1,5 +1,4 @@
 import Flapjack.CrepFixClock
-import Flapjack.Test.CrepeSemantics
 
 /-!
 # Parity checks for `crepSem$fix_clock_def`

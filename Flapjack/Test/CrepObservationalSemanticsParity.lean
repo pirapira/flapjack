@@ -1,4 +1,3 @@
-import Flapjack.CrepObservationalSemantics
 
 /-!
 # Parity checks for Crepe `semantics_def`

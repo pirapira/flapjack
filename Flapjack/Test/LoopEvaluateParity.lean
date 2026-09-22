@@ -1,5 +1,4 @@
 import Flapjack.LoopEvaluate
-import Flapjack.RiscV.PanSemantics
 
 /-!
 # Source parity for Pancake `loopSem$evaluate`

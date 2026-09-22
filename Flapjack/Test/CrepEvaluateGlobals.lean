@@ -1,4 +1,3 @@
-import Flapjack.CrepEvaluate
 
 /-! Regression tests for the `crepEvaluate` global/memory boundary
     (`crepSemScript.sml:111,288-291`).  Globals are a separate finmap:

@@ -1,4 +1,3 @@
-import Flapjack.CrepeGlobalEvaluator
 import Flapjack.RiscV.PanMemory
 
 /-!

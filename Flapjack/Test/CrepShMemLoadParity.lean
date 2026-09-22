@@ -1,5 +1,4 @@
 import Flapjack.CrepShMemLoad
-import Flapjack.Test.CrepeSemantics
 
 /-!
 # Parity checks for `crepSem$sh_mem_load_def`

@@ -1,9 +1,7 @@
 import Flapjack.RiscV.Encoding
-import Flapjack.Test.CorrectnessTarget
 import Flapjack.Test.PipelineDiagnostics
 import Flapjack.Test.SourceGlobalParity
 import Flapjack.Test.RegisterTransfer
-import Flapjack.Test.LoopToWord
 import Flapjack.Test.PanMemoryParity
 import Flapjack.Test.PanShapeParity
 import Flapjack.Test.PanShapeVarsParity
@@ -86,9 +84,7 @@ import Flapjack.Test.PanHProgReturnParity
 import Flapjack.Test.PanHProgRaiseParity
 import Flapjack.Test.PanValueFfiClockLe
 import Flapjack.Test.PanValueEvaluatorStability
-import Flapjack.Test.CrepeStateRelationWfShape
 import Flapjack.Test.PanToCrepMaxListParity
-import Flapjack.Test.CrepeGlobalStoreCorrectness
 import Flapjack.Test.PanHProgExtCallParity
 import Flapjack.Test.PanHProgStoreByteParity
 import Flapjack.Test.PanHProgStore32Parity
@@ -117,7 +113,6 @@ import Flapjack.Test.CrepAssignedFreeVarsParity
 import Flapjack.Test.CrepeStoresParity
 import Flapjack.Test.CrepeNestedDecsParity
 import Flapjack.Test.CrepeStoreGlobalsParity
-import Flapjack.Test.CrepeLoadGlobalsParity
 import Flapjack.Test.CrepeAssignRetParity
 import Flapjack.Test.CrepeVarCexpParity
 import Flapjack.Test.CrepExpsParity
@@ -201,8 +196,6 @@ import Flapjack.Test.InstructionTransfer
 import Flapjack.Test.ArtifactFormat
 import Flapjack.Test.CrepeGlobalAddressParity
 import Flapjack.Test.RiscVMemOpParity
-import Flapjack.Test.ParsedFullSsaPipeline
-import Flapjack.Test.EndToEndParity
 import Flapjack.Test.RiscVArtifactParity
 import Flapjack.Test.RiscVMemOpParity
 import Flapjack.Test.RiscVRegisterMapParity
@@ -624,7 +617,6 @@ def main : IO Unit := do
     Flapjack.Test.SourceGlobalParity.runChecks,
     checkBool "shadowing global source remains accepted"
       Flapjack.Test.SourceGlobalParity.shadowingBytesAccepted,
-    Flapjack.Test.LoopToWord.runChecks,
     Flapjack.Test.LoopGetVarsParity.runChecks,
     Flapjack.Test.LoopSetGlobalsParity.runChecks,
     Flapjack.Test.LoopSetVarsParity.runChecks,

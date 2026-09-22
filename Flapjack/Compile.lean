@@ -401,32 +401,6 @@ def panToCrepCompFunc [BEq α] [OfNat α 0] [Add α]
   compileProg
     { context with vars := panToCrepMakeVmap params, maxVar := vmax } body
 
-def compileFunDecl [BEq α] [OfNat α 0] [Add α]
-    (context : CompileContext α) (declaration : FunDecl α) : CompiledFunction α :=
-  let (_vars, params, maxVar) := compileParamVars declaration.params 0
-  let functionContext :=
-    { context with vars := panToCrepMakeVmap declaration.params, maxVar := maxVar }
-  { name := declaration.name, params := params,
-    body := compileProg functionContext declaration.body,
-    returnShape := declaration.returnShape }
-
-def compileFunctions [BEq α] [OfNat α 0] [Add α]
-    (context : CompileContext α) : List (Decl α) → List (CompiledFunction α)
-  | [] => []
-  | .function declaration :: declarations =>
-      compileFunDecl context declaration :: compileFunctions context declarations
-  | _ :: declarations => compileFunctions context declarations
-termination_by declarations => sizeOf declarations
-
-/-! Existing context-normalized function-table compiler used by the
-    correctness layer.  `compileToCrep` below preserves the source function's
-    last-parameter-slot `vmax` convention for direct parity with HOL. -/
-def compileToCrepe [BEq α] [OfNat α 0] [Add α]
-    (context : CompileContext α) (declarations : List (Decl α)) :
-    List (CompiledFunction α) :=
-  let context := { context with functions := functionInfos declarations }
-  compileFunctions context declarations
-
 /-! Faithful port of `pan_to_crep$compile_to_crep` from
     `cakeml/pancake/pan_to_crepScript.sml:383-391`.
 

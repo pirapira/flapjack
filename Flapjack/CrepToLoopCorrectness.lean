@@ -1,4 +1,3 @@
-import Flapjack.CorrectnessFfi
 import Flapjack.CrepeSemantics
 import Flapjack.CrepeRuntime
 import Flapjack.CrepToLoop

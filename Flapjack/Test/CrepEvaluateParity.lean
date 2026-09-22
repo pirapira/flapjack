@@ -1,5 +1,3 @@
-import Flapjack.CrepEvaluate
-import Flapjack.Test.CrepeSemantics
 
 /-!
 # Parity checks for Pancake `crepSem.evaluate_def`

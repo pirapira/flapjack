@@ -1,4 +1,3 @@
-import Flapjack.RiscV.PanSemantics
 
 /-!
 Parity test for the faithful source `AddCarry` primitive (`pan_primop`).

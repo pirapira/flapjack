@@ -1,5 +1,3 @@
-import Flapjack.RiscV.PanSemantics
-import Flapjack.CrepPrimop
 
 namespace Flapjack.Test.PanPrimopWfParity
 

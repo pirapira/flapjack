@@ -2,7 +2,6 @@ import Flapjack.RiscV.Backend
 import Flapjack.RiscV.CakeSoundness
 import Flapjack.RiscV.Calls
 import Flapjack.RiscV.CorrectnessBackend
-import Flapjack.RiscV.CorrectnessFfi
 import Flapjack.RiscV.Encoding
 import Flapjack.RiscV.Lab
 import Flapjack.RiscV.LocValue
@@ -311,10 +310,9 @@ example :
         (.assign 4 (.const (BitVec.ofNat 64 0x1234))) =
       some ([.lui 4 (BitVec.ofNat 64 1),
         .addi 4 4 (BitVec.ofNat 64 0x234)], []) := by
-  simpa [wordConstToInstructions, wordConst32ToInstructions, registerOfNat] using
-    (wordFunctionToRiscVWithCallsAndFfiCake_const_assign
-      ({ targets := [], services := [] } : WordCallFfiContext 64)
-      4 (BitVec.ofNat 64 0x1234))
+  simp [wordFunctionToRiscVWithCallsAndFfiCake,
+    wordFunctionToRiscVWithCallsCake, wordExpToInstructionsCake,
+    wordConstToInstructions, wordConst32ToInstructions, registerOfNat]
 
 example :
     wordFunctionToRiscVWithCallsAndFfiCake (width := 64)
@@ -469,20 +467,8 @@ example (state : State 64) :
       some (executeInstructions state
         [.lui 4 (BitVec.ofNat 64 1),
          .addi 4 4 (BitVec.ofNat 64 0x234)], []) := by
-  have hstraight : WordRiscVStraightLine
-      (.assign 4 (.const (BitVec.ofNat 64 0x1234)) : WordProg (Word 64)) :=
-    .assign _ _
-  have hcompile : wordFunctionToRiscVWithCallsAndFfiCake
-      ({ targets := [], services := [] } : WordCallFfiContext 64)
-      (.assign 4 (.const (BitVec.ofNat 64 0x1234)) : WordProg (Word 64)) =
-      some ([.lui 4 (BitVec.ofNat 64 1),
-        .addi 4 4 (BitVec.ofNat 64 0x234)], []) := by
-    simp [wordFunctionToRiscVWithCallsAndFfiCake,
-      wordFunctionToRiscVWithCallsCake, wordExpToInstructionsCake,
-      wordConstToInstructions, wordConst32ToInstructions, registerOfNat]
-  exact wordFunctionToRiscVWithCallsAndFfiCake_sound_of_straightLine
-    ({ targets := [], services := [] } : WordCallFfiContext 64)
-    state _ hstraight _ hcompile
+  simp [evalWordFunctionCake, wordExpToInstructionsCake,
+    wordConstToInstructions, wordConst32ToInstructions, registerOfNat]
 
 /-! The checked call-aware selector now has the same compositional theorem
     shape as the legacy theorem-facing selector.  This exercises the sequence

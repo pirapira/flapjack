@@ -48,6 +48,12 @@ inductive LoopWordLoc where
 /-- The code table is an association list of `(label, parameters, body)`. -/
 abbrev LoopCode (α : Type u) := List (Nat × List Nat × LoopProg α)
 
+def lookupLoopFunction : Nat → LoopCode α → Option (List Nat × LoopProg α)
+  | _, [] => none
+  | label, (candidate, parameters, body) :: functions =>
+      if label == candidate then some (parameters, body)
+      else lookupLoopFunction label functions
+
 /-- `find_code` from `loopSemScript.sml:147-163`. -/
 def findLoopCode (label : Option Nat) (args : List LoopWordLoc)
     (code : LoopCode LoopWordLoc) :

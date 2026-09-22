@@ -1,4 +1,3 @@
-import Flapjack.Test.CrepeSemantics
 
 /-!
 # Original-domain parity for `crepSem.lookup_code_def`

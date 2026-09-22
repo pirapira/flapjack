@@ -29,9 +29,9 @@ theorem distinctFunctionDeclarations_names_nodup :
   simp [distinctFunctionDeclarations, functionDeclarationNames]
 
 theorem distinctFunctionDeclarations_compiled_names_nodup :
-    (compileToCrepe distinctCompileContext distinctFunctionDeclarations).map
+    (compileToCrep distinctCompileContext distinctFunctionDeclarations).map
       CompiledFunction.name |>.Nodup := by
-  exact compileToCrepe_names_nodup _ _
+  exact compileToCrep_names_nodup _ _
     distinctFunctionDeclarations_names_nodup
 
 /-! Source-facing counterpart of Cake's
@@ -75,7 +75,7 @@ theorem distinctFunctionDeclarations_first_compiled_origin :
     (functionDeclarationNames duplicateFunctionDeclarations) = ["same", "same"]
 
 #guard
-    (compileToCrepe distinctCompileContext distinctFunctionDeclarations).map
+    (compileToCrep distinctCompileContext distinctFunctionDeclarations).map
       CompiledFunction.name = ["first", "second"]
 
 #guard

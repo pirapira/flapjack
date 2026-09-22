@@ -1,4 +1,3 @@
-import Flapjack.CrepPrimop
 
 /-!
 # Parity checks for Crepe `crep_primop_def`

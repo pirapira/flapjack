@@ -1,5 +1,4 @@
 import Flapjack.CrepEval
-import Flapjack.Test.CrepeSemantics
 
 /-!
 # Parity checks for `crepSem$eval_def`

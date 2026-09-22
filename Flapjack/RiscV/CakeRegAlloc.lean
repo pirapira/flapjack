@@ -536,21 +536,26 @@ decreasing_by all_goals decreasing_trivial
    accumulator, union the new node's partners once, then add the reverse
    edge to each existing member. Overlap handling preserves the reference
    live-list and graph behavior for duplicate names. -/
-def cakeExtendCliqueSetFast : List Nat → List Nat →
+def cakeExtendCliqueSetFastAux : List Nat → List Nat → Std.TreeSet Nat →
     CakeNodeMap (Std.TreeSet Nat) → CakeNodeMap (Std.TreeSet Nat) × List Nat
-  | [], cli, adj => (adj, cli)
-  | x :: xs, cli, adj =>
-      if cli.contains x then cakeExtendCliqueSetFast xs cli adj
+  | [], cli, _members, adj => (adj, cli)
+  | x :: xs, cli, members, adj =>
+      if members.contains x then
+        cakeExtendCliqueSetFastAux xs cli members adj
       else
-        let partners := Std.TreeSet.ofList cli
         let existingX := (adj.get x).getD ∅
-        let adjX := adj.set x (existingX.union partners)
+        let adjX := adj.set x (existingX.union members)
         let adjAll := cli.foldl (fun current y =>
           let existingY := (current.get y).getD ∅
           current.set y (existingY.insert x)) adjX
-        cakeExtendCliqueSetFast xs (x :: cli) adjAll
-termination_by new _ _ => sizeOf new
+        cakeExtendCliqueSetFastAux xs (x :: cli) (members.insert x) adjAll
+termination_by new _ _ _ => sizeOf new
 decreasing_by all_goals decreasing_trivial
+
+def cakeExtendCliqueSetFast : List Nat → List Nat →
+    CakeNodeMap (Std.TreeSet Nat) → CakeNodeMap (Std.TreeSet Nat) × List Nat
+  | new, cli, adj =>
+      cakeExtendCliqueSetFastAux new cli (Std.TreeSet.ofList cli) adj
 
 def cakeExtendCliqueSet : List Nat → List Nat →
     CakeNodeMap (Std.TreeSet Nat) → CakeNodeMap (Std.TreeSet Nat) × List Nat :=

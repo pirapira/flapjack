@@ -1428,6 +1428,7 @@ example :
 
 #check @panValuePcCodeRelConcrete_compileToCrep
 #check @panValuePcRaisedHraiseData_of_program_state_correct
+#check @panValuePcCompileCorrectAndClockedRaisedResultRel_of_program_state_correct
 
 /-! Cake's generated parameter context satisfies the slot bound needed by
     the raised-payload evaluator, after reversing the source-name map. -/

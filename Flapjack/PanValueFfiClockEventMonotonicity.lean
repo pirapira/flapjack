@@ -3,6 +3,7 @@ import Flapjack.PanSimpEvaluate
 import Flapjack.PanObservationalSemantics
 import Flapjack.PanToCrepCorrectnessBoundary
 import Flapjack.PanValueFfiEventMonotonicity
+import Flapjack.PanProgramSimp
 
 namespace Flapjack
 
@@ -602,6 +603,83 @@ theorem evalPanValueFfiClockProgram_of_declarations_and_normal_call_result_rel_i
   · exact (panValuePcResultRel_normal_iff state.structs pcContext exceptionRel
       exceptionCode globalsLookup locals globals memory targetState).2 hstate
   · exact hprefix
+
+/-! The declaration-state counterpart transports the initial source/target
+    relation through the actual declaration evaluators before applying the
+    normal-call result bridge.  The evaluator, lookup, result, and event
+    premises remain explicit, matching the normal branch of Cake's
+    `state_rel_imp_semantics_decls_to_crep`. -/
+theorem evalPanValueFfiClockProgram_of_related_declarations_and_normal_call_result_rel_ioEvents_prefix
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (initial : PanValueFfiProgramState α σ)
+    (clock : Nat)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (fuel : Nat) (declarations : List (Decl α))
+    (entry : FunName) (arguments : List (Exp α))
+    (state : PanValueProgramState α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (nextClock : Nat)
+    (pcContext : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (targetState : CrepState α)
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ))
+    (targetInitial : PanValueProgramState α)
+    (hinitial : panValueProgramStateRel initial.source targetInitial)
+    (hdeclarations : evalPanValueDeclarations initial.source declarations
+      (memoryAccess := memoryAccess) = some state)
+    (hentry : lookupInfo entry state.returnShapes = none)
+    (hcall : evalPanValueFfiClockCall context primitive handler state.structs
+      state.functions state.baseAddress state.topAddress state.bytesInWord fuel
+      (fun _ => none) state.globals state.memory initial.ffi clock none entry arguments
+      (memoryAccess := memoryAccess)
+      (contracts := some (PanValueCallContracts.mk state.returnShapes
+        state.exceptions state.parameterShapes))
+      (memoryHandler := memoryHandler) =
+      some (.control (.normal locals globals memory ffi), nextClock))
+    (hstate : panValueCrepStateRel state.structs pcContext locals globals
+      memory targetState)
+    (hprefix : initial.ffi.ioEvents <+: ffi.ioEvents) :
+    ∃ targetDeclaration,
+      evalPanValueDeclarations targetInitial (panSimpDecls declarations)
+        (memoryAccess := memoryAccess) = some targetDeclaration ∧
+      panValueProgramStateRel state targetDeclaration ∧
+      lookupInfo entry targetDeclaration.returnShapes = none ∧
+      evalPanValueFfiClockProgram context initial clock primitive handler fuel
+        declarations entry arguments (memoryAccess := memoryAccess)
+        (memoryHandler := memoryHandler) =
+        some (.control (.normal locals globals memory ffi), nextClock) ∧
+      panValuePcResultRel state.structs pcContext exceptionRel exceptionCode
+        globalsLookup (.normal locals globals memory) (.normal targetState) ∧
+      initial.ffi.ioEvents <+: ffi.ioEvents := by
+  obtain ⟨targetDeclaration, htargetDeclarations, hpostRel⟩ :=
+    panValueProgramStateRel_evalPanValueDeclarations
+      initial.source targetInitial hinitial declarations memoryAccess state
+      hdeclarations
+  rcases hpostRel with ⟨_hstructs, _hglobals, _hmemory, hreturnShapes,
+    _hparameterShapes, _hexceptions, _hbaseAddress, _htopAddress, _hbytesInWord,
+    _hfunctions⟩
+  have htargetEntry : lookupInfo entry targetDeclaration.returnShapes = none := by
+    rw [← hreturnShapes]
+    exact hentry
+  have hnormal :=
+    evalPanValueFfiClockProgram_of_declarations_and_normal_call_result_rel_ioEvents_prefix
+      context initial clock primitive handler fuel declarations entry arguments state
+      locals globals memory ffi nextClock pcContext exceptionRel exceptionCode
+      globalsLookup targetState memoryAccess memoryHandler
+      hdeclarations hentry hcall hstate hprefix
+  exact ⟨targetDeclaration, htargetDeclarations,
+    ⟨_hstructs, _hglobals, _hmemory, hreturnShapes, _hparameterShapes,
+      _hexceptions, _hbaseAddress, _htopAddress, _hbytesInWord, _hfunctions⟩,
+    htargetEntry,
+    hnormal.1, hnormal.2.1, hnormal.2.2⟩
 
 /-! The timeout counterpart composes the declaration evaluator with the
     clocked call boundary and the concrete `state_rel` result relation.  This

@@ -1122,6 +1122,30 @@ def cakeDoCoalesceReal (x y : Nat) (case1 case2 : List Nat)
   let state := case1.foldl (fun s v => cakeDecDeg v s) state
   cakePushStack y state
 
+/- Cake's do_coalesce_real (reg_allocScript.sml:458-471) performs all
+   adjacency and degree updates before pushing the coalesced node y. -/
+theorem cakeDoCoalesceReal_selected_stack_lt_dim
+    (x y : Nat) (case1 case2 : List Nat) (state : CakeRaState)
+    (hy : y < state.dim) :
+    ∃ selected, selected < state.dim ∧
+      (cakeDoCoalesceReal x y case1 case2 state).stack = selected :: state.stack := by
+  have hdecDeg : ∀ (s : CakeRaState) (xs : List Nat),
+      (xs.foldl (fun s v => cakeDecDeg v s) s).stack = s.stack := by
+    intro s xs
+    induction xs generalizing s with
+    | nil => rfl
+    | cons v xs ih =>
+        simp only [List.foldl]
+        rw [ih]
+        simp [cakeDecDeg]
+  refine ⟨y, hy, ?_⟩
+  let coalescedState := { state with coalesced := state.coalesced.set y x }
+  by_cases hfixed : !cakeIsFixed coalescedState x
+  · simp [cakeDoCoalesceReal, coalescedState, hfixed, hdecDeg,
+      cakeIncDeg, cakePushStack]
+  · simp [cakeDoCoalesceReal, coalescedState, hfixed, hdecDeg,
+      cakePushStack]
+
 /-- `coalesce_parent` (`reg_allocScript.sml:592-612`) with path
     compression. -/
 def cakeCoalesceParent : Nat → CakeRaState → Nat × CakeRaState

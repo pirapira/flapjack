@@ -364,7 +364,7 @@ run_probe compile_panop_probeScript.sml compile_panop_probe.out \
 run_probe compile_exp_probeScript.sml compile_exp_probe.out \
   leaves struct_field loads_ops cmp_shift "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe exp_hdl_probeScript.sml exp_hdl_probe.out \
-  missing known "$cake_dir/pancake/pan_to_crepScript.sml"
+  missing known dup_update dup_list "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe ret_var_probeScript.sml ret_var_probe.out \
   one_empty named "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe ret_hdl_probeScript.sml ret_hdl_probe.out \
@@ -385,6 +385,11 @@ run_probe excp_rel_probeScript.sml excp_rel_probe.out \
   "$cake_dir/pancake/proofs"
 run_probe ctxt_fc_probeScript.sml ctxt_fc_probe.out \
   shaped_slots empty_maximum \
+  "$cake_dir/pancake/proofs/pan_to_crepProofScript.sml" \
+  "$cake_dir/pancake/proofs"
+run_probe code_rel_probeScript.sml code_rel_probe.out \
+  code_rel_type compiled_return localised_return localised_global_assignment \
+  function_signature_lookup target_function_lookup code_rel_rejects_unlocalised_source \
   "$cake_dir/pancake/proofs/pan_to_crepProofScript.sml" \
   "$cake_dir/pancake/proofs"
 run_probe pan_globals_compile_top_probeScript.sml pan_globals_compile_top_probe.out \

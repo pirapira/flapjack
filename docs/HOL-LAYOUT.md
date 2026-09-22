@@ -45,6 +45,18 @@ is checked by
 empty-structure premise and states function shapes with the empty-context
 `isWfShapeNil` predicate.
 
+`excp_rel_def` and `ctxt_fc_def` from `proofs/pan_to_crepProofScript.sml` are
+tagged in `Flapjack/Pancake/Proofs/PanToCrep.lean`. Its HOL-shaped `codeRel`
+definition is currently untagged because the body uses the list-backed
+compiler adapter, whereas HOL concludes with exact `compile`. The exact
+`compile_def` port is tracked by bead `flapjack-pxn.18.3.1.4`.
+`localised_prog_def`, the source-side premise of `code_rel_def`, is tagged in
+`Flapjack/PanLocalised.lean`, including HOL's prohibition on calls with global
+destinations. Direct HOL proofs of matching and mismatching code maps are
+paired with Lean tests in
+`scripts/hol-probes/code_rel_probe.out` and
+`Flapjack/Test/PanToCrepCodeRelParity.lean`.
+
 `evaluate_decls_def` from `semantics/panSemScript.sml` is ported in
 `Flapjack/Pancake/Semantics/PanSem.lean` as `evaluateDecls`. Its dedicated
 state retains full function entries and exception shapes, while runtime

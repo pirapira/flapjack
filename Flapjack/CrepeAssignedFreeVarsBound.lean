@@ -692,6 +692,41 @@ theorem crepAssignedFreeVars_seq_assignRet_compileProg [BEq α] [OfNat α 0] [Ad
       handlerNames ++ crepAssignedFreeVars (compileProg context handlerProgram) := by
   simp [crepAssignedFreeVars, crepAssignedFreeVars_assignRet]
 
+/-- Looking up the freshly bound name after a context extension (`|+` update
+    self case, `finite_mapTheory.FLOOKUP_UPDATE`). -/
+theorem lookupInfo_cons_self [BEq String] [LawfulBEq String] (name : String)
+    (value : α) (entries : InfoMap α) :
+    lookupInfo name ((name, value) :: entries) = some value := by
+  simp [lookupInfo]
+
+/-- Looking up a different name after a context extension is unchanged (`|+`
+    update other case, `finite_mapTheory.FLOOKUP_UPDATE`). -/
+theorem lookupInfo_cons_ne [BEq String] (key name : String) (value : α)
+    (entries : InfoMap α) (h : (name == key) = false) :
+    lookupInfo key ((name, value) :: entries) = lookupInfo key entries := by
+  simp [lookupInfo, h]
+
+/-- Extending a compilation context with a declaration whose slot names all
+    lie strictly above the current maximum introduces no context slots at or
+    below that maximum.  This is the transport used by the recursive cases of
+    the assigned-memory bound: when a slot variable is already bounded by
+    `context.maxVar`, a slot in the extended context is a slot in the original
+    one, because the fresh declaration's names all exceed the maximum. -/
+theorem crepContextSlot_cons_of_le [BEq String] (context : CompileContext α)
+    (name : String) (shape : Shape) (names : List Nat)
+    (hnames : ∀ y ∈ names, context.maxVar < y) {x : Nat} (hx : x ≤ context.maxVar)
+    (h : CrepContextSlot
+      { context with vars := (name, (shape, names)) :: context.vars } x) :
+    CrepContextSlot context x := by
+  obtain ⟨n, sh, slots, hlookup, hmem⟩ := h
+  simp only [lookupInfo] at hlookup
+  split at hlookup
+  · have hpair : (shape, names) = (sh, slots) := Option.some.inj hlookup
+    have hslots : slots = names := (congrArg Prod.snd hpair).symm
+    rw [hslots] at hmem
+    exact absurd (hnames x hmem) (by omega)
+  · exact ⟨n, sh, slots, hlookup, hmem⟩
+
 /-- Membership of a compiled nested declaration body's free variables in the
     free variables of the body alone (the declared names only remove entries). -/
 theorem mem_crepAssignedFreeVars_nestedDecs {α : Type} (names : List Nat)

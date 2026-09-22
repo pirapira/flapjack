@@ -102,22 +102,13 @@ the coordinated internal agents; outside contributors can open their own
 focused PRs. Backends other than RISC-V are out of scope.
 
 Work bottom-up from a desired theorem through its HOL dependencies: port small
-definitions and supporting lemmas before assembling the larger result. Existing
-`@[hol ...]` tags show where mappings are being built; they are navigation
-hints, not proof that the two definitions are equivalent. To find candidate
-declarations earlier in one HOL script, run, for example:
-
-```sh
-python3 scripts/next-hol-port.py \
-  --file cakeml/pancake/proofs/pan_globalsProofScript.sml \
-  --goal compile_top_shape_wf
-```
-
-The command lists untagged definitions by HOL source order. Check the
-corresponding Lean file and open issues before choosing one: an untagged
-declaration is not necessarily unported. Use `--kind Theorem` to look for
-supporting theorems, and `scripts/check-hol-refs.py --mapping` to inspect
-existing tags.
+definitions and supporting lemmas first. Use `@[hol ...]` tags and
+`scripts/check-hol-refs.py --mapping` to locate existing work. Run
+`python3 scripts/next-hol-port.py --file cakeml/pancake/FILE.sml` to list
+untagged candidates in a script; `--goal HOL_NAME` limits the list to earlier
+declarations, and `--kind Theorem` includes theorem candidates. Check the
+source, Lean analogues, and issue claims before choosing a target: tags are
+navigation aids, not evidence of equivalence or of a missing port.
 
 If you use a coding agent, this is a suitable prompt for a small first PR:
 

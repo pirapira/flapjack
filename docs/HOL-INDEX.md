@@ -33,19 +33,11 @@ The index is a local build artifact and is absent from a fresh checkout.  If
 the recorded commit does not match `git -C cakeml rev-parse HEAD`, regenerate
 before relying on line ranges or dependency results.
 
-To identify small candidates on the path to a particular HOL theorem, use:
-
-```sh
-python3 scripts/next-hol-port.py \
-  --file cakeml/pancake/proofs/pan_globalsProofScript.sml \
-  --goal compile_top_shape_wf
-```
-
-This regenerates a missing or stale index, combines it with the current
-`@[hol]` mapping, and lists untagged definitions earlier in that script.
-`--kind Theorem` selects supporting theorems instead; repeat `--kind` to show
-multiple kinds. Source order is only a starting point for bottom-up porting,
-not a complete dependency graph. Check the actual HOL dependencies, existing
-Lean declarations, and GitHub issue claims before starting a port. An absent
-tag does not prove a missing implementation; a present tag does not prove
-equivalence.
+To find candidates in any Pancake HOL script, run
+`python3 scripts/next-hol-port.py --file cakeml/pancake/FILE.sml`, replacing
+`FILE.sml` with its path below `cakeml/pancake/`. Add `--goal HOL_NAME` to
+show only earlier declarations or `--kind Theorem` for theorem candidates.
+The command refreshes a stale index and excludes declarations with `@[hol]`
+tags. Source order and tag presence are navigation aids, not a dependency
+proof or an equivalence claim; inspect HOL, Lean, and GitHub issues before
+starting work.

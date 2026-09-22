@@ -2714,6 +2714,8 @@ example : PanValueFfiClockNormalAdequateProgFromFloor 3 3 evaluatorContext
 #check @Flapjack.evalPanValueProgram_of_declarations_and_raised_call_with_exception_lookup_evidence
 #check @Flapjack.panExceptionEntries_mem_of_exnDecl_mem
 #check @Flapjack.evalPanValueDeclarations_exception_lookup_isSome
+#check @Flapjack.lookupInfo_eq_some_of_mem_of_nodup
+#check @Flapjack.evalPanValueDeclarations_exception_shape_lookup
 
 example : decPanClock (5 + 3) = decPanClock 5 + 3 := decPanClock_add 5 3 (by decide)
 

@@ -96,68 +96,94 @@ theorem globalDeclsFilter_isException_all_shapes (structs : StructContext)
     (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2367`): a successful
     declaration evaluation only installs function declarations whose parameter
     and return shapes are well formed in the source struct context. The
-    admissibility premise is HOL's `EVERY (\d. is_function d ∨ is_decl d ∨
-    is_exn_decl d) code`; the faithful `evaluate_decls` port checks the
-    function shapes before installing each entry. -/
+    admissibility premise `panSemCompileTopAdmissible` is the constructor form
+    of HOL's `EVERY (\d. is_function d ∨ is_decl d ∨ is_exn_decl d) code`; the
+    faithful `evaluate_decls` port (`Flapjack.Pancake.Semantics.PanSem`) checks
+    the function shapes before installing each entry. This is the single tagged
+    copy of the port and the one the global-pass proof uses. -/
 @[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "evaluate_decls_functions_wf"]
-theorem evaluateDecls_functions_wf
+theorem evaluateDeclsFunctionsWf
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     [BEq String]
-    (state : PanSemDeclarationState α σ) (code : List (Decl α))
+    (state : PanSemDeclarationState α σ) (declarations : List (Decl α))
     (state' : PanSemDeclarationState α σ)
-    (heval : evaluateDecls state code = some state')
-    {fi : FunDecl α} (hmem : (.function fi : Decl α) ∈ code)
-    (hadm : code.all
-      (fun declaration => globalDeclIsFunction declaration ||
-        isDecl declaration || isExnDecl declaration) = true) :
-    fi.params.all
-        (fun parameter => isWfShape state.runtime.structs parameter.2) = true ∧
-      isWfShape state.runtime.structs fi.returnShape = true := by
-  induction code generalizing state with
-  | nil => simp at hmem
+    {function : FunDecl α}
+    (heval : evaluateDecls state declarations = some state')
+    (hmem : (.function function : Decl α) ∈ declarations)
+    (hadmissible : declarations.all panSemCompileTopAdmissible = true) :
+    function.params.all (fun parameter =>
+      isWfShape state.runtime.structs parameter.2) = true ∧
+      isWfShape state.runtime.structs function.returnShape = true := by
+  induction declarations generalizing state state' with
+  | nil => cases hmem
   | cons head tail ih =>
-      have hadm_tail : tail.all
-          (fun declaration => globalDeclIsFunction declaration ||
-            isDecl declaration || isExnDecl declaration) = true := by
-        have h := hadm
-        rw [List.all_cons, Bool.and_eq_true] at h
-        exact h.2
+      have hadmissibleTail : tail.all panSemCompileTopAdmissible = true := by
+        simp only [List.all_cons, Bool.and_eq_true] at hadmissible
+        exact hadmissible.2
       cases head with
       | name name fields =>
           simp only [evaluateDecls] at heval
-          simp only [List.mem_cons] at hmem
-          rcases hmem with h | h
-          · exact absurd h (by simp)
-          · exact ih state heval h hadm_tail
+          rcases List.mem_cons.mp hmem with hhead | htail
+          · cases hhead
+          · exact ih state state' heval htail hadmissibleTail
       | decl shape name expression =>
           simp only [evaluateDecls] at heval
-          split at heval
-          · simp at heval
-          · split at heval
-            · have hres := ih _ heval (by simpa using hmem) hadm_tail
-              exact hres
-            · simp at heval
-      | function function =>
+          cases hevalExp : evalPanValueExp state.runtime.structs (fun _ => none)
+              state.runtime.globals state.runtime.memory state.runtime.baseAddress
+              state.runtime.topAddress state.runtime.bytesInWord expression
+              (memoryAccess := some state.memoryAccess) with
+          | none => simp [hevalExp] at heval
+          | some value =>
+              cases hshape : panShapeMatches
+                  (panValueShape state.runtime.structs value) shape with
+              | false => simp [hevalExp, hshape] at heval
+              | true =>
+                simp [hevalExp, hshape] at heval
+                rcases List.mem_cons.mp hmem with hhead | htail
+                · cases hhead
+                · exact ih
+                    { state with runtime :=
+                      { state.runtime with globals :=
+                        panSemDeclUpdateGlobal state.runtime.globals name value } }
+                    state' heval htail hadmissibleTail
+      | function current =>
           simp only [evaluateDecls] at heval
-          split at heval
-          · rename_i hwf
-            simp only [List.mem_cons] at hmem
-            rcases hmem with h | h
-            · injection h with h; subst h
+          cases hwf : (current.params.all (fun parameter =>
+              isWfShape state.runtime.structs parameter.2) &&
+              isWfShape state.runtime.structs current.returnShape) with
+          | false => simp [hwf] at heval
+          | true =>
+            simp [hwf] at heval
+            rcases List.mem_cons.mp hmem with hhead | htail
+            · have hsame : function = current := by
+                injection hhead
+              subst current
               simpa only [Bool.and_eq_true] using hwf
-            · have hres := ih _ heval h hadm_tail
-              exact hres
-          · simp at heval
+            · let entry : PanSemFunctionEntry α :=
+                { params := current.params
+                  body := current.body
+                  returnShape := current.returnShape }
+              let nextState : PanSemDeclarationState α σ :=
+                { state with code :=
+                  panSemDeclUpdateInfo state.code current.name entry }
+              exact ih nextState state' heval htail hadmissibleTail
       | exnDecl exception shape =>
           simp only [evaluateDecls] at heval
-          split at heval
-          · simp at heval
-          · split at heval
-            · have hres := ih _ heval (by simpa using hmem) hadm_tail
-              exact hres
-            · simp at heval
+          cases hduplicate : (lookupInfo exception state.eshapes).isSome with
+          | true => simp [hduplicate] at heval
+          | false =>
+            cases hwf : isWfShape state.runtime.structs shape with
+            | false => simp [hduplicate, hwf] at heval
+            | true =>
+              simp [hduplicate, hwf] at heval
+              rcases List.mem_cons.mp hmem with hhead | htail
+              · cases hhead
+              · exact ih
+                  { state with eshapes :=
+                    panSemDeclUpdateInfo state.eshapes exception shape }
+                  state' heval htail hadmissibleTail
 
 /-- Flapjack-specific lookup support; this representation-specific fact has
     no separate HOL theorem declaration. -/

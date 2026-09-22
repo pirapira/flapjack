@@ -177,7 +177,7 @@ example :
   simp [evaluateDecls, initialState, initialRuntime, isWfShape, lookupInfo]
 
 /-! Non-vacuity witness for the tagged HOL
-    `evaluate_decls_functions_wf` port (`evaluateDecls_functions_wf`): the
+    `evaluate_decls_functions_wf` port (`evaluateDeclsFunctionsWf`): the
     installed sample function's parameter and return shapes are well formed in
     the source struct context. -/
 example : (sampleFunction).params.all
@@ -187,7 +187,7 @@ example : (sampleFunction).params.all
   | none => simp [evaluateDecls, sampleFunction, initialState, initialRuntime,
       isWfShape] at h
   | some state' =>
-      exact evaluateDecls_functions_wf initialState [.function (sampleFunction)]
+      exact evaluateDeclsFunctionsWf initialState [.function (sampleFunction)]
         state' h (by simp)
         (by decide)
 

@@ -83,4 +83,30 @@ theorem callDestinationNames_local_of_some
   obtain ⟨info, hinfo, hmap⟩ := Option.bind_eq_some_iff.mp h
   exact ⟨info.1, info.2, hinfo, (wrapRt_map_snd_of_some hmap).symm⟩
 
+/-! When `compileProg` extends a Cake context with a fresh declaration, every
+    slot visible through the extended finite-map view is either an old context
+    slot or one of the newly allocated slots.  This is the context-map half of
+    the `not_mem_context_assigned_mem_gt` induction. -/
+theorem crepContextSlot_extended_or_gt [BEq String]
+    (context : CompileContext α) (name : VarName) (shape : Shape)
+    (slots : List Nat)
+    (hslots : ∀ x ∈ slots, context.maxVar < x)
+    {x : Nat}
+    (h : CrepContextSlot
+      { context with
+        vars := (name, (shape, slots)) :: context.vars
+        maxVar := context.maxVar + Shape.shapeSize shape } x) :
+    CrepContextSlot context x ∨ context.maxVar < x := by
+  rcases h with ⟨queriedName, queriedShape, queriedSlots, hlookup, hx⟩
+  cases hname : (name == queriedName) with
+  | false =>
+      simp only [lookupInfo, hname] at hlookup
+      exact Or.inl ⟨queriedName, queriedShape, queriedSlots, hlookup, hx⟩
+  | true =>
+      simp only [lookupInfo, hname] at hlookup
+      have hpair : (shape, slots) = (queriedShape, queriedSlots) := by
+        simpa using hlookup
+      have hslotsEq : slots = queriedSlots := congrArg Prod.snd hpair
+      exact Or.inr (hslots x (by rw [hslotsEq]; exact hx))
+
 end Flapjack

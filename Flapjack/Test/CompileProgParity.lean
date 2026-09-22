@@ -175,5 +175,6 @@ def runChecks : IO Bool := do
 #check @compileProg_assign_local_of_compiled
 #check @compileProg_shMemLoad_local_of_compiled
 #check @compileProg_shMemStore_of_compiled
+#check @crepAssignedFreeVars_nestedDecs_mem_iff
 
 end Flapjack.Test.CompileProgParity

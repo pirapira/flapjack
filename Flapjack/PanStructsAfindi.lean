@@ -1,4 +1,4 @@
-import Flapjack.Static
+import Flapjack.Pancake.PanStatic
 
 /-!
 Faithful executable port of CakeML Pancake's `pan_structs$afindi` helper.

@@ -1,4 +1,4 @@
-import Flapjack.Static
+import Flapjack.Pancake.PanStatic
 
 namespace Flapjack
 

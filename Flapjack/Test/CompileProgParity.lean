@@ -1,5 +1,5 @@
 import Flapjack.Pipeline
-import Flapjack.Compile
+import Flapjack.Pancake.PanToCrep.Compile
 
 namespace Flapjack.Test.CompileProgParity
 

@@ -1,4 +1,4 @@
-import Flapjack.CrepeArith
+import Flapjack.Pancake.CrepArith
 
 namespace Flapjack.Test.CrepeDestConstParity
 

@@ -1,4 +1,4 @@
-import Flapjack.CrepeArith
+import Flapjack.Pancake.CrepArith
 import Flapjack.RiscV.Model
 
 namespace Flapjack.Test.CrepeDest2ExpParity

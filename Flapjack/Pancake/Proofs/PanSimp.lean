@@ -1,7 +1,7 @@
 import Flapjack.HolRef
-import Flapjack.PanGlobals
+import Flapjack.Pancake.PanGlobals
 import Flapjack.PanProgramSemantics
-import Flapjack.PanSimp
+import Flapjack.Pancake.PanSimp
 
 /-!
 Counterpart of Cake's `decs_stcnames_compile_prog`

@@ -1,4 +1,4 @@
-import Flapjack.Compile
+import Flapjack.Pancake.PanToCrep.Compile
 
 /-! Genuine context invariants ported from Pancake's `pan_commonPropsScript.sml`.
 

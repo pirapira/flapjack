@@ -1,4 +1,4 @@
-import Flapjack.CrepToLoop
+import Flapjack.Pancake.CrepToLoop
 
 /-!
 Direct parity for `crep_to_loop$compile` (`crep_to_loopScript.sml:120`).

@@ -1,5 +1,5 @@
-import Flapjack.Language
-import Flapjack.Static
+import Flapjack.Pancake.PanLang
+import Flapjack.Pancake.PanStatic
 
 /-!
 The localisation pass.

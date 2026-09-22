@@ -1,5 +1,5 @@
-import Flapjack.PanSimp
-import Flapjack.PanSimpEvaluate
+import Flapjack.Pancake.PanSimp
+import Flapjack.Pancake.Proofs.PanSimp.Evaluate
 
 namespace Flapjack
 

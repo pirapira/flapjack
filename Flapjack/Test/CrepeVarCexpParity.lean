@@ -1,4 +1,4 @@
-import Flapjack.Crepe
+import Flapjack.Pancake.CrepLang
 
 /-!
 # Original-domain parity for `crepLang$var_cexp`

@@ -1,4 +1,4 @@
-import Flapjack.CrepToLoopOptimise
+import Flapjack.Pancake.CrepToLoop.Optimise
 
 /-! Direct parity for `crep_to_loop$ocompile` (`crep_to_loopScript.sml:216`).
 The expected shapes are copied from `scripts/hol-probes/ocompile_probe.out`;

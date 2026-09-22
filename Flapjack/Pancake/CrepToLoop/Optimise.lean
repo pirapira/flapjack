@@ -1,5 +1,5 @@
-import Flapjack.CrepToLoop
-import Flapjack.LoopAnalysis
+import Flapjack.Pancake.CrepToLoop
+import Flapjack.Pancake.LoopLive
 
 namespace Flapjack
 

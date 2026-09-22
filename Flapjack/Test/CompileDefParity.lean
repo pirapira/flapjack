@@ -1,4 +1,4 @@
-import Flapjack.Compile
+import Flapjack.Pancake.PanToCrep.Compile
 
 /-!
 # Original-domain parity for `pan_to_crep$compile` (`compile_def`)

@@ -1,5 +1,5 @@
-import Flapjack.Compile
-import Flapjack.CrepeInline
+import Flapjack.Pancake.PanToCrep.Compile
+import Flapjack.Pancake.CrepInline
 import Std.Data.HashSet.Lemmas
 
 /-!

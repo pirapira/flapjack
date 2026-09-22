@@ -1,5 +1,5 @@
 import Flapjack.Pipeline
-import Flapjack.LoopToWord
+import Flapjack.Pancake.LoopToWord
 import Flapjack.Parser
 import Flapjack.RiscV.Encoding
 import Flapjack.RiscV.LabDiagnostics

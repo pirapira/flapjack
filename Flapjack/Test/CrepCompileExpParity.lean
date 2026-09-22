@@ -1,4 +1,4 @@
-import Flapjack.CrepToLoop
+import Flapjack.Pancake.CrepToLoop
 
 /-! Direct parity for `crep_to_loop$compile_exp_def` at
 `cakeml/pancake/crep_to_loopScript.sml:50`.  The three-argument Mul case keeps

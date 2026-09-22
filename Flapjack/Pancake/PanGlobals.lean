@@ -1,5 +1,5 @@
-import Flapjack.PanStructs
-import Flapjack.PanSimp
+import Flapjack.Pancake.PanStructs
+import Flapjack.Pancake.PanSimp
 
 /-!
 The core of Pancake's `pan_globals` pass.

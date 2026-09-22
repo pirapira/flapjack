@@ -1,5 +1,5 @@
-import Flapjack.Loop
-import Flapjack.Static
+import Flapjack.Pancake.LoopLang
+import Flapjack.Pancake.PanStatic
 import Flapjack.RiscV.Model
 
 /-!

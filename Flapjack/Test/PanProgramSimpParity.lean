@@ -1,4 +1,4 @@
-import Flapjack.PanProgramSimp
+import Flapjack.Pancake.Proofs.PanSimp
 
 namespace Flapjack.Test.PanProgramSimpParity
 

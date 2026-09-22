@@ -1,6 +1,6 @@
 import Flapjack.HolRef
-import Flapjack.Crepe
-import Flapjack.Static
+import Flapjack.Pancake.CrepLang
+import Flapjack.Pancake.PanStatic
 
 /-!
 Executable expression lowering from Flapjack to Crepe.

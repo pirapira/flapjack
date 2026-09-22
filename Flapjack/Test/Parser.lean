@@ -1,6 +1,6 @@
 import Flapjack.Parser
-import Flapjack.Static
-import Flapjack.Compile
+import Flapjack.Pancake.PanStatic
+import Flapjack.Pancake.PanToCrep.Compile
 
 /-!
 Parser tests.

@@ -1,4 +1,4 @@
-import Flapjack.CrepeInlinePass
+import Flapjack.Pancake.CrepInline.Pass
 
 namespace Flapjack
 

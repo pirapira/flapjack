@@ -1,5 +1,5 @@
 import Flapjack.HolRef
-import Flapjack.PanToCrep
+import Flapjack.Pancake.PanToCrep
 
 /-!
 Core statement lowering from Flapjack to Crepe.

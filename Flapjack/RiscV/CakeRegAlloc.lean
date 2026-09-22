@@ -1,7 +1,7 @@
 import Flapjack.RiscV.CakeAllocatorCore
 import Flapjack.RiscV.Allocator
 import Flapjack.RiscV.SpillCosts
-import Flapjack.CrepToLoop
+import Flapjack.Pancake.CrepToLoop
 
 /-!
 # Cake register-allocation driver slice: stack-only analysis

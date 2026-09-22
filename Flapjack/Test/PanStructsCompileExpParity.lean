@@ -1,4 +1,4 @@
-import Flapjack.PanStructs
+import Flapjack.Pancake.PanStructs
 
 namespace Flapjack.Test.PanStructsCompileExpParity
 

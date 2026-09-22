@@ -1,4 +1,4 @@
-import Flapjack.LoopCall
+import Flapjack.Pancake.LoopCall
 import Flapjack.LoopSemantics
 
 namespace Flapjack

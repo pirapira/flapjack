@@ -1,4 +1,4 @@
-import Flapjack.LoopEvaluate
+import Flapjack.Pancake.Semantics.LoopSem
 import Flapjack.Ffi
 
 /-!

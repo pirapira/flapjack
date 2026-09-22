@@ -1,5 +1,5 @@
 import Flapjack.PanValues
-import Flapjack.Static
+import Flapjack.Pancake.PanStatic
 
 namespace Flapjack
 

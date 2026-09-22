@@ -1,4 +1,4 @@
-import Flapjack.PanEvaluate
+import Flapjack.Pancake.Semantics.PanSem
 import Flapjack.LoopObservationalSemantics
 
 /-!

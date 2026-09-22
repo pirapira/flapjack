@@ -1,5 +1,5 @@
-import Flapjack.PanSimp
-import Flapjack.PanEvaluate
+import Flapjack.Pancake.PanSimp
+import Flapjack.Pancake.Semantics.PanSem
 import Flapjack.PanValueFfiClockFuel
 import Flapjack.PanValueFfiClockCorrectness
 

@@ -1,4 +1,4 @@
-import Flapjack.Static
+import Flapjack.Pancake.PanStatic
 
 /-!
 # `panLang$is_wf_shape` parity

@@ -1,4 +1,4 @@
-import Flapjack.PanGlobals
+import Flapjack.Pancake.PanGlobals
 import Flapjack.Parser.Localise
 
 namespace Flapjack

@@ -1,5 +1,5 @@
 import Flapjack.HolRef
-import Flapjack.Language
+import Flapjack.Pancake.PanLang
 import Flapjack.Display
 import Flapjack.Ffi
 import Flapjack.LoopFfi
@@ -29,12 +29,12 @@ import Flapjack.PanHProgDecCall
 import Flapjack.PanHProgCall
 import Flapjack.CrepExitLoop
 import Flapjack.CrepFixClock
-import Flapjack.CrepEval
+import Flapjack.Pancake.Semantics.CrepSem.Eval
 import Flapjack.CrepShMemLoad
 import Flapjack.CrepShMemOp
 import Flapjack.CrepShMemStore
 import Flapjack.CrepMemLoad
-import Flapjack.CrepEval
+import Flapjack.Pancake.Semantics.CrepSem.Eval
 import Flapjack.PanBst
 import Flapjack.PanBStateUpdates
 import Flapjack.PanBStateEmptyLocals
@@ -44,7 +44,7 @@ import Flapjack.PanSetKvar
 import Flapjack.PanShMemLoad
 import Flapjack.PanShMemStore
 import Flapjack.PanEval
-import Flapjack.PanEvaluate
+import Flapjack.Pancake.Semantics.PanSem
 import Flapjack.PanObservationalSemantics
 import Flapjack.PanHHandleCallRet
 import Flapjack.PanMrec
@@ -54,12 +54,12 @@ import Flapjack.PanHProgCond
 import Flapjack.PanHProgStoreMem
 import Flapjack.PanHProgAssign
 import Flapjack.PanHProgWhile
-import Flapjack.PanSimp
+import Flapjack.Pancake.PanSimp
 import Flapjack.PanLocalised
-import Flapjack.PanSimpEvaluate
+import Flapjack.Pancake.Proofs.PanSimp.Evaluate
 import Flapjack.PanSimpLocalised
-import Flapjack.PanStructs
-import Flapjack.PanGlobals
+import Flapjack.Pancake.PanStructs
+import Flapjack.Pancake.PanGlobals
 import Flapjack.Pipeline
 import Flapjack.RiscV.PipelineDiagnostics
 import Flapjack.RiscV.CorrectnessTraps
@@ -71,18 +71,18 @@ import Flapjack.RiscV.InstructionDataCommutation
 import Flapjack.RiscV.CorrectnessBackendRegisterMap
 import Flapjack.FlatCorrectness
 import Flapjack.Tests
-import Flapjack.Static
+import Flapjack.Pancake.PanStatic
 import Flapjack.Parser
-import Flapjack.Crepe
-import Flapjack.PanToCrep
+import Flapjack.Pancake.CrepLang
+import Flapjack.Pancake.PanToCrep
 import Flapjack.CrepeCompileExpVariables
 import Flapjack.CompileParamVarsBounds
 import Flapjack.CrepeContextBounds
-import Flapjack.Compile
+import Flapjack.Pancake.PanToCrep.Compile
 import Flapjack.CompileFunctionDistinct
 import Flapjack.Semantics
 import Flapjack.CrepeSemantics
-import Flapjack.CrepeRuntime
+import Flapjack.Pancake.Semantics.CrepSem
 import Flapjack.PanToCrepCorrectnessBoundary
 import Flapjack.PanToCrepExceptionRelation
 import Flapjack.PanToCrepMaxList
@@ -163,11 +163,11 @@ import Flapjack.RiscV.Ffi
 import Flapjack.RiscV.ExactFfi
 import Flapjack.RiscV.Link
 import Flapjack.WordSemantics
-import Flapjack.Loop
+import Flapjack.Pancake.LoopLang
 import Flapjack.NatDedup
-import Flapjack.CrepToLoop
-import Flapjack.CrepToLoopOptimise
-import Flapjack.LoopAnalysis
+import Flapjack.Pancake.CrepToLoop
+import Flapjack.Pancake.CrepToLoop.Optimise
+import Flapjack.Pancake.LoopLive
 /- The context-aware Crep-to-Loop correctness file is being updated alongside
    the faithful `findLoopVar` lowering and is intentionally not in this
    umbrella until its old identity-map assumptions are repaired. -/

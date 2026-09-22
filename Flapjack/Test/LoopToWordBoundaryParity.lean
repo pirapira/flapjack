@@ -1,7 +1,7 @@
 import Flapjack.Parser
-import Flapjack.Compile
+import Flapjack.Pancake.PanToCrep.Compile
 import Flapjack.Pipeline
-import Flapjack.LoopToWord
+import Flapjack.Pancake.LoopToWord
 import Flapjack.RiscV.Allocator
 
 namespace Flapjack.Test.LoopToWordBoundaryParity

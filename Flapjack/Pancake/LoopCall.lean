@@ -1,4 +1,4 @@
-import Flapjack.Loop
+import Flapjack.Pancake.LoopLang
 
 /-!
 # Pancake `loop_call.comp`

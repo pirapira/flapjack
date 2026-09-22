@@ -315,6 +315,20 @@ def stackCopyReturn (perf isHandler : Bool) (k register frameOffset : Nat)
       (if isHandler then frameOffset + stackHandlerSlots perf else frameOffset) count)
       (stackFreeIfNonzero count continuation)
 
+/-! The Word-to-Stack call carriers pass the already-sliced stack-resident
+    return suffix rather than Cake's full `vs` list. Its length is therefore
+    exactly `num_stack_ret`; keep the same descending copy and handler-frame
+    offset without manufacturing an artificial ABI prefix. -/
+def stackCopyReturnSuffix (perf isHandler : Bool) (register frameOffset : Nat)
+    (returnSuffix : List Nat) (continuation : StackProg α) : StackProg α :=
+  if returnSuffix.length = 0 then
+    continuation
+  else
+    .seq (stackCopyReturnAux register
+      (if isHandler then frameOffset + stackHandlerSlots perf else frameOffset)
+      returnSuffix.length)
+      (stackFreeIfNonzero returnSuffix.length continuation)
+
 def stackRaiseStub (perf : Bool) (register : Nat) : StackProg α :=
   stackSeq [
     .get register .handler,
@@ -358,12 +372,13 @@ def wordToStackCallNoHandler (_perf : Bool) (target : Nat)
     (argumentCount frameOffset scratch : Nat)
     (returnValues : List Nat) (returnCode : StackProg α)
     (returnLabel entryLabel : Nat) : StackProg α :=
+  let returnCode := stackCopyReturnSuffix _perf false scratch frameOffset
+    returnValues returnCode
   let callCode :=
     .call (some (returnCode, 0, returnLabel, entryLabel)) (.label target) none
   stackSeq [
     stackArgs (argumentCount + 1) frameOffset scratch,
-    callCode,
-    .stackFree (returnValues.length)
+    callCode
   ]
 
 def wordToStackCallWithHandlerInSection (perf : Bool) (target : Nat)
@@ -420,12 +435,13 @@ def wordToStackCallNoHandlerTarget (_perf : Bool) (target : StackCallTarget)
     (argumentCount frameOffset scratch : Nat)
     (returnValues : List Nat) (returnCode : StackProg α)
     (returnLabel entryLabel : Nat) : StackProg α :=
+  let returnCode := stackCopyReturnSuffix _perf false scratch frameOffset
+    returnValues returnCode
   let callCode :=
     .call (some (returnCode, 0, returnLabel, entryLabel)) target none
   stackSeq [
     stackArgs (argumentCount + 1) frameOffset scratch,
-    callCode,
-    .stackFree (returnValues.length)
+    callCode
   ]
 
 def wordToStackCallWithHandlerInSectionTarget (perf : Bool) (target : StackCallTarget)
@@ -433,6 +449,59 @@ def wordToStackCallWithHandlerInSectionTarget (perf : Bool) (target : StackCallT
     (returnCode handlerCode : StackProg α)
     (returnLabel entryLabel handlerLabel handlerEntryLabel exceptionLabel : Nat) : StackProg α :=
   let returnCode := stackPopHandler perf scratch returnCode
+  let callCode :=
+    .call (some (returnCode, 0, returnLabel, entryLabel)) target
+      (some (handlerCode, exceptionLabel, handlerEntryLabel))
+  stackSeq [
+    stackPushHandler perf handlerEntryLabel handlerLabel scratch,
+    stackHandlerArgs perf (argumentCount + 1) frameOffset scratch,
+    callCode
+  ]
+
+/-! Returning handler calls use Cake's `copy_ret T` around the popped return
+    continuation.  The older handler carrier remains available for calls with
+    no return metadata; these variants make the return suffix explicit for the
+    source-shaped compiler paths. -/
+def wordToStackCallWithHandlerInSectionReturn (perf : Bool) (target : Nat)
+    (argumentCount frameOffset scratch : Nat) (returnValues : List Nat)
+    (returnCode handlerCode : StackProg α)
+    (returnLabel entryLabel handlerLabel handlerEntryLabel exceptionLabel : Nat) :
+    StackProg α :=
+  let returnCode := stackCopyReturnSuffix perf true scratch frameOffset
+    returnValues (stackPopHandler perf scratch returnCode)
+  let callCode :=
+    .call (some (returnCode, 0, returnLabel, entryLabel)) (.label target)
+      (some (handlerCode, exceptionLabel, handlerEntryLabel))
+  stackSeq [
+    stackPushHandler perf handlerEntryLabel handlerLabel scratch,
+    stackHandlerArgs perf (argumentCount + 1) frameOffset scratch,
+    callCode
+  ]
+
+def wordToStackCallWithHandlerInSectionAtRegisterCountReturn (perf : Bool)
+    (target : Nat) (argumentCount registerCount frameOffset scratch : Nat)
+    (returnValues : List Nat) (returnCode handlerCode : StackProg α)
+    (returnLabel entryLabel handlerLabel handlerEntryLabel exceptionLabel : Nat) :
+    StackProg α :=
+  let returnCode := stackCopyReturnSuffix perf true scratch frameOffset
+    returnValues (stackPopHandler perf scratch returnCode)
+  let callCode :=
+    .call (some (returnCode, 0, returnLabel, entryLabel)) (.label target)
+      (some (handlerCode, exceptionLabel, handlerEntryLabel))
+  let stackArgumentCount := argumentCount + 1 - registerCount
+  stackSeq [
+    stackPushHandler perf handlerEntryLabel handlerLabel scratch,
+    stackHandlerArgs perf stackArgumentCount frameOffset scratch,
+    callCode
+  ]
+
+def wordToStackCallWithHandlerInSectionTargetReturn (perf : Bool)
+    (target : StackCallTarget) (argumentCount frameOffset scratch : Nat)
+    (returnValues : List Nat) (returnCode handlerCode : StackProg α)
+    (returnLabel entryLabel handlerLabel handlerEntryLabel exceptionLabel : Nat) :
+    StackProg α :=
+  let returnCode := stackCopyReturnSuffix perf true scratch frameOffset
+    returnValues (stackPopHandler perf scratch returnCode)
   let callCode :=
     .call (some (returnCode, 0, returnLabel, entryLabel)) target
       (some (handlerCode, exceptionLabel, handlerEntryLabel))

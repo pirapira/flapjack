@@ -1153,6 +1153,15 @@
       "tracked_beads": [
         "flapjack-pxn.8.5.14.1.5"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/p8_frame_pressure.pnk",
+      "source_reference": "Original-Cake frame-pressure witness: two 2-field structs remain live across a later id call, exercising three retained continuation frames.",
+      "cake_sha256": "8097265ce2325308d373295aa1d90ad56cac89bcda999b10ec4e0f719aadf410",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.3",
+        "flapjack-pxn.8.5.14.1.5"
+      ]
     }
   ]
 }

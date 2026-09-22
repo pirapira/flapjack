@@ -160,6 +160,21 @@ def compSyntaxOkGuard : Bool :=
         [.assign 4 (.const 1)])) ==
     [3, 4, 9]
 
+/-! Cake `loopPropsScript.sml:810` `cut_sets_union_domain_subset` and `:831`
+    `comp_syn_impl_cut_sets_subspt`: every variable live before a
+    syntactically well-formed statement stays live after its cut set. -/
+
+theorem loopCompSyntaxOk_cutSets_subset_fixture :
+    (2 : Nat) ∈ loopCutSets [2, 5]
+      (loopNestedSeq ([.assign 3 (.const 0)] : List (LoopProg Nat))) :=
+  loopCompSyntaxOk_cutSets_subset [2, 5]
+    (loopNestedSeq ([.assign 3 (.const 0)] : List (LoopProg Nat)))
+    (by simp [loopNestedSeq, loopCompSyntaxOk]) 2 (by simp)
+
+def cutSetsSubsetGuard : Bool :=
+  (loopCutSets [2, 5]
+      (loopNestedSeq ([.assign 3 (.const 0)] : List (LoopProg Nat)))).contains 2
+
 def check (name : String) (actual expected : List Nat) : IO Bool := do
   if actual == expected then
     IO.println s!"PASS {name}"
@@ -188,7 +203,8 @@ def runChecks : IO Bool := do
     checkBool "survives nested_seq append" survivesAppendGuard,
     checkBool "cut_sets nested_seq append" cutSetsAppendGuard,
     checkBool "assigned_vars nested_seq split" assignedVarsSplitGuard,
-    checkBool "comp_syntax_ok nested_seq append" compSyntaxOkGuard ].mapM id
+    checkBool "comp_syntax_ok nested_seq append" compSyntaxOkGuard,
+    checkBool "cut_sets preserves live" cutSetsSubsetGuard ].mapM id
   pure (results.all id)
 
 end Flapjack.Test.LoopAssignedVarsParity

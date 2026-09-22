@@ -741,4 +741,52 @@ theorem loopCompSyntaxOk_nestedSeq_append_elim (statements rest : List (LoopProg
       obtain ⟨h2', h3⟩ := ih (loopCutSets live statement) h2
       exact ⟨⟨h1, h2'⟩, h3⟩
 
+/-- Membership is preserved by a fold of `insertNatSorted`; this is the
+    list-backed counterpart of CakeML's `union` accumulation used by
+    `cut_sets_union_accumulate`. -/
+theorem mem_foldl_insertNatSorted (names : List Nat) (live : List Nat) :
+    ∀ x, x ∈ live →
+      x ∈ names.foldl (fun current name => insertNatSorted name current) live := by
+  induction names generalizing live with
+  | nil => intro x hx; simpa using hx
+  | cons name names ih =>
+      intro x hx
+      simp only [List.foldl_cons]
+      exact ih (insertNatSorted name live) x
+        (by rw [insertNatSorted_mem]; exact Or.inr hx)
+
+/-- Cake's `cut_sets_union_domain_subset`
+    (`cakeml/pancake/semantics/loopPropsScript.sml:810`) together with
+    `comp_syn_impl_cut_sets_subspt` (`:831`): every variable already live
+    before a syntactically well-formed statement remains live afterwards. -/
+theorem loopCompSyntaxOk_cutSets_subset :
+    ∀ (live : List Nat) (program : LoopProg α),
+      loopCompSyntaxOk live program → ∀ x, x ∈ live → x ∈ loopCutSets live program := by
+  apply loopCompSyntaxOk.induct (motive := fun live program =>
+    loopCompSyntaxOk live program →
+      ∀ x, x ∈ live → x ∈ loopCutSets live program)
+  · intro live _ x hx; exact hx
+  · intro live name value _ x hx; rw [loopCutSets, insertNatSorted_mem]; exact Or.inr hx
+  · intro live operation h x hx; cases operation <;> simp only [loopCutSets] <;>
+      first
+        | (rw [insertNatSorted_mem]; exact Or.inr hx)
+        | (rw [insertNatSorted_mem, insertNatSorted_mem]; exact Or.inr (Or.inr hx))
+  · intro live label _ x hx; exact hx
+  · intro live destination source _ x hx; rw [loopCutSets, insertNatSorted_mem]; exact Or.inr hx
+  · intro live address destination _ x hx; rw [loopCutSets, insertNatSorted_mem]; exact Or.inr hx
+  · intro live address destination _ x hx; rw [loopCutSets, insertNatSorted_mem]; exact Or.inr hx
+  · intro live first second ihFirst ihSecond h x hx
+    simp only [loopCutSets]
+    exact ihSecond h.2 x (ihFirst h.1 x hx)
+  · intro live operator condition right thenBranch elseBranch liveOut ihThen ihElse h x hx
+    obtain ⟨_, _, ns, rfl⟩ := h
+    simp only [loopCutSets]
+    exact mem_foldl_insertNatSorted ns live x hx
+  · intro live liveIn body liveOut ihBody h x hx
+    obtain ⟨hlin, _, _⟩ := h
+    subst hlin
+    exact hx
+  · intro t live h1 h2 h3 h4 h5 h6 h7 h8 h9 h10 h x hx
+    exact absurd h (by cases t <;> simp_all [loopCompSyntaxOk])
+
 end Flapjack

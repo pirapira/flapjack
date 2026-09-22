@@ -1073,6 +1073,14 @@
       "tracked_beads": [
         "flapjack-pxn.8.5.14.1.5"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00002_fuzz_pressure_20261017.pnk",
+      "source_reference": "Fresh exact differential witness from seed 20261017 index 2: five accepted functions, twelve locals, two loops, a struct-returning call, local/shared loads and stores, shifts, and a handler exercise the Cake IRC/frame allocator under pressure. Cake and Flapjack artifacts are byte-identical.",
+      "cake_sha256": "6b5f82efdaf28e8e99f1cd9a8b4450a2968331a713ee98302ad3c7ddb70e8dd0",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.5"
+      ]
     }
   ]
 }

@@ -8,6 +8,7 @@ import Flapjack.PanValueFfiClockShift
 import Flapjack.PanValueFfiClockCorrectness
 import Flapjack.PanValueFfiClockEventMonotonicity
 import Flapjack.PanToCrepSemantics
+import Flapjack.PanCrepSemanticAgreement
 
 namespace Flapjack.Test.PanSimpParity
 

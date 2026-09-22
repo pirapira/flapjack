@@ -821,6 +821,40 @@ theorem evalPanValueFfiClockProg_shift_ioEvents_prefix
     hstateful hmemory fuel locals globals memory ffi (clock + extra) program
     memoryAccess contracts memoryHandler highOutcome highClock hrunHigh
 
+/-! The non-timeout branch of Cake's ordered event-prefix premise follows
+    directly from the clock-shift result theorem.  The timeout branch remains
+    an explicit evaluator obligation, as in Cake's recursive monotonicity
+    proof, rather than being hidden behind an unsound initial-trace claim. -/
+theorem panSemEvaluate_clock_event_prefix_of_nonTimeout
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (state : PanSemEvaluateState α σ)
+    (program : Prog α)
+    (hevaluate : ∀ clock, ∃ outcome returnedClock,
+      panSemEvaluate context primitive handler
+        { state with clock := clock } program = some (outcome, returnedClock)) :
+    (hnonTimeout : ∀ clock outcome returnedClock,
+      panSemEvaluate context primitive handler
+        { state with clock := clock } program = some (outcome, returnedClock) →
+      ∀ locals globals memory ffi,
+        outcome ≠ .timeout locals globals memory ffi) →
+    ∀ (left right : Nat), left ≤ right →
+      panResultEvents
+          (panSemEvaluate context primitive handler
+            { state with clock := left } program) <+:
+        panResultEvents
+          (panSemEvaluate context primitive handler
+            { state with clock := right } program) := by
+  intro hnonTimeout left right hleft
+  obtain ⟨lowOutcome, lowClock, hlow⟩ := hevaluate left
+  have hnotimeout := hnonTimeout left lowOutcome lowClock hlow
+  have hshift := panSemEvaluate_clock_shift_panResultEvents
+    context primitive handler { state with clock := left } program
+    (right - left) lowOutcome lowClock hlow hnotimeout
+  rw [hshift]
+  simp [Nat.add_sub_of_le hleft]
+
 /-! The evaluator shift also transports the full source-facing result
     projection.  This is the direct clocked top-level bridge used when a
     correctness relation needs the same control/state result at a larger

@@ -458,6 +458,19 @@ end CakeNodeMap
 def cakeSpillCostMap (nextNode : Nat) (costs : NatInfoMap Nat) : CakeNodeMap Nat :=
   CakeNodeMap.ofNatInfoMap nextNode costs
 
+/- Cake passes the source-keyed spill-cost tree directly to `reg_alloc`.
+   `CakeNodeMap` therefore must retain a cost whose source key lies beyond
+   the allocator-node array in its `outside` map; silently densifying that
+   key would change `st_ex_list_MIN_cost` selection. -/
+theorem cakeSpillCostMap_outside_lookup
+    (nextNode key cost : Nat) (hkey : nextNode ≤ key) :
+    (cakeSpillCostMap nextNode [(key, cost)]).get key = some cost := by
+  have hlt : ¬ key < nextNode := Nat.not_lt_of_ge hkey
+  simp [cakeSpillCostMap, CakeNodeMap.ofNatInfoMap, CakeNodeMap.set,
+    CakeNodeMap.get, CakeNodeMap.ofSize, cakeMapUpdate, cakeMapLookup,
+    Flapjack.lookupNatInfo,
+    hlt]
+
 /-- The IRC allocator state (`ra_state`), represented functionally. -/
 structure CakeRaState where
   adjLists : CakeNodeMap (List Nat)

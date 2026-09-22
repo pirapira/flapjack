@@ -721,6 +721,52 @@ theorem call_target_compile_correct_fixture :
         loopLookupFirst, load32State])
   simpa [comp, loopResultState] using hcall
 
+theorem call_empty_compile_correct_fixture :
+    evalLoopProgWithCallsAndFfi []
+        (fun _ _ _ _ _ _ => none) 1 load32State
+        (comp [(3, 2)]
+          (.call none none [] none : LoopProg Nat) :
+            LoopProg Nat × LocationEnv).1 =
+        some (.normal load32State) ∧
+      labelsIn
+        (comp [(3, 2)]
+          (.call none none [] none : LoopProg Nat) :
+            LoopProg Nat × LocationEnv).2
+        load32State.locals := by
+  have hcall := comp_call_empty_correct
+    (functions := [])
+    (ffiHandler := (fun _ _ _ _ _ _ => none))
+    (environment := [(3, 2)]) (state := load32State) (fuel := 0)
+    (returns := none) (handler := none)
+  simpa [comp] using hcall
+
+theorem call_implicit_target_compile_correct_fixture :
+    evalLoopProgWithCallsAndFfi
+        [(2, [], (.return [] : LoopProg Nat))]
+        (fun _ _ _ _ _ _ => none) 3 load32State
+        (comp [(3, 2)]
+          (.call none none [3] none : LoopProg Nat) :
+            LoopProg Nat × LocationEnv).1 =
+        some (.returned load32State []) ∧
+      labelsIn
+        (comp [(3, 2)]
+          (.call none none [3] none : LoopProg Nat) :
+            LoopProg Nat × LocationEnv).2
+        load32State.locals := by
+  have hcall := comp_call_implicit_target_correct
+    (functions := [(2, [], (.return [] : LoopProg Nat))])
+    (ffiHandler := (fun _ _ _ _ _ _ => none))
+    (environment := [(3, 2)]) (state := load32State) (fuel := 2)
+    (returns := none) (arguments := [3]) (pre := [])
+    (lastValue := 3) (destination := 2) (handler := none)
+    (result := .returned load32State [])
+    (by simp [splitLast]) (by simp [lookup])
+    (by
+      simp [evalLoopCallWithCallsAndFfi, evalLoopProgWithCallsAndFfi,
+        lookupLoopFunction, loopReadLocals, evalLoopProg, loopBindParameters,
+        loopLookupFirst, load32State])
+  simpa [comp, loopResultState] using hcall
+
 theorem call_target_return_compile_correct_fixture :
     evalLoopProgWithCallsAndFfi
         [(1, [3], (.return [3] : LoopProg Nat))]
@@ -813,52 +859,6 @@ theorem call_target_raised_handler_compile_correct_fixture :
     (by simp [loopBindParameters, loopLookupFirst])
     (by simp [evalLoopProgWithCallsAndFfi, evalLoopProg, loopLookupFirst])
     (by simp [evalLoopProgWithCallsAndFfi, evalLoopProg])
-  simpa [comp, loopResultState] using hcall
-
-theorem call_empty_compile_correct_fixture :
-    evalLoopProgWithCallsAndFfi []
-        (fun _ _ _ _ _ _ => none) 1 load32State
-        (comp [(3, 2)]
-          (.call none none [] none : LoopProg Nat) :
-            LoopProg Nat × LocationEnv).1 =
-        some (.normal load32State) ∧
-      labelsIn
-        (comp [(3, 2)]
-          (.call none none [] none : LoopProg Nat) :
-            LoopProg Nat × LocationEnv).2
-        load32State.locals := by
-  have hcall := comp_call_empty_correct
-    (functions := [])
-    (ffiHandler := (fun _ _ _ _ _ _ => none))
-    (environment := [(3, 2)]) (state := load32State) (fuel := 0)
-    (returns := none) (handler := none)
-  simpa [comp] using hcall
-
-theorem call_implicit_target_compile_correct_fixture :
-    evalLoopProgWithCallsAndFfi
-        [(2, [], (.return [] : LoopProg Nat))]
-        (fun _ _ _ _ _ _ => none) 3 load32State
-        (comp [(3, 2)]
-          (.call none none [3] none : LoopProg Nat) :
-            LoopProg Nat × LocationEnv).1 =
-        some (.returned load32State []) ∧
-      labelsIn
-        (comp [(3, 2)]
-          (.call none none [3] none : LoopProg Nat) :
-            LoopProg Nat × LocationEnv).2
-        load32State.locals := by
-  have hcall := comp_call_implicit_target_correct
-    (functions := [(2, [], (.return [] : LoopProg Nat))])
-    (ffiHandler := (fun _ _ _ _ _ _ => none))
-    (environment := [(3, 2)]) (state := load32State) (fuel := 2)
-    (returns := none) (arguments := [3]) (pre := [])
-    (lastValue := 3) (destination := 2) (handler := none)
-    (result := .returned load32State [])
-    (by simp [splitLast]) (by simp [lookup])
-    (by
-      simp [evalLoopCallWithCallsAndFfi, evalLoopProgWithCallsAndFfi,
-        lookupLoopFunction, loopReadLocals, evalLoopProg, loopBindParameters,
-        loopLookupFirst, load32State])
   simpa [comp, loopResultState] using hcall
 
 theorem call_implicit_target_unresolved_compile_fixture :

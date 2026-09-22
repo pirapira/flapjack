@@ -576,4 +576,14 @@ def assignRet [OfNat α 0] [Add α] (wordStride : α) (names : List Nat) : CrepP
   crepNestedSeq (names.zipWith (fun name value => .assign name value)
     (loadGlobals (0 : α) wordStride names.length))
 
+/-- The assignments emitted by `assignRet` assign exactly `names`, so their
+    free-variable set is `names`.  Used by the call-handler branch of Cake's
+    `not_mem_context_assigned_mem_gt` (`pan_to_crepProofScript.sml:1252`). -/
+theorem crepAssignedFreeVars_assignRet [OfNat α 0] [Add α]
+    (wordStride : α) (names : List Nat) :
+    crepAssignedFreeVars (assignRet wordStride names) = names := by
+  unfold assignRet
+  rw [crepAssignedFreeVars_nestedSeq_assign_zipWith names
+      (loadGlobals (0 : α) wordStride names.length) (by rw [loadGlobals_length])]
+
 end Flapjack

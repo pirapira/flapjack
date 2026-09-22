@@ -70,6 +70,45 @@ abbrev PanValuePcTargetCode α :=
 abbrev PanValuePcCodeRel α :=
   CompileContext α → PanValuePcSourceCode α → PanValuePcTargetCode α → Prop
 
+/-- Concrete Cake `code_rel` analogue (`pan_to_crepProofScript.sml:32`).
+
+Every source function's compiled target image is present with the parameter
+slots and body produced by the function-local compile context, and the source
+body is localised.  This is the missing glue between the abstract
+`PanValuePcCodeRel` parameter of `pc_compile_correct` and the concrete compiler
+table: it has exactly the type of `PanValuePcCodeRel α`, so it can be passed
+directly as the `codeRel` argument. -/
+def panValuePcCodeRelConcrete [BEq String] [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α)
+    (source : PanValuePcSourceCode α) (target : PanValuePcTargetCode α) : Prop :=
+  ∀ name parameters body,
+    lookupPanFunction name source = some (parameters, body) →
+    localisedProg body ∧
+    ∃ vshs returnShape,
+      lookupInfo name context.functions = some (vshs, returnShape) ∧
+      vshs.map Prod.fst = parameters ∧
+      lookupCompiledFunction name target =
+        some (panToCrepVars vshs,
+          compileProg { context with vars := panToCrepMakeVmap vshs } body)
+
+/-- The empty source code satisfies the concrete code relation for any target. -/
+theorem panValuePcCodeRelConcrete_nil [BEq String] [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (target : PanValuePcTargetCode α) :
+    panValuePcCodeRelConcrete context [] target := by
+  intro name parameters body hlookup
+  simp [lookupPanFunction] at hlookup
+
+/-- A concrete code relation exposes localisation of every looked-up source
+body, which is the localisation obligation of Cake `mk_ctxt_code_imp_code_rel`. -/
+theorem panValuePcCodeRelConcrete_localised [BEq String] [BEq α] [OfNat α 0]
+    [Add α] {context : CompileContext α} {source : PanValuePcSourceCode α}
+    {target : PanValuePcTargetCode α}
+    (h : panValuePcCodeRelConcrete context source target) :
+    ∀ name parameters body,
+      lookupPanFunction name source = some (parameters, body) →
+      localisedProg body :=
+  fun name parameters body hlookup => (h name parameters body hlookup).1
+
 abbrev PanValuePcExceptionShapeRel α :=
   CompileContext α → InfoMap Shape → InfoMap Shape → Prop
 

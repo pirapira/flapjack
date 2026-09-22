@@ -2726,4 +2726,26 @@ theorem evalPanValueFfiClockProg_leaf_of_handlerPreserves
       memoryAccess contracts memoryHandler clock hstateful hmemory hstep⟩
 
 
+
+set_option linter.unusedVariables false in
+theorem panValueFfiStatefulHandlerPreservesIoEvents_fails
+    (α : Type u) (σ : Type v) :
+    panValueFfiStatefulHandlerPreservesIoEvents (α := α) (σ := σ)
+      (fun (_ : FunName) (_ _ _ _ : α) (_ : VarName → Option (PanValue α))
+        (_ : FfiState σ) => none) := by
+  intro function configuration configurationLength array arrayLength locals ffi nextLocals
+    nextFfi h
+  exact absurd h (by simp)
+
+set_option linter.unusedVariables false in
+theorem panValueFfiMemoryHandlerPreservesIoEvents_fails
+    (α : Type u) (σ : Type v) :
+    panValueFfiMemoryHandlerPreservesIoEvents (α := α) (σ := σ)
+      (fun (_ : FunName) (_ _ _ _ : α) (_ : VarName → Option (PanValue α))
+        (_ : α → Option (PanValue α)) (_ : FfiState σ) => none) := by
+  intro function configuration configurationLength array arrayLength locals memory ffi nextLocals
+    nextMemory nextFfi h
+  exact absurd h (by simp)
+
+
 end Flapjack

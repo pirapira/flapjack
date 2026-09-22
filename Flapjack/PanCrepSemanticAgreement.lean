@@ -126,6 +126,35 @@ theorem panLprefixChain_of_panSemEvaluate_nonTimeout
   exact panSemEvaluate_clock_event_prefix_of_nonTimeout
     context primitive handler state program hevaluate hnonTimeout left right hleft
 
+/-! Expose the same non-timeout chain at the production hook boundary used by
+    the clock-indexed semantic agreement.  The evaluator and non-timeout
+    premises stay in the executable `panSemEvaluate` form; only the hook
+    projection is discharged definitionally. -/
+theorem panSemEvaluateHooks_lprefixChain_of_nonTimeout
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (state : PanSemEvaluateState α σ)
+    (program : Prog α)
+    (hevaluate : ∀ clock, ∃ outcome returnedClock,
+      panSemEvaluate context primitive handler
+        { state with clock := clock } program = some (outcome, returnedClock))
+    (hnonTimeout : ∀ clock outcome returnedClock,
+      panSemEvaluate context primitive handler
+        { state with clock := clock } program = some (outcome, returnedClock) →
+      ∀ locals globals memory ffi,
+        outcome ≠ .timeout locals globals memory ffi) :
+    panLprefixChain (fun clock =>
+      panResultEvents
+        ((panSemEvaluateHooks context primitive handler state program).evaluate clock)) := by
+  have hchain := panLprefixChain_of_panSemEvaluate_nonTimeout
+    context primitive handler state program hevaluate hnonTimeout
+  simpa [panSemEvaluateHooks] using hchain
+
 @[simp] theorem panSemEvaluateHooks_ffiOutcome
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

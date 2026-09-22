@@ -171,6 +171,24 @@ theorem panValueCtxtMax_getElem_le [BEq String] (bound : Nat)
     slots[n] ≤ bound :=
   hmax.2 name shape slots hlookup slots[n] (List.getElem_mem hn)
 
+/-- Counterpart of the context hypothesis of Cake's
+    `not_mem_context_assigned_mem_gt`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:1252`): any value
+    strictly above a `ctxt_max` bound is absent from the slot list of every
+    variable in the context. -/
+theorem panValueCtxtMax_not_mem_of_lt [BEq String] (bound x : Nat)
+    (vars : InfoMap (Shape × List Nat)) (name : String) (shape : Shape)
+    (slots : List Nat)
+    (hmax : panValueCtxtMax bound vars)
+    (hx : bound < x)
+    (hlookup : lookupInfo name vars = some (shape, slots)) :
+    x ∉ slots := by
+  intro hmem
+  obtain ⟨n, hn, hget⟩ := List.mem_iff_getElem.mp hmem
+  have hle := panValueCtxtMax_getElem_le bound vars name shape slots n hmax hlookup hn
+  rw [hget] at hle
+  omega
+
 /-- The empty variable map satisfies Cake's `no_overlap`. -/
 theorem panValueNoOverlap_empty [BEq String] :
     panValueNoOverlap ([] : InfoMap (Shape × List Nat)) := by

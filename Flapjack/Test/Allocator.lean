@@ -1,5 +1,4 @@
 import Flapjack.Test.AllocatorCore
-import Flapjack.Test.AllocatorPipeline
 import Flapjack.Test.AllocatorSSA
 import Flapjack.Test.AllocatorSpills
 

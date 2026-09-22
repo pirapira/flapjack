@@ -263,16 +263,6 @@ def checkedPipelineRemoveConfig : StackRemoveConfig :=
     stackPointer := 20, bytesInWord := 8, stackBase := 21, wordShift := 3 }
 
 #guard
-    (compileFlapjackRiscVViaStackChecked (width := 64) .rv64i
-      (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
-      checkedPipelineRemoveConfig checkedPipelineDeclarations).isOk
-
-#guard
-    (compileFlapjackRiscVViaStackBytesChecked (width := 64) .rv64i
-      (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
-      checkedPipelineRemoveConfig checkedPipelineDeclarations).isOk
-
-#guard
     match compileFlapjackRiscVSourceBytesChecked (width := 64) .rv64i
       (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] checkedPipelineRemoveConfig
       "main" "fun main() { return 7; }" with

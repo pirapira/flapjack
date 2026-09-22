@@ -106,10 +106,10 @@ partial def backendWalk
   | [] => IO.println "PERF backend done"
   | entry :: rest => do
       let start ← IO.monoMsNow
-      let outcome := pipelineWordFunctionsAllocatedWithSpillsAndFullSsa [entry]
+      let outcome := pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked [entry]
       let status := match outcome with
-        | some result => s!"ok n={result.length}"
-        | none => "FAILED"
+        | .ok result => s!"ok n={result.length}"
+        | .error _ => "FAILED"
       let now ← IO.monoMsNow
       IO.println s!"PERF backend fn[{index}] label={entry.1} {now - start} ms {status}"
       (← IO.getStdout).flush
@@ -434,17 +434,17 @@ def main : IO Unit := do
           let globals := { globals0 with declarations := wrapper :: globals0.declarations }
           let crepeContext := pipelineCrepeContext (BitVec.ofNat 64 8)
             (fun value => BitVec.ofNat 64 value) globals
-          let compiled := compileToCrepe crepeContext globals.declarations
-          let t7 ← stage "compileToCrepe" t6 (countCrepFunctions compiled)
+          let compiled := compileToCrep crepeContext globals.declarations
+          let t7 ← stage "compileToCrep" t6 (countCrepFunctions compiled)
           let inlined := crepInlineTopRecursiveByNames
             (pipelineInlineNames globals.declarations) compiled
           let t8 ← stage "crepInline" t7 (countCrepFunctions inlined)
           let crepe := crepSimpFunctions (fun value => BitVec.ofNat 64 value) inlined
           let t9 ← stage "crepSimp" t8 (countCrepFunctions crepe)
-          let loop := pipelineLoopFunctions .rv64i 1 crepe
+          let loop := pipelineLoopFunctionsSource .rv64i 1 crepe
           let t10 ← stage "crepToLoop" t9
             (loop.foldl (fun acc (_, _, body) => acc + countLoop body) 0)
-          let word := pipelineWordFunctions loop
+          let word := pipelineWordFunctionsSource loop
           let _ ← stage "loopToWord" t10
             (word.foldl (fun acc (_, _, body) => acc + countWord body) 0)
           IO.println s!"PERF functions loop={loop.length} word={word.length}"

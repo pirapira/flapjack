@@ -1,5 +1,5 @@
 import Std
-import Flapjack.Language
+import Flapjack.Pancake.PanLang
 
 /-!
 The first Lean target-model slice for Flapjack's RISC-V backend.

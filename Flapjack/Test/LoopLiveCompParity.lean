@@ -1,4 +1,4 @@
-import Flapjack.LoopAnalysis
+import Flapjack.Pancake.LoopLive
 
 namespace Flapjack.Test.LoopLiveCompParity
 

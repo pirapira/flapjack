@@ -1,4 +1,4 @@
-import Flapjack.PanToCrep
+import Flapjack.Pancake.PanToCrep
 
 /-!
 # Original-domain parity for `pan_to_crep$ret_var`

@@ -1,6 +1,6 @@
 import Flapjack.Parser
-import Flapjack.Static
-import Flapjack.Compile
+import Flapjack.Pancake.PanStatic
+import Flapjack.Pancake.PanToCrep.Compile
 
 /-!
 Parser tests.
@@ -1714,12 +1714,12 @@ checker and its Pancake-to-Crepe compiler. -/
   | .ok declarations => !staticResultOk (staticCheck declarations)
   | .error _ => false
 
--- Parsed declarations compile through `compileToCrepe`, producing one
+-- Parsed declarations compile through `compileToCrep`, producing one
 -- compiled function per source function.
 #guard match parseTopDecs (BitVec.ofInt 64)
     "fun 1 f(1 a) { return a + 1; }\nfun 1 main() { var 1 r = f(2); return r; }" with
   | .ok declarations =>
-      (compileToCrepe
+      (compileToCrep
         { vars := [], functions := [], exceptions := [], maxVar := 0,
           bytesInWord := BitVec.ofNat 64 8 } declarations).length == 2
   | .error _ => false

@@ -1,4 +1,4 @@
-import Flapjack.PanGlobals
+import Flapjack.Pancake.PanGlobals
 
 namespace Flapjack.Test.PanGlobalsFreshNameParity
 

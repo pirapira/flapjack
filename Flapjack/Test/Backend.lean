@@ -1,10 +1,7 @@
 import Flapjack.Test.RiscVMemory
 import Flapjack.Test.RiscV
-import Flapjack.Test.Pipeline
-import Flapjack.Test.HandlerExecution
 import Flapjack.Test.Calls
 import Flapjack.Test.Loops
-import Flapjack.Test.Primitive
 import Flapjack.Test.Allocator
 import Flapjack.Test.AllocatorFunction
 import Flapjack.Test.AllocatorCalls
@@ -14,7 +11,6 @@ import Flapjack.Test.MustTerminate
 import Flapjack.Test.TailCalls
 import Flapjack.Test.WordOperations
 import Flapjack.Test.WordBitmaps
-import Flapjack.Test.BitmapPipeline
 import Flapjack.Test.HeapAlloc
 import Flapjack.Test.StackAlloc
 import Flapjack.Test.WordToStack

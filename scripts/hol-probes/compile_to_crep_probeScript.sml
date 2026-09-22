@@ -28,3 +28,15 @@ val _ = print_eval "raise_const"
             params := [(«x», panLang$One)];
             body := panLang$Raise «E» (panLang$Const (7w : 8 word));
             return := panLang$One |>]``;
+
+val _ = print_eval "raise_pair"
+  ``pan_to_crep$compile_to_crep
+      [panLang$ExnDecl «E» (panLang$Comb [panLang$One; panLang$One]);
+       panLang$Function
+         <| name := «f»; inline := F; export := F; params := [];
+            body := panLang$Raise «E»
+              (panLang$RStruct
+                [panLang$Const (7w : 8 word); panLang$Const 9w]);
+            return := panLang$One |>]``;
+
+val _ = print_eval "done" ``T``;

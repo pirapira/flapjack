@@ -1,6 +1,6 @@
-import Flapjack.Language
-import Flapjack.Crepe
-import Flapjack.Loop
+import Flapjack.Pancake.PanLang
+import Flapjack.Pancake.CrepLang
+import Flapjack.Pancake.LoopLang
 import Flapjack.NumSet
 
 /-!

@@ -1,4 +1,4 @@
-import Flapjack.PanSimp
+import Flapjack.Pancake.PanSimp
 import Flapjack.PanValues
 
 /-!

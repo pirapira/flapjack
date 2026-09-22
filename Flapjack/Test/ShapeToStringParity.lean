@@ -1,4 +1,4 @@
-import Flapjack.Language
+import Flapjack.Pancake.PanLang
 
 /-! Parity checks for Pancake `shape_to_str_def`, backed by
     `scripts/hol-probes/shape_to_str_probe.out`. -/

@@ -1,4 +1,4 @@
-import Flapjack.Crepe
+import Flapjack.Pancake.CrepLang
 
 /-!
 The compiler's `distinctLists` guard is exactly the non-interference property

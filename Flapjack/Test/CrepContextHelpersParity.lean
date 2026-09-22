@@ -1,4 +1,4 @@
-import Flapjack.CrepToLoop
+import Flapjack.Pancake.CrepToLoop
 
 /-! Direct parity for `gen_temps`, `rt_var`, and `rt_vars`
 (`crep_to_loopScript.sml:101-118`). -/

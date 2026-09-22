@@ -1,10 +1,10 @@
-import Flapjack.Compile
+import Flapjack.Pancake.PanToCrep.Compile
 
 /-!
 # Function-name invariants for the Pancake-to-Crep compiler
 
 CakeML's `pan_to_crep` correctness development keeps the compiled function
-table keyed by distinct names.  `compileFunctions` filters non-function
+table keyed by distinct names.  `compileFunctionsSource` filters non-function
 declarations while preserving each function declaration's name, so the
 invariant is a direct but useful bridge between a source declaration list and
 the table consumed by call correctness.
@@ -29,50 +29,11 @@ def functionDeclarations : List (Decl α) → List (FunDecl α)
   | _ :: declarations => functionDeclarations declarations
 termination_by declarations => sizeOf declarations
 
-theorem compileFunctions_map_name
-    [BEq α] [OfNat α 0] [Add α]
-    (context : CompileContext α) (declarations : List (Decl α)) :
-    (compileFunctions context declarations).map CompiledFunction.name =
-      functionDeclarationNames declarations := by
-  induction declarations with
-  | nil => simp [compileFunctions, functionDeclarationNames]
-  | cons declaration declarations ih =>
-      cases declaration with
-      | function declaration =>
-          simp [compileFunctions, functionDeclarationNames, ih, compileFunDecl]
-      | decl shape declaration value =>
-          simpa [compileFunctions, functionDeclarationNames] using ih
-      | exnDecl exception shape =>
-          simpa [compileFunctions, functionDeclarationNames] using ih
-      | name struct fields =>
-          simpa [compileFunctions, functionDeclarationNames] using ih
-
-theorem compileFunctions_names_nodup
-    [BEq α] [OfNat α 0] [Add α]
-    (context : CompileContext α) (declarations : List (Decl α))
-    (names : List FunName)
-    (hnames : functionDeclarationNames declarations = names)
-    (hnodup : names.Nodup) :
-    (compileFunctions context declarations).map CompiledFunction.name |>.Nodup := by
-  rw [compileFunctions_map_name context declarations, hnames]
-  exact hnodup
-
-theorem compileToCrepe_names_nodup
-    [BEq α] [OfNat α 0] [Add α]
-    (context : CompileContext α) (declarations : List (Decl α))
-    (hnodup : (functionDeclarationNames declarations).Nodup) :
-    (compileToCrepe context declarations).map CompiledFunction.name |>.Nodup := by
-  simpa [compileToCrepe] using
-    (compileFunctions_names_nodup
-      ({ context with functions := functionInfos declarations }) declarations
-      (functionDeclarationNames declarations) rfl hnodup)
-
-/- The source-shaped `compileToCrep` uses `compileFunctionsSource` rather
-   than the context-normalized table above, but it preserves the same
+/- The source-shaped `compileToCrep` uses `compileFunctionsSource` and preserves the same
    declaration-name projection.  This is the name-distinctness premise needed
    by the complete `compile_prog`/inline boundary. -/
 theorem compileFunctionsSource_map_name
-    [BEq α] [OfNat α 0] [Add α]
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (declarations : List (Decl α)) :
     (compileFunctionsSource context declarations).map CompiledFunction.name =
       functionDeclarationNames declarations := by
@@ -97,7 +58,7 @@ theorem compileFunctionsSource_map_name
     remain paired.  This is the indexed table-provenance fact needed before
     lifting source state semantics through `compile_to_crep`. -/
 theorem compileFunctionsSource_getElem?_origin
-    [BEq α] [OfNat α 0] [Add α]
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (declarations : List (Decl α))
     {n : Nat} {function : CompiledFunction α}
     (hcompiled : (compileFunctionsSource context declarations)[n]? = some function) :
@@ -143,7 +104,7 @@ theorem compileFunctionsSource_getElem?_origin
 
 /-! The same indexed provenance at the public `compileToCrep` boundary. -/
 theorem compileToCrep_getElem?_origin
-    [BEq α] [OfNat α 0] [Add α]
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (declarations : List (Decl α))
     {n : Nat} {function : CompiledFunction α}
     (hcompiled : (compileToCrep context declarations)[n]? = some function) :
@@ -156,7 +117,7 @@ theorem compileToCrep_getElem?_origin
   simpa [compileToCrep] using hcompiled
 
 theorem compileToCrep_names_nodup
-    [BEq α] [OfNat α 0] [Add α]
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (declarations : List (Decl α))
     (hnodup : (functionDeclarationNames declarations).Nodup) :
     (compileToCrep context declarations).map CompiledFunction.name |>.Nodup := by
@@ -179,7 +140,7 @@ theorem functionDeclarationNames_eq_functionDeclarations_map_name
       cases declaration <;> simp [functionDeclarationNames, functionDeclarations, ih]
 
 theorem compileToCrep_names_nodup_of_functionDeclarations
-    [BEq α] [OfNat α 0] [Add α]
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (declarations : List (Decl α))
     (hnodup : ((functionDeclarations declarations).map
       (fun declaration => declaration.name)).Nodup) :
@@ -192,7 +153,7 @@ theorem compileToCrep_names_nodup_of_functionDeclarations
    `compileToCrep` boundary exposes those slots as `List.range`, so this
    invariant is independent of function-body lowering. -/
 theorem compileFunctionsSource_params_nodup
-    [BEq α] [OfNat α 0] [Add α]
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (declarations : List (Decl α)) :
     ∀ function ∈ compileFunctionsSource context declarations,
       function.params.Nodup := by
@@ -214,7 +175,7 @@ theorem compileFunctionsSource_params_nodup
           simpa [compileFunctionsSource] using ih
 
 theorem compileToCrep_params_nodup
-    [BEq α] [OfNat α 0] [Add α]
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (declarations : List (Decl α)) :
     ∀ function ∈ compileToCrep context declarations,
       function.params.Nodup := by

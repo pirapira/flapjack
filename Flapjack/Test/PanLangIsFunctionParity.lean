@@ -1,4 +1,4 @@
-import Flapjack.PanGlobals
+import Flapjack.Pancake.PanGlobals
 
 /-!
 # Pancake `is_function` parity

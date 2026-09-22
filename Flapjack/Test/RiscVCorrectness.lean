@@ -1,4 +1,3 @@
-import Flapjack.RiscV.Correctness
 
 namespace Flapjack.RiscV
 

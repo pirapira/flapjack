@@ -1,4 +1,4 @@
-import Flapjack.CrepeRuntime
+import Flapjack.Pancake.Semantics.CrepSem
 
 /-!
 # Pancake `crepSem.fix_clock`

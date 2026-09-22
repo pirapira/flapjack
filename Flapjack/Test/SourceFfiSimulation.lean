@@ -1,4 +1,3 @@
-import Flapjack.CorrectnessFfiSource
 
 /-! Regression for the source-local FFI state-relation boundary. -/
 

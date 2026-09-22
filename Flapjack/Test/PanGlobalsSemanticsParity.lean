@@ -4,10 +4,10 @@ namespace Flapjack.Test.PanGlobalsSemanticsParity
 
 open Flapjack
 
-/-! Direct parity for Cake's `compile_top_shape_wf`
-    (`pan_globalsProofScript.sml:2458`): a successful declaration evaluation
-    makes every function declaration emitted by the start-function entry point
-    have well-formed parameter and return shapes. -/
+/-! Smoke checks for Flapjack's own start-function shape invariant. These
+    fixtures are analogous to Cake's `compile_top_shape_wf`
+    (`pan_globalsProofScript.sml:2458`), but they do not test that theorem's
+    statement shape: they use Flapjack's value evaluator and global compiler. -/
 
 def mainFunction : Decl Nat :=
   .function
@@ -31,8 +31,7 @@ theorem panDeclShapesWellFormed_mainFunction :
   simp [panDeclShapesWellFormed, panFunctionShapesWellFormed, mainFunction,
     isWfShape]
 
-/-- `compile_top_shape_wf` for the start-function entry point: any successful
-    evaluation justifies the shape invariant of the compiled declaration list. -/
+/-- Flapjack-specific start-function fixture for the analogous shape invariant. -/
 theorem globalCompileTopForStart_shapes_wf_fixture
     (state state' : PanValueProgramState Nat)
     (memoryAccess : Option (PanValueMemoryAccess Nat))
@@ -45,8 +44,8 @@ theorem globalCompileTopForStart_shapes_wf_fixture
         state' shapeDecls memoryAccess 4 id "main" compiled heval hcompile
       trivial
 
-/-- `compile_top_shape_wf_nil` (`pan_globalsProofScript.sml:2495`): the
-    empty-struct-context instance of the shape invariant. -/
+/-- Empty-struct Flapjack fixture, analogous to `compile_top_shape_wf_nil`
+    (`pan_globalsProofScript.sml:2495`) but with Flapjack's statement shape. -/
 theorem globalCompileTopForStart_shapes_wf_nil_fixture
     (state state' : PanValueProgramState Nat)
     (memoryAccess : Option (PanValueMemoryAccess Nat))

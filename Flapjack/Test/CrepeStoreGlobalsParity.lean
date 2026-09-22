@@ -1,4 +1,4 @@
-import Flapjack.Crepe
+import Flapjack.Pancake.CrepLang
 
 /-!
 # Original-domain parity for `crepLang$store_globals`
@@ -26,18 +26,18 @@ def isTwo : List (CrepProg Nat) → Bool
   | _ => false
 
 def parityGuard : Bool :=
-  isEmpty (storeGlobals 3 1 []) &&
-  isOne (storeGlobals 3 1 [.const 7]) &&
-  isTwo (storeGlobals 3 1 [.const 7, .const 9])
+  isEmpty (storeGlobals 3 []) &&
+  isOne (storeGlobals 3 [.const 7]) &&
+  isTwo (storeGlobals 3 [.const 7, .const 9])
 
 #eval parityGuard
 #guard parityGuard
 
 def runChecks : IO Bool := do
   let results := [
-    isEmpty (storeGlobals 3 1 []),
-    isOne (storeGlobals 3 1 [.const 7]),
-    isTwo (storeGlobals 3 1 [.const 7, .const 9])]
+    isEmpty (storeGlobals 3 []),
+    isOne (storeGlobals 3 [.const 7]),
+    isTwo (storeGlobals 3 [.const 7, .const 9])]
   match results with
   | [empty, one, two] =>
       if empty then IO.println "PASS crep store_globals empty" else IO.println "FAIL crep store_globals empty"

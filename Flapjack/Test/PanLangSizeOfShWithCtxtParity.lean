@@ -1,4 +1,4 @@
-import Flapjack.Static
+import Flapjack.Pancake.PanStatic
 
 /-!
 # `panLang$size_of_sh_with_ctxt` parity

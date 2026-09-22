@@ -1,25 +1,23 @@
-import Flapjack.Language
-import Flapjack.PanSimp
-import Flapjack.PanStructs
-import Flapjack.PanGlobals
+import Flapjack.Pancake.PanLang
+import Flapjack.Pancake.PanSimp
+import Flapjack.Pancake.PanStructs
+import Flapjack.Pancake.PanGlobals
 import Flapjack.Pipeline
-import Flapjack.Static
-import Flapjack.PanToCrep
-import Flapjack.Compile
+import Flapjack.Pancake.PanStatic
+import Flapjack.Pancake.PanToCrep
+import Flapjack.Pancake.PanToCrep.Compile
 import Flapjack.Semantics
 import Flapjack.PanValues
 import Flapjack.PanMemory
 import Flapjack.RiscV.Model
-import Flapjack.RiscV.PanSemantics
-import Flapjack.Loop
-import Flapjack.CrepToLoop
-import Flapjack.LoopAnalysis
+import Flapjack.Pancake.LoopLang
+import Flapjack.Pancake.CrepToLoop
+import Flapjack.Pancake.LoopLive
 import Flapjack.LoopSemantics
 import Flapjack.Word
 import Flapjack.RiscV.Backend
 import Flapjack.RiscV.Calls
 import Flapjack.RiscV.Link
-import Flapjack.Correctness
 import Flapjack.WordSemantics
 
 namespace Flapjack
@@ -28,24 +26,6 @@ open RiscV
 
 example : RiscV.Architecture.width .rv32i = 32 := by
   decide +kernel
-
-example :
-    (evalPanValueProgWithPrimitive (α := RiscV.Word 64) [] 0 100 8
-      (fun name => if name == "result" then
-        some (.rStruct [.word (BitVec.ofNat 64 0), .word (BitVec.ofNat 64 0)])
-        else none)
-      (fun _ => none) (fun _ => none) RiscV.panPrimitiveHandler
-      (.primitive "result" .addCarry
-        [.const (BitVec.ofNat 64 1), .const (BitVec.ofNat 64 2),
-          .const (BitVec.ofNat 64 0)])).map
-      (fun result => result.1 "result") =
-      some (some (.rStruct [
-        .word (BitVec.ofNat 64 3), .word (BitVec.ofNat 64 0)])) := by
-  simp [evalPanValueProgWithPrimitive, evalPanValueExp,
-    evalPanValueExp.evalPanValueExps, evalPanValueExps,
-    RiscV.panPrimitiveHandler, RiscV.addCarryWords,
-    updatePanValueMap, panValueShape, panShapeMatches,
-    panShapeMatches.panShapeListMatches]
 
 example : RiscV.accessAligned .read (0 : RiscV.Word 32) 4 = none := by
   decide

@@ -1,4 +1,3 @@
-import Flapjack.CrepeControlRelationContext
 
 namespace Flapjack.Test.CrepeControlRelationContext
 

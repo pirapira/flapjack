@@ -28,15 +28,14 @@ trap 'rm -f "$tmp"' EXIT
 
 # HOL's `hol run` consumes the already-built CakeML theories; it does not need
 # to rebuild an unchanged theory.  Keep the checked-in fixtures incremental as
-# well: rerun a probe only when its script, its referenced Pancake source, or
-# this driver is newer than the fixture.  This also keeps regeneration quick
-# after an ordinary no-op invocation.
+# well: rerun a probe only when its script or its referenced Pancake source is
+# newer than the fixture.  Changes to this driver do not invalidate probe
+# results, so ordinary harness maintenance stays incremental.
 probe_needs_refresh() {
   local output="$1"
   local probe="$2"
   local source="$3"
-  [[ ! -f "$output" || "$probe" -nt "$output" || \
-     "$source" -nt "$output" || "$probe_dir/regenerate.sh" -nt "$output" ]]
+  [[ ! -f "$output" || "$probe" -nt "$output" || "$source" -nt "$output" ]]
 }
 
 run_probe() {
@@ -50,8 +49,12 @@ run_probe() {
       *) labels+=("$1"); shift ;;
     esac
   done
-  local first_label="${labels[0]}"
-  local last_label="${labels[${#labels[@]}-1]}"
+  local first_label=""
+  local last_label=""
+  if [[ ${#labels[@]} -gt 0 ]]; then
+    first_label="${labels[0]}"
+    last_label="${labels[${#labels[@]}-1]}"
+  fi
   local source="$1"
   shift
   local workdir="${1:-$cake_dir/pancake}"
@@ -60,8 +63,12 @@ run_probe() {
   if probe_needs_refresh "$output" "$probe" "$source"; then
     (cd "$workdir" && \
       "$hol_dir/bin/hol" run "$probe") >"$tmp"
-    sed -n "/^${first_label}=/,/^${last_label}=/p" "$tmp" \
-      | sed '/^<<HOL message:/,/^  pattern completion.*>>$/d' > "$output"
+    if [[ ${#labels[@]} -eq 0 ]]; then
+      cp "$tmp" "$output"
+    else
+      sed -n "/^${first_label}=/,/^${last_label}=/p" "$tmp" \
+        | sed '/^<<HOL message:/,/^  pattern completion.*>>$/d' > "$output"
+    fi
   fi
 }
 
@@ -356,9 +363,10 @@ run_probe wrap_rt_probeScript.sml wrap_rt_probe.out \
 run_probe compile_def_probeScript.sml compile_def_probe.out \
   return return "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe compile_to_crep_probeScript.sml compile_to_crep_probe.out \
-  empty raise_const "$cake_dir/pancake/pan_to_crepScript.sml"
+  empty raise_const raise_pair done "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe compile_prog_probeScript.sml compile_prog_probe.out \
-  empty inline_call "$cake_dir/pancake/pan_to_crepScript.sml"
+  empty inline_call global_dest handled_missing_dest done \
+  "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe smart_seq_probeScript.sml smart_seq_probe.out \
   skip_skip skip_tick tick_skip tick_tick "$cake_dir/pancake/pan_simpScript.sml"
 run_probe seq_assoc_probeScript.sml seq_assoc_probe.out \

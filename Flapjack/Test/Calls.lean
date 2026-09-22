@@ -1,4 +1,4 @@
-import Flapjack.Test.Pipeline
+import Flapjack.Pipeline
 
 namespace Flapjack
 

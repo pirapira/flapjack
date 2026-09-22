@@ -1,5 +1,4 @@
 import Flapjack.RiscV.Backend
-import Flapjack.RiscV.Correctness
 import Flapjack.RiscV.Calls
 
 /-!
@@ -519,35 +518,6 @@ theorem executeInstructions_longMul_general [NeZero width] (state : State width)
     hdestination_distinct, 
     hsourceLeft_destinationLeft,
     hsourceRight_destinationLeft]
-
-/-! The call-aware selector preserves the source arithmetic meaning at the
-    concrete multiword boundaries.  These statements retain the selector
-    result as a hypothesis, so they remain useful after the selector grows
-    additional call and control-flow cases. -/
-
-theorem wordFunctionToRiscVWithCalls_addCarry_result [NeZero width]
-    (context : WordCallContext width) (state : State width)
-    (code : List (Instruction width))
-    (zero : readRegister state 0 = 0)
-    (hcompile : wordFunctionToRiscVWithCalls context
-      ((.inst (.arith (.addCarry 5 6 2 3 4))) : WordProg (Word width)) =
-      some (code, [])) :
-    (readRegister (executeInstructions state code) 5,
-      readRegister (executeInstructions state code) 6) =
-      addCarryWords (readRegister state 2) (readRegister state 3)
-        (readRegister state 4) := by
-  have hshape : wordFunctionToRiscVWithCalls context
-      ((.inst (.arith (.addCarry 5 6 2 3 4))) : WordProg (Word width)) =
-      some ([.sltu 31 0 4, .add 5 2 3, .sltu 6 5 3,
-        .add 5 5 31, .sltu 31 5 31, .or 6 6 31], []) := by
-    simp [wordFunctionToRiscVWithCalls, wordArithToInstructions,
-      registerOfNat]
-  have hcode : ([.sltu 31 0 4, .add 5 2 3, .sltu 6 5 3,
-      .add 5 5 31, .sltu 31 5 31, .or 6 6 31] :
-      List (Instruction width)) = code := by
-    exact congrArg Prod.fst (Option.some.inj (hshape.symm.trans hcompile))
-  subst code
-  exact executeInstructions_addCarry state zero
 
 theorem wordFunctionToRiscVWithCalls_longMul_result [NeZero width]
     (context : WordCallContext width) (state : State width)

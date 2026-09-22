@@ -1,7 +1,6 @@
-import Flapjack.PanSimp
-import Flapjack.CrepeExpressionRelation
-import Flapjack.PanToCrepCorrectnessBoundary
-import Flapjack.PanProgramSimp
+import Flapjack.Pancake.PanSimp
+import Flapjack.PanLocalised
+import Flapjack.Pancake.Proofs.PanSimp
 
 /-!
 `pan_simp` only inserts `Skip`, `Seq`, and `Annot` nodes and rewrites the
@@ -336,25 +335,5 @@ theorem localisedProg_panSimpProg (program : Prog α) (h : localisedProg program
   unfold panSimpProg
   exact localisedProg_retToTail _ (localisedProg_seqAssoc .skip program
     localisedProg_skip h)
-
-/-! The code-level invariant used by the Pancake-to-Crep boundary
-(`panValuePcLocalisedCode`, `Flapjack/PanToCrepCorrectnessBoundary.lean`) is
-preserved by the `pan_simp` function-table transform. -/
-
-theorem panValuePcLocalisedCode_panValueFunctionsSimp
-    (code : PanValuePcSourceCode α)
-    (h : panValuePcLocalisedCode code) :
-    panValuePcLocalisedCode (panValueFunctionsSimp code) := by
-  induction code with
-  | nil =>
-      intro entry hentry
-      simp [panValueFunctionsSimp] at hentry
-  | cons head rest ih =>
-      intro entry hentry
-      obtain ⟨name, parameters, body⟩ := head
-      simp only [panValueFunctionsSimp, List.mem_cons] at hentry
-      rcases hentry with rfl | hrest
-      · exact localisedProg_panSimpProg body (h (name, parameters, body) (by simp))
-      · exact ih (fun e he => h e (by simp [he])) entry hrest
 
 end Flapjack

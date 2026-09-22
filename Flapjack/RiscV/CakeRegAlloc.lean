@@ -1395,9 +1395,12 @@ def cakeFullConsistencyOk (state : CakeRaState) (k : Nat) (x y : Nat) : Bool :=
   let fixedY := cakeIsFixedK state k y
   let eligibleX := fixedX || cakeTagIsAtemp state x
   let eligibleY := fixedY || cakeTagIsAtemp state y
+  /- Keep the cheap domain/tag checks before the indexed adjacency lookup.
+     This is the same left-to-right Boolean contract as Cake's conjunction,
+     but avoids touching the graph for ineligible move endpoints. -/
   x != y && x < state.dim && y < state.dim &&
-    !cakeAdjMem state x y &&
-    eligibleX && eligibleY && !(fixedX && fixedY)
+    eligibleX && eligibleY && !(fixedX && fixedY) &&
+    !cakeAdjMem state x y
 
 /-- A lookup-only index for the source-variable side of `mk_bij`.
 

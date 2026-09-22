@@ -1267,7 +1267,9 @@ def wordStackGetNat (config : WordStackConfig) (destination : Nat)
 def wordStackOpCurrHeap {α : Type} (config : WordStackConfig) (operator : BinOp)
     (destination source : Nat) : Option (StackProg α) := do
   let (prelude, sourceRegister) ←
-    wordStackReadRegister config source config.addressScratch
+    /- Cake comp OpCurrHeap uses wReg1 for the source, so spilled
+       sources use the first temporary (k), not the wReg2 register. -/
+    wordStackReadRegister config source config.scratch
   let destination ← wordStackLocation config destination
   match destination with
   | .register destination =>

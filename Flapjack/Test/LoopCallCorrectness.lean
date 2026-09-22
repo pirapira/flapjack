@@ -291,6 +291,22 @@ theorem seq_continued_compile_correct_fixture :
     (by simp [comp, evalLoopProg])
   simpa [comp] using hseq
 
+theorem seq_raised_compile_correct_fixture :
+    evalLoopProg 2 load32State
+        (comp [(3, 2)]
+          (.seq (.raise 2 : LoopProg Nat) .tick)).1 =
+        some (.raised load32State 100) ∧
+      labelsIn
+        (comp [(3, 2)]
+          (.seq (.raise 2 : LoopProg Nat) .tick)).2
+        load32State.locals := by
+  have hseq := comp_seq_raised_correct
+    (environment := [(3, 2)]) (state := load32State) (fuel := 1)
+    (first := (.raise 2 : LoopProg Nat)) (second := .tick)
+    (middle := load32State) (exception := 100)
+    (by simp [comp, evalLoopProg, load32State])
+  simpa [comp] using hseq
+
 theorem ite_labelsIn_fixture :
     (comp [(3, 2)]
       (.ite .equal 2 (.imm 7) (.fail : LoopProg Nat) .tick [2]) :
@@ -607,6 +623,7 @@ theorem ffi_labelsIn_fixture :
 #check comp_seq_returned_correct
 #check comp_seq_broke_correct
 #check comp_seq_continued_correct
+#check comp_seq_raised_correct
 #check comp_ite_labelsIn
 #check comp_ite_true_correct
 #check comp_ite_false_correct

@@ -1,5 +1,4 @@
 import Flapjack.CrepeCallStateExtension
-import Flapjack.CrepeCallReturnedInversion
 
 /-!
 Inversion for a normal Crep call without a destination or handler.

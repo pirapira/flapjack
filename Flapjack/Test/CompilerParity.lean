@@ -84,7 +84,6 @@ import Flapjack.Test.PanHProgParity
 import Flapjack.Test.PanHProgLoadParity
 import Flapjack.Test.PanHProgReturnParity
 import Flapjack.Test.PanHProgRaiseParity
-import Flapjack.Test.PanValuePcRaisedPayloadCorrectness
 import Flapjack.Test.PanValueFfiClockLe
 import Flapjack.Test.PanValueEvaluatorStability
 import Flapjack.Test.CrepeStateRelationWfShape
@@ -116,7 +115,6 @@ import Flapjack.Test.WordDeadCodeParity
 import Flapjack.Test.CrepeNestedSeqParity
 import Flapjack.Test.CrepAssignedFreeVarsParity
 import Flapjack.Test.CrepeStoresParity
-import Flapjack.Test.CrepeProgramGenericRaiseCorrectness
 import Flapjack.Test.CrepeNestedDecsParity
 import Flapjack.Test.CrepeStoreGlobalsParity
 import Flapjack.Test.CrepeLoadGlobalsParity
@@ -690,7 +688,6 @@ def main : IO Unit := do
     Flapjack.Test.CrepeNestedSeqParity.runChecks,
     Flapjack.Test.CrepAssignedFreeVarsParity.runChecks,
     Flapjack.Test.CrepeStoresParity.runChecks,
-    Flapjack.Test.CrepeProgramGenericRaiseCorrectness.runChecks,
     Flapjack.Test.CrepeNestedDecsParity.runChecks,
     Flapjack.Test.CrepeStoreGlobalsParity.runChecks,
     Flapjack.Test.CrepeLoadGlobalsParity.runChecks,

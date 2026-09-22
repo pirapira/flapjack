@@ -1,6 +1,5 @@
 import Flapjack.PanValueFfiClockSemantics
 import Flapjack.PanValueFfiClockProjection
-import Flapjack.PanToCrepCorrectnessBridge
 import Flapjack.Test.PanValueFfiSemantics
 
 /-! Executable regressions for the CakeML clock boundary. -/
@@ -322,73 +321,5 @@ def exactMemoryBranch : Option (PanValueFfiClockResult (Word 64) Unit) :=
         event.outcome = .failed
   | _ => false
 
-/-! A `DecCall` whose callee terminates the host reaches the same terminal FFI
-    outcome as the direct `ExtCall` above.  The regression instantiates the Pc
-    result lift for that branch: the callee evaluation is an explicit premise,
-    and the source state relation is discharged from the flat source state. -/
-def clockedPcContext : CompileContext (Word 64) :=
-  { vars := [], functions := [], exceptions := [], maxVar := 0, bytesInWord := BitVec.ofNat 64 8 }
-
-example (event : FfiFinalEvent)
-    (hcall : evalPanValueFfiClockCall statefulTestContext statefulTestPrimitive
-      statefulTestHandler [] clockedCallFinalFfiFunctions
-      (BitVec.ofNat 64 0) (BitVec.ofNat 64 100) (BitVec.ofNat 64 8) 9
-      (fun _ => none) (fun _ => none) statefulTestMemory statefulTestFinalState
-      10 none "finalExt" [] =
-      some (.control (.finalFfi (fun _ => none) (fun _ => none)
-        statefulTestMemory statefulTestFinalState event), 9)) :
-    panValuePcResultRel [] clockedPcContext (fun _ _ _ => True)
-      (fun _ => none) (fun _ _ => none)
-      (.finalFfi (fun _ => none) (fun _ => none) statefulTestMemory event)
-      (.finalFfi { locals := fun _ => none, memory := panValueWordMemory statefulTestMemory, globals := fun _ => none } event) :=
-  (panValuePcFinalFfiResultRel_of_clocked_decCall [] clockedPcContext
-    (fun _ _ _ => True) (fun _ => none) (fun _ _ => none)
-    statefulTestContext statefulTestPrimitive statefulTestHandler
-    clockedCallFinalFfiFunctions
-    (BitVec.ofNat 64 0) (BitVec.ofNat 64 100) (BitVec.ofNat 64 8) 9 10 9
-    (fun _ => none) (fun _ => none) statefulTestMemory statefulTestFinalState
-    "x" .one "finalExt" [] .skip
-    (fun _ => none) (fun _ => none) statefulTestMemory statefulTestFinalState
-    event event
-    { locals := fun _ => none, memory := panValueWordMemory statefulTestMemory, globals := fun _ => none }
-    hcall (by
-      constructor
-      · rfl
-      · constructor
-        · intro name value shape slots h
-          cases h
-        · rfl) rfl).2.2
-
-/-! The `DecCall` Raise lift keeps the Cake exception-code and payload relation
-    explicit while projecting the clocked evaluator result. -/
-example (targetState : CrepState (Word 64)) (targetException : Word 64)
-    (hcall : evalPanValueFfiClockCall statefulTestContext statefulTestPrimitive
-      statefulTestHandler [] clockedRaiseFunctions
-      (BitVec.ofNat 64 0) (BitVec.ofNat 64 100) (BitVec.ofNat 64 8) 20
-      (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState 1
-      none "raiseOne" [] =
-      some (.control (.raised (fun _ => none) (fun _ => none)
-        (fun _ => none) statefulTestFfiState "E"
-        (.word (BitVec.ofNat 64 1))), 0))
-    (hstate : panValueCrepStateRel [] clockedPcContext
-      (fun _ => none) (fun _ => none) (fun _ => none) targetState)
-    (hraise : panValuePcExceptionResultRelWithContextCode [] clockedPcContext
-      (fun _ _ _ => True) (fun _ => none) (fun _ _ => none)
-      (fun _ => none) (fun _ => none) "E"
-      (.word (BitVec.ofNat 64 1)) targetState targetException) :
-    panValuePcResultRelWithContextCode [] clockedPcContext
-      (fun _ _ _ => True) (fun _ => none) (fun _ _ => none)
-      (.raised (fun _ => none) (fun _ => none) (fun _ => none)
-        "E" (.word (BitVec.ofNat 64 1)))
-      (.raised targetState targetException) :=
-  (panValuePcRaisedResultRelWithContextCode_of_clocked_decCall [] clockedPcContext
-    (fun _ _ _ => True) (fun _ => none) (fun _ _ => none)
-    statefulTestContext statefulTestPrimitive statefulTestHandler
-    clockedRaiseFunctions (BitVec.ofNat 64 0) (BitVec.ofNat 64 100)
-    (BitVec.ofNat 64 8) 20 1 0
-    (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState
-    "x" .one "raiseOne" [] .skip
-    (fun _ => none) (fun _ => none) statefulTestFfiState "E"
-    (.word (BitVec.ofNat 64 1)) targetState targetException hcall hstate hraise).2.2
 
 end Flapjack

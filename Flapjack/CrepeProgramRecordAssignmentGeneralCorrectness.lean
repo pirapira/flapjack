@@ -1,6 +1,5 @@
 import Flapjack.CrepeAssignmentSequenceCorrectness
 import Flapjack.CrepeSourceWordRecordShapeCorrectness
-import Flapjack.CrepeProgramRelation
 
 /-!
 The direct lowering of a structured local assignment with an arbitrary number

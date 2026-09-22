@@ -1,4 +1,3 @@
-import Flapjack.CrepeDecCallIndependentFuelRelation
 import Flapjack.CrepeRaisedResultRestoration
 
 /-!

@@ -1,5 +1,4 @@
 import Flapjack.CrepeExpressionRelation
-import Flapjack.CrepeProgramRelation
 
 /-!
 Fuel-polymorphic scalar raise lowering.

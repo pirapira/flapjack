@@ -1,5 +1,4 @@
 import Flapjack.Pipeline
-import Flapjack.PanToCrepCorrectnessBoundary
 
 /-!
 Concrete exception-code relation for the source-to-Crep correctness boundary.

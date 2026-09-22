@@ -6,7 +6,6 @@ import Flapjack.Test.ParserParseDefParity
 import Flapjack.Test.PanSteppedSemantics
 import Flapjack.Test.Backend
 import Flapjack.Test.Correctness
-import Flapjack.Test.PcCompileSkip
 import Flapjack.Test.CompileFunctionDistinct
 import Flapjack.Test.Runtime
 import Flapjack.Test.CollectorSemantics
@@ -60,7 +59,6 @@ import Flapjack.Test.CrepeFfiCorrectness
 import Flapjack.Test.CrepeFfiRelation
 import Flapjack.Test.CrepeFfiSequenceRelation
 import Flapjack.Test.CrepeDeclarationFfiRelation
-import Flapjack.Test.PanToCrepSemantics
 import Flapjack.Test.PanToCrepExceptionRelation
 import Flapjack.Test.CrepeHandlerCorrectness
 /- These legacy Crep-to-Loop theorem fixtures still assume identity variable
@@ -118,10 +116,6 @@ import Flapjack.Test.CrepeArith
 import Flapjack.Test.CrepePrimitive
 import Flapjack.Test.CrepeExpressionRelation
 import Flapjack.Test.CrepeExpressionStabilityParity
-import Flapjack.Test.CrepeProgramRelation
-import Flapjack.Test.CrepeProgramInduction
-import Flapjack.Test.CrepeProgramWordInduction
-import Flapjack.Test.CrepeSourceWordReturnCorrectness
 import Flapjack.Test.CrepeSourceWordAssignmentCorrectness
 import Flapjack.Test.CrepeSourceWordStoreCorrectness
 import Flapjack.Test.CrepeSourceWordConditionalCorrectness

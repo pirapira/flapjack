@@ -55,5 +55,11 @@ theorem opt_mmap_disj_zip_flookup_fixture :
 #check @localsRel
 #check @localsRel_lookup_ctxt
 #check @localRel_le_zip_update_preserved
+#check @listDisjoint_range_add
+
+/-- Cake `genlist_distinct_max` on a concrete instance. -/
+theorem listDisjoint_range_add_fixture :
+    ListDisjoint (((List.range 3).map (fun x => x + 1 + 4)) : List Nat) [0, 1, 2, 4] :=
+  listDisjoint_range_add 3 4 [0, 1, 2, 4] (by intro y hy; simp [List.mem_cons] at hy; omega)
 
 end Flapjack.Test.FiniteMapParity

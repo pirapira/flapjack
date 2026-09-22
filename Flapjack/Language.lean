@@ -1035,6 +1035,27 @@ theorem list_lookup_of_mem_of_nodup [BEq α] [LawfulBEq α] {entries : List (α 
           exact Bool.false_ne_true hk.symm
         · exact ih htail hmem
 
+/-- Counterpart of Cake's `alookup_el_pair_eq_el`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:3921`): in an
+    association list with distinct keys, the entry at an index whose key is
+    `key` is exactly the pair recorded by `lookup key`. -/
+theorem getElem_eq_of_lookup_eq [BEq α] [LawfulBEq α] {entries : List (α × β)}
+    {key : α} {value : β} {n : Nat}
+    (hdistinct : (entries.map Prod.fst).Nodup) (hn : n < entries.length)
+    (hhead : (entries[n]'hn).1 = key)
+    (hlookup : entries.lookup key = some value) :
+    entries[n]'hn = (key, value) := by
+  obtain ⟨l₁, l₂, hentries, _⟩ := (List.lookup_eq_some_iff).mp hlookup
+  have hmem : (key, value) ∈ entries := by
+    rw [hentries]
+    exact List.mem_append_right l₁ (by simp)
+  obtain ⟨m, hm, hmval⟩ := List.getElem_of_mem hmem
+  have hnx : entries[n]'hn = (key, (entries[n]'hn).2) := by
+    rw [← hhead]
+  have hnm : n = m := getElem_fst_inj entries n m hdistinct hn hm hnx hmval
+  subst hnm
+  exact hmval
+
 /-- Counterpart of Cake's `MEM_MAP2_IMP`
     (`cakeml/pancake/proofs/crep_inlineProofScript.sml:2233`): every element of
     a pointwise map comes from elements of both input lists. -/

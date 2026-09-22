@@ -277,6 +277,7 @@ import Flapjack.CompileCalleeParameterFreshness
 import Flapjack.CompileCalleeParameterStateRelation
 import Flapjack.CompileFunctionLookup
 import Flapjack.SourceCompiledFunctionLookup
+import Flapjack.PanToCrepCodeRelation
 import Flapjack.SourceCompiledFunctionCalleeContext
 import Flapjack.SourceCompiledFunctionCalleeEntry
 import Flapjack.SourceCompiledCalleeEntry

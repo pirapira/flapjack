@@ -1455,9 +1455,48 @@ kernel-checked inhabitant. -/
 #check @panValueNoOverlap
 #check @panValueCtxtMax_empty
 #check @panValueNoOverlap_empty
+#check @panValueNoOverlap_lookup_disjoint
+
+/-- Regression for Cake `no_overlap_flookup_distinct`: the lemma is applicable
+to any `no_overlap` variable map with two distinct looked-up variables. -/
+example (name name' : String) (shape shape' : Shape) (slots slots' : List Nat)
+    (hne : name ≠ name')
+    (hlookup : lookupInfo name ([] : InfoMap (Shape × List Nat)) =
+      some (shape, slots))
+    (hlookup' : lookupInfo name' ([] : InfoMap (Shape × List Nat)) =
+      some (shape', slots')) :
+    ListDisjoint slots slots' :=
+  panValueNoOverlap_lookup_disjoint
+    ([] : InfoMap (Shape × List Nat)) name name' shape shape' slots slots'
+    panValueNoOverlap_empty hne hlookup hlookup'
+
+#check @panValueNoOverlap_zip_withShape
+
+/-- Regression for Cake `all_distinct_alist_no_overlap`: splitting a nodup flat
+    slot list across a two-component shape yields a `no_overlap` alist. -/
+example :
+    panValueNoOverlap
+      ((["a", "b"] : List VarName).zip
+        (([Shape.one, Shape.one] : List Shape).zip
+          (withShape [Shape.one, Shape.one] [0, 1]))) :=
+  panValueNoOverlap_zip_withShape [0, 1] ["a", "b"]
+    [Shape.one, Shape.one] (by decide) (by simp [Shape.shapeSize]) (by decide)
+
 #check @panValueCtxtMax_compileParamVars
 #check @panValueNoOverlap_compileParamVars
 #check @panToCrepMakeVmap_context_invariants
+
+#check @panValueCtxtMax_zip_withShape
+
+/-- Regression for Cake `all_distinct_alist_ctxt_max`: the same split alist is
+    bounded by `maxList` of the flat slot list. -/
+example :
+    panValueCtxtMax (maxList [0, 1])
+      ((["a", "b"] : List VarName).zip
+        (([Shape.one, Shape.one] : List Shape).zip
+          (withShape [Shape.one, Shape.one] [0, 1]))) :=
+  panValueCtxtMax_zip_withShape [0, 1] ["a", "b"]
+    [Shape.one, Shape.one] (by decide) (by simp [Shape.shapeSize]) (by decide)
 
 /-! The generated formal-parameter context satisfies the two Cake invariants
     used by `locals_rel`, with the original source-shaped maximum convention.
@@ -1516,7 +1555,6 @@ example (name name' : String) (shape shape' : Shape) (slots slots' : List Nat)
   panValueNoOverlap_lookup_disjoint
     ([] : InfoMap (Shape × List Nat)) name name' shape shape' slots slots'
     panValueNoOverlap_empty hne hlookup hlookup'
-
 /-! The concrete `code_rel` analogue is non-vacuous on a source-faithful,
 nonempty function table: instantiating Cake's `mk_ctxt_code_imp_code_rel` port
 on a single declaration whose body is a localised `skip`. -/

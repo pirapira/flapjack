@@ -8,6 +8,7 @@ import Flapjack.CrepeProgramStoreByteCorrectness
 import Flapjack.CrepeProgramWhileCorrectness
 import Flapjack.CrepeProgramSourceWordReturnCorrectness
 import Flapjack.CompileCalleeParameterFreshness
+import Flapjack.PanToCrepMaxList
 
 /-!
 The checked Lean boundary corresponding to CakeML's
@@ -167,6 +168,84 @@ theorem panValueNoOverlap_empty [BEq String] :
   · intro name name' shape shape' slots slots' hlookup hlookup' hcommon
     simp [lookupInfo] at hlookup
 
+/-- Counterpart of Cake `no_overlap_flookup_distinct`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml`): two distinct
+    variables of a `no_overlap` context have disjoint slot lists. -/
+theorem panValueNoOverlap_lookup_disjoint [BEq String] [LawfulBEq String]
+    (vars : InfoMap (Shape × List Nat)) (name name' : String)
+    (shape shape' : Shape) (slots slots' : List Nat)
+    (hoverlap : panValueNoOverlap vars) (hne : name ≠ name')
+    (hlookup : lookupInfo name vars = some (shape, slots))
+    (hlookup' : lookupInfo name' vars = some (shape', slots')) :
+    ListDisjoint slots slots' := by
+  intro value hin hin'
+  exact hne (hoverlap.2 name name' shape shape' slots slots'
+    hlookup hlookup' ⟨value, hin, hin'⟩)
+
+/-- Counterpart of Cake `all_distinct_alist_no_overlap`
+    (`cakeml/pancake/semantics/panPropsScript.sml`): the `(variable, shape,
+    slot-list)` alist built by splitting a nodup flat slot list with
+    `withShape` satisfies `panValueNoOverlap`. -/
+theorem panValueNoOverlap_zip_withShape [LawfulBEq String]
+    (ns : List Nat) (vs : List VarName) (sh : List Shape)
+    (hns : ns.Nodup)
+    (hlen : ns.length = Shape.shapeSize (.comb sh))
+    (hlenv : vs.length = sh.length) :
+    panValueNoOverlap (vs.zip (sh.zip (withShape sh ns))) := by
+  constructor
+  · intro name shape slots hlookup
+    have hmem := lookupInfo_some_mem name
+      (vs.zip (sh.zip (withShape sh ns))) (shape, slots) hlookup
+    obtain ⟨i, hi, _hj, _hfirst, hsecond⟩ :=
+      mem_zip_getElem vs (sh.zip (withShape sh ns)) (name, (shape, slots)) hmem
+    rw [List.getElem_zip] at hsecond
+    have hiShapes : i < sh.length := by rw [hlenv] at hi; exact hi
+    have hiValues : i < (withShape sh ns).length := by
+      rw [withShape_length]; exact hiShapes
+    have hcomponent : slots = (withShape sh ns)[i]'hiValues := by
+      simpa using (congrArg Prod.snd hsecond).symm
+    rw [hcomponent]
+    exact all_distinct_withShape sh ns i hns hiShapes hlen
+  · intro name name' shape shape' slots slots' hlookup hlookup' hcommon
+    by_cases hneName : name = name'
+    · exact hneName
+    · exfalso
+      obtain ⟨slot, hslot, hslot'⟩ := hcommon
+      have hmem := lookupInfo_some_mem name
+        (vs.zip (sh.zip (withShape sh ns))) (shape, slots) hlookup
+      have hmem' := lookupInfo_some_mem name'
+        (vs.zip (sh.zip (withShape sh ns))) (shape', slots') hlookup'
+      have hdisj := listDisjoint_of_mem_zip_withShape vs sh ns
+        (name, (shape, slots)) (name', (shape', slots'))
+        hlenv (by rw [withShape_length]) hns hlen hmem hmem' hneName
+      exact hdisj slot hslot hslot'
+
+/-! Counterpart of Cake's `all_distinct_alist_ctxt_max`
+    (`cakeml/pancake/semantics/panPropsScript.sml`): the `(variable, shape,
+    slot-list)` alist built by splitting a flat slot list with `withShape`
+    satisfies `panValueCtxtMax` at `maxList ns`. -/
+theorem panValueCtxtMax_zip_withShape [LawfulBEq String]
+    (ns : List Nat) (vs : List VarName) (sh : List Shape)
+    (_hns : ns.Nodup)
+    (hlen : ns.length = Shape.shapeSize (.comb sh))
+    (hlenv : vs.length = sh.length) :
+    panValueCtxtMax (maxList ns) (vs.zip (sh.zip (withShape sh ns))) := by
+  refine ⟨Nat.zero_le _, ?_⟩
+  intro name shape slots hlookup slot hslot
+  have hmem := lookupInfo_some_mem name
+    (vs.zip (sh.zip (withShape sh ns))) (shape, slots) hlookup
+  obtain ⟨i, hi, _hj, _hfirst, hsecond⟩ :=
+    mem_zip_getElem vs (sh.zip (withShape sh ns)) (name, (shape, slots)) hmem
+  rw [List.getElem_zip] at hsecond
+  have hiShapes : i < sh.length := by rw [hlenv] at hi; exact hi
+  have hiValues : i < (withShape sh ns).length := by
+    rw [withShape_length]; exact hiShapes
+  have hcomponent : slots = (withShape sh ns)[i]'hiValues := by
+    simpa using (congrArg Prod.snd hsecond).symm
+  rw [hcomponent] at hslot
+  exact maxList_ge_of_mem ns slot
+    (mem_of_withShape_mem sh ns i slot hiValues hlen hslot)
+
 /-! The compiler-generated formal-parameter map satisfies the Cake `no_overlap`
     invariant.  The proof reuses the source-shaped parameter-list allocation
     theorem, then transports it through the metadata equation and the
@@ -265,7 +344,6 @@ theorem panValueCtxtMax_compileParamVars
   have hlt := compileParamVars_slot_lt params offset name shape slots
     hlookupRaw slot hslot
   omega
-
 /-! Package the two Cake context invariants for the compiler-generated
     parameter map.  This is the concrete `mk_ctxt` fragment used when a
     source callee is entered with its flattened parameters. -/
@@ -282,20 +360,6 @@ theorem panToCrepMakeVmap_context_invariants
       panValueNoOverlap_compileParamVars params 0
   · simpa [panToCrepMakeVmap] using
       panValueCtxtMax_compileParamVars params 0 hnames
-
-/-- Counterpart of Cake `no_overlap_flookup_distinct`
-    (`cakeml/pancake/semantics/pan_commonPropsScript.sml`): two distinct
-    variables of a `no_overlap` context have disjoint slot lists. -/
-theorem panValueNoOverlap_lookup_disjoint [BEq String] [LawfulBEq String]
-    (vars : InfoMap (Shape × List Nat)) (name name' : String)
-    (shape shape' : Shape) (slots slots' : List Nat)
-    (hoverlap : panValueNoOverlap vars) (hne : name ≠ name')
-    (hlookup : lookupInfo name vars = some (shape, slots))
-    (hlookup' : lookupInfo name' vars = some (shape', slots')) :
-    ListDisjoint slots slots' := by
-  intro value hin hin'
-  exact hne (hoverlap.2 name name' shape shape' slots slots'
-    hlookup hlookup' ⟨value, hin, hin'⟩)
 
 /-! Cake's `state_rel` packages `locals_rel`, whose defining premises are
     `no_overlap` and `ctxt_max`, together with the source-global and memory
@@ -334,7 +398,6 @@ theorem panValueCrepStateRelWithContext_of_stateRel [BEq String]
     panValueCrepStateRelWithContext structs context sourceLocals sourceGlobals
       sourceMemory crepState :=
   ⟨hoverlap, hmax, hrel⟩
-
 def panValuePcLocalisedCode (code : PanValuePcSourceCode α) : Prop :=
   ∀ entry ∈ code, localisedProg entry.2.2
 

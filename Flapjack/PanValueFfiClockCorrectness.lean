@@ -213,6 +213,35 @@ theorem evalPanValueFfiClockProg_seq_raised
         exception value), firstClock) := by
   simp [evalPanValueFfiClockProg, hfirst]
 
+/- A timeout in the first component also terminates a sequence immediately;
+   its post-state and remaining clock are the exact Cake timeout payload. -/
+theorem evalPanValueFfiClockProg_seq_timeout
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel clock firstClock : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (middleLocals middleGlobals : VarName → Option (PanValue α))
+    (middleMemory : α → Option (PanValue α)) (middleFfi : FfiState σ)
+    (first second : Prog α)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (contracts : Option PanValueCallContracts := none)
+    (hfirst : evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord fuel locals globals memory ffi clock first
+        (memoryAccess := memoryAccess) (contracts := contracts) =
+      some (.timeout middleLocals middleGlobals middleMemory middleFfi, firstClock)) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+        (.seq first second) (memoryAccess := memoryAccess) (contracts := contracts) =
+      some (.timeout middleLocals middleGlobals middleMemory middleFfi, firstClock) := by
+  simp [evalPanValueFfiClockProg, hfirst]
+
 /-! A zero-clock call still evaluates its arguments and validates the callee
 lookup/binding boundary before producing `TimeOut`.  This mirrors the order
 of the corresponding `panSem` equation and prevents a timeout theorem from

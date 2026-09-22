@@ -997,6 +997,44 @@ theorem panMap2_fst_eq {α β γ : Type} (f : α → β → γ) :
           simp only [panMap2, List.map_cons]
           rw [ih ys (by omega)]
 
+/-- Counterpart of Cake's `mem_lookup_fromalist_some`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:3813`): looking up a
+    key in an association list with distinct keys returns the value paired with
+    it.  CakeML states this for `lookup`/`fromAList`; the list-backed Flapjack
+    analogue is `List.lookup` on the association list itself. -/
+theorem list_lookup_of_mem_of_nodup [BEq α] [LawfulBEq α] {entries : List (α × β)}
+    {key : α} {value : β}
+    (hnodup : (entries.map Prod.fst).Nodup) (hmem : (key, value) ∈ entries) :
+    entries.lookup key = some value := by
+  induction entries with
+  | nil => simp at hmem
+  | cons entry entries ih =>
+      obtain ⟨headKey, headValue⟩ := entry
+      simp only [List.map_cons, List.nodup_cons] at hnodup
+      obtain ⟨hhead, htail⟩ := hnodup
+      simp only [List.mem_cons, Prod.mk.injEq] at hmem
+      rw [List.lookup_cons]
+      split
+      · rename_i hk
+        rcases hmem with hpair | hmem
+        · obtain ⟨_, hvalue⟩ := hpair
+          subst hvalue
+          rfl
+        · exfalso
+          have hkey : key = headKey := beq_iff_eq.mp hk
+          have hmemKey : key ∈ entries.map Prod.fst :=
+            List.mem_map.mpr ⟨(key, value), hmem, rfl⟩
+          rw [← hkey] at hhead
+          exact hhead hmemKey
+      · rename_i hk
+        rcases hmem with hpair | hmem
+        · exfalso
+          obtain ⟨hkey, _⟩ := hpair
+          have htrue : (key == headKey) = true := by rw [hkey]; exact beq_iff_eq.mpr rfl
+          rw [htrue] at hk
+          exact Bool.false_ne_true hk.symm
+        · exact ih htail hmem
+
 /-- Counterpart of Cake's `MEM_MAP2_IMP`
     (`cakeml/pancake/proofs/crep_inlineProofScript.sml:2233`): every element of
     a pointwise map comes from elements of both input lists. -/

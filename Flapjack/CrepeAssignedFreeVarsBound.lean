@@ -107,4 +107,14 @@ theorem callDestinationNames_some_slot (context : CompileContext α) (kind : Var
   | «global» => simp [callDestinationNames] at h
   | «local» => exact callDestinationNames_local_of_some context name names h
 
+/-- Free variables of a compiled call handler: the handler-setup assignment
+    contributes exactly the handler's destination names, and the compiled body
+    contributes its own free variables. -/
+theorem crepAssignedFreeVars_seq_assignRet_compileProg [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (handlerNames : List Nat) (handlerProgram : Prog α) :
+    crepAssignedFreeVars
+        (.seq (assignRet context.bytesInWord handlerNames) (compileProg context handlerProgram)) =
+      handlerNames ++ crepAssignedFreeVars (compileProg context handlerProgram) := by
+  simp [crepAssignedFreeVars, crepAssignedFreeVars_assignRet]
+
 end Flapjack

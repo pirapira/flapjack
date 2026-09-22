@@ -175,6 +175,21 @@ def cutSetsSubsetGuard : Bool :=
   (loopCutSets [2, 5]
       (loopNestedSeq ([.assign 3 (.const 0)] : List (LoopProg Nat)))).contains 2
 
+/-! Cake `loopPropsScript.sml:777` `cut_sets_union_accumulate` and `:820`
+    `cut_sets_union_domain_union`: the cut set is the original live set plus a
+    fresh set of names. -/
+
+theorem loopCompSyntaxOk_cutSets_exists_extra_fixture :
+    ∃ extra : List Nat,
+      ∀ x, x ∈ loopCutSets [2, 5] (.assign 3 (.const 0) : LoopProg Nat) ↔
+        x ∈ [2, 5] ∨ x ∈ extra :=
+  loopCompSyntaxOk_cutSets_exists_extra [2, 5] (.assign 3 (.const 0))
+    (by simp [loopCompSyntaxOk])
+
+def cutSetsExtraGuard : Bool :=
+  (loopCutSets [2, 5] (.assign 3 (.const 0) : LoopProg Nat)).contains 3 &&
+    (loopCutSets [2, 5] (.assign 3 (.const 0) : LoopProg Nat)).contains 2
+
 def check (name : String) (actual expected : List Nat) : IO Bool := do
   if actual == expected then
     IO.println s!"PASS {name}"
@@ -204,7 +219,8 @@ def runChecks : IO Bool := do
     checkBool "cut_sets nested_seq append" cutSetsAppendGuard,
     checkBool "assigned_vars nested_seq split" assignedVarsSplitGuard,
     checkBool "comp_syntax_ok nested_seq append" compSyntaxOkGuard,
-    checkBool "cut_sets preserves live" cutSetsSubsetGuard ].mapM id
+    checkBool "cut_sets preserves live" cutSetsSubsetGuard,
+    checkBool "cut_sets only adds" cutSetsExtraGuard ].mapM id
   pure (results.all id)
 
 end Flapjack.Test.LoopAssignedVarsParity

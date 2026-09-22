@@ -789,4 +789,154 @@ theorem loopCompSyntaxOk_cutSets_subset :
   · intro t live h1 h2 h3 h4 h5 h6 h7 h8 h9 h10 h x hx
     exact absurd h (by cases t <;> simp_all [loopCompSyntaxOk])
 
+/-- Membership in a fold of `insertNatSorted` is exactly membership in the
+    initial live set or in the folded names; this is the list-backed
+    counterpart of CakeML's `union` accumulation. -/
+theorem mem_foldl_insertNatSorted_iff (names : List Nat) (live : List Nat) :
+    ∀ x, x ∈ names.foldl (fun current name => insertNatSorted name current) live ↔
+      x ∈ live ∨ x ∈ names := by
+  induction names generalizing live with
+  | nil => intro x; simp
+  | cons name names ih =>
+      intro x
+      simp only [List.foldl_cons]
+      rw [ih (insertNatSorted name live) x, insertNatSorted_mem]
+      simp only [List.mem_cons]
+      constructor
+      · rintro ((h | h) | h)
+        · exact Or.inr (Or.inl h)
+        · exact Or.inl h
+        · exact Or.inr (Or.inr h)
+      · rintro (h | h | h)
+        · exact Or.inl (Or.inr h)
+        · exact Or.inl (Or.inl h)
+        · exact Or.inr h
+
+/-- Cake's `cut_sets_union_accumulate` (`cakeml/pancake/semantics/loopPropsScript.sml:777`)
+    and `cut_sets_union_domain_union` (`:820`): the variables live after a
+    syntactically well-formed statement are exactly the variables live before
+    it together with a fresh set of names. -/
+theorem loopCompSyntaxOk_cutSets_exists_extra :
+    ∀ (live : List Nat) (program : LoopProg α),
+      loopCompSyntaxOk live program →
+        ∃ extra : List Nat,
+          ∀ x, x ∈ loopCutSets live program ↔ x ∈ live ∨ x ∈ extra := by
+  apply loopCompSyntaxOk.induct (motive := fun live program =>
+    loopCompSyntaxOk live program →
+      ∃ extra : List Nat,
+        ∀ x, x ∈ loopCutSets live program ↔ x ∈ live ∨ x ∈ extra)
+  · intro live _
+    exact ⟨[], fun x => by simp [loopCutSets]⟩
+  · intro live name value _
+    exact ⟨[name], fun x => by
+      rw [loopCutSets, insertNatSorted_mem]
+      simp only [List.mem_cons, List.not_mem_nil, or_false]
+      constructor
+      · rintro (h | h)
+        · exact Or.inr h
+        · exact Or.inl h
+      · rintro (h | h)
+        · exact Or.inr h
+        · exact Or.inl h⟩
+  · intro live operation _
+    cases operation with
+    | longMul dl dr sl sr =>
+        exact ⟨[dl, dr], fun x => by
+          rw [loopCutSets, insertNatSorted_mem, insertNatSorted_mem]
+          simp only [List.mem_cons, List.not_mem_nil, or_false]
+          constructor
+          · rintro (h | h | h)
+            · exact Or.inr (Or.inl h)
+            · exact Or.inr (Or.inr h)
+            · exact Or.inl h
+          · rintro (h | h | h)
+            · exact Or.inr (Or.inr h)
+            · exact Or.inl h
+            · exact Or.inr (Or.inl h)⟩
+    | longDiv dl dr sl sr q =>
+        exact ⟨[dl, dr], fun x => by
+          rw [loopCutSets, insertNatSorted_mem, insertNatSorted_mem]
+          simp only [List.mem_cons, List.not_mem_nil, or_false]
+          constructor
+          · rintro (h | h | h)
+            · exact Or.inr (Or.inl h)
+            · exact Or.inr (Or.inr h)
+            · exact Or.inl h
+          · rintro (h | h | h)
+            · exact Or.inr (Or.inr h)
+            · exact Or.inl h
+            · exact Or.inr (Or.inl h)⟩
+    | div d dd ds =>
+        exact ⟨[d], fun x => by
+          rw [loopCutSets, insertNatSorted_mem]
+          simp only [List.mem_cons, List.not_mem_nil, or_false]
+          constructor
+          · rintro (h | h)
+            · exact Or.inr h
+            · exact Or.inl h
+          · rintro (h | h)
+            · exact Or.inr h
+            · exact Or.inl h⟩
+  · intro live label _
+    exact ⟨[], fun x => by simp [loopCutSets]⟩
+  · intro live destination source _
+    exact ⟨[destination], fun x => by
+      rw [loopCutSets, insertNatSorted_mem]
+      simp only [List.mem_cons, List.not_mem_nil, or_false]
+      constructor
+      · rintro (h | h)
+        · exact Or.inr h
+        · exact Or.inl h
+      · rintro (h | h)
+        · exact Or.inr h
+        · exact Or.inl h⟩
+  · intro live address destination _
+    exact ⟨[destination], fun x => by
+      rw [loopCutSets, insertNatSorted_mem]
+      simp only [List.mem_cons, List.not_mem_nil, or_false]
+      constructor
+      · rintro (h | h)
+        · exact Or.inr h
+        · exact Or.inl h
+      · rintro (h | h)
+        · exact Or.inr h
+        · exact Or.inl h⟩
+  · intro live address destination _
+    exact ⟨[destination], fun x => by
+      rw [loopCutSets, insertNatSorted_mem]
+      simp only [List.mem_cons, List.not_mem_nil, or_false]
+      constructor
+      · rintro (h | h)
+        · exact Or.inr h
+        · exact Or.inl h
+      · rintro (h | h)
+        · exact Or.inr h
+        · exact Or.inl h⟩
+  · intro live first second ihFirst ihSecond h
+    obtain ⟨e1, he1⟩ := ihFirst h.1
+    obtain ⟨e2, he2⟩ := ihSecond h.2
+    refine ⟨e1 ++ e2, fun x => ?_⟩
+    simp only [loopCutSets]
+    rw [he2 x, he1 x, List.mem_append]
+    constructor
+    · rintro ((h | h) | h)
+      · exact Or.inl h
+      · exact Or.inr (Or.inl h)
+      · exact Or.inr (Or.inr h)
+    · rintro (h | h | h)
+      · exact Or.inl (Or.inl h)
+      · exact Or.inl (Or.inr h)
+      · exact Or.inr h
+  · intro live operator condition right thenBranch elseBranch liveOut ihThen ihElse h
+    obtain ⟨_, _, ns, rfl⟩ := h
+    exact ⟨ns, fun x => by
+      simp only [loopCutSets]
+      exact mem_foldl_insertNatSorted_iff ns live x⟩
+  · intro live liveIn body liveOut ihBody h
+    obtain ⟨hlin, _, _⟩ := h
+    subst hlin
+    exact ⟨[], fun x => by simp [loopCutSets]⟩
+  · intro t live h1 h2 h3 h4 h5 h6 h7 h8 h9 h10 h
+    exact absurd h (by cases t <;> simp_all [loopCompSyntaxOk])
+
 end Flapjack

@@ -8,7 +8,8 @@ and `AGENTS.md`).  This script checks, without running Lean, that
 * the cited file exists in the `cakeml` submodule, and
 * a HOL declaration with exactly that name is declared in that file
   (`Theorem`, `Triviality`, `Definition`, `Datatype`, `Inductive`,
-  `CoInductive`, `Overload`, `Type`, or an SML-level `val name = ...`).
+  `CoInductive`, `Overload`, `Type`, or an SML-level `val name = ...`), and
+* the tagged Lean module is reachable by imports from `Flapjack.lean`.
 
 Usage:
   scripts/check-hol-refs.py            # check; exit 1 on any bad reference
@@ -44,6 +45,7 @@ HOL_HEADER_KEYWORDS = (
     "Overload",
     "Type",
 )
+IMPORT_RE = re.compile(r"^\s*import\s+(.+?)(?:\s*--.*)?$")
 
 
 def lean_files() -> list[Path]:
@@ -54,6 +56,30 @@ def lean_files() -> list[Path]:
         elif entry.is_dir():
             files.extend(sorted(entry.rglob("*.lean")))
     return files
+
+
+def reachable_lean_files(files: list[Path]) -> set[Path]:
+    """Follow local Lean imports from the umbrella module."""
+    modules = {
+        ".".join(path.relative_to(ROOT).with_suffix("").parts): path
+        for path in files
+    }
+    reachable: set[Path] = set()
+    pending = [ROOT / "Flapjack.lean"]
+    while pending:
+        path = pending.pop()
+        if path in reachable:
+            continue
+        reachable.add(path)
+        for line in path.read_text(encoding="utf-8").splitlines():
+            match = IMPORT_RE.match(line)
+            if match:
+                pending.extend(
+                    modules[module]
+                    for module in match.group(1).split()
+                    if module in modules
+                )
+    return reachable
 
 
 def find_lean_decl(lines: list[str], start: int) -> str:
@@ -98,7 +124,9 @@ def main(argv: list[str]) -> int:
         )
         return 1
 
-    for lean_path in lean_files():
+    files = lean_files()
+    reachable = reachable_lean_files(files)
+    for lean_path in files:
         rel = lean_path.relative_to(ROOT).as_posix()
         lines = lean_path.read_text(encoding="utf-8").splitlines()
         comment_depth = 0
@@ -118,6 +146,10 @@ def main(argv: list[str]) -> int:
             for hol_path, hol_name in ATTR_RE.findall(stripped):
                 where = f"{rel}:{number}"
                 lean_decl = find_lean_decl(lines, number - 1)
+                if lean_path not in reachable:
+                    errors.append(
+                        f"{where}: tagged module is not imported by Flapjack.lean"
+                    )
                 target = ROOT / hol_path
                 if not hol_path.startswith("cakeml/") or not hol_path.endswith(".sml"):
                     errors.append(f"{where}: path is not a cakeml/...sml file: {hol_path}")

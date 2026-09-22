@@ -1486,6 +1486,18 @@ example :
 #check @panValueNoOverlap_compileParamVars
 #check @panToCrepMakeVmap_context_invariants
 
+#check @panValueCtxtMax_zip_withShape
+
+/-- Regression for Cake `all_distinct_alist_ctxt_max`: the same split alist is
+    bounded by `maxList` of the flat slot list. -/
+example :
+    panValueCtxtMax (maxList [0, 1])
+      ((["a", "b"] : List VarName).zip
+        (([Shape.one, Shape.one] : List Shape).zip
+          (withShape [Shape.one, Shape.one] [0, 1]))) :=
+  panValueCtxtMax_zip_withShape [0, 1] ["a", "b"]
+    [Shape.one, Shape.one] (by decide) (by simp [Shape.shapeSize]) (by decide)
+
 /-! The generated formal-parameter context satisfies the two Cake invariants
     used by `locals_rel`, with the original source-shaped maximum convention.
     These examples keep the construction executable while checking the

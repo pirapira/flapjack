@@ -15,7 +15,7 @@ namespace Flapjack
 /-! Faithful port of Cake `afindi_less_length`
     (`cakeml/pancake/proofs/pan_structsProofScript.sml:345`). -/
 @[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "afindi_less_length"]
-theorem afindi_less_length [BEq α] (key : α) :
+theorem afindi_less_length [DecidableEq α] (key : α) :
     ∀ (entries : List (α × β)) (index : Nat),
       afindi key entries = some index → index < entries.length := by
   intro entries
@@ -44,7 +44,7 @@ theorem afindi_less_length [BEq α] (key : α) :
     (`cakeml/pancake/proofs/pan_structsProofScript.sml:430`). Given the
     successful search, `getElem?` is `some` exactly at the in-range `EL` index. -/
 @[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "afindi_EL"]
-theorem afindi_el_fst [BEq α] [LawfulBEq α] (key : α) :
+theorem afindi_el_fst [DecidableEq α] (key : α) :
     ∀ (entries : List (α × β)) (index : Nat),
       afindi key entries = some index →
         (entries[index]?).map Prod.fst = some key := by
@@ -62,7 +62,7 @@ theorem afindi_el_fst [BEq α] [LawfulBEq α] (key : α) :
         simp only [Option.some.injEq] at h
         subst h
         simp only [List.getElem?_cons_zero, Option.map_some]
-        exact congrArg some (eq_of_beq hbeq).symm
+        exact congrArg some hbeq.symm
       · split at h
         · simp at h
         · rename_i found hfound
@@ -75,7 +75,7 @@ theorem afindi_el_fst [BEq α] [LawfulBEq α] (key : α) :
     (`cakeml/pancake/proofs/pan_structsProofScript.sml:417`). The source uses
     `LENGTH xs + index`; this Lean statement writes the commuted Nat sum. -/
 @[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "afindi_append"]
-theorem afindi_append [BEq α] (key : α) (xs ys : List (α × β)) :
+theorem afindi_append [DecidableEq α] (key : α) (xs ys : List (α × β)) :
     afindi key (xs ++ ys) =
       (match afindi key xs with
         | none => (afindi key ys).map (fun index => index + xs.length)
@@ -84,7 +84,7 @@ theorem afindi_append [BEq α] (key : α) (xs ys : List (α × β)) :
   | nil => simp [afindi]
   | cons entry rest ih =>
       obtain ⟨candidate, value⟩ := entry
-      by_cases hbeq : key == candidate
+      by_cases hbeq : key = candidate
       · simp [afindi, hbeq]
       · simp only [List.cons_append, afindi, hbeq]
         rw [ih]
@@ -98,7 +98,7 @@ theorem afindi_append [BEq α] (key : α) (xs ys : List (α × β)) :
 /-! Faithful port of Cake `afindi_MAP_eq`
     (`cakeml/pancake/proofs/pan_structsProofScript.sml:356`). -/
 @[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "afindi_MAP_eq"]
-theorem afindi_map_eq [BEq α] (key : α) (f : α × β → α × γ)
+theorem afindi_map_eq [DecidableEq α] (key : α) (f : α × β → α × γ)
     (entries : List (α × β))
     (hf : ∀ x y, (x, y) ∈ entries → (f (x, y)).1 = x) :
     afindi key (entries.map f) = afindi key entries := by
@@ -113,13 +113,12 @@ theorem afindi_map_eq [BEq α] (key : α) (f : α × β → α × γ)
       simp only [List.map_cons]
       rw [afindi_cons, afindi_cons, hhead, ih htail]
 
-/-! Lean executable adaptation of Cake `dropWhile_afindi`
-    (`cakeml/pancake/proofs/pan_structsProofScript.sml:334`). This uses the
-    same `BEq` operation as `afindi`; without `LawfulBEq`, it does not assert
-    that the operation reflects HOL equality, so it intentionally has no
-    `@[hol]` tag. -/
-theorem afindi_dropWhile [BEq α] (key : α) (entries : List (α × β)) :
-    entries.dropWhile (fun entry => !(key == entry.1)) =
+/-! Executable equality-based adaptation of Cake `dropWhile_afindi`
+    (`cakeml/pancake/proofs/pan_structsProofScript.sml:334`). This still uses
+    Lean's Bool-valued `dropWhile` predicate, expressed by deciding HOL-style
+    inequality, so it is untagged. -/
+theorem afindi_dropWhile [DecidableEq α] (key : α) (entries : List (α × β)) :
+    entries.dropWhile (fun entry => decide (key ≠ entry.1)) =
       match afindi key entries with
       | none => []
       | some index => entries.drop index := by
@@ -127,28 +126,31 @@ theorem afindi_dropWhile [BEq α] (key : α) (entries : List (α × β)) :
   | nil => simp [afindi]
   | cons entry rest ih =>
       obtain ⟨candidate, value⟩ := entry
-      cases hb : (key == candidate) with
-      | true => simp [afindi_cons, hb]
-      | false =>
-          simp only [List.dropWhile_cons, afindi_cons, hb]
-          rw [ih]
-          cases afindi key rest with
-          | none => simp
-          | some index => simp [List.drop_succ_cons]
+      by_cases hb : key = candidate
+      · simp [afindi_cons, hb]
+      · have hdec : decide (key ≠ candidate) = true := by simp [hb]
+        simp only [List.dropWhile_cons, afindi_cons, hdec, if_neg hb]
+        rw [ih]
+        cases afindi key rest with
+        | none => simp
+        | some index => simp [List.drop_succ_cons]
 
 /-! Lean `List.lookup`/`getElem?` adaptation of Cake `ALOOKUP_eq_afindi`
-    (`cakeml/pancake/proofs/pan_structsProofScript.sml:405`). This is left
-    untagged because its generic `BEq` need not reflect HOL equality. -/
-theorem afindi_lookup [BEq α] (key : α) (entries : List (α × β)) :
+    (`cakeml/pancake/proofs/pan_structsProofScript.sml:405`). It uses the
+    `BEq` synthesized from `DecidableEq`, but remains untagged because its
+    statement is expressed through Lean's lookup and optional-index APIs. -/
+theorem afindi_lookup [DecidableEq α] (key : α) (entries : List (α × β)) :
     entries.lookup key =
       (afindi key entries).bind (fun index => (entries[index]?).map Prod.snd) := by
   induction entries with
   | nil => simp [afindi]
   | cons entry rest ih =>
       obtain ⟨candidate, value⟩ := entry
-      by_cases hbeq : key == candidate
-      · simp [List.lookup_cons, afindi_cons, hbeq]
-      · simp only [List.lookup_cons, hbeq, afindi_cons]
+      by_cases hbeq : key = candidate
+      · simp [afindi_cons, hbeq]
+      · have hbeq' : (key == candidate) = false := by
+          simp [BEq.beq, hbeq]
+        simp only [List.lookup_cons, hbeq', afindi_cons, if_neg hbeq]
         rw [ih]
         cases afindi key rest with
         | none => simp
@@ -157,7 +159,7 @@ theorem afindi_lookup [BEq α] (key : α) (entries : List (α × β)) :
 /-! Lean list-lookup adaptation of Cake's local `alookup_drop_helper`
     (`cakeml/pancake/proofs/pan_structsProofScript.sml:78`). -/
 @[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "alookup_drop_helper"]
-theorem lookup_drop_helper [BEq α] [LawfulBEq α]
+theorem lookup_drop_helper [DecidableEq α]
     (n : Nat) (xs : List (α × β)) (key : α) (value : β)
     (hlookup : List.lookup key (xs.drop n) = some value)
     (hnodup : (xs.map Prod.fst).Nodup) :
@@ -190,7 +192,7 @@ theorem lookup_drop_helper [BEq α] [LawfulBEq α]
 /-! Helper for Cake's local `map_fst_eq_alookup`: equal key lists imply
     identical `afindi` positions. This intermediate theorem is not a separate
     HOL declaration, so it has no `@[hol]` tag. -/
-theorem afindi_eq_of_map_fst_eq [BEq α] (key : α) :
+theorem afindi_eq_of_map_fst_eq [DecidableEq α] (key : α) :
     ∀ (xs ys : List (α × β)), xs.map Prod.fst = ys.map Prod.fst →
       afindi key xs = afindi key ys := by
   intro xs
@@ -212,7 +214,7 @@ theorem afindi_eq_of_map_fst_eq [BEq α] (key : α) :
           obtain ⟨hhead, htail⟩ := h
           have hcy : cx = cy := hhead
           subst hcy
-          by_cases hbc : key == cx
+          by_cases hbc : key = cx
           · rw [afindi_cons key (cx, vx) xs, afindi_cons key (cx, vy) ys,
               if_pos hbc, if_pos hbc]
           · rw [afindi_cons key (cx, vx) xs, afindi_cons key (cx, vy) ys,
@@ -221,7 +223,7 @@ theorem afindi_eq_of_map_fst_eq [BEq α] (key : α) :
 /-! Lean option-indexing adaptation of Cake's local `map_fst_eq_alookup`
     (`cakeml/pancake/proofs/pan_structsProofScript.sml:278`). -/
 @[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "map_fst_eq_alookup"]
-theorem map_fst_eq_lookup [BEq String] [LawfulBEq String]
+theorem map_fst_eq_lookup
     (xs ys : List (String × β)) (nm : String) {v : β}
     (hlen : xs.map Prod.fst = ys.map Prod.fst)
     (hlookup : xs.lookup nm = some v) :

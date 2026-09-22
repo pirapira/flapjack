@@ -1331,6 +1331,7 @@ example
 #check @panValuePcCompileCorrectAndClockedResultRel_of_context_code
 #check @panValuePcCompileCorrectAndClockedRaisedResultRel_of_context_code
 #check @panValuePcCompileCorrectAndRaisedResultRel_of_hraise_data
+#check @panValuePcCompileCorrectAndClockedRaisedResultRel_of_hraise_data
 #check @panValuePcCompileCorrectAndResultRel_of_context_code
 #check @panValuePcCompileCorrectAndRaisedResultRel_of_context_code
 

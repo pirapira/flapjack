@@ -3457,3 +3457,4 @@ premises. -/
 #check @Flapjack.evalPanValueFfiClockProg_seq_raised
 #check @Flapjack.evalPanValueFfiClockProg_seq_timeout
 #check @Flapjack.evalPanValueFfiClockProg_seq_timeout_cross_clock_ioEvents_prefix
+#check @Flapjack.panValueProgramStateRel_evalDeclarations_parameterShape_adequacy

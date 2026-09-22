@@ -794,6 +794,38 @@ theorem panValueProgramStateRel_evalDeclarations_returnShape_adequacy
       hbaseAddress, htopAddress, hbytesInWord, hfunctions⟩,
     htargetLookup, by exact hexceptions'⟩
 
+/-! The parameter-shape projection needed by the argument side of Cake's
+    `state_rel_imp_semantics_decls_to_crep` call step.  Declaration evaluation
+    preserves the complete state relation, so the target parameter table can
+    be used directly by the subsequent evaluator relation rather than being
+    carried as an unproved premise. -/
+theorem panValueProgramStateRel_evalDeclarations_parameterShape_adequacy
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (s t : PanValueProgramState α) (hrel : panValueProgramStateRel s t)
+    (declarations : List (Decl α)) (memoryAccess : Option (PanValueMemoryAccess α))
+    (s' : PanValueProgramState α)
+    (hs : evalPanValueDeclarations s declarations memoryAccess = some s')
+    (name : FunName) (parameters : List (VarName × Shape))
+    (hlookup : lookupInfo name s'.parameterShapes = some parameters) :
+    ∃ t', evalPanValueDeclarations t (panSimpDecls declarations) memoryAccess = some t' ∧
+      panValueProgramStateRel s' t' ∧
+      lookupInfo name t'.parameterShapes = some parameters ∧
+      s'.exceptions = t'.exceptions := by
+  obtain ⟨t', ht, hrel'⟩ := panValueProgramStateRel_evalPanValueDeclarations
+    s t hrel declarations memoryAccess s' hs
+  rcases hrel' with ⟨hstructs, hglobals, hmemory, hreturnShapes,
+    hparameterShapes, hexceptions', hbaseAddress, htopAddress, hbytesInWord,
+    hfunctions⟩
+  have htargetLookup : lookupInfo name t'.parameterShapes = some parameters := by
+    rw [← hparameterShapes]
+    exact hlookup
+  exact ⟨t', ht,
+    ⟨hstructs, hglobals, hmemory, hreturnShapes, hparameterShapes, hexceptions',
+      hbaseAddress, htopAddress, hbytesInWord, hfunctions⟩,
+    htargetLookup, by exact hexceptions'⟩
+
 /-! Cake's `map_snd_f_eq` (`pan_simpProofScript.sml:43`): rewriting only the
     body component of a declaration triple commutes with projecting that body
     and applying a further function.  Stated for `List (α × β × γ)`, whose

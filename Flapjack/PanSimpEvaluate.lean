@@ -5810,6 +5810,7 @@ theorem PanValueFfiClockNormalAdequateProgFrom_call_destination
     (by intro hzero; omega) hwithin
     (fun finalGlobals => hassign locals finalGlobals values)
 
+
 /-- A lower-bounded adequate program followed by an all-clock adequate program
     sequences: the first's result clock is bounded by the input clock, and the
     continuation accepts every clock. -/
@@ -6077,6 +6078,47 @@ theorem PanValueFfiClockNormalAdequateProgFromFloor_of_from
     h clock hclock locals globals memory ffi
   exact ⟨finalLocals, finalGlobals, finalMemory, finalFfi, finalClock, heval,
     Nat.zero_le finalClock⟩
+
+/-! A destination call has no positive floor guarantee without a premise on the
+    callee result clock. Expose the sound floor-zero certificate for sequencing. -/
+theorem PanValueFfiClockNormalAdequateProgFromFloor_call_destination
+    (lo : Nat) (hlo : 1 ≤ lo)
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (ma : Option (PanValueMemoryAccess α))
+    (function : FunName) (arguments : List (Exp α))
+    (destination : Option (VarKind × VarName))
+    (parameters : List VarName) (body : Prog α)
+    (hfunctions : PanValueFfiClockFunctionsReturnSucceed context primitive handler
+      structs functions baseAddress topAddress bytesInWord ma none none)
+    (hbudget : progSize body + 1 ≤ callBudget)
+    (hlookup : lookupPanFunction function functions = some (parameters, body))
+    (hargs : ∀ (locals globals : VarName → Option (PanValue α))
+      (memory : α → Option (PanValue α)),
+      ∃ (values : List (PanValue α)) (calleeLocals : VarName → Option (PanValue α)),
+        evalPanValueExps structs locals globals memory baseAddress topAddress
+          bytesInWord arguments (memoryAccess := ma) = some values ∧
+        bindPanValueParameters parameters values = some calleeLocals ∧
+        panValueValuesWithinLimit structs values = true)
+    (hassign : ∀ (locals : VarName → Option (PanValue α))
+      (finalGlobals : VarName → Option (PanValue α)) (values : List (PanValue α)),
+      ∃ (assignedLocals assignedGlobals : VarName → Option (PanValue α)),
+        assignPanValueCallResult locals finalGlobals destination values
+          (structs := structs) = some (assignedLocals, assignedGlobals)) :
+    PanValueFfiClockNormalAdequateProgFromFloor lo 0 context primitive handler structs
+      functions baseAddress topAddress bytesInWord callBudget ma none none
+      (.call (some (destination, none)) function arguments) := by
+  exact PanValueFfiClockNormalAdequateProgFromFloor_of_from lo context primitive
+    handler structs functions baseAddress topAddress bytesInWord callBudget ma none none
+    (.call (some (destination, none)) function arguments)
+    (PanValueFfiClockNormalAdequateProgFrom_call_destination lo hlo context primitive
+      handler structs functions baseAddress topAddress bytesInWord callBudget ma function arguments
+      destination parameters body hfunctions hbudget hlookup hargs hassign)
 
 /-- Forgetting the floor: a floored certificate is in particular an un-floored
     one.  The converse holds only at floor `0`

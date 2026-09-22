@@ -471,6 +471,22 @@ theorem comp_fail_correct
   · simp [evalLoopProg]
   · exact henvironment
 
+theorem comp_mark_labelsIn
+    (environment : LocationEnv) (body : LoopProg α)
+    (locals : Nat → Option α)
+    (hbody : labelsIn (comp environment body).2 locals) :
+    (comp environment (.mark body : LoopProg α)).1 =
+        .mark (comp environment body).1 ∧
+      labelsIn (comp environment (.mark body : LoopProg α)).2 locals := by
+  have hcompiled :
+      comp environment (.mark body : LoopProg α) =
+        (.mark (comp environment body).1, (comp environment body).2) := by
+    simp [comp]
+  rw [hcompiled]
+  constructor
+  · rfl
+  · exact hbody
+
 theorem comp_setGlobal_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]

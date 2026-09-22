@@ -217,13 +217,14 @@ def functionInfos : List (Decl α) → InfoMap (List (VarName × Shape) × Shape
 def panToCrepVars (params : List (VarName × Shape)) : List Nat :=
   List.range (Shape.shapeSize (.comb (params.map Prod.snd)))
 
-/-! Faithful port of `pan_to_crep$compile` (`compile_def`) from
-    `cakeml/pancake/pan_to_crepScript.sml:139-305`.
+/-! Flapjack's executable `pan_to_crep$compile` analogue. It is not yet an
+    exact port of HOL `compile_def`: `CompileContext` admits a caller-supplied
+    `bytesInWord`, whereas HOL's context has no such field and uses the fixed
+    `byte$bytes_in_word`. Bead `flapjack-pxn.18.3.1.4` tracks the exact port.
 
     The recursive compiler below keeps CakeML's fallback behavior for
     malformed compiled expressions and preserves the source control-flow
     constructors. -/
-@[hol "cakeml/pancake/pan_to_crepScript.sml" "compile_def"]
 def compileProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (program : Prog α) : CrepProg α :=
   match program with
@@ -395,8 +396,11 @@ def panToCrepCompFunc [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
   compileProg
     { context with vars := panToCrepMakeVmap params, maxVar := vmax } body
 
-/-! Faithful port of `pan_to_crep$compile_to_crep` from
-    `cakeml/pancake/pan_to_crepScript.sml:383-391`.
+/-! Flapjack's executable `pan_to_crep$compile_to_crep` analogue, not yet
+    HOL-shaped: HOL's definition takes only declarations and builds the
+    function and exception maps internally; this function takes an additional
+    caller-supplied context. Bead `flapjack-pxn.18.3.1.3` tracks replacement by
+    a faithful executable port.
 
     HOL's `comp_func` sets `vmax` to the greatest parameter slot, whereas the
     existing context-normalized API stores the next free slot in its function
@@ -417,7 +421,6 @@ def compileFunctionsSource [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
   | _ :: declarations => compileFunctionsSource context declarations
 termination_by declarations => sizeOf declarations
 
-@[hol "cakeml/pancake/pan_to_crepScript.sml" "compile_to_crep_def"]
 def compileToCrep [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (declarations : List (Decl α)) :
     List (CompiledFunction α) :=

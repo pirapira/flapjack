@@ -770,4 +770,419 @@ theorem crepVarProg_transformBranch (loopDepth : Nat) (returnNames : List Nat)
   intro x hmem
   exact List.mem_append.mp (haux loopDepth program hmem)
 
+theorem crepUnreachElim_preserve_hasReturn (program : CrepProg α) :
+    crepHasReturn program = false →
+      ∀ {q : CrepProg α} {r : Option CrepEarlyExit},
+        crepUnreachElim program = (q, r) → crepHasReturn q = false := by
+  have h : ∀ (n : Nat) (program : CrepProg α), sizeOf program < n →
+      crepHasReturn program = false →
+        ∀ {q : CrepProg α} {r : Option CrepEarlyExit},
+          crepUnreachElim program = (q, r) → crepHasReturn q = false := by
+    intro n
+    induction n using Nat.strongRecOn with
+    | ind n ih =>
+      intro program hlt hh q r he
+      cases program with
+      | «skip» =>
+        rw [crepUnreachElim.eq_def] at he
+        cases he
+        exact hh
+      | «dec» name value body =>
+        have hbody : crepHasReturn body = false := by
+          simpa [crepHasReturn] using hh
+        rw [crepUnreachElim.eq_def] at he
+        dsimp only at he
+        cases hebody : crepUnreachElim body with
+        | mk body' bodyExit =>
+          rw [hebody] at he
+          cases he
+          have hsub : sizeOf body < sizeOf (CrepProg.dec name value body : CrepProg α) := by
+            decreasing_trivial
+          have hres := ih (sizeOf (CrepProg.dec name value body : CrepProg α)) hlt
+            body hsub hbody hebody
+          simpa [crepHasReturn] using hres
+      | «assign» name value =>
+        rw [crepUnreachElim.eq_def] at he
+        cases he
+        exact hh
+      | «primitive» names operator args =>
+        rw [crepUnreachElim.eq_def] at he
+        cases he
+        exact hh
+      | «store» address value =>
+        rw [crepUnreachElim.eq_def] at he
+        cases he
+        exact hh
+      | «store32» address value =>
+        rw [crepUnreachElim.eq_def] at he
+        cases he
+        exact hh
+      | «storeByte» address value =>
+        rw [crepUnreachElim.eq_def] at he
+        cases he
+        exact hh
+      | «storeGlob» address value =>
+        rw [crepUnreachElim.eq_def] at he
+        cases he
+        exact hh
+      | «seq» first second =>
+        have hparts : crepHasReturn first = false ∧ crepHasReturn second = false := by
+          simpa [crepHasReturn] using hh
+        rw [crepUnreachElim.eq_def] at he
+        dsimp only at he
+        cases hfirst : crepUnreachElim first with
+        | mk first' firstExit =>
+          rw [hfirst] at he
+          by_cases hsome : firstExit.isSome = true
+          · simp only [hsome] at he
+            cases he
+            have hsub : sizeOf first < sizeOf (CrepProg.seq first second : CrepProg α) := by
+              decreasing_trivial
+            have hres := ih (sizeOf (CrepProg.seq first second : CrepProg α)) hlt
+              first hsub hparts.1 hfirst
+            simpa [crepHasReturn] using hres
+          · simp only [hsome] at he
+            cases hsecond : crepUnreachElim second with
+            | mk second' secondExit =>
+              rw [hsecond] at he
+              cases he
+              have hsub1 : sizeOf first < sizeOf (CrepProg.seq first second : CrepProg α) := by
+                decreasing_trivial
+              have hsub2 : sizeOf second < sizeOf (CrepProg.seq first second : CrepProg α) := by
+                decreasing_trivial
+              have h1 := ih (sizeOf (CrepProg.seq first second : CrepProg α)) hlt
+                first hsub1 hparts.1 hfirst
+              have h2 := ih (sizeOf (CrepProg.seq first second : CrepProg α)) hlt
+                second hsub2 hparts.2 hsecond
+              simp [crepHasReturn, h1, h2]
+      | «ite» condition thenBranch elseBranch =>
+        have hparts : crepHasReturn thenBranch = false ∧ crepHasReturn elseBranch = false := by
+          simpa [crepHasReturn] using hh
+        rw [crepUnreachElim.eq_def] at he
+        dsimp only at he
+        cases hthen : crepUnreachElim thenBranch with
+        | mk then' thenExit =>
+          rw [hthen] at he
+          dsimp only at he
+          cases helse : crepUnreachElim elseBranch with
+          | mk else' elseExit =>
+            rw [helse] at he
+            cases he
+            have hsub1 : sizeOf thenBranch <
+                sizeOf (CrepProg.ite condition thenBranch elseBranch : CrepProg α) := by
+              decreasing_trivial
+            have hsub2 : sizeOf elseBranch <
+                sizeOf (CrepProg.ite condition thenBranch elseBranch : CrepProg α) := by
+              decreasing_trivial
+            have h1 := ih (sizeOf (CrepProg.ite condition thenBranch elseBranch : CrepProg α))
+              hlt thenBranch hsub1 hparts.1 hthen
+            have h2 := ih (sizeOf (CrepProg.ite condition thenBranch elseBranch : CrepProg α))
+              hlt elseBranch hsub2 hparts.2 helse
+            simp [crepHasReturn, h1, h2]
+      | «while» condition body =>
+        have hbody : crepHasReturn body = false := by
+          simpa [crepHasReturn] using hh
+        rw [crepUnreachElim.eq_def] at he
+        dsimp only at he
+        cases hbody' : crepUnreachElim body with
+        | mk body' bodyExit =>
+          rw [hbody'] at he
+          cases he
+          have hsub : sizeOf body < sizeOf (CrepProg.while condition body : CrepProg α) := by
+            decreasing_trivial
+          have hres := ih (sizeOf (CrepProg.while condition body : CrepProg α)) hlt
+            body hsub hbody hbody'
+          simpa [crepHasReturn] using hres
+      | «break» label =>
+        rw [crepUnreachElim.eq_def] at he
+        cases he
+        exact hh
+      | «continue» label =>
+        rw [crepUnreachElim.eq_def] at he
+        cases he
+        exact hh
+      | «call» returnInfo name args =>
+        cases returnInfo with
+        | none =>
+          rw [crepUnreachElim.eq_def] at he
+          cases he
+          exact hh
+        | some pair =>
+          obtain ⟨names, rest⟩ := pair
+          cases rest with
+          | none =>
+            rw [crepUnreachElim.eq_def] at he
+            cases he
+            exact hh
+          | some hr =>
+            obtain ⟨handler, body⟩ := hr
+            have hbody : crepHasReturn body = false := by
+              simpa [crepHasReturn] using hh
+            rw [crepUnreachElim.eq_def] at he
+            dsimp only at he
+            cases hbody' : crepUnreachElim body with
+            | mk body' bodyExit =>
+              rw [hbody'] at he
+              cases he
+              have hsub : sizeOf body <
+                  sizeOf (CrepProg.call (some (names, some (handler, body)))
+                    name args : CrepProg α) := by
+                decreasing_trivial
+              have hres := ih (sizeOf (CrepProg.call (some (names, some (handler, body)))
+                name args : CrepProg α)) hlt body hsub hbody hbody'
+              simpa [crepHasReturn] using hres
+      | «extCall» function configuration configurationLength array arrayLength =>
+        rw [crepUnreachElim.eq_def] at he
+        cases he
+        exact hh
+      | «raise» exception =>
+        rw [crepUnreachElim.eq_def] at he
+        cases he
+        exact hh
+      | «return» values =>
+        rw [crepUnreachElim.eq_def] at he
+        cases he
+        exact hh
+      | «shMem» operator name address =>
+        rw [crepUnreachElim.eq_def] at he
+        cases he
+        exact hh
+      | «tick» =>
+        rw [crepUnreachElim.eq_def] at he
+        cases he
+        exact hh
+  intro hh q r he
+  exact h (sizeOf program + 1) program (Nat.lt_succ_self _) hh he
+
+theorem crepUnreachElim_preserve_notBranchRet (program : CrepProg α) :
+    crepNotBranchRet program = true →
+      ∀ {q : CrepProg α} {r : Option CrepEarlyExit},
+        crepUnreachElim program = (q, r) → crepNotBranchRet q = true := by
+  have h : ∀ (n : Nat) (program : CrepProg α), sizeOf program < n →
+      crepNotBranchRet program = true →
+        ∀ {q : CrepProg α} {r : Option CrepEarlyExit},
+          crepUnreachElim program = (q, r) → crepNotBranchRet q = true := by
+    intro n
+    induction n using Nat.strongRecOn with
+    | ind n ih =>
+      intro program hlt hh q r he
+      cases program with
+      | «skip» =>
+        rw [crepUnreachElim.eq_def] at he
+        cases he
+        exact hh
+      | «dec» name value body =>
+        have hbody : crepNotBranchRet body = true := by
+          simpa [crepNotBranchRet] using hh
+        rw [crepUnreachElim.eq_def] at he
+        dsimp only at he
+        cases hebody : crepUnreachElim body with
+        | mk body' bodyExit =>
+          rw [hebody] at he
+          cases he
+          have hsub : sizeOf body < sizeOf (CrepProg.dec name value body : CrepProg α) := by
+            decreasing_trivial
+          have hres := ih (sizeOf (CrepProg.dec name value body : CrepProg α)) hlt
+            body hsub hbody hebody
+          simpa [crepNotBranchRet] using hres
+      | «assign» name value =>
+        rw [crepUnreachElim.eq_def] at he
+        cases he
+        exact hh
+      | «primitive» names operator args =>
+        rw [crepUnreachElim.eq_def] at he
+        cases he
+        exact hh
+      | «store» address value =>
+        rw [crepUnreachElim.eq_def] at he
+        cases he
+        exact hh
+      | «store32» address value =>
+        rw [crepUnreachElim.eq_def] at he
+        cases he
+        exact hh
+      | «storeByte» address value =>
+        rw [crepUnreachElim.eq_def] at he
+        cases he
+        exact hh
+      | «storeGlob» address value =>
+        rw [crepUnreachElim.eq_def] at he
+        cases he
+        exact hh
+      | «seq» first second =>
+        have hparts : crepNotBranchRet first = true ∧ crepNotBranchRet second = true := by
+          simpa [crepNotBranchRet] using hh
+        rw [crepUnreachElim.eq_def] at he
+        dsimp only at he
+        cases hfirst : crepUnreachElim first with
+        | mk first' firstExit =>
+          rw [hfirst] at he
+          by_cases hsome : firstExit.isSome = true
+          · simp only [hsome] at he
+            cases he
+            have hsub : sizeOf first < sizeOf (CrepProg.seq first second : CrepProg α) := by
+              decreasing_trivial
+            have hres := ih (sizeOf (CrepProg.seq first second : CrepProg α)) hlt
+              first hsub hparts.1 hfirst
+            simpa [crepNotBranchRet] using hres
+          · simp only [hsome] at he
+            cases hsecond : crepUnreachElim second with
+            | mk second' secondExit =>
+              rw [hsecond] at he
+              cases he
+              have hsub1 : sizeOf first < sizeOf (CrepProg.seq first second : CrepProg α) := by
+                decreasing_trivial
+              have hsub2 : sizeOf second < sizeOf (CrepProg.seq first second : CrepProg α) := by
+                decreasing_trivial
+              have h1 := ih (sizeOf (CrepProg.seq first second : CrepProg α)) hlt
+                first hsub1 hparts.1 hfirst
+              have h2 := ih (sizeOf (CrepProg.seq first second : CrepProg α)) hlt
+                second hsub2 hparts.2 hsecond
+              simp [crepNotBranchRet, h1, h2]
+      | «ite» condition thenBranch elseBranch =>
+        have hparts : (!crepHasReturn thenBranch) = true ∧ (!crepHasReturn elseBranch) = true := by
+          simpa [crepNotBranchRet] using hh
+        rw [crepUnreachElim.eq_def] at he
+        dsimp only at he
+        cases hthen : crepUnreachElim thenBranch with
+        | mk then' thenExit =>
+          rw [hthen] at he
+          dsimp only at he
+          cases helse : crepUnreachElim elseBranch with
+          | mk else' elseExit =>
+            rw [helse] at he
+            cases he
+            have hthenFalse : crepHasReturn thenBranch = false := by simpa using hparts.1
+            have helseFalse : crepHasReturn elseBranch = false := by simpa using hparts.2
+            have hthen' := crepUnreachElim_preserve_hasReturn thenBranch hthenFalse hthen
+            have helse' := crepUnreachElim_preserve_hasReturn elseBranch helseFalse helse
+            simp [crepNotBranchRet, hthen', helse']
+      | «while» condition body =>
+        have hparts : (!crepHasReturn body) = true := by
+          simpa [crepNotBranchRet] using hh
+        rw [crepUnreachElim.eq_def] at he
+        dsimp only at he
+        cases hbody' : crepUnreachElim body with
+        | mk body' bodyExit =>
+          rw [hbody'] at he
+          cases he
+          have hbodyFalse : crepHasReturn body = false := by simpa using hparts
+          have hres := crepUnreachElim_preserve_hasReturn body hbodyFalse hbody'
+          simp [crepNotBranchRet, hres]
+      | «break» label =>
+        rw [crepUnreachElim.eq_def] at he
+        cases he
+        exact hh
+      | «continue» label =>
+        rw [crepUnreachElim.eq_def] at he
+        cases he
+        exact hh
+      | «call» returnInfo name args =>
+        cases returnInfo with
+        | none =>
+          rw [crepUnreachElim.eq_def] at he
+          cases he
+          exact hh
+        | some pair =>
+          obtain ⟨names, rest⟩ := pair
+          cases rest with
+          | none =>
+            rw [crepUnreachElim.eq_def] at he
+            cases he
+            exact hh
+          | some hr =>
+            obtain ⟨handler, body⟩ := hr
+            have hparts : (!crepHasReturn body) = true := by
+              simpa [crepNotBranchRet] using hh
+            rw [crepUnreachElim.eq_def] at he
+            dsimp only at he
+            cases hbody' : crepUnreachElim body with
+            | mk body' bodyExit =>
+              rw [hbody'] at he
+              cases he
+              have hbodyFalse : crepHasReturn body = false := by simpa using hparts
+              have hres := crepUnreachElim_preserve_hasReturn body hbodyFalse hbody'
+              simp [crepNotBranchRet, hres]
+      | «extCall» function configuration configurationLength array arrayLength =>
+        rw [crepUnreachElim.eq_def] at he
+        cases he
+        exact hh
+      | «raise» exception =>
+        rw [crepUnreachElim.eq_def] at he
+        cases he
+        exact hh
+      | «return» values =>
+        rw [crepUnreachElim.eq_def] at he
+        cases he
+        exact hh
+      | «shMem» operator name address =>
+        rw [crepUnreachElim.eq_def] at he
+        cases he
+        exact hh
+      | «tick» =>
+        rw [crepUnreachElim.eq_def] at he
+        cases he
+        exact hh
+  intro hh q r he
+  exact h (sizeOf program + 1) program (Nat.lt_succ_self _) hh he
+
+/-! CakeML's `crep_inlineProofScript.sml` `unreach_elim_nested_decs` (:1697),
+    `unreach_elim_arg_load` (:1709) and `unreach_elim_arg_load_perm` (:1720):
+    wrapping an `unreach_elim` fixpoint in nested declarations preserves the
+    fixpoint and its reported early exit. -/
+
+theorem crepUnreachElim_dec_fixpoint (name : Nat) (value : CrepExp α) (program : CrepProg α)
+    (r : Option CrepEarlyExit)
+    (hfix : crepUnreachElim program = (program, r)) :
+    crepUnreachElim (.dec name value program) = (.dec name value program, r) := by
+  rw [crepUnreachElim.eq_def]
+  dsimp only
+  rw [hfix]
+
+theorem crepUnreachElim_nestedDecs (names : List Nat) (values : List (CrepExp α))
+    (program : CrepProg α) (r : Option CrepEarlyExit)
+    (hlen : names.length = values.length)
+    (hfix : crepUnreachElim program = (program, r)) :
+    crepUnreachElim (nestedDecs names values program) =
+      (nestedDecs names values program, r) := by
+  induction names generalizing values program r with
+  | nil =>
+      cases values with
+      | nil => simpa [nestedDecs] using hfix
+      | cons value values => simp at hlen
+  | cons name names ih =>
+      cases values with
+      | nil => simp at hlen
+      | cons value values =>
+          simp only [nestedDecs]
+          exact crepUnreachElim_dec_fixpoint name value
+            (nestedDecs names values program) r
+            (ih values program r (by simpa using hlen) hfix)
+
+theorem crepUnreachElim_argLoad (program : CrepProg α) (tmpVars : List Nat)
+    (args : List (CrepExp α)) (argsVName : List Nat) (r : Option CrepEarlyExit)
+    (hlen1 : tmpVars.length = args.length)
+    (hlen2 : args.length = argsVName.length)
+    (hfix : crepUnreachElim program = (program, r)) :
+    crepUnreachElim (argLoad tmpVars args argsVName program) =
+      (argLoad tmpVars args argsVName program, r) := by
+  unfold argLoad
+  have hinner : crepUnreachElim
+      (nestedDecs argsVName (tmpVars.map CrepExp.var) program) =
+      (nestedDecs argsVName (tmpVars.map CrepExp.var) program, r) :=
+    crepUnreachElim_nestedDecs argsVName (tmpVars.map CrepExp.var) program r
+      (by rw [List.length_map]; omega) hfix
+  exact crepUnreachElim_nestedDecs tmpVars args
+    (nestedDecs argsVName (tmpVars.map CrepExp.var) program) r hlen1 hinner
+
+theorem crepUnreachElim_argLoad_perm (program : CrepProg α) (tmpVars : List Nat)
+    (args : List (CrepExp α)) (argsVName : List Nat) (r : Option CrepEarlyExit)
+    (hlen1 : tmpVars.length = argsVName.length)
+    (hlen2 : args.length = argsVName.length)
+    (hfix : crepUnreachElim program = (program, r)) :
+    crepUnreachElim (argLoad tmpVars args argsVName program) =
+      (argLoad tmpVars args argsVName program, r) :=
+  crepUnreachElim_argLoad program tmpVars args argsVName r
+    (by omega) hlen2 hfix
+
 end Flapjack

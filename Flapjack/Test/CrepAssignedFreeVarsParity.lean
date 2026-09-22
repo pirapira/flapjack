@@ -288,6 +288,29 @@ theorem rewrittenContext_unassigned_fixture :
 #check @rewrittenContext_unassigned
 #check @panValueSlotBound_cons_of_nodup_disjoint
 
+def wrapRtContext : InfoMap (Shape × List Nat) :=
+  [("x", (Shape.comb [Shape.one, Shape.one], [5, 6]))]
+
+theorem wrapRtContext_noOverlap : panValueNoOverlap wrapRtContext := by
+  refine ⟨?_, ?_⟩
+  · intro name shape slots hlookup
+    simp only [wrapRtContext, lookupInfo] at hlookup
+    split at hlookup
+    · obtain ⟨rfl, rfl⟩ := Option.some.inj hlookup
+      decide
+    · exact absurd hlookup (by simp)
+  · intro name name' shape shape' slots slots' hl hl' hmem
+    simp only [wrapRtContext, lookupInfo] at hl hl'
+    split at hl <;> split at hl' <;> simp_all
+
+theorem panValueNoOverlap_wrapRt_nodup_fixture :
+    ([5, 6] : List Nat).Nodup :=
+  panValueNoOverlap_wrapRt_nodup wrapRtContext "x"
+    (Shape.comb [Shape.one, Shape.one]) [5, 6] wrapRtContext_noOverlap
+    (by simp [wrapRtContext, lookupInfo, wrapRt])
+
+#check @panValueNoOverlap_wrapRt_nodup
+
 def runChecks : IO Bool := do
   if parityGuard then
     IO.println "PASS crep assigned_free_vars skip/assign/dec/seq/if/while/shmem/fallback"

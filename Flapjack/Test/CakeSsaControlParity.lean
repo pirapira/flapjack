@@ -33,6 +33,23 @@ def callBoundaryGuard : Bool :=
 
 #guard callBoundaryGuard
 
+def handledCallProgram : WordProg Nat :=
+  .call (some ([9], ([], []),
+      (.move 1 [(9, 9), (7, 9)] : WordProg Nat), 0, 1))
+    (some 7) [0, 2]
+    (some (11, (.move 1 [(19, 19), (7, 19)] : WordProg Nat), 0, 2))
+
+def handledCallBoundaryGuard : Bool :=
+  match (wordFullSsaCcTrans 2 handledCallProgram).2.2 with
+  | .seq (.move 1 [(21, 0), (25, 2)])
+      (.seq (.move 0 [])
+        (.seq (.move 1 [(2, 21), (4, 25)])
+          (.call (some ([2], _, _, 0, 1)) (some 7) [2, 4]
+            (some (2, _, 0, 2))))) => true
+  | _ => false
+
+#guard handledCallBoundaryGuard
+
 def storeConstsProgram : WordProg Nat :=
   .storeConsts 1 2 3 4 []
 
@@ -219,7 +236,8 @@ def ffiCutsetBoundaryGuard : Bool :=
 
 def parityGuard : Bool :=
   raiseBoundaryGuard && callBoundaryGuard && storeConstsBoundaryGuard &&
-    ffiBoundaryGuard && codeBufferWriteBoundaryGuard && dataBufferWriteBoundaryGuard &&
+    handledCallBoundaryGuard && ffiBoundaryGuard && codeBufferWriteBoundaryGuard &&
+    dataBufferWriteBoundaryGuard &&
     longDivBoundaryGuard && longMulBoundaryGuard && shiftBoundaryGuard &&
     addCarryBoundaryGuard && constBoundaryGuard && binOpBoundaryGuard &&
     divBoundaryGuard && codeBufferWriteGuard && dataBufferWriteGuard &&
@@ -235,6 +253,8 @@ def runChecks : IO Bool := do
         raiseBoundaryGuard),
       ("full_ssa_cc_trans return-free Call preserves Cake argument ABI",
         callBoundaryGuard),
+      ("full_ssa_cc_trans handled Call preserves Cake handler ABI",
+        handledCallBoundaryGuard),
       ("full_ssa_cc_trans StoreConsts preserves Cake reload moves",
         storeConstsBoundaryGuard),
       ("full_ssa_cc_trans FFI preserves Cake ABI moves",

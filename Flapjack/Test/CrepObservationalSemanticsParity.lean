@@ -82,6 +82,20 @@ theorem semanticsDivergence :
     dif_neg divergenceNoSuccess]
   congr 2
 
+def updatedState : CrepState Nat :=
+  { sourceState with locals := fun slot => if slot = 3 then some 9 else none }
+
+def returnedControl : CrepControlResult Nat :=
+  .returned updatedState [7]
+
+theorem postStateProjection :
+    crepControlResultState sourceState (some returnedControl) = updatedState := by
+  rfl
+
+theorem postStateProjection_is_not_initial :
+    updatedState.locals 3 = some 9 ∧ sourceState.locals 3 = none := by
+  simp [updatedState, sourceState]
+
 def sourceClockParity : Bool :=
   crepResultOutcome (some (.returned [7] : CrepSemanticResult Nat)) ==
     some .success
@@ -93,6 +107,7 @@ def runChecks : IO Bool := do
   IO.println "PASS crep semantics failure branch"
   IO.println "PASS crep semantics termination branch"
   IO.println "PASS crep semantics divergence branch and prefix LUB"
+  IO.println "PASS crep semantics observes returned post-state"
   pure true
 
 end Flapjack.Test.CrepObservationalSemanticsParity

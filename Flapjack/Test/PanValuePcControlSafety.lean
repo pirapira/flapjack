@@ -1448,6 +1448,14 @@ example (context : CompileContext Nat) (eshapes : InfoMap Shape) :
 #check @lookupPanFunction_mem
 #check @panValuePcLocalisedCode_lookup
 
+/-! Cake's `ctxt_max_def`/`no_overlap_def` (`pan_commonPropsScript.sml:11,18`)
+are ported as concrete predicates on the variable map, with the empty map as a
+kernel-checked inhabitant. -/
+#check @panValueCtxtMax
+#check @panValueNoOverlap
+#check @panValueCtxtMax_empty
+#check @panValueNoOverlap_empty
+
 /-! The concrete `code_rel` analogue is non-vacuous on a source-faithful,
 nonempty function table: instantiating Cake's `mk_ctxt_code_imp_code_rel` port
 on a single declaration whose body is a localised `skip`. -/

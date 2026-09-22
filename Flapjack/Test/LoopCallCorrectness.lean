@@ -353,7 +353,7 @@ theorem ite_true_compile_correct_fixture :
     (thenBranch := (.tick : LoopProg Nat)) (elseBranch := .fail)
     (live := [2]) (leftValue := 100) (rightValue := 7)
     (result := .normal load32State)
-    (by simp [load32State, loopReadLocals]) (by simp)
+    (by simp [load32State]) (by simp)
     (by simp [evalLoopCondition]) (by simp [comp, evalLoopProg])
   simpa [comp, loopResultState] using hite
 
@@ -696,6 +696,31 @@ theorem call_labelsIn_fixture :
       exact ⟨100, by simp [load32State]⟩)
   simpa [comp, compCall, splitLast, lookup] using hcompiled
 
+theorem call_target_compile_correct_fixture :
+    evalLoopProgWithCallsAndFfi
+        [(1, [3], (.return [3] : LoopProg Nat))]
+        (fun _ _ _ _ _ _ => none) 3 load32State
+        (comp [(3, 2)]
+          (.call none (some 1) [3] none : LoopProg Nat) :
+            LoopProg Nat × LocationEnv).1 =
+        some (.returned load32State [7]) ∧
+      labelsIn
+        (comp [(3, 2)]
+          (.call none (some 1) [3] none : LoopProg Nat) :
+            LoopProg Nat × LocationEnv).2
+        load32State.locals := by
+  have hcall := comp_call_target_correct
+    (functions := [(1, [3], (.return [3] : LoopProg Nat))])
+    (ffiHandler := (fun _ _ _ _ _ _ => none))
+    (environment := [(3, 2)]) (state := load32State) (fuel := 2)
+    (returns := none) (target := 1) (arguments := [3]) (handler := none)
+    (result := .returned load32State [7])
+    (by
+      simp [evalLoopCallWithCallsAndFfi, evalLoopProgWithCallsAndFfi,
+        lookupLoopFunction, loopReadLocals, evalLoopProg, loopBindParameters,
+        loopLookupFirst, load32State])
+  simpa [comp, loopResultState] using hcall
+
 theorem ffi_labelsIn_fixture :
     (comp [(3, 2)]
       (.ffi "print" 1 2 3 4 [2, 3] : LoopProg Nat) : LoopProg Nat × LocationEnv).1 =
@@ -731,6 +756,34 @@ theorem primitive_single_compile_correct_fixture :
     (destination := 4) (operator := .addCarry) (arguments := [3])
     (argumentValues := [7]) (value := 107)
     (by simp [load32State, loopReadLocals]) (by simp)
+    (by
+      intro name source hlookup
+      have hpair : 3 = name ∧ 2 = source := by
+        simpa [lookup] using hlookup
+      have hsource : source = 2 := hpair.2.symm
+      subst source
+      exact ⟨100, by simp [load32State]⟩)
+  simpa [comp] using hprimitive
+
+theorem primitive_general_compile_correct_fixture :
+    evalLoopProgWithPrimitive
+        (fun _ _ => some [107, 700]) 1 load32State
+        (comp [(3, 2)]
+          (.primitive [4, 5] .addCarry [3] : LoopProg Nat) :
+            LoopProg Nat × LocationEnv).1 =
+        some (.normal { load32State with
+          locals := loopLookupFirst load32State.locals [(4, 107), (5, 700)] }) ∧
+      labelsIn
+        (comp [(3, 2)]
+          (.primitive [4, 5] .addCarry [3] : LoopProg Nat) :
+            LoopProg Nat × LocationEnv).2
+        (loopLookupFirst load32State.locals [(4, 107), (5, 700)]) := by
+  have hprimitive := comp_primitive_general_correct
+    (primitive := (fun _ _ => some [107, 700]))
+    (environment := [(3, 2)]) (state := load32State) (fuel := 0)
+    (destinations := [4, 5]) (operator := .addCarry) (arguments := [3])
+    (argumentValues := [7]) (values := [107, 700])
+    (by simp [load32State, loopReadLocals]) (by simp) (by simp)
     (by
       intro name source hlookup
       have hpair : 3 = name ∧ 2 = source := by
@@ -827,7 +880,9 @@ theorem loop_compile_result_fixture :
 #check comp_arith_longDiv_full_correct
 #check comp_primitive_labelsIn
 #check comp_primitive_single_correct
+#check comp_primitive_general_correct
 #check comp_call_labelsIn
+#check comp_call_target_correct
 #check comp_ffi_labelsIn
 #check comp_ffi_correct
 

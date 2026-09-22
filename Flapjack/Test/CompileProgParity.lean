@@ -8,6 +8,21 @@ def compileProgProbeContext : CompileContext Nat :=
   { vars := [], functions := [], exceptions := [], maxVar := 0,
     bytesInWord := 1 }
 
+#check @allocatedNames_gt
+#check @freshNames_gt
+
+theorem allocatedNames_gt_fixture : (0 : Nat) < (allocatedNames compileProgProbeContext .one).headD 0 := by
+  have hmem : (allocatedNames compileProgProbeContext .one).headD 0 ∈ allocatedNames compileProgProbeContext .one := by
+    simp [allocatedNames, compileProgProbeContext]
+  have := allocatedNames_gt compileProgProbeContext .one hmem
+  simpa [compileProgProbeContext] using this
+
+theorem freshNames_gt_fixture : (0 : Nat) < (freshNames compileProgProbeContext 1 1).headD 0 := by
+  have hmem : (freshNames compileProgProbeContext 1 1).headD 0 ∈ freshNames compileProgProbeContext 1 1 := by
+    simp [freshNames, compileProgProbeContext]
+  have := freshNames_gt compileProgProbeContext 1 1 (by decide) hmem
+  simpa [compileProgProbeContext] using this
+
 def compileProgProbeDecls : List (Decl Nat) :=
   [.function
      { name := "leaf", inline := true, exported := false, params := [],

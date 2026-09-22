@@ -26,6 +26,28 @@ Do not copy `.olean` files between worktrees or overwrite one with a copied
 artifact: a copied OLean can be newer than its source and hide subsequent
 source changes. Cache cleanup is local-only; do not stage `.lake` outputs.
 
+## Fleet workflow
+
+Keep the CakeML/HOL submodule read-only. Put HOL probes and captured oracle
+outputs on the Flapjack side under `scripts/hol-probes/`; follow that directory's
+README and `docs/PARITY-TESTING.md` for the detailed procedure.
+
+Claim a commit-sized bead before starting work. Record the pushed branch and
+commit, verification results, or exact blocked reason on the bead, and notify
+the coordinator. Keep dependency beads open until their own acceptance criteria
+are met.
+
+Maintain one fleet integration PR. Agents push their own branches but do not
+open separate PRs; the coordinator merges reviewed work into the integration
+branch. Merge the updated integration branch back into agent branches with
+ordinary merges. Do not rebase or cherry-pick shared work.
+
+Before reporting a port complete, build affected Lean modules, run `lake test`,
+`scripts/check-hol-refs.py`, and `scripts/check-warnings.sh`. For executable
+compiler changes, compare the executed output with original Pancake where an
+oracle exists; see `docs/PARITY-TESTING.md`. State which checks actually ran and
+which remain pending (including CI).
+
 ## Porting HOL theorems: placement, cross-reference, and shape
 
 Every Lean declaration that ports a declaration from the CakeML/HOL4

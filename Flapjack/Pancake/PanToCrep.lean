@@ -20,6 +20,7 @@ structure CompileContext (α : Type u) where
   bytesInWord : α
   deriving Repr
 
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "cexp_heads_def"]
 def cexpHeads : List (List (CrepExp α)) → Option (List (CrepExp α))
   | [] => some []
   | expressions :: rest =>
@@ -51,6 +52,7 @@ theorem cexpHeads_eq_cexpHeadsSimp (fallback : CrepExp α)
           simp only [cexpHeads, ih, cexpHeadsSimp]
           split <;> simp_all
 
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "comp_field_def"]
 def compileField [OfNat α 0] (index : Nat) :
     List Shape → List (CrepExp α) → List (CrepExp α) × Shape
   | [], _ => ([.const 0], .one)
@@ -58,6 +60,7 @@ def compileField [OfNat α 0] (index : Nat) :
       if index = 0 then (expressions.take (Shape.shapeSize shape), shape)
       else compileField (index - 1) shapes (expressions.drop (Shape.shapeSize shape))
 
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "compile_panop_def"]
 def compilePanOp : PanOp → CrepOp
   | .mul => .mul
 

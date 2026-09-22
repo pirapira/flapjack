@@ -1,0 +1,8 @@
+struct S { 1 a, 1 b, 1 c }
+fun S make(1 x) { return S <a = x, b = x + 1, c = x + 2>; }
+fun 1 id(1 x) { return x; }
+fun 1 main() {
+  var S s = make(4);
+  var 1 x = id(s.a);
+  return s.c + x;
+}

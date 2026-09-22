@@ -292,6 +292,105 @@ def pipelineFunctionInfos (firstLabel : Nat) :
     List (CompiledFunction α) → InfoMap (Nat × Nat) :=
   crepMakeFuncsAt firstLabel
 
+/-- Cake's `distinct_funcs` (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:60`):
+    the numeric label assigned to a function is injective on the function
+    names, in the list-backed `InfoMap` representation. -/
+def crepDistinctFuncs (functions : InfoMap (Nat × Nat)) : Prop :=
+  ∀ (x y : FunName) (n m : Nat) (rm rm' : Nat),
+    lookupInfo x functions = some (n, rm) →
+    lookupInfo y functions = some (m, rm') → n = m → x = y
+
+theorem crepMakeFuncsAt_label_ge (start : Nat)
+    (functions : List (CompiledFunction α)) :
+    ∀ {x : FunName} {n rm : Nat},
+      lookupInfo x (crepMakeFuncsAt start functions) = some (n, rm) →
+        start ≤ n := by
+  induction functions generalizing start with
+  | nil => intro x n rm h; simp [crepMakeFuncsAt, lookupInfo] at h
+  | cons function functions ih =>
+      intro x n rm h
+      simp only [crepMakeFuncsAt, lookupInfo] at h
+      by_cases hc : (function.name == x) = true
+      · rw [if_pos hc] at h
+        have hpair := Option.some.inj h
+        have : start = n := congrArg Prod.fst hpair
+        omega
+      · rw [if_neg hc] at h
+        have := ih (start := start + 1) h
+        omega
+
+theorem crepDistinctFuncs_crepMakeFuncsAt (start : Nat)
+    (functions : List (CompiledFunction α)) :
+    crepDistinctFuncs (crepMakeFuncsAt start functions) := by
+  intro x y n m rm rm' hx hy hnm
+  induction functions generalizing start with
+  | nil => simp [crepMakeFuncsAt, lookupInfo] at hx
+  | cons function functions ih =>
+      simp only [crepMakeFuncsAt, lookupInfo] at hx hy
+      by_cases hcx : (function.name == x) = true
+      · rw [if_pos hcx] at hx
+        have hxn : start = n := congrArg Prod.fst (Option.some.inj hx)
+        by_cases hcy : (function.name == y) = true
+        · rw [if_pos hcy] at hy
+          have hxname : x = function.name := (beq_iff_eq.mp hcx).symm
+          have hyname : y = function.name := (beq_iff_eq.mp hcy).symm
+          exact hxname.trans hyname.symm
+        · rw [if_neg hcy] at hy
+          have hge := crepMakeFuncsAt_label_ge (start := start + 1) functions hy
+          omega
+      · rw [if_neg hcx] at hx
+        by_cases hcy : (function.name == y) = true
+        · rw [if_pos hcy] at hy
+          have hyn : start = m := congrArg Prod.fst (Option.some.inj hy)
+          have hge := crepMakeFuncsAt_label_ge (start := start + 1) functions hx
+          omega
+        · rw [if_neg hcy] at hy
+          exact ih (start := start + 1) hx hy
+
+/-- Cake's `distinct_make_funcs`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:3757`): the function
+    table built by `make_funcs` has distinct labels. -/
+theorem crepDistinctFuncs_crepMakeFuncs (functions : List (CompiledFunction α)) :
+    crepDistinctFuncs (crepMakeFuncs functions) :=
+  crepDistinctFuncs_crepMakeFuncsAt crepFirstName functions
+
+/-- Cake's `initial_prog_make_funcs_el`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:3942`): the label a
+    function receives from `make_funcs` identifies the position of that
+    function in the source list.  CakeML writes the label of the `n`-th
+    function as `n + first_name`; the list-backed Flapjack port instead
+    inverts a successful lookup into the index whose label is
+    `start + index`. -/
+theorem crepMakeFuncsAt_exists_index (start : Nat)
+    (functions : List (CompiledFunction α))
+    {name : FunName} {label rm : Nat}
+    (h : lookupInfo name (crepMakeFuncsAt start functions) = some (label, rm)) :
+    ∃ n, label = start + n ∧
+      (functions[n]?).map (fun function => function.name) = some name ∧
+        n < functions.length := by
+  induction functions generalizing start with
+  | nil => simp [crepMakeFuncsAt, lookupInfo] at h
+  | cons function functions ih =>
+      simp only [crepMakeFuncsAt, lookupInfo] at h
+      by_cases hc : (function.name == name) = true
+      · rw [if_pos hc] at h
+        have hlabel : label = start := (congrArg Prod.fst (Option.some.inj h)).symm
+        exact ⟨0, by omega, by simp [beq_iff_eq.mp hc], by simp⟩
+      · rw [if_neg hc] at h
+        obtain ⟨n, hlabel, hget, hn⟩ := ih (start := start + 1) h
+        refine ⟨n + 1, by omega, ?_, by simp; omega⟩
+        simp only [List.getElem?_cons_succ]
+        exact hget
+
+/-- Cake's `initial_prog_make_funcs_el` for the `make_funcs` label base. -/
+theorem crepMakeFuncs_exists_index (functions : List (CompiledFunction α))
+    {name : FunName} {label rm : Nat}
+    (h : lookupInfo name (crepMakeFuncs functions) = some (label, rm)) :
+    ∃ n, label = crepFirstName + n ∧
+      (functions[n]?).map (fun function => function.name) = some name ∧
+        n < functions.length :=
+  crepMakeFuncsAt_exists_index crepFirstName functions h
+
 def pipelineLoopFunctionsAux [OfNat α 0] [OfNat α 1]
     (architecture : RiscV.Architecture) (functionInfos : InfoMap (Nat × Nat)) :
     Nat → List (CompiledFunction α) → List (Nat × List Nat × LoopProg α)

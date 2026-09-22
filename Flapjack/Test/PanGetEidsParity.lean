@@ -69,4 +69,43 @@ def getEidsPanSimpGuard : Bool :=
 #eval getEidsPanSimpGuard
 #guard getEidsPanSimpGuard
 
+/-! Cake's `distinct_make_funcs`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:3757`): the function
+    table built by `make_funcs` assigns distinct labels. -/
+
+def distinctFuncsCode : List (CompiledFunction Nat) :=
+  [{ name := "first", params := [], body := .skip, returnShape := .one },
+   { name := "second", params := [], body := .skip, returnShape := .one }]
+
+theorem crepDistinctFuncs_crepMakeFuncs_fixture :
+    crepDistinctFuncs (crepMakeFuncs distinctFuncsCode) :=
+  crepDistinctFuncs_crepMakeFuncs distinctFuncsCode
+
+def distinctFuncsGuard : Bool :=
+  match lookupInfo "first" (crepMakeFuncs distinctFuncsCode),
+        lookupInfo "second" (crepMakeFuncs distinctFuncsCode) with
+  | some (n, _), some (m, _) => n != m
+  | _, _ => false
+
+#eval distinctFuncsGuard
+#guard distinctFuncsGuard
+
+/-! Cake's `initial_prog_make_funcs_el`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:3942`): a successful
+    label lookup identifies the position of the function in the source list. -/
+
+theorem crepMakeFuncs_exists_index_fixture :
+    ∃ n, (crepFirstName + 1 : Nat) = crepFirstName + n ∧
+      (distinctFuncsCode[n]?).map (fun function => function.name) =
+        some "second" ∧
+        n < distinctFuncsCode.length :=
+  crepMakeFuncs_exists_index distinctFuncsCode
+    (rm := 0) (by decide)
+
+def makeFuncsIndexGuard : Bool :=
+  (distinctFuncsCode[1]?).map (fun function => function.name) == some "second"
+
+#eval makeFuncsIndexGuard
+#guard makeFuncsIndexGuard
+
 end Flapjack.Test.PanGetEidsParity

@@ -63,6 +63,8 @@ example :
       simp [handlerLoweringConfig, handlerLoweringInitial,
         handlerLoweringBody, wordToStackProgNatWithBitmapBuilder,
         wordToStackProgNat, wordToStackRaise, stackRaiseStubLocation])
-  simpa [wordStackJoin, handlerLoweringConfig, wordStackCallFrameOffset] using h
+  simpa [wordStackJoin, handlerLoweringConfig, wordStackCallFrameOffset,
+    wordToStackCallWithHandlerInSectionAtRegisterCountReturn,
+    stackCopyReturnSuffix] using h
 
 end Flapjack.RiscV

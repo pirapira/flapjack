@@ -3261,6 +3261,7 @@ premises. -/
 #check @Flapjack.evalPanValueFfiClockProg_ioEvents_prefix_of_handlerPreserves
 #check @Flapjack.evalPanValueFfiClockProg_while_zero_timeout_cross_clock_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProg_tick_zero_timeout_cross_clock_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProg_seq_zero_timeout_cross_clock_ioEvents_prefix
 
 /-! Source-entry clock shift: the evaluator's clock-dependent termination fuel is
     increased together with the clock, while successful non-timeout I/O events

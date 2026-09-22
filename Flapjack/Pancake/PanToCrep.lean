@@ -1,4 +1,5 @@
 import Flapjack.HolRef
+import Flapjack.FiniteMap.Basic
 import Flapjack.Pancake.CrepLang
 import Flapjack.Pancake.PanStatic
 
@@ -80,6 +81,23 @@ def expHdl [OfNat α 0] [OfNat α 1] [Add α]
       crepNestedSeq
         (List.zipWith (fun destination source => .assign destination source)
           names (loadGlobals 0 names.length))
+
+/-! Faithful port of `pan_to_crep$exp_hdl` from
+    `cakeml/pancake/pan_to_crepScript.sml:106-112`.
+
+    A variable absent from the finite map produces no code; a present variable
+    is initialized from the global return area, one word per flattened local,
+    with the assignments nested in source order.  The second component of the
+    stored pair is the flattened word list; the shape is not consulted. -/
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "exp_hdl_def"]
+def expHdlFiniteMap [OfNat α 0] [OfNat α 1] [Add α]
+    (fm : FiniteMap VarName (Shape × List Nat)) (v : VarName) : CrepProg α :=
+  match FLOOKUP fm v with
+  | none => .skip
+  | some (_, names) =>
+      crepNestedSeq
+        (panMap2 (fun destination source => .assign destination source)
+          names (loadGlobals (0 : α) names.length))
 
 /-! Faithful port of `pan_to_crep$ret_var` from
     `cakeml/pancake/pan_to_crepScript.sml:114-119`.

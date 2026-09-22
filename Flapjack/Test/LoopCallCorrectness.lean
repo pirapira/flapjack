@@ -11,6 +11,22 @@ def locValueState : LoopState Nat :=
     globals := fun _ => none
     memory := fun _ => none }
 
+
+theorem labelsIn_insert_update_collision_fixture :
+    labelsIn (insert 2 3 [(1, 2)])
+      (updateLoopLocal (fun name => if name = 2 then some 7 else if name = 3 then some 11 else none) 2 11) := by
+  apply labelsIn_insert_update [(1, 2)]
+    (fun name => if name = 2 then some 7 else if name = 3 then some 11 else none) 2 3 11
+  · simp
+  · intro name location hlookup
+    have hpair : 1 = name ∧ 2 = location := by
+      simpa [lookup] using hlookup
+    have hlocation : location = 2 := hpair.2.symm
+    subst location
+    exact ⟨7, by simp⟩
+
+#check labelsIn_insert_update
+
 theorem locValue_compile_correct_fixture :
     evalLoopProg 1 locValueState
         (comp [(1, 2)] (.locValue 3 2) : LoopProg Nat × LocationEnv).1 =

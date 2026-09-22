@@ -986,6 +986,41 @@ example :
       some [.store32Offset 4 10 (0 - BitVec.ofNat 64 24)] := by
   decide
 
+/- Cake's direct `Mem (Addr ...)` carrier uses the complete `riscv_memop`
+   table for a positive displacement as well.  Keep this separate from the
+   source-shaped shared-memory and stack-memory tables above: it exercises the
+   `WordInst.memOffset` Lab boundary that feeds the target encoder directly. -/
+def memOffsetOperatorTable : Bool :=
+  [
+    labCompilePlain (width := 64)
+      (.memOffset .load .add 4 10 24),
+    labCompilePlain (width := 64)
+      (.memOffset .store .add 4 10 24),
+    labCompilePlain (width := 64)
+      (.memOffset .load8 .add 4 10 24),
+    labCompilePlain (width := 64)
+      (.memOffset .store8 .add 4 10 24),
+    labCompilePlain (width := 64)
+      (.memOffset .load16 .add 4 10 24),
+    labCompilePlain (width := 64)
+      (.memOffset .store16 .add 4 10 24),
+    labCompilePlain (width := 64)
+      (.memOffset .load32 .add 4 10 24),
+    labCompilePlain (width := 64)
+      (.memOffset .store32 .add 4 10 24)
+  ] == [
+    some [.loadWordOffset 4 10 (BitVec.ofNat 64 24)],
+    some [.storeWordOffset 4 10 (BitVec.ofNat 64 24)],
+    some [.loadByteOffset 4 10 (BitVec.ofNat 64 24)],
+    some [.storeByteOffset 4 10 (BitVec.ofNat 64 24)],
+    some [.loadHalfOffset 4 10 (BitVec.ofNat 64 24)],
+    some [.storeHalfOffset 4 10 (BitVec.ofNat 64 24)],
+    some [.load32Offset 4 10 (BitVec.ofNat 64 24)],
+    some [.store32Offset 4 10 (BitVec.ofNat 64 24)]
+  ]
+
+#guard memOffsetOperatorTable
+
 -- reg1 holds the base and reg4 the byte: the store lands at base + 32.
 #guard
     labSharedStoreOffsetCode.bind (fun code =>

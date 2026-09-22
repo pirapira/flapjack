@@ -3034,6 +3034,58 @@ theorem PanValuePcSemanticClockEvidence.crossClockNormalResultRelWithContextCode
     exceptionRel exceptionCode globalsLookup sourceLocals sourceGlobals sourceMemory
     targetState).2 hbase, ⟨hoverlap, hmax, hbase⟩⟩
 
+/-! The same-clock normal-call instantiation is the direct declaration step of
+    `state_rel_imp_semantics_to_crep`.  Keep the evaluator, state, and result
+    constructors explicit while specializing the cross-clock bridge to one
+    source/target clock. -/
+theorem PanValuePcSemanticClockEvidence.normalResultRelWithContextCode_of_stateRelWithContext
+    {α σ : Type}
+    [BEq α] [OfNat α 0] [Add α]
+    {structs : StructContext} {context : CompileContext α}
+    {program : Prog α}
+    {sourceEvaluate : PanValuePcEvaluator α}
+    {targetEvaluate : CrepPcEvaluator α}
+    {codeRel : PanValuePcCodeRel α}
+    {excpRel : PanValuePcExceptionShapeRel α}
+    {exceptionRel : ExceptionId → PanValue α → α → Prop}
+    {exceptionCode : ExceptionId → Option α}
+    {globalsLookup : CrepState α → PanValue α → Option (List α)}
+    {panHooks : PanSemanticsHooks α σ}
+    {crepHooks : CrepSemanticsHooks α}
+    (hcorrect : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (clock : Nat)
+    (evidence : PanValuePcSemanticClockEvidence structs context program
+      clock sourceEvaluate targetEvaluate codeRel excpRel exceptionRel
+      exceptionCode globalsLookup panHooks crepHooks)
+    (inputCodeRel : codeRel context evidence.sourceInput.code
+      evidence.targetInput.code)
+    (inputExcpRel : excpRel context evidence.sourceInput.eshapes
+      evidence.targetInput.eshapes)
+    (inputStateRel : panValueCrepStateRelWithContext structs context
+      evidence.sourceInput.locals evidence.sourceInput.globals
+      evidence.sourceInput.memory evidence.targetInput.state)
+    (outputCodeRel : codeRel context evidence.sourceExecution.code
+      evidence.targetExecution.code)
+    (outputExcpRel : excpRel context evidence.sourceExecution.eshapes
+      evidence.targetExecution.eshapes)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (sourceFfi : FfiState σ)
+    (targetState : CrepState α)
+    (houtcome : evidence.outcome =
+      .control (.normal sourceLocals sourceGlobals sourceMemory sourceFfi))
+    (hresult : evidence.result = .normal targetState) :
+    panValuePcResultRelWithContextCode structs context exceptionRel exceptionCode
+      globalsLookup
+      (.normal sourceLocals sourceGlobals sourceMemory)
+      (.normal targetState) ∧
+    panValueCrepStateRelWithContext structs context sourceLocals sourceGlobals
+      sourceMemory targetState := by
+  exact PanValuePcSemanticClockEvidence.crossClockNormalResultRelWithContextCode_of_stateRelWithContext
+    hcorrect clock clock evidence evidence inputCodeRel inputExcpRel inputStateRel
+    outputCodeRel outputExcpRel sourceLocals sourceGlobals sourceMemory sourceFfi
+    targetState houtcome hresult
+
 /-! Dispatch the two ordinary declaration-induction branches at arbitrary
     source and target clocks.  The branch witness is explicit: normal results
     carry only the state relation, while raised results additionally carry the
@@ -5040,7 +5092,6 @@ theorem panCrepSemanticAgreement_of_pcCompileCorrectWithContextCode_cross_clock_
         (houtputCodeRel sourceClock targetClock)
         (houtputExcpRel sourceClock targetClock))
     (heventsCross := heventsCross)
-
 
 /-! ## A concrete no-final-FFI instantiation
 

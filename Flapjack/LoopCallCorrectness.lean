@@ -376,6 +376,25 @@ theorem comp_assign_var_correct
           · exact labelsIn_insert_update_any environment state.locals destination location
               sourceValue value hsourceValue henvironment
 
+theorem comp_tick_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (environment : LocationEnv) (state : LoopState α)
+    (_henvironment : labelsIn environment state.locals) :
+    evalLoopProg 1 state
+        (comp environment (.tick : LoopProg α)).1 =
+        some (.normal state) ∧
+      labelsIn (comp environment (.tick : LoopProg α)).2 state.locals := by
+  have hcompiled :
+      comp environment (.tick : LoopProg α) = (.tick, []) := by
+    simp [comp]
+  rw [hcompiled]
+  constructor
+  · exact evalLoopProg_tick state
+  · simp [labelsIn, lookup]
+
 theorem lookup_of_listDelete
     (destinations : List Nat) (environment : LocationEnv)
     (name location : Nat)

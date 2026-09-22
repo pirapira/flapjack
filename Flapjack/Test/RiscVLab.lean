@@ -844,6 +844,31 @@ example :
       some [.storeHalfOffset 10 11 (BitVec.ofNat 64 2047)] := by
   decide
 
+/- Cake's shared-memory carrier also preserves a wrapped negative displacement;
+   the target sees `2^64 - 8` as signed `-8` for each narrow opcode. -/
+example :
+    labCompilePlain (width := 64)
+      (.shareMemOffset .load8 10 11 (BitVec.ofNat 64 (2 ^ 64 - 8))) =
+      some [.loadByteOffset 10 11 (0 - BitVec.ofNat 64 8)] := by
+  decide
+
+example :
+    labCompilePlain (width := 64)
+      (.shareMemOffset .load16 10 11 (BitVec.ofNat 64 (2 ^ 64 - 8))) =
+      some [.loadHalfOffset 10 11 (0 - BitVec.ofNat 64 8)] := by
+  decide
+
+example :
+    labCompilePlain (width := 64)
+      (.shareMemOffset .store8 10 11 (BitVec.ofNat 64 (2 ^ 64 - 8))) =
+      some [.storeByteOffset 10 11 (0 - BitVec.ofNat 64 8)] := by
+  decide
+
+example :
+    labCompilePlain (width := 64)
+      (.shareMemOffset .store16 10 11 (BitVec.ofNat 64 (2 ^ 64 - 8))) =
+      some [.storeHalfOffset 10 11 (0 - BitVec.ofNat 64 8)] := by
+  decide
 /- Cake's source-shaped `wordShareInstToInstructionsCake` keeps a variable
    address as one direct `Mem` carrier.  Check every width in the target
    `riscv_memop` table at this backend boundary, independently of the

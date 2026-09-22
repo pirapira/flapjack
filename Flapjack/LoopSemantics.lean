@@ -1709,6 +1709,17 @@ theorem loopLookupFirst_singleton (locals : Nat → Option α) (name : Nat)
   funext current
   by_cases h : current = name <;> simp [loopLookupFirst, updateLoopLocal, h]
 
+/- The Cake `alist_insert` rule in `loopSemScript.sml:108-116` overlays
+   entries from the tail toward the head, so an earlier duplicate remains the
+   visible binding.  Expose that first-occurrence rule at the executable
+   evaluator boundary for the call/return correctness proofs. -/
+theorem loopLookupFirst_duplicate_first (locals : Nat → Option α) (name : Nat)
+    (first second : α) :
+    loopLookupFirst locals [(name, first), (name, second)] =
+      fun current => if current = name then some first else locals current := by
+  funext current
+  by_cases h : current = name <;> simp [loopLookupFirst, h]
+
 theorem loopFoldUpdate_at_congr (locals₁ locals₂ : Nat → Option α)
     (entries : List (Nat × α)) (current : Nat)
     (hcurrent : locals₁ current = locals₂ current) :

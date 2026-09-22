@@ -8,6 +8,7 @@ import Flapjack.CrepeProgramStoreByteCorrectness
 import Flapjack.CrepeProgramWhileCorrectness
 import Flapjack.CrepeProgramSourceWordReturnCorrectness
 import Flapjack.CompileCalleeParameterFreshness
+import Flapjack.PanToCrepMaxList
 
 /-!
 The checked Lean boundary corresponding to CakeML's
@@ -158,6 +159,18 @@ theorem panValueCtxtMax_empty [BEq String] (bound : Nat) (hbound : 0 ≤ bound) 
   intro name shape slots hlookup
   simp [lookupInfo] at hlookup
 
+/-- Cake `ctxt_max_el_leq` (`pan_to_crepProofScript.sml:1493`): in a
+`ctxt_max` context, every recorded slot number of a variable is bounded by the
+context bound. -/
+theorem panValueCtxtMax_getElem_le [BEq String] (bound : Nat)
+    (vars : InfoMap (Shape × List Nat)) (name : String) (shape : Shape)
+    (slots : List Nat) (n : Nat)
+    (hmax : panValueCtxtMax bound vars)
+    (hlookup : lookupInfo name vars = some (shape, slots))
+    (hn : n < slots.length) :
+    slots[n] ≤ bound :=
+  hmax.2 name shape slots hlookup slots[n] (List.getElem_mem hn)
+
 /-- The empty variable map satisfies Cake's `no_overlap`. -/
 theorem panValueNoOverlap_empty [BEq String] :
     panValueNoOverlap ([] : InfoMap (Shape × List Nat)) := by
@@ -218,6 +231,32 @@ theorem panValueNoOverlap_zip_withShape [LawfulBEq String]
         (name, (shape, slots)) (name', (shape', slots'))
         hlenv (by rw [withShape_length]) hns hlen hmem hmem' hneName
       exact hdisj slot hslot hslot'
+
+/-! Counterpart of Cake's `all_distinct_alist_ctxt_max`
+    (`cakeml/pancake/semantics/panPropsScript.sml`): the `(variable, shape,
+    slot-list)` alist built by splitting a flat slot list with `withShape`
+    satisfies `panValueCtxtMax` at `maxList ns`. -/
+theorem panValueCtxtMax_zip_withShape [LawfulBEq String]
+    (ns : List Nat) (vs : List VarName) (sh : List Shape)
+    (_hns : ns.Nodup)
+    (hlen : ns.length = Shape.shapeSize (.comb sh))
+    (hlenv : vs.length = sh.length) :
+    panValueCtxtMax (maxList ns) (vs.zip (sh.zip (withShape sh ns))) := by
+  refine ⟨Nat.zero_le _, ?_⟩
+  intro name shape slots hlookup slot hslot
+  have hmem := lookupInfo_some_mem name
+    (vs.zip (sh.zip (withShape sh ns))) (shape, slots) hlookup
+  obtain ⟨i, hi, _hj, _hfirst, hsecond⟩ :=
+    mem_zip_getElem vs (sh.zip (withShape sh ns)) (name, (shape, slots)) hmem
+  rw [List.getElem_zip] at hsecond
+  have hiShapes : i < sh.length := by rw [hlenv] at hi; exact hi
+  have hiValues : i < (withShape sh ns).length := by
+    rw [withShape_length]; exact hiShapes
+  have hcomponent : slots = (withShape sh ns)[i]'hiValues := by
+    simpa using (congrArg Prod.snd hsecond).symm
+  rw [hcomponent] at hslot
+  exact maxList_ge_of_mem ns slot
+    (mem_of_withShape_mem sh ns i slot hiValues hlen hslot)
 
 /-! The compiler-generated formal-parameter map satisfies the Cake `no_overlap`
     invariant.  The proof reuses the source-shaped parameter-list allocation

@@ -1456,6 +1456,7 @@ kernel-checked inhabitant. -/
 #check @panValueCtxtMax_empty
 #check @panValueNoOverlap_empty
 #check @panValueNoOverlap_lookup_disjoint
+#check @panValueCrepStateRel_compileFunDecl_context_with_invariants_of_folds
 
 /-- Regression for Cake `no_overlap_flookup_distinct`: the lemma is applicable
 to any `no_overlap` variable map with two distinct looked-up variables. -/
@@ -1485,6 +1486,30 @@ example :
 #check @panValueCtxtMax_compileParamVars
 #check @panValueNoOverlap_compileParamVars
 #check @panToCrepMakeVmap_context_invariants
+
+#check @panValueCtxtMax_zip_withShape
+
+/-- Regression for Cake `all_distinct_alist_ctxt_max`: the same split alist is
+    bounded by `maxList` of the flat slot list. -/
+example :
+    panValueCtxtMax (maxList [0, 1])
+      ((["a", "b"] : List VarName).zip
+        (([Shape.one, Shape.one] : List Shape).zip
+          (withShape [Shape.one, Shape.one] [0, 1]))) :=
+  panValueCtxtMax_zip_withShape [0, 1] ["a", "b"]
+    [Shape.one, Shape.one] (by decide) (by simp [Shape.shapeSize]) (by decide)
+
+#check @panValueCtxtMax_getElem_le
+
+/-- Regression for Cake `ctxt_max_el_leq`: a recorded slot number is bounded by
+    the context bound. -/
+example (bound : Nat) (vars : InfoMap (Shape × List Nat)) (name : String)
+    (shape : Shape) (slots : List Nat) (n : Nat)
+    (hmax : panValueCtxtMax bound vars)
+    (hlookup : lookupInfo name vars = some (shape, slots))
+    (hn : n < slots.length) :
+    slots[n] ≤ bound :=
+  panValueCtxtMax_getElem_le bound vars name shape slots n hmax hlookup hn
 
 /-! The generated formal-parameter context satisfies the two Cake invariants
     used by `locals_rel`, with the original source-shaped maximum convention.

@@ -1263,6 +1263,84 @@ theorem evalPanValueFfiClockProgram_of_related_declarations_and_finalFfi_call_re
   exact ⟨targetDeclaration, htargetDeclarations, hpostRel,
     hfinal.1, hfinal.2.1, hfinal.2.2⟩
 
+/-! The terminal-FFI adequacy branch keeps declaration lookup and exception
+    equality available to the state-relation induction alongside final-event
+    equality and the clocked result relation. -/
+theorem evalPanValueFfiClockProgram_of_related_declarations_and_finalFfi_call_result_rel_adequacy
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (initial : PanValueFfiProgramState α σ)
+    (clock : Nat)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (fuel : Nat) (declarations : List (Decl α))
+    (entry : FunName) (arguments : List (Exp α))
+    (state : PanValueProgramState α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (event : FfiFinalEvent) (nextClock : Nat)
+    (pcContext : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (targetState : CrepState α) (targetEvent : FfiFinalEvent)
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ))
+    (targetInitial : PanValueProgramState α)
+    (hinitial : panValueProgramStateRel initial.source targetInitial)
+    (hdeclarations : evalPanValueDeclarations initial.source declarations
+      (memoryAccess := memoryAccess) = some state)
+    {parameters : List VarName} {body : Prog α}
+    (hfunction : lookupPanFunction entry state.functions = some (parameters, body))
+    (hcall : evalPanValueFfiClockCall context primitive handler state.structs
+      state.functions state.baseAddress state.topAddress state.bytesInWord fuel
+      (fun _ => none) state.globals state.memory initial.ffi clock none entry arguments
+      (memoryAccess := memoryAccess)
+      (contracts := some (PanValueCallContracts.mk state.returnShapes
+        state.exceptions state.parameterShapes))
+      (memoryHandler := memoryHandler) =
+      some (.control (.finalFfi locals globals memory ffi event), nextClock))
+    (hstate : panValueCrepStateRel state.structs pcContext locals globals
+      memory targetState)
+    (hevent : event = targetEvent)
+    (hprefix : initial.ffi.ioEvents <+: ffi.ioEvents) :
+    ∃ targetDeclaration,
+      evalPanValueDeclarations targetInitial (panSimpDecls declarations)
+        (memoryAccess := memoryAccess) = some targetDeclaration ∧
+      panValueProgramStateRel state targetDeclaration ∧
+      lookupPanFunction entry targetDeclaration.functions =
+        some (parameters, panSimpProg body) ∧
+      state.exceptions = targetDeclaration.exceptions ∧
+      evalPanValueFfiClockProgram context initial clock primitive handler fuel
+        declarations entry arguments (memoryAccess := memoryAccess)
+        (memoryHandler := memoryHandler) =
+        some (.control (.finalFfi locals globals memory ffi event), nextClock) ∧
+      panValuePcResultRel state.structs pcContext exceptionRel exceptionCode
+        globalsLookup (.finalFfi locals globals memory event)
+        (.finalFfi targetState targetEvent) ∧
+      initial.ffi.ioEvents <+: ffi.ioEvents := by
+  obtain ⟨targetDeclaration, htargetDeclarations, hpostRel,
+    htargetFunction, htargetExceptions⟩ :=
+    panValueProgramStateRel_evalDeclarations_adequacy
+      initial.source targetInitial hinitial declarations memoryAccess state
+      hdeclarations entry hfunction
+  rcases hpostRel with ⟨hstructs, hglobals, hmemory, hreturnShapes,
+    hparameterShapes, hexceptions, hbaseAddress, htopAddress, hbytesInWord,
+    hfunctions⟩
+  have hfinal :=
+    evalPanValueFfiClockProgram_of_declarations_and_finalFfi_call_result_rel_ioEvents_prefix
+      context initial clock primitive handler fuel declarations entry arguments state
+      locals globals memory ffi event nextClock pcContext exceptionRel exceptionCode
+      globalsLookup targetState targetEvent memoryAccess memoryHandler
+      hdeclarations hcall hstate hevent hprefix
+  exact ⟨targetDeclaration, htargetDeclarations,
+    ⟨hstructs, hglobals, hmemory, hreturnShapes, hparameterShapes, hexceptions,
+      hbaseAddress, htopAddress, hbytesInWord, hfunctions⟩,
+    htargetFunction, htargetExceptions,
+    hfinal.1, hfinal.2.1, hfinal.2.2⟩
+
 theorem evalPanValueFfiClockProgram_of_declarations_and_raised_call_context_code
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

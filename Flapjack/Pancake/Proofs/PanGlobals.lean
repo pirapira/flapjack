@@ -5,10 +5,10 @@ import Flapjack.Pancake.Semantics.PanSem
 
 namespace Flapjack
 
-/-! Exact-shaped port of Cake's \`compile_top_only_functions_or_exns\`
-    (\`cakeml/pancake/proofs/pan_globalsProofScript.sml:2611\`). The public
-    \`globalCompileTopForStart\` is total, so the missing-start branch is the
-    empty list and satisfies the result predicate vacuously. -/
+/-! Flapjack-specific generalization for the parameterized
+    \`globalCompileTopForStart\` analogue. The exact HOL-tagged theorem is
+    \`globalCompileTopCake_all_function_or_exception\`, whose subject fixes
+    \`bytes_in_word\` and \`n2w\`. -/
 theorem globalCompileTopForStart_all_function_or_exception [BEq String]
     [Add α] [Mul α] (bytesInWord : α) (fromNat : Nat → α)
     (declarations : List (Decl α)) (start : FunName) :

@@ -45,7 +45,8 @@ The `ctxt_fc` cases record `with_shape` slot slicing, ZIP truncation, and
 `MAX_LIST` on an empty name list.
 `pan_globals_compile_top_probe.out` records original Pancake HOL evaluation
 of `pan_globals$compile_top` for an absent start function (the total empty-list
-result) and a present `main` entry. Its Lean checks live in
+result), a present `main` entry, and a global initializer in a nonempty
+declaration list. Its Lean checks live in
 `Flapjack.Test.PanGlobalsCompileTopForStartParity`.
 The `longdiv_code_probe.out` fixture probes the original software LongDiv
 helper at `cakeml/compiler/backend/data_to_wordScript.sml:829-867` and the
@@ -73,7 +74,12 @@ reviewer with HOL4 can rerun the command and inspect the diff. Each probe's
 declaration and source path make its reference boundary explicit. The script
 is incremental: a fixture is rerun only when its probe, the Pancake theory it
 observes, or the script itself is newer than that fixture. Delete a fixture
-when a forced regeneration is desired.
+when a forced regeneration is desired. To refresh one fixture while developing,
+set `HOL_PROBE_ONLY` to its probe filename, for example:
+
+```sh
+HOL_PROBE_ONLY=pan_globals_compile_top_probeScript.sml scripts/hol-probes/regenerate.sh
+```
 
 The checked-in source-facing compiler corpus at
 `scripts/parity-small-corpus.json` complements these semantic probes. Run

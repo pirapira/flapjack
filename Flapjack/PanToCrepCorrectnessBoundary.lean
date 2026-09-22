@@ -181,6 +181,44 @@ theorem panValueNoOverlap_lookup_disjoint [BEq String] [LawfulBEq String]
   exact hne (hoverlap.2 name name' shape shape' slots slots'
     hlookup hlookup' ⟨value, hin, hin'⟩)
 
+/-- Counterpart of Cake `all_distinct_alist_no_overlap`
+    (`cakeml/pancake/semantics/panPropsScript.sml`): the `(variable, shape,
+    slot-list)` alist built by splitting a nodup flat slot list with
+    `withShape` satisfies `panValueNoOverlap`. -/
+theorem panValueNoOverlap_zip_withShape [LawfulBEq String]
+    (ns : List Nat) (vs : List VarName) (sh : List Shape)
+    (hns : ns.Nodup)
+    (hlen : ns.length = Shape.shapeSize (.comb sh))
+    (hlenv : vs.length = sh.length) :
+    panValueNoOverlap (vs.zip (sh.zip (withShape sh ns))) := by
+  constructor
+  · intro name shape slots hlookup
+    have hmem := lookupInfo_some_mem name
+      (vs.zip (sh.zip (withShape sh ns))) (shape, slots) hlookup
+    obtain ⟨i, hi, _hj, _hfirst, hsecond⟩ :=
+      mem_zip_getElem vs (sh.zip (withShape sh ns)) (name, (shape, slots)) hmem
+    rw [List.getElem_zip] at hsecond
+    have hiShapes : i < sh.length := by rw [hlenv] at hi; exact hi
+    have hiValues : i < (withShape sh ns).length := by
+      rw [withShape_length]; exact hiShapes
+    have hcomponent : slots = (withShape sh ns)[i]'hiValues := by
+      simpa using (congrArg Prod.snd hsecond).symm
+    rw [hcomponent]
+    exact all_distinct_withShape sh ns i hns hiShapes hlen
+  · intro name name' shape shape' slots slots' hlookup hlookup' hcommon
+    by_cases hneName : name = name'
+    · exact hneName
+    · exfalso
+      obtain ⟨slot, hslot, hslot'⟩ := hcommon
+      have hmem := lookupInfo_some_mem name
+        (vs.zip (sh.zip (withShape sh ns))) (shape, slots) hlookup
+      have hmem' := lookupInfo_some_mem name'
+        (vs.zip (sh.zip (withShape sh ns))) (shape', slots') hlookup'
+      have hdisj := listDisjoint_of_mem_zip_withShape vs sh ns
+        (name, (shape, slots)) (name', (shape', slots'))
+        hlenv (by rw [withShape_length]) hns hlen hmem hmem' hneName
+      exact hdisj slot hslot hslot'
+
 /-! The compiler-generated formal-parameter map satisfies the Cake `no_overlap`
     invariant.  The proof reuses the source-shaped parameter-list allocation
     theorem, then transports it through the metadata equation and the

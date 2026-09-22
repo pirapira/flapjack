@@ -1470,6 +1470,18 @@ example (name name' : String) (shape shape' : Shape) (slots slots' : List Nat)
     ([] : InfoMap (Shape × List Nat)) name name' shape shape' slots slots'
     panValueNoOverlap_empty hne hlookup hlookup'
 
+#check @panValueNoOverlap_zip_withShape
+
+/-- Regression for Cake `all_distinct_alist_no_overlap`: splitting a nodup flat
+    slot list across a two-component shape yields a `no_overlap` alist. -/
+example :
+    panValueNoOverlap
+      ((["a", "b"] : List VarName).zip
+        (([Shape.one, Shape.one] : List Shape).zip
+          (withShape [Shape.one, Shape.one] [0, 1]))) :=
+  panValueNoOverlap_zip_withShape [0, 1] ["a", "b"]
+    [Shape.one, Shape.one] (by decide) (by simp [Shape.shapeSize]) (by decide)
+
 #check @panValueCtxtMax_compileParamVars
 #check @panValueNoOverlap_compileParamVars
 

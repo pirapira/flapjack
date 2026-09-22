@@ -215,16 +215,9 @@ example :
     wordToStackProg
         { locations := [(0, .stack 2)], scratch := 31, stackBase := 10 }
         ((.return 0 [0]) : WordProg Nat) =
-      some (.seq (.stackLoad 1 12)
-        (.seq (.stackLoad 31 12) (.return 31)) : StackProg Nat) := by
-  simp [wordToStackProg, wordStackReturn, wordStackMovesToPhysical,
-    wordStackReturnFreeCount, wordStackCakeFrameSize, stackFreeIfNonzero,
-    wordStackPhysicalMovesTo, wordStackPhysicalMovesToIndexed,
-    wordStackParallelLocationMove,
-    wordStackCakeParallelOptionOrder,
-    wordStackParallelLocationMoveAux, wordStackLocationMoveDestinations,
-    wordStackLocationMoveRemoveDestination,
-    wordStackLocationMove, wordStackLocation,
+      some (.seq (.stackLoad 31 12) (.return 31) : StackProg Nat) := by
+  simp [wordToStackProg, wordStackReturn, wordStackReturnFreeCount,
+    wordStackCakeFrameSize, stackFreeIfNonzero, wordStackLocation,
     wordStackOffset, lookupNatInfo, wordStackJoin]
 
 example :

@@ -98,9 +98,9 @@ def sourceTailCallFreeCountExact : Bool :=
 
 #guard sourceTailCallFreeCountExact
 
-/-! Cake's `comp Return` frees a non-empty current frame after moving the
-    returned ABI values.  The source-shaped port keeps `v1` in the values list,
-    so one returned value in a two-word frame still frees both frame words. -/
+/-! Cake's `comp Return v1 vs` only applies `wReg1` to the separate `v1`
+    carrier; the `vs` values are already in their ABI/frame locations.  The
+    source-shaped return lowering must therefore not rematerialize `vs`. -/
 def returnFrameFreeExact : Bool :=
   wordStackReturnFreeCount
       { locations := [(0, .register 5)], scratch := 31, stackBase := 0,
@@ -108,8 +108,7 @@ def returnFrameFreeExact : Bool :=
     match (wordStackReturn
         { locations := [(0, .register 5)], scratch := 31, stackBase := 0,
           abiFrameSlots := 1 } 0 [0] : Option (StackProg Nat)) with
-    | some (.seq (.arith .or 1 5 5)
-        (.seq (.stackFree 2) (.return 5))) => true
+    | some (.seq (.stackFree 2) (.return 5)) => true
     | _ => false
 
 #guard returnFrameFreeExact
@@ -128,6 +127,16 @@ def wideReturnFrameBoundaryExact : Bool :=
 
 #guard wideReturnFrameBoundaryExact
 
+def wideReturnDoesNotRelocateValues : Bool :=
+  let config : WordStackConfig :=
+    { locations := [], scratch := 31, stackBase := 0,
+      abiRegisterCount := 22, abiFrameSlots := 12 }
+  match (wordStackReturn config 0 (List.range 22) : Option (StackProg Nat)) with
+  | some (.seq (.stackFree 12) (.return 0)) => true
+  | _ => false
+
+#guard wideReturnDoesNotRelocateValues
+
 /- Cake's `copy_ret` copies stack-resident return values in descending frame
    order, then frees exactly the temporary return slots.  These two shapes
    are the direct `copy_ret_handler_2`/multi-value rows from
@@ -145,6 +154,19 @@ def returnCopyCakeGuard : Bool :=
   | _ => false
 
 #guard returnCopyCakeGuard
+
+def returnSuffixCopyCakeGuard : Bool :=
+  match stackCopyReturnSuffix (α := Nat) false false 31 4 [10, 12]
+      (.skip : StackProg Nat) with
+  | .seq
+      (.seq (.stackLoad 31 1)
+        (.seq (.stackStore 31 5)
+          (.seq (.stackLoad 31 0)
+            (.seq (.stackStore 31 4) .skip))))
+      (.seq (.stackFree 2) .skip) => true
+  | _ => false
+
+#guard returnSuffixCopyCakeGuard
 
 def handlerReturnCopyCakeGuard : Bool :=
   match stackCopyReturn (α := Nat) true true 1 31 4 [10]
@@ -296,8 +318,9 @@ def directCallDestinationCakeGuard : Bool :=
 #guard directCallDestinationCakeGuard
 
 /- Cake's returning direct-call wrapper includes the implicit return slot in
-   `StackArgs`, preserves the return-handler labels, and retains its explicit
-   zero `StackFree` tail. -/
+   `StackArgs`, preserves the return-handler labels, and puts `copy_ret` in
+   the call continuation.  With an empty stack suffix, that continuation is
+   the return code itself and no post-call `StackFree` is emitted. -/
 def returningCallCarrierCakeGuard : Bool :=
   match wordToStackCallNoHandler (α := Nat) false 7 0 6 3 []
       (.skip : StackProg Nat) 20 21 with
@@ -305,13 +328,11 @@ def returningCallCarrierCakeGuard : Bool :=
       (.seq (.stackAlloc words)
         (.seq (.stackLoad loadRegister loadOffset)
           (.stackStore storeRegister storeOffset)))
-      (.seq (.call (some (.skip, freeFrame, returnLabel, entryLabel))
-          (.label target) none)
-        (.stackFree freeWords)) =>
+      (.call (some (.skip, freeFrame, returnLabel, entryLabel))
+          (.label target) none) =>
       words == 1 && loadRegister == 3 && loadOffset == 6 &&
         storeRegister == 3 && storeOffset == 0 && freeFrame == 0 &&
-        returnLabel == 20 && entryLabel == 21 && target == 7 &&
-        freeWords == 0
+        returnLabel == 20 && entryLabel == 21 && target == 7
   | _ => false
 
 #guard returningCallCarrierCakeGuard
@@ -364,8 +385,12 @@ def runChecks : IO Bool := do
         returnFrameFreeExact),
       ("wide returns retain Cake's implicit v1 return slot",
         wideReturnFrameBoundaryExact),
+      ("wide returns leave Cake's vs carriers in place",
+        wideReturnDoesNotRelocateValues),
       ("copy_ret preserves Cake multi-value return frame order",
         returnCopyCakeGuard),
+      ("returning call carriers use Cake's suffix copy",
+        returnSuffixCopyCakeGuard),
       ("copy_ret preserves Cake handler-frame return layout",
         handlerReturnCopyCakeGuard),
       ("copy_ret and num_stack_ret match Cake's direct probe rows",

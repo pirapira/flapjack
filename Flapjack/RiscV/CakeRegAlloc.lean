@@ -1547,6 +1547,17 @@ def cakeColourWordSpillState (k : Nat) (parameters : List Nat)
     (name, cakeColourLocation k f (colour name)))
   { locations, nextSpill := if f = 0 then 0 else f - 1 }
 
+/-- Cake's coloured spill cursor is always contained in the frame size emitted
+    by `compile_prog`: an empty frame has no cursor, and a nonempty `f`-word
+    frame exposes spill slots below its bitmap word. -/
+theorem cakeColourWordSpillState_nextSpill_le_frame
+    (k : Nat) (parameters : List Nat) (program : WordProg α)
+    (colouring : NatInfoMap Nat) :
+    (cakeColourWordSpillState k parameters program colouring).nextSpill ≤
+      (cakeColourFrameSlots k parameters program colouring).2 := by
+  simp [cakeColourWordSpillState]
+  split <;> omega
+
 /-! Production-facing Cake allocator adapter.  This keeps Cake's full SSA
     entry moves and IRC coalescing in the returned Word program, while
     exposing the existing `WordSpillState` shape to the shared pipeline. -/

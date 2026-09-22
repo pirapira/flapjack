@@ -236,7 +236,7 @@ theorem not_mem_crepAssignedFreeVars_nestedDecs_fixture :
         (CrepProg.assign 3 (CrepExp.const 4))) :=
   not_mem_crepAssignedFreeVars_nestedDecs [2, 5]
     [CrepExp.const 1, CrepExp.const 2] (CrepProg.assign 3 (CrepExp.const 4))
-    (by decide) (by simp) (by simp [crepAssignedFreeVars])
+    (by decide) (by simp [crepAssignedFreeVars])
 
 #check @crepAssignedFreeVars_assignRet
 

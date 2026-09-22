@@ -538,7 +538,7 @@ theorem crepAssignedFreeVars_nestedDecs_append (names : List Nat)
 theorem not_mem_crepAssignedFreeVars_nestedDecs (names : List Nat)
     (values : List (CrepExp α)) (body : CrepProg α)
     (h : names.length = values.length) {x : Nat}
-    (hnames : x ∉ names) (hbody : x ∉ crepAssignedFreeVars body) :
+    (hbody : x ∉ crepAssignedFreeVars body) :
     x ∉ crepAssignedFreeVars (nestedDecs names values body) := by
   rw [crepAssignedFreeVars_nestedDecs_append names values body h]
   intro hmem

@@ -17,11 +17,12 @@ fun print_eval label q =
   end
 
 val main =
-  ``panLang$Function
+  ``(panLang$Function
       <| name := «main»; inline := F; export := F; params := [];
-         body := panLang$Skip; return := panLang$One |>``
+         body := panLang$Skip; return := panLang$One |> : 64 panLang$decl)``
 
-val global = ``panLang$Decl panLang$One (strlit "g") (panLang$Const 7w)``
+val global = ``panLang$Decl panLang$One (strlit "g")
+    (panLang$Const (7w : 64 word))``
 
 val _ = print_eval "missing_start"
   ``pan_globals$compile_top [^main] «absent»``;

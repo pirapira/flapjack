@@ -707,6 +707,30 @@ theorem panValueProgramStateRel_evalPanValueDeclarations
         memoryAccess s' hs
       exact ⟨rfl, hglobals, hmemory, hret, hparam, hexn, hbase, htop, hbiw, hfuncs⟩
 
+/-! A concrete declaration/evaluator bridge for the Cake
+    `state_rel_imp_semantics_decls_to_crep` induction.  The declaration
+    evaluator is run on both related states, and a source callee lookup is
+    transported through the resulting state relation.  This is stronger than
+    carrying the relation as a premise: it produces the target evaluator
+    result and the exact `pan_simp` body that the compiled call sees. -/
+theorem panValueProgramStateRel_evalDeclarations_lookupPanFunction
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (s t : PanValueProgramState α) (hrel : panValueProgramStateRel s t)
+    (declarations : List (Decl α)) (memoryAccess : Option (PanValueMemoryAccess α))
+    (s' : PanValueProgramState α)
+    (hs : evalPanValueDeclarations s declarations memoryAccess = some s')
+    (name : FunName) {parameters : List VarName} {body : Prog α}
+    (hlookup : lookupPanFunction name s'.functions = some (parameters, body)) :
+    ∃ t', evalPanValueDeclarations t (panSimpDecls declarations) memoryAccess = some t' ∧
+      lookupPanFunction name t'.functions =
+        some (parameters, panSimpProg body) := by
+  obtain ⟨t', ht, hrel'⟩ := panValueProgramStateRel_evalPanValueDeclarations
+    s t hrel declarations memoryAccess s' hs
+  refine ⟨t', ht, ?_⟩
+  exact panValueProgramStateRel_lookupPanFunction s' t' hrel' name hlookup
+
 /-! Cake's `map_snd_f_eq` (`pan_simpProofScript.sml:43`): rewriting only the
     body component of a declaration triple commutes with projecting that body
     and applying a further function.  Stated for `List (α × β × γ)`, whose

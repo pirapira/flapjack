@@ -265,6 +265,19 @@ theorem panValueCtxtMax_compileParamVars
   have hlt := compileParamVars_slot_lt params offset name shape slots
     hlookupRaw slot hslot
   omega
+/-- Counterpart of Cake `no_overlap_flookup_distinct`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml`): two distinct
+    variables of a `no_overlap` context have disjoint slot lists. -/
+theorem panValueNoOverlap_lookup_disjoint [BEq String] [LawfulBEq String]
+    (vars : InfoMap (Shape × List Nat)) (name name' : String)
+    (shape shape' : Shape) (slots slots' : List Nat)
+    (hoverlap : panValueNoOverlap vars) (hne : name ≠ name')
+    (hlookup : lookupInfo name vars = some (shape, slots))
+    (hlookup' : lookupInfo name' vars = some (shape', slots')) :
+    ListDisjoint slots slots' := by
+  intro value hin hin'
+  exact hne (hoverlap.2 name name' shape shape' slots slots'
+    hlookup hlookup' ⟨value, hin, hin'⟩)
 
 def panValuePcLocalisedCode (code : PanValuePcSourceCode α) : Prop :=
   ∀ entry ∈ code, localisedProg entry.2.2

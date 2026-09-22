@@ -1479,6 +1479,20 @@ example :
   have h := panValueCtxtMax_compileParamVars parameterContextFixture 0 hnames
   rw [compileParamVars_next_offset] at h
   simpa [panToCrepMakeVmap] using h
+#check @panValueNoOverlap_lookup_disjoint
+
+/-- Regression for Cake `no_overlap_flookup_distinct`: the lemma is applicable
+to any `no_overlap` variable map with two distinct looked-up variables. -/
+example (name name' : String) (shape shape' : Shape) (slots slots' : List Nat)
+    (hne : name ≠ name')
+    (hlookup : lookupInfo name ([] : InfoMap (Shape × List Nat)) =
+      some (shape, slots))
+    (hlookup' : lookupInfo name' ([] : InfoMap (Shape × List Nat)) =
+      some (shape', slots')) :
+    ListDisjoint slots slots' :=
+  panValueNoOverlap_lookup_disjoint
+    ([] : InfoMap (Shape × List Nat)) name name' shape shape' slots slots'
+    panValueNoOverlap_empty hne hlookup hlookup'
 
 /-! The concrete `code_rel` analogue is non-vacuous on a source-faithful,
 nonempty function table: instantiating Cake's `mk_ctxt_code_imp_code_rel` port

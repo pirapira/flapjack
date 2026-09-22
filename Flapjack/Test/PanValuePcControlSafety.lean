@@ -1457,6 +1457,7 @@ kernel-checked inhabitant. -/
 #check @panValueNoOverlap_empty
 #check @panValueCtxtMax_compileParamVars
 #check @panValueNoOverlap_compileParamVars
+#check @panToCrepMakeVmap_context_invariants
 
 /-! The generated formal-parameter context satisfies the two Cake invariants
     used by `locals_rel`, with the original source-shaped maximum convention.
@@ -1467,8 +1468,8 @@ private def parameterContextFixture : List (VarName × Shape) :=
 
 example :
     panValueNoOverlap (panToCrepMakeVmap parameterContextFixture) := by
-  simpa [panToCrepMakeVmap] using
-    panValueNoOverlap_compileParamVars parameterContextFixture 0
+  exact (panToCrepMakeVmap_context_invariants parameterContextFixture (by
+    simp [parameterContextFixture])).1
 
 example :
     panValueCtxtMax
@@ -1476,7 +1477,7 @@ example :
       (panToCrepMakeVmap parameterContextFixture) := by
   have hnames : (parameterContextFixture.map Prod.fst).Nodup := by
     simp [parameterContextFixture]
-  have h := panValueCtxtMax_compileParamVars parameterContextFixture 0 hnames
+  have h := (panToCrepMakeVmap_context_invariants parameterContextFixture hnames).2
   rw [compileParamVars_next_offset] at h
   simpa [panToCrepMakeVmap] using h
 #check @panValueNoOverlap_lookup_disjoint

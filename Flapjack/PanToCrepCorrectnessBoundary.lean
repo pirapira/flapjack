@@ -265,6 +265,24 @@ theorem panValueCtxtMax_compileParamVars
   have hlt := compileParamVars_slot_lt params offset name shape slots
     hlookupRaw slot hslot
   omega
+
+/-! Package the two Cake context invariants for the compiler-generated
+    parameter map.  This is the concrete `mk_ctxt` fragment used when a
+    source callee is entered with its flattened parameters. -/
+theorem panToCrepMakeVmap_context_invariants
+    [LawfulBEq String]
+    (params : List (VarName × Shape))
+    (hnames : (params.map Prod.fst).Nodup) :
+    panValueNoOverlap (panToCrepMakeVmap params) ∧
+      panValueCtxtMax
+        ((compileParamVars params 0).2.2 - 1)
+        (panToCrepMakeVmap params) := by
+  constructor
+  · simpa [panToCrepMakeVmap] using
+      panValueNoOverlap_compileParamVars params 0
+  · simpa [panToCrepMakeVmap] using
+      panValueCtxtMax_compileParamVars params 0 hnames
+
 /-- Counterpart of Cake `no_overlap_flookup_distinct`
     (`cakeml/pancake/semantics/pan_commonPropsScript.sml`): two distinct
     variables of a `no_overlap` context have disjoint slot lists. -/

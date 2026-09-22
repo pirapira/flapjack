@@ -135,6 +135,16 @@ theorem panValuePcExceptionShapeRelConcrete_refl (context : CompileContext α)
 def panValuePcLocalisedCode (code : PanValuePcSourceCode α) : Prop :=
   ∀ entry ∈ code, localisedProg entry.2.2
 
+/-- Cake `code_rel_imp` analogue: a localised source table exposes localisation
+for every looked-up function body. -/
+theorem panValuePcLocalisedCode_lookup [LawfulBEq String]
+    {code : PanValuePcSourceCode α} (h : panValuePcLocalisedCode code) :
+    ∀ name parameters body,
+      lookupPanFunction name code = some (parameters, body) →
+      localisedProg body :=
+  fun name parameters body hlookup =>
+    h (name, parameters, body) (lookupPanFunction_mem hlookup)
+
 /-! The exception clause of HOL `pc_compile_correct`: the target exception is
 the code looked up for the source exception, and a non-empty payload is
 available through `globalsLookup` with the same flattening and 32-word bound.

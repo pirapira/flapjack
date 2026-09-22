@@ -914,13 +914,13 @@ def wordStackSharedLoadInst {α : Type} (config : WordStackConfig) (operator : W
       pure (.seq (.shMem operator config.scratch address)
         (.stackStore config.scratch (wordStackOffset config destination)))
   | .register destination, .stack address =>
-      pure (.seq (.stackLoad config.addressScratch
+      pure (.seq (.stackLoad config.scratch
           (wordStackOffset config address))
-        (.shMem operator destination config.addressScratch))
+        (.shMem operator destination config.scratch))
   | .stack destination, .stack address =>
-      pure (.seq (.stackLoad config.addressScratch
+      pure (.seq (.stackLoad config.scratch
           (wordStackOffset config address))
-        (.seq (.shMem operator config.scratch config.addressScratch)
+        (.seq (.shMem operator config.scratch config.scratch)
           (.stackStore config.scratch (wordStackOffset config destination))))
 
 def wordStackSharedStoreInst {α : Type} (config : WordStackConfig) (operator : WordMemOp)
@@ -955,13 +955,13 @@ def wordStackSharedLoadOffsetInst {α : Type} (config : WordStackConfig)
       pure (.seq (.shMemOffset operator config.scratch address offset)
         (.stackStore config.scratch (wordStackOffset config destination)))
   | .register destination, .stack address =>
-      pure (.seq (.stackLoad config.addressScratch
+      pure (.seq (.stackLoad config.scratch
           (wordStackOffset config address))
-        (.shMemOffset operator destination config.addressScratch offset))
+        (.shMemOffset operator destination config.scratch offset))
   | .stack destination, .stack address =>
-      pure (.seq (.stackLoad config.addressScratch
+      pure (.seq (.stackLoad config.scratch
           (wordStackOffset config address))
-        (.seq (.shMemOffset operator config.scratch config.addressScratch offset)
+        (.seq (.shMemOffset operator config.scratch config.scratch offset)
           (.stackStore config.scratch (wordStackOffset config destination))))
 
 def wordStackSharedStoreOffsetInst {α : Type} (config : WordStackConfig)
@@ -1267,7 +1267,9 @@ def wordStackGetNat (config : WordStackConfig) (destination : Nat)
 def wordStackOpCurrHeap {α : Type} (config : WordStackConfig) (operator : BinOp)
     (destination source : Nat) : Option (StackProg α) := do
   let (prelude, sourceRegister) ←
-    wordStackReadRegister config source config.addressScratch
+    /- Cake comp OpCurrHeap uses wReg1 for the source, so spilled
+       sources use the first temporary (k), not the wReg2 register. -/
+    wordStackReadRegister config source config.scratch
   let destination ← wordStackLocation config destination
   match destination with
   | .register destination =>
@@ -1373,6 +1375,20 @@ def wordStackWritePhysicalNat (config : WordStackConfig) (destination : Nat)
   | .stack slot =>
       pure (wordStackJoin (body config.scratch)
         (.stackStore config.scratch (wordStackOffset config slot)))
+
+/- Cake's `wReg2` writes a spilled value through `k+1`, while `wReg1`
+   writes through `k`.  Shared stores use the former for their value carrier;
+   keep this temporary choice explicit rather than reusing the load/destination
+   helper above. -/
+def wordStackWritePhysicalNatWith (config : WordStackConfig)
+    (destination temporary : Nat) (body : Nat → StackProg Nat) :
+    Option (StackProg Nat) := do
+  let location ← wordStackLocation config destination
+  match location with
+  | .register register => pure (body register)
+  | .stack slot =>
+      pure (wordStackJoin (body temporary)
+        (.stackStore temporary (wordStackOffset config slot)))
 
 def wordStackWritePhysical {α : Type} (config : WordStackConfig) (destination : Nat)
     (body : Nat → StackProg α) : Option (StackProg α) := do
@@ -1736,16 +1752,26 @@ def wordStackCompileSharedNat (config : WordStackConfig)
     match address with
     | .const _ | .var _ | .lookup _ =>
         let (addressPrelude, addressRegister) ←
-          wordStackAtomNat config config.addressScratch address
-        let body ← wordStackWritePhysicalNat config destination
-          (fun register => .shMem operator register addressRegister)
+          wordStackAtomNat config config.scratch address
+        let body ← match operator with
+          | .store | .store8 | .store16 | .store32 =>
+              wordStackWritePhysicalNatWith config destination config.addressScratch
+                (fun register => .shMem operator register addressRegister)
+          | .load | .load8 | .load16 | .load32 =>
+              wordStackWritePhysicalNat config destination
+                (fun register => .shMem operator register addressRegister)
         pure (wordStackJoin addressPrelude body)
     | _ =>
         let addressPrelude ←
-          wordStackCompileExpToRegisterNat config config.addressScratch
-            (wordStackExpressionTemporaries config config.addressScratch) address
-        let body ← wordStackWritePhysicalNat config destination
-          (fun register => .shMem operator register config.addressScratch)
+          wordStackCompileExpToRegisterNat config config.scratch
+            (wordStackExpressionTemporaries config config.scratch) address
+        let body ← match operator with
+          | .store | .store8 | .store16 | .store32 =>
+              wordStackWritePhysicalNatWith config destination config.addressScratch
+                (fun register => .shMem operator register config.scratch)
+          | .load | .load8 | .load16 | .load32 =>
+              wordStackWritePhysicalNat config destination
+                (fun register => .shMem operator register config.scratch)
         pure (wordStackJoin addressPrelude body)
   match address with
   | .op .add [.var base, .const offset] =>

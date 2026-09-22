@@ -158,4 +158,18 @@ example :
     wordStackLocation, wordStackOffset, lookupNatInfo, wordStackJoin,
     wordOperationSpillConfig]
 
+/- Cake word_to_stackScript.sml line 461 uses wReg1 for the OpCurrHeap
+   source. Pin the spilled-source case to the first temporary k; using
+   addressScratch here changes the emitted RISC-V carrier. -/
+example :
+    wordToStackProgNat
+        { wordOperationSpillConfig with locations :=
+            [(0, .register 5), (1, .stack 3)] }
+        (.opCurrHeap .add 0 1 : WordProg Nat) =
+      some (.seq (.stackLoad 31 13)
+        (.opCurrHeap .add 5 31)) := by
+  simp [wordToStackProgNat, wordStackOpCurrHeap, wordStackReadRegister,
+    wordStackLocation, wordStackOffset, lookupNatInfo, wordStackJoin,
+    wordOperationSpillConfig]
+
 end Flapjack

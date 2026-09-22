@@ -472,4 +472,302 @@ theorem crepExpsOf_unreachElim (program : CrepProg α) :
     intro q r e h hmem
     cases program <;> simp_all [crepUnreachElim]
 
+theorem crepExpsOf_nestedSeq_assign_zipWith (names : List Nat) :
+    ∀ (values : List (CrepExp α)) {e : CrepExp α},
+      e ∈ crepExpsOf
+          (crepNestedSeq (names.zipWith (fun name value => .assign name value)
+            values)) →
+        e ∈ values := by
+  induction names with
+  | nil =>
+      intro values e hmem
+      cases values with
+      | nil => simp [crepNestedSeq, crepExpsOf] at hmem
+      | cons value values => simp [crepNestedSeq, crepExpsOf] at hmem
+  | cons name names ih =>
+      intro values e hmem
+      cases values with
+      | nil => simp [List.zipWith, crepNestedSeq, crepExpsOf] at hmem
+      | cons value values =>
+          simp only [List.zipWith_cons_cons, crepNestedSeq, crepExpsOf,
+            List.singleton_append, List.mem_cons] at hmem
+          rcases hmem with heq | hmem
+          · subst heq; exact by simp
+          · exact List.mem_cons.mpr (Or.inr (ih values hmem))
+
+theorem crepExpsOf_transformEoc (returnNames : List Nat) (program : CrepProg α) :
+    ∀ {e : CrepExp α},
+      e ∈ crepExpsOf (crepTransformEoc returnNames program) →
+        e ∈ crepExpsOf program := by
+  apply crepTransformEoc.induct
+    (motive := fun program => ∀ {e : CrepExp α},
+      e ∈ crepExpsOf (crepTransformEoc returnNames program) →
+        e ∈ crepExpsOf program)
+  · intro values e hmem
+    simp only [crepTransformEoc, crepExpsOf] at hmem ⊢
+    exact crepExpsOf_nestedSeq_assign_zipWith returnNames values hmem
+  · intro name arguments e hmem
+    simpa only [crepTransformEoc, crepExpsOf] using hmem
+  · intro names name arguments e hmem
+    simpa only [crepTransformEoc, crepExpsOf] using hmem
+  · intro names handler body name arguments ih e hmem
+    simp only [crepTransformEoc, crepExpsOf] at hmem ⊢
+    rcases List.mem_append.mp hmem with h | h
+    · exact List.mem_append.mpr (Or.inl h)
+    · exact List.mem_append.mpr (Or.inr (ih h))
+  · intro name value body ih e hmem
+    simp only [crepTransformEoc, crepExpsOf, List.mem_cons] at hmem ⊢
+    rcases hmem with h | h
+    · exact Or.inl h
+    · exact Or.inr (ih h)
+  · intro condition body ih e hmem
+    simp only [crepTransformEoc, crepExpsOf, List.mem_cons] at hmem ⊢
+    rcases hmem with h | h
+    · exact Or.inl h
+    · exact Or.inr (ih h)
+  · intro first second ihFirst ihSecond e hmem
+    simp only [crepTransformEoc, crepExpsOf] at hmem ⊢
+    rcases List.mem_append.mp hmem with h | h
+    · exact List.mem_append.mpr (Or.inl (ihFirst h))
+    · exact List.mem_append.mpr (Or.inr (ihSecond h))
+  · intro condition thenBranch elseBranch ihThen ihElse e hmem
+    simp only [crepTransformEoc, crepExpsOf, List.mem_cons] at hmem ⊢
+    rcases hmem with h | h
+    · exact Or.inl h
+    · rcases List.mem_append.mp h with h | h
+      · exact Or.inr (List.mem_append.mpr (Or.inl (ihThen h)))
+      · exact Or.inr (List.mem_append.mpr (Or.inr (ihElse h)))
+  · intro program h1 h2 h3 h4 h5 h6 h7 h8 e hmem
+    cases program <;> simp_all [crepTransformEoc]
+
+theorem crepExpsOf_transformBranch (loopDepth : Nat) (returnNames : List Nat)
+    (program : CrepProg α) :
+    ∀ {e : CrepExp α},
+      e ∈ crepExpsOf (crepTransformBranch loopDepth returnNames program) →
+        e ∈ crepExpsOf program := by
+  apply crepTransformBranch.induct (motive := fun loopDepth program =>
+    ∀ {e : CrepExp α},
+      e ∈ crepExpsOf (crepTransformBranch loopDepth returnNames program) →
+        e ∈ crepExpsOf program)
+  · intro loopDepth values e hmem
+    simp only [crepTransformBranch, crepExpsOf, List.append_nil] at hmem ⊢
+    exact crepExpsOf_nestedSeq_assign_zipWith returnNames values hmem
+  · intro loopDepth name arguments e hmem
+    simp only [crepTransformBranch, crepExpsOf, List.append_nil] at hmem ⊢
+    exact hmem
+  · intro loopDepth names name arguments e hmem
+    simpa only [crepTransformBranch, crepExpsOf] using hmem
+  · intro loopDepth names handler body name arguments ih e hmem
+    simp only [crepTransformBranch, crepExpsOf] at hmem ⊢
+    rcases List.mem_append.mp hmem with h | h
+    · exact List.mem_append.mpr (Or.inl h)
+    · exact List.mem_append.mpr (Or.inr (ih h))
+  · intro loopDepth name value body ih e hmem
+    simp only [crepTransformBranch, crepExpsOf, List.mem_cons] at hmem ⊢
+    rcases hmem with heq | hmem
+    · exact Or.inl heq
+    · exact Or.inr (ih hmem)
+  · intro loopDepth condition body ih e hmem
+    simp only [crepTransformBranch, crepExpsOf, List.mem_cons] at hmem ⊢
+    rcases hmem with heq | hmem
+    · exact Or.inl heq
+    · exact Or.inr (ih hmem)
+  · intro loopDepth first second ihFirst ihSecond e hmem
+    simp only [crepTransformBranch, crepExpsOf] at hmem ⊢
+    rcases List.mem_append.mp hmem with h | h
+    · exact List.mem_append.mpr (Or.inl (ihFirst h))
+    · exact List.mem_append.mpr (Or.inr (ihSecond h))
+  · intro loopDepth condition thenBranch elseBranch ihThen ihElse e hmem
+    simp only [crepTransformBranch, crepExpsOf, List.mem_cons] at hmem ⊢
+    rcases hmem with heq | hmem
+    · exact Or.inl heq
+    · rcases List.mem_append.mp hmem with h | h
+      · exact Or.inr (List.mem_append.mpr (Or.inl (ihThen h)))
+      · exact Or.inr (List.mem_append.mpr (Or.inr (ihElse h)))
+  · intro loopDepth program h1 h2 h3 h4 h5 h6 h7 h8 e hmem
+    cases program <;> simp_all [crepTransformBranch]
+
+/-- Cake's `mem_var_prog_nested_seq`
+    (`cakeml/pancake/proofs/crep_inlineProofScript.sml:2226`): the variables of
+    a nested sequence are the concatenation of the statements' variables. -/
+theorem crepVarProg_nestedSeq (programs : List (CrepProg α)) :
+    ∀ x, x ∈ crepVarProg (crepNestedSeq programs) ↔
+      x ∈ (programs.map crepVarProg).flatten := by
+  induction programs with
+  | nil => intro x; simp [crepNestedSeq, crepVarProg]
+  | cons program programs ih =>
+      intro x; simp [crepNestedSeq, crepVarProg, ih, List.mem_append]
+
+/-- The `List.zipWith` variant of `crepVarProg` for a nested sequence of
+    assignments used by `crepTransformEoc` and `crepTransformBranch`: the
+    variables of the generated assignments are among the given names or the
+    values' variables. -/
+theorem crepVarProg_nestedSeq_assign_zipWith (names : List Nat) :
+    ∀ (values : List (CrepExp α)) {x : Nat},
+      x ∈ crepVarProg
+          (crepNestedSeq (names.zipWith (fun name value => .assign name value) values)) →
+        x ∈ names ∨ x ∈ values.flatMap crepExpVars := by
+  induction names with
+  | nil =>
+      intro values x hmem
+      cases values with
+      | nil => simp [List.zipWith, crepNestedSeq, crepVarProg] at hmem
+      | cons value values => simp [List.zipWith, crepNestedSeq, crepVarProg] at hmem
+  | cons name names ih =>
+      intro values x hmem
+      cases values with
+      | nil => simp [List.zipWith, crepNestedSeq, crepVarProg] at hmem
+      | cons value values =>
+          simp only [List.zipWith_cons_cons, crepNestedSeq, crepVarProg,
+            List.mem_append] at hmem
+          rcases hmem with h | h
+          · rcases h with h | h
+            · exact Or.inl (List.mem_cons.mpr (Or.inl (List.mem_singleton.mp h)))
+            · exact Or.inr (List.mem_flatMap.mpr ⟨value, by simp, h⟩)
+          · rcases ih values h with h | h
+            · exact Or.inl (List.mem_cons.mpr (Or.inr h))
+            · exact Or.inr (List.mem_flatMap.mpr
+                (by rcases List.mem_flatMap.mp h with ⟨v, hv, hx⟩
+                    exact ⟨v, by simp [hv], hx⟩))
+
+/-- Cake's `mem_var_prog_transform_eoc`
+    (`cakeml/pancake/proofs/crep_inlineProofScript.sml:2241`): ending the call
+    at end-of-call summaries only introduces the return variables. -/
+theorem crepVarProg_transformEoc (returnNames : List Nat) (program : CrepProg α) :
+    ∀ {x : Nat}, x ∈ crepVarProg (crepTransformEoc returnNames program) →
+      x ∈ crepVarProg program ∨ x ∈ returnNames := by
+  have haux : ∀ (program : CrepProg α), ∀ {x : Nat},
+      x ∈ crepVarProg (crepTransformEoc returnNames program) →
+        x ∈ crepVarProg program ++ returnNames := by
+    apply crepTransformEoc.induct (motive := fun program =>
+      ∀ {x : Nat}, x ∈ crepVarProg (crepTransformEoc returnNames program) →
+        x ∈ crepVarProg program ++ returnNames)
+    · intro values x hmem
+      simp only [crepTransformEoc] at hmem
+      rcases crepVarProg_nestedSeq_assign_zipWith returnNames values hmem with h | h
+      · simp only [crepVarProg, List.mem_append]; exact Or.inr h
+      · simp only [crepVarProg, List.mem_append]; exact Or.inl h
+    · intro name arguments x hmem
+      simp only [crepTransformEoc, crepVarProg, List.mem_append] at hmem ⊢
+      exact hmem
+    · intro names name arguments x hmem
+      simp only [crepTransformEoc, crepVarProg, List.mem_append] at hmem ⊢
+      exact Or.inl hmem
+    · intro names handler body name arguments ih x hmem
+      simp only [crepTransformEoc, crepVarProg, List.mem_append] at hmem ⊢
+      rcases hmem with h | h
+      · exact Or.inl (Or.inl h)
+      · rcases List.mem_append.mp (ih h) with h' | h'
+        · exact Or.inl (Or.inr h')
+        · exact Or.inr h'
+    · intro name value body ih x hmem
+      simp only [crepTransformEoc, crepVarProg, List.mem_append] at hmem ⊢
+      rcases hmem with h | h
+      · exact Or.inl (Or.inl h)
+      · rcases List.mem_append.mp (ih h) with h' | h'
+        · exact Or.inl (Or.inr h')
+        · exact Or.inr h'
+    · intro condition body ih x hmem
+      simp only [crepTransformEoc, crepVarProg, List.mem_append] at hmem ⊢
+      rcases hmem with h | h
+      · exact Or.inl (Or.inl h)
+      · rcases List.mem_append.mp (ih h) with h' | h'
+        · exact Or.inl (Or.inr h')
+        · exact Or.inr h'
+    · intro first second ihFirst ihSecond x hmem
+      simp only [crepTransformEoc, crepVarProg, List.mem_append] at hmem ⊢
+      rcases hmem with h | h
+      · rcases List.mem_append.mp (ihFirst h) with h' | h'
+        · exact Or.inl (Or.inl h')
+        · exact Or.inr h'
+      · rcases List.mem_append.mp (ihSecond h) with h' | h'
+        · exact Or.inl (Or.inr h')
+        · exact Or.inr h'
+    · intro condition thenBranch elseBranch ihThen ihElse x hmem
+      simp only [crepTransformEoc, crepVarProg, List.mem_append] at hmem ⊢
+      rcases hmem with h | h
+      · rcases h with h | h
+        · exact Or.inl (Or.inl (Or.inl h))
+        · rcases List.mem_append.mp (ihThen h) with h' | h'
+          · exact Or.inl (Or.inl (Or.inr h'))
+          · exact Or.inr h'
+      · rcases List.mem_append.mp (ihElse h) with h' | h'
+        · exact Or.inl (Or.inr h')
+        · exact Or.inr h'
+    · intro program h1 h2 h3 h4 h5 h6 h7 h8 x hmem
+      cases program <;> simp_all [crepTransformEoc, List.mem_append]
+  intro x hmem
+  exact List.mem_append.mp (haux program hmem)
+
+/-- Cake's `mem_var_prog_transform_branch`
+    (`cakeml/pancake/proofs/crep_inlineProofScript.sml:2258`): ending the call
+    at branch summaries only introduces the return variables. -/
+theorem crepVarProg_transformBranch (loopDepth : Nat) (returnNames : List Nat)
+    (program : CrepProg α) :
+    ∀ {x : Nat}, x ∈ crepVarProg (crepTransformBranch loopDepth returnNames program) →
+      x ∈ crepVarProg program ∨ x ∈ returnNames := by
+  have haux : ∀ (loopDepth : Nat) (program : CrepProg α), ∀ {x : Nat},
+      x ∈ crepVarProg (crepTransformBranch loopDepth returnNames program) →
+        x ∈ crepVarProg program ++ returnNames := by
+    apply crepTransformBranch.induct (motive := fun loopDepth program =>
+      ∀ {x : Nat}, x ∈ crepVarProg (crepTransformBranch loopDepth returnNames program) →
+        x ∈ crepVarProg program ++ returnNames)
+    · intro loopDepth values x hmem
+      simp only [crepTransformBranch, crepVarProg, List.append_nil] at hmem
+      rcases crepVarProg_nestedSeq_assign_zipWith returnNames values hmem with h | h
+      · simp only [crepVarProg, List.mem_append]; exact Or.inr h
+      · simp only [crepVarProg, List.mem_append]; exact Or.inl h
+    · intro loopDepth name arguments x hmem
+      simp only [crepTransformBranch, crepVarProg, List.append_nil,
+        List.mem_append] at hmem ⊢
+      exact hmem
+    · intro loopDepth names name arguments x hmem
+      simp only [crepTransformBranch, crepVarProg, List.mem_append] at hmem ⊢
+      exact Or.inl hmem
+    · intro loopDepth names handler body name arguments ih x hmem
+      simp only [crepTransformBranch, crepVarProg, List.mem_append] at hmem ⊢
+      rcases hmem with h | h
+      · exact Or.inl (Or.inl h)
+      · rcases List.mem_append.mp (ih h) with h' | h'
+        · exact Or.inl (Or.inr h')
+        · exact Or.inr h'
+    · intro loopDepth name value body ih x hmem
+      simp only [crepTransformBranch, crepVarProg, List.mem_append] at hmem ⊢
+      rcases hmem with h | h
+      · exact Or.inl (Or.inl h)
+      · rcases List.mem_append.mp (ih h) with h' | h'
+        · exact Or.inl (Or.inr h')
+        · exact Or.inr h'
+    · intro loopDepth condition body ih x hmem
+      simp only [crepTransformBranch, crepVarProg, List.mem_append] at hmem ⊢
+      rcases hmem with h | h
+      · exact Or.inl (Or.inl h)
+      · rcases List.mem_append.mp (ih h) with h' | h'
+        · exact Or.inl (Or.inr h')
+        · exact Or.inr h'
+    · intro loopDepth first second ihFirst ihSecond x hmem
+      simp only [crepTransformBranch, crepVarProg, List.mem_append] at hmem ⊢
+      rcases hmem with h | h
+      · rcases List.mem_append.mp (ihFirst h) with h' | h'
+        · exact Or.inl (Or.inl h')
+        · exact Or.inr h'
+      · rcases List.mem_append.mp (ihSecond h) with h' | h'
+        · exact Or.inl (Or.inr h')
+        · exact Or.inr h'
+    · intro loopDepth condition thenBranch elseBranch ihThen ihElse x hmem
+      simp only [crepTransformBranch, crepVarProg, List.mem_append] at hmem ⊢
+      rcases hmem with h | h
+      · rcases h with h | h
+        · exact Or.inl (Or.inl (Or.inl h))
+        · rcases List.mem_append.mp (ihThen h) with h' | h'
+          · exact Or.inl (Or.inl (Or.inr h'))
+          · exact Or.inr h'
+      · rcases List.mem_append.mp (ihElse h) with h' | h'
+        · exact Or.inl (Or.inr h')
+        · exact Or.inr h'
+    · intro loopDepth program h1 h2 h3 h4 h5 h6 h7 h8 x hmem
+      cases program <;> simp_all [crepTransformBranch, List.mem_append]
+  intro x hmem
+  exact List.mem_append.mp (haux loopDepth program hmem)
+
 end Flapjack

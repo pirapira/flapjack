@@ -125,6 +125,58 @@ def pairRaiseOracle : Bool :=
 
 #guard pairRaiseOracle
 
+def callOracleContext : CompileContext Nat :=
+  { vars := [], functions := [], exceptions := [("E", 0)],
+    maxVar := 0, bytesInWord := 8 }
+
+def globalDestinationDecls : List (Decl Nat) :=
+  [.function
+     { name := "f", inline := false, exported := false, params := [],
+       body := .skip, returnShape := .comb [.one, .one] },
+   .function
+     { name := "g", inline := false, exported := false,
+       params := [("pair", .comb [.one, .one])],
+       body := .call (some (some (.global, "pair"), none)) "f" [],
+       returnShape := .one }]
+
+/-! Direct `global_dest` row in `compile_prog_probe.out`.  The source kind
+    is ignored at this boundary; the global-tagged destination still receives
+    the two flattened parameter slots. -/
+def globalDestinationOracle : Bool :=
+  match compileToCrep callOracleContext globalDestinationDecls with
+  | [{ name := "f", params := [], body := .skip, returnShape := .comb [.one, .one] },
+     { name := "g", params := [0, 1],
+       body := .call (some ([0, 1], none)) "f" [],
+       returnShape := .one }] => true
+  | _ => false
+
+#guard globalDestinationOracle
+
+def handledMissingDestinationDecls : List (Decl Nat) :=
+  [.exnDecl "E" (.comb [.one, .one]),
+   .function
+     { name := "f", inline := false, exported := false, params := [],
+       body := .skip, returnShape := .comb [.one, .one] },
+   .function
+     { name := "g", inline := false, exported := false,
+       params := [("pair", .comb [.one, .one])],
+       body := .call
+         (some (some (.local, "missing"), some ("E", "pair", .skip))) "f" [],
+       returnShape := .one }]
+
+/-! Direct `handled_missing_dest` row in `compile_prog_probe.out`. -/
+def handledMissingDestinationOracle : Bool :=
+  match compileToCrep callOracleContext handledMissingDestinationDecls with
+  | [{ name := "f", params := [], body := .skip, returnShape := .comb [.one, .one] },
+     { name := "g", params := [0, 1],
+       body := .call (some ([], some (0,
+         .seq (.seq (.assign 0 (.loadGlob 0))
+           (.seq (.assign 1 (.loadGlob 1)) .skip)) .skip))) "f" [],
+       returnShape := .one }] => true
+  | _ => false
+
+#guard handledMissingDestinationOracle
+
 /-! The fixture is the direct HOL evaluation of
     `pan_to_crep$compile_to_crep` on the same exception/function declaration.
     `compileToCrep` preserves the source function name, flattened parameter
@@ -156,10 +208,14 @@ def parityGuard : Bool :=
   parityGuard
 
 def runChecks : IO Bool := do
-  if parityGuard then
-    IO.println "PASS compile_to_crep raised constant source parity"
-  else
-    IO.println "FAIL compile_to_crep parity"
-  pure (parityGuard && pairRaiseOracle && crepVarsOracle)
+  let results := [
+    ("raised constant", parityGuard),
+    ("two-word exception", pairRaiseOracle),
+    ("global call destination", globalDestinationOracle),
+    ("handled call with missing destination", handledMissingDestinationOracle),
+    ("flattened parameters", crepVarsOracle)]
+  for (name, passed) in results do
+    IO.println s!"{if passed then "PASS" else "FAIL"} compile_to_crep {name}"
+  pure (results.all Prod.snd)
 
 end Flapjack.Test.CompileToCrepeParity

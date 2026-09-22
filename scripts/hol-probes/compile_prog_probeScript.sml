@@ -30,3 +30,37 @@ val _ = print_eval "inline_call"
          <| name := «main»; inline := F; export := T;
             params := []; body := panLang$Call NONE «id» [];
             return := panLang$One |>]``;
+
+val _ = print_eval "global_dest"
+  ``pan_to_crep$compile_to_crep
+      ([panLang$Function
+          <| name := «f»; inline := F; export := F; params := [];
+             body := panLang$Skip;
+             return := panLang$Comb [panLang$One; panLang$One] |>;
+        panLang$Function
+          <| name := «g»; inline := F; export := F;
+             params := [(«pair», panLang$Comb [panLang$One; panLang$One])];
+             body := panLang$Call
+               (SOME (SOME (panLang$Global, «pair»), NONE)) «f» [];
+             return := panLang$One |>]
+       : (8 word) panLang$decl list)``;
+
+val _ = print_eval "handled_missing_dest"
+  ``pan_to_crep$compile_to_crep
+      ([panLang$ExnDecl «E» (panLang$Comb [panLang$One; panLang$One]);
+        panLang$Function
+          <| name := «f»; inline := F; export := F; params := [];
+             body := panLang$Skip;
+             return := panLang$Comb [panLang$One; panLang$One] |>;
+        panLang$Function
+          <| name := «g»; inline := F; export := F;
+             params := [(«pair», panLang$Comb [panLang$One; panLang$One])];
+             body := panLang$Call
+               (SOME
+                 (SOME (panLang$Local, «missing»),
+                  SOME («E», «pair», panLang$Skip)))
+               «f» [];
+             return := panLang$One |>]
+       : (8 word) panLang$decl list)``;
+
+val _ = print_eval "done" ``T``;

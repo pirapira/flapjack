@@ -1,2 +1,18 @@
 empty=[]
+
 inline_call=[(«id»,[],Return [Const 7w]); («main»,[],Seq Tick (Return [Const 7w]))]
+
+global_dest=[(«f»,[],Skip); («g»,[0; 1],Call (SOME ([0; 1],NONE)) «f» [])]
+
+handled_missing_dest=[(«f»,[],Skip);
+ («g»,[0; 1],
+  Call
+    (SOME
+       ([],
+        SOME
+          (0w,
+           Seq
+             (Seq (Assign 0 (LoadGlob 0w))
+                (Seq (Assign 1 (LoadGlob 1w)) Skip)) Skip))) «f» [])]
+
+done=T

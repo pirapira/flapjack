@@ -239,6 +239,120 @@ theorem evalLoopExp_locals_congr [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mu
       | topAddr => simp [evalLoopExp] at he
   exact hmain expression value h heval
 
+/-- Cake's `eval_lemma'` (`cakeml/pancake/proofs/loop_liveProofScript.sml:416`):
+    an expression's value is unchanged when the local state is extended, i.e.
+    every previously defined name keeps its value.  CakeML states this with
+    `subspt s.locals locals`; the Flapjack port states the pointwise
+    implication for the function-valued local state. -/
+theorem evalLoopExp_locals_extend [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [PanCmp α]
+    (state : LoopState α) (locals : Nat → Option α) (expression : LoopExp α)
+    (value : α)
+    (h : ∀ name v, state.locals name = some v → locals name = some v)
+    (heval : evalLoopExp state expression = some value) :
+    evalLoopExp { state with locals := locals } expression = some value := by
+  have hmain : ∀ expression : LoopExp α, ∀ value : α,
+      evalLoopExp state expression = some value →
+      evalLoopExp { state with locals := locals } expression = some value := by
+    apply evalLoopExp.induct
+      (motive := fun expression => ∀ value : α,
+        evalLoopExp state expression = some value →
+        evalLoopExp { state with locals := locals } expression = some value)
+    · intro cval v he
+      simp only [evalLoopExp] at he ⊢
+      exact he
+    · intro name v he
+      simp only [evalLoopExp] at he ⊢
+      exact h name v he
+    · intro address v he
+      simp only [evalLoopExp] at he ⊢
+      exact he
+    · intro address ih v he
+      simp only [evalLoopExp] at he ⊢
+      cases haddr : evalLoopExp state address with
+      | none => simp [haddr] at he
+      | some addr =>
+          simp only [haddr] at he
+          rw [ih addr haddr]
+          exact he
+    · intro operator left right ihLeft ihRight v he
+      simp only [evalLoopExp] at he ⊢
+      cases hleft : evalLoopExp state left with
+      | none => simp [hleft] at he
+      | some lv =>
+          cases hright : evalLoopExp state right with
+          | none => simp [hleft, hright] at he
+          | some rv =>
+              simp only [hleft, hright] at he
+              rw [ihLeft lv hleft, ihRight rv hright]
+              exact he
+    · intro left right ihLeft ihRight v he
+      simp only [evalLoopExp] at he ⊢
+      cases hleft : evalLoopExp state left with
+      | none => simp [hleft] at he
+      | some lv =>
+          cases hright : evalLoopExp state right with
+          | none => simp [hleft, hright] at he
+          | some rv =>
+              simp only [hleft, hright] at he
+              rw [ihLeft lv hleft, ihRight rv hright]
+              exact he
+    · intro operator left right ihLeft ihRight v he
+      simp only [evalLoopExp] at he ⊢
+      cases hleft : evalLoopExp state left with
+      | none => simp [hleft] at he
+      | some lv =>
+          cases hright : evalLoopExp state right with
+          | none => simp [hleft, hright] at he
+          | some rv =>
+              simp only [hleft, hright] at he
+              rw [ihLeft lv hleft, ihRight rv hright]
+              exact he
+    · intro operator left right ihLeft ihRight v he
+      simp only [evalLoopExp] at he ⊢
+      cases hleft : evalLoopExp state left with
+      | none => simp [hleft] at he
+      | some lv =>
+          cases hright : evalLoopExp state right with
+          | none => simp [hleft, hright] at he
+          | some rv =>
+              simp only [hleft, hright] at he
+              rw [ihLeft lv hleft, ihRight rv hright]
+              exact he
+    · intro t n1 n2 n3 n4 n5 n6 n7 n8 v he
+      exfalso
+      cases t with
+      | const c => exact n1 c rfl
+      | var name => exact n2 name rfl
+      | lookup address => exact n3 address rfl
+      | load address => exact n4 address rfl
+      | op operator args =>
+          cases args with
+          | nil => simp [evalLoopExp] at he
+          | cons a rest =>
+              cases rest with
+              | nil => simp [evalLoopExp] at he
+              | cons b rest2 =>
+                  cases rest2 with
+                  | nil => exact n5 operator a b rfl
+                  | cons c rest3 => simp [evalLoopExp] at he
+      | crepOp cop args =>
+          cases args with
+          | nil => simp [evalLoopExp] at he
+          | cons a rest =>
+              cases rest with
+              | nil => simp [evalLoopExp] at he
+              | cons b rest2 =>
+                  cases rest2 with
+                  | nil => cases cop; exact n6 a b rfl
+                  | cons c rest3 => simp [evalLoopExp] at he
+      | cmp operator l r => exact n7 operator l r rfl
+      | shift operator l r => exact n8 operator l r rfl
+      | baseAddr => simp [evalLoopExp] at he
+      | topAddr => simp [evalLoopExp] at he
+  exact hmain expression value heval
+
 def deleteNatSorted (name : Nat) : List Nat → List Nat
   | [] => []
   | head :: tail =>

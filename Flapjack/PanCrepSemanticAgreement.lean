@@ -1695,6 +1695,71 @@ theorem PanValuePcSemanticClockEvidence.crossClockReturnedResultRel_withContext
     sourceMemory sourceFfi sourceValues targetState targetValues houtcome hresult
   exact ⟨hresultRel, ⟨hoverlap, hmax, hresultRel.1⟩⟩
 
+/-! Consume the bundled Cake state relation for the returned-call branch while
+    retaining its context-coded value relation.  This is the declaration
+    induction shape for returned results, with evaluator and result premises
+    kept explicit rather than projected into a compatibility predicate. -/
+theorem PanValuePcSemanticClockEvidence.crossClockReturnedResultRelWithContextCode_of_stateRelWithContext
+    {α σ : Type}
+    [BEq α] [OfNat α 0] [Add α]
+    {structs : StructContext} {context : CompileContext α}
+    {program : Prog α}
+    {sourceEvaluate : PanValuePcEvaluator α}
+    {targetEvaluate : CrepPcEvaluator α}
+    {codeRel : PanValuePcCodeRel α}
+    {excpRel : PanValuePcExceptionShapeRel α}
+    {exceptionRel : ExceptionId → PanValue α → α → Prop}
+    {exceptionCode : ExceptionId → Option α}
+    {globalsLookup : CrepState α → PanValue α → Option (List α)}
+    {panHooks : PanSemanticsHooks α σ}
+    {crepHooks : CrepSemanticsHooks α}
+    (hcorrect : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (sourceClock targetClock : Nat)
+    (sourceEvidence : PanValuePcSemanticClockEvidence structs context program
+      sourceClock sourceEvaluate targetEvaluate codeRel excpRel exceptionRel
+      exceptionCode globalsLookup panHooks crepHooks)
+    (targetEvidence : PanValuePcSemanticClockEvidence structs context program
+      targetClock sourceEvaluate targetEvaluate codeRel excpRel exceptionRel
+      exceptionCode globalsLookup panHooks crepHooks)
+    (inputCodeRel : codeRel context sourceEvidence.sourceInput.code
+      targetEvidence.targetInput.code)
+    (inputExcpRel : excpRel context sourceEvidence.sourceInput.eshapes
+      targetEvidence.targetInput.eshapes)
+    (inputStateRel : panValueCrepStateRelWithContext structs context
+      sourceEvidence.sourceInput.locals sourceEvidence.sourceInput.globals
+      sourceEvidence.sourceInput.memory targetEvidence.targetInput.state)
+    (outputCodeRel : codeRel context sourceEvidence.sourceExecution.code
+      targetEvidence.targetExecution.code)
+    (outputExcpRel : excpRel context sourceEvidence.sourceExecution.eshapes
+      targetEvidence.targetExecution.eshapes)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (sourceFfi : FfiState σ)
+    (sourceValues : List (PanValue α))
+    (targetState : CrepState α) (targetValues : List α)
+    (houtcome : sourceEvidence.outcome =
+      .control (.returned sourceLocals sourceGlobals sourceMemory sourceFfi
+        sourceValues))
+    (hresult : targetEvidence.result = .returned targetState targetValues) :
+    panValuePcResultRelWithContextCode structs context exceptionRel exceptionCode
+      globalsLookup
+      (.returned sourceLocals sourceGlobals sourceMemory sourceValues)
+      (.returned targetState targetValues) ∧
+    panValueCrepStateRelWithContext structs context sourceLocals sourceGlobals
+      sourceMemory targetState := by
+  rcases inputStateRel with ⟨hoverlap, hmax, hstateRel⟩
+  have hresultRel := PanValuePcSemanticClockEvidence.crossClockReturnedResultRel
+    hcorrect sourceClock targetClock sourceEvidence targetEvidence inputCodeRel
+    inputExcpRel hstateRel outputCodeRel outputExcpRel sourceLocals sourceGlobals
+    sourceMemory sourceFfi sourceValues targetState targetValues houtcome hresult
+  have hparts := (panValuePcResultRel_returned_iff structs context exceptionRel
+    exceptionCode globalsLookup sourceLocals sourceGlobals sourceMemory sourceValues
+    targetState targetValues).1 hresultRel
+  exact ⟨(panValuePcResultRelWithContextCode_returned_iff structs context
+    exceptionRel exceptionCode globalsLookup sourceLocals sourceGlobals sourceMemory
+    sourceValues targetState targetValues).2 hparts,
+    ⟨hoverlap, hmax, hparts.1⟩⟩
+
 /-! The normal-result counterpart of the cross-clock semantic branch.  This is
     the ordinary call case of Cake's declaration induction: evaluator and
     state evidence are retained, while the result is projected without

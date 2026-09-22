@@ -261,6 +261,25 @@ theorem ite_true_compile_correct_fixture :
     (by simp [evalLoopCondition]) (by simp [comp, evalLoopProg])
   simpa [comp, loopResultState] using hite
 
+theorem ite_false_compile_correct_fixture :
+    evalLoopProg 2 load32State
+        (comp [(3, 2)]
+          (.ite .equal 2 (.imm 7) (.fail : LoopProg Nat) .tick [2])).1 =
+        some (.normal load32State) ∧
+      labelsIn
+        (comp [(3, 2)]
+          (.ite .equal 2 (.imm 7) (.fail : LoopProg Nat) .tick [2])).2
+        (loopResultState (.normal load32State)).locals := by
+  have hite := comp_ite_false_correct
+    (environment := [(3, 2)]) (state := load32State) (fuel := 1)
+    (operator := .equal) (condition := 2) (right := .imm 7)
+    (thenBranch := (.fail : LoopProg Nat)) (elseBranch := .tick)
+    (live := [2]) (leftValue := 100) (rightValue := 7)
+    (result := .normal load32State)
+    (by simp [load32State]) (by simp)
+    (by simp [evalLoopCondition]) (by simp [comp, evalLoopProg])
+  simpa [comp, loopResultState] using hite
+
 theorem loop_labelsIn_fixture :
     (comp [(3, 2)]
       (.loop [2] (.fail : LoopProg Nat) [3]) : LoopProg Nat × LocationEnv).1 =
@@ -522,6 +541,7 @@ theorem ffi_labelsIn_fixture :
 #check comp_seq_labelsIn
 #check comp_ite_labelsIn
 #check comp_ite_true_correct
+#check comp_ite_false_correct
 #check comp_loop_labelsIn
 #check comp_setGlobal_correct
 #check comp_return_correct

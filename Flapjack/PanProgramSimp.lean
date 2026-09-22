@@ -82,7 +82,7 @@ theorem collectPanValueStructs_of_functions (context : StructContext)
   cases declaration <;> simp_all [globalDeclIsFunction, isName]
 
 theorem lookupInfo_isSome_of_mem [BEq String] [LawfulBEq String] (name : String)
-    (context : StructContext) (hmem : name ∈ context.map Prod.fst) :
+    (context : InfoMap β) (hmem : name ∈ context.map Prod.fst) :
     (lookupInfo name context).isSome = true := by
   induction context with
   | nil => simp at hmem
@@ -1023,6 +1023,62 @@ theorem evalPanValueDeclarations_exception_state_evidence
   exact ⟨structs, hcollect,
     evalPanValueDeclarations_exceptions state state' declarations memoryAccess heval,
     hwf⟩
+
+/-! A declared exception remains present in the table installed by successful
+    declaration evaluation.  This is the lookup-success half of the generic
+    raised evaluator bridge; the actual target exception code remains a
+    separate compiler-context premise. -/
+theorem panExceptionEntries_mem_of_exnDecl_mem
+    (declarations : List (Decl α)) {exception : ExceptionId} {shape : Shape}
+    (hmem : (.exnDecl exception shape : Decl α) ∈ declarations) :
+    (exception, shape) ∈ panExceptionEntries declarations := by
+  induction declarations with
+  | nil => simp at hmem
+  | cons declaration declarations ih =>
+      cases declaration with
+      | name name fields =>
+          simp only [panExceptionEntries_cons] at ⊢
+          exact ih (by simpa using hmem)
+      | decl declShape name value =>
+          simp only [panExceptionEntries_cons] at ⊢
+          exact ih (by simpa using hmem)
+      | function declaration =>
+          simp only [panExceptionEntries_cons] at ⊢
+          exact ih (by simpa using hmem)
+      | exnDecl declaredException declaredShape =>
+          simp only [panExceptionEntries_cons]
+          simp only [List.mem_cons] at hmem
+          rcases hmem with hhead | hmem
+          · injection hhead with hException hShape
+            subst exception
+            subst shape
+            exact List.mem_append_right _ (by simp)
+          · exact List.mem_append_left _ (ih hmem)
+
+theorem evalPanValueDeclarations_exception_lookup_isSome
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    [LawfulBEq String]
+    (state state' : PanValueProgramState α) (declarations : List (Decl α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    {exception : ExceptionId} {shape : Shape}
+    (hmem : (.exnDecl exception shape : Decl α) ∈ declarations)
+    (heval : evalPanValueDeclarations state declarations memoryAccess = some state') :
+    (lookupInfo exception state'.exceptions).isSome = true := by
+  have hentries : (exception, shape) ∈ panExceptionEntries declarations :=
+    panExceptionEntries_mem_of_exnDecl_mem declarations hmem
+  have htable := evalPanValueDeclarations_exceptions state state' declarations
+    memoryAccess heval
+  rw [htable]
+  have hname : exception ∈ (panExceptionEntries declarations).map Prod.fst :=
+    List.mem_map.mpr ⟨(exception, shape), hentries, rfl⟩
+  have hname' : exception ∈
+      (panExceptionEntries declarations ++ state.exceptions).map Prod.fst := by
+    simp only [List.map_append]
+    exact List.mem_append_left _ hname
+  exact lookupInfo_isSome_of_mem exception
+    (panExceptionEntries declarations ++ state.exceptions) hname'
 
 /-! Package the source-side raised call with the declaration-derived exception
     context.  This is the evaluator evidence needed before a generic raised

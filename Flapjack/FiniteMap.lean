@@ -147,13 +147,17 @@ theorem opt_mmap_disj_zip_flookup [BEq α] [LawfulBEq α]
         exact hxnot (he ▸ hkey)
       simp [hkx]
 
-/-- Cake `locals_rel_def` (`pan_to_crepProofScript.sml:71`) port.  The source
-locals are keyed by variable name and the target locals by word address; the
-relation records that every live variable's flattened word list is recoverable
-from the target map through its slot list.  `vars` is the alist representation
-of `ctxt.vars` (looked up with `lookupInfo`, the Flapjack `FLOOKUP` on the
-context). -/
-def localsRel [BEq String] (vars : InfoMap (Shape × List Nat)) (vmax : Nat)
+/-- Flapjack-specific executable surrogate for Cake `locals_rel_def`
+(`pan_to_crepProofScript.sml:71`).  The source locals are keyed by variable name
+and the target locals by word address; the relation records that every live
+variable's flattened word list is recoverable from the target map through its
+slot list.  `vars` is the alist representation of `ctxt.vars` (looked up with
+`lookupInfo`, the Flapjack `FLOOKUP` on the context).
+
+This list-backed variant is not the reviewed finite-map HOL port; the exact
+`@[hol]`-tagged `locals_rel_def` over `PanToCrepProofContext` lives in
+`Flapjack/Pancake/Proofs/PanToCrep.lean`. -/
+def executableLocalsRel [BEq String] (vars : InfoMap (Shape × List Nat)) (vmax : Nat)
     (sLocals : FiniteMap String (PanValue α))
     (tLocals : FiniteMap Nat α) : Prop :=
   panValueNoOverlap vars ∧ panValueCtxtMax vmax vars ∧
@@ -163,11 +167,11 @@ def localsRel [BEq String] (vars : InfoMap (Shape × List Nat)) (vmax : Nat)
         isWfShape [] (panValueShape [] v) = true
 
 /-- Cake `locals_rel_lookup_ctxt` (`pan_to_crepProofScript.sml:527`). -/
-theorem localsRel_lookup_ctxt [BEq String]
+theorem executableLocalsRel_lookup_ctxt [BEq String]
     (vars : InfoMap (Shape × List Nat)) (vmax : Nat)
     (sLocals : FiniteMap String (PanValue α)) (tLocals : FiniteMap Nat α)
     (vr : String) (v : PanValue α)
-    (hrel : localsRel vars vmax sLocals tLocals)
+    (hrel : executableLocalsRel vars vmax sLocals tLocals)
     (hlookup : FLOOKUP sLocals vr = some v) :
     ∃ ns, lookupInfo vr vars = some (panValueShape [] v, ns) ∧
       ns.length = (panValueFlatten v).length ∧
@@ -184,12 +188,12 @@ theorem localsRel_lookup_ctxt [BEq String]
 source-map-empty generalization: any context map that satisfies `no_overlap`
 and `ctxt_max` is related to an arbitrary target locals map when the source
 locals map is `FEMPTY` (the third conjunct is vacuous). -/
-theorem localsRel_of_empty_source [BEq String]
+theorem executableLocalsRel_of_empty_source [BEq String]
     (vars : InfoMap (Shape × List Nat)) (vmax : Nat)
     (tLocals : FiniteMap Nat α)
     (hnooverlap : panValueNoOverlap vars)
     (hmax : panValueCtxtMax vmax vars) :
-    localsRel vars vmax (FEMPTY : FiniteMap String (PanValue α)) tLocals := by
+    executableLocalsRel vars vmax (FEMPTY : FiniteMap String (PanValue α)) tLocals := by
   refine ⟨hnooverlap, hmax, ?_⟩
   intro vname v hlookup
   simp [FLOOKUP_empty] at hlookup
@@ -197,10 +201,10 @@ theorem localsRel_of_empty_source [BEq String]
 /-- Cake `mk_ctxt_imp_locals_rel` (`pan_to_crepProofScript.sml:4677`) at the
 empty context `mk_ctxt FEMPTY (make_funcs pc) 0 es`: the empty variable map
 satisfies `no_overlap` and `ctxt_max`, and the source locals map is empty. -/
-theorem localsRel_empty [BEq String] (vmax : Nat) (tLocals : FiniteMap Nat α) :
-    localsRel ([] : InfoMap (Shape × List Nat)) vmax
+theorem executableLocalsRel_empty [BEq String] (vmax : Nat) (tLocals : FiniteMap Nat α) :
+    executableLocalsRel ([] : InfoMap (Shape × List Nat)) vmax
       (FEMPTY : FiniteMap String (PanValue α)) tLocals :=
-  localsRel_of_empty_source [] vmax tLocals panValueNoOverlap_empty
+  executableLocalsRel_of_empty_source [] vmax tLocals panValueNoOverlap_empty
     (panValueCtxtMax_empty vmax (Nat.zero_le vmax))
 
 /-- Cake `local_rel_le_zip_update_preserved`
@@ -211,14 +215,14 @@ theorem localRel_le_zip_update_preserved [BEq String] [LawfulBEq String]
     (vars : InfoMap (Shape × List Nat)) (vmax : Nat)
     (l : FiniteMap String (PanValue α)) (l' : FiniteMap Nat α)
     (x : String) (v v' : PanValue α) (sh : Shape) (ns : List Nat)
-    (hrel : localsRel vars vmax l l')
+    (hrel : executableLocalsRel vars vmax l l')
     (hlookup : FLOOKUP l x = some v)
     (hctxt : lookupInfo x vars = some (sh, ns))
     (hshape : panValueShape [] v = panValueShape [] v')
     (hdistinct : ns.Nodup) :
-    localsRel vars vmax (FUPDATE l (x, v'))
+    executableLocalsRel vars vmax (FUPDATE l (x, v'))
       (FUPDATE_LIST l' (ns.zip (panValueFlatten v'))) := by
-  obtain ⟨hns, hnsctxt0, hnslen0, _hnsmap, hnswf⟩ := localsRel_lookup_ctxt vars vmax l l' x v hrel hlookup
+  obtain ⟨hns, hnsctxt0, hnslen0, _hnsmap, hnswf⟩ := executableLocalsRel_lookup_ctxt vars vmax l l' x v hrel hlookup
   have heq : (panValueShape [] v, hns) = (sh, ns) := by
     apply Option.some.inj
     rw [← hnsctxt0, hctxt]
@@ -265,17 +269,17 @@ theorem localRel_le_zip_update_preserved [BEq String] [LawfulBEq String]
 extending the source and target locals with a fresh variable whose slot list is
 duplicate-free, bounded above the old context and below the new context bound,
 and length-matched to the flattened value, preserves the locals relation. -/
-theorem localsRel_extend_new_var [BEq String] [LawfulBEq String]
+theorem executableLocalsRel_extend_new_var [BEq String] [LawfulBEq String]
     (vars : InfoMap (Shape × List Nat)) (vmax : Nat)
     (l : FiniteMap String (PanValue α)) (l' : FiniteMap Nat α)
     (x : String) (v : PanValue α) (ns : List Nat)
-    (hrel : localsRel vars vmax l l')
+    (hrel : executableLocalsRel vars vmax l l')
     (hwf : isWfShape [] (panValueShape [] v) = true)
     (hdistinct : ns.Nodup)
     (hbounds : ∀ slot ∈ ns,
       vmax < slot ∧ slot ≤ vmax + Shape.shapeSize (panValueShape [] v))
     (hlen : ns.length = Shape.shapeSize (panValueShape [] v)) :
-    localsRel ((x, (panValueShape [] v, ns)) :: vars)
+    executableLocalsRel ((x, (panValueShape [] v, ns)) :: vars)
       (vmax + Shape.shapeSize (panValueShape [] v))
       (FUPDATE l (x, v)) (FUPDATE_LIST l' (ns.zip (panValueFlatten v))) := by
   have hlenFlat : ns.length = (panValueFlatten v).length := by

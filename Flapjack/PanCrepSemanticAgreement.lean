@@ -724,6 +724,44 @@ theorem PanValuePcSemanticClockEvidence.resultRel
   rw [evidence.sourceResult, evidence.targetResult] at hrel
   exact hrel
 
+theorem PanValuePcSemanticClockEvidence.semanticOutcomeRel_withContextCode
+    {α σ : Type}
+    [BEq α] [OfNat α 0] [Add α]
+    {structs : StructContext} {context : CompileContext α}
+    {program : Prog α}
+    {sourceEvaluate : PanValuePcEvaluator α}
+    {targetEvaluate : CrepPcEvaluator α}
+    {codeRel : PanValuePcCodeRel α}
+    {excpRel : PanValuePcExceptionShapeRel α}
+    {exceptionRel : ExceptionId → PanValue α → α → Prop}
+    {exceptionCode : ExceptionId → Option α}
+    {globalsLookup : CrepState α → PanValue α → Option (List α)}
+    {panHooks : PanSemanticsHooks α σ}
+    {crepHooks : CrepSemanticsHooks α}
+    (hcorrect : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (evidenceClock : Nat)
+    (evidence : PanValuePcSemanticClockEvidence structs context program evidenceClock
+      sourceEvaluate targetEvaluate codeRel excpRel exceptionRel exceptionCode
+      globalsLookup panHooks crepHooks)
+    (hffiOutcome : ∀ event, panHooks.ffiOutcome event = event.outcome)
+    (sourceOutcome : PanSemanticOutcome)
+    (targetOutcome : CrepSemanticOutcome)
+    (hsourceOutcome : panResultOutcome panHooks
+      (some (evidence.outcome, evidence.returnedClock)) = some sourceOutcome)
+    (htargetOutcome : crepResultOutcome
+      (crepControlResultToSemantic (some evidence.result)) = some targetOutcome) :
+    panCrepSemanticOutcomeRel sourceOutcome targetOutcome := by
+  exact panValuePcResultRel_semanticOutcomeRel_of_outcome
+    structs context exceptionRel exceptionCode globalsLookup panHooks hffiOutcome
+    evidence.outcome evidence.result evidence.returnedClock sourceOutcome
+    targetOutcome
+    (PanValuePcSemanticClockEvidence.resultRel
+      (panValuePcCompileCorrect_of_withContextCode sourceEvaluate targetEvaluate
+        codeRel excpRel exceptionCode globalsLookup program hcorrect)
+      evidenceClock evidence)
+    hsourceOutcome htargetOutcome
+
 /-! Reapply `pc_compile_correct` across two clock witnesses. This is the
 source/target execution step used by Cake's `evaluate_add_clock_eq` cases: the
 clocked evaluator monotonicity itself is not assumed here, but every

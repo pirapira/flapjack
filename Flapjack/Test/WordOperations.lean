@@ -172,4 +172,51 @@ example :
     wordStackLocation, wordStackOffset, lookupNatInfo, wordStackJoin,
     wordOperationSpillConfig]
 
+/- Cake wShareInst (word_to_stackScript.sml:186-222) uses wReg1 for the
+   shared address and wReg2 for a spilled store value. Pin each spill
+   direction, including the simultaneous-spill case, at the direct
+   Word-to-Stack boundary. -/
+example :
+    wordToStackProgNat wordOperationSpillConfig
+        (.shareInst .load 1 (.var 0) : WordProg Nat) =
+      some (.seq (.stackLoad 31 13)
+        (.shMem .load 6 31)) := by
+  simp [wordToStackProgNat, wordStackCompileSharedNat, wordStackAtomNat,
+    wordStackReadRegister, wordStackWritePhysicalNat,
+    wordStackLocation, wordStackOffset, wordStackJoin, lookupNatInfo,
+    wordOperationSpillConfig]
+
+example :
+    wordToStackProgNat wordOperationSpillConfig
+        (.shareInst .load 0 (.var 1) : WordProg Nat) =
+      some (.seq (.shMem .load 31 6)
+        (.stackStore 31 13)) := by
+  simp [wordToStackProgNat, wordStackCompileSharedNat, wordStackAtomNat,
+    wordStackReadRegister, wordStackWritePhysicalNat,
+    wordStackLocation, wordStackOffset, wordStackJoin, lookupNatInfo,
+    wordOperationSpillConfig]
+
+example :
+    wordToStackProgNat wordOperationSpillConfig
+        (.shareInst .store 0 (.var 1) : WordProg Nat) =
+      some (.seq (.stackLoad 29 13)
+        (.shMem .store 29 6)) := by
+  simp [wordToStackProgNat, wordStackCompileSharedNat, wordStackAtomNat,
+    wordStackReadRegister, wordStackReadPhysicalNatWith,
+    wordStackLocation, wordStackOffset, wordStackJoin, lookupNatInfo,
+    wordOperationSpillConfig]
+
+example :
+    wordToStackProgNat
+        { wordOperationSpillConfig with locations :=
+            [(0, .stack 3), (1, .stack 2)] }
+        (.shareInst .store 0 (.var 1) : WordProg Nat) =
+      some (.seq (.stackLoad 31 12)
+        (.seq (.stackLoad 29 13)
+          (.shMem .store 29 31))) := by
+  simp [wordToStackProgNat, wordStackCompileSharedNat, wordStackAtomNat,
+    wordStackReadRegister, wordStackReadPhysicalNatWith,
+    wordStackLocation, wordStackOffset, wordStackJoin, lookupNatInfo,
+    wordOperationSpillConfig]
+
 end Flapjack

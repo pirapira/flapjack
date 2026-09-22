@@ -887,6 +887,20 @@ def doStepSimplifyPriorityGuard : Bool :=
 
 #guard doStepSimplifyPriorityGuard
 
+/- Cake's `do_step` reaches coalescing after an empty simplify worklist and
+   before pre-freeze/freeze/spill.  Keep the driver-level priority distinct
+   from the direct `do_coalesce` transition guard below. -/
+def doStepCoalescePriorityGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 3 with
+      moveRelated := CakeNodeMap.ofNatInfoMap 3 [(1, true), (2, true)]
+      availMovesWl := [(1, (1, 2))] }
+  let (changed, out) := cakeDoStep none 3 state
+  changed && out.availMovesWl == [] && out.unavailMovesWl == [] &&
+    (out.coalesced.get 2).getD 2 == 1 && out.stack == [2]
+
+#guard doStepCoalescePriorityGuard
+
 /- Cake's `do_step` reaches `do_spill` only after simplify, coalesce,
    pre-freeze, and freeze all report no progress.  With no cost table,
    `do_spill` selects the highest-degree candidate, preserving the residual

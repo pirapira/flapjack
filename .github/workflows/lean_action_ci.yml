@@ -19,7 +19,9 @@ jobs:
         run: ./scripts/check-warnings.sh
 
       - name: Check @[hol] cross-references point at existing HOL declarations
-        run: python3 scripts/check-hol-refs.py
+        run: |
+          git submodule update --init --depth 1 -- cakeml
+          python3 scripts/check-hol-refs.py
 
       - name: Check exact Pancake RISC-V parity fixtures
         run: |

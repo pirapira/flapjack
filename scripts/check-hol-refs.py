@@ -90,6 +90,14 @@ def main(argv: list[str]) -> int:
     mapping: list[tuple[str, str, str, str]] = []
     cache: dict[Path, set[str]] = {}
 
+    if not (ROOT / "cakeml" / "pancake").is_dir():
+        print(
+            "error: the cakeml submodule is not checked out; run "
+            "`git submodule update --init --depth 1 -- cakeml`",
+            file=sys.stderr,
+        )
+        return 1
+
     for lean_path in lean_files():
         rel = lean_path.relative_to(ROOT).as_posix()
         lines = lean_path.read_text(encoding="utf-8").splitlines()

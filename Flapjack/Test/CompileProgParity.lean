@@ -1,4 +1,5 @@
 import Flapjack.Pipeline
+import Flapjack.CrepeAssignedFreeVarsBound
 
 namespace Flapjack.Test.CompileProgParity
 
@@ -162,6 +163,25 @@ def runChecks : IO Bool := do
 #check @not_mem_freshNames
 #check @panValueSlotBound
 #check @panValueSlotBound_cons_of
+#check @crepContextSlot_extended_or_gt
+
+theorem extended_context_slot_fixture :
+    compileProgProbeContext.maxVar < 3 := by
+  let extended : CompileContext Nat :=
+    { compileProgProbeContext with
+      vars := ("fresh", (.one, [3])) :: compileProgProbeContext.vars
+      maxVar := compileProgProbeContext.maxVar + Shape.shapeSize .one }
+  have hslot : CrepContextSlot extended 3 := by
+    refine ⟨"fresh", .one, [3], ?_, by simp⟩
+    simp [extended, compileProgProbeContext, lookupInfo]
+  rcases crepContextSlot_extended_or_gt compileProgProbeContext
+      "fresh" .one [3] (by
+        intro x hx
+        simp [compileProgProbeContext] at *
+        omega) hslot with hold | hgt
+  · rcases hold with ⟨name, shape, names, hlookup, hmem⟩
+    simp [compileProgProbeContext, lookupInfo] at hlookup
+  · exact hgt
 
 #check @compileProg_break
 #check @compileProg_continue

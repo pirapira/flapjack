@@ -951,6 +951,58 @@ theorem PanValuePcSemanticClockEvidence.raisedForbiddenResultRel
     (.raised targetState targetException) evidence.returnedClock hraisedRel
   exact ⟨hraisedRel, by simpa [houtcome, hresult] using hforbidden⟩
 
+/-! The normal-control branch of Cake's
+    `state_rel_imp_semantics_to_crep` induction keeps the evaluator and state
+    relation explicit even though neither observation is a successful
+    termination.  It transports the normal result relation and the forbidden
+    observation classification together. -/
+theorem PanValuePcSemanticClockEvidence.normalForbiddenResultRel
+    {α σ : Type}
+    [BEq α] [OfNat α 0] [Add α]
+    {structs : StructContext} {context : CompileContext α}
+    {program : Prog α}
+    {sourceEvaluate : PanValuePcEvaluator α}
+    {targetEvaluate : CrepPcEvaluator α}
+    {codeRel : PanValuePcCodeRel α}
+    {excpRel : PanValuePcExceptionShapeRel α}
+    {exceptionRel : ExceptionId → PanValue α → α → Prop}
+    {exceptionCode : ExceptionId → Option α}
+    {globalsLookup : CrepState α → PanValue α → Option (List α)}
+    {panHooks : PanSemanticsHooks α σ}
+    {crepHooks : CrepSemanticsHooks α}
+    (hcorrect : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (evidenceClock : Nat)
+    (evidence : PanValuePcSemanticClockEvidence structs context program evidenceClock
+      sourceEvaluate targetEvaluate codeRel excpRel exceptionRel exceptionCode
+      globalsLookup panHooks crepHooks)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (sourceFfi : FfiState σ)
+    (targetState : CrepState α)
+    (houtcome : evidence.outcome =
+      .control (.normal sourceLocals sourceGlobals sourceMemory sourceFfi))
+    (hresult : evidence.result = .normal targetState) :
+    panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
+      (.normal sourceLocals sourceGlobals sourceMemory)
+      (.normal targetState) ∧
+    (panForbiddenResult (some (evidence.outcome, evidence.returnedClock)) ↔
+      crepForbiddenResult (crepControlResultToSemantic (some evidence.result))) := by
+  have hrel := PanValuePcSemanticClockEvidence.resultRel
+    (panValuePcCompileCorrect_of_withContextCode sourceEvaluate targetEvaluate
+      codeRel excpRel exceptionCode globalsLookup program hcorrect)
+    evidenceClock evidence
+  rw [houtcome, hresult] at hrel
+  have hnormalRel :
+      panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
+        (.normal sourceLocals sourceGlobals sourceMemory)
+        (.normal targetState) := by
+    simpa [panOutcomeToPcResult, crepControlToPcResult] using hrel
+  have hforbidden := panValuePcResultRel_forbidden_iff
+    structs context exceptionRel exceptionCode globalsLookup
+    (.control (.normal sourceLocals sourceGlobals sourceMemory sourceFfi))
+    (.normal targetState) evidence.returnedClock hnormalRel
+  exact ⟨hnormalRel, by simpa [houtcome, hresult] using hforbidden⟩
+
 /-! The cross-clock Raise case of Cake's semantic induction.  Both clock
     witnesses retain their evaluator equations and code/state relations; the
     result relation then transports the fact that neither raised observation

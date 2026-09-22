@@ -1498,6 +1498,18 @@ example :
   panValueCtxtMax_zip_withShape [0, 1] ["a", "b"]
     [Shape.one, Shape.one] (by decide) (by simp [Shape.shapeSize]) (by decide)
 
+#check @panValueCtxtMax_getElem_le
+
+/-- Regression for Cake `ctxt_max_el_leq`: a recorded slot number is bounded by
+    the context bound. -/
+example (bound : Nat) (vars : InfoMap (Shape × List Nat)) (name : String)
+    (shape : Shape) (slots : List Nat) (n : Nat)
+    (hmax : panValueCtxtMax bound vars)
+    (hlookup : lookupInfo name vars = some (shape, slots))
+    (hn : n < slots.length) :
+    slots[n] ≤ bound :=
+  panValueCtxtMax_getElem_le bound vars name shape slots n hmax hlookup hn
+
 /-! The generated formal-parameter context satisfies the two Cake invariants
     used by `locals_rel`, with the original source-shaped maximum convention.
     These examples keep the construction executable while checking the

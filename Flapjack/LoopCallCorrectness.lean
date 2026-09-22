@@ -1482,6 +1482,34 @@ theorem comp_call_target_correct
   · exact heval
   · simp [labelsIn, lookup]
 
+theorem comp_call_empty_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (functions : List (Nat × List Nat × LoopProg α))
+    (ffiHandler : FunName → α → α → α → α → LoopState α → Option (LoopState α))
+    (environment : LocationEnv) (state : LoopState α) (fuel : Nat)
+    (returns : Option (List Nat × List Nat))
+    (handler : Option (Nat × LoopProg α × LoopProg α × List Nat)) :
+    evalLoopProgWithCallsAndFfi functions ffiHandler (fuel + 1) state
+        (comp environment
+          (.call returns none [] handler : LoopProg α)).1 =
+        some (.normal state) ∧
+      labelsIn
+        (comp environment
+          (.call returns none [] handler : LoopProg α)).2
+        state.locals := by
+  have hcompiled :
+      comp environment
+          (.call returns none [] handler : LoopProg α) =
+        (.skip, []) := by
+    simp [comp, compCall, splitLast]
+  rw [hcompiled]
+  constructor
+  · simp [evalLoopProgWithCallsAndFfi, evalLoopProg]
+  · simp [labelsIn, lookup]
+
 theorem comp_ffi_labelsIn
     (environment : LocationEnv)
     (function : FunName) (configuration configurationLength array arrayLength : Nat)

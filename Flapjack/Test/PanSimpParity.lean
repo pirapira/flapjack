@@ -2713,6 +2713,9 @@ example : PanValueFfiClockNormalAdequateProgFromFloor 3 3 evaluatorContext
 #check @Flapjack.evalPanValueFfiClockProgram_of_declarations_and_normal_call_result_rel_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProgram_of_related_declarations_and_normal_call_result_rel_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProgram_of_related_declarations_and_raised_call_result_rel_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProgram_of_related_declarations_and_timeout_call_result_rel_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProgram_of_related_declarations_and_returned_call_result_rel_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProgram_of_related_declarations_and_finalFfi_call_result_rel_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProg_call_raised_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProg_call_timeout_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProg_call_finalFfi_ioEvents_prefix
@@ -2782,3 +2785,13 @@ with the handler-preservation premises discharged. -/
 
 #check @Flapjack.panValueFfiStatefulHandlerPreservesIoEvents_fails
 #check @Flapjack.panValueFfiMemoryHandlerPreservesIoEvents_fails
+
+/-! Unit-fuel structural step lemmas used by the residual-free event-prefix
+dispatch: conditional/declaration/sequence/call/decCall cannot succeed at unit
+fuel, and a zero-condition while preserves the input events. -/
+#check @Flapjack.evalPanValueFfiProgSteps_ite_one_none
+#check @Flapjack.evalPanValueFfiProgSteps_dec_one_none
+#check @Flapjack.evalPanValueFfiProgSteps_seq_one_none
+#check @Flapjack.evalPanValueFfiProgSteps_call_one_none
+#check @Flapjack.evalPanValueFfiProgSteps_decCall_one_none
+#check @Flapjack.evalPanValueFfiProgSteps_while_one_ioEvents_prefix

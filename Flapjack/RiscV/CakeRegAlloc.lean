@@ -165,6 +165,7 @@ def cakeStackOnlyDeleteMany (names : List Nat) (state : CakeStackOnlyState) :
 
 def cakeGetStackOnlyAuxFast {α : Type u} :
     CakeStackOnlyState → WordProg α → CakeStackOnlyState
+  | state, .skip => state
   | state, .move _ moves =>
       moves.foldr (fun move state => cakeStackOnlyMergeMove move.1 move.2 state) state
   | state, .seq first second =>
@@ -185,6 +186,9 @@ def cakeGetStackOnlyAuxFast {α : Type u} :
             (cakeGetStackOnlyAuxFast state handlerBody)
   | state, .call none _ _ _ => state
   | state, .loop _ body _ => cakeGetStackOnlyAuxFast state body
+  | state, .tick => state
+  | state, .break _ => state
+  | state, .continue _ => state
   | state, program =>
       match wordClashTree program [] with
       | .delta writes reads => cakeStackOnlyDeleteMany (writes ++ reads) state
@@ -776,7 +780,11 @@ def cakeIsFixedK (state : CakeRaState) (k : Nat) (x : Nat) : Bool :=
 /-- `considered_var` (`reg_allocScript.sml:507-512`): allocation temps and
     low physical registers count towards degrees. -/
 def cakeConsideredVar (state : CakeRaState) (k : Nat) (v : Nat) : Bool :=
-  ((state.nodeTag.get v).getD .aTemp == .aTemp) || cakeIsFixedK state k v
+  match state.nodeTag.get v with
+  | none => true
+  | some .aTemp => true
+  | some (.fixed n) => n < k
+  | some .sTemp => false
 
 /-- `is_not_coalesced` (`reg_allocScript.sml:320-327`): the node is its own
     coalescing parent. -/
@@ -882,25 +890,24 @@ def cakeInitAlloc1Heu (moves : List (Nat × (Nat × Nat))) (k : Nat)
     (state : CakeRaState) : Nat × CakeRaState :=
   let dim := state.dim
   let ds := List.range dim
-  let allocs := filterReversed (fun i =>
-    (state.nodeTag.get i).getD .aTemp == .aTemp) ds
-  let withDegrees :=
-    ds.foldl (fun st i =>
+  /- The allocatable-node collection and the three disjoint initialisations
+     share the same Cake node traversal.  Prepending matches
+     `filterReversed`; tags are immutable during this pass. -/
+  let (allocs, initialized) :=
+    ds.foldl (fun (acc : List Nat × CakeRaState) i =>
+        let (allocs, st) := acc
         let neighbours := (st.adjLists.get i).getD []
         let fills := neighbours.filter (cakeConsideredVar st k)
-        { st with degrees := st.degrees.set i fills.length })
-      state
-  let withCoalesced :=
-    ds.foldl (fun st i =>
-        { st with coalesced := st.coalesced.set i (0 + i) })
-      withDegrees
+        let allocs := if (state.nodeTag.get i).getD .aTemp == .aTemp then
+          i :: allocs else allocs
+        (allocs, { st with
+          degrees := st.degrees.set i fills.length
+          coalesced := st.coalesced.set i i
+          moveRelated := st.moveRelated.set i false }))
+      ([], state)
   let withMoves :=
-    { withCoalesced with
+    { initialized with
       availMovesWl := cakeSortMoves moves }
-  let cleared :=
-    ds.foldl (fun st i =>
-        { st with moveRelated := st.moveRelated.set i false })
-      withMoves
   let withRelated :=
     moves.foldl (fun st move =>
         let x := move.2.1
@@ -909,7 +916,7 @@ def cakeInitAlloc1Heu (moves : List (Nat × (Nat × Nat))) (k : Nat)
         let fixedY := cakeIsFixed st y
         let st := { st with moveRelated := st.moveRelated.set x (!fixedX) }
         { st with moveRelated := st.moveRelated.set y (!fixedY) })
-      cleared
+      withMoves
   let (ltk, gtk) := partitionReversed (fun v => cakeSplitDegree withRelated dim k v) allocs
   let (ltkfreeze, ltksimp) := partitionReversed (fun v => cakeMoveRelatedSub withRelated v) ltk
   let final :=
@@ -1387,13 +1394,26 @@ def cakeTagIsAtemp (state : CakeRaState) (x : Nat) : Bool :=
   | _ => false
 
 def cakeFullConsistencyOk (state : CakeRaState) (k : Nat) (x y : Nat) : Bool :=
-  let fixedX := cakeIsFixedK state k x
-  let fixedY := cakeIsFixedK state k y
-  let eligibleX := fixedX || cakeTagIsAtemp state x
-  let eligibleY := fixedY || cakeTagIsAtemp state y
+  let tagX := state.nodeTag.get x
+  let tagY := state.nodeTag.get y
+  let fixedX := match tagX with
+    | some (.fixed n) => n < k
+    | _ => false
+  let fixedY := match tagY with
+    | some (.fixed n) => n < k
+    | _ => false
+  let eligibleX := fixedX || match tagX with
+    | some .aTemp => true
+    | _ => false
+  let eligibleY := fixedY || match tagY with
+    | some .aTemp => true
+    | _ => false
+  /- Keep the cheap domain/tag checks before the indexed adjacency lookup.
+     This is the same left-to-right Boolean contract as Cake's conjunction,
+     but avoids touching the graph for ineligible move endpoints. -/
   x != y && x < state.dim && y < state.dim &&
-    !cakeAdjMem state x y &&
-    eligibleX && eligibleY && !(fixedX && fixedY)
+    eligibleX && eligibleY && !(fixedX && fixedY) &&
+    !cakeAdjMem state x y
 
 /-- A lookup-only index for the source-variable side of `mk_bij`.
 

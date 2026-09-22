@@ -1511,6 +1511,19 @@ example (bound : Nat) (vars : InfoMap (Shape × List Nat)) (name : String)
     slots[n] ≤ bound :=
   panValueCtxtMax_getElem_le bound vars name shape slots n hmax hlookup hn
 
+#check @panValueCtxtMax_not_mem_of_lt
+
+/-- Regression for the context hypothesis of Cake
+    `not_mem_context_assigned_mem_gt`: a value above the `ctxt_max` bound does
+    not occur in any variable's slot list. -/
+example (bound x : Nat) (vars : InfoMap (Shape × List Nat)) (name : String)
+    (shape : Shape) (slots : List Nat)
+    (hmax : panValueCtxtMax bound vars)
+    (hx : bound < x)
+    (hlookup : lookupInfo name vars = some (shape, slots)) :
+    x ∉ slots :=
+  panValueCtxtMax_not_mem_of_lt bound x vars name shape slots hmax hx hlookup
+
 /-! The generated formal-parameter context satisfies the two Cake invariants
     used by `locals_rel`, with the original source-shaped maximum convention.
     These examples keep the construction executable while checking the

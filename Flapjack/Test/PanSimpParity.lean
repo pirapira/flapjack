@@ -2718,6 +2718,7 @@ example : PanValueFfiClockNormalAdequateProgFromFloor 3 3 evaluatorContext
 #check @Flapjack.evalPanValueFfiClockProgram_of_related_declarations_and_raised_call_result_rel_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProgram_of_related_declarations_and_raised_call_result_rel_adequacy
 #check @Flapjack.evalPanValueFfiClockProgram_of_related_declarations_and_timeout_call_result_rel_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProgram_of_related_declarations_and_timeout_call_result_rel_adequacy
 #check @Flapjack.evalPanValueFfiClockProgram_of_related_declarations_and_returned_call_result_rel_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProgram_of_related_declarations_and_returned_call_result_rel_adequacy
 #check @Flapjack.evalPanValueFfiClockProgram_of_related_declarations_and_returned_call_result_rel_adequacy_with_context
@@ -2875,6 +2876,7 @@ theorem related_declarations_timeout_call_result_rel_fixture
       evalPanValueDeclarations targetInitial (panSimpDecls declarations)
         (memoryAccess := memoryAccess) = some targetDeclaration ∧
       panValueProgramStateRel state targetDeclaration ∧
+      state.exceptions = targetDeclaration.exceptions ∧
       evalPanValueFfiClockProgram evaluatorContext initial clock
         (fun _ _ => none) evaluatorHandler fuel declarations entry arguments
         (memoryAccess := memoryAccess) (memoryHandler := memoryHandler) =
@@ -2883,7 +2885,7 @@ theorem related_declarations_timeout_call_result_rel_fixture
       panValuePcResultRel state.structs pcContext exceptionRel exceptionCode
         globalsLookup (.timeout (fun _ => none) globals memory)
         (.timeout targetState) := by
-  exact evalPanValueFfiClockProgram_of_related_declarations_and_timeout_call_result_rel_ioEvents_prefix
+  exact evalPanValueFfiClockProgram_of_related_declarations_and_timeout_call_result_rel_adequacy
     evaluatorContext initial clock (fun _ _ => none) evaluatorHandler fuel
     declarations entry arguments state globals memory ffi nextClock pcContext
     exceptionRel exceptionCode globalsLookup targetState memoryAccess memoryHandler

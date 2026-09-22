@@ -183,6 +183,19 @@ theorem tick_compile_correct_fixture :
   subst source
   exact ⟨100, by simp [load32State]⟩
 
+theorem fail_compile_correct_fixture :
+    evalLoopProg 1 load32State
+        (comp [(3, 2)] (.fail : LoopProg Nat)).1 = none ∧
+      labelsIn (comp [(3, 2)] (.fail : LoopProg Nat)).2
+        load32State.locals := by
+  apply comp_fail_correct
+  intro name source hlookup
+  have hpair : 3 = name ∧ 2 = source := by
+    simpa [lookup] using hlookup
+  have hsource : source = 2 := hpair.2.symm
+  subst source
+  exact ⟨100, by simp [load32State]⟩
+
 theorem setGlobal_compile_correct_fixture :
     evalLoopProg 1 load32State
         (comp [(3, 2)] (.setGlobal 9 (.const 11) : LoopProg Nat)).1 =
@@ -337,6 +350,20 @@ theorem arith_longMul_compile_correct_fixture :
     subst source
     exact ⟨100, by simp [load32State]⟩
 
+theorem arith_longDiv_labelsIn_fixture :
+    (comp [(3, 2)] (.arith (.longDiv 4 4 3 2 5)) : LoopProg Nat × LocationEnv).1 =
+        .arith (.longDiv 4 4 3 2 5) ∧
+      labelsIn
+        (comp [(3, 2)] (.arith (.longDiv 4 4 3 2 5)) : LoopProg Nat × LocationEnv).2
+        load32State.locals := by
+  apply comp_arith_longDiv_labelsIn
+  intro name source hlookup
+  have hpair : 3 = name ∧ 2 = source := by
+    simpa [lookup] using hlookup
+  have hsource : source = 2 := hpair.2.symm
+  subst source
+  exact ⟨100, by simp [load32State]⟩
+
 theorem primitive_labelsIn_fixture :
     (comp [(3, 2), (4, 3)] (.primitive [3] .addCarry [2, 3]) :
       LoopProg Nat × LocationEnv).1 = .primitive [3] .addCarry [2, 3] ∧
@@ -367,6 +394,41 @@ theorem primitive_labelsIn_fixture :
         simp [lookup, hname', hname4']
       simp [hnone] at hlookup
 
+theorem call_labelsIn_fixture :
+    (comp [(3, 2)]
+      (.call none none [2, 3] none : LoopProg Nat) : LoopProg Nat × LocationEnv).1 =
+        .call none (some 2) [2] none ∧
+      labelsIn
+        (comp [(3, 2)]
+          (.call none none [2, 3] none : LoopProg Nat)).2
+        load32State.locals := by
+  have hcompiled := comp_call_labelsIn (environment := [(3, 2)])
+    (returns := none) (target := none) (arguments := [2, 3]) (handler := none)
+    (locals := load32State.locals) (by
+      intro name source hlookup
+      have hpair : 3 = name ∧ 2 = source := by
+        simpa [lookup] using hlookup
+      have hsource : source = 2 := hpair.2.symm
+      subst source
+      exact ⟨100, by simp [load32State]⟩)
+  simpa [comp, compCall, splitLast, lookup] using hcompiled
+
+theorem ffi_labelsIn_fixture :
+    (comp [(3, 2)]
+      (.ffi "print" 1 2 3 4 [2, 3] : LoopProg Nat) : LoopProg Nat × LocationEnv).1 =
+        .ffi "print" 1 2 3 4 [2, 3] ∧
+      labelsIn
+        (comp [(3, 2)]
+          (.ffi "print" 1 2 3 4 [2, 3] : LoopProg Nat)).2
+        load32State.locals := by
+  apply comp_ffi_labelsIn
+  intro name source hlookup
+  have hpair : 3 = name ∧ 2 = source := by
+    simpa [lookup] using hlookup
+  have hsource : source = 2 := hpair.2.symm
+  subst source
+  exact ⟨100, by simp [load32State]⟩
+
 #check comp_locValue_correct
 #check comp_load32_correct
 #check comp_loadByte_correct
@@ -377,6 +439,7 @@ theorem primitive_labelsIn_fixture :
 #check comp_assign_var_correct
 #check comp_assign_nonvar_correct
 #check comp_tick_correct
+#check comp_fail_correct
 #check comp_setGlobal_correct
 #check comp_return_correct
 #check comp_raise_correct
@@ -386,6 +449,9 @@ theorem primitive_labelsIn_fixture :
 #check comp_shMem_store_correct
 #check comp_arith_div_correct
 #check comp_arith_longMul_correct
+#check comp_arith_longDiv_labelsIn
 #check comp_primitive_labelsIn
+#check comp_call_labelsIn
+#check comp_ffi_labelsIn
 
 end Flapjack.Test.LoopCallCorrectness

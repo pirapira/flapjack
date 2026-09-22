@@ -453,6 +453,24 @@ theorem comp_tick_correct
   · exact evalLoopProg_tick state
   · simp [labelsIn, lookup]
 
+theorem comp_fail_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (environment : LocationEnv) (state : LoopState α)
+    (henvironment : labelsIn environment state.locals) :
+    evalLoopProg 1 state
+        (comp environment (.fail : LoopProg α)).1 = none ∧
+      labelsIn (comp environment (.fail : LoopProg α)).2 state.locals := by
+  have hcompiled :
+      comp environment (.fail : LoopProg α) = (.fail, environment) := by
+    simp [comp]
+  rw [hcompiled]
+  constructor
+  · simp [evalLoopProg]
+  · exact henvironment
+
 theorem comp_setGlobal_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
@@ -721,6 +739,51 @@ theorem comp_arith_longMul_correct
               state.locals destinationLeft (leftValue * rightValue)
               (labelsIn_delete environment state.locals destinationRight henvironment)
 
+theorem comp_arith_longDiv_labelsIn
+    (environment : LocationEnv) (locals : Nat → Option α)
+    (destinationLeft destinationRight sourceLeft sourceRight quotient : Nat)
+    (henvironment : labelsIn environment locals) :
+    (comp environment
+      (.arith (.longDiv destinationLeft destinationRight sourceLeft sourceRight quotient) : LoopProg α)).1 =
+        .arith (.longDiv destinationLeft destinationRight sourceLeft sourceRight quotient) ∧
+      labelsIn
+        (comp environment
+          (.arith (.longDiv destinationLeft destinationRight sourceLeft sourceRight quotient) : LoopProg α)).2
+        locals := by
+  have hcompiled :
+      comp environment
+          (.arith (.longDiv destinationLeft destinationRight sourceLeft sourceRight quotient) : LoopProg α) =
+        (.arith (.longDiv destinationLeft destinationRight sourceLeft sourceRight quotient),
+          match lookup destinationLeft environment, lookup destinationRight environment with
+          | none, none => environment
+          | some _, none => delete destinationLeft environment
+          | none, some _ => delete destinationRight environment
+          | some _, some _ => delete destinationLeft (delete destinationRight environment)) := by
+    simp [comp, compArith] <;> rfl
+  rw [hcompiled]
+  cases hleftDestination : lookup destinationLeft environment with
+  | none =>
+      cases hrightDestination : lookup destinationRight environment with
+      | none =>
+          constructor
+          · rfl
+          · exact henvironment
+      | some _ =>
+          constructor
+          · rfl
+          · exact labelsIn_delete environment locals destinationRight henvironment
+  | some _ =>
+      cases hrightDestination : lookup destinationRight environment with
+      | none =>
+          constructor
+          · rfl
+          · exact labelsIn_delete environment locals destinationLeft henvironment
+      | some _ =>
+          constructor
+          · rfl
+          · exact labelsIn_delete (delete destinationRight environment) locals destinationLeft
+              (labelsIn_delete environment locals destinationRight henvironment)
+
 theorem lookup_of_listDelete
     (destinations : List Nat) (environment : LocationEnv)
     (name location : Nat)
@@ -742,6 +805,71 @@ theorem labelsIn_listDelete
   intro name location hlookup
   exact henvironment name location
     (lookup_of_listDelete destinations environment name location hlookup)
+
+theorem comp_call_labelsIn
+    (environment : LocationEnv)
+    (returns : Option (List Nat × List Nat)) (target : Option Nat)
+    (arguments : List Nat)
+    (handler : Option (Nat × LoopProg α × LoopProg α × List Nat))
+    (locals : Nat → Option α) (_henvironment : labelsIn environment locals) :
+    (comp environment
+      (.call returns target arguments handler) : LoopProg α × LocationEnv).1 =
+        (match target with
+        | some _ => .call returns target arguments handler
+        | none =>
+            match splitLast arguments with
+            | none => .skip
+            | some (pre, lastValue) =>
+                match lookup lastValue environment with
+                | none => .call returns none arguments handler
+                | some destination => .call returns (some destination) pre handler) ∧
+      labelsIn
+    (comp environment
+          (.call returns target arguments handler) : LoopProg α × LocationEnv).2
+        locals := by
+  have hnil : labelsIn ([] : LocationEnv) locals := by
+    intro name source hlookup
+    simp [lookup] at hlookup
+  cases target with
+  | some target =>
+      constructor
+      · simp [comp, compCall]
+      · simpa [comp, compCall] using hnil
+  | none =>
+      cases harguments : splitLast arguments with
+      | none =>
+          constructor
+          · simp [comp, compCall, harguments]
+          · simpa [comp, compCall, harguments] using hnil
+      | some pair =>
+          obtain ⟨pre, lastValue⟩ := pair
+          cases hlastValue : lookup lastValue environment with
+          | none =>
+              constructor
+              · simp [comp, compCall, harguments, hlastValue]
+              · simpa [comp, compCall, harguments, hlastValue] using hnil
+          | some destination =>
+              constructor
+              · simp [comp, compCall, harguments, hlastValue]
+              · simpa [comp, compCall, harguments, hlastValue] using hnil
+
+theorem comp_ffi_labelsIn
+    (environment : LocationEnv)
+    (function : FunName) (configuration configurationLength array arrayLength : Nat)
+    (live : List Nat) (locals : Nat → Option α)
+    (_henvironment : labelsIn environment locals) :
+    (comp environment
+      (.ffi function configuration configurationLength array arrayLength live) :
+        LoopProg α × LocationEnv).1 =
+        .ffi function configuration configurationLength array arrayLength live ∧
+      labelsIn
+        (comp environment
+          (.ffi function configuration configurationLength array arrayLength live) :
+            LoopProg α × LocationEnv).2
+        locals := by
+  constructor
+  · simp [comp]
+  · simp [comp, labelsIn, lookup]
 
 theorem comp_primitive_labelsIn
     (environment : LocationEnv) (destinations : List Nat)

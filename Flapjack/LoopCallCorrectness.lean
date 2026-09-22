@@ -504,6 +504,29 @@ theorem comp_seq_labelsIn
   · rfl
   · simp [labelsIn, lookup]
 
+theorem comp_ite_labelsIn
+    (environment : LocationEnv) (operator : Cmp) (condition : Nat)
+    (right : RegImm α) (thenBranch elseBranch : LoopProg α)
+    (live : List Nat) (locals : Nat → Option α) :
+    (comp environment
+      (.ite operator condition right thenBranch elseBranch live : LoopProg α)).1 =
+        .ite operator condition right (comp environment thenBranch).1
+          (comp environment elseBranch).1 live ∧
+      labelsIn
+        (comp environment
+          (.ite operator condition right thenBranch elseBranch live : LoopProg α)).2
+        locals := by
+  have hcompiled :
+      comp environment
+          (.ite operator condition right thenBranch elseBranch live : LoopProg α) =
+        (.ite operator condition right (comp environment thenBranch).1
+          (comp environment elseBranch).1 live, []) := by
+    simp [comp]
+  rw [hcompiled]
+  constructor
+  · rfl
+  · simp [labelsIn, lookup]
+
 theorem comp_setGlobal_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]

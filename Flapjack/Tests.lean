@@ -117,6 +117,7 @@ import Flapjack.Test.PanValueFfiClockMemoryFfi
 import Flapjack.Test.CrepeArith
 import Flapjack.Test.CrepePrimitive
 import Flapjack.Test.CrepeExpressionRelation
+import Flapjack.Test.CrepeExpressionStabilityParity
 import Flapjack.Test.CrepeProgramRelation
 import Flapjack.Test.CrepeProgramInduction
 import Flapjack.Test.CrepeProgramWordInduction

@@ -902,4 +902,66 @@ theorem not_mem_crepAssignedFreeVars_compileProg_bound
   | tick => exact not_mem_crepAssignedFreeVars_compileProg_tick context x
   | annot tag text => exact not_mem_crepAssignedFreeVars_compileProg_annot context tag text x
 
+/-- After extending a slot context with `(v, nvars)`, a value `x` that lies in
+    the slot list `ns` previously bound to `v` is no longer a context slot: the
+    fresh entry contributes `nvars` (disjoint from `ns`) and every other entry
+    is unchanged and already disjoint from `ns` by `no_overlap`.  This is the
+    slot-map transport step of Cake's `rewritten_context_unassigned`. -/
+theorem panValueSlotBound_cons_of_nodup_disjoint [BEq String] [LawfulBEq String]
+    (vars : InfoMap (Shape × List Nat)) (v : String) (sh sh' : Shape)
+    (nvars : List Nat) (ns : List Nat) {x : Nat}
+    (hnooverlap : panValueNoOverlap vars)
+    (hlookup : lookupInfo v vars = some (sh', ns))
+    (hdisj : ListDisjoint nvars ns) (hx : x ∈ ns) :
+    panValueSlotBound x ((v, (sh, nvars)) :: vars) := by
+  intro name shape slots hlookup'
+  simp only [lookupInfo] at hlookup'
+  split at hlookup'
+  · rename_i hbeq
+    have hpair : (sh, nvars) = (shape, slots) := Option.some.inj hlookup'
+    have hslots : slots = nvars := (congrArg Prod.snd hpair).symm
+    rw [hslots]
+    exact fun hmem => hdisj x hmem hx
+  · rename_i hbeq
+    have hfalse : (v == name) = false := by simpa using hbeq
+    have hvne : v ≠ name := beq_eq_false_iff_ne.mp hfalse
+    exact fun hmem => panValueNoOverlap_lookup_disjoint vars v name sh' shape
+      ns slots hnooverlap hvne hlookup hlookup' x hx hmem
+
+/-- Cake `rewritten_context_unassigned` (`pan_to_crepProofScript.sml:1457`):
+    extending a context with `(v, sh, nvars)` (an update of the slot map for
+    `v`) keeps the old slot list `ns` of `v` disjoint from the free variables
+    of the recompiled program, given the `ctxt_max`/`no_overlap` hypotheses and
+    `distinct_lists nvars ns`. -/
+theorem rewrittenContext_unassigned [LawfulBEq String]
+    [BEq α] [OfNat α 0] [Add α]
+    (ctxt : CompileContext α) (p : Prog α) (v : String) (sh : Shape)
+    (nvars : List Nat) (ns : List Nat) (sh' : Shape)
+    (hlookup : lookupInfo v ctxt.vars = some (sh', ns))
+    (hnooverlap : panValueNoOverlap ctxt.vars)
+    (hmax : panValueCtxtMax ctxt.maxVar ctxt.vars)
+    (_hnooverlapN : panValueNoOverlap ((v, (sh, nvars)) :: ctxt.vars))
+    (hmaxN : panValueCtxtMax (ctxt.maxVar + Shape.shapeSize sh)
+      ((v, (sh, nvars)) :: ctxt.vars))
+    (hdisj : ListDisjoint nvars ns) :
+    ListDisjoint ns
+      (crepAssignedFreeVars (compileProg
+        { ctxt with
+          vars := (v, (sh, nvars)) :: ctxt.vars
+          maxVar := ctxt.maxVar + Shape.shapeSize sh } p)) := by
+  intro x hx hmem
+  have hslot : panValueSlotBound x ((v, (sh, nvars)) :: ctxt.vars) :=
+    panValueSlotBound_cons_of_nodup_disjoint ctxt.vars v sh sh' nvars ns
+      hnooverlap hlookup hdisj hx
+  have hxbound : x ≤ ctxt.maxVar + Shape.shapeSize sh := by
+    obtain ⟨n, hn, hget⟩ := List.mem_iff_getElem.mp hx
+    have hle := panValueCtxtMax_getElem_le ctxt.maxVar ctxt.vars v sh' ns n
+      hmax hlookup hn
+    rw [hget] at hle
+    omega
+  exact not_mem_crepAssignedFreeVars_compileProg_bound
+    { ctxt with
+      vars := (v, (sh, nvars)) :: ctxt.vars
+      maxVar := ctxt.maxVar + Shape.shapeSize sh } p x hmaxN hslot hxbound hmem
+
 end Flapjack

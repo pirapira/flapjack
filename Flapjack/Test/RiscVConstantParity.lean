@@ -51,6 +51,21 @@ example :
       some [.ori 4 0 (BitVec.ofNat 64 0x800)] := by
   decide
 
+/-! The negative signed-12 endpoint is still a direct `ORI`; the positive
+    value with the same low 12 bits is not sign-extended and therefore takes
+    Cake's two-instruction `riscv_const32` path. -/
+example :
+    wordConstToInstructions (width := 64) 4
+        (BitVec.ofNat 64 (2 ^ 64 - 1)) =
+      some [.ori 4 0 (BitVec.ofNat 64 0xfff)] := by
+  decide
+
+example :
+    wordConstToInstructions (width := 64) 4 4095 =
+      some [.lui 4 (BitVec.ofNat 64 (2 ^ 20 - 1)),
+        .xori 4 4 (BitVec.ofNat 64 0xfff)] := by
+  decide
+
 example :
     wordConstToInstructions (width := 64) 4 (BitVec.ofNat 64 0x1234) =
       some [.lui 4 (BitVec.ofNat 64 1),

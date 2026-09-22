@@ -1,4 +1,5 @@
 import Flapjack.RiscV.PanSemantics
+import Flapjack.CrepPrimop
 
 namespace Flapjack.Test.PanPrimopWfParity
 
@@ -28,5 +29,24 @@ example : True := by
         carryArguments value h
       trivial
   | none => trivial
+
+/-! Cake's `pan_primop_crep_primop`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:1096`). -/
+
+example (value : PanValue (Word 64))
+    (h : panPrimitiveHandler .addCarry carryArguments = some value) :
+    crepPrimitiveHandler .addCarry (panValueFlattenValues carryArguments) =
+      some (panValueFlatten value) :=
+  panPrimitiveHandler_crepPrimitiveHandler .addCarry carryArguments value h
+
+def crepPrimopGuard : Bool :=
+  match panPrimitiveHandler .addCarry carryArguments with
+  | some value =>
+      crepPrimitiveHandler .addCarry (panValueFlattenValues carryArguments) ==
+        some (panValueFlatten value)
+  | none => false
+
+#eval crepPrimopGuard
+#guard crepPrimopGuard
 
 end Flapjack.Test.PanPrimopWfParity

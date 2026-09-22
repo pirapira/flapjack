@@ -85,7 +85,9 @@ Lean declarations' definitions, quantified variables, hypotheses, side
 conditions, and conclusions. A different evaluator, an extra successful-pass
 assumption, a weaker result, or a key comparison that does not implement HOL
 equality is a mismatch even if a proof builds and the reference checker accepts
-the name. Fix such a mismatch immediately. If a faithful correction is not
-tractable in the current change, remove the deviating implementation/proof
-instead of retaining it as a purported or renamed port, and record the missing
-HOL declaration as a bead. Do not merge a known mismatch for later cleanup.
+the name. Fix such a mismatch when tractable. Otherwise, remove the `@[hol]`
+tag, explain the precise mismatch and missing HOL result in the declaration's
+docstring, and file a bead for the faithful port. Preserve useful Flapjack-only
+infrastructure; delete a declaration only when it is unsalvageable or itself
+implements behavior that must be replaced. Do not merge a known mismatch as a
+claimed HOL port.

@@ -69,11 +69,13 @@ import Flapjack.RiscV.InstructionRelabel
 import Flapjack.RiscV.InstructionCommutation
 import Flapjack.RiscV.InstructionDataCommutation
 import Flapjack.RiscV.CorrectnessBackendRegisterMap
+import Flapjack.RiscV.CorrectnessParallelMove
 import Flapjack.FlatCorrectness
 import Flapjack.Tests
 import Flapjack.Pancake.PanStatic
 import Flapjack.Parser
 import Flapjack.Pancake.CrepLang
+import Flapjack.Pancake.Semantics.CrepProps
 import Flapjack.Pancake.PanToCrep
 import Flapjack.CrepeCompileExpVariables
 import Flapjack.CompileParamVarsBounds
@@ -82,6 +84,7 @@ import Flapjack.Pancake.PanToCrep.Compile
 import Flapjack.CompileFunctionDistinct
 import Flapjack.Semantics
 import Flapjack.CrepeSemantics
+import Flapjack.CrepeGlobalAddress
 import Flapjack.Pancake.Semantics.CrepSem
 import Flapjack.PanToCrepCorrectnessBoundary
 import Flapjack.PanToCrepExceptionRelation

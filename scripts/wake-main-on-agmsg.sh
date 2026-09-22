@@ -8,9 +8,9 @@ if [[ "${HERDR_ENV:-}" != 1 ]]; then
 fi
 
 target_pane="${1:?usage: wake-main-on-agmsg.sh TARGET_PANE}"
-project_dir="${2:-/home/zksecurity/pancake-lean}"
+project_dir="${2:-$(pwd)}"
 agent_name="${3:-flapjack-main}"
-watch_script="/home/zksecurity/.agents/skills/agmsg/scripts/watch.sh"
+watch_script="${AGMSG_WATCH_SCRIPT:-${HOME}/.agents/skills/agmsg/scripts/watch.sh}"
 
 command -v herdr >/dev/null
 command -v jq >/dev/null

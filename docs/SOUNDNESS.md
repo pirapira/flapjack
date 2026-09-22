@@ -66,6 +66,12 @@ The following are open review or verification obligations:
    state and selected regressions. It does not review the mathematical
    adequacy of the specifications or prove untested source programs compile
    identically to CakeML.
+7. HOL's `panSem$evaluate_decls` has not yet been ported as a faithful Lean
+   definition. The existing `evalPanValueDeclarationsWithStructs` is distinct,
+   with no proved refinement to HOL's declaration evaluator. Consequently a
+   theorem assuming only that Lean evaluator is not a port of HOL
+   `compile_top_shape_wf`. The prerequisite evaluator and theorem are tracked
+   by beads `flapjack-pxn.18.3.2.6` and `flapjack-pxn.18.3.2.1`.
 
 ## Trust and reproducibility notes
 

@@ -1518,6 +1518,66 @@ theorem comp_call_target_return_correct
   · simpa [evalLoopProgWithCallsAndFfi] using hcall
   · simp [labelsIn, lookup]
 
+theorem evalLoopCallWithCallsAndFfi_raised_no_handler
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (functions : List (Nat × List Nat × LoopProg α))
+    (ffiHandler : FunName → α → α → α → α → LoopState α → Option (LoopState α))
+    (fuel : Nat) (state : LoopState α)
+    (returns : Option (List Nat × List Nat)) (target : Nat)
+    (arguments parameters : List Nat) (body : LoopProg α)
+    (argumentValues : List α) (calleeLocals calleeState : LoopState α)
+    (exception : α)
+    (hlookup : lookupLoopFunction target functions = some (parameters, body))
+    (harguments : loopReadLocals state.locals arguments = some argumentValues)
+    (hbind : loopBindParameters parameters argumentValues (fun _ => none) =
+      some calleeLocals.locals)
+    (hcallee : evalLoopProgWithCallsAndFfi functions ffiHandler fuel
+      { state with locals := calleeLocals.locals } body =
+      some (.raised calleeState exception)) :
+    evalLoopCallWithCallsAndFfi functions ffiHandler (fuel + 1) state returns
+      (some target) arguments none =
+      some (.raised { calleeState with locals := state.locals } exception) := by
+  simp [evalLoopCallWithCallsAndFfi, hlookup, harguments, hbind, hcallee]
+
+theorem comp_call_target_raised_no_handler_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (functions : List (Nat × List Nat × LoopProg α))
+    (ffiHandler : FunName → α → α → α → α → LoopState α → Option (LoopState α))
+    (environment : LocationEnv) (fuel : Nat) (state : LoopState α)
+    (returns : Option (List Nat × List Nat)) (target : Nat)
+    (arguments parameters : List Nat) (body : LoopProg α)
+    (argumentValues : List α) (calleeLocals calleeState : LoopState α)
+    (exception : α)
+    (hlookup : lookupLoopFunction target functions = some (parameters, body))
+    (harguments : loopReadLocals state.locals arguments = some argumentValues)
+    (hbind : loopBindParameters parameters argumentValues (fun _ => none) =
+      some calleeLocals.locals)
+    (hcallee : evalLoopProgWithCallsAndFfi functions ffiHandler fuel
+      { state with locals := calleeLocals.locals } body =
+      some (.raised calleeState exception)) :
+    evalLoopProgWithCallsAndFfi functions ffiHandler (fuel + 2) state
+        (comp environment
+          (.call returns (some target) arguments none : LoopProg α)).1 =
+        some (.raised { calleeState with locals := state.locals } exception) ∧
+      labelsIn
+        (comp environment
+          (.call returns (some target) arguments none : LoopProg α)).2
+        state.locals := by
+  have hcall := evalLoopCallWithCallsAndFfi_raised_no_handler
+    functions ffiHandler fuel state returns target arguments parameters body
+      argumentValues calleeLocals calleeState exception
+      hlookup harguments hbind hcallee
+  have hcompiled := comp_call_target_correct
+    functions ffiHandler environment state (fuel + 1) returns target arguments none
+      (.raised { calleeState with locals := state.locals } exception) hcall
+  simpa [loopResultState, Nat.add_assoc] using hcompiled
+
 theorem comp_call_empty_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]

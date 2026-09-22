@@ -1244,6 +1244,47 @@ def cakeStExListMaxDeg (degrees : CakeNodeMap Nat) :
 termination_by l _ _ _ _ => sizeOf l
 decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
 
+/- Cake's `st_ex_list_MAX_deg_success` has the same bounded-result contract
+   for the no-spill-cost path: selecting the largest degree preserves the
+   allocator-node bound and the validity of the accumulated worklist. -/
+theorem cakeStExListMaxDeg_bounds
+    (degrees : CakeNodeMap Nat) (items : List Nat)
+    (dim k v : Nat) (acc : List Nat)
+    (hitems : ∀ x ∈ items, x < dim)
+    (hacc : ∀ x ∈ acc, x < dim)
+    (hk : k < dim) :
+    (cakeStExListMaxDeg degrees items dim k v acc).1 < dim ∧
+      ∀ x ∈ (cakeStExListMaxDeg degrees items dim k v acc).2,
+        x < dim := by
+  induction items generalizing k v acc with
+  | nil =>
+      exact ⟨by simpa [cakeStExListMaxDeg] using hk, by
+        simpa [cakeStExListMaxDeg] using hacc⟩
+  | cons item rest ih =>
+      have hitem : item < dim := hitems item (by simp)
+      have hrest : ∀ x ∈ rest, x < dim := by
+        intro x hx
+        exact hitems x (by simp [hx])
+      by_cases hchoose : v < (degrees.get item).getD 0
+      · have hacc' : ∀ x ∈ k :: acc, x < dim := by
+          intro x hx
+          simp only [List.mem_cons] at hx
+          rcases hx with rfl | hx
+          · exact hk
+          · exact hacc x hx
+        have h := ih (k := item) (v := (degrees.get item).getD 0)
+          (acc := k :: acc) hrest hacc' hitem
+        simpa [cakeStExListMaxDeg, hitem, hchoose] using h
+      · have hacc' : ∀ x ∈ item :: acc, x < dim := by
+          intro x hx
+          simp only [List.mem_cons] at hx
+          rcases hx with rfl | hx
+          · exact hitem
+          · exact hacc x hx
+        have h := ih (k := k) (v := v) (acc := item :: acc)
+          hrest hacc' hk
+        simpa [cakeStExListMaxDeg, hitem, hchoose] using h
+
 /-- `do_spill` (`reg_allocScript.sml:810-830`). -/
 def cakeDoSpill (scost : Option (CakeNodeMap Nat)) (k : Nat)
     (state : CakeRaState) : Bool × CakeRaState :=

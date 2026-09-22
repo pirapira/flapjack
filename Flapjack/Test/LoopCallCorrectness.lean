@@ -135,6 +135,36 @@ theorem skip_compile_correct_fixture :
   subst source
   exact ⟨100, by simp [load32State]⟩
 
+theorem primitive_labelsIn_fixture :
+    (comp [(3, 2), (4, 3)] (.primitive [3] .addCarry [2, 3]) :
+      LoopProg Nat × LocationEnv).1 = .primitive [3] .addCarry [2, 3] ∧
+      labelsIn
+        (comp [(3, 2), (4, 3)] (.primitive [3] .addCarry [2, 3] : LoopProg Nat)).2
+        load32State.locals := by
+  apply comp_primitive_labelsIn
+  intro name source hlookup
+  by_cases hname : name = 3
+  · subst name
+    have hsource : source = 2 := by
+      have hpair : 1 = 1 ∧ 2 = source := by
+        simpa [lookup] using hlookup
+      exact hpair.2.symm
+    subst source
+    exact ⟨100, by simp [load32State]⟩
+  · have hname' : 3 ≠ name := Ne.symm hname
+    by_cases hname4 : name = 4
+    · subst name
+      have hsource : source = 3 := by
+        have hpair : 3 = 3 ∧ 3 = source := by
+          simpa [lookup] using hlookup
+        exact hpair.2.symm
+      subst source
+      exact ⟨7, by simp [load32State]⟩
+    · have hnone : lookup name [(3, 2), (4, 3)] = none := by
+        have hname4' : 4 ≠ name := Ne.symm hname4
+        simp [lookup, hname', hname4']
+      simp [hnone] at hlookup
+
 #check comp_locValue_correct
 #check comp_load32_correct
 #check comp_loadByte_correct
@@ -142,5 +172,6 @@ theorem skip_compile_correct_fixture :
 #check comp_storeByte_correct
 #check comp_store_correct
 #check comp_skip_correct
+#check comp_primitive_labelsIn
 
 end Flapjack.Test.LoopCallCorrectness

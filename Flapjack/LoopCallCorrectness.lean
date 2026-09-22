@@ -273,5 +273,46 @@ theorem comp_skip_correct
   · exact evalLoopProg_skip state
   · exact henvironment
 
+theorem lookup_of_listDelete
+    (destinations : List Nat) (environment : LocationEnv)
+    (name location : Nat)
+    (hlookup : lookup name (listDelete destinations environment) = some location) :
+    lookup name environment = some location := by
+  induction destinations generalizing environment with
+  | nil => simpa [listDelete] using hlookup
+  | cons destination destinations ih =>
+      change lookup name (listDelete destinations (delete destination environment)) =
+        some location at hlookup
+      have hafter := ih (environment := delete destination environment) hlookup
+      exact lookup_of_delete environment name destination location hafter
+
+theorem labelsIn_listDelete
+    (destinations : List Nat) (environment : LocationEnv)
+    (locals : Nat → Option α)
+    (henvironment : labelsIn environment locals) :
+    labelsIn (listDelete destinations environment) locals := by
+  intro name location hlookup
+  exact henvironment name location
+    (lookup_of_listDelete destinations environment name location hlookup)
+
+theorem comp_primitive_labelsIn
+    (environment : LocationEnv) (destinations : List Nat)
+    (operator : PrimOp) (arguments : List Nat)
+    (locals : Nat → Option α)
+    (henvironment : labelsIn environment locals) :
+    (comp environment (.primitive destinations operator arguments : LoopProg α)).1 =
+        .primitive destinations operator arguments ∧
+      labelsIn
+        (comp environment (.primitive destinations operator arguments : LoopProg α)).2
+        locals := by
+  have hcompiled :
+      comp environment (.primitive destinations operator arguments : LoopProg α) =
+        (.primitive destinations operator arguments, listDelete destinations environment) := by
+    simp [comp]
+  rw [hcompiled]
+  constructor
+  · rfl
+  · exact labelsIn_listDelete destinations environment locals henvironment
+
 end LoopCall
 end Flapjack

@@ -16,4 +16,13 @@ example : ∃ w, lookupState.locals 3 = some w :=
 
 #check @evalCrepFullExpState_local_lookup_of_mem
 
+example : ∃ w, lookupState.locals 3 = some w :=
+  evalCrepFullExpsState_local_lookup_of_mem lookupState 0 0
+    [.op .add [.var 3, .const 1], .const 2] [6, 2] 3
+    (by simp [evalCrepFullExpState, lookupState, evalPanBinOp])
+    (by simp [crepExpVars, crepExpVars.crepExpVarsList])
+
+#check @exists_mapM_of_mem_flatten_map
+#check @evalCrepFullExpsState_local_lookup_of_mem
+
 end Flapjack.Test.CrepeExpressionStabilityParity

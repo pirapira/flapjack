@@ -520,5 +520,52 @@ theorem evalCrepFullExpState_local_lookup_of_mem
     termination_by structural expression
   exact go expression value heval hmem
 
+/-- Helper: a member of the flattened variable lists of a successfully mapped list
+comes from an element whose evaluation succeeds. -/
+theorem exists_mapM_of_mem_flatten_map {α β γ : Type _}
+    (f : α → Option β) (g : α → List γ) (es : List α) (vs : List β) (n : γ)
+    (heval : es.mapM f = some vs)
+    (hmem : n ∈ (es.map g).flatten) :
+    ∃ e ∈ es, ∃ v, f e = some v ∧ n ∈ g e := by
+  induction es generalizing vs with
+  | nil => simp at hmem
+  | cons e es ih =>
+      rw [List.mapM_cons] at heval
+      cases hfe : f e with
+      | none => simp [hfe] at heval
+      | some v =>
+          simp only [hfe] at heval
+          cases hes : es.mapM f with
+          | none => simp [hes] at heval
+          | some vs' =>
+              simp only [hes] at heval
+              have hvs : v :: vs' = vs := by simpa using heval
+              subst hvs
+              simp only [List.map_cons, List.flatten_cons, List.mem_append] at hmem
+              rcases hmem with hmem | hmem
+              · exact ⟨e, by simp, v, hfe, hmem⟩
+              · obtain ⟨e', he'mem, v', hf', hn'⟩ := ih vs' hes hmem
+                exact ⟨e', by simp [he'mem], v', hf', hn'⟩
+
+/-- Cake's `opt_mmap_eval_some_var_cexp_local_lookup` (`crepPropsScript.sml:847`):
+a successfully evaluated expression list binds every variable occurring in any
+of its expressions. -/
+theorem evalCrepFullExpsState_local_lookup_of_mem
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepState α) (baseAddress topAddress : α)
+    (expressions : List (CrepExp α)) (values : List α) (name : Nat)
+    (heval : expressions.mapM (evalCrepFullExpState state baseAddress topAddress) = some values)
+    (hmem : name ∈ (expressions.map crepExpVars).flatten) :
+    ∃ w, state.locals name = some w := by
+  obtain ⟨expression, _hexpression, value, hvalue, hmemExpression⟩ :=
+    exists_mapM_of_mem_flatten_map
+      (evalCrepFullExpState state baseAddress topAddress) crepExpVars
+      expressions values name heval hmem
+  exact evalCrepFullExpState_local_lookup_of_mem state baseAddress topAddress
+    expression value name hvalue hmemExpression
+
 end Flapjack
 

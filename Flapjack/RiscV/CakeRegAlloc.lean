@@ -570,10 +570,32 @@ def cakeExtendCliqueSetFastAux : List Nat → List Nat → Std.TreeSet Nat →
 termination_by new _ _ _ => sizeOf new
 decreasing_by all_goals decreasing_trivial
 
+/- Batch the set unions performed by `cakeExtendCliqueSetFastAux`.  The
+   reference adds each admitted node to every existing member in turn; since
+   adjacency is a TreeSet, unioning the complete admitted set gives the same
+   graph, while `addedRev ++ cli` preserves the reference's newest-first live
+   list.  Duplicate names are collected with the same first-admission rule. -/
+def cakeExtendCliqueSetBatch (new : List Nat) (cli : List Nat)
+    (adj : CakeNodeMap (Std.TreeSet Nat)) :
+    CakeNodeMap (Std.TreeSet Nat) × List Nat :=
+  let initial := Std.TreeSet.ofList cli
+  let (members, addedRev) := new.foldl (fun (state : Std.TreeSet Nat × List Nat) x =>
+    let (seen, added) := state
+    if seen.contains x then (seen, added)
+    else (seen.insert x, x :: added)) (initial, [])
+  let addedSet := Std.TreeSet.ofList addedRev
+  let adjNew := addedRev.foldl (fun current x =>
+    let existing := (current.get x).getD ∅
+    current.set x (existing.union (members.erase x))) adj
+  let adjAll := cli.foldl (fun current y =>
+    let existing := (current.get y).getD ∅
+    current.set y (existing.union addedSet)) adjNew
+  (adjAll, addedRev ++ cli)
+
 def cakeExtendCliqueSetFast : List Nat → List Nat →
     CakeNodeMap (Std.TreeSet Nat) → CakeNodeMap (Std.TreeSet Nat) × List Nat
   | new, cli, adj =>
-      cakeExtendCliqueSetFastAux new cli (Std.TreeSet.ofList cli) adj
+      cakeExtendCliqueSetBatch new cli adj
 
 def cakeExtendCliqueSet : List Nat → List Nat →
     CakeNodeMap (Std.TreeSet Nat) → CakeNodeMap (Std.TreeSet Nat) × List Nat :=

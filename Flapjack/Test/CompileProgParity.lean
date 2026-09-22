@@ -164,6 +164,7 @@ def runChecks : IO Bool := do
 #check @panValueSlotBound
 #check @panValueSlotBound_cons_of
 #check @crepContextSlot_extended_or_gt
+#check @crepContextSlot_le_max
 
 theorem extended_context_slot_fixture :
     compileProgProbeContext.maxVar < 3 := by

@@ -1517,4 +1517,7 @@ example :
     context.  Flapjack's companion of `compileExp_vars_bounded`. -/
 #check @Flapjack.compileExp_vars_present
 
+/-! Cake's `eval_map_var_cexp_present_ctxt` list companion (`pan_to_crepProofScript.sml:1077`). -/
+#check @Flapjack.compileExpList_vars_present
+
 end Flapjack.Test.PanValuePcControlSafety

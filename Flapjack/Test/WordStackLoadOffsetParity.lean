@@ -454,4 +454,32 @@ example :
     wordStackExpressionTemporaries, wordStackExpressionTemporariesExcluding,
     wordStackLocation, wordStackOffset, lookupNatInfo, wordStackJoin]
 
+/- Cake's `wShareInst` reloads a spilled shared-memory address through
+   `wReg1` before preserving the source-shaped offset carrier. -/
+example :
+    wordStackSharedMemoryOffsetInst
+      { locations := [(0, .register 4), (1, .stack 2)]
+        scratch := 31
+        addressScratch := 29
+        stackBase := 10 }
+      .load8 0 1 2047 =
+      some (.seq (.stackLoad 31 12)
+        (.shMemOffset .load8 4 31 2047) : StackProg Nat) := by
+  simp [wordStackSharedMemoryOffsetInst, wordStackSharedLoadOffsetInst,
+    wordStackLocation, wordStackOffset, lookupNatInfo]
+
+/- For a spilled shared-memory store value, Cake's `wReg2` is independent of
+   the address reload and remains the source register of the final ShMemOp. -/
+example :
+    wordStackSharedMemoryOffsetInst
+      { locations := [(0, .stack 2), (1, .register 5)]
+        scratch := 31
+        addressScratch := 29
+        stackBase := 10 }
+      .store8 0 1 2047 =
+      some (.seq (.stackLoad 29 12)
+        (.shMemOffset .store8 29 5 2047) : StackProg Nat) := by
+  simp [wordStackSharedMemoryOffsetInst, wordStackSharedStoreOffsetInst,
+    wordStackLocation, wordStackOffset, lookupNatInfo]
+
 end Flapjack.RiscV

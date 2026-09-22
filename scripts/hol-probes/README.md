@@ -28,6 +28,11 @@ additionally probes `pan_op_def` at lines 191--193.
 `Flapjack.Test.LoopDecClockParity` probes `dec_clock_def` at lines 42--43 of
 the same source.
 `Flapjack.Test.LoopFixClockParity` probes `fix_clock_def` at lines 46--49.
+`Flapjack.Test.PanEvaluateDeclsParity` probes `evaluate_decls_def` at
+`cakeml/pancake/semantics/panSemScript.sml:814-835`, including each declaration
+constructor, ordered global updates, local clearing during initializer
+evaluation, an in-domain word load, function-code replacement, and
+shape/duplicate failure cases.
 `compile_def_probe.out` also records direct HOL evaluations of assigned Global
 call destinations through `pan_to_crep$compile`: absent lookups, the
 `One`/empty-list fallback, and inconsistent shape/name-list lengths. The

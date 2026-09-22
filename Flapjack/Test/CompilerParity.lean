@@ -7,6 +7,7 @@ import Flapjack.Test.PanShapeParity
 import Flapjack.Test.PanShapeVarsParity
 import Flapjack.Test.PanGetEidsParity
 import Flapjack.Test.PanWordParity
+import Flapjack.Test.PanEvaluateDeclsParity
 import Flapjack.Test.LabPositionParity
 import Flapjack.Test.PanOpParity
 import Flapjack.Test.PanFixedLoadParity

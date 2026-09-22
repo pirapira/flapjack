@@ -41,6 +41,14 @@ interfaces.
 These gaps are tracked by beads `flapjack-pxn.18.3.2.1` and
 `flapjack-pxn.18.3.2.2`.
 
+`evaluate_decls_def` from `semantics/panSemScript.sml` is ported in
+`Flapjack/Pancake/Semantics/PanSem.lean` as `evaluateDecls`. Its dedicated
+state retains full function entries and exception shapes, while runtime
+expression evaluation uses the source empty-local environment for each value
+declaration. Direct HOL-EVAL branch results and Lean parity fixtures are kept
+in `scripts/hol-probes/pan_evaluate_decls_probe.out` and
+`Flapjack/Test/PanEvaluateDeclsParity.lean`.
+
 The total `compile_top_def` result and the HOL-shaped
 `compile_top_only_functions_or_exns` theorem are now present. Reusable
 Flapjack-specific shape predicates and pass lemmas live in

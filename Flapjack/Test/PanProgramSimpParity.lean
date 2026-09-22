@@ -172,6 +172,23 @@ theorem panValueProgramStateRel_evalDeclarations_returnShape_adequacy_fixture
       exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩)
     relationDecls none s' hs "f" .one hlookup
 
+/-! The declaration/evaluator composition keeps a successful call argument
+    value after `pan_simp` has produced the related target declaration state. -/
+theorem panValueProgramStateRel_evalDeclarations_evalExp_fixture
+    (s' : PanValueProgramState Nat)
+    (hs : evalPanValueDeclarations relationState relationDecls = some s') :
+    ∃ t', evalPanValueDeclarations
+        { relationState with
+          functions := panValueFunctionsSimp relationState.functions }
+        (panSimpDecls relationDecls) = some t' ∧
+      panValueProgramStateRel s' t' ∧
+      evalPanValueExp s'.structs (fun _ => none) t'.globals
+        t'.memory t'.baseAddress t'.topAddress t'.bytesInWord (.const 11) =
+        some (.word 11) := by
+  apply panValueProgramStateRel_evalDeclarations_evalExp relationState _
+    relationState_self relationDecls none s' (.const 11) (.word 11) hs
+  simp [evalPanValueExp]
+
 /-! Regression for the function-table lookup bridge used by Cake's
     `state_rel_imp_semantics`: the entry keeps its parameters and return shape,
     while only its body is replaced by `panSimpProg`. -/

@@ -84,12 +84,12 @@ def panValuePcCodeRelConcrete [BEq String] [BEq α] [OfNat α 0] [Add α]
   ∀ name parameters body,
     lookupPanFunction name source = some (parameters, body) →
     localisedProg body ∧
-    ∃ vshs returnShape,
+      ∃ vshs returnShape,
       lookupInfo name context.functions = some (vshs, returnShape) ∧
       vshs.map Prod.fst = parameters ∧
       lookupCompiledFunction name target =
         some (panToCrepVars vshs,
-          compileProg { context with vars := panToCrepMakeVmap vshs } body)
+          panToCrepCompFunc context vshs body)
 
 /-- The empty source code satisfies the concrete code relation for any target. -/
 theorem panValuePcCodeRelConcrete_nil [BEq String] [BEq α] [OfNat α 0] [Add α]
@@ -134,6 +134,16 @@ theorem panValuePcExceptionShapeRelConcrete_refl (context : CompileContext α)
 
 def panValuePcLocalisedCode (code : PanValuePcSourceCode α) : Prop :=
   ∀ entry ∈ code, localisedProg entry.2.2
+
+/-- Cake `code_rel_imp` analogue: a localised source table exposes localisation
+for every looked-up function body. -/
+theorem panValuePcLocalisedCode_lookup [LawfulBEq String]
+    {code : PanValuePcSourceCode α} (h : panValuePcLocalisedCode code) :
+    ∀ name parameters body,
+      lookupPanFunction name code = some (parameters, body) →
+      localisedProg body :=
+  fun name parameters body hlookup =>
+    h (name, parameters, body) (lookupPanFunction_mem hlookup)
 
 /-! The exception clause of HOL `pc_compile_correct`: the target exception is
 the code looked up for the source exception, and a non-empty payload is

@@ -1,4 +1,5 @@
 import Flapjack.PanValueFfiClockShift
+import Flapjack.PanValueFfiClockProjection
 import Flapjack.PanObservationalSemantics
 
 namespace Flapjack
@@ -704,5 +705,59 @@ theorem evalPanValueFfiClockProg_shift_panResultEvents
   cases outcome with
   | timeout => rfl
   | control result => cases result <;> rfl
+
+/-! The evaluator shift also transports the full source-facing result
+    projection.  This is the direct clocked top-level bridge used when a
+    correctness relation needs the same control/state result at a larger
+    clock, with only the residual clock changed. -/
+theorem evalPanValueFfiClockProg_shift_projection
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel : Nat) (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (program : Prog α) (memoryAccess : Option (PanValueMemoryAccess α))
+    (contracts : Option PanValueCallContracts)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ))
+    (outcome : PanValueFfiClockOutcome α σ) (resultClock extra : Nat)
+    (projection : PanValueFfiClockResultProjection α σ)
+    (hrun : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
+      program (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) = some (outcome, resultClock))
+    (hnotimeout : ∀ l g m f, outcome ≠ .timeout l g m f)
+    (hprojection :
+      (evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
+        program (memoryAccess := memoryAccess) (contracts := contracts)
+        (memoryHandler := memoryHandler)).map panValueFfiClockResultProjection =
+        some projection) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory ffi
+      (clock + extra) program (memoryAccess := memoryAccess)
+      (contracts := contracts) (memoryHandler := memoryHandler) =
+      some (outcome, resultClock + extra) ∧
+    (evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory ffi
+      (clock + extra) program (memoryAccess := memoryAccess)
+      (contracts := contracts) (memoryHandler := memoryHandler)).map
+        panValueFfiClockResultProjection =
+      some (panValueFfiClockResultProjection_shiftClock extra projection) := by
+  have hshift := (evalPanValueFfiClock_shift context primitive handler structs
+    functions baseAddress topAddress bytesInWord).2 fuel locals globals memory ffi
+    clock program memoryAccess contracts memoryHandler outcome resultClock extra
+    hrun hnotimeout
+  constructor
+  · exact hshift
+  · rw [hrun] at hprojection
+    rw [hshift]
+    cases outcome with
+    | timeout locals globals memory ffi =>
+        cases hnotimeout locals globals memory ffi rfl
+    | control result =>
+        cases result <;>
+          simp only [Option.map_some, Option.some.injEq] at hprojection
+        all_goals subst projection <;> rfl
 
 end Flapjack

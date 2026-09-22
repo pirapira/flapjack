@@ -167,4 +167,13 @@ def runChecks : IO Bool := do
 #check @compileProg_store32_of_compiled
 #check @compileProg_storeByte_of_compiled
 
+#check @compileProg_dec_of_compiled
+#check @compileProg_decCall
+#check @compileProg_store_of_compiled
+#check @compileProg_raise_of_compiled
+#check @compileProg_primitive_of_compiled
+#check @compileProg_assign_local_of_compiled
+#check @compileProg_shMemLoad_local_of_compiled
+#check @compileProg_shMemStore_of_compiled
+
 end Flapjack.Test.CompileProgParity

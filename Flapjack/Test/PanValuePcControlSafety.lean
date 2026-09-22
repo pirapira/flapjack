@@ -1434,6 +1434,7 @@ example :
 #check @panValuePcCompileCorrectAndClockedRaisedResultRel_of_program_state_correct
 #check @panValuePcNormalResultRelWithContextCode_of_program_state_correct
 #check @panValuePcReturnedResultRelWithContextCode_of_program_state_correct
+#check @panValuePcBrokeResultRelWithContextCode_of_program_state_correct
 
 /-! Cake's generated parameter context satisfies the slot bound needed by
     the raised-payload evaluator, after reversing the source-name map. -/

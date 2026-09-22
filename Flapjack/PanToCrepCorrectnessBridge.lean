@@ -1969,6 +1969,58 @@ theorem panValuePcReturnedResultRelWithContextCode_of_program_state_correct
       sourceMemory targetState ∧ panValueCrepValuesRel sourceValues targetValues
   exact hcontrol
 
+/-! A source `Break` is accepted at the Pc boundary only for the Cake
+    zero-label continuation.  The stateful evaluator relation supplies the
+    state part; the label equality remains explicit rather than being erased
+    by the control relation's wildcard label. -/
+theorem panValuePcBrokeResultRelWithContextCode_of_program_state_correct
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (program : Prog α)
+    (hprogram : PanValueCrepProgramStateCorrect program)
+    (context : CompileContext α) (structs : StructContext)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (state targetState : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α)
+    (sourceFuel targetFuel : Nat)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (targetLabel : Nat)
+    (hlabel : targetLabel = 0)
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory state)
+    (hsource : evalPanValueProgWithPrimitiveCallsAndFfi
+      primitive sourceHandler structs sourceFunctions
+      baseAddress topAddress bytesInWord sourceFuel
+      sourceLocals sourceGlobals sourceMemory program =
+      some (.broke sourceLocals sourceGlobals sourceMemory))
+    (hcrep : evalCrepFullProgState functions crepPrimitive ffi sharedMem
+      baseAddress topAddress targetFuel state (compileProg context program) =
+      some (.broke targetState targetLabel)) :
+    panValuePcResultRelWithContextCode structs context exceptionRel
+      exceptionCode globalsLookup
+      (.broke sourceLocals sourceGlobals sourceMemory)
+      (.broke targetState targetLabel) := by
+  subst targetLabel
+  have hcontrol := hprogram context structs sourceFunctions functions
+    sourceLocals sourceGlobals sourceMemory state primitive sourceHandler
+    crepPrimitive ffi sharedMem baseAddress topAddress bytesInWord sourceFuel
+    targetFuel exceptionRel
+    (.broke sourceLocals sourceGlobals sourceMemory)
+    (.broke targetState 0) hrel hsource hcrep
+  change panValueCrepStateRel structs context sourceLocals sourceGlobals
+    sourceMemory targetState
+  exact hcontrol
+
 theorem panValuePcRaisedWordHraiseData_retarget_globals
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

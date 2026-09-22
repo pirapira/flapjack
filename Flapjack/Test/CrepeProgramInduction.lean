@@ -1,5 +1,6 @@
 import Flapjack.PanToCrepCorrectnessBoundary
 import Flapjack.CrepeProgramWordInduction
+import Flapjack.PanProgramSimp
 
 /-!
 Regression coverage for the assembled stateful source-to-Crep induction.
@@ -102,5 +103,21 @@ example (structs : StructContext) (context : CompileContext Nat)
     crepState.memory address = some value := by
   exact panValueCrepStateRel_memory_lookup structs context sourceLocals
     sourceGlobals sourceMemory crepState address value hrel hmemory
+
+/-! Declaration evaluation and the state relation jointly preserve a callee
+    lookup, with the target body in the same `pan_simp` form used by the Crep
+    evaluator. -/
+example (s t s' : PanValueProgramState Nat)
+    (declarations : List (Decl Nat))
+    (memoryAccess : Option (PanValueMemoryAccess Nat))
+    (hrel : panValueProgramStateRel s t)
+    (hs : evalPanValueDeclarations s declarations memoryAccess = some s')
+    (name : FunName) (parameters : List VarName) (body : Prog Nat)
+    (hlookup : lookupPanFunction name s'.functions = some (parameters, body)) :
+    ∃ t', evalPanValueDeclarations t (panSimpDecls declarations) memoryAccess = some t' ∧
+      lookupPanFunction name t'.functions =
+        some (parameters, panSimpProg body) := by
+  exact panValueProgramStateRel_evalDeclarations_lookupPanFunction s t hrel
+    declarations memoryAccess s' hs name hlookup
 
 end Flapjack.Test.CrepeProgramInduction

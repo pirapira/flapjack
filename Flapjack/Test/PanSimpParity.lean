@@ -2708,6 +2708,7 @@ example : PanValueFfiClockNormalAdequateProgFromFloor 3 3 evaluatorContext
 #check @Flapjack.evalPanValueFfiClockProg_while_continued_iteration_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProg_while_timeout_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProg_shift_panResultEvents
+#check @Flapjack.evalPanValueFfiClockProg_shift_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProg_extCall_statefulHandler_normal_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProg_call_returned_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProgram_of_declarations_and_normal_call_result_rel_ioEvents_prefix
@@ -2719,6 +2720,7 @@ example : PanValueFfiClockNormalAdequateProgFromFloor 3 3 evaluatorContext
 #check @Flapjack.evalPanValueFfiClockProgram_of_related_declarations_and_returned_call_result_rel_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProgram_of_related_declarations_and_returned_call_result_rel_adequacy
 #check @Flapjack.evalPanValueFfiClockProgram_of_related_declarations_and_finalFfi_call_result_rel_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProgram_of_related_declarations_and_finalFfi_call_result_rel_adequacy
 
 /-! Typed regression for the normal-call declaration-state branch of Cake's
     `state_rel_imp_semantics_decls_to_crep`: the source declaration evaluator,
@@ -2939,6 +2941,7 @@ theorem related_declarations_finalFfi_call_result_rel_fixture
     memoryAccess memoryHandler targetInitial hinitial hdeclarations hcall hstate
     hevent hprefix
 
+#check @Flapjack.evalPanValueFfiClockProgram_of_related_declarations_and_raised_call_result_rel_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProg_call_raised_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProg_call_timeout_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProg_call_finalFfi_ioEvents_prefix

@@ -165,6 +165,22 @@ def stackOnlyFastReferenceGuard : Bool :=
 
 #guard stackOnlyFastReferenceGuard
 
+def stackOnlyMergeSetsReferenceGuard : Bool :=
+  let mkState (ts fs : List Nat) : CakeStackOnlyState :=
+    { ts, fs,
+      tsSet := Flapjack.natSetOfList ts,
+      fsSet := Flapjack.natSetOfList fs }
+  let base := mkState [13, 9, 9] [17]
+  let left := mkState [21, 13, 5] [19, 17]
+  let right := mkState [25, 9, 5] [23, 19]
+  let reference := cakeStackOnlyMergeSetsReference base left right
+  let fast := cakeStackOnlyMergeSets base left right
+  fast.ts == reference.ts && fast.fs == reference.fs &&
+    fast.tsSet.toList == reference.tsSet.toList &&
+    fast.fsSet.toList == reference.fsSet.toList
+
+#guard stackOnlyMergeSetsReferenceGuard
+
 def filterReversedGuard : Bool :=
   filterReversed (fun x : Nat => x % 2 = 1) [1, 2, 3, 4, 5, 6] = [5, 3, 1]
 

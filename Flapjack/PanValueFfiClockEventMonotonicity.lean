@@ -3391,6 +3391,29 @@ theorem panValueFfiMemoryHandlerPreservesIoEvents_fails
     nextMemory nextFfi h
   exact absurd h (by simp)
 
+theorem panValueFfiStatefulHandlerPreservesIoEvents_ffi
+    (α : Type u) (σ : Type v) :
+    panValueFfiStatefulHandlerPreservesIoEvents (α := α) (σ := σ)
+      (fun (_ : FunName) (_ _ _ _ : α) (_ : VarName → Option (PanValue α))
+        (ffi : FfiState σ) => some (fun _ => none, ffi)) := by
+  intro function configuration configurationLength array arrayLength locals ffi nextLocals
+    nextFfi h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨_, rfl⟩ := h
+  exact List.prefix_refl _
+
+theorem panValueFfiMemoryHandlerPreservesIoEvents_ffi
+    (α : Type u) (σ : Type v) :
+    panValueFfiMemoryHandlerPreservesIoEvents (α := α) (σ := σ)
+      (fun (_ : FunName) (_ _ _ _ : α) (_ : VarName → Option (PanValue α))
+        (_ : α → Option (PanValue α)) (ffi : FfiState σ) =>
+          some (fun _ => none, fun _ => none, ffi)) := by
+  intro function configuration configurationLength array arrayLength locals memory ffi nextLocals
+    nextMemory nextFfi h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨_, _, rfl⟩ := h
+  exact List.prefix_refl _
+
 set_option linter.unusedSimpArgs false in
 theorem evalPanValueFfiProgSteps_ite_one_none
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]

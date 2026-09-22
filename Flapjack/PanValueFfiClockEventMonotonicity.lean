@@ -1455,4 +1455,56 @@ theorem evalPanValueFfiClockProg_raise_ioEvents_prefix
       steps hsteps
   · exact hprefix
 
+theorem panResultFfi_panValueFfiClockRestoreLocal [BEq String]
+    (name : VarName) (oldValue : Option (PanValue α))
+    (outcome : PanValueFfiClockOutcome α σ) (clock : Nat) :
+    panResultFfi (panValueFfiClockRestoreLocal name oldValue outcome, clock) =
+      panResultFfi (outcome, clock) := by
+  cases outcome with
+  | control result => cases result <;> rfl
+  | timeout locals globals memory ffi => rfl
+
+theorem evalPanValueFfiClockProg_dec_ioEvents_prefix
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (name : VarName) (shape : Shape) (value : Exp α) (body : Prog α)
+    (valueResult : PanValue α) (outcome : PanValueFfiClockOutcome α σ)
+    (nextClock : Nat)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (contracts : Option PanValueCallContracts := none)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none)
+    (hvalue : evalPanValueExp structs locals globals memory baseAddress topAddress
+      bytesInWord value (memoryAccess := memoryAccess) = some valueResult)
+    (hmatch : panShapeMatches (panValueShape structs valueResult) shape = true)
+    (hbody : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel (updatePanValueMap locals name valueResult)
+      globals memory ffi clock body (memoryAccess := memoryAccess)
+      (contracts := contracts) (memoryHandler := memoryHandler) =
+      some (outcome, nextClock))
+    (hprefix : ffi.ioEvents <+:
+      (panResultFfi (outcome, nextClock)).ioEvents) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+      (.dec name shape value body) memoryAccess contracts memoryHandler =
+      some (panValueFfiClockRestoreLocal name (locals name) outcome, nextClock) ∧
+      ffi.ioEvents <+:
+        (panResultFfi
+          (panValueFfiClockRestoreLocal name (locals name) outcome, nextClock)).ioEvents := by
+  constructor
+  · exact evalPanValueFfiClockProg_dec_some context primitive handler structs
+      functions baseAddress topAddress bytesInWord fuel locals globals memory ffi
+      clock name shape value body memoryAccess contracts memoryHandler valueResult
+      outcome nextClock hvalue hmatch hbody
+  · rw [panResultFfi_panValueFfiClockRestoreLocal]
+    exact hprefix
+
 end Flapjack

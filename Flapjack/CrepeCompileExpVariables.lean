@@ -746,6 +746,26 @@ theorem compileExp_vars_present
   exact hmain (sizeOf expression) expression rfl
 
 
+theorem compileExpList_vars_present
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) :
+    ∀ (expressions : List (Exp α)) (varName : Nat),
+      varName ∈
+        (compileExp.compileExpList context expressions).flatMap
+          (fun compiled => compiled.1.flatMap crepExpVars) →
+      ∃ name shape names, lookupInfo name context.vars = some (shape, names) ∧
+        varName ∈ names := by
+  intro expressions
+  induction expressions with
+  | nil => intro varName hvar; simp [compileExp.compileExpList] at hvar
+  | cons expression expressions ih =>
+      intro varName hvar
+      simp only [compileExp.compileExpList, List.flatMap_cons,
+        List.mem_append] at hvar
+      rcases hvar with hvar | hvar
+      · exact compileExp_vars_present context expression varName hvar
+      · exact ih varName hvar
+
 /-! The expression-list companions below are the syntactic part of Cake's
     `compile_exp_not_mem_load_glob` (`pan_to_crepProofScript.sml:2013`).
     Flapjack's localized `compileExp` has no global-load expression case: the

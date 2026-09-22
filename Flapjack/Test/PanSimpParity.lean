@@ -2236,6 +2236,8 @@ theorem seq_call_ret_fallback :
     seqCallRet (.tick : Prog Nat) = .tick := by
   rfl
 
+#check evalPanValueFfiClockProg_seqCallRet_returned
+
 /-! The expected values are the direct HOL evaluation of
     `pan_simp$ret_to_tail` from `pan_simpScript.sml:50-66`. -/
 theorem ret_to_tail_skip :
@@ -3457,3 +3459,4 @@ premises. -/
 #check @Flapjack.evalPanValueFfiClockProg_seq_raised
 #check @Flapjack.evalPanValueFfiClockProg_seq_timeout
 #check @Flapjack.evalPanValueFfiClockProg_seq_timeout_cross_clock_ioEvents_prefix
+#check @Flapjack.panValueProgramStateRel_evalDeclarations_parameterShape_adequacy

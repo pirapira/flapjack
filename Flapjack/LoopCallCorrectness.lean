@@ -768,6 +768,35 @@ theorem comp_loop_labelsIn
   · rfl
   · simp [labelsIn, lookup]
 
+/-! This is the evaluator-result part of Cake's `compile_correct[Loop]`.
+    The source proof supplies the repeated-body result from its induction
+    hypothesis; this theorem preserves that result through the compiled Loop
+    wrapper and keeps the result-state `labelsIn` conclusion explicit. -/
+theorem comp_loop_repeat_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (environment : LocationEnv) (state : LoopState α) (fuel : Nat)
+    (liveIn liveOut : List Nat) (body : LoopProg α)
+    (result : LoopResult α)
+    (hbody : evalLoopRepeat fuel state (comp ([] : LocationEnv) body).1 =
+      some result) :
+    evalLoopProg (fuel + 1) state
+        (comp environment (.loop liveIn body liveOut : LoopProg α)).1 =
+        some result ∧
+      labelsIn
+        (comp environment (.loop liveIn body liveOut : LoopProg α)).2
+        (loopResultState result).locals := by
+  have hcompiled :
+      comp environment (.loop liveIn body liveOut : LoopProg α) =
+        (.loop liveIn (comp ([] : LocationEnv) body).1 liveOut, []) := by
+    simp [comp]
+  rw [hcompiled]
+  constructor
+  · simpa [evalLoopProg] using hbody
+  · simp [labelsIn, lookup]
+
 theorem comp_loop_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
@@ -783,14 +812,7 @@ theorem comp_loop_correct
       labelsIn
         (comp environment (.loop liveIn body liveOut : LoopProg α)).2
         (loopResultState result).locals := by
-  have hcompiled :
-      comp environment (.loop liveIn body liveOut : LoopProg α) =
-        (.loop liveIn (comp ([] : LocationEnv) body).1 liveOut, []) := by
-    simp [comp]
-  rw [hcompiled]
-  constructor
-  · simpa [evalLoopProg] using hresult
-  · simp [labelsIn, lookup]
+  exact comp_loop_repeat_correct environment state fuel liveIn liveOut body result hresult
 
 theorem comp_setGlobal_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]

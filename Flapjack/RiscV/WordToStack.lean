@@ -1379,18 +1379,7 @@ def wordStackWritePhysicalNat (config : WordStackConfig) (destination : Nat)
         (.stackStore config.scratch (wordStackOffset config slot)))
 
 /- Cake wReg2 reads a spilled shared-store value through k+1, while wReg1
-   reads an address through k. The write helper below is for destinations;
-   shared stores use the read helper. -/
-def wordStackWritePhysicalNatWith (config : WordStackConfig)
-    (destination temporary : Nat) (body : Nat → StackProg Nat) :
-    Option (StackProg Nat) := do
-  let location ← wordStackLocation config destination
-  match location with
-  | .register register => pure (body register)
-  | .stack slot =>
-      pure (wordStackJoin (body temporary)
-        (.stackStore temporary (wordStackOffset config slot)))
-
+   reads an address through k. Shared stores use the read carrier below. -/
 def wordStackReadPhysicalNatWith (config : WordStackConfig)
     (source temporary : Nat) (body : Nat → StackProg Nat) :
     Option (StackProg Nat) := do

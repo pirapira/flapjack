@@ -56,7 +56,9 @@ The total `compile_top_def` result and the HOL-shaped
 `compile_top_only_functions_or_exns` theorem are now present. Reusable
 Flapjack-specific shape predicates and pass lemmas live in
 `PanGlobals/ShapeInfrastructure.lean`; they use Flapjack's value evaluator
-and are infrastructure, not ports of the two open HOL shape theorems.
+and are infrastructure, not ports of HOL shape theorems. The exact
+`compile_top_shape_wf` result uses the faithful evaluator and lives in
+`PanGlobals.lean`; its `_nil` corollary is still open.
 
 Additional helper, semantic, and proof modules still live at the old top
 level while their exact HOL counterparts and statement shapes are reviewed.

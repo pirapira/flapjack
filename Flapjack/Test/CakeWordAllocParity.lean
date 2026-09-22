@@ -59,11 +59,46 @@ def add1AllocatorGuard : Bool :=
 
 #guard add1AllocatorGuard
 
+/-! Cake's `word_alloc 5 riscv_config 1 22` takes the simple allocator with
+    spill heuristics.  This is a separate driver branch from the IRC add
+    case above; its exact result is checked in
+    `scripts/hol-probes/word_alloc_spill_probe.out`. -/
+def cakeWordAllocSimpleSpill : Option (WordProg Nat) :=
+  let tree := wordClashTree add1Program []
+  let forcedStack := cakeGetStackOnly add1Program
+  let forced := cakeGetForced add1Program
+  let (wordMoves, spillCosts) := wordGetHeuristics 1 5 add1Program
+  let moves := wordMoves.map (fun move => (move.priority, (move.left, move.right)))
+  let bij := cakeMkBij tree
+  let scost := spillCosts.map (cakeSpillCostMap bij.nextNode)
+  let initialState := cakeInitRaStateFromBij bij tree forced forcedStack
+  match cakeDoRegAllocFromState .simple scost 22 moves bij initialState with
+  | none => none
+  | some colouring =>
+      some (wordApplyColour (CakeAlloc.totalColour colouring) add1Program)
+
+def simpleSpillAllocatorGuard : Bool :=
+  match cakeWordAllocSimpleSpill with
+  | some
+      (.seq (.move 1 [(0, 0), (4, 2), (2, 4)])
+        (.seq
+          (.seq (.move 0 [(2, 2)])
+            (.seq (.move 0 [(4, 4)])
+              (.inst (.arith (.binOp .add 2 2 (.reg 4))))))
+          (.seq (.move 0 [(2, 2)]) (.return 0 [2])))) => true
+  | _ => false
+
+#guard simpleSpillAllocatorGuard
+
 def runChecks : IO Bool := do
   if add1AllocatorGuard then
     IO.println "PASS Cake word_alloc add1 output matches the checked HOL oracle"
   else
     IO.println "FAIL Cake word_alloc add1 output matches the checked HOL oracle"
-  pure add1AllocatorGuard
+  if simpleSpillAllocatorGuard then
+    IO.println "PASS Cake word_alloc simple+spill output matches the checked HOL oracle"
+  else
+    IO.println "FAIL Cake word_alloc simple+spill output matches the checked HOL oracle"
+  pure (add1AllocatorGuard && simpleSpillAllocatorGuard)
 
 end Flapjack.Test.CakeWordAllocParity

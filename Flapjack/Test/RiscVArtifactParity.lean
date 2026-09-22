@@ -897,6 +897,28 @@ def frameOccupancyP7BitmapsMatch : Bool :=
   | some image => image.bitmaps.data == cakeFrameOccupancyP7Bitmaps
   | none => false
 
+/-! The p8 oracle keeps two returned two-field structs live across a later
+    call.  Cake reserves three 32-word continuation frames ([4, 32, 32, 32])
+    for the retained fields; this is a distinct high-occupancy witness from
+    p9, whose two continuations are only eight words. -/
+def frameOccupancyP8Source : String :=
+  "struct S { 1 f, 1 g }\n" ++
+    "fun S mks (1 a, 1 b) { return S <f = a, g = b>; }\n" ++
+    "fun 1 id (1 a) { return a; }\n" ++
+    "fun 1 main() {\n" ++
+    "  var S s1 = mks(1, 2);\n" ++
+    "  var S s2 = mks(3, 4);\n" ++
+    "  var 1 t = id(5);\n" ++
+    "  return s1.f + s1.g + s2.f + s2.g + t;\n" ++
+    "}"
+
+def cakeFrameOccupancyP8Bitmaps : List Nat := [4, 32, 32, 32]
+
+def frameOccupancyP8BitmapsMatch : Bool :=
+  match compileRuntimeImage frameOccupancyP8Source with
+  | some image => image.bitmaps.data == cakeFrameOccupancyP8Bitmaps
+  | none => false
+
 /-! The `bm_min2` oracle is the bitmap-min spill case: both fields of the
     returned struct are read after `id`, so Cake emits two eight-word
     continuation entries (`[4, 8, 8]`). -/
@@ -1511,6 +1533,8 @@ def runChecks : IO Bool := do
          frameOccupancyP5BitmapsMatch),
       ("frame-occupancy p7 exact vector matches the Cake oracle",
          frameOccupancyP7BitmapsMatch),
+      ("frame-occupancy p8 exact vector matches the Cake oracle",
+         frameOccupancyP8BitmapsMatch),
       ("frame-occupancy bm_min2 exact vector matches the Cake oracle",
          frameOccupancyBmMin2BitmapsMatch),
       ("frame-occupancy live1 exact vector matches the Cake oracle",

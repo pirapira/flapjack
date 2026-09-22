@@ -1691,6 +1691,8 @@ theorem panValuePcRaisedHraiseData_of_program_state_correct
     (globalsLookup : CrepState α → PanValue α → Option (List α))
     (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
       sourceMemory state)
+    (hpost : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory targetState)
     (hsource : evalPanValueProgWithPrimitiveCallsAndFfi
       primitive sourceHandler structs sourceFunctions
       baseAddress topAddress bytesInWord sourceFuel
@@ -1719,7 +1721,7 @@ theorem panValuePcRaisedHraiseData_of_program_state_correct
     (.raised targetState targetException) hrel hsource hcrep
   exact ⟨panValuePcRaisedHraiseData_of_control_evidence structs context
     exceptionRel exceptionCode globalsLookup sourceLocals sourceGlobals
-    sourceMemory sourceException sourceValue targetState targetException hrel
+    sourceMemory sourceException sourceValue targetState targetException hpost
     hcontrol hcode hglobals hsize, hlookup⟩
 
 theorem panValuePcRaisedWordHraiseData_retarget_globals

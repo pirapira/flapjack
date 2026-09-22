@@ -312,6 +312,183 @@ theorem not_mem_crepAssignedFreeVars_compileProg_raise
           · rw [if_neg hlength]
             simp [crepAssignedFreeVars]
 
+/-! `ShMemStore` binds its single temporary around the generated `shMem`
+    instruction.  Unlike the sufficient nested-declaration lemma used for
+    stores, this branch uses the exact declaration-filter equation because
+    the temporary is itself assigned by the body and is then removed. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_shMemStore
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (size : OpSize)
+    (address value : Exp α) (x : Nat) :
+    x ∉ crepAssignedFreeVars
+      (compileProg context (.shMemStore size address value)) := by
+  simp only [compileProg]
+  cases haddress : firstCompiledExpAnyShape context address with
+  | none => simp [crepAssignedFreeVars]
+  | some compiledAddress =>
+      cases hvalue : firstCompiledExpAnyShape context value with
+      | none => simp [crepAssignedFreeVars]
+      | some compiledValue =>
+          simp only
+          rw [crepAssignedFreeVars_nestedDecs_append
+            [maxCrepExpVar [compiledAddress] + 1] [compiledValue]
+            (.shMem (storeMemOp size) (maxCrepExpVar [compiledAddress] + 1)
+              compiledAddress) (by simp)]
+          simp [crepAssignedFreeVars]
+
+/-! Fixed-width stores lower directly to Crepe store instructions (or `Skip`)
+    and therefore have no assigned-free locals. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_store32
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (address value : Exp α) (x : Nat) :
+    x ∉ crepAssignedFreeVars
+      (compileProg context (.store32 address value)) := by
+  simp only [compileProg]
+  cases haddress : compileExp context address with
+  | mk addressExpressions addressShape =>
+      cases addressExpressions with
+      | nil => simp [crepAssignedFreeVars]
+      | cons compiledAddress rest =>
+          cases hvalue : compileExp context value with
+          | mk values valueShape =>
+              cases values with
+              | nil => simp [crepAssignedFreeVars]
+              | cons compiledValue rest => simp [crepAssignedFreeVars]
+
+theorem not_mem_crepAssignedFreeVars_compileProg_storeByte
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (address value : Exp α) (x : Nat) :
+    x ∉ crepAssignedFreeVars
+      (compileProg context (.storeByte address value)) := by
+  simp only [compileProg]
+  cases haddress : compileExp context address with
+  | mk addressExpressions addressShape =>
+      cases addressExpressions with
+      | nil => simp [crepAssignedFreeVars]
+      | cons compiledAddress rest =>
+          cases hvalue : compileExp context value with
+          | mk values valueShape =>
+              cases values with
+              | nil => simp [crepAssignedFreeVars]
+              | cons compiledValue rest => simp [crepAssignedFreeVars]
+
+/-! A local shared-memory load assigns the first slot of its destination;
+    Cake's context-slot hypothesis rules that slot out.  Unknown/global
+    destinations and malformed addresses use `Skip`. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_shMemLoad_local
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (size : OpSize) (name : VarName)
+    (address : Exp α) (x : Nat)
+    (hslot : ∀ shape slots,
+      lookupInfo name context.vars = some (shape, slots) → x ∉ slots) :
+    x ∉ crepAssignedFreeVars
+      (compileProg context (.shMemLoad size .local name address)) := by
+  simp only [compileProg]
+  cases hlookup : lookupInfo name context.vars with
+  | none => simp [crepAssignedFreeVars]
+  | some info =>
+      obtain ⟨shape, names⟩ := info
+      cases hnames : names with
+      | nil => simp [crepAssignedFreeVars]
+      | cons destination rest =>
+          cases haddress : firstCompiledExpAnyShape context address with
+          | none => simp [crepAssignedFreeVars]
+          | some compiledAddress =>
+              simp only
+              intro hx
+              have hlookup' : lookupInfo name context.vars =
+                  some (shape, destination :: rest) := by
+                simpa [hnames] using hlookup
+              have hdestination : x = destination := by
+                simpa [crepAssignedFreeVars] using hx
+              apply hslot shape (destination :: rest) hlookup'
+              simp [hdestination]
+
+/-! Structural sequence composition for the recursive `compileProg` proof. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_seq
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (first second : Prog α) (x : Nat)
+    (hfirst : x ∉ crepAssignedFreeVars (compileProg context first))
+    (hsecond : x ∉ crepAssignedFreeVars (compileProg context second)) :
+    x ∉ crepAssignedFreeVars (compileProg context (.seq first second)) := by
+  simp only [compileProg, crepAssignedFreeVars, List.mem_append]
+  intro h
+  rcases h with h | h
+  · exact hfirst h
+  · exact hsecond h
+
+/-! Conditional composition: the compiled condition does not assign locals;
+    only the two recursive branches contribute to `crepAssignedFreeVars`. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_ite
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (condition : Exp α)
+    (thenBranch elseBranch : Prog α) (x : Nat)
+    (hthen : x ∉ crepAssignedFreeVars (compileProg context thenBranch))
+    ( helse : x ∉ crepAssignedFreeVars (compileProg context elseBranch)) :
+    x ∉ crepAssignedFreeVars
+      (compileProg context (.ite condition thenBranch elseBranch)) := by
+  simp only [compileProg]
+  cases hcondition : compileExp context condition with
+  | mk expressions conditionShape =>
+      cases expressions with
+      | nil => simp [crepAssignedFreeVars]
+      | cons compiledCondition rest =>
+          simp only
+          simp only [crepAssignedFreeVars, List.mem_append]
+          intro h
+          rcases h with h | h
+          · exact hthen h
+          · exact helse h
+
+/-! While-loop composition: the condition is an expression and the body is
+    the only possible source of assigned-free locals. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_while
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (condition : Exp α) (body : Prog α) (x : Nat)
+    (hbody : x ∉ crepAssignedFreeVars (compileProg context body)) :
+    x ∉ crepAssignedFreeVars
+      (compileProg context (.while condition body)) := by
+  simp only [compileProg]
+  cases hcondition : compileExp context condition with
+  | mk expressions conditionShape =>
+      cases expressions with
+      | nil => simp [crepAssignedFreeVars]
+      | cons compiledCondition rest =>
+          simp only
+          simpa [crepAssignedFreeVars] using hbody
+
+/-! Terminal source constructors lower to Crepe instructions with empty
+    assigned-free sets (or to `Skip`). -/
+theorem not_mem_crepAssignedFreeVars_compileProg_return
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (value : Exp α) (x : Nat) :
+    x ∉ crepAssignedFreeVars (compileProg context (.return value)) := by
+  simp [compileProg, crepAssignedFreeVars]
+
+theorem not_mem_crepAssignedFreeVars_compileProg_break
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (x : Nat) :
+    x ∉ crepAssignedFreeVars (compileProg context .break) := by
+  simp [compileProg, crepAssignedFreeVars]
+
+theorem not_mem_crepAssignedFreeVars_compileProg_continue
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (x : Nat) :
+    x ∉ crepAssignedFreeVars (compileProg context .continue) := by
+  simp [compileProg, crepAssignedFreeVars]
+
+theorem not_mem_crepAssignedFreeVars_compileProg_tick
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (x : Nat) :
+    x ∉ crepAssignedFreeVars (compileProg context .tick) := by
+  simp [compileProg, crepAssignedFreeVars]
+
+theorem not_mem_crepAssignedFreeVars_compileProg_annot
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (tag text : String) (x : Nat) :
+    x ∉ crepAssignedFreeVars (compileProg context (.annot tag text)) := by
+  simp [compileProg, crepAssignedFreeVars]
+
 /-- `crepNestedSeq` of `assign` statements built from a zip of names with
     variables introduced by `freshNames` still has exactly `names` as its
     assigned free variables. -/

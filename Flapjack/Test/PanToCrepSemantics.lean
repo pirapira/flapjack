@@ -271,4 +271,6 @@ example {α σ : Type} [BEq α] [OfNat α 0] [Add α]
 
 #check @PanValuePcSemanticClockEvidence.crossClockFinalFfiSemanticOutcomeRel
 
+#check @panValuePcResultRelWithContextCode_of_pairwise_normalOrRaised_evidence
+
 end Flapjack.Test.PanToCrepSemantics

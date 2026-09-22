@@ -54,4 +54,16 @@ theorem panValueCrepRaisedStateRelExceptWithContext_two_word_spill
   exact panValueCrepRaisedStateRel_global_spill structs context sourceLocals
     sourceGlobals sourceMemory state spillAddress value hrel.2.2
 
+ theorem panValueCrepRaisedStateRelExceptWithContext_to_raisedStateRel
+    [BEq String]
+    (structs : StructContext) (context : CompileContext α)
+    (sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (state : CrepState α)
+    (spillAddress : α)
+    (hrel : panValueCrepRaisedStateRelExceptWithContext structs context
+      sourceGlobals sourceMemory state (fun address => address = spillAddress)) :
+    panValueCrepRaisedStateRel structs context sourceGlobals sourceMemory
+      state spillAddress :=
+  hrel.2.2
+
 end Flapjack

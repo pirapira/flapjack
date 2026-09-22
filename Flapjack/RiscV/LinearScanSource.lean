@@ -395,6 +395,24 @@ def wordLinearScanExtractColouring
 def wordLinearScanToWordColouring (colouring : NatInfoMap Nat) : NatInfoMap Nat :=
   colouring.map (fun entry => (entry.1, 2 * entry.2))
 
+theorem lookupNatInfo_wordLinearScanToWordColouring
+    (colouring : NatInfoMap Nat) (name colour : Nat)
+    (hlookup : lookupNatInfo name colouring = some colour) :
+    lookupNatInfo name (wordLinearScanToWordColouring colouring) =
+      some (2 * colour) := by
+  induction colouring with
+  | nil =>
+      simp [lookupNatInfo] at hlookup
+  | cons entry tail ih =>
+      rcases entry with ⟨key, value⟩
+      by_cases hkey : key = name
+      · subst key
+        simp [lookupNatInfo, wordLinearScanToWordColouring] at hlookup ⊢
+        cases hlookup
+        rfl
+      · simp [lookupNatInfo, wordLinearScanToWordColouring, hkey] at hlookup ⊢
+        exact ih hlookup
+
 def wordGetIntervalsCtAux : WordClashTree → Int → NatInfoMap Int →
     NatInfoMap Int → List Nat →
     Int × NatInfoMap Int × NatInfoMap Int × List Nat

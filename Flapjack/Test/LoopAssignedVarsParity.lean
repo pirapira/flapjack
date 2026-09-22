@@ -41,6 +41,16 @@ theorem loopAssignedVars_loopTempNames_fixture :
     loopAssignedVars probeAssignNames = [3, 4, 5] :=
   loopAssignedVars_loopTempNames 3 3 (.const 0)
 
+/-! Cake `crep_to_loopProofScript.sml:1562` `assigned_vars_nested_seq_assign`. -/
+
+def probeAssignPairs : LoopProg Nat :=
+  loopNestedSeq (loopAssignPairs [3, 4, 5] [.const 0, .const 1, .const 2])
+
+theorem loopAssignedVars_loopAssignPairs_fixture :
+    loopAssignedVars probeAssignPairs = [3, 4, 5] :=
+  loopAssignedVars_loopAssignPairs [3, 4, 5] [.const 0, .const 1, .const 2]
+    (by decide)
+
 def check (name : String) (actual expected : List Nat) : IO Bool := do
   if actual == expected then
     IO.println s!"PASS {name}"
@@ -60,7 +70,9 @@ def runChecks : IO Bool := do
     check "assigned_vars byte load"
       (loopAssignedVars probeLoadByte) originalLoadByte,
     check "assigned_vars MAPi Assign"
-      (loopAssignedVars probeAssignNames) [3, 4, 5] ].mapM id
+      (loopAssignedVars probeAssignNames) [3, 4, 5],
+    check "assigned_vars nested_seq Assign"
+      (loopAssignedVars probeAssignPairs) [3, 4, 5] ].mapM id
   pure (results.all id)
 
 end Flapjack.Test.LoopAssignedVarsParity

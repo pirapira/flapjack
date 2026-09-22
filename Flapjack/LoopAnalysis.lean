@@ -520,4 +520,33 @@ theorem loopAssignedVars_loopTempNames (offset count : Nat)
       loopTempNames offset count :=
   loopAssignedVars_loopAssignNames _ _
 
+def loopAssignPairs (names : List Nat) (expressions : List (LoopExp α)) :
+    List (LoopProg α) :=
+  names.zipWith (fun name expression => .assign name expression) expressions
+
+theorem loopAssignPairs_cons (name : Nat) (names : List Nat)
+    (expression : LoopExp α) (expressions : List (LoopExp α)) :
+    loopAssignPairs (name :: names) (expression :: expressions) =
+      .assign name expression :: loopAssignPairs names expressions := by
+  simp [loopAssignPairs]
+
+theorem loopAssignedVars_loopAssignPairs (names : List Nat)
+    (expressions : List (LoopExp α)) (hlen : names.length = expressions.length) :
+    loopAssignedVars (loopNestedSeq (loopAssignPairs names expressions)) =
+      names := by
+  induction names generalizing expressions with
+  | nil =>
+      cases expressions with
+      | nil => simp [loopAssignPairs, loopNestedSeq, loopAssignedVars]
+      | cons expression expressions => simp at hlen
+  | cons name names ih =>
+      cases expressions with
+      | nil => simp at hlen
+      | cons expression expressions =>
+          rw [loopAssignPairs_cons, loopAssignedVars_nestedSeq]
+          simp only [List.flatMap_cons, loopAssignedVars]
+          rw [← loopAssignedVars_nestedSeq (loopAssignPairs names expressions)]
+          rw [ih expressions (by simpa using hlen)]
+          rfl
+
 end Flapjack

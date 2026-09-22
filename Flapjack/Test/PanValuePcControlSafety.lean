@@ -1368,4 +1368,14 @@ example
 
 #check @panValueCrepProgramStateControlSafe_while_wordExp
 
+/-! The concrete Cake `code_rel` analogue is an inhabitant of the abstract
+`PanValuePcCodeRel` parameter, so it can be supplied directly to
+`pc_compile_correct`. -/
+example (context : CompileContext Nat) (target : PanValuePcTargetCode Nat) :
+    panValuePcCodeRelConcrete context [] target :=
+  panValuePcCodeRelConcrete_nil context target
+
+#check @panValuePcCodeRelConcrete
+#check @panValuePcCodeRelConcrete_localised
+
 end Flapjack.Test.PanValuePcControlSafety

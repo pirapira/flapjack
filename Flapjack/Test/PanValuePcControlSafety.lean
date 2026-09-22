@@ -1514,4 +1514,9 @@ example :
   compileFunDeclSource_parameter_context_slots_bounded concreteRelContext
     boundedParameterDecl (by simp [boundedParameterDecl])
 
+/-! Cake's `eval_var_cexp_present_ctxt` (`pan_to_crepProofScript.sml:693`):
+    every variable in a compiled expression is a slot bound in the compile
+    context.  Flapjack's companion of `compileExp_vars_bounded`. -/
+#check @Flapjack.compileExp_vars_present
+
 end Flapjack.Test.PanValuePcControlSafety

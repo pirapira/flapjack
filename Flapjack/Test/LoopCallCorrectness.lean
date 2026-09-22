@@ -151,6 +151,24 @@ theorem assign_var_compile_correct_fixture :
     subst source
     exact ⟨100, by simp [load32State]⟩
 
+theorem assign_const_compile_correct_fixture :
+    evalLoopProg 1 load32State
+        (comp [(3, 2)] (.assign 4 (.const 11)) : LoopProg Nat × LocationEnv).1 =
+        some (.normal { load32State with
+          locals := updateLoopLocal load32State.locals 4 11 }) ∧
+      labelsIn (comp [(3, 2)] (.assign 4 (.const 11)) : LoopProg Nat × LocationEnv).2
+        (updateLoopLocal load32State.locals 4 11) := by
+  apply comp_assign_nonvar_correct
+  · intro source
+    simp
+  · simp [evalLoopExp]
+  · intro name source hlookup
+    have hpair : 3 = name ∧ 2 = source := by
+      simpa [lookup] using hlookup
+    have hsource : source = 2 := hpair.2.symm
+    subst source
+    exact ⟨100, by simp [load32State]⟩
+
 theorem tick_compile_correct_fixture :
     evalLoopProg 1 load32State
         (comp [(3, 2)] (.tick : LoopProg Nat)).1 =
@@ -220,6 +238,7 @@ theorem primitive_labelsIn_fixture :
 #check comp_store_correct
 #check comp_skip_correct
 #check comp_assign_var_correct
+#check comp_assign_nonvar_correct
 #check comp_tick_correct
 #check comp_setGlobal_correct
 #check comp_primitive_labelsIn

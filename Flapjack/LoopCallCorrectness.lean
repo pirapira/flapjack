@@ -376,6 +376,41 @@ theorem comp_assign_var_correct
           · exact labelsIn_insert_update_any environment state.locals destination location
               sourceValue value hsourceValue henvironment
 
+theorem comp_assign_nonvar_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (environment : LocationEnv) (state : LoopState α)
+    (destination : Nat) (expression : LoopExp α) (value : α)
+    (hnotvar : ∀ source, expression ≠ .var source)
+    (hvalue : evalLoopExp state expression = some value)
+    (henvironment : labelsIn environment state.locals) :
+    evalLoopProg 1 state
+        (comp environment (.assign destination expression : LoopProg α)).1 =
+        some (.normal { state with
+          locals := updateLoopLocal state.locals destination value }) ∧
+      labelsIn
+        (comp environment (.assign destination expression : LoopProg α)).2
+        (updateLoopLocal state.locals destination value) := by
+  have hcompiled :
+      comp environment (.assign destination expression : LoopProg α) =
+        (.assign destination expression,
+          match lookup destination environment with
+          | none => environment
+          | some _ => delete destination environment) := by
+    cases expression <;> simp_all [comp] <;> rfl
+  rw [hcompiled]
+  cases hdestination : lookup destination environment with
+  | none =>
+      constructor
+      · exact evalLoopProg_assign state destination expression value hvalue
+      · exact labelsIn_update environment state.locals destination value henvironment
+  | some _ =>
+      constructor
+      · exact evalLoopProg_assign state destination expression value hvalue
+      · exact labelsIn_delete_update environment state.locals destination value henvironment
+
 theorem comp_tick_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]

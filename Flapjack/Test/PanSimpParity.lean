@@ -2829,6 +2829,64 @@ theorem related_declarations_normal_call_result_rel_fixture
     exceptionRel exceptionCode globalsLookup targetState memoryAccess memoryHandler
     targetInitial hinitial hdeclarations hentry hcall hstate hprefix
 
+theorem related_declarations_normal_call_context_state_fixture
+    (initial : PanValueFfiProgramState Nat Unit)
+    (targetInitial : PanValueProgramState Nat)
+    (clock : Nat) (fuel : Nat)
+    (declarations : List (Decl Nat)) (entry : FunName)
+    (arguments : List (Exp Nat))
+    (state : PanValueProgramState Nat)
+    (locals globals : VarName → Option (PanValue Nat))
+    (memory : Nat → Option (PanValue Nat)) (ffi : FfiState Unit)
+    (nextClock : Nat)
+    (pcContext : CompileContext Nat)
+    (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+    (exceptionCode : ExceptionId → Option Nat)
+    (globalsLookup : CrepState Nat → PanValue Nat → Option (List Nat))
+    (targetState : CrepState Nat)
+    (memoryAccess : Option (PanValueMemoryAccess Nat))
+    (memoryHandler : Option (PanValueMemoryFfiHandler Nat Unit))
+    {parameters : List VarName} {body : Prog Nat}
+    (hinitial : panValueProgramStateRel initial.source targetInitial)
+    (hdeclarations : evalPanValueDeclarations initial.source declarations
+      (memoryAccess := memoryAccess) = some state)
+    (hfunction : lookupPanFunction entry state.functions = some (parameters, body))
+    (hentry : lookupInfo entry state.returnShapes = none)
+    (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)
+      evaluatorHandler state.structs state.functions state.baseAddress
+      state.topAddress state.bytesInWord fuel (fun _ => none) state.globals
+      state.memory initial.ffi clock none entry arguments
+      (memoryAccess := memoryAccess)
+      (contracts := some (PanValueCallContracts.mk state.returnShapes
+        state.exceptions state.parameterShapes))
+      (memoryHandler := memoryHandler) =
+      some (.control (.normal locals globals memory ffi), nextClock))
+    (hstateContext : panValueCrepStateRelWithContext state.structs pcContext
+      locals globals memory targetState)
+    (hprefix : initial.ffi.ioEvents <+: ffi.ioEvents) :
+    ∃ targetDeclaration,
+      evalPanValueDeclarations targetInitial (panSimpDecls declarations)
+        (memoryAccess := memoryAccess) = some targetDeclaration ∧
+      panValueProgramStateRel state targetDeclaration ∧
+      lookupPanFunction entry targetDeclaration.functions =
+        some (parameters, panSimpProg body) ∧
+      state.exceptions = targetDeclaration.exceptions ∧
+      lookupInfo entry targetDeclaration.returnShapes = none ∧
+      evalPanValueFfiClockProgram evaluatorContext initial clock
+        (fun _ _ => none) evaluatorHandler fuel declarations entry arguments
+        (memoryAccess := memoryAccess) (memoryHandler := memoryHandler) =
+        some (.control (.normal locals globals memory ffi), nextClock) ∧
+      panValuePcResultRel state.structs pcContext exceptionRel exceptionCode
+        globalsLookup (.normal locals globals memory) (.normal targetState) ∧
+      panValueCrepStateRelWithContext state.structs pcContext locals globals
+        memory targetState ∧
+      initial.ffi.ioEvents <+: ffi.ioEvents := by
+  exact evalPanValueFfiClockProgram_of_related_declarations_and_normal_call_result_rel_adequacy_with_context
+    evaluatorContext initial clock (fun _ _ => none) evaluatorHandler fuel
+    declarations entry arguments state locals globals memory ffi nextClock pcContext
+    exceptionRel exceptionCode globalsLookup targetState memoryAccess memoryHandler
+    targetInitial hinitial hdeclarations hfunction hentry hcall hstateContext hprefix
+
 /-! The returned declaration-call branch keeps the return-shape lookup and
     flattened value relation explicit, rather than reducing it to success. -/
 theorem related_declarations_returned_call_result_rel_fixture

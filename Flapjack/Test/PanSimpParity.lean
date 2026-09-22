@@ -2762,3 +2762,7 @@ except `extCall`, whose event preservation depends on the handler premises). -/
 /-! The `extCall` leaf needs explicit handler event-preservation premises; this is the
 remaining sub-case of the generic `hleaf` obligation. -/
 #check @Flapjack.evalPanValueFfiProgSteps_extCall_ioEvents_prefix
+
+/-! Fully-discharged leaf event-prefix: all 13 `PanValueFfiLeafProg` constructors,
+including `extCall`, under the explicit handler-preservation premises. -/
+#check @Flapjack.evalPanValueFfiProgSteps_leaf_ioEvents_prefix

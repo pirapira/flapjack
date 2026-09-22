@@ -2602,4 +2602,93 @@ theorem evalPanValueFfiProgSteps_extCall_ioEvents_prefix
                 | nStruct _ _ => simp at hstep
 
 
+
+set_option linter.unusedSimpArgs false in
+theorem evalPanValueFfiProgSteps_leaf_ioEvents_prefix
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (program : Prog α) (hleaf : PanValueFfiLeafProg program)
+    (result : PanValueFfiControlResult α σ) (steps : Nat)
+    (memoryAccess : Option (PanValueMemoryAccess α)) (contracts : Option PanValueCallContracts)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ)) (clock : Nat)
+    (hstateful : panValueFfiStatefulHandlerPreservesIoEvents handler)
+    (hmemory : ∀ (memoryHandler : PanValueMemoryFfiHandler α σ),
+      panValueFfiMemoryHandlerPreservesIoEvents memoryHandler)
+    (hstep : evalPanValueFfiProgSteps context primitive handler structs functions
+      baseAddress topAddress bytesInWord (Nat.succ fuel) locals globals memory ffi
+      program (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) = some (result, steps)) :
+    ffi.ioEvents <+: (panResultFfi ((.control result : PanValueFfiClockOutcome α σ), clock)).ioEvents := by
+  cases hleaf with
+  | skip =>
+      exact evalPanValueFfiProgSteps_eventSafeLeaf_ioEvents_prefix context primitive handler
+        structs functions baseAddress topAddress bytesInWord fuel locals globals memory ffi
+        (.skip : Prog α) .skip result steps memoryAccess contracts memoryHandler clock hstep
+  | assign kind name value =>
+      exact evalPanValueFfiProgSteps_eventSafeLeaf_ioEvents_prefix context primitive handler
+        structs functions baseAddress topAddress bytesInWord fuel locals globals memory ffi
+        (.assign kind name value) (.assign kind name value) result steps memoryAccess contracts
+        memoryHandler clock hstep
+  | primitive name operator args =>
+      exact evalPanValueFfiProgSteps_eventSafeLeaf_ioEvents_prefix context primitive handler
+        structs functions baseAddress topAddress bytesInWord fuel locals globals memory ffi
+        (.primitive name operator args) (.primitive name operator args) result steps memoryAccess
+        contracts memoryHandler clock hstep
+  | store address value =>
+      exact evalPanValueFfiProgSteps_eventSafeLeaf_ioEvents_prefix context primitive handler
+        structs functions baseAddress topAddress bytesInWord fuel locals globals memory ffi
+        (.store address value) (.store address value) result steps memoryAccess contracts
+        memoryHandler clock hstep
+  | store32 address value =>
+      exact evalPanValueFfiProgSteps_eventSafeLeaf_ioEvents_prefix context primitive handler
+        structs functions baseAddress topAddress bytesInWord fuel locals globals memory ffi
+        (.store32 address value) (.store32 address value) result steps memoryAccess contracts
+        memoryHandler clock hstep
+  | storeByte address value =>
+      exact evalPanValueFfiProgSteps_eventSafeLeaf_ioEvents_prefix context primitive handler
+        structs functions baseAddress topAddress bytesInWord fuel locals globals memory ffi
+        (.storeByte address value) (.storeByte address value) result steps memoryAccess contracts
+        memoryHandler clock hstep
+  | «break» =>
+      exact evalPanValueFfiProgSteps_eventSafeLeaf_ioEvents_prefix context primitive handler
+        structs functions baseAddress topAddress bytesInWord fuel locals globals memory ffi
+        (.break : Prog α) .break result steps memoryAccess contracts memoryHandler clock hstep
+  | «continue» =>
+      exact evalPanValueFfiProgSteps_eventSafeLeaf_ioEvents_prefix context primitive handler
+        structs functions baseAddress topAddress bytesInWord fuel locals globals memory ffi
+        (.continue : Prog α) .continue result steps memoryAccess contracts memoryHandler clock hstep
+  | extCall function configuration configurationLength array arrayLength =>
+      exact evalPanValueFfiProgSteps_extCall_ioEvents_prefix context primitive handler structs
+        functions baseAddress topAddress bytesInWord fuel locals globals memory ffi function
+        configuration configurationLength array arrayLength result steps memoryAccess contracts
+        memoryHandler clock hstateful hmemory hstep
+  | raise exception value =>
+      exact evalPanValueFfiProgSteps_eventSafeLeaf_ioEvents_prefix context primitive handler
+        structs functions baseAddress topAddress bytesInWord fuel locals globals memory ffi
+        (.raise exception value) (.raise exception value) result steps memoryAccess contracts
+        memoryHandler clock hstep
+  | «return» value =>
+      exact evalPanValueFfiProgSteps_eventSafeLeaf_ioEvents_prefix context primitive handler
+        structs functions baseAddress topAddress bytesInWord fuel locals globals memory ffi
+        (.return value) (.return value) result steps memoryAccess contracts memoryHandler clock hstep
+  | shMemLoad size kind name address =>
+      exact evalPanValueFfiProgSteps_eventSafeLeaf_ioEvents_prefix context primitive handler
+        structs functions baseAddress topAddress bytesInWord fuel locals globals memory ffi
+        (.shMemLoad size kind name address) (.shMemLoad size kind name address) result steps
+        memoryAccess contracts memoryHandler clock hstep
+  | shMemStore size address value =>
+      exact evalPanValueFfiProgSteps_eventSafeLeaf_ioEvents_prefix context primitive handler
+        structs functions baseAddress topAddress bytesInWord fuel locals globals memory ffi
+        (.shMemStore size address value) (.shMemStore size address value) result steps
+        memoryAccess contracts memoryHandler clock hstep
+
+
 end Flapjack

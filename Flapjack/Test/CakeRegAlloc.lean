@@ -97,6 +97,79 @@ def loopBodyGuard : Bool :=
 def assignLeafGuard : Bool :=
   cakeGetStackOnly (.assign 9 (.const 7 : WordExp Nat) : WordProg Nat) = []
 
+/- The TreeSet graph accumulator must materialize the same descending Cake
+   adjacency lists as the reference list insertion path. -/
+def graphSetAccumulatorGuard : Bool :=
+  let tree : WordClashTree :=
+    .seq
+      (.delta [1, 3] [2, 4])
+      (.branch (some [5, 6])
+        (.set [7, 8, 7])
+        (.delta [9] [1, 8]))
+  let bij := cakeMkBij tree
+  let sourceIndex := cakeSpDefaultIndex bij.toAllocator
+  let ta := cakeSpDefaultIndexed sourceIndex
+  let (reference, _) := cakeMkGraph ta tree [] (CakeNodeMap.ofSize bij.nextNode)
+  let reference := cakeExtendGraph ta [(1, 9), (8, 2)] reference
+  let (accumulated, _) :=
+    cakeMkGraphSet ta tree [] (cakeAdjSetMapOfSize bij.nextNode)
+  let accumulated := cakeExtendGraphSet ta [(1, 9), (8, 2)] accumulated
+  reference.toNatInfoMap == (accumulated.mapValues cakeAdjSetList).toNatInfoMap
+
+#guard graphSetAccumulatorGuard
+
+def cliqueSetAccumulatorGuard : Bool :=
+  let live := [1, 3, 5, 7]
+  let initial := cakeAdjSetMapOfSize 8
+  (cakeCliqueInsertEdgeSetFast live initial).toNatInfoMap ==
+    (cakeCliqueInsertEdgeSet live initial).toNatInfoMap
+
+#guard cliqueSetAccumulatorGuard
+
+def extendCliqueSetAccumulatorGuard : Bool :=
+  let newNames := [1, 4, 1, 3]
+  let live := [2, 4, 6]
+  let initial := cakeAdjSetMapOfSize 8
+  let fast := cakeExtendCliqueSetFast newNames live initial
+  let reference := cakeExtendCliqueSetReference newNames live initial
+  fast.2 == reference.2 && fast.1.toNatInfoMap == reference.1.toNatInfoMap
+
+#guard extendCliqueSetAccumulatorGuard
+
+def indexedAdjacencyMembershipGuard : Bool :=
+  let tree : WordClashTree := .delta [1, 3] [2, 4]
+  let bij := cakeMkBij tree
+  let state := cakeInitRaStateFromBij bij tree [] []
+  (List.range state.dim).all (fun x =>
+    (List.range state.dim).all (fun y =>
+      cakeAdjMem state x y == cakeSortedMem x (cakeAdjSub state.adjLists y)))
+
+#guard indexedAdjacencyMembershipGuard
+
+def stackOnlyFastReferenceGuard : Bool :=
+  let programs : List (WordProg Nat) :=
+    [ .skip,
+      .move 1 [(9, 9), (7, 9)],
+      .assign 9 (.var 7),
+      .seq (.move 1 [(13, 13), (2, 13)])
+        (.move 1 [(9, 9), (7, 9)]),
+      .ite .notEqual 2 (.reg 3)
+        (.move 1 [(9, 9), (7, 9)])
+        (.move 1 [(21, 21), (7, 21)]),
+      .loop [] (.move 1 [(9, 9), (7, 9)]) [],
+      .call (some ([9], ([], []),
+        (.move 1 [(9, 9), (7, 9)] : WordProg Nat), 0, 1))
+        (some 5) [2] none ]
+  programs.all (fun program =>
+    cakeGetStackOnly program == (cakeGetStackOnlyAux ([], []) program).2)
+
+#guard stackOnlyFastReferenceGuard
+
+def filterReversedGuard : Bool :=
+  filterReversed (fun x : Nat => x % 2 = 1) [1, 2, 3, 4, 5, 6] = [5, 3, 1]
+
+#guard filterReversedGuard
+
 /-- Canonical form for comparing node bijections with the probed sptree
     outputs: both maps sorted by key. -/
 def sortBijectionMaps (bijection : CakeNodeBijection) :

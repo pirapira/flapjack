@@ -543,6 +543,66 @@ theorem evalPanValueFfiClockProgram_of_declarations_and_raised_call_result_rel_i
     hdeclarations hcall hstate hresult
   exact ⟨hrel.1, hrel.2, hprefix⟩
 
+/-! The ordinary normal-call branch completes the declaration-boundary
+    composition used by Cake's `state_rel_imp_semantics_decls_to_crep`.  The
+    source state relation is retained at the result boundary, while the
+    declaration evaluator, call evaluator, and incoming FFI-event prefix are
+    all explicit premises. -/
+theorem evalPanValueFfiClockProgram_of_declarations_and_normal_call_result_rel_ioEvents_prefix
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (initial : PanValueFfiProgramState α σ)
+    (clock : Nat)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (fuel : Nat) (declarations : List (Decl α))
+    (entry : FunName) (arguments : List (Exp α))
+    (state : PanValueProgramState α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (nextClock : Nat)
+    (pcContext : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (targetState : CrepState α)
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ))
+    (hdeclarations : evalPanValueDeclarations initial.source declarations
+      (memoryAccess := memoryAccess) = some state)
+    (hentry : lookupInfo entry state.returnShapes = none)
+    (hcall : evalPanValueFfiClockCall context primitive handler state.structs
+      state.functions state.baseAddress state.topAddress state.bytesInWord fuel
+      (fun _ => none) state.globals state.memory initial.ffi clock none entry arguments
+      (memoryAccess := memoryAccess)
+      (contracts := some (PanValueCallContracts.mk state.returnShapes
+        state.exceptions state.parameterShapes))
+      (memoryHandler := memoryHandler) =
+      some (.control (.normal locals globals memory ffi), nextClock))
+    (hstate : panValueCrepStateRel state.structs pcContext locals globals
+      memory targetState)
+    (hprefix : initial.ffi.ioEvents <+: ffi.ioEvents) :
+    evalPanValueFfiClockProgram context initial clock primitive handler fuel
+      declarations entry arguments (memoryAccess := memoryAccess)
+      (memoryHandler := memoryHandler) =
+      some (.control (.normal locals globals memory ffi), nextClock) ∧
+    panValuePcResultRel state.structs pcContext exceptionRel exceptionCode
+      globalsLookup
+      (.normal locals globals memory)
+      (.normal targetState) ∧
+    initial.ffi.ioEvents <+: ffi.ioEvents := by
+  have hprogram := evalPanValueFfiClockProgram_of_declarations_and_call
+    context initial clock primitive handler fuel declarations entry arguments state
+    (.control (.normal locals globals memory ffi)) nextClock
+    (memoryAccess := memoryAccess) (memoryHandler := memoryHandler)
+    hdeclarations hentry hcall
+  refine ⟨hprogram, ?_, ?_⟩
+  · exact (panValuePcResultRel_normal_iff state.structs pcContext exceptionRel
+      exceptionCode globalsLookup locals globals memory targetState).2 hstate
+  · exact hprefix
+
 /-! The timeout counterpart composes the declaration evaluator with the
     clocked call boundary and the concrete `state_rel` result relation.  This
     is the timeout branch of Cake's `state_rel_imp_semantics_decls_to_crep`:

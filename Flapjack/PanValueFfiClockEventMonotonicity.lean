@@ -2784,7 +2784,6 @@ theorem evalPanValueFfiClockProg_leaf_of_handlerPreserves
 
 
 
-set_option linter.unusedVariables false in
 theorem panValueFfiStatefulHandlerPreservesIoEvents_fails
     (α : Type u) (σ : Type v) :
     panValueFfiStatefulHandlerPreservesIoEvents (α := α) (σ := σ)
@@ -2794,7 +2793,6 @@ theorem panValueFfiStatefulHandlerPreservesIoEvents_fails
     nextFfi h
   exact absurd h (by simp)
 
-set_option linter.unusedVariables false in
 theorem panValueFfiMemoryHandlerPreservesIoEvents_fails
     (α : Type u) (σ : Type v) :
     panValueFfiMemoryHandlerPreservesIoEvents (α := α) (σ := σ)

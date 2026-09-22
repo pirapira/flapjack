@@ -364,7 +364,7 @@ run_probe compile_panop_probeScript.sml compile_panop_probe.out \
 run_probe compile_exp_probeScript.sml compile_exp_probe.out \
   leaves struct_field loads_ops cmp_shift "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe exp_hdl_probeScript.sml exp_hdl_probe.out \
-  missing known "$cake_dir/pancake/pan_to_crepScript.sml"
+  missing known dup_update dup_list "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe ret_var_probeScript.sml ret_var_probe.out \
   one_empty named "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe ret_hdl_probeScript.sml ret_hdl_probe.out \

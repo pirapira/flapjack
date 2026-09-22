@@ -10,7 +10,7 @@ the inventory and this report.
 | --- | --- | --- | --- |
 | `compile_prog` | [`compile_prog_probe.out`](../scripts/hol-probes/compile_prog_probe.out) | [`CompileProgParity.lean`](../Flapjack/Test/CompileProgParity.lean) | empty input; inline calls; valid Global return destination; handled call with missing destination and a two-word payload |
 | `compile_to_crep` | [`compile_to_crep_probe.out`](../scripts/hol-probes/compile_to_crep_probe.out) | [`CompileToCrepeParity.lean`](../Flapjack/Test/CompileToCrepeParity.lean) | empty input; one-word and two-word exception raises; flattened parameters |
-| `exp_hdl` | [`exp_hdl_probe.out`](../scripts/hol-probes/exp_hdl_probe.out) | [`ExpHdlParity.lean`](../Flapjack/Test/ExpHdlParity.lean) | missing and known handler variables |
+| `exp_hdl` | [`exp_hdl_probe.out`](../scripts/hol-probes/exp_hdl_probe.out) | [`ExpHdlParity.lean`](../Flapjack/Test/ExpHdlParity.lean) | missing and known handler variables; duplicate finite-map updates in both FUPDATE and FUPDATE_LIST form, where the last binding wins |
 | `ret_hdl` | [`ret_hdl_probe.out`](../scripts/hol-probes/ret_hdl_probe.out) | [`RetHdlParity.lean`](../Flapjack/Test/RetHdlParity.lean) | One, empty/single/two-word Comb, and Named shapes |
 | `ret_var` | [`ret_var_probe.out`](../scripts/hol-probes/ret_var_probe.out) | [`RetVarParity.lean`](../Flapjack/Test/RetVarParity.lean) | empty and populated One, single and multiword Comb, and Named shapes |
 | `wrap_rt` | [`wrap_rt_probe.out`](../scripts/hol-probes/wrap_rt_probe.out) | [`WrapRtParity.lean`](../Flapjack/Test/WrapRtParity.lean) | absent, empty/single One, empty Comb, and Named destinations |

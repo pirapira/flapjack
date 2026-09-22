@@ -1146,6 +1146,14 @@
       "tracked_beads": [
         "flapjack-pxn.8.10"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00217_fuzz_allocator_20260928.pnk",
+      "source_reference": "Fresh exact differential witness from seed 20260928 index 217: struct and tuple-returning calls, nested loads and shifts, global/local stores, a branch with a handler-shaped call path, and high allocator/frame pressure exercise Cake IRC continuation layout. Cake and Flapjack artifacts are byte-identical.",
+      "cake_sha256": "9976538d54aaa8377d79a4d72c1c8bb32198765913240b92d1551edc9045498a",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.5"
+      ]
     }
   ]
 }

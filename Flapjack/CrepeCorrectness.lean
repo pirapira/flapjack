@@ -2990,6 +2990,29 @@ theorem evalCrepFullProgState_call_seq_raised_compose
       some (.raised callState exceptionCode) := by
   simp [evalCrepFullProgState, hcall]
 
+/-! A call that exhausts the Crep fuel budget short-circuits its sequence
+    continuation just like Cake's timeout branch.  Keeping this equation
+    separate from the raised case preserves the evaluator's concrete `none`
+    result and gives the state-relation induction an explicit timeout step. -/
+theorem evalCrepFullProgState_call_seq_timeout_compose
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (functions : List (CompiledFunction α))
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state : CrepState α)
+    (info : Option (List Nat × Option (α × CrepProg α)))
+    (function : FunName) (arguments : List (CrepExp α))
+    (body : CrepProg α)
+    (hcall : evalCrepFullCallState functions primitive ffi sharedMem
+      baseAddress topAddress fuel state info function arguments = none) :
+    evalCrepFullProgState functions primitive ffi sharedMem
+      baseAddress topAddress (fuel + 2) state
+      (.seq (.call info function arguments) body) = none := by
+  simp [evalCrepFullProgState, hcall]
+
 /-! The one-word declaration-call lowering combines fresh-slot setup, the
     destination-aware call, and the compiled continuation.  Its fuel offsets
     are explicit so later source-to-Crep induction can instantiate this rule

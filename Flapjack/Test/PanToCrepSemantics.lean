@@ -47,6 +47,7 @@ open Flapjack
 #check @Flapjack.panValuePcResultRelWithContextCode_of_clocked_evidence_pair
 #check @Flapjack.panCrepSemanticAgreement_of_clocked_pcCompileCorrectWithContextCode
 #check @Flapjack.panValuePcResultRelWithContextCode_of_pairwise_normalOrRaised_evidence
+#check @Flapjack.panValuePcResultRelWithContextCode_of_clocked_normalOrRaised_evidence
 #check @Flapjack.panCrepSemanticAgreement_of_pcCompileCorrectWithContextCode_cross_clock_prefix_from_pairwise_normalOrRaised_stateRelWithContext
 #check @Flapjack.panCrepBehaviourRel_of_pcCompileCorrectWithContextCode_cross_clock_prefix_from_pairwise_normalOrRaised_stateRelWithContext
 #check @Flapjack.panCrepSemanticAgreement_of_pcCompileCorrect
@@ -70,6 +71,8 @@ open Flapjack
 #check @Flapjack.panCrepBehaviourRel_of_pcCompileCorrectWithContextCode_cross_clock_prefix_from_pairwise_returned_stateRelWithContext
 #check @Flapjack.panLprefixChain_of_panSemEvaluate_event_prefix
 #check @Flapjack.panLprefixChain_of_panSemEvaluate_nonTimeout
+#check @Flapjack.panLprefixChain_of_crepLprefixChain_of_semantic_agreement
+#check @Flapjack.panSemantics_rel_crepSemantics_of_crep_chain
 
 example : panEventPrefix ([1] : List Nat) [1, 2] := by
   exact ⟨[2], rfl⟩
@@ -301,5 +304,7 @@ example {α σ : Type} [BEq α] [OfNat α 0] [Add α]
 #check @panValuePcResultRelWithContextCode_of_pairwise_normalOrRaised_evidence
 
 #check @panCrepBehaviourRel_of_pcCompileCorrectWithContextCode_cross_clock_prefix_from_pairwise_stateRelWithContext
+#check @panCrepBehaviourRel_of_clocked_pcCompileCorrectWithContextCode_cross_clock_prefix_from_pairwise_stateRelWithContext
+#check @panCrepBehaviourRel_of_clocked_pcCompileCorrectWithContextCode_cross_clock_prefix_from_pairwise_stateRelWithContext_of_crep_chain
 
 end Flapjack.Test.PanToCrepSemantics

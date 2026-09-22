@@ -817,6 +817,33 @@ def sharedMemOffsetOperatorTable : Bool :=
 
 #guard sharedMemOffsetOperatorTable
 
+/- The shared-memory Cake path uses the same signed-12 endpoint as the
+   stack-memory path, but it is a separate `shareMemOffset` carrier.  Pin the
+   narrow rows here so the shared-memory encoder cannot regress independently. -/
+example :
+    labCompilePlain (width := 64)
+      (.shareMemOffset .load8 10 11 (BitVec.ofNat 64 2047)) =
+      some [.loadByteOffset 10 11 (BitVec.ofNat 64 2047)] := by
+  decide
+
+example :
+    labCompilePlain (width := 64)
+      (.shareMemOffset .load16 10 11 (BitVec.ofNat 64 2047)) =
+      some [.loadHalfOffset 10 11 (BitVec.ofNat 64 2047)] := by
+  decide
+
+example :
+    labCompilePlain (width := 64)
+      (.shareMemOffset .store8 10 11 (BitVec.ofNat 64 2047)) =
+      some [.storeByteOffset 10 11 (BitVec.ofNat 64 2047)] := by
+  decide
+
+example :
+    labCompilePlain (width := 64)
+      (.shareMemOffset .store16 10 11 (BitVec.ofNat 64 2047)) =
+      some [.storeHalfOffset 10 11 (BitVec.ofNat 64 2047)] := by
+  decide
+
 /- Cake's source-shaped `wordShareInstToInstructionsCake` keeps a variable
    address as one direct `Mem` carrier.  Check every width in the target
    `riscv_memop` table at this backend boundary, independently of the

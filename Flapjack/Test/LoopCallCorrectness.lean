@@ -644,6 +644,39 @@ theorem arith_longDiv_full_compile_correct_fixture :
       exact ⟨100, by simp [longDivWordState]⟩)
   simpa using hlong
 
+theorem arith_longMul_full_compile_correct_fixture :
+    evalLoopProgFullWithLongMul
+        (fun left right : RiscV.Word 64 => some (left + right, left * right)) 1
+        longDivWordState
+        (comp [(3, 2)]
+          (.arith (.longMul 4 5 3 2)) :
+            LoopProg (RiscV.Word 64) × LocationEnv).1 =
+        some (.normal { longDivWordState with
+          locals := updateLoopLocal
+            (updateLoopLocal longDivWordState.locals 4 107) 5 700 }) ∧
+      labelsIn
+        (comp [(3, 2)]
+          (.arith (.longMul 4 5 3 2)) :
+            LoopProg (RiscV.Word 64) × LocationEnv).2
+        (updateLoopLocal
+          (updateLoopLocal longDivWordState.locals 4 107) 5 700) := by
+  have hlong := comp_arith_longMul_full_correct
+    (longMul := (fun left right : RiscV.Word 64 => some (left + right, left * right)))
+    (environment := [(3, 2)]) (state := longDivWordState) (fuel := 0)
+    (destinationLeft := 4) (destinationRight := 5)
+    (sourceLeft := 3) (sourceRight := 2)
+    (leftValue := 7) (rightValue := 100)
+    (highValue := 107) (lowValue := 700)
+    (by simp [longDivWordState]) (by simp [longDivWordState])
+    (by simp) (by
+      intro name source hlookup
+      have hpair : 3 = name ∧ 2 = source := by
+        simpa [lookup] using hlookup
+      have hsource : source = 2 := hpair.2.symm
+      subst source
+      exact ⟨100, by simp [longDivWordState]⟩)
+  simpa using hlong
+
 theorem call_labelsIn_fixture :
     (comp [(3, 2)]
       (.call none none [2, 3] none : LoopProg Nat) : LoopProg Nat × LocationEnv).1 =
@@ -736,6 +769,7 @@ theorem loop_compile_result_fixture :
 #check comp_shMem_store_correct
 #check comp_arith_div_correct
 #check comp_arith_longMul_correct
+#check comp_arith_longMul_full_correct
 #check comp_arith_longDiv_labelsIn
 #check comp_arith_longDiv_full_correct
 #check comp_primitive_labelsIn

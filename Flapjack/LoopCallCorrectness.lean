@@ -1082,6 +1082,92 @@ theorem comp_arith_longMul_correct
               state.locals destinationLeft (leftValue * rightValue)
               (labelsIn_delete environment state.locals destinationRight henvironment)
 
+theorem comp_arith_longMul_full_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [PanCmp α] [PanShiftWidth α]
+    [ArithmeticShiftRight α] [RotateRightOp α] [Complement α]
+    (longMul : α → α → Option (α × α))
+    (environment : LocationEnv) (state : LoopState α) (fuel : Nat)
+    (destinationLeft destinationRight sourceLeft sourceRight : Nat)
+    (leftValue rightValue highValue lowValue : α)
+    (hleft : state.locals sourceLeft = some leftValue)
+    (hright : state.locals sourceRight = some rightValue)
+    (hcompute : longMul leftValue rightValue = some (highValue, lowValue))
+    (henvironment : labelsIn environment state.locals) :
+    evalLoopProgFullWithLongMul longMul (fuel + 1) state
+        (comp environment
+          (.arith (.longMul destinationLeft destinationRight sourceLeft sourceRight) :
+            LoopProg α)).1 =
+        some (.normal { state with
+          locals := updateLoopLocal
+            (updateLoopLocal state.locals destinationLeft highValue)
+            destinationRight lowValue }) ∧
+      labelsIn
+        (comp environment
+          (.arith (.longMul destinationLeft destinationRight sourceLeft sourceRight) :
+            LoopProg α)).2
+        (updateLoopLocal
+          (updateLoopLocal state.locals destinationLeft highValue)
+          destinationRight lowValue) := by
+  have hcompiled :
+      comp environment
+          (.arith (.longMul destinationLeft destinationRight sourceLeft sourceRight) :
+            LoopProg α) =
+        (.arith (.longMul destinationLeft destinationRight sourceLeft sourceRight),
+          match lookup destinationLeft environment, lookup destinationRight environment with
+          | none, none => environment
+          | some _, none => delete destinationLeft environment
+          | none, some _ => delete destinationRight environment
+          | some _, some _ => delete destinationLeft (delete destinationRight environment)) := by
+    simp [comp, compArith] <;> rfl
+  have heval :
+      evalLoopProgFullWithLongMul longMul (fuel + 1) state
+          (.arith (.longMul destinationLeft destinationRight sourceLeft sourceRight)) =
+        some (.normal { state with
+          locals := updateLoopLocal
+            (updateLoopLocal state.locals destinationLeft highValue)
+            destinationRight lowValue }) := by
+    simp [evalLoopProgFullWithLongMul, hleft, hright, hcompute]
+  rw [hcompiled]
+  cases hleftDestination : lookup destinationLeft environment with
+  | none =>
+      cases hrightDestination : lookup destinationRight environment with
+      | none =>
+          constructor
+          · exact heval
+          · exact labelsIn_update environment
+              (updateLoopLocal state.locals destinationLeft highValue)
+              destinationRight lowValue
+              (labelsIn_update environment state.locals destinationLeft highValue
+                henvironment)
+      | some _ =>
+          constructor
+          · exact heval
+          · exact labelsIn_update (delete destinationRight environment)
+              (updateLoopLocal state.locals destinationLeft highValue)
+              destinationRight lowValue
+              (labelsIn_delete_update_any environment state.locals destinationRight
+                destinationLeft highValue henvironment)
+  | some _ =>
+      cases hrightDestination : lookup destinationRight environment with
+      | none =>
+          constructor
+          · exact heval
+          · exact labelsIn_update (delete destinationLeft environment)
+              (updateLoopLocal state.locals destinationLeft highValue)
+              destinationRight lowValue
+              (labelsIn_delete_update_any environment state.locals destinationLeft
+                destinationLeft highValue henvironment)
+      | some _ =>
+          constructor
+          · exact heval
+          · exact labelsIn_delete_update_any (delete destinationRight environment)
+              (updateLoopLocal state.locals destinationLeft highValue)
+              destinationLeft destinationRight lowValue
+              (labelsIn_delete_update_any environment state.locals destinationRight
+                destinationLeft highValue henvironment)
+
 theorem comp_arith_longDiv_labelsIn
     (environment : LocationEnv) (locals : Nat → Option α)
     (destinationLeft destinationRight sourceLeft sourceRight quotient : Nat)

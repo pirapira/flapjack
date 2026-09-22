@@ -118,7 +118,7 @@ example :
       .dec 2 (.const 0)
         (.call (some ([2], some (9, .seq .skip .skip))) "f" []) := by
   simp [compileProg, compileArgs, functionReturnNames, allocatedNames, compileProg,
-    expHdl, callContext, crepContext, lookupInfo, nestedDecs]
+    expHdl, expHdlFiniteMap, callContext, crepContext, lookupInfo, nestedDecs]
 
 example :
     compileProg callContext (.raise "E" (.const (α := Nat) 0)) =

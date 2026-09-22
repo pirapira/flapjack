@@ -65,23 +65,6 @@ def compileField [OfNat α 0] (index : Nat) :
 def compilePanOp : PanOp → CrepOp
   | .mul => .mul
 
-/-! Executable analogue of `pan_to_crep$exp_hdl` from
-    `cakeml/pancake/pan_to_crepScript.sml:106-112`. HOL takes a finite map and
-    uses `FLOOKUP`; this list-backed `InfoMap` helper uses first-match lookup,
-    so it is not tagged as the HOL definition. Bead `flapjack-pxn.18.3.1.6`
-    tracks the exact map-shaped port and executable bridge.
-
-    A known variable is initialized from the global return area, one word per
-    flattened local, and the assignments are nested in source order. -/
-def expHdl [OfNat α 0] [OfNat α 1] [Add α]
-    (vars : InfoMap (Shape × List Nat)) (name : VarName) : CrepProg α :=
-  match lookupInfo name vars with
-  | none => .skip
-  | some (_, names) =>
-      crepNestedSeq
-        (List.zipWith (fun destination source => .assign destination source)
-          names (loadGlobals 0 names.length))
-
 /-! Faithful port of `pan_to_crep$exp_hdl` from
     `cakeml/pancake/pan_to_crepScript.sml:106-112`.
 
@@ -98,6 +81,59 @@ def expHdlFiniteMap [OfNat α 0] [OfNat α 1] [Add α]
       crepNestedSeq
         (panMap2 (fun destination source => .assign destination source)
           names (loadGlobals (0 : α) names.length))
+
+/-! Flapjack-only representation bridge from the compiler's association-list
+    `InfoMap` to the HOL finite map.  The compiler stores bindings
+    most-recent-first; reversing and replaying them through `FUPDATE_LIST`
+    (Cake's `FEMPTY |++ ...`) reproduces the finite map that Cake's `make_vmap`
+    and `ctxt.vars |+ ...` updates build, so the later of two duplicate names
+    wins the lookup, exactly as `FLOOKUP` does. -/
+def infoMapToFiniteMap [BEq String] (entries : InfoMap β) : FiniteMap String β :=
+  FUPDATE_LIST FEMPTY entries.reverse
+
+theorem FUPDATE_LIST_append [BEq α] (fm : FiniteMap α β)
+    (entries rest : List (α × β)) :
+    FUPDATE_LIST fm (entries ++ rest) = FUPDATE_LIST (FUPDATE_LIST fm entries) rest := by
+  simp [FUPDATE_LIST, List.foldl_append]
+
+/-- Kernel-checked representation theorem: the list-backed first-match
+    `lookupInfo` and `FLOOKUP` of the bridged finite map agree at every key,
+    including duplicate names.  This is what licenses the executable handler
+    compilation to call the faithful `expHdlFiniteMap`. -/
+theorem lookupInfo_eq_flookup_infoMapToFiniteMap [BEq String] [LawfulBEq String]
+    (name : String) (entries : InfoMap β) :
+    lookupInfo name entries = FLOOKUP (infoMapToFiniteMap entries) name := by
+  induction entries with
+  | nil => rfl
+  | cons entry rest ih =>
+      rw [lookupInfo, infoMapToFiniteMap, List.reverse_cons, FUPDATE_LIST_append,
+        FUPDATE_LIST_cons, FUPDATE_LIST_nil, FLOOKUP_update]
+      by_cases h : (entry.1 == name) = true
+      · rw [if_pos h, if_pos h]
+      · rw [if_neg h, if_neg h]
+        exact ih
+
+@[simp] theorem FLOOKUP_infoMapToFiniteMap [BEq String] [LawfulBEq String]
+    (name : String) (entries : InfoMap β) :
+    FLOOKUP (infoMapToFiniteMap entries) name = lookupInfo name entries :=
+  (lookupInfo_eq_flookup_infoMapToFiniteMap name entries).symm
+
+/-- Executable handler-setup adapter.  It builds HOL's finite map from the
+    association-list compiler context and invokes the tagged faithful port
+    `expHdlFiniteMap`, so the executed call path uses the exact HOL definition.
+    Untagged: HOL has no association-list helper.
+
+    A known variable is initialized from the global return area, one word per
+    flattened local, and the assignments are nested in source order. -/
+def expHdl [BEq String] [OfNat α 0] [OfNat α 1] [Add α]
+    (vars : InfoMap (Shape × List Nat)) (name : VarName) : CrepProg α :=
+  expHdlFiniteMap (infoMapToFiniteMap vars) name
+
+/-- The executable adapter computes the faithful finite-map definition on the
+    bridged map. -/
+theorem expHdl_eq_expHdlFiniteMap_bridge [BEq String] [OfNat α 0] [OfNat α 1] [Add α]
+    (vars : InfoMap (Shape × List Nat)) (name : VarName) :
+    expHdl vars name = expHdlFiniteMap (infoMapToFiniteMap vars) name := rfl
 
 /-! Faithful port of `pan_to_crep$ret_var` from
     `cakeml/pancake/pan_to_crepScript.sml:114-119`.

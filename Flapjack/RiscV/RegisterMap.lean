@@ -312,6 +312,14 @@ def writeRegisterInternalNat {width : Nat} (state : State width) (name : Nat)
     (value : Word width) : State width :=
   (labRegisterOfNat name).elim state (fun register => writeRegister state register value)
 
+/-- Cake's internal zero stack register is mapped to architectural `x0`, so
+    writes through the internal accessor are discarded just like hardware
+    writes to `x0`. -/
+@[simp] theorem writeRegisterInternalNat_zeroStack {width : Nat}
+    (state : State width) (value : Word width) :
+    writeRegisterInternalNat state 27 value = state := by
+  simp [writeRegisterInternalNat, writeRegister]
+
 /-- Writing an internal register whose name is out of architectural range is a
 no-op. -/
 @[simp] theorem writeRegisterInternalNat_of_none {width : Nat} (state : State width)
@@ -326,5 +334,18 @@ writes the resulting hardware register. -/
     (value : Word width) :
     writeRegisterInternalNat state name value = writeRegister state register value := by
   simp [writeRegisterInternalNat, h]
+
+/-- A successful Cake internal write is visible through the same internal name
+unless its mapped hardware register is the hardwired zero register.  This is
+the read-after-write boundary used by Backend correctness after the one-time
+`riscv_names` translation. -/
+theorem readRegisterInternal_writeRegisterInternalNat_self {width : Nat}
+    (state : State width) {name : Nat} {register : Fin 32}
+    (value : Word width) (h : labRegisterOfNat name = some register)
+    (hzero : register ≠ 0) :
+    readRegisterInternal (writeRegisterInternalNat state name value) name =
+      some value := by
+  simp [readRegisterInternal, writeRegisterInternalNat, h,
+    readRegister, writeRegister, hzero]
 
 end Flapjack.RiscV

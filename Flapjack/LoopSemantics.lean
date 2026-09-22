@@ -1,4 +1,4 @@
-import Flapjack.CrepToLoop
+import Flapjack.Pancake.CrepToLoop
 
 /-!
 Executable semantics for the first Loop fragment.

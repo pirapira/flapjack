@@ -1,4 +1,4 @@
-import Flapjack.Compile
+import Flapjack.Pancake.PanToCrep.Compile
 
 /-! Oracle-backed parity tests for the standalone and assigned call forms of
     `pan_to_crep` (`pan_to_crepScript.sml:220-262`).  A standalone

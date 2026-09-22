@@ -1,5 +1,5 @@
-import Flapjack.CrepToLoop
-import Flapjack.LoopCall
+import Flapjack.Pancake.CrepToLoop
+import Flapjack.Pancake.LoopCall
 import Flapjack.LoopSemantics
 
 /-!

@@ -1,4 +1,4 @@
-import Flapjack.Language
+import Flapjack.Pancake.PanLang
 import Flapjack.Parser.Grammar
 
 /-!

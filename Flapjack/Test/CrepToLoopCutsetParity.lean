@@ -1,4 +1,4 @@
-import Flapjack.CrepToLoop
+import Flapjack.Pancake.CrepToLoop
 
 /-!
 # Original-domain parity for `crep_to_loop$compile` cutset threading

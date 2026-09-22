@@ -1,5 +1,5 @@
-import Flapjack.PanSimp
-import Flapjack.Static
+import Flapjack.Pancake.PanSimp
+import Flapjack.Pancake.PanStatic
 
 /-!
 The named-structure elimination pass from CakeML's `pan_structs` theory.

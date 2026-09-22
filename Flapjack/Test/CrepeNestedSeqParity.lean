@@ -1,5 +1,5 @@
-import Flapjack.Crepe
-import Flapjack.CrepeInline
+import Flapjack.Pancake.CrepLang
+import Flapjack.Pancake.CrepInline
 
 /-!
 # Original-domain parity for `crepLang$nested_seq`

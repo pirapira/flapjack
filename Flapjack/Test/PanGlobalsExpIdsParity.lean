@@ -1,4 +1,4 @@
-import Flapjack.PanGlobals
+import Flapjack.Pancake.PanGlobals
 
 /-!
 # Original-domain parity for `pan_to_word$exp_ids_compile_globals`

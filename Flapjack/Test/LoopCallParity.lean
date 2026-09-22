@@ -1,4 +1,4 @@
-import Flapjack.LoopCall
+import Flapjack.Pancake.LoopCall
 
 /-!
 # Original-domain parity for `loop_call$comp`

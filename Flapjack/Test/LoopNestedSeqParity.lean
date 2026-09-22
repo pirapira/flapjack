@@ -1,4 +1,4 @@
-import Flapjack.Loop
+import Flapjack.Pancake.LoopLang
 
 /-!
 # Original-domain parity for `nested_seq`

@@ -86,6 +86,8 @@ index with `python3 scripts/index-hol.py`. It records declaration locations,
 theory dependencies, and the CakeML commit used; see
 [`docs/HOL-INDEX.md`](docs/HOL-INDEX.md). The generated `.hol-index/` directory
 is gitignored.
+The evolving HOL-to-Lean source layout is recorded in
+[`docs/HOL-LAYOUT.md`](docs/HOL-LAYOUT.md).
 
 ## Project map
 
@@ -94,14 +96,15 @@ listed below. There is one shipped checked RISC-V path, implemented by
 `Flapjack.CompileMain`; experimental alternative compiler entry points have
 been removed so parity fixes cannot accidentally target a different pipeline.
 
-- `Flapjack/Language.lean`, `Static.lean`, and `Semantics.lean`: Pancake AST,
-  static checks, and source semantics.
-- `Flapjack/PanSimp.lean`, `PanStructs.lean`, and `PanGlobals.lean`: the first
-  source-to-source passes.
-- `Flapjack/PanToCrep.lean`, `CrepeRuntime.lean`, `CrepToLoop.lean`, and
-  `LoopEvaluate.lean`: Crep and Loop compilation and semantics.
-- `Flapjack/LoopToWord.lean` and the `Flapjack/RiscV` modules: the Word,
-  allocation, Stack, Lab, and RV64I portions used by the checked compiler.
+- `Flapjack/Pancake/PanLang.lean`, `PanStatic.lean`, and
+  `Semantics/PanSem.lean`: Pancake syntax, static checks, and source evaluator.
+- `Flapjack/Pancake/PanSimp.lean`, `PanStructs.lean`, and
+  `PanGlobals.lean`: the first source-to-source passes.
+- `Flapjack/Pancake/PanToCrep.lean`, `CrepToLoop.lean`,
+  `Semantics/CrepSem.lean`, and `Semantics/LoopSem.lean`: Crep and Loop
+  compilation and evaluator entry points.
+- `Flapjack/Pancake/LoopToWord.lean` and the `Flapjack/RiscV` modules: the
+  Word, allocation, Stack, Lab, and RV64I portions used by the checked compiler.
 - `Flapjack/Pipeline.lean` and `Flapjack/RiscV/PipelineDiagnostics.lean`: pass
   composition and explicit failure reporting.
 

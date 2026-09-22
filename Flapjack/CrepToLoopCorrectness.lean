@@ -1,6 +1,6 @@
 import Flapjack.CrepeSemantics
-import Flapjack.CrepeRuntime
-import Flapjack.CrepToLoop
+import Flapjack.Pancake.Semantics.CrepSem
+import Flapjack.Pancake.CrepToLoop
 
 namespace Flapjack
 

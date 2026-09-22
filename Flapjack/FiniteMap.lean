@@ -1,7 +1,7 @@
-import Flapjack.PanProgramSimp
+import Flapjack.Pancake.Proofs.PanSimp
 import Flapjack.PanValueFlatten
 import Flapjack.PanToCrepCorrectnessBoundary
-import Flapjack.Language
+import Flapjack.Pancake.PanLang
 
 /-!
 Faithful port of the HOL4/CakeML finite-map interface used by the original

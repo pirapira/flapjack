@@ -1,4 +1,4 @@
-import Flapjack.Crepe
+import Flapjack.Pancake.CrepLang
 
 /-!
 The Loop intermediate language used after Crepe lowering. The constructors

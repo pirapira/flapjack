@@ -1,4 +1,4 @@
-import Flapjack.Crepe
+import Flapjack.Pancake.CrepLang
 
 /-!
 Executable support for the Crepe inlining pass.

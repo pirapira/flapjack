@@ -1,4 +1,4 @@
-import Flapjack.Compile
+import Flapjack.Pancake.PanToCrep.Compile
 import Flapjack.RiscV.Model
 
 /-!

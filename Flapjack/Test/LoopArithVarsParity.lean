@@ -1,4 +1,4 @@
-import Flapjack.LoopAnalysis
+import Flapjack.Pancake.LoopLive
 
 /-! Direct parity for `loop_live$arith_vars_def` at
 `cakeml/pancake/loop_liveScript.sml:50`. -/

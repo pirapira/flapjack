@@ -1,4 +1,4 @@
-import Flapjack.LoopAnalysis
+import Flapjack.Pancake.LoopLive
 
 /-! Direct parity for `loop_live$vars_of_exp_def` at
 `cakeml/pancake/loop_liveScript.sml:11`.  The expected lists are the printed

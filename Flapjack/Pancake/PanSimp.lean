@@ -1,4 +1,4 @@
-import Flapjack.Language
+import Flapjack.Pancake.PanLang
 
 /-!
 The `pan_simp` pass from CakeML's Pancake development.

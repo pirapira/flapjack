@@ -1,4 +1,4 @@
-import Flapjack.Language
+import Flapjack.Pancake.PanLang
 
 /-! Parity guard for `panLang$free_var_ids` from
     `cakeml/pancake/panLangScript.sml:347-389`. -/

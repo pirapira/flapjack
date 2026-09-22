@@ -1,4 +1,4 @@
-import Flapjack.CrepToLoop
+import Flapjack.Pancake.CrepToLoop
 
 /-! Direct parity for `crep_to_loop$find_lab` (`find_lab_def`, line 27). -/
 namespace Flapjack.Test.CrepFindLabParity

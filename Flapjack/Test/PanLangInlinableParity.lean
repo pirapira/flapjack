@@ -1,4 +1,4 @@
-import Flapjack.Language
+import Flapjack.Pancake.PanLang
 
 /-! Parity guard for `panLang$inlinable` from
     `cakeml/pancake/panLangScript.sml:389-391`. -/

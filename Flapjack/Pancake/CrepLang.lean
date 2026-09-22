@@ -1,5 +1,5 @@
 import Flapjack.HolRef
-import Flapjack.Language
+import Flapjack.Pancake.PanLang
 
 /-!
 The Crepe intermediate language.

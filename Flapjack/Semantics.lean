@@ -1,4 +1,4 @@
-import Flapjack.Compile
+import Flapjack.Pancake.PanToCrep.Compile
 
 /-!
 Deterministic semantics for the currently supported compiler fragment.

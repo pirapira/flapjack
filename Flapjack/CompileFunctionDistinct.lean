@@ -1,4 +1,4 @@
-import Flapjack.Compile
+import Flapjack.Pancake.PanToCrep.Compile
 
 /-!
 # Function-name invariants for the Pancake-to-Crep compiler

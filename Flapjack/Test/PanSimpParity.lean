@@ -1,7 +1,7 @@
-import Flapjack.PanSimp
-import Flapjack.PanProgramSimp
-import Flapjack.PanSimpEvaluate
-import Flapjack.PanGlobals
+import Flapjack.Pancake.PanSimp
+import Flapjack.Pancake.Proofs.PanSimp
+import Flapjack.Pancake.Proofs.PanSimp.Evaluate
+import Flapjack.Pancake.PanGlobals
 import Flapjack.PanValueFfiEventMonotonicity
 import Flapjack.PanValueFfiClockShift
 import Flapjack.PanValueFfiClockCorrectness

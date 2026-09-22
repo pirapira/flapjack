@@ -1,5 +1,5 @@
 import Flapjack.CrepeSemantics
-import Flapjack.Compile
+import Flapjack.Pancake.PanToCrep.Compile
 import Flapjack.CrepToLoopCorrectness
 import Flapjack.RiscV.PanMemory
 

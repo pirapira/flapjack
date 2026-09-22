@@ -1524,6 +1524,20 @@ theorem cakeColourFrameSlots_arg_area_dominates
       parameters.length - k := by
   simp [cakeColourFrameSlots, hdom]
 
+/- The other `compile_prog` branch is spill-dominant: the coloured program's
+   computed occupancy wins the same Cake `MAX` rather than being replaced by
+   the formal argument area. -/
+theorem cakeColourFrameSlots_spill_dominates
+    (k : Nat) (parameters : List Nat) (program : WordProg α)
+    (colouring : NatInfoMap Nat)
+    (hdom : parameters.length - k ≤
+      (wordProgCakeMaxVar
+        (wordApplyColour (CakeAlloc.totalColour colouring) program) / 2 + 1) - k) :
+    (cakeColourFrameSlots k parameters program colouring).1 =
+      (wordProgCakeMaxVar
+        (wordApplyColour (CakeAlloc.totalColour colouring) program) / 2 + 1) - k := by
+  simp [cakeColourFrameSlots, hdom]
+
 def cakeColourWordSpillState (k : Nat) (parameters : List Nat)
     (program : WordProg α) (colouring : NatInfoMap Nat) : WordSpillState :=
   let colour := CakeAlloc.totalColour colouring

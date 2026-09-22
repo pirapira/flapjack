@@ -1,0 +1,5 @@
+fun 1 main() {
+  var 1 p = 0;
+  var 1 x = ld8 (p + 2048);
+  return x;
+}

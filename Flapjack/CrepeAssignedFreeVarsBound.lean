@@ -25,6 +25,19 @@ theorem prog_sizeOf_induction (motive : Prog α → Prop)
 def CrepContextSlot [BEq String] (context : CompileContext α) (x : Nat) : Prop :=
   ∃ name shape slots, lookupInfo name context.vars = some (shape, slots) ∧ x ∈ slots
 
+/-! Cake's `ctxt_max_el_leq` (`pan_to_crepProofScript.sml:1493`) in the
+    `CrepContextSlot` presentation: every slot recorded by a context entry is
+    bounded by the context maximum.  The assigned-free-vars induction uses
+    this form when turning a context lookup into the contradiction
+    `x ≤ maxVar < x`. -/
+theorem crepContextSlot_le_max [BEq String]
+    (context : CompileContext α)
+    (hmax : panValueCtxtMax context.maxVar context.vars)
+    {x : Nat} (hslot : CrepContextSlot context x) :
+    x ≤ context.maxVar := by
+  rcases hslot with ⟨name, shape, slots, hlookup, hx⟩
+  exact hmax.2 name shape slots hlookup x hx
+
 /-- Every slot drawn from the callee's return shape lies strictly above the
     context maximum (or the list is empty). -/
 theorem functionReturnNames_bound (context : CompileContext α) (function : FunName) :
@@ -82,6 +95,568 @@ theorem callDestinationNames_local_of_some
   rw [callDestinationNames_local_eq] at h
   obtain ⟨info, hinfo, hmap⟩ := Option.bind_eq_some_iff.mp h
   exact ⟨info.1, info.2, hinfo, (wrapRt_map_snd_of_some hmap).symm⟩
+
+/-! When `compileProg` extends a Cake context with a fresh declaration, every
+    slot visible through the extended finite-map view is either an old context
+    slot or one of the newly allocated slots.  This is the context-map half of
+    the `not_mem_context_assigned_mem_gt` induction. -/
+theorem crepContextSlot_extended_or_gt [BEq String]
+    (context : CompileContext α) (name : VarName) (shape : Shape)
+    (slots : List Nat)
+    (hslots : ∀ x ∈ slots, context.maxVar < x)
+    {x : Nat}
+    (h : CrepContextSlot
+      { context with
+        vars := (name, (shape, slots)) :: context.vars
+        maxVar := context.maxVar + Shape.shapeSize shape } x) :
+    CrepContextSlot context x ∨ context.maxVar < x := by
+  rcases h with ⟨queriedName, queriedShape, queriedSlots, hlookup, hx⟩
+  cases hname : (name == queriedName) with
+  | false =>
+      simp only [lookupInfo, hname] at hlookup
+      exact Or.inl ⟨queriedName, queriedShape, queriedSlots, hlookup, hx⟩
+  | true =>
+      simp only [lookupInfo, hname] at hlookup
+      have hpair : (shape, slots) = (queriedShape, queriedSlots) := by
+        simpa using hlookup
+      have hslotsEq : slots = queriedSlots := congrArg Prod.snd hpair
+      exact Or.inr (hslots x (by rw [hslotsEq]; exact hx))
+
+/-! The declaration branch of Cake's
+    `not_mem_context_assigned_mem_gt` (`pan_to_crepProofScript.sml:1260`):
+    once the recursive body has no assigned free occurrence of `x`, the fresh
+    slots introduced by the declaration nest cannot introduce one either. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_dec
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (name : VarName) (shape : Shape)
+    (value : Exp α) (body : Prog α) (x : Nat)
+    (expressions : List (CrepExp α)) (valueShape : Shape)
+    (hvalue : compileExp context value = (expressions, valueShape))
+    (hbody : x ∉ crepAssignedFreeVars
+      (compileProg
+        { context with
+          vars := (name, (valueShape, allocatedNames context valueShape)) :: context.vars
+          maxVar := context.maxVar + Shape.shapeSize valueShape } body)) :
+    x ∉ crepAssignedFreeVars (compileProg context (.dec name shape value body)) := by
+  simp only [compileProg, hvalue]
+  by_cases hlength : (allocatedNames context valueShape).length = expressions.length
+  · rw [if_pos hlength]
+    exact not_mem_crepAssignedFreeVars_nestedDecs
+      (allocatedNames context valueShape) expressions _ hlength hbody
+  · simp [hlength, crepAssignedFreeVars]
+
+/-! The declaration-call branch has the same shape as the Cake proof's
+    declaration nest: the generated return slots are bound by `nestedDecs`,
+    leaving only the recursively compiled body as a possible assigned-free
+    source. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_decCall
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (name : VarName) (shape : Shape)
+    (function : FunName) (arguments : List (Exp α)) (body : Prog α) (x : Nat)
+    (hbody : x ∉ crepAssignedFreeVars
+      (compileProg
+        { context with
+          vars := (name, (shape, allocatedNames context shape)) :: context.vars
+          maxVar := context.maxVar + Shape.shapeSize shape } body))
+    (hfresh : x ∉ allocatedNames context shape) :
+    x ∉ crepAssignedFreeVars
+      (compileProg context (.decCall name shape function arguments body)) := by
+  simp only [compileProg]
+  apply not_mem_crepAssignedFreeVars_nestedDecs
+  · simp
+  · simp only [crepAssignedFreeVars, List.mem_append]
+    intro hx
+    rcases hx with hx | hx
+    · exact hfresh hx
+    · exact hbody hx
+
+/-! The primitive branch of the Cake bound proof: the destination slots come
+    from the context, while the generated argument temporaries are hidden by
+    the surrounding declaration nest. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_primitive
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (name : VarName) (operator : PrimOp)
+    (arguments : List (Exp α)) (x : Nat)
+    (hslot : ∀ shape slots,
+      lookupInfo name context.vars = some (shape, slots) → x ∉ slots) :
+    x ∉ crepAssignedFreeVars
+      (compileProg context (.primitive name operator arguments)) := by
+  simp only [compileProg]
+  cases hlookup : lookupInfo name context.vars with
+  | none => simp [crepAssignedFreeVars]
+  | some info =>
+      obtain ⟨shape, slots⟩ := info
+      apply not_mem_crepAssignedFreeVars_nestedDecs
+      · simp [freshNames]
+      · simp only [crepAssignedFreeVars]
+        exact hslot shape slots hlookup
+
+/-! The store branch of Cake's `not_mem_context_assigned_mem_gt`:
+    successful shared stores assign no local variables, and the declaration
+    temporaries surrounding the address/value evaluation therefore cannot
+    contribute an assigned-free variable.  Malformed expression shapes use
+    the compiler's `Skip` fallback and are immediate. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_store
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (address value : Exp α) (x : Nat) :
+    x ∉ crepAssignedFreeVars
+      (compileProg context (.store address value)) := by
+  simp only [compileProg]
+  cases haddress : compileExp context address with
+  | mk addressExpressions addressShape =>
+      cases addressExpressions with
+      | nil => simp [crepAssignedFreeVars]
+      | cons compiledAddress rest =>
+          cases hvalue : compileExp context value with
+          | mk values valueShape =>
+              simp only
+              by_cases hlength : values.length = Shape.shapeSize valueShape
+              · rw [if_pos hlength]
+                apply not_mem_crepAssignedFreeVars_nestedDecs
+                · simp [freshNames_length, hlength]
+                · simp [crepAssignedFreeVars_nestedSeq_stores]
+              · simp [hlength, crepAssignedFreeVars]
+
+/-! The local-assignment branch of Cake's assigned-free bound.  When the
+    destination and expression variables are distinct, the generated zip of
+    assignments exposes the destination slot list directly.  Otherwise Cake
+    introduces fresh temporaries, whose declaration nest hides the same slot
+    list while preserving the assignment result. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_assign_local
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (name : VarName) (value : Exp α) (x : Nat)
+    (hslot : ∀ shape slots,
+      lookupInfo name context.vars = some (shape, slots) → x ∉ slots) :
+    x ∉ crepAssignedFreeVars
+      (compileProg context (.assign .local name value)) := by
+  simp only [compileProg]
+  cases hlookup : lookupInfo name context.vars with
+  | none => simp [crepAssignedFreeVars]
+  | some info =>
+      obtain ⟨shape, names⟩ := info
+      cases hcompile : compileExp context value with
+      | mk expressions valueShape =>
+          simp only
+          by_cases hlength : names.length = expressions.length
+          · rw [if_pos hlength]
+            by_cases hdistinct : distinctLists names (expressions.flatMap crepExpVars)
+            · rw [if_pos hdistinct]
+              rw [crepAssignedFreeVars_nestedSeq_assign_zipWith names expressions hlength]
+              exact hslot shape names hlookup
+            · rw [if_neg hdistinct]
+              apply not_mem_crepAssignedFreeVars_nestedDecs
+              · simp [freshNames_length, hlength]
+              · rw [← List.zipWith_map_right (f := fun temporary =>
+                    (CrepExp.var (α := α) temporary))
+                    (g := fun destination expression =>
+                      CrepProg.assign destination expression)]
+                rw [crepAssignedFreeVars_nestedSeq_assign_zipWith names
+                      ((freshNames context names.length 1).map
+                        (fun temporary => CrepExp.var temporary))
+                      (by simp [freshNames_length])]
+                exact hslot shape names hlookup
+          · rw [if_neg hlength]
+            simp [crepAssignedFreeVars]
+
+/-! ExtCall introduces four fresh declarations around a Crepe `extCall`, which
+    has no assigned-free locals.  This is the corresponding `ExtCall` branch
+    of Cake's induction; malformed expressions take the `Skip` fallback. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_extCall
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (function : FunName)
+    (configuration configurationLength array arrayLength : Exp α) (x : Nat) :
+    x ∉ crepAssignedFreeVars
+      (compileProg context
+        (.extCall function configuration configurationLength array arrayLength)) := by
+  simp only [compileProg]
+  cases hconfiguration : firstCompiledExp context configuration with
+  | none => simp [crepAssignedFreeVars]
+  | some compiledConfiguration =>
+      cases hconfigurationLength : firstCompiledExp context configurationLength with
+      | none => simp [crepAssignedFreeVars]
+      | some compiledConfigurationLength =>
+          cases harray : firstCompiledExp context array with
+          | none => simp [crepAssignedFreeVars]
+          | some compiledArray =>
+              cases harrayLength : firstCompiledExp context arrayLength with
+              | none => simp [crepAssignedFreeVars]
+              | some compiledArrayLength =>
+                  simp only
+                  apply not_mem_crepAssignedFreeVars_nestedDecs
+                  · simp
+                  · simp [crepAssignedFreeVars]
+
+/-! Raising stores the payload in globals through a declaration nest, then
+    raises.  Both the store-global sequence and the raise have empty
+    assigned-free sets, so the branch is independent of the chosen exception
+    code and payload shape. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_raise
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (exception : ExceptionId) (value : Exp α) (x : Nat) :
+    x ∉ crepAssignedFreeVars
+      (compileProg context (.raise exception value)) := by
+  simp only [compileProg]
+  cases hexception : lookupInfo exception context.exceptions with
+  | none => simp [crepAssignedFreeVars]
+  | some code =>
+      cases hcompile : compileExp context value with
+      | mk expressions valueShape =>
+          simp only
+          by_cases hlength : expressions.length = Shape.shapeSize valueShape
+          · rw [if_pos hlength]
+            simp only [crepAssignedFreeVars, List.append_nil]
+            apply not_mem_crepAssignedFreeVars_nestedDecs
+            · simp [freshNames_length, hlength]
+            · rw [crepAssignedFreeVars_nestedSeq_storeGlobals]
+              simp
+          · rw [if_neg hlength]
+            simp [crepAssignedFreeVars]
+
+/-! `ShMemStore` binds its single temporary around the generated `shMem`
+    instruction.  Unlike the sufficient nested-declaration lemma used for
+    stores, this branch uses the exact declaration-filter equation because
+    the temporary is itself assigned by the body and is then removed. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_shMemStore
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (size : OpSize)
+    (address value : Exp α) (x : Nat) :
+    x ∉ crepAssignedFreeVars
+      (compileProg context (.shMemStore size address value)) := by
+  simp only [compileProg]
+  cases haddress : firstCompiledExpAnyShape context address with
+  | none => simp [crepAssignedFreeVars]
+  | some compiledAddress =>
+      cases hvalue : firstCompiledExpAnyShape context value with
+      | none => simp [crepAssignedFreeVars]
+      | some compiledValue =>
+          simp only
+          rw [crepAssignedFreeVars_nestedDecs_append
+            [maxCrepExpVar [compiledAddress] + 1] [compiledValue]
+            (.shMem (storeMemOp size) (maxCrepExpVar [compiledAddress] + 1)
+              compiledAddress) (by simp)]
+          simp [crepAssignedFreeVars]
+
+/-! Fixed-width stores lower directly to Crepe store instructions (or `Skip`)
+    and therefore have no assigned-free locals. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_store32
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (address value : Exp α) (x : Nat) :
+    x ∉ crepAssignedFreeVars
+      (compileProg context (.store32 address value)) := by
+  simp only [compileProg]
+  cases haddress : compileExp context address with
+  | mk addressExpressions addressShape =>
+      cases addressExpressions with
+      | nil => simp [crepAssignedFreeVars]
+      | cons compiledAddress rest =>
+          cases hvalue : compileExp context value with
+          | mk values valueShape =>
+              cases values with
+              | nil => simp [crepAssignedFreeVars]
+              | cons compiledValue rest => simp [crepAssignedFreeVars]
+
+theorem not_mem_crepAssignedFreeVars_compileProg_storeByte
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (address value : Exp α) (x : Nat) :
+    x ∉ crepAssignedFreeVars
+      (compileProg context (.storeByte address value)) := by
+  simp only [compileProg]
+  cases haddress : compileExp context address with
+  | mk addressExpressions addressShape =>
+      cases addressExpressions with
+      | nil => simp [crepAssignedFreeVars]
+      | cons compiledAddress rest =>
+          cases hvalue : compileExp context value with
+          | mk values valueShape =>
+              cases values with
+              | nil => simp [crepAssignedFreeVars]
+              | cons compiledValue rest => simp [crepAssignedFreeVars]
+
+/-! A local shared-memory load assigns the first slot of its destination;
+    Cake's context-slot hypothesis rules that slot out.  Unknown/global
+    destinations and malformed addresses use `Skip`. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_shMemLoad_local
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (size : OpSize) (name : VarName)
+    (address : Exp α) (x : Nat)
+    (hslot : ∀ shape slots,
+      lookupInfo name context.vars = some (shape, slots) → x ∉ slots) :
+    x ∉ crepAssignedFreeVars
+      (compileProg context (.shMemLoad size .local name address)) := by
+  simp only [compileProg]
+  cases hlookup : lookupInfo name context.vars with
+  | none => simp [crepAssignedFreeVars]
+  | some info =>
+      obtain ⟨shape, names⟩ := info
+      cases hnames : names with
+      | nil => simp [crepAssignedFreeVars]
+      | cons destination rest =>
+          cases haddress : firstCompiledExpAnyShape context address with
+          | none => simp [crepAssignedFreeVars]
+          | some compiledAddress =>
+              simp only
+              intro hx
+              have hlookup' : lookupInfo name context.vars =
+                  some (shape, destination :: rest) := by
+                simpa [hnames] using hlookup
+              have hdestination : x = destination := by
+                simpa [crepAssignedFreeVars] using hx
+              apply hslot shape (destination :: rest) hlookup'
+              simp [hdestination]
+
+/-! Structural sequence composition for the recursive `compileProg` proof. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_seq
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (first second : Prog α) (x : Nat)
+    (hfirst : x ∉ crepAssignedFreeVars (compileProg context first))
+    (hsecond : x ∉ crepAssignedFreeVars (compileProg context second)) :
+    x ∉ crepAssignedFreeVars (compileProg context (.seq first second)) := by
+  simp only [compileProg, crepAssignedFreeVars, List.mem_append]
+  intro h
+  rcases h with h | h
+  · exact hfirst h
+  · exact hsecond h
+
+/-! Conditional composition: the compiled condition does not assign locals;
+    only the two recursive branches contribute to `crepAssignedFreeVars`. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_ite
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (condition : Exp α)
+    (thenBranch elseBranch : Prog α) (x : Nat)
+    (hthen : x ∉ crepAssignedFreeVars (compileProg context thenBranch))
+    ( helse : x ∉ crepAssignedFreeVars (compileProg context elseBranch)) :
+    x ∉ crepAssignedFreeVars
+      (compileProg context (.ite condition thenBranch elseBranch)) := by
+  simp only [compileProg]
+  cases hcondition : compileExp context condition with
+  | mk expressions conditionShape =>
+      cases expressions with
+      | nil => simp [crepAssignedFreeVars]
+      | cons compiledCondition rest =>
+          simp only
+          simp only [crepAssignedFreeVars, List.mem_append]
+          intro h
+          rcases h with h | h
+          · exact hthen h
+          · exact helse h
+
+/-! While-loop composition: the condition is an expression and the body is
+    the only possible source of assigned-free locals. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_while
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (condition : Exp α) (body : Prog α) (x : Nat)
+    (hbody : x ∉ crepAssignedFreeVars (compileProg context body)) :
+    x ∉ crepAssignedFreeVars
+      (compileProg context (.while condition body)) := by
+  simp only [compileProg]
+  cases hcondition : compileExp context condition with
+  | mk expressions conditionShape =>
+      cases expressions with
+      | nil => simp [crepAssignedFreeVars]
+      | cons compiledCondition rest =>
+          simp only
+          simpa [crepAssignedFreeVars] using hbody
+
+/-! Terminal source constructors lower to Crepe instructions with empty
+    assigned-free sets (or to `Skip`). -/
+theorem not_mem_crepAssignedFreeVars_compileProg_return
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (value : Exp α) (x : Nat) :
+    x ∉ crepAssignedFreeVars (compileProg context (.return value)) := by
+  simp [compileProg, crepAssignedFreeVars]
+
+theorem not_mem_crepAssignedFreeVars_compileProg_break
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (x : Nat) :
+    x ∉ crepAssignedFreeVars (compileProg context .break) := by
+  simp [compileProg, crepAssignedFreeVars]
+
+theorem not_mem_crepAssignedFreeVars_compileProg_continue
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (x : Nat) :
+    x ∉ crepAssignedFreeVars (compileProg context .continue) := by
+  simp [compileProg, crepAssignedFreeVars]
+
+theorem not_mem_crepAssignedFreeVars_compileProg_tick
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (x : Nat) :
+    x ∉ crepAssignedFreeVars (compileProg context .tick) := by
+  simp [compileProg, crepAssignedFreeVars]
+
+theorem not_mem_crepAssignedFreeVars_compileProg_annot
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (tag text : String) (x : Nat) :
+    x ∉ crepAssignedFreeVars (compileProg context (.annot tag text)) := by
+  simp [compileProg, crepAssignedFreeVars]
+
+/-! Call lowering without an exception handler.  A standalone call binds the
+    callee's fresh return slots; an assigned call either keeps its context
+    destination slots or falls back to a call with no assigned result. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_call_no_handler
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (function : FunName)
+    (arguments : List (Exp α))
+    (destination : Option (VarKind × VarName)) (x : Nat)
+    (hx : x ≤ context.maxVar)
+    (hslot : ∀ name shape slots,
+      lookupInfo name context.vars = some (shape, slots) → x ∉ slots) :
+    x ∉ crepAssignedFreeVars
+      (compileProg context
+        (.call (some (destination, none)) function arguments)) := by
+  simp only [compileProg]
+  cases destination with
+  | none =>
+      simp only
+      apply not_mem_crepAssignedFreeVars_nestedDecs
+      · simp
+      · simp only [crepAssignedFreeVars]
+        intro hx
+        have hreturns : x ∉ functionReturnNames context function := by
+          intro hmem
+          have hbound := functionReturnNames_bound context function x hmem
+          omega
+        exact hreturns hx
+  | some destination =>
+      obtain ⟨kind, name⟩ := destination
+      cases hdest : callDestinationNames context kind name with
+      | none =>
+          simp only [hdest]
+          simp [crepAssignedFreeVars]
+      | some names =>
+          cases kind with
+          | global => simp [callDestinationNames] at hdest
+          | «local» =>
+              simp only [hdest, crepAssignedFreeVars]
+              intro hmem
+              obtain ⟨shape, slots, hlookup, hnames⟩ :=
+                callDestinationNames_local_of_some context name names hdest
+              apply hslot name shape slots hlookup
+              rw [← hnames]
+              exact hmem
+
+/-! Known-exception call handlers.  The handler setup is either `Skip` for an
+    unknown handler destination or `assignRet` for a context destination;
+    both are followed by the recursively compiled handler body. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_call_known_handler
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (function : FunName)
+    (arguments : List (Exp α))
+    (destination : Option (VarKind × VarName))
+    (exception : ExceptionId) (handlerVar : VarName)
+    (handlerProgram : Prog α) (code : α) (x : Nat)
+    (hx : x ≤ context.maxVar)
+    (hexception : lookupInfo exception context.exceptions = some code)
+    (hbody : x ∉ crepAssignedFreeVars (compileProg context handlerProgram))
+    (hslot : ∀ name shape slots,
+      lookupInfo name context.vars = some (shape, slots) → x ∉ slots) :
+    x ∉ crepAssignedFreeVars
+      (compileProg context
+        (.call (some (destination, some (exception, handlerVar, handlerProgram)))
+          function arguments)) := by
+  simp only [compileProg]
+  rw [hexception]
+  cases hhandlerVar : lookupInfo handlerVar context.vars with
+  | none =>
+      have hhandlerFree : x ∉ crepAssignedFreeVars
+          (.seq (.skip : CrepProg α) (compileProg context handlerProgram)) := by
+        simpa [crepAssignedFreeVars] using hbody
+      cases destination with
+      | none =>
+          simp only
+          apply not_mem_crepAssignedFreeVars_nestedDecs
+          · simp
+          · simp only [crepAssignedFreeVars, List.mem_append]
+            intro h
+            rcases h with h | h
+            · have hreturns : x ∉ functionReturnNames context function := by
+                intro hmem
+                have hbound := functionReturnNames_bound context function x hmem
+                omega
+              exact hreturns h
+            · rcases h with h | h
+              · simp at h
+              · exact hbody h
+      | some destination =>
+          obtain ⟨kind, name⟩ := destination
+          cases hdest : callDestinationNames context kind name with
+          | none =>
+              simp only [hdest]
+              change x ∉ crepAssignedFreeVars
+                (.call (some ([], some (code,
+                  .seq (.skip : CrepProg α) (compileProg context handlerProgram))))
+                  function (compileArgs context arguments))
+              simpa only [crepAssignedFreeVars, List.nil_append] using hhandlerFree
+          | some names =>
+              cases kind with
+              | global => simp [callDestinationNames] at hdest
+              | «local» =>
+                  simp only [hdest, crepAssignedFreeVars, List.mem_append]
+                  intro h
+                  rcases h with h | h
+                  · obtain ⟨shape, slots, hlookup, hnames⟩ :=
+                      callDestinationNames_local_of_some context name names hdest
+                    apply hslot name shape slots hlookup
+                    rw [← hnames]
+                    exact h
+                  · rcases h with h | h
+                    · simp at h
+                    · exact hbody h
+  | some info =>
+      obtain ⟨shape, names⟩ := info
+      have hnames : x ∉ names := hslot handlerVar shape names hhandlerVar
+      have hassign : x ∉ crepAssignedFreeVars (assignRet context.bytesInWord names) := by
+        rw [crepAssignedFreeVars_assignRet]
+        exact hnames
+      have hhandlerFree : x ∉ crepAssignedFreeVars
+          (.seq (assignRet context.bytesInWord names)
+            (compileProg context handlerProgram)) := by
+        simp only [crepAssignedFreeVars, List.mem_append]
+        intro h
+        rcases h with h | h
+        · exact hassign h
+        · exact hbody h
+      cases destination with
+      | none =>
+          simp only
+          apply not_mem_crepAssignedFreeVars_nestedDecs
+          · simp
+          · simp only [crepAssignedFreeVars, List.mem_append]
+            intro h
+            rcases h with h | h
+            · have hreturns : x ∉ functionReturnNames context function := by
+                intro hmem
+                have hbound := functionReturnNames_bound context function x hmem
+                omega
+              exact hreturns h
+            · rcases h with h | h
+              · exact hassign h
+              · exact hbody h
+      | some destination =>
+          obtain ⟨kind, name⟩ := destination
+          cases hdest : callDestinationNames context kind name with
+          | none =>
+              simp only [hdest]
+              change x ∉ crepAssignedFreeVars
+                (.call (some ([], some (code,
+                  .seq (assignRet context.bytesInWord names)
+                    (compileProg context handlerProgram))))
+                  function (compileArgs context arguments))
+              simpa only [crepAssignedFreeVars, List.nil_append] using hhandlerFree
+          | some destinationNames =>
+              cases kind with
+              | global => simp [callDestinationNames] at hdest
+              | «local» =>
+                  simp only [hdest, crepAssignedFreeVars, List.mem_append]
+                  intro h
+                  rcases h with h | h
+                  · obtain ⟨destinationShape, slots, hlookup, hnames⟩ :=
+                      callDestinationNames_local_of_some context name destinationNames hdest
+                    apply hslot name destinationShape slots hlookup
+                    rw [← hnames]
+                    exact h
+                  · rcases h with h | h
+                    · exact hassign h
+                    · exact hbody h
 
 /-- `crepNestedSeq` of `assign` statements built from a zip of names with
     variables introduced by `freshNames` still has exactly `names` as its
@@ -162,390 +737,169 @@ theorem mem_crepAssignedFreeVars_nestedDecs {α : Type _} (names : List Nat)
   rw [crepAssignedFreeVars_nestedDecs_append names values body h] at hmem
   exact (List.mem_filter.mp hmem).1
 
-/-- Assigned-memory bound invariant: every free variable of a compiled program
-    at or below the context maximum is a slot of the context.  Cake
-    `not_mem_context_assigned_mem_gt` (`pan_to_crepProofScript.sml:1252`) uses
-    exactly this invariant, proved by `compile_ind`. -/
-theorem crepAssignedFreeVars_compileProg_bound [BEq α] [OfNat α 0] [Add α]
-    (program : Prog α) :
-    ∀ (context : CompileContext α) (x : Nat),
-      x ∈ crepAssignedFreeVars (compileProg context program) →
-      x ≤ context.maxVar → CrepContextSlot context x := by
-  induction program using prog_sizeOf_induction with
-  | step program ih =>
-    intro context x hxmem hbnd
-    cases program with
-    | skip => exact absurd hxmem (by simp [compileProg, crepAssignedFreeVars])
-    | «break» => exact absurd hxmem (by simp [compileProg, crepAssignedFreeVars])
-    | «continue» => exact absurd hxmem (by simp [compileProg, crepAssignedFreeVars])
-    | tick => exact absurd hxmem (by simp [compileProg, crepAssignedFreeVars])
-    | annot tag text => exact absurd hxmem (by simp [compileProg, crepAssignedFreeVars])
-    | «return» value => exact absurd hxmem (by simp [compileProg, crepAssignedFreeVars])
-    | store32 address value =>
-        simp only [compileProg] at hxmem
-        split at hxmem <;> exact absurd hxmem (by simp [crepAssignedFreeVars])
-    | storeByte address value =>
-        simp only [compileProg] at hxmem
-        split at hxmem <;> exact absurd hxmem (by simp [crepAssignedFreeVars])
-    | extCall function configuration configurationLength array arrayLength =>
-        cases hc : firstCompiledExp context configuration with
-        | none =>
-            simp only [compileProg, hc] at hxmem
-            exact absurd hxmem (by simp [crepAssignedFreeVars])
-        | some configuration' =>
-            cases hcl : firstCompiledExp context configurationLength with
-            | none =>
-                simp only [compileProg, hc, hcl] at hxmem
-                exact absurd hxmem (by simp [crepAssignedFreeVars])
-            | some configurationLength' =>
-                cases ha : firstCompiledExp context array with
-                | none =>
-                    simp only [compileProg, hc, hcl, ha] at hxmem
-                    exact absurd hxmem (by simp [crepAssignedFreeVars])
-                | some array' =>
-                    cases hal : firstCompiledExp context arrayLength with
-                    | none =>
-                        simp only [compileProg, hc, hcl, ha, hal] at hxmem
-                        exact absurd hxmem (by simp [crepAssignedFreeVars])
-                    | some arrayLength' =>
-                        rw [compileProg_extCall_of_compiled context function configuration
-                            configurationLength array arrayLength configuration'
-                            configurationLength' array' arrayLength' hc hcl ha hal] at hxmem
-                        rw [crepAssignedFreeVars_nestedDecs_append _ _ _ (by simp)] at hxmem
-                        have hmem := (List.mem_filter.mp hxmem).1
-                        simp only [crepAssignedFreeVars] at hmem
-                        exact absurd hmem (by simp)
-    | shMemStore size address value =>
-        cases haddress : firstCompiledExpAnyShape context address with
-        | none =>
-            simp only [compileProg, haddress] at hxmem
-            exact absurd hxmem (by simp [crepAssignedFreeVars])
-        | some address' =>
-            cases hvalue : firstCompiledExpAnyShape context value with
-            | none =>
-                simp only [compileProg, haddress, hvalue] at hxmem
-                exact absurd hxmem (by simp [crepAssignedFreeVars])
-            | some value' =>
-                rw [compileProg_shMemStore_of_compiled context size address value address'
-                    value' haddress hvalue] at hxmem
-                rw [crepAssignedFreeVars_nestedDecs_append [maxCrepExpVar [address'] + 1] [value'] _
-                    (by simp)] at hxmem
-                obtain ⟨hmem1, hmem2⟩ := List.mem_filter.mp hxmem
-                simp only [crepAssignedFreeVars] at hmem1
-                exact absurd hmem1 (of_decide_eq_true hmem2)
-    | seq first second =>
-        simp only [compileProg, crepAssignedFreeVars, List.mem_append] at hxmem
-        rcases hxmem with hxmem | hxmem
-        · exact ih first (by simp +arith) context x hxmem hbnd
-        · exact ih second (by simp +arith) context x hxmem hbnd
-    | ite condition thenBranch elseBranch =>
-        cases hcondition : compileExp context condition with
-        | mk compiled shape =>
-            cases compiled with
-            | nil =>
-                simp only [compileProg, hcondition] at hxmem
-                exact absurd hxmem (by simp [crepAssignedFreeVars])
-            | cons condition' rest =>
-                rw [compileProg_ite_of_compiled context condition thenBranch elseBranch
-                    condition' rest shape hcondition] at hxmem
-                simp only [crepAssignedFreeVars, List.mem_append] at hxmem
-                rcases hxmem with hxmem | hxmem
-                · exact ih thenBranch (by simp +arith) context x hxmem hbnd
-                · exact ih elseBranch (by simp +arith) context x hxmem hbnd
-    | «while» condition body =>
-        cases hcondition : compileExp context condition with
-        | mk compiled shape =>
-            cases compiled with
-            | nil =>
-                simp only [compileProg, hcondition] at hxmem
-                exact absurd hxmem (by simp [crepAssignedFreeVars])
-            | cons condition' rest =>
-                rw [compileProg_while_of_compiled context condition body condition' rest
-                    shape hcondition] at hxmem
-                simp only [crepAssignedFreeVars] at hxmem
-                exact ih body (by simp +arith) context x hxmem hbnd
-    | assign kind name value =>
-        cases kind with
-        | «global» => exact absurd hxmem (by simp [compileProg, crepAssignedFreeVars])
-        | «local» =>
-            cases hlookup : lookupInfo name context.vars with
-            | none =>
-                simp only [compileProg, hlookup] at hxmem
-                exact absurd hxmem (by simp [crepAssignedFreeVars])
-            | some info =>
-                obtain ⟨shape, names⟩ := info
-                cases hvalue : compileExp context value with
-                | mk expressions valueShape =>
-                    rw [compileProg_assign_local_of_compiled context name value shape
-                        valueShape names expressions hlookup hvalue] at hxmem
-                    split at hxmem
-                    · split at hxmem
-                      · rw [crepAssignedFreeVars_nestedSeq_assign_zipWith names expressions
-                            (by assumption)] at hxmem
-                        exact ⟨name, shape, names, hlookup, hxmem⟩
-                      · rw [crepAssignedFreeVars_nestedDecs_append
-                            (freshNames context names.length 1) expressions _
-                            (by rw [freshNames_length]; assumption)] at hxmem
-                        have hmem := (List.mem_filter.mp hxmem).1
-                        simp only [crepAssignedFreeVars_assignVar_zipWith names
-                            (freshNames context names.length 1) (by rw [freshNames_length])] at hmem
-                        exact ⟨name, shape, names, hlookup, hmem⟩
-                    · exact absurd hxmem (by simp [crepAssignedFreeVars])
-    | primitive name operator args =>
-        cases hlookup : lookupInfo name context.vars with
-        | none =>
-            simp only [compileProg, hlookup] at hxmem
-            exact absurd hxmem (by simp [crepAssignedFreeVars])
-        | some info =>
-            obtain ⟨shape, names⟩ := info
-            rw [compileProg_primitive_of_compiled context name operator args shape names
-                (compileArgs context args) hlookup rfl] at hxmem
-            rw [crepAssignedFreeVars_nestedDecs_append
-                (freshNames context (compileArgs context args).length 1)
-                (compileArgs context args) _ (by rw [freshNames_length])] at hxmem
-            have hmem := (List.mem_filter.mp hxmem).1
-            simp only [crepAssignedFreeVars] at hmem
-            exact ⟨name, shape, names, hlookup, hmem⟩
-    | store address value =>
-        cases haddress : compileExp context address with
-        | mk addressCompiled addressShape =>
-            cases hvalue : compileExp context value with
-            | mk values valueShape =>
-                cases addressCompiled with
-                | nil =>
-                    simp only [compileProg, haddress, hvalue] at hxmem
-                    exact absurd hxmem (by simp [crepAssignedFreeVars])
-                | cons address' addressRest =>
-                    rw [compileProg_store_of_compiled context address value address'
-                        addressRest addressShape values valueShape haddress hvalue] at hxmem
-                    split at hxmem
-                    · rw [crepAssignedFreeVars_nestedDecs_append _ _ _
-                          (by simp [freshNames_length])] at hxmem
-                      have hmem := (List.mem_filter.mp hxmem).1
-                      rw [crepAssignedFreeVars_nestedSeq_stores] at hmem
-                      exact absurd hmem (by simp)
-                    · exact absurd hxmem (by simp [crepAssignedFreeVars])
-    | dec name shape value body =>
-        cases hvalue : compileExp context value with
-        | mk expressions valueShape =>
-            rw [compileProg_dec_of_compiled context name shape value body expressions
-                valueShape hvalue] at hxmem
-            split at hxmem
-            · rename_i hlen
-              have hmem := mem_crepAssignedFreeVars_nestedDecs
-                  (allocatedNames context valueShape) expressions
-                  (compileProg { context with
-                    vars := (name, (valueShape, allocatedNames context valueShape)) :: context.vars,
-                    maxVar := context.maxVar + Shape.shapeSize valueShape } body)
-                  hlen hxmem
-              exact crepContextSlot_cons_of_le context name valueShape
-                (allocatedNames context valueShape)
-                (fun y hy => allocatedNames_gt context valueShape hy) hbnd
-                (ih body (by simp +arith)
-                  { context with
-                    vars := (name, (valueShape, allocatedNames context valueShape)) :: context.vars,
-                    maxVar := context.maxVar + Shape.shapeSize valueShape } x hmem
-                  (Nat.le_trans hbnd (Nat.le_add_right _ _)))
-            · exact absurd hxmem (by simp [crepAssignedFreeVars])
-    | decCall name shape function arguments body =>
-        rw [compileProg_decCall context name shape function arguments body] at hxmem
-        rw [crepAssignedFreeVars_nestedDecs_append (allocatedNames context shape)
-            ((allocatedNames context shape).map (fun _ => (.const 0 : CrepExp α))) _
-            (by simp [allocatedNames_length])] at hxmem
-        have hmem := (List.mem_filter.mp hxmem).1
-        simp only [crepAssignedFreeVars, List.mem_append] at hmem
-        rcases hmem with hmem | hmem
-        · exact absurd (allocatedNames_gt context shape hmem) (by omega)
-        · exact crepContextSlot_cons_of_le context name shape (allocatedNames context shape)
-            (fun y hy => allocatedNames_gt context shape hy) hbnd
-            (ih body (by simp +arith)
-              { context with
-                vars := (name, (shape, allocatedNames context shape)) :: context.vars,
-                maxVar := context.maxVar + Shape.shapeSize shape } x hmem
-              (Nat.le_trans hbnd (Nat.le_add_right _ _)))
-    | raise exception value =>
-        cases hexception : lookupInfo exception context.exceptions with
-        | none =>
-            simp only [compileProg, hexception] at hxmem
-            exact absurd hxmem (by simp [crepAssignedFreeVars])
-        | some code =>
-            cases hvalue : compileExp context value with
-            | mk expressions shape =>
-                rw [compileProg_raise_of_compiled context exception value code expressions
-                    shape hexception hvalue] at hxmem
-                split at hxmem
-                · simp only [crepAssignedFreeVars, List.mem_append] at hxmem
-                  rcases hxmem with hxmem | hxmem
-                  · rw [crepAssignedFreeVars_nestedDecs_append
-                        (freshNames context expressions.length 1) expressions _
-                        (by rw [freshNames_length])] at hxmem
-                    have hmem := (List.mem_filter.mp hxmem).1
-                    rw [crepAssignedFreeVars_nestedSeq_storeGlobals] at hmem
-                    exact absurd hmem (by simp)
-                  · exact absurd hxmem (by simp)
-                · exact absurd hxmem (by simp [crepAssignedFreeVars])
-    | shMemLoad size kind name address =>
-        cases kind with
-        | «global» =>
-            simp only [compileProg] at hxmem
-            exact absurd hxmem (by simp [crepAssignedFreeVars])
-        | «local» =>
-            cases hlookup : lookupInfo name context.vars with
-            | none =>
-                simp only [compileProg, hlookup] at hxmem
-                exact absurd hxmem (by simp [crepAssignedFreeVars])
-            | some info =>
-                obtain ⟨shape, slots⟩ := info
-                cases slots with
-                | nil =>
-                    simp only [compileProg, hlookup] at hxmem
-                    exact absurd hxmem (by simp [crepAssignedFreeVars])
-                | cons destination rest =>
-                    cases haddress : firstCompiledExpAnyShape context address with
-                    | none =>
-                        simp only [compileProg, hlookup, haddress] at hxmem
-                        exact absurd hxmem (by simp [crepAssignedFreeVars])
-                    | some address' =>
-                        rw [compileProg_shMemLoad_local_of_compiled context size name address
-                            shape destination rest address' hlookup haddress] at hxmem
-                        simp only [crepAssignedFreeVars, List.mem_cons, List.not_mem_nil,
-                          or_false] at hxmem
-                        exact ⟨name, shape, destination :: rest, hlookup, by simp [hxmem]⟩
-    | call info function arguments =>
-        cases info with
-        | none => exact absurd hxmem (by simp [compileProg, crepAssignedFreeVars])
-        | some infoData =>
-            obtain ⟨destination, handler⟩ := infoData
-            cases handler with
-            | none =>
-                cases destination with
-                | none =>
-                    simp only [compileProg] at hxmem
-                    rw [crepAssignedFreeVars_nestedDecs_append (functionReturnNames context function)
-                        ((functionReturnNames context function).map (fun _ => (.const 0 : CrepExp α))) _
-                        (by simp)] at hxmem
-                    have hmem := (List.mem_filter.mp hxmem).1
-                    simp only [crepAssignedFreeVars] at hmem
-                    exact absurd (functionReturnNames_bound context function x hmem) (by omega)
-                | some destData =>
-                    obtain ⟨kind, name⟩ := destData
-                    cases hnames : callDestinationNames context kind name with
-                    | none =>
-                        simp only [compileProg, hnames] at hxmem
-                        exact absurd hxmem (by simp [crepAssignedFreeVars])
-                    | some names =>
-                        rw [compileProg_call_destination_of_compiled context function arguments
-                            kind name names (compileArgs context arguments) hnames rfl] at hxmem
-                        obtain ⟨shape, slots, hlookup, hslots⟩ :=
-                          callDestinationNames_some_slot context kind name names hnames
-                        simp only [crepAssignedFreeVars] at hxmem
-                        exact ⟨name, shape, slots, hlookup, by rw [← hslots]; exact hxmem⟩
-            | some handlerData =>
-                obtain ⟨exception, handlerVar, handlerProgram⟩ := handlerData
-                cases hexception : lookupInfo exception context.exceptions with
-                | none =>
-                    cases destination with
-                    | none =>
-                        simp only [compileProg, hexception] at hxmem
-                        rw [crepAssignedFreeVars_nestedDecs_append
-                            (functionReturnNames context function)
-                            ((functionReturnNames context function).map
-                              (fun _ => (.const 0 : CrepExp α))) _ (by simp)] at hxmem
-                        have hmem := (List.mem_filter.mp hxmem).1
-                        simp only [crepAssignedFreeVars] at hmem
-                        exact absurd (functionReturnNames_bound context function x hmem) (by omega)
-                    | some destData =>
-                        obtain ⟨kind, name⟩ := destData
-                        cases hnames : callDestinationNames context kind name with
-                        | none =>
-                            simp only [compileProg, hexception, hnames] at hxmem
-                            exact absurd hxmem (by simp [crepAssignedFreeVars])
-                        | some names =>
-                            simp only [compileProg, hexception, hnames] at hxmem
-                            obtain ⟨shape, slots, hlookup, hslots⟩ :=
-                              callDestinationNames_some_slot context kind name names hnames
-                            simp only [crepAssignedFreeVars] at hxmem
-                            exact ⟨name, shape, slots, hlookup, by rw [← hslots]; exact hxmem⟩
-                | some code =>
-                    cases hhandler : lookupInfo handlerVar context.vars with
-                    | none =>
-                        cases destination with
-                        | none =>
-                            simp only [compileProg, hexception, hhandler] at hxmem
-                            rw [crepAssignedFreeVars_nestedDecs_append
-                                (functionReturnNames context function)
-                                ((functionReturnNames context function).map
-                                  (fun _ => (.const 0 : CrepExp α))) _ (by simp)] at hxmem
-                            have hmem := (List.mem_filter.mp hxmem).1
-                            simp [crepAssignedFreeVars, List.mem_append] at hmem
-                            rcases hmem with hmem | hmem
-                            · exact absurd (functionReturnNames_bound context function x hmem) (by omega)
-                            · exact ih handlerProgram (by simp +arith) context x hmem hbnd
-                        | some destData =>
-                            obtain ⟨kind, name⟩ := destData
-                            cases hnames : callDestinationNames context kind name with
-                            | none =>
-                                simp only [compileProg, hexception, hhandler, hnames] at hxmem
-                                simp [crepAssignedFreeVars] at hxmem
-                                exact ih handlerProgram (by simp +arith) context x hxmem hbnd
-                            | some names =>
-                                simp only [compileProg, hexception, hhandler, hnames] at hxmem
-                                simp [crepAssignedFreeVars, List.mem_append] at hxmem
-                                obtain ⟨shape, slots, hlookup, hslots⟩ :=
-                                  callDestinationNames_some_slot context kind name names hnames
-                                rcases hxmem with hxmem | hxmem
-                                · exact ⟨name, shape, slots, hlookup, by rw [← hslots]; exact hxmem⟩
-                                · exact ih handlerProgram (by simp +arith) context x hxmem hbnd
-                    | some handlerInfo =>
-                        obtain ⟨hshape, handlerNames⟩ := handlerInfo
-                        cases destination with
-                        | none =>
-                            simp only [compileProg, hexception, hhandler] at hxmem
-                            rw [crepAssignedFreeVars_nestedDecs_append
-                                (functionReturnNames context function)
-                                ((functionReturnNames context function).map
-                                  (fun _ => (.const 0 : CrepExp α))) _ (by simp)] at hxmem
-                            have hmem := (List.mem_filter.mp hxmem).1
-                            simp only [crepAssignedFreeVars,
-                              crepAssignedFreeVars_seq_assignRet_compileProg, List.mem_append] at hmem
-                            rcases hmem with hmem | hmem | hmem
-                            · exact absurd (functionReturnNames_bound context function x hmem) (by omega)
-                            · exact ⟨handlerVar, hshape, handlerNames, hhandler, hmem⟩
-                            · exact ih handlerProgram (by simp +arith) context x hmem hbnd
-                        | some destData =>
-                            obtain ⟨kind, name⟩ := destData
-                            cases hnames : callDestinationNames context kind name with
-                            | none =>
-                                simp only [compileProg, hexception, hhandler, hnames] at hxmem
-                                simp [crepAssignedFreeVars,
-                                  crepAssignedFreeVars_seq_assignRet_compileProg,
-                                  List.mem_append] at hxmem
-                                rcases hxmem with hxmem | hxmem
-                                · exact ⟨handlerVar, hshape, handlerNames, hhandler, hxmem⟩
-                                · exact ih handlerProgram (by simp +arith) context x hxmem hbnd
-                            | some names =>
-                                simp only [compileProg, hexception, hhandler, hnames] at hxmem
-                                simp [crepAssignedFreeVars,
-                                  crepAssignedFreeVars_seq_assignRet_compileProg,
-                                  List.mem_append] at hxmem
-                                obtain ⟨shape, slots, hlookup, hslots⟩ :=
-                                  callDestinationNames_some_slot context kind name names hnames
-                                rcases hxmem with hxmem | hxmem | hxmem
-                                · exact ⟨name, shape, slots, hlookup, by rw [← hslots]; exact hxmem⟩
-                                · exact ⟨handlerVar, hshape, handlerNames, hhandler, hxmem⟩
-                                · exact ih handlerProgram (by simp +arith) context x hxmem hbnd
-
-/-- Cake `not_mem_context_assigned_mem_gt` (`pan_to_crepProofScript.sml:1252`):
-    under a bounded context whose slots all avoid `x`, no free variable of the
-    compiled program equals `x`. -/
-theorem not_mem_context_assigned_mem_gt [BEq α] [OfNat α 0] [Add α]
+/-! Full structural counterpart of Cake's
+    `not_mem_context_assigned_mem_gt` (`pan_to_crepProofScript.sml:1252`).
+    The context maximum and slot-map hypotheses are threaded through the
+    declaration constructors; all expression temporaries are hidden by the
+    corresponding `nestedDecs` equations. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_bound
+    [BEq α] [OfNat α 0] [Add α]
     (context : CompileContext α) (program : Prog α) (x : Nat)
-    (_hmax : panValueCtxtMax context.maxVar context.vars)
-    (hslot : panValueSlotBound x context.vars) (hbnd : x ≤ context.maxVar) :
+    (hmax : panValueCtxtMax context.maxVar context.vars)
+    (hslot : panValueSlotBound x context.vars)
+    (hx : x ≤ context.maxVar) :
     x ∉ crepAssignedFreeVars (compileProg context program) := by
-  intro hmem
-  obtain ⟨name, shape, slots, hlookup, hxslot⟩ :=
-    crepAssignedFreeVars_compileProg_bound program context x hmem hbnd
-  exact hslot name shape slots hlookup hxslot
+  refine (prog_sizeOf_induction (motive := fun program =>
+    ∀ (context : CompileContext α) (x : Nat),
+      panValueCtxtMax context.maxVar context.vars →
+      panValueSlotBound x context.vars →
+      x ≤ context.maxVar →
+      x ∉ crepAssignedFreeVars (compileProg context program))
+    (step := ?_) program) context x hmax hslot hx
+  intro program ih context x hmax hslot hx
+  cases program with
+  | skip => simp [compileProg, crepAssignedFreeVars]
+  | dec name declaredShape value body =>
+      cases hcompile : compileExp context value with
+      | mk expressions valueShape =>
+          simp only [compileProg, hcompile]
+          by_cases hlength : (allocatedNames context valueShape).length = expressions.length
+          · rw [if_pos hlength]
+            have hmaxAtNew : panValueCtxtMax
+                (context.maxVar + Shape.shapeSize valueShape) context.vars := by
+              refine ⟨by omega, ?_⟩
+              intro oldName oldShape oldSlots hlookup slot hmem
+              have hle := hmax.2 oldName oldShape oldSlots hlookup slot hmem
+              omega
+            have hmaxNext : panValueCtxtMax
+                (context.maxVar + Shape.shapeSize valueShape)
+                ((name, (valueShape, allocatedNames context valueShape)) :: context.vars) :=
+              panValueCtxtMax_cons_of _ _ _ _ _ hmaxAtNew (by
+                intro slot hmem
+                exact allocatedNames_slot_le context valueShape slot hmem)
+            have hslotNext : panValueSlotBound x
+                ((name, (valueShape, allocatedNames context valueShape)) :: context.vars) :=
+              panValueSlotBound_cons_of x name valueShape
+                (allocatedNames context valueShape) context.vars hslot
+                (not_mem_allocatedNames context valueShape hx)
+            have hxNext : x ≤ context.maxVar + Shape.shapeSize valueShape := by omega
+            have hbody := ih body (by decreasing_trivial)
+              { context with
+                vars := (name, (valueShape, allocatedNames context valueShape)) :: context.vars
+                maxVar := context.maxVar + Shape.shapeSize valueShape }
+              x hmaxNext hslotNext hxNext
+            apply not_mem_crepAssignedFreeVars_nestedDecs
+            · simpa [allocatedNames_length] using hlength
+            · exact hbody
+          · rw [if_neg hlength]
+            simp [crepAssignedFreeVars]
+  | assign kind name value =>
+      cases kind with
+      | global => simp [compileProg, crepAssignedFreeVars]
+      | «local» =>
+          apply not_mem_crepAssignedFreeVars_compileProg_assign_local context name value x
+          intro shape slots hlookup
+          exact hslot name shape slots hlookup
+  | primitive name operator arguments =>
+      apply not_mem_crepAssignedFreeVars_compileProg_primitive
+        context name operator arguments x
+      intro shape slots hlookup
+      exact hslot name shape slots hlookup
+  | store address value =>
+      exact not_mem_crepAssignedFreeVars_compileProg_store context address value x
+  | store32 address value =>
+      exact not_mem_crepAssignedFreeVars_compileProg_store32 context address value x
+  | storeByte address value =>
+      exact not_mem_crepAssignedFreeVars_compileProg_storeByte context address value x
+  | seq first second =>
+      apply not_mem_crepAssignedFreeVars_compileProg_seq context first second x
+      · exact ih first (by decreasing_trivial) context x hmax hslot hx
+      · exact ih second (by decreasing_trivial) context x hmax hslot hx
+  | ite condition thenBranch elseBranch =>
+      apply not_mem_crepAssignedFreeVars_compileProg_ite context condition thenBranch elseBranch x
+      · exact ih thenBranch (by decreasing_trivial) context x hmax hslot hx
+      · exact ih elseBranch (by decreasing_trivial) context x hmax hslot hx
+  | «while» condition body =>
+      apply not_mem_crepAssignedFreeVars_compileProg_while context condition body x
+      exact ih body (by decreasing_trivial) context x hmax hslot hx
+  | «break» => exact not_mem_crepAssignedFreeVars_compileProg_break context x
+  | «continue» => exact not_mem_crepAssignedFreeVars_compileProg_continue context x
+  | call info function arguments =>
+      cases info with
+      | none => simp [compileProg, crepAssignedFreeVars]
+      | some info =>
+          obtain ⟨destination, handler⟩ := info
+          cases handler with
+          | none =>
+              apply not_mem_crepAssignedFreeVars_compileProg_call_no_handler
+                context function arguments destination x hx
+              intro name shape slots hlookup
+              exact hslot name shape slots hlookup
+          | some handlerInfo =>
+              obtain ⟨exception, handlerVar, handlerProgram⟩ := handlerInfo
+              cases hlookup : lookupInfo exception context.exceptions with
+              | none =>
+                  simpa [compileProg, hlookup] using
+                    (not_mem_crepAssignedFreeVars_compileProg_call_no_handler
+                      context function arguments destination x hx (by
+                        intro name shape slots hlookup
+                        exact hslot name shape slots hlookup))
+              | some code =>
+                  apply not_mem_crepAssignedFreeVars_compileProg_call_known_handler
+                    context function arguments destination exception handlerVar
+                    handlerProgram code x hx hlookup
+                    (ih handlerProgram (by decreasing_trivial) context x hmax hslot hx)
+                  intro name shape slots hlookup
+                  exact hslot name shape slots hlookup
+  | decCall name shape function arguments body =>
+      have hmaxAtNew : panValueCtxtMax
+          (context.maxVar + Shape.shapeSize shape) context.vars := by
+        refine ⟨by omega, ?_⟩
+        intro oldName oldShape oldSlots hlookup slot hmem
+        have hle := hmax.2 oldName oldShape oldSlots hlookup slot hmem
+        omega
+      have hmaxNext : panValueCtxtMax
+          (context.maxVar + Shape.shapeSize shape)
+          ((name, (shape, allocatedNames context shape)) :: context.vars) :=
+        panValueCtxtMax_cons_of _ _ _ _ _ hmaxAtNew (by
+          intro slot hmem
+          exact allocatedNames_slot_le context shape slot hmem)
+      have hslotNext : panValueSlotBound x
+          ((name, (shape, allocatedNames context shape)) :: context.vars) :=
+        panValueSlotBound_cons_of x name shape (allocatedNames context shape)
+          context.vars hslot (not_mem_allocatedNames context shape hx)
+      have hxNext : x ≤ context.maxVar + Shape.shapeSize shape := by omega
+      have hbody := ih body (by decreasing_trivial)
+        { context with
+          vars := (name, (shape, allocatedNames context shape)) :: context.vars
+          maxVar := context.maxVar + Shape.shapeSize shape }
+        x hmaxNext hslotNext hxNext
+      simp only [compileProg]
+      apply not_mem_crepAssignedFreeVars_nestedDecs
+      · simp
+      · simp only [crepAssignedFreeVars, List.mem_append]
+        intro h
+        rcases h with h | h
+        · exact not_mem_allocatedNames context shape hx h
+        · exact hbody h
+  | extCall function configuration configurationLength array arrayLength =>
+      exact not_mem_crepAssignedFreeVars_compileProg_extCall context function
+        configuration configurationLength array arrayLength x
+  | raise exception value =>
+      exact not_mem_crepAssignedFreeVars_compileProg_raise context exception value x
+  | «return» value =>
+      exact not_mem_crepAssignedFreeVars_compileProg_return context value x
+  | shMemLoad size kind name address =>
+      cases kind with
+      | global => simp [compileProg, crepAssignedFreeVars]
+      | «local» =>
+          apply not_mem_crepAssignedFreeVars_compileProg_shMemLoad_local
+            context size name address x
+          intro shape slots hlookup
+          exact hslot name shape slots hlookup
+  | shMemStore size address value =>
+      exact not_mem_crepAssignedFreeVars_compileProg_shMemStore context size address value x
+  | tick => exact not_mem_crepAssignedFreeVars_compileProg_tick context x
+  | annot tag text => exact not_mem_crepAssignedFreeVars_compileProg_annot context tag text x
 
 end Flapjack

@@ -1,4 +1,5 @@
 import Flapjack.Pipeline
+import Flapjack.CrepeAssignedFreeVarsBound
 
 namespace Flapjack.Test.CompileProgParity
 
@@ -8,8 +9,15 @@ def compileProgProbeContext : CompileContext Nat :=
   { vars := [], functions := [], exceptions := [], maxVar := 0,
     bytesInWord := 1 }
 
+#check @crepGetEidsFromDecls_lookup_iff_exception
 #check @allocatedNames_gt
 #check @freshNames_gt
+#check @mem_crepExpVars_le_maxCrepExpVar
+
+theorem maxCrepExpVar_mem_fixture :
+    7 ≤ maxCrepExpVar ([.var 3, .const 0, .var 7] : List (CrepExp Nat)) := by
+  apply mem_crepExpVars_le_maxCrepExpVar
+  simp [crepExpVars]
 
 theorem allocatedNames_gt_fixture : (0 : Nat) < (allocatedNames compileProgProbeContext .one).headD 0 := by
   have hmem : (allocatedNames compileProgProbeContext .one).headD 0 ∈ allocatedNames compileProgProbeContext .one := by
@@ -156,6 +164,26 @@ def runChecks : IO Bool := do
 #check @not_mem_freshNames
 #check @panValueSlotBound
 #check @panValueSlotBound_cons_of
+#check @crepContextSlot_extended_or_gt
+#check @crepContextSlot_le_max
+
+theorem extended_context_slot_fixture :
+    compileProgProbeContext.maxVar < 3 := by
+  let extended : CompileContext Nat :=
+    { compileProgProbeContext with
+      vars := ("fresh", (.one, [3])) :: compileProgProbeContext.vars
+      maxVar := compileProgProbeContext.maxVar + Shape.shapeSize .one }
+  have hslot : CrepContextSlot extended 3 := by
+    refine ⟨"fresh", .one, [3], ?_, by simp⟩
+    simp [extended, lookupInfo]
+  rcases crepContextSlot_extended_or_gt compileProgProbeContext
+      "fresh" .one [3] (by
+        intro x hx
+        simp [compileProgProbeContext] at *
+        omega) hslot with hold | hgt
+  · rcases hold with ⟨name, shape, names, hlookup, hmem⟩
+    simp [compileProgProbeContext, lookupInfo] at hlookup
+  · exact hgt
 
 #check @compileProg_break
 #check @compileProg_continue
@@ -175,5 +203,6 @@ def runChecks : IO Bool := do
 #check @compileProg_assign_local_of_compiled
 #check @compileProg_shMemLoad_local_of_compiled
 #check @compileProg_shMemStore_of_compiled
+#check @crepAssignedFreeVars_nestedDecs_mem_iff
 
 end Flapjack.Test.CompileProgParity

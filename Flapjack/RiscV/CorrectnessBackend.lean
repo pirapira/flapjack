@@ -571,6 +571,21 @@ theorem wordFunctionToRiscVWithCalls_longMul_result [NeZero width]
   subst code
   exact executeInstructions_longMul_result state
 
+/-- A nonzero RISC-V `divU` destination receives the signed word quotient
+    whenever the divisor is nonzero.  This general instruction contract is the
+    arbitrary-register form used by compiler-correctness clients. -/
+theorem executeInstructions_divU_result [NeZero width]
+    (state : State width) (destination sourceLeft sourceRight : Fin 32)
+    (hdestination : destination ≠ 0)
+    (hdivisor : readRegister state sourceRight ≠ 0) :
+    readRegister (executeInstructions state
+      [.divU destination sourceLeft sourceRight]) destination =
+      BitVec.ofInt width
+        ((readRegister state sourceLeft).toInt.ediv
+          (readRegister state sourceRight).toInt) := by
+  rw [executeInstructions_single, execute_divU]
+  split <;> simp_all
+
 
 theorem wordFunctionToRiscVWithCalls_div_result [NeZero width]
     (context : WordCallContext width) (state : State width)

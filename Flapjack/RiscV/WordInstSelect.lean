@@ -442,6 +442,18 @@ termination_by expression => sizeOf expression
 decreasing_by
   all_goals first | decreasing_trivial | (simp [sizeOf] <;> omega)
 
+/- Cake's `shiftImmediate` rejects amounts at or above the RV word width.
+   The selector's source-faithful fallback is independent of the selected
+   left operand: it materializes the zero result in the current temporary. -/
+theorem wordInstSelectAtom_nat_shift_outOfRange
+    (temp : Nat) (operator : Shift) (left : WordExp Nat) (amount : Nat)
+    (hamount : 64 ≤ amount) :
+    wordInstSelectAtom (α := Nat) temp
+        (.shift operator left (.const amount)) =
+      (.inst (.const temp 0), .var temp) := by
+  have hnot : ¬ amount < 64 := Nat.not_lt_of_ge hamount
+  simp [wordInstSelectAtom, WordInstSelectImmediate.shiftImmediate, hnot]
+
 /-! Address expressions are selected by Cake's generic `inst_select_exp` path.
     In particular, a base-plus-offset address must remain an expression so the
     later Word-to-Stack pass can fuse the offset into the memory instruction.

@@ -20,6 +20,8 @@ import Flapjack.CrepeNestedDecsStability
 import Flapjack.CrepeRaisedCallInversion
 import Flapjack.PanToCrepDecCallCorrectness
 import Flapjack.PanToCrepProgramComposition
+import Flapjack.PanToCrepCodeRelation
+import Flapjack.PanSimpLocalised
 
 namespace Flapjack.Test.PanValuePcControlSafety
 
@@ -1399,5 +1401,27 @@ example (context : CompileContext Nat) (eshapes : InfoMap Shape) :
 
 #check @lookupPanFunction_mem
 #check @panValuePcLocalisedCode_lookup
+
+/-! The concrete `code_rel` analogue is non-vacuous on a source-faithful,
+nonempty function table: instantiating Cake's `mk_ctxt_code_imp_code_rel` port
+on a single declaration whose body is a localised `skip`. -/
+private def concreteRelContext : CompileContext Nat :=
+  { vars := [], functions := [], exceptions := [], maxVar := 0, bytesInWord := 8 }
+
+private def concreteRelDecls : List (Decl Nat) :=
+  [Decl.function { name := "f", inline := false, exported := false, params := [], body := (.skip : Prog Nat), returnShape := .one }]
+
+example :
+    panValuePcCodeRelConcrete
+      { concreteRelContext with functions := functionInfos concreteRelDecls }
+      (sourceFunctionEntries concreteRelDecls)
+      (compileToCrep concreteRelContext concreteRelDecls) :=
+  panValuePcCodeRelConcrete_compileToCrep concreteRelContext concreteRelDecls (by
+    intro entry hentry
+    simp [concreteRelDecls, sourceFunctionEntries] at hentry
+    rcases hentry with rfl
+    exact localisedProg_skip)
+
+#check @panValuePcCodeRelConcrete_compileToCrep
 
 end Flapjack.Test.PanValuePcControlSafety

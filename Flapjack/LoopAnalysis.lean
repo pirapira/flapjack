@@ -28,6 +28,44 @@ def loopVarsOfExp : LoopExp α → List Nat
 def varsOfExp (expression : LoopExp α) (live : List Nat) : List Nat :=
   (loopVarsOfExp expression).foldr insertNatSorted live
 
+/-- Membership in a fold of `insertNatSorted` over an expression's reads. -/
+theorem mem_foldr_insertNatSorted (names : List Nat) (live : List Nat) (x : Nat) :
+    x ∈ names.foldr insertNatSorted live ↔ x ∈ names ∨ x ∈ live := by
+  induction names with
+  | nil => simp
+  | cons name names ih =>
+      simp only [List.foldr_cons, insertNatSorted_mem, ih, List.mem_cons]
+      constructor
+      · rintro (h | h | h)
+        · exact Or.inl (Or.inl h)
+        · exact Or.inl (Or.inr h)
+        · exact Or.inr h
+      · rintro ((h | h) | h)
+        · exact Or.inl h
+        · exact Or.inr (Or.inl h)
+        · exact Or.inr (Or.inr h)
+
+/-- Membership in `varsOfExp`: a name is live when it is read by the
+    expression or was already live. -/
+theorem varsOfExp_mem (expression : LoopExp α) (live : List Nat) (x : Nat) :
+    x ∈ varsOfExp expression live ↔ x ∈ loopVarsOfExp expression ∨ x ∈ live := by
+  simp [varsOfExp, mem_foldr_insertNatSorted]
+
+/-- Cake's `vars_of_exp_acc` (`cakeml/pancake/proofs/loop_liveProofScript.sml:339`):
+    the accumulator is subsumed, so the live set is the expression's reads
+    together with the incoming live set. -/
+theorem varsOfExp_acc (expression : LoopExp α) (live : List Nat) (x : Nat) :
+    x ∈ varsOfExp expression live ↔ x ∈ varsOfExp expression [] ∨ x ∈ live := by
+  rw [varsOfExp_mem, varsOfExp_mem]
+  simp
+
+/-- Cake's `vars_of_exp_mono` (`cakeml/pancake/proofs/loop_liveProofScript.sml:400`):
+    every incoming live name remains live after reading the expression. -/
+theorem varsOfExp_mono (expression : LoopExp α) (live : List Nat) (x : Nat)
+    (h : x ∈ live) : x ∈ varsOfExp expression live := by
+  rw [varsOfExp_mem]
+  exact Or.inr h
+
 def deleteNatSorted (name : Nat) : List Nat → List Nat
   | [] => []
   | head :: tail =>
@@ -1042,5 +1080,71 @@ theorem loopAccVars_mem (program : LoopProg α) (names : List Nat) (x : Nat) :
     x ∈ loopAccVars program names ↔ x ∈ names ∨ x ∈ loopAccVars program [] :=
   loopAccVars_mem_aux program names names x
 
+
+/-- Cake's `every_prog_def`
+    (`cakeml/pancake/semantics/loopPropsScript.sml:10`): a predicate-combinator
+    over Loop programs that requires the predicate of every program node. -/
+def loopEveryProg (predicate : LoopProg α → Prop) : LoopProg α → Prop
+  | .seq first second =>
+      predicate (.seq first second) ∧ loopEveryProg predicate first ∧
+        loopEveryProg predicate second
+  | .loop liveIn body liveOut =>
+      predicate (.loop liveIn body liveOut) ∧ loopEveryProg predicate body
+  | .ite operator condition right thenBranch elseBranch live =>
+      predicate (.ite operator condition right thenBranch elseBranch live) ∧
+        loopEveryProg predicate thenBranch ∧ loopEveryProg predicate elseBranch
+  | .mark body =>
+      predicate (.mark body) ∧ loopEveryProg predicate body
+  | .call returns target arguments handler =>
+      predicate (.call returns target arguments handler) ∧
+        (match handler with
+         | some (_, first, second, _) =>
+             loopEveryProg predicate first ∧ loopEveryProg predicate second
+         | none => True)
+  | program => predicate program
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
+
+theorem loopEveryProg_seq (predicate : LoopProg α → Prop) (first second : LoopProg α) :
+    loopEveryProg predicate (.seq first second) ↔
+      predicate (.seq first second) ∧ loopEveryProg predicate first ∧
+        loopEveryProg predicate second := by
+  simp [loopEveryProg]
+
+theorem loopEveryProg_loop (predicate : LoopProg α → Prop) (liveIn : List Nat)
+    (body : LoopProg α) (liveOut : List Nat) :
+    loopEveryProg predicate (.loop liveIn body liveOut) ↔
+      predicate (.loop liveIn body liveOut) ∧ loopEveryProg predicate body := by
+  simp [loopEveryProg]
+
+theorem loopEveryProg_ite (predicate : LoopProg α → Prop) (operator : Cmp)
+    (condition : Nat) (right : RegImm α) (thenBranch elseBranch : LoopProg α)
+    (live : List Nat) :
+    loopEveryProg predicate (.ite operator condition right thenBranch elseBranch live) ↔
+      predicate (.ite operator condition right thenBranch elseBranch live) ∧
+        loopEveryProg predicate thenBranch ∧ loopEveryProg predicate elseBranch := by
+  simp [loopEveryProg]
+
+theorem loopEveryProg_mark (predicate : LoopProg α → Prop) (body : LoopProg α) :
+    loopEveryProg predicate (.mark body) ↔
+      predicate (.mark body) ∧ loopEveryProg predicate body := by
+  simp [loopEveryProg]
+
+theorem loopEveryProg_call (predicate : LoopProg α → Prop)
+    (returns : Option (List Nat × List Nat)) (target : Option Nat)
+    (arguments : List Nat)
+    (handler : Option (Nat × LoopProg α × LoopProg α × List Nat)) :
+    loopEveryProg predicate (.call returns target arguments handler) ↔
+      predicate (.call returns target arguments handler) ∧
+        (match handler with
+         | some (_, first, second, _) =>
+             loopEveryProg predicate first ∧ loopEveryProg predicate second
+         | none => True) := by
+  cases handler with
+  | none => simp [loopEveryProg]
+  | some h =>
+      obtain ⟨n, first, second, l⟩ := h
+      simp [loopEveryProg]
 
 end Flapjack

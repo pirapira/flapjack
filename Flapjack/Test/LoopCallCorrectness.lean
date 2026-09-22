@@ -891,6 +891,36 @@ theorem call_target_return_assign_compile_correct_fixture :
       simp [loopLookupFirst, updateLoopLocal]
     · simp [loopLookupFirst, updateLoopLocal, hname]
 
+theorem call_target_return_assign_failure_compile_correct_fixture :
+    evalLoopProgWithCallsAndFfi
+        [(1, [3], (.return [3] : LoopProg Nat))]
+        (fun _ _ _ _ _ _ => none) 3 load32State
+        (comp [(3, 2)]
+          (.call (some ([4, 5], [])) (some 1) [3] none : LoopProg Nat) :
+            LoopProg Nat × LocationEnv).1 = none ∧
+      labelsIn
+        (comp [(3, 2)]
+          (.call (some ([4, 5], [])) (some 1) [3] none : LoopProg Nat) :
+            LoopProg Nat × LocationEnv).2
+        load32State.locals := by
+  apply comp_call_target_return_assign_failure_correct
+    (functions := [(1, [3], (.return [3] : LoopProg Nat))])
+    (ffiHandler := (fun _ _ _ _ _ _ => none))
+    (environment := [(3, 2)]) (state := load32State) (fuel := 1)
+    (returns := ([4, 5], [])) (target := 1) (arguments := [3])
+    (parameters := [3]) (body := (.return [3] : LoopProg Nat))
+    (argumentValues := [7])
+    (calleeLocals := { load32State with
+      locals := fun name => if name = 3 then some 7 else none })
+    (calleeState := { load32State with
+      locals := fun name => if name = 3 then some 7 else none })
+    (values := [7])
+  · simp [lookupLoopFunction]
+  · simp [load32State, loopReadLocals]
+  · simp [loopBindParameters, loopLookupFirst]
+  · simp [evalLoopProgWithCallsAndFfi, evalLoopProg, load32State, loopReadLocals]
+  · simp [loopAssignValues]
+
 theorem call_target_normal_failure_compile_correct_fixture :
     evalLoopProgWithCallsAndFfi
         [(1, [3], (.skip : LoopProg Nat))]
@@ -1317,6 +1347,7 @@ theorem loop_compile_result_fixture :
 #check evalLoopCallWithCallsAndFfi_returned_assign_no_handler
 #check comp_call_target_return_assign_no_handler_correct
 #check evalLoopCallWithCallsAndFfi_normal_failure
+#check comp_call_target_return_assign_failure_correct
 #check comp_call_target_normal_failure_correct
 #check comp_call_target_raised_no_handler_correct
 #check comp_call_target_raised_handler_correct

@@ -301,6 +301,52 @@ def nestedDecs : List Nat → List (CrepExp α) → CrepProg α → CrepProg α
   | name :: names, value :: values, body => .dec name value (nestedDecs names values body)
   | _, _, _ => .skip
 
+theorem crepExpsOf_nestedDecs (names : List Nat) :
+    ∀ (values : List (CrepExp α)) (body : CrepProg α) {e : CrepExp α},
+      e ∈ crepExpsOf (nestedDecs names values body) →
+        e ∈ values ∨ e ∈ crepExpsOf body := by
+  induction names with
+  | nil =>
+      intro values body e hmem
+      cases values with
+      | nil => exact Or.inr (by simpa [nestedDecs] using hmem)
+      | cons value values => simp [nestedDecs, crepExpsOf] at hmem
+  | cons name names ih =>
+      intro values body e hmem
+      cases values with
+      | nil => simp [nestedDecs, crepExpsOf] at hmem
+      | cons value values =>
+          simp only [nestedDecs, crepExpsOf, List.mem_cons] at hmem
+          rcases hmem with rfl | hmem
+          · exact Or.inl (by simp)
+          · rcases ih values body hmem with hv | hb
+            · exact Or.inl (by simp [hv])
+            · exact Or.inr hb
+
+theorem crepExpsOf_nestedSeq_assign (names : List Nat) :
+    ∀ (values : List (CrepExp α)) {e : CrepExp α},
+      e ∈ crepExpsOf
+          (crepNestedSeq (panMap2 (fun name value => .assign name value)
+            names values)) →
+        e ∈ values := by
+  induction names with
+  | nil =>
+      intro values e hmem
+      cases values with
+      | nil => simp [panMap2, crepNestedSeq, crepExpsOf] at hmem
+      | cons value values => simp [panMap2, crepNestedSeq, crepExpsOf] at hmem
+  | cons name names ih =>
+      intro values e hmem
+      cases values with
+      | nil => simp [panMap2, crepNestedSeq, crepExpsOf] at hmem
+      | cons value values =>
+          simp only [panMap2, crepNestedSeq, crepExpsOf, List.mem_cons,
+            List.singleton_append] at hmem
+          rcases hmem with heq | hmem
+          · subst heq; exact by simp
+          · exact List.mem_cons.mpr (Or.inr (ih values hmem))
+
+
 def storeGlobals [Add α] (address stride : α) : List (CrepExp α) → List (CrepProg α)
   | [] => []
   | value :: values => .storeGlob address value :: storeGlobals (address + stride) stride values

@@ -400,6 +400,22 @@ theorem call_labelsIn_fixture :
       exact ⟨100, by simp [load32State]⟩)
   simpa [comp, compCall, splitLast, lookup] using hcompiled
 
+theorem ffi_labelsIn_fixture :
+    (comp [(3, 2)]
+      (.ffi "print" 1 2 3 4 [2, 3] : LoopProg Nat) : LoopProg Nat × LocationEnv).1 =
+        .ffi "print" 1 2 3 4 [2, 3] ∧
+      labelsIn
+        (comp [(3, 2)]
+          (.ffi "print" 1 2 3 4 [2, 3] : LoopProg Nat)).2
+        load32State.locals := by
+  apply comp_ffi_labelsIn
+  intro name source hlookup
+  have hpair : 3 = name ∧ 2 = source := by
+    simpa [lookup] using hlookup
+  have hsource : source = 2 := hpair.2.symm
+  subst source
+  exact ⟨100, by simp [load32State]⟩
+
 #check comp_locValue_correct
 #check comp_load32_correct
 #check comp_loadByte_correct
@@ -422,5 +438,6 @@ theorem call_labelsIn_fixture :
 #check comp_arith_longDiv_labelsIn
 #check comp_primitive_labelsIn
 #check comp_call_labelsIn
+#check comp_ffi_labelsIn
 
 end Flapjack.Test.LoopCallCorrectness

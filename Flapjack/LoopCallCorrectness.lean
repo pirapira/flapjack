@@ -835,6 +835,24 @@ theorem comp_call_labelsIn
               · simp [comp, compCall, harguments, hlastValue]
               · simpa [comp, compCall, harguments, hlastValue] using hnil
 
+theorem comp_ffi_labelsIn
+    (environment : LocationEnv)
+    (function : FunName) (configuration configurationLength array arrayLength : Nat)
+    (live : List Nat) (locals : Nat → Option α)
+    (_henvironment : labelsIn environment locals) :
+    (comp environment
+      (.ffi function configuration configurationLength array arrayLength live) :
+        LoopProg α × LocationEnv).1 =
+        .ffi function configuration configurationLength array arrayLength live ∧
+      labelsIn
+        (comp environment
+          (.ffi function configuration configurationLength array arrayLength live) :
+            LoopProg α × LocationEnv).2
+        locals := by
+  constructor
+  · simp [comp]
+  · simp [comp, labelsIn, lookup]
+
 theorem comp_primitive_labelsIn
     (environment : LocationEnv) (destinations : List Nat)
     (operator : PrimOp) (arguments : List Nat)

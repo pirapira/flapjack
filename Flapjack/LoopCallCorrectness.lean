@@ -487,6 +487,23 @@ theorem comp_mark_labelsIn
   · rfl
   · exact hbody
 
+theorem comp_seq_labelsIn
+    (environment : LocationEnv) (first second : LoopProg α)
+    (locals : Nat → Option α) :
+    (comp environment (.seq first second : LoopProg α)).1 =
+        .seq (comp environment first).1
+          (comp (comp environment first).2 second).1 ∧
+      labelsIn (comp environment (.seq first second : LoopProg α)).2 locals := by
+  have hcompiled :
+      comp environment (.seq first second : LoopProg α) =
+        (.seq (comp environment first).1
+          (comp (comp environment first).2 second).1, []) := by
+    simp [comp]
+  rw [hcompiled]
+  constructor
+  · rfl
+  · simp [labelsIn, lookup]
+
 theorem comp_setGlobal_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]

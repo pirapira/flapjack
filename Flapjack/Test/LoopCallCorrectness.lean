@@ -214,6 +214,19 @@ theorem mark_labelsIn_fixture :
     (locals := load32State.locals) (by simpa [comp] using henvironment)
   simpa [comp] using hmarked
 
+theorem seq_labelsIn_fixture :
+    (comp [(3, 2)]
+      (.seq (.fail : LoopProg Nat) .tick) : LoopProg Nat × LocationEnv).1 =
+        .seq .fail .tick ∧
+      labelsIn
+        (comp [(3, 2)]
+          (.seq (.fail : LoopProg Nat) .tick)).2
+        load32State.locals := by
+  have hseq := comp_seq_labelsIn
+    (environment := [(3, 2)]) (first := (.fail : LoopProg Nat))
+    (second := .tick) (locals := load32State.locals)
+  simpa [comp] using hseq
+
 theorem setGlobal_compile_correct_fixture :
     evalLoopProg 1 load32State
         (comp [(3, 2)] (.setGlobal 9 (.const 11) : LoopProg Nat)).1 =
@@ -459,6 +472,7 @@ theorem ffi_labelsIn_fixture :
 #check comp_tick_correct
 #check comp_fail_correct
 #check comp_mark_labelsIn
+#check comp_seq_labelsIn
 #check comp_setGlobal_correct
 #check comp_return_correct
 #check comp_raise_correct

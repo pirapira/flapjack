@@ -589,6 +589,32 @@ theorem listDisjoint_comm (xs ys : List α) (h : ListDisjoint xs ys) :
     ListDisjoint ys xs :=
   fun value hy hx => h value hx hy
 
+/-! Counterpart of Cake's `genlist_distinct_max`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:208`): the
+    `GENLIST (λx. SUC x + m) n` slot enumeration is disjoint from any list
+    whose elements are bounded by `m`. -/
+theorem listDisjoint_range_add (n m : Nat) (ys : List Nat)
+    (h : ∀ y, y ∈ ys → y ≤ m) :
+    ListDisjoint ((List.range n).map (fun x => x + 1 + m)) ys := by
+  intro x hx hy
+  obtain ⟨i, _hi, rfl⟩ := List.mem_map.mp hx
+  have hlt : m < i + 1 + m := by omega
+  have hle := h (i + 1 + m) hy
+  omega
+
+/-! Counterpart of Cake's `genlist_distinct_max'`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:221`): the shifted
+    `GENLIST (λx. SUC x + (m + p)) n` slot enumeration is disjoint from any
+    list whose elements are bounded by `m`. -/
+theorem listDisjoint_range_add_shift (n m p : Nat) (ys : List Nat)
+    (h : ∀ y, y ∈ ys → y ≤ m) :
+    ListDisjoint ((List.range n).map (fun x => x + 1 + (m + p))) ys := by
+  intro x hx hy
+  obtain ⟨i, _hi, rfl⟩ := List.mem_map.mp hx
+  have hlt : m < i + 1 + (m + p) := by omega
+  have hle := h (i + 1 + (m + p)) hy
+  omega
+
 /-! Counterpart of Cake's `distinct_lists_cons`
     (`cakeml/pancake/semantics/pan_commonPropsScript.sml:125`). -/
 theorem listDisjoint_of_append_left (ns xs ys zs : List α)

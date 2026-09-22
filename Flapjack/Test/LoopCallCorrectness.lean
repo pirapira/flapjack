@@ -1,4 +1,5 @@
 import Flapjack.LoopCallCorrectness
+import Flapjack.RiscV.Model
 
 namespace Flapjack.Test.LoopCallCorrectness
 
@@ -386,7 +387,23 @@ theorem loop_labelsIn_fixture :
   have hloop := comp_loop_labelsIn
     (environment := [(3, 2)]) (liveIn := [2]) (body := (.fail : LoopProg Nat))
     (liveOut := [3]) (locals := load32State.locals)
-  simpa [comp] using hloop
+  simpa [comp, loopResultState] using hloop
+
+theorem loop_repeat_compile_correct_fixture :
+    evalLoopProg 3 load32State
+        (comp [(3, 2)]
+          (.loop [2] (.break 0 : LoopProg Nat) [3])).1 =
+        some (.normal load32State) ∧
+      labelsIn
+        (comp [(3, 2)]
+          (.loop [2] (.break 0 : LoopProg Nat) [3])).2
+        load32State.locals := by
+  have hloop := comp_loop_repeat_correct
+    (environment := [(3, 2)]) (state := load32State) (fuel := 2)
+    (liveIn := [2]) (body := (.break 0 : LoopProg Nat)) (liveOut := [3])
+    (result := .normal load32State)
+    (by simp [comp, evalLoopRepeat, evalLoopProg])
+  simpa [comp, loopResultState] using hloop
 
 theorem setGlobal_compile_correct_fixture :
     evalLoopProg 1 load32State
@@ -572,6 +589,7 @@ theorem primitive_labelsIn_fixture :
       exact hpair.2.symm
     subst source
     exact ⟨100, by simp [load32State]⟩
+
   · have hname' : 3 ≠ name := Ne.symm hname
     by_cases hname4 : name = 4
     · subst name
@@ -585,6 +603,79 @@ theorem primitive_labelsIn_fixture :
         have hname4' : 4 ≠ name := Ne.symm hname4
         simp [lookup, hname', hname4']
       simp [hnone] at hlookup
+
+def longDivWordState : LoopState (RiscV.Word 64) :=
+  { locals := fun name => if name = 2 then some 100 else
+      if name = 3 then some 7 else none
+    globals := fun _ => none
+    memory := fun _ => none }
+
+theorem arith_longDiv_full_compile_correct_fixture :
+    evalLoopProgFullWithLongDiv
+        (fun high low divisor : RiscV.Word 64 => some (high + low, divisor)) 1
+        longDivWordState
+        (comp [(3, 2)]
+          (.arith (.longDiv 4 5 3 2 2)) :
+            LoopProg (RiscV.Word 64) × LocationEnv).1 =
+        some (.normal { longDivWordState with
+          locals := updateLoopLocal
+            (updateLoopLocal longDivWordState.locals 5 100) 4 107 }) ∧
+      labelsIn
+        (comp [(3, 2)]
+          (.arith (.longDiv 4 5 3 2 2)) :
+            LoopProg (RiscV.Word 64) × LocationEnv).2
+        (updateLoopLocal
+          (updateLoopLocal longDivWordState.locals 5 100) 4 107) := by
+  have hlong := comp_arith_longDiv_full_correct
+    (longDiv := (fun high low divisor : RiscV.Word 64 => some (high + low, divisor)))
+    (environment := [(3, 2)]) (state := longDivWordState) (fuel := 0)
+    (destinationLeft := 4) (destinationRight := 5)
+    (sourceLeft := 3) (sourceRight := 2) (quotient := 2)
+    (highValue := 7) (lowValue := 100) (divisorValue := 100)
+    (quotientValue := 107) (remainderValue := 100)
+    (by simp [longDivWordState]) (by simp [longDivWordState])
+    (by simp [longDivWordState])
+    (by simp) (by
+      intro name source hlookup
+      have hpair : 3 = name ∧ 2 = source := by
+        simpa [lookup] using hlookup
+      have hsource : source = 2 := hpair.2.symm
+      subst source
+      exact ⟨100, by simp [longDivWordState]⟩)
+  simpa using hlong
+
+theorem arith_longMul_full_compile_correct_fixture :
+    evalLoopProgFullWithLongMul
+        (fun left right : RiscV.Word 64 => some (left + right, left * right)) 1
+        longDivWordState
+        (comp [(3, 2)]
+          (.arith (.longMul 4 5 3 2)) :
+            LoopProg (RiscV.Word 64) × LocationEnv).1 =
+        some (.normal { longDivWordState with
+          locals := updateLoopLocal
+            (updateLoopLocal longDivWordState.locals 4 107) 5 700 }) ∧
+      labelsIn
+        (comp [(3, 2)]
+          (.arith (.longMul 4 5 3 2)) :
+            LoopProg (RiscV.Word 64) × LocationEnv).2
+        (updateLoopLocal
+          (updateLoopLocal longDivWordState.locals 4 107) 5 700) := by
+  have hlong := comp_arith_longMul_full_correct
+    (longMul := (fun left right : RiscV.Word 64 => some (left + right, left * right)))
+    (environment := [(3, 2)]) (state := longDivWordState) (fuel := 0)
+    (destinationLeft := 4) (destinationRight := 5)
+    (sourceLeft := 3) (sourceRight := 2)
+    (leftValue := 7) (rightValue := 100)
+    (highValue := 107) (lowValue := 700)
+    (by simp [longDivWordState]) (by simp [longDivWordState])
+    (by simp) (by
+      intro name source hlookup
+      have hpair : 3 = name ∧ 2 = source := by
+        simpa [lookup] using hlookup
+      have hsource : source = 2 := hpair.2.symm
+      subst source
+      exact ⟨100, by simp [longDivWordState]⟩)
+  simpa using hlong
 
 theorem call_labelsIn_fixture :
     (comp [(3, 2)]
@@ -621,6 +712,29 @@ theorem ffi_labelsIn_fixture :
   subst source
   exact ⟨100, by simp [load32State]⟩
 
+theorem loop_compile_result_fixture :
+    evalLoopProg 3 load32State
+        (comp [(3, 2)]
+          (.loop [2] (.break 0) [2] : LoopProg Nat) :
+            LoopProg Nat × LocationEnv).1 =
+        some (.normal load32State) ∧
+      labelsIn
+        (comp [(3, 2)]
+          (.loop [2] (.break 0) [2] : LoopProg Nat)).2
+        load32State.locals := by
+  have hresult :
+      evalLoopRepeat 2 load32State
+          (comp ([] : LocationEnv) (.break 0 : LoopProg Nat)).1 =
+        some (.normal load32State) := by
+    simp [comp, evalLoopRepeat, evalLoopProg]
+  have hloop := comp_loop_correct
+    (environment := [(3, 2)]) (state := load32State) (fuel := 2)
+    (liveIn := [2]) (liveOut := [2]) (body := (.break 0 : LoopProg Nat))
+    (result := .normal load32State) hresult
+  constructor
+  · simpa [comp] using hloop.1
+  · simpa [comp, loopResultState] using hloop.2
+
 #check comp_locValue_correct
 #check comp_load32_correct
 #check comp_loadByte_correct
@@ -644,6 +758,8 @@ theorem ffi_labelsIn_fixture :
 #check comp_ite_true_correct
 #check comp_ite_false_correct
 #check comp_loop_labelsIn
+#check comp_loop_correct
+#check comp_loop_repeat_correct
 #check comp_setGlobal_correct
 #check comp_return_correct
 #check comp_raise_correct
@@ -653,7 +769,9 @@ theorem ffi_labelsIn_fixture :
 #check comp_shMem_store_correct
 #check comp_arith_div_correct
 #check comp_arith_longMul_correct
+#check comp_arith_longMul_full_correct
 #check comp_arith_longDiv_labelsIn
+#check comp_arith_longDiv_full_correct
 #check comp_primitive_labelsIn
 #check comp_call_labelsIn
 #check comp_ffi_labelsIn

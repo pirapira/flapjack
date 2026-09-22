@@ -76,6 +76,22 @@ def checkBool (name : String) (value : Bool) : IO Bool := do
 def survivesStructureGuard : Bool :=
   (loopAssignPairs [3, 4, 5] [.const 0, .const 1, .const 2]).length == 3
 
+/-! Cake `loopPropsScript.sml:719` `survives_nested_seq_intro`. -/
+
+theorem loopSurvives_nestedSeq_append_fixture :
+    loopSurvives 3
+      (loopNestedSeq
+        (([.assign 3 (.const 0)] : List (LoopProg Nat)) ++
+          [.assign 4 (.const 1)])) :=
+  loopSurvives_nestedSeq_append 3 [.assign 3 (.const 0)]
+    [.assign 4 (.const 1)]
+    (by simp [loopNestedSeq, loopSurvives])
+    (by simp [loopNestedSeq, loopSurvives])
+
+def survivesAppendGuard : Bool :=
+  (([.assign 3 (.const 0)] : List (LoopProg Nat)) ++
+    ([.assign 4 (.const 1)] : List (LoopProg Nat))).length == 2
+
 def check (name : String) (actual expected : List Nat) : IO Bool := do
   if actual == expected then
     IO.println s!"PASS {name}"
@@ -100,7 +116,8 @@ def runChecks : IO Bool := do
       (loopAssignedVars probeAssignPairs) [3, 4, 5],
     check "cut_sets MAPi Assign"
       (loopCutSets [9] probeAssignPairs) [3, 4, 5, 9],
-    checkBool "survives MAPi Assign" survivesStructureGuard ].mapM id
+    checkBool "survives MAPi Assign" survivesStructureGuard,
+    checkBool "survives nested_seq append" survivesAppendGuard ].mapM id
   pure (results.all id)
 
 end Flapjack.Test.LoopAssignedVarsParity

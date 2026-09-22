@@ -643,4 +643,21 @@ theorem loopSurvives_loopTempNames (name : Nat) (offset count : Nat)
       (loopNestedSeq (loopAssignPairs (loopTempNames offset count) expressions)) :=
   loopSurvives_loopAssignPairs name _ expressions hlen
 
+/-- Cake's `survives_nested_seq_intro`
+    (`cakeml/pancake/semantics/loopPropsScript.sml:719`): a variable surviving
+    each of two statement lists also survives their concatenation. -/
+theorem loopSurvives_nestedSeq_append (n : Nat)
+    (statements rest : List (LoopProg α))
+    (h1 : loopSurvives n (loopNestedSeq statements))
+    (h2 : loopSurvives n (loopNestedSeq rest)) :
+    loopSurvives n (loopNestedSeq (statements ++ rest)) := by
+  revert h1 h2
+  induction statements with
+  | nil => intro h1 h2; simpa [loopNestedSeq] using h2
+  | cons statement statements ih =>
+      intro h1 h2
+      rw [List.cons_append]
+      simp only [loopNestedSeq, loopSurvives] at h1 ⊢
+      exact ⟨h1.1, ih h1.2 h2⟩
+
 end Flapjack

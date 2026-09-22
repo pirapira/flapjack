@@ -598,6 +598,20 @@ theorem loopCutSets_loopTempNames (live : List Nat) (offset count : Nat)
       loopListInsert (loopTempNames offset count) live :=
   loopCutSets_loopAssignPairs live _ expressions hlen
 
+/-- Cake's `cut_sets_nested_seq`
+    (`cakeml/pancake/semantics/loopPropsScript.sml:767`): cutting a nested
+    sequence of two statement lists is cutting the first and then the second. -/
+theorem loopCutSets_nestedSeq_append (live : List Nat)
+    (statements rest : List (LoopProg α)) :
+    loopCutSets live (loopNestedSeq (statements ++ rest)) =
+      loopCutSets (loopCutSets live (loopNestedSeq statements))
+        (loopNestedSeq rest) := by
+  induction statements generalizing live with
+  | nil => simp [loopNestedSeq, loopCutSets]
+  | cons statement statements ih =>
+      simp only [List.cons_append, loopNestedSeq, loopCutSets]
+      rw [ih (loopCutSets live statement)]
+
 /-- Counterpart of Cake `survives_def` (`cakeml/pancake/semantics/loopPropsScript.sml:25`):
     a variable survives a Loop program when every control-flow path that can
     reach a use of it keeps it live.  Flapjack's live sets are plain lists, so

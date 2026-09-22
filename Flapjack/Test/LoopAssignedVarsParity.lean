@@ -92,6 +92,27 @@ def survivesAppendGuard : Bool :=
   (([.assign 3 (.const 0)] : List (LoopProg Nat)) ++
     ([.assign 4 (.const 1)] : List (LoopProg Nat))).length == 2
 
+/-! Cake `loopPropsScript.sml:767` `cut_sets_nested_seq`. -/
+
+theorem loopCutSets_nestedSeq_append_fixture :
+    loopCutSets [9]
+        (loopNestedSeq
+          (([.assign 3 (.const 0)] : List (LoopProg Nat)) ++
+            [.assign 4 (.const 1)])) =
+      loopCutSets
+        (loopCutSets [9]
+          (loopNestedSeq ([.assign 3 (.const 0)] : List (LoopProg Nat))))
+        (loopNestedSeq ([.assign 4 (.const 1)] : List (LoopProg Nat))) :=
+  loopCutSets_nestedSeq_append [9] [.assign 3 (.const 0)]
+    [.assign 4 (.const 1)]
+
+def cutSetsAppendGuard : Bool :=
+  loopCutSets [9]
+      (loopNestedSeq
+        (([.assign 3 (.const 0)] : List (LoopProg Nat)) ++
+          [.assign 4 (.const 1)])) ==
+    [3, 4, 9]
+
 def check (name : String) (actual expected : List Nat) : IO Bool := do
   if actual == expected then
     IO.println s!"PASS {name}"
@@ -117,7 +138,8 @@ def runChecks : IO Bool := do
     check "cut_sets MAPi Assign"
       (loopCutSets [9] probeAssignPairs) [3, 4, 5, 9],
     checkBool "survives MAPi Assign" survivesStructureGuard,
-    checkBool "survives nested_seq append" survivesAppendGuard ].mapM id
+    checkBool "survives nested_seq append" survivesAppendGuard,
+    checkBool "cut_sets nested_seq append" cutSetsAppendGuard ].mapM id
   pure (results.all id)
 
 end Flapjack.Test.LoopAssignedVarsParity

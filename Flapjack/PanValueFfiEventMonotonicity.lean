@@ -159,6 +159,52 @@ theorem evalPanValueFfiProgSteps_shMemLoad_normal_ioEvents_prefix
       | final finalFfi event => simp [hload] at hresult
   · exact False.elim (hvalid hvalid')
 
+theorem evalPanValueFfiProgSteps_shMemLoad_finalFfi_ioEvents_prefix
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (size : OpSize) (kind : VarKind) (name : VarName) (address : Exp α)
+    (access : PanValueMemoryAccess α) (contracts : Option PanValueCallContracts)
+    (addressWord : α) (addressSteps : Nat)
+    (nextFfi : FfiState σ) (event : FfiFinalEvent)
+    (haddress : evalPanValueExpCounted structs locals globals memory
+      baseAddress topAddress bytesInWord address (memoryAccess := some access) =
+      some (.word addressWord, addressSteps))
+    (hresult : evalPanValueFfiProgSteps context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi
+      (.shMemLoad size kind name address) (memoryAccess := some access)
+      (contracts := contracts) =
+      some (.finalFfi (fun _ => none) globals memory nextFfi event,
+        addressSteps + 1)) :
+    ffi.ioEvents <+: nextFfi.ioEvents := by
+  simp [evalPanValueFfiProgSteps, haddress] at hresult
+  rcases hresult with ⟨hvalid', hresult⟩
+  by_cases hvalid :
+      panValueSharedLoadValid structs locals globals kind name (.word 0) = true
+  · clear hvalid'
+    cases hload : panValueFfiSharedLoad context ffi size addressWord with
+    | none => simp [hload] at hresult
+    | some loadResult =>
+      cases loadResult with
+      | loaded loadedFfi value => cases kind <;> simp [hload] at hresult
+      | stored storedFfi => simp [hload] at hresult
+      | final finalFfi finalEvent =>
+        have hprefix := panValueFfiSharedLoad_ioEvents_prefix context ffi size addressWord
+          (.final finalFfi finalEvent) hload
+        rw [hload] at hresult
+        simp at hresult
+        rcases hresult with ⟨hffi, hevent⟩
+        cases hffi
+        cases hevent
+        simpa [panValueFfiSharedResultFfi] using hprefix
+  · exact False.elim (hvalid hvalid')
+
 theorem evalPanValueFfiProgSteps_shMemStore_normal_ioEvents_prefix
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

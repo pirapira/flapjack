@@ -165,6 +165,7 @@ def cakeStackOnlyDeleteMany (names : List Nat) (state : CakeStackOnlyState) :
 
 def cakeGetStackOnlyAuxFast {α : Type u} :
     CakeStackOnlyState → WordProg α → CakeStackOnlyState
+  | state, .skip => state
   | state, .move _ moves =>
       moves.foldr (fun move state => cakeStackOnlyMergeMove move.1 move.2 state) state
   | state, .seq first second =>
@@ -185,6 +186,7 @@ def cakeGetStackOnlyAuxFast {α : Type u} :
             (cakeGetStackOnlyAuxFast state handlerBody)
   | state, .call none _ _ _ => state
   | state, .loop _ body _ => cakeGetStackOnlyAuxFast state body
+  | state, .tick => state
   | state, program =>
       match wordClashTree program [] with
       | .delta writes reads => cakeStackOnlyDeleteMany (writes ++ reads) state

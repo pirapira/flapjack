@@ -7,6 +7,7 @@ import Flapjack.PanValueFfiEventMonotonicity
 import Flapjack.PanValueFfiClockShift
 import Flapjack.PanValueFfiClockCorrectness
 import Flapjack.PanValueFfiClockEventMonotonicity
+import Flapjack.PanToCrepSemantics
 
 namespace Flapjack.Test.PanSimpParity
 
@@ -2677,11 +2678,22 @@ example : PanValueFfiClockNormalAdequateProgFromFloor 3 3 evaluatorContext
 #check @Flapjack.evalPanValueFfiClockProg_extCall_statefulHandler_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProg_tick_zero_timeout_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProg_tick_succ_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProg_while_zero_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProg_ite_true_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProg_ite_false_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProg_return_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProg_raise_ioEvents_prefix
+#check @Flapjack.panResultFfi_panValueFfiClockRestoreLocal
+#check @Flapjack.evalPanValueFfiClockProg_dec_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProg_decCall_timeout_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiClockProg_decCall_finalFfi_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProgram_of_declarations_and_raised_call_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProgram_of_declarations_and_timeout_call_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProg_decCall_raised_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProg_decCall_timeout_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProg_decCall_finalFfi_ioEvents_prefix
+#check @Flapjack.crepLprefixChain_of_panLprefixChain_of_semantic_agreement
+#check @Flapjack.panSemantics_rel_crepSemantics_of_pan_chain
 #check @Flapjack.evalPanValueFfiClockProgram_of_declarations_and_returned_call_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProgram_of_declarations_and_returned_call_result_rel
 #check @Flapjack.evalPanValueFfiClockProgram_of_declarations_and_raised_call_result_rel
@@ -2734,3 +2746,5 @@ theorem clocked_while_timeout_preserves_events :
     (by simp [evalPanValueExp]) (by decide) (by decide)
 
 end Flapjack.Test.PanSimpParity
+
+#check @Flapjack.evalPanValueFfiClockProg_leaf_ioEvents_prefix

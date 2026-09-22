@@ -1,4 +1,6 @@
 import Flapjack.RiscV.CakeRegAlloc
+import Flapjack.RiscV.LinearScan
+import Flapjack.RiscV.LinearScanSource
 
 /-!
 # Direct Cake `word_alloc` output parity
@@ -88,6 +90,53 @@ def simpleAllocatorGuard : Bool :=
   | _ => false
 
 #guard simpleAllocatorGuard
+
+/-! Cake algorithms 4 and above select `linear_scan_reg_alloc`.  Its source
+    bijection and retained pass-1 colours are exercised here, then converted
+    from compressed colours to the even Word RISC-V names at the boundary. -/
+def cakeWordAllocLinearScanSourceFor (registerColours : Nat) : Option (WordProg Nat) :=
+  let tree := wordClashTree add1Program []
+  let forced := cakeGetForced add1Program
+  let moves := (wordGetHeuristics 4 5 add1Program).1
+  match wordLinearScanAllocateSource registerColours forced moves tree with
+  | none => none
+  | some allocation =>
+      some (wordApplyColour
+        (fun name => match lookupNatInfo name
+            (wordLinearScanToWordColouring allocation.colouring) with
+          | some colour => colour
+          | none => 0)
+        add1Program)
+
+def cakeWordAllocLinearScanSource : Option (WordProg Nat) :=
+  cakeWordAllocLinearScanSourceFor 22
+
+def linearScanSourceAllocatorGuard : Bool :=
+  match cakeWordAllocLinearScanSource with
+  | some
+      (.seq (.move 1 [(0, 0), (4, 2), (6, 4)])
+        (.seq
+          (.seq (.move 0 [(6, 6)])
+            (.seq (.move 0 [(4, 4)])
+              (.inst (.arith (.binOp .add 6 6 (.reg 4))))))
+          (.seq (.move 0 [(2, 6)]) (.return 0 [2])))) => true
+  | _ => false
+
+#guard linearScanSourceAllocatorGuard
+
+def linearScanSourceK1AllocatorGuard : Bool :=
+  match cakeWordAllocLinearScanSourceFor 1 with
+  | some
+      (.seq (.move 1 [(4, 0), (6, 2), (0, 4)])
+        (.seq
+          (.seq (.move 0 [(0, 0)])
+            (.seq (.move 0 [(6, 6)])
+              (.inst (.arith (.binOp .add 0 0 (.reg 6))))))
+          (.seq (.move 0 [(2, 0)]) (.return 4 [2])))) => true
+  | _ => false
+
+#guard linearScanSourceK1AllocatorGuard
+
 
 /-! Cake's `word_alloc 5 riscv_config 1 22` takes the simple allocator with
     spill heuristics.  This is a separate driver branch from the IRC add
@@ -224,6 +273,10 @@ def runChecks : IO Bool := do
     IO.println "PASS Cake word_alloc simple unweighted output matches the checked HOL oracle"
   else
     IO.println "FAIL Cake word_alloc simple unweighted output matches the checked HOL oracle"
+  if linearScanSourceAllocatorGuard then
+    IO.println "PASS Cake word_alloc linear-scan output matches the checked HOL oracle"
+  else
+    IO.println "FAIL Cake word_alloc linear-scan output matches the checked HOL oracle"
   if simpleSpillAllocatorGuard then
     IO.println "PASS Cake word_alloc simple+spill output matches the checked HOL oracle"
   else
@@ -240,7 +293,7 @@ def runChecks : IO Bool := do
     IO.println "PASS Cake word_alloc AddCarry output matches the checked HOL oracle"
   else
     IO.println "FAIL Cake word_alloc AddCarry output matches the checked HOL oracle"
-  pure (add1AllocatorGuard && simpleAllocatorGuard && simpleSpillAllocatorGuard && ircK1AllocatorGuard &&
+  pure (add1AllocatorGuard && simpleAllocatorGuard && linearScanSourceAllocatorGuard && simpleSpillAllocatorGuard && ircK1AllocatorGuard &&
     ircK1UnweightedAllocatorGuard && addCarryAllocatorGuard)
 
 end Flapjack.Test.CakeWordAllocParity

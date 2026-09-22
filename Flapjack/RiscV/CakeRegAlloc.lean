@@ -1315,6 +1315,48 @@ def cakeUnboundColour (col : Nat) : List Nat → Nat
       else if col = x then cakeUnboundColour (col + 1) xs
       else cakeUnboundColour col xs
 
+/-! Cake's `unbound_colour` proof: a sorted forbidden-colour list never
+    forces the negative preference below `k` or back onto a forbidden colour. -/
+theorem cakeUnboundColour_correct
+    (col : Nat) (colours : List Nat)
+    (hsorted : List.Pairwise (fun left right : Nat => left ≤ right) colours) :
+    col ≤ cakeUnboundColour col colours ∧
+      cakeUnboundColour col colours ∉ colours := by
+  induction colours generalizing col with
+  | nil =>
+      simp [cakeUnboundColour]
+  | cons head tail ih =>
+      simp only [List.pairwise_cons] at hsorted
+      by_cases hlt : col < head
+      · have hnotHead : col ≠ head := by omega
+        have hnotTail : col ∉ tail := by
+          intro hmem
+          have hheadTail := hsorted.1 col hmem
+          omega
+        simp [cakeUnboundColour, hlt, hnotHead, hnotTail]
+      · by_cases heq : col = head
+        · have h := ih (col := col + 1) hsorted.2
+          subst col
+          have hnotHead : cakeUnboundColour (head + 1) tail ≠ head := by
+            intro hsame
+            omega
+          rw [cakeUnboundColour]
+          simp only [Nat.lt_irrefl, ↓reduceIte]
+          constructor
+          · omega
+          · simp only [List.mem_cons, not_or]
+            exact ⟨hnotHead, h.2⟩
+        · have hheadLe : head ≤ col := Nat.le_of_not_gt hlt
+          have h := ih (col := col) hsorted.2
+          have hnotHead : cakeUnboundColour col tail ≠ head := by
+            intro hsame
+            omega
+          rw [cakeUnboundColour]
+          simp only [hlt, ↓reduceIte, heq]
+          exact ⟨h.1, by
+            simp only [List.mem_cons, not_or]
+            exact ⟨hnotHead, h.2⟩⟩
+
 /-- `neg_first_match_col` (`reg_allocScript.sml:1420-1436`). -/
 def cakeNegFirstMatchCol (state : CakeRaState) (k : Nat) (bads : List Nat) :
     List Nat → Option Nat

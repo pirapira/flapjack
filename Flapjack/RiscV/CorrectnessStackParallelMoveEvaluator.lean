@@ -522,6 +522,31 @@ theorem wordStackPhysicalMovesFromSpecWithStride_mem_source
         simpa [Nat.mul_succ, Nat.add_assoc, Nat.add_left_comm,
           Nat.add_comm] using hindex
 
+/-! Cake source-register distinctness for positive ABI strides. -/
+theorem wordStackPhysicalMovesFromSpecWithStride_sources_nodup
+    (stride : Nat) (hstride : 0 < stride)
+    (locations : List WordLocation) (source : Nat)
+    (hlocations : locations.Nodup) :
+    (wordStackPhysicalMovesFromSpecWithStride stride locations source).map
+      Prod.snd |>.Nodup := by
+  induction locations generalizing source with
+  | nil => simp [wordStackPhysicalMovesFromSpecWithStride]
+  | cons location locations ih =>
+      apply List.nodup_cons.mpr
+      constructor
+      · intro hmem
+        rcases List.mem_map.mp hmem with ⟨move, hmove, hsource⟩
+        obtain ⟨index, hindex⟩ :=
+          wordStackPhysicalMovesFromSpecWithStride_mem_source stride
+            locations (source + stride) move hmove
+        have hregister :
+            (.register source : WordLocation) =
+              .register ((source + stride) + stride * index) := by
+          exact hsource.symm.trans hindex
+        injection hregister with hvalue
+        omega
+      · exact ih (source := source + stride) (List.nodup_cons.mp hlocations).2
+
 /-! Physical parameter moves retain the source-register shape introduced by
     the ABI lowering.  This is the list-level bridge needed by callers that
     reason about all generated entry moves at once, rather than a selected

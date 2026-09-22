@@ -123,4 +123,12 @@ example :
       wordStackJoin, evalWordStackMachine,
       wordStackMachineWriteRegister, wordStackMachineBinOp]
 
+example :
+    (wordStackPhysicalMovesFromSpecWithStride 2
+      [.register 5, .stack 1] 2).map Prod.snd |>.Nodup := by
+  apply wordStackPhysicalMovesFromSpecWithStride_sources_nodup 2 (by omega)
+  decide
+
+#check @wordStackPhysicalMovesFromSpecWithStride_sources_nodup
+
 end Flapjack.RiscV

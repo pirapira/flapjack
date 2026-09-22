@@ -1073,6 +1073,46 @@
       "tracked_beads": [
         "flapjack-pxn.8.5.14.1.5"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00002_fuzz_pressure_20261017.pnk",
+      "source_reference": "Fresh exact differential witness from seed 20261017 index 2: five accepted functions, twelve locals, two loops, a struct-returning call, local/shared loads and stores, shifts, and a handler exercise the Cake IRC/frame allocator under pressure. Cake and Flapjack artifacts are byte-identical.",
+      "cake_sha256": "6b5f82efdaf28e8e99f1cd9a8b4450a2968331a713ee98302ad3c7ddb70e8dd0",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.5"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00226_fuzz_nested_pressure_20261017.pnk",
+      "source_reference": "Fresh exact differential witness from seed 20261017 index 226: nested try/loops and handlers, struct/tuple calls, sixteen locals, shared/local memory, shifts, stores, and high allocator pressure exercise Cake IRC and frame continuation layout. Cake and Flapjack artifacts are byte-identical.",
+      "cake_sha256": "5e992efb791544c66100c0bab94cb98817dae46ec16dbfb7cef06c3dba97dac1",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.5"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00209_fuzz_global_pressure_20261018.pnk",
+      "source_reference": "Fresh exact differential witness from seed 20261018 index 209: global/shared/local memory, nested loops and handlers, struct/tuple calls, shifts, stores, and high allocator pressure exercise Cake IRC and frame continuation layout. Cake and Flapjack artifacts are byte-identical.",
+      "cake_sha256": "3616d6fca2c1536291def6c06bbf6507a1ba7e90de1e52b15a1add0af0a064a4",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.5"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00413_fuzz_pressure_20261019.pnk",
+      "source_reference": "Fresh exact differential witness from seed 20261019 index 413: nested loops, break/continue and handlers, struct/tuple calls, global/local/shared memory, shifts, stores, and high allocator pressure exercise Cake IRC and frame continuation layout. Cake and Flapjack artifacts are byte-identical.",
+      "cake_sha256": "261a166200ef0a1bf7ff9adc0544e517b01964711a033343e50178d3376969bf",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.5"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00003_fuzz_global_pressure_20260927.pnk",
+      "source_reference": "Fresh exact differential witness from seed 20260927 index 3: global/shared/local memory, nested loops and handlers, struct/tuple calls, shifts, stores, FFI, and high allocator pressure exercise Cake IRC/frame continuation layout. Cake and Flapjack artifacts are byte-identical.",
+      "cake_sha256": "b5af93d521011d1a1eb61432013c53ac92be130e6ead12c18abef84ddbf2df77",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.5"
+      ]
     }
   ]
 }

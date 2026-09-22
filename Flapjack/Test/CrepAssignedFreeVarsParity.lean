@@ -1,4 +1,5 @@
 import Flapjack.Crepe
+import Flapjack.CrepeAssignedFreeVarsBound
 
 /-!
 # Original-domain parity for `crepLang$assigned_free_vars`
@@ -31,6 +32,26 @@ def parityGuard : Bool :=
 
 #eval parityGuard
 #guard parityGuard
+
+def boundedContext : CompileContext Nat :=
+  { vars := [("fresh", (.one, [3]))], functions := [], exceptions := [],
+    maxVar := 3, bytesInWord := 1 }
+
+/-! This fixture exercises the Cake `ctxt_max_el_leq` bridge on the same
+    context-slot representation used by the assigned-free-vars proof. -/
+theorem context_slot_bound_fixture :
+    CrepContextSlot boundedContext 3 → 3 ≤ boundedContext.maxVar := by
+  intro hslot
+  apply crepContextSlot_le_max boundedContext ?_ hslot
+  refine ⟨by omega, ?_⟩
+  intro name shape slots hlookup
+  simp [boundedContext, lookupInfo] at hlookup
+  rcases hlookup with ⟨_hname, hshape, hslots⟩
+  subst shape
+  subst slots
+  intro slot hmem
+  simp [boundedContext] at *
+  omega
 
 def runChecks : IO Bool := do
   if parityGuard then

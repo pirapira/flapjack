@@ -25,6 +25,19 @@ theorem prog_sizeOf_induction (motive : Prog α → Prop)
 def CrepContextSlot [BEq String] (context : CompileContext α) (x : Nat) : Prop :=
   ∃ name shape slots, lookupInfo name context.vars = some (shape, slots) ∧ x ∈ slots
 
+/-! Cake's `ctxt_max_el_leq` (`pan_to_crepProofScript.sml:1493`) in the
+    `CrepContextSlot` presentation: every slot recorded by a context entry is
+    bounded by the context maximum.  The assigned-free-vars induction uses
+    this form when turning a context lookup into the contradiction
+    `x ≤ maxVar < x`. -/
+theorem crepContextSlot_le_max [BEq String]
+    (context : CompileContext α)
+    (hmax : panValueCtxtMax context.maxVar context.vars)
+    {x : Nat} (hslot : CrepContextSlot context x) :
+    x ≤ context.maxVar := by
+  rcases hslot with ⟨name, shape, slots, hlookup, hx⟩
+  exact hmax.2 name shape slots hlookup x hx
+
 /-- Every slot drawn from the callee's return shape lies strictly above the
     context maximum (or the list is empty). -/
 theorem functionReturnNames_bound (context : CompileContext α) (function : FunName) :

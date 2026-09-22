@@ -292,4 +292,63 @@ theorem localRel_le_zip_update_preserved [BEq String] [LawfulBEq String]
     rw [opt_mmap_disj_zip_flookup ns l' ns'' (panValueFlatten v') hdisj hlen']
     exact hmap''
 
+/-- Cake `locals_rel_extend_new_var` (`pan_to_crepProofScript.sml:4179`):
+extending the source and target locals with a fresh variable whose slot list is
+duplicate-free, bounded above the old context and below the new context bound,
+and length-matched to the flattened value, preserves the locals relation. -/
+theorem localsRel_extend_new_var [BEq String] [LawfulBEq String]
+    (vars : InfoMap (Shape × List Nat)) (vmax : Nat)
+    (l : FiniteMap String (PanValue α)) (l' : FiniteMap Nat α)
+    (x : String) (v : PanValue α) (ns : List Nat)
+    (hrel : localsRel vars vmax l l')
+    (hwf : isWfShape [] (panValueShape [] v) = true)
+    (hdistinct : ns.Nodup)
+    (hbounds : ∀ slot ∈ ns,
+      vmax < slot ∧ slot ≤ vmax + Shape.shapeSize (panValueShape [] v))
+    (hlen : ns.length = Shape.shapeSize (panValueShape [] v)) :
+    localsRel ((x, (panValueShape [] v, ns)) :: vars)
+      (vmax + Shape.shapeSize (panValueShape [] v))
+      (FUPDATE l (x, v)) (FUPDATE_LIST l' (ns.zip (panValueFlatten v))) := by
+  have hlenFlat : ns.length = (panValueFlatten v).length := by
+    rw [hlen, panValueFlatten_length_eq_shapeSize v hwf]
+  have hdisjAll : ∀ name' shape' slots',
+      lookupInfo name' vars = some (shape', slots') → ListDisjoint ns slots' := by
+    intro name' shape' slots' hlookup' slot hmem hmem'
+    exact panValueCtxtMax_not_mem_of_lt vmax slot vars name' shape' slots'
+      hrel.2.1 (hbounds slot hmem).1 hlookup' hmem'
+  refine ⟨?_, ?_, ?_⟩
+  · exact panValueNoOverlap_cons_of vars x (panValueShape [] v) ns
+      hrel.1 hdistinct hdisjAll
+  · exact panValueCtxtMax_cons_of (vmax + Shape.shapeSize (panValueShape [] v))
+      vars x (panValueShape [] v) ns
+      (panValueCtxtMax_mono vmax (vmax + Shape.shapeSize (panValueShape [] v))
+        (Nat.le_add_right _ _) vars hrel.2.1)
+      (fun slot hmem => (hbounds slot hmem).2)
+  · intro vname v'' hlookup''
+    rw [FLOOKUP_update] at hlookup''
+    cases hx : (x == vname) with
+    | true =>
+        have hxv : vname = x := (beq_iff_eq.mp hx).symm
+        simp [hx] at hlookup''
+        cases hlookup''
+        refine ⟨ns, panValueFlatten v, ?_, ?_, rfl, hwf⟩
+        · rw [hxv]
+          simp [lookupInfo]
+        · exact opt_mmap_some_eq_zip_flookup ns l' (panValueFlatten v)
+            hdistinct hlenFlat
+    | false =>
+        have hne : x ≠ vname := beq_eq_false_iff_ne.mp hx
+        simp [hx] at hlookup''
+        obtain ⟨ns'', vs'', hctxt'', hmap'', hflat'', hwf''⟩ :=
+          hrel.2.2 vname v'' hlookup''
+        have hbf : (x == vname) = false := beq_eq_false_iff_ne.mpr hne
+        refine ⟨ns'', vs'', ?_, ?_, hflat'', hwf''⟩
+        · simpa [lookupInfo, hbf] using hctxt''
+        · have hdisj'' : ListDisjoint ns ns'' := by
+            intro slot hmem hmem'
+            exact panValueCtxtMax_not_mem_of_lt vmax slot vars vname
+              (panValueShape [] v'') ns'' hrel.2.1 (hbounds slot hmem).1 hctxt'' hmem'
+          rw [opt_mmap_disj_zip_flookup ns l' ns'' (panValueFlatten v) hdisj'' hlenFlat]
+          exact hmap''
+
 end Flapjack

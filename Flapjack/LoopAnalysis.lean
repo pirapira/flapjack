@@ -28,6 +28,44 @@ def loopVarsOfExp : LoopExp α → List Nat
 def varsOfExp (expression : LoopExp α) (live : List Nat) : List Nat :=
   (loopVarsOfExp expression).foldr insertNatSorted live
 
+/-- Membership in a fold of `insertNatSorted` over an expression's reads. -/
+theorem mem_foldr_insertNatSorted (names : List Nat) (live : List Nat) (x : Nat) :
+    x ∈ names.foldr insertNatSorted live ↔ x ∈ names ∨ x ∈ live := by
+  induction names with
+  | nil => simp
+  | cons name names ih =>
+      simp only [List.foldr_cons, insertNatSorted_mem, ih, List.mem_cons]
+      constructor
+      · rintro (h | h | h)
+        · exact Or.inl (Or.inl h)
+        · exact Or.inl (Or.inr h)
+        · exact Or.inr h
+      · rintro ((h | h) | h)
+        · exact Or.inl h
+        · exact Or.inr (Or.inl h)
+        · exact Or.inr (Or.inr h)
+
+/-- Membership in `varsOfExp`: a name is live when it is read by the
+    expression or was already live. -/
+theorem varsOfExp_mem (expression : LoopExp α) (live : List Nat) (x : Nat) :
+    x ∈ varsOfExp expression live ↔ x ∈ loopVarsOfExp expression ∨ x ∈ live := by
+  simp [varsOfExp, mem_foldr_insertNatSorted]
+
+/-- Cake's `vars_of_exp_acc` (`cakeml/pancake/proofs/loop_liveProofScript.sml:339`):
+    the accumulator is subsumed, so the live set is the expression's reads
+    together with the incoming live set. -/
+theorem varsOfExp_acc (expression : LoopExp α) (live : List Nat) (x : Nat) :
+    x ∈ varsOfExp expression live ↔ x ∈ varsOfExp expression [] ∨ x ∈ live := by
+  rw [varsOfExp_mem, varsOfExp_mem]
+  simp
+
+/-- Cake's `vars_of_exp_mono` (`cakeml/pancake/proofs/loop_liveProofScript.sml:400`):
+    every incoming live name remains live after reading the expression. -/
+theorem varsOfExp_mono (expression : LoopExp α) (live : List Nat) (x : Nat)
+    (h : x ∈ live) : x ∈ varsOfExp expression live := by
+  rw [varsOfExp_mem]
+  exact Or.inr h
+
 def deleteNatSorted (name : Nat) : List Nat → List Nat
   | [] => []
   | head :: tail =>

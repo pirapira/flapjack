@@ -1328,6 +1328,8 @@ example
 #check @panValuePcCompileCorrectWithContextCode_of_compact_evaluators_with_bounded_generic_raised_evidence_and_clocked_raised
 #check @panValuePcCompileCorrectWithContextCode_of_arbitrary_clocked_raised_with_bounded_evidence
 #check @panValuePcCompileCorrect_compact_with_bounded_expression_state_evidence
+#check @panValuePcCompileCorrect_compact_with_bounded_expression_state_evidence_canonical_globals
+#check @panValuePcCompileCorrect_compact_one_word_raise_with_bounded_expression_state_evidence
 #check @panValuePcCompileCorrect_of_compact_evaluators_and_clocked_word_raise_hraise_data
 #check @panValuePcCompileCorrect_of_compact_evaluators_and_clocked_two_word_raise_hraise_data
 #check @panValuePcCompileCorrectWithContextCode_of_compact_evaluators_and_clocked_raised_control_evidence
@@ -1425,6 +1427,8 @@ example :
     exact localisedProg_skip)
 
 #check @panValuePcCodeRelConcrete_compileToCrep
+#check @panValuePcRaisedHraiseData_of_program_state_correct
+#check @panValuePcCompileCorrectAndClockedRaisedResultRel_of_program_state_correct
 
 /-! Cake's generated parameter context satisfies the slot bound needed by
     the raised-payload evaluator, after reversing the source-name map. -/

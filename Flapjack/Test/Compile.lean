@@ -38,9 +38,7 @@ def constantFunction : FunDecl Nat :=
   { name := "constant", inline := false, exported := false, params := [],
     body := .return (.const 7), returnShape := .one }
 
-example :
-    (compileFunDeclSource assignmentContext identityFunction).params = [0] := by
-  native_decide
+#guard (compileFunDeclSource assignmentContext identityFunction).params == [0]
 
 example :
     (compileFunDeclSource assignmentContext identityFunction).body =

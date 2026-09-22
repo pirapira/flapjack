@@ -3038,3 +3038,4 @@ premises. -/
     increased together with the clock, while successful non-timeout I/O events
     remain unchanged. -/
 #check @Flapjack.panSemEvaluate_clock_shift_panResultEvents
+#check @Flapjack.evalPanValueFfiClockProg_seq_raised

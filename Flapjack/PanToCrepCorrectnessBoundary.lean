@@ -265,6 +265,24 @@ theorem panValueCtxtMax_compileParamVars
   have hlt := compileParamVars_slot_lt params offset name shape slots
     hlookupRaw slot hslot
   omega
+
+/-! Package the two Cake context invariants for the compiler-generated
+    parameter map.  This is the concrete `mk_ctxt` fragment used when a
+    source callee is entered with its flattened parameters. -/
+theorem panToCrepMakeVmap_context_invariants
+    [LawfulBEq String]
+    (params : List (VarName × Shape))
+    (hnames : (params.map Prod.fst).Nodup) :
+    panValueNoOverlap (panToCrepMakeVmap params) ∧
+      panValueCtxtMax
+        ((compileParamVars params 0).2.2 - 1)
+        (panToCrepMakeVmap params) := by
+  constructor
+  · simpa [panToCrepMakeVmap] using
+      panValueNoOverlap_compileParamVars params 0
+  · simpa [panToCrepMakeVmap] using
+      panValueCtxtMax_compileParamVars params 0 hnames
+
 /-- Counterpart of Cake `no_overlap_flookup_distinct`
     (`cakeml/pancake/semantics/pan_commonPropsScript.sml`): two distinct
     variables of a `no_overlap` context have disjoint slot lists. -/
@@ -278,6 +296,44 @@ theorem panValueNoOverlap_lookup_disjoint [BEq String] [LawfulBEq String]
   intro value hin hin'
   exact hne (hoverlap.2 name name' shape shape' slots slots'
     hlookup hlookup' ⟨value, hin, hin'⟩)
+
+/-! Cake's `state_rel` packages `locals_rel`, whose defining premises are
+    `no_overlap` and `ctxt_max`, together with the source-global and memory
+    components.  The existing `panValueCrepStateRel` is intentionally kept
+    as the compatibility relation used by the lower-level correctness files;
+    this strengthened wrapper exposes the original invariant shape for the
+    top-level `state_rel_imp_semantics_to_crep` port. -/
+def panValueCrepStateRelWithContext [BEq String]
+    (structs : StructContext) (context : CompileContext α)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (crepState : CrepState α) : Prop :=
+  panValueNoOverlap context.vars ∧
+    panValueCtxtMax context.maxVar context.vars ∧
+    panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory crepState
+
+theorem panValueCrepStateRelWithContext_to_stateRel [BEq String]
+    (structs : StructContext) (context : CompileContext α)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (crepState : CrepState α)
+    (hrel : panValueCrepStateRelWithContext structs context sourceLocals
+      sourceGlobals sourceMemory crepState) :
+    panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory crepState :=
+  hrel.2.2
+
+theorem panValueCrepStateRelWithContext_of_stateRel [BEq String]
+    (structs : StructContext) (context : CompileContext α)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (crepState : CrepState α)
+    (hoverlap : panValueNoOverlap context.vars)
+    (hmax : panValueCtxtMax context.maxVar context.vars)
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory crepState) :
+    panValueCrepStateRelWithContext structs context sourceLocals sourceGlobals
+      sourceMemory crepState :=
+  ⟨hoverlap, hmax, hrel⟩
 
 def panValuePcLocalisedCode (code : PanValuePcSourceCode α) : Prop :=
   ∀ entry ∈ code, localisedProg entry.2.2

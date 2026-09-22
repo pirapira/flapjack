@@ -1,4 +1,5 @@
 import Flapjack.FiniteMap
+import Flapjack.HolRef
 import Flapjack.PanToCrepMaxList
 
 /-!

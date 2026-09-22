@@ -168,6 +168,25 @@ theorem compileProg_structural_composition_assigned_free_fixture :
         boundedContext (.const 1) .skip 7
       simp [compileProg, crepAssignedFreeVars]
 
+theorem compileProg_call_no_handler_assigned_free_fixture :
+    (2 : Nat) ∉ crepAssignedFreeVars
+      (compileProg boundedContext
+        (.call (some (some (.local, "fresh"), none)) "callee" [])) := by
+  apply not_mem_crepAssignedFreeVars_compileProg_call_no_handler
+    boundedContext "callee" [] (some (.local, "fresh")) 2 (by simp [boundedContext])
+  intro queriedName shape slots hlookup
+  cases hname : ("fresh" == queriedName) with
+  | false =>
+      simp [boundedContext, lookupInfo] at hlookup
+      rcases hlookup with ⟨hnameEq, hshapeEq, hslotsEq⟩
+      subst queriedName
+      simp at hname
+  | true =>
+      simp [boundedContext, lookupInfo] at hlookup
+      rcases hlookup with ⟨hnameEq, hshapeEq, hslotsEq⟩
+      rw [← hslotsEq]
+      simp
+
 def runChecks : IO Bool := do
   if parityGuard then
     IO.println "PASS crep assigned_free_vars skip/assign/dec/seq/if/while/shmem/fallback"

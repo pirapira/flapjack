@@ -489,6 +489,51 @@ theorem not_mem_crepAssignedFreeVars_compileProg_annot
     x ∉ crepAssignedFreeVars (compileProg context (.annot tag text)) := by
   simp [compileProg, crepAssignedFreeVars]
 
+/-! Call lowering without an exception handler.  A standalone call binds the
+    callee's fresh return slots; an assigned call either keeps its context
+    destination slots or falls back to a call with no assigned result. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_call_no_handler
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (function : FunName)
+    (arguments : List (Exp α))
+    (destination : Option (VarKind × VarName)) (x : Nat)
+    (hx : x ≤ context.maxVar)
+    (hslot : ∀ name shape slots,
+      lookupInfo name context.vars = some (shape, slots) → x ∉ slots) :
+    x ∉ crepAssignedFreeVars
+      (compileProg context
+        (.call (some (destination, none)) function arguments)) := by
+  simp only [compileProg]
+  cases destination with
+  | none =>
+      simp only
+      apply not_mem_crepAssignedFreeVars_nestedDecs
+      · simp
+      · simp only [crepAssignedFreeVars]
+        intro hx
+        have hreturns : x ∉ functionReturnNames context function := by
+          intro hmem
+          have hbound := functionReturnNames_bound context function x hmem
+          omega
+        exact hreturns hx
+  | some destination =>
+      obtain ⟨kind, name⟩ := destination
+      cases hdest : callDestinationNames context kind name with
+      | none =>
+          simp only [hdest]
+          simp [crepAssignedFreeVars]
+      | some names =>
+          cases kind with
+          | global => simp [callDestinationNames] at hdest
+          | «local» =>
+              simp only [hdest, crepAssignedFreeVars]
+              intro hmem
+              obtain ⟨shape, slots, hlookup, hnames⟩ :=
+                callDestinationNames_local_of_some context name names hdest
+              apply hslot name shape slots hlookup
+              rw [← hnames]
+              exact hmem
+
 /-- `crepNestedSeq` of `assign` statements built from a zip of names with
     variables introduced by `freshNames` still has exactly `names` as its
     assigned free variables. -/

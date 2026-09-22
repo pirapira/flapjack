@@ -701,4 +701,13 @@ example :
 
 #check @lookup_locals_eq_map_vars
 
+/-! The concrete stateful call/sequence timeout bridge: an unresolved callee
+    at the inner fuel budget prevents the continuation from running. -/
+theorem crepe_call_seq_timeout_compose_zero :
+    evalCrepFullProgState [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      (fun _ _ _ _ => none) 0 0 2 crepeSemanticsState
+      (.seq (.call none "missing" []) .skip) = none := by
+  apply evalCrepFullProgState_call_seq_timeout_compose
+  decide +kernel
+
 end Flapjack

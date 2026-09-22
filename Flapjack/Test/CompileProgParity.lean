@@ -9,6 +9,7 @@ def compileProgProbeContext : CompileContext Nat :=
   { vars := [], functions := [], exceptions := [], maxVar := 0,
     bytesInWord := 1 }
 
+#check @crepGetEidsFromDecls_lookup_iff_exception
 #check @allocatedNames_gt
 #check @freshNames_gt
 #check @mem_crepExpVars_le_maxCrepExpVar

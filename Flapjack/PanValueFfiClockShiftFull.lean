@@ -838,7 +838,7 @@ theorem evalPanValueFfiClockProg_shift_ioEvents_prefix
           (.control controlResult, resultClock + extra) :=
         Option.some.inj (hrunHigh.symm.trans hshift)
       cases hpair
-      cases controlResult <;> exact hlow
+  cases controlResult <;> exact hlow
 
 /-! The evaluator shift also transports the full source-facing result
     projection.  This is the direct clocked top-level bridge used when a

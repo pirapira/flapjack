@@ -685,4 +685,60 @@ theorem loopSurvives_nestedSeq_append (n : Nat)
       simp only [loopNestedSeq, loopSurvives] at h1 ⊢
       exact ⟨h1.1, ih h1.2 h2⟩
 
+
+def loopCompSyntaxOk (live : List Nat) : LoopProg α → Prop
+  | .skip => True
+  | .assign _ _ => True
+  | .arith _ => True
+  | .break _ => True
+  | .locValue _ _ => True
+  | .load32 _ _ => True
+  | .loadByte _ _ => True
+  | .seq first second =>
+      loopCompSyntaxOk live first ∧ loopCompSyntaxOk (loopCutSets live first) second
+  | .ite _ _ _ thenBranch elseBranch liveOut =>
+      loopCompSyntaxOk live thenBranch ∧ loopCompSyntaxOk live elseBranch ∧
+        ∃ ns : List Nat, liveOut = ns.foldl (fun current name => insertNatSorted name current) live
+  | .loop liveIn body liveOut =>
+      live = liveIn ∧ live = liveOut ∧ loopCompSyntaxOk liveIn body
+  | _ => False
+
+theorem loopCompSyntaxOk_seq2 (live : List Nat) (first second : LoopProg α)
+    (h1 : loopCompSyntaxOk live first)
+    (h2 : loopCompSyntaxOk (loopCutSets live first) second) :
+    loopCompSyntaxOk live (.seq first second) :=
+  ⟨h1, h2⟩
+
+theorem loopCompSyntaxOk_nestedSeq_append (statements rest : List (LoopProg α))
+    (live : List Nat)
+    (h1 : loopCompSyntaxOk live (loopNestedSeq statements))
+    (h2 : loopCompSyntaxOk (loopCutSets live (loopNestedSeq statements))
+      (loopNestedSeq rest)) :
+    loopCompSyntaxOk live (loopNestedSeq (statements ++ rest)) := by
+  revert h1 h2
+  induction statements generalizing live with
+  | nil =>
+      intro h1 h2
+      simpa [loopNestedSeq, loopCutSets] using h2
+  | cons statement statements ih =>
+      intro h1 h2
+      simp only [List.cons_append, loopNestedSeq, loopCompSyntaxOk] at h1 ⊢
+      exact ⟨h1.1, ih (loopCutSets live statement) h1.2 h2⟩
+
+theorem loopCompSyntaxOk_nestedSeq_append_elim (statements rest : List (LoopProg α))
+    (live : List Nat)
+    (h : loopCompSyntaxOk live (loopNestedSeq (statements ++ rest))) :
+    loopCompSyntaxOk live (loopNestedSeq statements) ∧
+      loopCompSyntaxOk (loopCutSets live (loopNestedSeq statements))
+        (loopNestedSeq rest) := by
+  induction statements generalizing live with
+  | nil =>
+      simp only [List.nil_append, loopNestedSeq, loopCutSets] at h ⊢
+      exact ⟨trivial, h⟩
+  | cons statement statements ih =>
+      simp only [List.cons_append, loopNestedSeq, loopCompSyntaxOk] at h
+      obtain ⟨h1, h2⟩ := h
+      obtain ⟨h2', h3⟩ := ih (loopCutSets live statement) h2
+      exact ⟨⟨h1, h2'⟩, h3⟩
+
 end Flapjack

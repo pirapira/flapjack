@@ -131,6 +131,35 @@ def assignedVarsSplitGuard : Bool :=
           [.assign 4 (.const 1)])) ==
     [3, 4]
 
+/-! Cake `loopPropsScript.sml:57` `comp_syntax_ok_def` with the
+    `comp_syn_ok_seq2`/`comp_syn_ok_nested_seq`/`comp_syn_ok_nested_seq2`
+    bridges.  `loopCompSyntaxOk` is Prop-valued and has no `Decidable`
+    instance, so the regression is theorem-based. -/
+
+theorem loopCompSyntaxOk_nestedSeq_append_fixture :
+    loopCompSyntaxOk [9]
+      (loopNestedSeq (([.assign 3 (.const 0)] : List (LoopProg Nat)) ++
+        [.assign 4 (.const 1)])) :=
+  loopCompSyntaxOk_nestedSeq_append _ _
+    ([9] : List Nat)
+    (by simp [loopNestedSeq, loopCompSyntaxOk])
+    (by simp [loopNestedSeq, loopCutSets, loopCompSyntaxOk])
+
+theorem loopCompSyntaxOk_nestedSeq_append_elim_fixture :
+    loopCompSyntaxOk [9]
+        (loopNestedSeq ([.assign 3 (.const 0)] : List (LoopProg Nat))) ∧
+      loopCompSyntaxOk
+        (loopCutSets [9] (loopNestedSeq ([.assign 3 (.const 0)] : List (LoopProg Nat))))
+        (loopNestedSeq ([.assign 4 (.const 1)] : List (LoopProg Nat))) :=
+  loopCompSyntaxOk_nestedSeq_append_elim _ _
+    ([9] : List Nat) loopCompSyntaxOk_nestedSeq_append_fixture
+
+def compSyntaxOkGuard : Bool :=
+  loopCutSets [9]
+      (loopNestedSeq (([.assign 3 (.const 0)] : List (LoopProg Nat)) ++
+        [.assign 4 (.const 1)])) ==
+    [3, 4, 9]
+
 def check (name : String) (actual expected : List Nat) : IO Bool := do
   if actual == expected then
     IO.println s!"PASS {name}"
@@ -158,7 +187,8 @@ def runChecks : IO Bool := do
     checkBool "survives MAPi Assign" survivesStructureGuard,
     checkBool "survives nested_seq append" survivesAppendGuard,
     checkBool "cut_sets nested_seq append" cutSetsAppendGuard,
-    checkBool "assigned_vars nested_seq split" assignedVarsSplitGuard ].mapM id
+    checkBool "assigned_vars nested_seq split" assignedVarsSplitGuard,
+    checkBool "comp_syntax_ok nested_seq append" compSyntaxOkGuard ].mapM id
   pure (results.all id)
 
 end Flapjack.Test.LoopAssignedVarsParity

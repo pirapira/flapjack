@@ -687,4 +687,18 @@ def crepeCallFullValues :
       (evalPanProgWithCalls pipelineCallSourceFunctions 20 (fun _ => none)
         pipelineCallSourceMain).map (fun result => result.2)
 
+/-- Focused regression for the Cake `lookup_locals_eq_map_vars` counterpart. -/
+def lookupLocalsState : CrepState Nat :=
+  { locals := fun name =>
+      if name == 2 then some 7 else if name == 5 then some 9 else none
+    memory := fun _ => none }
+
+example :
+    ([2, 5] : List Nat).mapM lookupLocalsState.locals =
+      (([2, 5] : List Nat).map (CrepExp.var (α := Nat))).mapM
+        (evalCrepFullExpState lookupLocalsState 0 0) :=
+  lookup_locals_eq_map_vars lookupLocalsState 0 0 [2, 5]
+
+#check @lookup_locals_eq_map_vars
+
 end Flapjack

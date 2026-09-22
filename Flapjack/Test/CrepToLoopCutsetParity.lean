@@ -156,6 +156,25 @@ theorem insertNatSorted_mem_fixture :
     · omega
     · simp at h
 
+theorem insertNatSorted_comm_fixture :
+    insertNatSorted 0 (insertNatSorted 2 ([1, 3] : List Nat)) =
+      insertNatSorted 2 (insertNatSorted 0 [1, 3]) :=
+  insertNatSorted_comm 0 2 [1, 3]
+
+theorem loopListInsert_insertNatSorted_comm_fixture :
+    insertNatSorted 4 (loopListInsert [1, 2] ([5] : List Nat)) =
+      loopListInsert [1, 2] (insertNatSorted 4 [5]) :=
+  loopListInsert_insertNatSorted_comm 4 [1, 2] [5]
+
+def insertCommGuard : Bool :=
+  insertNatSorted 0 (insertNatSorted 2 ([1, 3] : List Nat)) ==
+      insertNatSorted 2 (insertNatSorted 0 [1, 3]) &&
+    insertNatSorted 4 (loopListInsert [1, 2] ([5] : List Nat)) ==
+      loopListInsert [1, 2] (insertNatSorted 4 [5])
+
+#eval insertCommGuard
+#guard insertCommGuard
+
 def insertSortedGuard : Bool :=
   loopListInsert (([1, 2] : List Nat) ++ [3]) [5] ==
       insertNatSorted 3 (loopListInsert [1, 2] [5]) &&
@@ -171,7 +190,7 @@ def insertSortedGuard : Bool :=
 
 def parityGuard : Bool :=
   constArgsGuard && load32ArgGuard && decContinuationGuard && ifBranchesGuard &&
-    whileBodyGuard && handlerGuard
+    whileBodyGuard && handlerGuard && insertCommGuard
 
 #eval parityGuard
 #guard parityGuard
@@ -179,12 +198,12 @@ def parityGuard : Bool :=
 def runChecks : IO Bool := do
   let results := [
     constArgsGuard, load32ArgGuard, decContinuationGuard, ifBranchesGuard,
-    whileBodyGuard, handlerGuard, insertSortedGuard]
+    whileBodyGuard, handlerGuard, insertSortedGuard, insertCommGuard]
   let names := [
     "crep_to_loop cutset const args", "crep_to_loop cutset load32 arg",
     "crep_to_loop dec continuation live", "crep_to_loop if branches live",
     "crep_to_loop while condition live", "crep_to_loop handler live",
-    "crep_to_loop list_insert lemmas"]
+    "crep_to_loop list_insert lemmas", "crep_to_loop list_insert commutation"]
   let mut all := true
   for (name, result) in names.zip results do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"

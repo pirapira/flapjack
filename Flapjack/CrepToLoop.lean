@@ -148,6 +148,66 @@ theorem loopListInsert_mem (x : Nat) (names : List Nat) (live : List Nat) :
       by_cases h1 : x = name <;> by_cases h2 : x ∈ names <;> by_cases h3 : x ∈ live <;>
         simp_all [List.mem_cons]
 
+theorem insertNatSorted_cons_lt {a b : Nat} (l : List Nat) (h : a < b) :
+    insertNatSorted a (b :: l) = a :: b :: l := by
+  simp [insertNatSorted, h]
+
+theorem insertNatSorted_cons_eq {a b : Nat} (l : List Nat) (h : a = b) :
+    insertNatSorted a (b :: l) = b :: l := by
+  cases h
+  simp [insertNatSorted, Nat.lt_irrefl]
+
+theorem insertNatSorted_cons_gt {a b : Nat} (l : List Nat) (h : b < a) :
+    insertNatSorted a (b :: l) = b :: insertNatSorted a l := by
+  have hlt : ¬ a < b := Nat.not_lt_of_lt h
+  have hne : ¬ a = b := by omega
+  simp [insertNatSorted, hlt, hne]
+
+theorem insertNatSorted_nil_comm (x y : Nat) :
+    insertNatSorted x (insertNatSorted y []) =
+      insertNatSorted y (insertNatSorted x []) := by
+  rcases Nat.lt_trichotomy x y with h | h | h
+  · have hyx : ¬ y < x := Nat.not_lt_of_lt h
+    have hne1 : ¬ x = y := by omega
+    have hne2 : ¬ y = x := by omega
+    simp only [insertNatSorted, if_pos h, if_neg hyx, if_neg hne1, if_neg hne2]
+  · subst h; rfl
+  · have hxy : ¬ x < y := Nat.not_lt_of_lt h
+    have hne1 : ¬ x = y := by omega
+    have hne2 : ¬ y = x := by omega
+    simp only [insertNatSorted, if_pos h, if_neg hxy, if_neg hne1, if_neg hne2]
+
+theorem insertNatSorted_comm (x y : Nat) :
+    ∀ live : List Nat,
+      insertNatSorted x (insertNatSorted y live) =
+        insertNatSorted y (insertNatSorted x live) := by
+  intro live
+  induction live with
+  | nil => exact insertNatSorted_nil_comm x y
+  | cons head tail ih =>
+      rcases Nat.lt_trichotomy x head with hxlt | hxeq | hxgt <;>
+      rcases Nat.lt_trichotomy y head with hylt | hyeq | hygt <;>
+      rcases Nat.lt_trichotomy x y with hxylt | hxyeq | hxygt <;>
+      simp_all only [insertNatSorted_cons_lt, insertNatSorted_cons_eq,
+        insertNatSorted_cons_gt] <;>
+      try (exfalso; omega)
+
+
+theorem loopListInsert_insertNatSorted_comm (x : Nat) (names : List Nat)
+    (live : List Nat) :
+    insertNatSorted x (loopListInsert names live) =
+      loopListInsert names (insertNatSorted x live) := by
+  induction names generalizing live with
+  | nil => simp [loopListInsert]
+  | cons name names ih =>
+      rw [show loopListInsert (name :: names) live =
+          loopListInsert names (insertNatSorted name live) from rfl]
+      rw [ih (insertNatSorted name live)]
+      rw [show loopListInsert (name :: names) (insertNatSorted x live) =
+          loopListInsert names (insertNatSorted name (insertNatSorted x live))
+            from rfl]
+      rw [insertNatSorted_comm name x]
+
 /-! Source-named port of `crep_to_loop$prog_if` (`prog_if_def`,
     `crep_to_loopScript.sml:34`).  The result is a statement list; the caller
     applies `nested_seq` exactly as the original compiler does. -/

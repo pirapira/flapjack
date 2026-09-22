@@ -326,6 +326,8 @@ run_probe crep_primop_probeScript.sml crep_primop_probe.out \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe crep_load_shape_probeScript.sml crep_load_shape_probe.out \
   empty nonzero_two "$cake_dir/pancake/crepLangScript.sml"
+run_probe crep_load_shape64_probeScript.sml crep_load_shape64_probe.out \
+  empty64 nonzero_two64 "$cake_dir/pancake/crepLangScript.sml"
 run_probe crep_to_loop_cutset_probeScript.sml crep_to_loop_cutset_probe.out \
   cut_set_const_args handler_original_live "$cake_dir/pancake/crep_to_loopScript.sml"
 run_probe crep_nested_seq_probeScript.sml crep_nested_seq_probe.out \

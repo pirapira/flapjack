@@ -1,0 +1,4 @@
+empty64=[]
+zero_one64=[Load (Const 7w)]
+zero_two64=[Load (Const 7w); Load (Op Add [Const 7w; Const 8w])]
+nonzero_two64=[Load (Op Add [Const 7w; Const 8w]); Load (Op Add [Const 7w; Const 16w])]

@@ -793,6 +793,28 @@ theorem call_target_return_compile_correct_fixture :
         loopLookupFirst, loopAssignValues, load32State])
   simpa [comp, loopResultState] using hcall
 
+theorem call_target_return_no_handler_semantic_fixture :
+    evalLoopCallWithCallsAndFfi
+        [(1, [3], (.return [3] : LoopProg Nat))]
+        (fun _ _ _ _ _ _ => none) 3 load32State none (some 1) [3] none =
+      some (.returned load32State [7]) := by
+  apply evalLoopCallWithCallsAndFfi_returned_no_handler
+    (functions := [(1, [3], (.return [3] : LoopProg Nat))])
+    (ffiHandler := (fun _ _ _ _ _ _ => none))
+    (fuel := 2) (state := load32State) (target := 1)
+    (arguments := [3]) (parameters := [3])
+    (body := (.return [3] : LoopProg Nat)) (argumentValues := [7])
+    (calleeLocals := { load32State with
+      locals := loopLookupFirst (fun _ => none) ([3].zip [7]) })
+    (calleeState := { load32State with
+      locals := loopLookupFirst (fun _ => none) ([3].zip [7]) })
+    (values := [7])
+  · simp [lookupLoopFunction]
+  · simp [loopReadLocals, load32State]
+  · simp [loopBindParameters, loopLookupFirst]
+  · simp [evalLoopProgWithCallsAndFfi, evalLoopProg, loopLookupFirst,
+      loopReadLocals, load32State]
+
 theorem call_target_return_handler_compile_correct_fixture :
     evalLoopProgWithCallsAndFfi
         [(1, [3], (.return [3] : LoopProg Nat))]
@@ -1125,6 +1147,7 @@ theorem loop_compile_result_fixture :
 #check comp_call_target_return_correct
 #check comp_call_target_return_handler_correct
 #check comp_call_target_return_handler_result_correct
+#check evalLoopCallWithCallsAndFfi_returned_no_handler
 #check comp_call_target_raised_no_handler_correct
 #check comp_call_target_raised_handler_correct
 #check comp_call_empty_correct

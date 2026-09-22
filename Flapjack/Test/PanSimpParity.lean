@@ -2940,6 +2940,7 @@ theorem related_declarations_finalFfi_call_result_rel_fixture
     memoryAccess memoryHandler targetInitial hinitial hdeclarations hcall hstate
     hevent hprefix
 
+#check @Flapjack.evalPanValueFfiClockProgram_of_related_declarations_and_raised_call_result_rel_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProg_call_raised_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProg_call_timeout_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProg_call_finalFfi_ioEvents_prefix

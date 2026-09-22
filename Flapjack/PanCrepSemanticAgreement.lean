@@ -455,6 +455,7 @@ theorem evalPanValueFfiClockProgram_of_declarations_and_normal_raised_timeout_ca
         (.control (.normal locals globals memory ffi)) nextClock memoryAccess
         memoryHandler hdeclarations hentry hcall
     · simpa [panOutcomeToPcResult] using hresult
+
   · obtain ⟨globals, memory, ffi, exception, value, nextClock, hcall,
       targetResult, hresult⟩ := hraised
     refine ⟨.control (.raised (fun _ => none) globals memory ffi exception value),
@@ -472,6 +473,134 @@ theorem evalPanValueFfiClockProgram_of_declarations_and_normal_raised_timeout_ca
         (.timeout (fun _ => none) globals memory ffi) nextClock memoryAccess
         memoryHandler hdeclarations hentry hcall
     · simpa [panOutcomeToPcResult] using hresult
+
+def panOutcomeFfi : PanValueFfiClockOutcome α σ → FfiState σ
+  | .control (.normal _ _ _ ffi) => ffi
+  | .control (.returned _ _ _ ffi _) => ffi
+  | .control (.raised _ _ _ ffi _ _) => ffi
+  | .control (.broke _ _ _ ffi) => ffi
+  | .control (.continued _ _ _ ffi) => ffi
+  | .control (.finalFfi _ _ _ ffi _) => ffi
+  | .timeout _ _ _ ffi => ffi
+
+/-! The three non-returning call branches also compose with the FFI event
+    prefix carried by the source evaluator.  This is the explicit
+    normal/raised/timeout dispatch used by Cake's
+    `state_rel_imp_semantics_to_crep`: the declaration evaluator and call
+    evaluator remain executable premises, while the result relation and event
+    prefix are transported together.  Returned calls are intentionally kept
+    separate because they additionally require the callee return-shape
+    obligation. -/
+theorem evalPanValueFfiClockProgram_of_declarations_and_normal_raised_timeout_call_result_rel_ioEvents_prefix
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (initial : PanValueFfiProgramState α σ)
+    (clock : Nat) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (fuel : Nat) (declarations : List (Decl α))
+    (entry : FunName) (arguments : List (Exp α))
+    (state : PanValueProgramState α)
+    (pcContext : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ))
+    (hdeclarations : evalPanValueDeclarations initial.source declarations
+      (memoryAccess := memoryAccess) = some state)
+    (hentry : lookupInfo entry state.returnShapes = none)
+    (hcase :
+      (∃ (locals globals : VarName → Option (PanValue α))
+          (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+          (nextClock : Nat),
+        evalPanValueFfiClockCall context primitive handler state.structs
+          state.functions state.baseAddress state.topAddress state.bytesInWord fuel
+          (fun _ => none) state.globals state.memory initial.ffi clock none entry
+          arguments (memoryAccess := memoryAccess)
+          (contracts := some (PanValueCallContracts.mk state.returnShapes
+            state.exceptions state.parameterShapes))
+          (memoryHandler := memoryHandler) =
+          some (.control (.normal locals globals memory ffi), nextClock) ∧
+        ∃ targetResult : CrepPcResult α,
+          panValuePcResultRel state.structs pcContext exceptionRel
+            exceptionCode globalsLookup
+            (.normal locals globals memory) targetResult ∧
+        initial.ffi.ioEvents <+: ffi.ioEvents)
+      ∨ (∃ (globals : VarName → Option (PanValue α))
+          (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+          (exception : ExceptionId) (value : PanValue α)
+          (nextClock : Nat),
+        evalPanValueFfiClockCall context primitive handler state.structs
+          state.functions state.baseAddress state.topAddress state.bytesInWord fuel
+          (fun _ => none) state.globals state.memory initial.ffi clock none entry
+          arguments (memoryAccess := memoryAccess)
+          (contracts := some (PanValueCallContracts.mk state.returnShapes
+            state.exceptions state.parameterShapes))
+          (memoryHandler := memoryHandler) =
+          some (.control (.raised (fun _ => none) globals memory ffi
+            exception value), nextClock) ∧
+        ∃ targetResult : CrepPcResult α,
+          panValuePcResultRel state.structs pcContext exceptionRel
+            exceptionCode globalsLookup
+            (.raised (fun _ => none) globals memory exception value) targetResult ∧
+        initial.ffi.ioEvents <+: ffi.ioEvents)
+      ∨ (∃ (globals : VarName → Option (PanValue α))
+          (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+          (nextClock : Nat),
+        evalPanValueFfiClockCall context primitive handler state.structs
+          state.functions state.baseAddress state.topAddress state.bytesInWord fuel
+          (fun _ => none) state.globals state.memory initial.ffi clock none entry
+          arguments (memoryAccess := memoryAccess)
+          (contracts := some (PanValueCallContracts.mk state.returnShapes
+            state.exceptions state.parameterShapes))
+          (memoryHandler := memoryHandler) =
+          some (.timeout (fun _ => none) globals memory ffi, nextClock) ∧
+        ∃ targetResult : CrepPcResult α,
+          panValuePcResultRel state.structs pcContext exceptionRel
+            exceptionCode globalsLookup
+            (.timeout (fun _ => none) globals memory) targetResult ∧
+        initial.ffi.ioEvents <+: ffi.ioEvents)) :
+    ∃ (outcome : PanValueFfiClockOutcome α σ) (nextClock : Nat)
+        (targetResult : CrepPcResult α),
+      evalPanValueFfiClockProgram context initial clock primitive handler fuel
+        declarations entry arguments (memoryAccess := memoryAccess)
+        (memoryHandler := memoryHandler) = some (outcome, nextClock) ∧
+      panValuePcResultRel state.structs pcContext exceptionRel exceptionCode
+        globalsLookup (panOutcomeToPcResult outcome) targetResult ∧
+      initial.ffi.ioEvents <+: (panOutcomeFfi outcome).ioEvents := by
+  rcases hcase with hnormal | hraised | htimeout
+  · obtain ⟨locals, globals, memory, ffi, nextClock, hcall,
+      targetResult, hresult, hprefix⟩ := hnormal
+    refine ⟨.control (.normal locals globals memory ffi), nextClock,
+      targetResult, ?_, ?_, ?_⟩
+    · exact evalPanValueFfiClockProgram_of_declarations_and_call
+        context initial clock primitive handler fuel declarations entry arguments state
+        (.control (.normal locals globals memory ffi)) nextClock memoryAccess
+        memoryHandler hdeclarations hentry hcall
+    · simpa [panOutcomeToPcResult] using hresult
+    · simpa [panOutcomeFfi] using hprefix
+  · obtain ⟨globals, memory, ffi, exception, value, nextClock, hcall,
+      targetResult, hresult, hprefix⟩ := hraised
+    refine ⟨.control (.raised (fun _ => none) globals memory ffi exception value),
+      nextClock, targetResult, ?_, ?_, ?_⟩
+    · exact evalPanValueFfiClockProgram_of_declarations_and_call
+        context initial clock primitive handler fuel declarations entry arguments state
+        (.control (.raised (fun _ => none) globals memory ffi exception value))
+        nextClock memoryAccess memoryHandler hdeclarations hentry hcall
+    · simpa [panOutcomeToPcResult] using hresult
+    · simpa [panOutcomeFfi] using hprefix
+  · obtain ⟨globals, memory, ffi, nextClock, hcall, targetResult,
+      hresult, hprefix⟩ := htimeout
+    refine ⟨.timeout (fun _ => none) globals memory ffi, nextClock,
+      targetResult, ?_, ?_, ?_⟩
+    · exact evalPanValueFfiClockProgram_of_declarations_and_call
+        context initial clock primitive handler fuel declarations entry arguments state
+        (.timeout (fun _ => none) globals memory ffi) nextClock memoryAccess
+        memoryHandler hdeclarations hentry hcall
+    · simpa [panOutcomeToPcResult] using hresult
+    · simpa [panOutcomeFfi] using hprefix
 
 /-! Consume both executable clock adapters at the result-relation boundary.
     This is the concrete link from the production stateful evaluators to the

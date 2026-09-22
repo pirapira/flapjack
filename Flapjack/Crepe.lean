@@ -346,6 +346,29 @@ theorem crepExpsOf_nestedSeq_assign (names : List Nat) :
           · subst heq; exact by simp
           · exact List.mem_cons.mpr (Or.inr (ih values hmem))
 
+/-- Faithful port of Cake `arg_load_def` from
+    `cakeml/pancake/crep_inlineScript.sml:59`: simulate the argument loading
+    of a function call as a pair of nested declaration blocks. -/
+def argLoad (tmpVars : List Nat) (args : List (CrepExp α))
+    (argsVName : List Nat) (body : CrepProg α) : CrepProg α :=
+  nestedDecs tmpVars args (nestedDecs argsVName (tmpVars.map CrepExp.var) body)
+
+/-- Cake's `exps_of_arg_load` (`cakeml/pancake/proofs/crep_inlineProofScript.sml:3057`):
+    an expression occurring in an argument load is either one of the loaded
+    argument expressions, a temporary variable, or an expression of the body. -/
+theorem crepExpsOf_argLoad (tmpVars : List Nat) (args : List (CrepExp α))
+    (argsVName : List Nat) (body : CrepProg α) {e : CrepExp α}
+    (hmem : e ∈ crepExpsOf (argLoad tmpVars args argsVName body)) :
+    e ∈ args ∨ (∃ c, c ∈ tmpVars ∧ e = .var c) ∨ e ∈ crepExpsOf body := by
+  unfold argLoad at hmem
+  rcases crepExpsOf_nestedDecs tmpVars args
+      (nestedDecs argsVName (tmpVars.map CrepExp.var) body) hmem with hargs | hinner
+  · exact Or.inl hargs
+  · rcases crepExpsOf_nestedDecs argsVName (tmpVars.map CrepExp.var) body hinner with
+      hvars | hbody
+    · rcases List.mem_map.mp hvars with ⟨c, hc, heq⟩
+      exact Or.inr (Or.inl ⟨c, hc, heq.symm⟩)
+    · exact Or.inr (Or.inr hbody)
 
 def storeGlobals [Add α] (address stride : α) : List (CrepExp α) → List (CrepProg α)
   | [] => []

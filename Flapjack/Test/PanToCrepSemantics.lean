@@ -72,6 +72,8 @@ open Flapjack
 #check @Flapjack.panCrepBehaviourRel_of_pcCompileCorrectWithContextCode_cross_clock_prefix_from_pairwise_returned_stateRelWithContext
 #check @Flapjack.panLprefixChain_of_panSemEvaluate_event_prefix
 #check @Flapjack.panLprefixChain_of_panSemEvaluate_nonTimeout
+#check @Flapjack.panLprefixChain_of_crepLprefixChain_of_semantic_agreement
+#check @Flapjack.panSemantics_rel_crepSemantics_of_crep_chain
 
 example : panEventPrefix ([1] : List Nat) [1, 2] := by
   exact ⟨[2], rfl⟩

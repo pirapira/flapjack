@@ -1210,6 +1210,18 @@
       "tracked_beads": [
         "flapjack-pxn.10"
       ]
+    },
+    {
+      "path": "scripts/parity-difffuzz-findings/bitmap-min/case.pnk",
+      "source_reference": "Previously recorded bitmap/frame allocator witness: current Cake and Flapjack outputs are now byte-identical after the frame/allocator parity fixes.",
+      "cake_sha256": "e7fa7109be00b18e6048000c97e19de23c21c7c92bd4ea978b62b06d367134da",
+      "tracked_beads": []
+    },
+    {
+      "path": "scripts/parity-difffuzz-findings/ffi-min/case.pnk",
+      "source_reference": "Previously recorded FFI/frame allocator witness: current Cake and Flapjack outputs are now byte-identical after the frame/allocator parity fixes.",
+      "cake_sha256": "f6b049c7f654ddb5887b2d33a625785430e37dfa9c96340216d7bbd14dad67f1",
+      "tracked_beads": []
     }
   ]
 }

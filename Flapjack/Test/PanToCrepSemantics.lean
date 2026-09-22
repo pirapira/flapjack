@@ -33,6 +33,7 @@ open Flapjack
 #check @Flapjack.PanValuePcSemanticClockEvidence.crossClockNormalResultRelWithContextCode_of_stateRelWithContext
 #check @Flapjack.PanValuePcSemanticClockEvidence.crossClockNormalOrRaisedResultRelWithContextCode_of_stateRelWithContext
 #check @Flapjack.panValuePcResultRelWithContextCode_of_pairwise_normalOrRaised_evidence
+#check @Flapjack.panCrepSemanticAgreement_of_pcCompileCorrectWithContextCode_cross_clock_prefix_from_pairwise_normalOrRaised_stateRelWithContext
 #check @Flapjack.panCrepSemanticAgreement_of_pcCompileCorrect
 #check @Flapjack.panCrepSemanticAgreement_of_pcCompileCorrect_cross_clock
 #check @Flapjack.panEventPrefix_antisymm
@@ -271,5 +272,9 @@ example {α σ : Type} [BEq α] [OfNat α 0] [Add α]
 #check @panCrepBehaviourRel_of_pcCompileCorrectWithContextCode_cross_clock_prefix_from_pairwise_evidence
 
 #check @PanValuePcSemanticClockEvidence.crossClockFinalFfiSemanticOutcomeRel
+
+#check @panValuePcResultRelWithContextCode_of_pairwise_normalOrRaised_evidence
+
+#check @panCrepBehaviourRel_of_pcCompileCorrectWithContextCode_cross_clock_prefix_from_pairwise_stateRelWithContext
 
 end Flapjack.Test.PanToCrepSemantics

@@ -4,8 +4,10 @@ import Flapjack.PanProgramSemantics
 /-!
 Supporting shape invariants for Flapjack's global compilation pass. The
 HOL-mapped start-function theorems live in
-`Flapjack/Pancake/Proofs/PanGlobals.lean`; this module keeps the reusable
-list and compilation lemmas used to establish them.
+this module keeps Flapjack-specific shape invariants for its own global pass.
+They are not statement-shaped ports of Cake's `compile_top_shape_wf`: they use
+Flapjack's value evaluator and `globalCompileTopForStart` result instead of
+Cake's `evaluate_decls` and `compile_top` interfaces.
 -/
 
 namespace Flapjack
@@ -17,9 +19,10 @@ def panFunctionShapesWellFormed (structs : StructContext)
   declaration.params.all (fun parameter => isWfShape structs parameter.2) &&
     isWfShape structs declaration.returnShape
 
-/-- The declaration-level predicate of Cake's `compile_top_shape_wf`: function
-    declarations must have well-formed parameter and return shapes; every other
-    declaration satisfies it trivially. -/
+/-- A Flapjack declaration predicate requiring well-formed function parameter
+    and return shapes; every non-function declaration satisfies it trivially.
+    This represents the shape condition used by Cake's theorem, but its use in
+    Flapjack-specific results below does not port that theorem's statement. -/
 def panDeclShapesWellFormed (structs : StructContext)
     (declaration : Decl α) : Bool :=
   match declaration with
@@ -214,5 +217,71 @@ theorem globalCompileDecs_result_shapes_wf [BEq String] [LawfulBEq String]
   · simpa using hextra
   · exact globalCompileDecs_functions_all_of_predicate context declarations
       (panDeclShapesWellFormed structs) hsource
+
+/-- Flapjack-specific safety invariant: successful value declaration evaluation
+    and successful start-function compilation yield declarations with
+    well-formed function shapes. This is analogous to Cake's
+    `compile_top_shape_wf` (`pan_globalsProofScript.sml:2458`), but has a
+    different statement shape and evaluator/compiler interfaces; it is not a
+    port of that HOL theorem. -/
+theorem globalCompileTopForStart_shapes_wf
+    [BEq String] [LawfulBEq String] [Add α] [Mul α]
+    [BEq α] [OfNat α 0] [OfNat α 1] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext) (state state' : PanValueProgramState α)
+    (declarations : List (Decl α)) (memoryAccess : Option (PanValueMemoryAccess α))
+    (bytesInWord : α) (fromNat : Nat → α) (start : FunName)
+    (compiled : List (Decl α))
+    (heval : evalPanValueDeclarationsWithStructs structs state declarations
+      memoryAccess = some state')
+    (hcompile : globalCompileTopForStart bytesInWord fromNat declarations start =
+      some compiled) :
+    compiled.all (panDeclShapesWellFormed structs) = true := by
+  have hsource := evalPanValueDeclarationsWithStructs_all_shapes structs state
+    state' declarations memoryAccess heval
+  unfold globalCompileTopForStart at hcompile
+  cases hfind : globalFindFunction start declarations with
+  | none => simp [hfind] at hcompile
+  | some entry =>
+      simp only [hfind, Option.some.injEq] at hcompile
+      subst hcompile
+      have hwf := evalPanValueDeclarationsWithStructs_functions_wf structs state
+        state' declarations memoryAccess heval
+        (globalFindFunction_mem start declarations entry hfind)
+      have hresort := globalResortDecls_all_shapes structs declarations hsource
+      have hrenamed : (globalRenameDecls start (globalNewMainName declarations)
+          (globalResortDecls declarations)).all
+          (panDeclShapesWellFormed structs) = true :=
+        globalRenameDecls_all_of_predicate start (globalNewMainName declarations)
+          (panDeclShapesWellFormed structs) (globalResortDecls declarations)
+          (List.all_eq_true.mpr
+            (fun declaration _ => panDeclShapesWellFormed_or_function structs declaration))
+          (globalResortDecls_all_of_renamed structs start
+            (globalNewMainName declarations) declarations hresort)
+      refine globalCompileDecs_result_shapes_wf structs _ _ _ ?_ ?_
+      · simp [panDeclShapesWellFormed, panFunctionShapesWellFormed, hwf.1, hwf.2]
+      · simpa [panDeclShapesWellFormed, panFunctionShapesWellFormed] using hrenamed
+
+/-- Empty-struct-context instance of Flapjack's start-function shape invariant.
+    This analogously specializes Cake's `compile_top_shape_wf_nil`
+    (`pan_globalsProofScript.sml:2495`), but is not that theorem's HOL-shaped
+    statement. -/
+theorem globalCompileTopForStart_shapes_wf_nil
+    [BEq String] [LawfulBEq String] [Add α] [Mul α]
+    [BEq α] [OfNat α 0] [OfNat α 1] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state state' : PanValueProgramState α) (declarations : List (Decl α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (bytesInWord : α) (fromNat : Nat → α) (start : FunName)
+    (compiled : List (Decl α))
+    (heval : evalPanValueDeclarationsWithStructs ([] : StructContext) state
+      declarations memoryAccess = some state')
+    (hcompile : globalCompileTopForStart bytesInWord fromNat declarations start =
+      some compiled) :
+    compiled.all (panDeclShapesWellFormed ([] : StructContext)) = true :=
+  globalCompileTopForStart_shapes_wf ([] : StructContext) state state'
+    declarations memoryAccess bytesInWord fromNat start compiled heval hcompile
 
 end Flapjack

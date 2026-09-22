@@ -3469,4 +3469,35 @@ theorem evalPanValueFfiProgSteps_one_ioEvents_prefix
       obtain ⟨rfl, rfl⟩ := hstep
       simp only [panResultFfi]
       exact List.prefix_refl _
+
+set_option linter.unusedSimpArgs false in
+set_option linter.unusedVariables false in
+theorem evalPanValueFfiClockProg_ioEvents_prefix_of_handlerPreserves
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (hstateful : panValueFfiStatefulHandlerPreservesIoEvents handler)
+    (hmemory : ∀ (memoryHandler : PanValueMemoryFfiHandler α σ),
+      panValueFfiMemoryHandlerPreservesIoEvents memoryHandler) :
+    ∀ (fuel : Nat) (locals globals : VarName → Option (PanValue α))
+      (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat) (program : Prog α)
+      (memoryAccess : Option (PanValueMemoryAccess α)) (contracts : Option PanValueCallContracts)
+      (memoryHandler : Option (PanValueMemoryFfiHandler α σ))
+      (outcome : PanValueFfiClockOutcome α σ) (resultClock : Nat),
+      evalPanValueFfiClockProg context primitive handler structs functions baseAddress topAddress
+        bytesInWord fuel locals globals memory ffi clock program
+        (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler) =
+        some (outcome, resultClock) →
+      ffi.ioEvents <+: (panResultFfi (outcome, resultClock)).ioEvents :=
+  (evalPanValueFfiClock_ioEvents_prefix context primitive handler structs functions baseAddress
+    topAddress bytesInWord
+    (fun locals globals memory ffi clock program result steps memoryAccess contracts memoryHandler
+        hstep =>
+      evalPanValueFfiProgSteps_one_ioEvents_prefix context primitive handler structs functions
+        baseAddress topAddress bytesInWord locals globals memory ffi program memoryAccess contracts
+        memoryHandler clock result steps hstateful hmemory hstep)).2
 end Flapjack

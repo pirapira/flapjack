@@ -8,12 +8,18 @@ and `AGENTS.md`).  This script checks, without running Lean, that
 * the cited file exists in the `cakeml` submodule, and
 * a HOL declaration with exactly that name is declared in that file
   (`Theorem`, `Triviality`, `Definition`, `Datatype`, `Inductive`,
-  `CoInductive`, `Overload`, `Type`, or an SML-level `val name = ...`).
+  `CoInductive`, `Overload`, `Type`, or an SML-level `val name = ...`), and
+* the Lean module carrying the tag is transitively imported from the library
+  root `Flapjack.lean`, so `lake build Flapjack` actually elaborates it.  A
+  tagged theorem in an orphaned module would otherwise count as ported while
+  never being checked.
 
 Usage:
   scripts/check-hol-refs.py            # check; exit 1 on any bad reference
   scripts/check-hol-refs.py --mapping  # also print a TSV mapping to stdout:
                                        #   lean_file:line  lean_decl  hol_path  hol_name
+  scripts/check-hol-refs.py --orphans  # also list every non-test module that is
+                                       # not reachable from Flapjack.lean (warning only)
 
 Uses only the standard library.
 """
@@ -44,6 +50,34 @@ HOL_HEADER_KEYWORDS = (
     "Overload",
     "Type",
 )
+IMPORT_RE = re.compile(r"^import\s+(Flapjack(?:\.[A-Za-z0-9_]+)*)", re.M)
+
+
+def module_name(path: Path) -> str:
+    rel = path.relative_to(ROOT).with_suffix("")
+    return ".".join(rel.parts)
+
+
+def module_path(module: str) -> Path:
+    return ROOT / (module.replace(".", "/") + ".lean")
+
+
+def reachable_modules(root: str = "Flapjack") -> set[str]:
+    """Modules transitively imported from the library root."""
+    seen: set[str] = set()
+    stack = [root]
+    while stack:
+        module = stack.pop()
+        if module in seen:
+            continue
+        seen.add(module)
+        path = module_path(module)
+        if not path.is_file():
+            continue
+        for imported in IMPORT_RE.findall(path.read_text(encoding="utf-8")):
+            if imported not in seen:
+                stack.append(imported)
+    return seen
 
 
 def lean_files() -> list[Path]:
@@ -86,9 +120,11 @@ def hol_declares(path: Path, name: str, cache: dict[Path, set[str]]) -> bool:
 
 def main(argv: list[str]) -> int:
     want_mapping = "--mapping" in argv
+    want_orphans = "--orphans" in argv
     errors: list[str] = []
     mapping: list[tuple[str, str, str, str]] = []
     cache: dict[Path, set[str]] = {}
+    reachable = reachable_modules()
 
     if not (ROOT / "cakeml" / "pancake").is_dir():
         print(
@@ -101,6 +137,8 @@ def main(argv: list[str]) -> int:
     for lean_path in lean_files():
         rel = lean_path.relative_to(ROOT).as_posix()
         lines = lean_path.read_text(encoding="utf-8").splitlines()
+        module = module_name(lean_path)
+        module_reported = False
         comment_depth = 0
         for number, line in enumerate(lines, start=1):
             # Skip block comments (`/- ... -/`, nestable), so examples in module
@@ -118,6 +156,13 @@ def main(argv: list[str]) -> int:
             for hol_path, hol_name in ATTR_RE.findall(stripped):
                 where = f"{rel}:{number}"
                 lean_decl = find_lean_decl(lines, number - 1)
+                if module not in reachable and not module_reported:
+                    module_reported = True
+                    errors.append(
+                        f"{rel}: module {module} carries @[hol] but is not imported "
+                        f"(transitively) from Flapjack.lean, so `lake build Flapjack` "
+                        f"never checks it; add the import to Flapjack.lean"
+                    )
                 target = ROOT / hol_path
                 if not hol_path.startswith("cakeml/") or not hol_path.endswith(".sml"):
                     errors.append(f"{where}: path is not a cakeml/...sml file: {hol_path}")
@@ -136,6 +181,17 @@ def main(argv: list[str]) -> int:
     if want_mapping:
         for row in mapping:
             print("\t".join(row))
+
+    if want_orphans:
+        orphans = sorted(
+            module_name(path)
+            for path in lean_files()
+            if path.is_relative_to(ROOT / "Flapjack")
+            and not path.is_relative_to(ROOT / "Flapjack" / "Test")
+            and module_name(path) not in reachable
+        )
+        for module in orphans:
+            print(f"warning: {module} is not reachable from Flapjack.lean", file=sys.stderr)
 
     if errors:
         for error in errors:

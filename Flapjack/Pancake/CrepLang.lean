@@ -157,15 +157,6 @@ theorem crepExpVars_var {α : Type} (name : Nat) :
     crepExpVars (α := α) (.var name) = [name] := by
   simp [crepExpVars]
 
-/-- Faithful port of Cake `crepProps$map_var_cexp_eq_var`
-    (`cakeml/pancake/semantics/crepPropsScript.sml:227`): mapping `Var` over a
-    variable list and flattening the variables recovers the list. -/
-theorem map_var_crepExpVars_eq {α : Type} (names : List Nat) :
-    (names.map (CrepExp.var (α := α))).flatMap crepExpVars = names := by
-  induction names with
-  | nil => rfl
-  | cons name names ih => simp [crepExpVars_var, ih]
-
 def loadShape [BEq α] [OfNat α 0] [Add α]
     (address stride : α) (count : Nat) (value : CrepExp α) : List (CrepExp α) :=
   match count with
@@ -173,15 +164,6 @@ def loadShape [BEq α] [OfNat α 0] [Add α]
   | count + 1 =>
       let loaded := if address == 0 then .load value else .load (.op .add [value, .const address])
       loaded :: loadShape (address + stride) stride count value
-
-/-- Original-domain counterpart of Cake's `length_load_shape_eq_shape`
-    (`cakeml/pancake/semantics/crepPropsScript.sml:30`). -/
-theorem loadShape_length [BEq α] [OfNat α 0] [Add α]
-    (address stride : α) (count : Nat) (value : CrepExp α) :
-    (loadShape address stride count value).length = count := by
-  induction count generalizing address with
-  | zero => rfl
-  | succ count ih => simp [loadShape, ih]
 
 /-- Original-domain counterpart of Cake's `load_shape_el_rel`
     (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:114`): the `n`-th

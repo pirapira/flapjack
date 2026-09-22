@@ -12,6 +12,26 @@ namespace Flapjack
 
 universe u
 
+/-- HOL `map_var_cexp_eq_var`: mapping `Var` over a list and flattening each
+    expression's variable list recovers the original list. -/
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "map_var_cexp_eq_var"]
+theorem map_var_crepExpVars_eq {α : Type} (names : List Nat) :
+    (names.map (CrepExp.var (α := α))).flatMap crepExpVars = names := by
+  induction names with
+  | nil => rfl
+  | cons name names ih => simp [crepExpVars_var, ih]
+
+/-- Flapjack's parameterized-stride analogue of HOL's
+    `length_load_shape_eq_shape`. HOL uses the fixed `byte$bytes_in_word`
+    constant; `loadShape` currently takes `stride` as an extra argument, so
+    this is not yet tagged as a port of the exact HOL declaration. -/
+theorem loadShape_length [BEq α] [OfNat α 0] [Add α]
+    (address stride : α) (count : Nat) (value : CrepExp α) :
+    (loadShape address stride count value).length = count := by
+  induction count generalizing address with
+  | zero => rfl
+  | succ count ih => simp [loadShape, ih]
+
 /-! Faithful port of Cake `crepProps$length_load_globals_eq_read_size`
     (`cakeml/pancake/semantics/crepPropsScript.sml:467`). -/
 @[hol "cakeml/pancake/semantics/crepPropsScript.sml" "length_load_globals_eq_read_size"]

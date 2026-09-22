@@ -354,6 +354,43 @@ theorem crepDistinctFuncs_crepMakeFuncs (functions : List (CompiledFunction α))
     crepDistinctFuncs (crepMakeFuncs functions) :=
   crepDistinctFuncs_crepMakeFuncsAt crepFirstName functions
 
+/-- Cake's `initial_prog_make_funcs_el`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:3942`): the label a
+    function receives from `make_funcs` identifies the position of that
+    function in the source list.  CakeML writes the label of the `n`-th
+    function as `n + first_name`; the list-backed Flapjack port instead
+    inverts a successful lookup into the index whose label is
+    `start + index`. -/
+theorem crepMakeFuncsAt_exists_index (start : Nat)
+    (functions : List (CompiledFunction α))
+    {name : FunName} {label rm : Nat}
+    (h : lookupInfo name (crepMakeFuncsAt start functions) = some (label, rm)) :
+    ∃ n, label = start + n ∧
+      (functions[n]?).map (fun function => function.name) = some name ∧
+        n < functions.length := by
+  induction functions generalizing start with
+  | nil => simp [crepMakeFuncsAt, lookupInfo] at h
+  | cons function functions ih =>
+      simp only [crepMakeFuncsAt, lookupInfo] at h
+      by_cases hc : (function.name == name) = true
+      · rw [if_pos hc] at h
+        have hlabel : label = start := (congrArg Prod.fst (Option.some.inj h)).symm
+        exact ⟨0, by omega, by simp [beq_iff_eq.mp hc], by simp⟩
+      · rw [if_neg hc] at h
+        obtain ⟨n, hlabel, hget, hn⟩ := ih (start := start + 1) h
+        refine ⟨n + 1, by omega, ?_, by simp; omega⟩
+        simp only [List.getElem?_cons_succ]
+        exact hget
+
+/-- Cake's `initial_prog_make_funcs_el` for the `make_funcs` label base. -/
+theorem crepMakeFuncs_exists_index (functions : List (CompiledFunction α))
+    {name : FunName} {label rm : Nat}
+    (h : lookupInfo name (crepMakeFuncs functions) = some (label, rm)) :
+    ∃ n, label = crepFirstName + n ∧
+      (functions[n]?).map (fun function => function.name) = some name ∧
+        n < functions.length :=
+  crepMakeFuncsAt_exists_index crepFirstName functions h
+
 def pipelineLoopFunctionsAux [OfNat α 0] [OfNat α 1]
     (architecture : RiscV.Architecture) (functionInfos : InfoMap (Nat × Nat)) :
     Nat → List (CompiledFunction α) → List (Nat × List Nat × LoopProg α)

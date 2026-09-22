@@ -202,6 +202,34 @@ def accVarsMemGuard : Bool :=
   (loopAccVars probeAssignPairs [9]).contains 9 &&
     (loopAccVars probeAssignPairs [9]).contains 3
 
+/-! Cake `loopPropsScript.sml:10` `every_prog_def`, ported as `loopEveryProg`.
+    `loopEveryProg` is `Prop`-valued (no `Decidable` instance), so the
+    regression is theorem-based. -/
+
+theorem loopEveryProg_seq_fixture :
+    loopEveryProg (fun _ => True) (.seq (.assign 3 (.const 0)) .tick : LoopProg Nat) := by
+  simp [loopEveryProg]
+
+theorem loopEveryProg_ite_fixture :
+    loopEveryProg (fun _ => True)
+      (.ite .notEqual 3 (.imm 1) .tick .skip ([] : List Nat) : LoopProg Nat) := by
+  simp [loopEveryProg]
+
+theorem loopEveryProg_call_fixture :
+    loopEveryProg (fun _ => True)
+      (.call none none ([] : List Nat)
+        (some (1, (.assign 3 (.const 0) : LoopProg Nat), .tick, ([] : List Nat))) :
+        LoopProg Nat) := by
+  simp [loopEveryProg]
+
+theorem loopEveryProg_mark_fixture :
+    loopEveryProg (fun _ => True) (.mark (.assign 3 (.const 0)) : LoopProg Nat) := by
+  simp [loopEveryProg]
+
+theorem loopEveryProg_loop_fixture :
+    loopEveryProg (fun _ => True) (.loop ([] : List Nat) .tick ([] : List Nat) : LoopProg Nat) := by
+  simp [loopEveryProg]
+
 def check (name : String) (actual expected : List Nat) : IO Bool := do
   if actual == expected then
     IO.println s!"PASS {name}"

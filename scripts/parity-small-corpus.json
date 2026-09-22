@@ -1121,6 +1121,14 @@
       "tracked_beads": [
         "flapjack-pxn.8.5.14.1.5"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00017_fuzz_allocator_20260923.pnk",
+      "source_reference": "Fresh exact differential witness from seed 20260923 index 17: allocation helpers, nested loops, exception paths, byte/word stores, and high allocator pressure exercise Cake IRC/frame continuation layout. Cake and Flapjack artifacts are byte-identical.",
+      "cake_sha256": "a64e49771356cae31fe54419c9ee7a6e44c88d38c92891e49c1fcb839ad6b38e",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.5"
+      ]
     }
   ]
 }

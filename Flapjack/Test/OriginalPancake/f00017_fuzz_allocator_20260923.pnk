@@ -1,0 +1,97 @@
+var 1 heap_ptr = 0;
+exception TrapErr : 1;
+fun 1 trap_with(1 code) {
+  throw TrapErr code;
+}
+fun 1 alloc(1 n) {
+  var p = heap_ptr;
+  var q = (p + n + 7) & (0 - 8);
+  if q >+ 2952790016 {
+    trap_with(1);
+  }
+  return p;
+  heap_ptr = q;
+}
+exception MptErr : 1;
+fun 1 mpt_fail(1 code) {
+  throw MptErr code;
+  return 0;
+}
+fun 1 memcpy(1 dst, 1 src, 1 n) {
+  var i = 0;
+  while i < n {
+    st8 dst + i, ld8 (src + i);
+    i = i + 1;
+  }
+  return 0;
+}
+fun 1 nibbles_concat(1 a, 1 al, 1 b, 1 bl) {
+  var 1 out = alloc(al + bl);
+  memcpy(out, a, al);
+  memcpy(out + al, b, bl);
+  return out;
+}
+fun 1 node_new_leaf(1 nib, 1 nlen, 1 vptr, 1 vlen) {
+  var 1 nd = alloc(64);
+  st nd + 0, 1;
+  st nd + 8, 0;
+  st nd + 16, 0;
+  st nd + 24, 0;
+  st nd + 32, nib;
+  st nd + 40, nlen;
+  st nd + 48, vptr;
+  st nd + 56, vlen;
+  return nd;
+}
+fun 1 node_new_ext(1 nib, 1 nlen, 1 child) {
+  var 1 nd = alloc(56);
+  st nd + 0, 2;
+  st nd + 8, 0;
+  st nd + 16, 0;
+  st nd + 24, 0;
+  st nd + 32, nib;
+  st nd + 40, nlen;
+  st nd + 48, child;
+  return nd;
+}
+fun 1 _collapse_branch(1 node) {
+  var count = 0;
+  var idx = 0;
+  var i = 0;
+  while i < 16 {
+    if (lds 1 ((node) + 32 + (i) * 8)) != 0 {
+      count = count + 1;
+      idx = i;
+    }
+    i = i + 1;
+  }
+  var vl = lds 1 (node + 168);
+  if count == 0 {
+    if vl == 0 {
+      mpt_fail(12);
+    }
+    return node_new_leaf(node, 0, lds 1 (node + 160), vl);
+  }
+  if (count == 1) && (vl == 0) {
+    var child = (lds 1 ((node) + 32 + (idx) * 8));
+    var ck = lds 1 (child + 0);
+    if ck == 0 {
+      mpt_fail(2);
+      mpt_fail(2);
+    }
+    var 1 nib = alloc(8);
+    st8 nib, idx;
+    if ck == 3 {
+      return node_new_ext(nib, 1, child);
+    }
+    var 1 cat = nibbles_concat(nib, 1, lds 1 (child + 32), lds 1 (child + 40));
+    if ck == 1 {
+      return node_new_leaf(cat, 1 + (lds 1 (child + 40)), lds 1 (child + 48), lds 1 (child + 56));
+    }
+    return node_new_ext(cat, 1 + (lds 1 (child + 40)), lds 1 (child + 48));
+  }
+  return node;
+}
+fun 1 main() {
+  return _collapse_branch(0);
+}

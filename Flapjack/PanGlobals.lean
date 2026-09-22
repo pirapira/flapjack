@@ -1443,6 +1443,22 @@ theorem globalCompileDecs_exceptions_eq_filter [BEq String] [Add α] [Mul α]
   exact globalDeclsFilter_isException_globalCompileDecls
     (globalCollect context code) code
 
+theorem functions_globalDeclsFilter_isException (declarations : List (Decl α)) :
+    functions (globalDeclsFilter globalDeclIsException declarations) = [] :=
+  functions_globalDeclsFilter_nil_of_predicate _
+    (fun declaration hpred => by
+      cases declaration <;> simp_all [globalDeclIsException, globalDeclIsFunction])
+    declarations
+
+/-- Cake's `functions_compile_decs_exns`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:519`): the exception
+    component of `compile_decs` contains no function declarations. -/
+theorem globalCompileDecs_exceptions_functions [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α)) :
+    functions (globalCompileDecs context code).exceptions = [] := by
+  rw [globalCompileDecs_exceptions_eq_filter]
+  exact functions_globalDeclsFilter_isException code
+
 theorem globalDeclsFilter_eq_self_of_all (predicate : Decl α → Bool)
     (declarations : List (Decl α))
     (hall : declarations.all predicate = true) :
@@ -1966,6 +1982,149 @@ theorem globalCompileTopForStart_names_nodup [BEq String] [LawfulBEq String]
         exact globalNewMainName_not_mem declarations hmem'
       · exact nodup_globalRenameFunctionName_map start
           (globalNewMainName declarations) _ hnodup
+
+/-! Cake's `size_of_eids_compile_top`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:364`): the exception
+    identifier count is preserved by the whole top-level compilation.  The
+    counting lemmas below are the ingredients: appends add, the exception
+    filter keeps the same count, and compilation/renaming/partitioning each
+    preserve it. -/
+
+theorem sizeOfEids_append (xs ys : List (Decl α)) :
+    sizeOfEids (xs ++ ys) = sizeOfEids xs + sizeOfEids ys := by
+  induction xs with
+  | nil => simp [sizeOfEids]
+  | cons d ds ih =>
+      rw [List.cons_append, sizeOfEids_cons, sizeOfEids_cons, ih]
+      split <;> omega
+
+theorem sizeOfEids_globalDeclsFilter_isException (xs : List (Decl α)) :
+    sizeOfEids (globalDeclsFilter globalDeclIsException xs) = sizeOfEids xs := by
+  induction xs with
+  | nil => simp [globalDeclsFilter, sizeOfEids]
+  | cons d ds ih =>
+      simp only [globalDeclsFilter]
+      by_cases h : globalDeclIsException d = true
+      · rw [if_pos h, sizeOfEids_cons, sizeOfEids_cons]
+        have hExn : isExnDecl d = true := by
+          cases d <;> simp_all [globalDeclIsException, isExnDecl]
+        rw [if_pos hExn, if_pos hExn]
+        exact congrArg (fun n => 1 + n) ih
+      · rw [if_neg h, sizeOfEids_cons]
+        have hExn : isExnDecl d = false := by
+          cases d <;> simp_all [globalDeclIsException, isExnDecl]
+        rw [if_neg (by simp [hExn])]
+        exact ih
+
+theorem sizeOfEids_globalCompileDecls [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (xs : List (Decl α)) :
+    sizeOfEids (globalCompileDecls context xs) = sizeOfEids xs := by
+  induction xs with
+  | nil => simp [globalCompileDecls, sizeOfEids]
+  | cons d ds ih =>
+      cases d with
+      | function fn =>
+          simp only [globalCompileDecls]
+          simpa [sizeOfEids_cons, isExnDecl] using ih
+      | exnDecl e sh =>
+          simp only [globalCompileDecls]
+          simpa [sizeOfEids_cons, isExnDecl] using ih
+      | decl sh nm v =>
+          simp only [globalCompileDecls]
+          simpa [sizeOfEids_cons, isExnDecl] using ih
+      | name nm flds =>
+          simp only [globalCompileDecls]
+          simpa [sizeOfEids_cons, isExnDecl] using ih
+
+theorem sizeOfEids_globalRenameDecls [BEq String] (source target : FunName)
+    (xs : List (Decl α)) :
+    sizeOfEids (globalRenameDecls source target xs) = sizeOfEids xs := by
+  induction xs with
+  | nil => simp [globalRenameDecls, sizeOfEids]
+  | cons d ds ih =>
+      cases d with
+      | function fn =>
+          simp only [globalRenameDecls]
+          simpa [sizeOfEids_cons, isExnDecl] using ih
+      | exnDecl e sh =>
+          simp only [globalRenameDecls]
+          simpa [sizeOfEids_cons, isExnDecl] using ih
+      | decl sh nm v =>
+          simp only [globalRenameDecls]
+          simpa [sizeOfEids_cons, isExnDecl] using ih
+      | name nm flds =>
+          simp only [globalRenameDecls]
+          simpa [sizeOfEids_cons, isExnDecl] using ih
+
+theorem sizeOfEids_globalDeclsFilter_isFunction (xs : List (Decl α)) :
+    sizeOfEids (globalDeclsFilter globalDeclIsFunction xs) = 0 := by
+  induction xs with
+  | nil => simp [globalDeclsFilter, sizeOfEids]
+  | cons d ds ih =>
+      cases d <;>
+        simp_all [globalDeclsFilter, globalDeclIsFunction, sizeOfEids_cons,
+          isExnDecl]
+
+theorem sizeOfEids_globalDeclsFilter_isName (xs : List (Decl α)) :
+    sizeOfEids (globalDeclsFilter globalDeclIsName xs) = 0 := by
+  induction xs with
+  | nil => simp [globalDeclsFilter, sizeOfEids]
+  | cons d ds ih =>
+      cases d <;>
+        simp_all [globalDeclsFilter, globalDeclIsName, sizeOfEids_cons,
+          isExnDecl]
+
+theorem sizeOfEids_globalDeclsFilter_isGlobal (xs : List (Decl α)) :
+    sizeOfEids (globalDeclsFilter globalDeclIsGlobal xs) = 0 := by
+  induction xs with
+  | nil => simp [globalDeclsFilter, sizeOfEids]
+  | cons d ds ih =>
+      cases d <;>
+        simp_all [globalDeclsFilter, globalDeclIsGlobal, sizeOfEids_cons,
+          isExnDecl]
+
+theorem sizeOfEids_globalResortDecls (xs : List (Decl α)) :
+    sizeOfEids (globalResortDecls xs) = sizeOfEids xs := by
+  rw [globalResortDecls, sizeOfEids_append, sizeOfEids_append, sizeOfEids_append,
+    sizeOfEids_globalDeclsFilter_isName,
+    sizeOfEids_globalDeclsFilter_isException,
+    sizeOfEids_globalDeclsFilter_isGlobal,
+    sizeOfEids_globalDeclsFilter_isFunction]
+  omega
+
+theorem sizeOfEids_globalCompileDecs_exceptions [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α)) :
+    sizeOfEids (globalCompileDecs context code).exceptions = sizeOfEids code := by
+  simp only [globalCompileDecs]
+  rw [sizeOfEids_globalDeclsFilter_isException, sizeOfEids_globalCompileDecls]
+
+theorem sizeOfEids_globalCompileDecs_functions [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α)) :
+    sizeOfEids (globalCompileDecs context code).functions = 0 := by
+  simp only [globalCompileDecs]
+  exact sizeOfEids_globalDeclsFilter_isFunction _
+
+/-- Cake's `size_of_eids_compile_top`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:364`). -/
+theorem globalCompileTopForStart_sizeOfEids [BEq String] [Add α] [Mul α]
+    (bytesInWord : α) (fromNat : Nat → α) (declarations : List (Decl α))
+    (start : FunName) (compiled : List (Decl α))
+    (hcompile : globalCompileTopForStart bytesInWord fromNat declarations start =
+      some compiled) :
+    sizeOfEids compiled = sizeOfEids declarations := by
+  unfold globalCompileTopForStart at hcompile
+  cases hfind : globalFindFunction start declarations with
+  | none => simp [hfind] at hcompile
+  | some entry =>
+      simp only [hfind, Option.some.injEq] at hcompile
+      subst hcompile
+      have hnil : sizeOfEids ([] : List (Decl α)) = 0 := by
+        rw [sizeOfEids.eq_def]
+      rw [sizeOfEids_append, sizeOfEids_append,
+        sizeOfEids_globalCompileDecs_exceptions,
+        sizeOfEids_globalCompileDecs_functions,
+        sizeOfEids_globalRenameDecls, sizeOfEids_globalResortDecls]
+      simp [sizeOfEids_cons, isExnDecl, hnil]
 
 def globalCompileTop [BEq String] [Add α] [Mul α]
     (bytesInWord : α) (fromNat : Nat → α) (declarations : List (Decl α)) :

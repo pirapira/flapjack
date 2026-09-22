@@ -778,6 +778,43 @@ theorem call_target_raised_no_handler_compile_correct_fixture :
     (by simp [evalLoopProgWithCallsAndFfi, evalLoopProg, loopLookupFirst])
   simpa [comp, loopResultState] using hcall
 
+theorem call_target_raised_handler_compile_correct_fixture :
+    evalLoopProgWithCallsAndFfi
+        [(1, [3], (.raise 3 : LoopProg Nat))]
+        (fun _ _ _ _ _ _ => none) 3 load32State
+        (comp [(3, 2)]
+          (.call (some ([], [])) (some 1) [3]
+            (some (5, (.skip : LoopProg Nat), .skip, [])) : LoopProg Nat) :
+            LoopProg Nat × LocationEnv).1 =
+        some (.normal { load32State with
+          locals := updateLoopLocal load32State.locals 5 7 }) ∧
+      labelsIn
+        (comp [(3, 2)]
+          (.call (some ([], [])) (some 1) [3]
+            (some (5, (.skip : LoopProg Nat), .skip, [])) : LoopProg Nat) :
+            LoopProg Nat × LocationEnv).2
+        (updateLoopLocal load32State.locals 5 7) := by
+  have hcall := comp_call_target_raised_handler_correct
+    (functions := [(1, [3], (.raise 3 : LoopProg Nat))])
+    (ffiHandler := (fun _ _ _ _ _ _ => none))
+    (environment := [(3, 2)]) (fuel := 1) (state := load32State)
+    (returns := ([], [])) (target := 1) (arguments := [3]) (parameters := [3])
+    (body := (.raise 3 : LoopProg Nat)) (argumentValues := [7])
+    (calleeLocals := { load32State with
+      locals := loopLookupFirst (fun _ => none) ([3].zip [7]) })
+    (calleeState := { load32State with
+      locals := loopLookupFirst (fun _ => none) ([3].zip [7]) })
+    (exceptionName := 5) (exceptionBody := .skip) (normalBody := .skip)
+    (handlerLive := []) (exception := 7)
+    (handlerState := { load32State with
+      locals := updateLoopLocal load32State.locals 5 7 })
+    (by simp [lookupLoopFunction])
+    (by simp [loopReadLocals, load32State])
+    (by simp [loopBindParameters, loopLookupFirst])
+    (by simp [evalLoopProgWithCallsAndFfi, evalLoopProg, loopLookupFirst])
+    (by simp [evalLoopProgWithCallsAndFfi, evalLoopProg])
+  simpa [comp, loopResultState] using hcall
+
 theorem call_empty_compile_correct_fixture :
     evalLoopProgWithCallsAndFfi []
         (fun _ _ _ _ _ _ => none) 1 load32State
@@ -1007,6 +1044,7 @@ theorem loop_compile_result_fixture :
 #check comp_call_target_correct
 #check comp_call_target_return_correct
 #check comp_call_target_raised_no_handler_correct
+#check comp_call_target_raised_handler_correct
 #check comp_call_empty_correct
 #check comp_call_implicit_target_correct
 #check comp_call_implicit_target_unresolved_correct

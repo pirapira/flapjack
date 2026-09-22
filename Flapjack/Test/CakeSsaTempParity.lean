@@ -157,17 +157,33 @@ def loopBreakGuard : Bool :=
             (.move 1 [(13, 17)])) [])) => true
   | _ => false
 
+/-! Cake's break reconciliation also preserves a live value outside the loop;
+    this is the live-out companion to `loopBreakGuard`. -/
+def loopBreakLiveOutProgram : WordProg Nat :=
+  .loop [0, 2] (.seq (.assign 0 (.const 1)) (.break 0)) [2]
+
+def loopBreakLiveOutGuard : Bool :=
+  match (wordFullSsaCcTrans 2 loopBreakLiveOutProgram).2.2 with
+  | .seq (.move 1 [(5, 0), (9, 2)])
+      (.seq (.seq .skip (.move 0 [(13, 5), (17, 9)]))
+        (.loop [17, 13]
+          (.seq
+            (.seq (.assign 21 (.const 1)) (.break 0))
+            (.move 1 [(13, 21)])) [17])) => true
+  | _ => false
+
 #guard branchSsaGuard
 #guard branchSkipSsaGuard
 #guard loopSsaGuard
 #guard loopLiveOutGuard
 #guard loopBreakGuard
+#guard loopBreakLiveOutGuard
 
 def parityGuard : Bool :=
   setupTwoGuard && fullTransMoveGuard && limitBaseGuard &&
     limitTwoAssignsGuard && setupTwoNextGuard && fullSkipMoveGuard &&
     fullTwoAssignsGuard && branchSsaGuard && branchSkipSsaGuard &&
-    loopSsaGuard && loopLiveOutGuard && loopBreakGuard
+    loopSsaGuard && loopLiveOutGuard && loopBreakGuard && loopBreakLiveOutGuard
 
 #guard parityGuard
 #eval parityGuard
@@ -192,7 +208,9 @@ def runChecks : IO Bool := do
       ("full_ssa_cc_trans preserves Cake loop exit cut sets",
         loopLiveOutGuard),
       ("full_ssa_cc_trans preserves Cake loop break reconciliation",
-        loopBreakGuard) ]
+        loopBreakGuard),
+      ("full_ssa_cc_trans preserves Cake live-out break reconciliation",
+        loopBreakLiveOutGuard) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

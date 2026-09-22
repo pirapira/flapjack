@@ -666,6 +666,18 @@ def heuFixedDegreeGuard : Bool :=
     after.degrees.get 1 == some 1 &&
     after.simpWl == [1] && after.spillWl == []
 
+/-- Missing node tags use Cake's `sp_default`-style Atemp default in
+    `considered_var`; stack temporaries remain unconsidered. -/
+def consideredVarTagGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 2 with
+      nodeTag := CakeNodeMap.ofNatInfoMap 2 [(0, .sTemp), (1, .fixed 2)] }
+  !cakeConsideredVar state 4 0 &&
+    cakeConsideredVar state 4 1 &&
+    cakeConsideredVar state 4 7
+
+#guard consideredVarTagGuard
+
 /-- Normalise a colouring to the ascending original-variable order that the
     original sptree iteration produces. -/
 def sortColouring (colours : Flapjack.NatInfoMap Nat) :

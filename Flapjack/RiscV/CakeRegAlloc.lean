@@ -780,7 +780,11 @@ def cakeIsFixedK (state : CakeRaState) (k : Nat) (x : Nat) : Bool :=
 /-- `considered_var` (`reg_allocScript.sml:507-512`): allocation temps and
     low physical registers count towards degrees. -/
 def cakeConsideredVar (state : CakeRaState) (k : Nat) (v : Nat) : Bool :=
-  ((state.nodeTag.get v).getD .aTemp == .aTemp) || cakeIsFixedK state k v
+  match state.nodeTag.get v with
+  | none => true
+  | some .aTemp => true
+  | some (.fixed n) => n < k
+  | some .sTemp => false
 
 /-- `is_not_coalesced` (`reg_allocScript.sml:320-327`): the node is its own
     coalescing parent. -/

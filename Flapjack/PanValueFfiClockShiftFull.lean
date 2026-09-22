@@ -668,4 +668,41 @@ theorem evalPanValueFfiClock_shift_panResultEvents
   | timeout => rfl
   | control result => cases result <;> rfl
 
+/-! The corresponding successful top-level program case is the clocked
+    evaluator step used by Cake's `evaluate_add_clock_io_events_mono`. -/
+theorem evalPanValueFfiClockProg_shift_panResultEvents
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel : Nat) (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (program : Prog α) (memoryAccess : Option (PanValueMemoryAccess α))
+    (contracts : Option PanValueCallContracts)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ))
+    (outcome : PanValueFfiClockOutcome α σ) (resultClock extra : Nat)
+    (hrun : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
+      program (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) = some (outcome, resultClock))
+    (hnotimeout : ∀ l g m f, outcome ≠ .timeout l g m f) :
+    panResultEvents
+        (evalPanValueFfiClockProg context primitive handler structs functions
+          baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
+          program (memoryAccess := memoryAccess) (contracts := contracts)
+          (memoryHandler := memoryHandler)) =
+      panResultEvents
+        (evalPanValueFfiClockProg context primitive handler structs functions
+          baseAddress topAddress bytesInWord fuel locals globals memory ffi
+          (clock + extra) program (memoryAccess := memoryAccess)
+          (contracts := contracts) (memoryHandler := memoryHandler)) := by
+  have hshift := (evalPanValueFfiClock_shift context primitive handler structs
+    functions baseAddress topAddress bytesInWord).2 fuel locals globals memory ffi
+    clock program memoryAccess contracts memoryHandler outcome resultClock extra
+    hrun hnotimeout
+  rw [hrun, hshift]
+  cases outcome with
+  | timeout => rfl
+  | control result => cases result <;> rfl
+
 end Flapjack

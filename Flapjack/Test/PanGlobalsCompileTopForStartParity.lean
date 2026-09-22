@@ -1,4 +1,4 @@
-import Flapjack.Pancake.PanGlobals
+import Flapjack.Pancake.Proofs.PanGlobals
 
 namespace Flapjack.Test.PanGlobalsCompileTopForStartParity
 
@@ -17,10 +17,10 @@ def parityGuard : Bool :=
   let simple :=
     globalCompileTopForStart 4 id [mainFunction] "main"
   (match missing with
-  | none => true
+  | [] => true
   | _ => false) &&
   (match simple with
-  | some [.function entry, .function renamed] =>
+  | [.function entry, .function renamed] =>
       entry.name == "main" &&
       entry.inline == false && entry.exported == false &&
       entry.params.isEmpty &&
@@ -40,40 +40,33 @@ def parityGuard : Bool :=
 #guard parityGuard
 
 def correctnessGuard : Bool :=
-  match globalCompileTopForStart 4 id [mainFunction] "main" with
-  | some compiled =>
-      compiled.all
-        (fun declaration => globalDeclIsFunction declaration ||
-          globalDeclIsException declaration)
-  | none => false
+  (globalCompileTopForStart 4 id [mainFunction] "main").all
+    (fun declaration => globalDeclIsFunction declaration ||
+      globalDeclIsException declaration)
 
 #eval correctnessGuard
 #guard correctnessGuard
 
-example : True := by
-  cases hcompile : globalCompileTopForStart 4 id [mainFunction] "main" with
-  | none => trivial
-  | some compiled =>
-      have h := globalCompileTopForStart_all_function_or_exception 4 id
-        [mainFunction] "main" compiled hcompile
-      trivial
+example :
+    (globalCompileTopForStart 4 id [mainFunction] "main").all
+      (fun declaration => globalDeclIsFunction declaration ||
+        globalDeclIsException declaration) = true := by
+  exact globalCompileTopForStart_all_function_or_exception 4 id
+    [mainFunction] "main"
 
 def exceptionDecl : Decl Nat :=
   .exnDecl "E" (.named "T")
 
 def exceptionGuard : Bool :=
   let declarations := [exceptionDecl, mainFunction]
-  match globalCompileTopForStart 4 id declarations "main" with
-  | some compiled =>
-      (exceptionEntries compiled).length ==
-        (exceptionEntries declarations).length
-  | none => false
+  (exceptionEntries (globalCompileTopForStart 4 id declarations "main")).length ==
+    (exceptionEntries declarations).length
 
 #eval exceptionGuard
 #guard exceptionGuard
 
 example : True := by
-  cases hcompile : globalCompileTopForStart 4 id
+  cases hcompile : globalCompileTopForStartSome 4 id
       [exceptionDecl, mainFunction] "main" with
   | none => trivial
   | some compiled =>
@@ -92,15 +85,14 @@ def otherFunction : Decl Nat :=
 
 def namesNodupGuard : Bool :=
   match globalCompileTopForStart 4 id [mainFunction, otherFunction] "main" with
-  | some compiled =>
+  | compiled =>
       ((functions compiled).map (fun entry => entry.1)).Nodup
-  | none => false
 
 #eval namesNodupGuard
 #guard namesNodupGuard
 
 example : True := by
-  cases hcompile : globalCompileTopForStart 4 id
+  cases hcompile : globalCompileTopForStartSome 4 id
       [mainFunction, otherFunction] "main" with
   | none => trivial
   | some compiled =>

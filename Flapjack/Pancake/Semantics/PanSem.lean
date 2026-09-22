@@ -45,6 +45,27 @@ def PanSemExactState.toEvaluateState (state : PanSemExactState α σ) :
     PanSemEvaluateState α σ :=
   { state.legacy with memoryAccess := some state.memoryAccess }
 
+/-- One source `panSem$state.code` entry: typed parameters, function body, and
+    return shape. This full entry is kept separately from the legacy runtime
+    state's function-name/parameter-name/body triples. -/
+structure PanSemFunctionEntry (α : Type u) where
+  params : List (VarName × Shape)
+  body : Prog α
+  returnShape : Shape
+
+/-- State boundary for the source `evaluate_decls` definition. `runtime`
+    carries the expression-evaluation fields and preserves all runtime state;
+    `code` and `eshapes` model the source finite maps directly, and the
+    required `memoryAccess` supplies the source memory-domain/byte behavior;
+    declaration evaluation cannot fall back to the permissive legacy memory
+    path. In particular, the lossy `runtime.functions` compatibility field is
+    not used as `code`. -/
+structure PanSemDeclarationState (α : Type u) (σ : Type v) where
+  runtime : PanSemEvaluateState α σ
+  code : InfoMap (PanSemFunctionEntry α)
+  eshapes : InfoMap Shape
+  memoryAccess : PanValueMemoryAccess α
+
 mutual
   def panSemExpFuel : Exp α → Nat
     | .const _ | .var _ _ | .baseAddr | .topAddr | .bytesInWord => 1
@@ -225,5 +246,70 @@ theorem panSemEvaluateExactState_raise_of_eval
     panSemEvaluateFuel, evalPanValueFfiClockLeaf, evalPanValueFfiClockProg,
     evalPanValueFfiProgSteps, evalPanValueExpCounted,
     PanSemExactState.toEvaluateState, heval, hvalid, hlimit]
+
+/-! Finite-map updates for the source declaration evaluator. `InfoMap` is an
+    association-list representation; putting the updated binding first and
+    removing older copies gives the same lookup behavior as HOL `|+`. -/
+def panSemDeclUpdateInfo [BEq String] (entries : InfoMap β)
+    (name : String) (value : β) : InfoMap β :=
+  (name, value) :: entries.filter (fun entry => !(entry.1 == name))
+
+def panSemDeclUpdateGlobal [BEq String]
+    (globals : VarName → Option (PanValue α)) (name : VarName)
+    (value : PanValue α) : VarName → Option (PanValue α) :=
+  fun candidate => if candidate == name then some value else globals candidate
+
+/-! Faithful declaration-by-declaration port of Cake
+    `panSem$evaluate_decls` (`panSemScript.sml:814-835`). The dedicated
+    `code` map retains parameter and return shapes, and `eshapes` retains the
+    source exception map. The legacy runtime `functions` list is not used as a
+    substitute for the source code map. Unlike `evalPanValueDeclarations`,
+    this definition does no struct-name prepass: HOL's `Name` case is a no-op. -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "evaluate_decls_def"]
+def evaluateDecls
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    [BEq String]
+    (state : PanSemDeclarationState α σ) : List (Decl α) →
+      Option (PanSemDeclarationState α σ)
+  | [] => some state
+  | .name _ _ :: declarations => evaluateDecls state declarations
+  | .decl shape name expression :: declarations =>
+      match evalPanValueExp state.runtime.structs (fun _ => none)
+          state.runtime.globals state.runtime.memory state.runtime.baseAddress
+          state.runtime.topAddress state.runtime.bytesInWord expression
+          (memoryAccess := some state.memoryAccess) with
+      | none => none
+      | some value =>
+          if panShapeMatches (panValueShape state.runtime.structs value) shape then
+            evaluateDecls
+              { state with runtime :=
+                { state.runtime with globals :=
+                    panSemDeclUpdateGlobal state.runtime.globals name value } }
+              declarations
+          else none
+  | .function declaration :: declarations =>
+      if declaration.params.all (fun parameter =>
+          isWfShape state.runtime.structs parameter.2) &&
+          isWfShape state.runtime.structs declaration.returnShape then
+        let entry : PanSemFunctionEntry α :=
+          { params := declaration.params
+            body := declaration.body
+            returnShape := declaration.returnShape }
+        evaluateDecls
+          { state with code := panSemDeclUpdateInfo state.code declaration.name entry }
+          declarations
+      else none
+  | .exnDecl exception shape :: declarations =>
+      if (lookupInfo exception state.eshapes).isSome then none
+      else if isWfShape state.runtime.structs shape then
+        evaluateDecls
+          { state with eshapes := panSemDeclUpdateInfo state.eshapes exception shape }
+          declarations
+      else none
+termination_by declarations => sizeOf declarations
+decreasing_by
+  all_goals first | sizeOf_list_dec | decreasing_trivial
 
 end Flapjack

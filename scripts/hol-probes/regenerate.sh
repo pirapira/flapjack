@@ -86,6 +86,8 @@ run_probe pan_mem_load_probeScript.sml pan_mem_load_probe.out \
   one_hit named_suffix_blocked "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_shape_of_probeScript.sml pan_shape_of_probe.out \
   word nstruct "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_evaluate_decls_probeScript.sml pan_evaluate_decls_probe.out \
+  empty exn_bad_shape_failure "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_word_helpers_probeScript.sml pan_word_helpers_probe.out \
   is_word the_val_word "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_op_probeScript.sml pan_op_probe.out \
@@ -368,6 +370,8 @@ run_probe compile_to_crep_probeScript.sml compile_to_crep_probe.out \
 run_probe compile_prog_probeScript.sml compile_prog_probe.out \
   empty inline_call global_dest handled_missing_dest done \
   "$cake_dir/pancake/pan_to_crepScript.sml"
+run_probe pan_globals_compile_top_probeScript.sml pan_globals_compile_top_probe.out \
+  missing_start present_start "$cake_dir/pancake/pan_globalsScript.sml"
 run_probe smart_seq_probeScript.sml smart_seq_probe.out \
   skip_skip skip_tick tick_skip tick_tick "$cake_dir/pancake/pan_simpScript.sml"
 run_probe seq_assoc_probeScript.sml seq_assoc_probe.out \

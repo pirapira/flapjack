@@ -60,6 +60,7 @@ import Flapjack.Pancake.Proofs.PanSimp.Evaluate
 import Flapjack.PanSimpLocalised
 import Flapjack.Pancake.PanStructs
 import Flapjack.Pancake.PanGlobals
+import Flapjack.Pancake.Proofs.PanGlobals
 import Flapjack.Pipeline
 import Flapjack.RiscV.PipelineDiagnostics
 import Flapjack.RiscV.CorrectnessTraps

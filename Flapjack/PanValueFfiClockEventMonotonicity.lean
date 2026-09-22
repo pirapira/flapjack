@@ -1551,6 +1551,61 @@ theorem evalPanValueFfiClockProgram_of_declarations_and_normal_call_context_code
   exact (panValuePcResultRelWithContextCode_normal_iff state.structs pcContext
     exceptionRel exceptionCode globalsLookup locals globals memory targetState).2 hstate
 
+/-! The timeout declaration branch has the same context-code boundary as the
+    normal branch.  This is the clock-exhaustion case of
+    `state_rel_imp_semantics_to_crep`: declaration evaluation and the call
+    evaluator remain explicit, while the concrete state relation is lifted to
+    the context-aware result relation rather than being dropped at timeout. -/
+theorem evalPanValueFfiClockProgram_of_declarations_and_timeout_call_context_code
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (initial : PanValueFfiProgramState α σ)
+    (clock : Nat)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (fuel : Nat) (declarations : List (Decl α))
+    (entry : FunName) (arguments : List (Exp α))
+    (state : PanValueProgramState α)
+    (globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (nextClock : Nat)
+    (pcContext : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (targetState : CrepState α)
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ))
+    (hdeclarations : evalPanValueDeclarations initial.source declarations
+      (memoryAccess := memoryAccess) = some state)
+    (hcall : evalPanValueFfiClockCall context primitive handler state.structs
+      state.functions state.baseAddress state.topAddress state.bytesInWord fuel
+      (fun _ => none) state.globals state.memory initial.ffi clock none entry arguments
+      (memoryAccess := memoryAccess)
+      (contracts := some (PanValueCallContracts.mk state.returnShapes
+        state.exceptions state.parameterShapes))
+      (memoryHandler := memoryHandler) =
+      some (.timeout (fun _ => none) globals memory ffi, nextClock))
+    (hstate : panValueCrepStateRel state.structs pcContext
+      (fun _ => none) globals memory targetState) :
+    evalPanValueFfiClockProgram context initial clock primitive handler fuel
+      declarations entry arguments (memoryAccess := memoryAccess)
+      (memoryHandler := memoryHandler) =
+      some (.timeout (fun _ => none) globals memory ffi, nextClock) ∧
+    panValuePcResultRelWithContextCode state.structs pcContext exceptionRel
+      exceptionCode globalsLookup
+      (.timeout (fun _ => none) globals memory) (.timeout targetState) := by
+  have hprogram := evalPanValueFfiClockProgram_of_declarations_and_timeout_call
+    context initial clock primitive handler fuel declarations entry arguments state
+    globals memory ffi nextClock (memoryAccess := memoryAccess)
+    (memoryHandler := memoryHandler) hdeclarations hcall
+  refine ⟨hprogram, ?_⟩
+  exact (panValuePcResultRelWithContextCode_timeout_iff state.structs pcContext
+    exceptionRel exceptionCode globalsLookup (fun _ => none) globals memory
+    targetState).2 hstate
+
 theorem evalPanValueFfiClockProgram_of_declarations_and_raised_call_context_code
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

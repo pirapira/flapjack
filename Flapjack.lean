@@ -77,7 +77,6 @@ import Flapjack.PanToCrep
 import Flapjack.CrepeCompileExpVariables
 import Flapjack.CompileParamVarsBounds
 import Flapjack.CrepeContextBounds
-import Flapjack.CrepeAssignedFreeVarsBound
 import Flapjack.Compile
 import Flapjack.CompileFunctionDistinct
 import Flapjack.Semantics

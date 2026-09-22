@@ -211,6 +211,24 @@ theorem compileProg_call_known_handler_assigned_free_fixture :
     (by simp [handlerContext, lookupInfo])
     hbody hslot
 
+theorem compileProg_assigned_free_bound_full_fixture :
+    (2 : Nat) ∉ crepAssignedFreeVars
+      (compileProg boundedContext
+        (.dec "temporary" .one (.const 1)
+          (.seq (.assign .local "fresh" (.const 2)) .skip))) := by
+  apply not_mem_crepAssignedFreeVars_compileProg_bound
+    boundedContext
+    (.dec "temporary" .one (.const 1)
+      (.seq (.assign .local "fresh" (.const 2)) .skip)) 2
+  · simp [boundedContext, panValueCtxtMax, lookupInfo]
+  · intro name shape slots hlookup
+    simp [boundedContext, lookupInfo] at hlookup
+    rcases hlookup with ⟨hname, hshape, hslots⟩
+    subst shape
+    subst slots
+    simp
+  · simp [boundedContext]
+
 def runChecks : IO Bool := do
   if parityGuard then
     IO.println "PASS crep assigned_free_vars skip/assign/dec/seq/if/while/shmem/fallback"

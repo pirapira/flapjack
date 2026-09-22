@@ -394,6 +394,85 @@ theorem panValuePcResultRelWithContextCode_of_clocked_evaluator_adapters
       (crepControlToPcResult targetResult) (by
         simpa [hsourceResult, htargetResult] using hresult)
 
+/-! Complete the adapter link at the plain top-level correctness boundary.
+    The compiler relation is obtained only by projecting an explicit
+    context-coded correctness premise; the executable source/Crep equations
+    and their arbitrary result constructor remain visible in the conclusion. -/
+theorem panValuePcCompileCorrectAndClockedResultRel_of_clocked_evaluator_adapters
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (sourceContext : PanValueFfiContext α)
+    (sourcePrimitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueStatefulFfiHandler α σ)
+    (sourceState : PanSemEvaluateState α σ)
+    (clock : Nat) (sourceCompileContext targetCompileContext : CompileContext α)
+    (targetFunctions : List (CompiledFunction α))
+    (targetPrimitive : CrepPrimitiveHandler α)
+    (targetFfi : CrepFfiHandler α)
+    (targetSharedMem : CrepSharedMemHandler α)
+    (targetBaseAddress targetTopAddress : α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (program : Prog α)
+    (sourceInput : PanValuePcInput α) (sourceProgram : Prog α)
+    (sourceExecution : PanValuePcExecution α)
+    (targetInput : CrepPcInput α) (targetProgram : CrepProg α)
+    (targetExecution : CrepPcExecution α)
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (hcompile : PanValuePcCompileCorrectWithContextCode
+      (panValuePcClockedSourceEvaluator clock sourceContext sourcePrimitive
+        sourceHandler sourceState)
+      (crepPcClockedTargetEvaluator clock targetFunctions targetPrimitive targetFfi
+        targetSharedMem targetBaseAddress targetTopAddress)
+      codeRel excpRel exceptionCode globalsLookup program)
+    (hsource : panValuePcClockedSourceEvaluator clock sourceContext
+      sourcePrimitive sourceHandler sourceState sourceCompileContext sourceInput
+      sourceProgram = some sourceExecution)
+    (htarget : crepPcClockedTargetEvaluator clock targetFunctions targetPrimitive
+      targetFfi targetSharedMem targetBaseAddress targetTopAddress
+      targetCompileContext targetInput targetProgram = some targetExecution)
+    (hresult : panValuePcResultRelWithContextCode structs context exceptionRel
+      exceptionCode globalsLookup sourceExecution.result targetExecution.result) :
+    PanValuePcCompileCorrect
+      (panValuePcClockedSourceEvaluator clock sourceContext sourcePrimitive
+        sourceHandler sourceState)
+      (crepPcClockedTargetEvaluator clock targetFunctions targetPrimitive targetFfi
+        targetSharedMem targetBaseAddress targetTopAddress)
+      codeRel excpRel exceptionCode globalsLookup program ∧
+    ∃ sourceResult targetResult,
+      panSemEvaluate sourceContext sourcePrimitive sourceHandler
+        { sourceState with
+          structs := sourceInput.structs
+          locals := sourceInput.locals
+          globals := sourceInput.globals
+          memory := sourceInput.memory
+          clock := clock } sourceProgram = some sourceResult ∧
+      crepEvaluate targetFunctions targetPrimitive targetFfi targetSharedMem
+        targetBaseAddress targetTopAddress clock targetInput.state targetProgram =
+        some targetResult ∧
+      panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
+        (panOutcomeToPcResult sourceResult.1) (crepControlToPcResult targetResult) := by
+  have hplain := panValuePcCompileCorrect_of_withContextCode
+    (panValuePcClockedSourceEvaluator clock sourceContext sourcePrimitive sourceHandler
+      sourceState)
+    (crepPcClockedTargetEvaluator clock targetFunctions targetPrimitive targetFfi
+      targetSharedMem targetBaseAddress targetTopAddress)
+    codeRel excpRel exceptionCode globalsLookup program hcompile
+  have hresults := panValuePcResultRelWithContextCode_of_clocked_evaluator_adapters
+    clock sourceCompileContext targetCompileContext sourceContext sourcePrimitive
+    sourceHandler sourceState sourceInput sourceProgram sourceExecution targetFunctions
+    targetPrimitive targetFfi targetSharedMem targetBaseAddress targetTopAddress targetInput
+    targetProgram targetExecution structs context exceptionRel exceptionCode globalsLookup
+    hsource htarget hresult
+  rcases hresults with ⟨sourceResult, targetResult, hsourceEval, htargetEval,
+    _hcontextResult, hplainResult⟩
+  exact ⟨hplain, ⟨sourceResult, targetResult, hsourceEval, htargetEval, hplainResult⟩⟩
+
 /-! ## Same-clock field transport -/
 
 set_option linter.unusedSimpArgs false in

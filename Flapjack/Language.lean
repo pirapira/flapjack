@@ -522,6 +522,30 @@ theorem mem_compField_imp_mem (index : Nat) (shapes : List Shape)
           exact List.mem_of_mem_drop
             (ih k (values.drop (Shape.shapeSize shape)) hk hvalues' hmem)
 
+/-- Counterpart of Cake's `mem_comp_field_lem`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:397`): with no index
+    bound the selected field is still a sublist of the flattened record (Cake's
+    `Const 0w` fallback is represented by the empty list here). -/
+theorem mem_compField_imp_mem_of_any (index : Nat) (shapes : List Shape)
+    (values : List α) (candidate : α)
+    (hmem : candidate ∈ compField index shapes values) :
+    candidate ∈ values := by
+  revert values index
+  induction shapes with
+  | nil =>
+      intro index values hmem
+      exact absurd hmem (by simp [compField])
+  | cons shape shapes ih =>
+      intro index values hmem
+      cases index with
+      | zero =>
+          simp only [compField] at hmem
+          exact List.mem_of_mem_take hmem
+      | succ k =>
+          simp only [compField, Nat.succ_ne_zero, if_false] at hmem
+          exact List.mem_of_mem_drop
+            (ih k (values.drop (Shape.shapeSize shape)) hmem)
+
 /-- Cake's `DISJOINT (set left) (set right)` predicate, stated directly on
     lists because `List` membership already expresses the element relation. -/
 def ListDisjoint (left right : List α) : Prop :=

@@ -112,6 +112,26 @@ theorem panValuePcCodeRelConcrete_localised [BEq String] [BEq α] [OfNat α 0]
 abbrev PanValuePcExceptionShapeRel α :=
   CompileContext α → InfoMap Shape → InfoMap Shape → Prop
 
+/-- Concrete Cake `excp_rel` analogue (`pan_to_crepProofScript.sml:16`),
+adapted to the shape-valued exception table of this boundary: the source and
+target exception shape maps agree on every lookup, i.e. they have the same
+finite domain and the same payload shapes.  This has exactly the type of
+`PanValuePcExceptionShapeRel α`, so it can be passed directly as the `excpRel`
+argument of `pc_compile_correct`. -/
+def panValuePcExceptionShapeRelConcrete (_context : CompileContext α)
+    (sourceEshapes targetEshapes : InfoMap Shape) : Prop :=
+  ∀ exception shape,
+    lookupInfo exception sourceEshapes = some shape ↔
+      lookupInfo exception targetEshapes = some shape
+
+/-- The concrete exception-shape relation is reflexive. -/
+theorem panValuePcExceptionShapeRelConcrete_refl (context : CompileContext α)
+    (eshapes : InfoMap Shape) :
+    panValuePcExceptionShapeRelConcrete context eshapes eshapes := by
+  unfold panValuePcExceptionShapeRelConcrete
+  intro exception shape
+  rfl
+
 def panValuePcLocalisedCode (code : PanValuePcSourceCode α) : Prop :=
   ∀ entry ∈ code, localisedProg entry.2.2
 

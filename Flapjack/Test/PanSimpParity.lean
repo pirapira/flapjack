@@ -3008,6 +3008,8 @@ with the handler-preservation premises discharged. -/
 
 #check @Flapjack.panValueFfiStatefulHandlerPreservesIoEvents_fails
 #check @Flapjack.panValueFfiMemoryHandlerPreservesIoEvents_fails
+#check @Flapjack.panValueFfiStatefulHandlerPreservesIoEvents_ffi
+#check @Flapjack.panValueFfiMemoryHandlerPreservesIoEvents_ffi
 
 /-! Unit-fuel structural step lemmas used by the residual-free event-prefix
 dispatch: conditional/declaration/sequence/call/decCall cannot succeed at unit

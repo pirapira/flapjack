@@ -152,4 +152,14 @@ def runChecks : IO Bool := do
   pure (parityGuard && compileProgUnreachableInlineGuard &&
     shMemStoreAddressTempParity)
 
+#check @compileProg_break
+#check @compileProg_continue
+#check @compileProg_tick
+#check @compileProg_annot
+#check @compileProg_assign_global
+#check @compileProg_ite_of_compiled
+#check @compileProg_while_of_compiled
+#check @compileProg_store32_of_compiled
+#check @compileProg_storeByte_of_compiled
+
 end Flapjack.Test.CompileProgParity

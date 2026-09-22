@@ -543,4 +543,60 @@ theorem compileProg_call_destination_degraded_of_compiled
       .call none function compiledArguments := by
   simp [compileProg, hnames, harguments]
 
+theorem compileProg_break [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) : compileProg context .break = .break 0 := by
+  simp [compileProg]
+
+theorem compileProg_continue [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) : compileProg context .continue = .continue 0 := by
+  simp [compileProg]
+
+theorem compileProg_tick [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) : compileProg context .tick = .tick := by
+  simp [compileProg]
+
+theorem compileProg_annot [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (tag text : String) :
+    compileProg context (.annot tag text) = .skip := by
+  simp [compileProg]
+
+theorem compileProg_assign_global [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (name : VarName) (value : Exp α) :
+    compileProg context (.assign .global name value) = .skip := by
+  simp [compileProg]
+
+theorem compileProg_ite_of_compiled [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (condition : Exp α)
+    (thenBranch elseBranch : Prog α) (condition' : CrepExp α)
+    (rest : List (CrepExp α)) (shape : Shape)
+    (hcondition : compileExp context condition = (condition' :: rest, shape)) :
+    compileProg context (.ite condition thenBranch elseBranch) =
+      .ite condition' (compileProg context thenBranch) (compileProg context elseBranch) := by
+  simp [compileProg, hcondition]
+
+theorem compileProg_while_of_compiled [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (condition : Exp α) (body : Prog α)
+    (condition' : CrepExp α) (rest : List (CrepExp α)) (shape : Shape)
+    (hcondition : compileExp context condition = (condition' :: rest, shape)) :
+    compileProg context (.while condition body) = .while condition' (compileProg context body) := by
+  simp [compileProg, hcondition]
+
+theorem compileProg_store32_of_compiled [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (address value : Exp α)
+    (address' value' : CrepExp α) (addressRest valueRest : List (CrepExp α))
+    (addressShape valueShape : Shape)
+    (haddress : compileExp context address = (address' :: addressRest, addressShape))
+    (hvalue : compileExp context value = (value' :: valueRest, valueShape)) :
+    compileProg context (.store32 address value) = .store32 address' value' := by
+  simp [compileProg, haddress, hvalue]
+
+theorem compileProg_storeByte_of_compiled [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (address value : Exp α)
+    (address' value' : CrepExp α) (addressRest valueRest : List (CrepExp α))
+    (addressShape valueShape : Shape)
+    (haddress : compileExp context address = (address' :: addressRest, addressShape))
+    (hvalue : compileExp context value = (value' :: valueRest, valueShape)) :
+    compileProg context (.storeByte address value) = .storeByte address' value' := by
+  simp [compileProg, haddress, hvalue]
+
 end Flapjack

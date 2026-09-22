@@ -162,6 +162,15 @@ def cakeMaxVarNoReturnHandler : Bool :=
 
 #guard cakeMaxVarNoReturnHandler
 
+/- The checked Cake word_stack_frame_probe.out reports max_var = 26 for
+   two sequential assignments. Keep this source-level frame input distinct
+   from the no-return-handler case above. -/
+def cakeMaxVarSequenceOracle : Bool :=
+  wordProgCakeMaxVar
+      (.seq (.assign 0 (.const 0)) (.assign 26 (.const 0)) : WordProg Nat) == 26
+
+#guard cakeMaxVarSequenceOracle
+
 def spillingWordFunctions : Option (List (Nat × Nat × WordProg (RiscV.Word 64))) :=
   match parseTopDecs (BitVec.ofInt 64) spillingSource with
   | .error _ => none
@@ -224,6 +233,8 @@ def runChecks : IO Bool := do
         cakeWordFrameSlotsOracleExact),
       ("Cake colour-to-spill adapter matches format_var and frame sizing",
         cakeColourWordSpillStateOracleExact),
+      ("Cake max_var preserves the sequential-assignment frame input",
+        cakeMaxVarSequenceOracle),
       ("allocator frame slots stay inside the frame word_to_stack allocates",
         frameContainmentExact) ]
   let mut ok := true

@@ -28489,6 +28489,100 @@ theorem panValuePcCompileCorrectWithContextCode_compact_with_expression_state_ev
     hexception, hlookupCode, hcode, hflat, (by simpa [hflat] using hdistinct),
     hsize⟩
 
+/-! Context-coded companion of the canonical flat-global expression-state
+    Raise evidence.  The abstract `globalsLookup` adapter is discharged by
+    Pancake's canonical typed flat-global lookup, so no adapter premise
+    remains; the evaluator, state, freshness, shape, and payload premises
+    stay explicit. -/
+theorem panValuePcCompileCorrectWithContextCode_compact_with_expression_state_evidence_canonical_globals
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (program : Prog α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α)
+    (sourceFuel targetFuel : Nat)
+    (hprogram : PanValueCrepProgramStateCorrect program)
+    (hprogramSafe : PanValueCrepProgramStateControlSafe program)
+    (hevidence : ∀ (context : CompileContext α) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (sourceValue : PanValue α) (targetState : CrepState α)
+      (targetException : α),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      ∃ (state : CrepState α) (expression : Exp α),
+        targetState =
+          { state with globals :=
+              (updateMemoryListAt state.globals 0 context.bytesInWord
+                (panValueFlatWords sourceValue)) } ∧
+        context.bytesInWord = bytesInWord ∧
+        panValueCrepStateRel structs context sourceLocals sourceGlobals
+          sourceMemory state ∧
+        PanValueCrepExpressionStateCorrect expression ∧
+        evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+          baseAddress topAddress bytesInWord expression = some sourceValue ∧
+        (∀ (compiled : List (CrepExp α)),
+          ∀ name ∈ freshNames context compiled.length 1,
+            ∀ value ∈ compiled, name ∉ crepExpVars value) ∧
+        (∀ (compiled : List (CrepExp α)),
+          ∀ name ∈ freshNames context compiled.length 1,
+            state.locals name = none) ∧
+        exceptionRel sourceException sourceValue targetException ∧
+        lookupInfo sourceException context.exceptions = some targetException ∧
+        exceptionCode sourceException = some targetException ∧
+        List.Pairwise (fun left right : α => left ≠ right)
+          (storeAddresses (0 : α) context.bytesInWord
+            (panValueFlatWords sourceValue).length) ∧
+        Shape.shapeSize (panValueShape structs sourceValue) ≤ 32 ∧
+        (panValueFlatWords sourceValue).length =
+          Shape.shapeSize (panValueShape structs sourceValue)) :
+    PanValuePcCompileCorrectWithContextCode
+      (panValuePcCompactSourceEvaluator primitive sourceHandler sourceFunctions
+        baseAddress topAddress bytesInWord sourceFuel)
+      (crepPcCompactTargetEvaluator functions crepPrimitive ffi sharedMem
+        baseAddress topAddress targetFuel)
+      codeRel excpRel exceptionCode (crepPcFlatGlobalsLookup bytesInWord) program := by
+  refine panValuePcCompileCorrect_compact_with_flat_global_evaluator_evidence_context_code
+    program codeRel excpRel exceptionCode (crepPcFlatGlobalsLookup bytesInWord)
+    sourceFunctions functions
+    primitive sourceHandler crepPrimitive ffi sharedMem baseAddress topAddress
+    bytesInWord sourceFuel targetFuel hprogram hprogramSafe ?_ ?_
+  · intro targetState sourceValue
+    rfl
+  · intro context structs exceptionRel sourceLocals sourceGlobals sourceMemory
+      sourceException sourceValue targetState targetException hcontrol
+    rcases hevidence context structs exceptionRel sourceLocals sourceGlobals
+      sourceMemory sourceException sourceValue targetState targetException hcontrol with
+      ⟨state, expression, htarget, hbytesInWord, hrel, hexpression, hsource,
+        hnot, hfresh, hexception, hlookupCode, hcode, hdistinct, hsize,
+        hflatLength⟩
+    obtain ⟨compiled, shape, values, hvalid, hcompile, hlength, hcompiled,
+        hnot', hfresh', hflat⟩ := panValueCrepExpressionStateEvidence_of_correct
+      expression hexpression context structs sourceLocals sourceGlobals sourceMemory
+      state baseAddress topAddress bytesInWord sourceValue hrel hsource hnot hfresh
+      hflatLength
+    have htarget' : targetState =
+        { state with globals :=
+            updateMemoryListAt state.globals 0 context.bytesInWord values } := by
+      simpa [hflat] using htarget
+    exact ⟨state, expression, compiled, shape, values, htarget', hbytesInWord,
+      hrel, hsource, hvalid, hcompile, hlength, hcompiled, hnot', hfresh',
+      hexception, hlookupCode, hcode, hflat, (by simpa [hflat] using hdistinct),
+      hsize⟩
+
 /-! Feed expression-state Raise evidence into the context-coded stateful
     `pc_compile_correct` boundary.  The source/target evaluator adapters and
     every evaluator/state premise remain explicit. -/
@@ -38328,152 +38422,6 @@ theorem panValuePcCompileCorrectAndClockedFinalFfiResultRel_of_normal_program_st
     clockExceptionRel clockExceptionCode clockGlobalsLookup event targetEvent
     finalFfi hclockState hclock hevent
 
-theorem panValuePcCompileCorrectAndClockedRaisedResultRel_of_both_program_state_correct
-    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (sourceEvaluate : PanValuePcEvaluator α)
-    (targetEvaluate : CrepPcEvaluator α)
-    (codeRel : PanValuePcCodeRel α)
-    (excpRel : PanValuePcExceptionShapeRel α)
-    (exceptionCode : ExceptionId → Option α)
-    (globalsLookup : CrepState α → PanValue α → Option (List α))
-    (program : Prog α)
-    (hcompile : PanValuePcCompileCorrectWithContextCode sourceEvaluate
-      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
-    (hprogram : PanValueCrepProgramStateCorrect program)
-    (structs : StructContext) (context : CompileContext α)
-    (sourceFunctions : List (FunName × List VarName × Prog α))
-    (functions : List (CompiledFunction α))
-    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
-    (sourceMemory : α → Option (PanValue α)) (state targetState : CrepState α)
-    (primitive : PanPrimitiveHandler α)
-    (sourceHandler : PanValueFfiHandler α)
-    (crepPrimitive : CrepPrimitiveHandler α)
-    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
-    (baseAddress topAddress bytesInWord : α)
-    (sourceFuel targetFuel : Nat)
-    (exceptionRel : ExceptionId → PanValue α → α → Prop)
-    (sourceException : ExceptionId) (sourceValue : PanValue α)
-    (targetException : α)
-    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
-      sourceMemory state)
-    (hsource : evalPanValueProgWithPrimitiveCallsAndFfi
-      primitive sourceHandler structs sourceFunctions baseAddress topAddress
-      bytesInWord sourceFuel sourceLocals sourceGlobals sourceMemory program =
-      some (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue))
-    (hcrep : evalCrepFullProgState functions crepPrimitive ffi sharedMem
-      baseAddress topAddress targetFuel state (compileProg context program) =
-      some (.raised targetState targetException))
-    (hpost : panValueCrepStateRel structs context sourceLocals sourceGlobals
-      sourceMemory targetState)
-    (hcode : exceptionCode sourceException = some targetException)
-    (hlookup : lookupInfo sourceException context.exceptions =
-      some targetException)
-    (hglobals : 1 ≤ Shape.shapeSize (panValueShape structs sourceValue) →
-      globalsLookup targetState sourceValue = some (panValueFlatWords sourceValue))
-    (hsize : Shape.shapeSize (panValueShape structs sourceValue) ≤ 32)
-    (clockContext : PanValueFfiContext α)
-    (clockPrimitive : PanPrimitiveHandler α)
-    (clockHandler : PanValueStatefulFfiHandler α σ)
-    (clockStructs : StructContext) (clockPcContext : CompileContext α)
-    (clockFunctions : List (FunName × List VarName × Prog α))
-    (clockProgram : Prog α)
-    (hclockProgram : PanValueCrepProgramStateCorrect clockProgram)
-    (clockCompiledFunctions : List (CompiledFunction α))
-    (clockLocals clockGlobals : VarName → Option (PanValue α))
-    (clockMemory : α → Option (PanValue α)) (clockState clockTargetState : CrepState α)
-    (clockCrepPrimitive : CrepPrimitiveHandler α)
-    (clockFfiHandler : CrepFfiHandler α)
-    (clockSharedMem : CrepSharedMemHandler α)
-    (clockSourceHandler : PanValueFfiHandler α)
-    (clockBaseAddress clockTopAddress clockBytesInWord : α)
-    (clockSourceFuel clockTargetFuel : Nat)
-    (clockException : ExceptionId) (clockValue : PanValue α)
-    (clockTargetException : α)
-    (hclockRel : panValueCrepStateRel clockStructs clockPcContext
-      clockLocals clockGlobals clockMemory clockState)
-    (hclockSource : evalPanValueProgWithPrimitiveCallsAndFfi
-      clockPrimitive clockSourceHandler clockStructs clockFunctions
-      clockBaseAddress clockTopAddress clockBytesInWord clockSourceFuel
-      clockLocals clockGlobals clockMemory clockProgram = some
-      (.raised clockLocals clockGlobals clockMemory clockException clockValue))
-    (hclockCrep : evalCrepFullProgState clockCompiledFunctions clockCrepPrimitive
-      clockFfiHandler clockSharedMem clockBaseAddress clockTopAddress
-      clockTargetFuel clockState (compileProg clockPcContext clockProgram) =
-      some (.raised clockTargetState clockTargetException))
-    (hclockPost : panValueCrepStateRel clockStructs clockPcContext
-      clockLocals clockGlobals clockMemory clockTargetState)
-    (hclockCode : exceptionCode clockException = some clockTargetException)
-    (hclockLookup : 1 ≤ Shape.shapeSize (panValueShape clockStructs clockValue) →
-      globalsLookup clockTargetState clockValue = some (panValueFlatWords clockValue))
-    (hclockSize : Shape.shapeSize (panValueShape clockStructs clockValue) ≤ 32)
-    (hclockLookupCode : lookupInfo clockException clockPcContext.exceptions =
-      some clockTargetException)
-    (clockFfi : FfiState σ) (clockFuel clock : Nat)
-    (hclockResult : evalPanValueFfiClockProg clockContext clockPrimitive
-      clockHandler clockStructs clockFunctions clockBaseAddress clockTopAddress
-      clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
-      clockFfi clock clockProgram =
-      some (.control (.raised clockLocals clockGlobals clockMemory clockFfi
-        clockException clockValue), clock))
-    (hprojection :
-      (evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
-        clockStructs clockFunctions clockBaseAddress clockTopAddress
-        clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
-        clockFfi clock clockProgram).map panValueFfiClockResultProjection =
-      some (.raised clockLocals clockGlobals clockMemory clockFfi clockException
-        clockValue clock)) :
-    PanValuePcCompileCorrect sourceEvaluate targetEvaluate codeRel excpRel
-      exceptionCode globalsLookup program ∧
-    evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
-      clockStructs clockFunctions clockBaseAddress clockTopAddress
-      clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
-      clockFfi clock clockProgram =
-      some (.control (.raised clockLocals clockGlobals clockMemory clockFfi
-        clockException clockValue), clock) ∧
-    (evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
-      clockStructs clockFunctions clockBaseAddress clockTopAddress
-      clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
-      clockFfi clock clockProgram).map panValueFfiClockResultProjection =
-      some (.raised clockLocals clockGlobals clockMemory clockFfi clockException
-        clockValue clock) ∧
-    panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
-      (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
-      (.raised targetState targetException) ∧
-    panValuePcResultRel clockStructs clockPcContext exceptionRel exceptionCode
-      globalsLookup
-      (.raised clockLocals clockGlobals clockMemory clockException clockValue)
-      (.raised clockTargetState clockTargetException) := by
-  have hsourceData := panValuePcRaisedHraiseData_of_program_state_correct
-    program hprogram context structs sourceFunctions functions sourceLocals
-    sourceGlobals sourceMemory state primitive sourceHandler crepPrimitive ffi
-    sharedMem baseAddress topAddress bytesInWord sourceFuel targetFuel exceptionRel
-    sourceException sourceValue targetState targetException exceptionCode
-    globalsLookup hrel hsource hcrep hpost hcode hlookup hglobals hsize
-  have hclockData := panValuePcClockedRaisedHraiseData_of_program_state_correct
-    clockProgram hclockProgram clockStructs clockPcContext clockFunctions
-    clockCompiledFunctions clockLocals clockGlobals clockMemory clockState
-    clockTargetState clockPrimitive clockSourceHandler clockCrepPrimitive
-    clockFfiHandler clockSharedMem clockBaseAddress clockTopAddress
-    clockBytesInWord clockSourceFuel clockTargetFuel exceptionRel exceptionCode
-    globalsLookup clockException clockValue clockTargetException hclockRel
-    hclockSource hclockCrep hclockPost hclockCode hclockLookup hclockSize
-    hclockLookupCode
-  exact panValuePcCompileCorrectAndClockedRaisedResultRel_of_hraise_data
-    sourceEvaluate targetEvaluate codeRel excpRel exceptionCode globalsLookup
-    program hcompile structs context exceptionRel sourceLocals sourceGlobals
-    sourceMemory sourceException sourceValue targetState targetException hsourceData
-    clockContext clockPrimitive clockHandler clockStructs clockPcContext
-    clockFunctions clockBaseAddress clockTopAddress clockBytesInWord clockFuel clock
-    clockLocals clockGlobals clockMemory clockFfi clockProgram clockException
-    clockValue clockTargetState clockTargetException hclockResult hclockData
-    hprojection
-
-/-! Compose direct source and Crep Returned evaluator evidence with the
-    generic clocked Returned result package.  The source and clocked value
-    relations, state relations, and evaluator equations remain explicit. -/
 theorem panValuePcCompileCorrectAndClockedReturnedResultRel_of_program_state_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
@@ -38517,56 +38465,38 @@ theorem panValuePcCompileCorrectAndClockedReturnedResultRel_of_program_state_cor
     (clockStructs : StructContext)
     (clockPcContext : CompileContext α)
     (clockFunctions : List (FunName × List VarName × Prog α))
-    (clockCompiledFunctions : List (CompiledFunction α))
+    (clockBaseAddress clockTopAddress clockBytesInWord : α)
+    (clockFuel clock : Nat)
     (clockLocals clockGlobals : VarName → Option (PanValue α))
     (clockMemory : α → Option (PanValue α)) (clockFfi : FfiState σ)
-    (clockProgram : Prog α)
-    (hclockProgram : PanValueCrepProgramStateCorrect clockProgram)
-    (clockState clockTargetState : CrepState α)
-    (clockSourceHandler : PanValueFfiHandler α)
-    (clockCrepPrimitive : CrepPrimitiveHandler α)
-    (clockFfiHandler : CrepFfiHandler α)
-    (clockSharedMem : CrepSharedMemHandler α)
-    (clockBaseAddress clockTopAddress clockBytesInWord : α)
-    (clockSourceFuel clockTargetFuel : Nat)
+    (clockProgram : Prog α) (clockTargetState : CrepState α)
     (clockExceptionRel : ExceptionId → PanValue α → α → Prop)
     (clockExceptionCode : ExceptionId → Option α)
     (clockGlobalsLookup : CrepState α → PanValue α → Option (List α))
     (clockValues : List (PanValue α)) (clockTargetValues : List α)
     (hclockState : panValueCrepStateRel clockStructs clockPcContext
       clockLocals clockGlobals clockMemory clockTargetState)
+    (hvalues : panValueCrepValuesRel clockValues clockTargetValues)
     (hclock : evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
       clockStructs clockFunctions clockBaseAddress clockTopAddress
       clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
       clockFfi clock clockProgram =
-      some (.control
-        (.returned clockLocals clockGlobals clockMemory clockFfi clockValues), clock))
-    (hclockRel : panValueCrepStateRel clockStructs clockPcContext
-      clockLocals clockGlobals clockMemory clockState)
-    (hclockSource : evalPanValueProgWithPrimitiveCallsAndFfi
-      clockPrimitive clockSourceHandler clockStructs clockFunctions
-      clockBaseAddress clockTopAddress clockBytesInWord clockSourceFuel
-      clockLocals clockGlobals clockMemory clockProgram =
-      some (.returned clockLocals clockGlobals clockMemory clockValues))
-    (hclockCrep : evalCrepFullProgState clockCompiledFunctions
-      clockCrepPrimitive clockFfiHandler clockSharedMem clockBaseAddress
-      clockTopAddress clockTargetFuel clockState
-      (compileProg clockPcContext clockProgram) =
-      some (.returned clockTargetState clockTargetValues))
-    (hvalues : panValueCrepValuesRel clockValues clockTargetValues) :
+      some (.control (.returned clockLocals clockGlobals clockMemory clockFfi
+        clockValues), clock)) :
     PanValuePcCompileCorrect sourceEvaluate targetEvaluate codeRel excpRel
       exceptionCode globalsLookup program ∧
     evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
       clockStructs clockFunctions clockBaseAddress clockTopAddress
       clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
       clockFfi clock clockProgram =
-      some (.control
-        (.returned clockLocals clockGlobals clockMemory clockFfi clockValues), clock) ∧
+      some (.control (.returned clockLocals clockGlobals clockMemory clockFfi
+        clockValues), clock) ∧
     (evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
       clockStructs clockFunctions clockBaseAddress clockTopAddress
       clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
       clockFfi clock clockProgram).map panValueFfiClockResultProjection =
-      some (.returned clockLocals clockGlobals clockMemory clockFfi clockValues clock) ∧
+      some (.returned clockLocals clockGlobals clockMemory clockFfi clockValues
+        clock) ∧
     panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
       (.returned sourceLocals sourceGlobals sourceMemory sourceValues)
       (.returned targetState targetValues) ∧
@@ -38574,156 +38504,23 @@ theorem panValuePcCompileCorrectAndClockedReturnedResultRel_of_program_state_cor
       clockExceptionCode clockGlobalsLookup
       (.returned clockLocals clockGlobals clockMemory clockValues)
       (.returned clockTargetState clockTargetValues) := by
-  have hsourceResult := panValuePcReturnedResultRelWithContextCode_of_program_state_correct
+  have hreturned := panValuePcReturnedResultRelWithContextCode_of_program_state_correct
     program hprogram context structs sourceFunctions functions sourceLocals
     sourceGlobals sourceMemory state targetState primitive sourceHandler
     crepPrimitive ffi sharedMem baseAddress topAddress bytesInWord sourceFuel
     targetFuel exceptionRel exceptionCode globalsLookup sourceValues targetValues
     hrel hsource hcrep
-  have hclockResult := panValuePcReturnedResultRelWithContextCode_of_program_state_correct
-    clockProgram hclockProgram clockPcContext clockStructs clockFunctions
-    clockCompiledFunctions clockLocals clockGlobals clockMemory clockState
-    clockTargetState clockPrimitive clockSourceHandler clockCrepPrimitive
-    clockFfiHandler clockSharedMem clockBaseAddress clockTopAddress
-    clockBytesInWord clockSourceFuel clockTargetFuel clockExceptionRel
-    clockExceptionCode clockGlobalsLookup clockValues clockTargetValues
-    hclockRel hclockSource hclockCrep
   exact panValuePcCompileCorrectAndClockedReturnedResultRel_of_context_code
     sourceEvaluate targetEvaluate codeRel excpRel exceptionCode globalsLookup
     program hcompile structs context exceptionRel
     (.returned sourceLocals sourceGlobals sourceMemory sourceValues)
-    (.returned targetState targetValues) hsourceResult
-    clockContext clockPrimitive clockHandler clockStructs clockFunctions
-    clockBaseAddress clockTopAddress clockBytesInWord clockFuel clock
-    clockLocals clockGlobals clockMemory clockFfi clockProgram clockTargetState
-    clockPcContext clockExceptionRel clockExceptionCode clockGlobalsLookup
-    clockValues clockTargetValues hclockState hvalues hclock
+    (.returned targetState targetValues) hreturned clockContext clockPrimitive
+    clockHandler clockStructs clockFunctions clockBaseAddress clockTopAddress
+    clockBytesInWord clockFuel clock clockLocals clockGlobals clockMemory
+    clockFfi clockProgram clockTargetState clockPcContext clockExceptionRel
+    clockExceptionCode clockGlobalsLookup clockValues clockTargetValues
+    hclockState hvalues hclock
 
-/-! Compose direct source and Crep Normal evaluator evidence with the generic
-    clocked Normal result package.  This is the non-payload control case; all
-    source and clock state/evaluator premises remain explicit. -/
-theorem panValuePcCompileCorrectAndClockedNormalResultRel_of_program_state_correct
-    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (sourceEvaluate : PanValuePcEvaluator α)
-    (targetEvaluate : CrepPcEvaluator α)
-    (codeRel : PanValuePcCodeRel α)
-    (excpRel : PanValuePcExceptionShapeRel α)
-    (exceptionCode : ExceptionId → Option α)
-    (globalsLookup : CrepState α → PanValue α → Option (List α))
-    (program : Prog α)
-    (hcompile : PanValuePcCompileCorrectWithContextCode sourceEvaluate
-      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
-    (hprogram : PanValueCrepProgramStateCorrect program)
-    (structs : StructContext) (context : CompileContext α)
-    (sourceFunctions : List (FunName × List VarName × Prog α))
-    (functions : List (CompiledFunction α))
-    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
-    (sourceMemory : α → Option (PanValue α)) (state targetState : CrepState α)
-    (primitive : PanPrimitiveHandler α)
-    (sourceHandler : PanValueFfiHandler α)
-    (crepPrimitive : CrepPrimitiveHandler α)
-    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
-    (baseAddress topAddress bytesInWord : α)
-    (sourceFuel targetFuel : Nat)
-    (exceptionRel : ExceptionId → PanValue α → α → Prop)
-    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
-      sourceMemory state)
-    (hsource : evalPanValueProgWithPrimitiveCallsAndFfi
-      primitive sourceHandler structs sourceFunctions baseAddress topAddress
-      bytesInWord sourceFuel sourceLocals sourceGlobals sourceMemory program =
-      some (.normal sourceLocals sourceGlobals sourceMemory))
-    (hcrep : evalCrepFullProgState functions crepPrimitive ffi sharedMem
-      baseAddress topAddress targetFuel state (compileProg context program) =
-      some (.normal targetState))
-    (clockContext : PanValueFfiContext α)
-    (clockPrimitive : PanPrimitiveHandler α)
-    (clockHandler : PanValueStatefulFfiHandler α σ)
-    (clockStructs : StructContext)
-    (clockPcContext : CompileContext α)
-    (clockFunctions : List (FunName × List VarName × Prog α))
-    (clockCompiledFunctions : List (CompiledFunction α))
-    (clockLocals clockGlobals : VarName → Option (PanValue α))
-    (clockMemory : α → Option (PanValue α)) (clockFfi : FfiState σ)
-    (clockFuel clock : Nat)
-    (clockProgram : Prog α)
-    (clockState clockTargetState : CrepState α)
-    (clockSourceHandler : PanValueFfiHandler α)
-    (clockCrepPrimitive : CrepPrimitiveHandler α)
-    (clockFfiHandler : CrepFfiHandler α)
-    (clockSharedMem : CrepSharedMemHandler α)
-    (clockBaseAddress clockTopAddress clockBytesInWord : α)
-    (clockSourceFuel clockTargetFuel : Nat)
-    (clockExceptionRel : ExceptionId → PanValue α → α → Prop)
-    (clockExceptionCode : ExceptionId → Option α)
-    (clockGlobalsLookup : CrepState α → PanValue α → Option (List α))
-    (hclockState : panValueCrepStateRel clockStructs clockPcContext
-      clockLocals clockGlobals clockMemory clockTargetState)
-    (hclock : evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
-      clockStructs clockFunctions clockBaseAddress clockTopAddress
-      clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
-      clockFfi clock clockProgram =
-      some (.control
-        (.normal clockLocals clockGlobals clockMemory clockFfi), clock))
-    (hclockProgram : PanValueCrepProgramStateCorrect clockProgram)
-    (hclockRel : panValueCrepStateRel clockStructs clockPcContext
-      clockLocals clockGlobals clockMemory clockState)
-    (hclockSource : evalPanValueProgWithPrimitiveCallsAndFfi
-      clockPrimitive clockSourceHandler clockStructs clockFunctions
-      clockBaseAddress clockTopAddress clockBytesInWord clockSourceFuel
-      clockLocals clockGlobals clockMemory clockProgram =
-      some (.normal clockLocals clockGlobals clockMemory))
-    (hclockCrep : evalCrepFullProgState clockCompiledFunctions
-      clockCrepPrimitive clockFfiHandler clockSharedMem clockBaseAddress
-      clockTopAddress clockTargetFuel clockState
-      (compileProg clockPcContext clockProgram) =
-      some (.normal clockTargetState)) :
-    PanValuePcCompileCorrect sourceEvaluate targetEvaluate codeRel excpRel
-      exceptionCode globalsLookup program ∧
-    evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
-      clockStructs clockFunctions clockBaseAddress clockTopAddress
-      clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
-      clockFfi clock clockProgram =
-      some (.control
-        (.normal clockLocals clockGlobals clockMemory clockFfi), clock) ∧
-    (evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
-      clockStructs clockFunctions clockBaseAddress clockTopAddress
-      clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
-      clockFfi clock clockProgram).map panValueFfiClockResultProjection =
-      some (.normal clockLocals clockGlobals clockMemory clockFfi clock) ∧
-    panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
-      (.normal sourceLocals sourceGlobals sourceMemory) (.normal targetState) ∧
-    panValuePcResultRel clockStructs clockPcContext clockExceptionRel
-      clockExceptionCode clockGlobalsLookup
-      (.normal clockLocals clockGlobals clockMemory)
-      (.normal clockTargetState) := by
-  have hsourceResult := panValuePcNormalResultRelWithContextCode_of_program_state_correct
-    program hprogram context structs sourceFunctions functions sourceLocals
-    sourceGlobals sourceMemory state targetState primitive sourceHandler
-    crepPrimitive ffi sharedMem baseAddress topAddress bytesInWord sourceFuel
-    targetFuel exceptionRel exceptionCode globalsLookup hrel hsource hcrep
-  have hclockResult := panValuePcNormalResultRelWithContextCode_of_program_state_correct
-    clockProgram hclockProgram clockPcContext clockStructs clockFunctions
-    clockCompiledFunctions clockLocals clockGlobals clockMemory clockState
-    clockTargetState clockPrimitive clockSourceHandler clockCrepPrimitive
-    clockFfiHandler clockSharedMem clockBaseAddress clockTopAddress
-    clockBytesInWord clockSourceFuel clockTargetFuel clockExceptionRel
-    clockExceptionCode clockGlobalsLookup hclockRel hclockSource hclockCrep
-  exact panValuePcCompileCorrectAndClockedNormalResultRel_of_context_code
-    sourceEvaluate targetEvaluate codeRel excpRel exceptionCode globalsLookup
-    program hcompile structs context exceptionRel
-    (.normal sourceLocals sourceGlobals sourceMemory) (.normal targetState)
-    hsourceResult clockContext clockPrimitive clockHandler clockStructs
-    clockFunctions clockBaseAddress clockTopAddress clockBytesInWord clockFuel
-    clock clockLocals clockGlobals clockMemory clockFfi clockProgram
-    clockTargetState clockPcContext clockExceptionRel clockExceptionCode
-    clockGlobalsLookup hclockState hclock
-
-/-! Compose direct source and Crep Broke evaluator evidence with the generic
-    clocked Broke result package.  Cake's zero-label requirement is retained
-    separately for the source and clocked Crep evaluations. -/
 theorem panValuePcCompileCorrectAndClockedBrokeResultRel_of_program_state_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
@@ -38767,50 +38564,30 @@ theorem panValuePcCompileCorrectAndClockedBrokeResultRel_of_program_state_correc
     (clockStructs : StructContext)
     (clockPcContext : CompileContext α)
     (clockFunctions : List (FunName × List VarName × Prog α))
-    (clockCompiledFunctions : List (CompiledFunction α))
+    (clockBaseAddress clockTopAddress clockBytesInWord : α)
+    (clockFuel clock : Nat)
     (clockLocals clockGlobals : VarName → Option (PanValue α))
     (clockMemory : α → Option (PanValue α)) (clockFfi : FfiState σ)
-    (clockFuel clock : Nat) (clockProgram : Prog α)
-    (hclockProgram : PanValueCrepProgramStateCorrect clockProgram)
-    (clockState clockTargetState : CrepState α)
-    (clockSourceHandler : PanValueFfiHandler α)
-    (clockCrepPrimitive : CrepPrimitiveHandler α)
-    (clockFfiHandler : CrepFfiHandler α)
-    (clockSharedMem : CrepSharedMemHandler α)
-    (clockBaseAddress clockTopAddress clockBytesInWord : α)
-    (clockSourceFuel clockTargetFuel : Nat)
+    (clockProgram : Prog α) (clockTargetState : CrepState α)
     (clockExceptionRel : ExceptionId → PanValue α → α → Prop)
     (clockExceptionCode : ExceptionId → Option α)
     (clockGlobalsLookup : CrepState α → PanValue α → Option (List α))
-    (clockTargetLabel : Nat) (hclockLabel : clockTargetLabel = 0)
     (hclockState : panValueCrepStateRel clockStructs clockPcContext
       clockLocals clockGlobals clockMemory clockTargetState)
     (hclock : evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
       clockStructs clockFunctions clockBaseAddress clockTopAddress
       clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
       clockFfi clock clockProgram =
-      some (.control
-        (.broke clockLocals clockGlobals clockMemory clockFfi), clock))
-    (hclockRel : panValueCrepStateRel clockStructs clockPcContext
-      clockLocals clockGlobals clockMemory clockState)
-    (hclockSource : evalPanValueProgWithPrimitiveCallsAndFfi
-      clockPrimitive clockSourceHandler clockStructs clockFunctions
-      clockBaseAddress clockTopAddress clockBytesInWord clockSourceFuel
-      clockLocals clockGlobals clockMemory clockProgram =
-      some (.broke clockLocals clockGlobals clockMemory))
-    (hclockCrep : evalCrepFullProgState clockCompiledFunctions
-      clockCrepPrimitive clockFfiHandler clockSharedMem clockBaseAddress
-      clockTopAddress clockTargetFuel clockState
-      (compileProg clockPcContext clockProgram) =
-      some (.broke clockTargetState clockTargetLabel)) :
+      some (.control (.broke clockLocals clockGlobals clockMemory clockFfi),
+        clock)) :
     PanValuePcCompileCorrect sourceEvaluate targetEvaluate codeRel excpRel
       exceptionCode globalsLookup program ∧
     evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
       clockStructs clockFunctions clockBaseAddress clockTopAddress
       clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
       clockFfi clock clockProgram =
-      some (.control
-        (.broke clockLocals clockGlobals clockMemory clockFfi), clock) ∧
+      some (.control (.broke clockLocals clockGlobals clockMemory clockFfi),
+        clock) ∧
     (evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
       clockStructs clockFunctions clockBaseAddress clockTopAddress
       clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
@@ -38822,34 +38599,23 @@ theorem panValuePcCompileCorrectAndClockedBrokeResultRel_of_program_state_correc
     panValuePcResultRel clockStructs clockPcContext clockExceptionRel
       clockExceptionCode clockGlobalsLookup
       (.broke clockLocals clockGlobals clockMemory)
-      (.broke clockTargetState clockTargetLabel) := by
-  subst targetLabel
-  subst clockTargetLabel
-  have hsourceResult := panValuePcBrokeResultRelWithContextCode_of_program_state_correct
+      (.broke clockTargetState 0) := by
+  have hbroke := panValuePcBrokeResultRelWithContextCode_of_program_state_correct
     program hprogram context structs sourceFunctions functions sourceLocals
     sourceGlobals sourceMemory state targetState primitive sourceHandler
     crepPrimitive ffi sharedMem baseAddress topAddress bytesInWord sourceFuel
-    targetFuel exceptionRel exceptionCode globalsLookup 0 rfl hrel hsource hcrep
-  have hclockResult := panValuePcBrokeResultRelWithContextCode_of_program_state_correct
-    clockProgram hclockProgram clockPcContext clockStructs clockFunctions
-    clockCompiledFunctions clockLocals clockGlobals clockMemory clockState
-    clockTargetState clockPrimitive clockSourceHandler clockCrepPrimitive
-    clockFfiHandler clockSharedMem clockBaseAddress clockTopAddress
-    clockBytesInWord clockSourceFuel clockTargetFuel clockExceptionRel
-    clockExceptionCode clockGlobalsLookup 0 rfl hclockRel hclockSource hclockCrep
+    targetFuel exceptionRel exceptionCode globalsLookup targetLabel hlabel hrel
+    hsource hcrep
   exact panValuePcCompileCorrectAndClockedBrokeResultRel_of_context_code
     sourceEvaluate targetEvaluate codeRel excpRel exceptionCode globalsLookup
     program hcompile structs context exceptionRel
     (.broke sourceLocals sourceGlobals sourceMemory)
-    (.broke targetState 0) hsourceResult clockContext clockPrimitive
+    (.broke targetState targetLabel) hbroke clockContext clockPrimitive
     clockHandler clockStructs clockFunctions clockBaseAddress clockTopAddress
     clockBytesInWord clockFuel clock clockLocals clockGlobals clockMemory
     clockFfi clockProgram clockTargetState clockPcContext clockExceptionRel
     clockExceptionCode clockGlobalsLookup hclockState hclock
 
-/-! Compose direct source and Crep Continued evaluator evidence with the
-    generic clocked Continued result package.  Cake's zero-label requirement
-    remains an explicit premise for both evaluator paths. -/
 theorem panValuePcCompileCorrectAndClockedContinuedResultRel_of_program_state_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
@@ -38893,50 +38659,30 @@ theorem panValuePcCompileCorrectAndClockedContinuedResultRel_of_program_state_co
     (clockStructs : StructContext)
     (clockPcContext : CompileContext α)
     (clockFunctions : List (FunName × List VarName × Prog α))
-    (clockCompiledFunctions : List (CompiledFunction α))
+    (clockBaseAddress clockTopAddress clockBytesInWord : α)
+    (clockFuel clock : Nat)
     (clockLocals clockGlobals : VarName → Option (PanValue α))
     (clockMemory : α → Option (PanValue α)) (clockFfi : FfiState σ)
-    (clockFuel clock : Nat) (clockProgram : Prog α)
-    (hclockProgram : PanValueCrepProgramStateCorrect clockProgram)
-    (clockState clockTargetState : CrepState α)
-    (clockSourceHandler : PanValueFfiHandler α)
-    (clockCrepPrimitive : CrepPrimitiveHandler α)
-    (clockFfiHandler : CrepFfiHandler α)
-    (clockSharedMem : CrepSharedMemHandler α)
-    (clockBaseAddress clockTopAddress clockBytesInWord : α)
-    (clockSourceFuel clockTargetFuel : Nat)
+    (clockProgram : Prog α) (clockTargetState : CrepState α)
     (clockExceptionRel : ExceptionId → PanValue α → α → Prop)
     (clockExceptionCode : ExceptionId → Option α)
     (clockGlobalsLookup : CrepState α → PanValue α → Option (List α))
-    (clockTargetLabel : Nat) (hclockLabel : clockTargetLabel = 0)
     (hclockState : panValueCrepStateRel clockStructs clockPcContext
       clockLocals clockGlobals clockMemory clockTargetState)
     (hclock : evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
       clockStructs clockFunctions clockBaseAddress clockTopAddress
       clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
       clockFfi clock clockProgram =
-      some (.control
-        (.continued clockLocals clockGlobals clockMemory clockFfi), clock))
-    (hclockRel : panValueCrepStateRel clockStructs clockPcContext
-      clockLocals clockGlobals clockMemory clockState)
-    (hclockSource : evalPanValueProgWithPrimitiveCallsAndFfi
-      clockPrimitive clockSourceHandler clockStructs clockFunctions
-      clockBaseAddress clockTopAddress clockBytesInWord clockSourceFuel
-      clockLocals clockGlobals clockMemory clockProgram =
-      some (.continued clockLocals clockGlobals clockMemory))
-    (hclockCrep : evalCrepFullProgState clockCompiledFunctions
-      clockCrepPrimitive clockFfiHandler clockSharedMem clockBaseAddress
-      clockTopAddress clockTargetFuel clockState
-      (compileProg clockPcContext clockProgram) =
-      some (.continued clockTargetState clockTargetLabel)) :
+      some (.control (.continued clockLocals clockGlobals clockMemory clockFfi),
+        clock)) :
     PanValuePcCompileCorrect sourceEvaluate targetEvaluate codeRel excpRel
       exceptionCode globalsLookup program ∧
     evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
       clockStructs clockFunctions clockBaseAddress clockTopAddress
       clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
       clockFfi clock clockProgram =
-      some (.control
-        (.continued clockLocals clockGlobals clockMemory clockFfi), clock) ∧
+      some (.control (.continued clockLocals clockGlobals clockMemory clockFfi),
+        clock) ∧
     (evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
       clockStructs clockFunctions clockBaseAddress clockTopAddress
       clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
@@ -38948,29 +38694,113 @@ theorem panValuePcCompileCorrectAndClockedContinuedResultRel_of_program_state_co
     panValuePcResultRel clockStructs clockPcContext clockExceptionRel
       clockExceptionCode clockGlobalsLookup
       (.continued clockLocals clockGlobals clockMemory)
-      (.continued clockTargetState clockTargetLabel) := by
-  subst targetLabel
-  subst clockTargetLabel
-  have hsourceResult := panValuePcContinuedResultRelWithContextCode_of_program_state_correct
+      (.continued clockTargetState 0) := by
+  have hcontinued := panValuePcContinuedResultRelWithContextCode_of_program_state_correct
     program hprogram context structs sourceFunctions functions sourceLocals
     sourceGlobals sourceMemory state targetState primitive sourceHandler
     crepPrimitive ffi sharedMem baseAddress topAddress bytesInWord sourceFuel
-    targetFuel exceptionRel exceptionCode globalsLookup 0 rfl hrel hsource hcrep
-  have hclockResult := panValuePcContinuedResultRelWithContextCode_of_program_state_correct
-    clockProgram hclockProgram clockPcContext clockStructs clockFunctions
-    clockCompiledFunctions clockLocals clockGlobals clockMemory clockState
-    clockTargetState clockPrimitive clockSourceHandler clockCrepPrimitive
-    clockFfiHandler clockSharedMem clockBaseAddress clockTopAddress
-    clockBytesInWord clockSourceFuel clockTargetFuel clockExceptionRel
-    clockExceptionCode clockGlobalsLookup 0 rfl hclockRel hclockSource hclockCrep
+    targetFuel exceptionRel exceptionCode globalsLookup targetLabel hlabel hrel
+    hsource hcrep
   exact panValuePcCompileCorrectAndClockedContinuedResultRel_of_context_code
     sourceEvaluate targetEvaluate codeRel excpRel exceptionCode globalsLookup
     program hcompile structs context exceptionRel
     (.continued sourceLocals sourceGlobals sourceMemory)
-    (.continued targetState 0) hsourceResult clockContext clockPrimitive
+    (.continued targetState targetLabel) hcontinued clockContext clockPrimitive
     clockHandler clockStructs clockFunctions clockBaseAddress clockTopAddress
     clockBytesInWord clockFuel clock clockLocals clockGlobals clockMemory
     clockFfi clockProgram clockTargetState clockPcContext clockExceptionRel
     clockExceptionCode clockGlobalsLookup hclockState hclock
+
+theorem panValuePcCompileCorrectAndClockedNormalResultRel_of_program_state_correct
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (sourceEvaluate : PanValuePcEvaluator α)
+    (targetEvaluate : CrepPcEvaluator α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (program : Prog α)
+    (hcompile : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (hprogram : PanValueCrepProgramStateCorrect program)
+    (structs : StructContext) (context : CompileContext α)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (state targetState : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α)
+    (sourceFuel targetFuel : Nat)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory state)
+    (hsource : evalPanValueProgWithPrimitiveCallsAndFfi
+      primitive sourceHandler structs sourceFunctions baseAddress topAddress
+      bytesInWord sourceFuel sourceLocals sourceGlobals sourceMemory program =
+      some (.normal sourceLocals sourceGlobals sourceMemory))
+    (hcrep : evalCrepFullProgState functions crepPrimitive ffi sharedMem
+      baseAddress topAddress targetFuel state (compileProg context program) =
+      some (.normal targetState))
+    (clockContext : PanValueFfiContext α)
+    (clockPrimitive : PanPrimitiveHandler α)
+    (clockHandler : PanValueStatefulFfiHandler α σ)
+    (clockStructs : StructContext)
+    (clockPcContext : CompileContext α)
+    (clockFunctions : List (FunName × List VarName × Prog α))
+    (clockBaseAddress clockTopAddress clockBytesInWord : α)
+    (clockFuel clock : Nat)
+    (clockLocals clockGlobals : VarName → Option (PanValue α))
+    (clockMemory : α → Option (PanValue α)) (clockFfi : FfiState σ)
+    (clockProgram : Prog α) (clockTargetState : CrepState α)
+    (clockExceptionRel : ExceptionId → PanValue α → α → Prop)
+    (clockExceptionCode : ExceptionId → Option α)
+    (clockGlobalsLookup : CrepState α → PanValue α → Option (List α))
+    (hclockState : panValueCrepStateRel clockStructs clockPcContext
+      clockLocals clockGlobals clockMemory clockTargetState)
+    (hclock : evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
+      clockFfi clock clockProgram =
+      some (.control (.normal clockLocals clockGlobals clockMemory clockFfi),
+        clock)) :
+    PanValuePcCompileCorrect sourceEvaluate targetEvaluate codeRel excpRel
+      exceptionCode globalsLookup program ∧
+    evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
+      clockFfi clock clockProgram =
+      some (.control (.normal clockLocals clockGlobals clockMemory clockFfi),
+        clock) ∧
+    (evalPanValueFfiClockProg clockContext clockPrimitive clockHandler
+      clockStructs clockFunctions clockBaseAddress clockTopAddress
+      clockBytesInWord (clockFuel + 1) clockLocals clockGlobals clockMemory
+      clockFfi clock clockProgram).map panValueFfiClockResultProjection =
+      some (.normal clockLocals clockGlobals clockMemory clockFfi clock) ∧
+    panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
+      (.normal sourceLocals sourceGlobals sourceMemory)
+      (.normal targetState) ∧
+    panValuePcResultRel clockStructs clockPcContext clockExceptionRel
+      clockExceptionCode clockGlobalsLookup
+      (.normal clockLocals clockGlobals clockMemory)
+      (.normal clockTargetState) := by
+  have hnormal := panValuePcNormalResultRelWithContextCode_of_program_state_correct
+    program hprogram context structs sourceFunctions functions sourceLocals
+    sourceGlobals sourceMemory state targetState primitive sourceHandler
+    crepPrimitive ffi sharedMem baseAddress topAddress bytesInWord sourceFuel
+    targetFuel exceptionRel exceptionCode globalsLookup hrel hsource hcrep
+  exact panValuePcCompileCorrectAndClockedNormalResultRel_of_context_code
+    sourceEvaluate targetEvaluate codeRel excpRel exceptionCode globalsLookup
+    program hcompile structs context exceptionRel
+    (.normal sourceLocals sourceGlobals sourceMemory) (.normal targetState)
+    hnormal clockContext clockPrimitive clockHandler clockStructs clockFunctions
+    clockBaseAddress clockTopAddress clockBytesInWord clockFuel clock clockLocals
+    clockGlobals clockMemory clockFfi clockProgram clockTargetState clockPcContext
+    clockExceptionRel clockExceptionCode clockGlobalsLookup hclockState hclock
 
 end Flapjack

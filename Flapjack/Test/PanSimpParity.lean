@@ -3270,3 +3270,4 @@ premises. -/
 #check @Flapjack.panSemEvaluate_clock_event_prefix_of_nonTimeout
 #check @Flapjack.evalPanValueFfiClockProg_seq_raised
 #check @Flapjack.evalPanValueFfiClockProg_seq_timeout
+#check @Flapjack.evalPanValueFfiClockProg_seq_timeout_cross_clock_ioEvents_prefix

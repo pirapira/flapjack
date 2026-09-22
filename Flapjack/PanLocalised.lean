@@ -1,3 +1,4 @@
+import Flapjack.HolRef
 import Flapjack.Pancake.PanGlobals
 import Flapjack.Parser.Localise
 
@@ -9,6 +10,7 @@ simplified Pan-to-Crep simulation layer. -/
 def localisedExp (expression : Exp α) : Prop :=
   expGlobalVars expression = []
 
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "localised_prog_def"]
 def localisedProg : Prog α → Prop
   | .skip | .break | .continue | .tick | .annot _ _ => True
   | .dec _ _ value body => localisedExp value ∧ localisedProg body
@@ -24,8 +26,10 @@ def localisedProg : Prog α → Prop
   | .call info _ arguments =>
       (∀ expression ∈ arguments, localisedExp expression) ∧
       (match info with
-       | some (some (.global, _), _) => False
        | some (_, some (_, _, handler)) => localisedProg handler
+       | _ => True) ∧
+      (match info with
+       | some (some (.global, _), _) => False
        | _ => True)
   | .decCall _ _ _ arguments body =>
       (∀ expression ∈ arguments, localisedExp expression) ∧ localisedProg body

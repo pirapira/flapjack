@@ -28,6 +28,9 @@ source changes. Cache cleanup is local-only; do not stage `.lake` outputs.
 
 ## Fleet workflow
 
+This section coordinates internal fleet agents. External contributors may open
+their own focused PRs and do not need access to the fleet's bead database.
+
 Keep the CakeML/HOL submodule read-only. Put HOL probes and captured oracle
 outputs on the Flapjack side under `scripts/hol-probes/`; follow that directory's
 README and `docs/PARITY-TESTING.md` for the detailed procedure.

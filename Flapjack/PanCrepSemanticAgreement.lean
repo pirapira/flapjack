@@ -3564,6 +3564,170 @@ theorem panCrepBehaviourRel_of_pcCompileCorrectWithContextCode_cross_clock_prefi
       hraised hsourcePrefix htargetPrefix
   exact panSemantics_rel_crepSemantics panHooks crepHooks hagreement panChain crepChain
 
+/-! The returned branch of the same declaration induction carries an explicit
+    value list, but its state transport is still obtained from the strengthened
+    context relation.  The result relation is obtained from the explicit
+    cross-clock `pc_compile_correct` premises. -/
+theorem panCrepSemanticAgreement_of_pcCompileCorrectWithContextCode_cross_clock_prefix_from_pairwise_returned_stateRelWithContext
+    [BEq α] [OfNat α 0] [Add α]
+    (structs : StructContext) (context : CompileContext α) (program : Prog α)
+    (sourceEvaluate : PanValuePcEvaluator α)
+    (targetEvaluate : CrepPcEvaluator α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (panHooks : PanSemanticsHooks α σ)
+    (crepHooks : CrepSemanticsHooks α)
+    (hffiOutcome : ∀ event, panHooks.ffiOutcome event = event.outcome)
+    (hcorrect : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (hevidence : ∀ (clock : Nat), PanValuePcSemanticClockEvidence structs
+      context program clock sourceEvaluate targetEvaluate codeRel excpRel
+      exceptionRel exceptionCode globalsLookup panHooks crepHooks)
+    (hinputCodeRel : ∀ (sourceClock targetClock : Nat),
+      codeRel context (hevidence sourceClock).sourceInput.code
+        (hevidence targetClock).targetInput.code)
+    (hinputExcpRel : ∀ (sourceClock targetClock : Nat),
+      excpRel context (hevidence sourceClock).sourceInput.eshapes
+        (hevidence targetClock).targetInput.eshapes)
+    (hinputStateRel : ∀ (sourceClock targetClock : Nat),
+      panValueCrepStateRelWithContext structs context
+        (hevidence sourceClock).sourceInput.locals
+        (hevidence sourceClock).sourceInput.globals
+        (hevidence sourceClock).sourceInput.memory
+        (hevidence targetClock).targetInput.state)
+    (houtputCodeRel : ∀ (sourceClock targetClock : Nat),
+      codeRel context (hevidence sourceClock).sourceExecution.code
+        (hevidence targetClock).targetExecution.code)
+    (houtputExcpRel : ∀ (sourceClock targetClock : Nat),
+      excpRel context (hevidence sourceClock).sourceExecution.eshapes
+        (hevidence targetClock).targetExecution.eshapes)
+    (hreturned : ∀ (sourceClock targetClock : Nat),
+      ∃ sourceLocals sourceGlobals sourceMemory sourceFfi sourceValues targetState targetValues,
+        (hevidence sourceClock).outcome =
+          .control (.returned sourceLocals sourceGlobals sourceMemory sourceFfi sourceValues) ∧
+        (hevidence targetClock).result = .returned targetState targetValues)
+    (hsourcePrefix : ∀ (sourceClock targetClock : Nat),
+      panEventPrefix
+        (panResultEvents (some ((hevidence sourceClock).outcome,
+          (hevidence sourceClock).returnedClock)))
+        (crepHooks.ioEvents (hevidence targetClock).targetState))
+    (htargetPrefix : ∀ (sourceClock targetClock : Nat),
+      panEventPrefix
+        (crepHooks.ioEvents (hevidence targetClock).targetState)
+        (panResultEvents (some ((hevidence sourceClock).outcome,
+          (hevidence sourceClock).returnedClock)))) :
+    PanCrepSemanticAgreement panHooks crepHooks ∧
+    ∀ (_clock : Nat), ∃ sourceLocals sourceGlobals sourceMemory targetState,
+      panValueCrepStateRelWithContext structs context sourceLocals sourceGlobals
+        sourceMemory targetState := by
+  have hresultCross : ∀ (sourceClock targetClock : Nat),
+      panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
+        (panOutcomeToPcResult (hevidence sourceClock).outcome)
+        (crepControlToPcResult (hevidence targetClock).result) := by
+    intro sourceClock targetClock
+    exact PanValuePcSemanticClockEvidence.crossResultRel_withContextCode
+      hcorrect sourceClock targetClock (hevidence sourceClock) (hevidence targetClock)
+      (hinputCodeRel sourceClock targetClock) (hinputExcpRel sourceClock targetClock)
+      (hinputStateRel sourceClock targetClock).2.2
+      (houtputCodeRel sourceClock targetClock) (houtputExcpRel sourceClock targetClock)
+  have hagreement :=
+    panCrepSemanticAgreement_of_pcCompileCorrectWithContextCode_cross_clock_prefix
+      structs context program sourceEvaluate targetEvaluate codeRel excpRel
+      exceptionCode globalsLookup exceptionRel panHooks crepHooks hffiOutcome hcorrect
+      hevidence hresultCross hsourcePrefix htargetPrefix
+  refine ⟨hagreement, ?_⟩
+  intro clock
+  rcases hreturned clock clock with ⟨sourceLocals, sourceGlobals, sourceMemory,
+    _sourceFfi, sourceValues, targetState, targetValues, houtcome, hresult⟩
+  rcases hinputStateRel clock clock with ⟨hoverlap, hmax, _hstate⟩
+  have hrel := PanValuePcSemanticClockEvidence.crossResultRel_withContextCode
+    hcorrect clock clock (hevidence clock) (hevidence clock)
+    (hinputCodeRel clock clock) (hinputExcpRel clock clock)
+    (hinputStateRel clock clock).2.2 (houtputCodeRel clock clock)
+    (houtputExcpRel clock clock)
+  have hreturnedRel :
+      panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
+        (.returned sourceLocals sourceGlobals sourceMemory sourceValues)
+        (.returned targetState targetValues) := by
+    simpa [houtcome, hresult, panOutcomeToPcResult, crepControlToPcResult] using hrel
+  have hstate := (panValuePcResultRel_returned_iff structs context exceptionRel
+    exceptionCode globalsLookup sourceLocals sourceGlobals sourceMemory sourceValues
+    targetState targetValues).1 hreturnedRel
+  exact ⟨sourceLocals, sourceGlobals, sourceMemory, targetState,
+    ⟨hoverlap, hmax, hstate.1⟩⟩
+
+/-! Lift the returned-result state bridge through Cake's clock-indexed
+    observational wrappers.  The evaluator, state, returned-value, and
+    bidirectional event-prefix premises stay explicit at this boundary. -/
+theorem panCrepBehaviourRel_of_pcCompileCorrectWithContextCode_cross_clock_prefix_from_pairwise_returned_stateRelWithContext
+    [BEq α] [OfNat α 0] [Add α]
+    (structs : StructContext) (context : CompileContext α) (program : Prog α)
+    (sourceEvaluate : PanValuePcEvaluator α)
+    (targetEvaluate : CrepPcEvaluator α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (panHooks : PanSemanticsHooks α σ)
+    (crepHooks : CrepSemanticsHooks α)
+    (hffiOutcome : ∀ event, panHooks.ffiOutcome event = event.outcome)
+    (hcorrect : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (hevidence : ∀ (clock : Nat), PanValuePcSemanticClockEvidence structs
+      context program clock sourceEvaluate targetEvaluate codeRel excpRel
+      exceptionRel exceptionCode globalsLookup panHooks crepHooks)
+    (hinputCodeRel : ∀ (sourceClock targetClock : Nat),
+      codeRel context (hevidence sourceClock).sourceInput.code
+        (hevidence targetClock).targetInput.code)
+    (hinputExcpRel : ∀ (sourceClock targetClock : Nat),
+      excpRel context (hevidence sourceClock).sourceInput.eshapes
+        (hevidence targetClock).targetInput.eshapes)
+    (hinputStateRel : ∀ (sourceClock targetClock : Nat),
+      panValueCrepStateRelWithContext structs context
+        (hevidence sourceClock).sourceInput.locals
+        (hevidence sourceClock).sourceInput.globals
+        (hevidence sourceClock).sourceInput.memory
+        (hevidence targetClock).targetInput.state)
+    (houtputCodeRel : ∀ (sourceClock targetClock : Nat),
+      codeRel context (hevidence sourceClock).sourceExecution.code
+        (hevidence targetClock).targetExecution.code)
+    (houtputExcpRel : ∀ (sourceClock targetClock : Nat),
+      excpRel context (hevidence sourceClock).sourceExecution.eshapes
+        (hevidence targetClock).targetExecution.eshapes)
+    (hreturned : ∀ (sourceClock targetClock : Nat),
+      ∃ sourceLocals sourceGlobals sourceMemory sourceFfi sourceValues targetState targetValues,
+        (hevidence sourceClock).outcome =
+          .control (.returned sourceLocals sourceGlobals sourceMemory sourceFfi sourceValues) ∧
+        (hevidence targetClock).result = .returned targetState targetValues)
+    (hsourcePrefix : ∀ (sourceClock targetClock : Nat),
+      panEventPrefix
+        (panResultEvents (some ((hevidence sourceClock).outcome,
+          (hevidence sourceClock).returnedClock)))
+        (crepHooks.ioEvents (hevidence targetClock).targetState))
+    (htargetPrefix : ∀ (sourceClock targetClock : Nat),
+      panEventPrefix
+        (crepHooks.ioEvents (hevidence targetClock).targetState)
+        (panResultEvents (some ((hevidence sourceClock).outcome,
+          (hevidence sourceClock).returnedClock))))
+    (panChain : panLprefixChain
+      (fun clock => panResultEvents (panHooks.evaluate clock)))
+    (crepChain : crepLprefixChain
+      (fun clock => crepHooks.ioEvents (crepHooks.evaluate clock).2)) :
+    panCrepBehaviourRel
+      (panSemantics panHooks panChain)
+      (crepSemantics crepHooks crepChain) := by
+  have hagreement :=
+    panCrepSemanticAgreement_of_pcCompileCorrectWithContextCode_cross_clock_prefix_from_pairwise_returned_stateRelWithContext
+      structs context program sourceEvaluate targetEvaluate codeRel excpRel
+      exceptionCode globalsLookup exceptionRel panHooks crepHooks hffiOutcome
+      hcorrect hevidence hinputCodeRel hinputExcpRel hinputStateRel houtputCodeRel
+      houtputExcpRel hreturned hsourcePrefix htargetPrefix
+  exact panSemantics_rel_crepSemantics panHooks crepHooks hagreement.1 panChain crepChain
+
 /-! Derive the cross-clock context-coded result relation from the two clock
     witnesses themselves.  The input/output code and exception relations and
     the state relation remain explicit for each clock pair; only the
@@ -3700,95 +3864,6 @@ theorem panCrepSemanticAgreement_of_pcCompileCorrectWithContextCode_cross_clock_
     houtputCodeRel houtputExcpRel hsourcePrefix htargetPrefix
 
 
-/-! Returned-result-only declaration branch. This packages the returned
-    cross-clock result relation with the full Cake state context while leaving
-    event-prefix and evaluator evidence explicit at the semantic boundary. -/
-theorem panCrepSemanticAgreement_of_pcCompileCorrectWithContextCode_cross_clock_prefix_from_pairwise_returned_stateRelWithContext
-    [BEq α] [OfNat α 0] [Add α] [BEq String]
-    (structs : StructContext) (context : CompileContext α) (program : Prog α)
-    (sourceEvaluate : PanValuePcEvaluator α)
-    (targetEvaluate : CrepPcEvaluator α)
-    (codeRel : PanValuePcCodeRel α)
-    (excpRel : PanValuePcExceptionShapeRel α)
-    (exceptionCode : ExceptionId → Option α)
-    (globalsLookup : CrepState α → PanValue α → Option (List α))
-    (exceptionRel : ExceptionId → PanValue α → α → Prop)
-    (panHooks : PanSemanticsHooks α σ)
-    (crepHooks : CrepSemanticsHooks α)
-    (hffiOutcome : ∀ event, panHooks.ffiOutcome event = event.outcome)
-    (hcorrect : PanValuePcCompileCorrectWithContextCode sourceEvaluate
-      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
-    (hevidence : ∀ (clock : Nat), PanValuePcSemanticClockEvidence structs
-      context program clock sourceEvaluate targetEvaluate codeRel excpRel
-      exceptionRel exceptionCode globalsLookup panHooks crepHooks)
-    (hinputCodeRel : ∀ (sourceClock targetClock : Nat),
-      codeRel context (hevidence sourceClock).sourceInput.code
-        (hevidence targetClock).targetInput.code)
-    (hinputExcpRel : ∀ (sourceClock targetClock : Nat),
-      excpRel context (hevidence sourceClock).sourceInput.eshapes
-        (hevidence targetClock).targetInput.eshapes)
-    (hstateRel : ∀ (sourceClock targetClock : Nat),
-      panValueCrepStateRelWithContext structs context
-        (hevidence sourceClock).sourceInput.locals
-        (hevidence sourceClock).sourceInput.globals
-        (hevidence sourceClock).sourceInput.memory
-        (hevidence targetClock).targetInput.state)
-    (houtputCodeRel : ∀ (sourceClock targetClock : Nat),
-      codeRel context (hevidence sourceClock).sourceExecution.code
-        (hevidence targetClock).targetExecution.code)
-    (houtputExcpRel : ∀ (sourceClock targetClock : Nat),
-      excpRel context (hevidence sourceClock).sourceExecution.eshapes
-        (hevidence targetClock).targetExecution.eshapes)
-    (hreturned : ∀ (sourceClock targetClock : Nat),
-      ∃ sourceLocals sourceGlobals sourceMemory sourceFfi sourceValues targetState
-          targetValues,
-        (hevidence sourceClock).outcome =
-          .control (.returned sourceLocals sourceGlobals sourceMemory sourceFfi
-            sourceValues) ∧
-        (hevidence targetClock).result = .returned targetState targetValues)
-    (hsourcePrefix : ∀ (sourceClock targetClock : Nat),
-      panEventPrefix
-        (panResultEvents (some ((hevidence sourceClock).outcome,
-          (hevidence sourceClock).returnedClock)))
-        (crepHooks.ioEvents (hevidence targetClock).targetState))
-    (htargetPrefix : ∀ (sourceClock targetClock : Nat),
-      panEventPrefix
-        (crepHooks.ioEvents (hevidence targetClock).targetState)
-        (panResultEvents (some ((hevidence sourceClock).outcome,
-          (hevidence sourceClock).returnedClock)))) :
-    PanCrepSemanticAgreement panHooks crepHooks := by
-  apply panCrepSemanticAgreement_of_pcCompileCorrectWithContextCode_cross_clock_prefix
-    (structs := structs) (context := context) (program := program)
-    (sourceEvaluate := sourceEvaluate) (targetEvaluate := targetEvaluate)
-    (codeRel := codeRel) (excpRel := excpRel)
-    (exceptionCode := exceptionCode) (globalsLookup := globalsLookup)
-    (exceptionRel := exceptionRel) (panHooks := panHooks)
-    (crepHooks := crepHooks) (hffiOutcome := hffiOutcome)
-    (hcorrect := hcorrect) (hevidence := hevidence)
-    (hresultCross := by
-      intro sourceClock targetClock
-      rcases hreturned sourceClock targetClock with
-        ⟨sourceLocals, sourceGlobals, sourceMemory, sourceFfi, sourceValues,
-          targetState, targetValues, houtcome, hresult⟩
-      have hstate := panValueCrepStateRelWithContext_to_stateRel
-        structs context (hevidence sourceClock).sourceInput.locals
-        (hevidence sourceClock).sourceInput.globals
-        (hevidence sourceClock).sourceInput.memory
-        (hevidence targetClock).targetInput.state
-        (hstateRel sourceClock targetClock)
-      have hplain :=
-        PanValuePcSemanticClockEvidence.crossClockReturnedResultRel
-          hcorrect sourceClock targetClock (hevidence sourceClock)
-          (hevidence targetClock) (hinputCodeRel sourceClock targetClock)
-          (hinputExcpRel sourceClock targetClock) hstate
-          (houtputCodeRel sourceClock targetClock)
-          (houtputExcpRel sourceClock targetClock)
-          sourceLocals sourceGlobals sourceMemory sourceFfi sourceValues
-          targetState targetValues houtcome hresult
-      simpa [houtcome, hresult, panOutcomeToPcResult, crepControlToPcResult]
-        using hplain)
-    (hsourcePrefix := hsourcePrefix) (htargetPrefix := htargetPrefix)
-
 /-! The terminal-FFI-only declaration branch packages the existing
     cross-clock FinalFFI relation with the full Cake context state relation.
     FinalFFI remains a distinct successful observation, with its event
@@ -3888,77 +3963,6 @@ theorem panCrepSemanticAgreement_of_pcCompileCorrectWithContextCode_cross_clock_
         using hresultRel)
     (hsourcePrefix := hsourcePrefix) (htargetPrefix := htargetPrefix)
 
-
-/-! Behavior-level returned wrapper for the preceding returned state-context adapter.
-    The returned branch and both cross-clock event-prefix witnesses remain
-    explicit before transporting the agreement to observable behavior. -/
-theorem panCrepBehaviourRel_of_pcCompileCorrectWithContextCode_cross_clock_prefix_from_pairwise_returned_stateRelWithContext
-    [BEq α] [OfNat α 0] [Add α] [BEq String]
-    (structs : StructContext) (context : CompileContext α) (program : Prog α)
-    (sourceEvaluate : PanValuePcEvaluator α)
-    (targetEvaluate : CrepPcEvaluator α)
-    (codeRel : PanValuePcCodeRel α)
-    (excpRel : PanValuePcExceptionShapeRel α)
-    (exceptionCode : ExceptionId → Option α)
-    (globalsLookup : CrepState α → PanValue α → Option (List α))
-    (exceptionRel : ExceptionId → PanValue α → α → Prop)
-    (panHooks : PanSemanticsHooks α σ)
-    (crepHooks : CrepSemanticsHooks α)
-    (hffiOutcome : ∀ event, panHooks.ffiOutcome event = event.outcome)
-    (hcorrect : PanValuePcCompileCorrectWithContextCode sourceEvaluate
-      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
-    (hevidence : ∀ (clock : Nat), PanValuePcSemanticClockEvidence structs
-      context program clock sourceEvaluate targetEvaluate codeRel excpRel
-      exceptionRel exceptionCode globalsLookup panHooks crepHooks)
-    (hinputCodeRel : ∀ (sourceClock targetClock : Nat),
-      codeRel context (hevidence sourceClock).sourceInput.code
-        (hevidence targetClock).targetInput.code)
-    (hinputExcpRel : ∀ (sourceClock targetClock : Nat),
-      excpRel context (hevidence sourceClock).sourceInput.eshapes
-        (hevidence targetClock).targetInput.eshapes)
-    (hstateRel : ∀ (sourceClock targetClock : Nat),
-      panValueCrepStateRelWithContext structs context
-        (hevidence sourceClock).sourceInput.locals
-        (hevidence sourceClock).sourceInput.globals
-        (hevidence sourceClock).sourceInput.memory
-        (hevidence targetClock).targetInput.state)
-    (houtputCodeRel : ∀ (sourceClock targetClock : Nat),
-      codeRel context (hevidence sourceClock).sourceExecution.code
-        (hevidence targetClock).targetExecution.code)
-    (houtputExcpRel : ∀ (sourceClock targetClock : Nat),
-      excpRel context (hevidence sourceClock).sourceExecution.eshapes
-        (hevidence targetClock).targetExecution.eshapes)
-    (hreturned : ∀ (sourceClock targetClock : Nat),
-      ∃ sourceLocals sourceGlobals sourceMemory sourceFfi sourceValues targetState
-          targetValues,
-        (hevidence sourceClock).outcome =
-          .control (.returned sourceLocals sourceGlobals sourceMemory sourceFfi
-            sourceValues) ∧
-        (hevidence targetClock).result = .returned targetState targetValues)
-    (hsourcePrefix : ∀ (sourceClock targetClock : Nat),
-      panEventPrefix
-        (panResultEvents (some ((hevidence sourceClock).outcome,
-          (hevidence sourceClock).returnedClock)))
-        (crepHooks.ioEvents (hevidence targetClock).targetState))
-    (htargetPrefix : ∀ (sourceClock targetClock : Nat),
-      panEventPrefix
-        (crepHooks.ioEvents (hevidence targetClock).targetState)
-        (panResultEvents (some ((hevidence sourceClock).outcome,
-          (hevidence sourceClock).returnedClock))))
-    (panChain : panLprefixChain
-      (fun clock => panResultEvents (panHooks.evaluate clock)))
-    (crepChain : crepLprefixChain
-      (fun clock => crepHooks.ioEvents (crepHooks.evaluate clock).2)) :
-    panCrepBehaviourRel
-      (panSemantics panHooks panChain)
-      (crepSemantics crepHooks crepChain) := by
-  have hagreement :=
-    panCrepSemanticAgreement_of_pcCompileCorrectWithContextCode_cross_clock_prefix_from_pairwise_returned_stateRelWithContext
-      structs context program sourceEvaluate targetEvaluate codeRel excpRel
-      exceptionCode globalsLookup exceptionRel panHooks crepHooks hffiOutcome
-      hcorrect hevidence hinputCodeRel hinputExcpRel hstateRel houtputCodeRel
-      houtputExcpRel hreturned hsourcePrefix htargetPrefix
-  exact panSemantics_rel_crepSemantics panHooks crepHooks hagreement panChain crepChain
 
 /-! Behavior-level FinalFFI wrapper for the preceding state-context adapter.
     The source and target prefix chains remain explicit, so the observable

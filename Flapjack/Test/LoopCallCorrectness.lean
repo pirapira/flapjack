@@ -121,11 +121,26 @@ theorem store_compile_correct_fixture :
     subst source
     exact ⟨100, by simp [load32State]⟩
 
+theorem skip_compile_correct_fixture :
+    evalLoopProg 1 load32State
+        (comp [(3, 2)] (.skip : LoopProg Nat) : LoopProg Nat × LocationEnv).1 =
+        some (.normal load32State) ∧
+      labelsIn (comp [(3, 2)] (.skip : LoopProg Nat) : LoopProg Nat × LocationEnv).2
+        load32State.locals := by
+  apply comp_skip_correct
+  intro name source hlookup
+  have hpair : 3 = name ∧ 2 = source := by
+    simpa [lookup] using hlookup
+  have hsource : source = 2 := hpair.2.symm
+  subst source
+  exact ⟨100, by simp [load32State]⟩
+
 #check comp_locValue_correct
 #check comp_load32_correct
 #check comp_loadByte_correct
 #check comp_store32_correct
 #check comp_storeByte_correct
 #check comp_store_correct
+#check comp_skip_correct
 
 end Flapjack.Test.LoopCallCorrectness

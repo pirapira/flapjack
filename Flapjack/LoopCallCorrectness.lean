@@ -254,5 +254,24 @@ theorem comp_store_correct
       haddress hvalue
   · exact henvironment
 
+theorem comp_skip_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (environment : LocationEnv) (state : LoopState α)
+    (henvironment : labelsIn environment state.locals) :
+    evalLoopProg 1 state
+        (comp environment (.skip : LoopProg α)).1 =
+        some (.normal state) ∧
+      labelsIn (comp environment (.skip : LoopProg α)).2 state.locals := by
+  have hcompiled :
+      comp environment (.skip : LoopProg α) = (.skip, environment) := by
+    simp [comp]
+  rw [hcompiled]
+  constructor
+  · exact evalLoopProg_skip state
+  · exact henvironment
+
 end LoopCall
 end Flapjack

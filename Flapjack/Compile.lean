@@ -636,4 +636,116 @@ theorem compileProg_storeByte_of_compiled [BEq α] [OfNat α 0] [Add α]
     compileProg context (.storeByte address value) = .storeByte address' value' := by
   simp [compileProg, haddress, hvalue]
 
+/-! The remaining `compileProg` decomposition equations expose the emitted
+    Crepe shape for the constructors that the assigned-memory bound proof
+    (`not_mem_context_assigned_mem_gt`, `pan_to_crepProofScript.sml:1252`)
+    must analyse: declarations, declaration-calls, stores, raises,
+    primitives, local assignments, and the two shared-memory leaves.  Each
+    carries the explicit `compileExp`/`lookupInfo` premise that determines
+    the constructor's branch. -/
+
+theorem compileProg_dec_of_compiled [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (name : VarName) (shape : Shape) (value : Exp α)
+    (body : Prog α) (expressions : List (CrepExp α)) (valueShape : Shape)
+    (hvalue : compileExp context value = (expressions, valueShape)) :
+    compileProg context (.dec name shape value body) =
+      if (allocatedNames context valueShape).length = expressions.length then
+        nestedDecs (allocatedNames context valueShape) expressions
+          (compileProg { context with
+            vars := (name, (valueShape, allocatedNames context valueShape)) :: context.vars,
+            maxVar := context.maxVar + Shape.shapeSize valueShape } body)
+      else .skip := by
+  simp only [compileProg, hvalue]
+
+theorem compileProg_decCall [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (name : VarName) (shape : Shape) (function : FunName)
+    (arguments : List (Exp α)) (body : Prog α) :
+    compileProg context (.decCall name shape function arguments body) =
+      nestedDecs (allocatedNames context shape)
+        ((allocatedNames context shape).map (fun _ => (.const 0 : CrepExp α)))
+        (.seq (.call (some (allocatedNames context shape, none)) function
+            (compileArgs context arguments))
+          (compileProg { context with
+            vars := (name, (shape, allocatedNames context shape)) :: context.vars,
+            maxVar := context.maxVar + Shape.shapeSize shape } body)) := by
+  simp only [compileProg]
+
+theorem compileProg_store_of_compiled [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (address value : Exp α)
+    (address' : CrepExp α) (addressRest : List (CrepExp α)) (addressShape : Shape)
+    (values : List (CrepExp α)) (shape : Shape)
+    (haddress : compileExp context address = (address' :: addressRest, addressShape))
+    (hvalue : compileExp context value = (values, shape)) :
+    compileProg context (.store address value) =
+      if values.length = Shape.shapeSize shape then
+        nestedDecs ((context.maxVar + 1) :: freshNames context values.length 2)
+          (address' :: values)
+          (crepNestedSeq
+            (stores (.var (context.maxVar + 1))
+              ((freshNames context values.length 2).map .var) 0 context.bytesInWord))
+      else .skip := by
+  simp only [compileProg, haddress, hvalue]
+
+theorem compileProg_raise_of_compiled [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (exception : ExceptionId) (value : Exp α) (code : α)
+    (expressions : List (CrepExp α)) (shape : Shape)
+    (hexception : lookupInfo exception context.exceptions = some code)
+    (hvalue : compileExp context value = (expressions, shape)) :
+    compileProg context (.raise exception value) =
+      if expressions.length = Shape.shapeSize shape then
+        .seq (nestedDecs (freshNames context expressions.length 1) expressions
+            (crepNestedSeq (storeGlobals 0 context.bytesInWord
+              ((freshNames context expressions.length 1).map .var))))
+          (.raise code)
+      else .skip := by
+  simp only [compileProg, hexception, hvalue]
+
+theorem compileProg_primitive_of_compiled [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (name : VarName) (operator : PrimOp)
+    (arguments : List (Exp α)) (shape : Shape) (names : List Nat)
+    (compiledArguments : List (CrepExp α))
+    (hlookup : lookupInfo name context.vars = some (shape, names))
+    (harguments : compileArgs context arguments = compiledArguments) :
+    compileProg context (.primitive name operator arguments) =
+      nestedDecs (freshNames context compiledArguments.length 1) compiledArguments
+        (.primitive names operator (freshNames context compiledArguments.length 1)) := by
+  simp only [compileProg, hlookup, harguments]
+
+theorem compileProg_assign_local_of_compiled [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (name : VarName) (value : Exp α)
+    (shape valueShape : Shape) (names : List Nat) (expressions : List (CrepExp α))
+    (hlookup : lookupInfo name context.vars = some (shape, names))
+    (hvalue : compileExp context value = (expressions, valueShape)) :
+    compileProg context (.assign .local name value) =
+      if names.length = expressions.length then
+        (if distinctLists names (expressions.flatMap crepExpVars) then
+          crepNestedSeq
+            (names.zipWith (fun name expression => .assign name expression) expressions)
+        else
+          nestedDecs (freshNames context names.length 1) expressions
+            (crepNestedSeq
+              (names.zipWith (fun name temporary => .assign name (.var temporary))
+                (freshNames context names.length 1))))
+      else .skip := by
+  simp only [compileProg, hlookup, hvalue]
+
+theorem compileProg_shMemLoad_local_of_compiled [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (size : OpSize) (name : VarName) (address : Exp α)
+    (shape : Shape) (destination : Nat) (destinationRest : List Nat) (address' : CrepExp α)
+    (hlookup : lookupInfo name context.vars = some (shape, destination :: destinationRest))
+    (haddress : firstCompiledExpAnyShape context address = some address') :
+    compileProg context (.shMemLoad size .local name address) =
+      .shMem (loadMemOp size) destination address' := by
+  simp only [compileProg, hlookup, haddress]
+
+theorem compileProg_shMemStore_of_compiled [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (size : OpSize) (address value : Exp α)
+    (address' value' : CrepExp α)
+    (haddress : firstCompiledExpAnyShape context address = some address')
+    (hvalue : firstCompiledExpAnyShape context value = some value') :
+    compileProg context (.shMemStore size address value) =
+      nestedDecs [maxCrepExpVar [address'] + 1] [value']
+        (.shMem (storeMemOp size) (maxCrepExpVar [address'] + 1) address') := by
+  simp only [compileProg, haddress, hvalue]
+
 end Flapjack

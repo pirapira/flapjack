@@ -1226,6 +1226,28 @@ def cakeDoFreeze (k : Nat) (state : CakeRaState) : Bool × CakeRaState :=
       let state := cakePushStack x (cakeDecDegree x state)
       (true, cakeUnspill k { state with freezeWl := xs })
 
+/- Cake's do_freeze (reg_allocScript.sml:749-764) pushes the head of the
+   freeze worklist before unspill.  Pin both the selected-node bound and the
+   resulting newest-first stack carrier. -/
+theorem cakeDoFreeze_selected_stack_lt_dim
+    (k : Nat) (state : CakeRaState) (item : Nat) (rest : List Nat)
+    (hfreeze : state.freezeWl = item :: rest)
+    (hitem : item < state.dim) :
+    ∃ selected, selected < state.dim ∧
+      (cakeDoFreeze k state).2.stack = selected :: state.stack := by
+  have hdecDeg : ∀ (s : CakeRaState) (xs : List Nat),
+      (xs.foldl (fun s x => cakeDecDeg x s) s).stack = s.stack := by
+    intro s xs
+    induction xs generalizing s with
+    | nil => rfl
+    | cons x xs ih =>
+        simp only [List.foldl]
+        rw [ih]
+        simp [cakeDecDeg]
+  refine ⟨item, hitem, ?_⟩
+  simp [cakeDoFreeze, hfreeze, cakePushStack, cakeDecDegree, hitem,
+    hdecDeg, cakeUnspill, cakeReviveMoves, cakeAddSimpWl, cakeAddFreezeWl]
+
 /-- `safe_div` (`reg_allocScript.sml:771`). -/
 def cakeSafeDiv (x v : Nat) : Nat := if v = 0 then 0 else x / v
 

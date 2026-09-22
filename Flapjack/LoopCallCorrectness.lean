@@ -534,6 +534,35 @@ theorem comp_continue_correct
   · exact evalLoopProg_continue state label
   · exact henvironment
 
+theorem comp_shMem_load_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (environment : LocationEnv) (state : LoopState α)
+    (operator : CrepMemOp) (name : Nat) (address : LoopExp α)
+    (addressValue value : α)
+    (hoperator : operator = .load ∨ operator = .load8 ∨
+      operator = .load16 ∨ operator = .load32)
+    (haddress : evalLoopExp state address = some addressValue)
+    (hvalue : state.memory addressValue = some value)
+    (_henvironment : labelsIn environment state.locals) :
+    evalLoopProg 1 state
+        (comp environment (.shMem operator name address : LoopProg α)).1 =
+        some (.normal { state with
+          locals := updateLoopLocal state.locals name value }) ∧
+      labelsIn (comp environment (.shMem operator name address : LoopProg α)).2
+        (updateLoopLocal state.locals name value) := by
+  have hcompiled :
+      comp environment (.shMem operator name address : LoopProg α) =
+        (.shMem operator name address, []) := by
+    simp [comp]
+  rw [hcompiled]
+  constructor
+  · exact evalLoopProg_shMem_load state operator name address addressValue value
+      hoperator haddress hvalue
+  · simp [labelsIn, lookup]
+
 theorem lookup_of_listDelete
     (destinations : List Nat) (environment : LocationEnv)
     (name location : Nat)

@@ -387,7 +387,7 @@ theorem loop_labelsIn_fixture :
   have hloop := comp_loop_labelsIn
     (environment := [(3, 2)]) (liveIn := [2]) (body := (.fail : LoopProg Nat))
     (liveOut := [3]) (locals := load32State.locals)
-  simpa [comp] using hloop
+  simpa [comp, loopResultState] using hloop
 
 theorem setGlobal_compile_correct_fixture :
     evalLoopProg 1 load32State
@@ -663,6 +663,29 @@ theorem ffi_labelsIn_fixture :
   subst source
   exact ⟨100, by simp [load32State]⟩
 
+theorem loop_compile_result_fixture :
+    evalLoopProg 3 load32State
+        (comp [(3, 2)]
+          (.loop [2] (.break 0) [2] : LoopProg Nat) :
+            LoopProg Nat × LocationEnv).1 =
+        some (.normal load32State) ∧
+      labelsIn
+        (comp [(3, 2)]
+          (.loop [2] (.break 0) [2] : LoopProg Nat)).2
+        load32State.locals := by
+  have hresult :
+      evalLoopRepeat 2 load32State
+          (comp ([] : LocationEnv) (.break 0 : LoopProg Nat)).1 =
+        some (.normal load32State) := by
+    simp [comp, evalLoopRepeat, evalLoopProg]
+  have hloop := comp_loop_correct
+    (environment := [(3, 2)]) (state := load32State) (fuel := 2)
+    (liveIn := [2]) (liveOut := [2]) (body := (.break 0 : LoopProg Nat))
+    (result := .normal load32State) hresult
+  constructor
+  · simpa [comp] using hloop.1
+  · simpa [comp, loopResultState] using hloop.2
+
 #check comp_locValue_correct
 #check comp_load32_correct
 #check comp_loadByte_correct
@@ -686,6 +709,7 @@ theorem ffi_labelsIn_fixture :
 #check comp_ite_true_correct
 #check comp_ite_false_correct
 #check comp_loop_labelsIn
+#check comp_loop_correct
 #check comp_setGlobal_correct
 #check comp_return_correct
 #check comp_raise_correct

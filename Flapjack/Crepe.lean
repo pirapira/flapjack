@@ -245,6 +245,40 @@ def crepNestedSeq : List (CrepProg α) → CrepProg α
   | [] => .skip
   | statement :: statements => .seq statement (crepNestedSeq statements)
 
+/-- Faithful port of Cake `crepProps$exps_of` from
+    `cakeml/pancake/semantics/crepPropsScript.sml:1282`: collect the
+    expressions that occur directly in a Crepe program. -/
+def crepExpsOf : CrepProg α → List (CrepExp α)
+  | .dec _ value body => value :: crepExpsOf body
+  | .seq first second => crepExpsOf first ++ crepExpsOf second
+  | .ite condition thenBranch elseBranch =>
+      condition :: (crepExpsOf thenBranch ++ crepExpsOf elseBranch)
+  | .while condition body => condition :: crepExpsOf body
+  | .call info _ args =>
+      args ++ (match info with
+               | some (_, some (_, handler)) => crepExpsOf handler
+               | _ => [])
+  | .store address value => [address, value]
+  | .store32 address value => [address, value]
+  | .storeByte address value => [address, value]
+  | .storeGlob _ value => [value]
+  | .return values => values
+  | .assign _ value => [value]
+  | .shMem _ _ address => [address]
+  | _ => []
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
+
+/-- Cake's `crepProps$exps_of_nested_seq`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:1010`). -/
+theorem crepExpsOf_nestedSeq (statements : List (CrepProg α)) :
+    crepExpsOf (crepNestedSeq statements) =
+      (statements.map crepExpsOf).flatten := by
+  induction statements with
+  | nil => simp [crepNestedSeq, crepExpsOf]
+  | cons statement statements ih => simp [crepNestedSeq, crepExpsOf, ih]
+
 /-! Faithful port of Cake `crep_seqs_def` from
     `cakeml/pancake/pan_passesScript.sml:377`: flatten only `Seq` nodes,
     preserving the left-to-right order of all other Crepe statements. -/

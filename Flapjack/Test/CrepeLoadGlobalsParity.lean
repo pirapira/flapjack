@@ -228,6 +228,16 @@ theorem evalCrepFullProgState_nestedDecs_loadGlobals_fixture :
   · simp [loadGlobalsResultState, loadGlobalsState, loadGlobalsNames,
       loadGlobalsValues, updateCrepLocalList, evalCrepFullProgState]
 
+#check @not_mem_crepAssignedFreeVars_nestedDecs
+
+theorem not_mem_crepAssignedFreeVars_nestedDecs_fixture :
+    (7 : Nat) ∉ crepAssignedFreeVars
+      (nestedDecs [2, 5] [CrepExp.const 1, CrepExp.const 2]
+        (CrepProg.assign 3 (CrepExp.const 4))) :=
+  not_mem_crepAssignedFreeVars_nestedDecs [2, 5]
+    [CrepExp.const 1, CrepExp.const 2] (CrepProg.assign 3 (CrepExp.const 4))
+    (by decide) (by simp [crepAssignedFreeVars])
+
 #check @crepAssignedFreeVars_assignRet
 
 theorem crepAssignedFreeVars_assignRet_fixture :

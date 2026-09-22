@@ -229,6 +229,65 @@ theorem compileProg_assigned_free_bound_full_fixture :
     simp
   · simp [boundedContext]
 
+/-- Cake `rewritten_context_unassigned` regression: the old slot list of a
+    variable stays disjoint from the free variables after the slot map is
+    extended for that variable. -/
+def rewrittenContext : CompileContext Nat :=
+  { vars := [("x", (Shape.one, [7]))], functions := [], exceptions := [],
+    maxVar := 7, bytesInWord := 1 }
+
+theorem rewrittenContext_unassigned_fixture :
+    ListDisjoint ([7] : List Nat)
+      (crepAssignedFreeVars
+        (compileProg
+          { rewrittenContext with
+            vars := ("x", (Shape.one, [])) :: rewrittenContext.vars
+            maxVar := rewrittenContext.maxVar + 1 } .skip)) := by
+  apply rewrittenContext_unassigned rewrittenContext .skip "x" Shape.one [] [7] Shape.one
+  · simp [rewrittenContext, lookupInfo]
+  · refine ⟨?_, ?_⟩
+    · intro name shape slots hlookup
+      simp only [rewrittenContext, lookupInfo] at hlookup
+      split at hlookup
+      · obtain ⟨rfl, rfl⟩ := Option.some.inj hlookup
+        simp
+      · simp at hlookup
+    · intro name name' shape shape' slots slots' hl hl' hmem
+      simp only [rewrittenContext, lookupInfo] at hl hl'
+      split at hl <;> split at hl' <;> simp_all
+  · refine ⟨by simp [rewrittenContext], ?_⟩
+    intro name shape slots hlookup
+    simp only [rewrittenContext, lookupInfo] at hlookup
+    split at hlookup
+    · obtain ⟨rfl, rfl⟩ := Option.some.inj hlookup
+      intro slot hslot
+      simp only [List.mem_singleton] at hslot
+      subst hslot
+      simp [rewrittenContext]
+    · simp at hlookup
+  · refine ⟨?_, ?_⟩
+    · intro name shape slots hlookup
+      simp only [rewrittenContext, lookupInfo] at hlookup
+      split at hlookup
+      · obtain ⟨rfl, rfl⟩ := Option.some.inj hlookup
+        simp
+      · simp at hlookup
+    · intro name name' shape shape' slots slots' hl hl' hmem
+      simp only [rewrittenContext, lookupInfo] at hl hl'
+      split at hl <;> split at hl' <;> simp_all
+  · refine ⟨by simp [rewrittenContext], ?_⟩
+    intro name shape slots hlookup
+    simp only [rewrittenContext, lookupInfo] at hlookup
+    split at hlookup
+    · obtain ⟨rfl, rfl⟩ := Option.some.inj hlookup
+      simp
+    · exact absurd hlookup (by simp)
+  · intro value hmem
+    simp at hmem
+
+#check @rewrittenContext_unassigned
+#check @panValueSlotBound_cons_of_nodup_disjoint
+
 def runChecks : IO Bool := do
   if parityGuard then
     IO.println "PASS crep assigned_free_vars skip/assign/dec/seq/if/while/shmem/fallback"

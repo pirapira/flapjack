@@ -1,5 +1,6 @@
 import Flapjack.PanToCrepCorrectnessBoundary
 import Flapjack.PanToCrepCallControlSafety
+import Flapjack.PanSimp
 
 /-!
 Control-safety for the source-to-Crep `call` constructor when the call
@@ -1280,5 +1281,54 @@ theorem PanValueProgNotBrokeContinued_decCall
                                   (locals name) bodyResult hsafe.2⟩
                       · simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcall,
                           hshape] at h
+
+/-! Source handler safety is preserved by the two pure shape rewrites of
+    `pan_simp`: inserting a `smartSeq` around a program, and collapsing the
+    `call`/`return` tail shape into a destination-free `call`. -/
+theorem PanValueProgNotBrokeContinued_smartSeq
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (pre program : Prog α)
+    (hpre : PanValueProgNotBrokeContinued primitive handler structs functions
+      baseAddress topAddress bytesInWord pre)
+    (hprogram : PanValueProgNotBrokeContinued primitive handler structs functions
+      baseAddress topAddress bytesInWord program) :
+    PanValueProgNotBrokeContinued primitive handler structs functions
+      baseAddress topAddress bytesInWord (smartSeq pre program) := by
+  unfold smartSeq
+  split
+  · exact hprogram
+  · exact PanValueProgNotBrokeContinued_seq primitive handler structs functions
+      baseAddress topAddress bytesInWord pre program hpre hprogram
+
+theorem PanValueProgNotBrokeContinued_seqCallRet
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (program : Prog α)
+    (h : PanValueProgNotBrokeContinued primitive handler structs functions
+      baseAddress topAddress bytesInWord program) :
+    PanValueProgNotBrokeContinued primitive handler structs functions
+      baseAddress topAddress bytesInWord (seqCallRet program) := by
+  unfold seqCallRet
+  split
+  · rename_i returnName function arguments returnedName
+    split
+    · exact PanValueProgNotBrokeContinued_call_of_no_handler primitive handler
+        structs functions baseAddress topAddress bytesInWord none function
+        arguments (by intro destination caughtHandler hinfo; simp at hinfo)
+    · exact h
+  · exact h
 
 end Flapjack

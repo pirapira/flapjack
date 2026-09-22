@@ -1114,6 +1114,10 @@ example :
 
 #check @PanValueProgNotBrokeContinued_while
 
+#check @PanValueProgNotBrokeContinued_decCall
+#check @PanValueProgNotBrokeContinued_smartSeq
+#check @PanValueProgNotBrokeContinued_seqCallRet
+
 /-! A declaration call whose body is safe is itself safe. -/
 example :
     PanValueProgNotBrokeContinued (fun _ _ => none) (fun _ _ _ _ _ _ => none)

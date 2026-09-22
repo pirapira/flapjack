@@ -25,6 +25,59 @@ def allocatedNames (context : CompileContext α) (shape : Shape) : List Nat :=
 def freshNames (context : CompileContext α) (count start : Nat) : List Nat :=
   (List.range count).map (fun offset => context.maxVar + start + offset)
 
+/-- Every slot allocated by `allocatedNames` lies strictly above the context's
+    current `maxVar`.  This is the bound Cake's `not_mem_context_assigned_mem_gt`
+    uses to rule out collisions between fresh temporaries and live variables. -/
+theorem allocatedNames_gt (context : CompileContext α) (shape : Shape) {slot : Nat}
+    (hmem : slot ∈ allocatedNames context shape) : context.maxVar < slot := by
+  obtain ⟨offset, _hoffset, rfl⟩ := List.mem_map.mp hmem
+  omega
+
+/-- Every slot allocated by `freshNames` lies strictly above the context's
+    current `maxVar`, provided the fresh window starts above zero (Cake always
+    calls it with `start ≥ 1`). -/
+theorem freshNames_gt (context : CompileContext α) (count start : Nat) (hstart : 0 < start)
+    {slot : Nat} (hmem : slot ∈ freshNames context count start) : context.maxVar < slot := by
+  obtain ⟨offset, _hoffset, rfl⟩ := List.mem_map.mp hmem
+  omega
+
+theorem not_mem_allocatedNames (context : CompileContext α) (shape : Shape) {x : Nat}
+    (hx : x ≤ context.maxVar) : x ∉ allocatedNames context shape := by
+  intro hmem
+  have := allocatedNames_gt context shape hmem
+  omega
+
+theorem not_mem_freshNames (context : CompileContext α) (count start : Nat)
+    (hstart : 0 < start) {x : Nat} (hx : x ≤ context.maxVar) :
+    x ∉ freshNames context count start := by
+  intro hmem
+  have := freshNames_gt context count start hstart hmem
+  omega
+
+/-- `x` occurs in no slot list stored in the variable context.  This is the
+    second hypothesis of Cake's `not_mem_context_assigned_mem_gt`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:1252`). -/
+def panValueSlotBound [BEq String] (x : Nat) (vars : InfoMap (Shape × List Nat)) : Prop :=
+  ∀ name shape slots, lookupInfo name vars = some (shape, slots) → x ∉ slots
+
+/-- Extending the variable context with an entry whose slots avoid `x` preserves
+    the `panValueSlotBound` invariant. -/
+theorem panValueSlotBound_cons_of [BEq String] (x : Nat) (name : String)
+    (shape : Shape) (slots : List Nat) (vars : InfoMap (Shape × List Nat))
+    (h : panValueSlotBound x vars) (hslots : x ∉ slots) :
+    panValueSlotBound x ((name, (shape, slots)) :: vars) := by
+  intro name' shape' slots' hlookup
+  cases hb : (name == name') with
+  | false =>
+      simp only [lookupInfo, hb] at hlookup
+      exact h name' shape' slots' hlookup
+  | true =>
+      simp only [lookupInfo, hb] at hlookup
+      have hpair : (shape, slots) = (shape', slots') := by simpa using hlookup
+      have hslotsEq : slots = slots' := congrArg Prod.snd hpair
+      rw [← hslotsEq]
+      exact hslots
+
 /-! Cake's ExtCall lowering chooses its temporary base from the largest
     variable occurring in all four compiled expressions, rather than from the
     context's cached `vmax`.  `ShMemStore` chooses its temporary from the
@@ -33,6 +86,39 @@ def freshNames (context : CompileContext α) (count start : Nat) : List Nat :=
     register allocation. -/
 def maxCrepExpVar (expressions : List (CrepExp α)) : Nat :=
   (expressions.flatMap crepExpVars).foldl max 0
+
+/-! Every variable occurring in the compiled expression list is bounded by
+    the `FOLDR MAX 0 (FLAT (MAP var_cexp ...))` value used by Cake's
+    `compile` for `ExtCall` and `ShMemStore` temporaries
+    (`pan_to_crepScript.sml:291-305`).  This is the freshness bridge needed
+    by the assigned-memory proof: adding a positive offset produces a slot
+    strictly above every expression variable. -/
+theorem mem_crepExpVars_le_maxCrepExpVar
+    (expressions : List (CrepExp α)) {name : Nat}
+    (hmem : name ∈ expressions.flatMap crepExpVars) :
+    name ≤ maxCrepExpVar expressions := by
+  have hacc : ∀ (xs : List Nat) (acc : Nat),
+      acc ≤ xs.foldl max acc := by
+    intro xs
+    induction xs with
+    | nil => intro acc; exact Nat.le_refl acc
+    | cons x xs ih =>
+        intro acc
+        simp only [List.foldl_cons]
+        exact Nat.le_trans (Nat.le_max_left _ _) (ih (max acc x))
+  have hbound : ∀ (xs : List Nat) (acc : Nat), name ∈ xs →
+      name ≤ xs.foldl max acc := by
+    intro xs
+    induction xs with
+    | nil => simp
+    | cons x xs ih =>
+        intro acc h
+        simp only [List.mem_cons] at h
+        simp only [List.foldl_cons]
+        rcases h with rfl | h
+        · exact Nat.le_trans (Nat.le_max_right _ _) (hacc xs (max acc name))
+        · exact ih (max acc x) h
+  exact hbound (expressions.flatMap crepExpVars) 0 hmem
 
 def functionReturnNames (context : CompileContext α) (function : FunName) : List Nat :=
   match lookupInfo function context.functions with
@@ -526,5 +612,173 @@ theorem compileProg_call_destination_degraded_of_compiled
         (.call (some (some (kind, name), none)) function arguments) =
       .call none function compiledArguments := by
   simp [compileProg, hnames, harguments]
+
+theorem compileProg_break [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) : compileProg context .break = .break 0 := by
+  simp [compileProg]
+
+theorem compileProg_continue [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) : compileProg context .continue = .continue 0 := by
+  simp [compileProg]
+
+theorem compileProg_tick [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) : compileProg context .tick = .tick := by
+  simp [compileProg]
+
+theorem compileProg_annot [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (tag text : String) :
+    compileProg context (.annot tag text) = .skip := by
+  simp [compileProg]
+
+theorem compileProg_assign_global [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (name : VarName) (value : Exp α) :
+    compileProg context (.assign .global name value) = .skip := by
+  simp [compileProg]
+
+theorem compileProg_ite_of_compiled [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (condition : Exp α)
+    (thenBranch elseBranch : Prog α) (condition' : CrepExp α)
+    (rest : List (CrepExp α)) (shape : Shape)
+    (hcondition : compileExp context condition = (condition' :: rest, shape)) :
+    compileProg context (.ite condition thenBranch elseBranch) =
+      .ite condition' (compileProg context thenBranch) (compileProg context elseBranch) := by
+  simp [compileProg, hcondition]
+
+theorem compileProg_while_of_compiled [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (condition : Exp α) (body : Prog α)
+    (condition' : CrepExp α) (rest : List (CrepExp α)) (shape : Shape)
+    (hcondition : compileExp context condition = (condition' :: rest, shape)) :
+    compileProg context (.while condition body) = .while condition' (compileProg context body) := by
+  simp [compileProg, hcondition]
+
+theorem compileProg_store32_of_compiled [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (address value : Exp α)
+    (address' value' : CrepExp α) (addressRest valueRest : List (CrepExp α))
+    (addressShape valueShape : Shape)
+    (haddress : compileExp context address = (address' :: addressRest, addressShape))
+    (hvalue : compileExp context value = (value' :: valueRest, valueShape)) :
+    compileProg context (.store32 address value) = .store32 address' value' := by
+  simp [compileProg, haddress, hvalue]
+
+theorem compileProg_storeByte_of_compiled [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (address value : Exp α)
+    (address' value' : CrepExp α) (addressRest valueRest : List (CrepExp α))
+    (addressShape valueShape : Shape)
+    (haddress : compileExp context address = (address' :: addressRest, addressShape))
+    (hvalue : compileExp context value = (value' :: valueRest, valueShape)) :
+    compileProg context (.storeByte address value) = .storeByte address' value' := by
+  simp [compileProg, haddress, hvalue]
+
+/-! The remaining `compileProg` decomposition equations expose the emitted
+    Crepe shape for the constructors that the assigned-memory bound proof
+    (`not_mem_context_assigned_mem_gt`, `pan_to_crepProofScript.sml:1252`)
+    must analyse: declarations, declaration-calls, stores, raises,
+    primitives, local assignments, and the two shared-memory leaves.  Each
+    carries the explicit `compileExp`/`lookupInfo` premise that determines
+    the constructor's branch. -/
+
+theorem compileProg_dec_of_compiled [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (name : VarName) (shape : Shape) (value : Exp α)
+    (body : Prog α) (expressions : List (CrepExp α)) (valueShape : Shape)
+    (hvalue : compileExp context value = (expressions, valueShape)) :
+    compileProg context (.dec name shape value body) =
+      if (allocatedNames context valueShape).length = expressions.length then
+        nestedDecs (allocatedNames context valueShape) expressions
+          (compileProg { context with
+            vars := (name, (valueShape, allocatedNames context valueShape)) :: context.vars,
+            maxVar := context.maxVar + Shape.shapeSize valueShape } body)
+      else .skip := by
+  simp only [compileProg, hvalue]
+
+theorem compileProg_decCall [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (name : VarName) (shape : Shape) (function : FunName)
+    (arguments : List (Exp α)) (body : Prog α) :
+    compileProg context (.decCall name shape function arguments body) =
+      nestedDecs (allocatedNames context shape)
+        ((allocatedNames context shape).map (fun _ => (.const 0 : CrepExp α)))
+        (.seq (.call (some (allocatedNames context shape, none)) function
+            (compileArgs context arguments))
+          (compileProg { context with
+            vars := (name, (shape, allocatedNames context shape)) :: context.vars,
+            maxVar := context.maxVar + Shape.shapeSize shape } body)) := by
+  simp only [compileProg]
+
+theorem compileProg_store_of_compiled [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (address value : Exp α)
+    (address' : CrepExp α) (addressRest : List (CrepExp α)) (addressShape : Shape)
+    (values : List (CrepExp α)) (shape : Shape)
+    (haddress : compileExp context address = (address' :: addressRest, addressShape))
+    (hvalue : compileExp context value = (values, shape)) :
+    compileProg context (.store address value) =
+      if values.length = Shape.shapeSize shape then
+        nestedDecs ((context.maxVar + 1) :: freshNames context values.length 2)
+          (address' :: values)
+          (crepNestedSeq
+            (stores (.var (context.maxVar + 1))
+              ((freshNames context values.length 2).map .var) 0 context.bytesInWord))
+      else .skip := by
+  simp only [compileProg, haddress, hvalue]
+
+theorem compileProg_raise_of_compiled [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (exception : ExceptionId) (value : Exp α) (code : α)
+    (expressions : List (CrepExp α)) (shape : Shape)
+    (hexception : lookupInfo exception context.exceptions = some code)
+    (hvalue : compileExp context value = (expressions, shape)) :
+    compileProg context (.raise exception value) =
+      if expressions.length = Shape.shapeSize shape then
+        .seq (nestedDecs (freshNames context expressions.length 1) expressions
+            (crepNestedSeq (storeGlobals 0 context.bytesInWord
+              ((freshNames context expressions.length 1).map .var))))
+          (.raise code)
+      else .skip := by
+  simp only [compileProg, hexception, hvalue]
+
+theorem compileProg_primitive_of_compiled [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (name : VarName) (operator : PrimOp)
+    (arguments : List (Exp α)) (shape : Shape) (names : List Nat)
+    (compiledArguments : List (CrepExp α))
+    (hlookup : lookupInfo name context.vars = some (shape, names))
+    (harguments : compileArgs context arguments = compiledArguments) :
+    compileProg context (.primitive name operator arguments) =
+      nestedDecs (freshNames context compiledArguments.length 1) compiledArguments
+        (.primitive names operator (freshNames context compiledArguments.length 1)) := by
+  simp only [compileProg, hlookup, harguments]
+
+theorem compileProg_assign_local_of_compiled [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (name : VarName) (value : Exp α)
+    (shape valueShape : Shape) (names : List Nat) (expressions : List (CrepExp α))
+    (hlookup : lookupInfo name context.vars = some (shape, names))
+    (hvalue : compileExp context value = (expressions, valueShape)) :
+    compileProg context (.assign .local name value) =
+      if names.length = expressions.length then
+        (if distinctLists names (expressions.flatMap crepExpVars) then
+          crepNestedSeq
+            (names.zipWith (fun name expression => .assign name expression) expressions)
+        else
+          nestedDecs (freshNames context names.length 1) expressions
+            (crepNestedSeq
+              (names.zipWith (fun name temporary => .assign name (.var temporary))
+                (freshNames context names.length 1))))
+      else .skip := by
+  simp only [compileProg, hlookup, hvalue]
+
+theorem compileProg_shMemLoad_local_of_compiled [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (size : OpSize) (name : VarName) (address : Exp α)
+    (shape : Shape) (destination : Nat) (destinationRest : List Nat) (address' : CrepExp α)
+    (hlookup : lookupInfo name context.vars = some (shape, destination :: destinationRest))
+    (haddress : firstCompiledExpAnyShape context address = some address') :
+    compileProg context (.shMemLoad size .local name address) =
+      .shMem (loadMemOp size) destination address' := by
+  simp only [compileProg, hlookup, haddress]
+
+theorem compileProg_shMemStore_of_compiled [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (size : OpSize) (address value : Exp α)
+    (address' value' : CrepExp α)
+    (haddress : firstCompiledExpAnyShape context address = some address')
+    (hvalue : firstCompiledExpAnyShape context value = some value') :
+    compileProg context (.shMemStore size address value) =
+      nestedDecs [maxCrepExpVar [address'] + 1] [value']
+        (.shMem (storeMemOp size) (maxCrepExpVar [address'] + 1) address') := by
+  simp only [compileProg, haddress, hvalue]
 
 end Flapjack

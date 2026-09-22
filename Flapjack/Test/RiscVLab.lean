@@ -651,6 +651,62 @@ example :
       some [.storeByteOffset 4 5 (0 - BitVec.ofNat 64 8)] := by
   decide
 
+/- Cake's lower signed-12 endpoint remains a direct width-specific Store;
+   the subtracting carrier must encode `-2048`, not materialize the address. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMemSub .store32 4 5 2048) [] 0]⟩ =
+      some [.store32Offset 4 5 (0 - BitVec.ofNat 64 2048)] := by
+  decide
+
+/- The matching lower signed-12 Load32 endpoint is also a direct Cake Mem
+   carrier; it must retain `-2048` rather than fall back to address synthesis. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMemSub .load32 4 5 2048) [] 0]⟩ =
+      some [.load32Offset 4 5 (0 - BitVec.ofNat 64 2048)] := by
+  decide
+
+/- The full-width Cake Word carriers use the same lower signed-12 endpoint;
+   retain `-2048` for ordinary Load/Store, not only Load32/Store32. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMemSub .store 4 5 2048) [] 0]⟩ =
+      some [.storeWordOffset 4 5 (0 - BitVec.ofNat 64 2048)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMemSub .load 4 5 2048) [] 0]⟩ =
+      some [.loadWordOffset 4 5 (0 - BitVec.ofNat 64 2048)] := by
+  decide
+
+/- The same Cake lower signed-12 boundary applies independently to the
+   byte/halfword memory-op rows; retain each width-specific target opcode. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMemSub .load8 4 5 2048) [] 0]⟩ =
+      some [.loadByteOffset 4 5 (0 - BitVec.ofNat 64 2048)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMemSub .load16 4 5 2048) [] 0]⟩ =
+      some [.loadHalfOffset 4 5 (0 - BitVec.ofNat 64 2048)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMemSub .store8 4 5 2048) [] 0]⟩ =
+      some [.storeByteOffset 4 5 (0 - BitVec.ofNat 64 2048)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMemSub .store16 4 5 2048) [] 0]⟩ =
+      some [.storeHalfOffset 4 5 (0 - BitVec.ofNat 64 2048)] := by
+  decide
+
 /- The largest positive signed-12 displacement remains a direct load32. -/
 example :
     compileLabSection (width := 64) { services := [] }
@@ -844,6 +900,57 @@ example :
       some [.storeHalfOffset 10 11 (BitVec.ofNat 64 2047)] := by
   decide
 
+/- Cake's shared-memory carrier also preserves a wrapped negative displacement;
+   the target sees `2^64 - 8` as signed `-8` for each narrow opcode. -/
+example :
+    labCompilePlain (width := 64)
+      (.shareMemOffset .load8 10 11 (BitVec.ofNat 64 (2 ^ 64 - 8))) =
+      some [.loadByteOffset 10 11 (0 - BitVec.ofNat 64 8)] := by
+  decide
+
+example :
+    labCompilePlain (width := 64)
+      (.shareMemOffset .load16 10 11 (BitVec.ofNat 64 (2 ^ 64 - 8))) =
+      some [.loadHalfOffset 10 11 (0 - BitVec.ofNat 64 8)] := by
+  decide
+
+example :
+    labCompilePlain (width := 64)
+      (.shareMemOffset .store8 10 11 (BitVec.ofNat 64 (2 ^ 64 - 8))) =
+      some [.storeByteOffset 10 11 (0 - BitVec.ofNat 64 8)] := by
+  decide
+
+example :
+    labCompilePlain (width := 64)
+      (.shareMemOffset .store16 10 11 (BitVec.ofNat 64 (2 ^ 64 - 8))) =
+      some [.storeHalfOffset 10 11 (0 - BitVec.ofNat 64 8)] := by
+  decide
+
+/- The full-width shared-memory carriers retain Cake's lower signed-12
+   endpoint as direct offset instructions, independently of the narrow rows. -/
+example :
+    labCompilePlain (width := 64)
+      (.shareMemOffset .load 10 11 (BitVec.ofNat 64 (2 ^ 64 - 2048))) =
+      some [.loadWordOffset 10 11 (0 - BitVec.ofNat 64 2048)] := by
+  decide
+
+example :
+    labCompilePlain (width := 64)
+      (.shareMemOffset .store 10 11 (BitVec.ofNat 64 (2 ^ 64 - 2048))) =
+      some [.storeWordOffset 10 11 (0 - BitVec.ofNat 64 2048)] := by
+  decide
+
+example :
+    labCompilePlain (width := 64)
+      (.shareMemOffset .load32 10 11 (BitVec.ofNat 64 (2 ^ 64 - 2048))) =
+      some [.load32Offset 10 11 (0 - BitVec.ofNat 64 2048)] := by
+  decide
+
+example :
+    labCompilePlain (width := 64)
+      (.shareMemOffset .store32 10 11 (BitVec.ofNat 64 (2 ^ 64 - 2048))) =
+      some [.store32Offset 10 11 (0 - BitVec.ofNat 64 2048)] := by
+  decide
 /- Cake's source-shaped `wordShareInstToInstructionsCake` keeps a variable
    address as one direct `Mem` carrier.  Check every width in the target
    `riscv_memop` table at this backend boundary, independently of the
@@ -878,6 +985,41 @@ example :
       ⟨3, [.asm (.memOffset .store32 .sub 4 10 24) [] 0]⟩ =
       some [.store32Offset 4 10 (0 - BitVec.ofNat 64 24)] := by
   decide
+
+/- Cake's direct `Mem (Addr ...)` carrier uses the complete `riscv_memop`
+   table for a positive displacement as well.  Keep this separate from the
+   source-shaped shared-memory and stack-memory tables above: it exercises the
+   `WordInst.memOffset` Lab boundary that feeds the target encoder directly. -/
+def memOffsetOperatorTable : Bool :=
+  [
+    labCompilePlain (width := 64)
+      (.memOffset .load .add 4 10 24),
+    labCompilePlain (width := 64)
+      (.memOffset .store .add 4 10 24),
+    labCompilePlain (width := 64)
+      (.memOffset .load8 .add 4 10 24),
+    labCompilePlain (width := 64)
+      (.memOffset .store8 .add 4 10 24),
+    labCompilePlain (width := 64)
+      (.memOffset .load16 .add 4 10 24),
+    labCompilePlain (width := 64)
+      (.memOffset .store16 .add 4 10 24),
+    labCompilePlain (width := 64)
+      (.memOffset .load32 .add 4 10 24),
+    labCompilePlain (width := 64)
+      (.memOffset .store32 .add 4 10 24)
+  ] == [
+    some [.loadWordOffset 4 10 (BitVec.ofNat 64 24)],
+    some [.storeWordOffset 4 10 (BitVec.ofNat 64 24)],
+    some [.loadByteOffset 4 10 (BitVec.ofNat 64 24)],
+    some [.storeByteOffset 4 10 (BitVec.ofNat 64 24)],
+    some [.loadHalfOffset 4 10 (BitVec.ofNat 64 24)],
+    some [.storeHalfOffset 4 10 (BitVec.ofNat 64 24)],
+    some [.load32Offset 4 10 (BitVec.ofNat 64 24)],
+    some [.store32Offset 4 10 (BitVec.ofNat 64 24)]
+  ]
+
+#guard memOffsetOperatorTable
 
 -- reg1 holds the base and reg4 the byte: the store lands at base + 32.
 #guard
@@ -1077,6 +1219,22 @@ private def jumpCmpImmBoundary (operator : Cmp) (target : Nat) :
   some [.ori 31 0 (BitVec.ofNat 64 3),
     .branchGeU 4 31 (BitVec.ofNat 64 8),
     .jal 0 (BitVec.ofNat 64 4088)]
+
+/- The corresponding negative signed-12 boundary is measured from the whole
+   Cake `JumpCmp` line, including its ORI prelude: -4092 remains a direct
+   branch, while -4096 takes Cake's inverted-branch/JAL fallback. -/
+private def jumpCmpImmNegativeBoundary (position : Nat) :
+    Option (List (Instruction 64)) :=
+  labCompileAsm (width := 64) { services := [] } 1 [(0, 0)] position
+    (.jumpCmp .notEqual 4 (.imm 3) ⟨1, 0⟩)
+
+#guard jumpCmpImmNegativeBoundary 4092 ==
+  some [.ori 31 0 (BitVec.ofNat 64 3),
+    .branchEq 4 31 (0 - BitVec.ofNat 64 4096)]
+#guard jumpCmpImmNegativeBoundary 4096 ==
+  some [.ori 31 0 (BitVec.ofNat 64 3),
+    .branchNe 4 31 (BitVec.ofNat 64 8),
+    .jal 0 (0 - BitVec.ofNat 64 4104)]
 
 example :
     labCompileAsm (width := 64) { services := [] } 1 [(0, 2 ^ 20 - 2)] 0

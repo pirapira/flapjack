@@ -1244,7 +1244,7 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackProgNatWithBitmapBuilder_call
         (.skip : StackProg Nat) := by
     simp [wordToStackCallWithHandlerInSectionAtRegisterCountReturn,
       stackCopyReturnSuffix, stackSeq, stackPushHandler, stackHandlerArgs,
-      stackArgs, stackHandlerSlots]
+      stackArgs, stackHandlerSlots, stackPopHandler]
   intro hliveSkip
   rw [wordStackJoin_eq_seq_of_ne_skip liveCode _ hliveSkip hcallNe]
   have hseq := evalStackProgFuelWithCodeAndFfi_seq_normal_result

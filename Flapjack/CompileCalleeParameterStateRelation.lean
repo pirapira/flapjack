@@ -1,4 +1,5 @@
 import Flapjack.CompileCalleeParameterFreshness
+import Flapjack.PanToCrepCorrectnessBoundary
 
 /-!
 Compiler-facing state relation for an evaluated callee parameter list.
@@ -313,6 +314,60 @@ theorem panValueCrepStateRel_compileFunDecl_context_of_folds
     structs context sourceGlobals sourceMemory crepMemory
     declaration.params values 0 hlength hglobals hmemory hcontext hnames hshape
     hparameterLength
+
+/-! Package the fold-based callee relation with Cake's declaration-entry
+    `no_overlap` and `ctxt_max` invariants.  This is the declaration-state
+    witness consumed by the `state_rel_imp_semantics_decls_to_crep` call step;
+    the evaluator and call-result premises remain at the caller boundary. -/
+theorem panValueCrepStateRel_compileFunDecl_context_with_invariants_of_folds
+    [OfNat α 0]
+    [LawfulBEq String]
+    (structs : StructContext) (context : CompileContext α)
+    (sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (crepMemory : α → Option α)
+    (declaration : FunDecl α) (values : List (PanValue α))
+    (hlength : declaration.params.length = values.length)
+    (hglobals : sourceGlobals = (fun _ => none))
+    (hmemory : panValueWordMemory sourceMemory = crepMemory)
+    (hcontext : context.vars = [])
+    (hnames : (declaration.params.map Prod.fst).Nodup)
+    (hshape : ∀ parameter ∈ compileCalleeParameterList
+        declaration.params values 0,
+      panShapeMatches (panValueShape structs parameter.value) parameter.shape = true)
+    (hparameterLength : ∀ parameter ∈ compileCalleeParameterList
+        declaration.params values 0,
+      parameter.slots.length = parameter.values.length) :
+    panValueCrepStateRelWithContext structs
+      { context with
+          vars := panToCrepMakeVmap declaration.params
+          maxVar := (compileParamVars declaration.params 0).2.2 - 1 }
+      (foldCalleeParameterSource (fun _ => none)
+        (compileCalleeParameterList declaration.params values 0))
+      sourceGlobals sourceMemory
+      { locals := foldCalleeParameterLocals (fun _ => none)
+          (compileCalleeParameterList declaration.params values 0),
+        memory := crepMemory } := by
+  have hstate := panValueCrepStateRel_compileFunDecl_context_of_folds
+    structs context sourceGlobals sourceMemory crepMemory declaration values
+    hlength hglobals hmemory hcontext hnames hshape hparameterLength
+  have hinvariants := panToCrepMakeVmap_context_invariants
+    declaration.params hnames
+  have hstate' : panValueCrepStateRel structs
+      { context with
+          vars := panToCrepMakeVmap declaration.params
+          maxVar := (compileParamVars declaration.params 0).2.2 - 1 }
+      (foldCalleeParameterSource (fun _ => none)
+        (compileCalleeParameterList declaration.params values 0))
+      sourceGlobals sourceMemory
+      { locals := foldCalleeParameterLocals (fun _ => none)
+          (compileCalleeParameterList declaration.params values 0),
+        memory := crepMemory } := by
+    rcases hstate with ⟨hglobals', hlocals, hmemory'⟩
+    refine ⟨hglobals', ?_, hmemory'⟩
+    intro name value shape slots hsource hlookup
+    exact hlocals name value shape slots hsource hlookup
+  exact ⟨hinvariants.1, hinvariants.2, hstate'⟩
 
 theorem panValueCrepStateRel_reordered_parameter_context
     [OfNat α 0]

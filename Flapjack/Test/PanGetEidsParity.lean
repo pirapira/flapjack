@@ -90,4 +90,22 @@ def distinctFuncsGuard : Bool :=
 #eval distinctFuncsGuard
 #guard distinctFuncsGuard
 
+/-! Cake's `initial_prog_make_funcs_el`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:3942`): a successful
+    label lookup identifies the position of the function in the source list. -/
+
+theorem crepMakeFuncs_exists_index_fixture :
+    ∃ n, (crepFirstName + 1 : Nat) = crepFirstName + n ∧
+      (distinctFuncsCode[n]?).map (fun function => function.name) =
+        some "second" ∧
+        n < distinctFuncsCode.length :=
+  crepMakeFuncs_exists_index distinctFuncsCode
+    (rm := 0) (by decide)
+
+def makeFuncsIndexGuard : Bool :=
+  (distinctFuncsCode[1]?).map (fun function => function.name) == some "second"
+
+#eval makeFuncsIndexGuard
+#guard makeFuncsIndexGuard
+
 end Flapjack.Test.PanGetEidsParity

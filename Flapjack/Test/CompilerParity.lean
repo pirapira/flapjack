@@ -233,6 +233,7 @@ import Flapjack.Test.CakeSsaMemoryParity
 import Flapjack.Test.CakeSsaLeafParity
 import Flapjack.Test.CakeDeadCodeStateParity
 import Flapjack.Test.CakeReturnSoundness
+import Flapjack.Test.CakeCompileSingleCorrectness
 import Flapjack.Test.CakeApplyColourParity
 import Flapjack.Test.CakeSpillCostParity
 import Flapjack.Test.CakeFrameVectorParity

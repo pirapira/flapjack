@@ -83,6 +83,7 @@ import Flapjack.PanToCrep
 import Flapjack.CrepeCompileExpVariables
 import Flapjack.CompileParamVarsBounds
 import Flapjack.CrepeContextBounds
+import Flapjack.CrepeAssignedFreeVarsBound
 import Flapjack.Compile
 import Flapjack.CompileFunctionDistinct
 import Flapjack.Semantics
@@ -107,6 +108,7 @@ import Flapjack.PanToCrepProgramComposition
 import Flapjack.PanToCrepTailCallCorrectness
 import Flapjack.PanToCrepMaxList
 import Flapjack.PanValueFlatten
+import Flapjack.FiniteMap
 import Flapjack.PanToCrepCallControlSafety
 import Flapjack.PanToCrepCallHandlerControlSafety
 import Flapjack.PanToCrepAssignmentControlSafety

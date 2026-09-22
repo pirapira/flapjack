@@ -761,6 +761,71 @@ theorem panValueProgramStateRel_evalDeclarations_adequacy
     exact hexceptions
   exact ⟨t', ht, hrel', hlookup', hexceptions⟩
 
+/-! The returned-call declaration step only needs the return-shape projection
+    of the full adequacy package.  Keep this smaller bridge available to the
+    `state_rel_imp_semantics_decls_to_crep` induction so a caller can consume
+    the target declaration evaluator, post-state relation, and callee shape
+    without unpacking the function-table lookup case. -/
+theorem panValueProgramStateRel_evalDeclarations_returnShape_adequacy
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (s t : PanValueProgramState α) (hrel : panValueProgramStateRel s t)
+    (declarations : List (Decl α)) (memoryAccess : Option (PanValueMemoryAccess α))
+    (s' : PanValueProgramState α)
+    (hs : evalPanValueDeclarations s declarations memoryAccess = some s')
+    (name : FunName) (shape : Shape)
+    (hlookup : lookupInfo name s'.returnShapes = some shape) :
+    ∃ t', evalPanValueDeclarations t (panSimpDecls declarations) memoryAccess = some t' ∧
+      panValueProgramStateRel s' t' ∧
+      lookupInfo name t'.returnShapes = some shape ∧
+      s'.exceptions = t'.exceptions := by
+  obtain ⟨t', ht, hrel'⟩ :=
+    panValueProgramStateRel_evalPanValueDeclarations
+      s t hrel declarations memoryAccess s' hs
+  rcases hrel' with ⟨hstructs, hglobals, hmemory, hreturnShapes,
+    hparameterShapes, hexceptions', hbaseAddress, htopAddress, hbytesInWord,
+    hfunctions⟩
+  have htargetLookup : lookupInfo name t'.returnShapes = some shape := by
+    rw [← hreturnShapes]
+    exact hlookup
+  exact ⟨t', ht,
+    ⟨hstructs, hglobals, hmemory, hreturnShapes, hparameterShapes, hexceptions',
+      hbaseAddress, htopAddress, hbytesInWord, hfunctions⟩,
+    htargetLookup, by exact hexceptions'⟩
+
+/-! The parameter-shape projection needed by the argument side of Cake's
+    `state_rel_imp_semantics_decls_to_crep` call step.  Declaration evaluation
+    preserves the complete state relation, so the target parameter table can
+    be used directly by the subsequent evaluator relation rather than being
+    carried as an unproved premise. -/
+theorem panValueProgramStateRel_evalDeclarations_parameterShape_adequacy
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (s t : PanValueProgramState α) (hrel : panValueProgramStateRel s t)
+    (declarations : List (Decl α)) (memoryAccess : Option (PanValueMemoryAccess α))
+    (s' : PanValueProgramState α)
+    (hs : evalPanValueDeclarations s declarations memoryAccess = some s')
+    (name : FunName) (parameters : List (VarName × Shape))
+    (hlookup : lookupInfo name s'.parameterShapes = some parameters) :
+    ∃ t', evalPanValueDeclarations t (panSimpDecls declarations) memoryAccess = some t' ∧
+      panValueProgramStateRel s' t' ∧
+      lookupInfo name t'.parameterShapes = some parameters ∧
+      s'.exceptions = t'.exceptions := by
+  obtain ⟨t', ht, hrel'⟩ := panValueProgramStateRel_evalPanValueDeclarations
+    s t hrel declarations memoryAccess s' hs
+  rcases hrel' with ⟨hstructs, hglobals, hmemory, hreturnShapes,
+    hparameterShapes, hexceptions', hbaseAddress, htopAddress, hbytesInWord,
+    hfunctions⟩
+  have htargetLookup : lookupInfo name t'.parameterShapes = some parameters := by
+    rw [← hparameterShapes]
+    exact hlookup
+  exact ⟨t', ht,
+    ⟨hstructs, hglobals, hmemory, hreturnShapes, hparameterShapes, hexceptions',
+      hbaseAddress, htopAddress, hbytesInWord, hfunctions⟩,
+    htargetLookup, by exact hexceptions'⟩
+
 /-! Cake's `map_snd_f_eq` (`pan_simpProofScript.sml:43`): rewriting only the
     body component of a declaration triple commutes with projecting that body
     and applying a further function.  Stated for `List (α × β × γ)`, whose
@@ -802,6 +867,36 @@ theorem evalPanValueExp_panValueProgramStateRel
   obtain ⟨_hstructs, hglobals, hmemory, _hret, _hparam, _hexn, hbase, htop,
     hbiw, _hfuncs⟩ := hrel
   simpa only [hglobals, hmemory, hbase, htop, hbiw] using hs
+
+/-! Compose declaration-state adequacy with the expression evaluator.  This is
+    the concrete argument-evaluation step needed by Cake's
+    `state_rel_imp_semantics_decls_to_crep` call branch: after the declarations
+    have produced a related target state, a successful source argument keeps
+    the same value in that post-declaration target state.  The evaluator
+    equations and the post-state relation are produced by this theorem; they
+    are not merely carried as caller premises. -/
+theorem panValueProgramStateRel_evalDeclarations_evalExp
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (s t : PanValueProgramState α) (hrel : panValueProgramStateRel s t)
+    (declarations : List (Decl α)) (memoryAccess : Option (PanValueMemoryAccess α))
+    (s' : PanValueProgramState α)
+    (expression : Exp α) (value : PanValue α)
+    (hs : evalPanValueDeclarations s declarations memoryAccess = some s')
+    (hvalue : evalPanValueExp s'.structs (fun _ => none) s'.globals
+        s'.memory s'.baseAddress s'.topAddress s'.bytesInWord expression
+        (memoryAccess := memoryAccess) = some value) :
+    ∃ t', evalPanValueDeclarations t (panSimpDecls declarations) memoryAccess = some t' ∧
+      panValueProgramStateRel s' t' ∧
+      evalPanValueExp s'.structs (fun _ => none) t'.globals
+        t'.memory t'.baseAddress t'.topAddress t'.bytesInWord expression
+        (memoryAccess := memoryAccess) = some value := by
+  obtain ⟨t', ht, hrel'⟩ := panValueProgramStateRel_evalPanValueDeclarations
+    s t hrel declarations memoryAccess s' hs
+  refine ⟨t', ht, hrel', ?_⟩
+  exact evalPanValueExp_panValueProgramStateRel s'.structs (fun _ => none)
+    s' t' hrel' expression memoryAccess value hvalue
 
 /-! Cake's `OPT_MMAP_eval_some_eq` (`pan_simpProofScript.sml:518`): a whole
     list of expressions that evaluates successfully evaluates to the same

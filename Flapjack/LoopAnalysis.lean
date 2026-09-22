@@ -1,5 +1,6 @@
 import Flapjack.CrepToLoop
 import Flapjack.LoopCall
+import Flapjack.LoopSemantics
 
 /-!
 Structural analyses for the Loop language. These are the list-based
@@ -28,6 +29,330 @@ def loopVarsOfExp : LoopExp α → List Nat
 def varsOfExp (expression : LoopExp α) (live : List Nat) : List Nat :=
   (loopVarsOfExp expression).foldr insertNatSorted live
 
+/-- Membership in a fold of `insertNatSorted` over an expression's reads. -/
+theorem mem_foldr_insertNatSorted (names : List Nat) (live : List Nat) (x : Nat) :
+    x ∈ names.foldr insertNatSorted live ↔ x ∈ names ∨ x ∈ live := by
+  induction names with
+  | nil => simp
+  | cons name names ih =>
+      simp only [List.foldr_cons, insertNatSorted_mem, ih, List.mem_cons]
+      constructor
+      · rintro (h | h | h)
+        · exact Or.inl (Or.inl h)
+        · exact Or.inl (Or.inr h)
+        · exact Or.inr h
+      · rintro ((h | h) | h)
+        · exact Or.inl h
+        · exact Or.inr (Or.inl h)
+        · exact Or.inr (Or.inr h)
+
+/-- Membership in `varsOfExp`: a name is live when it is read by the
+    expression or was already live. -/
+theorem varsOfExp_mem (expression : LoopExp α) (live : List Nat) (x : Nat) :
+    x ∈ varsOfExp expression live ↔ x ∈ loopVarsOfExp expression ∨ x ∈ live := by
+  simp [varsOfExp, mem_foldr_insertNatSorted]
+
+/-- Cake's `vars_of_exp_acc` (`cakeml/pancake/proofs/loop_liveProofScript.sml:339`):
+    the accumulator is subsumed, so the live set is the expression's reads
+    together with the incoming live set. -/
+theorem varsOfExp_acc (expression : LoopExp α) (live : List Nat) (x : Nat) :
+    x ∈ varsOfExp expression live ↔ x ∈ varsOfExp expression [] ∨ x ∈ live := by
+  rw [varsOfExp_mem, varsOfExp_mem]
+  simp
+
+/-- Cake's `vars_of_exp_mono` (`cakeml/pancake/proofs/loop_liveProofScript.sml:400`):
+    every incoming live name remains live after reading the expression. -/
+theorem varsOfExp_mono (expression : LoopExp α) (live : List Nat) (x : Nat)
+    (h : x ∈ live) : x ∈ varsOfExp expression live := by
+  rw [varsOfExp_mem]
+  exact Or.inr h
+
+/-- Cake's `eval_lemma` (`cakeml/pancake/proofs/loop_liveProofScript.sml:443`):
+    an expression's value only depends on the local variables it reads.  CakeML
+    states this with a finite-map `subspt` of the restricted local state; the
+    list-backed Flapjack port states that the two local maps agree on
+    `loopVarsOfExp expression`. -/
+theorem evalLoopExp_locals_congr [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [PanCmp α]
+    (state : LoopState α) (locals : Nat → Option α) (expression : LoopExp α)
+    (value : α)
+    (h : ∀ name ∈ loopVarsOfExp expression, locals name = state.locals name)
+    (heval : evalLoopExp state expression = some value) :
+    evalLoopExp { state with locals := locals } expression = some value := by
+  have hmain : ∀ expression : LoopExp α, ∀ value : α,
+      (∀ name ∈ loopVarsOfExp expression, locals name = state.locals name) →
+      evalLoopExp state expression = some value →
+      evalLoopExp { state with locals := locals } expression = some value := by
+    apply evalLoopExp.induct
+      (motive := fun expression => ∀ value : α,
+        (∀ name ∈ loopVarsOfExp expression, locals name = state.locals name) →
+        evalLoopExp state expression = some value →
+        evalLoopExp { state with locals := locals } expression = some value)
+    · intro cval v hc he
+      simp only [evalLoopExp] at he ⊢
+      exact he
+    · intro name v hc he
+      have hloc : locals name = state.locals name := hc name (by simp [loopVarsOfExp])
+      simp only [evalLoopExp] at he ⊢
+      rw [hloc]; exact he
+    · intro address v hc he
+      simp only [evalLoopExp] at he ⊢
+      exact he
+    · intro address ih v hc he
+      simp only [evalLoopExp] at he ⊢
+      cases haddr : evalLoopExp state address with
+      | none => simp [haddr] at he
+      | some addr =>
+          simp only [haddr] at he
+          have hsub : ∀ name ∈ loopVarsOfExp address, locals name = state.locals name :=
+            fun name hname => hc name (by simpa only [loopVarsOfExp] using hname)
+          have hih := ih addr hsub haddr
+          rw [hih]
+          exact he
+    · intro operator left right ihLeft ihRight v hc he
+      simp only [evalLoopExp] at he ⊢
+      cases hleft : evalLoopExp state left with
+      | none => simp [hleft] at he
+      | some lv =>
+          cases hright : evalLoopExp state right with
+          | none => simp [hleft, hright] at he
+          | some rv =>
+              simp only [hleft, hright] at he
+              have hleft' : ∀ name ∈ loopVarsOfExp left, locals name = state.locals name := by
+                intro name hname
+                exact hc name (by
+                  simp only [loopVarsOfExp, List.flatMap_cons, List.flatMap_nil,
+                    List.append_nil, List.mem_append]
+                  exact Or.inl hname)
+              have hright' : ∀ name ∈ loopVarsOfExp right, locals name = state.locals name := by
+                intro name hname
+                exact hc name (by
+                  simp only [loopVarsOfExp, List.flatMap_cons, List.flatMap_nil,
+                    List.append_nil, List.mem_append]
+                  exact Or.inr hname)
+              have hihL := ihLeft lv hleft' hleft
+              have hihR := ihRight rv hright' hright
+              rw [hihL, hihR]
+              exact he
+    · intro left right ihLeft ihRight v hc he
+      simp only [evalLoopExp] at he ⊢
+      cases hleft : evalLoopExp state left with
+      | none => simp [hleft] at he
+      | some lv =>
+          cases hright : evalLoopExp state right with
+          | none => simp [hleft, hright] at he
+          | some rv =>
+              simp only [hleft, hright] at he
+              have hleft' : ∀ name ∈ loopVarsOfExp left, locals name = state.locals name := by
+                intro name hname
+                exact hc name (by
+                  simp only [loopVarsOfExp, List.flatMap_cons, List.flatMap_nil,
+                    List.append_nil, List.mem_append]
+                  exact Or.inl hname)
+              have hright' : ∀ name ∈ loopVarsOfExp right, locals name = state.locals name := by
+                intro name hname
+                exact hc name (by
+                  simp only [loopVarsOfExp, List.flatMap_cons, List.flatMap_nil,
+                    List.append_nil, List.mem_append]
+                  exact Or.inr hname)
+              have hihL := ihLeft lv hleft' hleft
+              have hihR := ihRight rv hright' hright
+              rw [hihL, hihR]
+              exact he
+    · intro operator left right ihLeft ihRight v hc he
+      simp only [evalLoopExp] at he ⊢
+      cases hleft : evalLoopExp state left with
+      | none => simp [hleft] at he
+      | some lv =>
+          cases hright : evalLoopExp state right with
+          | none => simp [hleft, hright] at he
+          | some rv =>
+              simp only [hleft, hright] at he
+              have hleft' : ∀ name ∈ loopVarsOfExp left, locals name = state.locals name := by
+                intro name hname
+                exact hc name (by
+                  simp only [loopVarsOfExp, List.mem_append]
+                  exact Or.inl hname)
+              have hright' : ∀ name ∈ loopVarsOfExp right, locals name = state.locals name := by
+                intro name hname
+                exact hc name (by
+                  simp only [loopVarsOfExp, List.mem_append]
+                  exact Or.inr hname)
+              have hihL := ihLeft lv hleft' hleft
+              have hihR := ihRight rv hright' hright
+              rw [hihL, hihR]
+              exact he
+    · intro operator left right ihLeft ihRight v hc he
+      simp only [evalLoopExp] at he ⊢
+      cases hleft : evalLoopExp state left with
+      | none => simp [hleft] at he
+      | some lv =>
+          cases hright : evalLoopExp state right with
+          | none => simp [hleft, hright] at he
+          | some rv =>
+              simp only [hleft, hright] at he
+              have hleft' : ∀ name ∈ loopVarsOfExp left, locals name = state.locals name := by
+                intro name hname
+                exact hc name (by
+                  simp only [loopVarsOfExp, List.mem_append]
+                  exact Or.inl hname)
+              have hright' : ∀ name ∈ loopVarsOfExp right, locals name = state.locals name := by
+                intro name hname
+                exact hc name (by
+                  simp only [loopVarsOfExp, List.mem_append]
+                  exact Or.inr hname)
+              have hihL := ihLeft lv hleft' hleft
+              have hihR := ihRight rv hright' hright
+              rw [hihL, hihR]
+              exact he
+    · intro t n1 n2 n3 n4 n5 n6 n7 n8 v hc he
+      exfalso
+      cases t with
+      | const c => exact n1 c rfl
+      | var name => exact n2 name rfl
+      | lookup address => exact n3 address rfl
+      | load address => exact n4 address rfl
+      | op operator args =>
+          cases args with
+          | nil => simp [evalLoopExp] at he
+          | cons a rest =>
+              cases rest with
+              | nil => simp [evalLoopExp] at he
+              | cons b rest2 =>
+                  cases rest2 with
+                  | nil => exact n5 operator a b rfl
+                  | cons c rest3 => simp [evalLoopExp] at he
+      | crepOp cop args =>
+          cases args with
+          | nil => simp [evalLoopExp] at he
+          | cons a rest =>
+              cases rest with
+              | nil => simp [evalLoopExp] at he
+              | cons b rest2 =>
+                  cases rest2 with
+                  | nil => cases cop; exact n6 a b rfl
+                  | cons c rest3 => simp [evalLoopExp] at he
+      | cmp operator l r => exact n7 operator l r rfl
+      | shift operator l r => exact n8 operator l r rfl
+      | baseAddr => simp [evalLoopExp] at he
+      | topAddr => simp [evalLoopExp] at he
+  exact hmain expression value h heval
+
+/-- Cake's `eval_lemma'` (`cakeml/pancake/proofs/loop_liveProofScript.sml:416`):
+    an expression's value is unchanged when the local state is extended, i.e.
+    every previously defined name keeps its value.  CakeML states this with
+    `subspt s.locals locals`; the Flapjack port states the pointwise
+    implication for the function-valued local state. -/
+theorem evalLoopExp_locals_extend [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [PanCmp α]
+    (state : LoopState α) (locals : Nat → Option α) (expression : LoopExp α)
+    (value : α)
+    (h : ∀ name v, state.locals name = some v → locals name = some v)
+    (heval : evalLoopExp state expression = some value) :
+    evalLoopExp { state with locals := locals } expression = some value := by
+  have hmain : ∀ expression : LoopExp α, ∀ value : α,
+      evalLoopExp state expression = some value →
+      evalLoopExp { state with locals := locals } expression = some value := by
+    apply evalLoopExp.induct
+      (motive := fun expression => ∀ value : α,
+        evalLoopExp state expression = some value →
+        evalLoopExp { state with locals := locals } expression = some value)
+    · intro cval v he
+      simp only [evalLoopExp] at he ⊢
+      exact he
+    · intro name v he
+      simp only [evalLoopExp] at he ⊢
+      exact h name v he
+    · intro address v he
+      simp only [evalLoopExp] at he ⊢
+      exact he
+    · intro address ih v he
+      simp only [evalLoopExp] at he ⊢
+      cases haddr : evalLoopExp state address with
+      | none => simp [haddr] at he
+      | some addr =>
+          simp only [haddr] at he
+          rw [ih addr haddr]
+          exact he
+    · intro operator left right ihLeft ihRight v he
+      simp only [evalLoopExp] at he ⊢
+      cases hleft : evalLoopExp state left with
+      | none => simp [hleft] at he
+      | some lv =>
+          cases hright : evalLoopExp state right with
+          | none => simp [hleft, hright] at he
+          | some rv =>
+              simp only [hleft, hright] at he
+              rw [ihLeft lv hleft, ihRight rv hright]
+              exact he
+    · intro left right ihLeft ihRight v he
+      simp only [evalLoopExp] at he ⊢
+      cases hleft : evalLoopExp state left with
+      | none => simp [hleft] at he
+      | some lv =>
+          cases hright : evalLoopExp state right with
+          | none => simp [hleft, hright] at he
+          | some rv =>
+              simp only [hleft, hright] at he
+              rw [ihLeft lv hleft, ihRight rv hright]
+              exact he
+    · intro operator left right ihLeft ihRight v he
+      simp only [evalLoopExp] at he ⊢
+      cases hleft : evalLoopExp state left with
+      | none => simp [hleft] at he
+      | some lv =>
+          cases hright : evalLoopExp state right with
+          | none => simp [hleft, hright] at he
+          | some rv =>
+              simp only [hleft, hright] at he
+              rw [ihLeft lv hleft, ihRight rv hright]
+              exact he
+    · intro operator left right ihLeft ihRight v he
+      simp only [evalLoopExp] at he ⊢
+      cases hleft : evalLoopExp state left with
+      | none => simp [hleft] at he
+      | some lv =>
+          cases hright : evalLoopExp state right with
+          | none => simp [hleft, hright] at he
+          | some rv =>
+              simp only [hleft, hright] at he
+              rw [ihLeft lv hleft, ihRight rv hright]
+              exact he
+    · intro t n1 n2 n3 n4 n5 n6 n7 n8 v he
+      exfalso
+      cases t with
+      | const c => exact n1 c rfl
+      | var name => exact n2 name rfl
+      | lookup address => exact n3 address rfl
+      | load address => exact n4 address rfl
+      | op operator args =>
+          cases args with
+          | nil => simp [evalLoopExp] at he
+          | cons a rest =>
+              cases rest with
+              | nil => simp [evalLoopExp] at he
+              | cons b rest2 =>
+                  cases rest2 with
+                  | nil => exact n5 operator a b rfl
+                  | cons c rest3 => simp [evalLoopExp] at he
+      | crepOp cop args =>
+          cases args with
+          | nil => simp [evalLoopExp] at he
+          | cons a rest =>
+              cases rest with
+              | nil => simp [evalLoopExp] at he
+              | cons b rest2 =>
+                  cases rest2 with
+                  | nil => cases cop; exact n6 a b rfl
+                  | cons c rest3 => simp [evalLoopExp] at he
+      | cmp operator l r => exact n7 operator l r rfl
+      | shift operator l r => exact n8 operator l r rfl
+      | baseAddr => simp [evalLoopExp] at he
+      | topAddr => simp [evalLoopExp] at he
+  exact hmain expression value heval
+
 def deleteNatSorted (name : Nat) : List Nat → List Nat
   | [] => []
   | head :: tail =>
@@ -54,6 +379,51 @@ def arithVars : LoopArith → List Nat → List Nat
 
 def loopListDeleteSorted (names : List Nat) (live : List Nat) : List Nat :=
   names.foldl (fun current name => deleteNatSorted name current) live
+
+/-- `deleteNatSorted` is a filter; this makes the membership facts below
+    immediate. -/
+theorem deleteNatSorted_eq_filter (name : Nat) (live : List Nat) :
+    deleteNatSorted name live = live.filter (fun x => decide (x ≠ name)) := by
+  induction live with
+  | nil => simp [deleteNatSorted]
+  | cons head tail ih =>
+      rw [deleteNatSorted, ih, List.filter_cons]
+      by_cases h : (name == head) = true
+      · rw [if_pos h]
+        have : decide (head ≠ name) = false := by
+          rw [decide_eq_false_iff_not]
+          exact fun hne => hne (beq_iff_eq.mp h).symm
+        simp [this]
+      · rw [if_neg h]
+        have : decide (head ≠ name) = true := by
+          rw [decide_eq_true_iff]
+          exact fun hx => h (beq_iff_eq.mpr hx.symm)
+        simp [this]
+
+/-- Membership in `deleteNatSorted`: the removed name is the only difference. -/
+theorem deleteNatSorted_mem (name : Nat) (live : List Nat) (x : Nat) :
+    x ∈ deleteNatSorted name live ↔ x ∈ live ∧ x ≠ name := by
+  rw [deleteNatSorted_eq_filter, List.mem_filter, decide_eq_true_iff]
+
+/-- Cake's `domain_list_delete`
+    (`cakeml/pancake/proofs/loop_liveProofScript.sml:561`): deleting a list of
+    names removes exactly those names from the live set.  CakeML states this on
+    HOL sets (`domain s DIFF set vs`); the list-backed Flapjack port states the
+    same fact with membership. -/
+theorem loopListDeleteSorted_mem (names : List Nat) (live : List Nat) (x : Nat) :
+    x ∈ loopListDeleteSorted names live ↔ x ∈ live ∧ x ∉ names := by
+  induction names generalizing live with
+  | nil => simp [loopListDeleteSorted]
+  | cons name names ih =>
+      rw [show loopListDeleteSorted (name :: names) live =
+          loopListDeleteSorted names (deleteNatSorted name live) from rfl]
+      rw [ih, deleteNatSorted_mem]
+      simp only [List.mem_cons, not_or]
+      constructor
+      · rintro ⟨⟨hmem, hne⟩, hnotnames⟩
+        exact ⟨hmem, hne, hnotnames⟩
+      · rintro ⟨hmem, hne, hnotnames⟩
+        exact ⟨⟨hmem, hne⟩, hnotnames⟩
 
 def loopIntersectSorted (left right : List Nat) : List Nat :=
   left.filter (fun name => name ∈ right)
@@ -1042,5 +1412,71 @@ theorem loopAccVars_mem (program : LoopProg α) (names : List Nat) (x : Nat) :
     x ∈ loopAccVars program names ↔ x ∈ names ∨ x ∈ loopAccVars program [] :=
   loopAccVars_mem_aux program names names x
 
+
+/-- Cake's `every_prog_def`
+    (`cakeml/pancake/semantics/loopPropsScript.sml:10`): a predicate-combinator
+    over Loop programs that requires the predicate of every program node. -/
+def loopEveryProg (predicate : LoopProg α → Prop) : LoopProg α → Prop
+  | .seq first second =>
+      predicate (.seq first second) ∧ loopEveryProg predicate first ∧
+        loopEveryProg predicate second
+  | .loop liveIn body liveOut =>
+      predicate (.loop liveIn body liveOut) ∧ loopEveryProg predicate body
+  | .ite operator condition right thenBranch elseBranch live =>
+      predicate (.ite operator condition right thenBranch elseBranch live) ∧
+        loopEveryProg predicate thenBranch ∧ loopEveryProg predicate elseBranch
+  | .mark body =>
+      predicate (.mark body) ∧ loopEveryProg predicate body
+  | .call returns target arguments handler =>
+      predicate (.call returns target arguments handler) ∧
+        (match handler with
+         | some (_, first, second, _) =>
+             loopEveryProg predicate first ∧ loopEveryProg predicate second
+         | none => True)
+  | program => predicate program
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
+
+theorem loopEveryProg_seq (predicate : LoopProg α → Prop) (first second : LoopProg α) :
+    loopEveryProg predicate (.seq first second) ↔
+      predicate (.seq first second) ∧ loopEveryProg predicate first ∧
+        loopEveryProg predicate second := by
+  simp [loopEveryProg]
+
+theorem loopEveryProg_loop (predicate : LoopProg α → Prop) (liveIn : List Nat)
+    (body : LoopProg α) (liveOut : List Nat) :
+    loopEveryProg predicate (.loop liveIn body liveOut) ↔
+      predicate (.loop liveIn body liveOut) ∧ loopEveryProg predicate body := by
+  simp [loopEveryProg]
+
+theorem loopEveryProg_ite (predicate : LoopProg α → Prop) (operator : Cmp)
+    (condition : Nat) (right : RegImm α) (thenBranch elseBranch : LoopProg α)
+    (live : List Nat) :
+    loopEveryProg predicate (.ite operator condition right thenBranch elseBranch live) ↔
+      predicate (.ite operator condition right thenBranch elseBranch live) ∧
+        loopEveryProg predicate thenBranch ∧ loopEveryProg predicate elseBranch := by
+  simp [loopEveryProg]
+
+theorem loopEveryProg_mark (predicate : LoopProg α → Prop) (body : LoopProg α) :
+    loopEveryProg predicate (.mark body) ↔
+      predicate (.mark body) ∧ loopEveryProg predicate body := by
+  simp [loopEveryProg]
+
+theorem loopEveryProg_call (predicate : LoopProg α → Prop)
+    (returns : Option (List Nat × List Nat)) (target : Option Nat)
+    (arguments : List Nat)
+    (handler : Option (Nat × LoopProg α × LoopProg α × List Nat)) :
+    loopEveryProg predicate (.call returns target arguments handler) ↔
+      predicate (.call returns target arguments handler) ∧
+        (match handler with
+         | some (_, first, second, _) =>
+             loopEveryProg predicate first ∧ loopEveryProg predicate second
+         | none => True) := by
+  cases handler with
+  | none => simp [loopEveryProg]
+  | some h =>
+      obtain ⟨n, first, second, l⟩ := h
+      simp [loopEveryProg]
 
 end Flapjack

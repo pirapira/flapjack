@@ -687,4 +687,27 @@ def crepeCallFullValues :
       (evalPanProgWithCalls pipelineCallSourceFunctions 20 (fun _ => none)
         pipelineCallSourceMain).map (fun result => result.2)
 
+/-- Focused regression for the Cake `lookup_locals_eq_map_vars` counterpart. -/
+def lookupLocalsState : CrepState Nat :=
+  { locals := fun name =>
+      if name == 2 then some 7 else if name == 5 then some 9 else none
+    memory := fun _ => none }
+
+example :
+    ([2, 5] : List Nat).mapM lookupLocalsState.locals =
+      (([2, 5] : List Nat).map (CrepExp.var (α := Nat))).mapM
+        (evalCrepFullExpState lookupLocalsState 0 0) :=
+  lookup_locals_eq_map_vars lookupLocalsState 0 0 [2, 5]
+
+#check @lookup_locals_eq_map_vars
+
+/-! The concrete stateful call/sequence timeout bridge: an unresolved callee
+    at the inner fuel budget prevents the continuation from running. -/
+theorem crepe_call_seq_timeout_compose_zero :
+    evalCrepFullProgState [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      (fun _ _ _ _ => none) 0 0 2 crepeSemanticsState
+      (.seq (.call none "missing" []) .skip) = none := by
+  apply evalCrepFullProgState_call_seq_timeout_compose
+  decide +kernel
+
 end Flapjack

@@ -1,4 +1,5 @@
 import Flapjack.Pipeline
+import Flapjack.CrepeAssignedFreeVarsBound
 
 namespace Flapjack.Test.CompileProgParity
 
@@ -7,6 +8,28 @@ open Flapjack
 def compileProgProbeContext : CompileContext Nat :=
   { vars := [], functions := [], exceptions := [], maxVar := 0,
     bytesInWord := 1 }
+
+#check @crepGetEidsFromDecls_lookup_iff_exception
+#check @allocatedNames_gt
+#check @freshNames_gt
+#check @mem_crepExpVars_le_maxCrepExpVar
+
+theorem maxCrepExpVar_mem_fixture :
+    7 ≤ maxCrepExpVar ([.var 3, .const 0, .var 7] : List (CrepExp Nat)) := by
+  apply mem_crepExpVars_le_maxCrepExpVar
+  simp [crepExpVars]
+
+theorem allocatedNames_gt_fixture : (0 : Nat) < (allocatedNames compileProgProbeContext .one).headD 0 := by
+  have hmem : (allocatedNames compileProgProbeContext .one).headD 0 ∈ allocatedNames compileProgProbeContext .one := by
+    simp [allocatedNames, compileProgProbeContext]
+  have := allocatedNames_gt compileProgProbeContext .one hmem
+  simpa [compileProgProbeContext] using this
+
+theorem freshNames_gt_fixture : (0 : Nat) < (freshNames compileProgProbeContext 1 1).headD 0 := by
+  have hmem : (freshNames compileProgProbeContext 1 1).headD 0 ∈ freshNames compileProgProbeContext 1 1 := by
+    simp [freshNames, compileProgProbeContext]
+  have := freshNames_gt compileProgProbeContext 1 1 (by decide) hmem
+  simpa [compileProgProbeContext] using this
 
 def compileProgProbeDecls : List (Decl Nat) :=
   [.function
@@ -136,5 +159,50 @@ def runChecks : IO Bool := do
     IO.println "FAIL compile_prog shared-store address temporary parity"
   pure (parityGuard && compileProgUnreachableInlineGuard &&
     shMemStoreAddressTempParity)
+
+#check @not_mem_allocatedNames
+#check @not_mem_freshNames
+#check @panValueSlotBound
+#check @panValueSlotBound_cons_of
+#check @crepContextSlot_extended_or_gt
+#check @crepContextSlot_le_max
+
+theorem extended_context_slot_fixture :
+    compileProgProbeContext.maxVar < 3 := by
+  let extended : CompileContext Nat :=
+    { compileProgProbeContext with
+      vars := ("fresh", (.one, [3])) :: compileProgProbeContext.vars
+      maxVar := compileProgProbeContext.maxVar + Shape.shapeSize .one }
+  have hslot : CrepContextSlot extended 3 := by
+    refine ⟨"fresh", .one, [3], ?_, by simp⟩
+    simp [extended, lookupInfo]
+  rcases crepContextSlot_extended_or_gt compileProgProbeContext
+      "fresh" .one [3] (by
+        intro x hx
+        simp [compileProgProbeContext] at *
+        omega) hslot with hold | hgt
+  · rcases hold with ⟨name, shape, names, hlookup, hmem⟩
+    simp [compileProgProbeContext, lookupInfo] at hlookup
+  · exact hgt
+
+#check @compileProg_break
+#check @compileProg_continue
+#check @compileProg_tick
+#check @compileProg_annot
+#check @compileProg_assign_global
+#check @compileProg_ite_of_compiled
+#check @compileProg_while_of_compiled
+#check @compileProg_store32_of_compiled
+#check @compileProg_storeByte_of_compiled
+
+#check @compileProg_dec_of_compiled
+#check @compileProg_decCall
+#check @compileProg_store_of_compiled
+#check @compileProg_raise_of_compiled
+#check @compileProg_primitive_of_compiled
+#check @compileProg_assign_local_of_compiled
+#check @compileProg_shMemLoad_local_of_compiled
+#check @compileProg_shMemStore_of_compiled
+#check @crepAssignedFreeVars_nestedDecs_mem_iff
 
 end Flapjack.Test.CompileProgParity

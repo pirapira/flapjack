@@ -480,6 +480,72 @@ theorem withShape_getElem_eq_take_drop (shapes : List Shape) (values : List α)
           rw [shapeSize_comb_cons]
           rw [← List.drop_drop]
 
+/-! Counterpart of Cake's `comp_field`
+    (`cakeml/pancake/pan_to_crepScript.sml:28`).  Cake returns the pair
+    `(TAKE (size_of_shape sh) es, sh)` for the selected field and recurses on
+    `DROP (size_of_shape sh) es`; here we keep only the expression-list
+    component (the shape component is `shapes[index]`).  Cake's empty-list
+    fallback `[Const 0w]` is represented by `[]` because every use below
+    assumes `index < shapes.length`, so that branch is unreachable. -/
+def compField (index : Nat) (shapes : List Shape) (values : List α) : List α :=
+  match shapes with
+  | [] => []
+  | shape :: shapes =>
+      if index = 0 then values.take (Shape.shapeSize shape)
+      else compField (index - 1) shapes (values.drop (Shape.shapeSize shape))
+
+/-- Counterpart of Cake's `mem_comp_field`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:666`): an expression of
+    a selected field is an expression of the flattened record. -/
+theorem mem_compField_imp_mem (index : Nat) (shapes : List Shape)
+    (values : List α) (candidate : α)
+    (hindex : index < shapes.length)
+    (hvalues : values.length = Shape.shapeSize (.comb shapes))
+    (hmem : candidate ∈ compField index shapes values) :
+    candidate ∈ values := by
+  revert values index
+  induction shapes with
+  | nil => intro index values hindex; exact absurd hindex (Nat.not_lt_zero index)
+  | cons shape shapes ih =>
+      intro index values hindex hvalues hmem
+      simp only [List.length_cons] at hindex
+      cases index with
+      | zero =>
+          simp only [compField] at hmem
+          exact List.mem_of_mem_take hmem
+      | succ k =>
+          have hk : k < shapes.length := by omega
+          have hvalues' : (values.drop (Shape.shapeSize shape)).length =
+              Shape.shapeSize (.comb shapes) := by
+            rw [List.length_drop, hvalues, shapeSize_comb_cons, Nat.add_sub_cancel_left]
+          simp only [compField, Nat.succ_ne_zero, if_false] at hmem
+          exact List.mem_of_mem_drop
+            (ih k (values.drop (Shape.shapeSize shape)) hk hvalues' hmem)
+
+/-- Counterpart of Cake's `mem_comp_field_lem`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:397`): with no index
+    bound the selected field is still a sublist of the flattened record (Cake's
+    `Const 0w` fallback is represented by the empty list here). -/
+theorem mem_compField_imp_mem_of_any (index : Nat) (shapes : List Shape)
+    (values : List α) (candidate : α)
+    (hmem : candidate ∈ compField index shapes values) :
+    candidate ∈ values := by
+  revert values index
+  induction shapes with
+  | nil =>
+      intro index values hmem
+      exact absurd hmem (by simp [compField])
+  | cons shape shapes ih =>
+      intro index values hmem
+      cases index with
+      | zero =>
+          simp only [compField] at hmem
+          exact List.mem_of_mem_take hmem
+      | succ k =>
+          simp only [compField, Nat.succ_ne_zero, if_false] at hmem
+          exact List.mem_of_mem_drop
+            (ih k (values.drop (Shape.shapeSize shape)) hmem)
+
 /-- Cake's `DISJOINT (set left) (set right)` predicate, stated directly on
     lists because `List` membership already expresses the element relation. -/
 def ListDisjoint (left right : List α) : Prop :=
@@ -546,6 +612,32 @@ theorem listDisjoint_append (xs ys : List α) (h : (xs ++ ys).Nodup) :
 theorem listDisjoint_comm (xs ys : List α) (h : ListDisjoint xs ys) :
     ListDisjoint ys xs :=
   fun value hy hx => h value hx hy
+
+/-! Counterpart of Cake's `genlist_distinct_max`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:208`): the
+    `GENLIST (λx. SUC x + m) n` slot enumeration is disjoint from any list
+    whose elements are bounded by `m`. -/
+theorem listDisjoint_range_add (n m : Nat) (ys : List Nat)
+    (h : ∀ y, y ∈ ys → y ≤ m) :
+    ListDisjoint ((List.range n).map (fun x => x + 1 + m)) ys := by
+  intro x hx hy
+  obtain ⟨i, _hi, rfl⟩ := List.mem_map.mp hx
+  have hlt : m < i + 1 + m := by omega
+  have hle := h (i + 1 + m) hy
+  omega
+
+/-! Counterpart of Cake's `genlist_distinct_max'`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:221`): the shifted
+    `GENLIST (λx. SUC x + (m + p)) n` slot enumeration is disjoint from any
+    list whose elements are bounded by `m`. -/
+theorem listDisjoint_range_add_shift (n m p : Nat) (ys : List Nat)
+    (h : ∀ y, y ∈ ys → y ≤ m) :
+    ListDisjoint ((List.range n).map (fun x => x + 1 + (m + p))) ys := by
+  intro x hx hy
+  obtain ⟨i, _hi, rfl⟩ := List.mem_map.mp hx
+  have hlt : m < i + 1 + (m + p) := by omega
+  have hle := h (i + 1 + (m + p)) hy
+  omega
 
 /-! Counterpart of Cake's `distinct_lists_cons`
     (`cakeml/pancake/semantics/pan_commonPropsScript.sml:125`). -/
@@ -1034,6 +1126,27 @@ theorem list_lookup_of_mem_of_nodup [BEq α] [LawfulBEq α] {entries : List (α 
           rw [htrue] at hk
           exact Bool.false_ne_true hk.symm
         · exact ih htail hmem
+
+/-- Counterpart of Cake's `alookup_el_pair_eq_el`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:3921`): in an
+    association list with distinct keys, the entry at an index whose key is
+    `key` is exactly the pair recorded by `lookup key`. -/
+theorem getElem_eq_of_lookup_eq [BEq α] [LawfulBEq α] {entries : List (α × β)}
+    {key : α} {value : β} {n : Nat}
+    (hdistinct : (entries.map Prod.fst).Nodup) (hn : n < entries.length)
+    (hhead : (entries[n]'hn).1 = key)
+    (hlookup : entries.lookup key = some value) :
+    entries[n]'hn = (key, value) := by
+  obtain ⟨l₁, l₂, hentries, _⟩ := (List.lookup_eq_some_iff).mp hlookup
+  have hmem : (key, value) ∈ entries := by
+    rw [hentries]
+    exact List.mem_append_right l₁ (by simp)
+  obtain ⟨m, hm, hmval⟩ := List.getElem_of_mem hmem
+  have hnx : entries[n]'hn = (key, (entries[n]'hn).2) := by
+    rw [← hhead]
+  have hnm : n = m := getElem_fst_inj entries n m hdistinct hn hm hnx hmval
+  subst hnm
+  exact hmval
 
 /-- Counterpart of Cake's `MEM_MAP2_IMP`
     (`cakeml/pancake/proofs/crep_inlineProofScript.sml:2233`): every element of

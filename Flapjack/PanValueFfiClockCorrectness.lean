@@ -181,6 +181,67 @@ theorem evalPanValueFfiClockProg_seq_normal
       some (outcome, finalClock) := by
   simp [evalPanValueFfiClockProg, hfirst, hsecond]
 
+/- A raised first component terminates a sequence immediately.  The complete
+   globals/memory/FFI state and exception payload are propagated unchanged;
+   the second component is not evaluated. -/
+theorem evalPanValueFfiClockProg_seq_raised
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel clock firstClock : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (middleLocals middleGlobals : VarName → Option (PanValue α))
+    (middleMemory : α → Option (PanValue α)) (middleFfi : FfiState σ)
+    (first second : Prog α) (exception : ExceptionId) (value : PanValue α)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (contracts : Option PanValueCallContracts := none)
+    (hfirst : evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord fuel locals globals memory ffi clock first
+        (memoryAccess := memoryAccess) (contracts := contracts) =
+      some (.control (.raised middleLocals middleGlobals middleMemory middleFfi
+        exception value), firstClock)) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+        (.seq first second) (memoryAccess := memoryAccess) (contracts := contracts) =
+      some (.control (.raised middleLocals middleGlobals middleMemory middleFfi
+        exception value), firstClock) := by
+  simp [evalPanValueFfiClockProg, hfirst]
+
+/- A timeout in the first component also terminates a sequence immediately;
+   its post-state and remaining clock are the exact Cake timeout payload. -/
+theorem evalPanValueFfiClockProg_seq_timeout
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel clock firstClock : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (middleLocals middleGlobals : VarName → Option (PanValue α))
+    (middleMemory : α → Option (PanValue α)) (middleFfi : FfiState σ)
+    (first second : Prog α)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (contracts : Option PanValueCallContracts := none)
+    (hfirst : evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord fuel locals globals memory ffi clock first
+        (memoryAccess := memoryAccess) (contracts := contracts) =
+      some (.timeout middleLocals middleGlobals middleMemory middleFfi, firstClock)) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+        baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+        (.seq first second) (memoryAccess := memoryAccess) (contracts := contracts) =
+      some (.timeout middleLocals middleGlobals middleMemory middleFfi, firstClock) := by
+  simp [evalPanValueFfiClockProg, hfirst]
+
 /-! A zero-clock call still evaluates its arguments and validates the callee
 lookup/binding boundary before producing `TimeOut`.  This mirrors the order
 of the corresponding `panSem` equation and prevents a timeout theorem from
@@ -983,6 +1044,52 @@ theorem evalPanValueFfiClockProgram_of_declarations_and_raised_call_cross_clock
   constructor
   · simp [evalPanValueFfiClockProgram, hdeclarations, hcall]
   · simp [evalPanValueFfiClockProgram, hdeclarations, hcallShift]
+
+/-! General declaration-boundary clock shifting for a call result.  The
+    outcome remains polymorphic so Return, Raise, Timeout, and FinalFFI are
+    not conflated; each call evaluator equation and the declaration lookup
+    premise stays explicit for the Cake top-level induction. -/
+theorem evalPanValueFfiClockProgram_of_declarations_and_call_cross_clock
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (initial : PanValueFfiProgramState α σ)
+    (clock ck : Nat)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (fuel : Nat) (declarations : List (Decl α))
+    (entry : FunName) (arguments : List (Exp α))
+    (state : PanValueProgramState α)
+    (outcome : PanValueFfiClockOutcome α σ) (nextClock : Nat)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none)
+    (hdeclarations : evalPanValueDeclarations initial.source declarations
+      (memoryAccess := memoryAccess) = some state)
+    (hentry : lookupInfo entry state.returnShapes = none)
+    (hcall : evalPanValueFfiClockCall context primitive handler state.structs
+      state.functions state.baseAddress state.topAddress state.bytesInWord fuel
+      (fun _ => none) state.globals state.memory initial.ffi clock none entry arguments
+      (memoryAccess := memoryAccess)
+      (contracts := some (PanValueCallContracts.mk state.returnShapes
+        state.exceptions state.parameterShapes))
+      (memoryHandler := memoryHandler) = some (outcome, nextClock))
+    (hcallShift : evalPanValueFfiClockCall context primitive handler state.structs
+      state.functions state.baseAddress state.topAddress state.bytesInWord fuel
+      (fun _ => none) state.globals state.memory initial.ffi (clock + ck) none entry arguments
+      (memoryAccess := memoryAccess)
+      (contracts := some (PanValueCallContracts.mk state.returnShapes
+        state.exceptions state.parameterShapes))
+      (memoryHandler := memoryHandler) = some (outcome, nextClock + ck)) :
+    evalPanValueFfiClockProgram context initial clock primitive handler fuel
+      declarations entry arguments (memoryAccess := memoryAccess)
+      (memoryHandler := memoryHandler) = some (outcome, nextClock) ∧
+    evalPanValueFfiClockProgram context initial (clock + ck) primitive handler fuel
+      declarations entry arguments (memoryAccess := memoryAccess)
+      (memoryHandler := memoryHandler) = some (outcome, nextClock + ck) := by
+  constructor
+  · simp [evalPanValueFfiClockProgram, hdeclarations, hentry, hcall]
+  · simp [evalPanValueFfiClockProgram, hdeclarations, hentry, hcallShift]
 
 /-! The corresponding timeout bridge keeps zero-clock behavior explicit at the
     declaration/program boundary. -/

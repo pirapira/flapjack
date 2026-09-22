@@ -1,4 +1,5 @@
 import Flapjack.Crepe
+import Flapjack.CrepeAssignedFreeVarsBound
 
 /-!
 # Original-domain parity for `crepLang$assigned_free_vars`
@@ -31,6 +32,284 @@ def parityGuard : Bool :=
 
 #eval parityGuard
 #guard parityGuard
+
+def boundedContext : CompileContext Nat :=
+  { vars := [("fresh", (.one, [3]))], functions := [], exceptions := [],
+    maxVar := 3, bytesInWord := 1 }
+
+def raiseContext : CompileContext Nat :=
+  { boundedContext with exceptions := [("error", 11)] }
+
+def handlerContext : CompileContext Nat :=
+  { vars := [], functions := [], exceptions := [("error", 11)],
+    maxVar := 0, bytesInWord := 1 }
+
+/-! This fixture exercises the Cake `ctxt_max_el_leq` bridge on the same
+    context-slot representation used by the assigned-free-vars proof. -/
+theorem context_slot_bound_fixture :
+    CrepContextSlot boundedContext 3 → 3 ≤ boundedContext.maxVar := by
+  intro hslot
+  apply crepContextSlot_le_max boundedContext ?_ hslot
+  refine ⟨by omega, ?_⟩
+  intro name shape slots hlookup
+  simp [boundedContext, lookupInfo] at hlookup
+  rcases hlookup with ⟨_hname, hshape, hslots⟩
+  subst shape
+  subst slots
+  intro slot hmem
+  simp [boundedContext] at *
+  omega
+
+theorem compileProg_dec_assigned_free_fixture :
+    (7 : Nat) ∉ crepAssignedFreeVars
+      (compileProg boundedContext (.dec "fresh" .one (.const 1) .skip)) := by
+  apply not_mem_crepAssignedFreeVars_compileProg_dec
+    boundedContext "fresh" .one (.const 1) .skip 7 [.const 1] .one
+  · simp [compileExp]
+  · simp [compileProg, crepAssignedFreeVars]
+
+theorem compileProg_decCall_assigned_free_fixture :
+    (7 : Nat) ∉ crepAssignedFreeVars
+      (compileProg boundedContext
+        (.decCall "fresh" .one "callee" [] .skip)) := by
+  apply not_mem_crepAssignedFreeVars_compileProg_decCall
+    boundedContext "fresh" .one "callee" [] .skip 7
+  · simp [compileProg, crepAssignedFreeVars]
+  · simp [allocatedNames, boundedContext]
+
+theorem compileProg_primitive_assigned_free_fixture :
+    (7 : Nat) ∉ crepAssignedFreeVars
+      (compileProg boundedContext (.primitive "fresh" .addCarry [])) := by
+  apply not_mem_crepAssignedFreeVars_compileProg_primitive
+    boundedContext "fresh" .addCarry [] 7
+  intro shape slots hlookup
+  simp [boundedContext, lookupInfo] at hlookup
+  rcases hlookup with ⟨rfl, rfl⟩
+  simp
+
+theorem compileProg_store_assigned_free_fixture :
+    (9 : Nat) ∉ crepAssignedFreeVars
+      (compileProg boundedContext (.store (.const 0) (.const 1))) := by
+  exact not_mem_crepAssignedFreeVars_compileProg_store
+    boundedContext (.const 0) (.const 1) 9
+
+theorem compileProg_assign_local_direct_assigned_free_fixture :
+    (7 : Nat) ∉ crepAssignedFreeVars
+      (compileProg boundedContext
+        (.assign .local "fresh" (.const 1))) := by
+  apply not_mem_crepAssignedFreeVars_compileProg_assign_local
+    boundedContext "fresh" (.const 1) 7
+  intro shape slots hlookup
+  simp [boundedContext, lookupInfo] at hlookup
+  rcases hlookup with ⟨rfl, rfl⟩
+  simp
+
+theorem compileProg_assign_local_temporary_assigned_free_fixture :
+    (7 : Nat) ∉ crepAssignedFreeVars
+      (compileProg boundedContext
+        (.assign .local "fresh" (.var .local "fresh"))) := by
+  apply not_mem_crepAssignedFreeVars_compileProg_assign_local
+    boundedContext "fresh" (.var .local "fresh") 7
+  intro shape slots hlookup
+  simp [boundedContext, lookupInfo] at hlookup
+  rcases hlookup with ⟨rfl, rfl⟩
+  simp
+
+theorem compileProg_extCall_assigned_free_fixture :
+    (9 : Nat) ∉ crepAssignedFreeVars
+      (compileProg boundedContext
+        (.extCall "ffi" (.const 1) (.const 2) (.const 3) (.const 4))) := by
+  exact not_mem_crepAssignedFreeVars_compileProg_extCall
+    boundedContext "ffi" (.const 1) (.const 2) (.const 3) (.const 4) 9
+
+theorem compileProg_raise_assigned_free_fixture :
+    (9 : Nat) ∉ crepAssignedFreeVars
+      (compileProg raiseContext (.raise "error" (.const 1))) := by
+  exact not_mem_crepAssignedFreeVars_compileProg_raise
+    raiseContext "error" (.const 1) 9
+
+theorem compileProg_shMemStore_assigned_free_fixture :
+    (9 : Nat) ∉ crepAssignedFreeVars
+      (compileProg boundedContext
+        (.shMemStore .opW (.const 0) (.const 1))) := by
+  exact not_mem_crepAssignedFreeVars_compileProg_shMemStore
+    boundedContext .opW (.const 0) (.const 1) 9
+
+theorem compileProg_store32_assigned_free_fixture :
+    (9 : Nat) ∉ crepAssignedFreeVars
+      (compileProg boundedContext (.store32 (.const 0) (.const 1))) := by
+  exact not_mem_crepAssignedFreeVars_compileProg_store32
+    boundedContext (.const 0) (.const 1) 9
+
+theorem compileProg_storeByte_assigned_free_fixture :
+    (9 : Nat) ∉ crepAssignedFreeVars
+      (compileProg boundedContext (.storeByte (.const 0) (.const 1))) := by
+  exact not_mem_crepAssignedFreeVars_compileProg_storeByte
+    boundedContext (.const 0) (.const 1) 9
+
+theorem compileProg_shMemLoad_local_assigned_free_fixture :
+    (7 : Nat) ∉ crepAssignedFreeVars
+      (compileProg boundedContext
+        (.shMemLoad .opW .local "fresh" (.const 0))) := by
+  apply not_mem_crepAssignedFreeVars_compileProg_shMemLoad_local
+    boundedContext .opW "fresh" (.const 0) 7
+  intro shape slots hlookup
+  simp [boundedContext, lookupInfo] at hlookup
+  rcases hlookup with ⟨rfl, rfl⟩
+  simp
+
+theorem compileProg_structural_composition_assigned_free_fixture :
+    (7 : Nat) ∉ crepAssignedFreeVars
+      (compileProg boundedContext
+        (.seq .skip (.ite (.const 1) .skip (.while (.const 1) .skip)))) := by
+  apply not_mem_crepAssignedFreeVars_compileProg_seq
+    boundedContext .skip (.ite (.const 1) .skip (.while (.const 1) .skip)) 7
+  · simp [compileProg, crepAssignedFreeVars]
+  · apply not_mem_crepAssignedFreeVars_compileProg_ite
+      boundedContext (.const 1) .skip (.while (.const 1) .skip) 7
+    · simp [compileProg, crepAssignedFreeVars]
+    · apply not_mem_crepAssignedFreeVars_compileProg_while
+        boundedContext (.const 1) .skip 7
+      simp [compileProg, crepAssignedFreeVars]
+
+theorem compileProg_call_no_handler_assigned_free_fixture :
+    (2 : Nat) ∉ crepAssignedFreeVars
+      (compileProg boundedContext
+        (.call (some (some (.local, "fresh"), none)) "callee" [])) := by
+  apply not_mem_crepAssignedFreeVars_compileProg_call_no_handler
+    boundedContext "callee" [] (some (.local, "fresh")) 2 (by simp [boundedContext])
+  intro queriedName shape slots hlookup
+  cases hname : ("fresh" == queriedName) with
+  | false =>
+      simp [boundedContext, lookupInfo] at hlookup
+      rcases hlookup with ⟨hnameEq, hshapeEq, hslotsEq⟩
+      subst queriedName
+      simp at hname
+  | true =>
+      simp [boundedContext, lookupInfo] at hlookup
+      rcases hlookup with ⟨hnameEq, hshapeEq, hslotsEq⟩
+      rw [← hslotsEq]
+      simp
+
+theorem compileProg_call_known_handler_assigned_free_fixture :
+    (0 : Nat) ∉ crepAssignedFreeVars
+      (compileProg handlerContext
+        (.call (some (none, some ("error", "missing", .skip))) "callee" [])) := by
+  have hbody : (0 : Nat) ∉ crepAssignedFreeVars
+      (compileProg handlerContext (.skip : Prog Nat)) := by
+    rw [compileProg_skip]
+    simp [crepAssignedFreeVars]
+  have hslot : ∀ name shape slots,
+      lookupInfo name handlerContext.vars = some (shape, slots) →
+        (0 : Nat) ∉ slots := by
+    intro name shape slots hlookup
+    change lookupInfo name ([] : InfoMap (Shape × List Nat)) = some (shape, slots) at hlookup
+    simp [lookupInfo] at hlookup
+  apply not_mem_crepAssignedFreeVars_compileProg_call_known_handler
+    handlerContext "callee" [] none "error" "missing" .skip 11 0
+    (by simp [handlerContext])
+    (by simp [handlerContext, lookupInfo])
+    hbody hslot
+
+theorem compileProg_assigned_free_bound_full_fixture :
+    (2 : Nat) ∉ crepAssignedFreeVars
+      (compileProg boundedContext
+        (.dec "temporary" .one (.const 1)
+          (.seq (.assign .local "fresh" (.const 2)) .skip))) := by
+  apply not_mem_crepAssignedFreeVars_compileProg_bound
+    boundedContext
+    (.dec "temporary" .one (.const 1)
+      (.seq (.assign .local "fresh" (.const 2)) .skip)) 2
+  · simp [boundedContext, panValueCtxtMax, lookupInfo]
+  · intro name shape slots hlookup
+    simp [boundedContext, lookupInfo] at hlookup
+    rcases hlookup with ⟨hname, hshape, hslots⟩
+    subst shape
+    subst slots
+    simp
+  · simp [boundedContext]
+
+/-- Cake `rewritten_context_unassigned` regression: the old slot list of a
+    variable stays disjoint from the free variables after the slot map is
+    extended for that variable. -/
+def rewrittenContext : CompileContext Nat :=
+  { vars := [("x", (Shape.one, [7]))], functions := [], exceptions := [],
+    maxVar := 7, bytesInWord := 1 }
+
+theorem rewrittenContext_unassigned_fixture :
+    ListDisjoint ([7] : List Nat)
+      (crepAssignedFreeVars
+        (compileProg
+          { rewrittenContext with
+            vars := ("x", (Shape.one, [])) :: rewrittenContext.vars
+            maxVar := rewrittenContext.maxVar + 1 } .skip)) := by
+  apply rewrittenContext_unassigned rewrittenContext .skip "x" Shape.one [] [7] Shape.one
+  · simp [rewrittenContext, lookupInfo]
+  · refine ⟨?_, ?_⟩
+    · intro name shape slots hlookup
+      simp only [rewrittenContext, lookupInfo] at hlookup
+      split at hlookup
+      · obtain ⟨rfl, rfl⟩ := Option.some.inj hlookup
+        simp
+      · simp at hlookup
+    · intro name name' shape shape' slots slots' hl hl' hmem
+      simp only [rewrittenContext, lookupInfo] at hl hl'
+      split at hl <;> split at hl' <;> simp_all
+  · refine ⟨by simp [rewrittenContext], ?_⟩
+    intro name shape slots hlookup
+    simp only [rewrittenContext, lookupInfo] at hlookup
+    split at hlookup
+    · obtain ⟨rfl, rfl⟩ := Option.some.inj hlookup
+      intro slot hslot
+      simp only [List.mem_singleton] at hslot
+      subst hslot
+      simp [rewrittenContext]
+    · simp at hlookup
+  · refine ⟨?_, ?_⟩
+    · intro name shape slots hlookup
+      simp only [rewrittenContext, lookupInfo] at hlookup
+      split at hlookup
+      · obtain ⟨rfl, rfl⟩ := Option.some.inj hlookup
+        simp
+      · simp at hlookup
+    · intro name name' shape shape' slots slots' hl hl' hmem
+      simp only [rewrittenContext, lookupInfo] at hl hl'
+      split at hl <;> split at hl' <;> simp_all
+  · refine ⟨by simp [rewrittenContext], ?_⟩
+    intro name shape slots hlookup
+    simp only [rewrittenContext, lookupInfo] at hlookup
+    split at hlookup
+    · obtain ⟨rfl, rfl⟩ := Option.some.inj hlookup
+      simp
+    · exact absurd hlookup (by simp)
+  · intro value hmem
+    simp at hmem
+
+#check @rewrittenContext_unassigned
+#check @panValueSlotBound_cons_of_nodup_disjoint
+
+def wrapRtContext : InfoMap (Shape × List Nat) :=
+  [("x", (Shape.comb [Shape.one, Shape.one], [5, 6]))]
+
+theorem wrapRtContext_noOverlap : panValueNoOverlap wrapRtContext := by
+  refine ⟨?_, ?_⟩
+  · intro name shape slots hlookup
+    simp only [wrapRtContext, lookupInfo] at hlookup
+    split at hlookup
+    · obtain ⟨rfl, rfl⟩ := Option.some.inj hlookup
+      decide
+    · exact absurd hlookup (by simp)
+  · intro name name' shape shape' slots slots' hl hl' hmem
+    simp only [wrapRtContext, lookupInfo] at hl hl'
+    split at hl <;> split at hl' <;> simp_all
+
+theorem panValueNoOverlap_wrapRt_nodup_fixture :
+    ([5, 6] : List Nat).Nodup :=
+  panValueNoOverlap_wrapRt_nodup wrapRtContext "x"
+    (Shape.comb [Shape.one, Shape.one]) [5, 6] wrapRtContext_noOverlap
+    (by simp [wrapRtContext, lookupInfo, wrapRt])
+
+#check @panValueNoOverlap_wrapRt_nodup
 
 def runChecks : IO Bool := do
   if parityGuard then

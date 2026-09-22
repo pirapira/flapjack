@@ -522,6 +522,37 @@ theorem wordStackPhysicalMovesFromSpecWithStride_mem_source
         simpa [Nat.mul_succ, Nat.add_assoc, Nat.add_left_comm,
           Nat.add_comm] using hindex
 
+/-! The source registers in Cake's physical ABI move list are distinct.  This
+    is the source-list invariant needed by the acyclic `parmove` contract:
+    the destination-side `Nodup` premise is retained explicitly even though
+    the arithmetic source proof itself only uses the positive stride.  The
+    source shape is the one used by Cake's
+    `word_to_stackScript.sml:85` `MAP (DIV2 ## DIV2)`/`parmove` lowering. -/
+theorem wordStackPhysicalMovesFromSpecWithStride_map_snd_nodup
+    (stride : Nat) (locations : List WordLocation) (source : Nat)
+    (hstride : 0 < stride) (hlocations : locations.Nodup) :
+    (wordStackPhysicalMovesFromSpecWithStride stride locations source).map
+        Prod.snd |>.Nodup := by
+  induction locations generalizing source with
+  | nil =>
+      simp [wordStackPhysicalMovesFromSpecWithStride]
+  | cons location locations ih =>
+      have hlocations' : (location :: locations).Nodup := hlocations
+      have htailLocations : locations.Nodup :=
+        (List.nodup_cons.mp hlocations').2
+      simp only [wordStackPhysicalMovesFromSpecWithStride, List.map_cons]
+      apply List.nodup_cons.mpr
+      constructor
+      · intro hmem
+        rcases List.mem_map.mp hmem with ⟨move, hmove, hsource⟩
+        obtain ⟨index, hindex⟩ :=
+          wordStackPhysicalMovesFromSpecWithStride_mem_source
+            stride locations (source + stride) move hmove
+        have hnat : source = (source + stride) + stride * index := by
+          simpa [hsource] using hindex
+        omega
+      · exact ih (source := source + stride) htailLocations
+
 /-! Physical parameter moves retain the source-register shape introduced by
     the ABI lowering.  This is the list-level bridge needed by callers that
     reason about all generated entry moves at once, rather than a selected

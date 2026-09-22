@@ -1448,6 +1448,141 @@ example (context : CompileContext Nat) (eshapes : InfoMap Shape) :
 #check @lookupPanFunction_mem
 #check @panValuePcLocalisedCode_lookup
 
+/-! Cake's `ctxt_max_def`/`no_overlap_def` (`pan_commonPropsScript.sml:11,18`)
+are ported as concrete predicates on the variable map, with the empty map as a
+kernel-checked inhabitant. -/
+#check @panValueCtxtMax
+#check @panValueNoOverlap
+#check @panValueCtxtMax_empty
+#check @panValueNoOverlap_empty
+#check @panValueNoOverlap_lookup_disjoint
+#check @panValueCrepStateRel_compileFunDecl_context_with_invariants_of_folds
+
+/-- Regression for Cake `no_overlap_flookup_distinct`: the lemma is applicable
+to any `no_overlap` variable map with two distinct looked-up variables. -/
+example (name name' : String) (shape shape' : Shape) (slots slots' : List Nat)
+    (hne : name ≠ name')
+    (hlookup : lookupInfo name ([] : InfoMap (Shape × List Nat)) =
+      some (shape, slots))
+    (hlookup' : lookupInfo name' ([] : InfoMap (Shape × List Nat)) =
+      some (shape', slots')) :
+    ListDisjoint slots slots' :=
+  panValueNoOverlap_lookup_disjoint
+    ([] : InfoMap (Shape × List Nat)) name name' shape shape' slots slots'
+    panValueNoOverlap_empty hne hlookup hlookup'
+
+#check @panValueNoOverlap_zip_withShape
+
+/-- Regression for Cake `all_distinct_alist_no_overlap`: splitting a nodup flat
+    slot list across a two-component shape yields a `no_overlap` alist. -/
+example :
+    panValueNoOverlap
+      ((["a", "b"] : List VarName).zip
+        (([Shape.one, Shape.one] : List Shape).zip
+          (withShape [Shape.one, Shape.one] [0, 1]))) :=
+  panValueNoOverlap_zip_withShape [0, 1] ["a", "b"]
+    [Shape.one, Shape.one] (by decide) (by simp [Shape.shapeSize]) (by decide)
+
+#check @panValueCtxtMax_compileParamVars
+#check @panValueNoOverlap_compileParamVars
+#check @panToCrepMakeVmap_context_invariants
+
+#check @panValueCtxtMax_zip_withShape
+
+/-- Regression for Cake `all_distinct_alist_ctxt_max`: the same split alist is
+    bounded by `maxList` of the flat slot list. -/
+example :
+    panValueCtxtMax (maxList [0, 1])
+      ((["a", "b"] : List VarName).zip
+        (([Shape.one, Shape.one] : List Shape).zip
+          (withShape [Shape.one, Shape.one] [0, 1]))) :=
+  panValueCtxtMax_zip_withShape [0, 1] ["a", "b"]
+    [Shape.one, Shape.one] (by decide) (by simp [Shape.shapeSize]) (by decide)
+
+#check @panValueCtxtMax_cons_of
+
+#check @panValueCtxtMax_getElem_le
+
+/-- Regression for Cake `ctxt_max_el_leq`: a recorded slot number is bounded by
+    the context bound. -/
+example (bound : Nat) (vars : InfoMap (Shape × List Nat)) (name : String)
+    (shape : Shape) (slots : List Nat) (n : Nat)
+    (hmax : panValueCtxtMax bound vars)
+    (hlookup : lookupInfo name vars = some (shape, slots))
+    (hn : n < slots.length) :
+    slots[n] ≤ bound :=
+  panValueCtxtMax_getElem_le bound vars name shape slots n hmax hlookup hn
+
+#check @panValueCtxtMax_not_mem_of_lt
+
+/-- Regression for the context hypothesis of Cake
+    `not_mem_context_assigned_mem_gt`: a value above the `ctxt_max` bound does
+    not occur in any variable's slot list. -/
+example (bound x : Nat) (vars : InfoMap (Shape × List Nat)) (name : String)
+    (shape : Shape) (slots : List Nat)
+    (hmax : panValueCtxtMax bound vars)
+    (hx : bound < x)
+    (hlookup : lookupInfo name vars = some (shape, slots)) :
+    x ∉ slots :=
+  panValueCtxtMax_not_mem_of_lt bound x vars name shape slots hmax hx hlookup
+
+/-! The generated formal-parameter context satisfies the two Cake invariants
+    used by `locals_rel`, with the original source-shaped maximum convention.
+    These examples keep the construction executable while checking the
+    theorem-level bridge on both scalar and structured parameters. -/
+private def parameterContextFixture : List (VarName × Shape) :=
+  [("word", .one), ("pair", .comb [.one, .one]), ("empty", .comb [])]
+
+example :
+    panValueNoOverlap (panToCrepMakeVmap parameterContextFixture) := by
+  exact (panToCrepMakeVmap_context_invariants parameterContextFixture (by
+    simp [parameterContextFixture])).1
+
+example :
+    panValueCtxtMax
+      (Shape.shapeSize (.comb (parameterContextFixture.map Prod.snd)) - 1)
+      (panToCrepMakeVmap parameterContextFixture) := by
+  have hnames : (parameterContextFixture.map Prod.fst).Nodup := by
+    simp [parameterContextFixture]
+  have h := (panToCrepMakeVmap_context_invariants parameterContextFixture hnames).2
+  rw [compileParamVars_next_offset] at h
+  simpa [panToCrepMakeVmap] using h
+#check @panValueNoOverlap_lookup_disjoint
+#check @panValueCrepStateRelWithContext
+#check @panValueCrepStateRelWithContext_to_stateRel
+#check @panValueCrepStateRelWithContext_of_stateRel
+
+/-! The strengthened state relation retains Cake's `no_overlap`/`ctxt_max`
+invariants while projecting to the compatibility state relation used by the
+existing correctness leaves. -/
+private def emptyContext : CompileContext Nat :=
+  { vars := [], functions := [], exceptions := [], maxVar := 0, bytesInWord := 8 }
+
+example : panValueCrepStateRelWithContext [] emptyContext
+    (fun _ => none) (fun _ => none) (fun _ => none)
+    { locals := fun _ => none, memory := fun _ => none } := by
+  apply panValueCrepStateRelWithContext_of_stateRel
+  · simpa [emptyContext] using
+      (panValueNoOverlap_empty :
+        panValueNoOverlap ([] : InfoMap (Shape × List Nat)))
+  · simpa [emptyContext] using
+      (panValueCtxtMax_empty 0 (by omega) :
+        panValueCtxtMax 0 ([] : InfoMap (Shape × List Nat)))
+  · refine ⟨rfl, panValueCrepLocalsRel_empty [] emptyContext (fun _ => none), ?_⟩
+    rfl
+
+/-- Regression for Cake `no_overlap_flookup_distinct`: the lemma is applicable
+to any `no_overlap` variable map with two distinct looked-up variables. -/
+example (name name' : String) (shape shape' : Shape) (slots slots' : List Nat)
+    (hne : name ≠ name')
+    (hlookup : lookupInfo name ([] : InfoMap (Shape × List Nat)) =
+      some (shape, slots))
+    (hlookup' : lookupInfo name' ([] : InfoMap (Shape × List Nat)) =
+      some (shape', slots')) :
+    ListDisjoint slots slots' :=
+  panValueNoOverlap_lookup_disjoint
+    ([] : InfoMap (Shape × List Nat)) name name' shape shape' slots slots'
+    panValueNoOverlap_empty hne hlookup hlookup'
 /-! The concrete `code_rel` analogue is non-vacuous on a source-faithful,
 nonempty function table: instantiating Cake's `mk_ctxt_code_imp_code_rel` port
 on a single declaration whose body is a localised `skip`. -/
@@ -1475,8 +1610,11 @@ example :
 #check @panValuePcCompileCorrectAndClockedRaisedResultRel_of_hraise_data_with_clock_context
 #check @panValuePcCompileCorrectAndClockedRaisedResultRel_of_clocked_program_state_correct_with_clock_context
 #check @panValuePcCompileCorrectAndClockedRaisedResultRel_of_both_program_state_correct_with_clock_context
+#check @panValuePcCompileCorrectAndClockedRaisedResultRel_of_both_program_state_correct_with_clock_context_of_state_context
 #check @panValuePcCompileCorrectWithContextCode_of_compact_evaluators_with_expression_state_evidence_and_clocked_raised_control_evidence
 #check @panValuePcCompileCorrectAndClockedReturnedResultRel_of_both_program_state_correct_with_clock_context
+#check @panValuePcCompileCorrectAndClockedReturnedResultRel_of_both_program_state_correct_with_clock_context_of_state_context
+#check @panValuePcCompileCorrectAndClockedNormalResultRel_of_both_program_state_correct_with_clock_context_of_state_context
 #check @panValuePcCompileCorrectAndClockedNormalResultRel_of_both_program_state_correct_with_clock_context
 #check @panValuePcCompileCorrectAndClockedResultRel_of_program_state_correct_with_context_code
 #check @panValuePcCompileCorrectAndClockedBrokeResultRel_of_both_program_state_correct_with_clock_context
@@ -1485,6 +1623,7 @@ example :
 #check @panValuePcCompileCorrectAndClockedResultRel_of_both_program_state_correct_with_clock_context
 #check @panValuePcRaisedHraiseData_callback_to_control_exception_result_rel_with_context_code
 #check @panValuePcCompileCorrectAndClockedFinalFfiResultRel_of_both_program_state_correct_with_clock_context
+#check @panValuePcCompileCorrectAndClockedFinalFfiResultRel_of_both_program_state_correct_with_clock_context_of_state_context
 #check @panValuePcCompileCorrectAndResultRel_of_program_state_correct_with_context_code
 #check @panValuePcCompileCorrectAndRaisedResultRel_of_program_state_correct_with_context_code
 #check @panValuePcCompileCorrectAndClockedResultRel_of_normal_program_state_correct_with_context_code

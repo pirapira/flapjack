@@ -784,6 +784,7 @@ theorem panSemEvaluate_clock_shift_panResultEvents
         (panSemEvaluate context primitive handler
           { state with clock := state.clock + extra } program) :=
       (congrArg panResultEvents hrun'').symm
+ 
 /-! Cake's `evaluate_add_clock_io_events_mono` has a timeout branch in which
     the smaller-clock run contributes only its incoming FFI trace.  The
     larger-clock run may continue, so that branch is a prefix statement rather
@@ -805,7 +806,7 @@ theorem evalPanValueFfiClockProg_shift_ioEvents_prefix
     (memoryHandler : Option (PanValueMemoryFfiHandler α σ))
     (outcome : PanValueFfiClockOutcome α σ) (resultClock extra : Nat)
     (highOutcome : PanValueFfiClockOutcome α σ) (highClock : Nat)
-    (hrun : evalPanValueFfiClockProg context primitive handler structs functions
+    (_hrun : evalPanValueFfiClockProg context primitive handler structs functions
       baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
       program (memoryAccess := memoryAccess) (contracts := contracts)
       (memoryHandler := memoryHandler) = some (outcome, resultClock))
@@ -815,30 +816,44 @@ theorem evalPanValueFfiClockProg_shift_ioEvents_prefix
       (contracts := contracts) (memoryHandler := memoryHandler) =
       some (highOutcome, highClock)) :
     ffi.ioEvents <+: (panResultFfi (highOutcome, highClock)).ioEvents := by
-  cases outcome with
-  | timeout timeoutLocals timeoutGlobals timeoutMemory timeoutFfi =>
-      exact (evalPanValueFfiClockProg_ioEvents_prefix_of_handlerPreserves
-        context primitive handler structs functions baseAddress topAddress bytesInWord
-        hstateful hmemory fuel locals globals memory ffi (clock + extra) program
-        memoryAccess contracts memoryHandler highOutcome highClock hrunHigh)
-  | control controlResult =>
-      have hlow :=
-        (evalPanValueFfiClockProg_ioEvents_prefix_of_handlerPreserves
-          context primitive handler structs functions baseAddress topAddress bytesInWord
-          hstateful hmemory fuel locals globals memory ffi clock program memoryAccess
-          contracts memoryHandler (.control controlResult) resultClock hrun)
-      have hshift :=
-        (evalPanValueFfiClock_shift context primitive handler structs functions
-          baseAddress topAddress bytesInWord).2 fuel locals globals memory ffi clock
-          program memoryAccess contracts memoryHandler (.control controlResult) resultClock extra hrun
-          (by
-            intro timeoutLocals timeoutGlobals timeoutMemory timeoutFfi htimeout
-            cases htimeout)
-      have hpair : (highOutcome, highClock) =
-          (.control controlResult, resultClock + extra) :=
-        Option.some.inj (hrunHigh.symm.trans hshift)
-      cases hpair
-      cases controlResult <;> exact hlow
+  exact evalPanValueFfiClockProg_ioEvents_prefix_of_handlerPreserves
+    context primitive handler structs functions baseAddress topAddress bytesInWord
+    hstateful hmemory fuel locals globals memory ffi (clock + extra) program
+    memoryAccess contracts memoryHandler highOutcome highClock hrunHigh
+
+/-! The non-timeout branch of Cake's ordered event-prefix premise follows
+    directly from the clock-shift result theorem.  The timeout branch remains
+    an explicit evaluator obligation, as in Cake's recursive monotonicity
+    proof, rather than being hidden behind an unsound initial-trace claim. -/
+theorem panSemEvaluate_clock_event_prefix_of_nonTimeout
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (state : PanSemEvaluateState α σ)
+    (program : Prog α)
+    (hevaluate : ∀ clock, ∃ outcome returnedClock,
+      panSemEvaluate context primitive handler
+        { state with clock := clock } program = some (outcome, returnedClock)) :
+    (hnonTimeout : ∀ clock outcome returnedClock,
+      panSemEvaluate context primitive handler
+        { state with clock := clock } program = some (outcome, returnedClock) →
+      ∀ locals globals memory ffi,
+        outcome ≠ .timeout locals globals memory ffi) →
+    ∀ (left right : Nat), left ≤ right →
+      panResultEvents
+          (panSemEvaluate context primitive handler
+            { state with clock := left } program) <+:
+        panResultEvents
+          (panSemEvaluate context primitive handler
+            { state with clock := right } program) := by
+  intro hnonTimeout left right hleft
+  obtain ⟨lowOutcome, lowClock, hlow⟩ := hevaluate left
+  have hnotimeout := hnonTimeout left lowOutcome lowClock hlow
+  have hshift := panSemEvaluate_clock_shift_panResultEvents
+    context primitive handler { state with clock := left } program
+    (right - left) lowOutcome lowClock hlow hnotimeout
+  rw [hshift]
+  simp [Nat.add_sub_of_le hleft]
 
 /-! The evaluator shift also transports the full source-facing result
     projection.  This is the direct clocked top-level bridge used when a

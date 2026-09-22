@@ -91,6 +91,17 @@ example :
     (locations := [.register 5])
   simp [entryMoveConfig, wordStackLocation, lookupNatInfo]
 
+/-! The source registers in the physical move list are distinct, matching the
+    positive-stride `parmove` invariant in Cake's `word_to_stackScript.sml`. -/
+example :
+    (wordStackPhysicalMovesFromSpecWithStride 2
+      [.register 5, .stack 3, .register 6] 2).map Prod.snd |>.Nodup := by
+  apply wordStackPhysicalMovesFromSpecWithStride_map_snd_nodup
+  · decide
+  · decide
+
+#check @wordStackPhysicalMovesFromSpecWithStride_map_snd_nodup
+
 example :
     ∀ move, move ∈ [(.register 5, .register 2)] →
       ∃ index,
@@ -122,5 +133,13 @@ example :
       wordStackLocationMoveRemoveDestination, wordStackLocationMove,
       wordStackJoin, evalWordStackMachine,
       wordStackMachineWriteRegister, wordStackMachineBinOp]
+
+example :
+    (wordStackPhysicalMovesFromSpecWithStride 2
+      [.register 5, .stack 1] 2).map Prod.snd |>.Nodup := by
+  apply wordStackPhysicalMovesFromSpecWithStride_map_snd_nodup 2 _ 2 (by omega)
+  decide
+
+#check @wordStackPhysicalMovesFromSpecWithStride_map_snd_nodup
 
 end Flapjack.RiscV

@@ -160,6 +160,51 @@ theorem crepGetEidsFromDecls_lookup_of_exception
           intro exception shape hmem
           exact ih index exception shape (by simpa [exceptionEntries] using hmem)
 
+/-! The finite-domain half of Cake get_eids_imp_excp_rel: the generated exception-code table has a lookup exactly when the source declaration list contains that exception. The code value remains abstract, matching Cake separate word-size and code-assignment premises. -/
+theorem crepGetEidsFromDecls_lookup_iff_exception
+    [BEq String] [LawfulBEq String]
+    (fromNat : Nat → α) (index : Nat) :
+    ∀ (declarations : List (Decl α)) (exception : ExceptionId),
+      (∃ shape, (exception, shape) ∈ exceptionEntries declarations) ↔
+        ∃ code, lookupInfo exception
+          (pipelineExceptionCodes fromNat index declarations) = some code := by
+  intro declarations
+  induction declarations generalizing index with
+  | nil =>
+      intro exception
+      simp [exceptionEntries, pipelineExceptionCodes, lookupInfo]
+  | cons declaration declarations ih =>
+      cases declaration with
+      | exnDecl declaredException declaredShape =>
+          intro exception
+          by_cases heq : exception == declaredException
+          · have heqEq : exception = declaredException := eq_of_beq heq
+            subst exception
+            simp [exceptionEntries, pipelineExceptionCodes, lookupInfo]
+          · have hneq : exception ≠ declaredException := by
+              intro h
+              apply heq
+              simp [h]
+            have hne : (declaredException == exception) = false := by
+              rw [Bool.eq_false_iff]
+              intro h
+              apply heq
+              exact beq_iff_eq.mpr (eq_of_beq h).symm
+            simpa [exceptionEntries, pipelineExceptionCodes, lookupInfo, heq, hne, hneq] using
+              (ih (index + 1) exception)
+      | decl declaredShape name value =>
+          intro exception
+          simpa [exceptionEntries, pipelineExceptionCodes, lookupInfo] using
+            (ih index exception)
+      | function declaration =>
+          intro exception
+          simpa [exceptionEntries, pipelineExceptionCodes, lookupInfo] using
+            (ih index exception)
+      | name struct fields =>
+          intro exception
+          simpa [exceptionEntries, pipelineExceptionCodes, lookupInfo] using
+            (ih index exception)
+
 def pipelineInlineNames : List (Decl α) → List FunName
   | [] => []
   | .function declaration :: declarations =>
@@ -353,6 +398,43 @@ theorem crepDistinctFuncs_crepMakeFuncsAt (start : Nat)
 theorem crepDistinctFuncs_crepMakeFuncs (functions : List (CompiledFunction α)) :
     crepDistinctFuncs (crepMakeFuncs functions) :=
   crepDistinctFuncs_crepMakeFuncsAt crepFirstName functions
+
+/-- Cake's `initial_prog_make_funcs_el`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:3942`): the label a
+    function receives from `make_funcs` identifies the position of that
+    function in the source list.  CakeML writes the label of the `n`-th
+    function as `n + first_name`; the list-backed Flapjack port instead
+    inverts a successful lookup into the index whose label is
+    `start + index`. -/
+theorem crepMakeFuncsAt_exists_index (start : Nat)
+    (functions : List (CompiledFunction α))
+    {name : FunName} {label rm : Nat}
+    (h : lookupInfo name (crepMakeFuncsAt start functions) = some (label, rm)) :
+    ∃ n, label = start + n ∧
+      (functions[n]?).map (fun function => function.name) = some name ∧
+        n < functions.length := by
+  induction functions generalizing start with
+  | nil => simp [crepMakeFuncsAt, lookupInfo] at h
+  | cons function functions ih =>
+      simp only [crepMakeFuncsAt, lookupInfo] at h
+      by_cases hc : (function.name == name) = true
+      · rw [if_pos hc] at h
+        have hlabel : label = start := (congrArg Prod.fst (Option.some.inj h)).symm
+        exact ⟨0, by omega, by simp [beq_iff_eq.mp hc], by simp⟩
+      · rw [if_neg hc] at h
+        obtain ⟨n, hlabel, hget, hn⟩ := ih (start := start + 1) h
+        refine ⟨n + 1, by omega, ?_, by simp; omega⟩
+        simp only [List.getElem?_cons_succ]
+        exact hget
+
+/-- Cake's `initial_prog_make_funcs_el` for the `make_funcs` label base. -/
+theorem crepMakeFuncs_exists_index (functions : List (CompiledFunction α))
+    {name : FunName} {label rm : Nat}
+    (h : lookupInfo name (crepMakeFuncs functions) = some (label, rm)) :
+    ∃ n, label = crepFirstName + n ∧
+      (functions[n]?).map (fun function => function.name) = some name ∧
+        n < functions.length :=
+  crepMakeFuncsAt_exists_index crepFirstName functions h
 
 def pipelineLoopFunctionsAux [OfNat α 0] [OfNat α 1]
     (architecture : RiscV.Architecture) (functionInfos : InfoMap (Nat × Nat)) :

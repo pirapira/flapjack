@@ -68,6 +68,32 @@ theorem withShape_getElem_eq_take_drop_fixture :
   withShape_getElem_eq_take_drop oneCombNamed [1, 2, 3, 4] 1
     (by simp [oneCombNamed, Shape.shapeSize]) (by decide)
 
+/-! Counterpart of Cake's `mem_comp_field`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:666`); the source
+    definition is `comp_field_def` (`cakeml/pancake/pan_to_crepScript.sml:28`). -/
+#guard compField 1 oneCombNamed [1, 2, 3, 4] == [2, 3]
+
+theorem compField_fixture :
+    compField 1 oneCombNamed [1, 2, 3, 4] = [2, 3] := by
+  simp [compField, oneCombNamed, Shape.shapeSize]
+
+theorem mem_compField_imp_mem_fixture :
+    (2 : Nat) ∈ ([1, 2, 3, 4] : List Nat) :=
+  mem_compField_imp_mem 1 oneCombNamed [1, 2, 3, 4] 2
+    (by decide)
+    (by simp [oneCombNamed, Shape.shapeSize])
+    (by simp [compField, oneCombNamed, Shape.shapeSize])
+
+#check @compField
+#check @mem_compField_imp_mem
+
+theorem mem_compField_imp_mem_of_any_fixture :
+    (3 : Nat) ∈ ([1, 2, 3, 4] : List Nat) :=
+  mem_compField_imp_mem_of_any 1 oneCombNamed [1, 2, 3, 4] 3
+    (by simp [compField, oneCombNamed, Shape.shapeSize])
+
+#check @mem_compField_imp_mem_of_any
+
 def withShapeMembersGuard : Bool :=
   ((withShape oneCombNamed [1, 2, 3, 4])[1]'(by rw [withShape_length]; decide)).all
     (fun value => ([1, 2, 3, 4] : List Nat).contains value)

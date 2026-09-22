@@ -165,6 +165,7 @@ def cakeStackOnlyDeleteMany (names : List Nat) (state : CakeStackOnlyState) :
 
 def cakeGetStackOnlyAuxFast {α : Type u} :
     CakeStackOnlyState → WordProg α → CakeStackOnlyState
+  | state, .skip => state
   | state, .move _ moves =>
       moves.foldr (fun move state => cakeStackOnlyMergeMove move.1 move.2 state) state
   | state, .seq first second =>
@@ -185,6 +186,9 @@ def cakeGetStackOnlyAuxFast {α : Type u} :
             (cakeGetStackOnlyAuxFast state handlerBody)
   | state, .call none _ _ _ => state
   | state, .loop _ body _ => cakeGetStackOnlyAuxFast state body
+  | state, .tick => state
+  | state, .break _ => state
+  | state, .continue _ => state
   | state, program =>
       match wordClashTree program [] with
       | .delta writes reads => cakeStackOnlyDeleteMany (writes ++ reads) state
@@ -453,6 +457,19 @@ end CakeNodeMap
 
 def cakeSpillCostMap (nextNode : Nat) (costs : NatInfoMap Nat) : CakeNodeMap Nat :=
   CakeNodeMap.ofNatInfoMap nextNode costs
+
+/- Cake passes the source-keyed spill-cost tree directly to `reg_alloc`.
+   `CakeNodeMap` therefore must retain a cost whose source key lies beyond
+   the allocator-node array in its `outside` map; silently densifying that
+   key would change `st_ex_list_MIN_cost` selection. -/
+theorem cakeSpillCostMap_outside_lookup
+    (nextNode key cost : Nat) (hkey : nextNode ≤ key) :
+    (cakeSpillCostMap nextNode [(key, cost)]).get key = some cost := by
+  have hlt : ¬ key < nextNode := Nat.not_lt_of_ge hkey
+  simp [cakeSpillCostMap, CakeNodeMap.ofNatInfoMap, CakeNodeMap.set,
+    CakeNodeMap.get, CakeNodeMap.ofSize, cakeMapUpdate, cakeMapLookup,
+    Flapjack.lookupNatInfo,
+    hlt]
 
 /-- The IRC allocator state (`ra_state`), represented functionally. -/
 structure CakeRaState where
@@ -776,7 +793,11 @@ def cakeIsFixedK (state : CakeRaState) (k : Nat) (x : Nat) : Bool :=
 /-- `considered_var` (`reg_allocScript.sml:507-512`): allocation temps and
     low physical registers count towards degrees. -/
 def cakeConsideredVar (state : CakeRaState) (k : Nat) (v : Nat) : Bool :=
-  ((state.nodeTag.get v).getD .aTemp == .aTemp) || cakeIsFixedK state k v
+  match state.nodeTag.get v with
+  | none => true
+  | some .aTemp => true
+  | some (.fixed n) => n < k
+  | some .sTemp => false
 
 /-- `is_not_coalesced` (`reg_allocScript.sml:320-327`): the node is its own
     coalescing parent. -/
@@ -882,25 +903,24 @@ def cakeInitAlloc1Heu (moves : List (Nat × (Nat × Nat))) (k : Nat)
     (state : CakeRaState) : Nat × CakeRaState :=
   let dim := state.dim
   let ds := List.range dim
-  let allocs := filterReversed (fun i =>
-    (state.nodeTag.get i).getD .aTemp == .aTemp) ds
-  let withDegrees :=
-    ds.foldl (fun st i =>
+  /- The allocatable-node collection and the three disjoint initialisations
+     share the same Cake node traversal.  Prepending matches
+     `filterReversed`; tags are immutable during this pass. -/
+  let (allocs, initialized) :=
+    ds.foldl (fun (acc : List Nat × CakeRaState) i =>
+        let (allocs, st) := acc
         let neighbours := (st.adjLists.get i).getD []
         let fills := neighbours.filter (cakeConsideredVar st k)
-        { st with degrees := st.degrees.set i fills.length })
-      state
-  let withCoalesced :=
-    ds.foldl (fun st i =>
-        { st with coalesced := st.coalesced.set i (0 + i) })
-      withDegrees
+        let allocs := if (state.nodeTag.get i).getD .aTemp == .aTemp then
+          i :: allocs else allocs
+        (allocs, { st with
+          degrees := st.degrees.set i fills.length
+          coalesced := st.coalesced.set i i
+          moveRelated := st.moveRelated.set i false }))
+      ([], state)
   let withMoves :=
-    { withCoalesced with
+    { initialized with
       availMovesWl := cakeSortMoves moves }
-  let cleared :=
-    ds.foldl (fun st i =>
-        { st with moveRelated := st.moveRelated.set i false })
-      withMoves
   let withRelated :=
     moves.foldl (fun st move =>
         let x := move.2.1
@@ -909,7 +929,7 @@ def cakeInitAlloc1Heu (moves : List (Nat × (Nat × Nat))) (k : Nat)
         let fixedY := cakeIsFixed st y
         let st := { st with moveRelated := st.moveRelated.set x (!fixedX) }
         { st with moveRelated := st.moveRelated.set y (!fixedY) })
-      cleared
+      withMoves
   let (ltk, gtk) := partitionReversed (fun v => cakeSplitDegree withRelated dim k v) allocs
   let (ltkfreeze, ltksimp) := partitionReversed (fun v => cakeMoveRelatedSub withRelated v) ltk
   let final :=
@@ -988,6 +1008,12 @@ def cakeUnspill (k : Nat) (state : CakeRaState) : CakeRaState :=
   let state := cakeAddSimpWl simp state
   cakeAddFreezeWl freeze state
 
+/- Cake's unspill (reg_allocScript.sml:378-391) only partitions and revives
+   worklists.  Its stack carrier is observationally unchanged. -/
+theorem cakeUnspill_stack_eq (k : Nat) (state : CakeRaState) :
+    (cakeUnspill k state).stack = state.stack := by
+  simp [cakeUnspill, cakeReviveMoves, cakeAddSimpWl, cakeAddFreezeWl]
+
 /-- `do_simplify` (`reg_allocScript.sml:400-421`). -/
 def cakeDoSimplify (k : Nat) (state : CakeRaState) : Bool × CakeRaState :=
   match state.simpWl with
@@ -996,6 +1022,64 @@ def cakeDoSimplify (k : Nat) (state : CakeRaState) : Bool × CakeRaState :=
       let state := state.simpWl.foldl (fun s x => cakeDecDegree x s) state
       let state := state.simpWl.foldl (fun s x => cakePushStack x s) state
       (true, cakeUnspill k { state with simpWl := [] })
+
+/- Cake do_simplify pushes every simplify-worklist node before unspill;
+   unspill only rearranges worklists and leaves the built stack unchanged. -/
+theorem cakeDoSimplify_stack_eq
+    (k : Nat) (state : CakeRaState) (items : List Nat)
+    (hsimp : state.simpWl = items) (hitems : items ≠ []) :
+    (cakeDoSimplify k state).2.stack = items.reverse ++ state.stack := by
+  have hdecDegStack : ∀ (s : CakeRaState) (xs : List Nat),
+      (xs.foldl (fun s x => cakeDecDeg x s) s).stack = s.stack := by
+    intro s xs
+    induction xs generalizing s with
+    | nil => rfl
+    | cons x xs ih =>
+        simp only [List.foldl]
+        rw [ih]
+        simp [cakeDecDeg]
+  have hdecDegSimp : ∀ (s : CakeRaState) (xs : List Nat),
+      (xs.foldl (fun s x => cakeDecDeg x s) s).simpWl = s.simpWl := by
+    intro s xs
+    induction xs generalizing s with
+    | nil => rfl
+    | cons x xs ih =>
+        simp only [List.foldl]
+        rw [ih]
+        simp [cakeDecDeg]
+  have hdec : ∀ (s : CakeRaState) (xs : List Nat),
+      (xs.foldl (fun s x => cakeDecDegree x s) s).stack = s.stack := by
+    intro s xs
+    induction xs generalizing s with
+    | nil => rfl
+    | cons x xs ih =>
+        simp only [List.foldl]
+        rw [ih]
+        by_cases hlt : x < s.dim
+        · simp [cakeDecDegree, hlt, hdecDegStack]
+        · simp [cakeDecDegree, hlt]
+  have hdecSimp : ∀ (s : CakeRaState) (xs : List Nat),
+      (xs.foldl (fun s x => cakeDecDegree x s) s).simpWl = s.simpWl := by
+    intro s xs
+    induction xs generalizing s with
+    | nil => rfl
+    | cons x xs ih =>
+        simp only [List.foldl]
+        rw [ih]
+        by_cases hlt : x < s.dim
+        · simp [cakeDecDegree, hlt, hdecDegSimp]
+        · simp [cakeDecDegree, hlt]
+  have hpush : ∀ (s : CakeRaState) (xs : List Nat),
+      (xs.foldl (fun s x => cakePushStack x s) s).stack = xs.reverse ++ s.stack := by
+    intro s xs
+    induction xs generalizing s with
+    | nil => simp
+    | cons x xs ih =>
+        simp only [List.foldl]
+        rw [ih]
+        simp [cakePushStack, List.reverse_cons, List.append_assoc]
+  simp [cakeDoSimplify, hsimp, hdec, hdecSimp, hpush, cakeUnspill,
+    cakeReviveMoves, cakeAddSimpWl, cakeAddFreezeWl]
 
 /-- `inc_deg` (`reg_allocScript.sml:424-429`). -/
 def cakeIncDeg (n d : Nat) (state : CakeRaState) : CakeRaState :=
@@ -1043,6 +1127,30 @@ def cakeDoCoalesceReal (x y : Nat) (case1 case2 : List Nat)
     adjSets := state.adjSets.map (fun adj => cakeListInsertEdgeSet x case2 adj) }
   let state := case1.foldl (fun s v => cakeDecDeg v s) state
   cakePushStack y state
+
+/- Cake's do_coalesce_real (reg_allocScript.sml:458-471) performs all
+   adjacency and degree updates before pushing the coalesced node y. -/
+theorem cakeDoCoalesceReal_selected_stack_lt_dim
+    (x y : Nat) (case1 case2 : List Nat) (state : CakeRaState)
+    (hy : y < state.dim) :
+    ∃ selected, selected < state.dim ∧
+      (cakeDoCoalesceReal x y case1 case2 state).stack = selected :: state.stack := by
+  have hdecDeg : ∀ (s : CakeRaState) (xs : List Nat),
+      (xs.foldl (fun s v => cakeDecDeg v s) s).stack = s.stack := by
+    intro s xs
+    induction xs generalizing s with
+    | nil => rfl
+    | cons v xs ih =>
+        simp only [List.foldl]
+        rw [ih]
+        simp [cakeDecDeg]
+  refine ⟨y, hy, ?_⟩
+  let coalescedState := { state with coalesced := state.coalesced.set y x }
+  by_cases hfixed : !cakeIsFixed coalescedState x
+  · simp [cakeDoCoalesceReal, coalescedState, hfixed, hdecDeg,
+      cakeIncDeg, cakePushStack]
+  · simp [cakeDoCoalesceReal, coalescedState, hfixed, hdecDeg,
+      cakePushStack]
 
 /-- `coalesce_parent` (`reg_allocScript.sml:592-612`) with path
     compression. -/
@@ -1148,6 +1256,28 @@ def cakeDoFreeze (k : Nat) (state : CakeRaState) : Bool × CakeRaState :=
       let state := cakePushStack x (cakeDecDegree x state)
       (true, cakeUnspill k { state with freezeWl := xs })
 
+/- Cake's do_freeze (reg_allocScript.sml:749-764) pushes the head of the
+   freeze worklist before unspill.  Pin both the selected-node bound and the
+   resulting newest-first stack carrier. -/
+theorem cakeDoFreeze_selected_stack_lt_dim
+    (k : Nat) (state : CakeRaState) (item : Nat) (rest : List Nat)
+    (hfreeze : state.freezeWl = item :: rest)
+    (hitem : item < state.dim) :
+    ∃ selected, selected < state.dim ∧
+      (cakeDoFreeze k state).2.stack = selected :: state.stack := by
+  have hdecDeg : ∀ (s : CakeRaState) (xs : List Nat),
+      (xs.foldl (fun s x => cakeDecDeg x s) s).stack = s.stack := by
+    intro s xs
+    induction xs generalizing s with
+    | nil => rfl
+    | cons x xs ih =>
+        simp only [List.foldl]
+        rw [ih]
+        simp [cakeDecDeg]
+  refine ⟨item, hitem, ?_⟩
+  simp [cakeDoFreeze, hfreeze, cakePushStack, cakeDecDegree, hitem,
+    hdecDeg, cakeUnspill, cakeReviveMoves, cakeAddSimpWl, cakeAddFreezeWl]
+
 /-- `safe_div` (`reg_allocScript.sml:771`). -/
 def cakeSafeDiv (x v : Nat) : Nat := if v = 0 then 0 else x / v
 
@@ -1166,6 +1296,51 @@ def cakeStExListMinCost (degrees : CakeNodeMap Nat) (scost : CakeNodeMap Nat) :
 termination_by l _ _ _ _ => sizeOf l
 decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
 
+/- Cake's `st_ex_list_MIN_cost_success` preserves the allocator-node bound
+   while scanning the spill worklist.  This is the pure-result form used by
+   the Lean `do_spill` adapter. -/
+theorem cakeStExListMinCost_bounds
+    (degrees scost : CakeNodeMap Nat) (items : List Nat)
+    (dim k v : Nat) (acc : List Nat)
+    (hitems : ∀ x ∈ items, x < dim)
+    (hacc : ∀ x ∈ acc, x < dim)
+    (hk : k < dim) :
+    (cakeStExListMinCost degrees scost items dim k v acc).1 < dim ∧
+      ∀ x ∈ (cakeStExListMinCost degrees scost items dim k v acc).2,
+        x < dim := by
+  induction items generalizing k v acc with
+  | nil =>
+      exact ⟨by simpa [cakeStExListMinCost] using hk, by
+        simpa [cakeStExListMinCost] using hacc⟩
+  | cons item rest ih =>
+      have hitem : item < dim := hitems item (by simp)
+      have hrest : ∀ x ∈ rest, x < dim := by
+        intro x hx
+        exact hitems x (by simp [hx])
+      by_cases hchoose : v >
+          cakeSafeDiv ((scost.get item).getD 0) ((degrees.get item).getD 0)
+      · have hacc' : ∀ x ∈ k :: acc, x < dim := by
+          intro x hx
+          simp only [List.mem_cons] at hx
+          rcases hx with rfl | hx
+          · exact hk
+          · exact hacc x hx
+        have h := ih
+          (k := item)
+          (v := cakeSafeDiv ((scost.get item).getD 0)
+            ((degrees.get item).getD 0))
+          (acc := k :: acc) hrest hacc' hitem
+        simpa [cakeStExListMinCost, hitem, hchoose] using h
+      · have hacc' : ∀ x ∈ item :: acc, x < dim := by
+          intro x hx
+          simp only [List.mem_cons] at hx
+          rcases hx with rfl | hx
+          · exact hitem
+          · exact hacc x hx
+        have h := ih (k := k) (v := v) (acc := item :: acc)
+          hrest hacc' hk
+        simpa [cakeStExListMinCost, hitem, hchoose] using h
+
 /-- `st_ex_list_MAX_deg` (`reg_allocScript.sml:792-808`). -/
 def cakeStExListMaxDeg (degrees : CakeNodeMap Nat) :
     List Nat → Nat → Nat → Nat → List Nat → Nat × List Nat
@@ -1178,6 +1353,47 @@ def cakeStExListMaxDeg (degrees : CakeNodeMap Nat) :
       else cakeStExListMaxDeg degrees xs d k v acc
 termination_by l _ _ _ _ => sizeOf l
 decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+
+/- Cake's `st_ex_list_MAX_deg_success` has the same bounded-result contract
+   for the no-spill-cost path: selecting the largest degree preserves the
+   allocator-node bound and the validity of the accumulated worklist. -/
+theorem cakeStExListMaxDeg_bounds
+    (degrees : CakeNodeMap Nat) (items : List Nat)
+    (dim k v : Nat) (acc : List Nat)
+    (hitems : ∀ x ∈ items, x < dim)
+    (hacc : ∀ x ∈ acc, x < dim)
+    (hk : k < dim) :
+    (cakeStExListMaxDeg degrees items dim k v acc).1 < dim ∧
+      ∀ x ∈ (cakeStExListMaxDeg degrees items dim k v acc).2,
+        x < dim := by
+  induction items generalizing k v acc with
+  | nil =>
+      exact ⟨by simpa [cakeStExListMaxDeg] using hk, by
+        simpa [cakeStExListMaxDeg] using hacc⟩
+  | cons item rest ih =>
+      have hitem : item < dim := hitems item (by simp)
+      have hrest : ∀ x ∈ rest, x < dim := by
+        intro x hx
+        exact hitems x (by simp [hx])
+      by_cases hchoose : v < (degrees.get item).getD 0
+      · have hacc' : ∀ x ∈ k :: acc, x < dim := by
+          intro x hx
+          simp only [List.mem_cons] at hx
+          rcases hx with rfl | hx
+          · exact hk
+          · exact hacc x hx
+        have h := ih (k := item) (v := (degrees.get item).getD 0)
+          (acc := k :: acc) hrest hacc' hitem
+        simpa [cakeStExListMaxDeg, hitem, hchoose] using h
+      · have hacc' : ∀ x ∈ item :: acc, x < dim := by
+          intro x hx
+          simp only [List.mem_cons] at hx
+          rcases hx with rfl | hx
+          · exact hitem
+          · exact hacc x hx
+        have h := ih (k := k) (v := v) (acc := item :: acc)
+          hrest hacc' hk
+        simpa [cakeStExListMaxDeg, hitem, hchoose] using h
 
 /-- `do_spill` (`reg_allocScript.sml:810-830`). -/
 def cakeDoSpill (scost : Option (CakeNodeMap Nat)) (k : Nat)
@@ -1193,6 +1409,45 @@ def cakeDoSpill (scost : Option (CakeNodeMap Nat)) (k : Nat)
               (cakeSafeDiv ((sc.get x).getD 0) xv) []
       let state := cakePushStack y (cakeDecDegree y state)
       (true, cakeUnspill k { state with spillWl := ys })
+
+/- Both Cake spill-selection paths push the selected bounded allocator node
+   onto the stack before `unspill` rearranges only the worklists. -/
+theorem cakeDoSpill_selected_stack_lt_dim
+    (scost : Option (CakeNodeMap Nat)) (k : Nat) (state : CakeRaState)
+    (item : Nat) (rest : List Nat)
+    (hspill : state.spillWl = item :: rest)
+    (hitem : item < state.dim)
+    (hrest : ∀ x ∈ rest, x < state.dim) :
+    ∃ selected, selected < state.dim ∧
+      (cakeDoSpill scost k state).2.stack = selected :: state.stack := by
+  have hfold : ∀ (s : CakeRaState) (xs : List Nat),
+      (xs.foldl (fun s v => cakeDecDeg v s) s).stack = s.stack := by
+    intro s xs
+    induction xs generalizing s with
+    | nil => rfl
+    | cons x xs ih =>
+        simp only [List.foldl]
+        rw [ih]
+        rfl
+  cases hcost : scost with
+  | none =>
+      have hbounds := cakeStExListMaxDeg_bounds state.degrees rest
+        state.dim item ((state.degrees.get item).getD 0) [] hrest
+        (by simp) hitem
+      refine ⟨(cakeStExListMaxDeg state.degrees rest state.dim item
+        ((state.degrees.get item).getD 0) []).1, hbounds.1, ?_⟩
+      simp [cakeDoSpill, hspill, cakePushStack, cakeDecDegree, hbounds.1, hfold,
+        cakeUnspill, cakeReviveMoves, cakeAddSimpWl, cakeAddFreezeWl]
+  | some costs =>
+      have hbounds := cakeStExListMinCost_bounds state.degrees costs rest
+        state.dim item
+        (cakeSafeDiv ((costs.get item).getD 0)
+          ((state.degrees.get item).getD 0)) [] hrest (by simp) hitem
+      refine ⟨(cakeStExListMinCost state.degrees costs rest state.dim item
+        (cakeSafeDiv ((costs.get item).getD 0)
+          ((state.degrees.get item).getD 0)) []).1, hbounds.1, ?_⟩
+      simp [cakeDoSpill, hspill, cakePushStack, cakeDecDegree, hbounds.1, hfold,
+        cakeUnspill, cakeReviveMoves, cakeAddSimpWl, cakeAddFreezeWl]
 
 /-- `do_step` (`reg_allocScript.sml:832-857`): the first successful
     transition wins. -/
@@ -1295,6 +1550,48 @@ def cakeUnboundColour (col : Nat) : List Nat → Nat
       else if col = x then cakeUnboundColour (col + 1) xs
       else cakeUnboundColour col xs
 
+/-! Cake's `unbound_colour` proof: a sorted forbidden-colour list never
+    forces the negative preference below `k` or back onto a forbidden colour. -/
+theorem cakeUnboundColour_correct
+    (col : Nat) (colours : List Nat)
+    (hsorted : List.Pairwise (fun left right : Nat => left ≤ right) colours) :
+    col ≤ cakeUnboundColour col colours ∧
+      cakeUnboundColour col colours ∉ colours := by
+  induction colours generalizing col with
+  | nil =>
+      simp [cakeUnboundColour]
+  | cons head tail ih =>
+      simp only [List.pairwise_cons] at hsorted
+      by_cases hlt : col < head
+      · have hnotHead : col ≠ head := by omega
+        have hnotTail : col ∉ tail := by
+          intro hmem
+          have hheadTail := hsorted.1 col hmem
+          omega
+        simp [cakeUnboundColour, hlt, hnotHead, hnotTail]
+      · by_cases heq : col = head
+        · have h := ih (col := col + 1) hsorted.2
+          subst col
+          have hnotHead : cakeUnboundColour (head + 1) tail ≠ head := by
+            intro hsame
+            omega
+          rw [cakeUnboundColour]
+          simp only [Nat.lt_irrefl, ↓reduceIte]
+          constructor
+          · omega
+          · simp only [List.mem_cons, not_or]
+            exact ⟨hnotHead, h.2⟩
+        · have hheadLe : head ≤ col := Nat.le_of_not_gt hlt
+          have h := ih (col := col) hsorted.2
+          have hnotHead : cakeUnboundColour col tail ≠ head := by
+            intro hsame
+            omega
+          rw [cakeUnboundColour]
+          simp only [hlt, ↓reduceIte, heq]
+          exact ⟨h.1, by
+            simp only [List.mem_cons, not_or]
+            exact ⟨hnotHead, h.2⟩⟩
+
 /-- `neg_first_match_col` (`reg_allocScript.sml:1420-1436`). -/
 def cakeNegFirstMatchCol (state : CakeRaState) (k : Nat) (bads : List Nat) :
     List Nat → Option Nat
@@ -1387,13 +1684,26 @@ def cakeTagIsAtemp (state : CakeRaState) (x : Nat) : Bool :=
   | _ => false
 
 def cakeFullConsistencyOk (state : CakeRaState) (k : Nat) (x y : Nat) : Bool :=
-  let fixedX := cakeIsFixedK state k x
-  let fixedY := cakeIsFixedK state k y
-  let eligibleX := fixedX || cakeTagIsAtemp state x
-  let eligibleY := fixedY || cakeTagIsAtemp state y
+  let tagX := state.nodeTag.get x
+  let tagY := state.nodeTag.get y
+  let fixedX := match tagX with
+    | some (.fixed n) => n < k
+    | _ => false
+  let fixedY := match tagY with
+    | some (.fixed n) => n < k
+    | _ => false
+  let eligibleX := fixedX || match tagX with
+    | some .aTemp => true
+    | _ => false
+  let eligibleY := fixedY || match tagY with
+    | some .aTemp => true
+    | _ => false
+  /- Keep the cheap domain/tag checks before the indexed adjacency lookup.
+     This is the same left-to-right Boolean contract as Cake's conjunction,
+     but avoids touching the graph for ineligible move endpoints. -/
   x != y && x < state.dim && y < state.dim &&
-    !cakeAdjMem state x y &&
-    eligibleX && eligibleY && !(fixedX && fixedY)
+    eligibleX && eligibleY && !(fixedX && fixedY) &&
+    !cakeAdjMem state x y
 
 /-- A lookup-only index for the source-variable side of `mk_bij`.
 
@@ -1468,6 +1778,41 @@ theorem cakeColourLocation_stack_boundary
       .stack (f - 1 - (register - k)) := by
   simp [cakeColourLocation, hregister]
 
+/-- A Cake stack colour whose spill index fits the `f`-word frame is assigned
+    a concrete slot strictly below that frame, as `format_var` requires. -/
+theorem cakeColourLocation_stack_slot_lt_frame
+    (k f register : Nat) (hregister : k ≤ register)
+    (hslot : register - k < f) :
+    ∃ slot, cakeColourLocation k f (2 * register) = .stack slot ∧ slot < f := by
+  refine ⟨f - 1 - (register - k),
+    cakeColourLocation_stack_boundary k f register hregister, ?_⟩
+  omega
+
+/- Cake's `format_var` keeps physical-register colours and frame-slot colours
+   distinct, and the frame offset is injective on the allocated range.  This
+   packages the location fact needed by the RISC-V allocator correctness
+   boundary: two distinct even Cake colours below the register-plus-frame
+   bound cannot collapse to the same Word-to-Stack location. -/
+theorem cakeColourLocation_even_injective
+    (k f register₁ register₂ : Nat)
+    (h₁ : register₁ < k + f) (h₂ : register₂ < k + f)
+    (h : cakeColourLocation k f (2 * register₁) =
+      cakeColourLocation k f (2 * register₂)) :
+    register₁ = register₂ := by
+  by_cases h₁k : register₁ < k
+  · by_cases h₂k : register₂ < k
+    · simpa [cakeColourLocation, h₁k, h₂k] using h
+    · have h₂k' : k ≤ register₂ := Nat.le_of_not_gt h₂k
+      simp [cakeColourLocation, h₁k, h₂k] at h
+  · have h₁k' : k ≤ register₁ := Nat.le_of_not_gt h₁k
+    by_cases h₂k : register₂ < k
+    · simp [cakeColourLocation, h₁k, h₂k] at h
+    · have h₂k' : k ≤ register₂ := Nat.le_of_not_gt h₂k
+      simp [cakeColourLocation, h₁k, h₂k] at h
+      have h₁slot : register₁ - k ≤ f - 1 := by omega
+      have h₂slot : register₂ - k ≤ f - 1 := by omega
+      omega
+
 def cakeColourFrameSlots (k : Nat) (parameters : List Nat)
     (program : WordProg α) (colouring : NatInfoMap Nat) : Nat × Nat :=
   let colour := CakeAlloc.totalColour colouring
@@ -1477,6 +1822,34 @@ def cakeColourFrameSlots (k : Nat) (parameters : List Nat)
   let f' := max ((maxVar / 2 + 1) - k) stackArgs
   (f', if f' = 0 then 0 else f' + 1)
 
+/- Cake's `compile_prog` takes the argument-area floor when it dominates the
+   coloured program's spill demand.  Keep this branch kernel-checked beside
+   the allocator adapter: it is the frame equation used by the RISC-V
+   Word-to-Stack boundary, not a heuristic reconstruction. -/
+theorem cakeColourFrameSlots_arg_area_dominates
+    (k : Nat) (parameters : List Nat) (program : WordProg α)
+    (colouring : NatInfoMap Nat)
+    (hdom : (wordProgCakeMaxVar
+        (wordApplyColour (CakeAlloc.totalColour colouring) program) / 2 + 1) - k ≤
+      parameters.length - k) :
+    (cakeColourFrameSlots k parameters program colouring).1 =
+      parameters.length - k := by
+  simp [cakeColourFrameSlots, hdom]
+
+/- The other `compile_prog` branch is spill-dominant: the coloured program's
+   computed occupancy wins the same Cake `MAX` rather than being replaced by
+   the formal argument area. -/
+theorem cakeColourFrameSlots_spill_dominates
+    (k : Nat) (parameters : List Nat) (program : WordProg α)
+    (colouring : NatInfoMap Nat)
+    (hdom : parameters.length - k ≤
+      (wordProgCakeMaxVar
+        (wordApplyColour (CakeAlloc.totalColour colouring) program) / 2 + 1) - k) :
+    (cakeColourFrameSlots k parameters program colouring).1 =
+      (wordProgCakeMaxVar
+        (wordApplyColour (CakeAlloc.totalColour colouring) program) / 2 + 1) - k := by
+  simp [cakeColourFrameSlots, hdom]
+
 def cakeColourWordSpillState (k : Nat) (parameters : List Nat)
     (program : WordProg α) (colouring : NatInfoMap Nat) : WordSpillState :=
   let colour := CakeAlloc.totalColour colouring
@@ -1485,6 +1858,47 @@ def cakeColourWordSpillState (k : Nat) (parameters : List Nat)
   let locations := names.map (fun name =>
     (name, cakeColourLocation k f (colour name)))
   { locations, nextSpill := if f = 0 then 0 else f - 1 }
+
+/-- Cake's coloured spill cursor is always contained in the frame size emitted
+    by `compile_prog`: an empty frame has no cursor, and a nonempty `f`-word
+    frame exposes spill slots below its bitmap word. -/
+theorem cakeColourWordSpillState_nextSpill_le_frame
+    (k : Nat) (parameters : List Nat) (program : WordProg α)
+    (colouring : NatInfoMap Nat) :
+    (cakeColourWordSpillState k parameters program colouring).nextSpill ≤
+      (cakeColourFrameSlots k parameters program colouring).2 := by
+  simp [cakeColourWordSpillState]
+  split <;> omega
+
+/-- The production Cake allocator adapter retains exactly the `f'` spill
+    occupancy from `compile_prog`, including the zero-occupancy case. -/
+theorem cakeColourWordSpillState_nextSpill_eq_occupancy
+    (k : Nat) (parameters : List Nat) (program : WordProg α)
+    (colouring : NatInfoMap Nat) :
+    (cakeColourWordSpillState k parameters program colouring).nextSpill =
+      (cakeColourFrameSlots k parameters program colouring).1 := by
+  simp [cakeColourWordSpillState, cakeColourFrameSlots]
+  split <;> omega
+
+/- Cake's `format_var` maps each spill index below the allocator cursor to a
+   concrete slot in the frame.  Keep this combined invariant at the adapter
+   boundary so callers do not have to separately reconstruct the occupancy
+   bound and the location equation. -/
+theorem cakeColourWordSpillState_allocated_stack_slot_lt_frame
+    (k : Nat) (parameters : List Nat) (program : WordProg α)
+    (colouring : NatInfoMap Nat) (register : Nat)
+    (hregister : k ≤ register)
+    (hslot : register - k <
+      (cakeColourWordSpillState k parameters program colouring).nextSpill) :
+    ∃ slot, cakeColourLocation k
+        (cakeColourFrameSlots k parameters program colouring).2
+        (2 * register) = .stack slot ∧
+      slot < (cakeColourFrameSlots k parameters program colouring).2 := by
+  have hframe := cakeColourWordSpillState_nextSpill_le_frame
+    k parameters program colouring
+  exact cakeColourLocation_stack_slot_lt_frame
+    k (cakeColourFrameSlots k parameters program colouring).2 register
+    hregister (by omega)
 
 /-! Production-facing Cake allocator adapter.  This keeps Cake's full SSA
     entry moves and IRC coalescing in the returned Word program, while

@@ -183,6 +183,9 @@ def indexedAdjacencyMembershipGuard : Bool :=
 def stackOnlyFastReferenceGuard : Bool :=
   let programs : List (WordProg Nat) :=
     [ .skip,
+      .tick,
+      .break 0,
+      .continue 0,
       .move 1 [(9, 9), (7, 9)],
       .assign 9 (.var 7),
       .seq (.move 1 [(13, 13), (2, 13)])
@@ -663,6 +666,18 @@ def heuFixedDegreeGuard : Bool :=
     after.degrees.get 1 == some 1 &&
     after.simpWl == [1] && after.spillWl == []
 
+/-- Missing node tags use Cake's `sp_default`-style Atemp default in
+    `considered_var`; stack temporaries remain unconsidered. -/
+def consideredVarTagGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 2 with
+      nodeTag := CakeNodeMap.ofNatInfoMap 2 [(0, .sTemp), (1, .fixed 2)] }
+  !cakeConsideredVar state 4 0 &&
+    cakeConsideredVar state 4 1 &&
+    cakeConsideredVar state 4 7
+
+#guard consideredVarTagGuard
+
 /-- Normalise a colouring to the ascending original-variable order that the
     original sptree iteration produces. -/
 def sortColouring (colours : Flapjack.NatInfoMap Nat) :
@@ -871,6 +886,78 @@ def doStepSimplifyPriorityGuard : Bool :=
     (out.coalesced.get 2).getD 2 == 2
 
 #guard doStepSimplifyPriorityGuard
+
+/- Cake's `do_step` reaches coalescing after an empty simplify worklist and
+   before pre-freeze/freeze/spill.  Keep the driver-level priority distinct
+   from the direct `do_coalesce` transition guard below. -/
+def doStepCoalescePriorityGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 3 with
+      moveRelated := CakeNodeMap.ofNatInfoMap 3 [(1, true), (2, true)]
+      availMovesWl := [(1, (1, 2))] }
+  let (changed, out) := cakeDoStep none 3 state
+  changed && out.availMovesWl == [] && out.unavailMovesWl == [] &&
+    (out.coalesced.get 2).getD 2 == 1 && out.stack == [2]
+
+#guard doStepCoalescePriorityGuard
+
+/- With no simplify/coalesce progress and an un-related freeze node, Cake's
+   driver takes the pre-freeze branch; the pre-freeze pass immediately
+   simplifies that node and leaves the allocator worklists empty. -/
+def doStepPrefreezePriorityGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 3 with
+      freezeWl := [1] }
+  let (changed, out) := cakeDoStep none 3 state
+  changed && out.stack == [1] && out.simpWl == [] &&
+    out.freezeWl == [] && out.spillWl == []
+
+#guard doStepPrefreezePriorityGuard
+
+/- A move-related freeze node survives pre-freeze, so Cake's driver reaches
+   `do_freeze` only after simplify/coalesce/pre-freeze report no progress. -/
+def doStepFreezePriorityGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 3 with
+      freezeWl := [1]
+      moveRelated := CakeNodeMap.ofNatInfoMap 3 [(1, true), (2, true)]
+      unavailMovesWl := [(1, (1, 2))] }
+  let (changed, out) := cakeDoStep none 3 state
+  changed && out.stack == [1] && out.simpWl == [] &&
+    out.freezeWl == [] && out.spillWl == [] &&
+    out.unavailMovesWl == [(1, (1, 2))]
+
+#guard doStepFreezePriorityGuard
+
+/- Cake's `do_step` reaches `do_spill` only after simplify, coalesce,
+   pre-freeze, and freeze all report no progress.  With no cost table,
+   `do_spill` selects the highest-degree candidate, preserving the residual
+   spill worklist.  This covers the final priority branch from
+   `reg_allocScript.sml:809-857`. -/
+def doStepSpillFallbackGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 3 with
+      degrees := CakeNodeMap.ofNatInfoMap 3 [(1, 1), (2, 3)]
+      spillWl := [1, 2] }
+  let (changed, out) := cakeDoStep none 1 state
+  changed && out.stack == [2] && out.spillWl == [1] &&
+    out.simpWl == [] && out.freezeWl == []
+
+#guard doStepSpillFallbackGuard
+
+/- Cake's `rpt_do_step` (`reg_allocScript.sml:860-868`) stops early when the
+   next `do_step` makes no progress.  A one-node spill performs exactly one
+   transition and then terminates before consuming the remaining fuel. -/
+def rptDoStepEarlyStopGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 2 with
+      degrees := CakeNodeMap.ofNatInfoMap 2 [(1, 1)]
+      spillWl := [1] }
+  let out := cakeRptDoStep none 1 3 state
+  out.stack == [1] && out.spillWl == [] && out.simpWl == [] &&
+    out.freezeWl == []
+
+#guard rptDoStepEarlyStopGuard
 
 /- Cake's `unspill` (`reg_allocScript.sml:378-391`) partitions the spill
    worklist with the HOL reversed-accumulator order, sending newly low-degree,
@@ -1576,6 +1663,8 @@ def parityGuard : Bool :=
     && sortMovesTailSplitGuard && freezeWorklistTransitionGuard &&
       doSpillEqualDegreeGuard && doSpillEmptyGuard &&
       doStepSimplifyPriorityGuard &&
+      doStepSpillFallbackGuard &&
+      rptDoStepEarlyStopGuard &&
       unspillTransitionGuard
       && coalesceSelfMoveRejectedGuard && applyColourProbeGuard
 
@@ -1628,7 +1717,8 @@ def runChecks : IO Bool := do
     decDegreeOutOfDimNoOpGuard, coalesceWorklistSuccessGuard,
     freezeWorklistTransitionGuard, coalesceParentCompressionGuard,
     prefreezeTransitionGuard, doSpillEqualDegreeGuard, doSpillEmptyGuard,
-    doStepSimplifyPriorityGuard, unspillTransitionGuard,
+    doStepSimplifyPriorityGuard, doStepSpillFallbackGuard,
+    rptDoStepEarlyStopGuard, unspillTransitionGuard,
     worklistPrependGuard, extendCliqueGuard, splitDegreeGuard,
     smergePriorityGuard, applyColourProbeGuard]
   let names := [
@@ -1688,7 +1778,9 @@ def runChecks : IO Bool := do
     "do_coalesce success transition", "do_freeze transition",
     "do_prefreeze transition", "do_spill equal-degree transition",
     "do_spill empty-worklist no-op",
-    "do_step simplify priority", "unspill transition", "worklist prepend",
+    "do_step simplify priority", "do_step spill fallback",
+    "rpt_do_step early stop", "unspill transition",
+    "worklist prepend",
     "extend clique", "split degree", "smerge priority",
     "apply_colour rewrites source Word register fields"]
   let mut all := true

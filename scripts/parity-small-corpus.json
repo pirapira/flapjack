@@ -382,7 +382,8 @@
       "source_reference": "Cake word_copyScript.sml:377-380: copy_prop_prog resets the incoming equivalence state after a Loop. This isolates the fp_pow4 table/loop and call-result pressure that previously emitted a 20-byte surplus.",
       "cake_sha256": "b4e2f41c484dc86b90a267cd0980789a024e0836cfc19a29b923a196453c75b2",
       "tracked_beads": [
-        "flapjack-8tb.4.6"
+        "flapjack-8tb.4.6",
+        "flapjack-pxn.8.5.14.1.5"
       ]
     },
     {
@@ -504,6 +505,12 @@
       "source_reference": "Acceptance regression lock for flapjack-01k. Cake compiles a call with fourteen or more word arguments; flapjack-compile used to fail outright with SourceRiscVImageError.loweringInFunction (PipelineRiscVLoweringError.wordToStackFailure), because WordStackConfig.abiRegisterCount defaulted to 12 -- the x10--x21 span -- while Cake's call-argument arithmetic uses k, the reg_count word_to_stack$compile derives once as asm_conf.reg_count - (5 + LENGTH asm_conf.avoid_regs) = 22 on RISC-V (word_to_stackScript.sml:605). wordStackPhysicalMovesToIndexed then returned none for an argument that would land past the end of the frame. Thirteen is the last arity that used to work and is kept as the control; fourteen, sixteen and twenty are inside the range that used to be rejected. Compiling this file with a binary built at fde32cd5 fails with wordToStackFailure 10 in call14; it is byte-identical to original Pancake now.",
       "cake_sha256": "bd578347d18e31981cc17b5404657b8cb80b3071dad2521ff9fc08d49b50c001",
       "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/wide_return_22.pnk",
+      "source_reference": "Original-Cake wide-return frame witness: a 22-word returned structure crosses the RISC-V allocator boundary and exercises Cake copy_ret/stack-free lowering; the corrected Flapjack artifact is byte-identical to Cake.",
+      "cake_sha256": "e952d989344c8a625691318012eceae4dd29ada0ff0b38f7ccb34a2ce634ee43",
+      "tracked_beads": ["flapjack-pxn.8.5.14.1.5"]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/wide_call_spilled_base.pnk",
@@ -1115,9 +1122,58 @@
       ]
     },
     {
+      "path": "Flapjack/Test/OriginalPancake/f00080_fuzz_pressure_20260923.pnk",
+      "source_reference": "Fresh exact differential witness from seed 20260923 index 80: nested loops and handlers, global/shared/local memory, shifts, byte/word stores, and high allocator pressure exercise Cake IRC/frame continuation layout. Cake and Flapjack artifacts are byte-identical.",
+      "cake_sha256": "2bf9db11ee1acc2d539f8a93301aa01097afee5a93e018e5f62f5a4abc0f2779",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.5"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00017_fuzz_allocator_20260923.pnk",
+      "source_reference": "Fresh exact differential witness from seed 20260923 index 17: allocation helpers, nested loops, exception paths, byte/word stores, and high allocator pressure exercise Cake IRC/frame continuation layout. Cake and Flapjack artifacts are byte-identical.",
+      "cake_sha256": "a64e49771356cae31fe54419c9ee7a6e44c88d38c92891e49c1fcb839ad6b38e",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.5"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00333_fuzz_frame_pressure_20260924.pnk",
+      "source_reference": "Fresh exact differential witness from seed 20260924 index 333: duplicate local-name pressure, struct/tuple calls, nested loops with break/continue, shared/local loads/stores, handlers, and high allocator/frame pressure exercise Cake IRC and continuation layout. Cake and Flapjack artifacts are byte-identical.",
+      "cake_sha256": "36b3f90bcf1028c01c218fbe8f2f7bcc0dfda8cbf45e64ea8a8138b9da44f9f5",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.5"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00217_fuzz_allocator_20260928.pnk",
+      "source_reference": "Fresh exact differential witness from seed 20260928 index 217: struct and tuple-returning calls, nested loads and shifts, global/local stores, a branch with a handler-shaped call path, and high allocator/frame pressure exercise Cake IRC continuation layout. Cake and Flapjack artifacts are byte-identical.",
+      "cake_sha256": "9976538d54aaa8377d79a4d72c1c8bb32198765913240b92d1551edc9045498a",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.5"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00276_fuzz_frame_allocator_20260928.pnk",
+      "source_reference": "Fresh exact differential witness from seed 20260928 index 276: nested loops and branches, repeated local/shared loads and stores, struct field accesses, shifts, calls, and high temporary/frame pressure exercise Cake IRC continuation layout. Cake and Flapjack artifacts are byte-identical.",
+      "cake_sha256": "97a19ed4f8ef7dc079fcd929abba2e2348a6c6ed78abb1415d7eda11990cb997",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.5"
+      ]
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/p8_frame_pressure.pnk",
       "source_reference": "Original-Cake frame-pressure witness: two 2-field structs remain live across a later id call, exercising three retained continuation frames.",
       "cake_sha256": "8097265ce2325308d373295aa1d90ad56cac89bcda999b10ec4e0f719aadf410",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.3",
+        "flapjack-pxn.8.5.14.1.5"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/frame_cross_call.pnk",
+      "source_reference": "Original-Cake frame/allocator witness: a field from a returned three-word struct is passed through a second call while another field remains live; Cake and Flapjack stdout are byte-identical.",
+      "cake_sha256": "4923da52a032099ae4e64200cec1a814b07a237209bef690fbe46cac20260697",
       "tracked_beads": [
         "flapjack-pxn.8.5.14.1.3",
         "flapjack-pxn.8.5.14.1.5"
@@ -1148,9 +1204,45 @@
       ]
     },
     {
-      "path": "Flapjack/Test/OriginalPancake/f00217_fuzz_allocator_20260928.pnk",
-      "source_reference": "Fresh exact differential witness from seed 20260928 index 217: struct and tuple-returning calls, nested loads and shifts, global/local stores, a branch with a handler-shaped call path, and high allocator/frame pressure exercise Cake IRC continuation layout. Cake and Flapjack artifacts are byte-identical.",
-      "cake_sha256": "9976538d54aaa8377d79a4d72c1c8bb32198765913240b92d1551edc9045498a",
+      "path": "Flapjack/Test/OriginalPancake/riscv_narrow_lower_offset.pnk",
+      "source_reference": "Original-Cake narrow load-offset fixture: ld8 (p + 2048) preserves the exact lower signed-12 boundary through source-to-RISC-V lowering.",
+      "cake_sha256": "fe597203b6b8371b914165486775b69a81cf3aa48be438f1f3aef2c18ba496ed",
+      "tracked_beads": [
+        "flapjack-pxn.10"
+      ]
+    },
+    {
+      "path": "scripts/parity-difffuzz-findings/bitmap-min/case.pnk",
+      "source_reference": "Previously recorded bitmap/frame allocator witness: current Cake and Flapjack outputs are now byte-identical after the frame/allocator parity fixes.",
+      "cake_sha256": "e7fa7109be00b18e6048000c97e19de23c21c7c92bd4ea978b62b06d367134da",
+      "tracked_beads": []
+    },
+    {
+      "path": "scripts/parity-difffuzz-findings/ffi-min/case.pnk",
+      "source_reference": "Previously recorded FFI/frame allocator witness: current Cake and Flapjack outputs are now byte-identical after the frame/allocator parity fixes.",
+      "cake_sha256": "f6b049c7f654ddb5887b2d33a625785430e37dfa9c96340216d7bbd14dad67f1",
+      "tracked_beads": []
+    },
+    {
+      "path": "scripts/parity-difffuzz-findings/frame-occupancy/p9.pnk",
+      "source_reference": "Original-Cake p9 frame-occupancy witness: two retained struct fields across a non-tail call require exact continuation bitmap words [4,8,8].",
+      "cake_sha256": "231edf4c3210768c8d1b8df52a0fc2a59cbcc7ff472a85fc1835cfee7d903483",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.5"
+      ]
+    },
+    {
+      "path": "scripts/parity-difffuzz-findings/frame-occupancy/live1.pnk",
+      "source_reference": "Original-Cake live1 frame-occupancy witness: one retained struct field across a non-tail call requires two minimal continuation frames [4,4,4].",
+      "cake_sha256": "c1829c6958c08508a2ab59ffda36c0d48809e04afa54dc790ce8b6dbfbe376a6",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.5"
+      ]
+    },
+    {
+      "path": "scripts/parity-difffuzz-findings/frame-occupancy/live3.pnk",
+      "source_reference": "Original-Cake live3 frame-occupancy witness: three retained struct values across four non-tail continuations require exact sixteen-word frames [4,16,16,16,16].",
+      "cake_sha256": "712a26b9bf5f17fa9066468dfae8b9e052065499b397204bbeab824ac4404856",
       "tracked_beads": [
         "flapjack-pxn.8.5.14.1.5"
       ]

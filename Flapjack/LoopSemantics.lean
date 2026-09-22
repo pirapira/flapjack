@@ -1709,6 +1709,17 @@ theorem loopLookupFirst_singleton (locals : Nat → Option α) (name : Nat)
   funext current
   by_cases h : current = name <;> simp [loopLookupFirst, updateLoopLocal, h]
 
+/- The Cake `alist_insert` rule in `loopSemScript.sml:108-116` overlays
+   entries from the tail toward the head, so an earlier duplicate remains the
+   visible binding.  Expose that first-occurrence rule at the executable
+   evaluator boundary for the call/return correctness proofs. -/
+theorem loopLookupFirst_duplicate_first (locals : Nat → Option α) (name : Nat)
+    (first second : α) :
+    loopLookupFirst locals [(name, first), (name, second)] =
+      fun current => if current = name then some first else locals current := by
+  funext current
+  by_cases h : current = name <;> simp [loopLookupFirst, h]
+
 theorem loopFoldUpdate_at_congr (locals₁ locals₂ : Nat → Option α)
     (entries : List (Nat × α)) (current : Nat)
     (hcurrent : locals₁ current = locals₂ current) :
@@ -1795,6 +1806,163 @@ theorem loopLookupFirst_eq_foldl_of_nodup (locals : Nat → Option α)
                   updateLoopLocal locals entry.fst entry.snd)
                   (updateLoopLocal locals name value) entries current :=
                 htail.symm
+
+/-- Two local-state functions that agree on a name list read the same values
+    from that list. -/
+theorem loopReadLocals_congr (f g : Nat → Option α) (names : List Nat)
+    (h : ∀ name ∈ names, f name = g name) :
+    loopReadLocals f names = loopReadLocals g names := by
+  induction names with
+  | nil => simp [loopReadLocals]
+  | cons name names ih =>
+      simp only [loopReadLocals]
+      rw [h name (by simp)]
+      have htail : ∀ m ∈ names, f m = g m := fun m hm => h m (by simp [hm])
+      rw [ih htail]
+
+/-- Counterpart of CakeML's `get_vars_local_update_some_eq`
+    (`cakeml/pancake/semantics/loopPropsScript.sml:278`): reading a list of
+    distinct names from the local state obtained by inserting the paired values
+    returns exactly those values. -/
+theorem loopReadLocals_loopLookupFirst_zip (locals : Nat → Option α)
+    (names : List Nat) (values : List α)
+    (hdistinct : names.Nodup) (hlen : names.length = values.length) :
+    loopReadLocals (loopLookupFirst locals (names.zip values)) names =
+      some values := by
+  induction names generalizing values locals with
+  | nil =>
+      cases values with
+      | nil => simp [loopReadLocals]
+      | cons v vs => simp at hlen
+  | cons name names ih =>
+      cases values with
+      | nil => simp at hlen
+      | cons value values =>
+          obtain ⟨hnot, hnodup⟩ := List.nodup_cons.mp hdistinct
+          have hlen' : names.length = values.length := by
+            simp only [List.length_cons] at hlen
+            omega
+          have hlook :
+              loopLookupFirst locals ((name, value) :: names.zip values) name =
+                some value := by
+            simp [loopLookupFirst]
+          have htail :
+              loopReadLocals
+                  (loopLookupFirst locals ((name, value) :: names.zip values))
+                  names =
+                loopReadLocals (loopLookupFirst locals (names.zip values))
+                  names := by
+            apply loopReadLocals_congr
+            intro m hm
+            have hne : m ≠ name := fun heq => hnot (heq ▸ hm)
+            simp [loopLookupFirst, hne]
+          simp only [List.zip_cons_cons, loopReadLocals]
+          rw [hlook]
+          rw [htail, ih locals values hnodup hlen']
+          rfl
+
+/-- Reading a name list returns exactly one value per name. -/
+theorem loopReadLocals_length (locals : Nat → Option α) (names : List Nat)
+    (values : List α) (h : loopReadLocals locals names = some values) :
+    values.length = names.length := by
+  induction names generalizing values with
+  | nil =>
+      simp only [loopReadLocals, Option.some.injEq] at h
+      subst h
+      simp
+  | cons name names ih =>
+      simp only [loopReadLocals] at h
+      cases hlocal : locals name with
+      | none => simp [hlocal] at h
+      | some v =>
+          cases htail : loopReadLocals locals names with
+          | none => simp [hlocal, htail] at h
+          | some vs =>
+              simp [hlocal, htail] at h
+              subst h
+              simp only [List.length_cons]
+              rw [ih vs htail]
+
+/-- Reading a prefix of the names returns a prefix of the values; this is the
+    list-valued counterpart of CakeML's `get_vars_front`
+    (`cakeml/pancake/proofs/loop_callProofScript.sml:273`). -/
+theorem loopReadLocals_take (locals : Nat → Option α) (names : List Nat)
+    (values : List α) (h : loopReadLocals locals names = some values) (n : Nat) :
+    loopReadLocals locals (names.take n) = some (values.take n) := by
+  induction names generalizing values n with
+  | nil =>
+      simp only [loopReadLocals, Option.some.injEq] at h
+      subst h
+      simp [loopReadLocals]
+  | cons name names ih =>
+      simp only [loopReadLocals] at h
+      cases hlocal : locals name with
+      | none => simp [hlocal] at h
+      | some v =>
+          cases htail : loopReadLocals locals names with
+          | none => simp [hlocal, htail] at h
+          | some vs =>
+              simp [hlocal, htail] at h
+              subst h
+              cases n with
+              | zero => simp [loopReadLocals]
+              | succ k =>
+                  simp only [List.take_succ_cons, loopReadLocals]
+                  rw [hlocal, ih vs htail k]
+                  rfl
+
+/-- CakeML's `get_vars_front`
+    (`cakeml/pancake/proofs/loop_callProofScript.sml:273`): dropping the last
+    name drops the last value. -/
+theorem loopReadLocals_dropLast (locals : Nat → Option α) (names : List Nat)
+    (values : List α) (h : loopReadLocals locals names = some values) :
+    loopReadLocals locals names.dropLast = some values.dropLast := by
+  rw [List.dropLast_eq_take, List.dropLast_eq_take]
+  rw [loopReadLocals_length locals names values h]
+  exact loopReadLocals_take locals names values h (names.length - 1)
+
+/-- A successful read of a nonempty name list returns a nonempty value list. -/
+theorem loopReadLocals_ne_nil (locals : Nat → Option α) (names : List Nat)
+    (values : List α) (h : loopReadLocals locals names = some values)
+    (hne : names ≠ []) : values ≠ [] := by
+  intro hv
+  have hlen := loopReadLocals_length locals names values h
+  rw [hv] at hlen
+  simp at hlen
+  exact hne (List.length_eq_zero_iff.mp hlen.symm)
+
+/-- Reading a one-element name list returns the mapped single value. -/
+theorem loopReadLocals_singleton (locals : Nat → Option α) (name : Nat) :
+    loopReadLocals locals [name] = (locals name).map (fun v => [v]) := by
+  cases hlocal : locals name <;> simp [loopReadLocals, hlocal]
+
+/-- CakeML's `get_vars_last`
+    (`cakeml/pancake/proofs/loop_callProofScript.sml:300`): the value read for
+    the last name is the value stored for it.  CakeML's `LAST` is total, so the
+    Flapjack port carries the nonempty-value-list hypothesis explicitly. -/
+theorem loopReadLocals_getLast (locals : Nat → Option α) (names : List Nat)
+    (values : List α) (h : loopReadLocals locals names = some values)
+    (hne : names ≠ []) (hvals : values ≠ []) :
+    locals (names.getLast hne) = some (values.getLast hvals) := by
+  have hnames : names.dropLast ++ [names.getLast hne] = names := by
+    rw [List.dropLast_eq_take, List.take_append_getLast]
+  have hvals_split : values.dropLast ++ [values.getLast hvals] = values := by
+    rw [List.dropLast_eq_take, List.take_append_getLast]
+  have hsplit : loopReadLocals locals (names.dropLast ++ [names.getLast hne]) =
+      some values := by
+    rw [hnames]; exact h
+  rw [loopReadLocals_append] at hsplit
+  rw [loopReadLocals_dropLast locals names values h] at hsplit
+  rw [loopReadLocals_singleton] at hsplit
+  cases hlast : locals (names.getLast hne) with
+  | none => simp [hlast] at hsplit
+  | some w =>
+      simp only [hlast, Option.map_some] at hsplit
+      have hw : values.dropLast ++ [w] = values := Option.some.inj hsplit
+      have : [w] = [values.getLast hvals] :=
+        List.append_cancel_left (hw.trans hvals_split.symm)
+      rw [List.singleton_inj] at this
+      rw [this]
 
 def loopBindParameters (parameters : List Nat) (values : List α)
     (locals : Nat → Option α) : Option (Nat → Option α) :=

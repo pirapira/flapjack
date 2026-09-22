@@ -667,6 +667,32 @@ example :
       some [.load32Offset 4 5 (0 - BitVec.ofNat 64 2048)] := by
   decide
 
+/- The same Cake lower signed-12 boundary applies independently to the
+   byte/halfword memory-op rows; retain each width-specific target opcode. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMemSub .load8 4 5 2048) [] 0]⟩ =
+      some [.loadByteOffset 4 5 (0 - BitVec.ofNat 64 2048)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMemSub .load16 4 5 2048) [] 0]⟩ =
+      some [.loadHalfOffset 4 5 (0 - BitVec.ofNat 64 2048)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMemSub .store8 4 5 2048) [] 0]⟩ =
+      some [.storeByteOffset 4 5 (0 - BitVec.ofNat 64 2048)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMemSub .store16 4 5 2048) [] 0]⟩ =
+      some [.storeHalfOffset 4 5 (0 - BitVec.ofNat 64 2048)] := by
+  decide
+
 /- The largest positive signed-12 displacement remains a direct load32. -/
 example :
     compileLabSection (width := 64) { services := [] }

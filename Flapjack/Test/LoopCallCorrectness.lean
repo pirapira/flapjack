@@ -381,6 +381,25 @@ theorem primitive_labelsIn_fixture :
         simp [lookup, hname', hname4']
       simp [hnone] at hlookup
 
+theorem call_labelsIn_fixture :
+    (comp [(3, 2)]
+      (.call none none [2, 3] none : LoopProg Nat) : LoopProg Nat × LocationEnv).1 =
+        .call none (some 2) [2] none ∧
+      labelsIn
+        (comp [(3, 2)]
+          (.call none none [2, 3] none : LoopProg Nat)).2
+        load32State.locals := by
+  have hcompiled := comp_call_labelsIn (environment := [(3, 2)])
+    (returns := none) (target := none) (arguments := [2, 3]) (handler := none)
+    (locals := load32State.locals) (by
+      intro name source hlookup
+      have hpair : 3 = name ∧ 2 = source := by
+        simpa [lookup] using hlookup
+      have hsource : source = 2 := hpair.2.symm
+      subst source
+      exact ⟨100, by simp [load32State]⟩)
+  simpa [comp, compCall, splitLast, lookup] using hcompiled
+
 #check comp_locValue_correct
 #check comp_load32_correct
 #check comp_loadByte_correct
@@ -402,5 +421,6 @@ theorem primitive_labelsIn_fixture :
 #check comp_arith_longMul_correct
 #check comp_arith_longDiv_labelsIn
 #check comp_primitive_labelsIn
+#check comp_call_labelsIn
 
 end Flapjack.Test.LoopCallCorrectness

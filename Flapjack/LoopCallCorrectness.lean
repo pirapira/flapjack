@@ -788,6 +788,53 @@ theorem labelsIn_listDelete
   exact henvironment name location
     (lookup_of_listDelete destinations environment name location hlookup)
 
+theorem comp_call_labelsIn
+    (environment : LocationEnv)
+    (returns : Option (List Nat × List Nat)) (target : Option Nat)
+    (arguments : List Nat)
+    (handler : Option (Nat × LoopProg α × LoopProg α × List Nat))
+    (locals : Nat → Option α) (_henvironment : labelsIn environment locals) :
+    (comp environment
+      (.call returns target arguments handler) : LoopProg α × LocationEnv).1 =
+        (match target with
+        | some _ => .call returns target arguments handler
+        | none =>
+            match splitLast arguments with
+            | none => .skip
+            | some (pre, lastValue) =>
+                match lookup lastValue environment with
+                | none => .call returns none arguments handler
+                | some destination => .call returns (some destination) pre handler) ∧
+      labelsIn
+    (comp environment
+          (.call returns target arguments handler) : LoopProg α × LocationEnv).2
+        locals := by
+  have hnil : labelsIn ([] : LocationEnv) locals := by
+    intro name source hlookup
+    simp [lookup] at hlookup
+  cases target with
+  | some target =>
+      constructor
+      · simp [comp, compCall]
+      · simpa [comp, compCall] using hnil
+  | none =>
+      cases harguments : splitLast arguments with
+      | none =>
+          constructor
+          · simp [comp, compCall, harguments]
+          · simpa [comp, compCall, harguments] using hnil
+      | some pair =>
+          obtain ⟨pre, lastValue⟩ := pair
+          cases hlastValue : lookup lastValue environment with
+          | none =>
+              constructor
+              · simp [comp, compCall, harguments, hlastValue]
+              · simpa [comp, compCall, harguments, hlastValue] using hnil
+          | some destination =>
+              constructor
+              · simp [comp, compCall, harguments, hlastValue]
+              · simpa [comp, compCall, harguments, hlastValue] using hnil
+
 theorem comp_primitive_labelsIn
     (environment : LocationEnv) (destinations : List Nat)
     (operator : PrimOp) (arguments : List Nat)

@@ -1,5 +1,6 @@
 import Flapjack.PanToCrepSemantics
 import Flapjack.PanToCrepCorrectnessBoundary
+import Flapjack.PanValueFfiClockShiftFull
 
 /-!
 # From the clocked `pc_compile_correct` result relation to observational semantics
@@ -91,6 +92,38 @@ theorem panLprefixChain_of_panSemEvaluate_event_prefix
   rcases Nat.le_total left right with hleft | hright
   · exact Or.inl (hprefix left right hleft)
   · exact Or.inr (hprefix right left hright)
+
+/-! The non-timeout source evaluator supplies the ordered prefixes needed by
+    `panSemantics` directly.  Timeout monotonicity remains an explicit
+    supported-subset obligation until the recursive Cake evaluator induction
+    is discharged. -/
+theorem panLprefixChain_of_panSemEvaluate_nonTimeout
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (state : PanSemEvaluateState α σ)
+    (program : Prog α)
+    (hevaluate : ∀ clock, ∃ outcome returnedClock,
+      panSemEvaluate context primitive handler
+        { state with clock := clock } program = some (outcome, returnedClock))
+    (hnonTimeout : ∀ clock outcome returnedClock,
+      panSemEvaluate context primitive handler
+        { state with clock := clock } program = some (outcome, returnedClock) →
+      ∀ locals globals memory ffi,
+        outcome ≠ .timeout locals globals memory ffi) :
+    panLprefixChain (fun clock =>
+      panResultEvents
+        (panSemEvaluate context primitive handler
+          { state with clock := clock } program)) := by
+  apply panLprefixChain_of_panSemEvaluate_event_prefix
+    context primitive handler state program
+  intro left right hleft
+  exact panSemEvaluate_clock_event_prefix_of_nonTimeout
+    context primitive handler state program hevaluate hnonTimeout left right hleft
 
 @[simp] theorem panSemEvaluateHooks_ffiOutcome
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]

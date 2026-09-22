@@ -217,6 +217,47 @@ theorem not_mem_crepAssignedFreeVars_compileProg_store
                 · simp [crepAssignedFreeVars_nestedSeq_stores]
               · simp [hlength, crepAssignedFreeVars]
 
+/-! The local-assignment branch of Cake's assigned-free bound.  When the
+    destination and expression variables are distinct, the generated zip of
+    assignments exposes the destination slot list directly.  Otherwise Cake
+    introduces fresh temporaries, whose declaration nest hides the same slot
+    list while preserving the assignment result. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_assign_local
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (name : VarName) (value : Exp α) (x : Nat)
+    (hslot : ∀ shape slots,
+      lookupInfo name context.vars = some (shape, slots) → x ∉ slots) :
+    x ∉ crepAssignedFreeVars
+      (compileProg context (.assign .local name value)) := by
+  simp only [compileProg]
+  cases hlookup : lookupInfo name context.vars with
+  | none => simp [crepAssignedFreeVars]
+  | some info =>
+      obtain ⟨shape, names⟩ := info
+      cases hcompile : compileExp context value with
+      | mk expressions valueShape =>
+          simp only
+          by_cases hlength : names.length = expressions.length
+          · rw [if_pos hlength]
+            by_cases hdistinct : distinctLists names (expressions.flatMap crepExpVars)
+            · rw [if_pos hdistinct]
+              rw [crepAssignedFreeVars_nestedSeq_assign_zipWith names expressions hlength]
+              exact hslot shape names hlookup
+            · rw [if_neg hdistinct]
+              apply not_mem_crepAssignedFreeVars_nestedDecs
+              · simp [freshNames_length, hlength]
+              · rw [← List.zipWith_map_right (f := fun temporary =>
+                    (CrepExp.var (α := α) temporary))
+                    (g := fun destination expression =>
+                      CrepProg.assign destination expression)]
+                rw [crepAssignedFreeVars_nestedSeq_assign_zipWith names
+                      ((freshNames context names.length 1).map
+                        (fun temporary => CrepExp.var temporary))
+                      (by simp [freshNames_length])]
+                exact hslot shape names hlookup
+          · rw [if_neg hlength]
+            simp [crepAssignedFreeVars]
+
 /-- `crepNestedSeq` of `assign` statements built from a zip of names with
     variables introduced by `freshNames` still has exactly `names` as its
     assigned free variables. -/

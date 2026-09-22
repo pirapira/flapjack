@@ -2697,6 +2697,7 @@ example : PanValueFfiClockNormalAdequateProgFromFloor 3 3 evaluatorContext
 #check @Flapjack.evalPanValueFfiClockProgram_of_declarations_and_returned_call_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProgram_of_declarations_and_returned_call_result_rel
 #check @Flapjack.evalPanValueFfiClockProgram_of_declarations_and_raised_call_result_rel
+#check @Flapjack.evalPanValueFfiClockProgram_of_declarations_and_raised_call_result_rel_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProgram_of_declarations_and_timeout_call_result_rel_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProgram_of_declarations_and_raised_call_context_code
 #check @Flapjack.evalPanValueFfiClockProg_decCall_returned_ioEvents_prefix
@@ -2769,3 +2770,10 @@ remaining sub-case of the generic `hleaf` obligation. -/
 /-! Fully-discharged leaf event-prefix: all 13 `PanValueFfiLeafProg` constructors,
 including `extCall`, under the explicit handler-preservation premises. -/
 #check @Flapjack.evalPanValueFfiProgSteps_leaf_ioEvents_prefix
+
+/-! Concrete composed leaf bridge: the clocked leaf run and its event prefix,
+with the handler-preservation premises discharged. -/
+#check @Flapjack.evalPanValueFfiClockProg_leaf_of_handlerPreserves
+
+#check @Flapjack.panValueFfiStatefulHandlerPreservesIoEvents_fails
+#check @Flapjack.panValueFfiMemoryHandlerPreservesIoEvents_fails

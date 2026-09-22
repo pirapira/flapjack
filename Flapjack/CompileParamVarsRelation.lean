@@ -10,6 +10,24 @@ equations avoids unfolding the allocator in callee-call correctness proofs.
 
 namespace Flapjack
 
+/-! The third component of `compileParamVars` is the next free slot.  Cake's
+    source-shaped `comp_func` uses the preceding slot as `vmax`, so keeping
+    this equation explicit prevents the two context conventions from being
+    conflated in correctness proofs. -/
+theorem compileParamVars_next_offset
+    (params : List (VarName × Shape)) (offset : Nat) :
+    (compileParamVars params offset).2.snd =
+      offset + Shape.shapeSize (.comb (params.map Prod.snd)) := by
+  induction params generalizing offset with
+  | nil =>
+      simp [compileParamVars, Shape.shapeSize]
+  | cons param params ih =>
+      cases param with
+      | mk name shape =>
+          simp only [compileParamVars]
+          rw [ih]
+          simp [shapeSize_comb_cons, Nat.add_assoc]
+
 theorem compileParamVars_preserves_parameter_shapes
     (params : List (VarName × Shape)) (offset : Nat) :
     (compileParamVars params offset).1.map

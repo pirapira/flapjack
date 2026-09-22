@@ -92,4 +92,41 @@ theorem localsRel_extend_new_var_fixture :
     (by simp [panValueShape])
   simpa [panValueShape, Shape.shapeSize, panValueFlatten] using h
 
+/-! ### `FDOMSUB` / `resVar` regressions (Cake `res_var` layer) -/
+
+#check @FDOMSUB
+#check @resVar
+#check @FLOOKUP_resVar
+#check @FLOOKUP_resVar_diff_eq
+#check @resVar_commutes
+
+/-- A concrete finite map for the `res_var` regressions. -/
+def resVarBase : FiniteMap Nat Nat := FUPDATE_LIST FEMPTY [(3, 30)]
+
+/-- A concrete finite map with two entries. -/
+def resVarBase2 : FiniteMap Nat Nat := FUPDATE_LIST FEMPTY [(3, 30), (4, 40)]
+
+/-- `FDOMSUB` removes exactly the requested key. -/
+theorem fdomsub_fixture :
+    FLOOKUP (FDOMSUB resVarBase2 3) 3 = none
+      ∧ FLOOKUP (FDOMSUB resVarBase2 3) 4 = some 40 := by
+  constructor
+  · simp [FDOMSUB, FLOOKUP]
+  · simp [FDOMSUB, FLOOKUP, resVarBase2, FUPDATE_LIST, FUPDATE]
+
+/-- Cake `flookup_res_var_thm` on a concrete map. -/
+theorem flookup_resVar_fixture :
+    FLOOKUP (resVar resVarBase (4, some 40)) 4 = some 40
+      ∧ FLOOKUP (resVar resVarBase (4, some 40)) 3 = some 30 := by
+  constructor
+  · rw [FLOOKUP_resVar]; simp only [beq_iff_eq, if_true]
+  · rw [FLOOKUP_resVar_diff_eq _ _ _ 40 (by decide)]
+    simp [resVarBase, FLOOKUP, FUPDATE_LIST, FUPDATE]
+
+/-- Cake `res_var_commutes` on a concrete map. -/
+theorem resVar_commutes_fixture :
+    resVar (resVar resVarBase (2, some 20)) (3, some 30)
+      = resVar (resVar resVarBase (3, some 30)) (2, some 20) := by
+  exact resVar_commutes resVarBase (FUPDATE_LIST FEMPTY [(2, 20), (3, 30)]) 3 2 (by decide)
+
 end Flapjack.Test.FiniteMapParity

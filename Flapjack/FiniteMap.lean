@@ -625,4 +625,82 @@ theorem FLOOKUP_FUPDATE_LIST_zip_getElem [BEq α] [LawfulBEq α]
         rw [List.zip_cons_cons, FUPDATE_LIST_cons]
         exact ih ys (FUPDATE f (a, y)) k hdistinctTail hlenTail hk
 
+/-- Domain subtraction at a key that is not bound leaves the map unchanged. -/
+theorem FDOMSUB_eq_self_of_lookup_none [BEq α] [LawfulBEq α]
+    (f : FiniteMap α β) (x : α) (h : FLOOKUP f x = none) :
+    FDOMSUB f x = f := by
+  funext k
+  by_cases hk : (x == k) = true
+  · simp only [FDOMSUB, hk, if_true]
+    rw [← beq_iff_eq.mp hk]
+    exact h.symm
+  · simp only [FDOMSUB, hk, Bool.false_eq_true, if_false]
+
+/-- Updating a key with the value it already binds leaves the map unchanged. -/
+theorem FUPDATE_eq_self_of_lookup_some [BEq α] [LawfulBEq α]
+    (f : FiniteMap α β) (x : α) (v : β) (h : FLOOKUP f x = some v) :
+    FUPDATE f (x, v) = f := by
+  funext k
+  by_cases hk : (x == k) = true
+  · simp only [FUPDATE, hk, if_true]
+    rw [← beq_iff_eq.mp hk]
+    exact h.symm
+  · simp only [FUPDATE, hk, Bool.false_eq_true, if_false]
+
+/-- Domain subtraction at a key immediately after updating that same key. -/
+theorem FDOMSUB_FUPDATE_same [BEq α] [LawfulBEq α]
+    (f : FiniteMap α β) (x : α) (v : β) :
+    FDOMSUB (FUPDATE f (x, v)) x = FDOMSUB f x := by
+  funext k
+  by_cases hk : (x == k) = true
+  · simp only [FDOMSUB, FUPDATE, hk, if_true]
+  · simp only [FDOMSUB, FUPDATE, hk, Bool.false_eq_true, if_false]
+
+/-- Two consecutive updates of the same key collapse to the later one. -/
+theorem FUPDATE_FUPDATE_same [BEq α] [LawfulBEq α]
+    (f : FiniteMap α β) (x : α) (v1 v2 : β) :
+    FUPDATE (FUPDATE f (x, v1)) (x, v2) = FUPDATE f (x, v2) := by
+  funext k
+  by_cases hk : (x == k) = true
+  · simp only [FUPDATE, hk, if_true]
+  · simp only [FUPDATE, hk, Bool.false_eq_true, if_false]
+
+/-- Cake `res_var_lookup_original_eq` (crepPropsScript.sml:612): folding `res_var`
+over the `ZIP` of a distinct key list with its values, restoring each key's
+original binding, reproduces the original map. -/
+theorem foldl_resVar_zip_lookup_original [BEq α] [LawfulBEq α]
+    (xs : List α) (ys : List β) (lc : FiniteMap α β)
+    (hdistinct : xs.Nodup) (hlen : xs.length = ys.length) :
+    ((xs.zip (xs.map (FLOOKUP lc))).foldl resVar
+        (FUPDATE_LIST lc (xs.zip ys))) = lc := by
+  induction xs generalizing ys lc with
+  | nil =>
+    cases ys with
+    | nil => simp [FUPDATE_LIST_nil]
+    | cons y ys => simp at hlen
+  | cons a xs ih =>
+    cases ys with
+    | nil => simp at hlen
+    | cons y ys =>
+      rw [List.nodup_cons] at hdistinct
+      obtain ⟨ha, hdistinctTail⟩ := hdistinct
+      have hlenTail : xs.length = ys.length := by simpa using hlen
+      have hnotmem : a ∉ (xs.zip ys).map Prod.fst := by
+        rw [List.map_fst_zip (by omega)]
+        exact ha
+      simp only [List.map_cons, List.zip_cons_cons, FUPDATE_LIST_cons, List.foldl_cons]
+      rw [← FUPDATE_FUPDATE_LIST_commutes lc a y (xs.zip ys) hnotmem]
+      cases hlookup : FLOOKUP lc a with
+      | none =>
+        simp only [resVar, FDOMSUB_FUPDATE_same]
+        rw [FDOMSUB_FUPDATE_LIST_commutes xs ys lc a ha hlenTail,
+            FDOMSUB_eq_self_of_lookup_none lc a hlookup]
+        exact ih ys lc hdistinctTail hlenTail
+      | some v =>
+        simp only [resVar]
+        rw [FUPDATE_FUPDATE_same]
+        rw [FUPDATE_eq_self_of_lookup_some (FUPDATE_LIST lc (xs.zip ys)) a v
+          (by rw [FLOOKUP_FUPDATE_LIST_zip_not_mem xs ys lc a hlenTail ha]; exact hlookup)]
+        exact ih ys lc hdistinctTail hlenTail
+
 end Flapjack

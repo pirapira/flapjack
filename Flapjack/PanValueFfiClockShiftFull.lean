@@ -763,6 +763,7 @@ theorem evalPanValueFfiClockProg_shift_ioEvents_prefix
         Option.some.inj (hrunHigh.symm.trans hshift)
       cases hpair
       cases controlResult <;> exact hlow
+ 
 /-! The source-facing evaluator derives its Lean termination fuel from the
     input clock.  Consequently the fixed-fuel shift theorem above is not by
     itself enough to transport `panSemEvaluate`: after shifting the clock, the
@@ -839,6 +840,7 @@ theorem panSemEvaluate_clock_shift_panResultEvents
         (panSemEvaluate context primitive handler
           { state with clock := state.clock + extra } program) :=
       (congrArg panResultEvents hrun'').symm
+ 
 
 /-! The evaluator shift also transports the full source-facing result
     projection.  This is the direct clocked top-level bridge used when a

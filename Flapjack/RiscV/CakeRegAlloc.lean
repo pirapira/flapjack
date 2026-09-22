@@ -1568,6 +1568,16 @@ theorem cakeColourWordSpillState_nextSpill_le_frame
   simp [cakeColourWordSpillState]
   split <;> omega
 
+/-- The production Cake allocator adapter retains exactly the `f'` spill
+    occupancy from `compile_prog`, including the zero-occupancy case. -/
+theorem cakeColourWordSpillState_nextSpill_eq_occupancy
+    (k : Nat) (parameters : List Nat) (program : WordProg α)
+    (colouring : NatInfoMap Nat) :
+    (cakeColourWordSpillState k parameters program colouring).nextSpill =
+      (cakeColourFrameSlots k parameters program colouring).1 := by
+  simp [cakeColourWordSpillState, cakeColourFrameSlots]
+  split <;> omega
+
 /-! Production-facing Cake allocator adapter.  This keeps Cake's full SSA
     entry moves and IRC coalescing in the returned Word program, while
     exposing the existing `WordSpillState` shape to the shared pipeline. -/

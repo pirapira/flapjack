@@ -1,3 +1,4 @@
+import Flapjack.HolRef
 import Flapjack.PanToCrep
 
 /-!
@@ -11,7 +12,7 @@ front-end constructs whose runtime environments are not ported yet lower to
 
 namespace Flapjack
 
-def compileArgs [BEq α] [OfNat α 0] [Add α]
+def compileArgs [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (expressions : List (Exp α)) : List (CrepExp α) :=
   match expressions with
   | [] => []
@@ -125,17 +126,12 @@ def functionReturnNames (context : CompileContext α) (function : FunName) : Lis
   | some (_, shape) => allocatedNames context shape
   | none => []
 
-/- `wrap_rt`-based call-destination resolution (`pan_to_crepScript.sml:247`):
-    a call target survives only when the destination variable's shape is
-    preserved; globals and unknown locals degrade to a tail call. -/
-def callDestinationNames (context : CompileContext α) (kind : VarKind)
+/- `wrap_rt`-based call-destination resolution (`pan_to_crepScript.sml:247`).
+    Cake ignores the source `rk` tag at this post-`pan_globals` boundary and
+    looks up the destination name in `ctxt.vars`. -/
+def callDestinationNames (context : CompileContext α) (_kind : VarKind)
     (name : VarName) : Option (List Nat) :=
-  match kind with
-  | .global => none
-  | .local =>
-      match lookupInfo name context.vars with
-      | none => none
-      | some info => (wrapRt (some info)).map Prod.snd
+  (wrapRt (lookupInfo name context.vars)).map Prod.snd
 
 def loadMemOp : OpSize → CrepMemOp
   | .op8 => .load8
@@ -149,7 +145,7 @@ def storeMemOp : OpSize → CrepMemOp
   | .op32 => .store32
   | .op16 => .store16
 
-def firstCompiledExp [BEq α] [OfNat α 0] [Add α]
+def firstCompiledExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (expression : Exp α) : Option (CrepExp α) :=
   match compileExp context expression with
   | (compiled :: _, .one) => some compiled
@@ -158,13 +154,13 @@ def firstCompiledExp [BEq α] [OfNat α 0] [Add α]
 /-- CakeML's shared-memory compilation only requires the compiled
     address/value list to be nonempty and proceeds with the head word, for
     any shape (`pan_to_crepScript.sml:291-305`). -/
-def firstCompiledExpAnyShape [BEq α] [OfNat α 0] [Add α]
+def firstCompiledExpAnyShape [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (expression : Exp α) : Option (CrepExp α) :=
   match compileExp context expression with
   | (compiled :: _, _) => some compiled
   | _ => none
 
-theorem firstCompiledExpAnyShape_of_firstCompiledExp [BEq α] [OfNat α 0] [Add α]
+theorem firstCompiledExpAnyShape_of_firstCompiledExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     {context : CompileContext α} {expression : Exp α} {compiled : CrepExp α}
     (h : firstCompiledExp context expression = some compiled) :
     firstCompiledExpAnyShape context expression = some compiled := by
@@ -227,7 +223,8 @@ def panToCrepVars (params : List (VarName × Shape)) : List Nat :=
     The recursive compiler below keeps CakeML's fallback behavior for
     malformed compiled expressions and preserves the source control-flow
     constructors. -/
-def compileProg [BEq α] [OfNat α 0] [Add α]
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "compile_def"]
+def compileProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (program : Prog α) : CrepProg α :=
   match program with
   | .skip => .skip
@@ -309,10 +306,7 @@ def compileProg [BEq α] [OfNat α 0] [Add α]
                 match lookupInfo exception context.exceptions with
                 | none => none
                 | some code =>
-                    let handlerSetup :=
-                      match lookupInfo handlerVar context.vars with
-                      | some (_, names) => assignRet context.bytesInWord names
-                      | none => .skip
+                    let handlerSetup := expHdl context.vars handlerVar
                     some (code, .seq handlerSetup (compileProg context handlerProgram))
           match destination with
           | none =>
@@ -366,7 +360,7 @@ def compileProg [BEq α] [OfNat α 0] [Add α]
           if compiled.1.length = Shape.shapeSize compiled.2 then
             .seq
               (nestedDecs temporaries compiled.1
-                (crepNestedSeq (storeGlobals 0 context.bytesInWord
+                (crepNestedSeq (storeGlobals 0
                   (temporaries.map .var))))
               (.raise code)
           else .skip
@@ -393,7 +387,7 @@ termination_by structural program
     the flattened parameter shape, then invokes `compile`; keeping that
     construction explicit prevents callers from silently using the legacy
     next-free-slot convention. -/
-def panToCrepCompFunc [BEq α] [OfNat α 0] [Add α]
+def panToCrepCompFunc [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (params : List (VarName × Shape))
     (body : Prog α) : CrepProg α :=
   let shapes := params.map Prod.snd
@@ -408,13 +402,13 @@ def panToCrepCompFunc [BEq α] [OfNat α 0] [Add α]
     existing context-normalized API stores the next free slot in its function
     context.  The subtraction below is therefore intentional and preserves
     the source temporary numbering. -/
-def compileFunDeclSource [BEq α] [OfNat α 0] [Add α]
+def compileFunDeclSource [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (declaration : FunDecl α) : CompiledFunction α :=
   { name := declaration.name, params := panToCrepVars declaration.params,
     body := panToCrepCompFunc context declaration.params declaration.body,
     returnShape := declaration.returnShape }
 
-def compileFunctionsSource [BEq α] [OfNat α 0] [Add α]
+def compileFunctionsSource [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) : List (Decl α) → List (CompiledFunction α)
   | [] => []
   | .function declaration :: declarations =>
@@ -423,28 +417,29 @@ def compileFunctionsSource [BEq α] [OfNat α 0] [Add α]
   | _ :: declarations => compileFunctionsSource context declarations
 termination_by declarations => sizeOf declarations
 
-def compileToCrep [BEq α] [OfNat α 0] [Add α]
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "compile_to_crep_def"]
+def compileToCrep [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (declarations : List (Decl α)) :
     List (CompiledFunction α) :=
   let context := { context with functions := functionInfos declarations }
   compileFunctionsSource context declarations
 
-theorem compileProg_skip [BEq α] [OfNat α 0] [Add α]
+theorem compileProg_skip [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) : compileProg context .skip = .skip := by
   simp [compileProg]
 
-theorem compileProg_seq [BEq α] [OfNat α 0] [Add α]
+theorem compileProg_seq [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (first second : Prog α) :
     compileProg context (.seq first second) =
       .seq (compileProg context first) (compileProg context second) := by
   simp [compileProg]
 
-theorem compileProg_return [BEq α] [OfNat α 0] [Add α]
+theorem compileProg_return [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (value : Exp α) :
     compileProg context (.return value) = .return (compileExp context value).1 := by
   simp [compileProg]
 
-theorem compileProg_extCall_of_compiled [BEq α] [OfNat α 0] [Add α]
+theorem compileProg_extCall_of_compiled [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (function : FunName)
     (configuration configurationLength array arrayLength : Exp α)
     (configuration' configurationLength' array' arrayLength' : CrepExp α)
@@ -468,7 +463,7 @@ theorem compileProg_extCall_of_compiled [BEq α] [OfNat α 0] [Add α]
   simp [compileProg, hconfiguration, hconfigurationLength, harray, harrayLength,
     nestedDecs]
 
-theorem compileProg_call_handler_of_compiled [BEq α] [OfNat α 0] [Add α]
+theorem compileProg_call_handler_of_compiled [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (function : FunName)
     (arguments : List (Exp α)) (returnShape : Shape)
     (exception handlerVar : VarName) (exceptionCode : α)
@@ -487,11 +482,11 @@ theorem compileProg_call_handler_of_compiled [BEq α] [OfNat α 0] [Add α]
         ((allocatedNames context returnShape).map (fun _ => (.const 0 : CrepExp α)))
         (.call (some (allocatedNames context returnShape,
           some (exceptionCode,
-            .seq (assignRet context.bytesInWord handlerNames)
+            .seq (expHdl context.vars handlerVar)
               (compileProg context handlerProgram))))
           function compiledArguments) := by
   rcases hhandler with ⟨shape, hhandler⟩
-  simp [compileProg, hfunction, hexception, hhandler, harguments,
+  simp [compileProg, hfunction, hexception, harguments,
     functionReturnNames, allocatedNames]
 
 /-! The `Call_Ret_Exception` branch of Cake's `pc_compile_correct` splits on
@@ -502,7 +497,7 @@ theorem compileProg_call_handler_of_compiled [BEq α] [OfNat α 0] [Add α]
     and destination-carrying calls; they are the explicit compile-side
     premise for the "exception id in handler not found in context" sub-case. -/
 
-theorem compileProg_call_handler_missing_of_compiled [BEq α] [OfNat α 0] [Add α]
+theorem compileProg_call_handler_missing_of_compiled [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (function : FunName)
     (arguments : List (Exp α)) (returnShape : Shape)
     (exception handlerVar : VarName)
@@ -523,7 +518,7 @@ theorem compileProg_call_handler_missing_of_compiled [BEq α] [OfNat α 0] [Add 
     functionReturnNames, allocatedNames]
 
 theorem compileProg_call_handler_missing_destination_degraded_of_compiled
-    [BEq α] [OfNat α 0] [Add α]
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (function : FunName)
     (arguments : List (Exp α)) (kind : VarKind) (name : VarName)
     (exception handlerVar : VarName)
@@ -539,7 +534,7 @@ theorem compileProg_call_handler_missing_destination_degraded_of_compiled
   simp [compileProg, hexception, hnames, harguments]
 
 theorem compileProg_call_handler_missing_destination_of_compiled
-    [BEq α] [OfNat α 0] [Add α]
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (function : FunName)
     (arguments : List (Exp α)) (kind : VarKind) (name : VarName)
     (names : List Nat)
@@ -563,7 +558,7 @@ theorem compileProg_call_handler_missing_destination_of_compiled
     emitted shapes as explicit compile-side premises. -/
 
 theorem compileProg_call_destination_of_compiled
-    [BEq α] [OfNat α 0] [Add α]
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (function : FunName)
     (arguments : List (Exp α)) (kind : VarKind) (name : VarName)
     (names : List Nat)
@@ -576,7 +571,7 @@ theorem compileProg_call_destination_of_compiled
   simp [compileProg, hnames, harguments]
 
 theorem compileProg_call_destination_degraded_of_compiled
-    [BEq α] [OfNat α 0] [Add α]
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (function : FunName)
     (arguments : List (Exp α)) (kind : VarKind) (name : VarName)
     (compiledArguments : List (CrepExp α))
@@ -587,29 +582,29 @@ theorem compileProg_call_destination_degraded_of_compiled
       .call none function compiledArguments := by
   simp [compileProg, hnames, harguments]
 
-theorem compileProg_break [BEq α] [OfNat α 0] [Add α]
+theorem compileProg_break [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) : compileProg context .break = .break 0 := by
   simp [compileProg]
 
-theorem compileProg_continue [BEq α] [OfNat α 0] [Add α]
+theorem compileProg_continue [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) : compileProg context .continue = .continue 0 := by
   simp [compileProg]
 
-theorem compileProg_tick [BEq α] [OfNat α 0] [Add α]
+theorem compileProg_tick [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) : compileProg context .tick = .tick := by
   simp [compileProg]
 
-theorem compileProg_annot [BEq α] [OfNat α 0] [Add α]
+theorem compileProg_annot [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (tag text : String) :
     compileProg context (.annot tag text) = .skip := by
   simp [compileProg]
 
-theorem compileProg_assign_global [BEq α] [OfNat α 0] [Add α]
+theorem compileProg_assign_global [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (name : VarName) (value : Exp α) :
     compileProg context (.assign .global name value) = .skip := by
   simp [compileProg]
 
-theorem compileProg_ite_of_compiled [BEq α] [OfNat α 0] [Add α]
+theorem compileProg_ite_of_compiled [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (condition : Exp α)
     (thenBranch elseBranch : Prog α) (condition' : CrepExp α)
     (rest : List (CrepExp α)) (shape : Shape)
@@ -618,14 +613,14 @@ theorem compileProg_ite_of_compiled [BEq α] [OfNat α 0] [Add α]
       .ite condition' (compileProg context thenBranch) (compileProg context elseBranch) := by
   simp [compileProg, hcondition]
 
-theorem compileProg_while_of_compiled [BEq α] [OfNat α 0] [Add α]
+theorem compileProg_while_of_compiled [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (condition : Exp α) (body : Prog α)
     (condition' : CrepExp α) (rest : List (CrepExp α)) (shape : Shape)
     (hcondition : compileExp context condition = (condition' :: rest, shape)) :
     compileProg context (.while condition body) = .while condition' (compileProg context body) := by
   simp [compileProg, hcondition]
 
-theorem compileProg_store32_of_compiled [BEq α] [OfNat α 0] [Add α]
+theorem compileProg_store32_of_compiled [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (address value : Exp α)
     (address' value' : CrepExp α) (addressRest valueRest : List (CrepExp α))
     (addressShape valueShape : Shape)
@@ -634,7 +629,7 @@ theorem compileProg_store32_of_compiled [BEq α] [OfNat α 0] [Add α]
     compileProg context (.store32 address value) = .store32 address' value' := by
   simp [compileProg, haddress, hvalue]
 
-theorem compileProg_storeByte_of_compiled [BEq α] [OfNat α 0] [Add α]
+theorem compileProg_storeByte_of_compiled [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (address value : Exp α)
     (address' value' : CrepExp α) (addressRest valueRest : List (CrepExp α))
     (addressShape valueShape : Shape)
@@ -651,7 +646,7 @@ theorem compileProg_storeByte_of_compiled [BEq α] [OfNat α 0] [Add α]
     carries the explicit `compileExp`/`lookupInfo` premise that determines
     the constructor's branch. -/
 
-theorem compileProg_dec_of_compiled [BEq α] [OfNat α 0] [Add α]
+theorem compileProg_dec_of_compiled [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (name : VarName) (shape : Shape) (value : Exp α)
     (body : Prog α) (expressions : List (CrepExp α)) (valueShape : Shape)
     (hvalue : compileExp context value = (expressions, valueShape)) :
@@ -664,7 +659,7 @@ theorem compileProg_dec_of_compiled [BEq α] [OfNat α 0] [Add α]
       else .skip := by
   simp only [compileProg, hvalue]
 
-theorem compileProg_decCall [BEq α] [OfNat α 0] [Add α]
+theorem compileProg_decCall [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (name : VarName) (shape : Shape) (function : FunName)
     (arguments : List (Exp α)) (body : Prog α) :
     compileProg context (.decCall name shape function arguments body) =
@@ -677,7 +672,7 @@ theorem compileProg_decCall [BEq α] [OfNat α 0] [Add α]
             maxVar := context.maxVar + Shape.shapeSize shape } body)) := by
   simp only [compileProg]
 
-theorem compileProg_store_of_compiled [BEq α] [OfNat α 0] [Add α]
+theorem compileProg_store_of_compiled [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (address value : Exp α)
     (address' : CrepExp α) (addressRest : List (CrepExp α)) (addressShape : Shape)
     (values : List (CrepExp α)) (shape : Shape)
@@ -693,7 +688,7 @@ theorem compileProg_store_of_compiled [BEq α] [OfNat α 0] [Add α]
       else .skip := by
   simp only [compileProg, haddress, hvalue]
 
-theorem compileProg_raise_of_compiled [BEq α] [OfNat α 0] [Add α]
+theorem compileProg_raise_of_compiled [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (exception : ExceptionId) (value : Exp α) (code : α)
     (expressions : List (CrepExp α)) (shape : Shape)
     (hexception : lookupInfo exception context.exceptions = some code)
@@ -701,13 +696,13 @@ theorem compileProg_raise_of_compiled [BEq α] [OfNat α 0] [Add α]
     compileProg context (.raise exception value) =
       if expressions.length = Shape.shapeSize shape then
         .seq (nestedDecs (freshNames context expressions.length 1) expressions
-            (crepNestedSeq (storeGlobals 0 context.bytesInWord
+            (crepNestedSeq (storeGlobals 0
               ((freshNames context expressions.length 1).map .var))))
           (.raise code)
       else .skip := by
   simp only [compileProg, hexception, hvalue]
 
-theorem compileProg_primitive_of_compiled [BEq α] [OfNat α 0] [Add α]
+theorem compileProg_primitive_of_compiled [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (name : VarName) (operator : PrimOp)
     (arguments : List (Exp α)) (shape : Shape) (names : List Nat)
     (compiledArguments : List (CrepExp α))
@@ -718,7 +713,7 @@ theorem compileProg_primitive_of_compiled [BEq α] [OfNat α 0] [Add α]
         (.primitive names operator (freshNames context compiledArguments.length 1)) := by
   simp only [compileProg, hlookup, harguments]
 
-theorem compileProg_assign_local_of_compiled [BEq α] [OfNat α 0] [Add α]
+theorem compileProg_assign_local_of_compiled [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (name : VarName) (value : Exp α)
     (shape valueShape : Shape) (names : List Nat) (expressions : List (CrepExp α))
     (hlookup : lookupInfo name context.vars = some (shape, names))
@@ -736,7 +731,7 @@ theorem compileProg_assign_local_of_compiled [BEq α] [OfNat α 0] [Add α]
       else .skip := by
   simp only [compileProg, hlookup, hvalue]
 
-theorem compileProg_shMemLoad_local_of_compiled [BEq α] [OfNat α 0] [Add α]
+theorem compileProg_shMemLoad_local_of_compiled [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (size : OpSize) (name : VarName) (address : Exp α)
     (shape : Shape) (destination : Nat) (destinationRest : List Nat) (address' : CrepExp α)
     (hlookup : lookupInfo name context.vars = some (shape, destination :: destinationRest))
@@ -745,7 +740,7 @@ theorem compileProg_shMemLoad_local_of_compiled [BEq α] [OfNat α 0] [Add α]
       .shMem (loadMemOp size) destination address' := by
   simp only [compileProg, hlookup, haddress]
 
-theorem compileProg_shMemStore_of_compiled [BEq α] [OfNat α 0] [Add α]
+theorem compileProg_shMemStore_of_compiled [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (size : OpSize) (address value : Exp α)
     (address' value' : CrepExp α)
     (haddress : firstCompiledExpAnyShape context address = some address')

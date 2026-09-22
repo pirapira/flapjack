@@ -1,2 +1,12 @@
 empty=[]
+
 raise_const=[(«f»,[0],Seq (Dec 1 (Const 7w) (Seq (StoreGlob 0w (Var 1)) Skip)) (Raise 0w))]
+
+raise_pair=[(«f»,[],
+  Seq
+    (Dec 1 (Const 7w)
+       (Dec 2 (Const 9w)
+          (Seq (StoreGlob 0w (Var 1)) (Seq (StoreGlob 1w (Var 2)) Skip))))
+    (Raise 0w))]
+
+done=T

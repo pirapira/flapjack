@@ -228,6 +228,12 @@ theorem evalCrepFullProgState_nestedDecs_loadGlobals_fixture :
   · simp [loadGlobalsResultState, loadGlobalsState, loadGlobalsNames,
       loadGlobalsValues, updateCrepLocalList, evalCrepFullProgState]
 
+#check @crepAssignedFreeVars_assignRet
+
+theorem crepAssignedFreeVars_assignRet_fixture :
+    crepAssignedFreeVars (assignRet (1 : Nat) [2, 5, 9]) = [2, 5, 9] :=
+  crepAssignedFreeVars_assignRet (1 : Nat) [2, 5, 9]
+
 def runChecks : IO Bool := do
   let results := [
     isEmpty (loadGlobals 3 1 0),

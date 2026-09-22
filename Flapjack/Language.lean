@@ -976,6 +976,65 @@ theorem panMap3_eq_map2_zip (f : α → β → γ → δ) (l1 : List α) (l2 : L
               have h2' : ys.length = zs.length := by simp at h2; omega
               simp only [panMap3, panMap2, List.zip_cons_cons, ih xs ys h1' h2']
 
+/-- Counterpart of Cake's `map_map2_fst`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:3799`): when two lists
+    have equal length, projecting the first component of a pointwise map that
+    keeps its first argument recovers the first list.  CakeML states this for
+    the concrete `MAP2` used by `make_funcs`; here the second component is
+    arbitrary, since only `FST` is observed. -/
+theorem panMap2_fst_eq {α β γ : Type} (f : α → β → γ) :
+    ∀ (xs : List α) (ys : List β), xs.length = ys.length →
+      (panMap2 (fun x y => (x, f x y)) xs ys).map Prod.fst = xs := by
+  intro xs
+  induction xs with
+  | nil => intro ys _; rfl
+  | cons x xs ih =>
+      intro ys hlen
+      cases ys with
+      | nil => simp at hlen
+      | cons y ys =>
+          simp only [List.length_cons] at hlen
+          simp only [panMap2, List.map_cons]
+          rw [ih ys (by omega)]
+
+/-- Counterpart of Cake's `mem_lookup_fromalist_some`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:3813`): looking up a
+    key in an association list with distinct keys returns the value paired with
+    it.  CakeML states this for `lookup`/`fromAList`; the list-backed Flapjack
+    analogue is `List.lookup` on the association list itself. -/
+theorem list_lookup_of_mem_of_nodup [BEq α] [LawfulBEq α] {entries : List (α × β)}
+    {key : α} {value : β}
+    (hnodup : (entries.map Prod.fst).Nodup) (hmem : (key, value) ∈ entries) :
+    entries.lookup key = some value := by
+  induction entries with
+  | nil => simp at hmem
+  | cons entry entries ih =>
+      obtain ⟨headKey, headValue⟩ := entry
+      simp only [List.map_cons, List.nodup_cons] at hnodup
+      obtain ⟨hhead, htail⟩ := hnodup
+      simp only [List.mem_cons, Prod.mk.injEq] at hmem
+      rw [List.lookup_cons]
+      split
+      · rename_i hk
+        rcases hmem with hpair | hmem
+        · obtain ⟨_, hvalue⟩ := hpair
+          subst hvalue
+          rfl
+        · exfalso
+          have hkey : key = headKey := beq_iff_eq.mp hk
+          have hmemKey : key ∈ entries.map Prod.fst :=
+            List.mem_map.mpr ⟨(key, value), hmem, rfl⟩
+          rw [← hkey] at hhead
+          exact hhead hmemKey
+      · rename_i hk
+        rcases hmem with hpair | hmem
+        · exfalso
+          obtain ⟨hkey, _⟩ := hpair
+          have htrue : (key == headKey) = true := by rw [hkey]; exact beq_iff_eq.mpr rfl
+          rw [htrue] at hk
+          exact Bool.false_ne_true hk.symm
+        · exact ih htail hmem
+
 /-- Counterpart of Cake's `MEM_MAP2_IMP`
     (`cakeml/pancake/proofs/crep_inlineProofScript.sml:2233`): every element of
     a pointwise map comes from elements of both input lists. -/

@@ -323,4 +323,17 @@ example (info : StructInfo)
     (info.fields.map Prod.fst).Nodup :=
   lookupInfo_fields_nodup "S" simpleContext info hlookup hok
 
+/-! Cake's `mem_lookup_fromalist_some`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:3813`). -/
+
+theorem list_lookup_of_mem_of_nodup_fixture :
+    assocXs.lookup "b" = some 2 :=
+  list_lookup_of_mem_of_nodup (by decide) (by decide)
+
+def memLookupGuard : Bool :=
+  assocXs.lookup "b" == some 2 && assocXs.lookup "a" == some 1
+
+#eval memLookupGuard
+#guard memLookupGuard
+
 end Flapjack.Test.PanStructsAfindiParity

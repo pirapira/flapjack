@@ -2507,6 +2507,18 @@ theorem panValueResVar_comm [BEq String] [LawfulBEq String]
     by_cases hn : (name == n) = true <;>
     simp_all [beq_iff_eq]
 
+/-- Counterpart of Cake's `res_var_commutes_strong`
+    (`cakeml/pancake/proofs/crep_inlineProofScript.sml:699`): restoring two
+    locals commutes even when the two names coincide, because each side reads
+    the original binding of the other name from `locals'`. -/
+theorem panValueResVar_comm_strong [BEq String] [LawfulBEq String]
+    (locals locals' : VarName → Option (PanValue α)) (h n : VarName) :
+    panValueResVar (panValueResVar locals h (locals' h)) n (locals' n) =
+      panValueResVar (panValueResVar locals n (locals' n)) h (locals' h) := by
+  funext x
+  by_cases hx : (x == n) = true <;> by_cases hh : (x == h) = true <;>
+    simp_all [panValueResVar, beq_iff_eq]
+
 def restorePanValueLocal [BEq String]
     (locals : VarName → Option (PanValue α)) (name : VarName)
     (oldValue : Option (PanValue α)) : VarName → Option (PanValue α) :=

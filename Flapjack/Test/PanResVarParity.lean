@@ -91,4 +91,23 @@ def commGuard : Bool :=
 #eval commGuard
 #guard commGuard
 
+/-! `res_var_commutes_strong` (`crep_inlineProofScript.sml:699`). -/
+
+theorem panValueResVar_comm_strong_fixture :
+    panValueResVar (panValueResVar locals "x" (locals "x")) "x" (locals "x") =
+      panValueResVar (panValueResVar locals "x" (locals "x")) "x" (locals "x") :=
+  panValueResVar_comm_strong locals locals "x" "x"
+
+theorem panValueResVar_comm_strong_fixture2 :
+    panValueResVar (panValueResVar locals "x" (locals "x")) "y" (locals "y") =
+      panValueResVar (panValueResVar locals "y" (locals "y")) "x" (locals "x") :=
+  panValueResVar_comm_strong locals locals "x" "y"
+
+def commStrongGuard : Bool :=
+  isWord (panValueResVar (panValueResVar locals "x" (locals "x")) "x"
+      (locals "x") "x") 3
+
+#eval commStrongGuard
+#guard commStrongGuard
+
 end Flapjack.Test.PanResVarParity

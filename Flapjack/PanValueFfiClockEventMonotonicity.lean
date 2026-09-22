@@ -1867,6 +1867,79 @@ theorem evalPanValueFfiClockProgram_of_related_declarations_and_finalFfi_call_re
     htargetFunction, htargetExceptions,
     hfinal.1, hfinal.2.1, hfinal.2.2⟩
 
+/-! The terminal-FFI declaration branch also preserves the strengthened
+    context state relation.  This is the FinalFFI counterpart of the normal,
+    raised, and timeout adequacy bridges above. -/
+theorem evalPanValueFfiClockProgram_of_related_declarations_and_finalFfi_call_result_rel_adequacy_with_context
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (initial : PanValueFfiProgramState α σ)
+    (clock : Nat)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (fuel : Nat) (declarations : List (Decl α))
+    (entry : FunName) (arguments : List (Exp α))
+    (state : PanValueProgramState α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (event : FfiFinalEvent) (nextClock : Nat)
+    (pcContext : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (targetState : CrepState α) (targetEvent : FfiFinalEvent)
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ))
+    (targetInitial : PanValueProgramState α)
+    (hinitial : panValueProgramStateRel initial.source targetInitial)
+    (hdeclarations : evalPanValueDeclarations initial.source declarations
+      (memoryAccess := memoryAccess) = some state)
+    {parameters : List VarName} {body : Prog α}
+    (hfunction : lookupPanFunction entry state.functions = some (parameters, body))
+    (hcall : evalPanValueFfiClockCall context primitive handler state.structs
+      state.functions state.baseAddress state.topAddress state.bytesInWord fuel
+      (fun _ => none) state.globals state.memory initial.ffi clock none entry arguments
+      (memoryAccess := memoryAccess)
+      (contracts := some (PanValueCallContracts.mk state.returnShapes
+        state.exceptions state.parameterShapes))
+      (memoryHandler := memoryHandler) =
+      some (.control (.finalFfi locals globals memory ffi event), nextClock))
+    (hstateContext : panValueCrepStateRelWithContext state.structs pcContext
+      locals globals memory targetState)
+    (hevent : event = targetEvent)
+    (hprefix : initial.ffi.ioEvents <+: ffi.ioEvents) :
+    ∃ targetDeclaration,
+      evalPanValueDeclarations targetInitial (panSimpDecls declarations)
+        (memoryAccess := memoryAccess) = some targetDeclaration ∧
+      panValueProgramStateRel state targetDeclaration ∧
+      lookupPanFunction entry targetDeclaration.functions =
+        some (parameters, panSimpProg body) ∧
+      state.exceptions = targetDeclaration.exceptions ∧
+      evalPanValueFfiClockProgram context initial clock primitive handler fuel
+        declarations entry arguments (memoryAccess := memoryAccess)
+        (memoryHandler := memoryHandler) =
+        some (.control (.finalFfi locals globals memory ffi event), nextClock) ∧
+      panValuePcResultRel state.structs pcContext exceptionRel exceptionCode
+        globalsLookup (.finalFfi locals globals memory event)
+        (.finalFfi targetState targetEvent) ∧
+      panValueCrepStateRelWithContext state.structs pcContext locals globals
+        memory targetState ∧
+      initial.ffi.ioEvents <+: ffi.ioEvents := by
+  have hstate := panValueCrepStateRelWithContext_to_stateRel
+    state.structs pcContext locals globals memory targetState hstateContext
+  have hfinal :=
+    evalPanValueFfiClockProgram_of_related_declarations_and_finalFfi_call_result_rel_adequacy
+      context initial clock primitive handler fuel declarations entry arguments state
+      locals globals memory ffi event nextClock pcContext exceptionRel exceptionCode
+      globalsLookup targetState targetEvent memoryAccess memoryHandler targetInitial
+      hinitial hdeclarations hfunction hcall hstate hevent hprefix
+  rcases hfinal with ⟨targetDeclaration, htargetDeclarations, hpostRel,
+    htargetFunction, htargetExceptions, hprogram, hresult, hprefixFinal⟩
+  exact ⟨targetDeclaration, htargetDeclarations, hpostRel, htargetFunction,
+    htargetExceptions, hprogram, hresult, hstateContext, hprefixFinal⟩
+
 /-! The ordinary normal-call branch also has a context-code form.  It keeps
     the declaration evaluator and the clocked call evaluator explicit, then
     lifts the concrete source/target state relation to the context-code

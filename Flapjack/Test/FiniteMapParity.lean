@@ -129,4 +129,13 @@ theorem resVar_commutes_fixture :
       = resVar (resVar resVarBase (3, some 30)) (2, some 20) := by
   exact resVar_commutes resVarBase (FUPDATE_LIST FEMPTY [(2, 20), (3, 30)]) 3 2 (by decide)
 
+/-- Cake `mk_ctxt_imp_locals_rel` at the empty context. -/
+theorem localsRel_empty_fixture :
+    localsRel ([] : InfoMap (Shape × List Nat)) 0
+      (FEMPTY : FiniteMap String (PanValue Nat)) (FEMPTY : FiniteMap Nat Nat) :=
+  localsRel_empty 0 (FEMPTY : FiniteMap Nat Nat)
+
+#check @localsRel_empty
+#check @localsRel_of_empty_source
+
 end Flapjack.Test.FiniteMapParity

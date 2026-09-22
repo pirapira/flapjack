@@ -1203,4 +1203,82 @@ theorem not_panValueProgNotBrokeContinued_break
     (by simp [evalPanValueProgWithPrimitiveCallsAndFfi])
   exact hres.1 _ _ _ rfl
 
+/-! The declaration-call form cannot expose loop control when its body cannot:
+    the call itself only yields `returned` (body inlined) or `raised`, and the
+    `returned` branch is closed by transporting the body's safety through the
+    local restoration. -/
+theorem PanValueProgNotBrokeContinued_decCall
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (name : VarName) (shape : Shape) (function : FunName)
+    (arguments : List (Exp α)) (body : Prog α)
+    (hbody : PanValueProgNotBrokeContinued primitive handler structs functions
+      baseAddress topAddress bytesInWord body) :
+    PanValueProgNotBrokeContinued primitive handler structs functions
+      baseAddress topAddress bytesInWord
+      (.decCall name shape function arguments body) := by
+  intro fuel locals globals memory result h
+  cases fuel with
+  | zero => simp [evalPanValueProgWithPrimitiveCallsAndFfi] at h
+  | succ fuel =>
+      cases hcall : evalPanValueCallWithPrimitiveCallsAndFfi primitive handler
+          structs functions baseAddress topAddress bytesInWord fuel locals globals
+          memory none function arguments with
+      | none => simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcall] at h
+      | some callResult =>
+          cases callResult with
+          | normal callLocals callGlobals callMemory =>
+              simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcall] at h
+          | broke callLocals callGlobals callMemory =>
+              simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcall] at h
+          | continued callLocals callGlobals callMemory =>
+              simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcall] at h
+          | raised callLocals callGlobals callMemory exception value =>
+              have hres : result =
+                  PanValueControlResult.raised (fun _ => none) callGlobals
+                    callMemory exception value := by
+                simpa [evalPanValueProgWithPrimitiveCallsAndFfi, hcall] using h.symm
+              rw [hres]
+              exact ⟨fun l g m => by simp, fun l g m => by simp⟩
+          | returned callLocals callGlobals callMemory values =>
+              cases values with
+              | nil =>
+                  simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcall] at h
+              | cons value rest =>
+                  cases rest with
+                  | cons v vs =>
+                      simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcall] at h
+                  | nil =>
+                      by_cases hshape : panShapeMatches (panValueShape structs value)
+                          shape = true
+                      · cases hbodyEval : evalPanValueProgWithPrimitiveCallsAndFfi
+                            primitive handler structs functions baseAddress topAddress
+                            bytesInWord fuel (updatePanValueMap locals name value)
+                            callGlobals callMemory body with
+                        | none =>
+                            simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcall,
+                              hshape, hbodyEval] at h
+                        | some bodyResult =>
+                            have hsafe := hbody fuel
+                              (updatePanValueMap locals name value) callGlobals
+                              callMemory bodyResult hbodyEval
+                            simp only [evalPanValueProgWithPrimitiveCallsAndFfi, hcall,
+                              hshape, if_true, hbodyEval, Option.bind_eq_bind,
+                              Option.bind_some, Option.pure_def,
+                              Option.some.injEq] at h
+                            subst h
+                            exact
+                              ⟨restorePanValueControlLocal_not_broke name
+                                  (locals name) bodyResult hsafe.1,
+                                restorePanValueControlLocal_not_continued name
+                                  (locals name) bodyResult hsafe.2⟩
+                      · simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcall,
+                          hshape] at h
+
 end Flapjack

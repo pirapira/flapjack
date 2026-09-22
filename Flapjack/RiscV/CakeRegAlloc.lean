@@ -1417,6 +1417,17 @@ def cakeColourLocation (k f colour : Nat) : WordLocation :=
   else
     .stack (f - 1 - (stackRegister - k))
 
+theorem cakeColourLocation_register_boundary
+    (k f register : Nat) (hregister : register < k) :
+    cakeColourLocation k f (2 * register) = .register register := by
+  simp [cakeColourLocation, hregister]
+
+theorem cakeColourLocation_stack_boundary
+    (k f register : Nat) (hregister : k ≤ register) :
+    cakeColourLocation k f (2 * register) =
+      .stack (f - 1 - (register - k)) := by
+  simp [cakeColourLocation, hregister]
+
 def cakeColourFrameSlots (k : Nat) (parameters : List Nat)
     (program : WordProg α) (colouring : NatInfoMap Nat) : Nat × Nat :=
   let colour := CakeAlloc.totalColour colouring

@@ -328,6 +328,72 @@ theorem crepPcClockedTargetEvaluator_adapter
       exact (congrArg (fun value : CrepPcExecution α => value.result)
         heval').symm
 
+/-! Consume both executable clock adapters at the result-relation boundary.
+    This is the concrete link from the production stateful evaluators to the
+    arbitrary `pc_compile_correct` result relation: the source and target
+    evaluator equations, their states, and the context-coded result relation
+    remain explicit, including returned, raised, timeout, and final-FFI cases. -/
+theorem panValuePcResultRelWithContextCode_of_clocked_evaluator_adapters
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (clock : Nat) (sourceCompileContext targetCompileContext : CompileContext α)
+    (sourceContext : PanValueFfiContext α)
+    (sourcePrimitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueStatefulFfiHandler α σ)
+    (sourceState : PanSemEvaluateState α σ)
+    (sourceInput : PanValuePcInput α) (sourceProgram : Prog α)
+    (sourceExecution : PanValuePcExecution α)
+    (targetFunctions : List (CompiledFunction α))
+    (targetPrimitive : CrepPrimitiveHandler α)
+    (targetFfi : CrepFfiHandler α)
+    (targetSharedMem : CrepSharedMemHandler α)
+    (targetBaseAddress targetTopAddress : α)
+    (targetInput : CrepPcInput α) (targetProgram : CrepProg α)
+    (targetExecution : CrepPcExecution α)
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (hsource : panValuePcClockedSourceEvaluator clock sourceContext
+      sourcePrimitive sourceHandler sourceState sourceCompileContext sourceInput
+      sourceProgram = some sourceExecution)
+    (htarget : crepPcClockedTargetEvaluator clock targetFunctions targetPrimitive
+      targetFfi targetSharedMem targetBaseAddress targetTopAddress
+      targetCompileContext targetInput targetProgram = some targetExecution)
+    (hresult : panValuePcResultRelWithContextCode structs context exceptionRel
+      exceptionCode globalsLookup sourceExecution.result targetExecution.result) :
+    ∃ sourceResult targetResult,
+      panSemEvaluate sourceContext sourcePrimitive sourceHandler
+        { sourceState with
+          structs := sourceInput.structs
+          locals := sourceInput.locals
+          globals := sourceInput.globals
+          memory := sourceInput.memory
+          clock := clock } sourceProgram = some sourceResult ∧
+      crepEvaluate targetFunctions targetPrimitive targetFfi targetSharedMem
+        targetBaseAddress targetTopAddress clock targetInput.state targetProgram =
+        some targetResult ∧
+      panValuePcResultRelWithContextCode structs context exceptionRel exceptionCode
+        globalsLookup (panOutcomeToPcResult sourceResult.1)
+        (crepControlToPcResult targetResult) ∧
+      panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
+        (panOutcomeToPcResult sourceResult.1) (crepControlToPcResult targetResult) := by
+  rcases panValuePcClockedSourceEvaluator_adapter clock sourceCompileContext
+    sourceContext sourcePrimitive sourceHandler sourceState sourceInput sourceProgram
+    sourceExecution hsource with ⟨sourceResult, hsourceEval, hsourceResult⟩
+  rcases crepPcClockedTargetEvaluator_adapter clock targetCompileContext
+    targetFunctions targetPrimitive targetFfi targetSharedMem targetBaseAddress
+    targetTopAddress targetInput targetProgram targetExecution htarget with
+    ⟨targetResult, htargetEval, htargetResult⟩
+  refine ⟨sourceResult, targetResult, hsourceEval, htargetEval, ?_, ?_⟩
+  · simpa [hsourceResult, htargetResult] using hresult
+  · exact panValuePcResultRel_of_withContextCode structs context exceptionRel
+      exceptionCode globalsLookup (panOutcomeToPcResult sourceResult.1)
+      (crepControlToPcResult targetResult) (by
+        simpa [hsourceResult, htargetResult] using hresult)
+
 /-! ## Same-clock field transport -/
 
 set_option linter.unusedSimpArgs false in

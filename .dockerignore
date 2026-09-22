@@ -1,0 +1,38 @@
+# Lean build cache (rebuilt fresh inside Docker via lake)
+.lake/
+
+# Generated outputs (rebuilt inside Docker)
+gen-out/
+
+# Not needed for the Docker EEST image: it only builds flapjack-compile and
+# the pinned guest, then runs evm-asm's harness via --guest-elf/--no-build,
+# so cakeml's HOL4 sources and evm-asm's own Lean project (built only if the
+# harness were asked to build its own codegen guest, which this image never
+# does) are excluded to keep the build context small.
+cakeml/
+evm-asm/EvmAsm/
+evm-asm/*.lean
+evm-asm/fixtures/
+evm-asm/tests/
+evm-asm/bench/
+evm-asm/docs/
+evm-asm/execution-spec-tests/
+evm-asm/execution-specs/
+evm-asm/sail-import/
+evm-asm/.lake/
+evm-asm/gen-out/
+evm-asm/lake-manifest.json
+evm-asm/lakefile.toml
+
+# Local parity-fuzzing scratch space, not needed to build or run the image
+scripts/parity-difffuzz-findings/
+.difffuzz-work/
+
+# VCS and dev tooling
+.git/
+.beads/
+.dolt/
+.cursor/
+.opencode/
+__pycache__/
+*.pyc

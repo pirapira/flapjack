@@ -81,6 +81,20 @@ differential fuzzer `scripts/parity-difffuzz.py` compares full artifacts
 mismatch as a bead; see the differential-fuzzing section of
 [`docs/PARITY-TESTING.md`](docs/PARITY-TESTING.md).
 
+## EEST conformance (Docker)
+
+`Dockerfile` builds a self-contained image that compiles the pinned
+`stateless-pancaketh` guest with `flapjack-compile`, then runs the EEST
+"zkevm" conformance fixtures against it under `ziskemu` (ZisK **0.18.0**;
+ZisK 0.16.0 is known not to work for succinct proof verification against this
+guest). It mirrors
+[evm-asm's own Docker EEST image](https://github.com/Verified-zkEVM/evm-asm/blob/main/DOCKER-EEST.md),
+reusing its EEST harness (`evm-asm/scripts/codegen-eest-stateless-check.sh`,
+pulled in via the `evm-asm` submodule) against flapjack's own compiled guest
+instead. See [`docs/DOCKER-EEST.md`](docs/DOCKER-EEST.md) for how to build
+and run it, and [`scripts/upgrade-zisk.sh`](scripts/upgrade-zisk.sh) to bump
+the pinned ZisK version.
+
 ## Project map
 
 The Lean library currently contains the core Pancake syntax in

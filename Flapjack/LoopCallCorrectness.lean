@@ -1482,6 +1482,42 @@ theorem comp_call_target_correct
   · exact heval
   · simp [labelsIn, lookup]
 
+theorem comp_call_target_return_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (functions : List (Nat × List Nat × LoopProg α))
+    (ffiHandler : FunName → α → α → α → α → LoopState α → Option (LoopState α))
+    (environment : LocationEnv) (state : LoopState α) (fuel : Nat)
+    (destinations live : List Nat) (target : Nat) (arguments : List Nat)
+    (values : List α) (handler : Option (Nat × LoopProg α × LoopProg α × List Nat))
+    (hcall : evalLoopCallWithCallsAndFfi functions ffiHandler fuel state
+      (some (destinations, live)) (some target) arguments handler =
+      some (.normal { state with
+        locals := loopLookupFirst state.locals (destinations.zip values) })) :
+    evalLoopProgWithCallsAndFfi functions ffiHandler (fuel + 1) state
+        (comp environment
+          (.call (some (destinations, live)) (some target) arguments handler :
+            LoopProg α)).1 =
+        some (.normal { state with
+          locals := loopLookupFirst state.locals (destinations.zip values) }) ∧
+      labelsIn
+        (comp environment
+          (.call (some (destinations, live)) (some target) arguments handler :
+            LoopProg α)).2
+        (loopLookupFirst state.locals (destinations.zip values)) := by
+  have hcompiled :
+      comp environment
+          (.call (some (destinations, live)) (some target) arguments handler :
+            LoopProg α) =
+        (.call (some (destinations, live)) (some target) arguments handler, []) := by
+    simp [comp, compCall]
+  rw [hcompiled]
+  constructor
+  · simpa [evalLoopProgWithCallsAndFfi] using hcall
+  · simp [labelsIn, lookup]
+
 theorem comp_call_empty_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]

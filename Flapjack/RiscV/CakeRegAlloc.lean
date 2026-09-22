@@ -1391,10 +1391,20 @@ def cakeTagIsAtemp (state : CakeRaState) (x : Nat) : Bool :=
   | _ => false
 
 def cakeFullConsistencyOk (state : CakeRaState) (k : Nat) (x y : Nat) : Bool :=
-  let fixedX := cakeIsFixedK state k x
-  let fixedY := cakeIsFixedK state k y
-  let eligibleX := fixedX || cakeTagIsAtemp state x
-  let eligibleY := fixedY || cakeTagIsAtemp state y
+  let tagX := state.nodeTag.get x
+  let tagY := state.nodeTag.get y
+  let fixedX := match tagX with
+    | some (.fixed n) => n < k
+    | _ => false
+  let fixedY := match tagY with
+    | some (.fixed n) => n < k
+    | _ => false
+  let eligibleX := fixedX || match tagX with
+    | some .aTemp => true
+    | _ => false
+  let eligibleY := fixedY || match tagY with
+    | some .aTemp => true
+    | _ => false
   /- Keep the cheap domain/tag checks before the indexed adjacency lookup.
      This is the same left-to-right Boolean contract as Cake's conjunction,
      but avoids touching the graph for ineligible move endpoints. -/

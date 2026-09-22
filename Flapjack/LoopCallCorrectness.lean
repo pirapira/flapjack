@@ -454,6 +454,27 @@ theorem comp_setGlobal_correct
   · simp [evalLoopProg, hvalue]
   · exact henvironment
 
+theorem comp_return_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (environment : LocationEnv) (state : LoopState α)
+    (names : List Nat) (values : List α)
+    (hvalues : loopReadLocals state.locals names = some values)
+    (_henvironment : labelsIn environment state.locals) :
+    evalLoopProg 1 state
+        (comp environment (.return names : LoopProg α)).1 =
+        some (.returned state values) ∧
+      labelsIn (comp environment (.return names : LoopProg α)).2 state.locals := by
+  have hcompiled :
+      comp environment (.return names : LoopProg α) = (.return names, []) := by
+    simp [comp]
+  rw [hcompiled]
+  constructor
+  · exact evalLoopProg_return state names values hvalues
+  · simp [labelsIn, lookup]
+
 theorem lookup_of_listDelete
     (destinations : List Nat) (environment : LocationEnv)
     (name location : Nat)

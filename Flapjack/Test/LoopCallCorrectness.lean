@@ -200,6 +200,21 @@ theorem setGlobal_compile_correct_fixture :
     subst source
     exact ⟨100, by simp [load32State]⟩
 
+theorem return_compile_correct_fixture :
+    evalLoopProg 1 load32State
+        (comp [(3, 2)] (.return [2, 3] : LoopProg Nat)).1 =
+        some (.returned load32State [100, 7]) ∧
+      labelsIn (comp [(3, 2)] (.return [2, 3] : LoopProg Nat)).2
+        load32State.locals := by
+  apply comp_return_correct
+  · simp [loopReadLocals, load32State]
+  · intro name source hlookup
+    have hpair : 3 = name ∧ 2 = source := by
+      simpa [lookup] using hlookup
+    have hsource : source = 2 := hpair.2.symm
+    subst source
+    exact ⟨100, by simp [load32State]⟩
+
 theorem primitive_labelsIn_fixture :
     (comp [(3, 2), (4, 3)] (.primitive [3] .addCarry [2, 3]) :
       LoopProg Nat × LocationEnv).1 = .primitive [3] .addCarry [2, 3] ∧
@@ -241,6 +256,7 @@ theorem primitive_labelsIn_fixture :
 #check comp_assign_nonvar_correct
 #check comp_tick_correct
 #check comp_setGlobal_correct
+#check comp_return_correct
 #check comp_primitive_labelsIn
 
 end Flapjack.Test.LoopCallCorrectness

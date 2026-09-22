@@ -32,6 +32,24 @@ implemented by `Flapjack.CompileMain`.
 These checks establish useful local properties of the covered fragments. They
 do not establish whole-compiler equivalence.
 
+## HOL-to-Lean trust boundary
+
+This project ports HOL definitions and theorem statements into Lean; it does
+not prove, and currently cannot prove within either prover, that a HOL
+definition and its Lean translation are equivalent. Such a cross-prover
+equivalence proof is out of scope. A `@[hol]` tag is applied only after review
+of the source and Lean declaration shapes; it records reviewed provenance,
+not a machine-checked equivalence certificate. Confidence in a
+translation comes from line-by-line review of definitions and theorem shapes,
+direct HOL probes compared with Lean results, and differential compiler tests.
+Those checks are valuable but finite and do not close this trust boundary.
+
+Lean proofs establish their conclusions about the Lean definitions actually
+used in their statements. Even a complete Lean port of Pancake's correctness
+chain would imply a property of the original HOL/Pancake compiler only under
+the externally reviewed assumption that the relevant definitions and theorem
+statements were translated faithfully.
+
 ## Explicit limitations
 
 The following are open review or verification obligations:
@@ -68,10 +86,13 @@ The following are open review or verification obligations:
    identically to CakeML.
 7. HOL's `panSem$evaluate_decls` has not yet been ported as a faithful Lean
    definition. The existing `evalPanValueDeclarationsWithStructs` is distinct,
-   with no proved refinement to HOL's declaration evaluator. Consequently a
-   theorem assuming only that Lean evaluator is not a port of HOL
-   `compile_top_shape_wf`. The prerequisite evaluator and theorem are tracked
-   by beads `flapjack-pxn.18.3.2.6` and `flapjack-pxn.18.3.2.1`.
+   and its behavior has not been reviewed and tested as a translation of that
+   HOL evaluator. Consequently a theorem assuming only the existing Lean
+   evaluator is not a port of HOL `compile_top_shape_wf`. Porting the HOL
+   evaluator and checking it against direct HOL probes are tracked by bead
+   `flapjack-pxn.18.3.2.6`; the theorem is tracked by
+   `flapjack-pxn.18.3.2.1`. Neither bead asks for a cross-prover equivalence
+   proof.
 
 ## Trust and reproducibility notes
 

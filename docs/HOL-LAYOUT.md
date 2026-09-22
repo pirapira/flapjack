@@ -28,15 +28,14 @@ provenance is recorded by `@[hol ...]` and checked by
 | `semantics/crepPropsScript.sml` | `Flapjack/Pancake/Semantics/CrepProps.lean` |
 | `semantics/loopSemScript.sml` | `Flapjack/Pancake/Semantics/LoopSem.lean` |
 | `proofs/pan_simpProofScript.sml` | `Flapjack/Pancake/Proofs/PanSimp.lean`, `PanSimp/Evaluate.lean` |
-Flapjack-specific helper lemmas supporting the shape proofs remain in
-`Flapjack/PanGlobalsSemantics.lean`; they are not attributed to HOL. In
-particular, `globalCompileTopForStart_shapes_wf` and its empty-struct corollary
-are Flapjack-specific analogues of `compile_top_shape_wf` and
-`compile_top_shape_wf_nil`, not ports of their statement shapes. Cake assumes
-`evaluate_decls` succeeds and concludes an `EVERY` property of
-`compile_top code start`; Flapjack's lemmas assume success of its value
-evaluator and `globalCompileTopForStart`. A HOL-shaped theorem port remains a
-gap in `pan_globalsProofScript.sml`.
+There is currently no Lean port of `compile_top_shape_wf` or
+`compile_top_shape_wf_nil` from `proofs/pan_globalsProofScript.sml`. The earlier
+Flapjack-specific analogues were removed because they did not preserve the HOL
+statement shape: Cake assumes `evaluate_decls` succeeds and concludes an
+`EVERY` property of `compile_top code start`. A faithful port remains open; it
+must establish that result with the corresponding evaluator and compiler
+interfaces.
+
 Placement under `Proofs` does not imply that a whole pass correctness theorem
 has been established. The remaining moves and review gate are tracked by beads
 `flapjack-pxn.18.3.1`–`flapjack-pxn.18.3.3`.

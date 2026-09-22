@@ -1691,8 +1691,6 @@ theorem panValuePcRaisedHraiseData_of_program_state_correct
     (globalsLookup : CrepState α → PanValue α → Option (List α))
     (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
       sourceMemory state)
-    (hpost : panValueCrepStateRel structs context sourceLocals sourceGlobals
-      sourceMemory targetState)
     (hsource : evalPanValueProgWithPrimitiveCallsAndFfi
       primitive sourceHandler structs sourceFunctions
       baseAddress topAddress bytesInWord sourceFuel

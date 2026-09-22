@@ -190,6 +190,18 @@ def cutSetsExtraGuard : Bool :=
   (loopCutSets [2, 5] (.assign 3 (.const 0) : LoopProg Nat)).contains 3 &&
     (loopCutSets [2, 5] (.assign 3 (.const 0) : LoopProg Nat)).contains 2
 
+/-! Cake `loopPropsScript.sml:89` `acc_vars_acc`, in the list-backed
+    membership form used by Flapjack's `loopAccVars`. -/
+
+theorem loopAccVars_mem_fixture :
+    (2 : Nat) ∈ loopAccVars probeAssignPairs [2] ↔
+      (2 : Nat) ∈ [2] ∨ (2 : Nat) ∈ loopAccVars probeAssignPairs [] :=
+  loopAccVars_mem probeAssignPairs [2] 2
+
+def accVarsMemGuard : Bool :=
+  (loopAccVars probeAssignPairs [9]).contains 9 &&
+    (loopAccVars probeAssignPairs [9]).contains 3
+
 def check (name : String) (actual expected : List Nat) : IO Bool := do
   if actual == expected then
     IO.println s!"PASS {name}"
@@ -220,7 +232,8 @@ def runChecks : IO Bool := do
     checkBool "assigned_vars nested_seq split" assignedVarsSplitGuard,
     checkBool "comp_syntax_ok nested_seq append" compSyntaxOkGuard,
     checkBool "cut_sets preserves live" cutSetsSubsetGuard,
-    checkBool "cut_sets only adds" cutSetsExtraGuard ].mapM id
+    checkBool "cut_sets only adds" cutSetsExtraGuard,
+    checkBool "acc_vars accumulates" accVarsMemGuard ].mapM id
   pure (results.all id)
 
 end Flapjack.Test.LoopAssignedVarsParity

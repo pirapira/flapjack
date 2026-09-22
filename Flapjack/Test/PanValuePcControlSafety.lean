@@ -1352,6 +1352,7 @@ example
 #check @panValuePcCompileCorrectAndClockedNormalResultRel_of_context_code
 #check @panValuePcCompileCorrectAndClockedBrokeResultRel_of_context_code
 #check @panValuePcCompileCorrectAndClockedContinuedResultRel_of_context_code
+#check @panValueCrepControlRel_of_program_state_correct
 #check @panValuePcCompileCorrectAndResultRel_of_context_code
 #check @panValuePcCompileCorrectAndRaisedResultRel_of_context_code
 

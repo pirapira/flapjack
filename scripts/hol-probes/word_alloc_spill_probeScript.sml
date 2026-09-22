@@ -41,6 +41,9 @@ val _ = print_eval "spill_allocator"
 val _ = print_eval "spill_allocator_simple_unweighted"
   ``word_alloc$word_alloc 5 riscv_config 0 22 ^spill_prog NONE``;
 
+val _ = print_eval "spill_allocator_linear_scan"
+  ``word_alloc$word_alloc 5 riscv_config 4 22 ^spill_prog NONE``;
+
 val _ = print_eval "spill_allocator_k1"
   ``word_alloc$word_alloc 5 riscv_config 3 1 ^spill_prog NONE``;
 

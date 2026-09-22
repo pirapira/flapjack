@@ -89,27 +89,27 @@ is gitignored.
 The evolving HOL-to-Lean source layout is recorded in
 [`docs/HOL-LAYOUT.md`](docs/HOL-LAYOUT.md).
 
-## Project map
+## Port in progress
 
-The source-facing compiler follows the Pancake pass order through the modules
-listed below. There is one shipped checked RISC-V path, implemented by
-`Flapjack.CompileMain`; experimental alternative compiler entry points have
-been removed so parity fixes cannot accidentally target a different pipeline.
+Contributions are welcome. The RISC-V compiler port and its correctness proof
+are still in progress; see [`PLAN.md`](PLAN.md) for the staged work and
+[`docs/SOUNDNESS.md`](docs/SOUNDNESS.md) for the current proof boundaries.
+Start with the porting and verification rules in [`AGENTS.md`](AGENTS.md).
+The bead and single-PR instructions in its *Fleet workflow* section apply to
+the coordinated internal agents; outside contributors can open their own
+focused PRs. Backends other than RISC-V are out of scope.
 
-- `Flapjack/Pancake/PanLang.lean`, `PanStatic.lean`, and
-  `Semantics/PanSem.lean`: Pancake syntax, static checks, and source evaluator.
-- `Flapjack/Pancake/PanSimp.lean`, `PanStructs.lean`, and
-  `PanGlobals.lean`: the first source-to-source passes.
-- `Flapjack/Pancake/PanToCrep.lean`, `CrepToLoop.lean`,
-  `Semantics/CrepSem.lean`, and `Semantics/LoopSem.lean`: Crep and Loop
-  compilation and evaluator entry points.
-- `Flapjack/Pancake/LoopToWord.lean` and the `Flapjack/RiscV` modules: the
-  Word, allocation, Stack, Lab, and RV64I portions used by the checked compiler.
-- `Flapjack/Pipeline.lean` and `Flapjack/RiscV/PipelineDiagnostics.lean`: pass
-  composition and explicit failure reporting.
+If you use a coding agent, this is a suitable prompt for a small first PR:
 
-The current tree intentionally does not contain a top-level Pancake compiler
-correctness theorem. Existing proofs establish selected local properties only;
-their validity and implications are described in
-[`docs/SOUNDNESS.md`](docs/SOUNDNESS.md). The staged port is tracked in
-[`PLAN.md`](PLAN.md).
+```text
+Find one unclaimed, narrowly scoped Pancake-to-Lean porting issue on the
+RISC-V path. Choose a single HOL definition that has no faithful Lean port;
+if no issue is that small, propose one before coding. Read AGENTS.md and the
+corresponding HOL source. Port only that definition into its counterpart Lean
+module, preserving its inputs, outputs, and edge cases. Add a focused HOL EVAL
+probe and matching Lean tests for two representative cases. Do not change the
+compiler pipeline, add a broad refactor, or claim a theorem is ported. Run the
+affected lake build, lake test, scripts/check-hol-refs.py, and
+scripts/check-warnings.sh. Open one PR with the HOL reference, test results,
+and any remaining gap in its description.
+```

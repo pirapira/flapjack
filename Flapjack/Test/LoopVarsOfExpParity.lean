@@ -39,4 +39,26 @@ def varsAccGuard : Bool :=
 #eval varsAccGuard
 #guard varsAccGuard
 
+/-! Counterpart of CakeML's `domain_list_delete`
+    (`cakeml/pancake/proofs/loop_liveProofScript.sml:561`). -/
+
+theorem deleteNatSorted_mem_fixture :
+    (2 : Nat) ∈ deleteNatSorted 3 [2, 3, 4] ↔
+      (2 : Nat) ∈ ([2, 3, 4] : List Nat) ∧ (2 : Nat) ≠ 3 :=
+  deleteNatSorted_mem 3 [2, 3, 4] 2
+
+theorem loopListDeleteSorted_mem_fixture :
+    (2 : Nat) ∈ loopListDeleteSorted [3] [2, 3, 4] ↔
+      (2 : Nat) ∈ ([2, 3, 4] : List Nat) ∧ (2 : Nat) ∉ [3] :=
+  loopListDeleteSorted_mem [3] [2, 3, 4] 2
+
+def deleteSortedGuard : Bool :=
+  (deleteNatSorted 3 [2, 3, 4]).contains 2 &&
+    !(deleteNatSorted 3 [2, 3, 4]).contains 3 &&
+    (loopListDeleteSorted [3, 4] [2, 3, 4, 5]).contains 2 &&
+    !(loopListDeleteSorted [3, 4] [2, 3, 4, 5]).contains 4
+
+#eval deleteSortedGuard
+#guard deleteSortedGuard
+
 end Flapjack.Test.LoopVarsOfExpParity

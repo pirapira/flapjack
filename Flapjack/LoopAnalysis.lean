@@ -93,6 +93,51 @@ def arithVars : LoopArith → List Nat → List Nat
 def loopListDeleteSorted (names : List Nat) (live : List Nat) : List Nat :=
   names.foldl (fun current name => deleteNatSorted name current) live
 
+/-- `deleteNatSorted` is a filter; this makes the membership facts below
+    immediate. -/
+theorem deleteNatSorted_eq_filter (name : Nat) (live : List Nat) :
+    deleteNatSorted name live = live.filter (fun x => decide (x ≠ name)) := by
+  induction live with
+  | nil => simp [deleteNatSorted]
+  | cons head tail ih =>
+      rw [deleteNatSorted, ih, List.filter_cons]
+      by_cases h : (name == head) = true
+      · rw [if_pos h]
+        have : decide (head ≠ name) = false := by
+          rw [decide_eq_false_iff_not]
+          exact fun hne => hne (beq_iff_eq.mp h).symm
+        simp [this]
+      · rw [if_neg h]
+        have : decide (head ≠ name) = true := by
+          rw [decide_eq_true_iff]
+          exact fun hx => h (beq_iff_eq.mpr hx.symm)
+        simp [this]
+
+/-- Membership in `deleteNatSorted`: the removed name is the only difference. -/
+theorem deleteNatSorted_mem (name : Nat) (live : List Nat) (x : Nat) :
+    x ∈ deleteNatSorted name live ↔ x ∈ live ∧ x ≠ name := by
+  rw [deleteNatSorted_eq_filter, List.mem_filter, decide_eq_true_iff]
+
+/-- Cake's `domain_list_delete`
+    (`cakeml/pancake/proofs/loop_liveProofScript.sml:561`): deleting a list of
+    names removes exactly those names from the live set.  CakeML states this on
+    HOL sets (`domain s DIFF set vs`); the list-backed Flapjack port states the
+    same fact with membership. -/
+theorem loopListDeleteSorted_mem (names : List Nat) (live : List Nat) (x : Nat) :
+    x ∈ loopListDeleteSorted names live ↔ x ∈ live ∧ x ∉ names := by
+  induction names generalizing live with
+  | nil => simp [loopListDeleteSorted]
+  | cons name names ih =>
+      rw [show loopListDeleteSorted (name :: names) live =
+          loopListDeleteSorted names (deleteNatSorted name live) from rfl]
+      rw [ih, deleteNatSorted_mem]
+      simp only [List.mem_cons, not_or]
+      constructor
+      · rintro ⟨⟨hmem, hne⟩, hnotnames⟩
+        exact ⟨hmem, hne, hnotnames⟩
+      · rintro ⟨hmem, hne, hnotnames⟩
+        exact ⟨⟨hmem, hne⟩, hnotnames⟩
+
 def loopIntersectSorted (left right : List Nat) : List Nat :=
   left.filter (fun name => name ∈ right)
 

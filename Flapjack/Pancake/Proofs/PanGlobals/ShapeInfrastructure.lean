@@ -6,9 +6,10 @@ Reusable, Flapjack-specific shape infrastructure for the global pass. These
 predicates and helper lemmas describe Flapjack's `isWfShape` relation and
 value evaluator; they are not ports of Cake's `compile_top_shape_wf` because
 they do not use Cake's `evaluate_decls` premise. The faithful HOL theorems
-remain open under beads `flapjack-pxn.18.3.2.1` and
-`flapjack-pxn.18.3.2.2`. The helper lemmas are Flapjack-specific support;
-none claims a direct HOL theorem correspondence.
+are proved in `Flapjack/Pancake/Proofs/PanGlobals.lean`; the
+`compile_top_shape_wf_nil` corollary remains open under bead
+`flapjack-pxn.18.3.2.2`. The helper lemmas are Flapjack-specific support and
+do not use the different value evaluator as evidence for the faithful port.
 -/
 
 namespace Flapjack

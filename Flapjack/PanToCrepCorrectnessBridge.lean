@@ -37626,4 +37626,45 @@ theorem panValuePcCompileCorrectAndClockedContinuedResultRel_of_context_code
   exact ⟨hresult'.1, hresult'.2.1, hresult'.2.2.1, hresult'.2.2.2,
     hclockResult⟩
 
+/-! Name the direct Cake evaluator-to-control bridge used by the generic
+    clocked correctness package.  The source and Crep evaluator equations,
+    related state, exception relation, and fuel parameters remain explicit;
+    this helper only applies `PanValueCrepProgramStateCorrect` and does not
+    manufacture any raised-payload, timeout, or FinalFFI evidence. -/
+theorem panValueCrepControlRel_of_program_state_correct
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (program : Prog α)
+    (hprogram : PanValueCrepProgramStateCorrect program)
+    (context : CompileContext α) (structs : StructContext)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (state : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α)
+    (sourceFuel targetFuel : Nat)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (sourceResult : PanValueControlResult α)
+    (crepResult : CrepControlResult α)
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory state)
+    (hsource : evalPanValueProgWithPrimitiveCallsAndFfi
+      primitive sourceHandler structs sourceFunctions
+      baseAddress topAddress bytesInWord sourceFuel
+      sourceLocals sourceGlobals sourceMemory program = some sourceResult)
+    (hcrep : evalCrepFullProgState functions crepPrimitive ffi sharedMem
+      baseAddress topAddress targetFuel state
+      (compileProg context program) = some crepResult) :
+    panValueCrepControlRel structs context exceptionRel sourceResult crepResult := by
+  exact hprogram context structs sourceFunctions functions sourceLocals
+    sourceGlobals sourceMemory state primitive sourceHandler crepPrimitive ffi
+    sharedMem baseAddress topAddress bytesInWord sourceFuel targetFuel
+    exceptionRel sourceResult crepResult hrel hsource hcrep
+
 end Flapjack

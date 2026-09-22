@@ -790,6 +790,86 @@ theorem PanValuePcSemanticClockEvidence.resultRelWithContextCode
   rw [evidence.sourceResult, evidence.targetResult] at hrel
   exact hrel
 
+/-! Dispatch one clocked evaluator evidence through the two ordinary
+    `state_rel_imp_semantics_to_crep` result branches.  The returned context
+    state relation and arbitrary Raise lookup are extracted from the
+    context-coded compiler result rather than assumed separately. -/
+theorem PanValuePcSemanticClockEvidence.normalOrRaisedResultRelWithContextCode_of_branch
+    {α σ : Type}
+    [BEq α] [OfNat α 0] [Add α]
+    {structs : StructContext} {context : CompileContext α}
+    {program : Prog α}
+    {sourceEvaluate : PanValuePcEvaluator α}
+    {targetEvaluate : CrepPcEvaluator α}
+    {codeRel : PanValuePcCodeRel α}
+    {excpRel : PanValuePcExceptionShapeRel α}
+    {exceptionRel : ExceptionId → PanValue α → α → Prop}
+    {exceptionCode : ExceptionId → Option α}
+    {globalsLookup : CrepState α → PanValue α → Option (List α)}
+    {panHooks : PanSemanticsHooks α σ}
+    {crepHooks : CrepSemanticsHooks α}
+    (hcorrect : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (evidenceClock : Nat)
+    (evidence : PanValuePcSemanticClockEvidence structs context program evidenceClock
+      sourceEvaluate targetEvaluate codeRel excpRel exceptionRel exceptionCode
+      globalsLookup panHooks crepHooks)
+    (inputStateRel : panValueCrepStateRelWithContext structs context
+      evidence.sourceInput.locals evidence.sourceInput.globals
+      evidence.sourceInput.memory evidence.targetInput.state)
+    (hbranch :
+      (∃ sourceLocals sourceGlobals sourceMemory sourceFfi targetState,
+        evidence.outcome =
+          .control (.normal sourceLocals sourceGlobals sourceMemory sourceFfi) ∧
+        evidence.result = .normal targetState) ∨
+      (∃ sourceLocals sourceGlobals sourceMemory sourceFfi sourceException
+          sourceValue targetState targetException,
+        evidence.outcome =
+          .control (.raised sourceLocals sourceGlobals sourceMemory sourceFfi
+            sourceException sourceValue) ∧
+        evidence.result = .raised targetState targetException ∧
+        lookupInfo sourceException context.exceptions = some targetException)) :
+    panValuePcResultRelWithContextCode structs context exceptionRel exceptionCode
+      globalsLookup (panOutcomeToPcResult evidence.outcome)
+      (crepControlToPcResult evidence.result) ∧
+    ∃ sourceLocals sourceGlobals sourceMemory targetState,
+      panValueCrepStateRelWithContext structs context sourceLocals sourceGlobals
+        sourceMemory targetState := by
+  rcases inputStateRel with ⟨hoverlap, hmax, _⟩
+  have hrel := PanValuePcSemanticClockEvidence.resultRelWithContextCode
+    hcorrect evidenceClock evidence
+  rcases hbranch with hnormal | hraised
+  · rcases hnormal with ⟨sourceLocals, sourceGlobals, sourceMemory, sourceFfi,
+      targetState, houtcome, hresult⟩
+    have hnormalRel :
+        panValuePcResultRelWithContextCode structs context exceptionRel exceptionCode
+          globalsLookup
+          (.normal sourceLocals sourceGlobals sourceMemory) (.normal targetState) := by
+      simpa [houtcome, hresult, panOutcomeToPcResult, crepControlToPcResult]
+        using hrel
+    have hstate := (panValuePcResultRelWithContextCode_normal_iff structs context
+      exceptionRel exceptionCode globalsLookup sourceLocals sourceGlobals sourceMemory
+      targetState).1 hnormalRel
+    exact ⟨hrel,
+      ⟨sourceLocals, sourceGlobals, sourceMemory, targetState,
+        ⟨hoverlap, hmax, hstate⟩⟩⟩
+  · rcases hraised with ⟨sourceLocals, sourceGlobals, sourceMemory, sourceFfi,
+      sourceException, sourceValue, targetState, targetException, houtcome, hresult,
+      hlookup⟩
+    have hraisedRel :
+        panValuePcResultRelWithContextCode structs context exceptionRel exceptionCode
+          globalsLookup
+          (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+          (.raised targetState targetException) := by
+      simpa [houtcome, hresult, panOutcomeToPcResult, crepControlToPcResult]
+        using hrel
+    have hstate := (panValuePcResultRelWithContextCode_raised_iff structs context
+      exceptionRel exceptionCode globalsLookup sourceLocals sourceGlobals sourceMemory
+      sourceException sourceValue targetState targetException).1 hraisedRel
+    exact ⟨hrel,
+      ⟨sourceLocals, sourceGlobals, sourceMemory, targetState,
+        ⟨hoverlap, hmax, hstate.1⟩⟩⟩
+
 theorem PanValuePcSemanticClockEvidence.resultRel
     {α σ : Type}
     [BEq α] [OfNat α 0] [Add α]

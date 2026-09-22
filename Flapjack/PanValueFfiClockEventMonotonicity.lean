@@ -3418,8 +3418,10 @@ theorem evalPanValueFfiProgSteps_extCall_ioEvents_prefix
     (memoryAccess : Option (PanValueMemoryAccess α)) (contracts : Option PanValueCallContracts)
     (memoryHandler : Option (PanValueMemoryFfiHandler α σ)) (clock : Nat)
     (hstateful : panValueFfiStatefulHandlerPreservesIoEvents handler)
-    (hmemory : ∀ (memoryHandler : PanValueMemoryFfiHandler α σ),
-      panValueFfiMemoryHandlerPreservesIoEvents memoryHandler)
+    (hmemory : match memoryHandler with
+      | none => True
+      | some memoryHandler =>
+          panValueFfiMemoryHandlerPreservesIoEvents memoryHandler)
     (hstep : evalPanValueFfiProgSteps context primitive handler structs functions
       baseAddress topAddress bytesInWord (Nat.succ fuel) locals globals memory ffi
       (.extCall function configuration configurationLength array arrayLength)
@@ -3516,7 +3518,7 @@ theorem evalPanValueFfiProgSteps_extCall_ioEvents_prefix
                               Option.pure_def] at hstep
                             obtain ⟨rfl, rfl⟩ := hstep
                             simp only [panResultFfi]
-                            exact hmemory mh function configurationValue configurationLengthValue
+                            exact hmemory function configurationValue configurationLengthValue
                               arrayValue arrayLengthValue locals memory ffi nextLocals nextMemory
                               nextFfi hcall
                         | none =>
@@ -3638,10 +3640,17 @@ theorem evalPanValueFfiProgSteps_leaf_ioEvents_prefix
         structs functions baseAddress topAddress bytesInWord fuel locals globals memory ffi
         (.continue : Prog α) .continue result steps memoryAccess contracts memoryHandler clock hstep
   | extCall function configuration configurationLength array arrayLength =>
-      exact evalPanValueFfiProgSteps_extCall_ioEvents_prefix context primitive handler structs
-        functions baseAddress topAddress bytesInWord fuel locals globals memory ffi function
-        configuration configurationLength array arrayLength result steps memoryAccess contracts
-        memoryHandler clock hstateful hmemory hstep
+      cases memoryHandler with
+      | none =>
+          exact evalPanValueFfiProgSteps_extCall_ioEvents_prefix context primitive handler structs
+            functions baseAddress topAddress bytesInWord fuel locals globals memory ffi function
+            configuration configurationLength array arrayLength result steps memoryAccess contracts
+            none clock hstateful True.intro hstep
+      | some memoryHandler =>
+          exact evalPanValueFfiProgSteps_extCall_ioEvents_prefix context primitive handler structs
+            functions baseAddress topAddress bytesInWord fuel locals globals memory ffi function
+            configuration configurationLength array arrayLength result steps memoryAccess contracts
+            (some memoryHandler) clock hstateful (hmemory memoryHandler) hstep
   | raise exception value =>
       exact evalPanValueFfiProgSteps_eventSafeLeaf_ioEvents_prefix context primitive handler
         structs functions baseAddress topAddress bytesInWord fuel locals globals memory ffi

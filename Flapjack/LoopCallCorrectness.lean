@@ -226,5 +226,33 @@ theorem comp_storeByte_correct
       haddress hvalue
   · exact henvironment
 
+theorem comp_store_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (environment : LocationEnv) (state : LoopState α)
+    (address : LoopExp α) (value : Nat)
+    (addressValue valueValue : α)
+    (haddress : evalLoopExp state address = some addressValue)
+    (hvalue : state.locals value = some valueValue)
+    (henvironment : labelsIn environment state.locals) :
+    evalLoopProg 1 state
+        (comp environment (.store address value : LoopProg α)).1 =
+        some (.normal { state with
+          memory := updateLoopMemory state.memory addressValue valueValue }) ∧
+      labelsIn (comp environment (.store address value : LoopProg α)).2
+        ({ state with
+          memory := updateLoopMemory state.memory addressValue valueValue }).locals := by
+  have hcompiled :
+      comp environment (.store address value : LoopProg α) =
+        (.store address value, environment) := by
+    simp [comp]
+  rw [hcompiled]
+  constructor
+  · exact evalLoopProg_store state address value addressValue valueValue
+      haddress hvalue
+  · exact henvironment
+
 end LoopCall
 end Flapjack

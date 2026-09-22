@@ -1378,4 +1378,13 @@ example (context : CompileContext Nat) (target : PanValuePcTargetCode Nat) :
 #check @panValuePcCodeRelConcrete
 #check @panValuePcCodeRelConcrete_localised
 
+/-! The concrete Cake `excp_rel` analogue is likewise an inhabitant of the
+abstract `PanValuePcExceptionShapeRel` parameter. -/
+example (context : CompileContext Nat) (eshapes : InfoMap Shape) :
+    panValuePcExceptionShapeRelConcrete context eshapes eshapes :=
+  panValuePcExceptionShapeRelConcrete_refl context eshapes
+
+#check @panValuePcExceptionShapeRelConcrete
+#check @panValuePcExceptionShapeRelConcrete_refl
+
 end Flapjack.Test.PanValuePcControlSafety

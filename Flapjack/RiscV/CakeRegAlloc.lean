@@ -125,7 +125,7 @@ def cakeStackOnlyInter (left : List Nat) (rightSet : Std.TreeSet Nat) :
   let kept := left.filter (fun x => rightSet.contains x)
   (kept, Flapjack.natSetOfList kept)
 
-def cakeStackOnlyMergeSets (base left right : CakeStackOnlyState) :
+def cakeStackOnlyMergeSetsReference (base left right : CakeStackOnlyState) :
     CakeStackOnlyState :=
   let (_inner, innerSet) := cakeStackOnlyInter left.ts base.tsSet
   let (common, commonSet) := cakeStackOnlyInter right.ts innerSet
@@ -137,6 +137,24 @@ def cakeStackOnlyMergeSets (base left right : CakeStackOnlyState) :
     cakeStackOnlyUnion leftOnly leftOnlySet rightOnly
   let (ts, tsSet) := cakeStackOnlyUnion common commonSet different
   let (fs, fsSet) := cakeStackOnlyUnion left.fs left.fsSet right.fs
+  { ts, fs, tsSet, fsSet }
+
+/-! The two `Diff` results below are consumed only through their list
+    projections. Keep the Cake list order, but avoid constructing the
+    discarded intermediate TreeSets; the final union still rebuilds exactly
+    the same sets as the reference. -/
+def cakeStackOnlyMergeSets (base left right : CakeStackOnlyState) :
+    CakeStackOnlyState :=
+  let (_inner, innerSet) := cakeStackOnlyInter left.ts base.tsSet
+  let (common, commonSet) := cakeStackOnlyInter right.ts innerSet
+  let leftOnly := left.ts.filter (fun x => !base.tsSet.contains x)
+  let leftOnlySet := Flapjack.natSetOfList leftOnly
+  let rightOnly := right.ts.filter (fun x => !base.tsSet.contains x)
+  let different := leftOnly ++ rightOnly.filter (fun x => !leftOnlySet.contains x)
+  let ts := common ++ different.filter (fun x => !commonSet.contains x)
+  let tsSet := different.foldl (fun seen x => seen.insert x) commonSet
+  let fs := left.fs ++ right.fs.filter (fun x => !left.fsSet.contains x)
+  let fsSet := right.fs.foldl (fun seen x => seen.insert x) left.fsSet
   { ts, fs, tsSet, fsSet }
 
 def cakeStackOnlyDeleteMany (names : List Nat) (state : CakeStackOnlyState) :

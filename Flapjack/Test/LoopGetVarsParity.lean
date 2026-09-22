@@ -75,9 +75,58 @@ def oneLoc : Nat → Option ProbeWordLoc
 #guard loopReadLocals twoWords [2, 1] == originalOrder
 #guard loopReadLocals oneLoc [1] == originalLoc
 
+/-! Counterpart of CakeML's `get_vars_local_update_some_eq`
+    (`cakeml/pancake/semantics/loopPropsScript.sml:278`): reading a list of
+    distinct names from the local state built by inserting the paired values
+    returns those values. -/
+
+theorem loopReadLocals_loopLookupFirst_zip_fixture :
+    loopReadLocals
+        (loopLookupFirst (fun _ => none)
+          ([1, 2].zip [ProbeWordLoc.word 5, ProbeWordLoc.word 7]))
+        [1, 2] =
+      some [ProbeWordLoc.word 5, ProbeWordLoc.word 7] :=
+  loopReadLocals_loopLookupFirst_zip (fun _ => none) [1, 2]
+    [ProbeWordLoc.word 5, ProbeWordLoc.word 7] (by decide) (by decide)
+
+/-! Counterpart of CakeML's `get_vars_front` and `get_vars_last`
+    (`cakeml/pancake/proofs/loop_callProofScript.sml:273/300`): reading a
+    prefix (resp. the last element) of the names reads the prefix (resp. the
+    value stored for the last name). -/
+
+theorem loopReadLocals_take_fixture :
+    loopReadLocals twoWords ([1, 2].take 1) =
+      some ([ProbeWordLoc.word 5, ProbeWordLoc.word 7].take 1) :=
+  loopReadLocals_take twoWords [1, 2]
+    [ProbeWordLoc.word 5, ProbeWordLoc.word 7] (by decide) 1
+
+theorem loopReadLocals_dropLast_fixture :
+    loopReadLocals twoWords ([1, 2].dropLast) =
+      some ([ProbeWordLoc.word 5, ProbeWordLoc.word 7].dropLast) :=
+  loopReadLocals_dropLast twoWords [1, 2]
+    [ProbeWordLoc.word 5, ProbeWordLoc.word 7] (by decide)
+
+theorem loopReadLocals_getLast_fixture :
+    twoWords ([1, 2].getLast (by decide)) =
+      some ([ProbeWordLoc.word 5, ProbeWordLoc.word 7].getLast (by decide)) :=
+  loopReadLocals_getLast twoWords [1, 2]
+    [ProbeWordLoc.word 5, ProbeWordLoc.word 7] (by decide) (by decide)
+    (by decide)
+
 def runChecks : IO Bool := do
   let checks :=
     [ ("Loop get_vars hit order", loopReadLocals twoWords [1, 2] == originalHit),
+      ("Loop get_vars local update roundtrip",
+        loopReadLocals
+            (loopLookupFirst (fun _ => none)
+              ([1, 2].zip [ProbeWordLoc.word 5, ProbeWordLoc.word 7]))
+            [1, 2] ==
+          some [ProbeWordLoc.word 5, ProbeWordLoc.word 7]),
+      ("Loop get_vars front",
+        loopReadLocals twoWords ([1, 2].dropLast) ==
+          some [ProbeWordLoc.word 5]),
+      ("Loop get_vars last",
+        twoWords ([1, 2].getLast (by decide)) == some (ProbeWordLoc.word 7)),
       ("Loop get_vars missing local", loopReadLocals oneWord [1, 3] == originalMiss),
       ("Loop get_vars empty list", loopReadLocals oneWord [] == originalEmpty),
       ("Loop get_vars preserves request order",

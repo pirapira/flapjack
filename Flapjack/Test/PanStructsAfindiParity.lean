@@ -336,4 +336,17 @@ def memLookupGuard : Bool :=
 #eval memLookupGuard
 #guard memLookupGuard
 
+/-! Cake's `alookup_el_pair_eq_el`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:3921`). -/
+
+theorem getElem_eq_of_lookup_eq_fixture :
+    assocXs[1]'(by decide) = ("b", 2) :=
+  getElem_eq_of_lookup_eq (by decide) (by decide) (by decide) (by decide)
+
+def alookupElGuard : Bool :=
+  (assocXs[1]?).map Prod.snd == some 2
+
+#eval alookupElGuard
+#guard alookupElGuard
+
 end Flapjack.Test.PanStructsAfindiParity

@@ -289,6 +289,43 @@ theorem expIds_nestedSeq (statements : List (Prog α)) :
   | nil => simp [nestedSeq, expIds]
   | cons statement statements ih => simp [nestedSeq, expIds, ih]
 
+/-- Source-shaped counterpart of Pancake's `panProps$exps_of`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1336`): collect the
+    expressions that occur directly in a program. -/
+def expsOf : Prog α → List (Exp α)
+  | .raise _ e => [e]
+  | .dec _ _ e body => e :: expsOf body
+  | .seq p q => expsOf p ++ expsOf q
+  | .ite e p q => e :: (expsOf p ++ expsOf q)
+  | .while e body => e :: expsOf body
+  | .call info _ es =>
+      es ++ (match info with
+             | some (_, some (_, _, handler)) => expsOf handler
+             | _ => [])
+  | .decCall _ _ _ es body => es ++ expsOf body
+  | .store a b => [a, b]
+  | .store32 a b => [a, b]
+  | .storeByte a b => [a, b]
+  | .return e => [e]
+  | .extCall _ e1 e2 e3 e4 => [e1, e2, e3, e4]
+  | .assign _ _ e => [e]
+  | .primitive _ _ es => es
+  | .shMemLoad _ _ _ e => [e]
+  | .shMemStore _ a b => [a, b]
+  | _ => []
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
+
+/-- Cake's `pan_exps_of_nested_seq`
+    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:1018`): the expressions
+    of a nested sequence are the concatenation of the statements' expressions. -/
+theorem expsOf_nestedSeq (statements : List (Prog α)) :
+    expsOf (nestedSeq statements) = (statements.map expsOf).flatten := by
+  induction statements with
+  | nil => simp [nestedSeq, expsOf]
+  | cons statement statements ih => simp [nestedSeq, expsOf, ih]
+
 /-! Direct source-shaped counterpart of `panLang$fun_ids`: collect the
     statically referenced function names, including call-handler bodies and
     declaration-call bodies. -/

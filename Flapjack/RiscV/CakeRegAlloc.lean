@@ -187,6 +187,8 @@ def cakeGetStackOnlyAuxFast {α : Type u} :
   | state, .call none _ _ _ => state
   | state, .loop _ body _ => cakeGetStackOnlyAuxFast state body
   | state, .tick => state
+  | state, .break _ => state
+  | state, .continue _ => state
   | state, program =>
       match wordClashTree program [] with
       | .delta writes reads => cakeStackOnlyDeleteMany (writes ++ reads) state

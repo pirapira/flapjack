@@ -184,6 +184,8 @@ def stackOnlyFastReferenceGuard : Bool :=
   let programs : List (WordProg Nat) :=
     [ .skip,
       .tick,
+      .break 0,
+      .continue 0,
       .move 1 [(9, 9), (7, 9)],
       .assign 9 (.var 7),
       .seq (.move 1 [(13, 13), (2, 13)])

@@ -4996,4 +4996,54 @@ theorem evalPanValueFfiClockProg_seq_zero_timeout_cross_clock_ioEvents_prefix
     (.seq first second) none none none highOutcome highClock (by simpa using hhigh)
   refine ⟨hlow, ?_⟩
   simpa [panResultFfi, hfirstEvents] using hhighPrefix
+
+/-! The nonzero-clock counterpart of the preceding `Seq` timeout base case.
+    When the first component has already consumed a positive clock but leaves
+    the incoming FFI trace unchanged, the same explicit preservation argument
+    supplies the recursive Cake prefix step. -/
+theorem evalPanValueFfiClockProg_seq_timeout_cross_clock_ioEvents_prefix
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel clock extra : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (first second : Prog α)
+    (middleLocals middleGlobals : VarName → Option (PanValue α))
+    (middleMemory : α → Option (PanValue α)) (middleFfi : FfiState σ)
+    (firstClock : Nat)
+    (highOutcome : PanValueFfiClockOutcome α σ) (highClock : Nat)
+    (hfirst : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory ffi clock first =
+      some (.timeout middleLocals middleGlobals middleMemory middleFfi, firstClock))
+    (hfirstEvents : middleFfi.ioEvents = ffi.ioEvents)
+    (hhigh : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi
+      (clock + extra) (.seq first second) = some (highOutcome, highClock))
+    (hstateful : panValueFfiStatefulHandlerPreservesIoEvents handler)
+    (hmemory : ∀ (memoryHandler : PanValueMemoryFfiHandler α σ),
+      panValueFfiMemoryHandlerPreservesIoEvents memoryHandler) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+      (.seq first second) =
+      some (.timeout middleLocals middleGlobals middleMemory middleFfi, firstClock) ∧
+      (panResultFfi
+        (.timeout middleLocals middleGlobals middleMemory middleFfi, firstClock)).ioEvents <+:
+        (panResultFfi (highOutcome, highClock)).ioEvents := by
+  have hlow := evalPanValueFfiClockProg_seq_timeout context primitive handler structs
+    functions baseAddress topAddress bytesInWord fuel clock firstClock locals globals
+    memory ffi middleLocals middleGlobals middleMemory middleFfi first second
+    (memoryAccess := none) (contracts := none) hfirst
+  have hhighPrefix := evalPanValueFfiClockProg_ioEvents_prefix_of_handlerPreserves
+    context primitive handler structs functions baseAddress topAddress bytesInWord
+    hstateful hmemory (fuel + 1) locals globals memory ffi (clock + extra)
+    (.seq first second) none none none highOutcome highClock (by simpa using hhigh)
+  refine ⟨hlow, ?_⟩
+  simpa [panResultFfi, hfirstEvents] using hhighPrefix
 end Flapjack

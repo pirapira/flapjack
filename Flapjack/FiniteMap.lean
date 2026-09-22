@@ -565,4 +565,64 @@ theorem map_FLOOKUP_foldl_resVar_zip_fupdate [BEq α] [LawfulBEq α]
   rw [map_FLOOKUP_foldl_resVar_zip xs ys cs (FUPDATE_LIST fm (xs.zip as)) hdisj hlenCs]
   exact map_FLOOKUP_FUPDATE_LIST_zip_not_mem xs ys as fm hdisj hlenAs
 
+/-- Cake `domsub_commutes_fupdate` (pan_commonPropsScript.sml:319): domain
+subtraction at a key absent from the update list commutes with the list update. -/
+theorem FDOMSUB_FUPDATE_LIST_commutes [BEq α] [LawfulBEq α]
+    (xs : List α) (ys : List β) (fm : FiniteMap α β) (x : α)
+    (h : x ∉ xs) (hlen : xs.length = ys.length) :
+    FDOMSUB (FUPDATE_LIST fm (xs.zip ys)) x =
+      FUPDATE_LIST (FDOMSUB fm x) (xs.zip ys) := by
+  induction xs generalizing fm ys with
+  | nil =>
+    cases ys with
+    | nil => simp [FUPDATE_LIST_nil]
+    | cons y ys => simp at hlen
+  | cons a xs ih =>
+    cases ys with
+    | nil => simp at hlen
+    | cons y ys =>
+      have hne : x ≠ a := by
+        intro he
+        exact h (by simp [he])
+      have htail : x ∉ xs := by
+        intro hmem
+        exact h (by simp [hmem])
+      have hlenTail : xs.length = ys.length := by simpa using hlen
+      rw [List.zip_cons_cons, FUPDATE_LIST_cons]
+      rw [ih ys (FUPDATE fm (a, y)) htail hlenTail]
+      rw [FDOMSUB_FUPDATE_neq fm x a y hne]
+      rw [FUPDATE_LIST_cons]
+
+/-- Cake `update_eq_zip_flookup` (pan_commonPropsScript.sml:244): a key occurring
+in a distinct key list looks up its paired value in the updated map. -/
+theorem FLOOKUP_FUPDATE_LIST_zip_getElem [BEq α] [LawfulBEq α]
+    (xs : List α) (ys : List β) (f : FiniteMap α β) (n : Nat)
+    (hdistinct : xs.Nodup) (hlen : xs.length = ys.length) (hn : n < xs.length) :
+    FLOOKUP (FUPDATE_LIST f (xs.zip ys)) (xs[n]'hn) =
+      some (ys[n]'(by rw [← hlen]; exact hn)) := by
+  induction xs generalizing f ys n with
+  | nil => simp at hn
+  | cons a xs ih =>
+    cases ys with
+    | nil => simp at hlen
+    | cons y ys =>
+      rw [List.nodup_cons] at hdistinct
+      obtain ⟨ha, hdistinctTail⟩ := hdistinct
+      have hlenTail : xs.length = ys.length := by simpa using hlen
+      cases n with
+      | zero =>
+        simp only [List.getElem_cons_zero]
+        rw [List.zip_cons_cons, FUPDATE_LIST_cons]
+        rw [FLOOKUP_FUPDATE_LIST_not_mem (FUPDATE f (a, y)) (xs.zip ys) a
+          (by rw [List.map_fst_zip (by omega)]; exact ha)]
+        rw [FLOOKUP_update]
+        simp
+      | succ k =>
+        have hk : k < xs.length := by
+          simp only [List.length_cons] at hn
+          omega
+        simp only [List.getElem_cons_succ]
+        rw [List.zip_cons_cons, FUPDATE_LIST_cons]
+        exact ih ys (FUPDATE f (a, y)) k hdistinctTail hlenTail hk
+
 end Flapjack

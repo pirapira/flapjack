@@ -91,4 +91,31 @@ def evalLocalsGuard : Bool :=
 #eval evalLocalsGuard
 #guard evalLocalsGuard
 
+/-! Counterpart of CakeML's `eval_lemma'`
+    (`cakeml/pancake/proofs/loop_liveProofScript.sml:416`): extending the local
+    state preserves the value of an expression. -/
+
+def extendedLocals : Nat → Option Nat :=
+  fun n => if n == 3 then some 5 else if n == 4 then some 7 else none
+
+theorem evalLoopExp_locals_extend_fixture :
+    evalLoopExp { liveState with locals := extendedLocals } (.var 3 : LoopExp Nat) =
+      some 5 :=
+  evalLoopExp_locals_extend liveState extendedLocals (.var 3) 5
+    (by
+      intro name v hname
+      simp [liveState] at hname
+      obtain ⟨rfl, rfl⟩ := hname
+      simp [extendedLocals])
+    (by simp [evalLoopExp, liveState])
+
+def evalExtendGuard : Bool :=
+  evalLoopExp { liveState with locals := extendedLocals } (.var 3 : LoopExp Nat) ==
+      some 5 &&
+    evalLoopExp { liveState with locals := extendedLocals }
+      (.op .add [.var 3, .const 1] : LoopExp Nat) == some 6
+
+#eval evalExtendGuard
+#guard evalExtendGuard
+
 end Flapjack.Test.LoopVarsOfExpParity

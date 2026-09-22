@@ -872,6 +872,36 @@ def doStepSimplifyPriorityGuard : Bool :=
 
 #guard doStepSimplifyPriorityGuard
 
+/- Cake's `do_step` reaches `do_spill` only after simplify, coalesce,
+   pre-freeze, and freeze all report no progress.  With no cost table,
+   `do_spill` selects the highest-degree candidate, preserving the residual
+   spill worklist.  This covers the final priority branch from
+   `reg_allocScript.sml:809-857`. -/
+def doStepSpillFallbackGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 3 with
+      degrees := CakeNodeMap.ofNatInfoMap 3 [(1, 1), (2, 3)]
+      spillWl := [1, 2] }
+  let (changed, out) := cakeDoStep none 1 state
+  changed && out.stack == [2] && out.spillWl == [1] &&
+    out.simpWl == [] && out.freezeWl == []
+
+#guard doStepSpillFallbackGuard
+
+/- Cake's `rpt_do_step` (`reg_allocScript.sml:860-868`) stops early when the
+   next `do_step` makes no progress.  A one-node spill performs exactly one
+   transition and then terminates before consuming the remaining fuel. -/
+def rptDoStepEarlyStopGuard : Bool :=
+  let state : CakeRaState :=
+    { CakeRaState.empty 2 with
+      degrees := CakeNodeMap.ofNatInfoMap 2 [(1, 1)]
+      spillWl := [1] }
+  let out := cakeRptDoStep none 1 3 state
+  out.stack == [1] && out.spillWl == [] && out.simpWl == [] &&
+    out.freezeWl == []
+
+#guard rptDoStepEarlyStopGuard
+
 /- Cake's `unspill` (`reg_allocScript.sml:378-391`) partitions the spill
    worklist with the HOL reversed-accumulator order, sending newly low-degree,
    non-move-related nodes to `simpWl`. -/
@@ -1576,6 +1606,8 @@ def parityGuard : Bool :=
     && sortMovesTailSplitGuard && freezeWorklistTransitionGuard &&
       doSpillEqualDegreeGuard && doSpillEmptyGuard &&
       doStepSimplifyPriorityGuard &&
+      doStepSpillFallbackGuard &&
+      rptDoStepEarlyStopGuard &&
       unspillTransitionGuard
       && coalesceSelfMoveRejectedGuard && applyColourProbeGuard
 
@@ -1628,7 +1660,8 @@ def runChecks : IO Bool := do
     decDegreeOutOfDimNoOpGuard, coalesceWorklistSuccessGuard,
     freezeWorklistTransitionGuard, coalesceParentCompressionGuard,
     prefreezeTransitionGuard, doSpillEqualDegreeGuard, doSpillEmptyGuard,
-    doStepSimplifyPriorityGuard, unspillTransitionGuard,
+    doStepSimplifyPriorityGuard, doStepSpillFallbackGuard,
+    rptDoStepEarlyStopGuard, unspillTransitionGuard,
     worklistPrependGuard, extendCliqueGuard, splitDegreeGuard,
     smergePriorityGuard, applyColourProbeGuard]
   let names := [
@@ -1688,7 +1721,9 @@ def runChecks : IO Bool := do
     "do_coalesce success transition", "do_freeze transition",
     "do_prefreeze transition", "do_spill equal-degree transition",
     "do_spill empty-worklist no-op",
-    "do_step simplify priority", "unspill transition", "worklist prepend",
+    "do_step simplify priority", "do_step spill fallback",
+    "rpt_do_step early stop", "unspill transition",
+    "worklist prepend",
     "extend clique", "split degree", "smerge priority",
     "apply_colour rewrites source Word register fields"]
   let mut all := true

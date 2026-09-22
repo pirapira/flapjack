@@ -659,6 +659,14 @@ example :
       some [.store32Offset 4 5 (0 - BitVec.ofNat 64 2048)] := by
   decide
 
+/- The matching lower signed-12 Load32 endpoint is also a direct Cake Mem
+   carrier; it must retain `-2048` rather than fall back to address synthesis. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMemSub .load32 4 5 2048) [] 0]⟩ =
+      some [.load32Offset 4 5 (0 - BitVec.ofNat 64 2048)] := by
+  decide
+
 /- The largest positive signed-12 displacement remains a direct load32. -/
 example :
     compileLabSection (width := 64) { services := [] }

@@ -68,4 +68,28 @@ theorem listDisjoint_range_add_shift_fixture :
     ListDisjoint (((List.range 3).map (fun x => x + 1 + (4 + 5))) : List Nat) [0, 1, 2, 4] :=
   listDisjoint_range_add_shift 3 4 5 [0, 1, 2, 4] (by intro y hy; simp [List.mem_cons] at hy; omega)
 
+#check @localsRel_extend_new_var
+#check @panValueNoOverlap_cons_of
+#check @panValueCtxtMax_mono
+
+/-- Cake `locals_rel_extend_new_var` on a concrete fresh variable. -/
+theorem localsRel_extend_new_var_fixture :
+    localsRel ([("x", (Shape.one, [1]))] : InfoMap (Shape × List Nat)) 1
+      (FUPDATE (FEMPTY : FiniteMap String (PanValue Nat)) ("x", PanValue.word 5))
+      (FUPDATE_LIST (FEMPTY : FiniteMap Nat Nat) (([1] : List Nat).zip ([5] : List Nat))) := by
+  have hbase : localsRel ([] : InfoMap (Shape × List Nat)) 0
+      (FEMPTY : FiniteMap String (PanValue Nat)) (FEMPTY : FiniteMap Nat Nat) :=
+    ⟨panValueNoOverlap_empty, panValueCtxtMax_empty 0 (by omega),
+      by intro vname v h; simp [FLOOKUP_empty] at h⟩
+  have h := localsRel_extend_new_var ([] : InfoMap (Shape × List Nat)) 0
+    (FEMPTY : FiniteMap String (PanValue Nat)) (FEMPTY : FiniteMap Nat Nat)
+    "x" (PanValue.word 5) [1] hbase (by simp [panValueShape, isWfShape]) (by decide)
+    (by
+      intro slot hmem
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at hmem
+      rcases hmem with rfl
+      simp [panValueShape])
+    (by simp [panValueShape])
+  simpa [panValueShape, Shape.shapeSize, panValueFlatten] using h
+
 end Flapjack.Test.FiniteMapParity

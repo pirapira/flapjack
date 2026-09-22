@@ -61,4 +61,34 @@ def deleteSortedGuard : Bool :=
 #eval deleteSortedGuard
 #guard deleteSortedGuard
 
+/-! Counterpart of CakeML's `eval_lemma`
+    (`cakeml/pancake/proofs/loop_liveProofScript.sml:443`). -/
+
+def liveState : LoopState Nat :=
+  { locals := fun n => if n == 3 then some 5 else none,
+    globals := fun _ => none,
+    memory := fun _ => none }
+
+def liveLocals : Nat → Option Nat :=
+  fun n => if n == 3 then some 5 else some 99
+
+theorem evalLoopExp_locals_congr_fixture :
+    evalLoopExp { liveState with locals := liveLocals } (.var 3 : LoopExp Nat) =
+      some 5 :=
+  evalLoopExp_locals_congr liveState liveLocals (.var 3) 5
+    (by
+      intro name hmem
+      simp [loopVarsOfExp] at hmem
+      subst hmem
+      simp [liveState, liveLocals])
+    (by simp [evalLoopExp, liveState])
+
+def evalLocalsGuard : Bool :=
+  evalLoopExp { liveState with locals := liveLocals } (.var 3 : LoopExp Nat) == some 5 &&
+    evalLoopExp { liveState with locals := liveLocals }
+      (.op .add [.var 3, .const 1] : LoopExp Nat) == some 6
+
+#eval evalLocalsGuard
+#guard evalLocalsGuard
+
 end Flapjack.Test.LoopVarsOfExpParity

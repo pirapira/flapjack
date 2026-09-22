@@ -107,6 +107,7 @@ import Flapjack.PanToCrepProgramComposition
 import Flapjack.PanToCrepTailCallCorrectness
 import Flapjack.PanToCrepMaxList
 import Flapjack.PanValueFlatten
+import Flapjack.FiniteMap
 import Flapjack.PanToCrepCallControlSafety
 import Flapjack.PanToCrepCallHandlerControlSafety
 import Flapjack.PanToCrepAssignmentControlSafety

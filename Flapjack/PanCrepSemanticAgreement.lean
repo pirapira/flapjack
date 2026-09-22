@@ -3215,6 +3215,60 @@ theorem PanValuePcSemanticClockEvidence.normalResultRelWithContextCode_of_stateR
     outputCodeRel outputExcpRel sourceLocals sourceGlobals sourceMemory sourceFfi
     targetState houtcome hresult
 
+/-! The same-clock returned-call instantiation is the value-producing declaration
+    step of `state_rel_imp_semantics_to_crep`.  Keep the returned values and
+    evaluator/state premises explicit while specializing the cross-clock
+    context-coded bridge to one source/target clock. -/
+theorem PanValuePcSemanticClockEvidence.returnedResultRelWithContextCode_of_stateRelWithContext
+    {α σ : Type}
+    [BEq α] [OfNat α 0] [Add α]
+    {structs : StructContext} {context : CompileContext α}
+    {program : Prog α}
+    {sourceEvaluate : PanValuePcEvaluator α}
+    {targetEvaluate : CrepPcEvaluator α}
+    {codeRel : PanValuePcCodeRel α}
+    {excpRel : PanValuePcExceptionShapeRel α}
+    {exceptionRel : ExceptionId → PanValue α → α → Prop}
+    {exceptionCode : ExceptionId → Option α}
+    {globalsLookup : CrepState α → PanValue α → Option (List α)}
+    {panHooks : PanSemanticsHooks α σ}
+    {crepHooks : CrepSemanticsHooks α}
+    (hcorrect : PanValuePcCompileCorrectWithContextCode sourceEvaluate
+      targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
+    (clock : Nat)
+    (evidence : PanValuePcSemanticClockEvidence structs context program
+      clock sourceEvaluate targetEvaluate codeRel excpRel exceptionRel
+      exceptionCode globalsLookup panHooks crepHooks)
+    (inputCodeRel : codeRel context evidence.sourceInput.code
+      evidence.targetInput.code)
+    (inputExcpRel : excpRel context evidence.sourceInput.eshapes
+      evidence.targetInput.eshapes)
+    (inputStateRel : panValueCrepStateRelWithContext structs context
+      evidence.sourceInput.locals evidence.sourceInput.globals
+      evidence.sourceInput.memory evidence.targetInput.state)
+    (outputCodeRel : codeRel context evidence.sourceExecution.code
+      evidence.targetExecution.code)
+    (outputExcpRel : excpRel context evidence.sourceExecution.eshapes
+      evidence.targetExecution.eshapes)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (sourceFfi : FfiState σ)
+    (sourceValues : List (PanValue α))
+    (targetState : CrepState α) (targetValues : List α)
+    (houtcome : evidence.outcome =
+      .control (.returned sourceLocals sourceGlobals sourceMemory sourceFfi
+        sourceValues))
+    (hresult : evidence.result = .returned targetState targetValues) :
+    panValuePcResultRelWithContextCode structs context exceptionRel exceptionCode
+      globalsLookup
+      (.returned sourceLocals sourceGlobals sourceMemory sourceValues)
+      (.returned targetState targetValues) ∧
+    panValueCrepStateRelWithContext structs context sourceLocals sourceGlobals
+      sourceMemory targetState := by
+  exact PanValuePcSemanticClockEvidence.crossClockReturnedResultRelWithContextCode_of_stateRelWithContext
+    hcorrect clock clock evidence evidence inputCodeRel inputExcpRel inputStateRel
+    outputCodeRel outputExcpRel sourceLocals sourceGlobals sourceMemory sourceFfi
+    sourceValues targetState targetValues houtcome hresult
+
 /-! The same-clock arbitrary-Raise instantiation is the payload-bearing
     counterpart of the normal declaration step above.  Keep the source
     exception/value, target exception, and Cake exception-table lookup

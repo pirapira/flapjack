@@ -1645,7 +1645,11 @@ theorem comp_call_implicit_target_correct
   · exact heval
   · simp [labelsIn, lookup]
 
-theorem comp_call_unresolved_correct
+/-! Cake's unresolved implicit-target branch keeps the source call unchanged.
+    The call-aware evaluator then fails at the missing target lookup, rather
+    than silently changing the call into a normal result.  This is the
+    failure branch of the implicit-target case in `pc_compile_correct`. -/
+theorem comp_call_implicit_target_unresolved_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
     [ShiftRight α] [LT α]
@@ -1660,8 +1664,7 @@ theorem comp_call_unresolved_correct
     (hlookup : lookup lastValue environment = none) :
     evalLoopProgWithCallsAndFfi functions ffiHandler (fuel + 1) state
         (comp environment
-          (.call returns none arguments handler : LoopProg α)).1 =
-        none ∧
+          (.call returns none arguments handler : LoopProg α)).1 = none ∧
       labelsIn
         (comp environment
           (.call returns none arguments handler : LoopProg α)).2
@@ -1671,14 +1674,29 @@ theorem comp_call_unresolved_correct
           (.call returns none arguments handler : LoopProg α) =
         (.call returns none arguments handler, []) := by
     simp [comp, compCall, hsplit, hlookup]
-  have heval :
-      evalLoopProgWithCallsAndFfi functions ffiHandler (fuel + 1) state
-          (.call returns none arguments handler) = none := by
-    cases fuel <;> cases returns <;> cases handler <;>
-      simp [evalLoopProgWithCallsAndFfi, evalLoopCallWithCallsAndFfi]
   rw [hcompiled]
   constructor
-  · exact heval
+  · simp only [evalLoopProgWithCallsAndFfi]
+    have hnone : ∀ n,
+        evalLoopCallWithCallsAndFfi functions ffiHandler n state returns
+          none arguments handler = none := by
+      have hzero :
+          evalLoopCallWithCallsAndFfi functions ffiHandler 0 state returns
+            none arguments handler = none := by
+        unfold evalLoopCallWithCallsAndFfi
+        simp
+      have hsucc : ∀ n,
+          evalLoopCallWithCallsAndFfi functions ffiHandler (Nat.succ n)
+            state returns none arguments handler = none := by
+        intro n
+        unfold evalLoopCallWithCallsAndFfi
+        cases returns <;> cases handler <;>
+          simp
+      intro n
+      cases n with
+      | zero => exact hzero
+      | succ n => exact hsucc n
+    exact hnone fuel
   · simp [labelsIn, lookup]
 
 theorem comp_ffi_labelsIn

@@ -228,6 +228,16 @@ def cakeSharedStore32NegativeBoundary : Bool :=
         (.op .add [.var 23, .const offset])) => offset == 2 ^ 64 - 8
   | _ => false
 
+/- Cake's `shiftImmediate` rejects an amount at the word width.  The
+   `inst_select_exp` fallback is the zero result, rather than an opaque
+   shift carrier; this is the selector shape exercised by
+   `f01451_out_of_range_shift.pnk`. -/
+def cakeShiftOutOfRangeShape : Bool :=
+  match wordInstSelectAtom (α := Nat) 23
+      (.shift .lsl (.var 18) (.const 64)) with
+  | (.inst (.const 23 0), .var 23) => true
+  | _ => false
+
 /- Cake's `inst_select_exp` selects the non-heap operand into the fresh
    temporary before emitting the current-heap operation. -/
 def cakeCurrentHeapOr : Bool :=
@@ -376,6 +386,7 @@ def cakeStoreSelectorConstShape : Bool :=
 #guard cakeSharedOddHalfwordOffset
 #guard cakeSharedLoad32PositiveBoundary
 #guard cakeSharedStore32NegativeBoundary
+#guard cakeShiftOutOfRangeShape
 #guard cakeCurrentHeapOr
 #guard cakeConstCurrentHeapXor
 #guard cakeBitVecConstCurrentHeapXor

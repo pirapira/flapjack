@@ -80,6 +80,12 @@ theorem compileProg_primitive_assigned_free_fixture :
   rcases hlookup with ⟨rfl, rfl⟩
   simp
 
+theorem compileProg_store_assigned_free_fixture :
+    (9 : Nat) ∉ crepAssignedFreeVars
+      (compileProg boundedContext (.store (.const 0) (.const 1))) := by
+  exact not_mem_crepAssignedFreeVars_compileProg_store
+    boundedContext (.const 0) (.const 1) 9
+
 def runChecks : IO Bool := do
   if parityGuard then
     IO.println "PASS crep assigned_free_vars skip/assign/dec/seq/if/while/shmem/fallback"

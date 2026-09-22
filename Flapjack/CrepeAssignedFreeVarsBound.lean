@@ -191,6 +191,32 @@ theorem not_mem_crepAssignedFreeVars_compileProg_primitive
       · simp only [crepAssignedFreeVars]
         exact hslot shape slots hlookup
 
+/-! The store branch of Cake's `not_mem_context_assigned_mem_gt`:
+    successful shared stores assign no local variables, and the declaration
+    temporaries surrounding the address/value evaluation therefore cannot
+    contribute an assigned-free variable.  Malformed expression shapes use
+    the compiler's `Skip` fallback and are immediate. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_store
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (address value : Exp α) (x : Nat) :
+    x ∉ crepAssignedFreeVars
+      (compileProg context (.store address value)) := by
+  simp only [compileProg]
+  cases haddress : compileExp context address with
+  | mk addressExpressions addressShape =>
+      cases addressExpressions with
+      | nil => simp [crepAssignedFreeVars]
+      | cons compiledAddress rest =>
+          cases hvalue : compileExp context value with
+          | mk values valueShape =>
+              simp only
+              by_cases hlength : values.length = Shape.shapeSize valueShape
+              · rw [if_pos hlength]
+                apply not_mem_crepAssignedFreeVars_nestedDecs
+                · simp [freshNames_length, hlength]
+                · simp [crepAssignedFreeVars_nestedSeq_stores]
+              · simp [hlength, crepAssignedFreeVars]
+
 /-- `crepNestedSeq` of `assign` statements built from a zip of names with
     variables introduced by `freshNames` still has exactly `names` as its
     assigned free variables. -/

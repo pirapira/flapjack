@@ -740,6 +740,33 @@ theorem call_empty_compile_correct_fixture :
     (returns := none) (handler := none)
   simpa [comp] using hcall
 
+theorem call_implicit_target_compile_correct_fixture :
+    evalLoopProgWithCallsAndFfi
+        [(2, [], (.return [] : LoopProg Nat))]
+        (fun _ _ _ _ _ _ => none) 3 load32State
+        (comp [(3, 2)]
+          (.call none none [3] none : LoopProg Nat) :
+            LoopProg Nat × LocationEnv).1 =
+        some (.returned load32State []) ∧
+      labelsIn
+        (comp [(3, 2)]
+          (.call none none [3] none : LoopProg Nat) :
+            LoopProg Nat × LocationEnv).2
+        load32State.locals := by
+  have hcall := comp_call_implicit_target_correct
+    (functions := [(2, [], (.return [] : LoopProg Nat))])
+    (ffiHandler := (fun _ _ _ _ _ _ => none))
+    (environment := [(3, 2)]) (state := load32State) (fuel := 2)
+    (returns := none) (arguments := [3]) (pre := [])
+    (lastValue := 3) (destination := 2) (handler := none)
+    (result := .returned load32State [])
+    (by simp [splitLast]) (by simp [lookup])
+    (by
+      simp [evalLoopCallWithCallsAndFfi, evalLoopProgWithCallsAndFfi,
+        lookupLoopFunction, loopReadLocals, evalLoopProg, loopBindParameters,
+        loopLookupFirst, load32State])
+  simpa [comp, loopResultState] using hcall
+
 theorem ffi_labelsIn_fixture :
     (comp [(3, 2)]
       (.ffi "print" 1 2 3 4 [2, 3] : LoopProg Nat) : LoopProg Nat × LocationEnv).1 =
@@ -903,6 +930,7 @@ theorem loop_compile_result_fixture :
 #check comp_call_labelsIn
 #check comp_call_target_correct
 #check comp_call_empty_correct
+#check comp_call_implicit_target_correct
 #check comp_ffi_labelsIn
 #check comp_ffi_correct
 

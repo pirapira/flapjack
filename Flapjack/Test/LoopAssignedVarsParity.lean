@@ -32,6 +32,15 @@ def probeLoadByte : LoopProg Nat := .loadByte 4 9
 #guard loopAssignedVars probeLongDiv == originalLongDiv
 #guard loopAssignedVars probeLoadByte == originalLoadByte
 
+/-! Cake `crep_to_loopProofScript.sml:355` `assigned_vars_MAPi_Assign`. -/
+
+def probeAssignNames : LoopProg Nat :=
+  loopNestedSeq (loopAssignNames (loopTempNames 3 3) (.const 0))
+
+theorem loopAssignedVars_loopTempNames_fixture :
+    loopAssignedVars probeAssignNames = [3, 4, 5] :=
+  loopAssignedVars_loopTempNames 3 3 (.const 0)
+
 def check (name : String) (actual expected : List Nat) : IO Bool := do
   if actual == expected then
     IO.println s!"PASS {name}"
@@ -49,7 +58,9 @@ def runChecks : IO Bool := do
     check "assigned_vars long division"
       (loopAssignedVars probeLongDiv) originalLongDiv,
     check "assigned_vars byte load"
-      (loopAssignedVars probeLoadByte) originalLoadByte ].mapM id
+      (loopAssignedVars probeLoadByte) originalLoadByte,
+    check "assigned_vars MAPi Assign"
+      (loopAssignedVars probeAssignNames) [3, 4, 5] ].mapM id
   pure (results.all id)
 
 end Flapjack.Test.LoopAssignedVarsParity

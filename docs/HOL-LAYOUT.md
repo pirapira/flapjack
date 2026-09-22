@@ -32,53 +32,10 @@ provenance is recorded by `@[hol ...]` and checked by
 | `semantics/loopSemScript.sml` | `Flapjack/Pancake/Semantics/LoopSem.lean` |
 | `proofs/pan_simpProofScript.sml` | `Flapjack/Pancake/Proofs/PanSimp.lean`, `PanSimp/Evaluate.lean` |
 
-`compile_top_shape_wf` from `proofs/pan_globalsProofScript.sml` is ported in
-`Flapjack/Pancake/Proofs/PanGlobals.lean`. It assumes successful faithful
-`evaluateDecls` and HOL's admissible-declaration condition, then proves the
-function-shape property of the total `globalCompileTopCake` result, whose
-interface fixes HOL's `bytes_in_word` and `n2w` compiler context for each
-`BitVec` width. The generalized `globalCompileTopForStart` proof remains
-untagged because it exposes those choices to callers. The statement contract
-is checked by
-`Flapjack/Test/PanGlobalsCompileTopShapeWfParity.lean`. The exact
-`compile_top_shape_wf_nil` corollary is also ported there; it adds the
-empty-structure premise and states function shapes with the empty-context
-`isWfShapeNil` predicate.
-
-`excp_rel_def` and `ctxt_fc_def` from `proofs/pan_to_crepProofScript.sml` are
-tagged in `Flapjack/Pancake/Proofs/PanToCrep.lean`. Its HOL-shaped `codeRel`
-definition is currently untagged because the body uses the list-backed
-compiler adapter, whereas HOL concludes with exact `compile`. The exact
-`compile_def` port is tracked by bead `flapjack-pxn.18.3.1.4`.
-`localised_prog_def`, the source-side premise of `code_rel_def`, is tagged in
-`Flapjack/PanLocalised.lean`, including HOL's prohibition on calls with global
-destinations. Direct HOL proofs of matching and mismatching code maps are
-paired with Lean tests in
-`scripts/hol-probes/code_rel_probe.out` and
-`Flapjack/Test/PanToCrepCodeRelParity.lean`.
-
-`evaluate_decls_def` from `semantics/panSemScript.sml` is ported in
-`Flapjack/Pancake/Semantics/PanSem.lean` as `evaluateDecls`. Its dedicated
-state retains full function entries and exception shapes, while runtime
-expression evaluation uses the source empty-local environment for each value
-declaration. Direct HOL-EVAL branch results and Lean parity fixtures are kept
-in `scripts/hol-probes/pan_evaluate_decls_probe.out` and
-`Flapjack/Test/PanEvaluateDeclsParity.lean`.
-
-The total `compile_top_def` result and the HOL-shaped
-`compile_top_only_functions_or_exns` theorem are now present. Reusable
-Flapjack-specific shape predicates and pass lemmas live in
-`PanGlobals/ShapeInfrastructure.lean`; they use Flapjack's value evaluator
-and are infrastructure, not ports of HOL shape theorems. The exact
-`compile_top_shape_wf` result and its `_nil` corollary use the faithful
-evaluator and live in `PanGlobals.lean`.
-
 Additional helper, semantic, and proof modules still live at the old top
-level while their exact HOL counterparts and statement shapes are reviewed.
-`Flapjack/PanStructsAfindi.lean` retains residual shape-context helpers; the
-`afindi` implementation and its matched proof declarations now live in the
-listed Pancake modules.
-
 Placement under `Proofs` does not imply that a whole pass correctness theorem
-has been established. The remaining moves and review gate are tracked by beads
-`flapjack-pxn.18.3.1`–`flapjack-pxn.18.3.3`.
+has been established. For declaration-level provenance, use
+`scripts/check-hol-refs.py --mapping`; for untagged port candidates, use
+`scripts/next-hol-port.py`. Track individual gaps and progress in
+[GitHub issues](https://github.com/pirapira/flapjack/issues), not in this
+layout guide.

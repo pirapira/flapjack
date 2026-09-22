@@ -28,6 +28,9 @@ source changes. Cache cleanup is local-only; do not stage `.lake` outputs.
 
 ## Fleet workflow
 
+This section coordinates internal fleet agents. External contributors may open
+their own focused PRs and do not need access to the fleet's bead database.
+
 Keep the CakeML/HOL submodule read-only. Put HOL probes and captured oracle
 outputs on the Flapjack side under `scripts/hol-probes/`; follow that directory's
 README and `docs/PARITY-TESTING.md` for the detailed procedure.
@@ -52,6 +55,12 @@ which remain pending (including CI).
 
 Every Lean declaration that ports a declaration from the CakeML/HOL4
 development must be traceable to its original without a lookup table.
+
+**Keep declaration notes local.** `docs/HOL-LAYOUT.md` maps HOL scripts to
+Lean modules; it is not a declaration-status log. Put assumptions, statement
+differences, and other declaration-specific caveats beside the relevant Lean
+definition or theorem. Track open work in GitHub issues, not in
+`docs/SOUNDNESS.md`, which records assurance limits and external assumptions.
 
 **Place it in the counterpart file.** Each HOL script has one primary Lean
 counterpart (for example `cakeml/pancake/proofs/pan_to_crepProofScript.sml`

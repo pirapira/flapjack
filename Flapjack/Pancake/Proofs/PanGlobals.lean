@@ -182,6 +182,9 @@ theorem globalCompileTopCake_shapes_wf {width : Nat} [LawfulBEq String]
     in the same shape as HOL while reusing the shared Flapjack predicate. -/
 def isWfShapeNil : Shape → Bool := isWfShape []
 
+/-- HOL's empty-structure corollary: successful declaration evaluation and
+    admissible declarations give well-formed output shapes under `isWfShapeNil`.
+    The empty-structure premise is explicit, as in the HOL statement. -/
 @[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "compile_top_shape_wf_nil"]
 theorem globalCompileTopCake_shapes_wf_nil {width : Nat} [LawfulBEq String]
     [ShiftLeft (BitVec width)] [ShiftRight (BitVec width)]

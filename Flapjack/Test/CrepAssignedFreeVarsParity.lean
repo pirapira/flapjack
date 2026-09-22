@@ -37,6 +37,9 @@ def boundedContext : CompileContext Nat :=
   { vars := [("fresh", (.one, [3]))], functions := [], exceptions := [],
     maxVar := 3, bytesInWord := 1 }
 
+def raiseContext : CompileContext Nat :=
+  { boundedContext with exceptions := [("error", 11)] }
+
 /-! This fixture exercises the Cake `ctxt_max_el_leq` bridge on the same
     context-slot representation used by the assigned-free-vars proof. -/
 theorem context_slot_bound_fixture :
@@ -79,6 +82,47 @@ theorem compileProg_primitive_assigned_free_fixture :
   simp [boundedContext, lookupInfo] at hlookup
   rcases hlookup with ⟨rfl, rfl⟩
   simp
+
+theorem compileProg_store_assigned_free_fixture :
+    (9 : Nat) ∉ crepAssignedFreeVars
+      (compileProg boundedContext (.store (.const 0) (.const 1))) := by
+  exact not_mem_crepAssignedFreeVars_compileProg_store
+    boundedContext (.const 0) (.const 1) 9
+
+theorem compileProg_assign_local_direct_assigned_free_fixture :
+    (7 : Nat) ∉ crepAssignedFreeVars
+      (compileProg boundedContext
+        (.assign .local "fresh" (.const 1))) := by
+  apply not_mem_crepAssignedFreeVars_compileProg_assign_local
+    boundedContext "fresh" (.const 1) 7
+  intro shape slots hlookup
+  simp [boundedContext, lookupInfo] at hlookup
+  rcases hlookup with ⟨rfl, rfl⟩
+  simp
+
+theorem compileProg_assign_local_temporary_assigned_free_fixture :
+    (7 : Nat) ∉ crepAssignedFreeVars
+      (compileProg boundedContext
+        (.assign .local "fresh" (.var .local "fresh"))) := by
+  apply not_mem_crepAssignedFreeVars_compileProg_assign_local
+    boundedContext "fresh" (.var .local "fresh") 7
+  intro shape slots hlookup
+  simp [boundedContext, lookupInfo] at hlookup
+  rcases hlookup with ⟨rfl, rfl⟩
+  simp
+
+theorem compileProg_extCall_assigned_free_fixture :
+    (9 : Nat) ∉ crepAssignedFreeVars
+      (compileProg boundedContext
+        (.extCall "ffi" (.const 1) (.const 2) (.const 3) (.const 4))) := by
+  exact not_mem_crepAssignedFreeVars_compileProg_extCall
+    boundedContext "ffi" (.const 1) (.const 2) (.const 3) (.const 4) 9
+
+theorem compileProg_raise_assigned_free_fixture :
+    (9 : Nat) ∉ crepAssignedFreeVars
+      (compileProg raiseContext (.raise "error" (.const 1))) := by
+  exact not_mem_crepAssignedFreeVars_compileProg_raise
+    raiseContext "error" (.const 1) 9
 
 def runChecks : IO Bool := do
   if parityGuard then

@@ -191,6 +191,127 @@ theorem not_mem_crepAssignedFreeVars_compileProg_primitive
       · simp only [crepAssignedFreeVars]
         exact hslot shape slots hlookup
 
+/-! The store branch of Cake's `not_mem_context_assigned_mem_gt`:
+    successful shared stores assign no local variables, and the declaration
+    temporaries surrounding the address/value evaluation therefore cannot
+    contribute an assigned-free variable.  Malformed expression shapes use
+    the compiler's `Skip` fallback and are immediate. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_store
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (address value : Exp α) (x : Nat) :
+    x ∉ crepAssignedFreeVars
+      (compileProg context (.store address value)) := by
+  simp only [compileProg]
+  cases haddress : compileExp context address with
+  | mk addressExpressions addressShape =>
+      cases addressExpressions with
+      | nil => simp [crepAssignedFreeVars]
+      | cons compiledAddress rest =>
+          cases hvalue : compileExp context value with
+          | mk values valueShape =>
+              simp only
+              by_cases hlength : values.length = Shape.shapeSize valueShape
+              · rw [if_pos hlength]
+                apply not_mem_crepAssignedFreeVars_nestedDecs
+                · simp [freshNames_length, hlength]
+                · simp [crepAssignedFreeVars_nestedSeq_stores]
+              · simp [hlength, crepAssignedFreeVars]
+
+/-! The local-assignment branch of Cake's assigned-free bound.  When the
+    destination and expression variables are distinct, the generated zip of
+    assignments exposes the destination slot list directly.  Otherwise Cake
+    introduces fresh temporaries, whose declaration nest hides the same slot
+    list while preserving the assignment result. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_assign_local
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (name : VarName) (value : Exp α) (x : Nat)
+    (hslot : ∀ shape slots,
+      lookupInfo name context.vars = some (shape, slots) → x ∉ slots) :
+    x ∉ crepAssignedFreeVars
+      (compileProg context (.assign .local name value)) := by
+  simp only [compileProg]
+  cases hlookup : lookupInfo name context.vars with
+  | none => simp [crepAssignedFreeVars]
+  | some info =>
+      obtain ⟨shape, names⟩ := info
+      cases hcompile : compileExp context value with
+      | mk expressions valueShape =>
+          simp only
+          by_cases hlength : names.length = expressions.length
+          · rw [if_pos hlength]
+            by_cases hdistinct : distinctLists names (expressions.flatMap crepExpVars)
+            · rw [if_pos hdistinct]
+              rw [crepAssignedFreeVars_nestedSeq_assign_zipWith names expressions hlength]
+              exact hslot shape names hlookup
+            · rw [if_neg hdistinct]
+              apply not_mem_crepAssignedFreeVars_nestedDecs
+              · simp [freshNames_length, hlength]
+              · rw [← List.zipWith_map_right (f := fun temporary =>
+                    (CrepExp.var (α := α) temporary))
+                    (g := fun destination expression =>
+                      CrepProg.assign destination expression)]
+                rw [crepAssignedFreeVars_nestedSeq_assign_zipWith names
+                      ((freshNames context names.length 1).map
+                        (fun temporary => CrepExp.var temporary))
+                      (by simp [freshNames_length])]
+                exact hslot shape names hlookup
+          · rw [if_neg hlength]
+            simp [crepAssignedFreeVars]
+
+/-! ExtCall introduces four fresh declarations around a Crepe `extCall`, which
+    has no assigned-free locals.  This is the corresponding `ExtCall` branch
+    of Cake's induction; malformed expressions take the `Skip` fallback. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_extCall
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (function : FunName)
+    (configuration configurationLength array arrayLength : Exp α) (x : Nat) :
+    x ∉ crepAssignedFreeVars
+      (compileProg context
+        (.extCall function configuration configurationLength array arrayLength)) := by
+  simp only [compileProg]
+  cases hconfiguration : firstCompiledExp context configuration with
+  | none => simp [crepAssignedFreeVars]
+  | some compiledConfiguration =>
+      cases hconfigurationLength : firstCompiledExp context configurationLength with
+      | none => simp [crepAssignedFreeVars]
+      | some compiledConfigurationLength =>
+          cases harray : firstCompiledExp context array with
+          | none => simp [crepAssignedFreeVars]
+          | some compiledArray =>
+              cases harrayLength : firstCompiledExp context arrayLength with
+              | none => simp [crepAssignedFreeVars]
+              | some compiledArrayLength =>
+                  simp only
+                  apply not_mem_crepAssignedFreeVars_nestedDecs
+                  · simp
+                  · simp [crepAssignedFreeVars]
+
+/-! Raising stores the payload in globals through a declaration nest, then
+    raises.  Both the store-global sequence and the raise have empty
+    assigned-free sets, so the branch is independent of the chosen exception
+    code and payload shape. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_raise
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (exception : ExceptionId) (value : Exp α) (x : Nat) :
+    x ∉ crepAssignedFreeVars
+      (compileProg context (.raise exception value)) := by
+  simp only [compileProg]
+  cases hexception : lookupInfo exception context.exceptions with
+  | none => simp [crepAssignedFreeVars]
+  | some code =>
+      cases hcompile : compileExp context value with
+      | mk expressions valueShape =>
+          simp only
+          by_cases hlength : expressions.length = Shape.shapeSize valueShape
+          · rw [if_pos hlength]
+            simp only [crepAssignedFreeVars, List.append_nil]
+            apply not_mem_crepAssignedFreeVars_nestedDecs
+            · simp [freshNames_length, hlength]
+            · rw [crepAssignedFreeVars_nestedSeq_storeGlobals]
+              simp
+          · rw [if_neg hlength]
+            simp [crepAssignedFreeVars]
+
 /-- `crepNestedSeq` of `assign` statements built from a zip of names with
     variables introduced by `freshNames` still has exactly `names` as its
     assigned free variables. -/

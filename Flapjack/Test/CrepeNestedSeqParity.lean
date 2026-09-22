@@ -257,4 +257,21 @@ def runChecks : IO Bool := do
       IO.println "FAIL crep nested_seq result arity"
       pure false
 
+
+/-! `crepUnreachElim_converge` and `crepUnreachElim_fixPoint`
+    (`cakeml/pancake/proofs/crep_inlineProofScript.sml:1663` / `:1686`):
+    re-eliminating unreachable code is a no-op and the range of
+    `crepUnreachElim` is its fixed-point set. -/
+
+example {q : CrepProg Nat} {r : Option CrepEarlyExit}
+    (he : crepUnreachElim
+      (.seq (.return [.const 1]) (.assign 4 (.const 9)) : CrepProg Nat) = (q, r)) :
+    crepUnreachElim q = (q, r) :=
+  crepUnreachElim_converge _ he
+
+example (q : CrepProg Nat) (r : Option CrepEarlyExit)
+    (hq : crepUnreachElim q = (q, r)) :
+    ∃ p : CrepProg Nat, crepUnreachElim p = (q, r) :=
+  (crepUnreachElim_fixPoint q r).mpr hq
+
 end Flapjack.Test.CrepeNestedSeqParity

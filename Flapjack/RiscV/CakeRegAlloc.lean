@@ -1578,6 +1578,26 @@ theorem cakeColourWordSpillState_nextSpill_eq_occupancy
   simp [cakeColourWordSpillState, cakeColourFrameSlots]
   split <;> omega
 
+/- Cake's `format_var` maps each spill index below the allocator cursor to a
+   concrete slot in the frame.  Keep this combined invariant at the adapter
+   boundary so callers do not have to separately reconstruct the occupancy
+   bound and the location equation. -/
+theorem cakeColourWordSpillState_allocated_stack_slot_lt_frame
+    (k : Nat) (parameters : List Nat) (program : WordProg α)
+    (colouring : NatInfoMap Nat) (register : Nat)
+    (hregister : k ≤ register)
+    (hslot : register - k <
+      (cakeColourWordSpillState k parameters program colouring).nextSpill) :
+    ∃ slot, cakeColourLocation k
+        (cakeColourFrameSlots k parameters program colouring).2
+        (2 * register) = .stack slot ∧
+      slot < (cakeColourFrameSlots k parameters program colouring).2 := by
+  have hframe := cakeColourWordSpillState_nextSpill_le_frame
+    k parameters program colouring
+  exact cakeColourLocation_stack_slot_lt_frame
+    k (cakeColourFrameSlots k parameters program colouring).2 register
+    hregister (by omega)
+
 /-! Production-facing Cake allocator adapter.  This keeps Cake's full SSA
     entry moves and IRC coalescing in the returned Word program, while
     exposing the existing `WordSpillState` shape to the shared pipeline. -/

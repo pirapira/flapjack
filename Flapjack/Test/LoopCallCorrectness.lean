@@ -767,6 +767,27 @@ theorem call_implicit_target_compile_correct_fixture :
         loopLookupFirst, load32State])
   simpa [comp, loopResultState] using hcall
 
+theorem call_unresolved_compile_correct_fixture :
+    evalLoopProgWithCallsAndFfi []
+        (fun _ _ _ _ _ _ => none) 1 load32State
+        (comp [(3, 2)]
+          (.call none none [4] none : LoopProg Nat) :
+            LoopProg Nat × LocationEnv).1 =
+        none ∧
+      labelsIn
+        (comp [(3, 2)]
+          (.call none none [4] none : LoopProg Nat) :
+            LoopProg Nat × LocationEnv).2
+        load32State.locals := by
+  have hcall := comp_call_unresolved_correct
+    (functions := [])
+    (ffiHandler := (fun _ _ _ _ _ _ => none))
+    (environment := [(3, 2)]) (state := load32State) (fuel := 0)
+    (returns := none) (arguments := [4]) (pre := [])
+    (lastValue := 4) (handler := none)
+    (by simp [splitLast]) (by simp [lookup])
+  simpa [comp] using hcall
+
 theorem ffi_labelsIn_fixture :
     (comp [(3, 2)]
       (.ffi "print" 1 2 3 4 [2, 3] : LoopProg Nat) : LoopProg Nat × LocationEnv).1 =
@@ -931,6 +952,7 @@ theorem loop_compile_result_fixture :
 #check comp_call_target_correct
 #check comp_call_empty_correct
 #check comp_call_implicit_target_correct
+#check comp_call_unresolved_correct
 #check comp_ffi_labelsIn
 #check comp_ffi_correct
 

@@ -1549,6 +1549,42 @@ theorem comp_call_implicit_target_correct
   · exact heval
   · simp [labelsIn, lookup]
 
+theorem comp_call_unresolved_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (functions : List (Nat × List Nat × LoopProg α))
+    (ffiHandler : FunName → α → α → α → α → LoopState α → Option (LoopState α))
+    (environment : LocationEnv) (state : LoopState α) (fuel : Nat)
+    (returns : Option (List Nat × List Nat)) (arguments pre : List Nat)
+    (lastValue : Nat)
+    (handler : Option (Nat × LoopProg α × LoopProg α × List Nat))
+    (hsplit : splitLast arguments = some (pre, lastValue))
+    (hlookup : lookup lastValue environment = none) :
+    evalLoopProgWithCallsAndFfi functions ffiHandler (fuel + 1) state
+        (comp environment
+          (.call returns none arguments handler : LoopProg α)).1 =
+        none ∧
+      labelsIn
+        (comp environment
+          (.call returns none arguments handler : LoopProg α)).2
+        state.locals := by
+  have hcompiled :
+      comp environment
+          (.call returns none arguments handler : LoopProg α) =
+        (.call returns none arguments handler, []) := by
+    simp [comp, compCall, hsplit, hlookup]
+  have heval :
+      evalLoopProgWithCallsAndFfi functions ffiHandler (fuel + 1) state
+          (.call returns none arguments handler) = none := by
+    cases fuel <;> cases returns <;> cases handler <;>
+      simp [evalLoopProgWithCallsAndFfi, evalLoopCallWithCallsAndFfi]
+  rw [hcompiled]
+  constructor
+  · exact heval
+  · simp [labelsIn, lookup]
+
 theorem comp_ffi_labelsIn
     (environment : LocationEnv)
     (function : FunName) (configuration configurationLength array arrayLength : Nat)

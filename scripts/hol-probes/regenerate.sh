@@ -28,15 +28,14 @@ trap 'rm -f "$tmp"' EXIT
 
 # HOL's `hol run` consumes the already-built CakeML theories; it does not need
 # to rebuild an unchanged theory.  Keep the checked-in fixtures incremental as
-# well: rerun a probe only when its script, its referenced Pancake source, or
-# this driver is newer than the fixture.  This also keeps regeneration quick
-# after an ordinary no-op invocation.
+# well: rerun a probe only when its script or its referenced Pancake source is
+# newer than the fixture.  Changes to this driver do not invalidate probe
+# results, so ordinary harness maintenance stays incremental.
 probe_needs_refresh() {
   local output="$1"
   local probe="$2"
   local source="$3"
-  [[ ! -f "$output" || "$probe" -nt "$output" || \
-     "$source" -nt "$output" || "$probe_dir/regenerate.sh" -nt "$output" ]]
+  [[ ! -f "$output" || "$probe" -nt "$output" || "$source" -nt "$output" ]]
 }
 
 run_probe() {
@@ -356,7 +355,7 @@ run_probe wrap_rt_probeScript.sml wrap_rt_probe.out \
 run_probe compile_def_probeScript.sml compile_def_probe.out \
   return return "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe compile_to_crep_probeScript.sml compile_to_crep_probe.out \
-  empty raise_const "$cake_dir/pancake/pan_to_crepScript.sml"
+  empty raise_const raise_pair done "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe compile_prog_probeScript.sml compile_prog_probe.out \
   empty inline_call "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe smart_seq_probeScript.sml smart_seq_probe.out \

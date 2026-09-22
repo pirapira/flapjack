@@ -23,7 +23,7 @@ def handlerContext : CompileContext Nat :=
   { vars := [("pair", (.comb [.one, .one], [0, 1])),
       ("v", (.one, []))],
     functions := [("f", ([], .comb [.one, .one]))],
-    exceptions := [("E", 9)], maxVar := 1, bytesInWord := 1 }
+    exceptions := [("E", 9)], maxVar := 1, bytesInWord := 8 }
 
 /-- A standalone call to a two-word function declares locals 2 and 3 as
     zero before the call (`rts = GENLIST (vmax + SUC x) 2`). -/
@@ -49,14 +49,16 @@ example :
       (.call (some (some (.local, "missing"), none)) "f" []) =
       .call none "f" [] := by
   simp [compileProg, compileArgs, callDestinationNames,
-    standalonePairContext, lookupInfo]
+    wrapRt, standalonePairContext, lookupInfo]
 
-/-- An assigned call to a global destination is a tail call. -/
+/-- Cake ignores the source kind tag here: a known global-tagged destination
+    uses the same `wrap_rt (FLOOKUP ctxt.vars name)` result as a local tag. -/
 example :
     compileProg standalonePairContext
-      (.call (some (some (.global, "x"), none)) "f" []) =
-      .call none "f" [] := by
-  simp [compileProg, compileArgs, callDestinationNames]
+      (.call (some (some (.global, "pair"), none)) "f" []) =
+      .call (some ([0, 1], none)) "f" [] := by
+  simp [compileProg, compileArgs, callDestinationNames, wrapRt,
+    standalonePairContext, lookupInfo]
 
 /-- An assigned call to a local whose shape `wrap_rt` drops (a one-word
     variable) is a tail call. -/
@@ -69,13 +71,16 @@ example :
 
 /-- A known handler on an unknown destination keeps only the handler, and
     the handler setup loads the handler variable's slots from the global
-    return area (`assignRet`). -/
+    return area (`exp_hdl`), at word indices 0 and 1 even when
+    `bytesInWord = 8`. -/
 example :
     compileProg handlerContext
       (.call (some (some (.local, "missing"),
         some ("E", "pair", .skip))) "f" []) =
-      .call (some ([], some (9, .seq (assignRet 1 [0, 1]) .skip))) "f" [] := by
+      .call (some ([], some (9,
+        .seq (.seq (.assign 0 (.loadGlob 0))
+          (.seq (.assign 1 (.loadGlob 1)) .skip)) .skip))) "f" [] := by
   simp [compileProg, compileArgs, callDestinationNames,
-    handlerContext, lookupInfo]
+    wrapRt, expHdl, loadGlobals, crepNestedSeq, handlerContext, lookupInfo]
 
 end Flapjack

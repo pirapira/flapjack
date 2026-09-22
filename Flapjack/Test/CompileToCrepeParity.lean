@@ -97,6 +97,34 @@ def compFuncOracle : Bool :=
 
 #guard compFuncOracle
 
+def compileToCrepePairContext : CompileContext Nat :=
+  { vars := [], functions := [], exceptions := [("E", 0)],
+    maxVar := 0, bytesInWord := 8 }
+
+def compileToCrepePairDecls : List (Decl Nat) :=
+  [.exnDecl "E" (.comb [.one, .one]),
+   .function
+     { name := "f", inline := false, exported := false, params := [],
+       body := .raise "E" (.rStruct [.const 7, .const 9]),
+       returnShape := .one }]
+
+/-! Direct `raise_pair` result from `compile_to_crep_probe.out`.  In
+    particular, the Crep global return area is word-indexed (0, 1), even when
+    the target byte width is 8. -/
+def pairRaiseOracle : Bool :=
+  match compileToCrep compileToCrepePairContext compileToCrepePairDecls with
+  | [{ name := "f", params := [],
+       body := .seq
+         (.dec 1 (.const 7)
+           (.dec 2 (.const 9)
+             (.seq (.storeGlob 0 (.var 1))
+               (.seq (.storeGlob 1 (.var 2)) .skip))))
+         (.raise 0),
+       returnShape := .one }] => true
+  | _ => false
+
+#guard pairRaiseOracle
+
 /-! The fixture is the direct HOL evaluation of
     `pan_to_crep$compile_to_crep` on the same exception/function declaration.
     `compileToCrep` preserves the source function name, flattened parameter
@@ -132,6 +160,6 @@ def runChecks : IO Bool := do
     IO.println "PASS compile_to_crep raised constant source parity"
   else
     IO.println "FAIL compile_to_crep parity"
-  pure (parityGuard && crepVarsOracle)
+  pure (parityGuard && pairRaiseOracle && crepVarsOracle)
 
 end Flapjack.Test.CompileToCrepeParity

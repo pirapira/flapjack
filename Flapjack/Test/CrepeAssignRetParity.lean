@@ -26,18 +26,18 @@ def isTwo : CrepProg Nat → Bool
   | _ => false
 
 def parityGuard : Bool :=
-  isEmpty (assignRet 1 []) &&
-  isOne (assignRet 1 [1]) &&
-  isTwo (assignRet 1 [1, 2])
+  isEmpty (assignRet []) &&
+  isOne (assignRet [1]) &&
+  isTwo (assignRet [1, 2])
 
 #eval parityGuard
 #guard parityGuard
 
 def runChecks : IO Bool := do
   let results := [
-    isEmpty (assignRet 1 []),
-    isOne (assignRet 1 [1]),
-    isTwo (assignRet 1 [1, 2])]
+    isEmpty (assignRet []),
+    isOne (assignRet [1]),
+    isTwo (assignRet [1, 2])]
   match results with
   | [empty, one, two] =>
       if empty then IO.println "PASS crep assign_ret empty" else IO.println "FAIL crep assign_ret empty"

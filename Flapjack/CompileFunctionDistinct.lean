@@ -33,7 +33,7 @@ termination_by declarations => sizeOf declarations
    declaration-name projection.  This is the name-distinctness premise needed
    by the complete `compile_prog`/inline boundary. -/
 theorem compileFunctionsSource_map_name
-    [BEq α] [OfNat α 0] [Add α]
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (declarations : List (Decl α)) :
     (compileFunctionsSource context declarations).map CompiledFunction.name =
       functionDeclarationNames declarations := by
@@ -58,7 +58,7 @@ theorem compileFunctionsSource_map_name
     remain paired.  This is the indexed table-provenance fact needed before
     lifting source state semantics through `compile_to_crep`. -/
 theorem compileFunctionsSource_getElem?_origin
-    [BEq α] [OfNat α 0] [Add α]
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (declarations : List (Decl α))
     {n : Nat} {function : CompiledFunction α}
     (hcompiled : (compileFunctionsSource context declarations)[n]? = some function) :
@@ -104,7 +104,7 @@ theorem compileFunctionsSource_getElem?_origin
 
 /-! The same indexed provenance at the public `compileToCrep` boundary. -/
 theorem compileToCrep_getElem?_origin
-    [BEq α] [OfNat α 0] [Add α]
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (declarations : List (Decl α))
     {n : Nat} {function : CompiledFunction α}
     (hcompiled : (compileToCrep context declarations)[n]? = some function) :
@@ -117,7 +117,7 @@ theorem compileToCrep_getElem?_origin
   simpa [compileToCrep] using hcompiled
 
 theorem compileToCrep_names_nodup
-    [BEq α] [OfNat α 0] [Add α]
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (declarations : List (Decl α))
     (hnodup : (functionDeclarationNames declarations).Nodup) :
     (compileToCrep context declarations).map CompiledFunction.name |>.Nodup := by
@@ -140,7 +140,7 @@ theorem functionDeclarationNames_eq_functionDeclarations_map_name
       cases declaration <;> simp [functionDeclarationNames, functionDeclarations, ih]
 
 theorem compileToCrep_names_nodup_of_functionDeclarations
-    [BEq α] [OfNat α 0] [Add α]
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (declarations : List (Decl α))
     (hnodup : ((functionDeclarations declarations).map
       (fun declaration => declaration.name)).Nodup) :
@@ -153,7 +153,7 @@ theorem compileToCrep_names_nodup_of_functionDeclarations
    `compileToCrep` boundary exposes those slots as `List.range`, so this
    invariant is independent of function-body lowering. -/
 theorem compileFunctionsSource_params_nodup
-    [BEq α] [OfNat α 0] [Add α]
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (declarations : List (Decl α)) :
     ∀ function ∈ compileFunctionsSource context declarations,
       function.params.Nodup := by
@@ -175,7 +175,7 @@ theorem compileFunctionsSource_params_nodup
           simpa [compileFunctionsSource] using ih
 
 theorem compileToCrep_params_nodup
-    [BEq α] [OfNat α 0] [Add α]
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (declarations : List (Decl α)) :
     ∀ function ∈ compileToCrep context declarations,
       function.params.Nodup := by

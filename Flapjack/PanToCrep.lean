@@ -1,3 +1,4 @@
+import Flapjack.HolRef
 import Flapjack.Crepe
 import Flapjack.Static
 
@@ -65,6 +66,7 @@ def compilePanOp : PanOp → CrepOp
 
     A known variable is initialized from the global return area, one word per
     flattened local, and the assignments are nested in source order. -/
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "exp_hdl_def"]
 def expHdl [OfNat α 0] [OfNat α 1] [Add α]
     (vars : InfoMap (Shape × List Nat)) (name : VarName) : CrepProg α :=
   match lookupInfo name vars with
@@ -72,13 +74,14 @@ def expHdl [OfNat α 0] [OfNat α 1] [Add α]
   | some (_, names) =>
       crepNestedSeq
         (List.zipWith (fun destination source => .assign destination source)
-          names (loadGlobals 0 1 names.length))
+          names (loadGlobals 0 names.length))
 
 /-! Faithful port of `pan_to_crep$ret_var` from
     `cakeml/pancake/pan_to_crepScript.sml:114-119`.
 
     A return variable exists only for a one-word shape.  Pancake's `oHD`
     operation supplies the first flattened destination when one is present. -/
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "ret_var_def"]
 def retVar (shape : Shape) (names : List Nat) : Option Nat :=
   match shape with
   | .one => names.head?
@@ -104,12 +107,13 @@ def shapeVars (shapes : List Shape) (values : List α) : List (Shape × List α)
 
     Only a multi-word `Comb` needs a handler that copies the returned global
     words into its flattened local destinations. -/
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "ret_hdl_def"]
 def retHdl [OfNat α 0] [OfNat α 1] [Add α]
     (shape : Shape) (names : List Nat) : CrepProg α :=
   match shape with
   | .one => .skip
   | .comb fields =>
-      if 1 < Shape.shapeSize (.comb fields) then assignRet (1 : α) names
+      if 1 < Shape.shapeSize (.comb fields) then assignRet names
       else .skip
   | .named _ => .skip
 

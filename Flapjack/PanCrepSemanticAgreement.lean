@@ -2259,34 +2259,38 @@ theorem PanValuePcSemanticClockEvidence.crossClockNormalOrRaisedResultRelWithCon
     simpa [houtcome, hresult, panOutcomeToPcResult, crepControlToPcResult]
       using hraisedRel.1
 
-/-! Package the normal/raised branch dispatcher over all source and
-    target clocks.  This is the pairwise context-coded result adapter consumed
-    by the Cake declaration induction: raised pairs retain their exception
-    lookup, while both branches return the strengthened target state relation. -/
+/-! Lift the branch dispatcher over the arbitrary clock family used by
+    `state_rel_imp_semantics_to_crep`.  This is the result-relation half of the
+    top-level evaluator instantiation: all per-clock input/output relations
+    and the constructor witness remain arguments, while the theorem supplies
+    the context-coded result relation for every clock pair. -/
 theorem panValuePcResultRelWithContextCode_of_pairwise_normalOrRaised_evidence
+    {α σ : Type}
     [BEq α] [OfNat α 0] [Add α]
-    (structs : StructContext) (context : CompileContext α) (program : Prog α)
-    (sourceEvaluate : PanValuePcEvaluator α)
-    (targetEvaluate : CrepPcEvaluator α)
-    (codeRel : PanValuePcCodeRel α)
-    (excpRel : PanValuePcExceptionShapeRel α)
-    (exceptionCode : ExceptionId → Option α)
-    (globalsLookup : CrepState α → PanValue α → Option (List α))
-    (exceptionRel : ExceptionId → PanValue α → α → Prop)
-    (panHooks : PanSemanticsHooks α σ)
-    (crepHooks : CrepSemanticsHooks α)
+    {structs : StructContext} {context : CompileContext α}
+    {program : Prog α}
+    {sourceEvaluate : PanValuePcEvaluator α}
+    {targetEvaluate : CrepPcEvaluator α}
+    {codeRel : PanValuePcCodeRel α}
+    {excpRel : PanValuePcExceptionShapeRel α}
+    {exceptionRel : ExceptionId → PanValue α → α → Prop}
+    {exceptionCode : ExceptionId → Option α}
+    {globalsLookup : CrepState α → PanValue α → Option (List α)}
+    {panHooks : PanSemanticsHooks α σ}
+    {crepHooks : CrepSemanticsHooks α}
     (hcorrect : PanValuePcCompileCorrectWithContextCode sourceEvaluate
       targetEvaluate codeRel excpRel exceptionCode globalsLookup program)
-    (hevidence : ∀ clock, PanValuePcSemanticClockEvidence structs context program
-      clock sourceEvaluate targetEvaluate codeRel excpRel exceptionRel
-      exceptionCode globalsLookup panHooks crepHooks)
+    (hevidence : ∀ clock : Nat,
+      PanValuePcSemanticClockEvidence structs context program clock
+        sourceEvaluate targetEvaluate codeRel excpRel exceptionRel exceptionCode
+        globalsLookup panHooks crepHooks)
     (hinputCodeRel : ∀ (sourceClock targetClock : Nat),
       codeRel context (hevidence sourceClock).sourceInput.code
         (hevidence targetClock).targetInput.code)
     (hinputExcpRel : ∀ (sourceClock targetClock : Nat),
       excpRel context (hevidence sourceClock).sourceInput.eshapes
         (hevidence targetClock).targetInput.eshapes)
-    (hstateRel : ∀ (sourceClock targetClock : Nat),
+    (hinputStateRel : ∀ (sourceClock targetClock : Nat),
       panValueCrepStateRelWithContext structs context
         (hevidence sourceClock).sourceInput.locals
         (hevidence sourceClock).sourceInput.globals
@@ -2321,8 +2325,9 @@ theorem panValuePcResultRelWithContextCode_of_pairwise_normalOrRaised_evidence
   exact PanValuePcSemanticClockEvidence.crossClockNormalOrRaisedResultRelWithContextCode_of_stateRelWithContext
     hcorrect sourceClock targetClock (hevidence sourceClock) (hevidence targetClock)
     (hinputCodeRel sourceClock targetClock) (hinputExcpRel sourceClock targetClock)
-    (hstateRel sourceClock targetClock) (houtputCodeRel sourceClock targetClock)
-    (houtputExcpRel sourceClock targetClock) (hbranch sourceClock targetClock)
+    (hinputStateRel sourceClock targetClock)
+    (houtputCodeRel sourceClock targetClock) (houtputExcpRel sourceClock targetClock)
+    (hbranch sourceClock targetClock)
 
 theorem panCrepSemanticAgreement_of_pcCompileCorrectWithContextCode_pairwise_evidence
     [BEq α] [OfNat α 0] [Add α]

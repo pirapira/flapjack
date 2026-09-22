@@ -122,4 +122,52 @@ theorem crepContextSlot_extended_or_gt [BEq String]
       have hslotsEq : slots = queriedSlots := congrArg Prod.snd hpair
       exact Or.inr (hslots x (by rw [hslotsEq]; exact hx))
 
+/-! The declaration branch of Cake's
+    `not_mem_context_assigned_mem_gt` (`pan_to_crepProofScript.sml:1260`):
+    once the recursive body has no assigned free occurrence of `x`, the fresh
+    slots introduced by the declaration nest cannot introduce one either. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_dec
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (name : VarName) (shape : Shape)
+    (value : Exp α) (body : Prog α) (x : Nat)
+    (expressions : List (CrepExp α)) (valueShape : Shape)
+    (hvalue : compileExp context value = (expressions, valueShape))
+    (hbody : x ∉ crepAssignedFreeVars
+      (compileProg
+        { context with
+          vars := (name, (valueShape, allocatedNames context valueShape)) :: context.vars
+          maxVar := context.maxVar + Shape.shapeSize valueShape } body)) :
+    x ∉ crepAssignedFreeVars (compileProg context (.dec name shape value body)) := by
+  simp only [compileProg, hvalue]
+  by_cases hlength : (allocatedNames context valueShape).length = expressions.length
+  · rw [if_pos hlength]
+    exact not_mem_crepAssignedFreeVars_nestedDecs
+      (allocatedNames context valueShape) expressions _ hlength hbody
+  · simp [hlength, crepAssignedFreeVars]
+
+/-! The declaration-call branch has the same shape as the Cake proof's
+    declaration nest: the generated return slots are bound by `nestedDecs`,
+    leaving only the recursively compiled body as a possible assigned-free
+    source. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_decCall
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (name : VarName) (shape : Shape)
+    (function : FunName) (arguments : List (Exp α)) (body : Prog α) (x : Nat)
+    (hbody : x ∉ crepAssignedFreeVars
+      (compileProg
+        { context with
+          vars := (name, (shape, allocatedNames context shape)) :: context.vars
+          maxVar := context.maxVar + Shape.shapeSize shape } body))
+    (hfresh : x ∉ allocatedNames context shape) :
+    x ∉ crepAssignedFreeVars
+      (compileProg context (.decCall name shape function arguments body)) := by
+  simp only [compileProg]
+  apply not_mem_crepAssignedFreeVars_nestedDecs
+  · simp
+  · simp only [crepAssignedFreeVars, List.mem_append]
+    intro hx
+    rcases hx with hx | hx
+    · exact hfresh hx
+    · exact hbody hx
+
 end Flapjack

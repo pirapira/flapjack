@@ -651,6 +651,14 @@ example :
       some [.storeByteOffset 4 5 (0 - BitVec.ofNat 64 8)] := by
   decide
 
+/- Cake's lower signed-12 endpoint remains a direct width-specific Store;
+   the subtracting carrier must encode `-2048`, not materialize the address. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨4, [.asm (.stackMemSub .store32 4 5 2048) [] 0]⟩ =
+      some [.store32Offset 4 5 (0 - BitVec.ofNat 64 2048)] := by
+  decide
+
 /- The largest positive signed-12 displacement remains a direct load32. -/
 example :
     compileLabSection (width := 64) { services := [] }

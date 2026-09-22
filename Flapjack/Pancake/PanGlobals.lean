@@ -1,3 +1,4 @@
+import Flapjack.HolRef
 import Flapjack.Pancake.PanStructs
 import Flapjack.Pancake.PanSimp
 
@@ -1674,11 +1675,12 @@ theorem globalCompileDecs_filter_isDecl [BEq String] [Add α] [Mul α]
     globalCompileInitializers_filter_isDecl]
   refine ⟨rfl, ?_, ?_, rfl⟩ <;> simp [globalDeclsFilter]
 
-/-! The start-function form of CakeML's `pan_globals$compile_top_def`
-    (`pan_globalsScript.sml:236`).  The existing `globalCompileTop` below
-    exposes the lower-level context pass; this wrapper models the source
-    entry-point result, including the synthesized tail-calling function. -/
-def globalCompileTopForStart [BEq String] [Add α] [Mul α]
+/-! Successful-start helper for Flapjack's top-level global compiler. This
+    Option-valued helper is used by invariants that require a named start
+    function to exist. HOL's public `compile_top` is total and returns `[]`
+    when the start function is absent; `globalCompileTopForStart` below
+    implements that behavior. -/
+def globalCompileTopForStartSome [BEq String] [Add α] [Mul α]
     (bytesInWord : α) (fromNat : Nat → α) (declarations : List (Decl α))
     (start : FunName) : Option (List (Decl α)) :=
   match globalFindFunction start declarations with
@@ -1708,6 +1710,27 @@ def globalCompileTopForStart [BEq String] [Add α] [Mul α]
               (.call none renamedStart parameters)
             returnShape := entry.returnShape }
       some (compiled.exceptions ++ [newMain] ++ compiled.functions)
+
+/-! Generalized total compiler analogue. Its word size and natural-number
+    conversion are explicit so Flapjack callers can use different targets; it
+    is not itself the exact HOL `compile_top` interface. The fixed-word
+    `globalCompileTopCake` wrapper below is the exact-shaped interface. -/
+def globalCompileTopForStart [BEq String] [Add α] [Mul α]
+    (bytesInWord : α) (fromNat : Nat → α) (declarations : List (Decl α))
+    (start : FunName) : List (Decl α) :=
+  (globalCompileTopForStartSome bytesInWord fromNat declarations start).getD []
+
+/-! HOL's `compile_top` fixes its compiler context to
+    `bytes_in_word` and `n2w`. For a word of `width` bits, those are represented
+    by `width / 8` and `BitVec.ofNat width` respectively. This wrapper keeps
+    those choices out of the caller interface while remaining polymorphic in
+    the HOL word width. -/
+@[hol "cakeml/pancake/pan_globalsScript.sml" "compile_top_def"]
+def globalCompileTopCake [BEq String] [Add (BitVec width)] [Mul (BitVec width)]
+    (declarations : List (Decl (BitVec width))) (start : FunName) :
+    List (Decl (BitVec width)) :=
+  globalCompileTopForStart (BitVec.ofNat width (width / 8))
+    (BitVec.ofNat width) declarations start
 
 theorem globalDecls_all_or_of_all_left (predicate other : Decl α → Bool)
     (declarations : List (Decl α))
@@ -1753,27 +1776,10 @@ theorem globalCompileDecs_result_all_function_or_exception [BEq String] [Add α]
   · exact globalDecls_all_or_of_all_right globalDeclIsFunction
       globalDeclIsException _ (globalDeclsFilter_all globalDeclIsFunction _)
 
-theorem globalCompileTopForStart_all_function_or_exception [BEq String] [Add α]
-    [Mul α] (bytesInWord : α) (fromNat : Nat → α)
-    (declarations : List (Decl α)) (start : FunName) (compiled : List (Decl α))
-    (hcompile : globalCompileTopForStart bytesInWord fromNat declarations start =
-      some compiled) :
-    compiled.all
-      (fun declaration => globalDeclIsFunction declaration ||
-        globalDeclIsException declaration) = true := by
-  unfold globalCompileTopForStart at hcompile
-  cases hfind : globalFindFunction start declarations with
-  | none => simp [hfind] at hcompile
-  | some entry =>
-      simp only [hfind, Option.some.injEq] at hcompile
-      subst hcompile
-      exact globalCompileDecs_result_all_function_or_exception _ _ _
-        (by simp [globalDeclIsFunction])
-
-/-! Counterpart of the exception projection of Cake's `compile_top`
-    (`pan_globalsProofScript.sml:2974`): the global pass preserves the
-    exception table exactly, so `exceptions (compile_top code start)` is
-    `exceptions code`. -/
+/-! Flapjack stage invariant: compiling declarations preserves their exception
+    projection. This supports top-level exception reasoning but is not itself
+    a port of Cake's `exceptions_compile_top`, which also assumes the
+    requested start function is present. -/
 theorem exceptionEntries_globalCompileDecls [BEq String] [Add α] [Mul α]
     (context : GlobalPassContext α) (declarations : List (Decl α)) :
     exceptionEntries (globalCompileDecls context declarations) =
@@ -1801,13 +1807,17 @@ theorem exceptionEntries_globalResortDecls (declarations : List (Decl α)) :
     exceptionEntries_filter_name, exceptionEntries_filter_exception,
     exceptionEntries_filter_global, exceptionEntries_filter_function]
 
+/-! Successful-start helper lemma for Flapjack's exception projection. The
+    Option premise is intentionally about `globalCompileTopForStartSome`; the
+    total HOL `compile_top` returns no declarations when the start is absent,
+    so exception preservation for that branch is not claimed. -/
 theorem globalCompileTopForStart_exceptionEntries [BEq String] [Add α] [Mul α]
     (bytesInWord : α) (fromNat : Nat → α) (declarations : List (Decl α))
     (start : FunName) (compiled : List (Decl α))
-    (hcompile : globalCompileTopForStart bytesInWord fromNat declarations start =
+    (hcompile : globalCompileTopForStartSome bytesInWord fromNat declarations start =
       some compiled) :
     exceptionEntries compiled = exceptionEntries declarations := by
-  unfold globalCompileTopForStart at hcompile
+  unfold globalCompileTopForStartSome at hcompile
   cases hfind : globalFindFunction start declarations with
   | none => simp [hfind] at hcompile
   | some entry =>
@@ -1949,14 +1959,16 @@ theorem functions_globalRenameDecls_map_fst [BEq String] (source target : FunNam
   simp only [functions_globalRenameDecls, List.map_map]
   rfl
 
+/-! Successful-start helper lemma for function-name uniqueness. This uses the
+    Option-valued found-start helper, not the total `compile_top` interface. -/
 theorem globalCompileTopForStart_names_nodup [BEq String] [LawfulBEq String]
     [Add α] [Mul α] (bytesInWord : α) (fromNat : Nat → α)
     (declarations : List (Decl α)) (start : FunName) (compiled : List (Decl α))
-    (hcompile : globalCompileTopForStart bytesInWord fromNat declarations start =
+    (hcompile : globalCompileTopForStartSome bytesInWord fromNat declarations start =
       some compiled)
     (hnodup : ((functions declarations).map (fun entry => entry.1)).Nodup) :
     ((functions compiled).map (fun entry => entry.1)).Nodup := by
-  unfold globalCompileTopForStart at hcompile
+  unfold globalCompileTopForStartSome at hcompile
   cases hfind : globalFindFunction start declarations with
   | none => simp [hfind] at hcompile
   | some entry =>
@@ -2104,15 +2116,16 @@ theorem sizeOfEids_globalCompileDecs_functions [BEq String] [Add α] [Mul α]
   simp only [globalCompileDecs]
   exact sizeOfEids_globalDeclsFilter_isFunction _
 
-/-- Cake's `size_of_eids_compile_top`
-    (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:364`). -/
+/-! Successful-start helper lemma for exception-identifier counts. The
+    successful-start condition is explicit because the total HOL `compile_top`
+    discards declarations on a missing start function. -/
 theorem globalCompileTopForStart_sizeOfEids [BEq String] [Add α] [Mul α]
     (bytesInWord : α) (fromNat : Nat → α) (declarations : List (Decl α))
     (start : FunName) (compiled : List (Decl α))
-    (hcompile : globalCompileTopForStart bytesInWord fromNat declarations start =
+    (hcompile : globalCompileTopForStartSome bytesInWord fromNat declarations start =
       some compiled) :
     sizeOfEids compiled = sizeOfEids declarations := by
-  unfold globalCompileTopForStart at hcompile
+  unfold globalCompileTopForStartSome at hcompile
   cases hfind : globalFindFunction start declarations with
   | none => simp [hfind] at hcompile
   | some entry =>

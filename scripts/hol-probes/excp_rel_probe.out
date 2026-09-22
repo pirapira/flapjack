@@ -1,0 +1,16 @@
+empty_maps=∀e e' n n'. T
+
+same_domain_injective=∀e e' n n'.
+  (if «F» = e then SOME 1w else if «E» = e then SOME 0w else NONE) = SOME n ∧
+  (if «F» = e' then SOME 1w else if «E» = e' then SOME 0w else NONE) =
+  SOME n' ∧ n = n' ⇒
+  e = e'
+
+domain_mismatch=F
+
+noninjective_compiler_codes=∀e e' n n'.
+  (if «F» = e then SOME 0w else if «E» = e then SOME 0w else NONE) = SOME n ∧
+  (if «F» = e' then SOME 0w else if «E» = e' then SOME 0w else NONE) =
+  SOME n' ∧ n = n' ⇒
+  e = e'
+

@@ -157,15 +157,23 @@ theorem crepExpVars_var {α : Type} (name : Nat) :
     crepExpVars (α := α) (.var name) = [name] := by
   simp [crepExpVars]
 
-/-- Faithful port of Cake `crepProps$map_var_cexp_eq_var`
-    (`cakeml/pancake/semantics/crepPropsScript.sml:227`): mapping `Var` over a
-    variable list and flattening the variables recovers the list. -/
-theorem map_var_crepExpVars_eq {α : Type} (names : List Nat) :
-    (names.map (CrepExp.var (α := α))).flatMap crepExpVars = names := by
-  induction names with
-  | nil => rfl
-  | cons name names ih => simp [crepExpVars_var, ih]
+/-- The fixed machine byte width `byte$bytes_in_word` that Cake's
+    `crepLang$load_shape` uses for its stride
+    (`cakeml/pancake/crepLangScript.sml:82-86`).  Cake derives it from the word
+    type as `n2w (dimindex (:'a) DIV 8)`; Flapjack's value type is abstract, so a
+    target supplies the same fixed constant through an instance, exactly as
+    `[OfNat α 1]` supplies the fixed increment of `load_globals`. -/
+class CrepBytesInWord (α : Type u) where
+  bytesInWord : α
 
+/-- The RISC-V style instance: a `BitVec w` word has `w / 8` bytes. -/
+instance bitVecCrepBytesInWord (w : Nat) : CrepBytesInWord (BitVec w) where
+  bytesInWord := BitVec.ofNat w (w / 8)
+
+/-- General-stride loading used by the Flapjack pipeline.  Cake's
+    `crepLang$load_shape` fixes the stride to `byte$bytes_in_word`; the pipeline
+    passes the stride from its compile context, so this remains Flapjack-specific
+    infrastructure.  The faithful fixed-width port is `loadShapeBytes`. -/
 def loadShape [BEq α] [OfNat α 0] [Add α]
     (address stride : α) (count : Nat) (value : CrepExp α) : List (CrepExp α) :=
   match count with
@@ -174,14 +182,45 @@ def loadShape [BEq α] [OfNat α 0] [Add α]
       let loaded := if address == 0 then .load value else .load (.op .add [value, .const address])
       loaded :: loadShape (address + stride) stride count value
 
-/-- Original-domain counterpart of Cake's `length_load_shape_eq_shape`
-    (`cakeml/pancake/semantics/crepPropsScript.sml:30`). -/
-theorem loadShape_length [BEq α] [OfNat α 0] [Add α]
-    (address stride : α) (count : Nat) (value : CrepExp α) :
-    (loadShape address stride count value).length = count := by
+/-- Faithful port of `crepLang$load_shape_def`
+    (`cakeml/pancake/crepLangScript.sml:82-86`): load `count` consecutive words
+    starting at `address`, stepping by the fixed machine byte width.  Unlike the
+    pipeline's `loadShape`, the stride is not a parameter; it is the fixed
+    `byte$bytes_in_word` supplied by the `CrepBytesInWord` instance. -/
+@[hol "cakeml/pancake/crepLangScript.sml" "load_shape_def"]
+def loadShapeBytes [BEq α] [OfNat α 0] [Add α] [CrepBytesInWord α]
+    (address : α) (count : Nat) (value : CrepExp α) : List (CrepExp α) :=
+  match count with
+  | 0 => []
+  | count + 1 =>
+      let loaded := if address == 0 then .load value else .load (.op .add [value, .const address])
+      loaded :: loadShapeBytes (address + CrepBytesInWord.bytesInWord) count value
+
+/-- Checked invariant connecting the pipeline's parameterized `loadShape` to the
+    faithful fixed-width `loadShapeBytes`: when the explicit stride is the
+    machine byte width, the two agree.  The production `.load` lowering passes
+    `context.bytesInWord` as that stride, so the bridge
+    `compileExp_load_eq_loadShapeBytes` below certifies its fixed-width
+    behavior.  This is Flapjack infrastructure; HOL has no parameterized
+    `load_shape`. -/
+theorem loadShape_eq_loadShapeBytes_of_stride_eq [BEq α] [OfNat α 0] [Add α]
+    [CrepBytesInWord α] (address stride : α) (count : Nat) (value : CrepExp α)
+    (hstride : stride = CrepBytesInWord.bytesInWord) :
+    loadShape address stride count value = loadShapeBytes address count value := by
+  subst hstride
   induction count generalizing address with
   | zero => rfl
-  | succ count ih => simp [loadShape, ih]
+  | succ count ih => simp [loadShape, loadShapeBytes, ih]
+
+/-- The RISC-V compile context byte width is the fixed machine byte width: the
+    pipeline entry points supply `8` for the 64-bit word, which is exactly
+    `byte$bytes_in_word` (`n2w (dimindex (:'a) DIV 8)`). -/
+theorem riscvBytesInWord_eq : (8 : BitVec 64) = CrepBytesInWord.bytesInWord := rfl
+
+/-- The 32-bit oracle probe width is the fixed machine byte width: the checked-in
+    `crep_load_shape_probe.out` was produced with `32 word` values, for which
+    `byte$bytes_in_word = 4`. -/
+theorem probeBytesInWord_eq : (4 : BitVec 32) = CrepBytesInWord.bytesInWord := rfl
 
 /-- Original-domain counterpart of Cake's `load_shape_el_rel`
     (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:114`): the `n`-th
@@ -386,43 +425,6 @@ def loadGlobals {α : Type u} [OfNat α 1] [Add α]
   | 0 => []
   | count + 1 => .loadGlob address :: loadGlobals (address + 1) count
 
-/-- Faithful port of Cake `crepProps$length_load_globals_eq_read_size`
-    (`cakeml/pancake/semantics/crepPropsScript.sml:467`). -/
-@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "length_load_globals_eq_read_size"]
-theorem loadGlobals_length {α : Type u} [OfNat α 1] [Add α]
-    (address : α) (count : Nat) :
-    (loadGlobals address count).length = count := by
-  induction count generalizing address with
-  | zero => rfl
-  | succ count ih => simp [loadGlobals, ih]
-
-/-- Faithful port of Cake `crepProps$el_load_globals_elem`
-    (`cakeml/pancake/semantics/crepPropsScript.sml:474`). -/
-@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "el_load_globals_elem"]
-theorem loadGlobals_getElem (address count n : Nat) (h : n < count) :
-    (loadGlobals address count)[n]? = some (.loadGlob (address + n)) := by
-  induction count generalizing address n with
-  | zero => simp at h
-  | succ count ih =>
-      cases n with
-      | zero => simp [loadGlobals]
-      | succ k =>
-          simp only [loadGlobals, List.getElem?_cons_succ]
-          rw [ih (address + 1) k (by omega)]
-          congr 1
-          simp [Nat.add_comm, Nat.add_left_comm]
-
-/-- Faithful port of Cake `crepProps$var_cexp_load_globals_empty`
-    (`cakeml/pancake/semantics/crepPropsScript.sml:698`): the loads generated by
-    `load_globals` contain no local variables. -/
-@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "var_cexp_load_globals_empty"]
-theorem loadGlobals_crepExpVars_empty {α : Type u} [OfNat α 1] [Add α]
-    (address : α) (count : Nat) :
-    (loadGlobals address count).flatMap crepExpVars = [] := by
-  induction count generalizing address with
-  | zero => simp [loadGlobals]
-  | succ count ih => simp [loadGlobals, ih, crepExpVars]
-
 /-- Faithful port of Cake `crepProps$assigned_free_vars_IMP_assigned_vars`
     (`cakeml/pancake/semantics/crepPropsScript.sml:373`): every free variable of
     a program is an assigned variable of that program. -/
@@ -481,18 +483,6 @@ theorem crepAssignedFreeVars_nestedSeq_stores [BEq α] [OfNat α 0] [Add α]
   | nil => simp [stores, crepNestedSeq, crepAssignedFreeVars]
   | cons value values ih =>
       simp [stores, crepNestedSeq, crepAssignedFreeVars, ih]
-
-/-- Faithful port of Cake `crepProps$assigned_free_vars_store_globals_empty`
-    (`cakeml/pancake/semantics/crepPropsScript.sml:458`). -/
-@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "assigned_free_vars_store_globals_empty"]
-theorem crepAssignedFreeVars_nestedSeq_storeGlobals {α : Type u}
-    [OfNat α 1] [Add α]
-    (address : α) (values : List (CrepExp α)) :
-    crepAssignedFreeVars (crepNestedSeq (storeGlobals address values)) = [] := by
-  induction values generalizing address with
-  | nil => simp [storeGlobals, crepNestedSeq, crepAssignedFreeVars]
-  | cons value values ih =>
-      simp [storeGlobals, crepNestedSeq, crepAssignedFreeVars, ih]
 
 /-- Faithful port of Cake `crepProps$assigned_vars_nested_decs_append`
     (`cakeml/pancake/semantics/crepPropsScript.sml:390`). -/
@@ -597,18 +587,6 @@ theorem crepAssignedVars_nestedSeq_stores [BEq α] [OfNat α 0] [Add α]
   | nil => simp [stores, crepNestedSeq, crepAssignedVars]
   | cons value values ih =>
       simp [stores, crepNestedSeq, crepAssignedVars, ih]
-
-/-- Faithful port of Cake `crepProps$assigned_vars_store_globals_empty`
-    (`cakeml/pancake/semantics/crepPropsScript.sml:449`). -/
-@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "assigned_vars_store_globals_empty"]
-theorem crepAssignedVars_nestedSeq_storeGlobals {α : Type u}
-    [OfNat α 1] [Add α]
-    (address : α) (values : List (CrepExp α)) :
-    crepAssignedVars (crepNestedSeq (storeGlobals address values)) = [] := by
-  induction values generalizing address with
-  | nil => simp [storeGlobals, crepNestedSeq, crepAssignedVars]
-  | cons value values ih =>
-      simp [storeGlobals, crepNestedSeq, crepAssignedVars, ih]
 
 @[hol "cakeml/pancake/crepLangScript.sml" "assign_ret_def"]
 def assignRet {α : Type u} [OfNat α 0] [OfNat α 1] [Add α]

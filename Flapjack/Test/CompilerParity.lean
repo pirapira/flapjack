@@ -7,6 +7,7 @@ import Flapjack.Test.PanShapeParity
 import Flapjack.Test.PanShapeVarsParity
 import Flapjack.Test.PanGetEidsParity
 import Flapjack.Test.PanWordParity
+import Flapjack.Test.PanEvaluateDeclsParity
 import Flapjack.Test.LabPositionParity
 import Flapjack.Test.PanOpParity
 import Flapjack.Test.PanFixedLoadParity
@@ -31,6 +32,7 @@ import Flapjack.Test.PanGlobalsNewMainNameParity
 import Flapjack.Test.PanGlobalsDecShapesParity
 import Flapjack.Test.PanGlobalsExpIdsParity
 import Flapjack.Test.PanGlobalsCompileTopForStartParity
+import Flapjack.Test.PanGlobalsCompileTopShapeWfParity
 import Flapjack.Test.CrepeDestConstParity
 import Flapjack.Test.CrepeDest2ExpParity
 import Flapjack.Test.CrepeMulConstParity
@@ -81,6 +83,8 @@ import Flapjack.Test.PanHProgRaiseParity
 import Flapjack.Test.PanValueFfiClockLe
 import Flapjack.Test.PanValueEvaluatorStability
 import Flapjack.Test.PanToCrepMaxListParity
+import Flapjack.Test.PanToCrepRelationsParity
+import Flapjack.Test.PanToCrepCodeRelParity
 import Flapjack.Test.PanHProgExtCallParity
 import Flapjack.Test.PanHProgStoreByteParity
 import Flapjack.Test.PanHProgStore32Parity
@@ -125,7 +129,6 @@ import Flapjack.Test.PanSimpParity
 import Flapjack.Test.PanProgramSimpParity
 import Flapjack.Test.PanValueWfParity
 import Flapjack.Test.CrepeCompileExpVariablesParity
-import Flapjack.Test.PanGlobalsSemanticsParity
 import Flapjack.Test.PanSimpOthersParity
 import Flapjack.Test.CrepProgIfParity
 import Flapjack.Test.CompileCrepOpParity
@@ -664,6 +667,8 @@ def main : IO Unit := do
     Flapjack.Test.CompileDefParity.runChecks,
     Flapjack.Test.CompileToCrepeParity.runChecks,
     Flapjack.Test.CompileProgParity.runChecks,
+    Flapjack.Test.PanToCrepRelationsParity.runChecks,
+    Flapjack.Test.PanToCrepCodeRelParity.runChecks,
     Flapjack.Test.PanSimpParity.runChecks,
     Flapjack.Test.CrepExitLoopParity.runChecks,
     Flapjack.Test.PanNbOpParity.runChecks,

@@ -13,7 +13,10 @@ provenance is recorded by `@[hol ...]` and checked by
 | `panStaticScript.sml` | `Flapjack/Pancake/PanStatic.lean` |
 | `pan_simpScript.sml` | `Flapjack/Pancake/PanSimp.lean` |
 | `pan_structsScript.sml` | `Flapjack/Pancake/PanStructs.lean` |
+| `proofs/pan_structsProofScript.sml` | `Flapjack/Pancake/Proofs/PanStructs.lean` |
 | `pan_globalsScript.sml` | `Flapjack/Pancake/PanGlobals.lean` |
+| `proofs/pan_globalsProofScript.sml` | `Flapjack/Pancake/Proofs/PanGlobals.lean`, `PanGlobals/ShapeInfrastructure.lean` |
+| `proofs/pan_to_crepProofScript.sml` | `Flapjack/Pancake/Proofs/PanToCrep.lean` |
 | `pan_to_crepScript.sml` | `Flapjack/Pancake/PanToCrep.lean`, `PanToCrep/Compile.lean` |
 | `crepLangScript.sml` | `Flapjack/Pancake/CrepLang.lean` |
 | `crep_arithScript.sml` | `Flapjack/Pancake/CrepArith.lean` |
@@ -25,11 +28,14 @@ provenance is recorded by `@[hol ...]` and checked by
 | `loop_to_wordScript.sml` | `Flapjack/Pancake/LoopToWord.lean` |
 | `semantics/panSemScript.sml` | `Flapjack/Pancake/Semantics/PanSem.lean` |
 | `semantics/crepSemScript.sml` | `Flapjack/Pancake/Semantics/CrepSem.lean`, `CrepSem/Eval.lean` |
+| `semantics/crepPropsScript.sml` | `Flapjack/Pancake/Semantics/CrepProps.lean` |
 | `semantics/loopSemScript.sml` | `Flapjack/Pancake/Semantics/LoopSem.lean` |
 | `proofs/pan_simpProofScript.sml` | `Flapjack/Pancake/Proofs/PanSimp.lean`, `PanSimp/Evaluate.lean` |
 
 Additional helper, semantic, and proof modules still live at the old top
-level while their exact HOL counterparts and statement shapes are reviewed.
-In particular, placement under `Proofs` does not imply that a whole pass
-correctness theorem has been established. The remaining moves and review gate
-are tracked by beads `flapjack-pxn.18.3.1`–`flapjack-pxn.18.3.3`.
+Placement under `Proofs` does not imply that a whole pass correctness theorem
+has been established. For declaration-level provenance, use
+`scripts/check-hol-refs.py --mapping`; for untagged port candidates, use
+`scripts/next-hol-port.py`. Track individual gaps and progress in
+[GitHub issues](https://github.com/pirapira/flapjack/issues), not in this
+layout guide.

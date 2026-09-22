@@ -28,6 +28,33 @@ additionally probes `pan_op_def` at lines 191--193.
 `Flapjack.Test.LoopDecClockParity` probes `dec_clock_def` at lines 42--43 of
 the same source.
 `Flapjack.Test.LoopFixClockParity` probes `fix_clock_def` at lines 46--49.
+`Flapjack.Test.PanEvaluateDeclsParity` probes `evaluate_decls_def` at
+`cakeml/pancake/semantics/panSemScript.sml:814-835`, including each declaration
+constructor, ordered global updates, local clearing during initializer
+evaluation, an in-domain word load, function-code replacement, and
+shape/duplicate failure cases.
+`compile_def_probe.out` also records direct HOL evaluations of assigned Global
+call destinations through `pan_to_crep$compile`: absent lookups, the
+`One`/empty-list fallback, and inconsistent shape/name-list lengths. The
+matching Lean cases live in `Flapjack.Test.CompileDefParity`.
+`excp_rel_probe.out` and `ctxt_fc_probe.out` are direct EVALs from
+`pan_to_crepProofTheory`, paired with `Flapjack.Test.PanToCrepRelationsParity`.
+The `excp_rel` cases deliberately use a word-valued compiler-code map and a
+shape-valued source map, matching the definition's independent HOL value types.
+The `ctxt_fc` cases record `with_shape` slot slicing, ZIP truncation, and
+`MAX_LIST` on an empty name list.
+`code_rel_probe.out` records the HOL-inferred source/target code-map types,
+compiled parameter return, localisation outcomes, function-signature lookup,
+and target entry. The probe also proves matching and deliberately mismatching
+`code_rel` instances against `code_rel_def`; the corresponding Lean relation
+analogue tests live in `Flapjack.Test.PanToCrepCodeRelParity`. The Lean
+relation remains untagged until its list-backed compiler body is replaced by
+the exact HOL `compile` port tracked by bead `flapjack-pxn.18.3.1.4`.
+`pan_globals_compile_top_probe.out` records original Pancake HOL evaluation
+of `pan_globals$compile_top` for an absent start function (the total empty-list
+result), a present `main` entry, and a global initializer in a nonempty
+declaration list. Its Lean checks live in
+`Flapjack.Test.PanGlobalsCompileTopForStartParity`.
 The `longdiv_code_probe.out` fixture probes the original software LongDiv
 helper at `cakeml/compiler/backend/data_to_wordScript.sml:829-867` and the
 RISC-V target's deliberate LongDiv encoding rejection.
@@ -54,7 +81,12 @@ reviewer with HOL4 can rerun the command and inspect the diff. Each probe's
 declaration and source path make its reference boundary explicit. The script
 is incremental: a fixture is rerun only when its probe, the Pancake theory it
 observes, or the script itself is newer than that fixture. Delete a fixture
-when a forced regeneration is desired.
+when a forced regeneration is desired. To refresh one fixture while developing,
+set `HOL_PROBE_ONLY` to its probe filename, for example:
+
+```sh
+HOL_PROBE_ONLY=pan_globals_compile_top_probeScript.sml scripts/hol-probes/regenerate.sh
+```
 
 The checked-in source-facing compiler corpus at
 `scripts/parity-small-corpus.json` complements these semantic probes. Run
@@ -65,3 +97,9 @@ the CakeML semantic definition exercised by the fixture, and the P1 beads that
 own any current generated/user-code differences. The runner compares the
 complete runtime, generated-entry, and user-function sections; it does not
 normalize instruction bytes.
+
+The focused Pan-to-Crep fixtures are summarized in
+[`docs/PAN-TO-CREP-PARITY-COVERAGE.md`](../../docs/PAN-TO-CREP-PARITY-COVERAGE.md).
+CI validates that each listed direct-HOL case remains present in its committed
+probe output and in the corresponding Lean test with
+`scripts/pan-to-crep-coverage-report.py --check`.

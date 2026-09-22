@@ -2,14 +2,14 @@ import Flapjack.Pancake.PanGlobals
 import Flapjack.PanProgramSemantics
 
 /-!
-Counterpart of Cake's `compile_top_shape_wf` (`pan_globalsProofScript.sml:2458`).
-
-A successful declaration evaluation only installs function declarations whose
-parameter and return shapes are well formed in the struct context.  The global
-pass reassociates, filters and renames the declarations, and this file records
-that the start-function entry point therefore emits only declarations whose
-function shapes are well formed.  This is the shape invariant Cake's
-`state_rel_imp_semantics` needs for the compiled program.
+Reusable, Flapjack-specific shape infrastructure for the global pass. These
+predicates and helper lemmas describe Flapjack's `isWfShape` relation and
+value evaluator; they are not ports of Cake's `compile_top_shape_wf` because
+they do not use Cake's `evaluate_decls` premise. The faithful HOL theorems
+are proved in `Flapjack/Pancake/Proofs/PanGlobals.lean`; the
+`compile_top_shape_wf_nil` corollary remains open under bead
+`flapjack-pxn.18.3.2.2`. The helper lemmas are Flapjack-specific support and
+do not use the different value evaluator as evidence for the faithful port.
 -/
 
 namespace Flapjack
@@ -21,9 +21,10 @@ def panFunctionShapesWellFormed (structs : StructContext)
   declaration.params.all (fun parameter => isWfShape structs parameter.2) &&
     isWfShape structs declaration.returnShape
 
-/-- The declaration-level predicate of Cake's `compile_top_shape_wf`: function
-    declarations must have well-formed parameter and return shapes; every other
-    declaration satisfies it trivially. -/
+/-- A Flapjack declaration predicate requiring well-formed function parameter
+    and return shapes; every non-function declaration satisfies it trivially.
+    This represents the shape condition used by Cake's theorem, but its use in
+    Flapjack-specific results below does not port that theorem's statement. -/
 def panDeclShapesWellFormed (structs : StructContext)
     (declaration : Decl α) : Bool :=
   match declaration with
@@ -32,6 +33,9 @@ def panDeclShapesWellFormed (structs : StructContext)
 
 /-! Membership in a filtered list implies membership in the original list.
     (`mem_globalDeclsFilter` only reports the predicate.) -/
+/-- Flapjack-specific filter support: membership in its filtered list implies
+    membership in the original list. This generic fact has no separate HOL
+    theorem declaration. -/
 theorem mem_globalDeclsFilter_original {predicate : Decl α → Bool}
     {declaration : Decl α} {declarations : List (Decl α)}
     (hmem : declaration ∈ globalDeclsFilter predicate declarations) :
@@ -48,6 +52,7 @@ theorem mem_globalDeclsFilter_original {predicate : Decl α → Bool}
       · simp [hpred] at hmem
         exact List.mem_cons.mpr (Or.inr (ih hmem))
 
+/-- Flapjack-specific list-filter support; no separate HOL theorem is ported. -/
 theorem globalDeclsFilter_all_of_all (predicate other : Decl α → Bool)
     (declarations : List (Decl α))
     (hall : declarations.all other = true) :
@@ -55,6 +60,7 @@ theorem globalDeclsFilter_all_of_all (predicate other : Decl α → Bool)
   List.all_eq_true.mpr (fun declaration hmem =>
     List.all_eq_true.mp hall declaration (mem_globalDeclsFilter_original hmem))
 
+/-- Flapjack-specific predicate support; this is not a Cake theorem port. -/
 theorem panDeclShapesWellFormed_or_function (structs : StructContext)
     (declaration : Decl α) :
     (globalDeclIsFunction declaration ||
@@ -70,6 +76,8 @@ theorem panDeclShapesWellFormed_rename_update (structs : StructContext)
       panDeclShapesWellFormed structs (.function function) := by
   simp [panDeclShapesWellFormed, panFunctionShapesWellFormed]
 
+/-- Flapjack-specific support for the exception branch of its shape predicate;
+    it has no separate HOL theorem declaration. -/
 theorem globalDeclsFilter_isException_all_shapes (structs : StructContext)
     (declarations : List (Decl α)) :
     (globalDeclsFilter globalDeclIsException declarations).all
@@ -82,9 +90,10 @@ theorem globalDeclsFilter_isException_all_shapes (structs : StructContext)
   | exnDecl exception shape => simp [panDeclShapesWellFormed]
   | name struct fields => simp [globalDeclIsException] at hpred
 
-/-! Counterpart of Cake's `evaluate_decls_functions_wf` lifted to the whole
-    declaration list: a successful evaluation only admits well-formed function
-    shapes. -/
+/-- Flapjack-specific list invariant from its value evaluator's
+    function-shape result. It has no HOL reference because that evaluator is
+    not HOL `evaluate_decls`; this does not discharge the HOL
+    `compile_top_shape_wf` premise. -/
 theorem evalPanValueDeclarationsWithStructs_all_shapes
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
@@ -105,6 +114,8 @@ theorem evalPanValueDeclarationsWithStructs_all_shapes
   | exnDecl exception shape => simp [panDeclShapesWellFormed]
   | name struct fields => simp [panDeclShapesWellFormed]
 
+/-- Flapjack-specific lookup support; this representation-specific fact has
+    no separate HOL theorem declaration. -/
 theorem globalFindFunction_mem [BEq String] [LawfulBEq String]
     (name : FunName) (declarations : List (Decl α)) (entry : FunDecl α)
     (hfind : globalFindFunction name declarations = some entry) :
@@ -132,6 +143,8 @@ theorem globalFindFunction_mem [BEq String] [LawfulBEq String]
           rw [globalFindFunction.eq_def] at hfind
           exact List.mem_cons.mpr (Or.inr (ih hfind))
 
+/-- Flapjack-specific shape-filter invariant used by the open global-pass
+    proof; it is not a port of a HOL theorem. -/
 theorem globalResortDecls_all_shapes (structs : StructContext)
     (declarations : List (Decl α))
     (hsource : declarations.all (panDeclShapesWellFormed structs) = true) :
@@ -195,10 +208,8 @@ theorem globalRenameDecls_all_of_body_compiled [Add α] [Mul α]
   | exnDecl exception shape => rfl
   | name struct fields => rfl
 
-/-! Counterpart of the declaration-table part of Cake's `compile_top_shape_wf`:
-    the compiled exception and function tables, together with the synthesized
-    entry point, only contain declarations whose function shapes are well
-    formed. -/
+/-! Internal helper showing that the compiled exception/function tables and
+    synthesized entry point satisfy Flapjack's declaration-shape predicate. -/
 theorem globalCompileDecs_result_shapes_wf [BEq String] [LawfulBEq String]
     [Add α] [Mul α] (structs : StructContext) (context : GlobalPassContext α)
     (declarations : List (Decl α)) (extra : Decl α)
@@ -220,69 +231,5 @@ theorem globalCompileDecs_result_shapes_wf [BEq String] [LawfulBEq String]
   · simpa using hextra
   · exact globalCompileDecs_functions_all_of_predicate context declarations
       (panDeclShapesWellFormed structs) hsource
-
-/-- Counterpart of Cake's `compile_top_shape_wf`
-    (`pan_globalsProofScript.sml:2458`): if the declaration evaluation succeeds,
-    every function declaration emitted by the start-function entry point has
-    well-formed parameter and return shapes in the evaluation's struct context. -/
-theorem globalCompileTopForStart_shapes_wf
-    [BEq String] [LawfulBEq String] [Add α] [Mul α]
-    [BEq α] [OfNat α 0] [OfNat α 1] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (structs : StructContext) (state state' : PanValueProgramState α)
-    (declarations : List (Decl α)) (memoryAccess : Option (PanValueMemoryAccess α))
-    (bytesInWord : α) (fromNat : Nat → α) (start : FunName)
-    (compiled : List (Decl α))
-    (heval : evalPanValueDeclarationsWithStructs structs state declarations
-      memoryAccess = some state')
-    (hcompile : globalCompileTopForStart bytesInWord fromNat declarations start =
-      some compiled) :
-    compiled.all (panDeclShapesWellFormed structs) = true := by
-  have hsource := evalPanValueDeclarationsWithStructs_all_shapes structs state
-    state' declarations memoryAccess heval
-  unfold globalCompileTopForStart at hcompile
-  cases hfind : globalFindFunction start declarations with
-  | none => simp [hfind] at hcompile
-  | some entry =>
-      simp only [hfind, Option.some.injEq] at hcompile
-      subst hcompile
-      have hwf := evalPanValueDeclarationsWithStructs_functions_wf structs state
-        state' declarations memoryAccess heval
-        (globalFindFunction_mem start declarations entry hfind)
-      have hresort := globalResortDecls_all_shapes structs declarations hsource
-      have hrenamed : (globalRenameDecls start (globalNewMainName declarations)
-          (globalResortDecls declarations)).all
-          (panDeclShapesWellFormed structs) = true :=
-        globalRenameDecls_all_of_predicate start (globalNewMainName declarations)
-          (panDeclShapesWellFormed structs) (globalResortDecls declarations)
-          (List.all_eq_true.mpr
-            (fun declaration _ => panDeclShapesWellFormed_or_function structs declaration))
-          (globalResortDecls_all_of_renamed structs start
-            (globalNewMainName declarations) declarations hresort)
-      refine globalCompileDecs_result_shapes_wf structs _ _ _ ?_ ?_
-      · simp [panDeclShapesWellFormed, panFunctionShapesWellFormed, hwf.1, hwf.2]
-      · simpa [panDeclShapesWellFormed, panFunctionShapesWellFormed] using hrenamed
-
-/-- Counterpart of Cake's `compile_top_shape_wf_nil`
-    (`pan_globalsProofScript.sml:2495`): the empty-struct-context instance of
-    `compile_top_shape_wf`, stated with Cake's `is_wf_shape_nil` reading (here
-    `isWfShape []`). -/
-theorem globalCompileTopForStart_shapes_wf_nil
-    [BEq String] [LawfulBEq String] [Add α] [Mul α]
-    [BEq α] [OfNat α 0] [OfNat α 1] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (state state' : PanValueProgramState α) (declarations : List (Decl α))
-    (memoryAccess : Option (PanValueMemoryAccess α))
-    (bytesInWord : α) (fromNat : Nat → α) (start : FunName)
-    (compiled : List (Decl α))
-    (heval : evalPanValueDeclarationsWithStructs ([] : StructContext) state
-      declarations memoryAccess = some state')
-    (hcompile : globalCompileTopForStart bytesInWord fromNat declarations start =
-      some compiled) :
-    compiled.all (panDeclShapesWellFormed ([] : StructContext)) = true :=
-  globalCompileTopForStart_shapes_wf ([] : StructContext) state state'
-    declarations memoryAccess bytesInWord fromNat start compiled heval hcompile
 
 end Flapjack

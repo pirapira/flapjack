@@ -1,1 +1,5 @@
 return=Return [Const 7w]
+missing_global=Call NONE «f» []
+empty_one_global=Call NONE «f» []
+extra_names_global=Call (SOME ([4; 5],NONE)) «f» []
+missing_names_global=Call (SOME ([4],NONE)) «f» []

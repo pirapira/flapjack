@@ -1,4 +1,5 @@
 import Flapjack.HolRef
+import Flapjack.FiniteMap.Basic
 import Flapjack.Pancake.CrepLang
 import Flapjack.Pancake.PanStatic
 
@@ -20,6 +21,7 @@ structure CompileContext (α : Type u) where
   bytesInWord : α
   deriving Repr
 
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "cexp_heads_def"]
 def cexpHeads : List (List (CrepExp α)) → Option (List (CrepExp α))
   | [] => some []
   | expressions :: rest =>
@@ -51,6 +53,7 @@ theorem cexpHeads_eq_cexpHeadsSimp (fallback : CrepExp α)
           simp only [cexpHeads, ih, cexpHeadsSimp]
           split <;> simp_all
 
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "comp_field_def"]
 def compileField [OfNat α 0] (index : Nat) :
     List Shape → List (CrepExp α) → List (CrepExp α) × Shape
   | [], _ => ([.const 0], .one)
@@ -58,15 +61,18 @@ def compileField [OfNat α 0] (index : Nat) :
       if index = 0 then (expressions.take (Shape.shapeSize shape), shape)
       else compileField (index - 1) shapes (expressions.drop (Shape.shapeSize shape))
 
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "compile_panop_def"]
 def compilePanOp : PanOp → CrepOp
   | .mul => .mul
 
-/-! Faithful port of `pan_to_crep$exp_hdl` from
-    `cakeml/pancake/pan_to_crepScript.sml:106-112`.
+/-! Executable analogue of `pan_to_crep$exp_hdl` from
+    `cakeml/pancake/pan_to_crepScript.sml:106-112`. HOL takes a finite map and
+    uses `FLOOKUP`; this list-backed `InfoMap` helper uses first-match lookup,
+    so it is not tagged as the HOL definition. Bead `flapjack-pxn.18.3.1.6`
+    tracks the exact map-shaped port and executable bridge.
 
     A known variable is initialized from the global return area, one word per
     flattened local, and the assignments are nested in source order. -/
-@[hol "cakeml/pancake/pan_to_crepScript.sml" "exp_hdl_def"]
 def expHdl [OfNat α 0] [OfNat α 1] [Add α]
     (vars : InfoMap (Shape × List Nat)) (name : VarName) : CrepProg α :=
   match lookupInfo name vars with
@@ -75,6 +81,23 @@ def expHdl [OfNat α 0] [OfNat α 1] [Add α]
       crepNestedSeq
         (List.zipWith (fun destination source => .assign destination source)
           names (loadGlobals 0 names.length))
+
+/-! Faithful port of `pan_to_crep$exp_hdl` from
+    `cakeml/pancake/pan_to_crepScript.sml:106-112`.
+
+    A variable absent from the finite map produces no code; a present variable
+    is initialized from the global return area, one word per flattened local,
+    with the assignments nested in source order.  The second component of the
+    stored pair is the flattened word list; the shape is not consulted. -/
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "exp_hdl_def"]
+def expHdlFiniteMap [OfNat α 0] [OfNat α 1] [Add α]
+    (fm : FiniteMap VarName (Shape × List Nat)) (v : VarName) : CrepProg α :=
+  match FLOOKUP fm v with
+  | none => .skip
+  | some (_, names) =>
+      crepNestedSeq
+        (panMap2 (fun destination source => .assign destination source)
+          names (loadGlobals (0 : α) names.length))
 
 /-! Faithful port of `pan_to_crep$ret_var` from
     `cakeml/pancake/pan_to_crepScript.sml:114-119`.
@@ -89,8 +112,9 @@ def retVar (shape : Shape) (names : List Nat) : Option Nat :=
       if Shape.shapeSize (.comb fields) = 1 then names.head? else none
   | .named _ => none
 
-/-! Source-shaped port of CakeML Pancake's `shape_vars_def`
-    (`cakeml/pancake/pan_to_crepScript.sml:319-322`).  The source consumes the
+/-! Flapjack-only helper modeled on the commented-out `shape_vars_def` text
+    (`cakeml/pancake/pan_to_crepScript.sml:319-324`); HOL does not define this
+    function. The helper consumes the
     flattened word list one shape at a time: each result keeps exactly
     `size_of_shape sh` words, and the recursive call receives the remaining
     `DROP` suffix.  In particular, short input is not padded and excess input
@@ -122,6 +146,7 @@ def retHdl [OfNat α 0] [OfNat α 1] [Add α]
 
     The empty one-word return slot is normalized to no return slot; every
     other option is preserved unchanged. -/
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "wrap_rt_def"]
 def wrapRt : Option (Shape × List Nat) → Option (Shape × List Nat)
   | none => none
   | some (.one, []) => none
@@ -207,5 +232,22 @@ theorem compileExp_bytesInWord [BEq α] [OfNat α 0] [Add α]
     (context : CompileContext α) :
     compileExp context .bytesInWord = ([.const context.bytesInWord], .one) := by
   simp [compileExp]
+
+/-- Production `.load` lowering with a machine-byte-width compile context agrees
+    with Cake's fixed-stride `load_shape` (`loadShapeBytes`).  The pipeline passes
+    `context.bytesInWord`; `hbytes` is the checked invariant that this field is
+    the fixed machine byte width — `riscvBytesInWord_eq` certifies the RV64 entry
+    points, which supply `8`. -/
+theorem compileExp_load_eq_loadShapeBytes [BEq α] [OfNat α 0] [Add α]
+    [CrepBytesInWord α] (context : CompileContext α)
+    (hbytes : context.bytesInWord = CrepBytesInWord.bytesInWord)
+    (shape : Shape) (expression : Exp α) (head : CrepExp α)
+    (rest : List (CrepExp α)) (shape' : Shape)
+    (hcompile : compileExp context expression = (head :: rest, shape')) :
+    (compileExp context (.load shape expression)).1 =
+      loadShapeBytes 0 (Shape.shapeSize shape) head := by
+  rw [compileExp]
+  simp only [hcompile]
+  rw [loadShape_eq_loadShapeBytes_of_stride_eq _ _ _ _ hbytes]
 
 end Flapjack

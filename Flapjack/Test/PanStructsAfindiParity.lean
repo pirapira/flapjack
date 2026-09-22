@@ -47,7 +47,7 @@ theorem afindi_map_eq_fixture :
     (by intro x y _; rfl)
 
 theorem afindi_dropWhile_fixture :
-    entries.dropWhile (fun entry => !("b" == entry.1)) = entries.drop 1 := by
+    entries.dropWhile (fun entry => decide ("b" ≠ entry.1)) = entries.drop 1 := by
   rw [afindi_dropWhile]
   simp [afindi, entries]
 

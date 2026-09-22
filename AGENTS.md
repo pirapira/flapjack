@@ -91,3 +91,15 @@ docstring, and file a bead for the faithful port. Preserve useful Flapjack-only
 infrastructure; delete a declaration only when it is unsalvageable or itself
 implements behavior that must be replaced. Do not merge a known mismatch as a
 claimed HOL port.
+
+**Port the executable path, too.** As HOL definitions are ported, make the
+compiler that `flapjack-compile` actually runs call the reviewed `@[hol]`
+definitions. A tagged proof-only duplicate beside a different production
+implementation is an intermediate step, not completion of the compiler port;
+track the production replacement in a dependency-linked bead and test the executed path
+against the original Pancake output. Keep a different executable implementation
+only for a documented, material performance reason (for example, avoiding a
+whole-array copy for each element update), and state the exact relationship to
+the HOL-shaped definition and the evidence for the exception. Do not use a
+performance exception merely because an existing Flapjack helper has a more
+convenient interface.

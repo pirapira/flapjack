@@ -1,0 +1,34 @@
+empty=SOME
+  (s with
+   <|locals := FEMPTY; globals := FEMPTY; structs := []; code := FEMPTY;
+     eshapes := FEMPTY|>)
+
+name_noop=([],FEMPTY,FEMPTY,FEMPTY)
+
+decl_global_update=(SOME (ValWord 7w),FEMPTY)
+
+decl_word_load_update=SOME (ValWord 9w)
+
+decl_bad_load_shape=NONE
+
+decl_preserves_locals=(SOME (ValWord 7w),SOME (ValWord 3w))
+
+decl_left_to_right=(SOME (ValWord 7w),SOME (ValWord 7w))
+
+decl_empty_locals_failure=NONE
+
+decl_shape_failure=NONE
+
+function_code_update=SOME ([(«x»,One)],Skip,One)
+
+function_code_replacement=SOME ([(«x»,One)],Skip,One)
+
+function_bad_param_shape=NONE
+
+function_bad_return_shape=NONE
+
+exn_shape_update=SOME One
+
+exn_duplicate_failure=NONE
+
+exn_bad_shape_failure=NONE

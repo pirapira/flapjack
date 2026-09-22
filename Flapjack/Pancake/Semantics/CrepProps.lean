@@ -21,16 +21,27 @@ theorem map_var_crepExpVars_eq {α : Type} (names : List Nat) :
   | nil => rfl
   | cons name names ih => simp [crepExpVars_var, ih]
 
-/-- Flapjack's parameterized-stride analogue of HOL's
-    `length_load_shape_eq_shape`. HOL uses the fixed `byte$bytes_in_word`
-    constant; `loadShape` currently takes `stride` as an extra argument, so
-    this is not yet tagged as a port of the exact HOL declaration. -/
+/-- Flapjack-specific infrastructure: the length result for the pipeline's
+    general-stride `loadShape`.  This is not a HOL port, because it quantifies an
+    explicit stride; the exact HOL counterpart is `length_loadShape_eq_shape`. -/
 theorem loadShape_length [BEq α] [OfNat α 0] [Add α]
     (address stride : α) (count : Nat) (value : CrepExp α) :
     (loadShape address stride count value).length = count := by
   induction count generalizing address with
   | zero => rfl
   | succ count ih => simp [loadShape, ih]
+
+/-- Faithful port of Cake `crepProps$length_load_shape_eq_shape`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:30`), stated over the fixed
+    `byte$bytes_in_word` stride.  The `CrepBytesInWord` instance supplies the
+    fixed byte width, so the explicit quantified variables are HOL's `n a e`. -/
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "length_load_shape_eq_shape"]
+theorem length_loadShape_eq_shape [BEq α] [OfNat α 0] [Add α] [CrepBytesInWord α]
+    (count : Nat) (address : α) (value : CrepExp α) :
+    (loadShapeBytes address count value).length = count := by
+  induction count generalizing address with
+  | zero => rfl
+  | succ count ih => simp [loadShapeBytes, ih]
 
 /-! Faithful port of Cake `crepProps$length_load_globals_eq_read_size`
     (`cakeml/pancake/semantics/crepPropsScript.sml:467`). -/

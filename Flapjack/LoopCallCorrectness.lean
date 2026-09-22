@@ -487,6 +487,29 @@ theorem comp_mark_labelsIn
   · rfl
   · exact hbody
 
+theorem comp_mark_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (environment : LocationEnv) (state : LoopState α) (fuel : Nat)
+    (body : LoopProg α) (result : LoopResult α)
+    (hbody : evalLoopProg fuel state (comp environment body).1 = some result)
+    (hlabels : labelsIn (comp environment body).2
+      (loopResultState result).locals) :
+    evalLoopProg (fuel + 1) state
+        (comp environment (.mark body : LoopProg α)).1 = some result ∧
+      labelsIn (comp environment (.mark body : LoopProg α)).2
+        (loopResultState result).locals := by
+  have hcompiled :
+      comp environment (.mark body : LoopProg α) =
+        (.mark (comp environment body).1, (comp environment body).2) := by
+    simp [comp]
+  rw [hcompiled]
+  constructor
+  · simp [evalLoopProg, hbody]
+  · exact hlabels
+
 theorem comp_seq_labelsIn
     (environment : LocationEnv) (first second : LoopProg α)
     (locals : Nat → Option α) :
@@ -579,6 +602,58 @@ theorem comp_seq_broke_correct
   constructor
   · exact evalLoopProg_seq_broke fuel state (comp environment first).1
       (comp (comp environment first).2 second).1 middle label hfirst
+  · simp [labelsIn, lookup]
+
+theorem comp_seq_continued_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (environment : LocationEnv) (state : LoopState α) (fuel : Nat)
+    (first second : LoopProg α) (middle : LoopState α) (label : Nat)
+    (hfirst :
+      evalLoopProg fuel state (comp environment first).1 =
+        some (.continued middle label)) :
+    evalLoopProg (fuel + 1) state
+        (comp environment (.seq first second : LoopProg α)).1 =
+        some (.continued middle label) ∧
+      labelsIn (comp environment (.seq first second : LoopProg α)).2
+        middle.locals := by
+  have hcompiled :
+      comp environment (.seq first second : LoopProg α) =
+        (.seq (comp environment first).1
+          (comp (comp environment first).2 second).1, []) := by
+    simp [comp]
+  rw [hcompiled]
+  constructor
+  · exact evalLoopProg_seq_continued fuel state (comp environment first).1
+      (comp (comp environment first).2 second).1 middle label hfirst
+  · simp [labelsIn, lookup]
+
+theorem comp_seq_raised_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (environment : LocationEnv) (state : LoopState α) (fuel : Nat)
+    (first second : LoopProg α) (middle : LoopState α) (exception : α)
+    (hfirst :
+      evalLoopProg fuel state (comp environment first).1 =
+        some (.raised middle exception)) :
+    evalLoopProg (fuel + 1) state
+        (comp environment (.seq first second : LoopProg α)).1 =
+        some (.raised middle exception) ∧
+      labelsIn (comp environment (.seq first second : LoopProg α)).2
+        middle.locals := by
+  have hcompiled :
+      comp environment (.seq first second : LoopProg α) =
+        (.seq (comp environment first).1
+          (comp (comp environment first).2 second).1, []) := by
+    simp [comp]
+  rw [hcompiled]
+  constructor
+  · exact evalLoopProg_seq_raised fuel state (comp environment first).1
+      (comp (comp environment first).2 second).1 middle exception hfirst
   · simp [labelsIn, lookup]
 
 theorem comp_ite_labelsIn

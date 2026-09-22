@@ -549,4 +549,53 @@ theorem loopAssignedVars_loopAssignPairs (names : List Nat)
           rw [ih expressions (by simpa using hlen)]
           rfl
 
+/-! Cake `loopPropsScript.sml:40` `cut_sets_def`: the list-backed live set
+    after executing a Loop statement.  Cake's HOL `insert`/`num_set` is
+    replaced by the sorted-list `insertNatSorted`, matching the rest of the
+    Flapjack live-set layer. -/
+
+def loopCutSets (live : List Nat) : LoopProg α → List Nat
+  | .skip => live
+  | .locValue destination _ => insertNatSorted destination live
+  | .assign name _ => insertNatSorted name live
+  | .load32 _ destination => insertNatSorted destination live
+  | .loadByte _ destination => insertNatSorted destination live
+  | .seq first second => loopCutSets (loopCutSets live first) second
+  | .ite _ _ _ _ _ live' => live'
+  | .arith (.longMul destinationLeft destinationRight _ _) =>
+      insertNatSorted destinationLeft (insertNatSorted destinationRight live)
+  | .arith (.longDiv destinationLeft destinationRight _ _ _) =>
+      insertNatSorted destinationLeft (insertNatSorted destinationRight live)
+  | .arith (.div destination _ _) => insertNatSorted destination live
+  | _ => live
+
+/-- Cake `crep_to_loopProofScript.sml:342` `cut_sets_MAPi_Assign`: running the
+    assignments produced for `offset, …, offset + count - 1` adds exactly
+    those names to the live set. -/
+theorem loopCutSets_loopAssignPairs (live : List Nat) (names : List Nat)
+    (expressions : List (LoopExp α)) (hlen : names.length = expressions.length) :
+    loopCutSets live (loopNestedSeq (loopAssignPairs names expressions)) =
+      loopListInsert names live := by
+  induction names generalizing expressions live with
+  | nil =>
+      cases expressions with
+      | nil => simp [loopAssignPairs, loopNestedSeq, loopCutSets, loopListInsert]
+      | cons expression expressions => simp at hlen
+  | cons name names ih =>
+      cases expressions with
+      | nil => simp at hlen
+      | cons expression expressions =>
+          simp only [loopAssignPairs_cons, loopNestedSeq, loopCutSets, loopListInsert]
+          exact ih (insertNatSorted name live) expressions (by simpa using hlen)
+
+/-- Cake `crep_to_loopProofScript.sml:342`, stated for the `loopTempNames`
+    numbering produced by the executable inliner. -/
+theorem loopCutSets_loopTempNames (live : List Nat) (offset count : Nat)
+    (expressions : List (LoopExp α))
+    (hlen : (loopTempNames offset count).length = expressions.length) :
+    loopCutSets live
+        (loopNestedSeq (loopAssignPairs (loopTempNames offset count) expressions)) =
+      loopListInsert (loopTempNames offset count) live :=
+  loopCutSets_loopAssignPairs live _ expressions hlen
+
 end Flapjack

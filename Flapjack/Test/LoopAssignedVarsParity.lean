@@ -51,6 +51,13 @@ theorem loopAssignedVars_loopAssignPairs_fixture :
   loopAssignedVars_loopAssignPairs [3, 4, 5] [.const 0, .const 1, .const 2]
     (by decide)
 
+/-! Cake `crep_to_loopProofScript.sml:342` `cut_sets_MAPi_Assign`. -/
+
+theorem loopCutSets_loopAssignPairs_fixture :
+    loopCutSets [9] probeAssignPairs = [3, 4, 5, 9] :=
+  loopCutSets_loopAssignPairs [9] [3, 4, 5] [.const 0, .const 1, .const 2]
+    (by decide)
+
 def check (name : String) (actual expected : List Nat) : IO Bool := do
   if actual == expected then
     IO.println s!"PASS {name}"
@@ -72,7 +79,9 @@ def runChecks : IO Bool := do
     check "assigned_vars MAPi Assign"
       (loopAssignedVars probeAssignNames) [3, 4, 5],
     check "assigned_vars nested_seq Assign"
-      (loopAssignedVars probeAssignPairs) [3, 4, 5] ].mapM id
+      (loopAssignedVars probeAssignPairs) [3, 4, 5],
+    check "cut_sets MAPi Assign"
+      (loopCutSets [9] probeAssignPairs) [3, 4, 5, 9] ].mapM id
   pure (results.all id)
 
 end Flapjack.Test.LoopAssignedVarsParity

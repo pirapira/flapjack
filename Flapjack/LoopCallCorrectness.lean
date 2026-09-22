@@ -471,6 +471,79 @@ theorem comp_fail_correct
   · simp [evalLoopProg]
   · exact henvironment
 
+theorem comp_mark_labelsIn
+    (environment : LocationEnv) (body : LoopProg α)
+    (locals : Nat → Option α)
+    (hbody : labelsIn (comp environment body).2 locals) :
+    (comp environment (.mark body : LoopProg α)).1 =
+        .mark (comp environment body).1 ∧
+      labelsIn (comp environment (.mark body : LoopProg α)).2 locals := by
+  have hcompiled :
+      comp environment (.mark body : LoopProg α) =
+        (.mark (comp environment body).1, (comp environment body).2) := by
+    simp [comp]
+  rw [hcompiled]
+  constructor
+  · rfl
+  · exact hbody
+
+theorem comp_seq_labelsIn
+    (environment : LocationEnv) (first second : LoopProg α)
+    (locals : Nat → Option α) :
+    (comp environment (.seq first second : LoopProg α)).1 =
+        .seq (comp environment first).1
+          (comp (comp environment first).2 second).1 ∧
+      labelsIn (comp environment (.seq first second : LoopProg α)).2 locals := by
+  have hcompiled :
+      comp environment (.seq first second : LoopProg α) =
+        (.seq (comp environment first).1
+          (comp (comp environment first).2 second).1, []) := by
+    simp [comp]
+  rw [hcompiled]
+  constructor
+  · rfl
+  · simp [labelsIn, lookup]
+
+theorem comp_ite_labelsIn
+    (environment : LocationEnv) (operator : Cmp) (condition : Nat)
+    (right : RegImm α) (thenBranch elseBranch : LoopProg α)
+    (live : List Nat) (locals : Nat → Option α) :
+    (comp environment
+      (.ite operator condition right thenBranch elseBranch live : LoopProg α)).1 =
+        .ite operator condition right (comp environment thenBranch).1
+          (comp environment elseBranch).1 live ∧
+      labelsIn
+        (comp environment
+          (.ite operator condition right thenBranch elseBranch live : LoopProg α)).2
+        locals := by
+  have hcompiled :
+      comp environment
+          (.ite operator condition right thenBranch elseBranch live : LoopProg α) =
+        (.ite operator condition right (comp environment thenBranch).1
+          (comp environment elseBranch).1 live, []) := by
+    simp [comp]
+  rw [hcompiled]
+  constructor
+  · rfl
+  · simp [labelsIn, lookup]
+
+theorem comp_loop_labelsIn
+    (environment : LocationEnv) (liveIn liveOut : List Nat)
+    (body : LoopProg α) (locals : Nat → Option α) :
+    (comp environment (.loop liveIn body liveOut : LoopProg α)).1 =
+        .loop liveIn (comp ([] : LocationEnv) body).1 liveOut ∧
+      labelsIn
+        (comp environment (.loop liveIn body liveOut : LoopProg α)).2
+        locals := by
+  have hcompiled :
+      comp environment (.loop liveIn body liveOut : LoopProg α) =
+        (.loop liveIn (comp ([] : LocationEnv) body).1 liveOut, []) := by
+    simp [comp]
+  rw [hcompiled]
+  constructor
+  · rfl
+  · simp [labelsIn, lookup]
+
 theorem comp_setGlobal_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]

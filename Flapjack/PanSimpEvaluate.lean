@@ -6598,6 +6598,37 @@ theorem PanValueFfiClockNormalAdequateProgFrom_while
     (progCallFuel callBudget (.while condition body)) locals globals memory ffi
     clock (hloop clock hclock locals globals memory ffi)
 
+/-! The nonzero `While` certificate has no positive floor guarantee by itself.
+    Expose its sound floor-zero form for subsequent sequence composition. -/
+theorem PanValueFfiClockNormalAdequateProgFromFloor_while
+    (lo : Nat)
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (callBudget : Nat)
+    (ma : Option (PanValueMemoryAccess α))
+    (c : Option PanValueCallContracts)
+    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (condition : Exp α) (body : Prog α)
+    (hloop : ∀ (clock : Nat), lo ≤ clock →
+      ∀ (locals globals : VarName → Option (PanValue α))
+        (memory : α → Option (PanValue α)) (ffi : FfiState σ),
+        PanValueFfiClockWhileExitsNormally context primitive handler structs
+          functions baseAddress topAddress bytesInWord ma c mh condition body
+          (progCallFuel callBudget (.while condition body)) locals globals memory
+          ffi clock) :
+    PanValueFfiClockNormalAdequateProgFromFloor lo 0 context primitive handler structs
+      functions baseAddress topAddress bytesInWord callBudget ma c mh
+      (.while condition body) := by
+  exact PanValueFfiClockNormalAdequateProgFromFloor_of_from lo context primitive
+    handler structs functions baseAddress topAddress bytesInWord callBudget ma c mh
+    (.while condition body)
+    (PanValueFfiClockNormalAdequateProgFrom_while lo context primitive handler
+      structs functions baseAddress topAddress bytesInWord callBudget ma c mh condition body hloop)
+
 /-- A lower-bounded adequate zero-condition `While`: the loop exits immediately
     without spending a tick, so the bound is irrelevant. -/
 theorem PanValueFfiClockNormalAdequateProgFrom_while_zero

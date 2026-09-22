@@ -2537,6 +2537,7 @@ example : PanValueFfiClockNormalAdequateProgFrom 1 evaluatorContext
 /-! The fuel-indexed while-exit certificate underpinning the nonzero-condition
 `While` adequacy constructor. -/
 #check @Flapjack.PanValueFfiClockWhileExitsNormally
+#check @Flapjack.PanValueFfiClockNormalAdequateProgFromFloor_while
 
 /-! A lower-bound-preserving sequence certificate.  Both `Skip` components
     leave the clock unchanged, so the new floor-composition theorem can feed

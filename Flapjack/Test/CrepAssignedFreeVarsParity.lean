@@ -53,6 +53,14 @@ theorem context_slot_bound_fixture :
   simp [boundedContext] at *
   omega
 
+theorem compileProg_dec_assigned_free_fixture :
+    (7 : Nat) ∉ crepAssignedFreeVars
+      (compileProg boundedContext (.dec "fresh" .one (.const 1) .skip)) := by
+  apply not_mem_crepAssignedFreeVars_compileProg_dec
+    boundedContext "fresh" .one (.const 1) .skip 7 [.const 1] .one
+  · simp [compileExp]
+  · simp [compileProg, crepAssignedFreeVars]
+
 def runChecks : IO Bool := do
   if parityGuard then
     IO.println "PASS crep assigned_free_vars skip/assign/dec/seq/if/while/shmem/fallback"

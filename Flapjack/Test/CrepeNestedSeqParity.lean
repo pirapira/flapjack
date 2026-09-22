@@ -127,13 +127,47 @@ def transformBranchExpsGuard : Bool :=
     (crepTransformBranch 0 [7]
       (.seq (.return [.const 1]) (.assign 4 (.const 9)) : CrepProg Nat))).length == 2
 
+/-! Cake's `mem_var_prog_nested_seq` (`crep_inlineProofScript.sml:2226`). -/
+
+def varProgProgList : List (CrepProg Nat) := [.assign 1 (.const 7), .tick]
+
+example (x : Nat) (hmem : x ∈ crepVarProg (crepNestedSeq varProgProgList)) :
+    x ∈ (varProgProgList.map crepVarProg).flatten :=
+  (crepVarProg_nestedSeq varProgProgList x).mp hmem
+
+def nestedVarProgGuard : Bool :=
+  (crepVarProg (crepNestedSeq varProgProgList)).length ==
+    (varProgProgList.map crepVarProg).flatten.length
+
+/-! Cake's `mem_var_prog_transform_eoc` (`crep_inlineProofScript.sml:2241`). -/
+
+example {x : Nat}
+    (hmem : x ∈ crepVarProg (crepTransformEoc [7] (.return [.const 1] : CrepProg Nat))) :
+    x ∈ crepVarProg (.return [.const 1] : CrepProg Nat) ∨ x ∈ [7] :=
+  crepVarProg_transformEoc [7] _ hmem
+
+def transformEocVarProgGuard : Bool :=
+  (crepVarProg (crepTransformEoc [7] (.return [.const 1] : CrepProg Nat))).length == 1
+
+/-! Cake's `mem_var_prog_transform_branch` (`crep_inlineProofScript.sml:2258`). -/
+
+example {x : Nat}
+    (hmem : x ∈ crepVarProg
+      (crepTransformBranch 0 [7] (.return [.const 1] : CrepProg Nat))) :
+    x ∈ crepVarProg (.return [.const 1] : CrepProg Nat) ∨ x ∈ [7] :=
+  crepVarProg_transformBranch 0 [7] _ hmem
+
+def transformBranchVarProgGuard : Bool :=
+  (crepVarProg (crepTransformBranch 0 [7] (.return [.const 1] : CrepProg Nat))).length == 1
+
 def parityGuard : Bool :=
   isEmpty (crepNestedSeq []) &&
   isOne (crepNestedSeq [.skip]) &&
   isTwo (crepNestedSeq [.tick, .skip]) &&
   isAssignSeq (crepNestedSeq [.assign 1 (.const 7), .assign 2 (.const 9)]) &&
   isFlattened && crepExpsGuard && inlineExpsGuard && argLoadGuard &&
-  unreachElimExpsGuard && transformEocExpsGuard && transformBranchExpsGuard
+  unreachElimExpsGuard && transformEocExpsGuard && transformBranchExpsGuard &&
+  nestedVarProgGuard && transformEocVarProgGuard && transformBranchVarProgGuard
 
 #eval parityGuard
 #guard parityGuard
@@ -150,9 +184,12 @@ def runChecks : IO Bool := do
     argLoadGuard,
     unreachElimExpsGuard,
     transformEocExpsGuard,
-    transformBranchExpsGuard]
+    transformBranchExpsGuard,
+    nestedVarProgGuard,
+    transformEocVarProgGuard,
+    transformBranchVarProgGuard]
   match results with
-  | [empty, one, two, assignment, flattened, exps, inlineExps, argLoad, unreach, transformEoc, transformBranch] =>
+  | [empty, one, two, assignment, flattened, exps, inlineExps, argLoad, unreach, transformEoc, transformBranch, nestedVarProg, transformEocVarProg, transformBranchVarProg] =>
       if empty then IO.println "PASS crep nested_seq empty" else IO.println "FAIL crep nested_seq empty"
       if one then IO.println "PASS crep nested_seq one" else IO.println "FAIL crep nested_seq one"
       if two then IO.println "PASS crep nested_seq two" else IO.println "FAIL crep nested_seq two"
@@ -164,7 +201,10 @@ def runChecks : IO Bool := do
       if unreach then IO.println "PASS crep inline exps_of unreach_elim" else IO.println "FAIL crep inline exps_of unreach_elim"
       if transformEoc then IO.println "PASS crep inline exps_of transform_eoc" else IO.println "FAIL crep inline exps_of transform_eoc"
       if transformBranch then IO.println "PASS crep inline exps_of transform_branch" else IO.println "FAIL crep inline exps_of transform_branch"
-      pure (empty && one && two && assignment && flattened && exps && inlineExps && argLoad && unreach && transformEoc && transformBranch)
+      if nestedVarProg then IO.println "PASS crep inline var_prog nested_seq" else IO.println "FAIL crep inline var_prog nested_seq"
+      if transformEocVarProg then IO.println "PASS crep inline var_prog transform_eoc" else IO.println "FAIL crep inline var_prog transform_eoc"
+      if transformBranchVarProg then IO.println "PASS crep inline var_prog transform_branch" else IO.println "FAIL crep inline var_prog transform_branch"
+      pure (empty && one && two && assignment && flattened && exps && inlineExps && argLoad && unreach && transformEoc && transformBranch && nestedVarProg && transformEocVarProg && transformBranchVarProg)
   | _ =>
       IO.println "FAIL crep nested_seq result arity"
       pure false

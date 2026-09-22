@@ -89,6 +89,65 @@ def loopListInsert (names live : List Nat) : List Nat :=
 def loopListUnion (left right : List Nat) : List Nat :=
   loopListInsert (left ++ right) []
 
+/-! CakeML's `num_set` insert operations preserve membership and canonical
+    order.  The Flapjack live sets are plain sorted lists, so the corresponding
+    facts are stated directly for `insertNatSorted`/`loopListInsert`. -/
+
+/-- Membership in an inserted sorted live set, counterpart of CakeML's
+    `domain_list_insert` (`sptreeScript.sml:2042`). -/
+theorem insertNatSorted_mem (name : Nat) (live : List Nat) (x : Nat) :
+    x ∈ insertNatSorted name live ↔ x = name ∨ x ∈ live := by
+  induction live with
+  | nil => simp [insertNatSorted]
+  | cons head tail ih =>
+      by_cases hlt : name < head
+      · simp [insertNatSorted, hlt, List.mem_cons]
+      · by_cases heq : name = head
+        · subst heq; simp [insertNatSorted, List.mem_cons]
+        · simp only [insertNatSorted, if_neg hlt, if_neg heq, List.mem_cons, ih]
+          by_cases h1 : x = name <;> by_cases h2 : x = head <;> by_cases h3 : x ∈ tail <;>
+            simp_all
+
+/-- Inserting the same temporary twice is idempotent, the Flapjack counterpart
+    of CakeML's `insert_insert_eq`/`insert_shadow`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:380`). -/
+theorem insertNatSorted_idem (name : Nat) (live : List Nat) :
+    insertNatSorted name (insertNatSorted name live) = insertNatSorted name live := by
+  induction live with
+  | nil => simp [insertNatSorted]
+  | cons head tail ih =>
+      by_cases hlt : name < head
+      · simp [insertNatSorted, hlt]
+      · by_cases heq : name = head
+        · subst heq; simp [insertNatSorted]
+        · simp only [insertNatSorted, if_neg hlt, if_neg heq, ih]
+
+/-- CakeML's `list_insert_SNOC`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:386`). -/
+theorem loopListInsert_snoc (x : Nat) (ys : List Nat) (live : List Nat) :
+    loopListInsert (ys ++ [x]) live = insertNatSorted x (loopListInsert ys live) := by
+  simp [loopListInsert, List.foldl_append]
+
+/-- CakeML's `list_insert_append`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:414`), in the foldl
+    orientation used by the Flapjack executable port. -/
+theorem loopListInsert_append (xs ys : List Nat) (live : List Nat) :
+    loopListInsert (xs ++ ys) live = loopListInsert ys (loopListInsert xs live) := by
+  simp [loopListInsert, List.foldl_append]
+
+/-- Membership in a folded live set; counterpart of CakeML's
+    `domain_list_insert` for `list_insert`. -/
+theorem loopListInsert_mem (x : Nat) (names : List Nat) (live : List Nat) :
+    x ∈ loopListInsert names live ↔ x ∈ names ∨ x ∈ live := by
+  induction names generalizing live with
+  | nil => simp [loopListInsert]
+  | cons name names ih =>
+      rw [show loopListInsert (name :: names) live =
+          loopListInsert names (insertNatSorted name live) from rfl]
+      rw [ih, insertNatSorted_mem]
+      by_cases h1 : x = name <;> by_cases h2 : x ∈ names <;> by_cases h3 : x ∈ live <;>
+        simp_all [List.mem_cons]
+
 /-! Source-named port of `crep_to_loop$prog_if` (`prog_if_def`,
     `crep_to_loopScript.sml:34`).  The result is a statement list; the caller
     applies `nested_seq` exactly as the original compiler does. -/

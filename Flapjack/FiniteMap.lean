@@ -234,6 +234,29 @@ theorem localsRel_lookup_ctxt [BEq String]
   · rw [hflat]
     exact hmap
 
+/-- Cake `mk_ctxt_imp_locals_rel` (`pan_to_crepProofScript.sml:4677`),
+source-map-empty generalization: any context map that satisfies `no_overlap`
+and `ctxt_max` is related to an arbitrary target locals map when the source
+locals map is `FEMPTY` (the third conjunct is vacuous). -/
+theorem localsRel_of_empty_source [BEq String]
+    (vars : InfoMap (Shape × List Nat)) (vmax : Nat)
+    (tLocals : FiniteMap Nat α)
+    (hnooverlap : panValueNoOverlap vars)
+    (hmax : panValueCtxtMax vmax vars) :
+    localsRel vars vmax (FEMPTY : FiniteMap String (PanValue α)) tLocals := by
+  refine ⟨hnooverlap, hmax, ?_⟩
+  intro vname v hlookup
+  simp [FLOOKUP_empty] at hlookup
+
+/-- Cake `mk_ctxt_imp_locals_rel` (`pan_to_crepProofScript.sml:4677`) at the
+empty context `mk_ctxt FEMPTY (make_funcs pc) 0 es`: the empty variable map
+satisfies `no_overlap` and `ctxt_max`, and the source locals map is empty. -/
+theorem localsRel_empty [BEq String] (vmax : Nat) (tLocals : FiniteMap Nat α) :
+    localsRel ([] : InfoMap (Shape × List Nat)) vmax
+      (FEMPTY : FiniteMap String (PanValue α)) tLocals :=
+  localsRel_of_empty_source [] vmax tLocals panValueNoOverlap_empty
+    (panValueCtxtMax_empty vmax (Nat.zero_le vmax))
+
 /-- Cake `local_rel_le_zip_update_preserved`
 (`pan_to_crepProofScript.sml:2263`): overwriting a variable with a
 shape-compatible value and refreshing the target map through the variable's

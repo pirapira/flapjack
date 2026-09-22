@@ -39,4 +39,23 @@ val _ = print_eval "raise_pair"
                 [panLang$Const (7w : 8 word); panLang$Const 9w]);
             return := panLang$One |>]``;
 
+val _ = print_eval "handled_pair"
+  ``pan_to_crep$compile_to_crep
+      [panLang$ExnDecl «E» (panLang$Comb [panLang$One; panLang$One]);
+        panLang$Function
+          <| name := «f»; inline := F; export := F; params := [];
+             body := panLang$Raise «E»
+               (panLang$RStruct
+                 [panLang$Const (7w : 8 word); panLang$Const 9w]);
+             return := panLang$Comb [panLang$One; panLang$One] |>;
+        panLang$Function
+          <| name := «g»; inline := F; export := F;
+             params := [(«pair», panLang$Comb [panLang$One; panLang$One])];
+             body := panLang$Call
+               (SOME
+                 (SOME (panLang$Local, «pair»),
+                  SOME («E», «pair», panLang$Skip)))
+               «f» [];
+             return := panLang$One |>]``;
+
 val _ = print_eval "done" ``T``;

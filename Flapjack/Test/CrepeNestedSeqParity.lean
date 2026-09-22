@@ -1,4 +1,5 @@
 import Flapjack.Crepe
+import Flapjack.CrepeInline
 
 /-!
 # Original-domain parity for `crepLang$nested_seq`
@@ -76,12 +77,33 @@ example (e : CrepExp Nat) (hmem : e ∈ crepExpsOf argLoadProbe) :
 def argLoadGuard : Bool :=
   (crepExpsOf argLoadProbe).length == 3
 
+/-! Cake's `exps_of_unreach_elim` (`crep_inlineProofScript.sml:3089`). -/
+
+/-- The expected result pair of eliminating an unreachable tail; spelled out
+    literally so the guard does not have to evaluate the well-founded
+    `crepUnreachElim` (whose compiled form `#eval` refuses). -/
+def unreachElimProbe : CrepProg Nat × Option CrepEarlyExit :=
+  ((.return [.const 1] : CrepProg Nat), some .return)
+
+example {q : CrepProg Nat} {r : Option CrepEarlyExit} {e : CrepExp Nat}
+    (h : crepUnreachElim
+      (.seq (.return [.const 1]) (.assign 4 (.const 9)) : CrepProg Nat) = (q, r))
+    (hmem : e ∈ crepExpsOf q) :
+    e ∈ crepExpsOf
+      (.seq (.return [.const 1]) (.assign 4 (.const 9)) : CrepProg Nat) :=
+  crepExpsOf_unreachElim _ h hmem
+
+def unreachElimExpsGuard : Bool :=
+  (crepExpsOf unreachElimProbe.1).length == 1 &&
+  decide (unreachElimProbe.2 = some .return)
+
 def parityGuard : Bool :=
   isEmpty (crepNestedSeq []) &&
   isOne (crepNestedSeq [.skip]) &&
   isTwo (crepNestedSeq [.tick, .skip]) &&
   isAssignSeq (crepNestedSeq [.assign 1 (.const 7), .assign 2 (.const 9)]) &&
-  isFlattened && crepExpsGuard && inlineExpsGuard && argLoadGuard
+  isFlattened && crepExpsGuard && inlineExpsGuard && argLoadGuard &&
+  unreachElimExpsGuard
 
 #eval parityGuard
 #guard parityGuard
@@ -95,9 +117,10 @@ def runChecks : IO Bool := do
     isFlattened,
     crepExpsGuard,
     inlineExpsGuard,
-    argLoadGuard]
+    argLoadGuard,
+    unreachElimExpsGuard]
   match results with
-  | [empty, one, two, assignment, flattened, exps, inlineExps, argLoad] =>
+  | [empty, one, two, assignment, flattened, exps, inlineExps, argLoad, unreach] =>
       if empty then IO.println "PASS crep nested_seq empty" else IO.println "FAIL crep nested_seq empty"
       if one then IO.println "PASS crep nested_seq one" else IO.println "FAIL crep nested_seq one"
       if two then IO.println "PASS crep nested_seq two" else IO.println "FAIL crep nested_seq two"
@@ -106,7 +129,8 @@ def runChecks : IO Bool := do
       if exps then IO.println "PASS crep nested_seq exps_of" else IO.println "FAIL crep nested_seq exps_of"
       if inlineExps then IO.println "PASS crep inline exps_of membership" else IO.println "FAIL crep inline exps_of membership"
       if argLoad then IO.println "PASS crep inline exps_of arg_load" else IO.println "FAIL crep inline exps_of arg_load"
-      pure (empty && one && two && assignment && flattened && exps && inlineExps && argLoad)
+      if unreach then IO.println "PASS crep inline exps_of unreach_elim" else IO.println "FAIL crep inline exps_of unreach_elim"
+      pure (empty && one && two && assignment && flattened && exps && inlineExps && argLoad && unreach)
   | _ =>
       IO.println "FAIL crep nested_seq result arity"
       pure false

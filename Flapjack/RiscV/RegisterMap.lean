@@ -327,4 +327,17 @@ writes the resulting hardware register. -/
     writeRegisterInternalNat state name value = writeRegister state register value := by
   simp [writeRegisterInternalNat, h]
 
+/-- A successful Cake internal write is visible through the same internal name
+unless its mapped hardware register is the hardwired zero register.  This is
+the read-after-write boundary used by Backend correctness after the one-time
+`riscv_names` translation. -/
+theorem readRegisterInternal_writeRegisterInternalNat_self {width : Nat}
+    (state : State width) {name : Nat} {register : Fin 32}
+    (value : Word width) (h : labRegisterOfNat name = some register)
+    (hzero : register ≠ 0) :
+    readRegisterInternal (writeRegisterInternalNat state name value) name =
+      some value := by
+  simp [readRegisterInternal, writeRegisterInternalNat, h,
+    readRegister, writeRegister, hzero]
+
 end Flapjack.RiscV

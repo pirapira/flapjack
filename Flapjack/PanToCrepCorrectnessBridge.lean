@@ -27245,6 +27245,76 @@ theorem panValuePcCompileCorrect_compact_with_bounded_expression_state_evidence
     hexception, hlookupCode, hcode, hflat, (by simpa [hflat] using hdistinct),
     hsize⟩
 
+
+theorem panValuePcCompileCorrect_compact_with_bounded_expression_state_evidence_canonical_globals
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (program : Prog α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α)
+    (sourceFuel targetFuel : Nat)
+    (hprogram : PanValueCrepProgramStateCorrect program)
+    (hprogramSafe : PanValueCrepProgramStateControlSafe program)
+    (hbounded : ∀ (context : CompileContext α) (name : String)
+      (shape : Shape) (names : List Nat),
+      lookupInfo name context.vars = some (shape, names) →
+      ∀ varName ∈ names, varName ≤ context.maxVar)
+    (hevidence : ∀ (context : CompileContext α) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (sourceValue : PanValue α) (targetState : CrepState α)
+      (targetException : α),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      ∃ (state : CrepState α) (expression : Exp α),
+        targetState =
+          { state with globals :=
+              (updateMemoryListAt state.globals 0 context.bytesInWord
+                (panValueFlatWords sourceValue)) } ∧
+        context.bytesInWord = bytesInWord ∧
+        panValueCrepStateRel structs context sourceLocals sourceGlobals
+          sourceMemory state ∧
+        PanValueCrepExpressionStateCorrect expression ∧
+        evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+          baseAddress topAddress bytesInWord expression = some sourceValue ∧
+        (∀ (compiled : List (CrepExp α)),
+          ∀ name ∈ freshNames context compiled.length 1,
+            state.locals name = none) ∧
+        exceptionRel sourceException sourceValue targetException ∧
+        lookupInfo sourceException context.exceptions = some targetException ∧
+        exceptionCode sourceException = some targetException ∧
+        List.Pairwise (fun left right : α => left ≠ right)
+          (storeAddresses (0 : α) context.bytesInWord
+            (panValueFlatWords sourceValue).length) ∧
+        Shape.shapeSize (panValueShape structs sourceValue) ≤ 32 ∧
+        (panValueFlatWords sourceValue).length =
+          Shape.shapeSize (panValueShape structs sourceValue)) :
+    PanValuePcCompileCorrect
+      (panValuePcCompactSourceEvaluator primitive sourceHandler sourceFunctions
+        baseAddress topAddress bytesInWord sourceFuel)
+      (crepPcCompactTargetEvaluator functions crepPrimitive ffi sharedMem
+        baseAddress topAddress targetFuel)
+      codeRel excpRel exceptionCode (crepPcFlatGlobalsLookup bytesInWord) program := by
+  exact panValuePcCompileCorrect_compact_with_bounded_expression_state_evidence
+    program codeRel excpRel exceptionCode (crepPcFlatGlobalsLookup bytesInWord)
+    sourceFunctions functions primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord sourceFuel targetFuel hprogram hprogramSafe
+    (by
+      intro targetState sourceValue
+      rfl) hbounded hevidence
 /-! Specialize expression-state Raise evidence to Pancake's canonical typed
     flat-global lookup.  The evaluator, state, freshness, shape, and payload
     premises remain explicit; only the abstract lookup adapter is discharged

@@ -312,6 +312,30 @@ theorem not_mem_crepAssignedFreeVars_compileProg_raise
           · rw [if_neg hlength]
             simp [crepAssignedFreeVars]
 
+/-! `ShMemStore` binds its single temporary around the generated `shMem`
+    instruction.  Unlike the sufficient nested-declaration lemma used for
+    stores, this branch uses the exact declaration-filter equation because
+    the temporary is itself assigned by the body and is then removed. -/
+theorem not_mem_crepAssignedFreeVars_compileProg_shMemStore
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (size : OpSize)
+    (address value : Exp α) (x : Nat) :
+    x ∉ crepAssignedFreeVars
+      (compileProg context (.shMemStore size address value)) := by
+  simp only [compileProg]
+  cases haddress : firstCompiledExpAnyShape context address with
+  | none => simp [crepAssignedFreeVars]
+  | some compiledAddress =>
+      cases hvalue : firstCompiledExpAnyShape context value with
+      | none => simp [crepAssignedFreeVars]
+      | some compiledValue =>
+          simp only
+          rw [crepAssignedFreeVars_nestedDecs_append
+            [maxCrepExpVar [compiledAddress] + 1] [compiledValue]
+            (.shMem (storeMemOp size) (maxCrepExpVar [compiledAddress] + 1)
+              compiledAddress) (by simp)]
+          simp [crepAssignedFreeVars]
+
 /-- `crepNestedSeq` of `assign` statements built from a zip of names with
     variables introduced by `freshNames` still has exactly `names` as its
     assigned free variables. -/

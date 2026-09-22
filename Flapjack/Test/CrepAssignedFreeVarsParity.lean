@@ -124,6 +124,13 @@ theorem compileProg_raise_assigned_free_fixture :
   exact not_mem_crepAssignedFreeVars_compileProg_raise
     raiseContext "error" (.const 1) 9
 
+theorem compileProg_shMemStore_assigned_free_fixture :
+    (9 : Nat) ∉ crepAssignedFreeVars
+      (compileProg boundedContext
+        (.shMemStore .opW (.const 0) (.const 1))) := by
+  exact not_mem_crepAssignedFreeVars_compileProg_shMemStore
+    boundedContext .opW (.const 0) (.const 1) 9
+
 def runChecks : IO Bool := do
   if parityGuard then
     IO.println "PASS crep assigned_free_vars skip/assign/dec/seq/if/while/shmem/fallback"

@@ -26,6 +26,8 @@ theorem labelsIn_insert_update_collision_fixture :
     exact ⟨7, by simp⟩
 
 #check labelsIn_insert_update
+#check loopReadLocals_dropLast
+#check loopReadLocals_getLast
 
 theorem locValue_compile_correct_fixture :
     evalLoopProg 1 locValueState

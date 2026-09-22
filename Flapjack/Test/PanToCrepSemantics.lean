@@ -13,6 +13,7 @@ open Flapjack
 #check @Flapjack.PanValuePcSemanticClockEvidence.crossResultRel_withContextCode
 #check @Flapjack.PanValuePcSemanticClockEvidence.returnedSemanticOutcomeRel
 #check @Flapjack.PanValuePcSemanticClockEvidence.finalFfiSemanticOutcomeRel
+#check @Flapjack.PanValuePcSemanticClockEvidence.raisedForbiddenResultRel
 #check @Flapjack.panCrepSemanticAgreement_of_pcCompileCorrect
 #check @Flapjack.panCrepSemanticAgreement_of_pcCompileCorrect_cross_clock
 #check @Flapjack.panEventPrefix_antisymm

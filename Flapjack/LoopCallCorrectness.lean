@@ -1370,6 +1370,43 @@ theorem comp_call_labelsIn
               · simp [comp, compCall, harguments, hlastValue]
               · simpa [comp, compCall, harguments, hlastValue] using hnil
 
+theorem comp_call_target_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (functions : List (Nat × List Nat × LoopProg α))
+    (ffiHandler : FunName → α → α → α → α → LoopState α → Option (LoopState α))
+    (environment : LocationEnv) (state : LoopState α) (fuel : Nat)
+    (returns : Option (List Nat × List Nat)) (target : Nat)
+    (arguments : List Nat)
+    (handler : Option (Nat × LoopProg α × LoopProg α × List Nat))
+    (result : LoopResult α)
+    (hcall : evalLoopCallWithCallsAndFfi functions ffiHandler fuel state
+      returns (some target) arguments handler = some result) :
+    evalLoopProgWithCallsAndFfi functions ffiHandler (fuel + 1) state
+        (comp environment
+          (.call returns (some target) arguments handler : LoopProg α)).1 =
+        some result ∧
+      labelsIn
+        (comp environment
+          (.call returns (some target) arguments handler : LoopProg α)).2
+        (loopResultState result).locals := by
+  have hcompiled :
+      comp environment
+          (.call returns (some target) arguments handler : LoopProg α) =
+        (.call returns (some target) arguments handler, []) := by
+    simp [comp, compCall]
+  have heval :
+      evalLoopProgWithCallsAndFfi functions ffiHandler (fuel + 1) state
+          (.call returns (some target) arguments handler) =
+        some result := by
+    simpa [evalLoopProgWithCallsAndFfi] using hcall
+  rw [hcompiled]
+  constructor
+  · exact heval
+  · simp [labelsIn, lookup]
+
 theorem comp_ffi_labelsIn
     (environment : LocationEnv)
     (function : FunName) (configuration configurationLength array arrayLength : Nat)
@@ -1387,6 +1424,52 @@ theorem comp_ffi_labelsIn
   constructor
   · simp [comp]
   · simp [comp, labelsIn, lookup]
+
+theorem comp_ffi_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (functions : List (Nat × List Nat × LoopProg α))
+    (ffiHandler : FunName → α → α → α → α → LoopState α → Option (LoopState α))
+    (environment : LocationEnv) (state : LoopState α) (fuel : Nat)
+    (function : FunName) (configuration configurationLength array arrayLength : Nat)
+    (live : List Nat)
+    (configurationValue configurationLengthValue arrayValue arrayLengthValue : α)
+    (resultState : LoopState α)
+    (hconfiguration : state.locals configuration = some configurationValue)
+    (hconfigurationLength : state.locals configurationLength =
+      some configurationLengthValue)
+    (harray : state.locals array = some arrayValue)
+    (harrayLength : state.locals arrayLength = some arrayLengthValue)
+    (hffi : ffiHandler function configurationValue configurationLengthValue
+      arrayValue arrayLengthValue state = some resultState) :
+    evalLoopProgWithCallsAndFfi functions ffiHandler (fuel + 1) state
+        (comp environment
+          (.ffi function configuration configurationLength array arrayLength live :
+            LoopProg α)).1 =
+        some (.normal resultState) ∧
+      labelsIn
+        (comp environment
+          (.ffi function configuration configurationLength array arrayLength live :
+            LoopProg α)).2
+        resultState.locals := by
+  have hcompiled :
+      comp environment
+          (.ffi function configuration configurationLength array arrayLength live :
+            LoopProg α) =
+        (.ffi function configuration configurationLength array arrayLength live, []) := by
+    simp [comp]
+  have heval :
+      evalLoopProgWithCallsAndFfi functions ffiHandler (fuel + 1) state
+          (.ffi function configuration configurationLength array arrayLength live) =
+        some (.normal resultState) := by
+    simp [evalLoopProgWithCallsAndFfi, hconfiguration, hconfigurationLength,
+      harray, harrayLength, hffi]
+  rw [hcompiled]
+  constructor
+  · exact heval
+  · simp [labelsIn, lookup]
 
 theorem comp_primitive_labelsIn
     (environment : LocationEnv) (destinations : List Nat)
@@ -1406,6 +1489,47 @@ theorem comp_primitive_labelsIn
   constructor
   · rfl
   · exact labelsIn_listDelete destinations environment locals henvironment
+
+theorem comp_primitive_single_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (primitive : LoopPrimitiveHandler α)
+    (environment : LocationEnv) (state : LoopState α) (fuel : Nat)
+    (destination : Nat) (operator : PrimOp) (arguments : List Nat)
+    (argumentValues : List α) (value : α)
+    (harguments : loopReadLocals state.locals arguments = some argumentValues)
+    (hprimitive : primitive operator argumentValues = some [value])
+    (henvironment : labelsIn environment state.locals) :
+    evalLoopProgWithPrimitive primitive (fuel + 1) state
+        (comp environment
+          (.primitive [destination] operator arguments : LoopProg α)).1 =
+        some (.normal { state with
+          locals := updateLoopLocal state.locals destination value }) ∧
+      labelsIn
+        (comp environment
+          (.primitive [destination] operator arguments : LoopProg α)).2
+        (updateLoopLocal state.locals destination value) := by
+  have hcompiled :
+      comp environment
+          (.primitive [destination] operator arguments : LoopProg α) =
+        (.primitive [destination] operator arguments,
+          listDelete [destination] environment) := by
+    simp [comp]
+  have heval :
+      evalLoopProgWithPrimitive primitive (fuel + 1) state
+          (.primitive [destination] operator arguments) =
+        some (.normal { state with
+          locals := updateLoopLocal state.locals destination value }) := by
+    simp [evalLoopProgWithPrimitive, harguments, hprimitive,
+      loopAssignValues, loopLookupFirst_singleton]
+  rw [hcompiled]
+  constructor
+  · exact heval
+  · simpa [listDelete, loopLookupFirst_singleton] using
+      (labelsIn_delete_update environment state.locals destination value
+        henvironment)
 
 end LoopCall
 end Flapjack

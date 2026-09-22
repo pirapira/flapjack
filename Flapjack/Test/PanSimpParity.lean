@@ -2815,6 +2815,74 @@ theorem timeout_call_context_code_fixture
     exceptionRel exceptionCode globalsLookup targetState memoryAccess memoryHandler
     hdeclarations hcall hstate
 
+/-! The raised context-code adequacy fixture keeps the declaration-state
+    relation, transformed callee, exception-table equality, and explicit
+    raised payload relation available to the caller. -/
+theorem related_declarations_raised_call_context_code_adequacy_fixture
+    (initial : PanValueFfiProgramState Nat Unit)
+    (targetInitial : PanValueProgramState Nat)
+    (clock : Nat) (fuel : Nat)
+    (declarations : List (Decl Nat)) (entry : FunName)
+    (arguments : List (Exp Nat))
+    (state : PanValueProgramState Nat)
+    (locals globals : VarName → Option (PanValue Nat))
+    (memory : Nat → Option (PanValue Nat)) (ffi : FfiState Unit)
+    (exception : ExceptionId) (value : PanValue Nat) (nextClock : Nat)
+    (pcContext : CompileContext Nat)
+    (exceptionRel : ExceptionId → PanValue Nat → Nat → Prop)
+    (exceptionCode : ExceptionId → Option Nat)
+    (globalsLookup : CrepState Nat → PanValue Nat → Option (List Nat))
+    (targetState : CrepState Nat) (targetException : Nat)
+    (memoryAccess : Option (PanValueMemoryAccess Nat))
+    (memoryHandler : Option (PanValueMemoryFfiHandler Nat Unit))
+    {parameters : List VarName} {body : Prog Nat}
+    (hinitial : panValueProgramStateRel initial.source targetInitial)
+    (hdeclarations : evalPanValueDeclarations initial.source declarations
+      (memoryAccess := memoryAccess) = some state)
+    (hfunction : lookupPanFunction entry state.functions = some (parameters, body))
+    (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)
+      evaluatorHandler state.structs state.functions state.baseAddress
+      state.topAddress state.bytesInWord fuel (fun _ => none) state.globals
+      state.memory initial.ffi clock none entry arguments
+      (memoryAccess := memoryAccess)
+      (contracts := some (PanValueCallContracts.mk state.returnShapes
+        state.exceptions state.parameterShapes))
+      (memoryHandler := memoryHandler) =
+      some (.control (.raised (fun _ => none) globals memory ffi exception value),
+        nextClock))
+    (hstateContext : panValueCrepStateRelWithContext state.structs pcContext
+      locals globals memory targetState)
+    (hresult : panValuePcExceptionResultRel state.structs pcContext exceptionRel
+      exceptionCode globalsLookup globals memory exception value targetState
+      targetException)
+    (hlookup : lookupInfo exception pcContext.exceptions = some targetException)
+    (hprefix : initial.ffi.ioEvents <+: ffi.ioEvents) :
+    ∃ targetDeclaration,
+      evalPanValueDeclarations targetInitial (panSimpDecls declarations)
+        (memoryAccess := memoryAccess) = some targetDeclaration ∧
+      panValueProgramStateRel state targetDeclaration ∧
+      lookupPanFunction entry targetDeclaration.functions =
+        some (parameters, panSimpProg body) ∧
+      state.exceptions = targetDeclaration.exceptions ∧
+      evalPanValueFfiClockProgram evaluatorContext initial clock
+        (fun _ _ => none) evaluatorHandler fuel declarations entry arguments
+        (memoryAccess := memoryAccess) (memoryHandler := memoryHandler) =
+        some (.control (.raised (fun _ => none) globals memory ffi exception value),
+          nextClock) ∧
+      panValuePcResultRelWithContextCode state.structs pcContext exceptionRel
+        exceptionCode globalsLookup
+        (.raised locals globals memory exception value)
+        (.raised targetState targetException) ∧
+      panValueCrepStateRelWithContext state.structs pcContext locals globals
+        memory targetState ∧
+      initial.ffi.ioEvents <+: ffi.ioEvents := by
+  exact evalPanValueFfiClockProgram_of_related_declarations_and_raised_call_context_code_adequacy
+    evaluatorContext initial clock (fun _ _ => none) evaluatorHandler fuel
+    declarations entry arguments state locals globals memory ffi exception value
+    nextClock pcContext exceptionRel exceptionCode globalsLookup targetState
+    targetException memoryAccess memoryHandler targetInitial hinitial hdeclarations
+    hfunction hcall hstateContext hresult hlookup hprefix
+
 /-! Typed regression for the normal-call declaration-state branch of Cake's
     `state_rel_imp_semantics_decls_to_crep`: the source declaration evaluator,
     target declaration evaluator, call result, state relation, and incoming

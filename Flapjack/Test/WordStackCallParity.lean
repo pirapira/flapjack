@@ -114,6 +114,20 @@ def returnFrameFreeExact : Bool :=
 
 #guard returnFrameFreeExact
 
+/- Cake's direct `num_stack_ret 22 vs` row is one stack slot for a 22-word
+   `vs`: the separate `v1` consumes the final ABI result position.  The
+   flattened Word-to-Stack boundary must preserve that same `+1`, both for
+   the frame free count and for the returned-call copy suffix. -/
+def wideReturnFrameBoundaryExact : Bool :=
+  let config : WordStackConfig :=
+    { locations := [], scratch := 31, stackBase := 0,
+      abiRegisterCount := 22, abiFrameSlots := 12 }
+  stackNumReturnSlots 22 (List.range 22) == 1 &&
+    wordStackReturnFreeCount config (List.range 22) == 12 &&
+    wordStackReturnStackSuffix config (List.range 22) == [21]
+
+#guard wideReturnFrameBoundaryExact
+
 /- Cake's `copy_ret` copies stack-resident return values in descending frame
    order, then frees exactly the temporary return slots.  These two shapes
    are the direct `copy_ret_handler_2`/multi-value rows from
@@ -348,6 +362,8 @@ def runChecks : IO Bool := do
         sourceTailCallFreeCountExact),
       ("returns free the Cake current frame after ABI moves",
         returnFrameFreeExact),
+      ("wide returns retain Cake's implicit v1 return slot",
+        wideReturnFrameBoundaryExact),
       ("copy_ret preserves Cake multi-value return frame order",
         returnCopyCakeGuard),
       ("copy_ret preserves Cake handler-frame return layout",

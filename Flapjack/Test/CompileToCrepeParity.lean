@@ -125,6 +125,42 @@ def pairRaiseOracle : Bool :=
 
 #guard pairRaiseOracle
 
+def handledPairDecls : List (Decl Nat) :=
+  [.exnDecl "E" (.comb [.one, .one]),
+   .function
+     { name := "f", inline := false, exported := false, params := [],
+       body := .raise "E" (.rStruct [.const 7, .const 9]),
+       returnShape := .comb [.one, .one] },
+   .function
+     { name := "g", inline := false, exported := false,
+       params := [("pair", .comb [.one, .one])],
+       body := .call
+         (some (some (.local, "pair"), some ("E", "pair", .skip))) "f" [],
+       returnShape := .one }]
+
+/-! Direct `handled_pair` row in `compile_to_crep_probe.out`: the function
+    raises a two-field RStruct payload, and the handled call carries both its
+    two-word result slots and the exception handler that reloads both payload
+    words from the Crep global return area. -/
+def handledPairOracle : Bool :=
+  match compileToCrep compileToCrepePairContext handledPairDecls with
+  | [{ name := "f", params := [],
+       body := .seq
+         (.dec 1 (.const 7)
+           (.dec 2 (.const 9)
+             (.seq (.storeGlob 0 (.var 1))
+               (.seq (.storeGlob 1 (.var 2)) .skip))))
+         (.raise 0), returnShape := .comb [.one, .one] },
+     { name := "g", params := [0, 1],
+       body := .call
+         (some ([0, 1], some (0,
+           .seq (.seq (.assign 0 (.loadGlob 0))
+             (.seq (.assign 1 (.loadGlob 1)) .skip)) .skip)))
+         "f" [], returnShape := .one }] => true
+  | _ => false
+
+#guard handledPairOracle
+
 def callOracleContext : CompileContext Nat :=
   { vars := [], functions := [], exceptions := [("E", 0)],
     maxVar := 0, bytesInWord := 8 }
@@ -211,6 +247,7 @@ def runChecks : IO Bool := do
   let results := [
     ("raised constant", parityGuard),
     ("two-word exception", pairRaiseOracle),
+    ("handled two-word exception", handledPairOracle),
     ("global call destination", globalDestinationOracle),
     ("handled call with missing destination", handledMissingDestinationOracle),
     ("flattened parameters", crepVarsOracle)]

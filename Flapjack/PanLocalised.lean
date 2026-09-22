@@ -10,6 +10,8 @@ simplified Pan-to-Crep simulation layer. -/
 def localisedExp (expression : Exp α) : Prop :=
   expGlobalVars expression = []
 
+/-- HOL's source localisation predicate. In particular, calls with a global
+    destination are not localised, even when their arguments are local. -/
 @[hol "cakeml/pancake/semantics/panPropsScript.sml" "localised_prog_def"]
 def localisedProg : Prog α → Prop
   | .skip | .break | .continue | .tick | .annot _ _ => True

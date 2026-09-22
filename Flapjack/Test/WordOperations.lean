@@ -118,16 +118,16 @@ example :
 example :
     wordToStackProgNat wordOperationSpillConfig
         (.codeBufferWrite 0 1 : WordProg Nat) =
-      some (.seq (.stackLoad 29 13)
-        (.codeBufferWrite 29 6)) := by
+      some (.seq (.stackLoad 31 13)
+        (.codeBufferWrite 31 6)) := by
   simp [wordToStackProgNat, wordStackBufferWrite, wordStackLocation,
     wordStackOffset, wordStackJoin, lookupNatInfo, wordOperationSpillConfig]
 
 example :
     wordToStackProgNat wordOperationSpillConfig
         (.dataBufferWrite 1 0 : WordProg Nat) =
-      some (.seq (.stackLoad 31 13)
-        (.dataBufferWrite 6 31)) := by
+      some (.seq (.stackLoad 29 13)
+        (.dataBufferWrite 6 29)) := by
   simp [wordToStackProgNat, wordStackBufferWrite, wordStackLocation,
     wordStackOffset, wordStackJoin, lookupNatInfo, wordOperationSpillConfig]
 
@@ -136,9 +136,9 @@ example :
         { wordOperationSpillConfig with locations :=
             [(0, .stack 3), (1, .stack 2)] }
         (.codeBufferWrite 0 1 : WordProg Nat) =
-      some (.seq (.stackLoad 29 13)
-        (.seq (.stackLoad 31 12)
-          (.codeBufferWrite 29 31))) := by
+      some (.seq (.stackLoad 31 13)
+        (.seq (.stackLoad 29 12)
+          (.codeBufferWrite 31 29))) := by
   simp [wordToStackProgNat, wordStackBufferWrite, wordStackLocation,
     wordStackOffset, wordStackJoin, lookupNatInfo, wordOperationSpillConfig]
 

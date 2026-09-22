@@ -1325,6 +1325,8 @@ def wordStackInstall {α : Type} (config : WordStackConfig)
 
 def wordStackBufferWrite {α : Type} (config : WordStackConfig) (isCode : Bool)
     (address value : Nat) : Option (StackProg α) := do
+  /- Cake comp CodeBufferWrite/DataBufferWrite uses wReg1 for the address
+     and wReg2 for the value (word_to_stackScript.sml:546-551). -/
   let address ← wordStackLocation config address
   let value ← wordStackLocation config value
   match address, value with
@@ -1332,31 +1334,31 @@ def wordStackBufferWrite {α : Type} (config : WordStackConfig) (isCode : Bool)
       pure (if isCode then .codeBufferWrite address value
         else .dataBufferWrite address value)
   | .stack address, .register value =>
-      if value = config.addressScratch then
+      if value = config.scratch then
         none
       else
         pure (wordStackJoin
-          (.stackLoad config.addressScratch (wordStackOffset config address))
-          (if isCode then .codeBufferWrite config.addressScratch value
-          else .dataBufferWrite config.addressScratch value))
+          (.stackLoad config.scratch (wordStackOffset config address))
+          (if isCode then .codeBufferWrite config.scratch value
+          else .dataBufferWrite config.scratch value))
   | .register address, .stack value =>
-      if address = config.scratch then
+      if address = config.addressScratch then
         none
       else
         pure (wordStackJoin
-          (.stackLoad config.scratch (wordStackOffset config value))
-          (if isCode then .codeBufferWrite address config.scratch
-          else .dataBufferWrite address config.scratch))
+          (.stackLoad config.addressScratch (wordStackOffset config value))
+          (if isCode then .codeBufferWrite address config.addressScratch
+          else .dataBufferWrite address config.addressScratch))
   | .stack address, .stack value =>
       if config.scratch = config.addressScratch then
         none
       else
         pure (wordStackJoin
-          (.stackLoad config.addressScratch (wordStackOffset config address))
+          (.stackLoad config.scratch (wordStackOffset config address))
           (wordStackJoin
-            (.stackLoad config.scratch (wordStackOffset config value))
-            (if isCode then .codeBufferWrite config.addressScratch config.scratch
-            else .dataBufferWrite config.addressScratch config.scratch)))
+            (.stackLoad config.addressScratch (wordStackOffset config value))
+            (if isCode then .codeBufferWrite config.scratch config.addressScratch
+            else .dataBufferWrite config.scratch config.addressScratch)))
 
 def wordStackAtomNat (config : WordStackConfig) (temporary : Nat) :
     WordExp Nat → Option (StackProg Nat × Nat)

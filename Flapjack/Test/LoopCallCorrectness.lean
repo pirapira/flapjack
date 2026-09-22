@@ -499,6 +499,40 @@ theorem shMem_load_compile_correct_fixture :
     subst source
     exact ⟨100, by simp [load32State]⟩
 
+theorem shMem_store_preserves_locals_fixture :
+    (loopResultState (.normal { load32State with
+      memory := updateLoopMemory load32State.memory 100 7 })).locals =
+      load32State.locals := by
+  have hresult :
+      evalLoopProg 1 load32State (.shMem .store 3 (.var 2)) =
+        some (.normal { load32State with
+          memory := updateLoopMemory load32State.memory 100 7 }) := by
+    simp [evalLoopProg, evalLoopExp, load32State]
+  have hpreserved := evalLoopProg_shMem_store_preserves_locals
+    (state := load32State) (fuel := 1) (operator := .store)
+    (name := 3) (address := .var 2)
+    (result := .normal { load32State with
+      memory := updateLoopMemory load32State.memory 100 7 })
+    (Or.inl rfl) hresult
+  exact hpreserved
+
+theorem shMem_store_other_local_fixture :
+    (loopResultState (.normal { load32State with
+      memory := updateLoopMemory load32State.memory 100 7 })).locals 2 =
+      load32State.locals 2 := by
+  have hresult :
+      evalLoopProg 1 load32State (.shMem .store 3 (.var 2)) =
+        some (.normal { load32State with
+          memory := updateLoopMemory load32State.memory 100 7 }) := by
+    simp [evalLoopProg, evalLoopExp, load32State]
+  have hpreserved := evalLoopProg_shMem_other_local
+    (state := load32State) (fuel := 1) (operator := .store)
+    (name := 2) (destination := 3) (address := .var 2)
+    (result := .normal { load32State with
+      memory := updateLoopMemory load32State.memory 100 7 })
+    (by simp) (by decide) hresult
+  exact hpreserved
+
 theorem shMem_store_compile_correct_fixture :
     evalLoopProg 1 load32State
         (comp [(3, 2)] (.shMem .store 3 (.var 2)) : LoopProg Nat × LocationEnv).1 =
@@ -1169,6 +1203,8 @@ theorem loop_compile_result_fixture :
 #check comp_continue_correct
 #check comp_shMem_load_correct
 #check comp_shMem_store_correct
+#check evalLoopProg_shMem_store_preserves_locals
+#check evalLoopProg_shMem_other_local
 #check comp_arith_div_correct
 #check comp_arith_longMul_correct
 #check comp_arith_longMul_full_correct

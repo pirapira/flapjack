@@ -918,6 +918,44 @@ theorem comp_continue_correct
   · exact evalLoopProg_continue state label
   · exact henvironment
 
+theorem evalLoopProg_shMem_store_preserves_locals
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : LoopState α) (fuel : Nat) (operator : CrepMemOp)
+    (name : Nat) (address : LoopExp α) (result : LoopResult α)
+    (hoperator : operator = .store ∨ operator = .store8 ∨
+      operator = .store16 ∨ operator = .store32)
+    (heval : evalLoopProg fuel state (.shMem operator name address) = some result) :
+    (loopResultState result).locals = state.locals := by
+  funext current
+  apply evalLoopProg_result_local current fuel state
+    (.shMem operator name address)
+  · rcases hoperator with rfl | rfl | rfl | rfl <;>
+      simp [loopNoLocalWrites]
+  · exact heval
+
+theorem evalLoopProg_shMem_other_local
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : LoopState α) (fuel : Nat) (operator : CrepMemOp)
+    (name destination : Nat) (address : LoopExp α) (result : LoopResult α)
+    (hoperator : operator = .load ∨ operator = .load8 ∨
+      operator = .load16 ∨ operator = .load32 ∨
+      operator = .store ∨ operator = .store8 ∨
+      operator = .store16 ∨ operator = .store32)
+    (hdifferent : name ≠ destination)
+    (heval : evalLoopProg fuel state (.shMem operator destination address) = some result) :
+    (loopResultState result).locals name = state.locals name := by
+  apply evalLoopProg_result_local name fuel state
+    (.shMem operator destination address)
+  · rcases hoperator with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+      simp [loopNoLocalWrites, hdifferent]
+  · exact heval
+
 theorem comp_shMem_load_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]

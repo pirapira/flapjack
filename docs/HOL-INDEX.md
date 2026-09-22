@@ -32,3 +32,12 @@ rg '^pan_to_crep -> ' .hol-index/theory-deps.txt
 The index is a local build artifact and is absent from a fresh checkout.  If
 the recorded commit does not match `git -C cakeml rev-parse HEAD`, regenerate
 before relying on line ranges or dependency results.
+
+To find candidates in any Pancake HOL script, run
+`python3 scripts/next-hol-port.py --file cakeml/pancake/FILE.sml`, replacing
+`FILE.sml` with its path below `cakeml/pancake/`. Add `--goal HOL_NAME` to
+show only earlier declarations or `--kind Theorem` for theorem candidates.
+The command refreshes a stale index and excludes declarations with `@[hol]`
+tags. Source order and tag presence are navigation aids, not a dependency
+proof or an equivalence claim; inspect HOL, Lean, and GitHub issues before
+starting work.

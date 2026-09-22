@@ -841,6 +841,7 @@ theorem panSemEvaluate_clock_shift_panResultEvents
           { state with clock := state.clock + extra } program) :=
       (congrArg panResultEvents hrun'').symm
  
+ 
 
 /-! The evaluator shift also transports the full source-facing result
     projection.  This is the direct clocked top-level bridge used when a

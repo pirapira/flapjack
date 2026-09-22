@@ -2713,7 +2713,9 @@ example : PanValueFfiClockNormalAdequateProgFromFloor 3 3 evaluatorContext
 #check @Flapjack.panValueFfiSharedStore_ioEvents_prefix
 #check @Flapjack.panValueFfiExtCall_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiProgSteps_shMemLoad_normal_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiProgSteps_shMemLoad_finalFfi_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiProgSteps_shMemStore_normal_ioEvents_prefix
+#check @Flapjack.evalPanValueFfiProgSteps_shMemStore_finalFfi_ioEvents_prefix
 #check @Flapjack.evalPanValueFfiClockProg_while_zero_shift
 #check @Flapjack.evalPanValueFfiClockProg_while_normal_shift_step
 #check @Flapjack.evalPanValueFfiClockProg_while_broke_shift_step
@@ -2753,3 +2755,16 @@ end Flapjack.Test.PanSimpParity
 /-! The generic residual/timeout event-prefix induction reduces whole-program event monotonicity
 to the explicit per-leaf residual obligation `hleaf`. -/
 #check @Flapjack.evalPanValueFfiClock_ioEvents_prefix
+
+/-! Event-prefix for the event-safe leaf fragment (every `PanValueFfiLeafProg` constructor
+except `extCall`, whose event preservation depends on the handler premises). -/
+#check @Flapjack.PanValueFfiEventSafeLeaf
+#check @Flapjack.evalPanValueFfiProgSteps_eventSafeLeaf_ioEvents_prefix
+
+/-! The `extCall` leaf needs explicit handler event-preservation premises; this is the
+remaining sub-case of the generic `hleaf` obligation. -/
+#check @Flapjack.evalPanValueFfiProgSteps_extCall_ioEvents_prefix
+
+/-! Fully-discharged leaf event-prefix: all 13 `PanValueFfiLeafProg` constructors,
+including `extCall`, under the explicit handler-preservation premises. -/
+#check @Flapjack.evalPanValueFfiProgSteps_leaf_ioEvents_prefix

@@ -1,0 +1,8 @@
+shaped_slots=<|vars := FEMPTY⟨«pair» ↦ (Comb [One; One],[1; 2]); «x» ↦ (One,[0])⟩;
+  funcs := FEMPTY⟨«f» ↦ ([],One)⟩; eids := FEMPTY⟨«E» ↦ 3w⟩; vmax := 2|>
+
+zip_truncates_and_empty_slots=<|vars := FOLDL $|+ FEMPTY⟨«x» ↦ (One,[])⟩ (ZIP ([«ignored»],[]));
+  funcs := FEMPTY; eids := FEMPTY; vmax := 0|>
+
+empty_maximum=<|vars := FEMPTY; funcs := FEMPTY; eids := FEMPTY; vmax := 0|>
+

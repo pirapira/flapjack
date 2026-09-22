@@ -37,6 +37,12 @@ shape/duplicate failure cases.
 call destinations through `pan_to_crep$compile`: absent lookups, the
 `One`/empty-list fallback, and inconsistent shape/name-list lengths. The
 matching Lean cases live in `Flapjack.Test.CompileDefParity`.
+`excp_rel_probe.out` and `ctxt_fc_probe.out` are direct EVALs from
+`pan_to_crepProofTheory`, paired with `Flapjack.Test.PanToCrepRelationsParity`.
+The `excp_rel` cases deliberately use a word-valued compiler-code map and a
+shape-valued source map, matching the definition's independent HOL value types.
+The `ctxt_fc` cases record `with_shape` slot slicing, ZIP truncation, and
+`MAX_LIST` on an empty name list.
 `pan_globals_compile_top_probe.out` records original Pancake HOL evaluation
 of `pan_globals$compile_top` for an absent start function (the total empty-list
 result) and a present `main` entry. Its Lean checks live in

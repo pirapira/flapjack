@@ -39,6 +39,7 @@ import Flapjack.Test.PanValueWfParity
 import Flapjack.Test.PanCost
 import Flapjack.Test.SourceSemanticsOps
 import Flapjack.Test.PanToCrepExceptionRelation
+import Flapjack.Test.PanToCrepRelationsParity
 /- These legacy Crep-to-Loop theorem fixtures still assume identity variable
    resolution; source parity coverage remains in `Test.SourceToLoop`. -/
 import Flapjack.Test.StaticGlobalVarParity

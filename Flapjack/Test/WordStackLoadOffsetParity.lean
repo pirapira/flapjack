@@ -45,6 +45,28 @@ example :
   simp [wordStackMemoryOffsetInst, wordStackLoadOffsetInst, wordStackLocation,
     wordStackOffset, lookupNatInfo]
 
+/- Cake retains the same signed-12 positive endpoint for byte and halfword
+   loads; width selection is deferred to the target encoder. -/
+example :
+    wordStackMemoryOffsetInst
+      { locations := [(0, .register 4), (1, .register 5)]
+        scratch := 31
+        stackBase := 10 }
+      .load8 0 1 2047 =
+      some (.inst (.memOffset .load8 4 5 2047) : StackProg Nat) := by
+  simp [wordStackMemoryOffsetInst, wordStackLoadOffsetInst, wordStackLocation,
+    wordStackOffset, lookupNatInfo]
+
+example :
+    wordStackMemoryOffsetInst
+      { locations := [(0, .register 4), (1, .register 5)]
+        scratch := 31
+        stackBase := 10 }
+      .load16 0 1 2047 =
+      some (.inst (.memOffset .load16 4 5 2047) : StackProg Nat) := by
+  simp [wordStackMemoryOffsetInst, wordStackLoadOffsetInst, wordStackLocation,
+    wordStackOffset, lookupNatInfo]
+
 /- Cake retains a negative signed-12 Load displacement in the source-shaped
    MemOffset carrier as its modulo-2^64 word; Lab later interprets it as -8. -/
 example :
@@ -108,6 +130,26 @@ example :
         stackBase := 10 }
       .store32 0 1 2047 =
       some (.inst (.memOffset .store32 4 5 2047) : StackProg Nat) := by
+  simp [wordStackMemoryOffsetInst, wordStackStoreOffsetInst, wordStackLocation,
+    wordStackOffset, lookupNatInfo]
+
+example :
+    wordStackMemoryOffsetInst
+      { locations := [(0, .register 4), (1, .register 5)]
+        scratch := 31
+        stackBase := 10 }
+      .store8 0 1 2047 =
+      some (.inst (.memOffset .store8 4 5 2047) : StackProg Nat) := by
+  simp [wordStackMemoryOffsetInst, wordStackStoreOffsetInst, wordStackLocation,
+    wordStackOffset, lookupNatInfo]
+
+example :
+    wordStackMemoryOffsetInst
+      { locations := [(0, .register 4), (1, .register 5)]
+        scratch := 31
+        stackBase := 10 }
+      .store16 0 1 2047 =
+      some (.inst (.memOffset .store16 4 5 2047) : StackProg Nat) := by
   simp [wordStackMemoryOffsetInst, wordStackStoreOffsetInst, wordStackLocation,
     wordStackOffset, lookupNatInfo]
 

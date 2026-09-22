@@ -28,6 +28,10 @@ additionally probes `pan_op_def` at lines 191--193.
 `Flapjack.Test.LoopDecClockParity` probes `dec_clock_def` at lines 42--43 of
 the same source.
 `Flapjack.Test.LoopFixClockParity` probes `fix_clock_def` at lines 46--49.
+`compile_def_probe.out` also records direct HOL evaluations of assigned Global
+call destinations through `pan_to_crep$compile`: absent lookups, the
+`One`/empty-list fallback, and inconsistent shape/name-list lengths. The
+matching Lean cases live in `Flapjack.Test.CompileDefParity`.
 The `longdiv_code_probe.out` fixture probes the original software LongDiv
 helper at `cakeml/compiler/backend/data_to_wordScript.sml:829-867` and the
 RISC-V target's deliberate LongDiv encoding rejection.

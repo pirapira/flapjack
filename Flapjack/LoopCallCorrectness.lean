@@ -592,6 +592,47 @@ theorem comp_shMem_store_correct
       hoperator haddress hvalue
   · simp [labelsIn, lookup]
 
+theorem comp_arith_div_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (environment : LocationEnv) (state : LoopState α)
+    (destination dividend divisor : Nat)
+    (dividendValue divisorValue : α)
+    (hdividend : state.locals dividend = some dividendValue)
+    (hdivisor : state.locals divisor = some divisorValue)
+    (hnonzero : (divisorValue == 0) = false)
+    (henvironment : labelsIn environment state.locals) :
+    evalLoopProg 1 state
+        (comp environment (.arith (.div destination dividend divisor) : LoopProg α)).1 =
+        some (.normal { state with
+          locals := updateLoopLocal state.locals destination (dividendValue / divisorValue) }) ∧
+      labelsIn
+        (comp environment (.arith (.div destination dividend divisor) : LoopProg α)).2
+        (updateLoopLocal state.locals destination (dividendValue / divisorValue)) := by
+  have hcompiled :
+      comp environment (.arith (.div destination dividend divisor) : LoopProg α) =
+        (.arith (.div destination dividend divisor),
+          match lookup destination environment with
+          | none => environment
+          | some _ => delete destination environment) := by
+    simp [comp, compArith] <;> rfl
+  rw [hcompiled]
+  cases hdestination : lookup destination environment with
+  | none =>
+      constructor
+      · exact evalLoopProg_div state destination dividend divisor dividendValue divisorValue
+          hdividend hdivisor hnonzero
+      · exact labelsIn_update environment state.locals destination
+          (dividendValue / divisorValue) henvironment
+  | some _ =>
+      constructor
+      · exact evalLoopProg_div state destination dividend divisor dividendValue divisorValue
+          hdividend hdivisor hnonzero
+      · exact labelsIn_delete_update environment state.locals destination
+          (dividendValue / divisorValue) henvironment
+
 theorem lookup_of_listDelete
     (destinations : List Nat) (environment : LocationEnv)
     (name location : Nat)

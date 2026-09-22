@@ -1543,4 +1543,459 @@ theorem evalPanValueFfiClockProg_dec_ioEvents_prefix
   · rw [panResultFfi_panValueFfiClockRestoreLocal]
     exact hprefix
 
+
+set_option linter.unusedSimpArgs false in
+set_option linter.unusedVariables false in
+/-- Generic event-prefix monotonicity for the clocked evaluator, by mutual induction over the
+residual/timeout `fuel` budget. The per-leaf residual obligation is threaded explicitly as
+`hleaf`: every successful unit-fuel `evalPanValueFfiProgSteps` run preserves the FFI event log.
+All other constructors (declaration, sequence, conditional, call, declaration-call, while, tick)
+are reduced to the corresponding induction hypothesis or to `List.prefix_refl`. -/
+theorem evalPanValueFfiClock_ioEvents_prefix
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (hleaf : ∀ (locals globals : VarName → Option (PanValue α)) (memory : α → Option (PanValue α))
+        (ffi : FfiState σ) (clock : Nat) (program : Prog α)
+        (result : PanValueFfiControlResult α σ) (steps : Nat)
+        (memoryAccess : Option (PanValueMemoryAccess α)) (contracts : Option PanValueCallContracts)
+        (memoryHandler : Option (PanValueMemoryFfiHandler α σ)),
+        evalPanValueFfiProgSteps context primitive handler structs functions baseAddress topAddress
+          bytesInWord 1 locals globals memory ffi program
+          (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler) =
+          some (result, steps) →
+        ffi.ioEvents <+:
+          (panResultFfi ((.control result : PanValueFfiClockOutcome α σ), clock)).ioEvents) :
+    (∀ (fuel : Nat) (locals globals : VarName → Option (PanValue α)) (memory : α → Option (PanValue α))
+        (ffi : FfiState σ) (clock : Nat)
+        (info : Option (Option (VarKind × VarName) × Option (ExceptionId × VarName × Prog α)))
+        (function : FunName) (arguments : List (Exp α))
+        (memoryAccess : Option (PanValueMemoryAccess α)) (contracts : Option PanValueCallContracts)
+        (memoryHandler : Option (PanValueMemoryFfiHandler α σ))
+        (outcome : PanValueFfiClockOutcome α σ) (resultClock : Nat),
+        evalPanValueFfiClockCall context primitive handler structs functions baseAddress topAddress bytesInWord
+          fuel locals globals memory ffi clock info function arguments
+          (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler) =
+          some (outcome, resultClock) →
+        ffi.ioEvents <+: (panResultFfi (outcome, resultClock)).ioEvents)
+    ∧
+    (∀ (fuel : Nat) (locals globals : VarName → Option (PanValue α)) (memory : α → Option (PanValue α))
+        (ffi : FfiState σ) (clock : Nat) (program : Prog α)
+        (memoryAccess : Option (PanValueMemoryAccess α)) (contracts : Option PanValueCallContracts)
+        (memoryHandler : Option (PanValueMemoryFfiHandler α σ))
+        (outcome : PanValueFfiClockOutcome α σ) (resultClock : Nat),
+        evalPanValueFfiClockProg context primitive handler structs functions baseAddress topAddress bytesInWord
+          fuel locals globals memory ffi clock program
+          (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler) =
+          some (outcome, resultClock) →
+        ffi.ioEvents <+: (panResultFfi (outcome, resultClock)).ioEvents) := by
+  refine evalPanValueFfiClockCall.mutual_induct
+    (motive1 := fun fuel locals globals memory ffi clock info function arguments memoryAccess contracts memoryHandler =>
+      ∀ outcome resultClock,
+        evalPanValueFfiClockCall context primitive handler structs functions baseAddress topAddress bytesInWord
+          fuel locals globals memory ffi clock info function arguments
+          (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler) =
+          some (outcome, resultClock) →
+        ffi.ioEvents <+: (panResultFfi (outcome, resultClock)).ioEvents)
+    (motive2 := fun fuel locals globals memory ffi clock program memoryAccess contracts memoryHandler =>
+      ∀ outcome resultClock,
+        evalPanValueFfiClockProg context primitive handler structs functions baseAddress topAddress bytesInWord
+          fuel locals globals memory ffi clock program
+          (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler) =
+          some (outcome, resultClock) →
+        ffi.ioEvents <+: (panResultFfi (outcome, resultClock)).ioEvents)
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+  · -- case1: Call fuel 0
+    intro memoryAccess contracts memoryHandler locals globals memory ffi clock info function arguments outcome resultClock hrun
+    simp only [evalPanValueFfiClockCall] at hrun
+    exact absurd hrun (by simp)
+  · -- case2: Call fuel+1
+    intro fuel locals globals memory ffi clock info function arguments memoryAccess contracts memoryHandler hbodyIH hhandlerIH outcome resultClock hrun
+    simp only [evalPanValueFfiClockCall] at hrun
+    cases hvalues : evalPanValueExps structs locals globals memory baseAddress topAddress bytesInWord arguments
+        (memoryAccess := memoryAccess) with
+    | none => simp only [hvalues, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+    | some values =>
+      simp only [hvalues, Option.bind_eq_bind, Option.bind_some] at hrun
+      cases hlookup : lookupPanFunction function functions with
+      | none => simp only [hlookup, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+      | some pair =>
+        obtain ⟨parameters, body⟩ := pair
+        simp only [hlookup, Option.bind_eq_bind, Option.bind_some] at hrun
+        by_cases hparams : panValueParametersValid structs contracts function values = true
+        · simp only [hparams, if_true, Option.bind_eq_bind, Option.bind_some] at hrun
+          cases hbind : bindPanValueParameters parameters values with
+          | none => simp only [hbind, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+          | some calleeLocals =>
+            simp only [hbind, Option.bind_eq_bind, Option.bind_some] at hrun
+            by_cases hclock : clock = 0
+            · simp only [hclock, if_true, Option.pure_def] at hrun
+              have hpair := Option.some.inj hrun
+              rw [← hpair]
+              simp only [panValueFfiClockTimeout, panResultFfi]
+              exact List.prefix_refl _
+            · simp only [hclock, if_false, Option.bind_eq_bind, Option.bind_some] at hrun
+              cases hcallee : evalPanValueFfiClockProg context primitive handler structs functions baseAddress
+                  topAddress bytesInWord fuel calleeLocals globals memory ffi (decPanClock clock) body
+                  (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler) with
+              | none => simp only [hcallee, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+              | some pair2 =>
+                obtain ⟨calleeOutcome, calleeClock⟩ := pair2
+                simp only [hcallee, Option.bind_eq_bind, Option.bind_some] at hrun
+                have hb : ffi.ioEvents <+: (panResultFfi (calleeOutcome, calleeClock)).ioEvents :=
+                  hbodyIH body calleeLocals calleeOutcome calleeClock hcallee
+                cases calleeOutcome with
+                | timeout l g m f =>
+                  simp only [Option.pure_def] at hrun
+                  have hpair := Option.some.inj hrun
+                  rw [← hpair]
+                  exact hb
+                | control result =>
+                  cases result with
+                  | normal l g m f => simp only [Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+                  | broke l g m f => simp only [Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+                  | continued l g m f => simp only [Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+                  | returned l g m f vs =>
+                    by_cases hret : (panValueReturnValid structs contracts function vs && panValueValuesWithinLimit structs vs) = true
+                    · simp only [hret, if_true, Option.bind_eq_bind, Option.bind_some] at hrun
+                      cases info with
+                      | none =>
+                        simp only [Option.pure_def] at hrun
+                        have hpair := Option.some.inj hrun
+                        rw [← hpair]
+                        exact hb
+                      | some ipair =>
+                        obtain ⟨destination, sndOpt⟩ := ipair
+                        simp only [Option.bind_eq_bind, Option.bind_some] at hrun
+                        cases hassign : assignPanValueCallResult locals g destination vs structs with
+                        | none => simp only [hassign, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+                        | some apair =>
+                          simp only [hassign, Option.bind_eq_bind, Option.bind_some] at hrun
+                          simp only [Option.pure_def] at hrun
+                          have hpair := Option.some.inj hrun
+                          rw [← hpair]
+                          exact hb
+                    · simp only [hret, if_false, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+                  | raised l g m f ex v =>
+                    by_cases hexc : (panValueExceptionValid structs contracts ex v && panValuePayloadWithinLimit structs v) = true
+                    · simp only [hexc, if_true, Option.bind_eq_bind, Option.bind_some] at hrun
+                      cases info with
+                      | none =>
+                        simp only [Option.pure_def] at hrun
+                        have hpair := Option.some.inj hrun
+                        rw [← hpair]
+                        exact hb
+                      | some ipair =>
+                        obtain ⟨destination, sndOpt⟩ := ipair
+                        cases sndOpt with
+                        | none =>
+                          simp only [Option.pure_def] at hrun
+                          have hpair := Option.some.inj hrun
+                          rw [← hpair]
+                          exact hb
+                        | some htriple =>
+                          obtain ⟨caught, handlerVariable, handlerProgram⟩ := htriple
+                          by_cases hcaught : (caught == ex) = true
+                          · simp only [hcaught, if_true, Option.bind_eq_bind, Option.bind_some] at hrun
+                            by_cases hvalid : panValueHandlerValid structs contracts locals handlerVariable v = true
+                            · simp only [hvalid, if_true] at hrun
+                              have hidx := hhandlerIH calleeClock g m f v handlerVariable handlerProgram outcome resultClock hrun
+                              exact List.IsPrefix.trans (by simpa [panResultFfi] using hb) hidx
+                            · simp only [hvalid, if_false, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+                          · simp only [hcaught, if_false, Option.pure_def] at hrun
+                            have hpair := Option.some.inj hrun
+                            rw [← hpair]
+                            exact hb
+                    · simp only [hexc, if_false, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+                  | finalFfi l g m f ev =>
+                    simp only [Option.pure_def] at hrun
+                    have hpair := Option.some.inj hrun
+                    rw [← hpair]
+                    exact hb
+        · simp only [hparams, if_false, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+  · -- case3: Prog fuel 0
+    intro memoryAccess contracts memoryHandler locals globals memory ffi clock program outcome resultClock hrun
+    simp only [evalPanValueFfiClockProg] at hrun
+    exact absurd hrun (by simp)
+  · -- case4: Prog dec
+    intro fuel locals globals memory ffi clock name shape value body memoryAccess contracts memoryHandler hbodyIH outcome resultClock hrun
+    simp only [evalPanValueFfiClockProg] at hrun
+    cases hvalue : evalPanValueExp structs locals globals memory baseAddress topAddress bytesInWord value
+        (memoryAccess := memoryAccess) with
+    | none => simp only [hvalue, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+    | some valueResult =>
+      simp only [hvalue, Option.bind_eq_bind, Option.bind_some] at hrun
+      by_cases hmatch : panShapeMatches (panValueShape structs valueResult) shape = true
+      · simp only [hmatch, if_true, Option.bind_eq_bind, Option.bind_some] at hrun
+        cases hbody : evalPanValueFfiClockProg context primitive handler structs functions baseAddress topAddress
+            bytesInWord fuel (updatePanValueMap locals name valueResult) globals memory ffi clock body
+            (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler) with
+        | none => simp only [hbody, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+        | some pair =>
+          obtain ⟨bodyOutcome, bodyClock⟩ := pair
+          simp only [hbody, Option.bind_eq_bind, Option.bind_some] at hrun
+          have hb : ffi.ioEvents <+: (panResultFfi (bodyOutcome, bodyClock)).ioEvents :=
+            hbodyIH valueResult bodyOutcome bodyClock hbody
+          simp only [Option.pure_def] at hrun
+          have hpair := Option.some.inj hrun
+          rw [← hpair]
+          rw [panResultFfi_panValueFfiClockRestoreLocal]
+          exact hb
+      · simp only [hmatch, if_false, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+  · -- case5: Prog seq
+    intro fuel locals globals memory ffi clock first second memoryAccess contracts memoryHandler hfirstIH hsecondIH outcome resultClock hrun
+    simp only [evalPanValueFfiClockProg] at hrun
+    cases hfirst : evalPanValueFfiClockProg context primitive handler structs functions baseAddress topAddress
+        bytesInWord fuel locals globals memory ffi clock first
+        (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler) with
+    | none => simp only [hfirst, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+    | some pair =>
+      obtain ⟨firstOutcome, firstClock⟩ := pair
+      simp only [hfirst, Option.bind_eq_bind, Option.bind_some] at hrun
+      have hf : ffi.ioEvents <+: (panResultFfi (firstOutcome, firstClock)).ioEvents :=
+        hfirstIH firstOutcome firstClock hfirst
+      cases firstOutcome with
+      | timeout l g m f =>
+        simp only [Option.pure_def] at hrun
+        have hpair := Option.some.inj hrun
+        rw [← hpair]
+        exact hf
+      | control result =>
+        cases result with
+        | normal nl ng nm nf =>
+          cases hsecond : evalPanValueFfiClockProg context primitive handler structs functions baseAddress topAddress
+              bytesInWord fuel nl ng nm nf firstClock second
+              (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler) with
+          | none => simp only [hsecond, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+          | some pair2 =>
+            obtain ⟨secondOutcome, secondClock⟩ := pair2
+            simp only [hsecond, Option.bind_eq_bind, Option.bind_some] at hrun
+            have hs : nf.ioEvents <+: (panResultFfi (secondOutcome, secondClock)).ioEvents :=
+              hsecondIH firstClock nl ng nm nf secondOutcome secondClock hsecond
+            have hpair := Option.some.inj hrun
+            rw [← hpair]
+            exact List.IsPrefix.trans (by simpa [panResultFfi] using hf) hs
+        | returned l g m f vs =>
+          simp only [Option.pure_def] at hrun
+          have hpair := Option.some.inj hrun
+          rw [← hpair]
+          exact hf
+        | raised l g m f ex v =>
+          simp only [Option.pure_def] at hrun
+          have hpair := Option.some.inj hrun
+          rw [← hpair]
+          exact hf
+        | broke l g m f =>
+          simp only [Option.pure_def] at hrun
+          have hpair := Option.some.inj hrun
+          rw [← hpair]
+          exact hf
+        | continued l g m f =>
+          simp only [Option.pure_def] at hrun
+          have hpair := Option.some.inj hrun
+          rw [← hpair]
+          exact hf
+        | finalFfi l g m f ev =>
+          simp only [Option.pure_def] at hrun
+          have hpair := Option.some.inj hrun
+          rw [← hpair]
+          exact hf
+  · -- case6: Prog ite
+    intro fuel locals globals memory ffi clock condition thenBranch elseBranch memoryAccess contracts memoryHandler hthenIH outcome resultClock hrun
+    simp only [evalPanValueFfiClockProg] at hrun
+    cases hcond : evalPanValueExp structs locals globals memory baseAddress topAddress bytesInWord condition
+        (memoryAccess := memoryAccess) with
+    | none => simp only [hcond, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+    | some condValue =>
+      simp only [hcond, Option.bind_eq_bind, Option.bind_some] at hrun
+      cases condValue with
+      | word w => exact hthenIH w outcome resultClock hrun
+      | rStruct fields => simp only [Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+      | nStruct nm fields => simp only [Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+  · -- case7: Prog call
+    intro fuel locals globals memory ffi clock info function arguments memoryAccess contracts memoryHandler hcallIH outcome resultClock hrun
+    simp only [evalPanValueFfiClockProg] at hrun
+    exact hcallIH outcome resultClock hrun
+  · -- case8: Prog decCall
+    intro fuel locals globals memory ffi clock name shape function arguments body memoryAccess contracts memoryHandler hcallIH hbodyIH outcome resultClock hrun
+    simp only [evalPanValueFfiClockProg] at hrun
+    cases hcall : evalPanValueFfiClockCall context primitive handler structs functions baseAddress topAddress
+        bytesInWord fuel locals globals memory ffi clock none function arguments
+        (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler) with
+    | none => simp only [hcall, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+    | some pair =>
+      obtain ⟨callOutcome, nextClock⟩ := pair
+      simp only [hcall, Option.bind_eq_bind, Option.bind_some] at hrun
+      have hc : ffi.ioEvents <+: (panResultFfi (callOutcome, nextClock)).ioEvents :=
+        hcallIH callOutcome nextClock hcall
+      cases callOutcome with
+      | timeout l g m f =>
+        simp only [Option.pure_def] at hrun
+        have hpair := Option.some.inj hrun
+        rw [← hpair]
+        exact hc
+      | control result =>
+        cases result with
+        | returned l g m f vs =>
+          cases vs with
+          | nil =>
+            simp only [Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+          | cons v rest =>
+            cases rest with
+            | cons v2 rest2 =>
+              simp only [Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+            | nil =>
+              simp only [Option.bind_eq_bind, Option.bind_some] at hrun
+              by_cases hmatch : panShapeMatches (panValueShape structs v) shape = true
+              · simp only [hmatch, if_true, Option.bind_eq_bind, Option.bind_some] at hrun
+                cases hbody : evalPanValueFfiClockProg context primitive handler structs functions baseAddress topAddress
+                    bytesInWord fuel (updatePanValueMap locals name v) g m f nextClock body
+                    (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler) with
+                | none => simp only [hbody, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+                | some pair2 =>
+                  obtain ⟨bodyOutcome, bodyClock⟩ := pair2
+                  simp only [hbody, Option.bind_eq_bind, Option.bind_some] at hrun
+                  have hb : f.ioEvents <+: (panResultFfi (bodyOutcome, bodyClock)).ioEvents :=
+                    hbodyIH nextClock g m f v bodyOutcome bodyClock hbody
+                  simp only [Option.pure_def] at hrun
+                  have hpair := Option.some.inj hrun
+                  rw [← hpair]
+                  rw [panResultFfi_panValueFfiClockRestoreLocal]
+                  exact List.IsPrefix.trans (by simpa [panResultFfi] using hc) hb
+              · simp only [hmatch, if_false, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+        | normal l g m f => simp only [Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+        | broke l g m f => simp only [Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+        | continued l g m f => simp only [Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+        | raised l g m f ex v =>
+          simp only [Option.pure_def] at hrun
+          have hpair := Option.some.inj hrun
+          rw [← hpair]
+          exact hc
+        | finalFfi l g m f ev =>
+          simp only [Option.pure_def] at hrun
+          have hpair := Option.some.inj hrun
+          rw [← hpair]
+          exact hc
+  · -- case9: Prog while
+    intro fuel locals globals memory ffi clock conditionExp body memoryAccess contracts memoryHandler hbodyIH hrecIH outcome resultClock hrun
+    simp only [evalPanValueFfiClockProg] at hrun
+    cases hcond : evalPanValueExp structs locals globals memory baseAddress topAddress bytesInWord conditionExp
+        (memoryAccess := memoryAccess) with
+    | none => simp only [hcond, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+    | some condValue =>
+      simp only [hcond, Option.bind_eq_bind, Option.bind_some] at hrun
+      cases condValue with
+      | word w =>
+        by_cases hz : (w == 0) = true
+        · simp only [hz, if_true, Option.pure_def] at hrun
+          have hpair := Option.some.inj hrun
+          rw [← hpair]
+          simp only [panResultFfi]
+          exact List.prefix_refl _
+        · simp only [hz, if_false, Option.bind_eq_bind, Option.bind_some] at hrun
+          by_cases hclock : (clock == 0) = true
+          · simp only [hclock, if_true, Option.pure_def] at hrun
+            have hpair := Option.some.inj hrun
+            rw [← hpair]
+            simp only [panValueFfiClockTimeout, panResultFfi]
+            exact List.prefix_refl _
+          · simp only [hclock, if_false, Option.bind_eq_bind, Option.bind_some] at hrun
+            cases hbody : evalPanValueFfiClockProg context primitive handler structs functions baseAddress topAddress
+                bytesInWord fuel locals globals memory ffi (decPanClock clock) body
+                (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler) with
+            | none => simp only [hbody, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+            | some pair =>
+              obtain ⟨bodyOutcome, bodyClock⟩ := pair
+              simp only [hbody, Option.bind_eq_bind, Option.bind_some] at hrun
+              have hb : ffi.ioEvents <+: (panResultFfi (bodyOutcome, bodyClock)).ioEvents :=
+                hbodyIH bodyOutcome bodyClock hbody
+              cases bodyOutcome with
+              | timeout l g m f =>
+                simp only [Option.pure_def] at hrun
+                have hpair := Option.some.inj hrun
+                rw [← hpair]
+                exact hb
+              | control result =>
+                cases result with
+                | normal nl ng nm nf =>
+                  cases hrec : evalPanValueFfiClockProg context primitive handler structs functions baseAddress
+                      topAddress bytesInWord fuel nl ng nm nf bodyClock (.while conditionExp body)
+                      (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler) with
+                  | none => simp only [hrec, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+                  | some pair2 =>
+                    obtain ⟨recOutcome, recClock⟩ := pair2
+                    simp only [hrec, Option.bind_eq_bind, Option.bind_some] at hrun
+                    have hr : nf.ioEvents <+: (panResultFfi (recOutcome, recClock)).ioEvents :=
+                      hrecIH bodyClock nl ng nm nf recOutcome recClock hrec
+                    simp only [Option.pure_def] at hrun
+                    have hpair := Option.some.inj hrun
+                    rw [← hpair]
+                    exact List.IsPrefix.trans (by simpa [panResultFfi] using hb) hr
+                | continued nl ng nm nf =>
+                  cases hrec : evalPanValueFfiClockProg context primitive handler structs functions baseAddress
+                      topAddress bytesInWord fuel nl ng nm nf bodyClock (.while conditionExp body)
+                      (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler) with
+                  | none => simp only [hrec, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+                  | some pair2 =>
+                    obtain ⟨recOutcome, recClock⟩ := pair2
+                    simp only [hrec, Option.bind_eq_bind, Option.bind_some] at hrun
+                    have hr : nf.ioEvents <+: (panResultFfi (recOutcome, recClock)).ioEvents :=
+                      hrecIH bodyClock nl ng nm nf recOutcome recClock hrec
+                    simp only [Option.pure_def] at hrun
+                    have hpair := Option.some.inj hrun
+                    rw [← hpair]
+                    exact List.IsPrefix.trans (by simpa [panResultFfi] using hb) hr
+                | broke nl ng nm nf =>
+                  simp only [Option.pure_def] at hrun
+                  have hpair := Option.some.inj hrun
+                  rw [← hpair]
+                  simpa [panResultFfi] using hb
+                | returned l g m f vs =>
+                  simp only [Option.pure_def] at hrun
+                  have hpair := Option.some.inj hrun
+                  rw [← hpair]
+                  exact hb
+                | raised l g m f ex v =>
+                  simp only [Option.pure_def] at hrun
+                  have hpair := Option.some.inj hrun
+                  rw [← hpair]
+                  exact hb
+                | finalFfi l g m f ev =>
+                  simp only [Option.pure_def] at hrun
+                  have hpair := Option.some.inj hrun
+                  rw [← hpair]
+                  exact hb
+      | rStruct fields => simp only [Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+      | nStruct nm fields => simp only [Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+  · -- case10: Prog tick clock 0
+    intro memoryAccess contracts memoryHandler _fuel locals globals memory ffi outcome resultClock hrun
+    simp only [evalPanValueFfiClockProg] at hrun
+    simp only [Option.pure_def] at hrun
+    have hpair := Option.some.inj hrun
+    rw [← hpair]
+    simp only [panValueFfiClockTimeout, panResultFfi]
+    exact List.prefix_refl _
+  · -- case11: Prog tick clock != 0
+    intro memoryAccess contracts memoryHandler _fuel locals globals memory ffi clock hclock outcome resultClock hrun
+    simp only [evalPanValueFfiClockProg, if_neg hclock, Option.pure_def] at hrun
+    have hpair := Option.some.inj hrun
+    rw [← hpair]
+    simp only [panResultFfi]
+    exact List.prefix_refl _
+  · -- case12: Prog fallback (residual / leaf)
+    intro _fuel locals globals memory ffi clock program memoryAccess contracts memoryHandler hdec hseq hite hcall hdecCall hwhile htick outcome resultClock hrun
+    simp only [evalPanValueFfiClockProg, hdec, hseq, hite, hcall, hdecCall, hwhile, htick,
+      evalPanValueFfiClockLeaf, Function.comp_def] at hrun
+    rw [Option.map_eq_some_iff] at hrun
+    obtain ⟨⟨r, s⟩, hstep, heq⟩ := hrun
+    have ho : outcome = (PanValueFfiClockOutcome.control r : PanValueFfiClockOutcome α σ) :=
+      congrArg Prod.fst heq.symm
+    have hc : resultClock = clock := congrArg Prod.snd heq.symm
+    rw [ho, hc]
+    exact hleaf locals globals memory ffi clock program r s memoryAccess contracts memoryHandler hstep
+
 end Flapjack

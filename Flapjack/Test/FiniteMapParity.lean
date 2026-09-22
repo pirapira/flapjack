@@ -189,4 +189,21 @@ theorem map_FLOOKUP_foldl_resVar_zip_fupdate_fixture :
 #check @map_FLOOKUP_FUPDATE_LIST_zip_not_mem
 #check @map_FLOOKUP_foldl_resVar_zip_fupdate
 
+theorem FDOMSUB_FUPDATE_LIST_commutes_fixture :
+    FDOMSUB (FUPDATE_LIST (FUPDATE_LIST FEMPTY [(3, 30)])
+        (([2, 5] : List Nat).zip ([20, 50] : List Nat))) 7 =
+      FUPDATE_LIST (FDOMSUB (FUPDATE_LIST FEMPTY [(3, 30)]) 7)
+        (([2, 5] : List Nat).zip ([20, 50] : List Nat)) :=
+  FDOMSUB_FUPDATE_LIST_commutes [2, 5] [20, 50]
+    (FUPDATE_LIST FEMPTY [(3, 30)]) 7 (by decide) rfl
+
+theorem FLOOKUP_FUPDATE_LIST_zip_getElem_fixture :
+    FLOOKUP (FUPDATE_LIST FEMPTY (([2, 5] : List Nat).zip ([20, 50] : List Nat))) 5 =
+      some 50 := by
+  simpa using
+    FLOOKUP_FUPDATE_LIST_zip_getElem [2, 5] [20, 50] FEMPTY 1 (by decide) rfl (by decide)
+
+#check @FDOMSUB_FUPDATE_LIST_commutes
+#check @FLOOKUP_FUPDATE_LIST_zip_getElem
+
 end Flapjack.Test.FiniteMapParity

@@ -84,12 +84,12 @@ def panValuePcCodeRelConcrete [BEq String] [BEq α] [OfNat α 0] [Add α]
   ∀ name parameters body,
     lookupPanFunction name source = some (parameters, body) →
     localisedProg body ∧
-    ∃ vshs returnShape,
+      ∃ vshs returnShape,
       lookupInfo name context.functions = some (vshs, returnShape) ∧
       vshs.map Prod.fst = parameters ∧
       lookupCompiledFunction name target =
         some (panToCrepVars vshs,
-          compileProg { context with vars := panToCrepMakeVmap vshs } body)
+          panToCrepCompFunc context vshs body)
 
 /-- The empty source code satisfies the concrete code relation for any target. -/
 theorem panValuePcCodeRelConcrete_nil [BEq String] [BEq α] [OfNat α 0] [Add α]

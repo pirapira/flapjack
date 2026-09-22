@@ -87,6 +87,39 @@ theorem panValueSlotBound_cons_of [BEq String] (x : Nat) (name : String)
 def maxCrepExpVar (expressions : List (CrepExp α)) : Nat :=
   (expressions.flatMap crepExpVars).foldl max 0
 
+/-! Every variable occurring in the compiled expression list is bounded by
+    the `FOLDR MAX 0 (FLAT (MAP var_cexp ...))` value used by Cake's
+    `compile` for `ExtCall` and `ShMemStore` temporaries
+    (`pan_to_crepScript.sml:291-305`).  This is the freshness bridge needed
+    by the assigned-memory proof: adding a positive offset produces a slot
+    strictly above every expression variable. -/
+theorem mem_crepExpVars_le_maxCrepExpVar
+    (expressions : List (CrepExp α)) {name : Nat}
+    (hmem : name ∈ expressions.flatMap crepExpVars) :
+    name ≤ maxCrepExpVar expressions := by
+  have hacc : ∀ (xs : List Nat) (acc : Nat),
+      acc ≤ xs.foldl max acc := by
+    intro xs
+    induction xs with
+    | nil => intro acc; exact Nat.le_refl acc
+    | cons x xs ih =>
+        intro acc
+        simp only [List.foldl_cons]
+        exact Nat.le_trans (Nat.le_max_left _ _) (ih (max acc x))
+  have hbound : ∀ (xs : List Nat) (acc : Nat), name ∈ xs →
+      name ≤ xs.foldl max acc := by
+    intro xs
+    induction xs with
+    | nil => simp
+    | cons x xs ih =>
+        intro acc h
+        simp only [List.mem_cons] at h
+        simp only [List.foldl_cons]
+        rcases h with rfl | h
+        · exact Nat.le_trans (Nat.le_max_right _ _) (hacc xs (max acc name))
+        · exact ih (max acc x) h
+  exact hbound (expressions.flatMap crepExpVars) 0 hmem
+
 def functionReturnNames (context : CompileContext α) (function : FunName) : List Nat :=
   match lookupInfo function context.functions with
   | some (_, shape) => allocatedNames context shape

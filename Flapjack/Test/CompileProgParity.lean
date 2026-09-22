@@ -10,6 +10,12 @@ def compileProgProbeContext : CompileContext Nat :=
 
 #check @allocatedNames_gt
 #check @freshNames_gt
+#check @mem_crepExpVars_le_maxCrepExpVar
+
+theorem maxCrepExpVar_mem_fixture :
+    7 ≤ maxCrepExpVar ([.var 3, .const 0, .var 7] : List (CrepExp Nat)) := by
+  apply mem_crepExpVars_le_maxCrepExpVar
+  simp [crepExpVars]
 
 theorem allocatedNames_gt_fixture : (0 : Nat) < (allocatedNames compileProgProbeContext .one).headD 0 := by
   have hmem : (allocatedNames compileProgProbeContext .one).headD 0 ∈ allocatedNames compileProgProbeContext .one := by
@@ -175,5 +181,6 @@ def runChecks : IO Bool := do
 #check @compileProg_assign_local_of_compiled
 #check @compileProg_shMemLoad_local_of_compiled
 #check @compileProg_shMemStore_of_compiled
+#check @crepAssignedFreeVars_nestedDecs_mem_iff
 
 end Flapjack.Test.CompileProgParity

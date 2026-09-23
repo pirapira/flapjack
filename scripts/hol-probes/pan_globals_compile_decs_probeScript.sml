@@ -29,3 +29,23 @@ val _ = print_eval "exception"
 val _ = print_eval "name"
   ``pan_globals$compile_decs ^ctxt
       [panLang$Name «S» []]``;
+
+(* Function-before-Decl: the function body must be compiled under the context
+   as of its own position, so the later «g» declaration is NOT yet visible and
+   the global read becomes Const 0w.  The function-after-decl row resolves it. *)
+val functionDecl =
+  ``(<| name := «f»; inline := F; export := F; params := [];
+        body := panLang$Assign panLang$Local «x» (panLang$Var panLang$Global «g»);
+        return := One |>) : 8 word panLang$fun_decl``;
+val _ = print_eval "function_before_decl"
+  ``pan_globals$compile_decs ^ctxt
+      [panLang$Function ^functionDecl;
+       panLang$Decl One «g» (panLang$Const 7w)]``;
+val _ = print_eval "function_after_decl"
+  ``pan_globals$compile_decs ^ctxt
+      [panLang$Decl One «g» (panLang$Const 7w);
+       panLang$Function ^functionDecl]``;
+(* Sentinel so the multi-line `function_after_decl` value above is not the last
+   label; regenerate.sh captures rows up to the last label and would drop the
+   continuation lines of a row that wraps. *)
+val _ = print_eval "compile_decs_probe_done" ``0``;

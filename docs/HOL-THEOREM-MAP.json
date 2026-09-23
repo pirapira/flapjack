@@ -2873,6 +2873,38 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "compile_decs_functions_thm",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "compile_decs_functions_thm_threaded",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged: HOL maps with an ARB fallback for non-function declarations; this Lean statement uses the identity declaration fallback, which agrees with HOL under the EVERY is_function premise. ARB rendering pending review."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged: context-threading globalCompileDecsThreaded over arbitrary GlobalPassContext bytesInWord/fromNat and arbitrary [Add α]/[Mul α] with non-lawful [BEq String]; exact canonical-word-context port tracked by a dependency bead.",
+    "hol_name": "compile_decs_decls_thm",
+    "lean_name": "compile_decs_decls_thm_threaded"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged: context-threading globalCompileDecsThreaded over arbitrary GlobalPassContext bytesInWord/fromNat and arbitrary [Add α]/[Mul α] with non-lawful [BEq String]; exact canonical-word-context port tracked by a dependency bead.",
+    "hol_name": "compile_decs_EVERY_is_function",
+    "lean_name": "compile_decs_EVERY_is_function_threaded"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged: context-threading globalCompileDecsThreaded over arbitrary GlobalPassContext bytesInWord/fromNat and arbitrary [Add α]/[Mul α] with non-lawful [BEq String]; exact canonical-word-context port tracked by a dependency bead.",
+    "hol_name": "compile_decls_append",
+    "lean_name": "compile_decls_append_threaded"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
     "hol_name": "ALOOKUP_MAP3",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "ALOOKUP_MAP3",

@@ -4283,6 +4283,14 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructCompileCorrectSkipCase",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Full translated Skip specialization with every compile_correct postcondition and its original invariant premises, using the production evaluator and finite-map state wrapper. Kept untagged: HOL has one quantified compile_correct theorem rather than a named Skip theorem, and its NONE result is encoded as Lean normal clock outcome."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "panStructCompileSkip_eq_skip",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Production compiler support equation; no standalone HOL declaration."

@@ -275,6 +275,30 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepDest2ExpFuel_holFiniteDimension",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only all-fuel transport of the power-of-two recognizer through an explicit arbitrary finite dimension enumeration"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepDest2Exp_holFiniteDimension",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only width-bounded recognizer transport for arbitrary explicitly enumerated finite dimensions"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepMulConst_holFiniteDimension",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only multiplication rewrite naturality across an arbitrary explicit finite dimension enumeration and BitVec conversion"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepDestConst_mapCrepExpWord",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only transport of the constant destination test through a word-carrier expression map"

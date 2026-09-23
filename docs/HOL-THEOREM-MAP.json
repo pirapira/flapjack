@@ -4992,6 +4992,14 @@
     "reviewer": "Codex (source comparison; HOL clauses reproduced literally over the HOL-shaped StructContextHOL carrying struct_info fields and size only: scalar T, RStruct EVERY, NStruct per-field EVERY conjunction with lookupInfo as the first-match alist ALOOKUP under [LawfulBEq String], NONE => F, SOME info => MAP FST fields equality via List String == and MAP (panSemShapeOf o SND) equality via panStructShapeListEqBool, the structural HOL shape-list =; direct original-HOL rows in scripts/hol-probes/pan_structs_value_validity_probe.out match)"
   },
   {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "v_flds_ok_append",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panValueFldsOk_append",
+    "statement_status": "reviewed_exact",
+    "reviewer": "The HOL implication over ctxt, v, and the theorem's pfx is preserved over StructContextHOL: Bool-valued v_flds_ok is panValueFldsOk, ALL_DISTINCT (MAP FST pfx ++ MAP FST ctxt) is List.Nodup on the corresponding mapped keys, and lawful String BEq reflects HOL equality for first-match ALOOKUP. The direct original-HOL EVAL fixture includes a nonempty prefix and nested named value."
+  },
+  {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
     "hol_name": "is_wf_shape_v_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
@@ -5926,5 +5934,21 @@
     "lean_name": "not_crepInlineCodeInlRel_of_target_none",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only refutation rule for the finite-map code_inl_rel relation; no HOL original."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "lookupInfo_mem_of_some",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Generic Lean membership consequence of successful first-match lookup; used to show that a disjoint appended prefix cannot shadow a successful HOL context lookup."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "lookupInfo_append_eq_of_some",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean-only lookup preservation helper under nodup appended keys, used in the exact panValueFldsOk_append port."
   }
 ]

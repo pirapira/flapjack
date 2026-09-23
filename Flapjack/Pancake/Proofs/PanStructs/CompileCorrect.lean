@@ -115,6 +115,97 @@ mutual
   decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
 end
 
+private theorem lookupInfo_mem_of_some [BEq κ] [LawfulBEq κ]
+    (key : κ) (entries : List (κ × β)) (value : β)
+    (hlookup : lookupInfo key entries = some value) :
+    key ∈ entries.map Prod.fst := by
+  induction entries with
+  | nil => simp [lookupInfo] at hlookup
+  | cons entry entries ih =>
+      obtain ⟨candidate, candidateValue⟩ := entry
+      by_cases hmatch : candidate == key
+      · have heq : candidate = key := LawfulBEq.eq_of_beq hmatch
+        simp [heq]
+      · simp only [lookupInfo, hmatch] at hlookup
+        have htail := ih hlookup
+        simp [htail]
+
+private theorem lookupInfo_append_eq_of_some [LawfulBEq String]
+    (pfx context : StructContextHOL) (key : String) (value : StructInfoHOL)
+    (hdisjoint : (pfx.map Prod.fst ++ context.map Prod.fst).Nodup)
+    (hlookup : lookupInfo key context = some value) :
+    lookupInfo key (pfx ++ context) = some value := by
+  induction pfx with
+  | nil => exact hlookup
+  | cons entry pfx ih =>
+      obtain ⟨candidate, info⟩ := entry
+      rcases List.nodup_cons.mp hdisjoint with ⟨hnot, htailNodup⟩
+      have hkeyMem := lookupInfo_mem_of_some key context value hlookup
+      have hcandidateNe : candidate ≠ key := by
+        intro heq
+        subst candidate
+        exact hnot (List.mem_append_right _ hkeyMem)
+      have hmatch : (candidate == key) = false := by
+        cases hbeq : candidate == key with
+        | false => rfl
+        | true => exact False.elim (hcandidateNe (LawfulBEq.eq_of_beq hbeq))
+      simp only [List.map_cons] at hdisjoint
+      have hresult := ih htailNodup
+      simpa [lookupInfo, hmatch] using hresult
+
+/-- Exact HOL `v_flds_ok_append` (`pan_structsProofScript.sml:522`): extending
+    the HOL-shaped structure context preserves Bool field validity when the
+    prefix keys are distinct from the original context keys. This is the
+    invariant-preservation prerequisite used by `compile_correct`. The direct
+    original-HOL EVAL row and a named-value Lean regression with nonempty
+    prefix are recorded in `pan_structs_value_validity_probe.out`. -/
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "v_flds_ok_append"]
+theorem panValueFldsOk_append [LawfulBEq String]
+    (pfx context : StructContextHOL) (value : PanValue α)
+    (hvalue : panValueFldsOk context value = true)
+    (hkeys : (pfx.map Prod.fst ++ context.map Prod.fst).Nodup) :
+    panValueFldsOk (pfx ++ context) value = true := by
+  revert hvalue hkeys pfx
+  apply panValueFldsOk.induct (α := α)
+    (motive1 := fun value =>
+      ∀ pfx, panValueFldsOk context value = true →
+        (pfx.map Prod.fst ++ context.map Prod.fst).Nodup →
+          panValueFldsOk (pfx ++ context) value = true)
+    (motive2 := fun fields =>
+      ∀ pfx, panFieldsFldsOk context fields = true →
+        (pfx.map Prod.fst ++ context.map Prod.fst).Nodup →
+          panFieldsFldsOk (pfx ++ context) fields = true)
+    (motive3 := fun values =>
+      ∀ pfx, panValuesFldsOk context values = true →
+        (pfx.map Prod.fst ++ context.map Prod.fst).Nodup →
+          panValuesFldsOk (pfx ++ context) values = true)
+  · intro word pfx hvalue hkeys
+    simp [panValueFldsOk]
+  · intro values ih pfx hvalue hkeys
+    simpa [panValueFldsOk] using ih pfx
+      (by simpa [panValueFldsOk] using hvalue) hkeys
+  · intro name fields ih pfx hvalue hkeys
+    simp only [panValueFldsOk, Bool.and_eq_true] at hvalue ⊢
+    cases hlookup : lookupInfo name context with
+    | none => simp [hlookup] at hvalue
+    | some info =>
+        simp only [hlookup, Bool.and_eq_true] at hvalue
+        obtain ⟨hfields, hnames, hshapes⟩ := hvalue
+        have hlookupExtended := lookupInfo_append_eq_of_some
+          pfx context name info hkeys hlookup
+        simp only [hlookupExtended, Bool.and_eq_true]
+        exact ⟨ih pfx hfields hkeys, hnames, hshapes⟩
+  · intro pfx hvalue hkeys
+    simp [panFieldsFldsOk]
+  · intro name value fields ihValue ihFields pfx hvalue hkeys
+    simp only [panFieldsFldsOk, Bool.and_eq_true] at hvalue ⊢
+    exact ⟨ihValue pfx hvalue.1 hkeys, ihFields pfx hvalue.2 hkeys⟩
+  · intro pfx hvalue hkeys
+    simp [panValuesFldsOk]
+  · intro value values ihValue ihValues pfx hvalue hkeys
+    simp only [panValuesFldsOk, Bool.and_eq_true] at hvalue ⊢
+    exact ⟨ihValue pfx hvalue.1 hkeys, ihValues pfx hvalue.2 hkeys⟩
+
 mutual
   /-- Bool-valued comparison for HOL `v_flds_ok_def`, using production
       `lookupInfo`. This is not currently tagged as an exact port: the HOL

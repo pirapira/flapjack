@@ -30,14 +30,37 @@ def exceptionsAppendGuard : Bool :=
 
 #guard exceptionsAppendGuard
 
+/-! Constructor-behavior fixture for the relocated, HOL-tagged
+    `panLang$exceptions` counterpart `exceptionEntries`
+    (`panLangScript.sml:328`): only `.exnDecl` contributes, preserving order. -/
+def exceptionsConstructorGuard : Bool :=
+  let mixed : List (Decl Nat) :=
+    [.function
+       { name := "f", inline := false, exported := false, params := [],
+         body := .skip, returnShape := .one },
+     .decl .one "h" (.const 9), .name "S" [], .exnDecl "E" (.named "T"),
+     .exnDecl "F" .one]
+  (match exceptionEntries mixed with
+   | [("E", .named "T"), ("F", .one)] => true
+   | _ => false)
+
+#guard exceptionsConstructorGuard
+
 def runChecks : IO Bool := do
-  let ok ←
+  let appendOk ←
     if exceptionsAppendGuard then
       IO.println "PASS pan_globals exceptions_append"
       pure true
     else
       IO.println "FAIL pan_globals exceptions_append"
       pure false
-  pure ok
+  let constructorOk ←
+    if exceptionsConstructorGuard then
+      IO.println "PASS panLang exceptions definition"
+      pure true
+    else
+      IO.println "FAIL panLang exceptions definition"
+      pure false
+  pure (appendOk && constructorOk)
 
 end Flapjack.Test.PanGlobalsExceptionsAppendParity

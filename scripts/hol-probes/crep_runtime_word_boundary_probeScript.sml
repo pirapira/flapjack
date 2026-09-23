@@ -41,3 +41,19 @@ val _ = print_eval "word32_at_8"
   ``mem_load_32 ^mem ^dm F (8w:64 word)``;
 val _ = print_eval "word32_unaligned"
   ``mem_load_32 ^mem ^dm F (9w:64 word)``;
+
+val _ = print_eval "store_byte_roundtrip"
+  ``case mem_store_byte ^mem ^dm F (8w:64 word) (0xABw:word8) of
+      NONE => NONE
+    | SOME m2 => mem_load_byte m2 ^dm F (8w:64 word)``;
+val _ = print_eval "store_byte_outside"
+  ``mem_store_byte ^mem ^dm F (16w:64 word) (0xABw:word8)``;
+
+val _ = print_eval "store32_roundtrip"
+  ``case mem_store_32 ^mem ^dm F (8w:64 word) (0xAABBCCDDw:word32) of
+      NONE => NONE
+    | SOME m2 => mem_load_32 m2 ^dm F (8w:64 word)``;
+val _ = print_eval "store32_unaligned"
+  ``mem_store_32 ^mem ^dm F (9w:64 word) (0xAABBCCDDw:word32)``;
+val _ = print_eval "store32_outside"
+  ``mem_store_32 ^mem ^dm F (16w:64 word) (0xAABBCCDDw:word32)``;

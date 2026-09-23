@@ -66,7 +66,7 @@ def probeBaseState : CrepRuntimeState (RiscV.Word 64) Unit :=
 def probeTargetState : CrepRuntimeState (RiscV.Word 64) Unit :=
   riscv64CrepRuntimeTarget probeBaseState
 
-/-- Bool mirror of the seven HOL oracle rows, evaluated by `#guard`. -/
+/-- Bool mirror of the direct HOL oracle rows, evaluated by `#guard`. -/
 def wordBoundaryGuard : Bool :=
   (probeTargetState.bytesInWord == (8 : RiscV.Word 64)) &&
   (probeTargetState.bigEndian == false) &&
@@ -107,7 +107,12 @@ def storeRoundTripGuard : Bool :=
   (crepRuntimeStore32 probeTargetState (9 : RiscV.Word 64)
       (0xAABBCCDD : RiscV.Word 64)).isNone &&
   (crepRuntimeStore32 probeTargetState (16 : RiscV.Word 64)
-      (0xAABBCCDD : RiscV.Word 64)).isNone
+      (0xAABBCCDD : RiscV.Word 64)).isNone &&
+  ((crepRuntimeStore32 probeTargetState (8 : RiscV.Word 64)
+      (0xAABBCCDD : RiscV.Word 64)).bind (fun state => state.memory (8 : RiscV.Word 64)) ==
+    (RiscV.panRiscVStore32 probeDomain probeMemory (8 : RiscV.Word 64)
+      (8 : RiscV.Word 64) (0xAABBCCDD : RiscV.Word 64)).bind
+        (fun memory => memory (8 : RiscV.Word 64)))
 
 /-- The production evaluator computes `.load`/`.load32` through the same model
     operations the canonical target bridges expose. -/
@@ -120,6 +125,14 @@ example : crepRuntimeLoad32 (riscv64CrepRuntimeTarget probeBaseState) (8 : RiscV
     RiscV.panRiscVRead32 probeBaseState.memaddrs probeBaseState.memory
       (8 : RiscV.Word 64) (8 : RiscV.Word 64) :=
   crepRuntimeLoad32_target_eq_riscv probeBaseState 8
+
+/-- The 32-bit store production path is the same memory update as
+    `panModelStore32` on the canonical target. -/
+example : (crepRuntimeStore32 (riscv64CrepRuntimeTarget probeBaseState)
+      (8 : RiscV.Word 64) (0xAABBCCDD : RiscV.Word 64)).map (fun state => state.memory) =
+    RiscV.panRiscVStore32 probeBaseState.memaddrs probeBaseState.memory
+      (8 : RiscV.Word 64) (8 : RiscV.Word 64) (0xAABBCCDD : RiscV.Word 64) :=
+  crepRuntimeStore32_target_eq_riscv probeBaseState 8 (0xAABBCCDD : RiscV.Word 64)
 
 #guard wordBoundaryGuard
 #guard storeRoundTripGuard

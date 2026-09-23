@@ -559,13 +559,15 @@ def riscvWordOfBytesHOL {width : Nat} [NeZero width]
       riscvSetByteHOL bigEndian address
         (riscvWordOfBytesHOL bigEndian (address + 1) rest) byte
 
-/-- Width-generic exact port of HOL `loopSem$sh_mem_load_def`
-    (`loopSemScript.sml:198-215`).  The word codec `word_to_bytes`/`word_of_bytes`
-    is supplied generically by `riscvWordToBytesHOL`/`riscvWordOfBytesHOL`, so no
-    extra codec parameter is introduced and the word type stays polymorphic.
-    HOL's unreachable `_ => (SOME Error, s)` alternative after the two `FFI`
-    constructors is omitted because `FfiResult` has exactly those two. -/
-@[hol "cakeml/pancake/semantics/loopSemScript.sml" "sh_mem_load_def"]
+/-! FLAPJACK-SPECIFIC (not an exact HOL port).  This is the width-generic
+    runtime helper for HOL `loopSem$sh_mem_load_def` (`loopSemScript.sml:198-215`),
+    using the generic `riscvWordToBytesHOL`/`riscvWordOfBytesHOL` codec.  It is
+    not statement-exact: HOL's `sh_mem_load` takes the whole
+    `('a,'ffi) loopSem$state`, whose `sh_mdomain` is a `'a word set`, whereas
+    `LoopMachineState` models `shMdomain` as a `Word -> Bool` predicate and this
+    helper also takes the local name/address decomposed.  The exact whole-state,
+    set-valued port with an explicit state bridge is tracked by
+    `flapjack-s6a.3.2.1`. -/
 def shMemLoadHOL {width : Nat} [NeZero width]
     (state : LoopMachineState (RiscV.Word width) F)
     (name : Nat) (address : RiscV.Word width) (byteCount : Nat) :
@@ -598,11 +600,12 @@ def shMemLoadHOL {width : Nat} [NeZero width]
           (none, updated)
     else (some .error, state)
 
-/-- Width-generic exact port of HOL `loopSem$sh_mem_store_def`
-    (`loopSemScript.sml:217-243`).  Only a word-valued local can be stored; the
-    payload is the value bytes followed by the address bytes, truncated to
-    `byteCount` for nonzero widths. -/
-@[hol "cakeml/pancake/semantics/loopSemScript.sml" "sh_mem_store_def"]
+/-! FLAPJACK-SPECIFIC (not an exact HOL port).  Runtime helper for HOL
+    `loopSem$sh_mem_store_def` (`loopSemScript.sml:217-243`).  Same
+    whole-state/set-domain mismatch as `shMemLoadHOL`; only a word-valued local
+    can be stored and the payload is the value bytes followed by the address
+    bytes, truncated to `byteCount` for nonzero widths.  Exact port tracked by
+    `flapjack-s6a.3.2.1`. -/
 def shMemStoreHOL {width : Nat} [NeZero width]
     (state : LoopMachineState (RiscV.Word width) F)
     (name : Nat) (address : RiscV.Word width) (byteCount : Nat) :
@@ -629,9 +632,10 @@ def shMemStoreHOL {width : Nat} [NeZero width]
         else (some .error, state)
   | _ => (some .error, state)
 
-/-- Width-generic exact dispatch port of HOL `loopSem$sh_mem_op_def`
-    (`loopSemScript.sml:255-262`). -/
-@[hol "cakeml/pancake/semantics/loopSemScript.sml" "sh_mem_op_def"]
+/-! FLAPJACK-SPECIFIC (not an exact HOL port).  Runtime dispatch matching HOL
+    `loopSem$sh_mem_op_def` (`loopSemScript.sml:255-262`), over the
+    whole-state/set-domain mismatch described at `shMemLoadHOL`.  Exact port
+    tracked by `flapjack-s6a.3.2.1`. -/
 def shMemOpHOL {width : Nat} [NeZero width]
     (state : LoopMachineState (RiscV.Word width) F)
     (operator : CrepMemOp) (name : Nat) (address : RiscV.Word width) :
@@ -646,22 +650,23 @@ def shMemOpHOL {width : Nat} [NeZero width]
   | .load32 => shMemLoadHOL state name address 4
   | .store32 => shMemStoreHOL state name address 4
 
-/-! Direct width-generic port of CakeML `mem_load_def`
-    (`cakeml/pancake/semantics/loopSemScript.sml:64-69`).  The memory is HOL's
-    total `'a word -> 'a word_loc` map and the domain is HOL's address set; the
-    result is `SOME (s.memory addr)` exactly when `addr` is in the domain. -/
-@[hol "cakeml/pancake/semantics/loopSemScript.sml" "mem_load_def"]
+/-! FLAPJACK-SPECIFIC (not an exact HOL port).  Runtime helper for CakeML
+    `mem_load_def` (`cakeml/pancake/semantics/loopSemScript.sml:64-69`).  HOL
+    takes the whole `('a,'ffi) loopSem$state` (`mem_load addr s`) and reads
+    `s.memory`/`s.mdomain` (a set), while this helper splits the total memory map
+    and the `address -> Prop` domain out as arguments.  Exact whole-state port
+    tracked by `flapjack-s6a.3.2.2.1`. -/
 def memLoadHOL {width : Nat}
     (memory : RiscV.Word width → LoopValue (RiscV.Word width))
     (domain : RiscV.Word width → Prop) [DecidablePred domain]
     (address : RiscV.Word width) : Option (LoopValue (RiscV.Word width)) :=
   if domain address then some (memory address) else none
 
-/-! Direct width-generic port of CakeML `mem_store_def`
-    (`cakeml/pancake/semantics/loopSemScript.sml:57-62`).  Inside the domain the
-    address is updated with `=+` (`addr =+ w`), leaving every other address
-    unchanged; outside the domain the result is `NONE`. -/
-@[hol "cakeml/pancake/semantics/loopSemScript.sml" "mem_store_def"]
+/-! FLAPJACK-SPECIFIC (not an exact HOL port).  Runtime helper for CakeML
+    `mem_store_def` (`cakeml/pancake/semantics/loopSemScript.sml:57-62`).  HOL
+    takes and returns the whole `('a,'ffi) loopSem$state`, whereas this helper
+    splits memory/domain out and returns the updated total memory map (not the
+    state).  Exact whole-state port tracked by `flapjack-s6a.3.2.2.1`. -/
 def memStoreHOL {width : Nat}
     (memory : RiscV.Word width → LoopValue (RiscV.Word width))
     (domain : RiscV.Word width → Prop) [DecidablePred domain]

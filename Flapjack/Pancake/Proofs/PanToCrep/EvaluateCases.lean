@@ -3473,10 +3473,6 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
     (hcompiledHandlerBody : compileCodeRelProg context sourceHandlerBody = handlerBody)
     (hstate : stateRel source caller)
     (hcode : codeRel context (panSemCodeAsLookup source.code) caller.code)
-    (hcalleeState : stateRel sourceAfterCallee calleeState)
-    (hcalleeCode : codeRel context (panSemCodeAsLookup sourceAfterCallee.code)
-      calleeState.code)
-    (hexcp : excpRel context.eids sourceAfterCallee.exceptionShapes)
     (hlocals : localsRel context source.locals caller.locals)
     (hsource : FLOOKUP source.locals handlerVariableTarget = some old)
     (hvariable : FLOOKUP context.vars handlerVariableTarget =
@@ -3516,7 +3512,10 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
           (ctxtFc context.funcs context.eids
             (parameters.map Prod.fst) (parameters.map Prod.snd)
             (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))))
-          sourceBody) = some (.raised exceptionCode, calleeState))
+          sourceBody) = some (.raised exceptionCode, calleeState) ∧
+      stateRel sourceAfterCallee calleeState ∧
+      codeRel context (panSemCodeAsLookup sourceAfterCallee.code) calleeState.code ∧
+      excpRel context.eids sourceAfterCallee.exceptionShapes)
     (hhandlerIH : evalPanValueFfiClockCodeProg sourceContext sourcePrimitive
       sourceHandler source.structs source.code source.exceptionShapes source.baseAddress
       source.topAddress panSemBitVec64BytesInWord fuel
@@ -3587,6 +3586,12 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
     { { { { source with globals := calleeGlobals } with memory := calleeMemory }
       with ffi := calleeFfi }
     with clock := min (decPanClock source.clock) calleeClock }
+  obtain ⟨targetLocals, _htargetArgs, htargetLookup⟩ :=
+    lookupCrepRuntimeCode_ofCodeRel_compiledArgs context source caller function
+      parameters sourceBody returnShape expressions arguments hstate hcode hlocals
+      hsupported hsourceArgs hentry hargumentLength
+  obtain ⟨_hcalleeTargetRun, hcalleeState, hcalleeCode, hexcp⟩ :=
+    hcalleeIH hsourceCalleeBody targetLocals htargetLookup
   obtain ⟨htarget, hstatePost, hcodePost, hexcpPost, hlocalsPost⟩ :=
     evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody_ofCodeRelArgs_postRelations
       context handler primitive source sourceAfterCallee
@@ -3596,7 +3601,7 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
       hcalleeState hcalleeCode hexcp hlocals hsource hvariable hslot hglobal
       hsupported hsourceArgs hentry hargumentLength hinfoValid hclock hmatch
       (fun targetLocals hlookup =>
-        hcalleeIH hsourceCalleeBody targetLocals hlookup)
+        (hcalleeIH hsourceCalleeBody targetLocals hlookup).1)
       (fun payloadState hpayload hpayloadState hpayloadCode hpayloadExcp
           hpayloadLocals =>
         hhandlerIH hsourceHandlerBodyRun hsourceExpressions hsourceExceptionCode

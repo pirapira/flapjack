@@ -34,10 +34,18 @@ def parityGuard : Bool :=
 #eval parityGuard
 #guard parityGuard
 
-/-! The production list helper is the fuel-indexed analogue of HOL's
-    mutually recursive `compile_shapes`. This concrete list mirrors the direct
-    HOL-EVAL `compile_shapes_map` oracle; the fuel parameter is the reason the
-    helper theorem is intentionally left untagged. -/
+/-! Exact no-fuel list fixture for the direct HOL-EVAL `compile_shapes_map`
+    oracle. It exercises recursive named expansion through the production
+    no-fuel mutually recursive helper. -/
+theorem structCompileShapes_eq_map_fixture :
+    structCompileShapeWF.structCompileShapesWF forwardContext
+      [.named "outer", .comb [.one, .named "inner"], .named "missing"] =
+      [.comb [.comb [.one]], .comb [.one, .comb [.one]], .one] := by
+  rw [structCompileShapes_eq_map]
+  simp [structCompileShapeWF, structCompileShapeWF.structCompileShapesWF,
+    forwardContext, lookupInfoWithRest]
+
+/-! The fuel-indexed helper remains a separate untagged analogue. -/
 theorem structCompileShapesFuel_eq_map_fixture :
     structCompileShapeFuel.structCompileShapesFuel 8 forwardContext
       [.named "outer", .comb [.one, .named "inner"], .named "missing"] =

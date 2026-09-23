@@ -1875,9 +1875,11 @@ structure CakeCompileDecsResult (width : Nat) where
     contexts the Lean clauses agree clause-for-clause; the extra
     infinite-support lookups do not alter the port.  No cross-system finite-map
     equivalence is claimed beyond that local use.  `width` is restricted by
-    `[NeZero width]`, as HOL `dimindex` is positive. -/
+    `[NeZero width]`, as HOL `dimindex` is positive, and the name equality is
+    `[LawfulBEq String]` so the `==` used by `FUPDATE`/`FLOOKUP` reflects HOL's
+    `=`. -/
 @[hol "cakeml/pancake/pan_globalsScript.sml" "compile_decs_def"]
-def compileDecsCake [BEq String] {width : Nat} [NeZero width] (context : CakeContext width) :
+def compileDecsCake [LawfulBEq String] {width : Nat} [NeZero width] (context : CakeContext width) :
     List (Decl (BitVec width)) → CakeCompileDecsResult width
   | [] => { initializers := [], functions := [], exceptions := [], context := context }
   | .function declaration :: declarations =>
@@ -1904,7 +1906,7 @@ def compileDecsCake [BEq String] {width : Nat} [NeZero width] (context : CakeCon
         exceptions := rest.exceptions
         context := rest.context }
 
-theorem compileDecsCake_functions_all_isFunction [BEq String] {width : Nat} [NeZero width]
+theorem compileDecsCake_functions_all_isFunction [LawfulBEq String] {width : Nat} [NeZero width]
     (context : CakeContext width) (declarations : List (Decl (BitVec width))) :
     (compileDecsCake context declarations).functions.all globalDeclIsFunction = true := by
   induction declarations generalizing context with
@@ -1924,7 +1926,7 @@ theorem compileDecsCake_functions_all_isFunction [BEq String] {width : Nat} [NeZ
           simp only [compileDecsCake]
           exact ih context
 
-theorem compileDecsCake_functions_eq_nil_of_no_functions [BEq String] {width : Nat} [NeZero width]
+theorem compileDecsCake_functions_eq_nil_of_no_functions [LawfulBEq String] {width : Nat} [NeZero width]
     (declarations : List (Decl (BitVec width))) :
     ∀ context, declarations.all (fun declaration => !globalDeclIsFunction declaration) = true →
       (compileDecsCake context declarations).functions = [] := by
@@ -1948,7 +1950,7 @@ theorem compileDecsCake_functions_eq_nil_of_no_functions [BEq String] {width : N
           simp only [compileDecsCake]
           exact ih _ hnone.2
 
-theorem compileDecsCake_append [BEq String] {width : Nat} [NeZero width] (context : CakeContext width)
+theorem compileDecsCake_append [LawfulBEq String] {width : Nat} [NeZero width] (context : CakeContext width)
     (decs rest : List (Decl (BitVec width))) :
     compileDecsCake context (decs ++ rest) =
       let first := compileDecsCake context decs

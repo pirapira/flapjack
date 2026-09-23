@@ -3109,7 +3109,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "compile_decs_decls_thm_cake",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; exact compile_decs_* statement over the canonical CakeContext: compileDecsCake is the tagged compile_decs_def port, compileProgCake/compileExpCake/freshNameHOL are the tagged compile_def/compile_exp_def/fresh_name_def ports, [NeZero width] mirrors HOL dimindex positivity, and globals is consulted only through FLOOKUP/FUPDATE with the same local finite-map representation argument as compileExpCake)."
+    "reviewer": "Codex (source comparison; exact compile_decs_* statement over the canonical CakeContext: compileDecsCake is the tagged compile_decs_def port, compileProgCake/compileExpCake/freshNameHOL are the tagged compile_def/compile_exp_def/fresh_name_def ports, [NeZero width] mirrors HOL dimindex positivity, and globals is consulted only through FLOOKUP/FUPDATE with the same local finite-map representation argument as compileExpCake); name equality is [LawfulBEq String] so the == used by FUPDATE/FLOOKUP reflects HOL =.)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
@@ -3117,7 +3117,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "compile_decs_EVERY_is_function_cake",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; exact compile_decs_* statement over the canonical CakeContext: compileDecsCake is the tagged compile_decs_def port, compileProgCake/compileExpCake/freshNameHOL are the tagged compile_def/compile_exp_def/fresh_name_def ports, [NeZero width] mirrors HOL dimindex positivity, and globals is consulted only through FLOOKUP/FUPDATE with the same local finite-map representation argument as compileExpCake)."
+    "reviewer": "Codex (source comparison; exact compile_decs_* statement over the canonical CakeContext: compileDecsCake is the tagged compile_decs_def port, compileProgCake/compileExpCake/freshNameHOL are the tagged compile_def/compile_exp_def/fresh_name_def ports, [NeZero width] mirrors HOL dimindex positivity, and globals is consulted only through FLOOKUP/FUPDATE with the same local finite-map representation argument as compileExpCake); name equality is [LawfulBEq String] so the == used by FUPDATE/FLOOKUP reflects HOL =.)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
@@ -3125,7 +3125,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "compile_decls_append_cake",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; exact compile_decs_* statement over the canonical CakeContext: compileDecsCake is the tagged compile_decs_def port, compileProgCake/compileExpCake/freshNameHOL are the tagged compile_def/compile_exp_def/fresh_name_def ports, [NeZero width] mirrors HOL dimindex positivity, and globals is consulted only through FLOOKUP/FUPDATE with the same local finite-map representation argument as compileExpCake)."
+    "reviewer": "Codex (source comparison; exact compile_decs_* statement over the canonical CakeContext: compileDecsCake is the tagged compile_decs_def port, compileProgCake/compileExpCake/freshNameHOL are the tagged compile_def/compile_exp_def/fresh_name_def ports, [NeZero width] mirrors HOL dimindex positivity, and globals is consulted only through FLOOKUP/FUPDATE with the same local finite-map representation argument as compileExpCake); name equality is [LawfulBEq String] so the == used by FUPDATE/FLOOKUP reflects HOL =.)"
   },
   {
     "hol_path": "cakeml/pancake/pan_globalsScript.sml",
@@ -3149,7 +3149,7 @@
     "lean_path": "Flapjack/Pancake/PanGlobals.lean",
     "lean_name": "compileDecsCake",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; clause-for-clause compile_decs_def over CakeContext: Function compiles its body under the context at its own position via compileProgCake, Decl computes globals_size + bytes_in_word * n2w (size_of_shape sh) then extends globals by FUPDATE and sets globals_size := address for the following declarations, ExnDecl conses the exception, Name is skipped, and nil returns the context unchanged; [NeZero width] mirrors HOL dimindex positivity; globals is consulted only through FLOOKUP/FUPDATE, with the local representation argument that HOL finite maps embed as lookup functions and extra infinite-support lookups do not alter this port)."
+    "reviewer": "Codex (source comparison; clause-for-clause compile_decs_def over CakeContext: Function compiles its body under the context at its own position via compileProgCake, Decl computes globals_size + bytes_in_word * n2w (size_of_shape sh) then extends globals by FUPDATE and sets globals_size := address for the following declarations, ExnDecl conses the exception, Name is skipped, and nil returns the context unchanged; [NeZero width] mirrors HOL dimindex positivity; globals is consulted only through FLOOKUP/FUPDATE, with the local representation argument that HOL finite maps embed as lookup functions and extra infinite-support lookups do not alter this port); name equality is [LawfulBEq String] so the == used by FUPDATE/FLOOKUP reflects HOL =.)"
   },
   {
     "hol_path": "cakeml/pancake/pan_globalsScript.sml",

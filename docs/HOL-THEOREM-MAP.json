@@ -4489,6 +4489,46 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "compile_exp_correct",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructCompileExpCorrectRStructCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Kernel-checked RStruct constructor specialization of HOL compile_exp_correct. It retains the translated successful-evaluation, context-view equality, pointwise field-validity, struct_infos_ok, local/global shape-map premises, and all three parent conclusions. The per-field induction hypotheses carry those same premises and are assembled as a list-indexed induction family. This is intentionally untagged because HOL has one universally quantified theorem with no named RStruct theorem/case, and the Lean interface uses PanSemState total lookup functions plus explicit bytesInWord rather than HOL finite maps and fixed-width eval."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructAll_mem",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Generic membership eliminator for the local PanStructAll induction-hypothesis list; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructAll_map",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Generic map over the local PanStructAll induction-hypothesis list; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructConvertValues_eq_map",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Executable list conversion equals List.map of the production value converter; support for the RStruct case only, with no standalone HOL theorem declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructRStructListShapeFields",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Private list induction support that derives old-shape map equality and recursive field validity from the per-field compile_exp_correct induction hypotheses. It supports, but is not itself, the RStruct case."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "compile_correct",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "panStructCompileCorrectBreakCase",

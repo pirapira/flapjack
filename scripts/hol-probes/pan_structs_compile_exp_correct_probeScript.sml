@@ -129,3 +129,24 @@ val _ = print_simp "compile_exp_correct_mmap_nonempty"
      OPT_MMAP (panSem$eval (pan_structsProof$convert_s ^ctxt ^local_state))
        (pan_structs$compile_exps ^ctxt ^mmap_expressions) =
          SOME (MAP pan_structsProof$convert_v ^mmap_values))``;
+
+val rstruct_value =
+  ``RStruct [ValWord (3w:8 word); ValWord (5w:8 word)]``;
+val rstruct_expression =
+  ``(panLang$RStruct [panLang$Const (3w:8 word);
+                      panLang$Const (5w:8 word)] : 8 panLang$exp)``;
+val _ = print_simp "compile_exp_correct_rstruct"
+  [pan_structsProofTheory.convert_s_def,
+   pan_structsProofTheory.convert_v_def,
+   pan_structsTheory.compile_exp_def,
+   pan_structsTheory.old_exp_shape_def,
+   panSemTheory.eval_def,
+   panSemTheory.shape_of_def,
+   pan_structsProofTheory.v_flds_ok_def]
+  ``(pan_structs$old_exp_shape ^ctxt ^rstruct_expression,
+     panSem$shape_of ^rstruct_value,
+     pan_structsProof$v_flds_ok (^local_state).structs ^rstruct_value,
+     panSem$eval ^local_state ^rstruct_expression = SOME ^rstruct_value,
+     panSem$eval (pan_structsProof$convert_s ^ctxt ^local_state)
+       (pan_structs$compile_exp ^ctxt ^rstruct_expression) =
+         SOME (pan_structsProof$convert_v ^rstruct_value))``;

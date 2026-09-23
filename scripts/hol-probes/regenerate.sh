@@ -518,7 +518,8 @@ run_probe crep_simp_prog_probeScript.sml crep_simp_prog_probe.out \
   assign unchanged "$cake_dir/pancake/crep_arithScript.sml"
 run_probe afindi_probeScript.sml afindi_probe.out \
   empty duplicate_first wf_shape_drop dropWhile_MAP_helper UNCURRY_EQ_o_SND_pair \
-  map_uncurry_zip_again struct_infos_ok_drop \
+  map_uncurry_zip_again struct_infos_ok_drop struct_infos_ok_append \
+  struct_infos_ok_cons \
   "$cake_dir/pancake/proofs/pan_structsProofScript.sml"
 run_probe pan_structs_compile_exp_probeScript.sml pan_structs_compile_exp_probe.out \
   rstruct old_shapes_map "$cake_dir/pancake/pan_structsScript.sml"

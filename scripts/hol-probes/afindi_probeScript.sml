@@ -54,3 +54,30 @@ val _ = print
   (String.translate (fn #"\n" => " " | c => String.str c)
     (term_to_string (concl struct_infos_ok_drop_instance)));
 val _ = print "\n";
+val empty_struct_context = mk_const ("NIL", type_of valid_struct_context);
+val struct_infos_ok_append_instance =
+  INST [{redex = mk_var ("xs", type_of valid_struct_context),
+         residue = empty_struct_context},
+        {redex = mk_var ("ys", type_of valid_struct_context),
+         residue = valid_struct_context}]
+    struct_infos_ok_append;
+val _ = print "struct_infos_ok_append=";
+val _ = print
+  (String.translate (fn #"\n" => " " | c => String.str c)
+    (term_to_string (concl struct_infos_ok_append_instance)));
+val _ = print "\n";
+val cons_struct_name = ``strlit "S"``;
+val cons_struct_info = ``<| fields := [(strlit "f", One)]; size := 1 |>``;
+val struct_infos_ok_cons_instance =
+  INST [{redex = mk_var ("xs", type_of valid_struct_context),
+         residue = empty_struct_context},
+        {redex = mk_var ("nm", type_of cons_struct_name),
+         residue = cons_struct_name},
+        {redex = mk_var ("info", type_of cons_struct_info),
+         residue = cons_struct_info}]
+    struct_infos_ok_cons;
+val _ = print "struct_infos_ok_cons=";
+val _ = print
+  (String.translate (fn #"\n" => " " | c => String.str c)
+    (term_to_string (concl struct_infos_ok_cons_instance)));
+val _ = print "\n";

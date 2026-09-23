@@ -42,12 +42,31 @@ def parityGuard : Bool :=
 #eval parityGuard
 #guard parityGuard
 
+/-! The production Pancake `functions` used by the executable passes is now an
+    alias of the reviewed, HOL-tagged `functionEntries`
+    (`cakeml/pancake/panLangScript.sml:319-328`). This is the direct
+    executable-path regression: the alias reduces by `rfl` to the tagged
+    definition and yields the exact HOL-EVAL observations. -/
+example : functions [functionDeclaration] = functionEntries [functionDeclaration] := rfl
+
+def functionsAliasGuard : Bool :=
+  (match functions [functionDeclaration] with
+  | [("f", [("x", .one)], .skip, .one)] => true
+  | _ => false) &&
+  (match functions [globalDeclaration] with
+  | [] => true
+  | _ => false)
+
+#eval functionsAliasGuard
+#guard functionsAliasGuard
+
 def runChecks : IO Bool := do
-  if parityGuard then
+  if parityGuard && functionsAliasGuard then
     IO.println "PASS panLang functions definition"
+    IO.println "PASS panSimp functions alias to functionEntries"
     pure true
   else
-    IO.println "FAIL panLang functions definition"
+    IO.println "FAIL panLang functions definition or alias"
     pure false
 
 end Flapjack.Test.PanLangFunctionsParity

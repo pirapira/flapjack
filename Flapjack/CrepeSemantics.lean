@@ -418,22 +418,4 @@ theorem evalCrepFullExpsState_eq_of_noGlobals
           expression hexpression,
         ih htail]
 
-/-- Counterpart of Cake `crepProps$lookup_locals_eq_map_vars`
-    (`cakeml/pancake/semantics/crepPropsScript.sml`): reading a list of local
-    variables through `OPT_MMAP` of the local map equals evaluating the
-    corresponding `.var` expressions. -/
-theorem lookup_locals_eq_map_vars
-    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (state : CrepState α) (baseAddress topAddress : α) (names : List Nat) :
-    names.mapM state.locals =
-      (names.map (CrepExp.var (α := α))).mapM
-        (evalCrepFullExpState state baseAddress topAddress) := by
-  induction names with
-  | nil => rfl
-  | cons name names ih =>
-      simp [evalCrepFullExpState, ih]
-
 end Flapjack

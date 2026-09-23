@@ -90,6 +90,44 @@ run_probe pan_crep_primop_probeScript.sml pan_crep_primop_probe.out \
 run_probe pan_structs_opt_mmap_probeScript.sml pan_structs_opt_mmap_probe.out \
   success pointwise "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
   "$cake_dir/pancake/proofs"
+run_probe pan_structs_compile_correct_probeScript.sml pan_structs_compile_correct_probe.out \
+  convert_named_record compile_correct_skip_source compile_correct_skip_converted \
+  convert_s_finite_maps \
+  compile_correct_tick_zero_source compile_correct_tick_zero_converted \
+  compile_correct_tick_positive_source compile_correct_tick_positive_converted \
+  "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
+  "$cake_dir/pancake/proofs"
+run_probe pan_structs_value_validity_probeScript.sml pan_structs_value_validity_probe.out \
+  v_flds_ok_word v_flds_ok_named_match v_flds_ok_named_mismatch \
+  v_flds_ok_named_missing v_flds_ok_duplicate_first \
+  is_wf_shape_v_word is_wf_shape_v_named_match \
+  is_wf_shape_v_named_missing \
+  "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
+  "$cake_dir/pancake/proofs"
+run_probe pan_structs_afindi_map_probeScript.sml pan_structs_afindi_map_probe.out \
+  hit_preserves_key_index missing_key_stays_missing \
+  "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
+  "$cake_dir/pancake/proofs"
+run_probe pan_structs_afindi_length_probeScript.sml pan_structs_afindi_length_probe.out \
+  first_match_strictly_below_length last_match_strictly_below_length \
+  "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
+  "$cake_dir/pancake/proofs"
+run_probe pan_structs_afindi_el_probeScript.sml pan_structs_afindi_el_probe.out \
+  first_match_fst middle_match_fst last_match_fst \
+  "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
+  "$cake_dir/pancake/proofs"
+run_probe pan_structs_alookup_afindi_probeScript.sml pan_structs_alookup_afindi_probe.out \
+  present_lookup_projection missing_lookup_projection duplicate_key_first_value \
+  "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
+  "$cake_dir/pancake/proofs"
+run_probe pan_structs_afindi_append_probeScript.sml pan_structs_afindi_append_probe.out \
+  prefix_hit_keeps_first_index suffix_hit_adds_prefix_length missing_key_stays_none \
+  "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
+  "$cake_dir/pancake/proofs"
+run_probe pan_structs_dropwhile_afindi_probeScript.sml pan_structs_dropwhile_afindi_probe.out \
+  first_hit_drop later_hit_drop missing_hit_drop \
+  "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
+  "$cake_dir/pancake/proofs"
 run_probe loop_to_word_probeScript.sml loop_to_word_probe.out \
   find_var_empty find_reg_imm_ctxt "$cake_dir/pancake/loop_to_wordScript.sml"
 # The get_stack_only probe observes the allocator driver's stack-only
@@ -135,6 +173,12 @@ run_probe crep_runtime_write_bytes_probeScript.sml crep_runtime_write_bytes_prob
   "$cake_dir/pancake/semantics"
 run_probe crep_runtime_ext_call_probeScript.sml crep_runtime_ext_call_probe.out \
   empty_name_identity oracle_diverged "$cake_dir/pancake/semantics/panSemScript.sml" \
+  "$cake_dir/pancake/semantics"
+run_probe crep_every_exp_probeScript.sml crep_every_exp_probe.out \
+  const_hit always_op_nested "$cake_dir/pancake/semantics/crepPropsScript.sml" \
+  "$cake_dir/pancake/semantics"
+run_probe crep_assigned_vars_probeScript.sml crep_assigned_vars_probe.out \
+  afv_prog nested_afv "$cake_dir/pancake/semantics/crepPropsScript.sml" \
   "$cake_dir/pancake/semantics"
 run_probe pan_flat_store_probeScript.sml pan_flat_store_probe.out \
   store_hit stores_blocked "$cake_dir/pancake/semantics/panSemScript.sml"
@@ -248,6 +292,35 @@ run_probe pan_sem_tick_e2e_probeScript.sml pan_sem_tick_e2e_probe.out \
 # The Skip probe observes the normal result with state carried verbatim.
 run_probe pan_sem_skip_e2e_probeScript.sml pan_sem_skip_e2e_probe.out \
   skip_result skip_locals_preserved \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+# The Assign probe observes the accepted, fresh-destination, and
+# source-evaluation-failure branches, including the unchanged post-state on the
+# two Error branches.
+run_probe pan_sem_assign_e2e_probeScript.sml pan_sem_assign_e2e_probe.out \
+  assign_local_ok_result assign_eval_missing_clock \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+# The Dec probe observes the accepted declaration with local restoration, the
+# shape-mismatch rejection, and the initialiser-evaluation-failure rejection,
+# including the unchanged post-state of both rejection branches.
+run_probe pan_sem_dec_e2e_probeScript.sml pan_sem_dec_e2e_probe.out \
+  dec_ok_result dec_eval_missing_clock \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+# The Primitive probe observes the accepted AddCarry update, the
+# fresh-destination rejection, and the argument-evaluation-failure rejection,
+# including the unchanged post-state of both rejection branches.
+run_probe pan_sem_primitive_e2e_probeScript.sml pan_sem_primitive_e2e_probe.out \
+  prim_ok_result prim_arg_missing_clock \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+# The Error-propagation probe nests a rejected Dec inside Seq and While and
+# observes that the explicit `SOME Error` result propagates.
+run_probe pan_sem_error_prop_e2e_probeScript.sml pan_sem_error_prop_e2e_probe.out \
+  seq_error_result while_error_locals \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+# The Store/ShMem/If probe observes successful execution and the explicit
+# `SOME Error` results with unchanged state for the store, shared-memory, and
+# condition rejection branches.
+run_probe pan_sem_store_error_probeScript.sml pan_sem_store_error_probe.out \
+  if_ok_result shmemstore_domain_result \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_fix_clock_probeScript.sml pan_fix_clock_probe.out \
   pan_fix_clock_clamps pan_fix_clock_keeps_lower \
@@ -442,7 +515,7 @@ run_probe excp_rel_probeScript.sml excp_rel_probe.out \
   "$cake_dir/pancake/proofs/pan_to_crepProofScript.sml" \
   "$cake_dir/pancake/proofs"
 run_probe ctxt_fc_probeScript.sml ctxt_fc_probe.out \
-  shaped_slots empty_maximum \
+  shaped_slots empty_maximum functions_projection vmax_nonempty_list vmax_empty_list \
   "$cake_dir/pancake/proofs/pan_to_crepProofScript.sml" \
   "$cake_dir/pancake/proofs"
 run_probe code_rel_probeScript.sml code_rel_probe.out \
@@ -503,8 +576,10 @@ run_probe crep_simp_prog_probeScript.sml crep_simp_prog_probe.out \
   assign unchanged "$cake_dir/pancake/crep_arithScript.sml"
 run_probe afindi_probeScript.sml afindi_probe.out \
   empty duplicate_first wf_shape_drop dropWhile_MAP_helper UNCURRY_EQ_o_SND_pair \
-  map_uncurry_zip_again \
-  "$cake_dir/pancake/pan_structsScript.sml"
+  map_uncurry_zip_again struct_infos_ok_drop struct_infos_ok_append \
+  struct_infos_ok_cons alookup_map_structs_ok fields_in_order_reorder_noop \
+  opt_mmap_eq_every alookup_drop_helper map_fst_eq_alookup \
+  "$cake_dir/pancake/proofs/pan_structsProofScript.sml"
 run_probe pan_structs_compile_exp_probeScript.sml pan_structs_compile_exp_probe.out \
   rstruct old_shapes_map "$cake_dir/pancake/pan_structsScript.sml"
 run_probe crep_semantics_probeScript.sml crep_semantics_probe.out \
@@ -643,6 +718,14 @@ run_probe loop_sem_sh_mem_store_probeScript.sml loop_sem_sh_mem_store_probe.out 
   "$cake_dir/pancake/semantics/loopSemScript.sml"
 run_probe loop_sem_sh_mem_op_probeScript.sml loop_sem_sh_mem_op_probe.out \
   load store32 "$cake_dir/pancake/semantics/loopSemScript.sml"
+run_probe loop_sem_ffi_probeScript.sml loop_sem_ffi_probe.out \
+  extcall_returned extcall_missing_local \
+  "$cake_dir/pancake/semantics/loopSemScript.sml"
+run_probe loop_sem_ffi_rv64_probeScript.sml loop_sem_ffi_rv64_probe.out \
+  rv64_lookups rv64_extcall_live_absent \
+  "$cake_dir/pancake/semantics/loopSemScript.sml"
+run_probe byte_align_probeScript.sml byte_align_probe.out \
+  ba24_5 ba8_7 "$cake_dir/pancake/semantics/loopSemScript.sml"
 run_probe loop_sem_exit_loop_probeScript.sml loop_sem_exit_loop_probe.out \
   exit_loop_break exit_loop_error "$cake_dir/pancake/semantics/loopSemScript.sml"
 # The loop_arith probe prints numeric word values to avoid raw-literal ambiguity.

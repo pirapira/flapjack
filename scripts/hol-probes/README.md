@@ -46,6 +46,11 @@ call destinations through `pan_to_crep$compile`: absent lookups, the
 matching Lean cases live in `Flapjack.Test.CompileDefParity`.
 `excp_rel_probe.out` and `ctxt_fc_probe.out` are direct EVALs from
 `pan_to_crepProofTheory`, paired with `Flapjack.Test.PanToCrepRelationsParity`.
+The `functions_projection` row in `ctxt_fc_probe.out` directly checks the
+HOL `ctxt_fc_funcs_eq` theorem at `pan_to_crepProofScript.sml:2295` against
+the kernel-checked Lean fixture in that module. The `vmax_nonempty_list` and
+`vmax_empty_list` rows directly check `ctxt_fc_vmax` at line 2307 and are
+paired with `ctxtFcVmax` Lean fixtures.
 The `excp_rel` cases deliberately use a word-valued compiler-code map and a
 shape-valued source map, matching the definition's independent HOL value types.
 The `ctxt_fc` cases record `with_shape` slot slicing, ZIP truncation, and
@@ -74,11 +79,62 @@ destination, shift, and width checks live in `Flapjack.Test.CrepeDest2ExpParity`
 `crepSem$eval` after `crep_arith$mul_const` for zero, one, power-of-two, and
 general multipliers, with a word-valued local. Its matching production runtime
 cases live in `Flapjack.Test.CrepeMulConstParity`.
+`crep_eval_probe.out` records direct HOL EVAL of the `Const`, `Var`, `Load`,
+`LoadGlob`, `BaseAddr`, and `TopAddr` constructor cases from
+`cakeml/pancake/semantics/crepSemScript.sml:90-166`. The width-8 production
+checks live in `Flapjack.Test.CrepEvalConstructorParity`; generic word-result
+projection equations live beside `evalCrepRuntimeExp` in
+`Flapjack/Pancake/Semantics/CrepSem.lean`. These equations cover a constructor
+scope slice only: the target-extended runtime state and the remaining
+word-operation and byte-load cases still need an evaluator correspondence.
 `pan_globals_compile_top_probe.out` records original Pancake HOL evaluation
 of `pan_globals$compile_top` for an absent start function (the total empty-list
 result), a present `main` entry, and a global initializer in a nonempty
 declaration list. Its Lean checks live in
 `Flapjack.Test.PanGlobalsCompileTopForStartParity`.
+`pan_structs_afindi_map_probe.out` records direct HOL EVAL for the hit and
+miss cases of `afindi_MAP_eq` at
+`cakeml/pancake/proofs/pan_structsProofScript.sml:356`; its matching Lean
+checks live in `Flapjack.Test.PanStructsAfindiParity`.
+`pan_structs_afindi_length_probe.out` records direct HOL EVAL of first and
+last successful key indices against `afindi_less_length` at
+`cakeml/pancake/proofs/pan_structsProofScript.sml:345`; Lean checks the same
+rows in `Flapjack.Test.PanStructsAfindiParity`.
+`pan_structs_afindi_el_probe.out` records direct HOL EVAL of the first
+component at first, middle and last successful `afindi` indices for
+`afindi_EL` at `cakeml/pancake/proofs/pan_structsProofScript.sml:430`; Lean
+checks the equivalent `getElem?`-based API in
+`Flapjack.Test.PanStructsAfindiParity`.
+`pan_structs_alookup_afindi_probe.out` records direct HOL EVAL of present,
+missing and duplicate-key cases for `ALOOKUP_eq_afindi` at
+`cakeml/pancake/proofs/pan_structsProofScript.sml:405`; matching `List.lookup`
+regressions live in `Flapjack.Test.PanStructsAfindiParity`.
+`pan_structs_compile_correct_probe.out` records direct HOL EVAL of
+`convert_v_def` on a named record, source/converted `Skip` evaluator equations,
+and zero-clock timeout / positive-clock decrement `Tick` evaluator equations,
+plus HOL simplifier reduction of `convert_s_def` over nonempty local, global,
+exception-shape, and function-code finite maps using the finite-map lookup
+rules. These are used in `compile_correct` at
+`cakeml/pancake/proofs/pan_structsProofScript.sml:1034`. These rows cover
+evaluator support only; the full theorem's finite-map premises and invariant,
+shape-map, and result-value postconditions remain open in
+`flapjack-pxn.18.5.3.29` and `.30`. Lean regressions live in
+`Flapjack.Test.PanStructsCompileCorrect`.
+`pan_structs_value_validity_probe.out` records direct HOL EVAL of the word,
+matching/mismatching named-record, missing-context, and duplicate-key first
+match rows for
+`v_flds_ok_def` and `is_wf_shape_v_def`; the matching Bool-valued Lean
+definitions and regressions live in
+`Flapjack.Pancake.Proofs.PanStructs.CompileCorrect` and
+`Flapjack.Test.PanStructsValueValidityParity`.
+`pan_structs_afindi_append_probe.out` records direct HOL EVAL of prefix-hit,
+shifted suffix-hit and missing-key rows for `afindi_append` at
+`cakeml/pancake/proofs/pan_structsProofScript.sml:417`; matching Lean cases
+live in `Flapjack.Test.PanStructsAfindiParity`.
+`pan_structs_dropwhile_afindi_probe.out` records direct HOL EVAL of first-hit,
+later-hit and absent-key cases for `dropWhile_afindi` at
+`cakeml/pancake/proofs/pan_structsProofScript.sml:334`; matching Lean rows
+live in `Flapjack.Test.PanStructsAfindiParity`.
 The `longdiv_code_probe.out` fixture probes the original software LongDiv
 helper at `cakeml/compiler/backend/data_to_wordScript.sml:829-867` and the
 RISC-V target's deliberate LongDiv encoding rejection.

@@ -10,9 +10,12 @@ available for compatibility and for proofs that do not model a clock.  The
 clocked evaluator charges one unit at a function call, at each executed while
 iteration, and at `Tick`, exactly as `dec_clock` is used by `panSem`.
 
-Errors continue to be represented by `none`, while timeout is explicit and
-clears source locals.  Keeping timeout in a separate result type avoids
-changing the established control-result API used by the compiler proofs.
+Semantic errors (`panSem`'s `SOME Error`) are explicit
+`PanValueFfiControlResult.error` results carrying the unchanged state, while
+timeout is explicit and clears source locals.  Only a genuinely missing
+evaluation result (for example fuel exhaustion) is `none`.  Keeping timeout in
+a separate result type avoids changing the established control-result API used
+by the compiler proofs.
 -/
 
 namespace Flapjack
@@ -127,6 +130,9 @@ mutual
           | .control result =>
               match result with
               | .normal _ _ _ _ | .broke _ _ _ _ | .continued _ _ _ _ => none
+              | .error _ calleeGlobals calleeMemory calleeFfi =>
+                  pure (.control (.error (fun _ => none) calleeGlobals calleeMemory calleeFfi),
+                    calleeClock)
               | .returned _ calleeGlobals calleeMemory calleeFfi values =>
                   if panValueReturnValid structs contracts function values &&
                       panValueValuesWithinLimit structs values then
@@ -184,18 +190,18 @@ mutual
         Option (PanValueFfiClockResult α σ)
     | 0, _, _, _, _, _, _, _, _, _ => none
     | fuel + 1, locals, globals, memory, ffi, clock, .dec name shape value body,
-        memoryAccess, contracts, memoryHandler => do
-        let value ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
-        if panShapeMatches (panValueShape structs value) shape then
-          let oldValue := locals name
-          let (outcome, nextClock) ← evalPanValueFfiClockProg context primitive handler
-            structs functions baseAddress topAddress bytesInWord fuel
-            (updatePanValueMap locals name value) globals memory ffi clock body
-            (memoryAccess := memoryAccess) (contracts := contracts)
-            (memoryHandler := memoryHandler)
-          pure (panValueFfiClockRestoreLocal name oldValue outcome, nextClock)
-        else none
+        memoryAccess, contracts, memoryHandler =>
+        (panValueDecAcceptedValue structs baseAddress topAddress bytesInWord locals globals memory
+          value memoryAccess shape).elim
+          (pure (.control (.error locals globals memory ffi), clock))
+          (fun evaluated => do
+            let oldValue := locals name
+            let (outcome, nextClock) ← evalPanValueFfiClockProg context primitive handler
+              structs functions baseAddress topAddress bytesInWord fuel
+              (updatePanValueMap locals name evaluated) globals memory ffi clock body
+              (memoryAccess := memoryAccess) (contracts := contracts)
+              (memoryHandler := memoryHandler)
+            pure (panValueFfiClockRestoreLocal name oldValue outcome, nextClock))
     | fuel + 1, locals, globals, memory, ffi, clock, .seq first second,
         memoryAccess, contracts, memoryHandler => do
         let (firstOutcome, firstClock) ← evalPanValueFfiClockProg context primitive handler
@@ -210,15 +216,16 @@ mutual
               (memoryHandler := memoryHandler)
         | _ => pure (firstOutcome, firstClock)
     | fuel + 1, locals, globals, memory, ffi, clock,
-        .ite condition thenBranch elseBranch, memoryAccess, contracts, memoryHandler => do
-        let condition ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord condition (memoryAccess := memoryAccess)
-        let .word condition := condition | none
-        evalPanValueFfiClockProg context primitive handler structs functions
-          baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
-          (if condition != 0 then thenBranch else elseBranch)
-          (memoryAccess := memoryAccess) (contracts := contracts)
-          (memoryHandler := memoryHandler)
+        .ite condition thenBranch elseBranch, memoryAccess, contracts, memoryHandler =>
+        (panValueIteConditionValue structs baseAddress topAddress bytesInWord locals globals
+          memory condition memoryAccess).elim
+          (pure (.control (.error locals globals memory ffi), clock))
+          (fun condition =>
+            evalPanValueFfiClockProg context primitive handler structs functions
+              baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
+              (if condition != 0 then thenBranch else elseBranch)
+              (memoryAccess := memoryAccess) (contracts := contracts)
+              (memoryHandler := memoryHandler))
     | fuel + 1, locals, globals, memory, ffi, clock,
         .call info function arguments, memoryAccess, contracts, memoryHandler =>
         evalPanValueFfiClockCall context primitive handler structs functions
@@ -253,6 +260,8 @@ mutual
         | .control (.returned _ _ _ _ _) => none
         | .control (.normal _ _ _ _) | .control (.broke _ _ _ _) |
             .control (.continued _ _ _ _) => none
+        | .control (.error nextLocals nextGlobals nextMemory nextFfi) =>
+            pure (.control (.error nextLocals nextGlobals nextMemory nextFfi), nextClock)
     | fuel + 1, locals, globals, memory, ffi, clock, .while conditionExp body,
         memoryAccess, contracts, memoryHandler => do
         let condition ← evalPanValueExp structs locals globals memory
@@ -343,6 +352,9 @@ mutual
           | .control result =>
               match result with
               | .normal _ _ _ _ | .broke _ _ _ _ | .continued _ _ _ _ => none
+              | .error _ calleeGlobals calleeMemory calleeFfi =>
+                  pure (.control (.error (fun _ => none) calleeGlobals calleeMemory calleeFfi),
+                    calleeClock)
               | .returned _ calleeGlobals calleeMemory calleeFfi values =>
                   let sourceReturnValid := match values with
                     | [value] => panShapeMatches (panValueShape structs value) returnShape
@@ -411,18 +423,18 @@ mutual
         Option (PanValueFfiClockResult α σ)
     | 0, _, _, _, _, _, _, _, _, _ => none
     | fuel + 1, locals, globals, memory, ffi, clock, .dec name shape value body,
-        memoryAccess, contracts, memoryHandler => do
-        let value ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
-        if panShapeMatches (panValueShape structs value) shape then
-          let oldValue := locals name
-          let (outcome, nextClock) ← evalPanValueFfiClockCodeProg context primitive handler
-            structs code exceptionShapes baseAddress topAddress bytesInWord fuel
-            (updatePanValueMap locals name value) globals memory ffi clock body
-            (memoryAccess := memoryAccess) (contracts := contracts)
-            (memoryHandler := memoryHandler)
-          pure (panValueFfiClockRestoreLocal name oldValue outcome, nextClock)
-        else none
+        memoryAccess, contracts, memoryHandler =>
+        (panValueDecAcceptedValue structs baseAddress topAddress bytesInWord locals globals memory
+          value memoryAccess shape).elim
+          (pure (.control (.error locals globals memory ffi), clock))
+          (fun evaluated => do
+            let oldValue := locals name
+            let (outcome, nextClock) ← evalPanValueFfiClockCodeProg context primitive handler
+              structs code exceptionShapes baseAddress topAddress bytesInWord fuel
+              (updatePanValueMap locals name evaluated) globals memory ffi clock body
+              (memoryAccess := memoryAccess) (contracts := contracts)
+              (memoryHandler := memoryHandler)
+            pure (panValueFfiClockRestoreLocal name oldValue outcome, nextClock))
     | fuel + 1, locals, globals, memory, ffi, clock, .seq first second,
         memoryAccess, contracts, memoryHandler => do
         let (firstOutcome, firstClock) ← evalPanValueFfiClockCodeProg context primitive handler
@@ -438,15 +450,16 @@ mutual
               (memoryHandler := memoryHandler)
         | _ => pure (firstOutcome, firstClock)
     | fuel + 1, locals, globals, memory, ffi, clock,
-        .ite condition thenBranch elseBranch, memoryAccess, contracts, memoryHandler => do
-        let condition ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord condition (memoryAccess := memoryAccess)
-        let .word condition := condition | none
-        evalPanValueFfiClockCodeProg context primitive handler structs code exceptionShapes
-          baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
-          (if condition != 0 then thenBranch else elseBranch)
-          (memoryAccess := memoryAccess) (contracts := contracts)
-          (memoryHandler := memoryHandler)
+        .ite condition thenBranch elseBranch, memoryAccess, contracts, memoryHandler =>
+        (panValueIteConditionValue structs baseAddress topAddress bytesInWord locals globals
+          memory condition memoryAccess).elim
+          (pure (.control (.error locals globals memory ffi), clock))
+          (fun condition =>
+            evalPanValueFfiClockCodeProg context primitive handler structs code exceptionShapes
+              baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
+              (if condition != 0 then thenBranch else elseBranch)
+              (memoryAccess := memoryAccess) (contracts := contracts)
+              (memoryHandler := memoryHandler))
     | fuel + 1, locals, globals, memory, ffi, clock,
         .call info function arguments, memoryAccess, contracts, memoryHandler =>
         evalPanValueFfiClockCodeCall context primitive handler structs code exceptionShapes
@@ -480,6 +493,8 @@ mutual
         | .control (.returned _ _ _ _ _) => none
         | .control (.normal _ _ _ _) | .control (.broke _ _ _ _) |
             .control (.continued _ _ _ _) => none
+        | .control (.error nextLocals nextGlobals nextMemory nextFfi) =>
+            pure (.control (.error nextLocals nextGlobals nextMemory nextFfi), nextClock)
     | fuel + 1, locals, globals, memory, ffi, clock, .while conditionExp body,
         memoryAccess, contracts, memoryHandler => do
         let condition ← evalPanValueExp structs locals globals memory
@@ -518,6 +533,78 @@ mutual
           (memoryHandler := memoryHandler)
     termination_by fuel _ _ _ _ _ _ _ _ _ => fuel
 end
+
+/-! General source Call exception-dispatch step.  The callee body, argument
+values, return shape, exception payload, and handler program are all
+parameters; `hcalleeBody` is the source-side induction hypothesis for the
+callee.  This exposes the exact clock clamp and handler-local update used by
+HOL `evaluate_def` without assuming a fixed callee syntax or a target run. -/
+theorem evalPanValueFfiClockCodeCall_catchesRaisedBody
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext) (code : PanSemCodeMap α)
+    (exceptionShapes : ExceptionId → Option Shape)
+    (baseAddress topAddress bytesInWord : α)
+    (fuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (handlerVariable : VarName) (handlerProgram body : Prog α)
+    (function : FunName) (exception : ExceptionId)
+    (arguments : List (Exp α)) (values : List (PanValue α))
+    (returnShape : Shape)
+    (calleeLocals : VarName → Option (PanValue α))
+    (calleeGlobals : VarName → Option (PanValue α))
+    (calleeMemory : α → Option (PanValue α)) (calleeFfi : FfiState σ)
+    (exceptionValue : PanValue α) (calleeClock : Nat)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (contracts : Option PanValueCallContracts := none)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none)
+    (handlerResult : PanValueFfiClockResult α σ)
+    (harguments : evalPanValueExps structs locals globals memory
+      baseAddress topAddress bytesInWord arguments
+      (memoryAccess := memoryAccess) = some values)
+    (hcallee : lookupPanSemCodeCall structs code function values =
+      some (body, returnShape, calleeLocals))
+    (hclock : clock ≠ 0)
+    (calleeRaisedLocals : VarName → Option (PanValue α))
+    (hcalleeBody : evalPanValueFfiClockCodeProg context primitive handler
+      structs code exceptionShapes baseAddress topAddress bytesInWord fuel
+      calleeLocals globals memory ffi (decPanClock clock) body
+      (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) =
+        some (.control (.raised calleeRaisedLocals calleeGlobals calleeMemory
+          calleeFfi exception exceptionValue), calleeClock))
+    (hexceptionShape : ∃ shape, exceptionShapes exception = some shape ∧
+      panShapeMatches (panValueShape structs exceptionValue) shape = true)
+    (hexceptionContract : panValueExceptionValid structs contracts exception
+      exceptionValue = true)
+    (hpayload : panValuePayloadWithinLimit structs exceptionValue = true)
+    (hhandlerAssignment : panValueAssignmentValid structs locals (fun _ => none)
+      .local handlerVariable exceptionValue = true)
+    (hhandlerContract : panValueHandlerValid structs contracts locals
+      handlerVariable exceptionValue = true)
+    (hhandlerBody : evalPanValueFfiClockCodeProg context primitive handler
+      structs code exceptionShapes baseAddress topAddress bytesInWord fuel
+      (updatePanValueMap locals handlerVariable exceptionValue)
+      calleeGlobals calleeMemory calleeFfi
+      (min (decPanClock clock) calleeClock) handlerProgram
+      (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) = some handlerResult) :
+    evalPanValueFfiClockCodeCall context primitive handler structs code
+      exceptionShapes baseAddress topAddress bytesInWord (fuel + 1) locals
+      globals memory ffi clock
+      (some (none, some (exception, handlerVariable, handlerProgram)))
+      function arguments (memoryAccess := memoryAccess)
+      (contracts := contracts) (memoryHandler := memoryHandler) =
+        some handlerResult := by
+  rcases hexceptionShape with ⟨shape, hshape, hshapeMatch⟩
+  simp [evalPanValueFfiClockCodeCall, harguments, hcallee, hclock,
+    hcalleeBody, hshape, hshapeMatch, hexceptionContract, hpayload,
+    hhandlerAssignment, hhandlerContract, hhandlerBody, decPanClock]
 
 def evalPanValueFfiClockProgram
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]

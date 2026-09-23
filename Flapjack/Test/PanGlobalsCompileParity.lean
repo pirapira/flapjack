@@ -36,6 +36,28 @@ def parityGuard : Bool :=
 #eval parityGuard
 #guard parityGuard
 
+/-! Direct generated-program parity for Cake's handled call with a global
+    destination. The result name starts from `""`, while the independent flag
+    starts from `"vn'"`; see `global_destination_handler_flag` in the original
+    HOL probe. -/
+def globalHandlerFlagInput : Prog Nat :=
+  .call (some (some (.global, "g"), some ("E", "handler", .skip))) "f" []
+
+def globalHandlerFlagGuard : Bool :=
+  match globalCompileProg compileContext globalHandlerFlagInput with
+  | .dec "" .one (.const 0)
+      (.dec "vn'" .one (.const 0)
+        (.seq
+          (.call
+            (some (some (.local, ""), some ("E", "handler",
+              .seq .skip (.assign .local "vn'" (.const 1)))))
+            "f" [])
+          (.ite (.var .local "vn'") .skip
+            (.store (.op .sub [.topAddr, .const 8]) (.var .local ""))))) => true
+  | _ => false
+
+#guard globalHandlerFlagGuard
+
 /-! Cake's duplicate top-level declarations retain one initializer per
     declaration, while the final `FLOOKUP` binding is the last declaration.
     This is the source-level contract exercised by

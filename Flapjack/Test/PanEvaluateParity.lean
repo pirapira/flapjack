@@ -139,6 +139,17 @@ def evaluateSourceCallRaisesException :=
           if exception == "E" then some .one else none })
     (.call none "raiseE" [] : Prog Word64)
 
+def evaluateSourceCallHandlesException :=
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler
+    ({ emptyPanSourceState 10 sourceRaiseExceptionCallCode with
+        locals := fun name =>
+          if name == "caught" then some (.word (BitVec.ofNat 64 0)) else none
+        exceptionShapes := fun exception =>
+          if exception == "E" then some .one else none })
+    (.call (some (none, some ("E", "caught",
+      .return (.var .local "caught")))) "raiseE" [] : Prog Word64)
+
 def evaluateSourceDecCallId :=
   panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
     statefulTestHandler
@@ -216,6 +227,10 @@ def observeSourceCallRaisesException : Bool :=
       value == BitVec.ofNat 64 7
   | _ => false
 
+def observeSourceCallHandlesException : Bool :=
+  isSourceReturnedWord evaluateSourceCallHandlesException
+    (BitVec.ofNat 64 7) 9
+
 def observeSourceCodeDecCall := isSourceReturnedWord evaluateSourceDecCallId
   (BitVec.ofNat 64 7) 9
 
@@ -252,6 +267,7 @@ def observeSourceConstReturnCall := isSourceReturnedWord
 #guard observeSourceCodeCall
 #guard observeSourceCallAssigned
 #guard observeSourceCallRaisesException
+#guard observeSourceCallHandlesException
 #guard observeSourceCodeDecCall
 #guard observeSourceNestedCodeCall
 #guard observeSourceCodePreservedAfterRecursion
@@ -389,6 +405,35 @@ def evaluateFixedStoreByteDomainFailure :=
     (.storeByte (.const (BitVec.ofNat 64 16))
       (.const (BitVec.ofNat 64 0xaa)) : Prog (Word 64))
 
+def emptySharedContext : PanValueFfiContext (Word 64) :=
+  { statefulTestContext with sharedDomain := fun _ => false }
+
+def evaluateIfBadCondition :=
+  panSemEvaluateExact statefulTestContext statefulTestPrimitive statefulTestHandler
+    fixedLoadAccess (fixedStoreState 5)
+    (.ite (.var .local "missing") .skip .skip : Prog (Word 64))
+
+def evaluateIfOk :=
+  panSemEvaluateExact statefulTestContext statefulTestPrimitive statefulTestHandler
+    fixedLoadAccess (fixedStoreState 5)
+    (.ite (.const (BitVec.ofNat 64 1)) .skip .skip : Prog (Word 64))
+
+def evaluateShMemLoadUnbound :=
+  panSemEvaluateExact emptySharedContext statefulTestPrimitive statefulTestHandler
+    fixedLoadAccess (fixedStoreState 5)
+    (.shMemLoad .op8 .local "missing" (.const (BitVec.ofNat 64 8)) : Prog (Word 64))
+
+def evaluateShMemLoadDomainFailure :=
+  panSemEvaluateExact emptySharedContext statefulTestPrimitive statefulTestHandler
+    fixedLoadAccess (fixedStoreState 5)
+    (.shMemLoad .op8 .local "kept" (.const (BitVec.ofNat 64 8)) : Prog (Word 64))
+
+def evaluateShMemStoreDomainFailure :=
+  panSemEvaluateExact emptySharedContext statefulTestPrimitive statefulTestHandler
+    fixedLoadAccess (fixedStoreState 5)
+    (.shMemStore .op8 (.const (BitVec.ofNat 64 8))
+      (.const (BitVec.ofNat 64 7)) : Prog (Word 64))
+
 def isWord (expected : Nat) : PanValue (Word 64) → Bool
   | .word value => value == BitVec.ofNat 64 expected
   | _ => false
@@ -457,6 +502,10 @@ def isNoneOption : Option (PanValue (Word 64)) → Bool
   | none => true
   | _ => false
 
+def isErrorResult {α σ : Type} : Option (PanValueFfiClockResult α σ) → Bool
+  | some (.control (.error _ _ _ _), _) => true
+  | _ => false
+
 def observeFixedStore : Bool :=
   match evaluateFixedStore with
   | some (.control (.normal locals globals memory ffi), 4) =>
@@ -480,9 +529,32 @@ def observeFixedStoreByte : Bool :=
   | _ => false
 
 def observeFixedStoreFailures : Bool :=
-  evaluateFixedStoreDomainFailure.isNone &&
-    evaluateFixedStore32Unaligned.isNone &&
-    evaluateFixedStoreByteDomainFailure.isNone
+  isErrorResult evaluateFixedStoreDomainFailure &&
+    isErrorResult evaluateFixedStore32Unaligned &&
+    isErrorResult evaluateFixedStoreByteDomainFailure
+
+def errorPreservingKeptAt (clock localValue : Nat) :
+    Option (PanValueFfiClockResult (Word 64) Unit) → Bool
+  | some (.control (.error locals _ _ _), n) =>
+      n == clock && isWordOption localValue (locals "kept")
+  | _ => false
+
+def observeIfBadCondition : Bool :=
+  errorPreservingKeptAt 5 55 evaluateIfBadCondition
+
+def observeIfOk : Bool :=
+  match evaluateIfOk with
+  | some (.control (.normal locals _ _ _), 5) => isWordOption 55 (locals "kept")
+  | _ => false
+
+def observeShMemLoadUnbound : Bool :=
+  errorPreservingKeptAt 5 55 evaluateShMemLoadUnbound
+
+def observeShMemLoadDomainFailure : Bool :=
+  errorPreservingKeptAt 5 55 evaluateShMemLoadDomainFailure
+
+def observeShMemStoreDomainFailure : Bool :=
+  errorPreservingKeptAt 5 55 evaluateShMemStoreDomainFailure
 
 #guard observeSkip
 #guard observeReturn41
@@ -498,6 +570,11 @@ def observeFixedStoreFailures : Bool :=
 #guard observeFixedStore32
 #guard observeFixedStoreByte
 #guard observeFixedStoreFailures
+#guard observeIfBadCondition
+#guard observeIfOk
+#guard observeShMemLoadUnbound
+#guard observeShMemLoadDomainFailure
+#guard observeShMemStoreDomainFailure
 
 def runChecks : IO Bool := do
   if observeSkip then IO.println "PASS evaluate skip" else IO.println "FAIL evaluate skip"
@@ -511,6 +588,8 @@ def runChecks : IO Bool := do
     IO.println "FAIL state-owned Call writes the existing local destination"
   if observeSourceCallRaisesException then IO.println "PASS state-owned Call propagates the callee exception payload" else
     IO.println "FAIL state-owned Call propagates the callee exception payload"
+  if observeSourceCallHandlesException then IO.println "PASS state-owned Call handler catches and binds the exception payload" else
+    IO.println "FAIL state-owned Call handler catches and binds the exception payload"
   if observeSourceCodeDecCall then IO.println "PASS state-owned code DecCall matches HOL deccall_code_map_7" else
     IO.println "FAIL state-owned code DecCall matches HOL deccall_code_map_7"
   if observeSourceNestedCodeCall then IO.println "PASS state-owned nested Call and DecCall match HOL recursive oracle" else
@@ -543,6 +622,16 @@ def runChecks : IO Bool := do
     IO.println "FAIL evaluate explicit StoreByte"
   if observeFixedStoreFailures then IO.println "PASS evaluate explicit store failures" else
     IO.println "FAIL evaluate explicit store failures"
+  if observeIfBadCondition then IO.println "PASS evaluate If rejects non-word condition with Error" else
+    IO.println "FAIL evaluate If rejects non-word condition with Error"
+  if observeIfOk then IO.println "PASS evaluate If word condition keeps clock" else
+    IO.println "FAIL evaluate If word condition keeps clock"
+  if observeShMemLoadUnbound then IO.println "PASS evaluate ShMemLoad rejects unbound local with Error" else
+    IO.println "FAIL evaluate ShMemLoad rejects unbound local with Error"
+  if observeShMemLoadDomainFailure then IO.println "PASS evaluate ShMemLoad rejects shared-domain miss with Error" else
+    IO.println "FAIL evaluate ShMemLoad rejects shared-domain miss with Error"
+  if observeShMemStoreDomainFailure then IO.println "PASS evaluate ShMemStore rejects shared-domain miss with Error" else
+    IO.println "FAIL evaluate ShMemStore rejects shared-domain miss with Error"
   pure (observeSkip && observeReturn41 && observeSequence && observeTickAtZero && observeCall &&
     observeSourceCodeCall && observeSourceCodeDecCall && observeSourceNestedCodeCall &&
     observeSourceCodePreservedAfterRecursion &&
@@ -552,6 +641,8 @@ def runChecks : IO Bool := do
     observeFixedLoads && observeFixedLoadDomainFailure &&
     observeExactProgramMemoryAccess && observeExactProgramDomainFailure &&
     observeFixedStore &&
-    observeFixedStore32 && observeFixedStoreByte && observeFixedStoreFailures)
+    observeFixedStore32 && observeFixedStoreByte && observeFixedStoreFailures &&
+    observeIfBadCondition && observeIfOk && observeShMemLoadUnbound &&
+    observeShMemLoadDomainFailure && observeShMemStoreDomainFailure)
 
 end Flapjack.Test.PanEvaluateParity

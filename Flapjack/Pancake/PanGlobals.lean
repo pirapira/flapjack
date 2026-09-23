@@ -313,7 +313,9 @@ def globalCompileProg [BEq String] [Add α] [Mul α]
                 let names := handlerVar :: globalFreeVars compiledHandlerProgram ++
                   compiledArguments.flatMap globalExpVars
                 let resultName := globalFreshName "" names
-                let flagName := globalFreshName resultName (resultName :: names)
+                /- Cake's `compile_def` uses the fixed seed `"vn'"` for its
+                   handler flag, independently of the fresh result name. -/
+                let flagName := globalFreshName "vn'" (resultName :: names)
                 let handlerBody :=
                   .seq compiledHandlerProgram
                     (.assign .local flagName (.const (context.fromNat 1)))
@@ -375,7 +377,11 @@ theorem globalCompileProg_expIds [BEq String] [Add α] [Mul α]
     global allocation makes their name-preservation contracts reusable by the
     target-facing pipeline. -/
 
-def globalRenameFunctionName [BEq String]
+/-- Exact-shaped port of Cake's `fperm_name_def`
+    (`pan_globalsScript.sml:184`): renaming swaps the `source` and `target`
+    function names and leaves every other name unchanged. -/
+@[hol "cakeml/pancake/pan_globalsScript.sml" "fperm_name_def"]
+def globalRenameFunctionName [LawfulBEq String]
     (source target name : FunName) : FunName :=
   if source == name then target else if target == name then source else name
 
@@ -403,7 +409,12 @@ theorem globalRenameFunctionName_cong [BEq String] [LawfulBEq String]
   · intro h
     rw [h]
 
-def globalRenameProg [BEq String]
+/-- Exact-shaped port of Cake's `fperm_def`
+    (`pan_globalsScript.sml:191`): rename `source` to `target` and vice versa
+    in every function occurrence and nested handler/body, leaving the other
+    program constructs structurally unchanged. -/
+@[hol "cakeml/pancake/pan_globalsScript.sml" "fperm_def"]
+def globalRenameProg [LawfulBEq String]
     (source target : FunName) : Prog α → Prog α
   | .dec name shape value body =>
       .dec name shape value (globalRenameProg source target body)
@@ -428,7 +439,12 @@ def globalRenameProg [BEq String]
   | program => program
 termination_by program => sizeOf program
 
-def globalRenameDecls [BEq String]
+/-- Exact-shaped port of Cake's `fperm_decs_def`
+    (`pan_globalsScript.sml:216`): rename `source`/`target` in each function
+    declaration's name and body; every other declaration passes through
+    unchanged. -/
+@[hol "cakeml/pancake/pan_globalsScript.sml" "fperm_decs_def"]
+def globalRenameDecls [LawfulBEq String]
     (source target : FunName) : List (Decl α) → List (Decl α)
   | [] => []
   | .function declaration :: declarations =>
@@ -463,9 +479,9 @@ theorem functions_globalRenameDecls [BEq String] (source target : FunName)
         (globalRenameFunctionName source target entry.1, entry.2.1,
           globalRenameProg source target entry.2.2.1, entry.2.2.2)) := by
   induction declarations with
-  | nil => simp [globalRenameDecls, functions]
+  | nil => simp [globalRenameDecls, functions, functionEntries]
   | cons declaration declarations ih =>
-      cases declaration <;> simp [globalRenameDecls, functions, ih]
+      cases declaration <;> simp [globalRenameDecls, functions, functionEntries, ih]
 
 theorem nodup_globalRenameFunctionName_map [BEq String] [LawfulBEq String]
     (source target : FunName) (names : List FunName) (hnodup : names.Nodup) :
@@ -725,23 +741,37 @@ theorem sizeOfEids_structCompileTop (declarations : List (Decl α)) :
   exact sizeOfEids_structCompileDecls declarations
     (structGetNames { structs := [], locals := [], globals := [] } declarations)
 
+/-! Counterpart of Cake's `resort_decls_def` (`pan_globalsScript.sml:179`):
+    declarations are regrouped as names, exceptions, value declarations, and
+    functions, in that order.  `globalDeclIsName`/`globalDeclIsException`/
+    `globalDeclIsGlobal`/`globalDeclIsFunction` are the HOL `is_name`/
+    `is_exn_decl`/`is_decl`/`is_function` predicates. -/
+@[hol "cakeml/pancake/pan_globalsScript.sml" "resort_decls_def"]
 def globalResortDecls (declarations : List (Decl α)) : List (Decl α) :=
   globalDeclsFilter globalDeclIsName declarations ++
     globalDeclsFilter globalDeclIsException declarations ++
     globalDeclsFilter globalDeclIsGlobal declarations ++
     globalDeclsFilter globalDeclIsFunction declarations
 
-def globalNewMainName [BEq String] (declarations : List (Decl α)) : FunName :=
+/-! Counterpart of Cake's `new_main_name_def` (`pan_globalsScript.sml:224`):
+    the synthesized entry-point name is `fresh_name "main"` over the current
+    function names (`globalFunctionNames` is `MAP FST` of the function table). -/
+@[hol "cakeml/pancake/pan_globalsScript.sml" "new_main_name_def"]
+def globalNewMainName [LawfulBEq String] (declarations : List (Decl α)) : FunName :=
   globalFreshName "main" (globalFunctionNames declarations)
 
 /-! Counterpart of Cake's `new_main_name_correct`
     (`pan_globalsProofScript.sml:2073`): the synthesized `main` entry-point name
     is never one of the program's existing function names. -/
-theorem globalNewMainName_not_mem [BEq String] [LawfulBEq String]
+theorem globalNewMainName_not_mem [LawfulBEq String]
     (declarations : List (Decl α)) :
     globalNewMainName declarations ∉ globalFunctionNames declarations :=
   globalFreshName_not_mem "main" (globalFunctionNames declarations)
 
+/-! Counterpart of Cake's `dec_shapes_def` (`pan_globalsScript.sml:228`): the
+    shape projection skips function, name, and exception declarations and
+    keeps the shape of each value declaration, in order. -/
+@[hol "cakeml/pancake/pan_globalsScript.sml" "dec_shapes_def"]
 def globalDeclShapes : List (Decl α) → List Shape
   | [] => []
   | .function _ :: declarations => globalDeclShapes declarations
@@ -972,14 +1002,14 @@ theorem functions_globalDeclsFilter_nil_of_predicate
     (declarations : List (Decl α)) :
     functions (globalDeclsFilter predicate declarations) = [] := by
   induction declarations with
-  | nil => simp [globalDeclsFilter, functions]
+  | nil => simp [globalDeclsFilter, functions, functionEntries]
   | cons declaration declarations ih =>
       simp only [globalDeclsFilter]
       by_cases hpred : predicate declaration = true
       · rw [if_pos hpred]
         have hnotfun := hpredicate declaration hpred
         cases declaration <;> simp [globalDeclIsFunction] at hnotfun
-        all_goals simp [functions]
+        all_goals simp [functions, functionEntries]
         all_goals exact ih
       · rw [if_neg hpred]
         exact ih
@@ -1034,21 +1064,21 @@ theorem functions_globalDeclsFilter_isFunction (declarations : List (Decl α)) :
     functions (globalDeclsFilter globalDeclIsFunction declarations) =
       functions declarations := by
   induction declarations with
-  | nil => simp [globalDeclsFilter, functions]
+  | nil => simp [globalDeclsFilter, functions, functionEntries]
   | cons declaration declarations ih =>
       simp only [globalDeclsFilter]
       by_cases hpred : globalDeclIsFunction declaration = true
       · rw [if_pos hpred]
-        cases declaration <;> simp_all [globalDeclIsFunction, functions]
+        cases declaration <;> simp_all [globalDeclIsFunction, functions, functionEntries]
       · rw [if_neg hpred]
-        cases declaration <;> simp_all [globalDeclIsFunction, functions]
+        cases declaration <;> simp_all [globalDeclIsFunction, functions, functionEntries]
 
 theorem functions_append (declarations rest : List (Decl α)) :
     functions (declarations ++ rest) = functions declarations ++ functions rest := by
   induction declarations with
-  | nil => simp [functions]
+  | nil => simp [functions, functionEntries]
   | cons declaration declarations ih =>
-      cases declaration <;> simp [functions, ih]
+      cases declaration <;> simp [functions, functionEntries, ih]
 
 /-! Counterpart of Cake's `resort_decls_preserve_functions`
     (`pan_globalsProofScript.sml:2055`): resorting declarations leaves the
@@ -1295,9 +1325,9 @@ theorem functions_names_globalCompileDecls [BEq String] [Add α] [Mul α]
         (fun entry => entry.1) =
       (functions declarations).map (fun entry => entry.1) := by
   induction declarations with
-  | nil => simp [globalCompileDecls, functions]
+  | nil => simp [globalCompileDecls, functions, functionEntries]
   | cons declaration declarations ih =>
-      cases declaration <;> simp [globalCompileDecls, functions, ih]
+      cases declaration <;> simp [globalCompileDecls, functions, functionEntries, ih]
 
 theorem globalCompileDecls_all_not_function [BEq String] [Add α] [Mul α]
     (context : GlobalPassContext α) (declarations : List (Decl α))
@@ -1803,7 +1833,7 @@ theorem globalFunctionNames_eq_functions_map (declarations : List (Decl α)) :
   | nil => rw [globalFunctionNames.eq_def]; rfl
   | cons declaration declarations ih =>
       cases declaration <;> rw [globalFunctionNames.eq_def] <;>
-        simp [functions, ih]
+        simp [functions, functionEntries, ih]
 
 theorem globalFindFunction_name_mem [BEq String] [LawfulBEq String]
     (name : FunName) (declarations : List (Decl α)) (entry : FunDecl α)
@@ -1896,9 +1926,9 @@ theorem functions_globalCompileDecls [BEq String] [Add α] [Mul α]
       (functions declarations).map (fun entry =>
         (entry.1, entry.2.1, globalCompileProg context entry.2.2.1, entry.2.2.2)) := by
   induction declarations with
-  | nil => simp [globalCompileDecls, functions]
+  | nil => simp [globalCompileDecls, functions, functionEntries]
   | cons declaration declarations ih =>
-      cases declaration <;> simp [globalCompileDecls, functions, ih]
+      cases declaration <;> simp [globalCompileDecls, functions, functionEntries, ih]
 
 /-- Cake's `compile_decs_exp_ids`
     (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:153`): compiling the
@@ -1944,7 +1974,7 @@ theorem globalCompileTopForStart_names_nodup [BEq String] [LawfulBEq String]
       rw [globalCompileDecs_exceptions_eq_filter,
         functions_globalDeclsFilter_globalException, List.nil_append]
       rw [List.map_append]
-      simp only [functions, List.map_cons, List.map_nil,
+      simp only [functions, functionEntries, List.map_cons, List.map_nil,
         List.singleton_append]
       rw [globalCompileDecs_functions_names, functions_globalRenameDecls_map_fst,
         functions_globalResortDecls]

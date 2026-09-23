@@ -91,14 +91,12 @@ def panSimpDecl : Decl α → Decl α
 
 /-! Cake's `functions` projection (`panLangScript.sml:319-326`): the function
     table as `(name, params, body, returnShape)` entries, with non-function
-    declarations dropped. -/
-def functions :
-    List (Decl α) → List (FunName × List (VarName × Shape) × Prog α × Shape)
-  | [] => []
-  | .function declaration :: declarations =>
-      (declaration.name, declaration.params, declaration.body,
-        declaration.returnShape) :: functions declarations
-  | _ :: declarations => functions declarations
+    declarations dropped.  This is an alias for the reviewed, HOL-tagged
+    `functionEntries` (`Flapjack/Pancake/PanLang.lean`), so the executable
+    path and the ported definition coincide. -/
+abbrev functions :
+    List (Decl α) → List (FunName × List (VarName × Shape) × Prog α × Shape) :=
+  functionEntries
 
 /-- Counterpart of Cake's `functions_eq_FILTER`
     (`cakeml/pancake/semantics/panPropsScript.sml:1487`): the function table is
@@ -117,7 +115,7 @@ theorem functions_eq_filterMap (declarations : List (Decl α)) :
   induction declarations with
   | nil => rfl
   | cons declaration declarations ih =>
-      cases declaration <;> simp [functions, ih]
+      cases declaration <;> simp [functions, functionEntries, ih]
 
 /-! Source-shaped counterpart of Cake's `compile_prog_pmatch`: `compile_prog`
     maps `compile` over function declarations and leaves other declarations
@@ -138,10 +136,10 @@ theorem functions_panSimpDecls (declarations : List (Decl α)) :
       (functions declarations).map (fun entry =>
         (entry.1, entry.2.1, panSimpProg entry.2.2.1, entry.2.2.2)) := by
   induction declarations with
-  | nil => simp [panSimpDecls, functions]
+  | nil => simp [panSimpDecls, functions, functionEntries]
   | cons declaration declarations ih =>
       cases declaration <;>
-        simp [panSimpDecls, functions, ih]
+        simp [panSimpDecls, functions, functionEntries, ih]
 
 /-! Cake's `MEM_functions` (`pan_globalsProofScript.sml:2380`): every entry of
     the `functions` projection comes from a function declaration of the source
@@ -155,26 +153,26 @@ theorem mem_functions {declarations : List (Decl α)}
         entry = (declaration.name, declaration.params, declaration.body,
           declaration.returnShape) := by
   induction declarations with
-  | nil => simp [functions] at hmem
+  | nil => simp [functions, functionEntries] at hmem
   | cons declaration declarations ih =>
       cases declaration with
       | function function =>
-          simp only [functions, List.mem_cons] at hmem
+          simp only [functions, functionEntries, List.mem_cons] at hmem
           rcases hmem with hentry | htail
           · subst hentry
             exact ⟨function, by simp, rfl⟩
           · obtain ⟨found, hfound, hentry⟩ := ih htail
             exact ⟨found, by simp [hfound], hentry⟩
       | decl shape name value =>
-          simp only [functions] at hmem
+          simp only [functions, functionEntries] at hmem
           obtain ⟨found, hfound, hentry⟩ := ih hmem
           exact ⟨found, by simp [hfound], hentry⟩
       | exnDecl exception shape =>
-          simp only [functions] at hmem
+          simp only [functions, functionEntries] at hmem
           obtain ⟨found, hfound, hentry⟩ := ih hmem
           exact ⟨found, by simp [hfound], hentry⟩
       | name struct fields =>
-          simp only [functions] at hmem
+          simp only [functions, functionEntries] at hmem
           obtain ⟨found, hfound, hentry⟩ := ih hmem
           exact ⟨found, by simp [hfound], hentry⟩
 
@@ -237,35 +235,35 @@ theorem lookupFunctionEntry_panSimpDecls
       some (parameters, panSimpProg body, returnShape) := by
   induction declarations with
   | nil =>
-      simp [functions, lookupFunctionEntry] at hlookup
+      simp [functions, functionEntries, lookupFunctionEntry] at hlookup
   | cons declaration declarations ih =>
       cases declaration with
       | function declaration =>
           by_cases hname : name == declaration.name
-          · simp [functions, panSimpDecls, lookupFunctionEntry, hname] at hlookup ⊢
+          · simp [functions, functionEntries, panSimpDecls, lookupFunctionEntry, hname] at hlookup ⊢
             rcases hlookup with ⟨rfl, rfl, rfl⟩
             simp
           · have htail : lookupFunctionEntry name (functions declarations) =
                 some (parameters, body, returnShape) := by
-              simpa [functions, lookupFunctionEntry, hname] using hlookup
+              simpa [functions, functionEntries, lookupFunctionEntry, hname] using hlookup
             have htail' := ih htail
-            simpa [functions, panSimpDecls, lookupFunctionEntry, hname]
+            simpa [functions, functionEntries, panSimpDecls, lookupFunctionEntry, hname]
               using htail'
       | decl shape declarationName expression =>
           have htail : lookupFunctionEntry name (functions declarations) =
               some (parameters, body, returnShape) := by
-            simpa only [functions] using hlookup
-          simpa only [panSimpDecls, functions] using ih htail
+            simpa only [functions, functionEntries] using hlookup
+          simpa only [panSimpDecls, functions, functionEntries] using ih htail
       | exnDecl exception shape =>
           have htail : lookupFunctionEntry name (functions declarations) =
               some (parameters, body, returnShape) := by
-            simpa only [functions] using hlookup
-          simpa only [panSimpDecls, functions] using ih htail
+            simpa only [functions, functionEntries] using hlookup
+          simpa only [panSimpDecls, functions, functionEntries] using ih htail
       | name struct fields =>
           have htail : lookupFunctionEntry name (functions declarations) =
               some (parameters, body, returnShape) := by
-            simpa only [functions] using hlookup
-          simpa only [panSimpDecls, functions] using ih htail
+            simpa only [functions, functionEntries] using hlookup
+          simpa only [panSimpDecls, functions, functionEntries] using ih htail
 
 /-- `lookupFunctionEntry` returns the entry found at a given index whenever the
     function names are distinct. -/

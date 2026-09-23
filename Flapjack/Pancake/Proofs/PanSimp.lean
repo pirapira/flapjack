@@ -321,35 +321,6 @@ theorem list_mapM_eq_some_iff {α β : Type} (f : α → Option β) (xs : List �
             have hxs : xs.mapM f = some ys' := (ih ys').mpr htail
             simp [hfx, hxs]
 
-/-- Cake's `opt_mmap_eq_every`
-(`cakeml/pancake/proofs/pan_structsProofScript.sml:255-265`): if `mapM f` succeeds
-on `xs` producing `ys`, then any predicate that holds for every successful image
-`f x = some y` with `x ∈ xs` holds for every element of `ys`. -/
-theorem list_mapM_all_of_mem {α β : Type} (f : α → Option β) (P : β → Bool)
-    (xs : List α) (ys : List β) (h : xs.mapM f = some ys)
-    (hf : ∀ x y, x ∈ xs → f x = some y → P y = true) :
-    ys.all P = true := by
-  induction xs generalizing ys with
-  | nil =>
-      simp only [List.mapM_nil] at h
-      cases h
-      simp
-  | cons a as ih =>
-      rw [List.mapM_cons] at h
-      cases hx : f a with
-      | none => simp [hx] at h
-      | some b =>
-          simp only [hx] at h
-          cases hxs : as.mapM f with
-          | none => simp [hxs] at h
-          | some ys' =>
-              simp only [hxs] at h
-              have hb : b :: ys' = ys := by simpa using h
-              subst hb
-              simp only [List.all_cons, Bool.and_eq_true]
-              exact ⟨hf a b (by simp) hx,
-                ih ys' hxs (fun x y hx' hfy => hf x y (by simp [hx']) hfy)⟩
-
 /-- Cake's `OPT_MMAP_MEM_IMP`
 (`cakeml/pancake/semantics/panPropsScript.sml:115-123`): every element of a
 successful `OPT_MMAP` image has a preimage in the source list on which `f`
@@ -964,13 +935,13 @@ theorem evalPanValueDeclarationsWithStructs_functions
       simp only [evalPanValueDeclarationsWithStructs] at heval
       have hstate : state = state' := (Option.some.injEq _ _).mp heval
       subst hstate
-      simp [panFunctionEntries, functions]
+      simp [panFunctionEntries, functions, functionEntries]
   | cons declaration declarations ih =>
       cases declaration with
       | name struct fields =>
           simp only [evalPanValueDeclarationsWithStructs] at heval
           rw [ih state heval]
-          simp [panFunctionEntries, functions]
+          simp [panFunctionEntries, functions, functionEntries]
       | decl shape name expression =>
           simp only [evalPanValueDeclarationsWithStructs] at heval
           cases hval : evalPanValueExp structs (fun _ => none) state.globals
@@ -982,7 +953,7 @@ theorem evalPanValueDeclarationsWithStructs_functions
                   panShapeMatches (panValueShape structs value) shape = true
               · simp [hval, hmatch] at heval
                 rw [ih _ heval]
-                simp [panFunctionEntries, functions]
+                simp [panFunctionEntries, functions, functionEntries]
               · simp [hval, hmatch] at heval
       | function declaration =>
           simp only [evalPanValueDeclarationsWithStructs] at heval
@@ -991,7 +962,7 @@ theorem evalPanValueDeclarationsWithStructs_functions
               isWfShape structs declaration.returnShape) = true
           · simp only [hwf] at heval
             rw [ih _ heval]
-            simp [panFunctionEntries, functions, List.reverse_cons, List.map_append]
+            simp [panFunctionEntries, functions, functionEntries, List.reverse_cons, List.map_append]
           · simp [hwf] at heval
       | exnDecl exception shape =>
           simp only [evalPanValueDeclarationsWithStructs] at heval
@@ -1000,7 +971,7 @@ theorem evalPanValueDeclarationsWithStructs_functions
           · by_cases hwf : isWfShape structs shape = true
             · simp only [hexists, hwf] at heval
               rw [ih _ heval]
-              simp [panFunctionEntries, functions]
+              simp [panFunctionEntries, functions, functionEntries]
             · simp [hexists, hwf] at heval
 
 /-! Cake's `evaluate_decls_eshapes`
@@ -1479,7 +1450,7 @@ theorem evalPanValueDeclarationsWithStructs_only_funs_and_exn_decls
       have hstate : state = state' := (Option.some.injEq _ _).mp heval
       subst hstate
       simp [panFunctionEntries, panReturnShapeEntries, panParameterShapeEntries,
-        panExceptionEntries, functions, exceptionEntries, ← hstructs]
+        panExceptionEntries, functions, functionEntries, exceptionEntries, ← hstructs]
   | cons declaration declarations ih =>
       simp only [List.all_cons, Bool.and_eq_true] at hall
       obtain ⟨hhead, htail⟩ := hall
@@ -1492,7 +1463,7 @@ theorem evalPanValueDeclarationsWithStructs_only_funs_and_exn_decls
           · simp only [hwf] at heval
             rw [ih _ (by rfl) htail heval]
             simp [panFunctionEntries, panReturnShapeEntries,
-              panParameterShapeEntries, panExceptionEntries, functions,
+              panParameterShapeEntries, panExceptionEntries, functions, functionEntries,
               exceptionEntries, List.reverse_cons, List.map_append,
               List.append_assoc]
           · simp [hwf] at heval
@@ -1504,7 +1475,7 @@ theorem evalPanValueDeclarationsWithStructs_only_funs_and_exn_decls
             · simp only [hexists, hwf] at heval
               rw [ih _ (by rfl) htail heval]
               simp [panFunctionEntries, panReturnShapeEntries,
-                panParameterShapeEntries, panExceptionEntries_cons, functions,
+                panParameterShapeEntries, panExceptionEntries_cons, functions, functionEntries,
                 List.append_assoc]
             · simp [hexists, hwf] at heval
       | decl shape name expression =>
@@ -1540,7 +1511,7 @@ theorem evalPanValueDeclarationsWithStructs_only_functions
       have hstate : state = state' := (Option.some.injEq _ _).mp heval
       subst hstate
       simp [panFunctionEntries, panReturnShapeEntries, panParameterShapeEntries,
-        functions, ← hstructs]
+        functions, functionEntries, ← hstructs]
   | cons declaration declarations ih =>
       simp only [List.all_cons, Bool.and_eq_true] at hall
       obtain ⟨hhead, htail⟩ := hall
@@ -1553,7 +1524,7 @@ theorem evalPanValueDeclarationsWithStructs_only_functions
           · simp only [hwf] at heval
             rw [ih _ (by rfl) htail heval]
             simp [panFunctionEntries, panReturnShapeEntries,
-              panParameterShapeEntries, functions, List.reverse_cons,
+              panParameterShapeEntries, functions, functionEntries, List.reverse_cons,
               List.map_append, List.append_assoc]
           · simp [hwf] at heval
       | decl shape name expression =>
@@ -1628,7 +1599,7 @@ theorem evalPanValueDeclarationsWithStructs_only_functions_sufficiency
   induction declarations generalizing state with
   | nil =>
       simp [evalPanValueDeclarationsWithStructs, panFunctionEntries,
-        panReturnShapeEntries, panParameterShapeEntries, functions, ← hstructs]
+        panReturnShapeEntries, panParameterShapeEntries, functions, functionEntries, ← hstructs]
   | cons declaration declarations ih =>
       simp only [List.all_cons, Bool.and_eq_true] at hall
       obtain ⟨hhead, htail⟩ := hall
@@ -1643,7 +1614,7 @@ theorem evalPanValueDeclarationsWithStructs_only_functions_sufficiency
           rw [ih _ (by rfl) htail
             (fun other hmem => hwf other (by simp [hmem]))]
           simp [panFunctionEntries, panReturnShapeEntries,
-            panParameterShapeEntries, functions, List.reverse_cons,
+            panParameterShapeEntries, functions, functionEntries, List.reverse_cons,
             List.map_append, List.append_assoc]
       | decl shape name expression =>
           simp [globalDeclIsFunction] at hhead
@@ -1824,7 +1795,7 @@ theorem evalPanValueDeclarationsWithStructs_only_functions_and_exns_sufficiency
   | nil =>
       simp [evalPanValueDeclarationsWithStructs, panFunctionEntries,
         panReturnShapeEntries, panParameterShapeEntries, panExceptionEntries_nil,
-        functions, List.nil_append, ← hstructs]
+        functions, functionEntries, List.nil_append, ← hstructs]
   | cons declaration declarations ih =>
       simp only [List.all_cons, Bool.and_eq_true] at hall
       obtain ⟨hhead, htail⟩ := hall
@@ -1867,7 +1838,7 @@ theorem evalPanValueDeclarationsWithStructs_only_functions_and_exns_sufficiency
             hnodupTail hnoneTail hexnsTail).trans (by
               simp [next, panFunctionEntries, panReturnShapeEntries,
                 panParameterShapeEntries, panExceptionEntries_cons, functions,
-                List.reverse_cons, List.map_append,
+                functionEntries, List.reverse_cons, List.map_append,
                 List.append_assoc])
       | exnDecl exception shape =>
           simp only [panExceptionEntries_cons]
@@ -1917,7 +1888,7 @@ theorem evalPanValueDeclarationsWithStructs_only_functions_and_exns_sufficiency
           exact hrec.trans (by
             simp [next, panFunctionEntries,
               panReturnShapeEntries, panParameterShapeEntries, functions,
-              List.append_assoc])
+              functionEntries, List.append_assoc])
       | decl shape name expression =>
           simp [globalDeclIsFunction, isExnDecl] at hhead
       | name name fields =>

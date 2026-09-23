@@ -1,0 +1,52 @@
+import Flapjack.Pancake.Proofs.PanGlobals
+
+namespace Flapjack.Test.PanGlobalsFunctionsFilterNilParity
+
+open Flapjack
+
+/-! Executable regression for the exact `pan_globalsProofScript.sml:2967`
+    lemma `functions_filter_nil` and the adjacent `:2042`
+    `functions_FILTER_exn_decl` / `:2049` `functions_FILTER_is_name`, ported in
+    `Flapjack.Pancake.Proofs.PanGlobals`. -/
+
+def declarations : List (Decl Nat) :=
+  [.function
+     { name := "f", inline := false, exported := false, params := [],
+       body := .skip, returnShape := .one },
+   .name "S" [], .exnDecl "E" (.named "T"),
+   .decl .one "h" (.const 9)]
+
+theorem functionsFilterNilFixture :
+    functions
+      (globalDeclsFilter
+        (fun declaration => !globalDeclIsFunction declaration) declarations) = [] :=
+  functions_filter_nil declarations
+
+theorem functionsFilterExnDeclFixture :
+    functions (globalDeclsFilter isExnDecl declarations) = [] :=
+  functions_FILTER_exn_decl declarations
+
+theorem functionsFilterIsNameFixture :
+    functions (globalDeclsFilter isName declarations) = [] :=
+  functions_FILTER_is_name declarations
+
+def functionsFilterNilGuard : Bool :=
+  (functions
+      (globalDeclsFilter
+        (fun declaration => !globalDeclIsFunction declaration) declarations)).isEmpty &&
+    (functions (globalDeclsFilter isExnDecl declarations)).isEmpty &&
+    (functions (globalDeclsFilter isName declarations)).isEmpty
+
+#guard functionsFilterNilGuard
+
+def runChecks : IO Bool := do
+  let nilOk ←
+    if functionsFilterNilGuard then
+      IO.println "PASS pan_globals functions FILTER nil lemmas"
+      pure true
+    else
+      IO.println "FAIL pan_globals functions FILTER nil lemmas"
+      pure false
+  pure nilOk
+
+end Flapjack.Test.PanGlobalsFunctionsFilterNilParity

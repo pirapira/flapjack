@@ -1796,7 +1796,7 @@ theorem evalPanValueFfiClockProg_dec_some
         (.dec name shape value body) (memoryAccess := ma) (contracts := c)
         (memoryHandler := mh) =
       some (panValueFfiClockRestoreLocal name (locals name) outcome, nextClock) := by
-  simp [evalPanValueFfiClockProg, hvalue, hmatch, hbody]
+  simp [evalPanValueFfiClockProg, panValueDecAcceptedValue, hvalue, hmatch, hbody]
 
 /-- `progSize`-indexed form of `evalPanValueFfiClockProg_dec_some`: the body
     is evaluated at its own `progSize` budget, so a declaration succeeds at
@@ -1914,7 +1914,10 @@ theorem evalPanValueFfiClockProg_ite_true_some
         (.ite condition thenBranch elseBranch) (memoryAccess := ma) (contracts := c)
         (memoryHandler := mh) =
       some (outcome, nextClock) := by
-  simp [evalPanValueFfiClockProg, hcondition, hnonzero, hthen]
+  have hcond : panValueIteConditionValue structs baseAddress topAddress bytesInWord
+      locals globals memory condition ma = some wordValue := by
+    simp [panValueIteConditionValue, hcondition]
+  simp [evalPanValueFfiClockProg, hcond, Option.elim_some, hnonzero, hthen]
 
 theorem evalPanValueFfiClockProg_ite_false_some
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
@@ -1946,7 +1949,10 @@ theorem evalPanValueFfiClockProg_ite_false_some
         (.ite condition thenBranch elseBranch) (memoryAccess := ma) (contracts := c)
         (memoryHandler := mh) =
       some (outcome, nextClock) := by
-  simp [evalPanValueFfiClockProg, hcondition, hzero, helse]
+  have hcond : panValueIteConditionValue structs baseAddress topAddress bytesInWord
+      locals globals memory condition ma = some wordValue := by
+    simp [panValueIteConditionValue, hcondition]
+  simp [evalPanValueFfiClockProg, hcond, Option.elim_some, hzero, helse]
 
 /-- `progSize`-indexed form of `evalPanValueFfiClockProg_ite_true_some`: the
     selected branch is evaluated at the combined branch budget
@@ -4674,6 +4680,7 @@ theorem evalPanValueFfiClockProg_seq_terminal_some
       | broke l g m f => rfl
       | continued l g m f => rfl
       | finalFfi l g m f event => rfl
+      | error l g m f => rfl
   | timeout l g m f => rfl
 
 

@@ -50,6 +50,7 @@ def panResultFfi : PanValueFfiClockResult α σ → FfiState σ
   | (.control (.broke _ _ _ ffi), _) => ffi
   | (.control (.continued _ _ _ ffi), _) => ffi
   | (.control (.finalFfi _ _ _ ffi _), _) => ffi
+  | (.control (.error _ _ _ ffi), _) => ffi
   | (.timeout _ _ _ ffi, _) => ffi
 
 def panResultEvents : Option (PanValueFfiClockResult α σ) → List FfiEvent

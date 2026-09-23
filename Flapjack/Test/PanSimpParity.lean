@@ -935,10 +935,10 @@ example :
     (by
       intro locals globals memory ffi
       exact ⟨locals, globals, updatePanValueMemory memory 7 (.word 9), ffi, 3, by
-        simp [evalPanValueFfiProgSteps, evalPanValueExpCounted, evalPanValueExp,
-          panValueExpStepCost, panValueStoreWithAccess, panValueFlatStoreWords,
-          panValueFlatWords, panValueFlatWordsFuel, panValueFlatOffset,
-          updatePanValueMemory]⟩)
+        simp [evalPanValueFfiProgSteps, panValueStoreResult, evalPanValueExpCounted,
+          evalPanValueExp, panValueExpStepCost, panValueStoreWithAccess,
+          panValueFlatStoreWords, panValueFlatWords, panValueFlatWordsFuel,
+          panValueFlatOffset, updatePanValueMemory]⟩)
 
 /-- A destination call is normal-adequate from a nonzero clock, given the
 per-state argument/shape evidence and the destination assignment. -/
@@ -1259,10 +1259,10 @@ example :
     (by
       intro locals globals memory ffi
       exact ⟨locals, globals, updatePanValueMemory memory 7 (.word 9), ffi, 3, by
-        simp [evalPanValueFfiProgSteps, evalPanValueExpCounted, evalPanValueExp,
-          panValueExpStepCost, panValueStoreWithAccess, panValueFlatStoreWords,
-          panValueFlatWords, panValueFlatWordsFuel, panValueFlatOffset,
-          updatePanValueMemory]⟩)
+        simp [evalPanValueFfiProgSteps, panValueStoreResult, evalPanValueExpCounted,
+          evalPanValueExp, panValueExpStepCost, panValueStoreWithAccess,
+          panValueFlatStoreWords, panValueFlatWords, panValueFlatWordsFuel,
+          panValueFlatOffset, updatePanValueMemory]⟩)
 
 /-- The raised `DecCall` outcome also lifts to the declaration's progSize. -/
 example
@@ -2367,7 +2367,7 @@ theorem pan_simp_compile_prog_distinct_params :
       (entry.2.1.map Prod.fst).Nodup := by
   apply functions_panSimpDecls_params_nodup compileProgDeclsFixture
   intro entry hentry
-  simp [compileProgDeclsFixture, functions] at hentry
+  simp [compileProgDeclsFixture, functions, functionEntries] at hentry
   rcases hentry with rfl
   simp
 
@@ -2678,7 +2678,7 @@ example : functions (panSimpDecls ([] : List (Decl Nat))) =
 
 example : ((functions (panSimpDecls ([] : List (Decl Nat)))).map
     (fun entry => entry.1)).Nodup :=
-  firstCompileProgAllDistinctPanSimp [] (by simp [functions])
+  firstCompileProgAllDistinctPanSimp [] (by simp [functions, functionEntries])
 
 example :
     ([(1, (2, 3))] : List (Nat × Nat × Nat)).map (fun entry => entry.2.2 + 1) =

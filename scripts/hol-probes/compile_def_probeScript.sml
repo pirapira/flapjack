@@ -51,6 +51,46 @@ val _ = print_eval "missing_names_global"
       (panLang$Call
         (SOME (SOME (panLang$Global, «missing_names»), NONE)) «f» [])``;
 
+(* Local-kind mirrors of the four Global cases above: Cake's assigned-call
+   rule looks up the destination with `wrap_rt (FLOOKUP ctxt.vars rt)` and
+   ignores the `rk` kind tag, so each pair must agree. *)
+
+val _ = print_eval "missing_local"
+  ``pan_to_crep$compile
+      <| vars := FEMPTY; funcs := FEMPTY; eids := FEMPTY; vmax := 0 |>
+      (panLang$Call
+        (SOME (SOME (panLang$Local, «missing»), NONE)) «f» [])``;
+
+val _ = print_eval "empty_one_local"
+  ``pan_to_crep$compile
+      <| vars := FEMPTY |+ («empty_one», (panLang$One, []));
+         funcs := FEMPTY; eids := FEMPTY; vmax := 0 |>
+      (panLang$Call
+        (SOME (SOME (panLang$Local, «empty_one»), NONE)) «f» [])``;
+
+val _ = print_eval "extra_names_local"
+  ``pan_to_crep$compile
+      <| vars := FEMPTY |+ («extra_names», (panLang$One, [4; 5]));
+         funcs := FEMPTY; eids := FEMPTY; vmax := 5 |>
+      (panLang$Call
+        (SOME (SOME (panLang$Local, «extra_names»), NONE)) «f» [])``;
+
+val _ = print_eval "missing_names_local"
+  ``pan_to_crep$compile
+      <| vars := FEMPTY |+ («missing_names»,
+          (panLang$Comb [panLang$One; panLang$One], [4]));
+         funcs := FEMPTY; eids := FEMPTY; vmax := 4 |>
+      (panLang$Call
+        (SOME (SOME (panLang$Local, «missing_names»), NONE)) «f» [])``;
+
+val _ = print_eval "valid_local"
+  ``pan_to_crep$compile
+      <| vars := FEMPTY |+ («pair»,
+          (panLang$Comb [panLang$One; panLang$One], [0; 1]));
+         funcs := FEMPTY; eids := FEMPTY; vmax := 1 |>
+      (panLang$Call
+        (SOME (SOME (panLang$Local, «pair»), NONE)) «f» [])``;
+
 val _ = print_eval "empty_struct_return"
   ``pan_to_crep$compile
       <| vars := FEMPTY; funcs := FEMPTY; eids := FEMPTY; vmax := 0 |>

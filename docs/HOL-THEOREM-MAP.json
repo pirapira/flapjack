@@ -4187,6 +4187,14 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "crepRuntimeExpHdlOneWord_handlerPrestateRelations",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only composition of one-word exp_hdl with state_rel, code_rel, excp_rel, and locals_rel at the matching handler-body entry, using the source updatePanValueMap assignment; callee post-state relation and payload global remain premises, so this is not pc_compile_correct[Call_Ret_Exception]"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "crepRuntimeExpHdlOneWord_localsRel",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only composition of actual exp_hdl payload write with the HOL-shaped locals_rel update needed by the handler-body induction hypothesis; enclosing Call_Ret_Exception proof remains open"
@@ -4222,6 +4230,30 @@
     "lean_name": "evalCrepRuntimeCall_catchesRaisedOneWordHandler_ofCodeRelArgs",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only composition deriving actual target argument words and code-map lookup from supported source argument evaluation plus state_rel/code_rel/locals_rel, then applying the target one-word exp_hdl/Return Call proof; source Call result and post-state relations remain open, so this is not the HOL pc_compile_correct case"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only target Call dispatch for an arbitrary handler body: composes an explicit one-word exp_hdl evaluator result with the handler-body evaluator induction hypothesis and code-map-derived callee body hypothesis; source/target body-state relations remain open, so not pc_compile_correct"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody_ofCodeRelArgs",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only composition deriving actual target Call arguments and callee lookup from supported source argument evaluation/state_rel/code_rel/locals_rel, then applying arbitrary-handler target Call dispatch under callee, exp_hdl, and handler-body evaluator hypotheses; source result and post-state relations remain open, so not pc_compile_correct"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody_ofCodeRelArgs_relations",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only fixed-fuel target Call composition: derives the exp_hdl payload state and state_rel/code_rel/excp_rel/locals_rel from related source/target callee post-states, then applies a relation-aware handler-body IH; source Call result and final post-state relation remain open, so not pc_compile_correct"
   },
   {
     "hol_path": null,
@@ -4270,6 +4302,14 @@
     "lean_name": "panSemEvaluateRiscV64CodeCall_catchesRaisedBody_ofState",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only fixed-RV64 source Call induction step: arbitrary callee/body/arguments and raised-payload source IH are evaluated through the finite state-owned code map and memory domains derived from PanSemState; does not prove the target relation or full pc_compile_correct Call case"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panSemEvaluateRiscV64CodeState_call_catchesRaisedBody_ofState",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only source Call result lifted to the production PanSemState evaluator when its code-map-derived fuel is exactly bodyFuel+2; recursively evaluates callee and handler body through state.code and preserves state-owned code in the post-state projection, but does not prove target simulation or pc_compile_correct"
   },
   {
     "hol_path": null,
@@ -4414,6 +4454,38 @@
     "lean_name": "panStructBreakEvaluatorProjection",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Production source/converted evaluator projection used by the Break case; distinct from the full compile_correct specialization and has no standalone HOL theorem."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "compile_correct",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructCompileCorrectContinueCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Full Continue specialization of the quantified HOL compile_correct theorem over production evaluation and PanStructFiniteState, retaining source Continue evaluation, field validity, global and continuation-local shape maps, and empty result obligations. No exact tag: HOL has no named Continue theorem/case declaration, and SOME Continue is represented as Lean control .continued. The adjacent declaration documents this specialization boundary."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructCompileContinue_eq_continue",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Production compiler support equation for Continue; no standalone HOL theorem declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructSourceContinueEvaluation",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Untagged production source evaluator equation for Continue; the HOL evaluator clause is a definition equation and not a standalone named Lean theorem port."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructContinueEvaluatorProjection",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Production source/converted evaluator projection used by the Continue case; distinct from the full compile_correct specialization and has no standalone HOL theorem."
   },
   {
     "hol_path": null,

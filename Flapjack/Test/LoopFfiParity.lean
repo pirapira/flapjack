@@ -10,10 +10,10 @@ Exercises `loopMachineExtCall`, the 64-bit RISC-V instance of the source
 The observations are compared with the direct 64-bit HOL oracle
 `scripts/hol-probes/loop_sem_ffi_rv64_probe.out`: it records intermediate
 lookups, byte loads and byte-array reads, plus returned, terminal `FinalFFI`,
-and malformed-local outcomes. The byte helpers `memLoadByteAuxHOL` and
-`readBytearrayHOL` (in `LoopSem`) are width-generic exact ports; the RV64
-`ExtCall` executable path remains untagged because HOL states the evaluator
-polymorphically.
+and malformed-local outcomes. The byte helpers `memLoadByteAuxHOL`,
+`memStoreByteAuxHOL`, `readBytearrayHOL` and `writeBytearrayHOL` (in `LoopSem`)
+are width-generic exact ports; the RV64 `ExtCall` executable path remains
+untagged because HOL states the evaluator polymorphically.
 -/
 
 namespace Flapjack.Test.LoopFfiParity
@@ -106,11 +106,32 @@ def readBytearrayGuard : Bool :=
   readBytearrayHOL (loopMemLoadByteAux (baseState returningState)) 8 2 ==
       some [0xCD, 0xEF]
 
+/-- The width-generic `memStoreByteAuxHOL` replaces the aligned byte and leaves
+    other words untouched (`0xEFCD` with byte 0 set to `0x11` is `0xEF11`). -/
+def memStoreGuard : Bool :=
+  let state := baseState returningState
+  match memStoreByteAuxHOL (width := 64) state.memory state.mdomain state.be
+      (8 : Word) 0x11 with
+  | some memory =>
+      memory (8 : Word) == some (.word (0xEF11 : Word)) &&
+      memory (0 : Word) == some (.word (0xAB : Word))
+  | none => false
+
+/-- The width-generic `writeBytearrayHOL` writes the byte list in order at
+    increasing addresses; the HOL probe records the result `0x2211` at `8w`. -/
+def writeBytearrayGuard : Bool :=
+  let state := baseState returningState
+  let memory := writeBytearrayHOL (width := 64) state.memory state.mdomain
+      state.be (8 : Word) [0x11, 0x22]
+  memory (8 : Word) == some (.word (0x2211 : Word))
+
 #guard returnedGuard
 #guard finalGuard
 #guard missingLocalGuard
 #guard memLoadGuard
 #guard readBytearrayGuard
+#guard memStoreGuard
+#guard writeBytearrayGuard
 
 def runChecks : IO Bool := do
   let returnedOk ←
@@ -148,6 +169,21 @@ def runChecks : IO Bool := do
     else
       IO.println "FAIL Loop width-generic read_bytearray byte-array reads"
       pure false
-  pure (returnedOk && finalOk && missingOk && memLoadOk && readBytearrayOk)
+  let memStoreOk ←
+    if memStoreGuard then
+      IO.println "PASS Loop width-generic mem_store_byte_aux byte store"
+      pure true
+    else
+      IO.println "FAIL Loop width-generic mem_store_byte_aux byte store"
+      pure false
+  let writeBytearrayOk ←
+    if writeBytearrayGuard then
+      IO.println "PASS Loop width-generic write_bytearray byte-array writes"
+      pure true
+    else
+      IO.println "FAIL Loop width-generic write_bytearray byte-array writes"
+      pure false
+  pure (returnedOk && finalOk && missingOk && memLoadOk && readBytearrayOk &&
+    memStoreOk && writeBytearrayOk)
 
 end Flapjack.Test.LoopFfiParity

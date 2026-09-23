@@ -245,13 +245,19 @@ def compileProgHOL [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
       nestedDecs names (names.map (fun _ => .const 0))
         (.seq call (compileProgHOL nextContext body))
   | .extCall function configuration configurationLength array arrayLength =>
-      match firstCompiledExpHOL context configuration,
-          firstCompiledExpHOL context configurationLength,
-          firstCompiledExpHOL context array,
-          firstCompiledExpHOL context arrayLength with
-      | some configuration, some configurationLength, some array, some arrayLength =>
+      let compiledConfiguration := compileExpHOL context configuration
+      let compiledConfigurationLength := compileExpHOL context configurationLength
+      let compiledArray := compileExpHOL context array
+      let compiledArrayLength := compileExpHOL context arrayLength
+      match compiledConfiguration, compiledConfigurationLength,
+          compiledArray, compiledArrayLength with
+      | (configuration :: _, .one), (configurationLength :: _, .one),
+          (array :: _, .one), (arrayLength :: _, .one) =>
+          /- HOL computes this bound from every compiled expression element,
+             before selecting each One-shaped expression's head for Dec. -/
           let base := maxCrepExpVarHOL
-            [configuration, configurationLength, array, arrayLength] + 1
+            (compiledConfiguration.1 ++ compiledConfigurationLength.1 ++
+              compiledArray.1 ++ compiledArrayLength.1) + 1
           let configurationName := base
           let configurationLengthName := base + 1
           let arrayName := base + 2

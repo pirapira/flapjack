@@ -43,6 +43,18 @@ def emptyOneHOLContext : PanToCrepHOLContext Nat :=
     eids := FEMPTY
     vmax := 0 }
 
+def highTailHOLContext : PanToCrepHOLContext Nat :=
+  { vars := FUPDATE_LIST FEMPTY
+      [("ptr1", (.one, [4, 100])), ("len1", (.one, [5])),
+       ("ptr2", (.one, [6])), ("len2", (.one, [7]))]
+    funcs := FEMPTY
+    eids := FEMPTY
+    vmax := 100 }
+
+def highTailExtCall : Prog Nat :=
+  .extCall "f" (.var .local "ptr1") (.var .local "len1")
+    (.var .local "ptr2") (.var .local "len2")
+
 def extraNamesHOLContext : PanToCrepHOLContext Nat :=
   { vars := FUPDATE FEMPTY ("extra_names", (.one, [4, 5]))
     funcs := FEMPTY
@@ -157,6 +169,11 @@ def isSkip : CrepProg Nat → Bool
   | .skip => true
   | _ => false
 
+def isHighTailExtCall : CrepProg Nat → Bool
+  | .dec 101 (.var 4) (.dec 102 (.var 5) (.dec 103 (.var 6)
+      (.dec 104 (.var 7) (.extCall "f" 101 102 103 104)))) => true
+  | _ => false
+
 def isReturnSeven : CrepProg Nat → Bool
   | .return [.const 7] => true
   | _ => false
@@ -184,6 +201,7 @@ def nativeProgramParityGuard : Bool :=
   isBreak (compileProgHOL emptyHOLContext (.break : Prog Nat)) &&
   isContinue (compileProgHOL emptyHOLContext (.continue : Prog Nat)) &&
   isSeqSkipTick (compileProgHOL emptyHOLContext (.seq .skip (.tick : Prog Nat))) &&
+  isHighTailExtCall (compileProgHOL highTailHOLContext highTailExtCall) &&
   isTailCallToF (compileProgHOL emptyHOLContext missingGlobalCall) &&
   isTailCallToF (compileProgHOL emptyOneHOLContext emptyOneGlobalCall) &&
   isExtraNamesCallToF (compileProgHOL extraNamesHOLContext extraNamesGlobalCall) &&
@@ -274,6 +292,10 @@ example :
 #guard finiteMapParityGuard
 #guard nativeProgramParityGuard
 #guard finiteMapLoadStoreParityGuard
+
+example :
+    isHighTailExtCall (compileProgHOL highTailHOLContext highTailExtCall) = true := by
+  native_decide
 
 def runChecks : IO Bool := do
   if parityGuard then

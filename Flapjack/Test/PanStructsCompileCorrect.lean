@@ -308,4 +308,73 @@ example : True := finiteMapTickCaseRegression 0
 
 example : True := finiteMapTickCaseRegression 3
 
+/-! These four result/state assertions pair the checked-in HOL `TimeOut` and
+`NONE` rows with the concrete production evaluator representation. At clock
+zero both source and converted states time out and clear locals. At clock three
+both continue with normal control and decrement to clock two, preserving
+locals, globals, memory, and FFI state. -/
+
+example :
+    panSemEvaluateCodeStateWithPostState statefulTestContext statefulTestPrimitive
+      statefulTestHandler (BitVec.ofNat 64 8) finiteMapState.runtime (.tick : Prog Word64) =
+      some ((.control (.normal finiteMapState.runtime.locals finiteMapState.runtime.globals
+        finiteMapState.runtime.memory finiteMapState.runtime.ffi), 2),
+        { finiteMapState.runtime with clock := 2 }) := by
+  simp [panSemEvaluateCodeStateWithPostState_tick, finiteMapState,
+    panStructFiniteStateFromMaps, finiteMapRuntime]
+
+example :
+    panSemEvaluateCodeStateWithPostState statefulTestContext statefulTestPrimitive
+      statefulTestHandler (BitVec.ofNat 64 8)
+      (panStructConvertFiniteState finiteMapContext
+        (finiteMapStateAtClock 3)).runtime
+      (structCompileProg finiteMapContext (.tick : Prog Word64)) =
+      some ((.control (.normal
+        (panStructConvertFiniteState finiteMapContext
+          (finiteMapStateAtClock 3)).runtime.locals
+        (panStructConvertFiniteState finiteMapContext
+          (finiteMapStateAtClock 3)).runtime.globals
+        (panStructConvertFiniteState finiteMapContext
+          (finiteMapStateAtClock 3)).runtime.memory
+        (panStructConvertFiniteState finiteMapContext
+          (finiteMapStateAtClock 3)).runtime.ffi), 2),
+        { (panStructConvertFiniteState finiteMapContext
+            (finiteMapStateAtClock 3)).runtime with clock := 2 }) := by
+  simp [panSemEvaluateCodeStateWithPostState_tick, panStructCompileTick_eq_tick,
+    finiteMapStateAtClock, finiteMapState, panStructFiniteStateFromMaps,
+    finiteMapRuntime, panStructConvertFiniteState, panStructConvertState,
+    panStructConvertCode, structCompileShape,
+    structCompileShapeWF]
+
+example :
+    panSemEvaluateCodeStateWithPostState statefulTestContext statefulTestPrimitive
+      statefulTestHandler (BitVec.ofNat 64 8)
+      (finiteMapStateAtClock 0).runtime (.tick : Prog Word64) =
+      some ((.timeout (fun _ => none) (finiteMapStateAtClock 0).runtime.globals
+        (finiteMapStateAtClock 0).runtime.memory (finiteMapStateAtClock 0).runtime.ffi, 0),
+        { (finiteMapStateAtClock 0).runtime with locals := fun _ => none }) := by
+  simp [panSemEvaluateCodeStateWithPostState_tick, finiteMapStateAtClock,
+    finiteMapState, panStructFiniteStateFromMaps, finiteMapRuntime]
+
+example :
+    panSemEvaluateCodeStateWithPostState statefulTestContext statefulTestPrimitive
+      statefulTestHandler (BitVec.ofNat 64 8)
+      (panStructConvertFiniteState finiteMapContext
+        (finiteMapStateAtClock 0)).runtime
+      (structCompileProg finiteMapContext (.tick : Prog Word64)) =
+      some ((.timeout (fun _ => none)
+        (panStructConvertFiniteState finiteMapContext
+          (finiteMapStateAtClock 0)).runtime.globals
+        (panStructConvertFiniteState finiteMapContext
+          (finiteMapStateAtClock 0)).runtime.memory
+        (panStructConvertFiniteState finiteMapContext
+          (finiteMapStateAtClock 0)).runtime.ffi, 0),
+        { (panStructConvertFiniteState finiteMapContext
+            (finiteMapStateAtClock 0)).runtime with locals := fun _ => none }) := by
+  simp [panSemEvaluateCodeStateWithPostState_tick, panStructCompileTick_eq_tick,
+    finiteMapStateAtClock, finiteMapState, panStructFiniteStateFromMaps,
+    finiteMapRuntime, panStructConvertFiniteState, panStructConvertState,
+    panStructConvertCode, structCompileShape,
+    structCompileShapeWF]
+
 end Flapjack.Test

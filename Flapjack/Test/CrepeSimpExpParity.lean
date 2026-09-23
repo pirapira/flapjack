@@ -6,6 +6,21 @@ import Flapjack.RiscV.PanMemory
 
 namespace Flapjack.Test.CrepeSimpExpParity
 
+/-! HOL words use a finite Boolean-function carrier. This direct check
+    exercises its `Fin n` encoding and conversion to the production BitVec
+    representation independently of the expression evaluator bridge. -/
+def holBits4 : Fin 4 → Bool := fun index => index.val == 0 || index.val == 2
+
+#guard holWordBitsToBitVec holBits4 == BitVec.ofNat 4 5
+
+example : bitVecToHolWordBits (holWordBitsToBitVec holBits4) = holBits4 :=
+  bitVecToHolWordBits_holWordBitsToBitVec holBits4
+
+example :
+    holWordBitsToBitVec (bitVecToHolWordBits (BitVec.ofNat 4 5)) =
+      BitVec.ofNat 4 5 :=
+  holWordBitsToBitVec_bitVecToHolWordBits (BitVec.ofNat 4 5)
+
 /-! Direct parity for `crep_arith$simp_exp_def`
     (`crep_arithScript.sml:59`).  These cases cover constant folding,
     constant-on-either-side multiplication, recursive children, and the
@@ -114,5 +129,13 @@ example :
   apply crepSimpExpCorrect1BitVec
   simp [evalCrepHolExpWordLab, evalCrepHolExp, holState8, holExpression8,
     updateCrepRuntimeLocal]
+
+example :
+    evalCrepHolExpWordLab (crepArithHolMapCode (fun entry => entry) holState8)
+      (crepSimpExp (BitVec.ofNat 8) holExpression8) =
+      some (.word (word8 56)) := by
+  apply crepSimpExpCorrectBitVec
+  simp [evalCrepHolExpWordLab, evalCrepHolExp, holState8, holExpression8,
+    updateCrepRuntimeLocal, panTheWord, word8]
 
 end Flapjack.Test.CrepeSimpExpParity

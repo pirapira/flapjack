@@ -63,14 +63,15 @@ mutual
 end
 
 mutual
-  /-- Bool-valued counterpart of HOL `v_flds_ok_def`, using the production
-      `lookupInfo`. Its `LawfulBEq String` instance identifies that lookup
-      with HOL equality-based `ALOOKUP` (see
-      `lookupInfo_eq_panPropsALookupEq`). Lean `StructInfo` has an additional
-      `shapedFields` cache absent from HOL; the predicate ignores it, as well
-      as the source `size` field. The remaining fields projection used by the
-      compiler context is `panStructContextShapeView`. -/
-  @[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "v_flds_ok_def"]
+  /-- Bool-valued comparison for HOL `v_flds_ok_def`, using production
+      `lookupInfo`. This is not currently tagged as an exact port: the HOL
+      predicate uses HOL equality in `ALOOKUP`, while this declaration's
+      lookup semantics are selected by `[BEq String]`; the equality adapter
+      lemma only identifies lookup for lawful instances and does not establish
+      that the production representation is the same HOL interface. Lean
+      `StructInfo` also has an additional `shapedFields` cache absent from HOL.
+      This Bool declaration is distinct from the Prop-valued convenience
+      predicate below. -/
   def panStructValueFieldsOkBool (structs : StructContext) :
       PanValue α → Bool
     | .word _ => true

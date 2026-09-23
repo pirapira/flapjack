@@ -288,6 +288,14 @@
     "reviewer": "Untagged all-width RISC-V production evaluator support theorem; it does not state the arbitrary source word-carrier theorem."
   },
   {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrectBitVec",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged all-positive-width BitVec specialization of the public some-value theorem, preserving successful evaluation, arbitrary code-map update, and full word_lab result; the arbitrary HOL word carrier theorem remains open."
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
@@ -2820,32 +2828,32 @@
     "hol_name": "compile_decs_EVERY_is_function",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "compile_decs_EVERY_is_function",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged: globalCompileDecs compiles function bodies under the final collected context, unlike HOL compile_decs which threads context through declarations."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
     "hol_name": "compile_decs_decls_thm",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "compile_decs_decls_thm",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged: the premise concerns globalCompileDecs, not HOL's context-threading compile_decs."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
     "hol_name": "compile_decs_exns_are_exns",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "compile_decs_exns_are_exns",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged: the premise concerns globalCompileDecs, not HOL's context-threading compile_decs."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
     "hol_name": "compile_decs_preserve_functions",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "compile_decs_preserve_functions",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged: the premise concerns globalCompileDecs, not HOL's context-threading compile_decs."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
@@ -2860,8 +2868,8 @@
     "hol_name": "compile_decs_FILTER_decs",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "compile_decs_FILTER_decs",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged: the premise concerns globalCompileDecs, not HOL's context-threading compile_decs."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
@@ -4210,6 +4218,14 @@
   {
     "hol_path": null,
     "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "evalCrepRuntimeCall_catchesRaisedOneWordHandler_ofCodeRelArgs",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only composition deriving actual target argument words and code-map lookup from supported source argument evaluation plus state_rel/code_rel/locals_rel, then applying the target one-word exp_hdl/Return Call proof; source Call result and post-state relations remain open, so this is not the HOL pc_compile_correct case"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "crepRuntimeExtCall_stateRel_dispatch_returned",
     "statement_status": "no_hol_reference_pending_classification",
@@ -4278,22 +4294,6 @@
     "lean_name": "panStructConvertValue",
     "statement_status": "reviewed_exact",
     "reviewer": "All HOL cases reviewed against PanValue: Val (Word w) maps to .word unchanged; RStruct xs maps recursively in order to .rStruct; NStruct nm flds maps recursively over field values in order to .rStruct, dropping names as HOL does. The adjacent direct HOL EVAL fixture covers named-record conversion."
-  },
-  {
-    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
-    "hol_name": "v_flds_ok_def",
-    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
-    "lean_name": "panStructValueFieldsOkBool",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Bool equations compared constructor by constructor with HOL. Uses production lookupInfo; lookupInfo_eq_panPropsALookupEq proves its lawful String comparison is the equality-based HOL ALOOKUP. StructInfo.shapedFields and size are ignored, with the projected fields context given by panStructContextShapeView. Direct HOL EVAL fixtures cover word, matching/mismatching named values, missing context, and duplicate-key first-match."
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
-    "hol_name": "is_wf_shape_v_def",
-    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
-    "lean_name": "panIsWfShapeValueBool",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Bool equations compared constructor by constructor with HOL. Uses production lookupInfo; lookupInfo_eq_panPropsALookupEq proves its lawful String comparison is the equality-based HOL ALOOKUP. StructInfo.shapedFields and size are unused by this predicate. Direct HOL EVAL fixtures cover word, matching named struct, and missing context."
   },
   {
     "hol_path": null,
@@ -4542,5 +4542,13 @@
     "lean_name": "crepAssignedFreeVars_nestedSeq_assign_zipWith",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison against crepPropsScript.sml:420; oracle row nested_afv=[1;2] reproduced by Lean guards in Flapjack/Test/CrepAssignedVarsParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "hol_name": "fm_empty_zip_alist",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "lean_name": "fmEmptyZipAlist",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against fm_empty_zip_alist at pan_commonPropsScript.sml:426; direct HOL-EVAL rows reproduced by Lean guards in Flapjack/Test/FmEmptyZipAlistParity.lean)"
   }
 ]

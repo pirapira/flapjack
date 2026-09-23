@@ -42,12 +42,15 @@ theorem lookupInfo_eq_panPropsALookupEq [BEq κ] [LawfulBEq κ] [DecidableEq κ]
       · simp [lookupInfo, panPropsALookupEq, hname, ih]
 
 mutual
-  /-- Bool-valued counterpart of HOL `is_wf_shape_v_def`, using production
-      `lookupInfo`. Its `LawfulBEq String` instance identifies lookup with
-      HOL equality-based `ALOOKUP` (see
-      `lookupInfo_eq_panPropsALookupEq`). Lean `StructInfo` has an additional
-      `shapedFields` cache absent from HOL; this predicate ignores it. -/
-  @[hol "cakeml/pancake/semantics/panPropsScript.sml" "is_wf_shape_v_def"]
+  /-- Bool-valued comparison for HOL `is_wf_shape_v_def`, using production
+      `lookupInfo`. This is not currently tagged as an exact port: the HOL
+      predicate uses HOL equality in `ALOOKUP`, while this declaration's
+      lookup semantics are selected by `[BEq String]`; the equality adapter
+      lemma only identifies lookup for lawful instances and does not establish
+      that the production representation is the same HOL interface. Lean
+      `StructInfo` also has an additional `shapedFields` cache absent from HOL.
+      The separate Prop-valued convenience predicate in CompileCorrect is
+      further from the HOL Bool statement. -/
   def panIsWfShapeValueBool (structs : StructContext) : PanValue α → Bool
     | .word _ => true
     | .rStruct values => panIsWfShapeValuesBool structs values

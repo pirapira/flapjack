@@ -21,15 +21,6 @@ structure CompileContext (α : Type u) where
   bytesInWord : α
   deriving Repr
 
-/-! Legacy fixed-width context. It has the HOL record's four logical fields,
-    but stores each map as an `InfoMap` list, so it is not the finite-map HOL
-    `ctxt`. Use `PanToCrepHOLContext` for exact `compile_def` execution. -/
-structure PanToCrepCompileContext (α : Type u) where
-  vars : InfoMap (Shape × List Nat)
-  functions : InfoMap (List (VarName × Shape) × Shape)
-  exceptions : InfoMap α
-  maxVar : Nat
-
 /-! HOL's `context` record in `pan_to_crepScript.sml` uses finite maps, not
     `InfoMap` lists. This context preserves that representation directly. -/
 structure PanToCrepHOLContext (α : Type) where
@@ -37,14 +28,6 @@ structure PanToCrepHOLContext (α : Type) where
   funcs : FiniteMap FunName (List (VarName × Shape) × Shape)
   eids : FiniteMap ExceptionId α
   vmax : Nat
-
-def PanToCrepCompileContext.toExecutable [CrepBytesInWord α]
-    (context : PanToCrepCompileContext α) : CompileContext α :=
-  { vars := context.vars
-    functions := context.functions
-    exceptions := context.exceptions
-    maxVar := context.maxVar
-    bytesInWord := CrepBytesInWord.bytesInWord }
 
 @[hol "cakeml/pancake/pan_to_crepScript.sml" "cexp_heads_def"]
 def cexpHeads : List (List (CrepExp α)) → Option (List (CrepExp α))

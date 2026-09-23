@@ -380,7 +380,8 @@ run_probe compile_def_probeScript.sml compile_def_probe.out \
   pair_load pair_store fixed_stride64 \
   "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe compile_to_crep_probeScript.sml compile_to_crep_probe.out \
-  empty raise_const raise_pair raise_pair_later handled_pair done "$cake_dir/pancake/pan_to_crepScript.sml"
+  empty raise_const raise_pair raise_pair_later raise_pair_later_64 handled_pair done \
+  "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe compile_prog_probeScript.sml compile_prog_probe.out \
   empty inline_call global_dest handled_missing_dest done \
   "$cake_dir/pancake/pan_to_crepScript.sml"

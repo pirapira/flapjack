@@ -46,11 +46,13 @@ comments do not count as theorem entries or tests. Correctness claims are descri
 For `pan_to_crepScript.sml`, `compileProgRiscV` is the tagged RISC-V
 specialization of `compile_def`: it receives the HOL finite-map `context` and
 uses the `BitVec` word's fixed bytes-in-word stride. The generic finite-map
-helper `compileProgHOL` and the older list-backed `compileProg` and
-`compileProgFixed` remain untagged adapters. `codeRel` executes the generic
-helper through `compileCodeRelProg`; its relation-level HOL statement remains
-tracked separately. These definition tags record provenance; they do not claim
-the pass-correctness theorem has been proved.
+helper `compileProgHOL` and the older list-backed `compileProg` remain untagged
+compatibility implementations. The `PanToCrepCompileContext`/`compileProgFixed`
+adapter has been removed; it converted finite-map-shaped callers back to
+list-backed maps. `codeRel` executes the generic helper through
+`compileCodeRelProg`; its relation-level HOL statement remains tracked
+separately. These definition tags record provenance; they do not claim the
+pass-correctness theorem has been proved.
 
 Additional helper, semantic, and proof modules still live at the old top
 Placement under `Proofs` does not imply that a whole pass correctness theorem

@@ -45,6 +45,220 @@ theorem holWordBitsToBitVec_bitVecToHolWordBits {width : Nat}
   rw [BitVec.getLsbD_ofBoolListLE]
   simp [List.getD_eq_getElem?_getD, hindex]
 
+/-! A dimension-indexed HOL word is isomorphic to the canonical Fin-index
+    representation once its finite dimension is enumerated. Lean core/Std in
+    this project does not provide Fintype/equivFin, so the enumeration data is
+    represented explicitly here. This is representation infrastructure only;
+    the evaluator and word-operation transport are proved separately below. -/
+class HolFiniteDimension (ι : Type u) where
+  width : Nat
+  width_pos : 0 < width
+  encode : ι → Fin width
+  decode : Fin width → ι
+  encode_decode : ∀ index, encode (decode index) = index
+  decode_encode : ∀ index, decode (encode index) = index
+
+instance instFinHolFiniteDimension {width : Nat} [NeZero width] :
+    HolFiniteDimension (Fin width) where
+  width := width
+  width_pos := Nat.pos_of_ne_zero (NeZero.ne width)
+  encode := id
+  decode := id
+  encode_decode := by intro index; rfl
+  decode_encode := by intro index; rfl
+
+def holWordToFinBits {ι : Type u} (dimension : HolFiniteDimension ι)
+    (word : ι → Bool) : Fin dimension.width → Bool :=
+  fun index => word (dimension.decode index)
+
+def finBitsToHolWord {ι : Type u} (dimension : HolFiniteDimension ι)
+    (word : Fin dimension.width → Bool) : ι → Bool :=
+  fun index => word (dimension.encode index)
+
+theorem finBitsToHolWord_holWordToFinBits {ι : Type u}
+    (dimension : HolFiniteDimension ι) (word : ι → Bool) :
+    finBitsToHolWord dimension (holWordToFinBits dimension word) = word := by
+  funext index
+  simp [finBitsToHolWord, holWordToFinBits, dimension.decode_encode]
+
+theorem holWordToFinBits_finBitsToHolWord {ι : Type u}
+    (dimension : HolFiniteDimension ι) (word : Fin dimension.width → Bool) :
+    holWordToFinBits dimension (finBitsToHolWord dimension word) = word := by
+  funext index
+  simp [holWordToFinBits, finBitsToHolWord, dimension.encode_decode]
+
+def holWordToBitVec {ι : Type u} (dimension : HolFiniteDimension ι)
+    (word : ι → Bool) : BitVec dimension.width :=
+  holWordBitsToBitVec (holWordToFinBits dimension word)
+
+def bitVecToHolWord {ι : Type u} (dimension : HolFiniteDimension ι)
+    (word : BitVec dimension.width) : ι → Bool :=
+  finBitsToHolWord dimension (bitVecToHolWordBits word)
+
+theorem bitVecToHolWord_holWordToBitVec {ι : Type u}
+    (dimension : HolFiniteDimension ι) (word : ι → Bool) :
+    bitVecToHolWord dimension (holWordToBitVec dimension word) = word := by
+  change finBitsToHolWord dimension
+      (bitVecToHolWordBits (holWordBitsToBitVec (holWordToFinBits dimension word))) = word
+  rw [bitVecToHolWordBits_holWordBitsToBitVec]
+  exact finBitsToHolWord_holWordToFinBits dimension word
+
+theorem holWordToBitVec_bitVecToHolWord {ι : Type u}
+    (dimension : HolFiniteDimension ι) (word : BitVec dimension.width) :
+    holWordToBitVec dimension (bitVecToHolWord dimension word) = word := by
+  change holWordBitsToBitVec
+      (holWordToFinBits dimension
+        (finBitsToHolWord dimension (bitVecToHolWordBits word))) = word
+  rw [holWordToFinBits_finBitsToHolWord]
+  exact holWordBitsToBitVec_bitVecToHolWordBits word
+
+/-! Generic finite-index word operations are transported by the explicit
+    dimension enumeration. They are kept in their own namespace so existing
+    Fin-specific instances remain the canonical production adapters. -/
+namespace HolFiniteWord
+
+variable {ι : Type u} [dimension : HolFiniteDimension ι]
+
+instance : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
+
+instance : BEq (ι → Bool) :=
+  ⟨fun left right => holWordToBitVec dimension left == holWordToBitVec dimension right⟩
+
+instance (value : Nat) : OfNat (ι → Bool) value :=
+  ⟨bitVecToHolWord dimension (BitVec.ofNat dimension.width value)⟩
+
+instance : Add (ι → Bool) :=
+  ⟨fun left right => bitVecToHolWord dimension
+    (holWordToBitVec dimension left + holWordToBitVec dimension right)⟩
+
+instance : Mul (ι → Bool) :=
+  ⟨fun left right => bitVecToHolWord dimension
+    (holWordToBitVec dimension left * holWordToBitVec dimension right)⟩
+
+instance : Sub (ι → Bool) :=
+  ⟨fun left right => bitVecToHolWord dimension
+    (holWordToBitVec dimension left - holWordToBitVec dimension right)⟩
+
+instance : AndOp (ι → Bool) :=
+  ⟨fun left right => bitVecToHolWord dimension
+    (AndOp.and (holWordToBitVec dimension left) (holWordToBitVec dimension right))⟩
+
+instance : OrOp (ι → Bool) :=
+  ⟨fun left right => bitVecToHolWord dimension
+    (OrOp.or (holWordToBitVec dimension left) (holWordToBitVec dimension right))⟩
+
+instance : HXor (ι → Bool) (ι → Bool) (ι → Bool) :=
+  ⟨fun left right => bitVecToHolWord dimension
+    (HXor.hXor (holWordToBitVec dimension left) (holWordToBitVec dimension right))⟩
+
+instance : Complement (ι → Bool) :=
+  ⟨fun value => bitVecToHolWord dimension
+    (Complement.complement (holWordToBitVec dimension value))⟩
+
+instance : ShiftLeft (ι → Bool) :=
+  ⟨fun value amount => bitVecToHolWord dimension
+    (ShiftLeft.shiftLeft (holWordToBitVec dimension value)
+      (holWordToBitVec dimension amount))⟩
+
+instance : ShiftRight (ι → Bool) :=
+  ⟨fun value amount => bitVecToHolWord dimension
+    (ShiftRight.shiftRight (holWordToBitVec dimension value)
+      (holWordToBitVec dimension amount))⟩
+
+instance : LT (ι → Bool) :=
+  ⟨fun left right => holWordToBitVec dimension left < holWordToBitVec dimension right⟩
+
+instance : DecidableRel (fun left right : ι → Bool => left < right) := by
+  intro left right
+  change Decidable (holWordToBitVec dimension left < holWordToBitVec dimension right)
+  infer_instance
+
+instance : PanCmp (ι → Bool) :=
+  ⟨fun left right => decide (holWordToBitVec dimension left <
+      holWordToBitVec dimension right),
+    fun left right => RiscV.signedLess (holWordToBitVec dimension left)
+      (holWordToBitVec dimension right)⟩
+
+instance : PanShiftWidth (ι → Bool) :=
+  ⟨dimension.width, fun value => (holWordToBitVec dimension value).toNat⟩
+
+instance : ArithmeticShiftRight (ι → Bool) :=
+  ⟨fun value amount => bitVecToHolWord dimension
+    (BitVec.sshiftRight (holWordToBitVec dimension value)
+      (holWordToBitVec dimension amount).toNat)⟩
+
+instance : RotateRightOp (ι → Bool) :=
+  ⟨fun value amount => bitVecToHolWord dimension
+    (BitVec.rotateRight (holWordToBitVec dimension value)
+      (holWordToBitVec dimension amount).toNat)⟩
+
+end HolFiniteWord
+
+theorem holFiniteWordToBitVec_zero {ι : Type u}
+    [dimension : HolFiniteDimension ι] :
+    holWordToBitVec dimension (0 : ι → Bool) = 0 := by
+  change holWordToBitVec dimension
+    (bitVecToHolWord dimension (BitVec.ofNat dimension.width 0)) = _
+  rw [holWordToBitVec_bitVecToHolWord]
+  simp [BitVec.ofNat]
+
+theorem holFiniteWordToBitVec_one {ι : Type u}
+    [dimension : HolFiniteDimension ι] :
+    holWordToBitVec dimension (1 : ι → Bool) = 1 := by
+  change holWordToBitVec dimension
+    (bitVecToHolWord dimension (BitVec.ofNat dimension.width 1)) = _
+  rw [holWordToBitVec_bitVecToHolWord]
+  simp [BitVec.ofNat]
+
+theorem holFiniteWordToBitVec_add {ι : Type u}
+    [dimension : HolFiniteDimension ι] (left right : ι → Bool) :
+    holWordToBitVec dimension (left + right) =
+      holWordToBitVec dimension left + holWordToBitVec dimension right := by
+  change holWordToBitVec dimension
+    (bitVecToHolWord dimension
+      (holWordToBitVec dimension left + holWordToBitVec dimension right)) = _
+  rw [holWordToBitVec_bitVecToHolWord]
+
+theorem holFiniteWordToBitVec_mul {ι : Type u}
+    [dimension : HolFiniteDimension ι] (left right : ι → Bool) :
+    holWordToBitVec dimension (left * right) =
+      holWordToBitVec dimension left * holWordToBitVec dimension right := by
+  change holWordToBitVec dimension
+    (bitVecToHolWord dimension
+      (holWordToBitVec dimension left * holWordToBitVec dimension right)) = _
+  rw [holWordToBitVec_bitVecToHolWord]
+
+theorem holFiniteWordToBitVec_and {ι : Type u}
+    [dimension : HolFiniteDimension ι] (left right : ι → Bool) :
+    holWordToBitVec dimension (AndOp.and left right) =
+      AndOp.and (holWordToBitVec dimension left) (holWordToBitVec dimension right) := by
+  change holWordToBitVec dimension
+    (bitVecToHolWord dimension
+      (AndOp.and (holWordToBitVec dimension left) (holWordToBitVec dimension right))) = _
+  rw [holWordToBitVec_bitVecToHolWord]
+
+theorem holFiniteWordToBitVec_shiftRight {ι : Type u}
+    [dimension : HolFiniteDimension ι] (left right : ι → Bool) :
+    holWordToBitVec dimension (ShiftRight.shiftRight left right) =
+      ShiftRight.shiftRight (holWordToBitVec dimension left)
+        (holWordToBitVec dimension right) := by
+  change holWordToBitVec dimension
+    (bitVecToHolWord dimension
+      (ShiftRight.shiftRight (holWordToBitVec dimension left)
+        (holWordToBitVec dimension right))) = _
+  rw [holWordToBitVec_bitVecToHolWord]
+
+theorem holFiniteWordToBitVec_shiftLeft {ι : Type u}
+    [dimension : HolFiniteDimension ι] (left right : ι → Bool) :
+    holWordToBitVec dimension (ShiftLeft.shiftLeft left right) =
+      ShiftLeft.shiftLeft (holWordToBitVec dimension left)
+        (holWordToBitVec dimension right) := by
+  change holWordToBitVec dimension
+    (bitVecToHolWord dimension
+      (ShiftLeft.shiftLeft (holWordToBitVec dimension left)
+        (holWordToBitVec dimension right))) = _
+  rw [holWordToBitVec_bitVecToHolWord]
+
 /-! Operations on finite-index HOL word bits are transported through the
     equivalence above. This gives the production Crep evaluator and arithmetic
     simplifier their standard word interfaces on the function-valued carrier,

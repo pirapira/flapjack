@@ -23,6 +23,41 @@ example :
       BitVec.ofNat 4 5 :=
   holWordBitsToBitVec_bitVecToHolWordBits (BitVec.ofNat 4 5)
 
+/-! The general finite-dimension adapter also works when the dimension is not
+    represented by `Fin` in the source theorem. Here `Bool` is explicitly
+    enumerated as two indices and its word carrier is transported to BitVec. -/
+@[instance_reducible] def boolWordDimension : HolFiniteDimension Bool where
+  width := 2
+  width_pos := by decide
+  encode := fun index => if index then 1 else 0
+  decode := fun index => index.val == 1
+  encode_decode := by decide
+  decode_encode := by decide
+
+def boolDimensionWord : Bool → Bool := id
+
+example : bitVecToHolWord boolWordDimension
+    (holWordToBitVec boolWordDimension boolDimensionWord) = boolDimensionWord :=
+  bitVecToHolWord_holWordToBitVec boolWordDimension boolDimensionWord
+
+example : holWordToBitVec boolWordDimension
+    (bitVecToHolWord boolWordDimension (BitVec.ofNat 2 2)) = BitVec.ofNat 2 2 :=
+  holWordToBitVec_bitVecToHolWord boolWordDimension (BitVec.ofNat 2 2)
+
+def boolDimensionSimplifiedMultiply : CrepExp (Bool → Bool) := by
+  letI : HolFiniteDimension Bool := boolWordDimension
+  exact crepSimpExp (fun value =>
+    bitVecToHolWord boolWordDimension (BitVec.ofNat 2 value))
+    (.crepOp .mul [.var 0, .const (boolDimensionWord)])
+
+def boolDimensionSimplifyHasExpectedShift : Bool :=
+  match boolDimensionSimplifiedMultiply with
+  | .shift .lsl (.var 0) (.const value) =>
+      holWordToBitVec boolWordDimension value == BitVec.ofNat 2 1
+  | _ => false
+
+#guard boolDimensionSimplifyHasExpectedShift
+
 #guard crepSimpExp (fun value => bitVecToHolWordBits (BitVec.ofNat 4 value))
     (.crepOp .mul [.var 2, .const (bitVecToHolWordBits (BitVec.ofNat 4 2))]) ==
   .shift .lsl (.var 2) (.const (bitVecToHolWordBits (BitVec.ofNat 4 1)))

@@ -22,22 +22,22 @@ namespace Flapjack.Test.LoopStateResultParity
 open Flapjack
 
 def breakDecrements : Bool :=
-  exitLoop (α := Nat) (some (.break 3)) == some (.break 2)
+  exitLoop (W := Nat) (F := Nat) (some (.break 3)) == some (.break 2)
 
 def breakStopsAtZero : Bool :=
-  exitLoop (α := Nat) (some (.break 0)) == some (.break 0)
+  exitLoop (W := Nat) (F := Nat) (some (.break 0)) == some (.break 0)
 
 def continueDecrements : Bool :=
-  exitLoop (α := Nat) (some (.continue 2)) == some (.continue 1)
+  exitLoop (W := Nat) (F := Nat) (some (.continue 2)) == some (.continue 1)
 
 def otherUnchanged : Bool :=
-  exitLoop (α := Nat) (some (.timeOut : LoopMachineResult Nat)) == some .timeOut
+  exitLoop (W := Nat) (F := Nat) (some (.timeOut : LoopMachineResult Nat)) == some .timeOut
 
 def noneStaysNone : Bool :=
-  (exitLoop (α := Nat) (none : Option (LoopMachineResult Nat))).isNone
+  (exitLoop (W := Nat) (F := Nat) (none : Option (LoopMachineResult Nat))).isNone
 
 def errorUnchanged : Bool :=
-  exitLoop (α := Nat) (some (.error : LoopMachineResult Nat)) == some .error
+  exitLoop (W := Nat) (F := Nat) (some (.error : LoopMachineResult Nat)) == some .error
 
 def probeState (clock : Nat) : LoopMachineState Nat :=
   { locals := fun _ => none

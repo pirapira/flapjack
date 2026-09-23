@@ -24,7 +24,7 @@ def lprefixLubProbeCommand : String := "scripts/hol-probes/regenerate.sh"
 
 #guard lprefixLubProbeCommand == "scripts/hol-probes/regenerate.sh"
 
-def emptyState (clock : Nat) : LoopMachineState LoopWordLoc :=
+def emptyState (clock : Nat) : LoopMachineState Nat LoopWordLoc :=
   { locals := fun _ => none
     globals := fun _ => none
     memory := fun _ => none
@@ -34,10 +34,10 @@ def emptyState (clock : Nat) : LoopMachineState LoopWordLoc :=
     code := []
     be := false
     ffi := .word 0
-    baseAddr := .word 4
-    topAddr := .word 100 }
+    baseAddr := 4
+    topAddr := 100 }
 
-def noEvents : LoopMachineState LoopWordLoc → List FfiEvent := fun _ => []
+def noEvents : LoopMachineState Nat LoopWordLoc → List FfiEvent := fun _ => []
 
 def emptyLprefixLub : LoopLprefixLub (fun _ : Nat => ([] : List FfiEvent)) :=
   { trace := fun _ => none
@@ -115,7 +115,7 @@ def finalFfiEvaluate (_clock : Nat) : LoopMachineStep :=
   (some (.finalFfi (.word 9)), emptyState 0)
 
 def observeStep (step : LoopMachineStep) :
-    Option (LoopMachineResult LoopWordLoc) × Nat :=
+    Option (LoopMachineResult Nat LoopWordLoc) × Nat :=
   (step.1, step.2.clock)
 
 def sourceClockParity : Bool :=

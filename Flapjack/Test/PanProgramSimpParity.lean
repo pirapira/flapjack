@@ -1,4 +1,5 @@
 import Flapjack.Pancake.Proofs.PanSimp
+import Flapjack.Pancake.Proofs.PanStructs
 
 namespace Flapjack.Test.PanProgramSimpParity
 
@@ -66,6 +67,17 @@ theorem list_mapM_eq_some_iff_fixture :
     ([3, 5] : List Nat).mapM (fun n => if n == 4 then none else some (n + 1)) =
       some [4, 6] := by
   rw [list_mapM_eq_some_iff]
+  refine ⟨by decide, ?_⟩
+  intro n hn
+  have hn' : n < 2 := by simpa using hn
+  have : n = 0 ∨ n = 1 := by omega
+  rcases this with rfl | rfl <;> decide
+
+/-- PanStructs counterpart of `opt_mmap_eq_some_el`, checked on a nonempty
+    successful map against the direct HOL EVAL fixture. -/
+theorem optMmapEqSomeEl_fixture :
+    ([3, 5] : List Nat).mapM (fun n => some (n + 1)) = some [4, 6] := by
+  rw [optMmapEqSomeEl]
   refine ⟨by decide, ?_⟩
   intro n hn
   have hn' : n < 2 := by simpa using hn

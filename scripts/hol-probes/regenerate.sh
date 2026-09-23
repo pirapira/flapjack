@@ -87,6 +87,9 @@ run_probe word_add_carry_probeScript.sml word_add_carry_probe.out \
   "$cake_dir/compiler/backend"
 run_probe pan_crep_primop_probeScript.sml pan_crep_primop_probe.out \
   pan_valid crep_invalid "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_structs_opt_mmap_probeScript.sml pan_structs_opt_mmap_probe.out \
+  success pointwise "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
+  "$cake_dir/pancake/proofs"
 run_probe loop_to_word_probeScript.sml loop_to_word_probe.out \
   find_var_empty find_reg_imm_ctxt "$cake_dir/pancake/loop_to_wordScript.sml"
 # The get_stack_only probe observes the allocator driver's stack-only
@@ -489,6 +492,10 @@ run_probe crep_store_global_probeScript.sml crep_store_global_probe.out \
 # Var-read flattening and overwrite behaviour.
 run_probe crep_locals_wordlab_probeScript.sml crep_locals_wordlab_probe.out \
   locals_set_var_cell locals_set_var_overwrite \
+  "$cake_dir/pancake/semantics/crepSemScript.sml" \
+  "$cake_dir/pancake/semantics"
+run_probe crep_replicate_const_probeScript.sml crep_replicate_const_probe.out \
+  replicate_const_one replicate_const_nonzero \
   "$cake_dir/pancake/semantics/crepSemScript.sml" \
   "$cake_dir/pancake/semantics"
 run_probe prog_if_probeScript.sml prog_if_probe.out \

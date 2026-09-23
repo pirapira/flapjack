@@ -1,4 +1,5 @@
 import Flapjack.Pancake.Semantics.PanSem
+import Flapjack.Pancake.Semantics.PanSemStateEval
 import Flapjack.Test.PanValueFfiSemantics
 
 /-!
@@ -113,21 +114,21 @@ def sourceConstReturnCallCode : PanSemCodeMap Word64 :=
   [("constant", ([], .return (.const (BitVec.ofNat 64 7)), .one))]
 
 def evaluateSourceCallId :=
-  panSemEvaluateCodeState statefulTestContext statefulTestPrimitive
-    statefulTestHandler (BitVec.ofNat 64 8)
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler
     (emptyPanSourceState 10 sourceIdCode)
     (.call none "id" [.const (BitVec.ofNat 64 7)] : Prog Word64)
 
 def evaluateSourceDecCallId :=
-  panSemEvaluateCodeState statefulTestContext statefulTestPrimitive
-    statefulTestHandler (BitVec.ofNat 64 8)
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler
     (emptyPanSourceState 10 sourceIdCode)
     (.decCall "answer" .one "id" [.const (BitVec.ofNat 64 7)]
       (.return (.var .local "answer")) : Prog Word64)
 
 def evaluateSourceNestedCall :=
-  panSemEvaluateCodeState statefulTestContext statefulTestPrimitive
-    statefulTestHandler (BitVec.ofNat 64 8)
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler
     (emptyPanSourceState 10 sourceRecursiveCode)
     (.call none "f" [] : Prog Word64)
 
@@ -138,28 +139,28 @@ def evaluateSourceNestedCallWithPostState :=
     (.call none "f" [] : Prog Word64)
 
 def evaluateSourceRecursiveCallTimeout :=
-  panSemEvaluateCodeState statefulTestContext statefulTestPrimitive
-    statefulTestHandler (BitVec.ofNat 64 8)
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler
     (emptyPanSourceState 2 sourceCallSelfCode)
     (.call none "loop" [] : Prog Word64)
 
 def evaluateSourceRecursiveDecCallTimeout :=
-  panSemEvaluateCodeState statefulTestContext statefulTestPrimitive
-    statefulTestHandler (BitVec.ofNat 64 8)
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler
     (emptyPanSourceState 2 sourceDecCallSelfCode)
     (.decCall "answer" .one "loop" [] .skip : Prog Word64)
 
 def evaluateSourceZeroClockCallTimeout :=
-  panSemEvaluateCodeState statefulTestContext statefulTestPrimitive
-    statefulTestHandler (BitVec.ofNat 64 8)
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler
     ({ emptyPanSourceState 0 sourceZeroClockCallCode with
         locals := fun name =>
           if name == "x" then some (.word (BitVec.ofNat 64 9)) else none })
     (.call none "callee" [] : Prog Word64)
 
 def evaluateSourceConstReturnCall :=
-  panSemEvaluateCodeState statefulTestContext statefulTestPrimitive
-    statefulTestHandler (BitVec.ofNat 64 8)
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler
     (emptyPanSourceState 10 sourceConstReturnCallCode)
     (.call none "constant" [] : Prog Word64)
 

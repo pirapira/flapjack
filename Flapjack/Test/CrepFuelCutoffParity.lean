@@ -77,4 +77,43 @@ def findsTimeoutFuel (fuelLimit : Nat) (program : CrepProg Nat) : Bool :=
 /- Bounded search witnesses ∃ targetFuel for the clocked loop timeout. -/
 #guard findsTimeoutFuel 5 clockedLoop
 
+/-- All fuel-cutoff distinctions above, as a single boolean checked at run time. -/
+def fuelCutoffGuard : Bool :=
+  (evalCrepRuntimeResult runtimeHandler noPrimitive 1 globalState
+    shortSequence).isNone &&
+  (match evalCrepRuntimeResult runtimeHandler noPrimitive 1 globalState
+      (.assign 99 (.const 1)) with
+    | some (.error, _) => true
+    | _ => false) &&
+  (evalCrepRuntimeResult runtimeHandler noPrimitive 2 globalState
+    (.while (.const 1) .skip)).isNone &&
+  (evalCrepRuntimeResult runtimeHandler noPrimitive 1 recursiveCallState
+    (.call none "recur" [])).isNone &&
+  (match evalCrepRuntimeResult runtimeHandler noPrimitive 3 globalState
+      (.while (.const 1) (.assign 99 (.const 2))) with
+    | some (.error, _) => true
+    | _ => false) &&
+  (match evalCrepRuntimeResult runtimeHandler noPrimitive 3 globalState
+      shortSequence with
+    | some (.normal, _) => true
+    | _ => false) &&
+  findsNormalFuel 4 shortSequence &&
+  (match evalCrepRuntimeResult runtimeHandler noPrimitive 4 globalState
+      clockedLoop with
+    | some (.timeout, _) => true
+    | _ => false) &&
+  findsTimeoutFuel 5 clockedLoop
+
+theorem fuelCutoffGuard_true : fuelCutoffGuard = true := by
+  native_decide
+
+#guard fuelCutoffGuard
+
+def runChecks : IO Bool := do
+  if fuelCutoffGuard then
+    IO.println "PASS crep fuel is cutoff not semantic error (seq/call/loop/timeout)"
+  else
+    IO.println "FAIL crep fuel cutoff distinctions"
+  pure fuelCutoffGuard
+
 end Flapjack.Test.CrepFuelCutoffParity

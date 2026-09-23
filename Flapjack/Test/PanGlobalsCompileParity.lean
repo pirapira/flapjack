@@ -36,10 +36,11 @@ def parityGuard : Bool :=
 #eval parityGuard
 #guard parityGuard
 
-/-! Direct generated-program parity for Cake's handled call with a global
-    destination. The result name starts from `""`, while the independent flag
-    starts from `"vn'"`; see `global_destination_handler_flag` in the original
-    HOL probe. -/
+/-! In Cake's global-destination handled-call branch, the result slot is
+    freshened from `""`, but the handler flag is independently freshened from
+    the fixed seed `"vn'"`. This direct generated-program regression matches
+    `global_destination_handler_flag` in
+    `scripts/hol-probes/pan_globals_compile_probe.out`. -/
 def globalHandlerFlagInput : Prog Nat :=
   .call (some (some (.global, "g"), some ("E", "handler", .skip))) "f" []
 
@@ -56,6 +57,7 @@ def globalHandlerFlagGuard : Bool :=
             (.store (.op .sub [.topAddr, .const 8]) (.var .local ""))))) => true
   | _ => false
 
+#eval globalHandlerFlagGuard
 #guard globalHandlerFlagGuard
 
 /-! Cake's duplicate top-level declarations retain one initializer per

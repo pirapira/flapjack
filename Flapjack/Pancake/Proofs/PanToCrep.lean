@@ -798,11 +798,11 @@ theorem localRelLeZipUpdatePreserved
 
 /-! `localsRelUpdateExistingValue` proves the local-map relation after a
 shape-preserving source update, using the slots recorded in `context.vars`.
-The one-word target `exp_hdl` execution is already covered by
+For a one-word payload, the target runtime `exp_hdl` step is proved by
 `EvaluateCases.crepRuntimeExpHdlOneWord`; its composition with the local-map
-relation is `EvaluateCases.crepRuntimeExpHdlOneWord_localsRel`. Together they
-establish the one-word handler prestate case. Other payload widths and the
-enclosing Call relation remain open. -/
+relation is proved by `EvaluateCases.crepRuntimeExpHdlOneWord_localsRel`.
+Together they establish the one-word handler prestate case. Other payload
+widths and the enclosing Call relation remain open. -/
 theorem localsRelUpdateExistingValue
     (context : PanToCrepProofContext α)
     (sourceLocals : FiniteMap String (PanValue α))
@@ -1588,5 +1588,226 @@ theorem panValueFfiExtCall_stateRel_target
     conv => rhs; rw [riscv64WriteState_withFfi]
   · rw [hmem, panValueFfiWriteBytes_eq_panSemWriteBytearray]
     simpa only [hcr, har, hfBase] using hdispatch.2
+
+/-- A successful source `sh_mem_load` outcome drives the target shared-memory
+    `load` dispatch: the mapped read reaches `callFfi` with the HOL `SharedMem
+    MappedRead` name and width byte, the loaded word is installed into the named
+    local, and the ffi-only source update is a `stateRel` post-state.  The target
+    dispatch and post-state are derived from the source evaluator outcome, not
+    assumed.  HOL `sh_mem_load` (`panSemScript.sml:510`).  Direct oracle:
+    `scripts/hol-probes/crep_runtime_shared_mem_probe.out`. -/
+theorem panValueFfiSharedLoad_stateRel_target
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (size : OpSize) (name : Nat) (address : RiscV.Word 64)
+    (nextFfi : FfiState σ) (value : RiscV.Word 64)
+    (hstate : stateRel source (riscv64CrepRuntimeTarget base))
+    (hsource : panValueFfiSharedLoad (riscv64PanValueFfiContext base.shMemaddrs)
+        source.ffi size address = some (.loaded nextFfi value)) :
+    crepRuntimeSharedMem riscv64SharedMemCallFfiHandler
+        (riscv64CrepRuntimeTarget base) (opSizeToCrepLoadOp size) name address =
+      (.normal, { riscv64CrepRuntimeTarget base with
+        ffi := nextFfi,
+        locals := updateCrepRuntimeLocal (riscv64CrepRuntimeTarget base).locals
+          name (.word value) }) ∧
+    stateRel { source with ffi := nextFfi }
+      { riscv64CrepRuntimeTarget base with
+        ffi := nextFfi,
+        locals := updateCrepRuntimeLocal (riscv64CrepRuntimeTarget base).locals
+          name (.word value) } := by
+  obtain ⟨hdom, bytes, hcall, hvalue⟩ :=
+    panValueFfiSharedLoad_loaded_inv (riscv64PanValueFfiContext base.shMemaddrs)
+      source.ffi size address nextFfi value hsource
+  have hbaseffi : base.ffi = source.ffi :=
+    (hstate.2.2.2.2.2.2.2.1.trans (riscv64CrepRuntimeTarget_ffi base)).symm
+  have hcallBase : callFfi base.ffi (.sharedMem .mappedRead)
+      [UInt8.ofNat (panValueFfiWidth size)]
+      ((riscv64PanValueFfiContext base.shMemaddrs).wordToBytes address false) =
+        .returned nextFfi bytes := by
+    rw [hbaseffi]; exact hcall
+  have hvalid : crepRuntimeSharedAddressValid (riscv64CrepRuntimeTarget base)
+      (opSizeToCrepLoadOp size) address = true := by
+    rw [crepRuntimeSharedAddressValid_opSizeToCrepLoadOp]; exact hdom
+  constructor
+  · cases size <;>
+      (simp only [opSizeToCrepLoadOp] at hvalid
+       simp only [panValueFfiWidth] at hcallBase
+       simp only [opSizeToCrepLoadOp, crepRuntimeMemWidth,
+         riscv64CrepRuntimeTarget_ffi, riscv64CrepRuntimeTarget_ffiContext,
+         riscv64SharedMemCallFfiHandler_sharedMem, crepSharedMemOperator,
+         crepRuntimeSharedMem, hvalid, if_true, hcallBase, ← hvalue])
+  · simpa only [stateRel] using stateRel_ffiUpdate source (riscv64CrepRuntimeTarget base)
+      nextFfi hstate
+
+/-- A successful source `sh_mem_store` outcome drives the target shared-memory
+    `store` dispatch: the mapped write reaches `callFfi` with the HOL `SharedMem
+    MappedWrite` name, the width byte, and the HOL payload, and the ffi-only
+    result is a `stateRel` post-state.  HOL `sh_mem_store`
+    (`panSemScript.sml:527`).  Direct oracle:
+    `scripts/hol-probes/crep_runtime_shared_mem_probe.out`. -/
+theorem panValueFfiSharedStore_stateRel_target
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (size : OpSize) (name : Nat) (address : RiscV.Word 64)
+    (value : RiscV.Word 64)
+    (hname : (riscv64CrepRuntimeTarget base).locals name = some (.word value))
+    (nextFfi : FfiState σ)
+    (hstate : stateRel source (riscv64CrepRuntimeTarget base))
+    (hsource : panValueFfiSharedStore (riscv64PanValueFfiContext base.shMemaddrs)
+        source.ffi size address value = some (.stored nextFfi)) :
+    crepRuntimeSharedMem riscv64SharedMemCallFfiHandler
+        (riscv64CrepRuntimeTarget base) (opSizeToCrepStoreOp size) name address =
+      (.normal, { riscv64CrepRuntimeTarget base with ffi := nextFfi }) ∧
+    stateRel { source with ffi := nextFfi }
+      { riscv64CrepRuntimeTarget base with ffi := nextFfi } := by
+  obtain ⟨hdom, bytes, hcall⟩ :=
+    panValueFfiSharedStore_stored_inv (riscv64PanValueFfiContext base.shMemaddrs)
+      source.ffi size address value nextFfi hsource
+  have hbaseffi : base.ffi = source.ffi :=
+    (hstate.2.2.2.2.2.2.2.1.trans (riscv64CrepRuntimeTarget_ffi base)).symm
+  have hcallBase : callFfi base.ffi (.sharedMem .mappedWrite)
+      [UInt8.ofNat (panValueFfiWidth size)]
+      (if panValueFfiWidth size = 0 then
+          (riscv64PanValueFfiContext base.shMemaddrs).wordToBytes value false ++
+            (riscv64PanValueFfiContext base.shMemaddrs).wordToBytes address false
+        else
+          ((riscv64PanValueFfiContext base.shMemaddrs).wordToBytes value false).take
+              (panValueFfiWidth size) ++
+            (riscv64PanValueFfiContext base.shMemaddrs).wordToBytes address false) =
+        .returned nextFfi bytes := by
+    rw [hbaseffi]; exact hcall
+  have hvalid : crepRuntimeSharedAddressValid (riscv64CrepRuntimeTarget base)
+      (opSizeToCrepStoreOp size) address = true := by
+    rw [crepRuntimeSharedAddressValid_opSizeToCrepStoreOp]; exact hdom
+  have hcallGoal : callFfi base.ffi (.sharedMem .mappedWrite)
+      [UInt8.ofNat (crepRuntimeMemWidth (opSizeToCrepStoreOp size))]
+      (if crepRuntimeMemWidth (opSizeToCrepStoreOp size) = 0 then
+          (riscv64PanValueFfiContext base.shMemaddrs).wordToBytes value false ++
+            (riscv64PanValueFfiContext base.shMemaddrs).wordToBytes address false
+        else
+          ((riscv64PanValueFfiContext base.shMemaddrs).wordToBytes value false).take
+              (crepRuntimeMemWidth (opSizeToCrepStoreOp size)) ++
+            (riscv64PanValueFfiContext base.shMemaddrs).wordToBytes address false) =
+        .returned nextFfi bytes := by
+    rw [crepRuntimeSharedStorePayload_eq (riscv64PanValueFfiContext base.shMemaddrs)
+      value address size]
+    rw [crepRuntimeMemWidth_opSizeToCrepStoreOp]
+    exact hcallBase
+  constructor
+  · cases size <;>
+      (simp only [opSizeToCrepStoreOp] at hvalid
+       simp only [opSizeToCrepStoreOp,
+         riscv64CrepRuntimeTarget_ffi, riscv64CrepRuntimeTarget_ffiContext,
+         riscv64SharedMemCallFfiHandler_sharedMem, crepSharedMemOperator,
+         crepRuntimeSharedMem, hname, Option.map_some, panTheWord, hvalid, if_true]
+       erw [hcallGoal])
+  · simpa only [stateRel] using stateRel_ffiUpdate source (riscv64CrepRuntimeTarget base)
+      nextFfi hstate
+
+/-- The source `sh_mem_load` `FFI_final` outcome drives the target shared-memory
+    `load` dispatch to `FinalFFI` with the locals cleared and the pre-state
+    relation (HOL `(SOME FinalFFI, empty_locals s)`).  Direct oracle:
+    `scripts/hol-probes/crep_runtime_shared_mem_probe.out` (`load_final`). -/
+theorem panValueFfiSharedLoad_stateRel_final
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (size : OpSize) (name : Nat) (address : RiscV.Word 64)
+    (nextFfi : FfiState σ) (event : FfiFinalEvent)
+    (hstate : stateRel source (riscv64CrepRuntimeTarget base))
+    (hsource : panValueFfiSharedLoad (riscv64PanValueFfiContext base.shMemaddrs)
+        source.ffi size address = some (.final nextFfi event)) :
+    crepRuntimeSharedMem riscv64SharedMemCallFfiHandler
+        (riscv64CrepRuntimeTarget base) (opSizeToCrepLoadOp size) name address =
+      (.finalFfi event,
+        clearCrepRuntimeLocals (riscv64CrepRuntimeTarget base)) ∧
+    stateRel { source with ffi := nextFfi }
+      (clearCrepRuntimeLocals (riscv64CrepRuntimeTarget base)) := by
+  obtain ⟨hdom, hffi, hcall⟩ :=
+    panValueFfiSharedLoad_final_inv (riscv64PanValueFfiContext base.shMemaddrs)
+      source.ffi size address nextFfi event hsource
+  subst hffi
+  have hbaseffi : base.ffi = source.ffi :=
+    (hstate.2.2.2.2.2.2.2.1.trans (riscv64CrepRuntimeTarget_ffi base)).symm
+  have hcallBase : callFfi base.ffi (.sharedMem .mappedRead)
+      [UInt8.ofNat (panValueFfiWidth size)]
+      ((riscv64PanValueFfiContext base.shMemaddrs).wordToBytes address false) =
+        .final event := by
+    rw [hbaseffi]; exact hcall
+  have hvalid : crepRuntimeSharedAddressValid (riscv64CrepRuntimeTarget base)
+      (opSizeToCrepLoadOp size) address = true := by
+    rw [crepRuntimeSharedAddressValid_opSizeToCrepLoadOp]; exact hdom
+  constructor
+  · cases size <;>
+      (simp only [opSizeToCrepLoadOp] at hvalid
+       simp only [panValueFfiWidth] at hcallBase
+       simp only [opSizeToCrepLoadOp, crepRuntimeMemWidth,
+         riscv64CrepRuntimeTarget_ffi, riscv64CrepRuntimeTarget_ffiContext,
+         riscv64SharedMemCallFfiHandler_sharedMem, crepSharedMemOperator,
+         crepRuntimeSharedMem, clearCrepRuntimeLocals, hvalid, if_true,
+         hcallBase])
+  · simpa only [stateRel, clearCrepRuntimeLocals] using hstate
+
+/-- The source `sh_mem_store` `FFI_final` outcome drives the target
+    shared-memory `store` dispatch to `FinalFFI` with the pre-state relation
+    (HOL `(SOME FinalFFI, s)`).  Direct oracle:
+    `scripts/hol-probes/crep_runtime_shared_mem_probe.out` (`store_final`). -/
+theorem panValueFfiSharedStore_stateRel_final
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (size : OpSize) (name : Nat) (address : RiscV.Word 64)
+    (value : RiscV.Word 64)
+    (hname : (riscv64CrepRuntimeTarget base).locals name = some (.word value))
+    (nextFfi : FfiState σ) (event : FfiFinalEvent)
+    (hstate : stateRel source (riscv64CrepRuntimeTarget base))
+    (hsource : panValueFfiSharedStore (riscv64PanValueFfiContext base.shMemaddrs)
+        source.ffi size address value = some (.final nextFfi event)) :
+    crepRuntimeSharedMem riscv64SharedMemCallFfiHandler
+        (riscv64CrepRuntimeTarget base) (opSizeToCrepStoreOp size) name address =
+      (.finalFfi event, riscv64CrepRuntimeTarget base) ∧
+    stateRel { source with ffi := nextFfi }
+      (riscv64CrepRuntimeTarget base) := by
+  obtain ⟨hdom, hffi, hcall⟩ :=
+    panValueFfiSharedStore_final_inv (riscv64PanValueFfiContext base.shMemaddrs)
+      source.ffi size address value nextFfi event hsource
+  subst hffi
+  have hbaseffi : base.ffi = source.ffi :=
+    (hstate.2.2.2.2.2.2.2.1.trans (riscv64CrepRuntimeTarget_ffi base)).symm
+  have hcallBase : callFfi base.ffi (.sharedMem .mappedWrite)
+      [UInt8.ofNat (panValueFfiWidth size)]
+      (if panValueFfiWidth size = 0 then
+          (riscv64PanValueFfiContext base.shMemaddrs).wordToBytes value false ++
+            (riscv64PanValueFfiContext base.shMemaddrs).wordToBytes address false
+        else
+          ((riscv64PanValueFfiContext base.shMemaddrs).wordToBytes value false).take
+              (panValueFfiWidth size) ++
+            (riscv64PanValueFfiContext base.shMemaddrs).wordToBytes address false) =
+        .final event := by
+    rw [hbaseffi]; exact hcall
+  have hvalid : crepRuntimeSharedAddressValid (riscv64CrepRuntimeTarget base)
+      (opSizeToCrepStoreOp size) address = true := by
+    rw [crepRuntimeSharedAddressValid_opSizeToCrepStoreOp]; exact hdom
+  have hcallGoal : callFfi base.ffi (.sharedMem .mappedWrite)
+      [UInt8.ofNat (crepRuntimeMemWidth (opSizeToCrepStoreOp size))]
+      (if crepRuntimeMemWidth (opSizeToCrepStoreOp size) = 0 then
+          (riscv64PanValueFfiContext base.shMemaddrs).wordToBytes value false ++
+            (riscv64PanValueFfiContext base.shMemaddrs).wordToBytes address false
+        else
+          ((riscv64PanValueFfiContext base.shMemaddrs).wordToBytes value false).take
+              (crepRuntimeMemWidth (opSizeToCrepStoreOp size)) ++
+            (riscv64PanValueFfiContext base.shMemaddrs).wordToBytes address false) =
+        .final event := by
+    rw [crepRuntimeSharedStorePayload_eq (riscv64PanValueFfiContext base.shMemaddrs)
+      value address size]
+    rw [crepRuntimeMemWidth_opSizeToCrepStoreOp]
+    exact hcallBase
+  constructor
+  · cases size <;>
+      (simp only [opSizeToCrepStoreOp] at hvalid
+       simp only [opSizeToCrepStoreOp, riscv64CrepRuntimeTarget_ffi,
+         riscv64CrepRuntimeTarget_ffiContext,
+         riscv64SharedMemCallFfiHandler_sharedMem, crepSharedMemOperator,
+         crepRuntimeSharedMem, hname, Option.map_some, panTheWord, hvalid, if_true]
+       erw [hcallGoal])
+  · simpa only [stateRel] using hstate
 
 end Flapjack

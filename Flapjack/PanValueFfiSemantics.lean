@@ -73,6 +73,142 @@ def panValueFfiSharedStore (context : PanValueFfiContext α)
     | .returned nextFfi _ => some (.stored nextFfi)
     | .final event => some (.final ffi event)
 
+/-- Inversion of a successful mapped read: the address passes the shared-memory
+    domain guard and `call_FFI` (Lean `callFfi`) returns bytes whose
+    `word_of_bytes` image is the observed value. -/
+theorem panValueFfiSharedLoad_loaded_inv
+    (context : PanValueFfiContext α) (ffi : FfiState σ) (size : OpSize)
+    (address : α) (nextFfi : FfiState σ) (value : α)
+    (h : panValueFfiSharedLoad context ffi size address = some (.loaded nextFfi value)) :
+    context.sharedDomain (panValueFfiSharedAddress context size address) = true ∧
+    ∃ bytes,
+      callFfi ffi (.sharedMem .mappedRead) [UInt8.ofNat (panValueFfiWidth size)]
+          (context.wordToBytes address false) = .returned nextFfi bytes ∧
+      value = context.wordOfBytes false bytes := by
+  simp only [panValueFfiSharedLoad] at h
+  by_cases hdom : context.sharedDomain (panValueFfiSharedAddress context size address) = true
+  · rw [hdom] at h
+    simp only [Bool.not_true, Bool.false_eq_true, if_false] at h
+    cases hcall : callFfi ffi (.sharedMem .mappedRead) [UInt8.ofNat (panValueFfiWidth size)]
+        (context.wordToBytes address false) with
+    | returned returnedFfi bytes =>
+        rw [hcall] at h
+        simp only [Option.some.injEq] at h
+        injection h with hffi hval
+        exact ⟨hdom, bytes, by simp only [hffi], hval.symm⟩
+    | final event =>
+        rw [hcall] at h
+        simp at h
+  · have hb : context.sharedDomain (panValueFfiSharedAddress context size address) = false := by
+      cases hval : context.sharedDomain (panValueFfiSharedAddress context size address) <;>
+        simp_all
+    rw [hb] at h
+    simp at h
+
+/-- Inversion of a terminal mapped read. -/
+theorem panValueFfiSharedLoad_final_inv
+    (context : PanValueFfiContext α) (ffi : FfiState σ) (size : OpSize)
+    (address : α) (nextFfi : FfiState σ) (event : FfiFinalEvent)
+    (h : panValueFfiSharedLoad context ffi size address = some (.final nextFfi event)) :
+    context.sharedDomain (panValueFfiSharedAddress context size address) = true ∧
+    nextFfi = ffi ∧
+    callFfi ffi (.sharedMem .mappedRead) [UInt8.ofNat (panValueFfiWidth size)]
+        (context.wordToBytes address false) = .final event := by
+  simp only [panValueFfiSharedLoad] at h
+  by_cases hdom : context.sharedDomain (panValueFfiSharedAddress context size address) = true
+  · rw [hdom] at h
+    simp only [Bool.not_true, Bool.false_eq_true, if_false] at h
+    cases hcall : callFfi ffi (.sharedMem .mappedRead) [UInt8.ofNat (panValueFfiWidth size)]
+        (context.wordToBytes address false) with
+    | returned returnedFfi bytes =>
+        rw [hcall] at h
+        simp at h
+    | final event' =>
+        rw [hcall] at h
+        simp only [Option.some.injEq] at h
+        injection h with hffi hev
+        exact ⟨hdom, hffi.symm, by simp only [hev]⟩
+  · have hb : context.sharedDomain (panValueFfiSharedAddress context size address) = false := by
+      cases hval : context.sharedDomain (panValueFfiSharedAddress context size address) <;>
+        simp_all
+    rw [hb] at h
+    simp at h
+
+/-- Inversion of a successful mapped write: the address passes the domain guard
+    and the `SharedMem MappedWrite` send returns normally, updating the ffi. -/
+theorem panValueFfiSharedStore_stored_inv
+    (context : PanValueFfiContext α) (ffi : FfiState σ) (size : OpSize)
+    (address value : α) (nextFfi : FfiState σ)
+    (h : panValueFfiSharedStore context ffi size address value = some (.stored nextFfi)) :
+    context.sharedDomain (panValueFfiSharedAddress context size address) = true ∧
+    ∃ bytes,
+      callFfi ffi (.sharedMem .mappedWrite) [UInt8.ofNat (panValueFfiWidth size)]
+          (if panValueFfiWidth size = 0 then
+              context.wordToBytes value false ++ context.wordToBytes address false
+            else
+              (context.wordToBytes value false).take (panValueFfiWidth size) ++
+                context.wordToBytes address false) = .returned nextFfi bytes := by
+  simp only [panValueFfiSharedStore] at h
+  by_cases hdom : context.sharedDomain (panValueFfiSharedAddress context size address) = true
+  · rw [hdom] at h
+    simp only [Bool.not_true, Bool.false_eq_true, if_false] at h
+    cases hcall : callFfi ffi (.sharedMem .mappedWrite) [UInt8.ofNat (panValueFfiWidth size)]
+        (if panValueFfiWidth size = 0 then
+            context.wordToBytes value false ++ context.wordToBytes address false
+          else
+            (context.wordToBytes value false).take (panValueFfiWidth size) ++
+              context.wordToBytes address false) with
+    | returned returnedFfi bytes =>
+        rw [hcall] at h
+        simp only [Option.some.injEq] at h
+        injection h with hffi
+        exact ⟨hdom, bytes, by simp only [hffi]⟩
+    | final event =>
+        rw [hcall] at h
+        simp at h
+  · have hb : context.sharedDomain (panValueFfiSharedAddress context size address) = false := by
+      cases hval : context.sharedDomain (panValueFfiSharedAddress context size address) <;>
+        simp_all
+    rw [hb] at h
+    simp at h
+
+/-- Inversion of a terminal mapped write. -/
+theorem panValueFfiSharedStore_final_inv
+    (context : PanValueFfiContext α) (ffi : FfiState σ) (size : OpSize)
+    (address value : α) (nextFfi : FfiState σ) (event : FfiFinalEvent)
+    (h : panValueFfiSharedStore context ffi size address value = some (.final nextFfi event)) :
+    context.sharedDomain (panValueFfiSharedAddress context size address) = true ∧
+    nextFfi = ffi ∧
+    callFfi ffi (.sharedMem .mappedWrite) [UInt8.ofNat (panValueFfiWidth size)]
+        (if panValueFfiWidth size = 0 then
+            context.wordToBytes value false ++ context.wordToBytes address false
+          else
+            (context.wordToBytes value false).take (panValueFfiWidth size) ++
+              context.wordToBytes address false) = .final event := by
+  simp only [panValueFfiSharedStore] at h
+  by_cases hdom : context.sharedDomain (panValueFfiSharedAddress context size address) = true
+  · rw [hdom] at h
+    simp only [Bool.not_true, Bool.false_eq_true, if_false] at h
+    cases hcall : callFfi ffi (.sharedMem .mappedWrite) [UInt8.ofNat (panValueFfiWidth size)]
+        (if panValueFfiWidth size = 0 then
+            context.wordToBytes value false ++ context.wordToBytes address false
+          else
+            (context.wordToBytes value false).take (panValueFfiWidth size) ++
+              context.wordToBytes address false) with
+    | returned returnedFfi bytes =>
+        rw [hcall] at h
+        simp at h
+    | final event' =>
+        rw [hcall] at h
+        simp only [Option.some.injEq] at h
+        injection h with hffi hev
+        exact ⟨hdom, hffi.symm, by simp only [hev]⟩
+  · have hb : context.sharedDomain (panValueFfiSharedAddress context size address) = false := by
+      cases hval : context.sharedDomain (panValueFfiSharedAddress context size address) <;>
+        simp_all
+    rw [hb] at h
+    simp at h
+
 def panValueFfiReadBytes [Add α] [OfNat α 1]
     (access : PanValueMemoryAccess α) (context : PanValueFfiContext α)
     (memory : α → Option (PanValue α)) (bytesInWord address : α) :

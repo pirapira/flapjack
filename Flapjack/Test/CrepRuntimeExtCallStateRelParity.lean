@@ -463,6 +463,177 @@ def sourceOutcomeGuard : Bool :=
       | _ => false
   | _ => false
 
+/-- An oracle whose mapped reads return the low byte `0x42` and whose mapped
+    writes echo a zero-filled payload of the same length. -/
+def sharedOracle : FfiOracle Unit := fun name state _ bytes =>
+  match name with
+  | .sharedMem .mappedRead => .returned state [(0x42 : UInt8), 0, 0, 0, 0, 0, 0, 0]
+  | .sharedMem .mappedWrite => .returned state (bytes.map (fun _ => 0))
+  | _ => .final .failed
+
+def sharedFfi : FfiState Unit :=
+  { oracle := sharedOracle, state := (), ioEvents := [] }
+
+/-- The target local 0 holds the word 7 for the mapped-write fixture. -/
+def sharedLocals : Nat → Option (PanWordLab (RiscV.Word 64))
+  | 0 => some (.word 7)
+  | _ => none
+
+/-- A target where only the aligned address 8 is a shared-memory address. -/
+def sharedBase : CrepRuntimeState (RiscV.Word 64) Unit :=
+  { callBase with
+    shMemaddrs := fun address => address == (8 : RiscV.Word 64)
+    locals := sharedLocals
+    ffi := sharedFfi }
+
+def sharedSource : PanSemState (RiscV.Word 64) (FfiState Unit) :=
+  { callSource with
+    sharedMemaddrs := fun address => address == (8 : RiscV.Word 64)
+    ffi := sharedFfi }
+
+theorem sharedStateRel :
+    stateRel sharedSource (riscv64CrepRuntimeTarget sharedBase) := by
+  refine ⟨?_, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  exact callStateRel.1
+
+/-- A successful mapped read of one byte: the byte `0x42` returned by the
+    oracle is loaded (HOL `sh_mem_load`, `word_of_bytes`). -/
+def sharedLoadGuard : Bool :=
+  match panValueFfiSharedLoad (riscv64PanValueFfiContext sharedBase.shMemaddrs)
+      sharedFfi .op8 (8 : RiscV.Word 64) with
+  | some (.loaded _ value) => value == (0x42 : RiscV.Word 64)
+  | _ => false
+
+/-- A read outside the shared-memory domain is rejected. -/
+def sharedLoadErrorGuard : Bool :=
+  (panValueFfiSharedLoad (riscv64PanValueFfiContext sharedBase.shMemaddrs)
+    sharedFfi .op8 (16 : RiscV.Word 64)).isNone
+
+/-- A successful mapped write of one byte reaches `callFfi`. -/
+def sharedStoreGuard : Bool :=
+  match panValueFfiSharedStore (riscv64PanValueFfiContext sharedBase.shMemaddrs)
+      sharedFfi .op8 (8 : RiscV.Word 64) (7 : RiscV.Word 64) with
+  | some (.stored _) => true
+  | _ => false
+
+/-- The production target shared-memory `load` dispatch reaches `Normal`. -/
+def sharedTargetLoadGuard : Bool :=
+  match (crepRuntimeSharedMem riscv64SharedMemCallFfiHandler
+      (riscv64CrepRuntimeTarget sharedBase) (opSizeToCrepLoadOp .op8) 0
+      (8 : RiscV.Word 64)).1 with
+  | .normal => true
+  | _ => false
+
+/-- The production target shared-memory `store` dispatch reaches `Normal`. -/
+def sharedTargetStoreGuard : Bool :=
+  match (crepRuntimeSharedMem riscv64SharedMemCallFfiHandler
+      (riscv64CrepRuntimeTarget sharedBase) (opSizeToCrepStoreOp .op8) 0
+      (8 : RiscV.Word 64)).1 with
+  | .normal => true
+  | _ => false
+
+/-- An oracle that reports a `final` event for shared-memory operations
+    (HOL `Oracle_final`, i.e. the `FFI_final` branch). -/
+def sharedFinalOracle : FfiOracle Unit := fun name _ _ _ =>
+  match name with
+  | .sharedMem _ => .final .failed
+  | _ => .final .failed
+
+def sharedFinalFfi : FfiState Unit :=
+  { oracle := sharedFinalOracle, state := (), ioEvents := [] }
+
+def sharedFinalBase : CrepRuntimeState (RiscV.Word 64) Unit :=
+  { sharedBase with ffi := sharedFinalFfi }
+
+def sharedFinalSource : PanSemState (RiscV.Word 64) (FfiState Unit) :=
+  { sharedSource with ffi := sharedFinalFfi }
+
+theorem sharedFinalStateRel :
+    stateRel sharedFinalSource (riscv64CrepRuntimeTarget sharedFinalBase) := by
+  refine ⟨?_, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  exact sharedStateRel.1
+
+/-- The production target shared-memory `load` on a final oracle reports
+    `FinalFFI` (HOL `sh_mem_load` `FFI_final`). -/
+def sharedFinalLoadGuard : Bool :=
+  match (crepRuntimeSharedMem riscv64SharedMemCallFfiHandler
+      (riscv64CrepRuntimeTarget sharedFinalBase) (opSizeToCrepLoadOp .op8) 0
+      (8 : RiscV.Word 64)).1 with
+  | .finalFfi _ => true
+  | _ => false
+
+/-- The production target shared-memory `store` on a final oracle reports
+    `FinalFFI` (HOL `sh_mem_store` `FFI_final`). -/
+def sharedFinalStoreGuard : Bool :=
+  match (crepRuntimeSharedMem riscv64SharedMemCallFfiHandler
+      (riscv64CrepRuntimeTarget sharedFinalBase) (opSizeToCrepStoreOp .op8) 0
+      (8 : RiscV.Word 64)).1 with
+  | .finalFfi _ => true
+  | _ => false
+
+/-- The source `sh_mem_load` `FFI_final` outcome on the final oracle. -/
+def sharedFinalLoadEvent : FfiFinalEvent :=
+  { name := .sharedMem .mappedRead
+    configuration := [1]
+    bytes := (riscv64PanValueFfiContext sharedFinalBase.shMemaddrs).wordToBytes
+      (8 : RiscV.Word 64) false
+    outcome := .failed }
+
+theorem sharedFinalLoadOutcome :
+    panValueFfiSharedLoad (riscv64PanValueFfiContext sharedFinalBase.shMemaddrs)
+        sharedFinalFfi .op8 (8 : RiscV.Word 64) =
+      some (.final sharedFinalFfi sharedFinalLoadEvent) := by
+  simp [panValueFfiSharedLoad, sharedFinalFfi, sharedFinalOracle, callFfi,
+    sharedFinalLoadEvent, riscv64PanValueFfiContext] <;> decide
+
+/-- The source `sh_mem_store` `FFI_final` outcome on the final oracle. -/
+def sharedFinalStoreEvent : FfiFinalEvent :=
+  { name := .sharedMem .mappedWrite
+    configuration := [1]
+    bytes := ((riscv64PanValueFfiContext sharedFinalBase.shMemaddrs).wordToBytes
+        (7 : RiscV.Word 64) false).take 1
+      ++ (riscv64PanValueFfiContext sharedFinalBase.shMemaddrs).wordToBytes
+        (8 : RiscV.Word 64) false
+    outcome := .failed }
+
+theorem sharedFinalStoreOutcome :
+    panValueFfiSharedStore (riscv64PanValueFfiContext sharedFinalBase.shMemaddrs)
+        sharedFinalFfi .op8 (8 : RiscV.Word 64) (7 : RiscV.Word 64) =
+      some (.final sharedFinalFfi sharedFinalStoreEvent) := by
+  simp [panValueFfiSharedStore, sharedFinalFfi, sharedFinalOracle, callFfi,
+    sharedFinalStoreEvent, riscv64PanValueFfiContext] <;> decide
+
+/-- A source `sh_mem_load` `FFI_final` outcome drives the target `FinalFFI`
+    dispatch with the cleared-locals post-state. -/
+example :
+    crepRuntimeSharedMem riscv64SharedMemCallFfiHandler
+        (riscv64CrepRuntimeTarget sharedFinalBase) (opSizeToCrepLoadOp .op8) 0
+        (8 : RiscV.Word 64) =
+      (.finalFfi sharedFinalLoadEvent,
+        clearCrepRuntimeLocals (riscv64CrepRuntimeTarget sharedFinalBase)) :=
+  (panValueFfiSharedLoad_stateRel_final sharedFinalSource sharedFinalBase
+    .op8 0 (8 : RiscV.Word 64) sharedFinalFfi sharedFinalLoadEvent
+    sharedFinalStateRel sharedFinalLoadOutcome).1
+
+/-- A source `sh_mem_store` `FFI_final` outcome drives the target `FinalFFI`
+    dispatch with the unchanged post-state. -/
+example :
+    crepRuntimeSharedMem riscv64SharedMemCallFfiHandler
+        (riscv64CrepRuntimeTarget sharedFinalBase) (opSizeToCrepStoreOp .op8) 0
+        (8 : RiscV.Word 64) =
+      (.finalFfi sharedFinalStoreEvent, riscv64CrepRuntimeTarget sharedFinalBase) :=
+  (panValueFfiSharedStore_stateRel_final sharedFinalSource sharedFinalBase
+    .op8 0 (8 : RiscV.Word 64) (7 : RiscV.Word 64) rfl sharedFinalFfi
+    sharedFinalStoreEvent sharedFinalStateRel sharedFinalStoreOutcome).1
+
+#eval sharedLoadGuard
+#eval sharedLoadErrorGuard
+#eval sharedStoreGuard
+#eval sharedTargetLoadGuard
+#eval sharedTargetStoreGuard
+#eval sharedFinalLoadGuard
+#eval sharedFinalStoreGuard
+
 def runChecks : IO Bool := do
   let checks := [
     ("Crep ExtCall dispatch follows source call_FFI and stateRel ffi update",
@@ -479,6 +650,16 @@ def runChecks : IO Bool := do
       oneShotGuard),
     ("Crep ExtCall source panValueFfiExtCall outcome drives target dispatch",
       sourceOutcomeGuard),
+    ("Crep shared-memory mapped read follows source sh_mem_load",
+      sharedLoadGuard),
+    ("Crep shared-memory read outside domain is rejected", sharedLoadErrorGuard),
+    ("Crep shared-memory mapped write reaches call_FFI", sharedStoreGuard),
+    ("Crep shared-memory target load dispatch is normal", sharedTargetLoadGuard),
+    ("Crep shared-memory target store dispatch is normal", sharedTargetStoreGuard),
+    ("Crep shared-memory FFI_final load dispatch returns FinalFFI",
+      sharedFinalLoadGuard),
+    ("Crep shared-memory FFI_final store dispatch returns FinalFFI",
+      sharedFinalStoreGuard),
     ("Crep ExtCall failing-read branch returns Error with state unchanged", true)]
   for (name, passed) in checks do
     IO.println s!"{if passed then "PASS" else "FAIL"} {name}"

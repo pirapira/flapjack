@@ -116,6 +116,17 @@ val _ = print_eval "deccall_code_map_7"
            («id», ([(«x», panLang$One)],
              panLang$Return (panLang$Var panLang$Local «x»), panLang$One)))))``
 
+val _ = print_eval "call_struct_argument_7_8"
+  ``FST (panSem$evaluate
+      (panLang$Call NONE «pair»
+        [panLang$RStruct [panLang$Const (7w:8 word);
+          panLang$Const (8w:8 word)]],
+       (((ARB:((8),unit) panSem$state) with clock := 10) with
+         code := FEMPTY |+
+           («pair», ([(«p», panLang$Comb [panLang$One; panLang$One])],
+             panLang$Return (panLang$Var panLang$Local «p»),
+             panLang$Comb [panLang$One; panLang$One])))))``
+
 val _ = print_eval "call_zero_clock_timeout"
   ``FST (panSem$evaluate
       (panLang$Call NONE «callee» [],

@@ -87,8 +87,8 @@ private theorem crepMulConst_holWordBits {width : Nat} [NeZero width]
 /-- CakeML's `dest_const_thm`: a successful destination test identifies the
     expression as exactly that constant. -/
 @[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "dest_const_thm"]
-theorem crepDestConst_eq_const {n : Nat} (expression : CrepExp (RiscV.Word n))
-    (value : RiscV.Word n)
+theorem crepDestConst_eq_const {α : Type} (expression : CrepExp α)
+    (value : α)
     (h : crepDestConst expression = some value) :
     expression = .const value := by
   cases expression <;> simp_all [crepDestConst]

@@ -229,7 +229,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepDestConst_eq_const",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement comparison and direct HOL-EVAL constructor probe)"
+    "reviewer": "Codex (fully polymorphic statement comparison with HOL dest_const_thm and direct HOL-EVAL constructor probe)"
   },
   {
     "hol_path": "cakeml/pancake/crep_arithScript.sml",
@@ -2926,6 +2926,30 @@
     "reviewer": "Untagged: context-threading globalCompileDecsThreaded over arbitrary GlobalPassContext bytesInWord/fromNat and arbitrary [Add \u03b1]/[Mul \u03b1] with non-lawful [BEq String]; exact canonical-word-context port tracked by a dependency bead.",
     "hol_name": "compile_decls_append",
     "lean_name": "compile_decls_append_threaded"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "compile_decs_decls_thm",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "compile_decs_decls_thm_cake",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged: compileDecsCake composes the untagged Flapjack globalCompileProg/globalCompileExp, not proved clause-for-clause against HOL pan_globals$compile/compile_exp; CakeContext.globals is a list (InfoMap) rather than HOL's extensional finite map; width : Nat admits 0 while HOL dimindex is positive. Exact port tracked by flapjack-pxn.18.5.2.20.1.1."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "compile_decs_EVERY_is_function",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "compile_decs_EVERY_is_function_cake",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged: compileDecsCake composes the untagged Flapjack globalCompileProg/globalCompileExp, not proved clause-for-clause against HOL pan_globals$compile/compile_exp; CakeContext.globals is a list (InfoMap) rather than HOL's extensional finite map; width : Nat admits 0 while HOL dimindex is positive. Exact port tracked by flapjack-pxn.18.5.2.20.1.1."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "compile_decls_append",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "compile_decls_append_cake",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged: compileDecsCake composes the untagged Flapjack globalCompileProg/globalCompileExp, not proved clause-for-clause against HOL pan_globals$compile/compile_exp; CakeContext.globals is a list (InfoMap) rather than HOL's extensional finite map; width : Nat admits 0 while HOL dimindex is positive. Exact port tracked by flapjack-pxn.18.5.2.20.1.1."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",

@@ -65,6 +65,25 @@ theorem prod_uncurry_const_eq_comp_snd {α β γ : Type} (f : β → γ) :
   cases p
   rfl
 
+/-- Exact port of HOL `map_uncurry_zip_again`
+    (`pan_structsProofScript.sml:900`). -/
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "map_uncurry_zip_again" 900]
+theorem list_zip_map_eq {α β γ δ : Type} (f : α → γ) (g : β → δ)
+    (xs : List α) (ys : List β) (h : xs.length = ys.length) :
+    (xs.zip ys).map (fun p => (f p.1, g p.2)) = (xs.map f).zip (ys.map g) := by
+  induction xs generalizing ys with
+  | nil =>
+      cases ys with
+      | nil => rfl
+      | cons y ys => simp at h
+  | cons x xs ih =>
+      cases ys with
+      | nil => simp at h
+      | cons y ys =>
+          simp only [List.zip_cons_cons, List.map_cons, List.length_cons] at h ⊢
+          have h' : xs.length = ys.length := by omega
+          rw [ih ys h']
+
 /-- HOL's mutual `is_wf_shape_compile_shape`
     (`pan_structsProofScript.sml:298`): compiling a shape, or a list of
     shapes, removes every `Named` constructor, so the result is well formed in

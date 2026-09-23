@@ -177,8 +177,10 @@ theorem crepInlineLocalsExtRel_self (a b : CrepHolState α σ) :
     `CrepInlineFmap.lookup`/`remove`/`submap` mirror HOL
     `FLOOKUP`/`DOMSUB`/`SUBMAP` and `crepInlineProgFmap` is the exact
     `inline_prog` port (see `Flapjack/Pancake/CrepInline/Pass.lean`).  The map
-    carrier is a Lean inductive rather than HOL's sptree, so no `@[hol]` tag is
-    attached; the statement otherwise follows the source clause for clause. -/
+    carrier is a canonical unique-key finite map (an entry list carrying a
+    duplicate-free key invariant, so `card` equals the domain cardinality)
+    rather than HOL's sptree, so no `@[hol]` tag is attached; the statement
+    otherwise follows the source clause for clause. -/
 def crepInlineCodeInlRel [BEq FunName] [LawfulBEq FunName]
     [OfNat α 0] [OfNat α 1]
     (inl_fs : CrepInlineFmap α) (s t : CrepHolState α σ) : Prop :=

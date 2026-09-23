@@ -105,95 +105,142 @@ decreasing_by
 HOL `inline_prog_def` (`cakeml/pancake/crep_inlineScript.sml:203-257`) recurses
 on `(inlineable_fs, prog)` using the lexicographic termination measure
 `(CARD (FDOM inlineable_fs), prog_size prog)`, because a Cake finite map is a
-finite sptree.  Lean's `Flapjack.FiniteMap` is the function `α → Option β`,
-whose domain need not be finite, so its `FDOM` has no cardinality and HOL's
-termination argument does not transfer.  The datatype below is a genuine
-finite map with HOL-shaped `FLOOKUP`/`DOMSUB`/`SUBMAP` and a `card`, so that
-removing a bound key strictly decreases the termination measure.  This is the
-finite-map representation required for the exact `code_inl_rel_def` port and
-is deliberately not the rejected list/first-match analogue. -/
+finite sptree with unique keys.  Lean's `Flapjack.FiniteMap` is the function
+`α → Option β`, whose domain need not be finite, so its `FDOM` has no
+cardinality and HOL's termination argument does not transfer.
 
-inductive CrepInlineFmap (α : Type u) where
-  | empty : CrepInlineFmap α
-  | insert (key : FunName) (value : List Nat × CrepProg α)
-      (rest : CrepInlineFmap α) : CrepInlineFmap α
+`CrepInlineFmap` below is a finite map with a **canonical unique-key
+invariant**: its `entries` list carries a proof that the key projection is
+duplicate-free, so every key is bound at most once and `card` (the entry count)
+is exactly the number of distinct keys in the domain, matching HOL
+`CARD (FDOM fs)`.  `lookup` is HOL `FLOOKUP`, `remove` is HOL `DOMSUB` and
+`submap` is HOL `SUBMAP`.  The only public construction paths are `empty` and
+the smart `insert`, which replaces any existing binding rather than shadowing
+it, so the invariant is preserved by construction.  This is not the rejected
+list-backed first-match analogue: the carrier is a genuine canonical finite map
+and its cardinality is the domain cardinality. -/
+
+structure CrepInlineFmap (α : Type u) where
+  entries : List (FunName × (List Nat × CrepProg α))
+  nodupKeys : (entries.map Prod.fst).Nodup
 
 namespace CrepInlineFmap
 
-/-- HOL `FLOOKUP` on the finite map. -/
-def lookup [BEq FunName] (name : FunName) :
-    CrepInlineFmap α → Option (List Nat × CrepProg α)
-  | .empty => none
-  | .insert key value rest =>
-      if key == name then some value else lookup name rest
+/-- The empty finite map (HOL `FEMPTY`). -/
+def empty : CrepInlineFmap α :=
+  { entries := [], nodupKeys := by simp }
 
-/-- HOL DOMSUB `fs \\ name`. -/
-def remove [BEq FunName] (name : FunName) :
-    CrepInlineFmap α → CrepInlineFmap α
-  | .empty => .empty
-  | .insert key value rest =>
-      if key == name then remove name rest
-      else .insert key value (remove name rest)
+/-- HOL `FLOOKUP`. -/
+def lookup [BEq FunName] (name : FunName) (fs : CrepInlineFmap α) :
+    Option (List Nat × CrepProg α) :=
+  List.lookup name fs.entries
+
+/-- Number of bindings; with the unique-key invariant this is HOL
+    `CARD (FDOM fs)`. -/
+def card (fs : CrepInlineFmap α) : Nat := fs.entries.length
+
+theorem not_mem_map_fst_filter_bne [BEq FunName] [LawfulBEq FunName]
+    (name : FunName) (l : List (FunName × (List Nat × CrepProg α))) :
+    name ∉ List.map Prod.fst (l.filter (fun e => e.1 != name)) := by
+  intro hmem
+  rw [List.mem_map] at hmem
+  obtain ⟨e, he, hfe⟩ := hmem
+  rw [List.mem_filter] at he
+  rw [← hfe] at he
+  simpa using he.2
+
+/-- Remove every binding of `name` (HOL DOMSUB `fs \\ name`). -/
+def remove [BEq FunName] [LawfulBEq FunName] (name : FunName)
+    (fs : CrepInlineFmap α) : CrepInlineFmap α :=
+  { entries := fs.entries.filter (fun e => e.1 != name)
+    nodupKeys :=
+      fs.nodupKeys.sublist ((List.filter_sublist (l := fs.entries)).map Prod.fst) }
+
+/-- Insert `name ↦ value`, replacing any existing binding
+    (HOL `fs |+ (name, value)`). -/
+def insert [BEq FunName] [LawfulBEq FunName] (name : FunName)
+    (value : List Nat × CrepProg α) (fs : CrepInlineFmap α) : CrepInlineFmap α :=
+  { entries := (name, value) :: fs.entries.filter (fun e => e.1 != name)
+    nodupKeys := by
+      rw [List.map_cons]
+      refine List.nodup_cons.mpr ⟨not_mem_map_fst_filter_bne name fs.entries, ?_⟩
+      exact fs.nodupKeys.sublist
+        ((List.filter_sublist (l := fs.entries)).map Prod.fst) }
 
 /-- HOL finite-map `SUBMAP`: every binding of `a` is a binding of `b`. -/
 def submap (a b : CrepInlineFmap α) : Prop :=
   ∀ name value, a.lookup name = some value → b.lookup name = some value
 
-/-- Number of bindings; the first component of HOL's termination measure. -/
-def card : CrepInlineFmap α → Nat
-  | .empty => 0
-  | .insert _ _ rest => card rest + 1
+theorem eraseDups_eq_self_of_nodup [BEq FunName] [LawfulBEq FunName]
+    {l : List FunName} (h : l.Nodup) : l.eraseDups = l := by
+  induction l with
+  | nil => rfl
+  | cons a t ih =>
+      rw [List.eraseDups_cons]
+      have ha : a ∉ t := (List.nodup_cons.mp h).1
+      have ht : t.Nodup := (List.nodup_cons.mp h).2
+      have hfilter : (t.filter fun b => !b == a) = t := by
+        apply List.filter_eq_self.mpr
+        intro b hb
+        have hne : b ≠ a := fun hba => ha (hba ▸ hb)
+        simpa using hne
+      rw [hfilter, ih ht]
 
-@[simp] theorem card_empty : (empty : CrepInlineFmap α).card = 0 := rfl
+/-- `card` is exactly the number of distinct keys, i.e. HOL `CARD (FDOM fs)`. -/
+theorem card_eq_domain_cardinality [BEq FunName] [LawfulBEq FunName]
+    (fs : CrepInlineFmap α) :
+    fs.card = (fs.entries.map Prod.fst).eraseDups.length := by
+  rw [eraseDups_eq_self_of_nodup fs.nodupKeys]
+  simp [card, List.length_map]
 
-@[simp] theorem card_insert (key : FunName) (value : List Nat × CrepProg α)
-    (rest : CrepInlineFmap α) :
-    (insert key value rest).card = rest.card + 1 := rfl
+theorem lookup_insert_self [BEq FunName] [LawfulBEq FunName] (name : FunName)
+    (value : List Nat × CrepProg α) (fs : CrepInlineFmap α) :
+    (insert name value fs).lookup name = some value := by
+  rw [insert, lookup]
+  exact List.lookup_eq_some_iff.mpr ⟨[], _, rfl, by simp⟩
 
-theorem lookup_insert_self [BEq FunName] [LawfulBEq FunName]
-    (name : FunName) (value : List Nat × CrepProg α) (rest : CrepInlineFmap α) :
-    (insert name value rest).lookup name = some value := by
-  simp [lookup]
+theorem submap_refl (fs : CrepInlineFmap α) : submap fs fs := fun _ _ h => h
 
-theorem lookup_remove_none [BEq FunName] [LawfulBEq FunName]
-    (name : FunName) (fs : CrepInlineFmap α) :
-    (fs.remove name).lookup name = none := by
-  induction fs with
-  | empty => rfl
-  | insert key value rest ih =>
-      cases hk : key == name with
-      | true => simpa [remove, hk] using ih
-      | false => simp [lookup, remove, hk, ih]
-
-theorem card_remove_le [BEq FunName] (name : FunName)
-    (fs : CrepInlineFmap α) : (fs.remove name).card ≤ fs.card := by
-  induction fs with
-  | empty => simp [remove, card]
-  | insert key value rest ih =>
-      cases hk : key == name with
-      | true => simp [remove, hk]; exact Nat.le_succ_of_le ih
-      | false => simp [remove, hk]; exact ih
+/-- Removing a bound key strictly decreases the domain cardinality. -/
+theorem length_filter_lt_of_lookup [BEq FunName] [LawfulBEq FunName]
+    (name : FunName) {v : List Nat × CrepProg α}
+    {l : List (FunName × (List Nat × CrepProg α))}
+    (h : List.lookup name l = some v) :
+    (l.filter (fun e => e.1 != name)).length < l.length := by
+  obtain ⟨l₁, l₂, heq, hkeys⟩ := List.lookup_eq_some_iff.mp h
+  subst heq
+  have hl₁ : (l₁.filter (fun e => e.1 != name)) = l₁ := by
+    apply List.filter_eq_self.mpr
+    intro e he
+    have hne : e.1 ≠ name := by
+      have hk := hkeys e he
+      rw [bne_iff_ne] at hk
+      exact fun hx => hk hx.symm
+    rw [bne_iff_ne]; exact hne
+  have hhead : ((name, v) :: l₂).filter (fun e => e.1 != name)
+      = l₂.filter (fun e => e.1 != name) := by
+    simp [bne_self_eq_false]
+  rw [List.filter_append, hl₁, hhead]
+  simp only [List.length_append, List.length_cons]
+  exact Nat.add_lt_add_left (Nat.lt_succ_of_le (List.length_filter_le _ l₂)) l₁.length
 
 theorem card_remove_lt [BEq FunName] [LawfulBEq FunName] (name : FunName)
     (fs : CrepInlineFmap α) {value : List Nat × CrepProg α}
     (h : fs.lookup name = some value) : (fs.remove name).card < fs.card := by
-  induction fs with
-  | empty => simp [lookup] at h
-  | insert key v rest ih =>
-      cases hk : key == name with
-      | true =>
-          have hle : (rest.remove name).card ≤ rest.card := card_remove_le name rest
-          simp only [remove, hk, card_insert]
-          exact Nat.lt_succ_of_le hle
-      | false =>
-          have hrest : rest.lookup name = some value := by
-            simpa [lookup, hk] using h
-          have hlt := ih hrest
-          simp only [remove, hk, card_insert]
-          exact Nat.succ_lt_succ hlt
+  show (fs.entries.filter (fun e => e.1 != name)).length < fs.entries.length
+  exact length_filter_lt_of_lookup name h
 
-theorem submap_refl (fs : CrepInlineFmap α) : submap fs fs :=
-  fun _ _ h => h
+theorem lookup_remove_none [BEq FunName] [LawfulBEq FunName] (name : FunName)
+    (fs : CrepInlineFmap α) : (fs.remove name).lookup name = none := by
+  rw [remove, lookup]
+  cases h : List.lookup name (fs.entries.filter (fun e => e.1 != name)) with
+  | none => rfl
+  | some b =>
+      obtain ⟨l₁, l₂, heq, _⟩ := List.lookup_eq_some_iff.mp h
+      have hmem : (name, b) ∈ fs.entries.filter (fun e => e.1 != name) := by
+        rw [heq]; simp
+      rw [List.mem_filter] at hmem
+      simpa using hmem.2
 
 end CrepInlineFmap
 

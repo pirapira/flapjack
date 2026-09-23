@@ -155,7 +155,7 @@ theorem not_localsExtRel_disagree : ¬ crepInlineLocalsExtRel extA extB extA' ex
 
 /-- A finite inline map with one callee `f` whose body is `Skip`. -/
 def codeInlFmap : CrepInlineFmap Nat :=
-  .insert "f" ([7], CrepProg.skip) .empty
+  CrepInlineFmap.insert "f" ([7], CrepProg.skip) CrepInlineFmap.empty
 
 def codeInlSource : CrepHolState Nat Unit :=
   { baseState with code := fun _ => some ([7], CrepProg.skip) }

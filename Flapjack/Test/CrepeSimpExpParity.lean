@@ -15,6 +15,19 @@ def holBits4 : Fin 4 → Bool := fun index => index.val == 0 || index.val == 2
 #guard holWordBitsToBitVec (holBits4 + holBits4) == BitVec.ofNat 4 10
 #guard holWordBitsToBitVec (holBits4 * holBits4) == BitVec.ofNat 4 9
 
+@[instance_reducible] private def fin4WordDimension :
+    HolFiniteDimension (Fin 4) := inferInstance
+
+/-! HOL word addition and multiplication are defined by `n2w` after natural
+    arithmetic on `w2n`; the generic source-shaped adapters reduce to the same
+    BitVec operations under the explicit finite-index enumeration. -/
+#guard holWordToBitVec fin4WordDimension
+    (holFiniteWordSourceAdd fin4WordDimension holBits4 holBits4) ==
+      BitVec.ofNat 4 10
+#guard holWordToBitVec fin4WordDimension
+    (holFiniteWordSourceMul fin4WordDimension holBits4 holBits4) ==
+      BitVec.ofNat 4 9
+
 /-! These kernel checks mirror the original HOL `n2w_def` probe for zero,
     one, and the high set bit. Numeric FCP index 0 is the least-significant
     bit, as stated generally by HOL `word_index_n2w`. -/

@@ -1,0 +1,8 @@
+word_add_definition=∀v w. v + w = n2w (w2n v + w2n w)
+word_mul_definition=∀v w. v * w = n2w (w2n v * w2n w)
+word_sub_definition=∀v w. v − w = v + -w
+word_add_n2w=∀m n. n2w m + n2w n = n2w (m + n)
+word_mul_n2w=∀m n. n2w m * n2w n = n2w (m * n)
+add_3_5_8=3w + 5w = 8w
+mul_3_5_8=3w * 5w = 15w
+sub_3_5_8=3w − 5w = n2w (3 + (dimword (:8) − 5 MOD dimword (:8)))

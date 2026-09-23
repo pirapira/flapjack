@@ -48,7 +48,9 @@ matching Lean cases live in `Flapjack.Test.CompileDefParity`.
 `pan_to_crepProofTheory`, paired with `Flapjack.Test.PanToCrepRelationsParity`.
 The `functions_projection` row in `ctxt_fc_probe.out` directly checks the
 HOL `ctxt_fc_funcs_eq` theorem at `pan_to_crepProofScript.sml:2295` against
-the kernel-checked Lean fixture in that module.
+the kernel-checked Lean fixture in that module. The `vmax_nonempty_list` and
+`vmax_empty_list` rows directly check `ctxt_fc_vmax` at line 2307 and are
+paired with `ctxtFcVmax` Lean fixtures.
 The `excp_rel` cases deliberately use a word-valued compiler-code map and a
 shape-valued source map, matching the definition's independent HOL value types.
 The `ctxt_fc` cases record `with_shape` slot slicing, ZIP truncation, and

@@ -4,3 +4,5 @@ zip_truncates_and_empty_slots=<|vars := FOLDL $|+ FEMPTY⟨«x» ↦ (One,[])⟩
   funcs := FEMPTY; eids := FEMPTY; vmax := 0|>
 empty_maximum=<|vars := FEMPTY; funcs := FEMPTY; eids := FEMPTY; vmax := 0|>
 functions_projection=T
+vmax_nonempty_list=T
+vmax_empty_list=T

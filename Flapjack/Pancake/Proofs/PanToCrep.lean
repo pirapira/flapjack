@@ -7,6 +7,7 @@ import Flapjack.PanValueFlatten
 import Flapjack.Pancake.PanToCrep
 import Flapjack.Pancake.Semantics.CrepProps
 import Flapjack.Pancake.Semantics.CrepSem
+import Flapjack.Pancake.Semantics.CrepRuntimeTarget
 import Flapjack.Pancake.Semantics.PanSem
 import Flapjack.Pancake.Semantics.PanSemStateEval
 import Flapjack.Pancake.Semantics.PanCommonProps
@@ -1021,5 +1022,65 @@ theorem firstCompileProgAllDistinct {width : Nat}
       Function.comp_def]
   rw [hnames]
   exact firstCompileToCrepAllDistinct declarations hdistinct
+
+/-- `state_rel` records that source and target ffi states coincide; installing the
+    same `call_FFI` result on both therefore preserves the whole relation (the
+    other components are untouched, so they reduce definitionally). -/
+theorem stateRel_ffiUpdate (source : PanSemState α (FfiState σ))
+    (target : CrepRuntimeState α σ) (ffi : FfiState σ)
+    (hrel : stateRel source target) :
+    stateRel { source with ffi := ffi } { target with ffi := ffi } := by
+  unfold stateRel at hrel ⊢
+  obtain ⟨hm, hma, hsm, hst, hg, hcl, hbe, hffi, hba, hta⟩ := hrel
+  exact ⟨hm, hma, hsm, hst, hg, hcl, hbe, rfl, hba, hta⟩
+
+/-- Failing-read target-evaluation step for `ExtCall`: a failed configuration or
+    array read returns `Error` with the target state unchanged (HOL `_ => (SOME
+    Error, s)`), independently of the ffi state, and therefore also for a source
+    state related by `stateRel`. -/
+theorem crepRuntimeExtCallValues_stateRel_error
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (function : FunName)
+    (configuration configurationLength array arrayLength : RiscV.Word 64)
+    (_hstate : stateRel source (riscv64CrepRuntimeTarget base))
+    (h : riscv64ReadByteArray base configuration configurationLength.toNat = none ∨
+         riscv64ReadByteArray base array arrayLength.toNat = none) :
+    crepRuntimeExtCallValues riscv64ExtCallCallFfiHandler
+        (riscv64CrepRuntimeTarget base) function
+        configuration configurationLength array arrayLength =
+      (.error, riscv64CrepRuntimeTarget base) :=
+  crepRuntimeExtCallValues_target_error base function configuration
+    configurationLength array arrayLength h
+
+/-- Source/target target-evaluation simulation step for `ExtCall` on the canonical
+    RISC-V 64 target.  Given `stateRel source (riscv64CrepRuntimeTarget base)` and
+    both argument reads, the production `crepRuntimeExtCallValues` step follows
+    the Lean `callFfi` (HOL `call_FFI`) on the *source* ffi state: `FFI_return`
+    yields `Normal` with the returned bytes written back and the returned ffi
+    installed on the target, while `FFI_final` yields `FinalFFI` unchanged.  The
+    updated source and target states stay related by `stateRel_ffiUpdate`.  The
+    failing-read case is `crepRuntimeExtCallValues_stateRel_error`, so the two
+    together cover every production `ExtCall` outcome. -/
+theorem crepRuntimeExtCallValues_stateRel_dispatch
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (function : FunName)
+    (configuration configurationLength array arrayLength : RiscV.Word 64)
+    (configurationBytes arrayBytes : List UInt8)
+    (hstate : stateRel source (riscv64CrepRuntimeTarget base))
+    (hc : riscv64ReadByteArray base configuration configurationLength.toNat =
+      some configurationBytes)
+    (ha : riscv64ReadByteArray base array arrayLength.toNat = some arrayBytes) :
+    crepRuntimeExtCallValues riscv64ExtCallCallFfiHandler
+        (riscv64CrepRuntimeTarget base) function
+        configuration configurationLength array arrayLength =
+      (match callFfi source.ffi (.extCall function) configurationBytes arrayBytes with
+       | .returned ffi bytes =>
+           (.normal, riscv64WriteState { base with ffi := ffi } array bytes)
+       | .final event => (.finalFfi event, riscv64CrepRuntimeTarget base)) := by
+  have hffi : base.ffi = source.ffi :=
+    (hstate.2.2.2.2.2.2.2.1.trans (riscv64CrepRuntimeTarget_ffi base)).symm
+  rw [crepRuntimeExtCallValues_target_dispatch base function configuration
+    configurationLength array arrayLength configurationBytes arrayBytes hc ha, hffi]
+  rfl
 
 end Flapjack

@@ -4,6 +4,7 @@ duplicate_first=[(«id»,[],Return [Const 7w]); («id»,[],Return [Const 9w]);
  («main»,[],Seq Tick (Return [Const 7w]))]
 nested_inline=[(«leaf»,[],Return [Const 7w]); («mid»,[],Seq Tick (Return [Const 7w]));
  («main»,[],Seq Tick (Seq Tick (Return [Const 7w])))]
+params_two_words=[(«pair»,[0; 1],Skip)]
 global_dest=[(«f»,[],Skip); («g»,[0; 1],Call (SOME ([0; 1],NONE)) «f» [])]
 handled_missing_dest=[(«f»,[],Skip);
  («g»,[0; 1],

@@ -65,6 +65,7 @@ import Flapjack.Pancake.Proofs.PanGlobals
 import Flapjack.Pancake.Proofs.PanToCrep.EvaluateCases
 import Flapjack.Pancake.Proofs.PanToCrep
 import Flapjack.Pancake.Proofs.PanToCrep.Primop
+import Flapjack.Pancake.Proofs.PanToCrep.CompileProgParams
 import Flapjack.Pancake.Proofs.PanToCrep.EvaluatorBoundary
 import Flapjack.Pipeline
 import Flapjack.RiscV.PipelineDiagnostics

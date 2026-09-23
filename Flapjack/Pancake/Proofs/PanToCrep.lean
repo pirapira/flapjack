@@ -1128,6 +1128,41 @@ theorem slcTlcWordLabLocalsRelOfPanSem
   exact slcTlcWordLabLocalsRelMemberOfPanSem context parameters arguments slots
     name value hnames hshapeMap hslots hslotsLength hwf hlookup
 
+/-- HOL-`LIST_REL` presentation of the Call-entry `locals_rel` conjunct.
+`hshapeAt` is the indexed form supplied by `LIST_REL_EL_EQN`; this theorem
+constructs the source shape-map bridge explicitly before applying the
+`panSem$shape_of`/`is_wf_shape_v_nil` proof above. -/
+theorem slcTlcWordLabLocalsRelOfIndexedPanSem
+    (context : PanToCrepProofContext α) (parameters : List (String × Shape))
+    (arguments : List (PanValue α)) (slots : List Nat)
+    (hnames : (parameters.map Prod.fst).Nodup)
+    (hlength : parameters.length = arguments.length)
+    (hshapeAt : ∀ index (hparam : index < parameters.length)
+      (harg : index < arguments.length),
+      (parameters[index]'hparam).2 = panSemShapeOf (arguments[index]'harg))
+    (hslots : slots.Nodup)
+    (hslotsLength : slots.length = (arguments.flatMap panValueFlatten).length)
+    (hwf : ∀ value, value ∈ arguments →
+      isWfShape [] (panSemShapeOf value) = true) :
+    noOverlap (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+      (parameters.map Prod.snd) slots).vars ∧
+    ctxtMax
+      (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+        (parameters.map Prod.snd) slots).vmax
+      (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+        (parameters.map Prod.snd) slots).vars ∧
+    (∀ name value, FLOOKUP (slc parameters arguments) name = some value →
+      ∃ names words,
+        FLOOKUP (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+          (parameters.map Prod.snd) slots).vars name =
+            some (panValueShape [] value, names) ∧
+        names.mapM (FLOOKUP (tlcWordLab slots arguments)) = some words ∧
+        (panValueFlatten value).map PanWordLab.word = words ∧
+        isWfShape [] (panValueShape [] value) = true) := by
+  exact slcTlcWordLabLocalsRelOfPanSem context parameters arguments slots hnames
+    (callParameterShapeMapEqPanSem parameters arguments hlength hshapeAt)
+    hslots hslotsLength hwf
+
 /-! HOL `state_rel_def` (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:45`).
     The source Pancake state and target Crepe state agree on their memory
     domains, clock, endianness, FFI state, and address bounds; the source has

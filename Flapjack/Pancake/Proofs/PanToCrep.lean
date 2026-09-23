@@ -993,6 +993,141 @@ theorem tlcWordLabWithShapeGetElemMapOfPanSem
   rw [← withShape_getElem_eq_take_drop shapes (words.map PanWordLab.word) index
     hwordLabSize hindexShapes, hpartitionIndex]
 
+/-- The third conjunct of the Call entry `locals_rel` proof for one source
+`slc` lookup. The indexed source formal selects the corresponding `ctxtFc`
+slot group, whose actual word_lab `tlc` map yields the flattened value. -/
+theorem slcTlcWordLabLocalsRelMemberOfPanSem
+    (context : PanToCrepProofContext α) (parameters : List (String × Shape))
+    (arguments : List (PanValue α)) (slots : List Nat)
+    (name : String) (value : PanValue α)
+    (hnames : (parameters.map Prod.fst).Nodup)
+    (hshapeMap : parameters.map Prod.snd = arguments.map panSemShapeOf)
+    (hslots : slots.Nodup)
+    (hslotsLength : slots.length = (arguments.flatMap panValueFlatten).length)
+    (hwf : ∀ value, value ∈ arguments →
+      isWfShape [] (panSemShapeOf value) = true)
+    (hlookup : FLOOKUP (slc parameters arguments) name = some value) :
+    ∃ names words,
+      FLOOKUP (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+        (parameters.map Prod.snd) slots).vars name =
+          some (panValueShape [] value, names) ∧
+      names.mapM (FLOOKUP (tlcWordLab slots arguments)) = some words ∧
+      (panValueFlatten value).map PanWordLab.word = words ∧
+      isWfShape [] (panValueShape [] value) = true := by
+  obtain ⟨index, hindexName, hindexArg, hnameAt, hargAt⟩ :=
+    slcLookupGetElem parameters arguments name value hlookup
+  have hindexShape : index < (parameters.map Prod.snd).length := by
+    simpa only [List.length_map] using hindexName
+  have hindexPanSemShape : index < (arguments.map panSemShapeOf).length := by
+    simpa only [List.length_map] using hindexArg
+  have hshapeAtMap := congrArg (fun shapes : List Shape => shapes[index]?) hshapeMap
+  have hshapeAtSource : (parameters.map Prod.snd)[index]? =
+      some ((parameters.map Prod.snd)[index]'hindexShape) :=
+    List.getElem?_eq_getElem hindexShape
+  have hshapeAtArgs : (arguments.map panSemShapeOf)[index]? =
+      some ((arguments.map panSemShapeOf)[index]'hindexPanSemShape) :=
+    List.getElem?_eq_getElem hindexPanSemShape
+  rw [hshapeAtSource, hshapeAtArgs] at hshapeAtMap
+  have hshapeAt : (parameters.map Prod.snd)[index]'hindexShape =
+      panSemShapeOf (arguments[index]'hindexArg) := by
+    simpa only [List.getElem_map] using Option.some.inj hshapeAtMap
+  have hshapeValue : (parameters.map Prod.snd)[index]'hindexShape =
+      panValueShape [] value := by
+    calc
+      (parameters.map Prod.snd)[index]'hindexShape =
+          panSemShapeOf (arguments[index]'hindexArg) := hshapeAt
+      _ = panValueShape [] (arguments[index]'hindexArg) :=
+        panSemShapeOf_eq_panValueShape_nil _
+      _ = panValueShape [] value := by rw [hargAt]
+  have hindexParameter : index < parameters.length := by
+    simpa only [List.length_map] using hindexName
+  have hcontext := ctxtFcVarsLookupGetElem context parameters slots index hnames hindexParameter
+  rw [hnameAt, hshapeValue] at hcontext
+  have hgroupsEq := congrArg (fun shapes : List Shape => withShape shapes slots) hshapeMap
+  have hindexSourceGroup : index <
+      (withShape (parameters.map Prod.snd) slots).length := by
+    rw [withShape_length]
+    exact hindexShape
+  have hindexTargetGroup : index <
+      (withShape (arguments.map panSemShapeOf) slots).length := by
+    rw [withShape_length]
+    exact hindexPanSemShape
+  have hgroupsAt := congrArg
+    (fun groups : List (List Nat) => groups[index]?) hgroupsEq
+  have hsourceGroupSome := List.getElem?_eq_getElem hindexSourceGroup
+  have htargetGroupSome := List.getElem?_eq_getElem hindexTargetGroup
+  rw [hsourceGroupSome, htargetGroupSome] at hgroupsAt
+  have hgroupsAt' :
+      (withShape (parameters.map Prod.snd) slots)[index]'hindexSourceGroup =
+        (withShape (arguments.map panSemShapeOf) slots)[index]'hindexTargetGroup :=
+    Option.some.inj hgroupsAt
+  have hmap := tlcWordLabWithShapeGetElemMapOfPanSem arguments slots index hslots
+    hslotsLength hwf hindexArg
+  rw [← hgroupsAt'] at hmap
+  rw [hargAt] at hmap
+  have hwfValue : isWfShape [] (panValueShape [] value) = true := by
+    rw [← hargAt]
+    simpa [panSemShapeOf_eq_panValueShape_nil] using
+      hwf (arguments[index]'hindexArg) (List.getElem_mem hindexArg)
+  exact ⟨(withShape (parameters.map Prod.snd) slots)[index]'hindexSourceGroup,
+    (panValueFlatten value).map PanWordLab.word, hcontext, hmap, rfl, hwfValue⟩
+
+/-- The complete `locals_rel` conjunct for the Call-entry bindings, expressed
+at the source panSem shape/empty-context premise and the target state's
+`word_lab` locals map. This remains untagged support until the enclosing HOL
+Call preservation theorem is ported with its state/code/excp conclusions. -/
+theorem slcTlcWordLabLocalsRelOfPanSem
+    (context : PanToCrepProofContext α) (parameters : List (String × Shape))
+    (arguments : List (PanValue α)) (slots : List Nat)
+    (hnames : (parameters.map Prod.fst).Nodup)
+    (hshapeMap : parameters.map Prod.snd = arguments.map panSemShapeOf)
+    (hslots : slots.Nodup)
+    (hslotsLength : slots.length = (arguments.flatMap panValueFlatten).length)
+    (hwf : ∀ value, value ∈ arguments →
+      isWfShape [] (panSemShapeOf value) = true) :
+    noOverlap (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+      (parameters.map Prod.snd) slots).vars ∧
+    ctxtMax
+      (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+        (parameters.map Prod.snd) slots).vmax
+      (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+        (parameters.map Prod.snd) slots).vars ∧
+    (∀ name value, FLOOKUP (slc parameters arguments) name = some value →
+      ∃ names words,
+        FLOOKUP (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+          (parameters.map Prod.snd) slots).vars name =
+            some (panValueShape [] value, names) ∧
+        names.mapM (FLOOKUP (tlcWordLab slots arguments)) = some words ∧
+        (panValueFlatten value).map PanWordLab.word = words ∧
+        isWfShape [] (panValueShape [] value) = true) := by
+  have hwfNil : ∀ value, value ∈ arguments →
+      isWfShape [] (panValueShape [] value) = true := by
+    intro value hmem
+    simpa [panSemShapeOf_eq_panValueShape_nil] using hwf value hmem
+  have hshapeMapNil : parameters.map Prod.snd = arguments.map (panValueShape []) := by
+    calc
+      parameters.map Prod.snd = arguments.map panSemShapeOf := hshapeMap
+      _ = arguments.map (panValueShape []) := panSemShapeOfMapPanValueShapeNil arguments
+  have hshapeSize : Shape.shapeSize (.comb (parameters.map Prod.snd)) =
+      (arguments.flatMap panValueFlatten).length := by
+    rw [hshapeMapNil]
+    simpa [Function.comp_def, List.length_flatMap] using
+      shapeSize_comb_map_panValueShape_eq_flatten_length arguments hwfNil
+  have hslotsShape : slots.length = Shape.shapeSize (.comb (parameters.map Prod.snd)) :=
+    hslotsLength.trans hshapeSize.symm
+  have hnoOverlap := ctxtFcNoOverlapOfDistinctSlots context parameters slots hslots hslotsShape
+  have hmax := ctxtFcCtxtMaxOfSlots context parameters slots hslotsShape
+  have hcontextMax : ctxtMax
+      (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+        (parameters.map Prod.snd) slots).vmax
+      (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+        (parameters.map Prod.snd) slots).vars := by
+    simpa [ctxtFc] using hmax
+  refine ⟨hnoOverlap, hcontextMax, ?_⟩
+  intro name value hlookup
+  exact slcTlcWordLabLocalsRelMemberOfPanSem context parameters arguments slots
+    name value hnames hshapeMap hslots hslotsLength hwf hlookup
+
 /-! HOL `state_rel_def` (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:45`).
     The source Pancake state and target Crepe state agree on their memory
     domains, clock, endianness, FFI state, and address bounds; the source has

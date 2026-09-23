@@ -3672,6 +3672,22 @@
     "reviewer": "Flapjack source-facing tlc slot projection at panSem shape_of under the Call theorem's empty-context argument well-formedness premise; no arbitrary-struct generalization claimed."
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "slcTlcWordLabLocalsRelMemberOfPanSem",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack support deriving the locals_rel member clause from a successful slc lookup, formal/context shape lookup, and the target word_lab slot projection; not tagged as the enclosing HOL Call theorem."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "slcTlcWordLabLocalsRelOfPanSem",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack Call-entry proof of the expanded locals_rel_def body for slc parameters and the actual word_lab target tlc map under source panSem shape_of/is_wf_shape_v_nil premises; does not claim state/code/excp preservation or an exact theorem port."
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
     "hol_name": "state_rel_def",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",

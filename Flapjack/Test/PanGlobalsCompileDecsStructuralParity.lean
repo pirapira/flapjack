@@ -65,15 +65,54 @@ def compileDecsStructuralGuard : Bool :=
   ((functions result.functions).map (fun entry => entry.1) ==
     (functions declarations).map (fun entry => entry.1))
 
-#eval compileDecsStructuralGuard
-#guard compileDecsStructuralGuard
+/-- Predicate that recognizes the function declaration renamed from `f` to
+    `b`; true on every other declaration, matching the HOL hypothesis shape of
+    `EVERY_fperm_decs`. -/
+def renamedPredicate : Decl Nat → Bool
+  | .function function => function.name == "b"
+  | _ => true
+
+theorem everyFpermDecsFixture :
+    (globalRenameDecls "f" "b" declarations).all renamedPredicate = true :=
+  EVERY_fperm_decs "f" "b" renamedPredicate declarations (by decide) (by decide)
+
+theorem compileDecsFilterDeclsFixture :
+    globalCompileDecs compileContext (globalDeclsFilter isDecl declarations) =
+      { initializers := compileResult.initializers, functions := [],
+        exceptions := [], context := compileResult.context } :=
+  compile_decs_FILTER_decs compileContext declarations
+    compileResult.initializers compileResult.functions compileResult.exceptions
+    compileResult.context rfl
+
+def everyFpermDecsGuard : Bool :=
+  (globalRenameDecls "f" "b" declarations).all renamedPredicate
+
+def compileDecsFilterDeclsGuard : Bool :=
+  let result := globalCompileDecs compileContext
+    (globalDeclsFilter isDecl declarations)
+  result.functions.isEmpty && result.exceptions.isEmpty &&
+  (result.initializers.length == compileResult.initializers.length)
+
+#eval everyFpermDecsGuard
+#guard everyFpermDecsGuard
+#eval compileDecsFilterDeclsGuard
+#guard compileDecsFilterDeclsGuard
 
 def runChecks : IO Bool := do
-  if compileDecsStructuralGuard then
-    IO.println "PASS pan_globals compile_decs structural lemmas"
-    pure true
-  else
-    IO.println "FAIL pan_globals compile_decs structural lemmas"
-    pure false
+  let structuralOk ←
+    if compileDecsStructuralGuard then
+      IO.println "PASS pan_globals compile_decs structural lemmas"
+      pure true
+    else
+      IO.println "FAIL pan_globals compile_decs structural lemmas"
+      pure false
+  let fpermFilterOk ←
+    if everyFpermDecsGuard && compileDecsFilterDeclsGuard then
+      IO.println "PASS pan_globals EVERY_fperm_decs and compile_decs_FILTER_decs"
+      pure true
+    else
+      IO.println "FAIL pan_globals EVERY_fperm_decs and compile_decs_FILTER_decs"
+      pure false
+  pure (structuralOk && fpermFilterOk)
 
 end Flapjack.Test.PanGlobalsCompileDecsStructuralParity

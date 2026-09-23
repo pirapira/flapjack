@@ -605,4 +605,51 @@ theorem compile_decs_preserve_functions [BEq String] [Add α] [Mul α]
       (functions code).map (fun entry => entry.1) := by
   simpa [hcompile] using globalCompileDecs_preserve_functions context code
 
+/-- Exact-shaped port of Cake's `EVERY_fperm_decs`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2436`): if a predicate
+    holds on every non-function declaration and on every renamed function
+    declaration, it holds on every declaration produced by the renaming pass.
+    HOL `EVERY (λd. ¬is_function d ⇒ P d)` is the boolean
+    `declarations.all (fun d => globalDeclIsFunction d || predicate d) = true`;
+    the function premise keeps HOL's `Function fi` destructuring. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "EVERY_fperm_decs"]
+theorem EVERY_fperm_decs [BEq String] (source target : FunName)
+    (predicate : Decl α → Bool) (declarations : List (Decl α))
+    (hother : declarations.all
+      (fun declaration => globalDeclIsFunction declaration || predicate declaration) = true)
+    (hfunction : declarations.all
+      (fun declaration => match declaration with
+        | .function function =>
+            predicate (.function { function with
+              name := globalRenameFunctionName source target function.name
+              body := globalRenameProg source target function.body })
+        | _ => true) = true) :
+    (globalRenameDecls source target declarations).all predicate = true :=
+  globalRenameDecls_all_of_predicate source target predicate declarations
+    hother hfunction
+
+/-- Exact-shaped port of Cake's `compile_decs_FILTER_decs`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2822`): filtering the
+    source program to its value declarations leaves the initializers and the
+    context unchanged and empties the function and exception tables.  HOL
+    `FILTER is_decl` is `globalDeclsFilter isDecl`; the four outputs are
+    quantified and bound by the equality premise as in the other
+    `compile_decs` ports, and the result is stated as a whole record. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "compile_decs_FILTER_decs"]
+theorem compile_decs_FILTER_decs [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α))
+    (decls : List (Prog α)) (funs exns : List (Decl α))
+    (ctxt' : GlobalPassContext α)
+    (hcompile : globalCompileDecs context code =
+      { initializers := decls, functions := funs,
+        exceptions := exns, context := ctxt' }) :
+    globalCompileDecs context (globalDeclsFilter isDecl code) =
+      { initializers := decls, functions := [],
+        exceptions := [], context := ctxt' } := by
+  obtain ⟨hinit, hfuns, hexns, hctx⟩ := globalCompileDecs_filter_isDecl context code
+  simp only [hcompile] at hinit hfuns hexns hctx
+  cases h : globalCompileDecs context (globalDeclsFilter isDecl code)
+  simp only [h] at hinit hfuns hexns hctx
+  simp [hinit, hfuns, hexns, hctx]
+
 end Flapjack

@@ -2664,6 +2664,22 @@
     "reviewer": "Codex (source comparison)"
   },
   {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "EVERY_fperm_decs",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "EVERY_fperm_decs",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "compile_decs_FILTER_decs",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "compile_decs_FILTER_decs",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
@@ -2836,8 +2852,8 @@
     "hol_name": "alookup_drop_helper",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "lookup_drop_helper",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (ALOOKUP/List.lookup and ALL_DISTINCT/Nodup premise and both conjunction outputs matched; direct HOL-EVAL premise/conclusion fixture)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",

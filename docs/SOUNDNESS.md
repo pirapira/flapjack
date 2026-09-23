@@ -44,6 +44,13 @@ translation comes from line-by-line review of definitions and theorem shapes,
 direct HOL probes compared with Lean results, and differential compiler tests.
 Those checks are valuable but finite and do not close this trust boundary.
 
+`HOL-THEOREM-MAP.json` records each tagged declaration and every theorem or
+lemma under `Flapjack/Pancake/Proofs`, including statement-review status and a
+reviewer field. The CI gate checks inventory coverage and metadata consistency;
+it does not perform statement review. Entries marked
+`pending_statement_review` or `no_hol_reference_pending_classification` remain
+open review work and must not be described as exact HOL ports.
+
 Lean proofs establish their conclusions about the Lean definitions actually
 used in their statements. Even a complete Lean port of Pancake's correctness
 chain would imply a property of the original HOL/Pancake compiler only under

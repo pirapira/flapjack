@@ -357,7 +357,7 @@ theorem panSemEvaluateCodeStateWithPostState_eq_map
       (memoryHandler := memoryHandler) <;>
     simp [panSemEvaluateCodeStateWithPostState, hresult]
 
-/-! Exact HOL `evaluate_def` Tick equation
+/-! Production-evaluator counterpart of the HOL `evaluate_def` Tick equation
     (`cakeml/pancake/semantics/panSemScript.sml:683-685`) over the production
     source-state evaluator: at clock zero the result is `TimeOut` with cleared
     locals, otherwise `NONE` with the clock decremented and every other state

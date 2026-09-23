@@ -91,9 +91,6 @@ def tickSuccGuard : Bool :=
 #guard tickZeroGuard
 #guard tickSuccGuard
 
-theorem tickZeroGuard_true : tickZeroGuard = true := by native_decide
-theorem tickSuccGuard_true : tickSuccGuard = true := by native_decide
-
 def runChecks : IO Bool := do
   if tickZeroGuard then IO.println "PASS panSem Tick zero-clock timeout clears locals"
   else IO.println "FAIL panSem Tick zero-clock timeout clears locals"

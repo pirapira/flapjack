@@ -328,6 +328,22 @@
     "reviewer": "Codex (source comparison)"
   },
   {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "not_is_function",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "not_is_function",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "decl_distinct",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "decl_distinct",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
@@ -2470,6 +2486,14 @@
     "lean_name": "dropWhile_map_helper",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source predicate premise and MAP/DROPWHILE conclusion comparison with direct HOL-EVAL fixture)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "UNCURRY_EQ_o_SND",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "prod_uncurry_const_eq_comp_snd",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (generic function statement comparison with direct HOL-EVAL fixture)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",

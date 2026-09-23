@@ -96,6 +96,10 @@ checks the equivalent `getElem?`-based API in
 missing and duplicate-key cases for `ALOOKUP_eq_afindi` at
 `cakeml/pancake/proofs/pan_structsProofScript.sml:405`; matching `List.lookup`
 regressions live in `Flapjack.Test.PanStructsAfindiParity`.
+`pan_structs_afindi_append_probe.out` records direct HOL EVAL of prefix-hit,
+shifted suffix-hit and missing-key rows for `afindi_append` at
+`cakeml/pancake/proofs/pan_structsProofScript.sml:417`; matching Lean cases
+live in `Flapjack.Test.PanStructsAfindiParity`.
 The `longdiv_code_probe.out` fixture probes the original software LongDiv
 helper at `cakeml/compiler/backend/data_to_wordScript.sml:829-867` and the
 RISC-V target's deliberate LongDiv encoding rejection.

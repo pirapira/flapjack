@@ -57,7 +57,7 @@ theorem elLoadGlobals {α : Type u}
 /-- Flapjack-specific bridge: the source-semantics shape function agrees with
     the pre-existing value shape function at the empty structure context.
     HOL has one `shape_of` function, so this bridge has no HOL original. -/
-private theorem panSemShapeOf_eq_panValueShape_nil (value : PanValue α) :
+theorem panSemShapeOf_eq_panValueShape_nil (value : PanValue α) :
     panSemShapeOf value = panValueShape [] value := by
   induction value using panSemShapeOf.induct with
   | case1 _ => simp [panSemShapeOf, panValueShape]
@@ -1419,15 +1419,13 @@ callee-entry word_lab locals. This is the state-owned Call boundary: the
 source's `bindPanValueParameters` result is identified with HOL `slc`, then
 the exact expanded `locals_rel` proof above applies. It remains support for the
 enclosing recursive Call case and is not itself a HOL theorem port. -/
-theorem bindPanValueParametersLocalsRelOfIndexedPanSem
+theorem bindPanValueParametersLocalsRelOfPanSem
     (context : PanToCrepProofContext α) (parameters : List (String × Shape))
     (arguments : List (PanValue α)) (slots : List Nat)
     (sourceLocals : String → Option (PanValue α))
     (hnames : (parameters.map Prod.fst).Nodup)
     (hlength : parameters.length = arguments.length)
-    (hshapeAt : ∀ index (hparam : index < parameters.length)
-      (harg : index < arguments.length),
-      (parameters[index]'hparam).2 = panSemShapeOf (arguments[index]'harg))
+    (hshapeMap : parameters.map Prod.snd = arguments.map panSemShapeOf)
     (hslots : slots.Nodup)
     (hslotsLength : slots.length = (arguments.flatMap panValueFlatten).length)
     (hwf : ∀ value, value ∈ arguments →
@@ -1442,8 +1440,8 @@ theorem bindPanValueParametersLocalsRelOfIndexedPanSem
   have hsourceLocals : sourceLocals = slc parameters arguments :=
     Option.some.inj (hbind.symm.trans hbindSlc)
   rw [hsourceLocals]
-  exact slcTlcWordLabLocalsRelOfIndexedPanSem_exact context parameters
-    arguments slots hnames hlength hshapeAt hslots hslotsLength hwf
+  exact slcTlcWordLabLocalsRelOfPanSem context parameters arguments slots
+    hnames hshapeMap hslots hslotsLength hwf
 
 /-- HOL `locals_rel_wf_shape`: every source local covered by the local-state
     relation is a well-formed value in the empty struct context. -/

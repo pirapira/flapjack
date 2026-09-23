@@ -627,6 +627,14 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "lookupCrepRuntimeCode_callEntryLocalsRel",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only actual source and target Call-entry locals_rel derived from successful state-owned lookups, evaluator argument well-formedness, and exact tlcWordLab target locals; supplies one recursive Call IH boundary but not the full pc_compile_correct case"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "panSemCallCalleeEntryStateCodeExcpRel",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only Call-entry preservation helper: derives state_rel across source/target local replacement and matching clock decrement, and carries the state-owned code_rel and source excp_rel into HOL's ctxt_fc function context. It does not derive the function-context locals_rel for bound arguments or prove the Call induction case."
@@ -646,6 +654,14 @@
     "lean_name": "panSemCodeArgumentsMatch_of_lookup_success",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only extraction of the shape-matching condition from successful state-owned source code lookup; no standalone HOL theorem statement is claimed."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "bindPanValueParameters_of_lookup_success",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Private Flapjack projection of successful state-owned code lookup to its actual source parameter binder result; feeds the callee-entry locals_rel bridge, not a standalone HOL theorem"
   },
   {
     "hol_path": null,
@@ -4675,7 +4691,7 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
-    "lean_name": "bindPanValueParametersLocalsRelOfIndexedPanSem",
+    "lean_name": "bindPanValueParametersLocalsRelOfPanSem",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only callee-entry locals_rel bridge from the successful source evaluator binder to actual target word_lab locals; derives the relation through slc, not the enclosing Call preservation theorem"
   },

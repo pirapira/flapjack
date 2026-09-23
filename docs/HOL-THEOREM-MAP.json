@@ -4254,5 +4254,13 @@
     "lean_name": "panStructTickEvaluatorSupport",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Paired Tick evaluator support only; omits compile_correct premises and invariant/shape-map/result postconditions; not an exact theorem case."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "every_exp_def",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "crepEveryExp",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (constructor-by-constructor source comparison against every_exp_def; direct HOL-EVAL rows reproduced by Lean guards in Flapjack/Test/CrepEveryExpParity.lean)"
   }
 ]

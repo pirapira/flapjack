@@ -167,6 +167,9 @@ run_probe crep_runtime_write_bytes_probeScript.sml crep_runtime_write_bytes_prob
 run_probe crep_runtime_ext_call_probeScript.sml crep_runtime_ext_call_probe.out \
   empty_name_identity oracle_diverged "$cake_dir/pancake/semantics/panSemScript.sml" \
   "$cake_dir/pancake/semantics"
+run_probe crep_every_exp_probeScript.sml crep_every_exp_probe.out \
+  const_hit always_op_nested "$cake_dir/pancake/semantics/crepPropsScript.sml" \
+  "$cake_dir/pancake/semantics"
 run_probe pan_flat_store_probeScript.sml pan_flat_store_probe.out \
   store_hit stores_blocked "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_flatten_probeScript.sml pan_flatten_probe.out \

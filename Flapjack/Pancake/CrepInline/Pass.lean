@@ -168,7 +168,7 @@ def insert [BEq FunName] [LawfulBEq FunName] (name : FunName)
         ((List.filter_sublist (l := fs.entries)).map Prod.fst) }
 
 /-- HOL finite-map `SUBMAP`: every binding of `a` is a binding of `b`. -/
-def submap (a b : CrepInlineFmap α) : Prop :=
+def submap [BEq FunName] (a b : CrepInlineFmap α) : Prop :=
   ∀ name value, a.lookup name = some value → b.lookup name = some value
 
 theorem eraseDups_eq_self_of_nodup [BEq FunName] [LawfulBEq FunName]
@@ -199,7 +199,7 @@ theorem lookup_insert_self [BEq FunName] [LawfulBEq FunName] (name : FunName)
   rw [insert, lookup]
   exact List.lookup_eq_some_iff.mpr ⟨[], _, rfl, by simp⟩
 
-theorem submap_refl (fs : CrepInlineFmap α) : submap fs fs := fun _ _ h => h
+theorem submap_refl [BEq FunName] (fs : CrepInlineFmap α) : submap fs fs := fun _ _ h => h
 
 /-- Removing a bound key strictly decreases the domain cardinality. -/
 theorem length_filter_lt_of_lookup [BEq FunName] [LawfulBEq FunName]
@@ -242,6 +242,35 @@ theorem lookup_remove_none [BEq FunName] [LawfulBEq FunName] (name : FunName)
       rw [List.mem_filter] at hmem
       simpa using hmem.2
 
+/-! ### Carrier bridge to the HOL finite-map view
+
+The HOL source uses `FLOOKUP`/`\\`/`SUBMAP`/`CARD (FDOM _)` on an
+`mlstring |-> _ fmap`.  `toFiniteMap` reads the same partial function out of a
+`CrepInlineFmap`, so the HOL `FLOOKUP` view is represented exactly, and `card`
+is the finite domain cardinality (see `card_eq_domain_cardinality`).  This is a
+*view* bridge, not a type isomorphism: the carrier is the unique-key entry list
+rather than an sptree, which is why `crepInlineProgFmap` carries no `@[hol]`
+tag (see the tag review in the definition's docstring). -/
+
+/-- The partial function of a `CrepInlineFmap`, i.e. its HOL `fmap` read view. -/
+def toFiniteMap [BEq FunName] (fs : CrepInlineFmap α) :
+    FiniteMap FunName (List Nat × CrepProg α) :=
+  fun name => fs.lookup name
+
+theorem FLOOKUP_toFiniteMap [BEq FunName] (fs : CrepInlineFmap α) (name : FunName) :
+    FLOOKUP (toFiniteMap fs) name = fs.lookup name := rfl
+
+theorem submap_iff_flookup [BEq FunName] (a b : CrepInlineFmap α) :
+    submap a b ↔
+      ∀ name value,
+        FLOOKUP (toFiniteMap a) name = some value →
+        FLOOKUP (toFiniteMap b) name = some value := by
+  constructor
+  · intro h name value hf
+    exact h name value hf
+  · intro h name value hl
+    exact h name value hl
+
 end CrepInlineFmap
 
 /-- Exact shape of Cake `crep_inline$inline_prog`
@@ -252,7 +281,17 @@ end CrepInlineFmap
     callee name from the finite map before recursing into the looked-up callee
     body, and dispatches on the (possibly handler-inlined) call type.
     Termination uses HOL's measure `CARD (FDOM fs) LEX prog_size`, supplied
-    here by `CrepInlineFmap.card` and `CrepInlineFmap.card_remove_lt`. -/
+    here by `CrepInlineFmap.card` and `CrepInlineFmap.card_remove_lt`.
+
+    **Tag review.**  No `@[hol]` tag is attached.  The carrier bridge
+    `CrepInlineFmap.toFiniteMap` shows `FLOOKUP`/`SUBMAP` correspond exactly
+    and `card` equals `CARD (FDOM _)`, but HOL `inline_prog_def` is a literal
+    recursive definition over an `mlstring |-> _` sptree with an sptree-based
+    termination measure, whereas this definition is over the unique-key entry
+    list with a `card` measure.  The identity of the two *definition terms*
+    therefore fails even though their values agree on the bridged view, so a
+    tag would misrepresent the statement.  Behaviour is instead pinned by the
+    direct HOL oracle `scripts/hol-probes/crep_inline_code_inl_probe.out`. -/
 def crepInlineProgFmap [BEq FunName] [LawfulBEq FunName]
     [OfNat α 0] [OfNat α 1]
     (inlineable : CrepInlineFmap α) : CrepProg α → CrepProg α

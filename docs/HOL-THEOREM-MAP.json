@@ -4449,6 +4449,14 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "compile_exp_correct_mmap_helper",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructCompileExpsEvalOfPointwiseCorrect",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Kernel-checked production list-evaluation prerequisite for HOL's local compile_exp_correct_mmap_helper at line 206. It preserves the source-list success premise, per-expression source-to-compiled correctness premise, and converted mapped-values conclusion over evalPanValueExps/structCompileExps. It is intentionally untagged: the HOL helper is local and ranges over eval of a HOL finite-map state, while Lean uses PanSemState total lookup functions and an explicit bytesInWord evaluator argument. This supports RStruct/NStruct and other recursive expression cases; it is not itself a compile_exp_correct constructor case."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "compile_correct",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "panStructCompileCorrectBreakCase",

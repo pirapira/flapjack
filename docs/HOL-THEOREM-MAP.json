@@ -112,6 +112,14 @@
     "reviewer": "Codex (constructor-by-constructor source comparison)"
   },
   {
+    "hol_path": "cakeml/pancake/semantics/loopSemScript.sml",
+    "hol_name": "loop_primop_def",
+    "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",
+    "lean_name": "loopPrimopHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (constructor-by-constructor source comparison)"
+  },
+  {
     "hol_path": "cakeml/pancake/pan_globalsScript.sml",
     "hol_name": "fperm_name_def",
     "lean_path": "Flapjack/Pancake/PanGlobals.lean",
@@ -2772,16 +2780,16 @@
     "hol_name": "ALOOKUP_MAP3",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "ALOOKUP_MAP3",
-    "statement_status": "documented_mismatch",
-    "reviewer": "Codex (source comparison; HOL ALOOKUP is key-polymorphic, production lookupInfo is String-specialized)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; key-polymorphic lookupInfo == alist$ALOOKUP under LawfulBEq)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
     "hol_name": "ALOOKUP_MAP4",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "ALOOKUP_MAP4",
-    "statement_status": "documented_mismatch",
-    "reviewer": "Codex (source comparison; HOL ALOOKUP is key-polymorphic, production lookupInfo is String-specialized)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; key-polymorphic lookupInfo == alist$ALOOKUP under LawfulBEq)"
   },
   {
     "hol_path": null,
@@ -4061,7 +4069,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "localsRelUpdateExistingValue",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only handler-prestate bridge from locals_rel lookup to shape-preserving flattened update; no standalone HOL declaration"
+    "reviewer": "Flapjack-only handler-prestate bridge from locals_rel lookup to shape-preserving flattened update; the one-word target exp_hdl execution step is proved by EvaluateCases.crepRuntimeExpHdlOneWord; general handler case and enclosing Call relation remain open"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
@@ -4074,26 +4082,10 @@
   {
     "hol_path": null,
     "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
-    "lean_name": "crepRuntimeExtCall_stateRel_dispatch_returned",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only four-local companion of crepRuntimeExtCallValues_stateRel_dispatch_returned: resolves the actual Nat-indexed production crepRuntimeExtCall wrapper to the canonical-target ExtCall dispatch and builds the source panSemWriteBytearray post-state for the FFI_return branch; no single HOL declaration"
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "crepRuntimeExpHdlOneWord",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only actual target exp_hdl execution for a one-word payload loaded from globals_lookup slot 0 into an existing handler local; induction support, not the enclosing Call_Ret_Exception theorem"
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
-    "lean_name": "crepRuntimeExtCallValues_stateRel_dispatch_final",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only non-returned companion of crepRuntimeExtCallValues_stateRel_dispatch_returned: when the call_FFI handler reports a final event, the canonical-target ExtCall step is FinalFFI with the target state unchanged and the source/target states remain the related pre-states (HOL FFI_final, (SOME (FinalFFI outcome), s))."
   },
   {
     "hol_path": null,
@@ -4106,26 +4098,10 @@
   {
     "hol_path": null,
     "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
-    "lean_name": "crepRuntimeExtCall_stateRel_error",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only four-local wrapper failing-read branch (HOL _ => (SOME Error, s)): the Nat-indexed production crepRuntimeExtCall resolves its four locals, the configuration or array read fails, and the step is Error with the target state unchanged and the source/target states still related."
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "panSemEvaluateRiscV64CodeState_callCatchRaiseOneWord_ofEntry",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only fixed-RV64 source-state Call exception dispatch helper: state-owned callee raises a one-word payload and a preexisting matching handler local returns it; induction support, not full pc_compile_correct case"
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
-    "lean_name": "crepRuntimeExtCall_stateRel_dispatch_final",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only four-local companion of crepRuntimeExtCallValues_stateRel_dispatch_final: the production crepRuntimeExtCall wrapper resolves its four locals, the reads succeed and the handler reports a final event, so the step is FinalFFI with the target state unchanged and the source/target states stay related."
   },
   {
     "hol_path": null,
@@ -4142,5 +4118,53 @@
     "lean_name": "evalCrepRuntimeCall_catchesRaisedOneWordHandler",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only composition of target Call exception dispatch with actual exp_hdl/Return evaluation, given target code lookup and callee-body IH; full source/target state relation composition remains open"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "crepRuntimeExtCall_stateRel_dispatch_returned",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only four-local companion of crepRuntimeExtCallValues_stateRel_dispatch_returned: resolves the actual Nat-indexed production crepRuntimeExtCall wrapper to the canonical-target ExtCall dispatch and builds the source panSemWriteBytearray post-state for the FFI_return branch; no single HOL declaration"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "crepRuntimeExtCallValues_stateRel_dispatch_final",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only non-returned companion of crepRuntimeExtCallValues_stateRel_dispatch_returned: when the call_FFI handler reports a final event, the canonical-target ExtCall step is FinalFFI with the target state unchanged and the source/target states remain the related pre-states (HOL FFI_final, (SOME (FinalFFI outcome), s))."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "crepRuntimeExtCall_stateRel_error",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only four-local wrapper failing-read branch (HOL _ => (SOME Error, s)): the Nat-indexed production crepRuntimeExtCall resolves its four locals, the configuration or array read fails, and the step is Error with the target state unchanged and the source/target states still related."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "crepRuntimeExtCall_stateRel_dispatch_final",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only four-local companion of crepRuntimeExtCallValues_stateRel_dispatch_final: the production crepRuntimeExtCall wrapper resolves its four locals, the reads succeed and the handler reports a final event, so the step is FinalFFI with the target state unchanged and the source/target states stay related."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panToCrepPcCompileCorrectCallCatchRaiseOneWordCodeStateRiscV64",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only fixed-RV64 actual-state matching Call exception case for one-word payload: derives source callee from PanSemState.code and target callee from code_rel, maps handler via excp_rel/context, executes exp_hdl payload load and Return, and proves state_rel/code_rel/excp_rel/global lookup/clock; not a direct HOL theorem port"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panSemEvaluateRiscV64CodeCall_catchesRaisedBody_ofState",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only fixed-RV64 source Call induction step: arbitrary callee/body/arguments and raised-payload source IH are evaluated through the finite state-owned code map and memory domains derived from PanSemState; does not prove the target relation or full pc_compile_correct Call case"
   }
 ]

@@ -2852,8 +2852,8 @@
     "hol_name": "afindi_EL",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "afindi_el_fst",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (HOL EL/FST result matches Lean getElem?/map result; successful afindi premise ensures the indexed access exists; direct HOL-EVAL first/middle/last rows paired with Lean regression)"
   },
   {
     "hol_path": null,

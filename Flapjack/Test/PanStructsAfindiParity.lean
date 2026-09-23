@@ -40,6 +40,25 @@ theorem afindi_el_fst_fixture : (entries[1]?).map Prod.fst = some "b" := by
   have h : afindi "b" entries = some 1 := by simp [afindi, entries]
   exact afindi_el_fst "b" entries 1 h
 
+/-! Direct HOL-EVAL rows from `pan_structs_afindi_el_probe.out` for first,
+middle and last matches. Lean's `getElem?` result records the HOL `EL` index's
+validity explicitly; the theorem gives the matching first component. -/
+theorem afindi_el_fst_first_fixture : (entries[0]?).map Prod.fst = some "a" := by
+  have h : afindi "a" entries = some 0 := by simp [afindi, entries]
+  exact afindi_el_fst "a" entries 0 h
+
+theorem afindi_el_fst_last_fixture : (entries[2]?).map Prod.fst = some "c" := by
+  have h : afindi "c" entries = some 2 := by simp [afindi, entries]
+  exact afindi_el_fst "c" entries 2 h
+
+def holAfIndiElGuard : Bool :=
+  (entries[0]?).map Prod.fst == some "a" &&
+  (entries[1]?).map Prod.fst == some "b" &&
+  (entries[2]?).map Prod.fst == some "c"
+
+#eval holAfIndiElGuard
+#guard holAfIndiElGuard
+
 theorem afindi_append_fixture :
     afindi "d" (entries ++ [("d", 40)]) =
       (match afindi "d" entries with

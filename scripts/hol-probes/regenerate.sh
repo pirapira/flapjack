@@ -123,8 +123,15 @@ run_probe crep_runtime_ffi_boundary_probeScript.sml crep_runtime_ffi_boundary_pr
 run_probe crep_runtime_shared_domain_probeScript.sml crep_runtime_shared_domain_probe.out \
   valid_zero_mem align_16 "$cake_dir/pancake/semantics/panSemScript.sml" \
   "$cake_dir/pancake/semantics"
+run_probe crep_arith_dest_const_probeScript.sml crep_arith_dest_const_probe.out \
+  constant multiplication "$cake_dir/pancake/crep_arithScript.sml"
+run_probe crep_arith_eval_mul_const_probeScript.sml crep_arith_eval_mul_const_probe.out \
+  input_word multiply_general "$cake_dir/pancake/proofs/crep_arithProofScript.sml"
 run_probe crep_runtime_read_bytes_probeScript.sml crep_runtime_read_bytes_probe.out \
   read_bytes_zero read_bytes_out_of_domain "$cake_dir/pancake/semantics/panSemScript.sml" \
+  "$cake_dir/pancake/semantics"
+run_probe crep_runtime_write_bytes_probeScript.sml crep_runtime_write_bytes_probe.out \
+  write_head write_out_of_domain "$cake_dir/pancake/semantics/panSemScript.sml" \
   "$cake_dir/pancake/semantics"
 run_probe pan_flat_store_probeScript.sml pan_flat_store_probe.out \
   store_hit stores_blocked "$cake_dir/pancake/semantics/panSemScript.sml"

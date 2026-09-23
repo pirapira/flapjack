@@ -1,0 +1,5 @@
+input_word=SOME (Word 7w)
+multiply_zero=SOME (Word 0w)
+multiply_one=SOME (Word 7w)
+multiply_power_of_two=SOME (Word 56w)
+multiply_general=SOME (Word 21w)

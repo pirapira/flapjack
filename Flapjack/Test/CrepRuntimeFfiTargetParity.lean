@@ -157,17 +157,57 @@ example : crepRuntimeReadBytes ffiReadTarget (8 : RiscV.Word 64) 4 =
     riscv64ReadByteArray ffiReadBase (8 : RiscV.Word 64) 4 :=
   crepRuntimeReadBytes_target_eq_riscv ffiReadBase 8 4
 
+/-- The write-bytes oracle uses the same memory/domain as the read-bytes one. -/
+def ffiWriteBase : CrepRuntimeState (RiscV.Word 64) Unit := ffiReadBase
+
+def writeBytes8 : List UInt8 :=
+  [(0xAA : UInt8), 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x11, 0x22]
+
+def writeBytes1 : List UInt8 := [(0xAA : UInt8)]
+
+/-- Bool mirror of the write-bytes rows of the HOL oracle
+    (`write_head=SOME 0xAAw; write_byte1=SOME 0xBBw; write_32=SOME 0xDDCCBBAAw;
+    write_unaligned_byte=SOME 0xAAw; write_out_of_domain=SOME 0x01w`), where
+    `riscv64WriteMem` mirrors HOL's total `write_bytearray`. -/
+def ffiWriteBytesGuard : Bool :=
+  (RiscV.panRiscVReadByte ffiWriteBase.memaddrs
+      (riscv64WriteMem ffiWriteBase (8 : RiscV.Word 64) writeBytes8)
+      (8 : RiscV.Word 64) (8 : RiscV.Word 64) == some (170 : RiscV.Word 64)) &&
+  (RiscV.panRiscVReadByte ffiWriteBase.memaddrs
+      (riscv64WriteMem ffiWriteBase (8 : RiscV.Word 64) writeBytes8)
+      (8 : RiscV.Word 64) (9 : RiscV.Word 64) == some (187 : RiscV.Word 64)) &&
+  (RiscV.panRiscVRead32 ffiWriteBase.memaddrs
+      (riscv64WriteMem ffiWriteBase (8 : RiscV.Word 64) writeBytes8)
+      (8 : RiscV.Word 64) (8 : RiscV.Word 64) == some (0xDDCCBBAA : RiscV.Word 64)) &&
+  (RiscV.panRiscVReadByte ffiWriteBase.memaddrs
+      (riscv64WriteMem ffiWriteBase (9 : RiscV.Word 64) writeBytes1)
+      (8 : RiscV.Word 64) (9 : RiscV.Word 64) == some (170 : RiscV.Word 64)) &&
+  (RiscV.panRiscVReadByte ffiWriteBase.memaddrs
+      (riscv64WriteMem ffiWriteBase (16 : RiscV.Word 64) writeBytes1)
+      (8 : RiscV.Word 64) (8 : RiscV.Word 64) == some (1 : RiscV.Word 64))
+
+/-- Production `crepRuntimeWriteBytes` on the canonical target maps to the HOL
+    `write_bytearray` memory. -/
+example : (crepRuntimeWriteBytes (riscv64CrepRuntimeTarget ffiWriteBase)
+      (8 : RiscV.Word 64) writeBytes8).map (fun state => state.memory) =
+    some (riscv64WriteMem ffiWriteBase (8 : RiscV.Word 64) writeBytes8) :=
+  crepRuntimeWriteBytes_target_eq_riscv ffiWriteBase 8 writeBytes8
+
 #guard ffiByteCodecGuard
 
 #guard ffiSharedDomainGuard
 
 #guard ffiReadBytesGuard
 
+#guard ffiWriteBytesGuard
+
 #eval ffiByteCodecGuard
 
 #eval ffiSharedDomainGuard
 
 #eval ffiReadBytesGuard
+
+#eval ffiWriteBytesGuard
 
 def runChecks : IO Bool := do
   if ffiByteCodecGuard then
@@ -182,6 +222,11 @@ def runChecks : IO Bool := do
     IO.println "PASS crep runtime RISC-V 64 FFI read-bytes target parity"
   else
     IO.println "FAIL crep runtime RISC-V 64 FFI read-bytes target parity"
-  pure (ffiByteCodecGuard && ffiSharedDomainGuard && ffiReadBytesGuard)
+  if ffiWriteBytesGuard then
+    IO.println "PASS crep runtime RISC-V 64 FFI write-bytes target parity"
+  else
+    IO.println "FAIL crep runtime RISC-V 64 FFI write-bytes target parity"
+  pure (ffiByteCodecGuard && ffiSharedDomainGuard && ffiReadBytesGuard &&
+    ffiWriteBytesGuard)
 
 end Flapjack.Test.CrepRuntimeFfiTargetParity

@@ -176,3 +176,25 @@ val _ = print_eval "compile_exp_correct_nfield"
      panSem$eval (pan_structsProof$convert_s ^ctxt ^local_state)
        (pan_structs$compile_exp ^ctxt ^nfield_expression) =
        SOME (pan_structsProof$convert_v ^nfield_value))``;
+val rfield_value = ``ValWord (5w:8 word)``;
+val rfield_expression = ``(panLang$RField 1 ^local_expression
+  : 8 panLang$exp)``;
+val _ = print_simp "compile_exp_correct_rfield"
+  [pan_structsProofTheory.convert_s_def,
+   pan_structsProofTheory.convert_v_def,
+   pan_structsTheory.compile_exp_def,
+   pan_structsTheory.old_exp_shape_def,
+   panSemTheory.eval_def,
+   panSemTheory.shape_of_def,
+   pan_structsProofTheory.v_flds_ok_def,
+   LLOOKUP_THM,
+   FLOOKUP_UPDATE,
+   FLOOKUP_FMAP_MAP2,
+   FLOOKUP_FUN_FMAP]
+  ``(pan_structs$old_exp_shape ^ctxt ^rfield_expression,
+     panSem$shape_of ^rfield_value,
+     pan_structsProof$v_flds_ok (^local_state).structs ^rfield_value,
+     panSem$eval ^local_state ^rfield_expression = SOME ^rfield_value,
+     panSem$eval (pan_structsProof$convert_s ^ctxt ^local_state)
+       (pan_structs$compile_exp ^ctxt ^rfield_expression) =
+       SOME (pan_structsProof$convert_v ^rfield_value))``;

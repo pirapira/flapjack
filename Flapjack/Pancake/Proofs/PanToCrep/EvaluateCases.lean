@@ -3389,6 +3389,149 @@ theorem evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody_ofCodeRelArgs_postRe
         hpayloadExcp' hpayloadLocals').1)
   exact ⟨hcall, hpostState, hpostCode, hpostExcp, hpostLocals⟩
 
+/-! Join production source Call evaluation to the relation-aware target Call
+dispatcher. The post-state relation required by the target handler-body IH is
+now indexed by the actual source evaluator result, projected through
+`panSemCodeStateAfter`; the source run uses the state-owned code map and the
+RISC-V state-derived memory inputs. Callee and handler induction hypotheses
+are still premises, so this is a Call-case composition step, not the complete
+`pc_compile_correct[Call_Ret_Exception]` theorem. -/
+theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
+    (sourceContext : PanValueFfiContext (RiscV.Word 64))
+    (sourcePrimitive : PanPrimitiveHandler (RiscV.Word 64))
+    (sourceHandler : PanValueStatefulFfiHandler (RiscV.Word 64) σ)
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (function : String)
+    (sourceHandlerBody : Prog (RiscV.Word 64))
+    (sourceResult : PanValueFfiClockResult (RiscV.Word 64) σ)
+    (sourceException handlerVariable : String)
+    (sourceExpressions : List (Exp (RiscV.Word 64)))
+    (hsourceRun : panSemEvaluateRiscV64CodeState sourceContext sourcePrimitive
+      sourceHandler source
+      (.call (some (none, some (sourceException, handlerVariable, sourceHandlerBody)))
+        function sourceExpressions) = some sourceResult)
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (handler : CrepRuntimeFfiHandler (RiscV.Word 64) σ FfiFinalEvent)
+    (primitive : CrepPrimitiveHandler (RiscV.Word 64))
+    (sourceAfterCallee : PanSemState (RiscV.Word 64) (FfiState σ))
+    (caller : CrepRuntimeState (RiscV.Word 64) σ)
+    (handlerVariableTarget : String) (slot : Nat)
+    (old : PanValue (RiscV.Word 64))
+    (destinations : List Nat) (caught exceptionCode value : RiscV.Word 64)
+    (parameters : List (String × Shape))
+    (sourceBody : Prog (RiscV.Word 64)) (returnShape : Shape)
+    (expressions : List (Exp (RiscV.Word 64)))
+    (arguments : List (PanValue (RiscV.Word 64)))
+    (handlerBody : CrepProg (RiscV.Word 64))
+    (calleeState : CrepRuntimeState (RiscV.Word 64) σ)
+    (handlerResult : CrepRuntimeStep (RiscV.Word 64) σ FfiFinalEvent)
+    (hsourceExpressions : sourceExpressions = expressions)
+    (hsourceExceptionCode : FLOOKUP context.eids sourceException = some caught)
+    (hsourceHandlerVariable : handlerVariable = handlerVariableTarget)
+    (hcompiledHandlerBody : compileCodeRelProg context sourceHandlerBody = handlerBody)
+    (hstate : stateRel source caller)
+    (hcode : codeRel context (panSemCodeAsLookup source.code) caller.code)
+    (hcalleeState : stateRel sourceAfterCallee calleeState)
+    (hcalleeCode : codeRel context (panSemCodeAsLookup sourceAfterCallee.code)
+      calleeState.code)
+    (hexcp : excpRel context.eids sourceAfterCallee.exceptionShapes)
+    (hlocals : localsRel context source.locals caller.locals)
+    (hsource : FLOOKUP source.locals handlerVariableTarget = some old)
+    (hvariable : FLOOKUP context.vars handlerVariableTarget =
+      some (Shape.one, [slot]))
+    (hslot : ∃ current, caller.locals slot = some current)
+    (hglobal : calleeState.globals (0 : BitVec 5) = some (.word value))
+    (hsupported : ∀ expression, expression ∈ expressions →
+      compileArgConstLocalStructAddress expression)
+    (hsourceArgs : evalPanSemStateExps source expressions = some arguments)
+    (hentry : panSemCodeLookup source.code function =
+      some (parameters, sourceBody, returnShape))
+    (hargumentLength :
+      Shape.shapeSize (.comb (parameters.map Prod.snd)) =
+        (arguments.flatMap panValueFlatten).length)
+    (hinfoValid : crepRuntimeCallInfoValid
+      (some (destinations, some (caught,
+        .seq (expHdlFiniteMap context.vars handlerVariableTarget) handlerBody))) = true)
+    (hclock : caller.clock ≠ 0)
+    (hmatch : (caught == exceptionCode) = true)
+    (hcalleeIH : ∀ targetLocals,
+      lookupCrepRuntimeCode function (arguments.flatMap panValueFlatten) caller.code =
+        some (compileCodeRelProg
+          (ctxtFc context.funcs context.eids
+            (parameters.map Prod.fst) (parameters.map Prod.snd)
+            (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))))
+          sourceBody, targetLocals) →
+      evalCrepRuntimeProg handler primitive 4
+        (decCrepClock { caller with locals := targetLocals })
+        (compileCodeRelProg
+          (ctxtFc context.funcs context.eids
+            (parameters.map Prod.fst) (parameters.map Prod.snd)
+            (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))))
+          sourceBody) = some (.raised exceptionCode, calleeState))
+    (hhandlerIH : sourceExpressions = expressions →
+      FLOOKUP context.eids sourceException = some caught →
+      handlerVariable = handlerVariableTarget →
+      compileCodeRelProg context sourceHandlerBody = handlerBody →
+      ∀ payloadState,
+      evalCrepRuntimeProg handler primitive 3
+        (crepRuntimeCallerState caller calleeState)
+        (expHdlFiniteMap context.vars handlerVariableTarget) =
+          some (.normal, payloadState) →
+      stateRel
+        { sourceAfterCallee with
+          locals := updatePanValueMap source.locals handlerVariableTarget (.word value) }
+        payloadState →
+      codeRel context (panSemCodeAsLookup sourceAfterCallee.code) payloadState.code →
+      excpRel context.eids sourceAfterCallee.exceptionShapes →
+      localsRel context
+        (updatePanValueMap source.locals handlerVariableTarget (.word value))
+        payloadState.locals →
+      evalCrepRuntimeProg handler primitive 3
+        (fixCrepRuntimeClock (ε := FfiFinalEvent)
+          (crepRuntimeCallerState caller calleeState) (.normal, payloadState)).2
+        handlerBody = some handlerResult ∧
+      stateRel (panSemCodeStateAfter source sourceResult) handlerResult.2 ∧
+      codeRel context
+        (panSemCodeAsLookup (panSemCodeStateAfter source sourceResult).code)
+        handlerResult.2.code ∧
+      excpRel context.eids
+        (panSemCodeStateAfter source sourceResult).exceptionShapes ∧
+      localsRel context (panSemCodeStateAfter source sourceResult).locals
+        handlerResult.2.locals) :
+    panSemEvaluateRiscV64CodeState sourceContext sourcePrimitive sourceHandler
+      source
+      (.call (some (none, some (sourceException, handlerVariable, sourceHandlerBody)))
+        function sourceExpressions) = some sourceResult ∧
+    evalCrepRuntimeCall handler primitive 5 caller
+      (some (destinations, some (caught,
+        .seq (expHdlFiniteMap context.vars handlerVariableTarget) handlerBody))) function
+      (compileArgsHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        expressions) = some handlerResult ∧
+    stateRel (panSemCodeStateAfter source sourceResult) handlerResult.2 ∧
+    codeRel context
+      (panSemCodeAsLookup (panSemCodeStateAfter source sourceResult).code)
+      handlerResult.2.code ∧
+    excpRel context.eids
+      (panSemCodeStateAfter source sourceResult).exceptionShapes ∧
+    localsRel context (panSemCodeStateAfter source sourceResult).locals
+      handlerResult.2.locals := by
+  obtain ⟨htarget, hstatePost, hcodePost, hexcpPost, hlocalsPost⟩ :=
+    evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody_ofCodeRelArgs_postRelations
+      context handler primitive source sourceAfterCallee
+      (panSemCodeStateAfter source sourceResult) caller function handlerVariableTarget
+      slot old destinations caught exceptionCode value parameters sourceBody returnShape
+      expressions arguments handlerBody calleeState handlerResult hstate hcode
+      hcalleeState hcalleeCode hexcp hlocals hsource hvariable hslot hglobal
+      hsupported hsourceArgs hentry hargumentLength hinfoValid hclock hmatch
+      hcalleeIH (fun payloadState hpayload hpayloadState hpayloadCode hpayloadExcp
+          hpayloadLocals =>
+        hhandlerIH hsourceExpressions hsourceExceptionCode hsourceHandlerVariable
+          hcompiledHandlerBody payloadState hpayload hpayloadState hpayloadCode
+          hpayloadExcp hpayloadLocals)
+  exact ⟨hsourceRun, htarget, hstatePost, hcodePost, hexcpPost, hlocalsPost⟩
+
 /-! Fixed-RV64 actual-state Call simulation for a matching one-word exception
 handler. The source call and target callee both resolve through their
 state-owned code maps; the target handler reads the raised payload through

@@ -4261,7 +4261,15 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody_ofCodeRelArgs_postRelations",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only fixed-fuel actual target Call composition that carries a related handler-body post-state through the production Call dispatcher; the source Call execution/result is not connected here, so this is not pc_compile_correct[Call_Ret_Exception]"
+    "reviewer": "Flapjack-only fixed-fuel target Call composition carrying a related handler-body post-state through production dispatch; its source post-state is supplied by the caller and is not itself connected to source evaluation, so this is not pc_compile_correct[Call_Ret_Exception]"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only composition of an actual state-owned source Call run with production target Call dispatch and the source-result-indexed handler post-relations. It assumes the run and callee/handler relation IHs; it does not establish their premises or the full compiled-program Call_Ret_Exception case"
   },
   {
     "hol_path": null,

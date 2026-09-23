@@ -49,7 +49,9 @@ lemma under `Flapjack/Pancake/Proofs`, including statement-review status and a
 reviewer field. The CI gate checks inventory coverage and metadata consistency;
 it does not perform statement review. Entries marked
 `pending_statement_review` or `no_hol_reference_pending_classification` remain
-open review work and must not be described as exact HOL ports.
+open review work and must not be described as exact HOL ports. A `reviewer`
+field on a pending entry records inventory authorship, not completed statement
+review.
 
 Lean proofs establish their conclusions about the Lean definitions actually
 used in their statements. Even a complete Lean port of Pancake's correctness

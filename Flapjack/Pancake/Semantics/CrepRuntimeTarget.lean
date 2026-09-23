@@ -357,4 +357,42 @@ theorem evalCrepRuntimeExp_shift_target
             (RiscV.panRiscVShift operator leftValue)) := by
   simp [evalCrepRuntimeExp, riscv64CrepRuntimeTarget, RiscV.panRiscVMemoryModel]
 
+/-! ## External-call byte-array reads
+
+HOL `crepSem$ExtCall` (and `panSem`) read the configuration and array arguments
+with `read_bytearray ptr (w2n len) (mem_load_byte s.memory s.memaddrs s.be)`
+before handing them to `call_FFI`. `riscv64ReadByteArray` is that read for the
+canonical target: `n` bytes from `address`, each the RISC-V byte at that address
+(HOL `get_byte` after `byte_align`), low address first. The production
+`crepRuntimeReadBytes` is exactly this list; the bridge below is definitional
+once the byte load is the RISC-V one.
+Direct oracle: `scripts/hol-probes/crep_runtime_read_bytes_probe.out`
+  read_bytes_zero=SOME []; read_bytes_short=SOME [1w; 2w; 3w; 4w];
+  read_bytes_cross=SOME [1w; 2w; 3w; 4w; 5w; 6w; 7w; 8w];
+  read_bytes_out_of_domain=NONE -/
+
+/-- HOL `read_bytearray address length (mem_load_byte memory domain false)` for
+    the canonical RISC-V 64 target: `length` successive target bytes. -/
+def riscv64ReadByteArray (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (address : RiscV.Word 64) : Nat → Option (List UInt8)
+  | 0 => some []
+  | length + 1 => do
+      let value ← RiscV.panRiscVReadByte base.memaddrs base.memory (8 : RiscV.Word 64) address
+      let rest ← riscv64ReadByteArray base (address + 1) length
+      pure (riscv64GetByte 0 value :: rest)
+
+/-- Production `crepRuntimeReadBytes` on the canonical target is HOL
+    `read_bytearray` with `mem_load_byte`. -/
+theorem crepRuntimeReadBytes_target_eq_riscv
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (address : RiscV.Word 64)
+    (length : Nat) :
+    crepRuntimeReadBytes (riscv64CrepRuntimeTarget base) address length =
+      riscv64ReadByteArray base address length := by
+  induction length generalizing address with
+  | zero => simp [crepRuntimeReadBytes, riscv64ReadByteArray]
+  | succ n ih =>
+      simp [crepRuntimeReadBytes, riscv64ReadByteArray, ih,
+        crepRuntimeLoadByte_target_eq_riscv, riscv64CrepRuntimeTarget_ffiContext,
+        riscv64PanValueFfiContext_wordToByte_eq_getByte0]
+
 end Flapjack

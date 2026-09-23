@@ -1,0 +1,4 @@
+read_bytes_zero=SOME []
+read_bytes_short=SOME [1w; 2w; 3w; 4w]
+read_bytes_cross=SOME [1w; 2w; 3w; 4w; 5w; 6w; 7w; 8w]
+read_bytes_out_of_domain=NONE

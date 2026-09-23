@@ -144,7 +144,9 @@ run_probe pan_lang_exceptions_probeScript.sml pan_lang_exceptions_probe.out \
 run_probe pan_lang_fun_ids_probeScript.sml pan_lang_fun_ids_probe.out \
   empty call handler dec_call "$cake_dir/pancake/panLangScript.sml"
 run_probe word_stack_frame_probeScript.sml word_stack_frame_probe.out \
-  maxvar_skip limit_seq "$cake_dir/compiler/backend/word_to_stackScript.sml"
+  maxvar_skip limit_seq later_pair_f later_pair_alloc later_pair_slot_44 \
+  later_pair_slot_46 later_pair_bounded \
+  "$cake_dir/compiler/backend/word_to_stackScript.sml"
 run_probe word_stack_max_var_probeScript.sml word_stack_max_var_probe.out \
   maxvar_inst_mem maxvar_return "$cake_dir/compiler/backend/word_allocScript.sml" \
   "$cake_dir/compiler/backend"

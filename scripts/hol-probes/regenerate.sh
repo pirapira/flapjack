@@ -114,6 +114,7 @@ run_probe pan_structs_compile_exp_correct_probeScript.sml pan_structs_compile_ex
   compile_exp_correct_mmap_nonempty compile_exp_correct_rstruct \
   compile_exp_correct_nstruct compile_exp_correct_nfield \
   compile_exp_correct_rfield compile_exp_correct_op compile_exp_correct_load \
+  compile_exp_correct_load_nested_named \
   size_of_compile_shape_comb \
   "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
   "$cake_dir/pancake/proofs"
@@ -169,7 +170,7 @@ run_probe pan_word_helpers_probeScript.sml pan_word_helpers_probe.out \
 run_probe pan_op_probeScript.sml pan_op_probe.out \
   mul_two mul_three "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_fixed_load_probeScript.sml pan_fixed_load_probe.out \
-  mem_load_byte_definition byte_align_width24_address5 \
+  mem_load_byte_definition load32_width24_address4 \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_fixed_store_probeScript.sml pan_fixed_store_probe.out \
   byte_store_hit store32_unaligned "$cake_dir/pancake/semantics/panSemScript.sml"
@@ -391,6 +392,9 @@ run_probe pan_upd_locals_probeScript.sml pan_upd_locals_probe.out \
 run_probe pan_sem_e2e_probeScript.sml pan_sem_e2e_probe.out \
   return_41 call_code_map_7 recursive_call_code_map_7 deccall_code_map_7 \
   recursive_call_timeout recursive_deccall_timeout \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_sem_call_return_shape_probeScript.sml pan_sem_call_return_shape_probe.out \
+  call_bad_return_shape_result deccall_bad_return_shape_caller_local \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_sem_e2e_add_probeScript.sml pan_sem_e2e_add_probe.out \
   return_add_6_7 return_add_6_7 "$cake_dir/pancake/semantics/panSemScript.sml"

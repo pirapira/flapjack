@@ -806,7 +806,8 @@ mutual
                             (structs := structs)
                           pure (.normal locals globals calleeMemory calleeFfi,
                             argumentSteps + steps)
-                    else none
+                    else some (.error calleeLocals calleeGlobals calleeMemory calleeFfi,
+                      argumentSteps + steps)
                 | .raised _ calleeGlobals calleeMemory calleeFfi exception value =>
                     if panValueExceptionValid structs contracts exception value &&
                         panValuePayloadWithinLimit structs value then

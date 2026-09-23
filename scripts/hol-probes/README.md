@@ -43,6 +43,14 @@ all-width equation to the production RISC-V target is in
 boundary and its matching cases live in
 `Flapjack.Pancake.Semantics.PanSemStateEval` and
 `Flapjack.Test.PanSemStateEvalParity`.
+`pan_sem_e2e_probe.out` records direct HOL evaluation cases for nonempty
+state-owned code maps, including recursive Call, DecCall, nested Call/DecCall,
+and clock timeout. `pan_sem_call_return_shape_probe.out` adds Call and DecCall
+cases where the callee's actual returned value disagrees with the return shape
+stored in the code map; HOL returns `SOME Error`, preserves the decremented
+clock, and exposes the callee post-state. Their Lean checks live in
+`Flapjack.Test.PanEvaluateParity` and exercise the recursive
+`PanSemState.code` evaluator.
 `compile_def_probe.out` also records direct HOL evaluations of assigned Global
 call destinations through `pan_to_crep$compile`: absent lookups, the
 `One`/empty-list fallback, and inconsistent shape/name-list lengths. The
@@ -132,12 +140,23 @@ generated from source commit `857f0d98da8f8a3580f3442338e697809308ede`.
 `mem_load_32_def` directly, together with the imported `byte_align_def`,
 `aligned_def`, `align_def`, `get_byte_def`, `byte_index_def`, and
 `word_of_bytes_def`. It evaluates domain misses, alignment failure, both
-endiannesses, 8-bit/64-bit word instances, and the 24-bit case
-`byte_align 5w = 4w`. That last row differs from production RISC-V's
-`panRiscVByteAlign 3 5 = 3`: RISC-V rounds by a multiple of three while the
-HOL definition aligns using `LOG2 (dimindex DIV 8)`. The matching focused
-RISC-V model checks and explicit width-24 mismatch guard are in
-`Flapjack.Test.PanFixedLoadParity`. The generic
+endiannesses, 8-bit/64-bit word instances, and the 24-bit cases
+`byte_align 5w = 4w`, little-endian `mem_load_byte ... {4w} F 5w = SOME 51w`,
+and big-endian `mem_load_byte ... {4w} T 5w = SOME 17w`. Those rows
+also include the width-24 32-bit load at address 4, whose `word32` result is
+`0x22113322`. They differ from production RISC-V's `panRiscVByteAlign 3 5 = 3`,
+which misses the domain containing only address 4. RISC-V rounds by a multiple
+of three while the HOL definition aligns using `LOG2 (dimindex DIV 8)`. The
+`holByteAlignedRiscVMemoryModel` overlay uses the source alignment formula and
+returns the probed byte while leaving the other RISC-V model operations
+explicit. Focused checks for the source overlay and production mismatch are in
+`Flapjack.Test.PanFixedLoadParity`. The generic finite-word
+`holFiniteWordSourceMemoryModel` adapter uses the same alignment formula and
+direct HOL `get_byte` index arithmetic; tests cover both endiannesses at width
+24, plus a 24-bit 32-bit-load fixture. Its `aligned` operation is now expressed
+as divisibility by the requested byte alignment. The `word_of_bytes` operation
+still comes from the transported RISC-V model and needs its own correspondence
+proof. The generic
 Crep source helpers `crepHolEvalMemLoadByte` and `crepHolEvalMemLoad32`, plus
 their equations to `panModelReadByte`/`panModelRead32`, are in
 `Flapjack.Pancake.Semantics.CrepSem`; they keep the `PanMemoryModel` explicit
@@ -217,8 +236,10 @@ correctness, and the converted `compile_exps` result for the local HOL helper
 `compile_exp_correct_mmap_helper`; Lean proves the corresponding production
 list-evaluation prerequisite in `panStructCompileExpsEvalOfPointwiseCorrect`.
 The Load row directly exercises an explicit two-word memory read and is paired
-with a Lean source/converted evaluation fixture. Its general constructor case
-and the required memory-conversion induction remain open. The
+with a Lean source/converted evaluation fixture. The nested named-load row
+checks a multiword `Pair` containing a named `Inner`, including source and
+compiled shapes, field validity, and both evaluator results. Its general
+constructor case and the required memory-conversion induction remain open. The
 `size_of_compile_shape_comb` row separately directly evaluates the HOL
 `size_of_compile_shape` prerequisite at
 `cakeml/pancake/proofs/pan_structsProofScript.sml:512`; the generic Lean theorem

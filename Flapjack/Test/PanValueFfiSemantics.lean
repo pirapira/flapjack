@@ -436,7 +436,7 @@ example :
   apply evalPanValueFfiProgramStepped_fst
 
 #guard
-    (evalPanValueFfiProgram statefulTestContext statefulPublicProgramState
+    match evalPanValueFfiProgram statefulTestContext statefulPublicProgramState
       statefulTestPrimitive statefulTestHandler 30
       [.function
          { name := "badReturn", inline := false, exported := false, params := [],
@@ -447,8 +447,9 @@ example :
            body := .seq (.call none "badReturn" []) (.return (.const 0)),
            returnShape := .one }]
       "main" []
-      (memoryAccess := some (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel))).isNone =
-      true
+      (memoryAccess := some (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel)) with
+    | some (.error _ _ _ _) => true
+    | _ => false
 
 #guard
     isErrorControl

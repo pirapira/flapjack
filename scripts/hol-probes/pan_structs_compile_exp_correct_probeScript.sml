@@ -237,6 +237,40 @@ val _ = print_eval "compile_exp_correct_load"
        (pan_structs$compile_exp ^ctxt ^load_expression) =
          SOME (pan_structsProof$convert_v ^load_value))``;
 
+val nested_load_ctxt =
+  ``<| structs := [(strlit "Pair", [(strlit "inner", Named (strlit "Inner"));
+                                     (strlit "last", One)]);
+                    (strlit "Inner", [(strlit "left", One);
+                                      (strlit "right", One)])];
+      locals := []; globals := [] |>``;
+val nested_load_state =
+  ``^state with <|
+      structs := [(strlit "Pair", <| fields := [(strlit "inner", Named (strlit "Inner"));
+                                                   (strlit "last", One)]; size := 3 |>);
+                  (strlit "Inner", <| fields := [(strlit "left", One);
+                                                    (strlit "right", One)]; size := 2 |> )];
+      memory := (\a:8 word. if a = 0w then Word (7w:8 word)
+                            else if a = 1w then Word (11w:8 word)
+                            else if a = 2w then Word (13w:8 word) else ARB);
+      memaddrs := {0w; 1w; 2w}; sh_memaddrs := {} |>``;
+val nested_load_value =
+  ``NStruct (strlit "Pair")
+      [(strlit "inner", NStruct (strlit "Inner")
+        [(strlit "left", ValWord (7w:8 word));
+         (strlit "right", ValWord (11w:8 word))]);
+       (strlit "last", ValWord (13w:8 word))]``;
+val nested_load_expression =
+  ``(panLang$Load (Named (strlit "Pair")) (panLang$Const (0w:8 word))
+      : 8 panLang$exp)``;
+val _ = print_eval "compile_exp_correct_load_nested_named"
+  ``(pan_structs$old_exp_shape ^nested_load_ctxt ^nested_load_expression,
+     panSem$shape_of ^nested_load_value,
+     pan_structsProof$v_flds_ok (^nested_load_state).structs ^nested_load_value,
+     panSem$eval ^nested_load_state ^nested_load_expression = SOME ^nested_load_value,
+     panSem$eval (pan_structsProof$convert_s ^nested_load_ctxt ^nested_load_state)
+       (pan_structs$compile_exp ^nested_load_ctxt ^nested_load_expression) =
+       SOME (pan_structsProof$convert_v ^nested_load_value))``;
+
 val _ = print_eval "size_of_compile_shape_comb"
   ``(is_wf_shape [] (Comb [One; One]),
      struct_infos_ok [],

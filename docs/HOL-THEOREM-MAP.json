@@ -128,6 +128,14 @@
     "reviewer": "Codex (statement comparison with dimindex specialized to RISC-V width)"
   },
   {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "eval_mul_const",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepEvalMulConst",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Codex (Lean support lemma fixes RiscV.Word 64 and canonical target; HOL theorem is polymorphic)"
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
     "hol_name": "genlist_less_than",
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",

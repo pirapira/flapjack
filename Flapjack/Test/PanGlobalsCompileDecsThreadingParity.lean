@@ -199,6 +199,19 @@ def compileProgChecks : List Bool :=
 #eval compileProgChecks
 #guard compileProgChecks.all id
 
+/-- Direct rows for the exact `fresh_name` port, mirroring the
+    `fresh_name_clear` / `fresh_name_missing_empty` / `fresh_name_hit` /
+    `fresh_name_seed` rows of `scripts/hol-probes/pan_globals_compile_decs_probe.out`
+    (HOL: `«x»`, `«»`, `«'''»`, `«vn''»`). -/
+def freshNameChecks : List Bool :=
+  [ freshNameHOL "x" ["y"] == "x"
+  , freshNameHOL "" [] == ""
+  , freshNameHOL "" ["", "'", "''"] == "'''"
+  , freshNameHOL "vn'" ["vn'"] == "vn''" ]
+
+#eval freshNameChecks
+#guard freshNameChecks.all id
+
 theorem cakeEveryIsFunction :
     cakeResultBefore.functions.all globalDeclIsFunction = true :=
   compile_decs_EVERY_is_function_cake cakeContext cakeFunctionBeforeDecl
@@ -228,6 +241,7 @@ def cakeThreadingGuard : Bool :=
   cakeThreadingValues == [0, 1] &&
   compileExpChecks.all id &&
   compileProgChecks.all id &&
+  freshNameChecks.all id &&
   cakeResultBefore.functions.all globalDeclIsFunction
 
 #eval cakeThreadingGuard

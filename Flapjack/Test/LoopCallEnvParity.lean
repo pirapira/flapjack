@@ -21,7 +21,7 @@ def callerState : LoopMachineState Nat :=
     clock := 17
     code := []
     be := false
-    ffi := 23
+    ffi := trivialFfiState Nat 23
     baseAddr := 100
     topAddr := 200 }
 

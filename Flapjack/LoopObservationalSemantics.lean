@@ -123,18 +123,18 @@ inductive LoopBehaviour where
 
 structure LoopSemanticsHooks where
   evaluate : Nat → LoopMachineStep
-  ioEvents : LoopMachineState LoopWordLoc → List FfiEvent
-  ffiOutcome : LoopWordLoc → FfiOutcome
+  ioEvents : LoopMachineState Nat LoopWordLoc → List FfiEvent
+  ffiOutcome : FfiFinalEvent → FfiOutcome
 
 def loopResultOutcome (hooks : LoopSemanticsHooks)
-    (result : Option (LoopMachineResult LoopWordLoc)) :
+    (result : Option (LoopMachineResult Nat)) :
     Option LoopSemanticOutcome :=
   match result with
   | some (.result _) => some .success
   | some (.finalFfi event) => some (.ffi (hooks.ffiOutcome event))
   | _ => none
 
-def loopForbiddenResult : Option (LoopMachineResult LoopWordLoc) → Prop
+def loopForbiddenResult : Option (LoopMachineResult Nat) → Prop
   | some .timeOut | some (.finalFfi _) | some (.result _) => False
   | _ => True
 

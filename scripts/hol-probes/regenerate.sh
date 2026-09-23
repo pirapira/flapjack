@@ -170,6 +170,9 @@ run_probe crep_runtime_ext_call_probeScript.sml crep_runtime_ext_call_probe.out 
 run_probe crep_every_exp_probeScript.sml crep_every_exp_probe.out \
   const_hit always_op_nested "$cake_dir/pancake/semantics/crepPropsScript.sml" \
   "$cake_dir/pancake/semantics"
+run_probe crep_assigned_vars_probeScript.sml crep_assigned_vars_probe.out \
+  afv_prog nested_afv "$cake_dir/pancake/semantics/crepPropsScript.sml" \
+  "$cake_dir/pancake/semantics"
 run_probe pan_flat_store_probeScript.sml pan_flat_store_probe.out \
   store_hit stores_blocked "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_flatten_probeScript.sml pan_flatten_probe.out \

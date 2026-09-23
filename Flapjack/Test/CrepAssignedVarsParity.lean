@@ -1,0 +1,90 @@
+import Flapjack.Pancake.Semantics.CrepProps
+
+/-!
+Parity checks for the `crepProps` assigned-variable theorems ported into
+`Flapjack/Pancake/Semantics/CrepProps.lean`:
+
+* `assigned_free_vars_IMP_assigned_vars`
+* `nested_seq_assigned_vars_eq`
+* `nested_seq_assigned_free_vars_eq`
+
+The concrete programs mirror the direct HOL-EVAL rows in
+`scripts/hol-probes/crep_assigned_vars_probe.out`:
+
+```
+afv_prog=[2; 3]
+av_prog=[1; 2; 3]
+imp_mem=T
+imp_mem_absent=T
+nested_av=[1; 2]
+nested_afv=[1; 2]
+```
+-/
+
+namespace Flapjack.Test.CrepAssignedVarsParity
+
+open Flapjack
+
+/-- `Dec 1 (Const 1) (Seq (Assign 2 (Var 1)) (Assign 3 (Const 2)))`. -/
+def parityProg : CrepProg Nat :=
+  .dec 1 (.const 1) (.seq (.assign 2 (.var 1)) (.assign 3 (.const 2)))
+
+/-- `nested_seq (MAP2 Assign [1, 2] [Const 1, Const 2])`. -/
+def parityNested : CrepProg Nat :=
+  crepNestedSeq
+    ([1, 2].zipWith (fun name value => CrepProg.assign name value)
+      [CrepExp.const (1 : Nat), CrepExp.const 2])
+
+theorem afvProg : crepAssignedFreeVars parityProg = [2, 3] := by
+  simp [parityProg, crepAssignedFreeVars]
+
+theorem avProg : crepAssignedVars parityProg = [1, 2, 3] := by
+  simp [parityProg, crepAssignedVars]
+
+theorem nestedAv : crepAssignedVars parityNested = [1, 2] := by
+  simp [parityNested, crepNestedSeq, crepAssignedVars]
+
+theorem nestedAfv : crepAssignedFreeVars parityNested = [1, 2] := by
+  simp [parityNested, crepNestedSeq, crepAssignedFreeVars]
+
+theorem impMem : (2 ∈ crepAssignedFreeVars parityProg →
+    2 ∈ crepAssignedVars parityProg) := by
+  rw [afvProg, avProg]
+  decide
+
+theorem impMemAbsent : (9 ∈ crepAssignedFreeVars parityProg →
+    9 ∈ crepAssignedVars parityProg) := by
+  rw [afvProg, avProg]
+  decide
+
+example : 2 ∈ crepAssignedVars parityProg :=
+  mem_crepAssignedFreeVars_imp_mem_crepAssignedVars parityProg 2
+    (by rw [afvProg]; decide)
+
+example : crepAssignedVars parityNested = [1, 2] :=
+  crepAssignedVars_nestedSeq_assign_zipWith [1, 2]
+    [CrepExp.const (1 : Nat), CrepExp.const 2] (by decide)
+
+example : crepAssignedFreeVars parityNested = [1, 2] :=
+  crepAssignedFreeVars_nestedSeq_assign_zipWith [1, 2]
+    [CrepExp.const (1 : Nat), CrepExp.const 2] (by decide)
+
+def parityGuard : Bool :=
+  (crepAssignedFreeVars parityProg == [2, 3]) &&
+  (crepAssignedVars parityProg == [1, 2, 3]) &&
+  (decide ((2 : Nat) ∈ ([2, 3] : List Nat) → 2 ∈ [1, 2, 3])) &&
+  (decide ((9 : Nat) ∈ ([2, 3] : List Nat) → 9 ∈ [1, 2, 3])) &&
+  (crepAssignedVars parityNested == [1, 2]) &&
+  (crepAssignedFreeVars parityNested == [1, 2])
+
+#guard parityGuard
+
+#eval parityGuard
+
+def runChecks : IO Bool := do
+  let ok := parityGuard
+  IO.println (if ok then "PASS Crep assigned-vars IMP and nested-seq theorems match HOL"
+    else "FAIL Crep assigned-vars IMP and nested-seq theorems match HOL")
+  return ok
+
+end Flapjack.Test.CrepAssignedVarsParity

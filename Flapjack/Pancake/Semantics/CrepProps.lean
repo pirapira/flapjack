@@ -40,12 +40,11 @@ def cexpHeadsSimp : List (List (CrepExp α)) → Option (List (CrepExp α))
     case is the direct HOL `Var` clause.
 
     Scope boundary: this tag is for the variable-only theorem, not a claim that
-    `crepSemEvalExp` ports all of HOL `eval_def`. In particular, Lean stores
-    memory as `α → Option α` with a Boolean domain and globals as
-    `α → Option α`; HOL stores total word memory with a separate address set,
-    and globals keyed by fixed-width 5-bit words with `word_lab` values. The
-    Lean `loadGlob` AST index is also `α`, whereas HOL's is 5-bit. None of
-    those fields or constructors is observed by this theorem. -/
+    `crepSemEvalExp` ports all of HOL `eval_def`. Lean stores memory as
+    `α → Option α` with a Boolean domain, rather than HOL's total word memory
+    with a separate address set. Global keys and cells have HOL's 5-bit and
+    `word_lab` shapes, though Lean represents their finite-map lookup as a
+    function. None of those fields or constructors is observed by this theorem. -/
 @[hol "cakeml/pancake/semantics/crepPropsScript.sml" "lookup_locals_eq_map_vars"]
 theorem lookup_locals_eq_map_vars
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]

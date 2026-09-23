@@ -568,8 +568,10 @@ private theorem crepEvalCodeMapIrrel {α : Type} [BEq α] [OfNat α 0] [OfNat α
     mapc f code-map update, and complete Option (PanWordLab.word ...)
     result. The value type is a positive-width RISC-V word and evaluation fixes
     riscvCrepWordTarget; HOL instead quantifies over its polymorphic word
-    type and arbitrary crepSem state. The evaluator correspondence remains
-    open, so this faithful-shape specialization is deliberately untagged. -/
+    type and arbitrary crepSem state. The evaluator correspondence is proved
+    for every positive RISC-V width and for the concrete `Fin width → Bool`
+    carrier, but not for an arbitrary HOL finite dimension type. This faithful-
+    shape specialization is deliberately untagged. -/
 theorem crepSimpExpCorrect1 {n : Nat} [NeZero n] {σ : Type}
     (f : (List Nat × CrepProg (RiscV.Word n)) →
       (List Nat × CrepProg (RiscV.Word n)))

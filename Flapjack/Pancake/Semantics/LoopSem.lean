@@ -828,10 +828,19 @@ a *total* `'a word -> 'a word_loc` memory and set-valued `mdomain`/`sh_mdomain`.
 `LoopMachineState` above keeps partial memories and `Bool` domains so the
 executable pipeline can stay total; this section supplies the HOL-shaped state,
 exact ports of `mem_load`/`mem_store`/`sh_mem_load`/`sh_mem_store`/`sh_mem_op`
-over the whole state, and an explicit documented bridge between the two. -/
+over the whole state, and an explicit documented bridge between the two.
+
+The shared-memory and ExtCall ports call `Flapjack.callFfi`, the counterpart of
+HOL `ffi$call_FFI` (`cakeml/semantics/ffi/ffiScript.sml:64-80`): a nonempty
+`ExtCall` consults `state.oracle` and only accepts a returned byte list of the
+same length as the input (otherwise `FFI_failed`); the empty `ExtCall ""` returns
+the input bytes without consulting the oracle. -/
 
 /-- HOL `('a,'ffi) loopSem$state` (`loopSemScript.sml:13-27`) with the exact
-    component types: a total `word -> word_loc` memory and set-valued domains. -/
+    component types: a total `word -> word_loc` memory, set-valued domains, and
+    a `num_map`-style code field.  HOL's `code : (num list # 'a prog) num_map`
+    is represented as a lookup `Nat → Option (List Nat × LoopProg W)` with no
+    finite-support requirement, matching `sptree$lookup` on the source map. -/
 structure LoopSemState (W : Type) (F : Type := Nat) where
   locals : Nat → Option (LoopValue W)
   globals : BitVec 5 → Option (LoopValue W)
@@ -839,7 +848,7 @@ structure LoopSemState (W : Type) (F : Type := Nat) where
   mdomain : W → Prop
   shMdomain : W → Prop
   clock : Nat
-  code : LoopCode W
+  code : Nat → Option (List Nat × LoopProg W)
   be : Bool
   ffi : FfiState F
   baseAddr : W
@@ -867,9 +876,11 @@ def setFfi (state : LoopSemState W F) (next : FfiState F) : LoopSemState W F :=
 
 end LoopSemState
 
-/-- Explicit runtime bridge from the machine representation to the HOL-shaped
-    state: absent memory addresses become HOL's `Loc`, `Bool` domains become the
-    corresponding set predicates.  Every other component is shared. -/
+/-- Explicit **one-way** runtime bridge from the machine representation to the
+    HOL-shaped state: absent memory addresses become HOL's `Loc`, `Bool` domains
+    become the corresponding set predicates, and the finite `LoopCode` list is
+    turned into the `num_map`-style lookup.  No converse bridge is provided: a
+    lookup function cannot in general be recovered as a finite list. -/
 def LoopSemState.ofMachine (state : LoopMachineState W F) : LoopSemState W F where
   locals := state.locals
   globals := state.globals
@@ -877,25 +888,7 @@ def LoopSemState.ofMachine (state : LoopMachineState W F) : LoopSemState W F whe
   mdomain := fun address => state.mdomain address = true
   shMdomain := fun address => state.shMdomain address = true
   clock := state.clock
-  code := state.code
-  be := state.be
-  ffi := state.ffi
-  baseAddr := state.baseAddr
-  topAddr := state.topAddr
-
-/-- Explicit runtime bridge from the HOL-shaped state back to the machine
-    representation: the total memory is wrapped in `some`, the set predicates
-    are decided by the supplied instances. -/
-def LoopMachineState.ofSem (state : LoopSemState W F)
-    [DecidablePred state.mdomain] [DecidablePred state.shMdomain] :
-    LoopMachineState W F where
-  locals := state.locals
-  globals := state.globals
-  memory := fun address => some (state.memory address)
-  mdomain := fun address => decide (state.mdomain address)
-  shMdomain := fun address => decide (state.shMdomain address)
-  clock := state.clock
-  code := state.code
+  code := fun label => lookupLoopFunction label state.code
   be := state.be
   ffi := state.ffi
   baseAddr := state.baseAddr

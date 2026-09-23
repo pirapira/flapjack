@@ -1,4 +1,5 @@
 import Flapjack.Pancake.Semantics.CrepSem
+import Flapjack.Pancake.WordLang
 import Flapjack.PanSemWriteBytearray
 import Flapjack.RiscV.PanMemory
 
@@ -47,16 +48,16 @@ namespace Flapjack
 
 /-! The expression evaluator needs the word cell operations that HOL derives
     from the word width. This target fixes those operations for any positive
-    BitVec width; unlike `riscv64CrepRuntimeTarget`, its purpose is the
-    width-polymorphic expression semantics, so FFI fields are left untouched
-    (expression evaluation never reads them). -/
+    BitVec width and preserves HOL's state endianness for byte loads; unlike
+    `riscv64CrepRuntimeTarget`, its FFI fields are left untouched because
+    expression evaluation never reads them. -/
 def riscvCrepWordTarget [NeZero width]
     (base : CrepRuntimeState (RiscV.Word width) σ) :
     CrepRuntimeState (RiscV.Word width) σ :=
   { base with
     bytesInWord := BitVec.ofNat width (width / 8)
-    bigEndian := false
-    memoryModel := RiscV.panRiscVMemoryModel }
+    bigEndian := base.bigEndian
+    memoryModel := RiscV.panRiscVMemoryModelForEndian base.bigEndian }
 
 /-! ## Canonical FFI byte codec
 
@@ -283,17 +284,18 @@ theorem crepRuntimeLoad_wordTarget_eq_riscv [NeZero width]
 theorem crepRuntimeLoadByte_wordTarget_eq_riscv [NeZero width]
     (base : CrepRuntimeState (RiscV.Word width) σ) (address : RiscV.Word width) :
     crepRuntimeLoadByte (riscvCrepWordTarget base) address =
-      RiscV.panRiscVReadByte base.memaddrs (crepRuntimeMemoryView base.memory)
-        (BitVec.ofNat width (width / 8)) address := by
-  simp [crepRuntimeLoadByte, RiscV.panRiscVReadByte, panModelReadByte,
-    riscvCrepWordTarget, RiscV.panRiscVMemoryModel, crepRuntimeMemoryView,
-    panTheWord] <;> rfl
+      panModelReadByte (RiscV.panRiscVMemoryModelForEndian base.bigEndian)
+        base.memaddrs (crepRuntimeMemoryView base.memory)
+        (BitVec.ofNat width (width / 8)) address base.bigEndian := by
+  simp [crepRuntimeLoadByte, panModelReadByte, riscvCrepWordTarget,
+    RiscV.panRiscVMemoryModelForEndian, crepRuntimeMemoryView, panTheWord] <;> rfl
 
 theorem crepRuntimeLoad32_wordTarget_eq_riscv [NeZero width]
     (base : CrepRuntimeState (RiscV.Word width) σ) (address : RiscV.Word width) :
     crepRuntimeLoad32 (riscvCrepWordTarget base) address =
-      RiscV.panRiscVRead32 base.memaddrs (crepRuntimeMemoryView base.memory)
-        (BitVec.ofNat width (width / 8)) address := by
+      panModelRead32 (RiscV.panRiscVMemoryModelForEndian base.bigEndian)
+        base.memaddrs (crepRuntimeMemoryView base.memory)
+        (BitVec.ofNat width (width / 8)) address base.bigEndian := by
   have haddr2 : address + 1 + 1 = address + 2 := by
     calc
       (address + 1) + 1 = address + (1 + 1) := BitVec.add_assoc _ _ _
@@ -309,8 +311,8 @@ theorem crepRuntimeLoad32_wordTarget_eq_riscv [NeZero width]
       (address + 2) + 1 = address + (2 + 1) := BitVec.add_assoc _ _ _
       _ = address + 3 := by rw [h23]
   unfold crepRuntimeLoad32
-  simp only [riscvCrepWordTarget, RiscV.panRiscVRead32, panModelRead32,
-    RiscV.panRiscVMemoryModel, crepRuntimeMemoryView, panTheWord]
+  simp only [riscvCrepWordTarget, panModelRead32, crepRuntimeMemoryView,
+    panTheWord, RiscV.panRiscVMemoryModelForEndian]
   simp only [haddr2, haddr32]
   rfl
 
@@ -319,6 +321,14 @@ theorem crepRuntimeWordTarget_wordOp [NeZero width]
     (values : List (RiscV.Word width)) :
     (riscvCrepWordTarget base).memoryModel.wordOp operator values =
       RiscV.panRiscVWordOp operator values := rfl
+
+/-! The RISC-V production model's list-valued operation is the HOL
+`word_op_def` port at every positive BitVec width. This closes the
+operation-field step for expression evaluation; it does not by itself identify
+the target-extended runtime state with a HOL `crepSem$state`. -/
+theorem panRiscVWordOp_eq_wordOpHOL [NeZero width]
+    (operator : BinOp) (values : List (RiscV.Word width)) :
+    RiscV.panRiscVWordOp operator values = wordOpHOL operator values := rfl
 
 theorem crepRuntimeWordTarget_compare [NeZero width]
     (base : CrepRuntimeState (RiscV.Word width) σ) (operator : Cmp)

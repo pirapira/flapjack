@@ -64,6 +64,14 @@
     "reviewer": "Codex (source formula and direct numeric HOL-EVAL comparison)"
   },
   {
+    "hol_path": "cakeml/compiler/backend/wordLangScript.sml",
+    "hol_name": "word_op_def",
+    "lean_path": "Flapjack/Pancake/WordLang.lean",
+    "lean_name": "wordOpHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (compared source word_op cases, fold identities, and binary Sub arity)"
+  },
+  {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
     "hol_name": "flatten_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem/Primop.lean",
@@ -267,9 +275,25 @@
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
-    "lean_name": "crepSimpExpCorrect1",
+    "lean_name": "crepSimpExpCorrect1BitVec",
     "statement_status": "documented_mismatch",
-    "reviewer": "Untagged RISC-V width specialization with HOL-shaped success premise, mapc code update, and full option/word_lab result; HOL quantifies over arbitrary word types/states and uses crepSem eval, for which no production evaluator correspondence is proved."
+    "reviewer": "Untagged all-positive-width BitVec theorem over a source-shaped state; all-constructor correspondence to the production evaluator is proved. Still specializes HOL's arbitrary word carrier to RiscV.Word/BitVec, so the exact polymorphic theorem is open and no HOL tag is present."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Untagged all-width RISC-V production evaluator support theorem; it does not state the arbitrary source word-carrier theorem."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepArithHolMapCode_target",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only commuting equation between the fixed-width HOL-shaped state adapter and production code-map update."
   },
   {
     "hol_path": null,

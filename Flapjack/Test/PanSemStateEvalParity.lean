@@ -1,4 +1,5 @@
 import Flapjack.Pancake.Semantics.PanSemStateEval
+import Flapjack.Pancake.WordLang
 
 /-! The expected values are recorded by direct HOL EVAL of the source
 `panSem$eval` probe. The Lean cases exercise the state-derived word and memory
@@ -129,12 +130,34 @@ private def observesReturnedWord
 #guard isWordResult
   (evalPanSemStateExp bigEndianState (.load32 (.const 0)))
   (BitVec.ofNat 64 0x11223344)
+
+/- These model checks exercise the same endian-sensitive get_byte and
+   word_of_bytes path used by the width-generic Crep target adapter. -/
+#guard (RiscV.panRiscVMemoryModelForEndian true).getByte
+    (BitVec.ofNat 64 8) (BitVec.ofNat 64 0) sourceMemoryWord true ==
+  BitVec.ofNat 64 0x11
+#guard panModelRead32 (RiscV.panRiscVMemoryModelForEndian true)
+    (fun _ : Word64 => true) (fun _ : Word64 => some sourceMemoryWord)
+    (BitVec.ofNat 64 8) (BitVec.ofNat 64 0) true ==
+  some (BitVec.ofNat 64 0x11223344)
 #guard isWordResult
   (evalPanSemStateExp littleEndianState
     (.op .add [.const 1, .const 2, .const 3]))
   (BitVec.ofNat 64 6)
 #guard isNoneResult
   (evalPanSemStateExp littleEndianState (.op .sub [.const 1]))
+
+/- The direct HOL `eval_def` rows above exercise `word_op_def`'s list fold and
+   invalid Sub arity. These checks compare the tagged source-shaped definition
+   with the RISC-V operation used by production expression evaluation. -/
+#guard wordOpHOL .add
+    [BitVec.ofNat 64 1, BitVec.ofNat 64 2, BitVec.ofNat 64 3] ==
+  some (BitVec.ofNat 64 6)
+#guard wordOpHOL .sub [BitVec.ofNat 64 1] == none
+#guard RiscV.panRiscVWordOp .add
+    [BitVec.ofNat 64 1, BitVec.ofNat 64 2, BitVec.ofNat 64 3] ==
+  some (BitVec.ofNat 64 6)
+#guard RiscV.panRiscVWordOp .sub [BitVec.ofNat 64 1] == none
 
 #guard isWordResult ((panSemBitVec64MemoryAccess littleEndianState).sharedRead
   littleEndianState.memory panSemBitVec64BytesInWord .opW 0)

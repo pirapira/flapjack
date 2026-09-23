@@ -65,11 +65,11 @@ end
 mutual
   /-- Bool-valued comparison for HOL `v_flds_ok_def`, using production
       `lookupInfo`. This is not currently tagged as an exact port: the HOL
-      predicate uses HOL equality in `ALOOKUP`, while this declaration's
-      lookup semantics are selected by `[BEq String]`; the equality adapter
-      lemma only identifies lookup for lawful instances and does not establish
-      that the production representation is the same HOL interface. Lean
-      `StructInfo` also has an additional `shapedFields` cache absent from HOL.
+      predicate uses HOL equality in `ALOOKUP`, while this declaration calls
+      `lookupInfo` at the canonical String equality instance. An exact
+      clause-by-clause comparison of the recursive shape and field checks
+      against HOL is still required before claiming the tag. Lean `StructInfo`
+      also has an additional `shapedFields` cache absent from HOL.
       This Bool declaration is distinct from the Prop-valued convenience
       predicate below. -/
   def panStructValueFieldsOkBool (structs : StructContext) :

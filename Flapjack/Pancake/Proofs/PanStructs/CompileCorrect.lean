@@ -703,25 +703,8 @@ theorem panStructCompileCorrectContinueCase
   exact ⟨htarget, hlocalsFields, hglobalsFields, hglobalsMap, hlocalsMap,
     by simp [panStructValuesFieldsOkBool], by simp [panIsWfShapeValuesBool]⟩
 
-/-- Derived Local/Global Var-constructor specialization of HOL
-    `compile_exp_correct`; intentionally untagged because HOL has only the
-    universally quantified theorem, not a separately named Var-case
-    declaration, and this Lean statement is not textually/expression-for-
-    expression the same theorem. It retains every HOL premise in translated
-    form: successful source evaluation, the struct-context projection,
-    local/global field-validity predicates, `struct_infos_ok`, and both
-    local/global shape-map equations. The interface differs because Lean
-    represents HOL finite maps by nodup `InfoMap` lists plus total runtime
-    lookup functions (`PanStructFiniteState`), expresses `FEVERY` and
-    `FMAP_MAP2` through pointwise adapters, and requires lawful `BEq String`
-    to make production lookup agree with HOL equality. `panStructContextShapeView`
-    projects Lean struct infos to the HOL context's fields view. Lean also
-    stores a `shapedFields` cache absent from HOL; `structInfosOk` does not
-    inspect that cache. The evaluator takes an explicit `bytesInWord`
-    parameter. Under these interfaces, the three
-    conjuncts are the Var instance of HOL's old-shape, `v_flds_ok`, and
-    converted-evaluation conclusions. Other expression constructors remain
-    open. -/
+/-- Private bridge from the default String lookup instance to the explicit
+    equality-based adapter used to relate production lookup to HOL lookup. -/
 private theorem lookupInfoStringDefault_eq_panPropsALookupEq
     {β : Type} (key : String) (entries : List (String × β)) :
     @lookupInfo String β instBEqOfDecidableEq key entries =
@@ -729,6 +712,24 @@ private theorem lookupInfoStringDefault_eq_panPropsALookupEq
   letI : LawfulBEq String := instLawfulBEqString
   exact lookupInfo_eq_panPropsALookupEq key entries
 
+/-- Derived Local/Global Var-constructor specialization of HOL
+    `compile_exp_correct`; intentionally untagged because HOL has only the
+    universally quantified theorem, not a separately named Var-case
+    declaration. This Lean statement is not an exact statement port. It keeps
+    successful source evaluation, but re-encodes the HOL premises: the direct
+    `ctxt.structs = MAP ... s.structs` equality is replaced by equality of
+    shape views (which observes names and fields, not the full Lean struct-info
+    records); finite-map `FEVERY` field-validity is expressed as pointwise Bool
+    predicates over total runtime lookups; and the `FMAP_MAP2` premises are
+    expressed through pointwise shape-map adapters. The state wrapper supplies
+    nodup `InfoMap` lists and lookup equations, while lawful `BEq String` is
+    needed to align production lookup with HOL equality. The theorem carries
+    `structInfosOk` as a premise, but this Var-case proof does not use it. Lean
+    also stores a `shapedFields` cache absent from HOL, which these premises do
+    not inspect, and its evaluator takes an explicit `bytesInWord` parameter.
+    Its three conclusions are the Var instance of HOL's old-shape,
+    `v_flds_ok`, and converted-evaluation conclusions. Other expression
+    constructors remain open. -/
 theorem panStructCompileExpCorrectVarCase
     [BEq String] [LawfulBEq String] [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

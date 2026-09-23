@@ -89,3 +89,9 @@
 # execution outcome -- the companion `sourceToLoop_ffi_executes` was the
 # execution check and is now a `#guard`.
 1 Flapjack/Test/SourceToLoopFfi.lean
+
+# --- Dest-2-exp parameter-shape side conditions ------------------------------
+# The four `native_decide` calls supply side conditions as arguments to the
+# `crepDest2Exp_eq_shift` / `crepDest2Exp_lt_width` theorems, so `#guard`
+# cannot stand in; the surrounding execution check is already a `#guard`.
+4 Flapjack/Test/CrepeDest2ExpParity.lean

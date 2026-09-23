@@ -11,10 +11,13 @@ and invariant postconditions are not yet proved here.
 namespace Flapjack
 
 mutual
-  /-- Executable counterpart of HOL `convert_v_def`. `PanValue.word`
-      represents HOL `Val (Word w)` directly; named record fields are
-      recursively converted in order and their labels are dropped. Its direct
-      HOL-EVAL regression is recorded in the adjacent probe fixture. -/
+  /-- Exact executable counterpart of HOL `convert_v_def`. The HOL datatype
+      cases are `Val (Word w)`, `RStruct xs`, and `NStruct nm flds`; these
+      correspond respectively to `.word`, `.rStruct`, and `.nStruct` in
+      `PanValue`. The first case is unchanged, the second maps recursively in
+      order, and the third drops both record and field names while recursively
+      mapping field values in order. The direct HOL-EVAL regression is recorded
+      in the adjacent probe fixture. -/
   @[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "convert_v_def"]
   def panStructConvertValue : PanValue α → PanValue α
     | .word value => .word value
@@ -38,12 +41,15 @@ mutual
 end
 
 mutual
-  /-- Executable counterpart of HOL `v_flds_ok_def` over `PanValue`.
-      Named-record field names, order, and recursively computed shapes are all
-      checked as in the HOL definition. Lean `StructInfo` carries a `size`
-      field absent from the HOL context projection; this predicate reads only
-      `.fields`, as HOL does. -/
-  @[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "v_flds_ok_def"]
+  /-- Flapjack support predicate mirroring the conditions in HOL
+      `v_flds_ok_def`, but not an exact port. HOL returns a boolean (`T`/`F`);
+      this definition returns `Prop`. It also searches the Lean `StructContext`
+      with `[BEq String]` via `lookupInfo`, whereas HOL uses equality-based
+      `ALOOKUP` over an association list. The equivalence of that key comparison
+      (and thus lookup behavior) is not established. `StructInfo.size` is an
+      extra Lean field absent from the HOL projection; this predicate reads
+      only `.fields`. Keep the HOL tag off until the boolean/type and lookup
+      representations are aligned. -/
   def panStructValueFieldsOk [BEq String] (structs : StructContext) :
       PanValue α → Prop
     | .word _ => True
@@ -76,11 +82,15 @@ mutual
 end
 
 mutual
-  /-- Executable counterpart of HOL `is_wf_shape_v_def` over `PanValue`.
-      Lean `StructInfo` carries a `size` field absent from the HOL context
-      projection; this predicate checks only name membership and nested values,
-      as HOL does. -/
-  @[hol "cakeml/pancake/semantics/panPropsScript.sml" "is_wf_shape_v_def"]
+  /-- Flapjack support predicate mirroring the conditions in HOL
+      `is_wf_shape_v_def`, but not an exact port. HOL returns a boolean
+      (`T`/`F`); this definition returns `Prop`. It also searches the Lean
+      `StructContext` with `[BEq String]` via `lookupInfo`, whereas HOL uses
+      equality-based `ALOOKUP` over an association list. The equivalence of that
+      key comparison (and thus lookup behavior) is not established.
+      `StructInfo.size` is an extra Lean field absent from the HOL projection;
+      this predicate reads only `.fields`. Keep the HOL tag off until the
+      boolean/type and lookup representations are aligned. -/
   def panStructValueShapeWf [BEq String] (structs : StructContext) :
       PanValue α → Prop
     | .word _ => True

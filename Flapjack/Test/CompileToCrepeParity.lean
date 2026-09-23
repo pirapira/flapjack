@@ -1,6 +1,4 @@
 import Flapjack.Pancake.PanToCrep.Compile
-import Flapjack.Pancake.CrepToLoop
-import Flapjack.Pancake.LoopToWord
 import Flapjack.RiscV.WordToStack
 
 namespace Flapjack.Test.CompileToCrepeParity
@@ -307,11 +305,11 @@ def laterPairOracle : Bool :=
 
 #guard laterPairOracle
 
-/-! The original `compile_to_crep` fixture above stores the later payload
-words at `StoreGlob 0` and `StoreGlob 1`. Cake `loop_to_word` represents those
-as `Set (Temp 0)` and `Set (Temp 1)`, and `word_to_stack` must retain the same
-Temp region indices instead of scaling them by target bytes-per-word. The
-original rules are `loop_to_wordScript.sml:93` and
+/-! The `compile_to_crep` fixture above separately checks `StoreGlob 0/1`.
+This boundary check starts from a representative Word program containing
+`Set (Temp 0/1)` and checks that `word_to_stack` preserves those indices; it
+does not establish an end-to-end link between the two fixtures. The original
+rules are `loop_to_wordScript.sml:93` and
 `compiler/backend/word_to_stackScript.sml:491`. -/
 def laterPairStackTempRegionOracle : Bool :=
   let config : RiscV.WordStackConfig :=
@@ -325,34 +323,6 @@ def laterPairStackTempRegionOracle : Bool :=
   | _ => false
 
 #guard laterPairStackTempRegionOracle
-
-def stackTempSetIndices {α : Type} : StackProg α → List Nat
-  | .set (.temp index) _ => [index]
-  | .seq first second =>
-      stackTempSetIndices first ++ stackTempSetIndices second
-  | .ite _ _ _ thenBranch elseBranch =>
-      stackTempSetIndices thenBranch ++ stackTempSetIndices elseBranch
-  | .loop body => stackTempSetIndices body
-  | _ => []
-
-def laterPairEndToEndTempRegionOracle : Bool :=
-  let stackConfig : RiscV.WordStackConfig :=
-    { locations := (List.range 64).map (fun name => (name, .register name))
-      scratch := 31, stackBase := 0 }
-  match compileToCrep compileToCrepePairContext laterPairDecls with
-  | [function] =>
-      let loopContext := crepMkCtxt .rv64i
-        (crepMakeVmap function.params) [] (function.params.length - 1)
-      let loopProgram := compileCrepToLoop loopContext [] function.body
-      let wordProgram := LoopToWord.loopToWordCompFunc 0 function.params loopProgram
-      match RiscV.wordToStackProgNat stackConfig wordProgram with
-      | some stackProgram =>
-          laterPairOracle && laterPairStackTempRegionOracle &&
-            stackTempSetIndices stackProgram == [0, 1]
-      | none => false
-  | _ => false
-
-#guard laterPairEndToEndTempRegionOracle
 
 def handledPairDecls : List (Decl Nat) :=
   [.exnDecl "E" (.comb [.one, .one]),

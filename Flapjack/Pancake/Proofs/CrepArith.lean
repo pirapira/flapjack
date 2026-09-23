@@ -1464,6 +1464,68 @@ theorem crepSimpExpCorrect1HolFiniteDimension {ι : Type} {σ : Type}
     _ = (evalCrepRuntimeExp runtime expression).map PanWordLab.word :=
       congrArg (Option.map PanWordLab.word) hsimp
 
+def crepArithHolFiniteDimensionMapCode {ι : Type} {σ : Type}
+    (f : (List Nat × CrepProg (ι → Bool)) → (List Nat × CrepProg (ι → Bool)))
+    (state : CrepHolState (ι → Bool) σ) : CrepHolState (ι → Bool) σ :=
+  { state with code := fun name => (state.code name).map f }
+
+theorem crepArithHolFiniteDimensionMapCode_runtime {ι : Type}
+    (dimension : HolFiniteDimension ι) {σ : Type}
+    (f : (List Nat × CrepProg (ι → Bool)) → (List Nat × CrepProg (ι → Bool)))
+    (state : CrepHolState (ι → Bool) σ) :
+    (crepArithHolFiniteDimensionMapCode f state).toHolFiniteWordRuntime dimension =
+      crepArithMapCode f (state.toHolFiniteWordRuntime dimension) := by
+  cases state
+  rfl
+
+/-! Source-state-shaped all-width corollary. This has HOL's premise, mapc
+    update, simplifier, and complete option/word_lab result, and its proof
+    rewrites through the production evaluator theorem above. It is kept
+    untagged because the source evaluator is represented through an explicit
+    `HolFiniteDimension` enumeration and BitVec/RISC-V operations, so the
+    unrestricted HOL word-carrier correspondence is still unproved. -/
+theorem crepSimpExpCorrect1HolFiniteDimensionSource {ι : Type} {σ : Type}
+    (dimension : HolFiniteDimension ι)
+    (f : (List Nat × CrepProg (ι → Bool)) → (List Nat × CrepProg (ι → Bool)))
+    (state : CrepHolState (ι → Bool) σ) (expression : CrepExp (ι → Bool))
+    (h : evalCrepHolFiniteDimensionExpWordLab dimension state expression ≠ none) :
+    evalCrepHolFiniteDimensionExpWordLab dimension
+      (crepArithHolFiniteDimensionMapCode f state)
+      (crepSimpExp (fun n => bitVecToHolWord dimension
+        (BitVec.ofNat dimension.width n)) expression) =
+    evalCrepHolFiniteDimensionExpWordLab dimension state expression := by
+  have hEvalSource (source : CrepHolState (ι → Bool) σ)
+      (e : CrepExp (ι → Bool)) :
+      evalCrepHolFiniteDimensionExpWordLab dimension source e =
+        (evalCrepRuntimeExp (source.toHolFiniteWordRuntime dimension) e).map
+          PanWordLab.word := by
+    simp only [evalCrepHolFiniteDimensionExpWordLab]
+    rw [← evalCrepRuntimeExp_finiteDimension_eq dimension source e]
+  have hSourceRuntime := hEvalSource state expression
+  have hRuntime :
+      (evalCrepRuntimeExp (state.toHolFiniteWordRuntime dimension) expression).map
+        PanWordLab.word ≠ none := by
+    simpa [hSourceRuntime] using h
+  have hMapRuntime := hEvalSource (crepArithHolFiniteDimensionMapCode f state)
+    (crepSimpExp (fun n => bitVecToHolWord dimension
+      (BitVec.ofNat dimension.width n)) expression)
+  calc
+    evalCrepHolFiniteDimensionExpWordLab dimension
+        (crepArithHolFiniteDimensionMapCode f state)
+        (crepSimpExp (fun n => bitVecToHolWord dimension
+          (BitVec.ofNat dimension.width n)) expression) =
+        (evalCrepRuntimeExp
+          ((crepArithHolFiniteDimensionMapCode f state).toHolFiniteWordRuntime dimension)
+          (crepSimpExp (fun n => bitVecToHolWord dimension
+            (BitVec.ofNat dimension.width n)) expression)).map PanWordLab.word :=
+          hMapRuntime
+    _ = (evalCrepRuntimeExp (state.toHolFiniteWordRuntime dimension)
+          expression).map PanWordLab.word := by
+          rw [crepArithHolFiniteDimensionMapCode_runtime]
+          exact crepSimpExpCorrect1HolFiniteDimension f state expression hRuntime
+    _ = evalCrepHolFiniteDimensionExpWordLab dimension state expression :=
+      hSourceRuntime.symm
+
 
 
 /-- Flapjack's RISC-V specialization of HOL simp_exp_correct1.

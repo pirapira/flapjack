@@ -48,6 +48,14 @@
     "reviewer": "Codex (constructor-by-constructor source comparison)"
   },
   {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "dest_const_thm",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepDestConst_eq_const",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement comparison and direct HOL-EVAL constructor probe)"
+  },
+  {
     "hol_path": "cakeml/pancake/crep_inlineScript.sml",
     "hol_name": "compile_inl_top_def",
     "lean_path": "Flapjack/Pancake/CrepInline/Pass.lean",
@@ -2248,20 +2256,20 @@
     "reviewer": "Codex (proof inventory)"
   },
   {
-    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
-    "hol_name": "compile_exps_eq_map",
+    "hol_path": null,
+    "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
-    "lean_name": "structCompileExps_eq_map",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison with direct HOL-EVAL list fixture)"
+    "lean_name": "structCompileShapesFuel_eq_map",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (fuel parameter differs from no-fuel HOL compile_shapes_eq_map; see theorem docstring)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
-    "hol_name": "opt_mmap_eq_some_el",
+    "hol_name": "old_exp_shapes_eq",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
-    "lean_name": "optMmapEqSomeEl",
+    "lean_name": "structOldExpShapes_eq_map",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison with direct HOL-EVAL success and pointwise fixture)"
+    "reviewer": "Codex (source comparison with direct HOL-EVAL list fixture)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
@@ -3112,6 +3120,62 @@
     "reviewer": "Codex (bounded actual-state Call case infrastructure; untagged)"
   },
   {
+    "hol_path": "cakeml/pancake/proofs/pan_simpProofScript.sml",
+    "hol_name": "exp_ids_ret_to_tail_eq",
+    "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
+    "lean_name": "expIdsRetToTailEq",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_simpProofScript.sml",
+    "hol_name": "exp_ids_seq_assoc_eq",
+    "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
+    "lean_name": "expIdsSeqAssocEq",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_simpProofScript.sml",
+    "hol_name": "exp_ids_compile_eq",
+    "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
+    "lean_name": "expIdsCompileEq",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_simpProofScript.sml",
+    "hol_name": "size_of_eids_compile_eq",
+    "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
+    "lean_name": "sizeOfEidsPanSimpDeclsEq",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_simpProofScript.sml",
+    "hol_name": "functions_compile_prog",
+    "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
+    "lean_name": "functionsCompileProg",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_simpProofScript.sml",
+    "hol_name": "first_compile_prog_all_distinct",
+    "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
+    "lean_name": "firstCompileProgAllDistinctPanSimp",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "opt_mmap_eq_some_el",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "optMmapEqSomeEl",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison with direct HOL-EVAL success and pointwise fixture)"
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
@@ -3209,50 +3273,34 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_simpProofScript.sml",
-    "hol_name": "exp_ids_ret_to_tail_eq",
+    "hol_name": "map_snd_f_eq",
     "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
-    "lean_name": "expIdsRetToTailEq",
+    "lean_name": "mapSndFEq",
     "statement_status": "pending_statement_review",
     "reviewer": "flapjack-deepseek (source comparison)"
   },
   {
-    "hol_path": "cakeml/pancake/proofs/pan_simpProofScript.sml",
-    "hol_name": "exp_ids_seq_assoc_eq",
-    "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
-    "lean_name": "expIdsSeqAssocEq",
-    "statement_status": "pending_statement_review",
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "crepRuntimeLoad_eq_some_of_crepMemoryRel",
+    "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "flapjack-deepseek (source comparison)"
   },
   {
-    "hol_path": "cakeml/pancake/proofs/pan_simpProofScript.sml",
-    "hol_name": "exp_ids_compile_eq",
-    "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
-    "lean_name": "expIdsCompileEq",
-    "statement_status": "pending_statement_review",
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "crepRuntimeLoad_eq_none_of_memaddrs_false",
+    "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "flapjack-deepseek (source comparison)"
   },
   {
-    "hol_path": "cakeml/pancake/proofs/pan_simpProofScript.sml",
-    "hol_name": "size_of_eids_compile_eq",
-    "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
-    "lean_name": "sizeOfEidsPanSimpDeclsEq",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
-  },
-  {
-    "hol_path": "cakeml/pancake/proofs/pan_simpProofScript.sml",
-    "hol_name": "functions_compile_prog",
-    "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
-    "lean_name": "functionsCompileProg",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
-  },
-  {
-    "hol_path": "cakeml/pancake/proofs/pan_simpProofScript.sml",
-    "hol_name": "first_compile_prog_all_distinct",
-    "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
-    "lean_name": "firstCompileProgAllDistinctPanSimp",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "compile_exps_eq_map",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "structCompileExps_eq_map",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison with direct HOL-EVAL list fixture)"
   }
 ]

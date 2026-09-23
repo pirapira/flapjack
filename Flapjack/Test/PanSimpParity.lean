@@ -2680,5 +2680,11 @@ example : ((functions (panSimpDecls ([] : List (Decl Nat)))).map
     (fun entry => entry.1)).Nodup :=
   firstCompileProgAllDistinctPanSimp [] (by simp [functions])
 
+example :
+    ([(1, (2, 3))] : List (Nat × Nat × Nat)).map (fun entry => entry.2.2 + 1) =
+      (([(1, (2, 3))] : List (Nat × Nat × Nat)).map
+        (fun entry => entry.2.2)).map (fun body => body + 1) :=
+  mapSndFEq _ (fun body => body + 1) (fun value => value)
+
 
 end Flapjack.Test.PanSimpParity

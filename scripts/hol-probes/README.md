@@ -61,6 +61,15 @@ the exact HOL `compile` port tracked by bead `flapjack-pxn.18.3.1.4`.
 `pan_to_crepProof$globals_lookup_def` for a present singleton word and a
 missing global; the matching Lean guards live in
 `Flapjack.Test.PanToCrepGlobalsLookupParity`.
+`crep_arith_dest_const_probe.out` records direct HOL EVAL of
+`crep_arith$dest_const_def` at
+`cakeml/pancake/crep_arithScript.sml:10-12` for a constant, variable, load,
+and multiplication expression. Its Lean constructor checks live in
+`Flapjack.Test.CrepeDestConstParity`.
+`crep_arith_eval_mul_const_probe.out` records direct HOL EVAL of
+`crepSem$eval` after `crep_arith$mul_const` for zero, one, power-of-two, and
+general multipliers, with a word-valued local. Its matching production runtime
+cases live in `Flapjack.Test.CrepeMulConstParity`.
 `pan_globals_compile_top_probe.out` records original Pancake HOL evaluation
 of `pan_globals$compile_top` for an absent start function (the total empty-list
 result), a present `main` entry, and a global initializer in a nonempty

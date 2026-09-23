@@ -120,6 +120,19 @@ run_probe crep_runtime_word_boundary_probeScript.sml crep_runtime_word_boundary_
 run_probe crep_runtime_ffi_boundary_probeScript.sml crep_runtime_ffi_boundary_probe.out \
   bytes64 set_byte_0_roundtrip "$cake_dir/pancake/semantics/panSemScript.sml" \
   "$cake_dir/pancake/semantics"
+run_probe crep_runtime_shared_domain_probeScript.sml crep_runtime_shared_domain_probe.out \
+  valid_zero_mem align_16 "$cake_dir/pancake/semantics/panSemScript.sml" \
+  "$cake_dir/pancake/semantics"
+run_probe crep_arith_dest_const_probeScript.sml crep_arith_dest_const_probe.out \
+  constant multiplication "$cake_dir/pancake/crep_arithScript.sml"
+run_probe crep_arith_eval_mul_const_probeScript.sml crep_arith_eval_mul_const_probe.out \
+  input_word multiply_general "$cake_dir/pancake/proofs/crep_arithProofScript.sml"
+run_probe crep_runtime_read_bytes_probeScript.sml crep_runtime_read_bytes_probe.out \
+  read_bytes_zero read_bytes_out_of_domain "$cake_dir/pancake/semantics/panSemScript.sml" \
+  "$cake_dir/pancake/semantics"
+run_probe crep_runtime_write_bytes_probeScript.sml crep_runtime_write_bytes_probe.out \
+  write_head write_out_of_domain "$cake_dir/pancake/semantics/panSemScript.sml" \
+  "$cake_dir/pancake/semantics"
 run_probe pan_flat_store_probeScript.sml pan_flat_store_probe.out \
   store_hit stores_blocked "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_flatten_probeScript.sml pan_flatten_probe.out \
@@ -140,6 +153,8 @@ run_probe pan_lang_decl_predicates_probeScript.sml pan_lang_decl_predicates_prob
   is_decl_decl is_decl_exception is_exn_decl_exception is_exn_decl_decl \
   is_name_name is_name_decl size_of_eids_empty size_of_eids_mixed \
   "$cake_dir/pancake/panLangScript.sml"
+run_probe compile_shape_probeScript.sml compile_shape_probe.out \
+  one compile_shapes_map "$cake_dir/pancake/pan_structsScript.sml"
 run_probe pan_lang_var_exp_probeScript.sml pan_lang_var_exp_probe.out \
   local_var global_var nested nested_global "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_lang_load_store_op_probeScript.sml pan_lang_load_store_op_probe.out \
@@ -476,7 +491,7 @@ run_probe crep_simp_prog_probeScript.sml crep_simp_prog_probe.out \
 run_probe afindi_probeScript.sml afindi_probe.out \
   empty duplicate_first "$cake_dir/pancake/pan_structsScript.sml"
 run_probe pan_structs_compile_exp_probeScript.sml pan_structs_compile_exp_probe.out \
-  rstruct list_map "$cake_dir/pancake/pan_structsScript.sml"
+  rstruct old_shapes_map "$cake_dir/pancake/pan_structsScript.sml"
 run_probe crep_semantics_probeScript.sml crep_semantics_probe.out \
   semantics_timeout_is_nonterminal semantics_break_is_nonterminal \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
@@ -498,6 +513,12 @@ run_probe crep_locals_wordlab_probeScript.sml crep_locals_wordlab_probe.out \
   "$cake_dir/pancake/semantics"
 run_probe crep_replicate_const_probeScript.sml crep_replicate_const_probe.out \
   replicate_const_one replicate_const_nonzero \
+  "$cake_dir/pancake/semantics/crepSemScript.sml" \
+  "$cake_dir/pancake/semantics"
+# The mem_load probe observes the total word -> word_lab memory function and the
+# memaddrs guard on both mem_load and eval (Load ...).
+run_probe crep_mem_load_probeScript.sml crep_mem_load_probe.out \
+  mem_load_valid eval_load_invalid \
   "$cake_dir/pancake/semantics/crepSemScript.sml" \
   "$cake_dir/pancake/semantics"
 run_probe prog_if_probeScript.sml prog_if_probe.out \

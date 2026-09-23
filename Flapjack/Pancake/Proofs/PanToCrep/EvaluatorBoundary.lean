@@ -50,35 +50,6 @@ def panToCrepSourceEvaluate
     Option (PanValueFfiClockResult α σ) :=
   panSemEvaluateExactState context primitive handler state program
 
-/-! For the `pc_compile_correct[Skip]` case, expose the production Pancake
-evaluator on a HOL-shaped `PanSemState`. The source code map is intentionally
-not converted to a runtime list: `Skip` cannot inspect code or call a function.
-Every state component consumed by the actual evaluator is copied from the
-source state, and the exact memory-access object is still required. -/
-def panToCrepSourceEvaluateSkip
-    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
-    (handler : PanValueStatefulFfiHandler α σ)
-    (bytesInWord : α) (memoryAccess : PanValueMemoryAccess α)
-    (source : PanSemState α (FfiState σ)) :
-    Option (PanValueFfiClockResult α σ) :=
-  panSemEvaluateExactState context primitive handler
-    { legacy :=
-        { structs := source.structs
-          functions := []
-          locals := source.locals
-          globals := source.globals
-          memory := source.memory
-          ffi := source.ffi
-          clock := source.clock
-          baseAddress := source.baseAddress
-          topAddress := source.topAddress
-          bytesInWord := bytesInWord }
-      memoryAccess := memoryAccess }
-    .skip
-
 def panToCrepTargetEvaluate
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

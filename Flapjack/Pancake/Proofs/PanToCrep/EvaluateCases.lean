@@ -50,57 +50,6 @@ theorem crepSkipEvaluationEquation
       some (.normal, state) := by
   exact evalCrepRuntimeResult_skip handler primitive fuel state
 
-/-! Kernel-checked `pc_compile_correct[Skip]` case at the full relation
-boundary. HOL's source `NONE` is represented by the source evaluator's normal
-clocked outcome; the target evaluator represents that same result as
-`.normal`. Both evaluators preserve their complete represented states. The
-code and exception relations are carried unchanged, and `localsRel` is stated
-again over the post-states. The HOL `localised_prog Skip` premise simplifies
-to true, so it contributes no residual hypothesis. This theorem is left
-untagged: Lean's evaluator APIs encode a normal step as a clocked result,
-whereas HOL exposes `(NONE, state)`. This case correspondence is therefore
-tracked as a documented statement mismatch rather than claimed as an exact
-tagged theorem. -/
-theorem panToCrepPcCompileCorrectSkip
-    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    [CrepBytesInWord α] [BEq String]
-    (context : PanToCrepProofContext α)
-    (sourceContext : PanValueFfiContext α)
-    (sourcePrimitive : PanPrimitiveHandler α)
-    (sourceHandler : PanValueStatefulFfiHandler α σ)
-    (targetHandler : CrepRuntimeFfiHandler α σ FfiFinalEvent)
-    (targetPrimitive : CrepPrimitiveHandler α) (fuel : Nat)
-    (bytesInWord : α) (memoryAccess : PanValueMemoryAccess α)
-    (sourceState : PanSemState α (FfiState σ))
-    (targetState : CrepRuntimeState α σ)
-    (targetCode : FiniteMap FunName (List Nat × CrepProg α))
-    (hstate : stateRel sourceState targetState)
-    (hcode : codeRel context sourceState.code targetCode)
-    (hexceptions : excpRel context.eids sourceState.exceptionShapes)
-    (hlocals : localsRel context sourceState.locals targetState.locals) :
-    panToCrepSourceEvaluateSkip sourceContext sourcePrimitive sourceHandler
-      bytesInWord memoryAccess sourceState =
-      some (.control (.normal sourceState.locals sourceState.globals
-        sourceState.memory sourceState.ffi), sourceState.clock) ∧
-    ∃ targetState',
-      panToCrepTargetEvaluate context targetHandler targetPrimitive (fuel + 1)
-        targetState .skip = some (.normal, targetState') ∧
-      stateRel sourceState targetState' ∧
-      codeRel context sourceState.code targetCode ∧
-      excpRel context.eids sourceState.exceptionShapes ∧
-      localsRel context sourceState.locals targetState'.locals := by
-  constructor
-  · simp [panToCrepSourceEvaluateSkip, panSemEvaluateExactState, panSemEvaluate,
-      panSemEvaluateWithFuel, panSemEvaluateFuel, PanSemExactState.toEvaluateState,
-      evalPanValueFfiClockProg, evalPanValueFfiClockLeaf,
-      evalPanValueFfiProgSteps]
-  · refine ⟨targetState, ?_, hstate, hcode, hexceptions, ?_⟩
-    · simp [panToCrepTargetEvaluate, compileCodeRelProg, compileProgHOL,
-        evalCrepRuntimeResult, evalCrepRuntimeProg]
-    · exact hlocals
-
 /-- HOL's compiler leaves `Skip` unchanged. -/
 theorem compileProgHOL_skip
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α]

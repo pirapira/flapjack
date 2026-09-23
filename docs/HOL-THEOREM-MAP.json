@@ -3248,6 +3248,30 @@
     "reviewer": "Codex (fixed-RV64 actual-state Annot case specialization; untagged)"
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panSemEvaluateCodeState_decCallSkip_ofEntry",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (state-owned DecCall evaluator case infrastructure; untagged)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panSemEvaluateRiscV64CodeState_decCallSkip_ofEntry",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (fixed-RV64 DecCall evaluator specialization; untagged)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panToCrepPcCompileCorrectDecCallWordSkipCodeStateRiscV64",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (fixed-RV64 actual-state DecCall induction case; untagged)"
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_simpProofScript.sml",
     "hol_name": "map_snd_f_eq",
     "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",

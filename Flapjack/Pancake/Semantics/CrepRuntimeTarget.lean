@@ -19,11 +19,12 @@ executable evaluator can be read as a fixed target rather than an arbitrary
 model. Nothing here changes a tagged declaration or adds a premise to one; the
 target is an ordinary predicate/instance, and `stateRel` is untouched.
 
-The corresponding 32-bit *store* equality (`crepRuntimeStore32` versus
-`panModelStore32`) is not proved here yet: the four-step `setByte` chain needs
-extra `BitVec` address-normalization rewrites before the equality is
-definitional. That is tracked in child bead `flapjack-pxn.18.4.3.43.2`; the
-executable store is still exercised against the direct HOL oracle below.
+The whole production store/load boundary is covered: the 32-bit variants use
+the `BitVec` numeral normalizations `a + 1 + 1 = a + 2`,
+`a + 1 + 1 + 1 = a + 3`, and `1 + 1 + 1 = 3`; the four-step `setByte` chain of
+`crepRuntimeStore32` then matches `panModelStore32` exactly. Nothing here
+changes a tagged declaration or adds a premise to one; the target is an
+ordinary predicate/instance, and `stateRel` is untouched.
 
 Direct HOL oracle: `scripts/hol-probes/crep_runtime_word_boundary_probe.out`
   bytes64=8w; bytes32=4w; byte_at_9=SOME 2w; byte_at_8=SOME 1w;
@@ -132,11 +133,32 @@ theorem crepRuntimeStoreByte_target_eq_riscv
   · rw [if_neg hb, if_neg hb]
     rfl
 
-/-! The 32-bit store bridge (`crepRuntimeStore32` versus `panModelStore32`) is
-tracked separately in child bead `flapjack-pxn.18.4.3.43.2`: it is the same
-one-word-stride argument as the 32-bit load bridge above, but the four-step
-`setByte` chain needs the `BitVec` address-normalization rewrites before the
-canonical target equality is definitional. -/
+/-- `updateMemory` (production, `Flapjack.Semantics`) and
+    `panModelUpdateMemory` (the memory-model helper) are definitionally the same
+    function, so the store bridges can compare the updated memories directly. -/
+theorem updateMemory_eq_panModelUpdateMemory [BEq α] (memory : PanWordMemory α)
+    (address value : α) :
+    updateMemory memory address value = panModelUpdateMemory memory address value :=
+  rfl
+
+theorem crepRuntimeStore32_target_eq_riscv
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (address value : RiscV.Word 64) :
+    (crepRuntimeStore32 (riscv64CrepRuntimeTarget base) address value).map
+        (fun state => state.memory) =
+      RiscV.panRiscVStore32 base.memaddrs base.memory (8 : RiscV.Word 64)
+        address value := by
+  rw [crepRuntimeStore32, RiscV.panRiscVStore32, panModelStore32,
+    riscv64CrepRuntimeTarget, RiscV.panRiscVMemoryModel]
+  by_cases ha : RiscV.aligned address 4 = true
+  · rw [if_pos ha, if_pos ha]
+    by_cases hb : base.memaddrs (RiscV.panRiscVByteAlign 8 address) = true
+    · rw [if_pos hb, if_pos hb]
+      cases hm : base.memory (RiscV.panRiscVByteAlign 8 address) <;>
+        simp [updateMemory_eq_panModelUpdateMemory, BitVec.add_assoc]
+    · rw [if_neg hb, if_neg hb]
+      rfl
+  · rw [if_neg ha, if_neg ha]
+    rfl
 
 /-! ## Evaluator bridges
 

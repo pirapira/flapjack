@@ -1,7 +1,6 @@
 import Flapjack.HolRef
 import Flapjack.PanToCrepMaxList
 import Flapjack.Pancake.Semantics.CrepSem
-import Flapjack.Pancake.CrepInline.Pass
 
 /-! Exact theorem counterpart for CakeML's `crep_inlineProofScript.sml`.
 
@@ -165,62 +164,5 @@ theorem crepInlineLocalsExtRel_self (a b : CrepHolState α σ) :
     crepInlineLocalsExtRel a b a b := by
   simp only [crepInlineLocalsExtRel]
   rw [crepHolFdiff_fdom_self a.locals, crepHolFdiff_fdom_self b.locals]
-
-/-- Production-shaped rendering of CakeML's `code_inl_rel`
-    (`crep_inlineProofScript.sml:1504`):
-    `code_inl_rel inl_fs s t ⇔
-       ∀fname args prog.
-         FLOOKUP s.code fname = SOME (args, prog) ⇒
-         ∃inl_bag. inl_bag SUBMAP inl_fs ∧
-           FLOOKUP t.code fname = SOME (args, inline_prog inl_bag prog)`.
-
-    This is NOT tagged as the exact HOL declaration, because the two
-    `inline`-map representations genuinely differ:
-    * HOL's `inl_fs`/`inl_bag` are finite maps
-      `mlstring |-> (num list # prog)` consulted by `FLOOKUP`, whereas the
-      executable Lean pass `crepInlineProg` consumes a first-match entry list
-      `List (CrepInlineEntry α)` (`crepInlineLookup`);
-    * HOL's `inl_bag SUBMAP inl_fs` is a finite-map substructure, rendered here
-      as entry-list membership in `inl_fs`;
-    * HOL's `inline_prog` (`crep_inlineScript.sml:203`) is not ported exactly:
-      the Lean pass splits HOL's single `Call ctyp e args` equation into
-      `.call none`/`.call (some (_, none))`/`.call (some (_, some _))` and uses
-      the list lookup above.  Its exact finite-map port is tracked separately.
-    The statement below keeps HOL's quantifier/argument order and the source/
-    target `FLOOKUP t.code = SOME (args, <inlined>)` clause, so it can be
-    strengthened into the tagged statement once the finite-map `inline_prog`
-    is ported. -/
-def crepInlineCodeInlRel [BEq FunName] [OfNat α 0] [OfNat α 1]
-    (inl_fs : List (CrepInlineEntry α))
-    (s t : CrepHolState α σ) : Prop :=
-  ∀ fname args prog,
-    s.code fname = some (args, prog) →
-    ∃ inl_bag : List (CrepInlineEntry α),
-      (∀ entry, entry ∈ inl_bag → entry ∈ inl_fs) ∧
-      t.code fname = some (args, crepInlineProg inl_bag prog)
-
-/-- Sufficient condition matching the production inline pass: if every target
-    body is the source body inlined with `inl_fs`, the relation holds (take
-    `inl_bag = inl_fs`). -/
-theorem crepInlineCodeInlRel_of_code [BEq FunName] [OfNat α 0] [OfNat α 1]
-    (inl_fs : List (CrepInlineEntry α)) (s t : CrepHolState α σ)
-    (h : ∀ fname args prog, s.code fname = some (args, prog) →
-      t.code fname = some (args, crepInlineProg inl_fs prog)) :
-    crepInlineCodeInlRel inl_fs s t := by
-  intro fname args prog hcode
-  exact ⟨inl_fs, fun _ hmem => hmem, h fname args prog hcode⟩
-
-/-- Negative case: the relation cannot hold when a source function body has no
-    inlined target entry at all. -/
-theorem not_crepInlineCodeInlRel_of_target_none
-    [BEq FunName] [OfNat α 0] [OfNat α 1]
-    (inl_fs : List (CrepInlineEntry α)) (s t : CrepHolState α σ)
-    (fname : FunName) (args : List Nat) (prog : CrepProg α)
-    (hcode : s.code fname = some (args, prog)) (hnone : t.code fname = none) :
-    ¬ crepInlineCodeInlRel inl_fs s t := by
-  intro h
-  obtain ⟨_inl_bag, _hsub, htarget⟩ := h fname args prog hcode
-  rw [hnone] at htarget
-  simp at htarget
 
 end Flapjack

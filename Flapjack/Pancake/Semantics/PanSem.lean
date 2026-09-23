@@ -674,7 +674,7 @@ theorem panSemEvaluateExactState_raise_of_eval
         state.legacy.memory state.legacy.ffi exception value), state.legacy.clock) := by
   simp [panSemEvaluateExactState, panSemEvaluate, panSemEvaluateWithFuel,
     panSemEvaluateFuel, evalPanValueFfiClockLeaf, evalPanValueFfiClockProg,
-    evalPanValueFfiProgSteps, evalPanValueExpCounted,
+    evalPanValueFfiProgSteps, panValueRaiseResult, evalPanValueExpCounted,
     PanSemExactState.toEvaluateState, heval, hvalid, hlimit]
 
 /-! Finite-map updates for the source declaration evaluator. `InfoMap` is an

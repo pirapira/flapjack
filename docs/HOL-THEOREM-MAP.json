@@ -125,7 +125,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",
     "lean_name": "readBytearrayHOL",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; get_byte/word-width are HOL parameters, no extra codec)"
+    "reviewer": "Codex (source comparison; exact HOL arg order address,length,get_byte; get_byte/word-width are HOL parameters, no extra codec)"
   },
   {
     "hol_path": "cakeml/compiler/backend/semantics/wordSemScript.sml",
@@ -133,7 +133,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",
     "lean_name": "memLoadByteAuxHOL",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; memory/domain/word-width are HOL parameters, no extra codec)"
+    "reviewer": "Codex (source comparison; exact HOL total word_loc memory m, word-set domain dm, arg order m,dm,be,w, no extra codec)"
   },
   {
     "hol_path": "cakeml/compiler/backend/semantics/wordSemScript.sml",
@@ -141,7 +141,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",
     "lean_name": "memStoreByteAuxHOL",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; memory/domain/word-width are HOL parameters, no extra codec)"
+    "reviewer": "Codex (source comparison; exact HOL total word_loc memory m, word-set domain dm, arg order m,dm,be,w,b, no extra codec)"
   },
   {
     "hol_path": "cakeml/compiler/backend/semantics/wordSemScript.sml",
@@ -149,7 +149,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",
     "lean_name": "writeBytearrayHOL",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; byte store is HOL's mem_store_byte_aux parameter, no extra codec)"
+    "reviewer": "Codex (source comparison; exact HOL arg order a,bs,m,dm,be over total word_loc memory and word-set domain, no extra codec)"
   },
   {
     "hol_path": "cakeml/pancake/pan_globalsScript.sml",

@@ -101,29 +101,29 @@ def memLoadGuard : Bool :=
 /-- `rv64_read_bytearrays=(SOME [171w],SOME [205w; 239w])`: the width-generic
     `readBytearrayHOL` fed by the 64-bit byte loader. -/
 def readBytearrayGuard : Bool :=
-  readBytearrayHOL (loopMemLoadByteAux (baseState returningState)) 0 1 ==
+  readBytearrayHOL (0 : Word) 1 (loopMemLoadByteAux (baseState returningState)) ==
       some [0xAB] &&
-  readBytearrayHOL (loopMemLoadByteAux (baseState returningState)) 8 2 ==
+  readBytearrayHOL (8 : Word) 2 (loopMemLoadByteAux (baseState returningState)) ==
       some [0xCD, 0xEF]
 
 /-- The width-generic `memStoreByteAuxHOL` replaces the aligned byte and leaves
     other words untouched (`0xEFCD` with byte 0 set to `0x11` is `0xEF11`). -/
 def memStoreGuard : Bool :=
   let state := baseState returningState
-  match memStoreByteAuxHOL (width := 64) state.memory state.mdomain state.be
-      (8 : Word) 0x11 with
+  match memStoreByteAuxHOL (width := 64) (loopTotalMemory state) (loopTotalDomain state)
+      state.be (8 : Word) 0x11 with
   | some memory =>
-      memory (8 : Word) == some (.word (0xEF11 : Word)) &&
-      memory (0 : Word) == some (.word (0xAB : Word))
+      memory (8 : Word) == .word (0xEF11 : Word) &&
+      memory (0 : Word) == .word (0xAB : Word)
   | none => false
 
 /-- The width-generic `writeBytearrayHOL` writes the byte list in order at
     increasing addresses; the HOL probe records the result `0x2211` at `8w`. -/
 def writeBytearrayGuard : Bool :=
   let state := baseState returningState
-  let memory := writeBytearrayHOL (width := 64) state.memory state.mdomain
-      state.be (8 : Word) [0x11, 0x22]
-  memory (8 : Word) == some (.word (0x2211 : Word))
+  let memory := writeBytearrayHOL (8 : Word) [0x11, 0x22]
+      (loopTotalMemory state) (loopTotalDomain state) state.be
+  memory (8 : Word) == .word (0x2211 : Word)
 
 #guard returnedGuard
 #guard finalGuard

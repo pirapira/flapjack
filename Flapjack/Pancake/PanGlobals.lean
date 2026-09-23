@@ -522,14 +522,6 @@ def functionEntries : List (Decl α) →
   | _ :: declarations => functionEntries declarations
 termination_by declarations => sizeOf declarations
 
-/-! Direct source-shaped counterpart of `panLang$exceptions`. -/
-def exceptionEntries : List (Decl α) → List (ExceptionId × Shape)
-  | [] => []
-  | .exnDecl exception shape :: declarations =>
-      (exception, shape) :: exceptionEntries declarations
-  | _ :: declarations => exceptionEntries declarations
-termination_by declarations => sizeOf declarations
-
 /-! Counterpart of Cake's `exceptions_append`
     (`pan_globalsProofScript.sml:2507`): the exception table distributes over
     list append. -/

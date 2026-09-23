@@ -229,6 +229,17 @@ def inlinable : Decl α → Bool
   | .function declaration => declaration.inline
   | _ => false
 
+/-! Direct source-shaped counterpart of `panLang$exceptions`
+    (`panLangScript.sml:328`): the exception table of a declaration list, in
+    declaration order, dropping every non-exception declaration. -/
+@[hol "cakeml/pancake/panLangScript.sml" "exceptions_def"]
+def exceptionEntries : List (Decl α) → List (ExceptionId × Shape)
+  | [] => []
+  | .exnDecl exception shape :: declarations =>
+      (exception, shape) :: exceptionEntries declarations
+  | _ :: declarations => exceptionEntries declarations
+termination_by declarations => sizeOf declarations
+
 def nestedSeq : List (Prog α) → Prog α
   | [] => .skip
   | statement :: statements => .seq statement (nestedSeq statements)

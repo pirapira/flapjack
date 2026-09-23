@@ -278,6 +278,35 @@ theorem shapeSizeWithContext_drop (context : StructContext)
           have hctx := lookupInfo_drop_helper n context name info hlk hnodup
           simp [shapeSizeWithContext, hlk, hctx]
 
+/-- Exact port of HOL `dropWhile_MAP_helper`
+    (`pan_structsProofScript.sml:542`): mapping commutes with `dropWhile` when
+    the source and mapped predicates agree on every source element. -/
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "dropWhile_MAP_helper" 542]
+theorem dropWhile_map_helper {α β : Type} (P : α → Bool) (Q : β → Bool)
+    (f : α → β) (xs : List α) (ys : List α)
+    (h : xs.dropWhile P = ys)
+    (hPQ : ∀ x ∈ xs, P x = Q (f x)) :
+    (xs.map f).dropWhile Q = ys.map f := by
+  induction xs generalizing ys with
+  | nil =>
+      simp only [List.dropWhile_nil] at h
+      subst h
+      simp
+  | cons x xs ih =>
+      have hx : P x = Q (f x) := hPQ x (by simp)
+      rw [List.dropWhile_cons] at h
+      by_cases hP : P x = true
+      · rw [if_pos hP] at h
+        have hQ : Q (f x) = true := by rw [← hx]; exact hP
+        rw [List.map_cons, List.dropWhile_cons, hQ]
+        simp only [if_true]
+        exact ih ys h (fun y hy => hPQ y (by simp [hy]))
+      · rw [if_neg hP] at h
+        have hPfalse : P x = false := by simpa using hP
+        have hQ : Q (f x) = false := by rw [← hx]; exact hPfalse
+        rw [← h, List.map_cons, List.dropWhile_cons, hQ]
+        simp only [Bool.false_eq_true, if_false]
+
 /-- HOL's `old_exp_shapes_eq` (`pan_structsProofScript.sml:679`): the
     production old-shape list helper equals `MAP` of the production
     single-expression old-shape function, with no additional premises. -/

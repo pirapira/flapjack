@@ -432,9 +432,9 @@ def main : IO Unit := do
                 (.call none renamed entryArguments)
               returnShape := entry.returnShape }
           let globals := { globals0 with declarations := wrapper :: globals0.declarations }
-          let crepeContext := pipelineCrepeContext (BitVec.ofNat 64 8)
+          let crepeContext := pipelineCrepeCompileContext
             (fun value => BitVec.ofNat 64 value) globals
-          let compiled := compileToCrep crepeContext globals.declarations
+          let compiled := compileToCrepFixed crepeContext globals.declarations
           let t7 ← stage "compileToCrep" t6 (countCrepFunctions compiled)
           let inlined := crepInlineTopRecursiveByNames
             (pipelineInlineNames globals.declarations) compiled

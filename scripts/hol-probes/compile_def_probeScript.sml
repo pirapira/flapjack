@@ -7,6 +7,7 @@ open bossLib;
 open HolKernel Parse;
 open preamble;
 open pan_to_crepTheory;
+val _ = Globals.max_print_depth := 100;
 
 fun print_eval label q =
   let
@@ -49,3 +50,27 @@ val _ = print_eval "missing_names_global"
          funcs := FEMPTY; eids := FEMPTY; vmax := 4 |>
       (panLang$Call
         (SOME (SOME (panLang$Global, «missing_names»), NONE)) «f» [])``;
+
+val _ = print_eval "pair_load"
+  ``pan_to_crep$compile
+      <| vars := FEMPTY |+ («p», (panLang$One, [0]));
+         funcs := FEMPTY; eids := FEMPTY; vmax := 0 |>
+      (panLang$Return
+        (panLang$Load (panLang$Comb [panLang$One; panLang$One])
+          (panLang$Var panLang$Local «p»)) : 64 word panLang$prog)``;
+
+val _ = print_eval "pair_store"
+  ``pan_to_crep$compile
+      <| vars := FEMPTY |+ («p», (panLang$One, [0]))
+                 |+ («x», (panLang$One, [1]))
+                 |+ («y», (panLang$One, [2]));
+         funcs := FEMPTY; eids := FEMPTY; vmax := 2 |>
+      (panLang$Store (panLang$Var panLang$Local «p»)
+        (panLang$RStruct
+          [panLang$Var panLang$Local «x»; panLang$Var panLang$Local «y»]) :
+        64 word panLang$prog)``;
+
+val _ = print_eval "fixed_stride64"
+  ``(pan_to_crep$compile_exp
+      <| vars := FEMPTY; funcs := FEMPTY; eids := FEMPTY; vmax := 0 |>
+      panLang$BytesInWord : 64 word crepLang$exp list # panLang$shape)``;

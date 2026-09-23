@@ -15,6 +15,32 @@ open Flapjack
 def context : CompileContext Nat :=
   { vars := [], functions := [], exceptions := [], maxVar := 0, bytesInWord := 1 }
 
+def fixedWidthContext : PanToCrepCompileContext Nat :=
+  { vars := [("p", (.one, [0])), ("x", (.one, [1])), ("y", (.one, [2]))]
+    functions := []
+    exceptions := []
+    maxVar := 2 }
+
+def pairLoad : Prog Nat :=
+  .return (.load (.comb [.one, .one]) (.var .local "p"))
+
+def pairStore : Prog Nat :=
+  .store (.var .local "p") (.rStruct [.var .local "x", .var .local "y"])
+
+def isFixedPairLoad8 : CrepProg Nat → Bool
+  | .return [.load (.var 0), .load (.op .add [.var 0, .const 8])] => true
+  | _ => false
+
+def isFixedPairStore8 : CrepProg Nat → Bool
+  | .dec 3 (.var 0) (.dec 4 (.var 1) (.dec 5 (.var 2)
+      (.seq (.store (.var 3) (.var 4))
+        (.seq (.store (.op .add [.var 3, .const 8]) (.var 5)) .skip)))) => true
+  | _ => false
+
+def fixedWidthParityGuard : Bool :=
+  isFixedPairLoad8 (compileProgFixed fixedWidthContext pairLoad) &&
+  isFixedPairStore8 (compileProgFixed fixedWidthContext pairStore)
+
 def emptyOneGlobalContext : CompileContext Nat :=
   { vars := [("empty_one", (.one, []))], functions := [], exceptions := [],
     maxVar := 0, bytesInWord := 1 }
@@ -80,7 +106,8 @@ def parityGuard : Bool :=
   isTailCallToF (compileProg context missingGlobalCall) &&
   isTailCallToF (compileProg emptyOneGlobalContext emptyOneGlobalCall) &&
   isExtraNamesCallToF (compileProg extraNamesGlobalContext extraNamesGlobalCall) &&
-  isMissingNamesCallToF (compileProg missingNamesGlobalContext missingNamesGlobalCall)
+  isMissingNamesCallToF (compileProg missingNamesGlobalContext missingNamesGlobalCall) &&
+  fixedWidthParityGuard
 
 example : compileProg context missingGlobalCall = .call none "f" [] := by
   simp [missingGlobalCall, compileProg, compileArgs, callDestinationNames,
@@ -105,10 +132,11 @@ example :
 
 #eval parityGuard
 #guard parityGuard
+#guard fixedWidthParityGuard
 
 def runChecks : IO Bool := do
   if parityGuard then
-    IO.println "PASS compile_def skip/return/break/continue/seq and Global destination parity"
+    IO.println "PASS compile_def fixed-width load/store and control-flow parity"
   else
     IO.println "FAIL compile_def parity"
   pure parityGuard

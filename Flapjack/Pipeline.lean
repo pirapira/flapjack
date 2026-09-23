@@ -315,6 +315,14 @@ def pipelineCrepeContext [BEq α] [Add α]
     maxVar := 0
     bytesInWord := bytesInWord }
 
+def pipelineCrepeCompileContext [BEq α] [Add α]
+    (fromNat : Nat → α) (program : GlobalCompiledProgram α) :
+    PanToCrepCompileContext α :=
+  { vars := []
+    functions := []
+    exceptions := crepGetEidsFromDecls fromNat program.declarations
+    maxVar := 0 }
+
 /-! Source-named ports of CakeML Pancake's `first_name_def` and
     `make_funcs_def` (`crep_to_loopScript.sml:243-255`).  The executable
     pipeline also needs a caller-selected label base when runtime sections
@@ -649,8 +657,8 @@ def compileFlapjackEntryCake [BEq (BitVec width)] [OfNat (BitVec width) 0]
       let prepared := globalRenameDecls start renamed (globalResortDecls structured)
       let metadata := globalCompileTop bytesInWord fromNat prepared
       let globals := { metadata with declarations := cakeDeclarations }
-      let crepeContext := pipelineCrepeContext bytesInWord fromNat globals
-      let compiled := compileToCrep crepeContext cakeDeclarations
+      let crepeContext := pipelineCrepeCompileContext fromNat globals
+      let compiled := compileToCrepFixed crepeContext cakeDeclarations
       let crepe := crepSimpFunctions fromNat
         (crepInlineTopRecursiveByNames (pipelineInlineNames cakeDeclarations) compiled)
       let loop := pipelineLoopFunctionsSource architecture 1 crepe

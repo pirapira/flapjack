@@ -14,7 +14,7 @@ the inventory and this report.
 | `ret_hdl` | [`ret_hdl_probe.out`](../scripts/hol-probes/ret_hdl_probe.out) | [`RetHdlParity.lean`](../Flapjack/Test/RetHdlParity.lean) | One, empty/single/two-word Comb, and Named shapes |
 | `ret_var` | [`ret_var_probe.out`](../scripts/hol-probes/ret_var_probe.out) | [`RetVarParity.lean`](../Flapjack/Test/RetVarParity.lean) | empty and populated One, single and multiword Comb, and Named shapes |
 | `wrap_rt` | [`wrap_rt_probe.out`](../scripts/hol-probes/wrap_rt_probe.out) | [`WrapRtParity.lean`](../Flapjack/Test/WrapRtParity.lean) | absent, empty/single One, empty Comb, and Named destinations |
-| `compile` | [`compile_def_probe.out`](../scripts/hol-probes/compile_def_probe.out) | [`CompileDefParity.lean`](../Flapjack/Test/CompileDefParity.lean) | missing Global lookup, malformed empty/extra/missing name lists, and unknown/shape-dropped Local destinations |
+| `compile` | [`compile_def_probe.out`](../scripts/hol-probes/compile_def_probe.out) | [`CompileDefParity.lean`](../Flapjack/Test/CompileDefParity.lean) | missing/empty/malformed name lists for both Global and Local destination kinds, plus a valid Local pair destination; Cake ignores the kind tag and looks the destination up in ctxt.vars |
 
 ## Scope
 

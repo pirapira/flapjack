@@ -496,4 +496,43 @@ theorem new_main_name_correct [BEq String] [LawfulBEq String]
   rw [← globalFunctionNames_eq_functions_map]
   exact globalNewMainName_not_mem declarations
 
+/-- Exact-shaped port of Cake's `fresh_name_correct`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:993`): the name produced
+    by the fresh-name search is not a member of the input list.  HOL
+    `MEM (fresh_name name names) names ⇒ F` is `globalFreshName name names ∈
+    names → False`; the production counterpart is `globalFreshName_not_mem`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "fresh_name_correct"]
+theorem fresh_name_correct [BEq String] [LawfulBEq String]
+    (name : String) (names : List String) :
+    globalFreshName name names ∈ names → False :=
+  globalFreshName_not_mem name names
+
+/-- Exact-shaped port of Cake's `fresh_name_correct'`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1003`): if every member
+    of `names'` lies in `names`, then a name fresh for `names` is also fresh
+    for `names'`.  HOL `set names' ⊆ set names` is stated pointwise, as in the
+    production counterpart `globalFreshName_not_mem_of_subset`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "fresh_name_correct'"]
+theorem fresh_name_correct' [BEq String] [LawfulBEq String]
+    (name : String) (names names' : List String)
+    (hmem : globalFreshName name names ∈ names')
+    (hsubset : ∀ candidate, candidate ∈ names' → candidate ∈ names) :
+    False :=
+  globalFreshName_not_mem_of_subset name names names' hsubset hmem
+
+/-- Exact-shaped port of Cake's `FILTER_decs_fperm_decs`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2832`): renaming
+    commutes with filtering to the non-function declarations.  HOL
+    `FILTER ($¬ ∘ is_function)` is `globalDeclsFilter (fun declaration =>
+    !globalDeclIsFunction declaration)` and HOL `fperm_decs` is the reviewed
+    production `globalRenameDecls`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "FILTER_decs_fperm_decs"]
+theorem FILTER_decs_fperm_decs [BEq String] (source target : FunName)
+    (declarations : List (Decl α)) :
+    globalDeclsFilter (fun declaration => !globalDeclIsFunction declaration)
+        (globalRenameDecls source target declarations) =
+      globalDeclsFilter (fun declaration => !globalDeclIsFunction declaration)
+        declarations :=
+  globalRenameDecls_filter_not_function source target declarations
+
 end Flapjack

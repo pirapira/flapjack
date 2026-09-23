@@ -4165,7 +4165,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "localsRelUpdateExistingValue",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only handler-prestate bridge from locals_rel lookup to shape-preserving flattened update; the one-word target exp_hdl execution step is proved by EvaluateCases.crepRuntimeExpHdlOneWord; general handler case and enclosing Call relation remain open"
+    "reviewer": "Flapjack-only local-map lemma deriving the flattened target-slot update from locals_rel lookup and shape preservation; one-word exp_hdl execution and its relation-aware handler prestate are composed in EvaluateCases, while other payload widths and the source/target Call theorem remain open"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
@@ -4254,6 +4254,14 @@
     "lean_name": "evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody_ofCodeRelArgs_relations",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only fixed-fuel target Call composition: derives the exp_hdl payload state and state_rel/code_rel/excp_rel/locals_rel from related source/target callee post-states, then applies a relation-aware handler-body IH; source Call result and final post-state relation remain open, so not pc_compile_correct"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody_ofCodeRelArgs_postRelations",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only fixed-fuel actual target Call composition that carries a related handler-body post-state through the production Call dispatcher; the source Call execution/result is not connected here, so this is not pc_compile_correct[Call_Ret_Exception]"
   },
   {
     "hol_path": null,

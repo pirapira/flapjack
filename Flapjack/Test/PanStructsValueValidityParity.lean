@@ -101,10 +101,28 @@ example : panValueFldsOk ([] : StructContextHOL) holValueValidityMatch = false :
   simp [panValueFldsOk, panValuesFldsOk, panFieldsFldsOk, lookupInfo,
     holValueValidityMatch]
 
-/-- `v_flds_ok_duplicate_first` in `pan_structs_value_validity_probe.out`. -/
-example : panValueFldsOk holValueValidityFirstMatchContext
-    holValueValidityMatch = false := by
+/-- `is_wf_shape_v_named_mismatch` in `pan_structs_value_validity_probe.out`. -/
+example : panValueFldsOk holValueValidityContext holValueValidityMismatch = false := by
   simp [panValueFldsOk, panValuesFldsOk, panFieldsFldsOk, lookupInfo,
-    holValueValidityFirstMatchContext, holValueValidityMatch]
+    holValueValidityContext, holValueValidityMismatch]
+
+/-- `is_wf_shape_v_word` in `pan_structs_value_validity_probe.out`. -/
+example : panIsWfShapeValueHOL holValueValidityContext (.word 1 : PanValue Nat) = true := by
+  simp [panIsWfShapeValueHOL, holValueValidityContext]
+
+/-- `is_wf_shape_v_named_match` in `pan_structs_value_validity_probe.out`. -/
+example : panIsWfShapeValueHOL holValueValidityContext holValueValidityMatch = true := by
+  simp [panIsWfShapeValueHOL, panIsWfShapeValuesHOL, lookupInfo,
+    holValueValidityContext, holValueValidityMatch]
+
+/-- `is_wf_shape_v_named_missing` in `pan_structs_value_validity_probe.out`. -/
+example : panIsWfShapeValueHOL ([] : StructContextHOL) holValueValidityMatch = false := by
+  simp [panIsWfShapeValueHOL, panIsWfShapeValuesHOL, lookupInfo, holValueValidityMatch]
+
+/-- `is_wf_shape_v_named_mismatch` in `pan_structs_value_validity_probe.out`:
+    `is_wf_shape_v` ignores field names, so the renamed field still counts. -/
+example : panIsWfShapeValueHOL holValueValidityContext holValueValidityMismatch = true := by
+  simp [panIsWfShapeValueHOL, panIsWfShapeValuesHOL, lookupInfo,
+    holValueValidityContext, holValueValidityMismatch]
 
 end Flapjack.Test

@@ -32,6 +32,20 @@ structure StructInfo where
 abbrev StructContext := List (StructName × StructInfo)
 abbrev InfoMap (α : Type u) := List (String × α)
 
+/-- HOL-shaped `struct_info` (`cakeml/pancake/panLangScript.sml:121`), the value
+    component of the contexts that `pan_structsProof$v_flds_ok` and
+    `panProps$is_wf_shape_v` range over (via `ALOOKUP`). It carries exactly the
+    HOL fields `fields` and `size`, without the production
+    `StructInfo.shapedFields` cache that has no HOL counterpart. -/
+structure StructInfoHOL where
+  fields : List (FieldName × Shape)
+  size : Nat
+  deriving Repr
+
+/-- HOL-shaped struct context: the association list `(stcname # struct_info)
+    list` used by `v_flds_ok`/`is_wf_shape_v` and `ALOOKUP`. -/
+abbrev StructContextHOL := List (StructName × StructInfoHOL)
+
 /-- Key-polymorphic first-match association-list lookup: the Lean counterpart
     of HOL `alist$ALOOKUP`.  The association list may use any key type with
     `BEq`; under `[LawfulBEq κ]` the `==` test reflects HOL's `=`, so this is

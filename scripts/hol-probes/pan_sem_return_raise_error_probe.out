@@ -1,0 +1,15 @@
+ret_eval_fail_result=SOME Error
+ret_eval_fail_clock=5
+ret_eval_fail_locals=SOME (ValWord 3w)
+ret_oversized_result=SOME Error
+ret_oversized_locals=SOME (ValWord 3w)
+ret_ok_result=SOME (Return (ValWord 7w))
+ret_ok_locals=NONE
+raise_missing_shape_result=SOME Error
+raise_missing_shape_locals=SOME (ValWord 3w)
+raise_eval_fail_result=SOME Error
+raise_eval_fail_locals=SOME (ValWord 3w)
+raise_oversized_result=SOME Error
+raise_shape_mismatch_result=SOME Error
+raise_ok_result=SOME (Exception «E» (ValWord 7w))
+raise_ok_locals=NONE

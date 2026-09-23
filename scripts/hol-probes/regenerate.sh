@@ -97,6 +97,10 @@ run_probe pan_structs_compile_correct_probeScript.sml pan_structs_compile_correc
   compile_correct_tick_positive_source compile_correct_tick_positive_converted \
   "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
   "$cake_dir/pancake/proofs"
+run_probe pan_structs_compile_exp_correct_probeScript.sml pan_structs_compile_exp_correct_probe.out \
+  compile_exp_correct_local_var compile_exp_correct_global_var \
+  "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
+  "$cake_dir/pancake/proofs"
 run_probe pan_structs_value_validity_probeScript.sml pan_structs_value_validity_probe.out \
   v_flds_ok_word v_flds_ok_named_match v_flds_ok_named_mismatch \
   v_flds_ok_named_missing v_flds_ok_duplicate_first \

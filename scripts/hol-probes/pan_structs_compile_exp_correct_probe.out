@@ -1,0 +1,2 @@
+compile_exp_correct_local_var=(Comb [One; One],Comb [One; One],T,T,T)
+compile_exp_correct_global_var=(One,One,T,T,T)

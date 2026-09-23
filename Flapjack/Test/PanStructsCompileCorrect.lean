@@ -582,4 +582,90 @@ example :
     panStructConvertCode, structCompileShape,
     structCompileShapeWF]
 
+private theorem finiteMapLocalValueFieldsOk :
+    panStructEveryValueFieldsOkBool finiteMapState.runtime.structs
+      finiteMapState.runtime.locals := by
+  intro name value hlookup
+  simp [finiteMapState, panStructFiniteStateFromMaps, finiteMapRuntime,
+    panPropsALookupEq] at hlookup
+  rcases hlookup with ⟨rfl, rfl⟩
+  simp [panStructValueFieldsOkBool, finiteMapState,
+    panStructFiniteStateFromMaps, finiteMapRuntime]
+
+private theorem finiteMapGlobalValueFieldsOk :
+    panStructEveryValueFieldsOkBool finiteMapState.runtime.structs
+      finiteMapState.runtime.globals := by
+  intro name value hlookup
+  simp [finiteMapState, panStructFiniteStateFromMaps, finiteMapRuntime,
+    panPropsALookupEq] at hlookup
+  rcases hlookup with ⟨rfl, rfl⟩
+  simp [panStructValueFieldsOkBool, finiteMapState,
+    panStructFiniteStateFromMaps, finiteMapRuntime]
+
+private theorem finiteMapLocalShapeMap :
+    panStructShapeMapEq finiteMapContext.locals finiteMapState.runtime.locals := by
+  intro name
+  by_cases hname : name = "local"
+  · subst name
+    simp [finiteMapContext, finiteMapState, panStructFiniteStateFromMaps,
+      finiteMapRuntime, panPropsALookupEq, lookupInfo, panSemShapeOf]
+  · have hne : "local" ≠ name := Ne.symm hname
+    simp [finiteMapContext, finiteMapState, panStructFiniteStateFromMaps,
+      finiteMapRuntime, panPropsALookupEq, lookupInfo, hne]
+
+private theorem finiteMapGlobalShapeMap :
+    panStructShapeMapEq finiteMapContext.globals finiteMapState.runtime.globals := by
+  intro name
+  by_cases hname : name = "global"
+  · subst name
+    simp [finiteMapContext, finiteMapState, panStructFiniteStateFromMaps,
+      finiteMapRuntime, panPropsALookupEq, lookupInfo, panSemShapeOf]
+  · have hne : "global" ≠ name := Ne.symm hname
+    simp [finiteMapContext, finiteMapState, panStructFiniteStateFromMaps,
+      finiteMapRuntime, panPropsALookupEq, lookupInfo, hne]
+
+example :
+    structOldExpShape finiteMapContext (.var .local "local" : Exp Word64) = .one ∧
+    panStructValueFieldsOkBool finiteMapState.runtime.structs
+      (.word (BitVec.ofNat 64 7)) = true ∧
+    evalPanValueExp
+      (panStructConvertFiniteState finiteMapContext finiteMapState).runtime.structs
+      (panStructConvertFiniteState finiteMapContext finiteMapState).runtime.locals
+      (panStructConvertFiniteState finiteMapContext finiteMapState).runtime.globals
+      (panStructConvertFiniteState finiteMapContext finiteMapState).runtime.memory
+      (panStructConvertFiniteState finiteMapContext finiteMapState).runtime.baseAddress
+      (panStructConvertFiniteState finiteMapContext finiteMapState).runtime.topAddress
+      (BitVec.ofNat 64 8) (structCompileExp finiteMapContext
+        (.var .local "local" : Exp Word64)) =
+      some (.word (BitVec.ofNat 64 7)) := by
+  have hresult := panStructCompileExpCorrectVarCase finiteMapContext finiteMapState
+    (BitVec.ofNat 64 8) "local" .local (.word (BitVec.ofNat 64 7))
+    (by simp [evalPanValueExp, finiteMapState, panStructFiniteStateFromMaps,
+      finiteMapRuntime, panPropsALookupEq]) rfl finiteMapLocalValueFieldsOk finiteMapGlobalValueFieldsOk
+    (by simp [structInfosOk, finiteMapState, panStructFiniteStateFromMaps,
+      finiteMapRuntime]) finiteMapLocalShapeMap finiteMapGlobalShapeMap
+  simpa [panSemShapeOf, panStructConvertValue] using hresult
+
+example :
+    structOldExpShape finiteMapContext (.var .global "global" : Exp Word64) = .one ∧
+    panStructValueFieldsOkBool finiteMapState.runtime.structs
+      (.word (BitVec.ofNat 64 11)) = true ∧
+    evalPanValueExp
+      (panStructConvertFiniteState finiteMapContext finiteMapState).runtime.structs
+      (panStructConvertFiniteState finiteMapContext finiteMapState).runtime.locals
+      (panStructConvertFiniteState finiteMapContext finiteMapState).runtime.globals
+      (panStructConvertFiniteState finiteMapContext finiteMapState).runtime.memory
+      (panStructConvertFiniteState finiteMapContext finiteMapState).runtime.baseAddress
+      (panStructConvertFiniteState finiteMapContext finiteMapState).runtime.topAddress
+      (BitVec.ofNat 64 8) (structCompileExp finiteMapContext
+        (.var .global "global" : Exp Word64)) =
+      some (.word (BitVec.ofNat 64 11)) := by
+  have hresult := panStructCompileExpCorrectVarCase finiteMapContext finiteMapState
+    (BitVec.ofNat 64 8) "global" .global (.word (BitVec.ofNat 64 11))
+    (by simp [evalPanValueExp, finiteMapState, panStructFiniteStateFromMaps,
+      finiteMapRuntime, panPropsALookupEq]) rfl finiteMapLocalValueFieldsOk finiteMapGlobalValueFieldsOk
+    (by simp [structInfosOk, finiteMapState, panStructFiniteStateFromMaps,
+      finiteMapRuntime]) finiteMapLocalShapeMap finiteMapGlobalShapeMap
+  simpa [panSemShapeOf, panStructConvertValue] using hresult
+
 end Flapjack.Test

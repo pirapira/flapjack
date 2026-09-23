@@ -129,9 +129,15 @@ not by itself establish the unrestricted HOL-polymorphic
 with matching built theories by setting `CAKEML`; the checked output was
 generated from source commit `857f0d98da8f8a3580f3442338e697809308ede`.
 `pan_fixed_load_probe.out` prints HOL `mem_load_byte_def` and
-`mem_load_32_def` directly, then evaluates domain misses, alignment failure,
-both endiannesses, and 8-bit/64-bit word instances. The matching focused
-RISC-V model checks are in `Flapjack.Test.PanFixedLoadParity`. The generic
+`mem_load_32_def` directly, together with the imported `byte_align_def`,
+`aligned_def`, `align_def`, `get_byte_def`, `byte_index_def`, and
+`word_of_bytes_def`. It evaluates domain misses, alignment failure, both
+endiannesses, 8-bit/64-bit word instances, and the 24-bit case
+`byte_align 5w = 4w`. That last row differs from production RISC-V's
+`panRiscVByteAlign 3 5 = 3`: RISC-V rounds by a multiple of three while the
+HOL definition aligns using `LOG2 (dimindex DIV 8)`. The matching focused
+RISC-V model checks and explicit width-24 mismatch guard are in
+`Flapjack.Test.PanFixedLoadParity`. The generic
 Crep source helpers `crepHolEvalMemLoadByte` and `crepHolEvalMemLoad32`, plus
 their equations to `panModelReadByte`/`panModelRead32`, are in
 `Flapjack.Pancake.Semantics.CrepSem`; they keep the `PanMemoryModel` explicit

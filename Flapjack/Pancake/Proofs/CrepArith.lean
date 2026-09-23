@@ -1447,7 +1447,13 @@ private theorem crepEvalCodeMapIrrel {α : Type} [BEq α] [OfNat α 0] [OfNat α
     the polymorphic word type. Their equality for every HOL word dimension
     and memory state remains unproved. The successful evaluation induction
     needs these branches, so this theorem is not tagged as HOL
-    `simp_exp_correct1`. -/
+    `simp_exp_correct1`. There is a concrete counterexample to identifying
+    the current RISC-V model with the HOL model at every dimension: for a
+    24-bit word, the probed HOL definition gives `byte_align 5w = 4w` because
+    it aligns by `LOG2 (24 DIV 8) = 1`, while the production model supplied
+    `bytesInWord = 3` and rounds address 5 down to 3. See
+    `PanFixedLoadParity.holByteAlignWidth24Address5` and the direct HOL row in
+    `pan_fixed_load_probe.out`. -/
 theorem crepSimpExpCorrect1HolFiniteDimension {ι : Type} {σ : Type}
     [dimension : HolFiniteDimension ι]
     (f : (List Nat × CrepProg (ι → Bool)) → (List Nat × CrepProg (ι → Bool)))

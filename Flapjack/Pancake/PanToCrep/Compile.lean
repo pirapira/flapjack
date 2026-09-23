@@ -738,10 +738,8 @@ def panToCrepCompFuncRiscV (context : PanToCrepHOLContext (BitVec width))
   let shapes := params.map Prod.snd
   let vmax := Shape.shapeSize (.comb shapes) - 1
   compileProgRiscV
-    { vars := panToCrepMakeVmapHOL params
-      funcs := context.funcs
-      eids := context.eids
-      vmax := vmax } body
+    (panToCrepMkCtxtHOL (panToCrepMakeVmapHOL params)
+      context.funcs vmax context.eids) body
 
 /-! HOL `get_eids_from_decls_def`: enumerate exception declarations in source
 order and turn their zero-based indices into words. HOL `alist_to_fmap` uses
@@ -767,7 +765,7 @@ def compileToCrepHOL
   let functionMap := functionInfosHOL declarations
   let exceptionMap := panToCrepGetEidsFromDeclsHOL declarations
   let context : PanToCrepHOLContext (BitVec width) :=
-    { vars := FEMPTY, funcs := functionMap, eids := exceptionMap, vmax := 0 }
+    panToCrepMkCtxtHOL FEMPTY functionMap 0 exceptionMap
   functions.map fun (name, parameters, body, _returnShape) =>
     (name, panToCrepVars parameters,
       panToCrepCompFuncRiscV context parameters body)

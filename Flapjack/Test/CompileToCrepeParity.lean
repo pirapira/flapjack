@@ -1,4 +1,6 @@
 import Flapjack.Pancake.PanToCrep.Compile
+import Flapjack.Pancake.CrepToLoop
+import Flapjack.Pancake.LoopToWord
 import Flapjack.RiscV.WordToStack
 
 namespace Flapjack.Test.CompileToCrepeParity
@@ -324,8 +326,31 @@ def laterPairStackTempRegionOracle : Bool :=
 
 #guard laterPairStackTempRegionOracle
 
+def stackTempSetIndices {α : Type} : StackProg α → List Nat
+  | .set (.temp index) _ => [index]
+  | .seq first second =>
+      stackTempSetIndices first ++ stackTempSetIndices second
+  | .ite _ _ _ thenBranch elseBranch =>
+      stackTempSetIndices thenBranch ++ stackTempSetIndices elseBranch
+  | .loop body => stackTempSetIndices body
+  | _ => []
+
 def laterPairEndToEndTempRegionOracle : Bool :=
-  laterPairOracle && laterPairStackTempRegionOracle
+  let stackConfig : RiscV.WordStackConfig :=
+    { locations := (List.range 64).map (fun name => (name, .register name))
+      scratch := 31, stackBase := 0 }
+  match compileToCrep compileToCrepePairContext laterPairDecls with
+  | [function] =>
+      let loopContext := crepMkCtxt .rv64i
+        (crepMakeVmap function.params) [] (function.params.length - 1)
+      let loopProgram := compileCrepToLoop loopContext [] function.body
+      let wordProgram := LoopToWord.loopToWordCompFunc 0 function.params loopProgram
+      match RiscV.wordToStackProgNat stackConfig wordProgram with
+      | some stackProgram =>
+          laterPairOracle && laterPairStackTempRegionOracle &&
+            stackTempSetIndices stackProgram == [0, 1]
+      | none => false
+  | _ => false
 
 #guard laterPairEndToEndTempRegionOracle
 

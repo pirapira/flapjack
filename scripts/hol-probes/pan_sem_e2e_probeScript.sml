@@ -41,3 +41,12 @@ val _ = print_eval "return_if_13"
         (panLang$Return (panLang$Const (13w:8 word)))
         (panLang$Return (panLang$Const (99w:8 word))),
        (ARB:((8),unit) panSem$state)))``
+
+val _ = print_eval "call_code_map_7"
+  ``FST (panSem$evaluate
+      (panLang$Call NONE (strlit "id") [panLang$Const (7w:8 word)],
+       ((ARB:((8),unit) panSem$state) with
+          <| code := FEMPTY |+ (strlit "id",
+               ([ (strlit "x", panLang$One) ],
+                panLang$Return (panLang$Var panLang$Local (strlit "x")), panLang$One));
+             clock := 10 |>)))``

@@ -6,13 +6,11 @@ import Flapjack.PanValueFfiClockSemantics
 # Pancake `evaluate`
 
 Source reference: `cakeml/pancake/semantics/panSemScript.sml:556-736`
-(`evaluate_def`).  The source evaluates one `panLang$prog` against the
-clocked Pancake state, preserving all source state components and returning
-the remaining clock.  `PanSemEvaluateState` is the corresponding source
-boundary; `panSemEvaluate` delegates to the exact clocked evaluator, whose
-constructor equations cover declarations, assignments, primitives, ordinary
-and sized stores, sequencing, conditionals, loops, calls, declaration calls,
-exceptions, returns, shared memory, external calls, ticks, and annotations.
+(`evaluate_def`). The HOL source evaluates one `panLang$prog` against a state
+whose `code` field is a finite map. `PanSemEvaluateState` is the existing
+list-backed executable compatibility boundary; its `functions` field is not
+the source `PanSemState.code` map. Its clocked evaluator covers calls against
+that list, but it is not the exact recursive source code-map evaluator.
 
 The fuel is only Lean's termination guard.  It is derived from the complete
 program/function tree and source clock, while the observable semantics remain
@@ -39,6 +37,8 @@ termination_by value => sizeOf value
 
 structure PanSemEvaluateState (α : Type u) (σ : Type v) where
   structs : StructContext
+  /-- Compatibility function table. This list cannot stand in for the
+      HOL-finite `PanSemState.code` map in a source Call/DecCall proof. -/
   functions : List (FunName × List VarName × Prog α)
   locals : VarName → Option (PanValue α)
   globals : VarName → Option (PanValue α)

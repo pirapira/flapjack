@@ -1080,9 +1080,6 @@ theorem panToCrepPcCompileCorrectCallReturnConstCodeStateRiscV64
   simpa [panSemEvaluateRiscV64CodeState,
     panSemEvaluateCodeStateWithMemoryModel, panSemBitVec64BytesInWord] using hgeneric
 
-/-! Direct nonempty-code-map DecCall equation used by the corresponding
-actual-state simulation case. This remains untagged proof infrastructure; the
-HOL oracle is `deccall_code_map_7` in `pan_sem_e2e_probe.out`. -/
 /-! Direct nonempty-code-map Call equation for a one-word parameter and a
 return of that parameter. This is untagged evaluator infrastructure; the
 corresponding original HOL observation is `call_code_map_7`. -/
@@ -1488,6 +1485,9 @@ theorem panToCrepPcCompileCorrectAnnotCodeStateRiscV64
     panSemEvaluateCodeStateWithMemoryModel, panSemBitVec64BytesInWord,
     hsourcePost] using hgeneric
 
+/-! Direct nonempty-code-map DecCall equation used by the corresponding
+actual-state simulation case. This remains untagged proof infrastructure; the
+HOL oracle is `deccall_code_map_7` in `pan_sem_e2e_probe.out`. -/
 theorem panSemEvaluateCodeState_decCallSkip_ofEntry
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Sub α]
     [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

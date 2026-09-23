@@ -4358,5 +4358,37 @@
     "lean_name": "crepEveryExp",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (constructor-by-constructor source comparison against every_exp_def; direct HOL-EVAL rows reproduced by Lean guards in Flapjack/Test/CrepEveryExpParity.lean)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "evalCrepRuntimeExps_append",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only list evaluator append lemma for production Crep expression results; supports the HOL compile_args list induction."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "evalPanSemStateExps_cons",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only source state evaluator equation decomposing a successful expression list result into head and tail evaluations."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "evalMapCompileArgsFlat_of_each",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only compile_args list induction: lifts a separately supplied per-expression flattening result over the production source and target list evaluators; per-expression correctness for all HOL-localised constructors is not yet proved."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileArgsHOL_constOrLocal_eval_flatten",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Proves compiled target words equal flattened source results for argument lists containing only Const and Local expressions. This is a strict subset of HOL eval_map_comp_exp_flat_eq; other expression constructors and the full Call case remain open."
   }
 ]

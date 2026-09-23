@@ -3419,6 +3419,14 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panSemEvaluateRiscV64CodeState_callHandlesRaiseOneWordException_ofEntry",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Fixed-RV64 source evaluator support for the Call_Ret_Exception case; not the general HOL theorem"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "panSkipEvaluationEquation",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Codex (proof inventory)"
@@ -3750,6 +3758,14 @@
     "lean_name": "panSemEvaluateRiscV64CodeState_callAssignParameter_ofEntry",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Codex (fixed-RV64 state-owned assigned Call evaluator case; untagged)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panToCrepPcCompileCorrectCallHandlesOneWordExceptionCodeStateRiscV64",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Fixed-RV64 actual-state Call_Ret_Exception support case; narrower than the general pc_compile_correct theorem"
   },
   {
     "hol_path": null,

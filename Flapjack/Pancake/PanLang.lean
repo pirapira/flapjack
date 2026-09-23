@@ -1005,31 +1005,6 @@ theorem zero_not_mem_genlist_offset {α : Type} (t : List α) (h : t.length ≤ 
   rw [hzero] at htoNat
   simp at htoNat
 
-/-- Cake's `map_pick_up_first` (`pan_globalsProofScript.sml:2995`): projecting
-    the first component of a quadruple map recovers the mapped first
-    components. -/
-theorem map_fst_map_quad {α β γ δ ε ζ η θ : Type}
-    (l : List (α × β × γ × δ)) (f1 : α → ε) (f2 : β → ζ) (f3 : γ → η)
-    (f4 : δ → θ) :
-    ((l.map (fun p => (f1 p.1, f2 p.2.1, f3 p.2.2.1, f4 p.2.2.2))).map Prod.fst) =
-      (l.map Prod.fst).map f1 := by
-  rw [List.map_map, List.map_map]
-  rfl
-
-/-- Cake's `tuple_4_o` (`pan_globalsProofScript.sml:3003`): composing two
-    quadruple projections composes the four component functions pointwise. -/
-theorem quadProjection_comp {α β γ δ ε ζ η θ ι κ ℓ μ : Type}
-    (f1 : α → ε) (f2 : β → ζ) (f3 : γ → η) (f4 : δ → θ)
-    (g1 : ι → α) (g2 : κ → β) (g3 : ℓ → γ) (g4 : μ → δ) :
-    (fun p : ι × κ × ℓ × μ =>
-        (f1 (g1 p.1), f2 (g2 p.2.1), f3 (g3 p.2.2.1), f4 (g4 p.2.2.2))) =
-      ((fun q : α × β × γ × δ => (f1 q.1, f2 q.2.1, f3 q.2.2.1, f4 q.2.2.2)) ∘
-        (fun p : ι × κ × ℓ × μ =>
-          (g1 p.1, g2 p.2.1, g3 p.2.2.1, g4 p.2.2.2))) := by
-  funext p
-  obtain ⟨x, y, z, t⟩ := p
-  rfl
-
 /-- Cake's `MAP2` (`pan_commonScript.sml`): pointwise combination of two lists,
     truncating at the shorter one. -/
 def panMap2 (f : α → β → γ) : List α → List β → List γ

@@ -66,6 +66,37 @@ theorem afindi_append_fixture :
         | some index => some index) := by
   exact afindi_append "d" entries [("d", 40)]
 
+/-! Direct HOL-EVAL rows from `pan_structs_afindi_append_probe.out` cover a
+prefix hit, an offset suffix hit, and an absent key. HOL writes the shifted
+index as `LENGTH xs + i`; Lean's theorem uses the commuted `i + xs.length`. -/
+def appendPrefix : List (String × Nat) := [("a", 1), ("b", 2)]
+def appendSuffix : List (String × Nat) := [("b", 99)]
+def suffixPrefix : List (String × Nat) := [("a", 1)]
+def suffixEntries : List (String × Nat) := [("b", 2), ("b", 3)]
+
+theorem afindi_append_prefix_hit_fixture :
+    afindi "b" (appendPrefix ++ appendSuffix) = some 1 := by
+  rw [afindi_append]
+  simp [appendPrefix, afindi]
+
+theorem afindi_append_suffix_hit_fixture :
+    afindi "b" (suffixPrefix ++ suffixEntries) = some 1 := by
+  rw [afindi_append]
+  simp [suffixPrefix, suffixEntries, afindi]
+
+theorem afindi_append_missing_fixture :
+    afindi "z" (suffixPrefix ++ appendSuffix) = none := by
+  rw [afindi_append]
+  simp [suffixPrefix, appendSuffix, afindi]
+
+def holAfIndiAppendGuard : Bool :=
+  afindi "b" (appendPrefix ++ appendSuffix) == some 1 &&
+  afindi "b" (suffixPrefix ++ suffixEntries) == some 1 &&
+  afindi "z" (suffixPrefix ++ appendSuffix) == none
+
+#eval holAfIndiAppendGuard
+#guard holAfIndiAppendGuard
+
 theorem afindi_append_value_fixture :
     afindi "d" (entries ++ [("d", 40)]) = some 3 := by
   simp [afindi, entries]
@@ -91,6 +122,27 @@ theorem afindi_dropWhile_fixture :
     entries.dropWhile (fun entry => decide ("b" ≠ entry.1)) = entries.drop 1 := by
   rw [afindi_dropWhile]
   simp [afindi, entries]
+
+/-! Direct HOL-EVAL rows from `pan_structs_dropwhile_afindi_probe.out` check
+the first hit, a later hit and an absent key against HOL `DROP` and
+`dropWhile_afindi`. -/
+theorem afindi_dropWhile_first_fixture :
+    entries.dropWhile (fun entry => decide ("a" ≠ entry.1)) = entries := by
+  rw [afindi_dropWhile]
+  simp [afindi, entries]
+
+theorem afindi_dropWhile_missing_fixture :
+    entries.dropWhile (fun entry => decide ("z" ≠ entry.1)) = [] := by
+  rw [afindi_dropWhile]
+  simp [afindi, entries]
+
+def holAfIndiDropWhileGuard : Bool :=
+  entries.dropWhile (fun entry => decide ("a" ≠ entry.1)) == entries &&
+  entries.dropWhile (fun entry => decide ("b" ≠ entry.1)) == entries.drop 1 &&
+  entries.dropWhile (fun entry => decide ("z" ≠ entry.1)) == []
+
+#eval holAfIndiDropWhileGuard
+#guard holAfIndiDropWhileGuard
 
 theorem afindi_lookup_fixture :
     entries.lookup "b" = some 20 := by

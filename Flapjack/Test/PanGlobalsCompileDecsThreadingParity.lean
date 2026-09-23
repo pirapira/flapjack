@@ -452,6 +452,39 @@ def adapterGuard : Bool :=
 #eval adapterGuard
 #guard adapterGuard
 
+/-- A start function so the total `compile_top` path is exercised end to end. -/
+def cakeMainFunction : Decl (BitVec 8) :=
+  .function
+    { name := "main", inline := false, exported := false, params := [],
+      body := .skip, returnShape := .one }
+
+def cakeStartDeclarations : List (Decl (BitVec 8)) :=
+  [cakeMainFunction, .decl Shape.one "g" (.const 7)]
+
+/-- The executed fixed-word path is the canonical definition. -/
+theorem executedTopCanonicalAgreement :
+    globalCompileTopCake cakeStartDeclarations "main" =
+      (globalCompileTopForStartSomeCake cakeStartDeclarations "main").getD [] := rfl
+
+/-- The executed fixed-word path computes exactly the polymorphic production
+    output; this is the adapter that lets `globalCompileTopCake` route through
+    the tagged `compileDecsCake` without changing observable behavior. -/
+theorem executedTopAgreement :
+    globalCompileTopCake cakeStartDeclarations "main" =
+      globalCompileTopForStart (BitVec.ofNat 8 (8 / 8)) (BitVec.ofNat 8)
+        cakeStartDeclarations "main" := by
+  rw [globalCompileTopCake_eq]
+  simp only [cakeBytesInWord]
+
+def executedTopGuard : Bool :=
+  !(globalCompileTopCake cakeStartDeclarations "main").isEmpty &&
+  (globalCompileTopCake cakeStartDeclarations "main").length ==
+    (globalCompileTopForStart (BitVec.ofNat 8 (8 / 8)) (BitVec.ofNat 8)
+      cakeStartDeclarations "main").length
+
+#eval executedTopGuard
+#guard executedTopGuard
+
 def cakeThreadingGuard : Bool :=
   cakeThreadingValues == [0, 1] &&
   compileExpChecks.all id &&
@@ -462,6 +495,7 @@ def cakeThreadingGuard : Bool :=
   adapterExpGuard &&
   adapterProgGuard &&
   adapterRecordGuard &&
+  executedTopGuard &&
   cakeResultBefore.functions.all globalDeclIsFunction
 
 #eval cakeThreadingGuard

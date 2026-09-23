@@ -430,6 +430,28 @@ def evalCrepHolWordBitsExpWordLab [NeZero width]
     CrepExp (Fin width → Bool) → Option (PanWordLab (Fin width → Bool)) :=
   fun expression => (evalCrepHolWordBitsExp state expression).map PanWordLab.word
 
+/-! Production evaluator constructor equations. These are kernel-checked
+    correspondences between the production evaluator over the finite-index
+    word state and the transported source-shaped evaluator; they supply
+    genuine base cases for a later all-constructor induction. -/
+theorem evalCrepRuntimeExp_var_toHolWordBits [NeZero width]
+    (state : CrepHolState (Fin width → Bool) σ) (name : Nat) :
+    evalCrepRuntimeExp state.toHolWordBitsRuntime (.var name) =
+      evalCrepHolWordBitsExp state (.var name) := by
+  simp only [evalCrepRuntimeExp, evalCrepHolWordBitsExp, evalCrepHolExp,
+    mapCrepExpWord, CrepHolState.toHolWordBitsRuntime]
+  rw [← crepHolWordBits_local_toBitVec state name]
+  simp [Function.comp_def, mapCrepHolWordLab, panTheWord]
+
+theorem evalCrepRuntimeExp_loadGlob_toHolWordBits [NeZero width]
+    (state : CrepHolState (Fin width → Bool) σ) (address : BitVec 5) :
+    evalCrepRuntimeExp state.toHolWordBitsRuntime (.loadGlob address) =
+      evalCrepHolWordBitsExp state (.loadGlob address) := by
+  simp only [evalCrepRuntimeExp, evalCrepHolWordBitsExp, evalCrepHolExp,
+    mapCrepExpWord, CrepHolState.toHolWordBitsRuntime]
+  rw [← crepHolWordBits_global_toBitVec state address]
+  simp [Function.comp_def, mapCrepHolWordLab, panTheWord]
+
 /-! The next desired bridge would show that the production runtime evaluator on
     the finite-index HOL-word carrier equals the transported source evaluator
     above. This is not implied by the carrier equivalence alone: the 32-bit

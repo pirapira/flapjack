@@ -75,6 +75,34 @@ def evaluateCall :=
       : PanSemEvaluateState (Word 64) Unit)
     (.call none "id" [.const (BitVec.ofNat 64 7)] : Prog (Word 64))
 
+/-! The non-clocked Call evaluator receives declaration-derived returnShapes
+through PanValueCallContracts. A malformed callee return must produce Error
+with the callee post-state, matching the direct HOL malformed-return oracle. -/
+def nonClockedBadReturnFunctions :
+    List (FunName × List VarName × Prog (Word 64)) :=
+  [("badret", ["x"], .return (.const (BitVec.ofNat 64 7)))]
+
+def nonClockedBadReturnContracts : PanValueCallContracts :=
+  PanValueCallContracts.mk
+    [("badret", .comb [.one, .one])] []
+    [("badret", [("x", .one)])]
+
+def evaluateNonClockedCallBadReturnShape :=
+  evalPanValueFfiProgramSteps statefulTestContext statefulTestPrimitive
+    statefulTestHandler [] nonClockedBadReturnFunctions
+    (BitVec.ofNat 64 0) (BitVec.ofNat 64 100) (BitVec.ofNat 64 8) 8
+    (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState
+    (.call none "badret" [.const (BitVec.ofNat 64 4)] : Prog (Word 64))
+    (contracts := some nonClockedBadReturnContracts)
+
+def observeNonClockedCallBadReturnShape : Bool :=
+  match evaluateNonClockedCallBadReturnShape with
+  | some (.error locals _ _ _, _) =>
+      match locals "x" with
+      | some (.word value) => value == BitVec.ofNat 64 4
+      | _ => false
+  | _ => false
+
 private abbrev Word64 := Word 64
 
 def emptyPanSourceState (clock : Nat)
@@ -681,6 +709,7 @@ def observeShMemStoreDomainFailure : Bool :=
 #guard observeShMemLoadUnbound
 #guard observeShMemLoadDomainFailure
 #guard observeShMemStoreDomainFailure
+#guard observeNonClockedCallBadReturnShape
 
 def runChecks : IO Bool := do
   if observeSkip then IO.println "PASS evaluate skip" else IO.println "FAIL evaluate skip"
@@ -727,6 +756,9 @@ def runChecks : IO Bool := do
   if observeSourceDecCallBadReturnShape then
     IO.println "PASS state-owned DecCall returns HOL Error and callee state on return-shape mismatch"
   else IO.println "FAIL state-owned DecCall returns HOL Error and callee state on return-shape mismatch"
+  if observeNonClockedCallBadReturnShape then
+    IO.println "PASS non-clocked Call returns Error with callee post-state on return-shape mismatch"
+  else IO.println "FAIL non-clocked Call returns Error with callee post-state on return-shape mismatch"
   if observeNestedRaise then IO.println "PASS evaluate nested structured raise" else
     IO.println "FAIL evaluate nested structured raise"
   if observeFixedLoads then IO.println "PASS evaluate fixed-width loads" else

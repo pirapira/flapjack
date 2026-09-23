@@ -703,8 +703,10 @@ theorem panStructCompileCorrectContinueCase
   exact ⟨htarget, hlocalsFields, hglobalsFields, hglobalsMap, hlocalsMap,
     by simp [panStructValuesFieldsOkBool], by simp [panIsWfShapeValuesBool]⟩
 
-/-- Private bridge from the default String lookup instance to the explicit
-    equality-based adapter used to relate production lookup to HOL lookup. -/
+/-- Private lookup bridge used by the Var proof below. This comment documents
+    only this helper; the declaration-local HOL mismatch note for
+    `panStructCompileExpCorrectVarCase` is placed immediately before that
+    theorem. -/
 private theorem lookupInfoStringDefault_eq_panPropsALookupEq
     {β : Type} (key : String) (entries : List (String × β)) :
     @lookupInfo String β instBEqOfDecidableEq key entries =
@@ -712,8 +714,9 @@ private theorem lookupInfoStringDefault_eq_panPropsALookupEq
   letI : LawfulBEq String := instLawfulBEqString
   exact lookupInfo_eq_panPropsALookupEq key entries
 
-/-- Derived Local/Global Var-constructor specialization of HOL
-    `compile_exp_correct`; intentionally untagged because HOL has only the
+/-- Documentation for `panStructCompileExpCorrectVarCase`: this is a derived
+    Local/Global Var-constructor specialization of HOL `compile_exp_correct`;
+    intentionally untagged because HOL has only the
     universally quantified theorem, not a separately named Var-case
     declaration. This Lean statement is not an exact statement port. It keeps
     successful source evaluation, but re-encodes the HOL premises: the direct
@@ -791,6 +794,56 @@ theorem panStructCompileExpCorrectVarCase
         simpa using congrArg (fun result : Option Shape => result.getD .one) hshapeLookup
       · simp [evalPanValueExp, structCompileExp, panStructConvertFiniteState,
           panStructConvertState, hlookup]
+
+/-- Derived Const-constructor specialization of HOL `compile_exp_correct`.
+    This stays untagged because HOL has only the universally quantified
+    theorem, not a separately named Const-case declaration. As in the Var
+    case above, the context equality uses a fields shape-view, finite-map
+    FEVERY becomes pointwise Bool validity over total lookups, and FMAP_MAP2
+    uses pointwise shape-map adapters backed by PanStructFiniteState's nodup
+    lists. Lawful `BEq String` aligns production lookup with HOL equality.
+    The theorem carries but does not use the translated struct-info premise. -/
+theorem panStructCompileExpCorrectConstCase
+    [BEq String] [LawfulBEq String] [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : StructPassContext)
+    (state : PanStructFiniteState α ffi)
+    (bytesInWord : α)
+    (constant : α) (value : PanValue α)
+    (heval : evalPanValueExp state.runtime.structs state.runtime.locals
+      state.runtime.globals state.runtime.memory state.runtime.baseAddress
+      state.runtime.topAddress bytesInWord (.const constant) = some value)
+    (_hstructs : panStructContextShapeView context.structs =
+      panStructContextShapeView state.runtime.structs)
+    (_hlocalsFields : panStructEveryValueFieldsOkBool
+      state.runtime.structs state.runtime.locals)
+    (_hglobalsFields : panStructEveryValueFieldsOkBool
+      state.runtime.structs state.runtime.globals)
+    (_hstructInfos : structInfosOk state.runtime.structs)
+    (_hlocalsMap : panStructShapeMapEq context.locals state.runtime.locals)
+    (_hglobalsMap : panStructShapeMapEq context.globals state.runtime.globals) :
+    structOldExpShape (α := α) context (.const constant) = panSemShapeOf value ∧
+    panStructValueFieldsOkBool state.runtime.structs value = true ∧
+    evalPanValueExp (panStructConvertFiniteState context state).runtime.structs
+      (panStructConvertFiniteState context state).runtime.locals
+      (panStructConvertFiniteState context state).runtime.globals
+      (panStructConvertFiniteState context state).runtime.memory
+      (panStructConvertFiniteState context state).runtime.baseAddress
+      (panStructConvertFiniteState context state).runtime.topAddress
+      bytesInWord (structCompileExp (α := α) context (.const constant)) =
+        some (panStructConvertValue value) := by
+  cases value with
+  | word wordValue =>
+      have hword : constant = wordValue := by
+        simpa [evalPanValueExp] using heval
+      subst wordValue
+      refine ⟨by simp [structOldExpShape, panSemShapeOf], ?_, ?_⟩
+      · simp [panStructValueFieldsOkBool]
+      · simp [evalPanValueExp, panStructConvertFiniteState,
+          panStructConvertState, panStructConvertValue]
+  | rStruct values => simp [evalPanValueExp] at heval
+  | nStruct name fields => simp [evalPanValueExp] at heval
 
 /-- Evaluator-equation support for a future HOL `compile_correct` Skip case:
     this proves only the two source/converted outcomes and omits the HOL

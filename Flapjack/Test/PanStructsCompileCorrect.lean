@@ -668,4 +668,26 @@ example :
       finiteMapRuntime]) finiteMapLocalShapeMap finiteMapGlobalShapeMap
   simpa [panSemShapeOf, panStructConvertValue] using hresult
 
+example :
+    structOldExpShape finiteMapContext (.const (BitVec.ofNat 64 13) : Exp Word64) = .one ∧
+    panStructValueFieldsOkBool finiteMapState.runtime.structs
+      (.word (BitVec.ofNat 64 13)) = true ∧
+    evalPanValueExp
+      (panStructConvertFiniteState finiteMapContext finiteMapState).runtime.structs
+      (panStructConvertFiniteState finiteMapContext finiteMapState).runtime.locals
+      (panStructConvertFiniteState finiteMapContext finiteMapState).runtime.globals
+      (panStructConvertFiniteState finiteMapContext finiteMapState).runtime.memory
+      (panStructConvertFiniteState finiteMapContext finiteMapState).runtime.baseAddress
+      (panStructConvertFiniteState finiteMapContext finiteMapState).runtime.topAddress
+      (BitVec.ofNat 64 8) (structCompileExp finiteMapContext
+        (.const (BitVec.ofNat 64 13) : Exp Word64)) =
+      some (.word (BitVec.ofNat 64 13)) := by
+  have hresult := panStructCompileExpCorrectConstCase finiteMapContext finiteMapState
+    (BitVec.ofNat 64 8) (BitVec.ofNat 64 13) (.word (BitVec.ofNat 64 13))
+    (by simp [evalPanValueExp]) rfl finiteMapLocalValueFieldsOk
+    finiteMapGlobalValueFieldsOk
+    (by simp [structInfosOk, finiteMapState, panStructFiniteStateFromMaps,
+      finiteMapRuntime]) finiteMapLocalShapeMap finiteMapGlobalShapeMap
+  simpa [panSemShapeOf, panStructConvertValue] using hresult
+
 end Flapjack.Test

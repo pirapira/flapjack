@@ -63,13 +63,13 @@ mutual
 end
 
 mutual
-  /-- Exact Bool-valued counterpart of HOL `v_flds_ok_def`. The Lean
-      `StructInfo` includes HOL's `fields` and `size`, plus a Flapjack-only
-      `shapedFields` cache which is ignored here. Key lookup uses decidable
-      equality and first-match order, matching HOL `ALOOKUP`; structural shape
-      list equality is decided by a structural comparator equivalent to HOL
-      structural list equality. -/
-  @[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "v_flds_ok_def"]
+  /-- Bool-valued support definition with equations matching HOL
+      `v_flds_ok_def`. It is deliberately untagged: this equality-lookup model
+      over Lean `StructContext` has not yet been connected to the production
+      `lookupInfo`/`BEq` state representation used by `compile_correct`.
+      `StructInfo` also has a Lean-only `shapedFields` cache; this definition
+      ignores it. The direct HOL fixture checks representative equations, not
+      that missing production-state bridge. -/
   def panStructValueFieldsOkBool (structs : StructContext) :
       PanValue α → Bool
     | .word _ => true
@@ -105,12 +105,9 @@ mutual
 end
 
 mutual
-  /-- Prop-valued Flapjack convenience predicate mirroring HOL
-      `v_flds_ok_def`. It is not an exact port: HOL returns Bool, while this
-      declaration returns Prop and uses `[BEq String]` lookup. The adjacent
-      `panStructValueFieldsOkBool` definition is the Bool/equality-based HOL
-      counterpart. `StructInfo.shapedFields` is an additional Lean cache field
-      absent from HOL and is ignored by both predicates. -/
+  /-- Prop-valued Flapjack convenience predicate mirroring the equations of
+      HOL `v_flds_ok_def`. It is not an exact port: HOL returns Bool, while
+      this declaration returns Prop and uses `[BEq String]` lookup. -/
   def panStructValueFieldsOk [BEq String] (structs : StructContext) :
       PanValue α → Prop
     | .word _ => True
@@ -143,12 +140,9 @@ mutual
 end
 
 mutual
-  /-- Prop-valued Flapjack convenience predicate mirroring HOL
-      `is_wf_shape_v_def`. It is not an exact port: HOL returns Bool, while
-      this declaration returns Prop and uses `[BEq String]` lookup. The
-      adjacent `panIsWfShapeValueBool` definition is the Bool/equality-based
-      HOL counterpart. The HOL `struct_info` has fields and size; Lean adds an
-      unused `shapedFields` cache which this predicate also ignores. -/
+  /-- Prop-valued Flapjack convenience predicate mirroring the equations of
+      HOL `is_wf_shape_v_def`. It is not an exact port: HOL returns Bool, while
+      this declaration returns Prop and uses `[BEq String]` lookup. -/
   def panStructValueShapeWf [BEq String] (structs : StructContext) :
       PanValue α → Prop
     | .word _ => True

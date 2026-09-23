@@ -37,6 +37,8 @@ import Flapjack.Test.PanGlobalsCompileTopShapeWfParity
 import Flapjack.Test.PanGlobalsExceptionsAppendParity
 import Flapjack.Test.PanGlobalsExceptionsFilterIsFunctionParity
 import Flapjack.Test.PanGlobalsDeclPredicateParity
+import Flapjack.Test.PanGlobalsFunctionsFilterNilParity
+import Flapjack.Test.PanGlobalsFpermClusterParity
 import Flapjack.Test.PanLangFunctionsParity
 import Flapjack.Test.CrepeDestConstParity
 import Flapjack.Test.CrepeDest2ExpParity
@@ -126,6 +128,7 @@ import Flapjack.Test.CrepLocalsWordLabParity
 import Flapjack.Test.CrepMemoryRelParity
 import Flapjack.Test.CrepFuelCutoffParity
 import Flapjack.Test.PanToCrepGlobalsLookupParity
+import Flapjack.Test.PanToCrepCallExceptionParity
 import Flapjack.Test.CrepeAssignRetParity
 import Flapjack.Test.CrepeVarCexpParity
 import Flapjack.Test.CrepExpsParity
@@ -143,6 +146,7 @@ import Flapjack.Test.CompileProgParity
 import Flapjack.Test.DupExnEidsParity
 import Flapjack.Test.CrepRuntimeTargetParity
 import Flapjack.Test.CrepRuntimeFfiTargetParity
+import Flapjack.Test.CrepRuntimeExtCallStateRelParity
 import Flapjack.Test.PanSimpParity
 import Flapjack.Test.PanProgramSimpParity
 import Flapjack.Test.PanValueWfParity
@@ -637,6 +641,8 @@ def main : IO Unit := do
     Flapjack.Test.PanGlobalsExceptionsAppendParity.runChecks,
     Flapjack.Test.PanGlobalsExceptionsFilterIsFunctionParity.runChecks,
     Flapjack.Test.PanGlobalsDeclPredicateParity.runChecks,
+    Flapjack.Test.PanGlobalsFunctionsFilterNilParity.runChecks,
+    Flapjack.Test.PanGlobalsFpermClusterParity.runChecks,
     Flapjack.Test.PanLangFunctionsParity.runChecks,
     Flapjack.Test.PanShapeValParity.runChecks,
     Flapjack.Test.LoopIsLoadParity.runChecks,
@@ -695,6 +701,7 @@ def main : IO Unit := do
     Flapjack.Test.DupExnEidsParity.runChecks,
     Flapjack.Test.CrepRuntimeTargetParity.runChecks,
     Flapjack.Test.CrepRuntimeFfiTargetParity.runChecks,
+    Flapjack.Test.CrepRuntimeExtCallStateRelParity.runChecks,
     Flapjack.Test.PanToCrepRelationsParity.runChecks,
     Flapjack.Test.PanToCrepCodeRelParity.runChecks,
     Flapjack.Test.PanToCrepStateRelParity.runChecks,

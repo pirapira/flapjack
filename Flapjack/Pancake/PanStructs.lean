@@ -83,12 +83,22 @@ def structCompileShapeFuel : Nat → StructContext → Shape → Shape
   | 0, _, _ => .one
   | _fuel + 1, _context, .one => .one
   | fuel + 1, context, .comb shapes =>
-      .comb (shapes.map (structCompileShapeFuel fuel context))
+      .comb (structCompileShapesFuel fuel context shapes)
   | fuel + 1, context, .named name =>
       match lookupInfoWithRest name context with
       | some (info, suffix) =>
-          .comb ((info.fields.map Prod.snd).map (structCompileShapeFuel fuel suffix))
+          .comb (structCompileShapesFuel fuel suffix (info.fields.map Prod.snd))
       | none => .one
+  termination_by fuel _context shape => (fuel, sizeOf shape)
+where
+  structCompileShapesFuel (fuel : Nat) (context : StructContext) :
+      List Shape → List Shape
+    | [] => []
+    | shape :: shapes =>
+        structCompileShapeFuel fuel context shape ::
+          structCompileShapesFuel fuel context shapes
+  termination_by shapes => (fuel, sizeOf shapes)
+  decreasing_by all_goals simp_wf <;> omega
 
 def structCompileShape (context : StructContext) (shape : Shape) : Shape :=
   structCompileShapeFuel

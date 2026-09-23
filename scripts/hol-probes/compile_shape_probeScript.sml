@@ -32,3 +32,8 @@ val _ = print_eval "backward_suffix"
   ``pan_structs$compile_shape ^backward_context (Named «outer»)``;
 val _ = print_eval "missing"
   ``pan_structs$compile_shape ^forward_context (Named «missing»)``;
+val _ = print_eval "compile_shapes_map"
+  ``pan_structs$compile_shapes ^forward_context
+      [Named «outer»; Comb [One; Named «inner»]; Named «missing»] =
+    MAP (pan_structs$compile_shape ^forward_context)
+      [Named «outer»; Comb [One; Named «inner»]; Named «missing»]``;

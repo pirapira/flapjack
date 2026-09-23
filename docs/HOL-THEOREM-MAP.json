@@ -2868,8 +2868,8 @@
     "hol_name": "afindi_less_length",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "afindi_less_length",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (HOL source comparison: successful afindi search implies index below list length with matching quantifiers; direct HOL-EVAL first/last-index fixture paired with Lean regression)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
@@ -2884,8 +2884,8 @@
     "hol_name": "afindi_MAP_eq",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "afindi_map_eq",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (HOL source comparison: quantified MEM key-preservation premise and afindi result equality match; direct HOL-EVAL hit/miss fixture paired with Lean regression)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",

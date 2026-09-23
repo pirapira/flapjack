@@ -1,4 +1,5 @@
 import Flapjack.Pancake.Semantics.PanSem
+import Flapjack.Pancake.Semantics.PanSemCodeCall
 import Flapjack.Test.PanValueFfiSemantics
 
 /-!
@@ -74,6 +75,33 @@ def evaluateCall :=
         contracts := some idContracts }
       : PanSemEvaluateState (Word 64) Unit)
     (.call none "id" [.const (BitVec.ofNat 64 7)] : Prog (Word 64))
+
+/-! The source-state call path reads its callee from the nonempty HOL-shaped
+    `PanSemState.code` map. Its restricted direct-Return boundary does not
+    accept or assume a separate function list. -/
+def codeMapCallState : PanSemState (Word 64) (FfiState Unit) :=
+  { locals := fun _ => none
+    globals := fun _ => none
+    structs := []
+    code := fun name =>
+      if name == "id" then
+        some ([ ("x", .one) ],
+          .return (.var .local "x"), .one)
+      else none
+    exceptionShapes := fun _ => none
+    memory := fun _ => none
+    memaddrs := fun _ => true
+    sharedMemaddrs := fun _ => false
+    clock := 10
+    be := false
+    ffi := statefulTestFfiState
+    baseAddress := BitVec.ofNat 64 0
+    topAddress := BitVec.ofNat 64 100 }
+
+def evaluateCodeMapCall :=
+  panSemEvaluateCodeReturnCall statefulTestContext statefulTestPrimitive
+    statefulTestHandler (BitVec.ofNat 64 8) none 16 codeMapCallState "id"
+    [.const (BitVec.ofNat 64 7)]
 
 /-! The fixed-width branches must go through the explicit source memory model.
     This is the stateful evaluator path corresponding to
@@ -235,6 +263,15 @@ def observeCall : Bool :=
       locals "x" = none && isWord 7 value
   | _ => false
 
+def observeCodeMapCall : Bool :=
+  match evaluateCodeMapCall.evaluation with
+  | some (.control (.returned locals globals memory ffi [value]), 9) =>
+      locals "x" = none && globals "g" = none && memory (BitVec.ofNat 64 0) = none &&
+        isWord 7 value && ffi.ioEvents = statefulTestFfiState.ioEvents &&
+        (evaluateCodeMapCall.code "id").isSome &&
+        (codeMapCallState.code "id").isSome
+  | _ => false
+
 def observeNestedRaise : Bool :=
   match evaluateNestedRaise with
   | some (.control (.raised locals _ _ _ "E"
@@ -304,6 +341,7 @@ def observeFixedStoreFailures : Bool :=
 #guard observeSequence
 #guard observeTickAtZero
 #guard observeCall
+#guard observeCodeMapCall
 #guard observeNestedRaise
 #guard observeFixedLoads
 #guard observeFixedLoadDomainFailure
@@ -320,6 +358,8 @@ def runChecks : IO Bool := do
   if observeSequence then IO.println "PASS evaluate sequence" else IO.println "FAIL evaluate sequence"
   if observeTickAtZero then IO.println "PASS evaluate timeout" else IO.println "FAIL evaluate timeout"
   if observeCall then IO.println "PASS evaluate call_id_7" else IO.println "FAIL evaluate call_id_7"
+  if observeCodeMapCall then IO.println "PASS evaluate source-state code-map call" else
+    IO.println "FAIL evaluate source-state code-map call"
   if observeNestedRaise then IO.println "PASS evaluate nested structured raise" else
     IO.println "FAIL evaluate nested structured raise"
   if observeFixedLoads then IO.println "PASS evaluate fixed-width loads" else
@@ -339,6 +379,7 @@ def runChecks : IO Bool := do
   if observeFixedStoreFailures then IO.println "PASS evaluate explicit store failures" else
     IO.println "FAIL evaluate explicit store failures"
   pure (observeSkip && observeReturn41 && observeSequence && observeTickAtZero && observeCall &&
+    observeCodeMapCall &&
     observeNestedRaise &&
     observeFixedLoads && observeFixedLoadDomainFailure &&
     observeExactProgramMemoryAccess && observeExactProgramDomainFailure &&

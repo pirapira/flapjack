@@ -45,6 +45,7 @@ import Flapjack.PanShMemLoad
 import Flapjack.PanShMemStore
 import Flapjack.PanEval
 import Flapjack.Pancake.Semantics.PanSem
+import Flapjack.Pancake.Semantics.PanSemCodeCall
 import Flapjack.PanObservationalSemantics
 import Flapjack.PanHHandleCallRet
 import Flapjack.PanMrec

@@ -77,3 +77,35 @@ val _ = print_eval "call_terminal_missing_result"
   ``FST (panSem$evaluate
       (panLang$DecCall (strlit "r") panLang$One (strlit "g") []
         panLang$Skip, ^baseState))``;
+val paramState = ``(^baseState with code := ^probeCode |+
+  (strlit "skipp",
+    ([(strlit "p", panLang$One)] : (mlstring # panLang$shape) list, panLang$Skip, panLang$One)) |+
+  (strlit "breakp",
+    ([(strlit "p", panLang$One)] : (mlstring # panLang$shape) list, panLang$Break, panLang$One)) |+
+  (strlit "contp",
+    ([(strlit "p", panLang$One)] : (mlstring # panLang$shape) list, panLang$Continue, panLang$One)))``;
+
+val _ = print_eval "call_terminal_skip_param_result"
+  ``FST (panSem$evaluate
+      (panLang$DecCall (strlit "r") panLang$One (strlit "skipp")
+        [panLang$Const (9w:8 word)] panLang$Skip, ^paramState))``;
+val _ = print_eval "call_terminal_skip_param_locals"
+  ``FLOOKUP (SND (panSem$evaluate
+      (panLang$DecCall (strlit "r") panLang$One (strlit "skipp")
+        [panLang$Const (9w:8 word)] panLang$Skip, ^paramState))).locals (strlit "p")``;
+val _ = print_eval "call_terminal_break_param_result"
+  ``FST (panSem$evaluate
+      (panLang$DecCall (strlit "r") panLang$One (strlit "breakp")
+        [panLang$Const (9w:8 word)] panLang$Skip, ^paramState))``;
+val _ = print_eval "call_terminal_break_param_locals"
+  ``FLOOKUP (SND (panSem$evaluate
+      (panLang$DecCall (strlit "r") panLang$One (strlit "breakp")
+        [panLang$Const (9w:8 word)] panLang$Skip, ^paramState))).locals (strlit "p")``;
+val _ = print_eval "call_terminal_continue_param_result"
+  ``FST (panSem$evaluate
+      (panLang$DecCall (strlit "r") panLang$One (strlit "contp")
+        [panLang$Const (9w:8 word)] panLang$Skip, ^paramState))``;
+val _ = print_eval "call_terminal_continue_param_locals"
+  ``FLOOKUP (SND (panSem$evaluate
+      (panLang$DecCall (strlit "r") panLang$One (strlit "contp")
+        [panLang$Const (9w:8 word)] panLang$Skip, ^paramState))).locals (strlit "p")``;

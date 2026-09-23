@@ -234,6 +234,57 @@ def statefulMissingCallRejected : Bool :=
 
 #guard statefulMissingCallRejected
 
+def isWordLocal (expected : Word 64) : Option (PanValue (Word 64)) → Bool
+  | some (.word value) => value == expected
+  | _ => false
+
+def errorPreservesCalleeLocal (expected : Word 64) :
+    Option (PanValueFfiSteppedResult (Word 64) Unit) → Bool
+  | some (.error locals _ _ _, _) => isWordLocal expected (locals "p")
+  | _ => false
+
+def errorEmptiesLocals :
+    Option (PanValueFfiSteppedResult (Word 64) Unit) → Bool
+  | some (.error locals _ _ _, _) => isWordLocal 9 (locals "p") == false
+  | _ => false
+
+def statefulBreakParamPreservesLocal : Bool :=
+  errorPreservesCalleeLocal 9
+    (evalPanValueFfiCallSteps statefulTestContext statefulTestPrimitive
+    statefulTestHandler [] [("breakp", ["p"], .break)] (BitVec.ofNat 64 0)
+    (BitVec.ofNat 64 100) (BitVec.ofNat 64 8) 10
+    (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState none
+    "breakp" [.const (BitVec.ofNat 64 9)])
+
+def statefulContinueParamPreservesLocal : Bool :=
+  errorPreservesCalleeLocal 9
+    (evalPanValueFfiCallSteps statefulTestContext statefulTestPrimitive
+    statefulTestHandler [] [("contp", ["p"], .continue)] (BitVec.ofNat 64 0)
+    (BitVec.ofNat 64 100) (BitVec.ofNat 64 8) 10
+    (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState none
+    "contp" [.const (BitVec.ofNat 64 9)])
+
+def statefulFallThroughParamPreservesLocal : Bool :=
+  errorPreservesCalleeLocal 9
+    (evalPanValueFfiCallSteps statefulTestContext statefulTestPrimitive
+    statefulTestHandler [] [("skipp", ["p"], .skip)] (BitVec.ofNat 64 0)
+    (BitVec.ofNat 64 100) (BitVec.ofNat 64 8) 10
+    (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState none
+    "skipp" [.const (BitVec.ofNat 64 9)])
+
+def statefulCalleeErrorEmptiesLocals : Bool :=
+  errorEmptiesLocals
+    (evalPanValueFfiCallSteps statefulTestContext statefulTestPrimitive
+    statefulTestHandler [] [("errp", ["p"], .assign .local "q" (.const (BitVec.ofNat 64 7)))]
+    (BitVec.ofNat 64 0) (BitVec.ofNat 64 100) (BitVec.ofNat 64 8) 10
+    (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState none
+    "errp" [.const (BitVec.ofNat 64 9)])
+
+#guard statefulBreakParamPreservesLocal
+#guard statefulContinueParamPreservesLocal
+#guard statefulFallThroughParamPreservesLocal
+#guard statefulCalleeErrorEmptiesLocals
+
 def statefulExtCallProgram : Option (Word 64 × Nat × Nat) :=
   (evalPanValueFfiProgramSteps statefulTestContext statefulTestPrimitive
       statefulTestHandler [] [] (BitVec.ofNat 64 0) (BitVec.ofNat 64 100)

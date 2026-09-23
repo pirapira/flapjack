@@ -155,6 +155,55 @@ def clockedMissingCallRejected : Bool :=
 #guard clockedContinueCallRejected
 #guard clockedMissingCallRejected
 
+def clockedIsWordLocal (expected : Word 64) : Option (PanValue (Word 64)) → Bool
+  | some (.word value) => value == expected
+  | _ => false
+
+def clockedErrorPreservesCalleeLocal (expected : Word 64) :
+    Option (PanValueFfiClockResult (Word 64) Unit) → Bool
+  | some (.control (.error locals _ _ _), _) => clockedIsWordLocal expected (locals "p")
+  | _ => false
+
+def clockedErrorEmptiesLocals :
+    Option (PanValueFfiClockResult (Word 64) Unit) → Bool
+  | some (.control (.error locals _ _ _), _) => clockedIsWordLocal 9 (locals "p") == false
+  | _ => false
+
+def clockedBreakParamPreservesLocal : Bool :=
+  clockedErrorPreservesCalleeLocal 9
+    (evalPanValueFfiClockCall statefulTestContext statefulTestPrimitive
+      statefulTestHandler [] [("breakp", ["p"], .break)] 0 100 8 20
+      (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState 5
+      none "breakp" [.const (BitVec.ofNat 64 9)])
+
+def clockedContinueParamPreservesLocal : Bool :=
+  clockedErrorPreservesCalleeLocal 9
+    (evalPanValueFfiClockCall statefulTestContext statefulTestPrimitive
+      statefulTestHandler [] [("contp", ["p"], .continue)] 0 100 8 20
+      (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState 5
+      none "contp" [.const (BitVec.ofNat 64 9)])
+
+def clockedFallThroughParamPreservesLocal : Bool :=
+  clockedErrorPreservesCalleeLocal 9
+    (evalPanValueFfiClockCall statefulTestContext statefulTestPrimitive
+      statefulTestHandler [] [("skipp", ["p"], .skip)] 0 100 8 20
+      (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState 5
+      none "skipp" [.const (BitVec.ofNat 64 9)])
+
+def clockedCalleeErrorEmptiesLocals : Bool :=
+  clockedErrorEmptiesLocals
+    (evalPanValueFfiClockCall statefulTestContext statefulTestPrimitive
+      statefulTestHandler []
+      [("errp", ["p"], .assign .local "q" (.const (BitVec.ofNat 64 7)))]
+      0 100 8 20
+      (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState 5
+      none "errp" [.const (BitVec.ofNat 64 9)])
+
+#guard clockedBreakParamPreservesLocal
+#guard clockedContinueParamPreservesLocal
+#guard clockedFallThroughParamPreservesLocal
+#guard clockedCalleeErrorEmptiesLocals
+
 def clockedFinalFfi : Option (PanValueFfiClockResult (Word 64) Unit) :=
   evalPanValueFfiClockProg statefulTestContext statefulTestPrimitive
     statefulTestHandler [] [] (BitVec.ofNat 64 0) (BitVec.ofNat 64 100)

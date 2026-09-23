@@ -758,9 +758,12 @@ mutual
               baseAddress topAddress bytesInWord fuel calleeLocals globals memory ffi body
               (memoryAccess := memoryAccess) (contracts := contracts)
               (memoryHandler := memoryHandler)
+            -- HOL returns `SOME Error` preserving the callee state's locals for
+            -- NONE/Break/Continue, and empties them only in the catch-all
+            -- (`SOME Error`/TimeOut) clause.
             match result with
-            | .normal _ calleeGlobals calleeMemory calleeFfi =>
-                some (.error (fun _ => none) calleeGlobals calleeMemory calleeFfi,
+            | .normal calleeLocals calleeGlobals calleeMemory calleeFfi =>
+                some (.error calleeLocals calleeGlobals calleeMemory calleeFfi,
                   argumentSteps + steps)
             | .returned _ calleeGlobals calleeMemory calleeFfi values =>
                 if panValueReturnValid structs contracts function values &&
@@ -796,11 +799,11 @@ mutual
                   | _ => pure (.raised (fun _ => none) calleeGlobals calleeMemory calleeFfi exception value,
                       argumentSteps + steps)
                 else none
-            | .broke _ calleeGlobals calleeMemory calleeFfi =>
-                pure (.error (fun _ => none) calleeGlobals calleeMemory calleeFfi,
+            | .broke calleeLocals calleeGlobals calleeMemory calleeFfi =>
+                pure (.error calleeLocals calleeGlobals calleeMemory calleeFfi,
                   argumentSteps + steps)
-            | .continued _ calleeGlobals calleeMemory calleeFfi =>
-                pure (.error (fun _ => none) calleeGlobals calleeMemory calleeFfi,
+            | .continued calleeLocals calleeGlobals calleeMemory calleeFfi =>
+                pure (.error calleeLocals calleeGlobals calleeMemory calleeFfi,
                   argumentSteps + steps)
             | .error _ calleeGlobals calleeMemory calleeFfi =>
                 pure (.error (fun _ => none) calleeGlobals calleeMemory calleeFfi,
@@ -932,8 +935,8 @@ mutual
         | .finalFfi _ globals memory ffi event =>
             pure (.finalFfi (fun _ => none) globals memory ffi event,
               callSteps + 1)
-        | .error _ globals memory ffi =>
-            pure (.error (fun _ => none) globals memory ffi, callSteps + 1)
+        | .error calleeLocals globals memory ffi =>
+            pure (.error calleeLocals globals memory ffi, callSteps + 1)
         | _ => none
     | _fuel + 1, locals, globals, memory, ffi,
         .extCall function configuration configurationLength array arrayLength, memoryAccess,

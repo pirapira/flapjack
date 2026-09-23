@@ -129,14 +129,14 @@ mutual
                   calleeClock)
             | .control result =>
                 match result with
-                | .normal _ calleeGlobals calleeMemory calleeFfi =>
-                    pure (.control (.error (fun _ => none) calleeGlobals calleeMemory calleeFfi),
+                | .normal calleeLocals calleeGlobals calleeMemory calleeFfi =>
+                    pure (.control (.error calleeLocals calleeGlobals calleeMemory calleeFfi),
                       calleeClock)
-                | .broke _ calleeGlobals calleeMemory calleeFfi =>
-                    pure (.control (.error (fun _ => none) calleeGlobals calleeMemory calleeFfi),
+                | .broke calleeLocals calleeGlobals calleeMemory calleeFfi =>
+                    pure (.control (.error calleeLocals calleeGlobals calleeMemory calleeFfi),
                       calleeClock)
-                | .continued _ calleeGlobals calleeMemory calleeFfi =>
-                    pure (.control (.error (fun _ => none) calleeGlobals calleeMemory calleeFfi),
+                | .continued calleeLocals calleeGlobals calleeMemory calleeFfi =>
+                    pure (.control (.error calleeLocals calleeGlobals calleeMemory calleeFfi),
                       calleeClock)
                 | .error _ calleeGlobals calleeMemory calleeFfi =>
                     pure (.control (.error (fun _ => none) calleeGlobals calleeMemory calleeFfi),
@@ -363,14 +363,14 @@ mutual
                   calleeClock)
             | .control result =>
                 match result with
-                | .normal _ calleeGlobals calleeMemory calleeFfi =>
-                    pure (.control (.error (fun _ => none) calleeGlobals calleeMemory calleeFfi),
+                | .normal calleeLocals calleeGlobals calleeMemory calleeFfi =>
+                    pure (.control (.error calleeLocals calleeGlobals calleeMemory calleeFfi),
                       calleeClock)
-                | .broke _ calleeGlobals calleeMemory calleeFfi =>
-                    pure (.control (.error (fun _ => none) calleeGlobals calleeMemory calleeFfi),
+                | .broke calleeLocals calleeGlobals calleeMemory calleeFfi =>
+                    pure (.control (.error calleeLocals calleeGlobals calleeMemory calleeFfi),
                       calleeClock)
-                | .continued _ calleeGlobals calleeMemory calleeFfi =>
-                    pure (.control (.error (fun _ => none) calleeGlobals calleeMemory calleeFfi),
+                | .continued calleeLocals calleeGlobals calleeMemory calleeFfi =>
+                    pure (.control (.error calleeLocals calleeGlobals calleeMemory calleeFfi),
                       calleeClock)
                 | .error _ calleeGlobals calleeMemory calleeFfi =>
                     pure (.control (.error (fun _ => none) calleeGlobals calleeMemory calleeFfi),

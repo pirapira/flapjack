@@ -96,6 +96,13 @@ val _ = print_eval "empty_struct_return"
       <| vars := FEMPTY; funcs := FEMPTY; eids := FEMPTY; vmax := 0 |>
       (panLang$Return (panLang$RStruct []))``;
 
+val _ = print_eval "finite_map_shadow_return"
+  ``pan_to_crep$compile
+      <| vars := FEMPTY |+ («p», (panLang$One, [3]))
+                 |+ («p», (panLang$One, [5]));
+         funcs := FEMPTY; eids := FEMPTY; vmax := 5 |>
+      (panLang$Return (panLang$Var panLang$Local «p»))``;
+
 val _ = print_eval "pair_load"
   ``pan_to_crep$compile
       <| vars := FEMPTY |+ («p», (panLang$One, [0]));

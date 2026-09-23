@@ -21,6 +21,40 @@ def fixedWidthContext : PanToCrepCompileContext Nat :=
     exceptions := []
     maxVar := 2 }
 
+def finiteMapContext : PanToCrepHOLContext Nat :=
+  { vars := FUPDATE (FUPDATE FEMPTY ("p", (.one, [3]))) ("p", (.one, [5]))
+    funcs := FEMPTY
+    eids := FEMPTY
+    vmax := 5 }
+
+def fixedWidthHOLContext : PanToCrepHOLContext Nat :=
+  { vars := FUPDATE_LIST FEMPTY
+      [("p", (.one, [0])), ("x", (.one, [1])), ("y", (.one, [2]))]
+    funcs := FEMPTY
+    eids := FEMPTY
+    vmax := 2 }
+
+def emptyHOLContext : PanToCrepHOLContext Nat :=
+  { vars := FEMPTY, funcs := FEMPTY, eids := FEMPTY, vmax := 0 }
+
+def emptyOneHOLContext : PanToCrepHOLContext Nat :=
+  { vars := FUPDATE FEMPTY ("empty_one", (.one, []))
+    funcs := FEMPTY
+    eids := FEMPTY
+    vmax := 0 }
+
+def extraNamesHOLContext : PanToCrepHOLContext Nat :=
+  { vars := FUPDATE FEMPTY ("extra_names", (.one, [4, 5]))
+    funcs := FEMPTY
+    eids := FEMPTY
+    vmax := 5 }
+
+def missingNamesHOLContext : PanToCrepHOLContext Nat :=
+  { vars := FUPDATE FEMPTY ("missing_names", (.comb [.one, .one], [4]))
+    funcs := FEMPTY
+    eids := FEMPTY
+    vmax := 4 }
+
 def pairLoad : Prog Nat :=
   .return (.load (.comb [.one, .one]) (.var .local "p"))
 
@@ -42,6 +76,11 @@ def isFixedPairStore8 : CrepProg Nat → Bool
 def fixedWidthParityGuard : Bool :=
   isFixedPairLoad8 (compileProgFixed fixedWidthContext pairLoad) &&
   isFixedPairStore8 (compileProgFixed fixedWidthContext pairStore)
+
+def finiteMapParityGuard : Bool :=
+  match compileProgHOL finiteMapContext (.return (.var .local "p")) with
+  | .return [.var 5] => true
+  | _ => false
 
 def emptyOneGlobalContext : CompileContext Nat :=
   { vars := [("empty_one", (.one, []))], functions := [], exceptions := [],
@@ -138,6 +177,22 @@ def isSeqSkipTick : CrepProg Nat → Bool
   | .seq .skip .tick => true
   | _ => false
 
+def nativeProgramParityGuard : Bool :=
+  isSkip (compileProgHOL emptyHOLContext (.skip : Prog Nat)) &&
+  isReturnSeven (compileProgHOL emptyHOLContext (.return (.const 7))) &&
+  isEmptyReturn (compileProgHOL emptyHOLContext emptyStructReturn) &&
+  isBreak (compileProgHOL emptyHOLContext (.break : Prog Nat)) &&
+  isContinue (compileProgHOL emptyHOLContext (.continue : Prog Nat)) &&
+  isSeqSkipTick (compileProgHOL emptyHOLContext (.seq .skip (.tick : Prog Nat))) &&
+  isTailCallToF (compileProgHOL emptyHOLContext missingGlobalCall) &&
+  isTailCallToF (compileProgHOL emptyOneHOLContext emptyOneGlobalCall) &&
+  isExtraNamesCallToF (compileProgHOL extraNamesHOLContext extraNamesGlobalCall) &&
+  isMissingNamesCallToF (compileProgHOL missingNamesHOLContext missingNamesGlobalCall)
+
+def finiteMapLoadStoreParityGuard : Bool :=
+  isFixedPairLoad8 (compileProgHOL fixedWidthHOLContext pairLoad) &&
+  isFixedPairStore8 (compileProgHOL fixedWidthHOLContext pairStore)
+
 def parityGuard : Bool :=
   isSkip (compileProg context (.skip : Prog Nat)) &&
   isReturnSeven (compileProg context (.return (.const 7))) &&
@@ -154,7 +209,8 @@ def parityGuard : Bool :=
   isExtraNamesCallToF (compileProg extraNamesLocalContext extraNamesLocalCall) &&
   isMissingNamesCallToF (compileProg missingNamesLocalContext missingNamesLocalCall) &&
   isValidPairCallToF (compileProg validLocalContext validLocalCall) &&
-  fixedWidthParityGuard
+  fixedWidthParityGuard && finiteMapParityGuard && nativeProgramParityGuard &&
+    finiteMapLoadStoreParityGuard
 
 example : compileProg context missingGlobalCall = .call none "f" [] := by
   simp [missingGlobalCall, compileProg, compileArgs, callDestinationNames,
@@ -215,6 +271,9 @@ example :
 #eval parityGuard
 #guard parityGuard
 #guard fixedWidthParityGuard
+#guard finiteMapParityGuard
+#guard nativeProgramParityGuard
+#guard finiteMapLoadStoreParityGuard
 
 def runChecks : IO Bool := do
   if parityGuard then

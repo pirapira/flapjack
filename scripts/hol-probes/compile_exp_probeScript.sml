@@ -42,3 +42,9 @@ val _ = print_eval "cmp_shift"
       (Cmp Equal (Const (1w : 8 word)) (Const 0w)),
     pan_to_crep$compile_exp ^ctxt
       (Shift Lsl (Const (2w : 8 word)) (Const 1w)))``;
+
+val finite_map_shadow_ctxt =
+  ``<| vars := FEMPTY |+ («p», (One, [3])) |+ («p», (One, [5]));
+       funcs := FEMPTY; eids := FEMPTY; vmax := 5 |>``;
+val _ = print_eval "finite_map_shadow"
+  ``pan_to_crep$compile_exp ^finite_map_shadow_ctxt (Var Local «p»)``;

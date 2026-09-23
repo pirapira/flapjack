@@ -1,4 +1,4 @@
-import Flapjack.Pancake.PanToCrep
+import Flapjack.Pancake.PanToCrep.Compile
 
 /-!
 # Original-domain parity for `pan_to_crep$compile_exp`
@@ -14,6 +14,12 @@ open Flapjack
 
 def context : CompileContext Nat :=
   { vars := [], functions := [], exceptions := [], maxVar := 0, bytesInWord := 8 }
+
+def finiteMapContext : PanToCrepHOLContext Nat :=
+  { vars := FUPDATE (FUPDATE FEMPTY ("p", (.one, [3]))) ("p", (.one, [5]))
+    funcs := FEMPTY
+    eids := FEMPTY
+    vmax := 5 }
 
 def oneResultOK (expected : List (CrepExp Nat)) :
     List (CrepExp Nat) × Shape → Bool
@@ -53,14 +59,26 @@ def cmpShiftOK : Bool :=
   oneResultOK [.shift .lsl (.const 2) (.const 1)]
       (compileExp context (.shift .lsl (.const 2) (.const 1)))
 
-def parityGuard : Bool := leavesOK && structFieldOK && loadsOpsOK && cmpShiftOK
+/-! The value and duplicate-key case are checked against the direct HOL probe
+    `finite_map_shadow` in `compile_exp_probe.out`. This exercises HOL's
+    `FUPDATE` lookup semantics through the native finite-map context. -/
+def finiteMapLookupOK : Bool :=
+  match compileExpHOL finiteMapContext (.var .local "p") with
+  | ([.var 5], .one) => true
+  | _ => false
+
+def parityGuard : Bool :=
+  leavesOK && structFieldOK && loadsOpsOK && cmpShiftOK && finiteMapLookupOK
+
+example : compileExpHOL finiteMapContext (.var .local "p") = ([.var 5], .one) := by
+  simp [compileExpHOL, finiteMapContext, FLOOKUP, FUPDATE]
 
 #eval parityGuard
 #guard parityGuard
 
 def runChecks : IO Bool := do
   if parityGuard then
-    IO.println "PASS compile_exp leaves/struct-field/loads/ops/cmp-shift"
+    IO.println "PASS compile_exp leaves/struct-field/loads/ops/cmp-shift/finite-map"
   else
     IO.println "FAIL compile_exp parity"
   pure parityGuard

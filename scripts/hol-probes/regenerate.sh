@@ -362,7 +362,8 @@ run_probe comp_field_probeScript.sml comp_field_probe.out \
 run_probe compile_panop_probeScript.sml compile_panop_probe.out \
   "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe compile_exp_probeScript.sml compile_exp_probe.out \
-  leaves struct_field loads_ops cmp_shift "$cake_dir/pancake/pan_to_crepScript.sml"
+  leaves struct_field loads_ops cmp_shift finite_map_shadow \
+  "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe exp_hdl_probeScript.sml exp_hdl_probe.out \
   missing known dup_update dup_list "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe ret_var_probeScript.sml ret_var_probe.out \
@@ -374,7 +375,7 @@ run_probe wrap_rt_probeScript.sml wrap_rt_probe.out \
 run_probe compile_def_probeScript.sml compile_def_probe.out \
   return missing_global empty_one_global extra_names_global missing_names_global \
   missing_local empty_one_local extra_names_local missing_names_local valid_local \
-  empty_struct_return \
+  empty_struct_return finite_map_shadow_return \
   pair_load pair_store fixed_stride64 \
   "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe compile_to_crep_probeScript.sml compile_to_crep_probe.out \

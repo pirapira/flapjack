@@ -251,4 +251,206 @@ theorem panToCrepConcreteEvaluationGoal_skip
           evalCrepRuntimeResult, evalCrepRuntimeProg]
       · simp [panToCrepRunResultRel, panToCrepControlResultRel, hclock]
 
+/-- The `Break` constructor satisfies the concrete source-run-implies-target-run
+goal; the HOL result relation maps the source break to target label zero. -/
+theorem panToCrepConcreteEvaluationGoal_break
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    [CrepBytesInWord α] [BEq String]
+    (context : PanToCrepProofContext α)
+    (sourceCode : FiniteMap FunName
+      (List (VarName × Shape) × Prog α × Shape))
+    (targetCode : FiniteMap FunName (List Nat × CrepProg α))
+    (sourceContext : PanValueFfiContext α)
+    (sourcePrimitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueStatefulFfiHandler α σ)
+    (targetHandler : CrepRuntimeFfiHandler α σ FfiFinalEvent)
+    (targetPrimitive : CrepPrimitiveHandler α) (fuel : Nat)
+    (sourceState : PanSemExactState α σ)
+    (targetState : CrepRuntimeState α σ)
+    (hclock : sourceState.legacy.clock = targetState.clock)
+    (hfuel : 0 < fuel) :
+    panToCrepConcreteEvaluationGoal context sourceCode targetCode
+      sourceContext sourcePrimitive sourceHandler targetHandler targetPrimitive
+      fuel sourceState targetState .break := by
+  intro _hruntime sourceRun hsource
+  have hsourceBreak :
+      panToCrepSourceEvaluate sourceContext sourcePrimitive sourceHandler
+        sourceState .break =
+      some (.control (.broke sourceState.legacy.locals sourceState.legacy.globals
+        sourceState.legacy.memory sourceState.legacy.ffi), sourceState.legacy.clock) := by
+    simp [panToCrepSourceEvaluate, panSemEvaluateExactState, panSemEvaluate,
+      panSemEvaluateWithFuel, panSemEvaluateFuel, PanSemExactState.toEvaluateState,
+      evalPanValueFfiClockProg, evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps]
+  rw [hsourceBreak] at hsource
+  injection hsource with hrun
+  subst sourceRun
+  cases fuel with
+  | zero => omega
+  | succ fuel =>
+      refine ⟨((CrepRuntimeResult.broke 0 : CrepRuntimeResult α FfiFinalEvent),
+        targetState), ?_, ?_⟩
+      · simp [panToCrepTargetEvaluate, compileCodeRelProg, compileProgHOL,
+          evalCrepRuntimeResult, evalCrepRuntimeProg]
+      · simp [panToCrepRunResultRel, panToCrepControlResultRel, hclock]
+
+/-- The `Continue` constructor satisfies the concrete source-run-implies-
+target-run goal with the HOL level-zero result mapping. -/
+theorem panToCrepConcreteEvaluationGoal_continue
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    [CrepBytesInWord α] [BEq String]
+    (context : PanToCrepProofContext α)
+    (sourceCode : FiniteMap FunName
+      (List (VarName × Shape) × Prog α × Shape))
+    (targetCode : FiniteMap FunName (List Nat × CrepProg α))
+    (sourceContext : PanValueFfiContext α)
+    (sourcePrimitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueStatefulFfiHandler α σ)
+    (targetHandler : CrepRuntimeFfiHandler α σ FfiFinalEvent)
+    (targetPrimitive : CrepPrimitiveHandler α) (fuel : Nat)
+    (sourceState : PanSemExactState α σ)
+    (targetState : CrepRuntimeState α σ)
+    (hclock : sourceState.legacy.clock = targetState.clock)
+    (hfuel : 0 < fuel) :
+    panToCrepConcreteEvaluationGoal context sourceCode targetCode
+      sourceContext sourcePrimitive sourceHandler targetHandler targetPrimitive
+      fuel sourceState targetState .continue := by
+  intro _hruntime sourceRun hsource
+  have hsourceContinue :
+      panToCrepSourceEvaluate sourceContext sourcePrimitive sourceHandler
+        sourceState .continue =
+      some (.control (.continued sourceState.legacy.locals sourceState.legacy.globals
+        sourceState.legacy.memory sourceState.legacy.ffi), sourceState.legacy.clock) := by
+    simp [panToCrepSourceEvaluate, panSemEvaluateExactState, panSemEvaluate,
+      panSemEvaluateWithFuel, panSemEvaluateFuel, PanSemExactState.toEvaluateState,
+      evalPanValueFfiClockProg, evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps]
+  rw [hsourceContinue] at hsource
+  injection hsource with hrun
+  subst sourceRun
+  cases fuel with
+  | zero => omega
+  | succ fuel =>
+      refine ⟨((CrepRuntimeResult.continued 0 : CrepRuntimeResult α FfiFinalEvent),
+        targetState), ?_, ?_⟩
+      · simp [panToCrepTargetEvaluate, compileCodeRelProg, compileProgHOL,
+          evalCrepRuntimeResult, evalCrepRuntimeProg]
+      · simp [panToCrepRunResultRel, panToCrepControlResultRel, hclock]
+
+/-- The `Annot` constructor is a no-op in the source and compiles to `Skip`,
+so it has a concrete successful target run preserving the state and clock. -/
+theorem panToCrepConcreteEvaluationGoal_annot
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    [CrepBytesInWord α] [BEq String]
+    (context : PanToCrepProofContext α)
+    (sourceCode : FiniteMap FunName
+      (List (VarName × Shape) × Prog α × Shape))
+    (targetCode : FiniteMap FunName (List Nat × CrepProg α))
+    (sourceContext : PanValueFfiContext α)
+    (sourcePrimitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueStatefulFfiHandler α σ)
+    (targetHandler : CrepRuntimeFfiHandler α σ FfiFinalEvent)
+    (targetPrimitive : CrepPrimitiveHandler α) (fuel : Nat)
+    (sourceState : PanSemExactState α σ)
+    (targetState : CrepRuntimeState α σ) (tag text : String)
+    (hclock : sourceState.legacy.clock = targetState.clock)
+    (hfuel : 0 < fuel) :
+    panToCrepConcreteEvaluationGoal context sourceCode targetCode
+      sourceContext sourcePrimitive sourceHandler targetHandler targetPrimitive
+      fuel sourceState targetState (.annot tag text) := by
+  intro _hruntime sourceRun hsource
+  have hsourceAnnot :
+      panToCrepSourceEvaluate sourceContext sourcePrimitive sourceHandler
+        sourceState (.annot tag text) =
+      some (.control (.normal sourceState.legacy.locals sourceState.legacy.globals
+        sourceState.legacy.memory sourceState.legacy.ffi), sourceState.legacy.clock) := by
+    simp [panToCrepSourceEvaluate, panSemEvaluateExactState, panSemEvaluate,
+      panSemEvaluateWithFuel, panSemEvaluateFuel, PanSemExactState.toEvaluateState,
+      evalPanValueFfiClockProg, evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps]
+  rw [hsourceAnnot] at hsource
+  injection hsource with hrun
+  subst sourceRun
+  cases fuel with
+  | zero => omega
+  | succ fuel =>
+      refine ⟨((CrepRuntimeResult.normal : CrepRuntimeResult α FfiFinalEvent),
+        targetState), ?_, ?_⟩
+      · simp [panToCrepTargetEvaluate, compileCodeRelProg, compileProgHOL,
+          evalCrepRuntimeResult, evalCrepRuntimeProg]
+      · simp [panToCrepRunResultRel, panToCrepControlResultRel, hclock]
+
+/-- The `Tick` constructor preserves the concrete run relation across both
+clock branches: zero-clock timeout and positive-clock decrement. -/
+theorem panToCrepConcreteEvaluationGoal_tick
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    [CrepBytesInWord α] [BEq String]
+    (context : PanToCrepProofContext α)
+    (sourceCode : FiniteMap FunName
+      (List (VarName × Shape) × Prog α × Shape))
+    (targetCode : FiniteMap FunName (List Nat × CrepProg α))
+    (sourceContext : PanValueFfiContext α)
+    (sourcePrimitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueStatefulFfiHandler α σ)
+    (targetHandler : CrepRuntimeFfiHandler α σ FfiFinalEvent)
+    (targetPrimitive : CrepPrimitiveHandler α) (fuel : Nat)
+    (sourceState : PanSemExactState α σ)
+    (targetState : CrepRuntimeState α σ)
+    (hclock : sourceState.legacy.clock = targetState.clock)
+    (hfuel : 0 < fuel) :
+    panToCrepConcreteEvaluationGoal context sourceCode targetCode
+      sourceContext sourcePrimitive sourceHandler targetHandler targetPrimitive
+      fuel sourceState targetState .tick := by
+  intro _hruntime sourceRun hsource
+  have hsourceTick :
+      panToCrepSourceEvaluate sourceContext sourcePrimitive sourceHandler
+        sourceState .tick =
+      if sourceState.legacy.clock = 0 then
+        some (panValueFfiClockTimeout sourceState.legacy.globals
+          sourceState.legacy.memory sourceState.legacy.ffi sourceState.legacy.clock)
+      else some (.control (.normal sourceState.legacy.locals sourceState.legacy.globals
+        sourceState.legacy.memory sourceState.legacy.ffi),
+        decPanClock sourceState.legacy.clock) := by
+    simp [panToCrepSourceEvaluate, panSemEvaluateExactState, panSemEvaluate,
+      panSemEvaluateWithFuel, panSemEvaluateFuel, PanSemExactState.toEvaluateState,
+      evalPanValueFfiClockProg, panValueFfiClockTimeout]
+  rw [hsourceTick] at hsource
+  by_cases hzero : sourceState.legacy.clock = 0
+  · simp [hzero, panValueFfiClockTimeout] at hsource
+    cases hsource
+    have htargetzero : targetState.clock = 0 := by
+      rw [← hclock]
+      exact hzero
+    cases fuel with
+    | zero => omega
+    | succ fuel =>
+        refine ⟨((CrepRuntimeResult.timeout : CrepRuntimeResult α FfiFinalEvent),
+          clearCrepRuntimeLocals targetState), ?_, ?_⟩
+        · simp [panToCrepTargetEvaluate, compileCodeRelProg, compileProgHOL,
+            evalCrepRuntimeResult, evalCrepRuntimeProg, htargetzero]
+        · simp [panToCrepRunResultRel, panToCrepControlResultRel,
+            clearCrepRuntimeLocals, htargetzero]
+  · simp [hzero] at hsource
+    cases hsource
+    have htargetNonzero : ¬targetState.clock = 0 := by
+      intro htargetzero
+      apply hzero
+      calc
+        sourceState.legacy.clock = targetState.clock := hclock
+        _ = 0 := htargetzero
+    cases fuel with
+    | zero => omega
+    | succ fuel =>
+        refine ⟨((CrepRuntimeResult.normal : CrepRuntimeResult α FfiFinalEvent),
+          decCrepClock targetState), ?_, ?_⟩
+        · simp [panToCrepTargetEvaluate, compileCodeRelProg, compileProgHOL,
+            evalCrepRuntimeResult, evalCrepRuntimeProg, htargetNonzero]
+        · simp [panToCrepRunResultRel, panToCrepControlResultRel,
+            decPanClock, decCrepClock, hclock]
+
 end Flapjack

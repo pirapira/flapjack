@@ -2614,5 +2614,37 @@
     "lean_name": "panToCrepConcreteEvaluationGoal_skip",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panToCrepConcreteEvaluationGoal_break",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panToCrepConcreteEvaluationGoal_continue",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panToCrepConcreteEvaluationGoal_annot",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panToCrepConcreteEvaluationGoal_tick",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (proof inventory)"
   }
 ]

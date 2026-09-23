@@ -4456,6 +4456,22 @@
     "reviewer": "Production source/converted evaluator projection used by the Break case; distinct from the full compile_correct specialization and has no standalone HOL theorem."
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "lookupInfoStringDefault_eq_panPropsALookupEq",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Private lookup bridge from the production default String BEq instance to the explicit equality-based alist lookup adapter; it is a Lean implementation helper, not a standalone HOL declaration."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "compile_exp_correct",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructCompileExpCorrectVarCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Kernel-checked derived Local/Global Var specialization of HOL compile_exp_correct over production structCompileExp/evalPanValueExp. It is intentionally untagged: HOL has one universally quantified theorem and no separately named Var-case declaration. This is not an exact statement port: source evaluation is retained, but direct HOL ctxt.structs equality is replaced by equality of projected shape views; finite-map FEVERY field validity is re-encoded as pointwise Bool predicates over total runtime lookups; and FMAP_MAP2 equations use pointwise adapters. PanStructFiniteState supplies nodup InfoMap lists and lookup equations, and lawful BEq String is needed to align production lookup with HOL equality. The theorem carries structInfosOk as a premise, but the Var proof does not use it. Lean also has a shapedFields cache absent from HOL (not inspected here) and an explicit bytesInWord evaluator parameter. The three conclusions are the Var instance of old_exp_shape/shape_of, v_flds_ok, and converted evaluation. Other expression constructors remain open."
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "compile_correct",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",

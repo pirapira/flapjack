@@ -1,0 +1,6 @@
+deccall_ok_result=NONE
+deccall_ok_clock=4
+deccall_ok_locals=SOME (ValWord 3w)
+deccall_shape_result=SOME Error
+deccall_error_result=SOME Error
+deccall_missing_result=SOME Error

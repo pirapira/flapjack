@@ -386,7 +386,7 @@ theorem progMono (context : PanValueFfiContext α) (primitive : PanPrimitiveHand
                 rw [hb] at h
                 rw [ihBody _ _ _ _ _ _ hfk hb]
                 exact h
-            · rw [if_neg hshape] at h; simp at h
+            · rw [if_neg hshape] at h ⊢; exact h
       | raised l g m f e v => exact h
       | normal l g m f => simp at h
       | broke l g m f => simp at h

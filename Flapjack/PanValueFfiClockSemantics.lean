@@ -248,7 +248,7 @@ mutual
                 (memoryAccess := memoryAccess) (contracts := contracts)
                 (memoryHandler := memoryHandler)
               pure (panValueFfiClockRestoreLocal name oldValue bodyOutcome, bodyClock)
-            else none
+            else pure (.control (.error (fun _ => none) nextGlobals nextMemory nextFfi), nextClock)
         | .control (.raised _ nextGlobals nextMemory nextFfi exception value) =>
             pure (.control (.raised (fun _ => none) nextGlobals nextMemory nextFfi
               exception value), nextClock)
@@ -483,7 +483,7 @@ mutual
                 (memoryAccess := memoryAccess) (contracts := contracts)
                 (memoryHandler := memoryHandler)
               pure (panValueFfiClockRestoreLocal name oldValue bodyOutcome, bodyClock)
-            else none
+            else pure (.control (.error (fun _ => none) nextGlobals nextMemory nextFfi), nextClock)
         | .control (.raised _ nextGlobals nextMemory nextFfi exception value) =>
             pure (.control (.raised (fun _ => none) nextGlobals nextMemory nextFfi
               exception value), nextClock)

@@ -113,10 +113,12 @@ theorem lookupInfo_eq_flookup_infoMapToFiniteMap [BEq String] [LawfulBEq String]
     FLOOKUP (infoMapToFiniteMap entries) name = lookupInfo name entries :=
   (lookupInfo_eq_flookup_infoMapToFiniteMap name entries).symm
 
-/-- Executable handler-setup adapter.  It builds HOL's finite map from the
-    association-list compiler context and invokes the tagged faithful port
-    `expHdlFiniteMap`, so the executed call path uses the exact HOL definition.
-    Untagged: HOL has no association-list helper.
+/-- Kernel-checked association-list adapter retained for tests and lemmas.  It
+    builds HOL's finite map from the compiler's `InfoMap` context and invokes
+    the tagged faithful port `expHdlFiniteMap`.  Production handler compilation
+    does not use this wrapper: `compileProg` calls `expHdlFiniteMap` directly on
+    `infoMapToFiniteMap context.vars`, so the executed path is the tagged
+    definition itself.  Untagged: HOL has no association-list helper.
 
     A known variable is initialized from the global return area, one word per
     flattened local, and the assignments are nested in source order. -/

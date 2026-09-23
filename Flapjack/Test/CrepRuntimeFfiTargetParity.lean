@@ -20,6 +20,14 @@ Direct oracle: `scripts/hol-probes/crep_runtime_ffi_boundary_probe.out`
   bytes64=8w; get_byte_0=8w; get_byte_1=7w; get_byte_7=1w; byte_align_8=8w;
   byte_align_16=16w; word_to_bytes_64=[8w; 7w; 6w; 5w; 4w; 3w; 2w; 1w];
   word_of_bytes_roundtrip=0x102030405060708w; set_byte_0_roundtrip=0x102030405060708w
+
+The canonical target also sets `ffiContext.sharedDomain` to the state's
+`shMemaddrs` bitmap, matching HOL's `s.sh_memaddrs` shared-memory validity used
+by `sh_mem_load`/`sh_mem_store`.
+
+Direct oracle: `scripts/hol-probes/crep_runtime_shared_domain_probe.out`
+  valid_zero_mem=T; valid_zero_out=F; valid_aligned_mem=T;
+  valid_aligned_out=F; align_9=8w; align_16=16w
 -/
 
 namespace Flapjack.Test.CrepRuntimeFfiTargetParity
@@ -39,7 +47,7 @@ def ffiProbeBase : CrepRuntimeState (RiscV.Word 64) Unit :=
     shMemaddrs := fun _ => false
     memoryModel := RiscV.panRiscVMemoryModel
     bytesInWord := (8 : RiscV.Word 64)
-    ffiContext := riscv64PanValueFfiContext
+    ffiContext := riscv64PanValueFfiContext (fun _ => false)
     clock := 0
     bigEndian := false
     ffi := natCrepRuntimeFfiState
@@ -49,17 +57,22 @@ def ffiProbeBase : CrepRuntimeState (RiscV.Word 64) Unit :=
 def ffiProbeTarget : CrepRuntimeState (RiscV.Word 64) Unit :=
   riscv64CrepRuntimeTarget ffiProbeBase
 
+/-- The canonical context the target installs on `ffiProbeBase`, with the base
+    state's shared-memory bitmap as its `sharedDomain`. -/
+def ffiProbeContext : PanValueFfiContext (RiscV.Word 64) :=
+  riscv64PanValueFfiContext ffiProbeBase.shMemaddrs
+
 /-- Bool mirror of the direct HOL oracle rows, evaluated by `#guard`. -/
 def ffiByteCodecGuard : Bool :=
-  (riscv64PanValueFfiContext.byteAlign (9 : RiscV.Word 64) == (8 : RiscV.Word 64)) &&
-  (riscv64PanValueFfiContext.byteAlign (16 : RiscV.Word 64) == (16 : RiscV.Word 64)) &&
+  (ffiProbeContext.byteAlign (9 : RiscV.Word 64) == (8 : RiscV.Word 64)) &&
+  (ffiProbeContext.byteAlign (16 : RiscV.Word 64) == (16 : RiscV.Word 64)) &&
   (riscv64GetByte 0 oracleWord == (8 : UInt8)) &&
   (riscv64GetByte 1 oracleWord == (7 : UInt8)) &&
   (riscv64GetByte 7 oracleWord == (1 : UInt8)) &&
-  (riscv64PanValueFfiContext.wordToBytes oracleWord false ==
+  (ffiProbeContext.wordToBytes oracleWord false ==
     [(8 : UInt8), 7, 6, 5, 4, 3, 2, 1]) &&
-  (riscv64PanValueFfiContext.wordOfBytes false
-      (riscv64PanValueFfiContext.wordToBytes oracleWord false) == oracleWord) &&
+  (ffiProbeContext.wordOfBytes false
+      (ffiProbeContext.wordToBytes oracleWord false) == oracleWord) &&
   (RiscV.panRiscVSetByte (8 : RiscV.Word 64) (0 : RiscV.Word 64)
       (RiscV.panRiscVGetByte (8 : RiscV.Word 64) (0 : RiscV.Word 64) oracleWord)
       oracleWord == oracleWord) &&
@@ -67,21 +80,58 @@ def ffiByteCodecGuard : Bool :=
   (ffiProbeTarget.ffiContext.byteAlign (9 : RiscV.Word 64) == (8 : RiscV.Word 64)) &&
   (ffiProbeTarget.ffiContext.wordToByte oracleWord == (8 : UInt8))
 
+/-- A base state whose shared-memory bitmap is exactly the singleton `{8}`. -/
+def ffiSharedBase : CrepRuntimeState (RiscV.Word 64) Unit :=
+  { ffiProbeBase with shMemaddrs := fun address => address == 8 }
+
+def ffiSharedTarget : CrepRuntimeState (RiscV.Word 64) Unit :=
+  riscv64CrepRuntimeTarget ffiSharedBase
+
+/-- Bool mirror of the shared-memory validity rows of the HOL oracle
+    (`valid_zero_mem=T; valid_zero_out=F; valid_aligned_mem=T;
+    valid_aligned_out=F; align_9=8w; align_16=16w`), where the canonical
+    `ffiContext.sharedDomain` is the state's `shMemaddrs` bitmap. -/
+def ffiSharedDomainGuard : Bool :=
+  (crepRuntimeSharedAddressValid ffiSharedTarget .load (8 : RiscV.Word 64) == true) &&
+  (crepRuntimeSharedAddressValid ffiSharedTarget .load (9 : RiscV.Word 64) == false) &&
+  (crepRuntimeSharedAddressValid ffiSharedTarget .load32 (9 : RiscV.Word 64) == true) &&
+  (crepRuntimeSharedAddressValid ffiSharedTarget .load32 (16 : RiscV.Word 64) == false) &&
+  (crepRuntimeSharedAddressValid ffiSharedTarget .load32 (8 : RiscV.Word 64) == true) &&
+  (ffiSharedTarget.ffiContext.sharedDomain (8 : RiscV.Word 64) == true) &&
+  (ffiSharedTarget.ffiContext.sharedDomain (9 : RiscV.Word 64) == false) &&
+  (RiscV.panRiscVByteAlign 8 (9 : RiscV.Word 64) == (8 : RiscV.Word 64)) &&
+  (RiscV.panRiscVByteAlign 8 (16 : RiscV.Word 64) == (16 : RiscV.Word 64))
+
 /-- The production target fixes `ffiContext` to the canonical byte codec, so the
     executable FFI boundary uses the HOL-shaped byte representation. -/
 example : (riscv64CrepRuntimeTarget ffiProbeBase).ffiContext =
-    riscv64PanValueFfiContext :=
+    ffiProbeContext :=
   riscv64CrepRuntimeTarget_ffiContext ffiProbeBase
+
+/-- The canonical target's `sharedDomain` is the state's `shMemaddrs` bitmap. -/
+example : (riscv64CrepRuntimeTarget ffiSharedBase).ffiContext.sharedDomain =
+    ffiSharedBase.shMemaddrs := by
+  funext address
+  rw [riscv64CrepRuntimeTarget_sharedDomain]
+  rfl
 
 #guard ffiByteCodecGuard
 
+#guard ffiSharedDomainGuard
+
 #eval ffiByteCodecGuard
+
+#eval ffiSharedDomainGuard
 
 def runChecks : IO Bool := do
   if ffiByteCodecGuard then
     IO.println "PASS crep runtime RISC-V 64 FFI byte-codec target parity"
   else
     IO.println "FAIL crep runtime RISC-V 64 FFI byte-codec target parity"
-  pure ffiByteCodecGuard
+  if ffiSharedDomainGuard then
+    IO.println "PASS crep runtime RISC-V 64 FFI shared-domain target parity"
+  else
+    IO.println "FAIL crep runtime RISC-V 64 FFI shared-domain target parity"
+  pure (ffiByteCodecGuard && ffiSharedDomainGuard)
 
 end Flapjack.Test.CrepRuntimeFfiTargetParity

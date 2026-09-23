@@ -123,6 +123,20 @@ instance : RotateRightOp (Fin width → Bool) :=
 
 end HolWordBits
 
+@[simp] theorem holWordBitsToBitVec_add {width : Nat}
+    (left right : Fin width → Bool) :
+    holWordBitsToBitVec (left + right) =
+      holWordBitsToBitVec left + holWordBitsToBitVec right := by
+  change holWordBitsToBitVec (bitVecToHolWordBits
+    (holWordBitsToBitVec left + holWordBitsToBitVec right)) = _
+  rw [holWordBitsToBitVec_bitVecToHolWordBits]
+
+@[simp] theorem holWordBitsToBitVec_one {width : Nat} :
+    holWordBitsToBitVec (1 : Fin width → Bool) = BitVec.ofNat width 1 := by
+  change holWordBitsToBitVec (bitVecToHolWordBits (BitVec.ofNat width 1)) =
+    BitVec.ofNat width 1
+  rw [holWordBitsToBitVec_bitVecToHolWordBits]
+
 def holWordBitsRiscVMemoryModel [NeZero width] (bigEndian : Bool) :
     PanMemoryModel (Fin width → Bool) :=
   let model := RiscV.panRiscVMemoryModelForEndian bigEndian
@@ -264,6 +278,51 @@ def CrepHolState.toBitVecState [NeZero width]
     baseAddress := holWordBitsToBitVec state.baseAddress
     topAddress := holWordBitsToBitVec state.topAddress }
 
+/-! State projections commute with the finite-index/BitVec carrier map. These
+    equations discharge the target-independent `Var`, `LoadGlob`, and plain
+    `Load` cases when proving evaluator transport; they do not yet cover the
+    target word operations or byte loads. -/
+theorem crepHolWordBits_local_toBitVec [NeZero width]
+    (state : CrepHolState (Fin width → Bool) σ) (name : Nat) :
+    (state.toBitVecState.locals name).map
+        (mapCrepHolWordLab bitVecToHolWordBits) = state.locals name := by
+  cases h : state.locals name <;>
+    simp [CrepHolState.toBitVecState, h, mapCrepHolWordLab,
+      bitVecToHolWordBits_holWordBitsToBitVec]
+
+theorem crepHolWordBits_global_toBitVec [NeZero width]
+    (state : CrepHolState (Fin width → Bool) σ) (name : BitVec 5) :
+    (state.toBitVecState.globals name).map
+        (mapCrepHolWordLab bitVecToHolWordBits) = state.globals name := by
+  cases h : state.globals name <;>
+    simp [CrepHolState.toBitVecState, h, mapCrepHolWordLab,
+      bitVecToHolWordBits_holWordBitsToBitVec]
+
+theorem crepHolWordBits_load_toBitVec [NeZero width]
+    (state : CrepHolState (Fin width → Bool) σ)
+    (address : Fin width → Bool) :
+    crepRuntimeLoad state.toHolWordBitsRuntime address =
+      (crepRuntimeLoad state.toBitVecState.toRuntime
+        (holWordBitsToBitVec address)).map bitVecToHolWordBits := by
+  cases state
+  simp [crepRuntimeLoad, CrepHolState.toHolWordBitsRuntime, CrepHolState.toRuntime,
+    CrepHolState.toBitVecState, mapCrepHolWordLab, panTheWord,
+    bitVecToHolWordBits_holWordBitsToBitVec] <;> rfl
+
+theorem crepHolWordBits_loadByte_toBitVec [NeZero width]
+    (state : CrepHolState (Fin width → Bool) σ)
+    (address : Fin width → Bool) :
+    crepRuntimeLoadByte state.toHolWordBitsRuntime address =
+      (crepRuntimeLoadByte
+        (riscvCrepWordTarget state.toBitVecState.toRuntime)
+        (holWordBitsToBitVec address)).map bitVecToHolWordBits := by
+  cases state
+  simp [crepRuntimeLoadByte, CrepHolState.toHolWordBitsRuntime,
+    CrepHolState.toRuntime, CrepHolState.toBitVecState,
+    holWordBitsRiscVMemoryModel, riscvCrepWordTarget, mapCrepHolWordLab,
+    panTheWord, holWordBitsToBitVec_bitVecToHolWordBits] <;>
+    (split <;> simp_all)
+
 /-- Source-shaped Lean translation of HOL `crepSem$eval_def` for every
     positive BitVec word width. It is untagged because the arbitrary HOL word
     carrier remains unrepresented; `evalCrepRuntimeExp_toRuntime_eq` proves
@@ -335,10 +394,10 @@ def evalCrepHolWordBitsExpWordLab [NeZero width]
 
 /-! The next desired bridge would show that the production runtime evaluator on
     the finite-index HOL-word carrier equals the transported source evaluator
-    above. This is not implied by the carrier equivalence alone: memory-model
-    load operations, list-valued `wordOp`, comparisons, and shifts must all
-    commute with the conversion. Keep the statement out of the HOL map until
-    those operation and state equations are proved. -/
+    above. This is not implied by the carrier equivalence alone: the 32-bit
+    load, list-valued `wordOp`, comparisons, and shifts must commute with the
+    conversion. Keep the statement out of the HOL map until those operation
+    and state equations are proved. -/
 
 private theorem crepHolState_load32 [NeZero width]
     (state : CrepHolState (RiscV.Word width) σ) (address : RiscV.Word width) :

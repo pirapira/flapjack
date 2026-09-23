@@ -144,6 +144,46 @@
     "reviewer": "Codex (source comparison; width-generic, requires aligned 2, four set_byte writes at w..w+3, =+ update leaves other addresses unchanged)"
   },
   {
+    "hol_path": "cakeml/pancake/semantics/loopSemScript.sml",
+    "hol_name": "mem_load_def",
+    "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",
+    "lean_name": "memLoadSemHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; whole-state port; total word_loc memory plus word-set mdomain, exact HOL argument order)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/loopSemScript.sml",
+    "hol_name": "mem_store_def",
+    "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",
+    "lean_name": "memStoreSemHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; whole-state port; total word_loc memory plus word-set mdomain, =+ update on the state)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/loopSemScript.sml",
+    "hol_name": "sh_mem_load_def",
+    "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",
+    "lean_name": "shMemLoadSemHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; whole-state port; shared-memory set, byte_align(address) for nonzero width, word_to_bytes/word_of_bytes codec)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/loopSemScript.sml",
+    "hol_name": "sh_mem_store_def",
+    "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",
+    "lean_name": "shMemStoreSemHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; whole-state port; shared-memory set, Word local required, word_to_bytes/word_of_bytes codec, only ffi updated)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/loopSemScript.sml",
+    "hol_name": "sh_mem_op_def",
+    "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",
+    "lean_name": "shMemOpSemHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; exact width dispatch Load/Store=0, *8=1, *16=2, *32=4)"
+  },
+  {
     "hol_path": "cakeml/misc/miscScript.sml",
     "hol_name": "read_bytearray_def",
     "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",

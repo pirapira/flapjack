@@ -821,4 +821,170 @@ def loopMachineFfiHook (state : LoopMachineState (RiscV.Word 64) F)
     (_live : List Nat) : LoopMachineStep (RiscV.Word 64) F :=
   loopMachineExtCall state function configuration configurationLength array arrayLength
 
+/-! ## HOL-shaped whole-state loopSem semantics
+
+HOL's `loopSem` state (`cakeml/pancake/semantics/loopSemScript.sml:13-27`) stores
+a *total* `'a word -> 'a word_loc` memory and set-valued `mdomain`/`sh_mdomain`.
+`LoopMachineState` above keeps partial memories and `Bool` domains so the
+executable pipeline can stay total; this section supplies the HOL-shaped state,
+exact ports of `mem_load`/`mem_store`/`sh_mem_load`/`sh_mem_store`/`sh_mem_op`
+over the whole state, and an explicit documented bridge between the two. -/
+
+/-- HOL `('a,'ffi) loopSem$state` (`loopSemScript.sml:13-27`) with the exact
+    component types: a total `word -> word_loc` memory and set-valued domains. -/
+structure LoopSemState (W : Type) (F : Type := Nat) where
+  locals : Nat → Option (LoopValue W)
+  globals : BitVec 5 → Option (LoopValue W)
+  memory : W → LoopValue W
+  mdomain : W → Prop
+  shMdomain : W → Prop
+  clock : Nat
+  code : LoopCode W
+  be : Bool
+  ffi : FfiState F
+  baseAddr : W
+  topAddr : W
+
+/-- The `(result option, state)` pair returned by HOL `loopSem$evaluate`. -/
+abbrev LoopSemStep (W : Type) (F : Type := Nat) :=
+  Option (LoopMachineResult W) × LoopSemState W F
+
+namespace LoopSemState
+
+/-- HOL `set_var` on the whole state. -/
+def setVar (state : LoopSemState W F) (name : Nat) (value : LoopValue W) :
+    LoopSemState W F :=
+  { state with
+    locals := fun current => if current = name then some value else state.locals current }
+
+/-- HOL `call_env []`: every local becomes `NONE`. -/
+def clearLocals (state : LoopSemState W F) : LoopSemState W F :=
+  { state with locals := fun _ => none }
+
+/-- Replace the FFI state. -/
+def setFfi (state : LoopSemState W F) (next : FfiState F) : LoopSemState W F :=
+  { state with ffi := next }
+
+end LoopSemState
+
+/-- Explicit runtime bridge from the machine representation to the HOL-shaped
+    state: absent memory addresses become HOL's `Loc`, `Bool` domains become the
+    corresponding set predicates.  Every other component is shared. -/
+def LoopSemState.ofMachine (state : LoopMachineState W F) : LoopSemState W F where
+  locals := state.locals
+  globals := state.globals
+  memory := fun address => (state.memory address).getD (.loc 0 0)
+  mdomain := fun address => state.mdomain address = true
+  shMdomain := fun address => state.shMdomain address = true
+  clock := state.clock
+  code := state.code
+  be := state.be
+  ffi := state.ffi
+  baseAddr := state.baseAddr
+  topAddr := state.topAddr
+
+/-- Explicit runtime bridge from the HOL-shaped state back to the machine
+    representation: the total memory is wrapped in `some`, the set predicates
+    are decided by the supplied instances. -/
+def LoopMachineState.ofSem (state : LoopSemState W F)
+    [DecidablePred state.mdomain] [DecidablePred state.shMdomain] :
+    LoopMachineState W F where
+  locals := state.locals
+  globals := state.globals
+  memory := fun address => some (state.memory address)
+  mdomain := fun address => decide (state.mdomain address)
+  shMdomain := fun address => decide (state.shMdomain address)
+  clock := state.clock
+  code := state.code
+  be := state.be
+  ffi := state.ffi
+  baseAddr := state.baseAddr
+  topAddr := state.topAddr
+
+/-- Exact whole-state port of HOL `mem_load_def` (`loopSemScript.sml:64-69`):
+    `mem_load addr s = if addr IN s.mdomain then SOME (s.memory addr) else NONE`. -/
+@[hol "cakeml/pancake/semantics/loopSemScript.sml" "mem_load_def"]
+def memLoadSemHOL (address : W) (state : LoopSemState W F) [DecidablePred state.mdomain] :
+    Option (LoopValue W) :=
+  if state.mdomain address then some (state.memory address) else none
+
+/-- Exact whole-state port of HOL `mem_store_def` (`loopSemScript.sml:57-62`):
+    `mem_store addr w s = if addr IN s.mdomain then SOME (s with memory := (addr =+ w) s.memory) else NONE`. -/
+@[hol "cakeml/pancake/semantics/loopSemScript.sml" "mem_store_def"]
+def memStoreSemHOL [DecidableEq W] (address : W) (value : LoopValue W)
+    (state : LoopSemState W F) [DecidablePred state.mdomain] :
+    Option (LoopSemState W F) :=
+  if state.mdomain address then
+    some { state with
+      memory := fun current => if current = address then value else state.memory current }
+  else none
+
+/-- Exact whole-state port of HOL `sh_mem_load_def` (`loopSemScript.sml:198-215`).
+    For a nonzero byte count only the aligned address is checked against
+    `sh_mdomain`; the FFI payload still uses the original address. -/
+@[hol "cakeml/pancake/semantics/loopSemScript.sml" "sh_mem_load_def"]
+def shMemLoadSemHOL {width : Nat} [NeZero width] (name : Nat)
+    (address : RiscV.Word width) (byteCount : Nat)
+    (state : LoopSemState (RiscV.Word width) F) [DecidablePred state.shMdomain] :
+    LoopSemStep (RiscV.Word width) F :=
+  if byteCount = 0 then
+    if state.shMdomain address then
+      match callFfi state.ffi (.sharedMem .mappedRead) (loopShMemByteCount byteCount)
+          (riscvWordToBytesHOL address false) with
+      | .final event => (some (.finalFfi event), LoopSemState.clearLocals state)
+      | .returned nextFfi bytes =>
+          (none, LoopSemState.setFfi
+            (LoopSemState.setVar state name (.word (riscvWordOfBytesHOL false 0 bytes)))
+            nextFfi)
+    else (some .error, state)
+  else
+    if state.shMdomain (riscvByteAlignHOL address) then
+      match callFfi state.ffi (.sharedMem .mappedRead) (loopShMemByteCount byteCount)
+          (riscvWordToBytesHOL address false) with
+      | .final event => (some (.finalFfi event), LoopSemState.clearLocals state)
+      | .returned nextFfi bytes =>
+          (none, LoopSemState.setFfi
+            (LoopSemState.setVar state name (.word (riscvWordOfBytesHOL false 0 bytes)))
+            nextFfi)
+    else (some .error, state)
+
+/-- Exact whole-state port of HOL `sh_mem_store_def` (`loopSemScript.sml:217-243`).
+    A store is only meaningful when the local holds a `Word`. -/
+@[hol "cakeml/pancake/semantics/loopSemScript.sml" "sh_mem_store_def"]
+def shMemStoreSemHOL {width : Nat} [NeZero width] (name : Nat)
+    (address : RiscV.Word width) (byteCount : Nat)
+    (state : LoopSemState (RiscV.Word width) F) [DecidablePred state.shMdomain] :
+    LoopSemStep (RiscV.Word width) F :=
+  let addressBytes := riscvWordToBytesHOL address false
+  match state.locals name with
+  | some (.word value) =>
+      let valueBytes := riscvWordToBytesHOL value false
+      let payload :=
+        if byteCount = 0 then valueBytes ++ addressBytes
+        else valueBytes.take byteCount ++ addressBytes
+      let aligned := if byteCount = 0 then address else riscvByteAlignHOL address
+      if state.shMdomain aligned then
+        match callFfi state.ffi (.sharedMem .mappedWrite)
+            (loopShMemByteCount byteCount) payload with
+        | .final event => (some (.finalFfi event), LoopSemState.clearLocals state)
+        | .returned nextFfi _ =>
+            (none, LoopSemState.setFfi state nextFfi)
+      else (some .error, state)
+  | _ => (some .error, state)
+
+/-- Exact whole-state port of HOL `sh_mem_op_def` (`loopSemScript.sml:255-262`). -/
+@[hol "cakeml/pancake/semantics/loopSemScript.sml" "sh_mem_op_def"]
+def shMemOpSemHOL {width : Nat} [NeZero width] (operator : CrepMemOp) (name : Nat)
+    (address : RiscV.Word width) (state : LoopSemState (RiscV.Word width) F)
+    [DecidablePred state.shMdomain] : LoopSemStep (RiscV.Word width) F :=
+  match operator with
+  | .load => shMemLoadSemHOL name address 0 state
+  | .store => shMemStoreSemHOL name address 0 state
+  | .load8 => shMemLoadSemHOL name address 1 state
+  | .store8 => shMemStoreSemHOL name address 1 state
+  | .load16 => shMemLoadSemHOL name address 2 state
+  | .store16 => shMemStoreSemHOL name address 2 state
+  | .load32 => shMemLoadSemHOL name address 4 state
+  | .store32 => shMemStoreSemHOL name address 4 state
+
 end Flapjack

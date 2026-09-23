@@ -82,6 +82,12 @@ destination, shift, and width checks live in `Flapjack.Test.CrepeDest2ExpParity`
 `crepSem$eval` after `crep_arith$mul_const` for zero, one, power-of-two, and
 general multipliers, with a word-valued local. Its matching production runtime
 cases live in `Flapjack.Test.CrepeMulConstParity`.
+`crep_simp_exp_probe.out` records direct HOL EVAL of
+`crep_arith$simp_exp_def` (`crep_arithScript.sml:59`) for constant folding,
+left/right constant multiplication, nested multiplication, and recursive
+load/word-operation children. Its Lean syntax checks live in
+`Flapjack.Test.CrepeSimpExpParity`; these cases do not establish the
+polymorphic evaluator-preservation theorem `simp_exp_correct1`.
 `crep_eval_probe.out` records direct HOL EVAL of the `Const`, `Var`, `Load`,
 `LoadGlob`, `BaseAddr`, and `TopAddr` constructor cases from
 `cakeml/pancake/semantics/crepSemScript.sml:90-166`. The width-8 production

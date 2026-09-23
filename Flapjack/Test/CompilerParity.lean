@@ -117,6 +117,7 @@ import Flapjack.Test.CrepeNestedSeqParity
 import Flapjack.Test.CrepeStoresParity
 import Flapjack.Test.CrepeNestedDecsParity
 import Flapjack.Test.CrepeStoreGlobalsParity
+import Flapjack.Test.CrepGlobalShapeParity
 import Flapjack.Test.CrepeAssignRetParity
 import Flapjack.Test.CrepeVarCexpParity
 import Flapjack.Test.CrepExpsParity

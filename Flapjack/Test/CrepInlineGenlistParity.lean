@@ -44,6 +44,15 @@ def crepInlineMaxListGuard : Bool :=
 
 #guard crepInlineMaxListGuard
 
+theorem crepInlineMaxGenlist_add_suc_val :
+    maxList ((List.range 5).map (fun x => (x + 1) + 3)) = 5 + 3 :=
+  max_list_genlist_add_suc_val 3 5 (by decide)
+
+def crepInlineMaxGenlistGuard : Bool :=
+  decide (maxList ((List.range 5).map (fun x => (x + 1) + 3)) = 8)
+
+#guard crepInlineMaxGenlistGuard
+
 def runChecks : IO Bool := do
   let genlistOk ←
     if crepInlineGenlistIntervalGuard then
@@ -59,6 +68,13 @@ def runChecks : IO Bool := do
     else
       IO.println "FAIL crep_inline MORE_THEN_NOT_MAX_LIST"
       pure false
-  pure (genlistOk && maxListOk)
+  let maxGenlistOk ←
+    if crepInlineMaxGenlistGuard then
+      IO.println "PASS crep_inline max_list_genlist_add_suc_val"
+      pure true
+    else
+      IO.println "FAIL crep_inline max_list_genlist_add_suc_val"
+      pure false
+  pure (genlistOk && maxListOk && maxGenlistOk)
 
 end Flapjack.Test.CrepInlineGenlistParity

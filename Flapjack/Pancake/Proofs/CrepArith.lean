@@ -238,6 +238,27 @@ theorem crepEvalMulConst {n : Nat} [NeZero n] {σ : Type}
           rw [hRaw]
           simp [riscvCrepWordTarget, RiscV.panRiscVMemoryModel, hshift]
 
+/-! Lean-only adapter from the explicit `PanWordLab.word` result shape to the
+    raw production evaluator result used by the recursive simp proof. -/
+private theorem crepEvalMulConstRaw {n : Nat} [NeZero n] {σ : Type}
+    (state : CrepRuntimeState (RiscV.Word n) σ)
+    (expression : CrepExp (RiscV.Word n)) (constant value : RiscV.Word n)
+    (h : evalCrepRuntimeExp (riscvCrepWordTarget state) expression = some value) :
+    evalCrepRuntimeExp (riscvCrepWordTarget state)
+      (crepMulConst (BitVec.ofNat n) expression constant) = some (value * constant) := by
+  have wordInjective : Function.Injective (PanWordLab.word : RiscV.Word n →
+      PanWordLab (RiscV.Word n)) := by
+    intro left right hEq
+    cases hEq
+    rfl
+  have hWrapped :
+      (evalCrepRuntimeExp (riscvCrepWordTarget state) expression).map
+        PanWordLab.word = some (.word value) := by
+    simpa using congrArg (Option.map PanWordLab.word) h
+  have hResult := crepEvalMulConst state expression constant value hWrapped
+  apply Option.map_injective wordInjective
+  simpa using hResult
+
 /-- Flapjack representation of HOL's local `mapc f` state update: apply `f`
     to each present code-map entry and leave every other runtime field alone. -/
 def crepArithMapCode {n : Nat} (f : (List Nat × CrepProg (RiscV.Word n)) →

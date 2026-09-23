@@ -125,3 +125,15 @@ val _ = print_eval "alookup_drop_helper"
     ALL_DISTINCT (MAP FST [(strlit "a", 10); (strlit "b", 20)]) ==>
     ~MEM (strlit "b") (MAP FST (TAKE 1 [(strlit "a", 10); (strlit "b", 20)])) /\
     ALOOKUP [(strlit "a", 10); (strlit "b", 20)] (strlit "b") = SOME 20``;
+(* The HOL existential has the concrete witness i = 1 in this oracle row. *)
+val _ = print_eval "map_fst_eq_alookup"
+  ``MAP FST [(strlit "a", 1); (strlit "b", 2)] =
+      MAP FST [(strlit "a", 3); (strlit "b", 4)] /\
+    ALOOKUP [(strlit "a", 1); (strlit "b", 2)] (strlit "b") = SOME 2 ==>
+    pan_structs$afindi (strlit "b") [(strlit "a", 1); (strlit "b", 2)] = SOME 1 /\
+      pan_structs$afindi (strlit "b") [(strlit "a", 3); (strlit "b", 4)] = SOME 1 /\
+      1 < LENGTH [(strlit "a", 1); (strlit "b", 2)] /\
+      1 < LENGTH [(strlit "a", 3); (strlit "b", 4)] /\
+      2 = SND (EL 1 [(strlit "a", 1); (strlit "b", 2)]) /\
+      ALOOKUP [(strlit "a", 3); (strlit "b", 4)] (strlit "b") =
+        SOME (SND (EL 1 [(strlit "a", 3); (strlit "b", 4)]))``;

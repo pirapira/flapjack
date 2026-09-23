@@ -35,7 +35,7 @@ while true; do
             continue
           fi
           if herdr agent prompt "$pane" \
-            "Resume the Flapjack fleet goal. Read docs/RTK.md from the integration branch and prefix shell commands with rtk (rtk proxy for unsupported commands). If your PanStructs compile_shapes_eq_map branch is unfinished, first repair the RiscV.lean:409 proof fallout, run required gates, commit/push, update its bead, and agmsg flapjack-main with SHA/results. If the command runner is still blocked, report the exact blocker by agmsg and stop; do not claim success. Otherwise claim another ready commit-sized HOL-shaped theorem bead, ordinary-merge the integration branch, and continue. No separate PR." \
+            "Resume the Flapjack fleet goal. If your PanStructs compile_shapes_eq_map branch is unfinished, first repair the RiscV.lean:409 proof fallout, run required gates, commit/push, update its bead, and agmsg flapjack-main with SHA/results. If the command runner is still blocked, report the exact blocker by agmsg and stop; do not claim success. Otherwise claim another ready commit-sized HOL-shaped theorem bead, ordinary-merge the integration branch, and continue. No separate PR." \
             >/dev/null 2>&1; then
             echo "resumed $name in $pane"
             was_ready=true

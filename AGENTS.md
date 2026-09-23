@@ -1,8 +1,5 @@
 # Agent Notes
 
-Codex fleet agents should read [docs/RTK.md](docs/RTK.md) for the shared shell
-command convention; this copy is available to every checkout after merging.
-
 ## Lean/Lake cache artifacts
 
 Prefer a targeted repair over a global cache reset. When a build is blocked by

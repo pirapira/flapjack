@@ -203,6 +203,30 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpMulEval",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Target-specific recursive simp multiplication case; consumes only the documented untagged RISC-V evaluator support lemma"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged RISC-V width specialization with HOL-shaped success premise, mapc code update, and full option/word_lab result; HOL quantifies over arbitrary word types/states and uses crepSem eval, for which no production evaluator correspondence is proved."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpEvalPreserves",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only all-width RISC-V production-evaluator induction helper underlying the documented simp_exp_correct1 specialization; not the polymorphic HOL evaluator theorem."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepEvalCodeMapIrrel",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Codex (Flapjack-only evaluator infrastructure; supports the local mapc update in simp_exp_correct1)"
@@ -2744,6 +2768,22 @@
     "reviewer": "Codex (source comparison)"
   },
   {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "ALOOKUP_MAP3",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "ALOOKUP_MAP3",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Codex (source comparison; HOL ALOOKUP is key-polymorphic, production lookupInfo is String-specialized)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "ALOOKUP_MAP4",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "ALOOKUP_MAP4",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Codex (source comparison; HOL ALOOKUP is key-polymorphic, production lookupInfo is String-specialized)"
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
@@ -2860,16 +2900,16 @@
     "hol_name": "afindi_append",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "afindi_append",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source case split and shifted suffix index match; Lean writes i + xs.length, equal to HOL LENGTH xs + i by Nat commutativity; direct HOL-EVAL prefix/suffix/miss rows paired with Lean regression)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "dropWhile_afindi",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "afindi_dropWhile",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (HOL key inequality and DROP index case split match Lean decide/dropWhile and List.drop; direct HOL-EVAL first/later/missing rows paired with Lean regressions)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
@@ -2956,8 +2996,8 @@
     "hol_name": "ctxt_fc_funcs_eq",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "ctxtFcFuncsEq",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source theorem has no premises and equates ctxt_fc.funcs with its supplied map; Lean constructor projection is definitional; direct HOL EVAL row paired with kernel-checked Lean fixture)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",

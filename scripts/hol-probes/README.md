@@ -46,6 +46,9 @@ call destinations through `pan_to_crep$compile`: absent lookups, the
 matching Lean cases live in `Flapjack.Test.CompileDefParity`.
 `excp_rel_probe.out` and `ctxt_fc_probe.out` are direct EVALs from
 `pan_to_crepProofTheory`, paired with `Flapjack.Test.PanToCrepRelationsParity`.
+The `functions_projection` row in `ctxt_fc_probe.out` directly checks the
+HOL `ctxt_fc_funcs_eq` theorem at `pan_to_crepProofScript.sml:2295` against
+the kernel-checked Lean fixture in that module.
 The `excp_rel` cases deliberately use a word-valued compiler-code map and a
 shape-valued source map, matching the definition's independent HOL value types.
 The `ctxt_fc` cases record `with_shape` slot slicing, ZIP truncation, and
@@ -96,6 +99,14 @@ checks the equivalent `getElem?`-based API in
 missing and duplicate-key cases for `ALOOKUP_eq_afindi` at
 `cakeml/pancake/proofs/pan_structsProofScript.sml:405`; matching `List.lookup`
 regressions live in `Flapjack.Test.PanStructsAfindiParity`.
+`pan_structs_afindi_append_probe.out` records direct HOL EVAL of prefix-hit,
+shifted suffix-hit and missing-key rows for `afindi_append` at
+`cakeml/pancake/proofs/pan_structsProofScript.sml:417`; matching Lean cases
+live in `Flapjack.Test.PanStructsAfindiParity`.
+`pan_structs_dropwhile_afindi_probe.out` records direct HOL EVAL of first-hit,
+later-hit and absent-key cases for `dropWhile_afindi` at
+`cakeml/pancake/proofs/pan_structsProofScript.sml:334`; matching Lean rows
+live in `Flapjack.Test.PanStructsAfindiParity`.
 The `longdiv_code_probe.out` fixture probes the original software LongDiv
 helper at `cakeml/compiler/backend/data_to_wordScript.sml:829-867` and the
 RISC-V target's deliberate LongDiv encoding rejection.

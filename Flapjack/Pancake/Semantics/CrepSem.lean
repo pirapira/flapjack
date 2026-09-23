@@ -93,6 +93,51 @@ structure CrepRuntimeState (α σ : Type u) where
   baseAddress : α
   topAddress : α
 
+/-- Flapjack's field-only encoding of HOL `crepSem$state` for a fixed
+    `RiscV.Word width` carrier. Finite maps are represented extensionally by
+    lookup functions, and the three target-configuration fields
+    (`memoryModel`, `bytesInWord`, `ffiContext`) of the executable
+    `CrepRuntimeState` are absent, matching HOL's 11-field state. It is
+    untagged because it does not quantify over HOL's arbitrary word carrier. -/
+structure CrepHolState (α σ : Type u) where
+  locals : Nat → Option (PanWordLab α)
+  globals : BitVec 5 → Option (PanWordLab α)
+  code : FunName → Option (List Nat × CrepProg α)
+  memory : α → PanWordLab α
+  memaddrs : α → Bool
+  shMemaddrs : α → Bool
+  clock : Nat
+  bigEndian : Bool
+  ffi : FfiState σ
+  baseAddress : α
+  topAddress : α
+
+/-- Exact HOL-shaped port of `crepSem$set_globals_def` (crepSemScript.sml:61)
+    over the 11-field `CrepHolState`:
+    `set_globals gv w s = s with globals := s.globals |+ (gv,w)`.
+    Production `setCrepRuntimeGlobals` routes its globals update through this
+    definition while preserving its three extra configuration fields. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "set_globals_def"]
+def setCrepHolGlobals (key : BitVec 5) (value : PanWordLab α)
+    (state : CrepHolState α σ) : CrepHolState α σ :=
+  { state with globals := FUPDATE state.globals (key, value) }
+
+/-- Forget the three target-configuration fields of the executable runtime
+    state, obtaining the 11-field HOL-shaped state. -/
+def CrepRuntimeState.toHolState (state : CrepRuntimeState α σ) :
+    CrepHolState α σ :=
+  { locals := state.locals
+    globals := state.globals
+    code := state.code
+    memory := state.memory
+    memaddrs := state.memaddrs
+    shMemaddrs := state.shMemaddrs
+    clock := state.clock
+    bigEndian := state.bigEndian
+    ffi := state.ffi
+    baseAddress := state.baseAddress
+    topAddress := state.topAddress }
+
 /- Flapjack clock update. Its field operation follows CakeML Pancake's
    `dec_clock_def`, but this runtime state still carries extra memory-model
    and FFI-context fields, so this is not tagged as an exact HOL definition. -/
@@ -103,17 +148,17 @@ def updateCrepRuntimeGlobal (globals : BitVec 5 → Option (PanWordLab α))
     (key : BitVec 5) (value : PanWordLab α) : BitVec 5 → Option (PanWordLab α) :=
   fun candidate => if key == candidate then some value else globals candidate
 
-/-- Production global update on the 14-field `CrepRuntimeState`. Its field
-    operation follows HOL `crepSem$set_globals` (crepSemScript.sml:61), but the
-    runtime state carries three target-configuration fields
-    (`memoryModel`, `bytesInWord`, `ffiContext`) absent from HOL's 11-field
-    state, so this is NOT tagged as the exact HOL definition. The exact
-    HOL-shaped port lives in `Flapjack/Pancake/Semantics/CrepSem/Eval.lean` as
-    `setCrepHolGlobals`; `setCrepRuntimeGlobals_eq_FUPDATE` records that the
-    update is HOL's finite-map `|+`/`FUPDATE` on the globals component. -/
+/-- Production global update on the 14-field `CrepRuntimeState`. It derives its
+    globals update by applying the tagged HOL `setCrepHolGlobals` to the
+    11-field projection `CrepRuntimeState.toHolState` and writing the resulting
+    globals back, so the three runtime configuration fields are preserved
+    exactly as the record update leaves them. It is NOT itself tagged (HOL's
+    state has 11 fields); `setCrepRuntimeGlobals_eq_FUPDATE` and
+    `setCrepRuntimeGlobals_toHolState` are the kernel-checked adapters. -/
 def setCrepRuntimeGlobals (key : BitVec 5) (value : PanWordLab α)
     (state : CrepRuntimeState α σ) : CrepRuntimeState α σ :=
-  { state with globals := updateCrepRuntimeGlobal state.globals key value }
+  { state with
+    globals := (setCrepHolGlobals key value state.toHolState).globals }
 
 /-- The global-cell update is HOL's finite-map `|+`/`FUPDATE` on the
     function-represented globals map. -/
@@ -128,6 +173,19 @@ theorem setCrepRuntimeGlobals_eq_FUPDATE
     (key : BitVec 5) (value : PanWordLab α) (state : CrepRuntimeState α σ) :
     setCrepRuntimeGlobals key value state =
       { state with globals := FUPDATE state.globals (key, value) } := rfl
+
+/-- Kernel-checked adapter: routing production StoreGlob through the tagged HOL
+    definition only changes the globals component, leaving the 11 encoded
+    fields equal to the HOL-shaped update. -/
+theorem setCrepRuntimeGlobals_toHolState
+    (key : BitVec 5) (value : PanWordLab α) (state : CrepRuntimeState α σ) :
+    (setCrepRuntimeGlobals key value state).toHolState =
+      setCrepHolGlobals key value state.toHolState := rfl
+
+/-- Kernel-checked adapter: `toHolState` forgets exactly the three
+    configuration fields, so it commutes with the production update. -/
+theorem CrepRuntimeState.toHolState_globals (state : CrepRuntimeState α σ) :
+    state.toHolState.globals = state.globals := rfl
 
 def updateCrepRuntimeLocal (locals : Nat → Option (PanWordLab α))
     (name : Nat) (value : PanWordLab α) : Nat → Option (PanWordLab α) :=

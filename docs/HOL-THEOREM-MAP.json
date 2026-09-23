@@ -5162,10 +5162,10 @@
   {
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
     "hol_name": "set_globals_def",
-    "lean_path": "Flapjack/Pancake/Semantics/CrepSem/Eval.lean",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
     "lean_name": "setCrepHolGlobals",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (exact 11-field CrepHolState port of set_globals_def crepSemScript.sml:61: setCrepHolGlobals gv w s = s with globals := s.globals |+ (gv,w), written as FUPDATE. The production 14-field CrepRuntimeState version is the separate untagged setCrepRuntimeGlobals, related by setCrepRuntimeGlobals_eq_FUPDATE and the untagged commutation setCrepHolGlobals_toRuntime. Direct HOL oracle crep_store_global_probe.out rows and Lean guards/examples in Flapjack/Test/CrepGlobalShapeParity.lean)"
+    "reviewer": "Codex (exact 11-field CrepHolState port of set_globals_def crepSemScript.sml:61: setCrepHolGlobals gv w s = s with globals := s.globals |+ (gv,w), written as FUPDATE, co-located with the production state in CrepSem.lean. Production setCrepRuntimeGlobals routes its globals update through it via CrepRuntimeState.toHolState while preserving the three config fields (setCrepRuntimeGlobals_eq_FUPDATE, setCrepRuntimeGlobals_toHolState, CrepHolState.toHolState_toRuntime). Direct HOL oracle crep_store_global_probe.out rows and Lean guards/examples in Flapjack/Test/CrepGlobalShapeParity.lean)"
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",

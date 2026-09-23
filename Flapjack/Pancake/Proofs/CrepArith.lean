@@ -16,4 +16,136 @@ theorem crepDestConst_eq_const {n : Nat} (expression : CrepExp (RiscV.Word n))
     expression = .const value := by
   cases expression <;> simp_all [crepDestConst]
 
+/-! The following private BitVec arithmetic lemmas support the RISC-V
+    specialization of HOL's destination facts. They are generic Lean helpers
+    and have no declaration in the CakeML HOL development. -/
+
+private theorem bitVec_even_shift_double {n : Nat} (word : BitVec n)
+    (heven : word.toNat % 2 = 0) :
+    word.toNat = 2 * (BitVec.ushiftRight word 1).toNat := by
+  change word.toNat = 2 * (word.toNat >>> 1)
+  rw [Nat.shiftRight_eq_div_pow]
+  have h := Nat.mod_add_div word.toNat 2
+  omega
+
+private theorem one_lt_pow_two {n : Nat} [NeZero n] : 1 < 2 ^ n := by
+  cases n with
+  | zero => exact False.elim ((NeZero.ne 0) rfl)
+  | succ n => simp
+
+private theorem bitVec_one_toNat {n : Nat} [NeZero n] :
+    (1 : BitVec n).toNat = 1 := by
+  change (BitVec.ofNat n 1).toNat = 1
+  rw [BitVec.toNat_ofNat]
+  exact Nat.mod_eq_of_lt one_lt_pow_two
+
+private theorem bitVec_lowBit_zero_even {n : Nat} [NeZero n]
+    (word : RiscV.Word n) (h : AndOp.and word 1 = 0) :
+    word.toNat % 2 = 0 := by
+  have ht := congrArg BitVec.toNat h
+  change (word &&& (1 : BitVec n)).toNat = 0 at ht
+  rw [BitVec.toNat_and] at ht
+  rw [bitVec_one_toNat, Nat.and_one_is_mod] at ht
+  exact ht
+
+private theorem bitVec_even_shiftRight_one_double {n : Nat} [NeZero n]
+    (word : RiscV.Word n) (heven : word.toNat % 2 = 0) :
+    word.toNat = 2 * (ShiftRight.shiftRight word 1).toNat := by
+  have hnat := bitVec_even_shift_double word heven
+  have hshift : ShiftRight.shiftRight word (1 : RiscV.Word n) =
+      BitVec.ushiftRight word 1 := by
+    change BitVec.ushiftRight word (1 : RiscV.Word n).toNat =
+      BitVec.ushiftRight word 1
+    rw [bitVec_one_toNat]
+  rw [hshift]
+  exact hnat
+
+private theorem crepDest2ExpFuel_sound {n : Nat} [NeZero n]
+    (fuel start : Nat) (word : RiscV.Word n) (result : Nat)
+    (h : crepDest2ExpFuel fuel start word = some result) :
+    start ≤ result ∧ result - start < n ∧
+      word.toNat = 2 ^ (result - start) % 2 ^ n := by
+  induction fuel generalizing start word result with
+  | zero => simp [crepDest2ExpFuel] at h
+  | succ fuel ih =>
+      simp only [crepDest2ExpFuel] at h
+      split at h
+      · contradiction
+      · split at h
+        · have heval : some start = some result := h
+          have hr : result = start := by cases heval; rfl
+          subst result
+          have hw : word = 1 := by simpa using ‹(word == 1) = true›
+          have hword : word.toNat = 1 := by
+            rw [hw, bitVec_one_toNat]
+          have hn : 0 < n := Nat.pos_of_ne_zero (NeZero.ne n)
+          refine ⟨by omega, by omega, ?_⟩
+          simp [hword, Nat.mod_eq_of_lt one_lt_pow_two]
+        · split at h
+          · contradiction
+          · have hrec :
+              crepDest2ExpFuel fuel (start + 1) (ShiftRight.shiftRight word 1) =
+                  some result := h
+            have hand : AndOp.and word 1 = 0 := by
+              have hbit : (AndOp.and word 1 != 0) = false := by
+                cases hb : (AndOp.and word 1 != 0) <;> simp_all
+              simpa using hbit
+            have ihResult := ih (start + 1) (ShiftRight.shiftRight word 1)
+              result hrec
+            obtain ⟨hstart, hwidth, hword⟩ := ihResult
+            have hdouble := bitVec_even_shiftRight_one_double word
+              (bitVec_lowBit_zero_even word hand)
+            have hd : result - (start + 1) < n := hwidth
+            have hdiff : result - start = result - (start + 1) + 1 := by omega
+            have hmod : 2 ^ (result - (start + 1)) % 2 ^ n =
+                2 ^ (result - (start + 1)) :=
+              Nat.mod_eq_of_lt (Nat.pow_lt_pow_right (by decide) hd)
+            have hlt : word.toNat < 2 ^ n := word.isLt
+            rw [hdouble, hword, hmod] at hlt
+            have hpowlt : 2 ^ (result - (start + 1) + 1) < 2 ^ n := by
+              rw [Nat.pow_succ, Nat.mul_comm]
+              exact hlt
+            have hdlt : result - (start + 1) + 1 < n :=
+              (Nat.pow_lt_pow_iff_right (by decide)).mp hpowlt
+            refine ⟨by omega, by omega, ?_⟩
+            calc
+              word.toNat = 2 * (ShiftRight.shiftRight word 1).toNat := hdouble
+              _ = 2 ^ (result - (start + 1) + 1) := by
+                rw [hword, hmod, Nat.pow_succ]
+                omega
+              _ = 2 ^ (result - start) % 2 ^ n := by
+                rw [hdiff, Nat.mod_eq_of_lt hpowlt]
+
+/- CakeML's `dest_2exp_thm`: every successful exponent destination is the
+   corresponding logical left shift of one. -/
+@[hol "cakeml/pancake/crep_arithScript.sml" "dest_2exp_thm"]
+theorem crepDest2Exp_eq_shift {n : Nat} [NeZero n] (word : RiscV.Word n)
+    (exponent : Nat) (h : crepDest2Exp 0 word = some exponent) :
+    word = BitVec.shiftLeft (1 : RiscV.Word n) exponent := by
+  change crepDest2ExpFuel (n + 1) 0 word = some exponent at h
+  have hs := crepDest2ExpFuel_sound (n + 1) 0 word exponent h
+  obtain ⟨_, hbound, hword⟩ := hs
+  have hbound : exponent < n := by simpa using hbound
+  apply BitVec.eq_of_toNat_eq
+  change word.toNat = (BitVec.shiftLeft (1 : RiscV.Word n) exponent).toNat
+  rw [BitVec.shiftLeft_eq]
+  rw [BitVec.toNat_shiftLeft]
+  rw [bitVec_one_toNat]
+  rw [Nat.mod_eq_of_lt (by
+    have : 2 ^ exponent < 2 ^ n := Nat.pow_lt_pow_right (by decide) hbound
+    simpa [Nat.shiftLeft_eq, Nat.one_mul] using this)]
+  have hword' : word.toNat = 2 ^ exponent % 2 ^ n := by simpa using hword
+  rw [Nat.mod_eq_of_lt (Nat.pow_lt_pow_right (by decide) hbound)] at hword'
+  simpa [Nat.shiftLeft_eq, Nat.one_mul] using hword'
+
+/- CakeML's `dest_2exp_bound'`: a successful exponent destination is below
+   the word width. -/
+@[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "dest_2exp_bound'"]
+theorem crepDest2Exp_lt_width {n : Nat} [NeZero n] (word : RiscV.Word n)
+    (exponent : Nat) (h : crepDest2Exp 0 word = some exponent) :
+    exponent < n := by
+  change crepDest2ExpFuel (n + 1) 0 word = some exponent at h
+  have hs := crepDest2ExpFuel_sound (n + 1) 0 word exponent h
+  exact (by simpa using hs.2.1)
+
 end Flapjack

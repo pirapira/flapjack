@@ -102,6 +102,25 @@ def riscvWidth24ByteLoad : Option (Word 24) :=
   panModelReadByte (RiscV.panRiscVMemoryModelForEndian false)
     width24Domain width24Memory (BitVec.ofNat 24 3) (BitVec.ofNat 24 5) false
 
+/-! The finite-word source adapter makes the HOL byte_align operation explicit
+    after the generic carrier/BitVec transport. This exercises the same
+    non-power-of-two width through the model that an arbitrary-carrier
+    evaluator can use, without asserting the other transported operations are
+    already proved equal to HOL. -/
+@[instance_reducible] def dimension24 : HolFiniteDimension (Fin 24) := inferInstance
+def finiteWord24 (value : Nat) : Fin 24 → Bool :=
+  bitVecToHolWord dimension24 (BitVec.ofNat 24 value)
+def finiteWord24ByteAlign : Fin 24 → Bool :=
+  (holFiniteWordSourceMemoryModel dimension24 false).byteAlign
+    (finiteWord24 3) (finiteWord24 5)
+def finiteWord24Domain : (Fin 24 → Bool) → Bool :=
+  fun address => address == finiteWord24 4
+def finiteWord24Memory : PanWordMemory (Fin 24 → Bool) :=
+  fun _ => some (finiteWord24 0x332211)
+def finiteWord24ByteLoad : Option (Fin 24 → Bool) :=
+  panModelReadByte (holFiniteWordSourceMemoryModel dimension24 false)
+    finiteWord24Domain finiteWord24Memory (finiteWord24 3) (finiteWord24 5) false
+
 #guard originalProbeSource ==
   "cakeml/pancake/semantics/panSemScript.sml:86-109 (mem_load_byte_def/mem_load_32_def)"
 #guard byteHit == originalByteHit
@@ -118,5 +137,8 @@ def riscvWidth24ByteLoad : Option (Word 24) :=
 #guard holByteAlignWidth24Address5 != riscvByteAlignWidth24Address5
 #guard holWidth24ByteLoad == some (BitVec.ofNat 24 0x33)
 #guard riscvWidth24ByteLoad == none
+#guard holWordToBitVec dimension24 finiteWord24ByteAlign == BitVec.ofNat 24 4
+#guard (finiteWord24ByteLoad.map (holWordToBitVec dimension24)) ==
+  some (BitVec.ofNat 24 0x33)
 
 end Flapjack.Test.PanFixedLoadParity

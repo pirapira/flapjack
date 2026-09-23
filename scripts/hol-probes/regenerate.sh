@@ -431,7 +431,7 @@ run_probe code_rel_probeScript.sml code_rel_probe.out \
   "$cake_dir/pancake/proofs/pan_to_crepProofScript.sml" \
   "$cake_dir/pancake/proofs"
 run_probe globals_lookup_probeScript.sml globals_lookup_probe.out \
-  lookup_success lookup_missing \
+  lookup_success lookup_missing lookup_struct \
   "$cake_dir/pancake/proofs/pan_to_crepProofScript.sml" \
   "$cake_dir/pancake/proofs"
 run_probe pan_globals_compile_top_probeScript.sml pan_globals_compile_top_probe.out \

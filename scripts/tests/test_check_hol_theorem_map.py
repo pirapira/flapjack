@@ -31,26 +31,21 @@ protected theorem actualProof : True := by trivial
 
 
 class ReviewedSourceComparisonTest(unittest.TestCase):
-    def test_crep_state_simp_ports_are_in_review_inventory(self):
+    def test_crep_state_shape_mismatch_is_not_mapped_as_exact(self):
         inventory = {
             (record["lean_path"], record["lean_name"]): record
             for record in MAP["build_inventory"]()
         }
-        expected = {
-            ("Flapjack/Pancake/Semantics/CrepProps.lean", "dec_clock_simp"):
-                "dec_clock_simp",
-            ("Flapjack/Pancake/Semantics/CrepProps.lean", "empty_locals_simp"):
-                "empty_locals_simp",
-            ("Flapjack/Pancake/Semantics/CrepSem.lean", "decCrepClock"):
-                "dec_clock_def",
-        }
-        for key, hol_name in expected.items():
+        invalid_exact = (
+            ("Flapjack/Pancake/Semantics/CrepProps.lean", "lookup_locals_eq_map_vars"),
+            ("Flapjack/Pancake/Semantics/CrepProps.lean", "dec_clock_simp"),
+            ("Flapjack/Pancake/Semantics/CrepProps.lean", "empty_locals_simp"),
+            ("Flapjack/Pancake/Semantics/CrepSem.lean", "decCrepClock"),
+            ("Flapjack/Pancake/Semantics/CrepSem.lean", "clearCrepRuntimeLocals"),
+        )
+        for key in invalid_exact:
             with self.subTest(key=key):
-                self.assertEqual(inventory[key]["hol_name"], hol_name)
-                self.assertEqual(inventory[key]["statement_status"], "reviewed_exact")
-                self.assertEqual(
-                    inventory[key]["reviewer"], "Codex (source comparison)"
-                )
+                self.assertNotIn(key, inventory)
 
     def test_compile_prog_exact_ports_are_in_review_inventory(self):
         inventory = {

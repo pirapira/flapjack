@@ -88,9 +88,9 @@ structure CrepRuntimeState (α σ : Type u) where
   baseAddress : α
   topAddress : α
 
-/- Exact executable counterpart of CakeML Pancake's `dec_clock_def`
-   (`crepSemScript.sml:145-148`).  The state is otherwise unchanged. -/
-@[hol "cakeml/pancake/semantics/crepSemScript.sml" "dec_clock_def"]
+/- Flapjack clock update. Its field operation follows CakeML Pancake's
+   `dec_clock_def`, but the whole state type is not HOL-shaped while locals
+   contain bare words rather than `word_lab` cells. -/
 def decCrepClock (state : CrepRuntimeState α σ) : CrepRuntimeState α σ :=
   { state with clock := state.clock - 1 }
 
@@ -105,14 +105,12 @@ def setCrepRuntimeGlobals (key : BitVec 5) (value : PanWordLab α)
     (state : CrepRuntimeState α σ) : CrepRuntimeState α σ :=
   { state with globals := updateCrepRuntimeGlobal state.globals key value }
 
-/- Exact executable counterpart of CakeML Pancake's `empty_locals_def`
-   (`crepSemScript.sml:71`).  Terminal timeout and exception boundaries do not
-   expose the caller's transient locals. -/
-@[hol "cakeml/pancake/semantics/crepSemScript.sml" "empty_locals_def"]
+/- Flapjack local-clear operation. Its field operation follows CakeML's
+   `empty_locals_def`, but the whole state type still differs in locals cells. -/
 def clearCrepRuntimeLocals (state : CrepRuntimeState α σ) : CrepRuntimeState α σ :=
   { state with locals := fun _ => none }
 
-/-- Flapjack-only projection lemma for the production HOL empty-locals port. -/
+/-- Flapjack-only projection lemma for the local-clear operation. -/
 @[simp] theorem clearCrepRuntimeLocals_code (state : CrepRuntimeState α σ) :
     (clearCrepRuntimeLocals state).code = state.code := rfl
 

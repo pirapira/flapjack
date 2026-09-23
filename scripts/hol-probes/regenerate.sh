@@ -73,7 +73,19 @@ run_probe() {
     if [[ ${#labels[@]} -eq 0 ]]; then
       cp "$tmp" "$output"
     else
-      sed -n "/^${first_label}=/,/^${last_label}=/p" "$tmp" \
+      awk -v first="$first_label" -v last="$last_label" '
+        BEGIN { started = 0; ended = 0 }
+        {
+          if (!started) {
+            if (index($0, first "=") != 1) next
+            started = 1
+          } else if (ended && $0 ~ /^[[:alnum:]_]+=/) {
+            exit
+          }
+          if (index($0, last "=") == 1) ended = 1
+          print
+        }
+      ' "$tmp" \
         | sed '/^<<HOL message:/,/^  pattern completion.*>>$/d; /^$/d' > "$output"
     fi
   fi
@@ -100,6 +112,7 @@ run_probe pan_structs_compile_correct_probeScript.sml pan_structs_compile_correc
 run_probe pan_structs_compile_exp_correct_probeScript.sml pan_structs_compile_exp_correct_probe.out \
   compile_exp_correct_local_var compile_exp_correct_global_var compile_exp_correct_const \
   compile_exp_correct_mmap_nonempty compile_exp_correct_rstruct \
+  compile_exp_correct_nstruct \
   "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
   "$cake_dir/pancake/proofs"
 run_probe pan_structs_value_validity_probeScript.sml pan_structs_value_validity_probe.out \

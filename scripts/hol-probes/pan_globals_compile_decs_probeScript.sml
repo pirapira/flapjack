@@ -66,6 +66,16 @@ val _ = print_eval "compile_assign_global_miss"
   ``pan_globals$compile ^ctxt
       (panLang$Assign panLang$Global «g» (panLang$Const 5w))``;
 
+(* Direct fresh_name fixtures: append one apostrophe per collision. *)
+val _ = print_eval "fresh_name_clear"
+  ``pan_globals$fresh_name «x» [«y»]``;
+val _ = print_eval "fresh_name_missing_empty"
+  ``pan_globals$fresh_name «» ([] : mlstring list)``;
+val _ = print_eval "fresh_name_hit"
+  ``pan_globals$fresh_name «» [«»; «'»; «''»]``;
+val _ = print_eval "fresh_name_seed"
+  ``pan_globals$fresh_name «vn'» [«vn'»]``;
+
 (* Sentinel so the multi-line `function_after_decl` value above is not the last
    label; regenerate.sh captures rows up to the last label and would drop the
    continuation lines of a row that wraps. *)

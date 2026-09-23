@@ -159,6 +159,169 @@ example :
     panStructConvertValue, panStructConvertValues, evalPanValueExp,
     structCompileExp] using hcase
 
+def pairCompileInfo : StructInfo where
+  fields := [("left", .one), ("right", .one)]
+  size := 2
+
+def namedStructRuntime : PanSemState Word64 (FfiState Unit) :=
+  { finiteMapRuntime with structs := [("Pair", pairCompileInfo)] }
+
+def namedStructCompileContext : StructPassContext :=
+  { emptyStructCompileContext with structs := [("Pair", pairCompileInfo)] }
+
+def nstructCompileCaseFields : List (FieldName × Exp Word64) :=
+  [("left", .const (BitVec.ofNat 64 3)),
+   ("right", .const (BitVec.ofNat 64 5))]
+
+def nstructCompileCaseValue : PanValue Word64 :=
+  .nStruct "Pair"
+    [("left", .word (BitVec.ofNat 64 3)),
+     ("right", .word (BitVec.ofNat 64 5))]
+
+example :
+    structOldExpShape namedStructCompileContext
+        (.nStruct "Pair" nstructCompileCaseFields) = .named "Pair" ∧
+    panStructValueFieldsOkBool namedStructRuntime.structs nstructCompileCaseValue = true ∧
+    evalPanValueExp
+        (panStructConvertState namedStructCompileContext namedStructRuntime).structs
+        (panStructConvertState namedStructCompileContext namedStructRuntime).locals
+        (panStructConvertState namedStructCompileContext namedStructRuntime).globals
+        (panStructConvertState namedStructCompileContext namedStructRuntime).memory
+        (panStructConvertState namedStructCompileContext namedStructRuntime).baseAddress
+        (panStructConvertState namedStructCompileContext namedStructRuntime).topAddress
+        (BitVec.ofNat 64 8)
+        (structCompileExp namedStructCompileContext
+          (.nStruct "Pair" nstructCompileCaseFields)) =
+      some (.rStruct [.word (BitVec.ofNat 64 3), .word (BitVec.ofNat 64 5)]) := by
+  have hsource : evalPanValueExp namedStructRuntime.structs namedStructRuntime.locals
+      namedStructRuntime.globals namedStructRuntime.memory namedStructRuntime.baseAddress
+      namedStructRuntime.topAddress (BitVec.ofNat 64 8)
+      (.nStruct "Pair" nstructCompileCaseFields) = some nstructCompileCaseValue := by
+    have hfieldEval : evalPanValueExp.evalPanValueFields namedStructRuntime.structs
+        namedStructRuntime.locals namedStructRuntime.globals namedStructRuntime.memory
+        namedStructRuntime.baseAddress namedStructRuntime.topAddress (BitVec.ofNat 64 8)
+        nstructCompileCaseFields = some
+          [("left", .word (BitVec.ofNat 64 3)), ("right", .word (BitVec.ofNat 64 5))] := by
+      simp [evalPanValueExp.evalPanValueFields, evalPanValueExp,
+        nstructCompileCaseFields, namedStructRuntime, finiteMapRuntime]
+    have hshapes : panValueFieldsHaveShapes
+        [("Pair", pairCompileInfo)] pairCompileInfo.fields
+        [("left", .word (BitVec.ofNat 64 3)), ("right", .word (BitVec.ofNat 64 5))] = true := by
+      simp [panValueFieldsHaveShapes, panShapeMatches, panValueShape, pairCompileInfo]
+    simp [evalPanValueExp, evalPanValueExp.evalPanValueFields,
+      nstructCompileCaseFields, nstructCompileCaseValue, namedStructRuntime,
+      lookupInfo, hshapes]
+  have hstructs : panStructContextShapeView namedStructCompileContext.structs =
+      panStructContextShapeView namedStructRuntime.structs := by
+    rfl
+  have hlocalsFields : panStructEveryValueFieldsOkBool namedStructRuntime.structs
+      namedStructRuntime.locals := by
+    intro name value hvalue
+    simp [namedStructRuntime, finiteMapRuntime] at hvalue
+  have hglobalsFields : panStructEveryValueFieldsOkBool namedStructRuntime.structs
+      namedStructRuntime.globals := by
+    intro name value hvalue
+    simp [namedStructRuntime, finiteMapRuntime] at hvalue
+  have hstructInfos : structInfosOk namedStructRuntime.structs := by
+    refine ⟨?_, by simp [namedStructRuntime, finiteMapRuntime, pairCompileInfo], ?_, ?_⟩
+    · intro entry hentry
+      simp [namedStructRuntime, finiteMapRuntime, pairCompileInfo] at hentry
+      subst entry
+      simp
+    · intro i name info hget shape hmem
+      cases i with
+      | zero =>
+          simp only [namedStructRuntime, finiteMapRuntime,
+            List.getElem?_cons_zero] at hget
+          rcases hget with ⟨rfl, rfl⟩
+          simp [pairCompileInfo] at hmem
+          subst shape
+          simp [isWfShape, namedStructRuntime, finiteMapRuntime]
+      | succ i => simp [namedStructRuntime, finiteMapRuntime] at hget
+    · intro entry hentry
+      simp [namedStructRuntime, finiteMapRuntime, pairCompileInfo] at hentry
+      subst entry
+      simp [shapeSizeWithContext]
+  have hlocalsMap : panStructShapeMapEq namedStructCompileContext.locals
+      namedStructRuntime.locals := by
+    intro name
+    simp [namedStructCompileContext, emptyStructCompileContext,
+      namedStructRuntime, finiteMapRuntime, lookupInfo]
+  have hglobalsMap : panStructShapeMapEq namedStructCompileContext.globals
+      namedStructRuntime.globals := by
+    intro name
+    simp [namedStructCompileContext, emptyStructCompileContext,
+      namedStructRuntime, finiteMapRuntime, lookupInfo]
+  have hconstant : ∀ word, ∀ subvalue,
+      evalPanValueExp namedStructRuntime.structs namedStructRuntime.locals
+        namedStructRuntime.globals namedStructRuntime.memory namedStructRuntime.baseAddress
+        namedStructRuntime.topAddress (BitVec.ofNat 64 8) (.const word) = some subvalue →
+      panStructContextShapeView namedStructCompileContext.structs =
+        panStructContextShapeView namedStructRuntime.structs →
+      panStructEveryValueFieldsOkBool namedStructRuntime.structs namedStructRuntime.locals →
+      panStructEveryValueFieldsOkBool namedStructRuntime.structs namedStructRuntime.globals →
+      structInfosOk namedStructRuntime.structs →
+      panStructShapeMapEq namedStructCompileContext.locals namedStructRuntime.locals →
+      panStructShapeMapEq namedStructCompileContext.globals namedStructRuntime.globals →
+      structOldExpShape namedStructCompileContext (.const word) = panSemShapeOf subvalue ∧
+      panStructValueFieldsOkBool namedStructRuntime.structs subvalue = true ∧
+      evalPanValueExp (panStructConvertState namedStructCompileContext namedStructRuntime).structs
+        (panStructConvertState namedStructCompileContext namedStructRuntime).locals
+        (panStructConvertState namedStructCompileContext namedStructRuntime).globals
+        (panStructConvertState namedStructCompileContext namedStructRuntime).memory
+        (panStructConvertState namedStructCompileContext namedStructRuntime).baseAddress
+        (panStructConvertState namedStructCompileContext namedStructRuntime).topAddress
+        (BitVec.ofNat 64 8) (structCompileExp namedStructCompileContext (.const word)) =
+          some (panStructConvertValue subvalue) := by
+    intro word subvalue hevalSub _hstructs _hlocalsFields _hglobalsFields
+      _hstructInfos _hlocalsMap _hglobalsMap
+    cases subvalue with
+    | word value =>
+        have heq : word = value := by simpa [evalPanValueExp] using hevalSub
+        subst value
+        simp [structOldExpShape, panSemShapeOf, panStructValueFieldsOkBool,
+          evalPanValueExp, panStructConvertState, panStructConvertValue,
+          namedStructCompileContext]
+    | rStruct values => simp [evalPanValueExp] at hevalSub
+    | nStruct name values => simp [evalPanValueExp] at hevalSub
+  have hinduction : PanStructAll (fun expression => ∀ subvalue,
+      evalPanValueExp namedStructRuntime.structs namedStructRuntime.locals
+        namedStructRuntime.globals namedStructRuntime.memory namedStructRuntime.baseAddress
+        namedStructRuntime.topAddress (BitVec.ofNat 64 8) expression = some subvalue →
+      panStructContextShapeView namedStructCompileContext.structs =
+        panStructContextShapeView namedStructRuntime.structs →
+      panStructEveryValueFieldsOkBool namedStructRuntime.structs namedStructRuntime.locals →
+      panStructEveryValueFieldsOkBool namedStructRuntime.structs namedStructRuntime.globals →
+      structInfosOk namedStructRuntime.structs →
+      panStructShapeMapEq namedStructCompileContext.locals namedStructRuntime.locals →
+      panStructShapeMapEq namedStructCompileContext.globals namedStructRuntime.globals →
+      structOldExpShape namedStructCompileContext expression = panSemShapeOf subvalue ∧
+      panStructValueFieldsOkBool namedStructRuntime.structs subvalue = true ∧
+      evalPanValueExp (panStructConvertState namedStructCompileContext namedStructRuntime).structs
+        (panStructConvertState namedStructCompileContext namedStructRuntime).locals
+        (panStructConvertState namedStructCompileContext namedStructRuntime).globals
+        (panStructConvertState namedStructCompileContext namedStructRuntime).memory
+        (panStructConvertState namedStructCompileContext namedStructRuntime).baseAddress
+        (panStructConvertState namedStructCompileContext namedStructRuntime).topAddress
+        (BitVec.ofNat 64 8) (structCompileExp namedStructCompileContext expression) =
+          some (panStructConvertValue subvalue))
+      (nstructCompileCaseFields.map Prod.snd) := by
+    apply PanStructAll.cons
+    · exact hconstant (BitVec.ofNat 64 3)
+    · apply PanStructAll.cons
+      · exact hconstant (BitVec.ofNat 64 5)
+      · exact PanStructAll.nil
+  have hcase := panStructCompileExpCorrectNStructCase namedStructCompileContext
+    namedStructRuntime (BitVec.ofNat 64 8) "Pair" nstructCompileCaseFields
+    nstructCompileCaseValue hsource hstructs hlocalsFields hglobalsFields
+    hstructInfos hlocalsMap hglobalsMap hinduction
+  simpa [nstructCompileCaseFields, nstructCompileCaseValue,
+    namedStructCompileContext, namedStructRuntime, pairCompileInfo,
+    panSemShapeOf, panStructValueFieldsOkBool,
+    panStructFieldValuesFieldsOkBool, panStructValuesFieldsOkBool,
+    panStructConvertValue, panStructConvertFieldValues, evalPanValueExp,
+    structCompileExp, structCompileExps_eq_map] using hcase
+
 def finiteMapState : PanStructFiniteState Word64 (FfiState Unit) :=
   panStructFiniteStateFromMaps finiteMapRuntime
     [("local", .word (BitVec.ofNat 64 7))]

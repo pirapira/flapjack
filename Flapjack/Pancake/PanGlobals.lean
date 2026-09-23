@@ -250,6 +250,39 @@ theorem globalFreshName_not_mem_of_subset [BEq String] [LawfulBEq String]
     globalFreshName name names ∉ names' := by
   intro hmem
   exact globalFreshName_not_mem name names (hsubset _ hmem)
+/-- Maximum `String.length` over a list of names; used only to justify
+    termination of the exact `fresh_name` port below. -/
+def maxNameLength : List String → Nat
+  | [] => 0
+  | name :: names => max name.length (maxNameLength names)
+
+theorem length_le_maxNameLength {name : String} {names : List String}
+    (hmem : name ∈ names) : name.length ≤ maxNameLength names := by
+  induction names with
+  | nil => cases hmem
+  | cons head tail ih =>
+      rw [maxNameLength]
+      rcases List.mem_cons.mp hmem with hhead | htail
+      · subst hhead
+        exact Nat.le_max_left _ _
+      · exact Nat.le_trans (ih htail) (Nat.le_max_right _ _)
+
+/-- Exact clause-for-clause port of Cake's `fresh_name`
+    (`pan_globalsScript.sml:55`): while the candidate is already a member of
+    `names`, append one apostrophe and retry.  Termination follows HOL's own
+    measure: appending a character strictly increases the length, bounded above
+    by the maximum name length. -/
+@[hol "cakeml/pancake/pan_globalsScript.sml" "fresh_name_def"]
+def freshNameHOL (name : String) (names : List String) : String :=
+  if name ∈ names then freshNameHOL (name ++ "'") names else name
+termination_by 1 + maxNameLength names - name.length
+decreasing_by
+  simp_wf
+  have hmem : name ∈ names := ‹name ∈ names›
+  have hle := length_le_maxNameLength hmem
+  have hone : ("'" : String).length = 1 := rfl
+  rw [hone]
+  omega
 
 def globalShapeVal (context : GlobalPassContext α) : Shape → Exp α
   | .one => .const (context.fromNat 0)
@@ -1519,12 +1552,11 @@ decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
 
 /-- FLAPJACK-SPECIFIC (not an exact HOL port).  Clause-structured `compile`
     over `CakeContext`, mirroring HOL `pan_globals$compile_def`
-    (`pan_globalsScript.sml:69-149`).  Every clause matches the HOL clause
-    directly except the global-return-handler case, which calls the untagged
-    fuel-based `globalFreshName` rather than the exact HOL `fresh_name`
-    (`pan_globalsScript.sml:47-55`); the `@[hol]` tag is withheld until that
-    fresh-name helper is ported exactly.  See bead
-    `flapjack-pxn.18.5.2.20.1.1.2`. -/
+    (`pan_globalsScript.sml:69-149`).  The global-return-handler case now calls
+    the exact `freshNameHOL` port of HOL `fresh_name` (`pan_globalsScript.sml:55`).
+    The `@[hol]` tag is still withheld pending full clause/side-condition review
+    of the program compiler and the finite-map representation note.  See beads
+    `flapjack-pxn.18.5.2.20.1.1` and `flapjack-pxn.18.5.2.20.1.1.1`. -/
 def compileProgCake [BEq String] {width : Nat} [NeZero width] (context : CakeContext width) :
     Prog (BitVec width) → Prog (BitVec width)
   | .dec name shape value body =>
@@ -1578,10 +1610,10 @@ def compileProgCake [BEq String] {width : Nat} [NeZero width] (context : CakeCon
                 let compiledHandlerProgram := compileProgCake context handler
                 let names := handlerVar :: globalFreeVars compiledHandlerProgram ++
                   compiledArguments.flatMap globalExpVars
-                let resultName := globalFreshName "" names
+                let resultName := freshNameHOL "" names
                 /- Cake's `compile_def` uses the fixed seed `"vn'"` for its
                    handler flag, independently of the fresh result name. -/
-                let flagName := globalFreshName "vn'" (resultName :: names)
+                let flagName := freshNameHOL "vn'" (resultName :: names)
                 let handlerBody :=
                   .seq compiledHandlerProgram
                     (.assign .local flagName (.const (BitVec.ofNat width 1)))

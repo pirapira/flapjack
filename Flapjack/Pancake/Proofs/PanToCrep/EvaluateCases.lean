@@ -2542,6 +2542,105 @@ theorem compileExpHOL_local_eval_flatten
   rw [evalCrepRuntimeExps_vars_eq]
   exact htargetValues
 
+/-! `mapM` success is preserved by truncating both its input and output at the
+same position. This supports `comp_field` projections of flattened locals. -/
+private theorem mapM_take_of_success {α β : Type} (f : α → Option β)
+    (inputs : List α) (outputs : List β) (count : Nat)
+    (hmap : inputs.mapM f = some outputs) :
+    (inputs.take count).mapM f = some (outputs.take count) := by
+  induction inputs generalizing outputs count with
+  | nil =>
+      simp only [List.mapM_nil] at hmap
+      cases hmap
+      simp only [List.take_nil, List.mapM_nil]
+      rfl
+  | cons input inputs ih =>
+      cases hhead : f input with
+      | none => simp [List.mapM_cons, hhead] at hmap
+      | some output =>
+          cases htail : inputs.mapM f with
+          | none => simp [List.mapM_cons, hhead, htail] at hmap
+          | some outputsTail =>
+              simp [List.mapM_cons, hhead, htail] at hmap
+              cases hmap
+              cases count with
+              | zero => simp only [List.take_zero, List.mapM_nil]; rfl
+              | succ count =>
+                  simp only [List.take_succ_cons]
+                  simp [List.mapM_cons, hhead, ih outputsTail count htail]
+
+/-! First-field projection from a nonempty source record evaluates the
+matching prefix of its flattened target local, as HOL `comp_field` does. -/
+private theorem compileExpHOL_rFieldZero_nonemptyLocal_eval_flatten
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (name : String) (fieldValue : PanValue (RiscV.Word 64))
+    (remainingFields : List (PanValue (RiscV.Word 64)))
+    (hlocals : localsRel context source.locals target.locals)
+    (hsource : FLOOKUP source.locals name =
+      some (.rStruct (fieldValue :: remainingFields))) :
+    evalCrepRuntimeExps target
+      (compileExpHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        (.rField 0 (.var .local name))).1 = some (panValueFlatten fieldValue) := by
+  obtain ⟨slots, hcontext, _hslotsLength, htargetWords, hwf⟩ :=
+    localsRelLookupCtxt context source.locals target.locals name
+      (.rStruct (fieldValue :: remainingFields))
+      hlocals hsource
+  have hwfField : isWfShape [] (panValueShape [] fieldValue) = true := by
+    simp only [panValueShape, List.map_cons, isWfShape.eq_def] at hwf
+    rw [isWfShape.isWfShapeList.eq_def] at hwf
+    simp only [Bool.and_eq_true] at hwf
+    exact hwf.1
+  have hparentShape : panValueShape [] (.rStruct (fieldValue :: remainingFields)) =
+      .comb (panValueShape [] fieldValue :: remainingFields.map (panValueShape [])) := by
+    simp [panValueShape]
+  have hcontext' : FLOOKUP context.vars name =
+      some (.comb (panValueShape [] fieldValue ::
+        remainingFields.map (panValueShape [])), slots) := by
+    simpa [hparentShape] using hcontext
+  let compilerContext : PanToCrepHOLContext (RiscV.Word 64) :=
+    { vars := context.vars, funcs := context.funcs,
+      eids := context.eids, vmax := context.vmax }
+  have hcompiled :
+      compileExpHOL compilerContext (.rField 0 (.var .local name)) =
+        ((slots.take (Shape.shapeSize (panValueShape [] fieldValue))).map .var,
+          panValueShape [] fieldValue) := by
+    simp [compilerContext, compileExpHOL, hcontext', compileField]
+  have htargetValues : slots.mapM
+      (fun slot => (FLOOKUP target.locals slot).map panTheWord) =
+      some (panValueFlatten (.rStruct (fieldValue :: remainingFields))) :=
+    mapM_panTheWord_of_wordLab target.locals slots
+      (panValueFlatten (.rStruct (fieldValue :: remainingFields)))
+      htargetWords
+  have htargetValues' : slots.mapM
+      (fun slot => (target.locals slot).map panTheWord) =
+      some (panValueFlatten (.rStruct (fieldValue :: remainingFields))) := by
+    simpa [FLOOKUP] using htargetValues
+  have hmapPrefix := mapM_take_of_success
+    (fun slot => (target.locals slot).map panTheWord) slots
+    (panValueFlatten (.rStruct (fieldValue :: remainingFields)))
+    (Shape.shapeSize (panValueShape [] fieldValue)) htargetValues'
+  have hflattenAppend : panValueFlatten (.rStruct (fieldValue :: remainingFields)) =
+      panValueFlatten fieldValue ++ remainingFields.flatMap panValueFlatten := by
+    rw [panValueFlatten_rStruct, panValueFlattenValues_eq_flatMap]
+    simp
+  have hfieldLength := panValueFlatten_length_eq_shapeSize fieldValue hwfField
+  have hflattenPrefix :
+      (panValueFlatten (.rStruct (fieldValue :: remainingFields))).take
+        (Shape.shapeSize (panValueShape [] fieldValue)) =
+      panValueFlatten fieldValue := by
+    rw [hflattenAppend, ← hfieldLength]
+    rw [List.take_append_of_le_length (Nat.le_refl _), List.take_length]
+  have htargetPrefix : (slots.take (Shape.shapeSize (panValueShape [] fieldValue))).mapM
+      (fun slot => (target.locals slot).map panTheWord) =
+      some (panValueFlatten fieldValue) := by
+    simpa [hflattenPrefix] using hmapPrefix
+  rw [hcompiled]
+  rw [evalCrepRuntimeExps_vars_eq, htargetPrefix]
+
 /-! Flapjack-specific RV64 constant support toward HOL `compile_exp_val_rel`;
     the general expression theorem remains open. -/
 theorem compileExpHOL_const_eval_flatten
@@ -2699,13 +2798,20 @@ theorem compileArgsHOL_constLocalOrStruct_eval_flatten
     evalMapCompileArgsFlat_of_each compilerContext source target expressions values
       hsource heach
 
-inductive compileArgConstLocalStructAddress : Exp (RiscV.Word 64) → Prop where
+inductive compileArgConstLocalStructAddress
+    (source : PanSemState (RiscV.Word 64) (FfiState σ)) :
+    Exp (RiscV.Word 64) → Prop where
   | existing (expression : Exp (RiscV.Word 64))
       (supported : compileArgConstLocalOrStruct expression) :
-      compileArgConstLocalStructAddress expression
-  | baseAddress : compileArgConstLocalStructAddress .baseAddr
-  | topAddress : compileArgConstLocalStructAddress .topAddr
-  | bytesInWord : compileArgConstLocalStructAddress .bytesInWord
+      compileArgConstLocalStructAddress source expression
+  | firstRecordFieldLocal (name : String) (fieldValue : PanValue (RiscV.Word 64))
+      (remainingFields : List (PanValue (RiscV.Word 64)))
+      (hsource : FLOOKUP source.locals name =
+        some (.rStruct (fieldValue :: remainingFields))) :
+      compileArgConstLocalStructAddress source (.rField 0 (.var .local name))
+  | baseAddress : compileArgConstLocalStructAddress source .baseAddr
+  | topAddress : compileArgConstLocalStructAddress source .topAddr
+  | bytesInWord : compileArgConstLocalStructAddress source .bytesInWord
 
 /-! Call argument results for all already-proved Const/Local/RStruct cases,
 plus the three address/word-size constructors of HOL compile_exp_val_rel.
@@ -2719,7 +2825,7 @@ theorem compileArgsHOL_constLocalStructAddress_eval_flatten
     (hstate : stateRel source target)
     (hlocals : localsRel context source.locals target.locals)
     (hsupported : ∀ expression, expression ∈ expressions →
-      compileArgConstLocalStructAddress expression)
+      compileArgConstLocalStructAddress source expression)
     (hsource : evalPanSemStateExps source expressions = some values) :
     evalCrepRuntimeExps target
       (compileArgsHOL
@@ -2771,6 +2877,17 @@ theorem compileArgsHOL_constLocalStructAddress_eval_flatten
                   target fields fieldValues hlocals hfields heval
             | nStruct name fields =>
                 simp [evalPanSemStateExp, evalPanValueExp] at heval
+    | firstRecordFieldLocal name fieldValue remainingFields hsource =>
+        have hlocal : source.locals name =
+            some (.rStruct (fieldValue :: remainingFields)) := by
+          simpa [FLOOKUP] using hsource
+        unfold evalPanSemStateExp at heval
+        simp [evalPanValueExp, hlocal] at heval
+        have hvalue : value = fieldValue := by
+          exact heval.symm
+        subst value
+        exact compileExpHOL_rFieldZero_nonemptyLocal_eval_flatten
+          context source target name fieldValue remainingFields hlocals hsource
   simpa [compilerContext] using
     evalMapCompileArgsFlat_of_each compilerContext source target expressions values
       hsource heach
@@ -2943,7 +3060,7 @@ theorem lookupCrepRuntimeCode_ofCodeRel_compiledArgs
     (hcode : codeRel context (panSemCodeAsLookup source.code) target.code)
     (hlocals : localsRel context source.locals target.locals)
     (hsupported : ∀ expression, expression ∈ expressions →
-      compileArgConstLocalStructAddress expression)
+      compileArgConstLocalStructAddress source expression)
     (hsource : evalPanSemStateExps source expressions = some values)
     (hentry : panSemCodeLookup source.code function =
       some (parameters, sourceBody, returnShape))
@@ -3117,7 +3234,7 @@ theorem evalCrepRuntimeCall_catchesRaisedOneWordHandler_ofCodeRelArgs
     (hcode : codeRel context (panSemCodeAsLookup source.code) caller.code)
     (hlocals : localsRel context source.locals caller.locals)
     (hsupported : ∀ expression, expression ∈ expressions →
-      compileArgConstLocalStructAddress expression)
+      compileArgConstLocalStructAddress source expression)
     (hsourceArgs : evalPanSemStateExps source expressions = some arguments)
     (hentry : panSemCodeLookup source.code function =
       some (parameters, sourceBody, returnShape))
@@ -3201,7 +3318,7 @@ theorem evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody_ofCodeRelArgs
     (hcode : codeRel context (panSemCodeAsLookup source.code) caller.code)
     (hlocals : localsRel context source.locals caller.locals)
     (hsupported : ∀ expression, expression ∈ expressions →
-      compileArgConstLocalStructAddress expression)
+      compileArgConstLocalStructAddress source expression)
     (hsourceArgs : evalPanSemStateExps source expressions = some arguments)
     (hentry : panSemCodeLookup source.code function =
       some (parameters, sourceBody, returnShape))
@@ -3298,7 +3415,7 @@ theorem evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody_ofCodeRelArgs_relati
     (hslot : ∃ current, caller.locals slot = some current)
     (hglobal : calleeState.globals (0 : BitVec 5) = some (.word value))
     (hsupported : ∀ expression, expression ∈ expressions →
-      compileArgConstLocalStructAddress expression)
+      compileArgConstLocalStructAddress source expression)
     (hsourceArgs : evalPanSemStateExps source expressions = some arguments)
     (hentry : panSemCodeLookup source.code function =
       some (parameters, sourceBody, returnShape))
@@ -3395,7 +3512,7 @@ theorem evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody_ofCodeRelArgs_postRe
     (hslot : ∃ current, caller.locals slot = some current)
     (hglobal : calleeState.globals (0 : BitVec 5) = some (.word value))
     (hsupported : ∀ expression, expression ∈ expressions →
-      compileArgConstLocalStructAddress expression)
+      compileArgConstLocalStructAddress source expression)
     (hsourceArgs : evalPanSemStateExps source expressions = some arguments)
     (hentry : panSemCodeLookup source.code function =
       some (parameters, sourceBody, returnShape))
@@ -3562,7 +3679,7 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
       some (Shape.one, [slot]))
     (hslot : ∃ current, caller.locals slot = some current)
     (hsupported : ∀ expression, expression ∈ expressions →
-      compileArgConstLocalStructAddress expression)
+      compileArgConstLocalStructAddress source expression)
     (hsourceArgs : evalPanSemStateExps source expressions = some arguments)
     (hentry : panSemCodeLookup source.code function =
       some (parameters, sourceBody, returnShape))

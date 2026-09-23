@@ -8,6 +8,7 @@ call_handles_exception_7=SOME (Return (ValWord 7w))
 recursive_call_code_map_7=SOME (Return (ValWord 7w))
 deccall_code_map_7=SOME (Return (ValWord 7w))
 call_struct_argument_7_8=SOME (Return (RStruct [ValWord 7w; ValWord 8w]))
+call_record_first_field_7=SOME (Return (ValWord 7w))
 call_zero_clock_timeout=SOME TimeOut
 call_zero_arg_const_7=SOME (Return (ValWord 7w))
 recursive_call_timeout=SOME TimeOut

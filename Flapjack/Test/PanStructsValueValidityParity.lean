@@ -149,6 +149,9 @@ private def nestedValue : PanValue Nat :=
     [("inner", .nStruct "Pair" [("left", .word 2), ("right", .rStruct [])]),
      ("tag", .word 3)]
 
+private def appendPrefix : StructContextHOL :=
+  [("PrefixOnly", { fields := [("marker", Shape.one)], size := 1 })]
+
 /-- `v_flds_ok_duplicate_second` in `pan_structs_value_validity_probe.out`. -/
 example : panValueFldsOk holValueValiditySecondMatchContext holValueValidityMatch = true := by
   simp [panValueFldsOk, panValuesFldsOk, panFieldsFldsOk, lookupInfo,
@@ -165,6 +168,14 @@ example : panValueFldsOk nestedContext nestedValue = true := by
   simp [panValueFldsOk, panValuesFldsOk, panFieldsFldsOk, lookupInfo,
     panStructShapeListEqBool, panStructShapeEqBool, panSemShapeOf,
     nestedContext, nestedValue]
+
+/-- `v_flds_ok_append_nonempty_prefix_named` in the direct HOL-EVAL fixture. -/
+example : panValueFldsOk (appendPrefix ++ nestedContext) nestedValue = true := by
+  apply panValueFldsOk_append appendPrefix nestedContext nestedValue
+  · simp [panValueFldsOk, panValuesFldsOk, panFieldsFldsOk, lookupInfo,
+      panStructShapeListEqBool, panStructShapeEqBool, panSemShapeOf,
+      nestedContext, nestedValue]
+  · simp [appendPrefix, nestedContext]
 
 /-- `is_wf_shape_v_nested_match` in `pan_structs_value_validity_probe.out`. -/
 example : panIsWfShapeValueHOL nestedContext nestedValue = true := by

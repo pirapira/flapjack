@@ -2828,6 +2828,128 @@ private theorem evalCrepCompileField_panValueField
                 index rfl hfieldsWfTail hindexTail hevalTail
               simpa [compileField, List.getElem_cons_succ] using htail
 
+/-! The arbitrary-expression RField step consumes the inner expression's
+compiled-evaluation IH and its shape/well-formedness facts. Source evaluation
+selects the indexed field; this is the constructor step used by the enclosing
+compile_exp_val_rel induction, not a standalone HOL theorem port. -/
+private theorem compileExpHOL_rField_eval_flatten_ofInnerIH
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (expression : Exp (RiscV.Word 64)) (index : Nat)
+    (fields : List (PanValue (RiscV.Word 64)))
+    (value : PanValue (RiscV.Word 64))
+    (compiledExpressions : List (CrepExp (RiscV.Word 64)))
+    (fieldShapes : List Shape)
+    (hsourceInner : evalPanSemStateExp source expression =
+      some (.rStruct fields))
+    (hsourceField : evalPanSemStateExp source
+      (.rField index expression) = some value)
+    (hcompileInner : compileExpHOL
+      { vars := context.vars, funcs := context.funcs,
+        eids := context.eids, vmax := context.vmax }
+      expression = (compiledExpressions, .comb fieldShapes))
+    (hfieldShapes : fieldShapes = fields.map (panValueShape []))
+    (hfieldsWf : ∀ value, value ∈ fields →
+      isWfShape [] (panValueShape [] value) = true)
+    (hindex : index < fields.length)
+    (hinnerIH : evalCrepRuntimeExps target compiledExpressions =
+      some (fields.flatMap panValueFlatten)) :
+    evalCrepRuntimeExps target
+      (compileExpHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        (.rField index expression)).1 =
+      some (panValueFlatten value) := by
+  have hsourceField' : evalPanSemStateExp source
+      (.rField index expression) = some fields[index] := by
+    have hsourceInner' : evalPanValueExp source.structs source.locals
+        source.globals source.memory source.baseAddress source.topAddress
+        panSemBitVec64BytesInWord expression
+        (memoryAccess := some (panSemBitVec64MemoryAccess source)) =
+      some (.rStruct fields) := by
+      simpa [evalPanSemStateExp] using hsourceInner
+    simp [evalPanSemStateExp, evalPanValueExp, hsourceInner', hindex]
+  have hvalue : value = fields[index] := by
+    exact Option.some.inj (hsourceField.symm.trans hsourceField')
+  subst value
+  have hprojection := evalCrepCompileField_panValueField target fields
+    fieldShapes compiledExpressions index hfieldShapes hfieldsWf hindex hinnerIH
+  have hcompiledField : compileExpHOL
+      { vars := context.vars, funcs := context.funcs,
+        eids := context.eids, vmax := context.vmax }
+      (.rField index expression) =
+      compileField index fieldShapes compiledExpressions := by
+    simp [compileExpHOL, hcompileInner]
+  rw [hcompiledField]
+  exact hprojection
+
+/-! The RField constructor wrapper carries the HOL `compile_exp_val_rel`
+inner-expression induction hypothesis: source evaluation, state/code/locals
+relations, `localised_exp` (expressed here as no global variables), and the
+compiled expression tuple. The IH contributes target evaluation plus the
+source shape and well-formedness conclusions. -/
+private theorem compileExpHOL_rField_eval_flatten_ofHOLIH
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (expression : Exp (RiscV.Word 64)) (index : Nat)
+    (fields : List (PanValue (RiscV.Word 64)))
+    (value : PanValue (RiscV.Word 64))
+    (compiledExpressions : List (CrepExp (RiscV.Word 64)))
+    (fieldShapes : List Shape)
+    (hstate : stateRel source target)
+    (hcode : codeRel context (panSemCodeAsLookup source.code) target.code)
+    (hlocals : localsRel context source.locals target.locals)
+    (hsourceInner : evalPanSemStateExp source expression =
+      some (.rStruct fields))
+    (hsourceField : evalPanSemStateExp source
+      (.rField index expression) = some value)
+    (hindex : index < fields.length)
+    (hlocalized : expGlobalVars expression = [])
+    (hcompileInner : compileExpHOL
+      { vars := context.vars, funcs := context.funcs,
+        eids := context.eids, vmax := context.vmax }
+      expression = (compiledExpressions, .comb fieldShapes))
+    (hinnerIH : evalPanSemStateExp source expression = some (.rStruct fields) →
+      stateRel source target →
+      codeRel context (panSemCodeAsLookup source.code) target.code →
+      localsRel context source.locals target.locals →
+      expGlobalVars expression = [] →
+      compileExpHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        expression = (compiledExpressions, .comb fieldShapes) →
+      evalCrepRuntimeExps target compiledExpressions =
+          some (fields.flatMap panValueFlatten) ∧
+        panValueShape [] (.rStruct fields) = .comb fieldShapes ∧
+        isWfShape [] (.comb fieldShapes) = true) :
+    evalCrepRuntimeExps target
+      (compileExpHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        (.rField index expression)).1 =
+      some (panValueFlatten value) := by
+  have hshapeIH := hinnerIH hsourceInner hstate hcode hlocals hlocalized hcompileInner
+  rcases hshapeIH with ⟨hinnerEval, hshapeValue, hshapeWf⟩
+  have hfieldShapes : fieldShapes = fields.map (panValueShape []) := by
+    have hcomb : Shape.comb (fields.map (panValueShape [])) =
+        Shape.comb fieldShapes := by
+      simpa [panValueShape] using hshapeValue
+    have hfieldShapes' : fields.map (panValueShape []) = fieldShapes := by
+      injection hcomb
+    exact hfieldShapes'.symm
+  have hfieldsWf : ∀ field, field ∈ fields →
+      isWfShape [] (panValueShape [] field) = true := by
+    intro field hmem
+    have hshapeMem : panValueShape [] field ∈ fieldShapes := by
+      rw [hfieldShapes]
+      exact List.mem_map.mpr ⟨field, hmem, rfl⟩
+    exact isWfShape_of_mem (by simpa [isWfShape] using hshapeWf) hshapeMem
+  exact compileExpHOL_rField_eval_flatten_ofInnerIH context source target
+    expression index fields value compiledExpressions fieldShapes hsourceInner
+    hsourceField hcompileInner hfieldShapes hfieldsWf hindex hinnerEval
+
 /-! State-owned local specialization of the generic RField case above. It
 handles any valid field index and any well-formed field shapes, deriving the
 inner compiled evaluation from `locals_rel` rather than assuming a target run. -/
@@ -2874,17 +2996,24 @@ private theorem compileExpHOL_rFieldLocal_eval_flatten
     rw [evalCrepRuntimeExps_vars_eq]
     simpa [panValueFlatten_rStruct, panValueFlattenValues_eq_flatMap] using
       htargetValues'
-  have hfieldEval := evalCrepCompileField_panValueField target fields
-    (fields.map (panValueShape [])) (slots.map CrepExp.var) index rfl
-    hfieldsWf hindex hinnerEval
-  have hcompiled : compileExpHOL
+  have hlocal : source.locals name = some (.rStruct fields) := by
+    simpa [FLOOKUP] using hsource
+  have hsourceInner : evalPanSemStateExp source (.var .local name) =
+      some (.rStruct fields) := by
+    simp [evalPanSemStateExp, evalPanValueExp, hlocal]
+  have hsourceField : evalPanSemStateExp source
+      (.rField index (.var .local name)) = some fields[index] := by
+    simp [evalPanSemStateExp, evalPanValueExp, hlocal, hindex]
+  have hcompiledInner : compileExpHOL
       { vars := context.vars, funcs := context.funcs,
         eids := context.eids, vmax := context.vmax }
-      (.rField index (.var .local name)) =
-      compileField index (fields.map (panValueShape [])) (slots.map CrepExp.var) := by
+      (.var .local name) = (slots.map CrepExp.var,
+        .comb (fields.map (panValueShape []))) := by
     simp [compileExpHOL, hcontext']
-  rw [hcompiled]
-  exact hfieldEval
+  exact compileExpHOL_rField_eval_flatten_ofInnerIH context source target
+    (.var .local name) index fields fields[index] (slots.map CrepExp.var)
+    (fields.map (panValueShape [])) hsourceInner hsourceField hcompiledInner rfl hfieldsWf
+    hindex hinnerEval
 
 /-! Flapjack-specific RV64 constant support toward HOL `compile_exp_val_rel`;
     the general expression theorem remains open. -/

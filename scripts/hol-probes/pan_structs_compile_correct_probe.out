@@ -1,0 +1,3 @@
+convert_named_record=RStruct [ValWord 3w; ValWord 5w]
+compile_correct_skip_source=(NONE,T)
+compile_correct_skip_converted=(NONE,T)

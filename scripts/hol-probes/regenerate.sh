@@ -90,6 +90,10 @@ run_probe pan_crep_primop_probeScript.sml pan_crep_primop_probe.out \
 run_probe pan_structs_opt_mmap_probeScript.sml pan_structs_opt_mmap_probe.out \
   success pointwise "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
   "$cake_dir/pancake/proofs"
+run_probe pan_structs_compile_correct_probeScript.sml pan_structs_compile_correct_probe.out \
+  convert_named_record compile_correct_skip_source compile_correct_skip_converted \
+  "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
+  "$cake_dir/pancake/proofs"
 run_probe pan_structs_afindi_map_probeScript.sml pan_structs_afindi_map_probe.out \
   hit_preserves_key_index missing_key_stays_missing \
   "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \

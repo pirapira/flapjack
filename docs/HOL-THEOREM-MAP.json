@@ -4595,41 +4595,9 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
-    "lean_name": "lookupInfoDefaultPanPropsNStruct",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Lean lookup adapter for default-BEq InfoMap and HOL-shaped struct lookup; support only, with no separate HOL declaration."
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "lookupInfo_mapValues",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Finite-map lookup adapter lemma used to connect HOL FMAP_MAP2 results with explicit InfoMap entries; support for the open convert_s/compile_correct port."
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
-    "lean_name": "lookupInfo_mapValuesNStruct",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Specialized lookup-map adapter for named-struct declarations; proves a Lean map-view equation and is not a standalone HOL theorem."
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
-    "lean_name": "panStructConvertFieldValues_eq_map",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Lean list-map equation for converting named-struct field values; support for evaluator cases, with no separate HOL declaration."
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
-    "lean_name": "panValueFieldsHaveShapesNames",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Projects the Bool field-shape correspondence to equal field-name lists; Lean-only support for the open PanStructs correctness proof."
   },
   {
     "hol_path": null,

@@ -112,6 +112,30 @@
     "reviewer": "Codex (constructor-by-constructor source comparison)"
   },
   {
+    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
+    "hol_name": "fperm_name_def",
+    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
+    "lean_name": "globalRenameFunctionName",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (constructor-by-constructor source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
+    "hol_name": "fperm_def",
+    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
+    "lean_name": "globalRenameProg",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (constructor-by-constructor source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
+    "hol_name": "fperm_decs_def",
+    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
+    "lean_name": "globalRenameDecls",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (constructor-by-constructor source comparison)"
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "dest_const_thm",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",

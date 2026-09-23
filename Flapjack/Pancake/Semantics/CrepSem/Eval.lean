@@ -331,6 +331,20 @@ theorem crepHolWordBits_loadByte_toBitVec [NeZero width]
     panTheWord, holWordBitsToBitVec_bitVecToHolWordBits] <;>
     (split <;> simp_all)
 
+theorem crepHolWordBits_load32_toBitVec [NeZero width]
+    (state : CrepHolState (Fin width → Bool) σ)
+    (address : Fin width → Bool) :
+    crepRuntimeLoad32 state.toHolWordBitsRuntime address =
+      (crepRuntimeLoad32
+        (riscvCrepWordTarget state.toBitVecState.toRuntime)
+        (holWordBitsToBitVec address)).map bitVecToHolWordBits := by
+  cases state
+  simp [crepRuntimeLoad32, CrepHolState.toHolWordBitsRuntime,
+    CrepHolState.toRuntime, CrepHolState.toBitVecState,
+    holWordBitsRiscVMemoryModel, riscvCrepWordTarget, mapCrepHolWordLab,
+    panTheWord, holWordBitsToBitVec_bitVecToHolWordBits,
+    BitVec.add_assoc] <;> (split <;> simp_all)
+
 theorem crepHolWordBits_wordOp_toBitVec [NeZero width]
     (state : CrepHolState (Fin width → Bool) σ)
     (operator : BinOp) (values : List (Fin width → Bool)) :
@@ -416,8 +430,9 @@ def evalCrepHolExpWordLab [NeZero width]
 
 /-! HOL evaluator source shape for the Fin-index word representation is
     obtained by transporting the existing source-shaped evaluator through the
-    carrier equivalence. This adapter is untagged until its relation to the
-    full production evaluator is proved for every constructor. -/
+    carrier equivalence. Its production relation is proved below for every
+    constructor, but the concrete `Fin width` index still does not represent
+    every HOL finite dimension type. -/
 def evalCrepHolWordBitsExp [NeZero width]
     (state : CrepHolState (Fin width → Bool) σ) :
     CrepExp (Fin width → Bool) → Option (Fin width → Bool) :=
@@ -630,14 +645,8 @@ theorem evalCrepRuntimeExp_crepOpMul_toHolWordBits [NeZero width]
             bitVecToHolWordBits (leftValue * rightValue)
           simp [holWordBitsToBitVec_bitVecToHolWordBits]
 
-/-! The next desired bridge would show that the production runtime evaluator on
-    the finite-index HOL-word carrier equals the transported source evaluator
-    above. Production `Var`, `LoadGlob`, recursive plain `Load`, list-valued
-    `Op`, `CrepOp.mul`, `Cmp`, and `Shift` cases are now proved using their
-    structural induction hypotheses. The load32 correspondence and the
-    assembling expression/list induction remain open. Keep the full theorem
-    out of the HOL map until the load32 case and assembling proof are complete.
-    -/
+/-! Target helpers for the production evaluator relation, retaining the
+    source state memory/domain fields. -/
 
 private theorem crepHolState_load32 [NeZero width]
     (state : CrepHolState (RiscV.Word width) σ) (address : RiscV.Word width) :
@@ -662,8 +671,7 @@ private theorem crepHolState_loadByte [NeZero width]
   exact crepRuntimeLoadByte_wordTarget_eq_riscv (state.toRuntime) address
 
 /-! Flapjack-only all-constructor correspondence for the positive-width
-BitVec adapter. This removes the evaluator mismatch for that representation,
-but does not establish the arbitrary HOL word-carrier theorem. -/
+BitVec adapter. -/
 theorem evalCrepRuntimeExp_toRuntime_eq [NeZero width]
     (state : CrepHolState (RiscV.Word width) σ)
     (expression : CrepExp (RiscV.Word width)) :
@@ -738,6 +746,161 @@ theorem evalCrepRuntimeExp_toRuntime_eq [NeZero width]
     riscvCrepWordTarget, CrepHolState.toRuntime]
   case topAddr => simp [evalCrepRuntimeExp, evalCrepHolExp,
     riscvCrepWordTarget, CrepHolState.toRuntime]
+  case nil => simp [evalCrepRuntimeExps]
+  case cons head tail ihHead ihTail =>
+    constructor
+    · intro e he state
+      simp only [List.mem_cons] at he
+      rcases he with he | he
+      · subst e
+        exact ihHead state
+      · exact ihTail.1 e he state
+    · intro state
+      simp [evalCrepRuntimeExps, ihHead state, ihTail.2 state]
+
+theorem evalCrepRuntimeExp_loadByte_toHolWordBits [NeZero width]
+    (state : CrepHolState (Fin width → Bool) σ)
+    (address : CrepExp (Fin width → Bool))
+    (ih : evalCrepRuntimeExp state.toHolWordBitsRuntime address =
+      evalCrepHolWordBitsExp state address) :
+    evalCrepRuntimeExp state.toHolWordBitsRuntime (.loadByte address) =
+      evalCrepHolWordBitsExp state (.loadByte address) := by
+  simp only [evalCrepRuntimeExp, evalCrepHolWordBitsExp, evalCrepHolExp,
+    mapCrepExpWord] at ih ⊢
+  cases hEval : evalCrepHolExp state.toBitVecState
+      (mapCrepExpWord holWordBitsToBitVec address) with
+  | none =>
+      simp [hEval] at ih
+      simp [ih]
+  | some value =>
+      have hAddress : evalCrepRuntimeExp state.toHolWordBitsRuntime address =
+          some (bitVecToHolWordBits value) := by
+        simpa [hEval] using ih
+      rw [hAddress]
+      simp only [Option.bind_eq_bind, Option.bind_some]
+      rw [crepHolWordBits_loadByte_toBitVec state
+        (bitVecToHolWordBits value)]
+      rw [crepHolState_loadByte]
+      simp [holWordBitsToBitVec_bitVecToHolWordBits]
+
+theorem evalCrepRuntimeExp_load32_toHolWordBits [NeZero width]
+    (state : CrepHolState (Fin width → Bool) σ)
+    (address : CrepExp (Fin width → Bool))
+    (ih : evalCrepRuntimeExp state.toHolWordBitsRuntime address =
+      evalCrepHolWordBitsExp state address) :
+    evalCrepRuntimeExp state.toHolWordBitsRuntime (.load32 address) =
+      evalCrepHolWordBitsExp state (.load32 address) := by
+  simp only [evalCrepRuntimeExp, evalCrepHolWordBitsExp, evalCrepHolExp,
+    mapCrepExpWord] at ih ⊢
+  cases hEval : evalCrepHolExp state.toBitVecState
+      (mapCrepExpWord holWordBitsToBitVec address) with
+  | none =>
+      simp [hEval] at ih
+      simp [ih]
+  | some value =>
+      have hAddress : evalCrepRuntimeExp state.toHolWordBitsRuntime address =
+          some (bitVecToHolWordBits value) := by
+        simpa [hEval] using ih
+      rw [hAddress]
+      simp only [Option.bind_eq_bind, Option.bind_some]
+      rw [crepHolWordBits_load32_toBitVec state
+        (bitVecToHolWordBits value)]
+      rw [crepHolState_load32]
+      simp [holWordBitsToBitVec_bitVecToHolWordBits]
+
+private theorem mapM_evalCrepHolWordBitsExp [NeZero width]
+    (state : CrepHolState (Fin width → Bool) σ)
+    (expressions : List (CrepExp (Fin width → Bool))) :
+    expressions.mapM (evalCrepHolWordBitsExp state) =
+      ((expressions.map (mapCrepExpWord holWordBitsToBitVec)).mapM
+        (evalCrepHolExp state.toBitVecState)).map
+          (List.map bitVecToHolWordBits) := by
+  induction expressions with
+  | nil => simp
+  | cons head tail ih =>
+      cases hHead : evalCrepHolExp state.toBitVecState
+          (mapCrepExpWord holWordBitsToBitVec head) with
+      | none => simp [evalCrepHolWordBitsExp, hHead]
+      | some headValue =>
+          cases hTail : List.mapM
+              (evalCrepHolExp state.toBitVecState)
+              (List.map (mapCrepExpWord holWordBitsToBitVec) tail) with
+          | none => simp [evalCrepHolWordBitsExp, hHead, hTail, ih]
+          | some tailValues =>
+              simp [evalCrepHolWordBitsExp, hHead, hTail, ih]
+
+/-! This all-constructor theorem closes the production evaluator relation for
+    the concrete finite-index Boolean representation. It is still only a
+    representation-specific prerequisite: HOL quantifies over arbitrary
+    finite index types and their word instances, which this theorem does not
+    quantify over. -/
+theorem evalCrepRuntimeExp_toHolWordBits_eq [NeZero width]
+    (state : CrepHolState (Fin width → Bool) σ)
+    (expression : CrepExp (Fin width → Bool)) :
+    evalCrepRuntimeExp state.toHolWordBitsRuntime expression =
+      evalCrepHolWordBitsExp state expression := by
+  have evalExpsMapM (targetState : CrepRuntimeState (Fin width → Bool) σ) :
+      ∀ expressions,
+        evalCrepRuntimeExps targetState expressions =
+          expressions.mapM (evalCrepRuntimeExp targetState) := by
+    intro xs
+    induction xs with
+    | nil => simp [evalCrepRuntimeExps]
+    | cons head tail ih => simp [evalCrepRuntimeExps, ih]
+  induction expression using
+      (CrepExp.rec (motive_2 := fun expressions =>
+        (∀ e, e ∈ expressions → ∀ (state : CrepHolState (Fin width → Bool) σ),
+          evalCrepRuntimeExp state.toHolWordBitsRuntime e =
+            evalCrepHolWordBitsExp state e) ∧
+        (∀ (state : CrepHolState (Fin width → Bool) σ),
+          evalCrepRuntimeExps state.toHolWordBitsRuntime expressions =
+            expressions.mapM (evalCrepHolWordBitsExp state))))
+      generalizing state
+  case const value =>
+    simp [evalCrepRuntimeExp, evalCrepHolWordBitsExp, evalCrepHolExp,
+      mapCrepExpWord, CrepHolState.toHolWordBitsRuntime,
+      CrepHolState.toBitVecState, bitVecToHolWordBits_holWordBitsToBitVec]
+  case var name => exact evalCrepRuntimeExp_var_toHolWordBits state name
+  case load address ih => exact evalCrepRuntimeExp_load_toHolWordBits state address (ih state)
+  case load32 address ih =>
+    exact evalCrepRuntimeExp_load32_toHolWordBits state address (ih state)
+  case loadByte address ih =>
+    exact evalCrepRuntimeExp_loadByte_toHolWordBits state address (ih state)
+  case loadGlob address => exact evalCrepRuntimeExp_loadGlob_toHolWordBits state address
+  case op operator expressions ih =>
+    apply evalCrepRuntimeExp_op_toHolWordBits
+    have h := ih.2 state
+    rw [mapM_evalCrepHolWordBitsExp state expressions] at h
+    exact h
+  case crepOp operator expressions ih =>
+    cases expressions with
+    | nil => simp [evalCrepRuntimeExp, evalCrepHolWordBitsExp,
+        evalCrepHolExp, mapCrepExpWord]
+    | cons head tail => cases tail with
+      | nil => simp [evalCrepRuntimeExp, evalCrepHolWordBitsExp,
+          evalCrepHolExp, mapCrepExpWord]
+      | cons second tail => cases tail with
+        | nil =>
+          cases operator with
+          | mul =>
+            exact evalCrepRuntimeExp_crepOpMul_toHolWordBits state head second
+              (ih.1 head (by simp) state) (ih.1 second (by simp) state)
+        | cons extra rest => simp [evalCrepRuntimeExp, evalCrepHolWordBitsExp,
+            evalCrepHolExp, mapCrepExpWord]
+  case cmp operator left right ihLeft ihRight =>
+    exact evalCrepRuntimeExp_cmp_toHolWordBits state operator left right
+      (ihLeft state) (ihRight state)
+  case shift operator left right ihLeft ihRight =>
+    exact evalCrepRuntimeExp_shift_toHolWordBits state operator left right
+      (ihLeft state) (ihRight state)
+  case baseAddr =>
+    simp [evalCrepRuntimeExp, evalCrepHolWordBitsExp, evalCrepHolExp,
+      mapCrepExpWord, CrepHolState.toHolWordBitsRuntime,
+      CrepHolState.toBitVecState, bitVecToHolWordBits_holWordBitsToBitVec]
+  case topAddr =>
+    simp [evalCrepRuntimeExp, evalCrepHolWordBitsExp, evalCrepHolExp,
+      mapCrepExpWord, CrepHolState.toHolWordBitsRuntime,
+      CrepHolState.toBitVecState, bitVecToHolWordBits_holWordBitsToBitVec]
   case nil => simp [evalCrepRuntimeExps]
   case cons head tail ihHead ihTail =>
     constructor

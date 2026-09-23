@@ -229,7 +229,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepDestConst_eq_const",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement comparison and direct HOL-EVAL constructor probe)"
+    "reviewer": "Codex (fully polymorphic statement comparison with HOL dest_const_thm and direct HOL-EVAL constructor probe)"
   },
   {
     "hol_path": "cakeml/pancake/crep_arithScript.sml",

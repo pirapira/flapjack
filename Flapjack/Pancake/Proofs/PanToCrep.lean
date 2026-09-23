@@ -161,27 +161,6 @@ theorem isWfShapeNil_length_flatten (value : PanValue α) (words : List α)
     rw [hpositive hpos]
     exact panValueFlatten_length_eq_shapeSize value hwf
 
-/-- Flapjack-specific, word-stripped runtime helper: the production evaluator
-    `evalCrepRuntimeExps` returns the bare word carried by a `word_lab` cell, so
-    this is not HOL's `pan_to_crepProof$evaluate_replicate_const`
-    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:3051`), whose `eval`
-    returns `Word 0w` directly. The exact HOL statement therefore needs the
-    production evaluator to yield `word_lab` values (bead `flapjack-pxn.18.4.3.43`,
-    which `flapjack-pxn.18.4.3.48` now depends on). Kept untagged as oracle
-    support; see `scripts/hol-probes/crep_replicate_const_probe.out`. -/
-theorem evalCrepRuntimeExps_replicate_const
-    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (count : Nat) (state : CrepRuntimeState α σ) :
-    evalCrepRuntimeExps state (List.replicate count (.const (0 : α))) =
-      some (List.replicate count (0 : α)) := by
-  induction count with
-  | zero => simp [evalCrepRuntimeExps]
-  | succ count ih =>
-      simp [List.replicate_succ, evalCrepRuntimeExps, evalCrepRuntimeExp, ih]
-
 /-! Local support for `MAP_SOME_MEM_lemma`, kept in its HOL counterpart
     module. This drops the source theorem's unused Nat witness; the exact
     tagged theorem below restores that witness in its original position. -/

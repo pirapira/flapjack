@@ -270,6 +270,39 @@ example :
     (Or.inl (by simp [riscv64ReadByteArray, RiscV.panRiscVReadByte,
       panModelReadByte, ffiErrorBase]))
 
+/-- A base state with the read-bytes memory/domain and the `call_FFI` oracle,
+    used to exercise the HOL `FFI_return` write-back branch. -/
+def ffiReturnedBase : CrepRuntimeState (RiscV.Word 64) Nat :=
+  { ffiProbeBase with
+    memory := fun address =>
+      if address == (8 : RiscV.Word 64) then
+        .word (0x0807060504030201 : RiscV.Word 64)
+      else .word 0
+    memaddrs := fun address => address == (8 : RiscV.Word 64)
+    ffi := ffiCallFfiState }
+
+def ffiReturnedFfi : FfiState Nat :=
+  { ffiCallFfiState with
+    state := 1
+    ioEvents := ffiCallFfiState.ioEvents ++
+      [{ name := .extCall "f", configuration := [1, 2, 3, 4]
+         bytes := [1, 2, 3, 4].zip [1, 2, 3, 4] }] }
+
+/-- The returned branch writes the oracle bytes back with `crepRuntimeWriteBytes`
+    and returns `Normal` with the updated ffi, matching `call_FFI`'s `FFI_return`
+    (`write_bytearray` plus the ffi update). -/
+example :
+    crepRuntimeExtCallValues riscv64ExtCallCallFfiHandler
+        (riscv64CrepRuntimeTarget ffiReturnedBase) "f"
+        (8 : RiscV.Word 64) 4 (8 : RiscV.Word 64) 4 =
+      (.normal, riscv64WriteState
+        { ffiReturnedBase with ffi := ffiReturnedFfi }
+        (8 : RiscV.Word 64) [1, 2, 3, 4]) :=
+  crepRuntimeExtCallValues_target_returned ffiReturnedBase "f"
+    (8 : RiscV.Word 64) 4 (8 : RiscV.Word 64) 4
+    [1, 2, 3, 4] [1, 2, 3, 4]
+    (by decide) (by decide) ffiReturnedFfi [1, 2, 3, 4] (by rfl)
+
 #guard ffiByteCodecGuard
 
 #guard ffiSharedDomainGuard

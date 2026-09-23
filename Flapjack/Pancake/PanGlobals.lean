@@ -510,18 +510,6 @@ def globalFunctionNames : List (Decl α) → List FunName
   | _ :: declarations => globalFunctionNames declarations
 termination_by declarations => sizeOf declarations
 
-/-! Direct source-shaped counterpart of `panLang$functions`: retain every
-    function's metadata while skipping value, exception, and struct
-    declarations. -/
-def functionEntries : List (Decl α) →
-    List (FunName × List (VarName × Shape) × Prog α × Shape)
-  | [] => []
-  | .function declaration :: declarations =>
-      (declaration.name, declaration.params, declaration.body,
-        declaration.returnShape) :: functionEntries declarations
-  | _ :: declarations => functionEntries declarations
-termination_by declarations => sizeOf declarations
-
 /-! Counterpart of Cake's `exceptions_append`
     (`pan_globalsProofScript.sml:2507`): the exception table distributes over
     list append. -/

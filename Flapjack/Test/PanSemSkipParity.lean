@@ -67,8 +67,6 @@ def skipGuard : Bool :=
 
 #guard skipGuard
 
-theorem skipGuard_true : skipGuard = true := by native_decide
-
 def runChecks : IO Bool := do
   if skipGuard then IO.println "PASS panSem Skip normal result preserves clock and locals"
   else IO.println "FAIL panSem Skip normal result preserves clock and locals"

@@ -271,6 +271,67 @@ theorem submap_iff_flookup [BEq FunName] (a b : CrepInlineFmap α) :
   · intro h name value hl
     exact h name value hl
 
+/-- Removing a key from the entry list is the HOL `DOMSUB` view: the lookup of
+    the removed key is `none` and every other lookup is unchanged. -/
+theorem lookup_filter_bne {α : Type u} {β : Type v} [BEq α] [LawfulBEq α]
+    (key name : α) (l : List (α × β)) (hnd : (l.map Prod.fst).Nodup) :
+    List.lookup key (l.filter (fun e => e.1 != name)) =
+      if key == name then none else List.lookup key l := by
+  induction l with
+  | nil => simp
+  | cons e t ih =>
+      obtain ⟨k, v⟩ := e
+      rw [List.map_cons] at hnd
+      obtain ⟨hk, hnd_t⟩ := List.nodup_cons.mp hnd
+      rw [List.filter_cons]
+      by_cases hkn : (k != name) = true
+      · rw [if_pos hkn, List.lookup_cons, List.lookup_cons, ih hnd_t]
+        have hkne : k ≠ name := by simpa [bne_iff_ne] using hkn
+        cases hkey : key == k with
+        | true =>
+            have hk_eq : key = k := by simpa using hkey
+            have hnm : (key == name) = false := by
+              rw [beq_eq_false_iff_ne]; exact fun h => hkne (hk_eq ▸ h)
+            simp [hnm]
+        | false => simp
+      · rw [if_neg hkn, List.lookup_cons, ih hnd_t]
+        have hke : k = name := Classical.byContradiction (by
+          intro h
+          exact hkn (by rw [bne_iff_ne]; exact h))
+        by_cases hkey : key == name
+        · rw [if_pos hkey, if_pos hkey]
+        · rw [if_neg hkey, if_neg hkey]
+          have hkeq : (key == k) = false := by
+            rw [beq_eq_false_iff_ne]
+            intro h
+            exact hkey (by rw [← hke, h]; exact beq_self_eq_true k)
+          rw [hkeq]
+
+/-- The carrier bridge commutes with `remove` (HOL `\\`): the view of a removed
+    map is the view with that key deleted. -/
+theorem toFiniteMap_remove [BEq FunName] [LawfulBEq FunName]
+    (fs : CrepInlineFmap α) (name : FunName) :
+    toFiniteMap (remove name fs) =
+      fun key => if key == name then none else toFiniteMap fs key := by
+  funext key
+  simp only [toFiniteMap, lookup, remove]
+  exact lookup_filter_bne key name fs.entries fs.nodupKeys
+
+/-- The carrier bridge commutes with `insert`: a freshly inserted key is
+    visible and every other lookup is unchanged. -/
+theorem lookup_insert [BEq FunName] [LawfulBEq FunName]
+    (key name : FunName) (value : List Nat × CrepProg α) (fs : CrepInlineFmap α) :
+    (insert name value fs).lookup key =
+      if key == name then some value else fs.lookup key := by
+  unfold CrepInlineFmap.insert CrepInlineFmap.lookup
+  rw [List.lookup_cons]
+  cases hkey : key == name with
+  | true => simp
+  | false =>
+      have hneg : ¬ (key == name) = true := by rw [hkey]; simp
+      rw [lookup_filter_bne key name fs.entries fs.nodupKeys, if_neg hneg]
+      rfl
+
 end CrepInlineFmap
 
 /-- Exact shape of Cake `crep_inline$inline_prog`
@@ -284,13 +345,16 @@ end CrepInlineFmap
     here by `CrepInlineFmap.card` and `CrepInlineFmap.card_remove_lt`.
 
     **Tag review.** No `@[hol]` tag is attached. The carrier bridge
-    `CrepInlineFmap.toFiniteMap` connects lookup and submap, and `card` counts
-    distinct keys. HOL defines `inline_prog` over a finite sptree; this Lean
-    function recurses over duplicate-free entries. A proof that the two
-    recursive functions agree under the carrier bridge is still missing.
-    The direct HOL oracle in
-    `scripts/hol-probes/crep_inline_code_inl_probe.out` checks representative
-    cases, but does not establish that universal correspondence. -/
+    `CrepInlineFmap.toFiniteMap` connects lookup and submap, `card` counts
+    distinct keys, and `toFiniteMap_remove`/`lookup_insert` show the bridge
+    commutes with `DOMSUB`/update. The universal theorem
+    `crepInlineProgFmap_congr` proves this Lean pass depends on the inlineable
+    map only through its finite-map lookup view, for every input program.
+    This does not prove equality with HOL's sptree-recursive `inline_prog`;
+    that cross-system correspondence is still open, so this definition has
+    no `@[hol]` tag. The direct HOL oracle in
+    `scripts/hol-probes/crep_inline_code_inl_probe.out` pins representative
+    cases only. -/
 def crepInlineProgFmap [BEq FunName] [LawfulBEq FunName]
     [OfNat α 0] [OfNat α 1]
     (inlineable : CrepInlineFmap α) : CrepProg α → CrepProg α
@@ -355,6 +419,82 @@ decreasing_by
       decreasing_trivial
     | apply Prod.Lex.left
       exact CrepInlineFmap.card_remove_lt name inlineable _hlookup
+
+/-- Representation independence within the Lean finite-map inline port: the
+    pass depends on the inlineable map only through `toFiniteMap`. Thus any
+    two Lean carriers with the same lookup view produce the same result for
+    every program. Equality with HOL `inline_prog` is not established here. -/
+theorem crepInlineProgFmap_congr [BEq FunName] [LawfulBEq FunName]
+    [OfNat α 0] [OfNat α 1]
+    {fs gs : CrepInlineFmap α}
+    (h : CrepInlineFmap.toFiniteMap fs = CrepInlineFmap.toFiniteMap gs) :
+    ∀ prog, crepInlineProgFmap fs prog = crepInlineProgFmap gs prog := by
+  have key : ∀ (m : CrepInlineFmap α) (p : CrepProg α),
+      ∀ n : CrepInlineFmap α,
+        CrepInlineFmap.toFiniteMap n = CrepInlineFmap.toFiniteMap m →
+        crepInlineProgFmap m p = crepInlineProgFmap n p := by
+    apply crepInlineProgFmap.induct
+      (motive := fun m p => ∀ n,
+        CrepInlineFmap.toFiniteMap n = CrepInlineFmap.toFiniteMap m →
+        crepInlineProgFmap m p = crepInlineProgFmap n p)
+    · intro m name value body ih n hn
+      rw [crepInlineProgFmap.eq_1, crepInlineProgFmap.eq_1, ih n hn]
+    · intro m first second ih1 ih2 n hn
+      rw [crepInlineProgFmap.eq_2, crepInlineProgFmap.eq_2, ih1 n hn, ih2 n hn]
+    · intro m condition thenBranch elseBranch ih1 ih2 n hn
+      rw [crepInlineProgFmap.eq_3, crepInlineProgFmap.eq_3, ih1 n hn, ih2 n hn]
+    · intro m condition body ih n hn
+      rw [crepInlineProgFmap.eq_4, crepInlineProgFmap.eq_4, ih n hn]
+    · intro m name arguments hlookup n hn
+      rw [crepInlineProgFmap.eq_5, crepInlineProgFmap.eq_5]
+      have hnlookup : CrepInlineFmap.lookup name n = none :=
+        (congrFun hn name).trans hlookup
+      rw [hlookup, hnlookup]
+    · intro m name arguments argumentNames calleeBody hlookup ih n hn
+      rw [crepInlineProgFmap.eq_5, crepInlineProgFmap.eq_5]
+      have hnlookup : CrepInlineFmap.lookup name n = some (argumentNames, calleeBody) :=
+        (congrFun hn name).trans hlookup
+      rw [hlookup, hnlookup]
+      simp only []
+      have hremove : CrepInlineFmap.toFiniteMap (CrepInlineFmap.remove name n) =
+          CrepInlineFmap.toFiniteMap (CrepInlineFmap.remove name m) := by
+        rw [CrepInlineFmap.toFiniteMap_remove, CrepInlineFmap.toFiniteMap_remove]
+        funext k
+        by_cases hk : k == name
+        · rw [if_pos hk, if_pos hk]
+        · rw [if_neg hk, if_neg hk]
+          exact congrFun hn k
+      rw [ih (CrepInlineFmap.remove name n) hremove]
+    · intro m returnNames name arguments hdistinct n hn
+      rw [crepInlineProgFmap.eq_6, crepInlineProgFmap.eq_6]
+      rw [if_pos hdistinct, if_pos hdistinct]
+    · intro m returnNames name arguments hnd hlookup n hn
+      rw [crepInlineProgFmap.eq_6, crepInlineProgFmap.eq_6]
+      have hnlookup : CrepInlineFmap.lookup name n = none :=
+        (congrFun hn name).trans hlookup
+      rw [if_neg hnd, if_neg hnd, hlookup, hnlookup]
+    · intro m returnNames name arguments hnd argumentNames calleeBody hlookup ih n hn
+      rw [crepInlineProgFmap.eq_6, crepInlineProgFmap.eq_6]
+      have hnlookup : CrepInlineFmap.lookup name n = some (argumentNames, calleeBody) :=
+        (congrFun hn name).trans hlookup
+      rw [if_neg hnd, if_neg hnd, hlookup, hnlookup]
+      simp only []
+      have hremove : CrepInlineFmap.toFiniteMap (CrepInlineFmap.remove name n) =
+          CrepInlineFmap.toFiniteMap (CrepInlineFmap.remove name m) := by
+        rw [CrepInlineFmap.toFiniteMap_remove, CrepInlineFmap.toFiniteMap_remove]
+        funext k
+        by_cases hk : k == name
+        · rw [if_pos hk, if_pos hk]
+        · rw [if_neg hk, if_neg hk]
+          exact congrFun hn k
+      rw [ih (CrepInlineFmap.remove name n) hremove]
+    · intro m returnNames handler body name arguments ih n hn
+      rw [crepInlineProgFmap.eq_7, crepInlineProgFmap.eq_7, ih n hn]
+    · intro m program h1 h2 h3 h4 h5 h6 h7 n hn
+      rw [crepInlineProgFmap.eq_8 m program h1 h2 h3 h4 h5 h6 h7,
+        crepInlineProgFmap.eq_8 n program h1 h2 h3 h4 h5 h6 h7]
+  intro prog
+  exact key fs prog gs h.symm
 
 def crepInlineActiveNames [BEq FunName]
     (inlineable : List (CrepInlineEntry α)) :

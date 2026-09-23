@@ -173,6 +173,8 @@ def nonClockedEvaluate (program : Prog Word64)
     (returnRaiseState 5).locals (returnRaiseState 5).globals (returnRaiseState 5).memory
     statefulTestFfiState program (contracts := contracts)
 
+/-- Check the oracle fixture's local, representative global/memory lookups, and
+    FFI observation. This is a regression guard, not a full-state equality proof. -/
 def errorSteppedPreserving (result : Option (PanValueFfiSteppedResult Word64 Unit)) : Bool :=
   match result with
   | some (.error locals globals memory ffi, _) =>

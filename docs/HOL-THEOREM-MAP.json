@@ -4784,22 +4784,6 @@
     "reviewer": "Flapjack-only Option mapM list infrastructure: successful lookup/evaluation on a flattened local slice is preserved for matching prefixes; no separate HOL theorem"
   },
   {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
-    "lean_name": "compileExpHOL_rFieldZero_nonemptyLocal_eval_flatten",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only evaluation support for HOL comp_field index zero on an rField over a nonempty source-local rStruct; Call argument support remains restricted and this is not the full compile_exp_val_rel theorem"
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
-    "lean_name": "compileExpHOL_rFieldOne_pairLocal_eval_flatten",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only evaluation support for HOL comp_field index one on a two-word source-local rStruct; proves the selected target word through locals_rel and does not claim full compile_exp_val_rel or Call correctness"
-  },
-  {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "fields_in_order_reorder_noop",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
@@ -5502,6 +5486,38 @@
     "lean_name": "panStructTickEvaluatorSupport",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Paired Tick evaluator support only; omits compile_correct premises and invariant/shape-map/result postconditions; not an exact theorem case."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "evalCrepRuntimeExps_eq_mapM",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only equation relating the target expression-list evaluator to List.mapM; used to project field-sized prefixes and suffixes from successful compiled-record evaluation."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "mapM_drop_of_success",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only list evaluator lemma projecting a successful mapM result after dropping an input prefix; supports generic RField evaluation."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "evalCrepCompileField_panValueField",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only arbitrary-index RField evaluator bridge for compiled field slices; it is one constructor-specific support lemma, not the complete HOL compile_exp_val_rel theorem."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_rFieldLocal_eval_flatten",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only local RField constructor bridge for arbitrary valid field indices, deriving the compiled inner-record evaluation from locals_rel; the general compile_exp_val_rel and Call argument theorem remain open."
   },
   {
     "hol_path": null,

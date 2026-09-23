@@ -128,6 +128,10 @@ def sourcePairCode : PanSemCodeMap Word64 :=
   [("pair", ([ ("p", .comb [.one, .one]) ], .return (.var .local "p"),
     .comb [.one, .one]))]
 
+def sourceCallMiddlePairCode : PanSemCodeMap Word64 :=
+  [("pair", ([ ("p", .comb [.one, .one]) ], .return (.var .local "p"),
+    .comb [.one, .one]))]
+
 def sourceRecursiveCode : PanSemCodeMap Word64 :=
   [("f", ([], .decCall "nested" .one "g" []
       (.return (.var .local "nested")), .one)),
@@ -181,6 +185,18 @@ def evaluateSourceCallFirstRecordField :=
             some (.rStruct [.word (BitVec.ofNat 64 7), .word (BitVec.ofNat 64 8)])
           else none })
     (.call none "id" [.rField 0 (.var .local "pair")] : Prog Word64)
+
+def evaluateSourceCallMiddlePairField :=
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler
+    ({ emptyPanSourceState 10 sourceCallMiddlePairCode with
+        locals := fun name =>
+          if name == "record" then
+            some (.rStruct [.word (BitVec.ofNat 64 3),
+              .rStruct [.word (BitVec.ofNat 64 7), .word (BitVec.ofNat 64 8)],
+              .word (BitVec.ofNat 64 10)])
+          else none })
+    (.call none "pair" [.rField 1 (.var .local "record")] : Prog Word64)
 
 def evaluateSourceCallAssigned :=
   panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
@@ -314,6 +330,12 @@ def observeSourceCallStructArgument : Bool :=
 
 def observeSourceCallFirstRecordField := isSourceReturnedWord
   evaluateSourceCallFirstRecordField (BitVec.ofNat 64 7) 9
+
+def observeSourceCallMiddlePairField : Bool :=
+  match evaluateSourceCallMiddlePairField with
+  | some (.control (.returned _ _ _ _ [.rStruct [.word first, .word second]]), 9) =>
+      first == BitVec.ofNat 64 7 && second == BitVec.ofNat 64 8
+  | _ => false
 
 def observeSourceCallAssigned : Bool :=
   match evaluateSourceCallAssigned with
@@ -734,6 +756,9 @@ def runChecks : IO Bool := do
   if observeSourceCallHandlesPairException then
     IO.println "PASS state-owned Call handler returns a two-word exception payload like HOL"
   else IO.println "FAIL state-owned Call handler returns a two-word exception payload like HOL"
+  if observeSourceCallMiddlePairField then
+    IO.println "PASS state-owned Call evaluates a middle RField pair like original HOL"
+  else IO.println "FAIL state-owned Call evaluates a middle RField pair like original HOL"
   if observeSourceCodeDecCall then IO.println "PASS state-owned code DecCall matches HOL deccall_code_map_7" else
     IO.println "FAIL state-owned code DecCall matches HOL deccall_code_map_7"
   if observeSourceNestedCodeCall then IO.println "PASS state-owned nested Call and DecCall match HOL recursive oracle" else
@@ -789,6 +814,7 @@ def runChecks : IO Bool := do
     IO.println "FAIL evaluate ShMemStore rejects shared-domain miss with Error"
   pure (observeSkip && observeReturn41 && observeSequence && observeTickAtZero && observeCall &&
     observeSourceCodeCall && observeSourceCallStructArgument && observeSourceCallFirstRecordField &&
+    observeSourceCallMiddlePairField &&
     observeSourceCodeDecCall &&
     observeSourceNestedCodeCall &&
     observeSourceNestedOrdinaryCall &&

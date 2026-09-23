@@ -722,6 +722,9 @@ def compileToCrep [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
 /-! HOL finite-map variants used by the RISC-V production path. The parameter
     and function tables are built with `FUPDATE_LIST`; body compilation then
     uses `compileProgHOL` without converting the context to `InfoMap`. -/
+/-- HOL `make_vmap_def`: allocate consecutive flattened parameter slots and
+    update the finite map in source order, so a later duplicate name wins. -/
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "make_vmap_def"]
 def panToCrepMakeVmapHOL (params : List (VarName × Shape)) :
     FiniteMap VarName (Shape × List Nat) :=
   FUPDATE_LIST FEMPTY (compileParamVars params 0).1

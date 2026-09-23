@@ -254,6 +254,21 @@ def makeVmapOracle : Bool :=
 
 #guard makeVmapOracle
 
+/-! Direct HOL `make_vmap_shaped` and `make_vmap_duplicate_lookup` oracle:
+    the finite-map production path allocates consecutive slots and its later
+    duplicate parameter wins the lookup. -/
+def makeVmapHOLOracle : Bool :=
+  let shaped := panToCrepMakeVmapHOL
+    [("x", .one), ("pair", .comb [.one, .one])]
+  let duplicate := panToCrepMakeVmapHOL
+    [("x", .one), ("x", .comb [.one, .one])]
+  match FLOOKUP shaped "x", FLOOKUP shaped "pair", FLOOKUP duplicate "x" with
+  | some (.one, [0]), some (.comb [.one, .one], [1, 2]),
+      some (.comb [.one, .one], [1, 2]) => true
+  | _, _, _ => false
+
+#guard makeVmapHOLOracle
+
 /-! Cake's `FEMPTY |++ ZIP` gives the later duplicate parameter the result of
     lookup.  This is deliberately a malformed direct compiler input: the
     source static checker rejects duplicate formal names, but the executable

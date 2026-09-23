@@ -36,8 +36,11 @@ shape/duplicate failure cases.
 `pan_sem_state_eval_probe.out` records direct HOL EVAL of `eval_def` at
 `cakeml/pancake/semantics/panSemScript.sml:209-297` for in-domain and
 out-of-domain word loads, little- and big-endian byte loads, 32-bit loads, and
-list-valued word operators with accepted and rejected operand counts. The
-state-derived Lean boundary and its matching cases live in
+list-valued `word_op_def` operators with accepted and rejected operand counts.
+The source-shaped generic definition is `Flapjack.Pancake.wordOpHOL`; its
+all-width equation to the production RISC-V target is in
+`Flapjack.Pancake.Semantics.CrepRuntimeTarget`. The state-derived Lean
+boundary and its matching cases live in
 `Flapjack.Pancake.Semantics.PanSemStateEval` and
 `Flapjack.Test.PanSemStateEvalParity`.
 `compile_def_probe.out` also records direct HOL evaluations of assigned Global

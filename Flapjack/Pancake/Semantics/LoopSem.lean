@@ -537,6 +537,205 @@ def writeBytearrayHOL {width : Nat} [NeZero width]
       | some updated => updated
       | none => memory
 
+/-- Width-generic port of HOL `byte$word_to_bytes`
+    (`src/n-bit/byteScript.sml:450`):
+    `word_to_bytes w be = word_to_bytes_aux (dimindex DIV 8) w be`, i.e. the
+    `get_byte` of each increasing index.  That script is part of the HOL
+    standard library rather than the CakeML submodule, so this declaration
+    carries no HOL tag. -/
+def riscvWordToBytesHOL {width : Nat} [NeZero width]
+    (value : RiscV.Word width) (bigEndian : Bool) : List UInt8 :=
+  (List.range (width / 8)).map
+    (fun index => riscvGetByteHOL bigEndian (BitVec.ofNat width index) value)
+
+/-- Width-generic port of HOL `byte$word_of_bytes`
+    (`src/n-bit/byteScript.sml:197`): fold `set_byte` over the bytes starting at
+    `address` and incrementing by one.  HOL standard library, so no HOL tag. -/
+def riscvWordOfBytesHOL {width : Nat} [NeZero width]
+    (bigEndian : Bool) (address : RiscV.Word width) :
+    List UInt8 → RiscV.Word width
+  | [] => 0
+  | byte :: rest =>
+      riscvSetByteHOL bigEndian address
+        (riscvWordOfBytesHOL bigEndian (address + 1) rest) byte
+
+/-! FLAPJACK-SPECIFIC (not an exact HOL port).  This is the width-generic
+    runtime helper for HOL `loopSem$sh_mem_load_def` (`loopSemScript.sml:198-215`),
+    using the generic `riscvWordToBytesHOL`/`riscvWordOfBytesHOL` codec.  It is
+    not statement-exact: HOL's `sh_mem_load` takes the whole
+    `('a,'ffi) loopSem$state`, whose `sh_mdomain` is a `'a word set`, whereas
+    `LoopMachineState` models `shMdomain` as a `Word -> Bool` predicate and this
+    helper also takes the local name/address decomposed.  The exact whole-state,
+    set-valued port with an explicit state bridge is tracked by
+    `flapjack-s6a.3.2.1`. -/
+def shMemLoadHOL {width : Nat} [NeZero width]
+    (state : LoopMachineState (RiscV.Word width) F)
+    (name : Nat) (address : RiscV.Word width) (byteCount : Nat) :
+    LoopMachineStep (RiscV.Word width) F :=
+  let addressBytes := riscvWordToBytesHOL address false
+  let call := callFfi state.ffi (.sharedMem .mappedRead)
+    (loopShMemByteCount byteCount) addressBytes
+  if byteCount = 0 then
+    if state.shMdomain address then
+      match call with
+      | .final event => (some (.finalFfi event), callEnv [] state)
+      | .returned newFfi bytes =>
+          let updated : LoopMachineState (RiscV.Word width) F :=
+            { state with
+              ffi := newFfi
+              locals := loopSetVar state.locals name
+                (.word (riscvWordOfBytesHOL false 0 bytes)) }
+          (none, updated)
+    else (some .error, state)
+  else
+    if state.shMdomain (riscvByteAlignHOL (width := width) address) then
+      match call with
+      | .final event => (some (.finalFfi event), callEnv [] state)
+      | .returned newFfi bytes =>
+          let updated : LoopMachineState (RiscV.Word width) F :=
+            { state with
+              ffi := newFfi
+              locals := loopSetVar state.locals name
+                (.word (riscvWordOfBytesHOL false 0 bytes)) }
+          (none, updated)
+    else (some .error, state)
+
+/-! FLAPJACK-SPECIFIC (not an exact HOL port).  Runtime helper for HOL
+    `loopSem$sh_mem_store_def` (`loopSemScript.sml:217-243`).  Same
+    whole-state/set-domain mismatch as `shMemLoadHOL`; only a word-valued local
+    can be stored and the payload is the value bytes followed by the address
+    bytes, truncated to `byteCount` for nonzero widths.  Exact port tracked by
+    `flapjack-s6a.3.2.1`. -/
+def shMemStoreHOL {width : Nat} [NeZero width]
+    (state : LoopMachineState (RiscV.Word width) F)
+    (name : Nat) (address : RiscV.Word width) (byteCount : Nat) :
+    LoopMachineStep (RiscV.Word width) F :=
+  match state.locals name with
+  | some (.word value) =>
+      let valueBytes := riscvWordToBytesHOL value false
+      let addressBytes := riscvWordToBytesHOL address false
+      if byteCount = 0 then
+        if state.shMdomain address then
+          match callFfi state.ffi (.sharedMem .mappedWrite)
+              (loopShMemByteCount byteCount)
+              (valueBytes ++ addressBytes) with
+          | .final event => (some (.finalFfi event), callEnv [] state)
+          | .returned newFfi _ => (none, { state with ffi := newFfi })
+        else (some .error, state)
+      else
+        if state.shMdomain (riscvByteAlignHOL (width := width) address) then
+          match callFfi state.ffi (.sharedMem .mappedWrite)
+              (loopShMemByteCount byteCount)
+              (valueBytes.take byteCount ++ addressBytes) with
+          | .final event => (some (.finalFfi event), callEnv [] state)
+          | .returned newFfi _ => (none, { state with ffi := newFfi })
+        else (some .error, state)
+  | _ => (some .error, state)
+
+/-! FLAPJACK-SPECIFIC (not an exact HOL port).  Runtime dispatch matching HOL
+    `loopSem$sh_mem_op_def` (`loopSemScript.sml:255-262`), over the
+    whole-state/set-domain mismatch described at `shMemLoadHOL`.  Exact port
+    tracked by `flapjack-s6a.3.2.1`. -/
+def shMemOpHOL {width : Nat} [NeZero width]
+    (state : LoopMachineState (RiscV.Word width) F)
+    (operator : CrepMemOp) (name : Nat) (address : RiscV.Word width) :
+    LoopMachineStep (RiscV.Word width) F :=
+  match operator with
+  | .load => shMemLoadHOL state name address 0
+  | .store => shMemStoreHOL state name address 0
+  | .load8 => shMemLoadHOL state name address 1
+  | .store8 => shMemStoreHOL state name address 1
+  | .load16 => shMemLoadHOL state name address 2
+  | .store16 => shMemStoreHOL state name address 2
+  | .load32 => shMemLoadHOL state name address 4
+  | .store32 => shMemStoreHOL state name address 4
+
+/-! FLAPJACK-SPECIFIC (not an exact HOL port).  Runtime helper for CakeML
+    `mem_load_def` (`cakeml/pancake/semantics/loopSemScript.sml:64-69`).  HOL
+    takes the whole `('a,'ffi) loopSem$state` (`mem_load addr s`) and reads
+    `s.memory`/`s.mdomain` (a set), while this helper splits the total memory map
+    and the `address -> Prop` domain out as arguments.  Exact whole-state port
+    tracked by `flapjack-s6a.3.2.2.1`. -/
+def memLoadHOL {width : Nat}
+    (memory : RiscV.Word width → LoopValue (RiscV.Word width))
+    (domain : RiscV.Word width → Prop) [DecidablePred domain]
+    (address : RiscV.Word width) : Option (LoopValue (RiscV.Word width)) :=
+  if domain address then some (memory address) else none
+
+/-! FLAPJACK-SPECIFIC (not an exact HOL port).  Runtime helper for CakeML
+    `mem_store_def` (`cakeml/pancake/semantics/loopSemScript.sml:57-62`).  HOL
+    takes and returns the whole `('a,'ffi) loopSem$state`, whereas this helper
+    splits memory/domain out and returns the updated total memory map (not the
+    state).  Exact whole-state port tracked by `flapjack-s6a.3.2.2.1`. -/
+def memStoreHOL {width : Nat}
+    (memory : RiscV.Word width → LoopValue (RiscV.Word width))
+    (domain : RiscV.Word width → Prop) [DecidablePred domain]
+    (address : RiscV.Word width) (value : LoopValue (RiscV.Word width)) :
+    Option (RiscV.Word width → LoopValue (RiscV.Word width)) :=
+  if domain address then
+    some (fun current => if current = address then value else memory current)
+  else none
+
+/-- Width-generic port of HOL `alignment$aligned` (`src/n-bit/alignmentScript.sml:20`):
+    `aligned p w = (align p w = w)`, where `align` clears the low `p` bits, so
+    `aligned p w` holds exactly when those low bits are already zero.  HOL
+    standard library, so no HOL tag. -/
+def riscvAlignedHOL {width : Nat} (p : Nat) (address : RiscV.Word width) : Bool :=
+  (address >>> p) <<< p = address
+
+/-- Width-generic exact port of HOL `mem_load_32_def`
+    (`cakeml/compiler/backend/semantics/wordSemScript.sml:70-81`).  When the
+    address is `aligned 2`, the four bytes at `w`, `w+1`, `w+2`, `w+3` of the
+    word stored at `byte_align w` are reassembled into a 32-bit word; `Loc` and
+    out-of-domain addresses yield `NONE`. -/
+@[hol "cakeml/compiler/backend/semantics/wordSemScript.sml" "mem_load_32_def"]
+def memLoad32HOL {width : Nat} [NeZero width]
+    (memory : RiscV.Word width → LoopValue (RiscV.Word width))
+    (domain : RiscV.Word width → Prop) [DecidablePred domain]
+    (bigEndian : Bool) (address : RiscV.Word width) : Option (RiscV.Word 32) :=
+  if riscvAlignedHOL 2 address then
+    let aligned := riscvByteAlignHOL address
+    match memory aligned with
+    | .loc _ _ => none
+    | .word value =>
+        if domain aligned then
+          some (riscvWordOfBytesHOL bigEndian (0 : RiscV.Word 32)
+            [riscvGetByteHOL bigEndian address value,
+             riscvGetByteHOL bigEndian (address + 1) value,
+             riscvGetByteHOL bigEndian (address + 2) value,
+             riscvGetByteHOL bigEndian (address + 3) value])
+        else none
+  else none
+
+/-- Width-generic exact port of HOL `mem_store_32_def`
+    (`cakeml/compiler/backend/semantics/wordSemScript.sml:84-97`).  When the
+    address is `aligned 2`, the four bytes of the 32-bit `value` are written at
+    `w`, `w+1`, `w+2`, `w+3` of the stored word, leaving every other address
+    unchanged; `Loc` and out-of-domain addresses yield `NONE`. -/
+@[hol "cakeml/compiler/backend/semantics/wordSemScript.sml" "mem_store_32_def"]
+def memStore32HOL {width : Nat} [NeZero width]
+    (memory : RiscV.Word width → LoopValue (RiscV.Word width))
+    (domain : RiscV.Word width → Prop) [DecidablePred domain]
+    (bigEndian : Bool) (address : RiscV.Word width) (value : RiscV.Word 32) :
+    Option (RiscV.Word width → LoopValue (RiscV.Word width)) :=
+  if riscvAlignedHOL 2 address then
+    let aligned := riscvByteAlignHOL address
+    match memory aligned with
+    | .loc _ _ => none
+    | .word stored =>
+        if domain aligned then
+          let v0 := riscvSetByteHOL bigEndian address stored
+            (riscvGetByteHOL bigEndian (0 : RiscV.Word 32) value)
+          let v1 := riscvSetByteHOL bigEndian (address + 1) v0
+            (riscvGetByteHOL bigEndian (1 : RiscV.Word 32) value)
+          let v2 := riscvSetByteHOL bigEndian (address + 2) v1
+            (riscvGetByteHOL bigEndian (2 : RiscV.Word 32) value)
+          let v3 := riscvSetByteHOL bigEndian (address + 3) v2
+            (riscvGetByteHOL bigEndian (3 : RiscV.Word 32) value)
+          some (fun current => if current = aligned then .word v3 else memory current)
+        else none
+  else none
+
 /-! FLAPJACK-SPECIFIC (not exact tagged ports).  The following byte-array
     helpers are the 64-bit RISC-V instances of HOL's polymorphic word memory
     codec.  The exact width-generic ports are `readBytearrayHOL`,

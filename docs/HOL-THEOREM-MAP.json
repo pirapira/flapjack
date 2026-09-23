@@ -64,6 +64,14 @@
     "reviewer": "Codex (source formula and direct numeric HOL-EVAL comparison)"
   },
   {
+    "hol_path": "cakeml/compiler/backend/wordLangScript.sml",
+    "hol_name": "word_op_def",
+    "lean_path": "Flapjack/Pancake/WordLang.lean",
+    "lean_name": "wordOpHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (compared source word_op cases, fold identities, and binary Sub arity)"
+  },
+  {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
     "hol_name": "flatten_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem/Primop.lean",
@@ -118,6 +126,22 @@
     "lean_name": "loopPrimopHOL",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (constructor-by-constructor source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/wordSemScript.sml",
+    "hol_name": "mem_load_32_def",
+    "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",
+    "lean_name": "memLoad32HOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; width-generic, requires aligned 2, total word_loc memory and word-set domain, four get_byte bytes reassembled with word_of_bytes be (0w:word32))"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/wordSemScript.sml",
+    "hol_name": "mem_store_32_def",
+    "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",
+    "lean_name": "memStore32HOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; width-generic, requires aligned 2, four set_byte writes at w..w+3, =+ update leaves other addresses unchanged)"
   },
   {
     "hol_path": "cakeml/misc/miscScript.sml",
@@ -251,9 +275,25 @@
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
-    "lean_name": "crepSimpExpCorrect1",
+    "lean_name": "crepSimpExpCorrect1BitVec",
     "statement_status": "documented_mismatch",
-    "reviewer": "Untagged RISC-V width specialization with HOL-shaped success premise, mapc code update, and full option/word_lab result; HOL quantifies over arbitrary word types/states and uses crepSem eval, for which no production evaluator correspondence is proved."
+    "reviewer": "Untagged all-positive-width BitVec theorem over a source-shaped state; all-constructor correspondence to the production evaluator is proved. Still specializes HOL's arbitrary word carrier to RiscV.Word/BitVec, so the exact polymorphic theorem is open and no HOL tag is present."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Untagged all-width RISC-V production evaluator support theorem; it does not state the arbitrary source word-carrier theorem."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepArithHolMapCode_target",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only commuting equation between the fixed-width HOL-shaped state adapter and production code-map update."
   },
   {
     "hol_path": null,

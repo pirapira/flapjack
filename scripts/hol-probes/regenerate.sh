@@ -466,7 +466,7 @@ run_probe excp_rel_probeScript.sml excp_rel_probe.out \
   "$cake_dir/pancake/proofs/pan_to_crepProofScript.sml" \
   "$cake_dir/pancake/proofs"
 run_probe ctxt_fc_probeScript.sml ctxt_fc_probe.out \
-  shaped_slots empty_maximum \
+  shaped_slots empty_maximum functions_projection \
   "$cake_dir/pancake/proofs/pan_to_crepProofScript.sml" \
   "$cake_dir/pancake/proofs"
 run_probe code_rel_probeScript.sml code_rel_probe.out \

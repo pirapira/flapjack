@@ -46,6 +46,9 @@ call destinations through `pan_to_crep$compile`: absent lookups, the
 matching Lean cases live in `Flapjack.Test.CompileDefParity`.
 `excp_rel_probe.out` and `ctxt_fc_probe.out` are direct EVALs from
 `pan_to_crepProofTheory`, paired with `Flapjack.Test.PanToCrepRelationsParity`.
+The `functions_projection` row in `ctxt_fc_probe.out` directly checks the
+HOL `ctxt_fc_funcs_eq` theorem at `pan_to_crepProofScript.sml:2295` against
+the kernel-checked Lean fixture in that module.
 The `excp_rel` cases deliberately use a word-valued compiler-code map and a
 shape-valued source map, matching the definition's independent HOL value types.
 The `ctxt_fc` cases record `with_shape` slot slicing, ZIP truncation, and

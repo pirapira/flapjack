@@ -24,3 +24,7 @@ val _ = print_eval "zip_truncates_and_empty_slots"
   ``pan_to_crepProof$ctxt_fc FEMPTY FEMPTY [«x»; «ignored»] [One] []``;
 val _ = print_eval "empty_maximum"
   ``pan_to_crepProof$ctxt_fc FEMPTY FEMPTY [] [] []``;
+val _ = print_eval "functions_projection"
+  ``(pan_to_crepProof$ctxt_fc
+      (FEMPTY |+ («f», ([], One))) FEMPTY [] [] []).funcs =
+    FEMPTY |+ («f», ([], One))``;

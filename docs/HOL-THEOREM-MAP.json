@@ -621,7 +621,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "panSemCallCalleeEntryStateCodeExcpRel",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only Call-entry preservation helper: derives state_rel across source/target local replacement and matching clock decrement, while carrying the state-owned code_rel and source excp_rel unchanged. It does not derive the function-context locals_rel for bound arguments or prove the Call induction case."
+    "reviewer": "Flapjack-only Call-entry preservation helper: derives state_rel across source/target local replacement and matching clock decrement, and carries the state-owned code_rel and source excp_rel into HOL's ctxt_fc function context. It does not derive the function-context locals_rel for bound arguments or prove the Call induction case."
   },
   {
     "hol_path": null,

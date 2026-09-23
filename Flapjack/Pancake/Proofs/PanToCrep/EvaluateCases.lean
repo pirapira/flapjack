@@ -3394,8 +3394,11 @@ dispatcher. The post-state relation required by the target handler-body IH is
 now indexed by the actual source evaluator result, projected through
 `panSemCodeStateAfter`; the source run uses the state-owned code map and the
 RISC-V state-derived memory inputs. It derives that run from the source
-callee-body and handler-body premises. Target callee and relation-aware handler
-induction hypotheses are still premises, so this is a Call-case composition step, not the complete
+callee-body and handler-body premises. The target callee and relation-aware
+handler induction hypotheses each consume the corresponding source evaluator
+run before producing their target result and post-state relations. Those
+cross-evaluator induction hypotheses are still premises, so this is a
+Call-case composition step, not the complete
 `pc_compile_correct[Call_Ret_Exception]` theorem. -/
 theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
     (sourceContext : PanValueFfiContext (RiscV.Word 64))
@@ -3470,10 +3473,6 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
     (hcompiledHandlerBody : compileCodeRelProg context sourceHandlerBody = handlerBody)
     (hstate : stateRel source caller)
     (hcode : codeRel context (panSemCodeAsLookup source.code) caller.code)
-    (hcalleeState : stateRel sourceAfterCallee calleeState)
-    (hcalleeCode : codeRel context (panSemCodeAsLookup sourceAfterCallee.code)
-      calleeState.code)
-    (hexcp : excpRel context.eids sourceAfterCallee.exceptionShapes)
     (hlocals : localsRel context source.locals caller.locals)
     (hsource : FLOOKUP source.locals handlerVariableTarget = some old)
     (hvariable : FLOOKUP context.vars handlerVariableTarget =
@@ -3493,7 +3492,14 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
         .seq (expHdlFiniteMap context.vars handlerVariableTarget) handlerBody))) = true)
     (hclock : caller.clock ≠ 0)
     (hmatch : (caught == exceptionCode) = true)
-    (hcalleeIH : ∀ targetLocals,
+    (hcalleeIH : evalPanValueFfiClockCodeProg sourceContext sourcePrimitive
+      sourceHandler source.structs source.code source.exceptionShapes source.baseAddress
+      source.topAddress panSemBitVec64BytesInWord fuel calleeLocals source.globals
+      source.memory source.ffi (decPanClock source.clock) sourceBody
+      (memoryAccess := some (panSemBitVec64MemoryAccess source)) =
+      some (.control (.raised calleeRaisedLocals calleeGlobals calleeMemory calleeFfi
+        sourceException (.word value)), calleeClock) →
+      ∀ targetLocals,
       lookupCrepRuntimeCode function (arguments.flatMap panValueFlatten) caller.code =
         some (compileCodeRelProg
           (ctxtFc context.funcs context.eids
@@ -3506,8 +3512,18 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
           (ctxtFc context.funcs context.eids
             (parameters.map Prod.fst) (parameters.map Prod.snd)
             (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))))
-          sourceBody) = some (.raised exceptionCode, calleeState))
-    (hhandlerIH : sourceExpressions = expressions →
+          sourceBody) = some (.raised exceptionCode, calleeState) ∧
+      stateRel sourceAfterCallee calleeState ∧
+      codeRel context (panSemCodeAsLookup sourceAfterCallee.code) calleeState.code ∧
+      excpRel context.eids sourceAfterCallee.exceptionShapes)
+    (hhandlerIH : evalPanValueFfiClockCodeProg sourceContext sourcePrimitive
+      sourceHandler source.structs source.code source.exceptionShapes source.baseAddress
+      source.topAddress panSemBitVec64BytesInWord fuel
+      (updatePanValueMap source.locals handlerVariable (.word value))
+      calleeGlobals calleeMemory calleeFfi (min (decPanClock source.clock) calleeClock)
+      sourceHandlerBody
+      (memoryAccess := some (panSemBitVec64MemoryAccess source)) = some sourceResult →
+      sourceExpressions = expressions →
       FLOOKUP context.eids sourceException = some caught →
       handlerVariable = handlerVariableTarget →
       compileCodeRelProg context sourceHandlerBody = handlerBody →
@@ -3570,6 +3586,12 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
     { { { { source with globals := calleeGlobals } with memory := calleeMemory }
       with ffi := calleeFfi }
     with clock := min (decPanClock source.clock) calleeClock }
+  obtain ⟨targetLocals, _htargetArgs, htargetLookup⟩ :=
+    lookupCrepRuntimeCode_ofCodeRel_compiledArgs context source caller function
+      parameters sourceBody returnShape expressions arguments hstate hcode hlocals
+      hsupported hsourceArgs hentry hargumentLength
+  obtain ⟨_hcalleeTargetRun, hcalleeState, hcalleeCode, hexcp⟩ :=
+    hcalleeIH hsourceCalleeBody targetLocals htargetLookup
   obtain ⟨htarget, hstatePost, hcodePost, hexcpPost, hlocalsPost⟩ :=
     evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody_ofCodeRelArgs_postRelations
       context handler primitive source sourceAfterCallee
@@ -3578,11 +3600,13 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
       expressions arguments handlerBody calleeState handlerResult hstate hcode
       hcalleeState hcalleeCode hexcp hlocals hsource hvariable hslot hglobal
       hsupported hsourceArgs hentry hargumentLength hinfoValid hclock hmatch
-      hcalleeIH (fun payloadState hpayload hpayloadState hpayloadCode hpayloadExcp
+      (fun targetLocals hlookup =>
+        (hcalleeIH hsourceCalleeBody targetLocals hlookup).1)
+      (fun payloadState hpayload hpayloadState hpayloadCode hpayloadExcp
           hpayloadLocals =>
-        hhandlerIH hsourceExpressions hsourceExceptionCode hsourceHandlerVariable
-          hcompiledHandlerBody payloadState hpayload hpayloadState hpayloadCode
-          hpayloadExcp hpayloadLocals)
+        hhandlerIH hsourceHandlerBodyRun hsourceExpressions hsourceExceptionCode
+          hsourceHandlerVariable hcompiledHandlerBody payloadState hpayload
+          hpayloadState hpayloadCode hpayloadExcp hpayloadLocals)
   exact ⟨hsourceRun.1, htarget, hstatePost, hcodePost, hexcpPost, hlocalsPost⟩
 
 /-! Fixed-RV64 actual-state Call simulation for a matching one-word exception

@@ -4,7 +4,7 @@ Flapjack is an in-progress Lean 4 port of the formally verified Pancake
 compiler; the original HOL sources are in the [`cakeml/pancake`](cakeml/pancake)
 submodule. It has an executable RV64I compiler path for a growing subset of
 Pancake, but is not yet a complete replacement and does not yet prove
-whole-compiler correctness. Only RISC-V is in scope; see
+whole-compiler correctness. See
 [`docs/SOUNDNESS.md`](docs/SOUNDNESS.md) for assurance limits and
 [`docs/PARITY-TESTING.md`](docs/PARITY-TESTING.md) for reference comparisons.
 

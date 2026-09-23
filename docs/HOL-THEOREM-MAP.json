@@ -109,7 +109,7 @@
     "lean_path": "Flapjack/Pancake/PanLang.lean",
     "lean_name": "freeVarIds",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; clause-for-clause free_var_ids_def over the tagged expLocalVars port of var_exp, collecting local variables only and preserving order/duplicates; the Dec filter uses lawful != implementing HOL $≠; direct #guard parity in PanLangFreeVarIdsParity)."
+    "reviewer": "Codex (source comparison; clause-for-clause free_var_ids_def over the tagged expLocalVars port of var_exp, collecting local variables only and preserving order/duplicates; the Dec filter uses lawful != implementing HOL $\u2260; direct #guard parity in PanLangFreeVarIdsParity)."
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
@@ -662,6 +662,14 @@
     "lean_name": "panShapeMatches_shapeSize_eq",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only structural consequence of the recursive shape matcher; Named shapes are covered because each has size one. No standalone HOL theorem statement is claimed."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "dec_clock_def",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
+    "lean_name": "decCrepHolClock",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Exact 11-field CrepHolState clock decrement, co-located with the crepSem counterpart and used by the tagged crep_inline locals_rel_dec_clock theorem. The executable CrepRuntimeState has extra configuration fields and retains its documented untagged decCrepClock adapter."
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
@@ -3107,7 +3115,7 @@
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "statement_status": "documented_mismatch",
-    "reviewer": "Untagged: context-threading globalCompileDecsThreaded over arbitrary GlobalPassContext bytesInWord/fromNat and arbitrary [Add α]/[Mul α] with non-lawful [BEq String]; exact canonical-word-context port tracked by a dependency bead.",
+    "reviewer": "Untagged: context-threading globalCompileDecsThreaded over arbitrary GlobalPassContext bytesInWord/fromNat and arbitrary [Add \u03b1]/[Mul \u03b1] with non-lawful [BEq String]; exact canonical-word-context port tracked by a dependency bead.",
     "hol_name": "compile_decs_decls_thm",
     "lean_name": "compile_decs_decls_thm_threaded"
   },
@@ -3115,7 +3123,7 @@
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "statement_status": "documented_mismatch",
-    "reviewer": "Untagged: context-threading globalCompileDecsThreaded over arbitrary GlobalPassContext bytesInWord/fromNat and arbitrary [Add α]/[Mul α] with non-lawful [BEq String]; exact canonical-word-context port tracked by a dependency bead.",
+    "reviewer": "Untagged: context-threading globalCompileDecsThreaded over arbitrary GlobalPassContext bytesInWord/fromNat and arbitrary [Add \u03b1]/[Mul \u03b1] with non-lawful [BEq String]; exact canonical-word-context port tracked by a dependency bead.",
     "hol_name": "compile_decs_EVERY_is_function",
     "lean_name": "compile_decs_EVERY_is_function_threaded"
   },
@@ -3123,7 +3131,7 @@
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "statement_status": "documented_mismatch",
-    "reviewer": "Untagged: context-threading globalCompileDecsThreaded over arbitrary GlobalPassContext bytesInWord/fromNat and arbitrary [Add α]/[Mul α] with non-lawful [BEq String]; exact canonical-word-context port tracked by a dependency bead.",
+    "reviewer": "Untagged: context-threading globalCompileDecsThreaded over arbitrary GlobalPassContext bytesInWord/fromNat and arbitrary [Add \u03b1]/[Mul \u03b1] with non-lawful [BEq String]; exact canonical-word-context port tracked by a dependency bead.",
     "hol_name": "compile_decls_append",
     "lean_name": "compile_decls_append_threaded"
   },
@@ -3181,7 +3189,7 @@
     "lean_path": "Flapjack/Pancake/PanGlobals.lean",
     "lean_name": "freshNameHOL",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; clause-for-clause: if the candidate is MEM/∈ of names then recurse on name ++ \"'\" else return it; termination follows HOL's measure via maxNameLength, no fuel recursion; direct HOL oracle rows fresh_name_clear=«x», fresh_name_missing_empty=«», fresh_name_hit=«'''», fresh_name_seed=«vn''» match the Lean parity checks)."
+    "reviewer": "Codex (source comparison; clause-for-clause: if the candidate is MEM/\u2208 of names then recurse on name ++ \"'\" else return it; termination follows HOL's measure via maxNameLength, no fuel recursion; direct HOL oracle rows fresh_name_clear=\u00abx\u00bb, fresh_name_missing_empty=\u00ab\u00bb, fresh_name_hit=\u00ab'''\u00bb, fresh_name_seed=\u00abvn''\u00bb match the Lean parity checks)."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
@@ -3542,6 +3550,14 @@
     "lean_name": "slcTlcRw",
     "statement_status": "pending_statement_review",
     "reviewer": "Codex (reference inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "slcLookupGetElem",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only support deriving the indexed formal/argument pair responsible for a successful slc lookup; used by the Call callee-entry locals_rel proof. It does not claim call_preserve_state_code_locals_rel."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
@@ -5294,5 +5310,37 @@
     "lean_name": "flookup_setCrepHolGlobals_locals",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (exact 11-field CrepHolState port of FLOOKUP_set_globals crepPropsScript.sml:297: FLOOKUP (set_globals gv w s).locals n = FLOOKUP s.locals n, using tagged setCrepHolGlobals. The production adapter flookup_setCrepRuntimeGlobals_locals is untagged. Direct HOL oracle row set_globals_direct=(SOME (Word 22w),SOME (Word 7w),NONE) reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+    "hol_name": "state_rel_def",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "crepInlineStateRel",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (field-by-field source comparison against crep_inlineProofScript.sml; CrepHolState is the exact 11-field crepSem$state encoding, finite-map SUBMAP is represented extensionally by crepHolSubmap, and Flapjack/Test/CrepInlineRelParity.lean exercises submap/strong/dec_clock behaviour)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+    "hol_name": "locals_rel_def",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "crepInlineLocalsRel",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (field-by-field source comparison against crep_inlineProofScript.sml; CrepHolState is the exact 11-field crepSem$state encoding, finite-map SUBMAP is represented extensionally by crepHolSubmap, and Flapjack/Test/CrepInlineRelParity.lean exercises submap/strong/dec_clock behaviour)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+    "hol_name": "locals_strong_rel_def",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "crepInlineLocalsStrongRel",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (field-by-field source comparison against crep_inlineProofScript.sml; CrepHolState is the exact 11-field crepSem$state encoding, finite-map SUBMAP is represented extensionally by crepHolSubmap, and Flapjack/Test/CrepInlineRelParity.lean exercises submap/strong/dec_clock behaviour)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+    "hol_name": "locals_rel_dec_clock",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "crepInlineLocalsRel_decClock",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (field-by-field source comparison against crep_inlineProofScript.sml; CrepHolState is the exact 11-field crepSem$state encoding, finite-map SUBMAP is represented extensionally by crepHolSubmap, and Flapjack/Test/CrepInlineRelParity.lean exercises submap/strong/dec_clock behaviour)"
   }
 ]

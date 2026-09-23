@@ -5810,6 +5810,22 @@
   {
     "hol_path": null,
     "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "crepRuntimeExpHdlTwoWords",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only production target exp_hdl execution for a two-word exception payload; no standalone HOL theorem declaration"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "crepRuntimeExpHdlTwoWords_localsRel",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only two-word handler setup bridge producing the locals_rel premise for Call handler-body induction; not the enclosing HOL theorem"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "shapeSizeWithContext_fold_drop",
     "statement_status": "no_hol_reference_pending_classification",

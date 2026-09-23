@@ -75,6 +75,34 @@ def evaluateCall :=
       : PanSemEvaluateState (Word 64) Unit)
     (.call none "id" [.const (BitVec.ofNat 64 7)] : Prog (Word 64))
 
+/-! The non-clocked Call evaluator receives declaration-derived returnShapes
+through PanValueCallContracts. A malformed callee return must produce Error
+with the callee post-state, matching the direct HOL malformed-return oracle. -/
+def nonClockedBadReturnFunctions :
+    List (FunName × List VarName × Prog (Word 64)) :=
+  [("badret", ["x"], .return (.const (BitVec.ofNat 64 7)))]
+
+def nonClockedBadReturnContracts : PanValueCallContracts :=
+  PanValueCallContracts.mk
+    [("badret", .comb [.one, .one])] []
+    [("badret", [("x", .one)])]
+
+def evaluateNonClockedCallBadReturnShape :=
+  evalPanValueFfiProgramSteps statefulTestContext statefulTestPrimitive
+    statefulTestHandler [] nonClockedBadReturnFunctions
+    (BitVec.ofNat 64 0) (BitVec.ofNat 64 100) (BitVec.ofNat 64 8) 8
+    (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState
+    (.call none "badret" [.const (BitVec.ofNat 64 4)] : Prog (Word 64))
+    (contracts := some nonClockedBadReturnContracts)
+
+def observeNonClockedCallBadReturnShape : Bool :=
+  match evaluateNonClockedCallBadReturnShape with
+  | some (.error locals _ _ _, _) =>
+      match locals "x" with
+      | some (.word value) => value == BitVec.ofNat 64 4
+      | _ => false
+  | _ => false
+
 private abbrev Word64 := Word 64
 
 def emptyPanSourceState (clock : Nat)
@@ -120,6 +148,9 @@ def sourceZeroClockCallCode : PanSemCodeMap Word64 :=
 
 def sourceConstReturnCallCode : PanSemCodeMap Word64 :=
   [("constant", ([], .return (.const (BitVec.ofNat 64 7)), .one))]
+
+def sourceBadReturnShapeCallCode : PanSemCodeMap Word64 :=
+  [("badret", ([], .return (.const (BitVec.ofNat 64 7)), .comb [.one, .one]))]
 
 def sourceRaiseExceptionCallCode : PanSemCodeMap Word64 :=
   [("raiseE", ([], .raise "E" (.const (BitVec.ofNat 64 7)), .one))]
@@ -243,6 +274,20 @@ def evaluateSourceConstReturnCall :=
     (emptyPanSourceState 10 sourceConstReturnCallCode)
     (.call none "constant" [] : Prog Word64)
 
+def sourceBadReturnShapeState :=
+  { emptyPanSourceState 10 sourceBadReturnShapeCallCode with
+      locals := updatePanValueMap (fun _ => none) "caller" (.word (BitVec.ofNat 64 3)) }
+
+def evaluateSourceCallBadReturnShape :=
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler sourceBadReturnShapeState
+    (.call none "badret" [] : Prog Word64)
+
+def evaluateSourceDecCallBadReturnShape :=
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler sourceBadReturnShapeState
+    (.decCall "dest" .one "badret" [] .skip : Prog Word64)
+
 private def isSourceReturnedWord
     (result : Option (PanValueFfiClockResult Word64 Unit))
     (expected : Word64) (expectedClock : Nat) : Bool :=
@@ -331,6 +376,22 @@ def observeSourceZeroClockCallTimeout : Bool :=
 def observeSourceConstReturnCall := isSourceReturnedWord
   evaluateSourceConstReturnCall (BitVec.ofNat 64 7) 9
 
+def observeSourceCallBadReturnShape : Bool :=
+  match evaluateSourceCallBadReturnShape with
+  | some (.control (.error locals _ _ _), clock) =>
+      match locals "caller" with
+      | none => clock == 9
+      | some _ => false
+  | _ => false
+
+def observeSourceDecCallBadReturnShape : Bool :=
+  match evaluateSourceDecCallBadReturnShape with
+  | some (.control (.error locals _ _ _), clock) =>
+      match locals "caller" with
+      | none => clock == 9
+      | some _ => false
+  | _ => false
+
 #guard observeSourceCodeCall
 #guard observeSourceCallStructArgument
 #guard observeSourceCallFirstRecordField
@@ -346,6 +407,8 @@ def observeSourceConstReturnCall := isSourceReturnedWord
 #guard observeSourceRecursiveDecCallTimeout
 #guard observeSourceZeroClockCallTimeout
 #guard observeSourceConstReturnCall
+#guard observeSourceCallBadReturnShape
+#guard observeSourceDecCallBadReturnShape
 
 /-! The fixed-width branches must go through the explicit source memory model.
     This is the stateful evaluator path corresponding to
@@ -646,6 +709,7 @@ def observeShMemStoreDomainFailure : Bool :=
 #guard observeShMemLoadUnbound
 #guard observeShMemLoadDomainFailure
 #guard observeShMemStoreDomainFailure
+#guard observeNonClockedCallBadReturnShape
 
 def runChecks : IO Bool := do
   if observeSkip then IO.println "PASS evaluate skip" else IO.println "FAIL evaluate skip"
@@ -686,6 +750,15 @@ def runChecks : IO Bool := do
     IO.println "FAIL state-owned Call with a nonempty code map times out at zero clock and clears locals"
   if observeSourceConstReturnCall then IO.println "PASS zero-argument state-owned Call returns its code-map word constant" else
     IO.println "FAIL zero-argument state-owned Call returns its code-map word constant"
+  if observeSourceCallBadReturnShape then
+    IO.println "PASS state-owned Call returns HOL Error and callee state on return-shape mismatch"
+  else IO.println "FAIL state-owned Call returns HOL Error and callee state on return-shape mismatch"
+  if observeSourceDecCallBadReturnShape then
+    IO.println "PASS state-owned DecCall returns HOL Error and callee state on return-shape mismatch"
+  else IO.println "FAIL state-owned DecCall returns HOL Error and callee state on return-shape mismatch"
+  if observeNonClockedCallBadReturnShape then
+    IO.println "PASS non-clocked Call returns Error with callee post-state on return-shape mismatch"
+  else IO.println "FAIL non-clocked Call returns Error with callee post-state on return-shape mismatch"
   if observeNestedRaise then IO.println "PASS evaluate nested structured raise" else
     IO.println "FAIL evaluate nested structured raise"
   if observeFixedLoads then IO.println "PASS evaluate fixed-width loads" else
@@ -722,6 +795,7 @@ def runChecks : IO Bool := do
     observeSourceCodePreservedAfterRecursion &&
     observeSourceRecursiveCallTimeout && observeSourceRecursiveDecCallTimeout &&
     observeSourceZeroClockCallTimeout && observeSourceConstReturnCall &&
+    observeSourceCallBadReturnShape && observeSourceDecCallBadReturnShape &&
     observeNestedRaise &&
     observeFixedLoads && observeFixedLoadDomainFailure &&
     observeExactProgramMemoryAccess && observeExactProgramDomainFailure &&

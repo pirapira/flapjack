@@ -739,12 +739,22 @@ theorem sizeOfEids_structCompileTop (declarations : List (Decl α)) :
   exact sizeOfEids_structCompileDecls declarations
     (structGetNames { structs := [], locals := [], globals := [] } declarations)
 
+/-! Counterpart of Cake's `resort_decls_def` (`pan_globalsScript.sml:179`):
+    declarations are regrouped as names, exceptions, value declarations, and
+    functions, in that order.  `globalDeclIsName`/`globalDeclIsException`/
+    `globalDeclIsGlobal`/`globalDeclIsFunction` are the HOL `is_name`/
+    `is_exn_decl`/`is_decl`/`is_function` predicates. -/
+@[hol "cakeml/pancake/pan_globalsScript.sml" "resort_decls_def"]
 def globalResortDecls (declarations : List (Decl α)) : List (Decl α) :=
   globalDeclsFilter globalDeclIsName declarations ++
     globalDeclsFilter globalDeclIsException declarations ++
     globalDeclsFilter globalDeclIsGlobal declarations ++
     globalDeclsFilter globalDeclIsFunction declarations
 
+/-! Counterpart of Cake's `new_main_name_def` (`pan_globalsScript.sml:224`):
+    the synthesized entry-point name is `fresh_name "main"` over the current
+    function names (`globalFunctionNames` is `MAP FST` of the function table). -/
+@[hol "cakeml/pancake/pan_globalsScript.sml" "new_main_name_def"]
 def globalNewMainName [BEq String] (declarations : List (Decl α)) : FunName :=
   globalFreshName "main" (globalFunctionNames declarations)
 
@@ -756,6 +766,10 @@ theorem globalNewMainName_not_mem [BEq String] [LawfulBEq String]
     globalNewMainName declarations ∉ globalFunctionNames declarations :=
   globalFreshName_not_mem "main" (globalFunctionNames declarations)
 
+/-! Counterpart of Cake's `dec_shapes_def` (`pan_globalsScript.sml:228`): the
+    shape projection skips function, name, and exception declarations and
+    keeps the shape of each value declaration, in order. -/
+@[hol "cakeml/pancake/pan_globalsScript.sml" "dec_shapes_def"]
 def globalDeclShapes : List (Decl α) → List Shape
   | [] => []
   | .function _ :: declarations => globalDeclShapes declarations

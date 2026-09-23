@@ -912,6 +912,24 @@ def holFiniteWordRiscVMemoryModel {ι : Type u}
     (holWordToBitVec dimension)
     (RiscV.panRiscVMemoryModelForEndian bigEndian)
 
+/-! HOL's imported `byte_align_def` uses `align (LOG2 (dimindex DIV 8))`.
+    This source-shaped BitVec operation clears the low bits selected by that
+    exponent. It is kept separate from production RISC-V, which rounds by the
+    supplied bytes-in-word value; those coincide for the RISC-V 32/64-bit
+    widths but differ for some other dimensions (for example 24 bits). -/
+def holByteAlignBitVec [NeZero width] (address : BitVec width) : BitVec width :=
+  let alignment := 2 ^ Nat.log2 (width / 8)
+  BitVec.ofNat width ((address.toNat / alignment) * alignment)
+
+/-- A load model with HOL's dimension-derived byte alignment and the existing
+    RISC-V byte extraction, alignment, and word-of-bytes operations. This is
+    only the first operation-level bridge: the remaining imported word
+    primitives still require a generic correspondence proof. -/
+def holByteAlignedRiscVMemoryModel [NeZero width] (bigEndian : Bool) :
+    PanMemoryModel (RiscV.Word width) :=
+  let model := RiscV.panRiscVMemoryModelForEndian bigEndian
+  { model with byteAlign := fun _ address => holByteAlignBitVec address }
+
 def CrepHolState.toHolFiniteBitVecState {ι : Type}
     (dimension : HolFiniteDimension ι)
     (state : CrepHolState (ι → Bool) σ) :

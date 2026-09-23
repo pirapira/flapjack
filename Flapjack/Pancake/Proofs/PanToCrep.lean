@@ -55,12 +55,14 @@ def ctxtFc
     The source Pancake state and target Crepe state agree on their memory
     domains, clock, endianness, FFI state, and address bounds; the source has
     no struct context (`s.structs = []`) and no globals (`s.globals = FEMPTY`).
-    `word_lab` is a single-constructor type, so the Pancake memory's `PanValue`
-    cells project to the target's raw word cells through `panValueWordMemory`
-    (`Flapjack/PanValues.lean:75`) with no information loss. -/
+    `word_lab` is a single-constructor type, so the target's raw word cells
+    reconstruct the source `PanValue` cells with `PanValue.word`; a source cell
+    that stored a structure could not be recovered from the target memory and
+    therefore does not satisfy the relation. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "state_rel_def"]
 def stateRel (s : PanSemState α (FfiState σ)) (t : CrepRuntimeState α σ) : Prop :=
-  panValueWordMemory s.memory = t.memory ∧ s.memaddrs = t.memaddrs ∧
+  s.memory = (fun address => (t.memory address).map PanValue.word) ∧
+    s.memaddrs = t.memaddrs ∧
     s.sharedMemaddrs = t.shMemaddrs ∧ s.structs = [] ∧
     s.globals = (FEMPTY : FiniteMap VarName (PanValue α)) ∧
     s.clock = t.clock ∧ s.be = t.bigEndian ∧ s.ffi = t.ffi ∧

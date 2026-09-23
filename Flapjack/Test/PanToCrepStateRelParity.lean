@@ -49,10 +49,13 @@ def targetState : CrepRuntimeState Nat Unit :=
 def nonEmptyGlobalsSourceState : PanSemState Nat (FfiState Unit) :=
   { sourceState with globals := fun _ => some (.word 0) }
 
+def structMemorySourceState : PanSemState Nat (FfiState Unit) :=
+  { sourceState with memory := fun _ => some (.rStruct []) }
+
 theorem stateRel_satisfied : stateRel sourceState targetState := by
   refine ⟨?_, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
   funext address
-  simp [sourceState, targetState, noPanValueCells, noNatCells, panValueWordMemory]
+  simp [sourceState, targetState, noPanValueCells, noNatCells]
 
 theorem stateRel_structs_fixture : sourceState.structs = [] :=
   stateRel_structs sourceState targetState stateRel_satisfied
@@ -67,6 +70,12 @@ theorem rejectsNonEmptyGlobals :
   have hglobals := stateRel_globals nonEmptyGlobalsSourceState targetState hrel
   have h0 := congrFun hglobals "x"
   simp [nonEmptyGlobalsSourceState, sourceState, FEMPTY] at h0
+
+theorem rejectsStructMemory :
+    ¬ stateRel structMemorySourceState targetState := by
+  intro hrel
+  have h0 := congrFun hrel.1 0
+  simp [structMemorySourceState, sourceState, targetState, noNatCells] at h0
 
 def oneVarContext : PanToCrepProofContext Nat :=
   { vars := FUPDATE FEMPTY ("x", (Shape.one, [0]))
@@ -146,6 +155,7 @@ def runChecks : IO Bool := do
     ("HOL state_rel satisfying fixture", true),
     ("HOL state_rel_structs and state_rel_globals", true),
     ("HOL state_rel rejects nonempty globals", true),
+    ("HOL state_rel rejects struct-valued memory", true),
     ("HOL locals_rel satisfying fixture", contextVarGuard && localMapGuard),
     ("HOL locals_rel rejects unmapped local", true)]
   for (name, passed) in checks do

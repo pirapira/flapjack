@@ -1052,15 +1052,16 @@ theorem crepRuntimeExtCallValues_stateRel_error
   crepRuntimeExtCallValues_target_error base function configuration
     configurationLength array arrayLength h
 
-/-- Source/target target-evaluation simulation step for `ExtCall` on the canonical
+/-- Source/target dispatch equation for `ExtCall` on the canonical
     RISC-V 64 target.  Given `stateRel source (riscv64CrepRuntimeTarget base)` and
     both argument reads, the production `crepRuntimeExtCallValues` step follows
     the Lean `callFfi` (HOL `call_FFI`) on the *source* ffi state: `FFI_return`
     yields `Normal` with the returned bytes written back and the returned ffi
     installed on the target, while `FFI_final` yields `FinalFFI` unchanged.  The
-    updated source and target states stay related by `stateRel_ffiUpdate`.  The
+    separate `stateRel_ffiUpdate` lemma covers an ffi-only update; this theorem
+    does not yet establish `stateRel` after returned bytes modify memory. The
     failing-read case is `crepRuntimeExtCallValues_stateRel_error`, so the two
-    together cover every production `ExtCall` outcome. -/
+    equations cover every production `ExtCall` dispatch outcome. -/
 theorem crepRuntimeExtCallValues_stateRel_dispatch
     (source : PanSemState (RiscV.Word 64) (FfiState σ))
     (base : CrepRuntimeState (RiscV.Word 64) σ) (function : FunName)

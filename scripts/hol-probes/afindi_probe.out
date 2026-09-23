@@ -1,11 +1,7 @@
 empty=NONE
-
 first=SOME 0
-
 middle=SOME 1
-
 last=SOME 2
-
 missing=NONE
-
 duplicate_first=SOME 0
+wf_shape_drop=T

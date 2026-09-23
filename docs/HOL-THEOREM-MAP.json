@@ -2409,6 +2409,22 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "is_wf_shape_drop",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "isWfShape_drop",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source premise/conclusion comparison with direct HOL-EVAL and Lean suffix fixture)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "lookupInfo_isSome_drop",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Support lemma used by isWfShape_drop and PanValues; not a ported HOL declaration"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "afindi_append",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "afindi_append",
@@ -3379,6 +3395,22 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panSemEvaluateRiscV64CodeState_callAssignParameter_ofEntry",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (fixed-RV64 state-owned assigned Call evaluator case; untagged)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panToCrepPcCompileCorrectCallAssignParameterCodeStateRiscV64",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (fixed-RV64 actual-state assigned Call induction case; untagged)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "panToCrepPcCompileCorrectSkipCodeStateRiscV64",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Codex (fixed-RV64 actual-state Skip case specialization; untagged)"
@@ -3470,5 +3502,29 @@
     "lean_name": "structCompileExps_eq_map",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison with direct HOL-EVAL list fixture)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "crepRuntimeStore_eq_some_of_memaddrs_true",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "crepRuntimeStore_eq_none_of_memaddrs_false",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "crepMemoryRel_store",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "flapjack-deepseek (source comparison)"
   }
 ]

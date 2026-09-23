@@ -11,7 +11,7 @@ namespace Flapjack.Test.CrepLocalsWordLabParity
 
 open Flapjack
 
-def noNatMemory : Nat → Option Nat := fun _ => none
+def noNatMemory : Nat → PanWordLab Nat := fun _ => .word 0
 def noNatDomain : Nat → Bool := fun _ => false
 
 /-- Base state with an empty local map, matching the probe's `s with locals :=

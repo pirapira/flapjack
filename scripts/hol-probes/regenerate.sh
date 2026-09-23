@@ -493,7 +493,7 @@ run_probe crep_simp_exp_probeScript.sml crep_simp_exp_probe.out \
 run_probe crep_simp_prog_probeScript.sml crep_simp_prog_probe.out \
   assign unchanged "$cake_dir/pancake/crep_arithScript.sml"
 run_probe afindi_probeScript.sml afindi_probe.out \
-  empty duplicate_first "$cake_dir/pancake/pan_structsScript.sml"
+  empty duplicate_first wf_shape_drop "$cake_dir/pancake/pan_structsScript.sml"
 run_probe pan_structs_compile_exp_probeScript.sml pan_structs_compile_exp_probe.out \
   rstruct old_shapes_map "$cake_dir/pancake/pan_structsScript.sml"
 run_probe crep_semantics_probeScript.sml crep_semantics_probe.out \
@@ -523,6 +523,10 @@ run_probe crep_replicate_const_probeScript.sml crep_replicate_const_probe.out \
 # memaddrs guard on both mem_load and eval (Load ...).
 run_probe crep_mem_load_probeScript.sml crep_mem_load_probe.out \
   mem_load_valid eval_load_invalid \
+  "$cake_dir/pancake/semantics/crepSemScript.sml" \
+  "$cake_dir/pancake/semantics"
+run_probe crep_mem_store_probeScript.sml crep_mem_store_probe.out \
+  mem_store_valid_lookup mem_store_invalid \
   "$cake_dir/pancake/semantics/crepSemScript.sml" \
   "$cake_dir/pancake/semantics"
 run_probe prog_if_probeScript.sml prog_if_probe.out \

@@ -3544,6 +3544,14 @@
     "reviewer": "Codex (reference inventory)"
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "slcLookupGetElem",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only support deriving the indexed formal/argument pair responsible for a successful slc lookup; used by the Call callee-entry locals_rel proof. It does not claim call_preserve_state_code_locals_rel."
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
     "hol_name": "state_rel_def",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",

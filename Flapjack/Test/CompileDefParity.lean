@@ -99,8 +99,7 @@ def isRiscv64PairLoad : CrepProg (BitVec 64) → Bool
       stride == (8 : BitVec 64)
   | _ => false
 
-example : isRiscv64PairLoad (compileProgRiscV riscv64PairContext riscv64PairLoad) = true := by
-  native_decide
+#guard isRiscv64PairLoad (compileProgRiscV riscv64PairContext riscv64PairLoad)
 
 def isRiscv64PairStore : CrepProg (BitVec 64) → Bool
   | .dec 3 (.var 0) (.dec 4 (.var 1) (.dec 5 (.var 2)
@@ -109,9 +108,8 @@ def isRiscv64PairStore : CrepProg (BitVec 64) → Bool
       stride == (8 : BitVec 64)
   | _ => false
 
-example : isRiscv64PairStore
-    (compileProgRiscV riscv64PairContext riscv64PairStore) = true := by
-  native_decide
+#guard isRiscv64PairStore
+  (compileProgRiscV riscv64PairContext riscv64PairStore)
 
 def pairStore : Prog Nat :=
   .store (.var .local "p") (.rStruct [.var .local "x", .var .local "y"])

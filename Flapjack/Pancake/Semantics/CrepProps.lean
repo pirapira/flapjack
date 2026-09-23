@@ -18,7 +18,10 @@ universe u
     `crepSem.eval`, whose `Var` case is `FLOOKUP s.locals v`. The Lean source-
     path evaluator's variable equation is stated explicitly by
     `crepSemEvalExp_var`; therefore HOL `OPT_MMAP` translates directly to
-    `List.mapM` over the same local lookup. -/
+    `List.mapM` over the same local lookup. This uses the HOL-mirrored
+    `CrepSem` runtime evaluator, not the legacy compatibility evaluator
+    `evalCrepFullExpState`; every expression evaluated by this theorem is a
+    `Var`, so the explicit variable equation is the relevant semantic case. -/
 @[hol "cakeml/pancake/semantics/crepPropsScript.sml" "lookup_locals_eq_map_vars"]
 theorem lookup_locals_eq_map_vars
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]

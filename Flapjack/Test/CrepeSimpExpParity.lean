@@ -34,6 +34,8 @@ example :
   encode_decode := by decide
   decode_encode := by decide
 
+local instance : HolFiniteDimension Bool := boolWordDimension
+
 def boolDimensionWord : Bool → Bool := id
 
 example : bitVecToHolWord boolWordDimension
@@ -57,6 +59,39 @@ def boolDimensionSimplifyHasExpectedShift : Bool :=
   | _ => false
 
 #guard boolDimensionSimplifyHasExpectedShift
+
+def boolDimensionHolState : CrepHolState (Bool → Bool) Unit where
+  locals := fun name => if name == 0 then some (.word boolDimensionWord) else none
+  globals := fun address => if address == 0 then some (.word boolDimensionWord) else none
+  code := fun _ => none
+  memory := fun _ => .word boolDimensionWord
+  memaddrs := fun _ => true
+  shMemaddrs := fun _ => false
+  clock := 10
+  bigEndian := false
+  ffi := natCrepRuntimeFfiState
+  baseAddress := boolDimensionWord
+  topAddress := boolDimensionWord
+
+#guard evalCrepRuntimeExp
+    (boolDimensionHolState.toHolFiniteWordRuntime boolWordDimension) (.var 0) ==
+      some boolDimensionWord
+#guard evalCrepRuntimeExp
+    (boolDimensionHolState.toHolFiniteWordRuntime boolWordDimension) (.loadGlob 0) ==
+      some boolDimensionWord
+
+example :
+    evalCrepRuntimeExp
+        (boolDimensionHolState.toHolFiniteWordRuntime boolWordDimension) (.var 0) =
+      evalCrepHolFiniteDimensionExp boolWordDimension boolDimensionHolState (.var 0) :=
+  evalCrepRuntimeExp_finiteDimension_var boolWordDimension boolDimensionHolState 0
+
+example :
+    evalCrepRuntimeExp
+        (boolDimensionHolState.toHolFiniteWordRuntime boolWordDimension) (.loadGlob 0) =
+      evalCrepHolFiniteDimensionExp boolWordDimension boolDimensionHolState (.loadGlob 0) :=
+  evalCrepRuntimeExp_finiteDimension_loadGlob
+    boolWordDimension boolDimensionHolState 0
 
 #guard crepSimpExp (fun value => bitVecToHolWordBits (BitVec.ofNat 4 value))
     (.crepOp .mul [.var 2, .const (bitVecToHolWordBits (BitVec.ofNat 4 2))]) ==

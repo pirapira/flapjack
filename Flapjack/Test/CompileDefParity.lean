@@ -80,6 +80,39 @@ def missingNamesHOLContext : PanToCrepHOLContext Nat :=
 def pairLoad : Prog Nat :=
   .return (.load (.comb [.one, .one]) (.var .local "p"))
 
+def riscv64PairContext : PanToCrepHOLContext (BitVec 64) :=
+  { vars := FUPDATE_LIST FEMPTY
+      [("p", (.one, [0])), ("x", (.one, [1])), ("y", (.one, [2]))]
+    funcs := FEMPTY
+    eids := FEMPTY
+    vmax := 2 }
+
+def riscv64PairLoad : Prog (BitVec 64) :=
+  .return (.load (.comb [.one, .one]) (.var .local "p"))
+
+def riscv64PairStore : Prog (BitVec 64) :=
+  .store (.var .local "p") (.rStruct [.var .local "x", .var .local "y"])
+
+
+def isRiscv64PairLoad : CrepProg (BitVec 64) → Bool
+  | .return [.load (.var 0), .load (.op .add [.var 0, .const stride])] =>
+      stride == (8 : BitVec 64)
+  | _ => false
+
+example : isRiscv64PairLoad (compileProgRiscV riscv64PairContext riscv64PairLoad) = true := by
+  native_decide
+
+def isRiscv64PairStore : CrepProg (BitVec 64) → Bool
+  | .dec 3 (.var 0) (.dec 4 (.var 1) (.dec 5 (.var 2)
+      (.seq (.store (.var 3) (.var 4))
+        (.seq (.store (.op .add [.var 3, .const stride]) (.var 5)) .skip)))) =>
+      stride == (8 : BitVec 64)
+  | _ => false
+
+example : isRiscv64PairStore
+    (compileProgRiscV riscv64PairContext riscv64PairStore) = true := by
+  native_decide
+
 def pairStore : Prog Nat :=
   .store (.var .local "p") (.rStruct [.var .local "x", .var .local "y"])
 

@@ -894,8 +894,8 @@ theorem evalPanValueFfiClockLeaf_return_var
         baseAddress topAddress bytesInWord clock locals globals memory ffi
         (.return (.var .local name)) ma c mh =
       some (.control (.returned (fun _ => none) globals memory ffi [value]), clock) := by
-  simp [evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps, evalPanValueExpCounted,
-    evalPanValueExp, hlookup, hwithin]
+  simp [evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps, panValueReturnResult,
+    evalPanValueExpCounted, evalPanValueExp, hlookup, hwithin]
 
 /-- Fusion of the `pan_simp` tail-call pattern.  When a call whose return value
     is stored in local `returnName` returns normally, the sequence
@@ -2298,7 +2298,7 @@ theorem evalPanValueFfiClockCall_returned_no_destination_of_functions
       memory ffi (decPanClock clock) values (Nat.le_refl (progSize body))
   exact ⟨finalGlobals, finalMemory, finalFfi, finalClock,
     by
-      simp [evalPanValueFfiClockCall, hargs, hlookup, hbind, hclock, hbody, hparams,
+      simp [evalPanValueFfiClockCall, panValueCallTarget, hargs, hlookup, hbind, hclock, hbody, hparams,
         hreturn, hwithin]⟩
 
 /-- Program-level form of general call adequacy: the `Call` node itself costs
@@ -2650,7 +2650,7 @@ theorem evalPanValueFfiClockCall_raised_no_handler_of_functions
       memory ffi (decPanClock clock) (Nat.le_refl (progSize body))
   exact ⟨exception, value, finalGlobals, finalMemory, finalFfi, finalClock,
     by
-      simp [evalPanValueFfiClockCall, hargs, hlookup, hbind, hclock, hbody, hparams,
+      simp [evalPanValueFfiClockCall, panValueCallTarget, hargs, hlookup, hbind, hclock, hbody, hparams,
         hexceptionValid, hwithin]⟩
 
 /-- Program-level form of uncaught-exception call adequacy: the `Call` node costs
@@ -2764,7 +2764,7 @@ theorem evalPanValueFfiClockCall_finalFfi_of_functions
       memory ffi (decPanClock clock) (Nat.le_refl (progSize body))
   exact ⟨finalGlobals, finalMemory, finalFfi, event, finalClock,
     by
-      simp [evalPanValueFfiClockCall, hargs, hlookup, hbind, hclock, hbody,
+      simp [evalPanValueFfiClockCall, panValueCallTarget, hargs, hlookup, hbind, hclock, hbody,
         hparams]⟩
 
 /-- Program-level form of terminal-FFI call adequacy: the `Call` node costs one
@@ -2915,7 +2915,7 @@ theorem evalPanValueFfiClockCall_caught_handler_of_functions
       (Nat.le_max_right _ _)
   exact ⟨outcome, finalClock,
     by
-      simp [evalPanValueFfiClockCall, hargs, hlookup, hbind, hclock, hbody, hcaught,
+      simp [evalPanValueFfiClockCall, panValueCallTarget, hargs, hlookup, hbind, hclock, hbody, hcaught,
         hparams, hvalid, hhandlerEval, hwithin, hexceptionValid]⟩
 
 /-- Program-level form of caught-handler adequacy: the `Call` node costs one
@@ -3049,7 +3049,7 @@ theorem evalPanValueFfiClockCall_caught_handler_normal_of_functions
       (Nat.le_max_right _ _)
   exact ⟨finalLocals, finalGlobals, finalMemory, finalFfi, finalClock,
     by
-      simp [evalPanValueFfiClockCall, hargs, hlookup, hbind, hclock, hbody, hcaught,
+      simp [evalPanValueFfiClockCall, panValueCallTarget, hargs, hlookup, hbind, hclock, hbody, hcaught,
         hparams, hvalid, hhandlerEval, hwithin, hexceptionValid]⟩
 
 /-- Program-level form of the normal-handler caught-call adequacy. -/

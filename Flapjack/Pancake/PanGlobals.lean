@@ -1426,11 +1426,16 @@ theorem globalCompileDecsThreaded_append [BEq String] [Add α] [Mul α]
           simp only [List.cons_append, globalCompileDecsThreaded]
           rw [ih context]
 
-/-! HOL-shaped context for `pan_globals$compile_decs_def`
-    (`pan_globalsScript.sml:1-9`): exactly HOL's three fields over a `width`-bit
-    word. HOL fixes `bytes_in_word = n2w (dimindex DIV 8)` and the numeral
-    conversion `n2w`; Flapjack's generalized `GlobalPassContext` exposes those
-    as fields, so `toPass` pins them to those HOL choices. -/
+/-! FLAPJACK-SPECIFIC (not an exact HOL port). HOL-shaped context for
+    `pan_globals$compile_decs_def` (`pan_globalsScript.sml:1-9`): the three HOL
+    fields `globals`/`globals_size`/`max_globals_size` over a `width`-bit word.
+    HOL fixes `bytes_in_word = n2w (dimindex DIV 8)` and the numeral conversion
+    `n2w`; `toPass` pins Flapjack's generalized `GlobalPassContext` fields to
+    those choices.  Two representational gaps keep this from being exact: HOL
+    `globals` is an extensional finite map (`varname |-> shape # 'a word`) while
+    this field is an `InfoMap` list with list-sensitive equality, and
+    `width : Nat` admits `width = 0` whereas HOL `dimindex` is positive.  See
+    bead `flapjack-pxn.18.5.2.20.1.1`. -/
 structure CakeContext (width : Nat) where
   globals : List (String × (Shape × BitVec width))
   globalsSize : BitVec width
@@ -1467,11 +1472,16 @@ structure CakeCompileDecsResult (width : Nat) where
   exceptions : List (Decl (BitVec width))
   context : CakeContext width
 
-/-- Exact-shaped `pan_globals$compile_decs_def` (`pan_globalsScript.sml:160-176`)
-    over the HOL-shaped `CakeContext`: the pass context is threaded through the
-    declaration list, so a function body is compiled under the context as of its
-    own position. This is an intermediate exact port; production
-    `globalCompileDecs` is switched over in `flapjack-pxn.18.5.2.20.2`. -/
+/-- FLAPJACK-SPECIFIC (not an exact HOL port). Structural context-threading
+    `compile_decs` over `CakeContext`, with the clause shapes of HOL
+    `pan_globals$compile_decs_def` (`pan_globalsScript.sml:160-176`): a function
+    body is compiled under the context as of its own position.  The `@[hol]` tag
+    is withheld because exactness is not established: the function/expression
+    compilers used here are the untagged Flapjack `globalCompileProg`/
+    `globalCompileExp`, not proved clause-for-clause against HOL
+    `pan_globals$compile`/`compile_exp`; `CakeContext.globals` is a list rather
+    than an extensional finite map; and `width = 0` is admitted.  See bead
+    `flapjack-pxn.18.5.2.20.1.1`. -/
 def compileDecsCake {width : Nat} (context : CakeContext width) :
     List (Decl (BitVec width)) → CakeCompileDecsResult width
   | [] => { initializers := [], functions := [], exceptions := [], context := context }

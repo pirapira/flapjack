@@ -98,9 +98,10 @@ theorem threadedAppend :
         context := second.context } :=
   compile_decls_append_threaded compileContext functionBeforeDecl [.exnDecl "E" .one]
 
-/-! Canonical HOL-shaped context fixtures. These use `CakeContext 8` (exactly
-    HOL's `globals`, `globals_size`, `max_globals_size` over 8-bit words) and
-    mirror the direct original-HOL rows in
+/-! Canonical HOL-shaped context fixtures (untagged Flapjack-only structural
+    lemmas; see bead `flapjack-pxn.18.5.2.20.1.1`). These use `CakeContext 8`
+    (HOL's `globals`, `globals_size`, `max_globals_size` fields over 8-bit words)
+    and mirror the direct original-HOL rows in
     `scripts/hol-probes/pan_globals_compile_decs_probe.out`. -/
 
 /-- The canonical HOL-shaped context over 8-bit words. -/

@@ -715,13 +715,17 @@ theorem compile_decls_append_threaded [BEq String] [Add α] [Mul α]
         context := second.context } :=
   globalCompileDecsThreaded_append context decs rest
 
-/-- Exact-shaped port of Cake's `compile_decs_decls_thm`
-    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1967`) over the
-    HOL-shaped `CakeContext` (globals, globals_size, max_globals_size). The
-    context fixes `bytes_in_word` and the numeral conversion to their HOL values
-    for a `width`-bit word, and `[LawfulBEq String]` makes the name test reflect
-    HOL's `=`. -/
-@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "compile_decs_decls_thm"]
+/-- FLAPJACK-SPECIFIC (not an exact HOL port). The `funs = []` result for
+    `compileDecsCake`, with the shape of Cake's `compile_decs_decls_thm`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1967`).  The `@[hol]` tag
+    is withheld pending an exactness review of the underlying representation:
+    `compileDecsCake` composes the untagged Flapjack
+    `globalCompileProg`/`globalCompileExp`, which are not proved to implement
+    every HOL `pan_globals$compile`/`compile_exp` clause and side condition;
+    `CakeContext.globals` is an `InfoMap` list with list-sensitive equality
+    rather than HOL's extensional finite map; and `width : Nat` admits
+    `width = 0`, whereas HOL `dimindex` is positive.  Tracked by bead
+    `flapjack-pxn.18.5.2.20.1.1`. -/
 theorem compile_decs_decls_thm_cake [LawfulBEq String] {width : Nat}
     (context : CakeContext width) (code : List (Decl (BitVec width)))
     (decls : List (Prog (BitVec width))) (funs exns : List (Decl (BitVec width)))
@@ -736,11 +740,12 @@ theorem compile_decs_decls_thm_cake [LawfulBEq String] {width : Nat}
   rw [hfuns]
   exact compileDecsCake_functions_eq_nil_of_no_functions code context hnone
 
-/-- Exact-shaped port of Cake's `compile_decs_EVERY_is_function`
-    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1977`) over the
-    HOL-shaped `CakeContext`; see `compile_decs_decls_thm_cake` for the
-    canonical word/equality conditions. -/
-@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "compile_decs_EVERY_is_function"]
+/-- FLAPJACK-SPECIFIC (not an exact HOL port). The `EVERY is_function` result
+    for `compileDecsCake`, with the shape of Cake's
+    `compile_decs_EVERY_is_function`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1977`).  Untagged for the
+    same representation/definition reasons as `compile_decs_decls_thm_cake`; see
+    bead `flapjack-pxn.18.5.2.20.1.1`. -/
 theorem compile_decs_EVERY_is_function_cake [LawfulBEq String] {width : Nat}
     (context : CakeContext width) (code : List (Decl (BitVec width)))
     (decls : List (Prog (BitVec width))) (funs exns : List (Decl (BitVec width)))
@@ -754,11 +759,12 @@ theorem compile_decs_EVERY_is_function_cake [LawfulBEq String] {width : Nat}
   rw [hfuns]
   exact compileDecsCake_functions_all_isFunction context code
 
-/-- Exact-shaped port of Cake's `compile_decls_append`
-    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1997`) over the
-    HOL-shaped `CakeContext`: the second declaration list runs under the context
-    reached by the first, and the three output lists append. -/
-@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "compile_decls_append"]
+/-- FLAPJACK-SPECIFIC (not an exact HOL port). The append/context-threading law
+    for `compileDecsCake`, with the shape of Cake's `compile_decls_append`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1997`): the second list
+    runs under the context reached by the first and the output lists append.
+    Untagged for the same representation/definition reasons as
+    `compile_decs_decls_thm_cake`; see bead `flapjack-pxn.18.5.2.20.1.1`. -/
 theorem compile_decls_append_cake [LawfulBEq String] {width : Nat}
     (context : CakeContext width) (decs rest : List (Decl (BitVec width))) :
     compileDecsCake context (decs ++ rest) =

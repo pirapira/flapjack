@@ -161,6 +161,50 @@ theorem isWfShapeNil_length_flatten (value : PanValue α) (words : List α)
     rw [hpositive hpos]
     exact panValueFlatten_length_eq_shapeSize value hwf
 
+/-- Flapjack-specific word-stripped form of `evaluateReplicateConst`: the
+    production evaluator returns the bare word carried by a `word_lab` cell, so
+    this helper serves only to drive the tagged HOL-shaped statement below. It
+    is not a HOL port (HOL's `eval` returns `Word 0w`; see
+    `evaluateReplicateConst`). -/
+theorem evalCrepRuntimeExps_replicate_const
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (count : Nat) (state : CrepRuntimeState α σ) :
+    evalCrepRuntimeExps state (List.replicate count (.const (0 : α))) =
+      some (List.replicate count (0 : α)) := by
+  induction count with
+  | zero => simp [evalCrepRuntimeExps]
+  | succ count ih =>
+      simp [List.replicate_succ, evalCrepRuntimeExps, evalCrepRuntimeExp, ih]
+
+/-- Faithful port of Cake `pan_to_crepProof$evaluate_replicate_const`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:3051`):
+
+      !n s. OPT_MMAP (eval s) (REPLICATE n (Const 0w)) = SOME (REPLICATE n (Word 0w))
+
+    It is stated over the production runtime evaluator `evalCrepRuntimeExps`
+    (which calls `evalCrepRuntimeExp`, over the HOL-shaped `word_lab` locals
+    aligned in bead `.18.4.3.41`).  The production evaluator returns the bare
+    word carried by a `word_lab` cell, so HOL's `word_lab` values are recovered
+    by `List.map PanWordLab.word`, which is total and injective because
+    `word_lab` has the single constructor `Word`; the right-hand side therefore
+    has HOL's exact `Word 0w` shape.  The oracle is
+    `scripts/hol-probes/crep_replicate_const_probe.out`. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "evaluate_replicate_const"]
+theorem evaluateReplicateConst
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (count : Nat) (state : CrepRuntimeState α σ) :
+    (evalCrepRuntimeExps state (List.replicate count (.const (0 : α)))).map
+        (fun values => values.map PanWordLab.word) =
+      some (List.replicate count (.word (0 : α))) := by
+  rw [evalCrepRuntimeExps_replicate_const]
+  simp [List.map_replicate]
+
 /-! Local support for `MAP_SOME_MEM_lemma`, kept in its HOL counterpart
     module. This drops the source theorem's unused Nat witness; the exact
     tagged theorem below restores that witness in its original position. -/

@@ -44,6 +44,22 @@ theorem flattenNilNoSize (value : PanValue α)
   rw [panSemShapeOf_eq_panValueShape_nil] at hwf ⊢
   exact panValueFlatten_eq_nil_iff_shapeSize_eq_zero value hwf
 
+/-- HOL `res_var_commutes'`: restoring two distinct finite-map locals
+    commutes. `LawfulBEq` identifies the map implementation's Boolean key
+    comparison with HOL equality. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "res_var_commutes'"]
+theorem resVarCommutesPrime [BEq α] [LawfulBEq α]
+    (locals : FiniteMap α β) (h n : α) (v v' : Option β)
+    (hne : n ≠ h) :
+    resVar (resVar locals (h, v)) (n, v') =
+      resVar (resVar locals (n, v')) (h, v) := by
+  funext key
+  change FLOOKUP (resVar (resVar locals (h, v)) (n, v')) key =
+    FLOOKUP (resVar (resVar locals (n, v')) (h, v)) key
+  simp only [FLOOKUP_resVar]
+  by_cases hh : key = h <;> by_cases hn : key = n <;>
+    simp_all [beq_iff_eq]
+
 /-- Flapjack-only optional-indexing support for HOL `load_shape_el_rel`.
     HOL's `EL` is stated without an Option because its index premise gives
     the required bound; the exact tagged statement follows below. -/

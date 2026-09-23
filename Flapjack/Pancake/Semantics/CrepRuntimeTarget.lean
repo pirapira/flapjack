@@ -692,9 +692,10 @@ theorem crepRuntimeExtCallValues_target_dispatch
 HOL `write_bytearray` updates the source `word_lab` memory by storing each
 returned byte with `mem_store_byte`. The canonical target `riscv64WriteState`
 performs the same tail-first recursion with `crepRuntimeStoreByte`. The two
-agree on the `PanValue.word` view recorded by `stateRel` whenever every
-byte-aligned address is in the `memaddrs` bitmap, so no store fails and the two
-fallback branches are never reached. -/
+agree on the `PanValue.word` view recorded by `stateRel` for every `memaddrs`
+domain: when a byte store fails, both HOL `write_bytearray` and the production
+writer fall back to the original memory (HOL's outer `m`), so the
+correspondence holds for successful and failed stores alike. -/
 
 /-- The source `PanValue` view of a total `word_lab` target memory: the
     `stateRel` memory conjunct written as a named function. -/
@@ -822,17 +823,6 @@ theorem riscv64WriteState_eq_setMemory
           simp only [Option.getD_some]
           rw [crepRuntimeStoreByte_some_eq hstore, ih (address + 1)]
           rfl
-
-/-- Under an aligned, total target memory the canonical byte store cannot fail. -/
-theorem crepRuntimeStoreByte_setMemory_isSome
-    (base : CrepRuntimeState (RiscV.Word 64) σ)
-    (memory : RiscV.Word 64 → PanWordLab (RiscV.Word 64))
-    (address value : RiscV.Word 64)
-    (h : base.memaddrs (RiscV.panRiscVByteAlign (8 : RiscV.Word 64) address) = true) :
-    ∃ u, crepRuntimeStoreByte (riscv64SetMemory base memory) address value = some u := by
-  simp only [crepRuntimeStoreByte, riscv64SetMemory, riscv64CrepRuntimeTarget,
-    RiscV.panRiscVMemoryModel, h, if_true]
-  exact ⟨_, rfl⟩
 
 /-- The `PanValue` view of the target store result (with the HOL total fallback)
     is the `panValueViewOf` image of the canonical RISC-V store, with the

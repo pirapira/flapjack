@@ -22,9 +22,15 @@ universe u
     `CrepSem` runtime evaluator, not the legacy compatibility evaluator
     `evalCrepFullExpState`; every expression evaluated by this theorem is a
     `Var`, so the explicit variable equation is the relevant semantic case.
-    Under the state correspondence `t.locals = state.locals`, HOL's left side
-    is `names.mapM state.locals` and its right side is exactly the mapped
-    `Var` expression list evaluated by `crepSemEvalExp` below. -/
+    The representation translation erases HOL's sole `word_lab` constructor
+    `Word`: a HOL lookup of `SOME (Word w)` corresponds to Lean's `some w`,
+    and absent entries correspond to `none`. Thus a HOL finite `locals` map
+    translates to the Lean lookup function `state.locals`. Under this
+    correspondence, HOL's left side is `names.mapM state.locals` and its right
+    side is exactly the mapped `Var` expression list evaluated by
+    `crepSemEvalExp` below. This argument uses only the `Var` equation; it does
+    not claim a separate whole-evaluator equivalence theorem for load or
+    operator cases. -/
 @[hol "cakeml/pancake/semantics/crepPropsScript.sml" "lookup_locals_eq_map_vars"]
 theorem lookup_locals_eq_map_vars
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]

@@ -307,6 +307,14 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpEvalPreservesHolFiniteDimensionWithRuntime",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Private Flapjack-only structural induction parameterized over a runtime and multiplication helper; it supplies support for the finite-word source-runtime preservation theorem but is not itself an HOL declaration"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpEvalPreservesHolFiniteDimension",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only all-constructor production evaluator preservation helper using an explicit finite-dimension RISC-V/BitVec interpretation"
@@ -334,6 +342,30 @@
     "lean_name": "crepSimpExpCorrect1HolFiniteDimensionSource",
     "statement_status": "documented_mismatch",
     "reviewer": "Source-state-shaped theorem with HOL's premise, code-map update, simp_exp and complete option/word_lab conclusion, proved through production evaluation. It remains untagged because HolFiniteDimension.encode selects the bit order used by n2w; a Lean test shows permuting the encoding changes the word for 1, and the selected encoding is not proved to be HOL's canonical dimindex/index map."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpEvalPreservesHolFiniteWordSource",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only recursive simplifier preservation over the source-shaped finite-word memory runtime; the carrier enumeration and transported word operations remain outside a proved HOL correspondence"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepArithHolFiniteDimensionSourceMapCode_runtime",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only commuting equation for code-map update and source-shaped finite-word runtime projection"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1HolFiniteWordSource",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Source-shaped finite-word runtime preservation of the complete optional word-lab result with successful-evaluation premise and arbitrary code-map update; remains untagged because the explicit finite-dimension enumeration and BitVec/RISC-V operation correspondence do not establish the polymorphic HOL word carrier"
   },
   {
     "hol_path": null,
@@ -4750,6 +4782,14 @@
     "lean_name": "compileExpHOL_rFieldZero_nonemptyLocal_eval_flatten",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only evaluation support for HOL comp_field index zero on an rField over a nonempty source-local rStruct; Call argument support remains restricted and this is not the full compile_exp_val_rel theorem"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_rFieldOne_pairLocal_eval_flatten",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only evaluation support for HOL comp_field index one on a two-word source-local rStruct; proves the selected target word through locals_rel and does not claim full compile_exp_val_rel or Call correctness"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",

@@ -8,6 +8,14 @@
     "reviewer": "Codex (reference inventory)"
   },
   {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "var_exp_def",
+    "lean_path": "Flapjack/Pancake/PanLang.lean",
+    "lean_name": "expLocalVars",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (constructor-by-constructor source comparison)"
+  },
+  {
     "hol_path": "cakeml/pancake/crepLangScript.sml",
     "hol_name": "assign_ret_def",
     "lean_path": "Flapjack/Pancake/CrepLang.lean",

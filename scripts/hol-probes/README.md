@@ -87,17 +87,25 @@ show the sampled indices are valid. The original definition is HOL4
 The kernel-checked canonical `Fin width`/BitVec equation
 `holWordBitsToBitVec_n2w` is in `Flapjack.Pancake.Semantics.CrepSem.Eval`; its
 zero/one/high-bit examples are in `Flapjack.Test.CrepeSimpExpParity`.
+For any explicit `HolFiniteDimension`, `holFiniteWordN2W_at_index` proves that
+the arbitrary-index adapter returns `Nat.testBit value (encode index)`, which
+is the pointwise FCP `BIT` equation under the chosen finite-index encoding;
+the Bool carrier test exercises this at multiple indices.
 `hol_word_arithmetic_probe.out` records the direct HOL4 definitions
 `word_add_def`, `word_mul_def`, and `word_sub_def` from the same external
 `wordsScript.sml`, along with the general `word_add_n2w` and `word_mul_n2w`
 theorems and 8-bit simplification examples. Lean's
 `holFiniteWordSourceAdd`/`holFiniteWordSourceMul` encode the source `n2w` of
 natural arithmetic on `w2n` values, with generic Fin-index transport theorems
-and focused 4-bit checks in `CrepeSimpExpParity`. `holFiniteWordSourceSub`
+and focused 4-bit checks in `CrepeSimpExpParity`. The pointwise `n2w`/`BIT`
+equation is proved for explicit finite dimensions. The recursive
+`finWordSBitSum` follows the numeric `Fin` indices and proves the `w2n`
+weighted `SBIT` sum equals BitVec `toNat`; the operation adapters are also
+rewritten to expose their `n2w`-of-SBitSum source shape. `holFiniteWordSourceSub`
 uses the corresponding two's-complement natural formula and its transport
-theorem; the test checks wraparound subtraction. This does not yet connect
-HOL's implicit `finite_index` dictionary to the explicit Lean
-`HolFiniteDimension` witness or bridge all Crep evaluator operations.
+theorem; the test checks wraparound subtraction. The remaining representation
+gap is identifying a Lean `HolFiniteDimension` witness with HOL's implicit
+`finite_index` choice; the full Crep evaluator correspondence is still open.
 `crep_arith_eval_mul_const_probe.out` records direct HOL EVAL of
 `crepSem$eval` after `crep_arith$mul_const` for zero, one, power-of-two, and
 general multipliers, with a word-valued local. Its matching production runtime

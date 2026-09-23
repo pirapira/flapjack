@@ -2518,6 +2518,16 @@ private theorem evalCrepRuntimeExps_vars_eq
   | cons slot slots ih =>
       simp [evalCrepRuntimeExps, evalCrepRuntimeExp, ih]
 
+private theorem evalCrepRuntimeExps_eq_mapM
+    (state : CrepRuntimeState (RiscV.Word 64) σ)
+    (expressions : List (CrepExp (RiscV.Word 64))) :
+    evalCrepRuntimeExps state expressions =
+      expressions.mapM (evalCrepRuntimeExp state) := by
+  induction expressions with
+  | nil => simp [evalCrepRuntimeExps]
+  | cons expression expressions ih =>
+      simp [evalCrepRuntimeExps, List.mapM_cons, ih]
+
 private theorem evalCrepRuntimeExps_append
     (state : CrepRuntimeState (RiscV.Word 64) σ)
     (left right : List (CrepExp (RiscV.Word 64)))
@@ -2713,147 +2723,168 @@ private theorem mapM_take_of_success {α β : Type} (f : α → Option β)
                   simp only [List.take_succ_cons]
                   simp [List.mapM_cons, hhead, ih outputsTail count htail]
 
-/-! First-field projection from a nonempty source record evaluates the
-matching prefix of its flattened target local, as HOL `comp_field` does. -/
-private theorem compileExpHOL_rFieldZero_nonemptyLocal_eval_flatten
+private theorem mapM_drop_of_success {α β : Type} (f : α → Option β)
+    (inputs : List α) (outputs : List β) (count : Nat)
+    (hmap : inputs.mapM f = some outputs) :
+    (inputs.drop count).mapM f = some (outputs.drop count) := by
+  induction inputs generalizing outputs count with
+  | nil =>
+      simp only [List.mapM_nil] at hmap
+      cases hmap
+      simp
+  | cons input inputs ih =>
+      cases hhead : f input with
+      | none => simp [List.mapM_cons, hhead] at hmap
+      | some output =>
+          cases htail : inputs.mapM f with
+          | none => simp [List.mapM_cons, hhead, htail] at hmap
+          | some outputsTail =>
+              simp [List.mapM_cons, hhead, htail] at hmap
+              cases hmap
+              cases count with
+              | zero => simp [List.mapM_cons, hhead, htail]
+              | succ count =>
+                  simpa [List.drop_succ_cons] using ih outputsTail count htail
+
+/-! `compile_exp_val_rel`'s RField case selects the source field's flattened
+slice from the compiled inner record. This helper is the list-level bridge for
+arbitrary field shapes and indices: successful target evaluation of the whole
+record is projected through the same shape-sized drop/take used by
+`compileField`. -/
+private theorem evalCrepCompileField_panValueField
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (values : List (PanValue (RiscV.Word 64)))
+    (shapes : List Shape) (expressions : List (CrepExp (RiscV.Word 64)))
+    (index : Nat)
+    (hshapes : shapes = values.map (panValueShape []))
+    (hfieldsWf : ∀ value, value ∈ values →
+      isWfShape [] (panValueShape [] value) = true)
+    (hindex : index < values.length)
+    (heval : evalCrepRuntimeExps target expressions =
+      some (values.flatMap panValueFlatten)) :
+    evalCrepRuntimeExps target (compileField index shapes expressions).1 =
+      some (panValueFlatten values[index]) := by
+  induction values generalizing shapes expressions index with
+  | nil => simp at hindex
+  | cons value values ih =>
+      cases shapes with
+      | nil => simp at hshapes
+      | cons shape tailShapes =>
+          simp only [List.map_cons] at hshapes
+          cases hshapes
+          have hvalueWf := hfieldsWf value (by simp)
+          have hvalueSize : (panValueFlatten value).length =
+              Shape.shapeSize (panValueShape [] value) :=
+            panValueFlatten_length_eq_shapeSize value hvalueWf
+          have heval' : evalCrepRuntimeExps target expressions =
+              some (panValueFlatten value ++ values.flatMap panValueFlatten) := by
+            simpa [List.flatMap_cons] using heval
+          have hmapEval : expressions.mapM (evalCrepRuntimeExp target) =
+              some (panValueFlatten value ++ values.flatMap panValueFlatten) := by
+            simpa [evalCrepRuntimeExps_eq_mapM] using heval'
+          cases index with
+          | zero =>
+              have hprefix := mapM_take_of_success
+                (fun expression => evalCrepRuntimeExp target expression)
+                expressions
+                (panValueFlatten value ++ values.flatMap panValueFlatten)
+                (Shape.shapeSize (panValueShape [] value))
+                hmapEval
+              have hprefixValues :
+                  (panValueFlatten value ++ values.flatMap panValueFlatten).take
+                    (Shape.shapeSize (panValueShape [] value)) =
+                  panValueFlatten value := by
+                rw [← hvalueSize]
+                rw [List.take_append_of_le_length (Nat.le_refl _), List.take_length]
+              have hprefixEval : evalCrepRuntimeExps target
+                  (expressions.take (Shape.shapeSize (panValueShape [] value))) =
+                  some (panValueFlatten value) := by
+                simpa [evalCrepRuntimeExps_eq_mapM, hprefixValues] using hprefix
+              simpa [compileField] using hprefixEval
+          | succ index =>
+              have hindexTail : index < values.length := by simpa using hindex
+              have hdrop := mapM_drop_of_success
+                (fun expression => evalCrepRuntimeExp target expression)
+                expressions
+                (panValueFlatten value ++ values.flatMap panValueFlatten)
+                (Shape.shapeSize (panValueShape [] value))
+                hmapEval
+              have hdropValues :
+                  (panValueFlatten value ++ values.flatMap panValueFlatten).drop
+                    (Shape.shapeSize (panValueShape [] value)) =
+                  values.flatMap panValueFlatten := by
+                rw [← hvalueSize]
+                simp
+              have hevalTail : evalCrepRuntimeExps target
+                  (expressions.drop (Shape.shapeSize (panValueShape [] value))) =
+                  some (values.flatMap panValueFlatten) := by
+                simpa [evalCrepRuntimeExps_eq_mapM, hdropValues] using hdrop
+              have hfieldsWfTail : ∀ item, item ∈ values →
+                  isWfShape [] (panValueShape [] item) = true := by
+                intro item hmem
+                exact hfieldsWf item (by simp [hmem])
+              have htail := ih (values.map (panValueShape []))
+                (expressions.drop (Shape.shapeSize (panValueShape [] value)))
+                index rfl hfieldsWfTail hindexTail hevalTail
+              simpa [compileField, List.getElem_cons_succ] using htail
+
+/-! State-owned local specialization of the generic RField case above. It
+handles any valid field index and any well-formed field shapes, deriving the
+inner compiled evaluation from `locals_rel` rather than assuming a target run. -/
+private theorem compileExpHOL_rFieldLocal_eval_flatten
     (context : PanToCrepProofContext (RiscV.Word 64))
     (source : PanSemState (RiscV.Word 64) (FfiState σ))
     (target : CrepRuntimeState (RiscV.Word 64) σ)
-    (name : String) (fieldValue : PanValue (RiscV.Word 64))
-    (remainingFields : List (PanValue (RiscV.Word 64)))
+    (name : String) (index : Nat) (fields : List (PanValue (RiscV.Word 64)))
     (hlocals : localsRel context source.locals target.locals)
-    (hsource : FLOOKUP source.locals name =
-      some (.rStruct (fieldValue :: remainingFields))) :
+    (hsource : FLOOKUP source.locals name = some (.rStruct fields))
+    (hindex : index < fields.length) :
     evalCrepRuntimeExps target
       (compileExpHOL
         { vars := context.vars, funcs := context.funcs,
           eids := context.eids, vmax := context.vmax }
-        (.rField 0 (.var .local name))).1 = some (panValueFlatten fieldValue) := by
-  obtain ⟨slots, hcontext, _hslotsLength, htargetWords, hwf⟩ :=
+        (.rField index (.var .local name))).1 =
+      some (panValueFlatten fields[index]) := by
+  obtain ⟨slots, hcontext, _hslotsLength, htargetWords, _hvalueWf⟩ :=
     localsRelLookupCtxt context source.locals target.locals name
-      (.rStruct (fieldValue :: remainingFields))
-      hlocals hsource
-  have hwfField : isWfShape [] (panValueShape [] fieldValue) = true := by
-    simp only [panValueShape, List.map_cons, isWfShape.eq_def] at hwf
-    rw [isWfShape.isWfShapeList.eq_def] at hwf
-    simp only [Bool.and_eq_true] at hwf
-    exact hwf.1
-  have hparentShape : panValueShape [] (.rStruct (fieldValue :: remainingFields)) =
-      .comb (panValueShape [] fieldValue :: remainingFields.map (panValueShape [])) := by
-    simp [panValueShape]
+      (.rStruct fields) hlocals hsource
   have hcontext' : FLOOKUP context.vars name =
-      some (.comb (panValueShape [] fieldValue ::
-        remainingFields.map (panValueShape [])), slots) := by
-    simpa [hparentShape] using hcontext
-  let compilerContext : PanToCrepHOLContext (RiscV.Word 64) :=
-    { vars := context.vars, funcs := context.funcs,
-      eids := context.eids, vmax := context.vmax }
-  have hcompiled :
-      compileExpHOL compilerContext (.rField 0 (.var .local name)) =
-        ((slots.take (Shape.shapeSize (panValueShape [] fieldValue))).map .var,
-          panValueShape [] fieldValue) := by
-    simp [compilerContext, compileExpHOL, hcontext', compileField]
-  have htargetValues : slots.mapM
-      (fun slot => (FLOOKUP target.locals slot).map panTheWord) =
-      some (panValueFlatten (.rStruct (fieldValue :: remainingFields))) :=
-    mapM_panTheWord_of_wordLab target.locals slots
-      (panValueFlatten (.rStruct (fieldValue :: remainingFields)))
-      htargetWords
+      some (.comb (fields.map (panValueShape [])), slots) := by
+    simpa [panValueShape] using hcontext
+  have hfieldsWfValues : panValueIsWfValues [] fields = true := by
+    have hvalueWf := localsRelWfShape context source.locals target.locals name
+      (.rStruct fields) hlocals hsource
+    simpa [panValueIsWf] using hvalueWf
+  have hfieldsWf : ∀ value, value ∈ fields →
+      isWfShape [] (panValueShape [] value) = true := by
+    intro value hmem
+    obtain ⟨fieldIndex, hfieldIndex, hvalue⟩ := List.mem_iff_getElem.mp hmem
+    have hget : fields[fieldIndex]? = some value := by
+      rw [List.getElem?_eq_getElem hfieldIndex, hvalue]
+    exact panValueIsWf_isWfShape_panValueShape [] value
+      (panValueIsWfValues_getElem? hfieldsWfValues hget)
+  have htargetValues := mapM_panTheWord_of_wordLab target.locals slots
+    (panValueFlatten (.rStruct fields)) htargetWords
   have htargetValues' : slots.mapM
       (fun slot => (target.locals slot).map panTheWord) =
-      some (panValueFlatten (.rStruct (fieldValue :: remainingFields))) := by
+      some (panValueFlatten (.rStruct fields)) := by
     simpa [FLOOKUP] using htargetValues
-  have hmapPrefix := mapM_take_of_success
-    (fun slot => (target.locals slot).map panTheWord) slots
-    (panValueFlatten (.rStruct (fieldValue :: remainingFields)))
-    (Shape.shapeSize (panValueShape [] fieldValue)) htargetValues'
-  have hflattenAppend : panValueFlatten (.rStruct (fieldValue :: remainingFields)) =
-      panValueFlatten fieldValue ++ remainingFields.flatMap panValueFlatten := by
-    rw [panValueFlatten_rStruct, panValueFlattenValues_eq_flatMap]
-    simp
-  have hfieldLength := panValueFlatten_length_eq_shapeSize fieldValue hwfField
-  have hflattenPrefix :
-      (panValueFlatten (.rStruct (fieldValue :: remainingFields))).take
-        (Shape.shapeSize (panValueShape [] fieldValue)) =
-      panValueFlatten fieldValue := by
-    rw [hflattenAppend, ← hfieldLength]
-    rw [List.take_append_of_le_length (Nat.le_refl _), List.take_length]
-  have htargetPrefix : (slots.take (Shape.shapeSize (panValueShape [] fieldValue))).mapM
-      (fun slot => (target.locals slot).map panTheWord) =
-      some (panValueFlatten fieldValue) := by
-    simpa [hflattenPrefix] using hmapPrefix
+  have hinnerEval : evalCrepRuntimeExps target
+      (slots.map CrepExp.var) = some (fields.flatMap panValueFlatten) := by
+    rw [evalCrepRuntimeExps_vars_eq]
+    simpa [panValueFlatten_rStruct, panValueFlattenValues_eq_flatMap] using
+      htargetValues'
+  have hfieldEval := evalCrepCompileField_panValueField target fields
+    (fields.map (panValueShape [])) (slots.map CrepExp.var) index rfl
+    hfieldsWf hindex hinnerEval
+  have hcompiled : compileExpHOL
+      { vars := context.vars, funcs := context.funcs,
+        eids := context.eids, vmax := context.vmax }
+      (.rField index (.var .local name)) =
+      compileField index (fields.map (panValueShape [])) (slots.map CrepExp.var) := by
+    simp [compileExpHOL, hcontext']
   rw [hcompiled]
-  rw [evalCrepRuntimeExps_vars_eq, htargetPrefix]
-
-/-! Second-field projection for a two-word local record. This extends the
-Call-argument relation past the first-field slice while keeping the source
-record and target flattened locals tied by `locals_rel`. -/
-private theorem compileExpHOL_rFieldOne_pairLocal_eval_flatten
-    (context : PanToCrepProofContext (RiscV.Word 64))
-    (source : PanSemState (RiscV.Word 64) (FfiState σ))
-    (target : CrepRuntimeState (RiscV.Word 64) σ)
-    (name : String) (first second : RiscV.Word 64)
-    (hlocals : localsRel context source.locals target.locals)
-    (hsource : FLOOKUP source.locals name =
-      some (.rStruct [.word first, .word second])) :
-    evalCrepRuntimeExps target
-      (compileExpHOL
-        { vars := context.vars, funcs := context.funcs,
-          eids := context.eids, vmax := context.vmax }
-        (.rField 1 (.var .local name))).1 = some [second] := by
-  obtain ⟨slots, hcontext, hslotsLength, htargetWords, _⟩ :=
-    localsRelLookupCtxt context source.locals target.locals name
-      (.rStruct [.word first, .word second]) hlocals hsource
-  have hslotsLength' : slots.length = 2 := by
-    simpa [panValueShape, panValueFlatten_rStruct,
-      panValueFlattenValues_eq_flatMap, panValueFlatten] using hslotsLength
-  have hslotsExists : ∃ slot0 slot1, slots = [slot0, slot1] := by
-    cases slots with
-    | nil => simp at hslotsLength'
-    | cons slot0 rest =>
-        cases rest with
-        | nil => simp at hslotsLength'
-        | cons slot1 rest =>
-            cases rest with
-            | nil => exact ⟨slot0, slot1, rfl⟩
-            | cons extra rest => simp at hslotsLength'
-  obtain ⟨slot0, slot1, rfl⟩ := hslotsExists
-  have hcontext' : FLOOKUP context.vars name =
-      some (.comb [.one, .one], [slot0, slot1]) := by
-    simpa [panValueShape] using hcontext
-  have htargetWordCells : [slot0, slot1].mapM
-      (FLOOKUP target.locals) = some [.word first, .word second] := by
-    simpa [panValueFlatten_rStruct, panValueFlattenValues_eq_flatMap,
-      panValueFlatten] using htargetWords
-  have hsecondWordCells : [slot1].mapM (FLOOKUP target.locals) =
-      some [.word second] := by
-    simp only [List.mapM_cons] at htargetWordCells
-    cases hfirst : FLOOKUP target.locals slot0 with
-    | none => simp [hfirst] at htargetWordCells
-    | some firstCell =>
-        cases firstCell with
-        | word firstValue =>
-            cases hsecond : FLOOKUP target.locals slot1 with
-            | none => simp [hfirst, hsecond] at htargetWordCells
-            | some secondCell =>
-                cases secondCell with
-                | word secondValue =>
-                    simp [hfirst, hsecond] at htargetWordCells
-                    rcases htargetWordCells with ⟨_, hsecondValue⟩
-                    subst secondValue
-                    simp [hsecond]
-  have hsecond : [slot1].mapM
-      (fun slot => (FLOOKUP target.locals slot).map panTheWord) = some [second] := by
-    apply mapM_panTheWord_of_wordLab target.locals [slot1] [second]
-    simpa [FLOOKUP] using hsecondWordCells
-  have hcompiled :
-      compileExpHOL
-        { vars := context.vars, funcs := context.funcs,
-          eids := context.eids, vmax := context.vmax }
-        (.rField 1 (.var .local name)) = ([slot1].map .var, .one) := by
-    simp [compileExpHOL, hcontext', compileField]
-  rw [hcompiled, evalCrepRuntimeExps_vars_eq]
-  exact hsecond
+  exact hfieldEval
 
 /-! Flapjack-specific RV64 constant support toward HOL `compile_exp_val_rel`;
     the general expression theorem remains open. -/
@@ -3018,15 +3049,12 @@ inductive compileArgConstLocalStructAddress
   | existing (expression : Exp (RiscV.Word 64))
       (supported : compileArgConstLocalOrStruct expression) :
       compileArgConstLocalStructAddress source expression
-  | firstRecordFieldLocal (name : String) (fieldValue : PanValue (RiscV.Word 64))
-      (remainingFields : List (PanValue (RiscV.Word 64)))
-      (hsource : FLOOKUP source.locals name =
-        some (.rStruct (fieldValue :: remainingFields))) :
-      compileArgConstLocalStructAddress source (.rField 0 (.var .local name))
-  | secondRecordFieldLocal (name : String) (first second : RiscV.Word 64)
-      (hsource : FLOOKUP source.locals name =
-        some (.rStruct [.word first, .word second])) :
-      compileArgConstLocalStructAddress source (.rField 1 (.var .local name))
+  | recordFieldLocal (name : String) (index : Nat)
+      (fields : List (PanValue (RiscV.Word 64)))
+      (hsource : FLOOKUP source.locals name = some (.rStruct fields))
+      (hindex : index < fields.length) :
+      compileArgConstLocalStructAddress source
+        (.rField index (.var .local name))
   | baseAddress : compileArgConstLocalStructAddress source .baseAddr
   | topAddress : compileArgConstLocalStructAddress source .topAddr
   | bytesInWord : compileArgConstLocalStructAddress source .bytesInWord
@@ -3095,28 +3123,16 @@ theorem compileArgsHOL_constLocalStructAddress_eval_flatten
                   target fields fieldValues hlocals hfields heval
             | nStruct name fields =>
                 simp [evalPanSemStateExp, evalPanValueExp] at heval
-    | firstRecordFieldLocal name fieldValue remainingFields hsource =>
+    | recordFieldLocal name index fields hsource hindex =>
         have hlocal : source.locals name =
-            some (.rStruct (fieldValue :: remainingFields)) := by
+            some (.rStruct fields) := by
           simpa [FLOOKUP] using hsource
         unfold evalPanSemStateExp at heval
-        simp [evalPanValueExp, hlocal] at heval
-        have hvalue : value = fieldValue := by
-          exact heval.symm
+        simp [evalPanValueExp, hlocal, hindex] at heval
+        have hvalue : value = fields[index] := heval.symm
         subst value
-        exact compileExpHOL_rFieldZero_nonemptyLocal_eval_flatten
-          context source target name fieldValue remainingFields hlocals hsource
-    | secondRecordFieldLocal name first second hsource =>
-        have hlocal : source.locals name =
-            some (.rStruct [.word first, .word second]) := by
-          simpa [FLOOKUP] using hsource
-        unfold evalPanSemStateExp at heval
-        simp [evalPanValueExp, hlocal] at heval
-        have hvalue : value = .word second := heval.symm
-        subst value
-        simpa [panValueFlatten] using
-          compileExpHOL_rFieldOne_pairLocal_eval_flatten
-            context source target name first second hlocals hsource
+        exact compileExpHOL_rFieldLocal_eval_flatten context source target
+          name index fields hlocals hsource hindex
   simpa [compilerContext] using
     evalMapCompileArgsFlat_of_each compilerContext source target expressions values
       hsource heach

@@ -1,4 +1,7 @@
 import Flapjack.Pancake.CrepArith
+import Flapjack.Pancake.Semantics.CrepSem
+import Flapjack.Pancake.Semantics.CrepRuntimeTarget
+import Flapjack.RiscV.PanMemory
 
 namespace Flapjack.Test.CrepeMulConstParity
 
@@ -29,7 +32,45 @@ def parityGuard : Bool :=
   | .shift .lsl (.var 2) (.const value) => value == word8 3
   | _ => false)
 
+def noRiscVWords : RiscV.Word 64 → Option (RiscV.Word 64) := fun _ => none
+def noRiscVDomain : RiscV.Word 64 → Bool := fun _ => false
+
+def runtimeBaseState : CrepRuntimeState (RiscV.Word 64) Unit :=
+  { locals := fun _ => none
+    globals := fun _ => none
+    code := FEMPTY
+    memory := noRiscVWords
+    memaddrs := noRiscVDomain
+    shMemaddrs := noRiscVDomain
+    memoryModel := RiscV.panRiscVMemoryModel
+    bytesInWord := (8 : RiscV.Word 64)
+    ffiContext := riscv64PanValueFfiContext noRiscVDomain
+    clock := 0
+    bigEndian := false
+    ffi := natCrepRuntimeFfiState
+    baseAddress := 0
+    topAddress := 0 }
+
+def runtimeState : CrepRuntimeState (RiscV.Word 64) Unit :=
+  { riscv64CrepRuntimeTarget runtimeBaseState with
+    locals := updateCrepRuntimeLocal (fun _ => none) 2 (.word (7 : RiscV.Word 64)) }
+
+def evaluateMulConst (multiplier : RiscV.Word 64) : Option (RiscV.Word 64) :=
+  evalCrepRuntimeExp runtimeState
+    (crepMulConst (BitVec.ofNat 64) (.var 2) multiplier)
+
+/-! Direct `crep_arith_eval_mul_const_probe.out` parity: the input is
+    `SOME (Word 7w)`; zero, one, power-of-two 8, and general 3 produce words
+    0, 7, 56, and 21 respectively. -/
+def runtimeParityGuard : Bool :=
+  evalCrepRuntimeExp runtimeState (.var 2) == some (7 : RiscV.Word 64) &&
+  evaluateMulConst 0 == some (0 : RiscV.Word 64) &&
+  evaluateMulConst 1 == some (7 : RiscV.Word 64) &&
+  evaluateMulConst 8 == some (56 : RiscV.Word 64) &&
+  evaluateMulConst 3 == some (21 : RiscV.Word 64)
+
 #eval parityGuard
 #guard parityGuard
+#guard runtimeParityGuard
 
 end Flapjack.Test.CrepeMulConstParity

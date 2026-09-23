@@ -109,16 +109,16 @@ finite sptree with unique keys.  Lean's `Flapjack.FiniteMap` is the function
 `α → Option β`, whose domain need not be finite, so its `FDOM` has no
 cardinality and HOL's termination argument does not transfer.
 
-`CrepInlineFmap` below is a finite map with a **canonical unique-key
-invariant**: its `entries` list carries a proof that the key projection is
+`CrepInlineFmap` below is a finite map with a **unique-key invariant**:
+its `entries` list carries a proof that the key projection is
 duplicate-free, so every key is bound at most once and `card` (the entry count)
 is exactly the number of distinct keys in the domain, matching HOL
 `CARD (FDOM fs)`.  `lookup` is HOL `FLOOKUP`, `remove` is HOL `DOMSUB` and
 `submap` is HOL `SUBMAP`.  The only public construction paths are `empty` and
 the smart `insert`, which replaces any existing binding rather than shadowing
-it, so the invariant is preserved by construction.  This is not the rejected
-list-backed first-match analogue: the carrier is a genuine canonical finite map
-and its cardinality is the domain cardinality. -/
+it, so the invariant is preserved by construction. Its list order is not
+canonical, but lookup and cardinality represent a finite map rather than a
+shadowing association list. -/
 
 structure CrepInlineFmap (α : Type u) where
   entries : List (FunName × (List Nat × CrepProg α))

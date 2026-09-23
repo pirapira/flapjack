@@ -1,11 +1,11 @@
 import Flapjack.Pancake.CrepInline.Pass
 
-/-! Regression for the canonical finite-map representation and the exact
+/-! Regression for the duplicate-free finite-map representation and the
 `inline_prog` port (`flapjack-pxn.18.5.5.7`).
 
 HOL `inline_prog_def` terminates with `CARD (FDOM fs) LEX prog_size`; the
 function-represented `Flapjack.FiniteMap` has no finite domain, so the port
-uses `CrepInlineFmap`, a canonical unique-key finite map with
+uses `CrepInlineFmap`, a unique-key finite map with
 `lookup`/`remove`/`submap`/`card`.  These checks pin the lookup/removal/
 cardinality laws, that `card` equals the domain cardinality, and that the
 smart `insert` replaces a duplicate key rather than shadowing it. -/
@@ -41,7 +41,7 @@ theorem fmapSubmapRefl : CrepInlineFmap.submap fmapEntries fmapEntries :=
   CrepInlineFmap.submap_refl fmapEntries
 
 /-- Re-inserting an existing key replaces the binding instead of shadowing it,
-    so the canonical map has domain cardinality one (the coordinator's
+    so the map has domain cardinality one (the coordinator's
     duplicate-key counterexample). -/
 def fmapDupInsert : CrepInlineFmap Nat :=
   CrepInlineFmap.insert "f" ([1], CrepProg.skip) fmapEntries

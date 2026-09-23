@@ -15,10 +15,10 @@ universe u
 
 /-- Faithful Lean port of Cake `crepProps$lookup_locals_eq_map_vars`
     (`cakeml/pancake/semantics/crepPropsScript.sml:17`). HOL uses
-    `crepSem.eval`; this port uses its source-path Lean counterpart
-    `crepSemEvalExp`, whose variable case reads the runtime state's local
-    lookup. Lean represents `FLOOKUP state.locals name` directly as
-    `state.locals name`. -/
+    `crepSem.eval`, whose `Var` case is `FLOOKUP s.locals v`. The Lean source-
+    path evaluator's variable equation is stated explicitly by
+    `crepSemEvalExp_var`; therefore HOL `OPT_MMAP` translates directly to
+    `List.mapM` over the same local lookup. -/
 @[hol "cakeml/pancake/semantics/crepPropsScript.sml" "lookup_locals_eq_map_vars"]
 theorem lookup_locals_eq_map_vars
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
@@ -32,7 +32,7 @@ theorem lookup_locals_eq_map_vars
   induction names with
   | nil => rfl
   | cons name names ih =>
-      simp [crepSemEvalExp, evalCrepRuntimeExp, ih]
+      simp only [List.mapM_cons, List.map_cons, crepSemEvalExp_var, ih]
 
 /-- HOL `map_var_cexp_eq_var`: mapping `Var` over a list and flattening each
     expression's variable list recovers the original list. -/

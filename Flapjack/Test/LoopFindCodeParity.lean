@@ -28,14 +28,14 @@ def loopBodyTag : LoopProg α → Nat
 
 /-- Table from the probe: label `5` takes two parameters and returns the body
     tagged `1`. -/
-def code2 : LoopCode LoopWordLoc := [(5, [1, 2], .mark .skip)]
+def code2 : LoopCode Nat := [(5, [1, 2], .mark .skip)]
 
 /-- Table from the probe: label `9` takes one parameter and returns the body
     tagged `2`. -/
-def code1 : LoopCode LoopWordLoc := [(9, [7], .tick)]
+def code1 : LoopCode Nat := [(9, [7], .tick)]
 
 /-- Table from the probe with duplicate parameter names. -/
-def codeDup : LoopCode LoopWordLoc := [(5, [1, 1], .skip)]
+def codeDup : LoopCode Nat := [(5, [1, 1], .skip)]
 
 def labelFirst : Bool :=
   match findLoopCode (some 5) [.word 3, .word 4] code2 with

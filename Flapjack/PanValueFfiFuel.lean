@@ -144,6 +144,7 @@ theorem call_succ_mono (context : PanValueFfiContext α) (primitive : PanPrimiti
           | broke l cg cm cf => exact h
           | continued l cg cm cf => exact h
           | finalFfi l cg cm cf ev => exact h
+          | error l cg cm cf => exact h
           | raised l cg cm cf e v =>
             dsimp only at h ⊢
             by_cases hvalid :
@@ -217,22 +218,24 @@ theorem progMono (context : PanValueFfiContext α) (primitive : PanPrimitiveHand
     rw [evalPanValueFfiProgSteps]
     cases hv : evalPanValueExpCounted structs locals globals memory baseAddress topAddress
         bytesInWord valueExp ma with
-    | none => rw [hv] at h; simp at h
+    | none =>
+      simp only [panValueDecAccepted, hv, Option.elim_none] at h ⊢
+      exact h
     | some pair =>
       obtain ⟨value, valueSteps⟩ := pair
-      rw [hv] at h
-      simp only [Option.bind_eq_bind, Option.bind_some] at h ⊢
+      simp only [panValueDecAccepted, hv] at h ⊢
       by_cases hshape : panShapeMatches (panValueShape structs value) shape
-      · rw [if_pos hshape] at h ⊢
+      · simp only [hshape, if_true, Option.elim_some, Option.bind_eq_bind] at h ⊢
         cases hb : evalPanValueFfiProgSteps context primitive handler structs functions
           baseAddress topAddress bytesInWord fuel (updatePanValueMap locals name value) globals memory ffi body
             (memoryAccess := ma) (contracts := c) (memoryHandler := mh) with
         | none => rw [hb] at h; simp at h
         | some q =>
           rw [hb] at h
-          rw [ihBody value _ _ hfk hb]
+          rw [ihBody (value, valueSteps) _ _ hfk hb]
           exact h
-      · rw [if_neg hshape] at h; simp at h
+      · simp only [hshape] at h ⊢
+        exact h
   | case6 =>
     intro fuel' result hle h
     obtain ⟨k, rfl⟩ : ∃ k, fuel' = k + 1 := ⟨fuel' - 1, by omega⟩
@@ -300,6 +303,7 @@ theorem progMono (context : PanValueFfiContext α) (primitive : PanPrimitiveHand
       | broke l g m f => exact h
       | continued l g m f => exact h
       | finalFfi l g m f ev => exact h
+      | error l g m f => exact h
   | case13 fuel locals globals memory ffi condition thenBranch elseBranch ma c mh ihThen ihElse =>
     intro fuel' result hle h
     obtain ⟨k, rfl⟩ : ∃ k, fuel' = k + 1 := ⟨fuel' - 1, by omega⟩
@@ -390,6 +394,7 @@ theorem progMono (context : PanValueFfiContext α) (primitive : PanPrimitiveHand
       | broke l g m f => simp at h
       | continued l g m f => simp at h
       | finalFfi l g m f ev => exact h
+      | error l g m f => exact h
   | case16 =>
     intro fuel' result hle h
     obtain ⟨k, rfl⟩ : ∃ k, fuel' = k + 1 := ⟨fuel' - 1, by omega⟩
@@ -448,6 +453,7 @@ theorem progMono (context : PanValueFfiContext α) (primitive : PanPrimitiveHand
             | raised l g m f e v => exact h
             | broke l g m f => exact h
             | finalFfi l g m f ev => exact h
+            | error l g m f => exact h
       | _ => simp at h
   | case18 =>
     intro fuel' result hle h

@@ -1,0 +1,6 @@
+seq_error_result=SOME Error
+seq_error_clock=5
+seq_error_locals=SOME (ValWord 3w)
+while_error_result=SOME Error
+while_error_clock=4
+while_error_locals=SOME (ValWord 3w)

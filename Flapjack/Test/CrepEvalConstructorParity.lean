@@ -54,6 +54,13 @@ def probeState : CrepRuntimeState (RiscV.Word 8) Unit :=
 #guard (evalCrepRuntimeExp probeState (.loadGlob (4 : BitVec 5))).map PanWordLab.word ==
   some (.word (word8 11))
 #guard (evalCrepRuntimeExp probeState (.loadGlob (8 : BitVec 5))).map PanWordLab.word == none
+/- HOL crep_arith_eval_mul_const_probe: the general multiplier case leaves
+   Crepop Mul [Var 1; Const 3w], which evaluates to Word 21w. -/
+#guard (evalCrepRuntimeExp probeState
+    (.crepOp .mul [.var 1, .const (word8 3)])).map PanWordLab.word ==
+  some (.word (word8 21))
+#guard (evalCrepRuntimeExp probeState (.crepOp .mul [.const (word8 4)])).map
+    PanWordLab.word == none
 #guard (evalCrepRuntimeExp probeState .baseAddr).map PanWordLab.word ==
   some (.word (word8 12))
 #guard (evalCrepRuntimeExp probeState .topAddr).map PanWordLab.word ==

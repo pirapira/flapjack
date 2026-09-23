@@ -24,7 +24,7 @@ def probeState : LoopMachineState Nat :=
     clock := 10
     code := []
     be := false
-    ffi := 0
+    ffi := trivialFfiState Nat 0
     baseAddr := 100
     topAddr := 200 }
 
@@ -35,14 +35,14 @@ def originalRegLoc : Option LoopWordLoc := some (.loc 9 0)
 
 #guard getVarImm probeState (.reg 1) == originalRegHit
 #guard getVarImm probeState (.reg 2) == originalRegMiss
-#guard getVarImm probeState (.imm (.word 7)) == originalImmWord
+#guard getVarImm probeState (.imm 7) == originalImmWord
 #guard getVarImm probeState (.reg 3) == originalRegLoc
 
 def runChecks : IO Bool := do
   let checks :=
     [ ("Loop get_var_imm register hit", getVarImm probeState (.reg 1) == originalRegHit),
       ("Loop get_var_imm register miss", getVarImm probeState (.reg 2) == originalRegMiss),
-      ("Loop get_var_imm immediate", getVarImm probeState (.imm (.word 7)) == originalImmWord),
+      ("Loop get_var_imm immediate", getVarImm probeState (.imm 7) == originalImmWord),
       ("Loop get_var_imm location value", getVarImm probeState (.reg 3) == originalRegLoc) ]
   let results ← checks.mapM fun (name, ok) => do
     if ok then

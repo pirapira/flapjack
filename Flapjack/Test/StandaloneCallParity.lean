@@ -81,7 +81,7 @@ example :
         .seq (.seq (.assign 0 (.loadGlob 0))
           (.seq (.assign 1 (.loadGlob 1)) .skip)) .skip))) "f" [] := by
   simp [compileProg, compileArgs, callDestinationNames,
-    wrapRt, expHdl, expHdlFiniteMap, panMap2, loadGlobals, crepNestedSeq,
+    wrapRt, expHdlFiniteMap, panMap2, loadGlobals, crepNestedSeq,
     handlerContext, lookupInfo]
 
 end Flapjack

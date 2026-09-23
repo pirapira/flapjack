@@ -121,6 +121,9 @@ def sourceZeroClockCallCode : PanSemCodeMap Word64 :=
 def sourceConstReturnCallCode : PanSemCodeMap Word64 :=
   [("constant", ([], .return (.const (BitVec.ofNat 64 7)), .one))]
 
+def sourceBadReturnShapeCallCode : PanSemCodeMap Word64 :=
+  [("badret", ([], .return (.const (BitVec.ofNat 64 7)), .comb [.one, .one]))]
+
 def sourceRaiseExceptionCallCode : PanSemCodeMap Word64 :=
   [("raiseE", ([], .raise "E" (.const (BitVec.ofNat 64 7)), .one))]
 
@@ -243,6 +246,20 @@ def evaluateSourceConstReturnCall :=
     (emptyPanSourceState 10 sourceConstReturnCallCode)
     (.call none "constant" [] : Prog Word64)
 
+def sourceBadReturnShapeState :=
+  { emptyPanSourceState 10 sourceBadReturnShapeCallCode with
+      locals := updatePanValueMap (fun _ => none) "caller" (.word (BitVec.ofNat 64 3)) }
+
+def evaluateSourceCallBadReturnShape :=
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler sourceBadReturnShapeState
+    (.call none "badret" [] : Prog Word64)
+
+def evaluateSourceDecCallBadReturnShape :=
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler sourceBadReturnShapeState
+    (.decCall "dest" .one "badret" [] .skip : Prog Word64)
+
 private def isSourceReturnedWord
     (result : Option (PanValueFfiClockResult Word64 Unit))
     (expected : Word64) (expectedClock : Nat) : Bool :=
@@ -331,6 +348,22 @@ def observeSourceZeroClockCallTimeout : Bool :=
 def observeSourceConstReturnCall := isSourceReturnedWord
   evaluateSourceConstReturnCall (BitVec.ofNat 64 7) 9
 
+def observeSourceCallBadReturnShape : Bool :=
+  match evaluateSourceCallBadReturnShape with
+  | some (.control (.error locals _ _ _), clock) =>
+      match locals "caller" with
+      | none => clock == 9
+      | some _ => false
+  | _ => false
+
+def observeSourceDecCallBadReturnShape : Bool :=
+  match evaluateSourceDecCallBadReturnShape with
+  | some (.control (.error locals _ _ _), clock) =>
+      match locals "caller" with
+      | none => clock == 9
+      | some _ => false
+  | _ => false
+
 #guard observeSourceCodeCall
 #guard observeSourceCallStructArgument
 #guard observeSourceCallFirstRecordField
@@ -346,6 +379,8 @@ def observeSourceConstReturnCall := isSourceReturnedWord
 #guard observeSourceRecursiveDecCallTimeout
 #guard observeSourceZeroClockCallTimeout
 #guard observeSourceConstReturnCall
+#guard observeSourceCallBadReturnShape
+#guard observeSourceDecCallBadReturnShape
 
 /-! The fixed-width branches must go through the explicit source memory model.
     This is the stateful evaluator path corresponding to
@@ -686,6 +721,12 @@ def runChecks : IO Bool := do
     IO.println "FAIL state-owned Call with a nonempty code map times out at zero clock and clears locals"
   if observeSourceConstReturnCall then IO.println "PASS zero-argument state-owned Call returns its code-map word constant" else
     IO.println "FAIL zero-argument state-owned Call returns its code-map word constant"
+  if observeSourceCallBadReturnShape then
+    IO.println "PASS state-owned Call returns HOL Error and callee state on return-shape mismatch"
+  else IO.println "FAIL state-owned Call returns HOL Error and callee state on return-shape mismatch"
+  if observeSourceDecCallBadReturnShape then
+    IO.println "PASS state-owned DecCall returns HOL Error and callee state on return-shape mismatch"
+  else IO.println "FAIL state-owned DecCall returns HOL Error and callee state on return-shape mismatch"
   if observeNestedRaise then IO.println "PASS evaluate nested structured raise" else
     IO.println "FAIL evaluate nested structured raise"
   if observeFixedLoads then IO.println "PASS evaluate fixed-width loads" else
@@ -722,6 +763,7 @@ def runChecks : IO Bool := do
     observeSourceCodePreservedAfterRecursion &&
     observeSourceRecursiveCallTimeout && observeSourceRecursiveDecCallTimeout &&
     observeSourceZeroClockCallTimeout && observeSourceConstReturnCall &&
+    observeSourceCallBadReturnShape && observeSourceDecCallBadReturnShape &&
     observeNestedRaise &&
     observeFixedLoads && observeFixedLoadDomainFailure &&
     observeExactProgramMemoryAccess && observeExactProgramDomainFailure &&

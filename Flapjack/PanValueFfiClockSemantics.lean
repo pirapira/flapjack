@@ -379,7 +379,7 @@ mutual
                     | .error _ calleeGlobals calleeMemory calleeFfi =>
                         pure (.control (.error (fun _ => none) calleeGlobals calleeMemory calleeFfi),
                           calleeClock)
-                    | .returned _ calleeGlobals calleeMemory calleeFfi values =>
+                    | .returned calleeLocals calleeGlobals calleeMemory calleeFfi values =>
                         let sourceReturnValid := match values with
                           | [value] => panShapeMatches (panValueShape structs value) returnShape
                           | _ => false
@@ -396,7 +396,8 @@ mutual
                                   (structs := structs)
                               pure (.control (.normal callerLocals callerGlobals
                                 calleeMemory calleeFfi), calleeClock)
-                        else none
+                        else pure (.control (.error calleeLocals calleeGlobals
+                          calleeMemory calleeFfi), calleeClock)
                     | .raised _ calleeGlobals calleeMemory calleeFfi exception value =>
                         let sourceExceptionValid := match exceptionShapes exception with
                           | some shape => panShapeMatches (panValueShape structs value) shape

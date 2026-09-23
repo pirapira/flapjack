@@ -1,0 +1,6 @@
+call_bad_return_shape_result=SOME Error
+call_bad_return_shape_clock=4
+call_bad_return_shape_caller_local=NONE
+deccall_bad_return_shape_result=SOME Error
+deccall_bad_return_shape_clock=4
+deccall_bad_return_shape_caller_local=NONE

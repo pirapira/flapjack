@@ -1,4 +1,5 @@
 import Flapjack.RiscV.PanMemory
+import Flapjack.Pancake.Semantics.CrepSem.Eval
 
 /-!
 # Fixed-width Pancake load parity
@@ -90,6 +91,16 @@ the RISC-V target. -/
 def holByteAlignWidth24Address5 : Word 24 := BitVec.ofNat 24 4
 def riscvByteAlignWidth24Address5 : Word 24 :=
   panRiscVByteAlign (BitVec.ofNat 24 3) (BitVec.ofNat 24 5)
+def width24Domain : PanMemoryDomain (Word 24) :=
+  fun address => address == BitVec.ofNat 24 4
+def width24Memory : PanFlatMemory (Word 24) :=
+  fun _ => some (BitVec.ofNat 24 0x332211)
+def holWidth24ByteLoad : Option (Word 24) :=
+  panModelReadByte (holByteAlignedRiscVMemoryModel false)
+    width24Domain width24Memory (BitVec.ofNat 24 3) (BitVec.ofNat 24 5) false
+def riscvWidth24ByteLoad : Option (Word 24) :=
+  panModelReadByte (RiscV.panRiscVMemoryModelForEndian false)
+    width24Domain width24Memory (BitVec.ofNat 24 3) (BitVec.ofNat 24 5) false
 
 #guard originalProbeSource ==
   "cakeml/pancake/semantics/panSemScript.sml:86-109 (mem_load_byte_def/mem_load_32_def)"
@@ -105,5 +116,7 @@ def riscvByteAlignWidth24Address5 : Word 24 :=
 #guard holByteAlignWidth24Address5 == BitVec.ofNat 24 4
 #guard riscvByteAlignWidth24Address5 == BitVec.ofNat 24 3
 #guard holByteAlignWidth24Address5 != riscvByteAlignWidth24Address5
+#guard holWidth24ByteLoad == some (BitVec.ofNat 24 0x33)
+#guard riscvWidth24ByteLoad == none
 
 end Flapjack.Test.PanFixedLoadParity

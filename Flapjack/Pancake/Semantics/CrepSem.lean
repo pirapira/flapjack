@@ -886,6 +886,63 @@ def evalCrepRuntimeExps
       pure (value :: values)
 termination_by expressions => sizeOf expressions
 
+/-- HOL-shaped Crep expression evaluator.  HOL's `crepSem$eval` returns a
+`word_lab` cell, so this core returns `PanWordLab` results directly instead of
+the unwrapped word carrier.  The production unwrapped evaluator
+`evalCrepRuntimeExp` has the shape of the `panTheWord` projection of this core;
+the formal projection bridge is tracked in bead flapjack-pxn.18.4.3.48.1. -/
+def evalCrepRuntimeExpWordLab
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeState α σ) : CrepExp α → Option (PanWordLab α)
+  | .const value => some (.word value)
+  | .var name => state.locals name
+  | .load address => do
+      let address ← evalCrepRuntimeExp state address
+      (crepRuntimeLoad state address).map PanWordLab.word
+  | .load32 address => do
+      let address ← evalCrepRuntimeExp state address
+      (crepRuntimeLoad32 state address).map PanWordLab.word
+  | .loadByte address => do
+      let address ← evalCrepRuntimeExp state address
+      (crepRuntimeLoadByte state address).map PanWordLab.word
+  | .loadGlob address => state.globals address
+  | .op operator expressions => do
+      let values ← expressions.mapM (evalCrepRuntimeExp state)
+      (state.memoryModel.wordOp operator values).map PanWordLab.word
+  | .crepOp .mul [left, right] => do
+      let left ← evalCrepRuntimeExp state left
+      let right ← evalCrepRuntimeExp state right
+      pure (.word (left * right))
+  | .cmp operator left right => do
+      let left ← evalCrepRuntimeExp state left
+      let right ← evalCrepRuntimeExp state right
+      pure (.word (state.memoryModel.compare operator left right))
+  | .shift operator left right => do
+      let left ← evalCrepRuntimeExp state left
+      let right ← evalCrepRuntimeExp state right
+      (state.memoryModel.shift operator left right).map PanWordLab.word
+  | .baseAddr => some (.word state.baseAddress)
+  | .topAddr => some (.word state.topAddress)
+  | _ => none
+
+/-- List-argument HOL-shaped evaluator: the `word_lab` analogue of
+`OPT_MMAP (eval s)` over a list of Crep expressions. -/
+def evalCrepRuntimeExpsWordLab
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeState α σ) : List (CrepExp α) → Option (List (PanWordLab α))
+  | [] => some []
+  | expression :: expressions => do
+      let value ← evalCrepRuntimeExpWordLab state expression
+      let values ← evalCrepRuntimeExpsWordLab state expressions
+      pure (value :: values)
+termination_by expressions => sizeOf expressions
+
 def restoreCrepRuntimeStep (name : Nat) (oldValue : Option (PanWordLab α)) :
     CrepRuntimeStep α σ ε → CrepRuntimeStep α σ ε
   | (result, state) =>

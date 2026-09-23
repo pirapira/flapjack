@@ -51,6 +51,26 @@ val _ = print_eval "call_code_map_7"
                 panLang$Return (panLang$Var panLang$Local (strlit "x")), panLang$One));
              clock := 10 |>)))``
 
+val _ = print_eval "call_assign_local_7"
+  ``(FST (panSem$evaluate
+      (panLang$Call (SOME (SOME (panLang$Local, strlit "answer"), NONE))
+        (strlit "id") [panLang$Const (7w:8 word)],
+       ((ARB:((8),unit) panSem$state) with
+          <| code := FEMPTY |+ (strlit "id",
+               ([ (strlit "x", panLang$One) ],
+                panLang$Return (panLang$Var panLang$Local (strlit "x")), panLang$One));
+             locals := FEMPTY |+ (strlit "answer", ValWord (3w:8 word));
+             clock := 10 |>))),
+     FLOOKUP (SND (panSem$evaluate
+      (panLang$Call (SOME (SOME (panLang$Local, strlit "answer"), NONE))
+        (strlit "id") [panLang$Const (7w:8 word)],
+       ((ARB:((8),unit) panSem$state) with
+          <| code := FEMPTY |+ (strlit "id",
+               ([ (strlit "x", panLang$One) ],
+                panLang$Return (panLang$Var panLang$Local (strlit "x")), panLang$One));
+             locals := FEMPTY |+ (strlit "answer", ValWord (3w:8 word));
+             clock := 10 |>)))).locals (strlit "answer"))``
+
 val _ = print_eval "recursive_call_code_map_7"
   ``FST (panSem$evaluate
       (panLang$Call NONE «f» [],

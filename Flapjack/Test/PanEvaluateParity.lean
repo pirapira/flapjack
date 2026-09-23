@@ -119,6 +119,15 @@ def evaluateSourceCallId :=
     (emptyPanSourceState 10 sourceIdCode)
     (.call none "id" [.const (BitVec.ofNat 64 7)] : Prog Word64)
 
+def evaluateSourceCallAssigned :=
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler
+    ({ emptyPanSourceState 10 sourceIdCode with
+        locals := fun name =>
+          if name == "answer" then some (.word (BitVec.ofNat 64 3)) else none })
+    (.call (some (some (.local, "answer"), none)) "id"
+      [.const (BitVec.ofNat 64 7)] : Prog Word64)
+
 def evaluateSourceDecCallId :=
   panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
     statefulTestHandler
@@ -182,6 +191,14 @@ private def isSourceTimeoutAt
 def observeSourceCodeCall := isSourceReturnedWord evaluateSourceCallId
   (BitVec.ofNat 64 7) 9
 
+def observeSourceCallAssigned : Bool :=
+  match evaluateSourceCallAssigned with
+  | some (.control (.normal locals _globals _memory _ffi), 9) =>
+      match locals "answer" with
+      | some (.word value) => value == BitVec.ofNat 64 7
+      | _ => false
+  | _ => false
+
 def observeSourceCodeDecCall := isSourceReturnedWord evaluateSourceDecCallId
   (BitVec.ofNat 64 7) 9
 
@@ -216,6 +233,7 @@ def observeSourceConstReturnCall := isSourceReturnedWord
   evaluateSourceConstReturnCall (BitVec.ofNat 64 7) 9
 
 #guard observeSourceCodeCall
+#guard observeSourceCallAssigned
 #guard observeSourceCodeDecCall
 #guard observeSourceNestedCodeCall
 #guard observeSourceCodePreservedAfterRecursion
@@ -471,6 +489,8 @@ def runChecks : IO Bool := do
   if observeCall then IO.println "PASS evaluate call_id_7" else IO.println "FAIL evaluate call_id_7"
   if observeSourceCodeCall then IO.println "PASS state-owned code Call matches HOL call_code_map_7" else
     IO.println "FAIL state-owned code Call matches HOL call_code_map_7"
+  if observeSourceCallAssigned then IO.println "PASS state-owned Call writes the existing local destination" else
+    IO.println "FAIL state-owned Call writes the existing local destination"
   if observeSourceCodeDecCall then IO.println "PASS state-owned code DecCall matches HOL deccall_code_map_7" else
     IO.println "FAIL state-owned code DecCall matches HOL deccall_code_map_7"
   if observeSourceNestedCodeCall then IO.println "PASS state-owned nested Call and DecCall match HOL recursive oracle" else

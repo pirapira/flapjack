@@ -590,6 +590,66 @@ theorem localRelGtVmaxPreserved
     exact (Nat.not_lt_of_ge hle) habove
   simp [beq_eq_false_iff_ne.mpr hne]
 
+/-- HOL `local_rel_le_zip_update_preserved`: replacing a source local by a
+    shape-compatible value and writing its flattened words to the associated
+    distinct slots preserves the finite-map locals relation. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "local_rel_le_zip_update_preserved"]
+theorem localRelLeZipUpdatePreserved
+    (context : PanToCrepProofContext α)
+    (sourceLocals : FiniteMap String (PanValue α))
+    (targetLocals : FiniteMap Nat α)
+    (name : String) (oldValue newValue : PanValue α)
+    (shape : Shape) (slots : List Nat)
+    (hrel : localsRel context sourceLocals targetLocals)
+    (hsource : FLOOKUP sourceLocals name = some oldValue)
+    (hcontext : FLOOKUP context.vars name = some (shape, slots))
+    (hshape : panValueShape [] oldValue = panValueShape [] newValue)
+    (hdistinct : slots.Nodup) :
+    localsRel context (FUPDATE sourceLocals (name, newValue))
+      (FUPDATE_LIST targetLocals (slots.zip (panValueFlatten newValue))) := by
+  obtain ⟨oldSlots, hlookup, hlen, _, hwf⟩ :=
+    localsRelLookupCtxt context sourceLocals targetLocals name oldValue hrel hsource
+  have hpair : (panValueShape [] oldValue, oldSlots) = (shape, slots) := by
+    apply Option.some.inj
+    rw [← hlookup, hcontext]
+  have hslots : oldSlots = slots := congrArg Prod.snd hpair
+  have hcontextOld : FLOOKUP context.vars name =
+      some (panValueShape [] oldValue, slots) := by
+    rw [← hslots]
+    exact hlookup
+  have hwfNew : isWfShape [] (panValueShape [] newValue) = true := by
+    rw [← hshape]
+    exact hwf
+  have hlenNew : slots.length = (panValueFlatten newValue).length := by
+    rw [← hslots, hlen, panValueFlatten_length_eq_shapeSize oldValue hwf,
+      panValueFlatten_length_eq_shapeSize newValue hwfNew, hshape]
+  refine ⟨hrel.1, hrel.2.1, ?_⟩
+  intro other value hsourceOther
+  rw [FLOOKUP_update] at hsourceOther
+  by_cases hsame : name = other
+  · subst other
+    simp at hsourceOther
+    cases hsourceOther
+    refine ⟨slots, panValueFlatten newValue, ?_, ?_, rfl, hwfNew⟩
+    · rw [← hshape]
+      exact hcontextOld
+    · exact opt_mmap_some_eq_zip_flookup slots targetLocals
+        (panValueFlatten newValue) hdistinct hlenNew
+  · have hneq : (name == other) = false := beq_eq_false_iff_ne.mpr hsame
+    simp [hneq] at hsourceOther
+    obtain ⟨otherSlots, words, hother, hmap, hflat, hotherWf⟩ :=
+      hrel.2.2 other value hsourceOther
+    refine ⟨otherSlots, words, hother, ?_, hflat, hotherWf⟩
+    have hdisjoint : ListDisjoint slots otherSlots := by
+      intro slot hin hotherIn
+      apply hsame
+      exact hrel.1.2 name other (panValueShape [] oldValue)
+        (panValueShape [] value) slots otherSlots hcontextOld hother
+        ⟨slot, hin, hotherIn⟩
+    rw [opt_mmap_disj_zip_flookup slots targetLocals otherSlots
+      (panValueFlatten newValue) hdisjoint hlenNew]
+    exact hmap
+
 /-! Execute the finite-map compiler with the HOL proof context. Every map is
     passed directly to `compileProgHOL`; no queried-name projection to an
     `InfoMap` is performed. -/

@@ -349,4 +349,260 @@ theorem ALL_DISTINCT_fperm_decs [BEq String] [LawfulBEq String]
         (fun entry => entry.1)).Nodup :=
   globalRenameDecls_names_nodup source target declarations hnodup
 
+/-! Exact-shaped port of Cake's `map_pick_up_first`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2995`): projecting the
+    first component of a quadruple map recovers the mapped first components.
+    HOL `MAP` is Lean `List.map` and `FST` is `Prod.fst`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "map_pick_up_first"]
+theorem map_pick_up_first {α β γ δ ε ζ η θ : Type}
+    (l : List (α × β × γ × δ)) (f1 : α → ε) (f2 : β → ζ) (f3 : γ → η)
+    (f4 : δ → θ) :
+    ((l.map (fun p => (f1 p.1, f2 p.2.1, f3 p.2.2.1, f4 p.2.2.2))).map Prod.fst) =
+      (l.map Prod.fst).map f1 := by
+  rw [List.map_map, List.map_map]
+  rfl
+
+/-! Exact-shaped port of Cake's `tuple_4_o`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:3003`): composing two
+    quadruple projections composes the four component functions pointwise. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "tuple_4_o"]
+theorem tuple_4_o {α β γ δ ε ζ η θ ι κ ℓ μ : Type}
+    (f1 : α → ε) (f2 : β → ζ) (f3 : γ → η) (f4 : δ → θ)
+    (g1 : ι → α) (g2 : κ → β) (g3 : ℓ → γ) (g4 : μ → δ) :
+    ((fun q : α × β × γ × δ => (f1 q.1, f2 q.2.1, f3 q.2.2.1, f4 q.2.2.2)) ∘
+        (fun p : ι × κ × ℓ × μ =>
+          (g1 p.1, g2 p.2.1, g3 p.2.2.1, g4 p.2.2.2))) =
+      (fun p : ι × κ × ℓ × μ =>
+        (f1 (g1 p.1), f2 (g2 p.2.1), f3 (g3 p.2.2.1), f4 (g4 p.2.2.2))) := by
+  funext p
+  obtain ⟨x, y, z, t⟩ := p
+  rfl
+
+/-! Exact-shaped port of Cake's `dec_shapes_append`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2328`): the collected
+    declaration shapes distribute over list append. `dec_shapes` is the
+    production `globalDeclShapes`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "dec_shapes_append"]
+theorem dec_shapes_append (declarations rest : List (Decl α)) :
+    globalDeclShapes (declarations ++ rest) =
+      globalDeclShapes declarations ++ globalDeclShapes rest :=
+  globalDeclShapes_append declarations rest
+
+/-! Exact-shaped port of Cake's `dec_shapes_functions`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2335`): a declaration
+    list all of whose entries are functions collects no shapes. HOL `EVERY
+    is_function` is Lean `List.all globalDeclIsFunction = true`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "dec_shapes_functions"]
+theorem dec_shapes_functions (declarations : List (Decl α))
+    (hfunctions : declarations.all globalDeclIsFunction = true) :
+    globalDeclShapes declarations = [] :=
+  globalDeclShapes_of_functions declarations
+    (fun declaration hmem => List.all_eq_true.mp hfunctions declaration hmem)
+
+/-! Exact-shaped port of Cake's `dec_shapes_FILTER`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2343`): filtering out
+    function declarations preserves collected shapes, while filtering to names
+    or exceptions yields none. HOL `FILTER` is Lean `globalDeclsFilter`,
+    `is_decl` is `globalDeclIsGlobal` and `is_exn_decl` is
+    `globalDeclIsException`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "dec_shapes_FILTER"]
+theorem dec_shapes_FILTER (declarations : List (Decl α)) :
+    globalDeclShapes
+        (globalDeclsFilter
+          (fun declaration => !globalDeclIsFunction declaration) declarations) =
+      globalDeclShapes declarations ∧
+    globalDeclShapes (globalDeclsFilter globalDeclIsName declarations) = [] ∧
+    globalDeclShapes (globalDeclsFilter globalDeclIsGlobal declarations) =
+      globalDeclShapes declarations ∧
+    globalDeclShapes (globalDeclsFilter globalDeclIsException declarations) = [] :=
+  ⟨globalDeclShapes_globalDeclsFilter_not_function declarations,
+    globalDeclShapes_globalDeclsFilter_name declarations,
+    globalDeclShapes_globalDeclsFilter_global declarations,
+    globalDeclShapes_globalDeclsFilter_exception declarations⟩
+
+/-! Exact-shaped port of Cake's `dec_shapes_fperm_decs`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2354`): renaming does not
+    change the collected declaration shapes. The source-shaped `fperm_decs` is
+    the production `globalRenameDecls`, which only rewrites function entries. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "dec_shapes_fperm_decs"]
+theorem dec_shapes_fperm_decs [BEq String] (source target : FunName)
+    (declarations : List (Decl α)) :
+    globalDeclShapes (globalRenameDecls source target declarations) =
+      globalDeclShapes declarations := by
+  induction declarations with
+  | nil => simp [globalRenameDecls, globalDeclShapes_nil]
+  | cons declaration declarations ih =>
+      cases declaration <;> simp [globalRenameDecls, globalDeclShapes_cons, ih]
+
+/-! Exact-shaped port of Cake's `dec_shapes_resort_decls_def`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2361`): resorting
+    declarations preserves the collected shapes. `resort_decls` is the
+    production `globalResortDecls`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "dec_shapes_resort_decls_def"]
+theorem dec_shapes_resort_decls_def (declarations : List (Decl α)) :
+    globalDeclShapes (globalResortDecls declarations) =
+      globalDeclShapes declarations :=
+  globalDeclShapes_globalResortDecls declarations
+
+/-! Exact-shaped port of Cake's `resort_decls_preserve_functions`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2055`): resorting
+    declarations leaves the function table unchanged. `resort_decls` is the
+    production `globalResortDecls`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "resort_decls_preserve_functions"]
+theorem resort_decls_preserve_functions (declarations : List (Decl α)) :
+    functions (globalResortDecls declarations) = functions declarations :=
+  functions_globalResortDecls declarations
+
+/-! Exact-shaped port of Cake's `fperm_decs_FILTER_is_function`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2032`): renaming commutes
+    with filtering to the function declarations. HOL `fperm_decs` is the
+    production `globalRenameDecls` and HOL `FILTER is_function` is Lean
+    `globalDeclsFilter globalDeclIsFunction`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "fperm_decs_FILTER_is_function"]
+theorem fperm_decs_FILTER_is_function [BEq String] (source target : FunName)
+    (declarations : List (Decl α)) :
+    globalRenameDecls source target
+        (globalDeclsFilter globalDeclIsFunction declarations) =
+      globalDeclsFilter globalDeclIsFunction
+        (globalRenameDecls source target declarations) :=
+  globalRenameDecls_filter_function source target declarations
+
+/-- Exact-shaped port of Cake's `fperm_decs_decls`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2023`).  The HOL
+    statement carries an unused `ys` binder introduced by `recInduct`, which is
+    reproduced here for statement parity.  HOL `EVERY ($¬ ∘ is_function)` is
+    Lean `declarations.all (fun declaration => !globalDeclIsFunction declaration)`
+    and HOL `fperm_decs` is the reviewed production `globalRenameDecls`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "fperm_decs_decls"]
+theorem fperm_decs_decls [BEq String] (source target : FunName)
+    (declarations _unused : List (Decl α))
+    (hnone : declarations.all
+      (fun declaration => !globalDeclIsFunction declaration) = true) :
+    globalRenameDecls source target declarations = declarations :=
+  globalRenameDecls_eq_self_of_no_functions source target declarations hnone
+
+/-- Exact-shaped port of Cake's `new_main_name_correct`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2073`): the synthesized
+    `main` entry-point name is not one of the program's existing function names.
+    HOL's `MEM (new_main_name code) (MAP FST (functions code)) ⇒ F` is stated as
+    failure of membership in `(functions declarations).map (fun entry => entry.1)`;
+    `globalFunctionNames_eq_functions_map` bridges the production
+    `globalFunctionNames`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "new_main_name_correct"]
+theorem new_main_name_correct [BEq String] [LawfulBEq String]
+    (declarations : List (Decl α)) :
+    globalNewMainName declarations ∈
+        (functions declarations).map (fun entry => entry.1) → False := by
+  rw [← globalFunctionNames_eq_functions_map]
+  exact globalNewMainName_not_mem declarations
+
+/-- Exact-shaped port of Cake's `fresh_name_correct`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:993`): the name produced
+    by the fresh-name search is not a member of the input list.  HOL
+    `MEM (fresh_name name names) names ⇒ F` is `globalFreshName name names ∈
+    names → False`; the production counterpart is `globalFreshName_not_mem`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "fresh_name_correct"]
+theorem fresh_name_correct [BEq String] [LawfulBEq String]
+    (name : String) (names : List String) :
+    globalFreshName name names ∈ names → False :=
+  globalFreshName_not_mem name names
+
+/-- Exact-shaped port of Cake's `fresh_name_correct'`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1003`): if every member
+    of `names'` lies in `names`, then a name fresh for `names` is also fresh
+    for `names'`.  HOL `set names' ⊆ set names` is stated pointwise, as in the
+    production counterpart `globalFreshName_not_mem_of_subset`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "fresh_name_correct'"]
+theorem fresh_name_correct' [BEq String] [LawfulBEq String]
+    (name : String) (names names' : List String)
+    (hmem : globalFreshName name names ∈ names')
+    (hsubset : ∀ candidate, candidate ∈ names' → candidate ∈ names) :
+    False :=
+  globalFreshName_not_mem_of_subset name names names' hsubset hmem
+
+/-- Exact-shaped port of Cake's `FILTER_decs_fperm_decs`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2832`): renaming
+    commutes with filtering to the non-function declarations.  HOL
+    `FILTER ($¬ ∘ is_function)` is `globalDeclsFilter (fun declaration =>
+    !globalDeclIsFunction declaration)` and HOL `fperm_decs` is the reviewed
+    production `globalRenameDecls`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "FILTER_decs_fperm_decs"]
+theorem FILTER_decs_fperm_decs [BEq String] (source target : FunName)
+    (declarations : List (Decl α)) :
+    globalDeclsFilter (fun declaration => !globalDeclIsFunction declaration)
+        (globalRenameDecls source target declarations) =
+      globalDeclsFilter (fun declaration => !globalDeclIsFunction declaration)
+        declarations :=
+  globalRenameDecls_filter_not_function source target declarations
+
+/-- Exact-shaped port of Cake's `compile_decs_EVERY_is_function`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1977`): every entry the
+    compilation pass emits into the function table is a function declaration.
+    As in HOL, the source is `code`, the four outputs `decls,funs,exns,ctxt'`
+    are explicitly quantified, and the premise binds them to the pass result
+    (`globalCompileDecs` returns a record in place of HOL's tuple).  HOL
+    `EVERY is_function funs` is `functions.all globalDeclIsFunction = true`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "compile_decs_EVERY_is_function"]
+theorem compile_decs_EVERY_is_function [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α))
+    (decls : List (Prog α)) (funs exns : List (Decl α))
+    (ctxt' : GlobalPassContext α)
+    (hcompile : globalCompileDecs context code =
+      { initializers := decls, functions := funs,
+        exceptions := exns, context := ctxt' }) :
+    funs.all globalDeclIsFunction = true := by
+  simpa [hcompile] using globalCompileDecs_functions_all_isFunction context code
+
+/-- Exact-shaped port of Cake's `compile_decs_decls_thm`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1967`): a program whose
+    declarations contain no functions compiles to an empty function table.
+    HOL `EVERY (λd. ¬is_function d)` is `code.all (fun declaration =>
+    !globalDeclIsFunction declaration) = true`; the four outputs are quantified
+    and bound by the equality premise as above. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "compile_decs_decls_thm"]
+theorem compile_decs_decls_thm [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α))
+    (decls : List (Prog α)) (funs exns : List (Decl α))
+    (ctxt' : GlobalPassContext α)
+    (hcompile : globalCompileDecs context code =
+      { initializers := decls, functions := funs,
+        exceptions := exns, context := ctxt' })
+    (hnone : code.all (fun declaration => !globalDeclIsFunction declaration) = true) :
+    funs = [] := by
+  simpa [hcompile] using
+    globalCompileDecs_functions_eq_nil_of_no_functions context code hnone
+
+/-- Exact-shaped port of Cake's `compile_decs_exns_are_exns`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2448`): the exception
+    table is exactly the exception declarations of the source program.  HOL
+    `FILTER is_exn_decl` is `globalDeclsFilter globalDeclIsException`; the four
+    outputs are quantified and bound by the equality premise as above. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "compile_decs_exns_are_exns"]
+theorem compile_decs_exns_are_exns [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α))
+    (decls : List (Prog α)) (funs exns : List (Decl α))
+    (ctxt' : GlobalPassContext α)
+    (hcompile : globalCompileDecs context code =
+      { initializers := decls, functions := funs,
+        exceptions := exns, context := ctxt' }) :
+    exns = globalDeclsFilter globalDeclIsException code := by
+  simpa [hcompile] using globalCompileDecs_exceptions_eq_filter context code
+
+/-- Exact-shaped port of Cake's `compile_decs_preserve_functions`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2062`): compilation
+    preserves the function-name table.  HOL `MAP FST (functions funs)` is
+    `(functions funs).map (fun entry => entry.1)`; the four outputs are
+    quantified and bound by the equality premise as above. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "compile_decs_preserve_functions"]
+theorem compile_decs_preserve_functions [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α))
+    (decls : List (Prog α)) (funs exns : List (Decl α))
+    (ctxt' : GlobalPassContext α)
+    (hcompile : globalCompileDecs context code =
+      { initializers := decls, functions := funs,
+        exceptions := exns, context := ctxt' }) :
+    (functions funs).map (fun entry => entry.1) =
+      (functions code).map (fun entry => entry.1) := by
+  simpa [hcompile] using globalCompileDecs_preserve_functions context code
+
 end Flapjack

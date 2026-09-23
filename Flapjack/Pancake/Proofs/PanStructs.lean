@@ -215,7 +215,7 @@ theorem isWfShape_drop [BEq String] (context : StructContext) (shape : Shape)
 /-! Lean list-lookup adaptation of Cake's local `alookup_drop_helper`
     (`cakeml/pancake/proofs/pan_structsProofScript.sml:78`). -/
 @[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "alookup_drop_helper"]
-theorem lookup_drop_helper [DecidableEq α]
+theorem lookup_drop_helper [BEq α] [LawfulBEq α]
     (n : Nat) (xs : List (α × β)) (key : α) (value : β)
     (hlookup : List.lookup key (xs.drop n) = some value)
     (hnodup : (xs.map Prod.fst).Nodup) :
@@ -260,7 +260,8 @@ theorem isWfShape_of_mem {context : StructContext} {shapes : List Shape} {shape 
 
 /-! Lean support lemmas connecting `lookupInfo` with the generic list lookup
     used in HOL's local `alookup_drop_helper`. -/
-theorem lookupInfo_eq_lookup (name : String) (entries : InfoMap α) :
+theorem lookupInfo_eq_lookup [BEq String] [LawfulBEq String]
+    (name : String) (entries : InfoMap α) :
     lookupInfo name entries = List.lookup name entries := by
   induction entries with
   | nil => rfl
@@ -276,7 +277,7 @@ theorem lookupInfo_eq_lookup (name : String) (entries : InfoMap α) :
           beq_eq_false_iff_ne.mpr (fun hc => h (beq_iff_eq.mpr hc.symm))
         simp [h, h']
 
-theorem lookupInfo_drop_helper (n : Nat)
+theorem lookupInfo_drop_helper [BEq String] [LawfulBEq String] (n : Nat)
     (context : StructContext) (name : String) (info : StructInfo)
     (hlookup : lookupInfo name (context.drop n) = some info)
     (hnodup : (context.map Prod.fst).Nodup) :
@@ -449,6 +450,145 @@ theorem structInfosOk_cons (xs : StructContext) (nm : StructName) (info : Struct
         simpa [isWfShape] using hlist
       rw [← hdropOne (.comb (info'.fields.map Prod.snd)) hwfComb]
       exact h4 (name, info') hentry
+
+/-- Exact translation of HOL's local `alookup_map_structs_ok`
+    (`pan_structsProofScript.sml:243`): a found structure in a valid context
+    has distinct field names. -/
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "alookup_map_structs_ok" 243]
+theorem lookupInfo_fields_nodup [BEq String] [LawfulBEq String] (name : String)
+    (context : StructContext) (info : StructInfo)
+    (hlookup : lookupInfo name context = some info)
+    (hok : structInfosOk context) :
+    (info.fields.map Prod.fst).Nodup := by
+  induction context with
+  | nil => simp [lookupInfo] at hlookup
+  | cons entry context ih =>
+      obtain ⟨candidate, entryInfo⟩ := entry
+      simp only [lookupInfo] at hlookup
+      by_cases hc : (candidate == name) = true
+      · rw [if_pos hc] at hlookup
+        have heq : entryInfo = info := Option.some.inj hlookup
+        subst heq
+        exact hok.1 (candidate, entryInfo) (by simp)
+      · rw [if_neg hc] at hlookup
+        exact ih hlookup (structInfosOk_drop 1 ((candidate, entryInfo) :: context) hok)
+
+/-- Exact production-helper translation of HOL `fields_in_order_reorder_noop`
+    (`pan_structsProofScript.sml:218`): selecting fields from compiled
+    expressions in the original field-name order yields the compiled source
+    expressions. -/
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "fields_in_order_reorder_noop" 218]
+theorem fieldsInOrderReorderNoop [BEq String] [LawfulBEq String]
+    (context : StructPassContext) (eflds : List (FieldName × Exp α))
+    (infoFields : List (FieldName × Shape))
+    (hNames : infoFields.map Prod.fst = eflds.map Prod.fst)
+    (hNodup : (infoFields.map Prod.fst).Nodup) :
+    structSelectFields infoFields (structCompileExp.structCompileFields context eflds) =
+      eflds.map (fun field => structCompileExp context field.2) := by
+  have lookup_append : ∀ (name : String) (prefixEntries entries : InfoMap (Exp α)),
+      name ∉ prefixEntries.map Prod.fst →
+      lookupInfo name (prefixEntries ++ entries) = lookupInfo name entries := by
+    intro name prefixEntries entries hnot
+    have hnone : List.lookup name prefixEntries = none := by
+      rw [List.lookup_eq_none_iff]
+      intro p hp
+      rw [bne_iff_ne]
+      intro hname
+      exact hnot (List.mem_map.mpr ⟨p, hp, hname.symm⟩)
+    calc
+      lookupInfo name (prefixEntries ++ entries) =
+          List.lookup name (prefixEntries ++ entries) :=
+            lookupInfo_eq_lookup name (prefixEntries ++ entries)
+      _ = List.lookup name entries := by rw [List.lookup_append, hnone]; simp
+      _ = lookupInfo name entries := (lookupInfo_eq_lookup name entries).symm
+  have select_append : ∀ (fields : List (FieldName × Shape))
+      (prefixEntries entries : InfoMap (Exp α)),
+      (∀ name ∈ fields.map Prod.fst, name ∉ prefixEntries.map Prod.fst) →
+      structSelectFields fields (prefixEntries ++ entries) = structSelectFields fields entries := by
+    intro fields
+    induction fields with
+    | nil => intro prefixEntries entries _; simp [structSelectFields]
+    | cons field fields ih =>
+        intro prefixEntries entries hdisjoint
+        obtain ⟨name, shape⟩ := field
+        have hlookup := lookup_append name prefixEntries entries (hdisjoint name (by simp))
+        simp only [structSelectFields, hlookup]
+        exact congrArg (fun tail : List (Exp α) =>
+          match lookupInfo name entries with
+          | some expression => expression :: tail
+          | none => tail)
+          (ih prefixEntries entries (fun other hmem =>
+            hdisjoint other (by simp [hmem])))
+  induction eflds generalizing infoFields with
+  | nil =>
+      cases infoFields with
+      | nil => simp [structSelectFields]
+      | cons field fields => simp at hNames
+  | cons field eflds ih =>
+      obtain ⟨name, expression⟩ := field
+      cases infoFields with
+      | nil => simp at hNames
+      | cons field infoFields =>
+          obtain ⟨infoName, shape⟩ := field
+          simp only [List.map_cons, List.cons.injEq] at hNames
+          rcases hNames with ⟨hHead, hNames⟩
+          simp only [List.map_cons, List.nodup_cons] at hNodup
+          have hFresh : infoName ∉ infoFields.map Prod.fst := hNodup.1
+          have hFresh' : name ∉ infoFields.map Prod.fst := by
+            simpa [hHead] using hFresh
+          have hTailNames : infoFields.map Prod.fst = eflds.map Prod.fst := hNames
+          have hTailNodup : (infoFields.map Prod.fst).Nodup := hNodup.2
+          simp only [structSelectFields, structCompileExp.structCompileFields,
+            hHead, lookupInfo, beq_self_eq_true, if_true]
+          have hdisjoint : ∀ other ∈ infoFields.map Prod.fst,
+              other ∉ [(name, structCompileExp context expression)].map Prod.fst := by
+            intro other hmem
+            have hne : other ≠ name := by
+              intro heq
+              subst heq
+              exact hFresh' hmem
+            simp only [List.map_cons, List.map_nil, List.mem_cons, List.mem_nil_iff, or_false]
+            exact hne
+          change structCompileExp context expression ::
+              structSelectFields infoFields
+                ([(name, structCompileExp context expression)] ++
+                  structCompileExp.structCompileFields context eflds) =
+            structCompileExp context expression ::
+              eflds.map (fun field => structCompileExp context field.2)
+          rw [select_append infoFields [(name, structCompileExp context expression)]
+            (structCompileExp.structCompileFields context eflds) hdisjoint]
+          have htail := ih infoFields hTailNames hTailNodup
+          simpa only [List.map_cons, Prod.snd] using
+            congrArg (fun tail => structCompileExp context expression :: tail) htail
+
+/-- Exact translation of HOL `opt_mmap_eq_every`
+    (`pan_structsProofScript.sml:255`): if production `List.mapM` succeeds,
+    every successful image satisfying `P` makes the result satisfy `P`. -/
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "opt_mmap_eq_every" 255]
+theorem list_mapM_all_of_mem {α β : Type} (f : α → Option β) (P : β → Bool)
+    (xs : List α) (ys : List β) (h : xs.mapM f = some ys)
+    (hf : ∀ x y, x ∈ xs → f x = some y → P y = true) :
+    ys.all P = true := by
+  induction xs generalizing ys with
+  | nil =>
+      simp only [List.mapM_nil] at h
+      cases h
+      simp
+  | cons a as ih =>
+      rw [List.mapM_cons] at h
+      cases hx : f a with
+      | none => simp [hx] at h
+      | some b =>
+          simp only [hx] at h
+          cases hxs : as.mapM f with
+          | none => simp [hxs] at h
+          | some ys' =>
+              simp only [hxs] at h
+              have hb : b :: ys' = ys := by simpa using h
+              subst hb
+              simp only [List.all_cons, Bool.and_eq_true]
+              exact ⟨hf a b (by simp) hx,
+                ih ys' hxs (fun x y hx' hfy => hf x y (by simp [hx']) hfy)⟩
 
 /-- Exact port of HOL `dropWhile_MAP_helper`
     (`pan_structsProofScript.sml:542`): mapping commutes with `dropWhile` when

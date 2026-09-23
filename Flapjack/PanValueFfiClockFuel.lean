@@ -119,19 +119,12 @@ theorem call_clock_succ_mono
   | some values =>
     rw [hargs] at h
     simp only [Option.bind_eq_bind, Option.bind_some] at h ⊢
-    cases hlk : lookupPanFunction function functions with
-    | none => rw [hlk] at h; simp at h
-    | some pb =>
-      obtain ⟨parameters, body⟩ := pb
-      rw [hlk] at h
-      simp only [Option.bind_some] at h ⊢
-      by_cases hvalid : panValueParametersValid structs c function values
-      · rw [if_pos hvalid] at h ⊢
-        cases hbind : bindPanValueParameters parameters values with
-        | none => rw [hbind] at h; simp at h
-        | some calleeLocals =>
-          rw [hbind] at h
-          simp only [Option.bind_some] at h ⊢
+    cases htarget : panValueCallTarget structs c function functions values with
+    | none => rw [htarget] at h; simp only [Option.elim_none] at h ⊢; exact h
+    | some target =>
+          obtain ⟨body, calleeLocals⟩ := target
+          rw [htarget] at h
+          simp only [Option.elim_some] at h ⊢
           by_cases hclock : clock = 0
           · rw [if_pos hclock] at h ⊢; exact h
           · rw [if_neg hclock] at h ⊢
@@ -178,7 +171,6 @@ theorem call_clock_succ_mono
                           · rw [if_neg hhv] at h; simp at h
                         · rw [if_neg hcaught] at h ⊢; exact h
                   · rw [if_neg hev] at h; simp at h
-      · rw [if_neg hvalid] at h; simp at h
 
 theorem evalPanValueFfiClockProg_fuel_mono'
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]

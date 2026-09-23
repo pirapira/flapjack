@@ -674,14 +674,6 @@ def compileProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
 
 termination_by structural program
 
-/-! Legacy fixed-width wrapper for list-backed `PanToCrepCompileContext`. It
-    accepts no byte-width value, but still routes through the list compiler;
-    exact finite-map callers should use `compileProgHOL`. -/
-def compileProgFixed [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
-    [CrepBytesInWord α] (context : PanToCrepCompileContext α)
-    (program : Prog α) : CrepProg α :=
-  compileProg (context.toExecutable) program
-
 /-! Source-named port of CakeML Pancake's active `comp_func_def`
     (`pan_to_crepScript.sml:337`).  Cake derives the context's `vmax` from
     the flattened parameter shape, then invokes `compile`; keeping that
@@ -739,17 +731,6 @@ def functionInfosHOL (declarations : List (Decl α)) :
      function name wins. `FUPDATE_LIST` is a left fold and needs reversal. -/
   FUPDATE_LIST FEMPTY (panToCrepMakeFuncs declarations).reverse
 
-def panToCrepCompFuncFixed [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
-    [CrepBytesInWord α] (context : PanToCrepHOLContext α)
-    (params : List (VarName × Shape)) (body : Prog α) : CrepProg α :=
-  let shapes := params.map Prod.snd
-  let vmax := Shape.shapeSize (.comb shapes) - 1
-  compileProgHOL
-    { vars := panToCrepMakeVmapHOL params
-      funcs := context.funcs
-      eids := context.eids
-      vmax := vmax } body
-
 def panToCrepCompFuncRiscV (context : PanToCrepHOLContext (BitVec width))
     (params : List (VarName × Shape)) (body : Prog (BitVec width)) :
     CrepProg (BitVec width) :=
@@ -760,30 +741,6 @@ def panToCrepCompFuncRiscV (context : PanToCrepHOLContext (BitVec width))
       funcs := context.funcs
       eids := context.eids
       vmax := vmax } body
-
-def compileFunDeclSourceFixed [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
-    [CrepBytesInWord α] (context : PanToCrepHOLContext α)
-    (declaration : FunDecl α) : CompiledFunction α :=
-  { name := declaration.name, params := panToCrepVars declaration.params,
-    body := panToCrepCompFuncFixed context declaration.params declaration.body,
-    returnShape := declaration.returnShape }
-
-def compileFunctionsSourceFixed [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
-    [CrepBytesInWord α] (context : PanToCrepHOLContext α) :
-    List (Decl α) → List (CompiledFunction α)
-  | [] => []
-  | .function declaration :: declarations =>
-      compileFunDeclSourceFixed context declaration ::
-        compileFunctionsSourceFixed context declarations
-  | _ :: declarations => compileFunctionsSourceFixed context declarations
-termination_by declarations => sizeOf declarations
-
-def compileToCrepFixed [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
-    [CrepBytesInWord α] (context : PanToCrepHOLContext α)
-    (declarations : List (Decl α)) :
-    List (CompiledFunction α) :=
-  let context := { context with funcs := functionInfosHOL declarations }
-  compileFunctionsSourceFixed context declarations
 
 /-! HOL `get_eids_from_decls_def`: enumerate exception declarations in source
 order and turn their zero-based indices into words. HOL `alist_to_fmap` uses

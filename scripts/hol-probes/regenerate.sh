@@ -177,6 +177,9 @@ run_probe crep_runtime_ext_call_probeScript.sml crep_runtime_ext_call_probe.out 
 run_probe crep_every_exp_probeScript.sml crep_every_exp_probe.out \
   const_hit always_op_nested "$cake_dir/pancake/semantics/crepPropsScript.sml" \
   "$cake_dir/pancake/semantics"
+run_probe crep_assigned_vars_probeScript.sml crep_assigned_vars_probe.out \
+  afv_prog nested_afv "$cake_dir/pancake/semantics/crepPropsScript.sml" \
+  "$cake_dir/pancake/semantics"
 run_probe pan_flat_store_probeScript.sml pan_flat_store_probe.out \
   store_hit stores_blocked "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_flatten_probeScript.sml pan_flatten_probe.out \
@@ -312,6 +315,12 @@ run_probe pan_sem_primitive_e2e_probeScript.sml pan_sem_primitive_e2e_probe.out 
 # observes that the explicit `SOME Error` result propagates.
 run_probe pan_sem_error_prop_e2e_probeScript.sml pan_sem_error_prop_e2e_probe.out \
   seq_error_result while_error_locals \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+# The Store/ShMem/If probe observes successful execution and the explicit
+# `SOME Error` results with unchanged state for the store, shared-memory, and
+# condition rejection branches.
+run_probe pan_sem_store_error_probeScript.sml pan_sem_store_error_probe.out \
+  if_ok_result shmemstore_domain_result \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_fix_clock_probeScript.sml pan_fix_clock_probe.out \
   pan_fix_clock_clamps pan_fix_clock_keeps_lower \
@@ -715,6 +724,8 @@ run_probe loop_sem_ffi_probeScript.sml loop_sem_ffi_probe.out \
 run_probe loop_sem_ffi_rv64_probeScript.sml loop_sem_ffi_rv64_probe.out \
   rv64_lookups rv64_extcall_missing_local \
   "$cake_dir/pancake/semantics/loopSemScript.sml"
+run_probe byte_align_probeScript.sml byte_align_probe.out \
+  ba24_5 ba8_7 "$cake_dir/pancake/semantics/loopSemScript.sml"
 run_probe loop_sem_exit_loop_probeScript.sml loop_sem_exit_loop_probe.out \
   exit_loop_break exit_loop_error "$cake_dir/pancake/semantics/loopSemScript.sml"
 # The loop_arith probe prints numeric word values to avoid raw-literal ambiguity.

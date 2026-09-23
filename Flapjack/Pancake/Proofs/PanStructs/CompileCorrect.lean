@@ -63,12 +63,13 @@ mutual
 end
 
 mutual
-  /-- Exact Bool-valued counterpart of HOL `v_flds_ok_def`. The Lean
-      `StructInfo` includes HOL's `fields` and `size`, plus a Flapjack-only
-      `shapedFields` cache which is ignored here. Key lookup uses decidable
-      equality and first-match order, matching HOL `ALOOKUP`; structural shape
-      list equality is decided by a structural comparator equivalent to HOL
-      structural list equality. -/
+  /-- Bool-valued counterpart of HOL `v_flds_ok_def`, using the production
+      `lookupInfo`. Its `LawfulBEq String` instance identifies that lookup
+      with HOL equality-based `ALOOKUP` (see
+      `lookupInfo_eq_panPropsALookupEq`). Lean `StructInfo` has an additional
+      `shapedFields` cache absent from HOL; the predicate ignores it, as well
+      as the source `size` field. The remaining fields projection used by the
+      compiler context is `panStructContextShapeView`. -/
   @[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "v_flds_ok_def"]
   def panStructValueFieldsOkBool (structs : StructContext) :
       PanValue α → Bool
@@ -76,7 +77,7 @@ mutual
     | .rStruct values => panStructValuesFieldsOkBool structs values
     | .nStruct name fields =>
         panStructFieldValuesFieldsOkBool structs fields &&
-          match panPropsALookupEq name structs with
+          match lookupInfo name structs with
           | none => false
           | some info =>
               decide (fields.map Prod.fst = info.fields.map Prod.fst) &&
@@ -105,12 +106,9 @@ mutual
 end
 
 mutual
-  /-- Prop-valued Flapjack convenience predicate mirroring HOL
-      `v_flds_ok_def`. It is not an exact port: HOL returns Bool, while this
-      declaration returns Prop and uses `[BEq String]` lookup. The adjacent
-      `panStructValueFieldsOkBool` definition is the Bool/equality-based HOL
-      counterpart. `StructInfo.shapedFields` is an additional Lean cache field
-      absent from HOL and is ignored by both predicates. -/
+  /-- Prop-valued Flapjack convenience predicate mirroring the equations of
+      HOL `v_flds_ok_def`. It is not an exact port: HOL returns Bool, while
+      this declaration returns Prop and uses `[BEq String]` lookup. -/
   def panStructValueFieldsOk [BEq String] (structs : StructContext) :
       PanValue α → Prop
     | .word _ => True
@@ -143,12 +141,9 @@ mutual
 end
 
 mutual
-  /-- Prop-valued Flapjack convenience predicate mirroring HOL
-      `is_wf_shape_v_def`. It is not an exact port: HOL returns Bool, while
-      this declaration returns Prop and uses `[BEq String]` lookup. The
-      adjacent `panIsWfShapeValueBool` definition is the Bool/equality-based
-      HOL counterpart. The HOL `struct_info` has fields and size; Lean adds an
-      unused `shapedFields` cache which this predicate also ignores. -/
+  /-- Prop-valued Flapjack convenience predicate mirroring the equations of
+      HOL `is_wf_shape_v_def`. It is not an exact port: HOL returns Bool, while
+      this declaration returns Prop and uses `[BEq String]` lookup. -/
   def panStructValueShapeWf [BEq String] (structs : StructContext) :
       PanValue α → Prop
     | .word _ => True
@@ -526,6 +521,32 @@ theorem panStructSkipFiniteMapEvaluatorSupport
   simpa [panStructConvertFiniteState] using
     (panStructSkipEvaluatorSupport context evaluationContext primitive handler
       bytesInWord state.runtime)
+
+/-- Exact production-evaluator projection for HOL-shaped finite-map state on
+    Skip. Converting the source execution's clock result and post-state yields
+    the execution of the converted state and compiled program. The state
+    wrapper carries finite support and lookup agreement, so the projection does
+    not assume a separate finite-support premise. -/
+theorem panStructFiniteMapSkipEvaluationProjection
+    [BEq String] [LawfulBEq String] [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : StructPassContext)
+    (evaluationContext : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (state : PanStructFiniteState α (FfiState σ)) :
+    panSemEvaluateCodeStateWithPostState evaluationContext primitive handler
+        bytesInWord (panStructConvertFiniteState context state).runtime
+        (structCompileProg context (.skip : Prog α)) =
+      (panSemEvaluateCodeStateWithPostState evaluationContext primitive handler
+        bytesInWord state.runtime (.skip : Prog α)).map
+        (fun (result, postState) =>
+          (panStructConvertClockResult result, panStructConvertState context postState)) := by
+  simp [panSemEvaluateCodeStateWithPostState_skip,
+    panStructConvertFiniteState, panStructConvertState, panStructConvertClockResult,
+    panStructConvertClockOutcome, panStructConvertControlResult]
+  constructor <;> rfl
 
 @[simp] theorem panStructCompileTick_eq_tick [BEq String]
     (context : StructPassContext) :

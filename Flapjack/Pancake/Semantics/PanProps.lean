@@ -42,16 +42,17 @@ theorem lookupInfo_eq_panPropsALookupEq [BEq κ] [LawfulBEq κ] [DecidableEq κ]
       · simp [lookupInfo, panPropsALookupEq, hname, ih]
 
 mutual
-  /-- Exact Bool-valued counterpart of HOL `is_wf_shape_v_def`. It preserves
-      the word, recursive struct, and named struct equations and uses
-      equality-based first-match `ALOOKUP`. Lean `StructInfo.shapedFields` is
-      an extra cached field which this definition does not inspect. -/
+  /-- Bool-valued counterpart of HOL `is_wf_shape_v_def`, using production
+      `lookupInfo`. Its `LawfulBEq String` instance identifies lookup with
+      HOL equality-based `ALOOKUP` (see
+      `lookupInfo_eq_panPropsALookupEq`). Lean `StructInfo` has an additional
+      `shapedFields` cache absent from HOL; this predicate ignores it. -/
   @[hol "cakeml/pancake/semantics/panPropsScript.sml" "is_wf_shape_v_def"]
   def panIsWfShapeValueBool (structs : StructContext) : PanValue α → Bool
     | .word _ => true
     | .rStruct values => panIsWfShapeValuesBool structs values
     | .nStruct name fields =>
-        (panPropsALookupEq name structs).isSome &&
+        (lookupInfo name structs).isSome &&
           panIsWfShapeValueFieldsBool structs fields
   termination_by value => sizeOf value
   decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial

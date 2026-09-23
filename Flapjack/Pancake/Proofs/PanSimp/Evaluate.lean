@@ -1914,7 +1914,10 @@ theorem evalPanValueFfiClockProg_ite_true_some
         (.ite condition thenBranch elseBranch) (memoryAccess := ma) (contracts := c)
         (memoryHandler := mh) =
       some (outcome, nextClock) := by
-  simp [evalPanValueFfiClockProg, hcondition, hnonzero, hthen]
+  have hcond : panValueIteConditionValue structs baseAddress topAddress bytesInWord
+      locals globals memory condition ma = some wordValue := by
+    simp [panValueIteConditionValue, hcondition]
+  simp [evalPanValueFfiClockProg, hcond, Option.elim_some, hnonzero, hthen]
 
 theorem evalPanValueFfiClockProg_ite_false_some
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
@@ -1946,7 +1949,10 @@ theorem evalPanValueFfiClockProg_ite_false_some
         (.ite condition thenBranch elseBranch) (memoryAccess := ma) (contracts := c)
         (memoryHandler := mh) =
       some (outcome, nextClock) := by
-  simp [evalPanValueFfiClockProg, hcondition, hzero, helse]
+  have hcond : panValueIteConditionValue structs baseAddress topAddress bytesInWord
+      locals globals memory condition ma = some wordValue := by
+    simp [panValueIteConditionValue, hcondition]
+  simp [evalPanValueFfiClockProg, hcond, Option.elim_some, hzero, helse]
 
 /-- `progSize`-indexed form of `evalPanValueFfiClockProg_ite_true_some`: the
     selected branch is evaluated at the combined branch budget

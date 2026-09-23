@@ -128,6 +128,38 @@
     "reviewer": "Codex (constructor-by-constructor source comparison)"
   },
   {
+    "hol_path": "cakeml/misc/miscScript.sml",
+    "hol_name": "read_bytearray_def",
+    "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",
+    "lean_name": "readBytearrayHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; exact HOL arg order address,length,get_byte; get_byte/word-width are HOL parameters, no extra codec)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/wordSemScript.sml",
+    "hol_name": "mem_load_byte_aux_def",
+    "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",
+    "lean_name": "memLoadByteAuxHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; exact HOL total word_loc memory m, word-set domain dm, arg order m,dm,be,w, byte_align = LOG2(width/8), no extra codec)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/wordSemScript.sml",
+    "hol_name": "mem_store_byte_aux_def",
+    "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",
+    "lean_name": "memStoreByteAuxHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; exact HOL total word_loc memory m, word-set domain dm, arg order m,dm,be,w,b, byte_align = LOG2(width/8), no extra codec)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/wordSemScript.sml",
+    "hol_name": "write_bytearray_def",
+    "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",
+    "lean_name": "writeBytearrayHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; exact HOL arg order a,bs,m,dm,be over total word_loc memory and word-set domain, byte_align via mem_store_byte_aux = LOG2(width/8), no extra codec)"
+  },
+  {
     "hol_path": "cakeml/pancake/pan_globalsScript.sml",
     "hol_name": "fperm_name_def",
     "lean_path": "Flapjack/Pancake/PanGlobals.lean",
@@ -366,6 +398,14 @@
     "lean_name": "cexpHeads",
     "statement_status": "pending_statement_review",
     "reviewer": "Codex (reference inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileArgsHOL_constLocalStructAddress_eval_flatten",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only Call-argument evaluation result composing Const/Local/RStruct support with HOL baseAddr, topAddr, and bytesInWord expression cases under stateRel; it does not claim the complete eval_map_comp_exp_flat_eq theorem."
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
@@ -4221,7 +4261,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "panStructValueFieldsOkBool",
     "statement_status": "reviewed_exact",
-    "reviewer": "All HOL cases match the Bool-valued Lean equations: word true; RStruct EVERY over values; NStruct EVERY over field values and first-match equality-based ALOOKUP followed by exact field-name and shape-list equality. The adjacent direct HOL EVAL fixture covers word, matching/mismatching fields, and missing context. The extra Lean StructInfo.shapedFields cache is ignored; fields and size correspond to the HOL struct_info projection."
+    "reviewer": "Bool equations compared constructor by constructor with HOL. Uses production lookupInfo; lookupInfo_eq_panPropsALookupEq proves its lawful String comparison is the equality-based HOL ALOOKUP. StructInfo.shapedFields and size are ignored, with the projected fields context given by panStructContextShapeView. Direct HOL EVAL fixtures cover word, matching/mismatching named values, missing context, and duplicate-key first-match."
   },
   {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
@@ -4229,7 +4269,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
     "lean_name": "panIsWfShapeValueBool",
     "statement_status": "reviewed_exact",
-    "reviewer": "All HOL cases match the Bool-valued Lean equations: word true; RStruct EVERY over values; NStruct equality-based ALOOKUP success and EVERY over field values. The adjacent direct HOL EVAL fixture covers word, matching named struct, and missing context. The extra Lean StructInfo.shapedFields cache is ignored."
+    "reviewer": "Bool equations compared constructor by constructor with HOL. Uses production lookupInfo; lookupInfo_eq_panPropsALookupEq proves its lawful String comparison is the equality-based HOL ALOOKUP. StructInfo.shapedFields and size are unused by this predicate. Direct HOL EVAL fixtures cover word, matching named struct, and missing context."
   },
   {
     "hol_path": null,
@@ -4294,6 +4334,14 @@
     "lean_name": "panStructSkipFiniteMapEvaluatorSupport",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Paired Skip evaluator support for a finite-map-backed source-state wrapper; omits the full compile_correct premises and invariant/shape-map/result postconditions."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructFiniteMapSkipEvaluationProjection",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Kernel-checked production-evaluator projection for finite-map state under Skip; supports, but is not, the HOL compile_correct induction case."
   },
   {
     "hol_path": null,
@@ -4398,5 +4446,61 @@
     "lean_name": "compileArgsHOL_constOrLocal_eval_flatten",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Proves compiled target words equal flattened source results for argument lists containing only Const and Local expressions. This is a strict subset of HOL eval_map_comp_exp_flat_eq; other expression constructors and the full Call case remain open."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpListHOL_flatMap_eq_compileArgsHOL",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only equation identifying compiled expression-list concatenation with compile_args output; used to compose the RStruct constructor case."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_rStruct_constOrLocal_eval_flatten",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Proves the RStruct constructor case of compiled expression evaluation when every field is Const or Local, by composing the nested compile_args result. Nested structs and other expression constructors remain open."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileArgsHOL_constLocalOrStruct_eval_flatten",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Proves compiled results for argument lists whose members are Const, Local, or one-level RStruct with Const/Local fields; it remains a strict subset of HOL eval_map_comp_exp_flat_eq."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "mk_ctxt_imp_locals_rel",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "mkCtxtImpLocalsRel",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison with mk_ctxt_imp_locals_rel: empty variable map, slot bound zero, make_funcs table; proof mirrors rw[locals_rel_def,no_overlap_def,mk_ctxt_def,ctxt_max_def])"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "assigned_free_vars_IMP_assigned_vars",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "mem_crepAssignedFreeVars_imp_mem_crepAssignedVars",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison against crepPropsScript.sml:373; direct HOL-EVAL oracle crep_assigned_vars_probe.out imp_mem/imp_mem_absent reproduced by Lean guards in Flapjack/Test/CrepAssignedVarsParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "nested_seq_assigned_vars_eq",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "crepAssignedVars_nestedSeq_assign_zipWith",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison against crepPropsScript.sml:411; oracle row nested_av=[1;2] reproduced by Lean guards in Flapjack/Test/CrepAssignedVarsParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "nested_seq_assigned_free_vars_eq",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "crepAssignedFreeVars_nestedSeq_assign_zipWith",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison against crepPropsScript.sml:420; oracle row nested_afv=[1;2] reproduced by Lean guards in Flapjack/Test/CrepAssignedVarsParity.lean)"
   }
 ]

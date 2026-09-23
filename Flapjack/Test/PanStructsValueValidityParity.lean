@@ -19,30 +19,38 @@ private def valueValidityFirstMatchContext : StructContext :=
   [("Pair", { fields := [("wrong", Shape.one)], size := 1 }),
    ("Pair", { fields := [("left", Shape.one), ("right", Shape.comb [])], size := 2 })]
 
+example (name : String) (structs : StructContext) :
+    lookupInfo name structs = panPropsALookupEq name structs := by
+  exact lookupInfo_eq_panPropsALookupEq name structs
+
+example :
+    panStructContextShapeView valueValidityContext =
+      [("Pair", [("left", Shape.one), ("right", Shape.comb [])])] := rfl
+
 example : panStructValueFieldsOkBool valueValidityContext (.word 1 : PanValue Nat) = true := by
   simp [panStructValueFieldsOkBool, valueValidityContext]
 
 example : panStructValueFieldsOkBool valueValidityContext valueValidityMatch = true := by
   simp [panStructValueFieldsOkBool, panStructValuesFieldsOkBool,
     panStructFieldValuesFieldsOkBool, panStructShapeListEqBool,
-    panStructShapeEqBool, panSemShapeOf, panPropsALookupEq, valueValidityContext,
+    panStructShapeEqBool, panSemShapeOf, lookupInfo, valueValidityContext,
     valueValidityMatch]
 
 example : panStructValueFieldsOkBool valueValidityContext valueValidityMismatch = false := by
   simp [panStructValueFieldsOkBool, panStructValuesFieldsOkBool,
     panStructFieldValuesFieldsOkBool, panStructShapeListEqBool,
-    panStructShapeEqBool, panSemShapeOf, panPropsALookupEq, valueValidityContext,
+    panStructShapeEqBool, panSemShapeOf, lookupInfo, valueValidityContext,
     valueValidityMismatch]
 
 example : panStructValueFieldsOkBool [] valueValidityMatch = false := by
   simp [panStructValueFieldsOkBool, panStructValuesFieldsOkBool,
-    panStructFieldValuesFieldsOkBool, panPropsALookupEq, valueValidityMatch]
+    panStructFieldValuesFieldsOkBool, lookupInfo, valueValidityMatch]
 
 example : panStructValueFieldsOkBool valueValidityFirstMatchContext
     valueValidityMatch = false := by
   simp [panStructValueFieldsOkBool, panStructValuesFieldsOkBool,
     panStructFieldValuesFieldsOkBool, panStructShapeListEqBool,
-    panStructShapeEqBool, panSemShapeOf, panPropsALookupEq,
+    panStructShapeEqBool, panSemShapeOf, lookupInfo,
     valueValidityFirstMatchContext, valueValidityMatch]
 
 example : panIsWfShapeValueBool valueValidityContext (.word 1 : PanValue Nat) = true := by
@@ -50,12 +58,12 @@ example : panIsWfShapeValueBool valueValidityContext (.word 1 : PanValue Nat) = 
 
 example : panIsWfShapeValueBool valueValidityContext valueValidityMatch = true := by
   simp [panIsWfShapeValueBool, panIsWfShapeValuesBool,
-    panIsWfShapeValueFieldsBool, panPropsALookupEq, valueValidityContext,
+    panIsWfShapeValueFieldsBool, lookupInfo, valueValidityContext,
     valueValidityMatch]
 
 example : panIsWfShapeValueBool [] valueValidityMatch = false := by
   simp [panIsWfShapeValueBool, panIsWfShapeValuesBool,
-    panIsWfShapeValueFieldsBool, panPropsALookupEq, valueValidityMatch]
+    panIsWfShapeValueFieldsBool, lookupInfo, valueValidityMatch]
 
 example : panStructShapeListEqBool [.comb []] [.comb []] = true := by
   simp [panStructShapeListEqBool, panStructShapeEqBool]

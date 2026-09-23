@@ -383,6 +383,25 @@ theorem adapterUpdate :
           globalsSize := 8 } :=
   cakeContextOfPass_update adapterPassContext "h" Shape.one 8
 
+theorem adapterExpAgreement :
+    compileExpCake (cakeContextOfPass adapterPassContext) (.var .global "g") =
+      globalCompileExp adapterPassContext (.var .global "g") :=
+  compileExpCake_cakeContextOfPass adapterPassContext adapterCanonical (.var .global "g")
+
+theorem adapterTopAddrAgreement :
+    compileExpCake (cakeContextOfPass adapterPassContext) .topAddr =
+      globalCompileExp adapterPassContext .topAddr :=
+  compileExpCake_cakeContextOfPass adapterPassContext adapterCanonical .topAddr
+
+def adapterExpGuard : Bool :=
+  expEq (compileExpCake (cakeContextOfPass adapterPassContext) (.var .global "g"))
+    (globalCompileExp adapterPassContext (.var .global "g")) &&
+  expEq (compileExpCake (cakeContextOfPass adapterPassContext) .topAddr)
+    (globalCompileExp adapterPassContext .topAddr)
+
+#eval adapterExpGuard
+#guard adapterExpGuard
+
 def adapterLookupOk : Bool :=
   match (cakeContextOfPass adapterPassContext).globals "g" with
   | some (Shape.one, address) => address == (7 : BitVec 8)
@@ -403,6 +422,7 @@ def cakeThreadingGuard : Bool :=
   freshNameChecks.all id &&
   handledProgramChecks &&
   adapterGuard &&
+  adapterExpGuard &&
   cakeResultBefore.functions.all globalDeclIsFunction
 
 #eval cakeThreadingGuard

@@ -724,6 +724,8 @@ run_probe loop_sem_ffi_probeScript.sml loop_sem_ffi_probe.out \
 run_probe loop_sem_ffi_rv64_probeScript.sml loop_sem_ffi_rv64_probe.out \
   rv64_lookups rv64_extcall_missing_local \
   "$cake_dir/pancake/semantics/loopSemScript.sml"
+run_probe byte_align_probeScript.sml byte_align_probe.out \
+  ba24_5 ba8_7 "$cake_dir/pancake/semantics/loopSemScript.sml"
 run_probe loop_sem_exit_loop_probeScript.sml loop_sem_exit_loop_probe.out \
   exit_loop_break exit_loop_error "$cake_dir/pancake/semantics/loopSemScript.sml"
 # The loop_arith probe prints numeric word values to avoid raw-literal ambiguity.

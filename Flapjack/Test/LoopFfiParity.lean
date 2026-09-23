@@ -10,8 +10,10 @@ Exercises `loopMachineExtCall`, the 64-bit RISC-V instance of the source
 The observations are compared with the direct 64-bit HOL oracle
 `scripts/hol-probes/loop_sem_ffi_rv64_probe.out`: it records intermediate
 lookups, byte loads and byte-array reads, plus returned, terminal `FinalFFI`,
-and malformed-local outcomes. The RV64 implementation remains untagged because
-HOL states the byte helpers and evaluator polymorphically.
+and malformed-local outcomes. The byte helpers `memLoadByteAuxHOL`,
+`memStoreByteAuxHOL`, `readBytearrayHOL` and `writeBytearrayHOL` (in `LoopSem`)
+are width-generic exact ports; the RV64 `ExtCall` executable path remains
+untagged because HOL states the evaluator polymorphically.
 -/
 
 namespace Flapjack.Test.LoopFfiParity
@@ -89,9 +91,61 @@ def missingLocalGuard : Bool :=
   | some .error => true
   | _ => false
 
+/-- `rv64_mem_load_byte_aux=(SOME 171w,SOME 205w,SOME 239w)`: the width-generic
+    `memLoadByteAuxHOL` instance at 64 bits. -/
+def memLoadGuard : Bool :=
+  loopMemLoadByteAux (baseState returningState) 0 == some (0xAB : UInt8) &&
+  loopMemLoadByteAux (baseState returningState) 8 == some (0xCD : UInt8) &&
+  loopMemLoadByteAux (baseState returningState) 9 == some (0xEF : UInt8)
+
+/-- `rv64_read_bytearrays=(SOME [171w],SOME [205w; 239w])`: the width-generic
+    `readBytearrayHOL` fed by the 64-bit byte loader. -/
+def readBytearrayGuard : Bool :=
+  readBytearrayHOL (0 : Word) 1 (loopMemLoadByteAux (baseState returningState)) ==
+      some [0xAB] &&
+  readBytearrayHOL (8 : Word) 2 (loopMemLoadByteAux (baseState returningState)) ==
+      some [0xCD, 0xEF]
+
+/-- The width-generic `memStoreByteAuxHOL` replaces the aligned byte and leaves
+    other words untouched (`0xEFCD` with byte 0 set to `0x11` is `0xEF11`). -/
+def memStoreGuard : Bool :=
+  let state := baseState returningState
+  match memStoreByteAuxHOL (width := 64) (loopTotalMemory state) (loopTotalDomain state)
+      state.be (8 : Word) 0x11 with
+  | some memory =>
+      memory (8 : Word) == .word (0xEF11 : Word) &&
+      memory (0 : Word) == .word (0xAB : Word)
+  | none => false
+
+/-- The width-generic `writeBytearrayHOL` writes the byte list in order at
+    increasing addresses; the HOL probe records the result `0x2211` at `8w`. -/
+def writeBytearrayGuard : Bool :=
+  let state := baseState returningState
+  let memory := writeBytearrayHOL (8 : Word) [0x11, 0x22]
+      (loopTotalMemory state) (loopTotalDomain state) state.be
+  memory (8 : Word) == .word (0x2211 : Word)
+
+/-- HOL `byte_align_def` (`alignmentScript.sml:23`) is
+    `align (LOG2 (dimindex DIV 8))`: the low `LOG2 (width DIV 8)` bits are
+    cleared.  For width 24 (3 bytes) `LOG2 3 = 1`, so alignment rounds down to
+    a multiple of 2, not 3 (`5w ↦ 4w`, `3w ↦ 2w`); width 8 is a no-op; and for
+    width 64 `LOG2 8 = 3` agrees with `panRiscVByteAlign 8`. -/
+def byteAlignGuard : Bool :=
+  riscvByteAlignHOL (width := 24) (5 : RiscV.Word 24) == 4 &&
+  riscvByteAlignHOL (width := 24) (3 : RiscV.Word 24) == 2 &&
+  riscvByteAlignHOL (width := 8) (7 : RiscV.Word 8) == 7 &&
+  riscvByteAlignHOL (width := 64) (13 : RiscV.Word 64) == 8 &&
+  riscvByteAlignHOL (width := 64) (13 : RiscV.Word 64) ==
+      RiscV.panRiscVByteAlign (8 : RiscV.Word 64) 13
+
 #guard returnedGuard
 #guard finalGuard
 #guard missingLocalGuard
+#guard memLoadGuard
+#guard readBytearrayGuard
+#guard memStoreGuard
+#guard writeBytearrayGuard
+#guard byteAlignGuard
 
 def runChecks : IO Bool := do
   let returnedOk ←
@@ -115,6 +169,42 @@ def runChecks : IO Bool := do
     else
       IO.println "FAIL Loop ExtCall missing local errors"
       pure false
-  pure (returnedOk && finalOk && missingOk)
+  let memLoadOk ←
+    if memLoadGuard then
+      IO.println "PASS Loop width-generic mem_load_byte_aux byte loads"
+      pure true
+    else
+      IO.println "FAIL Loop width-generic mem_load_byte_aux byte loads"
+      pure false
+  let readBytearrayOk ←
+    if readBytearrayGuard then
+      IO.println "PASS Loop width-generic read_bytearray byte-array reads"
+      pure true
+    else
+      IO.println "FAIL Loop width-generic read_bytearray byte-array reads"
+      pure false
+  let memStoreOk ←
+    if memStoreGuard then
+      IO.println "PASS Loop width-generic mem_store_byte_aux byte store"
+      pure true
+    else
+      IO.println "FAIL Loop width-generic mem_store_byte_aux byte store"
+      pure false
+  let writeBytearrayOk ←
+    if writeBytearrayGuard then
+      IO.println "PASS Loop width-generic write_bytearray byte-array writes"
+      pure true
+    else
+      IO.println "FAIL Loop width-generic write_bytearray byte-array writes"
+      pure false
+  let byteAlignOk ←
+    if byteAlignGuard then
+      IO.println "PASS Loop byte_align matches HOL LOG2(width/8) alignment"
+      pure true
+    else
+      IO.println "FAIL Loop byte_align matches HOL LOG2(width/8) alignment"
+      pure false
+  pure (returnedOk && finalOk && missingOk && memLoadOk && readBytearrayOk &&
+    memStoreOk && writeBytearrayOk && byteAlignOk)
 
 end Flapjack.Test.LoopFfiParity

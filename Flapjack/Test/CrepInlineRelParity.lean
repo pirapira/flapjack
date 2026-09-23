@@ -153,6 +153,44 @@ theorem not_localsExtRel_disagree : ¬ crepInlineLocalsExtRel extA extB extA' ex
   have hpoint := congrFun h 1
   simp [crepHolFdiff, crepHolFdom, extA, extA', extB, extBbad'] at hpoint
 
+/-! Regression for the production-shaped `code_inl_rel` relation.  The HOL
+    oracle `scripts/hol-probes/crep_inline_code_inl_probe.out` records
+    `inlined_call=Seq Tick Skip` and `handler_call_untouched` for
+    `inline_prog` over a finite map; the Lean pass is list-backed, so these
+    tests exercise the relation shape rather than a literal oracle row. -/
+
+def codeInlEntries : List (CrepInlineEntry Nat) :=
+  [("f", ([7], CrepProg.skip))]
+
+def codeInlSource : CrepHolState Nat Unit :=
+  { baseState with code := fun _ => some ([7], CrepProg.skip) }
+
+def codeInlTarget : CrepHolState Nat Unit :=
+  { baseState with code := fun _ => some ([7], crepInlineProg codeInlEntries CrepProg.skip) }
+
+def codeInlEmptyTarget : CrepHolState Nat Unit :=
+  { baseState with code := fun _ => none }
+
+theorem codeInlRel_positive :
+    crepInlineCodeInlRel codeInlEntries codeInlSource codeInlTarget := by
+  apply crepInlineCodeInlRel_of_code
+  intro fname args prog hcode
+  simp [codeInlSource] at hcode
+  obtain ⟨rfl, rfl⟩ := hcode
+  simp [codeInlTarget]
+
+theorem codeInlRel_negative :
+    ¬ crepInlineCodeInlRel codeInlEntries codeInlSource codeInlEmptyTarget :=
+  not_crepInlineCodeInlRel_of_target_none codeInlEntries codeInlSource codeInlEmptyTarget
+    "f" [7] CrepProg.skip (by simp [codeInlSource]) (by simp [codeInlEmptyTarget])
+
+def codeInlGuard : Bool :=
+  (codeInlSource.code "f").isSome &&
+    (codeInlTarget.code "f").isSome &&
+    (codeInlEmptyTarget.code "f").isNone
+
+#guard codeInlGuard
+
 def runChecks : IO Bool := do
   let relOk ←
     if baseStateGuard then
@@ -161,8 +199,15 @@ def runChecks : IO Bool := do
     else
       IO.println "FAIL crep_inline state_rel/locals_rel/locals_strong_rel definitions"
       pure false
+  let codeOk ←
+    if codeInlGuard then
+      IO.println "PASS crep_inline code_inl_rel production relation"
+      pure true
+    else
+      IO.println "FAIL crep_inline code_inl_rel production relation"
+      pure false
   IO.println "PASS crep_inline locals_rel_dec_clock preservation"
   IO.println "PASS crep_inline locals_ext_rel/state_rel_code definitions"
-  pure relOk
+  pure (relOk && codeOk)
 
 end Flapjack.Test.CrepInlineRelParity

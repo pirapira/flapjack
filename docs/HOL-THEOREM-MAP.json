@@ -3461,7 +3461,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "ctxtFcNoOverlapOfDistinctSlots",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack proof support for HOL no_overlap on ctxtFc: relies on distinct flat slots and the source theorem’s exact withShape partition; not tagged as a separate HOL theorem."
+    "reviewer": "Flapjack proof support for HOL no_overlap on ctxtFc: relies on distinct flat slots and the source theorem\u2019s exact withShape partition; not tagged as a separate HOL theorem."
   },
   {
     "hol_path": null,
@@ -3485,7 +3485,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "tlcWordLabWithShapeGetElemMapOfPanSem",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack source-facing projection showing ctxtFc withShape slots map through the actual word_lab tlc target map to a single argument’s flattened word_lab values; no HOL theorem tag."
+    "reviewer": "Flapjack source-facing projection showing ctxtFc withShape slots map through the actual word_lab tlc target map to a single argument\u2019s flattened word_lab values; no HOL theorem tag."
   },
   {
     "hol_path": null,
@@ -5494,5 +5494,21 @@
     "lean_name": "crepInlineLocalsExtRel_self",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only helper for the extensional FDOM/FDIFF rendering used by the exact crepInlineLocalsExtRel port; no HOL declaration of this name"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "crepInlineCodeInlRel_of_code",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only helper for the production-shaped crep_inline code relation; no HOL original (HOL code_inl_rel_def uses finite maps/SUBMAP while the executable pass uses a first-match entry list, so that definition is not tagged). Direct HOL oracle rows in scripts/hol-probes/crep_inline_code_inl_probe.out."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "not_crepInlineCodeInlRel_of_target_none",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only helper for the production-shaped crep_inline code relation; no HOL original (HOL code_inl_rel_def uses finite maps/SUBMAP while the executable pass uses a first-match entry list, so that definition is not tagged). Direct HOL oracle rows in scripts/hol-probes/crep_inline_code_inl_probe.out."
   }
 ]

@@ -289,6 +289,31 @@ theorem crepRuntimeLoadByte_wordTarget_eq_riscv [NeZero width]
     riscvCrepWordTarget, RiscV.panRiscVMemoryModel, crepRuntimeMemoryView,
     panTheWord] <;> rfl
 
+theorem crepRuntimeLoad32_wordTarget_eq_riscv [NeZero width]
+    (base : CrepRuntimeState (RiscV.Word width) σ) (address : RiscV.Word width) :
+    crepRuntimeLoad32 (riscvCrepWordTarget base) address =
+      RiscV.panRiscVRead32 base.memaddrs (crepRuntimeMemoryView base.memory)
+        (BitVec.ofNat width (width / 8)) address := by
+  have haddr2 : address + 1 + 1 = address + 2 := by
+    calc
+      (address + 1) + 1 = address + (1 + 1) := BitVec.add_assoc _ _ _
+      _ = address + 2 := by
+        congr 1
+        change BitVec.ofNat width 1 + BitVec.ofNat width 1 = BitVec.ofNat width 2
+        rw [BitVec.ofNat_add_ofNat]
+  have h23 : (2 : RiscV.Word width) + 1 = 3 := by
+    change BitVec.ofNat width 2 + BitVec.ofNat width 1 = BitVec.ofNat width 3
+    rw [BitVec.ofNat_add_ofNat]
+  have haddr32 : address + 2 + 1 = address + 3 := by
+    calc
+      (address + 2) + 1 = address + (2 + 1) := BitVec.add_assoc _ _ _
+      _ = address + 3 := by rw [h23]
+  unfold crepRuntimeLoad32
+  simp only [riscvCrepWordTarget, RiscV.panRiscVRead32, panModelRead32,
+    RiscV.panRiscVMemoryModel, crepRuntimeMemoryView, panTheWord]
+  simp only [haddr2, haddr32]
+  rfl
+
 theorem crepRuntimeWordTarget_wordOp [NeZero width]
     (base : CrepRuntimeState (RiscV.Word width) σ) (operator : BinOp)
     (values : List (RiscV.Word width)) :
@@ -306,6 +331,50 @@ theorem crepRuntimeWordTarget_shift [NeZero width]
     (left right : RiscV.Word width) :
     (riscvCrepWordTarget base).memoryModel.shift operator left right =
       RiscV.panRiscVShift operator left right := rfl
+
+/-! `evalPanShiftFull` is the width-parametric Lean counterpart of HOL's
+`word_sh_def`. The canonical production target uses `panRiscVShift`; this
+lemma proves those two interfaces agree for every positive word width. -/
+theorem panRiscVShift_eq_evalPanShiftFull [NeZero width]
+    (operator : Shift) (left right : RiscV.Word width) :
+    RiscV.panRiscVShift operator left right = evalPanShiftFull operator left right := by
+  change RiscV.panRiscVShift operator left right =
+    (if right.toNat ≠ 0 ∧ width ≤ right.toNat then none else
+      match operator with
+      | .lsl => some (left <<< right.toNat)
+      | .lsr => some (left >>> right.toNat)
+      | .asr => some (BitVec.sshiftRight left right.toNat)
+      | .ror => some (BitVec.rotateRight left right.toNat))
+  by_cases hlt : right.toNat < width
+  · have hnot : ¬ (right.toNat ≠ 0 ∧ width ≤ right.toNat) := by omega
+    simp [RiscV.panRiscVShift, hlt, hnot] <;> rfl
+  · have hle : width ≤ right.toNat := Nat.le_of_not_gt hlt
+    have hpos : 0 < width := Nat.pos_of_ne_zero (NeZero.ne width)
+    have hnz : right.toNat ≠ 0 := by
+      intro hz
+      omega
+    simp [RiscV.panRiscVShift, hlt, hle, hnz]
+
+theorem panRiscVCmp_eq_evalPanCmp [NeZero width]
+    (operator : Cmp) (left right : RiscV.Word width) :
+    RiscV.panRiscVCmp operator left right = evalPanCmp operator left right := by
+  cases operator with
+  | equal => simp [RiscV.panRiscVCmp, evalPanCmp] <;> split <;> rfl
+  | notEqual => simp [RiscV.panRiscVCmp, evalPanCmp] <;> split <;> rfl
+  | lower =>
+      simp [RiscV.panRiscVCmp, evalPanCmp, RiscV.panCmp_word_lower] <;> split <;> rfl
+  | notLower =>
+      by_cases h : left < right
+      · simp [RiscV.panRiscVCmp, evalPanCmp, RiscV.panCmp_word_lower, h]
+      · simp [RiscV.panRiscVCmp, evalPanCmp, RiscV.panCmp_word_lower, h]
+  | less =>
+      simp [RiscV.panRiscVCmp, evalPanCmp, RiscV.panCmp_word_less] <;> split <;> rfl
+  | notLess =>
+      by_cases h : RiscV.signedLess left right
+      · simp [RiscV.panRiscVCmp, evalPanCmp, RiscV.panCmp_word_less, h]
+      · simp [RiscV.panRiscVCmp, evalPanCmp, RiscV.panCmp_word_less, h]
+  | test => simp [RiscV.panRiscVCmp, evalPanCmp] <;> split <;> rfl
+  | notTest => simp [RiscV.panRiscVCmp, evalPanCmp] <;> split <;> rfl
 
 /-- `updateMemory` (production, `Flapjack.Semantics`) and
     `panModelUpdateMemory` (the memory-model helper) are definitionally the same

@@ -92,6 +92,8 @@ run_probe pan_structs_opt_mmap_probeScript.sml pan_structs_opt_mmap_probe.out \
   "$cake_dir/pancake/proofs"
 run_probe pan_structs_compile_correct_probeScript.sml pan_structs_compile_correct_probe.out \
   convert_named_record compile_correct_skip_source compile_correct_skip_converted \
+  compile_correct_tick_zero_source compile_correct_tick_zero_converted \
+  compile_correct_tick_positive_source compile_correct_tick_positive_converted \
   "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
   "$cake_dir/pancake/proofs"
 run_probe pan_structs_afindi_map_probeScript.sml pan_structs_afindi_map_probe.out \

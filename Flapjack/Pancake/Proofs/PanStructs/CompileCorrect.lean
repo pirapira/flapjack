@@ -65,6 +65,41 @@ def panStructConvertState [BEq String] (context : StructPassContext)
   baseAddress := state.baseAddress
   topAddress := state.topAddress
 
+def panStructConvertLocalMap (locals : VarName → Option (PanValue α)) :=
+  fun name => (locals name).map panStructConvertValue
+
+def panStructConvertControlResult : PanValueFfiControlResult α σ →
+    PanValueFfiControlResult α σ
+  | .normal locals globals memory ffi =>
+      .normal (panStructConvertLocalMap locals) (panStructConvertLocalMap globals)
+        memory ffi
+  | .returned locals globals memory ffi values =>
+      .returned (panStructConvertLocalMap locals) (panStructConvertLocalMap globals)
+        memory ffi (panStructConvertValues values)
+  | .raised locals globals memory ffi exception value =>
+      .raised (panStructConvertLocalMap locals) (panStructConvertLocalMap globals)
+        memory ffi exception (panStructConvertValue value)
+  | .broke locals globals memory ffi =>
+      .broke (panStructConvertLocalMap locals) (panStructConvertLocalMap globals)
+        memory ffi
+  | .continued locals globals memory ffi =>
+      .continued (panStructConvertLocalMap locals) (panStructConvertLocalMap globals)
+        memory ffi
+  | .finalFfi locals globals memory ffi event =>
+      .finalFfi (panStructConvertLocalMap locals) (panStructConvertLocalMap globals)
+        memory ffi event
+
+def panStructConvertClockOutcome : PanValueFfiClockOutcome α σ →
+    PanValueFfiClockOutcome α σ
+  | .control result => .control (panStructConvertControlResult result)
+  | .timeout locals globals memory ffi =>
+      .timeout (panStructConvertLocalMap locals) (panStructConvertLocalMap globals)
+        memory ffi
+
+def panStructConvertClockResult (result : PanValueFfiClockResult α σ) :
+    PanValueFfiClockResult α σ :=
+  (panStructConvertClockOutcome result.1, result.2)
+
 @[simp] theorem panStructConvertState_code [BEq String]
     (context : StructPassContext) (state : PanSemState α ffi) :
     (panStructConvertState context state).code =
@@ -108,5 +143,40 @@ theorem panStructCompileCorrectSkipCase
       (panSemEvaluateCodeStateWithPostState_skip
         evaluationContext primitive handler bytesInWord
         (panStructConvertState context state))
+
+@[simp] theorem panStructCompileTick_eq_tick [BEq String]
+    (context : StructPassContext) :
+    structCompileProg context (.tick : Prog α) = .tick := by
+  simp [structCompileProg]
+
+/-- The Tick branch of HOL `compile_correct`. The source and compiled
+    executions agree after `convert_v`/`convert_s` in both the timeout and
+    decrement cases, including the converted post-state projection. -/
+theorem panStructCompileCorrectTickCase
+    [BEq String] [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : StructPassContext)
+    (evaluationContext : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (state : PanSemState α (FfiState σ)) :
+    panSemEvaluateCodeStateWithPostState evaluationContext primitive handler
+        bytesInWord (panStructConvertState context state)
+        (structCompileProg context (.tick : Prog α)) =
+      (panSemEvaluateCodeStateWithPostState evaluationContext primitive handler
+        bytesInWord state (.tick : Prog α)).map
+        (fun (result, postState) =>
+          (panStructConvertClockResult result,
+            panStructConvertState context postState)) := by
+  by_cases hclock : state.clock = 0
+  · simp [panSemEvaluateCodeStateWithPostState_tick, panStructCompileTick_eq_tick,
+      panStructConvertState, panStructConvertClockResult,
+      panStructConvertClockOutcome, hclock]
+    constructor <;> funext name <;> rfl
+  · simp [panSemEvaluateCodeStateWithPostState_tick, panStructCompileTick_eq_tick,
+      panStructConvertState, panStructConvertClockResult,
+      panStructConvertClockOutcome, hclock]
+    congr 1 <;> funext name <;> rfl
 
 end Flapjack

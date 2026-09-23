@@ -536,8 +536,8 @@ theorem crepRuntimeWriteBytes_target_updateFfi
     (address : RiscV.Word 64) (bytes : List UInt8) :
     crepRuntimeWriteBytes { riscv64CrepRuntimeTarget base with ffi := ffi }
         address bytes =
-      some (riscv64SetMemory { base with ffi := ffi }
-        (riscv64WriteMem { base with ffi := ffi } address bytes)) := by
+      some (riscv64WriteState { base with ffi := ffi } address bytes) := by
+  dsimp only
   rw [← riscv64CrepRuntimeTarget_withFfi base ffi,
     crepRuntimeWriteBytes_target_eq_riscv_state]
 

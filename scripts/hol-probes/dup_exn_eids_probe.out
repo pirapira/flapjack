@@ -1,0 +1,5 @@
+dup_eids_lookup=SOME 0w
+mixed_eids_lookup_a=SOME 0w
+mixed_eids_lookup_e=SOME 1w
+dup_compile=[(«f»,[],Seq (Dec 1 (Const 7w) (Seq (StoreGlob 0w (Var 1)) Skip)) (Raise 0w))]
+done=T

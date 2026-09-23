@@ -379,6 +379,9 @@ run_probe compile_def_probeScript.sml compile_def_probe.out \
   "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe compile_to_crep_probeScript.sml compile_to_crep_probe.out \
   empty raise_const raise_pair raise_pair_later handled_pair done "$cake_dir/pancake/pan_to_crepScript.sml"
+run_probe dup_exn_eids_probeScript.sml dup_exn_eids_probe.out \
+  dup_eids_lookup mixed_eids_lookup_a mixed_eids_lookup_e dup_compile done \
+  "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe compile_prog_probeScript.sml compile_prog_probe.out \
   empty inline_call global_dest handled_missing_dest done \
   "$cake_dir/pancake/pan_to_crepScript.sml"

@@ -263,31 +263,32 @@ mutual
         | .control (.error nextLocals nextGlobals nextMemory nextFfi) =>
             pure (.control (.error nextLocals nextGlobals nextMemory nextFfi), nextClock)
     | fuel + 1, locals, globals, memory, ffi, clock, .while conditionExp body,
-        memoryAccess, contracts, memoryHandler => do
-        let condition ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord conditionExp (memoryAccess := memoryAccess)
-        let .word conditionValue := condition | none
-        if conditionValue == 0 then
-          pure (.control (.normal locals globals memory ffi), clock)
-        else if clock == 0 then
-          pure (panValueFfiClockTimeout globals memory ffi clock)
-        else
-          let (bodyOutcome, bodyClock) ← evalPanValueFfiClockProg context primitive handler
-            structs functions baseAddress topAddress bytesInWord fuel locals globals memory ffi
-            (decPanClock clock) body (memoryAccess := memoryAccess)
-            (contracts := contracts)
-            (memoryHandler := memoryHandler)
-          match bodyOutcome with
-          | .control (.normal nextLocals nextGlobals nextMemory nextFfi) |
-              .control (.continued nextLocals nextGlobals nextMemory nextFfi) =>
-              evalPanValueFfiClockProg context primitive handler structs functions
-                baseAddress topAddress bytesInWord fuel nextLocals nextGlobals nextMemory nextFfi
-                bodyClock (.while conditionExp body)
-                (memoryAccess := memoryAccess) (contracts := contracts)
+        memoryAccess, contracts, memoryHandler =>
+        (panValueIteConditionValue structs baseAddress topAddress bytesInWord locals globals
+          memory conditionExp memoryAccess).elim
+          (pure (.control (.error locals globals memory ffi), clock))
+          (fun conditionValue =>
+            if conditionValue == 0 then
+              pure (.control (.normal locals globals memory ffi), clock)
+            else if clock == 0 then
+              pure (panValueFfiClockTimeout globals memory ffi clock)
+            else do
+              let (bodyOutcome, bodyClock) ← evalPanValueFfiClockProg context primitive handler
+                structs functions baseAddress topAddress bytesInWord fuel locals globals memory ffi
+                (decPanClock clock) body (memoryAccess := memoryAccess)
+                (contracts := contracts)
                 (memoryHandler := memoryHandler)
-          | .control (.broke nextLocals nextGlobals nextMemory nextFfi) =>
-              pure (.control (.normal nextLocals nextGlobals nextMemory nextFfi), bodyClock)
-          | _ => pure (bodyOutcome, bodyClock)
+              match bodyOutcome with
+              | .control (.normal nextLocals nextGlobals nextMemory nextFfi) |
+                  .control (.continued nextLocals nextGlobals nextMemory nextFfi) =>
+                  evalPanValueFfiClockProg context primitive handler structs functions
+                    baseAddress topAddress bytesInWord fuel nextLocals nextGlobals nextMemory nextFfi
+                    bodyClock (.while conditionExp body)
+                    (memoryAccess := memoryAccess) (contracts := contracts)
+                    (memoryHandler := memoryHandler)
+              | .control (.broke nextLocals nextGlobals nextMemory nextFfi) =>
+                  pure (.control (.normal nextLocals nextGlobals nextMemory nextFfi), bodyClock)
+              | _ => pure (bodyOutcome, bodyClock))
     | _fuel + 1, locals, globals, memory, ffi, clock, .tick, _, _, _ =>
         if clock = 0 then
           pure (panValueFfiClockTimeout globals memory ffi clock)
@@ -496,32 +497,33 @@ mutual
         | .control (.error nextLocals nextGlobals nextMemory nextFfi) =>
             pure (.control (.error nextLocals nextGlobals nextMemory nextFfi), nextClock)
     | fuel + 1, locals, globals, memory, ffi, clock, .while conditionExp body,
-        memoryAccess, contracts, memoryHandler => do
-        let condition ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord conditionExp (memoryAccess := memoryAccess)
-        let .word conditionValue := condition | none
-        if conditionValue == 0 then
-          pure (.control (.normal locals globals memory ffi), clock)
-        else if clock == 0 then
-          pure (panValueFfiClockTimeout globals memory ffi clock)
-        else
-          let (bodyOutcome, bodyClock) ← evalPanValueFfiClockCodeProg context primitive handler
-            structs code exceptionShapes baseAddress topAddress bytesInWord fuel locals globals memory ffi
-            (decPanClock clock) body (memoryAccess := memoryAccess)
-            (contracts := contracts) (memoryHandler := memoryHandler)
-          let (bodyOutcome, bodyClock) :=
-            fixPanClock (decPanClock clock) (bodyOutcome, bodyClock)
-          match bodyOutcome with
-          | .control (.normal nextLocals nextGlobals nextMemory nextFfi) |
-              .control (.continued nextLocals nextGlobals nextMemory nextFfi) =>
-              evalPanValueFfiClockCodeProg context primitive handler structs code exceptionShapes
-                baseAddress topAddress bytesInWord fuel nextLocals nextGlobals nextMemory nextFfi
-                bodyClock (.while conditionExp body)
-                (memoryAccess := memoryAccess) (contracts := contracts)
-                (memoryHandler := memoryHandler)
-          | .control (.broke nextLocals nextGlobals nextMemory nextFfi) =>
-              pure (.control (.normal nextLocals nextGlobals nextMemory nextFfi), bodyClock)
-          | _ => pure (bodyOutcome, bodyClock)
+        memoryAccess, contracts, memoryHandler =>
+        (panValueIteConditionValue structs baseAddress topAddress bytesInWord locals globals
+          memory conditionExp memoryAccess).elim
+          (pure (.control (.error locals globals memory ffi), clock))
+          (fun conditionValue =>
+            if conditionValue == 0 then
+              pure (.control (.normal locals globals memory ffi), clock)
+            else if clock == 0 then
+              pure (panValueFfiClockTimeout globals memory ffi clock)
+            else do
+              let (bodyOutcome, bodyClock) ← evalPanValueFfiClockCodeProg context primitive handler
+                structs code exceptionShapes baseAddress topAddress bytesInWord fuel locals globals memory ffi
+                (decPanClock clock) body (memoryAccess := memoryAccess)
+                (contracts := contracts) (memoryHandler := memoryHandler)
+              let (bodyOutcome, bodyClock) :=
+                fixPanClock (decPanClock clock) (bodyOutcome, bodyClock)
+              match bodyOutcome with
+              | .control (.normal nextLocals nextGlobals nextMemory nextFfi) |
+                  .control (.continued nextLocals nextGlobals nextMemory nextFfi) =>
+                  evalPanValueFfiClockCodeProg context primitive handler structs code exceptionShapes
+                    baseAddress topAddress bytesInWord fuel nextLocals nextGlobals nextMemory nextFfi
+                    bodyClock (.while conditionExp body)
+                    (memoryAccess := memoryAccess) (contracts := contracts)
+                    (memoryHandler := memoryHandler)
+              | .control (.broke nextLocals nextGlobals nextMemory nextFfi) =>
+                  pure (.control (.normal nextLocals nextGlobals nextMemory nextFfi), bodyClock)
+              | _ => pure (bodyOutcome, bodyClock))
     | _fuel + 1, locals, globals, memory, ffi, clock, .tick, _, _, _ =>
         if clock == 0 then pure (panValueFfiClockTimeout globals memory ffi clock)
         else pure (.control (.normal locals globals memory ffi), decPanClock clock)

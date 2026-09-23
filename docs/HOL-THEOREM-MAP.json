@@ -4416,6 +4416,70 @@
     "reviewer": "Full translated Tick specialization with zero-clock timeout and positive-clock continuation, all compile_correct invariant premises and postconditions, production evaluator and finite-map state. Kept untagged: HOL has one quantified compile_correct theorem rather than a named Tick case, and represents outcomes as TimeOut/NONE plus state while Lean uses clock outcomes."
   },
   {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "compile_correct",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructCompileCorrectBreakCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Full Break specialization of the quantified HOL compile_correct theorem over production evaluation and PanStructFiniteState, retaining source Break evaluation, field validity, global and continuation-local shape maps, and empty result obligations. No exact tag: the HOL source has no named Break theorem/case declaration, and its SOME Break result is represented as Lean control .broke. The adjacent declaration documents this specialization boundary."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructCompileBreak_eq_break",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Production compiler support equation for Break; no standalone HOL theorem declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructSourceBreakEvaluation",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Untagged production source evaluator equation for Break; HOL's evaluator equation is present in panSemScript but there is no standalone Lean theorem port identifier for the full state/result pair."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructBreakEvaluatorProjection",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Production source/converted evaluator projection used by the Break case; distinct from the full compile_correct specialization and has no standalone HOL theorem."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "compile_correct",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructCompileCorrectContinueCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Full Continue specialization of the quantified HOL compile_correct theorem over production evaluation and PanStructFiniteState, retaining source Continue evaluation, field validity, global and continuation-local shape maps, and empty result obligations. No exact tag: HOL has no named Continue theorem/case declaration, and SOME Continue is represented as Lean control .continued. The adjacent declaration documents this specialization boundary."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructCompileContinue_eq_continue",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Production compiler support equation for Continue; no standalone HOL theorem declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructSourceContinueEvaluation",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Untagged production source evaluator equation for Continue; the HOL evaluator clause is a definition equation and not a standalone named Lean theorem port."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructContinueEvaluatorProjection",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Production source/converted evaluator projection used by the Continue case; distinct from the full compile_correct specialization and has no standalone HOL theorem."
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",

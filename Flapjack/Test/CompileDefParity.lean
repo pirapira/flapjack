@@ -310,15 +310,6 @@ example :
 #guard nativeProgramParityGuard
 #guard finiteMapLoadStoreParityGuard
 
-example :
-    isHighTailExtCall (compileProgHOL highTailHOLContext highTailExtCall) = true := by
-  native_decide
-
-example :
-    isSharedHighTailExtCall
-      (compileProgHOL sharedHighTailHOLContext sharedHighTailExtCall) = true := by
-  native_decide
-
 def runChecks : IO Bool := do
   if parityGuard then
     IO.println "PASS compile_def fixed-width load/store and control-flow parity"

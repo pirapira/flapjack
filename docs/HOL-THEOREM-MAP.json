@@ -288,6 +288,14 @@
     "reviewer": "Untagged all-width RISC-V production evaluator support theorem; it does not state the arbitrary source word-carrier theorem."
   },
   {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrectBitVec",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged all-positive-width BitVec specialization of the public some-value theorem, preserving successful evaluation, arbitrary code-map update, and full word_lab result; the arbitrary HOL word carrier theorem remains open."
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
@@ -4374,6 +4382,14 @@
     "lean_name": "panStructCompileCorrectSkipCase",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Full translated Skip specialization with every compile_correct postcondition and its original invariant premises, using the production evaluator and finite-map state wrapper. Kept untagged: HOL has one quantified compile_correct theorem rather than a named Skip theorem, and its NONE result is encoded as Lean normal clock outcome."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructCompileCorrectTickCase",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Full translated Tick specialization with zero-clock timeout and positive-clock continuation, all compile_correct invariant premises and postconditions, production evaluator and finite-map state. Kept untagged: HOL has one quantified compile_correct theorem rather than a named Tick case, and represents outcomes as TimeOut/NONE plus state while Lean uses clock outcomes."
   },
   {
     "hol_path": null,

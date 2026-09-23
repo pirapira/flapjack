@@ -105,6 +105,10 @@ def sourceRecursiveCode : PanSemCodeMap Word64 :=
       (.return (.var .local "nested")), .one)),
     ("g", ([], .return (.const (BitVec.ofNat 64 7)), .one))]
 
+def sourceNestedCallCode : PanSemCodeMap Word64 :=
+  [("f", ([], .call none "g" [], .one)),
+    ("g", ([], .return (.const (BitVec.ofNat 64 7)), .one))]
+
 def sourceCallSelfCode : PanSemCodeMap Word64 :=
   [("loop", ([], .call none "loop" [], .one))]
 
@@ -201,6 +205,12 @@ def evaluateSourceNestedCall :=
     (emptyPanSourceState 10 sourceRecursiveCode)
     (.call none "f" [] : Prog Word64)
 
+def evaluateSourceNestedOrdinaryCall :=
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler
+    (emptyPanSourceState 10 sourceNestedCallCode)
+    (.call none "f" [] : Prog Word64)
+
 def evaluateSourceNestedCallWithPostState :=
   panSemEvaluateCodeStateWithPostState statefulTestContext statefulTestPrimitive
     statefulTestHandler (BitVec.ofNat 64 8)
@@ -291,6 +301,9 @@ def observeSourceCodeDecCall := isSourceReturnedWord evaluateSourceDecCallId
 def observeSourceNestedCodeCall := isSourceReturnedWord evaluateSourceNestedCall
   (BitVec.ofNat 64 7) 8
 
+def observeSourceNestedOrdinaryCall := isSourceReturnedWord
+  evaluateSourceNestedOrdinaryCall (BitVec.ofNat 64 7) 8
+
 def observeSourceCodePreservedAfterRecursion : Bool :=
   match evaluateSourceNestedCallWithPostState with
   | some (_, postState) =>
@@ -327,6 +340,7 @@ def observeSourceConstReturnCall := isSourceReturnedWord
 #guard observeSourceCallHandlesPairException
 #guard observeSourceCodeDecCall
 #guard observeSourceNestedCodeCall
+#guard observeSourceNestedOrdinaryCall
 #guard observeSourceCodePreservedAfterRecursion
 #guard observeSourceRecursiveCallTimeout
 #guard observeSourceRecursiveDecCallTimeout
@@ -660,6 +674,8 @@ def runChecks : IO Bool := do
     IO.println "FAIL state-owned code DecCall matches HOL deccall_code_map_7"
   if observeSourceNestedCodeCall then IO.println "PASS state-owned nested Call and DecCall match HOL recursive oracle" else
     IO.println "FAIL state-owned nested Call and DecCall match HOL recursive oracle"
+  if observeSourceNestedOrdinaryCall then IO.println "PASS state-owned ordinary Call recursively resolves nested code entry" else
+    IO.println "FAIL state-owned ordinary Call recursively resolves nested code entry"
   if observeSourceCodePreservedAfterRecursion then IO.println "PASS recursive code-map evaluation preserves source code" else
     IO.println "FAIL recursive code-map evaluation preserves source code"
   if observeSourceRecursiveCallTimeout then IO.println "PASS recursive state-owned Call times out at source clock zero" else
@@ -702,6 +718,7 @@ def runChecks : IO Bool := do
     observeSourceCodeCall && observeSourceCallStructArgument && observeSourceCallFirstRecordField &&
     observeSourceCodeDecCall &&
     observeSourceNestedCodeCall &&
+    observeSourceNestedOrdinaryCall &&
     observeSourceCodePreservedAfterRecursion &&
     observeSourceRecursiveCallTimeout && observeSourceRecursiveDecCallTimeout &&
     observeSourceZeroClockCallTimeout && observeSourceConstReturnCall &&

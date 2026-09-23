@@ -1,0 +1,4 @@
+flookup_f=SOME ([7],Dec 1 (Const 1w) Skip)
+inlined_call=Seq Tick Skip
+no_match_call=Call NONE «g» []
+handler_call_untouched=Call (SOME ([1],SOME (2w,Skip))) «f» []

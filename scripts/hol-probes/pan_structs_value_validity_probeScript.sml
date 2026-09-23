@@ -56,3 +56,6 @@ val _ = print_eval "is_wf_shape_v_named_match"
   ``panProps$is_wf_shape_v ^context ^matching_value``;
 val _ = print_eval "is_wf_shape_v_named_missing"
   ``panProps$is_wf_shape_v [] ^matching_value``;
+val _ = print_eval "is_wf_shape_v_named_mismatch"
+  ``panProps$is_wf_shape_v ^context ^mismatching_value``;
+val _ = print_eval "value_validity_done" ``0``;

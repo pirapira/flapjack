@@ -63,6 +63,59 @@ mutual
 end
 
 mutual
+  /-- Exact executable port of HOL `pan_structsProof$v_flds_ok`
+      (`cakeml/pancake/proofs/pan_structsProofScript.sml:39`). The HOL clauses
+      are reproduced literally: a scalar is `T`; `RStruct vs` is
+      `EVERY (v_flds_ok ctxt) vs`; `NStruct nm flds` is the conjunction of the
+      per-field predicate `EVERY (\(nm,v). v_flds_ok ctxt v) flds` with the
+      `ALOOKUP ctxt nm` case, where `NONE` gives `F` and `SOME info` requires
+      both `MAP FST flds = MAP FST info.fields` and
+      `MAP (shape_of o SND) flds = MAP SND info.fields`.
+
+      `lookupInfo` is the first-match association-list lookup, i.e. the exact
+      `alist$ALOOKUP` counterpart, and under `[LawfulBEq String]` its `==`
+      reflects HOL's `=`. The context is the HOL-shaped `StructContextHOL`
+      (fields and size only). `panSemShapeOf` is the tagged exact port of HOL
+      `shape_of` (`panSemScript.sml:80`), and `panStructShapeListEqBool`
+      computes HOL's `=` on `shape` lists constructor-by-constructor, since
+      Lean `Shape` intentionally has no `BEq`/`DecidableEq` instance. The
+      direct original-HOL rows are pinned in
+      `scripts/hol-probes/pan_structs_value_validity_probe.out`. -/
+  @[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "v_flds_ok_def"]
+  def panValueFldsOk [LawfulBEq String] (context : StructContextHOL) :
+      PanValue α → Bool
+    | .word _ => true
+    | .rStruct values => panValuesFldsOk context values
+    | .nStruct name fields =>
+        panFieldsFldsOk context fields &&
+          match lookupInfo name context with
+          | none => false
+          | some info =>
+              (fields.map Prod.fst == info.fields.map Prod.fst) &&
+                panStructShapeListEqBool
+                  (fields.map (panSemShapeOf ∘ Prod.snd))
+                  (info.fields.map Prod.snd)
+  termination_by value => sizeOf value
+  decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+
+  def panValuesFldsOk [LawfulBEq String] (context : StructContextHOL) :
+      List (PanValue α) → Bool
+    | [] => true
+    | value :: values =>
+        panValueFldsOk context value && panValuesFldsOk context values
+  termination_by values => sizeOf values
+  decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+
+  def panFieldsFldsOk [LawfulBEq String] (context : StructContextHOL) :
+      List (FieldName × PanValue α) → Bool
+    | [] => true
+    | (_, value) :: fields =>
+        panValueFldsOk context value && panFieldsFldsOk context fields
+  termination_by fields => sizeOf fields
+  decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+end
+
+mutual
   /-- Bool-valued comparison for HOL `v_flds_ok_def`, using production
       `lookupInfo`. This is not currently tagged as an exact port: the HOL
       predicate uses HOL equality in `ALOOKUP`, while this declaration calls

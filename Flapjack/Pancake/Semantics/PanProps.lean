@@ -76,4 +76,68 @@ mutual
   decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
 end
 
+/-- The `MAP SND` view of a field list does not increase `sizeOf`, which
+    justifies the well-founded recursion of `panIsWfShapeValueHOL` (HOL's
+    `EVERY (is_wf_shape_v sctxt) (MAP SND nm_vs)`). -/
+theorem panSizeOfMapSndLe (fields : List (FieldName × PanValue α)) :
+    sizeOf (fields.map Prod.snd) ≤ sizeOf fields := by
+  induction fields with
+  | nil => simp
+  | cons pair pairs ih =>
+      obtain ⟨field, value⟩ := pair
+      simp only [List.map_cons]
+      simp
+      omega
+
+/-- The context argument of a struct value is strictly larger in `sizeOf` than
+    its field list. -/
+theorem sizeOfFieldsLtNStruct (name : StructName)
+    (fields : List (FieldName × PanValue α)) :
+    sizeOf fields < sizeOf (PanValue.nStruct name fields) := by
+  simp
+  omega
+
+/-
+Exact executable port of HOL `panProps$is_wf_shape_v`
+    (`cakeml/pancake/semantics/panPropsScript.sml:24`). The HOL clauses are
+    reproduced literally: a scalar is `T`; `RStruct vs` is
+    `EVERY (is_wf_shape_v sctxt) vs`; `NStruct nm nm_vs` is
+    `(ALOOKUP sctxt nm <> NONE) /\
+      EVERY (is_wf_shape_v sctxt) (MAP SND nm_vs)`.
+
+    `lookupInfo` is the first-match association-list lookup, i.e. the exact
+    `alist$ALOOKUP` counterpart, and under `[LawfulBEq String]` its `==`
+    reflects HOL's `=`; `isSome` is the Bool rendering of `<> NONE`. The
+    context is the HOL-shaped `StructContextHOL` (struct_info `fields` and
+    `size` only), so the per-field predicate is `EVERY` over `MAP SND`, as HOL
+    has it, rather than a fold over `(FieldName × PanValue)` pairs. The direct
+    original-HOL rows are pinned in
+    `scripts/hol-probes/pan_structs_value_validity_probe.out`. -/
+mutual
+  @[hol "cakeml/pancake/semantics/panPropsScript.sml" "is_wf_shape_v_def"]
+  def panIsWfShapeValueHOL [LawfulBEq String] (context : StructContextHOL) :
+      PanValue α → Bool
+    | .word _ => true
+    | .rStruct values => panIsWfShapeValuesHOL context values
+    | .nStruct name fields =>
+        (lookupInfo name context).isSome &&
+          panIsWfShapeValuesHOL context (fields.map Prod.snd)
+  termination_by value => sizeOf value
+  decreasing_by
+    all_goals first
+      | sizeOf_list_dec
+      | decreasing_trivial
+      | (have h := panSizeOfMapSndLe fields
+         have h2 := sizeOfFieldsLtNStruct name fields
+         omega)
+
+  def panIsWfShapeValuesHOL [LawfulBEq String] (context : StructContextHOL) :
+      List (PanValue α) → Bool
+    | [] => true
+    | value :: values =>
+        panIsWfShapeValueHOL context value && panIsWfShapeValuesHOL context values
+  termination_by values => sizeOf values
+  decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+end
+
 end Flapjack

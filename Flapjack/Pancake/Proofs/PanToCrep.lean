@@ -73,10 +73,53 @@ theorem panSemShapeOfMapPanValueShapeNil (arguments : List (PanValue α)) :
     arguments.map panSemShapeOf = arguments.map (panValueShape []) := by
   exact List.map_congr_left (fun value _ => panSemShapeOf_eq_panValueShape_nil value)
 
-/-- Indexed-list form of the HOL Call premise
+/- Indexed-list form of the HOL Call premise
 `LIST_REL (fun formal arg => formal.shape = shape_of arg) parameters arguments`.
 The source-facing equality is kept untagged until the complete Call theorem is
 ported. -/
+/-! Flapjack support: `panShapeMatches` is an exact structural shape check, so
+success entails equality of its two shape arguments. This is used to expose
+the indexed formal/argument shape fact from `lookup_code`'s successful check. -/
+mutual
+  theorem panShapeMatches_eq (left right : Shape)
+      (hmatch : panShapeMatches left right = true) : left = right := by
+    cases left with
+    | one => cases right <;> simp [panShapeMatches] at hmatch ⊢
+    | named leftName =>
+        cases right with
+        | named rightName =>
+            simp only [panShapeMatches] at hmatch
+            have hname : leftName = rightName := beq_iff_eq.mp hmatch
+            subst rightName
+            rfl
+        | one => simp [panShapeMatches] at hmatch
+        | comb _ => simp [panShapeMatches] at hmatch
+    | comb leftFields =>
+        cases right with
+        | comb rightFields =>
+            simp only [panShapeMatches] at hmatch
+            have hfields := panShapeListMatches_eq leftFields rightFields hmatch
+            subst rightFields
+            rfl
+        | one => simp [panShapeMatches] at hmatch
+        | named _ => simp [panShapeMatches] at hmatch
+
+  theorem panShapeListMatches_eq (left right : List Shape)
+      (hmatch : panShapeMatches.panShapeListMatches left right = true) :
+      left = right := by
+    cases left with
+    | nil => cases right <;> simp [panShapeMatches.panShapeListMatches] at hmatch ⊢
+    | cons leftHead leftTail =>
+        cases right with
+        | nil => simp [panShapeMatches.panShapeListMatches] at hmatch
+        | cons rightHead rightTail =>
+            simp only [panShapeMatches.panShapeListMatches, Bool.and_eq_true]
+              at hmatch
+            rcases hmatch with ⟨hhead, htail⟩
+            rw [panShapeMatches_eq leftHead rightHead hhead,
+              panShapeListMatches_eq leftTail rightTail htail]
+end
+
 theorem callParameterShapeMapEqPanSem
     (parameters : List (String × Shape)) (arguments : List (PanValue α))
     (hlength : parameters.length = arguments.length)
@@ -1295,6 +1338,30 @@ def localsRel (context : PanToCrepProofContext α)
         ns.mapM (FLOOKUP tLocals) = some vs ∧
         (panValueFlatten v).map PanWordLab.word = vs ∧
         isWfShape [] (panValueShape [] v) = true
+
+/-! The preceding Call-entry bridge is phrased as the expanded body of
+`locals_rel_def`, so it can also be supplied directly wherever the recursive
+Call case asks for the relation itself. This wrapper keeps the literal HOL
+relation at the callee-entry boundary; it adds no premise or HOL tag. -/
+theorem slcTlcWordLabLocalsRelOfIndexedPanSem_exact
+    (context : PanToCrepProofContext α) (parameters : List (String × Shape))
+    (arguments : List (PanValue α)) (slots : List Nat)
+    (hnames : (parameters.map Prod.fst).Nodup)
+    (hlength : parameters.length = arguments.length)
+    (hshapeAt : ∀ index (hparam : index < parameters.length)
+      (harg : index < arguments.length),
+      (parameters[index]'hparam).2 = panSemShapeOf (arguments[index]'harg))
+    (hslots : slots.Nodup)
+    (hslotsLength : slots.length = (arguments.flatMap panValueFlatten).length)
+    (hwf : ∀ value, value ∈ arguments →
+      isWfShape [] (panSemShapeOf value) = true) :
+    localsRel
+      (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+        (parameters.map Prod.snd) slots)
+      (slc parameters arguments) (tlcWordLab slots arguments) := by
+  unfold localsRel
+  exact slcTlcWordLabLocalsRelOfIndexedPanSem context parameters arguments slots
+    hnames hlength hshapeAt hslots hslotsLength hwf
 
 /-- HOL `locals_rel_wf_shape`: every source local covered by the local-state
     relation is a well-formed value in the empty struct context. -/

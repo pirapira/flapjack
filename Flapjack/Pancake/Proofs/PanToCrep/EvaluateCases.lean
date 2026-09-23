@@ -740,6 +740,71 @@ theorem panSemEvaluateCodeState_call_zero_clock_timeout_of_entry
           simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall,
             hargs, hlookupCall, hclock, panValueFfiClockTimeout]
 
+/-! A bounded successful Call equation for a nonempty state-owned code map.
+The callee has no parameters and returns one word constant, so this isolates
+the recursive code lookup and source clock transition used by the Call
+induction case. -/
+theorem panSemEvaluateCodeState_call_return_const_of_entry
+    [BEq α] [OfNat α 0] [OfNat α 1] [OfNat α 2] [OfNat α 3] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (state : PanSemState α (FfiState σ))
+    (function : FunName) (value : α)
+    (hentry : panSemCodeLookup state.code function =
+      some ([], .return (.const value), .one))
+    (hclock : state.clock ≠ 0)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none) :
+    panSemEvaluateCodeState context primitive handler bytesInWord state
+      (.call none function [] : Prog α) (memoryAccess := memoryAccess) =
+      some (.control (.returned (fun _ => none) state.globals state.memory
+        state.ffi [.word value]), decPanClock state.clock) := by
+  have hlookupCall : lookupPanSemCodeCall state.structs state.code function [] =
+      some (.return (.const value), .one, fun _ => none) := by
+    unfold lookupPanSemCodeCall
+    rw [hentry]
+    simp [panSemCodeArgumentsMatch, bindPanValueParameters]
+  have hargs : evalPanValueExps state.structs state.locals state.globals state.memory
+      state.baseAddress state.topAddress bytesInWord []
+      (memoryAccess := memoryAccess) = some [] := by
+    simp [evalPanValueExps, evalPanValueExp.evalPanValueExps]
+  have hcost : 1 ≤ panSemProgFuel (.call none function [] : Prog α) := by
+    simp [panSemProgFuel, panSemCallInfoFuel, panSemExpListFuel]
+  have hclockPos : 2 ≤ state.clock + 1 := by omega
+  have hbodyPos : 2 ≤ max (panSemProgFuel (.call none function [] : Prog α))
+      (panSemCodeBodyFuel state.code) + 1 := by
+    have hmax : panSemProgFuel (.call none function [] : Prog α) ≤
+        max (panSemProgFuel (.call none function [] : Prog α))
+          (panSemCodeBodyFuel state.code) := Nat.le_max_left _ _
+    have hmaxPos : 1 ≤ max (panSemProgFuel (.call none function [] : Prog α))
+        (panSemCodeBodyFuel state.code) := Nat.le_trans hcost hmax
+    omega
+  have hbound : 4 ≤ panSemCodeEvaluateFuel state
+      (.call none function [] : Prog α) := by
+    unfold panSemCodeEvaluateFuel
+    have hproduct := Nat.mul_le_mul hclockPos hbodyPos
+    omega
+  unfold panSemEvaluateCodeState panSemEvaluateCodeStateWithFuel
+  cases hfuel : panSemCodeEvaluateFuel state (.call none function [] : Prog α) with
+  | zero => omega
+  | succ fuel =>
+      cases fuel with
+      | zero => omega
+      | succ fuel =>
+          cases fuel with
+          | zero => omega
+          | succ fuel =>
+              cases fuel with
+              | zero => omega
+              | succ fuel =>
+                  simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall,
+                    evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps,
+                    evalPanValueExpCounted, evalPanValueExp,
+                    panValueShape, panShapeMatches,
+                    hargs, hlookupCall, hclock]
+
 /-! The zero-clock Call timeout branch at the production source/target state
 boundary. This is a single induction branch, not the general HOL theorem. -/
 theorem panToCrepPcCompileCorrectCallTimeoutCodeState
@@ -827,5 +892,95 @@ theorem panToCrepPcCompileCorrectCallTimeoutCodeState
   · simpa [panSemCodeStateAfter, panValueFfiClockTimeout,
       clearCrepRuntimeLocals] using hcode
   · simpa [panSemCodeStateAfter, panValueFfiClockTimeout,
+      clearCrepRuntimeLocals] using hexcp
+
+/-! A first successful recursive Call case over production source and target
+code maps. The code entry returns one constant word, which makes the nested
+source and target executions explicit without weakening the state boundary. -/
+theorem panToCrepPcCompileCorrectCallReturnConstCodeState
+    [BEq α] [OfNat α 0] [OfNat α 1] [OfNat α 2] [OfNat α 3] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    [CrepBytesInWord α]
+    (context : PanToCrepProofContext α)
+    (sourceModel : PanMemoryModel α) (sourceBytesInWord : α)
+    (sourceContext : PanValueFfiContext α)
+    (sourcePrimitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueStatefulFfiHandler α σ)
+    (targetHandler : CrepRuntimeFfiHandler α σ FfiFinalEvent)
+    (targetPrimitive : CrepPrimitiveHandler α)
+    (sourceState : PanSemState α (FfiState σ))
+    (targetState : CrepRuntimeState α σ) (function : FunName) (value : α)
+    (hstate : stateRel sourceState targetState)
+    (hcode : codeRel context (panSemCodeAsLookup sourceState.code) targetState.code)
+    (hexcp : excpRel context.eids sourceState.exceptionShapes)
+    (_hlocals : localsRel context sourceState.locals targetState.locals)
+    (_hlocalized : localisedProg (.call none function [] : Prog α))
+    (hentry : panSemCodeLookup sourceState.code function =
+      some ([], .return (.const value), .one))
+    (hclock : sourceState.clock ≠ 0) :
+    let sourceResult : PanValueFfiClockResult α σ :=
+      (.control (.returned (fun _ => none) sourceState.globals sourceState.memory
+        sourceState.ffi [.word value]), decPanClock sourceState.clock)
+    panSemEvaluateCodeStateWithMemoryModel sourceContext sourcePrimitive sourceHandler
+      sourceModel sourceBytesInWord sourceState (.call none function [] : Prog α) =
+        some sourceResult ∧
+    ∃ targetPost,
+      evalCrepRuntimeResult targetHandler targetPrimitive 3 targetState
+        (compileCodeRelProg context (.call none function [])) =
+          some (.returned [value], targetPost) ∧
+      stateRel (panSemCodeStateAfter sourceState sourceResult) targetPost ∧
+      codeRel context
+        (panSemCodeAsLookup (panSemCodeStateAfter sourceState sourceResult).code)
+        targetPost.code ∧
+      excpRel context.eids
+        (panSemCodeStateAfter sourceState sourceResult).exceptionShapes := by
+  rcases hstate with ⟨hmem, hmemaddrs, hshared, hstructs, hglobals, hclockRel,
+    hbe, hffi, hbase, htop⟩
+  let sourceResult : PanValueFfiClockResult α σ :=
+    (.control (.returned (fun _ => none) sourceState.globals sourceState.memory
+      sourceState.ffi [.word value]), decPanClock sourceState.clock)
+  let targetPost : CrepRuntimeState α σ :=
+    clearCrepRuntimeLocals (decCrepClock targetState)
+  have hsource := panSemEvaluateCodeState_call_return_const_of_entry
+    sourceContext sourcePrimitive sourceHandler sourceBytesInWord sourceState
+    function value hentry hclock (some (panValueMemoryAccessOfModel sourceModel
+      sourceState.memaddrs sourceState.sharedMemaddrs sourceState.be))
+  have hsourceExact : panSemEvaluateCodeStateWithMemoryModel sourceContext
+      sourcePrimitive sourceHandler sourceModel sourceBytesInWord sourceState
+      (.call none function [] : Prog α) = some sourceResult := by
+    simpa [panSemEvaluateCodeStateWithMemoryModel, sourceResult] using hsource
+  have hsourceLookup : FLOOKUP (panSemCodeAsLookup sourceState.code) function =
+      some ([], .return (.const value), .one) := by
+    change panSemCodeLookup sourceState.code function = _
+    exact hentry
+  have hcodeEntry := codeRelImp context (panSemCodeAsLookup sourceState.code)
+    targetState.code hcode function [] (.return (.const value) : Prog α) .one hsourceLookup
+  rcases hcodeEntry with ⟨_hbodyLocalized, _hfunc, htargetLookup⟩
+  have htargetCodeLookup : FLOOKUP targetState.code function =
+      some ([], .return [.const value]) := by
+    simpa [Shape.shapeSize, ctxtFc, compileCodeRelProg, compileProgHOL,
+      compileExpHOL] using htargetLookup
+  have htargetCallLookup : lookupCrepRuntimeCode function [] targetState.code =
+      some (.return [.const value], fun _ => none) := by
+    unfold lookupCrepRuntimeCode
+    rw [htargetCodeLookup]
+    simp [assignCrepRuntimeLocals]
+  have htargetNonzero : targetState.clock ≠ 0 := by omega
+  have htargetRun : evalCrepRuntimeResult targetHandler targetPrimitive 3 targetState
+      (compileCodeRelProg context (.call none function [])) =
+        some (.returned [value], targetPost) := by
+    simp [targetPost, evalCrepRuntimeResult, evalCrepRuntimeProg,
+      evalCrepRuntimeCall, evalCrepRuntimeExps, evalCrepRuntimeExp, compileCodeRelProg,
+      compileProgHOL, compileArgsHOL, htargetCallLookup, htargetNonzero,
+      crepRuntimeCallInfoValid, decCrepClock, fixCrepRuntimeClock,
+      crepRuntimeCallerState, clearCrepRuntimeLocals]
+  refine ⟨hsourceExact, targetPost, htargetRun, ?_, ?_, ?_⟩
+  · simp [stateRel, panSemCodeStateAfter, targetPost,
+      clearCrepRuntimeLocals, decCrepClock, decPanClock, hclockRel,
+      hmem, hmemaddrs, hshared, hstructs, hglobals, hbe, hffi, hbase, htop]
+  · simpa [panSemCodeStateAfter, sourceResult, targetPost,
+      clearCrepRuntimeLocals, decCrepClock] using hcode
+  · simpa [panSemCodeStateAfter, sourceResult, targetPost,
       clearCrepRuntimeLocals] using hexcp
 end Flapjack

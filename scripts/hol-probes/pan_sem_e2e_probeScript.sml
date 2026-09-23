@@ -79,6 +79,14 @@ val _ = print_eval "call_zero_clock_timeout"
          code := FEMPTY |+
            («callee», ([], panLang$Skip, panLang$One)))))``
 
+val _ = print_eval "call_zero_arg_const_7"
+  ``FST (panSem$evaluate
+      (panLang$Call NONE «constant» [],
+       (((ARB:((8),unit) panSem$state) with clock := 10) with
+         code := FEMPTY |+
+           («constant», ([],
+             panLang$Return (panLang$Const (7w:8 word)), panLang$One)))))``
+
 val _ = print_eval "recursive_call_timeout"
   ``FST (panSem$evaluate
       (panLang$Call NONE «loop» [],

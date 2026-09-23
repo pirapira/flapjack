@@ -109,6 +109,9 @@ def sourceDecCallSelfCode : PanSemCodeMap Word64 :=
 def sourceZeroClockCallCode : PanSemCodeMap Word64 :=
   [("callee", ([], .skip, .one))]
 
+def sourceConstReturnCallCode : PanSemCodeMap Word64 :=
+  [("constant", ([], .return (.const (BitVec.ofNat 64 7)), .one))]
+
 def evaluateSourceCallId :=
   panSemEvaluateCodeState statefulTestContext statefulTestPrimitive
     statefulTestHandler (BitVec.ofNat 64 8)
@@ -153,6 +156,12 @@ def evaluateSourceZeroClockCallTimeout :=
         locals := fun name =>
           if name == "x" then some (.word (BitVec.ofNat 64 9)) else none })
     (.call none "callee" [] : Prog Word64)
+
+def evaluateSourceConstReturnCall :=
+  panSemEvaluateCodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler (BitVec.ofNat 64 8)
+    (emptyPanSourceState 10 sourceConstReturnCallCode)
+    (.call none "constant" [] : Prog Word64)
 
 private def isSourceReturnedWord
     (result : Option (PanValueFfiClockResult Word64 Unit))
@@ -202,6 +211,9 @@ def observeSourceZeroClockCallTimeout : Bool :=
       | some _ => false
   | _ => false
 
+def observeSourceConstReturnCall := isSourceReturnedWord
+  evaluateSourceConstReturnCall (BitVec.ofNat 64 7) 9
+
 #guard observeSourceCodeCall
 #guard observeSourceCodeDecCall
 #guard observeSourceNestedCodeCall
@@ -209,6 +221,7 @@ def observeSourceZeroClockCallTimeout : Bool :=
 #guard observeSourceRecursiveCallTimeout
 #guard observeSourceRecursiveDecCallTimeout
 #guard observeSourceZeroClockCallTimeout
+#guard observeSourceConstReturnCall
 
 /-! The fixed-width branches must go through the explicit source memory model.
     This is the stateful evaluator path corresponding to
@@ -469,6 +482,8 @@ def runChecks : IO Bool := do
     IO.println "FAIL recursive state-owned DecCall times out at source clock zero"
   if observeSourceZeroClockCallTimeout then IO.println "PASS state-owned Call with a nonempty code map times out at zero clock and clears locals" else
     IO.println "FAIL state-owned Call with a nonempty code map times out at zero clock and clears locals"
+  if observeSourceConstReturnCall then IO.println "PASS zero-argument state-owned Call returns its code-map word constant" else
+    IO.println "FAIL zero-argument state-owned Call returns its code-map word constant"
   if observeNestedRaise then IO.println "PASS evaluate nested structured raise" else
     IO.println "FAIL evaluate nested structured raise"
   if observeFixedLoads then IO.println "PASS evaluate fixed-width loads" else
@@ -491,7 +506,7 @@ def runChecks : IO Bool := do
     observeSourceCodeCall && observeSourceCodeDecCall && observeSourceNestedCodeCall &&
     observeSourceCodePreservedAfterRecursion &&
     observeSourceRecursiveCallTimeout && observeSourceRecursiveDecCallTimeout &&
-    observeSourceZeroClockCallTimeout &&
+    observeSourceZeroClockCallTimeout && observeSourceConstReturnCall &&
     observeNestedRaise &&
     observeFixedLoads && observeFixedLoadDomainFailure &&
     observeExactProgramMemoryAccess && observeExactProgramDomainFailure &&

@@ -4,6 +4,56 @@ namespace Flapjack.Test.CompileToCrepeParity
 
 open Flapjack
 
+/-! Direct `raise_const` result from `compile_to_crep_probe.out`, now checked
+at the exact HOL declaration-only boundary over a 64-bit word. The exception
+declaration determines code zero internally; no compiler context is supplied. -/
+def holDeclarationOnlyProbe : List (Decl (BitVec 64)) :=
+  [.exnDecl "E" .one,
+   .function
+     { name := "f", inline := false, exported := false,
+       params := [("x", .one)],
+       body := .raise "E" (.const 7), returnShape := .one }]
+
+def holDeclarationOnlyOracle : Bool :=
+  match compileToCrepHOL holDeclarationOnlyProbe with
+  | [("f", [0],
+      .seq (.dec 1 (.const seven)
+        (.seq (.storeGlob address (.var 1)) .skip))
+        (.raise code))] =>
+      seven == (7 : BitVec 64) && address == (0 : BitVec 64) &&
+        code == (0 : BitVec 64)
+  | _ => false
+
+#guard holDeclarationOnlyOracle
+
+def holMetadataAdapterOracle : Bool :=
+  match compileToCrepHOLWithMetadata holDeclarationOnlyProbe with
+  | [{ name := "f", params := [0], returnShape := .one, .. }] => true
+  | _ => false
+
+#guard holMetadataAdapterOracle
+
+/-! HOL `alist_to_fmap` is a right fold: the first repeated name wins even
+though `compile_to_crep` still emits both function declarations in order. -/
+def holDuplicateMapOracle : Bool :=
+  let declarations : List (Decl (BitVec 64)) :=
+    [.exnDecl "E" .one, .exnDecl "E" .one,
+     .function
+       { name := "f", inline := false, exported := false,
+         params := [], body := .skip, returnShape := .one },
+     .function
+       { name := "f", inline := false, exported := false,
+         params := [("x", .one)], body := .skip,
+         returnShape := .comb [.one, .one] }]
+  FLOOKUP (panToCrepGetEidsFromDeclsHOL declarations) "E" ==
+      some (0 : BitVec 64) &&
+    (match FLOOKUP (functionInfosHOL declarations) "f" with
+     | some ([], .one) => true
+     | _ => false) &&
+    (compileToCrepHOL declarations).length == 2
+
+#guard holDuplicateMapOracle
+
 def compileToCrepeProbeContext : CompileContext Nat :=
   { vars := [], functions := [], exceptions := [("E", 0)],
     maxVar := 0, bytesInWord := 1 }

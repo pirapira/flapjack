@@ -315,6 +315,21 @@ example :
   rw [← hEval]
   simp [evalCrepRuntimeExp]
 
+example :
+    (evalCrepRuntimeExp
+      (CrepHolState.toHolFiniteWordSourceRuntime boolWordDimension
+        (crepArithHolFiniteDimensionMapCode id boolDimensionHolState))
+      (crepSimpExp
+        (fun n => bitVecToHolWord boolWordDimension (BitVec.ofNat 2 n))
+        (.crepOp .mul [.const boolDimensionWord, .const boolDimensionWord]))).map
+        PanWordLab.word =
+    (evalCrepRuntimeExp
+      (boolDimensionHolState.toHolFiniteWordSourceRuntime boolWordDimension)
+      (.crepOp .mul [.const boolDimensionWord, .const boolDimensionWord])).map
+        PanWordLab.word := by
+  apply crepSimpExpCorrect1HolFiniteWordSource id boolDimensionHolState _
+  simp [evalCrepRuntimeExp]
+
 example : True := by
   letI : HolFiniteDimension Bool := boolWordDimensionSwapped
   have hresult :

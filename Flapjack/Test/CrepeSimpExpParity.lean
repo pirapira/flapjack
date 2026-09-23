@@ -27,6 +27,9 @@ def holBits4 : Fin 4 → Bool := fun index => index.val == 0 || index.val == 2
 #guard holWordToBitVec fin4WordDimension
     (holFiniteWordSourceMul fin4WordDimension holBits4 holBits4) ==
       BitVec.ofNat 4 9
+#guard holWordToBitVec fin4WordDimension
+    (holFiniteWordSourceSub fin4WordDimension holBits4 (fun _ => true)) ==
+      BitVec.ofNat 4 6
 
 /-! These kernel checks mirror the original HOL `n2w_def` probe for zero,
     one, and the high set bit. Numeric FCP index 0 is the least-significant

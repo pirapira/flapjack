@@ -93,10 +93,11 @@ zero/one/high-bit examples are in `Flapjack.Test.CrepeSimpExpParity`.
 theorems and 8-bit simplification examples. Lean's
 `holFiniteWordSourceAdd`/`holFiniteWordSourceMul` encode the source `n2w` of
 natural arithmetic on `w2n` values, with generic Fin-index transport theorems
-and focused 4-bit checks in `CrepeSimpExpParity`. This does not yet connect
+and focused 4-bit checks in `CrepeSimpExpParity`. `holFiniteWordSourceSub`
+uses the corresponding two's-complement natural formula and its transport
+theorem; the test checks wraparound subtraction. This does not yet connect
 HOL's implicit `finite_index` dictionary to the explicit Lean
-`HolFiniteDimension` witness, and it does not bridge `word_sub_def` or all
-Crep evaluator operations.
+`HolFiniteDimension` witness or bridge all Crep evaluator operations.
 `crep_arith_eval_mul_const_probe.out` records direct HOL EVAL of
 `crepSem$eval` after `crep_arith$mul_const` for zero, one, power-of-two, and
 general multipliers, with a word-valued local. Its matching production runtime

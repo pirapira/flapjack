@@ -274,6 +274,13 @@ def holFiniteWordSourceMul {ι : Type u} (dimension : HolFiniteDimension ι)
   holFiniteWordN2W dimension
     (holFiniteWordW2N dimension left * holFiniteWordW2N dimension right)
 
+def holFiniteWordSourceSub {ι : Type u} (dimension : HolFiniteDimension ι)
+    (left right : ι → Bool) : ι → Bool :=
+  holFiniteWordN2W dimension
+    (holFiniteWordW2N dimension left +
+      (2 ^ dimension.width - holFiniteWordW2N dimension right %
+        2 ^ dimension.width))
+
 theorem holFiniteWordSourceAdd_toBitVec {ι : Type u}
     (dimension : HolFiniteDimension ι) (left right : ι → Bool) :
     holWordToBitVec dimension (holFiniteWordSourceAdd dimension left right) =
@@ -289,6 +296,20 @@ theorem holFiniteWordSourceMul_toBitVec {ι : Type u}
   rw [holFiniteWordSourceMul, holFiniteWordN2W, holFiniteWordW2N,
     holWordToBitVec_bitVecToHolWord]
   simp [holFiniteWordW2N, BitVec.ofNat_mul]
+
+theorem holFiniteWordSourceSub_toBitVec {ι : Type u}
+    (dimension : HolFiniteDimension ι) (left right : ι → Bool) :
+    holWordToBitVec dimension (holFiniteWordSourceSub dimension left right) =
+      holWordToBitVec dimension left - holWordToBitVec dimension right := by
+  rw [holFiniteWordSourceSub, holFiniteWordN2W, holFiniteWordW2N,
+    holWordToBitVec_bitVecToHolWord]
+  change BitVec.ofNat dimension.width
+      ((holWordToBitVec dimension left).toNat +
+        (2 ^ dimension.width -
+          (holWordToBitVec dimension right).toNat % 2 ^ dimension.width)) = _
+  rw [Nat.add_comm _ (2 ^ dimension.width - _)]
+  rw [← BitVec.ofNat_sub_ofNat]
+  simp
 
 theorem holFiniteWordToBitVec_and {ι : Type u}
     [dimension : HolFiniteDimension ι] (left right : ι → Bool) :

@@ -253,9 +253,11 @@ theorem holFiniteWordToBitVec_mul {ι : Type u}
     `$HOL/src/n-bit/wordsScript.sml`. HOL defines each operation by converting
     its operands with `w2n`, doing natural arithmetic, and converting back
     with `n2w`. These definitions make that contract explicit for a finite
-    Boolean-index carrier; they remain untagged because the HOL core theory is
-    outside the repository and the chosen `HolFiniteDimension` witness has not
-    yet been identified with HOL's implicit `finite_index` dictionary. -/
+    Boolean-index carrier. The adapter `holFiniteWordW2N` uses `BitVec.toNat`;
+    its equality with HOL's weighted-`SBIT` `w2n_def` has not yet been proved.
+    They remain untagged because the HOL core theory is outside the repository
+    and the chosen `HolFiniteDimension` witness has not yet been identified
+    with HOL's implicit `finite_index` dictionary. -/
 def holFiniteWordN2W {ι : Type u} (dimension : HolFiniteDimension ι)
     (value : Nat) : ι → Bool :=
   bitVecToHolWord dimension (BitVec.ofNat dimension.width value)

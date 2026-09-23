@@ -62,12 +62,15 @@ val _ = print_eval "ws_mem_store_update"
       SOME s' => (s'.memory (0w : 8 word), s'.memory (1w : 8 word))
     | NONE => (Word 0w, Word 0w)``
 
-(* Returning MappedRead: result NONE, local 1 set to Word 3w, one io_event. *)
+(* Returning MappedRead: result NONE, local 1 set to Word 3w, one io_event.
+   The loaded word is printed through `w2n` because EVAL leaves
+   `word_of_bytes F 0w [3w]` as an unreduced `set_byte` term; `w2n` forces the
+   concrete value, as in loop_sem_sh_mem_load_probe.out. *)
 val _ = print_eval "ws_sh_mem_load_return"
   ``case loopSem$sh_mem_load 1 (3w : 8 word) 0
       (^s with <| locals := insert 1 (Word (0w : 8 word)) LN;
                   sh_mdomain := {3w}; ffi := ^returning_ffi |>) of
-      (res,s') => (res, (case lookup 1 s'.locals of SOME (Word w) => w | _ => 0w),
+      (res,s') => (res, (case lookup 1 s'.locals of SOME (Word w) => w2n w | _ => 0),
                    LENGTH s'.ffi.io_events)``
 
 (* Final MappedRead: FinalFFI, locals cleared. *)
@@ -82,7 +85,7 @@ val _ = print_eval "ws_sh_mem_store_return"
   ``case loopSem$sh_mem_store 1 (3w : 8 word) 0
       (^s with <| locals := insert 1 (Word (7w : 8 word)) LN;
                   sh_mdomain := {3w}; ffi := ^returning_ffi |>) of
-      (res,s') => (res, (case lookup 1 s'.locals of SOME (Word w) => w | _ => 0w))``
+      (res,s') => (res, (case lookup 1 s'.locals of SOME (Word w) => w2n w | _ => 0))``
 
 (* Final MappedWrite: FinalFFI, locals cleared. *)
 val _ = print_eval "ws_sh_mem_store_final"

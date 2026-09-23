@@ -375,6 +375,88 @@ theorem panToCrepPcCompileCorrectBreakCodeState
   · simpa [hsourcePost] using hexcp
   · simpa [hsourcePost] using hlocals
 
+/-- The state-owned source evaluator's Continue equation. -/
+theorem panSemEvaluateCodeState_continue
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (state : PanSemState α (FfiState σ)) :
+    panSemEvaluateCodeState context primitive handler bytesInWord state .continue =
+      some (.control (.continued state.locals state.globals state.memory state.ffi),
+        state.clock) := by
+  have hpositive : 0 < panSemCodeEvaluateFuel state (.continue : Prog α) := by
+    unfold panSemCodeEvaluateFuel
+    omega
+  unfold panSemEvaluateCodeState panSemEvaluateCodeStateWithFuel
+  cases hfuel : panSemCodeEvaluateFuel state (.continue : Prog α) with
+  | zero => omega
+  | succ fuel =>
+      simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockLeaf,
+        evalPanValueFfiProgSteps]
+
+/-- Actual-state Continue case for the source-run-implies-target-run direction
+of HOL `pc_compile_correct`. It preserves source and target runtime, code, and
+exception state and proves the post-state local relation. -/
+theorem panToCrepPcCompileCorrectContinueCodeState
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    [CrepBytesInWord α] [BEq String]
+    (context : PanToCrepProofContext α)
+    (sourceContext : PanValueFfiContext α)
+    (sourcePrimitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueStatefulFfiHandler α σ)
+    (targetHandler : CrepRuntimeFfiHandler α σ FfiFinalEvent)
+    (targetPrimitive : CrepPrimitiveHandler α) (fuel : Nat)
+    (sourceState : PanSemState α (FfiState σ))
+    (targetState : CrepRuntimeState α σ)
+    (hstate : stateRel sourceState targetState)
+    (hcode : codeRel context (panSemCodeAsLookup sourceState.code) targetState.code)
+    (hexcp : excpRel context.eids sourceState.exceptionShapes)
+    (hlocals : localsRel context sourceState.locals targetState.locals) :
+    panSemEvaluateCodeState sourceContext sourcePrimitive sourceHandler
+      targetState.bytesInWord sourceState .continue =
+        some (.control (.continued sourceState.locals sourceState.globals
+          sourceState.memory sourceState.ffi), sourceState.clock) ∧
+    ∃ targetResult targetPost,
+      evalCrepRuntimeResult targetHandler targetPrimitive (fuel + 1) targetState
+        (compileCodeRelProg context .continue) = some (targetResult, targetPost) ∧
+      stateRel (panSemCodeStateAfter sourceState
+        (.control (.continued sourceState.locals sourceState.globals
+          sourceState.memory sourceState.ffi), sourceState.clock)) targetPost ∧
+      codeRel context
+        (panSemCodeAsLookup (panSemCodeStateAfter sourceState
+          (.control (.continued sourceState.locals sourceState.globals
+            sourceState.memory sourceState.ffi), sourceState.clock)).code)
+        targetPost.code ∧
+      excpRel context.eids
+        (panSemCodeStateAfter sourceState
+          (.control (.continued sourceState.locals sourceState.globals
+            sourceState.memory sourceState.ffi), sourceState.clock)).exceptionShapes ∧
+      targetResult = .continued 0 ∧
+      localsRel context
+        (panSemCodeStateAfter sourceState
+          (.control (.continued sourceState.locals sourceState.globals
+            sourceState.memory sourceState.ffi), sourceState.clock)).locals
+        targetPost.locals := by
+  refine ⟨panSemEvaluateCodeState_continue sourceContext sourcePrimitive sourceHandler
+    targetState.bytesInWord sourceState, ?_⟩
+  have hsourcePost : panSemCodeStateAfter sourceState
+      (.control (.continued sourceState.locals sourceState.globals
+        sourceState.memory sourceState.ffi), sourceState.clock) = sourceState := by
+    cases sourceState
+    rfl
+  refine ⟨.continued 0, targetState, ?_, ?_, ?_, ?_, rfl, ?_⟩
+  · simpa [compileCodeRelProg, compileProgHOL] using
+      (crepContinueEvaluationEquation targetHandler targetPrimitive fuel targetState)
+  · simpa [hsourcePost] using hstate
+  · simpa [hsourcePost] using hcode
+  · simpa [hsourcePost] using hexcp
+  · simpa [hsourcePost] using hlocals
+
 /-- The `Skip` constructor satisfies the concrete source-run-implies-target-run
 goal. The target run is constructed here; only clock agreement is needed
 because both evaluators leave their runtime states unchanged. -/

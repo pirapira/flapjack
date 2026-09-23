@@ -68,6 +68,12 @@ example :
 
 local instance : HolFiniteDimension Bool := boolWordDimension
 
+/-! The arbitrary-index n2w adapter is pointwise `BIT` at the number assigned
+    by the dimension encoding, matching HOL's FCP `finite_index` convention. -/
+#guard holFiniteWordN2W boolWordDimension 1 false == true
+#guard holFiniteWordN2W boolWordDimension 1 true == false
+#guard holFiniteWordN2W boolWordDimension 2 true == true
+
 @[instance_reducible] def boolWordDimensionSwapped : HolFiniteDimension Bool where
   width := 2
   width_pos := by decide

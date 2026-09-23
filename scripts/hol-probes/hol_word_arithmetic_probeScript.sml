@@ -22,6 +22,7 @@ fun print_conv label th =
 val _ = print_thm "word_add_definition" word_add_def;
 val _ = print_thm "word_mul_definition" word_mul_def;
 val _ = print_thm "word_sub_definition" word_sub_def;
+val _ = print_thm "w2n_definition" w2n_def;
 val _ = print_thm "word_add_n2w" word_add_n2w;
 val _ = print_thm "word_mul_n2w" word_mul_n2w;
 val _ = print_thm "word_2comp_n2w" word_2comp_n2w;

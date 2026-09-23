@@ -67,10 +67,13 @@ theorem holWordBitsToBitVec_n2w {width : Nat} (value : Nat) :
   exact holWordBitsToBitVec_bitVecToHolWordBits _
 
 /-! A dimension-indexed HOL word is isomorphic to the canonical Fin-index
-    representation once its finite dimension is enumerated. Lean core/Std in
-    this project does not provide Fintype/equivFin, so the enumeration data is
-    represented explicitly here. This is representation infrastructure only;
-    the evaluator and word-operation transport are proved separately below. -/
+    representation once its finite dimension is enumerated. Here `decode` is
+    the numeric-index-to-carrier map (the role of HOL `finite_index`) and
+    `encode` is its inverse. Lean core/Std in this project does not provide
+    Fintype/equivFin, so the enumeration data is represented explicitly here.
+    The arbitrary-index `n2w` adapter below is pointwise `BIT` at `encode i`;
+    the evaluator and remaining `w2n`/operation transport are proved
+    separately. -/
 class HolFiniteDimension (ι : Type u) where
   width : Nat
   width_pos : 0 < width
@@ -252,13 +255,23 @@ theorem holFiniteWordToBitVec_mul {ι : Type u}
 /-! Source-shaped arithmetic for HOL4's `word_add_def` and `word_mul_def` in
     `$HOL/src/n-bit/wordsScript.sml`. HOL defines each operation by converting
     its operands with `w2n`, doing natural arithmetic, and converting back
-    with `n2w`. These definitions make that contract explicit for a finite
-    Boolean-index carrier; they remain untagged because the HOL core theory is
-    outside the repository and the chosen `HolFiniteDimension` witness has not
-    yet been identified with HOL's implicit `finite_index` dictionary. -/
+    with `n2w`. These adapters use BitVec `toNat`/`ofNat` for those conversions.
+    The pointwise `n2w`/FCP `BIT` equation is proved below, but the HOL `w2n`
+    weighted `SBIT` sum has not yet been connected to BitVec `toNat`; these
+    equations are not yet a proof of HOL operation correspondence. They remain
+    untagged because the HOL core theory is outside the repository and the
+    chosen `HolFiniteDimension` witness has not yet been identified with HOL's
+    implicit `finite_index` dictionary. -/
 def holFiniteWordN2W {ι : Type u} (dimension : HolFiniteDimension ι)
     (value : Nat) : ι → Bool :=
   bitVecToHolWord dimension (BitVec.ofNat dimension.width value)
+
+theorem holFiniteWordN2W_at_index {ι : Type u}
+    (dimension : HolFiniteDimension ι) (value : Nat) (index : ι) :
+    holFiniteWordN2W dimension value index =
+      Nat.testBit value (dimension.encode index).val := by
+  simp [holFiniteWordN2W, bitVecToHolWord, finBitsToHolWord,
+    bitVecToHolWordBits_ofNat]
 
 def holFiniteWordW2N {ι : Type u} (dimension : HolFiniteDimension ι)
     (word : ι → Bool) : Nat :=

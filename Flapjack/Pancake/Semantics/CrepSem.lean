@@ -90,6 +90,7 @@ structure CrepRuntimeState (α σ : Type u) where
 
 /- Exact executable counterpart of CakeML Pancake's `dec_clock_def`
    (`crepSemScript.sml:145-148`).  The state is otherwise unchanged. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "dec_clock_def"]
 def decCrepClock (state : CrepRuntimeState α σ) : CrepRuntimeState α σ :=
   { state with clock := state.clock - 1 }
 

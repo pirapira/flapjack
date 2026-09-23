@@ -209,6 +209,31 @@ theorem localsRelWfShape
   rw [← panValueIsWf_eq_isWfShape_panValueShape_of_nil [] value rfl]
   exact hshape
 
+/-- Faithful port of Cake `locals_rel_lookup_ctxt`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:527`). The HOL
+    `OPT_MMAP (FLOOKUP t_locals) ns = SOME (flatten v)` is Lean's `List.mapM`
+    result, and `is_wf_shape_nil` is `isWfShape []` at the translated value
+    shape. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "locals_rel_lookup_ctxt"]
+theorem localsRelLookupCtxt
+    (context : PanToCrepProofContext α)
+    (sourceLocals : FiniteMap String (PanValue α))
+    (targetLocals : FiniteMap Nat α) (name : String) (value : PanValue α)
+    (hrel : localsRel context sourceLocals targetLocals)
+    (hlookup : FLOOKUP sourceLocals name = some value) :
+    ∃ slots,
+      FLOOKUP context.vars name = some (panValueShape [] value, slots) ∧
+      slots.length = (panValueFlatten value).length ∧
+      slots.mapM (FLOOKUP targetLocals) = some (panValueFlatten value) ∧
+      isWfShape [] (panValueShape [] value) = true := by
+  obtain ⟨slots, values, hcontext, hmap, hflatten, hwf⟩ :=
+    hrel.2.2 name value hlookup
+  refine ⟨slots, hcontext, ?_, ?_, hwf⟩
+  · rw [hflatten]
+    exact list_mapM_length (FLOOKUP targetLocals) slots values hmap
+  · rw [hflatten]
+    exact hmap
+
 /-- HOL `local_rel_gt_vmax_preserved`: a target local slot strictly above the
     proof context's maximum cannot occur in any source variable's slot list. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "local_rel_gt_vmax_preserved"]

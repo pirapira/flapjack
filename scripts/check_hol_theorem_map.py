@@ -173,6 +173,7 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/Proofs/PanToCrep.lean", "mod_eq_of_lt_eq"),
         ("Flapjack/Pancake/Proofs/PanToCrep.lean", "option_ne_none_iff_exists"),
         ("Flapjack/Pancake/Proofs/PanToCrep.lean", "prod_mk_pair_eq_id"),
+        ("Flapjack/Pancake/Proofs/PanToCrep.lean", "localsRelLookupCtxt"),
     }
     for key in reviewed_exact:
         if key in inventory:

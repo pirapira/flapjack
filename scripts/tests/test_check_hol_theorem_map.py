@@ -48,6 +48,16 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
                     inventory[key]["reviewer"], "Codex (source comparison)"
                 )
 
+    def test_locals_rel_lookup_ctxt_is_in_review_inventory(self):
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        key = ("Flapjack/Pancake/Proofs/PanToCrep.lean", "localsRelLookupCtxt")
+        self.assertEqual(inventory[key]["hol_name"], "locals_rel_lookup_ctxt")
+        self.assertEqual(inventory[key]["statement_status"], "reviewed_exact")
+        self.assertEqual(inventory[key]["reviewer"], "Codex (source comparison)")
+
 
 class ValidateInventoryTest(unittest.TestCase):
     path = "Flapjack/Pancake/Proofs/Example.lean"

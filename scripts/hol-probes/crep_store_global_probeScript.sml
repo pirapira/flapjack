@@ -32,6 +32,16 @@ val store_state =
                  base_addr := 12w;
                  top_addr := 13w |>)``;
 
+val direct_state =
+  ``(^store_state with locals := FEMPTY |+ (3, Word (7w:8 word)))``;
+
+val _ = print_eval "set_globals_direct"
+  ``let s' = crepSem$set_globals (4w:5 word) (Word (22w:8 word))
+                    ^direct_state in
+      (FLOOKUP s'.globals (4w:5 word),
+       FLOOKUP s'.locals 3,
+       FLOOKUP s'.locals 9)``;
+
 val _ = print_eval "store_global_insert"
   ``case crepSem$evaluate
       (crepLang$StoreGlob (4w:5 word) (crepLang$Const (11w:8 word)),

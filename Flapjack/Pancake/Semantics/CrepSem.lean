@@ -98,6 +98,13 @@ def updateCrepRuntimeGlobal (globals : BitVec 5 → Option (PanWordLab α))
     (key : BitVec 5) (value : PanWordLab α) : BitVec 5 → Option (PanWordLab α) :=
   fun candidate => if key == candidate then some value else globals candidate
 
+/-- Flapjack runtime helper for one fixed-width global update. This is not
+    tagged as HOL `set_globals_def`: the target state's locals still store bare
+    words, whereas HOL `crepSem$state.locals` stores `word_lab` cells. -/
+def setCrepRuntimeGlobals (key : BitVec 5) (value : PanWordLab α)
+    (state : CrepRuntimeState α σ) : CrepRuntimeState α σ :=
+  { state with globals := updateCrepRuntimeGlobal state.globals key value }
+
 /- Exact executable counterpart of CakeML Pancake's `empty_locals_def`
    (`crepSemScript.sml:71`).  Terminal timeout and exception boundaries do not
    expose the caller's transient locals. -/
@@ -557,8 +564,7 @@ mutual
     | _fuel + 1, state, .storeGlob address value =>
         match evalCrepRuntimeExp state value with
         | some value =>
-            let globals := updateCrepRuntimeGlobal state.globals address (.word value)
-            some (.normal, { state with globals := globals })
+            some (.normal, setCrepRuntimeGlobals address (.word value) state)
         | none => some (.error, state)
     | fuel + 1, state, .seq first second =>
         match evalCrepRuntimeProg handler primitive fuel state first with

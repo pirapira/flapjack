@@ -38,6 +38,18 @@ def runtimeHandler : CrepRuntimeFfiHandler Nat Unit Unit :=
 
 def noPrimitive : CrepPrimitiveHandler Nat := fun _ _ => none
 
+/- HOL crep_store_global_probe: set_globals_direct has a hit at global 4,
+   preserves the local 3, and leaves local 9 absent. This checks the observable
+   update behavior; it does not claim the whole Lean runtime-state type is a
+   port of HOL crepSem$state. -/
+def directUpdateState : CrepRuntimeState Nat Unit :=
+  { globalState with locals := fun name => if name == 3 then some 7 else none }
+
+#guard let state := setCrepRuntimeGlobals (4 : BitVec 5) (.word 22) directUpdateState
+       state.globals (4 : BitVec 5) == some (.word 22) &&
+       state.locals 3 == some 7 &&
+       (state.locals 9).isNone
+
 /- HOL crep_eval_probe: eval_global_hit=SOME (Word 11w). -/
 #guard evalCrepRuntimeExp globalState (.loadGlob (4 : BitVec 5)) == some 11
 #guard evalCrepRuntimeExp globalState (.loadGlob (36 : BitVec 5)) == some 11

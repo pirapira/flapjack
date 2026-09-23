@@ -2667,12 +2667,16 @@ theorem panValueFfiSharedStore_stateRel_final
        erw [hcallGoal])
   · simpa only [stateRel] using hstate
 
-/-- HOL `pan_to_crepProofScript.sml:3051` `evaluate_replicate_const`: the
-HOL-shaped Crep evaluator maps a `REPLICATE n (Const 0w)` argument list to
-`SOME (REPLICATE n (Word 0w))`.  Stated over the `word_lab`-returning core
-`evalCrepRuntimeExpsWordLab`, so the result already has HOL's `word_lab`
-shape with no post-map. -/
-@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "evaluate_replicate_const"]
+/-- Flapjack-specific analogue of HOL `pan_to_crepProofScript.sml:3051`
+`evaluate_replicate_const`.  NOT a port: the production Crep evaluator
+`evalCrepRuntimeExp`/`evalCrepRuntimeExps` returns the bare `α` carried by a
+`word_lab` cell, and this statement is proved over the separate word_lab core
+`evalCrepRuntimeExpsWordLab`, whose recursive children still call the bare
+`evalCrepRuntimeExp` and whose arithmetic/`crepOp` cases delegate to the
+arbitrary runtime `memoryModel` hooks rather than HOL's fixed `crepSem$eval`.
+So it is not yet kernel-checked equal to `crepSem$eval` and must not carry a
+`@[hol]` tag.  Establishing a faithful production evaluator/projection and
+revisiting the tag is tracked by bead `flapjack-pxn.18.4.3.48.1`. -/
 theorem evaluateReplicateConst
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

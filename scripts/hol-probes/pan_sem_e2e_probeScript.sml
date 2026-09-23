@@ -161,6 +161,20 @@ val _ = print_eval "call_record_first_field_7"
          code := FEMPTY |+
            («id», ([(«x», panLang$One)],
              panLang$Return (panLang$Var panLang$Local «x»), panLang$One));
+             clock := 10 |>)))``
+
+val _ = print_eval "call_record_middle_pair_7_8"
+  ``FST (panSem$evaluate
+      (panLang$Call NONE «pair»
+        [panLang$RField 1 (panLang$Var panLang$Local «record»)],
+       ((ARB:((8),unit) panSem$state) with
+        <| locals := FEMPTY |+ («record», RStruct [ValWord (3w:8 word);
+               RStruct [ValWord (7w:8 word); ValWord (8w:8 word)];
+               ValWord (10w:8 word)]);
+         code := FEMPTY |+
+           («pair», ([(«p», panLang$Comb [panLang$One; panLang$One])],
+             panLang$Return (panLang$Var panLang$Local «p»),
+             panLang$Comb [panLang$One; panLang$One]));
          clock := 10 |>)))``
 
 val _ = print_eval "call_zero_clock_timeout"

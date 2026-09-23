@@ -149,7 +149,8 @@ run_probe pan_lang_with_shape_probeScript.sml pan_lang_with_shape_probe.out \
 run_probe pan_lang_wf_fields_context_probeScript.sml pan_lang_wf_fields_context_probe.out \
   empty_fields self_reference_context "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_lang_size_of_sh_with_ctxt_probeScript.sml pan_lang_size_of_sh_with_ctxt_probe.out \
-  one known_named missing_named nested_comb "$cake_dir/pancake/panLangScript.sml"
+  one known_named missing_named nested_comb nested_named_size_drop \
+  "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_lang_size_of_shape_probeScript.sml pan_lang_size_of_shape_probe.out \
   one empty_comb named nested_comb "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_lang_decl_predicates_probeScript.sml pan_lang_decl_predicates_probe.out \
@@ -497,7 +498,8 @@ run_probe crep_simp_exp_probeScript.sml crep_simp_exp_probe.out \
 run_probe crep_simp_prog_probeScript.sml crep_simp_prog_probe.out \
   assign unchanged "$cake_dir/pancake/crep_arithScript.sml"
 run_probe afindi_probeScript.sml afindi_probe.out \
-  empty duplicate_first wf_shape_drop "$cake_dir/pancake/pan_structsScript.sml"
+  empty duplicate_first wf_shape_drop dropWhile_MAP_helper \
+  "$cake_dir/pancake/pan_structsScript.sml"
 run_probe pan_structs_compile_exp_probeScript.sml pan_structs_compile_exp_probe.out \
   rstruct old_shapes_map "$cake_dir/pancake/pan_structsScript.sml"
 run_probe crep_semantics_probeScript.sml crep_semantics_probe.out \

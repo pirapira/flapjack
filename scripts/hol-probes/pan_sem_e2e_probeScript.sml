@@ -71,6 +71,16 @@ val _ = print_eval "call_assign_local_7"
              locals := FEMPTY |+ (strlit "answer", ValWord (3w:8 word));
              clock := 10 |>)))).locals (strlit "answer"))``
 
+val _ = print_eval "call_raises_exception_7"
+  ``FST (panSem$evaluate
+      (panLang$Call NONE (strlit "raiseE") [],
+       ((ARB:((8),unit) panSem$state) with
+          <| eshapes := FEMPTY |+ (strlit "E", panLang$One);
+             code := FEMPTY |+ (strlit "raiseE",
+               ([], panLang$Raise (strlit "E")
+                   (panLang$Const (7w:8 word)), panLang$One));
+             clock := 10 |>)))``
+
 val _ = print_eval "recursive_call_code_map_7"
   ``FST (panSem$evaluate
       (panLang$Call NONE «f» [],

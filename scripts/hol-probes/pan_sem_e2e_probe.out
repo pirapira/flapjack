@@ -3,6 +3,7 @@ return_mul_42=SOME (Return (ValWord 42w))
 return_if_13=SOME (Return (ValWord 13w))
 call_code_map_7=SOME (Return (ValWord 7w))
 call_assign_local_7=(NONE,SOME (ValWord 7w))
+call_raises_exception_7=SOME (Exception «E» (ValWord 7w))
 recursive_call_code_map_7=SOME (Return (ValWord 7w))
 deccall_code_map_7=SOME (Return (ValWord 7w))
 call_zero_clock_timeout=SOME TimeOut

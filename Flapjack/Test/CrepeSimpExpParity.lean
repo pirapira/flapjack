@@ -1,4 +1,7 @@
 import Flapjack.Pancake.CrepArith
+import Flapjack.Pancake.Semantics.CrepSem
+import Flapjack.Pancake.Semantics.CrepRuntimeTarget
+import Flapjack.RiscV.PanMemory
 
 namespace Flapjack.Test.CrepeSimpExpParity
 
@@ -41,5 +44,46 @@ def parityGuard : Bool :=
 
 #eval parityGuard
 #guard parityGuard
+
+def noWords : RiscV.Word 64 → PanWordLab (RiscV.Word 64) := fun _ => .word 0
+def noDomain : RiscV.Word 64 → Bool := fun _ => false
+
+def runtimeBase : CrepRuntimeState (RiscV.Word 64) Unit :=
+  { locals := fun _ => none
+    globals := fun _ => none
+    code := FEMPTY
+    memory := noWords
+    memaddrs := noDomain
+    shMemaddrs := noDomain
+    memoryModel := RiscV.panRiscVMemoryModel
+    bytesInWord := (8 : RiscV.Word 64)
+    ffiContext := riscv64PanValueFfiContext noDomain
+    clock := 0
+    bigEndian := false
+    ffi := natCrepRuntimeFfiState
+    baseAddress := 0
+    topAddress := 0 }
+
+def runtimeState : CrepRuntimeState (RiscV.Word 64) Unit :=
+  { riscv64CrepRuntimeTarget runtimeBase with
+    locals := updateCrepRuntimeLocal (fun _ => none) 2 (.word (7 : RiscV.Word 64)) }
+
+/-! These checks exercise the production evaluator before and after the pass,
+    including the power-of-two shift branch and bottom-up nested folding.
+    They are executable support checks while the polymorphic HOL theorem port
+    remains open. -/
+def runtimeEvalSimpParity : Bool :=
+  let source : CrepExp (RiscV.Word 64) :=
+    .crepOp .mul [.var 2, .const (8 : RiscV.Word 64)]
+  let nested : CrepExp (RiscV.Word 64) :=
+    .crepOp .mul [source, .const (3 : RiscV.Word 64)]
+  evalCrepRuntimeExp (riscv64CrepRuntimeTarget runtimeState) source == some 56 &&
+  evalCrepRuntimeExp (riscv64CrepRuntimeTarget runtimeState)
+    (crepSimpExp (BitVec.ofNat 64) source) == some 56 &&
+  evalCrepRuntimeExp (riscv64CrepRuntimeTarget runtimeState) nested == some 168 &&
+  evalCrepRuntimeExp (riscv64CrepRuntimeTarget runtimeState)
+    (crepSimpExp (BitVec.ofNat 64) nested) == some 168
+
+#guard runtimeEvalSimpParity
 
 end Flapjack.Test.CrepeSimpExpParity

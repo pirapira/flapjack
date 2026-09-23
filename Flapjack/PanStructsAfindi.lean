@@ -148,68 +148,6 @@ theorem compileShapes_isWfShape [BEq String] (outer : StructContext)
       simp only [List.map_cons, isWfShape.isWfShapeList, Bool.and_eq_true]
       exact ⟨compileShape_isWfShape_of outer context shape, ih⟩
 
-/-- Cake `pan_structs` `struct_infos_ok_cons`: prepending a fresh structure
-    whose fields are distinct, whose shapes are well formed in the existing
-    context and whose recorded size matches keeps the context well formed. -/
-theorem structInfosOk_cons (xs : StructContext) (nm : StructName) (info : StructInfo)
-    (hxs : structInfosOk xs)
-    (hflds : (info.fields.map Prod.fst).Nodup)
-    (hfresh : nm ∉ xs.map Prod.fst)
-    (hwf : ∀ shape ∈ info.fields.map Prod.snd, isWfShape xs shape = true)
-    (hsize : info.size = shapeSizeWithContext xs (.comb (info.fields.map Prod.snd))) :
-    structInfosOk ((nm, info) :: xs) := by
-  obtain ⟨h1, h2, h3, h4⟩ := hxs
-  have hkeys : (((nm, info) :: xs).map Prod.fst).Nodup := by
-    simp only [List.map_cons, List.nodup_cons]
-    exact ⟨hfresh, h2⟩
-  have hdropOne : ∀ (shape : Shape),
-      isWfShape xs shape = true →
-      shapeSizeWithContext xs shape =
-        shapeSizeWithContext ((nm, info) :: xs) shape := by
-    intro shape hshape
-    have hd := shapeSizeWithContext_drop ((nm, info) :: xs) shape 1
-      (by simpa using hshape) hkeys
-    simpa using hd
-  refine ⟨?_, hkeys, ?_, ?_⟩
-  · intro entry hentry
-    rcases List.mem_cons.mp hentry with rfl | hentry
-    · exact hflds
-    · exact h1 entry hentry
-  · intro i name info' hget shape hmem
-    cases i with
-    | zero =>
-        simp only [List.getElem?_cons_zero, Option.some.injEq] at hget
-        obtain ⟨rfl, rfl⟩ := hget
-        have hdrop : ((nm, info) :: xs).drop (0 + 1) = xs := rfl
-        rw [hdrop]
-        exact hwf shape hmem
-    | succ k =>
-        simp only [List.getElem?_cons_succ] at hget
-        have hdrop : ((nm, info) :: xs).drop (Nat.succ k + 1) = xs.drop (k + 1) := by
-          rw [Nat.succ_eq_add_one, List.drop_succ_cons]
-        rw [hdrop]
-        exact h3 k name info' hget shape hmem
-  · intro entry hentry
-    rcases List.mem_cons.mp hentry with rfl | hentry
-    · have hlist : isWfShape.isWfShapeList xs (info.fields.map Prod.snd) = true :=
-        isWfShapeList_of_all hwf
-      have hwfComb : isWfShape xs (.comb (info.fields.map Prod.snd)) = true := by
-        simpa [isWfShape] using hlist
-      rw [← hdropOne (.comb (info.fields.map Prod.snd)) hwfComb]
-      exact hsize
-    · obtain ⟨name, info'⟩ := entry
-      obtain ⟨i, hi, heq⟩ := List.getElem_of_mem hentry
-      have hget : xs[i]? = some (name, info') := by
-        rw [List.getElem?_eq_getElem hi]
-        exact congrArg some heq
-      have hlist : isWfShape.isWfShapeList xs (info'.fields.map Prod.snd) = true :=
-        isWfShapeList_of_all (fun shape hmem =>
-          isWfShape_drop xs shape (i + 1) (h3 i name info' hget shape hmem))
-      have hwfComb : isWfShape xs (.comb (info'.fields.map Prod.snd)) = true := by
-        simpa [isWfShape] using hlist
-      rw [← hdropOne (.comb (info'.fields.map Prod.snd)) hwfComb]
-      exact h4 (name, info') hentry
-
 /-- Cake `pan_structs` `alookup_map_structs_ok`: a structure found in a
     well-formed context has distinct field names. -/
 theorem lookupInfo_fields_nodup [BEq String] [LawfulBEq String] (name : String)

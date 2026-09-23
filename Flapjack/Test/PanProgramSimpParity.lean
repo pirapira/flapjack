@@ -824,11 +824,6 @@ example : True := by
     ([] : StructContext) evalRelState resortDecls none hall
   trivial
 
-/-- Focused regression for the `filter_not_mem_self` counterpart. -/
-theorem filter_not_mem_self_fixture :
-    ([1, 2, 3] : List Nat).filter (fun x => decide (x ∉ [1, 2, 3])) = [] :=
-  filter_not_mem_self [1, 2, 3]
-
 /-- Focused regression for the `MAP_SOME_MEM_lemma` counterpart. -/
 theorem map_flatten_eq_map_some_flatten_fixture :
     ∃ y, (fun n : Nat => if n == 4 then none else some (n + 1)) 3 = some y ∧

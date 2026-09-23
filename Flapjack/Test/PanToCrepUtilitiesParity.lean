@@ -5,6 +5,11 @@ import Flapjack.Pancake.Proofs.PanToCrep
 
 namespace Flapjack.Test.PanToCrepUtilitiesParity
 
+/-- HOL `filter_not_mem_self` on a concrete list. -/
+theorem filter_not_mem_self_fixture :
+    ([1, 2, 3] : List Nat).filter (fun x => decide (x ∉ [1, 2, 3])) = [] :=
+  filter_not_mem_self [1, 2, 3]
+
 /-- Cake `pair_map_I`: the pair constructor is identity. -/
 theorem prod_mk_pair_eq_id_fixture :
     (fun p : Nat × Nat => (p.1, p.2)) = id :=

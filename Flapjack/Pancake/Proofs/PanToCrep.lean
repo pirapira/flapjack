@@ -19,6 +19,15 @@ namespace Flapjack
 
 /-! Exact utility theorem ports used by the `pan_to_crep` proof development. -/
 
+/-- HOL `filter_not_mem_self`: filtering a list by non-membership in that
+    same list removes every element. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "filter_not_mem_self"]
+theorem filter_not_mem_self {α : Type} [DecidableEq α] (l : List α) :
+    l.filter (fun x => decide (x ∉ l)) = [] := by
+  rw [List.filter_eq_nil_iff]
+  intro x hx
+  simp [hx]
+
 /-! Cake `not_none_then_some` (`pan_to_crepProofScript.sml:3593`). -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "not_none_then_some"]
 theorem option_ne_none_iff_exists {α : Type} (x : Option α) :

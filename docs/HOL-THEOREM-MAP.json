@@ -2377,6 +2377,14 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "is_wf_shape_compile_shape",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "structCompileShapeWF_isWfShape",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (mutual source comparison with direct HOL-EVAL and Lean nested-shape fixture)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "afindi_append",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "afindi_append",

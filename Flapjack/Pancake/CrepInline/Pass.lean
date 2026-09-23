@@ -496,26 +496,37 @@ theorem crepInlineProgFmap_congr [BEq FunName] [LawfulBEq FunName]
   intro prog
   exact key fs prog gs h.symm
 
-/-! ## HOL clause correspondence
+/-! ## Clause form of `crepInlineProgFmap`
 
-The pass `crepInlineProgFmap` satisfies, clause for clause, HOL
-`inline_prog_def` (`cakeml/pancake/crep_inlineScript.sml:203`).  The `Call`
-clause below is stated as a single equation whose right side is exactly HOL's
-`case ctyp` dispatch: the `ctyp`-inlining, the non-distinct-return guard, the
-`FLOOKUP` miss guard, the `DOMSUB` removal (`fs.remove`, HOL `\`), the
-recursive callee inlining, `unreach_elim`, the temporary-variable `GENLIST`
-(`crepInlineTmpNames`), and the `NONE`/`SOME(rts, NONE)`/`SOME(rts, SOME _)`
-branches.  The carrier is `CrepInlineFmap`, whose `lookup` is HOL `FLOOKUP`
-(`toFiniteMap`), whose `remove` is HOL `DOMSUB` (`toFiniteMap_remove`), and
-whose `card` equals the domain cardinality (`card_eq_domain_cardinality`), so
-the termination measure `(fs.card, sizeOf prog)` mirrors HOL
-`(CARD (FDOM fs), prog_size prog)`.
+These seven theorems unfold `crepInlineProgFmap` on each program constructor,
+stating its defining equations in the clause order of HOL `inline_prog_def`
+(`cakeml/pancake/crep_inlineScript.sml:203`).  Each is a kernel-checked fact
+about `crepInlineProgFmap` itself (derived from its own equation lemmas); they
+are NOT a cross-system correspondence to HOL `inline_prog`.  In particular no
+theorem here relates the Lean helpers (`crepUnreachElim`, `crepArgLoad`,
+`crepInlineNontail`, `crepInlineTmpNames`, `crepTransformEoc`,
+`crepTransformBranch`, ...) to the corresponding HOL helpers (`unreach_elim`,
+`arg_load`, `inline_nontail`, `GENLIST`, `transform_eoc`, `transform_branch`,
+...), and no theorem here proves that the recursive call equals HOL's.
+
+The `Call` constructor is split, not one equation: `crepInlineProgFmap` has
+separate equations for `.call none`, for `.call (some (rts, none))` (with the
+`crepAllDistinct` distinct/non-distinct split), and for
+`.call (some (rts, some (w, handler)))`.  The three theorems below state one
+such Lean equation each; the `crepInlineProgFmap_call_hol` right side is the
+`.call none` equation with its Lean `FLOOKUP` (`fs.lookup`) branch, not a
+definitional identity with HOL's `case ctyp` dispatch.
+
+What *is* pinned is the carrier view: `CrepInlineFmap.lookup` is HOL `FLOOKUP`
+(`toFiniteMap`), `remove` is HOL `DOMSUB` (`toFiniteMap_remove`), `card` equals
+the domain cardinality (`card_eq_domain_cardinality`), so the termination
+measure `(fs.card, sizeOf prog)` mirrors HOL `(CARD (FDOM fs), prog_size prog)`.
 
 No `@[hol]` tag is attached: the Lean carrier is the canonical entry-list model
-rather than the fmap quotient (they have the same `FLOOKUP` view but are not
-definitionally the same type), and the binders carry `[BEq FunName]` /
-`[LawfulBEq FunName]` where HOL uses propositional equality.  These are
-correspondence theorems, not a definitional identity. -/
+rather than the fmap quotient (same `FLOOKUP` view, not the same type), the
+binders carry `[BEq FunName]` / `[LawfulBEq FunName]` where HOL uses
+propositional equality, and the recursive helper cross-system correspondence
+remains open. -/
 
 theorem crepInlineProgFmap_call_hol {α : Type} [BEq FunName] [LawfulBEq FunName]
     [OfNat α 0] [OfNat α 1] (fs : CrepInlineFmap α) (name : FunName)

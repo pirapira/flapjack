@@ -156,7 +156,9 @@ theorem bridgeCongrShadow :
   crepInlineProgFmap_congr (fs := fmapReinsert) (gs := fmapEntries)
     fmapReinsertViewEq CrepProg.skip
 
-/-- HOL `inline_prog_def` Call clause (ctyp `NONE`) as a single equation. -/
+/-- Lean `.call none` defining equation of `crepInlineProgFmap`, in the shape
+    of HOL `inline_prog_def`'s `Call` clause (ctyp `NONE`).  This is an unfold
+    of the Lean definition, not a cross-system equality with HOL. -/
 theorem clauseCallNone :
     crepInlineProgFmap fmapEntries (.call none "f" [.const 5]) =
       (match fmapEntries.lookup "f" with
@@ -168,14 +170,18 @@ theorem clauseCallNone :
            crepInlineTail (crepArgLoad tmp [.const 5] argsVname inlined)) :=
   crepInlineProgFmap_call_hol fmapEntries "f" [.const 5]
 
-/-- HOL `inline_prog_def` `SOME(rts, SOME _)` branch: the call is only
-    ctyp-updated, and the handler is recursively inlined. -/
+/-- Lean `.call (some (rts, some _))` defining equation (the
+    `SOME(rts, SOME _)` branch of HOL `inline_prog_def`'s `Call` clause): only
+    the ctyp is updated and the handler recursively inlined.  Lean unfold, not
+    a cross-system equality. -/
 theorem clauseCallHandler :
     crepInlineProgFmap fmapEntries (.call (some ([1], some (0, .skip))) "f" []) =
       .call (some ([1], some (0, crepInlineProgFmap fmapEntries .skip))) "f" [] :=
   crepInlineProgFmap_call_some_handler_hol fmapEntries [1] 0 .skip "f" []
 
-/-- HOL `inline_prog_def` `Dec` clause is the structural recursion. -/
+/-- Lean `.dec v e p` defining equation (structural recursion, matching HOL
+    `inline_prog_def`'s `Dec` clause).  Lean unfold, not a cross-system
+    equality. -/
 theorem clauseDec :
     crepInlineProgFmap fmapEntries (.dec 1 (.const 1) .skip) =
       .dec 1 (.const 1) (crepInlineProgFmap fmapEntries .skip) :=

@@ -43,7 +43,8 @@ def finiteMapContext : StructPassContext where
 def finiteMapState : PanStructFiniteState Word64 (FfiState Unit) :=
   panStructFiniteStateFromMaps finiteMapRuntime
     [("local", .word (BitVec.ofNat 64 7))]
-    [("global", .word (BitVec.ofNat 64 11))] [("E", .one)] []
+    [("global", .word (BitVec.ofNat 64 11))] [("E", .one)]
+    [("f", ([], .skip, .one))]
     (by simp) (by simp) (by simp) (by simp)
 
 example : finiteMapState.runtime.locals "local" =
@@ -74,6 +75,13 @@ example :
       [("E", .one)] := by
   simp [panStructConvertFiniteState, finiteMapState,
     panStructFiniteStateFromMaps, structCompileShape, structCompileShapeWF]
+
+example :
+    lookupInfo "f" (panStructConvertFiniteState finiteMapContext finiteMapState).runtime.code =
+      some ([], .skip, .one) := by
+  simp [panStructConvertFiniteState, finiteMapState,
+    panStructFiniteStateFromMaps, panStructConvertState, panStructConvertCode,
+    structCompileShape, structCompileShapeWF, lookupInfo]
 
 example :
     ((panStructConvertFiniteState finiteMapContext finiteMapState).runtime.locals

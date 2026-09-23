@@ -27,3 +27,8 @@ val _ = print_eval "missing"
   ``pan_structs$afindi «z» [(«a», 10); («b», 20); («c», 30)]``;
 val _ = print_eval "duplicate_first"
   ``pan_structs$afindi «a» [(«a», 10); («b», 20); («a», 30)]``;
+val wf_drop_context =
+  ``[(«prefix», []); («s», [(«field», panLang$One)])]``;
+val _ = print_eval "wf_shape_drop"
+  ``panLang$is_wf_shape (DROP 1 ^wf_drop_context) (panLang$Named «s») ==>
+    panLang$is_wf_shape ^wf_drop_context (panLang$Named «s»)``;

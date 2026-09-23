@@ -1413,6 +1413,81 @@ theorem panSemEvaluateRiscV64CodeCall_catchesRaisedBody_ofState
     calleeRaisedLocals hcalleeBody hexceptionShape hexceptionValid hpayload
     hhandlerAssignment hhandlerContract hhandlerBody
 
+/-! Lift the source-side raised-handler IH composition to the production
+RISC-V `PanSemState` evaluator. The explicit fuel equation ties the local
+recursive evaluator premise to the state evaluator's finite-map-derived
+bound; the code field remains state-owned and is preserved in the projected
+post-state. This proves the actual source Call result for arbitrary related
+body evaluations, while target simulation remains a separate obligation. -/
+theorem panSemEvaluateRiscV64CodeState_call_catchesRaisedBody_ofState
+    (context : PanValueFfiContext (RiscV.Word 64))
+    (primitive : PanPrimitiveHandler (RiscV.Word 64))
+    (handler : PanValueStatefulFfiHandler (RiscV.Word 64) σ)
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (fuel : Nat)
+    (function exception handlerVariable : String)
+    (arguments : List (Exp (RiscV.Word 64)))
+    (values : List (PanValue (RiscV.Word 64)))
+    (returnShape : Shape) (body : Prog (RiscV.Word 64))
+    (calleeLocals : VarName → Option (PanValue (RiscV.Word 64)))
+    (calleeRaisedLocals : VarName → Option (PanValue (RiscV.Word 64)))
+    (calleeGlobals : VarName → Option (PanValue (RiscV.Word 64)))
+    (calleeMemory : (RiscV.Word 64) → Option (PanValue (RiscV.Word 64)))
+    (calleeFfi : FfiState σ) (exceptionValue : PanValue (RiscV.Word 64))
+    (calleeClock : Nat) (handlerProgram : Prog (RiscV.Word 64))
+    (handlerResult : PanValueFfiClockResult (RiscV.Word 64) σ)
+    (hfuel : panSemCodeEvaluateFuel state
+      (.call (some (none, some (exception, handlerVariable, handlerProgram)))
+        function arguments) = fuel + 2)
+    (harguments : evalPanSemStateExps state arguments = some values)
+    (hcallee : lookupPanSemCodeCall state.structs state.code function values =
+      some (body, returnShape, calleeLocals))
+    (hclock : state.clock ≠ 0)
+    (hcalleeBody : evalPanValueFfiClockCodeProg context primitive handler
+      state.structs state.code state.exceptionShapes state.baseAddress
+      state.topAddress panSemBitVec64BytesInWord fuel calleeLocals state.globals
+      state.memory state.ffi (decPanClock state.clock) body
+      (memoryAccess := some (panSemBitVec64MemoryAccess state)) =
+      some (.control (.raised calleeRaisedLocals calleeGlobals calleeMemory
+        calleeFfi exception exceptionValue), calleeClock))
+    (hexceptionShape : ∃ shape,
+      state.exceptionShapes exception = some shape ∧
+      panShapeMatches (panValueShape state.structs exceptionValue) shape = true)
+    (hexceptionValid : panValueExceptionValid state.structs none exception
+      exceptionValue = true)
+    (hpayload : panValuePayloadWithinLimit state.structs exceptionValue = true)
+    (hhandlerAssignment : panValueAssignmentValid state.structs state.locals
+      (fun _ => none) .local handlerVariable exceptionValue = true)
+    (hhandlerContract : panValueHandlerValid state.structs none state.locals
+      handlerVariable exceptionValue = true)
+    (hhandlerBody : evalPanValueFfiClockCodeProg context primitive handler
+      state.structs state.code state.exceptionShapes state.baseAddress
+      state.topAddress panSemBitVec64BytesInWord fuel
+      (updatePanValueMap state.locals handlerVariable exceptionValue)
+      calleeGlobals calleeMemory calleeFfi
+      (min (decPanClock state.clock) calleeClock) handlerProgram
+      (memoryAccess := some (panSemBitVec64MemoryAccess state)) =
+      some handlerResult) :
+    panSemEvaluateRiscV64CodeState context primitive handler state
+      (.call (some (none, some (exception, handlerVariable, handlerProgram)))
+        function arguments) = some handlerResult ∧
+    (panSemCodeStateAfter state handlerResult).code = state.code := by
+  have hcall := panSemEvaluateRiscV64CodeCall_catchesRaisedBody_ofState
+    context primitive handler state fuel function exception handlerVariable
+    arguments values returnShape body calleeLocals calleeRaisedLocals
+    calleeGlobals calleeMemory calleeFfi exceptionValue calleeClock handlerProgram
+    handlerResult harguments hcallee hclock hcalleeBody hexceptionShape
+    hexceptionValid hpayload hhandlerAssignment hhandlerContract hhandlerBody
+  refine ⟨?_, panSemCodeStateAfter_preserves_code state handlerResult⟩
+  change panSemEvaluateCodeStateWithMemoryModel context primitive handler
+    panSemBitVec64WordModel panSemBitVec64BytesInWord state
+    (.call (some (none, some (exception, handlerVariable, handlerProgram)))
+      function arguments) = some handlerResult
+  unfold panSemEvaluateCodeStateWithMemoryModel panSemEvaluateCodeState
+    panSemEvaluateCodeStateWithFuel
+  rw [hfuel]
+  simpa [evalPanValueFfiClockCodeProg, panSemBitVec64MemoryAccess] using hcall
+
 
 /-! Actual-state fixed-RV64 Call simulation for a nonempty source code map.
 The callee's parameter slot and returned body are derived from `code_rel`;

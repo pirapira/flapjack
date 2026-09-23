@@ -251,6 +251,57 @@ theorem panToCrepConcreteEvaluationGoal_skip
           evalCrepRuntimeResult, evalCrepRuntimeProg]
       · simp [panToCrepRunResultRel, panToCrepControlResultRel, hclock]
 
+/-- The constant-return case constructs a target run from the source run and
+preserves the flattened return word. This remains local support for the
+`pc_compile_correct` induction; the full post-state relations are not part of
+this concrete case boundary. -/
+theorem panToCrepConcreteEvaluationGoal_returnConst
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    [CrepBytesInWord α] [BEq String]
+    (context : PanToCrepProofContext α)
+    (sourceCode : FiniteMap FunName
+      (List (VarName × Shape) × Prog α × Shape))
+    (targetCode : FiniteMap FunName (List Nat × CrepProg α))
+    (sourceContext : PanValueFfiContext α)
+    (sourcePrimitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueStatefulFfiHandler α σ)
+    (targetHandler : CrepRuntimeFfiHandler α σ FfiFinalEvent)
+    (targetPrimitive : CrepPrimitiveHandler α) (fuel : Nat)
+    (sourceState : PanSemExactState α σ)
+    (targetState : CrepRuntimeState α σ) (value : α)
+    (hclock : sourceState.legacy.clock = targetState.clock)
+    (hfuel : 0 < fuel) :
+    panToCrepConcreteEvaluationGoal context sourceCode targetCode
+      sourceContext sourcePrimitive sourceHandler targetHandler targetPrimitive
+      fuel sourceState targetState (.return (.const value)) := by
+  intro _hruntime sourceRun hsource
+  have hsourceReturn :
+      panToCrepSourceEvaluate sourceContext sourcePrimitive sourceHandler
+        sourceState (.return (.const value)) =
+      some (.control (.returned (fun _ => none) sourceState.legacy.globals
+        sourceState.legacy.memory sourceState.legacy.ffi [.word value]),
+        sourceState.legacy.clock) := by
+    simp [panToCrepSourceEvaluate, panSemEvaluateExactState, panSemEvaluate,
+      panSemEvaluateWithFuel, panSemEvaluateFuel, PanSemExactState.toEvaluateState,
+      evalPanValueFfiClockProg, evalPanValueFfiClockLeaf,
+      evalPanValueFfiProgSteps, evalPanValueExpCounted,
+      evalPanValueExp, panValuePayloadWithinLimit_word]
+  rw [hsourceReturn] at hsource
+  injection hsource with hrun
+  subst sourceRun
+  cases fuel with
+  | zero => omega
+  | succ fuel =>
+      refine ⟨((CrepRuntimeResult.returned [value] : CrepRuntimeResult α FfiFinalEvent),
+        clearCrepRuntimeLocals targetState), ?_, ?_⟩
+      · simp [panToCrepTargetEvaluate, compileCodeRelProg, compileProgHOL,
+          compileExpHOL, evalCrepRuntimeResult,
+          evalCrepRuntimeProg, evalCrepRuntimeExps, evalCrepRuntimeExp]
+      · simp [panToCrepRunResultRel, panToCrepControlResultRel,
+          panValueFlatten, clearCrepRuntimeLocals, hclock]
+
 /-- The `Break` constructor satisfies the concrete source-run-implies-target-run
 goal; the HOL result relation maps the source break to target label zero. -/
 theorem panToCrepConcreteEvaluationGoal_break

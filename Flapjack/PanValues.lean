@@ -1354,6 +1354,56 @@ def evalPanValueExps [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
   evalPanValueExp.evalPanValueExps structs locals globals memory
     baseAddress topAddress bytesInWord expressions memoryAccess
 
+theorem evalPanValueFields_projection [BEq α] [OfNat α 0] [OfNat α 1]
+    [Add α] [Mul α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α))
+    (baseAddress topAddress bytesInWord : α)
+    (fields : List (FieldName × Exp α)) (values : List (FieldName × PanValue α))
+    (heval : evalPanValueExp.evalPanValueFields structs locals globals memory
+      baseAddress topAddress bytesInWord fields = some values) :
+    fields.map Prod.fst = values.map Prod.fst ∧
+      evalPanValueExps structs locals globals memory baseAddress topAddress
+        bytesInWord (fields.map Prod.snd) = some (values.map Prod.snd) := by
+  induction fields generalizing values with
+  | nil =>
+      simp [evalPanValueExp.evalPanValueFields] at heval
+      subst values
+      constructor
+      · rfl
+      · change evalPanValueExp.evalPanValueExps structs locals globals memory
+          baseAddress topAddress bytesInWord [] none = some []
+        simp [evalPanValueExp.evalPanValueExps]
+  | cons field fields ih =>
+      rcases field with ⟨name, expression⟩
+      cases hhead : evalPanValueExp structs locals globals memory baseAddress
+          topAddress bytesInWord expression with
+      | none => simp [evalPanValueExp.evalPanValueFields, hhead] at heval
+      | some head =>
+          cases htail : evalPanValueExp.evalPanValueFields structs locals globals
+              memory baseAddress topAddress bytesInWord fields with
+          | none =>
+              simp [evalPanValueExp.evalPanValueFields, hhead, htail] at heval
+          | some tail =>
+              have hvalues : values = (name, head) :: tail := by
+                simpa [evalPanValueExp.evalPanValueFields, hhead, htail] using heval.symm
+              subst values
+              have htailProjection := ih tail htail
+              constructor
+              · simp [htailProjection.1]
+              · change evalPanValueExp.evalPanValueExps structs locals globals memory
+                  baseAddress topAddress bytesInWord
+                  (expression :: fields.map Prod.snd) none =
+                    some (head :: tail.map Prod.snd)
+                have htailEval : evalPanValueExp.evalPanValueExps structs locals
+                    globals memory baseAddress topAddress bytesInWord
+                    (fields.map Prod.snd) none = some (tail.map Prod.snd) := by
+                  simpa only [evalPanValueExps] using htailProjection.2
+                simp [evalPanValueExp.evalPanValueExps, hhead, htailEval]
+
 
 theorem shapeVal_shape [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

@@ -166,6 +166,7 @@ import Flapjack.Test.CrepRuntimeExtCallStateRelParity
 import Flapjack.Test.CrepEveryExpParity
 import Flapjack.Test.CrepAssignedVarsParity
 import Flapjack.Test.MkCtxtImpLocalsRelParity
+import Flapjack.Test.FmEmptyZipAlistParity
 import Flapjack.Test.PanSimpParity
 import Flapjack.Test.PanProgramSimpParity
 import Flapjack.Test.PanValueWfParity
@@ -740,6 +741,7 @@ def main : IO Unit := do
     Flapjack.Test.CrepEveryExpParity.runChecks,
     Flapjack.Test.CrepAssignedVarsParity.runChecks,
     Flapjack.Test.MkCtxtImpLocalsRelParity.runChecks,
+    Flapjack.Test.FmEmptyZipAlistParity.runChecks,
     Flapjack.Test.PanToCrepRelationsParity.runChecks,
     Flapjack.Test.PanToCrepCodeRelParity.runChecks,
     Flapjack.Test.PanToCrepStateRelParity.runChecks,

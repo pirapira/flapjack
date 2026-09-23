@@ -12,6 +12,39 @@ type, and the source-shaped evaluator follows `crepSem$eval_def`.
 
 namespace Flapjack
 
+/-! HOL's polymorphic `'a word` carrier is a Boolean function indexed by the
+    finite dimension type `'a`. This canonical `Fin width` representation
+    exposes that carrier in Lean's core library. The conversions below use
+    little-endian bit order, matching BitVec's low-bit indexing. They are
+    Flapjack representation infrastructure, not a claim about the Crep
+    evaluator or any HOL theorem. -/
+def holWordBitsToBitVec {width : Nat} (word : Fin width → Bool) :
+    BitVec width :=
+  (BitVec.ofBoolListLE (List.ofFn word)).cast (by simp)
+
+def bitVecToHolWordBits {width : Nat} (word : BitVec width) :
+    Fin width → Bool :=
+  fun index => word.getLsb index
+
+theorem bitVecToHolWordBits_holWordBitsToBitVec {width : Nat}
+    (word : Fin width → Bool) :
+    bitVecToHolWordBits (holWordBitsToBitVec word) = word := by
+  funext index
+  change (BitVec.ofBoolListLE (List.ofFn word)).getLsbD index.val = word index
+  rw [BitVec.getLsbD_ofBoolListLE]
+  simp [List.getD_eq_getElem?_getD]
+
+theorem holWordBitsToBitVec_bitVecToHolWordBits {width : Nat}
+    (word : BitVec width) :
+    holWordBitsToBitVec (bitVecToHolWordBits word) = word := by
+  apply BitVec.eq_of_getLsbD_eq
+  intro index hindex
+  change (BitVec.ofBoolListLE
+      (List.ofFn (fun i => word.getLsb i))).getLsbD index =
+    word.getLsbD index
+  rw [BitVec.getLsbD_ofBoolListLE]
+  simp [List.getD_eq_getElem?_getD, hindex]
+
 /-- Flapjack's field-only encoding of HOL `crepSem$state` for a fixed
     `RiscV.Word width` carrier. Finite maps are represented extensionally by
     lookup functions. It is untagged because it does not quantify over HOL's

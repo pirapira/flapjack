@@ -76,4 +76,20 @@ val _ = print_eval "handled_pair"
                «f» [];
              return := panLang$One |>]``;
 
+(* HOL alist_to_fmap right-folds exception declarations: the first E keeps
+   code 0w even after a later E, while intervening F keeps code 1w. *)
+val _ = print_eval "duplicate_exceptions"
+  ``pan_to_crep$compile_to_crep
+      [panLang$ExnDecl «E» panLang$One;
+       panLang$ExnDecl «F» panLang$One;
+       panLang$ExnDecl «E» panLang$One;
+       panLang$Function
+         <| name := «f»; inline := F; export := F; params := [];
+            body := panLang$Raise «E» (panLang$Const (7w : 8 word));
+            return := panLang$One |>;
+       panLang$Function
+         <| name := «g»; inline := F; export := F; params := [];
+            body := panLang$Raise «F» (panLang$Const (9w : 8 word));
+            return := panLang$One |>]``;
+
 val _ = print_eval "done" ``T``;

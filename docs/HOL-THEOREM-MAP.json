@@ -2772,16 +2772,16 @@
     "hol_name": "ALOOKUP_MAP3",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "ALOOKUP_MAP3",
-    "statement_status": "documented_mismatch",
-    "reviewer": "Codex (source comparison; HOL ALOOKUP is key-polymorphic, production lookupInfo is String-specialized)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; key-polymorphic lookupInfo == alist$ALOOKUP under LawfulBEq)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
     "hol_name": "ALOOKUP_MAP4",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "ALOOKUP_MAP4",
-    "statement_status": "documented_mismatch",
-    "reviewer": "Codex (source comparison; HOL ALOOKUP is key-polymorphic, production lookupInfo is String-specialized)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; key-polymorphic lookupInfo == alist$ALOOKUP under LawfulBEq)"
   },
   {
     "hol_path": null,

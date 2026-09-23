@@ -144,6 +144,23 @@ class ValidateInventoryTest(unittest.TestCase):
         )
         self.assertEqual(errors, [])
 
+    def test_documented_mismatch_keeps_source_candidate_untagged(self):
+        reference = (
+            "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+            "opt_mmap_eval_is_wf_shape_v",
+        )
+        record = self.record(
+            hol_path=reference[0],
+            hol_name=reference[1],
+            lean_name="evalPanValueExpsWfShapeOfStateRel",
+            statement_status="documented_mismatch",
+            reviewer="Codex (source comparison)",
+        )
+        key = (self.path, record["lean_name"])
+        self.assertEqual(MAP["validate_inventory"]([record], {key}, {}), [])
+        errors = MAP["validate_inventory"]([record], {key}, {key: reference})
+        self.assertTrue(any("must not carry an @[hol] tag" in error for error in errors))
+
 
 if __name__ == "__main__":
     unittest.main()

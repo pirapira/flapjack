@@ -280,17 +280,14 @@ theorem evalPanValueFfiClockProg_fuel_mono'
     have hfk : fuel ≤ k := by omega
     rw [evalPanValueFfiClockProg] at h
     rw [evalPanValueFfiClockProg]
-    cases hc : evalPanValueExp structs locals globals memory baseAddress topAddress
-        bytesInWord condition ma with
-    | none => rw [hc] at h; simp at h
-    | some cv =>
-      rw [hc] at h
-      cases cv with
-      | word w =>
-        simp only [Option.bind_eq_bind, Option.bind_some] at h ⊢
-        exact ihBranch _ _ _ hfk h
-      | rStruct fields => simp at h
-      | nStruct name fields => simp at h
+    cases hv : panValueIteConditionValue structs baseAddress topAddress bytesInWord
+        locals globals memory condition ma with
+    | none =>
+      simp only [hv, Option.elim_none] at h ⊢
+      exact h
+    | some w =>
+      simp only [hv, Option.elim_some] at h ⊢
+      exact ihBranch _ _ _ hfk h
   | case7 fuel locals globals memory ffi clock info function arguments ma c mh ihCall =>
     intro fuel' result hle h
     obtain ⟨k, rfl⟩ : ∃ k, fuel' = k + 1 := ⟨fuel' - 1, by omega⟩

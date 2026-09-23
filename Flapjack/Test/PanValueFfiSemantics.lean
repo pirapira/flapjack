@@ -178,11 +178,14 @@ def statefulSharedStoreFinal : Bool :=
 #guard statefulSharedStoreFinal
 
 #guard
-  (evalPanValueFfiProgramSteps statefulTestContext statefulTestPrimitive
+  (match
+    evalPanValueFfiProgramSteps statefulTestContext statefulTestPrimitive
       statefulTestHandler [] [] (BitVec.ofNat 64 0) (BitVec.ofNat 64 100)
       (BitVec.ofNat 64 8) 10 (fun _ => none) (fun _ => none) (fun _ => none)
       statefulTestFfiState
-      (.shMemLoad .op8 .local "x" (.const (BitVec.ofNat 64 10)))).isNone
+      (.shMemLoad .op8 .local "x" (.const (BitVec.ofNat 64 10))) with
+  | some (.error _ _ _ _, _) => true
+  | _ => false)
 
 def statefulNormalCallRejected : Bool :=
   (evalPanValueFfiCallSteps statefulTestContext statefulTestPrimitive

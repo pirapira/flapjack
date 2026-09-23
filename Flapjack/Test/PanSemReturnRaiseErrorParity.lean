@@ -8,8 +8,8 @@ The source oracle is `scripts/hol-probes/pan_sem_return_raise_error_probe.out`,
 generated from `panSemScript.sml` (see lines 633-650). It pins:
 
 * `Return e` with a failing expression, and `Return e` with an oversized
-  payload, both to `SOME Error` with the unchanged state (clock, local `x`,
-  empty globals, empty memory, and the untouched test FFI state);
+  payload, both to `SOME Error`; the guards check the clock, local `x`,
+  representative empty global and memory lookups, and the test FFI state;
 * a well-sized `Return e` to `SOME (Return v)` with cleared locals and payload
   `[ValWord 7w]`;
 * `Raise eid e` with a missing declared shape, a failing expression, an
@@ -77,8 +77,8 @@ def isErrorAt (clock : Nat)
 
 /-- A `Raise`/`Return` rejection from the oracle fixture state: the result is an
 explicit control `Error` at the original clock, with the original local `x`,
-all-empty globals, all-empty memory, and the untouched test FFI state (empty
-event list). -/
+sampled empty global and memory lookups, and the untouched test FFI state
+(empty event list). -/
 def errorPreservesKeptAt (clock : Nat)
     (result : Option
       (PanValueFfiClockResult Word64 Unit × PanSemState Word64 (FfiState Unit))) : Bool :=

@@ -2489,6 +2489,14 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "UNCURRY_EQ_o_SND",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "prod_uncurry_const_eq_comp_snd",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (generic function statement comparison with direct HOL-EVAL fixture)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "afindi_append",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "afindi_append",

@@ -6,3 +6,4 @@ missing=NONE
 duplicate_first=SOME 0
 wf_shape_drop=T
 dropWhile_MAP_helper=T
+UNCURRY_EQ_o_SND_pair=T

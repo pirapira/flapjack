@@ -212,8 +212,6 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/Proofs/PanGlobals.lean", "compile_decs_preserve_functions"),
         ("Flapjack/Pancake/Proofs/PanGlobals.lean", "EVERY_fperm_decs"),
         ("Flapjack/Pancake/Proofs/PanGlobals.lean", "compile_decs_FILTER_decs"),
-        ("Flapjack/Pancake/Proofs/PanGlobals.lean", "ALOOKUP_MAP3"),
-        ("Flapjack/Pancake/Proofs/PanGlobals.lean", "ALOOKUP_MAP4"),
         ("Flapjack/Pancake/Proofs/PanToCrep.lean", "mod_eq_of_lt_eq"),
         ("Flapjack/Pancake/Proofs/PanToCrep.lean", "option_ne_none_iff_exists"),
         ("Flapjack/Pancake/Proofs/PanToCrep.lean", "prod_mk_pair_eq_id"),

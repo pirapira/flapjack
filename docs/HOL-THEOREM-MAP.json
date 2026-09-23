@@ -2480,6 +2480,22 @@
     "reviewer": "Lean specialization of local alookup_drop_helper; no separate HOL declaration"
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "isWfShapeList_of_all",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean support lemma for the struct_infos_ok_drop proof"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "struct_infos_ok_drop",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "structInfosOk_drop",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source definition clauses and DROP conclusion matched by a concrete HOL theorem instance)"
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "size_of_sh_with_ctxt_drop",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",

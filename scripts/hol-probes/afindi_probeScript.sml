@@ -1,10 +1,11 @@
 (* Direct HOL-EVAL fixture for pan_structs$afindi_def. *)
 load "bossLib";
 load "preamble";
-load "pan_structsTheory";
+load "pan_structsProofTheory";
 open bossLib;
 open HolKernel Parse;
 open preamble;
+open pan_structsProofTheory;
 
 fun print_eval label q =
   let
@@ -41,3 +42,15 @@ val _ = print_eval "UNCURRY_EQ_o_SND_pair"
 val _ = print_eval "map_uncurry_zip_again"
   ``MAP (\(x, y). (SUC x, SUC y)) (ZIP ([1; 2], [3; 4])) =
     ZIP (MAP SUC [1; 2], MAP SUC [3; 4])``;
+val valid_struct_context =
+  ``[(strlit "S", <| fields := [(strlit "f", One)]; size := 1 |>)]``;
+val struct_infos_ok_drop_instance =
+  INST [{redex = mk_var ("sh_ctxt", type_of valid_struct_context),
+         residue = valid_struct_context},
+        {redex = mk_var ("n", type_of ``1``), residue = ``1``}]
+    struct_infos_ok_drop;
+val _ = print "struct_infos_ok_drop=";
+val _ = print
+  (String.translate (fn #"\n" => " " | c => String.str c)
+    (term_to_string (concl struct_infos_ok_drop_instance)));
+val _ = print "\n";

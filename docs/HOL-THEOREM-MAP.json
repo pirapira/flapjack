@@ -2481,6 +2481,14 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "map_uncurry_zip_again",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "list_zip_map_eq",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (equal-length premise and ZIP/MAP conclusion comparison with direct HOL-EVAL fixture)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "afindi_append",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "afindi_append",

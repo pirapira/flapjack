@@ -266,9 +266,12 @@ theorem panStruct_mapKeys_preserved (entries : InfoMap α)
 /-- A finite-map representation of the map-valued fields in HOL's
     `panSem$state`, together with its exact lookup view in the production
     `PanSemState` evaluator. `entries` are authoritative; the agreement fields
-    make the evaluator's total functions exactly the corresponding finite-map
-    lookup. `Nodup` records the key uniqueness inherent in HOL finite maps. -/
-structure PanStructFiniteState [BEq String] (α : Type u) (ffi : Type v) where
+    make locals, globals, and exception-shape lookup use HOL equality directly.
+    The `LawfulBEq String` parameter ensures production code-map lookup agrees
+    with equality-based HOL `FLOOKUP`. `Nodup` records the key uniqueness
+    inherent in HOL finite maps. -/
+structure PanStructFiniteState [BEq String] [LawfulBEq String]
+    (α : Type u) (ffi : Type v) where
   runtime : PanSemState α ffi
   locals : InfoMap (PanValue α)
   globals : InfoMap (PanValue α)
@@ -277,16 +280,16 @@ structure PanStructFiniteState [BEq String] (α : Type u) (ffi : Type v) where
   globals_nodup : (globals.map Prod.fst).Nodup
   exceptionShapes_nodup : (exceptionShapes.map Prod.fst).Nodup
   code_nodup : (runtime.code.map Prod.fst).Nodup
-  locals_lookup : ∀ name, runtime.locals name = lookupInfo name locals
-  globals_lookup : ∀ name, runtime.globals name = lookupInfo name globals
+  locals_lookup : ∀ name, runtime.locals name = panPropsALookupEq name locals
+  globals_lookup : ∀ name, runtime.globals name = panPropsALookupEq name globals
   exceptionShapes_lookup :
-    ∀ name, runtime.exceptionShapes name = lookupInfo name exceptionShapes
+    ∀ name, runtime.exceptionShapes name = panPropsALookupEq name exceptionShapes
 
 /-- Build the production evaluator view from explicit HOL-shaped finite maps.
     The only side conditions are the key uniqueness conditions that are part
     of the finite-map representation itself; lookup agreement is constructed
     definitionally instead of being added as a theorem premise. -/
-def panStructFiniteStateFromMaps [BEq String]
+def panStructFiniteStateFromMaps [BEq String] [LawfulBEq String]
     (runtime : PanSemState α ffi)
     (locals globals : InfoMap (PanValue α)) (exceptionShapes : InfoMap Shape)
     (code : PanSemCodeMap α)
@@ -295,9 +298,9 @@ def panStructFiniteStateFromMaps [BEq String]
     (exceptionShapes_nodup : (exceptionShapes.map Prod.fst).Nodup)
     (code_nodup : (code.map Prod.fst).Nodup) : PanStructFiniteState α ffi where
   runtime := { runtime with
-    locals := fun name => lookupInfo name locals
-    globals := fun name => lookupInfo name globals
-    exceptionShapes := fun name => lookupInfo name exceptionShapes
+    locals := fun name => panPropsALookupEq name locals
+    globals := fun name => panPropsALookupEq name globals
+    exceptionShapes := fun name => panPropsALookupEq name exceptionShapes
     code := code }
   locals := locals
   globals := globals
@@ -322,7 +325,7 @@ def panStructFiniteStateFromMaps [BEq String]
 /-- Map all HOL finite-map fields while keeping the same finite key support.
     The result is again related to the production evaluator state by exact
     lookup equations. -/
-def panStructConvertFiniteState [BEq String]
+def panStructConvertFiniteState [BEq String] [LawfulBEq String]
     (context : StructPassContext) (state : PanStructFiniteState α ffi) :
     PanStructFiniteState α ffi where
   runtime := panStructConvertState context state.runtime
@@ -361,14 +364,56 @@ def panStructConvertFiniteState [BEq String]
     exact state.code_nodup
   locals_lookup := by
     intro name
-    simp [panStructConvertState, lookupInfo_mapValues, state.locals_lookup]
+    simp [panStructConvertState, panPropsALookupEq_mapValues, state.locals_lookup]
   globals_lookup := by
     intro name
-    simp [panStructConvertState, lookupInfo_mapValues, state.globals_lookup]
+    simp [panStructConvertState, panPropsALookupEq_mapValues, state.globals_lookup]
   exceptionShapes_lookup := by
     intro name
-    simp [panStructConvertState, lookupInfo_mapValues,
+    simp [panStructConvertState, panPropsALookupEq_mapValues,
       state.exceptionShapes_lookup]
+
+@[simp] theorem panStructConvertFiniteState_locals_support [BEq String]
+    [LawfulBEq String] (context : StructPassContext)
+    (state : PanStructFiniteState α ffi) :
+    (panStructConvertFiniteState context state).locals.map Prod.fst =
+      state.locals.map Prod.fst := by
+  apply panStruct_mapKeys_preserved
+  intro entry
+  cases entry
+  rfl
+
+@[simp] theorem panStructConvertFiniteState_globals_support [BEq String]
+    [LawfulBEq String] (context : StructPassContext)
+    (state : PanStructFiniteState α ffi) :
+    (panStructConvertFiniteState context state).globals.map Prod.fst =
+      state.globals.map Prod.fst := by
+  apply panStruct_mapKeys_preserved
+  intro entry
+  cases entry
+  rfl
+
+@[simp] theorem panStructConvertFiniteState_exceptionShapes_support [BEq String]
+    [LawfulBEq String] (context : StructPassContext)
+    (state : PanStructFiniteState α ffi) :
+    (panStructConvertFiniteState context state).exceptionShapes.map Prod.fst =
+      state.exceptionShapes.map Prod.fst := by
+  apply panStruct_mapKeys_preserved
+  intro entry
+  cases entry
+  rfl
+
+@[simp] theorem panStructConvertFiniteState_code_support [BEq String]
+    [LawfulBEq String] (context : StructPassContext)
+    (state : PanStructFiniteState α ffi) :
+    (panStructConvertFiniteState context state).runtime.code.map Prod.fst =
+      state.runtime.code.map Prod.fst := by
+  change (panStructConvertCode context state.runtime.code).map Prod.fst =
+    state.runtime.code.map Prod.fst
+  apply panStruct_mapKeys_preserved
+  intro entry
+  cases entry
+  rfl
 
 def panStructConvertLocalMap (locals : VarName → Option (PanValue α)) :=
   fun name => (locals name).map panStructConvertValue
@@ -457,7 +502,7 @@ theorem panStructSkipEvaluatorSupport
     keys. This remains evaluator support: the full `compile_correct` premises
     and FEVERY/shape-map/result conclusions are not asserted here. -/
 theorem panStructSkipFiniteMapEvaluatorSupport
-    [BEq String] [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [BEq String] [LawfulBEq String] [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : StructPassContext)

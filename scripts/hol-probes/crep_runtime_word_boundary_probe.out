@@ -1,0 +1,7 @@
+bytes64=8w
+bytes32=4w
+byte_at_9=SOME 2w
+byte_at_8=SOME 1w
+byte_outside_domain=NONE
+word32_at_8=SOME 0x4030201w
+word32_unaligned=NONE

@@ -134,6 +134,7 @@ import Flapjack.Test.CompileDefParity
 import Flapjack.Test.CompileToCrepeParity
 import Flapjack.Test.CompileProgParity
 import Flapjack.Test.DupExnEidsParity
+import Flapjack.Test.CrepRuntimeTargetParity
 import Flapjack.Test.PanSimpParity
 import Flapjack.Test.PanProgramSimpParity
 import Flapjack.Test.PanValueWfParity
@@ -677,6 +678,7 @@ def main : IO Unit := do
     Flapjack.Test.CompileToCrepeParity.runChecks,
     Flapjack.Test.CompileProgParity.runChecks,
     Flapjack.Test.DupExnEidsParity.runChecks,
+    Flapjack.Test.CrepRuntimeTargetParity.runChecks,
     Flapjack.Test.PanToCrepRelationsParity.runChecks,
     Flapjack.Test.PanToCrepCodeRelParity.runChecks,
     Flapjack.Test.PanToCrepStateRelParity.runChecks,

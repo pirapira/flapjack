@@ -63,20 +63,21 @@ mutual
 end
 
 mutual
-  /-- Bool-valued support definition with equations matching HOL
-      `v_flds_ok_def`. It is deliberately untagged: this equality-lookup model
-      over Lean `StructContext` has not yet been connected to the production
-      `lookupInfo`/`BEq` state representation used by `compile_correct`.
-      `StructInfo` also has a Lean-only `shapedFields` cache; this definition
-      ignores it. The direct HOL fixture checks representative equations, not
-      that missing production-state bridge. -/
+  /-- Bool-valued counterpart of HOL `v_flds_ok_def`, using the production
+      `lookupInfo`. Its `LawfulBEq String` instance identifies that lookup
+      with HOL equality-based `ALOOKUP` (see
+      `lookupInfo_eq_panPropsALookupEq`). Lean `StructInfo` has an additional
+      `shapedFields` cache absent from HOL; the predicate ignores it, as well
+      as the source `size` field. The remaining fields projection used by the
+      compiler context is `panStructContextShapeView`. -/
+  @[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "v_flds_ok_def"]
   def panStructValueFieldsOkBool (structs : StructContext) :
       PanValue α → Bool
     | .word _ => true
     | .rStruct values => panStructValuesFieldsOkBool structs values
     | .nStruct name fields =>
         panStructFieldValuesFieldsOkBool structs fields &&
-          match panPropsALookupEq name structs with
+          match lookupInfo name structs with
           | none => false
           | some info =>
               decide (fields.map Prod.fst = info.fields.map Prod.fst) &&

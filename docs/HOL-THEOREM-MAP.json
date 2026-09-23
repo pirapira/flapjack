@@ -4187,6 +4187,14 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "crepRuntimeExpHdlOneWord_handlerPrestateRelations",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only composition of one-word exp_hdl with state_rel, code_rel, excp_rel, and locals_rel at the matching handler-body entry, using the source updatePanValueMap assignment; callee post-state relation and payload global remain premises, so this is not pc_compile_correct[Call_Ret_Exception]"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "crepRuntimeExpHdlOneWord_localsRel",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only composition of actual exp_hdl payload write with the HOL-shaped locals_rel update needed by the handler-body induction hypothesis; enclosing Call_Ret_Exception proof remains open"
@@ -4222,6 +4230,22 @@
     "lean_name": "evalCrepRuntimeCall_catchesRaisedOneWordHandler_ofCodeRelArgs",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only composition deriving actual target argument words and code-map lookup from supported source argument evaluation plus state_rel/code_rel/locals_rel, then applying the target one-word exp_hdl/Return Call proof; source Call result and post-state relations remain open, so this is not the HOL pc_compile_correct case"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only target Call dispatch for an arbitrary handler body: composes an explicit one-word exp_hdl evaluator result with the handler-body evaluator induction hypothesis and code-map-derived callee body hypothesis; source/target body-state relations remain open, so not pc_compile_correct"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody_ofCodeRelArgs",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only composition deriving actual target Call arguments and callee lookup from supported source argument evaluation/state_rel/code_rel/locals_rel, then applying arbitrary-handler target Call dispatch under callee, exp_hdl, and handler-body evaluator hypotheses; source result and post-state relations remain open, so not pc_compile_correct"
   },
   {
     "hol_path": null,

@@ -3045,7 +3045,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "compile_decs_decls_thm_cake",
     "statement_status": "documented_mismatch",
-    "reviewer": "Untagged: compileDecsCake composes compileProgCake, which is not yet proved clause-for-clause against HOL pan_globals$compile (handler case still uses fuel-based globalFreshName; fresh_name port tracked by flapjack-pxn.18.5.2.20.1.1.1.1), and CakeContext.globals is a FiniteMap lookup function that need not have finite support. width is restricted by [NeZero width] since HOL dimindex is positive; the compile_exp half is the exact tagged compileExpCake. Exact port tracked by flapjack-pxn.18.5.2.20.1.1."
+    "reviewer": "Untagged: compileDecsCake composes compileProgCake, which is not yet proved clause-for-clause against HOL pan_globals$compile (its global-return-handler case now uses the exact tagged freshNameHOL, but the program compiler itself still awaits clause/side-condition review), and CakeContext.globals is a FiniteMap lookup function that need not have finite support. width is restricted by [NeZero width] since HOL dimindex is positive; the compile_exp half is the exact tagged compileExpCake. Exact port tracked by flapjack-pxn.18.5.2.20.1.1."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
@@ -3053,7 +3053,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "compile_decs_EVERY_is_function_cake",
     "statement_status": "documented_mismatch",
-    "reviewer": "Untagged: compileDecsCake composes compileProgCake, which is not yet proved clause-for-clause against HOL pan_globals$compile (handler case still uses fuel-based globalFreshName; fresh_name port tracked by flapjack-pxn.18.5.2.20.1.1.1.1), and CakeContext.globals is a FiniteMap lookup function that need not have finite support. width is restricted by [NeZero width] since HOL dimindex is positive; the compile_exp half is the exact tagged compileExpCake. Exact port tracked by flapjack-pxn.18.5.2.20.1.1."
+    "reviewer": "Untagged: compileDecsCake composes compileProgCake, which is not yet proved clause-for-clause against HOL pan_globals$compile (its global-return-handler case now uses the exact tagged freshNameHOL, but the program compiler itself still awaits clause/side-condition review), and CakeContext.globals is a FiniteMap lookup function that need not have finite support. width is restricted by [NeZero width] since HOL dimindex is positive; the compile_exp half is the exact tagged compileExpCake. Exact port tracked by flapjack-pxn.18.5.2.20.1.1."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
@@ -3061,7 +3061,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "compile_decls_append_cake",
     "statement_status": "documented_mismatch",
-    "reviewer": "Untagged: compileDecsCake composes compileProgCake, which is not yet proved clause-for-clause against HOL pan_globals$compile (handler case still uses fuel-based globalFreshName; fresh_name port tracked by flapjack-pxn.18.5.2.20.1.1.1.1), and CakeContext.globals is a FiniteMap lookup function that need not have finite support. width is restricted by [NeZero width] since HOL dimindex is positive; the compile_exp half is the exact tagged compileExpCake. Exact port tracked by flapjack-pxn.18.5.2.20.1.1."
+    "reviewer": "Untagged: compileDecsCake composes compileProgCake, which is not yet proved clause-for-clause against HOL pan_globals$compile (its global-return-handler case now uses the exact tagged freshNameHOL, but the program compiler itself still awaits clause/side-condition review), and CakeContext.globals is a FiniteMap lookup function that need not have finite support. width is restricted by [NeZero width] since HOL dimindex is positive; the compile_exp half is the exact tagged compileExpCake. Exact port tracked by flapjack-pxn.18.5.2.20.1.1."
   },
   {
     "hol_path": "cakeml/pancake/pan_globalsScript.sml",
@@ -3070,6 +3070,14 @@
     "lean_name": "compileExpCake",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison; HOL-shaped CakeContext over BitVec width with [NeZero width] mirroring HOL dimindex positivity; extensional finite-map globals used only through FLOOKUP, with the local representation argument that HOL finite maps embed as lookup functions and extra infinite-support lookups do not alter this port; bytes_in_word = n2w (width/8); all compile_exp_def clauses Var Local/Global, RStruct, RField, NStruct/NField, Load/LoadByte/Load32, Op/Panop/Cmp/Shift, TopAddr and the identity catch-all match)."
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
+    "hol_name": "fresh_name_def",
+    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
+    "lean_name": "freshNameHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; clause-for-clause: if the candidate is MEM/\u2208 of names then recurse on name ++ \"'\" else return it; termination follows HOL's measure via maxNameLength, no fuel recursion; direct HOL oracle rows fresh_name_clear=\u00abx\u00bb, fresh_name_missing_empty=\u00ab\u00bb, fresh_name_hit=\u00ab'''\u00bb, fresh_name_seed=\u00abvn''\u00bb match the Lean parity checks)."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",

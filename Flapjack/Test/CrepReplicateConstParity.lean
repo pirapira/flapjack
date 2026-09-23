@@ -1,13 +1,14 @@
 import Flapjack.Pancake.Proofs.PanToCrep
 
 /-!
-Direct runtime checks against `scripts/hol-probes/crep_replicate_const_probe.out`,
+Direct runtime oracle checks against `scripts/hol-probes/crep_replicate_const_probe.out`,
 generated from `crepSem$eval` for
 `pan_to_crepProofScript.sml:evaluate_replicate_const`.  The production runtime
-evaluator returns the bare word carried by a `word_lab` cell, so HOL's
-`Word 0w` shape is recovered with `List.map PanWordLab.word` (injective because
-`word_lab` has the single constructor `Word`).  The tagged theorem is
-`evaluateReplicateConst` in `Flapjack/Pancake/Proofs/PanToCrep.lean`.
+evaluator currently returns the bare word carried by a `word_lab` cell, so this
+is *not* the HOL statement shape yet: the oracle evidence below reconstructs
+HOL's `Word 0w` shape with `List.map PanWordLab.word`, and the exact tagged port
+is pending bead `flapjack-pxn.18.4.3.48`, which depends on the production
+evaluator itself yielding `word_lab` values (bead `flapjack-pxn.18.4.3.43`).
 -/
 
 namespace Flapjack.Test.CrepReplicateConstParity
@@ -62,15 +63,16 @@ def replicateConstGuard : Bool :=
 #eval replicateConstGuard
 #guard replicateConstGuard
 
-/-- The tagged theorem instantiates at the probe state. -/
-example : evalReplicate 3 = some [.word 0, .word 0, .word 0] :=
-  evaluateReplicateConst 3 baseState
+/-- The untagged runtime helper instantiates at the probe state. -/
+example : evalCrepRuntimeExps baseState (List.replicate 3 (.const 0)) =
+    some [0, 0, 0] :=
+  evalCrepRuntimeExps_replicate_const 3 baseState
 
 def runChecks : IO Bool := do
   if replicateConstGuard then
-    IO.println "PASS crep evaluate_replicate_const Word 0w shape"
+    IO.println "PASS crep replicate_const oracle cells (untagged)"
   else
-    IO.println "FAIL crep evaluate_replicate_const Word 0w shape"
+    IO.println "FAIL crep replicate_const oracle cells (untagged)"
   pure replicateConstGuard
 
 end Flapjack.Test.CrepReplicateConstParity

@@ -136,6 +136,30 @@
     "reviewer": "Codex (constructor-by-constructor source comparison)"
   },
   {
+    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
+    "hol_name": "resort_decls_def",
+    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
+    "lean_name": "globalResortDecls",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (constructor-by-constructor source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
+    "hol_name": "new_main_name_def",
+    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
+    "lean_name": "globalNewMainName",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (constructor-by-constructor source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
+    "hol_name": "dec_shapes_def",
+    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
+    "lean_name": "globalDeclShapes",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (constructor-by-constructor source comparison)"
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "dest_const_thm",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
@@ -3974,6 +3998,22 @@
     "lean_name": "crepRuntimeExtCallValues_stateRel_dispatch",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only source/target ExtCall simulation step following call_FFI (FFI_return/FFI_final) with state_rel; assembles the proven canonical-target branches; no single HOL declaration"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "crepRuntimeExtCallValues_stateRel_returned",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only source/target post-state stateRel for the Crep ExtCall FFI_return write-back branch on every memory domain (both successful and failed byte stores, matching HOL write_bytearray's fallback); assembles panSemWriteBytearray and riscv64WriteState through stateRel; no single HOL declaration"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "crepRuntimeExtCallValues_stateRel_dispatch_returned",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only assembly of the dispatched Crep ExtCall FFI_return step with its post-state stateRel; connects crepRuntimeExtCallValues_target_returned to crepRuntimeExtCallValues_stateRel_returned; no single HOL declaration"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",

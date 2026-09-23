@@ -323,37 +323,26 @@ def pipelineCrepeCompileContext [BEq α] [Add α]
     exceptions := crepGetEidsFromDecls fromNat program.declarations
     maxVar := 0 }
 
-/-- The production context constructor records exactly the `bytesInWord` value it
-    was given, so the executable entry point's word width is preserved into the
-    Pan-to-Crep lowering. -/
-theorem pipelineCrepeContext_bytesInWord [BEq α] [Add α]
-    (bytesInWord : α) (fromNat : Nat → α) (program : GlobalCompiledProgram α) :
-    (pipelineCrepeContext bytesInWord fromNat program).bytesInWord = bytesInWord := rfl
-
-/-- With `riscv64BytesInWord`, the width the executable RV64 entry point supplies,
-    the production context carries Cake's fixed `byte$bytes_in_word`. -/
-theorem pipelineCrepeContext_riscv64
+/-- The executed RV64 compiler context obtains Cake's fixed byte width from
+    the word type, not a caller-controlled field. -/
+theorem pipelineCrepeCompileContext_riscv64
     (fromNat : Nat → BitVec 64) (program : GlobalCompiledProgram (BitVec 64)) :
-    (pipelineCrepeContext riscv64BytesInWord fromNat program).bytesInWord =
-      CrepBytesInWord.bytesInWord := by
-  rw [pipelineCrepeContext_bytesInWord]
-  exact riscv64BytesInWord_eq
+    (pipelineCrepeCompileContext fromNat program).toExecutable.bytesInWord =
+      CrepBytesInWord.bytesInWord := rfl
 
-/-- End-to-end executable-path form: the `.load` lowering performed with the real
-    production context `pipelineCrepeContext riscv64BytesInWord` is exactly Cake's
-    fixed-stride `load_shape`, with the `hbytes` invariant discharged from the
-    entry width rather than assumed in a hand-built context. -/
+/-- The production RV64 context lowers a structured load at Cake's fixed
+    byte stride. -/
 theorem compileExp_load_pipelineRiscv64
     (fromNat : Nat → BitVec 64) (program : GlobalCompiledProgram (BitVec 64))
     (shape : Shape) (expression : Exp (BitVec 64)) (head : CrepExp (BitVec 64))
     (rest : List (CrepExp (BitVec 64))) (shape' : Shape)
-    (hcompile : compileExp (pipelineCrepeContext riscv64BytesInWord fromNat program)
+    (hcompile : compileExp ((pipelineCrepeCompileContext fromNat program).toExecutable)
       expression = (head :: rest, shape')) :
-    (compileExp (pipelineCrepeContext riscv64BytesInWord fromNat program)
+    (compileExp ((pipelineCrepeCompileContext fromNat program).toExecutable)
         (.load shape expression)).1 =
       loadShapeBytes 0 (Shape.shapeSize shape) head :=
   compileExp_load_riscv64 _
-    (pipelineCrepeContext_bytesInWord riscv64BytesInWord fromNat program)
+    (by rfl)
     shape expression head rest shape' hcompile
 
 /-! Source-named ports of CakeML Pancake's `first_name_def` and

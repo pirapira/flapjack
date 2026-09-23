@@ -95,7 +95,7 @@ def emptyProgram : GlobalCompiledProgram (BitVec 64) :=
         fromNat := fun value => BitVec.ofNat 64 value } }
 
 def productionContext : CompileContext (BitVec 64) :=
-  pipelineCrepeContext riscv64BytesInWord (fun value => BitVec.ofNat 64 value) emptyProgram
+  (pipelineCrepeCompileContext (fun value => BitVec.ofNat 64 value) emptyProgram).toExecutable
 
 /-- A Pan expression for the same source constant, fed through production. -/
 def panWord64ProbeValue : Exp (BitVec 64) := .const (BitVec.ofNat 64 7)
@@ -103,7 +103,7 @@ def panWord64ProbeValue : Exp (BitVec 64) := .const (BitVec.ofNat 64 7)
 /-- The production context's byte width is Cake's fixed `byte$bytes_in_word`, and
     the executable `.load` lowering through it is exactly `loadShapeBytes`. -/
 example : productionContext.bytesInWord = CrepBytesInWord.bytesInWord :=
-  pipelineCrepeContext_riscv64 _ _
+  pipelineCrepeCompileContext_riscv64 _ _
 
 example :
     (compileExp productionContext

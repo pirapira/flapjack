@@ -411,7 +411,8 @@ example : True := by
     { globals := [], globalsSize := 0, maxGlobalsSize := 0, bytesInWord := 8,
       fromNat := fun n => n }
   have h := globalCompileDecs_functions_all_of_predicate context
-    filterDeclsFixture globalDeclIsFunction (by decide)
+    filterDeclsFixture globalDeclIsFunction
+    (fun _ => by simp [filterDeclsFixture, globalDeclIsFunction])
   trivial
 
 def functionsEveryGuard : Bool :=

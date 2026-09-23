@@ -414,33 +414,6 @@ def holWordBitsRiscVMemoryModel [NeZero width] (bigEndian : Bool) :
       (model.shift operator (holWordBitsToBitVec left) (holWordBitsToBitVec right)).map
         bitVecToHolWordBits }
 
-/-- Flapjack's field-only encoding of HOL `crepSem$state` for a fixed
-    `RiscV.Word width` carrier. Finite maps are represented extensionally by
-    lookup functions. It is untagged because it does not quantify over HOL's
-    arbitrary word carrier. -/
-structure CrepHolState (α σ : Type u) where
-  locals : Nat → Option (PanWordLab α)
-  globals : BitVec 5 → Option (PanWordLab α)
-  code : FunName → Option (List Nat × CrepProg α)
-  memory : α → PanWordLab α
-  memaddrs : α → Bool
-  shMemaddrs : α → Bool
-  clock : Nat
-  bigEndian : Bool
-  ffi : FfiState σ
-  baseAddress : α
-  topAddress : α
-
-/-- Exact HOL-shaped port of `crepSem$set_globals_def` (crepSemScript.sml:61)
-    over the 11-field `CrepHolState`:
-    `set_globals gv w s = s with globals := s.globals |+ (gv,w)`.
-    The production 14-field `CrepRuntimeState` version is the separate untagged
-    `setCrepRuntimeGlobals`; `setCrepHolGlobals_toRuntime` relates the two. -/
-@[hol "cakeml/pancake/semantics/crepSemScript.sml" "set_globals_def"]
-def setCrepHolGlobals (key : BitVec 5) (value : PanWordLab α)
-    (state : CrepHolState α σ) : CrepHolState α σ :=
-  { state with globals := FUPDATE state.globals (key, value) }
-
 private def crepHolEvalFfiContext [OfNat α 0] : PanValueFfiContext α where
   sharedDomain := fun _ => false
   byteAlign := id
@@ -471,6 +444,11 @@ def CrepHolState.toRuntime [NeZero width]
     ffi := state.ffi
     baseAddress := state.baseAddress
     topAddress := state.topAddress }
+
+/-- `toHolState` is a left inverse of `toRuntime` on the 11 encoded fields. -/
+theorem CrepHolState.toHolState_toRuntime [NeZero width]
+    (state : CrepHolState (RiscV.Word width) σ) :
+    state.toRuntime.toHolState = state := rfl
 
 /-- Production adapter: the exact HOL-shaped `setCrepHolGlobals` on the
     field-only state commutes with `CrepHolState.toRuntime`, so the executable

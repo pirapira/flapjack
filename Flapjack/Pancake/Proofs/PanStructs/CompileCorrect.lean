@@ -399,6 +399,206 @@ private theorem panValueFieldsHaveShapesNames [BEq String] [LawfulBEq String]
           have htailNames := ih actual htail
           simp [hnameEq, htailNames]
 
+mutual
+  private theorem panValueShape_matches_eq [LawfulBEq String]
+      (context : StructContext) (value : PanValue α) (shape : Shape)
+      (hmatch : panShapeMatches (panValueShape context value) shape = true) :
+      panValueShape context value = shape := by
+    cases value with
+    | word word => cases shape <;> simp [panValueShape, panShapeMatches] at hmatch ⊢
+    | nStruct name fields =>
+        cases shape with
+        | named shapeName =>
+            simp only [panValueShape, panShapeMatches] at hmatch
+            have hname : name = shapeName := instLawfulBEqString.eq_of_beq hmatch
+            subst shapeName
+            simp [panValueShape]
+        | one => simp [panValueShape, panShapeMatches] at hmatch
+        | comb shapes => simp [panValueShape, panShapeMatches] at hmatch
+    | rStruct values =>
+        cases shape with
+        | comb shapes =>
+            have hshapes :
+                panShapeMatches.panShapeListMatches
+                  (values.map (panValueShape context)) shapes = true := by
+              simpa only [panValueShape, panShapeMatches] using hmatch
+            have hshapeList := panValueShapeList_matches_eq context values shapes hshapes
+            simp only [panValueShape, hshapeList]
+        | one => simp [panValueShape, panShapeMatches] at hmatch
+        | named name => simp [panValueShape, panShapeMatches] at hmatch
+
+  private theorem panValueShapeList_matches_eq [LawfulBEq String]
+      (context : StructContext) (values : List (PanValue α)) (shapes : List Shape)
+      (hmatch : panShapeMatches.panShapeListMatches
+        (values.map (panValueShape context)) shapes = true) :
+      values.map (panValueShape context) = shapes := by
+    cases values with
+    | nil => cases shapes <;> simp [panShapeMatches.panShapeListMatches] at hmatch ⊢
+    | cons value values =>
+        cases shapes with
+        | nil => simp [panShapeMatches.panShapeListMatches] at hmatch
+        | cons shape shapes =>
+            simp only [List.map_cons, panShapeMatches.panShapeListMatches,
+              Bool.and_eq_true] at hmatch
+            rcases hmatch with ⟨hhead, htail⟩
+            simp [panValueShape_matches_eq context value shape hhead,
+              panValueShapeList_matches_eq context values shapes htail]
+end
+
+private theorem lookupPanValueField_eq_lookupInfo [BEq String] [LawfulBEq String]
+    (name : FieldName) (fields : List (FieldName × PanValue α)) :
+    lookupPanValueField name fields = lookupInfo name fields := by
+  induction fields with
+  | nil => rfl
+  | cons entry fields ih =>
+      rcases entry with ⟨field, value⟩
+      by_cases h : field = name
+      · simp [lookupPanValueField, lookupInfo, h]
+      · simp [lookupPanValueField, lookupInfo, h, ih]
+
+private theorem panValueFieldsHaveShapes_lookup [BEq String] [LawfulBEq String]
+    (context : StructContext) (expected : List (FieldName × Shape))
+    (actual : List (FieldName × PanValue α)) (name : FieldName) (value : PanValue α)
+    (hshape : panValueFieldsHaveShapes context expected actual = true)
+    (hlookup : lookupInfo name actual = some value) :
+    ∃ shape, lookupInfo name expected = some shape ∧
+      shape = panValueShape context value := by
+  induction expected generalizing actual with
+  | nil =>
+      cases actual with
+      | nil => simp [lookupInfo] at hlookup
+      | cons entry actual => simp [panValueFieldsHaveShapes] at hshape
+  | cons entry expected ih =>
+      obtain ⟨expectedName, expectedShape⟩ := entry
+      cases actual with
+      | nil => simp [lookupInfo] at hlookup
+      | cons actualEntry actual =>
+          obtain ⟨actualName, actualValue⟩ := actualEntry
+          have hparts :
+              (((@BEq.beq FieldName instBEqOfDecidableEq expectedName actualName) = true) ∧
+                panShapeMatches (panValueShape context actualValue) expectedShape = true) ∧
+              panValueFieldsHaveShapes context expected actual = true := by
+            simpa only [panValueFieldsHaveShapes, Bool.and_eq_true] using hshape
+          have hnames : expectedName = actualName :=
+            instLawfulBEqString.eq_of_beq hparts.1.1
+          cases hhead : (@BEq.beq FieldName instBEqOfDecidableEq name actualName) with
+          | true =>
+              have hname : name = actualName := instLawfulBEqString.eq_of_beq hhead
+              have hvalue : value = actualValue := by
+                have hsome : some actualValue = some value := by
+                  simpa [lookupInfo, hname.symm] using hlookup
+                exact (Option.some.inj hsome).symm
+              subst name
+              subst expectedName
+              subst value
+              exact ⟨expectedShape, by simp [lookupInfo],
+                (panValueShape_matches_eq context actualValue expectedShape hparts.1.2).symm⟩
+          | false =>
+              have hnameNe : actualName ≠ name := by
+                intro hEq
+                subst name
+                simp at hhead
+              have htail : lookupInfo name actual = some value := by
+                simpa [lookupInfo, hnameNe] using hlookup
+              obtain ⟨shape, hshapeLookup, hshapeEq⟩ := ih actual hparts.2 htail
+              have hnameExpectedNe : expectedName ≠ name := by
+                intro hEq
+                apply hnameNe
+                rw [← hnames]
+                exact hEq
+              refine ⟨shape, ?_, hshapeEq⟩
+              simpa [lookupInfo, hnameExpectedNe] using hshapeLookup
+
+private theorem structFindFieldIndex_lookupAligned [BEq String] [LawfulBEq String]
+    (expected : List (FieldName × Shape)) (actual : List (FieldName × PanValue α))
+    (field : FieldName) (value : PanValue α)
+    (hnames : expected.map Prod.fst = actual.map Prod.fst)
+    (hlookup : lookupInfo field actual = some value) :
+    ∃ index, structFindFieldIndex field expected = some index ∧
+      (actual[index]?).map Prod.snd = some value := by
+  induction expected generalizing actual with
+  | nil =>
+      cases actual with
+      | nil => simp [lookupInfo] at hlookup
+      | cons entry actual => simp at hnames
+  | cons entry expected ih =>
+      obtain ⟨expectedName, expectedShape⟩ := entry
+      cases actual with
+      | nil => simp at hnames
+      | cons actualEntry actual =>
+          obtain ⟨actualName, actualValue⟩ := actualEntry
+          simp only [List.map_cons, List.cons.injEq] at hnames
+          rcases hnames with ⟨hname, htailNames⟩
+          subst actualName
+          cases hmatch : (expectedName == field) with
+          | true =>
+              have hfield : expectedName = field := LawfulBEq.eq_of_beq hmatch
+              have hvalue : actualValue = value := by
+                have hsome : some actualValue = some value := by
+                  simpa [lookupInfo, hfield] using hlookup
+                exact Option.some.inj hsome
+              subst value
+              refine ⟨0, ?_, ?_⟩
+              · simp [structFindFieldIndex, hmatch]
+              · simp
+          | false =>
+              have hfieldNe : field ≠ expectedName := by
+                intro heq
+                subst field
+                simp at hmatch
+              have htail : lookupInfo field actual = some value := by
+                have hneq : ¬ expectedName = field := fun heq => hfieldNe heq.symm
+                simpa [lookupInfo, hneq] using hlookup
+              obtain ⟨index, hindex, hvalue⟩ := ih actual htailNames htail
+              refine ⟨index + 1, ?_, ?_⟩
+              · simp [structFindFieldIndex, hmatch, hindex]
+              · simpa using hvalue
+
+private theorem panStructFieldValuesFieldsOkBool_lookup [BEq String] [LawfulBEq String]
+    (structs : StructContext) (fields : List (FieldName × PanValue α))
+    (name : FieldName) (value : PanValue α)
+    (hok : panStructFieldValuesFieldsOkBool structs fields = true)
+    (hlookup : lookupPanValueField name fields = some value) :
+    panStructValueFieldsOkBool structs value = true := by
+  induction fields with
+  | nil => simp [lookupPanValueField] at hlookup
+  | cons entry fields ih =>
+      rcases entry with ⟨field, fieldValue⟩
+      have hparts : panStructValueFieldsOkBool structs fieldValue = true ∧
+          panStructFieldValuesFieldsOkBool structs fields = true := by
+        simpa only [panStructFieldValuesFieldsOkBool, Bool.and_eq_true] using hok
+      by_cases hname : field = name
+      · have hvalue : value = fieldValue := by
+          have hsome : some fieldValue = some value := by
+            simpa [lookupPanValueField, hname] using hlookup
+          exact (Option.some.inj hsome).symm
+        subst value
+        exact hparts.1
+      · apply ih hparts.2
+        simpa [lookupPanValueField, hname] using hlookup
+
+mutual
+  private theorem panValueShape_eq_panSemShapeOf (context : StructContext)
+      (value : PanValue α) :
+      panValueShape context value = panSemShapeOf value := by
+    cases value with
+    | word value => rw [panValueShape.eq_1, panSemShapeOf.eq_1]
+    | nStruct name fields => rw [panValueShape.eq_3, panSemShapeOf.eq_3]
+    | rStruct values =>
+        rw [panValueShape.eq_2, panSemShapeOf.eq_2]
+        exact congrArg Shape.comb
+          (panValueShapeList_eq_panSemShapeOf context values)
+
+  private theorem panValueShapeList_eq_panSemShapeOf (context : StructContext)
+      (values : List (PanValue α)) :
+      values.map (panValueShape context) = values.map panSemShapeOf := by
+    cases values with
+    | nil => rfl
+    | cons value values =>
+        simp only [List.map_cons]
+        rw [panValueShape_eq_panSemShapeOf, panValueShapeList_eq_panSemShapeOf]
+end
+
 private theorem panStructRStructListShapeFields
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Sub α]
     [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
@@ -793,6 +993,343 @@ theorem panStructCompileExpCorrectNStructCase
                 panStructConvertFieldValues_eq_map, structCompileExp.structCompileExps]
                 using htargetListLocal
           · simp [evalPanValueExp, hlookup, hfieldEval, hshapes] at heval
+
+/-- Derived NField-constructor case of HOL `compile_exp_correct`. The
+    recursive hypothesis for the receiver carries the translated context,
+    finite-map, field-validity, and struct-info premises and all three
+    conclusions. Field lookup is connected to the production compiler's
+    `structFindFieldIndex` by preserving the declared and runtime field order.
+    This specialization is intentionally untagged: HOL has one universal
+    theorem, while Lean uses projected struct-shape equality, Bool validity
+    over total lookups, and an explicit `bytesInWord` parameter. The
+    `structInfosOk` premise is retained but unused in this case. -/
+theorem panStructCompileExpCorrectNFieldCase
+    [BEq String] [LawfulBEq String] [BEq α] [OfNat α 0] [OfNat α 1]
+    [Add α] [Mul α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : StructPassContext) (state : PanSemState α ffi)
+    (bytesInWord : α) (field : FieldName) (expression : Exp α)
+    (value : PanValue α)
+    (heval : evalPanValueExp state.structs state.locals state.globals state.memory
+      state.baseAddress state.topAddress bytesInWord (.nField field expression) = some value)
+    (hstructs : panStructContextShapeView context.structs =
+      panStructContextShapeView state.structs)
+    (hlocalsFields : panStructEveryValueFieldsOkBool state.structs state.locals)
+    (hglobalsFields : panStructEveryValueFieldsOkBool state.structs state.globals)
+    (hstructInfos : structInfosOk state.structs)
+    (hlocalsMap : panStructShapeMapEq context.locals state.locals)
+    (hglobalsMap : panStructShapeMapEq context.globals state.globals)
+    (hinduction : ∀ subvalue,
+      evalPanValueExp state.structs state.locals state.globals state.memory
+        state.baseAddress state.topAddress bytesInWord expression = some subvalue →
+      panStructContextShapeView context.structs = panStructContextShapeView state.structs →
+      panStructEveryValueFieldsOkBool state.structs state.locals →
+      panStructEveryValueFieldsOkBool state.structs state.globals →
+      structInfosOk state.structs →
+      panStructShapeMapEq context.locals state.locals →
+      panStructShapeMapEq context.globals state.globals →
+      structOldExpShape context expression = panSemShapeOf subvalue ∧
+      panStructValueFieldsOkBool state.structs subvalue = true ∧
+      evalPanValueExp (panStructConvertState context state).structs
+        (panStructConvertState context state).locals
+        (panStructConvertState context state).globals
+        (panStructConvertState context state).memory
+        (panStructConvertState context state).baseAddress
+        (panStructConvertState context state).topAddress bytesInWord
+        (structCompileExp context expression) = some (panStructConvertValue subvalue)) :
+    structOldExpShape context (.nField field expression) = panSemShapeOf value ∧
+    panStructValueFieldsOkBool state.structs value = true ∧
+    evalPanValueExp (panStructConvertState context state).structs
+      (panStructConvertState context state).locals
+      (panStructConvertState context state).globals
+      (panStructConvertState context state).memory
+      (panStructConvertState context state).baseAddress
+      (panStructConvertState context state).topAddress bytesInWord
+      (structCompileExp context (.nField field expression)) =
+        some (panStructConvertValue value) := by
+  cases hchild : evalPanValueExp state.structs state.locals state.globals state.memory
+      state.baseAddress state.topAddress bytesInWord expression with
+  | none => simp [evalPanValueExp, hchild] at heval
+  | some childValue =>
+      cases childValue with
+      | word word => simp [evalPanValueExp, hchild] at heval
+      | rStruct values => simp [evalPanValueExp, hchild] at heval
+      | nStruct structName fields =>
+          cases hlookupStruct : @lookupInfo String StructInfo instBEqOfDecidableEq
+              structName state.structs with
+          | none => simp [evalPanValueExp, hchild, hlookupStruct] at heval
+          | some info =>
+              cases hfield : lookupPanValueField field fields with
+              | none => simp [evalPanValueExp, hchild, hlookupStruct, hfield] at heval
+              | some fieldValue =>
+                  have hvalue : value = fieldValue := by
+                    have hval : fieldValue = value := by
+                      simp [evalPanValueExp, hchild, hlookupStruct, hfield] at heval
+                      exact heval
+                    exact hval.symm
+                  subst value
+                  have hchildIH := hinduction (.nStruct structName fields) hchild
+                    hstructs hlocalsFields hglobalsFields hstructInfos hlocalsMap hglobalsMap
+                  have hvalidParts :
+                      panStructFieldValuesFieldsOkBool state.structs fields = true ∧
+                      panValueFieldsHaveShapes state.structs info.fields fields = true := by
+                    have hvalid := hchildIH.2.1
+                    simp only [panStructValueFieldsOkBool] at hvalid
+                    rw [hlookupStruct] at hvalid
+                    simp only [Bool.and_eq_true] at hvalid
+                    exact hvalid
+                  have hfieldValid := panStructFieldValuesFieldsOkBool_lookup
+                    state.structs fields field fieldValue hvalidParts.1 hfield
+                  have hfieldLookup : lookupInfo field fields = some fieldValue := by
+                    rw [← lookupPanValueField_eq_lookupInfo field fields]
+                    exact hfield
+                  obtain ⟨fieldShape, hfieldShapeLookup, hfieldShapeEq⟩ :=
+                    panValueFieldsHaveShapes_lookup state.structs info.fields fields
+                      field fieldValue hvalidParts.2 hfieldLookup
+                  have hfieldNames := panValueFieldsHaveShapesNames state.structs
+                    info.fields fields hvalidParts.2
+                  have hindexData := structFindFieldIndex_lookupAligned
+                    info.fields fields field fieldValue hfieldNames hfieldLookup
+                  have hlookupLocal : lookupInfo structName state.structs = some info := by
+                    rw [lookupInfo_eq_panPropsALookupEq]
+                    rw [← lookupInfoDefaultPanPropsNStruct, hlookupStruct]
+                  have hcontextFieldsMap :
+                      (lookupInfo structName context.structs).map (fun entry => entry.fields) =
+                        some info.fields := by
+                    calc
+                      (lookupInfo structName context.structs).map (fun entry => entry.fields) =
+                          lookupInfo structName (panStructContextShapeView context.structs) := by
+                        symm
+                        simpa only [panStructContextShapeView] using
+                          (lookupInfo_mapValuesNStruct context.structs structName
+                            fun entry => entry.fields)
+                      _ = lookupInfo structName (panStructContextShapeView state.structs) := by
+                        rw [hstructs]
+                      _ = (lookupInfo structName state.structs).map (fun entry => entry.fields) := by
+                        simpa only [panStructContextShapeView] using
+                          (lookupInfo_mapValuesNStruct state.structs structName
+                            fun entry => entry.fields)
+                      _ = some info.fields := by simp [hlookupLocal]
+                  have hcontextInfoExists : ∃ contextInfo,
+                      lookupInfo structName context.structs = some contextInfo ∧
+                      contextInfo.fields = info.fields := by
+                    cases hcontextInfo : lookupInfo structName context.structs with
+                    | none => simp [hcontextInfo] at hcontextFieldsMap
+                    | some contextInfo =>
+                        exact ⟨contextInfo, rfl,
+                          by simpa [hcontextInfo] using hcontextFieldsMap⟩
+                  obtain ⟨contextInfo, hcontextInfo, hcontextInfoFields⟩ :=
+                    hcontextInfoExists
+                  have hcontextInfoDefault :
+                      @lookupInfo String StructInfo instBEqOfDecidableEq
+                        structName context.structs = some contextInfo := by
+                    rw [lookupInfoDefaultPanPropsNStruct]
+                    rw [lookupInfo_eq_panPropsALookupEq] at hcontextInfo
+                    exact hcontextInfo
+                  have hfieldShapeContext :
+                      lookupInfo field contextInfo.fields = some fieldShape := by
+                    simpa [hcontextInfoFields] using hfieldShapeLookup
+                  have hfieldShapeContextDefault :
+                      @lookupInfo FieldName Shape instBEqOfDecidableEq
+                        field contextInfo.fields = some fieldShape := by
+                    rw [lookupInfoDefaultPanPropsNStruct]
+                    rw [lookupInfo_eq_panPropsALookupEq] at hfieldShapeContext
+                    exact hfieldShapeContext
+                  have hfieldShapeSem : fieldShape = panSemShapeOf fieldValue := by
+                    calc
+                      fieldShape = panValueShape state.structs fieldValue := hfieldShapeEq
+                      _ = panSemShapeOf fieldValue :=
+                        panValueShape_eq_panSemShapeOf state.structs fieldValue
+                  have hchildShape :
+                      structOldExpShape context expression = .named structName := by
+                    simpa [panSemShapeOf] using hchildIH.1
+                  have hshape :
+                    structOldExpShape context (.nField field expression) =
+                        panSemShapeOf fieldValue := by
+                    simpa only [structOldExpShape, hchildShape, hcontextInfoDefault,
+                      hfieldShapeContextDefault] using hfieldShapeSem
+                  have hcompiledChild :
+                      evalPanValueExp (panStructConvertState context state).structs
+                        (panStructConvertState context state).locals
+                        (panStructConvertState context state).globals
+                        (panStructConvertState context state).memory
+                        (panStructConvertState context state).baseAddress
+                        (panStructConvertState context state).topAddress bytesInWord
+                        (structCompileExp context expression) =
+                        some (.rStruct
+                          (fields.map (panStructConvertValue ∘ Prod.snd))) := by
+                    simpa [panStructConvertValue, panStructConvertFieldValues_eq_map] using
+                      hchildIH.2.2
+                  obtain ⟨index, hindex, hselected⟩ := hindexData
+                  have hselectedConverted :
+                      (fields.map (panStructConvertValue ∘ Prod.snd))[index]? =
+                        some (panStructConvertValue fieldValue) := by
+                    have hmap := congrArg (Option.map panStructConvertValue) hselected
+                    simpa [List.getElem?_map] using hmap
+                  have hcontextIndex :
+                      structFindFieldIndex field contextInfo.fields = some index := by
+                    simpa [hcontextInfoFields] using hindex
+                  have hcompile :
+                      structCompileExp context (.nField field expression) =
+                        .rField index (structCompileExp context expression) := by
+                    simp [structCompileExp, hchildShape, hcontextInfo, hcontextIndex]
+                  have htarget :
+                      evalPanValueExp (panStructConvertState context state).structs
+                        (panStructConvertState context state).locals
+                        (panStructConvertState context state).globals
+                        (panStructConvertState context state).memory
+                        (panStructConvertState context state).baseAddress
+                        (panStructConvertState context state).topAddress bytesInWord
+                        (structCompileExp context (.nField field expression)) =
+                        some (panStructConvertValue fieldValue) := by
+                    rw [hcompile]
+                    simp only [evalPanValueExp, hcompiledChild]
+                    exact hselectedConverted
+                  exact ⟨hshape, hfieldValid, htarget⟩
+
+private theorem panStructValuesFieldsOkBool_getElem?
+    (structs : StructContext) (values : List (PanValue α)) (index : Nat)
+    (value : PanValue α)
+    (hok : panStructValuesFieldsOkBool structs values = true)
+    (hget : values[index]? = some value) :
+    panStructValueFieldsOkBool structs value = true := by
+  induction values generalizing index with
+  | nil => simp at hget
+  | cons head tail ih =>
+      cases index with
+      | zero =>
+          have hparts : panStructValueFieldsOkBool structs head = true ∧
+              panStructValuesFieldsOkBool structs tail = true := by
+            simpa only [panStructValuesFieldsOkBool, Bool.and_eq_true] using hok
+          have hhead : panStructValueFieldsOkBool structs head = true := by
+            exact hparts.1
+          have hvalue : value = head := by
+            simpa using hget.symm
+          subst value
+          exact hhead
+      | succ index =>
+          have htail : panStructValueFieldsOkBool structs head = true ∧
+              panStructValuesFieldsOkBool structs tail = true := by
+            simpa only [panStructValuesFieldsOkBool, Bool.and_eq_true] using hok
+          apply ih index htail.2
+          simpa using hget
+
+/-- Derived RField-constructor case of HOL `compile_exp_correct`. The
+    recursive hypothesis for the receiver carries the translated context,
+    finite-map, field-validity, and struct-info premises and all three
+    conclusions. Successful source evaluation provides the index lookup needed
+    both for the result shape and validity; no separate in-bounds premise is
+    added. This specialization is intentionally untagged: HOL has only the
+    universal theorem, while Lean uses projected struct-shape equality, Bool
+    validity over total lookups, and an explicit `bytesInWord` parameter. The
+    `structInfosOk` premise is retained but unused in this case. -/
+theorem panStructCompileExpCorrectRFieldCase
+    [BEq String] [LawfulBEq String] [BEq α] [OfNat α 0] [OfNat α 1]
+    [Add α] [Mul α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : StructPassContext) (state : PanSemState α ffi)
+    (bytesInWord : α) (index : Nat) (expression : Exp α)
+    (value : PanValue α)
+    (heval : evalPanValueExp state.structs state.locals state.globals state.memory
+      state.baseAddress state.topAddress bytesInWord (.rField index expression) = some value)
+    (hstructs : panStructContextShapeView context.structs =
+      panStructContextShapeView state.structs)
+    (hlocalsFields : panStructEveryValueFieldsOkBool state.structs state.locals)
+    (hglobalsFields : panStructEveryValueFieldsOkBool state.structs state.globals)
+    (hstructInfos : structInfosOk state.structs)
+    (hlocalsMap : panStructShapeMapEq context.locals state.locals)
+    (hglobalsMap : panStructShapeMapEq context.globals state.globals)
+    (hinduction : ∀ subvalue,
+      evalPanValueExp state.structs state.locals state.globals state.memory
+        state.baseAddress state.topAddress bytesInWord expression = some subvalue →
+      panStructContextShapeView context.structs = panStructContextShapeView state.structs →
+      panStructEveryValueFieldsOkBool state.structs state.locals →
+      panStructEveryValueFieldsOkBool state.structs state.globals →
+      structInfosOk state.structs →
+      panStructShapeMapEq context.locals state.locals →
+      panStructShapeMapEq context.globals state.globals →
+      structOldExpShape context expression = panSemShapeOf subvalue ∧
+      panStructValueFieldsOkBool state.structs subvalue = true ∧
+      evalPanValueExp (panStructConvertState context state).structs
+        (panStructConvertState context state).locals
+        (panStructConvertState context state).globals
+        (panStructConvertState context state).memory
+        (panStructConvertState context state).baseAddress
+        (panStructConvertState context state).topAddress bytesInWord
+        (structCompileExp context expression) = some (panStructConvertValue subvalue)) :
+    structOldExpShape context (.rField index expression) = panSemShapeOf value ∧
+    panStructValueFieldsOkBool state.structs value = true ∧
+    evalPanValueExp (panStructConvertState context state).structs
+      (panStructConvertState context state).locals
+      (panStructConvertState context state).globals
+      (panStructConvertState context state).memory
+      (panStructConvertState context state).baseAddress
+      (panStructConvertState context state).topAddress bytesInWord
+      (structCompileExp context (.rField index expression)) =
+        some (panStructConvertValue value) := by
+  cases hchild : evalPanValueExp state.structs state.locals state.globals state.memory
+      state.baseAddress state.topAddress bytesInWord expression with
+  | none => simp [evalPanValueExp, hchild] at heval
+  | some childValue =>
+      cases childValue with
+      | word word => simp [evalPanValueExp, hchild] at heval
+      | nStruct name fields => simp [evalPanValueExp, hchild] at heval
+      | rStruct values =>
+          cases hselected : values[index]? with
+          | none => simp [evalPanValueExp, hchild, hselected] at heval
+          | some selected =>
+              have hvalue : value = selected := by
+                have hval : selected = value := by
+                  simp [evalPanValueExp, hchild, hselected] at heval
+                  exact heval
+                exact hval.symm
+              subst value
+              have hchildIH := hinduction (.rStruct values) hchild
+                hstructs hlocalsFields hglobalsFields hstructInfos hlocalsMap hglobalsMap
+              have hvaluesValid : panStructValuesFieldsOkBool state.structs values = true := by
+                simpa only [panStructValueFieldsOkBool] using hchildIH.2.1
+              have hselectedValid := panStructValuesFieldsOkBool_getElem?
+                state.structs values index selected hvaluesValid hselected
+              have hselectedShape :
+                  (values.map panSemShapeOf)[index]? = some (panSemShapeOf selected) := by
+                simpa [List.getElem?_map] using
+                  congrArg (Option.map panSemShapeOf) hselected
+              have hshape :
+                  structOldExpShape context (.rField index expression) =
+                    panSemShapeOf selected := by
+                simp [structOldExpShape, hchildIH.1, panSemShapeOf,
+                  hselectedShape]
+              have hselectedConverted :
+                  (values.map panStructConvertValue)[index]? =
+                    some (panStructConvertValue selected) := by
+                simpa [List.getElem?_map] using
+                  congrArg (Option.map panStructConvertValue) hselected
+              have hcompiledChild :
+                  evalPanValueExp (panStructConvertState context state).structs
+                    (panStructConvertState context state).locals
+                    (panStructConvertState context state).globals
+                    (panStructConvertState context state).memory
+                    (panStructConvertState context state).baseAddress
+                    (panStructConvertState context state).topAddress bytesInWord
+                    (structCompileExp context expression) =
+                    some (.rStruct (values.map panStructConvertValue)) := by
+                simpa [panStructConvertValue, panStructConvertValues_eq_map] using
+                  hchildIH.2.2
+              have htarget :
+                  evalPanValueExp (panStructConvertState context state).structs
+                    (panStructConvertState context state).locals
+                    (panStructConvertState context state).globals
+                    (panStructConvertState context state).memory
+                    (panStructConvertState context state).baseAddress
+                    (panStructConvertState context state).topAddress bytesInWord
+                    (structCompileExp context (.rField index expression)) =
+                    some (panStructConvertValue selected) := by
+                simp only [structCompileExp]
+                simp only [evalPanValueExp, hcompiledChild]
+                exact hselectedConverted
+              exact ⟨hshape, hselectedValid, htarget⟩
 
 /-- Lookup in HOL's `FMAP_MAP2`-shaped `InfoMap` representation commutes with
     mapping values. Keeping this finite list, rather than only its total lookup

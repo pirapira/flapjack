@@ -1,0 +1,5 @@
+write_head=SOME 170w
+write_byte1=SOME 187w
+write_32=SOME 0xDDCCBBAAw
+write_unaligned_byte=SOME 170w
+write_out_of_domain=SOME 1w

@@ -21,6 +21,7 @@ val forward_context =
 val backward_context =
   ``[(«inner», [(«value», One)]);
       («outer», [(«field», Named «inner»)])]``;
+val outer_context = ``[(«unused», [])]``;
 
 val _ = print_eval "one"
   ``pan_structs$compile_shape ^forward_context One``;
@@ -37,3 +38,10 @@ val _ = print_eval "compile_shapes_map"
       [Named «outer»; Comb [One; Named «inner»]; Named «missing»] =
     MAP (pan_structs$compile_shape ^forward_context)
       [Named «outer»; Comb [One; Named «inner»]; Named «missing»]``;
+val _ = print_eval "compiled_shape_wf"
+  ``panLang$is_wf_shape ^outer_context
+      (pan_structs$compile_shape ^forward_context (Named «outer»))``;
+val _ = print_eval "compiled_shapes_wf"
+  ``EVERY (panLang$is_wf_shape ^outer_context)
+      (pan_structs$compile_shapes ^forward_context
+        [Named «outer»; Comb [One; Named «inner»]; Named «missing»])``;

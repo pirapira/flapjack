@@ -25,11 +25,15 @@ context.
 
 namespace Flapjack
 
-/-! Flapjack analogue of HOL `globals_lookup_def`. `CrepRuntimeState.globals`
-    now uses the HOL key and cell shapes (`BitVec 5` and `PanWordLab α`), and
-    the direct oracle cases are in `PanToCrepGlobalsLookupParity`. This helper
-    remains untagged: its `panSemShapeOf` input shape has not yet been shown to
-    be the exact HOL `shape_of` used by `globals_lookup_def`. -/
+/-! Exact Lean port of HOL `globals_lookup_def`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:435`). The production
+    globals field has HOL's `5 word` keys and `word_lab` cells; `panSemShapeOf`
+    is the exact `shape_of` port constructor by constructor, with no premises.
+    `Shape.shapeSize` matches HOL `size_of_shape_def` on `One`, `Comb` (sum of
+    child sizes), and `Named`, also without side conditions. `List.range` with
+    `BitVec.ofNat` represents `GENLIST n2w` including 5-bit truncation, and
+    `List.mapM` represents `OPT_MMAP`. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "globals_lookup_def"]
 def globalsLookup (state : CrepRuntimeState α σ) (value : PanValue α) :
     Option (List (PanWordLab α)) :=
   (List.range (Shape.shapeSize (panSemShapeOf value))).mapM

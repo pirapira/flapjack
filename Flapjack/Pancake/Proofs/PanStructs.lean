@@ -30,9 +30,9 @@ theorem structCompileExps_eq_map {α : Type} [BEq String] (context : StructPassC
 /-- Fuel-indexed analogue of HOL `compile_shapes_eq_map`
     (`pan_structsProofScript.sml:310`). The HOL statement has no fuel
     parameter and concerns mutually recursive `compile_shape`/`compile_shapes`.
-    Production Lean uses `structCompileShapeFuel` to guarantee termination, so
-    this helper theorem is deliberately untagged; it does not establish the
-    exact no-fuel HOL statement. -/
+    This auxiliary helper theorem is deliberately untagged; the production
+    no-fuel theorem `structCompileShapes_eq_map` below establishes the exact
+    HOL statement instead. -/
 theorem structCompileShapesFuel_eq_map (fuel : Nat) (context : StructContext) :
     (structCompileShapeFuel.structCompileShapesFuel fuel context : List Shape → List Shape) =
       fun shapes => shapes.map (structCompileShapeFuel fuel context) := by
@@ -41,6 +41,73 @@ theorem structCompileShapesFuel_eq_map (fuel : Nat) (context : StructContext) :
   | nil => simp [structCompileShapeFuel.structCompileShapesFuel]
   | cons shape shapes ih =>
       simp [structCompileShapeFuel.structCompileShapesFuel, ih]
+
+/-- Exact no-fuel port of HOL `compile_shapes_eq_map`
+    (`pan_structsProofScript.sml:310`). The production mutually recursive
+    compiler decreases on the HOL context-suffix/syntax-size measure, so this
+    statement keeps the source theorem's context and list arguments unchanged. -/
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "compile_shapes_eq_map" 310]
+theorem structCompileShapes_eq_map (context : StructContext) :
+    (structCompileShapeWF.structCompileShapesWF context : List Shape → List Shape) =
+      fun shapes => shapes.map (structCompileShapeWF context) := by
+  funext shapes
+  induction shapes with
+  | nil => simp [structCompileShapeWF.structCompileShapesWF]
+  | cons shape shapes ih =>
+      simp [structCompileShapeWF.structCompileShapesWF, ih]
+
+/-- HOL's mutual `is_wf_shape_compile_shape`
+    (`pan_structsProofScript.sml:298`): compiling a shape, or a list of
+    shapes, removes every `Named` constructor, so the result is well formed in
+    any outer structure context. -/
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "is_wf_shape_compile_shape" 298]
+theorem structCompileShapeWF_isWfShape [BEq String]
+    (outer : StructContext) :
+    (∀ (context : StructContext) (shape : Shape),
+      isWfShape outer (structCompileShapeWF context shape) = true) ∧
+    (∀ (context : StructContext) (shapes : List Shape),
+      isWfShape.isWfShapeList outer
+        (structCompileShapeWF.structCompileShapesWF context shapes) = true) := by
+  have hshape : ∀ (context : StructContext) (shape : Shape),
+      isWfShape outer (structCompileShapeWF context shape) = true := by
+    intro context shape
+    apply structCompileShapeWF.induct
+      (motive1 := fun context shapes =>
+        isWfShape.isWfShapeList outer
+          (structCompileShapeWF.structCompileShapesWF context shapes) = true)
+      (motive2 := fun context shape =>
+        isWfShape outer (structCompileShapeWF context shape) = true)
+    · intro context
+      simp [structCompileShapeWF.structCompileShapesWF, isWfShape.isWfShapeList]
+    · intro context shape shapes ihShape ihShapes
+      simp only [structCompileShapeWF.structCompileShapesWF,
+        isWfShape.isWfShapeList, Bool.and_eq_true]
+      exact ⟨ihShape, ihShapes⟩
+    · intro context
+      simp [structCompileShapeWF, isWfShape]
+    · intro context shapes ih
+      simp only [structCompileShapeWF, isWfShape]
+      exact ih
+    · intro context name info suffix hlookup ih
+      rw [structCompileShapeWF.eq_def]
+      dsimp only
+      rw [hlookup]
+      simp [isWfShape]
+      exact ih
+    · intro context name hlookup
+      rw [structCompileShapeWF.eq_def]
+      dsimp only
+      rw [hlookup]
+      simp [isWfShape]
+  constructor
+  · exact hshape
+  · intro context shapes
+    rw [structCompileShapes_eq_map]
+    induction shapes with
+    | nil => simp [isWfShape.isWfShapeList]
+    | cons shape shapes ih =>
+        simp only [List.map_cons, isWfShape.isWfShapeList, Bool.and_eq_true]
+        exact ⟨hshape context shape, ih⟩
 
 /-- HOL's `old_exp_shapes_eq` (`pan_structsProofScript.sml:679`): the
     production old-shape list helper equals `MAP` of the production

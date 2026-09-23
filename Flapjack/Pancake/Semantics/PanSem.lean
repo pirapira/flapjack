@@ -26,9 +26,13 @@ def panEmptyLocals (state : PanSemState α ffi) : PanSemState α ffi :=
   { state with locals := fun _ => none }
 
 /-- Faithful context-free port of Cake `panSem$shape_of`
-    (`cakeml/pancake/semantics/panSemScript.sml:80`). `PanValue.word`
-    represents `Val (Word w)`; the record cases retain Cake's structural and
-    named shapes. -/
+    (`cakeml/pancake/semantics/panSemScript.sml:80`). The source `v` cases
+    correspond exhaustively to `PanValue`: `.word w` represents
+    `Val (Word w)` because HOL `word_lab` has only its `Word` constructor;
+    `.rStruct vs` maps recursively to `Comb (MAP shape_of vs)`; `.nStruct nm
+    fields` maps to `Named nm`, with fields ignored on both sides. The HOL
+    definition has no premises or side conditions, and these three Lean cases
+    have exactly the same behavior. -/
 @[hol "cakeml/pancake/semantics/panSemScript.sml" "shape_of_def"]
 def panSemShapeOf : PanValue α → Shape
   | .word _ => .one

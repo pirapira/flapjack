@@ -133,6 +133,9 @@ run_probe crep_runtime_read_bytes_probeScript.sml crep_runtime_read_bytes_probe.
 run_probe crep_runtime_write_bytes_probeScript.sml crep_runtime_write_bytes_probe.out \
   write_head write_out_of_domain "$cake_dir/pancake/semantics/panSemScript.sml" \
   "$cake_dir/pancake/semantics"
+run_probe crep_runtime_ext_call_probeScript.sml crep_runtime_ext_call_probe.out \
+  empty_name_identity oracle_diverged "$cake_dir/pancake/semantics/panSemScript.sml" \
+  "$cake_dir/pancake/semantics"
 run_probe pan_flat_store_probeScript.sml pan_flat_store_probe.out \
   store_hit stores_blocked "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_flatten_probeScript.sml pan_flatten_probe.out \
@@ -154,7 +157,8 @@ run_probe pan_lang_decl_predicates_probeScript.sml pan_lang_decl_predicates_prob
   is_name_name is_name_decl size_of_eids_empty size_of_eids_mixed \
   "$cake_dir/pancake/panLangScript.sml"
 run_probe compile_shape_probeScript.sml compile_shape_probe.out \
-  one compile_shapes_map "$cake_dir/pancake/pan_structsScript.sml"
+  one compile_shapes_map compiled_shape_wf compiled_shapes_wf \
+  "$cake_dir/pancake/pan_structsScript.sml"
 run_probe pan_lang_var_exp_probeScript.sml pan_lang_var_exp_probe.out \
   local_var global_var nested nested_global "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_lang_load_store_op_probeScript.sml pan_lang_load_store_op_probe.out \
@@ -438,7 +442,7 @@ run_probe code_rel_probeScript.sml code_rel_probe.out \
   "$cake_dir/pancake/proofs/pan_to_crepProofScript.sml" \
   "$cake_dir/pancake/proofs"
 run_probe globals_lookup_probeScript.sml globals_lookup_probe.out \
-  lookup_success lookup_missing \
+  lookup_success lookup_missing lookup_struct \
   "$cake_dir/pancake/proofs/pan_to_crepProofScript.sml" \
   "$cake_dir/pancake/proofs"
 run_probe pan_globals_compile_top_probeScript.sml pan_globals_compile_top_probe.out \
@@ -481,7 +485,7 @@ run_probe crep_eval_probeScript.sml crep_eval_probe.out \
   eval_const eval_base_top \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe crep_dest_2exp_probeScript.sml crep_dest_2exp_probe.out \
-  zero max "$cake_dir/pancake/crep_arithScript.sml"
+  zero highest_shift_conclusion "$cake_dir/pancake/crep_arithScript.sml"
 run_probe crep_mul_const_probeScript.sml crep_mul_const_probe.out \
   zero eight "$cake_dir/pancake/crep_arithScript.sml"
 run_probe crep_simp_exp_probeScript.sml crep_simp_exp_probe.out \

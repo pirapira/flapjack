@@ -19,6 +19,7 @@ import Flapjack.Test.PanExpIdsParity
 import Flapjack.Test.PanLangFunIdsParity
 import Flapjack.Test.PanLangFreeVarIdsParity
 import Flapjack.Test.PanWithShapeParity
+import Flapjack.Test.CrepInlineGenlistParity
 import Flapjack.Test.PanShapeValParity
 import Flapjack.Test.PanGlobalsCompileExpParity
 import Flapjack.Test.PanGlobalsFreshNameParity
@@ -33,6 +34,7 @@ import Flapjack.Test.PanGlobalsDecShapesParity
 import Flapjack.Test.PanGlobalsExpIdsParity
 import Flapjack.Test.PanGlobalsCompileTopForStartParity
 import Flapjack.Test.PanGlobalsCompileTopShapeWfParity
+import Flapjack.Test.PanGlobalsExceptionsAppendParity
 import Flapjack.Test.CrepeDestConstParity
 import Flapjack.Test.CrepeDest2ExpParity
 import Flapjack.Test.CrepeMulConstParity
@@ -626,6 +628,8 @@ def main : IO Unit := do
     Flapjack.Test.PanNestedSeqParity.runChecks,
     Flapjack.Test.PanExpIdsParity.runChecks,
     Flapjack.Test.PanWithShapeParity.runChecks,
+    Flapjack.Test.CrepInlineGenlistParity.runChecks,
+    Flapjack.Test.PanGlobalsExceptionsAppendParity.runChecks,
     Flapjack.Test.PanShapeValParity.runChecks,
     Flapjack.Test.LoopIsLoadParity.runChecks,
     Flapjack.Test.LoopCallParity.runChecks,

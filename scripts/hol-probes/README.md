@@ -66,6 +66,10 @@ missing global; the matching Lean guards live in
 `cakeml/pancake/crep_arithScript.sml:10-12` for a constant, variable, load,
 and multiplication expression. Its Lean constructor checks live in
 `Flapjack.Test.CrepeDestConstParity`.
+`crep_dest_2exp_probe.out` records direct HOL EVAL of
+`crep_arith$dest_2exp_def` at `cakeml/pancake/crep_arithScript.sml:15`, including
+the corresponding `word_lsl 1w` results for successful exponents. Its Lean
+destination, shift, and width checks live in `Flapjack.Test.CrepeDest2ExpParity`.
 `crep_arith_eval_mul_const_probe.out` records direct HOL EVAL of
 `crepSem$eval` after `crep_arith$mul_const` for zero, one, power-of-two, and
 general multipliers, with a word-valued local. Its matching production runtime

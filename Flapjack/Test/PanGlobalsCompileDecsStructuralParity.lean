@@ -23,26 +23,38 @@ def declarations : List (Decl Nat) :=
 def nonFunctionDeclarations : List (Decl Nat) :=
   [.decl .one "g" (.const 7), .name "S" [], .exnDecl "E" .one]
 
+def compileResult : GlobalCompileDecsResult Nat :=
+  globalCompileDecs compileContext declarations
+
+def nonFunctionCompileResult : GlobalCompileDecsResult Nat :=
+  globalCompileDecs compileContext nonFunctionDeclarations
+
 theorem compileDecsEveryIsFunctionFixture :
-    (globalCompileDecs compileContext declarations).functions.all
-      globalDeclIsFunction = true :=
+    compileResult.functions.all globalDeclIsFunction = true :=
   compile_decs_EVERY_is_function compileContext declarations
+    compileResult.initializers compileResult.functions compileResult.exceptions
+    compileResult.context rfl
 
 theorem compileDecsDeclsThmFixture :
-    (globalCompileDecs compileContext nonFunctionDeclarations).functions = [] :=
+    nonFunctionCompileResult.functions = [] :=
   compile_decs_decls_thm compileContext nonFunctionDeclarations
+    nonFunctionCompileResult.initializers nonFunctionCompileResult.functions
+    nonFunctionCompileResult.exceptions nonFunctionCompileResult.context rfl
     (by simp [nonFunctionDeclarations, globalDeclIsFunction])
 
 theorem compileDecsExnsAreExnsFixture :
-    (globalCompileDecs compileContext declarations).exceptions =
+    compileResult.exceptions =
       globalDeclsFilter globalDeclIsException declarations :=
   compile_decs_exns_are_exns compileContext declarations
+    compileResult.initializers compileResult.functions compileResult.exceptions
+    compileResult.context rfl
 
 theorem compileDecsPreserveFunctionsFixture :
-    (functions (globalCompileDecs compileContext declarations).functions).map
-        (fun entry => entry.1) =
+    (functions compileResult.functions).map (fun entry => entry.1) =
       (functions declarations).map (fun entry => entry.1) :=
   compile_decs_preserve_functions compileContext declarations
+    compileResult.initializers compileResult.functions compileResult.exceptions
+    compileResult.context rfl
 
 def compileDecsStructuralGuard : Bool :=
   let result := globalCompileDecs compileContext declarations

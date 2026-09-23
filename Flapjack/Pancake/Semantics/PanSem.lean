@@ -253,6 +253,30 @@ def panSemEvaluateCodeState
     (memoryAccess := memoryAccess) (contracts := contracts)
     (memoryHandler := memoryHandler)
 
+/-- Evaluate a production source state using Cake's `memaddrs`,
+    `sh_memaddrs`, and `be` fields. The supplied word model describes the
+    source word operations; every memory domain and endianness input is
+    derived from `state`, while `bytesInWord` is source word-type metadata.
+    This boundary must be used for HOL-facing proofs instead of the optional
+    no-access compatibility path or a width read from the target state. -/
+def panSemEvaluateCodeStateWithMemoryModel
+    [BEq α] [OfNat α 0] [OfNat α 1] [OfNat α 2] [OfNat α 3]
+    [Add α] [Mul α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (model : PanMemoryModel α) (bytesInWord : α)
+    (state : PanSemState α (FfiState σ)) (program : Prog α)
+    (contracts : Option PanValueCallContracts := none)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none) :
+    Option (PanValueFfiClockResult α σ) :=
+  panSemEvaluateCodeState context primitive handler bytesInWord state program
+    (memoryAccess := some (panValueMemoryAccessOfModel model state.memaddrs
+      state.sharedMemaddrs state.be))
+    (contracts := contracts) (memoryHandler := memoryHandler)
+
 /-- Materialise the observable post-state of code-map evaluation. The source
     semantics never updates `state.code`; it is carried verbatim while the
     evaluator updates locals, globals, memory, FFI state, and clock. -/

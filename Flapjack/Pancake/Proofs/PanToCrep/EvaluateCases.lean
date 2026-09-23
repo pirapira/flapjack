@@ -214,8 +214,10 @@ theorem panSemEvaluateCodeState_skip
     (context : PanValueFfiContext α)
     (primitive : PanPrimitiveHandler α)
     (handler : PanValueStatefulFfiHandler α σ)
-    (bytesInWord : α) (state : PanSemState α (FfiState σ)) :
-    panSemEvaluateCodeState context primitive handler bytesInWord state .skip =
+    (bytesInWord : α) (state : PanSemState α (FfiState σ))
+    (memoryAccess : Option (PanValueMemoryAccess α) := none) :
+    panSemEvaluateCodeState context primitive handler bytesInWord state .skip
+      (memoryAccess := memoryAccess) =
       some (.control (.normal state.locals state.globals state.memory state.ffi),
         state.clock) := by
   have hpositive : 0 < panSemCodeEvaluateFuel state (.skip : Prog α) := by
@@ -237,11 +239,12 @@ is local case infrastructure and is deliberately untagged: the complete
 target side chooses its own fuel existentially, rather than forcing the source
 evaluation's fuel or a fixed cutoff onto the target run. -/
 theorem panToCrepPcCompileCorrectSkipCodeState
-    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [BEq α] [OfNat α 0] [OfNat α 1] [OfNat α 2] [OfNat α 3] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     [CrepBytesInWord α] [BEq String]
     (context : PanToCrepProofContext α)
+    (sourceModel : PanMemoryModel α) (sourceBytesInWord : α)
     (sourceContext : PanValueFfiContext α)
     (sourcePrimitive : PanPrimitiveHandler α)
     (sourceHandler : PanValueStatefulFfiHandler α σ)
@@ -253,8 +256,8 @@ theorem panToCrepPcCompileCorrectSkipCodeState
     (hcode : codeRel context (panSemCodeAsLookup sourceState.code) targetState.code)
     (hexcp : excpRel context.eids sourceState.exceptionShapes)
     (hlocals : localsRel context sourceState.locals targetState.locals) :
-    panSemEvaluateCodeState sourceContext sourcePrimitive sourceHandler
-      targetState.bytesInWord sourceState .skip =
+    panSemEvaluateCodeStateWithMemoryModel sourceContext sourcePrimitive sourceHandler
+      sourceModel sourceBytesInWord sourceState .skip =
         some (.control (.normal sourceState.locals sourceState.globals
           sourceState.memory sourceState.ffi), sourceState.clock) ∧
     ∃ targetFuel targetResult targetPost,
@@ -278,8 +281,10 @@ theorem panToCrepPcCompileCorrectSkipCodeState
           (.control (.normal sourceState.locals sourceState.globals
             sourceState.memory sourceState.ffi), sourceState.clock)).locals
         targetPost.locals := by
-  refine ⟨panSemEvaluateCodeState_skip sourceContext sourcePrimitive sourceHandler
-    targetState.bytesInWord sourceState, ?_⟩
+  have hsource := panSemEvaluateCodeState_skip sourceContext sourcePrimitive sourceHandler
+    sourceBytesInWord sourceState (some (panValueMemoryAccessOfModel sourceModel
+      sourceState.memaddrs sourceState.sharedMemaddrs sourceState.be))
+  refine ⟨(by simpa [panSemEvaluateCodeStateWithMemoryModel] using hsource), ?_⟩
   have hsourcePost : panSemCodeStateAfter sourceState
       (.control (.normal sourceState.locals sourceState.globals
         sourceState.memory sourceState.ffi), sourceState.clock) = sourceState := by
@@ -301,8 +306,10 @@ theorem panSemEvaluateCodeState_break
     (context : PanValueFfiContext α)
     (primitive : PanPrimitiveHandler α)
     (handler : PanValueStatefulFfiHandler α σ)
-    (bytesInWord : α) (state : PanSemState α (FfiState σ)) :
-    panSemEvaluateCodeState context primitive handler bytesInWord state .break =
+    (bytesInWord : α) (state : PanSemState α (FfiState σ))
+    (memoryAccess : Option (PanValueMemoryAccess α) := none) :
+    panSemEvaluateCodeState context primitive handler bytesInWord state .break
+      (memoryAccess := memoryAccess) =
       some (.control (.broke state.locals state.globals state.memory state.ffi),
         state.clock) := by
   have hpositive : 0 < panSemCodeEvaluateFuel state (.break : Prog α) := by
@@ -320,11 +327,12 @@ HOL `pc_compile_correct`. It proves all runtime, code, exception, and local
 relations over the code fields carried by the source and target states. This
 is local case infrastructure, not the complete theorem. -/
 theorem panToCrepPcCompileCorrectBreakCodeState
-    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [BEq α] [OfNat α 0] [OfNat α 1] [OfNat α 2] [OfNat α 3] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     [CrepBytesInWord α] [BEq String]
     (context : PanToCrepProofContext α)
+    (sourceModel : PanMemoryModel α) (sourceBytesInWord : α)
     (sourceContext : PanValueFfiContext α)
     (sourcePrimitive : PanPrimitiveHandler α)
     (sourceHandler : PanValueStatefulFfiHandler α σ)
@@ -336,8 +344,8 @@ theorem panToCrepPcCompileCorrectBreakCodeState
     (hcode : codeRel context (panSemCodeAsLookup sourceState.code) targetState.code)
     (hexcp : excpRel context.eids sourceState.exceptionShapes)
     (hlocals : localsRel context sourceState.locals targetState.locals) :
-    panSemEvaluateCodeState sourceContext sourcePrimitive sourceHandler
-      targetState.bytesInWord sourceState .break =
+    panSemEvaluateCodeStateWithMemoryModel sourceContext sourcePrimitive sourceHandler
+      sourceModel sourceBytesInWord sourceState .break =
         some (.control (.broke sourceState.locals sourceState.globals
           sourceState.memory sourceState.ffi), sourceState.clock) ∧
     ∃ targetResult targetPost,
@@ -361,8 +369,10 @@ theorem panToCrepPcCompileCorrectBreakCodeState
           (.control (.broke sourceState.locals sourceState.globals
             sourceState.memory sourceState.ffi), sourceState.clock)).locals
         targetPost.locals := by
-  refine ⟨panSemEvaluateCodeState_break sourceContext sourcePrimitive sourceHandler
-    targetState.bytesInWord sourceState, ?_⟩
+  have hsource := panSemEvaluateCodeState_break sourceContext sourcePrimitive sourceHandler
+    sourceBytesInWord sourceState (some (panValueMemoryAccessOfModel sourceModel
+      sourceState.memaddrs sourceState.sharedMemaddrs sourceState.be))
+  refine ⟨(by simpa [panSemEvaluateCodeStateWithMemoryModel] using hsource), ?_⟩
   have hsourcePost : panSemCodeStateAfter sourceState
       (.control (.broke sourceState.locals sourceState.globals
         sourceState.memory sourceState.ffi), sourceState.clock) = sourceState := by
@@ -384,8 +394,10 @@ theorem panSemEvaluateCodeState_continue
     (context : PanValueFfiContext α)
     (primitive : PanPrimitiveHandler α)
     (handler : PanValueStatefulFfiHandler α σ)
-    (bytesInWord : α) (state : PanSemState α (FfiState σ)) :
-    panSemEvaluateCodeState context primitive handler bytesInWord state .continue =
+    (bytesInWord : α) (state : PanSemState α (FfiState σ))
+    (memoryAccess : Option (PanValueMemoryAccess α) := none) :
+    panSemEvaluateCodeState context primitive handler bytesInWord state .continue
+      (memoryAccess := memoryAccess) =
       some (.control (.continued state.locals state.globals state.memory state.ffi),
         state.clock) := by
   have hpositive : 0 < panSemCodeEvaluateFuel state (.continue : Prog α) := by
@@ -402,11 +414,12 @@ theorem panSemEvaluateCodeState_continue
 of HOL `pc_compile_correct`. It preserves source and target runtime, code, and
 exception state and proves the post-state local relation. -/
 theorem panToCrepPcCompileCorrectContinueCodeState
-    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [BEq α] [OfNat α 0] [OfNat α 1] [OfNat α 2] [OfNat α 3] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     [CrepBytesInWord α] [BEq String]
     (context : PanToCrepProofContext α)
+    (sourceModel : PanMemoryModel α) (sourceBytesInWord : α)
     (sourceContext : PanValueFfiContext α)
     (sourcePrimitive : PanPrimitiveHandler α)
     (sourceHandler : PanValueStatefulFfiHandler α σ)
@@ -418,8 +431,8 @@ theorem panToCrepPcCompileCorrectContinueCodeState
     (hcode : codeRel context (panSemCodeAsLookup sourceState.code) targetState.code)
     (hexcp : excpRel context.eids sourceState.exceptionShapes)
     (hlocals : localsRel context sourceState.locals targetState.locals) :
-    panSemEvaluateCodeState sourceContext sourcePrimitive sourceHandler
-      targetState.bytesInWord sourceState .continue =
+    panSemEvaluateCodeStateWithMemoryModel sourceContext sourcePrimitive sourceHandler
+      sourceModel sourceBytesInWord sourceState .continue =
         some (.control (.continued sourceState.locals sourceState.globals
           sourceState.memory sourceState.ffi), sourceState.clock) ∧
     ∃ targetResult targetPost,
@@ -443,8 +456,10 @@ theorem panToCrepPcCompileCorrectContinueCodeState
           (.control (.continued sourceState.locals sourceState.globals
             sourceState.memory sourceState.ffi), sourceState.clock)).locals
         targetPost.locals := by
-  refine ⟨panSemEvaluateCodeState_continue sourceContext sourcePrimitive sourceHandler
-    targetState.bytesInWord sourceState, ?_⟩
+  have hsource := panSemEvaluateCodeState_continue sourceContext sourcePrimitive sourceHandler
+    sourceBytesInWord sourceState (some (panValueMemoryAccessOfModel sourceModel
+      sourceState.memaddrs sourceState.sharedMemaddrs sourceState.be))
+  refine ⟨(by simpa [panSemEvaluateCodeStateWithMemoryModel] using hsource), ?_⟩
   have hsourcePost : panSemCodeStateAfter sourceState
       (.control (.continued sourceState.locals sourceState.globals
         sourceState.memory sourceState.ffi), sourceState.clock) = sourceState := by
@@ -467,8 +482,10 @@ theorem panSemEvaluateCodeState_tick
     (context : PanValueFfiContext α)
     (primitive : PanPrimitiveHandler α)
     (handler : PanValueStatefulFfiHandler α σ)
-    (bytesInWord : α) (state : PanSemState α (FfiState σ)) :
-    panSemEvaluateCodeState context primitive handler bytesInWord state .tick =
+    (bytesInWord : α) (state : PanSemState α (FfiState σ))
+    (memoryAccess : Option (PanValueMemoryAccess α) := none) :
+    panSemEvaluateCodeState context primitive handler bytesInWord state .tick
+      (memoryAccess := memoryAccess) =
       if state.clock = 0 then
         some (panValueFfiClockTimeout state.globals state.memory state.ffi state.clock)
       else some (.control (.normal state.locals state.globals state.memory state.ffi),
@@ -487,11 +504,12 @@ theorem panSemEvaluateCodeState_tick
 run and state relations use the production finite code fields, and the two
 clock branches retain the source timeout/decrement behavior. -/
 theorem panToCrepPcCompileCorrectTickCodeState
-    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [BEq α] [OfNat α 0] [OfNat α 1] [OfNat α 2] [OfNat α 3] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     [CrepBytesInWord α] [BEq String]
     (context : PanToCrepProofContext α)
+    (sourceModel : PanMemoryModel α) (sourceBytesInWord : α)
     (sourceContext : PanValueFfiContext α)
     (sourcePrimitive : PanPrimitiveHandler α)
     (sourceHandler : PanValueStatefulFfiHandler α σ)
@@ -503,8 +521,8 @@ theorem panToCrepPcCompileCorrectTickCodeState
     (hcode : codeRel context (panSemCodeAsLookup sourceState.code) targetState.code)
     (hexcp : excpRel context.eids sourceState.exceptionShapes)
     (hlocals : localsRel context sourceState.locals targetState.locals) :
-    panSemEvaluateCodeState sourceContext sourcePrimitive sourceHandler
-      targetState.bytesInWord sourceState .tick =
+    panSemEvaluateCodeStateWithMemoryModel sourceContext sourcePrimitive sourceHandler
+      sourceModel sourceBytesInWord sourceState .tick =
         (if sourceState.clock = 0 then
           some (panValueFfiClockTimeout sourceState.globals sourceState.memory
             sourceState.ffi sourceState.clock)
@@ -546,8 +564,10 @@ theorem panToCrepPcCompileCorrectTickCodeState
             else (.control (.normal sourceState.locals sourceState.globals
               sourceState.memory sourceState.ffi), decPanClock sourceState.clock))).locals
           targetPost.locals) := by
-  refine ⟨panSemEvaluateCodeState_tick sourceContext sourcePrimitive sourceHandler
-    targetState.bytesInWord sourceState, ?_⟩
+  have hsource := panSemEvaluateCodeState_tick sourceContext sourcePrimitive sourceHandler
+    sourceBytesInWord sourceState (some (panValueMemoryAccessOfModel sourceModel
+      sourceState.memaddrs sourceState.sharedMemaddrs sourceState.be))
+  refine ⟨(by simpa [panSemEvaluateCodeStateWithMemoryModel] using hsource), ?_⟩
   rcases hstate with ⟨hmem, hmemaddrs, hshared, hstructs, hglobals, hclock,
     hbe, hffi, hbase, htop⟩
   by_cases hzero : sourceState.clock = 0
@@ -595,9 +615,9 @@ theorem panSemEvaluateCodeState_annot
     (primitive : PanPrimitiveHandler α)
     (handler : PanValueStatefulFfiHandler α σ)
     (bytesInWord : α) (state : PanSemState α (FfiState σ))
-    (tag text : String) :
+    (tag text : String) (memoryAccess : Option (PanValueMemoryAccess α) := none) :
     panSemEvaluateCodeState context primitive handler bytesInWord state
-      (.annot tag text) =
+      (.annot tag text) (memoryAccess := memoryAccess) =
       some (.control (.normal state.locals state.globals state.memory state.ffi),
         state.clock) := by
   have hpositive : 0 < panSemCodeEvaluateFuel state (.annot tag text) := by
@@ -614,11 +634,12 @@ theorem panSemEvaluateCodeState_annot
 is evaluated against the production source state; HOL compilation erases it
 to Skip, and all runtime/code/exception/local relations are preserved. -/
 theorem panToCrepPcCompileCorrectAnnotCodeState
-    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [BEq α] [OfNat α 0] [OfNat α 1] [OfNat α 2] [OfNat α 3] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     [CrepBytesInWord α] [BEq String]
     (context : PanToCrepProofContext α)
+    (sourceModel : PanMemoryModel α) (sourceBytesInWord : α)
     (sourceContext : PanValueFfiContext α)
     (sourcePrimitive : PanPrimitiveHandler α)
     (sourceHandler : PanValueStatefulFfiHandler α σ)
@@ -631,8 +652,8 @@ theorem panToCrepPcCompileCorrectAnnotCodeState
     (hcode : codeRel context (panSemCodeAsLookup sourceState.code) targetState.code)
     (hexcp : excpRel context.eids sourceState.exceptionShapes)
     (hlocals : localsRel context sourceState.locals targetState.locals) :
-    panSemEvaluateCodeState sourceContext sourcePrimitive sourceHandler
-      targetState.bytesInWord sourceState (.annot tag text) =
+    panSemEvaluateCodeStateWithMemoryModel sourceContext sourcePrimitive sourceHandler
+      sourceModel sourceBytesInWord sourceState (.annot tag text) =
         some (.control (.normal sourceState.locals sourceState.globals
           sourceState.memory sourceState.ffi), sourceState.clock) ∧
     ∃ targetResult targetPost,
@@ -656,8 +677,10 @@ theorem panToCrepPcCompileCorrectAnnotCodeState
           (.control (.normal sourceState.locals sourceState.globals
             sourceState.memory sourceState.ffi), sourceState.clock)).locals
         targetPost.locals := by
-  refine ⟨panSemEvaluateCodeState_annot sourceContext sourcePrimitive sourceHandler
-    targetState.bytesInWord sourceState tag text, ?_⟩
+  have hsource := panSemEvaluateCodeState_annot sourceContext sourcePrimitive sourceHandler
+    sourceBytesInWord sourceState tag text (some (panValueMemoryAccessOfModel sourceModel
+      sourceState.memaddrs sourceState.sharedMemaddrs sourceState.be))
+  refine ⟨(by simpa [panSemEvaluateCodeStateWithMemoryModel] using hsource), ?_⟩
   have hsourcePost : panSemCodeStateAfter sourceState
       (.control (.normal sourceState.locals sourceState.globals
         sourceState.memory sourceState.ffi), sourceState.clock) = sourceState := by
@@ -674,7 +697,7 @@ theorem panToCrepPcCompileCorrectAnnotCodeState
 /-! A narrow state-owned Call evaluator fact used by the actual-state Call
 timeout simulation case. -/
 theorem panSemEvaluateCodeState_call_zero_clock_timeout_of_entry
-    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [BEq α] [OfNat α 0] [OfNat α 1] [OfNat α 2] [OfNat α 3] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : PanValueFfiContext α)
@@ -683,9 +706,10 @@ theorem panSemEvaluateCodeState_call_zero_clock_timeout_of_entry
     (bytesInWord : α) (state : PanSemState α (FfiState σ))
     (function : FunName)
     (hentry : panSemCodeLookup state.code function = some ([], .skip, .one))
-    (hclock : state.clock = 0) :
+    (hclock : state.clock = 0)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none) :
     panSemEvaluateCodeState context primitive handler bytesInWord state
-      (.call none function [] : Prog α) =
+      (.call none function [] : Prog α) (memoryAccess := memoryAccess) =
       some (panValueFfiClockTimeout state.globals state.memory state.ffi state.clock) := by
   have hlookupCall : lookupPanSemCodeCall state.structs state.code function [] =
       some (.skip, .one, fun _ => none) := by
@@ -693,7 +717,8 @@ theorem panSemEvaluateCodeState_call_zero_clock_timeout_of_entry
     rw [hentry]
     simp [panSemCodeArgumentsMatch, bindPanValueParameters]
   have hargs : evalPanValueExps state.structs state.locals state.globals state.memory
-      state.baseAddress state.topAddress bytesInWord [] = some [] := by
+      state.baseAddress state.topAddress bytesInWord []
+      (memoryAccess := memoryAccess) = some [] := by
     simp [evalPanValueExps, evalPanValueExp.evalPanValueExps]
   have hpositive : 0 < panSemCodeEvaluateFuel state
       (.call none function [] : Prog α) := by
@@ -715,14 +740,80 @@ theorem panSemEvaluateCodeState_call_zero_clock_timeout_of_entry
           simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall,
             hargs, hlookupCall, hclock, panValueFfiClockTimeout]
 
+/-! A bounded successful Call equation for a nonempty state-owned code map.
+The callee has no parameters and returns one word constant, so this isolates
+the recursive code lookup and source clock transition used by the Call
+induction case. -/
+theorem panSemEvaluateCodeState_call_return_const_of_entry
+    [BEq α] [OfNat α 0] [OfNat α 1] [OfNat α 2] [OfNat α 3] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (state : PanSemState α (FfiState σ))
+    (function : FunName) (value : α)
+    (hentry : panSemCodeLookup state.code function =
+      some ([], .return (.const value), .one))
+    (hclock : state.clock ≠ 0)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none) :
+    panSemEvaluateCodeState context primitive handler bytesInWord state
+      (.call none function [] : Prog α) (memoryAccess := memoryAccess) =
+      some (.control (.returned (fun _ => none) state.globals state.memory
+        state.ffi [.word value]), decPanClock state.clock) := by
+  have hlookupCall : lookupPanSemCodeCall state.structs state.code function [] =
+      some (.return (.const value), .one, fun _ => none) := by
+    unfold lookupPanSemCodeCall
+    rw [hentry]
+    simp [panSemCodeArgumentsMatch, bindPanValueParameters]
+  have hargs : evalPanValueExps state.structs state.locals state.globals state.memory
+      state.baseAddress state.topAddress bytesInWord []
+      (memoryAccess := memoryAccess) = some [] := by
+    simp [evalPanValueExps, evalPanValueExp.evalPanValueExps]
+  have hcost : 1 ≤ panSemProgFuel (.call none function [] : Prog α) := by
+    simp [panSemProgFuel, panSemCallInfoFuel, panSemExpListFuel]
+  have hclockPos : 2 ≤ state.clock + 1 := by omega
+  have hbodyPos : 2 ≤ max (panSemProgFuel (.call none function [] : Prog α))
+      (panSemCodeBodyFuel state.code) + 1 := by
+    have hmax : panSemProgFuel (.call none function [] : Prog α) ≤
+        max (panSemProgFuel (.call none function [] : Prog α))
+          (panSemCodeBodyFuel state.code) := Nat.le_max_left _ _
+    have hmaxPos : 1 ≤ max (panSemProgFuel (.call none function [] : Prog α))
+        (panSemCodeBodyFuel state.code) := Nat.le_trans hcost hmax
+    omega
+  have hbound : 4 ≤ panSemCodeEvaluateFuel state
+      (.call none function [] : Prog α) := by
+    unfold panSemCodeEvaluateFuel
+    have hproduct := Nat.mul_le_mul hclockPos hbodyPos
+    omega
+  unfold panSemEvaluateCodeState panSemEvaluateCodeStateWithFuel
+  cases hfuel : panSemCodeEvaluateFuel state (.call none function [] : Prog α) with
+  | zero => omega
+  | succ fuel =>
+      cases fuel with
+      | zero => omega
+      | succ fuel =>
+          cases fuel with
+          | zero => omega
+          | succ fuel =>
+              cases fuel with
+              | zero => omega
+              | succ fuel =>
+                  simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall,
+                    evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps,
+                    evalPanValueExpCounted, evalPanValueExp,
+                    panValueShape, panShapeMatches,
+                    hargs, hlookupCall, hclock]
+
 /-! The zero-clock Call timeout branch at the production source/target state
 boundary. This is a single induction branch, not the general HOL theorem. -/
 theorem panToCrepPcCompileCorrectCallTimeoutCodeState
-    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [BEq α] [OfNat α 0] [OfNat α 1] [OfNat α 2] [OfNat α 3] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     [CrepBytesInWord α]
     (context : PanToCrepProofContext α)
+    (sourceModel : PanMemoryModel α) (sourceBytesInWord : α)
     (sourceContext : PanValueFfiContext α)
     (sourcePrimitive : PanPrimitiveHandler α)
     (sourceHandler : PanValueStatefulFfiHandler α σ)
@@ -737,8 +828,8 @@ theorem panToCrepPcCompileCorrectCallTimeoutCodeState
     (_hlocalized : localisedProg (.call none function [] : Prog α))
     (hentry : panSemCodeLookup sourceState.code function = some ([], .skip, .one))
     (hclock : sourceState.clock = 0) :
-    panSemEvaluateCodeState sourceContext sourcePrimitive sourceHandler
-      targetState.bytesInWord sourceState (.call none function [] : Prog α) =
+    panSemEvaluateCodeStateWithMemoryModel sourceContext sourcePrimitive sourceHandler
+      sourceModel sourceBytesInWord sourceState (.call none function [] : Prog α) =
         some (panValueFfiClockTimeout sourceState.globals sourceState.memory
           sourceState.ffi sourceState.clock) ∧
     ∃ targetPost,
@@ -760,8 +851,15 @@ theorem panToCrepPcCompileCorrectCallTimeoutCodeState
           (panValueFfiClockTimeout sourceState.globals sourceState.memory
             sourceState.ffi sourceState.clock)).exceptionShapes := by
   have hsource := panSemEvaluateCodeState_call_zero_clock_timeout_of_entry
-    sourceContext sourcePrimitive sourceHandler targetState.bytesInWord sourceState
-    function hentry hclock
+    sourceContext sourcePrimitive sourceHandler sourceBytesInWord sourceState
+    function hentry hclock (some (panValueMemoryAccessOfModel sourceModel
+      sourceState.memaddrs sourceState.sharedMemaddrs sourceState.be))
+  have hsourceExact : panSemEvaluateCodeStateWithMemoryModel sourceContext
+      sourcePrimitive sourceHandler sourceModel sourceBytesInWord sourceState
+      (.call none function [] : Prog α) =
+        some (panValueFfiClockTimeout sourceState.globals sourceState.memory
+          sourceState.ffi sourceState.clock) := by
+    simpa [panSemEvaluateCodeStateWithMemoryModel] using hsource
   have hsourceLookup : FLOOKUP (panSemCodeAsLookup sourceState.code) function =
       some ([], .skip, .one) := by
     change panSemCodeLookup sourceState.code function = some ([], .skip, .one)
@@ -785,7 +883,7 @@ theorem panToCrepPcCompileCorrectCallTimeoutCodeState
       some (.timeout, clearCrepRuntimeLocals targetState) := by
     simp [evalCrepRuntimeCall, evalCrepRuntimeExps, htargetCallLookup, htargetZero,
       crepRuntimeCallInfoValid, clearCrepRuntimeLocals]
-  refine ⟨hsource, clearCrepRuntimeLocals targetState, ?_, ?_, ?_, ?_⟩
+  refine ⟨hsourceExact, clearCrepRuntimeLocals targetState, ?_, ?_, ?_, ?_⟩
   · simpa [evalCrepRuntimeResult, evalCrepRuntimeProg, compileCodeRelProg,
       compileProgHOL, compileArgsHOL] using htargetCallRun
   · simp [stateRel, panSemCodeStateAfter, panValueFfiClockTimeout,
@@ -795,4 +893,406 @@ theorem panToCrepPcCompileCorrectCallTimeoutCodeState
       clearCrepRuntimeLocals] using hcode
   · simpa [panSemCodeStateAfter, panValueFfiClockTimeout,
       clearCrepRuntimeLocals] using hexcp
+
+/-! A first successful recursive Call case over production source and target
+code maps. The code entry returns one constant word, which makes the nested
+source and target executions explicit without weakening the state boundary. -/
+theorem panToCrepPcCompileCorrectCallReturnConstCodeState
+    [BEq α] [OfNat α 0] [OfNat α 1] [OfNat α 2] [OfNat α 3] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    [CrepBytesInWord α]
+    (context : PanToCrepProofContext α)
+    (sourceModel : PanMemoryModel α) (sourceBytesInWord : α)
+    (sourceContext : PanValueFfiContext α)
+    (sourcePrimitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueStatefulFfiHandler α σ)
+    (targetHandler : CrepRuntimeFfiHandler α σ FfiFinalEvent)
+    (targetPrimitive : CrepPrimitiveHandler α)
+    (sourceState : PanSemState α (FfiState σ))
+    (targetState : CrepRuntimeState α σ) (function : FunName) (value : α)
+    (hstate : stateRel sourceState targetState)
+    (hcode : codeRel context (panSemCodeAsLookup sourceState.code) targetState.code)
+    (hexcp : excpRel context.eids sourceState.exceptionShapes)
+    (_hlocals : localsRel context sourceState.locals targetState.locals)
+    (_hlocalized : localisedProg (.call none function [] : Prog α))
+    (hentry : panSemCodeLookup sourceState.code function =
+      some ([], .return (.const value), .one))
+    (hclock : sourceState.clock ≠ 0) :
+    let sourceResult : PanValueFfiClockResult α σ :=
+      (.control (.returned (fun _ => none) sourceState.globals sourceState.memory
+        sourceState.ffi [.word value]), decPanClock sourceState.clock)
+    panSemEvaluateCodeStateWithMemoryModel sourceContext sourcePrimitive sourceHandler
+      sourceModel sourceBytesInWord sourceState (.call none function [] : Prog α) =
+        some sourceResult ∧
+    ∃ targetPost,
+      evalCrepRuntimeResult targetHandler targetPrimitive 3 targetState
+        (compileCodeRelProg context (.call none function [])) =
+          some (.returned [value], targetPost) ∧
+      stateRel (panSemCodeStateAfter sourceState sourceResult) targetPost ∧
+      codeRel context
+        (panSemCodeAsLookup (panSemCodeStateAfter sourceState sourceResult).code)
+        targetPost.code ∧
+      excpRel context.eids
+        (panSemCodeStateAfter sourceState sourceResult).exceptionShapes := by
+  rcases hstate with ⟨hmem, hmemaddrs, hshared, hstructs, hglobals, hclockRel,
+    hbe, hffi, hbase, htop⟩
+  let sourceResult : PanValueFfiClockResult α σ :=
+    (.control (.returned (fun _ => none) sourceState.globals sourceState.memory
+      sourceState.ffi [.word value]), decPanClock sourceState.clock)
+  let targetPost : CrepRuntimeState α σ :=
+    clearCrepRuntimeLocals (decCrepClock targetState)
+  have hsource := panSemEvaluateCodeState_call_return_const_of_entry
+    sourceContext sourcePrimitive sourceHandler sourceBytesInWord sourceState
+    function value hentry hclock (some (panValueMemoryAccessOfModel sourceModel
+      sourceState.memaddrs sourceState.sharedMemaddrs sourceState.be))
+  have hsourceExact : panSemEvaluateCodeStateWithMemoryModel sourceContext
+      sourcePrimitive sourceHandler sourceModel sourceBytesInWord sourceState
+      (.call none function [] : Prog α) = some sourceResult := by
+    simpa [panSemEvaluateCodeStateWithMemoryModel, sourceResult] using hsource
+  have hsourceLookup : FLOOKUP (panSemCodeAsLookup sourceState.code) function =
+      some ([], .return (.const value), .one) := by
+    change panSemCodeLookup sourceState.code function = _
+    exact hentry
+  have hcodeEntry := codeRelImp context (panSemCodeAsLookup sourceState.code)
+    targetState.code hcode function [] (.return (.const value) : Prog α) .one hsourceLookup
+  rcases hcodeEntry with ⟨_hbodyLocalized, _hfunc, htargetLookup⟩
+  have htargetCodeLookup : FLOOKUP targetState.code function =
+      some ([], .return [.const value]) := by
+    simpa [Shape.shapeSize, ctxtFc, compileCodeRelProg, compileProgHOL,
+      compileExpHOL] using htargetLookup
+  have htargetCallLookup : lookupCrepRuntimeCode function [] targetState.code =
+      some (.return [.const value], fun _ => none) := by
+    unfold lookupCrepRuntimeCode
+    rw [htargetCodeLookup]
+    simp [assignCrepRuntimeLocals]
+  have htargetNonzero : targetState.clock ≠ 0 := by omega
+  have htargetRun : evalCrepRuntimeResult targetHandler targetPrimitive 3 targetState
+      (compileCodeRelProg context (.call none function [])) =
+        some (.returned [value], targetPost) := by
+    simp [targetPost, evalCrepRuntimeResult, evalCrepRuntimeProg,
+      evalCrepRuntimeCall, evalCrepRuntimeExps, evalCrepRuntimeExp, compileCodeRelProg,
+      compileProgHOL, compileArgsHOL, htargetCallLookup, htargetNonzero,
+      crepRuntimeCallInfoValid, decCrepClock, fixCrepRuntimeClock,
+      crepRuntimeCallerState, clearCrepRuntimeLocals]
+  refine ⟨hsourceExact, targetPost, htargetRun, ?_, ?_, ?_⟩
+  · simp [stateRel, panSemCodeStateAfter, targetPost,
+      clearCrepRuntimeLocals, decCrepClock, decPanClock, hclockRel,
+      hmem, hmemaddrs, hshared, hstructs, hglobals, hbe, hffi, hbase, htop]
+  · simpa [panSemCodeStateAfter, sourceResult, targetPost,
+      clearCrepRuntimeLocals, decCrepClock] using hcode
+  · simpa [panSemCodeStateAfter, sourceResult, targetPost,
+      clearCrepRuntimeLocals] using hexcp
+
+/-! Concrete RV64 source-call case boundaries.  These specializations close
+the generic model/stride parameters with the word type's fixed source memory
+model and 8-byte width; callers cannot supply target-state memory metadata as
+source semantics.  They remain induction-case support, not standalone HOL
+theorem ports. -/
+
+theorem panToCrepPcCompileCorrectCallTimeoutCodeStateRiscV64
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (sourceContext : PanValueFfiContext (RiscV.Word 64))
+    (sourcePrimitive : PanPrimitiveHandler (RiscV.Word 64))
+    (sourceHandler : PanValueStatefulFfiHandler (RiscV.Word 64) σ)
+    (targetHandler : CrepRuntimeFfiHandler (RiscV.Word 64) σ FfiFinalEvent)
+    (targetPrimitive : CrepPrimitiveHandler (RiscV.Word 64)) (fuel : Nat)
+    (sourceState : PanSemState (RiscV.Word 64) (FfiState σ))
+    (targetState : CrepRuntimeState (RiscV.Word 64) σ) (function : FunName)
+    (hstate : stateRel sourceState targetState)
+    (hcode : codeRel context (panSemCodeAsLookup sourceState.code) targetState.code)
+    (hexcp : excpRel context.eids sourceState.exceptionShapes)
+    (hlocals : localsRel context sourceState.locals targetState.locals)
+    (hlocalized : localisedProg (.call none function [] : Prog (RiscV.Word 64)))
+    (hentry : panSemCodeLookup sourceState.code function = some ([], .skip, .one))
+    (hclock : sourceState.clock = 0) :
+    panSemEvaluateRiscV64CodeState sourceContext sourcePrimitive sourceHandler
+      sourceState (.call none function [] : Prog (RiscV.Word 64)) =
+        some (panValueFfiClockTimeout sourceState.globals sourceState.memory
+          sourceState.ffi sourceState.clock) ∧
+    ∃ targetPost,
+      evalCrepRuntimeResult targetHandler targetPrimitive (fuel + 2) targetState
+        (compileCodeRelProg context (.call none function [])) =
+          some (.timeout, targetPost) ∧
+      stateRel
+        (panSemCodeStateAfter sourceState
+          (panValueFfiClockTimeout sourceState.globals sourceState.memory
+            sourceState.ffi sourceState.clock)) targetPost ∧
+      codeRel context
+        (panSemCodeAsLookup
+          (panSemCodeStateAfter sourceState
+            (panValueFfiClockTimeout sourceState.globals sourceState.memory
+              sourceState.ffi sourceState.clock)).code)
+        targetPost.code ∧
+      excpRel context.eids
+        (panSemCodeStateAfter sourceState
+          (panValueFfiClockTimeout sourceState.globals sourceState.memory
+            sourceState.ffi sourceState.clock)).exceptionShapes := by
+  have hgeneric := panToCrepPcCompileCorrectCallTimeoutCodeState
+    (context := context)
+    (sourceModel := panSemBitVec64WordModel)
+    (sourceBytesInWord := panSemBitVec64BytesInWord)
+    sourceContext sourcePrimitive sourceHandler targetHandler targetPrimitive fuel
+    sourceState targetState function hstate hcode hexcp hlocals hlocalized hentry hclock
+  simpa [panSemEvaluateRiscV64CodeState,
+    panSemEvaluateCodeStateWithMemoryModel, panSemBitVec64BytesInWord] using hgeneric
+
+theorem panToCrepPcCompileCorrectCallReturnConstCodeStateRiscV64
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (sourceContext : PanValueFfiContext (RiscV.Word 64))
+    (sourcePrimitive : PanPrimitiveHandler (RiscV.Word 64))
+    (sourceHandler : PanValueStatefulFfiHandler (RiscV.Word 64) σ)
+    (targetHandler : CrepRuntimeFfiHandler (RiscV.Word 64) σ FfiFinalEvent)
+    (targetPrimitive : CrepPrimitiveHandler (RiscV.Word 64))
+    (sourceState : PanSemState (RiscV.Word 64) (FfiState σ))
+    (targetState : CrepRuntimeState (RiscV.Word 64) σ) (function : FunName)
+    (value : RiscV.Word 64)
+    (hstate : stateRel sourceState targetState)
+    (hcode : codeRel context (panSemCodeAsLookup sourceState.code) targetState.code)
+    (hexcp : excpRel context.eids sourceState.exceptionShapes)
+    (hlocals : localsRel context sourceState.locals targetState.locals)
+    (hlocalized : localisedProg (.call none function [] : Prog (RiscV.Word 64)))
+    (hentry : panSemCodeLookup sourceState.code function =
+      some ([], .return (.const value), .one))
+    (hclock : sourceState.clock ≠ 0) :
+    let sourceResult : PanValueFfiClockResult (RiscV.Word 64) σ :=
+      (.control (.returned (fun _ => none) sourceState.globals sourceState.memory
+        sourceState.ffi [.word value]), decPanClock sourceState.clock)
+    panSemEvaluateRiscV64CodeState sourceContext sourcePrimitive sourceHandler
+      sourceState (.call none function [] : Prog (RiscV.Word 64)) =
+        some sourceResult ∧
+    ∃ targetPost,
+      evalCrepRuntimeResult targetHandler targetPrimitive 3 targetState
+        (compileCodeRelProg context (.call none function [])) =
+          some (.returned [value], targetPost) ∧
+      stateRel (panSemCodeStateAfter sourceState sourceResult) targetPost ∧
+      codeRel context
+        (panSemCodeAsLookup (panSemCodeStateAfter sourceState sourceResult).code)
+        targetPost.code ∧
+      excpRel context.eids
+        (panSemCodeStateAfter sourceState sourceResult).exceptionShapes := by
+  have hgeneric := panToCrepPcCompileCorrectCallReturnConstCodeState
+    (context := context)
+    (sourceModel := panSemBitVec64WordModel)
+    (sourceBytesInWord := panSemBitVec64BytesInWord)
+    sourceContext sourcePrimitive sourceHandler targetHandler targetPrimitive
+    sourceState targetState function value hstate hcode hexcp hlocals hlocalized hentry hclock
+  simpa [panSemEvaluateRiscV64CodeState,
+    panSemEvaluateCodeStateWithMemoryModel, panSemBitVec64BytesInWord] using hgeneric
+
+theorem panToCrepPcCompileCorrectSkipCodeStateRiscV64
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (sourceContext : PanValueFfiContext (RiscV.Word 64))
+    (sourcePrimitive : PanPrimitiveHandler (RiscV.Word 64))
+    (sourceHandler : PanValueStatefulFfiHandler (RiscV.Word 64) σ)
+    (targetHandler : CrepRuntimeFfiHandler (RiscV.Word 64) σ FfiFinalEvent)
+    (targetPrimitive : CrepPrimitiveHandler (RiscV.Word 64))
+    (sourceState : PanSemState (RiscV.Word 64) (FfiState σ))
+    (targetState : CrepRuntimeState (RiscV.Word 64) σ)
+    (hstate : stateRel sourceState targetState)
+    (hcode : codeRel context (panSemCodeAsLookup sourceState.code) targetState.code)
+    (hexcp : excpRel context.eids sourceState.exceptionShapes)
+    (hlocals : localsRel context sourceState.locals targetState.locals) :
+    panSemEvaluateRiscV64CodeState sourceContext sourcePrimitive sourceHandler
+      sourceState .skip =
+        some (.control (.normal sourceState.locals sourceState.globals
+          sourceState.memory sourceState.ffi), sourceState.clock) ∧
+    ∃ targetFuel targetResult targetPost,
+      evalCrepRuntimeResult targetHandler targetPrimitive targetFuel targetState
+        (compileCodeRelProg context .skip) = some (targetResult, targetPost) ∧
+      stateRel sourceState targetPost ∧
+      codeRel context (panSemCodeAsLookup sourceState.code) targetPost.code ∧
+      excpRel context.eids sourceState.exceptionShapes ∧ targetResult = .normal ∧
+      localsRel context sourceState.locals targetPost.locals := by
+  have hgeneric := panToCrepPcCompileCorrectSkipCodeState
+    (context := context) (sourceModel := panSemBitVec64WordModel)
+    (sourceBytesInWord := panSemBitVec64BytesInWord)
+    sourceContext sourcePrimitive sourceHandler targetHandler targetPrimitive
+    sourceState targetState hstate hcode hexcp hlocals
+  have hsourcePost : panSemCodeStateAfter sourceState
+      (.control (.normal sourceState.locals sourceState.globals
+        sourceState.memory sourceState.ffi), sourceState.clock) = sourceState := by
+    cases sourceState
+    rfl
+  simpa [panSemEvaluateRiscV64CodeState,
+    panSemEvaluateCodeStateWithMemoryModel, panSemBitVec64BytesInWord,
+    hsourcePost] using hgeneric
+
+theorem panToCrepPcCompileCorrectBreakCodeStateRiscV64
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (sourceContext : PanValueFfiContext (RiscV.Word 64))
+    (sourcePrimitive : PanPrimitiveHandler (RiscV.Word 64))
+    (sourceHandler : PanValueStatefulFfiHandler (RiscV.Word 64) σ)
+    (targetHandler : CrepRuntimeFfiHandler (RiscV.Word 64) σ FfiFinalEvent)
+    (targetPrimitive : CrepPrimitiveHandler (RiscV.Word 64)) (fuel : Nat)
+    (sourceState : PanSemState (RiscV.Word 64) (FfiState σ))
+    (targetState : CrepRuntimeState (RiscV.Word 64) σ)
+    (hstate : stateRel sourceState targetState)
+    (hcode : codeRel context (panSemCodeAsLookup sourceState.code) targetState.code)
+    (hexcp : excpRel context.eids sourceState.exceptionShapes)
+    (hlocals : localsRel context sourceState.locals targetState.locals) :
+    panSemEvaluateRiscV64CodeState sourceContext sourcePrimitive sourceHandler
+      sourceState .break =
+        some (.control (.broke sourceState.locals sourceState.globals
+          sourceState.memory sourceState.ffi), sourceState.clock) ∧
+    ∃ targetResult targetPost,
+      evalCrepRuntimeResult targetHandler targetPrimitive (fuel + 1) targetState
+        (compileCodeRelProg context .break) = some (targetResult, targetPost) ∧
+      stateRel sourceState targetPost ∧
+      codeRel context (panSemCodeAsLookup sourceState.code) targetPost.code ∧
+      excpRel context.eids sourceState.exceptionShapes ∧ targetResult = .broke 0 ∧
+      localsRel context sourceState.locals targetPost.locals := by
+  have hgeneric := panToCrepPcCompileCorrectBreakCodeState
+    (context := context) (sourceModel := panSemBitVec64WordModel)
+    (sourceBytesInWord := panSemBitVec64BytesInWord)
+    sourceContext sourcePrimitive sourceHandler targetHandler targetPrimitive fuel
+    sourceState targetState hstate hcode hexcp hlocals
+  have hsourcePost : panSemCodeStateAfter sourceState
+      (.control (.broke sourceState.locals sourceState.globals
+        sourceState.memory sourceState.ffi), sourceState.clock) = sourceState := by
+    cases sourceState
+    rfl
+  simpa [panSemEvaluateRiscV64CodeState,
+    panSemEvaluateCodeStateWithMemoryModel, panSemBitVec64BytesInWord,
+    hsourcePost] using hgeneric
+
+theorem panToCrepPcCompileCorrectContinueCodeStateRiscV64
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (sourceContext : PanValueFfiContext (RiscV.Word 64))
+    (sourcePrimitive : PanPrimitiveHandler (RiscV.Word 64))
+    (sourceHandler : PanValueStatefulFfiHandler (RiscV.Word 64) σ)
+    (targetHandler : CrepRuntimeFfiHandler (RiscV.Word 64) σ FfiFinalEvent)
+    (targetPrimitive : CrepPrimitiveHandler (RiscV.Word 64)) (fuel : Nat)
+    (sourceState : PanSemState (RiscV.Word 64) (FfiState σ))
+    (targetState : CrepRuntimeState (RiscV.Word 64) σ)
+    (hstate : stateRel sourceState targetState)
+    (hcode : codeRel context (panSemCodeAsLookup sourceState.code) targetState.code)
+    (hexcp : excpRel context.eids sourceState.exceptionShapes)
+    (hlocals : localsRel context sourceState.locals targetState.locals) :
+    panSemEvaluateRiscV64CodeState sourceContext sourcePrimitive sourceHandler
+      sourceState .continue =
+        some (.control (.continued sourceState.locals sourceState.globals
+          sourceState.memory sourceState.ffi), sourceState.clock) ∧
+    ∃ targetResult targetPost,
+      evalCrepRuntimeResult targetHandler targetPrimitive (fuel + 1) targetState
+        (compileCodeRelProg context .continue) = some (targetResult, targetPost) ∧
+      stateRel sourceState targetPost ∧
+      codeRel context (panSemCodeAsLookup sourceState.code) targetPost.code ∧
+      excpRel context.eids sourceState.exceptionShapes ∧ targetResult = .continued 0 ∧
+      localsRel context sourceState.locals targetPost.locals := by
+  have hgeneric := panToCrepPcCompileCorrectContinueCodeState
+    (context := context) (sourceModel := panSemBitVec64WordModel)
+    (sourceBytesInWord := panSemBitVec64BytesInWord)
+    sourceContext sourcePrimitive sourceHandler targetHandler targetPrimitive fuel
+    sourceState targetState hstate hcode hexcp hlocals
+  have hsourcePost : panSemCodeStateAfter sourceState
+      (.control (.continued sourceState.locals sourceState.globals
+        sourceState.memory sourceState.ffi), sourceState.clock) = sourceState := by
+    cases sourceState
+    rfl
+  simpa [panSemEvaluateRiscV64CodeState,
+    panSemEvaluateCodeStateWithMemoryModel, panSemBitVec64BytesInWord,
+    hsourcePost] using hgeneric
+
+theorem panToCrepPcCompileCorrectTickCodeStateRiscV64
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (sourceContext : PanValueFfiContext (RiscV.Word 64))
+    (sourcePrimitive : PanPrimitiveHandler (RiscV.Word 64))
+    (sourceHandler : PanValueStatefulFfiHandler (RiscV.Word 64) σ)
+    (targetHandler : CrepRuntimeFfiHandler (RiscV.Word 64) σ FfiFinalEvent)
+    (targetPrimitive : CrepPrimitiveHandler (RiscV.Word 64)) (fuel : Nat)
+    (sourceState : PanSemState (RiscV.Word 64) (FfiState σ))
+    (targetState : CrepRuntimeState (RiscV.Word 64) σ)
+    (hstate : stateRel sourceState targetState)
+    (hcode : codeRel context (panSemCodeAsLookup sourceState.code) targetState.code)
+    (hexcp : excpRel context.eids sourceState.exceptionShapes)
+    (hlocals : localsRel context sourceState.locals targetState.locals) :
+    panSemEvaluateRiscV64CodeState sourceContext sourcePrimitive sourceHandler
+      sourceState .tick =
+        (if sourceState.clock = 0 then
+          some (panValueFfiClockTimeout sourceState.globals sourceState.memory
+            sourceState.ffi sourceState.clock)
+        else some (.control (.normal sourceState.locals sourceState.globals
+          sourceState.memory sourceState.ffi), decPanClock sourceState.clock)) ∧
+    ∃ targetResult targetPost,
+      evalCrepRuntimeResult targetHandler targetPrimitive (fuel + 1) targetState
+        (compileCodeRelProg context .tick) = some (targetResult, targetPost) ∧
+      stateRel
+        (panSemCodeStateAfter sourceState
+          (if sourceState.clock = 0 then
+            panValueFfiClockTimeout sourceState.globals sourceState.memory
+              sourceState.ffi sourceState.clock
+          else (.control (.normal sourceState.locals sourceState.globals
+            sourceState.memory sourceState.ffi), decPanClock sourceState.clock)))
+        targetPost ∧
+      codeRel context
+        (panSemCodeAsLookup (panSemCodeStateAfter sourceState
+          (if sourceState.clock = 0 then
+            panValueFfiClockTimeout sourceState.globals sourceState.memory
+              sourceState.ffi sourceState.clock
+          else (.control (.normal sourceState.locals sourceState.globals
+            sourceState.memory sourceState.ffi), decPanClock sourceState.clock))).code)
+        targetPost.code ∧
+      excpRel context.eids
+        (panSemCodeStateAfter sourceState
+          (if sourceState.clock = 0 then
+            panValueFfiClockTimeout sourceState.globals sourceState.memory
+              sourceState.ffi sourceState.clock
+          else (.control (.normal sourceState.locals sourceState.globals
+            sourceState.memory sourceState.ffi), decPanClock sourceState.clock))).exceptionShapes ∧
+      (sourceState.clock = 0 → targetResult = .timeout) ∧
+      (sourceState.clock ≠ 0 → targetResult = .normal ∧
+        localsRel context
+          (panSemCodeStateAfter sourceState
+            (if sourceState.clock = 0 then
+              panValueFfiClockTimeout sourceState.globals sourceState.memory
+                sourceState.ffi sourceState.clock
+            else (.control (.normal sourceState.locals sourceState.globals
+              sourceState.memory sourceState.ffi), decPanClock sourceState.clock))).locals
+          targetPost.locals) := by
+  have hgeneric := panToCrepPcCompileCorrectTickCodeState
+    (context := context) (sourceModel := panSemBitVec64WordModel)
+    (sourceBytesInWord := panSemBitVec64BytesInWord)
+    sourceContext sourcePrimitive sourceHandler targetHandler targetPrimitive fuel
+    sourceState targetState hstate hcode hexcp hlocals
+  simpa [panSemEvaluateRiscV64CodeState,
+    panSemEvaluateCodeStateWithMemoryModel, panSemBitVec64BytesInWord] using hgeneric
+
+theorem panToCrepPcCompileCorrectAnnotCodeStateRiscV64
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (sourceContext : PanValueFfiContext (RiscV.Word 64))
+    (sourcePrimitive : PanPrimitiveHandler (RiscV.Word 64))
+    (sourceHandler : PanValueStatefulFfiHandler (RiscV.Word 64) σ)
+    (targetHandler : CrepRuntimeFfiHandler (RiscV.Word 64) σ FfiFinalEvent)
+    (targetPrimitive : CrepPrimitiveHandler (RiscV.Word 64)) (fuel : Nat)
+    (sourceState : PanSemState (RiscV.Word 64) (FfiState σ))
+    (targetState : CrepRuntimeState (RiscV.Word 64) σ) (tag text : String)
+    (hstate : stateRel sourceState targetState)
+    (hcode : codeRel context (panSemCodeAsLookup sourceState.code) targetState.code)
+    (hexcp : excpRel context.eids sourceState.exceptionShapes)
+    (hlocals : localsRel context sourceState.locals targetState.locals) :
+    panSemEvaluateRiscV64CodeState sourceContext sourcePrimitive sourceHandler
+      sourceState (.annot tag text) =
+        some (.control (.normal sourceState.locals sourceState.globals
+          sourceState.memory sourceState.ffi), sourceState.clock) ∧
+    ∃ targetResult targetPost,
+      evalCrepRuntimeResult targetHandler targetPrimitive (fuel + 1) targetState
+        (compileCodeRelProg context (.annot tag text)) = some (targetResult, targetPost) ∧
+      stateRel sourceState targetPost ∧
+      codeRel context (panSemCodeAsLookup sourceState.code) targetPost.code ∧
+      excpRel context.eids sourceState.exceptionShapes ∧ targetResult = .normal ∧
+      localsRel context sourceState.locals targetPost.locals := by
+  have hgeneric := panToCrepPcCompileCorrectAnnotCodeState
+    (context := context) (sourceModel := panSemBitVec64WordModel)
+    (sourceBytesInWord := panSemBitVec64BytesInWord)
+    sourceContext sourcePrimitive sourceHandler targetHandler targetPrimitive fuel
+    sourceState targetState tag text hstate hcode hexcp hlocals
+  have hsourcePost : panSemCodeStateAfter sourceState
+      (.control (.normal sourceState.locals sourceState.globals
+        sourceState.memory sourceState.ffi), sourceState.clock) = sourceState := by
+    cases sourceState
+    rfl
+  simpa [panSemEvaluateRiscV64CodeState,
+    panSemEvaluateCodeStateWithMemoryModel, panSemBitVec64BytesInWord,
+    hsourcePost] using hgeneric
 end Flapjack

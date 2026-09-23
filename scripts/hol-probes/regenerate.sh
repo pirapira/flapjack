@@ -87,6 +87,9 @@ run_probe word_add_carry_probeScript.sml word_add_carry_probe.out \
   "$cake_dir/compiler/backend"
 run_probe pan_crep_primop_probeScript.sml pan_crep_primop_probe.out \
   pan_valid crep_invalid "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_structs_opt_mmap_probeScript.sml pan_structs_opt_mmap_probe.out \
+  success pointwise "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
+  "$cake_dir/pancake/proofs"
 run_probe loop_to_word_probeScript.sml loop_to_word_probe.out \
   find_var_empty find_reg_imm_ctxt "$cake_dir/pancake/loop_to_wordScript.sml"
 # The get_stack_only probe observes the allocator driver's stack-only
@@ -97,7 +100,8 @@ run_probe get_stack_only_probeScript.sml get_stack_only_probe.out \
 run_probe pan_mem_load_probeScript.sml pan_mem_load_probe.out \
   one_hit named_suffix_blocked "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_sem_state_eval_probeScript.sml pan_sem_state_eval_probe.out \
-  word_load_hit word32_big "$cake_dir/pancake/semantics/panSemScript.sml"
+  word_load_hit op_add_fold_three op_sub_wrong_arity \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_shape_of_probeScript.sml pan_shape_of_probe.out \
   word nstruct "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_evaluate_decls_probeScript.sml pan_evaluate_decls_probe.out \
@@ -111,7 +115,7 @@ run_probe pan_fixed_load_probeScript.sml pan_fixed_load_probe.out \
 run_probe pan_fixed_store_probeScript.sml pan_fixed_store_probe.out \
   byte_store_hit store32_unaligned "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe crep_runtime_word_boundary_probeScript.sml crep_runtime_word_boundary_probe.out \
-  bytes64 word32_unaligned "$cake_dir/pancake/semantics/panSemScript.sml" \
+  bytes64 store32_outside "$cake_dir/pancake/semantics/panSemScript.sml" \
   "$cake_dir/pancake/semantics"
 run_probe pan_flat_store_probeScript.sml pan_flat_store_probe.out \
   store_hit stores_blocked "$cake_dir/pancake/semantics/panSemScript.sml"

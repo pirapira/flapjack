@@ -1,4 +1,5 @@
 import Flapjack.Pancake.Semantics.PanSem
+import Flapjack.Pancake.Semantics.PanSemStateEval
 import Flapjack.Test.PanValueFfiSemantics
 
 /-!
@@ -106,22 +107,28 @@ def sourceCallSelfCode : PanSemCodeMap Word64 :=
 def sourceDecCallSelfCode : PanSemCodeMap Word64 :=
   [("loop", ([], .decCall "nested" .one "loop" [] .skip, .one))]
 
+def sourceZeroClockCallCode : PanSemCodeMap Word64 :=
+  [("callee", ([], .skip, .one))]
+
+def sourceConstReturnCallCode : PanSemCodeMap Word64 :=
+  [("constant", ([], .return (.const (BitVec.ofNat 64 7)), .one))]
+
 def evaluateSourceCallId :=
-  panSemEvaluateCodeState statefulTestContext statefulTestPrimitive
-    statefulTestHandler (BitVec.ofNat 64 8)
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler
     (emptyPanSourceState 10 sourceIdCode)
     (.call none "id" [.const (BitVec.ofNat 64 7)] : Prog Word64)
 
 def evaluateSourceDecCallId :=
-  panSemEvaluateCodeState statefulTestContext statefulTestPrimitive
-    statefulTestHandler (BitVec.ofNat 64 8)
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler
     (emptyPanSourceState 10 sourceIdCode)
     (.decCall "answer" .one "id" [.const (BitVec.ofNat 64 7)]
       (.return (.var .local "answer")) : Prog Word64)
 
 def evaluateSourceNestedCall :=
-  panSemEvaluateCodeState statefulTestContext statefulTestPrimitive
-    statefulTestHandler (BitVec.ofNat 64 8)
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler
     (emptyPanSourceState 10 sourceRecursiveCode)
     (.call none "f" [] : Prog Word64)
 
@@ -132,16 +139,30 @@ def evaluateSourceNestedCallWithPostState :=
     (.call none "f" [] : Prog Word64)
 
 def evaluateSourceRecursiveCallTimeout :=
-  panSemEvaluateCodeState statefulTestContext statefulTestPrimitive
-    statefulTestHandler (BitVec.ofNat 64 8)
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler
     (emptyPanSourceState 2 sourceCallSelfCode)
     (.call none "loop" [] : Prog Word64)
 
 def evaluateSourceRecursiveDecCallTimeout :=
-  panSemEvaluateCodeState statefulTestContext statefulTestPrimitive
-    statefulTestHandler (BitVec.ofNat 64 8)
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler
     (emptyPanSourceState 2 sourceDecCallSelfCode)
     (.decCall "answer" .one "loop" [] .skip : Prog Word64)
+
+def evaluateSourceZeroClockCallTimeout :=
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler
+    ({ emptyPanSourceState 0 sourceZeroClockCallCode with
+        locals := fun name =>
+          if name == "x" then some (.word (BitVec.ofNat 64 9)) else none })
+    (.call none "callee" [] : Prog Word64)
+
+def evaluateSourceConstReturnCall :=
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler
+    (emptyPanSourceState 10 sourceConstReturnCallCode)
+    (.call none "constant" [] : Prog Word64)
 
 private def isSourceReturnedWord
     (result : Option (PanValueFfiClockResult Word64 Unit))
@@ -183,12 +204,25 @@ def observeSourceRecursiveCallTimeout :=
 def observeSourceRecursiveDecCallTimeout :=
   isSourceTimeoutAt evaluateSourceRecursiveDecCallTimeout 0
 
+def observeSourceZeroClockCallTimeout : Bool :=
+  match evaluateSourceZeroClockCallTimeout with
+  | some (.timeout locals _ _ _, 0) =>
+      match locals "x" with
+      | none => true
+      | some _ => false
+  | _ => false
+
+def observeSourceConstReturnCall := isSourceReturnedWord
+  evaluateSourceConstReturnCall (BitVec.ofNat 64 7) 9
+
 #guard observeSourceCodeCall
 #guard observeSourceCodeDecCall
 #guard observeSourceNestedCodeCall
 #guard observeSourceCodePreservedAfterRecursion
 #guard observeSourceRecursiveCallTimeout
 #guard observeSourceRecursiveDecCallTimeout
+#guard observeSourceZeroClockCallTimeout
+#guard observeSourceConstReturnCall
 
 /-! The fixed-width branches must go through the explicit source memory model.
     This is the stateful evaluator path corresponding to
@@ -447,6 +481,10 @@ def runChecks : IO Bool := do
     IO.println "FAIL recursive state-owned Call times out at source clock zero"
   if observeSourceRecursiveDecCallTimeout then IO.println "PASS recursive state-owned DecCall times out at source clock zero" else
     IO.println "FAIL recursive state-owned DecCall times out at source clock zero"
+  if observeSourceZeroClockCallTimeout then IO.println "PASS state-owned Call with a nonempty code map times out at zero clock and clears locals" else
+    IO.println "FAIL state-owned Call with a nonempty code map times out at zero clock and clears locals"
+  if observeSourceConstReturnCall then IO.println "PASS zero-argument state-owned Call returns its code-map word constant" else
+    IO.println "FAIL zero-argument state-owned Call returns its code-map word constant"
   if observeNestedRaise then IO.println "PASS evaluate nested structured raise" else
     IO.println "FAIL evaluate nested structured raise"
   if observeFixedLoads then IO.println "PASS evaluate fixed-width loads" else
@@ -469,6 +507,7 @@ def runChecks : IO Bool := do
     observeSourceCodeCall && observeSourceCodeDecCall && observeSourceNestedCodeCall &&
     observeSourceCodePreservedAfterRecursion &&
     observeSourceRecursiveCallTimeout && observeSourceRecursiveDecCallTimeout &&
+    observeSourceZeroClockCallTimeout && observeSourceConstReturnCall &&
     observeNestedRaise &&
     observeFixedLoads && observeFixedLoadDomainFailure &&
     observeExactProgramMemoryAccess && observeExactProgramDomainFailure &&

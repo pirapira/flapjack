@@ -72,6 +72,21 @@ val _ = print_eval "deccall_code_map_7"
            («id», ([(«x», panLang$One)],
              panLang$Return (panLang$Var panLang$Local «x»), panLang$One)))))``
 
+val _ = print_eval "call_zero_clock_timeout"
+  ``FST (panSem$evaluate
+      (panLang$Call NONE «callee» [],
+       (((ARB:((8),unit) panSem$state) with clock := 0) with
+         code := FEMPTY |+
+           («callee», ([], panLang$Skip, panLang$One)))))``
+
+val _ = print_eval "call_zero_arg_const_7"
+  ``FST (panSem$evaluate
+      (panLang$Call NONE «constant» [],
+       (((ARB:((8),unit) panSem$state) with clock := 10) with
+         code := FEMPTY |+
+           («constant», ([],
+             panLang$Return (panLang$Const (7w:8 word)), panLang$One)))))``
+
 val _ = print_eval "recursive_call_timeout"
   ``FST (panSem$evaluate
       (panLang$Call NONE «loop» [],

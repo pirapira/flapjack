@@ -6,7 +6,8 @@ Every Lean declaration that ports a HOL4 declaration carries
 and `AGENTS.md`).  This script checks, without running Lean, that
 
 * the cited file exists in the `cakeml` submodule, and
-* a HOL declaration with exactly that name is declared in that file
+* a HOL declaration with exactly that name is declared in that file; when
+  the name is duplicated, the tag must cite a matching source line
   (`Theorem`, `Triviality`, `Definition`, `Datatype`, `Inductive`,
   `CoInductive`, `Overload`, `Type`, or an SML-level `val name = ...`), and
 * the Lean module carrying the tag is transitively imported from the library
@@ -17,7 +18,7 @@ and `AGENTS.md`).  This script checks, without running Lean, that
 Usage:
   scripts/check-hol-refs.py            # check; exit 1 on any bad reference
   scripts/check-hol-refs.py --mapping  # also print a TSV mapping to stdout:
-                                       #   lean_file:line  lean_decl  hol_path  hol_name
+                                       #   lean_file:line  lean_decl  hol_path  hol_name[:line]
   scripts/check-hol-refs.py --orphans  # also list every non-test module that is
                                        # not reachable from Flapjack.lean (warning only)
 
@@ -34,7 +35,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 LEAN_DIRS = [ROOT / "Flapjack", ROOT / "Flapjack.lean"]
 
-ATTR_RE = re.compile(r'\bhol\s+"([^"]+)"\s+"([^"]+)"')
+ATTR_RE = re.compile(r'\bhol\s+"([^"]+)"\s+"([^"]+)"(?:\s+(\d+))?')
 DECL_RE = re.compile(
     r"^\s*(?:@\[[^\]]*\]\s*)?(?:private\s+|protected\s+|noncomputable\s+|partial\s+|unsafe\s+)*"
     r"(?:theorem|lemma|def|abbrev|instance|inductive|structure|class|opaque|axiom)\s+"
@@ -125,26 +126,45 @@ def hol_attribute_sites(lines: list[str]):
             continue
         attribute = " ".join(chunks)
         if "hol " in attribute:
-            for hol_path, hol_name in ATTR_RE.findall(attribute):
-                yield start, hol_path, hol_name
+            for hol_path, hol_name, hol_line in ATTR_RE.findall(attribute):
+                yield start, hol_path, hol_name, int(hol_line) if hol_line else None
         start = None
         chunks = []
 
 
-def hol_declares(path: Path, name: str, cache: dict[Path, set[str]]) -> bool:
+def hol_declaration_lines(
+    path: Path, cache: dict[Path, dict[str, list[int]]]
+) -> dict[str, list[int]]:
     if path not in cache:
-        names: set[str] = set()
+        names: dict[str, list[int]] = {}
         header = re.compile(
             r"^(?:%s)\s+([A-Za-z0-9_']+)" % "|".join(HOL_HEADER_KEYWORDS)
         )
         sml_val = re.compile(r"^val\s+([A-Za-z0-9_']+)\s*=")
         with path.open(encoding="utf-8", errors="replace") as handle:
-            for line in handle:
+            for number, line in enumerate(handle, start=1):
                 match = header.match(line) or sml_val.match(line)
                 if match:
-                    names.add(match.group(1))
+                    names.setdefault(match.group(1), []).append(number)
         cache[path] = names
-    return name in cache[path]
+    return cache[path]
+
+
+def hol_ref_error(
+    path: Path, name: str, line: int | None,
+    cache: dict[Path, dict[str, list[int]]]
+) -> str | None:
+    declared = hol_declaration_lines(path, cache).get(name, [])
+    if not declared:
+        return f"declares no `{name}`"
+    if line is None and len(declared) > 1:
+        return (
+            f"declares `{name}` at multiple lines {declared}; "
+            "add the source line to @[hol]"
+        )
+    if line is not None and line not in declared:
+        return f"declares `{name}` at {declared}, not at line {line}"
+    return None
 
 
 def main(argv: list[str]) -> int:
@@ -152,7 +172,7 @@ def main(argv: list[str]) -> int:
     want_orphans = "--orphans" in argv
     errors: list[str] = []
     mapping: list[tuple[str, str, str, str]] = []
-    cache: dict[Path, set[str]] = {}
+    cache: dict[Path, dict[str, list[int]]] = {}
     reachable = reachable_modules()
 
     if not (ROOT / "cakeml" / "pancake").is_dir():
@@ -168,7 +188,7 @@ def main(argv: list[str]) -> int:
         lines = lean_path.read_text(encoding="utf-8").splitlines()
         module = module_name(lean_path)
         module_reported = False
-        for number, hol_path, hol_name in hol_attribute_sites(lines):
+        for number, hol_path, hol_name, hol_line in hol_attribute_sites(lines):
             where = f"{rel}:{number}"
             lean_decl = find_lean_decl(lines, number - 1)
             if module not in reachable and not module_reported:
@@ -185,13 +205,15 @@ def main(argv: list[str]) -> int:
             if not target.is_file():
                 errors.append(f"{where}: HOL file does not exist: {hol_path}")
                 continue
-            if not hol_declares(target, hol_name, cache):
+            ref_error = hol_ref_error(target, hol_name, hol_line, cache)
+            if ref_error is not None:
                 errors.append(
-                    f"{where}: {hol_path} declares no `{hol_name}` "
+                    f"{where}: {hol_path} {ref_error} "
                     f"(cited by {lean_decl})"
                 )
                 continue
-            mapping.append((where, lean_decl, hol_path, hol_name))
+            mapped_name = f"{hol_name}:{hol_line}" if hol_line is not None else hol_name
+            mapping.append((where, lean_decl, hol_path, mapped_name))
 
     if want_mapping:
         for row in mapping:

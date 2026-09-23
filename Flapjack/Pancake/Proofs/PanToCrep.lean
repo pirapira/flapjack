@@ -524,7 +524,7 @@ def localsRel (context : PanToCrepProofContext α)
 
 /-- HOL `locals_rel_wf_shape`: every source local covered by the local-state
     relation is a well-formed value in the empty struct context. -/
-@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "locals_rel_wf_shape"]
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "locals_rel_wf_shape" 2345]
 theorem localsRelWfShape
     (context : PanToCrepProofContext α)
     (sourceLocals : FiniteMap String (PanValue α))

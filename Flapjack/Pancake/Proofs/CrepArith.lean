@@ -50,6 +50,40 @@ private theorem crepDest2Exp_holWordBits {width : Nat}
     crepDest2ExpFuel (width + 1) start (holWordBitsToBitVec word)
   exact crepDest2ExpFuel_holWordBits (width + 1) start word
 
+/-! This adapter law keeps the arithmetic pass natural under the canonical
+    representation of an arbitrary finite bit index. It is the remaining
+    bridge needed to lift the source-shaped evaluator proof from BitVec to
+    `Fin width → Bool`; it is Flapjack-only infrastructure. -/
+private theorem crepMulConst_holWordBits {width : Nat} [NeZero width]
+    (expression : CrepExp (Fin width → Bool)) (constant : Fin width → Bool) :
+    mapCrepExpWord holWordBitsToBitVec
+        (crepMulConst (fun value => bitVecToHolWordBits (BitVec.ofNat width value))
+          expression constant) =
+      crepMulConst (BitVec.ofNat width)
+        (mapCrepExpWord holWordBitsToBitVec expression)
+        (holWordBitsToBitVec constant) := by
+  unfold crepMulConst
+  have hzero : (constant == (0 : Fin width → Bool)) =
+      (holWordBitsToBitVec constant == (0 : BitVec width)) := by simp
+  have hone : (constant == (1 : Fin width → Bool)) =
+      (holWordBitsToBitVec constant == (1 : BitVec width)) := by simp
+  rw [hzero, hone]
+  by_cases hzero : holWordBitsToBitVec constant == 0
+  · have hzeroEq : holWordBitsToBitVec constant = 0 := of_decide_eq_true hzero
+    simp [hzeroEq, mapCrepExpWord]
+  · by_cases hone : holWordBitsToBitVec constant == 1
+    · have honeEq : holWordBitsToBitVec constant = 1 := of_decide_eq_true hone
+      simp [honeEq, NeZero.ne width]
+    · simp only [if_neg hzero, if_neg hone]
+      rw [crepDest2Exp_holWordBits]
+      cases crepDest2Exp 0 (holWordBitsToBitVec constant) with
+      | none => simp [mapCrepExpWord]
+      | some exponent =>
+          simp only [mapCrepExpWord]
+          exact congrArg (fun word => CrepExp.shift Shift.lsl
+            (mapCrepExpWord holWordBitsToBitVec expression) (CrepExp.const word))
+            (holWordBitsToBitVec_bitVecToHolWordBits _)
+
 /-- CakeML's `dest_const_thm`: a successful destination test identifies the
     expression as exactly that constant. -/
 @[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "dest_const_thm"]

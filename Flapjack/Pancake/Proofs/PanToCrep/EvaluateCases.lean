@@ -2222,6 +2222,73 @@ theorem crepRuntimeExpHdlReturnOneWord
   simp [evalCrepRuntimeExps, evalCrepRuntimeExp, updateCrepRuntimeLocal,
     panTheWord, clearCrepRuntimeLocals, fixCrepRuntimeClock]
 
+/-! Derive the production Crep callee lookup and parameter locals from the
+state-owned source/target code maps. The argument words are arbitrary; their
+length must match the flattened source parameter shapes. The HOL compiled
+argument evaluation bridge that supplies those words remains a separate
+obligation in the general Call case. -/
+private theorem eraseDups_eq_self_of_nodup (values : List Nat)
+    (hnodup : values.Nodup) : values.eraseDups = values := by
+  induction values with
+  | nil => rfl
+  | cons head tail ih =>
+      have ⟨hhead, htail⟩ := List.nodup_cons.mp hnodup
+      rw [List.eraseDups_cons]
+      have hfilter : tail.filter (fun value => !(value == head)) = tail := by
+        apply List.filter_eq_self.mpr
+        intro value hvalue
+        have hne : value ≠ head := by
+          intro heq
+          subst value
+          exact hhead hvalue
+        simp [hne]
+      rw [hfilter, ih htail]
+
+theorem lookupCrepRuntimeCode_ofCodeRel
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (function : String)
+    (parameters : List (String × Shape))
+    (sourceBody : Prog (RiscV.Word 64)) (returnShape : Shape)
+    (argumentWords : List (RiscV.Word 64))
+    (hcode : codeRel context (panSemCodeAsLookup source.code) target.code)
+    (hentry : panSemCodeLookup source.code function =
+      some (parameters, sourceBody, returnShape))
+    (hargumentLength :
+      Shape.shapeSize (.comb (parameters.map Prod.snd)) = argumentWords.length) :
+    ∃ targetLocals : Nat → Option (PanWordLab (RiscV.Word 64)),
+      lookupCrepRuntimeCode function argumentWords target.code =
+        some (compileCodeRelProg
+          (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+            (parameters.map Prod.snd)
+            (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))))
+          sourceBody, targetLocals) ∧
+      targetLocals = ((List.range
+        (Shape.shapeSize (.comb (parameters.map Prod.snd)))).zip argumentWords).foldl
+          (fun locals (name, value) =>
+            updateCrepRuntimeLocal locals name (.word value))
+            (fun _ => none : Nat → Option (PanWordLab (RiscV.Word 64))) := by
+  let names := List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))
+  have hsourceLookup : FLOOKUP (panSemCodeAsLookup source.code) function =
+      some (parameters, sourceBody, returnShape) := by
+    change panSemCodeLookup source.code function = _
+    exact hentry
+  rcases codeRelImp context (panSemCodeAsLookup source.code) target.code hcode
+      function parameters sourceBody returnShape hsourceLookup with
+    ⟨_, _, htargetEntry⟩
+  have hnamesLength : names.length = argumentWords.length := by
+    simpa [names] using hargumentLength
+  have hnamesEraseDups : names.eraseDups = names :=
+    eraseDups_eq_self_of_nodup names (by simp [names, List.nodup_range])
+  refine ⟨(names.zip argumentWords).foldl
+      (fun locals (name, value) =>
+        updateCrepRuntimeLocal locals name (.word value))
+      (fun _ => none : Nat → Option (PanWordLab (RiscV.Word 64))), ?_, rfl⟩
+  unfold lookupCrepRuntimeCode
+  rw [htargetEntry]
+  simp [names, hnamesLength, hnamesEraseDups, assignCrepRuntimeLocals]
+
 /-! Compose the actual target exp_hdl/Return execution with the generic Crep
 Call exception-dispatch induction step. The callee lookup and body execution
 remain explicit inputs so the enclosing state/code relation proof can derive
@@ -2399,7 +2466,7 @@ theorem panToCrepPcCompileCorrectCallCatchRaiseOneWordCodeStateRiscV64
     exact hentry
   have hcodeEntry := codeRelImp context (panSemCodeAsLookup sourceState.code)
     targetState.code hcode function [] (.raise exception (.const value)) .one hsourceCode
-  rcases hcodeEntry with ⟨_, hfunction, htargetEntry⟩
+  rcases hcodeEntry with ⟨_, hfunction, _⟩
   let functionContext := ctxtFc context.funcs context.eids [] [] []
   let targetBody : CrepProg (RiscV.Word 64) :=
     .seq (.dec 1 (.const value)
@@ -2410,13 +2477,18 @@ theorem panToCrepPcCompileCorrectCallCatchRaiseOneWordCodeStateRiscV64
     simp [functionContext, targetBody, compileCodeRelProg, compileProgHOL,
       compileExpHOL, freshNamesHOL, ctxtFc, maxList, hcontextException,
       nestedDecs, crepNestedSeq, storeGlobals]
-  have htargetEntry' : FLOOKUP targetState.code function = some ([], targetBody) := by
-    simpa [Shape.shapeSize, functionContext, maxList, hcompiledBody] using htargetEntry
-  have htargetLookup : lookupCrepRuntimeCode function [] targetState.code =
+  have hemptySlots :
+      List.range (Shape.shapeSize (.comb ([] : List Shape))) = [] := by
+    simp [Shape.shapeSize]
+  obtain ⟨targetCalleeLocals, htargetLookup, htargetCalleeLocalsEq⟩ :=
+    lookupCrepRuntimeCode_ofCodeRel context sourceState targetState function []
+      (.raise exception (.const value)) .one [] hcode hentry (by simp [Shape.shapeSize])
+  have htargetLookup' : lookupCrepRuntimeCode function [] targetState.code =
       some (targetBody, fun _ => none) := by
-    unfold lookupCrepRuntimeCode
-    rw [htargetEntry']
-    simp [assignCrepRuntimeLocals]
+    have hlocals : targetCalleeLocals = (fun _ => none) := by
+      simpa [hemptySlots, Shape.shapeSize] using htargetCalleeLocalsEq
+    simpa [hemptySlots, Shape.shapeSize, functionContext, hcompiledBody, hlocals]
+      using htargetLookup
 
   let returnSlot := context.vmax + 1
   have hfunctionLookup : context.funcs function = some ([], Shape.one) := by
@@ -2466,7 +2538,7 @@ theorem panToCrepPcCompileCorrectCallCatchRaiseOneWordCodeStateRiscV64
   have htargetCall := evalCrepRuntimeCall_catchesRaisedOneWordHandler context
     targetHandler targetPrimitive targetCaller [returnSlot] exceptionCode
     function handlerVariable slot [] [] targetBody (fun _ => none) calleeState
-    value (by simp [evalCrepRuntimeExps]) htargetLookup hcallInfo
+    value (by simp [evalCrepRuntimeExps]) htargetLookup' hcallInfo
     (by simpa [targetCaller] using hclock) hcalleeBody hvariable hcallerSlot
     (by simp [calleeState, updateCrepRuntimeGlobal])
   have htargetCall' : evalCrepRuntimeCall targetHandler targetPrimitive 5

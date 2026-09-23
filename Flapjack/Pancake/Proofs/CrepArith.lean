@@ -653,5 +653,26 @@ theorem crepSimpExpCorrect1BitVec {n : Nat} [NeZero n] {σ : Type}
           rw [evalCrepHolExpWordLab]
           rw [← evalCrepRuntimeExp_toRuntime_eq]
 
+/-! Flapjack-only all-width instance of the public HOL `simp_exp_correct`
+    conclusion. It inherits the arbitrary-carrier mismatch documented above
+    and is not tagged as a HOL port. -/
+theorem crepSimpExpCorrectBitVec {n : Nat} [NeZero n] {σ : Type}
+    (f : (List Nat × CrepProg (RiscV.Word n)) →
+      (List Nat × CrepProg (RiscV.Word n)))
+    (state : CrepHolState (RiscV.Word n) σ)
+    (expression : CrepExp (RiscV.Word n)) (value : RiscV.Word n)
+    (h : evalCrepHolExpWordLab state expression = some (.word value)) :
+    evalCrepHolExpWordLab (crepArithHolMapCode f state)
+      (crepSimpExp (BitVec.ofNat n) expression) = some (.word value) := by
+  have hsuccess : evalCrepHolExpWordLab state expression ≠ none := by
+    rw [h]
+    simp
+  calc
+    evalCrepHolExpWordLab (crepArithHolMapCode f state)
+        (crepSimpExp (BitVec.ofNat n) expression) =
+        evalCrepHolExpWordLab state expression :=
+          crepSimpExpCorrect1BitVec f state expression hsuccess
+    _ = some (.word value) := h
+
 
 end Flapjack

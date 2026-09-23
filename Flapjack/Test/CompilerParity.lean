@@ -85,6 +85,7 @@ import Flapjack.Test.PanValueEvaluatorStability
 import Flapjack.Test.PanToCrepMaxListParity
 import Flapjack.Test.PanToCrepRelationsParity
 import Flapjack.Test.PanToCrepEvaluatorBoundary
+import Flapjack.Test.PanToCrepUtilitiesParity
 import Flapjack.Test.PanToCrepCodeRelParity
 import Flapjack.Test.PanToCrepStateRelParity
 import Flapjack.Test.PanHProgExtCallParity

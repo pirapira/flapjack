@@ -30,6 +30,25 @@ protected theorem actualProof : True := by trivial
         self.assertEqual(names, {"actualProof"})
 
 
+class ReviewedSourceComparisonTest(unittest.TestCase):
+    def test_exact_pan_to_crep_utility_ports_are_in_review_inventory(self):
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        expected = {
+            ("Flapjack/Pancake/Proofs/PanToCrep.lean", "mod_eq_of_lt_eq"),
+            ("Flapjack/Pancake/Proofs/PanToCrep.lean", "option_ne_none_iff_exists"),
+            ("Flapjack/Pancake/Proofs/PanToCrep.lean", "prod_mk_pair_eq_id"),
+        }
+        for key in expected:
+            with self.subTest(key=key):
+                self.assertEqual(inventory[key]["statement_status"], "reviewed_exact")
+                self.assertEqual(
+                    inventory[key]["reviewer"], "Codex (source comparison)"
+                )
+
+
 class ValidateInventoryTest(unittest.TestCase):
     path = "Flapjack/Pancake/Proofs/Example.lean"
 

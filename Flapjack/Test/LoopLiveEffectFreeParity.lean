@@ -14,14 +14,17 @@ wrapper) on the current production entrypoint `compileFlapjackEntryCake`.
 
 Scope: the test exercises only the *effect-free* fragment of the Loop machine.
 The tested programs contain no `Primitive`, `Arith`, `Store`, `SetGlobal`,
-`Load32`, `LoadByte`, `Store32`, `StoreByte`, `ShMem`, or `Ffi` nodes, so the
-corresponding `LoopEvaluateHooks` fields are never invoked.  The three
-operations without a faithful Lean port yet (`loop_primop`, `sh_mem_op`, and
-the ExtCall `call_FFI` boundary, beads `flapjack-s6a.3.1/.2/.3`) are supplied
-as total functions that yield `Error`; the successful `[7]` result therefore
-also witnesses that the execution path never reaches them.  `effectFree`
-asserts this structurally over the compiled `LoopProg`.  This test does NOT
-claim `s6a.3` complete and does not provide a production adapter.
+`Load32`, `LoadByte`, `Store32`, `StoreByte`, `ShMem`, or `Ffi` nodes and no
+`.call`, so the corresponding `LoopEvaluateHooks` fields are never invoked.
+The operations without a faithful Lean port yet (`loop_primop`, `sh_mem_op`,
+and the ExtCall `call_FFI` boundary, beads `flapjack-s6a.3.1/.2/.3`) are
+supplied as total functions that yield `Error`; `arith` and `setGlobal` are
+no-ops.  The successful `[7]` result therefore also witnesses that the
+execution path never reaches them.  `effectFree` asserts this structurally
+over the compiled `LoopProg`, rejecting every `.call`.  The `eval` hook is a
+word-only fixture bridge (`machineToLoopState` drops `.loc` locals/memory); it
+is not a faithful general `loopSem$eval` adapter and is not exposed as
+production code.  This test does NOT claim `s6a.3` complete.
 
 The reference is the HOL loop-live regression: with the incoming live set at
 the loop cutset, the pre-loop assignment `out = 7` stays live and the program
@@ -43,23 +46,51 @@ def wideConstantSource : String :=
 /-- Structural witness that a compiled program stays in the effect-free
     fragment, so the unported hooks (`primitive`, `arith`, `store`,
     `setGlobal`, `load32`, `loadByte`, `store32`, `storeByte`, `shMem`, `ffi`)
-    are never invoked. -/
-partial def effectFree : LoopProg Word → Bool
+    are never invoked.  A `.call` is accepted only when its direct target
+    resolves in the code table to an effect-free body (recursively, with a
+    visited set for cycles) and its handler bodies are effect-free; indirect
+    calls (`target = none`) are rejected because the callee cannot be checked. -/
+partial def effectFreeIn (code : LoopCode Word) (visited : List Nat) :
+    LoopProg Word → Bool
   | .primitive .. | .arith .. | .store .. | .setGlobal .. | .load32 ..
   | .loadByte .. | .store32 .. | .storeByte .. | .shMem .. | .ffi .. => false
-  | .seq first second => effectFree first && effectFree second
+  | .seq first second => effectFreeIn code visited first && effectFreeIn code visited second
   | .ite _ _ _ thenBranch elseBranch _ =>
-      effectFree thenBranch && effectFree elseBranch
-  | .loop _ body _ => effectFree body
-  | .mark body => effectFree body
-  | .call _ _ _ handler => match handler with
-      | some (_, body, exceptionHandler, _) =>
-          effectFree body && effectFree exceptionHandler
-      | none => true
+      effectFreeIn code visited thenBranch && effectFreeIn code visited elseBranch
+  | .loop _ body _ => effectFreeIn code visited body
+  | .mark body => effectFreeIn code visited body
+  | .call _ target _ handler =>
+      let calleeOk :=
+        match target with
+        | none => false
+        | some label =>
+            if visited.contains label then true
+            else match lookupLoopFunction label code with
+              | none => true
+              | some (_, body) => effectFreeIn code (label :: visited) body
+      let handlerOk :=
+        match handler with
+        | none => true
+        | some (_, body, exceptionHandler, _) =>
+            effectFreeIn code visited body &&
+              effectFreeIn code visited exceptionHandler
+      calleeOk && handlerOk
   | _ => true
 
-/-- Bridge the machine state into the source-shaped `LoopState` used by the
-    reviewed `evalLoopExpSource` expression evaluator. -/
+/-- Effect-free check for a whole compiled function table plus entry body. -/
+def effectFree (code : LoopCode Word) (body : LoopProg Word) : Bool :=
+  effectFreeIn code [] body
+
+/-- Word-only fixture bridge from the machine state into the source-shaped
+    `LoopState` used by the reviewed `evalLoopExpSource` expression evaluator.
+
+    This is NOT a faithful general `loopSem$eval` adapter and is not exposed as
+    production code: a `.loc`-valued local or memory cell is dropped to `none`
+    (only `.word` payloads survive).  A path that read a location-valued
+    local/memory would therefore evaluate to `none`, fail the machine step, and
+    could not produce the asserted successful `[7]` result; the exact-result
+    guards below rule out such a path for these fixtures.  `globals` keeps the
+    location constructor because `evalLoopExpSource` handles `.loc` there. -/
 def machineToLoopState (state : LoopMachineState Word F) : LoopState Word :=
   { locals := fun name =>
       (state.locals name).bind fun value => match value with
@@ -74,8 +105,10 @@ def machineToLoopState (state : LoopMachineState Word F) : LoopState Word :=
         | .word word => some word
         | .loc _ _ => none }
 
-/-- Faithful `eval` hook: `evalLoopExpSource` over the bridged state, wrapped
-    back into a `Word` cell as in `loopSem$eval`. -/
+/-- Word-only fixture `eval` hook: `evalLoopExpSource` over the bridged state,
+    wrapped back into a `Word` cell as in `loopSem$eval`.  Because
+    `machineToLoopState` drops `.loc` locals/memory, this is a fixture adapter
+    for word-valued programs only, not a faithful general `loopSem$eval`. -/
 def evalHook (state : LoopMachineState Word F) (expression : LoopExp Word) :
     Option (LoopValue Word) :=
   (evalLoopExpSource (machineToLoopState state) state.baseAddr state.topAddr
@@ -88,10 +121,11 @@ def compareHook (operator : Cmp) (left right : LoopValue Word) : Bool :=
       (evalLoopCondition operator leftWord rightWord).getD false
   | _, _ => false
 
-/-- Hooks for the effect-free fragment.  `primitive`, `arith`, `store`,
-    `setGlobal`, `load32`, `loadByte`, `store32`, `storeByte`, `shMem`, and
-    `ffi` are deliberately total fallbacks that return `Error`; the programs
-    under test never invoke them (see `effectFree`). -/
+/-- Hooks for the effect-free fragment.  `primitive`, `store`, `load32`,
+    `loadByte`, `store32`, `storeByte`, `shMem`, and `ffi` are deliberately
+    total fallbacks that yield `Error`; `arith` and `setGlobal` are no-ops that
+    return the state unchanged.  The programs under test never invoke any of
+    these fields (see `effectFree`). -/
 def effectFreeHooks : LoopEvaluateHooks Word Unit where
   eval := evalHook
   primitive := fun _ _ => none
@@ -141,8 +175,9 @@ def loopRun (source : String) : Option (List Int) :=
               | _ => none
           | [] => none
 
-/-- The compiled `main` bodies of both fixtures, for the structural check. -/
-def mainBodies (source : String) : Option (LoopProg Word) :=
+/-- The compiled function table and first (`main`) body of a fixture, for the
+    structural check. -/
+def mainBodies (source : String) : Option (LoopCode Word × LoopProg Word) :=
   match Parser.parseTopDecs (BitVec.ofInt 64) source with
   | Except.error _ => none
   | Except.ok declarations =>
@@ -151,16 +186,19 @@ def mainBodies (source : String) : Option (LoopProg Word) :=
           (panTargetDeclarationsWithDefaultMain declarations) with
       | none => none
       | some pipeline => match pipeline.loop with
-          | (_, _, body) :: _ => some body
+          | (_, _, body) :: _ => some (pipeline.loop, body)
           | [] => none
+
+def effectFreeProgram (source : String) : Bool :=
+  match mainBodies source with
+  | some (code, body) => effectFree code body
+  | none => false
 
 def outSevenResult : Option (List Int) := loopRun outSevenSource
 def wideConstantResult : Option (List Int) := loopRun wideConstantSource
 
-def outSevenEffectFree : Bool :=
-  (mainBodies outSevenSource).any effectFree
-def wideConstantEffectFree : Bool :=
-  (mainBodies wideConstantSource).any effectFree
+def outSevenEffectFree : Bool := effectFreeProgram outSevenSource
+def wideConstantEffectFree : Bool := effectFreeProgram wideConstantSource
 
 def outSevenMatches : Bool := outSevenResult == some [7]
 def wideConstantMatches : Bool := wideConstantResult == some [1073741832]

@@ -43,6 +43,14 @@ comments do not count as theorem entries or tests. Correctness claims are descri
 | `semantics/loopSemScript.sml` | `Flapjack/Pancake/Semantics/LoopSem.lean` |
 | `proofs/pan_simpProofScript.sml` | `Flapjack/Pancake/Proofs/PanSimp.lean`, `PanSimp/Evaluate.lean` |
 
+`CrepSem/Eval.lean` has a direct `Var` equation matching HOL
+`crepSem.eval`'s local lookup, used by the tagged
+`lookup_locals_eq_map_vars` theorem. The module's whole evaluator is not tagged
+as `eval_def`: its runtime memory is partial, while HOL stores a total memory
+function with a separate domain. The local-map theorem evaluates only `Var`
+expressions and does not use the legacy `evalCrepFullExpState` compatibility
+evaluator.
+
 The exact `compile_exp_not_mem_load_glob` port is in
 `Flapjack/Pancake/Proofs/PanToCrep.lean`. It keeps the HOL `state_rel`,
 `code_rel`, and `locals_rel` premises and states absence over the nested Crepe

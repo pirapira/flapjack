@@ -3836,11 +3836,12 @@ now indexed by the actual source evaluator result, projected through
 `panSemCodeStateAfter`; the source run uses the state-owned code map and the
 RISC-V state-derived memory inputs. It derives that run from the source
 callee-body and handler-body premises. The premise `hcalleeTargetBodyIH`
-assumes the target callee-body evaluator run and its target state, code,
-exception, and payload-global facts needed by `exp_hdl`; this theorem does not
-derive that target callee simulation. The relation-aware handler IH also
-supplies its target result and post-state relations. Both are still induction
-premises, so this is a Call-case composition step, not the complete
+assumes the target callee-body evaluator run and its post-state, code,
+exception, and payload-global facts needed by `exp_hdl`; this theorem supplies
+the exact `locals_rel` at callee entry from the two production code lookups.
+The relation-aware handler IH also supplies its target result and post-state
+relations. The recursive body simulations remain induction premises, so this
+is a Call-case composition step, not the complete
 `pc_compile_correct[Call_Ret_Exception]` theorem. -/
 theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
     (sourceContext : PanValueFfiContext (RiscV.Word 64))
@@ -3944,6 +3945,11 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
             (parameters.map Prod.fst) (parameters.map Prod.snd)
             (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))))
           sourceBody, targetLocals) →
+      localsRel
+        (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+          (parameters.map Prod.snd)
+          (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))))
+        calleeLocals targetLocals →
       evalCrepRuntimeProg handler primitive 4
         (decCrepClock { caller with locals := targetLocals })
         (compileCodeRelProg
@@ -4039,12 +4045,14 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
     { { { { source with globals := calleeGlobals } with memory := calleeMemory }
       with ffi := calleeFfi }
     with clock := min (decPanClock source.clock) calleeClock }
-  obtain ⟨targetLocals, _htargetArgs, htargetLookup, htargetMap⟩ :=
-    lookupCrepRuntimeCode_ofCodeRel_compiledArgs context source caller function
-      parameters sourceBody returnShape expressions arguments hstate hcode hlocals
-      hsupported hsourceArgs hentry hargumentLength
+  obtain ⟨targetLocals, htargetLookup, hcalleeEntryLocals⟩ :=
+    lookupCrepRuntimeCode_callEntryLocalsRel context source caller function
+      parameters sourceBody returnShape expressions arguments calleeLocals
+      hsupported hstate hcode hlocals hsourceArgs hentry hsourceCallee
+      hargumentLength
   obtain ⟨_hcalleeTargetRun, hcalleeState, hcalleeCode, hexcp, hglobal⟩ :=
     hcalleeTargetBodyIH hsourceCalleeBody targetLocals htargetLookup
+      hcalleeEntryLocals
   obtain ⟨htarget, hstatePost, hcodePost, hexcpPost, hlocalsPost⟩ :=
     evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody_ofCodeRelArgs_postRelations
       context handler primitive source sourceAfterCallee
@@ -4053,8 +4061,12 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
       expressions arguments handlerBody calleeState handlerResult hstate hcode
       hcalleeState hcalleeCode hexcp hlocals hsource hvariable hslot hglobal
       hsupported hsourceArgs hentry hargumentLength hinfoValid hclock hmatch
-      (fun targetLocals hlookup =>
-        (hcalleeTargetBodyIH hsourceCalleeBody targetLocals hlookup).1)
+      (fun targetLocals' hlookup' => by
+        have hsame : targetLocals' = targetLocals := by
+          have htuple := Option.some.inj (hlookup'.symm.trans htargetLookup)
+          exact congrArg Prod.snd htuple
+        exact (hcalleeTargetBodyIH hsourceCalleeBody targetLocals' hlookup'
+          (by simpa [hsame] using hcalleeEntryLocals)).1)
       (fun payloadState hpayload hpayloadState hpayloadCode hpayloadExcp
           hpayloadLocals =>
         hhandlerIH hsourceHandlerBodyRun hsourceExpressions hsourceExceptionCode

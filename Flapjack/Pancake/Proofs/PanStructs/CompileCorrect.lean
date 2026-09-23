@@ -181,6 +181,19 @@ def panStructEveryValueShapeWf [BEq String] (structs : StructContext)
     (values : VarName → Option (PanValue α)) : Prop :=
   ∀ name value, values name = some value → panStructValueShapeWf structs value
 
+/-- Function-view adapters of HOL's `FEVERY` premises for the Bool-valued
+    PanStruct predicates. A `PanStructFiniteState` supplies the exact finite
+    support and lookup relation for these production lookup functions. -/
+def panStructEveryValueFieldsOkBool [BEq String]
+    (structs : StructContext) (values : VarName → Option (PanValue α)) : Prop :=
+  ∀ name value, values name = some value →
+    panStructValueFieldsOkBool structs value = true
+
+def panStructEveryValueShapeWfBool [BEq String]
+    (structs : StructContext) (values : VarName → Option (PanValue α)) : Prop :=
+  ∀ name value, values name = some value →
+    panIsWfShapeValueBool structs value = true
+
 /-- Pointwise view of the HOL equation
     `alist_to_fmap ctxt = FMAP_MAP2 (shape_of o SND) values`. This equality
     checks both lookup values and finite support. -/
@@ -547,6 +560,75 @@ theorem panStructFiniteMapSkipEvaluationProjection
     panStructConvertFiniteState, panStructConvertState, panStructConvertClockResult,
     panStructConvertClockOutcome, panStructConvertControlResult]
   constructor <;> rfl
+
+/-- Full Skip case of HOL `compile_correct`, specialized to the production
+    `PanSemState` evaluator with the finite-map view carried by
+    `PanStructFiniteState`. All HOL postconditions are included: converted
+    evaluation/state, local and global field validity, the global shape map,
+    the continuation-local shape map, and the empty result-value obligations.
+    The context premise is the HOL fields projection; the state wrapper
+    provides finite support without an extra premise. This case stays untagged
+    because HOL has a single quantified theorem rather than a named Skip case,
+    and Lean represents HOL `(NONE, state)` as a normal clock outcome. -/
+theorem panStructCompileCorrectSkipCase
+    [BEq String] [LawfulBEq String] [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : StructPassContext)
+    (evaluationContext : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (state : PanStructFiniteState α (FfiState σ))
+    (hsourceSkip : panSemEvaluateCodeStateWithPostState evaluationContext
+      primitive handler bytesInWord state.runtime (.skip : Prog α) =
+        some ((.control (.normal state.runtime.locals state.runtime.globals
+          state.runtime.memory state.runtime.ffi), state.runtime.clock), state.runtime))
+    (_hstructs : panStructContextShapeView context.structs =
+      panStructContextShapeView state.runtime.structs)
+    (hlocalsFields : panStructEveryValueFieldsOkBool
+      state.runtime.structs state.runtime.locals)
+    (hglobalsFields : panStructEveryValueFieldsOkBool
+      state.runtime.structs state.runtime.globals)
+    (_hlocalsShape : panStructEveryValueShapeWfBool
+      state.runtime.structs state.runtime.locals)
+    (_hglobalsShape : panStructEveryValueShapeWfBool
+      state.runtime.structs state.runtime.globals)
+    (_hstructInfos : structInfosOk state.runtime.structs)
+    (hlocalsMap : panStructShapeMapEq context.locals state.runtime.locals)
+    (hglobalsMap : panStructShapeMapEq context.globals state.runtime.globals) :
+    panSemEvaluateCodeStateWithPostState evaluationContext primitive handler
+        bytesInWord (panStructConvertFiniteState context state).runtime
+        (structCompileProg context (.skip : Prog α)) =
+      some ((.control (.normal
+        (panStructConvertFiniteState context state).runtime.locals
+        (panStructConvertFiniteState context state).runtime.globals
+        (panStructConvertFiniteState context state).runtime.memory
+        (panStructConvertFiniteState context state).runtime.ffi),
+        (panStructConvertFiniteState context state).runtime.clock),
+        (panStructConvertFiniteState context state).runtime) ∧
+    panStructEveryValueFieldsOkBool state.runtime.structs state.runtime.locals ∧
+    panStructEveryValueFieldsOkBool state.runtime.structs state.runtime.globals ∧
+    panStructShapeMapEq context.globals state.runtime.globals ∧
+    panStructShapeMapEq context.locals state.runtime.locals ∧
+    panStructValuesFieldsOkBool (α := α) state.runtime.structs [] = true ∧
+    panIsWfShapeValuesBool (α := α) state.runtime.structs [] = true := by
+  have hprojection := panStructFiniteMapSkipEvaluationProjection context
+    evaluationContext primitive handler bytesInWord state
+  rw [hsourceSkip] at hprojection
+  have htarget :
+      panSemEvaluateCodeStateWithPostState evaluationContext primitive handler
+          bytesInWord (panStructConvertFiniteState context state).runtime
+          (structCompileProg context (.skip : Prog α)) =
+        some ((.control (.normal
+          (panStructConvertFiniteState context state).runtime.locals
+          (panStructConvertFiniteState context state).runtime.globals
+          (panStructConvertFiniteState context state).runtime.memory
+          (panStructConvertFiniteState context state).runtime.ffi),
+          (panStructConvertFiniteState context state).runtime.clock),
+          (panStructConvertFiniteState context state).runtime) := by
+    exact hprojection
+  exact ⟨htarget, hlocalsFields, hglobalsFields, hglobalsMap, hlocalsMap,
+    by simp [panStructValuesFieldsOkBool], by simp [panIsWfShapeValuesBool]⟩
 
 @[simp] theorem panStructCompileTick_eq_tick [BEq String]
     (context : StructPassContext) :

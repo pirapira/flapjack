@@ -1,4 +1,5 @@
 import Flapjack.HolRef
+import Flapjack.Pancake.Semantics.PanCommonProps
 import Flapjack.Pancake.PanGlobals
 import Flapjack.PanProgramSemantics
 import Flapjack.Pancake.PanSimp
@@ -431,40 +432,12 @@ theorem list_mapM_map {α β γ : Type} (f : α → Option β) (xs : List α)
     rw [show (fun x => (f x).map g) = (Option.map g ∘ f) from rfl]
     rw [← Option.map_bind, hpoint]
 
-/-- Cake's `opt_mmap_eq_some` (`pan_commonPropsScript.sml:28`): a successful
-    `OPT_MMAP` is exactly a pointwise `SOME`-mapping. -/
+/-- Compatibility name for the exact HOL `opt_mmap_eq_some` theorem now in
+    `PanCommonProps`; retained for existing PanSimp consumers. -/
 theorem list_mapM_eq_some_map_some {α β : Type} (f : α → Option β)
     (xs : List α) (ys : List β) :
-    xs.mapM f = some ys ↔ xs.map f = ys.map some := by
-  constructor
-  · intro h
-    obtain ⟨hlen, hpoint⟩ := (list_mapM_eq_some_iff f xs ys).mp h
-    apply List.ext_getElem?
-    intro n
-    by_cases hn : n < ys.length
-    · have hb := hpoint n hn
-      have hyn : ys[n]? = some ys[n] := List.getElem?_eq_getElem hn
-      rw [hyn] at hb
-      rw [List.getElem?_map, List.getElem?_map, hyn]
-      cases hx : xs[n]? with
-      | none =>
-          rw [hx, Option.bind_none] at hb
-          exact absurd hb (by simp)
-      | some a =>
-          rw [hx, Option.bind_some] at hb
-          simp only [Option.map_some]
-          rw [hb]
-    · rw [List.getElem?_eq_none (by rw [List.length_map]; omega),
-          List.getElem?_eq_none (by rw [List.length_map]; omega)]
-  · intro h
-    have hmapid : xs.mapM f = (xs.map f).mapM id := by
-      rw [List.mapM_map]
-      congr 1
-    have hmapid' : (ys.map some).mapM id = ys.mapM some := by
-      rw [List.mapM_map]
-      congr 1
-    rw [hmapid, h, hmapid']
-    simpa using (List.mapM_pure (m := Option) (l := ys) (f := id))
+    xs.mapM f = some ys ↔ xs.map f = ys.map some :=
+  optMmapEqSome xs f ys
 
 /-- Cake's `map_some_the_map` (`pan_commonPropsScript.sml:615`): if mapping `f`
     over `xs` yields `ys` tagged with `some`, then recovering the payload with a

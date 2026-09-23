@@ -1438,7 +1438,15 @@ private theorem crepEvalCodeMapIrrel {α : Type} [BEq α] [OfNat α 0] [OfNat α
     order used by `n2w`; a Lean fixture shows that permuting the enumeration
     changes the word denoted by 1. No theorem currently identifies the
     selected encoding with HOL's canonical `dimindex`/index map, so this is
-    not yet an unrestricted correspondence for HOL's polymorphic word type. -/
+    not yet an unrestricted correspondence for HOL's polymorphic word type.
+    There is also a concrete evaluator mismatch in the address-load
+    constructors: `evalCrepHolFiniteDimensionExp` transports through
+    `evalCrepHolExp`, whose `Load32`/`LoadByte` cases use
+    `RiscV.panRiscVMemoryModelForEndian`; HOL `crepSem$eval_def` uses the
+    generic `mem_load_32`/`mem_load_byte` operations. Their equality for every
+    HOL word dimension and memory state remains unproved. The successful
+    evaluation induction needs these branches, so this theorem is not tagged
+    as HOL `simp_exp_correct1`. -/
 theorem crepSimpExpCorrect1HolFiniteDimension {ι : Type} {σ : Type}
     [dimension : HolFiniteDimension ι]
     (f : (List Nat × CrepProg (ι → Bool)) → (List Nat × CrepProg (ι → Bool)))

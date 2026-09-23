@@ -630,6 +630,10 @@ run_probe word_op_finite_probeScript.sml word_op_finite_probe.out \
   word_op_definition sub_three \
   "$cake_dir/compiler/backend/wordLangScript.sml" \
   "$cake_dir/compiler/backend"
+run_probe word_sh_finite_probeScript.sml word_sh_finite_probe.out \
+  word_sh_definition lsl_above_width \
+  "$cake_dir/compiler/backend/wordLangScript.sml" \
+  "$cake_dir/compiler/backend"
 run_probe crep_mul_const_probeScript.sml crep_mul_const_probe.out \
   zero eight "$cake_dir/pancake/crep_arithScript.sml"
 run_probe crep_simp_exp_probeScript.sml crep_simp_exp_probe.out \

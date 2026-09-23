@@ -25,14 +25,15 @@ theorem globalCompileTopForStart_all_function_or_exception [BEq String]
         (by simp [globalDeclIsFunction])
 
 @[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "compile_top_only_functions_or_exns"]
-theorem globalCompileTopCake_all_function_or_exception {width : Nat}
+theorem globalCompileTopCake_all_function_or_exception {width : Nat} [NeZero width]
     (declarations : List (Decl (BitVec width))) (start : FunName) :
     (globalCompileTopCake declarations start).all
       (fun declaration => globalDeclIsFunction declaration ||
         globalDeclIsException declaration) = true := by
-  simpa [globalCompileTopCake] using
-    (globalCompileTopForStart_all_function_or_exception
-      (BitVec.ofNat width (width / 8)) (BitVec.ofNat width) declarations start)
+  rw [globalCompileTopCake_eq]
+  simp only [cakeBytesInWord]
+  exact globalCompileTopForStart_all_function_or_exception
+    (BitVec.ofNat width (width / 8)) (BitVec.ofNat width) declarations start
 
 /-! Generalized proof behind the exact fixed-word theorem below. -/
 theorem globalCompileTopForStart_shapes_wf
@@ -161,7 +162,7 @@ theorem globalCompileTopForStart_shapes_wf
     `bytes_in_word` and `n2w` choices instead of exposing caller-controlled
     compiler configuration. -/
 @[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "compile_top_shape_wf"]
-theorem globalCompileTopCake_shapes_wf {width : Nat} [LawfulBEq String]
+theorem globalCompileTopCake_shapes_wf {width : Nat} [NeZero width] [LawfulBEq String]
     [ShiftLeft (BitVec width)] [ShiftRight (BitVec width)]
     (state : PanSemDeclarationState (BitVec width) σ)
     (declarations : List (Decl (BitVec width))) (start : FunName)
@@ -173,10 +174,11 @@ theorem globalCompileTopCake_shapes_wf {width : Nat} [LawfulBEq String]
         function.params.all (fun parameter =>
           isWfShape state.runtime.structs parameter.2) = true ∧
           isWfShape state.runtime.structs function.returnShape = true := by
-  simpa [globalCompileTopCake] using
-    (globalCompileTopForStart_shapes_wf
+  rw [globalCompileTopCake_eq]
+  simp only [cakeBytesInWord]
+  exact globalCompileTopForStart_shapes_wf
       (BitVec.ofNat width (width / 8)) (BitVec.ofNat width)
-      state declarations start state' heval hadmissible)
+      state declarations start state' heval hadmissible
 
 /-! Cake's `is_wf_shape_nil` predicate is the well-formedness test with no
     declared structures. This local spelling keeps the corollary's conclusion
@@ -187,7 +189,7 @@ def isWfShapeNil : Shape → Bool := isWfShape []
     admissible declarations give well-formed output shapes under `isWfShapeNil`.
     The empty-structure premise is explicit, as in the HOL statement. -/
 @[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "compile_top_shape_wf_nil"]
-theorem globalCompileTopCake_shapes_wf_nil {width : Nat} [LawfulBEq String]
+theorem globalCompileTopCake_shapes_wf_nil {width : Nat} [NeZero width] [LawfulBEq String]
     [ShiftLeft (BitVec width)] [ShiftRight (BitVec width)]
     (state : PanSemDeclarationState (BitVec width) σ)
     (declarations : List (Decl (BitVec width))) (start : FunName)

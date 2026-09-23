@@ -538,6 +538,85 @@ theorem holFiniteWordToBitVec_shiftLeft {ι : Type u}
         (holWordToBitVec dimension right))) = _
   rw [holWordToBitVec_bitVecToHolWord]
 
+theorem holFiniteWordToBitVec_asr {ι : Type u}
+    [dimension : HolFiniteDimension ι] (left right : ι → Bool) :
+    holWordToBitVec dimension (ArithmeticShiftRight.arithmeticShiftRight left right) =
+      ArithmeticShiftRight.arithmeticShiftRight
+        (holWordToBitVec dimension left) (holWordToBitVec dimension right) := by
+  letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
+  change holWordToBitVec dimension
+    (bitVecToHolWord dimension
+      (BitVec.sshiftRight (holWordToBitVec dimension left)
+        (holWordToBitVec dimension right).toNat)) =
+    BitVec.sshiftRight (holWordToBitVec dimension left)
+      (holWordToBitVec dimension right).toNat
+  rw [holWordToBitVec_bitVecToHolWord]
+
+theorem holFiniteWordToBitVec_ror {ι : Type u}
+    [dimension : HolFiniteDimension ι] (left right : ι → Bool) :
+    holWordToBitVec dimension (RotateRightOp.rotateRight left right) =
+      RotateRightOp.rotateRight
+        (holWordToBitVec dimension left) (holWordToBitVec dimension right) := by
+  letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
+  change holWordToBitVec dimension
+    (bitVecToHolWord dimension
+      (BitVec.rotateRight (holWordToBitVec dimension left)
+        (holWordToBitVec dimension right).toNat)) =
+    BitVec.rotateRight (holWordToBitVec dimension left)
+      (holWordToBitVec dimension right).toNat
+  rw [holWordToBitVec_bitVecToHolWord]
+
+theorem holFiniteWord_evalPanShift_toBitVec {ι : Type u}
+    (dimension : HolFiniteDimension ι) (operator : Shift)
+    (left right : ι → Bool) :
+    evalPanShiftFull operator left right =
+      (evalPanShiftFull operator (holWordToBitVec dimension left)
+        (holWordToBitVec dimension right)).map (bitVecToHolWord dimension) := by
+  letI : HolFiniteDimension ι := dimension
+  letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
+  have hWidthSource : PanShiftWidth.width (α := ι → Bool) = dimension.width := rfl
+  have hAmountSource (value : ι → Bool) :
+      PanShiftWidth.amount (α := ι → Bool) value =
+        (holWordToBitVec dimension value).toNat := rfl
+  have hWidthBits : PanShiftWidth.width (α := BitVec dimension.width) =
+      dimension.width := rfl
+  have hAmountBits (value : BitVec dimension.width) :
+      PanShiftWidth.amount (α := BitVec dimension.width) value = value.toNat := rfl
+  cases operator with
+  | lsl =>
+      simp only [evalPanShiftFull, hWidthSource, hAmountSource, hWidthBits, hAmountBits]
+      by_cases h : (holWordToBitVec dimension right).toNat ≠ 0 ∧
+          dimension.width ≤ (holWordToBitVec dimension right).toNat
+      · simp [h]
+      · simp [h]
+        rw [← bitVecToHolWord_holWordToBitVec dimension
+          (ShiftLeft.shiftLeft left right), holFiniteWordToBitVec_shiftLeft]
+  | lsr =>
+      simp only [evalPanShiftFull, hWidthSource, hAmountSource, hWidthBits, hAmountBits]
+      by_cases h : (holWordToBitVec dimension right).toNat ≠ 0 ∧
+          dimension.width ≤ (holWordToBitVec dimension right).toNat
+      · simp [h]
+      · simp [h]
+        rw [← bitVecToHolWord_holWordToBitVec dimension
+          (ShiftRight.shiftRight left right), holFiniteWordToBitVec_shiftRight]
+  | asr =>
+      simp only [evalPanShiftFull, hWidthSource, hAmountSource, hWidthBits, hAmountBits]
+      by_cases h : (holWordToBitVec dimension right).toNat ≠ 0 ∧
+          dimension.width ≤ (holWordToBitVec dimension right).toNat
+      · simp [h]
+      · simp [h]
+        rw [← bitVecToHolWord_holWordToBitVec dimension
+          (ArithmeticShiftRight.arithmeticShiftRight left right),
+          holFiniteWordToBitVec_asr]
+  | ror =>
+      simp only [evalPanShiftFull, hWidthSource, hAmountSource, hWidthBits, hAmountBits]
+      by_cases h : (holWordToBitVec dimension right).toNat ≠ 0 ∧
+          dimension.width ≤ (holWordToBitVec dimension right).toNat
+      · simp [h]
+      · simp [h]
+        rw [← bitVecToHolWord_holWordToBitVec dimension
+          (RotateRightOp.rotateRight left right), holFiniteWordToBitVec_ror]
+
 /-! Operations on finite-index HOL word bits are transported through the
     equivalence above. This gives the production Crep evaluator and arithmetic
     simplifier their standard word interfaces on the function-valued carrier,

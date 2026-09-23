@@ -1,4 +1,5 @@
 import Flapjack.Pancake.PanToCrep.Compile
+import Flapjack.RiscV.WordToStack
 
 namespace Flapjack.Test.CompileToCrepeParity
 
@@ -303,6 +304,30 @@ def laterPairOracle : Bool :=
   | _ => false
 
 #guard laterPairOracle
+
+/-! The original `compile_to_crep` fixture above stores the later payload
+words at `StoreGlob 0` and `StoreGlob 1`. Cake `loop_to_word` represents those
+as `Set (Temp 0)` and `Set (Temp 1)`, and `word_to_stack` must retain the same
+Temp region indices instead of scaling them by target bytes-per-word. The
+original rules are `loop_to_wordScript.sml:93` and
+`compiler/backend/word_to_stackScript.sml:491`. -/
+def laterPairStackTempRegionOracle : Bool :=
+  let config : RiscV.WordStackConfig :=
+    { locations := [], scratch := 31, stackBase := 0 }
+  let program : WordProg Nat :=
+    .seq (.set (.temp 0) (.const 7)) (.set (.temp 1) (.const 9))
+  match RiscV.wordToStackProgNat config program with
+  | some (.seq
+      (.seq (.const 31 7) (.set (.temp 0) 31))
+      (.seq (.const 31 9) (.set (.temp 1) 31))) => true
+  | _ => false
+
+#guard laterPairStackTempRegionOracle
+
+def laterPairEndToEndTempRegionOracle : Bool :=
+  laterPairOracle && laterPairStackTempRegionOracle
+
+#guard laterPairEndToEndTempRegionOracle
 
 def handledPairDecls : List (Decl Nat) :=
   [.exnDecl "E" (.comb [.one, .one]),

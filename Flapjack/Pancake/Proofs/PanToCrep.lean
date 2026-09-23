@@ -73,6 +73,23 @@ theorem panSemShapeOfMapPanValueShapeNil (arguments : List (PanValue α)) :
     arguments.map panSemShapeOf = arguments.map (panValueShape []) := by
   exact List.map_congr_left (fun value _ => panSemShapeOf_eq_panValueShape_nil value)
 
+/-- Indexed-list form of the HOL Call premise
+`LIST_REL (fun formal arg => formal.shape = shape_of arg) parameters arguments`.
+The source-facing equality is kept untagged until the complete Call theorem is
+ported. -/
+theorem callParameterShapeMapEqPanSem
+    (parameters : List (String × Shape)) (arguments : List (PanValue α))
+    (hlength : parameters.length = arguments.length)
+    (hshape : ∀ index (hparams : index < parameters.length)
+      (hargs : index < arguments.length),
+      (parameters[index]'hparams).2 = panSemShapeOf (arguments[index]'hargs)) :
+    parameters.map Prod.snd = arguments.map panSemShapeOf := by
+  apply List.ext_getElem
+  · simp [hlength]
+  · intro index hleft hright
+    simpa only [List.getElem_map] using hshape index
+      (by simpa using hleft) (by simpa using hright)
+
 /-! A successful `globalsLookup` exposes each state-owned return-global cell.
 This generic projection is useful when `exp_hdl` copies a multiword exception
 payload into its handler local. -/

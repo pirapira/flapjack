@@ -3587,6 +3587,14 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "callParameterShapeMapEqPanSem",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack indexed-list bridge from pointwise formal/argument shape equality to map equality, matching the shape content of the HOL Call LIST_REL premise; not a port of the complete HOL theorem."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "withShape_mapPanValueFlatten",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only partition lemma showing that splitting concatenated argument flattenings by the corresponding source value shapes returns each argument flattening; support for the Call function-context locals_rel proof."

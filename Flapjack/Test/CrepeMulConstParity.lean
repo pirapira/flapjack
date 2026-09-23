@@ -32,7 +32,7 @@ def parityGuard : Bool :=
   | .shift .lsl (.var 2) (.const value) => value == word8 3
   | _ => false)
 
-def noRiscVWords : RiscV.Word 64 → Option (RiscV.Word 64) := fun _ => none
+def noRiscVWords : RiscV.Word 64 → PanWordLab (RiscV.Word 64) := fun _ => .word 0
 def noRiscVDomain : RiscV.Word 64 → Bool := fun _ => false
 
 def runtimeBaseState : CrepRuntimeState (RiscV.Word 64) Unit :=

@@ -11,7 +11,7 @@ namespace Flapjack.Test.CrepGlobalShapeParity
 
 open Flapjack
 
-def noNatMemory : Nat → Option Nat := fun _ => none
+def noNatMemory : Nat → PanWordLab Nat := fun _ => .word 0
 def noNatDomain : Nat → Bool := fun _ => false
 
 def globalState : CrepRuntimeState Nat Unit :=

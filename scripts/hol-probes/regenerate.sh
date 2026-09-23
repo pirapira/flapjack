@@ -526,6 +526,10 @@ run_probe crep_mem_load_probeScript.sml crep_mem_load_probe.out \
   mem_load_valid eval_load_invalid \
   "$cake_dir/pancake/semantics/crepSemScript.sml" \
   "$cake_dir/pancake/semantics"
+run_probe crep_mem_store_probeScript.sml crep_mem_store_probe.out \
+  mem_store_valid_lookup mem_store_invalid \
+  "$cake_dir/pancake/semantics/crepSemScript.sml" \
+  "$cake_dir/pancake/semantics"
 run_probe prog_if_probeScript.sml prog_if_probe.out \
   prog_if_basic prog_if_basic \
   "$cake_dir/pancake/crep_to_loopScript.sml"

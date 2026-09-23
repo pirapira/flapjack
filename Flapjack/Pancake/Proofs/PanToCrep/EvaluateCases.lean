@@ -3090,6 +3090,44 @@ theorem lookupCrepRuntimeCode_ofCodeRel_compiledArgs
       hargumentLength
   exact ⟨targetLocals, by simpa [compilerContext] using harguments, hlookup⟩
 
+/-! The caller's state, code, and exception relations survive Call's callee
+entry setup: the two evaluators replace only locals and decrement the related
+clocks, while both state-owned code maps and the source exception-shape map
+remain unchanged. This supplies three callee-entry relations; the formal- and
+flattened-argument `localsRel` in the function context is a separate remaining
+obligation for full Call induction. -/
+theorem panSemCallCalleeEntryStateCodeExcpRel
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (sourceCalleeLocals : String → Option (PanValue (RiscV.Word 64)))
+    (targetCalleeLocals : Nat → Option (PanWordLab (RiscV.Word 64)))
+    (hstate : stateRel source target)
+    (hcode : codeRel context (panSemCodeAsLookup source.code) target.code)
+    (hexcp : excpRel context.eids source.exceptionShapes) :
+    stateRel
+        { { source with locals := sourceCalleeLocals } with
+          clock := decPanClock source.clock }
+        (decCrepClock { target with locals := targetCalleeLocals }) ∧
+      codeRel context
+        (panSemCodeAsLookup
+          ({ { source with locals := sourceCalleeLocals } with
+            clock := decPanClock source.clock }).code)
+        (decCrepClock { target with locals := targetCalleeLocals }).code ∧
+      excpRel context.eids
+        ({ { source with locals := sourceCalleeLocals } with
+          clock := decPanClock source.clock }).exceptionShapes := by
+  obtain ⟨hmemory, hmemaddrs, hshared, hstructs, hglobals, hclock, hbe, hffi,
+    hbase, htop⟩ := hstate
+  refine ⟨?_, ?_, ?_⟩
+  · unfold stateRel
+    simp only [decCrepClock, decPanClock]
+    exact ⟨hmemory, hmemaddrs, hshared, hstructs, hglobals,
+      congrArg (fun clock : Nat => clock - 1) hclock,
+      hbe, hffi, hbase, htop⟩
+  · simpa [decCrepClock] using hcode
+  · simpa using hexcp
+
 /-! Compose the actual target exp_hdl/Return execution with the generic Crep
 Call exception-dispatch induction step. The callee lookup and body execution
 remain explicit inputs so the enclosing state/code relation proof can derive

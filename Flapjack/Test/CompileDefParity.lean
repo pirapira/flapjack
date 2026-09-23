@@ -67,8 +67,43 @@ def extraNamesGlobalCall : Prog Nat :=
 def missingNamesGlobalCall : Prog Nat :=
   .call (some (some (.global, "missing_names"), none)) "f" []
 
+def validLocalContext : CompileContext Nat :=
+  { vars := [("pair", (.comb [.one, .one], [0, 1]))], functions := [],
+    exceptions := [], maxVar := 1, bytesInWord := 1 }
+
+def emptyOneLocalContext : CompileContext Nat :=
+  { vars := [("empty_one", (.one, []))], functions := [], exceptions := [],
+    maxVar := 0, bytesInWord := 1 }
+
+def extraNamesLocalContext : CompileContext Nat :=
+  { vars := [("extra_names", (.one, [4, 5]))], functions := [], exceptions := [],
+    maxVar := 5, bytesInWord := 1 }
+
+def missingNamesLocalContext : CompileContext Nat :=
+  { vars := [("missing_names", (.comb [.one, .one], [4]))],
+    functions := [], exceptions := [], maxVar := 4, bytesInWord := 1 }
+
+def missingLocalCall : Prog Nat :=
+  .call (some (some (.local, "missing"), none)) "f" []
+
+def emptyOneLocalCall : Prog Nat :=
+  .call (some (some (.local, "empty_one"), none)) "f" []
+
+def extraNamesLocalCall : Prog Nat :=
+  .call (some (some (.local, "extra_names"), none)) "f" []
+
+def missingNamesLocalCall : Prog Nat :=
+  .call (some (some (.local, "missing_names"), none)) "f" []
+
+def validLocalCall : Prog Nat :=
+  .call (some (some (.local, "pair"), none)) "f" []
+
 def isTailCallToF : CrepProg Nat → Bool
   | .call none "f" [] => true
+  | _ => false
+
+def isValidPairCallToF : CrepProg Nat → Bool
+  | .call (some ([0, 1], none)) "f" [] => true
   | _ => false
 
 def isExtraNamesCallToF : CrepProg Nat → Bool
@@ -114,6 +149,11 @@ def parityGuard : Bool :=
   isTailCallToF (compileProg emptyOneGlobalContext emptyOneGlobalCall) &&
   isExtraNamesCallToF (compileProg extraNamesGlobalContext extraNamesGlobalCall) &&
   isMissingNamesCallToF (compileProg missingNamesGlobalContext missingNamesGlobalCall) &&
+  isTailCallToF (compileProg context missingLocalCall) &&
+  isTailCallToF (compileProg emptyOneLocalContext emptyOneLocalCall) &&
+  isExtraNamesCallToF (compileProg extraNamesLocalContext extraNamesLocalCall) &&
+  isMissingNamesCallToF (compileProg missingNamesLocalContext missingNamesLocalCall) &&
+  isValidPairCallToF (compileProg validLocalContext validLocalCall) &&
   fixedWidthParityGuard
 
 example : compileProg context missingGlobalCall = .call none "f" [] := by
@@ -140,6 +180,37 @@ example :
       .call (some ([4], none)) "f" [] := by
   simp [missingNamesGlobalCall, compileProg, compileArgs, callDestinationNames,
     wrapRt, missingNamesGlobalContext, lookupInfo]
+
+/-! Local-kind mirrors.  Cake's rule looks the destination up in
+`ctxt.vars` and discards the `rk` tag, so a Local call and its Global twin
+emit the same list; the HOL fixture `compile_def_probe.out` records both. -/
+
+example : compileProg context missingLocalCall = .call none "f" [] := by
+  simp [missingLocalCall, compileProg, compileArgs, callDestinationNames,
+    wrapRt, context, lookupInfo]
+
+example :
+    compileProg emptyOneLocalContext emptyOneLocalCall = .call none "f" [] := by
+  simp [emptyOneLocalCall, compileProg, compileArgs, callDestinationNames,
+    wrapRt, emptyOneLocalContext, lookupInfo]
+
+example :
+    compileProg extraNamesLocalContext extraNamesLocalCall =
+      .call (some ([4, 5], none)) "f" [] := by
+  simp [extraNamesLocalCall, compileProg, compileArgs, callDestinationNames,
+    wrapRt, extraNamesLocalContext, lookupInfo]
+
+example :
+    compileProg missingNamesLocalContext missingNamesLocalCall =
+      .call (some ([4], none)) "f" [] := by
+  simp [missingNamesLocalCall, compileProg, compileArgs, callDestinationNames,
+    wrapRt, missingNamesLocalContext, lookupInfo]
+
+example :
+    compileProg validLocalContext validLocalCall =
+      .call (some ([0, 1], none)) "f" [] := by
+  simp [validLocalCall, compileProg, compileArgs, callDestinationNames,
+    wrapRt, validLocalContext, lookupInfo]
 
 #eval parityGuard
 #guard parityGuard

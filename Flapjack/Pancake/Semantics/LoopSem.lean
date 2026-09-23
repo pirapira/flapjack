@@ -537,6 +537,115 @@ def writeBytearrayHOL {width : Nat} [NeZero width]
       | some updated => updated
       | none => memory
 
+/-- Width-generic port of HOL `byte$word_to_bytes`
+    (`src/n-bit/byteScript.sml:450`):
+    `word_to_bytes w be = word_to_bytes_aux (dimindex DIV 8) w be`, i.e. the
+    `get_byte` of each increasing index.  That script is part of the HOL
+    standard library rather than the CakeML submodule, so this declaration
+    carries no HOL tag. -/
+def riscvWordToBytesHOL {width : Nat} [NeZero width]
+    (value : RiscV.Word width) (bigEndian : Bool) : List UInt8 :=
+  (List.range (width / 8)).map
+    (fun index => riscvGetByteHOL bigEndian (BitVec.ofNat width index) value)
+
+/-- Width-generic port of HOL `byte$word_of_bytes`
+    (`src/n-bit/byteScript.sml:197`): fold `set_byte` over the bytes starting at
+    `address` and incrementing by one.  HOL standard library, so no HOL tag. -/
+def riscvWordOfBytesHOL {width : Nat} [NeZero width]
+    (bigEndian : Bool) (address : RiscV.Word width) :
+    List UInt8 → RiscV.Word width
+  | [] => 0
+  | byte :: rest =>
+      riscvSetByteHOL bigEndian address
+        (riscvWordOfBytesHOL bigEndian (address + 1) rest) byte
+
+/-- Width-generic exact port of HOL `loopSem$sh_mem_load_def`
+    (`loopSemScript.sml:198-215`).  The word codec `word_to_bytes`/`word_of_bytes`
+    is supplied generically by `riscvWordToBytesHOL`/`riscvWordOfBytesHOL`, so no
+    extra codec parameter is introduced and the word type stays polymorphic.
+    HOL's unreachable `_ => (SOME Error, s)` alternative after the two `FFI`
+    constructors is omitted because `FfiResult` has exactly those two. -/
+@[hol "cakeml/pancake/semantics/loopSemScript.sml" "sh_mem_load_def"]
+def shMemLoadHOL {width : Nat} [NeZero width]
+    (state : LoopMachineState (RiscV.Word width) F)
+    (name : Nat) (address : RiscV.Word width) (byteCount : Nat) :
+    LoopMachineStep (RiscV.Word width) F :=
+  let addressBytes := riscvWordToBytesHOL address false
+  let call := callFfi state.ffi (.sharedMem .mappedRead)
+    (loopShMemByteCount byteCount) addressBytes
+  if byteCount = 0 then
+    if state.shMdomain address then
+      match call with
+      | .final event => (some (.finalFfi event), callEnv [] state)
+      | .returned newFfi bytes =>
+          let updated : LoopMachineState (RiscV.Word width) F :=
+            { state with
+              ffi := newFfi
+              locals := loopSetVar state.locals name
+                (.word (riscvWordOfBytesHOL false 0 bytes)) }
+          (none, updated)
+    else (some .error, state)
+  else
+    if state.shMdomain (riscvByteAlignHOL (width := width) address) then
+      match call with
+      | .final event => (some (.finalFfi event), callEnv [] state)
+      | .returned newFfi bytes =>
+          let updated : LoopMachineState (RiscV.Word width) F :=
+            { state with
+              ffi := newFfi
+              locals := loopSetVar state.locals name
+                (.word (riscvWordOfBytesHOL false 0 bytes)) }
+          (none, updated)
+    else (some .error, state)
+
+/-- Width-generic exact port of HOL `loopSem$sh_mem_store_def`
+    (`loopSemScript.sml:217-243`).  Only a word-valued local can be stored; the
+    payload is the value bytes followed by the address bytes, truncated to
+    `byteCount` for nonzero widths. -/
+@[hol "cakeml/pancake/semantics/loopSemScript.sml" "sh_mem_store_def"]
+def shMemStoreHOL {width : Nat} [NeZero width]
+    (state : LoopMachineState (RiscV.Word width) F)
+    (name : Nat) (address : RiscV.Word width) (byteCount : Nat) :
+    LoopMachineStep (RiscV.Word width) F :=
+  match state.locals name with
+  | some (.word value) =>
+      let valueBytes := riscvWordToBytesHOL value false
+      let addressBytes := riscvWordToBytesHOL address false
+      if byteCount = 0 then
+        if state.shMdomain address then
+          match callFfi state.ffi (.sharedMem .mappedWrite)
+              (loopShMemByteCount byteCount)
+              (valueBytes ++ addressBytes) with
+          | .final event => (some (.finalFfi event), callEnv [] state)
+          | .returned newFfi _ => (none, { state with ffi := newFfi })
+        else (some .error, state)
+      else
+        if state.shMdomain (riscvByteAlignHOL (width := width) address) then
+          match callFfi state.ffi (.sharedMem .mappedWrite)
+              (loopShMemByteCount byteCount)
+              (valueBytes.take byteCount ++ addressBytes) with
+          | .final event => (some (.finalFfi event), callEnv [] state)
+          | .returned newFfi _ => (none, { state with ffi := newFfi })
+        else (some .error, state)
+  | _ => (some .error, state)
+
+/-- Width-generic exact dispatch port of HOL `loopSem$sh_mem_op_def`
+    (`loopSemScript.sml:255-262`). -/
+@[hol "cakeml/pancake/semantics/loopSemScript.sml" "sh_mem_op_def"]
+def shMemOpHOL {width : Nat} [NeZero width]
+    (state : LoopMachineState (RiscV.Word width) F)
+    (operator : CrepMemOp) (name : Nat) (address : RiscV.Word width) :
+    LoopMachineStep (RiscV.Word width) F :=
+  match operator with
+  | .load => shMemLoadHOL state name address 0
+  | .store => shMemStoreHOL state name address 0
+  | .load8 => shMemLoadHOL state name address 1
+  | .store8 => shMemStoreHOL state name address 1
+  | .load16 => shMemLoadHOL state name address 2
+  | .store16 => shMemStoreHOL state name address 2
+  | .load32 => shMemLoadHOL state name address 4
+  | .store32 => shMemStoreHOL state name address 4
+
 /-! FLAPJACK-SPECIFIC (not exact tagged ports).  The following byte-array
     helpers are the 64-bit RISC-V instances of HOL's polymorphic word memory
     codec.  The exact width-generic ports are `readBytearrayHOL`,

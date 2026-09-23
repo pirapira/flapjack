@@ -1033,4 +1033,41 @@ theorem panSemWriteBytearray_target_eq_riscv
           (8 : RiscV.Word 64) address
           ((riscv64PanValueFfiContext base.shMemaddrs).byteToWord byte) <;> rfl
 
+/-- The source `panValueFfiWriteBytes` is the same definition as the
+    `panSemWriteBytearray` boundary. -/
+theorem panValueFfiWriteBytes_eq_panSemWriteBytearray
+    [BEq α] [Add α] [OfNat α 1]
+    (access : PanValueMemoryAccess α) (context : PanValueFfiContext α)
+    (memory : α → Option (PanValue α)) (bytesInWord address : α)
+    (bytes : List UInt8) :
+    panValueFfiWriteBytes access context memory bytesInWord address bytes =
+      panSemWriteBytearray access context memory bytesInWord address bytes := by
+  induction bytes generalizing address with
+  | nil => simp [panValueFfiWriteBytes, panSemWriteBytearray]
+  | cons byte bytes ih =>
+      simp only [panValueFfiWriteBytes, panSemWriteBytearray, ih]
+      cases access.storeByte access.domain
+        (panSemWriteBytearray access context memory bytesInWord (address + 1) bytes)
+        bytesInWord address (context.byteToWord byte) <;> rfl
+
+/-- The source `panValueFfiReadBytes` on the `PanValue` view of the canonical
+    target memory is the canonical RISC-V `riscv64ReadByteArray` (HOL
+    `read_bytearray`). -/
+theorem panValueFfiReadBytes_view_eq_riscv
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (address : RiscV.Word 64)
+    (length : Nat) :
+    panValueFfiReadBytes
+        (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel base.memaddrs)
+        (riscv64PanValueFfiContext base.shMemaddrs)
+        (panValueMemoryView base.memory) (8 : RiscV.Word 64) address length =
+      riscv64ReadByteArray base address length := by
+  induction length generalizing address with
+  | zero => simp [panValueFfiReadBytes, riscv64ReadByteArray]
+  | succ n ih =>
+      simp only [panValueFfiReadBytes, riscv64ReadByteArray]
+      rw [ih (address + 1)]
+      simp only [panValueMemoryAccessOfModel, panValueWordMemory, panValueMemoryView,
+        crepRuntimeMemoryView, riscv64PanValueFfiContext, RiscV.panRiscVReadByte,
+        RiscV.panRiscVMemoryModel, panModelReadByte]
+
 end Flapjack

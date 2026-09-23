@@ -150,6 +150,44 @@ theorem panValueFfiExtCall_returned_ioEvents_prefix
               exact callFfi_return_ioEvents_prefix ffi (.extCall function)
                 configurationBytes arrayBytes returnedFfi returnedBytes hffi
 
+/-- Inversion of a successful `panValueFfiExtCall` outcome: the two argument
+    reads and the `call_FFI` returned result, with the write-back memory. -/
+theorem panValueFfiExtCall_returned_inv
+    [BEq α] [Add α] [OfNat α 1]
+    (access : PanValueMemoryAccess α) (context : PanValueFfiContext α)
+    (memory : α → Option (PanValue α)) (bytesInWord : α)
+    (ffi : FfiState σ) (function : FunName)
+    (configuration configurationLength array arrayLength : α)
+    (nextMemory : α → Option (PanValue α)) (nextFfi : FfiState σ)
+    (h : panValueFfiExtCall access context memory bytesInWord ffi function
+      configuration configurationLength array arrayLength =
+      some (.returned nextMemory nextFfi)) :
+    ∃ configurationBytes arrayBytes bytes,
+      panValueFfiReadBytes access context memory bytesInWord configuration
+          (context.valueToNat configurationLength) = some configurationBytes ∧
+      panValueFfiReadBytes access context memory bytesInWord array
+          (context.valueToNat arrayLength) = some arrayBytes ∧
+      callFfi ffi (.extCall function) configurationBytes arrayBytes =
+        .returned nextFfi bytes ∧
+      nextMemory = panValueFfiWriteBytes access context memory bytesInWord
+        array bytes := by
+  unfold panValueFfiExtCall at h
+  cases hconfiguration : panValueFfiReadBytes access context memory bytesInWord
+      configuration (context.valueToNat configurationLength) with
+  | none => simp [hconfiguration] at h
+  | some configurationBytes =>
+      cases harray : panValueFfiReadBytes access context memory bytesInWord
+          array (context.valueToNat arrayLength) with
+      | none => simp [hconfiguration, harray] at h
+      | some arrayBytes =>
+          cases hffi : callFfi ffi (.extCall function) configurationBytes arrayBytes with
+          | final event => simp [hconfiguration, harray, hffi] at h
+          | returned returnedFfi bytes =>
+              simp [hconfiguration, harray, hffi] at h
+              rcases h with ⟨hmem, hffiEq⟩
+              exact ⟨configurationBytes, arrayBytes, bytes, rfl, rfl,
+                by rw [← hffiEq]; exact hffi, hmem.symm⟩
+
 inductive PanValueFfiControlResult (α : Type u) (σ : Type v) where
   | normal (locals globals : VarName → Option (PanValue α))
       (memory : α → Option (PanValue α)) (ffi : FfiState σ)

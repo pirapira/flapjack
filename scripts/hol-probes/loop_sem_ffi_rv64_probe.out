@@ -1,0 +1,7 @@
+rv64_lookups=(SOME (Word 0w),SOME (Word 1w),SOME (Word 8w),SOME (Word 2w))
+rv64_mem_load_byte_aux=(SOME 171w,SOME 205w,SOME 239w)
+rv64_read_bytearrays=(SOME [171w],SOME [205w; 239w])
+rv64_extcall_returned=(NONE,Word 171w,Word 8721w,SOME (Word 1w))
+rv64_extcall_final=(SOME (FinalFFI (Final_event (ExtCall «x») [171w] [205w; 239w] FFI_failed)),
+ NONE)
+rv64_extcall_missing_local=(SOME Error,SOME (Word 1w))

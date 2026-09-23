@@ -4166,5 +4166,253 @@
     "lean_name": "panSemEvaluateRiscV64CodeCall_catchesRaisedBody_ofState",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only fixed-RV64 source Call induction step: arbitrary callee/body/arguments and raised-payload source IH are evaluated through the finite state-owned code map and memory domains derived from PanSemState; does not prove the target relation or full pc_compile_correct Call case"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "eraseDups_eq_self_of_nodup",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only list utility proving eraseDups preserves a nodup natural-number list; used to discharge the target runtime's distinct parameter-slot guard"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "lookupCrepRuntimeCode_ofCodeRel",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only actual-state Call support: derives production target code lookup and parameter locals from code_rel for arbitrary argument words with an explicit flattened parameter-length premise; compiled argument evaluation bridge and enclosing Call relation remain open"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "convert_v_def",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructConvertValue",
+    "statement_status": "reviewed_exact",
+    "reviewer": "All HOL cases reviewed against PanValue: Val (Word w) maps to .word unchanged; RStruct xs maps recursively in order to .rStruct; NStruct nm flds maps recursively over field values in order to .rStruct, dropping names as HOL does. The adjacent direct HOL EVAL fixture covers named-record conversion."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructConvertState_code",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Projection helper for the untagged PanSemState convert_s adapter; total function maps do not preserve HOL finite-map support."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "lookupInfo_mapValues",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Finite-map lookup adapter lemma used to connect HOL FMAP_MAP2 results with explicit InfoMap entries; support for the open convert_s/compile_correct port."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStruct_mapKeys_preserved",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Generic key-preservation lemma for list-backed finite-map entries; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructConvertFiniteState_locals_support",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Proves `FMAP_MAP2` conversion preserves local finite-map support in the explicit Nodup list representation; projection support for convert_s, not a standalone HOL theorem or compile_correct case."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructConvertFiniteState_globals_support",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Proves `FMAP_MAP2` conversion preserves global finite-map support in the explicit Nodup list representation; projection support for convert_s, not a standalone HOL theorem or compile_correct case."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructConvertFiniteState_exceptionShapes_support",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Proves `FMAP_MAP2` conversion preserves exception-shape map support in the explicit Nodup list representation; projection support for convert_s, not a standalone HOL theorem or compile_correct case."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructConvertFiniteState_code_support",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Proves `convert_code_def` conversion preserves unique function-code map support; depends on LawfulBEq String so production lookup coincides with HOL equality, and is support rather than a compile_correct case."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructSkipFiniteMapEvaluatorSupport",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Paired Skip evaluator support for a finite-map-backed source-state wrapper; omits the full compile_correct premises and invariant/shape-map/result postconditions."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructFiniteMapSkipEvaluationProjection",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Kernel-checked production-evaluator projection for finite-map state under Skip; supports, but is not, the HOL compile_correct induction case."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructCompileSkip_eq_skip",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Production compiler support equation; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructSkipEvaluatorSupport",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Paired production evaluator equation only; omits compile_correct premises and invariant/shape-map/result postconditions. Full Skip port tracked by flapjack-pxn.18.5.3.29."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructCompileTick_eq_tick",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Production compiler support equation; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructTickEvaluatorSupport",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Paired Tick evaluator support only; omits compile_correct premises and invariant/shape-map/result postconditions; not an exact theorem case."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "evalCrepRuntimeExps_vars_eq",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only evaluator adapter equating compiled local-slot variables with target locals mapM evaluation; utility for compiling the HOL local-expression case."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "mapM_panTheWord_of_wordLab",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only word_lab projection lemma translating locals_rel target cells into evaluated target words; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_local_eval_flatten",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Local-variable constructor case for HOL compile_exp_val_rel: from state-owned source local evaluation and locals_rel, production Crep evaluation of the compiled slots returns the flattened PanValue. The general expression and Call argument theorem remain open."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_const_eval_flatten",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Constant constructor case for HOL compile_exp_val_rel: the state-owned source evaluator and production Crep compiler/evaluator both flatten the word constant; general expression and Call argument theorem remain open."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "every_exp_def",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "crepEveryExp",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (constructor-by-constructor source comparison against every_exp_def; direct HOL-EVAL rows reproduced by Lean guards in Flapjack/Test/CrepEveryExpParity.lean)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "evalCrepRuntimeExps_append",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only list evaluator append lemma for production Crep expression results; supports the HOL compile_args list induction."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "evalPanSemStateExps_cons",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only source state evaluator equation decomposing a successful expression list result into head and tail evaluations."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "evalMapCompileArgsFlat_of_each",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only compile_args list induction: lifts a separately supplied per-expression flattening result over the production source and target list evaluators; per-expression correctness for all HOL-localised constructors is not yet proved."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileArgsHOL_constOrLocal_eval_flatten",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Proves compiled target words equal flattened source results for argument lists containing only Const and Local expressions. This is a strict subset of HOL eval_map_comp_exp_flat_eq; other expression constructors and the full Call case remain open."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "assigned_free_vars_IMP_assigned_vars",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "mem_crepAssignedFreeVars_imp_mem_crepAssignedVars",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison against crepPropsScript.sml:373; direct HOL-EVAL oracle crep_assigned_vars_probe.out imp_mem/imp_mem_absent reproduced by Lean guards in Flapjack/Test/CrepAssignedVarsParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "nested_seq_assigned_vars_eq",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "crepAssignedVars_nestedSeq_assign_zipWith",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison against crepPropsScript.sml:411; oracle row nested_av=[1;2] reproduced by Lean guards in Flapjack/Test/CrepAssignedVarsParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "nested_seq_assigned_free_vars_eq",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "crepAssignedFreeVars_nestedSeq_assign_zipWith",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison against crepPropsScript.sml:420; oracle row nested_afv=[1;2] reproduced by Lean guards in Flapjack/Test/CrepAssignedVarsParity.lean)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpListHOL_flatMap_eq_compileArgsHOL",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only equation identifying compiled expression-list concatenation with compile_args output; used to compose the RStruct constructor case."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_rStruct_constOrLocal_eval_flatten",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Proves the RStruct constructor case of compiled expression evaluation when every field is Const or Local, by composing the nested compile_args result. Nested structs and other expression constructors remain open."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileArgsHOL_constLocalOrStruct_eval_flatten",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Proves compiled results for argument lists whose members are Const, Local, or one-level RStruct with Const/Local fields; it remains a strict subset of HOL eval_map_comp_exp_flat_eq."
   }
 ]

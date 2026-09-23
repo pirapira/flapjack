@@ -90,6 +90,20 @@ run_probe pan_crep_primop_probeScript.sml pan_crep_primop_probe.out \
 run_probe pan_structs_opt_mmap_probeScript.sml pan_structs_opt_mmap_probe.out \
   success pointwise "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
   "$cake_dir/pancake/proofs"
+run_probe pan_structs_compile_correct_probeScript.sml pan_structs_compile_correct_probe.out \
+  convert_named_record compile_correct_skip_source compile_correct_skip_converted \
+  convert_s_finite_maps \
+  compile_correct_tick_zero_source compile_correct_tick_zero_converted \
+  compile_correct_tick_positive_source compile_correct_tick_positive_converted \
+  "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
+  "$cake_dir/pancake/proofs"
+run_probe pan_structs_value_validity_probeScript.sml pan_structs_value_validity_probe.out \
+  v_flds_ok_word v_flds_ok_named_match v_flds_ok_named_mismatch \
+  v_flds_ok_named_missing v_flds_ok_duplicate_first \
+  is_wf_shape_v_word is_wf_shape_v_named_match \
+  is_wf_shape_v_named_missing \
+  "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
+  "$cake_dir/pancake/proofs"
 run_probe pan_structs_afindi_map_probeScript.sml pan_structs_afindi_map_probe.out \
   hit_preserves_key_index missing_key_stays_missing \
   "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
@@ -159,6 +173,12 @@ run_probe crep_runtime_write_bytes_probeScript.sml crep_runtime_write_bytes_prob
   "$cake_dir/pancake/semantics"
 run_probe crep_runtime_ext_call_probeScript.sml crep_runtime_ext_call_probe.out \
   empty_name_identity oracle_diverged "$cake_dir/pancake/semantics/panSemScript.sml" \
+  "$cake_dir/pancake/semantics"
+run_probe crep_every_exp_probeScript.sml crep_every_exp_probe.out \
+  const_hit always_op_nested "$cake_dir/pancake/semantics/crepPropsScript.sml" \
+  "$cake_dir/pancake/semantics"
+run_probe crep_assigned_vars_probeScript.sml crep_assigned_vars_probe.out \
+  afv_prog nested_afv "$cake_dir/pancake/semantics/crepPropsScript.sml" \
   "$cake_dir/pancake/semantics"
 run_probe pan_flat_store_probeScript.sml pan_flat_store_probe.out \
   store_hit stores_blocked "$cake_dir/pancake/semantics/panSemScript.sml"
@@ -698,6 +718,12 @@ run_probe loop_sem_sh_mem_store_probeScript.sml loop_sem_sh_mem_store_probe.out 
   "$cake_dir/pancake/semantics/loopSemScript.sml"
 run_probe loop_sem_sh_mem_op_probeScript.sml loop_sem_sh_mem_op_probe.out \
   load store32 "$cake_dir/pancake/semantics/loopSemScript.sml"
+run_probe loop_sem_ffi_probeScript.sml loop_sem_ffi_probe.out \
+  extcall_returned extcall_missing_local \
+  "$cake_dir/pancake/semantics/loopSemScript.sml"
+run_probe loop_sem_ffi_rv64_probeScript.sml loop_sem_ffi_rv64_probe.out \
+  rv64_lookups rv64_extcall_missing_local \
+  "$cake_dir/pancake/semantics/loopSemScript.sml"
 run_probe loop_sem_exit_loop_probeScript.sml loop_sem_exit_loop_probe.out \
   exit_loop_break exit_loop_error "$cake_dir/pancake/semantics/loopSemScript.sml"
 # The loop_arith probe prints numeric word values to avoid raw-literal ambiguity.

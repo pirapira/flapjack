@@ -1,0 +1,8 @@
+v_flds_ok_word=T
+v_flds_ok_named_match=T
+v_flds_ok_named_mismatch=F
+v_flds_ok_named_missing=F
+v_flds_ok_duplicate_first=F
+is_wf_shape_v_word=T
+is_wf_shape_v_named_match=T
+is_wf_shape_v_named_missing=F

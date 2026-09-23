@@ -168,7 +168,8 @@ run_probe pan_word_helpers_probeScript.sml pan_word_helpers_probe.out \
 run_probe pan_op_probeScript.sml pan_op_probe.out \
   mul_two mul_three "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_fixed_load_probeScript.sml pan_fixed_load_probe.out \
-  byte_hit load32_unaligned "$cake_dir/pancake/semantics/panSemScript.sml"
+  mem_load_byte_definition load32_hit_width8 \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_fixed_store_probeScript.sml pan_fixed_store_probe.out \
   byte_store_hit store32_unaligned "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe crep_runtime_word_boundary_probeScript.sml crep_runtime_word_boundary_probe.out \

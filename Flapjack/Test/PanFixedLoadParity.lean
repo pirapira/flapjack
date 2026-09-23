@@ -33,6 +33,10 @@ def originalByteHit : Option (Word 64) := some (BitVec.ofNat 64 2)
 def originalByteMiss : Option (Word 64) := none
 def originalLoad32Hit : Option (Word 64) := some (BitVec.ofNat 64 0x04030201)
 def originalLoad32Unaligned : Option (Word 64) := none
+def originalByteBigEndian : Option (Word 64) := some (BitVec.ofNat 64 7)
+def originalLoad32BigEndian : Option (Word 64) :=
+  some (BitVec.ofNat 64 0x08070605)
+def originalLoad32DomainMiss : Option (Word 64) := none
 
 def byteHit : Option (Word 64) :=
   panRiscVReadByte domain memory (BitVec.ofNat 64 8) (BitVec.ofNat 64 9)
@@ -46,11 +50,47 @@ def load32Hit : Option (Word 64) :=
 def load32Unaligned : Option (Word 64) :=
   panRiscVRead32 domain memory (BitVec.ofNat 64 8) (BitVec.ofNat 64 9)
 
+def bigEndianModel : PanMemoryModel (Word 64) :=
+  panRiscVMemoryModelForEndian true
+
+def byteBigEndian : Option (Word 64) :=
+  panModelReadByte bigEndianModel domain memory
+    (BitVec.ofNat 64 8) (BitVec.ofNat 64 9) true
+
+def load32BigEndian : Option (Word 64) :=
+  panModelRead32 bigEndianModel domain memory
+    (BitVec.ofNat 64 8) (BitVec.ofNat 64 8) true
+
+def load32DomainMiss : Option (Word 64) :=
+  panModelRead32 (panRiscVMemoryModelForEndian false)
+    (fun _ => false) memory
+    (BitVec.ofNat 64 8) (BitVec.ofNat 64 8) false
+
+/-! HOL words are not restricted to the production target width. This small
+    word probe checks that the same source-shaped model operations also retain
+    the 8-bit result projection used after HOL mem_load_32 returns word32. -/
+def word8Model : PanMemoryModel (Word 8) := panRiscVMemoryModelForEndian false
+def word8Domain : PanMemoryDomain (Word 8) := fun _ => true
+def word8Memory : PanFlatMemory (Word 8) :=
+  fun _ => some (BitVec.ofNat 8 0xa5)
+def word8BytesInWord : Word 8 := BitVec.ofNat 8 1
+def byteHitWidth8 : Option (Word 8) :=
+  panModelReadByte word8Model word8Domain word8Memory
+    word8BytesInWord (BitVec.ofNat 8 0) false
+def load32HitWidth8 : Option (Word 8) :=
+  panModelRead32 word8Model word8Domain word8Memory
+    word8BytesInWord (BitVec.ofNat 8 0) false
+
 #guard originalProbeSource ==
   "cakeml/pancake/semantics/panSemScript.sml:86-109 (mem_load_byte_def/mem_load_32_def)"
 #guard byteHit == originalByteHit
 #guard byteMiss == originalByteMiss
 #guard load32Hit == originalLoad32Hit
 #guard load32Unaligned == originalLoad32Unaligned
+#guard byteBigEndian == originalByteBigEndian
+#guard load32BigEndian == originalLoad32BigEndian
+#guard load32DomainMiss == originalLoad32DomainMiss
+#guard byteHitWidth8 == some (BitVec.ofNat 8 0xa5)
+#guard load32HitWidth8 == some (BitVec.ofNat 8 0xa5)
 
 end Flapjack.Test.PanFixedLoadParity

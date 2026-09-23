@@ -106,6 +106,18 @@ uses the corresponding two's-complement natural formula and its transport
 theorem; the test checks wraparound subtraction. The remaining representation
 gap is identifying a Lean `HolFiniteDimension` witness with HOL's implicit
 `finite_index` choice; the full Crep evaluator correspondence is still open.
+`word_op_finite_probe.out` records the original CakeML
+`wordLangTheory.word_op_def` list folds (And/Add/Or/Xor/Sub), including empty
+fold values and malformed subtraction arities. This worktree's CakeML submodule
+has no compiled `wordLangTheory.ui`, so regenerate this probe against a
+read-only CakeML checkout with matching source and built theories by setting
+`CAKEML` (the checked output was generated from matching CakeML source commit
+`857f0d98da8f8a3580f3442338e697809308ede`).
+`holFiniteWord_wordOp_toBitVec` proves that the explicit finite-dimension
+wordOp list behavior maps through the Fin-index/BitVec conversion for every
+operator and argument list; Bool-index checks are in
+`Flapjack.Test.CrepeSimpExpParity`. This remains untagged because the theorem
+uses explicit dimension data.
 `crep_arith_eval_mul_const_probe.out` records direct HOL EVAL of
 `crepSem$eval` after `crep_arith$mul_const` for zero, one, power-of-two, and
 general multipliers, with a word-valued local. Its matching production runtime

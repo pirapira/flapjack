@@ -126,11 +126,30 @@ example :
         ffi := callBase.ffi }
       (riscv64WriteState { callBase with ffi := callBase.ffi } (8 : RiscV.Word 64)
         [1, 2, 3, 4]) :=
-  crepRuntimeExtCallValues_stateRel_returned callSource callBase ""
+  crepRuntimeExtCallValues_stateRel_returned callSource callBase
+    (8 : RiscV.Word 64) [1, 2, 3, 4] callBase.ffi callStateRel
+
+/-- The assembled dispatch step: `FFI_return` writes the returned bytes back and
+    the post-states are related. -/
+example :
+    (crepRuntimeExtCallValues riscv64ExtCallCallFfiHandler
+        (riscv64CrepRuntimeTarget callBase) "" (8 : RiscV.Word 64) 4
+        (8 : RiscV.Word 64) 4 =
+      (.normal, riscv64WriteState { callBase with ffi := callBase.ffi }
+        (8 : RiscV.Word 64) [1, 2, 3, 4])) ∧
+    stateRel
+      { callSource with
+        memory := panSemWriteBytearray
+          (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel callBase.memaddrs)
+          (riscv64PanValueFfiContext callBase.shMemaddrs) callSource.memory
+          (8 : RiscV.Word 64) (8 : RiscV.Word 64) [1, 2, 3, 4],
+        ffi := callBase.ffi }
+      (riscv64WriteState { callBase with ffi := callBase.ffi } (8 : RiscV.Word 64)
+        [1, 2, 3, 4]) :=
+  crepRuntimeExtCallValues_stateRel_dispatch_returned callSource callBase ""
     (8 : RiscV.Word 64) 4 (8 : RiscV.Word 64) 4 [1, 2, 3, 4] [1, 2, 3, 4]
-    callReadConfiguration callReadArray callBase.ffi [1, 2, 3, 4]
+    callBase.ffi [1, 2, 3, 4] callStateRel callReadConfiguration callReadArray
     (by rw [riscv64ExtCallCallFfiHandler_extCall]; rfl)
-    callStateRel (fun _ => rfl)
 
 /-- The written target state reads back the returned first byte. -/
 def returnedGuard : Bool :=

@@ -1057,9 +1057,10 @@ theorem crepRuntimeExtCallValues_stateRel_error
     the Lean `callFfi` (HOL `call_FFI`) on the *source* ffi state: `FFI_return`
     yields `Normal` with the returned bytes written back and the returned ffi
     installed on the target, while `FFI_final` yields `FinalFFI` unchanged.  The
-    separate `stateRel_ffiUpdate` lemma covers an ffi-only update; this theorem
-    does not yet establish `stateRel` after returned bytes modify memory. The
-    failing-read case is `crepRuntimeExtCallValues_stateRel_error`, so the two
+    separate `stateRel_ffiUpdate` lemma covers an ffi-only update; the write-back
+    post-state is `crepRuntimeExtCallValues_stateRel_returned` (and the assembled
+    dispatched form is `crepRuntimeExtCallValues_stateRel_dispatch_returned`).
+    The failing-read case is `crepRuntimeExtCallValues_stateRel_error`, so the
     equations cover every production `ExtCall` dispatch outcome. -/
 theorem crepRuntimeExtCallValues_stateRel_dispatch
     (source : PanSemState (RiscV.Word 64) (FfiState σ))
@@ -1084,30 +1085,20 @@ theorem crepRuntimeExtCallValues_stateRel_dispatch
   rfl
 
 /-- Post-state `stateRel` for the `FFI_return` write-back branch of `ExtCall`.
-    Given the source/target relation and the HOL-shaped hypothesis that no
-    byte-aligned store can fail, the source `write_bytearray`
+    Given the source/target relation, the source `write_bytearray`
     (`panSemWriteBytearray` over the source memory) and the target
     `riscv64WriteState` (HOL `write_bytearray` over the canonical RISC-V target)
     remain related, with the returned ffi installed on both.  The memory
-    conjunct is `panSemWriteBytearray_target_eq_riscv`; the remaining conjuncts
-    are unchanged target fields.  This is the write-back companion of
-    `stateRel_ffiUpdate`, so the two together cover the `FFI_return` target
-    update. -/
+    conjunct is `panSemWriteBytearray_target_eq_riscv` (valid for every memory
+    domain, including the HOL failed-store fallback); the remaining conjuncts are
+    unchanged target fields.  This is the write-back companion of
+    `stateRel_ffiUpdate`; the dispatched step result is
+    `crepRuntimeExtCallValues_stateRel_dispatch_returned`. -/
 theorem crepRuntimeExtCallValues_stateRel_returned
     (source : PanSemState (RiscV.Word 64) (FfiState σ))
-    (base : CrepRuntimeState (RiscV.Word 64) σ) (function : FunName)
-    (configuration configurationLength array arrayLength : RiscV.Word 64)
-    (configurationBytes arrayBytes : List UInt8)
-    (_hc : riscv64ReadByteArray base configuration configurationLength.toNat =
-      some configurationBytes)
-    (_ha : riscv64ReadByteArray base array arrayLength.toNat = some arrayBytes)
-    (ffi : FfiState σ) (bytes : List UInt8)
-    (_hr : riscv64ExtCallCallFfiHandler
-        (.extCall function configurationBytes arrayBytes :
-          CrepRuntimeRequest (RiscV.Word 64)) base.ffi = .returned ffi bytes)
-    (hstate : stateRel source (riscv64CrepRuntimeTarget base))
-    (hdom : ∀ a : RiscV.Word 64,
-      base.memaddrs (RiscV.panRiscVByteAlign (8 : RiscV.Word 64) a) = true) :
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (array : RiscV.Word 64) (bytes : List UInt8) (ffi : FfiState σ)
+    (hstate : stateRel source (riscv64CrepRuntimeTarget base)) :
     stateRel
       { source with
         memory := panSemWriteBytearray
@@ -1150,7 +1141,7 @@ theorem crepRuntimeExtCallValues_stateRel_returned
     rw [riscv64WriteState_withFfi, riscv64WriteState_eq_setMemory]
     rfl
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-  · rw [hmView, panSemWriteBytearray_target_eq_riscv base array bytes hdom, hmemT]
+  · rw [hmView, panSemWriteBytearray_target_eq_riscv base array bytes, hmemT]
     rfl
   · rw [hmaT]; exact hma
   · rw [hsmT]; exact hsm
@@ -1161,5 +1152,40 @@ theorem crepRuntimeExtCallValues_stateRel_returned
   · rw [hffiT]
   · rw [hbaT]; exact hba
   · rw [htaT]; exact hta
+
+/-- The dispatched production `ExtCall` step when `call_ffi` returns
+    (`FFI_return`): the target step is `Normal` with the returned bytes written
+    back, and the source/target post-states are related (`stateRel`).  Connects
+    the read/handler premises of `crepRuntimeExtCallValues_target_returned` to
+    the post-state relation of `crepRuntimeExtCallValues_stateRel_returned`. -/
+theorem crepRuntimeExtCallValues_stateRel_dispatch_returned
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (function : FunName)
+    (configuration configurationLength array arrayLength : RiscV.Word 64)
+    (configurationBytes arrayBytes : List UInt8) (ffi : FfiState σ)
+    (bytes : List UInt8)
+    (hstate : stateRel source (riscv64CrepRuntimeTarget base))
+    (hc : riscv64ReadByteArray base configuration configurationLength.toNat =
+      some configurationBytes)
+    (ha : riscv64ReadByteArray base array arrayLength.toNat = some arrayBytes)
+    (hr : riscv64ExtCallCallFfiHandler
+        (.extCall function configurationBytes arrayBytes :
+          CrepRuntimeRequest (RiscV.Word 64)) base.ffi = .returned ffi bytes) :
+    (crepRuntimeExtCallValues riscv64ExtCallCallFfiHandler
+        (riscv64CrepRuntimeTarget base) function
+        configuration configurationLength array arrayLength =
+      (.normal, riscv64WriteState { base with ffi := ffi } array bytes)) ∧
+    stateRel
+      { source with
+        memory := panSemWriteBytearray
+          (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel base.memaddrs)
+          (riscv64PanValueFfiContext base.shMemaddrs) source.memory
+          (8 : RiscV.Word 64) array bytes,
+        ffi := ffi }
+      (riscv64WriteState { base with ffi := ffi } array bytes) :=
+  ⟨crepRuntimeExtCallValues_target_returned base function configuration
+      configurationLength array arrayLength configurationBytes arrayBytes hc ha
+      ffi bytes hr,
+   crepRuntimeExtCallValues_stateRel_returned source base array bytes ffi hstate⟩
 
 end Flapjack

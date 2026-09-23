@@ -200,6 +200,8 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/Proofs/PanGlobals.lean", "dec_shapes_resort_decls_def"),
         ("Flapjack/Pancake/Proofs/PanGlobals.lean", "resort_decls_preserve_functions"),
         ("Flapjack/Pancake/Proofs/PanGlobals.lean", "fperm_decs_FILTER_is_function"),
+        ("Flapjack/Pancake/Proofs/PanGlobals.lean", "fperm_decs_decls"),
+        ("Flapjack/Pancake/Proofs/PanGlobals.lean", "new_main_name_correct"),
         ("Flapjack/Pancake/Proofs/PanToCrep.lean", "mod_eq_of_lt_eq"),
         ("Flapjack/Pancake/Proofs/PanToCrep.lean", "option_ne_none_iff_exists"),
         ("Flapjack/Pancake/Proofs/PanToCrep.lean", "prod_mk_pair_eq_id"),

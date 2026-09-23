@@ -17,11 +17,6 @@ recognizes `theorem` and `lemma` declarations only; `#check` commands and
 comments do not count as theorem entries or tests. Correctness claims are described in
 [`SOUNDNESS.md`](SOUNDNESS.md).
 
-`PanToCrep/CompileExpVmax.lean` contains faithful ports of both
-`MEM_compile_exp_vmax` and `genlist_vmax_distinct_lists_compiled_exps`. The
-latter keeps the HOL context-bound premise and states disjointness between the
-fresh generated slots and variables occurring in `compileExpHOL` outputs.
-
 | HOL script | Lean counterpart |
 | --- | --- |
 | `panLangScript.sml` | `Flapjack/Pancake/PanLang.lean` |

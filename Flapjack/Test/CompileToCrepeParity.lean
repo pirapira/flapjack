@@ -154,6 +154,48 @@ def holDuplicateMapOracle : Bool :=
 
 #guard holDuplicateMapOracle
 
+/-! Exact `duplicate_exceptions` row from the direct HOL
+`compile_to_crep_probe.out`: the first repeated `E` keeps code zero, `F`
+keeps code one, and both compiled Raise bodies use those codes. -/
+def holDuplicateExceptionDecls : List (Decl (BitVec 8)) :=
+  [.exnDecl "E" .one, .exnDecl "F" .one, .exnDecl "E" .one,
+   .function
+     { name := "f", inline := false, exported := false, params := [],
+       body := .raise "E" (.const 7), returnShape := .one },
+   .function
+     { name := "g", inline := false, exported := false, params := [],
+       body := .raise "F" (.const 9), returnShape := .one }]
+
+def holDuplicateExceptionProductionOracle : Bool :=
+  FLOOKUP (panToCrepGetEidsFromDeclsHOL holDuplicateExceptionDecls) "E" ==
+      some (0 : BitVec 8) &&
+    FLOOKUP (panToCrepGetEidsFromDeclsHOL holDuplicateExceptionDecls) "F" ==
+      some (1 : BitVec 8) &&
+    (match compileToCrepHOL holDuplicateExceptionDecls with
+     | [("f", [], .seq
+          (.dec 1 (.const seven)
+            (.seq (.storeGlob first (.var 1)) .skip)) (.raise ecode)),
+        ("g", [], .seq
+          (.dec 1 (.const nine)
+            (.seq (.storeGlob second (.var 1)) .skip)) (.raise fcode))] =>
+          seven == (7 : BitVec 8) && nine == (9 : BitVec 8) &&
+            first == (0 : BitVec 8) && second == (0 : BitVec 8) &&
+            ecode == (0 : BitVec 8) && fcode == (1 : BitVec 8)
+     | _ => false)
+
+#guard holDuplicateExceptionProductionOracle
+
+def holDuplicateExceptionMetadataOracle : Bool :=
+  match compileToCrepHOLWithMetadata holDuplicateExceptionDecls with
+  | [{ name := "f", params := [], returnShape := .one,
+       body := .seq _ (.raise ecode) },
+     { name := "g", params := [], returnShape := .one,
+       body := .seq _ (.raise fcode) }] =>
+      ecode == (0 : BitVec 8) && fcode == (1 : BitVec 8)
+  | _ => false
+
+#guard holDuplicateExceptionMetadataOracle
+
 def compileToCrepeProbeContext : CompileContext Nat :=
   { vars := [], functions := [], exceptions := [("E", 0)],
     maxVar := 0, bytesInWord := 1 }
@@ -445,6 +487,8 @@ def parityGuard : Bool :=
 def runChecks : IO Bool := do
   let results := [
     ("raised constant", parityGuard),
+    ("duplicate exception names through HOL compiler", holDuplicateExceptionProductionOracle),
+    ("duplicate exception names through production metadata", holDuplicateExceptionMetadataOracle),
     ("declaration-only two-word exception", holPairRaiseProductionOracle),
     ("declaration-only later two-word exception", holLaterPairRaiseProductionOracle),
     ("declaration-only handled two-word exception", holHandledPairProductionOracle),

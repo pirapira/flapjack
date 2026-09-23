@@ -205,6 +205,94 @@ def wrapRt : Option (Shape × List Nat) → Option (Shape × List Nat)
   | some (.one, []) => none
   | value => value
 
+/-! ## Return-path bridge (Flapjack-only)
+
+Audit of the original development (`cakeml/pancake/pan_to_crepScript.sml`): the
+executable `compile` definition calls `exp_hdl` (`:238`, `:250`, `:260`) and
+`wrap_rt` (`:241`); it never calls `ret_hdl` (`:122`) or `ret_var` (`:114`).
+Those two definitions are used only inside the `Call_Ret` case of
+`pc_compile_correct` (`proofs/pan_to_crepProofScript.sml`, e.g. `:2622`,
+`:2727`) and by `pan_to_wordProofScript.sml:1083` when simplifying
+`exps_of (compile ...)`.  The executable path therefore already routes its
+handler setup and call destination through the faithful `expHdlFiniteMap` /
+`wrapRt`; re-routing `compileProg` through `retHdl` / `retVar` would be a
+behavior change with no HOL counterpart.
+
+The lemmas below are Flapjack-only infrastructure (HOL proves no such
+statements); they connect the tagged `ret_hdl_def`, `ret_var_def`, and
+`exp_hdl_def` to the tagged `assign_ret_def` so a future return-path proof can
+switch between the proof-level handler form and the emitted assignment form.
+They carry no `@[hol]` attribute because HOL has no corresponding declaration.
+Bead `flapjack-pxn.18.2.4.1`. -/
+
+/-- Cake's `MAP2` truncates like `List.zipWith`, so the finite-map return
+    handler body and `assignRet` emit the same program. -/
+theorem panMap2_eq_zipWith {α β γ : Type u} (f : α → β → γ)
+    (xs : List α) (ys : List β) : panMap2 f xs ys = xs.zipWith f ys := by
+  induction xs generalizing ys with
+  | nil => rfl
+  | cons x xs ih => cases ys <;> simp [panMap2, ih]
+
+/-- Known-variable form of `pan_to_crep$exp_hdl`: when `FLOOKUP` finds the
+    name, the emitted handler setup is exactly the tagged `assign_ret`
+    program that copies the global return slots into the flattened local. -/
+theorem expHdlFiniteMap_eq_assignRet [OfNat α 0] [OfNat α 1] [Add α]
+    {fm : FiniteMap VarName (Shape × List Nat)} {v : VarName}
+    {shape : Shape} {names : List Nat} (h : FLOOKUP fm v = some (shape, names)) :
+    expHdlFiniteMap fm v = assignRet names := by
+  unfold expHdlFiniteMap assignRet
+  simp only [h, panMap2_eq_zipWith]
+
+/-- Executable-adapter form of the previous lemma: the association-list
+    `expHdl` computes the tagged `assign_ret` whenever `lookupInfo` finds the
+    variable. -/
+theorem expHdl_eq_assignRet_of_lookupInfo [BEq String] [LawfulBEq String]
+    [OfNat α 0] [OfNat α 1] [Add α]
+    {vars : InfoMap (Shape × List Nat)} {name : VarName}
+    {shape : Shape} {names : List Nat}
+    (h : lookupInfo name vars = some (shape, names)) :
+    expHdl vars name = assignRet names := by
+  rw [expHdl_eq_expHdlFiniteMap_bridge]
+  exact expHdlFiniteMap_eq_assignRet (by simpa using h)
+
+/-- `pan_to_crep$ret_hdl` on a multi-word `Comb` is the tagged `assign_ret`. -/
+theorem retHdl_comb_eq_assignRet [OfNat α 0] [OfNat α 1] [Add α]
+    (fields : List Shape) (names : List Nat)
+    (h : 1 < Shape.shapeSize (.comb fields)) :
+    retHdl (.comb fields) names = assignRet names := by
+  simp [retHdl, h]
+
+/-- `pan_to_crep$ret_hdl` emits nothing for the one-word shapes. -/
+theorem retHdl_one_word_eq_skip [OfNat α 0] [OfNat α 1] [Add α]
+    (fields : List Shape) (names : List Nat)
+    (h : ¬ 1 < Shape.shapeSize (.comb fields)) :
+    retHdl (.comb fields) names = .skip := by
+  simp [retHdl, h]
+
+theorem retHdl_one_eq_skip [OfNat α 0] [OfNat α 1] [Add α] (names : List Nat) :
+    retHdl (.one : Shape) names = .skip := rfl
+
+theorem retHdl_named_eq_skip [OfNat α 0] [OfNat α 1] [Add α]
+    (structName : StructName) (names : List Nat) :
+    retHdl (.named structName) names = .skip := rfl
+
+/-- `pan_to_crep$ret_var` selects the first flattened destination of a one-word
+    shape and reports no return variable otherwise. -/
+theorem retVar_one (names : List Nat) : retVar (.one : Shape) names = names.head? := rfl
+
+theorem retVar_comb_eq_head (fields : List Shape) (names : List Nat)
+    (h : Shape.shapeSize (.comb fields) = 1) :
+    retVar (.comb fields) names = names.head? := by
+  simp [retVar, h]
+
+theorem retVar_comb_eq_none (fields : List Shape) (names : List Nat)
+    (h : Shape.shapeSize (.comb fields) ≠ 1) :
+    retVar (.comb fields) names = none := by
+  simp [retVar, h]
+
+theorem retVar_named (structName : StructName) (names : List Nat) :
+    retVar (.named structName) names = none := rfl
+
 def compileExp [BEq α] [OfNat α 0] [Add α]
     (context : CompileContext α) : Exp α → List (CrepExp α) × Shape
   | .const value => ([.const value], .one)

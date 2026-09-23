@@ -87,3 +87,25 @@ val _ = print_simp "compile_exp_correct_global_var"
      panSem$eval (pan_structsProof$convert_s ^global_ctxt ^global_state)
        (pan_structs$compile_exp ^global_ctxt ^global_expression) =
        SOME (pan_structsProof$convert_v ^global_value))``;
+
+val const_word = ``13w:8 word``;
+val const_value = ``ValWord ^const_word``;
+val const_expression = ``(panLang$Const ^const_word : 8 panLang$exp)``;
+val _ = print_simp "compile_exp_correct_const"
+  [pan_structsProofTheory.convert_s_def,
+   pan_structsProofTheory.convert_v_def,
+   pan_structsTheory.compile_exp_def,
+   pan_structsTheory.old_exp_shape_def,
+   panSemTheory.eval_def,
+   panSemTheory.shape_of_def,
+   pan_structsProofTheory.v_flds_ok_def,
+   FLOOKUP_UPDATE,
+   FLOOKUP_FMAP_MAP2,
+   FLOOKUP_FUN_FMAP]
+  ``(pan_structs$old_exp_shape ^ctxt ^const_expression,
+     panSem$shape_of ^const_value,
+     pan_structsProof$v_flds_ok (^local_state).structs ^const_value,
+     panSem$eval (^local_state) ^const_expression = SOME ^const_value,
+     panSem$eval (pan_structsProof$convert_s ^ctxt ^local_state)
+       (pan_structs$compile_exp ^ctxt ^const_expression) =
+       SOME (pan_structsProof$convert_v ^const_value))``;

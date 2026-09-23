@@ -26,10 +26,10 @@ def parityGuard : Bool :=
 `ret_var_def` to `List.head?` (bead `flapjack-pxn.18.2.4.1`). -/
 
 example : retVar (.comb [.one]) [5] = some 5 :=
-  retVar_comb_eq_head _ _ (by native_decide)
+  retVar_comb_eq_head _ _ (by simp [Shape.shapeSize])
 
 example : retVar (.comb [.one, .one]) [6] = none :=
-  retVar_comb_eq_none _ _ (by native_decide)
+  retVar_comb_eq_none _ _ (by simp [Shape.shapeSize])
 
 def runChecks : IO Bool := do
   if parityGuard then

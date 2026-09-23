@@ -40,10 +40,10 @@ Kernel-checked reductions, not HOL fixtures: they confirm the tagged
 emitted program, as recorded by `flapjack-pxn.18.2.4.1`. -/
 
 example : retHdl (α := Nat) (.comb [.one, .one]) [1, 2] = assignRet (α := Nat) [1, 2] :=
-  retHdl_comb_eq_assignRet _ _ (by native_decide)
+  retHdl_comb_eq_assignRet _ _ (by simp [Shape.shapeSize])
 
 example : retHdl (α := Nat) (.comb [.one]) [1] = .skip :=
-  retHdl_one_word_eq_skip _ _ (by native_decide)
+  retHdl_one_word_eq_skip _ _ (by simp [Shape.shapeSize])
 
 example : expHdlFiniteMap
     (FUPDATE (FEMPTY : FiniteMap String (Shape × List Nat))

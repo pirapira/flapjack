@@ -105,6 +105,14 @@
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "free_var_ids_def",
+    "lean_path": "Flapjack/Pancake/PanLang.lean",
+    "lean_name": "freeVarIds",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; clause-for-clause free_var_ids_def over the tagged expLocalVars port of var_exp, collecting local variables only and preserving order/duplicates; the Dec filter uses lawful != implementing HOL $\u2260; direct #guard parity in PanLangFreeVarIdsParity)."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "exceptions_def",
     "lean_path": "Flapjack/Pancake/PanLang.lean",
     "lean_name": "exceptionEntries",
@@ -262,6 +270,62 @@
     "lean_name": "crepEvalMulConstRaw",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Lean-only adapter removing the one-constructor PanWordLab wrapper from the untagged target-specific support lemma"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepEvalMulConstHolFiniteDimension",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only transport of constant-multiplication preservation across an explicit HolFiniteDimension representation; not a port of polymorphic HOL eval_mul_const"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "holFiniteWord_mul_comm",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Private Flapjack-only multiplication commutativity transport through the explicit finite-dimension BitVec model"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpMulEvalHolFiniteDimension",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Private Flapjack-only proof of the CrepOp.mul simplifier case under an explicit finite-dimension RISC-V/BitVec evaluator interpretation"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpEvalPreservesHolFiniteDimension",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only all-constructor production evaluator preservation helper using an explicit finite-dimension RISC-V/BitVec interpretation"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1HolFiniteDimension",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Generic finite-dimension production support preserves HOL's full optional word_lab result (both HOL word_lab and PanWordLab have only Word), the successful premise, and arbitrary code-map update. It remains untagged because it interprets the polymorphic word carrier through explicit HolFiniteDimension enumeration and the RISC-V/BitVec operation model; unrestricted HOL word-type/operation correspondence is not proved."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepArithHolFiniteDimensionMapCode_runtime",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only commuting equation for the source code-map update and its finite-dimension production runtime projection"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1HolFiniteDimensionSource",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Source-state-shaped theorem with HOL's premise, code-map update, simp_exp and complete option/word_lab conclusion, proved through production evaluation. It remains untagged because the Lean HOL word type is exposed by an explicit HolFiniteDimension enumeration and evaluated via BitVec/RISC-V operations; unrestricted HOL word representation/operation correspondence is not established."
   },
   {
     "hol_path": null,
@@ -3073,6 +3137,14 @@
   },
   {
     "hol_path": "cakeml/pancake/pan_globalsScript.sml",
+    "hol_name": "compile_def",
+    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
+    "lean_name": "compileProgCake",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; clause-for-clause compile_def over CakeContext: Dec, Assign Global/Local via FLOOKUP, Primitive, Store/Store32/StoreByte, Return, Raise, Seq, If, While, all Call rtyp/handler cases including the global-return-handler fresh-name machinery built from the exact freshNameHOL and freeVarIds/expLocalVars ports, DecCall, ExtCall, ShMemStore, ShMemLoad Local/Global, and the identity catch-all; [LawfulBEq String] so == and != implement HOL =; globals consulted only through FLOOKUP)."
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
     "hol_name": "fresh_name_def",
     "lean_path": "Flapjack/Pancake/PanGlobals.lean",
     "lean_name": "freshNameHOL",
@@ -3654,6 +3726,14 @@
     "lean_name": "globalsLookup",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison; exact state globals, shape_of, n2w, and OPT_MMAP ports)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "globalsLookup_wordCell",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only pointwise projection from successful state-owned globalsLookup; supports multiword exp_hdl reasoning and is not a separate HOL theorem"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
@@ -4493,7 +4573,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only composition deriving an actual state-owned source Call run from source callee/handler body premises, then carrying its projected result through production target Call dispatch. The target callee IH yields its run plus callee state_rel/code_rel/excp_rel and the word payload in target global cell zero needed by exp_hdl, rather than taking these as detached inputs; the handler relation IH remains a premise. This is not the full compiled-program Call_Ret_Exception case"
+    "reviewer": "Flapjack-only composition deriving an actual state-owned source Call run from source callee/handler body premises, then carrying its projected result through production target Call dispatch. The premise hcalleeTargetBodyIH assumes the target callee-body evaluator run plus callee state_rel/code_rel/excp_rel and the word payload in target global cell zero needed by exp_hdl; this helper consumes that target-body induction premise and does not prove the callee simulation. The handler relation IH also remains a premise. This is not the full compiled-program Call_Ret_Exception case"
   },
   {
     "hol_path": null,
@@ -4587,41 +4667,9 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
-    "lean_name": "lookupInfoDefaultPanPropsNStruct",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Lean lookup adapter for default-BEq InfoMap and HOL-shaped struct lookup; support only, with no separate HOL declaration."
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "lookupInfo_mapValues",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Finite-map lookup adapter lemma used to connect HOL FMAP_MAP2 results with explicit InfoMap entries; support for the open convert_s/compile_correct port."
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
-    "lean_name": "lookupInfo_mapValuesNStruct",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Specialized lookup-map adapter for named-struct declarations; proves a Lean map-view equation and is not a standalone HOL theorem."
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
-    "lean_name": "panStructConvertFieldValues_eq_map",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Lean list-map equation for converting named-struct field values; support for evaluator cases, with no separate HOL declaration."
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
-    "lean_name": "panValueFieldsHaveShapesNames",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Projects the Bool field-shape correspondence to equal field-name lists; Lean-only support for the open PanStructs correctness proof."
   },
   {
     "hol_path": null,
@@ -5110,5 +5158,21 @@
     "lean_name": "stateRel_riscv64CrepRuntimeTarget_iff",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "deepseek-two: Flapjack-only canonicalization lemma; riscv64CrepRuntimeTarget edits bytesInWord/memoryModel/ffiContext (not constrained by state_rel) and bigEndian, so stateRel source base and stateRel source (riscv64CrepRuntimeTarget base) coincide when base.bigEndian = false"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "set_globals_def",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem/Eval.lean",
+    "lean_name": "setCrepHolGlobals",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (exact 11-field CrepHolState port of set_globals_def crepSemScript.sml:61: setCrepHolGlobals gv w s = s with globals := s.globals |+ (gv,w), written as FUPDATE. The production 14-field CrepRuntimeState version is the separate untagged setCrepRuntimeGlobals, related by setCrepRuntimeGlobals_eq_FUPDATE and the untagged commutation setCrepHolGlobals_toRuntime. Direct HOL oracle crep_store_global_probe.out rows and Lean guards/examples in Flapjack/Test/CrepGlobalShapeParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "FLOOKUP_set_globals",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "flookup_setCrepHolGlobals_locals",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (exact 11-field CrepHolState port of FLOOKUP_set_globals crepPropsScript.sml:297: FLOOKUP (set_globals gv w s).locals n = FLOOKUP s.locals n, using tagged setCrepHolGlobals. The production adapter flookup_setCrepRuntimeGlobals_locals is untagged. Direct HOL oracle row set_globals_direct=(SOME (Word 22w),SOME (Word 7w),NONE) reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean)"
   }
 ]

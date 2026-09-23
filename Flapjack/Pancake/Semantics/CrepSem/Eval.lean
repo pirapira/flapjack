@@ -431,6 +431,16 @@ structure CrepHolState (α σ : Type u) where
   baseAddress : α
   topAddress : α
 
+/-- Exact HOL-shaped port of `crepSem$set_globals_def` (crepSemScript.sml:61)
+    over the 11-field `CrepHolState`:
+    `set_globals gv w s = s with globals := s.globals |+ (gv,w)`.
+    The production 14-field `CrepRuntimeState` version is the separate untagged
+    `setCrepRuntimeGlobals`; `setCrepHolGlobals_toRuntime` relates the two. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "set_globals_def"]
+def setCrepHolGlobals (key : BitVec 5) (value : PanWordLab α)
+    (state : CrepHolState α σ) : CrepHolState α σ :=
+  { state with globals := FUPDATE state.globals (key, value) }
+
 private def crepHolEvalFfiContext [OfNat α 0] : PanValueFfiContext α where
   sharedDomain := fun _ => false
   byteAlign := id
@@ -461,6 +471,15 @@ def CrepHolState.toRuntime [NeZero width]
     ffi := state.ffi
     baseAddress := state.baseAddress
     topAddress := state.topAddress }
+
+/-- Production adapter: the exact HOL-shaped `setCrepHolGlobals` on the
+    field-only state commutes with `CrepHolState.toRuntime`, so the executable
+    `setCrepRuntimeGlobals` performs the same global update. -/
+theorem setCrepHolGlobals_toRuntime [NeZero width]
+    (key : BitVec 5) (value : PanWordLab (RiscV.Word width))
+    (state : CrepHolState (RiscV.Word width) σ) :
+    (setCrepHolGlobals key value state).toRuntime =
+      setCrepRuntimeGlobals key value state.toRuntime := rfl
 
 /-! Production `CrepRuntimeState` adapter for a finite-index HOL word state.
     The target's word operations and byte accessors are lifted through the

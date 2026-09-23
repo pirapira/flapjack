@@ -5283,6 +5283,38 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panValueFlatContextFuel_lookup_ge",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only fuel bound showing a context suffix plus the selected declaration's fields fits within the original context fuel; support for named Load conversion, not a standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "lookupInfoWithRest_suffix_drop_for_load",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only support identifying the suffix returned by lookupInfoWithRest as a drop of the source context for named Load conversion."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "structInfosOk_suffix_for_load",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only support transporting structInfosOk to a lookup suffix for named Load conversion; no separate HOL theorem declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "lookupInfoWithRest_fields_wf_for_load",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only consequence of structInfosOk that a selected declaration's field shapes are well formed in its lookup suffix; support for named Load conversion."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "panStructConvertValues_eq_map",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Executable list conversion equals List.map of the production value converter; support for the RStruct case only, with no standalone HOL theorem declaration."

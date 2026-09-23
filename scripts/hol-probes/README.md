@@ -228,8 +228,10 @@ correctness, and the converted `compile_exps` result for the local HOL helper
 `compile_exp_correct_mmap_helper`; Lean proves the corresponding production
 list-evaluation prerequisite in `panStructCompileExpsEvalOfPointwiseCorrect`.
 The Load row directly exercises an explicit two-word memory read and is paired
-with a Lean source/converted evaluation fixture. Its general constructor case
-and the required memory-conversion induction remain open. The
+with a Lean source/converted evaluation fixture. The nested named-load row
+checks a multiword `Pair` containing a named `Inner`, including source and
+compiled shapes, field validity, and both evaluator results. Its general
+constructor case and the required memory-conversion induction remain open. The
 `size_of_compile_shape_comb` row separately directly evaluates the HOL
 `size_of_compile_shape` prerequisite at
 `cakeml/pancake/proofs/pan_structsProofScript.sml:512`; the generic Lean theorem

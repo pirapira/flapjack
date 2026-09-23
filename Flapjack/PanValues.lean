@@ -328,7 +328,7 @@ where
   panValueFlatShapeListFuel : List Shape → Nat
     | [] => 0
     | shape :: shapes =>
-        panValueFlatShapeFuel shape + panValueFlatShapeListFuel shapes
+        1 + panValueFlatShapeFuel shape + panValueFlatShapeListFuel shapes
 
 def panValueFlatFieldsFuel : List (FieldName × Shape) → Nat
   | [] => 0
@@ -392,6 +392,43 @@ mutual
         pure ((field, value) :: values)
   termination_by fuel _fields _address => fuel
 end
+
+/-- Field loads preserve field names around the ordinary list load of the
+    corresponding shapes. This is the representation bridge needed when a
+    named struct load is compiled into a flattened `Comb`. -/
+theorem panValueFlatLoadFieldsFuel_eq_zip [BEq α] [Add α]
+    (structs : StructContext) (readWord : α → Option α) (bytesInWord : α) :
+    ∀ (fuel : Nat) (fields : List (FieldName × Shape)) (address : α),
+      panValueFlatLoadFieldsFuel structs readWord bytesInWord fuel fields address =
+        (panValueFlatLoadListFuel structs readWord bytesInWord fuel
+          (fields.map Prod.snd) address).map
+            (fun values => (fields.map Prod.fst).zip values) := by
+  intro fuel
+  induction fuel with
+  | zero =>
+      intro fields address
+      cases fields <;> simp [panValueFlatLoadFieldsFuel, panValueFlatLoadListFuel]
+  | succ fuel ih =>
+      intro fields address
+      cases fields with
+      | nil => simp [panValueFlatLoadFieldsFuel, panValueFlatLoadListFuel]
+      | cons field fields =>
+          obtain ⟨name, shape⟩ := field
+          let nextAddress := panValueFlatOffset bytesInWord address
+            (shapeSizeWithContext structs shape)
+          simp only [panValueFlatLoadFieldsFuel, panValueFlatLoadListFuel, List.map_cons]
+          cases hhead : panValueFlatLoadFuel structs readWord bytesInWord fuel shape address with
+          | none => simp
+          | some value =>
+              have htail := ih fields nextAddress
+              dsimp [nextAddress] at htail
+              rw [htail]
+              cases hvalues : panValueFlatLoadListFuel structs readWord bytesInWord fuel
+                  (fields.map Prod.snd)
+                  (panValueFlatOffset bytesInWord address
+                    (shapeSizeWithContext structs shape)) with
+              | none => simp
+              | some values => simp [List.zip_cons_cons]
 
 def panValueFlatLoad [BEq α] [Add α]
     (structs : StructContext) (memory : α → Option (PanValue α))

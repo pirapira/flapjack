@@ -32,3 +32,7 @@ val wf_drop_context =
 val _ = print_eval "wf_shape_drop"
   ``panLang$is_wf_shape (DROP 1 ^wf_drop_context) (panLang$Named «s») ==>
     panLang$is_wf_shape ^wf_drop_context (panLang$Named «s»)``;
+val dropwhile_source = ``[0; 1; 2; 3]``;
+val _ = print_eval "dropWhile_MAP_helper"
+  ``dropWhile (\n:num. n < 3) (MAP SUC ^dropwhile_source) =
+    MAP SUC (dropWhile (\n:num. n < 2) ^dropwhile_source)``;

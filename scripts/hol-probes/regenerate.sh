@@ -503,6 +503,12 @@ run_probe crep_replicate_const_probeScript.sml crep_replicate_const_probe.out \
   replicate_const_one replicate_const_nonzero \
   "$cake_dir/pancake/semantics/crepSemScript.sml" \
   "$cake_dir/pancake/semantics"
+# The mem_load probe observes the total word -> word_lab memory function and the
+# memaddrs guard on both mem_load and eval (Load ...).
+run_probe crep_mem_load_probeScript.sml crep_mem_load_probe.out \
+  mem_load_valid eval_load_invalid \
+  "$cake_dir/pancake/semantics/crepSemScript.sml" \
+  "$cake_dir/pancake/semantics"
 run_probe prog_if_probeScript.sml prog_if_probe.out \
   prog_if_basic prog_if_basic \
   "$cake_dir/pancake/crep_to_loopScript.sml"

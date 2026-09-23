@@ -113,7 +113,7 @@ run_probe pan_structs_compile_exp_correct_probeScript.sml pan_structs_compile_ex
   compile_exp_correct_local_var compile_exp_correct_global_var compile_exp_correct_const \
   compile_exp_correct_mmap_nonempty compile_exp_correct_rstruct \
   compile_exp_correct_nstruct compile_exp_correct_nfield \
-  compile_exp_correct_rfield \
+  compile_exp_correct_rfield compile_exp_correct_op \
   "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
   "$cake_dir/pancake/proofs"
 run_probe pan_structs_value_validity_probeScript.sml pan_structs_value_validity_probe.out \
@@ -254,7 +254,7 @@ run_probe word_alloc_cost_probeScript.sml word_alloc_cost_probe.out \
   spill_all1_tail coal_empty coal_x_in coal_y_in coal_both_in coal_pri2_both_in \
   "$cake_dir/compiler/backend/word_allocScript.sml" "$cake_dir/compiler/backend"
 run_probe pan_lang_free_var_ids_probeScript.sml pan_lang_free_var_ids_probe.out \
-  empty dec_call "$cake_dir/pancake/panLangScript.sml"
+  empty global_in_handler "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_lang_inlinable_probeScript.sml pan_lang_inlinable_probe.out \
   inline_true non_function "$cake_dir/pancake/panLangScript.sml"
 run_probe get_forced_probeScript.sml get_forced_probe.out \

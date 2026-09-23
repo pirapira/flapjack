@@ -46,3 +46,12 @@ val _ = print_eval "dec_call"
       (DecCall (strlit "x") One (strlit "d")
         [Var Local (strlit "a")]
         (Return (Var Local (strlit "r"))))``;
+val _ = print_eval "global_read"
+  ``free_var_ids (Assign Local (strlit "x") (Var Global (strlit "g")))``;
+val _ = print_eval "global_in_handler"
+  ``free_var_ids
+      (Call (SOME (NONE,
+        SOME (strlit "E", strlit "h",
+          Seq (Assign Local (strlit "z") (Var Global (strlit "g")))
+              (Return (Var Local (strlit "q"))))))
+        (strlit "f") [Var Global (strlit "a")])``;

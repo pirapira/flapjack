@@ -51,13 +51,15 @@ namespace Flapjack
 all take the byte representation of a machine word from it before handing bytes
 to the external handler. HOL's `call_FFI` receives that byte list as produced by
 `byte$word_to_bytes` / `byte$get_byte`, while `crepSem` validates shared-memory
-addresses with `byte$byte_align`. The canonical RISC-V 64 context below uses the
-RISC-V helpers that mirror those HOL functions, so the executable FFI boundary
-is read as the fixed little-endian target byte codec.
+addresses with `byte$byte_align`. The canonical context below uses the RISC-V helpers that mirror those HOL
+functions, so the executable FFI boundary is read as the fixed little-endian
+target byte codec. Its `sharedDomain` is the state's shared-memory address
+bitmap (`CrepRuntimeState.shMemaddrs`), i.e. HOL `s.sh_memaddrs`, so the
+canonical target validates shared-memory addresses with the HOL predicate
+(`addr IN s.sh_memaddrs` / `byte_align addr IN s.sh_memaddrs`). Direct oracle:
+`scripts/hol-probes/crep_runtime_shared_domain_probe.out`.
 
-The `sharedDomain` field is deliberately total here; constraining shared-memory
-address validity is tracked in child bead `flapjack-pxn.18.4.3.43.1.1`, and the
-general `wordOfBytes`/`call_FFI` handler relation in
+The general `wordOfBytes`/`call_FFI` handler relation remains in
 `flapjack-pxn.18.4.3.43.1.2`. -/
 
 /-- The RISC-V byte at `index` of `value`, reusing the pan memory model's
@@ -76,9 +78,12 @@ def riscv64PutBytes (bigEndian : Bool) : Nat → List UInt8 → RiscV.Word 64 �
           (BitVec.ofNat 64 byte.toNat) value)
 
 /-- Canonical RISC-V 64 FFI byte codec: little-endian bytes, low byte first, as
-    HOL `word_to_bytes` produces for the 64-bit target. -/
-def riscv64PanValueFfiContext : PanValueFfiContext (RiscV.Word 64) where
-  sharedDomain := fun _ => true
+    HOL `word_to_bytes` produces for the 64-bit target. The shared-memory domain
+    is supplied by the caller; the canonical target passes the state's
+    `shMemaddrs`, the HOL `s.sh_memaddrs` predicate. -/
+def riscv64PanValueFfiContext (sharedDomain : RiscV.Word 64 → Bool) :
+    PanValueFfiContext (RiscV.Word 64) where
+  sharedDomain := sharedDomain
   byteAlign := RiscV.panRiscVByteAlign (8 : RiscV.Word 64)
   bigEndian := false
   wordToBytes := fun address _ => (List.range 8).map (fun index => riscv64GetByte index address)
@@ -87,22 +92,23 @@ def riscv64PanValueFfiContext : PanValueFfiContext (RiscV.Word 64) where
   byteToWord := fun byte => BitVec.ofNat 64 byte.toNat
   valueToNat := fun value => value.toNat
 
-/-- Canonical RISC-V 64 runtime target: fix the three target fields that HOL
-    leaves fixed by the word type. -/
+/-- Canonical RISC-V 64 runtime target: fix the target fields that HOL leaves
+    fixed by the word type, and read the FFI shared-memory domain from the
+    state's shared-memory address bitmap. -/
 def riscv64CrepRuntimeTarget (base : CrepRuntimeState (RiscV.Word 64) σ) :
     CrepRuntimeState (RiscV.Word 64) σ :=
   { base with
     bytesInWord := (8 : RiscV.Word 64)
     bigEndian := false
     memoryModel := RiscV.panRiscVMemoryModel
-    ffiContext := riscv64PanValueFfiContext }
+    ffiContext := riscv64PanValueFfiContext base.shMemaddrs }
 
 /-- Predicate naming the canonical target constraints. -/
 def isRiscV64CrepRuntimeTarget (state : CrepRuntimeState (RiscV.Word 64) σ) : Prop :=
   state.bytesInWord = (8 : RiscV.Word 64) ∧
     state.bigEndian = false ∧
     state.memoryModel = RiscV.panRiscVMemoryModel ∧
-    state.ffiContext = riscv64PanValueFfiContext
+    state.ffiContext = riscv64PanValueFfiContext state.shMemaddrs
 
 theorem riscv64CrepRuntimeTarget_isTarget
     (base : CrepRuntimeState (RiscV.Word 64) σ) :
@@ -128,7 +134,55 @@ theorem riscv64CrepRuntimeTarget_memoryModel
 
 theorem riscv64CrepRuntimeTarget_ffiContext
     (base : CrepRuntimeState (RiscV.Word 64) σ) :
-    (riscv64CrepRuntimeTarget base).ffiContext = riscv64PanValueFfiContext :=
+    (riscv64CrepRuntimeTarget base).ffiContext =
+      riscv64PanValueFfiContext base.shMemaddrs :=
+  rfl
+
+/-! ### Shared-memory address validity
+
+HOL `sh_mem_load`/`sh_mem_store` validate an address with `addr IN s.sh_memaddrs`
+for width zero and `byte_align addr IN s.sh_memaddrs` for nonzero widths
+(`panSemScript.sml:510-524`, `crepSemScript.sml:168-204`). The canonical target
+reads `ffiContext.sharedDomain` from the state's shared-memory address bitmap,
+so `crepRuntimeSharedAddressValid` is the HOL predicate itself, and a width-zero
+op checks the raw address while a width-four op checks the byte-aligned address.
+Direct oracle: `scripts/hol-probes/crep_runtime_shared_domain_probe.out`
+  valid_zero_mem=T; valid_zero_out=F; valid_aligned_mem=T; valid_aligned_out=F;
+  align_9=8w; align_16=16w -/
+
+/-- On the canonical target the FFI shared domain is the state's shared-memory
+    address bitmap (HOL `s.sh_memaddrs`). -/
+theorem riscv64CrepRuntimeTarget_sharedDomain
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (address : RiscV.Word 64) :
+    (riscv64CrepRuntimeTarget base).ffiContext.sharedDomain address =
+      (riscv64CrepRuntimeTarget base).shMemaddrs address :=
+  rfl
+
+/-- Production `crepRuntimeSharedAddressValid` is the canonical FFI shared
+    domain applied to the (byte-aligned) address, i.e. HOL `addr IN
+    s.sh_memaddrs` / `byte_align addr IN s.sh_memaddrs`. -/
+theorem crepRuntimeSharedAddressValid_eq_sharedDomain
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (operator : CrepMemOp)
+    (address : RiscV.Word 64) :
+    crepRuntimeSharedAddressValid (riscv64CrepRuntimeTarget base) operator address =
+      (riscv64CrepRuntimeTarget base).ffiContext.sharedDomain
+        (crepRuntimeSharedAddress (riscv64CrepRuntimeTarget base) operator address) :=
+  rfl
+
+/-- Width-zero shared-memory ops validate the raw address, as HOL does when
+    `nb = 0`. -/
+theorem crepRuntimeSharedAddress_load_target
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (address : RiscV.Word 64) :
+    crepRuntimeSharedAddress (riscv64CrepRuntimeTarget base) .load address =
+      address :=
+  rfl
+
+/-- Width-four shared-memory ops validate the byte-aligned address, as HOL does
+    when `nb ≠ 0`; `panRiscVByteAlign 8` is HOL `byte_align` on 64-bit words. -/
+theorem crepRuntimeSharedAddress_load32_target
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (address : RiscV.Word 64) :
+    crepRuntimeSharedAddress (riscv64CrepRuntimeTarget base) .load32 address =
+      RiscV.panRiscVByteAlign (8 : RiscV.Word 64) address :=
   rfl
 
 /-! ### FFI byte-codec bridges
@@ -139,23 +193,26 @@ helpers, whose offset arithmetic is HOL `byte$get_byte` / `byte$set_byte` /
 external handler for `ExtCall` and shared memory, matching HOL `word_to_bytes`.
 Direct oracle: `scripts/hol-probes/crep_runtime_ffi_boundary_probe.out`. -/
 
-theorem riscv64PanValueFfiContext_byteAlign_eq_riscv (address : RiscV.Word 64) :
-    riscv64PanValueFfiContext.byteAlign address =
+theorem riscv64PanValueFfiContext_byteAlign_eq_riscv
+    (domain : RiscV.Word 64 → Bool) (address : RiscV.Word 64) :
+    (riscv64PanValueFfiContext domain).byteAlign address =
       RiscV.panRiscVByteAlign (8 : RiscV.Word 64) address :=
   rfl
 
-theorem riscv64PanValueFfiContext_wordToByte_eq_getByte0 (value : RiscV.Word 64) :
-    riscv64PanValueFfiContext.wordToByte value = riscv64GetByte 0 value :=
+theorem riscv64PanValueFfiContext_wordToByte_eq_getByte0
+    (domain : RiscV.Word 64 → Bool) (value : RiscV.Word 64) :
+    (riscv64PanValueFfiContext domain).wordToByte value = riscv64GetByte 0 value :=
   rfl
 
 theorem riscv64PanValueFfiContext_wordToBytes_eq_getByte
-    (address : RiscV.Word 64) (bigEndian : Bool) :
-    riscv64PanValueFfiContext.wordToBytes address bigEndian =
+    (domain : RiscV.Word 64 → Bool) (address : RiscV.Word 64) (bigEndian : Bool) :
+    (riscv64PanValueFfiContext domain).wordToBytes address bigEndian =
       (List.range 8).map (fun index => riscv64GetByte index address) :=
   rfl
 
-theorem riscv64PanValueFfiContext_valueToNat_eq_riscv (value : RiscV.Word 64) :
-    riscv64PanValueFfiContext.valueToNat value = value.toNat :=
+theorem riscv64PanValueFfiContext_valueToNat_eq_riscv
+    (domain : RiscV.Word 64 → Bool) (value : RiscV.Word 64) :
+    (riscv64PanValueFfiContext domain).valueToNat value = value.toNat :=
   rfl
 
 theorem riscv64CrepRuntimeTarget_idem

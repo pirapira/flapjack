@@ -78,6 +78,18 @@ theorem ctxtFcVmax
     (variables : List String) (shapes : List Shape) (names : List Nat) :
     (ctxtFc context.funcs codes variables shapes names).vmax = maxList names := rfl
 
+/-- HOL `ctxt_max_el_leq`: a slot selected from a variable's flattened name
+    list does not exceed the context's maximum slot. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "ctxt_max_el_leq"]
+theorem ctxtMaxGetElemLe
+    (context : PanToCrepProofContext α) (varName : String)
+    (shape : Shape) (names : List Nat) (index : Nat)
+    (hmax : ctxtMax context.vmax context.vars)
+    (hlookup : FLOOKUP context.vars varName = some (shape, names))
+    (hindex : index < names.length) :
+    names[index] ≤ context.vmax := by
+  exact hmax.2 varName shape names hlookup names[index] (List.getElem_mem hindex)
+
 /-- HOL `slc_def`: pair each source parameter name with its argument value,
     with `ZIP` truncation represented by Lean's `List.zip`. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "slc_def"]

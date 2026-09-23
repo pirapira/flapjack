@@ -3,6 +3,11 @@ missing_global=Call NONE «f» []
 empty_one_global=Call NONE «f» []
 extra_names_global=Call (SOME ([4; 5],NONE)) «f» []
 missing_names_global=Call (SOME ([4],NONE)) «f» []
+missing_local=Call NONE «f» []
+empty_one_local=Call NONE «f» []
+extra_names_local=Call (SOME ([4; 5],NONE)) «f» []
+missing_names_local=Call (SOME ([4],NONE)) «f» []
+valid_local=Call (SOME ([0; 1],NONE)) «f» []
 empty_struct_return=Return []
 pair_load=Return
   (Load (Var 0)::

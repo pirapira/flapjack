@@ -61,6 +61,46 @@ theorem lookup_locals_eq_map_vars
   | cons name names ih =>
       simp only [List.mapM_cons, List.map_cons, crepSemEvalExp_var, ih]
 
+/-- Exact port of Cake `crepProps$dec_clock_simp`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:267`). It states every
+    unchanged field listed by HOL: locals, globals, code, memory, both memory
+    domains, endianness (`be`), FFI, and both address bounds. HOL omits `clock`
+    because `dec_clock` changes it; Lean's `bigEndian` is the corresponding
+    field for HOL's `be`. No extra premises are needed. -/
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "dec_clock_simp"]
+theorem dec_clock_simp (state : CrepRuntimeState α σ) :
+    (decCrepClock state).locals = state.locals ∧
+    (decCrepClock state).globals = state.globals ∧
+    (decCrepClock state).code = state.code ∧
+    (decCrepClock state).memory = state.memory ∧
+    (decCrepClock state).memaddrs = state.memaddrs ∧
+    (decCrepClock state).shMemaddrs = state.shMemaddrs ∧
+    (decCrepClock state).bigEndian = state.bigEndian ∧
+    (decCrepClock state).ffi = state.ffi ∧
+    (decCrepClock state).baseAddress = state.baseAddress ∧
+    (decCrepClock state).topAddress = state.topAddress := by
+  simp [decCrepClock]
+
+/-- Exact port of Cake `crepProps$empty_locals_simp`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:282`). It states every
+    unchanged field listed by HOL: globals, code, memory, both memory domains,
+    clock, endianness (`be`), FFI, and both address bounds. HOL omits `locals`
+    because `empty_locals` clears that field. Lean's `bigEndian` is the
+    corresponding field for HOL's `be`; no extra premises are needed. -/
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "empty_locals_simp"]
+theorem empty_locals_simp (state : CrepRuntimeState α σ) :
+    (clearCrepRuntimeLocals state).globals = state.globals ∧
+    (clearCrepRuntimeLocals state).code = state.code ∧
+    (clearCrepRuntimeLocals state).memory = state.memory ∧
+    (clearCrepRuntimeLocals state).memaddrs = state.memaddrs ∧
+    (clearCrepRuntimeLocals state).shMemaddrs = state.shMemaddrs ∧
+    (clearCrepRuntimeLocals state).clock = state.clock ∧
+    (clearCrepRuntimeLocals state).bigEndian = state.bigEndian ∧
+    (clearCrepRuntimeLocals state).ffi = state.ffi ∧
+    (clearCrepRuntimeLocals state).baseAddress = state.baseAddress ∧
+    (clearCrepRuntimeLocals state).topAddress = state.topAddress := by
+  simp [clearCrepRuntimeLocals]
+
 /-- HOL `map_var_cexp_eq_var`: mapping `Var` over a list and flattening each
     expression's variable list recovers the original list. -/
 @[hol "cakeml/pancake/semantics/crepPropsScript.sml" "map_var_cexp_eq_var"]

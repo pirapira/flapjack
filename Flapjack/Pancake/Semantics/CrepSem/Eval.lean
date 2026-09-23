@@ -21,6 +21,17 @@ def crepSemEvalExp
     (state : CrepRuntimeState α σ) : CrepExp α → Option α :=
   evalCrepRuntimeExp state
 
+/-- HOL `crepSem.eval s (Var v)` is `FLOOKUP s.locals v`.  The source-path
+Lean evaluator takes the same branch through the runtime state's local map. -/
+@[simp] theorem crepSemEvalExp_var
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeState α σ) (name : Nat) :
+    crepSemEvalExp state (.var name) = state.locals name := by
+  simp [crepSemEvalExp, evalCrepRuntimeExp]
+
 @[simp] theorem crepSemEvalExp_eq_runtime
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

@@ -8,7 +8,10 @@ function-represented `Flapjack.FiniteMap` has no finite domain, so the port
 uses `CrepInlineFmap`, a unique-key finite map with
 `lookup`/`remove`/`submap`/`card`.  These checks pin the lookup/removal/
 cardinality laws, that `card` equals the domain cardinality, and that the
-smart `insert` replaces a duplicate key rather than shadowing it. -/
+smart `insert` replaces a duplicate key rather than shadowing it.  The
+`fmapDupOverwrite`/`fmapNestedShape`/`fmapArgShape` fixtures mirror the direct
+HOL oracle rows in `scripts/hol-probes/crep_inline_code_inl_probe.out`
+(`lookup_dup_f`, `inline_nested_call`, `inline_arg_call`). -/
 
 namespace Flapjack.Test.CrepInlineFmapParity
 
@@ -71,12 +74,57 @@ def fmapMissShape : Bool :=
   | .call none "g" _ => true
   | _ => false
 
+/-- HOL `lookup_dup_f` / `inline_dup_call`: a duplicate key is overwritten
+    (`|+` on HOL, smart `insert` here), so lookup returns the last binding. -/
+def fmapDupOverwrite : CrepInlineFmap Nat :=
+  CrepInlineFmap.insert "f" ([9], .dec 9 (.const 3) .skip) fmapEntries
+
+theorem fmapDupOverwriteLookup :
+    fmapDupOverwrite.lookup "f" = some ([9], .dec 9 (.const 3) .skip) :=
+  CrepInlineFmap.lookup_insert_self "f" ([9], .dec 9 (.const 3) .skip) fmapEntries
+
+/-- HOL `inline_nested_call`: the callee body calls `f` again; `inline_prog`
+    removes `f` from the map (`\\`, DOMSUB) before recursing, so the nested
+    call is left untouched. -/
+def fmapNestedEntries : CrepInlineFmap Nat :=
+  CrepInlineFmap.insert "f" ([], CrepProg.call none "f" []) CrepInlineFmap.empty
+
+def fmapNestedShape : Bool :=
+  match crepInlineProgFmap fmapNestedEntries (.call none "f" []) with
+  | .seq .tick (.call none "f" []) => true
+  | _ => false
+
+/-- HOL `inline_arg_call`: argument loading through `arg_load`/`GENLIST`. -/
+def fmapArgEntries : CrepInlineFmap Nat :=
+  CrepInlineFmap.insert "f" ([7], .dec 1 (.const 1) .skip) CrepInlineFmap.empty
+
+def fmapArgShape : Bool :=
+  match crepInlineProgFmap fmapArgEntries (.call none "f" [.const 5]) with
+  | .seq .tick
+      (.dec 8 (.const 5) (.dec 7 (.var 8) (.dec 1 (.const 1) .skip))) => true
+  | _ => false
+
+/-- Carrier bridge: HOL `FLOOKUP` of the `FiniteMap` view is the map lookup. -/
+theorem bridgeFlookup :
+    FLOOKUP (CrepInlineFmap.toFiniteMap fmapEntries) "f" =
+      some ([7], CrepProg.skip) :=
+  CrepInlineFmap.FLOOKUP_toFiniteMap fmapEntries "f"
+
+/-- Carrier bridge for `SUBMAP` (holds definitionally through the view). -/
+theorem bridgeSubmapIff :
+    (CrepInlineFmap.submap fmapEntries fmapEntries) ↔
+      (∀ name value,
+        FLOOKUP (CrepInlineFmap.toFiniteMap fmapEntries) name = some value →
+        FLOOKUP (CrepInlineFmap.toFiniteMap fmapEntries) name = some value) :=
+  CrepInlineFmap.submap_iff_flookup fmapEntries fmapEntries
+
 /-- Matching HOL `FLOOKUP` on the finite map. -/
 def lookupShape : Bool :=
   (fmapEntries.lookup "f").isSome && (fmapEntries.lookup "g").isNone &&
     ((fmapEntries.remove "f").lookup "f").isNone
 
-def parityGuard : Bool := inlinedShape && fmapMissShape && lookupShape
+def parityGuard : Bool :=
+  inlinedShape && fmapMissShape && lookupShape && fmapNestedShape && fmapArgShape
 
 #guard parityGuard
 #eval parityGuard

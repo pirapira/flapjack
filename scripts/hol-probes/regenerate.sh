@@ -118,6 +118,10 @@ run_probe pan_structs_compile_exp_correct_probeScript.sml pan_structs_compile_ex
   size_of_compile_shape_comb \
   "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
   "$cake_dir/pancake/proofs"
+run_probe pan_structs_mem_load_conversion_probeScript.sml pan_structs_mem_load_conversion_probe.out \
+  mem_load_conversion_one mem_load_conversion_comb_multiword \
+  "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
+  "$cake_dir/pancake/proofs"
 run_probe pan_structs_value_validity_probeScript.sml pan_structs_value_validity_probe.out \
   v_flds_ok_word v_flds_ok_named_match v_flds_ok_named_mismatch \
   v_flds_ok_named_missing v_flds_ok_duplicate_first \
@@ -209,7 +213,7 @@ run_probe fm_empty_zip_alist_probeScript.sml fm_empty_zip_alist_probe.out \
   fold_flookup_eq flookup_absent "$cake_dir/pancake/semantics/pan_commonPropsScript.sml" \
   "$cake_dir/pancake/semantics"
 run_probe crep_inline_code_inl_probeScript.sml crep_inline_code_inl_probe.out \
-  flookup_f handler_call_untouched "$cake_dir/pancake/crep_inlineScript.sml" \
+  flookup_f inline_arg_call "$cake_dir/pancake/crep_inlineScript.sml" \
   "$cake_dir/pancake"
 run_probe pan_flat_store_probeScript.sml pan_flat_store_probe.out \
   store_hit stores_blocked "$cake_dir/pancake/semantics/panSemScript.sml"
@@ -374,6 +378,11 @@ run_probe pan_sem_call_arg_error_probeScript.sml pan_sem_call_arg_error_probe.ou
 # cleared locals.
 run_probe pan_sem_return_raise_error_probeScript.sml pan_sem_return_raise_error_probe.out \
   ret_eval_fail_result raise_ok_locals \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+# The ExtCall error probe observes the non-word argument and failing
+# byte-read rejections, each returning `SOME Error` with unchanged state.
+run_probe pan_sem_extcall_error_probeScript.sml pan_sem_extcall_error_probe.out \
+  ext_nonword_result ext_read_fail_ffi_io \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_sem_call_terminal_probeScript.sml pan_sem_call_terminal_probe.out \
   call_terminal_skip_result call_terminal_continue_param_locals \

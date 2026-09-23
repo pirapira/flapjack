@@ -4192,6 +4192,22 @@
     "reviewer": "All HOL cases reviewed against PanValue: Val (Word w) maps to .word unchanged; RStruct xs maps recursively in order to .rStruct; NStruct nm flds maps recursively over field values in order to .rStruct, dropping names as HOL does. The adjacent direct HOL EVAL fixture covers named-record conversion."
   },
   {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "v_flds_ok_def",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructValueFieldsOkBool",
+    "statement_status": "reviewed_exact",
+    "reviewer": "All HOL cases match the Bool-valued Lean equations: word true; RStruct EVERY over values; NStruct EVERY over field values and first-match equality-based ALOOKUP followed by exact field-name and shape-list equality. The adjacent direct HOL EVAL fixture covers word, matching/mismatching fields, and missing context. The extra Lean StructInfo.shapedFields cache is ignored; fields and size correspond to the HOL struct_info projection."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "is_wf_shape_v_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "panIsWfShapeValueBool",
+    "statement_status": "reviewed_exact",
+    "reviewer": "All HOL cases match the Bool-valued Lean equations: word true; RStruct EVERY over values; NStruct equality-based ALOOKUP success and EVERY over field values. The adjacent direct HOL EVAL fixture covers word, matching named struct, and missing context. The extra Lean StructInfo.shapedFields cache is ignored."
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
@@ -4286,5 +4302,13 @@
     "lean_name": "compileExpHOL_const_eval_flatten",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Constant constructor case for HOL compile_exp_val_rel: the state-owned source evaluator and production Crep compiler/evaluator both flatten the word constant; general expression and Call argument theorem remain open."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "every_exp_def",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "crepEveryExp",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (constructor-by-constructor source comparison against every_exp_def; direct HOL-EVAL rows reproduced by Lean guards in Flapjack/Test/CrepEveryExpParity.lean)"
   }
 ]

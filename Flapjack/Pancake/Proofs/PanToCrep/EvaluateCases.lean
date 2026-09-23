@@ -2270,11 +2270,11 @@ private theorem mapM_panTheWord_of_wordLab
                       have htailEval := ih words htailLookup
                       simp [List.mapM_cons, hlookup, panTheWord, htailEval]
 
-/-! The exact local-variable case of HOL `compile_exp_val_rel`. `locals_rel`
+/-! Flapjack-specific local-variable support toward HOL `compile_exp_val_rel`. `locals_rel`
 provides the flattened target words for the source value, and target `.var`
 evaluation reads those same slots through the production Crep locals map.
-This is one constructor case toward `eval_map_comp_exp_flat_eq`; it does not
-claim the general expression theorem. -/
+This handles one RV64 constructor, but does not state HOL's full case or
+claim the general expression theorem `eval_map_comp_exp_flat_eq`. -/
 theorem compileExpHOL_local_eval_flatten
     (context : PanToCrepProofContext (RiscV.Word 64))
     (source : PanSemState (RiscV.Word 64) (FfiState σ))
@@ -2300,7 +2300,8 @@ theorem compileExpHOL_local_eval_flatten
   rw [evalCrepRuntimeExps_vars_eq]
   exact htargetValues
 
-/-! The constant constructor case of HOL `compile_exp_val_rel`. -/
+/-! Flapjack-specific RV64 constant support toward HOL `compile_exp_val_rel`;
+    the general expression theorem remains open. -/
 theorem compileExpHOL_const_eval_flatten
     (context : PanToCrepProofContext (RiscV.Word 64))
     (source : PanSemState (RiscV.Word 64) (FfiState σ))

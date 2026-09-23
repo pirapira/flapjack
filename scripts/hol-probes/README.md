@@ -120,6 +120,13 @@ evaluator support only; the full theorem's finite-map premises and invariant,
 shape-map, and result-value postconditions remain open in
 `flapjack-pxn.18.5.3.29` and `.30`. Lean regressions live in
 `Flapjack.Test.PanStructsCompileCorrect`.
+`pan_structs_value_validity_probe.out` records direct HOL EVAL of the word,
+matching/mismatching named-record, missing-context, and duplicate-key first
+match rows for
+`v_flds_ok_def` and `is_wf_shape_v_def`; the matching Bool-valued Lean
+definitions and regressions live in
+`Flapjack.Pancake.Proofs.PanStructs.CompileCorrect` and
+`Flapjack.Test.PanStructsValueValidityParity`.
 `pan_structs_afindi_append_probe.out` records direct HOL EVAL of prefix-hit,
 shifted suffix-hit and missing-key rows for `afindi_append` at
 `cakeml/pancake/proofs/pan_structsProofScript.sml:417`; matching Lean cases

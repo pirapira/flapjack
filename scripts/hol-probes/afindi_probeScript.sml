@@ -81,3 +81,22 @@ val _ = print
   (String.translate (fn #"\n" => " " | c => String.str c)
     (term_to_string (concl struct_infos_ok_cons_instance)));
 val _ = print "\n";
+val alookup_map_structs_ok_oracle = prove(
+  ``!s_ctxt nm info. ALOOKUP s_ctxt nm = SOME info /\
+      struct_infos_ok s_ctxt ==> ALL_DISTINCT (MAP FST info.fields)``,
+  rw [] >>
+  imp_res_tac ALOOKUP_MEM >>
+  fs [struct_infos_ok_def, EVERY_MAP] >>
+  imp_res_tac EVERY_MEM >>
+  fs []);
+val alookup_map_context = valid_struct_context;
+val alookup_map_name = ``strlit "S"``;
+val alookup_map_info = ``<| fields := [(strlit "f", One)]; size := 1 |>``;
+val alookup_map_structs_ok_instance =
+  SPECL [alookup_map_context, alookup_map_name, alookup_map_info]
+    alookup_map_structs_ok_oracle;
+val _ = print "alookup_map_structs_ok=";
+val _ = print
+  (String.translate (fn #"\n" => " " | c => String.str c)
+    (term_to_string (concl alookup_map_structs_ok_instance)));
+val _ = print "\n";

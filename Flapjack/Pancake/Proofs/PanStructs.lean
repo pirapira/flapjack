@@ -450,6 +450,28 @@ theorem structInfosOk_cons (xs : StructContext) (nm : StructName) (info : Struct
       rw [← hdropOne (.comb (info'.fields.map Prod.snd)) hwfComb]
       exact h4 (name, info') hentry
 
+/-- Exact translation of HOL's local `alookup_map_structs_ok`
+    (`pan_structsProofScript.sml:243`): a found structure in a valid context
+    has distinct field names. -/
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "alookup_map_structs_ok" 243]
+theorem lookupInfo_fields_nodup [BEq String] [LawfulBEq String] (name : String)
+    (context : StructContext) (info : StructInfo)
+    (hlookup : lookupInfo name context = some info)
+    (hok : structInfosOk context) :
+    (info.fields.map Prod.fst).Nodup := by
+  induction context with
+  | nil => simp [lookupInfo] at hlookup
+  | cons entry context ih =>
+      obtain ⟨candidate, entryInfo⟩ := entry
+      simp only [lookupInfo] at hlookup
+      by_cases hc : (candidate == name) = true
+      · rw [if_pos hc] at hlookup
+        have heq : entryInfo = info := Option.some.inj hlookup
+        subst heq
+        exact hok.1 (candidate, entryInfo) (by simp)
+      · rw [if_neg hc] at hlookup
+        exact ih hlookup (structInfosOk_drop 1 ((candidate, entryInfo) :: context) hok)
+
 /-- Exact port of HOL `dropWhile_MAP_helper`
     (`pan_structsProofScript.sml:542`): mapping commutes with `dropWhile` when
     the source and mapped predicates agree on every source element. -/

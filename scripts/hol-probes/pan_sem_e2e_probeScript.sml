@@ -132,6 +132,14 @@ val _ = print_eval "deccall_code_map_7"
            («id», ([(«x», panLang$One)],
              panLang$Return (panLang$Var panLang$Local «x»), panLang$One)))))``
 
+val _ = print_eval "nested_call_code_map_7"
+  ``FST (panSem$evaluate
+      (panLang$Call NONE «f» [],
+       (((ARB:((8),unit) panSem$state) with clock := 10) with
+         code := FEMPTY |+
+           («f», ([], panLang$Call NONE «g» [], panLang$One)) |+
+           («g», ([], panLang$Return (panLang$Const (7w:8 word)), panLang$One)))))``
+
 val _ = print_eval "call_struct_argument_7_8"
   ``FST (panSem$evaluate
       (panLang$Call NONE «pair»

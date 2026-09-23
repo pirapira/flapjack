@@ -120,7 +120,7 @@ run_probe pan_structs_value_validity_probeScript.sml pan_structs_value_validity_
   v_flds_ok_word v_flds_ok_named_match v_flds_ok_named_mismatch \
   v_flds_ok_named_missing v_flds_ok_duplicate_first \
   is_wf_shape_v_word is_wf_shape_v_named_match \
-  is_wf_shape_v_named_missing \
+  is_wf_shape_v_named_missing value_validity_done \
   "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
   "$cake_dir/pancake/proofs"
 run_probe pan_structs_afindi_map_probeScript.sml pan_structs_afindi_map_probe.out \
@@ -366,6 +366,12 @@ run_probe pan_sem_deccall_error_probeScript.sml pan_sem_deccall_error_probe.out 
 # with `SOME Error` before callee lookup, preserving clock and locals.
 run_probe pan_sem_call_arg_error_probeScript.sml pan_sem_call_arg_error_probe.out \
   call_arg_fail_result call_arg_fail_missing_result \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+# The Return/Raise probe observes evaluation failure and shape/size rejection
+# with `SOME Error` and the unchanged state, plus the successful results with
+# cleared locals.
+run_probe pan_sem_return_raise_error_probeScript.sml pan_sem_return_raise_error_probe.out \
+  ret_eval_fail_result raise_ok_locals \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_sem_call_terminal_probeScript.sml pan_sem_call_terminal_probe.out \
   call_terminal_skip_result call_terminal_continue_param_locals \

@@ -62,19 +62,6 @@ mutual
   decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
 end
 
-/-- HOL-shaped `struct_info` (`cakeml/pancake/panLangScript.sml:121`), the value
-    component of the `v_flds_ok` context. It carries exactly the HOL fields
-    `fields` and `size`, without the production `StructInfo.shapedFields`
-    cache that has no HOL counterpart. -/
-structure StructInfoHOL where
-  fields : List (FieldName × Shape)
-  size : Nat
-  deriving Repr
-
-/-- HOL-shaped struct context: the association list `(stcname # struct_info)
-    list` that `v_flds_ok` (and `ALOOKUP`) range over. -/
-abbrev StructContextHOL := List (StructName × StructInfoHOL)
-
 mutual
   /-- Exact executable port of HOL `pan_structsProof$v_flds_ok`
       (`cakeml/pancake/proofs/pan_structsProofScript.sml:39`). The HOL clauses
@@ -1862,8 +1849,7 @@ private theorem lookupInfoStringDefault_eq_panPropsALookupEq
   letI : LawfulBEq String := instLawfulBEqString
   exact lookupInfo_eq_panPropsALookupEq key entries
 
-/-- This mismatch note applies only to the following Var-case theorem,
-    `panStructCompileExpCorrectVarCase`, not to the private lookup helper above.
+/-- Mismatch note for the Var-case theorem immediately below:
     `panStructCompileExpCorrectVarCase` is a derived Local/Global
     Var-constructor specialization of HOL `compile_exp_correct`;
     intentionally untagged because HOL has only the

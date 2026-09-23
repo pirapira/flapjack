@@ -283,15 +283,14 @@ end CrepInlineFmap
     Termination uses HOL's measure `CARD (FDOM fs) LEX prog_size`, supplied
     here by `CrepInlineFmap.card` and `CrepInlineFmap.card_remove_lt`.
 
-    **Tag review.**  No `@[hol]` tag is attached.  The carrier bridge
-    `CrepInlineFmap.toFiniteMap` shows `FLOOKUP`/`SUBMAP` correspond exactly
-    and `card` equals `CARD (FDOM _)`, but HOL `inline_prog_def` is a literal
-    recursive definition over an `mlstring |-> _` sptree with an sptree-based
-    termination measure, whereas this definition is over the unique-key entry
-    list with a `card` measure.  The identity of the two *definition terms*
-    therefore fails even though their values agree on the bridged view, so a
-    tag would misrepresent the statement.  Behaviour is instead pinned by the
-    direct HOL oracle `scripts/hol-probes/crep_inline_code_inl_probe.out`. -/
+    **Tag review.** No `@[hol]` tag is attached. The carrier bridge
+    `CrepInlineFmap.toFiniteMap` connects lookup and submap, and `card` counts
+    distinct keys. HOL defines `inline_prog` over a finite sptree; this Lean
+    function recurses over duplicate-free entries. A proof that the two
+    recursive functions agree under the carrier bridge is still missing.
+    The direct HOL oracle in
+    `scripts/hol-probes/crep_inline_code_inl_probe.out` checks representative
+    cases, but does not establish that universal correspondence. -/
 def crepInlineProgFmap [BEq FunName] [LawfulBEq FunName]
     [OfNat α 0] [OfNat α 1]
     (inlineable : CrepInlineFmap α) : CrepProg α → CrepProg α

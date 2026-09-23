@@ -1,0 +1,9 @@
+bytes64=8w
+get_byte_0=8w
+get_byte_1=7w
+get_byte_7=1w
+byte_align_8=8w
+byte_align_16=16w
+word_to_bytes_64=[8w; 7w; 6w; 5w; 4w; 3w; 2w; 1w]
+word_of_bytes_roundtrip=0x102030405060708w
+set_byte_0_roundtrip=0x102030405060708w

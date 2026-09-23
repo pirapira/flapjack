@@ -2249,6 +2249,14 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "compile_exps_eq_map",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "structCompileExps_eq_map",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison with direct HOL-EVAL list fixture)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "opt_mmap_eq_some_el",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "optMmapEqSomeEl",

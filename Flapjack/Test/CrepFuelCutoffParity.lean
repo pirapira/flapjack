@@ -104,9 +104,6 @@ def fuelCutoffGuard : Bool :=
     | _ => false) &&
   findsTimeoutFuel 5 clockedLoop
 
-theorem fuelCutoffGuard_true : fuelCutoffGuard = true := by
-  native_decide
-
 #guard fuelCutoffGuard
 
 def runChecks : IO Bool := do

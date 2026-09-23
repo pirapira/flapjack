@@ -43,6 +43,14 @@ all-width equation to the production RISC-V target is in
 boundary and its matching cases live in
 `Flapjack.Pancake.Semantics.PanSemStateEval` and
 `Flapjack.Test.PanSemStateEvalParity`.
+`pan_sem_e2e_probe.out` records direct HOL evaluation cases for nonempty
+state-owned code maps, including recursive Call, DecCall, nested Call/DecCall,
+and clock timeout. `pan_sem_call_return_shape_probe.out` adds Call and DecCall
+cases where the callee's actual returned value disagrees with the return shape
+stored in the code map; HOL returns `SOME Error`, preserves the decremented
+clock, and exposes the callee post-state. Their Lean checks live in
+`Flapjack.Test.PanEvaluateParity` and exercise the recursive
+`PanSemState.code` evaluator.
 `compile_def_probe.out` also records direct HOL evaluations of assigned Global
 call destinations through `pan_to_crep$compile`: absent lookups, the
 `One`/empty-list fallback, and inconsistent shape/name-list lengths. The

@@ -336,6 +336,37 @@ theorem crepExpsOf_nestedSeq (statements : List (CrepProg α)) :
   | nil => simp [crepNestedSeq, crepExpsOf]
   | cons statement statements ih => simp [crepNestedSeq, crepExpsOf, ih]
 
+mutual
+/-- Faithful port of Cake `crepProps$every_exp` from
+    `cakeml/pancake/semantics/crepPropsScript.sml:1300`: `every_exp P e`
+    holds when `P` holds of `e` and of every subexpression of `e`. -/
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "every_exp_def"]
+def crepEveryExp (predicate : CrepExp α → Bool) : CrepExp α → Bool
+  | .const value => predicate (.const value)
+  | .var name => predicate (.var name)
+  | .load address => predicate (.load address) && crepEveryExp predicate address
+  | .load32 address => predicate (.load32 address) && crepEveryExp predicate address
+  | .loadByte address => predicate (.loadByte address) && crepEveryExp predicate address
+  | .loadGlob address => predicate (.loadGlob address)
+  | .op operator arguments =>
+      predicate (.op operator arguments) && crepEveryExpList predicate arguments
+  | .crepOp operator arguments =>
+      predicate (.crepOp operator arguments) && crepEveryExpList predicate arguments
+  | .cmp operator left right =>
+      predicate (.cmp operator left right) && crepEveryExp predicate left &&
+        crepEveryExp predicate right
+  | .shift operator left right =>
+      predicate (.shift operator left right) && crepEveryExp predicate left &&
+        crepEveryExp predicate right
+  | .baseAddr => predicate .baseAddr
+  | .topAddr => predicate .topAddr
+/-- Cake's `EVERY (every_exp P)` list traversal. -/
+def crepEveryExpList (predicate : CrepExp α → Bool) : List (CrepExp α) → Bool
+  | [] => true
+  | expression :: expressions =>
+      crepEveryExp predicate expression && crepEveryExpList predicate expressions
+end
+
 /-! Faithful port of Cake `crep_seqs_def` from
     `cakeml/pancake/pan_passesScript.sml:377`: flatten only `Seq` nodes,
     preserving the left-to-right order of all other Crepe statements. -/

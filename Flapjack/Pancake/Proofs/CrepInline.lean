@@ -1,6 +1,7 @@
 import Flapjack.HolRef
 import Flapjack.PanToCrepMaxList
 import Flapjack.Pancake.Semantics.CrepSem
+import Flapjack.Pancake.CrepInline.Pass
 
 /-! Exact theorem counterpart for CakeML's `crep_inlineProofScript.sml`.
 
@@ -164,5 +165,50 @@ theorem crepInlineLocalsExtRel_self (a b : CrepHolState α σ) :
     crepInlineLocalsExtRel a b a b := by
   simp only [crepInlineLocalsExtRel]
   rw [crepHolFdiff_fdom_self a.locals, crepHolFdiff_fdom_self b.locals]
+
+/-- Finite-map form of Cake `crep_inline$code_inl_rel`
+    (`cakeml/pancake/proofs/crep_inlineProofScript.sml:1504-1511`):
+
+    `code_inl_rel inl_fs s t ⇔
+       ∀fname args prog. FLOOKUP s.code fname = SOME (args, prog) ⇒
+         ∃inl_bag. inl_bag SUBMAP inl_fs ∧
+                  FLOOKUP t.code fname = SOME (args, inline_prog inl_bag prog)`
+
+    `CrepInlineFmap.lookup`/`remove`/`submap` mirror HOL
+    `FLOOKUP`/`DOMSUB`/`SUBMAP` and `crepInlineProgFmap` is the exact
+    `inline_prog` port (see `Flapjack/Pancake/CrepInline/Pass.lean`).  The map
+    carrier is a canonical unique-key finite map (an entry list carrying a
+    duplicate-free key invariant, so `card` equals the domain cardinality)
+    rather than HOL's sptree, so no `@[hol]` tag is attached; the statement
+    otherwise follows the source clause for clause. -/
+def crepInlineCodeInlRel [BEq FunName] [LawfulBEq FunName]
+    [OfNat α 0] [OfNat α 1]
+    (inl_fs : CrepInlineFmap α) (s t : CrepHolState α σ) : Prop :=
+  ∀ fname args prog, s.code fname = some (args, prog) →
+    ∃ inl_bag : CrepInlineFmap α,
+      CrepInlineFmap.submap inl_bag inl_fs ∧
+      t.code fname = some (args, crepInlineProgFmap inl_bag prog)
+
+/-- Introduction rule with the witness `inl_bag := inl_fs`. -/
+theorem crepInlineCodeInlRel_of_code [BEq FunName] [LawfulBEq FunName]
+    [OfNat α 0] [OfNat α 1]
+    (inl_fs : CrepInlineFmap α) (s t : CrepHolState α σ)
+    (h : ∀ fname args prog, s.code fname = some (args, prog) →
+      t.code fname = some (args, crepInlineProgFmap inl_fs prog)) :
+    crepInlineCodeInlRel inl_fs s t := by
+  intro fname args prog hcode
+  exact ⟨inl_fs, CrepInlineFmap.submap_refl inl_fs, h fname args prog hcode⟩
+
+/-- A source binding with no target binding refutes the relation. -/
+theorem not_crepInlineCodeInlRel_of_target_none
+    [BEq FunName] [LawfulBEq FunName] [OfNat α 0] [OfNat α 1]
+    (inl_fs : CrepInlineFmap α) (s t : CrepHolState α σ)
+    (fname : FunName) (args : List Nat) (prog : CrepProg α)
+    (hcode : s.code fname = some (args, prog)) (hnone : t.code fname = none) :
+    ¬ crepInlineCodeInlRel inl_fs s t := by
+  intro h
+  obtain ⟨_bag, _hsub, htarget⟩ := h fname args prog hcode
+  rw [hnone] at htarget
+  simp at htarget
 
 end Flapjack

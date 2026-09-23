@@ -100,6 +100,224 @@ termination_by program => sizeOf program
 decreasing_by
   all_goals simp_wf; decreasing_trivial
 
+/-! ## Exact finite-map representation of Cake's inlineable finite map
+
+HOL `inline_prog_def` (`cakeml/pancake/crep_inlineScript.sml:203-257`) recurses
+on `(inlineable_fs, prog)` using the lexicographic termination measure
+`(CARD (FDOM inlineable_fs), prog_size prog)`, because a Cake finite map is a
+finite sptree with unique keys.  Lean's `Flapjack.FiniteMap` is the function
+`α → Option β`, whose domain need not be finite, so its `FDOM` has no
+cardinality and HOL's termination argument does not transfer.
+
+`CrepInlineFmap` below is a finite map with a **canonical unique-key
+invariant**: its `entries` list carries a proof that the key projection is
+duplicate-free, so every key is bound at most once and `card` (the entry count)
+is exactly the number of distinct keys in the domain, matching HOL
+`CARD (FDOM fs)`.  `lookup` is HOL `FLOOKUP`, `remove` is HOL `DOMSUB` and
+`submap` is HOL `SUBMAP`.  The only public construction paths are `empty` and
+the smart `insert`, which replaces any existing binding rather than shadowing
+it, so the invariant is preserved by construction.  This is not the rejected
+list-backed first-match analogue: the carrier is a genuine canonical finite map
+and its cardinality is the domain cardinality. -/
+
+structure CrepInlineFmap (α : Type u) where
+  entries : List (FunName × (List Nat × CrepProg α))
+  nodupKeys : (entries.map Prod.fst).Nodup
+
+namespace CrepInlineFmap
+
+/-- The empty finite map (HOL `FEMPTY`). -/
+def empty : CrepInlineFmap α :=
+  { entries := [], nodupKeys := by simp }
+
+/-- HOL `FLOOKUP`. -/
+def lookup [BEq FunName] (name : FunName) (fs : CrepInlineFmap α) :
+    Option (List Nat × CrepProg α) :=
+  List.lookup name fs.entries
+
+/-- Number of bindings; with the unique-key invariant this is HOL
+    `CARD (FDOM fs)`. -/
+def card (fs : CrepInlineFmap α) : Nat := fs.entries.length
+
+theorem not_mem_map_fst_filter_bne [BEq FunName] [LawfulBEq FunName]
+    (name : FunName) (l : List (FunName × (List Nat × CrepProg α))) :
+    name ∉ List.map Prod.fst (l.filter (fun e => e.1 != name)) := by
+  intro hmem
+  rw [List.mem_map] at hmem
+  obtain ⟨e, he, hfe⟩ := hmem
+  rw [List.mem_filter] at he
+  rw [← hfe] at he
+  simpa using he.2
+
+/-- Remove every binding of `name` (HOL DOMSUB `fs \\ name`). -/
+def remove [BEq FunName] [LawfulBEq FunName] (name : FunName)
+    (fs : CrepInlineFmap α) : CrepInlineFmap α :=
+  { entries := fs.entries.filter (fun e => e.1 != name)
+    nodupKeys :=
+      fs.nodupKeys.sublist ((List.filter_sublist (l := fs.entries)).map Prod.fst) }
+
+/-- Insert `name ↦ value`, replacing any existing binding
+    (HOL `fs |+ (name, value)`). -/
+def insert [BEq FunName] [LawfulBEq FunName] (name : FunName)
+    (value : List Nat × CrepProg α) (fs : CrepInlineFmap α) : CrepInlineFmap α :=
+  { entries := (name, value) :: fs.entries.filter (fun e => e.1 != name)
+    nodupKeys := by
+      rw [List.map_cons]
+      refine List.nodup_cons.mpr ⟨not_mem_map_fst_filter_bne name fs.entries, ?_⟩
+      exact fs.nodupKeys.sublist
+        ((List.filter_sublist (l := fs.entries)).map Prod.fst) }
+
+/-- HOL finite-map `SUBMAP`: every binding of `a` is a binding of `b`. -/
+def submap (a b : CrepInlineFmap α) : Prop :=
+  ∀ name value, a.lookup name = some value → b.lookup name = some value
+
+theorem eraseDups_eq_self_of_nodup [BEq FunName] [LawfulBEq FunName]
+    {l : List FunName} (h : l.Nodup) : l.eraseDups = l := by
+  induction l with
+  | nil => rfl
+  | cons a t ih =>
+      rw [List.eraseDups_cons]
+      have ha : a ∉ t := (List.nodup_cons.mp h).1
+      have ht : t.Nodup := (List.nodup_cons.mp h).2
+      have hfilter : (t.filter fun b => !b == a) = t := by
+        apply List.filter_eq_self.mpr
+        intro b hb
+        have hne : b ≠ a := fun hba => ha (hba ▸ hb)
+        simpa using hne
+      rw [hfilter, ih ht]
+
+/-- `card` is exactly the number of distinct keys, i.e. HOL `CARD (FDOM fs)`. -/
+theorem card_eq_domain_cardinality [BEq FunName] [LawfulBEq FunName]
+    (fs : CrepInlineFmap α) :
+    fs.card = (fs.entries.map Prod.fst).eraseDups.length := by
+  rw [eraseDups_eq_self_of_nodup fs.nodupKeys]
+  simp [card, List.length_map]
+
+theorem lookup_insert_self [BEq FunName] [LawfulBEq FunName] (name : FunName)
+    (value : List Nat × CrepProg α) (fs : CrepInlineFmap α) :
+    (insert name value fs).lookup name = some value := by
+  rw [insert, lookup]
+  exact List.lookup_eq_some_iff.mpr ⟨[], _, rfl, by simp⟩
+
+theorem submap_refl (fs : CrepInlineFmap α) : submap fs fs := fun _ _ h => h
+
+/-- Removing a bound key strictly decreases the domain cardinality. -/
+theorem length_filter_lt_of_lookup [BEq FunName] [LawfulBEq FunName]
+    (name : FunName) {v : List Nat × CrepProg α}
+    {l : List (FunName × (List Nat × CrepProg α))}
+    (h : List.lookup name l = some v) :
+    (l.filter (fun e => e.1 != name)).length < l.length := by
+  obtain ⟨l₁, l₂, heq, hkeys⟩ := List.lookup_eq_some_iff.mp h
+  subst heq
+  have hl₁ : (l₁.filter (fun e => e.1 != name)) = l₁ := by
+    apply List.filter_eq_self.mpr
+    intro e he
+    have hne : e.1 ≠ name := by
+      have hk := hkeys e he
+      rw [bne_iff_ne] at hk
+      exact fun hx => hk hx.symm
+    rw [bne_iff_ne]; exact hne
+  have hhead : ((name, v) :: l₂).filter (fun e => e.1 != name)
+      = l₂.filter (fun e => e.1 != name) := by
+    simp [bne_self_eq_false]
+  rw [List.filter_append, hl₁, hhead]
+  simp only [List.length_append, List.length_cons]
+  exact Nat.add_lt_add_left (Nat.lt_succ_of_le (List.length_filter_le _ l₂)) l₁.length
+
+theorem card_remove_lt [BEq FunName] [LawfulBEq FunName] (name : FunName)
+    (fs : CrepInlineFmap α) {value : List Nat × CrepProg α}
+    (h : fs.lookup name = some value) : (fs.remove name).card < fs.card := by
+  show (fs.entries.filter (fun e => e.1 != name)).length < fs.entries.length
+  exact length_filter_lt_of_lookup name h
+
+theorem lookup_remove_none [BEq FunName] [LawfulBEq FunName] (name : FunName)
+    (fs : CrepInlineFmap α) : (fs.remove name).lookup name = none := by
+  rw [remove, lookup]
+  cases h : List.lookup name (fs.entries.filter (fun e => e.1 != name)) with
+  | none => rfl
+  | some b =>
+      obtain ⟨l₁, l₂, heq, _⟩ := List.lookup_eq_some_iff.mp h
+      have hmem : (name, b) ∈ fs.entries.filter (fun e => e.1 != name) := by
+        rw [heq]; simp
+      rw [List.mem_filter] at hmem
+      simpa using hmem.2
+
+end CrepInlineFmap
+
+/-- Exact shape of Cake `crep_inline$inline_prog`
+    (`cakeml/pancake/crep_inlineScript.sml:203-257`) over the genuine
+    finite-map representation above.  The recursion follows the source script
+    equation by equation: `Dec`/`Seq`/`If`/`While` recurse structurally; the
+    `Call` equation inlines the recursively-inlined handler, removes the
+    callee name from the finite map before recursing into the looked-up callee
+    body, and dispatches on the (possibly handler-inlined) call type.
+    Termination uses HOL's measure `CARD (FDOM fs) LEX prog_size`, supplied
+    here by `CrepInlineFmap.card` and `CrepInlineFmap.card_remove_lt`. -/
+def crepInlineProgFmap [BEq FunName] [LawfulBEq FunName]
+    [OfNat α 0] [OfNat α 1]
+    (inlineable : CrepInlineFmap α) : CrepProg α → CrepProg α
+  | .dec name value body =>
+      .dec name value (crepInlineProgFmap inlineable body)
+  | .seq first second =>
+      .seq (crepInlineProgFmap inlineable first)
+        (crepInlineProgFmap inlineable second)
+  | .ite condition thenBranch elseBranch =>
+      .ite condition (crepInlineProgFmap inlineable thenBranch)
+        (crepInlineProgFmap inlineable elseBranch)
+  | .while condition body =>
+      .while condition (crepInlineProgFmap inlineable body)
+  | .call none name arguments =>
+      match _hlookup : inlineable.lookup name with
+      | none => .call none name arguments
+      | some (argumentNames, calleeBody) =>
+          let inlinedCallee :=
+            (crepUnreachElim
+              (crepInlineProgFmap (inlineable.remove name) calleeBody)).1
+          let temporaryNames :=
+            crepInlineTmpNames (arguments.flatMap crepExpVars) argumentNames
+          crepInlineTail
+            (crepArgLoad temporaryNames arguments argumentNames inlinedCallee)
+  | .call (some (returns, none)) name arguments =>
+      if !crepAllDistinct returns then
+        .call (some (returns, none)) name arguments
+      else
+        match _hlookup : inlineable.lookup name with
+        | none => .call (some (returns, none)) name arguments
+        | some (argumentNames, calleeBody) =>
+            let inlinedCallee :=
+              (crepUnreachElim
+                (crepInlineProgFmap (inlineable.remove name) calleeBody)).1
+            let temporaryNames :=
+              crepInlineTmpNames (arguments.flatMap crepExpVars) argumentNames
+            let returnMaximum := returns.foldl max 0
+            let bodyMaximum := crepVmaxProg inlinedCallee
+            let temporaryMaximum := temporaryNames.foldl max 0
+            let returnStart :=
+              max returnMaximum (max bodyMaximum temporaryMaximum) + 1
+            let temporaryReturns :=
+              (List.range returns.length).map
+                (fun offset => offset + returnStart)
+            let transformed :=
+              if crepNotBranchRet inlinedCallee then
+                .seq .tick (crepTransformEoc temporaryReturns inlinedCallee)
+              else
+                .while (.const 1)
+                  (crepTransformBranch 0 temporaryReturns inlinedCallee)
+            crepInlineNontail transformed returns temporaryReturns
+              temporaryNames arguments argumentNames
+  | .call (some (returns, some (w, handler))) name arguments =>
+      .call (some (returns, some (w, crepInlineProgFmap inlineable handler)))
+        name arguments
+  | program => program
+termination_by program => (inlineable.card, sizeOf program)
+decreasing_by
+  all_goals
+    first
+    | apply Prod.Lex.right
+      decreasing_trivial
+    | apply Prod.Lex.left
+      exact CrepInlineFmap.card_remove_lt name inlineable _hlookup
+
 def crepInlineActiveNames [BEq FunName]
     (inlineable : List (CrepInlineEntry α)) :
     Std.HashSet FunName :=

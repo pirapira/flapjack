@@ -268,6 +268,45 @@ theorem crepRuntimeLoad32_target_eq_riscv
     riscv64CrepRuntimeTarget, RiscV.panRiscVMemoryModel, crepRuntimeMemoryView,
     panTheWord, BitVec.add_assoc] <;> rfl
 
+/-! The expression theorem is width-polymorphic, so its target boundary needs
+word-operation and byte-load equations for every positive word width, not only
+the executable 64-bit image. These equations retain arbitrary source memory
+and address-domain fields. -/
+
+theorem crepRuntimeLoad_wordTarget_eq_riscv [NeZero width]
+    (base : CrepRuntimeState (RiscV.Word width) σ) (address : RiscV.Word width) :
+    crepRuntimeLoad (riscvCrepWordTarget base) address =
+      RiscV.panRiscVReadWord base.memaddrs (crepRuntimeMemoryView base.memory) address := by
+  simp [crepRuntimeLoad, RiscV.panRiscVReadWord, riscvCrepWordTarget,
+    crepRuntimeMemoryView, panTheWord] <;> rfl
+
+theorem crepRuntimeLoadByte_wordTarget_eq_riscv [NeZero width]
+    (base : CrepRuntimeState (RiscV.Word width) σ) (address : RiscV.Word width) :
+    crepRuntimeLoadByte (riscvCrepWordTarget base) address =
+      RiscV.panRiscVReadByte base.memaddrs (crepRuntimeMemoryView base.memory)
+        (BitVec.ofNat width (width / 8)) address := by
+  simp [crepRuntimeLoadByte, RiscV.panRiscVReadByte, panModelReadByte,
+    riscvCrepWordTarget, RiscV.panRiscVMemoryModel, crepRuntimeMemoryView,
+    panTheWord] <;> rfl
+
+theorem crepRuntimeWordTarget_wordOp [NeZero width]
+    (base : CrepRuntimeState (RiscV.Word width) σ) (operator : BinOp)
+    (values : List (RiscV.Word width)) :
+    (riscvCrepWordTarget base).memoryModel.wordOp operator values =
+      RiscV.panRiscVWordOp operator values := rfl
+
+theorem crepRuntimeWordTarget_compare [NeZero width]
+    (base : CrepRuntimeState (RiscV.Word width) σ) (operator : Cmp)
+    (left right : RiscV.Word width) :
+    (riscvCrepWordTarget base).memoryModel.compare operator left right =
+      RiscV.panRiscVCmp operator left right := rfl
+
+theorem crepRuntimeWordTarget_shift [NeZero width]
+    (base : CrepRuntimeState (RiscV.Word width) σ) (operator : Shift)
+    (left right : RiscV.Word width) :
+    (riscvCrepWordTarget base).memoryModel.shift operator left right =
+      RiscV.panRiscVShift operator left right := rfl
+
 /-- `updateMemory` (production, `Flapjack.Semantics`) and
     `panModelUpdateMemory` (the memory-model helper) are definitionally the same
     function, so the store bridges can compare the updated memories directly. -/

@@ -415,9 +415,10 @@ theorem crepRuntimeReadBytes_target_eq_riscv
 
 HOL `crepSem$ExtCall` writes the returned bytes back with
 `write_bytearray ptr new_bytes s.memory s.memaddrs s.be`, where
-`write_bytearray` is total: when `mem_store_byte` returns `NONE` it keeps the
-memory it already had. The production `crepRuntimeWriteBytes` mirrors this by
-keeping the tail state on a `NONE` store. `riscv64SetMemory`/`riscv64WriteMem`
+`write_bytearray` is total: when `mem_store_byte` returns `NONE` it discards
+that store *and every remaining store* and keeps the memory of the original
+call. The production `crepRuntimeWriteBytes` mirrors this by returning the
+original state on a `NONE` store. `riscv64SetMemory`/`riscv64WriteMem`
 are the canonical target witness of that write.
 Direct oracle: `scripts/hol-probes/crep_runtime_write_bytes_probe.out`. -/
 
@@ -432,14 +433,15 @@ theorem riscv64SetMemory_self (base : CrepRuntimeState (RiscV.Word 64) σ) :
     riscv64SetMemory base base.memory = riscv64CrepRuntimeTarget base := rfl
 
 /-- The production byte writer's step: store (with HOL's total fallback) at the
-    head address after writing the tail. -/
+    head address after writing the tail.  A failed head store discards the tail
+    writes too, returning the original state (HOL `write_bytearray`'s outer `m`). -/
 theorem crepRuntimeWriteBytes_cons (s : CrepRuntimeState (RiscV.Word 64) σ)
     (address : RiscV.Word 64) (byte : UInt8) (bytes : List UInt8) :
     crepRuntimeWriteBytes s address (byte :: bytes) =
       (crepRuntimeWriteBytes s (address + 1) bytes).map
         (fun tailState =>
           (crepRuntimeStoreByte tailState address (s.ffiContext.byteToWord byte)).getD
-            tailState) := by
+            s) := by
   rw [crepRuntimeWriteBytes]
   cases hrec : crepRuntimeWriteBytes s (address + 1) bytes with
   | none => rfl
@@ -448,15 +450,15 @@ theorem crepRuntimeWriteBytes_cons (s : CrepRuntimeState (RiscV.Word 64) σ)
       cases crepRuntimeStoreByte tailState address (s.ffiContext.byteToWord byte) <;> rfl
 
 /-- HOL `write_bytearray address bytes memory domain false` for the canonical
-    RISC-V 64 target: writes the bytes tail-first (matching HOL), keeping the
-    previous state whenever a byte store fails. -/
+    RISC-V 64 target: writes the bytes tail-first (matching HOL); a failed byte
+    store discards the tail writes and returns the original canonical target. -/
 def riscv64WriteState (base : CrepRuntimeState (RiscV.Word 64) σ)
     (address : RiscV.Word 64) : List UInt8 → CrepRuntimeState (RiscV.Word 64) σ
   | [] => riscv64CrepRuntimeTarget base
   | byte :: bytes =>
       (crepRuntimeStoreByte (riscv64WriteState base (address + 1) bytes) address
         ((riscv64CrepRuntimeTarget base).ffiContext.byteToWord byte)).getD
-        (riscv64WriteState base (address + 1) bytes)
+        (riscv64CrepRuntimeTarget base)
 
 /-- The memory produced by `riscv64WriteState`, i.e. the HOL `write_bytearray`
     result for `mem_store_byte`. -/

@@ -120,30 +120,6 @@
     "reviewer": "Codex (constructor-by-constructor source comparison)"
   },
   {
-    "hol_path": "cakeml/pancake/semantics/loopSemScript.sml",
-    "hol_name": "sh_mem_load_def",
-    "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",
-    "lean_name": "loopShMemLoad",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (constructor-by-constructor source comparison; 64-bit BitVec instance of the HOL polymorphic word codec)"
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/loopSemScript.sml",
-    "hol_name": "sh_mem_store_def",
-    "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",
-    "lean_name": "loopShMemStore",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (constructor-by-constructor source comparison; 64-bit BitVec instance of the HOL polymorphic word codec)"
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/loopSemScript.sml",
-    "hol_name": "sh_mem_op_def",
-    "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",
-    "lean_name": "loopShMemOp",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (constructor-by-constructor source comparison; 64-bit BitVec instance of the HOL polymorphic word codec)"
-  },
-  {
     "hol_path": "cakeml/pancake/pan_globalsScript.sml",
     "hol_name": "fperm_name_def",
     "lean_path": "Flapjack/Pancake/PanGlobals.lean",

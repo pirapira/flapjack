@@ -330,10 +330,14 @@ def loopPrimopHOL {width : Nat} [NeZero width] :
 /-- The source byte-count argument `[n2w nb]` handed to `call_FFI`. -/
 def loopShMemByteCount (width : Nat) : List UInt8 := [UInt8.ofNat width]
 
-/-- HOL `loopSem$sh_mem_load` (`loopSemScript.sml:198-215`).  The zero-width
-    case checks the raw address and omits HOL's unreachable FFI fallback; the
-    nonzero case checks `byte_align address` and keeps that fallback. -/
-@[hol "cakeml/pancake/semantics/loopSemScript.sml" "sh_mem_load_def"]
+/-! FLAPJACK-SPECIFIC (not an exact HOL port).  HOL `loopSem$sh_mem_load_def`
+    (`loopSemScript.sml:198-215`) is polymorphic in the word type `'a` and uses
+    the `word_to_bytes`/`word_of_bytes`/`byte_align` codec; this definition fixes
+    `RiscV.Word 64` and the RV64 little-endian codec (`riscv64GetByte` /
+    `riscv64PutBytes`).  The zero-width case checks the raw address and omits
+    HOL's unreachable FFI fallback; the nonzero case checks `byte_align address`
+    and keeps that fallback.  The exact polymorphic port is tracked by the
+    dependency bead and recorded as a documented mismatch. -/
 def loopShMemLoad (state : LoopMachineState (RiscV.Word 64) F)
     (name : Nat) (address : RiscV.Word 64) (width : Nat) :
     LoopMachineStep (RiscV.Word 64) F :=
@@ -367,10 +371,13 @@ def loopShMemLoad (state : LoopMachineState (RiscV.Word 64) F)
           (none, updated)
     else (some .error, state)
 
-/-- HOL `loopSem$sh_mem_store` (`loopSemScript.sml:217-243`).  Only a word-valued
-    local can be stored; the payload is the value bytes followed by the address
-    bytes (truncated to `width` for nonzero widths). -/
-@[hol "cakeml/pancake/semantics/loopSemScript.sml" "sh_mem_store_def"]
+/-! FLAPJACK-SPECIFIC (not an exact HOL port).  HOL `loopSem$sh_mem_store_def`
+    (`loopSemScript.sml:217-243`) is polymorphic in the word type `'a` and uses
+    the `word_to_bytes` codec; this definition fixes `RiscV.Word 64` and the RV64
+    little-endian codec.  Only a word-valued local can be stored; the payload is
+    the value bytes followed by the address bytes (truncated to `width` for
+    nonzero widths).  The exact polymorphic port is tracked by the dependency
+    bead and recorded as a documented mismatch. -/
 def loopShMemStore (state : LoopMachineState (RiscV.Word 64) F)
     (name : Nat) (address : RiscV.Word 64) (width : Nat) :
     LoopMachineStep (RiscV.Word 64) F :=
@@ -398,9 +405,12 @@ def loopShMemStore (state : LoopMachineState (RiscV.Word 64) F)
         else (some .error, state)
   | _ => (some .error, state)
 
-/-- HOL `loopSem$sh_mem_op` (`loopSemScript.sml:255-262`): dispatch the operator
-    to `sh_mem_load`/`sh_mem_store` with width 0, 1, 2, or 4. -/
-@[hol "cakeml/pancake/semantics/loopSemScript.sml" "sh_mem_op_def"]
+/-! FLAPJACK-SPECIFIC (not an exact HOL port).  HOL `loopSem$sh_mem_op_def`
+    (`loopSemScript.sml:255-262`) dispatches over the polymorphic word type; this
+    definition fixes `RiscV.Word 64` because it delegates to the specialized
+    `loopShMemLoad`/`loopShMemStore`.  The dispatch table itself (width 0, 1, 2,
+    or 4) matches HOL.  The exact polymorphic port is tracked by the dependency
+    bead and recorded as a documented mismatch. -/
 def loopShMemOp (state : LoopMachineState (RiscV.Word 64) F)
     (operator : CrepMemOp) (name : Nat) (address : RiscV.Word 64) :
     LoopMachineStep (RiscV.Word 64) F :=

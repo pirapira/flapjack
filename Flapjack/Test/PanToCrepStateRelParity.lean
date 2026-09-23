@@ -34,7 +34,7 @@ def sourceState : PanSemState Nat (FfiState Unit) :=
 def targetState : CrepRuntimeState Nat Unit :=
   { locals := fun _ => none
     globals := fun _ => none
-    functions := []
+    code := FEMPTY
     memory := noNatCells
     memaddrs := noMemaddrs
     shMemaddrs := noMemaddrs
@@ -47,41 +47,19 @@ def targetState : CrepRuntimeState Nat Unit :=
     baseAddress := 0
     topAddress := 0 }
 
-def skipCodeFunction : CompiledFunction Nat :=
-  { name := "id", params := [], body := .skip, returnShape := .one }
-
 def skipCodeMap : FiniteMap String (List Nat × CrepProg Nat) :=
   FUPDATE_LIST FEMPTY [("id", ([], .skip))]
 
 def skipCodeRuntime : CrepRuntimeState Nat Unit :=
-  { targetState with functions := [skipCodeFunction] }
-
-theorem skipCodeRuntimeMatchesMap :
-    ∀ function,
-      lookupCompiledFunction function skipCodeRuntime.functions =
-        FLOOKUP skipCodeMap function := by
-  intro function
-  by_cases h : function = "id"
-  · subst function
-    simp [skipCodeRuntime, skipCodeFunction, lookupCompiledFunction,
-      skipCodeMap, FUPDATE_LIST, FUPDATE, FLOOKUP]
-  · have hne : ("id" : String) ≠ function := fun heq => h heq.symm
-    simp [skipCodeRuntime, skipCodeFunction, lookupCompiledFunction,
-      skipCodeMap, FUPDATE_LIST, FUPDATE, FLOOKUP, FEMPTY, hne, h]
-
-def skipCodeState : CrepCodeState Nat Unit :=
-  { code := skipCodeMap
-    runtime := skipCodeRuntime
-    runtimeCode := skipCodeRuntimeMatchesMap }
+  { targetState with code := skipCodeMap }
 
 theorem skipCodeMap_has_runtime_entry :
-    FLOOKUP skipCodeState.code "id" = some ([], (CrepProg.skip : CrepProg Nat)) ∧
-    lookupCompiledFunction "id" skipCodeState.runtime.functions =
-      some ([], .skip) := by
+    FLOOKUP skipCodeRuntime.code "id" = some ([], (CrepProg.skip : CrepProg Nat)) ∧
+    lookupCrepRuntimeCode "id" [] skipCodeRuntime.code = some (.skip, fun _ => none) := by
   constructor
-  · simp [skipCodeState, skipCodeMap, FUPDATE_LIST, FUPDATE, FLOOKUP]
-  · simp [skipCodeState, skipCodeRuntime, skipCodeFunction,
-      lookupCompiledFunction]
+  · simp [skipCodeRuntime, skipCodeMap, FUPDATE_LIST, FUPDATE, FLOOKUP]
+  · simp [lookupCrepRuntimeCode, skipCodeRuntime, skipCodeMap,
+      FUPDATE_LIST, FUPDATE, FLOOKUP, assignCrepValues]
 
 def skipCodeContext : PanToCrepProofContext Nat :=
   { vars := FEMPTY
@@ -93,24 +71,23 @@ def skipSourceCode : FiniteMap String
     (List (VarName × Shape) × Prog Nat × Shape) :=
   FUPDATE FEMPTY ("id", ([], .skip, Shape.one))
 
-theorem skipCodeRelFixture : codeRel skipCodeContext skipSourceCode skipCodeState.code := by
+def skipSourceState : PanSemState Nat (FfiState Unit) :=
+  { sourceState with code := skipSourceCode }
+
+theorem skipCodeRelFixture :
+    codeRel skipCodeContext skipSourceState.code skipCodeRuntime.code := by
   intro function variableShapes program returnShape hlookup
   by_cases hname : function = "id"
   · subst function
     have hvalues : ([], Prog.skip, Shape.one) =
         (variableShapes, program, returnShape) := by
-      simpa [skipSourceCode, FLOOKUP_update] using hlookup
+      simpa [skipSourceState, skipSourceCode, FLOOKUP_update] using hlookup
     rcases hvalues with ⟨rfl, rfl, rfl⟩
-    simp [skipCodeContext, skipCodeState, skipCodeMap, FUPDATE_LIST, FUPDATE,
+    simp [skipCodeContext, skipCodeRuntime, skipCodeMap, FUPDATE_LIST, FUPDATE,
       FLOOKUP, compileCodeRelProg, compileProgHOL, localisedProg,
       Shape.shapeSize]
   · have hid : ("id" : String) ≠ function := fun heq => hname heq.symm
-    simp [skipSourceCode, FLOOKUP_update, hid] at hlookup
-
-def skipCodeFfiHandler : CrepRuntimeFfiHandler Nat Unit FfiFinalEvent :=
-  fun _ state => .returned state []
-
-def skipCodePrimitiveHandler : CrepPrimitiveHandler Nat := fun _ _ => none
+    simp [skipSourceState, skipSourceCode, FLOOKUP_update, hid] at hlookup
 
 def nonEmptyGlobalsSourceState : PanSemState Nat (FfiState Unit) :=
   { sourceState with globals := fun _ => some (.word 0) }
@@ -123,27 +100,20 @@ theorem stateRel_satisfied : stateRel sourceState targetState := by
   funext address
   simp [sourceState, targetState, noPanValueCells, noNatCells]
 
-theorem skipCodeState_relates_runtime :
-    stateRel sourceState skipCodeState.runtime := by
-  simpa [stateRel, skipCodeState, skipCodeRuntime, targetState] using
+theorem skipCodeRuntime_relates :
+    stateRel sourceState skipCodeRuntime := by
+  simpa [stateRel, skipCodeRuntime, targetState] using
     stateRel_satisfied
 
-theorem skipCodeState_skipBoundary_fixture :
-    ∃ post : CrepCodeState Nat Unit,
-      evalCrepRuntimeResult skipCodeFfiHandler skipCodePrimitiveHandler 1
-        skipCodeState.runtime .skip = some (.normal, post.runtime) ∧
-      stateRel sourceState post.runtime ∧
-      codeRel skipCodeContext skipSourceCode post.code ∧
-      post.code = skipCodeState.code ∧
-      (∀ function, lookupCompiledFunction function post.runtime.functions =
-        FLOOKUP post.code function) :=
-  crepCodeStateSkipBoundary skipCodeContext sourceState skipSourceCode
-    skipCodeFfiHandler skipCodePrimitiveHandler 0 skipCodeState
-    skipCodeState_relates_runtime skipCodeRelFixture
+theorem skipCodeRelEmptyLocalsFixture :
+    codeRel skipCodeContext (panEmptyLocals skipSourceState).code
+      (crepEmptyLocals skipCodeRuntime).code :=
+  codeRelEmptyLocals skipCodeContext skipSourceState skipCodeRuntime
+    skipCodeRelFixture
 
-def skipCodeStateLookupGuard : Bool :=
-  (FLOOKUP skipCodeState.code "id").isSome &&
-    (lookupCompiledFunction "id" skipCodeState.runtime.functions).isSome
+def skipCodeLookupGuard : Bool :=
+  (FLOOKUP skipCodeRuntime.code "id").isSome &&
+    (lookupCrepRuntimeCode "id" [] skipCodeRuntime.code).isSome
 
 theorem stateRel_structs_fixture : sourceState.structs = [] :=
   stateRel_structs sourceState targetState stateRel_satisfied
@@ -275,7 +245,7 @@ def runChecks : IO Bool := do
     ("HOL locals_rel_lookup_ctxt exact slot, flattened value, and shape",
       localsRelLookupCtxtGuard),
     ("HOL Crep code field matches a nonempty runtime function and survives Skip",
-      skipCodeStateLookupGuard),
+      skipCodeLookupGuard),
     ("HOL locals_rel rejects unmapped local", true)]
   for (name, passed) in checks do
     IO.println s!"{if passed then "PASS" else "FAIL"} {name}"

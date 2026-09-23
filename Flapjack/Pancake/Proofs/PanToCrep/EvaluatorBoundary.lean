@@ -4,11 +4,12 @@ import Flapjack.Pancake.Semantics.PanSem
 
 namespace Flapjack
 
-/-! The executable evaluators keep function tables as lists, while HOL's
-`code_rel` is stated over finite maps.  These relations connect the actual
-lookup functions called by the source and target evaluators to the maps used
-by `codeRel`.  The source projection retains parameter names and bodies;
-shape metadata is checked by `codeRel` itself. -/
+/-! The source compatibility evaluator keeps a list-backed function table,
+while the production Crep evaluator now reads its HOL-shaped finite code map
+directly from `CrepRuntimeState.code`. These relations connect the source
+lookup table and a proof caller's target map to those actual evaluator
+boundaries. The source projection retains parameter names and bodies; shape
+metadata is checked by `codeRel` itself. -/
 def panSourceRuntimeCodeRel [BEq String]
     (sourceCode : FiniteMap FunName
       (List (VarName × Shape) × Prog α × Shape))
@@ -18,11 +19,10 @@ def panSourceRuntimeCodeRel [BEq String]
       lookupPanFunction function runtimeFunctions =
         some (variableShapes.map Prod.fst, program)
 
-def crepRuntimeCodeRel [BEq String]
+def crepRuntimeCodeRel
     (targetCode : FiniteMap FunName (List Nat × CrepProg α))
-    (runtimeFunctions : List (CompiledFunction α)) : Prop :=
-  ∀ function, lookupCompiledFunction function runtimeFunctions =
-    FLOOKUP targetCode function
+    (targetState : CrepRuntimeState α σ) : Prop :=
+  targetState.code = targetCode
 
 /-- Relate HOL's finite-map code assumption to the exact lookup tables used by
 the shipped clocked source evaluator and target Crep evaluator. -/
@@ -36,7 +36,7 @@ def panToCrepRuntimeCodeRel [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (targetState : CrepRuntimeState α σ) : Prop :=
   codeRel context sourceCode targetCode ∧
     panSourceRuntimeCodeRel sourceCode sourceState.legacy.functions ∧
-    crepRuntimeCodeRel targetCode targetState.functions
+    crepRuntimeCodeRel targetCode targetState
 
 /-! These wrappers expose the production evaluators directly.  In particular,
 there is no evaluator callback parameter that could replace either semantics. -/

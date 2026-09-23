@@ -136,8 +136,12 @@ value shape, field validity, source evaluation, and converted target
 evaluation. The production `structCompileExp`/`evalPanValueExp` cases are
 proved in `panStructCompileExpCorrectVarCase` and
 `panStructCompileExpCorrectConstCase` and exercised by finite-map regressions
-in `Flapjack.Test.PanStructsCompileCorrect`. The other expression constructors
-remain open.
+in `Flapjack.Test.PanStructsCompileCorrect`. Its nonempty-list row separately
+checks source `OPT_MMAP` success, pointwise compiled-expression correctness,
+and the converted `compile_exps` result for the local HOL helper
+`compile_exp_correct_mmap_helper`; Lean proves the corresponding production
+list-evaluation prerequisite in `panStructCompileExpsEvalOfPointwiseCorrect`.
+The other expression constructors remain open.
 `pan_structs_value_validity_probe.out` records direct HOL EVAL of the word,
 matching/mismatching named-record, missing-context, and duplicate-key first
 match rows for

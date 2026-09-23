@@ -4293,7 +4293,15 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody_ofCodeRelArgs_postRelations",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only fixed-fuel actual target Call composition that carries a related handler-body post-state through the production Call dispatcher; the source Call execution/result is not connected here, so this is not pc_compile_correct[Call_Ret_Exception]"
+    "reviewer": "Flapjack-only fixed-fuel target Call composition carrying a related handler-body post-state through production dispatch; its source post-state is supplied by the caller and is not itself connected to source evaluation, so this is not pc_compile_correct[Call_Ret_Exception]"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only composition deriving an actual state-owned source Call run from source callee/handler body premises, then carrying its projected result through production target Call dispatch. The target callee IH now yields its run plus callee state_rel/code_rel/excp_rel, eliminating those detached relation premises; handler relation IH remains a premise. This is not the full compiled-program Call_Ret_Exception case"
   },
   {
     "hol_path": null,
@@ -4470,6 +4478,14 @@
     "lean_name": "panStructCompileExpCorrectConstCase",
     "statement_status": "documented_mismatch",
     "reviewer": "Kernel-checked Const-constructor specialization of HOL compile_exp_correct over production structCompileExp/evalPanValueExp; intentionally untagged because HOL has only the universally quantified theorem, not a separately named Const-case theorem. The Lean statement re-encodes the struct premise as projected shape-view equality, FEVERY field validity as pointwise Bool predicates over total lookups, and FMAP_MAP2 as pointwise shape-map adapters. PanStructFiniteState carries nodup InfoMap lists and lookup equations, with lawful BEq String for HOL equality; structInfosOk is carried but unused. Other expression constructors remain open."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "compile_exp_correct_mmap_helper",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructCompileExpsEvalOfPointwiseCorrect",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Kernel-checked production list-evaluation prerequisite for HOL's local compile_exp_correct_mmap_helper at line 206. It preserves the source-list success premise, per-expression source-to-compiled correctness premise, and converted mapped-values conclusion over evalPanValueExps/structCompileExps. It is intentionally untagged: the HOL helper is local and ranges over eval of a HOL finite-map state, while Lean uses PanSemState total lookup functions and an explicit bytesInWord evaluator argument. This supports RStruct/NStruct and other recursive expression cases; it is not itself a compile_exp_correct constructor case."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
@@ -4742,5 +4758,13 @@
     "lean_name": "crepRuntimeExtCall_stateRel_dispatch",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Codex (Flapjack-only assembly: packages the returned/final/error four-local stateRel branches; source post-state built, no HOL original)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "panValueFfiExtCall_stateRel_target",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (Flapjack-only: derives the target Crep ExtCall dispatch and post-state stateRel from a source panValueFfiExtCall returned-evaluator outcome plus stateRel, using the source/target read-write bridges; hypothesis is the source evaluator result, not the target result or post-relation)"
   }
 ]

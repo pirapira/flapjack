@@ -245,6 +245,10 @@ run_probe pan_sem_dec_clock_e2e_probeScript.sml pan_sem_dec_clock_e2e_probe.out 
 run_probe pan_sem_tick_e2e_probeScript.sml pan_sem_tick_e2e_probe.out \
   tick_zero_result tick_succ_locals_preserved \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+# The Skip probe observes the normal result with state carried verbatim.
+run_probe pan_sem_skip_e2e_probeScript.sml pan_sem_skip_e2e_probe.out \
+  skip_result skip_locals_preserved \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_fix_clock_probeScript.sml pan_fix_clock_probe.out \
   pan_fix_clock_clamps pan_fix_clock_keeps_lower \
   "$cake_dir/pancake/semantics/panSemScript.sml"

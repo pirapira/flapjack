@@ -1,6 +1,7 @@
 import Flapjack.FiniteMap
 import Flapjack.HolRef
 import Flapjack.PanBst
+import Flapjack.PanEmptyLocals
 import Flapjack.PanLocalised
 import Flapjack.PanValueFlatten
 import Flapjack.Pancake.PanToCrep
@@ -599,18 +600,6 @@ def codeRel [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
       FLOOKUP targetCode function = some
         (names, compileCodeRelProg nextContext program)
 
-/-! HOL's `crepSem$state` stores its code map alongside the rest of the
-runtime state. The executable Lean evaluator instead stores a list of compiled
-functions in `CrepRuntimeState`. This proof boundary carries the HOL-shaped
-map with the actual evaluator state and requires every lookup through the
-runtime list to agree with that map. It does not introduce a detached map
-argument to an evaluator theorem. -/
-structure CrepCodeState (α σ : Type) [BEq String] where
-  code : FiniteMap FunName (List Nat × CrepProg α)
-  runtime : CrepRuntimeState α σ
-  runtimeCode : ∀ function,
-    lookupCompiledFunction function runtime.functions = FLOOKUP code function
-
 /-- HOL `code_rel_imp`: an entry in related source code is localised and
     has the corresponding function metadata and compiled target entry. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "code_rel_imp"]
@@ -635,35 +624,19 @@ theorem codeRelImp [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
         (names, compileCodeRelProg nextContext program) :=
   hrel function variableShapes program returnShape hlookup
 
-/-! Target-side support for the HOL `pc_compile_correct[Skip]` case. The
-post-state's code relation refers to `post.code`, a field of `CrepCodeState`,
-and `runtimeCode` ties that same field to the function table used by the
-production target evaluator. This is only the target-state preservation
-boundary; it is not the full source/target Skip case theorem. -/
-theorem crepCodeStateSkipBoundary
-    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    [CrepBytesInWord α] [BEq String]
+/-! Faithful port of HOL `code_rel_empty_locals` (`pan_to_crepProofScript.sml:96`).
+Both code fields belong to their production semantic states. The HOL source
+and target `empty_locals` definitions update only locals, leaving each code
+map unchanged. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "code_rel_empty_locals"]
+theorem codeRelEmptyLocals [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
+    [CrepBytesInWord α]
     (context : PanToCrepProofContext α)
     (source : PanSemState α (FfiState σ))
-    (sourceCode : FiniteMap FunName
-      (List (VarName × Shape) × Prog α × Shape))
-    (handler : CrepRuntimeFfiHandler α σ FfiFinalEvent)
-    (primitive : CrepPrimitiveHandler α) (fuel : Nat)
-    (target : CrepCodeState α σ)
-    (hstate : stateRel source target.runtime)
-    (hcode : codeRel context sourceCode target.code) :
-    ∃ post : CrepCodeState α σ,
-      evalCrepRuntimeResult handler primitive (fuel + 1) target.runtime .skip =
-        some (.normal, post.runtime) ∧
-      stateRel source post.runtime ∧
-      codeRel context sourceCode post.code ∧
-      post.code = target.code ∧
-      (∀ function, lookupCompiledFunction function post.runtime.functions =
-        FLOOKUP post.code function) := by
-  refine ⟨target, ?_, hstate, hcode, rfl, target.runtimeCode⟩
-  exact evalCrepRuntimeResult_skip handler primitive fuel target.runtime
+    (target : CrepRuntimeState α σ)
+    (hcode : codeRel context source.code target.code) :
+    codeRel context (panEmptyLocals source).code
+      (crepEmptyLocals target).code := by
+  simpa [panEmptyLocals, crepEmptyLocals] using hcode
 
 end Flapjack

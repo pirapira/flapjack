@@ -1644,9 +1644,8 @@ theorem crepSimpExpCorrectBitVec {n : Nat} [NeZero n] {σ : Type}
           crepSimpExpCorrect1BitVec f state expression hsuccess
     _ = some (.word value) := h
 
-/-! Fin-index source states can now use the all-width simplifier naturality
-    theorem above to transfer evaluator preservation through BitVec. This
-    remains untagged because HOL ranges over arbitrary finite dimension types. -/
+/-! Fin-index source states can use the all-width simplifier naturality theorem
+    above to transfer evaluator preservation through BitVec. -/
 def crepArithHolWordBitsMapCode {width : Nat} {σ : Type}
     (f : (List Nat × CrepProg (Fin width → Bool)) →
       (List Nat × CrepProg (Fin width → Bool)))
@@ -1739,6 +1738,31 @@ theorem crepSimpExpCorrect1HolWordBits {width : Nat} [NeZero width]
     evalCrepHolWordBitsExpWordLab state expression
   simpa only [evalCrepHolWordBitsExpWordLab, evalCrepHolWordBitsExp, hstate]
     using hpresSource
+
+/-! This source-evaluator-shaped corollary uses the canonical numeric bit
+    positions `Fin width`, rather than an arbitrary enumeration of an index
+    type. It is still untagged: the evaluator's word operations and byte-load
+    behavior are transported through BitVec/RISC-V, and we have not proved
+    that this model is HOL's FCP word operations for every HOL type's
+    `dimindex`. The remaining faithful port is that representation/evaluator
+    correspondence, tracked by bead `flapjack-pxn.18.5.4.3.1`. -/
+theorem crepSimpExpCorrect1HolWordBitsSource {width : Nat} [NeZero width]
+    {σ : Type}
+    (f : (List Nat × CrepProg (Fin width → Bool)) →
+      (List Nat × CrepProg (Fin width → Bool)))
+    (state : CrepHolState (Fin width → Bool) σ)
+    (expression : CrepExp (Fin width → Bool))
+    (h : evalCrepHolWordBitsExpWordLab state expression ≠ none) :
+    evalCrepHolWordBitsExpWordLab (crepArithHolWordBitsMapCode f state)
+      (crepSimpExp (fun value => bitVecToHolWordBits (BitVec.ofNat width value))
+        expression) =
+    evalCrepHolWordBitsExpWordLab state expression := by
+  have hpres := crepSimpExpEvalPreservesHolWordBitsWordLab state expression h
+  have hstate := crepArithHolWordBitsMapCode_toBitVecState f state
+  unfold evalCrepHolWordBitsExpWordLab at hpres ⊢
+  unfold evalCrepHolWordBitsExp at hpres ⊢
+  rw [hstate]
+  exact hpres
 
 
 end Flapjack

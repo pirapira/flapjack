@@ -165,3 +165,14 @@ val _ = print_eval "compile_exp_correct_nstruct"
      panSem$eval (pan_structsProof$convert_s ^ctxt ^local_state)
        (pan_structs$compile_exp ^ctxt ^nstruct_expression) =
        SOME (pan_structsProof$convert_v ^nstruct_value))``;
+val nfield_value = ``ValWord (5w:8 word)``;
+val nfield_expression = ``(panLang$NField (strlit "right") ^nstruct_expression
+  : 8 panLang$exp)``;
+val _ = print_eval "compile_exp_correct_nfield"
+  ``(pan_structs$old_exp_shape ^ctxt ^nfield_expression,
+     panSem$shape_of ^nfield_value,
+     pan_structsProof$v_flds_ok (^local_state).structs ^nfield_value,
+     panSem$eval ^local_state ^nfield_expression = SOME ^nfield_value,
+     panSem$eval (pan_structsProof$convert_s ^ctxt ^local_state)
+       (pan_structs$compile_exp ^ctxt ^nfield_expression) =
+       SOME (pan_structsProof$convert_v ^nfield_value))``;

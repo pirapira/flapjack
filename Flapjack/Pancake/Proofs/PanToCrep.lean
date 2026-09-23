@@ -1084,4 +1084,83 @@ theorem crepRuntimeExtCallValues_stateRel_dispatch
     configurationLength array arrayLength configurationBytes arrayBytes hc ha, hffi]
   rfl
 
+/-- Post-state `stateRel` for the `FFI_return` write-back branch of `ExtCall`.
+    Given the source/target relation and the HOL-shaped hypothesis that no
+    byte-aligned store can fail, the source `write_bytearray`
+    (`panSemWriteBytearray` over the source memory) and the target
+    `riscv64WriteState` (HOL `write_bytearray` over the canonical RISC-V target)
+    remain related, with the returned ffi installed on both.  The memory
+    conjunct is `panSemWriteBytearray_target_eq_riscv`; the remaining conjuncts
+    are unchanged target fields.  This is the write-back companion of
+    `stateRel_ffiUpdate`, so the two together cover the `FFI_return` target
+    update. -/
+theorem crepRuntimeExtCallValues_stateRel_returned
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (function : FunName)
+    (configuration configurationLength array arrayLength : RiscV.Word 64)
+    (configurationBytes arrayBytes : List UInt8)
+    (_hc : riscv64ReadByteArray base configuration configurationLength.toNat =
+      some configurationBytes)
+    (_ha : riscv64ReadByteArray base array arrayLength.toNat = some arrayBytes)
+    (ffi : FfiState σ) (bytes : List UInt8)
+    (_hr : riscv64ExtCallCallFfiHandler
+        (.extCall function configurationBytes arrayBytes :
+          CrepRuntimeRequest (RiscV.Word 64)) base.ffi = .returned ffi bytes)
+    (hstate : stateRel source (riscv64CrepRuntimeTarget base))
+    (hdom : ∀ a : RiscV.Word 64,
+      base.memaddrs (RiscV.panRiscVByteAlign (8 : RiscV.Word 64) a) = true) :
+    stateRel
+      { source with
+        memory := panSemWriteBytearray
+          (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel base.memaddrs)
+          (riscv64PanValueFfiContext base.shMemaddrs) source.memory
+          (8 : RiscV.Word 64) array bytes,
+        ffi := ffi }
+      (riscv64WriteState { base with ffi := ffi } array bytes) := by
+  unfold stateRel at hstate ⊢
+  obtain ⟨hm, hma, hsm, hst, hg, hcl, hbe, _hffi0, hba, hta⟩ := hstate
+  have hmView : source.memory = panValueMemoryView base.memory := by
+    rw [hm]; rfl
+  have hmemT : (riscv64WriteState { base with ffi := ffi } array bytes).memory =
+      (riscv64WriteState base array bytes).memory := by
+    rw [riscv64WriteState_withFfi]
+  have hffiT : (riscv64WriteState { base with ffi := ffi } array bytes).ffi = ffi := by
+    rw [riscv64WriteState_withFfi]
+  have hmaT : (riscv64WriteState { base with ffi := ffi } array bytes).memaddrs =
+      base.memaddrs := by
+    rw [riscv64WriteState_withFfi, riscv64WriteState_eq_setMemory]
+    rfl
+  have hsmT : (riscv64WriteState { base with ffi := ffi } array bytes).shMemaddrs =
+      base.shMemaddrs := by
+    rw [riscv64WriteState_withFfi, riscv64WriteState_eq_setMemory]
+    rfl
+  have hclkT : (riscv64WriteState { base with ffi := ffi } array bytes).clock =
+      base.clock := by
+    rw [riscv64WriteState_withFfi, riscv64WriteState_eq_setMemory]
+    rfl
+  have hbeT : (riscv64WriteState { base with ffi := ffi } array bytes).bigEndian =
+      false := by
+    rw [riscv64WriteState_withFfi, riscv64WriteState_eq_setMemory]
+    rfl
+  have hbaT : (riscv64WriteState { base with ffi := ffi } array bytes).baseAddress =
+      base.baseAddress := by
+    rw [riscv64WriteState_withFfi, riscv64WriteState_eq_setMemory]
+    rfl
+  have htaT : (riscv64WriteState { base with ffi := ffi } array bytes).topAddress =
+      base.topAddress := by
+    rw [riscv64WriteState_withFfi, riscv64WriteState_eq_setMemory]
+    rfl
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · rw [hmView, panSemWriteBytearray_target_eq_riscv base array bytes hdom, hmemT]
+    rfl
+  · rw [hmaT]; exact hma
+  · rw [hsmT]; exact hsm
+  · exact hst
+  · exact hg
+  · rw [hclkT]; exact hcl
+  · rw [hbeT]; exact hbe
+  · rw [hffiT]
+  · rw [hbaT]; exact hba
+  · rw [htaT]; exact hta
+
 end Flapjack

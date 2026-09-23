@@ -3718,5 +3718,13 @@
     "lean_name": "crepRuntimeExtCallValues_stateRel_dispatch",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only source/target ExtCall simulation step following call_FFI (FFI_return/FFI_final) with state_rel; assembles the proven canonical-target branches; no single HOL declaration"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "crepRuntimeExtCallValues_stateRel_returned",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only source/target post-state stateRel for the Crep ExtCall FFI_return write-back branch; assembles panSemWriteBytearray and riscv64WriteState through stateRel; no single HOL declaration"
   }
 ]

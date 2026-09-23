@@ -1,4 +1,5 @@
 import Flapjack.Pancake.Semantics.CrepSem
+import Flapjack.PanSemWriteBytearray
 import Flapjack.RiscV.PanMemory
 
 /-!
@@ -670,5 +671,194 @@ theorem crepRuntimeExtCallValues_target_dispatch
         configuration configurationLength array arrayLength configurationBytes
         arrayBytes hc ha event (by
           rw [riscv64ExtCallCallFfiHandler_extCall, hres])
+
+/-! ## Post-write-back memory correspondence
+
+HOL `write_bytearray` updates the source `word_lab` memory by storing each
+returned byte with `mem_store_byte`. The canonical target `riscv64WriteState`
+performs the same tail-first recursion with `crepRuntimeStoreByte`. The two
+agree on the `PanValue.word` view recorded by `stateRel` whenever every
+byte-aligned address is in the `memaddrs` bitmap, so no store fails and the two
+fallback branches are never reached. -/
+
+/-- The source `PanValue` view of a total `word_lab` target memory: the
+    `stateRel` memory conjunct written as a named function. -/
+def panValueMemoryView (memory : α → PanWordLab α) : α → Option (PanValue α) :=
+  fun address => some (.word (panTheWord (memory address)))
+
+/-- Wrap the raw word cells of a memory view back into `PanValue.word`. -/
+def panValueViewOf (raw : α → Option α) : α → Option (PanValue α) :=
+  fun address => (raw address).map PanValue.word
+
+theorem panValueMemoryView_eq_panValueViewOf (memory : α → PanWordLab α) :
+    panValueMemoryView memory = panValueViewOf (crepRuntimeMemoryView memory) := rfl
+
+/-- The store bridge over an arbitrary tail memory: the production byte store
+    equals the canonical RISC-V store as a memory view. -/
+theorem crepRuntimeStoreByte_setMemory_view
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (memory : RiscV.Word 64 → PanWordLab (RiscV.Word 64))
+    (address value : RiscV.Word 64) :
+    (crepRuntimeStoreByte (riscv64SetMemory base memory) address value).map
+        (fun state => crepRuntimeMemoryView state.memory) =
+      RiscV.panRiscVStoreByte base.memaddrs (crepRuntimeMemoryView memory)
+        (8 : RiscV.Word 64) address value := by
+  rw [crepRuntimeStoreByte_eq_memory_view]
+  simp only [riscv64SetMemory, riscv64CrepRuntimeTarget, RiscV.panRiscVStoreByte,
+    panModelStoreByte, RiscV.panRiscVMemoryModel]
+  by_cases hb : base.memaddrs (RiscV.panRiscVByteAlign (8 : RiscV.Word 64) address) = true
+  · simp only [hb, if_true, crepRuntimeMemoryView, Option.pure_def, panTheWord]
+    rw [updateMemory_eq_panModelUpdateMemory]
+    rfl
+  · simp only [hb, if_false, Bool.false_eq_true]
+
+set_option linter.unusedSimpArgs false in
+/-- The canonical source byte store on the `PanValue` view equals the wrap of the
+    canonical RISC-V store. -/
+theorem panValueStoreByte_view
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (memory : RiscV.Word 64 → PanWordLab (RiscV.Word 64))
+    (address value : RiscV.Word 64) :
+    (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel base.memaddrs).storeByte
+        base.memaddrs (panValueMemoryView memory) (8 : RiscV.Word 64) address value =
+      (RiscV.panRiscVStoreByte base.memaddrs (crepRuntimeMemoryView memory)
+        (8 : RiscV.Word 64) address value).map panValueViewOf := by
+  rw [← crepRuntimeStoreByte_setMemory_view, Option.map_map]
+  simp only [panValueMemoryAccessOfModel, panValueMemoryView, riscv64SetMemory,
+    crepRuntimeMemoryView, panValueViewOf, updateCrepRuntimeMemory,
+    crepRuntimeStoreByte, Option.bind_some, Option.map_some, Option.pure_def,
+    Function.comp_apply, RiscV.panRiscVMemoryModel, riscv64CrepRuntimeTarget]
+  by_cases hb : base.memaddrs (RiscV.panRiscVByteAlign (8 : RiscV.Word 64) address) = true
+  · simp only [hb, if_true]
+    rw [Option.map_some, Function.comp_apply]
+    have hfun :
+        (fun current : RiscV.Word 64 =>
+            if (current == RiscV.panRiscVByteAlign (8 : RiscV.Word 64) address) = true then
+              some (PanValue.word (RiscV.panRiscVSetByte (8 : RiscV.Word 64) address value
+                (panTheWord (memory (RiscV.panRiscVByteAlign (8 : RiscV.Word 64) address)))))
+            else some (PanValue.word (panTheWord (memory current)))) =
+          panValueViewOf (crepRuntimeMemoryView
+            (updateCrepRuntimeMemory memory (RiscV.panRiscVByteAlign (8 : RiscV.Word 64) address)
+              (PanWordLab.word (RiscV.panRiscVSetByte (8 : RiscV.Word 64) address value
+                (panTheWord (memory (RiscV.panRiscVByteAlign (8 : RiscV.Word 64) address))))))) := by
+      funext current
+      by_cases h : current = RiscV.panRiscVByteAlign (8 : RiscV.Word 64) address <;>
+        simp_all [updateCrepRuntimeMemory, panValueViewOf, crepRuntimeMemoryView, panTheWord]
+    rw [← hfun]
+    rfl
+  · simp only [hb, if_false, Bool.false_eq_true]
+    rfl
+
+/-- A successful production byte store agrees with the tail on every field other
+    than memory. -/
+theorem crepRuntimeStoreByte_some_eq [BEq α] [Add α] [OfNat α 1]
+    {s : CrepRuntimeState α σ} {address value : α}
+    {u : CrepRuntimeState α σ} (h : crepRuntimeStoreByte s address value = some u) :
+    u = { s with memory := u.memory } := by
+  unfold crepRuntimeStoreByte at h
+  dsimp only at h
+  split at h
+  · injection h with h; subst h; rfl
+  · simp at h
+
+/-- The production byte store does not depend on the ffi state, so updating the
+    ffi is commuted with the store (the updated state keeps the same ffi). -/
+theorem crepRuntimeStoreByte_withFfi [BEq α] [Add α] [OfNat α 1]
+    (s : CrepRuntimeState α σ) (ffi : FfiState σ) (address value : α) :
+    crepRuntimeStoreByte { s with ffi := ffi } address value =
+      (crepRuntimeStoreByte s address value).map (fun u => { u with ffi := ffi }) := by
+  unfold crepRuntimeStoreByte
+  by_cases h : s.memaddrs (s.memoryModel.byteAlign s.bytesInWord address) = true
+  · simp only [h, if_true]
+    rfl
+  · simp only [h, if_false, Bool.false_eq_true]
+    rfl
+
+/-- Updating the ffi before writing bytes commutes with the write on every field:
+    the resulting write state is the canonical write state with the new ffi
+    installed (the written memory is independent of the ffi). -/
+theorem riscv64WriteState_withFfi (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (ffi : FfiState σ) (address : RiscV.Word 64) (bytes : List UInt8) :
+    riscv64WriteState { base with ffi := ffi } address bytes =
+      { riscv64WriteState base address bytes with ffi := ffi } := by
+  induction bytes generalizing address with
+  | nil => rfl
+  | cons byte bytes ih =>
+      rw [riscv64WriteState, ih (address + 1), riscv64WriteState]
+      rw [riscv64CrepRuntimeTarget_withFfi]
+      erw [crepRuntimeStoreByte_withFfi]
+      cases crepRuntimeStoreByte (riscv64WriteState base (address + 1) bytes) address
+          ((riscv64CrepRuntimeTarget base).ffiContext.byteToWord byte) <;> rfl
+
+/-- `riscv64WriteState` only changes memory, so it is the canonical target with
+    its own resulting memory installed. -/
+theorem riscv64WriteState_eq_setMemory
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (address : RiscV.Word 64)
+    (bytes : List UInt8) :
+    riscv64WriteState base address bytes =
+      riscv64SetMemory base (riscv64WriteState base address bytes).memory := by
+  induction bytes generalizing address with
+  | nil => rfl
+  | cons byte bytes ih =>
+      rw [riscv64WriteState]
+      cases hstore : crepRuntimeStoreByte (riscv64WriteState base (address + 1) bytes)
+          address ((riscv64CrepRuntimeTarget base).ffiContext.byteToWord byte) with
+      | none =>
+          simp only [Option.getD_none]
+          exact ih (address + 1)
+      | some u =>
+          simp only [Option.getD_some]
+          rw [crepRuntimeStoreByte_some_eq hstore, ih (address + 1)]
+          rfl
+
+/-- Under an aligned, total target memory the canonical byte store cannot fail. -/
+theorem crepRuntimeStoreByte_setMemory_isSome
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (memory : RiscV.Word 64 → PanWordLab (RiscV.Word 64))
+    (address value : RiscV.Word 64)
+    (h : base.memaddrs (RiscV.panRiscVByteAlign (8 : RiscV.Word 64) address) = true) :
+    ∃ u, crepRuntimeStoreByte (riscv64SetMemory base memory) address value = some u := by
+  simp only [crepRuntimeStoreByte, riscv64SetMemory, riscv64CrepRuntimeTarget,
+    RiscV.panRiscVMemoryModel, h, if_true]
+  exact ⟨_, rfl⟩
+
+/-- The canonical source byte-array write and the canonical target
+    `riscv64WriteState` agree on the `PanValue.word` view, provided no
+    byte-aligned store can fail. -/
+theorem panSemWriteBytearray_target_eq_riscv
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (address : RiscV.Word 64)
+    (bytes : List UInt8)
+    (hdom : ∀ a : RiscV.Word 64,
+      base.memaddrs (RiscV.panRiscVByteAlign (8 : RiscV.Word 64) a) = true) :
+    panSemWriteBytearray
+        (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel base.memaddrs)
+        (riscv64PanValueFfiContext base.shMemaddrs)
+        (panValueMemoryView base.memory) (8 : RiscV.Word 64) address bytes =
+      panValueMemoryView ((riscv64WriteState base address bytes).memory) := by
+  induction bytes generalizing address with
+  | nil => simp [panSemWriteBytearray, riscv64WriteState, riscv64CrepRuntimeTarget]
+  | cons byte bytes ih =>
+      rw [panSemWriteBytearray, ih (address + 1)]
+      obtain ⟨u, hu⟩ := crepRuntimeStoreByte_setMemory_isSome base
+        ((riscv64WriteState base (address + 1) bytes).memory) address
+        ((riscv64PanValueFfiContext base.shMemaddrs).byteToWord byte) (hdom address)
+      have hv : crepRuntimeMemoryView u.memory =
+          RiscV.panRiscVStoreByte base.memaddrs
+            (crepRuntimeMemoryView ((riscv64WriteState base (address + 1) bytes).memory))
+            (8 : RiscV.Word 64) address
+            ((riscv64PanValueFfiContext base.shMemaddrs).byteToWord byte) := by
+        have hview := crepRuntimeStoreByte_setMemory_view base
+          ((riscv64WriteState base (address + 1) bytes).memory) address
+          ((riscv64PanValueFfiContext base.shMemaddrs).byteToWord byte)
+        rw [hu] at hview
+        simpa using hview
+      rw [riscv64WriteState, riscv64WriteState_eq_setMemory base (address + 1) bytes]
+      simp only [riscv64SetMemory]
+      erw [hu]
+      simp only [Option.getD_some]
+      erw [panValueStoreByte_view]
+      rw [← hv]
+      simp only [Option.map_some]
+      rfl
 
 end Flapjack

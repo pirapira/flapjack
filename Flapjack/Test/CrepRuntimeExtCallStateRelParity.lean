@@ -112,6 +112,33 @@ example :
       simp [riscv64ReadByteArray, RiscV.panRiscVReadByte, panModelReadByte,
         callErrorBase]))
 
+/-- The `FFI_return` write-back branch: after the empty-name `call_FFI` identity
+    returns the array bytes on the unchanged ffi, writing those bytes back keeps
+    the source and target states related (HOL `write_bytearray` on source,
+    `riscv64WriteState` on target). -/
+example :
+    stateRel
+      { callSource with
+        memory := panSemWriteBytearray
+          (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel callBase.memaddrs)
+          (riscv64PanValueFfiContext callBase.shMemaddrs) callSource.memory
+          (8 : RiscV.Word 64) (8 : RiscV.Word 64) [1, 2, 3, 4],
+        ffi := callBase.ffi }
+      (riscv64WriteState { callBase with ffi := callBase.ffi } (8 : RiscV.Word 64)
+        [1, 2, 3, 4]) :=
+  crepRuntimeExtCallValues_stateRel_returned callSource callBase ""
+    (8 : RiscV.Word 64) 4 (8 : RiscV.Word 64) 4 [1, 2, 3, 4] [1, 2, 3, 4]
+    callReadConfiguration callReadArray callBase.ffi [1, 2, 3, 4]
+    (by rw [riscv64ExtCallCallFfiHandler_extCall]; rfl)
+    callStateRel (fun _ => rfl)
+
+/-- The written target state reads back the returned first byte. -/
+def returnedGuard : Bool :=
+  let written := riscv64WriteState { callBase with ffi := callBase.ffi }
+    (8 : RiscV.Word 64) [1, 2, 3, 4]
+  RiscV.panRiscVReadByte written.memaddrs (crepRuntimeMemoryView written.memory)
+      (8 : RiscV.Word 64) (8 : RiscV.Word 64) == some (1 : RiscV.Word 64)
+
 def dispatchGuard : Bool :=
   match callFfi callSource.ffi (.extCall "f") [1, 2, 3, 4] [1, 2, 3, 4] with
   | .returned _ _ => true
@@ -121,6 +148,8 @@ def runChecks : IO Bool := do
   let checks := [
     ("Crep ExtCall dispatch follows source call_FFI and stateRel ffi update",
       dispatchGuard),
+    ("Crep ExtCall FFI_return write-back preserves stateRel and writes bytes",
+      returnedGuard),
     ("Crep ExtCall failing-read branch returns Error with state unchanged", true)]
   for (name, passed) in checks do
     IO.println s!"{if passed then "PASS" else "FAIL"} {name}"

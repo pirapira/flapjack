@@ -65,6 +65,14 @@ private theorem panSemShapeOf_eq_panValueShape_nil (value : PanValue α) :
       simpa [panSemShapeOf, panValueShape] using ih
   | case3 _ _ => simp [panSemShapeOf, panValueShape]
 
+/-- Flapjack bridge from HOL source `shape_of` over evaluated Call arguments
+to the proof context's empty-struct shape function. The HOL premise
+`EVERY is_wf_shape_v_nil args` uses exactly this context; named-struct values
+do not satisfy that premise in the empty context. -/
+theorem panSemShapeOfMapPanValueShapeNil (arguments : List (PanValue α)) :
+    arguments.map panSemShapeOf = arguments.map (panValueShape []) := by
+  exact List.map_congr_left (fun value _ => panSemShapeOf_eq_panValueShape_nil value)
+
 /-! A successful `globalsLookup` exposes each state-owned return-global cell.
 This generic projection is useful when `exp_hdl` copies a multiword exception
 payload into its handler local. -/
@@ -599,6 +607,21 @@ theorem withShape_mapPanValueFlatten (arguments : List (PanValue α))
         simp
       rw [htake, hdrop, htail]
 
+/-- Source-facing form of `withShape_mapPanValueFlatten`: its shapes and
+well-formedness premise use the HOL `panSem$shape_of` and
+`is_wf_shape_v_nil` boundary. -/
+theorem withShape_mapPanValueFlattenOfPanSem
+    (arguments : List (PanValue α))
+    (hwf : ∀ value, value ∈ arguments →
+      isWfShape [] (panSemShapeOf value) = true) :
+    withShape (arguments.map panSemShapeOf)
+        ((arguments.map panValueFlatten).flatten) =
+      arguments.map panValueFlatten := by
+  rw [panSemShapeOfMapPanValueShapeNil]
+  apply withShape_mapPanValueFlatten
+  intro value hmem
+  simpa [panSemShapeOf_eq_panValueShape_nil] using hwf value hmem
+
 /-! The target `tlc` map returns exactly the flattened words in the slot window
 assigned by `withShape` to a given well-formed argument. This is the target
 half of the Call formal/flattened `locals_rel` proof. -/
@@ -664,6 +687,27 @@ theorem tlcWithShapeGetElemMap
     exact (Option.some.inj hindexed).trans hmapElem
   rw [hslotsWindow, hwindow]
   rw [← hwordsWindow, hpartitionIndex]
+
+/-- Source-facing `tlc` slot projection. The slot grouping is expressed with
+HOL `panSem$shape_of`, and its well-formedness premise is the empty-context
+`is_wf_shape_v_nil` condition from the Call theorem. -/
+theorem tlcWithShapeGetElemMapOfPanSem
+    (arguments : List (PanValue α)) (slots : List Nat) (index : Nat)
+    (hdistinct : slots.Nodup)
+    (hslotsLength : slots.length = (arguments.flatMap panValueFlatten).length)
+    (hwf : ∀ value, value ∈ arguments →
+      isWfShape [] (panSemShapeOf value) = true)
+    (hindex : index < arguments.length) :
+    ((withShape (arguments.map panSemShapeOf) slots)[index]'(by
+      rw [withShape_length]
+      simpa using hindex)).mapM (FLOOKUP (tlc slots arguments)) =
+      some (panValueFlatten (arguments[index]'hindex)) := by
+  have hwf' : ∀ value, value ∈ arguments →
+      isWfShape [] (panValueShape [] value) = true := by
+    intro value hmem
+    simpa [panSemShapeOf_eq_panValueShape_nil] using hwf value hmem
+  simpa only [panSemShapeOfMapPanValueShapeNil] using
+    (tlcWithShapeGetElemMap arguments slots index hdistinct hslotsLength hwf' hindex)
 
 /-! HOL `state_rel_def` (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:45`).
     The source Pancake state and target Crepe state agree on their memory

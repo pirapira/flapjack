@@ -3579,6 +3579,14 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "panSemShapeOfMapPanValueShapeNil",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack bridge identifying the exact source panSem shape_of list with the empty-struct proof-context shape list; supports translating the HOL is_wf_shape_v_nil Call premise."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "withShape_mapPanValueFlatten",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only partition lemma showing that splitting concatenated argument flattenings by the corresponding source value shapes returns each argument flattening; support for the Call function-context locals_rel proof."
@@ -3587,9 +3595,25 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "withShape_mapPanValueFlattenOfPanSem",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack bridge applying the partition lemma at HOL panSem shape_of with the exact empty-context is_wf_shape_v_nil premise; it does not cover arbitrary struct contexts."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "tlcWithShapeGetElemMap",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only lookup lemma showing that tlc maps the ctxtFc withShape slot group for an indexed argument to that argument's flattened words; support for the full Call locals_rel proof."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "tlcWithShapeGetElemMapOfPanSem",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack source-facing tlc slot projection at panSem shape_of under the Call theorem's empty-context argument well-formedness premise; no arbitrary-struct generalization claimed."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",

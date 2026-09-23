@@ -96,6 +96,10 @@ def emptyPanSourceState (clock : Nat)
 def sourceIdCode : PanSemCodeMap Word64 :=
   [("id", ([ ("x", .one) ], .return (.var .local "x"), .one))]
 
+def sourcePairCode : PanSemCodeMap Word64 :=
+  [("pair", ([ ("p", .comb [.one, .one]) ], .return (.var .local "p"),
+    .comb [.one, .one]))]
+
 def sourceRecursiveCode : PanSemCodeMap Word64 :=
   [("f", ([], .decCall "nested" .one "g" []
       (.return (.var .local "nested")), .one)),
@@ -121,6 +125,13 @@ def evaluateSourceCallId :=
     statefulTestHandler
     (emptyPanSourceState 10 sourceIdCode)
     (.call none "id" [.const (BitVec.ofNat 64 7)] : Prog Word64)
+
+def evaluateSourceCallStructArgument :=
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler
+    (emptyPanSourceState 10 sourcePairCode)
+    (.call none "pair" [.rStruct [.const (BitVec.ofNat 64 7),
+      .const (BitVec.ofNat 64 8)]] : Prog Word64)
 
 def evaluateSourceCallAssigned :=
   panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
@@ -213,6 +224,12 @@ private def isSourceTimeoutAt
 def observeSourceCodeCall := isSourceReturnedWord evaluateSourceCallId
   (BitVec.ofNat 64 7) 9
 
+def observeSourceCallStructArgument : Bool :=
+  match evaluateSourceCallStructArgument with
+  | some (.control (.returned _ _ _ _ [.rStruct [.word left, .word right]]), 9) =>
+      left == BitVec.ofNat 64 7 && right == BitVec.ofNat 64 8
+  | _ => false
+
 def observeSourceCallAssigned : Bool :=
   match evaluateSourceCallAssigned with
   | some (.control (.normal locals _globals _memory _ffi), 9) =>
@@ -265,6 +282,7 @@ def observeSourceConstReturnCall := isSourceReturnedWord
   evaluateSourceConstReturnCall (BitVec.ofNat 64 7) 9
 
 #guard observeSourceCodeCall
+#guard observeSourceCallStructArgument
 #guard observeSourceCallAssigned
 #guard observeSourceCallRaisesException
 #guard observeSourceCallHandlesException
@@ -584,6 +602,9 @@ def runChecks : IO Bool := do
   if observeCall then IO.println "PASS evaluate call_id_7" else IO.println "FAIL evaluate call_id_7"
   if observeSourceCodeCall then IO.println "PASS state-owned code Call matches HOL call_code_map_7" else
     IO.println "FAIL state-owned code Call matches HOL call_code_map_7"
+  if observeSourceCallStructArgument then
+    IO.println "PASS state-owned Call binds and returns a structured argument like HOL"
+  else IO.println "FAIL state-owned Call binds and returns a structured argument like HOL"
   if observeSourceCallAssigned then IO.println "PASS state-owned Call writes the existing local destination" else
     IO.println "FAIL state-owned Call writes the existing local destination"
   if observeSourceCallRaisesException then IO.println "PASS state-owned Call propagates the callee exception payload" else
@@ -633,7 +654,8 @@ def runChecks : IO Bool := do
   if observeShMemStoreDomainFailure then IO.println "PASS evaluate ShMemStore rejects shared-domain miss with Error" else
     IO.println "FAIL evaluate ShMemStore rejects shared-domain miss with Error"
   pure (observeSkip && observeReturn41 && observeSequence && observeTickAtZero && observeCall &&
-    observeSourceCodeCall && observeSourceCodeDecCall && observeSourceNestedCodeCall &&
+    observeSourceCodeCall && observeSourceCallStructArgument && observeSourceCodeDecCall &&
+    observeSourceNestedCodeCall &&
     observeSourceCodePreservedAfterRecursion &&
     observeSourceRecursiveCallTimeout && observeSourceRecursiveDecCallTimeout &&
     observeSourceZeroClockCallTimeout && observeSourceConstReturnCall &&

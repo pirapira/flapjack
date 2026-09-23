@@ -408,12 +408,20 @@
     "reviewer": "Flapjack-only Option/PanWordLab wrapper for finite-index evaluator preservation; it does not establish the arbitrary-carrier HOL result"
   },
   {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1HolWordBitsSource",
+    "statement_status": "documented_mismatch",
+    "reviewer": "All-positive-width source-state-shaped result over canonical Fin width -> Bool numeric bit positions, preserving the successful-evaluation premise, arbitrary code-map update, and full Option/word_lab result. It remains untagged because the source evaluator is transported through BitVec/RISC-V operations and byte loads; no proof identifies those operations with HOL FCP word operations for every dimindex."
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1HolWordBits",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only all-width production evaluator result on Fin width -> Bool; deliberately untagged because HOL quantifies over arbitrary finite dimension types"
+    "reviewer": "Flapjack-only all-width production evaluator result over canonical Fin width -> Bool numeric bit positions; the source-shaped counterpart is separately inventoried as a documented mismatch because evaluator operations still route through BitVec/RISC-V."
   },
   {
     "hol_path": null,

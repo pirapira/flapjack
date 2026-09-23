@@ -2566,5 +2566,29 @@
     "lean_name": "compileProgHOL_controlLeaves",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panAnnotEvaluationEquation",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "crepBreakEvaluationEquation",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "crepContinueEvaluationEquation",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (proof inventory)"
   }
 ]

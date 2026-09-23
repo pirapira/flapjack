@@ -104,6 +104,31 @@ theorem panContinueEvaluationEquation
   simp [evalPanValueFfiClockProg, evalPanValueFfiClockLeaf,
     evalPanValueFfiProgSteps]
 
+/-- HOL's `pc_compile_correct[Annot]` source-side evaluator equation. -/
+theorem panAnnotEvaluationEquation
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel clock : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (tag text : String)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (contracts : Option PanValueCallContracts := none)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+      (.annot tag text) memoryAccess contracts memoryHandler =
+      some (.control (.normal locals globals memory ffi), clock) := by
+  simp [evalPanValueFfiClockProg, evalPanValueFfiClockLeaf,
+    evalPanValueFfiProgSteps]
+
 /-- HOL's `pc_compile_correct[Tick]` source-side evaluator equation. -/
 theorem panTickEvaluationEquation
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
@@ -140,6 +165,32 @@ theorem crepTickEvaluationEquation
     evalCrepRuntimeResult handler primitive (fuel + 1) state .tick =
       if state.clock = 0 then some (.timeout, clearCrepRuntimeLocals state)
       else some (.normal, decCrepClock state) := by
+  simp [evalCrepRuntimeResult, evalCrepRuntimeProg]
+
+/-- HOL's `pc_compile_correct[Break]` target-side evaluator equation. -/
+theorem crepBreakEvaluationEquation
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (handler : CrepRuntimeFfiHandler α σ ε)
+    (primitive : CrepPrimitiveHandler α) (fuel : Nat)
+    (state : CrepRuntimeState α σ) :
+    evalCrepRuntimeResult handler primitive (fuel + 1) state (.break 0) =
+      some (.broke 0, state) := by
+  simp [evalCrepRuntimeResult, evalCrepRuntimeProg]
+
+/-- HOL's `pc_compile_correct[Continue]` target-side evaluator equation. -/
+theorem crepContinueEvaluationEquation
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (handler : CrepRuntimeFfiHandler α σ ε)
+    (primitive : CrepPrimitiveHandler α) (fuel : Nat)
+    (state : CrepRuntimeState α σ) :
+    evalCrepRuntimeResult handler primitive (fuel + 1) state (.continue 0) =
+      some (.continued 0, state) := by
   simp [evalCrepRuntimeResult, evalCrepRuntimeProg]
 
 /-- The compiler's control-flow leaf equations correspond to HOL's

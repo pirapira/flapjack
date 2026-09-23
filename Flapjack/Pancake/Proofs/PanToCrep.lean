@@ -65,6 +65,41 @@ private theorem panSemShapeOf_eq_panValueShape_nil (value : PanValue α) :
       simpa [panSemShapeOf, panValueShape] using ih
   | case3 _ _ => simp [panSemShapeOf, panValueShape]
 
+/-! A successful `globalsLookup` exposes each state-owned return-global cell.
+This generic projection is useful when `exp_hdl` copies a multiword exception
+payload into its handler local. -/
+theorem globalsLookup_wordCell {state : CrepRuntimeState (RiscV.Word 64) σ}
+    {value : PanValue (RiscV.Word 64)}
+    (hwf : isWfShape [] (panSemShapeOf value) = true)
+    (hlookup : globalsLookup state value =
+      some ((panValueFlatten value).map PanWordLab.word))
+    (index : Nat) (hindex : index < (panValueFlatten value).length) :
+    state.globals (BitVec.ofNat 5 index) =
+      some (.word ((panValueFlatten value)[index]'hindex)) := by
+  have hwf' : isWfShape [] (panValueShape [] value) = true := by
+    simpa [panSemShapeOf_eq_panValueShape_nil] using hwf
+  have hshape : Shape.shapeSize (panSemShapeOf value) =
+      (panValueFlatten value).length := by
+    rw [panSemShapeOf_eq_panValueShape_nil]
+    exact (panValueFlatten_length_eq_shapeSize value hwf').symm
+  have hindexShape : index < Shape.shapeSize (panSemShapeOf value) := by
+    omega
+  have hpoint := list_mapM_getElem?
+    (fun cellIndex => state.globals (BitVec.ofNat 5 cellIndex))
+    (List.range (Shape.shapeSize (panSemShapeOf value)))
+    ((panValueFlatten value).map PanWordLab.word) (by simpa [globalsLookup] using hlookup)
+    index
+  have hrange :
+      (List.range (Shape.shapeSize (panSemShapeOf value)))[index]? = some index := by
+    simp [hindexShape]
+  have houtput : ((panValueFlatten value).map PanWordLab.word)[index]? =
+      some (.word ((panValueFlatten value)[index]'hindex)) := by
+    simp [hindex]
+  rw [hrange] at hpoint
+  simp only [Option.bind_some] at hpoint
+  rw [houtput] at hpoint
+  exact hpoint
+
 /-- HOL `flatten_nil_no_size[local]`: flattening a value of well-formed
     empty-structure shape is empty exactly when its shape has size zero. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "flatten_nil_no_size"]

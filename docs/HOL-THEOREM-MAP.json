@@ -3656,6 +3656,14 @@
     "reviewer": "Codex (source comparison; exact state globals, shape_of, n2w, and OPT_MMAP ports)"
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "globalsLookup_wordCell",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only pointwise projection from successful state-owned globalsLookup; supports multiword exp_hdl reasoning and is not a separate HOL theorem"
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
     "hol_name": "compile_exp_not_mem_load_glob",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",

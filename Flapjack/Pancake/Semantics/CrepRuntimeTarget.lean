@@ -612,26 +612,29 @@ theorem crepRuntimeExtCallValues_target_final
     riscv64PanValueFfiContext_valueToNat_eq_riscv,
     crepRuntimeReadBytes_target_eq_riscv, riscv64CrepRuntimeTarget_ffi, hc, ha, hf]
 
-/-! ## Remaining `returned` dispatch gap (child `flapjack-pxn.18.4.3.43.1.2.2.1.1`)
-
-The `FFI_return` (write-back) branch of `crepRuntimeExtCallValues` is not yet
-composed. After the two argument reads and the handler result are rewritten, the
-goal is an equality between two syntactically identical
-`match crepRuntimeWriteBytes <record> array bytes with ...` terms, but `rfl` /
-`dsimp` reject it: the production occurrence (unfolded from `CrepSem`) and the
-goal occurrence elaborate distinct hidden arguments for the well-founded
-recursive `crepRuntimeWriteBytes`, so they are not definitionally equal. The
-write-back relation itself is proven (`crepRuntimeWriteBytes_target_eq_riscv_state`
-and `crepRuntimeWriteBytes_target_updateFfi`); only its composition into the
-one-shot dispatch expression is blocked, because the production `let state :=
-{ state with ffi := ffi }` is elaborated as a `have __src` projection literal
-that the bridge lemma's `{ .. with ffi := .. }` pattern cannot syntactically
-match.
-
-Concrete normalisation routes for a follow-up slice: (a) state the write-back
-bridge with the production's exact `let`/projection-literal state as its LHS;
-(b) restructure the production `let` so that the write call's state argument is
-shared with the bridge; (c) give `crepRuntimeWriteBytes` an explicit-argument
-alias so both occurrences use the same elaborated term. -/
+/-- Dispatch when the `callFfi` handler reports a `returned` result (HOL
+    `FFI_return`): the production step writes the returned bytes back into the
+    canonical target with `crepRuntimeWriteBytes` and returns `Normal` with the
+    updated ffi, matching `write_bytearray` plus the ffi update in `call_FFI`. -/
+theorem crepRuntimeExtCallValues_target_returned
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (function : FunName)
+    (configuration configurationLength array arrayLength : RiscV.Word 64)
+    (configurationBytes arrayBytes : List UInt8)
+    (hc : riscv64ReadByteArray base configuration configurationLength.toNat =
+      some configurationBytes)
+    (ha : riscv64ReadByteArray base array arrayLength.toNat = some arrayBytes)
+    (ffi : FfiState σ) (bytes : List UInt8)
+    (hr : riscv64ExtCallCallFfiHandler
+        (.extCall function configurationBytes arrayBytes :
+          CrepRuntimeRequest (RiscV.Word 64)) base.ffi = .returned ffi bytes) :
+    crepRuntimeExtCallValues riscv64ExtCallCallFfiHandler
+        (riscv64CrepRuntimeTarget base) function
+        configuration configurationLength array arrayLength =
+      (.normal, riscv64WriteState { base with ffi := ffi } array bytes) := by
+  unfold crepRuntimeExtCallValues
+  simp only [riscv64CrepRuntimeTarget_ffiContext,
+    riscv64PanValueFfiContext_valueToNat_eq_riscv,
+    crepRuntimeReadBytes_target_eq_riscv, riscv64CrepRuntimeTarget_ffi, hc, ha, hr]
+  erw [crepRuntimeWriteBytes_target_updateFfi]
 
 end Flapjack

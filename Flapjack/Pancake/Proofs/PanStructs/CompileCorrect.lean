@@ -793,10 +793,8 @@ theorem panStructCompileCorrectContinueCase
   exact ⟨htarget, hlocalsFields, hglobalsFields, hglobalsMap, hlocalsMap,
     by simp [panStructValuesFieldsOkBool], by simp [panIsWfShapeValuesBool]⟩
 
-/-- Private lookup bridge used by the Var proof below. This comment documents
-    only this helper; the declaration-local HOL mismatch note for
-    `panStructCompileExpCorrectVarCase` is placed immediately before that
-    theorem. -/
+/-- Private lookup bridge from the production string lookup to the
+    HOL-style association-list lookup. -/
 private theorem lookupInfoStringDefault_eq_panPropsALookupEq
     {β : Type} (key : String) (entries : List (String × β)) :
     @lookupInfo String β instBEqOfDecidableEq key entries =

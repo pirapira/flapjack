@@ -591,6 +591,179 @@ theorem localRelGtVmaxPreserved
     exact (Nat.not_lt_of_ge hle) habove
   simp [beq_eq_false_iff_ne.mpr hne]
 
+/-- HOL `local_rel_le_zip_update_preserved`: replacing a source local by a
+    shape-compatible value and writing its flattened words to the associated
+    distinct slots preserves the finite-map locals relation. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "local_rel_le_zip_update_preserved"]
+theorem localRelLeZipUpdatePreserved
+    (context : PanToCrepProofContext α)
+    (sourceLocals : FiniteMap String (PanValue α))
+    (targetLocals : FiniteMap Nat α)
+    (name : String) (oldValue newValue : PanValue α)
+    (shape : Shape) (slots : List Nat)
+    (hrel : localsRel context sourceLocals targetLocals)
+    (hsource : FLOOKUP sourceLocals name = some oldValue)
+    (hcontext : FLOOKUP context.vars name = some (shape, slots))
+    (hshape : panValueShape [] oldValue = panValueShape [] newValue)
+    (hdistinct : slots.Nodup) :
+    localsRel context (FUPDATE sourceLocals (name, newValue))
+      (FUPDATE_LIST targetLocals (slots.zip (panValueFlatten newValue))) := by
+  obtain ⟨oldSlots, hlookup, hlen, _, hwf⟩ :=
+    localsRelLookupCtxt context sourceLocals targetLocals name oldValue hrel hsource
+  have hpair : (panValueShape [] oldValue, oldSlots) = (shape, slots) := by
+    apply Option.some.inj
+    rw [← hlookup, hcontext]
+  have hslots : oldSlots = slots := congrArg Prod.snd hpair
+  have hcontextOld : FLOOKUP context.vars name =
+      some (panValueShape [] oldValue, slots) := by
+    rw [← hslots]
+    exact hlookup
+  have hwfNew : isWfShape [] (panValueShape [] newValue) = true := by
+    rw [← hshape]
+    exact hwf
+  have hlenNew : slots.length = (panValueFlatten newValue).length := by
+    rw [← hslots, hlen, panValueFlatten_length_eq_shapeSize oldValue hwf,
+      panValueFlatten_length_eq_shapeSize newValue hwfNew, hshape]
+  refine ⟨hrel.1, hrel.2.1, ?_⟩
+  intro other value hsourceOther
+  rw [FLOOKUP_update] at hsourceOther
+  by_cases hsame : name = other
+  · subst other
+    simp at hsourceOther
+    cases hsourceOther
+    refine ⟨slots, panValueFlatten newValue, ?_, ?_, rfl, hwfNew⟩
+    · rw [← hshape]
+      exact hcontextOld
+    · exact opt_mmap_some_eq_zip_flookup slots targetLocals
+        (panValueFlatten newValue) hdistinct hlenNew
+  · have hneq : (name == other) = false := beq_eq_false_iff_ne.mpr hsame
+    simp [hneq] at hsourceOther
+    obtain ⟨otherSlots, words, hother, hmap, hflat, hotherWf⟩ :=
+      hrel.2.2 other value hsourceOther
+    refine ⟨otherSlots, words, hother, ?_, hflat, hotherWf⟩
+    have hdisjoint : ListDisjoint slots otherSlots := by
+      intro slot hin hotherIn
+      apply hsame
+      exact hrel.1.2 name other (panValueShape [] oldValue)
+        (panValueShape [] value) slots otherSlots hcontextOld hother
+        ⟨slot, hin, hotherIn⟩
+    rw [opt_mmap_disj_zip_flookup slots targetLocals otherSlots
+      (panValueFlatten newValue) hdisjoint hlenNew]
+    exact hmap
+
+/-- HOL `locals_rel_extend_new_var`: a fresh, well-shaped source local can be
+    allocated in distinct target slots above the old context maximum. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "locals_rel_extend_new_var"]
+theorem localsRelExtendNewVar
+    (context : PanToCrepProofContext α)
+    (sourceLocals : FiniteMap String (PanValue α))
+    (targetLocals : FiniteMap Nat α)
+    (value : PanValue α) (name : String) (slots : List Nat)
+    (hrel : localsRel context sourceLocals targetLocals)
+    (hwf : isWfShape [] (panValueShape [] value) = true)
+    (hdistinct : slots.Nodup)
+    (hbounds : ∀ slot ∈ slots,
+      context.vmax < slot ∧
+        slot ≤ context.vmax + Shape.shapeSize (panValueShape [] value))
+    (hlen : slots.length = Shape.shapeSize (panValueShape [] value)) :
+    localsRel
+      { context with
+        vars := FUPDATE context.vars (name, (panValueShape [] value, slots))
+        vmax := context.vmax + Shape.shapeSize (panValueShape [] value) }
+      (FUPDATE sourceLocals (name, value))
+      (FUPDATE_LIST targetLocals (slots.zip (panValueFlatten value))) := by
+  have hlenFlat : slots.length = (panValueFlatten value).length := by
+    rw [hlen, panValueFlatten_length_eq_shapeSize value hwf]
+  have hdisjointOld : ∀ other shape otherSlots,
+      FLOOKUP context.vars other = some (shape, otherSlots) →
+      ListDisjoint slots otherSlots := by
+    intro other shape otherSlots hlookup slot hin hother
+    have hle : slot ≤ context.vmax :=
+      hrel.2.1.2 other shape otherSlots hlookup slot hother
+    exact (Nat.not_lt_of_ge hle) (hbounds slot hin).1
+  refine ⟨?_, ?_, ?_⟩
+  · constructor
+    · intro other shape otherSlots hlookup
+      rw [FLOOKUP_update] at hlookup
+      by_cases hsame : name = other
+      · simp [beq_iff_eq.mpr hsame] at hlookup
+        have hslots : slots = otherSlots := hlookup.2
+        rw [← hslots]
+        exact hdistinct
+      · have hbeq : (name == other) = false := beq_eq_false_iff_ne.mpr hsame
+        simp [hbeq] at hlookup
+        exact hrel.1.1 other shape otherSlots hlookup
+    · intro left right leftShape rightShape leftSlots rightSlots
+        hleft hright hinter
+      rw [FLOOKUP_update] at hleft hright
+      by_cases hl : name = left
+      · by_cases hr : name = right
+        · exact hl.symm.trans hr
+        · have hleq : (name == left) = true := beq_iff_eq.mpr hl
+          have hreq : (name == right) = false := beq_eq_false_iff_ne.mpr hr
+          simp [hleq] at hleft
+          simp [hreq] at hright
+          have hslots : slots = leftSlots := hleft.2
+          obtain ⟨slot, hin, hother⟩ := hinter
+          exact False.elim ((hdisjointOld right rightShape rightSlots hright)
+            slot (hslots.symm ▸ hin) hother)
+      · by_cases hr : name = right
+        · have hleq : (name == left) = false := beq_eq_false_iff_ne.mpr hl
+          have hreq : (name == right) = true := beq_iff_eq.mpr hr
+          simp [hleq] at hleft
+          simp [hreq] at hright
+          have hslots : slots = rightSlots := hright.2
+          obtain ⟨slot, hin, hother⟩ := hinter
+          exact False.elim ((hdisjointOld left leftShape leftSlots hleft)
+            slot (hslots.symm ▸ hother) hin)
+        · have hleq : (name == left) = false := beq_eq_false_iff_ne.mpr hl
+          have hreq : (name == right) = false := beq_eq_false_iff_ne.mpr hr
+          simp [hleq] at hleft
+          simp [hreq] at hright
+          exact hrel.1.2 left right leftShape rightShape leftSlots rightSlots
+            hleft hright hinter
+  · refine ⟨Nat.zero_le _, ?_⟩
+    intro other shape otherSlots hlookup slot hin
+    rw [FLOOKUP_update] at hlookup
+    by_cases hsame : name = other
+    · simp [beq_iff_eq.mpr hsame] at hlookup
+      have hslots : slots = otherSlots := hlookup.2
+      exact (hbounds slot (hslots.symm ▸ hin)).2
+    · have hbeq : (name == other) = false := beq_eq_false_iff_ne.mpr hsame
+      simp [hbeq] at hlookup
+      exact Nat.le_trans (hrel.2.1.2 other shape otherSlots hlookup slot hin)
+        (Nat.le_add_right _ _)
+  · intro other otherValue hlookupSource
+    rw [FLOOKUP_update] at hlookupSource
+    by_cases hsame : name = other
+    · simp [beq_iff_eq.mpr hsame] at hlookupSource
+      cases hlookupSource
+      refine ⟨slots, panValueFlatten value, ?_, ?_, rfl, hwf⟩
+      · simp [FLOOKUP_update, beq_iff_eq.mpr hsame]
+      · exact opt_mmap_some_eq_zip_flookup slots targetLocals
+          (panValueFlatten value) hdistinct hlenFlat
+    · have hbeq : (name == other) = false := beq_eq_false_iff_ne.mpr hsame
+      simp [hbeq] at hlookupSource
+      obtain ⟨otherSlots, words, hcontext, hmap, hflat, hotherWf⟩ :=
+        hrel.2.2 other otherValue hlookupSource
+      refine ⟨otherSlots, words, ?_, ?_, hflat, hotherWf⟩
+      · simpa [FLOOKUP_update, hbeq] using hcontext
+      · rw [opt_mmap_disj_zip_flookup slots targetLocals otherSlots
+          (panValueFlatten value)
+          (hdisjointOld other (panValueShape [] otherValue) otherSlots hcontext)
+          hlenFlat]
+        exact hmap
+
+/-- HOL `filter_not_mem_self`: filtering a list for elements absent from that
+    same list always produces the empty list. This is used by the compiled
+    assigned-variable invariant in the `DecCall` case. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "filter_not_mem_self"]
+theorem filterNotMemSelf [DecidableEq α] (values : List α) :
+    values.filter (fun value => value ∉ values) = [] := by
+  apply List.filter_eq_nil_iff.mpr
+  intro value hmem
+  simp [hmem]
+
 /-! Execute the finite-map compiler with the HOL proof context. Every map is
     passed directly to `compileProgHOL`; no queried-name projection to an
     `InfoMap` is performed. -/

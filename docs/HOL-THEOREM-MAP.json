@@ -4269,7 +4269,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only composition of an actual state-owned source Call run with production target Call dispatch and the source-result-indexed handler post-relations. It assumes the run and callee/handler relation IHs; it does not establish their premises or the full compiled-program Call_Ret_Exception case"
+    "reviewer": "Flapjack-only composition deriving an actual state-owned source Call run from source callee/handler body premises, then carrying its projected result through production target Call dispatch and relation-aware handler post-relations. Target callee and handler relation IHs remain premises; this is not the full compiled-program Call_Ret_Exception case"
   },
   {
     "hol_path": null,

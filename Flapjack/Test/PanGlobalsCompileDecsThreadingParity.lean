@@ -212,6 +212,128 @@ def freshNameChecks : List Bool :=
 #eval freshNameChecks
 #guard freshNameChecks.all id
 
+/-! Direct full-program `compile_def` fixture for a handled Global destination.
+    The canonical context binds both `g` (argument read) and `r` (destination)
+    to `(One, 7)`.  `compileProgCake` must build the whole nested
+    `Dec`/`Dec`/`Seq`/`Call`/`If`/`Store` program shown by the original-HOL row
+    `compile_def_handled_global` in `scripts/hol-probes/pan_globals_compile_decs_probe.out`,
+    including the fresh names `vn' = ""` and `flag = "vn''"`. -/
+
+def cakeContextWithHandled : CakeContext 8 :=
+  { globals :=
+      FUPDATE (FUPDATE cakeContext.globals ("g", (Shape.one, (7 : BitVec 8))))
+        ("r", (Shape.one, (7 : BitVec 8)))
+    globalsSize := 1
+    maxGlobalsSize := 16 }
+
+/-- Handler body mentioning the local `vn'`, so the fresh-name machinery is
+    exercised (`names = ["ev", "x", "vn'"]`). -/
+def handledHandlerSource : Prog (BitVec 8) :=
+  .seq (.assign .local "x" (.const (1 : BitVec 8)))
+    (.assign .local "vn'" (.const (2 : BitVec 8)))
+
+/-- `Call` to global destination `r` with an exception handler, reading global
+    `g` in its argument list. -/
+def handledCallSource : Prog (BitVec 8) :=
+  .call (some (some (.global, "r"), some ("e", "ev", handledHandlerSource)))
+    "f" [.var .global "g"]
+
+/-- The complete program the HOL `compile_def_handled_global` row produces. -/
+def expectedHandledProgram : Prog (BitVec 8) :=
+  .dec "" .one (.const (0 : BitVec 8))
+    (.dec "vn''" .one (.const (0 : BitVec 8))
+      (.seq
+        (.call
+          (some (some (.local, ""),
+            some ("e", "ev",
+              .seq (.seq (.assign .local "x" (.const (1 : BitVec 8)))
+                    (.assign .local "vn'" (.const (2 : BitVec 8))))
+                (.assign .local "vn''" (.const (1 : BitVec 8))))))
+          "f"
+          [.load .one (.op .sub [.topAddr, .const (7 : BitVec 8)])])
+        (.ite (.var .local "vn''") .skip
+          (.store (.op .sub [.topAddr, .const (7 : BitVec 8)])
+            (.var .local "")))))
+
+/-- Shape equality via `repr` (the test locals have no `BEq Shape`). -/
+def shapeEq (a b : Shape) : Bool := toString (repr a) == toString (repr b)
+
+/- Structural comparison covering every `Exp` and `Prog` constructor used by
+   the fixture; any unhandled constructor pair returns `false`, so a `true`
+   result certifies complete structural agreement. -/
+mutual
+  def expEq : Exp (BitVec 8) → Exp (BitVec 8) → Bool
+    | .const a, .const b => a == b
+    | .var k a, .var k' b => k == k' && a == b
+    | .rStruct a, .rStruct b => listExpEq a b
+    | .rField i a, .rField i' b => i == i' && expEq a b
+    | .nStruct _ _, .nStruct _ _ => false
+    | .nField f a, .nField f' b => f == f' && expEq a b
+    | .load s a, .load s' b => shapeEq s s' && expEq a b
+    | .loadByte a, .loadByte b => expEq a b
+    | .load32 a, .load32 b => expEq a b
+    | .op o a, .op o' b => o == o' && listExpEq a b
+    | .panOp o a, .panOp o' b => o == o' && listExpEq a b
+    | .cmp c a a', .cmp c' b b' => c == c' && expEq a b && expEq a' b'
+    | .shift s a a', .shift s' b b' => s == s' && expEq a b && expEq a' b'
+    | .baseAddr, .baseAddr => true
+    | .topAddr, .topAddr => true
+    | .bytesInWord, .bytesInWord => true
+    | _, _ => false
+    termination_by a b => sizeOf a + sizeOf b
+  def listExpEq : List (Exp (BitVec 8)) → List (Exp (BitVec 8)) → Bool
+    | [], [] => true
+    | a :: as, b :: bs => expEq a b && listExpEq as bs
+    | _, _ => false
+    termination_by a b => sizeOf a + sizeOf b
+end
+
+mutual
+  def progEq : Prog (BitVec 8) → Prog (BitVec 8) → Bool
+    | .skip, .skip => true
+    | .dec n s e p, .dec n' s' e' p' =>
+        n == n' && shapeEq s s' && expEq e e' && progEq p p'
+    | .assign k n e, .assign k' n' e' => k == k' && n == n' && expEq e e'
+    | .primitive n o a, .primitive n' o' a' => n == n' && o == o' && listExpEq a a'
+    | .store a b, .store a' b' => expEq a a' && expEq b b'
+    | .store32 a b, .store32 a' b' => expEq a a' && expEq b b'
+    | .storeByte a b, .storeByte a' b' => expEq a a' && expEq b b'
+    | .seq a b, .seq a' b' => progEq a a' && progEq b b'
+    | .ite c t f, .ite c' t' f' => expEq c c' && progEq t t' && progEq f f'
+    | .while c b, .while c' b' => expEq c c' && progEq b b'
+    | .break, .break => true
+    | .continue, .continue => true
+    | .call i n a, .call i' n' a' => callInfoEq i i' && n == n' && listExpEq a a'
+    | _, _ => false
+    termination_by a b => sizeOf a + sizeOf b
+  def callInfoEq :
+      Option (Option (VarKind × VarName) × Option (ExceptionId × VarName × Prog (BitVec 8)))
+      → Option (Option (VarKind × VarName) × Option (ExceptionId × VarName × Prog (BitVec 8)))
+      → Bool
+    | none, none => true
+    | some (r, h), some (r', h') => retKindEq r r' && handlerEq h h'
+    | _, _ => false
+    termination_by a b => sizeOf a + sizeOf b
+  def retKindEq : Option (VarKind × VarName) → Option (VarKind × VarName) → Bool
+    | none, none => true
+    | some (k, n), some (k', n') => k == k' && n == n'
+    | _, _ => false
+  def handlerEq :
+      Option (ExceptionId × VarName × Prog (BitVec 8))
+      → Option (ExceptionId × VarName × Prog (BitVec 8)) → Bool
+    | none, none => true
+    | some (e, v, p), some (e', v', p') => e == e' && v == v' && progEq p p'
+    | _, _ => false
+    termination_by a b => sizeOf a + sizeOf b
+end
+
+def handledProgramChecks : Bool :=
+  progEq (compileProgCake cakeContextWithHandled handledCallSource)
+    expectedHandledProgram
+
+#eval handledProgramChecks
+#guard handledProgramChecks
+
 theorem cakeEveryIsFunction :
     cakeResultBefore.functions.all globalDeclIsFunction = true :=
   compile_decs_EVERY_is_function_cake cakeContext cakeFunctionBeforeDecl
@@ -242,6 +364,7 @@ def cakeThreadingGuard : Bool :=
   compileExpChecks.all id &&
   compileProgChecks.all id &&
   freshNameChecks.all id &&
+  handledProgramChecks &&
   cakeResultBefore.functions.all globalDeclIsFunction
 
 #eval cakeThreadingGuard
@@ -270,6 +393,12 @@ def runChecks : IO Bool := do
     else
       IO.println "FAIL pan_globals canonical CakeContext compile_decs threading"
       pure false
-  pure (threadingOk && cakeOk)
+  let handledOk ← if handledProgramChecks then
+      IO.println "PASS pan_globals compile_def handled-Global full-program oracle"
+      pure true
+    else
+      IO.println "FAIL pan_globals compile_def handled-Global full-program oracle"
+      pure false
+  pure (threadingOk && cakeOk && handledOk)
 
 end Flapjack.Test.PanGlobalsCompileDecsThreadingParity

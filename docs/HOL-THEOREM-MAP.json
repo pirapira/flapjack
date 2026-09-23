@@ -105,6 +105,14 @@
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "free_var_ids_def",
+    "lean_path": "Flapjack/Pancake/PanLang.lean",
+    "lean_name": "freeVarIds",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; clause-for-clause free_var_ids_def over the tagged expLocalVars port of var_exp, collecting local variables only and preserving order/duplicates; the Dec filter uses lawful != implementing HOL $\u2260; direct #guard parity in PanLangFreeVarIdsParity)."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "exceptions_def",
     "lean_path": "Flapjack/Pancake/PanLang.lean",
     "lean_name": "exceptionEntries",
@@ -3070,6 +3078,14 @@
     "lean_name": "compileExpCake",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison; HOL-shaped CakeContext over BitVec width with [NeZero width] mirroring HOL dimindex positivity; extensional finite-map globals used only through FLOOKUP, with the local representation argument that HOL finite maps embed as lookup functions and extra infinite-support lookups do not alter this port; bytes_in_word = n2w (width/8); all compile_exp_def clauses Var Local/Global, RStruct, RField, NStruct/NField, Load/LoadByte/Load32, Op/Panop/Cmp/Shift, TopAddr and the identity catch-all match)."
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
+    "hol_name": "compile_def",
+    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
+    "lean_name": "compileProgCake",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; clause-for-clause compile_def over CakeContext: Dec, Assign Global/Local via FLOOKUP, Primitive, Store/Store32/StoreByte, Return, Raise, Seq, If, While, all Call rtyp/handler cases including the global-return-handler fresh-name machinery built from the exact freshNameHOL and freeVarIds/expLocalVars ports, DecCall, ExtCall, ShMemStore, ShMemLoad Local/Global, and the identity catch-all; [LawfulBEq String] so == and != implement HOL =; globals consulted only through FLOOKUP)."
   },
   {
     "hol_path": "cakeml/pancake/pan_globalsScript.sml",

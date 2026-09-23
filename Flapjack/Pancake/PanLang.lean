@@ -1282,9 +1282,12 @@ where
   decreasing_by
     all_goals first | sizeOf_list_dec | decreasing_trivial
 
-/-! Direct source-shaped counterpart of `panLang$free_var_ids`.  The
-    expression helper is the existing `expLocalVars`, which mirrors the
-    source `var_exp` distinction between local and global variables. -/
+/-! Exact clause-structured port of HOL `panLang$free_var_ids`
+    (`panLangScript.sml:347`).  The expression helper is the tagged
+    `expLocalVars` port of HOL `var_exp`, preserving the source distinction
+    between local and global variables; the `Dec` filter uses `!=`, which
+    implements HOL `$≠` because String equality is lawful. -/
+@[hol "cakeml/pancake/panLangScript.sml" "free_var_ids_def"]
 def freeVarIds : Prog α → List VarName
   | .dec name _ value body =>
       expLocalVars value ++ (freeVarIds body).filter (fun vname => vname != name)

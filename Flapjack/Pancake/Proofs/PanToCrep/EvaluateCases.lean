@@ -2199,6 +2199,74 @@ theorem crepRuntimeExpHdlOneWord_localsRel
     simpa [hpayloadSlots, panValueShape, panValueFlatten, FUPDATE_LIST,
       FUPDATE, beq_iff_eq] using hlocalsPayload
 
+/-! Assemble the one-word `exp_hdl` step with the relations at the matching
+source handler entry. The source state contributes its callee post-state, but
+its locals are restored from the caller and then assigned the payload; the
+target does the same restoration through `crepRuntimeCallerState` before
+executing `exp_hdl`. This yields the state, code, exception, and locals
+relations expected by a handler-body IH. The callee post-state and payload
+global still have to come from the recursive Call IHs. -/
+theorem crepRuntimeExpHdlOneWord_handlerPrestateRelations
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (handler : CrepRuntimeFfiHandler (RiscV.Word 64) σ FfiFinalEvent)
+    (primitive : CrepPrimitiveHandler (RiscV.Word 64))
+    (sourceAfterCallee : PanSemState (RiscV.Word 64) (FfiState σ))
+    (sourceCallerLocals : FiniteMap String (PanValue (RiscV.Word 64)))
+    (targetCaller targetCallee : CrepRuntimeState (RiscV.Word 64) σ)
+    (name : String) (slot : Nat) (old : PanValue (RiscV.Word 64))
+    (value : RiscV.Word 64)
+    (hstate : stateRel sourceAfterCallee targetCallee)
+    (hcode : codeRel context (panSemCodeAsLookup sourceAfterCallee.code)
+      targetCallee.code)
+    (hexcp : excpRel context.eids sourceAfterCallee.exceptionShapes)
+    (hlocals : localsRel context sourceCallerLocals targetCaller.locals)
+    (hsource : FLOOKUP sourceCallerLocals name = some old)
+    (hvariable : FLOOKUP context.vars name = some (Shape.one, [slot]))
+    (hslot : ∃ current, targetCaller.locals slot = some current)
+    (hglobal : targetCallee.globals (0 : BitVec 5) = some (.word value)) :
+    ∃ targetPost,
+      evalCrepRuntimeProg handler primitive 3
+        (crepRuntimeCallerState targetCaller targetCallee)
+        (expHdlFiniteMap context.vars name) = some (.normal, targetPost) ∧
+      stateRel
+        { sourceAfterCallee with
+          locals := updatePanValueMap sourceCallerLocals name (.word value) }
+      targetPost ∧
+      codeRel context (panSemCodeAsLookup sourceAfterCallee.code) targetPost.code ∧
+      excpRel context.eids sourceAfterCallee.exceptionShapes ∧
+      localsRel context
+        (updatePanValueMap sourceCallerLocals name (.word value)) targetPost.locals := by
+  let targetHandlerStart := crepRuntimeCallerState targetCaller targetCallee
+  obtain ⟨targetPost, hrun, hlocalsPost⟩ :=
+    crepRuntimeExpHdlOneWord_localsRel context handler primitive
+      targetHandlerStart sourceCallerLocals name slot old value hlocals hsource
+      hvariable hslot hglobal
+  have hrunExact := crepRuntimeExpHdlOneWord handler primitive targetHandlerStart
+    context.vars name slot value hvariable hslot hglobal
+  have hpostPair := Option.some.inj (hrun.symm.trans hrunExact)
+  have hpost : targetPost =
+      { targetHandlerStart with
+        locals := updateCrepRuntimeLocal targetHandlerStart.locals slot (.word value) } :=
+    congrArg Prod.snd hpostPair
+  have hsourceUpdate : FUPDATE sourceCallerLocals (name, .word value) =
+      updatePanValueMap sourceCallerLocals name (.word value) := by
+    funext key
+    by_cases hkey : name = key
+    · subst key
+      simp [FUPDATE, updatePanValueMap]
+    · have hforward : (name == key) = false :=
+        beq_eq_false_iff_ne.mpr hkey
+      have hbackward : (key == name) = false :=
+        beq_eq_false_iff_ne.mpr (Ne.symm hkey)
+      simp [FUPDATE, updatePanValueMap, hforward, hbackward]
+  refine ⟨targetPost, hrun, ?_, ?_, hexcp, ?_⟩
+  · rw [hpost]
+    simpa [stateRel, targetHandlerStart, crepRuntimeCallerState] using hstate
+  · rw [hpost]
+    simpa [targetHandlerStart, crepRuntimeCallerState] using hcode
+  · rw [← hsourceUpdate]
+    exact hlocalsPost
+
 /-! Execute the compiled matching handler continuation through its Return.
 This is the target-side handler-body IH shape used by the actual Call case. -/
 theorem crepRuntimeExpHdlReturnOneWord

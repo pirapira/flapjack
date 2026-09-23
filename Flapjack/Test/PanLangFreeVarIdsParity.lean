@@ -25,14 +25,25 @@ def declarationCall : Prog Nat :=
   .decCall "x" .one "d" [.var .local "a"]
     (.return (.var .local "r"))
 
+/-- A handled call whose handler body and argument read globals: HOL
+    `free_var_ids` collects only local variables, so the `Var Global` reads
+    contribute nothing (direct HOL rows `global_read`, `global_in_handler`). -/
+def handledGlobalCall : Prog Nat :=
+  .call (some (none, some ("E", "h",
+    .seq (.assign .local "z" (.var .global "g"))
+      (.return (.var .local "q"))))) "f"
+    [.var .global "a"]
+
 def parityGuard : Bool :=
   freeVarIds (.skip : Prog Nat) == [] &&
   freeVarIds (.assign .local "v" (.var .local "x") : Prog Nat) == ["v", "x"] &&
   freeVarIds (.assign .global "v" (.var .local "x") : Prog Nat) == ["x"] &&
+  freeVarIds (.assign .local "x" (.var .global "g") : Prog Nat) == ["x"] &&
   freeVarIds declaration == ["e"] &&
   freeVarIds conditional == ["g", "p", "q"] &&
   freeVarIds (.call none "f" [.var .local "a"] : Prog Nat) == ["a"] &&
   freeVarIds handledCall == ["h", "z", "q", "a"] &&
+  freeVarIds handledGlobalCall == ["h", "z", "q"] &&
   freeVarIds declarationCall == ["x", "r", "a"]
 
 #guard parityGuard

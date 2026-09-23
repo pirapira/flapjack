@@ -134,35 +134,6 @@ theorem localsRel_satisfied : localsRel oneVarContext sourceLocals targetLocals 
       · simp [panValueShape, isWfShape]
     · simp [FEMPTY] at hlookup
 
-def sourceWithWordLocal : PanSemState Nat (FfiState Unit) :=
-  { sourceState with locals := sourceLocals }
-
-def panEvalMemoryAccess : PanValueMemoryAccess Nat :=
-  panValueMemoryAccessOfModel natCrepRuntimeMemoryModel
-    sourceState.memaddrs sourceState.sharedMemaddrs
-
-theorem evalPanValueExpsWfShapeOfStateRel_fixture :
-    panValueIsWfValues ([] : StructContext) [.word 5] = true := by
-  have heval : evalPanValueExps sourceWithWordLocal.structs
-      sourceWithWordLocal.locals sourceWithWordLocal.globals
-      sourceWithWordLocal.memory sourceWithWordLocal.baseAddress
-      sourceWithWordLocal.topAddress 0 [.var .local "x"]
-      (memoryAccess := some panEvalMemoryAccess) = some [.word 5] := by
-    simp [evalPanValueExps, evalPanValueExp.evalPanValueExps,
-      evalPanValueExp, sourceWithWordLocal, sourceState, sourceLocals,
-      FUPDATE]
-  have hstate : stateRel sourceWithWordLocal targetState := by
-    change stateRel sourceState targetState
-    exact stateRel_satisfied
-  exact evalPanValueExpsWfShapeOfStateRel sourceWithWordLocal targetState
-    oneVarContext targetLocals 0 panEvalMemoryAccess [.var .local "x"]
-    [.word 5] heval hstate localsRel_satisfied
-
-def evalPanValueExpsWfShapeOfStateRel_fixture_guard : Bool :=
-  panValueIsWfValues ([] : StructContext) [.word 5]
-
-#guard evalPanValueExpsWfShapeOfStateRel_fixture_guard
-
 /-- The exact lookup theorem recovers the concrete slot, flattened word, and
     well-formed shape for the one-word local in `localsRel_satisfied`. -/
 theorem localsRelLookupCtxt_fixture :

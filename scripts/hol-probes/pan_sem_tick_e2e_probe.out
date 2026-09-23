@@ -1,0 +1,6 @@
+tick_zero_result=SOME TimeOut
+tick_zero_clock=0
+tick_zero_locals_cleared=NONE
+tick_succ_result=NONE
+tick_succ_clock=4
+tick_succ_locals_preserved=SOME (ValWord 7w)

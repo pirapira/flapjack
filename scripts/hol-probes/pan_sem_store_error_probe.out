@@ -1,0 +1,14 @@
+if_ok_result=NONE
+if_ok_clock=5
+if_bad_result=SOME Error
+if_bad_clock=5
+if_bad_locals=SOME (ValWord 3w)
+store_domain_result=SOME Error
+store_domain_locals=SOME (ValWord 3w)
+store32_domain_result=SOME Error
+storebyte_domain_result=SOME Error
+store32_ok_result=NONE
+store32_ok_clock=5
+shmemload_unbound_result=SOME Error
+shmemload_domain_result=SOME Error
+shmemstore_domain_result=SOME Error

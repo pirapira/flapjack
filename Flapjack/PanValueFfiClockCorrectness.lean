@@ -1449,15 +1449,15 @@ theorem evalPanValueFfiClock_clock_le (context : PanValueFfiContext α) (primiti
   · -- case6: Prog ite
     intro fuel locals globals memory ffi clock condition thenBranch elseBranch memoryAccess contracts memoryHandler hthenIH outcome resultClock hrun
     simp only [evalPanValueFfiClockProg] at hrun
-    cases hcond : evalPanValueExp structs locals globals memory baseAddress topAddress bytesInWord condition
-        (memoryAccess := memoryAccess) with
-    | none => simp only [hcond, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
-    | some condValue =>
-      simp only [hcond, Option.bind_eq_bind, Option.bind_some] at hrun
-      cases condValue with
-      | word w => exact hthenIH w outcome resultClock hrun
-      | rStruct fields => simp only [Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
-      | nStruct nm fields => simp only [Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+    cases hcond : panValueIteConditionValue structs baseAddress topAddress bytesInWord
+        locals globals memory condition memoryAccess with
+    | none =>
+      simp only [hcond, Option.elim_none] at hrun
+      simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
+      obtain ⟨_, hc⟩ := hrun; omega
+    | some w =>
+      simp only [hcond, Option.elim_some] at hrun
+      exact hthenIH w outcome resultClock hrun
   · -- case7: Prog call
     intro fuel locals globals memory ffi clock info function arguments memoryAccess contracts memoryHandler hcallIH outcome resultClock hrun
     simp only [evalPanValueFfiClockProg] at hrun

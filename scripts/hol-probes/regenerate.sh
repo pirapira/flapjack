@@ -316,6 +316,12 @@ run_probe pan_sem_primitive_e2e_probeScript.sml pan_sem_primitive_e2e_probe.out 
 run_probe pan_sem_error_prop_e2e_probeScript.sml pan_sem_error_prop_e2e_probe.out \
   seq_error_result while_error_locals \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+# The Store/ShMem/If probe observes successful execution and the explicit
+# `SOME Error` results with unchanged state for the store, shared-memory, and
+# condition rejection branches.
+run_probe pan_sem_store_error_probeScript.sml pan_sem_store_error_probe.out \
+  if_ok_result shmemstore_domain_result \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_fix_clock_probeScript.sml pan_fix_clock_probe.out \
   pan_fix_clock_clamps pan_fix_clock_keeps_lower \
   "$cake_dir/pancake/semantics/panSemScript.sml"
@@ -718,6 +724,8 @@ run_probe loop_sem_ffi_probeScript.sml loop_sem_ffi_probe.out \
 run_probe loop_sem_ffi_rv64_probeScript.sml loop_sem_ffi_rv64_probe.out \
   rv64_lookups rv64_extcall_missing_local \
   "$cake_dir/pancake/semantics/loopSemScript.sml"
+run_probe byte_align_probeScript.sml byte_align_probe.out \
+  ba24_5 ba8_7 "$cake_dir/pancake/semantics/loopSemScript.sml"
 run_probe loop_sem_exit_loop_probeScript.sml loop_sem_exit_loop_probe.out \
   exit_loop_break exit_loop_error "$cake_dir/pancake/semantics/loopSemScript.sml"
 # The loop_arith probe prints numeric word values to avoid raw-literal ambiguity.

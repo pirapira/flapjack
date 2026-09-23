@@ -11,9 +11,11 @@ Exercises the exact whole-state ports `memLoadSemHOL`, `memStoreSemHOL`,
 `LoopMachineState`.  Expected values follow the HOL definitions
 `loopSemScript.sml:52-69`, `:165-167` and `:198-262`; the aligned-address rule is
 HOL `byte_align` (LOG2 of `dimindex DIV 8`).  The width-8 fragments are checked
-against the captured outputs of the direct original HOL runs in
-`scripts/hol-probes/loop_sem_mem_load_probe.out`,
-`loop_sem_mem_store_probe.out` and `loop_sem_sh_mem_load_probe.out`.
+against the direct original HOL run
+`scripts/hol-probes/loop_sem_whole_state_probeScript.sml`
+(output `loop_sem_whole_state_probe.out`): raw `mem_load` hit/miss, the
+`mem_store` update observing an untouched neighbouring cell, and the
+`sh_mem_load`/`sh_mem_store` return/final/out-of-domain rows.
 -/
 
 namespace Flapjack.Test.LoopSemStateParity
@@ -143,16 +145,18 @@ def stateHelpersGuard : Bool :=
 
 /-! ## Direct-HOL-probe fixtures
 
-The expected values below are the captured outputs of direct original HOL runs
-(`scripts/hol-probes/loop_sem_mem_load_probe.out`,
-`loop_sem_mem_store_probe.out`, `loop_sem_sh_mem_load_probe.out`). -/
+The expected values below are the direct original HOL run
+`scripts/hol-probes/loop_sem_whole_state_probeScript.sml`
+(output `loop_sem_whole_state_probe.out`); each row exposes a concrete value
+(raw `SOME`/`NONE`, concrete words, io-event count) rather than a collapsed
+default. -/
 
 abbrev Word8 := RiscV.Word 8
 
 def memory8 : Word8 → LoopValue Word8 :=
-  fun address => if address = 0 then .word 7 else .loc 0 0
+  fun address => if address = 0 then .word 7 else if address = 1 then .word 2 else .loc 0 0
 
-abbrev domain8 : Word8 → Prop := fun address => address = 0
+abbrev domain8 : Word8 → Prop := fun address => address = 0 ∨ address = 1
 
 abbrev baseState8 : LoopSemState Word8 Unit where
   locals := fun name => if name = 1 then some (.word 0) else none
@@ -171,8 +175,14 @@ abbrev baseState8 : LoopSemState Word8 Unit where
 theorem probeMemLoadHit : memLoadSemHOL (0 : Word8) baseState8 = some (.word 7) := by
   decide
 
-/-- `mem_load_miss=NONE`. -/
-theorem probeMemLoadMiss : memLoadSemHOL (1 : Word8) baseState8 = none := by
+/-- `mem_load_miss=NONE` (out-of-domain address). -/
+theorem probeMemLoadMiss : memLoadSemHOL (5 : Word8) baseState8 = none := by
+  decide
+
+/-- `mem_store_update`: storing `Word 7w` at `0` keeps the `1` entry `Word 2w`. -/
+theorem probeMemStoreKeepsOther :
+    (memStoreSemHOL (0 : Word8) (.word 7) baseState8).map
+        (fun state => state.memory 1) = some (.word 2) := by
   decide
 
 /-- `mem_store_hit=SOME (Word 7w)` after reading the stored cell back. -/
@@ -182,14 +192,15 @@ theorem probeMemStoreHit :
   decide
 
 /-- `mem_store_miss=NONE` (out-of-domain address). -/
-theorem probeMemStoreMiss : memStoreSemHOL (1 : Word8) (.word 7) baseState8 = none := by
+theorem probeMemStoreMiss : memStoreSemHOL (5 : Word8) (.word 7) baseState8 = none := by
   decide
 
-/-- Oracle that returns the translated bytes for a `SharedMem MappedRead`. -/
+/-- Oracle that returns the translated bytes for any shared-memory access
+    (`MappedRead` and `MappedWrite`), matching the direct HOL probe. -/
 def returningRead : FfiState Unit where
   oracle := fun name _ _ bytes =>
     match name with
-    | .sharedMem .mappedRead => .returned () bytes
+    | .sharedMem _ => .returned () bytes
     | _ => .final .failed
   state := ()
   ioEvents := []
@@ -219,16 +230,61 @@ def probeShMemReturnGuard : Bool :=
 def probeShMemDomainErrorGuard : Bool :=
   decide ((shMemLoadSemHOL (width := 8) 1 4 0 sharedState8).1 = some .error)
 
+/-- Oracle that always finalizes, matching the direct HOL probe. -/
+def finalRead : FfiState Unit where
+  oracle := fun _ _ _ _ => .final .failed
+  state := ()
+  ioEvents := []
+
+/-- State with local `1` holding `Word 7w` for the store probes. -/
+abbrev storingState8 : LoopSemState Word8 Unit where
+  locals := fun name => if name = 1 then some (.word 7) else none
+  globals := fun _ => none
+  memory := memory8
+  mdomain := domain8
+  shMdomain := fun address => address = 3
+  clock := 200
+  code := fun _ => none
+  be := false
+  ffi := returningRead
+  baseAddr := 0
+  topAddr := 100
+
+/-- `store_return=(NONE, 7w)`: only the ffi is updated, the stored local stays. -/
+def probeShMemStoreReturnGuard : Bool :=
+  decide ((shMemStoreSemHOL (width := 8) 1 3 0 storingState8).1 = none) &&
+    decide ((shMemStoreSemHOL (width := 8) 1 3 0 storingState8).2.locals 1 = some (.word 7))
+
+/-- `load_final`: a final event is produced and locals are cleared. -/
+def probeShMemLoadFinalGuard : Bool :=
+  decide (shMemLoadSemHOL (width := 8) 1 3 0
+      { sharedState8 with ffi := finalRead }).1.isSome &&
+    decide ((shMemLoadSemHOL (width := 8) 1 3 0
+      { sharedState8 with ffi := finalRead }).2.locals 1 = none)
+
+/-- `store_final`: a final event is produced and locals are cleared. -/
+def probeShMemStoreFinalGuard : Bool :=
+  decide (shMemStoreSemHOL (width := 8) 1 3 0
+      { storingState8 with ffi := finalRead }).1.isSome &&
+    decide ((shMemStoreSemHOL (width := 8) 1 3 0
+      { storingState8 with ffi := finalRead }).2.locals 1 = none)
+
 #guard probeShMemReturnGuard
 #guard probeShMemDomainErrorGuard
+#guard probeShMemStoreReturnGuard
+#guard probeShMemLoadFinalGuard
+#guard probeShMemStoreFinalGuard
 
 def probeFixturesGuard : Bool :=
   decide ((memLoadSemHOL (0 : Word8) baseState8) = some (.word 7)) &&
-    decide ((memLoadSemHOL (1 : Word8) baseState8) = none) &&
+    decide ((memLoadSemHOL (5 : Word8) baseState8) = none) &&
     decide ((memStoreSemHOL (0 : Word8) (.word 7) baseState8).map
       (fun (state : LoopSemState Word8 Unit) => state.memory 0) = some (.word 7)) &&
-    decide ((memStoreSemHOL (1 : Word8) (.word 7) baseState8) = none) &&
-    probeShMemReturnGuard && probeShMemDomainErrorGuard
+    decide ((memStoreSemHOL (0 : Word8) (.word 7) baseState8).map
+      (fun (state : LoopSemState Word8 Unit) => state.memory 1) = some (.word 2)) &&
+    decide ((memStoreSemHOL (5 : Word8) (.word 7) baseState8) = none) &&
+    probeShMemReturnGuard && probeShMemDomainErrorGuard &&
+    probeShMemStoreReturnGuard && probeShMemLoadFinalGuard && probeShMemStoreFinalGuard
 
 #guard probeFixturesGuard
 

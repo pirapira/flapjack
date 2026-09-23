@@ -732,7 +732,7 @@ run_probe loop_sem_ffi_rv64_probeScript.sml loop_sem_ffi_rv64_probe.out \
 run_probe byte_align_probeScript.sml byte_align_probe.out \
   ba24_5 ba8_7 "$cake_dir/pancake/semantics/loopSemScript.sml"
 run_probe loop_sem_whole_state_probeScript.sml loop_sem_whole_state_probe.out \
-  ws_mem_load_hit ws_sh_mem_store_return \
+  ws_mem_load_hit ws_sh_mem_store_final \
   "$cake_dir/pancake/semantics/loopSemScript.sml"
 run_probe loop_sem_exit_loop_probeScript.sml loop_sem_exit_loop_probe.out \
   exit_loop_break exit_loop_error "$cake_dir/pancake/semantics/loopSemScript.sml"

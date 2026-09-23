@@ -611,6 +611,14 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panSemCallCalleeEntryStateCodeExcpRel",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only Call-entry preservation helper: derives state_rel across source/target local replacement and matching clock decrement, while carrying the state-owned code_rel and source excp_rel unchanged. It does not derive the function-context locals_rel for bound arguments or prove the Call induction case."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "panSemCodeArgumentsMatch_flattenLength",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only consequence deriving the flattened source argument length from successful shape-aware code-parameter matching and well-formed values; no standalone HOL theorem statement is claimed."

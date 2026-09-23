@@ -65,6 +65,36 @@ theorem callReadArray :
       some [(1 : UInt8), 2, 3, 4] := by
   decide
 
+/-- The four-local wrapper fixture: Nat-indexed target locals holding the
+    argument words in the production roles `configuration` (address),
+    `configurationLength`, `array` (address), `arrayLength`. -/
+def wrapperLocals : Nat → Option (PanWordLab (RiscV.Word 64))
+  | 0 => some (.word 8)
+  | 1 => some (.word 4)
+  | 2 => some (.word 8)
+  | 3 => some (.word 4)
+  | _ => none
+
+def wrapperBase : CrepRuntimeState (RiscV.Word 64) Unit :=
+  { callBase with locals := wrapperLocals }
+
+theorem wrapperStateRel :
+    stateRel callSource (riscv64CrepRuntimeTarget wrapperBase) := by
+  refine ⟨?_, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  funext address
+  rfl
+
+theorem wrapperReadConfiguration :
+    riscv64ReadByteArray wrapperBase (8 : RiscV.Word 64) 4 =
+      some [(1 : UInt8), 2, 3, 4] := by
+  decide
+
+theorem wrapperReadArray :
+    riscv64ReadByteArray wrapperBase (8 : RiscV.Word 64) 4 =
+      some [(1 : UInt8), 2, 3, 4] := by
+  decide
+
+
 /-- The assembled dispatch step, with the source-level `callFfi`/`call_FFI`
     result on `callSource.ffi`. -/
 example :
@@ -151,6 +181,30 @@ example :
     callBase.ffi [1, 2, 3, 4] callStateRel callReadConfiguration callReadArray
     (by rw [riscv64ExtCallCallFfiHandler_extCall]; rfl)
 
+/-- The actual four-local production wrapper `crepRuntimeExtCall` (Nat-indexed
+    target locals) resolves to the same `FFI_return` write-back dispatch, with the
+    source `panSemWriteBytearray` post-state built by the theorem. -/
+example :
+    (crepRuntimeExtCall riscv64ExtCallCallFfiHandler
+        (riscv64CrepRuntimeTarget wrapperBase) "" 0 1 2 3 =
+      (.normal, riscv64WriteState { wrapperBase with ffi := wrapperBase.ffi }
+        (8 : RiscV.Word 64) [1, 2, 3, 4])) ∧
+    stateRel
+      { callSource with
+        memory := panSemWriteBytearray
+          (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel wrapperBase.memaddrs)
+          (riscv64PanValueFfiContext wrapperBase.shMemaddrs) callSource.memory
+          (8 : RiscV.Word 64) (8 : RiscV.Word 64) [1, 2, 3, 4],
+        ffi := wrapperBase.ffi }
+      (riscv64WriteState { wrapperBase with ffi := wrapperBase.ffi }
+        (8 : RiscV.Word 64) [1, 2, 3, 4]) :=
+  crepRuntimeExtCall_stateRel_dispatch_returned callSource wrapperBase "" 0 1 2 3
+    (8 : RiscV.Word 64) 4 (8 : RiscV.Word 64) 4
+    rfl rfl rfl rfl [1, 2, 3, 4] [1, 2, 3, 4] wrapperBase.ffi [1, 2, 3, 4]
+    wrapperStateRel wrapperReadConfiguration wrapperReadArray
+    (by rw [riscv64ExtCallCallFfiHandler_extCall]; rfl)
+
+
 /-- The written target state reads back the returned first byte. -/
 def returnedGuard : Bool :=
   let written := riscv64WriteState { callBase with ffi := callBase.ffi }
@@ -163,12 +217,23 @@ def dispatchGuard : Bool :=
   | .returned _ _ => true
   | .final _ => true
 
+/-- Executes the four-local wrapper and checks the returned byte landed. -/
+def wrapperGuard : Bool :=
+  match crepRuntimeExtCall riscv64ExtCallCallFfiHandler
+      (riscv64CrepRuntimeTarget wrapperBase) "" 0 1 2 3 with
+  | (.normal, state) =>
+      RiscV.panRiscVReadByte state.memaddrs (crepRuntimeMemoryView state.memory)
+        (8 : RiscV.Word 64) (8 : RiscV.Word 64) == some (1 : RiscV.Word 64)
+  | _ => false
+
 def runChecks : IO Bool := do
   let checks := [
     ("Crep ExtCall dispatch follows source call_FFI and stateRel ffi update",
       dispatchGuard),
     ("Crep ExtCall FFI_return write-back preserves stateRel and writes bytes",
       returnedGuard),
+    ("Crep ExtCall four-local wrapper dispatch follows source call_FFI",
+      wrapperGuard),
     ("Crep ExtCall failing-read branch returns Error with state unchanged", true)]
   for (name, passed) in checks do
     IO.println s!"{if passed then "PASS" else "FAIL"} {name}"

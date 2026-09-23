@@ -457,6 +457,134 @@ theorem panToCrepPcCompileCorrectContinueCodeState
   · simpa [hsourcePost] using hexcp
   · simpa [hsourcePost] using hlocals
 
+/-- The state-owned source evaluator's Tick equation, including the source
+zero-clock timeout and positive-clock decrement. -/
+theorem panSemEvaluateCodeState_tick
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (state : PanSemState α (FfiState σ)) :
+    panSemEvaluateCodeState context primitive handler bytesInWord state .tick =
+      if state.clock = 0 then
+        some (panValueFfiClockTimeout state.globals state.memory state.ffi state.clock)
+      else some (.control (.normal state.locals state.globals state.memory state.ffi),
+        decPanClock state.clock) := by
+  have hpositive : 0 < panSemCodeEvaluateFuel state (.tick : Prog α) := by
+    unfold panSemCodeEvaluateFuel
+    omega
+  unfold panSemEvaluateCodeState panSemEvaluateCodeStateWithFuel
+  cases hfuel : panSemCodeEvaluateFuel state (.tick : Prog α) with
+  | zero => omega
+  | succ fuel =>
+      by_cases hclock : state.clock = 0 <;>
+        simp [evalPanValueFfiClockCodeProg, panValueFfiClockTimeout, hclock]
+
+/-- Actual-state Tick case for HOL `pc_compile_correct`. The source and target
+run and state relations use the production finite code fields, and the two
+clock branches retain the source timeout/decrement behavior. -/
+theorem panToCrepPcCompileCorrectTickCodeState
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    [CrepBytesInWord α] [BEq String]
+    (context : PanToCrepProofContext α)
+    (sourceContext : PanValueFfiContext α)
+    (sourcePrimitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueStatefulFfiHandler α σ)
+    (targetHandler : CrepRuntimeFfiHandler α σ FfiFinalEvent)
+    (targetPrimitive : CrepPrimitiveHandler α) (fuel : Nat)
+    (sourceState : PanSemState α (FfiState σ))
+    (targetState : CrepRuntimeState α σ)
+    (hstate : stateRel sourceState targetState)
+    (hcode : codeRel context (panSemCodeAsLookup sourceState.code) targetState.code)
+    (hexcp : excpRel context.eids sourceState.exceptionShapes)
+    (hlocals : localsRel context sourceState.locals targetState.locals) :
+    panSemEvaluateCodeState sourceContext sourcePrimitive sourceHandler
+      targetState.bytesInWord sourceState .tick =
+        (if sourceState.clock = 0 then
+          some (panValueFfiClockTimeout sourceState.globals sourceState.memory
+            sourceState.ffi sourceState.clock)
+        else some (.control (.normal sourceState.locals sourceState.globals
+          sourceState.memory sourceState.ffi), decPanClock sourceState.clock)) ∧
+    ∃ targetResult targetPost,
+      evalCrepRuntimeResult targetHandler targetPrimitive (fuel + 1) targetState
+        (compileCodeRelProg context .tick) = some (targetResult, targetPost) ∧
+      stateRel (panSemCodeStateAfter sourceState
+        (if sourceState.clock = 0 then
+          panValueFfiClockTimeout sourceState.globals sourceState.memory
+            sourceState.ffi sourceState.clock
+        else (.control (.normal sourceState.locals sourceState.globals
+          sourceState.memory sourceState.ffi), decPanClock sourceState.clock)))
+        targetPost ∧
+      codeRel context
+        (panSemCodeAsLookup (panSemCodeStateAfter sourceState
+          (if sourceState.clock = 0 then
+            panValueFfiClockTimeout sourceState.globals sourceState.memory
+              sourceState.ffi sourceState.clock
+          else (.control (.normal sourceState.locals sourceState.globals
+            sourceState.memory sourceState.ffi), decPanClock sourceState.clock))).code)
+        targetPost.code ∧
+      excpRel context.eids
+        (panSemCodeStateAfter sourceState
+          (if sourceState.clock = 0 then
+            panValueFfiClockTimeout sourceState.globals sourceState.memory
+              sourceState.ffi sourceState.clock
+          else (.control (.normal sourceState.locals sourceState.globals
+            sourceState.memory sourceState.ffi), decPanClock sourceState.clock))).exceptionShapes ∧
+      (sourceState.clock = 0 → targetResult = .timeout) ∧
+      (sourceState.clock ≠ 0 →
+        targetResult = .normal ∧
+        localsRel context
+          (panSemCodeStateAfter sourceState
+            (if sourceState.clock = 0 then
+              panValueFfiClockTimeout sourceState.globals sourceState.memory
+                sourceState.ffi sourceState.clock
+            else (.control (.normal sourceState.locals sourceState.globals
+              sourceState.memory sourceState.ffi), decPanClock sourceState.clock))).locals
+          targetPost.locals) := by
+  refine ⟨panSemEvaluateCodeState_tick sourceContext sourcePrimitive sourceHandler
+    targetState.bytesInWord sourceState, ?_⟩
+  rcases hstate with ⟨hmem, hmemaddrs, hshared, hstructs, hglobals, hclock,
+    hbe, hffi, hbase, htop⟩
+  by_cases hzero : sourceState.clock = 0
+  · have htargetZero : targetState.clock = 0 := by omega
+    refine ⟨.timeout, clearCrepRuntimeLocals targetState, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    · change evalCrepRuntimeResult targetHandler targetPrimitive (fuel + 1)
+        targetState .tick = some (.timeout, clearCrepRuntimeLocals targetState)
+      rw [crepTickEvaluationEquation]
+      simp [htargetZero]
+    · simp [stateRel, panSemCodeStateAfter, panValueFfiClockTimeout,
+        clearCrepRuntimeLocals, hzero, htargetZero, hmem, hmemaddrs,
+        hshared, hstructs, hglobals, hbe, hffi, hbase, htop]
+    · simpa [panSemCodeStateAfter, panValueFfiClockTimeout,
+        clearCrepRuntimeLocals, hzero] using hcode
+    · simpa [panSemCodeStateAfter, panValueFfiClockTimeout,
+        clearCrepRuntimeLocals, hzero] using hexcp
+    · intro _
+      rfl
+    · intro hnonzero
+      exact False.elim (hnonzero hzero)
+  · have htargetNonzero : targetState.clock ≠ 0 := by omega
+    refine ⟨.normal, decCrepClock targetState, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    · simpa [compileCodeRelProg, compileProgHOL, htargetNonzero,
+        decCrepClock] using
+        (crepTickEvaluationEquation targetHandler targetPrimitive fuel targetState)
+    · simp only [stateRel, panSemCodeStateAfter, decPanClock, decCrepClock,
+        if_neg hzero]
+      exact ⟨hmem, hmemaddrs, hshared, hstructs, hglobals,
+        by rw [hclock], hbe, hffi, hbase, htop⟩
+    · simpa [panSemCodeStateAfter, decCrepClock, hzero] using hcode
+    · simpa [panSemCodeStateAfter, decCrepClock, hzero] using hexcp
+    · intro hzero'
+      exact False.elim (hzero hzero')
+    · intro _
+      constructor
+      · rfl
+      · simpa [panSemCodeStateAfter, decCrepClock, hzero] using hlocals
+
 /-- The `Skip` constructor satisfies the concrete source-run-implies-target-run
 goal. The target run is constructed here; only clock agreement is needed
 because both evaluators leave their runtime states unchanged. -/

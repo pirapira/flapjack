@@ -975,7 +975,7 @@ mutual
           [configuration, configurationLength, array, arrayLength]
           (memoryAccess := memoryAccess)
         let [.word configuration, .word configurationLength, .word array, .word arrayLength] := values |
-          none
+          some (.error locals globals memory ffi, expressionSteps)
         match memoryHandler with
         | some memoryHandler =>
             match memoryHandler function configuration configurationLength array arrayLength
@@ -996,7 +996,8 @@ mutual
                     | some (.final ffi event) =>
                         pure (.finalFfi (fun _ => none) globals memory ffi event,
                           expressionSteps + 1)
-                    | none => none
+                    | none =>
+                        some (.error locals globals memory ffi, expressionSteps + 1)
         | none =>
             match memoryAccess with
             | none =>
@@ -1011,7 +1012,8 @@ mutual
                 | some (.final ffi event) =>
                     pure (.finalFfi (fun _ => none) globals memory ffi event,
                       expressionSteps + 1)
-                | none => none
+                | none =>
+                    some (.error locals globals memory ffi, expressionSteps + 1)
     | fuel + 1, locals, globals, memory, ffi, .while conditionExp body, memoryAccess,
         contracts, memoryHandler =>
         (panValueIteCondition structs baseAddress topAddress bytesInWord locals globals

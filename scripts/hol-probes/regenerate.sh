@@ -374,6 +374,11 @@ run_probe pan_sem_call_arg_error_probeScript.sml pan_sem_call_arg_error_probe.ou
 run_probe pan_sem_return_raise_error_probeScript.sml pan_sem_return_raise_error_probe.out \
   ret_eval_fail_result raise_ok_locals \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+# The ExtCall error probe observes the non-word argument and failing
+# byte-read rejections, each returning `SOME Error` with unchanged state.
+run_probe pan_sem_extcall_error_probeScript.sml pan_sem_extcall_error_probe.out \
+  ext_nonword_result ext_read_fail_locals \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_sem_call_terminal_probeScript.sml pan_sem_call_terminal_probe.out \
   call_terminal_skip_result call_terminal_continue_param_locals \
   "$cake_dir/pancake/semantics/panSemScript.sml"

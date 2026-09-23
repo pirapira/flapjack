@@ -1,0 +1,6 @@
+ext_nonword_result=SOME Error
+ext_nonword_clock=5
+ext_nonword_locals=SOME (ValWord 3w)
+ext_read_fail_result=SOME Error
+ext_read_fail_clock=5
+ext_read_fail_locals=SOME (ValWord 3w)

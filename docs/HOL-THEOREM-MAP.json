@@ -1,5 +1,53 @@
 [
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "bitVec_even_shift_double",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean-only generic BitVec arithmetic helper; no CakeML HOL declaration"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "one_lt_pow_two",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean-only generic BitVec arithmetic helper; no CakeML HOL declaration"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "bitVec_one_toNat",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean-only generic BitVec arithmetic helper; no CakeML HOL declaration"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "bitVec_lowBit_zero_even",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean-only generic BitVec arithmetic helper; no CakeML HOL declaration"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "bitVec_even_shiftRight_one_double",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean-only generic BitVec arithmetic helper; no CakeML HOL declaration"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepDest2ExpFuel_sound",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean-only recursive soundness helper; HOL exposes only the public destination theorems"
+  },
+  {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
     "hol_name": "localised_prog_def",
     "lean_path": "Flapjack/PanLocalised.lean",
@@ -54,6 +102,22 @@
     "lean_name": "crepDestConst_eq_const",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (statement comparison and direct HOL-EVAL constructor probe)"
+  },
+  {
+    "hol_path": "cakeml/pancake/crep_arithScript.sml",
+    "hol_name": "dest_2exp_thm",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepDest2Exp_eq_shift",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement comparison, arbitrary-width RISC-V proof, and direct HOL-EVAL fixture)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "dest_2exp_bound'",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepDest2Exp_lt_width",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement comparison with dimindex specialized to RISC-V width)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",

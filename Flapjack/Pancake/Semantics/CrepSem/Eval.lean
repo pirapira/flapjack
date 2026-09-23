@@ -123,6 +123,37 @@ instance : RotateRightOp (Fin width → Bool) :=
 
 end HolWordBits
 
+/-- Flapjack-only numeral conversion for the finite-index word adapter; HOL
+    uses its native polymorphic word numeral definitions. -/
+@[simp] theorem holWordBitsToBitVec_zero {width : Nat} :
+    holWordBitsToBitVec (0 : Fin width → Bool) = (0 : BitVec width) := by
+  change holWordBitsToBitVec (bitVecToHolWordBits (BitVec.ofNat width 0)) = _
+  rw [holWordBitsToBitVec_bitVecToHolWordBits]
+  simp
+
+/-- Flapjack-only equality conversion for the finite-index word adapter. -/
+@[simp] theorem holWordBitsToBitVec_beq {width : Nat}
+    (left right : Fin width → Bool) :
+    (left == right) = (holWordBitsToBitVec left == holWordBitsToBitVec right) := rfl
+
+/-- Flapjack-only low-bit operation conversion used by the recognizer bridge. -/
+@[simp] theorem holWordBitsToBitVec_andOp {width : Nat}
+    (left right : Fin width → Bool) :
+    holWordBitsToBitVec (AndOp.and left right) =
+      AndOp.and (holWordBitsToBitVec left) (holWordBitsToBitVec right) := by
+  change holWordBitsToBitVec (bitVecToHolWordBits
+    (AndOp.and (holWordBitsToBitVec left) (holWordBitsToBitVec right))) = _
+  rw [holWordBitsToBitVec_bitVecToHolWordBits]
+
+/-- Flapjack-only logical-right-shift conversion used by the recognizer bridge. -/
+@[simp] theorem holWordBitsToBitVec_shiftRight {width : Nat}
+    (left right : Fin width → Bool) :
+    holWordBitsToBitVec (ShiftRight.shiftRight left right) =
+      ShiftRight.shiftRight (holWordBitsToBitVec left) (holWordBitsToBitVec right) := by
+  change holWordBitsToBitVec (bitVecToHolWordBits
+    (ShiftRight.shiftRight (holWordBitsToBitVec left) (holWordBitsToBitVec right))) = _
+  rw [holWordBitsToBitVec_bitVecToHolWordBits]
+
 @[simp] theorem holWordBitsToBitVec_add {width : Nat}
     (left right : Fin width → Bool) :
     holWordBitsToBitVec (left + right) =

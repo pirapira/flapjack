@@ -9,6 +9,47 @@ import Flapjack.Pancake.Semantics.CrepSem.Eval
 
 namespace Flapjack
 
+/-! The finite-index word instance is transported through `BitVec`, so the
+    power-of-two recognizer returns the same exponent after representation
+    conversion. This is the arithmetic-simplifier bridge needed before its
+    preservation proof can be lifted from `BitVec` to finite-index HOL words. -/
+/-- Flapjack-only finite-word transport lemma for the executable recognizer;
+    HOL has no corresponding declaration because its recognizer already acts
+    directly on the polymorphic word type. -/
+private theorem crepDest2ExpFuel_holWordBits {width : Nat}
+    (fuel start : Nat) (word : Fin width → Bool) :
+    crepDest2ExpFuel fuel start word =
+      crepDest2ExpFuel fuel start (holWordBitsToBitVec word) := by
+  induction fuel generalizing start word with
+  | zero => simp [crepDest2ExpFuel]
+  | succ fuel ih =>
+      have hzero : (word == (0 : Fin width → Bool)) =
+          (holWordBitsToBitVec word == (0 : BitVec width)) := by
+        simp
+      have hone : (word == (1 : Fin width → Bool)) =
+          (holWordBitsToBitVec word == (1 : BitVec width)) := by
+        simp
+      have hlow : (AndOp.and word 1 != (0 : Fin width → Bool)) =
+          (AndOp.and (holWordBitsToBitVec word) 1 != (0 : BitVec width)) := by
+        change (!(AndOp.and word 1 == (0 : Fin width → Bool))) =
+          (!(AndOp.and (holWordBitsToBitVec word) 1 == (0 : BitVec width)))
+        rw [holWordBitsToBitVec_beq]
+        simp [holWordBitsToBitVec_andOp, holWordBitsToBitVec_one,
+          holWordBitsToBitVec_zero]
+      simp only [crepDest2ExpFuel, hzero, hone, hlow]
+      rw [ih (start + 1) (ShiftRight.shiftRight word 1)]
+      simp only [holWordBitsToBitVec_shiftRight, holWordBitsToBitVec_one]
+      rfl
+
+/-- Flapjack-only width-bounded wrapper around the finite-word recognizer
+transport lemma; it has no separate HOL declaration. -/
+private theorem crepDest2Exp_holWordBits {width : Nat}
+    (start : Nat) (word : Fin width → Bool) :
+    crepDest2Exp start word = crepDest2Exp start (holWordBitsToBitVec word) := by
+  change crepDest2ExpFuel (width + 1) start word =
+    crepDest2ExpFuel (width + 1) start (holWordBitsToBitVec word)
+  exact crepDest2ExpFuel_holWordBits (width + 1) start word
+
 /-- CakeML's `dest_const_thm`: a successful destination test identifies the
     expression as exactly that constant. -/
 @[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "dest_const_thm"]

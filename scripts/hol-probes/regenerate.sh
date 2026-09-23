@@ -125,6 +125,9 @@ run_probe crep_runtime_shared_domain_probeScript.sml crep_runtime_shared_domain_
   "$cake_dir/pancake/semantics"
 run_probe crep_arith_dest_const_probeScript.sml crep_arith_dest_const_probe.out \
   constant multiplication "$cake_dir/pancake/crep_arithScript.sml"
+run_probe crep_runtime_read_bytes_probeScript.sml crep_runtime_read_bytes_probe.out \
+  read_bytes_zero read_bytes_out_of_domain "$cake_dir/pancake/semantics/panSemScript.sml" \
+  "$cake_dir/pancake/semantics"
 run_probe pan_flat_store_probeScript.sml pan_flat_store_probe.out \
   store_hit stores_blocked "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_flatten_probeScript.sml pan_flatten_probe.out \

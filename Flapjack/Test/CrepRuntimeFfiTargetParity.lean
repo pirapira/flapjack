@@ -28,6 +28,15 @@ by `sh_mem_load`/`sh_mem_store`.
 Direct oracle: `scripts/hol-probes/crep_runtime_shared_domain_probe.out`
   valid_zero_mem=T; valid_zero_out=F; valid_aligned_mem=T;
   valid_aligned_out=F; align_9=8w; align_16=16w
+
+The external-call configuration/array arguments are read with HOL
+`read_bytearray ptr (w2n len) (mem_load_byte s.memory s.memaddrs s.be)`; the
+canonical target's `crepRuntimeReadBytes` is that byte list.
+
+Direct oracle: `scripts/hol-probes/crep_runtime_read_bytes_probe.out`
+  read_bytes_zero=SOME []; read_bytes_short=SOME [1w; 2w; 3w; 4w];
+  read_bytes_cross=SOME [1w; 2w; 3w; 4w; 5w; 6w; 7w; 8w];
+  read_bytes_out_of_domain=NONE
 -/
 
 namespace Flapjack.Test.CrepRuntimeFfiTargetParity
@@ -115,13 +124,50 @@ example : (riscv64CrepRuntimeTarget ffiSharedBase).ffiContext.sharedDomain =
   rw [riscv64CrepRuntimeTarget_sharedDomain]
   rfl
 
+/-- A base state whose memory holds `0x0807060504030201` at address `8` and whose
+    memory domain is `{8}`, matching the read-bytes oracle. -/
+def ffiReadBase : CrepRuntimeState (RiscV.Word 64) Unit :=
+  { ffiProbeBase with
+    memory := fun address =>
+      if address == (8 : RiscV.Word 64) then
+        some (0x0807060504030201 : RiscV.Word 64)
+      else none
+    memaddrs := fun address => address == (8 : RiscV.Word 64) }
+
+def ffiReadTarget : CrepRuntimeState (RiscV.Word 64) Unit :=
+  riscv64CrepRuntimeTarget ffiReadBase
+
+/-- Bool mirror of the read-bytes rows of the HOL oracle
+    (`read_bytes_zero=SOME []; read_bytes_short=SOME [1w; 2w; 3w; 4w];
+    read_bytes_cross=SOME [1w..8w]; read_bytes_out_of_domain=NONE`), where the
+    production `crepRuntimeReadBytes` reads through the canonical target. -/
+def ffiReadBytesGuard : Bool :=
+  (crepRuntimeReadBytes ffiReadTarget (8 : RiscV.Word 64) 0 == some ([] : List UInt8)) &&
+  (crepRuntimeReadBytes ffiReadTarget (8 : RiscV.Word 64) 4 ==
+    some [(1 : UInt8), 2, 3, 4]) &&
+  (crepRuntimeReadBytes ffiReadTarget (8 : RiscV.Word 64) 8 ==
+    some [(1 : UInt8), 2, 3, 4, 5, 6, 7, 8]) &&
+  (crepRuntimeReadBytes ffiReadTarget (8 : RiscV.Word 64) 9 == none) &&
+  (riscv64ReadByteArray ffiReadBase (8 : RiscV.Word 64) 4 ==
+    some [(1 : UInt8), 2, 3, 4])
+
+/-- Production `crepRuntimeReadBytes` on the canonical target is the HOL
+    `read_bytearray` byte list. -/
+example : crepRuntimeReadBytes ffiReadTarget (8 : RiscV.Word 64) 4 =
+    riscv64ReadByteArray ffiReadBase (8 : RiscV.Word 64) 4 :=
+  crepRuntimeReadBytes_target_eq_riscv ffiReadBase 8 4
+
 #guard ffiByteCodecGuard
 
 #guard ffiSharedDomainGuard
 
+#guard ffiReadBytesGuard
+
 #eval ffiByteCodecGuard
 
 #eval ffiSharedDomainGuard
+
+#eval ffiReadBytesGuard
 
 def runChecks : IO Bool := do
   if ffiByteCodecGuard then
@@ -132,6 +178,10 @@ def runChecks : IO Bool := do
     IO.println "PASS crep runtime RISC-V 64 FFI shared-domain target parity"
   else
     IO.println "FAIL crep runtime RISC-V 64 FFI shared-domain target parity"
-  pure (ffiByteCodecGuard && ffiSharedDomainGuard)
+  if ffiReadBytesGuard then
+    IO.println "PASS crep runtime RISC-V 64 FFI read-bytes target parity"
+  else
+    IO.println "FAIL crep runtime RISC-V 64 FFI read-bytes target parity"
+  pure (ffiByteCodecGuard && ffiSharedDomainGuard && ffiReadBytesGuard)
 
 end Flapjack.Test.CrepRuntimeFfiTargetParity

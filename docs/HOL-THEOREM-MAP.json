@@ -275,6 +275,62 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepDestConst_mapCrepExpWord",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only transport of the constant destination test through a word-carrier expression map"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpMul_holWordBits",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only proof that the binary multiplication simplifier commutes with finite-index-to-BitVec conversion"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExp_holWordBits",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only all-constructor bottom-up simplifier naturality under the canonical Fin-index word/BitVec equivalence"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepArithHolWordBitsMapCode_toBitVecState",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only state projection equation showing the arbitrary code-map update is erased by the source-to-BitVec evaluator adapter"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpEvalPreservesHolWordBits",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only all-width evaluator preservation theorem over the canonical Fin-index word carrier; arbitrary finite dimension carriers remain open"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpEvalPreservesHolWordBitsWordLab",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only Option/PanWordLab wrapper for finite-index evaluator preservation; it does not establish the arbitrary-carrier HOL result"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1HolWordBits",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only all-width production evaluator result on Fin width -> Bool; deliberately untagged because HOL quantifies over arbitrary finite dimension types"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepDest2ExpFuel_holWordBits",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only finite-index word to BitVec transport for the executable recognizer; HOL applies dest_2exp directly to its polymorphic word carrier"

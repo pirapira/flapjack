@@ -114,4 +114,55 @@ theorem crepInlineLocalsRel_decClock (s t : CrepHolState α σ)
   · simp only [crepInlineStateRel, decCrepHolClock]
     exact ⟨hg, hc, hm, hma, hsm, by rw [hcl], hbe, hf, hba, hta⟩
 
+/-- Finite-map `FDOM` for Lean's extensional lookup-function representation:
+    the predicate holding exactly at the bound keys.  HOL's `FDOM` is a
+    `num_set`; membership `n ∈ FDOM f` is `FLOOKUP f n ≠ NONE`, which is this
+    Boolean test.  Untagged infrastructure: HOL's `FDOM` is a finite-map
+    operation, not a declaration of `crep_inlineProofScript.sml`. -/
+def crepHolFdom (f : Nat → Option β) : Nat → Bool :=
+  fun n => (f n).isSome
+
+/-- Finite-map `FDIFF` for Lean's extensional lookup-function representation:
+    drop every key selected by `s`.  HOL's `FDIFF f s` restricts `f` to the
+    complement of `s`; state membership as a Boolean predicate so the
+    operation is executable.  Untagged infrastructure. -/
+def crepHolFdiff (f : Nat → Option β) (s : Nat → Bool) : Nat → Option β :=
+  fun n => if s n then none else f n
+
+/-- CakeML's `locals_ext_rel` (`crep_inlineProofScript.sml:162`): the locals
+    added when running from `a` to `a'` equal those added from `b` to `b'`,
+    i.e. `FDIFF a'.locals (FDOM a.locals) = FDIFF b'.locals (FDOM b.locals)`.
+    `crepHolFdiff`/`crepHolFdom` render HOL's `FDIFF`/`FDOM` extensionally. -/
+@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "locals_ext_rel_def"]
+def crepInlineLocalsExtRel (a b a' b' : CrepHolState α σ) : Prop :=
+  crepHolFdiff a'.locals (crepHolFdom a.locals) =
+    crepHolFdiff b'.locals (crepHolFdom b.locals)
+
+/-- CakeML's `state_rel_code` (`crep_inlineProofScript.sml:1442`): `state_rel`
+    without the `code` conjunct, used by the inlining simulation because
+    inlining changes `code` but preserves the rest of the state. -/
+@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "state_rel_code_def"]
+def crepInlineStateRelCode (s t : CrepHolState α σ) : Prop :=
+  s.globals = t.globals ∧
+  s.memory = t.memory ∧
+  s.memaddrs = t.memaddrs ∧
+  s.shMemaddrs = t.shMemaddrs ∧
+  s.clock = t.clock ∧
+  s.bigEndian = t.bigEndian ∧
+  s.ffi = t.ffi ∧
+  s.baseAddress = t.baseAddress ∧
+  s.topAddress = t.topAddress
+
+/-- Dropping the whole `FDOM` leaves the empty map. -/
+theorem crepHolFdiff_fdom_self (f : Nat → Option β) :
+    crepHolFdiff f (crepHolFdom f) = fun _ => none := by
+  funext n
+  cases h : f n <;> simp [crepHolFdiff, crepHolFdom, h]
+
+/-- `locals_ext_rel` holds when both runs add nothing to their locals. -/
+theorem crepInlineLocalsExtRel_self (a b : CrepHolState α σ) :
+    crepInlineLocalsExtRel a b a b := by
+  simp only [crepInlineLocalsExtRel]
+  rw [crepHolFdiff_fdom_self a.locals, crepHolFdiff_fdom_self b.locals]
+
 end Flapjack

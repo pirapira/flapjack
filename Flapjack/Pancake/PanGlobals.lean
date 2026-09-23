@@ -1733,6 +1733,20 @@ theorem cakeContextOfPass_update [BEq String] {width : Nat}
   simp only [cakeContextOfPass]
   rfl
 
+/-- Explicit-field form of `cakeContextOfPass_update`, convenient for rewriting
+    `rw [← ...]` in the full-record adapter. -/
+theorem cakeContextOfPass_update_fields [BEq String] {width : Nat}
+    (context : GlobalPassContext (BitVec width)) (name : String)
+    (shape : Shape) (address : BitVec width) :
+    cakeContextOfPass { context with
+        globals := (name, (shape, address)) :: context.globals
+        globalsSize := address }
+      = { globals := FUPDATE (cakeContextOfPass context).globals (name, (shape, address))
+          globalsSize := address
+          maxGlobalsSize := (cakeContextOfPass context).maxGlobalsSize } := by
+  simp only [cakeContextOfPass]
+  rfl
+
 /-- Adapter: production `shape_val` agrees with the canonical `cakeShapeVal`
     through `cakeContextOfPass`, under the canonical-word hypothesis. -/
 theorem globalShapeVal_cakeShapeVal [BEq String] {width : Nat} [NeZero width]
@@ -1862,6 +1876,21 @@ mutual
           compileExpCakeList_cakeContextOfPass context hcanonical expressions]
 end
 
+/-- Adapter for the argument-list compiler used by `compileProgCake`: on the
+    `cakeContextOfPass` view of a canonical production context, the canonical
+    `compileExpCakeArgs` agrees with the production `globalCompileExpList`. -/
+theorem compileExpCakeArgs_cakeContextOfPass [BEq String] {width : Nat} [NeZero width]
+    (context : GlobalPassContext (BitVec width)) (hcanonical : context.IsCakeCanonical) :
+    (expressions : List (Exp (BitVec width))) →
+      compileExpCakeArgs (cakeContextOfPass context) expressions =
+        globalCompileExpList context expressions
+  | [] => by
+      simp only [compileExpCakeArgs, globalCompileExpList]
+  | expression :: expressions => by
+      simp only [compileExpCakeArgs, globalCompileExpList,
+        compileExpCake_cakeContextOfPass context hcanonical expression,
+        compileExpCakeArgs_cakeContextOfPass context hcanonical expressions]
+
 /-- Exact clause-structured port of HOL `pan_globals$compile_def`
     (`pan_globalsScript.sml:69-149`) over the canonical word context
     `CakeContext`.  Each clause matches HOL directly; the global-return-handler
@@ -1974,6 +2003,46 @@ def compileProgCake [LawfulBEq String] {width : Nat} [NeZero width] (context : C
   | program => program
 termination_by program => sizeOf program
 
+@[simp] theorem FLOOKUP_cakeContextOfPass_globals [BEq String] {width : Nat}
+    (context : GlobalPassContext (BitVec width)) (key : String) :
+    (cakeContextOfPass context).globals key = lookupInfo key context.globals := rfl
+
+/-- The `shMemLoad` clause of the production/canonical agreement, isolated so
+    the `FLOOKUP`/match on the global table reduces on both sides. -/
+theorem compileProgCake_shMemLoad_eq [BEq String] {width : Nat} [NeZero width]
+    (context : GlobalPassContext (BitVec width)) (hcanonical : context.IsCakeCanonical)
+    (size : OpSize) (kind : VarKind) (name : VarName) (address : Exp (BitVec width)) :
+    compileProgCake (cakeContextOfPass context) (.shMemLoad size kind name address)
+      = globalCompileProg context (.shMemLoad size kind name address) := by
+  unfold compileProgCake globalCompileProg
+  simp only [FLOOKUP, FLOOKUP_cakeContextOfPass_globals]
+  cases h : lookupInfo name context.globals with
+  | none => cases kind <;> simp_all [compileExpCake_cakeContextOfPass context hcanonical]
+  | some pair =>
+      obtain ⟨shape, globalAddress⟩ := pair
+      cases shape <;> cases kind <;>
+        simp_all [compileExpCake_cakeContextOfPass context hcanonical, hcanonical.2]
+
+/-- Production `globalCompileProg` agrees with the tagged canonical
+    `compileProgCake` under the canonical word-context view. This is the
+    program half of the executed-path adapter for
+    `flapjack-pxn.18.5.2.20.2`. -/
+theorem globalCompileProg_cakeContextOfPass [BEq String] {width : Nat} [NeZero width]
+    (context : GlobalPassContext (BitVec width)) (hcanonical : context.IsCakeCanonical) :
+    (program : Prog (BitVec width)) →
+      compileProgCake (cakeContextOfPass context) program = globalCompileProg context program := by
+  apply globalCompileProg.induct context
+    (motive := fun program =>
+      compileProgCake (cakeContextOfPass context) program = globalCompileProg context program)
+  all_goals
+    intros
+    simp_all [compileProgCake, globalCompileProg, FLOOKUP,
+      FLOOKUP_cakeContextOfPass_globals,
+      compileProgCake_shMemLoad_eq context hcanonical,
+      compileExpCake_cakeContextOfPass context hcanonical,
+      compileExpCakeArgs_cakeContextOfPass context hcanonical,
+      globalShapeVal_cakeShapeVal context hcanonical, hcanonical.2]
+
 /-- HOL-shaped output of `compile_decs`. -/
 structure CakeCompileDecsResult (width : Nat) where
   initializers : List (Prog (BitVec width))
@@ -2028,6 +2097,43 @@ def compileDecsCake [LawfulBEq String] {width : Nat} [NeZero width] (context : C
         functions := rest.functions
         exceptions := rest.exceptions
         context := rest.context }
+
+/-- Full-record adapter: the canonical `compileDecsCake` over the extracted
+    `CakeContext` agrees, field by field, with the production
+    `globalCompileDecsThreaded` whenever the production context is
+    canonical-word (`IsCakeCanonical`).  All four fields (initializers,
+    functions, exceptions, context) are covered; the `context` field is stated
+    through `cakeContextOfPass` because the finite-map representation cannot be
+    turned back into a lossless association list. -/
+theorem compileDecsCake_cakeContextOfPass [LawfulBEq String] {width : Nat} [NeZero width]
+    (context : GlobalPassContext (BitVec width)) (hcanonical : context.IsCakeCanonical)
+    (declarations : List (Decl (BitVec width))) :
+    compileDecsCake (cakeContextOfPass context) declarations =
+      { initializers := (globalCompileDecsThreaded context declarations).initializers
+        functions := (globalCompileDecsThreaded context declarations).functions
+        exceptions := (globalCompileDecsThreaded context declarations).exceptions
+        context :=
+          cakeContextOfPass (globalCompileDecsThreaded context declarations).context } := by
+  induction declarations generalizing context with
+  | nil => simp only [compileDecsCake, globalCompileDecsThreaded]
+  | cons declaration declarations ih =>
+      cases declaration with
+      | function function =>
+          simp only [compileDecsCake, globalCompileDecsThreaded]
+          rw [ih context hcanonical]
+          simp only [globalCompileProg_cakeContextOfPass context hcanonical]
+      | exnDecl exception shape =>
+          simp only [compileDecsCake, globalCompileDecsThreaded]
+          rw [ih context hcanonical]
+      | name struct fields => exact ih context hcanonical
+      | decl shape name value =>
+          simp only [compileDecsCake, globalCompileDecsThreaded]
+          simp only [cakeAddress_ofPass context hcanonical shape]
+          erw [← cakeContextOfPass_update_fields context name shape (globalAddress context shape)]
+          rw [ih { context with
+              globals := (name, (shape, globalAddress context shape)) :: context.globals
+              globalsSize := globalAddress context shape } hcanonical]
+          simp only [compileExpCake_cakeContextOfPass context hcanonical value]
 
 theorem compileDecsCake_functions_all_isFunction [LawfulBEq String] {width : Nat} [NeZero width]
     (context : CakeContext width) (declarations : List (Decl (BitVec width))) :

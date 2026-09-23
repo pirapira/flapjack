@@ -15,6 +15,22 @@ def holBits4 : Fin 4 → Bool := fun index => index.val == 0 || index.val == 2
 #guard holWordBitsToBitVec (holBits4 + holBits4) == BitVec.ofNat 4 10
 #guard holWordBitsToBitVec (holBits4 * holBits4) == BitVec.ofNat 4 9
 
+@[instance_reducible] private def fin4WordDimension :
+    HolFiniteDimension (Fin 4) := inferInstance
+
+/-! HOL word addition and multiplication are defined by `n2w` after natural
+    arithmetic on `w2n`; the generic source-shaped adapters reduce to the same
+    BitVec operations under the explicit finite-index enumeration. -/
+#guard holWordToBitVec fin4WordDimension
+    (holFiniteWordSourceAdd fin4WordDimension holBits4 holBits4) ==
+      BitVec.ofNat 4 10
+#guard holWordToBitVec fin4WordDimension
+    (holFiniteWordSourceMul fin4WordDimension holBits4 holBits4) ==
+      BitVec.ofNat 4 9
+#guard holWordToBitVec fin4WordDimension
+    (holFiniteWordSourceSub fin4WordDimension holBits4 (fun _ => true)) ==
+      BitVec.ofNat 4 6
+
 /-! These kernel checks mirror the original HOL `n2w_def` probe for zero,
     one, and the high set bit. Numeric FCP index 0 is the least-significant
     bit, as stated generally by HOL `word_index_n2w`. -/
@@ -52,6 +68,12 @@ example :
 
 local instance : HolFiniteDimension Bool := boolWordDimension
 
+/-! The arbitrary-index n2w adapter is pointwise `BIT` at the number assigned
+    by the dimension encoding, matching HOL's FCP `finite_index` convention. -/
+#guard holFiniteWordN2W boolWordDimension 1 false == true
+#guard holFiniteWordN2W boolWordDimension 1 true == false
+#guard holFiniteWordN2W boolWordDimension 2 true == true
+
 @[instance_reducible] def boolWordDimensionSwapped : HolFiniteDimension Bool where
   width := 2
   width_pos := by decide
@@ -77,6 +99,25 @@ example :
   cases hFalse
 
 def boolDimensionWord : Bool → Bool := id
+
+#guard wordOp .add [] == some (0 : Bool → Bool)
+#guard wordOp .and [] == some (Complement.complement (0 : Bool → Bool))
+#guard wordOp .or [] == some (0 : Bool → Bool)
+#guard wordOp .xor [] == some (0 : Bool → Bool)
+#guard wordOp .sub [boolDimensionWord] == none
+#guard wordOp .sub [boolDimensionWord, boolDimensionWord, boolDimensionWord] == none
+
+example (operator : BinOp) (values : List (Bool → Bool)) :
+    wordOp operator values =
+      (wordOpHOL operator (values.map (holWordToBitVec boolWordDimension))).map
+        (bitVecToHolWord boolWordDimension) :=
+  holFiniteWord_wordOp_toBitVec boolWordDimension operator values
+
+#guard holFiniteWordSBitSum boolWordDimension boolDimensionWord == 2
+
+example : holFiniteWordW2N boolWordDimension boolDimensionWord = 2 := by
+  rw [holFiniteWordW2N_eq_SBitSum]
+  rfl
 
 example : bitVecToHolWord boolWordDimension
     (holWordToBitVec boolWordDimension boolDimensionWord) = boolDimensionWord :=

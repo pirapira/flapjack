@@ -1,0 +1,19 @@
+word_op_definition=∀op ws.
+  word_op op ws =
+  case (op,ws) of
+    (Add,ws) => SOME (FOLDR $+ 0w ws)
+  | (Sub,[]) => NONE
+  | (Sub,[w1]) => NONE
+  | (Sub,[w1; w2]) => SOME (w1 − w2)
+  | (Sub,w1::w2::v14::v15) => NONE
+  | (And,ws) => SOME (FOLDR $&& (¬0w) ws)
+  | (Or,ws) => SOME (FOLDR $|| 0w ws)
+  | (Xor,ws) => SOME (FOLDR $?? 0w ws)
+add_pair=word_op Add [3w; 5w] = SOME (3w + (5w + 0w))
+add_empty=word_op Add [] = SOME 0w
+and_empty=word_op And [] = SOME (¬0w)
+or_empty=word_op Or [] = SOME 0w
+xor_empty=word_op Xor [] = SOME 0w
+sub_pair=word_op Sub [3w; 5w] = SOME (3w + -5w)
+sub_one=word_op Sub [3w] = NONE
+sub_three=word_op Sub [1w; 2w; 3w] = NONE

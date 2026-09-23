@@ -1419,6 +1419,14 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
+    "lean_name": "list_mapM_takeDrop_of_success",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack list support preserving successful OPT_MMAP when projecting the same drop/take range from input and output lists; used to recover one target parameter slot group."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
     "lean_name": "list_mapM_length",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Codex (proof inventory)"
@@ -3432,6 +3440,62 @@
     "reviewer": "Codex (HOL MAX_LIST and Lean maxList slot projection match with no premises; direct HOL-EVAL empty and unsorted nonempty rows paired with kernel-checked Lean theorem instances)"
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "withShapeGetElemNodupOfSlotsNodup",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack finite-list support: each withShape component inherits Nodup from the flat target slot list; used for generated ctxtFc no_overlap."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "withShapeGetElemMemOfSlotsMem",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack finite-list support: each withShape component contains only slots from the flat target slot list; used for generated ctxtFc ctxt_max."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "ctxtFcNoOverlapOfDistinctSlots",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack proof support for HOL no_overlap on ctxtFc: relies on distinct flat slots and the source theorem’s exact withShape partition; not tagged as a separate HOL theorem."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "ctxtFcCtxtMaxOfSlots",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack proof support deriving the HOL ctxt_max bound for ctxtFc from maxList slots and exact withShape slices; not tagged as a separate HOL theorem."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "withShapeMap",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack list support proving withShape commutes with mapping each flattened word into HOL word_lab cells."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "tlcWordLabWithShapeGetElemMapOfPanSem",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack source-facing projection showing ctxtFc withShape slots map through the actual word_lab tlc target map to a single argument’s flattened word_lab values; no HOL theorem tag."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "ctxtFcVarsLookupGetElem",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only indexed lookup into the ctxtFc formal parameter slots, exposing the matching withShape slot group; support for the full Call locals_rel proof, not an independent HOL theorem."
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
     "hol_name": "ctxt_max_el_leq",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
@@ -3558,6 +3622,54 @@
     "lean_name": "slcLookupGetElem",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only support deriving the indexed formal/argument pair responsible for a successful slc lookup; used by the Call callee-entry locals_rel proof. It does not claim call_preserve_state_code_locals_rel."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "panSemShapeOfMapPanValueShapeNil",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack bridge identifying the exact source panSem shape_of list with the empty-struct proof-context shape list; supports translating the HOL is_wf_shape_v_nil Call premise."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "callParameterShapeMapEqPanSem",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack indexed-list bridge from pointwise formal/argument shape equality to map equality, matching the shape content of the HOL Call LIST_REL premise; not a port of the complete HOL theorem."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "withShape_mapPanValueFlatten",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only partition lemma showing that splitting concatenated argument flattenings by the corresponding source value shapes returns each argument flattening; support for the Call function-context locals_rel proof."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "withShape_mapPanValueFlattenOfPanSem",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack bridge applying the partition lemma at HOL panSem shape_of with the exact empty-context is_wf_shape_v_nil premise; it does not cover arbitrary struct contexts."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "tlcWithShapeGetElemMap",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only lookup lemma showing that tlc maps the ctxtFc withShape slot group for an indexed argument to that argument's flattened words; support for the full Call locals_rel proof."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "tlcWithShapeGetElemMapOfPanSem",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack source-facing tlc slot projection at panSem shape_of under the Call theorem's empty-context argument well-formedness premise; no arbitrary-struct generalization claimed."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
@@ -4840,6 +4952,14 @@
     "reviewer": "Kernel-checked RField constructor specialization over production structCompileExp/evalPanValueExp. It retains successful evaluation, projected struct-context equality, pointwise Bool field-validity premises, struct_infos_ok, local/global shape-map premises, and all three parent conclusions in its recursive receiver hypothesis. The selected index comes from successful source evaluation, so no extra bounds premise is added; production List.get? selection is aligned with HOL LLOOKUP. It is intentionally untagged because HOL has only universal compile_exp_correct. Lean uses PanSemState total lookups, Bool/list-backed finite-map adapters, and explicit bytesInWord; structInfosOk is retained but unused in this case."
   },
   {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "compile_exp_correct",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructCompileExpCorrectOpCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Kernel-checked Op-constructor specialization over production structCompileExp/evalPanValueExp. It retains source evaluation, projected context equality, pointwise Bool field validity, struct_infos_ok, local/global shape maps, and all three compile_exp_correct conclusions in the per-argument induction hypothesis. Successful Op evaluation is shown to produce exactly two words; the proof uses the production list-evaluation bridge and verifies word filtering commutes with panStructConvertValue. It remains untagged because HOL has only the universal compile_exp_correct theorem and the Lean state/evaluator interfaces use PanSemState lookups, pointwise adapters, and explicit bytesInWord."
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
@@ -5342,5 +5462,37 @@
     "lean_name": "crepInlineLocalsRel_decClock",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (field-by-field source comparison against crep_inlineProofScript.sml; CrepHolState is the exact 11-field crepSem$state encoding, finite-map SUBMAP is represented extensionally by crepHolSubmap, and Flapjack/Test/CrepInlineRelParity.lean exercises submap/strong/dec_clock behaviour)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+    "hol_name": "locals_ext_rel_def",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "crepInlineLocalsExtRel",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison against crep_inlineProofScript.sml; CrepHolState is the exact 11-field crepSem$state encoding, HOL FDOM/FDIFF are rendered extensionally by crepHolFdom/crepHolFdiff, and Flapjack/Test/CrepInlineRelParity.lean exercises agree/disagree behaviour)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+    "hol_name": "state_rel_code_def",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "crepInlineStateRelCode",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison against crep_inlineProofScript.sml; CrepHolState is the exact 11-field crepSem$state encoding, HOL FDOM/FDIFF are rendered extensionally by crepHolFdom/crepHolFdiff, and Flapjack/Test/CrepInlineRelParity.lean exercises agree/disagree behaviour)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "crepHolFdiff_fdom_self",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only helper for the extensional FDOM/FDIFF rendering used by the exact crepInlineLocalsExtRel port; no HOL declaration of this name"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "crepInlineLocalsExtRel_self",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only helper for the extensional FDOM/FDIFF rendering used by the exact crepInlineLocalsExtRel port; no HOL declaration of this name"
   }
 ]

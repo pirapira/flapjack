@@ -87,6 +87,9 @@ run_probe word_add_carry_probeScript.sml word_add_carry_probe.out \
   "$cake_dir/compiler/backend"
 run_probe pan_crep_primop_probeScript.sml pan_crep_primop_probe.out \
   pan_valid crep_invalid "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_structs_opt_mmap_probeScript.sml pan_structs_opt_mmap_probe.out \
+  success pointwise "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
+  "$cake_dir/pancake/proofs"
 run_probe loop_to_word_probeScript.sml loop_to_word_probe.out \
   find_var_empty find_reg_imm_ctxt "$cake_dir/pancake/loop_to_wordScript.sml"
 # The get_stack_only probe observes the allocator driver's stack-only

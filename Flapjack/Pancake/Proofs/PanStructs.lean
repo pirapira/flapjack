@@ -12,6 +12,65 @@ translation limits are documented at the declarations.
 
 namespace Flapjack
 
+/-- Cake's `opt_mmap_eq_some_el`
+    (`cakeml/pancake/proofs/pan_structsProofScript.sml:19`). The `getElem?`
+    formulation is the total Lean translation of HOL's total `EL`: under the
+    in-range premise, each optional lookup succeeds and supplies that element. -/
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "opt_mmap_eq_some_el"]
+theorem optMmapEqSomeEl {α β : Type} (f : α → Option β) (xs : List α) (ys : List β) :
+    xs.mapM f = some ys ↔
+      xs.length = ys.length ∧ ∀ n, n < ys.length → (xs[n]?).bind f = ys[n]? := by
+  induction xs generalizing ys with
+  | nil =>
+      constructor
+      · intro h
+        cases h
+        simp
+      · intro h
+        obtain ⟨hlen, _⟩ := h
+        have : ys = [] := by simpa using hlen.symm
+        subst this
+        rfl
+  | cons x xs ih =>
+      rw [List.mapM_cons]
+      constructor
+      · intro h
+        cases hx : f x with
+        | none => simp [hx] at h
+        | some b =>
+            simp only [hx] at h
+            cases hxs : xs.mapM f with
+            | none => simp [hxs] at h
+            | some ys' =>
+                simp only [hxs] at h
+                have hb : b :: ys' = ys := by simpa using h
+                subst hb
+                obtain ⟨hlen, hpt⟩ := (ih ys').mp hxs
+                refine ⟨by simp [hlen], ?_⟩
+                intro n hn
+                cases n with
+                | zero => simp [hx]
+                | succ m =>
+                    simp only [List.getElem?_cons_succ, List.length_cons] at hn ⊢
+                    have hm : m < ys'.length := by omega
+                    simpa using hpt m hm
+      · intro h
+        obtain ⟨hlen, hpt⟩ := h
+        cases ys with
+        | nil => simp at hlen
+        | cons b ys' =>
+            have hfx : f x = some b := by
+              have := hpt 0 (by simp)
+              simpa using this
+            have htail : xs.length = ys'.length ∧
+                ∀ n, n < ys'.length → (xs[n]?).bind f = ys'[n]? := by
+              refine ⟨by simpa using hlen, ?_⟩
+              intro n hn
+              have := hpt (n + 1) (by simp; omega)
+              simpa [List.getElem?_cons_succ] using this
+            have hxs : xs.mapM f = some ys' := (ih ys').mpr htail
+            simp [hfx, hxs]
+
 /-! Faithful port of Cake `afindi_less_length`
     (`cakeml/pancake/proofs/pan_structsProofScript.sml:345`). -/
 @[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "afindi_less_length"]

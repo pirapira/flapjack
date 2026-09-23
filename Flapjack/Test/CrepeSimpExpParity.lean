@@ -147,6 +147,44 @@ example :
   exact evalCrepRuntimeExp_finiteDimension_eq boolWordDimension
     boolDimensionHolState _
 
+example :
+    evalCrepRuntimeExp
+        (boolDimensionHolState.toHolFiniteWordRuntime boolWordDimension)
+        (crepMulConst
+          (fun n => bitVecToHolWord boolWordDimension (BitVec.ofNat 2 n))
+          (.const boolDimensionWord) boolDimensionWord) =
+      some (boolDimensionWord * boolDimensionWord) := by
+  exact crepEvalMulConstHolFiniteDimension boolWordDimension boolDimensionHolState
+    (.const boolDimensionWord) boolDimensionWord boolDimensionWord
+    (by simp [evalCrepRuntimeExp])
+
+example :
+    evalCrepRuntimeExp
+        (boolDimensionHolState.toHolFiniteWordRuntime boolWordDimension)
+        (crepSimpExp
+          (fun n => bitVecToHolWord boolWordDimension (BitVec.ofNat 2 n))
+          (.crepOp .mul [.const boolDimensionWord, .const boolDimensionWord])) =
+      evalCrepRuntimeExp
+        (boolDimensionHolState.toHolFiniteWordRuntime boolWordDimension)
+        (.crepOp .mul [.const boolDimensionWord, .const boolDimensionWord]) := by
+  exact crepSimpExpEvalPreservesHolFiniteDimension boolWordDimension
+    boolDimensionHolState _ (by simp [evalCrepRuntimeExp])
+
+example :
+    (evalCrepRuntimeExp
+      (crepArithMapCode id
+        (boolDimensionHolState.toHolFiniteWordRuntime boolWordDimension))
+      (crepSimpExp
+        (fun n => bitVecToHolWord boolWordDimension (BitVec.ofNat 2 n))
+        (.crepOp .mul [.const boolDimensionWord, .const boolDimensionWord]))).map
+        PanWordLab.word =
+      (evalCrepRuntimeExp
+        (boolDimensionHolState.toHolFiniteWordRuntime boolWordDimension)
+        (.crepOp .mul [.const boolDimensionWord, .const boolDimensionWord])).map
+        PanWordLab.word := by
+  exact crepSimpExpCorrect1HolFiniteDimension id boolDimensionHolState _
+    (by simp [evalCrepRuntimeExp])
+
 #guard crepSimpExp (fun value => bitVecToHolWordBits (BitVec.ofNat 4 value))
     (.crepOp .mul [.var 2, .const (bitVecToHolWordBits (BitVec.ofNat 4 2))]) ==
   .shift .lsl (.var 2) (.const (bitVecToHolWordBits (BitVec.ofNat 4 1)))

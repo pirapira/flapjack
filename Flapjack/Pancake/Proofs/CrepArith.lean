@@ -769,6 +769,363 @@ theorem crepEvalMulConstRaw {n : Nat} [NeZero n] {σ : Type}
   apply Option.map_injective wordInjective
   simpa using hResult
 
+/-! Transport the production constant-multiplication support across the
+    explicit finite-dimension representation. This is Flapjack-only proof
+    infrastructure: it reduces the operation to the BitVec target, while the
+    exact HOL-polymorphic theorem remains subject to the evaluator audit. -/
+theorem crepEvalMulConstHolFiniteDimension {ι : Type} {σ : Type}
+    (dimension : HolFiniteDimension ι)
+    (state : CrepHolState (ι → Bool) σ)
+    (expression : CrepExp (ι → Bool)) (constant value : ι → Bool)
+    (h : evalCrepRuntimeExp (state.toHolFiniteWordRuntime dimension) expression =
+      some value) :
+    evalCrepRuntimeExp (state.toHolFiniteWordRuntime dimension)
+      (crepMulConst
+        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+        expression constant) = some (value * constant) := by
+  letI : HolFiniteDimension ι := dimension
+  have hSource := evalCrepRuntimeExp_finiteDimension_eq dimension state expression
+  rw [hSource] at h
+  simp only [evalCrepHolFiniteDimensionExp] at h
+  cases hBits : evalCrepHolExp (state.toHolFiniteBitVecState dimension)
+      (mapCrepExpWord (holWordToBitVec dimension) expression) with
+  | none => simp [hBits] at h
+  | some bitVecValue =>
+      have hValue : bitVecToHolWord dimension bitVecValue = value := by
+        simpa [hBits] using h
+      have hBitVecValue : bitVecValue = holWordToBitVec dimension value := by
+        calc
+          bitVecValue = holWordToBitVec dimension
+              (bitVecToHolWord dimension bitVecValue) := by
+                rw [holWordToBitVec_bitVecToHolWord]
+          _ = holWordToBitVec dimension value := congrArg _ hValue
+      have hBitVecEval :
+          evalCrepRuntimeExp
+            (riscvCrepWordTarget
+              (state.toHolFiniteBitVecState dimension).toRuntime)
+            (mapCrepExpWord (holWordToBitVec dimension) expression) =
+            some (holWordToBitVec dimension value) := by
+        rw [evalCrepRuntimeExp_toRuntime_eq]
+        simpa [hBitVecValue] using hBits
+      have hMul := crepEvalMulConstRaw
+        ((state.toHolFiniteBitVecState dimension).toRuntime)
+        (mapCrepExpWord (holWordToBitVec dimension) expression)
+        (holWordToBitVec dimension constant) (holWordToBitVec dimension value)
+        hBitVecEval
+      have hRewrite := crepMulConst_holFiniteDimension expression constant
+      have hResult := evalCrepRuntimeExp_finiteDimension_eq dimension state
+        (crepMulConst
+          (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+          expression constant)
+      rw [hResult]
+      simp only [evalCrepHolFiniteDimensionExp]
+      rw [hRewrite]
+      rw [← evalCrepRuntimeExp_toRuntime_eq
+        (state.toHolFiniteBitVecState dimension)
+        (crepMulConst (BitVec.ofNat dimension.width)
+          (mapCrepExpWord (holWordToBitVec dimension) expression)
+          (holWordToBitVec dimension constant))]
+      rw [hMul]
+      simp only [Option.map_some]
+      exact congrArg some (calc
+        bitVecToHolWord dimension
+            (holWordToBitVec dimension value * holWordToBitVec dimension constant) =
+            bitVecToHolWord dimension
+              (holWordToBitVec dimension (value * constant)) := by
+                rw [holFiniteWordToBitVec_mul]
+        _ = value * constant := bitVecToHolWord_holWordToBitVec dimension _)
+
+private theorem holFiniteWord_mul_comm {ι : Type}
+    [dimension : HolFiniteDimension ι] (left right : ι → Bool) :
+    right * left = left * right := by
+  calc
+    right * left = bitVecToHolWord dimension
+        (holWordToBitVec dimension (right * left)) :=
+          (bitVecToHolWord_holWordToBitVec dimension _).symm
+    _ = bitVecToHolWord dimension
+        (holWordToBitVec dimension right * holWordToBitVec dimension left) := by
+          rw [holFiniteWordToBitVec_mul]
+    _ = bitVecToHolWord dimension
+        (holWordToBitVec dimension left * holWordToBitVec dimension right) := by
+          rw [BitVec.mul_comm]
+    _ = left * right := by
+          rw [← holFiniteWordToBitVec_mul]
+          exact bitVecToHolWord_holWordToBitVec dimension _
+
+private theorem crepSimpMulEvalHolFiniteDimension {ι : Type} {σ : Type}
+    (dimension : HolFiniteDimension ι)
+    (state : CrepHolState (ι → Bool) σ)
+    (left right : CrepExp (ι → Bool)) (leftValue rightValue : ι → Bool)
+    (hleft : evalCrepRuntimeExp (state.toHolFiniteWordRuntime dimension) (crepSimpExp
+      (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n)) left) =
+        some leftValue)
+    (hright : evalCrepRuntimeExp (state.toHolFiniteWordRuntime dimension) (crepSimpExp
+      (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n)) right) =
+        some rightValue) :
+    evalCrepRuntimeExp (state.toHolFiniteWordRuntime dimension) (crepSimpExp
+      (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+      (.crepOp .mul [left, right])) = some (leftValue * rightValue) := by
+  let fromNat := fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n)
+  let simpExp := fun expression => crepSimpExp fromNat expression
+  change evalCrepRuntimeExp (state.toHolFiniteWordRuntime dimension)
+      (simpExp left) = some leftValue at hleft
+  change evalCrepRuntimeExp (state.toHolFiniteWordRuntime dimension)
+      (simpExp right) = some rightValue at hright
+  cases hL : crepDestConst (simpExp left) with
+  | some leftConstant =>
+      have hLshape := crepDestConst_eq_const (simpExp left) leftConstant hL
+      cases hR : crepDestConst (simpExp right) with
+      | some rightConstant =>
+          have hRshape := crepDestConst_eq_const (simpExp right) rightConstant hR
+          have hmulShape := crepSimpExp.eq_5 fromNat [left, right]
+            leftConstant rightConstant (by simp [simpExp, hLshape, hRshape])
+          rw [hmulShape]
+          have hleftValue : leftConstant = leftValue := by
+            rw [hLshape] at hleft
+            simpa [evalCrepRuntimeExp] using hleft
+          have hrightValue : rightConstant = rightValue := by
+            rw [hRshape] at hright
+            simpa [evalCrepRuntimeExp] using hright
+          simp [evalCrepRuntimeExp, hleftValue, hrightValue]
+      | none =>
+          have hRnotConst : ∀ value, simpExp right = .const value → False := by
+            intro value heq
+            simp [heq, crepDestConst] at hR
+          have hmulShape := crepSimpExp.eq_6 fromNat [left, right] leftConstant
+            (simpExp right) hRnotConst (by simp [simpExp, hLshape])
+          rw [hmulShape]
+          have hleftValue : leftConstant = leftValue := by
+            rw [hLshape] at hleft
+            simpa [evalCrepRuntimeExp] using hleft
+          have hmul := crepEvalMulConstHolFiniteDimension dimension state
+            (simpExp right) leftConstant rightValue hright
+          calc
+            evalCrepRuntimeExp (state.toHolFiniteWordRuntime dimension)
+                (crepMulConst fromNat (simpExp right) leftConstant) =
+                some (rightValue * leftConstant) := hmul
+            _ = some (leftValue * rightValue) := by
+              rw [hleftValue, holFiniteWord_mul_comm]
+  | none =>
+      cases hR : crepDestConst (simpExp right) with
+      | some rightConstant =>
+          have hRshape := crepDestConst_eq_const (simpExp right) rightConstant hR
+          have hLnotConst : ∀ value, simpExp left = .const value → False := by
+            intro value heq
+            simp [heq, crepDestConst] at hL
+          have hmulShape := crepSimpExp.eq_7 fromNat [left, right]
+            (simpExp left) rightConstant hLnotConst (by simp [simpExp, hRshape])
+          rw [hmulShape]
+          have hrightValue : rightConstant = rightValue := by
+            rw [hRshape] at hright
+            simpa [evalCrepRuntimeExp] using hright
+          have hmul := crepEvalMulConstHolFiniteDimension dimension state
+            (simpExp left) rightConstant leftValue (by simpa [simpExp] using hleft)
+          simpa [hrightValue] using hmul
+      | none =>
+          have hLnotConst : ∀ value, simpExp left = .const value → False := by
+            intro value heq
+            simp [heq, crepDestConst] at hL
+          have hRnotConst : ∀ value, simpExp right = .const value → False := by
+            intro value heq
+            simp [heq, crepDestConst] at hR
+          have hnotConstConst : ∀ a b, CrepOp.mul = CrepOp.mul →
+              List.map simpExp [left, right] = [.const a, .const b] → False := by
+            intro a b _ hmap
+            simp only [List.map_cons, List.map_nil, List.cons.injEq] at hmap
+            exact hLnotConst a hmap.1
+          have hnotLeftConst : ∀ c expression, CrepOp.mul = CrepOp.mul →
+              List.map simpExp [left, right] = [.const c, expression] → False := by
+            intro c expression _ hmap
+            simp only [List.map_cons, List.map_nil, List.cons.injEq] at hmap
+            exact hLnotConst c hmap.1
+          have hnotRightConst : ∀ expression c, CrepOp.mul = CrepOp.mul →
+              List.map simpExp [left, right] = [expression, .const c] → False := by
+            intro expression c _ hmap
+            simp only [List.map_cons, List.map_nil, List.cons.injEq] at hmap
+            exact hRnotConst c hmap.2.1
+          have hmulShape := crepSimpExp.eq_8 fromNat [left, right]
+            CrepOp.mul hnotConstConst hnotLeftConst hnotRightConst
+          rw [hmulShape]
+          simp [evalCrepRuntimeExp, simpExp, hleft, hright]
+
+/-! All-width preservation for the production evaluator on an explicitly
+    enumerated Boolean-index word. The statement mirrors HOL's successful-
+    evaluation premise and evaluator equality, but remains untagged because
+    its Lean word representation and operation instances are the explicit
+    finite-dimension/BitVec interpretation described above. -/
+theorem crepSimpExpEvalPreservesHolFiniteDimension {ι : Type} {σ : Type}
+    (dimension : HolFiniteDimension ι)
+    (state : CrepHolState (ι → Bool) σ)
+    (expression : CrepExp (ι → Bool))
+    (h : evalCrepRuntimeExp (state.toHolFiniteWordRuntime dimension) expression ≠ none) :
+    evalCrepRuntimeExp (state.toHolFiniteWordRuntime dimension)
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n)) expression) =
+    evalCrepRuntimeExp (state.toHolFiniteWordRuntime dimension) expression := by
+  let fromNat := fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n)
+  have evalExpsMapM (sourceState : CrepHolState (ι → Bool) σ) :
+      ∀ expressions,
+        evalCrepRuntimeExps (sourceState.toHolFiniteWordRuntime dimension) expressions =
+          expressions.mapM
+            (evalCrepRuntimeExp (sourceState.toHolFiniteWordRuntime dimension)) := by
+    intro expressions
+    induction expressions with
+    | nil => simp [evalCrepRuntimeExps]
+    | cons head tail ih => simp [evalCrepRuntimeExps, ih]
+  induction expression using
+      (CrepExp.rec (motive_2 := fun expressions =>
+        (∀ e, e ∈ expressions → ∀ (state : CrepHolState (ι → Bool) σ),
+          evalCrepRuntimeExp (state.toHolFiniteWordRuntime dimension) e ≠ none →
+            evalCrepRuntimeExp (state.toHolFiniteWordRuntime dimension)
+              (crepSimpExp fromNat e) =
+            evalCrepRuntimeExp (state.toHolFiniteWordRuntime dimension) e) ∧
+        (∀ (state : CrepHolState (ι → Bool) σ),
+          evalCrepRuntimeExps (state.toHolFiniteWordRuntime dimension) expressions ≠ none →
+            evalCrepRuntimeExps (state.toHolFiniteWordRuntime dimension)
+              (expressions.map (crepSimpExp fromNat)) =
+            evalCrepRuntimeExps (state.toHolFiniteWordRuntime dimension) expressions)))
+      generalizing state
+  case const value => simp [crepSimpExp.eq_11, evalCrepRuntimeExp]
+  case var name => simp [crepSimpExp.eq_11, evalCrepRuntimeExp]
+  case load address ih =>
+    rw [crepSimpExp.eq_1]
+    simp only [evalCrepRuntimeExp] at h ⊢
+    cases hx : evalCrepRuntimeExp (state.toHolFiniteWordRuntime dimension) address with
+    | none => simp [hx] at h
+    | some value =>
+        have hi := ih state (by simp [hx])
+        rw [hi, hx]
+  case load32 address ih =>
+    rw [crepSimpExp.eq_2]
+    simp only [evalCrepRuntimeExp] at h ⊢
+    cases hx : evalCrepRuntimeExp (state.toHolFiniteWordRuntime dimension) address with
+    | none => simp [hx] at h
+    | some value =>
+        have hi := ih state (by simp [hx])
+        rw [hi, hx]
+  case loadByte address ih =>
+    rw [crepSimpExp.eq_3]
+    simp only [evalCrepRuntimeExp] at h ⊢
+    cases hx : evalCrepRuntimeExp (state.toHolFiniteWordRuntime dimension) address with
+    | none => simp [hx] at h
+    | some value =>
+        have hi := ih state (by simp [hx])
+        rw [hi, hx]
+  case loadGlob address => simp [crepSimpExp.eq_11, evalCrepRuntimeExp]
+  case op operator expressions ih =>
+    rw [crepSimpExp.eq_4]
+    simp only [evalCrepRuntimeExp] at h ⊢
+    rw [← evalExpsMapM state expressions] at h
+    cases hx : evalCrepRuntimeExps
+        (state.toHolFiniteWordRuntime dimension) expressions with
+    | none => simp [hx] at h
+    | some values =>
+        have hi := ih.2 state (by simp [hx])
+        rw [← evalExpsMapM state (expressions.map (crepSimpExp fromNat)),
+          ← evalExpsMapM state expressions, hi]
+  case crepOp operator expressions ih =>
+    cases operator
+    cases expressions with
+    | nil => simp [evalCrepRuntimeExp] at h
+    | cons left rest =>
+      cases rest with
+      | nil => simp [evalCrepRuntimeExp] at h
+      | cons right rest =>
+        cases rest with
+        | cons extra tail => simp [evalCrepRuntimeExp] at h
+        | nil =>
+          have hleft : evalCrepRuntimeExp
+              (state.toHolFiniteWordRuntime dimension) (crepSimpExp fromNat left) ≠ none := by
+            have hleftRaw : evalCrepRuntimeExp
+                (state.toHolFiniteWordRuntime dimension) left ≠ none := by
+              intro hn
+              simp [evalCrepRuntimeExp, hn] at h
+            rw [ih.1 left (by simp) state hleftRaw]
+            exact hleftRaw
+          have hright : evalCrepRuntimeExp
+              (state.toHolFiniteWordRuntime dimension) (crepSimpExp fromNat right) ≠ none := by
+            have hrightRaw : evalCrepRuntimeExp
+                (state.toHolFiniteWordRuntime dimension) right ≠ none := by
+              intro hn
+              simp [evalCrepRuntimeExp, hn] at h
+            rw [ih.1 right (by simp) state hrightRaw]
+            exact hrightRaw
+          obtain ⟨leftValue, hleftValue⟩ := Option.ne_none_iff_exists'.mp hleft
+          obtain ⟨rightValue, hrightValue⟩ := Option.ne_none_iff_exists'.mp hright
+          have hmul := crepSimpMulEvalHolFiniteDimension dimension state left right
+            leftValue rightValue hleftValue hrightValue
+          calc
+            evalCrepRuntimeExp (state.toHolFiniteWordRuntime dimension)
+                (crepSimpExp fromNat (.crepOp .mul [left, right])) =
+                some (leftValue * rightValue) := hmul
+            _ = evalCrepRuntimeExp (state.toHolFiniteWordRuntime dimension)
+                  (.crepOp .mul [left, right]) := by
+                simp [evalCrepRuntimeExp, ← ih.1 left (by simp) state
+                  (by intro hn; simp [evalCrepRuntimeExp, hn] at h),
+                  ← ih.1 right (by simp) state
+                    (by intro hn; simp [evalCrepRuntimeExp, hn] at h),
+                  hleftValue, hrightValue]
+  case cmp operator left right ihLeft ihRight =>
+    rw [crepSimpExp.eq_9]
+    simp only [evalCrepRuntimeExp] at h ⊢
+    cases hx : evalCrepRuntimeExp (state.toHolFiniteWordRuntime dimension) left with
+    | none => simp [hx] at h
+    | some leftValue =>
+      cases hy : evalCrepRuntimeExp (state.toHolFiniteWordRuntime dimension) right with
+      | none => simp [hx, hy] at h
+      | some rightValue =>
+        have hleft := ihLeft state (by simp [hx])
+        have hright := ihRight state (by simp [hy])
+        rw [hleft, hright, hx, hy]
+  case shift operator left right ihLeft ihRight =>
+    rw [crepSimpExp.eq_10]
+    simp only [evalCrepRuntimeExp] at h ⊢
+    cases hx : evalCrepRuntimeExp (state.toHolFiniteWordRuntime dimension) left with
+    | none => simp [hx] at h
+    | some leftValue =>
+      cases hy : evalCrepRuntimeExp (state.toHolFiniteWordRuntime dimension) right with
+      | none => simp [hx, hy] at h
+      | some rightValue =>
+        have hleft := ihLeft state (by simp [hx])
+        have hright := ihRight state (by simp [hy])
+        rw [hleft, hright, hx, hy]
+  case baseAddr => simp [crepSimpExp.eq_11, evalCrepRuntimeExp]
+  case topAddr => simp [crepSimpExp.eq_11, evalCrepRuntimeExp]
+  case nil => simp [evalCrepRuntimeExps]
+  case cons head tail ihHead ihTail =>
+    constructor
+    · intro e he state h
+      simp only [List.mem_cons] at he
+      rcases he with he | he
+      · subst e
+        exact ihHead state h
+      · exact ihTail.1 e he state h
+    · intro state h
+      rw [evalExpsMapM state (List.map (crepSimpExp fromNat) (head :: tail))]
+      rw [evalExpsMapM state (head :: tail)]
+      simp only [List.map_cons]
+      cases hx : evalCrepRuntimeExp
+          (state.toHolFiniteWordRuntime dimension) head with
+      | none => simp [evalCrepRuntimeExps, hx] at h
+      | some headValue =>
+        cases hy : evalCrepRuntimeExps
+            (state.toHolFiniteWordRuntime dimension) tail with
+        | none => simp [evalCrepRuntimeExps, hx, hy] at h
+        | some tailValues =>
+          have hHead := ihHead state (by simp [hx])
+          have hTail := ihTail.2 state (by simp [hy])
+          rw [hx] at hHead
+          change evalCrepRuntimeExp (state.toHolFiniteWordRuntime dimension)
+              (crepSimpExp fromNat head) = some headValue at hHead
+          rw [evalExpsMapM state (List.map (crepSimpExp fromNat) tail)] at hTail
+          rw [hy] at hTail
+          have hTailOriginal :
+              List.mapM (evalCrepRuntimeExp
+                (state.toHolFiniteWordRuntime dimension)) tail = some tailValues := by
+            rw [← evalExpsMapM state tail]
+            exact hy
+          simp [hHead, hx, hTail, hTailOriginal]
+
 /-! This target-specific helper proves the hard `CrepOp.mul` case of the
     recursive `simp_exp` preservation argument. It uses the generated
     `crepSimpExp` equations and the untagged RISC-V multiplication support;
@@ -1069,6 +1426,44 @@ private theorem crepEvalCodeMapIrrel {α : Type} [BEq α] [OfNat α 0] [OfNat α
           rw [ih state f |>.1 left (by simp)]
           rw [ih state f |>.1 right (by simp)]
         | cons _ _ => simp [evalCrepRuntimeExp]
+
+/-! The following theorem assembles the all-constructor preservation proof
+    over an arbitrary explicitly enumerated finite Boolean-index word carrier.
+    It retains the successful-evaluation premise and arbitrary local `mapc f`
+    code update, and compares complete `Option (PanWordLab ...)` results for
+    word-valued production expressions. It is not tagged as HOL
+    `simp_exp_correct1`: HOL allows the full `word_lab` result from
+    `crepSem$eval` and its polymorphic word operations, while this evaluator
+    transports through `HolFiniteDimension` and the RISC-V/BitVec model and
+    only embeds successful word results with `PanWordLab.word`. The exact
+    unrestricted production correspondence remains open. -/
+theorem crepSimpExpCorrect1HolFiniteDimension {ι : Type} {σ : Type}
+    [dimension : HolFiniteDimension ι]
+    (f : (List Nat × CrepProg (ι → Bool)) → (List Nat × CrepProg (ι → Bool)))
+    (state : CrepHolState (ι → Bool) σ) (expression : CrepExp (ι → Bool))
+    (h : (evalCrepRuntimeExp (state.toHolFiniteWordRuntime dimension) expression).map
+      PanWordLab.word ≠ none) :
+    (evalCrepRuntimeExp
+      ((crepArithMapCode f (state.toHolFiniteWordRuntime dimension)))
+      (crepSimpExp (fun n => bitVecToHolWord dimension
+        (BitVec.ofNat dimension.width n)) expression)).map PanWordLab.word =
+    (evalCrepRuntimeExp (state.toHolFiniteWordRuntime dimension) expression).map
+      PanWordLab.word := by
+  let runtime := state.toHolFiniteWordRuntime dimension
+  let fromNat := fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n)
+  have hraw : evalCrepRuntimeExp runtime expression ≠ none := by
+    simpa using h
+  have hsimp := crepSimpExpEvalPreservesHolFiniteDimension dimension state
+    expression hraw
+  calc
+    (evalCrepRuntimeExp (crepArithMapCode f runtime)
+        (crepSimpExp fromNat expression)).map PanWordLab.word =
+        (evalCrepRuntimeExp runtime (crepSimpExp fromNat expression)).map
+          PanWordLab.word := by
+            exact congrArg (Option.map PanWordLab.word)
+              (crepEvalCodeMapIrrel f runtime (crepSimpExp fromNat expression))
+    _ = (evalCrepRuntimeExp runtime expression).map PanWordLab.word :=
+      congrArg (Option.map PanWordLab.word) hsimp
 
 
 

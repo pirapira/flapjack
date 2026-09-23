@@ -6,6 +6,7 @@ import Flapjack.Test.PanMemoryParity
 import Flapjack.Test.PanShapeParity
 import Flapjack.Test.PanShapeVarsParity
 import Flapjack.Test.PanStructsCompileCorrect
+import Flapjack.Test.PanStructsValueValidityParity
 import Flapjack.Test.PanGetEidsParity
 import Flapjack.Test.PanWordParity
 import Flapjack.Test.PanEvaluateDeclsParity
@@ -89,6 +90,7 @@ import Flapjack.Test.LoopSemEvaluateParity
 import Flapjack.Test.LoopLiveEffectFreeParity
 import Flapjack.Test.LoopPrimopParity
 import Flapjack.Test.LoopShMemParity
+import Flapjack.Test.LoopFfiParity
 import Flapjack.Test.PanItreeFfiParity
 import Flapjack.Test.PanItreeTracePrefixParity
 import Flapjack.Test.PanItreeTracePrefix0Parity
@@ -678,6 +680,7 @@ def main : IO Unit := do
     Flapjack.Test.LoopLiveEffectFreeParity.runChecks,
     Flapjack.Test.LoopPrimopParity.runChecks,
     Flapjack.Test.LoopShMemParity.runChecks,
+    Flapjack.Test.LoopFfiParity.runChecks,
     Flapjack.Test.PanItreeFfiParity.runChecks,
     Flapjack.Test.PanItreeTracePrefixParity.runChecks,
     Flapjack.Test.PanItreeTracePrefix0Parity.runChecks,

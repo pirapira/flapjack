@@ -2222,6 +2222,243 @@ theorem crepRuntimeExpHdlReturnOneWord
   simp [evalCrepRuntimeExps, evalCrepRuntimeExp, updateCrepRuntimeLocal,
     panTheWord, clearCrepRuntimeLocals, fixCrepRuntimeClock]
 
+private theorem evalCrepRuntimeExps_vars_eq
+    (state : CrepRuntimeState (RiscV.Word 64) σ) (slots : List Nat) :
+    evalCrepRuntimeExps state (slots.map CrepExp.var) =
+      slots.mapM (fun slot => (state.locals slot).map panTheWord) := by
+  induction slots with
+  | nil => simp [evalCrepRuntimeExps]
+  | cons slot slots ih =>
+      simp [evalCrepRuntimeExps, evalCrepRuntimeExp, ih]
+
+private theorem evalCrepRuntimeExps_append
+    (state : CrepRuntimeState (RiscV.Word 64) σ)
+    (left right : List (CrepExp (RiscV.Word 64)))
+    (leftValues rightValues : List (RiscV.Word 64))
+    (hleft : evalCrepRuntimeExps state left = some leftValues)
+    (hright : evalCrepRuntimeExps state right = some rightValues) :
+    evalCrepRuntimeExps state (left ++ right) = some (leftValues ++ rightValues) := by
+  induction left generalizing leftValues with
+  | nil =>
+      simp [evalCrepRuntimeExps] at hleft
+      subst leftValues
+      simpa [evalCrepRuntimeExps] using hright
+  | cons expression expressions ih =>
+      cases heval : evalCrepRuntimeExp state expression with
+      | none => simp [evalCrepRuntimeExps, heval] at hleft
+      | some value =>
+          cases htail : evalCrepRuntimeExps state expressions with
+          | none => simp [evalCrepRuntimeExps, heval, htail] at hleft
+          | some values =>
+              simp [evalCrepRuntimeExps, heval, htail] at hleft
+              subst leftValues
+              simp only [List.cons_append, evalCrepRuntimeExps, heval]
+              rw [ih values htail]
+              simp
+
+private theorem evalPanSemStateExps_cons
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (expression : Exp (RiscV.Word 64)) (expressions : List (Exp (RiscV.Word 64)))
+    (value : PanValue (RiscV.Word 64)) (values : List (PanValue (RiscV.Word 64))) :
+    evalPanSemStateExps source (expression :: expressions) = some (value :: values) ↔
+      evalPanSemStateExp source expression = some value ∧
+      evalPanSemStateExps source expressions = some values := by
+  unfold evalPanSemStateExps evalPanSemStateExp evalPanValueExps
+  cases hhead : evalPanValueExp source.structs source.locals source.globals
+      source.memory source.baseAddress source.topAddress panSemBitVec64BytesInWord
+      expression (memoryAccess := some (panSemBitVec64MemoryAccess source)) <;>
+    cases htail : evalPanValueExp.evalPanValueExps source.structs source.locals
+      source.globals source.memory source.baseAddress source.topAddress
+      panSemBitVec64BytesInWord expressions
+      (some (panSemBitVec64MemoryAccess source)) <;>
+    simp [evalPanValueExp.evalPanValueExps, hhead, htail]
+
+/-! HOL `eval_map_comp_exp_flat_eq` lifts the per-expression compiler value
+relation over argument lists. This helper proves that list induction step
+without claiming the per-expression theorem for unsupported constructors. -/
+private theorem evalMapCompileArgsFlat_of_each
+    (compilerContext : PanToCrepHOLContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (expressions : List (Exp (RiscV.Word 64)))
+    (values : List (PanValue (RiscV.Word 64)))
+    (hsource : evalPanSemStateExps source expressions = some values)
+    (heach : ∀ expression, expression ∈ expressions → ∀ value,
+      evalPanSemStateExp source expression = some value →
+      evalCrepRuntimeExps target (compileExpHOL compilerContext expression).1 =
+        some (panValueFlatten value)) :
+    evalCrepRuntimeExps target (compileArgsHOL compilerContext expressions) =
+      some (values.flatMap panValueFlatten) := by
+  induction expressions generalizing values with
+  | nil =>
+      cases values with
+      | nil => simp [compileArgsHOL, evalCrepRuntimeExps]
+      | cons value values =>
+          simp [evalPanSemStateExps, evalPanValueExps,
+            evalPanValueExp.evalPanValueExps] at hsource
+  | cons expression expressions ih =>
+      cases values with
+      | nil =>
+          have hsourceImpossible :
+              evalPanSemStateExps source (expression :: expressions) ≠ some [] := by
+            intro h
+            cases hhead : evalPanValueExp source.structs source.locals source.globals
+                source.memory source.baseAddress source.topAddress panSemBitVec64BytesInWord
+                expression (memoryAccess := some (panSemBitVec64MemoryAccess source)) <;>
+              cases htail : evalPanValueExp.evalPanValueExps source.structs source.locals
+                source.globals source.memory source.baseAddress source.topAddress
+                panSemBitVec64BytesInWord expressions
+                (some (panSemBitVec64MemoryAccess source)) <;>
+              simp [evalPanSemStateExps, evalPanValueExps,
+                evalPanValueExp.evalPanValueExps, hhead, htail] at h
+          exact False.elim (hsourceImpossible hsource)
+      | cons value values =>
+          obtain ⟨hhead, htail⟩ :=
+            (evalPanSemStateExps_cons source expression expressions value values).mp hsource
+          have hcompiledHead := heach expression (by simp) value hhead
+          have heachTail : ∀ head, head ∈ expressions → ∀ item,
+              evalPanSemStateExp source head = some item →
+              evalCrepRuntimeExps target (compileExpHOL compilerContext head).1 =
+                some (panValueFlatten item) := by
+            intro head hmem item heval
+            exact heach head (by simp [hmem]) item heval
+          have hcompiledTail := ih values htail heachTail
+          have happend := evalCrepRuntimeExps_append target
+            (compileExpHOL compilerContext expression).1
+            (compileArgsHOL compilerContext expressions)
+            (panValueFlatten value) (values.flatMap panValueFlatten)
+            hcompiledHead hcompiledTail
+          simpa [compileArgsHOL, List.flatMap_cons] using happend
+
+private theorem mapM_panTheWord_of_wordLab
+    (locals : Nat → Option (PanWordLab (RiscV.Word 64)))
+    (slots : List Nat) (words : List (RiscV.Word 64))
+    (hslots : slots.mapM (FLOOKUP locals) =
+      some (words.map PanWordLab.word)) :
+    slots.mapM (fun slot => (FLOOKUP locals slot).map panTheWord) = some words := by
+  induction slots generalizing words with
+  | nil =>
+      cases words with
+      | nil => simp
+      | cons word words => simp at hslots
+  | cons slot slots ih =>
+      cases words with
+      | nil =>
+          simp only [List.mapM_cons] at hslots
+          cases hlookup : FLOOKUP locals slot with
+          | none => simp [hlookup] at hslots
+          | some cell =>
+              cases htail : slots.mapM (FLOOKUP locals) <;>
+                simp [hlookup, htail] at hslots
+      | cons word words =>
+          simp only [List.mapM_cons] at hslots
+          cases hlookup : FLOOKUP locals slot with
+          | none => simp [hlookup] at hslots
+          | some cell =>
+              cases cell with
+                | word cellWord =>
+                  cases htail : slots.mapM (FLOOKUP locals) with
+                  | none => simp [hlookup, htail] at hslots
+                  | some cells =>
+                      simp [hlookup, htail] at hslots
+                      rcases hslots with ⟨hword, htailWords⟩
+                      subst word
+                      have htailLookup : slots.mapM (FLOOKUP locals) =
+                          some (words.map PanWordLab.word) := by
+                        rw [htail, htailWords]
+                      have htailEval := ih words htailLookup
+                      simp [List.mapM_cons, hlookup, panTheWord, htailEval]
+
+/-! Flapjack-specific local-variable support toward HOL `compile_exp_val_rel`. `locals_rel`
+provides the flattened target words for the source value, and target `.var`
+evaluation reads those same slots through the production Crep locals map.
+This handles one RV64 constructor, but does not state HOL's full case or
+claim the general expression theorem `eval_map_comp_exp_flat_eq`. -/
+theorem compileExpHOL_local_eval_flatten
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (name : String) (value : PanValue (RiscV.Word 64))
+    (hlocals : localsRel context source.locals target.locals)
+    (hsourceEval : evalPanSemStateExp source (.var .local name) = some value) :
+    evalCrepRuntimeExps target
+      (compileExpHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        (.var .local name)).1 = some (panValueFlatten value) := by
+  have hsource : FLOOKUP source.locals name = some value := by
+    simpa [evalPanSemStateExp, evalPanValueExp, FLOOKUP] using hsourceEval
+  obtain ⟨slots, hcontext, _, htargetWords, _⟩ :=
+    localsRelLookupCtxt context source.locals target.locals name value hlocals hsource
+  have htargetValues : slots.mapM
+      (fun slot => (FLOOKUP target.locals slot).map panTheWord) =
+      some (panValueFlatten value) := by
+    exact mapM_panTheWord_of_wordLab target.locals slots (panValueFlatten value)
+      htargetWords
+  simp only [compileExpHOL, hcontext]
+  rw [evalCrepRuntimeExps_vars_eq]
+  exact htargetValues
+
+/-! Flapjack-specific RV64 constant support toward HOL `compile_exp_val_rel`;
+    the general expression theorem remains open. -/
+theorem compileExpHOL_const_eval_flatten
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (value : RiscV.Word 64) (sourceValue : PanValue (RiscV.Word 64))
+    (hsourceEval : evalPanSemStateExp source (.const value) = some sourceValue) :
+    evalCrepRuntimeExps target
+      (compileExpHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        (.const value)).1 = some (panValueFlatten sourceValue) := by
+  have hsourceValue : sourceValue = .word value := by
+    have hword : PanValue.word value = sourceValue := by
+      simpa [evalPanSemStateExp, evalPanValueExp] using hsourceEval
+    exact hword.symm
+  subst sourceValue
+  simp [compileExpHOL, evalCrepRuntimeExps, evalCrepRuntimeExp, panValueFlatten]
+
+inductive compileArgConstOrLocal : Exp (RiscV.Word 64) → Prop where
+  | const (value : RiscV.Word 64) : compileArgConstOrLocal (.const value)
+  | localVar (name : String) : compileArgConstOrLocal (.var .local name)
+
+/-! Call-argument list case when every argument is a constant or local
+variable. This composes the exact Const/Local `compile_exp_val_rel` cases
+through HOL `compile_args`; compound expressions remain to be ported. -/
+theorem compileArgsHOL_constOrLocal_eval_flatten
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (expressions : List (Exp (RiscV.Word 64)))
+    (values : List (PanValue (RiscV.Word 64)))
+    (hlocals : localsRel context source.locals target.locals)
+    (hsupported : ∀ expression, expression ∈ expressions →
+      compileArgConstOrLocal expression)
+    (hsource : evalPanSemStateExps source expressions = some values) :
+    evalCrepRuntimeExps target
+      (compileArgsHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        expressions) = some (values.flatMap panValueFlatten) := by
+  let compilerContext : PanToCrepHOLContext (RiscV.Word 64) :=
+    { vars := context.vars, funcs := context.funcs,
+      eids := context.eids, vmax := context.vmax }
+  have heach : ∀ expression, expression ∈ expressions → ∀ value,
+      evalPanSemStateExp source expression = some value →
+      evalCrepRuntimeExps target (compileExpHOL compilerContext expression).1 =
+        some (panValueFlatten value) := by
+    intro expression hmem value heval
+    cases hsupported expression hmem with
+    | const word =>
+        exact compileExpHOL_const_eval_flatten context source target word value heval
+    | localVar name =>
+        exact compileExpHOL_local_eval_flatten context source target name value
+          hlocals heval
+  simpa [compilerContext] using
+    evalMapCompileArgsFlat_of_each compilerContext source target expressions values
+      hsource heach
+
 /-! Derive the production Crep callee lookup and parameter locals from the
 state-owned source/target code maps. The argument words are arbitrary; their
 length must match the flattened source parameter shapes. The HOL compiled

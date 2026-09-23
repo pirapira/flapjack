@@ -1,5 +1,6 @@
 import Flapjack.HolRef
 import Flapjack.Pancake.Proofs.PanStructs
+import Flapjack.Pancake.Semantics.PanProps
 import Flapjack.Pancake.Semantics.PanSem
 
 /-!
@@ -40,16 +41,73 @@ mutual
   decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
 end
 
+/-! Structural Bool equality for the translated Shape datatype. It performs
+    the HOL constructor equality cases recursively and avoids a BEq instance
+    for Shape or String. -/
 mutual
-  /-- Flapjack support predicate mirroring the conditions in HOL
-      `v_flds_ok_def`, but not an exact port. HOL returns a boolean (`T`/`F`);
-      this definition returns `Prop`. It also searches the Lean `StructContext`
-      with `[BEq String]` via `lookupInfo`, whereas HOL uses equality-based
-      `ALOOKUP` over an association list. The equivalence of that key comparison
-      (and thus lookup behavior) is not established. `StructInfo.size` is an
-      extra Lean field absent from the HOL projection; this predicate reads
-      only `.fields`. Keep the HOL tag off until the boolean/type and lookup
-      representations are aligned. -/
+  def panStructShapeEqBool : Shape → Shape → Bool
+    | .one, .one => true
+    | .comb left, .comb right => panStructShapeListEqBool left right
+    | .named left, .named right => decide (left = right)
+    | _, _ => false
+  termination_by left right => sizeOf left + sizeOf right
+  decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+
+  def panStructShapeListEqBool : List Shape → List Shape → Bool
+    | [], [] => true
+    | left :: lefts, right :: rights =>
+        panStructShapeEqBool left right && panStructShapeListEqBool lefts rights
+    | _, _ => false
+  termination_by left right => sizeOf left + sizeOf right
+  decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+end
+
+mutual
+  /-- Bool-valued support definition with equations matching HOL
+      `v_flds_ok_def`. It is deliberately untagged: this equality-lookup model
+      over Lean `StructContext` has not yet been connected to the production
+      `lookupInfo`/`BEq` state representation used by `compile_correct`.
+      `StructInfo` also has a Lean-only `shapedFields` cache; this definition
+      ignores it. The direct HOL fixture checks representative equations, not
+      that missing production-state bridge. -/
+  def panStructValueFieldsOkBool (structs : StructContext) :
+      PanValue α → Bool
+    | .word _ => true
+    | .rStruct values => panStructValuesFieldsOkBool structs values
+    | .nStruct name fields =>
+        panStructFieldValuesFieldsOkBool structs fields &&
+          match panPropsALookupEq name structs with
+          | none => false
+          | some info =>
+              decide (fields.map Prod.fst = info.fields.map Prod.fst) &&
+              panStructShapeListEqBool
+                (fields.map (panSemShapeOf ∘ Prod.snd)) (info.fields.map Prod.snd)
+  termination_by value => sizeOf value
+  decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+
+  def panStructValuesFieldsOkBool (structs : StructContext) :
+      List (PanValue α) → Bool
+    | [] => true
+    | value :: values =>
+        panStructValueFieldsOkBool structs value &&
+          panStructValuesFieldsOkBool structs values
+  termination_by values => sizeOf values
+  decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+
+  def panStructFieldValuesFieldsOkBool (structs : StructContext) :
+      List (FieldName × PanValue α) → Bool
+    | [] => true
+    | (_, value) :: fields =>
+        panStructValueFieldsOkBool structs value &&
+          panStructFieldValuesFieldsOkBool structs fields
+  termination_by fields => sizeOf fields
+  decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+end
+
+mutual
+  /-- Prop-valued Flapjack convenience predicate mirroring the equations of
+      HOL `v_flds_ok_def`. It is not an exact port: HOL returns Bool, while
+      this declaration returns Prop and uses `[BEq String]` lookup. -/
   def panStructValueFieldsOk [BEq String] (structs : StructContext) :
       PanValue α → Prop
     | .word _ => True
@@ -82,15 +140,9 @@ mutual
 end
 
 mutual
-  /-- Flapjack support predicate mirroring the conditions in HOL
-      `is_wf_shape_v_def`, but not an exact port. HOL returns a boolean
-      (`T`/`F`); this definition returns `Prop`. It also searches the Lean
-      `StructContext` with `[BEq String]` via `lookupInfo`, whereas HOL uses
-      equality-based `ALOOKUP` over an association list. The equivalence of that
-      key comparison (and thus lookup behavior) is not established.
-      `StructInfo.size` is an extra Lean field absent from the HOL projection;
-      this predicate reads only `.fields`. Keep the HOL tag off until the
-      boolean/type and lookup representations are aligned. -/
+  /-- Prop-valued Flapjack convenience predicate mirroring the equations of
+      HOL `is_wf_shape_v_def`. It is not an exact port: HOL returns Bool, while
+      this declaration returns Prop and uses `[BEq String]` lookup. -/
   def panStructValueShapeWf [BEq String] (structs : StructContext) :
       PanValue α → Prop
     | .word _ => True
@@ -208,9 +260,12 @@ theorem panStruct_mapKeys_preserved (entries : InfoMap α)
 /-- A finite-map representation of the map-valued fields in HOL's
     `panSem$state`, together with its exact lookup view in the production
     `PanSemState` evaluator. `entries` are authoritative; the agreement fields
-    make the evaluator's total functions exactly the corresponding finite-map
-    lookup. `Nodup` records the key uniqueness inherent in HOL finite maps. -/
-structure PanStructFiniteState [BEq String] (α : Type u) (ffi : Type v) where
+    make locals, globals, and exception-shape lookup use HOL equality directly.
+    The `LawfulBEq String` parameter ensures production code-map lookup agrees
+    with equality-based HOL `FLOOKUP`. `Nodup` records the key uniqueness
+    inherent in HOL finite maps. -/
+structure PanStructFiniteState [BEq String] [LawfulBEq String]
+    (α : Type u) (ffi : Type v) where
   runtime : PanSemState α ffi
   locals : InfoMap (PanValue α)
   globals : InfoMap (PanValue α)
@@ -219,16 +274,16 @@ structure PanStructFiniteState [BEq String] (α : Type u) (ffi : Type v) where
   globals_nodup : (globals.map Prod.fst).Nodup
   exceptionShapes_nodup : (exceptionShapes.map Prod.fst).Nodup
   code_nodup : (runtime.code.map Prod.fst).Nodup
-  locals_lookup : ∀ name, runtime.locals name = lookupInfo name locals
-  globals_lookup : ∀ name, runtime.globals name = lookupInfo name globals
+  locals_lookup : ∀ name, runtime.locals name = panPropsALookupEq name locals
+  globals_lookup : ∀ name, runtime.globals name = panPropsALookupEq name globals
   exceptionShapes_lookup :
-    ∀ name, runtime.exceptionShapes name = lookupInfo name exceptionShapes
+    ∀ name, runtime.exceptionShapes name = panPropsALookupEq name exceptionShapes
 
 /-- Build the production evaluator view from explicit HOL-shaped finite maps.
     The only side conditions are the key uniqueness conditions that are part
     of the finite-map representation itself; lookup agreement is constructed
     definitionally instead of being added as a theorem premise. -/
-def panStructFiniteStateFromMaps [BEq String]
+def panStructFiniteStateFromMaps [BEq String] [LawfulBEq String]
     (runtime : PanSemState α ffi)
     (locals globals : InfoMap (PanValue α)) (exceptionShapes : InfoMap Shape)
     (code : PanSemCodeMap α)
@@ -237,9 +292,9 @@ def panStructFiniteStateFromMaps [BEq String]
     (exceptionShapes_nodup : (exceptionShapes.map Prod.fst).Nodup)
     (code_nodup : (code.map Prod.fst).Nodup) : PanStructFiniteState α ffi where
   runtime := { runtime with
-    locals := fun name => lookupInfo name locals
-    globals := fun name => lookupInfo name globals
-    exceptionShapes := fun name => lookupInfo name exceptionShapes
+    locals := fun name => panPropsALookupEq name locals
+    globals := fun name => panPropsALookupEq name globals
+    exceptionShapes := fun name => panPropsALookupEq name exceptionShapes
     code := code }
   locals := locals
   globals := globals
@@ -264,7 +319,7 @@ def panStructFiniteStateFromMaps [BEq String]
 /-- Map all HOL finite-map fields while keeping the same finite key support.
     The result is again related to the production evaluator state by exact
     lookup equations. -/
-def panStructConvertFiniteState [BEq String]
+def panStructConvertFiniteState [BEq String] [LawfulBEq String]
     (context : StructPassContext) (state : PanStructFiniteState α ffi) :
     PanStructFiniteState α ffi where
   runtime := panStructConvertState context state.runtime
@@ -303,14 +358,56 @@ def panStructConvertFiniteState [BEq String]
     exact state.code_nodup
   locals_lookup := by
     intro name
-    simp [panStructConvertState, lookupInfo_mapValues, state.locals_lookup]
+    simp [panStructConvertState, panPropsALookupEq_mapValues, state.locals_lookup]
   globals_lookup := by
     intro name
-    simp [panStructConvertState, lookupInfo_mapValues, state.globals_lookup]
+    simp [panStructConvertState, panPropsALookupEq_mapValues, state.globals_lookup]
   exceptionShapes_lookup := by
     intro name
-    simp [panStructConvertState, lookupInfo_mapValues,
+    simp [panStructConvertState, panPropsALookupEq_mapValues,
       state.exceptionShapes_lookup]
+
+@[simp] theorem panStructConvertFiniteState_locals_support [BEq String]
+    [LawfulBEq String] (context : StructPassContext)
+    (state : PanStructFiniteState α ffi) :
+    (panStructConvertFiniteState context state).locals.map Prod.fst =
+      state.locals.map Prod.fst := by
+  apply panStruct_mapKeys_preserved
+  intro entry
+  cases entry
+  rfl
+
+@[simp] theorem panStructConvertFiniteState_globals_support [BEq String]
+    [LawfulBEq String] (context : StructPassContext)
+    (state : PanStructFiniteState α ffi) :
+    (panStructConvertFiniteState context state).globals.map Prod.fst =
+      state.globals.map Prod.fst := by
+  apply panStruct_mapKeys_preserved
+  intro entry
+  cases entry
+  rfl
+
+@[simp] theorem panStructConvertFiniteState_exceptionShapes_support [BEq String]
+    [LawfulBEq String] (context : StructPassContext)
+    (state : PanStructFiniteState α ffi) :
+    (panStructConvertFiniteState context state).exceptionShapes.map Prod.fst =
+      state.exceptionShapes.map Prod.fst := by
+  apply panStruct_mapKeys_preserved
+  intro entry
+  cases entry
+  rfl
+
+@[simp] theorem panStructConvertFiniteState_code_support [BEq String]
+    [LawfulBEq String] (context : StructPassContext)
+    (state : PanStructFiniteState α ffi) :
+    (panStructConvertFiniteState context state).runtime.code.map Prod.fst =
+      state.runtime.code.map Prod.fst := by
+  change (panStructConvertCode context state.runtime.code).map Prod.fst =
+    state.runtime.code.map Prod.fst
+  apply panStruct_mapKeys_preserved
+  intro entry
+  cases entry
+  rfl
 
 def panStructConvertLocalMap (locals : VarName → Option (PanValue α)) :=
   fun name => (locals name).map panStructConvertValue
@@ -399,7 +496,7 @@ theorem panStructSkipEvaluatorSupport
     keys. This remains evaluator support: the full `compile_correct` premises
     and FEVERY/shape-map/result conclusions are not asserted here. -/
 theorem panStructSkipFiniteMapEvaluatorSupport
-    [BEq String] [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [BEq String] [LawfulBEq String] [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : StructPassContext)

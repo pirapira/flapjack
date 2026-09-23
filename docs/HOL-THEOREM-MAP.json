@@ -8,6 +8,14 @@
     "reviewer": "Codex (reference inventory)"
   },
   {
+    "hol_path": "cakeml/compiler/backend/backend_commonScript.sml",
+    "hol_name": "word_add_carry_def",
+    "lean_path": "Flapjack/Compiler/Backend/BackendCommon.lean",
+    "lean_name": "wordAddCarryHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source formula and direct numeric HOL-EVAL comparison)"
+  },
+  {
     "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "var_exp_def",
     "lean_path": "Flapjack/Pancake/PanLang.lean",

@@ -1901,6 +1901,46 @@ theorem crepSimpExpCorrect1HolFiniteWordSource {ι : Type} {σ : Type}
           expression).map PanWordLab.word :=
             congrArg (Option.map PanWordLab.word) hsimp
 
+/-! Canonical `Fin width` all-width instance of the source-runtime result.
+    Unlike the arbitrary `HolFiniteDimension` theorem above, this fixes the
+    index-to-bit map to Lean's standard `Fin` ordering for every positive
+    width. It remains untagged: this canonical Lean representation still does
+    not prove that production `evalCrepRuntimeExp`'s transported word
+    operations and memory loads are HOL `crepSem$eval` for every word type. -/
+theorem crepSimpExpCorrect1HolWordBitsSourceRuntime {width : Nat} [NeZero width]
+    {σ : Type}
+    (f : (List Nat × CrepProg (Fin width → Bool)) →
+      (List Nat × CrepProg (Fin width → Bool)))
+    (state : CrepHolState (Fin width → Bool) σ)
+    (expression : CrepExp (Fin width → Bool))
+    (h : (evalCrepRuntimeExp
+      (state.toHolFiniteWordSourceRuntime
+        (instFinHolFiniteDimension (width := width))) expression).map
+        PanWordLab.word ≠ none) :
+    (evalCrepRuntimeExp
+      (CrepHolState.toHolFiniteWordSourceRuntime
+        (instFinHolFiniteDimension (width := width))
+        (crepArithHolFiniteDimensionMapCode f state))
+      (crepSimpExp
+        (fun n => bitVecToHolWordBits (BitVec.ofNat width n)) expression)).map
+        PanWordLab.word =
+    (evalCrepRuntimeExp
+      (state.toHolFiniteWordSourceRuntime
+        (instFinHolFiniteDimension (width := width))) expression).map
+        PanWordLab.word := by
+  let dimension : HolFiniteDimension (Fin width) :=
+    instFinHolFiniteDimension (width := width)
+  letI : HolFiniteDimension (Fin width) := dimension
+  have hFromNat :
+      (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n)) =
+        (fun n => bitVecToHolWordBits (BitVec.ofNat dimension.width n)) := by
+    funext value
+    rfl
+  have hresult := crepSimpExpCorrect1HolFiniteWordSource (f := f)
+    (state := state) (expression := expression) h
+  rw [hFromNat] at hresult
+  exact hresult
+
 
 
 /-- Flapjack's RISC-V specialization of HOL simp_exp_correct1.

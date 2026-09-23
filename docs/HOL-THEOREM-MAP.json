@@ -267,6 +267,30 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepMulConst_holWordBits",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only finite-index/BitVec naturality for the arithmetic multiplier rewrite; required for a generic word-carrier evaluator proof and has no standalone HOL declaration"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepDest2ExpFuel_holWordBits",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only finite-index word to BitVec transport for the executable recognizer; HOL applies dest_2exp directly to its polymorphic word carrier"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepDest2Exp_holWordBits",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only width-bounded wrapper around finite-index recognizer transport; no separate HOL declaration"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpMulEval",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Target-specific recursive simp multiplication case; consumes only the documented untagged RISC-V evaluator support lemma"
@@ -2883,7 +2907,7 @@
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "statement_status": "documented_mismatch",
-    "reviewer": "Untagged: context-threading globalCompileDecsThreaded over arbitrary GlobalPassContext bytesInWord/fromNat and arbitrary [Add α]/[Mul α] with non-lawful [BEq String]; exact canonical-word-context port tracked by a dependency bead.",
+    "reviewer": "Untagged: context-threading globalCompileDecsThreaded over arbitrary GlobalPassContext bytesInWord/fromNat and arbitrary [Add \u03b1]/[Mul \u03b1] with non-lawful [BEq String]; exact canonical-word-context port tracked by a dependency bead.",
     "hol_name": "compile_decs_decls_thm",
     "lean_name": "compile_decs_decls_thm_threaded"
   },
@@ -2891,7 +2915,7 @@
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "statement_status": "documented_mismatch",
-    "reviewer": "Untagged: context-threading globalCompileDecsThreaded over arbitrary GlobalPassContext bytesInWord/fromNat and arbitrary [Add α]/[Mul α] with non-lawful [BEq String]; exact canonical-word-context port tracked by a dependency bead.",
+    "reviewer": "Untagged: context-threading globalCompileDecsThreaded over arbitrary GlobalPassContext bytesInWord/fromNat and arbitrary [Add \u03b1]/[Mul \u03b1] with non-lawful [BEq String]; exact canonical-word-context port tracked by a dependency bead.",
     "hol_name": "compile_decs_EVERY_is_function",
     "lean_name": "compile_decs_EVERY_is_function_threaded"
   },
@@ -2899,7 +2923,7 @@
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "statement_status": "documented_mismatch",
-    "reviewer": "Untagged: context-threading globalCompileDecsThreaded over arbitrary GlobalPassContext bytesInWord/fromNat and arbitrary [Add α]/[Mul α] with non-lawful [BEq String]; exact canonical-word-context port tracked by a dependency bead.",
+    "reviewer": "Untagged: context-threading globalCompileDecsThreaded over arbitrary GlobalPassContext bytesInWord/fromNat and arbitrary [Add \u03b1]/[Mul \u03b1] with non-lawful [BEq String]; exact canonical-word-context port tracked by a dependency bead.",
     "hol_name": "compile_decls_append",
     "lean_name": "compile_decls_append_threaded"
   },
@@ -4822,5 +4846,21 @@
     "statement_status": "no_hol_reference_pending_classification",
     "lean_name": "panValueFfiSharedStore_stateRel_target",
     "reviewer": "Flapjack-only: a source panValueFfiSharedStore `.stored` outcome (HOL sh_mem_store FFI_return) drives the target crepRuntimeSharedMem MappedWrite dispatch and the ffi-only stateRel post-state; direct oracle scripts/hol-probes/crep_runtime_shared_mem_probe.out (store_returned)."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "panValueFfiSharedLoad_stateRel_final",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "deepseek-two: Flapjack-only source-to-target shared-memory FFI_final step; HOL sh_mem_load FFI_final maps to target FinalFFI with cleared locals; oracle row load_final in scripts/hol-probes/crep_runtime_shared_mem_probe.out"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "panValueFfiSharedStore_stateRel_final",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "deepseek-two: Flapjack-only source-to-target shared-memory FFI_final step; HOL sh_mem_store FFI_final maps to target FinalFFI with unchanged state; oracle row store_final in scripts/hol-probes/crep_runtime_shared_mem_probe.out"
   }
 ]

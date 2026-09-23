@@ -61,3 +61,10 @@ val _ = print_eval "store_returned"
 val _ = print_eval "store_out_of_domain"
   ``case panSem$sh_mem_store (0xABw:8 word) (16w:8 word) 0 ^(base_with returning_ffi) of
       (res,s') => (res, LENGTH s'.ffi.io_events)``
+val _ = print_eval "store_final"
+  ``case panSem$sh_mem_store (0xABw:8 word) (8w:8 word) 0 ^(base_with final_ffi) of
+      (res,s') =>
+        ((case res of
+            SOME (FinalFFI (Final_event (SharedMem MappedWrite) [0w] bytes out)) => T
+          | _ => F),
+         LENGTH s'.ffi.io_events)``

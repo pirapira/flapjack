@@ -86,6 +86,11 @@ from inside Lean. A declaration without the attribute is Flapjack-specific
 infrastructure; if it has correctness content, say in its docstring why it
 has no HOL original.
 
+If the HOL script declares the same name more than once, append the exact
+source line to the tag, for example `@[hol "cakeml/...Script.sml" "name" 123]`.
+The reference checker rejects ambiguous names without a line and lines that
+do not declare that name.
+
 **Lean names may differ; the tag may not.** Naming may follow Lean
 conventions (`pcCompileCorrect`, `stateRel`), and keeping the HOL name
 verbatim is also fine. Whatever the name, the `@[hol]` tag carries the exact

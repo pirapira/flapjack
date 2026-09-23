@@ -671,6 +671,66 @@ def memStoreHOL {width : Nat}
     some (fun current => if current = address then value else memory current)
   else none
 
+/-- Width-generic port of HOL `alignment$aligned` (`src/n-bit/alignmentScript.sml:20`):
+    `aligned p w = (align p w = w)`, where `align` clears the low `p` bits, so
+    `aligned p w` holds exactly when those low bits are already zero.  HOL
+    standard library, so no HOL tag. -/
+def riscvAlignedHOL {width : Nat} (p : Nat) (address : RiscV.Word width) : Bool :=
+  (address >>> p) <<< p = address
+
+/-- Width-generic exact port of HOL `mem_load_32_def`
+    (`cakeml/compiler/backend/semantics/wordSemScript.sml:70-81`).  When the
+    address is `aligned 2`, the four bytes at `w`, `w+1`, `w+2`, `w+3` of the
+    word stored at `byte_align w` are reassembled into a 32-bit word; `Loc` and
+    out-of-domain addresses yield `NONE`. -/
+@[hol "cakeml/compiler/backend/semantics/wordSemScript.sml" "mem_load_32_def"]
+def memLoad32HOL {width : Nat} [NeZero width]
+    (memory : RiscV.Word width → LoopValue (RiscV.Word width))
+    (domain : RiscV.Word width → Prop) [DecidablePred domain]
+    (bigEndian : Bool) (address : RiscV.Word width) : Option (RiscV.Word 32) :=
+  if riscvAlignedHOL 2 address then
+    let aligned := riscvByteAlignHOL address
+    match memory aligned with
+    | .loc _ _ => none
+    | .word value =>
+        if domain aligned then
+          some (riscvWordOfBytesHOL bigEndian (0 : RiscV.Word 32)
+            [riscvGetByteHOL bigEndian address value,
+             riscvGetByteHOL bigEndian (address + 1) value,
+             riscvGetByteHOL bigEndian (address + 2) value,
+             riscvGetByteHOL bigEndian (address + 3) value])
+        else none
+  else none
+
+/-- Width-generic exact port of HOL `mem_store_32_def`
+    (`cakeml/compiler/backend/semantics/wordSemScript.sml:84-97`).  When the
+    address is `aligned 2`, the four bytes of the 32-bit `value` are written at
+    `w`, `w+1`, `w+2`, `w+3` of the stored word, leaving every other address
+    unchanged; `Loc` and out-of-domain addresses yield `NONE`. -/
+@[hol "cakeml/compiler/backend/semantics/wordSemScript.sml" "mem_store_32_def"]
+def memStore32HOL {width : Nat} [NeZero width]
+    (memory : RiscV.Word width → LoopValue (RiscV.Word width))
+    (domain : RiscV.Word width → Prop) [DecidablePred domain]
+    (bigEndian : Bool) (address : RiscV.Word width) (value : RiscV.Word 32) :
+    Option (RiscV.Word width → LoopValue (RiscV.Word width)) :=
+  if riscvAlignedHOL 2 address then
+    let aligned := riscvByteAlignHOL address
+    match memory aligned with
+    | .loc _ _ => none
+    | .word stored =>
+        if domain aligned then
+          let v0 := riscvSetByteHOL bigEndian address stored
+            (riscvGetByteHOL bigEndian (0 : RiscV.Word 32) value)
+          let v1 := riscvSetByteHOL bigEndian (address + 1) v0
+            (riscvGetByteHOL bigEndian (1 : RiscV.Word 32) value)
+          let v2 := riscvSetByteHOL bigEndian (address + 2) v1
+            (riscvGetByteHOL bigEndian (2 : RiscV.Word 32) value)
+          let v3 := riscvSetByteHOL bigEndian (address + 3) v2
+            (riscvGetByteHOL bigEndian (3 : RiscV.Word 32) value)
+          some (fun current => if current = aligned then .word v3 else memory current)
+        else none
+  else none
+
 /-! FLAPJACK-SPECIFIC (not exact tagged ports).  The following byte-array
     helpers are the 64-bit RISC-V instances of HOL's polymorphic word memory
     codec.  The exact width-generic ports are `readBytearrayHOL`,

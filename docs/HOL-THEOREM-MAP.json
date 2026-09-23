@@ -160,6 +160,22 @@
     "reviewer": "Codex (source comparison; total word_loc memory and word-set domain as in HOL, =+ update leaves other addresses unchanged)"
   },
   {
+    "hol_path": "cakeml/compiler/backend/semantics/wordSemScript.sml",
+    "hol_name": "mem_load_32_def",
+    "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",
+    "lean_name": "memLoad32HOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; width-generic, requires aligned 2, total word_loc memory and word-set domain, four get_byte bytes reassembled with word_of_bytes be (0w:word32))"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/wordSemScript.sml",
+    "hol_name": "mem_store_32_def",
+    "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",
+    "lean_name": "memStore32HOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; width-generic, requires aligned 2, four set_byte writes at w..w+3, =+ update leaves other addresses unchanged)"
+  },
+  {
     "hol_path": "cakeml/misc/miscScript.sml",
     "hol_name": "read_bytearray_def",
     "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",

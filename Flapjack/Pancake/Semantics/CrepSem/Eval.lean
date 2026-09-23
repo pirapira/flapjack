@@ -430,6 +430,15 @@ def evalCrepHolWordBitsExpWordLab [NeZero width]
     CrepExp (Fin width → Bool) → Option (PanWordLab (Fin width → Bool)) :=
   fun expression => (evalCrepHolWordBitsExp state expression).map PanWordLab.word
 
+private theorem evalCrepRuntimeExps_toMapM_wordBits [NeZero width]
+    (state : CrepRuntimeState (Fin width → Bool) σ)
+    (expressions : List (CrepExp (Fin width → Bool))) :
+    evalCrepRuntimeExps state expressions =
+      expressions.mapM (evalCrepRuntimeExp state) := by
+  induction expressions with
+  | nil => simp [evalCrepRuntimeExps]
+  | cons head tail ih => simp [evalCrepRuntimeExps, ih]
+
 /-! Production evaluator constructor equations. These are kernel-checked
     correspondences between the production evaluator over the finite-index
     word state and the transported source-shaped evaluator; they supply
@@ -476,6 +485,32 @@ theorem evalCrepRuntimeExp_load_toHolWordBits [NeZero width]
       simp [crepRuntimeLoad, CrepHolState.toRuntime,
         CrepHolState.toBitVecState, mapCrepHolWordLab, panTheWord,
         holWordBitsToBitVec_bitVecToHolWordBits] <;> rfl
+
+theorem evalCrepRuntimeExp_op_toHolWordBits [NeZero width]
+    (state : CrepHolState (Fin width → Bool) σ) (operator : BinOp)
+    (expressions : List (CrepExp (Fin width → Bool)))
+    (ih : evalCrepRuntimeExps state.toHolWordBitsRuntime expressions =
+      ((expressions.map (mapCrepExpWord holWordBitsToBitVec)).mapM
+        (evalCrepHolExp state.toBitVecState)).map
+          (List.map bitVecToHolWordBits)) :
+    evalCrepRuntimeExp state.toHolWordBitsRuntime (.op operator expressions) =
+      evalCrepHolWordBitsExp state (.op operator expressions) := by
+  simp only [evalCrepRuntimeExp, evalCrepHolWordBitsExp, evalCrepHolExp,
+    mapCrepExpWord] at ih ⊢
+  rw [← evalCrepRuntimeExps_toMapM_wordBits]
+  rw [ih]
+  cases hvalues :
+      (expressions.map (mapCrepExpWord holWordBitsToBitVec)).mapM
+        (evalCrepHolExp state.toBitVecState) with
+  | none => simp
+  | some values =>
+      simp
+      rw [crepHolWordBits_wordOp_toBitVec state operator
+        (List.map bitVecToHolWordBits values)]
+      simp [CrepHolState.toBitVecState, CrepHolState.toRuntime, wordOpHOL,
+        Function.comp_def, holWordBitsToBitVec_bitVecToHolWordBits,
+        RiscV.panRiscVMemoryModelForEndian,
+        panRiscVWordOp_eq_wordOpHOL]
 
 /-! The next desired bridge would show that the production runtime evaluator on
     the finite-index HOL-word carrier equals the transported source evaluator

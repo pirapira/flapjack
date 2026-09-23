@@ -3,7 +3,8 @@ import Flapjack.Pancake.Semantics.LoopSem
 /-!
 # Parity for the word-parametric `loopSem$evaluate` machine
 
-The equation shapes are checked definitionally against `evaluate_def`
+The equation shapes are proved from the Lean `evaluateLoop` equations; their
+reviewed shape follows `evaluate_def`
 (`cakeml/pancake/semantics/loopSemScript.sml:278-360`) at a fully generic
 word/FFI type, so the same machine serves the source probe (`W = Nat`,
 `F = LoopWordLoc`) and the production `BitVec` IR.
@@ -11,10 +12,10 @@ word/FFI type, so the same machine serves the source probe (`W = Nat`,
 The executable observations reuse the checked-in HOL-EVAL fixture
 `scripts/hol-probes/loop_sem_evaluate_probe.out`, whose state is
 `(8,'ffi) loopSem$state` (`W = BitVec 8`).  The rows that do not invoke an
-effect hook are reproduced exactly: `skip`, `break`, `continue`, the tail call
-whose callee returns `NONE`, and the clock-zero `tick` timeout.  The
-`assign`/`seq_return` rows exercise the expression hook and are covered by the
-production-hook regression (`flapjack-s6a.3`).
+effect hook are compared against that direct HOL probe: `skip`, `break`,
+`continue`, the tail call whose callee returns `NONE`, and the clock-zero
+`tick` timeout.  The `assign`/`seq_return` rows exercise the expression hook
+and are covered by the production-hook regression (`flapjack-s6a.3`).
 -/
 
 namespace Flapjack.Test.LoopSemEvaluateParity
@@ -73,7 +74,7 @@ def probeState (clock : Nat) : LoopMachineState (BitVec 8) LoopWordLoc :=
   , clock := clock
   , code := []
   , be := false
-  , ffi := .word 0
+  , ffi := trivialFfiState LoopWordLoc (.word 0)
   , baseAddr := 0
   , topAddr := 0 }
 

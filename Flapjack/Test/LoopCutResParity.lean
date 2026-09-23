@@ -24,7 +24,7 @@ def probeState (locals : Nat → Option LoopWordLoc) (clock : Nat) :
     clock := clock
     code := []
     be := false
-    ffi := 0
+    ffi := trivialFfiState Nat 0
     baseAddr := 4
     topAddr := 100 }
 

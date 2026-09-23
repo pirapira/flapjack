@@ -291,6 +291,54 @@ theorem compileField_mem_or_zero
           · exact Or.inl (List.mem_of_mem_drop hinput)
           · exact Or.inr hzero
 
+/-- Flapjack-only support for the exact HOL `mem_comp_field` statement below:
+    a valid field index excludes the source definition's zero fallback. -/
+private theorem compileField_mem_of_index_lt
+    [OfNat α 0] (index : Nat) (shapes : List Shape)
+    (expressions : List (CrepExp α)) (candidate : CrepExp α)
+    (hindex : index < shapes.length)
+    (hmem : candidate ∈ (compileField index shapes expressions).1) :
+    candidate ∈ expressions := by
+  induction shapes generalizing index expressions with
+  | nil => simp at hindex
+  | cons shape shapes ih =>
+      cases index with
+      | zero =>
+          exact List.mem_of_mem_take (by simpa [compileField] using hmem)
+      | succ index =>
+          have hindex' : index < shapes.length := by simpa using hindex
+          have hmem' : candidate ∈
+              (compileField index shapes
+                (expressions.drop (Shape.shapeSize shape))).1 := by
+            simpa [compileField] using hmem
+          exact List.mem_of_mem_drop
+            (ih index (expressions.drop (Shape.shapeSize shape)) hindex' hmem')
+
+/-- HOL `mem_comp_field`: with a valid record-field index and matching
+    source record shape, every expression selected by the pair-valued
+    `compileField` is from the flattened record input. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "mem_comp_field"]
+theorem compileField_mem_of_record_shape
+    [OfNat α 0] (shapes : List Shape) (index : Nat)
+    (expressions : List (CrepExp α)) (selectedShape : Shape)
+    (candidate : CrepExp α) (selected : List (CrepExp α))
+    (values : List (PanValue α))
+    (hindex : index < values.length)
+    (_hlength : expressions.length =
+      Shape.shapeSize (panSemShapeOf (.rStruct values)))
+    (hcompiled : compileField index shapes expressions =
+      (selected, selectedShape))
+    (hshape : Shape.comb shapes = panSemShapeOf (.rStruct values))
+    (hmem : candidate ∈ selected) :
+    candidate ∈ expressions := by
+  have hshapes : shapes = values.map panSemShapeOf :=
+    Shape.comb.inj (by simpa [panSemShapeOf] using hshape)
+  have hindex' : index < shapes.length := by
+    simpa [hshapes] using hindex
+  have hmem' : candidate ∈ (compileField index shapes expressions).1 := by
+    simpa [hcompiled] using hmem
+  exact compileField_mem_of_index_lt index shapes expressions candidate hindex' hmem'
+
 /-- HOL `filter_not_mem_self`: filtering a list by non-membership in that
     same list removes every element. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "filter_not_mem_self"]

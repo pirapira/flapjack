@@ -2648,6 +2648,22 @@
     "reviewer": "Codex (source comparison)"
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "compileField_mem_of_index_lt",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (Flapjack support: excludes unreachable zero fallback for valid field index)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "mem_comp_field",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "compileField_mem_of_record_shape",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source statement and pair-valued compileField comparison)"
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
     "hol_name": "MAX_LIST_APPEND",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",

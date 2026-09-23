@@ -5,6 +5,17 @@ import Flapjack.Pancake.Proofs.PanToCrep
 
 namespace Flapjack.Test.PanToCrepUtilitiesParity
 
+/-- The exact HOL `mem_comp_field` boundary selects an expression already in
+    the flattened one-field record. -/
+theorem mem_comp_field_fixture (candidate : CrepExp Nat)
+    (hmem : candidate ∈ ([.const 4] : List (CrepExp Nat))) :
+    candidate ∈ ([.const 4] : List (CrepExp Nat)) := by
+  exact compileField_mem_of_record_shape
+    [.one] 0 [.const 4] .one candidate [.const 4] [.word 4]
+    (by decide) (by simp [panSemShapeOf, Shape.shapeSize])
+    (by simp [compileField])
+    (by simp [panSemShapeOf]) hmem
+
 /-- HOL `filter_not_mem_self` on a concrete list. -/
 theorem filter_not_mem_self_fixture :
     ([1, 2, 3] : List Nat).filter (fun x => decide (x ∉ [1, 2, 3])) = [] :=

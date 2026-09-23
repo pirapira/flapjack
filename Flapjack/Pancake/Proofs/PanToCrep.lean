@@ -14,6 +14,7 @@ import Flapjack.Pancake.Semantics.PanCommonProps
 import Flapjack.Pancake.PanToCrep.Compile
 import Flapjack.Pancake.PanToCrep.CompileProg
 import Flapjack.Pancake.Proofs.PanToCrep.CompileExpVmax
+import Flapjack.CrepeCompileExpVariables
 import Flapjack.PanToCrepMaxList
 
 /-!
@@ -850,6 +851,32 @@ def codeRel [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
       let nextContext := ctxtFc context.funcs context.eids variables shapes names
       FLOOKUP targetCode function = some
         (names, compileCodeRelProg nextContext program)
+
+/-- Exact port of HOL `compile_exp_not_mem_load_glob`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:2013`). The finite-map
+    context fields are passed unchanged to `compileExpHOL`; the source code
+    map is bridged from Pancake's executable association list as in the
+    surrounding `codeRel` interface. The state, code, and locals relations
+    remain explicit HOL premises, and the conclusion traverses the nested
+    Crepe expressions with `crepExps`. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "compile_exp_not_mem_load_glob"]
+theorem compileExpNotMemLoadGlob [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
+    [CrepBytesInWord α]
+    (context : PanToCrepProofContext α) (expression : Exp α)
+    (source : PanSemState α (FfiState σ)) (target : CrepRuntimeState α σ)
+    (expressions : List (CrepExp α)) (shape : Shape) (address : α)
+    (hcompile : compileExpHOL
+      { vars := context.vars, funcs := context.funcs,
+        eids := context.eids, vmax := context.vmax } expression = (expressions, shape))
+    (_hstate : stateRel source target)
+    (_hcode : codeRel context (panSemCodeAsLookup source.code) target.code)
+    (_hlocals : localsRel context source.locals target.locals) :
+    CrepExp.loadGlob address ∉ expressions.flatMap crepExps := by
+  have hsafe := compileExpHOL_not_mem_loadGlob
+    { vars := context.vars, funcs := context.funcs,
+      eids := context.eids, vmax := context.vmax }
+    expression address
+  simpa only [hcompile] using hsafe
 
 /-- HOL `code_rel_imp`: an entry in related source code is localised and
     has the corresponding function metadata and compiled target entry. -/

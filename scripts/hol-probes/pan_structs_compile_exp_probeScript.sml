@@ -49,3 +49,14 @@ val _ = print_eval "loadbyte"
 val _ = print_eval "fallback"
   ``pan_structs$compile_exp ^ctxt
       (panLang$Const (0w : 8 word))``;
+val _ = print_eval "list_map"
+  ``pan_structs$compile_exps ^ctxt
+      [panLang$NStruct «Pair»
+        [(«right», panLang$Const (2w : 8 word));
+         («left», panLang$Const (1w : 8 word))];
+       panLang$Const (3w : 8 word)] =
+    MAP (pan_structs$compile_exp ^ctxt)
+      [panLang$NStruct «Pair»
+        [(«right», panLang$Const (2w : 8 word));
+         («left», panLang$Const (1w : 8 word))];
+       panLang$Const (3w : 8 word)]``;

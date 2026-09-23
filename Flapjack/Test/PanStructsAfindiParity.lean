@@ -323,6 +323,28 @@ example (info : StructInfo)
     (info.fields.map Prod.fst).Nodup :=
   lookupInfo_fields_nodup "S" simpleContext info hlookup hok
 
+/-! Focused regression for HOL `fields_in_order_reorder_noop`
+    (`pan_structsProofScript.sml:218`) using production compilation and field
+    selection helpers. -/
+
+def fieldOrderContext : StructPassContext :=
+  { structs := [], locals := [], globals := [] }
+
+def fieldOrderExpressions : List (FieldName × Exp Nat) :=
+  [("a", .const 10), ("b", .const 20)]
+
+def fieldOrderShapes : List (FieldName × Shape) :=
+  [("a", .one), ("b", .comb [.one, .one])]
+
+theorem fields_in_order_reorder_noop_fixture :
+    structSelectFields fieldOrderShapes
+        (structCompileExp.structCompileFields fieldOrderContext fieldOrderExpressions) =
+      [.const 10, .const 20] := by
+  simpa [fieldOrderExpressions] using
+    fieldsInOrderReorderNoop fieldOrderContext fieldOrderExpressions fieldOrderShapes
+      rfl (by decide)
+
+
 /-! Cake's `mem_lookup_fromalist_some`
     (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:3813`). -/
 

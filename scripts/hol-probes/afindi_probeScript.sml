@@ -100,3 +100,8 @@ val _ = print
   (String.translate (fn #"\n" => " " | c => String.str c)
     (term_to_string (concl alookup_map_structs_ok_instance)));
 val _ = print "\n";
+val _ = print "fields_in_order_reorder_noop=";
+val _ = print
+  (String.translate (fn #"\n" => " " | c => String.str c)
+    (term_to_string (concl fields_in_order_reorder_noop)));
+val _ = print "\n";

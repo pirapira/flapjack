@@ -1,34 +1,12 @@
 # Flapjack
 
-Flapjack is beginning as a Lean 4 port of the formally verified Pancake
-compiler. It is an early-stage project: the current Lean code covers the
-front-end syntax and declaration-level checking foundations, the first Pancake-to-Crepe and
-Crepe-to-Loop compiler slices, executable semantic fragments, and an initial
-RISC-V model. The CakeML HOL development is included as the `cakeml`
-submodule; its Pancake sources are in [`cakeml/pancake`](cakeml/pancake).
-
-Pancake source text can be parsed into Flapjack AST values with
-[`Flapjack/Parser.lean`](Flapjack/Parser.lean), a port of Pancake's own
-`panLexer`, `panPEG` grammar and `panPtreeConversion` conversion.
-`Flapjack.Parser.parseTopDecs (BitVec.ofInt 64) source` returns either a list
-of declarations or a list of positioned errors. The module map, the divergences
-from upstream, and the omissions are documented in
-[`Flapjack/Parser/README.md`](Flapjack/Parser/README.md).
-
-## Current status
-
-The port has a working, checked RV64I source-entry path for a growing subset
-of Pancake and selected pass-level and machine-level lemmas. It is not yet a
-complete replacement for CakeML's Pancake compiler:
-full runtime-image generation, broad source coverage, exact artifact parity,
-general executable source corpus and differential execution coverage, and the
-complete Pancake correctness theorem still require work. The current
-claims and limitations are recorded explicitly in
-[`docs/SOUNDNESS.md`](docs/SOUNDNESS.md).
-The required workflow for tying internal and end-to-end tests to the original
-Pancake implementation is in [`docs/PARITY-TESTING.md`](docs/PARITY-TESTING.md).
-
-Backends other than RISC-V are out of scope for this port.
+Flapjack is an in-progress Lean 4 port of the formally verified Pancake
+compiler; the original HOL sources are in the [`cakeml/pancake`](cakeml/pancake)
+submodule. It has an executable RV64I compiler path for a growing subset of
+Pancake, but is not yet a complete replacement and does not yet prove
+whole-compiler correctness. See
+[`docs/SOUNDNESS.md`](docs/SOUNDNESS.md) for assurance limits and
+[`docs/PARITY-TESTING.md`](docs/PARITY-TESTING.md) for reference comparisons.
 
 ## Usage
 
@@ -81,6 +59,9 @@ differential fuzzer `scripts/parity-difffuzz.py` compares full artifacts
 mismatch as a bead; see the differential-fuzzing section of
 [`docs/PARITY-TESTING.md`](docs/PARITY-TESTING.md).
 
+For the parser API and its current limitations, see
+[`Flapjack/Parser/README.md`](Flapjack/Parser/README.md).
+
 When porting a definition or theorem, generate the local CakeML/HOL source
 index with `python3 scripts/index-hol.py`. It records declaration locations,
 theory dependencies, and the CakeML commit used; see
@@ -95,11 +76,11 @@ Contributions are welcome. The RISC-V compiler port and its correctness proof
 are still in progress. [GitHub issues](https://github.com/pirapira/flapjack/issues)
 track work and claims; [`PLAN.md`](PLAN.md) gives the staged direction.
 [`docs/SOUNDNESS.md`](docs/SOUNDNESS.md) describes assurance limits, external
-assumptions, and out-of-scope gaps, not the task queue.
+assumptions, and out-of-scope gaps.
 Start with the porting and verification rules in [`AGENTS.md`](AGENTS.md).
 The bead and single-PR instructions in its *Fleet workflow* section apply to
 the coordinated internal agents; outside contributors can open their own
-focused PRs. Backends other than RISC-V are out of scope.
+focused PRs.
 
 Work bottom-up from a desired theorem through its HOL dependencies: port small
 definitions and supporting lemmas first. Use `@[hol ...]` tags and

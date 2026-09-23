@@ -72,7 +72,7 @@ def compiledGlobalDestinationMatchesHolOracle : Bool :=
   | .call (some ([0, 1], none)) "f" [] => true
   | _ => false
 
-def compilerContext : CompileContext Nat :=
+def compilerContext : PanToCrepCompileContext Nat :=
   compileCodeRelContext proofContext sourceBody
 
 theorem sourceBodyFreeVariables : freeVarIds sourceBody = ["x"] := by
@@ -92,14 +92,16 @@ theorem compilerContextVariables :
 
 theorem compiledReturnMatchesHolOracle :
     compileCodeRelProg proofContext sourceBody = .return [.var 0] := by
-  rw [compileCodeRelProg, sourceBody, compileProg_return]
+  rw [compileCodeRelProg, compileProgFixed, sourceBody, compileProg_return]
   change CrepProg.return
-    (compileExp (compileCodeRelContext proofContext
-      (.return (.var .local "x"))) (.var .local "x")).1 = .return [.var 0]
+    (compileExp ((compileCodeRelContext proofContext
+      (.return (.var .local "x"))).toExecutable) (.var .local "x")).1 =
+      .return [.var 0]
   have hvars :
-      (compileCodeRelContext proofContext (.return (.var .local "x"))).vars =
+      (compileCodeRelContext proofContext (.return (.var .local "x"))).toExecutable.vars =
         [("x", (.one, [0]))] := by
-    simpa [compilerContext, sourceBody] using compilerContextVariables
+    simpa [compilerContext, sourceBody, PanToCrepCompileContext.toExecutable] using
+      compilerContextVariables
   simp only [compileExp]
   rw [hvars]
   simp [lookupInfo]
@@ -135,8 +137,8 @@ theorem rejectsWrongCompiledBody :
     simp [sourceCode, FLOOKUP, FUPDATE]
   have hcompiled := (hrel "f" parameterShapes sourceBody .one hsource).2.2
   simp [wrongBodyTargetCode, FLOOKUP, FUPDATE, proofContext, ctxtFc,
-    compileCodeRelProg, sourceBody, parameterShapes, compilerFunctions,
-    compileProg, compileExp] at hcompiled
+    compileCodeRelProg, compileProgFixed, sourceBody, parameterShapes,
+    compilerFunctions, compileProg, compileExp] at hcompiled
 
 theorem rejectsMissingFunctionSignature :
     ¬ codeRel missingSignatureContext sourceCode matchingTargetCode := by

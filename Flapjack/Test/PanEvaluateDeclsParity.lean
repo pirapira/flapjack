@@ -1,4 +1,5 @@
 import Flapjack.Pancake.Semantics.PanSem
+import Flapjack.Pancake.Proofs.PanGlobals.ShapeInfrastructure
 
 /-!
 # `panSem$evaluate_decls` parity
@@ -174,5 +175,20 @@ example :
 example :
     evaluateDecls initialState [.exnDecl "E" (.named "Missing")] = none := by
   simp [evaluateDecls, initialState, initialRuntime, isWfShape, lookupInfo]
+
+/-! Non-vacuity witness for the tagged HOL
+    `evaluate_decls_functions_wf` port (`evaluateDeclsFunctionsWf`): the
+    installed sample function's parameter and return shapes are well formed in
+    the source struct context. -/
+example : (sampleFunction).params.all
+      (fun parameter => isWfShape initialRuntime.structs parameter.2) = true ∧
+    isWfShape initialRuntime.structs (sampleFunction).returnShape = true := by
+  cases h : evaluateDecls initialState [.function (sampleFunction)] with
+  | none => simp [evaluateDecls, sampleFunction, initialState, initialRuntime,
+      isWfShape] at h
+  | some state' =>
+      exact evaluateDeclsFunctionsWf initialState [.function (sampleFunction)]
+        state' h (by simp)
+        (by decide)
 
 end Flapjack.Test.PanEvaluateDeclsParity

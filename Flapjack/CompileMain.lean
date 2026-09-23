@@ -94,7 +94,7 @@ def compileMain (arguments : List String) : IO UInt32 := do
   let source ← readSource path
   if outputFormat == .pancake then
     match compileFlapjackRiscVSourceRuntimeImageChecked (width := 64) .rv64i
-        (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] compileRemoveConfig
+        riscv64BytesInWord (BitVec.ofInt 64) [] compileRemoveConfig
         "main" source with
     | .ok image =>
         for warning in image.warnings do
@@ -106,7 +106,7 @@ def compileMain (arguments : List String) : IO UInt32 := do
         return 1
   else if outputFormat == .sections then
     match compileFlapjackRiscVSourceImageChecked (width := 64) .rv64i
-        (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] compileRemoveConfig
+        riscv64BytesInWord (BitVec.ofInt 64) [] compileRemoveConfig
         "main" source with
     | .ok image =>
         for warning in image.warnings do
@@ -118,7 +118,7 @@ def compileMain (arguments : List String) : IO UInt32 := do
         return 1
   else
     match compileFlapjackRiscVSourceBytesChecked (width := 64) .rv64i
-        (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] compileRemoveConfig
+        riscv64BytesInWord (BitVec.ofInt 64) [] compileRemoveConfig
         "main" source with
     | .ok artifact =>
         for warning in artifact.warnings do

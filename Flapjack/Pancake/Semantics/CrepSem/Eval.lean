@@ -45,6 +45,130 @@ theorem holWordBitsToBitVec_bitVecToHolWordBits {width : Nat}
   rw [BitVec.getLsbD_ofBoolListLE]
   simp [List.getD_eq_getElem?_getD, hindex]
 
+/-! Operations on finite-index HOL word bits are transported through the
+    equivalence above. This gives the production Crep evaluator and arithmetic
+    simplifier their standard word interfaces on the function-valued carrier,
+    with bitvector arithmetic as the implementation. -/
+namespace HolWordBits
+
+variable {width : Nat}
+
+instance : BEq (Fin width → Bool) :=
+  ⟨fun left right => holWordBitsToBitVec left == holWordBitsToBitVec right⟩
+
+instance (value : Nat) : OfNat (Fin width → Bool) value :=
+  ⟨bitVecToHolWordBits (BitVec.ofNat width value)⟩
+
+instance : Add (Fin width → Bool) :=
+  ⟨fun left right => bitVecToHolWordBits
+    (holWordBitsToBitVec left + holWordBitsToBitVec right)⟩
+
+instance : Mul (Fin width → Bool) :=
+  ⟨fun left right => bitVecToHolWordBits
+    (holWordBitsToBitVec left * holWordBitsToBitVec right)⟩
+
+instance : Sub (Fin width → Bool) :=
+  ⟨fun left right => bitVecToHolWordBits
+    (holWordBitsToBitVec left - holWordBitsToBitVec right)⟩
+
+instance : AndOp (Fin width → Bool) :=
+  ⟨fun left right => bitVecToHolWordBits
+    (AndOp.and (holWordBitsToBitVec left) (holWordBitsToBitVec right))⟩
+
+instance : OrOp (Fin width → Bool) :=
+  ⟨fun left right => bitVecToHolWordBits
+    (OrOp.or (holWordBitsToBitVec left) (holWordBitsToBitVec right))⟩
+
+instance : HXor (Fin width → Bool) (Fin width → Bool) (Fin width → Bool) :=
+  ⟨fun left right => bitVecToHolWordBits
+    (HXor.hXor (holWordBitsToBitVec left) (holWordBitsToBitVec right))⟩
+
+instance : Complement (Fin width → Bool) :=
+  ⟨fun value => bitVecToHolWordBits (Complement.complement
+    (holWordBitsToBitVec value))⟩
+
+instance : ShiftLeft (Fin width → Bool) :=
+  ⟨fun value amount => bitVecToHolWordBits (ShiftLeft.shiftLeft
+    (holWordBitsToBitVec value) (holWordBitsToBitVec amount))⟩
+
+instance : ShiftRight (Fin width → Bool) :=
+  ⟨fun value amount => bitVecToHolWordBits (ShiftRight.shiftRight
+    (holWordBitsToBitVec value) (holWordBitsToBitVec amount))⟩
+
+instance : LT (Fin width → Bool) :=
+  ⟨fun left right => holWordBitsToBitVec left < holWordBitsToBitVec right⟩
+
+instance : DecidableRel (fun left right : Fin width → Bool => left < right) := by
+  intro left right
+  change Decidable (holWordBitsToBitVec left < holWordBitsToBitVec right)
+  infer_instance
+
+instance : PanCmp (Fin width → Bool) :=
+  ⟨fun left right => decide (holWordBitsToBitVec left < holWordBitsToBitVec right),
+    fun left right => RiscV.signedLess
+      (holWordBitsToBitVec left) (holWordBitsToBitVec right)⟩
+
+instance : PanShiftWidth (Fin width → Bool) :=
+  ⟨width, fun value => (holWordBitsToBitVec value).toNat⟩
+
+instance : ArithmeticShiftRight (Fin width → Bool) :=
+  ⟨fun value amount => bitVecToHolWordBits
+    (BitVec.sshiftRight (holWordBitsToBitVec value)
+      (holWordBitsToBitVec amount).toNat)⟩
+
+instance : RotateRightOp (Fin width → Bool) :=
+  ⟨fun value amount => bitVecToHolWordBits
+    (BitVec.rotateRight (holWordBitsToBitVec value)
+      (holWordBitsToBitVec amount).toNat)⟩
+
+end HolWordBits
+
+@[simp] theorem holWordBitsToBitVec_add {width : Nat}
+    (left right : Fin width → Bool) :
+    holWordBitsToBitVec (left + right) =
+      holWordBitsToBitVec left + holWordBitsToBitVec right := by
+  change holWordBitsToBitVec (bitVecToHolWordBits
+    (holWordBitsToBitVec left + holWordBitsToBitVec right)) = _
+  rw [holWordBitsToBitVec_bitVecToHolWordBits]
+
+@[simp] theorem holWordBitsToBitVec_mul {width : Nat}
+    (left right : Fin width → Bool) :
+    holWordBitsToBitVec (left * right) =
+      holWordBitsToBitVec left * holWordBitsToBitVec right := by
+  change holWordBitsToBitVec (bitVecToHolWordBits
+    (holWordBitsToBitVec left * holWordBitsToBitVec right)) = _
+  rw [holWordBitsToBitVec_bitVecToHolWordBits]
+
+@[simp] theorem holWordBitsToBitVec_one {width : Nat} :
+    holWordBitsToBitVec (1 : Fin width → Bool) = BitVec.ofNat width 1 := by
+  change holWordBitsToBitVec (bitVecToHolWordBits (BitVec.ofNat width 1)) =
+    BitVec.ofNat width 1
+  rw [holWordBitsToBitVec_bitVecToHolWordBits]
+
+def holWordBitsRiscVMemoryModel [NeZero width] (bigEndian : Bool) :
+    PanMemoryModel (Fin width → Bool) :=
+  let model := RiscV.panRiscVMemoryModelForEndian bigEndian
+  { byteAlign := fun bytes address => bitVecToHolWordBits
+      (model.byteAlign (holWordBitsToBitVec bytes) (holWordBitsToBitVec address))
+    getByte := fun bytes address value be => bitVecToHolWordBits
+      (model.getByte (holWordBitsToBitVec bytes) (holWordBitsToBitVec address)
+        (holWordBitsToBitVec value) be)
+    setByte := fun bytes address byte value be => bitVecToHolWordBits
+      (model.setByte (holWordBitsToBitVec bytes) (holWordBitsToBitVec address)
+        (holWordBitsToBitVec byte) (holWordBitsToBitVec value) be)
+    aligned := fun alignment address => model.aligned alignment
+      (holWordBitsToBitVec address)
+    wordOfBytes := fun be bytes => bitVecToHolWordBits
+      (model.wordOfBytes be (bytes.map holWordBitsToBitVec))
+    wordOp := fun operator values =>
+      (model.wordOp operator (values.map holWordBitsToBitVec)).map
+        bitVecToHolWordBits
+    compare := fun operator left right => bitVecToHolWordBits
+      (model.compare operator (holWordBitsToBitVec left) (holWordBitsToBitVec right))
+    shift := fun operator left right =>
+      (model.shift operator (holWordBitsToBitVec left) (holWordBitsToBitVec right)).map
+        bitVecToHolWordBits }
+
 /-- Flapjack's field-only encoding of HOL `crepSem$state` for a fixed
     `RiscV.Word width` carrier. Finite maps are represented extensionally by
     lookup functions. It is untagged because it does not quantify over HOL's
@@ -92,6 +216,150 @@ def CrepHolState.toRuntime [NeZero width]
     ffi := state.ffi
     baseAddress := state.baseAddress
     topAddress := state.topAddress }
+
+/-! Production `CrepRuntimeState` adapter for a finite-index HOL word state.
+    The target's word operations and byte accessors are lifted through the
+    finite-index/BitVec equivalence. FFI fields are expression-irrelevant, as
+    in `CrepHolState.toRuntime`. -/
+def CrepHolState.toHolWordBitsRuntime [NeZero width]
+    (state : CrepHolState (Fin width → Bool) σ) :
+    CrepRuntimeState (Fin width → Bool) σ :=
+  { locals := state.locals
+    globals := state.globals
+    code := state.code
+    memory := state.memory
+    memaddrs := state.memaddrs
+    shMemaddrs := state.shMemaddrs
+    memoryModel := holWordBitsRiscVMemoryModel state.bigEndian
+    bytesInWord := bitVecToHolWordBits (BitVec.ofNat width (width / 8))
+    ffiContext := crepHolEvalFfiContext
+    clock := state.clock
+    bigEndian := state.bigEndian
+    ffi := state.ffi
+    baseAddress := state.baseAddress
+    topAddress := state.topAddress }
+
+/-! Structural change of word carrier for expression-evaluator comparison.
+    The HOL state code map is omitted because `crepSem$eval` never reads code;
+    expression-only correspondence therefore does not need to translate
+    stored programs. -/
+def mapCrepExpWord {α β : Type} (convert : α → β) :
+    CrepExp α → CrepExp β
+  | .const value => .const (convert value)
+  | .var name => .var name
+  | .load address => .load (mapCrepExpWord convert address)
+  | .load32 address => .load32 (mapCrepExpWord convert address)
+  | .loadByte address => .loadByte (mapCrepExpWord convert address)
+  | .loadGlob address => .loadGlob address
+  | .op operator expressions =>
+      .op operator (expressions.map (mapCrepExpWord convert))
+  | .crepOp operator expressions =>
+      .crepOp operator (expressions.map (mapCrepExpWord convert))
+  | .cmp operator left right =>
+      .cmp operator (mapCrepExpWord convert left) (mapCrepExpWord convert right)
+  | .shift operator left right =>
+      .shift operator (mapCrepExpWord convert left) (mapCrepExpWord convert right)
+  | .baseAddr => .baseAddr
+  | .topAddr => .topAddr
+termination_by expression => sizeOf expression
+decreasing_by
+  all_goals first | sizeOf_list_dec | decreasing_trivial
+
+def mapCrepHolWordLab (convert : α → β) : PanWordLab α → PanWordLab β
+  | .word value => .word (convert value)
+
+def CrepHolState.toBitVecState [NeZero width]
+    (state : CrepHolState (Fin width → Bool) σ) :
+    CrepHolState (RiscV.Word width) σ :=
+  { locals := fun name => (state.locals name).map
+      (mapCrepHolWordLab holWordBitsToBitVec)
+    globals := fun name => (state.globals name).map
+      (mapCrepHolWordLab holWordBitsToBitVec)
+    code := fun _ => none
+    memory := fun address => mapCrepHolWordLab holWordBitsToBitVec
+      (state.memory (bitVecToHolWordBits address))
+    memaddrs := fun address => state.memaddrs (bitVecToHolWordBits address)
+    shMemaddrs := fun address => state.shMemaddrs (bitVecToHolWordBits address)
+    clock := state.clock
+    bigEndian := state.bigEndian
+    ffi := state.ffi
+    baseAddress := holWordBitsToBitVec state.baseAddress
+    topAddress := holWordBitsToBitVec state.topAddress }
+
+/-! State projections commute with the finite-index/BitVec carrier map. These
+    equations discharge the target-independent `Var`, `LoadGlob`, and plain
+    `Load` cases when proving evaluator transport; they do not yet cover the
+    target word operations or byte loads. -/
+theorem crepHolWordBits_local_toBitVec [NeZero width]
+    (state : CrepHolState (Fin width → Bool) σ) (name : Nat) :
+    (state.toBitVecState.locals name).map
+        (mapCrepHolWordLab bitVecToHolWordBits) = state.locals name := by
+  cases h : state.locals name <;>
+    simp [CrepHolState.toBitVecState, h, mapCrepHolWordLab,
+      bitVecToHolWordBits_holWordBitsToBitVec]
+
+theorem crepHolWordBits_global_toBitVec [NeZero width]
+    (state : CrepHolState (Fin width → Bool) σ) (name : BitVec 5) :
+    (state.toBitVecState.globals name).map
+        (mapCrepHolWordLab bitVecToHolWordBits) = state.globals name := by
+  cases h : state.globals name <;>
+    simp [CrepHolState.toBitVecState, h, mapCrepHolWordLab,
+      bitVecToHolWordBits_holWordBitsToBitVec]
+
+theorem crepHolWordBits_load_toBitVec [NeZero width]
+    (state : CrepHolState (Fin width → Bool) σ)
+    (address : Fin width → Bool) :
+    crepRuntimeLoad state.toHolWordBitsRuntime address =
+      (crepRuntimeLoad state.toBitVecState.toRuntime
+        (holWordBitsToBitVec address)).map bitVecToHolWordBits := by
+  cases state
+  simp [crepRuntimeLoad, CrepHolState.toHolWordBitsRuntime, CrepHolState.toRuntime,
+    CrepHolState.toBitVecState, mapCrepHolWordLab, panTheWord,
+    bitVecToHolWordBits_holWordBitsToBitVec] <;> rfl
+
+theorem crepHolWordBits_loadByte_toBitVec [NeZero width]
+    (state : CrepHolState (Fin width → Bool) σ)
+    (address : Fin width → Bool) :
+    crepRuntimeLoadByte state.toHolWordBitsRuntime address =
+      (crepRuntimeLoadByte
+        (riscvCrepWordTarget state.toBitVecState.toRuntime)
+        (holWordBitsToBitVec address)).map bitVecToHolWordBits := by
+  cases state
+  simp [crepRuntimeLoadByte, CrepHolState.toHolWordBitsRuntime,
+    CrepHolState.toRuntime, CrepHolState.toBitVecState,
+    holWordBitsRiscVMemoryModel, riscvCrepWordTarget, mapCrepHolWordLab,
+    panTheWord, holWordBitsToBitVec_bitVecToHolWordBits] <;>
+    (split <;> simp_all)
+
+theorem crepHolWordBits_wordOp_toBitVec [NeZero width]
+    (state : CrepHolState (Fin width → Bool) σ)
+    (operator : BinOp) (values : List (Fin width → Bool)) :
+    state.toHolWordBitsRuntime.memoryModel.wordOp operator values =
+      (state.toBitVecState.toRuntime.memoryModel.wordOp operator
+        (values.map holWordBitsToBitVec)).map bitVecToHolWordBits := by
+  cases state
+  simp [CrepHolState.toHolWordBitsRuntime, CrepHolState.toBitVecState,
+    CrepHolState.toRuntime, holWordBitsRiscVMemoryModel]
+
+theorem crepHolWordBits_compare_toBitVec [NeZero width]
+    (state : CrepHolState (Fin width → Bool) σ)
+    (operator : Cmp) (left right : Fin width → Bool) :
+    state.toHolWordBitsRuntime.memoryModel.compare operator left right =
+      bitVecToHolWordBits
+        (state.toBitVecState.toRuntime.memoryModel.compare operator
+          (holWordBitsToBitVec left) (holWordBitsToBitVec right)) := by
+  cases state
+  rfl
+
+theorem crepHolWordBits_shift_toBitVec [NeZero width]
+    (state : CrepHolState (Fin width → Bool) σ)
+    (operator : Shift) (left right : Fin width → Bool) :
+    state.toHolWordBitsRuntime.memoryModel.shift operator left right =
+      (state.toBitVecState.toRuntime.memoryModel.shift operator
+        (holWordBitsToBitVec left) (holWordBitsToBitVec right)).map
+          bitVecToHolWordBits := by
+  cases state
+  rfl
 
 /-- Source-shaped Lean translation of HOL `crepSem$eval_def` for every
     positive BitVec word width. It is untagged because the arbitrary HOL word
@@ -145,6 +413,51 @@ def evalCrepHolExpWordLab [NeZero width]
     (state : CrepHolState (RiscV.Word width) σ) :
     CrepExp (RiscV.Word width) → Option (PanWordLab (RiscV.Word width)) :=
   fun expression => (evalCrepHolExp state expression).map PanWordLab.word
+
+/-! HOL evaluator source shape for the Fin-index word representation is
+    obtained by transporting the existing source-shaped evaluator through the
+    carrier equivalence. This adapter is untagged until its relation to the
+    full production evaluator is proved for every constructor. -/
+def evalCrepHolWordBitsExp [NeZero width]
+    (state : CrepHolState (Fin width → Bool) σ) :
+    CrepExp (Fin width → Bool) → Option (Fin width → Bool) :=
+  fun expression =>
+    (evalCrepHolExp (state.toBitVecState)
+      (mapCrepExpWord holWordBitsToBitVec expression)).map bitVecToHolWordBits
+
+def evalCrepHolWordBitsExpWordLab [NeZero width]
+    (state : CrepHolState (Fin width → Bool) σ) :
+    CrepExp (Fin width → Bool) → Option (PanWordLab (Fin width → Bool)) :=
+  fun expression => (evalCrepHolWordBitsExp state expression).map PanWordLab.word
+
+/-! Production evaluator constructor equations. These are kernel-checked
+    correspondences between the production evaluator over the finite-index
+    word state and the transported source-shaped evaluator; they supply
+    genuine base cases for a later all-constructor induction. -/
+theorem evalCrepRuntimeExp_var_toHolWordBits [NeZero width]
+    (state : CrepHolState (Fin width → Bool) σ) (name : Nat) :
+    evalCrepRuntimeExp state.toHolWordBitsRuntime (.var name) =
+      evalCrepHolWordBitsExp state (.var name) := by
+  simp only [evalCrepRuntimeExp, evalCrepHolWordBitsExp, evalCrepHolExp,
+    mapCrepExpWord, CrepHolState.toHolWordBitsRuntime]
+  rw [← crepHolWordBits_local_toBitVec state name]
+  simp [Function.comp_def, mapCrepHolWordLab, panTheWord]
+
+theorem evalCrepRuntimeExp_loadGlob_toHolWordBits [NeZero width]
+    (state : CrepHolState (Fin width → Bool) σ) (address : BitVec 5) :
+    evalCrepRuntimeExp state.toHolWordBitsRuntime (.loadGlob address) =
+      evalCrepHolWordBitsExp state (.loadGlob address) := by
+  simp only [evalCrepRuntimeExp, evalCrepHolWordBitsExp, evalCrepHolExp,
+    mapCrepExpWord, CrepHolState.toHolWordBitsRuntime]
+  rw [← crepHolWordBits_global_toBitVec state address]
+  simp [Function.comp_def, mapCrepHolWordLab, panTheWord]
+
+/-! The next desired bridge would show that the production runtime evaluator on
+    the finite-index HOL-word carrier equals the transported source evaluator
+    above. This is not implied by the carrier equivalence alone: the 32-bit
+    load, list-valued `wordOp`, comparisons, and shifts must commute with the
+    conversion. Keep the statement out of the HOL map until those operation
+    and state equations are proved. -/
 
 private theorem crepHolState_load32 [NeZero width]
     (state : CrepHolState (RiscV.Word width) σ) (address : RiscV.Word width) :

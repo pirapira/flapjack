@@ -127,6 +127,34 @@ def clockedInvalidCallTerminal :
     (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState 5
     none "skip" []
 
+def clockedBreakCallRejected : Bool :=
+  match evalPanValueFfiClockCall statefulTestContext statefulTestPrimitive
+    statefulTestHandler [] [("break", [], .break)] 0 100 8 20
+    (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState 5
+    none "break" [] with
+  | some (.control (.error _ _ _ _), _) => true
+  | _ => false
+
+def clockedContinueCallRejected : Bool :=
+  match evalPanValueFfiClockCall statefulTestContext statefulTestPrimitive
+    statefulTestHandler [] [("continue", [], .continue)] 0 100 8 20
+    (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState 5
+    none "continue" [] with
+  | some (.control (.error _ _ _ _), _) => true
+  | _ => false
+
+def clockedMissingCallRejected : Bool :=
+  match evalPanValueFfiClockCall statefulTestContext statefulTestPrimitive
+    statefulTestHandler [] [] 0 100 8 20
+    (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState 5
+    none "missing" [] with
+  | some (.control (.error _ _ _ _), _) => true
+  | _ => false
+
+#guard clockedBreakCallRejected
+#guard clockedContinueCallRejected
+#guard clockedMissingCallRejected
+
 def clockedFinalFfi : Option (PanValueFfiClockResult (Word 64) Unit) :=
   evalPanValueFfiClockProg statefulTestContext statefulTestPrimitive
     statefulTestHandler [] [] (BitVec.ofNat 64 0) (BitVec.ofNat 64 100)
@@ -288,7 +316,10 @@ def exactMemoryBranch : Option (PanValueFfiClockResult (Word 64) Unit) :=
       locals "exceptionValue" = none && value = BitVec.ofNat 64 1
   | _ => false
 
-#guard clockedInvalidCallTerminal.isNone
+#guard
+  match clockedInvalidCallTerminal with
+  | some (.control (.error _ _ _ _), _) => true
+  | _ => false
 
 /- The named result projection keeps the exact source state and remaining
    clock while making timeout and terminal FFI outcomes distinct. -/

@@ -1,0 +1,7 @@
+call_terminal_skip_result=SOME Error
+call_terminal_skip_clock=4
+call_terminal_skip_locals=NONE
+call_terminal_break_result=SOME Error
+call_terminal_continue_result=SOME Error
+call_terminal_return_result=NONE
+call_terminal_missing_result=SOME Error

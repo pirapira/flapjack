@@ -801,7 +801,7 @@ theorem panSemEvaluateCodeState_call_return_const_of_entry
               | succ fuel =>
                   simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall,
                     evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps,
-                    evalPanValueExpCounted, evalPanValueExp,
+                    panValueReturnResult, evalPanValueExpCounted, evalPanValueExp,
                     panValueShape, panShapeMatches,
                     hargs, hlookupCall, hclock]
 
@@ -1142,7 +1142,7 @@ theorem panSemEvaluateCodeState_callReturnParameter_ofEntry
   rw [hfuelConcrete]
   simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall,
     evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps,
-    evalPanValueExpCounted, evalPanValueExp, hargs, hcallee, hclock,
+    panValueReturnResult, evalPanValueExpCounted, evalPanValueExp, hargs, hcallee, hclock,
     panValueShape, panShapeMatches, decPanClock]
 
 theorem panSemEvaluateRiscV64CodeState_callReturnParameter_ofEntry
@@ -1230,7 +1230,7 @@ theorem panSemEvaluateRiscV64CodeState_callAssignParameter_ofEntry
   rw [hfuelConcrete]
   simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall,
     evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps,
-    evalPanValueExpCounted, evalPanValueExp, hargs, hcallee, hclock,
+    panValueReturnResult, evalPanValueExpCounted, evalPanValueExp, hargs, hcallee, hclock,
     hassignment, panValueShape, panShapeMatches, decPanClock]
 
 
@@ -1278,8 +1278,9 @@ theorem panSemEvaluateRiscV64CodeState_callRaiseOneWordException_ofEntry
   rw [show panSemCodeEvaluateFuel state program = tail + 5 from hfuel]
   simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall,
     evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps,
-    evalPanValueExpCounted, evalPanValueExp, hargs, hcallee,
-    hexception, hclock, panValueShape, panShapeMatches, decPanClock]
+    panValueRaiseResult, evalPanValueExpCounted, evalPanValueExp,
+    hargs, hcallee, hexception, hclock, panValueShape, panShapeMatches,
+    decPanClock]
 
 /-! One-word state-owned Call exception dispatch to a handler that returns its
 local. The preexisting local is explicit because HOL's handler path validates
@@ -1336,7 +1337,8 @@ theorem panSemEvaluateRiscV64CodeState_callCatchRaiseOneWord_ofEntry
   rw [show panSemCodeEvaluateFuel state program = tail + 5 from hfuel]
   simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall,
     evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps,
-    evalPanValueExpCounted, evalPanValueExp, hargs, hcallee, hexception,
+    panValueRaiseResult, panValueReturnResult, evalPanValueExpCounted, evalPanValueExp,
+    hargs, hcallee, hexception,
     hhandlerLocal, hclock, panValueShape, panShapeMatches, panValueAssignmentValid,
     updatePanValueMap, decPanClock]
 
@@ -2049,7 +2051,7 @@ theorem panSemEvaluateCodeState_decCallSkip_ofEntry
   rw [hfuelConcrete]
   simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall,
     evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps,
-    evalPanValueExpCounted, evalPanValueExp, hargs, hcallee, hclock,
+    panValueReturnResult, evalPanValueExpCounted, evalPanValueExp, hargs, hcallee, hclock,
     panValueShape, panShapeMatches, panValueFfiClockRestoreLocal,
     panValueExpStepCost, restorePanValueFfiLocal, decPanClock]
   all_goals

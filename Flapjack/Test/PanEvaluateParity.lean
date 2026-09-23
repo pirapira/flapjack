@@ -475,6 +475,10 @@ def observeNestedRaise : Bool :=
         third == BitVec.ofNat 64 5
   | _ => false
 
+def isErrorResult {α σ : Type} : Option (PanValueFfiClockResult α σ) → Bool
+  | some (.control (.error _ _ _ _), _) => true
+  | _ => false
+
 def observeFixedLoads : Bool :=
   match evaluateFixedByte, evaluateFixedWord32 with
   | some (.control (.returned _ _ _ _ [(.word byte)]), 4),
@@ -483,7 +487,7 @@ def observeFixedLoads : Bool :=
   | _, _ => false
 
 def observeFixedLoadDomainFailure : Bool :=
-  evaluateFixedByteDomainFailure.isNone
+  isErrorResult evaluateFixedByteDomainFailure
 
 def observeExactProgramMemoryAccess : Bool :=
   match evaluateExactProgramWord32 with
@@ -500,10 +504,6 @@ def isWordOption (expected : Nat) : Option (PanValue (Word 64)) → Bool
 
 def isNoneOption : Option (PanValue (Word 64)) → Bool
   | none => true
-  | _ => false
-
-def isErrorResult {α σ : Type} : Option (PanValueFfiClockResult α σ) → Bool
-  | some (.control (.error _ _ _ _), _) => true
   | _ => false
 
 def observeFixedStore : Bool :=

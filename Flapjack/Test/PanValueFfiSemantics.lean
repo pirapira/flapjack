@@ -187,31 +187,52 @@ def statefulSharedStoreFinal : Bool :=
   | some (.error _ _ _ _, _) => true
   | _ => false)
 
+def isErrorStepped {α σ : Type} : Option (PanValueFfiSteppedResult α σ) → Bool
+  | some (.error _ _ _ _, _) => true
+  | _ => false
+
+def isErrorControl {α σ : Type} : Option (PanValueFfiControlResult α σ) → Bool
+  | some (.error _ _ _ _) => true
+  | _ => false
+
 def statefulNormalCallRejected : Bool :=
-  (evalPanValueFfiCallSteps statefulTestContext statefulTestPrimitive
+  isErrorStepped
+    (evalPanValueFfiCallSteps statefulTestContext statefulTestPrimitive
     statefulTestHandler [] [("skip", [], .skip)] (BitVec.ofNat 64 0)
     (BitVec.ofNat 64 100) (BitVec.ofNat 64 8) 10
     (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState none
-    "skip" []).isNone
+    "skip" [])
 
 #guard statefulNormalCallRejected
 
 def statefulBreakCallRejected : Bool :=
-  (evalPanValueFfiCallSteps statefulTestContext statefulTestPrimitive
+  isErrorStepped
+    (evalPanValueFfiCallSteps statefulTestContext statefulTestPrimitive
     statefulTestHandler [] [("break", [], .break)] (BitVec.ofNat 64 0)
     (BitVec.ofNat 64 100) (BitVec.ofNat 64 8) 10
     (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState none
-    "break" []).isNone
+    "break" [])
 
 def statefulContinueCallRejected : Bool :=
-  (evalPanValueFfiCallSteps statefulTestContext statefulTestPrimitive
+  isErrorStepped
+    (evalPanValueFfiCallSteps statefulTestContext statefulTestPrimitive
     statefulTestHandler [] [("continue", [], .continue)] (BitVec.ofNat 64 0)
     (BitVec.ofNat 64 100) (BitVec.ofNat 64 8) 10
     (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState none
-    "continue" []).isNone
+    "continue" [])
 
 #guard statefulBreakCallRejected
 #guard statefulContinueCallRejected
+
+def statefulMissingCallRejected : Bool :=
+  isErrorStepped
+    (evalPanValueFfiCallSteps statefulTestContext statefulTestPrimitive
+    statefulTestHandler [] [] (BitVec.ofNat 64 0)
+    (BitVec.ofNat 64 100) (BitVec.ofNat 64 8) 10
+    (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState none
+    "missing" [])
+
+#guard statefulMissingCallRejected
 
 def statefulExtCallProgram : Option (Word 64 × Nat × Nat) :=
   (evalPanValueFfiProgramSteps statefulTestContext statefulTestPrimitive
@@ -253,23 +274,23 @@ def statefulOversizedShape : Shape :=
   .comb (List.replicate 33 .one)
 
 #guard
-  (evalPanValueFfiProgram statefulTestContext statefulPublicProgramState
+  isErrorControl (evalPanValueFfiProgram statefulTestContext statefulPublicProgramState
     statefulTestPrimitive statefulTestHandler 30
     [.function
        { name := "oversized", inline := false, exported := true, params := [],
          body := .return statefulOversizedValues,
          returnShape := statefulOversizedShape }]
-    "oversized" []).isNone
+    "oversized" [])
 
 #guard
-  (evalPanValueFfiProgram statefulTestContext statefulPublicProgramState
+  isErrorControl (evalPanValueFfiProgram statefulTestContext statefulPublicProgramState
     statefulTestPrimitive statefulTestHandler 30
     [.exnDecl "Oversized" statefulOversizedShape,
      .function
        { name := "raisesOversized", inline := false, exported := true, params := [],
          body := .raise "Oversized" statefulOversizedValues,
          returnShape := .one }]
-    "raisesOversized" []).isNone
+    "raisesOversized" [])
 
 def statefulPublicProgram : Option (Word 64 × Nat) :=
   (evalPanValueFfiProgram statefulTestContext statefulPublicProgramState
@@ -379,7 +400,8 @@ example :
       true
 
 #guard
-    (evalPanValueFfiProgram statefulTestContext statefulPublicProgramState
+    isErrorControl
+      (evalPanValueFfiProgram statefulTestContext statefulPublicProgramState
       statefulTestPrimitive statefulTestHandler 30
       [.exnDecl "E" (.comb [.one, .one]),
        .function
@@ -390,8 +412,7 @@ example :
            body := .seq (.call none "badRaise" []) (.return (.const 0)),
            returnShape := .one }]
       "main" []
-      (memoryAccess := some (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel))).isNone =
-      true
+      (memoryAccess := some (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel)))
 
 #guard
     (evalPanValueFfiProgram statefulTestContext statefulPublicProgramState

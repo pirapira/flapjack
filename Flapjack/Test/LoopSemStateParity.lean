@@ -5,11 +5,12 @@ import Flapjack.HolRef
 # HOL-shaped whole-state Loop memory/shared-memory regression
 
 Exercises the exact whole-state ports `memLoadSemHOL`, `memStoreSemHOL`,
-`shMemStoreSemHOL`/`shMemLoadSemHOL`/`shMemOpSemHOL` from
+`shMemStoreSemHOL`/`shMemLoadSemHOL`/`shMemOpSemHOL`, `setGlobalsSemHOL` and
+`getVarImmSemHOL` from
 `Flapjack/Pancake/Semantics/LoopSem.lean` and their explicit bridge to
 `LoopMachineState`.  Expected values follow the HOL definitions
-`loopSemScript.sml:57-69` and `:198-262`; the aligned-address rule is HOL
-`byte_align` (LOG2 of `dimindex DIV 8`).
+`loopSemScript.sml:52-69`, `:165-167` and `:198-262`; the aligned-address rule is
+HOL `byte_align` (LOG2 of `dimindex DIV 8`).
 -/
 
 namespace Flapjack.Test.LoopSemStateParity
@@ -63,6 +64,21 @@ theorem bridgeMemory :
       .word 0xAB := by
   decide
 
+theorem setGlobalsHit :
+    (setGlobalsSemHOL baseState 0 (.word 42)).globals 0 = some (.word 42) := by
+  decide
+
+theorem setGlobalsPreserves :
+    (setGlobalsSemHOL baseState 0 (.word 42)).globals 1 = baseState.globals 1 :=
+  rfl
+
+theorem getVarImmReg : getVarImmSemHOL baseState (.reg 0) = some (.word 1) :=
+  rfl
+
+theorem getVarImmImm :
+    getVarImmSemHOL baseState (.imm (5 : Word)) = some (.word 5) :=
+  rfl
+
 /-- `load8` at `8` is 8-aligned and lies in the shared domain, so the
     terminal oracle yields `FinalFFI` and clears the locals. -/
 def shMemLoadFinalGuard : Bool :=
@@ -95,6 +111,14 @@ def memoryPortsGuard : Bool :=
 
 #guard memoryPortsGuard
 
+def stateHelpersGuard : Bool :=
+  decide ((setGlobalsSemHOL baseState 0 (.word 42)).globals 0 = some (.word 42)) &&
+    decide ((setGlobalsSemHOL baseState 0 (.word 42)).globals 1 = none) &&
+    decide (getVarImmSemHOL baseState (.reg 1) = some (.word 3)) &&
+    decide (getVarImmSemHOL baseState (.imm (5 : Word)) = some (.word 5))
+
+#guard stateHelpersGuard
+
 def runChecks : IO Bool := do
   let memoryOk ← if memoryPortsGuard then
       IO.println "PASS Loop whole-state mem_load/mem_store exact ports"
@@ -109,6 +133,12 @@ def runChecks : IO Bool := do
       else
         IO.println "FAIL Loop whole-state sh_mem_load/store/op exact ports"
         pure false
-  pure (memoryOk && shMemOk)
+  let helpersOk ← if stateHelpersGuard then
+      IO.println "PASS Loop whole-state set_globals and get_var_imm exact ports"
+      pure true
+    else
+      IO.println "FAIL Loop whole-state set_globals and get_var_imm exact ports"
+      pure false
+  pure (memoryOk && shMemOk && helpersOk)
 
 end Flapjack.Test.LoopSemStateParity

@@ -184,6 +184,22 @@
     "reviewer": "Codex (source comparison; exact width dispatch Load/Store=0, *8=1, *16=2, *32=4)"
   },
   {
+    "hol_path": "cakeml/pancake/semantics/loopSemScript.sml",
+    "hol_name": "set_globals_def",
+    "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",
+    "lean_name": "setGlobalsSemHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; whole-state port, globals |+ (index,value): the indexed global becomes some value and all others are preserved)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/loopSemScript.sml",
+    "hol_name": "get_var_imm_def",
+    "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",
+    "lean_name": "getVarImmSemHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; whole-state port, Reg n = lookup n locals, Imm w = SOME (Word w))"
+  },
+  {
     "hol_path": "cakeml/misc/miscScript.sml",
     "hol_name": "read_bytearray_def",
     "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",

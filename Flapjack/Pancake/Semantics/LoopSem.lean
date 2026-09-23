@@ -987,4 +987,22 @@ def shMemOpSemHOL {width : Nat} [NeZero width] (operator : CrepMemOp) (name : Na
   | .load32 => shMemLoadSemHOL name address 4 state
   | .store32 => shMemStoreSemHOL name address 4 state
 
+/-- Exact whole-state port of HOL `set_globals_def` (`loopSemScript.sml:52-54`):
+    `set_globals gv w s = s with globals := s.globals |+ (gv,w)`.  The global at
+    `index` becomes `value`; every other global is preserved. -/
+@[hol "cakeml/pancake/semantics/loopSemScript.sml" "set_globals_def"]
+def setGlobalsSemHOL (state : LoopSemState W F) (index : BitVec 5)
+    (value : LoopValue W) : LoopSemState W F :=
+  { state with
+    globals := fun current =>
+      if current = index then some value else state.globals current }
+
+/-- Exact whole-state port of HOL `get_var_imm_def` (`loopSemScript.sml:165-167`):
+    `get_var_imm (Reg n) s = lookup n s.locals` and
+    `get_var_imm (Imm w) s = SOME (Word w)`. -/
+@[hol "cakeml/pancake/semantics/loopSemScript.sml" "get_var_imm_def"]
+def getVarImmSemHOL (state : LoopSemState W F) : RegImm W → Option (LoopValue W)
+  | .reg name => state.locals name
+  | .imm value => some (.word value)
+
 end Flapjack

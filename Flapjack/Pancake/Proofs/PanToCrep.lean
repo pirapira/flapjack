@@ -60,6 +60,26 @@ theorem flookupResVarQuant (locals : FiniteMap Nat α)
       if query = name then value else FLOOKUP locals query := by
   simpa [beq_iff_eq] using FLOOKUP_resVar locals name query value
 
+/-- HOL `no_overlap_wrap_rt_some_all_distinct`: a successful wrapped return
+    lookup retains the duplicate-free slot list supplied by `no_overlap`. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "no_overlap_wrap_rt_some_all_distinct"]
+theorem noOverlapWrapRtNodup
+    (fm : FiniteMap String (Shape × List Nat)) (name : String)
+    (shape : Shape) (slots : List Nat)
+    (hno : noOverlap fm)
+    (hwrap : wrapRt (FLOOKUP fm name) = some (shape, slots)) :
+    slots.Nodup := by
+  cases hlookup : FLOOKUP fm name with
+  | none => simp [wrapRt, hlookup] at hwrap
+  | some entry =>
+      rcases entry with ⟨entryShape, entrySlots⟩
+      have hnodup : entrySlots.Nodup :=
+        hno.1 name entryShape entrySlots hlookup
+      cases entryShape <;> cases entrySlots <;>
+        simp [wrapRt, hlookup] at hwrap <;>
+        rcases hwrap with ⟨_, hslots⟩ <;>
+        simpa [← hslots] using hnodup
+
 /-- HOL `mem_comp_field_lem`: selecting a compiled record field retains an
     input expression or produces the zero fallback. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "mem_comp_field_lem"]

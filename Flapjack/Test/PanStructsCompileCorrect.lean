@@ -58,6 +58,14 @@ example : finiteMapState.runtime.globals "global" =
 example : finiteMapState.runtime.exceptionShapes "E" = some .one := by
   rfl
 
+example : finiteMapState.runtime.locals "local" =
+    panPropsALookupEq "local" finiteMapState.locals := by
+  exact finiteMapState.locals_lookup "local"
+
+example : lookupInfo "f" finiteMapState.runtime.code =
+    panPropsALookupEq "f" finiteMapState.runtime.code := by
+  exact lookupInfo_eq_panPropsALookupEq "f" finiteMapState.runtime.code
+
 example :
     (panStructConvertFiniteState finiteMapContext finiteMapState).locals =
       [("local", .word (BitVec.ofNat 64 7))] := by
@@ -94,7 +102,7 @@ example :
         some (.word (BitVec.ofNat 64 11)), some .one) := by
   simp [panStructConvertFiniteState, finiteMapState,
     panStructFiniteStateFromMaps, panStructConvertState, panStructConvertValue,
-    lookupInfo, structCompileShape, structCompileShapeWF]
+    panPropsALookupEq, structCompileShape, structCompileShapeWF]
 
 example :
     panSemEvaluateCodeStateWithPostState statefulTestContext statefulTestPrimitive

@@ -91,6 +91,16 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
         self.assertEqual(inventory[key]["statement_status"], "reviewed_exact")
         self.assertEqual(inventory[key]["reviewer"], "Codex (source comparison)")
 
+    def test_compile_exp_not_mem_load_glob_is_in_review_inventory(self):
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        key = ("Flapjack/Pancake/Proofs/PanToCrep.lean", "compileExpNotMemLoadGlob")
+        self.assertEqual(inventory[key]["hol_name"], "compile_exp_not_mem_load_glob")
+        self.assertEqual(inventory[key]["statement_status"], "reviewed_exact")
+        self.assertEqual(inventory[key]["reviewer"], "Codex (source comparison)")
+
 
 class ValidateInventoryTest(unittest.TestCase):
     path = "Flapjack/Pancake/Proofs/Example.lean"

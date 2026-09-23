@@ -195,6 +195,34 @@ theorem localsRel_satisfied : localsRel oneVarContext sourceLocals targetLocals 
       · simp [panValueShape, isWfShape]
     · simp [FEMPTY] at hlookup
 
+def compileExpNotMemSourceState : PanSemState Nat (FfiState Unit) :=
+  { sourceState with locals := sourceLocals }
+
+def compileExpNotMemTargetState : CrepRuntimeState Nat Unit :=
+  { targetState with locals := targetLocals }
+
+def compileExpNotMemExpression : Exp Nat :=
+  .op .add [.var .local "x", .const 7]
+
+/-- The fixture exercises a nested `exps` traversal through an operation and
+    supplies the actual HOL-shaped local, state, code, and locals relations. -/
+theorem compileExpNotMemLoadGlob_fixture :
+    CrepExp.loadGlob 17 ∉
+      ([.op .add [.var 0, .const 7]] : List (CrepExp Nat)).flatMap crepExps := by
+  apply compileExpNotMemLoadGlob oneVarContext compileExpNotMemExpression
+    compileExpNotMemSourceState compileExpNotMemTargetState
+    [.op .add [.var 0, .const 7]] .one 17
+  · simp [compileExpNotMemExpression,
+      compileExpHOL, oneVarContext, FLOOKUP, FUPDATE, compileExpHOL.compileExpListHOL,
+      cexpHeads]
+  · simpa [stateRel, compileExpNotMemSourceState, compileExpNotMemTargetState,
+      sourceState, targetState] using
+      stateRel_satisfied
+  · intro function variableShapes program returnShape hlookup
+    simp [compileExpNotMemSourceState, sourceState, panSemCodeAsLookup, panSemCodeLookup, lookupInfo,
+      FLOOKUP] at hlookup
+  · exact localsRel_satisfied
+
 /-- The exact lookup theorem recovers the concrete slot, flattened word, and
     well-formed shape for the one-word local in `localsRel_satisfied`. -/
 theorem localsRelLookupCtxt_fixture :

@@ -2681,6 +2681,14 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "compile_exp_not_mem_load_glob",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "compileExpNotMemLoadGlob",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
     "hol_name": "mem_comp_field_lem",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "compileField_mem_or_zero",
@@ -2710,6 +2718,14 @@
     "lean_name": "panPrimopCrepPrimop",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (original premise/conclusion shape and shared word_add_carry cases)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "compile_prog_distinct_params",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/CompileProgParams.lean",
+    "lean_name": "compileProgTopHOL_params_nodup",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (premise-free HOL EVERY/ALL_DISTINCT shape over exact compile_prog triples)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",

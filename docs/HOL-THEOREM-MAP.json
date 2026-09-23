@@ -2577,6 +2577,22 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "dec_clock_simp",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "dec_clock_simp",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "empty_locals_simp",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "empty_locals_simp",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
     "hol_name": "map_var_cexp_eq_var",
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
     "lean_name": "map_var_crepExpVars_eq",
@@ -2606,6 +2622,14 @@
     "lean_name": "optMmapEqSome",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "dec_clock_def",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
+    "lean_name": "decCrepClock",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (production state update comparison)"
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",

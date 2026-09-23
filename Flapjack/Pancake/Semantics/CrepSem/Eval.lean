@@ -10,10 +10,10 @@ constructors over the runtime state's word-valued representation. Its `Var`
 equation is exactly HOL `crepSem.eval`'s `FLOOKUP s.locals v` clause and is the
 only evaluator case used by `lookup_locals_eq_map_vars`. The runtime state
 stores memory as `α → Option α` plus an `α → Bool` domain, rather than HOL's
-total word memory plus a separate address set. Globals use HOL's 5-bit index
-and `word_lab` cell types; `loadGlob` unwraps the cell's `Word` constructor.
-Consequently this evaluator is not tagged as a whole-definition port of
-`eval_def`. The memory representation gap does not affect the tagged
+total word memory plus a separate address set. Global keys and cells use
+HOL's fixed 5-bit index and `word_lab` wrapper; `loadGlob` unwraps the cell's
+`Word` constructor. The remaining memory representation gap prevents tagging
+this whole evaluator as `eval_def`; it does not affect the tagged
 `lookup_locals_eq_map_vars` theorem, which applies the evaluator only to `Var`.
 This evaluator is independent of both `evalCrepRuntimeExp` and the legacy
 compatibility evaluator `evalCrepFullExpState` from `CrepeSemantics`.

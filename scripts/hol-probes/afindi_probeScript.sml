@@ -32,3 +32,12 @@ val wf_drop_context =
 val _ = print_eval "wf_shape_drop"
   ``panLang$is_wf_shape (DROP 1 ^wf_drop_context) (panLang$Named «s») ==>
     panLang$is_wf_shape ^wf_drop_context (panLang$Named «s»)``;
+val dropwhile_source = ``[0; 1; 2; 3]``;
+val _ = print_eval "dropWhile_MAP_helper"
+  ``dropWhile (\n:num. n < 3) (MAP SUC ^dropwhile_source) =
+    MAP SUC (dropWhile (\n:num. n < 2) ^dropwhile_source)``;
+val _ = print_eval "UNCURRY_EQ_o_SND_pair"
+  ``UNCURRY (\x. SUC) (0, 4) = SUC 4``;
+val _ = print_eval "map_uncurry_zip_again"
+  ``MAP (\(x, y). (SUC x, SUC y)) (ZIP ([1; 2], [3; 4])) =
+    ZIP (MAP SUC [1; 2], MAP SUC [3; 4])``;

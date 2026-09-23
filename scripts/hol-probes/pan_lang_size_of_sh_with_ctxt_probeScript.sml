@@ -22,6 +22,9 @@ fun print_eval label q =
 val pair_context =
   ``[(strlit "Pair", <| fields := [(strlit "left", One);
                                      (strlit "right", One)]; size := 2 |>)]``;
+val drop_context =
+  ``[(strlit "prefix", <| fields := []; size := 9 |>);
+      (strlit "Suffix", <| fields := []; size := 7 |>)]``;
 
 val _ = print_eval "one"
   ``size_of_sh_with_ctxt
@@ -33,3 +36,8 @@ val _ = print_eval "missing_named"
 val _ = print_eval "nested_comb"
   ``size_of_sh_with_ctxt ^pair_context
       (Comb [One; Named (strlit "Pair"); Comb [One; One]])``;
+val _ = print_eval "nested_named_size_drop"
+  ``size_of_sh_with_ctxt (DROP 1 ^drop_context)
+      (Comb [One; Named (strlit "Suffix")]) =
+    size_of_sh_with_ctxt ^drop_context
+      (Comb [One; Named (strlit "Suffix")])``;

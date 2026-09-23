@@ -181,6 +181,8 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/Proofs/PanGlobals.lean", "globalCompileTopCake_shapes_wf_nil"),
         ("Flapjack/Pancake/Proofs/PanGlobals.lean", "exceptions_append"),
         ("Flapjack/Pancake/Proofs/PanGlobals.lean", "exceptions_FILTER_is_function"),
+        ("Flapjack/Pancake/Proofs/PanGlobals.lean", "not_is_function"),
+        ("Flapjack/Pancake/Proofs/PanGlobals.lean", "decl_distinct"),
         ("Flapjack/Pancake/Proofs/PanToCrep.lean", "mod_eq_of_lt_eq"),
         ("Flapjack/Pancake/Proofs/PanToCrep.lean", "option_ne_none_iff_exists"),
         ("Flapjack/Pancake/Proofs/PanToCrep.lean", "prod_mk_pair_eq_id"),

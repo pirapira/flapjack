@@ -12,8 +12,8 @@ namespace Flapjack.Test.PanToCrepStateRelParity
 
 open Flapjack
 
-def noNatCells : Nat → Option Nat := fun _ => none
-def noPanValueCells : Nat → Option (PanValue Nat) := fun _ => none
+def noNatCells : Nat → PanWordLab Nat := fun _ => .word 0
+def noPanValueCells : Nat → Option (PanValue Nat) := fun _ => some (.word 0)
 def noMemaddrs : Nat → Bool := fun _ => false
 
 def sourceState : PanSemState Nat (FfiState Unit) :=
@@ -100,7 +100,7 @@ def structMemorySourceState : PanSemState Nat (FfiState Unit) :=
 theorem stateRel_satisfied : stateRel sourceState targetState := by
   refine ⟨?_, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
   funext address
-  simp [sourceState, targetState, noPanValueCells, noNatCells]
+  simp [sourceState, targetState, noPanValueCells, noNatCells, panTheWord]
 
 theorem skipCodeRuntime_relates :
     stateRel sourceState skipCodeRuntime := by
@@ -136,7 +136,7 @@ theorem rejectsStructMemory :
     ¬ stateRel structMemorySourceState targetState := by
   intro hrel
   have h0 := congrFun hrel.1 0
-  simp [structMemorySourceState, sourceState, targetState, noNatCells] at h0
+  simp [structMemorySourceState, sourceState, targetState, noNatCells, panTheWord] at h0
 
 def oneVarContext : PanToCrepProofContext Nat :=
   { vars := FUPDATE FEMPTY ("x", (Shape.one, [0]))

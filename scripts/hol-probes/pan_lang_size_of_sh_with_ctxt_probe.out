@@ -2,3 +2,4 @@ one=1
 known_named=2
 missing_named=1
 nested_comb=5
+nested_named_size_drop=T

@@ -149,7 +149,8 @@ run_probe pan_lang_with_shape_probeScript.sml pan_lang_with_shape_probe.out \
 run_probe pan_lang_wf_fields_context_probeScript.sml pan_lang_wf_fields_context_probe.out \
   empty_fields self_reference_context "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_lang_size_of_sh_with_ctxt_probeScript.sml pan_lang_size_of_sh_with_ctxt_probe.out \
-  one known_named missing_named nested_comb "$cake_dir/pancake/panLangScript.sml"
+  one known_named missing_named nested_comb nested_named_size_drop \
+  "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_lang_size_of_shape_probeScript.sml pan_lang_size_of_shape_probe.out \
   one empty_comb named nested_comb "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_lang_decl_predicates_probeScript.sml pan_lang_decl_predicates_probe.out \
@@ -239,6 +240,14 @@ run_probe pan_dec_clock_probeScript.sml pan_dec_clock_probe.out \
 # The dec_clock artifact fixture probe evaluates `tick; return 7` directly.
 run_probe pan_sem_dec_clock_e2e_probeScript.sml pan_sem_dec_clock_e2e_probe.out \
   dec_clock_tick_return dec_clock_tick_return_clock \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+# The Tick probe observes both the zero-clock timeout and positive-clock branches.
+run_probe pan_sem_tick_e2e_probeScript.sml pan_sem_tick_e2e_probe.out \
+  tick_zero_result tick_succ_locals_preserved \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+# The Skip probe observes the normal result with state carried verbatim.
+run_probe pan_sem_skip_e2e_probeScript.sml pan_sem_skip_e2e_probe.out \
+  skip_result skip_locals_preserved \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_fix_clock_probeScript.sml pan_fix_clock_probe.out \
   pan_fix_clock_clamps pan_fix_clock_keeps_lower \
@@ -493,7 +502,9 @@ run_probe crep_simp_exp_probeScript.sml crep_simp_exp_probe.out \
 run_probe crep_simp_prog_probeScript.sml crep_simp_prog_probe.out \
   assign unchanged "$cake_dir/pancake/crep_arithScript.sml"
 run_probe afindi_probeScript.sml afindi_probe.out \
-  empty duplicate_first wf_shape_drop "$cake_dir/pancake/pan_structsScript.sml"
+  empty duplicate_first wf_shape_drop dropWhile_MAP_helper UNCURRY_EQ_o_SND_pair \
+  map_uncurry_zip_again \
+  "$cake_dir/pancake/pan_structsScript.sml"
 run_probe pan_structs_compile_exp_probeScript.sml pan_structs_compile_exp_probe.out \
   rstruct old_shapes_map "$cake_dir/pancake/pan_structsScript.sml"
 run_probe crep_semantics_probeScript.sml crep_semantics_probe.out \
@@ -523,6 +534,10 @@ run_probe crep_replicate_const_probeScript.sml crep_replicate_const_probe.out \
 # memaddrs guard on both mem_load and eval (Load ...).
 run_probe crep_mem_load_probeScript.sml crep_mem_load_probe.out \
   mem_load_valid eval_load_invalid \
+  "$cake_dir/pancake/semantics/crepSemScript.sml" \
+  "$cake_dir/pancake/semantics"
+run_probe crep_mem_store_probeScript.sml crep_mem_store_probe.out \
+  mem_store_valid_lookup mem_store_invalid \
   "$cake_dir/pancake/semantics/crepSemScript.sml" \
   "$cake_dir/pancake/semantics"
 run_probe prog_if_probeScript.sml prog_if_probe.out \

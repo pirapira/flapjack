@@ -2226,6 +2226,148 @@ theorem crepRuntimeExpHdlOneWord
   rw [hglobal]
   simp [hslot, panTheWord, fixCrepRuntimeClock]
 
+/-! Two-word continuation of the target `exp_hdl` step. This is still
+Flapjack-only induction support: the handler payload occupies consecutive
+return-global cells and updates the existing slots in source order. -/
+theorem crepRuntimeExpHdlTwoWords
+    (handler : CrepRuntimeFfiHandler (RiscV.Word 64) σ FfiFinalEvent)
+    (primitive : CrepPrimitiveHandler (RiscV.Word 64))
+    (state : CrepRuntimeState (RiscV.Word 64) σ)
+    (variables : FiniteMap String (Shape × List Nat))
+    (name : String) (slot0 slot1 : Nat) (value0 value1 : RiscV.Word 64)
+    (hvariable : FLOOKUP variables name =
+      some (.comb [.one, .one], [slot0, slot1]))
+    (hslotsNe : slot0 ≠ slot1)
+    (hslot0 : ∃ old, state.locals slot0 = some old)
+    (hslot1 : ∃ old, state.locals slot1 = some old)
+    (hglobal0 : state.globals (0 : BitVec 5) = some (.word value0))
+    (hglobal1 : state.globals (1 : BitVec 5) = some (.word value1)) :
+    evalCrepRuntimeProg handler primitive 4 state
+      (expHdlFiniteMap variables name) =
+        some (.normal,
+          { state with locals :=
+            (updateCrepRuntimeLocal
+              (updateCrepRuntimeLocal state.locals slot0 (.word value0))
+              slot1 (.word value1)) }) := by
+  obtain ⟨old0, hslot0⟩ := hslot0
+  obtain ⟨old1, hslot1⟩ := hslot1
+  have hsetup : expHdlFiniteMap (α := RiscV.Word 64) variables name =
+      (.seq (.assign slot0 (.loadGlob (0 : BitVec 5)))
+        (.seq (.assign slot1 (.loadGlob (1 : BitVec 5))) .skip) :
+          CrepProg (RiscV.Word 64)) := by
+    simp [expHdlFiniteMap, hvariable, loadGlobals, panMap2, crepNestedSeq]
+  rw [hsetup]
+  have hload0 : evalCrepRuntimeExp state (.loadGlob (0 : BitVec 5)) =
+      some value0 := by
+    simp only [evalCrepRuntimeExp]
+    rw [hglobal0]
+    rfl
+  let stateAfterFirst :=
+    { state with locals := updateCrepRuntimeLocal state.locals slot0 (.word value0) }
+  let stateAfterBoth :=
+    { stateAfterFirst with
+      locals := updateCrepRuntimeLocal stateAfterFirst.locals slot1 (.word value1) }
+  have hfirst :
+      evalCrepRuntimeProg handler primitive 3 state
+        (.assign slot0 (.loadGlob (0 : BitVec 5))) =
+      some (.normal, stateAfterFirst) := by
+    rw [evalCrepRuntimeProg]
+    rw [hload0]
+    rw [hslot0]
+  have hslot1Value : stateAfterFirst.locals slot1 = some old1 := by
+    simp [stateAfterFirst, updateCrepRuntimeLocal, hslotsNe, hslot1]
+  have hload1 :
+      evalCrepRuntimeExp stateAfterFirst (.loadGlob (1 : BitVec 5)) = some value1 := by
+    simp only [evalCrepRuntimeExp, stateAfterFirst]
+    rw [hglobal1]
+    rfl
+  have hassign1 :
+      evalCrepRuntimeProg handler primitive 2 stateAfterFirst
+        (.assign slot1 (.loadGlob (1 : BitVec 5))) =
+      some (.normal, stateAfterBoth) := by
+    rw [evalCrepRuntimeProg]
+    rw [hload1]
+    rw [hslot1Value]
+  have hsecond :
+      evalCrepRuntimeProg handler primitive 3 stateAfterFirst
+        (.seq (.assign slot1 (.loadGlob (1 : BitVec 5))) .skip) =
+      some (.normal, stateAfterBoth) := by
+    rw [evalCrepRuntimeProg]
+    rw [hassign1]
+    simp [evalCrepRuntimeProg, fixCrepRuntimeClock, stateAfterBoth]
+  rw [evalCrepRuntimeProg]
+  rw [hfirst]
+  simp only [fixCrepRuntimeClock]
+  have hclockFirst : { stateAfterFirst with
+      clock := min state.clock stateAfterFirst.clock } = stateAfterFirst := by
+    simp [stateAfterFirst]
+  rw [hclockFirst]
+  rw [hsecond]
+
+/-! Relation-aware two-word target handler setup. This produces the exact
+`locals_rel` premise for a handler-body IH after `exp_hdl` copies both words
+from the state-owned return-global cells. -/
+theorem crepRuntimeExpHdlTwoWords_localsRel
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (handler : CrepRuntimeFfiHandler (RiscV.Word 64) σ FfiFinalEvent)
+    (primitive : CrepPrimitiveHandler (RiscV.Word 64))
+    (state : CrepRuntimeState (RiscV.Word 64) σ)
+    (sourceLocals : FiniteMap String (PanValue (RiscV.Word 64)))
+    (name : String) (slot0 slot1 : Nat)
+    (old : PanValue (RiscV.Word 64)) (value0 value1 : RiscV.Word 64)
+    (hlocals : localsRel context sourceLocals state.locals)
+    (hsource : FLOOKUP sourceLocals name = some old)
+    (hshape : panValueShape [] old = .comb [.one, .one])
+    (hvariable : FLOOKUP context.vars name =
+      some (.comb [.one, .one], [slot0, slot1]))
+    (hslotsNe : slot0 ≠ slot1)
+    (hslot0 : ∃ current, state.locals slot0 = some current)
+    (hslot1 : ∃ current, state.locals slot1 = some current)
+    (hglobal0 : state.globals (0 : BitVec 5) = some (.word value0))
+    (hglobal1 : state.globals (1 : BitVec 5) = some (.word value1)) :
+    ∃ targetPost,
+      evalCrepRuntimeProg handler primitive 4 state
+        (expHdlFiniteMap context.vars name) = some (.normal, targetPost) ∧
+      localsRel context
+        (FUPDATE sourceLocals
+          (name, .rStruct [.word value0, .word value1])) targetPost.locals := by
+  let payload : PanValue (RiscV.Word 64) := .rStruct [.word value0, .word value1]
+  have hpayloadShape : panValueShape [] payload = .comb [.one, .one] := by
+    simp [payload, panValueShape]
+  have hshapeUpdate : panValueShape [] old = panValueShape [] payload :=
+    hshape.trans hpayloadShape.symm
+  obtain ⟨payloadSlots, hcontextPayload, hslotsDistinct, hlocalsPayload⟩ :=
+    localsRelUpdateExistingValue context sourceLocals state.locals name old
+      payload hlocals hsource hshapeUpdate
+  have hpayloadSlots : payloadSlots = [slot0, slot1] := by
+    have hpairs : (panValueShape [] payload, payloadSlots) =
+        (.comb [.one, .one], [slot0, slot1]) :=
+      Option.some.inj (hcontextPayload.symm.trans hvariable)
+    exact congrArg Prod.snd hpairs
+  let targetPost := { state with locals :=
+    (updateCrepRuntimeLocal
+      (updateCrepRuntimeLocal state.locals slot0 (.word value0))
+      slot1 (.word value1)) }
+  have hrun := crepRuntimeExpHdlTwoWords handler primitive state context.vars name
+    slot0 slot1 value0 value1 hvariable hslotsNe hslot0 hslot1 hglobal0 hglobal1
+  have hrunPost : evalCrepRuntimeProg handler primitive 4 state
+      (expHdlFiniteMap context.vars name) = some (.normal, targetPost) := by
+    simpa [targetPost] using hrun
+  have hflat : panValueFlatten payload = [value0, value1] := by
+    simp [payload, panValueFlatten, panValueFlattenValues]
+  have hlocalsMap :
+      FUPDATE_LIST state.locals
+        (payloadSlots.zip ((panValueFlatten payload).map PanWordLab.word)) =
+      targetPost.locals := by
+    rw [hpayloadSlots]
+    rw [hflat]
+    funext slot
+    simp [targetPost, FUPDATE_LIST, FUPDATE,
+      updateCrepRuntimeLocal, beq_iff_eq]
+  refine ⟨targetPost, hrunPost, ?_⟩
+  rw [← hlocalsMap]
+  exact hlocalsPayload
+
 /-- The one-word `exp_hdl` execution above yields the `locals_rel` precondition
 for the matching source handler body. This is induction support for
 `pc_compile_correct[Call_Ret_Exception]`, not a standalone HOL declaration. -/

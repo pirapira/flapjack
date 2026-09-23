@@ -1653,9 +1653,12 @@ For the one-word Call exception-handler case, the target `exp_hdl` execution
 and resulting `locals_rel` postcondition are proved by
 `EvaluateCases.crepRuntimeExpHdlOneWord` and
 `EvaluateCases.crepRuntimeExpHdlOneWord_localsRel`; that target step is closed,
-not a separate remaining proof obligation. This lemma supplies the map update
-used in that proof. The enclosing HOL Call case, including wider handler
-payloads, remains open. -/
+not a separate remaining proof obligation. The same target setup and
+`locals_rel` precondition are proved for a two-word payload by
+`EvaluateCases.crepRuntimeExpHdlTwoWords` and
+`EvaluateCases.crepRuntimeExpHdlTwoWords_localsRel`. This lemma supplies the map
+update used in those proofs. The enclosing HOL Call case and other payload
+shapes remain open. -/
 theorem localsRelUpdateExistingValue
     (context : PanToCrepProofContext α)
     (sourceLocals : FiniteMap String (PanValue α))

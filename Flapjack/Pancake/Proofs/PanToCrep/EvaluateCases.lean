@@ -302,6 +302,64 @@ theorem panToCrepConcreteEvaluationGoal_returnConst
       · simp [panToCrepRunResultRel, panToCrepControlResultRel,
           panValueFlatten, clearCrepRuntimeLocals, hclock]
 
+/-- The empty-structure Return case exercises HOL `compile_def`'s zero-size
+shape branch and relates its flattened source result to Crep's empty return.
+This is local case support, not the full `pc_compile_correct` theorem. -/
+theorem panToCrepConcreteEvaluationGoal_returnEmptyStruct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    [CrepBytesInWord α] [BEq String]
+    (context : PanToCrepProofContext α)
+    (sourceCode : FiniteMap FunName
+      (List (VarName × Shape) × Prog α × Shape))
+    (targetCode : FiniteMap FunName (List Nat × CrepProg α))
+    (sourceContext : PanValueFfiContext α)
+    (sourcePrimitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueStatefulFfiHandler α σ)
+    (targetHandler : CrepRuntimeFfiHandler α σ FfiFinalEvent)
+    (targetPrimitive : CrepPrimitiveHandler α) (fuel : Nat)
+    (sourceState : PanSemExactState α σ)
+    (targetState : CrepRuntimeState α σ)
+    (hclock : sourceState.legacy.clock = targetState.clock)
+    (hfuel : 0 < fuel) :
+    panToCrepConcreteEvaluationGoal context sourceCode targetCode
+      sourceContext sourcePrimitive sourceHandler targetHandler targetPrimitive
+      fuel sourceState targetState (.return (.rStruct [])) := by
+  intro _hruntime sourceRun hsource
+  have hwithin : panValuePayloadWithinLimit sourceState.legacy.structs
+      (.rStruct [] : PanValue α) = true := by
+    simp [panValuePayloadWithinLimit, panValuePayloadSizeFuel,
+      panValuePayloadSizeFuel.panValuePayloadSizeFieldsFuel,
+      panValueFlatValueFuel, panValueFlatValueFuel.panValueFlatValueListFuel]
+  have hsourceReturn :
+      panToCrepSourceEvaluate sourceContext sourcePrimitive sourceHandler
+        sourceState (.return (.rStruct [])) =
+      some (.control (.returned (fun _ => none) sourceState.legacy.globals
+        sourceState.legacy.memory sourceState.legacy.ffi [.rStruct []]),
+        sourceState.legacy.clock) := by
+    simp [panToCrepSourceEvaluate, panSemEvaluateExactState, panSemEvaluate,
+      panSemEvaluateWithFuel, panSemEvaluateFuel, PanSemExactState.toEvaluateState,
+      evalPanValueFfiClockProg, evalPanValueFfiClockLeaf,
+      evalPanValueFfiProgSteps, evalPanValueExpCounted,
+      evalPanValueExp, evalPanValueExp.evalPanValueExps,
+      panValueExpStepCost, panValueExpStepCost.panValueExpsStepCost,
+      hwithin]
+  rw [hsourceReturn] at hsource
+  injection hsource with hrun
+  subst sourceRun
+  cases fuel with
+  | zero => omega
+  | succ fuel =>
+      refine ⟨((CrepRuntimeResult.returned [] : CrepRuntimeResult α FfiFinalEvent),
+        clearCrepRuntimeLocals targetState), ?_, ?_⟩
+      · simp [panToCrepTargetEvaluate, compileCodeRelProg, compileProgHOL,
+          compileExpHOL, evalCrepRuntimeResult, evalCrepRuntimeProg,
+          evalCrepRuntimeExps,
+          compileExpHOL.compileExpListHOL, Shape.shapeSize]
+      · simp [panToCrepRunResultRel, panToCrepControlResultRel,
+          panValueFlatten, panValueFlattenValues, clearCrepRuntimeLocals, hclock]
+
 /-- The `Break` constructor satisfies the concrete source-run-implies-target-run
 goal; the HOL result relation maps the source break to target label zero. -/
 theorem panToCrepConcreteEvaluationGoal_break

@@ -63,3 +63,9 @@ val _ = print_eval "byte_align_width24_address5"
 val _ = print_eval "byte_load_width24_address5"
   ``mem_load_byte (\a : 24 word. Word (0x332211w : 24 word))
       {4w} F 5w``
+val _ = print_eval "byte_load_width24_address5_big_endian"
+  ``mem_load_byte (\a : 24 word. Word (0x332211w : 24 word))
+      {4w} T 5w``
+val _ = print_eval "load32_width24_address4"
+  ``mem_load_32 (\a : 24 word. Word (0x332211w : 24 word))
+      {4w} F 4w``

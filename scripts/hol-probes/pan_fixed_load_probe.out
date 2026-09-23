@@ -39,3 +39,5 @@ byte_hit_width8=SOME 165w
 load32_hit_width8=SOME 0xA5A5A5A5w
 byte_align_width24_address5=4w
 byte_load_width24_address5=SOME 51w
+byte_load_width24_address5_big_endian=SOME 17w
+load32_width24_address4=SOME 0x22113322w

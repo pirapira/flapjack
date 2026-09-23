@@ -78,7 +78,7 @@ private theorem runtimeInputWrapped :
     (evalCrepRuntimeExp (riscv64CrepRuntimeTarget runtimeState) runtimeExpression).map
       PanWordLab.word = some (.word (7 : RiscV.Word 64)) := by
   have hRaw : evalCrepRuntimeExp (riscv64CrepRuntimeTarget runtimeState)
-      runtimeExpression = some (7 : RiscV.Word 64) := by native_decide
+      runtimeExpression = some (7 : RiscV.Word 64) := by decide +kernel
   simp [hRaw]
 
 example : (evalCrepRuntimeExp (riscv64CrepRuntimeTarget runtimeState)

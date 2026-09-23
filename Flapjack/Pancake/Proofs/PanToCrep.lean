@@ -487,7 +487,7 @@ theorem slcTlcRw
     therefore does not satisfy the relation. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "state_rel_def"]
 def stateRel (s : PanSemState α (FfiState σ)) (t : CrepRuntimeState α σ) : Prop :=
-  s.memory = (fun address => (t.memory address).map PanValue.word) ∧
+  s.memory = (fun address => some (PanValue.word (panTheWord (t.memory address)))) ∧
     s.memaddrs = t.memaddrs ∧
     s.sharedMemaddrs = t.shMemaddrs ∧ s.structs = [] ∧
     s.globals = (FEMPTY : FiniteMap VarName (PanValue α)) ∧
@@ -518,8 +518,7 @@ theorem stateRel_globals (s : PanSemState α (FfiState σ)) (t : CrepRuntimeStat
     accepts, so no `word_lab` cell is silently dropped.  It is the target-side
     hypothesis of the `mem_load_def` correspondence below. -/
 def crepMemoryRel (state : CrepRuntimeState α σ) (total : α → PanWordLab α) : Prop :=
-  ∀ address, state.memaddrs address = true →
-    state.memory address = some (panTheWord (total address))
+  state.memory = total
 
 /-- First branch of HOL `mem_load_def`
     (`cakeml/pancake/semantics/crepSemScript.sml:48-51`): a load at an address in
@@ -528,8 +527,9 @@ theorem crepRuntimeLoad_eq_some_of_crepMemoryRel {state : CrepRuntimeState α σ
     {total : α → PanWordLab α} (hrel : crepMemoryRel state total) {address : α}
     (hvalid : state.memaddrs address = true) :
     crepRuntimeLoad state address = some (panTheWord (total address)) := by
+  change state.memory = total at hrel
   rw [crepRuntimeLoad]
-  simp [hvalid, hrel address hvalid]
+  simp [hvalid, hrel]
 
 /-- Second branch of HOL `mem_load_def`: an address outside `memaddrs` has no
     loadable cell. -/
@@ -538,6 +538,43 @@ theorem crepRuntimeLoad_eq_none_of_memaddrs_false {state : CrepRuntimeState α �
     crepRuntimeLoad state address = none := by
   rw [crepRuntimeLoad]
   simp [hinvalid]
+
+/-- First branch of HOL `panSem$mem_store`
+    (`cakeml/pancake/semantics/panSemScript.sml:373-378`) as used by
+    `crepSem$evaluate`'s store case: a store at an address in `memaddrs`
+    succeeds and updates exactly that address, keeping the rest of the memory
+    function. -/
+theorem crepRuntimeStore_eq_some_of_memaddrs_true [BEq α]
+    {state : CrepRuntimeState α σ} {address value : α}
+    (hvalid : state.memaddrs address = true) :
+    crepRuntimeStore state address value =
+      some { state with memory := updateCrepRuntimeMemory state.memory address (.word value) } := by
+  rw [crepRuntimeStore]
+  simp [hvalid]
+
+/-- Second branch of HOL `panSem$mem_store`: a store outside `memaddrs` fails. -/
+theorem crepRuntimeStore_eq_none_of_memaddrs_false [BEq α]
+    {state : CrepRuntimeState α σ} {address value : α}
+    (hinvalid : state.memaddrs address = false) :
+    crepRuntimeStore state address value = none := by
+  rw [crepRuntimeStore]
+  simp [hinvalid]
+
+/-- Storing a value preserves `crepMemoryRel` when the total memory function is
+    updated at the same address: the stored cell becomes the `word_lab` of the
+    value, and every other guarded address is untouched. -/
+theorem crepMemoryRel_store [BEq α] {state : CrepRuntimeState α σ}
+    {total : α → PanWordLab α} (hrel : crepMemoryRel state total) {address : α}
+    (_hvalid : state.memaddrs address = true) (value : α) :
+    crepMemoryRel
+      { state with memory := updateCrepRuntimeMemory state.memory address (.word value) }
+      (fun current => if current == address then .word value else total current) := by
+  unfold crepMemoryRel at hrel ⊢
+  rw [hrel]
+  funext current
+  by_cases hsame : current == address
+  · simp [updateCrepRuntimeMemory, hsame]
+  · simp [updateCrepRuntimeMemory, hsame]
 
 /-- HOL `locals_rel_def` (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:71`):
     the proof context's variable map is well formed, and every live source

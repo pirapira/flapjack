@@ -3478,5 +3478,29 @@
     "lean_name": "structCompileExps_eq_map",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison with direct HOL-EVAL list fixture)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "crepRuntimeStore_eq_some_of_memaddrs_true",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "crepRuntimeStore_eq_none_of_memaddrs_false",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "crepMemoryRel_store",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "flapjack-deepseek (source comparison)"
   }
 ]

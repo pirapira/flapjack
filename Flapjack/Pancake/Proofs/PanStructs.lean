@@ -376,6 +376,15 @@ theorem structInfosOk_drop (n : Nat) (context : StructContext)
     rw [hsize]
     exact hctx
 
+/-- Exact API translation of HOL `struct_infos_ok_append`
+    (`pan_structsProofScript.sml:198`): a valid appended structure context
+    remains valid in its suffix. -/
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "struct_infos_ok_append" 198]
+theorem structInfosOk_append (xs ys : StructContext)
+    (h : structInfosOk (xs ++ ys)) : structInfosOk ys := by
+  have hdrop := structInfosOk_drop xs.length (xs ++ ys) h
+  rwa [List.drop_left] at hdrop
+
 /-- Exact port of HOL `dropWhile_MAP_helper`
     (`pan_structsProofScript.sml:542`): mapping commutes with `dropWhile` when
     the source and mapped predicates agree on every source element. -/

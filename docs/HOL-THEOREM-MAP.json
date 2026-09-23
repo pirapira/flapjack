@@ -2561,6 +2561,14 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "struct_infos_ok_append",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "structInfosOk_append",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source implication and appended-context premise/conclusion shape comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "size_of_sh_with_ctxt_drop",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "shapeSizeWithContext_drop",

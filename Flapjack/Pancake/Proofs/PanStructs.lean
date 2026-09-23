@@ -160,6 +160,124 @@ theorem isWfShape_drop [BEq String] (context : StructContext) (shape : Shape)
       exact lookupInfo_isSome_drop name context n h))
     shape context n
 
+/-! Lean list-lookup adaptation of Cake's local `alookup_drop_helper`
+    (`cakeml/pancake/proofs/pan_structsProofScript.sml:78`). -/
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "alookup_drop_helper"]
+theorem lookup_drop_helper [DecidableEq α]
+    (n : Nat) (xs : List (α × β)) (key : α) (value : β)
+    (hlookup : List.lookup key (xs.drop n) = some value)
+    (hnodup : (xs.map Prod.fst).Nodup) :
+    key ∉ (xs.take n).map Prod.fst ∧ List.lookup key xs = some value := by
+  have hmem_drop : key ∈ (xs.drop n).map Prod.fst := by
+    obtain ⟨l₁, l₂, heq, _⟩ :=
+      (List.lookup_eq_some_iff (l := xs.drop n) (k := key) (b := value)).mp hlookup
+    exact List.mem_map.mpr ⟨(key, value), by rw [heq]; simp, rfl⟩
+  have hmap : xs.map Prod.fst =
+      (xs.take n).map Prod.fst ++ (xs.drop n).map Prod.fst := by
+    rw [← List.map_append, List.take_append_drop]
+  have hnodup' : ((xs.take n).map Prod.fst ++ (xs.drop n).map Prod.fst).Nodup := by
+    rw [← hmap]; exact hnodup
+  have hnot_mem : key ∉ (xs.take n).map Prod.fst := by
+    intro hk
+    exact (List.nodup_append.mp hnodup').2.2 key hk key hmem_drop rfl
+  refine ⟨hnot_mem, ?_⟩
+  have htake_none : List.lookup key (xs.take n) = none := by
+    rw [List.lookup_eq_none_iff]
+    intro p hp
+    rw [bne_iff_ne]
+    intro hkp
+    exact hnot_mem (List.mem_map.mpr ⟨p, hp, hkp.symm⟩)
+  have h1 := List.lookup_append (l₁ := xs.take n) (l₂ := xs.drop n) (k := key)
+  rw [htake_none] at h1
+  simp only [Option.none_or] at h1
+  rw [← List.take_append_drop n xs, h1]
+  exact hlookup
+
+/-! Lean support lemma used to extract a shape premise from a well-formed
+    shape list. -/
+theorem isWfShape_of_mem {context : StructContext} {shapes : List Shape} {shape : Shape}
+    (h : isWfShape.isWfShapeList context shapes = true) (hmem : shape ∈ shapes) :
+    isWfShape context shape = true := by
+  induction shapes with
+  | nil => simp at hmem
+  | cons s ss ih =>
+      simp only [isWfShape.isWfShapeList, Bool.and_eq_true] at h
+      rcases List.mem_cons.mp hmem with rfl | hmem'
+      · exact h.1
+      · exact ih h.2 hmem'
+
+/-! Lean support lemmas connecting `lookupInfo` with the generic list lookup
+    used in HOL's local `alookup_drop_helper`. -/
+theorem lookupInfo_eq_lookup (name : String) (entries : InfoMap α) :
+    lookupInfo name entries = List.lookup name entries := by
+  induction entries with
+  | nil => rfl
+  | cons entry entries ih =>
+      obtain ⟨candidate, value⟩ := entry
+      simp only [lookupInfo, List.lookup_cons, ih]
+      by_cases h : (candidate == name) = true
+      · have h' : (name == candidate) = true := by
+          rw [beq_iff_eq] at h ⊢
+          exact h.symm
+        simp [h, h']
+      · have h' : (name == candidate) = false :=
+          beq_eq_false_iff_ne.mpr (fun hc => h (beq_iff_eq.mpr hc.symm))
+        simp [h, h']
+
+theorem lookupInfo_drop_helper (n : Nat)
+    (context : StructContext) (name : String) (info : StructInfo)
+    (hlookup : lookupInfo name (context.drop n) = some info)
+    (hnodup : (context.map Prod.fst).Nodup) :
+    lookupInfo name context = some info := by
+  rw [lookupInfo_eq_lookup] at hlookup ⊢
+  exact (lookup_drop_helper n context name info hlookup hnodup).2
+
+/-- Exact API translation of HOL `size_of_sh_with_ctxt_drop`
+    (`pan_structsProofScript.sml:99`): a well-formed shape has the same
+    context-sensitive size in a distinct-key context and its suffix. -/
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "size_of_sh_with_ctxt_drop" 99]
+theorem shapeSizeWithContext_drop (context : StructContext)
+    (shape : Shape) (n : Nat)
+    (h : isWfShape (context.drop n) shape = true)
+    (hnodup : (context.map Prod.fst).Nodup) :
+    shapeSizeWithContext (context.drop n) shape = shapeSizeWithContext context shape := by
+  revert h hnodup
+  induction shape using shapeSizeWithContext.induct with
+  | case1 => intro _ _; simp only [shapeSizeWithContext]
+  | case2 shapes ih =>
+      intro h hnodup
+      have hlist : isWfShape.isWfShapeList (context.drop n) shapes = true := by
+        simpa [isWfShape] using h
+      have hpoint : ∀ s ∈ shapes,
+          shapeSizeWithContext (context.drop n) s = shapeSizeWithContext context s :=
+        fun s hs => ih s hs (isWfShape_of_mem hlist hs) hnodup
+      have hfold : ∀ (l : List Shape),
+          (∀ s ∈ l, shapeSizeWithContext (context.drop n) s = shapeSizeWithContext context s) →
+          ∀ acc, l.foldl (fun total shape => total + shapeSizeWithContext (context.drop n) shape) acc =
+              l.foldl (fun total shape => total + shapeSizeWithContext context shape) acc := by
+        intro l
+        induction l with
+        | nil => intro _ acc; rfl
+        | cons s ss ihs =>
+            intro hl acc
+            simp only [List.foldl_cons]
+            rw [hl s (by simp)]
+            exact ihs (fun t ht => hl t (by simp [ht])) (acc + shapeSizeWithContext context s)
+      have hsum : shapes.foldl
+          (fun total shape => total + shapeSizeWithContext (context.drop n) shape) 0 =
+          shapes.foldl (fun total shape => total + shapeSizeWithContext context shape) 0 :=
+        hfold shapes hpoint 0
+      simp [shapeSizeWithContext, hsum]
+  | case3 name =>
+      intro h hnodup
+      have hsome : (lookupInfo name (context.drop n)).isSome = true := by
+        simpa [isWfShape] using h
+      cases hlk : lookupInfo name (context.drop n) with
+      | none => simp [hlk] at hsome
+      | some info =>
+          have hctx := lookupInfo_drop_helper n context name info hlk hnodup
+          simp [shapeSizeWithContext, hlk, hctx]
+
 /-- HOL's `old_exp_shapes_eq` (`pan_structsProofScript.sml:679`): the
     production old-shape list helper equals `MAP` of the production
     single-expression old-shape function, with no additional premises. -/
@@ -379,39 +497,6 @@ theorem afindi_lookup [DecidableEq α] (key : α) (entries : List (α × β)) :
         cases afindi key rest with
         | none => simp
         | some index => simp [List.getElem?_cons_succ]
-
-/-! Lean list-lookup adaptation of Cake's local `alookup_drop_helper`
-    (`cakeml/pancake/proofs/pan_structsProofScript.sml:78`). -/
-@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "alookup_drop_helper"]
-theorem lookup_drop_helper [DecidableEq α]
-    (n : Nat) (xs : List (α × β)) (key : α) (value : β)
-    (hlookup : List.lookup key (xs.drop n) = some value)
-    (hnodup : (xs.map Prod.fst).Nodup) :
-    key ∉ (xs.take n).map Prod.fst ∧ List.lookup key xs = some value := by
-  have hmem_drop : key ∈ (xs.drop n).map Prod.fst := by
-    obtain ⟨l₁, l₂, heq, _⟩ :=
-      (List.lookup_eq_some_iff (l := xs.drop n) (k := key) (b := value)).mp hlookup
-    exact List.mem_map.mpr ⟨(key, value), by rw [heq]; simp, rfl⟩
-  have hmap : xs.map Prod.fst =
-      (xs.take n).map Prod.fst ++ (xs.drop n).map Prod.fst := by
-    rw [← List.map_append, List.take_append_drop]
-  have hnodup' : ((xs.take n).map Prod.fst ++ (xs.drop n).map Prod.fst).Nodup := by
-    rw [← hmap]; exact hnodup
-  have hnot_mem : key ∉ (xs.take n).map Prod.fst := by
-    intro hk
-    exact (List.nodup_append.mp hnodup').2.2 key hk key hmem_drop rfl
-  refine ⟨hnot_mem, ?_⟩
-  have htake_none : List.lookup key (xs.take n) = none := by
-    rw [List.lookup_eq_none_iff]
-    intro p hp
-    rw [bne_iff_ne]
-    intro hkp
-    exact hnot_mem (List.mem_map.mpr ⟨p, hp, hkp.symm⟩)
-  have h1 := List.lookup_append (l₁ := xs.take n) (l₂ := xs.drop n) (k := key)
-  rw [htake_none] at h1
-  simp only [Option.none_or] at h1
-  rw [← List.take_append_drop n xs, h1]
-  exact hlookup
 
 /-! Helper for Cake's local `map_fst_eq_alookup`: equal key lists imply
     identical `afindi` positions. This intermediate theorem is not a separate

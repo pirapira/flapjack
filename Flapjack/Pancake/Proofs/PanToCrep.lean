@@ -753,6 +753,16 @@ theorem localsRelExtendNewVar
           hlenFlat]
         exact hmap
 
+/-- HOL `filter_not_mem_self`: filtering a list for elements absent from that
+    same list always produces the empty list. This is used by the compiled
+    assigned-variable invariant in the `DecCall` case. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "filter_not_mem_self"]
+theorem filterNotMemSelf [DecidableEq α] (values : List α) :
+    values.filter (fun value => value ∉ values) = [] := by
+  apply List.filter_eq_nil_iff.mpr
+  intro value hmem
+  simp [hmem]
+
 /-! Execute the finite-map compiler with the HOL proof context. Every map is
     passed directly to `compileProgHOL`; no queried-name projection to an
     `InfoMap` is performed. -/

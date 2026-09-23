@@ -1418,4 +1418,111 @@ theorem crepRuntimeExtCall_stateRel_dispatch_final
     configurationValue configurationLengthValue arrayValue arrayLengthValue
     configurationBytes arrayBytes event hstate hc ha hf
 
+/-- One-shot dispatch of the four-local production `crepRuntimeExtCall` wrapper on
+    the canonical RISC-V 64 target.  This is the four-local companion of
+    `crepRuntimeExtCallValues_target_dispatch_any`: after resolving the four source
+    locals it reduces to `crepRuntimeExtCallValues`, so its result is the Lean
+    `callFfi` (HOL `call_FFI`) match over the two `read_bytearray`s: `FFI_return`
+    yields `Normal` with the returned bytes written back and the returned ffi
+    installed, `FFI_final` yields `FinalFFI`, and a failed read yields `Error`.
+    Flapjack-only bridge (no HOL original); it assembles the branch lemmas
+    `crepRuntimeExtCall_stateRel_dispatch_returned`,
+    `crepRuntimeExtCall_stateRel_dispatch_final` and `crepRuntimeExtCall_stateRel_error`. -/
+theorem crepRuntimeExtCall_dispatch
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (function : FunName)
+    (configuration configurationLength array arrayLength : Nat)
+    (configurationValue configurationLengthValue arrayValue arrayLengthValue :
+      RiscV.Word 64)
+    (hconfiguration : base.locals configuration = some (.word configurationValue))
+    (hconfigurationLength : base.locals configurationLength =
+      some (.word configurationLengthValue))
+    (harray : base.locals array = some (.word arrayValue))
+    (harrayLength : base.locals arrayLength = some (.word arrayLengthValue)) :
+    crepRuntimeExtCall riscv64ExtCallCallFfiHandler
+        (riscv64CrepRuntimeTarget base) function
+        configuration configurationLength array arrayLength =
+      (match riscv64ReadByteArray base configurationValue configurationLengthValue.toNat,
+             riscv64ReadByteArray base arrayValue arrayLengthValue.toNat with
+       | some configurationBytes, some arrayBytes =>
+           (match callFfi base.ffi (.extCall function) configurationBytes arrayBytes with
+            | .returned ffi bytes =>
+                (.normal, riscv64WriteState { base with ffi := ffi } arrayValue bytes)
+            | .final event => (.finalFfi event, riscv64CrepRuntimeTarget base))
+       | _, _ => (.error, riscv64CrepRuntimeTarget base)) := by
+  have hlocals : (riscv64CrepRuntimeTarget base).locals = base.locals := rfl
+  simp only [crepRuntimeExtCall, hlocals]
+  rw [hconfiguration, hconfigurationLength, harray, harrayLength]
+  exact crepRuntimeExtCallValues_target_dispatch_any base function configurationValue
+    configurationLengthValue arrayValue arrayLengthValue
+
+/-- Assembled four-local `ExtCall` dispatch with source/target post-state relation:
+    the wrapper's one-shot dispatch matches the `call_FFI`-shaped branch selection,
+    and the corresponding post-states remain related (`stateRel`).  The source
+    post-state is built by the theorem (the `write_bytearray`-based memory update on
+    `FFI_return`, otherwise unchanged), never assumed; there is no target-run or
+    post-state premise.  This packages every branch of
+    `crepRuntimeExtCall_stateRel_dispatch_returned`/`_dispatch_final`/`_error` into a
+    single case-split.  Flapjack-only bridge (no HOL original). -/
+theorem crepRuntimeExtCall_stateRel_dispatch
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (function : FunName)
+    (configuration configurationLength array arrayLength : Nat)
+    (configurationValue configurationLengthValue arrayValue arrayLengthValue :
+      RiscV.Word 64)
+    (hconfiguration : base.locals configuration = some (.word configurationValue))
+    (hconfigurationLength : base.locals configurationLength =
+      some (.word configurationLengthValue))
+    (harray : base.locals array = some (.word arrayValue))
+    (harrayLength : base.locals arrayLength = some (.word arrayLengthValue))
+    (hstate : stateRel source (riscv64CrepRuntimeTarget base)) :
+    (crepRuntimeExtCall riscv64ExtCallCallFfiHandler
+        (riscv64CrepRuntimeTarget base) function
+        configuration configurationLength array arrayLength =
+      (match riscv64ReadByteArray base configurationValue configurationLengthValue.toNat,
+             riscv64ReadByteArray base arrayValue arrayLengthValue.toNat with
+       | some configurationBytes, some arrayBytes =>
+           (match callFfi base.ffi (.extCall function) configurationBytes arrayBytes with
+            | .returned ffi bytes =>
+                (.normal, riscv64WriteState { base with ffi := ffi } arrayValue bytes)
+            | .final event => (.finalFfi event, riscv64CrepRuntimeTarget base))
+       | _, _ => (.error, riscv64CrepRuntimeTarget base))) ∧
+    stateRel
+      (match riscv64ReadByteArray base configurationValue configurationLengthValue.toNat,
+             riscv64ReadByteArray base arrayValue arrayLengthValue.toNat with
+       | some configurationBytes, some arrayBytes =>
+           (match callFfi base.ffi (.extCall function) configurationBytes arrayBytes with
+            | .returned ffi bytes =>
+                { source with
+                  memory := panSemWriteBytearray
+                    (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel base.memaddrs)
+                    (riscv64PanValueFfiContext base.shMemaddrs) source.memory
+                    (8 : RiscV.Word 64) arrayValue bytes,
+                  ffi := ffi }
+            | .final _event => source)
+       | _, _ => source)
+      (match riscv64ReadByteArray base configurationValue configurationLengthValue.toNat,
+             riscv64ReadByteArray base arrayValue arrayLengthValue.toNat with
+       | some configurationBytes, some arrayBytes =>
+           (match callFfi base.ffi (.extCall function) configurationBytes arrayBytes with
+            | .returned ffi bytes =>
+                riscv64WriteState { base with ffi := ffi } arrayValue bytes
+            | .final _event => riscv64CrepRuntimeTarget base)
+       | _, _ => riscv64CrepRuntimeTarget base) := by
+  constructor
+  · exact crepRuntimeExtCall_dispatch base function configuration configurationLength
+      array arrayLength configurationValue configurationLengthValue arrayValue
+      arrayLengthValue hconfiguration hconfigurationLength harray harrayLength
+  · cases hc : riscv64ReadByteArray base configurationValue configurationLengthValue.toNat with
+    | none => simpa only [hc] using hstate
+    | some configurationBytes =>
+        cases ha : riscv64ReadByteArray base arrayValue arrayLengthValue.toNat with
+        | none => simpa only [hc, ha] using hstate
+        | some arrayBytes =>
+            cases hf : callFfi base.ffi (.extCall function) configurationBytes arrayBytes with
+            | returned ffi bytes =>
+                simpa only [hc, ha, hf] using
+                  crepRuntimeExtCallValues_stateRel_returned source base arrayValue bytes ffi
+                    hstate
+            | final _event => simpa only [hc, ha, hf] using hstate
+
 end Flapjack

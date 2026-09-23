@@ -339,6 +339,40 @@ def oneShotGuard : Bool :=
         (8 : RiscV.Word 64) (8 : RiscV.Word 64) == some (1 : RiscV.Word 64)
   | _ => false
 
+/-- The assembled four-local wrapper dispatch: one statement covering the
+    returned/final/error branches selected from the two reads and `callFfi`. -/
+example :
+    crepRuntimeExtCall riscv64ExtCallCallFfiHandler
+        (riscv64CrepRuntimeTarget wrapperBase) "" 0 1 2 3 =
+      (match riscv64ReadByteArray wrapperBase (8 : RiscV.Word 64) 4,
+             riscv64ReadByteArray wrapperBase (8 : RiscV.Word 64) 4 with
+       | some configurationBytes, some arrayBytes =>
+           (match callFfi wrapperBase.ffi (.extCall "") configurationBytes arrayBytes with
+            | .returned ffi bytes =>
+                (.normal, riscv64WriteState { wrapperBase with ffi := ffi }
+                  (8 : RiscV.Word 64) bytes)
+            | .final event => (.finalFfi event, riscv64CrepRuntimeTarget wrapperBase))
+       | _, _ => (.error, riscv64CrepRuntimeTarget wrapperBase)) :=
+  crepRuntimeExtCall_dispatch wrapperBase "" 0 1 2 3 (8 : RiscV.Word 64) 4
+    (8 : RiscV.Word 64) 4 rfl rfl rfl rfl
+
+/-- The assembled dispatch also carries the branch-selected source/target
+    `stateRel` post-state. -/
+example :
+    crepRuntimeExtCall riscv64ExtCallCallFfiHandler
+        (riscv64CrepRuntimeTarget wrapperBase) "" 0 1 2 3 =
+      (match riscv64ReadByteArray wrapperBase (8 : RiscV.Word 64) 4,
+             riscv64ReadByteArray wrapperBase (8 : RiscV.Word 64) 4 with
+       | some configurationBytes, some arrayBytes =>
+           (match callFfi wrapperBase.ffi (.extCall "") configurationBytes arrayBytes with
+            | .returned ffi bytes =>
+                (.normal, riscv64WriteState { wrapperBase with ffi := ffi }
+                  (8 : RiscV.Word 64) bytes)
+            | .final event => (.finalFfi event, riscv64CrepRuntimeTarget wrapperBase))
+       | _, _ => (.error, riscv64CrepRuntimeTarget wrapperBase)) :=
+  (crepRuntimeExtCall_stateRel_dispatch callSource wrapperBase "" 0 1 2 3
+    (8 : RiscV.Word 64) 4 (8 : RiscV.Word 64) 4 rfl rfl rfl rfl wrapperStateRel).1
+
 def runChecks : IO Bool := do
   let checks := [
     ("Crep ExtCall dispatch follows source call_FFI and stateRel ffi update",

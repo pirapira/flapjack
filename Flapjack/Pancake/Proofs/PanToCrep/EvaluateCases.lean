@@ -669,4 +669,128 @@ theorem panToCrepPcCompileCorrectAnnotCodeState
   · simpa [hsourcePost] using hexcp
   · simpa [hsourcePost] using hlocals
 
+/-! A narrow state-owned Call evaluator fact used by the actual-state Call
+timeout simulation case. -/
+theorem panSemEvaluateCodeState_call_zero_clock_timeout_of_entry
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (state : PanSemState α (FfiState σ))
+    (function : FunName)
+    (hentry : panSemCodeLookup state.code function = some ([], .skip, .one))
+    (hclock : state.clock = 0) :
+    panSemEvaluateCodeState context primitive handler bytesInWord state
+      (.call none function [] : Prog α) =
+      some (panValueFfiClockTimeout state.globals state.memory state.ffi state.clock) := by
+  have hlookupCall : lookupPanSemCodeCall state.structs state.code function [] =
+      some (.skip, .one, fun _ => none) := by
+    unfold lookupPanSemCodeCall
+    rw [hentry]
+    simp [panSemCodeArgumentsMatch, bindPanValueParameters]
+  have hargs : evalPanValueExps state.structs state.locals state.globals state.memory
+      state.baseAddress state.topAddress bytesInWord [] = some [] := by
+    simp [evalPanValueExps, evalPanValueExp.evalPanValueExps]
+  have hpositive : 0 < panSemCodeEvaluateFuel state
+      (.call none function [] : Prog α) := by
+    unfold panSemCodeEvaluateFuel
+    omega
+  have hcallFuel : 0 < panSemCodeEvaluateFuel state
+      (.call none function [] : Prog α) - 1 := by
+    unfold panSemCodeEvaluateFuel
+    rw [hclock]
+    omega
+  unfold panSemEvaluateCodeState panSemEvaluateCodeStateWithFuel
+  cases hfuel : panSemCodeEvaluateFuel state (.call none function [] : Prog α) with
+  | zero => omega
+  | succ fuel =>
+      have hcallFuel' : 0 < fuel := by omega
+      cases fuel with
+      | zero => omega
+      | succ fuel =>
+          simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall,
+            hargs, hlookupCall, hclock, panValueFfiClockTimeout]
+
+/-! The zero-clock Call timeout branch at the production source/target state
+boundary. This is a single induction branch, not the general HOL theorem. -/
+theorem panToCrepPcCompileCorrectCallTimeoutCodeState
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    [CrepBytesInWord α]
+    (context : PanToCrepProofContext α)
+    (sourceContext : PanValueFfiContext α)
+    (sourcePrimitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueStatefulFfiHandler α σ)
+    (targetHandler : CrepRuntimeFfiHandler α σ FfiFinalEvent)
+    (targetPrimitive : CrepPrimitiveHandler α) (fuel : Nat)
+    (sourceState : PanSemState α (FfiState σ))
+    (targetState : CrepRuntimeState α σ) (function : FunName)
+    (hstate : stateRel sourceState targetState)
+    (hcode : codeRel context (panSemCodeAsLookup sourceState.code) targetState.code)
+    (hexcp : excpRel context.eids sourceState.exceptionShapes)
+    (_hlocals : localsRel context sourceState.locals targetState.locals)
+    (_hlocalized : localisedProg (.call none function [] : Prog α))
+    (hentry : panSemCodeLookup sourceState.code function = some ([], .skip, .one))
+    (hclock : sourceState.clock = 0) :
+    panSemEvaluateCodeState sourceContext sourcePrimitive sourceHandler
+      targetState.bytesInWord sourceState (.call none function [] : Prog α) =
+        some (panValueFfiClockTimeout sourceState.globals sourceState.memory
+          sourceState.ffi sourceState.clock) ∧
+    ∃ targetPost,
+      evalCrepRuntimeResult targetHandler targetPrimitive (fuel + 2) targetState
+        (compileCodeRelProg context (.call none function [])) =
+          some (.timeout, targetPost) ∧
+      stateRel
+        (panSemCodeStateAfter sourceState
+          (panValueFfiClockTimeout sourceState.globals sourceState.memory
+            sourceState.ffi sourceState.clock)) targetPost ∧
+      codeRel context
+        (panSemCodeAsLookup
+          (panSemCodeStateAfter sourceState
+            (panValueFfiClockTimeout sourceState.globals sourceState.memory
+              sourceState.ffi sourceState.clock)).code)
+        targetPost.code ∧
+      excpRel context.eids
+        (panSemCodeStateAfter sourceState
+          (panValueFfiClockTimeout sourceState.globals sourceState.memory
+            sourceState.ffi sourceState.clock)).exceptionShapes := by
+  have hsource := panSemEvaluateCodeState_call_zero_clock_timeout_of_entry
+    sourceContext sourcePrimitive sourceHandler targetState.bytesInWord sourceState
+    function hentry hclock
+  have hsourceLookup : FLOOKUP (panSemCodeAsLookup sourceState.code) function =
+      some ([], .skip, .one) := by
+    change panSemCodeLookup sourceState.code function = some ([], .skip, .one)
+    exact hentry
+  have hcodeEntry := codeRelImp context (panSemCodeAsLookup sourceState.code)
+    targetState.code hcode function [] (.skip : Prog α) .one hsourceLookup
+  rcases hcodeEntry with ⟨_hbodyLocalized, _hfunc, htargetLookup⟩
+  rcases hstate with ⟨hmem, hmemaddrs, hshared, hstructs, hglobals, hclockRel,
+    hbe, hffi, hbase, htop⟩
+  have htargetZero : targetState.clock = 0 := by omega
+  have htargetCodeLookup : FLOOKUP targetState.code function = some ([], .skip) := by
+    simpa [Shape.shapeSize, ctxtFc, compileCodeRelProg, compileProgHOL] using
+      htargetLookup
+  have htargetCallLookup : lookupCrepRuntimeCode function [] targetState.code =
+      some (.skip, fun _ => none) := by
+    unfold lookupCrepRuntimeCode
+    rw [htargetCodeLookup]
+    simp [assignCrepValues]
+  have htargetCallRun : evalCrepRuntimeCall targetHandler targetPrimitive
+      (fuel + 1) targetState none function [] =
+      some (.timeout, clearCrepRuntimeLocals targetState) := by
+    simp [evalCrepRuntimeCall, evalCrepRuntimeExps, htargetCallLookup, htargetZero,
+      crepRuntimeCallInfoValid, clearCrepRuntimeLocals]
+  refine ⟨hsource, clearCrepRuntimeLocals targetState, ?_, ?_, ?_, ?_⟩
+  · simpa [evalCrepRuntimeResult, evalCrepRuntimeProg, compileCodeRelProg,
+      compileProgHOL, compileArgsHOL] using htargetCallRun
+  · simp [stateRel, panSemCodeStateAfter, panValueFfiClockTimeout,
+      clearCrepRuntimeLocals, hclock, htargetZero, hmem, hmemaddrs,
+      hshared, hstructs, hglobals, hbe, hffi, hbase, htop]
+  · simpa [panSemCodeStateAfter, panValueFfiClockTimeout,
+      clearCrepRuntimeLocals] using hcode
+  · simpa [panSemCodeStateAfter, panValueFfiClockTimeout,
+      clearCrepRuntimeLocals] using hexcp
 end Flapjack

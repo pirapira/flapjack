@@ -52,3 +52,23 @@ val _ = print_eval "prim_arg_missing_result"
       (panLang$Primitive (strlit "x") AddCarry
         [panLang$Const (1w:8 word); panLang$Const (2w:8 word); panLang$Var Local (strlit "z")],
         ^okState))``;
+val _ = print_eval "prim_fresh_invalid_locals"
+  ``FLOOKUP (SND (panSem$evaluate
+      (panLang$Primitive (strlit "y") AddCarry
+        [panLang$Const (1w:8 word); panLang$Const (2w:8 word); panLang$Const (0w:8 word)],
+        ^okState))).locals (strlit "x")``;
+val _ = print_eval "prim_fresh_invalid_clock"
+  ``(SND (panSem$evaluate
+      (panLang$Primitive (strlit "y") AddCarry
+        [panLang$Const (1w:8 word); panLang$Const (2w:8 word); panLang$Const (0w:8 word)],
+        ^okState))).clock``;
+val _ = print_eval "prim_arg_missing_locals"
+  ``FLOOKUP (SND (panSem$evaluate
+      (panLang$Primitive (strlit "x") AddCarry
+        [panLang$Const (1w:8 word); panLang$Const (2w:8 word); panLang$Var Local (strlit "z")],
+        ^okState))).locals (strlit "x")``;
+val _ = print_eval "prim_arg_missing_clock"
+  ``(SND (panSem$evaluate
+      (panLang$Primitive (strlit "x") AddCarry
+        [panLang$Const (1w:8 word); panLang$Const (2w:8 word); panLang$Var Local (strlit "z")],
+        ^okState))).clock``;

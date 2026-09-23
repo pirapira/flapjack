@@ -256,14 +256,16 @@ run_probe pan_sem_assign_e2e_probeScript.sml pan_sem_assign_e2e_probe.out \
   assign_local_ok_result assign_eval_missing_clock \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 # The Dec probe observes the accepted declaration with local restoration, the
-# shape-mismatch rejection, and the initialiser-evaluation-failure rejection.
+# shape-mismatch rejection, and the initialiser-evaluation-failure rejection,
+# including the unchanged post-state of both rejection branches.
 run_probe pan_sem_dec_e2e_probeScript.sml pan_sem_dec_e2e_probe.out \
-  dec_ok_result dec_eval_missing_result \
+  dec_ok_result dec_eval_missing_clock \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 # The Primitive probe observes the accepted AddCarry update, the
-# fresh-destination rejection, and the argument-evaluation-failure rejection.
+# fresh-destination rejection, and the argument-evaluation-failure rejection,
+# including the unchanged post-state of both rejection branches.
 run_probe pan_sem_primitive_e2e_probeScript.sml pan_sem_primitive_e2e_probe.out \
-  prim_ok_result prim_arg_missing_result \
+  prim_ok_result prim_arg_missing_clock \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_fix_clock_probeScript.sml pan_fix_clock_probe.out \
   pan_fix_clock_clamps pan_fix_clock_keeps_lower \

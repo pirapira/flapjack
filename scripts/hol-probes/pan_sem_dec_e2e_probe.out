@@ -3,3 +3,7 @@ dec_ok_clock=5
 dec_ok_locals_restored=SOME (ValWord 3w)
 dec_shape_mismatch_result=SOME Error
 dec_eval_missing_result=SOME Error
+dec_shape_mismatch_locals=SOME (ValWord 3w)
+dec_shape_mismatch_clock=5
+dec_eval_missing_locals=SOME (ValWord 3w)
+dec_eval_missing_clock=5

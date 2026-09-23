@@ -56,6 +56,10 @@ def decOkOutcome : PanValueFfiClockResult Word64 Unit :=
   (.control (.normal decRestoredLocals (decState 5).globals
       (decState 5).memory (decState 5).ffi), 5)
 
+def decErrorOutcome (clock : Nat) : PanValueFfiClockResult Word64 Unit :=
+  (.control (.error (decState clock).locals (decState clock).globals
+      (decState clock).memory (decState clock).ffi), clock)
+
 theorem dec_ok_eq :
     decEvaluate 5 3 (.dec "x" Shape.one (.const (BitVec.ofNat 64 7))
         (.assign .local "x" (.const (BitVec.ofNat 64 7)))) =
@@ -71,14 +75,16 @@ theorem dec_ok_eq :
 
 theorem dec_shape_mismatch_eq :
     decEvaluate 5 3 (.dec "x" (Shape.named "Other") (.const (BitVec.ofNat 64 7))
-        .skip) = none := by
-  unfold decEvaluate
+        .skip) = some (decErrorOutcome 5) := by
+  unfold decEvaluate decErrorOutcome
   rw [panSemEvaluateCodeStateWithFuel_dec]
-  simp [decState, evalPanValueExp, panValueShape, panShapeMatches]
+  simp [decState, evalPanValueExp, panValueShape,
+    panShapeMatches]
 
 theorem dec_eval_missing_eq :
-    decEvaluate 5 3 (.dec "x" Shape.one (.var .local "z") .skip) = none := by
-  unfold decEvaluate
+    decEvaluate 5 3 (.dec "x" Shape.one (.var .local "z") .skip) =
+      some (decErrorOutcome 5) := by
+  unfold decEvaluate decErrorOutcome
   rw [panSemEvaluateCodeStateWithFuel_dec]
   simp [decState, evalPanValueExp]
 
@@ -92,12 +98,20 @@ def decOkGuard : Bool :=
   | some (.control (.normal locals _ _ _), 5) => isWord3 (locals "x")
   | _ => false
 
+def decErrorGuard : Nat → Bool :=
+  fun clock =>
+    match decEvaluate clock 3 (.dec "x" Shape.one (.var .local "z") .skip) with
+    | some (.control (.error locals _ _ _), _) => isWord3 (locals "x")
+    | _ => false
+
 def decShapeMismatchGuard : Bool :=
-  (decEvaluate 5 3 (.dec "x" (Shape.named "Other") (.const (BitVec.ofNat 64 7))
-      .skip)).isNone
+  match decEvaluate 5 3 (.dec "x" (Shape.named "Other") (.const (BitVec.ofNat 64 7))
+      .skip) with
+  | some (.control (.error locals _ _ _), 5) => isWord3 (locals "x")
+  | _ => false
 
 def decEvalMissingGuard : Bool :=
-  (decEvaluate 5 3 (.dec "x" Shape.one (.var .local "z") .skip)).isNone
+  decErrorGuard 5
 
 def decGuard : Bool :=
   decOkGuard && decShapeMismatchGuard && decEvalMissingGuard
@@ -109,11 +123,11 @@ def runChecks : IO Bool := do
     IO.println "PASS panSem Dec accepted body restores declared local"
   else IO.println "FAIL panSem Dec accepted body restores declared local"
   if decShapeMismatchGuard then
-    IO.println "PASS panSem Dec shape mismatch rejected"
-  else IO.println "FAIL panSem Dec shape mismatch rejected"
+    IO.println "PASS panSem Dec shape mismatch rejected with Error and unchanged state"
+  else IO.println "FAIL panSem Dec shape mismatch rejected with Error and unchanged state"
   if decEvalMissingGuard then
-    IO.println "PASS panSem Dec initialiser failure rejected"
-  else IO.println "FAIL panSem Dec initialiser failure rejected"
+    IO.println "PASS panSem Dec initialiser failure rejected with Error and unchanged state"
+  else IO.println "FAIL panSem Dec initialiser failure rejected with Error and unchanged state"
   pure decGuard
 
 end Flapjack.Test.PanSemDecParity

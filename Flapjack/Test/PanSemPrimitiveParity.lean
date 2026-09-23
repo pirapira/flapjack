@@ -60,6 +60,10 @@ def primOkOutcome : PanValueFfiClockResult Word64 Unit :=
   (.control (.normal primUpdatedLocals (primState 5).globals
       (primState 5).memory (primState 5).ffi), 5)
 
+def primErrorOutcome (clock : Nat) : PanValueFfiClockResult Word64 Unit :=
+  (.control (.error (primState clock).locals (primState clock).globals
+      (primState clock).memory (primState clock).ffi), clock)
+
 theorem prim_ok_eq :
     primEvaluate 5 3 (.primitive "x" .addCarry
         [.const (BitVec.ofNat 64 1), .const (BitVec.ofNat 64 2),
@@ -74,8 +78,8 @@ theorem prim_ok_eq :
 theorem prim_fresh_invalid_eq :
     primEvaluate 5 3 (.primitive "y" .addCarry
         [.const (BitVec.ofNat 64 1), .const (BitVec.ofNat 64 2),
-          .const (BitVec.ofNat 64 0)]) = none := by
-  unfold primEvaluate
+          .const (BitVec.ofNat 64 0)]) = some (primErrorOutcome 5) := by
+  unfold primEvaluate primErrorOutcome
   rw [panSemEvaluateCodeStateWithFuel_primitive]
   simp [evalPanValueExps, evalPanValueExp.evalPanValueExps, evalPanValueExp,
     primState, addCarryPrimitive]
@@ -83,8 +87,8 @@ theorem prim_fresh_invalid_eq :
 theorem prim_arg_missing_eq :
     primEvaluate 5 3 (.primitive "x" .addCarry
         [.const (BitVec.ofNat 64 1), .const (BitVec.ofNat 64 2),
-          .var .local "z"]) = none := by
-  unfold primEvaluate
+          .var .local "z"]) = some (primErrorOutcome 5) := by
+  unfold primEvaluate primErrorOutcome
   rw [panSemEvaluateCodeStateWithFuel_primitive]
   simp [evalPanValueExps, evalPanValueExp.evalPanValueExps, evalPanValueExp,
     primState]
@@ -94,6 +98,11 @@ def isStruct3 : Option (PanValue Word64) → Bool
       low == BitVec.ofNat 64 3 && high == BitVec.ofNat 64 0
   | _ => false
 
+def isStruct00 : Option (PanValue Word64) → Bool
+  | some (.rStruct [.word low, .word high]) =>
+      low == BitVec.ofNat 64 0 && high == BitVec.ofNat 64 0
+  | _ => false
+
 def primOkGuard : Bool :=
   match primEvaluate 5 3 (.primitive "x" .addCarry
       [.const (BitVec.ofNat 64 1), .const (BitVec.ofNat 64 2),
@@ -101,15 +110,20 @@ def primOkGuard : Bool :=
   | some (.control (.normal locals _ _ _), 5) => isStruct3 (locals "x")
   | _ => false
 
+def primErrorGuard (program : Prog Word64) : Bool :=
+  match primEvaluate 5 3 program with
+  | some (.control (.error locals _ _ _), 5) => isStruct00 (locals "x")
+  | _ => false
+
 def primFreshGuard : Bool :=
-  (primEvaluate 5 3 (.primitive "y" .addCarry
-      [.const (BitVec.ofNat 64 1), .const (BitVec.ofNat 64 2),
-        .const (BitVec.ofNat 64 0)])).isNone
+  primErrorGuard (.primitive "y" .addCarry
+    [.const (BitVec.ofNat 64 1), .const (BitVec.ofNat 64 2),
+      .const (BitVec.ofNat 64 0)])
 
 def primMissingGuard : Bool :=
-  (primEvaluate 5 3 (.primitive "x" .addCarry
-      [.const (BitVec.ofNat 64 1), .const (BitVec.ofNat 64 2),
-        .var .local "z"])).isNone
+  primErrorGuard (.primitive "x" .addCarry
+    [.const (BitVec.ofNat 64 1), .const (BitVec.ofNat 64 2),
+      .var .local "z"])
 
 def primGuard : Bool :=
   primOkGuard && primFreshGuard && primMissingGuard
@@ -122,13 +136,13 @@ def runChecks : IO Bool := do
   else
     IO.println "FAIL panSem Primitive accepted AddCarry updates destination"
   if primFreshGuard then
-    IO.println "PASS panSem Primitive fresh destination rejected"
+    IO.println "PASS panSem Primitive fresh destination rejected with Error and unchanged state"
   else
-    IO.println "FAIL panSem Primitive fresh destination rejected"
+    IO.println "FAIL panSem Primitive fresh destination rejected with Error and unchanged state"
   if primMissingGuard then
-    IO.println "PASS panSem Primitive argument evaluation failure rejected"
+    IO.println "PASS panSem Primitive argument evaluation failure rejected with Error and unchanged state"
   else
-    IO.println "FAIL panSem Primitive argument evaluation failure rejected"
+    IO.println "FAIL panSem Primitive argument evaluation failure rejected with Error and unchanged state"
   pure primGuard
 
 end Flapjack.Test.PanSemPrimitiveParity

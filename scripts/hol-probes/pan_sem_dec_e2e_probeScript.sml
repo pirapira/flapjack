@@ -63,3 +63,29 @@ val _ = print_eval "dec_eval_missing_result"
         panLang$Skip,
         (^s with <| clock := 5;
           locals := FEMPTY |+ (strlit "x", ValWord (3w:8 word)) |>)))``;
+val _ = print_eval "dec_shape_mismatch_locals"
+  ``FLOOKUP (SND (panSem$evaluate
+      (panLang$Dec (strlit "x") (panLang$Named (strlit "Other"))
+        (panLang$Const (7w:8 word)) panLang$Skip,
+        (^s with <| clock := 5;
+          locals := FEMPTY |+ (strlit "x", ValWord (3w:8 word)) |>)))).locals
+      (strlit "x")``;
+val _ = print_eval "dec_shape_mismatch_clock"
+  ``(SND (panSem$evaluate
+      (panLang$Dec (strlit "x") (panLang$Named (strlit "Other"))
+        (panLang$Const (7w:8 word)) panLang$Skip,
+        (^s with <| clock := 5;
+          locals := FEMPTY |+ (strlit "x", ValWord (3w:8 word)) |>)))).clock``;
+val _ = print_eval "dec_eval_missing_locals"
+  ``FLOOKUP (SND (panSem$evaluate
+      (panLang$Dec (strlit "x") panLang$One (panLang$Var Local (strlit "z"))
+        panLang$Skip,
+        (^s with <| clock := 5;
+          locals := FEMPTY |+ (strlit "x", ValWord (3w:8 word)) |>)))).locals
+      (strlit "x")``;
+val _ = print_eval "dec_eval_missing_clock"
+  ``(SND (panSem$evaluate
+      (panLang$Dec (strlit "x") panLang$One (panLang$Var Local (strlit "z"))
+        panLang$Skip,
+        (^s with <| clock := 5;
+          locals := FEMPTY |+ (strlit "x", ValWord (3w:8 word)) |>)))).clock``;

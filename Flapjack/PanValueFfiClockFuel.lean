@@ -222,12 +222,14 @@ theorem evalPanValueFfiClockProg_fuel_mono'
     rw [evalPanValueFfiClockProg]
     cases hv : evalPanValueExp structs locals globals memory baseAddress topAddress
         bytesInWord valueExp ma with
-    | none => rw [hv] at h; simp at h
+    | none =>
+      simp only [panValueDecAcceptedValue, hv, Option.elim_none] at h ⊢
+      exact h
     | some value =>
-      rw [hv] at h
-      simp only [Option.bind_eq_bind, Option.bind_some] at h ⊢
+      simp only [panValueDecAcceptedValue, hv] at h ⊢
       by_cases hshape : panShapeMatches (panValueShape structs value) shape
-      · rw [if_pos hshape] at h ⊢
+      · simp only [hshape, if_true, Option.elim_some,
+          Option.bind_eq_bind] at h ⊢
         cases hb : evalPanValueFfiClockProg context primitive handler structs functions
           baseAddress topAddress bytesInWord fuel (updatePanValueMap locals name value)
             globals memory ffi clock body ma c mh with
@@ -236,7 +238,8 @@ theorem evalPanValueFfiClockProg_fuel_mono'
           rw [hb] at h
           rw [ihBody value _ _ hfk hb]
           exact h
-      · rw [if_neg hshape] at h; simp at h
+      · simp only [hshape] at h ⊢
+        exact h
   | case5 fuel locals globals memory ffi clock first second ma c mh ihFirst ihSecond =>
     intro fuel' result hle h
     obtain ⟨k, rfl⟩ : ∃ k, fuel' = k + 1 := ⟨fuel' - 1, by omega⟩

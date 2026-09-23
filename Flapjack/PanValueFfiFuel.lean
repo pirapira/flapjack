@@ -218,22 +218,24 @@ theorem progMono (context : PanValueFfiContext α) (primitive : PanPrimitiveHand
     rw [evalPanValueFfiProgSteps]
     cases hv : evalPanValueExpCounted structs locals globals memory baseAddress topAddress
         bytesInWord valueExp ma with
-    | none => rw [hv] at h; simp at h
+    | none =>
+      simp only [panValueDecAccepted, hv, Option.elim_none] at h ⊢
+      exact h
     | some pair =>
       obtain ⟨value, valueSteps⟩ := pair
-      rw [hv] at h
-      simp only [Option.bind_eq_bind, Option.bind_some] at h ⊢
+      simp only [panValueDecAccepted, hv] at h ⊢
       by_cases hshape : panShapeMatches (panValueShape structs value) shape
-      · rw [if_pos hshape] at h ⊢
+      · simp only [hshape, if_true, Option.elim_some, Option.bind_eq_bind] at h ⊢
         cases hb : evalPanValueFfiProgSteps context primitive handler structs functions
           baseAddress topAddress bytesInWord fuel (updatePanValueMap locals name value) globals memory ffi body
             (memoryAccess := ma) (contracts := c) (memoryHandler := mh) with
         | none => rw [hb] at h; simp at h
         | some q =>
           rw [hb] at h
-          rw [ihBody value _ _ hfk hb]
+          rw [ihBody (value, valueSteps) _ _ hfk hb]
           exact h
-      · rw [if_neg hshape] at h; simp at h
+      · simp only [hshape] at h ⊢
+        exact h
   | case6 =>
     intro fuel' result hle h
     obtain ⟨k, rfl⟩ : ∃ k, fuel' = k + 1 := ⟨fuel' - 1, by omega⟩

@@ -493,12 +493,24 @@ theorem panSemEvaluateCodeStateWithFuel_dec
                   locals := updatePanValueMap state.locals name evaluated } body).map
               (fun result =>
                 (panValueFfiClockRestoreLocal name (state.locals name) result.1, result.2))
-          else none
-      | none => none := by
+          else
+            some ((.control (.error state.locals state.globals state.memory state.ffi),
+              state.clock))
+      | none =>
+          some ((.control (.error state.locals state.globals state.memory state.ffi),
+            state.clock)) := by
   cases hvalue : evalPanValueExp state.structs state.locals state.globals state.memory
-      state.baseAddress state.topAddress bytesInWord value <;>
-  simp [panSemEvaluateCodeStateWithFuel, evalPanValueFfiClockCodeProg, hvalue] <;>
-  split <;> simp only [Option.map_eq_bind] <;> rfl
+      state.baseAddress state.topAddress bytesInWord value with
+  | none =>
+      simp [panSemEvaluateCodeStateWithFuel, evalPanValueFfiClockCodeProg,
+        panValueDecAcceptedValue, hvalue]
+  | some evaluated =>
+      by_cases hshape : panShapeMatches (panValueShape state.structs evaluated) shape = true
+      · simp [panSemEvaluateCodeStateWithFuel, evalPanValueFfiClockCodeProg,
+          panValueDecAcceptedValue, hvalue, hshape, Option.map_eq_bind]
+        rfl
+      · simp [panSemEvaluateCodeStateWithFuel, evalPanValueFfiClockCodeProg,
+          panValueDecAcceptedValue, hvalue, hshape]
 
 /-- Production source-state `Primitive` equation. The argument expressions are
     evaluated together; when they all succeed the primitive handler is applied
@@ -530,37 +542,45 @@ theorem panSemEvaluateCodeStateWithFuel_primitive
                     some ((.control (.normal
                         (updatePanValueMap state.locals name evaluated)
                         state.globals state.memory state.ffi), state.clock))
-                  else none
-              | none => none
-          | none => none
-      | none => none := by
+                  else
+                    some ((.control (.error state.locals state.globals state.memory state.ffi),
+                      state.clock))
+              | none =>
+                  some ((.control (.error state.locals state.globals state.memory state.ffi),
+                    state.clock))
+          | none =>
+              some ((.control (.error state.locals state.globals state.memory state.ffi),
+                state.clock))
+      | none =>
+          some ((.control (.error state.locals state.globals state.memory state.ffi),
+            state.clock)) := by
   cases hvalues : evalPanValueExps state.structs state.locals state.globals state.memory
       state.baseAddress state.topAddress bytesInWord arguments with
   | none =>
       simp [panSemEvaluateCodeStateWithFuel, evalPanValueFfiClockCodeProg,
-        evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps, evalPanValueExpsCounted,
-        hvalues]
+        evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps, panValuePrimitiveResult,
+        evalPanValueExpsCounted, hvalues]
   | some values =>
       cases hprim : primitive operator values with
       | none =>
           simp [panSemEvaluateCodeStateWithFuel, evalPanValueFfiClockCodeProg,
-            evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps, evalPanValueExpsCounted,
-            hvalues, hprim]
+            evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps, panValuePrimitiveResult,
+            evalPanValueExpsCounted, hvalues, hprim]
       | some evaluated =>
           cases hlocal : state.locals name with
           | none =>
               simp [panSemEvaluateCodeStateWithFuel, evalPanValueFfiClockCodeProg,
-                evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps, evalPanValueExpsCounted,
-                hvalues, hprim, hlocal]
+                evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps, panValuePrimitiveResult,
+                evalPanValueExpsCounted, hvalues, hprim, hlocal]
           | some oldValue =>
               by_cases hshape : panShapeMatches (panValueShape state.structs evaluated)
                   (panValueShape state.structs oldValue) = true
               · simp [panSemEvaluateCodeStateWithFuel, evalPanValueFfiClockCodeProg,
-                  evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps, evalPanValueExpsCounted,
-                  hvalues, hprim, hlocal, hshape]
+                  evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps, panValuePrimitiveResult,
+                  evalPanValueExpsCounted, hvalues, hprim, hlocal, hshape]
               · simp [panSemEvaluateCodeStateWithFuel, evalPanValueFfiClockCodeProg,
-                  evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps, evalPanValueExpsCounted,
-                  hvalues, hprim, hlocal, hshape]
+                  evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps, panValuePrimitiveResult,
+                  evalPanValueExpsCounted, hvalues, hprim, hlocal, hshape]
 
 /-!
   Exact source-memory entry point.

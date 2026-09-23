@@ -1379,11 +1379,14 @@ theorem evalPanValueFfiClock_clock_le (context : PanValueFfiContext α) (primiti
     simp only [evalPanValueFfiClockProg] at hrun
     cases hvalue : evalPanValueExp structs locals globals memory baseAddress topAddress bytesInWord value
         (memoryAccess := memoryAccess) with
-    | none => simp only [hvalue, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+    | none =>
+      simp only [panValueDecAcceptedValue, hvalue, Option.elim_none] at hrun
+      simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
+      obtain ⟨_, hc⟩ := hrun; omega
     | some valueResult =>
-      simp only [hvalue, Option.bind_eq_bind, Option.bind_some] at hrun
+      simp only [panValueDecAcceptedValue, hvalue] at hrun
       by_cases hmatch : panShapeMatches (panValueShape structs valueResult) shape = true
-      · simp only [hmatch, if_true, Option.bind_eq_bind, Option.bind_some] at hrun
+      · simp only [hmatch, if_true, Option.elim_some, Option.bind_eq_bind, Option.bind_some] at hrun
         cases hbody : evalPanValueFfiClockProg context primitive handler structs functions baseAddress topAddress
             bytesInWord fuel (updatePanValueMap locals name valueResult) globals memory ffi clock body
             (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler) with
@@ -1394,7 +1397,9 @@ theorem evalPanValueFfiClock_clock_le (context : PanValueFfiContext α) (primiti
           have hb : bodyClock ≤ clock := hbodyIH valueResult bodyOutcome bodyClock hbody
           simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
           obtain ⟨_, hc⟩ := hrun; omega
-      · simp only [hmatch, if_false, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+      · simp only [hmatch, if_false, Option.elim_none] at hrun
+        simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
+        obtain ⟨_, hc⟩ := hrun; omega
   · -- case5: Prog seq
     intro fuel locals globals memory ffi clock first second memoryAccess contracts memoryHandler hfirstIH hsecondIH outcome resultClock hrun
     simp only [evalPanValueFfiClockProg] at hrun

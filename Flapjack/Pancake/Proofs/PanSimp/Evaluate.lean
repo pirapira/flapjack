@@ -1796,7 +1796,7 @@ theorem evalPanValueFfiClockProg_dec_some
         (.dec name shape value body) (memoryAccess := ma) (contracts := c)
         (memoryHandler := mh) =
       some (panValueFfiClockRestoreLocal name (locals name) outcome, nextClock) := by
-  simp [evalPanValueFfiClockProg, hvalue, hmatch, hbody]
+  simp [evalPanValueFfiClockProg, panValueDecAcceptedValue, hvalue, hmatch, hbody]
 
 /-- `progSize`-indexed form of `evalPanValueFfiClockProg_dec_some`: the body
     is evaluated at its own `progSize` budget, so a declaration succeeds at

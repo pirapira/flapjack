@@ -17,6 +17,10 @@ generated from `panSemScript.sml` (see lines 633-650). It pins:
   unchanged state;
 * a well-matched `Raise eid e` to `SOME (Exception eid v)` with cleared locals,
   exception identifier `E`, and payload `ValWord 7w`.
+
+Both the clocked production entry (`panSemEvaluateCodeStateWithPostState`) and
+the non-clocked step evaluator (`evalPanValueFfiProgramSteps`) are guarded; both
+reach the shared `panValueReturnResult`/`panValueRaiseResult` helpers.
 -/
 
 namespace Flapjack.Test.PanSemReturnRaiseErrorParity
@@ -154,9 +158,74 @@ def raiseOkGuard : Bool :=
   isRaisedCleared 5 "E" 7
     (returnRaiseEvaluate 5 (.raise "E" (.const (BitVec.ofNat 64 7))) oneExceptionContracts)
 
+/-! ## Non-clocked evaluator guards
+
+The clocked path goes through `evalPanValueFfiClockProg`; the non-clocked step
+evaluator `evalPanValueFfiProgSteps` reaches the same shared
+`panValueReturnResult`/`panValueRaiseResult` helpers.  These guards exercise it
+directly over the same oracle fixtures and check the carried state. -/
+
+def nonClockedEvaluate (program : Prog Word64)
+    (contracts : Option PanValueCallContracts := none) :
+    Option (PanValueFfiSteppedResult Word64 Unit) :=
+  evalPanValueFfiProgramSteps statefulTestContext statefulTestPrimitive statefulTestHandler
+    [] [] (BitVec.ofNat 64 0) (BitVec.ofNat 64 100) (BitVec.ofNat 64 8) 5
+    (returnRaiseState 5).locals (returnRaiseState 5).globals (returnRaiseState 5).memory
+    statefulTestFfiState program (contracts := contracts)
+
+def errorSteppedPreserving (result : Option (PanValueFfiSteppedResult Word64 Unit)) : Bool :=
+  match result with
+  | some (.error locals globals memory ffi, _) =>
+      isWordOption 3 (locals "x") && (globals "g").isNone && (globals "x").isNone &&
+        (memory 0).isNone && (memory 8).isNone &&
+        ffi.state == () && decide (ffi.ioEvents = ([] : List FfiEvent))
+  | _ => false
+
+def returnedSteppedCleared (expected : Nat)
+    (result : Option (PanValueFfiSteppedResult Word64 Unit)) : Bool :=
+  match result with
+  | some (.returned locals _ _ _ values, _) =>
+      isMissingLocal (locals "x") && isWordList expected values
+  | _ => false
+
+def raisedSteppedCleared (exceptionId : String) (expected : Nat)
+    (result : Option (PanValueFfiSteppedResult Word64 Unit)) : Bool :=
+  match result with
+  | some (.raised locals _ _ _ exception value, _) =>
+      isMissingLocal (locals "x") && exception == exceptionId && isWordValue expected value
+  | _ => false
+
+def retEvalFailNonClockedGuard : Bool := errorSteppedPreserving (nonClockedEvaluate retEvalFail)
+
+def retOversizedNonClockedGuard : Bool := errorSteppedPreserving (nonClockedEvaluate retOversized)
+
+def retOkNonClockedGuard : Bool := returnedSteppedCleared 7 (nonClockedEvaluate retOk)
+
+def raiseMissingShapeNonClockedGuard : Bool :=
+  errorSteppedPreserving (nonClockedEvaluate raiseMissingShape (some (contractsWith [])))
+
+def raiseMismatchNonClockedGuard : Bool :=
+  errorSteppedPreserving (nonClockedEvaluate raiseMismatch oneExceptionContracts)
+
+def raiseEvalFailNonClockedGuard : Bool :=
+  errorSteppedPreserving (nonClockedEvaluate raiseEvalFail oneExceptionContracts)
+
+def raiseOversizedNonClockedGuard : Bool :=
+  errorSteppedPreserving (nonClockedEvaluate raiseOversized oversizedExceptionContracts)
+
+def raiseOkNonClockedGuard : Bool :=
+  raisedSteppedCleared "E" 7
+    (nonClockedEvaluate (.raise "E" (.const (BitVec.ofNat 64 7))) oneExceptionContracts)
+
+def returnRaiseNonClockedGuard : Bool :=
+  retEvalFailNonClockedGuard && retOversizedNonClockedGuard && retOkNonClockedGuard &&
+    raiseMissingShapeNonClockedGuard && raiseMismatchNonClockedGuard &&
+    raiseEvalFailNonClockedGuard && raiseOversizedNonClockedGuard && raiseOkNonClockedGuard
+
 def returnRaiseGuard : Bool :=
   retEvalFailGuard && retOversizedGuard && retOkGuard && raiseMissingShapeGuard &&
-    raiseMismatchGuard && raiseEvalFailGuard && raiseOversizedGuard && raiseOkGuard
+    raiseMismatchGuard && raiseEvalFailGuard && raiseOversizedGuard && raiseOkGuard &&
+    returnRaiseNonClockedGuard
 
 #guard returnRaiseGuard
 
@@ -185,6 +254,30 @@ def runChecks : IO Bool := do
   if raiseOkGuard then
     IO.println "PASS panSem Raise well-matched exception E payload ValWord 7w clears locals"
   else IO.println "FAIL panSem Raise well-matched exception E payload ValWord 7w clears locals"
+  if retEvalFailNonClockedGuard then
+    IO.println "PASS non-clocked Return failing expression rejected with Error and unchanged state"
+  else IO.println "FAIL non-clocked Return failing expression rejected with Error and unchanged state"
+  if retOversizedNonClockedGuard then
+    IO.println "PASS non-clocked Return oversized payload rejected with Error and unchanged state"
+  else IO.println "FAIL non-clocked Return oversized payload rejected with Error and unchanged state"
+  if retOkNonClockedGuard then
+    IO.println "PASS non-clocked Return well-sized payload is ValWord 7w and clears locals"
+  else IO.println "FAIL non-clocked Return well-sized payload is ValWord 7w and clears locals"
+  if raiseMissingShapeNonClockedGuard then
+    IO.println "PASS non-clocked Raise missing exception shape rejected with Error and unchanged state"
+  else IO.println "FAIL non-clocked Raise missing exception shape rejected with Error and unchanged state"
+  if raiseMismatchNonClockedGuard then
+    IO.println "PASS non-clocked Raise mismatched exception shape rejected with Error and unchanged state"
+  else IO.println "FAIL non-clocked Raise mismatched exception shape rejected with Error and unchanged state"
+  if raiseEvalFailNonClockedGuard then
+    IO.println "PASS non-clocked Raise failing expression rejected with Error and unchanged state"
+  else IO.println "FAIL non-clocked Raise failing expression rejected with Error and unchanged state"
+  if raiseOversizedNonClockedGuard then
+    IO.println "PASS non-clocked Raise oversized payload rejected with Error and unchanged state"
+  else IO.println "FAIL non-clocked Raise oversized payload rejected with Error and unchanged state"
+  if raiseOkNonClockedGuard then
+    IO.println "PASS non-clocked Raise well-matched exception E payload ValWord 7w clears locals"
+  else IO.println "FAIL non-clocked Raise well-matched exception E payload ValWord 7w clears locals"
   pure returnRaiseGuard
 
 end Flapjack.Test.PanSemReturnRaiseErrorParity

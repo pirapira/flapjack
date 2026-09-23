@@ -2640,6 +2640,46 @@
     "reviewer": "Codex (source comparison)"
   },
   {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "MEM_compile_exp_vmax",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean",
+    "lean_name": "memCompileExpVmax",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean",
+    "lean_name": "compileExpHOL_outputs_vars_bounded",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean",
+    "lean_name": "compileField_output_mem_or_input_or_zero",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean",
+    "lean_name": "crepExpVarsList_mem_iff",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean",
+    "lean_name": "cexpHeads_mem_flatten",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
